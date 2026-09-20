@@ -15,7 +15,9 @@ Effort = Literal["low", "medium", "high", "xhigh", "max"]
 CacheTTL = Literal["5m", "1h"]
 Weekday = Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 
-SECRET_FIELDS = frozenset({"anthropic_api_key", "telegram_bot_token"})
+SECRET_FIELDS = frozenset(
+    {"anthropic_api_key", "telegram_bot_token", "web_password", "web_secret_key"}
+)
 log = logging.getLogger(__name__)
 
 
@@ -82,6 +84,17 @@ class Settings(BaseSettings):
     google_calendar_id: str | None = None
     google_token_path: Path = Path("data/google_token.json")
     enrichment_notes: bool = True
+
+    # The read-only web page (see familydb/web/). Off unless WEB_ENABLED is set.
+    web_enabled: bool = False
+    web_host: str = "127.0.0.1"
+    web_port: int = 8080
+    web_password: str | None = None
+    web_secret_key: str | None = None
+    web_session_days: int = 30
+    web_allow_no_password: bool = False
+    web_trust_proxy: bool = False
+    web_title: str = "FamilyDB"
 
     # Console and logging
     console_member: str | None = None

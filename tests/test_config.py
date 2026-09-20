@@ -54,3 +54,49 @@ def test_os_tz_is_a_fallback_only_when_it_is_a_real_zone(monkeypatch: pytest.Mon
     monkeypatch.delenv("FAMILYDB_TZ")
     monkeypatch.setenv("TZ", "UTC0")
     assert Settings(_env_file=None, family_tz="Asia/Tokyo").tz == "Asia/Tokyo"
+
+
+def test_web_settings_default_to_a_private_page(tmp_path: Path) -> None:
+    s = Settings(_env_file=None, familydb_path=tmp_path / "x.db", web_password="hunter2")
+    assert s.web_enabled is False and s.web_host == "127.0.0.1" and s.web_port == 8080
+    assert s.web_session_days == 30 and s.web_title == "FamilyDB"
+    assert s.web_allow_no_password is False and s.web_trust_proxy is False
+    masked = s.masked()
+    assert masked["web_password"] == "****" and "hunter2" not in str(masked)
+
+
+def test_web_secret_key_is_generated_once_and_kept(tmp_path: Path) -> None:
+    from familydb.web.keys import secret_path, session_secret
+
+    s = Settings(_env_file=None, familydb_path=tmp_path / "data" / "x.db")
+    first = session_secret(s)
+    assert len(first) > 20 and session_secret(s) == first  # stable across calls
+    path = secret_path(s)
+    assert path.read_text() == first and path.stat().st_mode & 0o777 == 0o600
+    pinned = s.model_copy(update={"web_secret_key": "pinned"})
+    assert session_secret(pinned) == "pinned"  # the setting wins over the file
+
+
+def test_web_secret_key_falls_back_when_it_cannot_be_written(tmp_path: Path) -> None:
+    from familydb.web.keys import session_secret
+
+    blocked = tmp_path / "blocked"
+    blocked.write_text("not a directory")
+    s = Settings(_env_file=None, familydb_path=blocked / "x.db")
+    key = session_secret(s)
+    assert len(key) > 20 and session_secret(s) != key  # ephemeral, so a new one each time
+
+
+def test_web_password_is_required_off_the_loopback(tmp_path: Path) -> None:
+    from familydb.availability import web_available, web_is_public, web_password_required
+
+    private = Settings(_env_file=None, familydb_path=tmp_path / "x.db", web_enabled=True)
+    assert web_available(private) and not web_is_public(private)
+    assert not web_password_required(private)
+    for host in ("localhost", "::1", "[::1]", "127.0.0.1"):
+        assert not web_is_public(private.model_copy(update={"web_host": host})), host
+    public = private.model_copy(update={"web_host": "0.0.0.0"})
+    assert web_is_public(public) and web_password_required(public)
+    waived = public.model_copy(update={"web_allow_no_password": True})
+    assert web_is_public(waived) and not web_password_required(waived)
+    assert not web_available(private.model_copy(update={"web_enabled": False}))
