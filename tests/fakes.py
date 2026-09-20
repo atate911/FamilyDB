@@ -11,6 +11,7 @@ import httpx2
 from anthropic.types.beta import BetaMessage
 
 from familydb.integrations.google_calendar import CalendarEvent
+from familydb.integrations.open_meteo import DayForecast
 
 
 def text(value: str) -> dict[str, Any]:
@@ -163,3 +164,15 @@ class FakeCalendar:
     def delete_event(self, event_id: str) -> None:
         self.events.pop(event_id)
         self.deleted.append(event_id)
+
+
+class FakeForecast:
+    """In-memory ForecastAPI."""
+
+    def __init__(self, days: list[DayForecast]) -> None:
+        self.days = days
+        self.calls: list[tuple[date, date]] = []
+
+    def daily(self, start: date, end: date) -> list[DayForecast]:
+        self.calls.append((start, end))
+        return [d for d in self.days if start <= d.date <= end]

@@ -56,6 +56,7 @@ class Settings(BaseSettings):
     home_lat: float | None = None
     home_lon: float | None = None
     home_area: str = ""
+    weather_units: Literal["metric", "imperial"] = "metric"
 
     # Optional services
     web_tools_enabled: bool = False
