@@ -1,4 +1,4 @@
-"""Suggestion tools: the discovery worker's hand-back now; the `suggest` tool joins in step 5."""
+"""Suggestion tools: `suggest` for the chat model, `report_finds` for the discovery worker."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from urllib.parse import urlsplit
 
 from pydantic import BaseModel, Field
 
+from familydb.suggest.types import SuggestInput
 from familydb.tools.registry import ToolContext, tool
 
 MAX_FINDS = 6
@@ -64,3 +65,18 @@ def report_finds(ctx: ToolContext, args: ReportFindsInput) -> dict[str, Any]:
         )
         recorded += 1
     return {"recorded": recorded, "rejected": rejected, "total": len(finds)}
+
+
+@tool(
+    name="suggest",
+    description=(
+        "Checked suggestions for a window: looks at the calendar's free time, the forecast, every "
+        "idea on the list and the cached place details, and returns candidates with a verdict "
+        "(good, possible, ruled_out) and the reasons, plus time-bound web finds when discovery "
+        "is on. Call it once for 'what should we do' questions, then write the reply from it."
+    ),
+)
+def suggest(ctx: ToolContext, args: SuggestInput) -> dict[str, Any]:
+    from familydb.suggest.engine import run
+
+    return run(ctx, args).model_dump(mode="json")

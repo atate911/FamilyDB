@@ -15,7 +15,7 @@ from familydb.app import App
 from familydb.channels.base import IncomingMessage, OutgoingMessage
 from familydb.dates import utc_iso
 from familydb.errors import AgentError
-from familydb.store import calls, members, messages
+from familydb.store import calls, members, messages, suggestions
 from familydb.store.db import transaction
 from familydb.store.members import Member
 from familydb.tools import ToolContext
@@ -131,6 +131,9 @@ def _run(
             now=now,
         )
         messages.mark_processed(conn, inbound_id, result.actions, now=now)
+        for action in result.actions:
+            if action.get("tool") == "suggest" and action.get("suggestion_id"):
+                suggestions.set_reply(conn, int(action["suggestion_id"]), outbound.id)
     return OutgoingMessage(
         msg.chat_id, reply_text, result.status, inbound_id, outbound.id, result.actions
     )

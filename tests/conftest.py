@@ -101,3 +101,11 @@ def full_settings(calendar_settings: Settings) -> Settings:
     return calendar_settings.model_copy(
         update={"home_lat": 45.63, "home_lon": -122.67, "home_area": "Vancouver, WA"}
     )
+
+
+THURSDAY = datetime(2026, 9, 24, 18, 0)  # the evening before the weekend of Sat 26 / Sun 27
+
+
+@pytest.fixture
+def thursday_clock() -> FixedClock:
+    return FixedClock(THURSDAY, TZ)

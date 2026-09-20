@@ -148,21 +148,10 @@ def _end_keeping_duration(
     return iso_datetime(parse_datetime(new_start, tz) + duration)
 
 
-@tool(
-    name="get_calendar",
-    description=(
-        "Events on the shared family calendar between two dates, including ones people added by "
-        "hand, plus the free blocks (morning, afternoon, evening) per day."
-    ),
-    available=calendar_available,
-    unavailable_reason=NOT_CONFIGURED,
-)
-def get_calendar(ctx: ToolContext, args: GetCalendarInput) -> dict[str, Any]:
-    calendar = _calendar(ctx)
-    tz = ctx.clock.tz
-    start, end = parse_date_range(args.start, args.end)
-    if (end - start).days > MAX_WINDOW_DAYS:
-        raise ToolError(f"ask for at most {MAX_WINDOW_DAYS} days at a time")
+def calendar_days(
+    calendar: CalendarAPI, start: date, end: date, tz: ZoneInfo
+) -> list[dict[str, Any]]:
+    """Per-day timed events, all-day entries and free blocks. Shared with the suggestion engine."""
     window_start, _ = _day_bounds(start, tz)
     _, window_end = _day_bounds(end, tz)
     events = calendar.list_events(window_start, window_end)
@@ -189,6 +178,24 @@ def get_calendar(ctx: ToolContext, args: GetCalendarInput) -> dict[str, Any]:
             }
         )
         day += timedelta(days=1)
+    return days
+
+
+@tool(
+    name="get_calendar",
+    description=(
+        "Events on the shared family calendar between two dates, including ones people added by "
+        "hand, plus the free blocks (morning, afternoon, evening) per day."
+    ),
+    available=calendar_available,
+    unavailable_reason=NOT_CONFIGURED,
+)
+def get_calendar(ctx: ToolContext, args: GetCalendarInput) -> dict[str, Any]:
+    calendar = _calendar(ctx)
+    start, end = parse_date_range(args.start, args.end)
+    if (end - start).days > MAX_WINDOW_DAYS:
+        raise ToolError(f"ask for at most {MAX_WINDOW_DAYS} days at a time")
+    days = calendar_days(calendar, start, end, ctx.clock.tz)
     return {"calendar": ctx.settings.google_calendar_id, "days": days}
 
 
