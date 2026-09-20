@@ -5,6 +5,7 @@ from __future__ import annotations
 import typer
 
 from familydb import __version__
+from familydb.config import load_settings
 
 app = typer.Typer(
     name="familydb",
@@ -32,3 +33,11 @@ def main(
     ),
 ) -> None:
     """FamilyDB command-line interface."""
+
+
+@app.command()
+def config() -> None:
+    """Print the resolved settings with secrets masked."""
+    settings = load_settings()
+    for key, value in settings.masked().items():
+        typer.echo(f"{key}={value}")
