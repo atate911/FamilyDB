@@ -13,6 +13,31 @@ Two supported ways to run it: Docker Compose, or a Python virtualenv managed by 
 ```bash
 sudo mkdir -p /opt/familydb && sudo chown "$USER" /opt/familydb
 git clone <this repo> /opt/familydb && cd /opt/familydb
+scripts/install.sh
+```
+
+The installer asks a handful of questions, writes `.env`, installs the dependencies, creates the
+database and adds you as the first family member. It picks Docker when it finds it and a
+virtualenv otherwise, and it is safe to run again: it never overwrites `.env` without asking and
+never touches the database. Sections 2a and 2b below are the same steps by hand.
+
+Useful flags: `--mode docker|venv` to choose, `--config-only` to write `.env` and stop,
+`--dry-run` to see what it would do, `--yes` to take every default, and `--non-interactive` to
+read every answer from the environment. `scripts/install.sh --help` lists the variables it reads,
+which is what you want for a scripted VPS build:
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-... FAMILYDB_TZ=America/Vancouver HOME_AREA="Vancouver, WA" \
+  ADMIN_NAME=Sam WEB_ENABLED=true scripts/install.sh --non-interactive --mode docker
+```
+
+Three things it deliberately leaves empty, because nobody can know them before the bot is
+running: the Telegram chat id for the digest (section 10), the Google Calendar id and its token
+(section 5), and your coordinates if it could not look your town up (section 6).
+
+To set everything up by hand instead:
+
+```bash
 cp .env.example .env
 nano .env        # ANTHROPIC_API_KEY, FAMILYDB_TZ, HOME_AREA at least
 mkdir -p data

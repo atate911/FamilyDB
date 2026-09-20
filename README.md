@@ -16,6 +16,10 @@ One Python process does all of it. A chat adapter hands each message to a pipeli
 
 ## Quick start
 
+On a server, `scripts/install.sh` does all of this and the rest of the setup: it asks a few
+questions, writes `.env`, installs everything, creates the database and adds you as an admin.
+`--help` lists the options, including a non-interactive mode for a scripted build. By hand:
+
 ```bash
 uv sync
 uv run familydb db migrate

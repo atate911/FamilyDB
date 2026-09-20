@@ -5,6 +5,7 @@ FamilyDB is a family planning chat bot: Python 3.11+, SQLite, Claude through the
 ## Commands
 
 - `uv sync` installs everything. `uv run familydb --help` lists commands.
+- `scripts/install.sh` is the installer people actually use: it writes `.env`, installs, migrates and adds the first member, for Docker or a virtualenv. Anything new that needs configuring should be asked for there, with a fallback when the answer cannot be known yet.
 - Tests: `uv run pytest -q` (no network; the Anthropic API is faked in `tests/fakes.py`).
 - Lint and format: `uv run ruff check . && uv run ruff format .`
 - Live checks, need `ANTHROPIC_API_KEY`: `FAMILYDB_LIVE=1 uv run pytest -m live` and `uv run familydb debug validate-tools`.
