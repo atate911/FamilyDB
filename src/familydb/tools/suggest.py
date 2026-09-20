@@ -73,4 +73,6 @@ def report_finds(ctx: ToolContext, args: ReportFindsInput) -> dict[str, Any]:
 def suggest(ctx: ToolContext, args: SuggestInput) -> dict[str, Any]:
     from familydb.suggest.engine import run
 
-    return run(ctx, args).model_dump(mode="json")
+    # Nulls carry no information here and this result is not cached: it is sent to the model,
+    # then sent again with the reply. Leaving them out roughly halves it.
+    return run(ctx, args).model_dump(mode="json", exclude_none=True)

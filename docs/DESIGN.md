@@ -317,6 +317,7 @@ What keeps it down:
 - **Lookups and discovery run on a small model.** Extracting an address and opening hours from a page is not a judgement call, so worker turns use Haiku at low effort while chat keeps Opus. This is the largest recurring saving once web tools are on.
 - **The ideas list is capped** at `PROMPT_IDEA_LIMIT` (150). Past that the oldest are left out and the model is told to use `search_ideas`, so the cached block cannot grow without end.
 - **No scheduled job calls the model when there is nothing to do.** Retries, lookups, the digest and follow-ups all check the database first and return without touching the API; a test enforces it.
+- **The suggestion result is trimmed to what a reply can use.** It is a tool result, so it is sent to the model and then sent again with the reply, and none of it is cached. Returning every verdict for a list of sixty ideas cost about 5,200 tokens each time; returning the best dozen and half a dozen ruled out, with a count of the rest and no null fields, costs under 900. The `suggestions` table still records every verdict.
 - **Every loop is bounded**: `AGENT_MAX_ITERATIONS` for chat, `WORKER_MAX_ITERATIONS` for workers, at most three searches and three page reads per lookup, four searches per discovery, and discovery results cached twelve hours per window.
 
 Web searches are billed per search on top of tokens. Further levers, all config: lower `ANTHROPIC_EFFORT`, a smaller `ANTHROPIC_MODEL`, a lower `PROMPT_IDEA_LIMIT`, or `WEB_TOOLS_ENABLED=false` to stop lookups and discovery entirely.

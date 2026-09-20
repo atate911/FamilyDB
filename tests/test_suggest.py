@@ -489,3 +489,37 @@ def test_context_survives_a_calendar_transport_error(
     assert not result.is_error
     assert data["skipped_checks"] == ["calendar check failed: connection reset"]
     assert all(d["free_known"] is False and len(d["free"]) == 3 for d in data["days"])
+
+
+def test_the_result_stays_small_however_long_the_list_gets(
+    registry, conn, full_settings, thursday_clock, family
+) -> None:
+    """The result is sent to the model and then sent again with its reply, and is never cached."""
+    from familydb.suggest.compose import MAX_OFFERED, MAX_RULED_OUT
+
+    for number in range(60):
+        _idea(conn, f"Idea number {number} with a realistic sort of name", setting="indoor")
+    for number in range(10):
+        _idea(conn, f"Winter thing {number}", seasons=["winter"])  # ruled out: wrong season
+    ctx = _weekend_ctx(conn, full_settings, thursday_clock, family)
+    result, data = _suggest(registry, ctx)
+    offered = [c for c in data["candidates"] if c["verdict"] != "ruled_out"]
+    rejected = [c for c in data["candidates"] if c["verdict"] == "ruled_out"]
+    assert len(offered) == MAX_OFFERED and len(rejected) == MAX_RULED_OUT
+    assert data["not_shown"] == (60 - MAX_OFFERED) + (10 - MAX_RULED_OUT)
+    assert len(result.content) < 6000, "the result grew; it is paid for twice per question"
+    # Nulls are left out, but anything with something to say survives.
+    assert "null" not in result.content
+    assert all(c["reasons"] for c in data["candidates"])
+
+    # The log keeps every verdict, whatever the model was shown.
+    row = suggestions.list_recent(conn, limit=1)[0]
+    assert len(row.candidates) == 70
+
+
+def test_a_short_list_is_returned_whole(registry, conn, full_settings, thursday_clock, family):
+    _idea(conn, "Cafe A", setting="indoor")
+    _idea(conn, "Ski day", seasons=["winter"])
+    ctx = _weekend_ctx(conn, full_settings, thursday_clock, family)
+    _, data = _suggest(registry, ctx)
+    assert len(data["candidates"]) == 2 and data.get("not_shown", 0) == 0

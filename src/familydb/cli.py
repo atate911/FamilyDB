@@ -553,19 +553,21 @@ def _print_suggestion(data: dict[str, Any]) -> None:
         free = ", ".join(day["free"]) if day["free"] else "no free block"
         if not day["free_known"]:
             free += " (calendar not checked)"
-        weather = day["forecast"] or "no forecast"
-        if day["rain_chance_pct"] is not None:
+        weather = day.get("forecast") or "no forecast"
+        if day.get("rain_chance_pct") is not None:
             weather += f", {day['rain_chance_pct']}% rain"
         typer.echo(f"  {day['weekday']} {day['date']}: free {free} · {weather}")
     for candidate in data["candidates"]:
-        reasons = "; ".join(candidate["reasons"]) or "nothing against it"
+        reasons = "; ".join(candidate.get("reasons", [])) or "nothing against it"
         typer.echo(
             f"{candidate['verdict']:<9} #{candidate['idea_id']} {candidate['title']}: {reasons}"
         )
-    for find in data["web_finds"]:
+    if data.get("not_shown"):
+        typer.echo(f"          ... and {data['not_shown']} more, ranked below these")
+    for find in data.get("web_finds", []):
         when = f" ({find['dates']})" if find.get("dates") else ""
         typer.echo(f"web       {find['title']}{when}: {find['url']}")
-    if data["skipped_checks"]:
+    if data.get("skipped_checks"):
         typer.echo("skipped: " + "; ".join(data["skipped_checks"]))
 
 

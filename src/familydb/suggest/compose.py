@@ -8,6 +8,10 @@ from familydb.suggest.types import Candidate, Context, DaySummary, SuggestResult
 
 MAX_REASONS = 3
 VERDICT_ORDER = {"good": 0, "possible": 1, "ruled_out": 2}
+# The reply names three to five options and a few of the ideas that did not fit. Everything past
+# that is tokens the model pays for twice and never uses, so it is counted rather than listed.
+MAX_OFFERED = 12
+MAX_RULED_OUT = 6
 
 
 def _forecast_text(forecast: DayForecast | None) -> str | None:
@@ -74,6 +78,12 @@ def compose(
         c.model_copy(update={"reasons": c.reasons[:MAX_REASONS]})
         for c in order_candidates(candidates, by_id, recently)
     ]
+    offered = [c for c in ordered if c.verdict != "ruled_out"]
+    rejected = [c for c in ordered if c.verdict == "ruled_out"]
+    shown = offered[:MAX_OFFERED] + rejected[:MAX_RULED_OUT]
+    held_back = (len(offered) - len(offered[:MAX_OFFERED])) + (
+        len(rejected) - len(rejected[:MAX_RULED_OUT])
+    )
     start, end = context.window if context.window else (None, None)
     return SuggestResult(
         window=Window(
@@ -82,7 +92,8 @@ def compose(
             label=label,
         ),
         days=day_summaries(context),
-        candidates=ordered,
+        candidates=shown,
+        not_shown=held_back,
         web_finds=finds,
         skipped_checks=skipped,
         suggestion={"id": suggestion_id} if suggestion_id is not None else None,

@@ -86,6 +86,7 @@ class SuggestResult(BaseModel):
     candidates: list[Candidate]
     web_finds: list[WebFind]
     skipped_checks: list[str]
+    not_shown: int = 0  # further ideas ranked below the ones listed
     suggestion: dict[str, int] | None = None
 
 
