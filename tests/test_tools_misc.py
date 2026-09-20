@@ -57,9 +57,6 @@ def test_stubs_report_unavailable_without_erroring(registry, ctx) -> None:
         ("update_event", {"plan_id": 1, "start": "2026-09-27T20:00"}),
         ("delete_event", {"plan_id": 1}),
         ("get_forecast", {"start": "2026-09-26", "end": "2026-09-27"}),
-        ("lookup_place", {"idea_id": 1}),
-        ("check_open", {"idea_id": 1, "date": "2026-09-26"}),
-        ("save_place", {"idea_id": 1, "name": "Hopscotch"}),
     ]:
         result, data = _call(registry, ctx, name, payload)
         assert not result.is_error, name

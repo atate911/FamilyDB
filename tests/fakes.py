@@ -10,6 +10,7 @@ import anthropic
 import httpx2
 from anthropic.types.beta import BetaMessage
 
+from familydb.integrations.geocode import GeoPoint
 from familydb.integrations.google_calendar import CalendarEvent
 from familydb.integrations.open_meteo import DayForecast
 
@@ -198,3 +199,18 @@ def web_search_result(tool_use_id: str, results: list[dict[str, Any]]) -> dict[s
             for r in results
         ],
     }
+
+
+class FakeGeocoder:
+    """In-memory GeocoderAPI: answers from a dict of query -> GeoPoint, else a default."""
+
+    def __init__(
+        self, points: dict[str, GeoPoint] | None = None, default: GeoPoint | None = None
+    ) -> None:
+        self.points = {k.casefold(): v for k, v in (points or {}).items()}
+        self.default = default
+        self.queries: list[str] = []
+
+    def geocode(self, query: str) -> GeoPoint | None:
+        self.queries.append(query)
+        return self.points.get(query.casefold(), self.default)

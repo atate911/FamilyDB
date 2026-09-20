@@ -31,10 +31,12 @@ class App:
         *,
         calendar: Any = None,
         weather: Any = None,
+        geocoder: Any = None,
     ) -> None:
         self.settings = settings
         self._calendar = calendar
         self._weather = weather
+        self._geocoder = geocoder
         # Channels register how to deliver a text to one of their chats, keyed by channel name.
         self.senders: dict[str, Callable[[str, str], None]] = {}
         self.clock = clock or SystemClock(settings.tzinfo, southern=settings.southern_hemisphere)
@@ -64,6 +66,15 @@ class App:
 
             self._weather = OpenMeteo(self.settings)
         return self._weather
+
+    @property
+    def geocoder(self) -> Any:
+        """The keyless geocoder; always constructible."""
+        if self._geocoder is None:
+            from familydb.integrations.geocode import Geocoder
+
+            self._geocoder = Geocoder(self.settings)
+        return self._geocoder
 
     @property
     def client(self) -> anthropic.Anthropic:

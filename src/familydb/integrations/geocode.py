@@ -1,0 +1,139 @@
+"""Keyless geocoding: Nominatim for addresses, Open-Meteo's geocoder for town-level names."""
+
+from __future__ import annotations
+
+import json
+import logging
+import math
+import re
+import time
+import urllib.parse
+import urllib.request
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any, Protocol
+
+from familydb.config import Settings
+
+log = logging.getLogger(__name__)
+
+NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
+OPEN_METEO_GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
+USER_AGENT = "familydb/0.1 (self-hosted family planning bot)"
+MIN_INTERVAL = 1.0  # Nominatim's policy: at most one request per second
+EARTH_RADIUS_KM = 6371.0
+
+
+@dataclass(frozen=True)
+class GeoPoint:
+    lat: float
+    lon: float
+    label: str
+    source: str  # "nominatim" or "open-meteo"
+
+
+class GeocoderAPI(Protocol):
+    def geocode(self, query: str) -> GeoPoint | None: ...
+
+
+def is_short_name(query: str) -> bool:
+    """A town or landmark name rather than a street address."""
+    return not re.search(r"\d", query) and len(query.split()) <= 4
+
+
+def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlmb = math.radians(lon2 - lon1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlmb / 2) ** 2
+    return 2 * EARTH_RADIUS_KM * math.asin(math.sqrt(a))
+
+
+def estimate_travel(settings: Settings, lat: float, lon: float) -> tuple[int, float] | None:
+    """(minutes, km) by road from home as an estimate, or None without home coordinates."""
+    if settings.home_lat is None or settings.home_lon is None:
+        return None
+    km = haversine_km(settings.home_lat, settings.home_lon, lat, lon) * settings.road_factor
+    minutes = round(km / max(settings.travel_speed_kmh, 1.0) * 60)
+    return minutes, round(km, 1)
+
+
+class Geocoder:
+    """GeocoderAPI over Nominatim, falling back to Open-Meteo for short names. Never raises."""
+
+    def __init__(
+        self,
+        settings: Settings,
+        *,
+        sleep: Callable[[float], None] = time.sleep,
+        monotonic: Callable[[], float] = time.monotonic,
+    ) -> None:
+        self.settings = settings
+        self._sleep = sleep
+        self._monotonic = monotonic
+        self._last_call: float | None = None
+        self._cache: dict[str, GeoPoint | None] = {}
+
+    @staticmethod
+    def _fetch(url: str, headers: dict[str, str]) -> Any:
+        request = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(request, timeout=15) as response:
+            return json.loads(response.read().decode("utf-8"))
+
+    def _throttle(self) -> None:
+        if self._last_call is not None:
+            wait = MIN_INTERVAL - (self._monotonic() - self._last_call)
+            if wait > 0:
+                self._sleep(wait)
+        self._last_call = self._monotonic()
+
+    def _nominatim(self, query: str) -> GeoPoint | None:
+        params = urllib.parse.urlencode({"q": query, "format": "json", "limit": 1})
+        self._throttle()
+        try:
+            rows = self._fetch(
+                f"{NOMINATIM_URL}?{params}", {"User-Agent": USER_AGENT, "Accept-Language": "en"}
+            )
+        except Exception as exc:
+            log.warning("nominatim lookup failed for %r: %s", query, exc)
+            return None
+        if not rows:
+            return None
+        row = rows[0]
+        try:
+            label = str(row.get("display_name") or query)
+            return GeoPoint(float(row["lat"]), float(row["lon"]), label, "nominatim")
+        except (KeyError, TypeError, ValueError):
+            return None
+
+    def _open_meteo(self, query: str) -> GeoPoint | None:
+        params = urllib.parse.urlencode(
+            {"name": query, "count": 1, "language": "en", "format": "json"}
+        )
+        try:
+            payload = self._fetch(f"{OPEN_METEO_GEOCODE_URL}?{params}", {"User-Agent": USER_AGENT})
+        except Exception as exc:
+            log.warning("open-meteo geocoding failed for %r: %s", query, exc)
+            return None
+        results = payload.get("results") or [] if isinstance(payload, dict) else []
+        if not results:
+            return None
+        row = results[0]
+        try:
+            parts = [row.get("name"), row.get("admin1"), row.get("country")]
+            label = ", ".join(str(p) for p in parts if p)
+            return GeoPoint(float(row["latitude"]), float(row["longitude"]), label, "open-meteo")
+        except (KeyError, TypeError, ValueError):
+            return None
+
+    def geocode(self, query: str) -> GeoPoint | None:
+        key = " ".join(query.split()).casefold()
+        if not key:
+            return None
+        if key in self._cache:
+            return self._cache[key]
+        point = self._nominatim(query)
+        if point is None and is_short_name(query):
+            point = self._open_meteo(query)
+        self._cache[key] = point
+        return point

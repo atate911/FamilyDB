@@ -12,6 +12,8 @@ import pytest
 
 from familydb.clock import FixedClock
 from familydb.config import Settings
+from familydb.integrations.geocode import Geocoder
+from familydb.integrations.open_meteo import OpenMeteo
 from familydb.store import db, members
 from familydb.store.members import Member
 from familydb.tools import ToolContext, ToolRegistry, build_registry
@@ -79,4 +81,23 @@ def calendar_settings(settings: Settings, tmp_path: Path) -> Settings:
             "google_calendar_id": "family@group.calendar.google.com",
             "google_token_path": token,
         }
+    )
+
+
+@pytest.fixture(autouse=True)
+def no_network(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tests never reach the network: the raw fetchers raise unless a test patches them."""
+
+    def _boom(*_args, **_kwargs):
+        raise AssertionError("network access is disabled in tests")
+
+    monkeypatch.setattr(Geocoder, "_fetch", staticmethod(_boom))
+    monkeypatch.setattr(OpenMeteo, "_fetch", staticmethod(_boom))
+
+
+@pytest.fixture
+def full_settings(calendar_settings: Settings) -> Settings:
+    """Calendar configured and home coordinates set (weather and travel estimates on)."""
+    return calendar_settings.model_copy(
+        update={"home_lat": 45.63, "home_lon": -122.67, "home_area": "Vancouver, WA"}
     )
