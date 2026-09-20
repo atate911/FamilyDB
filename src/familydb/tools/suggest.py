@@ -33,6 +33,7 @@ class ReportFindsInput(BaseModel):
         "Used by the discovery worker to hand back time-bound options found on the web. "
         "Not for chat."
     ),
+    worker_only=True,
 )
 def report_finds(ctx: ToolContext, args: ReportFindsInput) -> dict[str, Any]:
     finds: list[dict[str, Any]] = ctx.scratch.setdefault("finds", [])

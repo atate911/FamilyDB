@@ -89,3 +89,17 @@ def tool_calls_for_message(conn: sqlite3.Connection, message_id: int) -> list[di
         "SELECT * FROM tool_calls WHERE message_id = ? ORDER BY id", (message_id,)
     ).fetchall()
     return [dict(row) for row in rows]
+
+
+def usage_since(conn: sqlite3.Connection, *, since: str) -> list[dict[str, Any]]:
+    """Token totals per model since a timestamp, busiest first. For `familydb debug cost`."""
+    rows = conn.execute(
+        "SELECT coalesce(served_model, model) AS model, count(*) AS calls, "
+        "coalesce(sum(input_tokens), 0) AS input_tokens, "
+        "coalesce(sum(cache_read_input_tokens), 0) AS cache_read, "
+        "coalesce(sum(cache_creation_input_tokens), 0) AS cache_write, "
+        "coalesce(sum(output_tokens), 0) AS output_tokens "
+        "FROM llm_calls WHERE created_at >= ? GROUP BY 1 ORDER BY calls DESC",
+        (since,),
+    ).fetchall()
+    return [dict(row) for row in rows]

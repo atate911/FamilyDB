@@ -72,6 +72,7 @@ class ToolSpec:
     available: Availability = always
     unavailable_reason: str = "not available yet"
     writes: bool = False
+    worker_only: bool = False  # declared to its worker turn, never to the chat model
 
     def api_definition(self) -> dict[str, Any]:
         return {
@@ -108,6 +109,7 @@ class ToolRegistry:
         available: Availability = always,
         unavailable_reason: str = "not available yet",
         writes: bool = False,
+        worker_only: bool = False,
     ) -> Callable[[Handler], Handler]:
         """Register a handler. The input model comes from its second parameter's annotation."""
 
@@ -121,6 +123,7 @@ class ToolRegistry:
                     available=available,
                     unavailable_reason=unavailable_reason,
                     writes=writes,
+                    worker_only=worker_only,
                 )
             )
             return handler
@@ -147,9 +150,15 @@ class ToolRegistry:
     ) -> list[dict[str, Any]]:
         """Declared tools sorted by name, then the server tools. Stable across chat turns.
 
-        Worker turns pass a subset in `names` and force the web tools on.
+        Worker turns pass a subset in `names` and force the web tools on. Without `names` this is
+        the chat list, which leaves out the hand-back tools only a worker ever calls: they cost
+        input tokens on every message and the chat model must not use them. The list stays the
+        same from turn to turn either way, so the prompt cache still holds.
         """
-        wanted = sorted(self._specs) if names is None else sorted(names)
+        if names is None:
+            wanted = sorted(name for name, spec in self._specs.items() if not spec.worker_only)
+        else:
+            wanted = sorted(names)
         unknown = set(wanted) - set(self._specs)
         if unknown:
             raise ValueError(f"unknown tools: {sorted(unknown)}")

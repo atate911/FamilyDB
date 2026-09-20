@@ -35,12 +35,26 @@ def cache_control(settings: Settings) -> dict[str, str]:
     return {"type": "ephemeral"}
 
 
+def trim_ideas(everything: list[Any], limit: int) -> tuple[list[Any], int]:
+    """The newest `limit` ideas in their usual order, and how many were left out."""
+    if limit <= 0 or len(everything) <= limit:
+        return everything, 0
+    return everything[-limit:], len(everything) - limit
+
+
 def build_system_blocks(conn: sqlite3.Connection, settings: Settings) -> list[dict[str, Any]]:
     """Two blocks, both cache breakpoints: the system prompt, then family context + idea list."""
     marker = cache_control(settings)
     family = render_family_context(members.list_all(conn), settings)
-    idea_lines = render_idea_list(ideas.list_for_prompt(conn))
+    everything = ideas.list_for_prompt(conn)
+    shown, hidden = trim_ideas(everything, settings.prompt_idea_limit)
+    idea_lines = render_idea_list(shown)
     context = f"{family}\n\n{IDEAS_HEADER}\n{idea_lines}"
+    if hidden:
+        context += (
+            f"\n({hidden} older idea{'s' if hidden != 1 else ''} not listed here; "
+            "use search_ideas to find them.)"
+        )
     return [
         {"type": "text", "text": load_system_prompt(), "cache_control": marker},
         {"type": "text", "text": context, "cache_control": marker},

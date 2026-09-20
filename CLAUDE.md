@@ -30,7 +30,8 @@ FamilyDB is a family planning chat bot: Python 3.11+, SQLite, Claude through the
 - Rendering is deterministic: idea lines, JSON (`store.db.to_json`, sorted keys), tool ordering (sorted by name), server tools appended last.
 - One SQLite connection per thread. Writes go inside `store.db.transaction`. Tools own their own transactions so partial progress survives a failed turn.
 - Migrations are append-only numbered files; never edit one that has been applied. Schema changes to FTS-indexed columns need an FTS rebuild in the migration.
-- Every tool is always declared to the model. Availability is checked at dispatch; unavailable tools return `{"available": false, ...}` as a non-error result so the model reports the skipped check instead of retrying.
+- Every tool is always declared to the model that may call it, and the list never varies between turns, because a varying list would cost the prompt cache. Availability is checked at dispatch; unavailable tools return `{"available": false, ...}` as a non-error result so the model reports the skipped check instead of retrying. Tools marked `worker_only` are left out of the chat list: they belong to a worker turn and would otherwise cost input tokens on every message.
+- Tokens are the running cost. Before adding anything to the cached prefix, or a scheduled job that calls the model, check `familydb debug cost` and keep the idle path free: every job must read the database and return without an API call when there is nothing to do.
 - Tool input models use `Literal` and handler checks instead of numeric or length constraints; strict schemas strip those.
 - The core is synchronous. Async adapters (Telegram) call the pipeline through `asyncio.to_thread`; anything that sends from another thread goes through the channel's thread-safe sender.
 - Tools reach external services only through `ToolContext.calendar` and `ToolContext.weather`, never by constructing clients themselves, so they stay testable with fakes.

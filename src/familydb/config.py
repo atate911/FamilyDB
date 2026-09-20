@@ -46,9 +46,14 @@ class Settings(BaseSettings):
     anthropic_effort: Effort = "medium"
     anthropic_max_tokens: int = 16000
     anthropic_fallbacks: bool = True
-    anthropic_cache_ttl: CacheTTL = "5m"
+    # An hour, because a family writes in bursts with long gaps: a five-minute cache would be
+    # cold almost every time and the whole prefix would be paid for again.
+    anthropic_cache_ttl: CacheTTL = "1h"
     agent_max_iterations: int = 8
     history_limit: int = 20
+    # The ideas list rides in the cached prompt on every message, so it cannot grow without end.
+    # Past this many, the oldest are left out and the model is told to search for them.
+    prompt_idea_limit: int = 150
     history_hours: float = 6.0
 
     # Storage and home
@@ -75,6 +80,10 @@ class Settings(BaseSettings):
     enrich_batch: int = 3
     place_stale_days: int = 30
     worker_max_iterations: int = 12
+    # Looking a place up and finding events are extraction jobs, not judgement calls, so they run
+    # on a smaller model with less thinking. Empty falls back to the chat model.
+    worker_model: str = "claude-haiku-4-5-20251001"
+    worker_effort: Effort = "low"
     travel_speed_kmh: float = 50.0
     road_factor: float = 1.3
     digest_chat_id: str | None = None

@@ -196,3 +196,12 @@ def test_web_command_reports_a_port_it_cannot_have(env: Path, monkeypatch) -> No
         port = taken.getsockname()[1]
         result = runner.invoke(app, ["web", "--port", str(port)])
     assert result.exit_code == 1 and "could not serve the page" in result.output
+
+
+def test_debug_cost_reports_the_prefix_and_what_was_spent(env: Path) -> None:
+    runner.invoke(app, ["members", "add", "Sam", "--role", "admin"])
+    result = runner.invoke(app, ["debug", "cost"])
+    assert result.exit_code == 0, result.output
+    assert "Sent with every chat message" in result.output
+    assert "tool definitions" in result.output and "in total" in result.output
+    assert "No model calls in the last 30 days." in result.output

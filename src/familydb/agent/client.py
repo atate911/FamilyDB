@@ -29,13 +29,19 @@ def make_client(settings: Settings) -> anthropic.Anthropic:
     return client
 
 
-def request_params(settings: Settings) -> dict[str, Any]:
-    """Model, limits, thinking, effort and refusal fallbacks. Identical on every call."""
+def request_params(
+    settings: Settings, *, model: str | None = None, effort: str | None = None
+) -> dict[str, Any]:
+    """Model, limits, thinking, effort and refusal fallbacks.
+
+    Identical on every chat call, which is what keeps the prompt cache warm. Worker turns pass a
+    smaller model and less thinking, and have their own cache.
+    """
     params: dict[str, Any] = {
-        "model": settings.anthropic_model,
+        "model": model or settings.anthropic_model,
         "max_tokens": settings.anthropic_max_tokens,
         "thinking": {"type": "adaptive"},
-        "output_config": {"effort": settings.anthropic_effort},
+        "output_config": {"effort": effort or settings.anthropic_effort},
     }
     if settings.anthropic_fallbacks:
         params["betas"] = [FALLBACK_BETA]

@@ -287,12 +287,59 @@ def debug_prompt(
     typer.echo(json.dumps(request, indent=2, ensure_ascii=False, default=str))
 
 
+@debug_app.command("cost")
+def debug_cost(
+    days: int = typer.Option(30, "--days", help="How far back to add up."),
+) -> None:
+    """What the model has cost lately, and what each message pays for before anyone types."""
+    import json as _json
+
+    from familydb.agent.prompt import build_system_blocks
+
+    application = build_app()
+    settings = application.settings
+    with closing(_ready(application)) as conn:
+        blocks = build_system_blocks(conn, settings)
+        tools = application.registry.api_tools(settings)
+        since = utc_iso(application.clock.now() - timedelta(days=days))
+        rows = calls.usage_since(conn, since=since)
+
+    # Four characters to the token is rough, but enough to show what is large.
+    system_tokens = sum(len(block["text"]) for block in blocks) // 4
+    tool_tokens = len(_json.dumps(tools, ensure_ascii=False)) // 4
+    worker = settings.worker_model or settings.anthropic_model
+    typer.echo("Sent with every chat message, and cached between them:")
+    typer.echo(f"  system prompt and family context  ~{system_tokens:>6,d} tokens")
+    typer.echo(f"  {len(tools)} tool definitions               ~{tool_tokens:>6,d} tokens")
+    typer.echo(f"  {'in total':<33}~{system_tokens + tool_tokens:>6,d} tokens")
+    typer.echo(
+        f"  cached for {settings.anthropic_cache_ttl}; chat runs on {settings.anthropic_model}"
+    )
+    typer.echo(f"  lookups and discovery run on {worker}")
+    if not rows:
+        typer.echo(f"\nNo model calls in the last {days} days.")
+        return
+    typer.echo(f"\nActually used in the last {days} days:")
+    header = f"  {'model':<28} {'calls':>6} {'in':>9} {'cached':>9} {'written':>9} {'out':>8}"
+    typer.echo(header)
+    for row in rows:
+        typer.echo(
+            f"  {row['model']:<28} {row['calls']:>6,d} {row['input_tokens']:>9,d} "
+            f"{row['cache_read']:>9,d} {row['cache_write']:>9,d} {row['output_tokens']:>8,d}"
+        )
+    total_in = sum(r["input_tokens"] for r in rows)
+    cached = sum(r["cache_read"] for r in rows)
+    served = total_in + cached + sum(r["cache_write"] for r in rows)
+    share = (cached / served * 100) if served else 0.0
+    typer.echo(f"  {share:.0f}% of input tokens came from the cache at a tenth of the price.")
+
+
 @debug_app.command("validate-tools")
 def debug_validate_tools() -> None:
     """Have the API validate the tool schemas via count_tokens (no generation, needs a key)."""
     application = build_app()
     settings = application.settings
-    tools = application.registry.api_tools(settings)
+    tools = application.registry.api_tools(settings, names=application.registry.names())
     try:
         result = application.client.beta.messages.count_tokens(
             model=settings.anthropic_model,

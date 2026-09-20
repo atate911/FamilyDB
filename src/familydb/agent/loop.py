@@ -59,9 +59,11 @@ def run_turn(
     messages: list[dict[str, Any]],
     tools: list[dict[str, Any]] | None = None,
     max_iterations: int | None = None,
+    model: str | None = None,
+    effort: str | None = None,
 ) -> TurnResult:
     """Drive one inbound message to a reply. `messages` is extended in place with the transcript."""
-    params = request_params(settings)
+    params = request_params(settings, model=model, effort=effort)
     tools = tools if tools is not None else registry.api_tools(settings)
     limit = max_iterations or settings.agent_max_iterations
     actions: list[dict[str, Any]] = []

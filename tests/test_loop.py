@@ -32,7 +32,9 @@ def test_plain_reply(settings, registry, ctx) -> None:
     assert request["thinking"] == {"type": "adaptive"}
     assert request["output_config"] == {"effort": "medium"}
     assert len(request["system"]) == 2
-    assert [t["name"] for t in request["tools"]] == registry.names()
+    chat_tools = [name for name in registry.names() if not registry.get(name).worker_only]
+    assert [t["name"] for t in request["tools"]] == chat_tools
+    assert "save_place" not in chat_tools  # a hand-back tool costs tokens chat never needs
     assert len(calls.recent_llm_calls(ctx.conn)) == 1
 
 

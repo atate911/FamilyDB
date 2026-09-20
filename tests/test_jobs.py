@@ -536,3 +536,24 @@ def test_scheduler_registers_the_catch_up(settings, clock) -> None:
     job = build_scheduler(App(settings, clock)).get_job("catch_up")
     assert job is not None and job.misfire_grace_time == 3600
     assert job.trigger.run_date == clock.now() + timedelta(seconds=CATCH_UP_DELAY_SECONDS)
+
+
+def test_no_job_calls_the_model_when_there_is_nothing_to_do(settings, clock, conn, family) -> None:
+    """Every scheduled job must be free when the family is quiet. The API is billed per call."""
+    from familydb.jobs.catch_up import run_catch_up
+    from familydb.jobs.follow_ups import run_follow_ups
+
+    api = fakes.FakeMessagesAPI()  # any request at all raises "no scripted response left"
+    quiet = _web_app(settings, clock, digest_chat_id="-100")
+    quiet.senders["telegram"] = lambda *_: None
+
+    assert run_retries(quiet, api=api) == 0
+    assert run_enrichment(quiet, api=api) == {"done": 0, "skipped": 0, "failed": 0, "deferred": 0}
+    assert run_follow_ups(quiet) == 0
+    assert run_catch_up(quiet, api=api) == {"follow_ups": 0, "digest": "not due"}
+    assert api.requests == []
+
+    # An enrichment run with the web off must not even reach for a client.
+    off = App(settings, clock)
+    assert run_enrichment(off, api=api)["done"] == 0
+    assert api.requests == []

@@ -42,6 +42,7 @@ uv run familydb db status         # row counts and the last model calls, with ca
 | `familydb chat TEXT [--as NAME] [--fresh]` | One message, one reply |
 | `familydb repl [--as NAME]` | Interactive chat (`/as NAME`, `/ideas`, `/quit`) |
 | `familydb debug prompt TEXT` | The exact API request that would be sent, without sending it |
+| `familydb debug cost [--days N]` | What each message pays for before anyone types, and what the last month actually used |
 | `familydb debug validate-tools` | Have the API validate the tool schemas (needs a key) |
 | `familydb google auth --client-secrets FILE` / `calendars` / `events` | One-time Google sign-in; find the calendar id; connection test |
 | `familydb enrich [--idea N] [--limit N]` | Look pending ideas up on the web now; `--idea` redoes one (needs `WEB_TOOLS_ENABLED=true`) |

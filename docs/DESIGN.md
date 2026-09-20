@@ -308,7 +308,18 @@ Design notes:
 
 ## 14. Cost
 
-Assumptions: about ten messages a day, each turn a few thousand input tokens mostly served from cache, a couple of tool round trips per message, short replies. On the Opus tier that is under ten dollars a month to start, and perhaps twenty to thirty once the list holds hundreds of ideas. Web searches are billed per search on top of tokens: a couple per new idea for enrichment and a few per suggestion question once discovery is on. Lowering effort, trimming the in-context list, or using a smaller model for routine turns and enrichment are all config changes if it ever matters.
+Every message pays for the same prefix before anyone types: the system prompt and family context (about 1,600 tokens) plus the tool definitions (about 3,400), so roughly 5,000 tokens, cached between messages. `familydb debug cost` prints that breakdown and what the last month actually used, per model, with the share that came from cache.
+
+What keeps it down:
+
+- **The cache lasts an hour, not five minutes.** A family writes in bursts with long gaps; a five-minute cache would be cold almost every time and the whole prefix would be paid for again at full price.
+- **The chat model is never sent the hand-back tools.** `save_place`, `skip_place` and `report_finds` belong to worker turns, so leaving them out of the chat request saves about 780 tokens per message without making the list vary between turns.
+- **Lookups and discovery run on a small model.** Extracting an address and opening hours from a page is not a judgement call, so worker turns use Haiku at low effort while chat keeps Opus. This is the largest recurring saving once web tools are on.
+- **The ideas list is capped** at `PROMPT_IDEA_LIMIT` (150). Past that the oldest are left out and the model is told to use `search_ideas`, so the cached block cannot grow without end.
+- **No scheduled job calls the model when there is nothing to do.** Retries, lookups, the digest and follow-ups all check the database first and return without touching the API; a test enforces it.
+- **Every loop is bounded**: `AGENT_MAX_ITERATIONS` for chat, `WORKER_MAX_ITERATIONS` for workers, at most three searches and three page reads per lookup, four searches per discovery, and discovery results cached twelve hours per window.
+
+Web searches are billed per search on top of tokens. Further levers, all config: lower `ANTHROPIC_EFFORT`, a smaller `ANTHROPIC_MODEL`, a lower `PROMPT_IDEA_LIMIT`, or `WEB_TOOLS_ENABLED=false` to stop lookups and discovery entirely.
 
 ## 15. Roadmap
 

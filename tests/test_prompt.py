@@ -25,7 +25,8 @@ def test_system_blocks_are_stable_and_cached(conn, settings, family, registry, c
     assert _dump(first) == _dump(second)
     assert _dump(tools_first) == _dump(registry.api_tools(settings))
     assert len(first) == 2
-    assert all(block["cache_control"] == {"type": "ephemeral"} for block in first)
+    marker = {"type": "ephemeral", "ttl": "1h"}  # the default: a family writes in bursts
+    assert all(block["cache_control"] == marker for block in first)
     assert "Today is" not in _dump(first)
     assert "Sam (admin)" in first[1]["text"]
     assert "the girls (kid" in first[1]["text"]
@@ -43,9 +44,9 @@ def test_adding_an_idea_changes_only_the_context_block(conn, settings, family) -
 
 
 def test_cache_ttl_setting(settings) -> None:
-    assert cache_control(settings) == {"type": "ephemeral"}
-    hourly = settings.model_copy(update={"anthropic_cache_ttl": "1h"})
-    assert cache_control(hourly) == {"type": "ephemeral", "ttl": "1h"}
+    assert cache_control(settings) == {"type": "ephemeral", "ttl": "1h"}
+    brief = settings.model_copy(update={"anthropic_cache_ttl": "5m"})
+    assert cache_control(brief) == {"type": "ephemeral"}
 
 
 def test_user_turn_carries_the_date_and_sender(clock) -> None:
@@ -106,3 +107,39 @@ def test_system_prompt_routes_questions_through_suggest() -> None:
     assert "Call suggest once" in text
     assert "Weekend digest:" in text and "How was #57" in text
     assert '"details: done"' in text
+
+
+def test_the_chat_list_leaves_out_the_worker_hand_back_tools(registry, settings) -> None:
+    import json
+
+    chat = registry.api_tools(settings)
+    names = [tool["name"] for tool in chat if "name" in tool]
+    assert "save_place" not in names and "skip_place" not in names
+    assert "report_finds" not in names
+    assert "suggest" in names and "add_idea" in names
+    # They are still registered, still dispatchable, and still declared to their own worker.
+    assert {"save_place", "skip_place", "report_finds"} <= set(registry.names())
+    worker = registry.api_tools(settings, names=["save_place", "skip_place"], force_web=True)
+    assert [t.get("name") for t in worker][:2] == ["save_place", "skip_place"]
+    # Dropping them is worth real money on every message.
+    everything = registry.api_tools(settings, names=registry.names())
+    saved = len(json.dumps(everything)) - len(json.dumps(chat))
+    assert saved > 2500
+
+
+def test_the_ideas_block_stops_growing(conn, settings, family) -> None:
+    from familydb.agent.prompt import trim_ideas
+
+    small = settings.model_copy(update={"prompt_idea_limit": 3})
+    with db.transaction(conn):
+        for number in range(5):
+            ideas.insert(conn, title=f"Idea {number}", kind="activity", now=NOW_ISO)
+    block = build_system_blocks(conn, small)[1]["text"]
+    assert "Idea 4" in block and "Idea 2" in block
+    assert "Idea 0" not in block and "Idea 1" not in block
+    assert "(2 older ideas not listed here; use search_ideas to find them.)" in block
+    # Under the limit nothing is dropped and nothing is said.
+    roomy = build_system_blocks(conn, settings)[1]["text"]
+    assert "Idea 0" in roomy and "not listed here" not in roomy
+    assert trim_ideas([1, 2, 3], 0) == ([1, 2, 3], 0)  # a limit of zero means no limit
+    assert trim_ideas([1, 2, 3], 2) == ([2, 3], 1)

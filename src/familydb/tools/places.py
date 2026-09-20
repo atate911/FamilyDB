@@ -204,6 +204,7 @@ def check_open(ctx: ToolContext, args: CheckOpenInput) -> dict[str, Any]:
         "enrichment worker; give only facts the pages state."
     ),
     writes=True,
+    worker_only=True,
 )
 def save_place(ctx: ToolContext, args: SavePlaceInput) -> dict[str, Any]:
     idea = ideas.get(ctx.conn, args.idea_id)
@@ -286,6 +287,7 @@ def save_place(ctx: ToolContext, args: SavePlaceInput) -> dict[str, Any]:
         "with a one-line reason. Used by the enrichment worker."
     ),
     writes=True,
+    worker_only=True,
 )
 def skip_place(ctx: ToolContext, args: SkipPlaceInput) -> dict[str, Any]:
     idea = ideas.get(ctx.conn, args.idea_id)

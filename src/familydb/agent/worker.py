@@ -110,5 +110,7 @@ def run_worker_turn(
         messages=messages,
         tools=worker_tools(kind, registry, settings, user_location=user_location),
         max_iterations=settings.worker_max_iterations,
+        model=settings.worker_model or settings.anthropic_model,
+        effort=settings.worker_effort,
     )
     return WorkerTurn(result, ctx)

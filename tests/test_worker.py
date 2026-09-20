@@ -119,3 +119,18 @@ def test_home_location(settings) -> None:
     assert (
         home_location(settings.model_copy(update={"home_area": "Portland"}))["city"] == "Portland"
     )
+
+
+def test_worker_turns_use_the_cheaper_model_and_less_thinking(settings, clock, conn, registry):
+    api = fakes.FakeMessagesAPI(fakes.message([fakes.text("done")]))
+    _run("enrich", api, settings, clock, registry, conn)
+    request = api.requests[0]
+    assert request["model"] == settings.worker_model == "claude-haiku-4-5-20251001"
+    assert request["output_config"] == {"effort": "low"}
+    assert request["model"] != settings.anthropic_model  # chat keeps the bigger one
+
+    # An empty WORKER_MODEL means "use the chat model for these too".
+    same = settings.model_copy(update={"worker_model": "", "worker_effort": "medium"})
+    api = fakes.FakeMessagesAPI(fakes.message([fakes.text("done")]))
+    _run("enrich", api, same, clock, registry, conn)
+    assert api.requests[0]["model"] == same.anthropic_model
