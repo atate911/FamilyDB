@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime, time
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import anthropic
 import httpx2
 from anthropic.types.beta import BetaMessage
+
+from familydb.integrations.google_calendar import CalendarEvent
 
 
 def text(value: str) -> dict[str, Any]:
@@ -78,3 +82,84 @@ def server_error() -> anthropic.InternalServerError:
 def connection_error() -> anthropic.APIConnectionError:
     request = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
     return anthropic.APIConnectionError(request=request)
+
+
+class FakeCalendar:
+    """In-memory CalendarAPI: enough of Google Calendar for the tools and their tests."""
+
+    def __init__(self, tz: ZoneInfo) -> None:
+        self.tz = tz
+        self.events: dict[str, CalendarEvent] = {}
+        self.deleted: list[str] = []
+        self._counter = 0
+
+    def _as_datetime(self, value: datetime | date, *, end: bool = False) -> datetime:
+        if isinstance(value, datetime):
+            return value
+        return datetime.combine(value, time.min, tzinfo=self.tz)
+
+    def seed(
+        self,
+        title: str,
+        start: datetime | date,
+        end: datetime | date,
+        *,
+        all_day: bool = False,
+        location: str | None = None,
+    ) -> CalendarEvent:
+        return self.insert_event(
+            title=title, start=start, end=end, all_day=all_day, location=location, description=None
+        )
+
+    def list_events(self, start: datetime, end: datetime) -> list[CalendarEvent]:
+        found = [
+            e
+            for e in self.events.values()
+            if self._as_datetime(e.start) < end and self._as_datetime(e.end) > start
+        ]
+        return sorted(found, key=lambda e: self._as_datetime(e.start))
+
+    def insert_event(
+        self,
+        *,
+        title: str,
+        start: datetime | date,
+        end: datetime | date,
+        all_day: bool,
+        location: str | None,
+        description: str | None,
+    ) -> CalendarEvent:
+        self._counter += 1
+        event = CalendarEvent(
+            id=f"evt{self._counter}",
+            title=title,
+            start=start,
+            end=end,
+            all_day=all_day,
+            location=location,
+            description=description,
+            link=f"https://calendar.example/evt{self._counter}",
+        )
+        self.events[event.id] = event
+        return event
+
+    def patch_event(self, event_id: str, **changes: Any) -> CalendarEvent:
+        current = self.events[event_id]
+        data = {
+            "id": current.id,
+            "title": changes.get("title", current.title),
+            "start": changes.get("start", current.start),
+            "end": changes.get("end", current.end),
+            "all_day": changes.get("all_day", current.all_day),
+            "location": changes.get("location", current.location),
+            "description": changes.get("description", current.description),
+            "status": current.status,
+            "link": current.link,
+        }
+        event = CalendarEvent(**data)
+        self.events[event_id] = event
+        return event
+
+    def delete_event(self, event_id: str) -> None:
+        self.events.pop(event_id)
+        self.deleted.append(event_id)

@@ -67,3 +67,16 @@ def ctx(
     conn: sqlite3.Connection, settings: Settings, clock: FixedClock, family: dict[str, Member]
 ) -> ToolContext:
     return ToolContext(conn=conn, settings=settings, clock=clock, member=family["sam"])
+
+
+@pytest.fixture
+def calendar_settings(settings: Settings, tmp_path: Path) -> Settings:
+    """Settings under which the calendar tools count as available."""
+    token = tmp_path / "google_token.json"
+    token.write_text("{}")
+    return settings.model_copy(
+        update={
+            "google_calendar_id": "family@group.calendar.google.com",
+            "google_token_path": token,
+        }
+    )

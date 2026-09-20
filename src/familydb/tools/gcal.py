@@ -1,17 +1,29 @@
-"""Google Calendar tools. Declared now so the model knows them; wired up in a later milestone."""
+"""Google Calendar tools: what is on the family calendar, and putting plans on it."""
 
 from __future__ import annotations
 
+from datetime import date, datetime, time, timedelta
 from typing import Any, Literal
+from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field
 
 from familydb.availability import calendar_available
-from familydb.errors import ToolUnavailable
+from familydb.dates import ensure_not_past, iso_date, iso_datetime, parse_date, parse_datetime
+from familydb.errors import ToolError, ToolUnavailable
+from familydb.integrations.google_calendar import CalendarAPI, CalendarEvent
+from familydb.store import ideas, plans
+from familydb.store.db import transaction
 from familydb.tools.registry import ToolContext, tool
 
-NOT_BUILT = "the Google Calendar integration is not built yet"
 NOT_CONFIGURED = "Google Calendar is not connected (no calendar id or token configured)"
+MAX_WINDOW_DAYS = 60
+DEFAULT_DURATION = timedelta(hours=2)
+BLOCKS: tuple[tuple[str, time, time], ...] = (
+    ("morning", time(8, 0), time(12, 0)),
+    ("afternoon", time(12, 0), time(17, 0)),
+    ("evening", time(17, 0), time(22, 0)),
+)
 
 
 class GetCalendarInput(BaseModel):
@@ -44,6 +56,62 @@ class DeleteEventInput(BaseModel):
     plan_id: int = Field(description="The plan number returned by create_event.")
 
 
+def _calendar(ctx: ToolContext) -> CalendarAPI:
+    if ctx.calendar is None:
+        raise ToolUnavailable(NOT_CONFIGURED)
+    return ctx.calendar
+
+
+def _day_bounds(day: date, tz: ZoneInfo) -> tuple[datetime, datetime]:
+    start = datetime.combine(day, time.min, tzinfo=tz)
+    return start, start + timedelta(days=1)
+
+
+def on_day(event: CalendarEvent, day: date, tz: ZoneInfo) -> bool:
+    if event.all_day:
+        first = event.start if isinstance(event.start, date) else event.start.date()
+        last_exclusive = event.end if isinstance(event.end, date) else event.end.date()
+        if last_exclusive <= first:
+            last_exclusive = first + timedelta(days=1)
+        return first <= day < last_exclusive
+    day_start, day_end = _day_bounds(day, tz)
+    return event.start < day_end and event.end > day_start  # type: ignore[operator]
+
+
+def free_blocks(events: list[CalendarEvent], day: date, tz: ZoneInfo) -> list[str]:
+    """Which of morning, afternoon and evening have no timed event. All-day events don't block."""
+    free: list[str] = []
+    for name, start_t, end_t in BLOCKS:
+        block_start = datetime.combine(day, start_t, tzinfo=tz)
+        block_end = datetime.combine(day, end_t, tzinfo=tz)
+        busy = any(
+            not event.all_day and event.start < block_end and event.end > block_start  # type: ignore[operator]
+            for event in events
+        )
+        if not busy:
+            free.append(name)
+    return free
+
+
+def _timed_or_all_day(
+    start_text: str, end_text: str | None, all_day: bool, tz: ZoneInfo
+) -> tuple[datetime | date, datetime | date, bool, str, str | None]:
+    """Resolve the user-facing start/end into calendar values and stored strings."""
+    date_only = len(start_text.strip()) == 10
+    if all_day or date_only:
+        start_d = parse_date(start_text.strip()[:10])
+        end_d = parse_date(end_text.strip()[:10]) if end_text else start_d
+        if end_d < start_d:
+            raise ToolError("end is before start")
+        # Google's all-day end is exclusive.
+        return start_d, end_d + timedelta(days=1), True, iso_date(start_d), iso_date(end_d)
+    start_dt = parse_datetime(start_text, tz)
+    end_dt = parse_datetime(end_text, tz) if end_text else start_dt + DEFAULT_DURATION
+    if end_dt <= start_dt:
+        raise ToolError("end must be after start")
+    return start_dt, end_dt, False, iso_datetime(start_dt), iso_datetime(end_dt)
+
+
 @tool(
     name="get_calendar",
     description=(
@@ -53,33 +121,164 @@ class DeleteEventInput(BaseModel):
     available=calendar_available,
     unavailable_reason=NOT_CONFIGURED,
 )
-def get_calendar(_ctx: ToolContext, _args: GetCalendarInput) -> dict[str, Any]:
-    raise ToolUnavailable(NOT_BUILT)
+def get_calendar(ctx: ToolContext, args: GetCalendarInput) -> dict[str, Any]:
+    calendar = _calendar(ctx)
+    tz = ctx.clock.tz
+    start = parse_date(args.start)
+    end = parse_date(args.end)
+    if end < start:
+        raise ToolError("end is before start")
+    if (end - start).days > MAX_WINDOW_DAYS:
+        raise ToolError(f"ask for at most {MAX_WINDOW_DAYS} days at a time")
+    window_start, _ = _day_bounds(start, tz)
+    _, window_end = _day_bounds(end, tz)
+    events = calendar.list_events(window_start, window_end)
+    days = []
+    day = start
+    while day <= end:
+        todays = [event for event in events if on_day(event, day, tz)]
+        days.append(
+            {
+                "date": day.isoformat(),
+                "weekday": day.strftime("%A"),
+                "events": [
+                    {
+                        "title": e.title,
+                        "start": e.start.strftime("%H:%M"),  # type: ignore[union-attr]
+                        "end": e.end.strftime("%H:%M"),  # type: ignore[union-attr]
+                        "location": e.location,
+                    }
+                    for e in todays
+                    if not e.all_day
+                ],
+                "all_day": [e.title for e in todays if e.all_day],
+                "free": free_blocks(todays, day, tz),
+            }
+        )
+        day += timedelta(days=1)
+    return {"calendar": ctx.settings.google_calendar_id, "days": days}
 
 
 @tool(
     name="create_event",
     description=(
         "Put a confirmed plan on the shared family calendar and link it to an idea. Resolve the "
-        "date yourself and echo it back to the family afterwards."
+        "date yourself and echo it back to the family afterwards. Returns the plan number."
     ),
     available=calendar_available,
     unavailable_reason=NOT_CONFIGURED,
     writes=True,
 )
-def create_event(_ctx: ToolContext, _args: CreateEventInput) -> dict[str, Any]:
-    raise ToolUnavailable(NOT_BUILT)
+def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
+    calendar = _calendar(ctx)
+    tz = ctx.clock.tz
+    if args.idea_id is not None and ideas.get(ctx.conn, args.idea_id) is None:
+        raise ToolError(f"no idea #{args.idea_id}")
+    start, end, all_day, stored_start, stored_end = _timed_or_all_day(
+        args.start, args.end, args.all_day, tz
+    )
+    ensure_not_past(start, ctx.clock)
+    event = calendar.insert_event(
+        title=args.title.strip(),
+        start=start,
+        end=end,
+        all_day=all_day,
+        location=args.location,
+        description=args.notes,
+    )
+    with transaction(ctx.conn):
+        plan = plans.insert(
+            ctx.conn,
+            title=args.title.strip(),
+            start=stored_start,
+            end=stored_end,
+            all_day=all_day,
+            idea_id=args.idea_id,
+            google_event_id=event.id,
+            calendar_id=ctx.settings.google_calendar_id,
+            location=args.location,
+            notes=args.notes,
+            created_by=ctx.member.id if ctx.member else None,
+            now=ctx.now_iso(),
+        )
+        idea = None
+        if args.idea_id is not None:
+            idea = ideas.update(ctx.conn, args.idea_id, {"status": "planned"}, now=ctx.now_iso())
+    return {
+        "plan": plan.model_dump(mode="json"),
+        "event": event.to_public(),
+        "idea": idea.model_dump(mode="json") if idea else None,
+    }
+
+
+def _cancel(ctx: ToolContext, plan: plans.Plan) -> dict[str, Any]:
+    calendar = _calendar(ctx)
+    if plan.google_event_id:
+        calendar.delete_event(plan.google_event_id)
+    with transaction(ctx.conn):
+        updated = plans.update(ctx.conn, plan.id, {"status": "cancelled"}, now=ctx.now_iso())
+        idea = None
+        if plan.idea_id is not None:
+            current = ideas.get(ctx.conn, plan.idea_id)
+            if current is not None and current.status == "planned":
+                idea = ideas.update(ctx.conn, plan.idea_id, {"status": "idea"}, now=ctx.now_iso())
+    return {
+        "plan": updated.model_dump(mode="json") if updated else None,
+        "idea": idea.model_dump(mode="json") if idea else None,
+    }
 
 
 @tool(
     name="update_event",
-    description="Change a plan on the calendar: new time, title, place, or cancel it.",
+    description="Change a plan on the calendar: new time, title, place, notes, or cancel it.",
     available=calendar_available,
     unavailable_reason=NOT_CONFIGURED,
     writes=True,
 )
-def update_event(_ctx: ToolContext, _args: UpdateEventInput) -> dict[str, Any]:
-    raise ToolUnavailable(NOT_BUILT)
+def update_event(ctx: ToolContext, args: UpdateEventInput) -> dict[str, Any]:
+    calendar = _calendar(ctx)
+    plan = plans.get(ctx.conn, args.plan_id)
+    if plan is None:
+        raise ToolError(f"no plan #{args.plan_id}")
+    if plan.status == "cancelled":
+        raise ToolError(f"plan #{plan.id} is cancelled; create a new event instead")
+    if args.status == "cancelled":
+        return _cancel(ctx, plan)
+
+    changes: dict[str, Any] = {}
+    patch: dict[str, Any] = {}
+    if args.title is not None:
+        changes["title"] = args.title.strip()
+        patch["title"] = changes["title"]
+    if args.location is not None:
+        changes["location"] = args.location
+        patch["location"] = args.location
+    if args.notes is not None:
+        changes["notes"] = args.notes
+        patch["description"] = args.notes
+    if args.status is not None:
+        changes["status"] = args.status
+    if args.start is not None or args.end is not None or args.all_day is not None:
+        all_day = plan.all_day if args.all_day is None else args.all_day
+        start_text = args.start if args.start is not None else plan.start
+        end_text = args.end if args.end is not None else (plan.end if args.start is None else None)
+        start, end, all_day, stored_start, stored_end = _timed_or_all_day(
+            start_text, end_text, all_day, ctx.clock.tz
+        )
+        ensure_not_past(start, ctx.clock)
+        changes.update({"start": stored_start, "end": stored_end, "all_day": all_day})
+        patch.update({"start": start, "end": end, "all_day": all_day})
+    if not changes:
+        raise ToolError("nothing to change")
+    event = None
+    if patch and plan.google_event_id:
+        event = calendar.patch_event(plan.google_event_id, **patch)
+    with transaction(ctx.conn):
+        updated = plans.update(ctx.conn, plan.id, changes, now=ctx.now_iso())
+    return {
+        "plan": updated.model_dump(mode="json") if updated else None,
+        "event": event.to_public() if event else None,
+    }
 
 
 @tool(
@@ -89,5 +288,10 @@ def update_event(_ctx: ToolContext, _args: UpdateEventInput) -> dict[str, Any]:
     unavailable_reason=NOT_CONFIGURED,
     writes=True,
 )
-def delete_event(_ctx: ToolContext, _args: DeleteEventInput) -> dict[str, Any]:
-    raise ToolUnavailable(NOT_BUILT)
+def delete_event(ctx: ToolContext, args: DeleteEventInput) -> dict[str, Any]:
+    plan = plans.get(ctx.conn, args.plan_id)
+    if plan is None:
+        raise ToolError(f"no plan #{args.plan_id}")
+    if plan.status == "cancelled":
+        return {"plan": plan.model_dump(mode="json"), "note": "already cancelled"}
+    return _cancel(ctx, plan)

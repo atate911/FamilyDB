@@ -9,6 +9,7 @@ import sqlite3
 import sys
 import threading
 from contextlib import closing
+from datetime import timedelta
 from pathlib import Path
 from uuid import uuid4
 
@@ -24,7 +25,8 @@ from familydb.app import App, build_app
 from familydb.channels.console import DEFAULT_CHAT, one_shot, run_repl
 from familydb.config import load_settings
 from familydb.dates import utc_iso
-from familydb.errors import AgentError
+from familydb.errors import AgentError, FamilyDBError
+from familydb.integrations import google_calendar
 from familydb.store import calls, db, ideas, members
 from familydb.store.members import Member
 from familydb.tools import ToolContext
@@ -43,6 +45,8 @@ app.add_typer(members_app, name="members")
 app.add_typer(ideas_app, name="ideas")
 debug_app = typer.Typer(help="Inspection commands.", no_args_is_help=True)
 app.add_typer(debug_app, name="debug")
+google_app = typer.Typer(help="Google Calendar setup.", no_args_is_help=True)
+app.add_typer(google_app, name="google")
 
 log = logging.getLogger(__name__)
 
@@ -367,3 +371,59 @@ def run() -> None:
     log.info("no chat channel configured; waiting. Use `familydb chat` or `familydb repl`.")
     stop.wait()
     log.info("stopped")
+
+
+@google_app.command("auth")
+def google_auth(
+    client_secrets: Path = typer.Option(
+        ..., "--client-secrets", help="OAuth desktop-app credentials JSON from Google Cloud."
+    ),
+) -> None:
+    """Sign in once on a machine with a browser. Saves the token to GOOGLE_TOKEN_PATH."""
+    application = build_app()
+    token_path = Path(application.settings.google_token_path)
+    if not client_secrets.exists():
+        raise typer.BadParameter(f"{client_secrets} does not exist")
+    google_calendar.run_auth_flow(client_secrets, token_path)
+    typer.echo(f"token saved to {token_path}")
+    typer.echo("If this is not the server, copy that file into the server's data folder.")
+
+
+@google_app.command("calendars")
+def google_calendars() -> None:
+    """List the calendars the signed-in account can see, with their ids."""
+    application = build_app()
+    try:
+        creds = google_calendar.load_credentials(Path(application.settings.google_token_path))
+        rows = google_calendar.list_calendars(creds)
+    except FamilyDBError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    for row in rows:
+        flags = row["access"] or ""
+        if row["primary"]:
+            flags += ", primary"
+        typer.echo(f"{row['id']}    {row['summary']}    ({flags})")
+
+
+@google_app.command("events")
+def google_events(days: int = typer.Option(7, "--days", help="How many days ahead.")) -> None:
+    """Show upcoming events on the configured family calendar (a connection test)."""
+    application = build_app()
+    calendar = application.calendar
+    if calendar is None:
+        typer.echo(
+            "Google Calendar is not configured; set GOOGLE_CALENDAR_ID and run auth.", err=True
+        )
+        raise typer.Exit(code=1)
+    now = application.clock.now()
+    try:
+        events = calendar.list_events(now, now + timedelta(days=days))
+    except FamilyDBError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    if not events:
+        typer.echo("no events in that window")
+    for event in events:
+        when = event.start.isoformat() if event.all_day else event.start.strftime("%a %d %b %H:%M")
+        typer.echo(f"{when}  {event.title}" + (f"  @ {event.location}" if event.location else ""))
