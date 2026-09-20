@@ -2,7 +2,7 @@
 
 A private family assistant that lives in our chat app. It remembers the things we say we'd like to do, puts confirmed plans on the shared Google Calendar, and suggests what to do this weekend based on the calendar, the weather and the ideas we've collected.
 
-**Status:** the foundation and the brain are built and usable from a terminal with an Anthropic API key: the store, the tools, the model loop with prompt caching, and a console chat. Telegram, Google Calendar, weather, place lookups and the staged suggestion engine are the next milestones. The design and roadmap are in [docs/DESIGN.md](docs/DESIGN.md); home-server setup is in [RUNBOOK.md](RUNBOOK.md).
+**Status:** usable by the family. The Telegram channel, the Google Calendar integration (plans created, moved and cancelled from chat, free time read live), the weather forecast and automatic retries are in, on top of the store, the tools, the model loop with prompt caching and the console chat. Next: looking up each idea's place details, checking hours and travel time, web discovery and the staged suggestion engine. The design and roadmap are in [docs/DESIGN.md](docs/DESIGN.md); home-server setup is in [RUNBOOK.md](RUNBOOK.md).
 
 ## How it works
 
@@ -34,7 +34,7 @@ uv run familydb db status         # row counts and the last model calls, with ca
 
 | Command | What it does |
 |---|---|
-| `familydb db migrate` / `status` / `backup DEST` | Create or upgrade the schema; show counts and recent model calls; online backup |
+| `familydb db migrate` / `status` / `backup DEST` / `retry-failed [--reset]` | Create or upgrade the schema; show counts and recent model calls; online backup; retry failed messages now |
 | `familydb members add NAME --role admin\|member\|kid [--channel --channel-user-id]` | Add a person; kids need no channel |
 | `familydb members list`, `familydb ideas list [--all] [--json]` | Inspect; the ideas lines are exactly what the model sees |
 | `familydb tool NAME --json '{...}'`, `--list`, `--schema` | Run any tool without the model |
@@ -42,7 +42,8 @@ uv run familydb db status         # row counts and the last model calls, with ca
 | `familydb repl [--as NAME]` | Interactive chat (`/as NAME`, `/ideas`, `/quit`) |
 | `familydb debug prompt TEXT` | The exact API request that would be sent, without sending it |
 | `familydb debug validate-tools` | Have the API validate the tool schemas (needs a key) |
-| `familydb run` | The long-running service: migrates, then serves the configured channels |
+| `familydb google auth --client-secrets FILE` / `calendars` / `events` | One-time Google sign-in; find the calendar id; connection test |
+| `familydb run` | The long-running service: migrates, starts the retry scheduler, then polls Telegram (or waits when no token is set) |
 | `familydb config` | Resolved settings with secrets masked |
 
 ## Layout
@@ -55,7 +56,9 @@ src/familydb/
   agent/          prompt builder, history, the tool loop, prompts/system.md
   tools/          registry, strict schemas, ideas/outcomes/now tools, calendar/weather/place stubs
   store/          SQLite connection, migrations/, one repository per table
-  channels/       message shapes and the console channel
+  channels/       message shapes, the console channel and the Telegram channel
+  integrations/   Google Calendar and Open-Meteo clients
+  jobs/           the scheduler and the retry job
 tests/            pytest suite with a scripted fake of the Anthropic API
 deploy/           systemd unit; Dockerfile and docker-compose.yml at the root
 ```

@@ -61,24 +61,27 @@ Without uv: `python3 -m venv .venv && .venv/bin/pip install .` gives the same `.
 5. `familydb chat "tell me about #1"` answers from history.
 6. `familydb db status` shows `cache_read` greater than zero on the second call. If it stays zero, see troubleshooting.
 7. `familydb debug validate-tools` confirms the API accepts every tool schema.
+8. `familydb tool --list` shows which integrations are available; the calendar and weather rows flip to `available` once sections 5 and 6 are done.
 
-## 4. Telegram (next milestone; steps to prepare)
+## 4. Telegram
 
-1. In Telegram, talk to BotFather: `/newbot`, pick a name and a username, copy the token into `TELEGRAM_BOT_TOKEN`.
-2. For a family group, also send BotFather `/setprivacy` and choose Disable, so the bot sees every message in the group. Then add the bot to the group.
-3. Each family member sends the bot a message. The first reply says "your id is 12345"; add them with `familydb members add NAME --channel telegram --channel-user-id 12345`.
+1. In Telegram, talk to BotFather: `/newbot`, pick a name and a username, copy the token into `TELEGRAM_BOT_TOKEN`, then start (or restart) the bot with `familydb run`.
+2. Each family member sends the bot a direct message. The reply says "your id on this channel is 12345"; add them with `familydb members add NAME --channel telegram --channel-user-id 12345`. Their next message gets a real answer.
+3. For a family group, send BotFather `/setprivacy` and choose Disable so the bot sees every message, then add the bot to the group. A dedicated "Ideas & Plans" group works best. In a busier group set `TELEGRAM_REQUIRE_MENTION=true` so it only answers when @mentioned or replied to.
+4. Long polling means nothing is exposed; if the server is off, Telegram keeps updates for a day and the bot catches up on restart without double-processing.
 
-## 5. Google Calendar (next milestone; steps to prepare)
+## 5. Google Calendar
 
-1. Create a Google Cloud project, enable the Google Calendar API.
-2. Configure the OAuth consent screen as External and set the publishing status to **In production**. Left in Testing, refresh tokens expire after seven days and the bot will stop writing to the calendar every week. The "unverified app" warning during consent is expected for a private app.
+1. Create a Google Cloud project and enable the Google Calendar API.
+2. Configure the OAuth consent screen as External and set the publishing status to **In production**. Left in Testing, refresh tokens expire after seven days and the bot stops writing to the calendar every week. The "unverified app" warning during consent is expected for a private app.
 3. Create OAuth credentials of type Desktop app and download the JSON.
-4. When the integration ships, run `familydb google auth` on a laptop, sign in as the account that owns the shared family calendar, and copy the resulting `google_token.json` into `data/`.
-5. Set `GOOGLE_CALENDAR_ID` to the calendar's id (Calendar settings, "Integrate calendar"). A dedicated family Google account keeps the bot's token separate from anyone's personal mail.
+4. On a laptop with a browser (not inside Docker), run `uv run familydb google auth --client-secrets ~/Downloads/client_secret_XXX.json` and sign in as the account that owns the shared family calendar. It writes `data/google_token.json`.
+5. Run `uv run familydb google calendars` to list the calendars and their ids, and put the family calendar's id in `GOOGLE_CALENDAR_ID`. A dedicated family Google account keeps the bot's token separate from anyone's personal mail.
+6. Copy `google_token.json` into the server's `data/` folder (it must be readable by the bot's user), restart the bot, and check with `familydb google events`. From chat, "we're going to the symphony next Saturday at 8" now creates the event; "move that to Sunday" and "cancel the symphony" update it.
 
-## 6. Weather (next milestone)
+## 6. Weather
 
-Set `HOME_LAT` and `HOME_LON`; nothing else is needed. Open-Meteo has no API key.
+Set `HOME_LAT` and `HOME_LON` (and `WEATHER_UNITS=imperial` for Fahrenheit). Open-Meteo needs no API key. Check with `familydb tool get_forecast --json '{"start": "2026-09-26", "end": "2026-09-27"}'`.
 
 ## 7. Backups
 
@@ -106,7 +109,8 @@ Migrations run automatically on start. Never edit an applied migration; add a ne
 
 - **`cache_read` stays 0 in `db status`.** Something volatile is in the cached prefix. `familydb debug prompt "hi"` prints the request: the two `system` blocks and the `tools` list must be byte-identical between two runs. Also, the cache expires after five minutes of quiet; set `ANTHROPIC_CACHE_TTL=1h` if usage is bursty.
 - **`database is locked`.** Two processes writing at once. Run one bot process; the CLI can be used alongside it (short transactions, busy timeout), but not a second `familydb run`.
-- **"Saved your message, but I couldn't process it right now."** The model call failed. `journalctl` or `docker compose logs` has the error; the message is stored with status `failed` and will be retried once the retry job ships (`familydb db status` counts them).
+- **"Saved your message, but I couldn't process it right now."** The model call failed. `journalctl` or `docker compose logs` has the error. The running bot retries the message every `RETRY_INTERVAL_MINUTES` up to `RETRY_MAX_ATTEMPTS` times and delivers the answer when it succeeds; `familydb db retry-failed` does it by hand, and `--reset` re-arms messages that gave up after a configuration problem you have since fixed.
+- **"Google credentials are expired or revoked."** Run `familydb google auth` again on a laptop and copy the new token over. If this happens weekly, the OAuth consent screen is still in Testing (section 5, step 2).
 - **"no family members yet".** Add an admin with `familydb members add NAME --role admin`.
 - **"Sorry, I only talk to the family."** The sender is not in `members` for that channel; the reply includes the id to add.
 - **A refusal.** Rare. `llm_calls.stop_reason` is `refusal`; server-side fallbacks are on by default (`ANTHROPIC_FALLBACKS`), so it means every model declined.

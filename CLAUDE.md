@@ -16,7 +16,9 @@ FamilyDB is a family planning chat bot: Python 3.11+, SQLite, Claude through the
 - `src/familydb/agent/`: `prompt.py` builds the cached system blocks, `history.py` rebuilds the chat, `loop.py` is the manual tool loop, `prompts/system.md` is the product spec the model follows.
 - `src/familydb/tools/`: `registry.py` declares and dispatches tools; one module per tool group. Stubs stay declared with real input models until their integration lands.
 - `src/familydb/store/`: `db.py` (connection, transactions, JSON, migrations), `migrations/*.sql`, one repository module per table returning pydantic records.
-- `src/familydb/channels/`: message dataclasses and the console channel. Telegram goes here.
+- `src/familydb/channels/`: message dataclasses, the console channel and the Telegram channel (`asyncio.to_thread` into the sync pipeline).
+- `src/familydb/integrations/`: Google Calendar and Open-Meteo clients behind small Protocols; tests use the fakes in `tests/fakes.py`.
+- `src/familydb/jobs/`: the APScheduler `BackgroundScheduler` and the retry job; jobs open their own connection with `app.connect()` and reply through `app.senders`.
 
 ## Rules that keep it working
 
@@ -26,5 +28,6 @@ FamilyDB is a family planning chat bot: Python 3.11+, SQLite, Claude through the
 - Migrations are append-only numbered files; never edit one that has been applied. Schema changes to FTS-indexed columns need an FTS rebuild in the migration.
 - Every tool is always declared to the model. Availability is checked at dispatch; unavailable tools return `{"available": false, ...}` as a non-error result so the model reports the skipped check instead of retrying.
 - Tool input models use `Literal` and handler checks instead of numeric or length constraints; strict schemas strip those.
-- The core is synchronous. Async adapters (Telegram) call the pipeline through `asyncio.to_thread`.
+- The core is synchronous. Async adapters (Telegram) call the pipeline through `asyncio.to_thread`; anything that sends from another thread goes through the channel's thread-safe sender.
+- Tools reach external services only through `ToolContext.calendar` and `ToolContext.weather`, never by constructing clients themselves, so they stay testable with fakes.
 - Keep replies short; edit `prompts/system.md` to change behaviour before touching code.

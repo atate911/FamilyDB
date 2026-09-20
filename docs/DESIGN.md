@@ -1,6 +1,6 @@
 # FamilyDB design
 
-Status: living design. Pass 1 is built (store, tools, agent loop with prompt caching, console chat); see the README for what works today. Section 16 lists what is decided and what is still open.
+Status: living design. Phases 0 and 1 are built (store, tools, agent loop with prompt caching, console and Telegram channels, Google Calendar, weather, retries); see the README for what works today. Section 16 lists what is decided and what is still open.
 
 ## 1. What it is
 
@@ -304,8 +304,8 @@ Assumptions: about ten messages a day, each turn a few thousand input tokens mos
 ## 15. Roadmap
 
 - **Phase 0, skeleton.** Done. Repo layout, config, the full SQLite schema including `places` and `suggestions`, the tool registry with every tool declared (calendar, weather and place stubs answer "not available yet" gracefully), CLI, tests, Docker Compose and a systemd unit. The suggestion stages live in the system prompt for now and become modules in Phase 2.
-- **Phase 1, MVP.** In progress. Done: the agent loop with prompt caching, capture with open kinds and participants, describe and search ideas, a console chat. Remaining: the Telegram adapter, create events on the calendar, suggestions from calendar plus forecast plus the list. Usable by the family once Telegram lands.
-- **Phase 2, checked suggestions.** Enrichment worker with web search and fetch, places cache, open-hours check, travel time, the discover stage, verdict logging, Thursday digest, day-after outcome prompts, retries.
+- **Phase 1, MVP.** Done. The agent loop with prompt caching, capture with open kinds and participants, describe and search ideas, the console chat, the Telegram channel, Google Calendar (create, move and cancel plans; free blocks per day), the Open-Meteo forecast, and bounded automatic retries of failed messages.
+- **Phase 2, checked suggestions.** Enrichment worker with web search and fetch, places cache, open-hours check, travel time, the discover stage, verdict logging, Thursday digest, day-after outcome prompts.
 - **Phase 3, richer data.** Google Places, routing API, link previews for pasted URLs, voice notes, photos.
 - **Phase 4, surfaces.** Read-only web page of the list, then editing; optional extra channels; OpenClaw or Claude connectors as alternative front ends over the same tools.
 - **Later.** Semantic search with embeddings, a recurring date-night planner, budgets, a trip-planning mode.
@@ -337,11 +337,13 @@ src/familydb/
   pipeline.py            one inbound message end to end
   agent/                 client.py, prompt.py, render.py, history.py, loop.py, prompts/system.md
   tools/                 registry.py, schema.py, ideas.py, outcomes.py, now.py, web.py,
-                         gcal.py, weather.py, places.py (stubs until their integrations land)
+                         gcal.py, weather.py, places.py (a stub until enrichment lands)
   store/                 db.py, migrations/, members.py, ideas.py, messages.py, outcomes.py,
                          calls.py, places.py, plans.py, suggestions.py
-  channels/              base.py, console.py; telegram.py comes next
+  channels/              base.py, console.py, telegram.py
+  integrations/          google_calendar.py, open_meteo.py
+  jobs/                  scheduler.py, retry_failed.py
 tests/                   pytest suite with a scripted fake of the Anthropic API; test_live.py opt-in
 ```
 
-Later milestones add `integrations/` (google_calendar.py, open_meteo.py, geocode.py), `jobs/` (enrich.py, weekend_digest.py, follow_ups.py, retry_failed.py) and `suggest/` (one module per stage).
+Later milestones add `integrations/geocode.py`, more jobs (enrich.py, weekend_digest.py, follow_ups.py) and `suggest/` (one module per stage).
