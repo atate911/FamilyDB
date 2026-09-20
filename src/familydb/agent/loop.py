@@ -84,6 +84,11 @@ def run_turn(
                 retryable=exc.status_code >= 500,
                 request_id=_request_id(exc),
             ) from exc
+        except TypeError as exc:
+            # The SDK raises a bare TypeError when it finds no credentials at all.
+            if "authentication" not in str(exc).lower():
+                raise
+            raise AgentError(f"no API credentials configured: {exc}", retryable=False) from exc
         duration_ms = int((time.monotonic() - started) * 1000)
 
         usage = _usage(response)

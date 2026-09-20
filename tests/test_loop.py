@@ -132,3 +132,15 @@ def test_api_errors_become_agent_errors(settings, registry, ctx, error, retryabl
     with pytest.raises(AgentError) as info:
         _run(api, settings, registry, ctx)
     assert info.value.retryable is retryable
+
+
+def test_missing_credentials_is_a_configuration_error(settings, registry, ctx) -> None:
+    api = fakes.FakeMessagesAPI(
+        TypeError("Could not resolve authentication method. Expected one of api_key ...")
+    )
+    with pytest.raises(AgentError) as info:
+        _run(api, settings, registry, ctx)
+    assert info.value.retryable is False
+    api = fakes.FakeMessagesAPI(TypeError("unrelated"))
+    with pytest.raises(TypeError):
+        _run(api, settings, registry, ctx)

@@ -3,7 +3,7 @@ import json
 from familydb.app import App
 from familydb.channels.base import IncomingMessage
 from familydb.channels.console import one_shot, run_repl
-from familydb.pipeline import RETRY_REPLY, handle_incoming
+from familydb.pipeline import CONFIG_REPLY, RETRY_REPLY, handle_incoming
 from familydb.store import calls, ideas, messages
 from tests import fakes
 
@@ -122,3 +122,12 @@ def test_repl_commands_and_messages(settings, clock, conn, family) -> None:
         json.loads(json.dumps(api.requests[0]["messages"][0]["content"]))[1]["text"]
         == "[Alex] hello"
     )
+
+
+def test_configuration_errors_get_the_admin_reply(settings, clock, conn, family) -> None:
+    app = _app(settings, clock)
+    api = fakes.FakeMessagesAPI(fakes.bad_request_error())
+    reply = handle_incoming(app, _telegram("hi", "10"), api=api, conn=conn)
+    assert reply.status == "failed"
+    assert reply.text == CONFIG_REPLY
+    assert messages.get(conn, reply.in_message_id).status == "failed"

@@ -319,6 +319,8 @@ def chat(
         return
     typer.echo(reply.text)
     if reply.status in {"failed", "unknown_sender"}:
+        if reply.status == "failed" and not application.settings.anthropic_api_key:
+            typer.echo("hint: ANTHROPIC_API_KEY is not set (see .env.example)", err=True)
         raise typer.Exit(code=1)
 
 
