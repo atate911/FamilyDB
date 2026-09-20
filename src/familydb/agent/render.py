@@ -6,7 +6,12 @@ cached prompt prefix, and any variation defeats the cache.
 
 from __future__ import annotations
 
+from typing import Any
+
+from familydb.clock import Clock
+from familydb.config import Settings
 from familydb.store.ideas import Idea
+from familydb.store.members import Member
 
 
 def _fmt_minutes(minutes: int) -> str:
@@ -57,3 +62,36 @@ def render_idea_list(ideas: list[Idea]) -> str:
     if not ideas:
         return "(no ideas yet)"
     return "\n".join(render_idea_line(idea) for idea in ideas)
+
+
+def render_family_context(family: list[Member], settings: Settings) -> str:
+    """The stable family block: who, where, which integrations exist. No dates, no sender."""
+    lines = ["Family:"]
+    for member in family:
+        if not member.active:
+            continue
+        if member.role == "kid":
+            lines.append(f"- {member.display_name} (kid, does not message the bot)")
+        else:
+            lines.append(f"- {member.display_name} ({member.role})")
+    if len(lines) == 1:
+        lines.append("- (no members configured yet)")
+    lines.append(f"Home area: {settings.home_area or 'not set'}")
+    lines.append(f"Timezone: {settings.tz}")
+    calendar = "connected" if settings.google_calendar_id else "not connected"
+    weather = "configured" if settings.home_lat is not None else "not configured"
+    web = "available" if settings.web_tools_enabled else "not available"
+    lines.append(f"Calendar: {calendar}. Weather: {weather}. Web tools: {web}.")
+    return "\n".join(lines)
+
+
+def render_user_turn(sender: str, text: str, clock: Clock) -> list[dict[str, Any]]:
+    """The current message as content blocks: the date line, then the sender-prefixed text."""
+    return [
+        {"type": "text", "text": f"Today is {clock.describe()}."},
+        {"type": "text", "text": f"[{sender}] {text}"},
+    ]
+
+
+def render_history_line(sender: str, text: str) -> str:
+    return f"[{sender}] {text}"

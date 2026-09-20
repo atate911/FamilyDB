@@ -8,10 +8,14 @@ import sys
 from contextlib import closing
 from pathlib import Path
 
+import anthropic
 import typer
 
 from familydb import __version__
-from familydb.agent.render import render_idea_line
+from familydb.agent.client import request_params
+from familydb.agent.history import load_history
+from familydb.agent.prompt import build_messages, build_system_blocks
+from familydb.agent.render import render_idea_line, render_user_turn
 from familydb.app import App, build_app
 from familydb.config import load_settings
 from familydb.store import calls, db, ideas, members
@@ -30,6 +34,8 @@ ideas_app = typer.Typer(help="The ideas list.", no_args_is_help=True)
 app.add_typer(db_app, name="db")
 app.add_typer(members_app, name="members")
 app.add_typer(ideas_app, name="ideas")
+debug_app = typer.Typer(help="Inspection commands.", no_args_is_help=True)
+app.add_typer(debug_app, name="debug")
 
 COUNTED_TABLES = ("members", "ideas", "places", "plans", "outcomes", "messages", "tool_calls")
 
@@ -227,3 +233,54 @@ def tool_cmd(
     typer.echo(result.content, err=result.is_error)
     if result.is_error:
         raise typer.Exit(code=1)
+
+
+@debug_app.command("prompt")
+def debug_prompt(
+    text: str = typer.Argument(..., help="The message to build a request for."),
+    as_member: str | None = typer.Option(None, "--as", help="Act as this family member."),
+    chat_id: str = typer.Option("console", "--chat", help="Chat whose history to include."),
+) -> None:
+    """Print the exact request that would be sent for TEXT, without calling the API."""
+    application = build_app()
+    settings = application.settings
+    with closing(_ready(application)) as conn:
+        member = _acting_member(application, conn, as_member)
+        sender = member.display_name if member else "someone"
+        system = build_system_blocks(conn, settings)
+        history = load_history(
+            conn,
+            chat_id,
+            clock=application.clock,
+            limit=settings.history_limit,
+            since_hours=settings.history_hours,
+        )
+        messages = build_messages(history, render_user_turn(sender, text, application.clock))
+        request = {
+            **request_params(settings),
+            "system": system,
+            "tools": application.registry.api_tools(settings),
+            "messages": messages,
+        }
+    typer.echo(json.dumps(request, indent=2, ensure_ascii=False, default=str))
+
+
+@debug_app.command("validate-tools")
+def debug_validate_tools() -> None:
+    """Have the API validate the tool schemas via count_tokens (no generation, needs a key)."""
+    application = build_app()
+    settings = application.settings
+    tools = application.registry.api_tools(settings)
+    try:
+        result = application.client.beta.messages.count_tokens(
+            model=settings.anthropic_model,
+            tools=tools,
+            messages=[{"role": "user", "content": "hello"}],
+        )
+    except anthropic.APIError as exc:
+        typer.echo(f"validation failed: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(
+        f"{len(tools)} tools accepted by {settings.anthropic_model}; "
+        f"prompt would be {result.input_tokens} input tokens"
+    )
