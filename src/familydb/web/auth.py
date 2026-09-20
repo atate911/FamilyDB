@@ -34,6 +34,8 @@ log = logging.getLogger(__name__)
 bp = Blueprint("auth", __name__)
 
 SESSION_KEY = "signed_in"
+# A browser or a monitor asking to read gets the login page; anything else gets a plain refusal.
+SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 MAX_ATTEMPTS = 5
 LOCKOUT_MINUTES = 15
 # Endpoints reachable without signing in. "static" covers the stylesheet on the login page.
@@ -127,7 +129,7 @@ def require_login() -> Response | None:
         return None
     if request.endpoint in OPEN_ENDPOINTS or session.get(SESSION_KEY):
         return None
-    if request.method != "GET":
+    if request.method not in SAFE_METHODS:
         return Response("sign in first", status=401, mimetype="text/plain")
     return redirect(url_for("auth.login", next=request.full_path.rstrip("?")))
 

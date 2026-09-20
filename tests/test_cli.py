@@ -177,3 +177,22 @@ def test_follow_ups_command(env: Path) -> None:
     result = runner.invoke(app, ["follow-ups", "--now"])
     assert result.exit_code == 0, result.output
     assert result.output.strip() == "asked about 0 plan(s)"
+
+
+def test_web_command_refuses_a_page_open_to_the_network(env: Path, monkeypatch) -> None:
+    monkeypatch.setenv("WEB_HOST", "0.0.0.0")
+    result = runner.invoke(app, ["web"])
+    assert result.exit_code == 1
+    assert "WEB_PASSWORD" in result.output and "WEB_ALLOW_NO_PASSWORD" in result.output
+
+
+def test_web_command_reports_a_port_it_cannot_have(env: Path, monkeypatch) -> None:
+    import socket
+
+    monkeypatch.setenv("WEB_PASSWORD", "shared")
+    with socket.socket() as taken:
+        taken.bind(("127.0.0.1", 0))
+        taken.listen(1)
+        port = taken.getsockname()[1]
+        result = runner.invoke(app, ["web", "--port", str(port)])
+    assert result.exit_code == 1 and "could not serve the page" in result.output

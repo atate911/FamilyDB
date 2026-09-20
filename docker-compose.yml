@@ -8,8 +8,33 @@ services:
     environment:
       FAMILYDB_PATH: /data/familydb.sqlite3
       GOOGLE_TOKEN_PATH: /data/google_token.json
+      # Inside a container the page has to bind every interface; the ports mapping below decides
+      # who can actually reach it. WEB_ENABLED and WEB_PASSWORD come from .env.
+      WEB_HOST: 0.0.0.0
+      WEB_PORT: 8080
     volumes:
       # The host folder must be writable by uid 1000 (the container's familydb user).
       - ./data:/data
+    ports:
+      # Reachable from this machine only. Drop the 127.0.0.1 prefix to serve the local network,
+      # and only with WEB_PASSWORD set. On a public server keep this and use the tls profile.
+      - "127.0.0.1:8080:8080"
     restart: unless-stopped
     init: true
+
+  # Optional: HTTPS for a server on the internet. Needs WEB_DOMAIN pointing at this machine.
+  #   docker compose --profile tls up -d
+  # Set WEB_TRUST_PROXY=true in .env so the real visitor address and the HTTPS scheme are read
+  # from Caddy's headers and the login cookie is marked Secure.
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["tls"]
+    depends_on:
+      - bot
+    ports:
+      - "80:80"
+      - "443:443"
+    command: caddy reverse-proxy --from ${WEB_DOMAIN:-localhost} --to bot:8080
+    volumes:
+      - ./data/caddy:/data
+    restart: unless-stopped

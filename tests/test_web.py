@@ -33,6 +33,7 @@ def test_pages_are_behind_the_password(settings, clock) -> None:
     assert response.status_code == 302
     assert response.headers["Location"] == "/login?next=/idea/1"
     assert client.post("/idea/1").status_code == 401  # a redirect would hide the reason
+    assert client.head("/idea/1").status_code == 302  # a monitor reading is sent to log in
     page = client.get("/login")
     assert page.status_code == 200 and "Family password" in page.text
 

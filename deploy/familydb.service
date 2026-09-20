@@ -26,6 +26,8 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
+# The web page, when WEB_ENABLED is set, binds WEB_HOST:WEB_PORT. The port must stay above 1024:
+# this unit runs unprivileged and NoNewPrivileges blocks binding a low port.
 ReadWritePaths=/opt/familydb/data
 
 [Install]

@@ -27,5 +27,8 @@ ENV PATH="/app/.venv/bin:$PATH" \
     FAMILYDB_PATH=/data/familydb.sqlite3 \
     GOOGLE_TOKEN_PATH=/data/google_token.json
 
+# The read-only web page, when WEB_ENABLED is set. Publish it with the compose ports mapping.
+EXPOSE 8080
+
 VOLUME ["/data"]
 CMD ["familydb", "run"]

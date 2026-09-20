@@ -23,7 +23,12 @@ from familydb.agent.history import load_history
 from familydb.agent.prompt import build_messages, build_system_blocks
 from familydb.agent.render import render_idea_line, render_user_turn
 from familydb.app import App, build_app
-from familydb.availability import digest_configured, enrichment_available, web_tools_available
+from familydb.availability import (
+    digest_configured,
+    enrichment_available,
+    web_available,
+    web_tools_available,
+)
 from familydb.channels.console import DEFAULT_CHAT, one_shot, run_repl
 from familydb.config import load_settings
 from familydb.dates import utc_iso
@@ -364,6 +369,11 @@ def run() -> None:
 
     scheduler = build_scheduler(application)
     scheduler.start()
+    stop_web = None
+    if web_available(settings):
+        from familydb.web.server import serve_in_thread
+
+        stop_web = serve_in_thread(application)
     try:
         if settings.telegram_bot_token:
             from familydb.channels.telegram import TelegramChannel
@@ -374,6 +384,8 @@ def run() -> None:
         else:
             _wait_for_stop()
     finally:
+        if stop_web is not None:
+            stop_web()
         scheduler.shutdown(wait=False)
     log.info("stopped")
 
@@ -556,6 +568,33 @@ def suggest(
         typer.echo(result.content)
         return
     _print_suggestion(json.loads(result.content))
+
+
+@app.command()
+def web(
+    host: str | None = typer.Option(None, "--host", help="Override WEB_HOST for this run."),
+    port: int | None = typer.Option(None, "--port", help="Override WEB_PORT for this run."),
+) -> None:
+    """Serve the read-only web page in the foreground until interrupted."""
+    from familydb.web.server import serve
+
+    overrides: dict[str, Any] = {}
+    if host:
+        overrides["web_host"] = host
+    if port:
+        overrides["web_port"] = port
+    application = build_app(**overrides)
+    application.migrate()
+    try:
+        serve(application)
+    except FamilyDBError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    except OSError as exc:
+        typer.echo(f"could not serve the page: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+    except KeyboardInterrupt:
+        typer.echo("stopped")
 
 
 @app.command()
