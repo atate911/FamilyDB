@@ -101,3 +101,34 @@ def test_history_limit_counts_only_earlier_messages(conn, family, clock) -> None
         conn, "console", clock=clock, limit=4, since_hours=6, exclude_message_id=current.id
     )
     assert [t.text for t in turns] == ["[Sam] in2", "Saved #2.", "[Sam] in3", "Saved #3."]
+
+
+def test_history_can_exclude_replies_to_a_message(conn, family, clock) -> None:
+    with db.transaction(conn):
+        inbound = messages.insert_in(
+            conn,
+            channel="console",
+            channel_update_id="r1",
+            chat_id="console",
+            member_id=family["sam"].id,
+            text="hello",
+            now="2026-09-20T20:00:00Z",
+        )
+        messages.insert_out(
+            conn,
+            channel="console",
+            chat_id="console",
+            text="I'll retry later.",
+            reply_to=inbound.id,
+            now="2026-09-20T20:00:05Z",
+        )
+    turns = load_history(
+        conn,
+        "console",
+        clock=clock,
+        limit=20,
+        since_hours=6,
+        exclude_message_id=inbound.id,
+        exclude_replies_to=inbound.id,
+    )
+    assert turns == []

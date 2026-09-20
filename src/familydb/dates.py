@@ -39,6 +39,15 @@ def ensure_not_past(when: date | datetime, clock: Clock, *, backfill: bool = Fal
         )
 
 
+def parse_date_range(start_text: str, end_text: str) -> tuple[date, date]:
+    """Two YYYY-MM-DD strings, end not before start."""
+    start = parse_date(start_text)
+    end = parse_date(end_text)
+    if end < start:
+        raise ToolError("end is before start")
+    return start, end
+
+
 def iso_date(day: date) -> str:
     return day.isoformat()
 

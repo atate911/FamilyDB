@@ -26,7 +26,8 @@ DAILY_FIELDS = (
     "precipitation_sum",
 )
 CACHE_SECONDS = 3600
-MAX_DAYS_AHEAD = 16
+# Open-Meteo serves 16 forecast days including today, so the last one is today + 15.
+MAX_DAYS_AHEAD = 15
 
 WEATHER_CODES: dict[int, str] = {
     0: "clear",

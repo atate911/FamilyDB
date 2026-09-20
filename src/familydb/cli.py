@@ -400,6 +400,11 @@ def db_retry_failed(
 
     application = build_app()
     application.migrate()
+    token = application.settings.telegram_bot_token
+    if token:
+        from familydb.channels.telegram import send_once
+
+        application.senders["telegram"] = lambda chat_id, text: send_once(token, chat_id, text)
     if reset:
         with closing(application.connect()) as conn, db.transaction(conn):
             count = messages.reset_retries(conn)

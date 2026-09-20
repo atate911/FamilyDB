@@ -10,12 +10,12 @@ from typing import Any
 from familydb.agent.history import load_history
 from familydb.agent.loop import MessagesAPI, TurnResult, run_turn
 from familydb.agent.prompt import build_messages, build_system_blocks
-from familydb.agent.render import render_user_turn
+from familydb.agent.render import render_retry_note, render_user_turn
 from familydb.app import App
 from familydb.channels.base import IncomingMessage, OutgoingMessage
 from familydb.dates import utc_iso
 from familydb.errors import AgentError
-from familydb.store import members, messages
+from familydb.store import calls, members, messages
 from familydb.store.db import transaction
 from familydb.store.members import Member
 from familydb.tools import ToolContext
@@ -90,15 +90,16 @@ def _run(
     conn: sqlite3.Connection,
     *,
     notify: bool,
+    retry: bool = False,
 ) -> OutgoingMessage:
     """Think and persist the outcome. With notify off (retries) failures stay silent."""
     try:
-        result = _think(app, msg, member, inbound_id, api, conn)
+        result = _think(app, msg, member, inbound_id, api, conn, retry=retry)
     except AgentError as exc:
         log.error("agent error on message %s: %s (retryable=%s)", inbound_id, exc, exc.retryable)
         if not exc.retryable:
             with transaction(conn):
-                messages.exhaust_retries(conn, inbound_id, app.settings.retry_max_attempts)
+                messages.give_up(conn, inbound_id)
         reply = RETRY_REPLY if exc.retryable else CONFIG_REPLY
         return _fail(app, conn, msg, inbound_id, str(exc), reply if notify else None)
     except Exception as exc:
@@ -149,7 +150,11 @@ def retry_message(
     row = messages.get(conn, message_id)
     if row is None or row.direction != "in" or row.status != "failed":
         return None
-    if row.retries >= app.settings.retry_max_attempts:
+    if row.give_up or row.retries >= app.settings.retry_max_attempts:
+        return None
+    if row.channel != "console" and row.channel not in app.senders:
+        # Only a process that can deliver the answer may consume the retry.
+        log.info("not retrying message %s: no sender for %s here", message_id, row.channel)
         return None
     member = members.get(conn, row.member_id) if row.member_id is not None else None
     if member is None:
@@ -165,7 +170,7 @@ def retry_message(
         text=row.text,
     )
     log.info("retrying message %s (attempt %s)", message_id, row.retries + 1)
-    reply = _run(app, msg, member, message_id, api, conn, notify=False)
+    reply = _run(app, msg, member, message_id, api, conn, notify=False, retry=True)
     if reply.status in {"ok", "refused"}:
         sender = app.senders.get(row.channel)
         if sender is not None:
@@ -183,6 +188,8 @@ def _think(
     inbound_id: int,
     api: MessagesAPI | None,
     conn: sqlite3.Connection,
+    *,
+    retry: bool = False,
 ) -> TurnResult:
     settings = app.settings
     system = build_system_blocks(conn, settings)
@@ -193,8 +200,15 @@ def _think(
         limit=settings.history_limit,
         since_hours=settings.history_hours,
         exclude_message_id=inbound_id,
+        exclude_replies_to=inbound_id if retry else None,
     )
-    turn = build_messages(history, render_user_turn(member.display_name, msg.text, app.clock))
+    current = render_user_turn(member.display_name, msg.text, app.clock)
+    if retry:
+        write_tools = {spec.name for spec in app.registry.specs() if spec.writes}
+        note = render_retry_note(calls.tool_calls_for_message(conn, inbound_id), write_tools)
+        if note:
+            current.append({"type": "text", "text": note})
+    turn = build_messages(history, current)
     ctx = ToolContext(
         conn=conn,
         settings=settings,

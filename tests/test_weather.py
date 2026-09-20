@@ -81,7 +81,7 @@ def test_get_forecast_tool(registry, conn, settings, clock, family) -> None:
     }
     # ranges are clamped to today..today+16
     result = registry.dispatch("get_forecast", {"start": "2026-09-01", "end": "2026-12-01"}, ctx)
-    assert ctx.weather.calls[-1] == (date(2026, 9, 20), date(2026, 10, 6))
+    assert ctx.weather.calls[-1] == (date(2026, 9, 20), date(2026, 10, 5))
     result = registry.dispatch("get_forecast", {"start": "2026-09-01", "end": "2026-09-10"}, ctx)
     data = json.loads(result.content)
     assert result.is_error and "covers" in data["error"]

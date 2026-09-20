@@ -6,6 +6,7 @@ cached prompt prefix, and any variation defeats the cache.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from familydb.availability import calendar_available, weather_available, web_tools_available
@@ -96,3 +97,38 @@ def render_user_turn(sender: str, text: str, clock: Clock) -> list[dict[str, Any
 
 def render_history_line(sender: str, text: str) -> str:
     return f"[{sender}] {text}"
+
+
+def _record_ref(output: Any) -> str:
+    if not isinstance(output, dict):
+        return ""
+    if "duplicate_of" in output:
+        return f" (already existed as #{output['duplicate_of']})"
+    if isinstance(output.get("id"), int):
+        return f" (#{output['id']})"
+    plan = output.get("plan")
+    if isinstance(plan, dict) and "id" in plan:
+        return f" (plan #{plan['id']})"
+    return ""
+
+
+def render_retry_note(prior_calls: list[dict[str, Any]], write_tools: set[str]) -> str | None:
+    """For a retried message: which write tools already ran, so the model does not repeat them."""
+    done: list[str] = []
+    for call in prior_calls:
+        if call.get("is_error") or call.get("tool_name") not in write_tools:
+            continue
+        try:
+            output = json.loads(call["output"]) if call.get("output") else {}
+        except ValueError:
+            output = {}
+        if isinstance(output, dict) and output.get("available") is False:
+            continue
+        done.append(f"{call['tool_name']}{_record_ref(output)}")
+    if not done:
+        return None
+    return (
+        "This message was processed before but the reply failed. These tool calls already "
+        "succeeded and must not be repeated: " + "; ".join(done) + ". Continue from there and "
+        "answer as if this were the first reply."
+    )

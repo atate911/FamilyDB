@@ -88,6 +88,18 @@ def split_text(text: str, limit: int = int(MessageLimit.MAX_TEXT_LENGTH)) -> lis
     return chunks
 
 
+def send_once(token: str, chat_id: str, text: str) -> None:
+    """Send from a process that is not running the bot, such as the manual retry command."""
+    from telegram import Bot
+
+    async def _send() -> None:
+        async with Bot(token) as bot:
+            for chunk in split_text(text):
+                await bot.send_message(chat_id=int(chat_id), text=chunk)
+
+    asyncio.run(_send())
+
+
 class TelegramChannel:
     """Runs python-telegram-bot's polling loop and feeds messages through the pipeline."""
 

@@ -9,7 +9,14 @@ from zoneinfo import ZoneInfo
 from pydantic import BaseModel, Field
 
 from familydb.availability import calendar_available
-from familydb.dates import ensure_not_past, iso_date, iso_datetime, parse_date, parse_datetime
+from familydb.dates import (
+    ensure_not_past,
+    iso_date,
+    iso_datetime,
+    parse_date,
+    parse_date_range,
+    parse_datetime,
+)
 from familydb.errors import ToolError, ToolUnavailable
 from familydb.integrations.google_calendar import CalendarAPI, CalendarEvent
 from familydb.store import ideas, plans
@@ -24,6 +31,8 @@ BLOCKS: tuple[tuple[str, time, time], ...] = (
     ("afternoon", time(12, 0), time(17, 0)),
     ("evening", time(17, 0), time(22, 0)),
 )
+# plan field -> Google event field, for the simple text attributes
+TEXT_FIELDS = {"title": "title", "location": "location", "notes": "description"}
 
 
 class GetCalendarInput(BaseModel):
@@ -44,9 +53,13 @@ class CreateEventInput(BaseModel):
 class UpdateEventInput(BaseModel):
     plan_id: int = Field(description="The plan number returned by create_event.")
     title: str | None = None
-    start: str | None = None
+    start: str | None = Field(
+        default=None, description="New start. With no new end, the plan keeps its duration."
+    )
     end: str | None = None
-    all_day: bool | None = None
+    all_day: bool | None = Field(
+        default=None, description="False needs a start time; true drops the time."
+    )
     location: str | None = None
     notes: str | None = None
     status: Literal["confirmed", "tentative", "cancelled"] | None = None
@@ -94,10 +107,20 @@ def free_blocks(events: list[CalendarEvent], day: date, tz: ZoneInfo) -> list[st
 
 
 def _timed_or_all_day(
-    start_text: str, end_text: str | None, all_day: bool, tz: ZoneInfo
+    start_text: str,
+    end_text: str | None,
+    all_day: bool,
+    tz: ZoneInfo,
+    *,
+    strict: bool = False,
 ) -> tuple[datetime | date, datetime | date, bool, str, str | None]:
-    """Resolve the user-facing start/end into calendar values and stored strings."""
+    """Resolve the user-facing start/end into calendar values and stored strings.
+
+    A date-only start makes the plan all-day unless `strict` says a time was required.
+    """
     date_only = len(start_text.strip()) == 10
+    if date_only and strict and not all_day:
+        raise ToolError("give a start time (YYYY-MM-DDTHH:MM) to make this a timed plan")
     if all_day or date_only:
         start_d = parse_date(start_text.strip()[:10])
         end_d = parse_date(end_text.strip()[:10]) if end_text else start_d
@@ -112,6 +135,19 @@ def _timed_or_all_day(
     return start_dt, end_dt, False, iso_datetime(start_dt), iso_datetime(end_dt)
 
 
+def _end_keeping_duration(
+    plan: plans.Plan, new_start: str, all_day: bool, tz: ZoneInfo
+) -> str | None:
+    """When only the start moves, carry the plan's length over to the new start."""
+    if plan.end is None or all_day != plan.all_day:
+        return None
+    if all_day:
+        span = parse_date(plan.end) - parse_date(plan.start)
+        return iso_date(parse_date(new_start[:10]) + span)
+    duration = parse_datetime(plan.end, tz) - parse_datetime(plan.start, tz)
+    return iso_datetime(parse_datetime(new_start, tz) + duration)
+
+
 @tool(
     name="get_calendar",
     description=(
@@ -124,10 +160,7 @@ def _timed_or_all_day(
 def get_calendar(ctx: ToolContext, args: GetCalendarInput) -> dict[str, Any]:
     calendar = _calendar(ctx)
     tz = ctx.clock.tz
-    start = parse_date(args.start)
-    end = parse_date(args.end)
-    if end < start:
-        raise ToolError("end is before start")
+    start, end = parse_date_range(args.start, args.end)
     if (end - start).days > MAX_WINDOW_DAYS:
         raise ToolError(f"ask for at most {MAX_WINDOW_DAYS} days at a time")
     window_start, _ = _day_bounds(start, tz)
@@ -230,7 +263,10 @@ def _cancel(ctx: ToolContext, plan: plans.Plan) -> dict[str, Any]:
 
 @tool(
     name="update_event",
-    description="Change a plan on the calendar: new time, title, place, notes, or cancel it.",
+    description=(
+        "Change a plan on the calendar: new time, title, place, notes, or cancel it. Moving only "
+        "the start keeps the plan's length."
+    ),
     available=calendar_available,
     unavailable_reason=NOT_CONFIGURED,
     writes=True,
@@ -247,27 +283,32 @@ def update_event(ctx: ToolContext, args: UpdateEventInput) -> dict[str, Any]:
 
     changes: dict[str, Any] = {}
     patch: dict[str, Any] = {}
-    if args.title is not None:
-        changes["title"] = args.title.strip()
-        patch["title"] = changes["title"]
-    if args.location is not None:
-        changes["location"] = args.location
-        patch["location"] = args.location
-    if args.notes is not None:
-        changes["notes"] = args.notes
-        patch["description"] = args.notes
+    for field, google_field in TEXT_FIELDS.items():
+        value = getattr(args, field)
+        if value is not None:
+            value = value.strip() if field == "title" else value
+            changes[field] = value
+            patch[google_field] = value
     if args.status is not None:
         changes["status"] = args.status
+
     if args.start is not None or args.end is not None or args.all_day is not None:
+        tz = ctx.clock.tz
         all_day = plan.all_day if args.all_day is None else args.all_day
         start_text = args.start if args.start is not None else plan.start
-        end_text = args.end if args.end is not None else (plan.end if args.start is None else None)
+        if args.end is not None:
+            end_text: str | None = args.end
+        elif args.start is not None:
+            end_text = _end_keeping_duration(plan, args.start, all_day, tz)
+        else:
+            end_text = plan.end
         start, end, all_day, stored_start, stored_end = _timed_or_all_day(
-            start_text, end_text, all_day, ctx.clock.tz
+            start_text, end_text, all_day, tz, strict=args.all_day is False
         )
         ensure_not_past(start, ctx.clock)
         changes.update({"start": stored_start, "end": stored_end, "all_day": all_day})
         patch.update({"start": start, "end": end, "all_day": all_day})
+
     if not changes:
         raise ToolError("nothing to change")
     event = None

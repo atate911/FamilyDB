@@ -68,9 +68,12 @@ def test_retries_are_bounded(settings, clock, conn, family) -> None:
 def test_configuration_errors_are_not_retried(settings, clock, conn, family) -> None:
     app = App(settings, clock)
     message_id = _failed_message(app, conn, fakes.bad_request_error())
-    assert messages.get(conn, message_id).retries == settings.retry_max_attempts
+    stored = messages.get(conn, message_id)
+    assert stored.give_up is True and stored.retries == 0
+    assert messages.failed(conn, max_retries=settings.retry_max_attempts) == []
     assert retry_message(app, message_id, api=fakes.FakeMessagesAPI(), conn=conn) is None
     assert messages.reset_retries(conn) == 1
+    assert messages.get(conn, message_id).give_up is False
     assert messages.failed(conn, max_retries=settings.retry_max_attempts)[0].id == message_id
 
 
@@ -93,3 +96,45 @@ def test_scheduler_registers_the_retry_job(settings, clock) -> None:
     job = scheduler.get_job("retry_failed")
     assert job is not None
     assert job.trigger.interval.total_seconds() == 7 * 60
+
+
+def test_retry_needs_a_sender_for_chat_channels(settings, clock, conn, family) -> None:
+    from familydb.channels.base import IncomingMessage
+    from familydb.pipeline import handle_incoming
+
+    app = App(settings, clock)
+    inbound = IncomingMessage("telegram", "u1", "chat-1", "1001", "we should go hiking")
+    reply = handle_incoming(
+        app, inbound, api=fakes.FakeMessagesAPI(fakes.rate_limit_error()), conn=conn
+    )
+    assert reply.status == "failed"
+    api = fakes.FakeMessagesAPI(fakes.message([fakes.text("Saved.")]))
+    assert retry_message(app, reply.in_message_id, api=api, conn=conn) is None  # no sender here
+    assert messages.get(conn, reply.in_message_id).status == "failed"
+    assert messages.get(conn, reply.in_message_id).retries == 0
+    delivered = []
+    app.senders["telegram"] = lambda chat_id, text: delivered.append((chat_id, text))
+    assert retry_message(app, reply.in_message_id, api=api, conn=conn).status == "ok"
+    assert delivered == [("chat-1", "Saved.")]
+
+
+def test_retry_tells_the_model_what_already_ran(settings, clock, conn, family) -> None:
+    app = App(settings, clock)
+    first_attempt = fakes.FakeMessagesAPI(
+        fakes.message(
+            [fakes.tool_use("tu_1", "add_idea", {"title": "Ramen place", "kind": "restaurant"})],
+            stop_reason="tool_use",
+        ),
+        fakes.rate_limit_error(),  # the reply never came, but the idea was saved
+    )
+    reply = one_shot(app, "we should try the ramen place", "Sam", api=first_attempt)
+    assert reply.status == "failed"
+    assert ideas.get(conn, 1).title == "Ramen place"
+    retry_api = fakes.FakeMessagesAPI(fakes.message([fakes.text("Saved #1.")]))
+    assert retry_message(app, reply.in_message_id, api=retry_api, conn=conn).status == "ok"
+    request = retry_api.requests[0]["messages"]
+    assert [m["role"] for m in request] == ["user"]  # the failure notice is not replayed
+    blocks = request[0]["content"]
+    assert blocks[1]["text"] == "[Sam] we should try the ramen place"
+    assert "add_idea (#1)" in blocks[2]["text"]
+    assert "must not be repeated" in blocks[2]["text"]

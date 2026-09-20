@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
@@ -104,8 +105,13 @@ def event_body(
     all_day: bool | None = None,
     location: str | None = None,
     description: str | None = None,
+    clear_other_time_key: bool = False,
 ) -> dict[str, Any]:
-    """The request body for insert or patch. Times come as a set: start, end and all_day."""
+    """The request body for insert or patch. Times come as a set: start, end and all_day.
+
+    Patches merge into the existing event, so switching between timed and all-day must null
+    the key the event no longer uses (`clear_other_time_key`).
+    """
     body: dict[str, Any] = {}
     if title is not None:
         body["summary"] = title
@@ -117,9 +123,15 @@ def event_body(
         if all_day:
             body["start"] = {"date": start.isoformat()}
             body["end"] = {"date": end.isoformat()}
+            if clear_other_time_key:
+                for key in ("start", "end"):
+                    body[key].update({"dateTime": None, "timeZone": None})
         else:
             body["start"] = {"dateTime": start.isoformat(), "timeZone": tz.key}
             body["end"] = {"dateTime": end.isoformat(), "timeZone": tz.key}
+            if clear_other_time_key:
+                for key in ("start", "end"):
+                    body[key]["date"] = None
     return body
 
 
@@ -183,22 +195,27 @@ class GoogleCalendar:
         self.token_path = Path(settings.google_token_path)
         self.tz = settings.tzinfo
         self._service: Any = None
+        # The underlying HTTP client is not thread-safe; the bot and the scheduler share this.
+        self._lock = threading.Lock()
 
     def _events(self) -> Any:
-        if self._service is None:
-            self._service = build_service(load_credentials(self.token_path))
-        return self._service.events()
+        with self._lock:
+            if self._service is None:
+                self._service = build_service(load_credentials(self.token_path))
+            return self._service.events()
 
-    @staticmethod
-    def _execute(request: Any) -> Any:
+    def _execute(self, request: Any, *, ignore: tuple[int, ...] = ()) -> Any:
         from google.auth.exceptions import RefreshError
         from googleapiclient.errors import HttpError
 
         try:
-            return request.execute()
+            with self._lock:
+                return request.execute()
         except HttpError as exc:
-            status = getattr(exc.resp, "status", "?")
-            raise ToolError(f"Google Calendar error {status}: {exc.reason}") from exc
+            status = getattr(exc.resp, "status", None)
+            if status in ignore:
+                return None
+            raise ToolError(f"Google Calendar error {status or '?'}: {exc.reason}") from exc
         except RefreshError as exc:
             raise ToolUnavailable(REAUTH) from exc
 
@@ -246,11 +263,15 @@ class GoogleCalendar:
         return parse_event(item, self.tz)
 
     def patch_event(self, event_id: str, **changes: Any) -> CalendarEvent:
-        body = event_body(tz=self.tz, **changes)
+        body = event_body(tz=self.tz, clear_other_time_key=True, **changes)
         item = self._execute(
             self._events().patch(calendarId=self.calendar_id, eventId=event_id, body=body)
         )
         return parse_event(item, self.tz)
 
     def delete_event(self, event_id: str) -> None:
-        self._execute(self._events().delete(calendarId=self.calendar_id, eventId=event_id))
+        """Delete an event. One already deleted by hand (404 or 410) counts as done."""
+        self._execute(
+            self._events().delete(calendarId=self.calendar_id, eventId=event_id),
+            ignore=(404, 410),
+        )

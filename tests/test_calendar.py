@@ -239,3 +239,106 @@ def test_plans_repository(conn, family) -> None:
     assert moved.start == "2026-10-10"
     assert [p.id for p in plans.for_idea(conn, idea.id)] == [plan.id]
     assert [p.id for p in plans.list_between(conn, "2026-10-01", "2026-11-01")] == [plan.id]
+
+
+def test_moving_only_the_start_keeps_the_duration(
+    registry, conn, calendar_settings, clock, family
+) -> None:
+    calendar = fakes.FakeCalendar(TZ)
+    ctx = _ctx(conn, calendar_settings, clock, family, calendar)
+    _, created = _call(
+        registry,
+        ctx,
+        "create_event",
+        title="Hike",
+        start="2026-09-26T09:00",
+        end="2026-09-26T13:00",
+    )
+    _, moved = _call(
+        registry, ctx, "update_event", plan_id=created["plan"]["id"], start="2026-09-27T10:00"
+    )
+    assert (moved["plan"]["start"], moved["plan"]["end"]) == (
+        "2026-09-27T10:00-07:00",
+        "2026-09-27T14:00-07:00",
+    )
+    _, trip = _call(
+        registry, ctx, "create_event", title="Trip", start="2026-10-02", end="2026-10-05"
+    )
+    _, moved = _call(registry, ctx, "update_event", plan_id=trip["plan"]["id"], start="2026-10-03")
+    assert (moved["plan"]["start"], moved["plan"]["end"]) == ("2026-10-03", "2026-10-06")
+    assert calendar.events["evt2"].end == date(2026, 10, 7)
+
+
+def test_converting_all_day_to_timed_needs_a_time(
+    registry, conn, calendar_settings, clock, family
+) -> None:
+    calendar = fakes.FakeCalendar(TZ)
+    ctx = _ctx(conn, calendar_settings, clock, family, calendar)
+    _, created = _call(registry, ctx, "create_event", title="Fair", start="2026-10-10")
+    result, data = _call(
+        registry, ctx, "update_event", plan_id=created["plan"]["id"], all_day=False
+    )
+    assert result.is_error and "start time" in data["error"]
+    _, timed = _call(
+        registry,
+        ctx,
+        "update_event",
+        plan_id=created["plan"]["id"],
+        all_day=False,
+        start="2026-10-10T19:00",
+    )
+    assert timed["plan"]["all_day"] is False and timed["plan"]["start"] == "2026-10-10T19:00-07:00"
+    assert calendar.events["evt1"].all_day is False
+
+
+def test_patch_body_clears_the_unused_time_key() -> None:
+    body = event_body(
+        tz=TZ,
+        start=date(2026, 10, 10),
+        end=date(2026, 10, 11),
+        all_day=True,
+        clear_other_time_key=True,
+    )
+    assert body["start"] == {"date": "2026-10-10", "dateTime": None, "timeZone": None}
+    start = datetime(2026, 10, 10, 19, tzinfo=TZ)
+    body = event_body(
+        tz=TZ, start=start, end=start + timedelta(hours=2), all_day=False, clear_other_time_key=True
+    )
+    assert body["start"]["date"] is None and body["start"]["dateTime"].startswith(
+        "2026-10-10T19:00"
+    )
+
+
+def test_google_delete_tolerates_missing_events(calendar_settings) -> None:
+    import httplib2
+    from googleapiclient.errors import HttpError
+
+    from familydb.errors import ToolError
+    from familydb.integrations.google_calendar import GoogleCalendar
+
+    class Request:
+        def __init__(self, status):
+            self.status = status
+
+        def execute(self):
+            if self.status:
+                raise HttpError(httplib2.Response({"status": self.status}), b"gone")
+            return {}
+
+    class Events:
+        def __init__(self, status):
+            self.status = status
+
+        def delete(self, **_kwargs):
+            return Request(self.status)
+
+    client = GoogleCalendar(calendar_settings)
+    client._events = lambda: Events(410)  # already deleted by hand
+    client.delete_event("evt1")
+    client._events = lambda: Events(403)
+    try:
+        client.delete_event("evt1")
+    except ToolError as exc:
+        assert "403" in str(exc)
+    else:
+        raise AssertionError("a 403 must still be reported")
