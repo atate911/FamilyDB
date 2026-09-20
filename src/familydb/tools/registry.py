@@ -33,6 +33,8 @@ class ToolContext:
     clock: Clock
     member: Member | None = None
     message_id: int | None = None
+    calendar: Any = None  # a CalendarAPI (integrations.google_calendar) when connected
+    weather: Any = None  # a ForecastAPI (integrations.open_meteo) when configured
 
     def now_iso(self) -> str:
         return utc_iso(self.clock.now())

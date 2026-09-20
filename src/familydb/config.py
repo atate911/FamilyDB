@@ -57,9 +57,14 @@ class Settings(BaseSettings):
     home_lon: float | None = None
     home_area: str = ""
 
-    # Optional services, wired in later milestones
+    # Optional services
     web_tools_enabled: bool = False
     telegram_bot_token: str | None = None
+    # In groups, only answer messages that mention the bot or reply to it.
+    telegram_require_mention: bool = False
+    # Failed messages are retried this often, this many times.
+    retry_interval_minutes: int = 5
+    retry_max_attempts: int = 3
     google_calendar_id: str | None = None
     google_token_path: Path = Path("data/google_token.json")
     enrichment_notes: bool = True

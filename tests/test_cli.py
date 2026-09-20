@@ -12,6 +12,7 @@ from typer.testing import CliRunner
 from familydb import __version__
 from familydb.cli import app
 from familydb.errors import AgentError
+from familydb.store import db
 from tests import fakes
 
 runner = CliRunner()
@@ -62,7 +63,7 @@ def test_db_members_and_ideas_commands(env: Path) -> None:
     result = runner.invoke(app, ["tool", "add_idea", "--json", "{}"])
     assert result.exit_code == 1
     result = runner.invoke(app, ["db", "status"])
-    assert "schema version: 1" in result.output
+    assert f"schema version: {len(db.list_migrations())}" in result.output
     assert "ideas: 1" in result.output
 
 

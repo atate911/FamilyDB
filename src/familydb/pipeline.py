@@ -132,7 +132,13 @@ def _think(
     )
     turn = build_messages(history, render_user_turn(member.display_name, msg.text, app.clock))
     ctx = ToolContext(
-        conn=conn, settings=settings, clock=app.clock, member=member, message_id=inbound_id
+        conn=conn,
+        settings=settings,
+        clock=app.clock,
+        member=member,
+        message_id=inbound_id,
+        calendar=app.calendar,
+        weather=app.weather,
     )
     return run_turn(
         api=api if api is not None else app.client.beta.messages,

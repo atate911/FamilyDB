@@ -237,6 +237,8 @@ def tool_cmd(
             settings=application.settings,
             clock=application.clock,
             member=_acting_member(application, conn, as_member),
+            calendar=application.calendar,
+            weather=application.weather,
         )
         result = registry.dispatch(name, payload, ctx)
     typer.echo(result.content, err=result.is_error)

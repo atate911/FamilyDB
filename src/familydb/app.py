@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+from collections.abc import Callable
 from contextlib import closing
 from pathlib import Path
 from typing import Any
@@ -11,6 +12,7 @@ from typing import Any
 import anthropic
 
 from familydb.agent.client import make_client
+from familydb.availability import calendar_available, weather_available
 from familydb.clock import Clock, SystemClock
 from familydb.config import Settings, load_settings
 from familydb.store import db
@@ -22,8 +24,19 @@ log = logging.getLogger(__name__)
 class App:
     """Everything a command or channel needs, built once per process."""
 
-    def __init__(self, settings: Settings, clock: Clock | None = None) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        clock: Clock | None = None,
+        *,
+        calendar: Any = None,
+        weather: Any = None,
+    ) -> None:
         self.settings = settings
+        self._calendar = calendar
+        self._weather = weather
+        # Channels register how to deliver a text to one of their chats, keyed by channel name.
+        self.senders: dict[str, Callable[[str, str], None]] = {}
         self.clock = clock or SystemClock(settings.tzinfo, southern=settings.southern_hemisphere)
         self._registry: ToolRegistry | None = None
         self._client: anthropic.Anthropic | None = None
@@ -33,6 +46,24 @@ class App:
         if self._registry is None:
             self._registry = build_registry()
         return self._registry
+
+    @property
+    def calendar(self) -> Any:
+        """The Google Calendar client when configured, else None (tools then say so)."""
+        if self._calendar is None and calendar_available(self.settings):
+            from familydb.integrations.google_calendar import GoogleCalendar
+
+            self._calendar = GoogleCalendar(self.settings)
+        return self._calendar
+
+    @property
+    def weather(self) -> Any:
+        """The Open-Meteo client when coordinates are set, else None."""
+        if self._weather is None and weather_available(self.settings):
+            from familydb.integrations.open_meteo import OpenMeteo
+
+            self._weather = OpenMeteo(self.settings)
+        return self._weather
 
     @property
     def client(self) -> anthropic.Anthropic:

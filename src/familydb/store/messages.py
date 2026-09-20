@@ -24,6 +24,7 @@ class Message(BaseModel):
     error: str | None = None
     reply_to: int | None = None
     processed_at: str | None = None
+    retries: int = 0
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> Message:
@@ -115,6 +116,16 @@ def recent_for_chat(
     return [Message.from_row(row) for row in reversed(rows)]
 
 
-def failed(conn: sqlite3.Connection) -> list[Message]:
-    rows = conn.execute("SELECT * FROM messages WHERE status = 'failed' ORDER BY id")
+def failed(conn: sqlite3.Connection, *, max_retries: int | None = None) -> list[Message]:
+    """Failed inbound messages, oldest first, optionally only those still eligible for a retry."""
+    sql = "SELECT * FROM messages WHERE status = 'failed' AND direction = 'in'"
+    params: list[Any] = []
+    if max_retries is not None:
+        sql += " AND retries < ?"
+        params.append(max_retries)
+    rows = conn.execute(sql + " ORDER BY id", params)
     return [Message.from_row(row) for row in rows]
+
+
+def bump_retries(conn: sqlite3.Connection, message_id: int) -> None:
+    conn.execute("UPDATE messages SET retries = retries + 1 WHERE id = ?", (message_id,))
