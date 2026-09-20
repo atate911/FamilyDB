@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hmac
 import logging
+import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from urllib.parse import urlsplit
@@ -41,6 +42,11 @@ LOCKOUT_MINUTES = 15
 # A page on the internet can be poked from endless addresses; the table of failures must not grow
 # with them. Past this many, everything not currently locked out is forgotten.
 MAX_TRACKED = 4096
+# Per-address counting alone cannot stop someone with many addresses, which anyone renting a
+# server has. A site-wide ceiling makes guessing a shared password impractical; a family will
+# never come near it.
+GLOBAL_ATTEMPTS = 50
+GLOBAL_WINDOW_MINUTES = 15
 # Endpoints reachable without signing in. "static" covers the stylesheet on the login page.
 OPEN_ENDPOINTS = frozenset({"auth.login", "auth.sign_in", "auth.logout", "web.healthz", "static"})
 HOME = "/"
@@ -55,16 +61,32 @@ class Lockout:
 
     failures: dict[str, int] = field(default_factory=dict)
     until: dict[str, datetime] = field(default_factory=dict)
+    everyone: int = 0
+    everyone_since: datetime | None = None
+    lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     def locked(self, who: str, now: datetime) -> bool:
-        deadline = self.until.get(who)
-        if deadline is None:
+        """Whether this address, or the whole site, is being kept waiting."""
+        with self.lock:
+            if self._everyone_locked(now):
+                return True
+            deadline = self.until.get(who)
+            if deadline is None:
+                return False
+            if now >= deadline:
+                self.until.pop(who, None)
+                self.failures.pop(who, None)
+                return False
+            return True
+
+    def _everyone_locked(self, now: datetime) -> bool:
+        if self.everyone_since is None:
             return False
-        if now >= deadline:
-            self.until.pop(who, None)
-            self.failures.pop(who, None)
+        if now - self.everyone_since >= timedelta(minutes=GLOBAL_WINDOW_MINUTES):
+            self.everyone = 0
+            self.everyone_since = None
             return False
-        return True
+        return self.everyone >= GLOBAL_ATTEMPTS
 
     def _prune(self, now: datetime) -> None:
         if len(self.failures) <= MAX_TRACKED:
@@ -79,18 +101,31 @@ class Lockout:
         self.until = {who: d for who, d in self.until.items() if who in live}
 
     def failed(self, who: str, now: datetime) -> None:
-        self._prune(now)
-        count = self.failures.get(who, 0) + 1
-        self.failures[who] = count
-        if count >= MAX_ATTEMPTS:
-            self.until[who] = now + timedelta(minutes=LOCKOUT_MINUTES)
-            log.warning("locking out %s after %d failed web logins", who, count)
-        else:
-            log.warning("failed web login from %s (%d/%d)", who, count, MAX_ATTEMPTS)
+        with self.lock:
+            self._prune(now)
+            if self.everyone_since is None or now - self.everyone_since >= timedelta(
+                minutes=GLOBAL_WINDOW_MINUTES
+            ):
+                self.everyone, self.everyone_since = 0, now
+            self.everyone += 1
+            count = self.failures.get(who, 0) + 1
+            self.failures[who] = count
+            if self.everyone == GLOBAL_ATTEMPTS:
+                log.warning(
+                    "%d failed web logins in %d minutes: refusing every login for a while",
+                    self.everyone,
+                    GLOBAL_WINDOW_MINUTES,
+                )
+            if count >= MAX_ATTEMPTS:
+                self.until[who] = now + timedelta(minutes=LOCKOUT_MINUTES)
+                log.warning("locking out %s after %d failed web logins", who, count)
+            else:
+                log.warning("failed web login from %s (%d/%d)", who, count, MAX_ATTEMPTS)
 
     def passed(self, who: str) -> None:
-        self.failures.pop(who, None)
-        self.until.pop(who, None)
+        with self.lock:
+            self.failures.pop(who, None)
+            self.until.pop(who, None)
 
 
 def password_in_use(settings: Settings) -> bool:

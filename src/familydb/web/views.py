@@ -6,9 +6,10 @@ The wording here is for people reading a page. The model's view of an idea lives
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 from urllib.parse import quote
+from zoneinfo import ZoneInfo
 
 from familydb.store.ideas import Idea
 from familydb.store.outcomes import Outcome
@@ -69,11 +70,23 @@ def details_text(idea: Idea) -> str:
     return DETAILS.get(idea.enrichment, idea.enrichment)
 
 
-def idea_row(idea: Idea) -> dict[str, Any]:
+def local_day(value: str, tz: ZoneInfo) -> str:
+    """A stored UTC instant as the date it was in the family's timezone."""
+    try:
+        moment = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return value[:10]
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=UTC)
+    return moment.astimezone(tz).date().isoformat()
+
+
+def idea_row(idea: Idea, tz: ZoneInfo) -> dict[str, Any]:
     """One line in a list of ideas."""
     return {
         "id": idea.id,
         "title": idea.title,
+        "added": local_day(idea.created_at, tz),
         # Links reach the page from chat and from pages the lookup worker read. Anything that is
         # not an ordinary web address is dropped here rather than put in an href.
         "url": clean_url(idea.url),

@@ -130,13 +130,14 @@ calendar. It never changes anything; ideas and plans are still added by messagin
 ```
 WEB_ENABLED=true
 WEB_HOST=0.0.0.0          # 127.0.0.1 keeps it on the server itself
-WEB_PASSWORD=something-the-family-can-remember
+WEB_PASSWORD=something-long-the-family-can-remember    # at least 12 characters
 ```
 
 With Docker, uncomment nothing else: the compose file publishes the page to the server itself
 (`127.0.0.1:8080`). To reach it from other devices on the network, change that line to
 `"8080:8080"`. The page then answers at `http://<server>:8080/`. Everyone types the password once;
-the login lasts `WEB_SESSION_DAYS` (30 by default).
+the login lasts `WEB_SESSION_DAYS` (30 by default). A page that faces the network needs at least twelve
+characters, because that one password guards everything and there is no second factor.
 
 If you would rather not put it on the network at all, leave `WEB_HOST=127.0.0.1` and reach it over
 Tailscale or `ssh -L 8080:127.0.0.1:8080 you@server`. That is the safest option and needs no
@@ -166,7 +167,8 @@ front: it means trusting those headers.
 Running without Docker, put nginx or Caddy in front the same way and keep `WEB_HOST=127.0.0.1`.
 
 **What protects it.** One shared password, checked in constant time. Five wrong guesses lock that
-address out for fifteen minutes and are logged. Every page but the login and `/healthz` needs the
+address out for fifteen minutes and are logged, and fifty failures from anywhere within a quarter
+of an hour stop the page answering logins at all, so a guesser with many addresses gets nowhere. Every page but the login and `/healthz` needs the
 cookie. Responses carry a content security policy that forbids scripts and framing, and nothing on
 the page writes to the database, so the worst a visitor can do is read. Refusing to start is
 deliberate: a page bound off the loopback with no password will not serve, and says so, unless you

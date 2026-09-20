@@ -52,7 +52,8 @@ def serve_in_thread(app: App) -> Callable[[], None] | None:
     except ConfigError as exc:
         log.error("the web page is not serving: %s", exc)
         return None
-    except (OSError, FamilyDBError) as exc:
+    except (OSError, ValueError, FamilyDBError) as exc:
+        # ValueError: waitress rejects a host it cannot parse, such as an empty WEB_HOST.
         log.error("could not serve the web page on %s: %s", address(app), exc)
         return None
     thread = threading.Thread(target=server.run, name=THREAD_NAME, daemon=True)

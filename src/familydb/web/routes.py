@@ -18,6 +18,7 @@ from familydb.web import views
 bp = Blueprint("web", __name__)
 
 LIST_LIMIT = 200
+MAX_ID = 2**63 - 1  # beyond this SQLite raises rather than simply finding nothing
 STATUSES = ("idea", "planned", "done", "dropped")
 RESTAURANT_KIND = "restaurant"
 PLANS_AHEAD_DAYS = 90
@@ -61,7 +62,7 @@ def ideas() -> str:
     filtered = bool(query or kind or status or who)
     return render_template(
         "ideas.html",
-        rows=[views.idea_row(idea) for idea in found],
+        rows=[views.idea_row(idea, app.settings.tzinfo) for idea in found],
         kinds=kinds,
         people=people,
         statuses=STATUSES,
@@ -71,7 +72,7 @@ def ideas() -> str:
     )
 
 
-@bp.get("/idea/<int:idea_id>")
+@bp.get(f"/idea/<int(max={MAX_ID}):idea_id>")
 def idea(idea_id: int) -> str:
     app = _app()
     settings = app.settings
@@ -87,7 +88,7 @@ def idea(idea_id: int) -> str:
     return render_template(
         "idea.html",
         idea=record,
-        row=views.idea_row(record),
+        row=views.idea_row(record, settings.tzinfo),
         setting=views.SETTINGS.get(record.setting, record.setting),
         weather=views.WEATHER.get(record.weather),
         place=views.place_panel(place, now, settings.place_stale_days),
@@ -124,8 +125,10 @@ def plans() -> str:
     app = _app()
     today = app.clock.today()
     with closing(app.connect()) as conn:
+        # list_between excludes its end, and a date sorts before that day's timed plans, so the
+        # exclusive bound is the day after the last one we want to show.
         upcoming = plan_store.list_between(
-            conn, today.isoformat(), (today + timedelta(days=PLANS_AHEAD_DAYS)).isoformat()
+            conn, today.isoformat(), (today + timedelta(days=PLANS_AHEAD_DAYS + 1)).isoformat()
         )
         recent = plan_store.list_between(
             conn, (today - timedelta(days=PLANS_BEHIND_DAYS)).isoformat(), today.isoformat()

@@ -14,7 +14,7 @@ from familydb.store import db, ideas, outcomes, places, plans
 from familydb.web import check_configuration, create_app
 from tests.conftest import NOW_ISO
 
-PASSWORD = "open sesame"
+PASSWORD = "open sesame please"  # at least MIN_PASSWORD characters
 
 
 def _client(settings, clock, **overrides):
@@ -573,3 +573,54 @@ def test_the_page_really_serves_on_a_thread_and_stops(settings, clock) -> None:
         raise AssertionError("the web thread did not stop")
     with pytest.raises(URLError):
         urllib.request.urlopen(f"http://127.0.0.1:{port}/healthz", timeout=2)
+
+
+def test_a_public_page_needs_a_password_worth_having(settings, clock) -> None:
+    from familydb.web import MIN_PASSWORD
+
+    public = settings.model_copy(update={"web_host": "0.0.0.0"})
+    with pytest.raises(ConfigError) as info:
+        check_configuration(public.model_copy(update={"web_password": "hunter2"}))
+    assert str(MIN_PASSWORD) in str(info.value) and "7 characters" in str(info.value)
+    check_configuration(public.model_copy(update={"web_password": "x" * MIN_PASSWORD}))
+    # A page only this machine can reach may keep a short one.
+    check_configuration(settings.model_copy(update={"web_password": "hunter2"}))
+
+
+def test_guessing_from_many_addresses_still_runs_out(settings, clock) -> None:
+    from familydb.web.auth import GLOBAL_ATTEMPTS, Lockout
+
+    lockout = Lockout()
+    now = clock.now()
+    for number in range(GLOBAL_ATTEMPTS):
+        who = f"203.0.113.{number}"  # a fresh address every time, so no address is ever locked
+        assert not lockout.locked(who, now)
+        lockout.failed(who, now)
+    assert lockout.locked("198.51.100.1", now)  # the site as a whole stops answering
+    clock.advance(timedelta(minutes=16))
+    assert not lockout.locked("198.51.100.1", clock.now())
+
+
+def test_an_impossible_idea_number_is_a_missing_page(settings, clock, conn, family) -> None:
+    client = _client(settings, clock)
+    assert client.get("/idea/99999999999999999999").status_code == 404
+    assert client.get("/idea/-1").status_code == 404
+    assert client.get("/idea/abc").status_code == 404
+
+
+def test_a_page_the_bot_serves_is_never_cached(settings, clock, conn, family) -> None:
+    client = _client(settings, clock)
+    assert client.get("/").headers["Cache-Control"] == "no-store"
+    assert client.get("/login").headers["Cache-Control"] == "no-store"
+    # The stylesheet keeps whatever Flask decided; only the family's own pages are held back.
+    assert client.get("/static/style.css").headers["Cache-Control"] != "no-store"
+
+
+def test_the_added_date_is_the_family_s_date(settings, clock, conn, family) -> None:
+    # 02:30 UTC is still the evening before in America/Vancouver.
+    with db.transaction(conn):
+        idea = ideas.insert(
+            conn, title="Late night idea", kind="activity", now="2026-09-21T02:30:00Z"
+        )
+    page = _client(settings, clock).get(f"/idea/{idea.id}")
+    assert "added 2026-09-20" in page.text

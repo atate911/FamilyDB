@@ -590,7 +590,7 @@ def web(
     except FamilyDBError as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=1) from exc
-    except OSError as exc:
+    except (OSError, ValueError) as exc:
         typer.echo(f"could not serve the page: {exc}", err=True)
         raise typer.Exit(code=1) from exc
     except KeyboardInterrupt:

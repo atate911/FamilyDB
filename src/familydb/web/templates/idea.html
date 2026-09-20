@@ -8,7 +8,7 @@
       <span class="tag">{{ idea.kind }}</span>
       <span class="tag status-{{ idea.status }}">{{ idea.status }}</span>
       {% if idea.suggested_by_name %}<span>suggested by {{ idea.suggested_by_name }}</span>{% endif %}
-      <span>added {{ idea.created_at[:10] }}</span>
+      <span>added {{ row.added }}</span>
     </p>
     {% if idea.description %}<p>{{ idea.description }}</p>{% endif %}
 

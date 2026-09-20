@@ -28,20 +28,38 @@ CONTENT_SECURITY_POLICY = (
     "frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
 )
 HSTS = "max-age=31536000"
+MIN_PASSWORD = 12
 NO_PASSWORD = (
     "WEB_HOST is {host}, so the page would be reachable from other machines, but WEB_PASSWORD is "
     "empty. Set a password, bind to 127.0.0.1, or set WEB_ALLOW_NO_PASSWORD=true if this is a "
     "home network you trust."
 )
+SHORT_PASSWORD = (
+    "WEB_PASSWORD is {length} characters. A page reachable from other machines needs at least "
+    f"{MIN_PASSWORD}, because one password guards everything and there is no second factor. "
+    "Bind to 127.0.0.1 instead if you would rather keep a short one."
+)
+NO_PROXY_TRUSTED = (
+    "The page is on %s with WEB_TRUST_PROXY off. If a reverse proxy is in front, set it to true: "
+    "otherwise every visitor shares one lockout, so five wrong guesses shut the family out, and "
+    "the login cookie is not marked Secure."
+)
 
 
 def check_configuration(settings: Settings) -> None:
-    """Refuse to serve an unprotected page to the network. Raises ConfigError."""
-    if web_password_required(settings) and not settings.web_password:
+    """Refuse to serve a page the network could walk into. Raises ConfigError."""
+    if not web_password_required(settings):
+        return
+    if not settings.web_password:
         raise ConfigError(NO_PASSWORD.format(host=settings.web_host))
+    if len(settings.web_password) < MIN_PASSWORD:
+        raise ConfigError(SHORT_PASSWORD.format(length=len(settings.web_password)))
 
 
 def security_headers(response: Any) -> Any:
+    if request.endpoint != "static":
+        # Otherwise the back button can redisplay the family's pages after signing out.
+        response.headers.setdefault("Cache-Control", "no-store")
     response.headers.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY)
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("Referrer-Policy", "no-referrer")
@@ -79,6 +97,8 @@ def create_app(app: App) -> Flask:
     web.register_error_handler(404, _not_found)
     if web_is_public(settings) and not settings.web_password:
         log.warning("serving the web page on %s with no password", settings.web_host)
+    elif web_is_public(settings) and not settings.web_trust_proxy:
+        log.warning(NO_PROXY_TRUSTED, settings.web_host)
     return web
 
 
