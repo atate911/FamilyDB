@@ -7,6 +7,7 @@ import sqlite3
 import sys
 from contextlib import closing
 from pathlib import Path
+from uuid import uuid4
 
 import anthropic
 import typer
@@ -17,6 +18,7 @@ from familydb.agent.history import load_history
 from familydb.agent.prompt import build_messages, build_system_blocks
 from familydb.agent.render import render_idea_line, render_user_turn
 from familydb.app import App, build_app
+from familydb.channels.console import DEFAULT_CHAT, one_shot, run_repl
 from familydb.config import load_settings
 from familydb.store import calls, db, ideas, members
 from familydb.store.members import Member
@@ -284,3 +286,44 @@ def debug_validate_tools() -> None:
         f"{len(tools)} tools accepted by {settings.anthropic_model}; "
         f"prompt would be {result.input_tokens} input tokens"
     )
+
+
+def _console_member(application: App, as_member: str | None) -> str:
+    with closing(_ready(application)) as conn:
+        member = _acting_member(application, conn, as_member)
+    if member is None:
+        raise typer.BadParameter(
+            "no family members yet; add one with: familydb members add NAME --role admin"
+        )
+    return member.display_name
+
+
+@app.command()
+def chat(
+    text: str = typer.Argument(..., help="The message to send."),
+    as_member: str | None = typer.Option(None, "--as", help="Speak as this family member."),
+    fresh: bool = typer.Option(False, "--fresh", help="Start a new chat with no history."),
+) -> None:
+    """Send one message to the bot and print its reply. Needs an Anthropic API key."""
+    application = build_app()
+    sender = _console_member(application, as_member)
+    chat_id = f"console:{uuid4().hex[:8]}" if fresh else DEFAULT_CHAT
+    reply = one_shot(application, text, sender, chat_id)
+    if reply is None:
+        typer.echo("(duplicate message ignored)")
+        return
+    typer.echo(reply.text)
+    if reply.status in {"failed", "unknown_sender"}:
+        raise typer.Exit(code=1)
+
+
+@app.command()
+def repl(
+    as_member: str | None = typer.Option(None, "--as", help="Speak as this family member."),
+    fresh: bool = typer.Option(False, "--fresh", help="Start a new chat with no history."),
+) -> None:
+    """Chat with the bot interactively. Needs an Anthropic API key."""
+    application = build_app()
+    sender = _console_member(application, as_member)
+    chat_id = f"console:{uuid4().hex[:8]}" if fresh else DEFAULT_CHAT
+    run_repl(application, sender, chat_id)
