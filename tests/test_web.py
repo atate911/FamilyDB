@@ -1,4 +1,5 @@
 from datetime import UTC, timedelta
+from pathlib import Path
 
 import pytest
 
@@ -469,3 +470,59 @@ def test_the_lockout_table_does_not_grow_without_limit(settings, clock) -> None:
     for number in range(MAX_TRACKED + 50):
         lockout.failed(f"172.16.{number // 256}.{number % 256}", now)
     assert lockout.locked("198.51.100.4", now)
+
+
+def test_the_web_package_has_no_way_to_write_to_the_database() -> None:
+    """The page is read-only by construction, not only by intent."""
+    import ast
+
+    import familydb.web as package
+
+    stores = {
+        "db",
+        "ideas",
+        "places",
+        "plans",
+        "outcomes",
+        "members",
+        "messages",
+        "calls",
+        "suggestions",
+        "idea_store",
+        "place_store",
+        "plan_store",
+        "outcome_store",
+    }
+    writes = {
+        "insert",
+        "insert_in",
+        "insert_out",
+        "update",
+        "delete",
+        "transaction",
+        "migrate",
+        "apply_outcome",
+        "requeue_enrichment",
+        "mark_followed_up",
+        "set_reply",
+        "set_active",
+        "mark_processed",
+        "mark_failed",
+        "bump_retries",
+        "give_up",
+        "reset_retries",
+        "add",
+    }
+    for module in sorted(Path(package.__file__).parent.glob("*.py")):
+        tree = ast.parse(module.read_text("utf-8"), filename=module.name)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and (node.module or "").startswith(
+                "familydb.store"
+            ):
+                for alias in node.names:
+                    assert alias.name not in writes, f"{module.name} imports {alias.name}"
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+                base = node.func.value
+                called = node.func.attr
+                writing = isinstance(base, ast.Name) and base.id in stores and called in writes
+                assert not writing, f"{module.name}:{node.lineno} calls {called} on a store"
