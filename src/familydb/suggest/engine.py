@@ -32,7 +32,9 @@ def resolve_window(args: SuggestInput, today: date) -> tuple[tuple[date, date] |
             raise ToolError("ask about at most two weeks at a time")
         label = "those dates"
     elif args.window == "next_weekend":
-        start, end = weekend_window(today + timedelta(days=7))
+        # The weekend after this one, which on a weekend day means the coming Saturday.
+        _, this_end = weekend_window(today)
+        start, end = weekend_window(this_end + timedelta(days=1))
         label = "next weekend"
     else:
         start, end = weekend_window(today)

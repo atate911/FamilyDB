@@ -1,9 +1,10 @@
 import json
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from familydb.integrations.open_meteo import DayForecast
 from familydb.store import db, ideas, places, suggestions
 from familydb.suggest.context import build_context
+from familydb.suggest.discover import DISCOVER_CACHE_SECONDS
 from familydb.suggest.engine import resolve_window
 from familydb.suggest.evaluate import overlap_minutes
 from familydb.suggest.shortlist import longest_free_span, participants_match, shortlist
@@ -58,6 +59,14 @@ def test_resolve_window(thursday_clock) -> None:
         SuggestInput(window="dates", start="2026-10-10", end="2026-10-11", question="?"), today
     )
     assert window == (date(2026, 10, 10), date(2026, 10, 11))
+
+
+def test_resolve_window_on_a_sunday(clock) -> None:
+    today = clock.today()  # Sunday 20 September
+    window, label = resolve_window(SuggestInput(window="this_weekend", question="?"), today)
+    assert window == (today, today) and label == "this weekend (Sun 20 Sep)"
+    window, label = resolve_window(SuggestInput(window="next_weekend", question="?"), today)
+    assert window == (SAT, SUN) and label == "next weekend (Sat 26 to Sun 27 Sep)"
 
 
 def test_context_reports_missing_services(conn, settings, thursday_clock, family) -> None:
@@ -293,7 +302,7 @@ def test_suggest_requeues_stale_places_when_web_is_on(
     _, data = _suggest(registry, ctx, discover=True)
     assert ideas.get(conn, stale.id).enrichment == "pending"
     assert "stale place details re-queued for a refresh" in data["skipped_checks"]
-    assert "web discovery not available yet" in data["skipped_checks"]
+    assert "web discovery not available here" in data["skipped_checks"]
 
 
 def test_suggest_without_services_and_recent_variety(
@@ -358,3 +367,90 @@ def test_pipeline_links_the_suggestion_to_the_reply(settings, thursday_clock, co
     row = suggestions.list_recent(conn, limit=1)[0]
     assert row.reply_message_id == reply.out_message_id
     assert reply.actions[0]["suggestion_id"] == row.id
+
+
+FIND = {
+    "title": "Harvest festival",
+    "url": "https://example.com/harvest",
+    "dates": "Sat 26 Sep, 10am to 4pm",
+    "summary": "Pumpkins, hay rides and food carts.",
+}
+
+
+def _web_ctx(conn, full_settings, thursday_clock, family, api, cache):
+    web_on = full_settings.model_copy(update={"web_tools_enabled": True})
+    ctx = _ctx(conn, web_on, thursday_clock, family, calendar=fakes.FakeCalendar(TZ))
+    ctx.api = api
+    ctx.discover_cache = cache
+    return ctx
+
+
+def test_discovery_runs_a_worker_turn_and_caches_the_finds(
+    registry, conn, full_settings, thursday_clock, family
+) -> None:
+    api = fakes.FakeMessagesAPI(*fakes.discover_script([FIND]))
+    cache: dict = {}
+    ctx = _web_ctx(conn, full_settings, thursday_clock, family, api, cache)
+    _idea(conn, "Cafe A", setting="indoor")
+    _, data = _suggest(registry, ctx, discover=True)
+    assert data["web_finds"] == [{**FIND, "source": "example.com"}]
+    assert "web discovery" not in " ".join(data["skipped_checks"])
+    request = api.requests[0]
+    assert [t["name"] for t in request["tools"]] == ["report_finds", "web_search", "web_fetch"]
+    assert request["tools"][1]["max_uses"] == 4
+    assert request["tools"][1]["user_location"]["city"] == "Vancouver"
+    asked = request["messages"][0]["content"][1]["text"]
+    assert "Window: Saturday 26 September to Sunday 27 September 2026." in asked
+    assert "Home area: Vancouver, WA." in asked and "what should we do this weekend?" in asked
+    assert list(cache) == ["2026-09-26:2026-09-27"]
+    # The suggestions log carries the finds too.
+    row = suggestions.list_recent(conn, limit=1)[0]
+    assert row.web_finds[0]["url"] == FIND["url"]
+
+    # Asking again inside the cache window makes no request at all.
+    _, again = _suggest(registry, ctx, discover=True)
+    assert again["web_finds"] == data["web_finds"] and len(api.requests) == 3
+
+    # A different window is a different key; an expired key is searched again.
+    api.queue.extend(fakes.discover_script([]))
+    _, other = _suggest(registry, ctx, discover=True, window="next_weekend")
+    assert other["web_finds"] == [] and len(cache) == 2
+    thursday_clock.advance(timedelta(seconds=DISCOVER_CACHE_SECONDS + 1))
+    api.queue.extend(fakes.discover_script([FIND]))
+    _, refreshed = _suggest(registry, ctx, discover=True)
+    assert len(refreshed["web_finds"]) == 1 and len(api.requests) == 9
+
+
+def test_discovery_failures_become_notes_and_are_not_cached(
+    registry, conn, full_settings, thursday_clock, family
+) -> None:
+    cache: dict = {}
+    api = fakes.FakeMessagesAPI(fakes.rate_limit_error())
+    ctx = _web_ctx(conn, full_settings, thursday_clock, family, api, cache)
+    _, data = _suggest(registry, ctx, discover=True)
+    assert data["web_finds"] == [] and cache == {}
+    assert any(n.startswith("web discovery failed:") for n in data["skipped_checks"])
+
+    # A worker that never hands back is a failure too, so the next ask tries again.
+    api.queue.append(fakes.message([fakes.text("Nothing found.")]))
+    _, data = _suggest(registry, ctx, discover=True)
+    assert "web discovery failed: worker ended without reporting" in data["skipped_checks"]
+    assert cache == {}
+
+    api.queue.extend(fakes.discover_script([FIND]))
+    _, data = _suggest(registry, ctx, discover=True)
+    assert len(data["web_finds"]) == 1 and len(cache) == 1
+
+    # discover=False never touches the web, even with a warm cache.
+    _, data = _suggest(registry, ctx, discover=False)
+    assert data["web_finds"] == [] and data["skipped_checks"] == ["weather not configured"]
+
+
+def test_discovery_request_for_someday(conn, settings, thursday_clock, family) -> None:
+    from familydb.suggest.discover import cache_key, render_discover_request
+
+    context = build_context(_ctx(conn, settings, thursday_clock, family), None)
+    text = render_discover_request(context, "  ", settings)
+    assert "Window: no fixed dates; look at the next four weeks or so." in text
+    assert "Home area: not set." in text and "asked" not in text
+    assert cache_key(None) == "someday" and cache_key((SAT, SAT)) == "2026-09-26:2026-09-26"

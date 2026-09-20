@@ -212,6 +212,7 @@ def _think(
         if note:
             current.append({"type": "text", "text": note})
     turn = build_messages(history, current)
+    messages_api = api if api is not None else app.client.beta.messages
     ctx = ToolContext(
         conn=conn,
         settings=settings,
@@ -220,9 +221,12 @@ def _think(
         message_id=inbound_id,
         calendar=app.calendar,
         weather=app.weather,
+        geocoder=app.geocoder,
+        api=messages_api,  # for the discovery worker inside `suggest`
+        discover_cache=app.discover_cache,
     )
     return run_turn(
-        api=api if api is not None else app.client.beta.messages,
+        api=messages_api,
         settings=settings,
         registry=app.registry,
         ctx=ctx,

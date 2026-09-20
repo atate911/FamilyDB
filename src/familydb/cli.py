@@ -11,6 +11,7 @@ import threading
 from contextlib import closing
 from datetime import timedelta
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
 import anthropic
@@ -22,7 +23,7 @@ from familydb.agent.history import load_history
 from familydb.agent.prompt import build_messages, build_system_blocks
 from familydb.agent.render import render_idea_line, render_user_turn
 from familydb.app import App, build_app
-from familydb.availability import enrichment_available
+from familydb.availability import enrichment_available, web_tools_available
 from familydb.channels.console import DEFAULT_CHAT, one_shot, run_repl
 from familydb.config import load_settings
 from familydb.dates import utc_iso
@@ -473,6 +474,88 @@ def _cli_senders(application: App) -> None:
         from familydb.channels.telegram import send_once
 
         application.senders["telegram"] = lambda chat_id, text: send_once(token, chat_id, text)
+
+
+WINDOWS = {"this-weekend": "this_weekend", "next-weekend": "next_weekend", "someday": "someday"}
+
+
+def _window_payload(window: str) -> dict[str, Any]:
+    if window in WINDOWS:
+        return {"window": WINDOWS[window]}
+    start, sep, end = window.partition("..")
+    if sep and start and end:
+        return {"window": "dates", "start": start.strip(), "end": end.strip()}
+    raise typer.BadParameter("use this-weekend, next-weekend, someday, or START..END (YYYY-MM-DD)")
+
+
+def _print_suggestion(data: dict[str, Any]) -> None:
+    typer.echo(data["window"]["label"])
+    for day in data["days"]:
+        free = ", ".join(day["free"]) if day["free"] else "no free block"
+        if not day["free_known"]:
+            free += " (calendar not checked)"
+        weather = day["forecast"] or "no forecast"
+        if day["rain_chance_pct"] is not None:
+            weather += f", {day['rain_chance_pct']}% rain"
+        typer.echo(f"  {day['weekday']} {day['date']}: free {free} · {weather}")
+    for candidate in data["candidates"]:
+        reasons = "; ".join(candidate["reasons"]) or "nothing against it"
+        typer.echo(
+            f"{candidate['verdict']:<9} #{candidate['idea_id']} {candidate['title']}: {reasons}"
+        )
+    for find in data["web_finds"]:
+        when = f" ({find['dates']})" if find.get("dates") else ""
+        typer.echo(f"web       {find['title']}{when}: {find['url']}")
+    if data["skipped_checks"]:
+        typer.echo("skipped: " + "; ".join(data["skipped_checks"]))
+
+
+@app.command()
+def suggest(
+    window: str = typer.Option(
+        "this-weekend", "--window", help="this-weekend, next-weekend, someday, or START..END."
+    ),
+    as_member: str | None = typer.Option(None, "--as", help="Ask as this family member."),
+    discover: bool = typer.Option(
+        False, "--discover", help="Also look for time-bound events on the web (calls the API)."
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Print the full result as JSON."),
+) -> None:
+    """Run the suggestion engine directly and print its verdicts, without the chat model."""
+    application = build_app()
+    payload = _window_payload(window)
+    payload["question"] = f"what should we do {window.replace('-', ' ')}?"
+    payload["discover"] = discover
+    api = None
+    if discover:
+        if not web_tools_available(application.settings):
+            typer.echo("set WEB_TOOLS_ENABLED=true to look for events on the web", err=True)
+            raise typer.Exit(code=1)
+        try:
+            api = application.client.beta.messages
+        except AgentError as exc:
+            typer.echo(str(exc), err=True)
+            raise typer.Exit(code=1) from exc
+    with closing(_ready(application)) as conn:
+        ctx = ToolContext(
+            conn=conn,
+            settings=application.settings,
+            clock=application.clock,
+            member=_acting_member(application, conn, as_member),
+            calendar=application.calendar,
+            weather=application.weather,
+            geocoder=application.geocoder,
+            api=api,
+            discover_cache=application.discover_cache,
+        )
+        result = application.registry.dispatch("suggest", payload, ctx)
+    if result.is_error:
+        typer.echo(result.content, err=True)
+        raise typer.Exit(code=1)
+    if json_output:
+        typer.echo(result.content)
+        return
+    _print_suggestion(json.loads(result.content))
 
 
 @app.command()

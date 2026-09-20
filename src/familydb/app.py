@@ -39,6 +39,8 @@ class App:
         self._geocoder = geocoder
         # Channels register how to deliver a text to one of their chats, keyed by channel name.
         self.senders: dict[str, Callable[[str, str], None]] = {}
+        # Web discovery results per window, kept for a while (see suggest/discover.py).
+        self.discover_cache: dict[str, Any] = {}
         self.clock = clock or SystemClock(settings.tzinfo, southern=settings.southern_hemisphere)
         self._registry: ToolRegistry | None = None
         self._client: anthropic.Anthropic | None = None

@@ -1,3 +1,4 @@
+import json
 import os
 import signal
 import subprocess
@@ -131,3 +132,23 @@ def test_enrich_command_requires_web_tools(env: Path) -> None:
     result = runner.invoke(app, ["enrich"])
     assert result.exit_code == 1
     assert "WEB_TOOLS_ENABLED" in result.output
+
+
+def test_suggest_command_prints_verdicts(env: Path) -> None:
+    runner.invoke(app, ["members", "add", "Sam", "--role", "admin"])
+    runner.invoke(
+        app, ["tool", "add_idea", "--json", '{"title": "Board game cafe", "kind": "activity"}']
+    )
+    result = runner.invoke(app, ["suggest", "--window", "this-weekend"])
+    assert result.exit_code == 0, result.output
+    assert result.output.startswith("this weekend (")
+    assert "possible  #1 Board game cafe: hours unknown" in result.output
+    assert "skipped: calendar not connected; weather not configured" in result.output
+    result = runner.invoke(app, ["suggest", "--window", "2026-10-03..2026-10-04", "--json"])
+    assert result.exit_code == 0, result.output
+    data = json.loads(result.output)
+    assert data["window"]["start"] == "2026-10-03" and len(data["candidates"]) == 1
+    result = runner.invoke(app, ["suggest", "--window", "tuesday"])
+    assert result.exit_code != 0 and "START..END" in result.output
+    result = runner.invoke(app, ["suggest", "--discover"])
+    assert result.exit_code == 1 and "WEB_TOOLS_ENABLED" in result.output
