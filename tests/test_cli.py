@@ -125,3 +125,9 @@ def test_validate_tools_reports_missing_credentials(
     result = runner.invoke(app, ["debug", "validate-tools"])
     assert result.exit_code == 1
     assert "validation failed: no Anthropic credentials" in result.output
+
+
+def test_enrich_command_requires_web_tools(env: Path) -> None:
+    result = runner.invoke(app, ["enrich"])
+    assert result.exit_code == 1
+    assert "WEB_TOOLS_ENABLED" in result.output

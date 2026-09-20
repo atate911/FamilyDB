@@ -138,3 +138,156 @@ def test_retry_tells_the_model_what_already_ran(settings, clock, conn, family) -
     assert blocks[1]["text"] == "[Sam] we should try the ramen place"
     assert "add_idea (#1)" in blocks[2]["text"]
     assert "must not be repeated" in blocks[2]["text"]
+
+
+# --- enrichment ---------------------------------------------------------------------------------
+
+from familydb.integrations.geocode import GeoPoint  # noqa: E402
+from familydb.jobs.enrich import render_place_note, run_enrichment  # noqa: E402
+from familydb.store import db, places  # noqa: E402
+
+POINT = GeoPoint(45.5, -122.6, "Hopscotch", "nominatim")
+
+
+def _web_app(settings, clock, **extra) -> App:
+    configured = settings.model_copy(
+        update={"web_tools_enabled": True, "home_lat": 45.63, "home_lon": -122.67, **extra}
+    )
+    return App(configured, clock, geocoder=fakes.FakeGeocoder(default=POINT))
+
+
+def _captured_idea(conn, family, title="Hopscotch, Portland", chat_id="-100"):
+    with db.transaction(conn):
+        inbound = messages.insert_in(
+            conn,
+            channel="telegram",
+            channel_update_id=f"cap-{title}",
+            chat_id=chat_id,
+            member_id=family["sam"].id,
+            text=f"idea: {title}",
+            now="2026-09-20T20:00:00Z",
+        )
+        return ideas.insert(
+            conn,
+            title=title,
+            kind="outing",
+            source_message_id=inbound.id,
+            now="2026-09-20T20:00:01Z",
+        ), inbound
+
+
+def test_enrichment_fills_in_an_idea_and_notes_the_chat(settings, clock, conn, family) -> None:
+    app = _web_app(settings, clock)
+    idea, inbound = _captured_idea(conn, family)
+    delivered: list[tuple[str, str]] = []
+    app.senders["telegram"] = lambda chat_id, text: delivered.append((chat_id, text))
+    api = fakes.FakeMessagesAPI(
+        *fakes.enrich_script(
+            {
+                "idea_id": idea.id,
+                "name": "Hopscotch Portland",
+                "summary": "Immersive art experience.",
+                "hours": [{"day": "sat", "open": "10:00", "close": "20:00"}],
+                "closed_days": ["mon"],
+                "booking_url": "https://example.com/tickets",
+            }
+        )
+    )
+    counts = run_enrichment(app, api=api)
+    assert counts == {"done": 1, "skipped": 0, "failed": 0, "deferred": 0}
+    stored = ideas.get(conn, idea.id)
+    assert stored.enrichment == "done" and stored.place_id is not None
+    place = places.get(conn, stored.place_id)
+    assert place.travel_minutes is not None and place.hours["mon"] == []
+    assert api.requests[0]["messages"][0]["content"][1]["text"].startswith(
+        "Idea #1: Hopscotch, Portland"
+    )
+    assert len(delivered) == 1 and delivered[0][0] == "-100"
+    note = delivered[0][1]
+    assert note.startswith("Filled in #1 Hopscotch Portland:") and "hours saved for sat" in note
+    assert "closed mon" in note and "tickets: https://example.com/tickets" in note
+    outbound = [
+        m
+        for m in messages.recent_for_chat(conn, "-100", limit=10, since="2026-09-01")
+        if m.direction == "out"
+    ]
+    assert outbound[0].reply_to == inbound.id and outbound[0].text == note
+    assert run_enrichment(app, api=fakes.FakeMessagesAPI()) == {
+        "done": 0,
+        "skipped": 0,
+        "failed": 0,
+        "deferred": 0,
+    }
+
+
+def test_enrichment_skipped_failed_and_deferred(settings, clock, conn, family) -> None:
+    app = _web_app(settings, clock)
+    picnic, _ = _captured_idea(conn, family, title="A picnic somewhere")
+    vague, _ = _captured_idea(conn, family, title="That place")
+    third, _ = _captured_idea(conn, family, title="Third idea")
+    api = fakes.FakeMessagesAPI(
+        fakes.message(
+            [
+                fakes.tool_use(
+                    "tu_skip",
+                    "skip_place",
+                    {"idea_id": picnic.id, "status": "skipped", "reason": "not a specific place"},
+                )
+            ],
+            stop_reason="tool_use",
+        ),
+        fakes.message([fakes.text("Skipped.")]),
+        fakes.message([fakes.text("I could not find it, sorry.")]),  # no hand-back
+        fakes.rate_limit_error(),
+    )
+    counts = run_enrichment(app, api=api)
+    assert counts == {"done": 0, "skipped": 1, "failed": 1, "deferred": 1}
+    assert ideas.get(conn, picnic.id).enrichment == "skipped"
+    failed = ideas.get(conn, vague.id)
+    assert failed.enrichment == "failed" and failed.enrichment_note == "worker ended without saving"
+    assert ideas.get(conn, third.id).enrichment == "pending"  # deferred, still queued
+    assert [i.id for i in ideas.pending_enrichment(conn, limit=10)] == [third.id]
+
+
+def test_enrichment_is_a_noop_without_web_tools(settings, clock, conn, family) -> None:
+    app = App(settings, clock)
+    _captured_idea(conn, family)
+    api = fakes.FakeMessagesAPI()
+    assert run_enrichment(app, api=api)["done"] == 0
+    assert api.requests == []
+
+
+def test_enrichment_note_can_be_turned_off(settings, clock, conn, family) -> None:
+    app = _web_app(settings, clock, enrichment_notes=False)
+    idea, _ = _captured_idea(conn, family)
+    delivered = []
+    app.senders["telegram"] = lambda chat_id, text: delivered.append(text)
+    api = fakes.FakeMessagesAPI(
+        *fakes.enrich_script({"idea_id": idea.id, "name": "Hopscotch Portland"})
+    )
+    assert run_enrichment(app, api=api)["done"] == 1
+    assert delivered == []
+
+
+def test_render_place_note_without_details() -> None:
+    from familydb.store.ideas import Idea
+    from familydb.store.places import Place
+
+    idea = Idea(
+        id=7,
+        kind="outing",
+        title="X",
+        created_at="2026-09-20T00:00:00Z",
+        updated_at="2026-09-20T00:00:00Z",
+    )
+    place = Place(
+        id=1, name="Somewhere", created_at="2026-09-20T00:00:00Z", updated_at="2026-09-20T00:00:00Z"
+    )
+    assert render_place_note(idea, place) == "Filled in #7 Somewhere: · hours unknown"
+
+
+def test_scheduler_registers_enrichment_only_with_web_tools(settings, clock) -> None:
+    assert build_scheduler(App(settings, clock)).get_job("enrich") is None
+    on = settings.model_copy(update={"web_tools_enabled": True, "enrich_interval_minutes": 4})
+    job = build_scheduler(App(on, clock)).get_job("enrich")
+    assert job is not None and job.trigger.interval.total_seconds() == 4 * 60

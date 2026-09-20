@@ -22,6 +22,7 @@ from familydb.agent.history import load_history
 from familydb.agent.prompt import build_messages, build_system_blocks
 from familydb.agent.render import render_idea_line, render_user_turn
 from familydb.app import App, build_app
+from familydb.availability import enrichment_available
 from familydb.channels.console import DEFAULT_CHAT, one_shot, run_repl
 from familydb.config import load_settings
 from familydb.dates import utc_iso
@@ -400,11 +401,7 @@ def db_retry_failed(
 
     application = build_app()
     application.migrate()
-    token = application.settings.telegram_bot_token
-    if token:
-        from familydb.channels.telegram import send_once
-
-        application.senders["telegram"] = lambda chat_id, text: send_once(token, chat_id, text)
+    _cli_senders(application)
     if reset:
         with closing(application.connect()) as conn, db.transaction(conn):
             count = messages.reset_retries(conn)
@@ -467,3 +464,30 @@ def google_events(days: int = typer.Option(7, "--days", help="How many days ahea
     for event in events:
         when = event.start.isoformat() if event.all_day else event.start.strftime("%a %d %b %H:%M")
         typer.echo(f"{when}  {event.title}" + (f"  @ {event.location}" if event.location else ""))
+
+
+def _cli_senders(application: App) -> None:
+    """Let a one-off command deliver replies the way the running bot would."""
+    token = application.settings.telegram_bot_token
+    if token:
+        from familydb.channels.telegram import send_once
+
+        application.senders["telegram"] = lambda chat_id, text: send_once(token, chat_id, text)
+
+
+@app.command()
+def enrich(
+    idea_id: int | None = typer.Option(None, "--idea", help="Look up this one idea, even if done."),
+    limit: int | None = typer.Option(None, "--limit", help="How many pending ideas to process."),
+) -> None:
+    """Look up place details for pending ideas now (the running bot does this on a schedule)."""
+    from familydb.jobs.enrich import run_enrichment
+
+    application = build_app()
+    application.migrate()
+    if not enrichment_available(application.settings):
+        typer.echo("set WEB_TOOLS_ENABLED=true to look ideas up on the web", err=True)
+        raise typer.Exit(code=1)
+    _cli_senders(application)
+    counts = run_enrichment(application, idea_id=idea_id, limit=limit)
+    typer.echo(", ".join(f"{key}: {value}" for key, value in counts.items()))
