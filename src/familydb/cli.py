@@ -359,7 +359,13 @@ def run() -> None:
         settings.tz,
     )
     if settings.telegram_bot_token:
-        log.warning("TELEGRAM_BOT_TOKEN is set but the Telegram channel is not built yet")
+        from familydb.channels.telegram import TelegramChannel
+
+        channel = TelegramChannel(application)
+        log.info("starting the Telegram channel (long polling)")
+        channel.run()
+        log.info("stopped")
+        return
     stop = threading.Event()
 
     def _stop(signum: int, _frame: object) -> None:
