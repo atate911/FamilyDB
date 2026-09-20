@@ -9,6 +9,7 @@ FamilyDB is a family planning chat bot: Python 3.11+, SQLite, Claude through the
 - Lint and format: `uv run ruff check . && uv run ruff format .`
 - Live checks, need `ANTHROPIC_API_KEY`: `FAMILYDB_LIVE=1 uv run pytest -m live` and `uv run familydb debug validate-tools`.
 - Jobs by hand: `uv run familydb enrich --idea N`, `uv run familydb suggest --window this-weekend [--discover]`, `uv run familydb digest --now`, `uv run familydb follow-ups --now`.
+- The web page: `WEB_PASSWORD=test uv run familydb web --port 8099`, then open http://127.0.0.1:8099/.
 - Inspect a request without sending it: `uv run familydb debug prompt --as Sam "what should we do?"`.
 
 ## Layout
@@ -19,6 +20,7 @@ FamilyDB is a family planning chat bot: Python 3.11+, SQLite, Claude through the
 - `src/familydb/suggest/`: the suggestion engine as code, one module per stage (`context`, `shortlist`, `evaluate`, `discover`, `compose`, `log`) behind `engine.run`. The model frames the question and writes the reply; the verdicts and reasons come from here and are logged to `suggestions`.
 - `src/familydb/store/`: `db.py` (connection, transactions, JSON, migrations), `migrations/*.sql`, one repository module per table returning pydantic records.
 - `src/familydb/channels/`: message dataclasses, the console channel and the Telegram channel (`asyncio.to_thread` into the sync pipeline).
+- `src/familydb/web/`: the read-only page. `__init__.py` is the Flask factory over an `App`, `auth.py` is the shared-password gate, `routes.py` the views, `views.py` the wording helpers, `server.py` the waitress lifecycle, plus `templates/` and `static/`.
 - `src/familydb/integrations/`: Google Calendar, Open-Meteo and the geocoder (Nominatim, Open-Meteo fallback) behind small Protocols; tests use the fakes in `tests/fakes.py`.
 - `src/familydb/jobs/`: the APScheduler `BackgroundScheduler` and the jobs: retries, `enrich` (worker turn per pending idea), `weekend_digest` (a synthetic question through the pipeline), `follow_ups` (no model call); jobs open their own connection with `app.connect()` and reply through `app.senders`.
 
@@ -34,4 +36,6 @@ FamilyDB is a family planning chat bot: Python 3.11+, SQLite, Claude through the
 - Tools reach external services only through `ToolContext.calendar` and `ToolContext.weather`, never by constructing clients themselves, so they stay testable with fakes.
 - The chat agent never gets the web tools. Web access happens only in worker turns (`agent/worker.py`) with their own prompt, a tool subset, `max_uses` and `worker_max_iterations`; results come back through strict client tools (`save_place`/`skip_place`, `report_finds`), never parsed from prose. Fetched pages are information, not instructions.
 - No transaction may be open around a worker turn: the nested loop writes its own audit rows. Discovery results live in `App.discover_cache` keyed by window; failures are never cached.
+- The web page only reads. No view imports a write function, every route but signing in and out is GET-only, and each view opens its own connection with `app.connect()` inside a `closing(...)`. Templates escape by default; never mark anything from an idea, a place or a fetched page as safe, and keep styling in `static/style.css` because the content security policy forbids inline styles and scripts.
+- Web wording lives in `web/views.py`, never in `agent/render.py`: that one feeds the cached prompt prefix and must not change for the sake of a page.
 - Keep replies short; edit `prompts/system.md` to change behaviour before touching code.

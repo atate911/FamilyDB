@@ -63,6 +63,7 @@ Without uv: `python3 -m venv .venv && .venv/bin/pip install .` gives the same `.
 7. `familydb debug validate-tools` confirms the API accepts every tool schema.
 8. `familydb tool --list` shows which integrations are available; the calendar and weather rows flip to `available` once sections 5 and 6 are done.
 9. `familydb suggest --window this-weekend` prints what the engine would say about the ideas so far, with the checks it had to skip.
+10. Optional: `WEB_PASSWORD=test familydb web --port 8099` and open the page in a browser (section 10).
 
 ## 4. Telegram
 
@@ -118,7 +119,76 @@ Migrations run automatically on start. Never edit an applied migration; add a ne
 
 **Cost.** Enrichment is at most three searches and three page reads per idea; discovery at most four searches per weekend per twelve hours. Both use the same model as chat.
 
-## 10. Troubleshooting
+## 10. The web page
+
+A read-only page for browsing: the ideas list with search and filters, one idea in full with its
+hours, travel estimate and booking link, the restaurants on their own page, and what is on the
+calendar. It never changes anything; ideas and plans are still added by messaging the bot.
+
+**At home.** Put a password in `.env`, turn the page on, and restart:
+
+```
+WEB_ENABLED=true
+WEB_HOST=0.0.0.0          # 127.0.0.1 keeps it on the server itself
+WEB_PASSWORD=something-the-family-can-remember
+```
+
+With Docker, uncomment nothing else: the compose file publishes the page to the server itself
+(`127.0.0.1:8080`). To reach it from other devices on the network, change that line to
+`"8080:8080"`. The page then answers at `http://<server>:8080/`. Everyone types the password once;
+the login lasts `WEB_SESSION_DAYS` (30 by default).
+
+If you would rather not put it on the network at all, leave `WEB_HOST=127.0.0.1` and reach it over
+Tailscale or `ssh -L 8080:127.0.0.1:8080 you@server`. That is the safest option and needs no
+password, though setting one anyway costs nothing.
+
+**On a server on the internet.** Plain HTTP would send the password in the clear, so put Caddy in
+front and let it get a certificate. Point a domain at the machine, then:
+
+```
+WEB_ENABLED=true
+WEB_HOST=0.0.0.0
+WEB_PASSWORD=a-long-random-password
+WEB_TRUST_PROXY=true
+WEB_DOMAIN=familydb.example.com
+```
+
+```bash
+docker compose --profile tls up -d          # starts the bot and Caddy
+```
+
+Leave the bot's own port published to `127.0.0.1` only, so the internet reaches Caddy and nothing
+else, and let the firewall through on 80 and 443 alone (`ufw allow 80,443/tcp`). `WEB_TRUST_PROXY`
+makes the page read the real visitor address and the HTTPS scheme from Caddy's headers, and marks
+the login cookie `Secure` so it never crosses plain HTTP. Only turn it on with a proxy actually in
+front: it means trusting those headers.
+
+Running without Docker, put nginx or Caddy in front the same way and keep `WEB_HOST=127.0.0.1`.
+
+**What protects it.** One shared password, checked in constant time. Five wrong guesses lock that
+address out for fifteen minutes and are logged. Every page but the login and `/healthz` needs the
+cookie. Responses carry a content security policy that forbids scripts and framing, and nothing on
+the page writes to the database, so the worst a visitor can do is read. Refusing to start is
+deliberate: a page bound off the loopback with no password will not serve, and says so, unless you
+set `WEB_ALLOW_NO_PASSWORD=true` on purpose.
+
+**Checking it.**
+
+```bash
+curl -sI http://127.0.0.1:8080/            # 302 to /login, plus the security headers
+curl -s http://127.0.0.1:8080/healthz      # ok
+```
+
+`familydb web --port 8099` serves the page alone in the foreground, which is the quickest way to
+try settings without restarting the bot.
+
+**Notes.** The login cookie is signed with a key generated once into `data/web_secret`; set
+`WEB_SECRET_KEY` instead if you run the page in more than one process, or everyone will be signed
+out at random. The port must stay above 1024, because the bot runs unprivileged in both Docker and
+systemd. The page opens its own database connection per request, which is safe alongside the bot
+writing: SQLite is in WAL mode.
+
+## 11. Troubleshooting
 
 - **`cache_read` stays 0 in `db status`.** Something volatile is in the cached prefix. `familydb debug prompt "hi"` prints the request: the two `system` blocks and the `tools` list must be byte-identical between two runs. Also, the cache expires after five minutes of quiet; set `ANTHROPIC_CACHE_TTL=1h` if usage is bursty.
 - **`database is locked`.** Two processes writing at once. Run one bot process; the CLI can be used alongside it (short transactions, busy timeout), but not a second `familydb run`.
@@ -130,3 +200,6 @@ Migrations run automatically on start. Never edit an applied migration; add a ne
 - **"details: failed" on an idea.** The lookup worker could not identify the place; `ideas list --json` shows the note. Fix the title or location with "actually it's the one in Vancouver" and run `familydb enrich --idea N`.
 - **Suggestions say "web discovery off" or "hours unknown".** Web tools are off (`WEB_TOOLS_ENABLED`), or the idea has not been looked up yet; the enrichment job runs only in the long-running `familydb run` process.
 - **The digest never arrives.** `familydb digest` shows the schedule and chat; the log says why a run was skipped (no chat id, nothing to send with, no admin). The bot must be in the group and see its messages (section 4, step 3).
+- **"the web page is not serving" in the log.** Either the settings forbid it (a page off the loopback with no `WEB_PASSWORD`) or the port is taken. The log line says which. The bot keeps running either way.
+- **The web page asks for the password again and again.** The login cookie could not be stored or its signing key keeps changing. Check that `data/` is writable, or set `WEB_SECRET_KEY`. Over HTTPS, `WEB_TRUST_PROXY` must be true or the `Secure` cookie is never set.
+- **The web page is unreachable from another device.** `WEB_HOST` is probably still `127.0.0.1`, or the compose `ports` line still starts with `127.0.0.1:`. Both have to change, and a password has to be set.
