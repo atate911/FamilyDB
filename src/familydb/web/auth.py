@@ -38,6 +38,9 @@ SESSION_KEY = "signed_in"
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 MAX_ATTEMPTS = 5
 LOCKOUT_MINUTES = 15
+# A page on the internet can be poked from endless addresses; the table of failures must not grow
+# with them. Past this many, everything not currently locked out is forgotten.
+MAX_TRACKED = 4096
 # Endpoints reachable without signing in. "static" covers the stylesheet on the login page.
 OPEN_ENDPOINTS = frozenset({"auth.login", "auth.sign_in", "auth.logout", "web.healthz", "static"})
 HOME = "/"
@@ -63,7 +66,20 @@ class Lockout:
             return False
         return True
 
+    def _prune(self, now: datetime) -> None:
+        if len(self.failures) <= MAX_TRACKED:
+            return
+        live = {who for who, deadline in self.until.items() if deadline > now}
+        if len(live) > MAX_TRACKED:
+            # More addresses are locked out than we will track. Per-address counting is not
+            # helping against whoever is doing this, so say so and start again.
+            log.warning("forgetting %d web lockouts: too many addresses to track", len(live))
+            live = set()
+        self.failures = {who: n for who, n in self.failures.items() if who in live}
+        self.until = {who: d for who, d in self.until.items() if who in live}
+
     def failed(self, who: str, now: datetime) -> None:
+        self._prune(now)
         count = self.failures.get(who, 0) + 1
         self.failures[who] = count
         if count >= MAX_ATTEMPTS:

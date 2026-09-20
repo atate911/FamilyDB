@@ -452,3 +452,20 @@ def test_links_that_are_not_web_addresses_never_become_links(settings, clock, co
     cards = _client(settings, clock).get("/restaurants")
     assert "javascript:" not in cards.text and "Their site" not in cards.text
     assert restaurant.title in cards.text
+
+
+def test_the_lockout_table_does_not_grow_without_limit(settings, clock) -> None:
+    from familydb.web.auth import MAX_ATTEMPTS, MAX_TRACKED, Lockout
+
+    lockout = Lockout()
+    now = clock.now()
+    for number in range(MAX_TRACKED + 50):  # one failure each, from many addresses
+        lockout.failed(f"10.0.{number // 256}.{number % 256}", now)
+    assert len(lockout.failures) <= MAX_TRACKED + 1
+    # Someone actually locked out is still locked out after a prune.
+    for _ in range(MAX_ATTEMPTS):
+        lockout.failed("198.51.100.4", now)
+    assert lockout.locked("198.51.100.4", now)
+    for number in range(MAX_TRACKED + 50):
+        lockout.failed(f"172.16.{number // 256}.{number % 256}", now)
+    assert lockout.locked("198.51.100.4", now)
