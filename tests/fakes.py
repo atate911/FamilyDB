@@ -214,3 +214,37 @@ class FakeGeocoder:
     def geocode(self, query: str) -> GeoPoint | None:
         self.queries.append(query)
         return self.points.get(query.casefold(), self.default)
+
+
+def enrich_script(save_place_input: dict[str, Any]) -> list[BetaMessage]:
+    """A worker that searches (paused turn), then hands back with save_place, then stops."""
+    return [
+        message(
+            [
+                server_tool_use("srvtoolu_1", "web_search", {"query": "official site"}),
+                web_search_result(
+                    "srvtoolu_1", [{"url": "https://example.com/place", "title": "Place"}]
+                ),
+            ],
+            stop_reason="pause_turn",
+        ),
+        message([tool_use("tu_save", "save_place", save_place_input)], stop_reason="tool_use"),
+        message([text("Saved.")]),
+    ]
+
+
+def discover_script(finds: list[dict[str, Any]]) -> list[BetaMessage]:
+    """A worker that searches (paused turn), then hands back with report_finds, then stops."""
+    return [
+        message(
+            [
+                server_tool_use("srvtoolu_2", "web_search", {"query": "events this weekend"}),
+                web_search_result(
+                    "srvtoolu_2", [{"url": "https://example.com/events", "title": "Events"}]
+                ),
+            ],
+            stop_reason="pause_turn",
+        ),
+        message([tool_use("tu_finds", "report_finds", {"finds": finds})], stop_reason="tool_use"),
+        message([text("Reported.")]),
+    ]

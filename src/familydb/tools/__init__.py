@@ -6,7 +6,15 @@ from familydb.tools.registry import REGISTRY, ToolContext, ToolRegistry, ToolRes
 
 
 def build_registry() -> ToolRegistry:
-    from familydb.tools import gcal, ideas, now, outcomes, places, weather  # noqa: F401
+    from familydb.tools import (  # noqa: F401
+        gcal,
+        ideas,
+        now,
+        outcomes,
+        places,
+        suggest,
+        weather,
+    )
 
     return REGISTRY
 

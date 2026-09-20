@@ -88,3 +88,8 @@ def test_family_context_matches_tool_availability(conn, settings, family, tmp_pa
     text = build_system_blocks(conn, full)[1]["text"]
     assert "Calendar: connected" in text
     assert "Weather: configured" in text
+
+
+def test_worker_tools_are_declared_to_the_chat_agent_too(registry, settings) -> None:
+    names = registry.names()
+    assert "report_finds" in names and "save_place" in names and "skip_place" in names
