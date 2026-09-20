@@ -5,12 +5,14 @@ from __future__ import annotations
 import logging
 
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from familydb.app import App
-from familydb.availability import enrichment_available
+from familydb.availability import digest_configured, enrichment_available
 from familydb.jobs.enrich import run_enrichment
 from familydb.jobs.retry_failed import run_retries
+from familydb.jobs.weekend_digest import run_digest
 
 log = logging.getLogger(__name__)
 
@@ -36,5 +38,16 @@ def build_scheduler(app: App) -> BackgroundScheduler:
             name="look up new ideas",
             max_instances=1,
             coalesce=True,
+        )
+    if digest_configured(app.settings):
+        scheduler.add_job(
+            run_digest,
+            CronTrigger(day_of_week=app.settings.digest_day, hour=app.settings.digest_hour),
+            args=[app],
+            id="weekend_digest",
+            name="weekend digest",
+            max_instances=1,
+            coalesce=True,
+            misfire_grace_time=3600,  # a restart within the hour still sends it
         )
     return scheduler

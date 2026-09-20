@@ -291,3 +291,93 @@ def test_scheduler_registers_enrichment_only_with_web_tools(settings, clock) -> 
     on = settings.model_copy(update={"web_tools_enabled": True, "enrich_interval_minutes": 4})
     job = build_scheduler(App(on, clock)).get_job("enrich")
     assert job is not None and job.trigger.interval.total_seconds() == 4 * 60
+
+
+# --- weekend digest -----------------------------------------------------------------------------
+
+from datetime import timedelta  # noqa: E402
+
+from familydb.jobs.weekend_digest import DIGEST_TEXT, run_digest  # noqa: E402
+from familydb.store import members, suggestions  # noqa: E402
+
+
+def _digest_app(settings, clock, chat_id="-100", **extra) -> App:
+    return App(settings.model_copy(update={"digest_chat_id": chat_id, **extra}), clock)
+
+
+def _digest_script(text="Here is what I found."):
+    return [
+        fakes.message(
+            [
+                fakes.tool_use(
+                    "tu_s",
+                    "suggest",
+                    {"window": "this_weekend", "question": DIGEST_TEXT, "discover": False},
+                )
+            ],
+            stop_reason="tool_use",
+        ),
+        fakes.message([fakes.text(text)]),
+    ]
+
+
+def test_digest_asks_as_the_first_admin_and_delivers(settings, thursday_clock, conn, family):
+    app = _digest_app(settings, thursday_clock)
+    delivered: list[tuple[str, str]] = []
+    app.senders["telegram"] = lambda chat_id, text: delivered.append((chat_id, text))
+    api = fakes.FakeMessagesAPI(*_digest_script())
+    reply = run_digest(app, api=api)
+    assert reply.status == "ok" and delivered == [("-100", "Here is what I found.")]
+    inbound = messages.get(conn, reply.in_message_id)
+    assert inbound.channel == "telegram" and inbound.chat_id == "-100"
+    assert inbound.channel_update_id == "digest:2026-09-24"
+    assert inbound.member_id == family["sam"].id and inbound.text == DIGEST_TEXT
+    assert inbound.status == "processed"
+    assert api.requests[0]["messages"][0]["content"][1]["text"] == f"[Sam] {DIGEST_TEXT}"
+    row = suggestions.list_recent(conn, limit=1)[0]
+    assert row.reply_message_id == reply.out_message_id and row.window_start == "2026-09-26"
+    # The same day again asks and sends nothing.
+    assert run_digest(app, api=api) is None
+    assert len(api.requests) == 2 and len(delivered) == 1
+    # A week later is a new digest.
+    thursday_clock.advance(timedelta(days=7))
+    api.queue.extend(_digest_script("Next week's."))
+    assert run_digest(app, api=api).status == "ok"
+    assert delivered[-1] == ("-100", "Next week's.")
+
+
+def test_digest_needs_a_chat_id_a_sender_and_an_admin(settings, thursday_clock, conn) -> None:
+    api = fakes.FakeMessagesAPI()  # any request would fail the test
+    assert run_digest(App(settings, thursday_clock), api=api) is None  # no chat id
+    app = _digest_app(settings, thursday_clock)
+    assert run_digest(app, api=api) is None  # nothing registered to send to Telegram here
+    app.senders["telegram"] = lambda *_: None
+    with db.transaction(conn):
+        members.add(conn, display_name="Kid", role="kid", now="2026-09-20T00:00:00Z")
+    assert run_digest(app, api=api) is None  # no admin to ask as
+    assert conn.execute("SELECT count(*) FROM messages").fetchone()[0] == 0
+
+
+def test_digest_failure_is_left_for_the_retry_job(settings, thursday_clock, conn, family):
+    app = _digest_app(settings, thursday_clock, chat_id="console")
+    printed: list[str] = []
+    app.senders["console"] = lambda _chat_id, text: printed.append(text)
+    reply = run_digest(app, api=fakes.FakeMessagesAPI(fakes.rate_limit_error()))
+    assert reply.status == "failed" and printed == []
+    inbound = messages.get(conn, reply.in_message_id)
+    assert inbound.channel == "console" and inbound.status == "failed"
+    assert reply.out_message_id is None  # no failure notice for the family
+    assert run_retries(app, api=fakes.FakeMessagesAPI(*_digest_script("Late digest."))) == 1
+    assert printed == ["Late digest."]
+    assert messages.get(conn, inbound.id).status == "processed"
+    assert run_digest(app, api=fakes.FakeMessagesAPI()) is None  # still one per day
+
+
+def test_scheduler_registers_the_digest_only_with_a_chat_id(settings, clock) -> None:
+    assert build_scheduler(App(settings, clock)).get_job("weekend_digest") is None
+    on = settings.model_copy(
+        update={"digest_chat_id": "-100", "digest_day": "fri", "digest_hour": 17}
+    )
+    job = build_scheduler(App(on, clock)).get_job("weekend_digest")
+    assert job is not None and job.misfire_grace_time == 3600
+    assert str(job.trigger) == "cron[day_of_week='fri', hour='17']"

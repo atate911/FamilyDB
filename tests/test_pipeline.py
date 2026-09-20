@@ -3,7 +3,7 @@ import json
 from familydb.app import App
 from familydb.channels.base import IncomingMessage
 from familydb.channels.console import one_shot, run_repl
-from familydb.pipeline import CONFIG_REPLY, RETRY_REPLY, handle_incoming
+from familydb.pipeline import CONFIG_REPLY, RETRY_REPLY, handle_incoming, handle_synthetic
 from familydb.store import calls, ideas, messages
 from tests import fakes
 
@@ -195,3 +195,15 @@ def test_suggest_turn_runs_discovery_inside_the_chat_turn(settings, thursday_clo
     logged = calls.tool_calls_for_message(conn, reply.in_message_id)
     assert [t["tool_name"] for t in logged] == ["report_finds", "suggest"]
     assert len(calls.recent_llm_calls(conn)) == 5
+
+
+def test_synthetic_messages_are_stored_deduped_and_fail_quietly(settings, clock, conn, family):
+    app = _app(settings, clock)
+    msg = IncomingMessage("telegram", "digest:2026-09-20", "-100", "1001", "Weekend digest: hi")
+    api = fakes.FakeMessagesAPI(fakes.rate_limit_error())
+    reply = handle_synthetic(app, msg, family["sam"], api=api, conn=conn)
+    assert reply.status == "failed" and reply.text == "" and reply.out_message_id is None
+    inbound = messages.get(conn, reply.in_message_id)
+    assert inbound.status == "failed" and inbound.member_id == family["sam"].id
+    assert handle_synthetic(app, msg, family["sam"], api=api, conn=conn) is None  # seen
+    assert len(api.requests) == 1

@@ -47,11 +47,34 @@ def handle_incoming(
         return _handle(app, msg, api, own)
 
 
+def handle_synthetic(
+    app: App,
+    msg: IncomingMessage,
+    member: Member,
+    *,
+    api: MessagesAPI | None = None,
+    conn: sqlite3.Connection | None = None,
+) -> OutgoingMessage | None:
+    """Process a message the bot wrote itself on a member's behalf (the weekend digest).
+
+    Same dedupe on the update id and the same storage as a real message, but the sender is given
+    and a failure stores no notice for the family: the retry job picks the message up later.
+    """
+    if conn is None:
+        with closing(app.connect()) as own:
+            return handle_synthetic(app, msg, member, api=api, conn=own)
+    if _seen(conn, msg):
+        return None
+    inbound_id = _store_inbound(app, conn, msg, member)
+    if inbound_id is None:
+        return None
+    return _run(app, msg, member, inbound_id, api, conn, notify=False)
+
+
 def _handle(
     app: App, msg: IncomingMessage, api: MessagesAPI | None, conn: sqlite3.Connection
 ) -> OutgoingMessage | None:
-    if msg.channel_update_id and messages.exists_update(conn, msg.channel, msg.channel_update_id):
-        log.info("ignoring duplicate update %s/%s", msg.channel, msg.channel_update_id)
+    if _seen(conn, msg):
         return None
 
     member = members.resolve(conn, msg.channel, msg.channel_user_id)
@@ -61,6 +84,23 @@ def _handle(
             msg.chat_id, UNKNOWN_SENDER.format(id=msg.channel_user_id), "unknown_sender"
         )
 
+    inbound_id = _store_inbound(app, conn, msg, member)
+    if inbound_id is None:
+        return None
+    return _run(app, msg, member, inbound_id, api, conn, notify=True)
+
+
+def _seen(conn: sqlite3.Connection, msg: IncomingMessage) -> bool:
+    if msg.channel_update_id and messages.exists_update(conn, msg.channel, msg.channel_update_id):
+        log.info("ignoring duplicate update %s/%s", msg.channel, msg.channel_update_id)
+        return True
+    return False
+
+
+def _store_inbound(
+    app: App, conn: sqlite3.Connection, msg: IncomingMessage, member: Member
+) -> int | None:
+    """Store the inbound message; None when the same update landed at the same moment."""
     try:
         with transaction(conn):
             inbound = messages.insert_in(
@@ -77,8 +117,7 @@ def _handle(
             raise
         log.info("update %s/%s arrived twice at once", msg.channel, msg.channel_update_id)
         return None
-
-    return _run(app, msg, member, inbound.id, api, conn, notify=True)
+    return inbound.id
 
 
 def _run(

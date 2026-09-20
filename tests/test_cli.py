@@ -152,3 +152,20 @@ def test_suggest_command_prints_verdicts(env: Path) -> None:
     assert result.exit_code != 0 and "START..END" in result.output
     result = runner.invoke(app, ["suggest", "--discover"])
     assert result.exit_code == 1 and "WEB_TOOLS_ENABLED" in result.output
+
+
+def test_digest_command_needs_a_chat_id_and_shows_the_schedule(
+    env: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    result = runner.invoke(app, ["digest", "--now"])
+    assert result.exit_code == 1 and "DIGEST_CHAT_ID" in result.output
+    monkeypatch.setenv("DIGEST_CHAT_ID", "-100")
+    result = runner.invoke(app, ["digest"])
+    assert result.exit_code == 0, result.output
+    assert result.output.strip() == (
+        "digest goes to telegram chat -100 every thu at 18:00 America/Vancouver; "
+        "add --now to send it now"
+    )
+    # --now without a Telegram token has no sender, so nothing is sent.
+    result = runner.invoke(app, ["digest", "--now"])
+    assert result.exit_code == 1 and "digest not sent" in result.output

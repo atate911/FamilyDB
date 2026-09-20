@@ -23,7 +23,7 @@ from familydb.agent.history import load_history
 from familydb.agent.prompt import build_messages, build_system_blocks
 from familydb.agent.render import render_idea_line, render_user_turn
 from familydb.app import App, build_app
-from familydb.availability import enrichment_available, web_tools_available
+from familydb.availability import digest_configured, enrichment_available, web_tools_available
 from familydb.channels.console import DEFAULT_CHAT, one_shot, run_repl
 from familydb.config import load_settings
 from familydb.dates import utc_iso
@@ -556,6 +556,39 @@ def suggest(
         typer.echo(result.content)
         return
     _print_suggestion(json.loads(result.content))
+
+
+@app.command()
+def digest(
+    now: bool = typer.Option(False, "--now", help="Send the weekend digest to the chat now."),
+) -> None:
+    """Show the digest schedule, or send it now with --now (the running bot sends it weekly)."""
+    from familydb.jobs.weekend_digest import digest_channel, run_digest
+
+    application = build_app()
+    settings = application.settings
+    if not digest_configured(settings):
+        typer.echo("set DIGEST_CHAT_ID to the family chat to enable the weekend digest", err=True)
+        raise typer.Exit(code=1)
+    chat_id = settings.digest_chat_id or ""
+    if not now:
+        typer.echo(
+            f"digest goes to {digest_channel(chat_id)} chat {chat_id} every {settings.digest_day} "
+            f"at {settings.digest_hour:02d}:00 {settings.tz}; add --now to send it now"
+        )
+        return
+    application.migrate()
+    _cli_senders(application)
+    application.senders["console"] = lambda _chat_id, text: typer.echo(text)
+    reply = run_digest(application)
+    if reply is None:
+        typer.echo("digest not sent: already sent today, or no sender or admin (see the log)")
+        raise typer.Exit(code=1)
+    if reply.status != "ok":
+        typer.echo(f"digest turn ended {reply.status}: {reply.text}", err=True)
+        raise typer.Exit(code=1)
+    if digest_channel(chat_id) != "console":
+        typer.echo(f"sent the digest to {chat_id}")
 
 
 @app.command()
