@@ -169,3 +169,11 @@ def test_digest_command_needs_a_chat_id_and_shows_the_schedule(
     # --now without a Telegram token has no sender, so nothing is sent.
     result = runner.invoke(app, ["digest", "--now"])
     assert result.exit_code == 1 and "digest not sent" in result.output
+
+
+def test_follow_ups_command(env: Path) -> None:
+    result = runner.invoke(app, ["follow-ups"])
+    assert result.exit_code == 0 and result.output.startswith("follow-ups go out daily at 10:00")
+    result = runner.invoke(app, ["follow-ups", "--now"])
+    assert result.exit_code == 0, result.output
+    assert result.output.strip() == "asked about 0 plan(s)"

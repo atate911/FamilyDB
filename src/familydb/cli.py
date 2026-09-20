@@ -591,6 +591,27 @@ def digest(
         typer.echo(f"sent the digest to {chat_id}")
 
 
+@app.command("follow-ups")
+def follow_ups(
+    now: bool = typer.Option(False, "--now", help="Ask about finished plans now."),
+) -> None:
+    """Ask how recent plans went (the running bot does this daily at FOLLOW_UP_HOUR)."""
+    from familydb.jobs.follow_ups import run_follow_ups
+
+    application = build_app()
+    settings = application.settings
+    if not now:
+        typer.echo(
+            f"follow-ups go out daily at {settings.follow_up_hour:02d}:00 {settings.tz} to the "
+            "chat each plan was made in; add --now to ask now"
+        )
+        return
+    application.migrate()
+    _cli_senders(application)
+    application.senders["console"] = lambda _chat_id, text: typer.echo(text)
+    typer.echo(f"asked about {run_follow_ups(application)} plan(s)")
+
+
 @app.command()
 def enrich(
     idea_id: int | None = typer.Option(None, "--idea", help="Look up this one idea, even if done."),

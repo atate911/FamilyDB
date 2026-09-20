@@ -11,6 +11,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from familydb.app import App
 from familydb.availability import digest_configured, enrichment_available
 from familydb.jobs.enrich import run_enrichment
+from familydb.jobs.follow_ups import run_follow_ups
 from familydb.jobs.retry_failed import run_retries
 from familydb.jobs.weekend_digest import run_digest
 
@@ -50,4 +51,14 @@ def build_scheduler(app: App) -> BackgroundScheduler:
             coalesce=True,
             misfire_grace_time=3600,  # a restart within the hour still sends it
         )
+    scheduler.add_job(
+        run_follow_ups,
+        CronTrigger(hour=app.settings.follow_up_hour),
+        args=[app],
+        id="follow_ups",
+        name="ask how plans went",
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=3600,
+    )
     return scheduler

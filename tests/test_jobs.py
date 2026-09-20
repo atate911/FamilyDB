@@ -381,3 +381,95 @@ def test_scheduler_registers_the_digest_only_with_a_chat_id(settings, clock) -> 
     job = build_scheduler(App(on, clock)).get_job("weekend_digest")
     assert job is not None and job.misfire_grace_time == 3600
     assert str(job.trigger) == "cron[day_of_week='fri', hour='17']"
+
+
+# --- follow-ups -------------------------------------------------------------------------------
+
+from familydb.agent.history import load_history  # noqa: E402
+from familydb.jobs.follow_ups import render_follow_up, run_follow_ups  # noqa: E402
+from familydb.store import outcomes, plans  # noqa: E402
+from tests.conftest import NOW_ISO  # noqa: E402
+
+
+def _plan(
+    conn, family, *, start, title="Hopscotch", idea_id=None, chat_id="-100", channel="telegram"
+):
+    with db.transaction(conn):
+        return plans.insert(
+            conn,
+            title=title,
+            start=start,
+            end=None,
+            all_day=True,
+            idea_id=idea_id,
+            created_by=family["sam"].id,
+            channel=channel,
+            chat_id=chat_id,
+            now="2026-09-18T00:00:00Z",
+        )
+
+
+def test_follow_ups_ask_once_in_the_plans_chat(settings, thursday_clock, conn, family) -> None:
+    app = App(settings, thursday_clock)  # Thursday 24 September
+    with db.transaction(conn):
+        idea = ideas.insert(conn, title="Hopscotch Portland", kind="outing", now=NOW_ISO)
+    done = _plan(conn, family, start="2026-09-19", title="Hopscotch Portland", idea_id=idea.id)
+    _plan(conn, family, start="2026-09-26", title="Still to come")
+    _plan(conn, family, start="2026-09-10", title="Too long ago")
+    _plan(conn, family, start="2026-09-20", title="No chat known", chat_id=None, channel=None)
+    sent: list[tuple[str, str]] = []
+    app.senders["telegram"] = lambda chat_id, text: sent.append((chat_id, text))
+    assert run_follow_ups(app) == 1
+    question = f"How was #{idea.id} Hopscotch Portland on Saturday? Worth doing again?"
+    assert sent == [("-100", question)]
+    assert plans.get(conn, done.id).followed_up_at is not None
+    rows = conn.execute(
+        "SELECT channel, chat_id, direction, text, reply_to FROM messages"
+    ).fetchall()
+    assert [tuple(r) for r in rows] == [("telegram", "-100", "out", question, None)]
+    assert run_follow_ups(app) == 0  # asked once
+    # The question sits in the chat history, so the family's answer reads as feedback.
+    history = load_history(conn, "-100", clock=thursday_clock, limit=10, since_hours=24)
+    assert [(h.role, h.text) for h in history] == [("assistant", question)]
+
+
+def test_follow_ups_skip_answered_plans_and_wait_for_a_sender(
+    settings, thursday_clock, conn, family
+) -> None:
+    app = App(settings, thursday_clock)
+    with db.transaction(conn):
+        idea = ideas.insert(conn, title="Ramen", kind="restaurant", now=NOW_ISO)
+    answered = _plan(conn, family, start="2026-09-19", title="Ramen", idea_id=idea.id)
+    waiting = _plan(conn, family, start="2026-09-20", title="Zoo")
+    with db.transaction(conn):
+        outcomes.insert(
+            conn,
+            idea_id=idea.id,
+            plan_id=None,
+            happened_on="2026-09-19",
+            rating=9,
+            would_repeat=True,
+            notes="great",
+            recorded_by=family["sam"].id,
+            now=NOW_ISO,
+        )
+    assert run_follow_ups(app) == 0  # no Telegram sender here: the zoo waits
+    assert plans.get(conn, answered.id).followed_up_at is not None  # answered: marked silently
+    assert plans.get(conn, waiting.id).followed_up_at is None
+    assert conn.execute("SELECT count(*) FROM messages").fetchone()[0] == 0
+    app.senders["telegram"] = lambda *_: None
+    assert run_follow_ups(app) == 1
+    assert plans.get(conn, waiting.id).followed_up_at is not None
+
+
+def test_render_follow_up_without_an_idea(family, conn) -> None:
+    plan = _plan(conn, family, start="2026-09-20T18:00:00-07:00", title="Dinner out")
+    assert render_follow_up(plan) == "How was Dinner out on Sunday? Worth doing again?"
+
+
+def test_scheduler_always_registers_follow_ups(settings, clock) -> None:
+    job = build_scheduler(App(settings.model_copy(update={"follow_up_hour": 9}), clock)).get_job(
+        "follow_ups"
+    )
+    assert job is not None and str(job.trigger) == "cron[hour='9']"
+    assert job.misfire_grace_time == 3600
