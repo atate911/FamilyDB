@@ -1,6 +1,6 @@
 # FamilyDB design
 
-Status: draft for review. Nothing here is built yet. Section 16 lists what is decided and what is still open.
+Status: living design. Pass 1 is built (store, tools, agent loop with prompt caching, console chat); see the README for what works today. Section 16 lists what is decided and what is still open.
 
 ## 1. What it is
 
@@ -208,6 +208,7 @@ Notes:
 - `suggestions` logs what was proposed, with the verdict on every candidate, so the bot can avoid repeating itself and we can see why it chose what it chose.
 - `messages` is both the audit log and the raw material for an eval set later: real family phrasings paired with the actions they should produce.
 - `outcomes` is separate from `ideas` so a restaurant can be done five times with five ratings.
+- `tool_calls` and `llm_calls` (added during the build) log every tool call and every model call with token usage and cache hits: the ground truth for cost and for whether caching works. `messages.reply_to` links a reply to the message it answers; `ideas.title_norm` backs duplicate detection.
 
 ## 8. Agent behaviour
 
@@ -284,7 +285,7 @@ Design notes:
 - No reverse proxy, no open ports, no domain. Long polling and outbound HTTPS only. A web UI later can sit on the LAN or behind Tailscale.
 - Logs to stdout; `docker logs` is enough to start.
 - Backups: a nightly job runs SQLite's online backup to a second location. Calendar events are also in Google.
-- Config, all via environment: `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `TELEGRAM_BOT_TOKEN`, `GOOGLE_CALENDAR_ID`, `GOOGLE_TOKEN_PATH`, `HOME_LAT`, `HOME_LON`, `HOME_AREA` (for web searches, e.g. the city), `TZ`, `FAMILYDB_PATH`.
+- Config, all via environment (full list with comments in `.env.example`): `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `ANTHROPIC_EFFORT`, `ANTHROPIC_FALLBACKS`, `ANTHROPIC_CACHE_TTL`, `TELEGRAM_BOT_TOKEN`, `GOOGLE_CALENDAR_ID`, `GOOGLE_TOKEN_PATH`, `HOME_LAT`, `HOME_LON`, `HOME_AREA` (for web searches, e.g. the city), `TZ`, `FAMILYDB_PATH`.
 - Upgrades: `git pull && docker compose up -d --build`. Migrations run on start.
 
 ## 13. Security
@@ -302,8 +303,8 @@ Assumptions: about ten messages a day, each turn a few thousand input tokens mos
 
 ## 15. Roadmap
 
-- **Phase 0, skeleton.** Repo layout, config, the full SQLite schema including `places` and `suggestions`, the tool registry with every tool declared (enrichment and evaluation stubs answer "not available yet" gracefully), the suggestion stages as separate modules, CLI, tests, Docker Compose.
-- **Phase 1, MVP.** Telegram adapter, agent loop, capture with open kinds and participants, describe and search ideas, create events, suggestions from calendar plus forecast plus the list. Usable by the family.
+- **Phase 0, skeleton.** Done. Repo layout, config, the full SQLite schema including `places` and `suggestions`, the tool registry with every tool declared (calendar, weather and place stubs answer "not available yet" gracefully), CLI, tests, Docker Compose and a systemd unit. The suggestion stages live in the system prompt for now and become modules in Phase 2.
+- **Phase 1, MVP.** In progress. Done: the agent loop with prompt caching, capture with open kinds and participants, describe and search ideas, a console chat. Remaining: the Telegram adapter, create events on the calendar, suggestions from calendar plus forecast plus the list. Usable by the family once Telegram lands.
 - **Phase 2, checked suggestions.** Enrichment worker with web search and fetch, places cache, open-hours check, travel time, the discover stage, verdict logging, Thursday digest, day-after outcome prompts, retries.
 - **Phase 3, richer data.** Google Places, routing API, link previews for pasted URLs, voice notes, photos.
 - **Phase 4, surfaces.** Read-only web page of the list, then editing; optional extra channels; OpenClaw or Claude connectors as alternative front ends over the same tools.
@@ -323,24 +324,24 @@ Decided so far: Telegram as the chat channel and Python as the language. The res
 | Group vs DM | Open, recommend both | A dedicated family group for capture, DMs for private queries. |
 | Enrichment notes in chat | Open, recommend on | A one-line "filled in #57" after lookup. Easy to turn off. |
 
-## 17. Proposed repo layout
+## 17. Repo layout
 
 ```
-familydb/
-  app/
-    main.py              # start the channel adapter and the scheduler
-    config.py            # environment -> settings
-    agent/               # client, system prompt, tool registry, run loop
-    tools/               # ideas.py, places.py, calendar.py, weather.py, time.py, web.py
-    suggest/             # frame.py, context.py, shortlist.py, evaluate.py, discover.py, compose.py
-    channels/            # base.py, telegram.py
-    store/               # schema.sql, migrations/, repositories
-    integrations/        # google_calendar.py, open_meteo.py, geocode.py
-    jobs/                # enrich.py, weekend_digest.py, follow_ups.py, retry_failed.py
-  cli.py                 # run any tool or suggestion stage from the shell
-  tests/
-  docker-compose.yml
-  Dockerfile
-  .env.example
-  docs/DESIGN.md
+pyproject.toml  uv.lock  README.md  RUNBOOK.md  CLAUDE.md  .env.example  Dockerfile  docker-compose.yml
+deploy/familydb.service
+src/familydb/
+  cli.py                 commands: db, members, ideas, tool, chat, repl, run, debug, config
+  config.py              settings from the environment and .env
+  app.py                 wiring: settings, clock, connections, tool registry, API client
+  clock.py, dates.py     time abstraction and date parsing in the family timezone
+  pipeline.py            one inbound message end to end
+  agent/                 client.py, prompt.py, render.py, history.py, loop.py, prompts/system.md
+  tools/                 registry.py, schema.py, ideas.py, outcomes.py, now.py, web.py,
+                         gcal.py, weather.py, places.py (stubs until their integrations land)
+  store/                 db.py, migrations/, members.py, ideas.py, messages.py, outcomes.py,
+                         calls.py, places.py, plans.py, suggestions.py
+  channels/              base.py, console.py; telegram.py comes next
+tests/                   pytest suite with a scripted fake of the Anthropic API; test_live.py opt-in
 ```
+
+Later milestones add `integrations/` (google_calendar.py, open_meteo.py, geocode.py), `jobs/` (enrich.py, weekend_digest.py, follow_ups.py, retry_failed.py) and `suggest/` (one module per stage).
