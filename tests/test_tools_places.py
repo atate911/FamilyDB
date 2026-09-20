@@ -172,3 +172,24 @@ def test_lookup_place_queues_missing_details(registry, conn, settings, clock, fa
     assert data["queued"] is True and ideas.get(conn, idea.id).enrichment == "pending"
     result, data = _call(registry, ctx, "lookup_place")
     assert result.is_error
+
+
+def test_save_place_drops_links_that_are_not_web_addresses(
+    registry, conn, full_settings, clock, family
+) -> None:
+    idea = _idea(conn)
+    ctx = _ctx(conn, full_settings, clock, family, fakes.FakeGeocoder(default=POINT))
+    _, data = _call(
+        registry,
+        ctx,
+        "save_place",
+        idea_id=idea.id,
+        name="Hopscotch Portland",
+        website="javascript:alert(1)",
+        booking_url=" https://example.com/tickets ",
+        source_urls=["https://example.com/about", "ftp://example.com/x", "not a url"],
+    )
+    place = data["place"]
+    assert place["website"] is None and place["booking_url"] == "https://example.com/tickets"
+    assert place["source_urls"] == ["https://example.com/about"]
+    assert data["idea"]["enrichment"] == "done"

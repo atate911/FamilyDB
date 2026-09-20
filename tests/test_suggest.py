@@ -454,3 +454,38 @@ def test_discovery_request_for_someday(conn, settings, thursday_clock, family) -
     assert "Window: no fixed dates; look at the next four weeks or so." in text
     assert "Home area: not set." in text and "asked" not in text
     assert cache_key(None) == "someday" and cache_key((SAT, SAT)) == "2026-09-26:2026-09-26"
+
+
+def test_discovery_crash_is_a_note_and_not_cached(
+    registry, conn, full_settings, thursday_clock, family
+) -> None:
+    cache: dict = {}
+    api = fakes.FakeMessagesAPI(RuntimeError("boom"))
+    ctx = _web_ctx(conn, full_settings, thursday_clock, family, api, cache)
+    result, data = _suggest(registry, ctx, discover=True)
+    assert not result.is_error
+    assert "web discovery failed: RuntimeError: boom" in data["skipped_checks"]
+    assert data["web_finds"] == [] and cache == {}
+
+
+class _BrokenCalendar:
+    def list_events(self, start, end):
+        raise OSError("connection reset")
+
+
+def test_context_survives_a_calendar_transport_error(
+    registry, conn, full_settings, thursday_clock, family
+) -> None:
+    ctx = _ctx(
+        conn,
+        full_settings,
+        thursday_clock,
+        family,
+        calendar=_BrokenCalendar(),
+        weather=fakes.FakeForecast([DRY_SAT, WET_SUN]),
+    )
+    _idea(conn, "Cafe A", setting="indoor")
+    result, data = _suggest(registry, ctx)
+    assert not result.is_error
+    assert data["skipped_checks"] == ["calendar check failed: connection reset"]
+    assert all(d["free_known"] is False and len(d["free"]) == 3 for d in data["days"])

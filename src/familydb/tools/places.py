@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from datetime import UTC, date, datetime
 from typing import Any, Literal
@@ -16,6 +17,9 @@ from familydb.store import ideas, places
 from familydb.store.db import transaction
 from familydb.store.places import Place
 from familydb.tools.registry import ToolContext, tool
+from familydb.tools.urls import clean_url
+
+log = logging.getLogger(__name__)
 
 Day = Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 DAYS: tuple[str, ...] = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
@@ -223,20 +227,29 @@ def save_place(ctx: ToolContext, args: SavePlaceInput) -> dict[str, Any]:
     travel = (
         estimate_travel(ctx.settings, lat, lon) if lat is not None and lon is not None else None
     )
+    # Links come from fetched pages through the model; keep only real web addresses.
+    website, booking_url = clean_url(args.website), clean_url(args.booking_url)
+    source_urls = [u for u in (clean_url(s) for s in args.source_urls) if u]
+    dropped = sum(1 for v in (args.website, args.booking_url) if v) + len(args.source_urls)
+    dropped -= sum(1 for v in (website, booking_url) if v) + len(source_urls)
+    if dropped:
+        log.warning(
+            "save_place for idea %s dropped %d link(s) that were not URLs", idea.id, dropped
+        )
     now = ctx.now_iso()
     fields: dict[str, Any] = {
         "summary": args.summary,
         "address": args.address,
         "lat": lat,
         "lon": lon,
-        "website": args.website,
-        "booking_url": args.booking_url,
+        "website": website,
+        "booking_url": booking_url,
         "phone": args.phone,
         "hours": hours,
         "price_note": args.price_note,
         "travel_minutes": travel[0] if travel else None,
         "travel_km": travel[1] if travel else None,
-        "source_urls": args.source_urls,
+        "source_urls": source_urls,
         "last_checked_at": now,
     }
     with transaction(ctx.conn):

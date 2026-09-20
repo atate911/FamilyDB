@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 from familydb.suggest.types import SuggestInput
 from familydb.tools.registry import ToolContext, tool
+from familydb.tools.urls import clean_url
 
 MAX_FINDS = 6
 
@@ -26,14 +27,6 @@ class ReportFindsInput(BaseModel):
     )
 
 
-def _clean_url(url: str) -> str | None:
-    value = url.strip()
-    parts = urlsplit(value)
-    if parts.scheme not in {"http", "https"} or not parts.netloc:
-        return None
-    return value
-
-
 @tool(
     name="report_finds",
     description=(
@@ -47,7 +40,7 @@ def report_finds(ctx: ToolContext, args: ReportFindsInput) -> dict[str, Any]:
     recorded = 0
     rejected = 0
     for find in args.finds:
-        url = _clean_url(find.url)
+        url = clean_url(find.url)
         if url is None:
             rejected += 1
             continue

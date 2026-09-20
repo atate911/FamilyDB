@@ -473,3 +473,66 @@ def test_scheduler_always_registers_follow_ups(settings, clock) -> None:
     )
     assert job is not None and str(job.trigger) == "cron[hour='9']"
     assert job.misfire_grace_time == 3600
+
+
+# --- review hardening --------------------------------------------------------------------------
+
+from familydb.jobs.catch_up import run_catch_up  # noqa: E402
+
+
+def test_enrichment_crash_marks_the_idea_failed_and_continues(settings, clock, conn, family):
+    app = _web_app(settings, clock)
+    first, _ = _captured_idea(conn, family, title="Crashes")
+    second, _ = _captured_idea(conn, family, title="Works")
+    api = fakes.FakeMessagesAPI(
+        RuntimeError("boom"),
+        *fakes.enrich_script({"idea_id": second.id, "name": "Works"}),
+    )
+    counts = run_enrichment(app, api=api)
+    assert counts == {"done": 1, "skipped": 0, "failed": 1, "deferred": 0}
+    failed = ideas.get(conn, first.id)
+    assert failed.enrichment == "failed" and failed.enrichment_note == "error: RuntimeError: boom"
+    assert ideas.get(conn, second.id).enrichment == "done"
+    assert ideas.pending_enrichment(conn, limit=10) == []  # nothing left to retry forever
+
+
+def test_catch_up_sends_a_digest_that_was_due_today(settings, thursday_clock, conn, family):
+    app = _digest_app(settings, thursday_clock)  # Thursday 18:00, digest at 18
+    delivered: list[str] = []
+    app.senders["telegram"] = lambda _chat_id, text: delivered.append(text)
+    api = fakes.FakeMessagesAPI(*_digest_script("Catch-up digest."))
+    assert run_catch_up(app, api=api) == {"follow_ups": 0, "digest": "ok"}
+    assert delivered == ["Catch-up digest."]
+    # Already sent today: the next catch-up sends nothing.
+    assert run_catch_up(app, api=api) == {"follow_ups": 0, "digest": "skipped"}
+    assert len(api.requests) == 2
+
+
+def test_catch_up_leaves_a_digest_that_is_not_due(settings, thursday_clock, clock, conn, family):
+    api = fakes.FakeMessagesAPI()  # any request would fail the test
+    later = _digest_app(settings, thursday_clock, digest_hour=19)  # not yet 19:00
+    later.senders["telegram"] = lambda *_: None
+    assert run_catch_up(later, api=api)["digest"] == "not due"
+    sunday = _digest_app(settings, clock)  # the shared clock is a Sunday
+    sunday.senders["telegram"] = lambda *_: None
+    assert run_catch_up(sunday, api=api)["digest"] == "not due"
+    assert run_catch_up(App(settings, thursday_clock), api=api)["digest"] == "not due"  # no id
+
+
+def test_catch_up_runs_the_follow_ups(settings, thursday_clock, conn, family) -> None:
+    app = App(settings, thursday_clock)
+    asked: list[str] = []
+    app.senders["telegram"] = lambda _chat_id, text: asked.append(text)
+    _plan(conn, family, start="2026-09-19", title="Hopscotch")
+    assert run_catch_up(app)["follow_ups"] == 1
+    assert asked == ["How was Hopscotch on Saturday? Worth doing again?"]
+
+
+def test_scheduler_registers_the_catch_up(settings, clock) -> None:
+    from datetime import timedelta
+
+    from familydb.jobs.scheduler import CATCH_UP_DELAY_SECONDS
+
+    job = build_scheduler(App(settings, clock)).get_job("catch_up")
+    assert job is not None and job.misfire_grace_time == 3600
+    assert job.trigger.run_date == clock.now() + timedelta(seconds=CATCH_UP_DELAY_SECONDS)

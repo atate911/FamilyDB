@@ -137,12 +137,20 @@ def enrich_idea(app: App, conn: Any, idea: Idea, *, api: MessagesAPI) -> str:
             return "deferred"
         _mark(conn, app, idea.id, "failed", f"worker: {exc}")
         return "failed"
+    except Exception as exc:
+        # Anything else would leave the idea pending and burn a model call every run.
+        log.exception("enrichment of idea %s crashed", idea.id)
+        _mark(conn, app, idea.id, "failed", f"error: {type(exc).__name__}: {exc}")
+        return "failed"
 
     if turn.handed_back("save_place") or turn.handed_back("skip_place"):
         current = ideas.get(conn, idea.id)
         status = current.enrichment if current else "failed"
         if status == "done" and current is not None:
-            _notify(app, conn, current)
+            try:
+                _notify(app, conn, current)
+            except Exception:
+                log.exception("could not note the enrichment of idea %s", idea.id)
         log.info("idea %s enrichment %s", idea.id, status)
         return status if status in OUTCOMES else "done"
 

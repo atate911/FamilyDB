@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import date, timedelta
 
 from familydb.clock import season_for
@@ -10,6 +11,8 @@ from familydb.suggest.types import Context, DayContext
 from familydb.tools import ToolContext
 from familydb.tools.gcal import calendar_days
 from familydb.tools.weather import forecast_days
+
+log = logging.getLogger(__name__)
 
 ALL_BLOCKS = ["morning", "afternoon", "evening"]
 
@@ -33,7 +36,9 @@ def build_context(ctx: ToolContext, window: tuple[date, date] | None) -> Context
         try:
             for day in calendar_days(ctx.calendar, start, end, tz):
                 free_by_day[day["date"]] = list(day["free"])
-        except ToolError as exc:
+        except Exception as exc:  # a transport error must not fail the whole suggestion
+            if not isinstance(exc, ToolError):
+                log.exception("calendar check failed")
             skipped.append(f"calendar check failed: {exc}")
             free_known = False
 
@@ -44,7 +49,9 @@ def build_context(ctx: ToolContext, window: tuple[date, date] | None) -> Context
         try:
             for forecast in forecast_days(ctx.weather, start, end, today):
                 forecasts[forecast.date] = forecast
-        except ToolError as exc:
+        except Exception as exc:
+            if not isinstance(exc, ToolError):
+                log.exception("forecast failed")
             skipped.append(f"forecast failed: {exc}")
         if not forecasts:
             skipped.append("no forecast for those dates")

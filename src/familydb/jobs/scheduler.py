@@ -3,19 +3,25 @@
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from familydb.app import App
 from familydb.availability import digest_configured, enrichment_available
+from familydb.jobs.catch_up import run_catch_up
 from familydb.jobs.enrich import run_enrichment
 from familydb.jobs.follow_ups import run_follow_ups
 from familydb.jobs.retry_failed import run_retries
 from familydb.jobs.weekend_digest import run_digest
 
 log = logging.getLogger(__name__)
+
+# The Telegram sender registers once polling starts, a moment after the scheduler; wait for it.
+CATCH_UP_DELAY_SECONDS = 60
 
 
 def build_scheduler(app: App) -> BackgroundScheduler:
@@ -49,7 +55,7 @@ def build_scheduler(app: App) -> BackgroundScheduler:
             name="weekend digest",
             max_instances=1,
             coalesce=True,
-            misfire_grace_time=3600,  # a restart within the hour still sends it
+            misfire_grace_time=3600,
         )
     scheduler.add_job(
         run_follow_ups,
@@ -59,6 +65,16 @@ def build_scheduler(app: App) -> BackgroundScheduler:
         name="ask how plans went",
         max_instances=1,
         coalesce=True,
+        misfire_grace_time=3600,
+    )
+    # The cron jobs above live in memory: a bot that was off at their hour would skip them until
+    # the next day or week, so run them once shortly after start (both are idempotent).
+    scheduler.add_job(
+        run_catch_up,
+        DateTrigger(run_date=app.clock.now() + timedelta(seconds=CATCH_UP_DELAY_SECONDS)),
+        args=[app],
+        id="catch_up",
+        name="catch up after a restart",
         misfire_grace_time=3600,
     )
     return scheduler

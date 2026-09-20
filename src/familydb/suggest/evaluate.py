@@ -46,7 +46,10 @@ def _hours_check(
     fits = list(item.fits_days)
     if place is None or not place.hours:
         checks.open = "unknown"
-        reasons.append(f"hours unknown (details {item.idea.enrichment})")
+        if item.idea.enrichment == "done":
+            reasons.append("hours not listed")
+        else:
+            reasons.append(f"hours unknown (details {item.idea.enrichment})")
         return fits, False, True
     open_days = []
     partial = False

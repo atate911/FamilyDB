@@ -81,6 +81,9 @@ def discover(ctx: ToolContext, context: Context, question: str) -> tuple[list[We
     except AgentError as exc:
         log.warning("discovery failed for %s: %s", key, exc)
         return [], f"{NOTE_FAILED}: {exc}"
+    except Exception as exc:  # a crash in the worker must not fail the whole suggestion
+        log.exception("discovery crashed for %s", key)
+        return [], f"{NOTE_FAILED}: {type(exc).__name__}: {exc}"
     if turn.result.status != "ok":
         reason = turn.result.error or turn.result.status
         log.warning("discovery turn for %s ended %s: %s", key, turn.result.status, reason)
