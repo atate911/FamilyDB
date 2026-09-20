@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}{{ site_title }}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <header class="bar">
+      <span class="brand">{{ site_title }}</span>
+      {% if password_in_use() and session.get('signed_in') %}
+        <form method="post" action="{{ url_for('auth.logout') }}">
+          <button class="quiet" type="submit">Sign out</button>
+        </form>
+      {% endif %}
+    </header>
+    <main>{% block content %}{% endblock %}</main>
+  </body>
+</html>

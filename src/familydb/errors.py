@@ -15,6 +15,10 @@ class ToolUnavailable(ToolError):
     """The tool exists but its backing service is not configured yet."""
 
 
+class ConfigError(FamilyDBError):
+    """A setting is missing or contradictory, and the thing it configures cannot start."""
+
+
 class AgentError(FamilyDBError):
     """The model call failed. `retryable` says whether a later attempt may succeed."""
 
