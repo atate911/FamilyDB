@@ -11,6 +11,7 @@ from typing import Any
 from familydb.clock import Clock, SystemClock
 from familydb.config import Settings, load_settings
 from familydb.store import db
+from familydb.tools import ToolRegistry, build_registry
 
 log = logging.getLogger(__name__)
 
@@ -21,6 +22,13 @@ class App:
     def __init__(self, settings: Settings, clock: Clock | None = None) -> None:
         self.settings = settings
         self.clock = clock or SystemClock(settings.tzinfo, southern=settings.southern_hemisphere)
+        self._registry: ToolRegistry | None = None
+
+    @property
+    def registry(self) -> ToolRegistry:
+        if self._registry is None:
+            self._registry = build_registry()
+        return self._registry
 
     def connect(self) -> sqlite3.Connection:
         """A fresh connection. SQLite connections are per thread; do not share them."""

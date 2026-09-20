@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
+import sys
 from contextlib import closing
 from pathlib import Path
 
@@ -13,6 +15,8 @@ from familydb.agent.render import render_idea_line
 from familydb.app import App, build_app
 from familydb.config import load_settings
 from familydb.store import calls, db, ideas, members
+from familydb.store.members import Member
+from familydb.tools import ToolContext
 
 app = typer.Typer(
     name="familydb",
@@ -167,3 +171,59 @@ def ideas_list(
         return
     for idea in rows:
         typer.echo(render_idea_line(idea))
+
+
+def _acting_member(application: App, conn: sqlite3.Connection, name: str | None) -> Member | None:
+    """Who a CLI action is attributed to: --as NAME, CONSOLE_MEMBER, else the first admin."""
+    wanted = name or application.settings.console_member
+    if wanted:
+        member = members.find_by_name(conn, wanted)
+        if member is None:
+            raise typer.BadParameter(f"no family member called {wanted!r}")
+        return member
+    admins = [m for m in members.list_all(conn) if m.role == "admin"]
+    return admins[0] if admins else None
+
+
+@app.command("tool")
+def tool_cmd(
+    name: str | None = typer.Argument(None, help="Tool name, e.g. add_idea."),
+    json_input: str | None = typer.Option(None, "--json", help="Input as a JSON object."),
+    stdin: bool = typer.Option(False, "--stdin", help="Read the JSON input from stdin."),
+    schema: bool = typer.Option(False, "--schema", help="Print the tool's API definition."),
+    list_tools: bool = typer.Option(False, "--list", help="List tools and availability."),
+    as_member: str | None = typer.Option(None, "--as", help="Act as this family member."),
+) -> None:
+    """Run one tool directly, without the model. Handy for testing and scripting."""
+    application = build_app()
+    registry = application.registry
+    if list_tools:
+        for spec in registry.specs():
+            state = "available" if spec.available(application.settings) else "unavailable"
+            kind = "writes" if spec.writes else "reads"
+            typer.echo(f"{spec.name:16} {state:12} {kind:6} {spec.description[:60]}")
+        return
+    if not name:
+        raise typer.BadParameter("give a tool name, or --list")
+    spec = registry.get(name)
+    if spec is None:
+        raise typer.BadParameter(f"unknown tool {name!r}; see --list")
+    if schema:
+        typer.echo(json.dumps(spec.api_definition(), indent=2, ensure_ascii=False))
+        return
+    raw = sys.stdin.read() if stdin else (json_input or "{}")
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise typer.BadParameter(f"input is not valid JSON: {exc}") from exc
+    with closing(_ready(application)) as conn:
+        ctx = ToolContext(
+            conn=conn,
+            settings=application.settings,
+            clock=application.clock,
+            member=_acting_member(application, conn, as_member),
+        )
+        result = registry.dispatch(name, payload, ctx)
+    typer.echo(result.content, err=result.is_error)
+    if result.is_error:
+        raise typer.Exit(code=1)

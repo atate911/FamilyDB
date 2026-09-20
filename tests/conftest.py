@@ -14,6 +14,7 @@ from familydb.clock import FixedClock
 from familydb.config import Settings
 from familydb.store import db, members
 from familydb.store.members import Member
+from familydb.tools import ToolContext, ToolRegistry, build_registry
 
 TZ = ZoneInfo("America/Vancouver")
 NOW = datetime(2026, 9, 20, 14, 3)  # a Sunday afternoon, PDT
@@ -54,3 +55,15 @@ def family(conn: sqlite3.Connection) -> dict[str, Member]:
         )
         girls = members.add(conn, "the girls", "kid", now=NOW_ISO)
     return {"sam": sam, "alex": alex, "girls": girls}
+
+
+@pytest.fixture
+def registry() -> ToolRegistry:
+    return build_registry()
+
+
+@pytest.fixture
+def ctx(
+    conn: sqlite3.Connection, settings: Settings, clock: FixedClock, family: dict[str, Member]
+) -> ToolContext:
+    return ToolContext(conn=conn, settings=settings, clock=clock, member=family["sam"])
