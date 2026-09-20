@@ -142,3 +142,56 @@ def test_simultaneous_redelivery_is_still_a_duplicate(
     monkeypatch.setattr("familydb.pipeline.messages.exists_update", lambda *_a, **_k: False)
     assert handle_incoming(app, _telegram("hi", "77"), api=api, conn=conn) is None
     assert len(api.requests) == 1
+
+
+def test_suggest_turn_runs_discovery_inside_the_chat_turn(settings, thursday_clock, conn, family):
+    """The chat model calls suggest; the engine runs the discovery worker on the same API."""
+    web_on = settings.model_copy(update={"web_tools_enabled": True, "home_area": "Vancouver, WA"})
+    app = App(web_on, thursday_clock)
+    find = {
+        "title": "Harvest festival",
+        "url": "https://example.com/harvest",
+        "dates": "Sat 26 Sep",
+        "summary": "Pumpkins and hay rides.",
+    }
+    api = fakes.FakeMessagesAPI(
+        fakes.message(
+            [
+                fakes.tool_use(
+                    "tu_s",
+                    "suggest",
+                    {"window": "this_weekend", "question": "what should we do this weekend?"},
+                )
+            ],
+            stop_reason="tool_use",
+        ),
+        *fakes.discover_script([find]),  # the nested worker turn's three responses
+        fakes.message([fakes.text("Nothing on the list yet, but there is a harvest festival.")]),
+    )
+    reply = handle_incoming(
+        app, _telegram("what should we do this weekend?", "7"), api=api, conn=conn
+    )
+    assert reply.status == "ok" and reply.text.startswith("Nothing on the list yet")
+    assert [a["tool"] for a in reply.actions] == ["suggest"]
+    # The worker's requests sit between the two chat requests and use the discovery prompt.
+    assert len(api.requests) == 5
+    assert api.requests[1]["system"][0]["text"].startswith("You are the discovery worker")
+    assert [t["name"] for t in api.requests[1]["tools"]] == [
+        "report_finds",
+        "web_search",
+        "web_fetch",
+    ]
+    assert api.requests[4]["system"][0]["text"].startswith("You are FamilyDB")
+    # The suggest result carried the find to the chat model, and the cache is warm.
+    tool_result = api.requests[4]["messages"][-1]["content"][0]
+    assert tool_result["type"] == "tool_result"
+    data = json.loads(tool_result["content"])
+    assert data["web_finds"][0]["url"] == find["url"] and data["skipped_checks"] == [
+        "calendar not connected",
+        "weather not configured",
+    ]
+    assert list(app.discover_cache) == ["2026-09-26:2026-09-27"]
+    # Everything is audited under the one inbound message: 5 model calls, 2 tool calls.
+    logged = calls.tool_calls_for_message(conn, reply.in_message_id)
+    assert [t["tool_name"] for t in logged] == ["report_finds", "suggest"]
+    assert len(calls.recent_llm_calls(conn)) == 5

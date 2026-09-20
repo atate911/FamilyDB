@@ -2,7 +2,12 @@ import json
 from datetime import timedelta
 
 from familydb.agent.history import HistoryTurn
-from familydb.agent.prompt import build_messages, build_system_blocks, cache_control
+from familydb.agent.prompt import (
+    build_messages,
+    build_system_blocks,
+    cache_control,
+    load_system_prompt,
+)
 from familydb.agent.render import render_user_turn
 from familydb.store import db, ideas
 from tests.conftest import NOW_ISO
@@ -93,3 +98,11 @@ def test_family_context_matches_tool_availability(conn, settings, family, tmp_pa
 def test_worker_tools_are_declared_to_the_chat_agent_too(registry, settings) -> None:
     names = registry.names()
     assert "report_finds" in names and "save_place" in names and "skip_place" in names
+    assert "suggest" in names
+
+
+def test_system_prompt_routes_questions_through_suggest() -> None:
+    text = load_system_prompt()
+    assert "Call suggest once" in text
+    assert "Weekend digest:" in text and "How was #57" in text
+    assert '"details: done"' in text
