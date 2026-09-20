@@ -1,0 +1,120 @@
+"""The message log: every inbound message and every reply, with what happened."""
+
+from __future__ import annotations
+
+import sqlite3
+from typing import Any, Literal
+
+from pydantic import BaseModel
+
+from familydb.store.db import from_json, to_json, utcnow_iso
+
+
+class Message(BaseModel):
+    id: int
+    channel: str
+    channel_update_id: str | None = None
+    chat_id: str
+    member_id: int | None = None
+    direction: Literal["in", "out"]
+    text: str
+    received_at: str
+    status: Literal["received", "processed", "failed"] = "received"
+    actions: Any = None
+    error: str | None = None
+    reply_to: int | None = None
+    processed_at: str | None = None
+
+    @classmethod
+    def from_row(cls, row: sqlite3.Row) -> Message:
+        data = dict(row)
+        data["actions"] = from_json(data.get("actions"))
+        return cls(**data)
+
+
+def exists_update(conn: sqlite3.Connection, channel: str, channel_update_id: str) -> bool:
+    row = conn.execute(
+        "SELECT 1 FROM messages WHERE channel = ? AND channel_update_id = ?",
+        (channel, channel_update_id),
+    ).fetchone()
+    return row is not None
+
+
+def insert_in(
+    conn: sqlite3.Connection,
+    *,
+    channel: str,
+    channel_update_id: str | None,
+    chat_id: str,
+    member_id: int | None,
+    text: str,
+    now: str | None = None,
+) -> Message:
+    cur = conn.execute(
+        "INSERT INTO messages (channel, channel_update_id, chat_id, member_id, direction, text, "
+        "received_at, status) VALUES (?, ?, ?, ?, 'in', ?, ?, 'received')",
+        (channel, channel_update_id, chat_id, member_id, text, now or utcnow_iso()),
+    )
+    message = get(conn, int(cur.lastrowid or 0))
+    assert message is not None
+    return message
+
+
+def insert_out(
+    conn: sqlite3.Connection,
+    *,
+    channel: str,
+    chat_id: str,
+    text: str,
+    reply_to: int | None = None,
+    now: str | None = None,
+) -> Message:
+    stamp = now or utcnow_iso()
+    cur = conn.execute(
+        "INSERT INTO messages (channel, chat_id, direction, text, received_at, status, reply_to, "
+        "processed_at) VALUES (?, ?, 'out', ?, ?, 'processed', ?, ?)",
+        (channel, chat_id, text, stamp, reply_to, stamp),
+    )
+    message = get(conn, int(cur.lastrowid or 0))
+    assert message is not None
+    return message
+
+
+def mark_processed(
+    conn: sqlite3.Connection, message_id: int, actions: Any, *, now: str | None = None
+) -> None:
+    conn.execute(
+        "UPDATE messages SET status = 'processed', actions = ?, error = NULL, processed_at = ? "
+        "WHERE id = ?",
+        (to_json(actions), now or utcnow_iso(), message_id),
+    )
+
+
+def mark_failed(
+    conn: sqlite3.Connection, message_id: int, error: str, *, now: str | None = None
+) -> None:
+    conn.execute(
+        "UPDATE messages SET status = 'failed', error = ?, processed_at = ? WHERE id = ?",
+        (error[:2000], now or utcnow_iso(), message_id),
+    )
+
+
+def get(conn: sqlite3.Connection, message_id: int) -> Message | None:
+    row = conn.execute("SELECT * FROM messages WHERE id = ?", (message_id,)).fetchone()
+    return Message.from_row(row) if row else None
+
+
+def recent_for_chat(
+    conn: sqlite3.Connection, chat_id: str, *, limit: int, since: str
+) -> list[Message]:
+    """The last `limit` messages in a chat received at or after `since`, oldest first."""
+    rows = conn.execute(
+        "SELECT * FROM messages WHERE chat_id = ? AND received_at >= ? ORDER BY id DESC LIMIT ?",
+        (chat_id, since, limit),
+    ).fetchall()
+    return [Message.from_row(row) for row in reversed(rows)]
+
+
+def failed(conn: sqlite3.Connection) -> list[Message]:
+    rows = conn.execute("SELECT * FROM messages WHERE status = 'failed' ORDER BY id")
+    return [Message.from_row(row) for row in rows]
