@@ -313,6 +313,7 @@ Every message pays for the same prefix before anyone types: the system prompt an
 What keeps it down:
 
 - **The cache lasts an hour, not five minutes.** A family writes in bursts with long gaps; a five-minute cache would be cold almost every time and the whole prefix would be paid for again at full price.
+- **The chat model cannot start a web search.** Searches are billed one at a time, and the chat request used to carry `web_search` and `web_fetch` with five uses each whenever lookups were enabled, so any message could have run up a bill on a whim. They are declared only in worker turns now, which is what section 4 always said.
 - **The chat model is never sent the hand-back tools.** `save_place`, `skip_place` and `report_finds` belong to worker turns, so leaving them out of the chat request saves about 780 tokens per message without making the list vary between turns.
 - **Lookups and discovery run on a small model.** Extracting an address and opening hours from a page is not a judgement call, so worker turns use Haiku at low effort while chat keeps Opus. This is the largest recurring saving once web tools are on.
 - **The ideas list is capped** at `PROMPT_IDEA_LIMIT` (150). Past that the oldest are left out and the model is told to use `search_ideas`, so the cached block cannot grow without end.

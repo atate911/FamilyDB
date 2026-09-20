@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from familydb.availability import web_tools_available
 from familydb.config import Settings
 
 WEB_SEARCH: dict[str, Any] = {"type": "web_search_20260209", "name": "web_search", "max_uses": 5}
@@ -20,10 +19,13 @@ def server_tools(
 ) -> list[dict[str, Any]]:
     """The server tools to append to a tool list, in a fixed order.
 
-    The chat agent gets them only when enabled in settings; worker turns force them on and may
-    cap uses or add an approximate location for searches.
+    Only worker turns get them, which is what `force` means. The chat agent never searches the
+    web itself: searches are billed one by one, so a model free to search on a whim is an open
+    tab on every message. Searching happens in bounded worker turns instead, with a cap on uses,
+    and the results come back through strict tools. `web_tools_available` decides whether those
+    worker turns run at all, not whether chat may search.
     """
-    if not (force or web_tools_available(settings)):
+    if not force:
         return []
     search = dict(WEB_SEARCH)
     fetch = dict(WEB_FETCH)

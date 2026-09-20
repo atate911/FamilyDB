@@ -76,12 +76,22 @@ def test_every_registered_tool_has_a_strict_schema(
         json.dumps(tool)  # serialisable
 
 
-def test_server_tools_are_appended_when_enabled(settings: Settings, registry: ToolRegistry) -> None:
+def test_the_chat_agent_never_gets_the_web_tools(
+    settings: Settings, registry: ToolRegistry
+) -> None:
+    """Searches are billed one at a time, so chat must not be able to start one."""
     enabled = settings.model_copy(update={"web_tools_enabled": True})
-    tools = registry.api_tools(enabled)
+    assert registry.api_tools(enabled) == registry.api_tools(settings)
+    assert not [t for t in registry.api_tools(enabled) if t.get("type", "").startswith("web_")]
+
+
+def test_worker_turns_get_the_web_tools(settings: Settings, registry: ToolRegistry) -> None:
+    enabled = settings.model_copy(update={"web_tools_enabled": True})
+    tools = registry.api_tools(enabled, names=["save_place"], force_web=True)
     assert [t["name"] for t in tools[-2:]] == ["web_search", "web_fetch"]
     assert tools[-2]["type"] == "web_search_20260209"
-    assert tools[:-2] == registry.api_tools(settings)
+    # Whether those worker turns run at all is decided by the jobs, not here.
+    assert registry.api_tools(settings, names=["save_place"], force_web=True) == tools
 
 
 def test_now_tool_takes_no_input(registry: ToolRegistry) -> None:
