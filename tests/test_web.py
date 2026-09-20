@@ -1,5 +1,10 @@
+import socket
+import threading
+import time
+import urllib.request
 from datetime import UTC, timedelta
 from pathlib import Path
+from urllib.error import URLError
 
 import pytest
 
@@ -526,3 +531,45 @@ def test_the_web_package_has_no_way_to_write_to_the_database() -> None:
                 called = node.func.attr
                 writing = isinstance(base, ast.Name) and base.id in stores and called in writes
                 assert not writing, f"{module.name}:{node.lineno} calls {called} on a store"
+
+
+def _free_port() -> int:
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        return probe.getsockname()[1]
+
+
+def test_a_page_that_cannot_start_leaves_the_bot_running(settings, clock) -> None:
+    from familydb.web.server import serve_in_thread
+
+    forbidden = App(settings.model_copy(update={"web_host": "0.0.0.0"}), clock)
+    assert serve_in_thread(forbidden) is None  # no password: refused, and no exception escapes
+
+    with socket.socket() as taken:
+        taken.bind(("127.0.0.1", 0))
+        taken.listen(1)
+        busy = settings.model_copy(update={"web_port": taken.getsockname()[1]})
+        assert serve_in_thread(App(busy, clock)) is None
+
+
+def test_the_page_really_serves_on_a_thread_and_stops(settings, clock) -> None:
+    from familydb.web.server import serve_in_thread
+
+    port = _free_port()
+    app = App(settings.model_copy(update={"web_port": port, "web_password": PASSWORD}), clock)
+    stop = serve_in_thread(app)
+    assert stop is not None
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/healthz", timeout=5) as answer:
+            assert answer.read().strip() == b"ok"
+    finally:
+        stop()
+    # Stopping is not instant: give the serving loop a moment to notice the closed socket.
+    for _ in range(50):
+        if not any(t.name == "familydb-web" and t.is_alive() for t in threading.enumerate()):
+            break
+        time.sleep(0.1)
+    else:
+        raise AssertionError("the web thread did not stop")
+    with pytest.raises(URLError):
+        urllib.request.urlopen(f"http://127.0.0.1:{port}/healthz", timeout=2)
