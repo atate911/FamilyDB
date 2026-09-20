@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Ideas · {{ site_title }}{% endblock %}
+{% block content %}
+  <form class="panel filters" method="get" action="{{ url_for('web.ideas') }}">
+    <div class="field wide">
+      <label for="q">Search</label>
+      <input id="q" name="q" type="search" value="{{ selected.q }}" placeholder="ramen, museum…" />
+    </div>
+    <div class="field">
+      <label for="kind">Kind</label>
+      <select id="kind" name="kind">
+        <option value="">any</option>
+        {% for option in kinds %}
+          <option value="{{ option }}" {{ 'selected' if option == selected.kind }}>{{ option }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="status">Status</label>
+      <select id="status" name="status">
+        <option value="">any but dropped</option>
+        {% for option in statuses %}
+          <option value="{{ option }}" {{ 'selected' if option == selected.status }}>{{ option }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="who">For</label>
+      <select id="who" name="who">
+        <option value="">anyone</option>
+        {% for option in people %}
+          <option value="{{ option }}" {{ 'selected' if option == selected.who }}>{{ option }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field actions">
+      <button type="submit">Filter</button>
+      {% if filtered %}<a class="clear" href="{{ url_for('web.ideas') }}">Clear</a>{% endif %}
+    </div>
+  </form>
+
+  <p class="muted count">
+    {{ rows | length }} idea{{ '' if rows | length == 1 else 's' }}{% if filtered %} match{{ 'es' if rows | length == 1 else '' }}{% endif %}{% if rows | length == limit %}, showing the first {{ limit }}{% endif %}
+  </p>
+
+  {% if not rows %}
+    <p class="panel muted">Nothing here yet. Ideas arrive by messaging the bot.</p>
+  {% endif %}
+
+  <ul class="cards">
+    {% for row in rows %}
+      <li class="panel card">
+        <h2>
+          <a href="{{ url_for('web.idea', idea_id=row.id) }}">{{ row.title }}</a>
+          <span class="tag">{{ row.kind }}</span>
+          {% if row.status != 'idea' %}<span class="tag status-{{ row.status }}">{{ row.status }}</span>{% endif %}
+        </h2>
+        <p class="muted meta">
+          <span>#{{ row.id }}</span>
+          {% if row.where %}<span>{{ row.where }}</span>{% endif %}
+          <span>for {{ row.who }}</span>
+          {% if row.duration %}<span>{{ row.duration }}</span>{% endif %}
+          {% if row.cost %}<span>{{ row.cost }}</span>{% endif %}
+          {% if row.rating %}<span>{{ row.rating }}</span>{% endif %}
+          {% if row.pending %}<span>{{ row.details }}</span>{% endif %}
+        </p>
+        {% if row.tags %}
+          <p class="tags">{% for tag in row.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</p>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% endblock %}

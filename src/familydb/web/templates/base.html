@@ -9,7 +9,10 @@
   </head>
   <body>
     <header class="bar">
-      <span class="brand">{{ site_title }}</span>
+      <a class="brand" href="{{ url_for('web.ideas') }}">{{ site_title }}</a>
+      <nav>
+        <a href="{{ url_for('web.ideas') }}">Ideas</a>
+      </nav>
       {% if password_in_use() and session.get('signed_in') %}
         <form method="post" action="{{ url_for('auth.logout') }}">
           <button class="quiet" type="submit">Sign out</button>

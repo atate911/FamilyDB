@@ -1,10 +1,12 @@
-from datetime import timedelta
+from datetime import UTC, timedelta
 
 import pytest
 
 from familydb.app import App
 from familydb.errors import ConfigError
+from familydb.store import db, ideas, outcomes, places, plans
 from familydb.web import check_configuration, create_app
+from tests.conftest import NOW_ISO
 
 PASSWORD = "open sesame"
 
@@ -121,3 +123,194 @@ def test_behind_a_proxy_the_cookie_is_secure_and_the_client_is_the_real_one(sett
     assert client.post("/login", data={"password": PASSWORD}, headers=forwarded).status_code == 429
     other = {**forwarded, "X-Forwarded-For": "203.0.113.8"}
     assert client.post("/login", data={"password": PASSWORD}, headers=other).status_code == 302
+
+
+def _idea(conn, title, **fields):
+    with db.transaction(conn):
+        return ideas.insert(
+            conn, title=title, kind=fields.pop("kind", "activity"), now=NOW_ISO, **fields
+        )
+
+
+def _with_place(conn, idea, **fields):
+    with db.transaction(conn):
+        place = places.insert(
+            conn,
+            name=fields.pop("name", idea.title),
+            now=NOW_ISO,
+            last_checked_at=NOW_ISO,
+            **fields,
+        )
+        ideas.update(conn, idea.id, {"place_id": place.id, "enrichment": "done"}, now=NOW_ISO)
+    return place
+
+
+def test_the_ideas_list_shows_what_is_stored(settings, clock, conn, family) -> None:
+    ramen = _idea(
+        conn,
+        "Ramen & noodles <Main St>",
+        kind="restaurant",
+        participants=["whole family"],
+        tags=["cheap"],
+        cost_level=2,
+        duration_min=60,
+        location_name="Main St",
+        suggested_by=family["sam"].id,
+    )
+    _idea(conn, "Museum day", kind="outing", participants=["with the girls"])
+    page = _client(settings, clock).get("/")
+    assert page.status_code == 200
+    assert page.text.count('class="panel card"') == 2
+    assert "2 ideas" in page.text
+    # Titles come from chat, so they are escaped rather than rendered as markup.
+    assert "Ramen &amp; noodles &lt;Main St&gt;" in page.text
+    assert "<Main St>" not in page.text
+    assert f'href="/idea/{ramen.id}"' in page.text
+    assert "for whole family" in page.text and "$$" in page.text
+
+
+def test_the_ideas_list_filters(settings, clock, conn, family) -> None:
+    _idea(conn, "Ramen place", kind="restaurant", participants=["whole family"])
+    _idea(conn, "Museum day", kind="outing", participants=["with the girls"])
+    _idea(conn, "Old plan", kind="outing", status="done")
+    dropped = _idea(conn, "Never again", kind="outing", status="dropped")
+    client = _client(settings, clock)
+    assert client.get("/").text.count('class="panel card"') == 3  # dropped is hidden
+    assert "Ramen place" in client.get("/?kind=restaurant").text
+    assert "Museum day" not in client.get("/?kind=restaurant").text
+    assert client.get("/?status=done").text.count('class="panel card"') == 1
+    assert f'href="/idea/{dropped.id}"' in client.get("/?status=dropped").text
+    assert client.get("/?who=with+the+girls").text.count('class="panel card"') == 1
+    assert "Museum" in client.get("/?q=museum").text
+    assert client.get("/?q=nothinglikethis").text.count('class="panel card"') == 0
+    assert "Clear" in client.get("/?kind=outing").text  # a way back to everything
+
+
+def test_an_idea_page_shows_its_place_details(settings, clock, conn, family) -> None:
+    idea = _idea(
+        conn,
+        "Hopscotch Portland",
+        kind="outing",
+        participants=["with the girls"],
+        duration_min=120,
+        cost_level=3,
+        needs_booking=True,
+        lead_time_days=2,
+        setting="indoor",
+        suggested_by=family["sam"].id,
+    )
+    _with_place(
+        conn,
+        idea,
+        address="1030 NW 12th Ave, Portland",
+        lat=45.53,
+        lon=-122.68,
+        website="https://example.com/hopscotch",
+        booking_url="https://example.com/tickets",
+        phone="555-0100",
+        price_note="adults $28, kids free",
+        hours={"sat": [{"open": "10:00", "close": "20:00"}], "mon": []},
+        travel_minutes=45,
+        travel_km=38.0,
+        source_urls=["https://example.com/hopscotch"],
+    )
+    with db.transaction(conn):
+        outcomes.insert(
+            conn,
+            idea_id=idea.id,
+            plan_id=None,
+            happened_on="2026-08-14",
+            rating=9,
+            would_repeat=True,
+            notes="The girls loved it",
+            recorded_by=family["sam"].id,
+            now=NOW_ISO,
+        )
+        plans.insert(
+            conn,
+            title="Hopscotch",
+            start="2026-10-03T18:30-07:00",
+            end=None,
+            all_day=False,
+            idea_id=idea.id,
+            created_by=family["sam"].id,
+            now=NOW_ISO,
+        )
+    page = _client(settings, clock).get(f"/idea/{idea.id}")
+    assert page.status_code == 200
+    assert "1030 NW 12th Ave" in page.text and "openstreetmap.org" in page.text
+    assert "Saturday" in page.text and "10:00-20:00" in page.text
+    assert "closed" in page.text and "not known" in page.text  # Monday closed, Sunday unknown
+    assert "about 45 min away, 38 km (estimate)" in page.text
+    assert "needed, about 2 days ahead" in page.text
+    assert "adults $28, kids free" in page.text
+    assert "9/10" in page.text and "would go again" in page.text
+    assert "The girls loved it" in page.text
+    assert "Saturday 3 October, 18:30" in page.text
+    assert 'rel="noopener noreferrer"' in page.text
+    assert "checked today" in page.text
+
+
+def test_an_idea_page_without_a_lookup_says_so(settings, clock, conn, family) -> None:
+    idea = _idea(conn, "A picnic somewhere")
+    page = _client(settings, clock).get(f"/idea/{idea.id}")
+    assert "details not looked up yet" in page.text
+    assert "Opening hours" not in page.text
+    assert _client(settings, clock).get("/idea/404").status_code == 404
+    assert "Not found" in _client(settings, clock).get("/idea/404").text
+
+
+def test_a_stale_lookup_is_flagged(settings, clock, conn, family) -> None:
+    idea = _idea(conn, "Old museum")
+    with db.transaction(conn):
+        place = places.insert(
+            conn, name="Old museum", now=NOW_ISO, last_checked_at="2026-01-01T00:00:00Z"
+        )
+        ideas.update(conn, idea.id, {"place_id": place.id, "enrichment": "done"}, now=NOW_ISO)
+    page = _client(settings, clock).get(f"/idea/{idea.id}")
+    assert "may be out of date" in page.text
+    assert "No opening hours were found." in page.text
+
+
+def test_view_helpers_word_things_for_people() -> None:
+    from datetime import date, datetime
+
+    from familydb.store.ideas import Idea
+    from familydb.store.places import Place
+    from familydb.web import views
+
+    def idea(**fields):
+        return Idea(id=1, kind="activity", title="t", created_at="", updated_at="", **fields)
+
+    assert views.duration_text(idea(duration_min=45)) == "about 45 min"
+    assert views.duration_text(idea(duration_min=60, duration_max=90)) == "1 h to 1.5 h"
+    assert views.duration_text(idea(duration_min=90, duration_max=90)) == "about 1.5 h"
+    assert views.duration_text(idea()) is None
+    assert views.cost_text(0) == "free" and views.cost_text(3) == "$$$"
+    assert views.cost_text(None) is None
+    assert views.participants_text(idea()) == "anyone"
+    assert views.rating_text(idea(times_done=1, avg_rating=8.0)) == "done once, rated 8/10"
+    assert views.rating_text(idea(times_done=2)) == "done 2 times"
+    assert views.rating_text(idea()) is None
+    assert views.details_text(idea(enrichment="skipped")) == "not one place to look up"
+
+    now = datetime(2026, 9, 20, tzinfo=UTC)
+    assert views.place_panel(None, now, 30) is None
+    assert views.travel_text(None) is None
+    bare = Place(id=1, name="X", created_at="c", updated_at="u")
+    assert views.freshness_text(bare, now, 30) == "never checked"
+    assert views.map_url(bare) is None
+    assert views.map_url(bare.model_copy(update={"address": "1 Main St"})).endswith("1%20Main%20St")
+    assert [r["hours"] for r in views.hours_rows(None)] == ["not known"] * 7
+
+    today = date(2026, 9, 20)
+    assert views.day_text("2026-09-26") == "Saturday 26 September"
+    assert views.day_text("2026-09-26T18:30-07:00") == "Saturday 26 September, 18:30"
+    assert views.day_text("not a date") == "not a date"
+    assert views.relative_text("2026-09-20", today) == "today"
+    assert views.relative_text("2026-09-21", today) == "tomorrow"
+    assert views.relative_text("2026-09-19", today) == "yesterday"
+    assert views.relative_text("2026-09-23", today) == "in 3 days"
+    assert views.relative_text("2026-10-11", today) == "in 3 weeks"
+    assert views.relative_text("2026-09-06", today) == "2 weeks ago"
+    assert views.relative_text("whenever", today) is None

@@ -101,3 +101,54 @@ button.quiet {
   border: 1px solid var(--line);
   font-weight: 500;
 }
+
+nav { display: flex; gap: 1rem; margin-left: auto; }
+nav a { text-decoration: none; font-weight: 500; }
+.bar form { margin-left: 0.5rem; }
+
+.filters { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; }
+.filters .field { flex: 1 1 9rem; }
+.filters .field.wide { flex: 2 1 14rem; }
+.filters .actions { display: flex; align-items: center; gap: 0.75rem; flex: 0 0 auto; }
+.filters button { margin-top: 0; }
+.clear { font-size: 0.9rem; }
+.count { margin: 0 0 0.75rem 0.25rem; font-size: 0.9rem; }
+
+.cards, .plain { list-style: none; margin: 0; padding: 0; }
+.plain > li { padding: 0.35rem 0; border-bottom: 1px solid var(--line); }
+.plain > li:last-child { border-bottom: 0; }
+.card h2 { margin: 0 0 0.35rem; font-size: 1.05rem; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: baseline; }
+.card h2 a { text-decoration: none; }
+
+.meta { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; margin: 0; font-size: 0.9rem; }
+.tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0.5rem 0 0; }
+.tag {
+  display: inline-block;
+  padding: 0.05rem 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+.status-planned { color: var(--accent); border-color: var(--accent); }
+.status-done { color: var(--muted); }
+.status-dropped { text-decoration: line-through; }
+.warn { color: var(--warn); }
+
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 0.3rem 1rem; margin: 1rem 0 0; }
+.facts dt { color: var(--muted); font-size: 0.9rem; }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+
+.hours { border-collapse: collapse; margin-top: 0.4rem; }
+.hours th { text-align: left; font-weight: 500; color: var(--muted); padding-right: 1.25rem; }
+.hours th, .hours td { padding: 0.15rem 0; }
+
+h3 { font-size: 0.95rem; margin: 1.25rem 0 0.25rem; }
+.sources { font-size: 0.85rem; overflow-wrap: anywhere; }
+
+@media (max-width: 30rem) {
+  .bar { flex-wrap: wrap; }
+  nav { margin-left: 0; width: 100%; }
+}

@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}{{ idea.title }} · {{ site_title }}{% endblock %}
+{% block content %}
+  <article class="panel">
+    <h1>{{ idea.title }}</h1>
+    <p class="muted meta">
+      <span>#{{ idea.id }}</span>
+      <span class="tag">{{ idea.kind }}</span>
+      <span class="tag status-{{ idea.status }}">{{ idea.status }}</span>
+      {% if idea.suggested_by_name %}<span>suggested by {{ idea.suggested_by_name }}</span>{% endif %}
+      <span>added {{ idea.created_at[:10] }}</span>
+    </p>
+    {% if idea.description %}<p>{{ idea.description }}</p>{% endif %}
+
+    <dl class="facts">
+      <dt>For</dt><dd>{{ row.who }}</dd>
+      {% if row.where %}<dt>Where</dt><dd>{{ row.where }}</dd>{% endif %}
+      <dt>Setting</dt><dd>{{ setting }}{% if weather %}, {{ weather }}{% endif %}</dd>
+      {% if idea.seasons %}<dt>Seasons</dt><dd>{{ idea.seasons | join(', ') }}</dd>{% endif %}
+      {% if row.duration %}<dt>How long</dt><dd>{{ row.duration }}</dd>{% endif %}
+      {% if row.cost %}<dt>Cost</dt><dd>{{ row.cost }}</dd>{% endif %}
+      {% if idea.needs_booking %}
+        <dt>Booking</dt>
+        <dd>needed{% if idea.lead_time_days %}, about {{ idea.lead_time_days }} days ahead{% endif %}</dd>
+      {% endif %}
+      {% if row.rating %}<dt>So far</dt><dd>{{ row.rating }}</dd>{% endif %}
+      <dt>Lookup</dt>
+      <dd>
+        {{ row.details }}{% if idea.enrichment_note %} ({{ idea.enrichment_note }}){% endif %}
+      </dd>
+      {% if idea.url %}
+        <dt>Link</dt>
+        <dd><a href="{{ idea.url }}" rel="noopener noreferrer">{{ idea.url }}</a></dd>
+      {% endif %}
+    </dl>
+    {% if idea.tags %}
+      <p class="tags">{% for tag in idea.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</p>
+    {% endif %}
+  </article>
+
+  {% if place %}
+    <section class="panel">
+      <h2>{{ place.name }}</h2>
+      {% if place.summary %}<p>{{ place.summary }}</p>{% endif %}
+      <dl class="facts">
+        {% if place.address %}
+          <dt>Address</dt>
+          <dd>
+            {{ place.address }}
+            {% if place.map_url %}
+              <a href="{{ place.map_url }}" rel="noopener noreferrer">map</a>
+            {% endif %}
+          </dd>
+        {% endif %}
+        {% if place.travel %}<dt>Getting there</dt><dd>{{ place.travel }}</dd>{% endif %}
+        {% if place.phone %}<dt>Phone</dt><dd>{{ place.phone }}</dd>{% endif %}
+        {% if place.website %}
+          <dt>Website</dt>
+          <dd><a href="{{ place.website }}" rel="noopener noreferrer">{{ place.website }}</a></dd>
+        {% endif %}
+        {% if place.booking_url %}
+          <dt>Booking</dt>
+          <dd><a href="{{ place.booking_url }}" rel="noopener noreferrer">{{ place.booking_url }}</a></dd>
+        {% endif %}
+        {% if place.price_note %}<dt>Prices</dt><dd>{{ place.price_note }}</dd>{% endif %}
+      </dl>
+
+      {% if place.has_hours %}
+        <h3>Opening hours</h3>
+        <table class="hours">
+          <tbody>
+            {% for row in place.hours %}
+              <tr><th scope="row">{{ row.day }}</th><td>{{ row.hours }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="muted">No opening hours were found.</p>
+      {% endif %}
+
+      {% if place.freshness %}
+        <p class="muted {{ 'warn' if place.stale }}">{{ place.freshness }}</p>
+      {% endif %}
+      {% if place.sources %}
+        <p class="muted sources">
+          From
+          {% for url in place.sources %}
+            <a href="{{ url }}" rel="noopener noreferrer">{{ url }}</a>{{ '' if loop.last else ', ' }}
+          {% endfor %}
+        </p>
+      {% endif %}
+    </section>
+  {% endif %}
+
+  {% if plans %}
+    <section class="panel">
+      <h2>On the calendar</h2>
+      <ul class="plain">
+        {% for plan in plans %}
+          <li>
+            {{ plan.when }}
+            {% if plan.relative %}<span class="muted">({{ plan.relative }})</span>{% endif %}
+            {% if plan.status != 'confirmed' %}<span class="tag">{{ plan.status }}</span>{% endif %}
+            {% if plan.location %}<span class="muted">{{ plan.location }}</span>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  {% if outcomes %}
+    <section class="panel">
+      <h2>How it went</h2>
+      <ul class="plain">
+        {% for outcome in outcomes %}
+          <li>
+            <strong>{{ outcome.when }}</strong>
+            {% if outcome.rating %}<span class="tag">{{ outcome.rating }}</span>{% endif %}
+            {% if outcome.repeat %}<span class="muted">{{ outcome.repeat }}</span>{% endif %}
+            {% if outcome.notes %}<div>{{ outcome.notes }}</div>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  <p><a href="{{ url_for('web.ideas') }}">Back to the ideas list</a></p>
+{% endblock %}
