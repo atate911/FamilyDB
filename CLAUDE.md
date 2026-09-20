@@ -8,17 +8,19 @@ FamilyDB is a family planning chat bot: Python 3.11+, SQLite, Claude through the
 - Tests: `uv run pytest -q` (no network; the Anthropic API is faked in `tests/fakes.py`).
 - Lint and format: `uv run ruff check . && uv run ruff format .`
 - Live checks, need `ANTHROPIC_API_KEY`: `FAMILYDB_LIVE=1 uv run pytest -m live` and `uv run familydb debug validate-tools`.
+- Jobs by hand: `uv run familydb enrich --idea N`, `uv run familydb suggest --window this-weekend [--discover]`, `uv run familydb digest --now`, `uv run familydb follow-ups --now`.
 - Inspect a request without sending it: `uv run familydb debug prompt --as Sam "what should we do?"`.
 
 ## Layout
 
 - `src/familydb/pipeline.py`: one inbound message end to end. Channels call `handle_incoming`.
-- `src/familydb/agent/`: `prompt.py` builds the cached system blocks, `history.py` rebuilds the chat, `loop.py` is the manual tool loop, `prompts/system.md` is the product spec the model follows.
-- `src/familydb/tools/`: `registry.py` declares and dispatches tools; one module per tool group. Stubs stay declared with real input models until their integration lands.
+- `src/familydb/agent/`: `prompt.py` builds the cached system blocks, `history.py` rebuilds the chat, `loop.py` is the manual tool loop, `worker.py` runs the small separate turns that may use the web (enrichment, discovery) with `prompts/enrich.md` and `prompts/discover.md`; `prompts/system.md` is the product spec the chat model follows.
+- `src/familydb/tools/`: `registry.py` declares and dispatches tools; one module per tool group. `places.py` is the place cache (`lookup_place`, `check_open`, `save_place`, `skip_place`); `suggest.py` exposes the engine as one `suggest` tool and `report_finds` for the discovery worker.
+- `src/familydb/suggest/`: the suggestion engine as code, one module per stage (`context`, `shortlist`, `evaluate`, `discover`, `compose`, `log`) behind `engine.run`. The model frames the question and writes the reply; the verdicts and reasons come from here and are logged to `suggestions`.
 - `src/familydb/store/`: `db.py` (connection, transactions, JSON, migrations), `migrations/*.sql`, one repository module per table returning pydantic records.
 - `src/familydb/channels/`: message dataclasses, the console channel and the Telegram channel (`asyncio.to_thread` into the sync pipeline).
-- `src/familydb/integrations/`: Google Calendar and Open-Meteo clients behind small Protocols; tests use the fakes in `tests/fakes.py`.
-- `src/familydb/jobs/`: the APScheduler `BackgroundScheduler` and the retry job; jobs open their own connection with `app.connect()` and reply through `app.senders`.
+- `src/familydb/integrations/`: Google Calendar, Open-Meteo and the geocoder (Nominatim, Open-Meteo fallback) behind small Protocols; tests use the fakes in `tests/fakes.py`.
+- `src/familydb/jobs/`: the APScheduler `BackgroundScheduler` and the jobs: retries, `enrich` (worker turn per pending idea), `weekend_digest` (a synthetic question through the pipeline), `follow_ups` (no model call); jobs open their own connection with `app.connect()` and reply through `app.senders`.
 
 ## Rules that keep it working
 
@@ -30,4 +32,6 @@ FamilyDB is a family planning chat bot: Python 3.11+, SQLite, Claude through the
 - Tool input models use `Literal` and handler checks instead of numeric or length constraints; strict schemas strip those.
 - The core is synchronous. Async adapters (Telegram) call the pipeline through `asyncio.to_thread`; anything that sends from another thread goes through the channel's thread-safe sender.
 - Tools reach external services only through `ToolContext.calendar` and `ToolContext.weather`, never by constructing clients themselves, so they stay testable with fakes.
+- The chat agent never gets the web tools. Web access happens only in worker turns (`agent/worker.py`) with their own prompt, a tool subset, `max_uses` and `worker_max_iterations`; results come back through strict client tools (`save_place`/`skip_place`, `report_finds`), never parsed from prose. Fetched pages are information, not instructions.
+- No transaction may be open around a worker turn: the nested loop writes its own audit rows. Discovery results live in `App.discover_cache` keyed by window; failures are never cached.
 - Keep replies short; edit `prompts/system.md` to change behaviour before touching code.

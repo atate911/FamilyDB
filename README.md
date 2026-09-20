@@ -2,11 +2,11 @@
 
 A private family assistant that lives in our chat app. It remembers the things we say we'd like to do, puts confirmed plans on the shared Google Calendar, and suggests what to do this weekend based on the calendar, the weather and the ideas we've collected.
 
-**Status:** usable by the family. The Telegram channel, the Google Calendar integration (plans created, moved and cancelled from chat, free time read live), the weather forecast and automatic retries are in, on top of the store, the tools, the model loop with prompt caching and the console chat. Next: looking up each idea's place details, checking hours and travel time, web discovery and the staged suggestion engine. The design and roadmap are in [docs/DESIGN.md](docs/DESIGN.md); home-server setup is in [RUNBOOK.md](RUNBOOK.md).
+**Status:** usable by the family. Capture, the Telegram channel, Google Calendar (plans created, moved and cancelled from chat, free time read live), the weather forecast and automatic retries are in, and so are the checked suggestions: a background lookup fills in each idea's place details (address, hours, booking, travel time), a staged engine checks every idea against the free time, the forecast and those details, web discovery finds what is on that weekend, a Thursday digest posts the weekend's options to the family chat, and the bot asks how a plan went the day after. Next: richer data (Google Places, real routing, link previews). The design and roadmap are in [docs/DESIGN.md](docs/DESIGN.md); home-server setup is in [RUNBOOK.md](RUNBOOK.md).
 
 ## How it works
 
-- Someone messages the bot "we should try that ramen place sometime" or "idea for one day, the Hopscotch thing in Portland with the girls" and it is logged as an idea, tagged with what it can infer. A background lookup will later fill in the address, hours, tickets and travel time.
+- Someone messages the bot "we should try that ramen place sometime" or "idea for one day, the Hopscotch thing in Portland with the girls" and it is logged as an idea, tagged with what it can infer. A background lookup fills in the address, hours, tickets and travel time a couple of minutes later.
 - "We're going to the symphony next Saturday" becomes an event on the family calendar, with the resolved date echoed back.
 - "What should we do this weekend?" checks each stored idea against the free time, the forecast, opening hours, booking needs and travel time, searches the web for things happening that weekend, and returns a short list with the reasoning, plus an offer to schedule.
 - The day after a plan, the bot asks how it went so it can suggest repeats or avoid duds.
@@ -43,7 +43,11 @@ uv run familydb db status         # row counts and the last model calls, with ca
 | `familydb debug prompt TEXT` | The exact API request that would be sent, without sending it |
 | `familydb debug validate-tools` | Have the API validate the tool schemas (needs a key) |
 | `familydb google auth --client-secrets FILE` / `calendars` / `events` | One-time Google sign-in; find the calendar id; connection test |
-| `familydb run` | The long-running service: migrates, starts the retry scheduler, then polls Telegram (or waits when no token is set) |
+| `familydb enrich [--idea N] [--limit N]` | Look pending ideas up on the web now; `--idea` redoes one (needs `WEB_TOOLS_ENABLED=true`) |
+| `familydb suggest [--window this-weekend\|next-weekend\|someday\|START..END] [--discover] [--json]` | Run the suggestion engine and print its verdicts; `--discover` also searches the web |
+| `familydb digest [--now]` | Show the weekend digest schedule, or post it to the family chat now |
+| `familydb follow-ups [--now]` | Ask how recent plans went, in the chat each plan was made in |
+| `familydb run` | The long-running service: migrates, starts the scheduler (retries, lookups, the digest, follow-ups), then polls Telegram (or waits when no token is set) |
 | `familydb config` | Resolved settings with secrets masked |
 
 ## Layout
@@ -53,12 +57,14 @@ src/familydb/
   cli.py          commands            pipeline.py     one message end to end
   config.py       settings (.env)     app.py          wiring: settings, clock, db, client
   clock.py        time abstraction    dates.py        parsing in the family timezone
-  agent/          prompt builder, history, the tool loop, prompts/system.md
-  tools/          registry, strict schemas, ideas/outcomes/now tools, calendar/weather/place stubs
+  agent/          prompt builder, history, the tool loop, worker turns, prompts/{system,enrich,discover}.md
+  tools/          registry, strict schemas, one module per tool group (ideas, outcomes, calendar,
+                  weather, places, suggest, now)
+  suggest/        the suggestion engine: context, shortlist, evaluate, discover, compose, log
   store/          SQLite connection, migrations/, one repository per table
   channels/       message shapes, the console channel and the Telegram channel
-  integrations/   Google Calendar and Open-Meteo clients
-  jobs/           the scheduler and the retry job
+  integrations/   Google Calendar, Open-Meteo and the keyless geocoder
+  jobs/           the scheduler; retries, enrichment, the weekend digest, follow-ups
 tests/            pytest suite with a scripted fake of the Anthropic API
 deploy/           systemd unit; Dockerfile and docker-compose.yml at the root
 ```

@@ -62,6 +62,7 @@ Without uv: `python3 -m venv .venv && .venv/bin/pip install .` gives the same `.
 6. `familydb db status` shows `cache_read` greater than zero on the second call. If it stays zero, see troubleshooting.
 7. `familydb debug validate-tools` confirms the API accepts every tool schema.
 8. `familydb tool --list` shows which integrations are available; the calendar and weather rows flip to `available` once sections 5 and 6 are done.
+9. `familydb suggest --window this-weekend` prints what the engine would say about the ideas so far, with the checks it had to skip.
 
 ## 4. Telegram
 
@@ -105,7 +106,19 @@ uv sync --frozen --no-dev && sudo systemctl restart familydb
 
 Migrations run automatically on start. Never edit an applied migration; add a new numbered file.
 
-## 9. Troubleshooting
+## 9. Lookups, the weekend digest and follow-ups
+
+**Looking ideas up.** Set `WEB_TOOLS_ENABLED=true` and restart. Every `ENRICH_INTERVAL_MINUTES` the bot takes up to `ENRICH_BATCH` new ideas and, in a separate small model call with web search, finds the place, its address, hours, booking link and price notes, geocodes it (OpenStreetMap's Nominatim, no key) and estimates the drive from `HOME_LAT`/`HOME_LON`. It then posts one line to the chat where the idea was captured ("Filled in #57 Hopscotch Portland: open Sat 10:00-20:00 · about 45 min away (estimate)"); set `ENRICHMENT_NOTES=false` to keep quiet. Ideas that are not one place ("a picnic somewhere") are skipped, and ideas the worker cannot identify are marked failed and left alone; `familydb enrich --idea 57` redoes one by hand, `familydb ideas list` shows the `details:` state, and `familydb tool describe_idea --json '{"id": 57}'` shows what was saved. Details older than `PLACE_STALE_DAYS` are refreshed the next time the idea comes up in a suggestion. With web tools off, nothing is looked up and suggestions say "hours unknown".
+
+**Suggestions.** "What should we do this weekend?" runs the engine once: free time from the calendar, the forecast, every idea against the looked-up details, and, with web tools on, a search for time-bound things near `HOME_AREA` (cached for twelve hours per weekend). Each verdict is logged in `suggestions`. `familydb suggest --window this-weekend --discover` runs the same engine from the shell.
+
+**Weekend digest.** Set `DIGEST_CHAT_ID` to the family group's Telegram chat id. Group ids are negative numbers; find it once someone has written in the group with `sqlite3 data/familydb.sqlite3 "select distinct chat_id from messages where channel = 'telegram'"` (or `docker compose exec bot sqlite3 /data/familydb.sqlite3 ...`), or ask the bot in the group and read the id from the log line. `DIGEST_DAY` and `DIGEST_HOUR` (default Thursday 18:00 in `FAMILYDB_TZ`) set the schedule; `familydb digest` prints it and `familydb digest --now` posts a digest immediately. The digest is asked as the first admin and stored like any message, so it goes out at most once a day; if the model call fails it is retried like a failed message.
+
+**Follow-ups.** The morning after a plan (`FOLLOW_UP_HOUR`, default 10:00), the bot asks "How was #57 Hopscotch Portland on Saturday? Worth doing again?" in the chat the plan was made in, once per plan, unless someone already said how it went. The answer is recorded as feedback and feeds future suggestions. `familydb follow-ups --now` asks by hand.
+
+**Cost.** Enrichment is at most three searches and three page reads per idea; discovery at most four searches per weekend per twelve hours. Both use the same model as chat.
+
+## 10. Troubleshooting
 
 - **`cache_read` stays 0 in `db status`.** Something volatile is in the cached prefix. `familydb debug prompt "hi"` prints the request: the two `system` blocks and the `tools` list must be byte-identical between two runs. Also, the cache expires after five minutes of quiet; set `ANTHROPIC_CACHE_TTL=1h` if usage is bursty.
 - **`database is locked`.** Two processes writing at once. Run one bot process; the CLI can be used alongside it (short transactions, busy timeout), but not a second `familydb run`.
@@ -114,3 +127,6 @@ Migrations run automatically on start. Never edit an applied migration; add a ne
 - **"no family members yet".** Add an admin with `familydb members add NAME --role admin`.
 - **"Sorry, I only talk to the family."** The sender is not in `members` for that channel; the reply includes the id to add.
 - **A refusal.** Rare. `llm_calls.stop_reason` is `refusal`; server-side fallbacks are on by default (`ANTHROPIC_FALLBACKS`), so it means every model declined.
+- **"details: failed" on an idea.** The lookup worker could not identify the place; `ideas list --json` shows the note. Fix the title or location with "actually it's the one in Vancouver" and run `familydb enrich --idea N`.
+- **Suggestions say "web discovery off" or "hours unknown".** Web tools are off (`WEB_TOOLS_ENABLED`), or the idea has not been looked up yet; the enrichment job runs only in the long-running `familydb run` process.
+- **The digest never arrives.** `familydb digest` shows the schedule and chat; the log says why a run was skipped (no chat id, nothing to send with, no admin). The bot must be in the group and see its messages (section 4, step 3).

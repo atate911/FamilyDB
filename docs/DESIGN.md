@@ -104,11 +104,11 @@ Sam and Alex are placeholder family members. Dates assume today is Sunday 20 Sep
 - **Message pipeline.** Allowlist check, persist the raw message, build context, run the agent, send the reply, persist what happened. Section 5.
 - **Agent.** One call into the Anthropic SDK tool runner with the system prompt, family context, the recent conversation for that chat, and the tools in section 6. The model decides whether a message is an idea, a plan, a query, feedback, a correction or chit-chat. There is no separate classifier.
 - **Tools.** Plain functions with JSON-schema inputs. Each is unit-tested and runnable from a CLI without the model, which is also how a web UI or another front end could reuse them later.
-- **Web search and fetch.** Anthropic's server-side tools, declared on the request. Claude searches and reads pages on Anthropic's side, so we host no scraper and hold no search API key. Used at capture time by the enrichment worker and at query time by the suggestion engine.
+- **Web search and fetch.** Anthropic's server-side tools, declared on the request. Claude searches and reads pages on Anthropic's side, so we host no scraper and hold no search API key. They are declared only in *worker turns*: small separate model calls with their own prompt, a tool subset and an iteration budget, used by the enrichment job and by the discovery stage. The chat agent's request never carries them, which keeps its cached prefix stable and its cost predictable.
 - **Enrichment worker.** A background job that takes newly saved ideas and fills in the place record: what it is, address and coordinates, opening hours, website and booking link, price notes, travel time from home. Section 9.
-- **Suggestion engine.** The explicit procedure behind "what should we do": frame, context, shortlist, evaluate each candidate, discover on the web, compose. Section 10. Used for chat questions and for the Thursday digest alike.
+- **Suggestion engine.** The explicit procedure behind "what should we do": frame, context, shortlist, evaluate each candidate, discover on the web, compose, log. Section 10. The stages are code, exposed to the chat model as one `suggest` tool; the model frames the question and writes the reply. Used for chat questions and for the Thursday digest alike.
 - **Store.** SQLite with FTS5 for text search. Section 7.
-- **Scheduler.** In-process cron: enrichment, Thursday evening digest, day-after outcome prompts, retry of failed messages, a monthly nudge about ideas that have sat for a year.
+- **Scheduler.** In-process cron: enrichment every couple of minutes, the Thursday evening digest, day-after follow-ups, retry of failed messages. A monthly nudge about ideas that have sat for a year is still to come.
 
 ## 5. Message pipeline
 
@@ -136,8 +136,11 @@ Prompt caching: the system prompt and the idea list go first with a cache breakp
 | `search_ideas` | text?, kind?, status?, participants?, setting?, max_duration?, max_cost?, max_travel_minutes?, tags?, exclude_done_within_days?, limit | Filtered list; FTS for text. With no filters it returns everything, which is fine at family scale. |
 | `lookup_place` | idea_id, or name and area | The cached place record. If missing or stale it queues enrichment and says so. |
 | `check_open` | idea_id, date | Whether the place is open that day and its hours, from the cached record, with the age of the data. |
-| `save_place` | idea_id, place fields, source_urls[] | Used by the enrichment worker to store what it found. |
-| `web_search`, `web_fetch` | query, url | Anthropic's server-side tools. Search returns results with links. Fetch reads a page whose URL already appears in the conversation, such as a search result or an idea's saved website. |
+| `save_place` | idea_id, name, address?, lat/lon?, hours[], closed_days[], booking_url?, price_note?, source_urls[] | Used by the enrichment worker to store what it found. Geocodes the address when no coordinates are given, estimates travel from home, upserts the place and marks the idea's details done. |
+| `skip_place` | idea_id, status (skipped or failed), reason | Used by the enrichment worker for ideas that are not one place, or that it could not identify. |
+| `suggest` | window (this_weekend, next_weekend, dates, someday), start?, end?, participants[], max_cost_level?, setting?, max_travel_minutes?, max_duration_minutes?, discover, question | Runs the suggestion engine (section 10) and returns the day context, every candidate with its verdict and reasons, the web finds and the checks that were skipped. |
+| `report_finds` | finds[] (title, url, dates, summary) | Used by the discovery worker to hand back time-bound things found on the web; http(s) links only, at most six. |
+| `web_search`, `web_fetch` | query, url | Anthropic's server-side tools, declared only in worker turns. Search returns results with links. Fetch reads a page whose URL already appears in the conversation, such as a search result or an idea's saved website. |
 | `get_calendar` | start, end | Live events from the shared calendar in that window, plus derived free blocks per day (morning, afternoon, evening). Includes events people added by hand. |
 | `create_event` | title, start, end?, all_day?, location?, notes?, idea_id? | Creates the Google Calendar event, records it in `plans`, links the idea and marks it planned. |
 | `update_event`, `delete_event` | plan id, changes | Corrections such as "actually Sunday". |
@@ -228,44 +231,45 @@ Model: Claude Opus 5 through the Messages API with adaptive thinking, effort set
 
 ## 9. Enrichment: filling in the details
 
-Trigger: an idea is saved with enrichment pending, or `lookup_place` finds no record or a stale one.
+Trigger: an idea is saved with enrichment pending, `lookup_place` finds no record, or the engine meets a place whose details are older than `PLACE_STALE_DAYS` (it re-queues them). Runs only when `WEB_TOOLS_ENABLED` is set, every `ENRICH_INTERVAL_MINUTES`, up to `ENRICH_BATCH` ideas per run, oldest first.
 
-The worker runs a small, separate agent call per idea with web search, web fetch and `save_place`:
+The job runs a worker turn per idea (`agent/worker.py`, prompt `prompts/enrich.md`): its own short system prompt, the web search and fetch tools with at most three uses each, and the two hand-back tools `save_place` and `skip_place`. Nobody reads the worker's prose; only its tool call matters.
 
-1. Work out what the thing is from the title, location and description, and find its official site.
-2. Extract address, opening hours by weekday, booking or ticket link, price notes.
-3. Geocode the address, then compute travel time and distance from home.
-4. Save everything with source URLs and a timestamp; mark the idea enriched.
-5. Post a one-line "filled in #57" note to the chat where the idea was captured. Configurable, off for people who find it noisy.
+1. Work out what the thing is from the title, the location as the family said it, the description and the home area, and find its official site.
+2. Extract the address, opening hours by weekday (split ranges as two entries, closed days named), booking or ticket link, price note, phone. Only what the pages state; never guessed hours.
+3. `save_place` geocodes the address (Nominatim, with Open-Meteo's geocoder as a fallback for short names), estimates travel from home (straight-line distance times a road factor at an average speed, labelled as an estimate), upserts the place record with its source URLs and a timestamp, and marks the idea's details done.
+4. Ideas that are not one place ("a picnic somewhere") end with `skip_place(status="skipped")`, without searching; ideas the worker cannot identify with `skip_place(status="failed")` and the reason. Neither is retried automatically; `familydb enrich --idea N` redoes one by hand.
+5. A one-line "Filled in #57 Hopscotch Portland: open Sat 10:00-20:00 · about 45 min away (estimate) · tickets: ..." note goes to the chat where the idea was captured. `ENRICHMENT_NOTES=false` turns it off.
 
-Freshness: when an idea becomes a candidate in a suggestion and its place data is older than a configured age, the engine re-checks hours before relying on them.
+Outcomes are read from the worker's actions, not its words: a successful `save_place` is done, a `skip_place` is what it says, neither is failed ("worker ended without saving"), and a retryable API error leaves the idea pending and stops the batch. Every worker call and tool call is logged under the message that captured the idea.
 
-Failure: mark enrichment failed with the reason. The idea still exists and can be suggested with "hours unknown".
+Freshness: stale details lower a candidate to "possible" in a suggestion and are re-queued for a refresh; the next run replaces the record in place.
 
-Cost: a couple of web searches per new idea.
+Cost: at most three searches and three page reads per idea, bounded further by `WORKER_MAX_ITERATIONS` since each paused web turn costs an iteration.
 
 Later: Google Places for canonical hours and open-now status, a routing API for real drive times, link previews when someone pastes a URL.
 
 ## 10. Suggestion engine: answering "what should we do?"
 
-The procedure is explicit so it can be tested stage by stage and improved one stage at a time. The model runs it inside one agent loop, guided by the system prompt; the Thursday digest calls the same code with a synthetic question.
+The procedure is explicit so it can be tested stage by stage and improved one stage at a time. The stages are code in `suggest/`, run by one `suggest` tool call; the chat model frames the question before the call and writes the reply after it. The Thursday digest asks the same question through the pipeline.
 
-| Stage | What it does | Uses | Phase |
-|---|---|---|---|
-| Frame | Work out the window ("this weekend", "a rainy Sunday", "someday"), who is coming, and any constraints in the message ("cheap", "near home", "with the girls") | the message, context | 1 |
-| Context | Free blocks per day from the calendar, the forecast per day, season, holidays | `get_calendar`, `get_forecast` | 1 |
-| Shortlist | Candidates from the idea list that plausibly fit: status, participants, setting versus weather, season, duration versus free blocks, not done recently | the in-context list, `search_ideas` | 1 |
-| Evaluate | For each candidate: open that day and at a usable time, booking needed and lead time, travel time versus the free block, weather fit, who is coming, how long since last done. Produce a verdict: good fit, possible, ruled out, with reasons | `check_open`, `describe_idea`, places cache, web fetch of the official site when data is stale | 2 |
-| Discover | Search the web for time-bound options the list doesn't know about: festivals, exhibits, markets, seasonal events near home in the window | `web_search`, `web_fetch` | 2 |
-| Compose | Three to five options with the verdict line each, the ruled-out list with reasons, new finds with links, an offer to schedule | the model | 1 |
-| Log | Store candidates, verdicts and web finds in `suggestions` | store | 2 |
+| Stage | What it does | Where |
+|---|---|---|
+| Frame | Work out the window (this weekend, next weekend, given dates, someday), who is coming, and any constraints in the message ("cheap", "somewhere inside", "close by", "with the girls") | the model, as the `suggest` input |
+| Context | Free blocks per day from the calendar, the forecast per day, the season. A missing integration becomes a "skipped check" and the days count as free | `suggest/context.py` over `calendar_days` and `forecast_days` |
+| Shortlist | Rules over every idea, the first failing rule being the reason: already planned; done within 60 days; rated under 5; participants; season; outdoor or weather needs versus each day's forecast (rain chance over 50%, or rain and snow codes); duration versus the free blocks (morning 4 h, afternoon 5 h, evening 5 h; day trips need a whole free day, trips every day); the question's cost, setting and duration limits. Someday windows skip the day-bound rules. At most eight go on to evaluation; the rest are "possible, not checked in detail" | `suggest/shortlist.py` |
+| Evaluate | For each shortlisted idea and fitting day: open that day with usable overlap of its hours and the free blocks (closed everywhere rules it out; unknown hours make it possible); stale details (possible, and re-queued); booking lead time against the days left; travel estimate against the free span and the asked limit. Any hard fail is ruled out, any unknown is possible, else good | `suggest/evaluate.py` over the places cache |
+| Discover | A worker turn (prompt `prompts/discover.md`, at most four searches, home area as the search location) finds time-bound things in the window near home and hands them back with `report_finds`. Results are cached per window for twelve hours on the App; a failure is a note, never cached | `suggest/discover.py` |
+| Compose | Good first (never done, then best rated), then possible, then ruled out; ideas suggested in the last two weeks sink within their group; at most three reasons each; a summary per day. The model turns this into three to five options with their reason, the ruled-out list, the web finds with links, the skipped checks and an offer to schedule | `suggest/compose.py`, then the model |
+| Log | Every candidate with its verdict and reasons, and the web finds, stored in `suggestions` and linked to the reply message | `suggest/log.py` |
 
 Design notes:
 
-- Shortlist before evaluate keeps the expensive checks to a handful of ideas per question.
-- Verdicts are explicit data, not just prose, so the log shows why something was or wasn't suggested and the family can tune the rules ("stop suggesting hikes over two hours").
-- If the list grows large, evaluate can fan out to one small agent call per candidate. Not needed at family scale.
+- Shortlist before evaluate keeps the detailed checks to a handful of ideas per question.
+- Verdicts are explicit data, not just prose, so the log shows why something was or wasn't suggested and the rules can be tuned in one place ("stop suggesting hikes over two hours").
+- The model does not re-check with `get_calendar`, `get_forecast` or `check_open` after `suggest`; those tools remain for direct questions.
 - Web finds are offered, not saved. "Add the harvest festival" turns one into an idea through the normal capture path.
+- Travel is an estimate from straight-line distance until a routing API lands, and every reason says so.
 
 ## 11. Integrations
 
@@ -275,7 +279,9 @@ Design notes:
 
 **Web search and fetch.** Anthropic's server-side tools, declared on the request alongside our own tools. No scraper to host, no search API key. Fetch only follows URLs already in the conversation, which is what we want: links from search results or an idea's saved website.
 
-**Weather.** Open-Meteo: free, no API key, sixteen-day daily forecast for the configured coordinates. Its geocoding endpoint covers town-level lookups; street addresses use OpenStreetMap's Nominatim within its usage policy.
+**Weather.** Open-Meteo: free, no API key, sixteen-day daily forecast for the configured coordinates.
+
+**Geocoding.** OpenStreetMap's Nominatim, keyless, within its usage policy: an identifying User-Agent, at most one request per second, results cached in the process, tiny volume (one lookup per new idea). Open-Meteo's geocoding endpoint is the fallback for short town-level names. A miss still saves the place, without travel time.
 
 **Later.** Google Places for hours, ratings and open-now; a routing API for drive times.
 
@@ -285,7 +291,7 @@ Design notes:
 - No reverse proxy, no open ports, no domain. Long polling and outbound HTTPS only. A web UI later can sit on the LAN or behind Tailscale.
 - Logs to stdout; `docker logs` is enough to start.
 - Backups: a nightly job runs SQLite's online backup to a second location. Calendar events are also in Google.
-- Config, all via environment (full list with comments in `.env.example`): `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `ANTHROPIC_EFFORT`, `ANTHROPIC_FALLBACKS`, `ANTHROPIC_CACHE_TTL`, `TELEGRAM_BOT_TOKEN`, `GOOGLE_CALENDAR_ID`, `GOOGLE_TOKEN_PATH`, `HOME_LAT`, `HOME_LON`, `HOME_AREA` (for web searches, e.g. the city), `FAMILYDB_TZ`, `FAMILYDB_PATH`.
+- Config, all via environment (full list with comments in `.env.example`): `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `ANTHROPIC_EFFORT`, `ANTHROPIC_FALLBACKS`, `ANTHROPIC_CACHE_TTL`, `TELEGRAM_BOT_TOKEN`, `GOOGLE_CALENDAR_ID`, `GOOGLE_TOKEN_PATH`, `HOME_LAT`, `HOME_LON`, `HOME_AREA` (for web searches, e.g. "Vancouver, WA"), `FAMILYDB_TZ`, `FAMILYDB_PATH`, `WEB_TOOLS_ENABLED` (enrichment and discovery), `ENRICH_INTERVAL_MINUTES`, `ENRICH_BATCH`, `ENRICHMENT_NOTES`, `PLACE_STALE_DAYS`, `WORKER_MAX_ITERATIONS`, `TRAVEL_SPEED_KMH`, `ROAD_FACTOR`, `DIGEST_CHAT_ID`, `DIGEST_DAY`, `DIGEST_HOUR`, `FOLLOW_UP_HOUR`.
 - Upgrades: `git pull && docker compose up -d --build`. Migrations run on start.
 
 ## 13. Security
@@ -305,7 +311,7 @@ Assumptions: about ten messages a day, each turn a few thousand input tokens mos
 
 - **Phase 0, skeleton.** Done. Repo layout, config, the full SQLite schema including `places` and `suggestions`, the tool registry with every tool declared (calendar, weather and place stubs answer "not available yet" gracefully), CLI, tests, Docker Compose and a systemd unit. The suggestion stages live in the system prompt for now and become modules in Phase 2.
 - **Phase 1, MVP.** Done. The agent loop with prompt caching, capture with open kinds and participants, describe and search ideas, the console chat, the Telegram channel, Google Calendar (create, move and cancel plans; free blocks per day), the Open-Meteo forecast, and bounded automatic retries of failed messages.
-- **Phase 2, checked suggestions.** Enrichment worker with web search and fetch, places cache, open-hours check, travel time, the discover stage, verdict logging, Thursday digest, day-after outcome prompts.
+- **Phase 2, checked suggestions.** Done. Worker turns with web search and fetch, the enrichment job and the places cache (hours, booking, geocoded travel estimate), the real `lookup_place` and `check_open`, the staged engine behind one `suggest` tool with verdicts logged to `suggestions`, web discovery with a per-window cache, the Thursday digest and the day-after follow-ups.
 - **Phase 3, richer data.** Google Places, routing API, link previews for pasted URLs, voice notes, photos.
 - **Phase 4, surfaces.** Read-only web page of the list, then editing; optional extra channels; OpenClaw or Claude connectors as alternative front ends over the same tools.
 - **Later.** Semantic search with embeddings, a recurring date-night planner, budgets, a trip-planning mode.
@@ -322,7 +328,8 @@ Decided so far: Telegram as the chat channel and Python as the language. The res
 | Calendar owner | Open, recommend a dedicated family Google account | Keeps the bot's token separate from anyone's personal mail. An existing account works too. |
 | Home location and timezone | Open, set in config | Needed for weather, travel time, web searches and resolving dates. |
 | Group vs DM | Open, recommend both | A dedicated family group for capture, DMs for private queries. |
-| Enrichment notes in chat | Open, recommend on | A one-line "filled in #57" after lookup. Easy to turn off. |
+| Enrichment notes in chat | **Decided: on by default** | A one-line "Filled in #57" after lookup, in the chat the idea came from. `ENRICHMENT_NOTES=false` turns it off. |
+| Web access | **Decided: worker turns only** | The chat agent never declares the web tools; enrichment and discovery run as separate bounded calls that hand results back through strict tools. Keeps the chat prefix cacheable and the cost per message predictable. |
 
 ## 17. Repo layout
 
@@ -330,19 +337,25 @@ Decided so far: Telegram as the chat channel and Python as the language. The res
 pyproject.toml  uv.lock  README.md  RUNBOOK.md  CLAUDE.md  .env.example  Dockerfile  docker-compose.yml
 deploy/familydb.service
 src/familydb/
-  cli.py                 commands: db, members, ideas, tool, chat, repl, run, debug, config
+  cli.py                 commands: db, members, ideas, tool, chat, repl, run, debug, config, google,
+                         enrich, suggest, digest, follow-ups
   config.py              settings from the environment and .env
-  app.py                 wiring: settings, clock, connections, tool registry, API client
+  app.py                 wiring: settings, clock, connections, tool registry, API client, senders,
+                         the discovery cache
   clock.py, dates.py     time abstraction and date parsing in the family timezone
-  pipeline.py            one inbound message end to end
-  agent/                 client.py, prompt.py, render.py, history.py, loop.py, prompts/system.md
+  availability.py        which integrations are configured
+  pipeline.py            one inbound message end to end; handle_synthetic for the digest
+  agent/                 client.py, prompt.py, render.py, history.py, loop.py, worker.py,
+                         prompts/{system,enrich,discover}.md
   tools/                 registry.py, schema.py, ideas.py, outcomes.py, now.py, web.py,
-                         gcal.py, weather.py, places.py (a stub until enrichment lands)
+                         gcal.py, weather.py, places.py, suggest.py
+  suggest/               types.py, engine.py, context.py, shortlist.py, evaluate.py, discover.py,
+                         compose.py, log.py
   store/                 db.py, migrations/, members.py, ideas.py, messages.py, outcomes.py,
                          calls.py, places.py, plans.py, suggestions.py
   channels/              base.py, console.py, telegram.py
-  integrations/          google_calendar.py, open_meteo.py
-  jobs/                  scheduler.py, retry_failed.py
+  integrations/          google_calendar.py, open_meteo.py, geocode.py
+  jobs/                  scheduler.py, retry_failed.py, enrich.py, weekend_digest.py, follow_ups.py
 tests/                   pytest suite with a scripted fake of the Anthropic API; test_live.py opt-in
 ```
 
