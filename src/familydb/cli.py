@@ -27,7 +27,7 @@ from familydb.config import load_settings
 from familydb.dates import utc_iso
 from familydb.errors import AgentError, FamilyDBError
 from familydb.integrations import google_calendar
-from familydb.store import calls, db, ideas, members
+from familydb.store import calls, db, ideas, members, messages
 from familydb.store.members import Member
 from familydb.tools import ToolContext
 
@@ -358,14 +358,25 @@ def run() -> None:
         settings.anthropic_effort,
         settings.tz,
     )
-    if settings.telegram_bot_token:
-        from familydb.channels.telegram import TelegramChannel
+    from familydb.jobs.scheduler import build_scheduler
 
-        channel = TelegramChannel(application)
-        log.info("starting the Telegram channel (long polling)")
-        channel.run()
-        log.info("stopped")
-        return
+    scheduler = build_scheduler(application)
+    scheduler.start()
+    try:
+        if settings.telegram_bot_token:
+            from familydb.channels.telegram import TelegramChannel
+
+            channel = TelegramChannel(application)
+            log.info("starting the Telegram channel (long polling)")
+            channel.run()
+        else:
+            _wait_for_stop()
+    finally:
+        scheduler.shutdown(wait=False)
+    log.info("stopped")
+
+
+def _wait_for_stop() -> None:
     stop = threading.Event()
 
     def _stop(signum: int, _frame: object) -> None:
@@ -376,7 +387,25 @@ def run() -> None:
     signal.signal(signal.SIGINT, _stop)
     log.info("no chat channel configured; waiting. Use `familydb chat` or `familydb repl`.")
     stop.wait()
-    log.info("stopped")
+
+
+@db_app.command("retry-failed")
+def db_retry_failed(
+    reset: bool = typer.Option(
+        False, "--reset", help="Make exhausted messages eligible again first."
+    ),
+) -> None:
+    """Retry failed messages now (the running bot also does this on a schedule)."""
+    from familydb.jobs.retry_failed import run_retries
+
+    application = build_app()
+    application.migrate()
+    if reset:
+        with closing(application.connect()) as conn, db.transaction(conn):
+            count = messages.reset_retries(conn)
+        typer.echo(f"reset {count} message(s)")
+    recovered = run_retries(application)
+    typer.echo(f"recovered {recovered} message(s)")
 
 
 @google_app.command("auth")

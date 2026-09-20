@@ -78,21 +78,44 @@ def _handle(
         log.info("update %s/%s arrived twice at once", msg.channel, msg.channel_update_id)
         return None
 
+    return _run(app, msg, member, inbound.id, api, conn, notify=True)
+
+
+def _run(
+    app: App,
+    msg: IncomingMessage,
+    member: Member,
+    inbound_id: int,
+    api: MessagesAPI | None,
+    conn: sqlite3.Connection,
+    *,
+    notify: bool,
+) -> OutgoingMessage:
+    """Think and persist the outcome. With notify off (retries) failures stay silent."""
     try:
-        result = _think(app, msg, member, inbound.id, api, conn)
+        result = _think(app, msg, member, inbound_id, api, conn)
     except AgentError as exc:
-        log.error("agent error on message %s: %s (retryable=%s)", inbound.id, exc, exc.retryable)
-        return _fail(
-            app, conn, msg, inbound.id, str(exc), RETRY_REPLY if exc.retryable else CONFIG_REPLY
-        )
+        log.error("agent error on message %s: %s (retryable=%s)", inbound_id, exc, exc.retryable)
+        if not exc.retryable:
+            with transaction(conn):
+                messages.exhaust_retries(conn, inbound_id, app.settings.retry_max_attempts)
+        reply = RETRY_REPLY if exc.retryable else CONFIG_REPLY
+        return _fail(app, conn, msg, inbound_id, str(exc), reply if notify else None)
     except Exception as exc:
-        log.exception("unexpected error on message %s", inbound.id)
-        return _fail(app, conn, msg, inbound.id, f"{type(exc).__name__}: {exc}", RETRY_REPLY)
+        log.exception("unexpected error on message %s", inbound_id)
+        error = f"{type(exc).__name__}: {exc}"
+        return _fail(app, conn, msg, inbound_id, error, RETRY_REPLY if notify else None)
 
     if result.status == "failed":
-        log.error("turn failed on message %s: %s", inbound.id, result.error)
+        log.error("turn failed on message %s: %s", inbound_id, result.error)
         return _fail(
-            app, conn, msg, inbound.id, result.error or "failed", RETRY_REPLY, result.actions
+            app,
+            conn,
+            msg,
+            inbound_id,
+            result.error or "failed",
+            RETRY_REPLY if notify else None,
+            result.actions,
         )
 
     reply_text = result.text or EMPTY_REPLY
@@ -103,13 +126,54 @@ def _handle(
             channel=msg.channel,
             chat_id=msg.chat_id,
             text=reply_text,
-            reply_to=inbound.id,
+            reply_to=inbound_id,
             now=now,
         )
-        messages.mark_processed(conn, inbound.id, result.actions, now=now)
+        messages.mark_processed(conn, inbound_id, result.actions, now=now)
     return OutgoingMessage(
-        msg.chat_id, reply_text, result.status, inbound.id, outbound.id, result.actions
+        msg.chat_id, reply_text, result.status, inbound_id, outbound.id, result.actions
     )
+
+
+def retry_message(
+    app: App,
+    message_id: int,
+    *,
+    api: MessagesAPI | None = None,
+    conn: sqlite3.Connection | None = None,
+) -> OutgoingMessage | None:
+    """Reprocess a failed inbound message. Returns None when it is not eligible."""
+    if conn is None:
+        with closing(app.connect()) as own:
+            return retry_message(app, message_id, api=api, conn=own)
+    row = messages.get(conn, message_id)
+    if row is None or row.direction != "in" or row.status != "failed":
+        return None
+    if row.retries >= app.settings.retry_max_attempts:
+        return None
+    member = members.get(conn, row.member_id) if row.member_id is not None else None
+    if member is None:
+        log.warning("cannot retry message %s: sender unknown", message_id)
+        return None
+    with transaction(conn):
+        messages.bump_retries(conn, message_id)
+    msg = IncomingMessage(
+        channel=row.channel,
+        channel_update_id=row.channel_update_id,
+        chat_id=row.chat_id,
+        channel_user_id=member.channel_user_id or member.display_name,
+        text=row.text,
+    )
+    log.info("retrying message %s (attempt %s)", message_id, row.retries + 1)
+    reply = _run(app, msg, member, message_id, api, conn, notify=False)
+    if reply.status in {"ok", "refused"}:
+        sender = app.senders.get(row.channel)
+        if sender is not None:
+            try:
+                sender(row.chat_id, reply.text)
+            except Exception:
+                log.exception("could not deliver the retried reply for message %s", message_id)
+    return reply
 
 
 def _think(
@@ -156,20 +220,24 @@ def _fail(
     msg: IncomingMessage,
     inbound_id: int,
     error: str,
-    reply_text: str,
+    reply_text: str | None,
     actions: list[dict[str, Any]] | None = None,
 ) -> OutgoingMessage:
+    """Mark the message failed; with a reply text, also store the notice sent to the family."""
     now = utc_iso(app.clock.now())
+    outbound_id = None
     with transaction(conn):
         messages.mark_failed(conn, inbound_id, error, now=now)
-        outbound = messages.insert_out(
-            conn,
-            channel=msg.channel,
-            chat_id=msg.chat_id,
-            text=reply_text,
-            reply_to=inbound_id,
-            now=now,
-        )
+        if reply_text is not None:
+            outbound = messages.insert_out(
+                conn,
+                channel=msg.channel,
+                chat_id=msg.chat_id,
+                text=reply_text,
+                reply_to=inbound_id,
+                now=now,
+            )
+            outbound_id = outbound.id
     return OutgoingMessage(
-        msg.chat_id, reply_text, "failed", inbound_id, outbound.id, actions or []
+        msg.chat_id, reply_text or "", "failed", inbound_id, outbound_id, actions or []
     )

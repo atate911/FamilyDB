@@ -129,3 +129,16 @@ def failed(conn: sqlite3.Connection, *, max_retries: int | None = None) -> list[
 
 def bump_retries(conn: sqlite3.Connection, message_id: int) -> None:
     conn.execute("UPDATE messages SET retries = retries + 1 WHERE id = ?", (message_id,))
+
+
+def exhaust_retries(conn: sqlite3.Connection, message_id: int, max_attempts: int) -> None:
+    """Stop the retry job from picking a message up, e.g. after a configuration error."""
+    conn.execute(
+        "UPDATE messages SET retries = MAX(retries, ?) WHERE id = ?", (max_attempts, message_id)
+    )
+
+
+def reset_retries(conn: sqlite3.Connection) -> int:
+    """Make every failed message eligible again (after fixing a configuration problem)."""
+    cur = conn.execute("UPDATE messages SET retries = 0 WHERE status = 'failed'")
+    return int(cur.rowcount)
