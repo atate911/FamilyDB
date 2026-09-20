@@ -314,3 +314,109 @@ def test_view_helpers_word_things_for_people() -> None:
     assert views.relative_text("2026-10-11", today) == "in 3 weeks"
     assert views.relative_text("2026-09-06", today) == "2 weeks ago"
     assert views.relative_text("whenever", today) is None
+
+
+def test_the_restaurants_page_links_out(settings, clock, conn, family) -> None:
+    ramen = _idea(
+        conn, "Ramen place", kind="restaurant", participants=["whole family"], cost_level=2
+    )
+    _with_place(
+        conn,
+        ramen,
+        address="1 Main St",
+        lat=45.6,
+        lon=-122.6,
+        website="https://example.com/ramen",
+        booking_url="https://example.com/book",
+        price_note="about $18 a bowl",
+        summary="Small counter, long queue.",
+        hours={"sun": [{"open": "11:00", "close": "21:00"}]},
+        travel_minutes=12,
+    )
+    _idea(conn, "Closed on Sundays", kind="restaurant")
+    _idea(conn, "Museum day", kind="outing")
+    page = _client(settings, clock).get("/restaurants")
+    assert page.status_code == 200
+    assert page.text.count('class="panel card"') == 2  # the outing is not here
+    assert "Museum day" not in page.text and "2 places" in page.text
+    assert "Small counter, long queue." in page.text and "1 Main St" in page.text
+    assert "open today 11:00-21:00" in page.text  # the shared clock is a Sunday
+    assert "about 12 min away" in page.text and "$$" in page.text
+    assert 'href="https://example.com/ramen" rel="noopener noreferrer"' in page.text
+    assert 'href="https://example.com/book" rel="noopener noreferrer"' in page.text
+    assert "openstreetmap.org" in page.text
+    assert f'href="/idea/{ramen.id}"' in page.text
+    assert "details not looked up yet" in page.text  # the second restaurant
+
+
+def test_the_restaurants_page_when_there_are_none(settings, clock, conn, family) -> None:
+    _idea(conn, "Museum day", kind="outing")
+    page = _client(settings, clock).get("/restaurants")
+    assert "No restaurants yet" in page.text and page.text.count('class="panel card"') == 0
+
+
+def test_the_plans_page_shows_what_is_coming_and_what_just_happened(
+    settings, clock, conn, family
+) -> None:
+    idea = _idea(conn, "Hopscotch Portland", kind="outing")
+    with db.transaction(conn):
+        plans.insert(
+            conn,
+            title="Hopscotch",
+            start="2026-10-03T18:30-07:00",
+            end=None,
+            all_day=False,
+            idea_id=idea.id,
+            location="Portland",
+            created_by=family["sam"].id,
+            now=NOW_ISO,
+        )
+        plans.insert(
+            conn,
+            title="Farmers market",
+            start="2026-09-12",
+            end="2026-09-12",
+            all_day=True,
+            created_by=family["sam"].id,
+            now=NOW_ISO,
+        )
+        gone = plans.insert(
+            conn,
+            title="Cancelled dinner",
+            start="2026-09-26",
+            end=None,
+            all_day=True,
+            created_by=family["sam"].id,
+            now=NOW_ISO,
+        )
+        far = plans.insert(
+            conn,
+            title="Next summer",
+            start="2027-07-01",
+            end=None,
+            all_day=True,
+            created_by=family["sam"].id,
+            now=NOW_ISO,
+        )
+        plans.update(conn, gone.id, {"status": "cancelled"}, now=NOW_ISO)
+    page = _client(settings, clock).get("/plans")
+    assert page.status_code == 200
+    assert "Saturday 3 October, 18:30" in page.text and "in 13 days" in page.text
+    assert f'href="/idea/{idea.id}"' in page.text and "Portland" in page.text
+    assert "Farmers market" in page.text and "Saturday 12 September" in page.text
+    assert "Cancelled dinner" not in page.text  # cancelled plans are not shown
+    assert "Next summer" not in page.text and str(far.id) not in page.text.split("Recently")[0]
+
+
+def test_the_plans_page_when_the_calendar_is_empty(settings, clock, conn, family) -> None:
+    page = _client(settings, clock).get("/plans")
+    assert "Nothing on the calendar for the next 90 days." in page.text
+    assert "Recently" not in page.text
+
+
+def test_the_nav_reaches_every_page(settings, clock, conn, family) -> None:
+    client = _client(settings, clock)
+    home = client.get("/")
+    for target in ("/", "/restaurants", "/plans"):
+        assert f'href="{target}"' in home.text, target
+        assert client.get(target).status_code == 200

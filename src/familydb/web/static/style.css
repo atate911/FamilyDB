@@ -152,3 +152,6 @@ h3 { font-size: 0.95rem; margin: 1.25rem 0 0.25rem; }
   .bar { flex-wrap: wrap; }
   nav { margin-left: 0; width: 100%; }
 }
+
+.links { display: flex; flex-wrap: wrap; gap: 0.9rem; margin: 0.6rem 0 0; font-size: 0.92rem; }
+.plain > li > div { margin-top: 0.15rem; }

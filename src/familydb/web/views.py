@@ -15,7 +15,7 @@ from familydb.store.outcomes import Outcome
 from familydb.store.places import Place
 from familydb.store.plans import Plan
 from familydb.suggest.shortlist import fmt_minutes
-from familydb.tools.places import DAYS, checked_days_ago, format_ranges, is_stale
+from familydb.tools.places import DAYS, checked_days_ago, format_ranges, is_stale, open_on
 
 DAY_NAMES = {
     "mon": "Monday",
@@ -147,6 +147,37 @@ def place_panel(place: Place | None, now: datetime, stale_days: int) -> dict[str
         "sources": place.source_urls,
         "freshness": freshness_text(place, now, stale_days),
         "stale": is_stale(place, now, stale_days),
+    }
+
+
+TODAY_HOURS = {"open": "open today {ranges}", "closed": "closed today", "unknown": None}
+
+
+def restaurant_card(
+    idea: Idea, place: Place | None, today: date, now: datetime, stale_days: int
+) -> dict[str, Any]:
+    """A restaurant as the page shows it: where, what it costs, and where to read more."""
+    state, ranges = open_on(place, today)
+    hours_today = TODAY_HOURS[state]
+    if hours_today:
+        hours_today = hours_today.format(ranges=format_ranges(ranges) or "").strip()
+    return {
+        "id": idea.id,
+        "title": idea.title,
+        "summary": (place.summary if place else None) or idea.description,
+        "where": (place.address if place else None) or idea.location_name,
+        "who": participants_text(idea),
+        "cost": cost_text(idea.cost_level) or (place.price_note if place else None),
+        "tags": idea.tags,
+        "rating": rating_text(idea),
+        "today": hours_today,
+        "travel": travel_text(place),
+        "website": place.website if place else idea.url,
+        "booking_url": place.booking_url if place else None,
+        "map_url": map_url(place),
+        "pending": idea.enrichment == "pending",
+        "details": details_text(idea),
+        "stale": is_stale(place, now, stale_days) if place else False,
     }
 
 

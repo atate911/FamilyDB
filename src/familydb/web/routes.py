@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import closing
+from datetime import timedelta
 from typing import Any
 
 from flask import Blueprint, Response, abort, current_app, render_template, request
@@ -18,6 +19,9 @@ bp = Blueprint("web", __name__)
 
 LIST_LIMIT = 200
 STATUSES = ("idea", "planned", "done", "dropped")
+RESTAURANT_KIND = "restaurant"
+PLANS_AHEAD_DAYS = 90
+PLANS_BEHIND_DAYS = 30
 
 
 def _app() -> App:
@@ -89,4 +93,48 @@ def idea(idea_id: int) -> str:
         place=views.place_panel(place, now, settings.place_stale_days),
         outcomes=[views.outcome_row(o) for o in reversed(outcomes)],
         plans=[views.plan_row(p, today) for p in reversed(plans)],
+    )
+
+
+@bp.get("/restaurants")
+def restaurants() -> str:
+    """The restaurant list on its own, each card linking out to where you can read more."""
+    app = _app()
+    now = app.clock.now()
+    today = app.clock.today()
+    stale_days = app.settings.place_stale_days
+    with closing(app.connect()) as conn:
+        found = idea_store.search(conn, kind=RESTAURANT_KIND, limit=LIST_LIMIT)
+        cards = [
+            views.restaurant_card(
+                idea,
+                place_store.get(conn, idea.place_id) if idea.place_id else None,
+                today,
+                now,
+                stale_days,
+            )
+            for idea in found
+        ]
+    return render_template("restaurants.html", cards=cards)
+
+
+@bp.get("/plans")
+def plans() -> str:
+    """What is on the family calendar: the next three months, then the past month."""
+    app = _app()
+    today = app.clock.today()
+    with closing(app.connect()) as conn:
+        upcoming = plan_store.list_between(
+            conn, today.isoformat(), (today + timedelta(days=PLANS_AHEAD_DAYS)).isoformat()
+        )
+        recent = plan_store.list_between(
+            conn, (today - timedelta(days=PLANS_BEHIND_DAYS)).isoformat(), today.isoformat()
+        )
+        titles = {row.id: row.title for row in idea_store.list_all(conn, include_dropped=True)}
+    return render_template(
+        "plans.html",
+        upcoming=[views.plan_row(plan, today) for plan in upcoming],
+        recent=[views.plan_row(plan, today) for plan in reversed(recent)],
+        titles=titles,
+        ahead=PLANS_AHEAD_DAYS,
     )

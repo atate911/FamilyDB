@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Restaurants · {{ site_title }}{% endblock %}
+{% block content %}
+  <h1>Restaurants</h1>
+  <p class="muted count">
+    {{ cards | length }} place{{ '' if cards | length == 1 else 's' }} the family has talked about.
+  </p>
+
+  {% if not cards %}
+    <p class="panel muted">No restaurants yet. Tell the bot about one and it will appear here.</p>
+  {% endif %}
+
+  <ul class="cards">
+    {% for card in cards %}
+      <li class="panel card">
+        <h2>
+          <a href="{{ url_for('web.idea', idea_id=card.id) }}">{{ card.title }}</a>
+          {% if card.cost %}<span class="tag">{{ card.cost }}</span>{% endif %}
+          {% if card.today %}<span class="tag">{{ card.today }}</span>{% endif %}
+        </h2>
+        {% if card.summary %}<p>{{ card.summary }}</p>{% endif %}
+        <p class="muted meta">
+          {% if card.where %}<span>{{ card.where }}</span>{% endif %}
+          {% if card.travel %}<span>{{ card.travel }}</span>{% endif %}
+          <span>for {{ card.who }}</span>
+          {% if card.rating %}<span>{{ card.rating }}</span>{% endif %}
+          {% if card.pending %}<span>{{ card.details }}</span>{% endif %}
+          {% if card.stale %}<span class="warn">details may be out of date</span>{% endif %}
+        </p>
+        <p class="links">
+          <a href="{{ url_for('web.idea', idea_id=card.id) }}">Everything we know</a>
+          {% if card.website %}
+            <a href="{{ card.website }}" rel="noopener noreferrer">Their site</a>
+          {% endif %}
+          {% if card.booking_url %}
+            <a href="{{ card.booking_url }}" rel="noopener noreferrer">Book a table</a>
+          {% endif %}
+          {% if card.map_url %}
+            <a href="{{ card.map_url }}" rel="noopener noreferrer">Map</a>
+          {% endif %}
+        </p>
+        {% if card.tags %}
+          <p class="tags">{% for tag in card.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</p>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% endblock %}
