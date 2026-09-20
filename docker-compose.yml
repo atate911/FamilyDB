@@ -1,0 +1,15 @@
+services:
+  bot:
+    build: .
+    image: familydb:local
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      FAMILYDB_PATH: /data/familydb.sqlite3
+      GOOGLE_TOKEN_PATH: /data/google_token.json
+    volumes:
+      # The host folder must be writable by uid 1000 (the container's familydb user).
+      - ./data:/data
+    restart: unless-stopped
+    init: true

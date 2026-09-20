@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import json
+import logging
+import signal
 import sqlite3
 import sys
+import threading
 from contextlib import closing
 from pathlib import Path
 from uuid import uuid4
@@ -38,6 +41,8 @@ app.add_typer(members_app, name="members")
 app.add_typer(ideas_app, name="ideas")
 debug_app = typer.Typer(help="Inspection commands.", no_args_is_help=True)
 app.add_typer(debug_app, name="debug")
+
+log = logging.getLogger(__name__)
 
 COUNTED_TABLES = ("members", "ideas", "places", "plans", "outcomes", "messages", "tool_calls")
 
@@ -327,3 +332,32 @@ def repl(
     sender = _console_member(application, as_member)
     chat_id = f"console:{uuid4().hex[:8]}" if fresh else DEFAULT_CHAT
     run_repl(application, sender, chat_id)
+
+
+@app.command()
+def run() -> None:
+    """Start the bot: apply migrations, then serve the configured channels until stopped."""
+    application = build_app()
+    settings = application.settings
+    application.migrate()
+    log.info(
+        "familydb %s starting: db=%s model=%s effort=%s tz=%s",
+        __version__,
+        settings.familydb_path,
+        settings.anthropic_model,
+        settings.anthropic_effort,
+        settings.tz,
+    )
+    if settings.telegram_bot_token:
+        log.warning("TELEGRAM_BOT_TOKEN is set but the Telegram channel is not built yet")
+    stop = threading.Event()
+
+    def _stop(signum: int, _frame: object) -> None:
+        log.info("received signal %s, stopping", signum)
+        stop.set()
+
+    signal.signal(signal.SIGTERM, _stop)
+    signal.signal(signal.SIGINT, _stop)
+    log.info("no chat channel configured; waiting. Use `familydb chat` or `familydb repl`.")
+    stop.wait()
+    log.info("stopped")

@@ -1,3 +1,8 @@
+import os
+import signal
+import subprocess
+import sys
+import time
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -85,3 +90,24 @@ def test_debug_prompt_prints_request(env: Path) -> None:
     assert result.exit_code == 0, result.output
     assert '"cache_control"' in result.output
     assert "[Sam] what should we do?" in result.output
+
+
+def test_run_command_waits_and_stops_on_sigterm(env: Path) -> None:
+    proc = subprocess.Popen(
+        [sys.executable, "-m", "familydb", "run"],
+        env={**os.environ, "LOG_LEVEL": "INFO"},
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    try:
+        time.sleep(1.5)
+        assert proc.poll() is None, "run exited early"
+        proc.send_signal(signal.SIGTERM)
+        output, _ = proc.communicate(timeout=15)
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+    assert proc.returncode == 0, output
+    assert "waiting" in output
+    assert "stopped" in output

@@ -1,0 +1,32 @@
+# systemd unit for running FamilyDB without Docker.
+# Install: copy to /etc/systemd/system/familydb.service, then
+#   sudo systemctl daemon-reload && sudo systemctl enable --now familydb
+# Assumes the repo is checked out at /opt/familydb with a venv at /opt/familydb/.venv
+# (uv sync --frozen --no-dev) and secrets in /opt/familydb/.env, owned by the familydb user.
+
+[Unit]
+Description=FamilyDB family planning bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=familydb
+Group=familydb
+WorkingDirectory=/opt/familydb
+EnvironmentFile=/opt/familydb/.env
+Environment=FAMILYDB_PATH=/opt/familydb/data/familydb.sqlite3
+Environment=GOOGLE_TOKEN_PATH=/opt/familydb/data/google_token.json
+ExecStart=/opt/familydb/.venv/bin/familydb run
+Restart=on-failure
+RestartSec=5
+
+# Hardening: read-only system, no privilege escalation, only the data folder writable.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/familydb/data
+
+[Install]
+WantedBy=multi-user.target
