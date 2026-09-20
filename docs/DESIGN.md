@@ -285,7 +285,7 @@ Design notes:
 - No reverse proxy, no open ports, no domain. Long polling and outbound HTTPS only. A web UI later can sit on the LAN or behind Tailscale.
 - Logs to stdout; `docker logs` is enough to start.
 - Backups: a nightly job runs SQLite's online backup to a second location. Calendar events are also in Google.
-- Config, all via environment (full list with comments in `.env.example`): `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `ANTHROPIC_EFFORT`, `ANTHROPIC_FALLBACKS`, `ANTHROPIC_CACHE_TTL`, `TELEGRAM_BOT_TOKEN`, `GOOGLE_CALENDAR_ID`, `GOOGLE_TOKEN_PATH`, `HOME_LAT`, `HOME_LON`, `HOME_AREA` (for web searches, e.g. the city), `TZ`, `FAMILYDB_PATH`.
+- Config, all via environment (full list with comments in `.env.example`): `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `ANTHROPIC_EFFORT`, `ANTHROPIC_FALLBACKS`, `ANTHROPIC_CACHE_TTL`, `TELEGRAM_BOT_TOKEN`, `GOOGLE_CALENDAR_ID`, `GOOGLE_TOKEN_PATH`, `HOME_LAT`, `HOME_LON`, `HOME_AREA` (for web searches, e.g. the city), `FAMILYDB_TZ`, `FAMILYDB_PATH`.
 - Upgrades: `git pull && docker compose up -d --build`. Migrations run on start.
 
 ## 13. Security

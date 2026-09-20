@@ -168,8 +168,7 @@ def get(conn: sqlite3.Connection, idea_id: int) -> Idea | None:
 
 def list_for_prompt(conn: sqlite3.Connection) -> list[Idea]:
     """Every idea the model should know about, oldest first. Dropped ideas are left out."""
-    rows = conn.execute(f"{_SELECT} WHERE i.status != 'dropped' ORDER BY i.id")
-    return [Idea.from_row(row) for row in rows]
+    return list_all(conn, include_dropped=False)
 
 
 def list_all(conn: sqlite3.Connection, *, include_dropped: bool = False) -> list[Idea]:

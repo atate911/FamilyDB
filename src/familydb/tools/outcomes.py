@@ -31,12 +31,12 @@ class RecordOutcomeInput(BaseModel):
     writes=True,
 )
 def record_outcome(ctx: ToolContext, args: RecordOutcomeInput) -> dict[str, Any]:
-    idea_id = args.idea_id
-    if idea_id is None and args.plan_id is not None:
+    plan = None
+    if args.plan_id is not None:
         plan = plans.get(ctx.conn, args.plan_id)
         if plan is None:
             raise ToolError(f"no plan #{args.plan_id}")
-        idea_id = plan.idea_id
+    idea_id = args.idea_id if args.idea_id is not None else (plan.idea_id if plan else None)
     if idea_id is None:
         raise ToolError("give idea_id (or a plan_id that is linked to an idea)")
     if ideas.get(ctx.conn, idea_id) is None:

@@ -6,13 +6,9 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from familydb.config import Settings
+from familydb.availability import weather_available
 from familydb.errors import ToolUnavailable
 from familydb.tools.registry import ToolContext, tool
-
-
-def weather_available(settings: Settings) -> bool:
-    return settings.home_lat is not None and settings.home_lon is not None
 
 
 class GetForecastInput(BaseModel):

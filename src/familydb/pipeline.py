@@ -61,16 +61,22 @@ def _handle(
             msg.chat_id, UNKNOWN_SENDER.format(id=msg.channel_user_id), "unknown_sender"
         )
 
-    with transaction(conn):
-        inbound = messages.insert_in(
-            conn,
-            channel=msg.channel,
-            channel_update_id=msg.channel_update_id,
-            chat_id=msg.chat_id,
-            member_id=member.id,
-            text=msg.text,
-            now=utc_iso(app.clock.now()),
-        )
+    try:
+        with transaction(conn):
+            inbound = messages.insert_in(
+                conn,
+                channel=msg.channel,
+                channel_update_id=msg.channel_update_id,
+                chat_id=msg.chat_id,
+                member_id=member.id,
+                text=msg.text,
+                now=utc_iso(app.clock.now()),
+            )
+    except sqlite3.IntegrityError:
+        if not msg.channel_update_id:
+            raise
+        log.info("update %s/%s arrived twice at once", msg.channel, msg.channel_update_id)
+        return None
 
     try:
         result = _think(app, msg, member, inbound.id, api, conn)

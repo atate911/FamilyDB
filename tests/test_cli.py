@@ -11,6 +11,7 @@ from typer.testing import CliRunner
 
 from familydb import __version__
 from familydb.cli import app
+from familydb.errors import AgentError
 from tests import fakes
 
 runner = CliRunner()
@@ -20,7 +21,7 @@ runner = CliRunner()
 def env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     monkeypatch.setenv("FAMILYDB_PATH", str(tmp_path / "cli.sqlite3"))
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
-    monkeypatch.setenv("TZ", "America/Vancouver")
+    monkeypatch.setenv("FAMILYDB_TZ", "America/Vancouver")
     monkeypatch.delenv("CONSOLE_MEMBER", raising=False)
     return tmp_path
 
@@ -111,3 +112,15 @@ def test_run_command_waits_and_stops_on_sigterm(env: Path) -> None:
     assert proc.returncode == 0, output
     assert "waiting" in output
     assert "stopped" in output
+
+
+def test_validate_tools_reports_missing_credentials(
+    env: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def _no_client(settings):
+        raise AgentError("no Anthropic credentials configured", retryable=False)
+
+    monkeypatch.setattr("familydb.app.make_client", _no_client)
+    result = runner.invoke(app, ["debug", "validate-tools"])
+    assert result.exit_code == 1
+    assert "validation failed: no Anthropic credentials" in result.output

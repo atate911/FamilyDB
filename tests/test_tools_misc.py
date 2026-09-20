@@ -35,6 +35,8 @@ def test_record_outcome_updates_idea(registry, ctx) -> None:
     assert result.is_error and "idea_id" in data["error"]
     result, data = _call(registry, ctx, "record_outcome", idea_id=42)
     assert result.is_error and "no idea #42" in data["error"]
+    result, data = _call(registry, ctx, "record_outcome", idea_id=idea["id"], plan_id=999)
+    assert result.is_error and "no plan #999" in data["error"]
 
 
 def test_now_reports_family_time(registry, ctx) -> None:

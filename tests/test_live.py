@@ -24,7 +24,7 @@ skip_unless_live = pytest.mark.skipif(not LIVE, reason="set FAMILYDB_LIVE=1 and 
 
 def _live_app(tmp_path: Path) -> App:
     settings = Settings(
-        _env_file=None, familydb_path=tmp_path / "live.sqlite3", tz="America/Vancouver"
+        _env_file=None, familydb_path=tmp_path / "live.sqlite3", family_tz="America/Vancouver"
     )
     app = App(settings)
     app.migrate()

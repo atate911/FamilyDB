@@ -13,17 +13,13 @@ from familydb.agent.client import request_params
 from familydb.config import Settings
 from familydb.errors import AgentError
 from familydb.store import calls
+from familydb.store.calls import USAGE_KEYS
+from familydb.store.db import transaction
 from familydb.tools import ToolContext, ToolRegistry
 
 log = logging.getLogger(__name__)
 
 REFUSAL_REPLY = "Sorry, I couldn't process that message."
-USAGE_KEYS = (
-    "input_tokens",
-    "cache_creation_input_tokens",
-    "cache_read_input_tokens",
-    "output_tokens",
-)
 
 
 class MessagesAPI(Protocol):
@@ -94,18 +90,19 @@ def run_turn(
         usage = _usage(response)
         for key in USAGE_KEYS:
             totals[key] += usage.get(key) or 0
-        calls.log_llm_call(
-            ctx.conn,
-            message_id=ctx.message_id,
-            iteration=iteration,
-            model=settings.anthropic_model,
-            served_model=getattr(response, "model", None),
-            request_id=getattr(response, "_request_id", None),
-            stop_reason=response.stop_reason,
-            usage=usage,
-            duration_ms=duration_ms,
-            now=ctx.now_iso(),
-        )
+        with transaction(ctx.conn):
+            calls.log_llm_call(
+                ctx.conn,
+                message_id=ctx.message_id,
+                iteration=iteration,
+                model=settings.anthropic_model,
+                served_model=getattr(response, "model", None),
+                request_id=getattr(response, "_request_id", None),
+                stop_reason=response.stop_reason,
+                usage=usage,
+                duration_ms=duration_ms,
+                now=ctx.now_iso(),
+            )
 
         if response.stop_reason == "refusal":
             details = getattr(response, "stop_details", None)
@@ -132,18 +129,19 @@ def run_turn(
         for block in tool_uses:
             tool_started = time.monotonic()
             result = registry.dispatch(block.name, block.input, ctx)
-            calls.log_tool_call(
-                ctx.conn,
-                message_id=ctx.message_id,
-                iteration=iteration,
-                tool_use_id=block.id,
-                tool_name=block.name,
-                input=block.input,
-                output=result.content,
-                is_error=result.is_error,
-                duration_ms=int((time.monotonic() - tool_started) * 1000),
-                now=ctx.now_iso(),
-            )
+            with transaction(ctx.conn):
+                calls.log_tool_call(
+                    ctx.conn,
+                    message_id=ctx.message_id,
+                    iteration=iteration,
+                    tool_use_id=block.id,
+                    tool_name=block.name,
+                    input=block.input,
+                    output=result.content,
+                    is_error=result.is_error,
+                    duration_ms=int((time.monotonic() - tool_started) * 1000),
+                    now=ctx.now_iso(),
+                )
             actions.append(result.summary)
             results.append(
                 {

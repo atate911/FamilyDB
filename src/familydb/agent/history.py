@@ -31,8 +31,11 @@ def load_history(
     """The last `limit` messages of a chat from the last `since_hours`, as plain text turns."""
     since = utc_iso(clock.now() - timedelta(hours=since_hours))
     names = {m.id: m.display_name for m in members.list_all(conn, active_only=False)}
+    # The current inbound message is already stored and is the newest row; fetch one extra
+    # so excluding it still leaves `limit` earlier messages.
+    fetch = limit + 1 if exclude_message_id is not None else limit
     turns: list[HistoryTurn] = []
-    for message in messages.recent_for_chat(conn, chat_id, limit=limit, since=since):
+    for message in messages.recent_for_chat(conn, chat_id, limit=fetch, since=since):
         if message.id == exclude_message_id:
             continue
         if message.direction == "in":

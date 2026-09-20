@@ -27,7 +27,7 @@ def settings(tmp_path: Path) -> Settings:
         _env_file=None,
         anthropic_api_key="test-key",
         familydb_path=tmp_path / "familydb.sqlite3",
-        tz="America/Vancouver",
+        family_tz="America/Vancouver",
     )
 
 

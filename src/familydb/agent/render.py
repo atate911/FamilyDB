@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from familydb.availability import calendar_available, weather_available, web_tools_available
 from familydb.clock import Clock
 from familydb.config import Settings
 from familydb.store.ideas import Idea
@@ -22,10 +23,10 @@ def _fmt_minutes(minutes: int) -> str:
 
 def _duration(idea: Idea) -> str | None:
     low, high = idea.duration_min, idea.duration_max
-    if low and high and low != high:
+    if low is not None and high is not None and low != high:
         return f"{_fmt_minutes(low)} to {_fmt_minutes(high)}"
-    if low or high:
-        return f"about {_fmt_minutes(low or high or 0)}"
+    if low is not None or high is not None:
+        return f"about {_fmt_minutes(low if low is not None else high or 0)}"
     return None
 
 
@@ -78,9 +79,9 @@ def render_family_context(family: list[Member], settings: Settings) -> str:
         lines.append("- (no members configured yet)")
     lines.append(f"Home area: {settings.home_area or 'not set'}")
     lines.append(f"Timezone: {settings.tz}")
-    calendar = "connected" if settings.google_calendar_id else "not connected"
-    weather = "configured" if settings.home_lat is not None else "not configured"
-    web = "available" if settings.web_tools_enabled else "not available"
+    calendar = "connected" if calendar_available(settings) else "not connected"
+    weather = "configured" if weather_available(settings) else "not configured"
+    web = "available" if web_tools_available(settings) else "not available"
     lines.append(f"Calendar: {calendar}. Weather: {weather}. Web tools: {web}.")
     return "\n".join(lines)
 

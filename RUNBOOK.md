@@ -14,7 +14,7 @@ Two supported ways to run it: Docker Compose, or a Python virtualenv managed by 
 sudo mkdir -p /opt/familydb && sudo chown "$USER" /opt/familydb
 git clone <this repo> /opt/familydb && cd /opt/familydb
 cp .env.example .env
-nano .env        # ANTHROPIC_API_KEY, TZ, HOME_AREA at least
+nano .env        # ANTHROPIC_API_KEY, FAMILYDB_TZ, HOME_AREA at least
 mkdir -p data
 ```
 

@@ -73,3 +73,18 @@ def test_build_messages_appends_to_a_trailing_user_turn(clock) -> None:
     assert len(messages) == 1
     assert messages[0]["content"][0] == {"type": "text", "text": "[Sam] unanswered"}
     assert messages[0]["content"][1:] == current
+
+
+def test_family_context_matches_tool_availability(conn, settings, family, tmp_path) -> None:
+    half = settings.model_copy(
+        update={"google_calendar_id": "family@group.calendar.google.com", "home_lat": 45.6}
+    )
+    text = build_system_blocks(conn, half)[1]["text"]
+    assert "Calendar: not connected" in text  # id set, but no token file
+    assert "Weather: not configured" in text  # latitude without longitude
+    token = tmp_path / "token.json"
+    token.write_text("{}")
+    full = half.model_copy(update={"google_token_path": token, "home_lon": -122.5})
+    text = build_system_blocks(conn, full)[1]["text"]
+    assert "Calendar: connected" in text
+    assert "Weather: configured" in text

@@ -23,6 +23,8 @@ from familydb.agent.render import render_idea_line, render_user_turn
 from familydb.app import App, build_app
 from familydb.channels.console import DEFAULT_CHAT, one_shot, run_repl
 from familydb.config import load_settings
+from familydb.dates import utc_iso
+from familydb.errors import AgentError
 from familydb.store import calls, db, ideas, members
 from familydb.store.members import Member
 from familydb.tools import ToolContext
@@ -143,7 +145,7 @@ def members_add(
                     role,  # type: ignore[arg-type]
                     channel=channel,
                     channel_user_id=channel_user_id,
-                    now=application.clock.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    now=utc_iso(application.clock.now()),
                 )
         except sqlite3.IntegrityError as exc:
             raise typer.BadParameter(f"could not add {name!r}: {exc}") from exc
@@ -284,7 +286,7 @@ def debug_validate_tools() -> None:
             tools=tools,
             messages=[{"role": "user", "content": "hello"}],
         )
-    except anthropic.APIError as exc:
+    except (anthropic.APIError, AgentError) as exc:
         typer.echo(f"validation failed: {exc}", err=True)
         raise typer.Exit(code=1) from exc
     typer.echo(

@@ -15,6 +15,7 @@ from pydantic import BaseModel, ValidationError
 
 from familydb.clock import Clock
 from familydb.config import Settings
+from familydb.dates import utc_iso
 from familydb.errors import ToolError, ToolUnavailable
 from familydb.store.members import Member
 from familydb.tools.schema import strict_schema
@@ -34,7 +35,7 @@ class ToolContext:
     message_id: int | None = None
 
     def now_iso(self) -> str:
-        return self.clock.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        return utc_iso(self.clock.now())
 
 
 @dataclass(frozen=True)
@@ -84,11 +85,13 @@ def dump(value: Any) -> str:
 class ToolRegistry:
     def __init__(self) -> None:
         self._specs: dict[str, ToolSpec] = {}
+        self._definitions: dict[str, dict[str, Any]] = {}
 
     def register(self, spec: ToolSpec) -> None:
         if spec.name in self._specs:
             raise ValueError(f"duplicate tool {spec.name!r}")
         self._specs[spec.name] = spec
+        self._definitions[spec.name] = spec.api_definition()
 
     def tool(
         self,
@@ -129,7 +132,9 @@ class ToolRegistry:
 
     def api_tools(self, settings: Settings) -> list[dict[str, Any]]:
         """Every declared tool, sorted by name, then the server tools. Stable across turns."""
-        return [spec.api_definition() for spec in self.specs()] + server_tools(settings)
+        return [dict(self._definitions[name]) for name in sorted(self._specs)] + server_tools(
+            settings
+        )
 
     def dispatch(self, name: str, raw_input: Any, ctx: ToolContext) -> ToolResult:
         spec = self._specs.get(name)

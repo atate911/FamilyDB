@@ -2,21 +2,16 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from familydb.config import Settings
+from familydb.availability import calendar_available
 from familydb.errors import ToolUnavailable
 from familydb.tools.registry import ToolContext, tool
 
 NOT_BUILT = "the Google Calendar integration is not built yet"
 NOT_CONFIGURED = "Google Calendar is not connected (no calendar id or token configured)"
-
-
-def calendar_available(settings: Settings) -> bool:
-    return bool(settings.google_calendar_id) and Path(settings.google_token_path).exists()
 
 
 class GetCalendarInput(BaseModel):

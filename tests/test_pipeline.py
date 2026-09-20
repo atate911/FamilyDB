@@ -131,3 +131,14 @@ def test_configuration_errors_get_the_admin_reply(settings, clock, conn, family)
     assert reply.status == "failed"
     assert reply.text == CONFIG_REPLY
     assert messages.get(conn, reply.in_message_id).status == "failed"
+
+
+def test_simultaneous_redelivery_is_still_a_duplicate(
+    settings, clock, conn, family, monkeypatch
+) -> None:
+    app = _app(settings, clock)
+    api = fakes.FakeMessagesAPI(fakes.message([fakes.text("ok")]))
+    assert handle_incoming(app, _telegram("hi", "77"), api=api, conn=conn) is not None
+    monkeypatch.setattr("familydb.pipeline.messages.exists_update", lambda *_a, **_k: False)
+    assert handle_incoming(app, _telegram("hi", "77"), api=api, conn=conn) is None
+    assert len(api.requests) == 1

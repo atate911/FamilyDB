@@ -220,3 +220,10 @@ def test_render_idea_line_is_compact_and_complete(conn, family) -> None:
         "tags: cheap, food | indoor/any | 1 h to 1.5 h | cost: $$ | needs booking | "
         "status: idea | by Sam 2026-09-20 | details: pending"
     )
+
+
+def test_render_duration_handles_zero(conn, family) -> None:
+    assert "0 min to 30 min" in render_idea_line(
+        _idea(conn, family, duration_min=0, duration_max=30)
+    )
+    assert "about 45 min" in render_idea_line(_idea(conn, family, title="B", duration_max=45))
