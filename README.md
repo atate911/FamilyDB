@@ -6,9 +6,9 @@ A private family assistant that lives in our chat app. It remembers the things w
 
 ## How it will work
 
-- Someone messages the bot "we should try that ramen place sometime" and it is logged as an idea, tagged with what it can infer (restaurant, cheap, any season).
+- Someone messages the bot "we should try that ramen place sometime" or "idea for one day, the Hopscotch thing in Portland with the girls" and it is logged as an idea, tagged with what it can infer. A background lookup then fills in the address, hours, tickets and travel time.
 - "We're going to the symphony next Saturday" becomes an event on the family calendar, with the resolved date echoed back.
-- "What should we do this weekend?" returns a short list of ideas that fit the free time and the forecast, with an offer to schedule them.
+- "What should we do this weekend?" checks each stored idea against the free time, the forecast, opening hours, booking needs and travel time, searches the web for things happening that weekend, and returns a short list with the reasoning, plus an offer to schedule.
 - The day after a plan, the bot asks how it went so it can suggest repeats or avoid duds.
 
 ## Planned stack
