@@ -144,3 +144,55 @@ def test_missing_credentials_is_a_configuration_error(settings, registry, ctx) -
     api = fakes.FakeMessagesAPI(TypeError("unrelated"))
     with pytest.raises(TypeError):
         _run(api, settings, registry, ctx)
+
+
+def test_tool_subset_and_iteration_override(settings, registry, ctx) -> None:
+    api = fakes.FakeMessagesAPI(fakes.message([fakes.text("ok")]))
+    system = build_system_blocks(ctx.conn, settings)
+    messages = build_messages([], render_user_turn("Sam", "hi", ctx.clock))
+    tools = registry.api_tools(settings, names=["save_place"], force_web=True, max_uses=3)
+    result = run_turn(
+        api=api,
+        settings=settings,
+        registry=registry,
+        ctx=ctx,
+        system=system,
+        messages=messages,
+        tools=tools,
+        max_iterations=2,
+    )
+    assert result.status == "ok"
+    sent = api.requests[0]["tools"]
+    assert [t["name"] for t in sent] == ["save_place", "web_search", "web_fetch"]
+    assert sent[1]["max_uses"] == 3 and sent[2]["max_uses"] == 3
+    looping = fakes.message([fakes.tool_use("tu", "now", {})], stop_reason="tool_use")
+    api = fakes.FakeMessagesAPI(looping, looping, looping)
+    result = run_turn(
+        api=api,
+        settings=settings,
+        registry=registry,
+        ctx=ctx,
+        system=system,
+        messages=build_messages([], render_user_turn("Sam", "hi", ctx.clock)),
+        max_iterations=2,
+    )
+    assert result.status == "failed" and result.iterations == 2 and len(api.requests) == 2
+
+
+def test_server_tool_blocks_pass_through_and_resume(settings, registry, ctx) -> None:
+    paused = fakes.message(
+        [
+            fakes.server_tool_use("srvtoolu_1", "web_search", {"query": "hopscotch portland"}),
+            fakes.web_search_result(
+                "srvtoolu_1", [{"url": "https://example.com/h", "title": "Hopscotch"}]
+            ),
+        ],
+        stop_reason="pause_turn",
+    )
+    api = fakes.FakeMessagesAPI(paused, fakes.message([fakes.text("Found it.")]))
+    result, _ = _run(api, settings, registry, ctx)
+    assert result.status == "ok" and result.iterations == 2
+    resumed = api.requests[1]["messages"]
+    assert resumed[-1]["role"] == "assistant"
+    assert [b.type for b in resumed[-1]["content"]] == ["server_tool_use", "web_search_tool_result"]
+    assert resumed[-1]["content"][1].content[0].url == "https://example.com/h"

@@ -1,4 +1,4 @@
-"""Places: looked-up facts about where an idea happens. Filled by enrichment (later milestone)."""
+"""Places: looked-up facts about where an idea happens, filled in by enrichment."""
 
 from __future__ import annotations
 
@@ -8,6 +8,26 @@ from typing import Any
 from pydantic import BaseModel
 
 from familydb.store.db import from_json, to_json, utcnow_iso
+
+EDITABLE_FIELDS = frozenset(
+    {
+        "name",
+        "summary",
+        "address",
+        "lat",
+        "lon",
+        "website",
+        "booking_url",
+        "phone",
+        "hours",
+        "price_note",
+        "travel_minutes",
+        "travel_km",
+        "source_urls",
+        "last_checked_at",
+    }
+)
+JSON_FIELDS = ("hours", "source_urls")
 
 
 class Place(BaseModel):
@@ -37,17 +57,37 @@ class Place(BaseModel):
         return cls(**data)
 
 
+def _encode(values: dict[str, Any]) -> dict[str, Any]:
+    out = dict(values)
+    if "name" in out and out["name"] is not None:
+        out["name"] = str(out["name"]).strip()
+    if "hours" in out and out["hours"] is not None:
+        out["hours"] = to_json(out["hours"])
+    if "source_urls" in out and out["source_urls"] is not None:
+        out["source_urls"] = to_json(list(out["source_urls"]))
+    return out
+
+
 def get(conn: sqlite3.Connection, place_id: int) -> Place | None:
     row = conn.execute("SELECT * FROM places WHERE id = ?", (place_id,)).fetchone()
     return Place.from_row(row) if row else None
 
 
+def find_by_name(conn: sqlite3.Connection, name: str) -> Place | None:
+    row = conn.execute(
+        "SELECT * FROM places WHERE lower(name) = lower(?) ORDER BY id LIMIT 1", (name.strip(),)
+    ).fetchone()
+    return Place.from_row(row) if row else None
+
+
 def insert(conn: sqlite3.Connection, *, name: str, now: str | None = None, **fields: Any) -> Place:
+    unknown = set(fields) - EDITABLE_FIELDS
+    if unknown:
+        raise ValueError(f"unknown place fields: {sorted(unknown)}")
     stamp = now or utcnow_iso()
-    data: dict[str, Any] = {"name": name.strip(), **fields}
-    if data.get("hours") is not None:
-        data["hours"] = to_json(data["hours"])
-    data["source_urls"] = to_json(list(data.get("source_urls") or []))
+    data = _encode({"name": name, **fields})
+    if data.get("source_urls") is None:
+        data["source_urls"] = "[]"
     data["created_at"] = stamp
     data["updated_at"] = stamp
     columns = list(data)
@@ -58,3 +98,16 @@ def insert(conn: sqlite3.Connection, *, name: str, now: str | None = None, **fie
     place = get(conn, int(cur.lastrowid or 0))
     assert place is not None
     return place
+
+
+def update(
+    conn: sqlite3.Connection, place_id: int, changes: dict[str, Any], *, now: str | None = None
+) -> Place | None:
+    unknown = set(changes) - EDITABLE_FIELDS
+    if unknown:
+        raise ValueError(f"unknown place fields: {sorted(unknown)}")
+    data = _encode(changes)
+    data["updated_at"] = now or utcnow_iso()
+    assignments = ", ".join(f"{column} = ?" for column in data)
+    conn.execute(f"UPDATE places SET {assignments} WHERE id = ?", [*data.values(), place_id])
+    return get(conn, place_id)

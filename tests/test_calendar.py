@@ -342,3 +342,24 @@ def test_google_delete_tolerates_missing_events(calendar_settings) -> None:
         assert "403" in str(exc)
     else:
         raise AssertionError("a 403 must still be reported")
+
+
+def test_create_event_records_the_originating_chat(
+    registry, conn, calendar_settings, clock, family
+) -> None:
+    from familydb.store import db, messages
+
+    with db.transaction(conn):
+        inbound = messages.insert_in(
+            conn,
+            channel="telegram",
+            channel_update_id="u9",
+            chat_id="-100",
+            member_id=family["sam"].id,
+            text="symphony saturday",
+            now=NOW_ISO,
+        )
+    ctx = _ctx(conn, calendar_settings, clock, family, fakes.FakeCalendar(TZ))
+    ctx.message_id = inbound.id
+    _, data = _call(registry, ctx, "create_event", title="Symphony", start="2026-09-26T20:00")
+    assert data["plan"]["channel"] == "telegram" and data["plan"]["chat_id"] == "-100"

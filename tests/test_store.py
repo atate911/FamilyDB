@@ -227,3 +227,136 @@ def test_render_duration_handles_zero(conn, family) -> None:
         _idea(conn, family, duration_min=0, duration_max=30)
     )
     assert "about 45 min" in render_idea_line(_idea(conn, family, title="B", duration_max=45))
+
+
+def test_enrichment_queue(conn, family) -> None:
+    first = _idea(conn, family)
+    second = _idea(conn, family, title="The falls hike", kind="outing")
+    dropped = _idea(conn, family, title="Dropped", kind="other", status="dropped")
+    assert [i.id for i in ideas.pending_enrichment(conn, limit=10)] == [first.id, second.id]
+    with db.transaction(conn):
+        ideas.update(conn, first.id, {"enrichment": "done", "enrichment_note": None}, now=NOW_ISO)
+        ideas.update(
+            conn, second.id, {"enrichment": "failed", "enrichment_note": "no idea"}, now=NOW_ISO
+        )
+    assert ideas.pending_enrichment(conn, limit=10) == []
+    assert ideas.get(conn, second.id).enrichment_note == "no idea"
+    with db.transaction(conn):
+        # the dropped idea was still pending, so only two rows change
+        assert ideas.requeue_enrichment(conn, [first.id, second.id, dropped.id], now=NOW_ISO) == 2
+    assert [i.id for i in ideas.pending_enrichment(conn, limit=1)] == [first.id]
+
+
+def test_places_update_and_lookup(conn) -> None:
+    from familydb.store import places
+
+    with db.transaction(conn):
+        place = places.insert(
+            conn,
+            name="Hopscotch Portland",
+            address="1030 NW 12th Ave",
+            hours={"sat": [{"open": "10:00", "close": "20:00"}]},
+            source_urls=["https://example.com"],
+            now=NOW_ISO,
+        )
+        updated = places.update(
+            conn, place.id, {"travel_minutes": 45, "hours": {"sun": []}}, now=NOW_ISO
+        )
+    assert updated.travel_minutes == 45 and updated.hours == {"sun": []}
+    assert updated.source_urls == ["https://example.com"]
+    assert places.find_by_name(conn, "hopscotch portland").id == place.id
+    assert places.find_by_name(conn, "nowhere") is None
+    with pytest.raises(ValueError):
+        places.update(conn, place.id, {"rating": 5})
+
+
+def test_plans_follow_up_queue(conn, family) -> None:
+    from familydb.store import plans
+
+    with db.transaction(conn):
+        done = plans.insert(
+            conn,
+            title="Hike",
+            start="2026-09-19T10:00-07:00",
+            end="2026-09-19T13:00-07:00",
+            all_day=False,
+            channel="telegram",
+            chat_id="-100",
+            now=NOW_ISO,
+        )
+        plans.insert(
+            conn,
+            title="No chat",
+            start="2026-09-19T10:00-07:00",
+            end=None,
+            all_day=False,
+            now=NOW_ISO,
+        )
+        plans.insert(
+            conn,
+            title="Future",
+            start="2026-09-26",
+            end="2026-09-26",
+            all_day=True,
+            channel="telegram",
+            chat_id="-100",
+            now=NOW_ISO,
+        )
+        plans.insert(
+            conn,
+            title="Ancient",
+            start="2026-08-01",
+            end="2026-08-01",
+            all_day=True,
+            channel="telegram",
+            chat_id="-100",
+            now=NOW_ISO,
+        )
+    due = plans.due_for_follow_up(conn, today="2026-09-20", since="2026-09-13")
+    assert [p.id for p in due] == [done.id]
+    with db.transaction(conn):
+        plans.mark_followed_up(conn, done.id, now=NOW_ISO)
+    assert plans.due_for_follow_up(conn, today="2026-09-20", since="2026-09-13") == []
+    assert plans.get(conn, done.id).followed_up_at == NOW_ISO
+
+
+def test_suggestions_reply_link_and_recent_good_ids(conn, family) -> None:
+    from familydb.store import suggestions
+
+    with db.transaction(conn):
+        reply = messages.insert_out(
+            conn, channel="console", chat_id="console", text="ideas", now=NOW_ISO
+        )
+        row = suggestions.insert(
+            conn,
+            asked_by=family["sam"].id,
+            window_start="2026-09-26",
+            window_end="2026-09-27",
+            candidates=[{"idea_id": 1, "verdict": "good"}, {"idea_id": 2, "verdict": "possible"}],
+            web_finds=[],
+            now=NOW_ISO,
+        )
+        suggestions.set_reply(conn, row.id, reply.id)
+    assert suggestions.get(conn, row.id).reply_message_id == reply.id
+    assert suggestions.recently_suggested(conn, since="2026-09-01T00:00:00Z") == {1}
+    assert suggestions.recently_suggested(conn, since="2026-10-01T00:00:00Z") == set()
+    assert [s.id for s in suggestions.list_recent(conn, limit=5)] == [row.id]
+
+
+def test_outcomes_exists_since(conn, family) -> None:
+    idea = _idea(conn, family)
+    with db.transaction(conn):
+        outcomes.insert(
+            conn,
+            idea_id=idea.id,
+            plan_id=None,
+            happened_on="2026-09-19",
+            rating=8,
+            would_repeat=True,
+            notes=None,
+            recorded_by=None,
+            now=NOW_ISO,
+        )
+    assert outcomes.exists_since(conn, idea_id=idea.id, plan_id=None, since="2026-09-19")
+    assert not outcomes.exists_since(conn, idea_id=idea.id, plan_id=None, since="2026-09-20")
+    assert not outcomes.exists_since(conn, idea_id=None, plan_id=None, since="2026-01-01")

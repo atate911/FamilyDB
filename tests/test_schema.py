@@ -87,3 +87,21 @@ def test_server_tools_are_appended_when_enabled(settings: Settings, registry: To
 def test_now_tool_takes_no_input(registry: ToolRegistry) -> None:
     schema = registry.get("now").api_definition()["input_schema"]
     assert schema == {"type": "object", "properties": {}, "additionalProperties": False}
+
+
+def test_api_tools_subset_and_forced_web(registry: ToolRegistry, settings: Settings) -> None:
+    subset = registry.api_tools(settings, names=["now", "add_idea"], force_web=True, max_uses=2)
+    assert [t["name"] for t in subset] == ["add_idea", "now", "web_search", "web_fetch"]
+    assert subset[2]["max_uses"] == 2
+    located = registry.api_tools(
+        settings,
+        names=["now"],
+        force_web=True,
+        user_location={"type": "approximate", "city": "Portland"},
+    )
+    assert located[1]["user_location"] == {"type": "approximate", "city": "Portland"}
+    assert "user_location" not in registry.api_tools(settings, names=["now"], force_web=True)[1]
+    import pytest
+
+    with pytest.raises(ValueError):
+        registry.api_tools(settings, names=["teleport"])

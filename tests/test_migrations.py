@@ -44,3 +44,11 @@ def test_connect_creates_parent_directory(tmp_path: Path) -> None:
     assert path.exists()
     assert conn.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
     conn.close()
+
+
+def test_phase2_columns_exist(conn) -> None:
+    def columns(table: str) -> set[str]:
+        return {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
+
+    assert "enrichment_note" in columns("ideas")
+    assert {"followed_up_at", "channel", "chat_id"} <= columns("plans")

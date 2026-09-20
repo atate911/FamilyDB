@@ -5,6 +5,7 @@ from __future__ import annotations
 import difflib
 import re
 import sqlite3
+from collections.abc import Iterable
 from datetime import date, timedelta
 from typing import Any, Literal
 
@@ -51,6 +52,7 @@ EDITABLE_FIELDS = frozenset(
         "place_id",
         "enrichment",
         "enriched_at",
+        "enrichment_note",
     }
 )
 INSERT_FIELDS = EDITABLE_FIELDS | {"suggested_by", "source_message_id"}
@@ -82,6 +84,7 @@ class Idea(BaseModel):
     place_id: int | None = None
     enrichment: Enrichment = "pending"
     enriched_at: str | None = None
+    enrichment_note: str | None = None
     suggested_by: int | None = None
     suggested_by_name: str | None = None
     source_message_id: int | None = None
@@ -169,6 +172,31 @@ def get(conn: sqlite3.Connection, idea_id: int) -> Idea | None:
 def list_for_prompt(conn: sqlite3.Connection) -> list[Idea]:
     """Every idea the model should know about, oldest first. Dropped ideas are left out."""
     return list_all(conn, include_dropped=False)
+
+
+def pending_enrichment(conn: sqlite3.Connection, *, limit: int) -> list[Idea]:
+    """Ideas waiting for a place lookup, oldest first."""
+    rows = conn.execute(
+        f"{_SELECT} WHERE i.enrichment = 'pending' AND i.status != 'dropped' ORDER BY i.id LIMIT ?",
+        (limit,),
+    )
+    return [Idea.from_row(row) for row in rows]
+
+
+def requeue_enrichment(
+    conn: sqlite3.Connection, idea_ids: Iterable[int], *, now: str | None = None
+) -> int:
+    """Put ideas back in the lookup queue (stale details). Returns how many changed."""
+    ids = [int(i) for i in idea_ids]
+    if not ids:
+        return 0
+    placeholders = ", ".join("?" for _ in ids)
+    cur = conn.execute(
+        f"UPDATE ideas SET enrichment = 'pending', updated_at = ? "
+        f"WHERE id IN ({placeholders}) AND enrichment != 'pending'",
+        [now or utcnow_iso(), *ids],
+    )
+    return int(cur.rowcount)
 
 
 def list_all(conn: sqlite3.Connection, *, include_dropped: bool = False) -> list[Idea]:

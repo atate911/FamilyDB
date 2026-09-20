@@ -176,3 +176,25 @@ class FakeForecast:
     def daily(self, start: date, end: date) -> list[DayForecast]:
         self.calls.append((start, end))
         return [d for d in self.days if start <= d.date <= end]
+
+
+def server_tool_use(tool_use_id: str, name: str, input: dict[str, Any]) -> dict[str, Any]:  # noqa: A002
+    return {"type": "server_tool_use", "id": tool_use_id, "name": name, "input": input}
+
+
+def web_search_result(tool_use_id: str, results: list[dict[str, Any]]) -> dict[str, Any]:
+    """A web_search_tool_result block; each result needs url and title."""
+    return {
+        "type": "web_search_tool_result",
+        "tool_use_id": tool_use_id,
+        "content": [
+            {
+                "type": "web_search_result",
+                "url": r["url"],
+                "title": r.get("title", r["url"]),
+                "encrypted_content": r.get("encrypted_content", "opaque"),
+                "page_age": r.get("page_age"),
+            }
+            for r in results
+        ],
+    }

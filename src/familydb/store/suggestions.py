@@ -59,3 +59,27 @@ def insert(
 def get(conn: sqlite3.Connection, suggestion_id: int) -> Suggestion | None:
     row = conn.execute("SELECT * FROM suggestions WHERE id = ?", (suggestion_id,)).fetchone()
     return Suggestion.from_row(row) if row else None
+
+
+def set_reply(conn: sqlite3.Connection, suggestion_id: int, message_id: int) -> None:
+    conn.execute(
+        "UPDATE suggestions SET reply_message_id = ? WHERE id = ?", (message_id, suggestion_id)
+    )
+
+
+def list_recent(conn: sqlite3.Connection, *, limit: int = 10) -> list[Suggestion]:
+    rows = conn.execute("SELECT * FROM suggestions ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+    return [Suggestion.from_row(row) for row in rows]
+
+
+def recently_suggested(conn: sqlite3.Connection, *, since: str) -> set[int]:
+    """Idea ids that got a 'good' verdict in any suggestion made at or after `since`."""
+    rows = conn.execute("SELECT candidates FROM suggestions WHERE asked_at >= ?", (since,))
+    ids: set[int] = set()
+    for row in rows:
+        for candidate in from_json(row["candidates"], []) or []:
+            if isinstance(candidate, dict) and candidate.get("verdict") == "good":
+                idea_id = candidate.get("idea_id")
+                if isinstance(idea_id, int):
+                    ids.add(idea_id)
+    return ids

@@ -62,6 +62,25 @@ def list_for_idea(conn: sqlite3.Connection, idea_id: int) -> list[Outcome]:
     return [Outcome.from_row(row) for row in rows]
 
 
+def exists_since(
+    conn: sqlite3.Connection, *, idea_id: int | None, plan_id: int | None, since: str
+) -> bool:
+    """Whether an outcome for this idea or plan was recorded for a date on or after `since`."""
+    conditions = []
+    params: list[object] = []
+    if idea_id is not None:
+        conditions.append("idea_id = ?")
+        params.append(idea_id)
+    if plan_id is not None:
+        conditions.append("plan_id = ?")
+        params.append(plan_id)
+    if not conditions:
+        return False
+    sql = f"SELECT 1 FROM outcomes WHERE ({' OR '.join(conditions)}) AND happened_on >= ? LIMIT 1"
+    params.append(since)
+    return conn.execute(sql, params).fetchone() is not None
+
+
 def average_rating(conn: sqlite3.Connection, idea_id: int) -> float | None:
     row = conn.execute(
         "SELECT AVG(rating) AS avg FROM outcomes WHERE idea_id = ? AND rating IS NOT NULL",

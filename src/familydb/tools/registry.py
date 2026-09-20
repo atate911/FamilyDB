@@ -7,7 +7,7 @@ import json
 import logging
 import sqlite3
 import typing
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -35,6 +35,10 @@ class ToolContext:
     message_id: int | None = None
     calendar: Any = None  # a CalendarAPI (integrations.google_calendar) when connected
     weather: Any = None  # a ForecastAPI (integrations.open_meteo) when configured
+    geocoder: Any = None  # a GeocoderAPI (integrations.geocode) when available
+    api: Any = None  # the MessagesAPI, for tools that run a worker turn (discovery)
+    discover_cache: Any = None  # the App-level cache of discovery results
+    scratch: dict[str, Any] = field(default_factory=dict)  # per-turn hand-back area
 
     def now_iso(self) -> str:
         return utc_iso(self.clock.now())
@@ -132,11 +136,27 @@ class ToolRegistry:
     def names(self) -> list[str]:
         return sorted(self._specs)
 
-    def api_tools(self, settings: Settings) -> list[dict[str, Any]]:
-        """Every declared tool, sorted by name, then the server tools. Stable across turns."""
-        return [dict(self._definitions[name]) for name in sorted(self._specs)] + server_tools(
-            settings
+    def api_tools(
+        self,
+        settings: Settings,
+        *,
+        names: Iterable[str] | None = None,
+        force_web: bool = False,
+        max_uses: int | None = None,
+        user_location: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Declared tools sorted by name, then the server tools. Stable across chat turns.
+
+        Worker turns pass a subset in `names` and force the web tools on.
+        """
+        wanted = sorted(self._specs) if names is None else sorted(names)
+        unknown = set(wanted) - set(self._specs)
+        if unknown:
+            raise ValueError(f"unknown tools: {sorted(unknown)}")
+        web = server_tools(
+            settings, force=force_web, max_uses=max_uses, user_location=user_location
         )
+        return [dict(self._definitions[name]) for name in wanted] + web
 
     def dispatch(self, name: str, raw_input: Any, ctx: ToolContext) -> ToolResult:
         spec = self._specs.get(name)
@@ -166,7 +186,7 @@ class ToolRegistry:
             for key in ("id", "duplicate_of"):
                 if key in result:
                     summary[key] = result[key]
-            for key in ("plan", "idea", "outcome"):
+            for key in ("plan", "idea", "outcome", "place", "suggestion"):
                 nested = result.get(key)
                 if isinstance(nested, dict) and "id" in nested:
                     summary[f"{key}_id"] = nested["id"]

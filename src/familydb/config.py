@@ -13,6 +13,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Effort = Literal["low", "medium", "high", "xhigh", "max"]
 CacheTTL = Literal["5m", "1h"]
+Weekday = Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 
 SECRET_FIELDS = frozenset({"anthropic_api_key", "telegram_bot_token"})
 log = logging.getLogger(__name__)
@@ -66,6 +67,18 @@ class Settings(BaseSettings):
     # Failed messages are retried this often, this many times.
     retry_interval_minutes: int = 5
     retry_max_attempts: int = 3
+
+    # Enrichment, suggestions and scheduled prompts
+    enrich_interval_minutes: int = 2
+    enrich_batch: int = 3
+    place_stale_days: int = 30
+    worker_max_iterations: int = 12
+    travel_speed_kmh: float = 50.0
+    road_factor: float = 1.3
+    digest_chat_id: str | None = None
+    digest_day: Weekday = "thu"
+    digest_hour: int = 18
+    follow_up_hour: int = 10
     google_calendar_id: str | None = None
     google_token_path: Path = Path("data/google_token.json")
     enrichment_notes: bool = True

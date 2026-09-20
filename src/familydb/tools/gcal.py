@@ -19,7 +19,7 @@ from familydb.dates import (
 )
 from familydb.errors import ToolError, ToolUnavailable
 from familydb.integrations.google_calendar import CalendarAPI, CalendarEvent
-from familydb.store import ideas, plans
+from familydb.store import ideas, messages, plans
 from familydb.store.db import transaction
 from familydb.tools.registry import ToolContext, tool
 
@@ -219,6 +219,7 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
         location=args.location,
         description=args.notes,
     )
+    origin = messages.get(ctx.conn, ctx.message_id) if ctx.message_id is not None else None
     with transaction(ctx.conn):
         plan = plans.insert(
             ctx.conn,
@@ -232,6 +233,8 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
             location=args.location,
             notes=args.notes,
             created_by=ctx.member.id if ctx.member else None,
+            channel=origin.channel if origin else None,
+            chat_id=origin.chat_id if origin else None,
             now=ctx.now_iso(),
         )
         idea = None

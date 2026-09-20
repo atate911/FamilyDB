@@ -57,14 +57,17 @@ def run_turn(
     ctx: ToolContext,
     system: list[dict[str, Any]],
     messages: list[dict[str, Any]],
+    tools: list[dict[str, Any]] | None = None,
+    max_iterations: int | None = None,
 ) -> TurnResult:
     """Drive one inbound message to a reply. `messages` is extended in place with the transcript."""
     params = request_params(settings)
-    tools = registry.api_tools(settings)
+    tools = tools if tools is not None else registry.api_tools(settings)
+    limit = max_iterations or settings.agent_max_iterations
     actions: list[dict[str, Any]] = []
     totals: dict[str, int] = dict.fromkeys(USAGE_KEYS, 0)
 
-    for iteration in range(1, settings.agent_max_iterations + 1):
+    for iteration in range(1, limit + 1):
         started = time.monotonic()
         try:
             response = api.create(**params, system=system, tools=tools, messages=messages)
@@ -153,6 +156,4 @@ def run_turn(
             )
         messages.append({"role": "user", "content": results})
 
-    return TurnResult(
-        "failed", "", actions, settings.agent_max_iterations, totals, error="max_iterations"
-    )
+    return TurnResult("failed", "", actions, limit, totals, error="max_iterations")

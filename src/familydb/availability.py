@@ -1,4 +1,4 @@
-"""Which optional integrations are configured. Shared by the tools and the prompt context."""
+"""Which optional integrations are configured. Shared by the tools, jobs and the prompt context."""
 
 from __future__ import annotations
 
@@ -17,3 +17,12 @@ def weather_available(settings: Settings) -> bool:
 
 def web_tools_available(settings: Settings) -> bool:
     return settings.web_tools_enabled
+
+
+def enrichment_available(settings: Settings) -> bool:
+    """Enrichment and discovery need the web tools."""
+    return web_tools_available(settings)
+
+
+def digest_configured(settings: Settings) -> bool:
+    return bool(settings.digest_chat_id)

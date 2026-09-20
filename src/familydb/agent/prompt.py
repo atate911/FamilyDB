@@ -19,9 +19,14 @@ IDEAS_HEADER = (
 )
 
 
-@lru_cache(maxsize=1)
+@lru_cache(maxsize=8)
+def load_prompt(name: str) -> str:
+    """A prompt file from the package: system, enrich, discover."""
+    return (resources.files("familydb.agent") / "prompts" / f"{name}.md").read_text("utf-8")
+
+
 def load_system_prompt() -> str:
-    return (resources.files("familydb.agent") / "prompts" / "system.md").read_text("utf-8")
+    return load_prompt("system")
 
 
 def cache_control(settings: Settings) -> dict[str, str]:
