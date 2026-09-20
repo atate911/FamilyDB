@@ -228,7 +228,6 @@ def plan_row(plan: Plan, today: date) -> dict[str, Any]:
         "location": plan.location,
         "notes": plan.notes,
         "status": plan.status,
-        "past": plan.start[:10] < today.isoformat(),
     }
 
 
