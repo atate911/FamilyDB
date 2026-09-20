@@ -16,6 +16,7 @@ from familydb.store.places import Place
 from familydb.store.plans import Plan
 from familydb.suggest.shortlist import fmt_minutes
 from familydb.tools.places import DAYS, checked_days_ago, format_ranges, is_stale, open_on
+from familydb.tools.urls import clean_url
 
 DAY_NAMES = {
     "mon": "Monday",
@@ -73,6 +74,9 @@ def idea_row(idea: Idea) -> dict[str, Any]:
     return {
         "id": idea.id,
         "title": idea.title,
+        # Links reach the page from chat and from pages the lookup worker read. Anything that is
+        # not an ordinary web address is dropped here rather than put in an href.
+        "url": clean_url(idea.url),
         "kind": idea.kind,
         "status": idea.status,
         "where": idea.location_name,
@@ -137,14 +141,14 @@ def place_panel(place: Place | None, now: datetime, stale_days: int) -> dict[str
         "summary": place.summary,
         "address": place.address,
         "phone": place.phone,
-        "website": place.website,
-        "booking_url": place.booking_url,
+        "website": clean_url(place.website),
+        "booking_url": clean_url(place.booking_url),
         "price_note": place.price_note,
         "travel": travel_text(place),
         "map_url": map_url(place),
         "hours": hours_rows(place),
         "has_hours": bool(place.hours),
-        "sources": place.source_urls,
+        "sources": [url for url in (clean_url(s) for s in place.source_urls) if url],
         "freshness": freshness_text(place, now, stale_days),
         "stale": is_stale(place, now, stale_days),
     }
@@ -172,8 +176,8 @@ def restaurant_card(
         "rating": rating_text(idea),
         "today": hours_today,
         "travel": travel_text(place),
-        "website": place.website if place else idea.url,
-        "booking_url": place.booking_url if place else None,
+        "website": clean_url(place.website if place else idea.url),
+        "booking_url": clean_url(place.booking_url) if place else None,
         "map_url": map_url(place),
         "pending": idea.enrichment == "pending",
         "details": details_text(idea),

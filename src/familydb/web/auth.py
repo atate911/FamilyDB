@@ -93,8 +93,14 @@ def client_address() -> str:
 
 
 def safe_next(target: str | None) -> str | None:
-    """A path on this site, or None. Stops the login form redirecting anywhere else."""
+    """A path on this site, or None. Stops the login form redirecting anywhere else.
+
+    Backslashes are refused outright: browsers treat "/\\elsewhere.example" the way they treat
+    "//elsewhere.example", which would send someone straight off the site after signing in.
+    """
     if not target or not target.startswith("/") or target.startswith("//"):
+        return None
+    if "\\" in target or "\r" in target or "\n" in target:
         return None
     parts = urlsplit(target)
     if parts.scheme or parts.netloc:

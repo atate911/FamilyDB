@@ -54,7 +54,15 @@ def test_signing_in_and_out(settings, clock) -> None:
 
 def test_the_next_parameter_cannot_leave_the_site(settings, clock) -> None:
     client = _client(settings, clock, web_password=PASSWORD)
-    for target in ("//evil.example/x", "https://evil.example", "javascript:alert(1)"):
+    hostile = (
+        "//evil.example/x",
+        "https://evil.example",
+        "javascript:alert(1)",
+        "/\\evil.example",  # browsers read the backslash as a second slash
+        "\\\\evil.example",
+        "not-a-path",
+    )
+    for target in hostile:
         response = client.post("/login", data={"password": PASSWORD, "next": target})
         assert response.headers["Location"] == "/", target
         client.post("/logout")
@@ -421,3 +429,26 @@ def test_the_nav_reaches_every_page(settings, clock, conn, family) -> None:
     for target in ("/", "/restaurants", "/plans"):
         assert f'href="{target}"' in home.text, target
         assert client.get(target).status_code == 200
+
+
+def test_links_that_are_not_web_addresses_never_become_links(settings, clock, conn, family) -> None:
+    # An idea's link comes straight from a chat message, and a place saved before links were
+    # filtered may hold anything. Neither may reach an href.
+    idea = _idea(conn, "Dodgy link", url="javascript:alert(1)")
+    _with_place(
+        conn,
+        idea,
+        website="javascript:alert(2)",
+        booking_url="  https://example.com/book  ",
+        source_urls=["data:text/html,<script>", "https://example.com/about"],
+    )
+    page = _client(settings, clock).get(f"/idea/{idea.id}")
+    assert page.status_code == 200
+    assert "javascript:" not in page.text and "data:text/html" not in page.text
+    assert 'href="https://example.com/book"' in page.text
+    assert 'href="https://example.com/about"' in page.text
+
+    restaurant = _idea(conn, "Dodgy diner", kind="restaurant", url="javascript:alert(3)")
+    cards = _client(settings, clock).get("/restaurants")
+    assert "javascript:" not in cards.text and "Their site" not in cards.text
+    assert restaurant.title in cards.text

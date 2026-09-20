@@ -28,9 +28,9 @@
       <dd>
         {{ row.details }}{% if idea.enrichment_note %} ({{ idea.enrichment_note }}){% endif %}
       </dd>
-      {% if idea.url %}
+      {% if row.url %}
         <dt>Link</dt>
-        <dd><a href="{{ idea.url }}" rel="noopener noreferrer">{{ idea.url }}</a></dd>
+        <dd><a href="{{ row.url }}" rel="noopener noreferrer">{{ row.url }}</a></dd>
       {% endif %}
     </dl>
     {% if idea.tags %}
