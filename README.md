@@ -13,4 +13,4 @@ A private family assistant that lives in our chat app. It remembers the things w
 
 ## Planned stack
 
-One long-running process on the home server (Docker), Claude through the Anthropic API for understanding, SQLite for storage, the Google Calendar API, Open-Meteo for weather, and Telegram as the first chat channel. The final choices are tracked in the design doc's open decisions.
+One long-running Python process on the home server (Docker), Claude through the Anthropic API for understanding, SQLite for storage, the Google Calendar API, Open-Meteo for weather, and Telegram as the first chat channel. The final choices are tracked in the design doc's open decisions.

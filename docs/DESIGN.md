@@ -1,6 +1,6 @@
 # FamilyDB design
 
-Status: draft for discussion. Nothing here is built yet. Section 14 lists the decisions still open.
+Status: draft for review. Nothing here is built yet. Section 14 lists what is decided and what is still open.
 
 ## 1. What it is
 
@@ -222,18 +222,20 @@ Assumptions: about ten messages a day, each turn a few thousand input tokens mos
 - **Phase 4, surfaces.** Read-only web page of the list, then editing; optional extra channels (Discord, Signal, WhatsApp); OpenClaw or Claude connectors as alternative front ends over the same tools.
 - **Later.** Semantic search with embeddings, a recurring date-night planner, budgets, a trip-planning mode.
 
-## 14. Open decisions
+## 14. Decisions
 
-| Decision | Recommendation | Why |
+Decided so far: Telegram as the chat channel and Python as the language. The rest are recommendations awaiting a call.
+
+| Decision | Status | Why |
 |---|---|---|
-| Chat channel | Telegram | Easiest bot API, long polling, groups, voice notes, free. WhatsApp needs Meta's Business API and a public webhook; iMessage needs a Mac bridge; Signal needs signal-cli. Discord is a close second if the family already uses it. |
-| Language | Python | Official Anthropic SDK with a tool runner, python-telegram-bot, google-api-python-client, SQLite in the standard library. TypeScript (grammY, googleapis, better-sqlite3) is an equally good choice if preferred. |
-| Database | SQLite | One file, trivial backups, FTS5 built in. Postgres only if a web UI with concurrent writers appears. |
-| Calendar owner | A dedicated family Google account | Keeps the bot's token separate from anyone's personal mail. An existing account works too. |
-| Home location and timezone | Set in config | Needed for weather and for resolving dates. |
-| Group vs DM | Both | A dedicated family group for capture, DMs for private queries. |
+| Chat channel | **Decided: Telegram** | Easiest bot API, long polling, groups, voice notes, free. WhatsApp needs Meta's Business API and a public webhook; iMessage needs a Mac bridge; Signal needs signal-cli. Discord is a close second if the family already uses it. |
+| Language | **Decided: Python** | Official Anthropic SDK with a tool runner, python-telegram-bot, google-api-python-client, SQLite in the standard library. TypeScript (grammY, googleapis, better-sqlite3) is an equally good choice if preferred. |
+| Database | Open, recommend SQLite | One file, trivial backups, FTS5 built in. Postgres only if a web UI with concurrent writers appears. |
+| Calendar owner | Open, recommend a dedicated family Google account | Keeps the bot's token separate from anyone's personal mail. An existing account works too. |
+| Home location and timezone | Open, set in config | Needed for weather and for resolving dates. |
+| Group vs DM | Open, recommend both | A dedicated family group for capture, DMs for private queries. |
 
-## 15. Proposed repo layout (Python shown; TypeScript would mirror it)
+## 15. Proposed repo layout
 
 ```
 familydb/
