@@ -1,0 +1,8 @@
+"""FamilyDB: a private family planning assistant."""
+
+from importlib.metadata import PackageNotFoundError, version
+
+try:
+    __version__ = version("familydb")
+except PackageNotFoundError:  # running from a source tree without an install
+    __version__ = "0.0.0+unknown"

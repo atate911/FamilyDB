@@ -1,7 +1,20 @@
+# secrets and local data
 .env
+data/
 *.db
 *.sqlite
 *.sqlite3
 token.json
+
+# python
 __pycache__/
+*.pyc
+.venv/
+*.egg-info/
+dist/
+build/
+.ruff_cache/
+.pytest_cache/
+
+# node (web UI later)
 node_modules/
