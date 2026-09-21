@@ -128,7 +128,7 @@ class AnthropicProvider:
 
         payload: dict[str, Any] = {
             "model": request.model or settings.anthropic_model,
-            "max_tokens": request.max_tokens or settings.anthropic_max_tokens,
+            "max_tokens": request.max_tokens or settings.max_output_tokens,
             "thinking": {"type": "adaptive"},
             "output_config": {"effort": request.effort or settings.anthropic_effort},
             "system": system,

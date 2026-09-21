@@ -175,7 +175,7 @@ class OpenAIProvider:
             "instructions": self.instructions(request.system),
             "input": self.transcript(request),
             "tools": self.tools(request),
-            "max_output_tokens": request.max_tokens or settings.anthropic_max_tokens,
+            "max_output_tokens": request.max_tokens or settings.max_output_tokens,
             "reasoning": {
                 "effort": EFFORT.get(request.effort or settings.anthropic_effort, "medium")
             },

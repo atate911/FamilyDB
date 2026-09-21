@@ -100,3 +100,23 @@ def test_web_password_is_required_off_the_loopback(tmp_path: Path) -> None:
     waived = public.model_copy(update={"web_allow_no_password": True})
     assert web_is_public(waived) and not web_password_required(waived)
     assert not web_available(private.model_copy(update={"web_enabled": False}))
+
+
+def test_the_answer_cap_is_not_named_for_one_vendor(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("ANTHROPIC_MAX_TOKENS", raising=False)
+    monkeypatch.delenv("MAX_OUTPUT_TOKENS", raising=False)
+    assert Settings(_env_file=None).max_output_tokens == 16000
+    monkeypatch.setenv("ANTHROPIC_MAX_TOKENS", "4321")  # anyone's existing .env keeps working
+    assert Settings(_env_file=None).max_output_tokens == 4321
+    monkeypatch.setenv("MAX_OUTPUT_TOKENS", "1234")
+    assert Settings(_env_file=None).max_output_tokens == 1234
+
+
+def test_both_providers_cap_the_answer_the_same_way(settings) -> None:
+    from familydb.agent.providers import build
+    from familydb.agent.providers.base import Message, TurnRequest
+
+    capped = settings.model_copy(update={"max_output_tokens": 999, "openai_api_key": "sk-t"})
+    request = TurnRequest(system=[], messages=[Message("user", ["hi"])])
+    assert build("anthropic", capped, api=object()).payload(request)["max_tokens"] == 999
+    assert build("openai", capped, api=object()).payload(request)["max_output_tokens"] == 999

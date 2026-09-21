@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import Field, PrivateAttr, field_validator, model_validator
+from pydantic import AliasChoices, Field, PrivateAttr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Effort = Literal["low", "medium", "high", "xhigh", "max"]
@@ -60,7 +60,11 @@ class Settings(BaseSettings):
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-opus-5"
     anthropic_effort: Effort = "medium"
-    anthropic_max_tokens: int = 16000
+    # Named for no vendor, because it caps the answer on either. The old ANTHROPIC_MAX_TOKENS
+    # still works for anyone who already has it in a .env.
+    max_output_tokens: int = Field(
+        default=16000, validation_alias=AliasChoices("MAX_OUTPUT_TOKENS", "ANTHROPIC_MAX_TOKENS")
+    )
     anthropic_fallbacks: bool = True
     # An hour, because a family writes in bursts with long gaps: a five-minute cache would be
     # cold almost every time and the whole prefix would be paid for again.
