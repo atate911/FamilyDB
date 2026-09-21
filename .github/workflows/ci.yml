@@ -62,6 +62,7 @@ jobs:
           cd /opt/familydb
           scripts/install.sh --non-interactive --mode venv
           test -f /etc/systemd/system/familydb.service
+          test "$(stat -c %a /etc/systemd/system/familydb.service)" = 644
           grep -q "^WorkingDirectory=/opt/familydb$" /etc/systemd/system/familydb.service
           # data/ and .env belong to the service now, so that is the account that must work.
           sudo -u familydb /opt/familydb/.venv/bin/familydb config > /dev/null

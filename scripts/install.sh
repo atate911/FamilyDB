@@ -583,7 +583,9 @@ if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
         esac
         if [ "$SKIP_UNIT" = 1 ]; then
           :
-        elif $SUDO cp "$tmp_unit" /etc/systemd/system/familydb.service \
+        # install, not cp: mktemp made this file 0600, and a unit nobody but root can read is
+        # one `systemctl cat` nobody but root can run.
+        elif $SUDO install -m 644 "$tmp_unit" /etc/systemd/system/familydb.service \
           && $SUDO systemctl daemon-reload \
           && { $SUDO systemctl enable familydb >/dev/null 2>&1 || true; }; then
           ok "Unit installed. Start it with: sudo systemctl start familydb"
