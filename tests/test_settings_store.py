@@ -122,6 +122,28 @@ def test_a_stored_value_that_will_not_validate_leaves_the_settings_alone(
     assert app.refresh() is False  # and it is not re-read on every message
 
 
+def test_turning_the_log_up_from_the_page_turns_the_log_up(conn, settings) -> None:
+    """A setting nothing re-reads on its own has to be applied when it moves."""
+    import logging
+
+    from familydb.app import configure_logging
+
+    root = logging.getLogger()
+    was = root.level
+    try:
+        configure_logging("INFO")
+        app = App(settings)
+        _store(conn, {"log_level": "debug"})
+        assert app.refresh() is True
+        assert root.level == logging.DEBUG
+        with db.transaction(conn):
+            settings_store.clear(conn, "log_level")
+        assert app.refresh() is True
+        assert root.level == logging.INFO
+    finally:
+        root.setLevel(was)
+
+
 def test_a_message_uses_the_settings_in_force(conn, settings, clock, family) -> None:
     """Nobody calls refresh here: the pipeline does it, so the next message is the new one."""
     from familydb.pipeline import handle_incoming

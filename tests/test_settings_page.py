@@ -205,6 +205,27 @@ def test_a_setting_cannot_be_reached_through_the_form_unless_the_page_offers_it(
     assert page.app.settings.web_password == PASSWORD
 
 
+def test_a_visitor_who_is_not_signed_in_cannot_make_the_page_do_work(
+    settings, clock, conn, monkeypatch
+):
+    """The gate runs first, so an unsigned request costs a refusal and not one query."""
+    app = App(settings.model_copy(update={"web_password": PASSWORD}), clock)
+    client = create_app(app).test_client()
+    asked = []
+    real = settings_store.stamp
+    monkeypatch.setattr(settings_store, "stamp", lambda conn: (asked.append(1), real(conn))[1])
+
+    assert client.get("/settings").status_code == 302
+    assert client.get("/healthz").status_code == 200
+    assert asked == []
+    client.post("/login", data={"password": PASSWORD})
+    asked.clear()
+    assert client.get("/settings").status_code == 200
+    assert len(asked) == 1  # signed in, so the page is served from the settings in force
+    assert client.get("/healthz").status_code == 200
+    assert len(asked) == 1  # and a liveness check still never asks
+
+
 def test_a_page_with_no_password_shows_a_key_to_whoever_can_reach_it(settings, clock, conn):
     """The relaxed home posture: there is no second password to ask for, and the page says so."""
     app = App(settings.model_copy(update={"openai_api_key": "sk-home"}), clock)

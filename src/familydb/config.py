@@ -87,7 +87,7 @@ class Settings(BaseSettings):
     # The ideas list rides in the cached prompt on every message, so it cannot grow without end.
     # Past this many, the oldest are left out and the model is told to search for them.
     prompt_idea_limit: int = Field(default=150, ge=0, le=5000)
-    history_hours: float = Field(default=6.0, gt=0, le=720)
+    history_hours: float = Field(default=6.0, ge=0, le=720)
 
     # Storage and home
     familydb_path: Path = Path("data/familydb.sqlite3")

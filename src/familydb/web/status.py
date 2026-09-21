@@ -175,7 +175,7 @@ def waiting(conn: sqlite3.Connection, tz: Any) -> dict[str, Any]:
     return {
         "lookups": [
             {"state": LOOKUP_STATES.get(state, state), "count": counts[state]}
-            for state in sorted(counts, key=lambda state: -counts[state])
+            for state in sorted(counts, key=lambda state: (-counts[state], state))
         ],
         "pending": [{"id": idea.id, "title": idea.title} for idea in pending],
         "pending_total": counts.get("pending", 0),

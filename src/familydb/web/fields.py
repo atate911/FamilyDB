@@ -163,10 +163,14 @@ GROUPS: tuple[tuple[str, str, tuple[Field, ...]], ...] = (
             field(
                 "prompt_idea_limit",
                 "Ideas sent with every message",
-                "The newest this many. The rest are still found by searching.",
+                "The newest this many; the rest are still found by searching. 0 means all of them.",
             ),
             field("history_limit", "Chat turns remembered"),
-            field("history_hours", "Hours of chat remembered"),
+            field(
+                "history_hours",
+                "Hours of chat remembered",
+                "0 makes every message stand on its own, with no conversation behind it.",
+            ),
         ),
     ),
     (

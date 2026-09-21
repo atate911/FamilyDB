@@ -167,6 +167,11 @@ class App:
             self.clock = SystemClock(
                 self.settings.tzinfo, southern=self.settings.southern_hemisphere
             )
+        # Turning the log up is most of the reason anyone opens the settings page in a hurry.
+        wanted = getattr(logging, self.settings.log_level, logging.INFO)
+        if logging.getLogger().level != wanted:
+            logging.getLogger().setLevel(wanted)
+            log.info("log level is now %s", self.settings.log_level)
 
     def connect(self) -> sqlite3.Connection:
         """A fresh connection. SQLite connections are per thread; do not share them."""
@@ -181,10 +186,10 @@ class App:
 
 
 def configure_logging(level: str) -> None:
-    logging.basicConfig(
-        level=getattr(logging, level.upper(), logging.INFO),
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    )
+    wanted = getattr(logging, level.upper(), logging.INFO)
+    logging.basicConfig(level=wanted, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    # basicConfig does nothing once a handler exists, and this is called again after a reload.
+    logging.getLogger().setLevel(wanted)
 
 
 def build_app(env_file: str | Path | None = ".env", **overrides: Any) -> App:

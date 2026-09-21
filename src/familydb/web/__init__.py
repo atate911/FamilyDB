@@ -98,8 +98,10 @@ def create_app(app: App) -> Flask:
     web.register_blueprint(auth.bp)
     web.register_blueprint(routes.bp)
     web.register_blueprint(settings_page.bp)
-    web.before_request(_picking_up_settings(app, web))
+    # The gate first: somebody who is not signed in should not be able to make the page work,
+    # not even for one small query.
     web.before_request(auth.require_login)
+    web.before_request(_picking_up_settings(app, web))
     web.after_request(security_headers)
     web.register_error_handler(404, _not_found)
     if web_is_public(settings) and not settings.web_password:
@@ -109,14 +111,22 @@ def create_app(app: App) -> Flask:
     return web
 
 
+# Nothing these two serve depends on a setting, and a monitor may ask for the first every few
+# seconds, so neither is worth a query.
+SETTINGS_FREE = frozenset({"web.healthz", "static"})
+
+
 def _picking_up_settings(app: App, web: Flask) -> Any:
     """A before_request hook that serves each page from the settings in force.
 
-    One small query per request when nothing has changed. Flask keeps its own copy of the
-    session lifetime, so that one is handed over again when it moves.
+    One small query per request when nothing has changed. It is registered after the login gate,
+    so a request about to be turned away costs nothing. Flask keeps its own copy of the session
+    lifetime, so that one is handed over again when it moves.
     """
 
     def hook() -> None:
+        if request.endpoint in SETTINGS_FREE:
+            return
         if app.refresh():
             web.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=app.settings.web_session_days)
 
