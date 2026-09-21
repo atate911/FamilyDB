@@ -11,7 +11,15 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from familydb.agent.loop import MessagesAPI, TurnResult, run_turn
-from familydb.agent.prompt import cache_control, load_prompt
+from familydb.agent.prompt import load_prompt
+from familydb.agent.providers import (
+    Message,
+    Provider,
+    SystemBlock,
+    ToolDef,
+    WebAccess,
+    for_surface,
+)
 from familydb.clock import Clock
 from familydb.config import Settings
 from familydb.tools import ToolContext, ToolRegistry
@@ -45,35 +53,24 @@ def home_location(settings: Settings) -> dict[str, Any] | None:
     return location
 
 
-def worker_system_blocks(kind: WorkerKind, settings: Settings) -> list[dict[str, Any]]:
-    marker = cache_control(settings)
+def worker_system_blocks(kind: WorkerKind, settings: Settings) -> list[SystemBlock]:
     home = f"Home area: {settings.home_area or 'not set'}\nTimezone: {settings.tz}"
-    return [
-        {"type": "text", "text": load_prompt(kind), "cache_control": marker},
-        {"type": "text", "text": home, "cache_control": marker},
-    ]
+    return [SystemBlock(load_prompt(kind), cacheable=True), SystemBlock(home, cacheable=True)]
 
 
-def worker_tools(
-    kind: WorkerKind,
-    registry: ToolRegistry,
-    settings: Settings,
-    *,
-    user_location: dict[str, Any] | None = None,
-) -> list[dict[str, Any]]:
-    return registry.api_tools(
-        settings,
-        names=WORKER_TOOLS[kind],
-        force_web=True,
-        max_uses=WORKER_MAX_USES[kind],
-        user_location=user_location,
-    )
+def worker_tools(kind: WorkerKind, registry: ToolRegistry) -> list[ToolDef]:
+    return registry.tool_defs(WORKER_TOOLS[kind])
+
+
+def worker_web(kind: WorkerKind, user_location: dict[str, Any] | None = None) -> WebAccess:
+    """Hosted search for this worker, capped. Only worker turns ever get it."""
+    return WebAccess(max_uses=WORKER_MAX_USES[kind], user_location=user_location)
 
 
 def run_worker_turn(
     *,
     kind: WorkerKind,
-    api: MessagesAPI,
+    api: MessagesAPI | None = None,
     settings: Settings,
     clock: Clock,
     registry: ToolRegistry,
@@ -82,6 +79,7 @@ def run_worker_turn(
     geocoder: Any = None,
     message_id: int | None = None,
     user_location: dict[str, Any] | None = None,
+    provider: Provider | None = None,
 ) -> WorkerTurn:
     """One worker turn. `message_id` ties the audit rows to a chat message when there is one."""
     ctx = ToolContext(
@@ -92,25 +90,18 @@ def run_worker_turn(
         message_id=message_id,
         geocoder=geocoder,
     )
-    messages: list[dict[str, Any]] = [
-        {
-            "role": "user",
-            "content": [
-                {"type": "text", "text": f"Today is {clock.describe()}."},
-                {"type": "text", "text": request},
-            ],
-        }
-    ]
+    worker: Provider = provider or for_surface(settings, "worker", api=api)
     result = run_turn(
-        api=api,
+        provider=worker,
         settings=settings,
         registry=registry,
         ctx=ctx,
         system=worker_system_blocks(kind, settings),
-        messages=messages,
-        tools=worker_tools(kind, registry, settings, user_location=user_location),
+        messages=[Message("user", [f"Today is {clock.describe()}.", request])],
+        tools=worker_tools(kind, registry),
+        web=worker_web(kind, user_location),
         max_iterations=settings.worker_max_iterations,
-        model=settings.worker_model or settings.anthropic_model,
+        model=worker.model_for("worker"),
         effort=settings.worker_effort,
     )
     return WorkerTurn(result, ctx)

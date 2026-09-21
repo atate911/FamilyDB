@@ -14,13 +14,12 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-import anthropic
 import typer
 
 from familydb import __version__
-from familydb.agent.client import request_params
 from familydb.agent.history import load_history
 from familydb.agent.prompt import build_messages, build_system_blocks
+from familydb.agent.providers.base import Message, TurnRequest
 from familydb.agent.render import render_idea_line, render_user_turn
 from familydb.app import App, build_app
 from familydb.availability import (
@@ -278,12 +277,15 @@ def debug_prompt(
             since_hours=settings.history_hours,
         )
         messages = build_messages(history, render_user_turn(sender, text, application.clock))
-        request = {
-            **request_params(settings),
-            "system": system,
-            "tools": application.registry.api_tools(settings),
-            "messages": messages,
-        }
+        provider = application.provider("chat")
+        request = provider.payload(
+            TurnRequest(
+                system=system,
+                messages=messages,
+                tools=application.registry.tool_defs(),
+                model=provider.model_for("chat"),
+            )
+        )
     typer.echo(json.dumps(request, indent=2, ensure_ascii=False, default=str))
 
 
@@ -300,13 +302,14 @@ def debug_cost(
     settings = application.settings
     with closing(_ready(application)) as conn:
         blocks = build_system_blocks(conn, settings)
-        tools = application.registry.api_tools(settings)
+        tools = application.registry.tool_defs()
         since = utc_iso(application.clock.now() - timedelta(days=days))
         rows = calls.usage_since(conn, since=since)
 
     # Four characters to the token is rough, but enough to show what is large.
-    system_tokens = sum(len(block["text"]) for block in blocks) // 4
-    tool_tokens = len(_json.dumps(tools, ensure_ascii=False)) // 4
+    system_tokens = sum(len(block.text) for block in blocks) // 4
+    tool_tokens = len(_json.dumps([t.schema for t in tools], ensure_ascii=False)) // 4
+    tool_tokens += sum(len(t.name) + len(t.description) for t in tools) // 4
     worker = settings.worker_model or settings.anthropic_model
     typer.echo("Sent with every chat message, and cached between them:")
     typer.echo(f"  system prompt and family context  ~{system_tokens:>6,d} tokens")
@@ -338,20 +341,20 @@ def debug_cost(
 def debug_validate_tools() -> None:
     """Have the API validate the tool schemas via count_tokens (no generation, needs a key)."""
     application = build_app()
-    settings = application.settings
-    tools = application.registry.api_tools(settings, names=application.registry.names())
+    provider = application.provider("chat")
+    everything = application.registry.tool_defs(application.registry.names())
+    request = TurnRequest(system=[], messages=[Message("user", ["hello"])], tools=everything)
     try:
-        result = application.client.beta.messages.count_tokens(
-            model=settings.anthropic_model,
-            tools=tools,
-            messages=[{"role": "user", "content": "hello"}],
-        )
-    except (anthropic.APIError, AgentError) as exc:
+        tokens = provider.count_tokens(request)
+    except (FamilyDBError, NotImplementedError) as exc:
+        typer.echo(f"validation failed: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+    except Exception as exc:  # whatever the SDK raises for a rejected schema
         typer.echo(f"validation failed: {exc}", err=True)
         raise typer.Exit(code=1) from exc
     typer.echo(
-        f"{len(tools)} tools accepted by {settings.anthropic_model}; "
-        f"prompt would be {result.input_tokens} input tokens"
+        f"{len(everything)} tools accepted by {provider.model_for('chat')} "
+        f"via {provider.name}; prompt would be {tokens} input tokens"
     )
 
 
@@ -593,7 +596,7 @@ def suggest(
             typer.echo("set WEB_TOOLS_ENABLED=true to look for events on the web", err=True)
             raise typer.Exit(code=1)
         try:
-            api = application.client.beta.messages
+            api = None  # the settings decide which provider runs discovery
         except AgentError as exc:
             typer.echo(str(exc), err=True)
             raise typer.Exit(code=1) from exc

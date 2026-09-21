@@ -9,9 +9,6 @@ from contextlib import closing
 from pathlib import Path
 from typing import Any
 
-import anthropic
-
-from familydb.agent.client import make_client
 from familydb.availability import calendar_available, weather_available
 from familydb.clock import Clock, SystemClock
 from familydb.config import Settings, load_settings
@@ -43,7 +40,6 @@ class App:
         self.discover_cache: dict[str, Any] = {}
         self.clock = clock or SystemClock(settings.tzinfo, southern=settings.southern_hemisphere)
         self._registry: ToolRegistry | None = None
-        self._client: anthropic.Anthropic | None = None
 
     @property
     def registry(self) -> ToolRegistry:
@@ -78,11 +74,11 @@ class App:
             self._geocoder = Geocoder(self.settings)
         return self._geocoder
 
-    @property
-    def client(self) -> anthropic.Anthropic:
-        if self._client is None:
-            self._client = make_client(self.settings)
-        return self._client
+    def provider(self, surface: str = "chat", api: Any = None) -> Any:
+        """The model provider for this surface, built fresh so a settings change takes effect."""
+        from familydb.agent import providers
+
+        return providers.for_surface(self.settings, surface, api=api)
 
     def connect(self) -> sqlite3.Connection:
         """A fresh connection. SQLite connections are per thread; do not share them."""

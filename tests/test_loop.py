@@ -4,18 +4,26 @@ import pytest
 
 from familydb.agent.loop import REFUSAL_REPLY, run_turn
 from familydb.agent.prompt import build_messages, build_system_blocks
+from familydb.agent.providers import WebAccess, build
 from familydb.agent.render import render_user_turn
 from familydb.errors import AgentError
 from familydb.store import calls, ideas
 from tests import fakes
 
 
-def _run(api, settings, registry, ctx, text="hello"):
+def _run(api, settings, registry, ctx, text="hello", **extra):
     system = build_system_blocks(ctx.conn, settings)
     messages = build_messages([], render_user_turn("Sam", text, ctx.clock))
-    return run_turn(
-        api=api, settings=settings, registry=registry, ctx=ctx, system=system, messages=messages
-    ), messages
+    result = run_turn(
+        provider=build("anthropic", settings, api=api),
+        settings=settings,
+        registry=registry,
+        ctx=ctx,
+        system=system,
+        messages=messages,
+        **extra,
+    )
+    return result, messages
 
 
 def test_plain_reply(settings, registry, ctx) -> None:
@@ -58,7 +66,9 @@ def test_tool_call_then_reply(settings, registry, ctx) -> None:
     assert second[-1]["content"][0]["tool_use_id"] == "tu_1"
     assert second[-1]["content"][0]["is_error"] is False
     assert ctx.conn.execute("SELECT COUNT(*) FROM tool_calls").fetchone()[0] == 1
-    assert len(messages) == 4
+    # The loop builds the transcript itself and leaves the caller's opening messages alone.
+    assert len(messages) == 1 and messages[0].role == "user"
+    assert len(second) == 3  # the opening turn, the tool call, the result
 
 
 def test_parallel_tools_return_one_user_message(settings, registry, ctx) -> None:
@@ -152,15 +162,15 @@ def test_tool_subset_and_iteration_override(settings, registry, ctx) -> None:
     api = fakes.FakeMessagesAPI(fakes.message([fakes.text("ok")]))
     system = build_system_blocks(ctx.conn, settings)
     messages = build_messages([], render_user_turn("Sam", "hi", ctx.clock))
-    tools = registry.api_tools(settings, names=["save_place"], force_web=True, max_uses=3)
     result = run_turn(
-        api=api,
+        provider=build("anthropic", settings, api=api),
         settings=settings,
         registry=registry,
         ctx=ctx,
         system=system,
         messages=messages,
-        tools=tools,
+        tools=registry.tool_defs(["save_place"]),
+        web=WebAccess(max_uses=3),
         max_iterations=2,
     )
     assert result.status == "ok"
@@ -170,7 +180,7 @@ def test_tool_subset_and_iteration_override(settings, registry, ctx) -> None:
     looping = fakes.message([fakes.tool_use("tu", "now", {})], stop_reason="tool_use")
     api = fakes.FakeMessagesAPI(looping, looping, looping)
     result = run_turn(
-        api=api,
+        provider=build("anthropic", settings, api=api),
         settings=settings,
         registry=registry,
         ctx=ctx,

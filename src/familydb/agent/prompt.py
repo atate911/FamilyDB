@@ -8,6 +8,7 @@ from importlib import resources
 from typing import Any
 
 from familydb.agent.history import HistoryTurn
+from familydb.agent.providers.base import Message, SystemBlock
 from familydb.agent.render import render_family_context, render_idea_list
 from familydb.config import Settings
 from familydb.store import ideas, members
@@ -29,12 +30,6 @@ def load_system_prompt() -> str:
     return load_prompt("system")
 
 
-def cache_control(settings: Settings) -> dict[str, str]:
-    if settings.anthropic_cache_ttl == "1h":
-        return {"type": "ephemeral", "ttl": "1h"}
-    return {"type": "ephemeral"}
-
-
 def trim_ideas(everything: list[Any], limit: int) -> tuple[list[Any], int]:
     """The newest `limit` ideas in their usual order, and how many were left out."""
     if limit <= 0 or len(everything) <= limit:
@@ -42,9 +37,8 @@ def trim_ideas(everything: list[Any], limit: int) -> tuple[list[Any], int]:
     return everything[-limit:], len(everything) - limit
 
 
-def build_system_blocks(conn: sqlite3.Connection, settings: Settings) -> list[dict[str, Any]]:
+def build_system_blocks(conn: sqlite3.Connection, settings: Settings) -> list[SystemBlock]:
     """Two blocks, both cache breakpoints: the system prompt, then family context + idea list."""
-    marker = cache_control(settings)
     family = render_family_context(members.list_all(conn), settings)
     everything = ideas.list_for_prompt(conn)
     shown, hidden = trim_ideas(everything, settings.prompt_idea_limit)
@@ -56,27 +50,23 @@ def build_system_blocks(conn: sqlite3.Connection, settings: Settings) -> list[di
             "use search_ideas to find them.)"
         )
     return [
-        {"type": "text", "text": load_system_prompt(), "cache_control": marker},
-        {"type": "text", "text": context, "cache_control": marker},
+        SystemBlock(load_system_prompt(), cacheable=True),
+        SystemBlock(context, cacheable=True),
     ]
 
 
-def build_messages(
-    history: list[HistoryTurn], current: list[dict[str, Any]]
-) -> list[dict[str, Any]]:
+def build_messages(history: list[HistoryTurn], current: list[str]) -> list[Message]:
     """History as alternating turns (same-role turns merged), then the current user turn."""
-    merged: list[dict[str, Any]] = []
+    merged: list[Message] = []
     for turn in history:
-        if merged and merged[-1]["role"] == turn.role:
-            merged[-1]["content"] += "\n\n" + turn.text
+        if merged and merged[-1].role == turn.role:
+            merged[-1] = Message(turn.role, [*merged[-1].parts, turn.text])
         else:
-            merged.append({"role": turn.role, "content": turn.text})
-    while merged and merged[0]["role"] != "user":
-        merged.pop(0)
-    if merged and merged[-1]["role"] == "user":
-        previous = merged[-1]["content"]
-        blocks = [{"type": "text", "text": previous}] if isinstance(previous, str) else previous
-        merged[-1]["content"] = blocks + current
+            merged.append(Message(turn.role, [turn.text]))
+    while merged and merged[0].role != "user":
+        merged.pop(0)  # a conversation has to open with the family, not with a reply
+    if merged and merged[-1].role == "user":
+        merged[-1] = Message("user", [*merged[-1].parts, *current])
     else:
-        merged.append({"role": "user", "content": current})
+        merged.append(Message("user", list(current)))
     return merged

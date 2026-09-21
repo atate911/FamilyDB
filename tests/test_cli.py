@@ -71,7 +71,7 @@ def test_db_members_and_ideas_commands(env: Path) -> None:
 def test_chat_command_uses_the_pipeline(env: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     runner.invoke(app, ["members", "add", "Sam", "--role", "admin"])
     monkeypatch.setattr(
-        "familydb.app.make_client",
+        "familydb.agent.providers.anthropic.make_client",
         lambda settings: _fake_client(fakes.message([fakes.text("Hello Sam!")])),
     )
     result = runner.invoke(app, ["chat", "hi there"])
@@ -122,7 +122,7 @@ def test_validate_tools_reports_missing_credentials(
     def _no_client(settings):
         raise AgentError("no Anthropic credentials configured", retryable=False)
 
-    monkeypatch.setattr("familydb.app.make_client", _no_client)
+    monkeypatch.setattr("familydb.agent.providers.anthropic.make_client", _no_client)
     result = runner.invoke(app, ["debug", "validate-tools"])
     assert result.exit_code == 1
     assert "validation failed: no Anthropic credentials" in result.output

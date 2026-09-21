@@ -13,13 +13,13 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
+from familydb.agent.providers.base import ToolDef
 from familydb.clock import Clock
 from familydb.config import Settings
 from familydb.dates import utc_iso
 from familydb.errors import ToolError, ToolUnavailable
 from familydb.store.members import Member
 from familydb.tools.schema import strict_schema
-from familydb.tools.web import server_tools
 
 log = logging.getLogger(__name__)
 
@@ -139,21 +139,13 @@ class ToolRegistry:
     def names(self) -> list[str]:
         return sorted(self._specs)
 
-    def api_tools(
-        self,
-        settings: Settings,
-        *,
-        names: Iterable[str] | None = None,
-        force_web: bool = False,
-        max_uses: int | None = None,
-        user_location: dict[str, Any] | None = None,
-    ) -> list[dict[str, Any]]:
-        """Declared tools sorted by name, then the server tools. Stable across chat turns.
+    def tool_defs(self, names: Iterable[str] | None = None) -> list[ToolDef]:
+        """Declared tools sorted by name, in terms no vendor owns. Stable across chat turns.
 
-        Worker turns pass a subset in `names` and force the web tools on. Without `names` this is
-        the chat list, which leaves out the hand-back tools only a worker ever calls: they cost
-        input tokens on every message and the chat model must not use them. The list stays the
-        same from turn to turn either way, so the prompt cache still holds.
+        Worker turns pass their subset in `names`. Without `names` this is the chat list, which
+        leaves out the hand-back tools only a worker ever calls: they cost input tokens on every
+        message and the chat model must not use them. Either way the list is the same from turn
+        to turn, so the prompt cache still holds.
         """
         if names is None:
             wanted = sorted(name for name, spec in self._specs.items() if not spec.worker_only)
@@ -162,10 +154,14 @@ class ToolRegistry:
         unknown = set(wanted) - set(self._specs)
         if unknown:
             raise ValueError(f"unknown tools: {sorted(unknown)}")
-        web = server_tools(
-            settings, force=force_web, max_uses=max_uses, user_location=user_location
-        )
-        return [dict(self._definitions[name]) for name in wanted] + web
+        return [
+            ToolDef(
+                name=name,
+                description=self._specs[name].description,
+                schema=self._definitions[name]["input_schema"],
+            )
+            for name in wanted
+        ]
 
     def dispatch(self, name: str, raw_input: Any, ctx: ToolContext) -> ToolResult:
         spec = self._specs.get(name)

@@ -1,8 +1,8 @@
 import json
 
+import pytest
 from pydantic import BaseModel, Field
 
-from familydb.config import Settings
 from familydb.tools import ToolRegistry
 from familydb.tools.schema import STRIP_KEYS, strict_schema
 
@@ -58,40 +58,27 @@ def test_strict_schema_strips_constraints_and_closes_objects() -> None:
     assert "anyOf" in schema["properties"]["note"]
 
 
-def test_every_registered_tool_has_a_strict_schema(
-    registry: ToolRegistry, settings: Settings
-) -> None:
-    tools = registry.api_tools(settings)
-    names = [t["name"] for t in tools]
+def test_every_registered_tool_has_a_usable_schema(registry: ToolRegistry) -> None:
+    tools = registry.tool_defs()
+    names = [t.name for t in tools]
     assert names == sorted(names)
     assert len(names) == len(set(names))
-    assert "web_search" not in names  # off by default
+    assert "web_search" not in names  # hosted tools belong to the provider, not the registry
     for tool in tools:
-        assert tool["strict"] is True
-        assert tool["description"]
-        assert all(
-            obj.get("additionalProperties") is False for obj in _objects(tool["input_schema"])
-        )
-        assert not (set(_keys(tool["input_schema"])) & STRIP_KEYS)
-        json.dumps(tool)  # serialisable
+        assert tool.description
+        assert all(obj.get("additionalProperties") is False for obj in _objects(tool.schema))
+        assert not (set(_keys(tool.schema)) & STRIP_KEYS)
+        json.dumps(tool.schema)  # serialisable
 
 
-def test_the_chat_agent_never_gets_the_web_tools(
-    settings: Settings, registry: ToolRegistry
-) -> None:
-    """Searches are billed one at a time, so chat must not be able to start one."""
-    enabled = settings.model_copy(update={"web_tools_enabled": True})
-    assert registry.api_tools(enabled) == registry.api_tools(settings)
-    assert not [t for t in registry.api_tools(enabled) if t.get("type", "").startswith("web_")]
+def test_the_registry_knows_nothing_about_hosted_tools(registry: ToolRegistry) -> None:
+    """Whether a surface may search is the provider's decision, from the request it is handed."""
+    from familydb.agent.providers.base import ToolDef
 
-
-def test_worker_turns_get_the_web_tools(settings: Settings, registry: ToolRegistry) -> None:
-    enabled = settings.model_copy(update={"web_tools_enabled": True})
-    tools = registry.api_tools(enabled, names=["save_place"], force_web=True)
-    assert [t["name"] for t in tools[-2:]] == ["web_search", "web_fetch"]
-    assert tools[-2]["type"] == "web_search_20260209"
-    # Whether those worker turns run at all is decided by the jobs, not here.
-    assert registry.api_tools(settings, names=["save_place"], force_web=True) == tools
+    assert all(isinstance(tool, ToolDef) for tool in registry.tool_defs())
+    hand_back = {"save_place", "skip_place", "report_finds"}
+    assert hand_back.isdisjoint(t.name for t in registry.tool_defs())
+    assert hand_back <= {t.name for t in registry.tool_defs(registry.names())}
 
 
 def test_now_tool_takes_no_input(registry: ToolRegistry) -> None:
@@ -99,19 +86,8 @@ def test_now_tool_takes_no_input(registry: ToolRegistry) -> None:
     assert schema == {"type": "object", "properties": {}, "additionalProperties": False}
 
 
-def test_api_tools_subset_and_forced_web(registry: ToolRegistry, settings: Settings) -> None:
-    subset = registry.api_tools(settings, names=["now", "add_idea"], force_web=True, max_uses=2)
-    assert [t["name"] for t in subset] == ["add_idea", "now", "web_search", "web_fetch"]
-    assert subset[2]["max_uses"] == 2
-    located = registry.api_tools(
-        settings,
-        names=["now"],
-        force_web=True,
-        user_location={"type": "approximate", "city": "Portland"},
-    )
-    assert located[1]["user_location"] == {"type": "approximate", "city": "Portland"}
-    assert "user_location" not in registry.api_tools(settings, names=["now"], force_web=True)[1]
-    import pytest
-
-    with pytest.raises(ValueError):
-        registry.api_tools(settings, names=["teleport"])
+def test_tool_defs_take_a_subset_and_refuse_an_unknown_name(registry: ToolRegistry) -> None:
+    subset = registry.tool_defs(["now", "add_idea"])
+    assert [t.name for t in subset] == ["add_idea", "now"]
+    with pytest.raises(ValueError, match="teleport"):
+        registry.tool_defs(["teleport"])

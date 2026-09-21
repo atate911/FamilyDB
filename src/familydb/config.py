@@ -12,6 +12,7 @@ from pydantic import Field, PrivateAttr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Effort = Literal["low", "medium", "high", "xhigh", "max"]
+ProviderName = Literal["anthropic", "openai"]
 CacheTTL = Literal["5m", "1h"]
 Weekday = Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 
@@ -41,6 +42,11 @@ class Settings(BaseSettings):
     )
 
     # Claude
+    # Who answers. `worker_provider` empty means the lookup and discovery turns use `provider`.
+    provider: ProviderName = "anthropic"
+    worker_provider: ProviderName | Literal[""] = ""
+    provider_fallback: bool = True
+
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-opus-5"
     anthropic_effort: Effort = "medium"

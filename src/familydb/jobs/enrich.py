@@ -115,7 +115,7 @@ def _notify(app: App, conn: Any, idea: Idea) -> None:
         log.exception("could not deliver the enrichment note for idea %s", idea.id)
 
 
-def enrich_idea(app: App, conn: Any, idea: Idea, *, api: MessagesAPI) -> str:
+def enrich_idea(app: App, conn: Any, idea: Idea, *, api: MessagesAPI | None = None) -> str:
     """Look one idea up. Returns done, skipped, failed or deferred (try again later)."""
     place = places.get(conn, idea.place_id) if idea.place_id else None
     request = render_enrich_request(idea, place, app.settings)
@@ -183,9 +183,8 @@ def run_enrichment(
             batch = ideas.pending_enrichment(conn, limit=limit or app.settings.enrich_batch)
         if not batch:
             return counts
-        messages_api = api if api is not None else app.client.beta.messages
         for idea in batch:
-            outcome = enrich_idea(app, conn, idea, api=messages_api)
+            outcome = enrich_idea(app, conn, idea, api=api)
             counts[outcome] += 1
             if outcome == "deferred":
                 break

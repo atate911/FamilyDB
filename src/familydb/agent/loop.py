@@ -1,4 +1,9 @@
-"""The turn loop: call the model, run the tools it asks for, repeat until it answers."""
+"""The turn loop: call the model, run the tools it asks for, repeat until it answers.
+
+Nothing here knows which vendor is answering. The loop builds a provider-neutral request, hands
+it to a Provider, and reads back a ModelReply. What that costs, which tools ran and how it ended
+are logged the same way whoever served it.
+"""
 
 from __future__ import annotations
 
@@ -7,9 +12,17 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol
 
-import anthropic
-
-from familydb.agent.client import request_params
+from familydb.agent.providers.base import (
+    Exchange,
+    Message,
+    ModelReply,
+    Provider,
+    SystemBlock,
+    ToolDef,
+    ToolOutcome,
+    TurnRequest,
+    WebAccess,
+)
 from familydb.config import Settings
 from familydb.errors import AgentError
 from familydb.store import calls
@@ -23,7 +36,7 @@ REFUSAL_REPLY = "Sorry, I couldn't process that message."
 
 
 class MessagesAPI(Protocol):
-    """The slice of `client.beta.messages` the loop uses; tests supply a scripted fake."""
+    """The slice of an SDK the providers use; tests supply a scripted fake."""
 
     def create(self, **kwargs: Any) -> Any: ...
 
@@ -36,126 +49,124 @@ class TurnResult:
     iterations: int = 0
     usage: dict[str, int] = field(default_factory=dict)
     error: str | None = None
-
-
-def _usage(response: Any) -> dict[str, int | None]:
-    usage = getattr(response, "usage", None)
-    return {key: getattr(usage, key, None) for key in USAGE_KEYS}
-
-
-def _request_id(exc: Exception) -> str | None:
-    response = getattr(exc, "response", None)
-    headers = getattr(response, "headers", None)
-    return headers.get("request-id") if headers is not None else None
+    provider: str | None = None
 
 
 def run_turn(
     *,
-    api: MessagesAPI,
+    provider: Provider,
     settings: Settings,
     registry: ToolRegistry,
     ctx: ToolContext,
-    system: list[dict[str, Any]],
-    messages: list[dict[str, Any]],
-    tools: list[dict[str, Any]] | None = None,
+    system: list[SystemBlock],
+    messages: list[Message],
+    tools: list[ToolDef] | None = None,
+    web: WebAccess | None = None,
     max_iterations: int | None = None,
     model: str | None = None,
     effort: str | None = None,
+    max_tokens: int | None = None,
 ) -> TurnResult:
-    """Drive one inbound message to a reply. `messages` is extended in place with the transcript."""
-    params = request_params(settings, model=model, effort=effort)
-    tools = tools if tools is not None else registry.api_tools(settings)
+    """Drive one inbound message to a reply."""
+    request = TurnRequest(
+        system=system,
+        messages=messages,
+        tools=tools if tools is not None else registry.tool_defs(),
+        web=web,
+        model=model,
+        effort=effort,
+        max_tokens=max_tokens,
+    )
     limit = max_iterations or settings.agent_max_iterations
     actions: list[dict[str, Any]] = []
     totals: dict[str, int] = dict.fromkeys(USAGE_KEYS, 0)
+    asked = provider.name
 
     for iteration in range(1, limit + 1):
         started = time.monotonic()
-        try:
-            response = api.create(**params, system=system, tools=tools, messages=messages)
-        except anthropic.RateLimitError as exc:
-            raise AgentError(
-                f"rate limited: {exc}", retryable=True, request_id=_request_id(exc)
-            ) from exc
-        except anthropic.APIConnectionError as exc:
-            raise AgentError(f"connection error: {exc}", retryable=True) from exc
-        except anthropic.APIStatusError as exc:
-            raise AgentError(
-                f"API error {exc.status_code}: {exc.message}",
-                retryable=exc.status_code >= 500,
-                request_id=_request_id(exc),
-            ) from exc
-        except TypeError as exc:
-            # The SDK raises a bare TypeError when it finds no credentials at all.
-            if "authentication" not in str(exc).lower():
-                raise
-            raise AgentError(f"no API credentials configured: {exc}", retryable=False) from exc
+        reply = provider.send(request)
         duration_ms = int((time.monotonic() - started) * 1000)
 
-        usage = _usage(response)
         for key in USAGE_KEYS:
-            totals[key] += usage.get(key) or 0
+            totals[key] += reply.usage.get(key) or 0
         with transaction(ctx.conn):
             calls.log_llm_call(
                 ctx.conn,
                 message_id=ctx.message_id,
                 iteration=iteration,
-                model=settings.anthropic_model,
-                served_model=getattr(response, "model", None),
-                request_id=getattr(response, "_request_id", None),
-                stop_reason=response.stop_reason,
-                usage=usage,
+                model=request.model or provider.model_for("chat"),
+                served_model=reply.model,
+                request_id=reply.request_id,
+                stop_reason=reply.stop,
+                usage=reply.usage,
                 duration_ms=duration_ms,
                 now=ctx.now_iso(),
             )
 
-        if response.stop_reason == "refusal":
-            details = getattr(response, "stop_details", None)
-            category = getattr(details, "category", None)
-            log.warning("model refused the request (category=%s)", category)
+        if reply.stop == "refusal":
+            log.warning("%s refused the request (category=%s)", asked, reply.refusal)
             return TurnResult(
-                "refused", REFUSAL_REPLY, actions, iteration, totals, error=f"refusal:{category}"
+                "refused",
+                REFUSAL_REPLY,
+                actions,
+                iteration,
+                totals,
+                error=f"refusal:{reply.refusal}",
+                provider=asked,
             )
-        if response.stop_reason == "max_tokens":
-            return TurnResult("failed", "", actions, iteration, totals, error="max_tokens")
+        if reply.stop == "max_tokens":
+            return TurnResult(
+                "failed", "", actions, iteration, totals, error="max_tokens", provider=asked
+            )
 
-        messages.append({"role": "assistant", "content": response.content})
-        if response.stop_reason == "pause_turn":
-            continue  # a server-side tool paused; re-sending the transcript resumes it
+        exchange = Exchange(reply=reply)
+        request.exchanges.append(exchange)
+        if reply.stop == "paused":
+            continue  # a hosted tool paused the turn; sending the transcript back resumes it
+        if not reply.tool_calls:
+            return TurnResult("ok", reply.text, actions, iteration, totals, provider=asked)
 
-        tool_uses = [block for block in response.content if block.type == "tool_use"]
-        if not tool_uses:
-            text = "\n".join(
-                block.text for block in response.content if block.type == "text"
-            ).strip()
-            return TurnResult("ok", text, actions, iteration, totals)
-
-        results: list[dict[str, Any]] = []
-        for block in tool_uses:
+        for call in reply.tool_calls:
             tool_started = time.monotonic()
-            result = registry.dispatch(block.name, block.input, ctx)
+            result = registry.dispatch(call.name, call.arguments, ctx)
             with transaction(ctx.conn):
                 calls.log_tool_call(
                     ctx.conn,
                     message_id=ctx.message_id,
                     iteration=iteration,
-                    tool_use_id=block.id,
-                    tool_name=block.name,
-                    input=block.input,
+                    tool_use_id=call.id,
+                    tool_name=call.name,
+                    input=call.arguments,
                     output=result.content,
                     is_error=result.is_error,
                     duration_ms=int((time.monotonic() - tool_started) * 1000),
                     now=ctx.now_iso(),
                 )
             actions.append(result.summary)
-            results.append(
-                {
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": result.content,
-                    "is_error": result.is_error,
-                }
+            exchange.outcomes.append(
+                ToolOutcome(id=call.id, content=result.content, is_error=result.is_error)
             )
-        messages.append({"role": "user", "content": results})
 
-    return TurnResult("failed", "", actions, limit, totals, error="max_iterations")
+    return TurnResult("failed", "", actions, limit, totals, error="max_iterations", provider=asked)
+
+
+def first_call_only(request: TurnRequest) -> bool:
+    """Whether nothing has been run yet, so starting again elsewhere repeats no side effect."""
+    return not request.exchanges
+
+
+__all__ = [
+    "REFUSAL_REPLY",
+    "AgentError",
+    "Exchange",
+    "Message",
+    "MessagesAPI",
+    "ModelReply",
+    "Provider",
+    "SystemBlock",
+    "ToolDef",
+    "TurnResult",
+    "WebAccess",
+    "first_call_only",
+    "run_turn",
+]

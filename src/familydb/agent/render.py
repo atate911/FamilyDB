@@ -87,12 +87,12 @@ def render_family_context(family: list[Member], settings: Settings) -> str:
     return "\n".join(lines)
 
 
-def render_user_turn(sender: str, text: str, clock: Clock) -> list[dict[str, Any]]:
-    """The current message as content blocks: the date line, then the sender-prefixed text."""
-    return [
-        {"type": "text", "text": f"Today is {clock.describe()}."},
-        {"type": "text", "text": f"[{sender}] {text}"},
-    ]
+def render_user_turn(sender: str, text: str, clock: Clock) -> list[str]:
+    """The current message in parts: the date line, then the sender-prefixed text.
+
+    They stay separate so the volatile date never merges into the message itself.
+    """
+    return [f"Today is {clock.describe()}.", f"[{sender}] {text}"]
 
 
 def render_history_line(sender: str, text: str) -> str:

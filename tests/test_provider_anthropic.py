@@ -1,0 +1,100 @@
+from types import SimpleNamespace
+
+import pytest
+
+from familydb.agent.providers import build
+from familydb.agent.providers.anthropic import ensure_credentials
+from familydb.agent.providers.base import Message, SystemBlock, ToolDef, TurnRequest, WebAccess
+from familydb.errors import AgentError
+
+
+def _provider(settings, **overrides):
+    return build("anthropic", settings.model_copy(update=overrides), api=object())
+
+
+def test_ensure_credentials_requires_some_source() -> None:
+    empty = SimpleNamespace(api_key=None, auth_token=None, credentials=None)
+    with pytest.raises(AgentError) as info:
+        ensure_credentials(empty)
+    assert info.value.retryable is False
+    ensure_credentials(SimpleNamespace(api_key="sk", auth_token=None, credentials=None))
+    ensure_credentials(SimpleNamespace(api_key=None, auth_token="tok", credentials=None))
+
+
+def test_the_request_follows_the_settings(settings) -> None:
+    request = TurnRequest(system=[], messages=[Message("user", ["hi"])])
+    payload = _provider(settings).payload(request)
+    assert payload["model"] == "claude-opus-5"
+    assert payload["betas"] == ["server-side-fallback-2026-07-01"]
+    assert payload["fallbacks"] == "default"
+    assert payload["output_config"] == {"effort": "medium"}
+    assert payload["thinking"] == {"type": "adaptive"}
+
+    quiet = _provider(settings, anthropic_fallbacks=False, anthropic_effort="low")
+    payload = quiet.payload(request)
+    assert "fallbacks" not in payload and "betas" not in payload
+    assert payload["output_config"] == {"effort": "low"}
+
+
+def test_system_blocks_carry_the_cache_marker(settings) -> None:
+    request = TurnRequest(
+        system=[SystemBlock("rules", cacheable=True), SystemBlock("volatile")],
+        messages=[Message("user", ["hi"])],
+    )
+    blocks = _provider(settings).payload(request)["system"]
+    assert blocks[0] == {
+        "type": "text",
+        "text": "rules",
+        "cache_control": {"type": "ephemeral", "ttl": "1h"},
+    }
+    assert blocks[1] == {"type": "text", "text": "volatile"}
+    brief = _provider(settings, anthropic_cache_ttl="5m").payload(request)["system"]
+    assert brief[0]["cache_control"] == {"type": "ephemeral"}
+
+
+def test_the_transcript_keeps_message_parts_apart(settings) -> None:
+    request = TurnRequest(
+        system=[],
+        messages=[
+            Message("user", ["Today is Sunday.", "[Sam] hello"]),
+            Message("assistant", ["Hi Sam."]),
+            Message("user", ["and again"]),
+        ],
+    )
+    turns = _provider(settings).payload(request)["messages"]
+    assert turns[0] == {
+        "role": "user",
+        "content": [
+            {"type": "text", "text": "Today is Sunday."},
+            {"type": "text", "text": "[Sam] hello"},
+        ],
+    }
+    assert turns[1] == {"role": "assistant", "content": "Hi Sam."}
+
+
+def test_tools_and_web_access_are_rendered(settings) -> None:
+    tool = ToolDef(name="now", description="the time", schema={"type": "object"})
+    request = TurnRequest(system=[], messages=[Message("user", ["hi"])], tools=[tool])
+    plain = _provider(settings).payload(request)["tools"]
+    assert plain == [
+        {
+            "name": "now",
+            "description": "the time",
+            "input_schema": {"type": "object"},
+            "strict": True,
+        }
+    ]
+    request.web = WebAccess(max_uses=3, user_location={"type": "approximate", "city": "Vancouver"})
+    tools = _provider(settings).payload(request)["tools"]
+    assert [t.get("name") for t in tools] == ["now", "web_search", "web_fetch"]
+    assert tools[1]["max_uses"] == 3 and tools[2]["max_uses"] == 3
+    assert tools[1]["user_location"]["city"] == "Vancouver"
+    assert "user_location" not in tools[2]
+
+
+def test_the_model_per_surface(settings) -> None:
+    provider = _provider(settings)
+    assert provider.model_for("chat") == "claude-opus-5"
+    assert provider.model_for("worker") == "claude-haiku-4-5-20251001"
+    same = _provider(settings, worker_model="")
+    assert same.model_for("worker") == same.model_for("chat")

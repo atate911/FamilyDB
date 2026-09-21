@@ -249,9 +249,9 @@ def _think(
         write_tools = {spec.name for spec in app.registry.specs() if spec.writes}
         note = render_retry_note(calls.tool_calls_for_message(conn, inbound_id), write_tools)
         if note:
-            current.append({"type": "text", "text": note})
+            current.append(note)
     turn = build_messages(history, current)
-    messages_api = api if api is not None else app.client.beta.messages
+    chat = app.provider("chat", api=api)
     ctx = ToolContext(
         conn=conn,
         settings=settings,
@@ -261,11 +261,11 @@ def _think(
         calendar=app.calendar,
         weather=app.weather,
         geocoder=app.geocoder,
-        api=messages_api,  # for the discovery worker inside `suggest`
+        api=api,  # a stand-in for the discovery worker inside `suggest`, when a test injects one
         discover_cache=app.discover_cache,
     )
     return run_turn(
-        api=messages_api,
+        provider=chat,
         settings=settings,
         registry=app.registry,
         ctx=ctx,

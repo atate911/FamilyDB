@@ -69,7 +69,7 @@ def discover(ctx: ToolContext, context: Context, question: str) -> tuple[list[We
     try:
         turn = run_worker_turn(
             kind="discover",
-            api=ctx.api,
+            api=ctx.api,  # a stand-in when a test injects one; otherwise the settings decide
             settings=ctx.settings,
             clock=ctx.clock,
             registry=build_registry(),
