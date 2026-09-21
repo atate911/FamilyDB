@@ -560,6 +560,7 @@ def test_no_job_calls_the_model_when_there_is_nothing_to_do(settings, clock, con
 
 
 def _openai_app(settings, clock, **extra):
+    """An app pointed at another provider, with lookups on."""
     configured = settings.model_copy(
         update={
             "web_tools_enabled": True,
@@ -614,3 +615,21 @@ def test_a_mixed_setup_sends_each_surface_to_its_own_provider(settings, clock, c
     assert api.requests[0]["model"] == "gpt-5-mini"
     assert app.provider("chat").name == "anthropic"
     assert app.provider("worker").name == "openai"
+
+
+def test_lookups_work_on_gemini_too(settings, clock, conn, family) -> None:
+    app = _openai_app(
+        settings, clock, provider="gemini", gemini_api_key="gm-test", openai_api_key=None
+    )
+    idea, _ = _captured_idea(conn, family)
+    api = fakes.FakeGeminiAPI(*fakes.gm_enrich_script({"idea_id": idea.id, "name": "Hopscotch"}))
+    assert run_enrichment(app, api=api)["done"] == 1
+    assert ideas.get(conn, idea.id).enrichment == "done"
+    request = api.requests[0]
+    assert request["model"] == "gemini-2.5-flash"
+    groups = request["config"]["tools"]
+    assert sorted(d["name"] for d in groups[0]["function_declarations"]) == [
+        "save_place",
+        "skip_place",
+    ]
+    assert "google_search" in groups[1]  # it can search and hand back in the same turn

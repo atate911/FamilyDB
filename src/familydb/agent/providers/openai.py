@@ -176,9 +176,7 @@ class OpenAIProvider:
             "input": self.transcript(request),
             "tools": self.tools(request),
             "max_output_tokens": request.max_tokens or settings.max_output_tokens,
-            "reasoning": {
-                "effort": EFFORT.get(request.effort or settings.anthropic_effort, "medium")
-            },
+            "reasoning": {"effort": EFFORT.get(request.effort or settings.effort, "medium")},
             "store": False,  # the family's messages are not left on someone else's server
         }
         key = self.cache_key(request.system)

@@ -95,9 +95,7 @@ class AnthropicProvider:
         return self.settings.anthropic_model
 
     def effort_for(self, surface: Surface) -> str:
-        return (
-            self.settings.worker_effort if surface == "worker" else self.settings.anthropic_effort
-        )
+        return self.settings.worker_effort if surface == "worker" else self.settings.effort
 
     # -- translation ----------------------------------------------------------------------
     def cache_marker(self) -> dict[str, str]:
@@ -130,7 +128,7 @@ class AnthropicProvider:
             "model": request.model or settings.anthropic_model,
             "max_tokens": request.max_tokens or settings.max_output_tokens,
             "thinking": {"type": "adaptive"},
-            "output_config": {"effort": request.effort or settings.anthropic_effort},
+            "output_config": {"effort": request.effort or settings.effort},
             "system": system,
             "tools": tools,
             "messages": self.transcript(request),

@@ -419,7 +419,7 @@ def run() -> None:
         __version__,
         settings.familydb_path,
         settings.anthropic_model,
-        settings.anthropic_effort,
+        settings.effort,
         settings.tz,
     )
     from familydb.jobs.scheduler import build_scheduler

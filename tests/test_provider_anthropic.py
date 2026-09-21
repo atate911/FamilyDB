@@ -30,7 +30,7 @@ def test_the_request_follows_the_settings(settings) -> None:
     assert payload["output_config"] == {"effort": "medium"}
     assert payload["thinking"] == {"type": "adaptive"}
 
-    quiet = _provider(settings, anthropic_fallbacks=False, anthropic_effort="low")
+    quiet = _provider(settings, anthropic_fallbacks=False, effort="low")
     payload = quiet.payload(request)
     assert "fallbacks" not in payload and "betas" not in payload
     assert payload["output_config"] == {"effort": "low"}

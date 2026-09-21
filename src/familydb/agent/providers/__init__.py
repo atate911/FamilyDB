@@ -24,7 +24,7 @@ from familydb.errors import ConfigError
 
 log = logging.getLogger(__name__)
 
-NAMES = ("anthropic", "openai")
+NAMES = ("anthropic", "openai", "gemini")
 
 
 def build(name: str, settings: Settings, api: Any = None) -> Provider:
@@ -37,6 +37,10 @@ def build(name: str, settings: Settings, api: Any = None) -> Provider:
         from familydb.agent.providers.openai import OpenAIProvider
 
         return OpenAIProvider(settings, api=api)
+    if name == "gemini":
+        from familydb.agent.providers.gemini import GeminiProvider
+
+        return GeminiProvider(settings, api=api)
     raise ConfigError(f"unknown provider {name!r}; use one of {', '.join(NAMES)}")
 
 
@@ -47,8 +51,9 @@ def chosen(settings: Settings, surface: Surface) -> str:
     return settings.provider
 
 
-def other(name: str) -> str:
-    return "openai" if name == "anthropic" else "anthropic"
+def others(name: str) -> list[str]:
+    """The rest, in a fixed order, so a fallback choice never depends on the weather."""
+    return [candidate for candidate in NAMES if candidate != name]
 
 
 def for_surface(settings: Settings, surface: Surface, api: Any = None) -> Provider:
@@ -61,10 +66,11 @@ def fallback_for(settings: Settings, surface: Surface, primary: str) -> Provider
     else to go, which is the ordinary case for a family using one account."""
     if not settings.provider_fallback:
         return None
-    spare = build(other(primary), settings)
-    if not spare.configured():
-        return None
-    return spare
+    for candidate in others(primary):
+        spare = build(candidate, settings)
+        if spare.configured():
+            return spare
+    return None
 
 
 __all__ = [
@@ -85,5 +91,5 @@ __all__ = [
     "chosen",
     "fallback_for",
     "for_surface",
-    "other",
+    "others",
 ]

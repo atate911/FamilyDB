@@ -173,7 +173,12 @@ def run_turn(
                 )
             actions.append(result.summary)
             exchange.outcomes.append(
-                ToolOutcome(id=call.id, content=result.content, is_error=result.is_error)
+                ToolOutcome(
+                    id=call.id,
+                    name=call.name,
+                    content=result.content,
+                    is_error=result.is_error,
+                )
             )
 
     return TurnResult(

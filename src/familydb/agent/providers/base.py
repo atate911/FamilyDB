@@ -63,6 +63,7 @@ class ToolOutcome:
     id: str
     content: str
     is_error: bool = False
+    name: str = ""  # which tool answered; some providers match on the name, not the id
 
 
 @dataclass(frozen=True)

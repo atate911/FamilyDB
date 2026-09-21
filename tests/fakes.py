@@ -373,3 +373,78 @@ def oa_discover_script(finds: list[dict[str, Any]]) -> list[Any]:
         oa_response([oa_tool_call("call_finds", "report_finds", {"finds": finds})]),
         oa_response([oa_text("Reported.")]),
     ]
+
+
+# --- Gemini -----------------------------------------------------------------------------------
+
+
+def gm_text(value: str) -> dict[str, Any]:
+    return {"text": value}
+
+
+def gm_tool_call(call_id: str, name: str, args: dict[str, Any]) -> dict[str, Any]:
+    return {"function_call": {"id": call_id, "name": name, "args": args}}
+
+
+def gm_response(
+    parts: list[dict[str, Any]],
+    *,
+    finish_reason: str = "STOP",
+    model: str = "gemini-2.5-pro",
+    usage: dict[str, Any] | None = None,
+) -> Any:
+    from google.genai import types
+
+    return types.GenerateContentResponse.model_validate(
+        {
+            "candidates": [
+                {"content": {"role": "model", "parts": parts}, "finish_reason": finish_reason}
+            ],
+            "model_version": model,
+            "response_id": "resp_gm",
+            "usage_metadata": usage
+            or {
+                "prompt_token_count": 100,
+                "cached_content_token_count": 0,
+                "candidates_token_count": 10,
+                "total_token_count": 110,
+            },
+        }
+    )
+
+
+class FakeGeminiAPI:
+    """Scripted stand-in for `client.models`, recording every request."""
+
+    def __init__(self, *responses: Any) -> None:
+        self.queue = list(responses)
+        self.requests: list[dict[str, Any]] = []
+
+    def generate_content(self, **kwargs: Any) -> Any:
+        self.requests.append({**kwargs, "contents": list(kwargs.get("contents", []))})
+        if not self.queue:
+            raise AssertionError("no scripted response left for this request")
+        item = self.queue.pop(0)
+        if isinstance(item, BaseException):
+            raise item
+        return item
+
+
+def gemini_rate_limit() -> Any:
+    from google.genai import errors
+
+    return errors.ClientError(429, {"error": {"message": "quota exceeded"}})
+
+
+def gemini_server_error() -> Any:
+    from google.genai import errors
+
+    return errors.ServerError(503, {"error": {"message": "overloaded"}})
+
+
+def gm_enrich_script(save_place_input: dict[str, Any]) -> list[Any]:
+    """A worker that hands back with save_place, then stops. Its search happens server side."""
+    return [
+        gm_response([gm_tool_call("c1", "save_place", save_place_input)]),
+        gm_response([gm_text("Saved.")]),
+    ]

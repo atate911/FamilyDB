@@ -12,13 +12,14 @@ from pydantic import AliasChoices, Field, PrivateAttr, field_validator, model_va
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Effort = Literal["low", "medium", "high", "xhigh", "max"]
-ProviderName = Literal["anthropic", "openai"]
+ProviderName = Literal["anthropic", "openai", "gemini"]
 CacheTTL = Literal["5m", "1h"]
 Weekday = Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 
 SECRET_FIELDS = frozenset(
     {
         "anthropic_api_key",
+        "gemini_api_key",
         "openai_api_key",
         "telegram_bot_token",
         "web_password",
@@ -53,13 +54,20 @@ class Settings(BaseSettings):
     worker_provider: ProviderName | Literal[""] = ""
     provider_fallback: bool = True
 
+    gemini_api_key: str | None = None
+    gemini_model: str = "gemini-2.5-pro"
+    gemini_worker_model: str = "gemini-2.5-flash"
+
     openai_api_key: str | None = None
     openai_model: str = "gpt-5"
     openai_worker_model: str = "gpt-5-mini"
 
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-opus-5"
-    anthropic_effort: Effort = "medium"
+    # Applies to whoever answers, so it is not named for one of them. ANTHROPIC_EFFORT still works.
+    effort: Effort = Field(
+        default="medium", validation_alias=AliasChoices("EFFORT", "ANTHROPIC_EFFORT")
+    )
     # Named for no vendor, because it caps the answer on either. The old ANTHROPIC_MAX_TOKENS
     # still works for anyone who already has it in a .env.
     max_output_tokens: int = Field(
