@@ -203,3 +203,25 @@ def test_it_says_when_there_is_no_key(settings) -> None:
 
     assert not OpenAIProvider(settings).configured()  # the base fixture has no OpenAI key
     assert OpenAIProvider(_settings(settings)).configured()
+
+
+def test_a_search_with_nothing_said_yet_resumes(settings, registry, ctx) -> None:
+    api = fakes.FakeResponsesAPI(
+        fakes.oa_response([fakes.oa_web_call("ws_1")]),  # went looking, said nothing
+        fakes.oa_response([fakes.oa_text("Found it.")]),
+    )
+    result = _run(api, settings, registry, ctx)
+    assert result.status == "ok" and result.text == "Found it." and result.iterations == 2
+    # The second request carries the first response's output back, so it can carry on.
+    assert api.requests[1]["input"][-1]["type"] == "web_search_call"
+
+
+def test_the_turn_cap_leaves_room_for_the_hand_back(settings) -> None:
+    tools = [
+        ToolDef(name="save_place", description="save", schema={"type": "object", "properties": {}}),
+        ToolDef(name="skip_place", description="skip", schema={"type": "object", "properties": {}}),
+    ]
+    request = TurnRequest(system=[], messages=[], tools=tools, web=WebAccess(max_uses=3))
+    # Three searches plus one call for each declared tool, so a worker that used every search
+    # can still report what it found.
+    assert _provider(settings).payload(request)["max_tool_calls"] == 5

@@ -185,8 +185,10 @@ class OpenAIProvider:
         if key:
             payload["prompt_cache_key"] = key
         if request.web is not None and request.web.max_uses is not None:
-            # No per-tool cap here, so the whole turn is capped instead.
-            payload["max_tool_calls"] = request.web.max_uses
+            # There is no per-tool cap here, only a cap on the whole turn, and that cap counts
+            # the hand-back call too. Leaving room for each declared tool once means a worker
+            # that has used all its searches can still report what it found.
+            payload["max_tool_calls"] = request.web.max_uses + len(request.tools)
         return payload
 
     def _stop(self, response: Any, calls: list[ToolCall]) -> tuple[Stop, str | None]:
@@ -198,10 +200,17 @@ class OpenAIProvider:
             return "max_tokens", reason
         if calls:
             return "tool_use", None
-        for item in getattr(response, "output", []) or []:
+        output = list(getattr(response, "output", []) or [])
+        for item in output:
             for part in getattr(item, "content", None) or []:
                 if getattr(part, "type", None) == "refusal":
                     return "refusal", getattr(part, "refusal", None)
+        searched = any(getattr(i, "type", "").endswith("_call") for i in output)
+        spoke = any(getattr(i, "type", None) == "message" for i in output)
+        if searched and not spoke:
+            # It went looking and has not said anything yet. Sending the transcript back lets it
+            # carry on, the same way a paused turn resumes on the other provider.
+            return "paused", None
         return "end", None
 
     def reply(self, response: Any) -> ModelReply:

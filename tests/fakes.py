@@ -285,8 +285,13 @@ def oa_tool_call(call_id: str, name: str, arguments: dict[str, Any]) -> dict[str
     }
 
 
-def oa_web_call(call_id: str = "ws_1") -> dict[str, Any]:
-    return {"type": "web_search_call", "id": call_id, "status": "completed"}
+def oa_web_call(call_id: str = "ws_1", query: str = "hopscotch portland") -> dict[str, Any]:
+    return {
+        "type": "web_search_call",
+        "id": call_id,
+        "status": "completed",
+        "action": {"type": "search", "query": query},
+    }
 
 
 def oa_response(
@@ -350,3 +355,21 @@ def openai_server_error() -> Any:
     import openai
 
     return openai.InternalServerError("boom", response=_response(503), body=None)
+
+
+def oa_enrich_script(save_place_input: dict[str, Any]) -> list[Any]:
+    """A worker that searches, then hands back with save_place, then stops."""
+    return [
+        oa_response([oa_web_call("ws_1")]),
+        oa_response([oa_tool_call("call_save", "save_place", save_place_input)]),
+        oa_response([oa_text("Saved.")]),
+    ]
+
+
+def oa_discover_script(finds: list[dict[str, Any]]) -> list[Any]:
+    """A worker that searches, then hands back with report_finds, then stops."""
+    return [
+        oa_response([oa_web_call("ws_2")]),
+        oa_response([oa_tool_call("call_finds", "report_finds", {"finds": finds})]),
+        oa_response([oa_text("Reported.")]),
+    ]

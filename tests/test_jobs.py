@@ -3,7 +3,7 @@ from familydb.channels.console import one_shot
 from familydb.jobs.retry_failed import run_retries
 from familydb.jobs.scheduler import build_scheduler
 from familydb.pipeline import retry_message
-from familydb.store import ideas, messages
+from familydb.store import calls, ideas, messages
 from tests import fakes
 
 
@@ -557,3 +557,60 @@ def test_no_job_calls_the_model_when_there_is_nothing_to_do(settings, clock, con
     off = App(settings, clock)
     assert run_enrichment(off, api=api)["done"] == 0
     assert api.requests == []
+
+
+def _openai_app(settings, clock, **extra):
+    configured = settings.model_copy(
+        update={
+            "web_tools_enabled": True,
+            "home_lat": 45.63,
+            "home_lon": -122.67,
+            "provider": "openai",
+            "openai_api_key": "sk-test",
+            **extra,
+        }
+    )
+    return App(configured, clock, geocoder=fakes.FakeGeocoder(default=POINT))
+
+
+def test_lookups_work_on_openai_too(settings, clock, conn, family) -> None:
+    app = _openai_app(settings, clock)
+    idea, _ = _captured_idea(conn, family)
+    api = fakes.FakeResponsesAPI(
+        *fakes.oa_enrich_script(
+            {
+                "idea_id": idea.id,
+                "name": "Hopscotch Portland",
+                "summary": "Immersive art experience.",
+                "hours": [{"day": "sat", "open": "10:00", "close": "20:00"}],
+                "booking_url": "https://example.com/tickets",
+            }
+        )
+    )
+    counts = run_enrichment(app, api=api)
+    assert counts == {"done": 1, "skipped": 0, "failed": 0, "deferred": 0}
+    stored = ideas.get(conn, idea.id)
+    assert stored.enrichment == "done" and stored.place_id is not None
+    assert places.get(conn, stored.place_id).booking_url == "https://example.com/tickets"
+    # It was asked with the worker model, the hosted search and the two hand-back tools.
+    request = api.requests[0]
+    assert request["model"] == "gpt-5-mini"
+    assert sorted(t.get("name", t["type"]) for t in request["tools"]) == [
+        "save_place",
+        "skip_place",
+        "web_search",
+    ]
+    assert request["instructions"].startswith("You are the lookup worker")
+    assert "Home area" in request["instructions"]  # both system blocks, joined into one string
+    assert calls.recent_llm_calls(conn)[0]["served_model"] == "gpt-5"
+
+
+def test_a_mixed_setup_sends_each_surface_to_its_own_provider(settings, clock, conn, family):
+    """Chat on Claude for the writing, the mechanical lookups on OpenAI."""
+    app = _openai_app(settings, clock, provider="anthropic", worker_provider="openai")
+    idea, _ = _captured_idea(conn, family)
+    api = fakes.FakeResponsesAPI(*fakes.oa_enrich_script({"idea_id": idea.id, "name": "Hopscotch"}))
+    assert run_enrichment(app, api=api)["done"] == 1
+    assert api.requests[0]["model"] == "gpt-5-mini"
+    assert app.provider("chat").name == "anthropic"
+    assert app.provider("worker").name == "openai"
