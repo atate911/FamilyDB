@@ -102,6 +102,7 @@ Sam and Alex are placeholder family members. Dates assume today is Sunday 20 Sep
 
 - **Channel adapter.** Receives messages and sends replies. Telegram, via long polling, so the home server needs no open ports. The interface is small: a message-in callback and a send-text call. Other channels can be added later without touching the rest.
 - **Message pipeline.** Allowlist check, persist the raw message, build context, run the agent, send the reply, persist what happened. Section 5.
+- **Providers.** Claude and OpenAI both answer, chosen per surface, so chat can run on one and the mechanical lookups on the other. The loop is written against a small protocol: it builds a request in terms no vendor owns and reads back a normalised reply, and each provider module translates. A message the chosen provider cannot take, because it is rate limited, unreachable or has no key, is asked of the other one, but only before any tool has run, so nothing is done twice.
 - **Agent.** One call into the Anthropic SDK tool runner with the system prompt, family context, the recent conversation for that chat, and the tools in section 6. The model decides whether a message is an idea, a plan, a query, feedback, a correction or chit-chat. There is no separate classifier.
 - **Tools.** Plain functions with JSON-schema inputs. Each is unit-tested and runnable from a CLI without the model, which is also how a web UI or another front end could reuse them later.
 - **Web search and fetch.** Anthropic's server-side tools, declared on the request. Claude searches and reads pages on Anthropic's side, so we host no scraper and hold no search API key. They are declared only in *worker turns*: small separate model calls with their own prompt, a tool subset and an iteration budget, used by the enrichment job and by the discovery stage. The chat agent's request never carries them, which keeps its cached prefix stable and its cost predictable.
@@ -347,6 +348,8 @@ Decided so far: Telegram as the chat channel and Python as the language. The res
 | Enrichment notes in chat | **Decided: on by default** | A one-line "Filled in #57" after lookup, in the chat the idea came from. `ENRICHMENT_NOTES=false` turns it off. |
 | Web page stack | **Decided: Flask, waitress, server-rendered** | No JavaScript and no build step, so a phone browser just works. Jinja2 escapes by default, which matters when titles come from chat and summaries from fetched pages. Waitress rather than Flask's development server. |
 | Web page access | **Decided: one shared family password** | Individual accounts would mean a user table, password resets and sessions per person for four people who already trust each other. The page is read-only, so the blast radius is reading. Revoking means changing one line in `.env`. |
+| Model vendor | **Decided: both, chosen per surface** | The work splits cleanly: writing a reply the family reads, and extracting hours from a page. Those do not need the same model, or the same vendor. A provider protocol costs one module per vendor and keeps the loop free of any SDK. |
+| Falling back | **Decided: first call only** | Handing a half-finished turn to another provider would repeat whatever its tools already did. Before the first tool call there is nothing to repeat, and that is where rate limits and outages land anyway. |
 | Web access | **Decided: worker turns only** | The chat agent never declares the web tools; enrichment and discovery run as separate bounded calls that hand results back through strict tools. Keeps the chat prefix cacheable and the cost per message predictable. |
 
 ## 17. Repo layout
@@ -363,8 +366,9 @@ src/familydb/
   clock.py, dates.py     time abstraction and date parsing in the family timezone
   availability.py        which integrations are configured
   pipeline.py            one inbound message end to end; handle_synthetic for the digest
-  agent/                 client.py, prompt.py, render.py, history.py, loop.py, worker.py,
+  agent/                 prompt.py, render.py, history.py, loop.py, worker.py,
                          prompts/{system,enrich,discover}.md
+  agent/providers/       base.py (the protocol and the types), anthropic.py, openai.py
   tools/                 registry.py, schema.py, ideas.py, outcomes.py, now.py, web.py,
                          gcal.py, weather.py, places.py, suggest.py
   suggest/               types.py, engine.py, context.py, shortlist.py, evaluate.py, discover.py,

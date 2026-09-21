@@ -310,15 +310,22 @@ def debug_cost(
     system_tokens = sum(len(block.text) for block in blocks) // 4
     tool_tokens = len(_json.dumps([t.schema for t in tools], ensure_ascii=False)) // 4
     tool_tokens += sum(len(t.name) + len(t.description) for t in tools) // 4
-    worker = settings.worker_model or settings.anthropic_model
+    chat_provider = application.provider("chat")
+    worker_provider = application.provider("worker")
     typer.echo("Sent with every chat message, and cached between them:")
     typer.echo(f"  system prompt and family context  ~{system_tokens:>6,d} tokens")
     typer.echo(f"  {len(tools)} tool definitions               ~{tool_tokens:>6,d} tokens")
     typer.echo(f"  {'in total':<33}~{system_tokens + tool_tokens:>6,d} tokens")
+    typer.echo(f"  chat runs on {chat_provider.model_for('chat')} via {chat_provider.name}")
     typer.echo(
-        f"  cached for {settings.anthropic_cache_ttl}; chat runs on {settings.anthropic_model}"
+        f"  lookups and discovery run on {worker_provider.model_for('worker')} "
+        f"via {worker_provider.name}"
     )
-    typer.echo(f"  lookups and discovery run on {worker}")
+    if chat_provider.name == "anthropic":
+        typer.echo(f"  the prefix above is cached for {settings.anthropic_cache_ttl}")
+    spare = application.fallback("chat", chat_provider.name)
+    if spare is not None:
+        typer.echo(f"  {spare.name} answers when {chat_provider.name} cannot")
     if not rows:
         typer.echo(f"\nNo model calls in the last {days} days.")
         return

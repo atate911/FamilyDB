@@ -50,7 +50,8 @@ Options
   -h, --help           This text.
 
 Answers can be supplied as environment variables, which is what --non-interactive reads:
-  ANTHROPIC_API_KEY  FAMILYDB_TZ  HOME_AREA  HOME_LAT  HOME_LON  WEATHER_UNITS
+  PROVIDER  ANTHROPIC_API_KEY  OPENAI_API_KEY
+  FAMILYDB_TZ  HOME_AREA  HOME_LAT  HOME_LON  WEATHER_UNITS
   TELEGRAM_BOT_TOKEN  WEB_ENABLED  WEB_HOST  WEB_PORT  WEB_PASSWORD  WEB_TOOLS_ENABLED
   ADMIN_NAME
 
@@ -209,7 +210,9 @@ if [ ! -t 0 ] && [ "$NON_INTERACTIVE" = 0 ] && [ "$ASSUME_YES" = 0 ]; then
   note "Not running from a terminal, so every question takes its default or the environment."
 fi
 
-if [ "$MODE" = docker ]; then
+if [ "$SKIP_INSTALL" = 1 ]; then
+  note "Writing configuration only, so the ${MODE} tooling is not checked."
+elif [ "$MODE" = docker ]; then
   have docker || die "docker not found. Install Docker, or re-run with --mode venv."
   docker compose version >/dev/null 2>&1 || die "the docker compose plugin is missing. Install it, or use --mode venv."
   if ! docker info >/dev/null 2>&1; then
@@ -264,22 +267,51 @@ fi
 if [ "$KEEP_ENV" = 0 ]; then
   [ "$DRY_RUN" = 1 ] || { cp "$EXAMPLE_FILE" "$ENV_FILE"; chmod 600 "$ENV_FILE"; }
 
-  # --- the one thing it cannot work without ---
+  # --- who answers ---
+  say ""
+  say "Which model answers: Claude, or OpenAI. You can give both and it will use the other one"
+  say "when the first is rate limited or down."
+  ask PROVIDER "claude or openai" "${PROVIDER:-claude}"
+  case "$PROVIDER" in
+    openai|OpenAI|OPENAI|gpt|GPT) PROVIDER=openai ;;
+    *) PROVIDER=anthropic ;;
+  esac
+  set_env PROVIDER "$PROVIDER"
+
   if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
     say ""
-    say "An Anthropic API key. Create one at https://console.anthropic.com/settings/keys"
+    say "An Anthropic key, for Claude. Create one at https://console.anthropic.com/settings/keys"
+    [ "$PROVIDER" = openai ] && note "Optional here, since you chose OpenAI; it becomes the spare."
     note "Leave it blank to fill in later; everything else will still be set up."
-    ask_secret ANTHROPIC_API_KEY "API key"
+    ask_secret ANTHROPIC_API_KEY "Anthropic key"
   fi
-  if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
-    case "$ANTHROPIC_API_KEY" in
-      sk-ant-*) ok "API key stored." ;;
-      *) warn "that does not look like an Anthropic key (they start sk-ant-). Storing it anyway." ;;
-    esac
-  else
-    warn "No API key. The bot will save messages but cannot reply until you add one to .env."
-  fi
+  case "${ANTHROPIC_API_KEY:-}" in
+    "") ;;
+    sk-ant-*) ok "Anthropic key stored." ;;
+    *) warn "that does not look like an Anthropic key (they start sk-ant-). Storing it anyway." ;;
+  esac
   set_env ANTHROPIC_API_KEY "${ANTHROPIC_API_KEY:-}"
+
+  if [ -z "${OPENAI_API_KEY:-}" ]; then
+    say ""
+    say "An OpenAI key. Create one at https://platform.openai.com/api-keys"
+    [ "$PROVIDER" = anthropic ] && note "Optional here, since you chose Claude; it becomes the spare."
+    ask_secret OPENAI_API_KEY "OpenAI key"
+  fi
+  case "${OPENAI_API_KEY:-}" in
+    "") ;;
+    sk-*) ok "OpenAI key stored." ;;
+    *) warn "that does not look like an OpenAI key (they start sk-). Storing it anyway." ;;
+  esac
+  set_env OPENAI_API_KEY "${OPENAI_API_KEY:-}"
+
+  if [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -z "${OPENAI_API_KEY:-}" ]; then
+    warn "No key at all. The bot will save messages but cannot reply until you add one to .env."
+  elif [ "$PROVIDER" = openai ] && [ -z "${OPENAI_API_KEY:-}" ]; then
+    warn "You chose OpenAI but gave no OpenAI key; it will fall back to Claude until you add one."
+  elif [ "$PROVIDER" = anthropic ] && [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+    warn "You chose Claude but gave no Anthropic key; it will fall back to OpenAI until you add one."
+  fi
 
   # --- where the family is ---
   detected_tz="$(detect_timezone)"
@@ -485,7 +517,7 @@ else
     rm -f /tmp/familydb-tools.$$
     ok "${ready} tools ready${waiting:+, ${waiting} waiting on a service you have not set up yet}."
   fi
-  if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+  if [ -n "${ANTHROPIC_API_KEY:-}" ] && [ "${PROVIDER:-anthropic}" = anthropic ]; then
     if runfamilydb debug validate-tools >/dev/null 2>&1; then
       ok "The API accepted the key and every tool definition."
     else
@@ -512,7 +544,9 @@ say "Watch it:   ${LOGS}"
 say "Talk to it: ${CLI} repl"
 say ""
 say "Still to do, when you are ready:"
-[ -z "${ANTHROPIC_API_KEY:-}" ] && say "  · put ANTHROPIC_API_KEY in .env, or it cannot reply"
+if [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -z "${OPENAI_API_KEY:-}" ]; then
+  say "  · put ANTHROPIC_API_KEY or OPENAI_API_KEY in .env, or it cannot reply"
+fi
 [ -z "${TELEGRAM_BOT_TOKEN:-}" ] && say "  · add a Telegram bot token to chat from your phones (RUNBOOK section 4)"
 [ -z "${HOME_LAT:-}" ] && say "  · add HOME_LAT and HOME_LON for the weather (RUNBOOK section 6)"
 say "  · connect Google Calendar from a machine with a browser (RUNBOOK section 5)"

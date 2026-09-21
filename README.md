@@ -2,7 +2,7 @@
 
 A private family assistant that lives in our chat app. It remembers the things we say we'd like to do, puts confirmed plans on the shared Google Calendar, and suggests what to do this weekend based on the calendar, the weather and the ideas we've collected.
 
-**Status:** usable by the family. Capture, the Telegram channel, Google Calendar (plans created, moved and cancelled from chat, free time read live), the weather forecast and automatic retries are in, and so are the checked suggestions: a background lookup fills in each idea's place details (address, hours, booking, travel time), a staged engine checks every idea against the free time, the forecast and those details, web discovery finds what is on that weekend, a Thursday digest posts the weekend's options to the family chat, and the bot asks how a plan went the day after. There is also a read-only web page for browsing the ideas list, the restaurants and the plans, with a shared family password. Next: richer data (Google Places, real routing, link previews). The design and roadmap are in [docs/DESIGN.md](docs/DESIGN.md); home-server setup is in [RUNBOOK.md](RUNBOOK.md).
+**Status:** usable by the family. Capture, the Telegram channel, Google Calendar (plans created, moved and cancelled from chat, free time read live), the weather forecast and automatic retries are in, and so are the checked suggestions: a background lookup fills in each idea's place details (address, hours, booking, travel time), a staged engine checks every idea against the free time, the forecast and those details, web discovery finds what is on that weekend, a Thursday digest posts the weekend's options to the family chat, and the bot asks how a plan went the day after. It runs on Claude or on OpenAI, per surface, with the other one as a spare when the first is busy. There is also a read-only web page for browsing the ideas list, the restaurants and the plans, with a shared family password. Next: richer data (Google Places, real routing, link previews). The design and roadmap are in [docs/DESIGN.md](docs/DESIGN.md); home-server setup is in [RUNBOOK.md](RUNBOOK.md).
 
 ## How it works
 
@@ -47,7 +47,7 @@ uv run familydb db status         # row counts and the last model calls, with ca
 | `familydb repl [--as NAME]` | Interactive chat (`/as NAME`, `/ideas`, `/quit`) |
 | `familydb debug prompt TEXT` | The exact API request that would be sent, without sending it |
 | `familydb debug cost [--days N]` | What each message pays for before anyone types, and what the last month actually used |
-| `familydb debug validate-tools` | Have the API validate the tool schemas (needs a key) |
+| `familydb debug validate-tools` | Have the API validate the tool schemas (needs an Anthropic key) |
 | `familydb google auth --client-secrets FILE` / `calendars` / `events` | One-time Google sign-in; find the calendar id; connection test |
 | `familydb enrich [--idea N] [--limit N]` | Look pending ideas up on the web now; `--idea` redoes one (needs `WEB_TOOLS_ENABLED=true`) |
 | `familydb suggest [--window this-weekend\|next-weekend\|someday\|START..END] [--discover] [--json]` | Run the suggestion engine and print its verdicts; `--discover` also searches the web |
@@ -65,6 +65,7 @@ src/familydb/
   config.py       settings (.env)     app.py          wiring: settings, clock, db, client
   clock.py        time abstraction    dates.py        parsing in the family timezone
   agent/          prompt builder, history, the tool loop, worker turns, prompts/{system,enrich,discover}.md
+  agent/providers/ one module per model vendor behind a small protocol
   tools/          registry, strict schemas, one module per tool group (ideas, outcomes, calendar,
                   weather, places, suggest, now)
   suggest/        the suggestion engine: context, shortlist, evaluate, discover, compose, log

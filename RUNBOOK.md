@@ -215,7 +215,53 @@ out at random. The port must stay above 1024, because the bot runs unprivileged 
 systemd. The page opens its own database connection per request, which is safe alongside the bot
 writing: SQLite is in WAL mode.
 
-## 11. Troubleshooting
+## 11. Choosing Claude or OpenAI
+
+Either can answer, and the choice is made per surface, so the two halves of the work can go to
+different places:
+
+```
+PROVIDER=anthropic         # or openai: who writes the replies the family reads
+WORKER_PROVIDER=           # empty means the same; set it to send lookups elsewhere
+PROVIDER_FALLBACK=true     # ask the other one when the first cannot take a message
+```
+
+Give whichever keys you have. `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` sit side by side; the one
+you did not choose becomes the spare. Each has its own pair of models, a larger one for chat and
+a smaller one for the mechanical lookups:
+
+```
+ANTHROPIC_MODEL=claude-opus-5
+WORKER_MODEL=claude-haiku-4-5-20251001
+OPENAI_MODEL=gpt-5
+OPENAI_WORKER_MODEL=gpt-5-mini
+```
+
+Check those names against your own account before relying on them; model names change and these
+are only defaults. `familydb debug cost` prints who is answering each surface and on which model,
+which is the quickest way to see that a change took effect.
+
+**A worthwhile combination.** Filling in an address and opening hours from a page is extraction,
+not judgement, and it is most of the volume once lookups are on. Sending that to the cheaper
+provider while chat stays wherever writes best is a real saving:
+
+```
+PROVIDER=anthropic
+WORKER_PROVIDER=openai
+```
+
+**What the fallback does and does not do.** A message the chosen provider cannot take, because it
+is rate limited, unreachable or has no key, is asked of the other one. Only before any tool has
+run: once the bot has saved an idea or put something on the calendar, starting again elsewhere
+would do it twice, so a turn that fails after that stays failed and the retry job picks it up as
+usual. A malformed request is not handed over either, since it would fail the same way twice.
+Turn it off with `PROVIDER_FALLBACK=false`.
+
+**What differs between them.** Claude's prompt cache is marked explicitly and lasts
+`ANTHROPIC_CACHE_TTL`; OpenAI caches long prefixes on its own, so that setting does nothing there.
+Lookups and discovery work on both. Conversations sent to OpenAI are sent with storage off.
+
+## 12. Troubleshooting
 
 - **`cache_read` stays 0 in `db status`.** Something volatile is in the cached prefix. `familydb debug prompt "hi"` prints the request: the two `system` blocks and the `tools` list must be byte-identical between two runs. Also, the cache expires after five minutes of quiet; set `ANTHROPIC_CACHE_TTL=1h` if usage is bursty.
 - **`database is locked`.** Two processes writing at once. Run one bot process; the CLI can be used alongside it (short transactions, busy timeout), but not a second `familydb run`.
@@ -224,6 +270,8 @@ writing: SQLite is in WAL mode.
 - **"no family members yet".** Add an admin with `familydb members add NAME --role admin`.
 - **"Sorry, I only talk to the family."** The sender is not in `members` for that channel; the reply includes the id to add.
 - **A refusal.** Rare. `llm_calls.stop_reason` is `refusal`; server-side fallbacks are on by default (`ANTHROPIC_FALLBACKS`), so it means every model declined.
+- **Replies are coming from the wrong provider.** `familydb debug cost` says who answers each surface. If it is not what you set, the other one is probably standing in because the chosen one has no key; the log says so at the time.
+- **"validation failed" from `debug validate-tools`.** That check only exists on the Claude side, since OpenAI has no token-counting endpoint. On OpenAI, send one real message instead.
 - **"details: failed" on an idea.** The lookup worker could not identify the place; `ideas list --json` shows the note. Fix the title or location with "actually it's the one in Vancouver" and run `familydb enrich --idea N`.
 - **Suggestions say "web discovery off" or "hours unknown".** Web tools are off (`WEB_TOOLS_ENABLED`), or the idea has not been looked up yet; the enrichment job runs only in the long-running `familydb run` process.
 - **The digest never arrives.** `familydb digest` shows the schedule and chat; the log says why a run was skipped (no chat id, nothing to send with, no admin). The bot must be in the group and see its messages (section 4, step 3).
