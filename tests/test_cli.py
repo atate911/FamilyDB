@@ -198,6 +198,26 @@ def test_web_command_reports_a_port_it_cannot_have(env: Path, monkeypatch) -> No
     assert result.exit_code == 1 and "could not serve the page" in result.output
 
 
+def test_config_says_where_each_setting_came_from(env: Path) -> None:
+    from contextlib import closing
+
+    from familydb.app import build_app
+    from familydb.store import settings as settings_store
+
+    assert runner.invoke(app, ["db", "migrate"]).exit_code == 0
+    application = build_app()
+    with closing(application.connect()) as conn, db.transaction(conn):
+        settings_store.set_many(conn, {"effort": "high", "gemini_api_key": "gm-hunter2"})
+    result = runner.invoke(app, ["config"])
+    assert result.exit_code == 0, result.output
+    lines = dict(line.split("=", 1) for line in result.output.splitlines())
+    assert lines["effort"] == "high  # set on the settings page"
+    assert lines["gemini_api_key"] == "****  # set on the settings page"
+    assert lines["anthropic_api_key"] == "****  # from the environment"  # the fixture sets it
+    assert lines["provider"] == "anthropic"  # nobody set it, so it is just the default
+    assert "gm-hunter2" not in result.output
+
+
 def test_debug_cost_reports_the_prefix_and_what_was_spent(env: Path) -> None:
     runner.invoke(app, ["members", "add", "Sam", "--role", "admin"])
     result = runner.invoke(app, ["debug", "cost"])

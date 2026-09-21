@@ -197,3 +197,15 @@ class Settings(BaseSettings):
 def load_settings(env_file: str | Path | None = ".env", **overrides: Any) -> Settings:
     """Build settings from the environment, an optional .env file, and explicit overrides."""
     return Settings(_env_file=env_file, **overrides)
+
+
+def apply_overrides(base: Settings, values: dict[str, Any]) -> Settings:
+    """`base` with these values on top, validated as if they had been in the environment.
+
+    Raises pydantic's ValidationError when a value will not do, which is what the page shows.
+    """
+    if not values:
+        return base
+    merged = {**base.model_dump(), **values}
+    merged.pop("tz", None)  # a property, not a field
+    return Settings(_env_file=None, **merged)

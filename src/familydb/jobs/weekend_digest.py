@@ -29,6 +29,7 @@ def digest_channel(chat_id: str) -> str:
 
 def run_digest(app: App, *, api: MessagesAPI | None = None) -> OutgoingMessage | None:
     """Ask and deliver the digest. Returns None when nothing was sent (and logs why)."""
+    app.refresh()
     settings = app.settings
     if not digest_configured(settings):
         log.info("digest skipped: DIGEST_CHAT_ID is not set")

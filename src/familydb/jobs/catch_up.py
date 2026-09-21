@@ -33,6 +33,7 @@ def digest_due(app: App) -> bool:
 
 def run_catch_up(app: App, *, api: MessagesAPI | None = None) -> dict[str, Any]:
     """Run the follow-ups, and the digest when it was due earlier today."""
+    app.refresh()
     result: dict[str, Any] = {"follow_ups": run_follow_ups(app), "digest": "not due"}
     if digest_due(app):
         reply = run_digest(app, api=api)

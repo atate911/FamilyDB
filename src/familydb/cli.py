@@ -29,11 +29,12 @@ from familydb.availability import (
     web_tools_available,
 )
 from familydb.channels.console import DEFAULT_CHAT, one_shot, run_repl
-from familydb.config import load_settings
+from familydb.config import Settings, apply_overrides, load_settings
 from familydb.dates import utc_iso
 from familydb.errors import FamilyDBError
 from familydb.integrations import google_calendar
 from familydb.store import calls, db, ideas, members, messages
+from familydb.store import settings as settings_store
 from familydb.store.members import Member
 from familydb.tools import ToolContext
 
@@ -85,12 +86,41 @@ def _ready(application: App) -> sqlite3.Connection:
     return application.connect()
 
 
+FROM_PAGE = "set on the settings page"
+FROM_ENV = "from the environment"
+
+
+def stored_settings(settings: Settings) -> dict[str, Any]:
+    """The overrides saved in the database, or nothing when there is no database yet."""
+    try:
+        with closing(db.connect(settings.familydb_path)) as conn:
+            return settings_store.overrides(conn)
+    except sqlite3.Error:
+        return {}
+
+
 @app.command()
 def config() -> None:
-    """Print the resolved settings with secrets masked."""
-    settings = load_settings()
+    """Print the resolved settings, secrets masked, and say where each one came from."""
+    base = load_settings()
+    stored = stored_settings(base)
+    try:
+        settings = apply_overrides(base, stored)
+    except Exception as exc:  # a stored value that no longer validates must not hide the rest
+        typer.echo(f"stored settings are not usable, showing the environment's: {exc}", err=True)
+        settings, stored = base, {}
+    defaults = {
+        name: field.get_default(call_default_factory=True)
+        for name, field in Settings.model_fields.items()
+    }
     for key, value in settings.masked().items():
-        typer.echo(f"{key}={value}")
+        if key in stored:
+            note = f"  # {FROM_PAGE}"
+        elif key in defaults and getattr(base, key) != defaults[key]:
+            note = f"  # {FROM_ENV}"
+        else:
+            note = ""
+        typer.echo(f"{key}={value}{note}")
 
 
 @db_app.command("migrate")

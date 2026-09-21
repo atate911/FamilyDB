@@ -30,10 +30,11 @@ def render_follow_up(plan: Plan) -> str:
 
 def run_follow_ups(app: App) -> int:
     """Ask about each plan that ended before today and was not asked about; returns how many."""
-    today = app.clock.today()
-    since = today - timedelta(days=FOLLOW_UP_DAYS)
     asked = 0
     with closing(app.connect()) as conn:
+        app.refresh(conn)
+        today = app.clock.today()
+        since = today - timedelta(days=FOLLOW_UP_DAYS)
         due = plans.due_for_follow_up(conn, today=today.isoformat(), since=since.isoformat())
         for plan in due:
             now = utc_iso(app.clock.now())

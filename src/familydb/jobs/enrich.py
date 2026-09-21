@@ -172,10 +172,11 @@ def run_enrichment(
 ) -> dict[str, int]:
     """Look up pending ideas (or one given idea). Returns counts per outcome."""
     counts = dict.fromkeys(OUTCOMES, 0)
-    if not enrichment_available(app.settings):
-        log.debug("enrichment skipped: web tools are off")
-        return counts
     with closing(app.connect()) as conn:
+        app.refresh(conn)
+        if not enrichment_available(app.settings):
+            log.debug("enrichment skipped: web tools are off")
+            return counts
         if idea_id is not None:
             idea = ideas.get(conn, idea_id)
             batch = [idea] if idea is not None else []

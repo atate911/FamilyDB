@@ -16,6 +16,7 @@ log = logging.getLogger(__name__)
 def run_retries(app: App, *, api: MessagesAPI | None = None) -> int:
     """Retry every eligible failed message once. Returns how many were processed successfully."""
     with closing(app.connect()) as conn:
+        app.refresh(conn)
         pending = messages.failed(conn, max_retries=app.settings.retry_max_attempts)
         if not pending:
             return 0

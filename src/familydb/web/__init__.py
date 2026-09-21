@@ -71,6 +71,7 @@ def security_headers(response: Any) -> Any:
 
 def create_app(app: App) -> Flask:
     """A Flask application over this App's database and settings."""
+    app.refresh()  # start from the settings in force, not only from what the environment said
     settings = app.settings
     check_configuration(settings)
     web = Flask(__name__)
@@ -88,10 +89,13 @@ def create_app(app: App) -> Flask:
     if settings.web_trust_proxy:
         web.wsgi_app = ProxyFix(web.wsgi_app, x_for=1, x_proto=1, x_host=1)  # type: ignore[method-assign]
 
-    web.jinja_env.globals["site_title"] = settings.web_title
-    web.jinja_env.globals["password_in_use"] = lambda: auth.password_in_use(settings)
+    # Read through `app` rather than closing over `settings`: a change made on the settings page
+    # replaces the whole object, and these must follow it.
+    web.jinja_env.globals["password_in_use"] = lambda: auth.password_in_use(app.settings)
+    web.context_processor(lambda: {"site_title": app.settings.web_title})
     web.register_blueprint(auth.bp)
     web.register_blueprint(routes.bp)
+    web.before_request(_picking_up_settings(app, web))
     web.before_request(auth.require_login)
     web.after_request(security_headers)
     web.register_error_handler(404, _not_found)
@@ -100,6 +104,20 @@ def create_app(app: App) -> Flask:
     elif web_is_public(settings) and not settings.web_trust_proxy:
         log.warning(NO_PROXY_TRUSTED, settings.web_host)
     return web
+
+
+def _picking_up_settings(app: App, web: Flask) -> Any:
+    """A before_request hook that serves each page from the settings in force.
+
+    One small query per request when nothing has changed. Flask keeps its own copy of the
+    session lifetime, so that one is handed over again when it moves.
+    """
+
+    def hook() -> None:
+        if app.refresh():
+            web.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=app.settings.web_session_days)
+
+    return hook
 
 
 def _not_found(_error: Any) -> tuple[str, int]:

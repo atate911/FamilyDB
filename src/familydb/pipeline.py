@@ -233,6 +233,7 @@ def _think(
     *,
     retry: bool = False,
 ) -> TurnResult:
+    app.refresh(conn)  # a model or a limit changed on the settings page applies from here on
     settings = app.settings
     system = build_system_blocks(conn, settings)
     history = load_history(

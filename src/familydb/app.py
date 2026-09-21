@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+import threading
 from collections.abc import Callable
 from contextlib import closing
 from pathlib import Path
@@ -31,9 +32,24 @@ class App:
         geocoder: Any = None,
     ) -> None:
         self.settings = settings
+        self._base = settings  # what the environment said, before anything stored on top
+        self._overrides_stamp: str | None = None
+        self._reload = threading.Lock()
         self._calendar = calendar
         self._weather = weather
         self._geocoder = geocoder
+        # Anything handed in (a test's fake, a command's client) is not ours to replace when the
+        # settings move; anything we built lazily from them is.
+        self._given = {
+            name
+            for name, value in (
+                ("calendar", calendar),
+                ("weather", weather),
+                ("geocoder", geocoder),
+                ("clock", clock),
+            )
+            if value is not None
+        }
         # Channels register how to deliver a text to one of their chats, keyed by channel name.
         self.senders: dict[str, Callable[[str, str], None]] = {}
         # Web discovery results per window, kept for a while (see suggest/discover.py).
@@ -85,6 +101,59 @@ class App:
         from familydb.agent import providers
 
         return providers.fallback_for(self.settings, surface, primary)
+
+    def refresh(self, conn: sqlite3.Connection | None = None) -> bool:
+        """Pick up settings changed from the page. True when something actually moved.
+
+        Cheap: one query for the newest change, and a rebuild only when that has moved on. Every
+        entry point calls this, so a change made on the page reaches the next message, the next
+        job and the next page view without a restart. Callers already holding a connection
+        should pass it rather than paying for a second one.
+        """
+        from familydb.config import apply_overrides
+        from familydb.store import settings as settings_store
+
+        if conn is None:
+            with closing(self.connect()) as own:
+                return self.refresh(own)
+        with self._reload:
+            try:
+                stamp = settings_store.stamp(conn)
+                if stamp == self._overrides_stamp:
+                    return False
+                values = settings_store.overrides(conn)
+            except sqlite3.Error as exc:
+                log.warning("could not read the stored settings: %s", exc)
+                return False
+            try:
+                fresh = apply_overrides(self._base, values)
+            except Exception as exc:
+                log.error(
+                    "stored settings are not usable, keeping the ones in the environment: %s", exc
+                )
+                self._overrides_stamp = stamp
+                return False
+            self._overrides_stamp = stamp
+            if fresh == self.settings:
+                return False  # a log line moved, the values did not
+            self.settings = fresh
+            self._forget_built()
+            log.info("settings reloaded (%d stored)", len(values))
+            return True
+
+    def _forget_built(self) -> None:
+        """Drop what was built from the settings that just changed, so it is built again.
+
+        Coordinates, units and the timezone are baked into these at construction. Anything
+        handed to the constructor stays: it belongs to whoever passed it.
+        """
+        for name in ("calendar", "weather", "geocoder"):
+            if name not in self._given:
+                setattr(self, f"_{name}", None)
+        if "clock" not in self._given and self.clock.southern != self.settings.southern_hemisphere:
+            self.clock = SystemClock(
+                self.settings.tzinfo, southern=self.settings.southern_hemisphere
+            )
 
     def connect(self) -> sqlite3.Connection:
         """A fresh connection. SQLite connections are per thread; do not share them."""

@@ -65,9 +65,16 @@ def overrides(conn: sqlite3.Connection) -> dict[str, Any]:
 
 
 def stamp(conn: sqlite3.Connection) -> str:
-    """The latest change, or an empty string. Cheap enough to check before reloading."""
-    row = conn.execute("SELECT max(updated_at) AS latest FROM app_settings").fetchone()
-    return (row["latest"] if row else None) or ""
+    """A marker that moves whenever a setting does. Cheap enough to check before every read.
+
+    Two numbers, because either can stand still while the other moves: the newest line in the
+    log, which a removed override also writes, and the newest value still stored.
+    """
+    row = conn.execute(
+        "SELECT (SELECT max(id) FROM settings_log) AS change, "
+        "(SELECT max(updated_at) FROM app_settings) AS stored"
+    ).fetchone()
+    return f"{row['change'] or 0}:{row['stored'] or ''}"
 
 
 def get(conn: sqlite3.Connection, key: str) -> Any:
