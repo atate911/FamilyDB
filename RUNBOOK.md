@@ -11,10 +11,20 @@ Two supported ways to run it: Docker Compose, or a Python virtualenv managed by 
 
 ## 1. Get the code and the config
 
+**Starting from a bare server, use [docs/INSTALL.md](docs/INSTALL.md) instead of this section.**
+It covers preparing the machine, getting the code onto it (the repository is private, so that is
+a step of its own), and the one command that does the rest:
+
+```bash
+sudo bash scripts/bootstrap.sh
+```
+
+This section is the configuration half, for a machine that already has the code and a runtime:
+
 ```bash
 sudo mkdir -p /opt/familydb && sudo chown "$USER" /opt/familydb
 git clone <this repo> /opt/familydb && cd /opt/familydb
-scripts/install.sh
+sudo scripts/install.sh
 ```
 
 The installer asks a handful of questions, writes `.env`, installs the dependencies, creates the
@@ -90,6 +100,10 @@ The unit sets `FAMILYDB_PATH` and `GOOGLE_TOKEN_PATH` under `/opt/familydb/data`
 Without uv: `python3 -m venv .venv && .venv/bin/pip install .` gives the same `.venv/bin/familydb`.
 
 ## 3. First run checklist
+
+`familydb doctor` does all of this in one command and says what to do about anything that is
+wrong; `--online` also checks the keys against the APIs, and `--fix` puts right the few things
+that can be put right without a decision. What it looks at, and what each one means:
 
 1. `familydb config` shows the settings you expect (the key is masked).
 2. `familydb db migrate` reports the schema version.
@@ -352,6 +366,12 @@ to count tokens without generating anything; OpenAI has no such endpoint, so the
 message is the check.
 
 ## 12. Looking after the server
+
+`scripts/maintain.sh` does most of what follows, and says what it is about to change before it
+changes it: `status` (is it running, how big is the database, when was the last backup), `check`
+(the full `familydb doctor` report), `backup`, `restore FILE`, `upgrade`, `logs`, `restart` and
+`schedule-backups`. The rest of this section is what it does, and how to do it by hand.
+
 
 Everything above gets the bot running. This is what a machine on the internet needs around it.
 

@@ -8,7 +8,7 @@ import signal
 import sqlite3
 import sys
 import threading
-from contextlib import closing
+from contextlib import closing, suppress
 from datetime import timedelta
 from pathlib import Path
 from typing import Any
@@ -457,6 +457,46 @@ def repl(
     sender = _console_member(application, as_member)
     chat_id = f"console:{uuid4().hex[:8]}" if fresh else DEFAULT_CHAT
     run_repl(application, sender, chat_id)
+
+
+@app.command()
+def doctor(
+    online: bool = typer.Option(
+        False, "--online", help="Also ask the model API and Telegram whether the keys work."
+    ),
+    fix: bool = typer.Option(
+        False, "--fix", help="Put right the few things that can be, such as file permissions."
+    ),
+    as_json: bool = typer.Option(False, "--json", help="Machine-readable, for a setup script."),
+) -> None:
+    """Check this install end to end and say what, if anything, is wrong.
+
+    Exits 1 when something must be fixed before the bot can work. Things that are merely not set
+    up yet, which is most of a first install, are warnings and do not fail.
+    """
+    from familydb import doctor as checks
+
+    application = build_app()
+    with suppress(Exception):  # a database that cannot be read is a finding, not a crash
+        application.refresh()
+    report = checks.run(application, online=online)
+    if fix:
+        checks.correct(application, report)
+        report = checks.run(application, online=online)  # say what is true after the repairs
+    if as_json:
+        typer.echo(json.dumps(report.as_dict(), indent=2, sort_keys=True))
+    else:
+        for check in report.checks:
+            mark = checks.MARKS[check.verdict]
+            typer.echo(f"{mark} {check.name}: {check.detail}")
+            if check.corrected:
+                typer.echo(f"    fixed: {check.corrected}")
+            elif check.fix and check.verdict in (checks.FAIL, checks.WARN):
+                typer.echo(f"    → {check.fix}")
+        typer.echo("")
+        typer.echo(checks.verdict(report))
+    if not report.healthy:
+        raise typer.Exit(code=1)
 
 
 @app.command()

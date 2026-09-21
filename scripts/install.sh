@@ -3,7 +3,18 @@
 # Safe to run again: it never overwrites a .env without asking, and never touches your database.
 set -euo pipefail
 
-VERSION="1.0"
+# shellcheck disable=SC2034  # read by lib/common.sh when it opens the transcript.
+SCRIPT_ARGS="$*"
+HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+if [ -r "${HERE}/lib/common.sh" ]; then
+  # shellcheck source=lib/common.sh
+  . "${HERE}/lib/common.sh"
+else
+  printf 'This script needs scripts/lib/common.sh beside it.\n' >&2
+  exit 1
+fi
+
+VERSION="1.1"
 REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 ENV_FILE="${REPO_ROOT}/.env"
 EXAMPLE_FILE="${REPO_ROOT}/.env.example"
@@ -17,26 +28,8 @@ NON_INTERACTIVE=0    # --non-interactive: never prompt; fail if something requir
 DRY_RUN=0
 SKIP_INSTALL=0       # --config-only: write .env and stop
 
-# ---------------------------------------------------------------- output ----
-if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
-  B=$'\033[1m'; DIM=$'\033[2m'; RED=$'\033[31m'; YEL=$'\033[33m'; GRN=$'\033[32m'; OFF=$'\033[0m'
-else
-  B=""; DIM=""; RED=""; YEL=""; GRN=""; OFF=""
-fi
-
-say()  { printf '%s\n' "$*"; }
-head2() { printf '\n%s%s%s\n' "$B" "$*" "$OFF"; }
-note() { printf '%s%s%s\n' "$DIM" "$*" "$OFF"; }
-ok()   { [ "$DRY_RUN" = 1 ] && return 0; printf '%s✓%s %s\n' "$GRN" "$OFF" "$*"; }
-warn() { printf '%s!%s %s\n' "$YEL" "$OFF" "$*" >&2; }
-die()  { EXPLAINED=1; printf '%s✗%s %s\n' "$RED" "$OFF" "$*" >&2; exit 1; }
-run()  { if [ "$DRY_RUN" = 1 ]; then note "would run: $*"; else "$@"; fi; }
-
-FAILED_AT=""
-EXPLAINED=0   # die() has already said why, so the trap stays quiet
-trap 'FAILED_AT="$BASH_COMMAND"' ERR
-# shellcheck disable=SC2154  # `status` is assigned at the start of this same trap.
-trap 'status=$?; if [ $status -ne 0 ] && [ "$EXPLAINED" = 0 ]; then printf "\n%s✗%s stopped at: %s\n   Nothing further was changed. Fix that and run this again.\n" "$RED" "$OFF" "${FAILED_AT:-the step above}" >&2; fi' EXIT
+# Output, logging, failure reporting, retries and confirm() all come from lib/common.sh.
+run() { if [ "$DRY_RUN" = 1 ]; then note "[dry run] $*"; else "$@"; fi; }
 
 usage() {
   cat <<'USAGE'
@@ -46,6 +39,7 @@ FamilyDB installer
 
 Options
   --mode docker|venv   How to run it. Default: docker when available, else a virtualenv.
+                       (bootstrap.sh always passes this explicitly, and chooses venv.)
   --yes                Accept every default. Still asks for the secrets it cannot guess: the
                        API keys and the Telegram token, unless they are in the environment.
   --non-interactive    Never prompt. Every answer must come from the environment (below).
@@ -75,15 +69,18 @@ while [ $# -gt 0 ]; do
     --non-interactive) NON_INTERACTIVE=1; ASSUME_YES=1; shift ;;
     --config-only) SKIP_INSTALL=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
-    -h|--help) usage; trap - EXIT; exit 0 ;;
+    -h|--help) usage; exit 0 ;;
     *) usage >&2; die "unknown option: $1" ;;
   esac
 done
 case "$MODE" in ""|docker|venv) ;; *) die "--mode must be docker or venv, not '$MODE'" ;; esac
+export ASSUME_YES DRY_RUN
+
+log_to "/var/log/familydb-install.log"
+enable_failure_reporting
+on_failure_hint "Nothing after the failed step ran, and .env and the database were not touched by it. docs/INSTALL.md has a section on each failure."
 
 # ----------------------------------------------------------------- input ----
-have() { command -v "$1" >/dev/null 2>&1; }
-
 ask() { # ask VAR "question" "default"
   local var="$1" question="$2" default="${3:-}" current reply
   current="${!var:-}"
@@ -104,14 +101,6 @@ ask_secret() { # ask_secret VAR "question"
   read -r -s -p "$question: " reply || reply=""
   printf '\n'
   printf -v "$var" '%s' "$reply"
-}
-
-confirm() { # confirm "question" yes|no
-  local question="$1" default="${2:-yes}" reply
-  if [ "$ASSUME_YES" = 1 ] || [ ! -t 0 ]; then [ "$default" = yes ]; return; fi
-  read -r -p "$question [$([ "$default" = yes ] && echo 'Y/n' || echo 'y/N')]: " reply || reply=""
-  reply="${reply:-$default}"
-  case "$reply" in [Yy]*|yes) return 0 ;; *) return 1 ;; esac
 }
 
 # --------------------------------------------------------------- helpers ----
@@ -197,8 +186,10 @@ service_can_reach_checkout() { # can the familydb user get to the files it has t
   # A home directory is closed to other users on most systems (0750), and no amount of unit
   # hardening changes that: the service would start into a path it cannot enter. /opt is the
   # documented home for exactly this reason.
-  have sudo || return 0   # no way to ask from here; assume whoever is installing knows
-  sudo -u familydb sh -c 'test -x "$1" && test -r "$1"' _ "$REPO_ROOT" 2>/dev/null
+  [ "$(id -un)" = familydb ] && return 0   # running as that user, from inside it: yes
+  have sudo || return 0                    # no way to ask from here; assume the admin knows
+  sudo -n true 2>/dev/null || return 0     # sudo would ask for a password; do not hang on it
+  sudo -n -u familydb sh -c 'test -x "$1" && test -r "$1"' _ "$REPO_ROOT" 2>/dev/null
 }
 
 random_password() {
@@ -266,6 +257,10 @@ print(hit["latitude"], hit["longitude"], ", ".join(b for b in bits if b))
 # -------------------------------------------------------------- preflight ----
 head2 "FamilyDB installer ${VERSION}"
 
+# Everything below is relative to the checkout, and so is the default FAMILYDB_PATH, so the
+# directory this was called from must not decide where the database lands.
+cd "$REPO_ROOT"
+
 [ -f "${REPO_ROOT}/pyproject.toml" ] || die "run this from a FamilyDB checkout (no pyproject.toml above scripts/)"
 grep -q 'name = "familydb"' "${REPO_ROOT}/pyproject.toml" || die "${REPO_ROOT} does not look like FamilyDB"
 [ -f "$EXAMPLE_FILE" ] || die "missing .env.example; the checkout is incomplete"
@@ -284,6 +279,32 @@ note "Installing into ${REPO_ROOT} using the ${MODE} path."
 if [ ! -t 0 ] && [ "$NON_INTERACTIVE" = 0 ] && [ "$ASSUME_YES" = 0 ]; then
   note "Not running from a terminal, so every question takes its default or the environment."
 fi
+
+if [ "$SKIP_INSTALL" = 1 ]; then
+  plan_item "Write ${ENV_FILE}, readable only by its owner" \
+    "your answers, including the API keys and the page password, are kept there"
+else
+  plan_item "Write ${ENV_FILE}, readable only by its owner" \
+    "your answers, including the API keys and the page password, are kept there"
+  if [ "$MODE" = docker ]; then
+    plan_item "Build a Docker image called familydb:local" \
+      "the bot and its dependencies, so nothing is installed into the system Python"
+  else
+    plan_item "Create a virtualenv at ${REPO_ROOT}/.venv with uv" \
+      "the dependencies are installed there at the exact versions in uv.lock, and nowhere else"
+  fi
+  plan_item "Create ${REPO_ROOT}/data and the SQLite database inside it" \
+    "everything the family tells it lives in that one file"
+  plan_item "Add the first family member to that database" \
+    "the bot only answers people it knows, so it needs at least one"
+  if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
+    plan_item "Offer to create the 'familydb' user and write /etc/systemd/system/familydb.service" \
+      "so it starts at boot and restarts if it stops; you are asked before this happens"
+  fi
+fi
+plan_untouched "the system Python, your firewall, and every other service"
+plan_untouched "any database that is already here: an existing one is migrated, never replaced"
+show_plan "What this installer changes"
 
 if [ "$SKIP_INSTALL" = 1 ]; then
   note "Writing configuration only, so the ${MODE} tooling is not checked."
@@ -491,7 +512,7 @@ fi
 if [ "$SKIP_INSTALL" = 1 ]; then
   head2 "Done"
   say "Configuration written. Nothing installed, as asked."
-  trap - EXIT
+  say "When you are ready to install for real: ${0}"
   exit 0
 fi
 
@@ -667,6 +688,7 @@ say "  · connect Google Calendar from a machine with a browser (RUNBOOK section
 say "  · set DIGEST_CHAT_ID once the family group exists (RUNBOOK section 9)"
 say ""
 say "What it costs to run: ${CLI} debug cost"
-say "Everything else:      RUNBOOK.md"
-
-trap - EXIT
+say "Check it over:        ${CLI} doctor"
+say "Look after it:        ${REPO_ROOT}/scripts/maintain.sh --help"
+say "Everything else:      RUNBOOK.md, and docs/INSTALL.md"
+[ -n "$LOG_FILE" ] && note "A transcript of this run is at ${LOG_FILE}"

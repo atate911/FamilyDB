@@ -31,8 +31,20 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - name: Shell syntax
         run: bash -n scripts/install.sh
-      - name: Shellcheck
-        run: shellcheck --severity=warning scripts/install.sh
+      - name: Shellcheck every script
+        run: shellcheck --severity=warning -x scripts/*.sh scripts/lib/*.sh
+      - name: Every script explains itself
+        run: |
+          for s in bootstrap install uninstall maintain; do
+            NO_COLOR=1 bash "scripts/$s.sh" --help > "/tmp/$s.help"
+            test -s "/tmp/$s.help"
+          done
+      - name: A bootstrap dry run changes nothing
+        run: |
+          NO_COLOR=1 bash scripts/bootstrap.sh --dry-run --yes --from "$PWD" | tee /tmp/boot.log
+          grep -q "What this will change on this machine" /tmp/boot.log
+          grep -q "It does not touch" /tmp/boot.log
+          test ! -e /opt/familydb
       - name: A dry run changes nothing
         run: |
           scripts/install.sh --dry-run --non-interactive --mode venv
@@ -76,6 +88,50 @@ jobs:
           sudo cp .env.example .env
           sudo chown familydb .env
           sudo -u familydb /opt/familydb/.venv/bin/familydb config > /dev/null
+      - name: doctor reports, and --fix puts right what it can
+        run: |
+          cd /opt/familydb
+          sudo chmod 644 .env
+          sudo -u familydb .venv/bin/familydb doctor --json > /tmp/doctor.json || true
+          python3 -c "import json;d=json.load(open('/tmp/doctor.json'));print(d['failures'],'failures')"
+          sudo .venv/bin/familydb doctor --fix > /tmp/fixed.log || true
+          test "$(stat -c %a .env)" = 600
+      - name: maintain.sh reports status and takes a backup
+        run: |
+          cd /opt/familydb
+          sudo scripts/maintain.sh status | tee /tmp/status.log
+          grep -q "Database:" /tmp/status.log
+          sudo scripts/maintain.sh backup --yes | tee /tmp/backup.log
+          grep -q "Backup:" /tmp/backup.log
+          test -n "$(find /opt/familydb/backups -name 'familydb-*.sqlite3')"
+      - name: A backup can be restored over the database
+        run: |
+          cd /opt/familydb
+          backup=$(find /opt/familydb/backups -name 'familydb-*.sqlite3' | head -1)
+          sudo scripts/maintain.sh restore "$backup" --yes
+          sudo -u familydb .venv/bin/familydb db status | grep -q "schema version"
+      - name: uninstall refuses a directory that is not an install
+        run: |
+          ! sudo scripts/uninstall.sh --target /usr 2>&1 | tee /tmp/refuse.log
+          grep -q "system directory" /tmp/refuse.log
+      - name: uninstall keeps the data, and an install picks it back up
+        run: |
+          cd /opt/familydb
+          sudo scripts/uninstall.sh --target /opt/familydb --yes | tee /tmp/uninstall.log
+          grep -q "It does not touch" /tmp/uninstall.log
+          test ! -e /opt/familydb/.venv      # the install is gone
+          test -f /opt/familydb/data/familydb.sqlite3   # the data is not
+          sudo scripts/install.sh --non-interactive --mode venv
+          sudo -u familydb .venv/bin/familydb members list | grep -q Sam
+      - name: purge removes everything, and backs it up first
+        run: |
+          cd /opt/familydb
+          sudo scripts/uninstall.sh --target /opt/familydb --purge --force \
+            --backup-to /tmp/familydb-final | tee /tmp/purge.log
+          test -n "$(find /tmp/familydb-final -name 'familydb-*.sqlite3')"
+          test ! -e /opt/familydb/.env
+          test ! -e /opt/familydb/data
+          ! id familydb 2>/dev/null
 
   docker:
     runs-on: ubuntu-latest

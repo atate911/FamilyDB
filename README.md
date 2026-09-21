@@ -16,9 +16,24 @@ One Python process does all of it. A chat adapter hands each message to a pipeli
 
 ## Quick start
 
-On a server, `scripts/install.sh` does all of this and the rest of the setup: it asks a few
-questions, writes `.env`, installs everything, creates the database and adds you as an admin.
-`--help` lists the options, including a non-interactive mode for a scripted build. By hand:
+**On a bare server, start at [docs/INSTALL.md](docs/INSTALL.md)**, which goes from a fresh VPS to
+a running bot: preparing the machine, getting the code onto it (the repository is private, so
+that is its own step), and then one command:
+
+```bash
+sudo bash scripts/bootstrap.sh
+```
+
+It says what it will change on the machine and why before it changes anything: the packages, the
+`familydb` user it creates, the directory it writes to, and the systemd unit. Then it installs,
+starts the service and checks the result. `scripts/install.sh` is the configuration half on its
+own, for a machine that is already prepared.
+
+Afterwards: `familydb doctor` says whether the install is right and what to do about anything
+that is not, `scripts/maintain.sh` does backups, restores, upgrades and logs, and
+`scripts/uninstall.sh` removes it, with or without the data.
+
+On your own machine, to try it out:
 
 ```bash
 uv sync
@@ -56,6 +71,7 @@ uv run familydb db status         # row counts and the last model calls, with ca
 | `familydb web [--host H] [--port N]` | Serve the web page in the foreground |
 | `familydb run` | The long-running service: migrates, starts the scheduler (retries, lookups, the digest, follow-ups) and the web page when it is enabled, then polls Telegram (or waits when no token is set) |
 | `familydb config` | Resolved settings with secrets masked, saying where each one came from |
+| `familydb doctor [--online] [--fix] [--json]` | Check the whole install and say what is wrong and how to fix it; `--fix` puts right what it safely can |
 
 ## Layout
 
@@ -75,7 +91,10 @@ src/familydb/
   integrations/   Google Calendar, Open-Meteo and the keyless geocoder
   jobs/           the scheduler; retries, enrichment, the weekend digest, follow-ups, catch-up
 tests/            pytest suite with a scripted fake of the Anthropic API
+scripts/          bootstrap (bare server to running bot), install, maintain, uninstall,
+                  and lib/common.sh: the shared logging, error reporting and retries
 deploy/           systemd unit; Dockerfile and docker-compose.yml at the root
+docs/             DESIGN.md, and INSTALL.md for a server from zero
 ```
 
 ## Development
