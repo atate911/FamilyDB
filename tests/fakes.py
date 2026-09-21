@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import date, datetime, time
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -248,3 +249,104 @@ def discover_script(finds: list[dict[str, Any]]) -> list[BetaMessage]:
         message([tool_use("tu_finds", "report_finds", {"finds": finds})], stop_reason="tool_use"),
         message([text("Reported.")]),
     ]
+
+
+# --- OpenAI's Responses API -----------------------------------------------------------------
+
+
+def oa_text(value: str) -> dict[str, Any]:
+    return {
+        "type": "message",
+        "id": "msg_1",
+        "role": "assistant",
+        "status": "completed",
+        "content": [{"type": "output_text", "text": value, "annotations": []}],
+    }
+
+
+def oa_refusal(reason: str = "I can't help with that.") -> dict[str, Any]:
+    return {
+        "type": "message",
+        "id": "msg_r",
+        "role": "assistant",
+        "status": "completed",
+        "content": [{"type": "refusal", "refusal": reason}],
+    }
+
+
+def oa_tool_call(call_id: str, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "type": "function_call",
+        "id": f"fc_{call_id}",
+        "call_id": call_id,
+        "name": name,
+        "arguments": json.dumps(arguments),
+        "status": "completed",
+    }
+
+
+def oa_web_call(call_id: str = "ws_1") -> dict[str, Any]:
+    return {"type": "web_search_call", "id": call_id, "status": "completed"}
+
+
+def oa_response(
+    output: list[dict[str, Any]],
+    *,
+    status: str = "completed",
+    incomplete: str | None = None,
+    model: str = "gpt-5",
+    usage: dict[str, Any] | None = None,
+) -> Any:
+    from openai.types.responses.response import Response
+
+    payload: dict[str, Any] = {
+        "id": "resp_test",
+        "created_at": 0.0,
+        "model": model,
+        "object": "response",
+        "output": output,
+        "parallel_tool_calls": True,
+        "tool_choice": "auto",
+        "tools": [],
+        "status": status,
+        "usage": usage
+        or {
+            "input_tokens": 100,
+            "input_tokens_details": {"cached_tokens": 0, "cache_write_tokens": 0},
+            "output_tokens": 10,
+            "output_tokens_details": {"reasoning_tokens": 0},
+            "total_tokens": 110,
+        },
+    }
+    if incomplete:
+        payload["incomplete_details"] = {"reason": incomplete}
+    return Response.model_validate(payload)
+
+
+class FakeResponsesAPI:
+    """Scripted stand-in for `client.responses`, recording every request."""
+
+    def __init__(self, *responses: Any) -> None:
+        self.queue = list(responses)
+        self.requests: list[dict[str, Any]] = []
+
+    def create(self, **kwargs: Any) -> Any:
+        self.requests.append({**kwargs, "input": list(kwargs.get("input", []))})
+        if not self.queue:
+            raise AssertionError("no scripted response left for this request")
+        item = self.queue.pop(0)
+        if isinstance(item, BaseException):
+            raise item
+        return item
+
+
+def openai_rate_limit() -> Any:
+    import openai
+
+    return openai.RateLimitError("slow down", response=_response(429), body=None)
+
+
+def openai_server_error() -> Any:
+    import openai
+
+    return openai.InternalServerError("boom", response=_response(503), body=None)

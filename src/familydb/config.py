@@ -17,7 +17,13 @@ CacheTTL = Literal["5m", "1h"]
 Weekday = Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 
 SECRET_FIELDS = frozenset(
-    {"anthropic_api_key", "telegram_bot_token", "web_password", "web_secret_key"}
+    {
+        "anthropic_api_key",
+        "openai_api_key",
+        "telegram_bot_token",
+        "web_password",
+        "web_secret_key",
+    }
 )
 log = logging.getLogger(__name__)
 
@@ -46,6 +52,10 @@ class Settings(BaseSettings):
     provider: ProviderName = "anthropic"
     worker_provider: ProviderName | Literal[""] = ""
     provider_fallback: bool = True
+
+    openai_api_key: str | None = None
+    openai_model: str = "gpt-5"
+    openai_worker_model: str = "gpt-5-mini"
 
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-opus-5"
