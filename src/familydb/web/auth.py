@@ -9,6 +9,7 @@ is set on purpose), there is nothing to log into and every page is open.
 
 from __future__ import annotations
 
+import hashlib
 import hmac
 import logging
 import secrets
@@ -37,6 +38,11 @@ bp = Blueprint("auth", __name__)
 
 SESSION_KEY = "signed_in"
 CSRF_KEY = "csrf"
+# A mark of the password a session was opened with. Changing WEB_PASSWORD then ends every session
+# that was signed in with the old one, which is what someone changing it after a scare expects.
+# It is an HMAC under the cookie signing key, not the password itself or a plain hash of it, so
+# what sits in the cookie says nothing about the password to anyone holding the cookie.
+PASSWORD_KEY = "pw"
 # A browser or a monitor asking to read gets the login page; anything else gets a plain refusal.
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 MAX_ATTEMPTS = 5
@@ -142,6 +148,15 @@ def password_in_use(settings: Settings) -> bool:
     return bool(settings.web_password)
 
 
+def password_mark(settings: Settings) -> str:
+    """A short mark of the password in force, for the session to carry."""
+    key = (current_app.secret_key or b"") if current_app else b""
+    if isinstance(key, str):
+        key = key.encode()
+    password = (settings.web_password or "").encode()
+    return hmac.new(key, password, hashlib.sha256).hexdigest()[:16]
+
+
 def password_matches(settings: Settings, given: str) -> bool:
     expected = settings.web_password or ""
     return bool(expected) and hmac.compare_digest(given.encode(), expected.encode())
@@ -187,8 +202,13 @@ def csrf_token() -> str:
 
 
 def csrf_ok(given: str | None) -> bool:
+    """Whether this form carried this session's token. Encoded, because `compare_digest` refuses
+    to compare strings outside ASCII and a pasted token full of accents is a wrong answer, not a
+    server error."""
     expected = session.get(CSRF_KEY)
-    return bool(expected) and bool(given) and hmac.compare_digest(given, expected)
+    if not expected or not given:
+        return False
+    return hmac.compare_digest(given.encode("utf-8", "replace"), expected.encode("utf-8"))
 
 
 def origin_ok() -> bool:
@@ -216,8 +236,13 @@ def require_login() -> Response | None:
     settings = _app().settings
     if not password_in_use(settings):
         return None
-    if request.endpoint in OPEN_ENDPOINTS or session.get(SESSION_KEY):
+    if request.endpoint in OPEN_ENDPOINTS:
         return None
+    if session.get(SESSION_KEY):
+        if hmac.compare_digest(session.get(PASSWORD_KEY, ""), password_mark(settings)):
+            return None
+        # The password has changed since this session was opened, so it is no longer signed in.
+        session.clear()
     if request.method not in SAFE_METHODS:
         return Response("sign in first", status=401, mimetype="text/plain")
     return redirect(url_for("auth.login", next=request.full_path.rstrip("?")))
@@ -255,6 +280,7 @@ def sign_in() -> Response | str:
     lockout.passed(who)
     session.clear()
     session[SESSION_KEY] = True
+    session[PASSWORD_KEY] = password_mark(settings)
     session.permanent = True
     log.info("web login from %s", who)
     return redirect(target or HOME)

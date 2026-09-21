@@ -1,6 +1,6 @@
 """Allow `python -m familydb`."""
 
-from familydb.cli import app
+from familydb.cli import run_cli
 
 if __name__ == "__main__":
-    app()
+    run_cli()

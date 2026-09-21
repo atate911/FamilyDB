@@ -610,6 +610,39 @@ def test_the_page_really_serves_on_a_thread_and_stops(settings, clock) -> None:
         urllib.request.urlopen(f"http://127.0.0.1:{port}/healthz", timeout=2)
 
 
+def test_changing_the_password_ends_the_sessions_opened_with_the_old_one(
+    settings, clock, conn
+) -> None:
+    client = _signed_in(settings, clock)
+    assert client.get("/").status_code == 200
+    cookie = client.get_cookie("session")
+    assert cookie is not None
+
+    # The same family, the same signing key, a new password: the old cookie is no longer a login.
+    changed = _client(settings, clock, web_password="a different long one")
+    changed.set_cookie("session", cookie.value)
+    assert changed.get("/").status_code == 302
+    assert changed.get("/").headers["Location"] == "/login?next=/"
+
+
+def test_a_form_token_outside_ascii_is_refused_and_not_a_crash(settings, clock, conn) -> None:
+    client = _signed_in(settings, clock)
+    answer = client.post("/settings", data={"csrf": "n\u00e9", "web_title": "x"})
+    assert answer.status_code == 400
+
+
+def test_the_server_refuses_a_body_before_reading_it(settings, clock) -> None:
+    from familydb.web import MAX_BODY_BYTES
+    from familydb.web.server import create_server
+
+    app = App(settings.model_copy(update={"web_port": _free_port()}), clock)
+    server = create_server(app)
+    try:
+        assert server.adj.max_request_body_size == MAX_BODY_BYTES
+    finally:
+        server.close()
+
+
 def test_a_public_page_needs_a_password_worth_having(settings, clock) -> None:
     from familydb.web import MIN_PASSWORD
 

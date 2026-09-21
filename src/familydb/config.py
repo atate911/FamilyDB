@@ -18,6 +18,21 @@ Weekday = Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 Latitude = Annotated[float, Field(ge=-90, le=90)]
 Longitude = Annotated[float, Field(ge=-180, le=180)]
 
+# An empty line in .env (`HOME_LAT=`) says "I have not set this", not "the empty string": it is
+# what `cp .env.example .env` leaves behind, and what the installer writes when a lookup
+# fails. Every such value is dropped before validation so the default applies. These few are the
+# exceptions, where empty is an answer in itself: no separate worker provider, no separate worker
+# model (use the chat one), no home area.
+EMPTY_MEANS_UNSET_EXCEPT = frozenset(
+    {
+        "worker_provider",
+        "worker_model",
+        "openai_worker_model",
+        "gemini_worker_model",
+        "home_area",
+    }
+)
+
 SECRET_FIELDS = frozenset(
     {
         "anthropic_api_key",
@@ -41,6 +56,19 @@ def _zone_or_none(value: str | None) -> str | None:
     except (ZoneInfoNotFoundError, ValueError):
         return None
     return candidate
+
+
+def _field_names(cls: type[BaseSettings]) -> dict[str, str]:
+    """Every name a field answers to, lowercased, mapped to the field name itself."""
+    names: dict[str, str] = {}
+    for name, field in cls.model_fields.items():
+        names[name.lower()] = name
+        alias = field.validation_alias
+        candidates = alias.choices if isinstance(alias, AliasChoices) else [alias]
+        for candidate in candidates:
+            if isinstance(candidate, str):
+                names[candidate.lower()] = name
+    return names
 
 
 class Settings(BaseSettings):
@@ -141,6 +169,23 @@ class Settings(BaseSettings):
     # Console and logging
     console_member: str | None = None
     log_level: str = "INFO"
+
+    @model_validator(mode="before")
+    @classmethod
+    def _blank_means_unset(cls, data: Any) -> Any:
+        """Drop empty values so the default applies, as an unanswered question should."""
+        if not isinstance(data, dict):
+            return data
+        names = _field_names(cls)
+        return {
+            key: value
+            for key, value in data.items()
+            if not (
+                isinstance(value, str)
+                and not value.strip()
+                and names.get(str(key).lower(), str(key).lower()) not in EMPTY_MEANS_UNSET_EXCEPT
+            )
+        }
 
     @field_validator("family_tz")
     @classmethod

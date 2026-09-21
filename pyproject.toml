@@ -22,7 +22,7 @@ dependencies = [
 ]
 
 [project.scripts]
-familydb = "familydb.cli:app"
+familydb = "familydb.cli:run_cli"
 
 [dependency-groups]
 dev = [

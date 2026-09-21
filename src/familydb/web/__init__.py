@@ -121,14 +121,16 @@ def _picking_up_settings(app: App, web: Flask) -> Any:
 
     One small query per request when nothing has changed. It is registered after the login gate,
     so a request about to be turned away costs nothing. Flask keeps its own copy of the session
-    lifetime, so that one is handed over again when it moves.
+    lifetime, so that one is handed over again on every request: the form that changed it has
+    already refreshed by the time this runs, so asking `refresh()` whether to bother would mean
+    the new lifetime never arrived.
     """
 
     def hook() -> None:
         if request.endpoint in SETTINGS_FREE:
             return
-        if app.refresh():
-            web.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=app.settings.web_session_days)
+        app.refresh()
+        web.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=app.settings.web_session_days)
 
     return hook
 

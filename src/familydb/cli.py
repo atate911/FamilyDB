@@ -15,6 +15,7 @@ from typing import Any
 from uuid import uuid4
 
 import typer
+from pydantic import ValidationError
 
 from familydb import __version__
 from familydb.agent.history import load_history
@@ -43,6 +44,9 @@ app = typer.Typer(
     help="FamilyDB: a private family planning assistant.",
     no_args_is_help=True,
     add_completion=False,
+    # Rich draws a traceback as a box of line art, which is unreadable in journalctl and in
+    # `docker compose logs`, the two places these are actually read.
+    pretty_exceptions_enable=False,
 )
 db_app = typer.Typer(help="Database maintenance.", no_args_is_help=True)
 members_app = typer.Typer(help="Family members.", no_args_is_help=True)
@@ -163,6 +167,18 @@ def db_status() -> None:
 def db_backup(dest: Path = typer.Argument(..., help="Path of the backup file to write.")) -> None:
     """Copy the database with SQLite's online backup API (safe while the bot runs)."""
     application = build_app()
+    source = application.settings.familydb_path
+    # Every other command may create the database; a backup may not. `FAMILYDB_PATH` is relative
+    # by default, so a backup run from cron with the wrong working directory would otherwise
+    # create an empty database beside itself, copy that, and report success every night.
+    if not source.exists():
+        typer.secho(f"no database at {source.resolve()}", fg=typer.colors.RED, err=True)
+        typer.secho(
+            "  Nothing was written. Run this from the checkout, or set FAMILYDB_PATH to an\n"
+            "  absolute path, which is what a backup from cron needs.",
+            err=True,
+        )
+        raise typer.Exit(1)
     dest.parent.mkdir(parents=True, exist_ok=True)
     with closing(application.connect()) as conn, closing(sqlite3.connect(str(dest))) as target:
         conn.backup(target)
@@ -761,3 +777,38 @@ def enrich(
     _cli_senders(application)
     counts = run_enrichment(application, idea_id=idea_id, limit=limit)
     typer.echo(", ".join(f"{key}: {value}" for key, value in counts.items()))
+
+
+def _stop(message: str, *detail: str) -> None:
+    typer.secho(message, fg=typer.colors.RED, err=True)
+    for line in detail:
+        typer.secho(f"  {line}" if line else "", err=True)
+    raise SystemExit(1)
+
+
+def run_cli() -> None:
+    """The console entry point.
+
+    A first install gets its settings wrong, and the two ways it does so are a value that will
+    not validate and a database it cannot open. Both are worth a sentence naming the setting,
+    rather than the traceback that says the same thing in forty lines.
+    """
+    try:
+        app()
+    except ValidationError as exc:
+        problems = [
+            f"{'.'.join(str(part) for part in error['loc']) or 'setting'}: {error['msg']}"
+            for error in exc.errors()
+        ]
+        _stop(
+            "a setting will not do:",
+            *problems,
+            "",
+            "Fix it in .env or on the settings page, then run this again.",
+            "`familydb config` prints every setting and where it came from.",
+        )
+    except sqlite3.OperationalError as exc:
+        _stop(
+            f"the database could not be opened: {exc}",
+            "FAMILYDB_PATH points somewhere this user cannot write, or the folder is missing.",
+        )

@@ -185,11 +185,22 @@ class App:
         return applied
 
 
+# httpx logs every request at INFO with its full URL, and a Telegram URL carries the bot token
+# in its path, so at INFO these would put the token in the journal on every poll. The vendor SDKs
+# send their keys in headers, which are never logged, so only the transport needs quietening.
+QUIET_LOGGERS = ("httpx", "httpcore")
+
+
 def configure_logging(level: str) -> None:
     wanted = getattr(logging, level.upper(), logging.INFO)
     logging.basicConfig(level=wanted, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     # basicConfig does nothing once a handler exists, and this is called again after a reload.
     logging.getLogger().setLevel(wanted)
+    # LOG_LEVEL=DEBUG is someone deliberately looking at the traffic, and is told in the runbook
+    # that the token comes with it. Every other level keeps it out.
+    transport = logging.DEBUG if wanted <= logging.DEBUG else logging.WARNING
+    for name in QUIET_LOGGERS:
+        logging.getLogger(name).setLevel(transport)
 
 
 def build_app(env_file: str | Path | None = ".env", **overrides: Any) -> App:

@@ -223,3 +223,20 @@ def test_the_schedule_follows_the_settings(conn, settings, clock) -> None:
     _store(conn, {"digest_chat_id": None})
     assert apply_settings(app, scheduler) == ["weekend_digest off"]
     assert scheduler.get_job("weekend_digest") is None
+
+
+def test_the_schedule_moves_even_when_the_page_saw_the_change_first(conn, settings, clock) -> None:
+    """The form and every page view refresh too, and must not swallow the scheduler's turn."""
+    from datetime import timedelta
+
+    from familydb.jobs.scheduler import apply_settings, build_scheduler
+
+    app = App(settings, clock)
+    scheduler = build_scheduler(app)
+
+    _store(conn, {"retry_interval_minutes": 42})
+    assert app.refresh() is True  # the settings form, or somebody opening a page
+    assert app.settings.retry_interval_minutes == 42
+
+    assert apply_settings(app, scheduler) == ["retry_failed"]
+    assert scheduler.get_job("retry_failed").trigger.interval == timedelta(minutes=42)

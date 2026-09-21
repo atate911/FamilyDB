@@ -132,9 +132,14 @@ def sync_jobs(app: App, scheduler: BaseScheduler) -> list[str]:
 
 
 def apply_settings(app: App, scheduler: BaseScheduler) -> list[str]:
-    """Notice a change made on the settings page and move the jobs it affects."""
-    if not app.refresh():
-        return []
+    """Notice a change made on the settings page and move the jobs it affects.
+
+    The refresh is not what decides: a page view or the form itself will usually have picked the
+    change up first, and asking `refresh()` again would then say "nothing moved" and leave the
+    jobs on the old schedule until a restart. Comparing the triggers is cheap, so it is done on
+    every tick and `sync_jobs` moves only what has actually changed.
+    """
+    app.refresh()
     moved = sync_jobs(app, scheduler)
     if moved:
         log.info("settings changed; %s", ", ".join(moved))

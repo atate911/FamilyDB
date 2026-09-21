@@ -16,7 +16,7 @@ from waitress import create_server as _create_server
 
 from familydb.app import App
 from familydb.errors import ConfigError, FamilyDBError
-from familydb.web import create_app
+from familydb.web import MAX_BODY_BYTES, create_app
 
 log = logging.getLogger(__name__)
 
@@ -28,7 +28,14 @@ def create_server(app: App) -> Any:
     """A waitress server with the socket already bound, so a clash is reported here."""
     settings = app.settings
     return _create_server(
-        create_app(app), host=settings.web_host, port=settings.web_port, ident=IDENT
+        create_app(app),
+        host=settings.web_host,
+        port=settings.web_port,
+        ident=IDENT,
+        # Flask refuses a body over MAX_BODY_BYTES, but only once waitress has read it, and
+        # waitress will take a gigabyte by default. Stop it at the socket instead: nothing the
+        # page accepts is larger than a settings form.
+        max_request_body_size=MAX_BODY_BYTES,
     )
 
 
