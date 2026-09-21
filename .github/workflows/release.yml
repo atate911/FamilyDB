@@ -13,6 +13,13 @@ on:
         description: "Version to release, e.g. v0.1.0"
         required: true
         type: string
+      move_existing:
+        description: >
+          Move this version to the commit being released, deleting the release and the tag
+          that are there now. Only for a version nobody has installed yet.
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -44,6 +51,21 @@ jobs:
           ' CHANGELOG.md > notes.md
           test -s notes.md
           cat notes.md
+      - name: Make room, if this version is being moved
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.move_existing }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Moving a version that people may already have installed is wrong: the same name
+          # would mean two different trees. It is allowed here only because it has to be asked
+          # for, one release at a time, and the answer is normally no.
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            was=$(gh release view "$VERSION" --json targetCommitish -q .targetCommitish)
+            echo "Moving ${VERSION} from ${was} to ${GITHUB_SHA}"
+            gh release delete "$VERSION" --yes --cleanup-tag
+          else
+            echo "${VERSION} does not exist yet, so there is nothing to move."
+          fi
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
@@ -64,4 +86,4 @@ jobs:
               --prerelease \
               --verify-tag
           fi
-          gh release view "$VERSION" --json tagName,isPrerelease,url
+          gh release view "$VERSION" --json tagName,targetCommitish,isPrerelease,url
