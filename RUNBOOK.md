@@ -75,9 +75,15 @@ journalctl -u familydb -f
 ```
 
 `scripts/install.sh` does all of this, the user included. Check `User=` and the paths in the unit
-if you cloned somewhere other than `/opt/familydb`. A checkout under `/home` needs one change:
-`ProtectHome=true` hides `/home` from the service, so the unit would start into an empty
-directory. Use `ProtectHome=read-only` there, which the installer does for you.
+if you cloned somewhere other than `/opt/familydb`.
+
+**Clone it into `/opt`, not your home directory.** A home directory is closed to other users on
+most systems, and the service runs as `familydb`, so a unit pointing inside `/home/you` cannot
+start: systemd reports a permission error on the working directory. The installer checks this
+before it writes a unit and tells you to move the checkout rather than leaving you one that will
+not start. If you do want it under `/home` anyway, the directory above it has to be traversable
+by the service user (`chmod o+x /home/you`), and the unit needs `ProtectHome=read-only` instead
+of `ProtectHome=true`, which the installer sets for you.
 
 The unit sets `FAMILYDB_PATH` and `GOOGLE_TOKEN_PATH` under `/opt/familydb/data` and locks the service down to that folder. To chat from the shell, run commands as the service user so the database stays owned by it: `sudo -u familydb /opt/familydb/.venv/bin/familydb repl`.
 
@@ -421,7 +427,7 @@ SQLite browser opens it.
 - **"Google credentials are expired or revoked."** Run `familydb google auth` again on a laptop and copy the new token over. If this happens weekly, the OAuth consent screen is still in Testing (section 5, step 2).
 - **"no family members yet".** Add an admin with `familydb members add NAME --role admin`.
 - **"a setting will not do" at startup.** A value in `.env` is not of the type the setting takes; the line names it. An empty line is fine and means "not set" — it is a value like `WEB_PORT=eighty` that stops it. Quote anything with a space or a `#` in it.
-- **The service will not start under systemd.** `systemctl status familydb` says which. The two that bite: the `familydb` user does not exist or does not own `data/` and `.env`, and a checkout under `/home` with `ProtectHome=true` (section 2b).
+- **The service will not start under systemd.** `systemctl status familydb` says which. The three that bite: the `familydb` user does not exist or does not own `data/` and `.env`; a checkout inside a home directory, which that user cannot enter at all; and `ProtectHome=true` with a checkout under `/home`. Section 2b covers all three, and `/opt/familydb` avoids the last two.
 - **"Sorry, I only talk to the family."** The sender is not in `members` for that channel; the reply includes the id to add.
 - **A refusal.** Rare. `llm_calls.stop_reason` is `refusal`; server-side fallbacks are on by default (`ANTHROPIC_FALLBACKS`), so it means every model declined.
 - **Replies are coming from the wrong provider.** `familydb debug cost` says who answers each surface. If it is not what you set, the other one is probably standing in because the chosen one has no key; the log says so at the time.

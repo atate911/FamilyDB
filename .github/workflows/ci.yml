@@ -37,27 +37,44 @@ jobs:
         run: |
           scripts/install.sh --dry-run --non-interactive --mode venv
           test ! -e .env
-      - name: A real install works from an untouched checkout
+      - name: An install from a home directory refuses to leave a unit that cannot start
+        # The checkout is under /home/runner here, which other users cannot enter, so the
+        # service user could never run from it. Say so rather than install a broken unit.
         env:
           ADMIN_NAME: Sam
           FAMILYDB_TZ: America/Vancouver
           NO_COLOR: "1"
         run: |
-          scripts/install.sh --non-interactive --mode venv
-      - name: The service user it created can run the bot
-        # The installer gives data/ and .env to the familydb user, so this is the account that
-        # has to work afterwards. Anyone else reading .env is supposed to be refused.
+          scripts/install.sh --non-interactive --mode venv 2>&1 | tee out.log
+          grep -q "cannot get into" out.log
+          test ! -f /etc/systemd/system/familydb.service
+          .venv/bin/familydb config > /dev/null       # still usable by whoever installed it
+          .venv/bin/familydb members list | grep -q Sam
+      - name: The documented install, in /opt, is complete
+        env:
+          ADMIN_NAME: Sam
+          FAMILYDB_TZ: America/Vancouver
+          NO_COLOR: "1"
         run: |
-          sudo -u familydb .venv/bin/familydb config > /dev/null
-          sudo -u familydb .venv/bin/familydb db status > /dev/null
-          sudo -u familydb .venv/bin/familydb members list | grep -q Sam
+          sudo mkdir -p /opt/familydb
+          sudo chown "$USER" /opt/familydb
+          git archive HEAD | tar -x -C /opt/familydb
+          cd /opt/familydb
+          scripts/install.sh --non-interactive --mode venv
           test -f /etc/systemd/system/familydb.service
-          grep -q "ProtectHome=read-only" /etc/systemd/system/familydb.service
+          grep -q "^WorkingDirectory=/opt/familydb$" /etc/systemd/system/familydb.service
+          # data/ and .env belong to the service now, so that is the account that must work.
+          sudo -u familydb /opt/familydb/.venv/bin/familydb config > /dev/null
+          sudo -u familydb /opt/familydb/.venv/bin/familydb db status > /dev/null
+          sudo -u familydb /opt/familydb/.venv/bin/familydb members list | grep -q Sam
+          test "$(stat -c %U /opt/familydb/.env)" = familydb
       - name: The example config is a working config
         run: |
-          sudo rm -f .env && cp .env.example .env
+          cd /opt/familydb
+          sudo rm -f .env
+          sudo cp .env.example .env
           sudo chown familydb .env
-          sudo -u familydb .venv/bin/familydb config > /dev/null
+          sudo -u familydb /opt/familydb/.venv/bin/familydb config > /dev/null
 
   docker:
     runs-on: ubuntu-latest

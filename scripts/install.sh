@@ -10,6 +10,7 @@ EXAMPLE_FILE="${REPO_ROOT}/.env.example"
 
 MODE=""              # docker | venv
 HAND_OVER_TO_SERVICE=0   # give data/ and .env to the familydb user, once the checks have run
+SKIP_UNIT=0          # the service user cannot reach this checkout, so a unit would not start
 SUDO=""              # set when the systemd unit is installed
 ASSUME_YES=0         # --yes: take every default, ask nothing
 NON_INTERACTIVE=0    # --non-interactive: never prompt; fail if something required is missing
@@ -190,6 +191,14 @@ set_env() { # set_env KEY VALUE
   else
     printf '%s=%s\n' "$key" "$written" >> "$ENV_FILE"
   fi
+}
+
+service_can_reach_checkout() { # can the familydb user get to the files it has to run?
+  # A home directory is closed to other users on most systems (0750), and no amount of unit
+  # hardening changes that: the service would start into a path it cannot enter. /opt is the
+  # documented home for exactly this reason.
+  have sudo || return 0   # no way to ask from here; assume whoever is installing knows
+  sudo -u familydb sh -c 'test -x "$1" && test -r "$1"' _ "$REPO_ROOT" 2>/dev/null
 }
 
 random_password() {
@@ -552,6 +561,15 @@ if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
           warn "Could not create the familydb user. Create it, or edit User= in the unit:"
           warn "  sudo useradd --system --home-dir ${REPO_ROOT} --shell /usr/sbin/nologin familydb"
         fi
+        if id familydb >/dev/null 2>&1 && ! service_can_reach_checkout; then
+          warn "The familydb user cannot get into ${REPO_ROOT}, which is usually because it is"
+          warn "inside somebody's home directory. A service running as its own user could not"
+          warn "start there, so the unit has not been installed. Move the checkout and run again:"
+          warn "  sudo mkdir -p /opt/familydb && sudo chown \"\$USER\" /opt/familydb"
+          warn "  cp -a ${REPO_ROOT}/. /opt/familydb/ && cd /opt/familydb && scripts/install.sh"
+          note "Everything else is installed. You can run it yourself with .venv/bin/familydb run."
+          SKIP_UNIT=1
+        fi
         tmp_unit="$(mktemp)"
         sed -e "s#/opt/familydb#${REPO_ROOT}#g" "$unit" > "$tmp_unit"
         # ProtectHome=true hides /home from the service, so a checkout there would start into an
@@ -563,17 +581,17 @@ if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
             note "A checkout under /home or /root needs ProtectHome=read-only; the unit says so."
             ;;
         esac
-        if $SUDO cp "$tmp_unit" /etc/systemd/system/familydb.service \
+        if [ "$SKIP_UNIT" = 1 ]; then
+          :
+        elif $SUDO cp "$tmp_unit" /etc/systemd/system/familydb.service \
           && $SUDO systemctl daemon-reload \
           && { $SUDO systemctl enable familydb >/dev/null 2>&1 || true; }; then
           ok "Unit installed. Start it with: sudo systemctl start familydb"
+          HAND_OVER_TO_SERVICE=1
         else
           warn "Could not install the systemd unit. Everything else is set up; see RUNBOOK section 2b."
         fi
         rm -f "$tmp_unit"
-        # The handover of data/ and .env waits until after the checks below, which run as the
-        # user running this script and would lose their own database halfway through.
-        HAND_OVER_TO_SERVICE=1
       fi
     fi
   else
