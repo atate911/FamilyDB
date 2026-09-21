@@ -137,3 +137,24 @@ def test_the_ideas_block_stops_growing(conn, settings, family) -> None:
     assert "Idea 0" in roomy and "not listed here" not in roomy
     assert trim_ideas([1, 2, 3], 0) == ([1, 2, 3], 0)  # a limit of zero means no limit
     assert trim_ideas([1, 2, 3], 2) == ([2, 3], 1)
+
+
+def test_the_request_is_the_same_one_this_api_always_received(conn, settings, family, clock):
+    """Only the newest turn is blocks; the history behind it is one piece of text, as before."""
+    from familydb.agent.providers import build
+    from familydb.agent.providers.base import TurnRequest
+
+    history = [
+        HistoryTurn("user", "[Sam] hello"),
+        HistoryTurn("user", "[Alex] me too"),
+        HistoryTurn("assistant", "Hi both."),
+    ]
+    messages = build_messages(history, render_user_turn("Sam", "what now?", clock))
+    request = TurnRequest(system=build_system_blocks(conn, settings), messages=messages)
+    turns = build("anthropic", settings, api=object()).payload(request)["messages"]
+    assert turns[0] == {"role": "user", "content": "[Sam] hello\n\n[Alex] me too"}
+    assert turns[1] == {"role": "assistant", "content": "Hi both."}
+    assert [part["text"] for part in turns[2]["content"]] == [
+        "Today is Sunday 20 September 2026, 14:03 (America/Vancouver), autumn.",
+        "[Sam] what now?",
+    ]

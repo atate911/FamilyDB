@@ -100,7 +100,8 @@ def run_turn(
     if fallback is not None and not active.configured():
         log.warning("%s has no credentials; asking %s instead", active.name, fallback.name)
         active = fallback
-        request.model = model or active.model_for(surface)
+        # Whatever model the caller named belonged to the provider we just left.
+        request.model = active.model_for(surface)
 
     for iteration in range(1, limit + 1):
         started = time.monotonic()
@@ -112,8 +113,14 @@ def run_turn(
                 raise
             log.warning("%s could not take this (%s); asking %s", active.name, exc, fallback.name)
             active = fallback
-            request.model = model or active.model_for(surface)
-            reply = active.send(request)
+            request.model = active.model_for(surface)
+            try:
+                reply = active.send(request)
+            except AgentError as spare_exc:
+                # 4. Report the first failure, not the second. A message the primary would have
+                # answered after a pause must not be given up on because the spare said 400.
+                log.warning("%s could not take it either: %s", active.name, spare_exc)
+                raise exc from spare_exc
         duration_ms = int((time.monotonic() - started) * 1000)
 
         for key in USAGE_KEYS:

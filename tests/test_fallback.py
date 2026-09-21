@@ -120,3 +120,35 @@ def test_the_whole_pipeline_hands_over(settings, clock, conn, family, monkeypatc
     assert reply.status == "ok" and reply.text == "Hello from the spare."
     assert len(api.requests) == 1
     assert api.requests[0]["model"] == "gpt-5"
+
+
+def test_the_spare_is_asked_with_its_own_model(settings, registry, ctx) -> None:
+    """A worker turn names its model, and that name belonged to the provider it just left."""
+    from familydb.agent.worker import run_worker_turn
+
+    paired = _both(settings, web_tools_enabled=True)
+    spare_api = fakes.FakeResponsesAPI(fakes.oa_response([fakes.oa_text("looked it up")]))
+    turn = run_worker_turn(
+        kind="enrich",
+        settings=paired,
+        clock=ctx.clock,
+        registry=registry,
+        conn=ctx.conn,
+        request="look up idea #1",
+        provider=build("anthropic", paired, api=fakes.FakeMessagesAPI(fakes.rate_limit_error())),
+        fallback=build("openai", paired, api=spare_api),
+    )
+    assert turn.result.status == "ok" and turn.result.provider == "openai"
+    # gpt-5-mini, not claude-haiku: asking for the other one's model would be a 404.
+    assert spare_api.requests[0]["model"] == "gpt-5-mini"
+
+
+def test_a_spare_that_also_fails_reports_the_first_failure(settings, registry, ctx) -> None:
+    """A rate limit is worth retrying later; a spare's bad request must not hide that."""
+    paired = _both(settings)
+    busy = build("anthropic", paired, api=fakes.FakeMessagesAPI(fakes.rate_limit_error()))
+    broken = build("openai", paired, api=fakes.FakeResponsesAPI(fakes.openai_bad_request()))
+    with pytest.raises(AgentError) as info:
+        _turn(paired, registry, ctx, busy, broken)
+    assert info.value.retryable is True  # the primary's verdict, so the retry job still tries
+    assert "rate limited" in str(info.value)

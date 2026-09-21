@@ -52,24 +52,26 @@ def test_system_blocks_carry_the_cache_marker(settings) -> None:
     assert brief[0]["cache_control"] == {"type": "ephemeral"}
 
 
-def test_the_transcript_keeps_message_parts_apart(settings) -> None:
+def test_only_the_newest_turn_is_sent_as_blocks(settings) -> None:
+    """History goes as one piece of text; the message being answered keeps its parts apart."""
     request = TurnRequest(
         system=[],
         messages=[
-            Message("user", ["Today is Sunday.", "[Sam] hello"]),
-            Message("assistant", ["Hi Sam."]),
-            Message("user", ["and again"]),
+            Message("user", ["[Sam] hello", "[Alex] me too"]),
+            Message("assistant", ["Hi both."]),
+            Message("user", ["Today is Sunday.", "[Sam] and again"]),
         ],
     )
     turns = _provider(settings).payload(request)["messages"]
-    assert turns[0] == {
+    assert turns[0] == {"role": "user", "content": "[Sam] hello\n\n[Alex] me too"}
+    assert turns[1] == {"role": "assistant", "content": "Hi both."}
+    assert turns[2] == {
         "role": "user",
         "content": [
             {"type": "text", "text": "Today is Sunday."},
-            {"type": "text", "text": "[Sam] hello"},
+            {"type": "text", "text": "[Sam] and again"},
         ],
     }
-    assert turns[1] == {"role": "assistant", "content": "Hi Sam."}
 
 
 def test_tools_and_web_access_are_rendered(settings) -> None:

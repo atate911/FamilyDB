@@ -167,6 +167,10 @@ class ToolRegistry:
         spec = self._specs.get(name)
         if spec is None:
             return _error(name, f"unknown tool {name!r}")
+        # A provider whose strict mode forbids an absent field sends null instead. Dropping
+        # those lets the input model's own default apply, as it does everywhere else.
+        if isinstance(raw_input, dict):
+            raw_input = {key: value for key, value in raw_input.items() if value is not None}
         try:
             args = spec.input_model.model_validate(raw_input or {})
         except ValidationError as exc:

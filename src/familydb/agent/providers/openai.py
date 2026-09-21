@@ -10,6 +10,7 @@ rather than by a per-tool limit.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 from typing import Any
@@ -65,9 +66,24 @@ def openai_schema(schema: dict[str, Any]) -> dict[str, Any]:
         else:
             out[key] = value
     if "properties" in out:
+        already = set(out.get("required") or [])
+        for name, child in out["properties"].items():
+            if name in already or _accepts_null(child):
+                continue
+            # It was optional because it has a default. Strict mode will not let it be absent,
+            # so it gets a way to say nothing instead, and the handler applies the default.
+            out["properties"][name] = {"anyOf": [child, {"type": "null"}]}
         out["required"] = list(out["properties"])
         out.setdefault("additionalProperties", False)
     return out
+
+
+def _accepts_null(schema: dict[str, Any]) -> bool:
+    if not isinstance(schema, dict):
+        return False
+    if schema.get("type") == "null" or "null" in (schema.get("type") or []):
+        return True
+    return any(_accepts_null(branch) for branch in schema.get("anyOf") or [])
 
 
 def _search_effort(max_uses: int | None) -> str:
@@ -110,7 +126,9 @@ class OpenAIProvider:
         cached = [block.text for block in system if block.cacheable]
         if not cached:
             return None
-        return f"familydb-{hash(tuple(cached)) & 0xFFFFFFFF:08x}"
+        # Not hash(): that is salted per interpreter, so every restart would ask for a new shard.
+        digest = hashlib.sha256("\n\n".join(cached).encode("utf-8")).hexdigest()
+        return f"familydb-{digest[:16]}"
 
     def tools(self, request: TurnRequest) -> list[dict[str, Any]]:
         tools: list[dict[str, Any]] = [
@@ -136,24 +154,32 @@ class OpenAIProvider:
         if access.user_location:
             where = access.user_location
             tool["user_location"] = {
-                "type": "approximate",
-                "country": where.get("country", "US"),
-                "city": where.get("city"),
-                "region": where.get("region"),
-                "timezone": where.get("timezone"),
+                key: value
+                for key, value in {
+                    "type": "approximate",
+                    "country": where.get("country"),
+                    "city": where.get("city"),
+                    "region": where.get("region"),
+                    "timezone": where.get("timezone"),
+                }.items()
+                if value is not None
             }
         return tool
 
     def transcript(self, request: TurnRequest) -> list[dict[str, Any]]:
         items: list[dict[str, Any]] = []
+        last = request.messages[-1] if request.messages else None
         for message in request.messages:
-            kind = "input_text" if message.role == "user" else "output_text"
-            items.append(
-                {
-                    "role": message.role,
-                    "content": [{"type": kind, "text": part} for part in message.parts],
-                }
-            )
+            if message.role == "assistant" or message is not last:
+                # output_text is only legal on the way out; an incoming turn is plain text.
+                items.append({"role": message.role, "content": message.text})
+            else:
+                items.append(
+                    {
+                        "role": "user",
+                        "content": [{"type": "input_text", "text": part} for part in message.parts],
+                    }
+                )
         for exchange in request.exchanges:
             # `raw` is the output list this API handed back; sending it again is how the turn
             # carries on, and it keeps any reasoning the model wants to refer to.
@@ -191,6 +217,10 @@ class OpenAIProvider:
 
     def _stop(self, response: Any, calls: list[ToolCall]) -> tuple[Stop, str | None]:
         status = getattr(response, "status", None)
+        if status in {"failed", "cancelled"}:
+            # A 200 carrying a failure. Saying "Done." to the family would be a lie.
+            detail = getattr(getattr(response, "error", None), "message", None) or status
+            raise AgentError(f"response {status}: {detail}", retryable=True)
         if status == "incomplete":
             reason = getattr(getattr(response, "incomplete_details", None), "reason", None)
             if reason in REFUSAL_REASONS:
@@ -227,18 +257,24 @@ class OpenAIProvider:
         stop, detail = self._stop(response, calls)
         usage = getattr(response, "usage", None)
         details = getattr(usage, "input_tokens_details", None)
+        # This API counts cached and newly-cached tokens inside input_tokens; the column means
+        # "everything else", as it does on the other providers, so the three stay disjoint.
+        total_in = getattr(usage, "input_tokens", None)
+        cached = getattr(details, "cached_tokens", None)
+        written = getattr(details, "cache_write_tokens", None)
+        fresh = None if total_in is None else max(total_in - (cached or 0) - (written or 0), 0)
         return ModelReply(
             stop=stop,
             text="\n".join(texts).strip(),
             tool_calls=calls,
             usage={
-                "input_tokens": getattr(usage, "input_tokens", None),
-                "cache_read_input_tokens": getattr(details, "cached_tokens", None),
-                "cache_creation_input_tokens": getattr(details, "cache_write_tokens", None),
+                "input_tokens": fresh,
+                "cache_read_input_tokens": cached,
+                "cache_creation_input_tokens": written,
                 "output_tokens": getattr(usage, "output_tokens", None),
             },
             model=getattr(response, "model", None),
-            request_id=getattr(response, "id", None),
+            request_id=getattr(response, "_request_id", None) or getattr(response, "id", None),
             refusal=detail,
             raw=[item.model_dump(exclude_none=True) for item in output],
         )

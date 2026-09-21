@@ -81,6 +81,7 @@ def run_worker_turn(
     message_id: int | None = None,
     user_location: dict[str, Any] | None = None,
     provider: Provider | None = None,
+    fallback: Provider | None = None,
 ) -> WorkerTurn:
     """One worker turn. `message_id` ties the audit rows to a chat message when there is one."""
     ctx = ToolContext(
@@ -92,7 +93,9 @@ def run_worker_turn(
         geocoder=geocoder,
     )
     worker: Provider = provider or for_surface(settings, "worker", api=api)
-    spare = None if api is not None else fallback_for(settings, "worker", worker.name)
+    spare = fallback
+    if spare is None and api is None:
+        spare = fallback_for(settings, "worker", worker.name)
     result = run_turn(
         provider=worker,
         surface="worker",

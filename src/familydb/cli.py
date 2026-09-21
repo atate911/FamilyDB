@@ -31,7 +31,7 @@ from familydb.availability import (
 from familydb.channels.console import DEFAULT_CHAT, one_shot, run_repl
 from familydb.config import load_settings
 from familydb.dates import utc_iso
-from familydb.errors import AgentError, FamilyDBError
+from familydb.errors import FamilyDBError
 from familydb.integrations import google_calendar
 from familydb.store import calls, db, ideas, members, messages
 from familydb.store.members import Member
@@ -602,11 +602,7 @@ def suggest(
         if not web_tools_available(application.settings):
             typer.echo("set WEB_TOOLS_ENABLED=true to look for events on the web", err=True)
             raise typer.Exit(code=1)
-        try:
-            api = None  # the settings decide which provider runs discovery
-        except AgentError as exc:
-            typer.echo(str(exc), err=True)
-            raise typer.Exit(code=1) from exc
+        api = None  # the settings decide which provider runs discovery
     with closing(_ready(application)) as conn:
         ctx = ToolContext(
             conn=conn,

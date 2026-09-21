@@ -351,6 +351,12 @@ def openai_rate_limit() -> Any:
     return openai.RateLimitError("slow down", response=_response(429), body=None)
 
 
+def openai_bad_request() -> Any:
+    import openai
+
+    return openai.BadRequestError("model_not_found", response=_response(400), body=None)
+
+
 def openai_server_error() -> Any:
     import openai
 

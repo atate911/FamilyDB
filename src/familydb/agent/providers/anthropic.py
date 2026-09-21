@@ -94,9 +94,6 @@ class AnthropicProvider:
             return self.settings.worker_model or self.settings.anthropic_model
         return self.settings.anthropic_model
 
-    def effort_for(self, surface: Surface) -> str:
-        return self.settings.worker_effort if surface == "worker" else self.settings.effort
-
     # -- translation ----------------------------------------------------------------------
     def cache_marker(self) -> dict[str, str]:
         if self.settings.anthropic_cache_ttl == "1h":
@@ -140,9 +137,11 @@ class AnthropicProvider:
 
     def transcript(self, request: TurnRequest) -> list[dict[str, Any]]:
         messages: list[dict[str, Any]] = []
+        last = request.messages[-1] if request.messages else None
         for message in request.messages:
-            if message.role == "assistant" or len(message.parts) == 1:
-                # One part goes as plain text, which is what this API has always been sent.
+            if message.role == "assistant" or message is not last:
+                # Only the newest turn is sent as separate blocks; everything behind it is one
+                # piece of text, which is how this API has always been sent it.
                 messages.append({"role": message.role, "content": message.text})
             else:
                 messages.append(

@@ -47,10 +47,16 @@ def test_strict_function_schemas_require_every_property() -> None:
     }
     out = openai_schema(schema)
     assert out["required"] == ["title", "note", "nested", "items"]
-    assert out["properties"]["nested"]["required"] == ["a"]
-    assert out["properties"]["items"]["items"]["required"] == ["b"]
-    assert out["properties"]["note"]["anyOf"][1] == {"type": "null"}  # optional stays nullable
-    assert all(o.get("additionalProperties") is False for o in (out, out["properties"]["nested"]))
+    assert out["properties"]["note"]["anyOf"][1] == {"type": "null"}  # already nullable, untouched
+    # Strict mode will not let a property be absent, so the ones that were optional because they
+    # have a default get a way to say nothing; the handler then applies the default.
+    nested = out["properties"]["nested"]
+    assert nested["anyOf"][1] == {"type": "null"}
+    assert nested["anyOf"][0]["required"] == ["a"]
+    assert nested["anyOf"][0]["additionalProperties"] is False
+    assert out["properties"]["items"]["anyOf"][0]["items"]["required"] == ["b"]
+    assert out["properties"]["title"] == {"type": "string"}  # already required, untouched
+    assert out["additionalProperties"] is False
 
 
 def test_the_request_carries_instructions_tools_and_a_cache_key(settings) -> None:
@@ -225,3 +231,116 @@ def test_the_turn_cap_leaves_room_for_the_hand_back(settings) -> None:
     # Three searches plus one call for each declared tool, so a worker that used every search
     # can still report what it found.
     assert _provider(settings).payload(request)["max_tool_calls"] == 5
+
+
+def test_a_reply_in_the_history_is_sent_in_a_shape_this_api_accepts(settings, clock) -> None:
+    """The second message of any conversation carries an assistant turn from the history."""
+    import pydantic
+    from openai.types.responses.response_input_param import ResponseInputItemParam
+    from pydantic import TypeAdapter
+
+    from familydb.agent.history import HistoryTurn
+
+    messages = build_messages(
+        [HistoryTurn("user", "[Sam] hello"), HistoryTurn("assistant", "Hi Sam.")],
+        render_user_turn("Sam", "and again", clock),
+    )
+    items = _provider(settings).payload(TurnRequest(system=[], messages=messages))["input"]
+    adapter = TypeAdapter(ResponseInputItemParam)
+    for item in items:
+        try:
+            adapter.validate_python(item)
+        except pydantic.ValidationError as exc:  # pragma: no cover - the assert carries the detail
+            raise AssertionError(f"the API would refuse {item}: {exc}") from exc
+    assert items[1] == {"role": "assistant", "content": "Hi Sam."}
+    assert items[-1]["content"][0]["type"] == "input_text"  # the new message keeps its parts
+
+
+def test_a_failed_response_is_not_a_cheerful_empty_answer(settings, registry, ctx) -> None:
+    api = fakes.FakeResponsesAPI(fakes.oa_response([], status="failed"))
+    with pytest.raises(AgentError) as info:
+        _run(api, settings, registry, ctx)
+    assert info.value.retryable is True  # worth another go, unlike a malformed request
+
+
+def test_token_columns_do_not_double_count(settings, registry, ctx) -> None:
+    api = fakes.FakeResponsesAPI(
+        fakes.oa_response(
+            [fakes.oa_text("hi")],
+            usage={
+                "input_tokens": 5000,  # this API counts the cached ones inside this
+                "input_tokens_details": {"cached_tokens": 4000, "cache_write_tokens": 500},
+                "output_tokens": 50,
+                "output_tokens_details": {"reasoning_tokens": 0},
+                "total_tokens": 5050,
+            },
+        )
+    )
+    usage = _run(api, settings, registry, ctx).usage
+    assert usage["input_tokens"] == 500  # everything not already accounted for
+    assert usage["cache_read_input_tokens"] == 4000
+    assert usage["cache_creation_input_tokens"] == 500
+    assert (
+        usage["input_tokens"]
+        + usage["cache_read_input_tokens"]
+        + usage["cache_creation_input_tokens"]
+        == 5000
+    )
+
+
+def test_the_cache_key_survives_a_restart(settings) -> None:
+    import subprocess
+    import sys
+
+    blocks = [SystemBlock("rules", cacheable=True), SystemBlock("volatile")]
+    here = _provider(settings).cache_key(blocks)
+    assert here and here.startswith("familydb-")
+    # A salted hash would differ in a fresh interpreter, and the key would stop finding its cache.
+    script = (
+        "import hashlib;"
+        "print('familydb-' + hashlib.sha256('rules'.encode('utf-8')).hexdigest()[:16])"
+    )
+    elsewhere = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, check=True
+    ).stdout.strip()
+    assert here == elsewhere
+    assert _provider(settings).cache_key([SystemBlock("volatile")]) is None
+
+
+def test_the_family_is_not_moved_to_another_country(settings) -> None:
+    from familydb.agent.worker import home_location
+
+    located = settings.model_copy(update={"home_area": "Vancouver, BC"})
+    request = TurnRequest(
+        system=[], messages=[], web=WebAccess(user_location=home_location(located))
+    )
+    where = _provider(settings).payload(request)["tools"][0]["user_location"]
+    assert where["city"] == "Vancouver" and where["region"] == "BC"
+    assert "country" not in where  # nobody said which country, so nobody should guess
+
+
+def test_a_property_forced_to_be_required_can_still_say_nothing(registry) -> None:
+    """Strict mode forbids an absent field, so an optional one needs a null to fall back on."""
+    from familydb.agent.providers.openai import openai_schema
+
+    schema = openai_schema(registry.get("add_idea").api_definition()["input_schema"])
+    assert set(schema["required"]) == set(schema["properties"])
+    for name in ("setting", "tags", "needs_booking"):  # optional through a default, not a None
+        assert {"type": "null"} in schema["properties"][name]["anyOf"], name
+    assert schema["properties"]["title"] == {
+        "description": "Short name for the idea, e.g. 'Ramen place on Main St'.",
+        "type": "string",
+    }
+
+
+def test_a_null_means_use_the_default(registry, ctx) -> None:
+    result = registry.dispatch(
+        "add_idea",
+        {"title": "Ramen place", "kind": "restaurant", "setting": None, "tags": None},
+        ctx,
+    )
+    assert not result.is_error, result.content
+    from familydb.store import ideas
+
+    saved = ideas.get(ctx.conn, 1)
+    assert saved.setting == "either" and saved.tags == []  # the model's own defaults

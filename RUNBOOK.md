@@ -271,7 +271,7 @@ Lookups and discovery work on both. Conversations sent to OpenAI are sent with s
 - **"Sorry, I only talk to the family."** The sender is not in `members` for that channel; the reply includes the id to add.
 - **A refusal.** Rare. `llm_calls.stop_reason` is `refusal`; server-side fallbacks are on by default (`ANTHROPIC_FALLBACKS`), so it means every model declined.
 - **Replies are coming from the wrong provider.** `familydb debug cost` says who answers each surface. If it is not what you set, the other one is probably standing in because the chosen one has no key; the log says so at the time.
-- **"validation failed" from `debug validate-tools`.** That check only exists on the Claude side, since OpenAI has no token-counting endpoint. On OpenAI, send one real message instead.
+- **"validation failed" from `debug validate-tools`.** That check counts tokens, which Claude and Gemini offer and OpenAI does not. With `PROVIDER=openai`, send one real message instead, or point `PROVIDER` at another provider for the length of the check.
 - **"details: failed" on an idea.** The lookup worker could not identify the place; `ideas list --json` shows the note. Fix the title or location with "actually it's the one in Vancouver" and run `familydb enrich --idea N`.
 - **Suggestions say "web discovery off" or "hours unknown".** Web tools are off (`WEB_TOOLS_ENABLED`), or the idea has not been looked up yet; the enrichment job runs only in the long-running `familydb run` process.
 - **The digest never arrives.** `familydb digest` shows the schedule and chat; the log says why a run was skipped (no chat id, nothing to send with, no admin). The bot must be in the group and see its messages (section 4, step 3).
