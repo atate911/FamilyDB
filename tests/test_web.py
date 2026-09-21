@@ -517,7 +517,10 @@ def test_the_pages_have_no_way_to_write_to_the_database() -> None:
         "give_up",
         "reset_retries",
         "add",
+        "set_many",
+        "clear",
     }
+    stores.add("settings_store")
     for module in sorted(Path(package.__file__).parent.glob("*.py")):
         if module.name == "settings.py":
             continue  # it writes; the next test pins exactly how far that goes

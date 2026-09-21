@@ -183,6 +183,24 @@ def pending_enrichment(conn: sqlite3.Connection, *, limit: int) -> list[Idea]:
     return [Idea.from_row(row) for row in rows]
 
 
+def enrichment_counts(conn: sqlite3.Connection) -> dict[str, int]:
+    """How many live ideas sit in each lookup state, for the status page."""
+    rows = conn.execute(
+        "SELECT enrichment, count(*) AS n FROM ideas WHERE status != 'dropped' GROUP BY 1"
+    ).fetchall()
+    return {row["enrichment"]: row["n"] for row in rows}
+
+
+def failed_enrichment(conn: sqlite3.Connection, *, limit: int = 5) -> list[Idea]:
+    """The ideas whose lookup gave up, newest first, so the page can say why."""
+    rows = conn.execute(
+        f"{_SELECT} WHERE i.enrichment = 'failed' AND i.status != 'dropped' "
+        "ORDER BY coalesce(i.enriched_at, i.created_at) DESC LIMIT ?",
+        (limit,),
+    )
+    return [Idea.from_row(row) for row in rows]
+
+
 def requeue_enrichment(
     conn: sqlite3.Connection, idea_ids: Iterable[int], *, now: str | None = None
 ) -> int:

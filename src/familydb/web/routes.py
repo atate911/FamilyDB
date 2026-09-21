@@ -13,6 +13,7 @@ from familydb.store import ideas as idea_store
 from familydb.store import outcomes as outcome_store
 from familydb.store import places as place_store
 from familydb.store import plans as plan_store
+from familydb.web import status as status_page
 from familydb.web import views
 
 bp = Blueprint("web", __name__)
@@ -40,6 +41,14 @@ def _choices(rows: list[Any]) -> tuple[list[str], list[str]]:
 def healthz() -> Response:
     """A plain-text liveness check for a monitor or a reverse proxy. No password needed."""
     return Response("ok\n", mimetype="text/plain")
+
+
+@bp.get("/status")
+def status() -> str:
+    """Is it working, and what is it costing us? A handful of small queries, no model call."""
+    app = _app()
+    with closing(app.connect()) as conn:
+        return render_template("status.html", **status_page.status(app, conn))
 
 
 @bp.get("/")

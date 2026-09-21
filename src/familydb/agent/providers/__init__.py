@@ -25,6 +25,13 @@ from familydb.errors import ConfigError
 log = logging.getLogger(__name__)
 
 NAMES = ("anthropic", "openai", "gemini")
+# Which vendor a model name belongs to. Only ever used after the fact, to say who answered a
+# call that is already logged; nothing is chosen by it.
+OWNED = (
+    ("anthropic", ("claude",)),
+    ("openai", ("gpt", "o1", "o3", "o4", "chatgpt")),
+    ("gemini", ("gemini",)),
+)
 
 
 def build(name: str, settings: Settings, api: Any = None) -> Provider:
@@ -42,6 +49,15 @@ def build(name: str, settings: Settings, api: Any = None) -> Provider:
 
         return GeminiProvider(settings, api=api)
     raise ConfigError(f"unknown provider {name!r}; use one of {', '.join(NAMES)}")
+
+
+def owner(model: str | None) -> str | None:
+    """Whose model this name is, as far as the name says, or None when it does not say."""
+    named = (model or "").lower()
+    for name, prefixes in OWNED:
+        if any(named.startswith(prefix) for prefix in prefixes):
+            return name
+    return None
 
 
 def chosen(settings: Settings, surface: Surface) -> str:
@@ -92,4 +108,5 @@ __all__ = [
     "fallback_for",
     "for_surface",
     "others",
+    "owner",
 ]

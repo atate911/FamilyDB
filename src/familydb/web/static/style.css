@@ -179,3 +179,9 @@ label.inline input { margin-right: 0.15rem; }
   border-radius: 8px;
   overflow-wrap: anywhere;
 }
+
+/* The status page. */
+.light { font-size: 0.8rem; vertical-align: 0.05rem; }
+.light.on { color: var(--accent); }
+.light.off { color: var(--warn); }
+.light.part { color: var(--muted); }

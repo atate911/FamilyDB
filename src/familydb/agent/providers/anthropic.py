@@ -44,7 +44,11 @@ def ensure_credentials(client: Any) -> None:
 def make_client(settings: Settings) -> anthropic.Anthropic:
     """A client for the configured key. With no key the SDK uses its own credential lookup."""
     client = anthropic.Anthropic(api_key=settings.anthropic_api_key, max_retries=2, timeout=120.0)
-    ensure_credentials(client)
+    try:
+        ensure_credentials(client)
+    except AgentError:
+        client.close()  # it holds a connection pool; nobody is going to use this one
+        raise
     return client
 
 
@@ -75,10 +79,16 @@ class AnthropicProvider:
 
     # -- wiring ---------------------------------------------------------------------------
     def configured(self) -> bool:
+        """Whether a call could be made at all.
+
+        This one builds a throwaway client, because the SDK looks for credentials in places the
+        settings never see. It is closed again straight away: the status page asks this question
+        on every view, and a leaked pool per view is a slow way to run out of sockets.
+        """
         if self._api is not None:
             return True
         try:
-            make_client(self.settings)
+            make_client(self.settings).close()
         except AgentError:
             return False
         return True

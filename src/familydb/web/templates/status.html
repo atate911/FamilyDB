@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Status · {{ site_title }}{% endblock %}
+{% macro lines(rows) %}
+  <ul class="plain">
+    {% for row in rows %}
+      <li>
+        <span class="light {{ 'on' if row.on else ('off' if row.on is sameas false else 'part') }}"
+          >●</span
+        >
+        <strong>{{ row.label }}</strong>
+        <div class="muted">{{ row.detail }}</div>
+      </li>
+    {% endfor %}
+  </ul>
+{% endmacro %}
+{% block content %}
+  <h1>Status</h1>
+
+  <section class="panel">
+    <h2>Who answers</h2>
+    {{ lines(models) }}
+  </section>
+
+  <section class="panel">
+    <h2>Keys</h2>
+    {{ lines(keys) }}
+    <p class="muted">
+      <a href="{{ url_for('settings.show') }}#keys">Change a key</a>
+    </p>
+  </section>
+
+  <section class="panel">
+    <h2>Connected to</h2>
+    {{ lines(services) }}
+  </section>
+
+  <section class="panel">
+    <h2>What it has cost</h2>
+    {% if spending.rows %}
+      <p>
+        {{ "{:,}".format(spending.calls) }} model call{{ "" if spending.calls == 1 else "s" }} in
+        the last {{ days }} days. {{ spending.cache_share }}% of what was sent came back from the
+        cache, at a tenth of the price.
+      </p>
+      <table class="hours">
+        <tr>
+          <th>model</th><th>calls</th><th>sent</th><th>cached</th><th>written</th><th>back</th>
+        </tr>
+        {% for row in spending.rows %}
+          <tr>
+            <td>{{ row.model }}</td>
+            <td>{{ "{:,}".format(row.calls) }}</td>
+            <td>{{ "{:,}".format(row.input_tokens) }}</td>
+            <td>{{ "{:,}".format(row.cache_read) }}</td>
+            <td>{{ "{:,}".format(row.cache_write) }}</td>
+            <td>{{ "{:,}".format(row.output_tokens) }}</td>
+          </tr>
+        {% endfor %}
+      </table>
+    {% else %}
+      <p class="muted">Nothing has been asked of a model in the last {{ days }} days.</p>
+    {% endif %}
+    {% if last %}
+      <p class="muted">
+        Last call {{ last.when }}: {{ last.model }} ({{ last.provider }}), ended
+        “{{ last.stop }}”, took {{ last.seconds }}s.
+      </p>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <h2>Waiting</h2>
+    {% if waiting.lookups %}
+      <p class="meta">
+        {% for row in waiting.lookups %}<span>{{ row.count }} {{ row.state }}</span>{% endfor %}
+      </p>
+    {% else %}
+      <p class="muted">No ideas yet.</p>
+    {% endif %}
+    {% if waiting.pending %}
+      <h3>Next to be looked up</h3>
+      <ul class="plain">
+        {% for row in waiting.pending %}
+          <li><a href="{{ url_for('web.idea', idea_id=row.id) }}">#{{ row.id }} {{ row.title }}</a></li>
+        {% endfor %}
+      </ul>
+      {% if waiting.pending_total > waiting.pending | length %}
+        <p class="muted">and {{ waiting.pending_total - (waiting.pending | length) }} more.</p>
+      {% endif %}
+    {% endif %}
+    {% if waiting.messages %}
+      <h3>Messages that did not go through</h3>
+      <ul class="plain">
+        {% for row in waiting.messages %}
+          <li>
+            {{ row.text }}
+            <div class="muted">
+              {{ row.when }} · {{ row.error }} ·
+              {% if row.given_up %}given up on{% else %}{{ row.tries }} tr{{ "y" if row.tries == 1 else "ies" }}, will try again{% endif %}
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </section>
+
+  {% if troubles.calls or troubles.lookups %}
+    <section class="panel">
+      <h2>Worth a look</h2>
+      {% if troubles.calls %}
+        <h3>Calls that ended oddly</h3>
+        <ul class="plain">
+          {% for row in troubles.calls %}
+            <li>{{ row.model }} — {{ row.stop }}<div class="muted">{{ row.when }}</div></li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+      {% if troubles.lookups %}
+        <h3>Lookups that failed</h3>
+        <ul class="plain">
+          {% for row in troubles.lookups %}
+            <li>
+              <a href="{{ url_for('web.idea', idea_id=row.id) }}">#{{ row.id }} {{ row.title }}</a>
+              <div class="muted">{{ row.note }}{% if row.when %} · {{ row.when }}{% endif %}</div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </section>
+  {% endif %}
+{% endblock %}

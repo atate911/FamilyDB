@@ -103,3 +103,17 @@ def usage_since(conn: sqlite3.Connection, *, since: str) -> list[dict[str, Any]]
         (since,),
     ).fetchall()
     return [dict(row) for row in rows]
+
+
+def troubles_since(
+    conn: sqlite3.Connection, *, since: str, limit: int = 10
+) -> list[dict[str, Any]]:
+    """Model calls that ended in something other than an answer or a tool call, newest first."""
+    rows = conn.execute(
+        "SELECT coalesce(served_model, model) AS model, stop_reason, created_at, message_id "
+        "FROM llm_calls WHERE created_at >= ? AND stop_reason IS NOT NULL "
+        "AND stop_reason NOT IN ('end', 'tool_use', 'paused') "
+        "ORDER BY id DESC LIMIT ?",
+        (since, limit),
+    ).fetchall()
+    return [dict(row) for row in rows]

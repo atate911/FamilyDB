@@ -128,6 +128,16 @@ def failed(conn: sqlite3.Connection, *, max_retries: int | None = None) -> list[
     return [Message.from_row(row) for row in rows]
 
 
+def recent_failures(conn: sqlite3.Connection, *, limit: int = 10) -> list[Message]:
+    """Inbound messages that did not go through, newest first, whether or not they are done with."""
+    rows = conn.execute(
+        "SELECT * FROM messages WHERE direction = 'in' AND status = 'failed' "
+        "ORDER BY id DESC LIMIT ?",
+        (limit,),
+    ).fetchall()
+    return [Message.from_row(row) for row in rows]
+
+
 def bump_retries(conn: sqlite3.Connection, message_id: int) -> None:
     conn.execute("UPDATE messages SET retries = retries + 1 WHERE id = ?", (message_id,))
 
