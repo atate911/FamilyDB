@@ -203,7 +203,10 @@ def retry_message(
         log.warning("cannot retry message %s: sender unknown", message_id)
         return None
     with transaction(conn):
-        messages.bump_retries(conn, message_id)
+        claimed = messages.claim_retry(conn, message_id, row.retries)
+    if not claimed:
+        log.info("not retrying message %s: another process has taken this attempt", message_id)
+        return None
     msg = IncomingMessage(
         channel=row.channel,
         channel_update_id=row.channel_update_id,

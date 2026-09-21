@@ -32,6 +32,7 @@ run()  { if [ "$DRY_RUN" = 1 ]; then note "would run: $*"; else "$@"; fi; }
 FAILED_AT=""
 EXPLAINED=0   # die() has already said why, so the trap stays quiet
 trap 'FAILED_AT="$BASH_COMMAND"' ERR
+# shellcheck disable=SC2154  # `status` is assigned at the start of this same trap.
 trap 'status=$?; if [ $status -ne 0 ] && [ "$EXPLAINED" = 0 ]; then printf "\n%s✗%s stopped at: %s\n   Nothing further was changed. Fix that and run this again.\n" "$RED" "$OFF" "${FAILED_AT:-the step above}" >&2; fi' EXIT
 
 usage() {

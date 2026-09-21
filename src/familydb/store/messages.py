@@ -142,6 +142,22 @@ def bump_retries(conn: sqlite3.Connection, message_id: int) -> None:
     conn.execute("UPDATE messages SET retries = retries + 1 WHERE id = ?", (message_id,))
 
 
+def claim_retry(conn: sqlite3.Connection, message_id: int, retries: int) -> bool:
+    """Take the next attempt at a failed message, if nobody else has it.
+
+    The running bot's retry job and `familydb db retry-failed` can both be looking at the same
+    row. Reading it and then bumping the count in a second statement would let both of them pay
+    for a model call and send the family two answers, so the bump is the claim: whoever changes
+    the row from the count they read wins, and the other is told to leave it alone.
+    """
+    changed = conn.execute(
+        "UPDATE messages SET retries = retries + 1 "
+        "WHERE id = ? AND direction = 'in' AND status = 'failed' AND give_up = 0 AND retries = ?",
+        (message_id, retries),
+    )
+    return changed.rowcount == 1
+
+
 def give_up(conn: sqlite3.Connection, message_id: int) -> None:
     """Stop the retry job from picking a message up, e.g. after a configuration error."""
     conn.execute("UPDATE messages SET give_up = 1 WHERE id = ?", (message_id,))

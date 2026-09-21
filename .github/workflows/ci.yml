@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The floor the project claims, and the one the Docker image runs.
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --frozen --python ${{ matrix.python }}
+      - name: Tests
+        run: uv run pytest -q
+      - name: Lint and format
+        run: uv run ruff check . && uv run ruff format --check .
+
+  installer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Shell syntax
+        run: bash -n scripts/install.sh
+      - name: Shellcheck
+        run: shellcheck --severity=warning scripts/install.sh
+      - name: A dry run changes nothing
+        run: |
+          scripts/install.sh --dry-run --non-interactive --mode venv
+          test ! -e .env
+      - name: A real install works from an untouched checkout
+        env:
+          ADMIN_NAME: Sam
+          FAMILYDB_TZ: America/Vancouver
+          NO_COLOR: "1"
+        run: |
+          scripts/install.sh --non-interactive --mode venv
+          .venv/bin/familydb config > /dev/null
+          .venv/bin/familydb db status > /dev/null
+          .venv/bin/familydb members list | grep -q Sam
+      - name: The example config is a working config
+        run: |
+          rm -f .env && cp .env.example .env
+          .venv/bin/familydb config > /dev/null

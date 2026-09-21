@@ -37,6 +37,32 @@ def test_retry_recovers_and_delivers(settings, clock, conn, family) -> None:
     assert retry_message(app, message_id, api=api, conn=conn) is None  # no longer failed
 
 
+def test_only_one_process_can_take_a_retry(settings, clock, conn, family) -> None:
+    """The bot's retry job and `familydb db retry-failed` can both see the same failed row."""
+    app = App(settings, clock)
+    message_id = _failed_message(app, conn, fakes.rate_limit_error())
+    app.senders["console"] = lambda chat_id, text: None
+
+    # What the loser of the race holds: the row as it was before the winner claimed it.
+    stale = messages.get(conn, message_id)
+    assert messages.claim_retry(conn, message_id, stale.retries) is True
+    assert messages.claim_retry(conn, message_id, stale.retries) is False
+    assert messages.get(conn, message_id).retries == 1  # one attempt, not two
+
+    # The one that loses the race stops there, without paying for a model call. An API with no
+    # replies scripted would raise if it were asked for one.
+    messages.reset_retries(conn)
+    lost = fakes.FakeMessagesAPI()
+    from familydb import pipeline
+
+    original = pipeline.messages.claim_retry
+    try:
+        pipeline.messages.claim_retry = lambda *args, **kwargs: False
+        assert retry_message(app, message_id, api=lost, conn=conn) is None
+    finally:
+        pipeline.messages.claim_retry = original
+
+
 def test_retries_are_bounded(settings, clock, conn, family) -> None:
     app = App(settings.model_copy(update={"retry_max_attempts": 2}), clock)
     message_id = _failed_message(app, conn, fakes.rate_limit_error())
