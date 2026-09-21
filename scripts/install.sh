@@ -166,6 +166,9 @@ set_env() { # set_env KEY VALUE
   [ "$DRY_RUN" = 1 ] && { note "would set $key"; return 0; }
   written="$(quote_env "$value")"
   if grep -q "^${key}=" "$ENV_FILE" 2>/dev/null; then
+    # The temporary file holds the keys too, so it is owner-only before a byte goes into it.
+    rm -f "${ENV_FILE}.tmp"
+    (umask 077; : > "${ENV_FILE}.tmp")
     # Read and write by hand: awk -v would read a backslash in the value as an escape.
     while IFS= read -r line || [ -n "$line" ]; do
       if [ "$replaced" = 0 ] && [ "${line%%=*}" = "$key" ] && [ "$line" != "${line#*=}" ]; then
@@ -174,7 +177,7 @@ set_env() { # set_env KEY VALUE
       else
         printf '%s\n' "$line"
       fi
-    done < "$ENV_FILE" > "${ENV_FILE}.tmp"
+    done < "$ENV_FILE" >> "${ENV_FILE}.tmp"
     mv "${ENV_FILE}.tmp" "$ENV_FILE"
     chmod 600 "$ENV_FILE"
   else

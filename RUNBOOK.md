@@ -161,6 +161,17 @@ uv sync --frozen --no-dev && sudo systemctl restart familydb
 ```
 
 Migrations run automatically on start. Never edit an applied migration; add a new numbered file.
+Check `systemctl status familydb` or `docker compose logs bot` once it is back: a setting that no
+longer validates is named in one line rather than stopping silently.
+
+Two upgrades ask something of you once:
+
+- Everyone signs in to the page again the first time after upgrading past the change that ties a
+  session to the password it was opened with. Nothing is wrong; it happens once.
+- The `tls` profile now keeps Caddy's certificate in `caddy/` rather than `data/caddy`, so that a
+  private key is not inside the bot's volume and its backups. Move the old folder across before
+  starting, or let Caddy ask for a fresh certificate, which it will do on its own:
+  `mv data/caddy caddy`. Delete any backup taken before this that might hold the old key.
 
 ## 9. Lookups, the weekend digest and follow-ups
 
