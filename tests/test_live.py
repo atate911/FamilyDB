@@ -49,11 +49,13 @@ def test_two_turns_save_an_idea_and_hit_the_cache(tmp_path: Path) -> None:
 
 @skip_unless_live
 def test_tool_schemas_are_accepted_by_the_api(tmp_path: Path) -> None:
+    from familydb.agent.providers.base import Message, TurnRequest
+
     app = _live_app(tmp_path)
-    settings = app.settings
-    result = app.client.beta.messages.count_tokens(
-        model=settings.anthropic_model,
-        tools=app.registry.api_tools(settings),
-        messages=[{"role": "user", "content": "hello"}],
+    provider = app.provider("chat")
+    request = TurnRequest(
+        system=[],
+        messages=[Message("user", ["hello"])],
+        tools=app.registry.tool_defs(app.registry.names()),
     )
-    assert result.input_tokens > 0
+    assert provider.count_tokens(request) > 0
