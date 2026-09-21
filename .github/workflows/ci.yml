@@ -63,16 +63,16 @@ jobs:
           .venv/bin/familydb config > /dev/null       # still usable by whoever installed it
           .venv/bin/familydb members list | grep -q Sam
       - name: The documented install, in /opt, is complete
+        # Through bootstrap.sh, which is what docs/INSTALL.md tells people to run: it is the
+        # only path that makes uv reachable by the service account as well as by the installer.
         env:
           ADMIN_NAME: Sam
           FAMILYDB_TZ: America/Vancouver
           NO_COLOR: "1"
         run: |
-          sudo mkdir -p /opt/familydb
-          sudo chown "$USER" /opt/familydb
-          git archive HEAD | tar -x -C /opt/familydb
+          sudo -E bash scripts/bootstrap.sh --from "$PWD" --yes --non-interactive --no-start
+          test -x /usr/local/bin/uv     # installed where every account can see it
           cd /opt/familydb
-          scripts/install.sh --non-interactive --mode venv
           test -f /etc/systemd/system/familydb.service
           test "$(stat -c %a /etc/systemd/system/familydb.service)" = 644
           grep -q "^WorkingDirectory=/opt/familydb$" /etc/systemd/system/familydb.service
@@ -123,6 +123,7 @@ jobs:
           test -f /opt/familydb/data/familydb.sqlite3   # the data is not
           sudo scripts/install.sh --non-interactive --mode venv
           sudo -u familydb .venv/bin/familydb members list | grep -q Sam
+          sudo -u familydb .venv/bin/familydb doctor --json > /dev/null || true
       - name: purge removes everything, and backs it up first
         run: |
           cd /opt/familydb

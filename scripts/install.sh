@@ -316,8 +316,28 @@ elif [ "$MODE" = docker ]; then
   fi
 else
   if ! have uv; then
+    # The most common reason by far: uv was installed into somebody's home directory, so it is
+    # on their PATH and on nobody else's. Say that, rather than "not installed", which sends
+    # people off to install it a second time.
+    if on_system_path uv; then
+      die "uv is installed but not on this PATH" \
+          "PATH is: ${PATH}" \
+          "Run this with the system PATH, or use scripts/bootstrap.sh, which sorts this out."
+    fi
+    for home in /root "${SUDO_USER:+/home/${SUDO_USER}}"; do
+      [ -n "$home" ] && [ -x "${home}/.local/bin/uv" ] && {
+        die "uv is installed at ${home}/.local/bin/uv, where this account cannot see it" \
+            "A tool in a home directory cannot be used by a service account. Install it for" \
+            "everyone, then run this again:" \
+            "  curl -LsSf https://astral.sh/uv/install.sh | sudo UV_INSTALL_DIR=/usr/local/bin sh" \
+            "Or use scripts/bootstrap.sh, which does that for you."
+      }
+    done
     if [ "$NON_INTERACTIVE" = 1 ]; then
-      die "uv is not installed. Install it from https://docs.astral.sh/uv/ and run again."
+      die "uv is not installed, and this path needs it" \
+          "Install it for every account on the machine:" \
+          "  curl -LsSf https://astral.sh/uv/install.sh | sudo UV_INSTALL_DIR=/usr/local/bin sh" \
+          "Or run scripts/bootstrap.sh, which installs it and everything else."
     fi
     say "This path needs uv, which manages the Python version and the virtualenv."
     if confirm "Install uv now (downloads and runs the official installer)?" yes; then
