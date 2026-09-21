@@ -9,6 +9,8 @@ ENV_FILE="${REPO_ROOT}/.env"
 EXAMPLE_FILE="${REPO_ROOT}/.env.example"
 
 MODE=""              # docker | venv
+HAND_OVER_TO_SERVICE=0   # give data/ and .env to the familydb user, once the checks have run
+SUDO=""              # set when the systemd unit is installed
 ASSUME_YES=0         # --yes: take every default, ask nothing
 NON_INTERACTIVE=0    # --non-interactive: never prompt; fail if something required is missing
 DRY_RUN=0
@@ -164,6 +166,11 @@ quote_env() { # quote_env VALUE -> how that value must be written so .env reads 
 set_env() { # set_env KEY VALUE
   local key="$1" value="$2" written line replaced=0
   [ "$DRY_RUN" = 1 ] && { note "would set $key"; return 0; }
+  # One setting per line is the whole format; a value with a line break in it cannot be stored
+  # here at all, and quietly storing half of it is worse than stopping.
+  case "$value" in
+    *$'\n'*) die "${key} contains a line break, which .env cannot hold. Use a value on one line." ;;
+  esac
   written="$(quote_env "$value")"
   if grep -q "^${key}=" "$ENV_FILE" 2>/dev/null; then
     # The temporary file holds the keys too, so it is owner-only before a byte goes into it.
@@ -527,7 +534,7 @@ if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
   head2 "Running it as a service"
   if [ "$(id -u)" = 0 ] || have sudo; then
     if confirm "Install the systemd unit so it starts on boot?" yes; then
-      SUDO=""; [ "$(id -u)" = 0 ] || SUDO="sudo"
+      [ "$(id -u)" = 0 ] || SUDO="sudo"
       unit="${REPO_ROOT}/deploy/familydb.service"
       [ -f "$unit" ] || die "missing ${unit}"
       if [ "$DRY_RUN" = 1 ]; then
@@ -553,7 +560,7 @@ if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
         case "$REPO_ROOT" in
           /home/*|/root/*)
             sed -i -e 's#^ProtectHome=true#ProtectHome=read-only#' "$tmp_unit"
-            note "Checkout is under ${REPO_ROOT%%/*}/, so the unit uses ProtectHome=read-only."
+            note "A checkout under /home or /root needs ProtectHome=read-only; the unit says so."
             ;;
         esac
         if $SUDO cp "$tmp_unit" /etc/systemd/system/familydb.service \
@@ -564,17 +571,9 @@ if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
           warn "Could not install the systemd unit. Everything else is set up; see RUNBOOK section 2b."
         fi
         rm -f "$tmp_unit"
-        # The service has to read the secrets and write the database; nobody else should.
-        if id familydb >/dev/null 2>&1; then
-          if $SUDO chown -R familydb:familydb "${REPO_ROOT}/data" 2>/dev/null \
-             && { [ ! -f "$ENV_FILE" ] || $SUDO chown familydb:familydb "$ENV_FILE"; }; then
-            ok "data/ and .env now belong to the familydb user."
-            note "Run the CLI as that user: sudo -u familydb ${REPO_ROOT}/.venv/bin/familydb repl"
-          else
-            warn "Could not hand data/ and .env to the familydb user. Do it before starting:"
-            warn "  sudo chown -R familydb:familydb ${REPO_ROOT}/data ${REPO_ROOT}/.env"
-          fi
-        fi
+        # The handover of data/ and .env waits until after the checks below, which run as the
+        # user running this script and would lose their own database halfway through.
+        HAND_OVER_TO_SERVICE=1
       fi
     fi
   else
@@ -605,6 +604,20 @@ else
   fi
 fi
 
+# --------------------------------------------------- handing it to the service ----
+# Last, because everything above runs as whoever started this script and needs to be able to
+# read .env and write data/. After this, those belong to the service.
+if [ "$HAND_OVER_TO_SERVICE" = 1 ] && [ "$DRY_RUN" = 0 ] && id familydb >/dev/null 2>&1; then
+  if $SUDO chown -R familydb:familydb "${REPO_ROOT}/data" 2>/dev/null \
+     && { [ ! -f "$ENV_FILE" ] || $SUDO chown familydb:familydb "$ENV_FILE"; }; then
+    ok "data/ and .env now belong to the familydb user."
+  else
+    warn "Could not hand data/ and .env to the familydb user. Do it before starting:"
+    warn "  sudo chown -R familydb:familydb ${REPO_ROOT}/data ${REPO_ROOT}/.env"
+    HAND_OVER_TO_SERVICE=0
+  fi
+fi
+
 # ----------------------------------------------------------- what is next ----
 head2 "Done"
 
@@ -616,6 +629,8 @@ else
   START="sudo systemctl start familydb   # or: .venv/bin/familydb run"
   LOGS="journalctl -u familydb -f"
   CLI="${REPO_ROOT}/.venv/bin/familydb"
+  # data/ and .env belong to the service now, so a command that reads them has to be that user.
+  [ "$HAND_OVER_TO_SERVICE" = 1 ] && CLI="sudo -u familydb ${REPO_ROOT}/.venv/bin/familydb"
 fi
 
 say "Start it:   ${B}${START}${OFF}"

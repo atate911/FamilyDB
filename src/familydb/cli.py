@@ -15,7 +15,6 @@ from typing import Any
 from uuid import uuid4
 
 import typer
-from pydantic import ValidationError
 
 from familydb import __version__
 from familydb.agent.history import load_history
@@ -32,7 +31,7 @@ from familydb.availability import (
 from familydb.channels.console import DEFAULT_CHAT, one_shot, run_repl
 from familydb.config import Settings, apply_overrides, load_settings
 from familydb.dates import utc_iso
-from familydb.errors import FamilyDBError
+from familydb.errors import ConfigError, FamilyDBError
 from familydb.integrations import google_calendar
 from familydb.store import calls, db, ideas, members, messages
 from familydb.store import settings as settings_store
@@ -795,20 +794,18 @@ def run_cli() -> None:
     """
     try:
         app()
-    except ValidationError as exc:
-        problems = [
-            f"{'.'.join(str(part) for part in error['loc']) or 'setting'}: {error['msg']}"
-            for error in exc.errors()
-        ]
+    except ConfigError as exc:
         _stop(
-            "a setting will not do:",
-            *problems,
+            str(exc),
             "",
             "Fix it in .env or on the settings page, then run this again.",
             "`familydb config` prints every setting and where it came from.",
         )
     except sqlite3.OperationalError as exc:
-        _stop(
-            f"the database could not be opened: {exc}",
-            "FAMILYDB_PATH points somewhere this user cannot write, or the folder is missing.",
-        )
+        detail = []
+        if "unable to open database file" in str(exc):
+            detail = ["FAMILYDB_PATH names a folder this user cannot write to, or cannot reach."]
+        _stop(f"the database could not be opened: {exc}", *detail)
+    except OSError as exc:
+        # Most often .env or data/ belonging to the service user, read by somebody else.
+        _stop(f"familydb could not start: {exc}")

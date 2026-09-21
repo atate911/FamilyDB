@@ -44,7 +44,7 @@ services:
     command: caddy reverse-proxy --from ${WEB_DOMAIN:-localhost} --to bot:8080
     volumes:
       # Its own folder, not ./data: the certificate's private key has no business being inside
-      # the bot's volume, in the bot's container, and in every `familydb db backup`.
+      # the bot's volume, where the bot's container can read it and any copy of data/ carries it.
       - ./caddy:/data
     restart: unless-stopped
     logging:

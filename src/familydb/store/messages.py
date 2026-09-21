@@ -138,10 +138,6 @@ def recent_failures(conn: sqlite3.Connection, *, limit: int = 10) -> list[Messag
     return [Message.from_row(row) for row in rows]
 
 
-def bump_retries(conn: sqlite3.Connection, message_id: int) -> None:
-    conn.execute("UPDATE messages SET retries = retries + 1 WHERE id = ?", (message_id,))
-
-
 def claim_retry(conn: sqlite3.Connection, message_id: int, retries: int) -> bool:
     """Take the next attempt at a failed message, if nobody else has it.
 

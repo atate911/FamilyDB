@@ -8,8 +8,17 @@ from pathlib import Path
 from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import AliasChoices, Field, PrivateAttr, field_validator, model_validator
+from pydantic import (
+    AliasChoices,
+    Field,
+    PrivateAttr,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from familydb.errors import ConfigError
 
 Effort = Literal["low", "medium", "high", "xhigh", "max"]
 ProviderName = Literal["anthropic", "openai", "gemini"]
@@ -244,9 +253,26 @@ class Settings(BaseSettings):
         return out
 
 
+def describe(exc: ValidationError) -> str:
+    """A validation failure as a person reading a journal wants it: which setting, and why."""
+    lines = []
+    for error in exc.errors():
+        name = ".".join(str(part) for part in error["loc"]) or "setting"
+        lines.append(f"  {name}: {error['msg']}")
+    return "a setting will not do:\n" + "\n".join(lines)
+
+
 def load_settings(env_file: str | Path | None = ".env", **overrides: Any) -> Settings:
-    """Build settings from the environment, an optional .env file, and explicit overrides."""
-    return Settings(_env_file=env_file, **overrides)
+    """Build settings from the environment, an optional .env file, and explicit overrides.
+
+    A value that will not validate is a configuration problem, not a programming one, so it
+    arrives as a ConfigError naming the setting. `apply_overrides` deliberately does not do
+    this: the settings page wants pydantic's own error to put against the right box.
+    """
+    try:
+        return Settings(_env_file=env_file, **overrides)
+    except ValidationError as exc:
+        raise ConfigError(describe(exc)) from exc
 
 
 def apply_overrides(base: Settings, values: dict[str, Any]) -> Settings:

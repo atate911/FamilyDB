@@ -170,7 +170,7 @@ class App:
         # Turning the log up is most of the reason anyone opens the settings page in a hurry.
         wanted = getattr(logging, self.settings.log_level, logging.INFO)
         if logging.getLogger().level != wanted:
-            logging.getLogger().setLevel(wanted)
+            set_log_level(wanted)
             log.info("log level is now %s", self.settings.log_level)
 
     def connect(self) -> sqlite3.Connection:
@@ -191,16 +191,26 @@ class App:
 QUIET_LOGGERS = ("httpx", "httpcore")
 
 
-def configure_logging(level: str) -> None:
-    wanted = getattr(logging, level.upper(), logging.INFO)
-    logging.basicConfig(level=wanted, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    # basicConfig does nothing once a handler exists, and this is called again after a reload.
+def set_log_level(wanted: int) -> None:
+    """Move the root logger, and the transport loggers with it.
+
+    Called again whenever the level changes on the settings page, so the two never drift: a
+    family that turns DEBUG on to read the traffic, and then turns it back down, must not be
+    left with the transport still logging the Telegram token.
+    """
     logging.getLogger().setLevel(wanted)
     # LOG_LEVEL=DEBUG is someone deliberately looking at the traffic, and is told in the runbook
     # that the token comes with it. Every other level keeps it out.
     transport = logging.DEBUG if wanted <= logging.DEBUG else logging.WARNING
     for name in QUIET_LOGGERS:
         logging.getLogger(name).setLevel(transport)
+
+
+def configure_logging(level: str) -> None:
+    wanted = getattr(logging, level.upper(), logging.INFO)
+    logging.basicConfig(level=wanted, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    # basicConfig does nothing once a handler exists, and this is called again after a reload.
+    set_log_level(wanted)
 
 
 def build_app(env_file: str | Path | None = ".env", **overrides: Any) -> App:

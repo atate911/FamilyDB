@@ -100,7 +100,7 @@ def test_it_shows_what_is_waiting(status, conn, family) -> None:
             now=NOW_ISO,
         )
         messages.mark_failed(conn, stuck.id, "AgentError: overloaded", now=NOW_ISO)
-        messages.bump_retries(conn, stuck.id)
+        assert messages.claim_retry(conn, stuck.id, 0) is True
     text = _flat(status.get("/status"))
     assert "2 waiting to be looked up" in text and "1 looked up" in text
     assert 'href="/idea/1"' in text and "#1 Idea 0" in text

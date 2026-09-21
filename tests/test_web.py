@@ -513,7 +513,7 @@ def test_the_pages_have_no_way_to_write_to_the_database() -> None:
         "set_active",
         "mark_processed",
         "mark_failed",
-        "bump_retries",
+        "claim_retry",
         "give_up",
         "reset_retries",
         "add",

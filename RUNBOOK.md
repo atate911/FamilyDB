@@ -171,7 +171,8 @@ Two upgrades ask something of you once:
 - The `tls` profile now keeps Caddy's certificate in `caddy/` rather than `data/caddy`, so that a
   private key is not inside the bot's volume and its backups. Move the old folder across before
   starting, or let Caddy ask for a fresh certificate, which it will do on its own:
-  `mv data/caddy caddy`. Delete any backup taken before this that might hold the old key.
+  `mv data/caddy caddy`. Any copy you made of the whole `data/` folder holds the old key, so
+  delete it; `familydb db backup` copies only the database and never held one.
 
 ## 9. Lookups, the weekend digest and follow-ups
 
