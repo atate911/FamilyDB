@@ -225,3 +225,20 @@ def test_debug_cost_reports_the_prefix_and_what_was_spent(env: Path) -> None:
     assert "Sent with every chat message" in result.output
     assert "tool definitions" in result.output and "in total" in result.output
     assert "No model calls in the last 30 days." in result.output
+
+
+def test_a_command_reports_the_settings_in_force_not_the_file_s(env: Path) -> None:
+    """A stored setting is what the bot is doing, so it is what a command should say."""
+    from contextlib import closing
+
+    from familydb.app import build_app
+    from familydb.store import settings as settings_store
+
+    runner.invoke(app, ["db", "migrate"])
+    assert "via anthropic" in runner.invoke(app, ["debug", "cost"]).output
+    application = build_app()
+    with closing(application.connect()) as conn, db.transaction(conn):
+        settings_store.set_many(conn, {"provider": "gemini", "gemini_model": "gemini-2.5-flash"})
+    result = runner.invoke(app, ["debug", "cost"])
+    assert result.exit_code == 0, result.output
+    assert "chat runs on gemini-2.5-flash via gemini" in result.output

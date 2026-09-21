@@ -121,6 +121,10 @@ The database is one file. Nightly:
 
 or with Docker: `docker compose exec bot familydb db backup /data/backups/familydb-$(date +%F).sqlite3`. The backup uses SQLite's online backup API and is safe while the bot runs. Keep a copy off the server. Calendar events are also in Google.
 
+An API key stored from the settings page lives in this file, so it is in every backup. That is
+the price of being able to change a key from a phone. If these backups go anywhere you do not
+control, keep the keys in `.env` instead (section 11) and the backup holds none.
+
 ## 8. Upgrades
 
 ```bash
@@ -146,9 +150,10 @@ Migrations run automatically on start. Never edit an applied migration; add a ne
 
 ## 10. The web page
 
-A read-only page for browsing: the ideas list with search and filters, one idea in full with its
-hours, travel estimate and booking link, the restaurants on their own page, and what is on the
-calendar. It never changes anything; ideas and plans are still added by messaging the bot.
+Five pages: the ideas list with search and filters, one idea in full with its hours, travel
+estimate and booking link, the restaurants on their own page, what is on the calendar, and two
+that are about the bot rather than the family — a status page and a settings page (section 11).
+Ideas, plans and outcomes are never changed here; they are still added by messaging the bot.
 
 **At home.** Put a password in `.env`, turn the page on, and restart:
 
@@ -193,11 +198,18 @@ Running without Docker, put nginx or Caddy in front the same way and keep `WEB_H
 
 **What protects it.** One shared password, checked in constant time. Five wrong guesses lock that
 address out for fifteen minutes and are logged, and fifty failures from anywhere within a quarter
-of an hour stop the page answering logins at all, so a guesser with many addresses gets nowhere. Every page but the login and `/healthz` needs the
-cookie. Responses carry a content security policy that forbids scripts and framing, and nothing on
-the page writes to the database, so the worst a visitor can do is read. Refusing to start is
+of an hour stop the page answering logins at all, so a guesser with many addresses gets nowhere.
+Every page but the login and `/healthz` needs the cookie. Responses carry a content security
+policy that forbids scripts and framing. Every form carries a token from the session as well, so a
+link from another site cannot make a change on the family's behalf. Refusing to start is
 deliberate: a page bound off the loopback with no password will not serve, and says so, unless you
 set `WEB_ALLOW_NO_PASSWORD=true` on purpose.
+
+Be clear-eyed about what signing in now buys someone: the ideas and plans are read-only, but the
+settings page can change which model answers, read the API keys, and point the bot at a different
+calendar. On a machine on the internet, that one password is what stands between a stranger and
+your API bill. Make it long, and use section 11's status page to notice a month that does not
+look like yours.
 
 **Checking it.**
 
@@ -215,31 +227,60 @@ out at random. The port must stay above 1024, because the bot runs unprivileged 
 systemd. The page opens its own database connection per request, which is safe alongside the bot
 writing: SQLite is in WAL mode.
 
-## 11. Choosing Claude or OpenAI
+**Status.** `/status` answers "is it working?" without a log: which model answers chat and which
+does the lookups, whether each key is set and whether it came from `.env` or the page, whether
+the calendar, the weather and the web lookups are connected, what the models have cost over the
+last thirty days and how much of that came back from the prompt cache, what is waiting to be
+looked up, which messages did not go through, and the failures worth a look. It asks nothing of a
+model, so refreshing it is free.
 
-Either can answer, and the choice is made per surface, so the two halves of the work can go to
-different places:
+## 11. Settings, and choosing Claude, OpenAI or Gemini
+
+Every setting in this section can be changed in two places: in `.env`, which needs a restart, or
+on the settings page at `/settings`, which does not. A value set on the page wins over the same
+one in `.env`; empty a box on the page and `.env` applies again, which is what the greyed-out
+value in an empty box is showing you. `familydb config` prints the lot and says where each one
+came from.
+
+A change reaches the next message and the next page straight away. The jobs that run on a
+schedule — the digest, the follow-ups, the lookups, the retries — pick a new time or interval up
+within five minutes. Nothing here needs `familydb run` restarted.
+
+**Who answers.** Any of the three can, and the choice is made per surface, so the two halves of
+the work can go to different places:
 
 ```
-PROVIDER=anthropic         # or openai: who writes the replies the family reads
+PROVIDER=anthropic         # anthropic, openai or gemini: who writes the replies the family reads
 WORKER_PROVIDER=           # empty means the same; set it to send lookups elsewhere
-PROVIDER_FALLBACK=true     # ask the other one when the first cannot take a message
+PROVIDER_FALLBACK=true     # ask another one when the first cannot take a message
 ```
 
-Give whichever keys you have. `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` sit side by side; the one
-you did not choose becomes the spare. Each has its own pair of models, a larger one for chat and
-a smaller one for the mechanical lookups:
+Give whichever keys you have. `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` and `GEMINI_API_KEY` sit side
+by side; the ones you did not choose become spares, tried in that order. Each vendor has its own
+pair of models, a larger one for chat and a smaller one for the mechanical lookups:
 
 ```
 ANTHROPIC_MODEL=claude-opus-5
 WORKER_MODEL=claude-haiku-4-5-20251001
 OPENAI_MODEL=gpt-5
 OPENAI_WORKER_MODEL=gpt-5-mini
+GEMINI_MODEL=gemini-2.5-pro
+GEMINI_WORKER_MODEL=gemini-2.5-flash
 ```
 
 Check those names against your own account before relying on them; model names change and these
-are only defaults. `familydb debug cost` prints who is answering each surface and on which model,
-which is the quickest way to see that a change took effect.
+are only defaults. `/status` and `familydb debug cost` both print who is answering each surface
+and on which model, which is the quickest way to see that a change took effect.
+
+**Keys on the page.** The settings page can store an API key, which is convenient and has one
+consequence worth knowing: a key stored there lives in `data/familydb.sqlite3`, so it is in every
+backup you take (section 7) and in every copy of that file. A key in `.env` is not. Either is
+fine on a machine you control; if the backups go somewhere you do not control, keep the keys in
+`.env`. The page never shows a key back to you or writes one to its change log — seeing one means
+typing the family password again, and it is shown once, on that screen only.
+
+**Undoing a change.** The bottom of the settings page lists what has changed, when, and from
+where. To put a setting back the way it was, empty its box: the value from `.env` applies again.
 
 **A worthwhile combination.** Filling in an address and opening hours from a page is extraction,
 not judgement, and it is most of the volume once lookups are on. Sending that to the cheaper
@@ -258,8 +299,11 @@ usual. A malformed request is not handed over either, since it would fail the sa
 Turn it off with `PROVIDER_FALLBACK=false`.
 
 **What differs between them.** Claude's prompt cache is marked explicitly and lasts
-`ANTHROPIC_CACHE_TTL`; OpenAI caches long prefixes on its own, so that setting does nothing there.
-Lookups and discovery work on both. Conversations sent to OpenAI are sent with storage off.
+`ANTHROPIC_CACHE_TTL`; OpenAI and Gemini cache long prefixes on their own, so that setting does
+nothing there. Lookups and discovery work on all three. Conversations sent to OpenAI are sent
+with storage off. `familydb debug validate-tools` works on Claude and Gemini, which can be asked
+to count tokens without generating anything; OpenAI has no such endpoint, so there the first real
+message is the check.
 
 ## 12. Troubleshooting
 
@@ -278,3 +322,6 @@ Lookups and discovery work on both. Conversations sent to OpenAI are sent with s
 - **"the web page is not serving" in the log.** Either the settings forbid it (a page off the loopback with no `WEB_PASSWORD`) or the port is taken. The log line says which. The bot keeps running either way.
 - **The web page asks for the password again and again.** The login cookie could not be stored or its signing key keeps changing. Check that `data/` is writable, or set `WEB_SECRET_KEY`. Over HTTPS, `WEB_TRUST_PROXY` must be true or the `Secure` cookie is never set.
 - **The web page is unreachable from another device.** `WEB_HOST` is probably still `127.0.0.1`, or the compose `ports` line still starts with `127.0.0.1:`. Both have to change, and a password has to be set.
+- **A setting in `.env` does nothing.** Something on the settings page is set for it, and that wins. `familydb config` marks every value with where it came from; empty that box on the page and `.env` applies again.
+- **"stored settings are not usable" in the log.** A value in the database no longer validates, usually because an upgrade narrowed what a setting will take. The bot keeps running on what `.env` says and names the setting in the same line; fix or empty that box on the settings page.
+- **A changed digest hour or lookup interval did not take effect.** Those move within five minutes of the change, not instantly; `journalctl` shows a "settings changed" line when they do. Anything that has not moved after that is worth reporting.

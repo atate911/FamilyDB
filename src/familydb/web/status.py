@@ -123,9 +123,9 @@ def services(app: App) -> list[dict[str, Any]]:
         _row(
             "Reading the web",
             enrichment_available(live),
-            "ideas are looked up automatically"
+            "ideas are looked up automatically, and discovery may search"
             if enrichment_available(live)
-            else "switched off, or no key for the lookup model",
+            else "off: no idea is filled in and nothing new is discovered",
         ),
         _row("Weekend digest", bool(live.digest_chat_id), live.digest_chat_id or "not sent"),
         _row("This page", None if not live.web_password else True, page),

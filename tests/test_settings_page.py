@@ -95,8 +95,9 @@ def test_a_value_the_setting_will_not_take_is_refused_on_its_own_box(page, conn)
 
 def test_a_form_without_this_session_s_token_is_refused(page, conn) -> None:
     form = _whole_form(page, provider="gemini")
-    refused = page.post("/settings", data={**form, "csrf": "made up"})
-    assert refused.status_code == 400
+    stale = page.post("/settings", data={**form, "csrf": "made up"})
+    assert stale.status_code == 400
+    assert "too old to use" in stale.text  # not "from another site": it was not
     assert settings_store.overrides(conn) == {}
     no_token = page.post("/settings", data={key: "" for key in form})
     assert no_token.status_code == 400
@@ -104,6 +105,9 @@ def test_a_form_without_this_session_s_token_is_refused(page, conn) -> None:
         "/settings", data=form, headers={"Origin": "https://not-this-page.example"}
     )
     assert elsewhere.status_code == 400
+    assert "did not come from this page" in elsewhere.text
+    for path in ("/settings/keys", "/settings/reveal"):
+        assert page.post(path, data={"csrf": "made up"}).status_code == 400
 
 
 def test_a_key_is_stored_but_never_shown_and_never_logged(page, conn) -> None:

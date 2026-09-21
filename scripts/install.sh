@@ -50,7 +50,7 @@ Options
   -h, --help           This text.
 
 Answers can be supplied as environment variables, which is what --non-interactive reads:
-  PROVIDER  ANTHROPIC_API_KEY  OPENAI_API_KEY
+  PROVIDER  ANTHROPIC_API_KEY  OPENAI_API_KEY  GEMINI_API_KEY
   FAMILYDB_TZ  HOME_AREA  HOME_LAT  HOME_LON  WEATHER_UNITS
   TELEGRAM_BOT_TOKEN  WEB_ENABLED  WEB_HOST  WEB_PORT  WEB_PASSWORD  WEB_TOOLS_ENABLED
   ADMIN_NAME
@@ -111,6 +111,30 @@ confirm() { # confirm "question" yes|no
 }
 
 # --------------------------------------------------------------- helpers ----
+ask_key() { # ask_key VAR provider "Label" "where to get one" "what it starts with"
+  local var="$1" owner="$2" label="$3" where="$4" prefix="$5"
+  if [ -z "${!var:-}" ]; then
+    # Explaining where to get a key is only worth doing to somebody who is about to be asked.
+    if [ "$NON_INTERACTIVE" = 0 ] && [ -t 0 ]; then
+      say ""
+      say "A key for ${label}. Create one at ${where}"
+      if [ "$PROVIDER" = "$owner" ]; then
+        note "This is the one you chose, so this is the key it will answer with."
+      else
+        note "Optional. With a key here, ${label} answers when the one you chose cannot."
+      fi
+      note "Leave it blank to fill in later; everything else will still be set up."
+    fi
+    ask_secret "$var" "${label} key"
+  fi
+  case "${!var:-}" in
+    "") ;;
+    ${prefix}*) ok "${label} key stored." ;;
+    *) warn "that does not look like a ${label} key (they start ${prefix}). Storing it anyway." ;;
+  esac
+  set_env "$var" "${!var:-}"
+}
+
 set_env() { # set_env KEY VALUE
   local key="$1" value="$2"
   [ "$DRY_RUN" = 1 ] && { note "would set $key"; return 0; }
@@ -269,48 +293,31 @@ if [ "$KEEP_ENV" = 0 ]; then
 
   # --- who answers ---
   say ""
-  say "Which model answers: Claude, or OpenAI. You can give both and it will use the other one"
-  say "when the first is rate limited or down."
-  ask PROVIDER "claude or openai" "${PROVIDER:-claude}"
+  say "Which model answers: Claude, OpenAI or Gemini. Give more than one key and it will ask"
+  say "another when the first is rate limited or down. All three can be changed later from the"
+  say "settings page, so this is not a decision you are stuck with."
+  ask PROVIDER "claude, openai or gemini" "${PROVIDER:-claude}"
   case "$PROVIDER" in
     openai|OpenAI|OPENAI|gpt|GPT) PROVIDER=openai ;;
+    gemini|Gemini|GEMINI|google|Google|GOOGLE) PROVIDER=gemini ;;
     *) PROVIDER=anthropic ;;
   esac
   set_env PROVIDER "$PROVIDER"
 
-  if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
-    say ""
-    say "An Anthropic key, for Claude. Create one at https://console.anthropic.com/settings/keys"
-    [ "$PROVIDER" = openai ] && note "Optional here, since you chose OpenAI; it becomes the spare."
-    note "Leave it blank to fill in later; everything else will still be set up."
-    ask_secret ANTHROPIC_API_KEY "Anthropic key"
-  fi
-  case "${ANTHROPIC_API_KEY:-}" in
-    "") ;;
-    sk-ant-*) ok "Anthropic key stored." ;;
-    *) warn "that does not look like an Anthropic key (they start sk-ant-). Storing it anyway." ;;
-  esac
-  set_env ANTHROPIC_API_KEY "${ANTHROPIC_API_KEY:-}"
+  ask_key ANTHROPIC_API_KEY anthropic "Claude" \
+    "https://console.anthropic.com/settings/keys" "sk-ant-"
+  ask_key OPENAI_API_KEY openai "OpenAI" "https://platform.openai.com/api-keys" "sk-"
+  ask_key GEMINI_API_KEY gemini "Gemini" "https://aistudio.google.com/apikey" "AIza"
 
-  if [ -z "${OPENAI_API_KEY:-}" ]; then
-    say ""
-    say "An OpenAI key. Create one at https://platform.openai.com/api-keys"
-    [ "$PROVIDER" = anthropic ] && note "Optional here, since you chose Claude; it becomes the spare."
-    ask_secret OPENAI_API_KEY "OpenAI key"
-  fi
-  case "${OPENAI_API_KEY:-}" in
-    "") ;;
-    sk-*) ok "OpenAI key stored." ;;
-    *) warn "that does not look like an OpenAI key (they start sk-). Storing it anyway." ;;
+  case "$PROVIDER" in
+    anthropic) CHOSEN_KEY="${ANTHROPIC_API_KEY:-}" ;;
+    openai) CHOSEN_KEY="${OPENAI_API_KEY:-}" ;;
+    gemini) CHOSEN_KEY="${GEMINI_API_KEY:-}" ;;
   esac
-  set_env OPENAI_API_KEY "${OPENAI_API_KEY:-}"
-
-  if [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -z "${OPENAI_API_KEY:-}" ]; then
+  if [ -z "${ANTHROPIC_API_KEY:-}${OPENAI_API_KEY:-}${GEMINI_API_KEY:-}" ]; then
     warn "No key at all. The bot will save messages but cannot reply until you add one to .env."
-  elif [ "$PROVIDER" = openai ] && [ -z "${OPENAI_API_KEY:-}" ]; then
-    warn "You chose OpenAI but gave no OpenAI key; it will fall back to Claude until you add one."
-  elif [ "$PROVIDER" = anthropic ] && [ -z "${ANTHROPIC_API_KEY:-}" ]; then
-    warn "You chose Claude but gave no Anthropic key; it will fall back to OpenAI until you add one."
+  elif [ -z "$CHOSEN_KEY" ]; then
+    warn "You chose ${PROVIDER} but gave no key for it; it will ask one of the others instead."
   fi
 
   # --- where the family is ---
@@ -365,7 +372,8 @@ if [ "$KEEP_ENV" = 0 ]; then
 
   # --- the web page ---
   say ""
-  say "A read-only web page lets you browse the ideas, the restaurants and the plans in a browser."
+  say "A web page lets you browse the ideas, the restaurants and the plans in a browser, see"
+  say "what the models have cost, and change the settings and the keys without editing a file."
   if [ -z "${WEB_ENABLED:-}" ]; then
     if confirm "Turn the web page on?" no; then WEB_ENABLED=true; else WEB_ENABLED=false; fi
   fi
@@ -517,7 +525,8 @@ else
     rm -f /tmp/familydb-tools.$$
     ok "${ready} tools ready${waiting:+, ${waiting} waiting on a service you have not set up yet}."
   fi
-  if [ -n "${ANTHROPIC_API_KEY:-}" ] && [ "${PROVIDER:-anthropic}" = anthropic ]; then
+  # Only where counting tokens is free: OpenAI has no such endpoint, so there is nothing to ask.
+  if [ -n "${CHOSEN_KEY:-}" ] && [ "${PROVIDER:-anthropic}" != openai ]; then
     if runfamilydb debug validate-tools >/dev/null 2>&1; then
       ok "The API accepted the key and every tool definition."
     else
@@ -544,8 +553,8 @@ say "Watch it:   ${LOGS}"
 say "Talk to it: ${CLI} repl"
 say ""
 say "Still to do, when you are ready:"
-if [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -z "${OPENAI_API_KEY:-}" ]; then
-  say "  · put ANTHROPIC_API_KEY or OPENAI_API_KEY in .env, or it cannot reply"
+if [ -z "${ANTHROPIC_API_KEY:-}${OPENAI_API_KEY:-}${GEMINI_API_KEY:-}" ]; then
+  say "  · add a key in .env or on the settings page, or it cannot reply"
 fi
 [ -z "${TELEGRAM_BOT_TOKEN:-}" ] && say "  · add a Telegram bot token to chat from your phones (RUNBOOK section 4)"
 [ -z "${HOME_LAT:-}" ] && say "  · add HOME_LAT and HOME_LON for the weather (RUNBOOK section 6)"

@@ -81,9 +81,15 @@ def main(
 
 
 def _ready(application: App) -> sqlite3.Connection:
-    """A migrated connection for a CLI command."""
+    """A migrated connection for a CLI command, with the stored settings already in force.
+
+    A command should show the family what the bot is doing, not what a file says it would do if
+    nothing had ever been changed from the page.
+    """
     application.migrate()
-    return application.connect()
+    conn = application.connect()
+    application.refresh(conn)
+    return conn
 
 
 FROM_PAGE = "set on the settings page"
@@ -442,13 +448,16 @@ def repl(
 def run() -> None:
     """Start the bot: apply migrations, then serve the configured channels until stopped."""
     application = build_app()
-    settings = application.settings
     application.migrate()
+    application.refresh()  # before anything reads a setting, including the scheduler
+    settings = application.settings
+    chat = application.provider("chat")
     log.info(
-        "familydb %s starting: db=%s model=%s effort=%s tz=%s",
+        "familydb %s starting: db=%s answering on %s via %s, effort=%s, tz=%s",
         __version__,
         settings.familydb_path,
-        settings.anthropic_model,
+        chat.model_for("chat"),
+        chat.name,
         settings.effort,
         settings.tz,
     )

@@ -122,7 +122,12 @@ class App:
         from familydb.store import settings as settings_store
 
         if conn is None:
-            with closing(self.connect()) as own:
+            try:
+                own = self.connect()
+            except (sqlite3.Error, OSError) as exc:
+                log.warning("could not open the database to read the settings: %s", exc)
+                return False
+            with closing(own):
                 return self.refresh(own)
         with self._reload:
             try:

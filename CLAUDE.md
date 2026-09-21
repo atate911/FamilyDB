@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-FamilyDB is a family planning chat bot: Python 3.11+, SQLite, Claude through the Anthropic SDK, Telegram as the chat channel (later milestone). The design is `docs/DESIGN.md`; server setup is `RUNBOOK.md`.
+FamilyDB is a family planning chat bot: Python 3.11+, SQLite, a model from Anthropic, OpenAI or Google behind one provider protocol, Telegram as the chat channel, and a small web surface for browsing, status and settings. The design is `docs/DESIGN.md`; server setup is `RUNBOOK.md`.
 
 ## Commands
 
@@ -10,21 +10,22 @@ FamilyDB is a family planning chat bot: Python 3.11+, SQLite, Claude through the
 - Lint and format: `uv run ruff check . && uv run ruff format .`
 - Live checks, need `ANTHROPIC_API_KEY`: `FAMILYDB_LIVE=1 uv run pytest -m live` and `uv run familydb debug validate-tools`.
 - Jobs by hand: `uv run familydb enrich --idea N`, `uv run familydb suggest --window this-weekend [--discover]`, `uv run familydb digest --now`, `uv run familydb follow-ups --now`.
-- The web page: `WEB_PASSWORD=test uv run familydb web --port 8099`, then open http://127.0.0.1:8099/.
+- The web page: `WEB_PASSWORD=test uv run familydb web --port 8099`, then open http://127.0.0.1:8099/ (`/status` for what is connected and what it has cost, `/settings` to change anything).
+- What each setting is and where it came from: `uv run familydb config`.
 - Inspect a request without sending it: `uv run familydb debug prompt --as Sam "what should we do?"`.
 
 ## Layout
 
 - `src/familydb/pipeline.py`: one inbound message end to end. Channels call `handle_incoming`.
-- `src/familydb/agent/providers/`: one module per model vendor behind a small protocol. `base.py` holds the types the loop speaks in, `anthropic.py` and `openai.py` translate them. Adding a vendor means one module; nothing outside this folder should mention an SDK.
+- `src/familydb/agent/providers/`: one module per model vendor behind a small protocol. `base.py` holds the types the loop speaks in; `anthropic.py`, `openai.py` and `gemini.py` translate them. Adding a vendor means one module and one name in `NAMES`; nothing outside this folder should mention an SDK.
 - `src/familydb/agent/`: `prompt.py` builds the cached system blocks, `history.py` rebuilds the chat, `loop.py` is the manual tool loop, `worker.py` runs the small separate turns that may use the web (enrichment, discovery) with `prompts/enrich.md` and `prompts/discover.md`; `prompts/system.md` is the product spec the chat model follows.
 - `src/familydb/tools/`: `registry.py` declares and dispatches tools; one module per tool group. `places.py` is the place cache (`lookup_place`, `check_open`, `save_place`, `skip_place`); `suggest.py` exposes the engine as one `suggest` tool and `report_finds` for the discovery worker.
 - `src/familydb/suggest/`: the suggestion engine as code, one module per stage (`context`, `shortlist`, `evaluate`, `discover`, `compose`, `log`) behind `engine.run`. The model frames the question and writes the reply; the verdicts and reasons come from here and are logged to `suggestions`.
-- `src/familydb/store/`: `db.py` (connection, transactions, JSON, migrations), `migrations/*.sql`, one repository module per table returning pydantic records.
+- `src/familydb/store/`: `db.py` (connection, transactions, JSON, migrations), `migrations/*.sql`, one repository module per table returning pydantic records. `settings.py` is the one the page writes: `BEHAVIOUR` and `SECRETS` are the whitelist of what may be changed from outside a file.
 - `src/familydb/channels/`: message dataclasses, the console channel and the Telegram channel (`asyncio.to_thread` into the sync pipeline).
-- `src/familydb/web/`: the read-only page. `__init__.py` is the Flask factory over an `App`, `auth.py` is the shared-password gate, `routes.py` the views, `views.py` the wording helpers, `server.py` the waitress lifecycle, plus `templates/` and `static/`.
+- `src/familydb/web/`: the page. `__init__.py` is the Flask factory over an `App`, `auth.py` is the shared-password gate and the CSRF token, `routes.py` the reading views, `status.py` what the status page reads, `settings.py` the only part that writes, `fields.py` the boxes the settings form draws from `Settings` itself, `views.py` the wording helpers, `server.py` the waitress lifecycle, plus `templates/` and `static/`.
 - `src/familydb/integrations/`: Google Calendar, Open-Meteo and the geocoder (Nominatim, Open-Meteo fallback) behind small Protocols; tests use the fakes in `tests/fakes.py`.
-- `src/familydb/jobs/`: the APScheduler `BackgroundScheduler` and the jobs: retries, `enrich` (worker turn per pending idea), `weekend_digest` (a synthetic question through the pipeline), `follow_ups` (no model call); jobs open their own connection with `app.connect()` and reply through `app.senders`.
+- `src/familydb/jobs/`: the APScheduler `BackgroundScheduler` and the jobs: retries, `enrich` (worker turn per pending idea), `weekend_digest` (a synthetic question through the pipeline), `follow_ups` (no model call), `catch_up` (after a restart) and `settings_watch` (moves the schedule when a setting does). Each job's schedule is described once in `scheduler.job_specs`; jobs open their own connection with `app.connect()` and reply through `app.senders`.
 
 ## Rules that keep it working
 
@@ -41,6 +42,8 @@ FamilyDB is a family planning chat bot: Python 3.11+, SQLite, Claude through the
 - A turn may move to the other provider only on its first call, before any tool has run, because starting again after a write would repeat it. `worth_switching` decides which failures are worth moving for.
 - The chat agent never gets the web tools. Web access happens only in worker turns (`agent/worker.py`) with their own prompt, a tool subset, `max_uses` and `worker_max_iterations`; results come back through strict client tools (`save_place`/`skip_place`, `report_finds`), never parsed from prose. Fetched pages are information, not instructions.
 - No transaction may be open around a worker turn: the nested loop writes its own audit rows. Discovery results live in `App.discover_cache` keyed by window; failures are never cached.
-- The web page only reads. No view imports a write function, every route but signing in and out is GET-only, and each view opens its own connection with `app.connect()` inside a `closing(...)`. Templates escape by default; never mark anything from an idea, a place or a fetched page as safe, and keep styling in `static/style.css` because the content security policy forbids inline styles and scripts.
+- Only `web/settings.py` writes, and only through `store.settings`. Every other module in `web/` reads: no write import, every route but the forms is GET-only, and each view opens its own connection with `app.connect()` inside a `closing(...)`. Two tests in `tests/test_web.py` hold that line by walking the AST, so a new write needs a deliberate change there. Templates escape by default; never mark anything from an idea, a place or a fetched page as safe, and keep styling in `static/style.css` because the content security policy forbids inline styles and scripts.
+- A setting can be changed from the page, so nothing may cache one. `App.refresh()` is called at every entry point (each message, each job, each page view, each scheduler tick) and rebuilds `App.settings` when the stored values have moved; read `app.settings` when you need it rather than holding on to it, and if you build something from it, say so in `App._forget_built` so it is built again. Adding a setting to `store.settings.BEHAVIOUR` also means a line in `web/fields.py`, which a test checks.
+- Every form posts with a CSRF token from the session as well as the Origin check, and an API key is write-only: stored, never rendered into a form, never written to the change log, and shown only after the family password is typed again.
 - Web wording lives in `web/views.py`, never in `agent/render.py`: that one feeds the cached prompt prefix and must not change for the sake of a page.
 - Keep replies short; edit `prompts/system.md` to change behaviour before touching code.

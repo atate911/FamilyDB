@@ -49,6 +49,8 @@ MAX_TRACKED = 4096
 # never come near it.
 GLOBAL_ATTEMPTS = 50
 GLOBAL_WINDOW_MINUTES = 15
+# Long enough for any real address, IPv6 with a zone included.
+MAX_ADDRESS = 64
 # Endpoints reachable without signing in. "static" covers the stylesheet on the login page.
 OPEN_ENDPOINTS = frozenset({"auth.login", "auth.sign_in", "auth.logout", "web.healthz", "static"})
 HOME = "/"
@@ -146,8 +148,12 @@ def password_matches(settings: Settings, given: str) -> bool:
 
 
 def client_address() -> str:
-    """Who is asking. Correct behind a proxy only when WEB_TRUST_PROXY is set."""
-    return request.remote_addr or "unknown"
+    """Who is asking. Correct behind a proxy only when WEB_TRUST_PROXY is set.
+
+    Trimmed, because behind a proxy this is whatever arrived in a header: it is a key in the
+    lockout table and it is written to the settings log, and neither wants an essay.
+    """
+    return (request.remote_addr or "unknown")[:MAX_ADDRESS]
 
 
 def safe_next(target: str | None) -> str | None:
