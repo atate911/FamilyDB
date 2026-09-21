@@ -1,6 +1,6 @@
 # FamilyDB design
 
-Status: living design. Phases 0 and 1 are built (store, tools, agent loop with prompt caching, console and Telegram channels, Google Calendar, weather, retries); see the README for what works today. Section 16 lists what is decided and what is still open.
+Status: living design. Phases 0 to 2 are built and phase 4 is under way: the store, the tools, the agent loop with prompt caching, the console and Telegram channels, Google Calendar, weather, retries, enrichment, the suggestion engine, web discovery, the digest, follow-ups, three providers behind one protocol, and the web page with its status and settings screens. See the README for what works today, section 15 for the roadmap and section 16 for what is decided and what is still open.
 
 ## 1. What it is
 
@@ -10,7 +10,7 @@ A private family assistant that lives in a chat app and owns three things:
 - Confirmed plans, mirrored to the shared Google Calendar: "we're going to the symphony next Saturday".
 - Answers to "what should we do this weekend?" that weigh each stored idea against the calendar, the forecast, opening hours, booking needs, travel time and who is coming, and add fresh finds from the web.
 
-It runs as one long-lived Python process on the home server, uses Claude for language understanding and for reading the web, and stores everything in a SQLite file we own.
+It runs as one long-lived Python process on a machine we own, home server or VPS. Language understanding and web reading go to Claude, OpenAI or Gemini, chosen per surface behind one provider protocol, and everything it knows is stored in a SQLite file we own.
 
 ## 2. What done looks like
 
@@ -75,7 +75,7 @@ Sam and Alex are placeholder family members. Dates assume today is Sunday 20 Sep
 - **The model understands, the code stores.** Claude turns sentences into structured records and picks tools. The tools are small, deterministic functions with tests. There are no free-form writes.
 - **Every suggestion is checked, not just recalled.** Before an idea is suggested it is evaluated against the actual day: weather, hours, booking, travel, who is coming, what was done recently. The web is consulted for things the list doesn't know about.
 - **Family scale is small scale.** A few hundred ideas fit in the model's context at once, so retrieval starts as "give the model the whole list" and only gets clever if it has to.
-- **Own the data.** One SQLite file on the home server, human-readable, backed up nightly. Google Calendar is the second copy of plans.
+- **Own the data.** One SQLite file on our own machine, human-readable, backed up nightly. Google Calendar is the second copy of plans.
 - **Echo, don't interrogate.** The bot confirms what it recorded, including resolved dates, and lets people correct it. It asks a question only when a plan is missing a date or time that matters.
 - **Small surface, easy to extend.** One process, one adapter per chat channel, one module per tool, one module per suggestion stage.
 
@@ -100,12 +100,12 @@ Sam and Alex are placeholder family members. Dates assume today is Sunday 20 Sep
         through Anthropic    (FamilyDB)         API
 ```
 
-- **Channel adapter.** Receives messages and sends replies. Telegram, via long polling, so the home server needs no open ports. The interface is small: a message-in callback and a send-text call. Other channels can be added later without touching the rest.
+- **Channel adapter.** Receives messages and sends replies. Telegram, via long polling, so the machine needs no open ports. The interface is small: a message-in callback and a send-text call. Other channels can be added later without touching the rest.
 - **Message pipeline.** Allowlist check, persist the raw message, build context, run the agent, send the reply, persist what happened. Section 5.
 - **Providers.** Claude, OpenAI and Gemini all answer, chosen per surface, so chat can run on one and the mechanical lookups on another. The loop is written against a small protocol: it builds a request in terms no vendor owns and reads back a normalised reply, and each provider module translates. A message the chosen provider cannot take, because it is rate limited, unreachable or has no key, is asked of the next one that has a key, but only before any tool has run, so nothing is done twice.
 - **Agent.** One call through the chosen provider with the system prompt, family context, the recent conversation for that chat, and the tools in section 6. The model decides whether a message is an idea, a plan, a query, feedback, a correction or chit-chat. There is no separate classifier.
 - **Tools.** Plain functions with JSON-schema inputs. Each is unit-tested and runnable from a CLI without the model, which is also how a web UI or another front end could reuse them later.
-- **Web search and fetch.** Anthropic's server-side tools, declared on the request. Claude searches and reads pages on Anthropic's side, so we host no scraper and hold no search API key. They are declared only in *worker turns*: small separate model calls with their own prompt, a tool subset and an iteration budget, used by the enrichment job and by the discovery stage. The chat agent's request never carries them, which keeps its cached prefix stable and its cost predictable.
+- **Web search and fetch.** The provider's own server-side tools, declared on the request: Anthropic's `web_search`/`web_fetch`, OpenAI's `web_search`, Gemini's `google_search`. The searching and reading happen on their side, so we host no scraper and hold no search API key. They are declared only in *worker turns*: small separate model calls with their own prompt, a tool subset and an iteration budget, used by the enrichment job and by the discovery stage. The chat agent's request never carries them, which keeps its cached prefix stable and its cost predictable.
 - **Enrichment worker.** A background job that takes newly saved ideas and fills in the place record: what it is, address and coordinates, opening hours, website and booking link, price notes, travel time from home. Section 9.
 - **Suggestion engine.** The explicit procedure behind "what should we do": frame, context, shortlist, evaluate each candidate, discover on the web, compose, log. Section 10. The stages are code, exposed to the chat model as one `suggest` tool; the model frames the question and writes the reply. Used for chat questions and for the Thursday digest alike.
 - **Web surface.** A page served by the same process, behind one shared family password: the ideas list, one idea in full, the restaurants and the plans, all read through the same store functions as the tools; a status page saying what is connected, what is waiting and what the models have cost; and a settings page. The family's own records are never written from the page, so it cannot corrupt anything the bot maintains; the one thing it does write is `app_settings`, which is how the bot is configured rather than what it knows. Section 12.
@@ -142,7 +142,7 @@ Prompt caching: the system prompt and the idea list go first with a cache breakp
 | `skip_place` | idea_id, status (skipped or failed), reason | Used by the enrichment worker for ideas that are not one place, or that it could not identify. |
 | `suggest` | window (this_weekend, next_weekend, dates, someday), start?, end?, participants[], max_cost_level?, setting?, max_travel_minutes?, max_duration_minutes?, discover, question | Runs the suggestion engine (section 10) and returns the day context, every candidate with its verdict and reasons, the web finds and the checks that were skipped. |
 | `report_finds` | finds[] (title, url, dates, summary) | Used by the discovery worker to hand back time-bound things found on the web; http(s) links only, at most six. |
-| `web_search`, `web_fetch` | query, url | Anthropic's server-side tools, declared only in worker turns. Search returns results with links. Fetch reads a page whose URL already appears in the conversation, such as a search result or an idea's saved website. |
+| `web_search`, `web_fetch` | query, url | The provider's server-side tools, declared only in worker turns. Search returns results with links. Fetch reads a page whose URL already appears in the conversation, such as a search result or an idea's saved website. |
 | `get_calendar` | start, end | Live events from the shared calendar in that window, plus derived free blocks per day (morning, afternoon, evening). Includes events people added by hand. |
 | `create_event` | title, start, end?, all_day?, location?, notes?, idea_id? | Creates the Google Calendar event, records it in `plans`, links the idea and marks it planned. |
 | `update_event`, `delete_event` | plan id, changes | Corrections such as "actually Sunday". |
@@ -279,7 +279,7 @@ Design notes:
 
 **Telegram.** A bot created with BotFather. Long polling means the server needs no inbound ports. Two ways to use it: DM the bot, or a dedicated family group ("Ideas & Plans") with the bot added and privacy mode disabled so everything posted there is for the bot. Voice notes can be transcribed later.
 
-**Web search and fetch.** Anthropic's server-side tools, declared on the request alongside our own tools. No scraper to host, no search API key. Fetch only follows URLs already in the conversation, which is what we want: links from search results or an idea's saved website.
+**Web search and fetch.** The provider's server-side tools, declared on the request alongside our own. No scraper to host, no search API key. Fetch only follows URLs already in the conversation, which is what we want: links from search results or an idea's saved website.
 
 **Weather.** Open-Meteo: free, no API key, sixteen-day daily forecast for the configured coordinates.
 
@@ -287,13 +287,13 @@ Design notes:
 
 **Later.** Google Places for hours, ratings and open-now; a routing API for drive times.
 
-## 12. Deployment on the home server
+## 12. Deployment on a home server or a VPS
 
 - One container via Docker Compose: the bot process, a volume for the SQLite file and the Google token, `.env` for secrets, `restart: unless-stopped`.
 - The bot itself needs no inbound ports: long polling and outbound HTTPS only.
 - The web page, when enabled, binds a port above 1024 (the process is unprivileged). Compose publishes it to the host machine alone by default. On the home network it can be published directly with a password set; on a public server an optional Caddy profile terminates HTTPS for a domain and the bot's own port stays private. `WEB_TRUST_PROXY` then makes the page read the real client address and scheme from the proxy.
-- Logs to stdout; `docker logs` is enough to start.
-- Backups: a nightly job runs SQLite's online backup to a second location. Calendar events are also in Google.
+- Logs to stdout; `docker logs` is enough to start. The HTTP transport is kept quiet below DEBUG, because a Telegram request carries the bot token in its URL.
+- Backups: a nightly job runs SQLite's online backup to a second location; the backup refuses to run against a database that is not there, so a cron line with the wrong working directory fails loudly instead of copying an empty one. Calendar events are also in Google.
 - Config comes from the environment and `.env` (full list with comments in `.env.example`): `PROVIDER`, `WORKER_PROVIDER`, `PROVIDER_FALLBACK`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY` and each vendor's pair of models, `EFFORT`, `MAX_OUTPUT_TOKENS`, `ANTHROPIC_CACHE_TTL`, `TELEGRAM_BOT_TOKEN`, `GOOGLE_CALENDAR_ID`, `GOOGLE_TOKEN_PATH`, `HOME_LAT`, `HOME_LON`, `HOME_AREA` (for web searches, e.g. "Vancouver, WA"), `FAMILYDB_TZ`, `FAMILYDB_PATH`, `WEB_TOOLS_ENABLED` (enrichment and discovery), `ENRICH_INTERVAL_MINUTES`, `ENRICH_BATCH`, `ENRICHMENT_NOTES`, `PLACE_STALE_DAYS`, `WORKER_MAX_ITERATIONS`, `TRAVEL_SPEED_KMH`, `ROAD_FACTOR`, `DIGEST_CHAT_ID`, `DIGEST_DAY`, `DIGEST_HOUR`, `FOLLOW_UP_HOUR`, and the `WEB_*` page settings.
 - Most of those can also be set from the settings page, which stores them in `app_settings` on top of the environment. Every entry point calls `App.refresh()` first — a single query for the newest change, and a rebuild only when it has moved — so a change reaches the next message, job and page view without a restart, and the scheduler moves a changed hour or interval within five minutes. What the page cannot reach is the shape of the deployment: the database path, the host, the port and the page's own password stay in `.env`, where a form cannot get at them.
 - Upgrades: `git pull && docker compose up -d --build`. Migrations run on start.
@@ -301,11 +301,11 @@ Design notes:
 ## 13. Security
 
 - Allowlist by channel user id. Unknown senders cannot trigger the model at all.
-- The model can only call the listed tools. No shell, no arbitrary HTTP from our process, no file access. Web reading happens on Anthropic's side through the declared tools.
+- The model can only call the listed tools. No shell, no arbitrary HTTP from our process, no file access. Web reading happens on the provider's side through the declared tools, in worker turns only.
 - The Google token has calendar scope only, on one calendar.
 - Inbound text and fetched web pages are treated as untrusted content in the prompt. The worst a malicious message or page can do is create a wrong idea, event or place record, which is visible and reversible.
 - Secrets live in `.env` on the server, never in the repo. `.env.example` documents them.
-- The web page is behind one shared password, compared in constant time, with a per-address lockout after five wrong guesses and a site-wide one after fifty. A page bound off the loopback without a password refuses to start unless the waiver is set deliberately, and a public one needs at least twelve characters. Responses carry a content security policy that forbids scripts and framing; the login cookie is HttpOnly, SameSite and, behind a proxy, Secure. Every form carries a per-session token as well as passing an Origin check. Everything shown comes from chat or from pages the lookup worker read, so it is escaped by the template engine and its links are filtered to http(s) when saved.
+- The web page is behind one shared password, compared in constant time, with a per-address lockout after five wrong guesses and a site-wide one after fifty. A session carries a mark of the password it was opened with, so changing the password ends every session that was signed in under the old one. A page bound off the loopback without a password refuses to start unless the waiver is set deliberately, and a public one needs at least twelve characters. Responses carry a content security policy that forbids scripts and framing; the login cookie is HttpOnly, SameSite and, behind a proxy, Secure. Every form carries a per-session token as well as passing an Origin check. Everything shown comes from chat or from pages the lookup worker read, so it is escaped by the template engine and its links are filtered to http(s) when saved.
 - The family's own records — ideas, plans, places, messages — are never written from the page; two tests walk the web package's AST to hold that line. The one table it writes is `app_settings`, and only through a whitelist: a setting not named in `store.settings.BEHAVIOUR` or `SECRETS` cannot be reached by a crafted form at all, which is why `FAMILYDB_PATH`, `WEB_HOST` and `WEB_PASSWORD` are not on it.
 - An API key is write-only from the page: stored, never rendered back into a form, and never written to the change log, which records only that it was replaced, by whom and from where. Showing one needs the family password typed again, is shown once on that screen, and is counted and locked out separately from signing in so a slip cannot shut the family out. A key stored this way lives in the database and therefore in the backups; the RUNBOOK says so, and `.env` remains the option for anyone who would rather it did not.
 - Every action is logged with the message that caused it.
@@ -343,7 +343,7 @@ Decided so far: Telegram as the chat channel and Python as the language. The res
 | Decision | Status | Why |
 |---|---|---|
 | Chat channel | **Decided: Telegram** | Easiest bot API, long polling, groups, voice notes, free. WhatsApp needs Meta's Business API and a public webhook; iMessage needs a Mac bridge; Signal needs signal-cli. Discord is a close second if the family already uses it. |
-| Language | **Decided: Python** | Official Anthropic SDK with a tool runner, python-telegram-bot, google-api-python-client, SQLite in the standard library. |
+| Language | **Decided: Python** | The official SDK for each provider, python-telegram-bot, google-api-python-client, SQLite in the standard library. |
 | Database | Open, recommend SQLite | One file, trivial backups, FTS5 built in. Postgres only if a web UI with concurrent writers appears. |
 | Calendar owner | Open, recommend a dedicated family Google account | Keeps the bot's token separate from anyone's personal mail. An existing account works too. |
 | Home location and timezone | Open, set in config | Needed for weather, travel time, web searches and resolving dates. |

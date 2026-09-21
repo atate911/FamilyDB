@@ -20,11 +20,16 @@ Environment=GOOGLE_TOKEN_PATH=/opt/familydb/data/google_token.json
 ExecStart=/opt/familydb/.venv/bin/familydb run
 Restart=on-failure
 RestartSec=5
+# A lookup turn that is mid-API-call can take a couple of minutes to notice the stop. Nothing is
+# lost if it is killed (each tool owns its transaction), but let it finish where it can.
+TimeoutStopSec=150
 
 # Hardening: read-only system, no privilege escalation, only the data folder writable.
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
+# /home is hidden from the service. A checkout under /home would then start into an empty
+# directory, so use ProtectHome=read-only there instead (the installer does this for you).
 ProtectHome=true
 # The web page, when WEB_ENABLED is set, binds WEB_HOST:WEB_PORT. The port must stay above 1024:
 # this unit runs unprivileged and NoNewPrivileges blocks binding a low port.

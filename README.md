@@ -2,7 +2,7 @@
 
 A private family assistant that lives in our chat app. It remembers the things we say we'd like to do, puts confirmed plans on the shared Google Calendar, and suggests what to do this weekend based on the calendar, the weather and the ideas we've collected.
 
-**Status:** usable by the family. Capture, the Telegram channel, Google Calendar (plans created, moved and cancelled from chat, free time read live), the weather forecast and automatic retries are in, and so are the checked suggestions: a background lookup fills in each idea's place details (address, hours, booking, travel time), a staged engine checks every idea against the free time, the forecast and those details, web discovery finds what is on that weekend, a Thursday digest posts the weekend's options to the family chat, and the bot asks how a plan went the day after. It runs on Claude, OpenAI or Gemini, chosen per surface, with another as a spare when the first is busy. A small web page behind a shared family password browses the ideas list, the restaurants and the plans, shows what is connected and what the models have cost, and changes every setting and key without editing a file or restarting anything. Next: richer data (Google Places, real routing, link previews). The design and roadmap are in [docs/DESIGN.md](docs/DESIGN.md); home-server setup is in [RUNBOOK.md](RUNBOOK.md).
+**Status:** usable by the family. Capture, the Telegram channel, Google Calendar (plans created, moved and cancelled from chat, free time read live), the weather forecast and automatic retries are in, and so are the checked suggestions: a background lookup fills in each idea's place details (address, hours, booking, travel time), a staged engine checks every idea against the free time, the forecast and those details, web discovery finds what is on that weekend, a Thursday digest posts the weekend's options to the family chat, and the bot asks how a plan went the day after. It runs on Claude, OpenAI or Gemini, chosen per surface, with another as a spare when the first is busy. A small web page behind a shared family password browses the ideas list, the restaurants and the plans, shows what is connected and what the models have cost, and changes every setting and key without editing a file or restarting anything. Next: richer data (Google Places, real routing, link previews). The design and roadmap are in [docs/DESIGN.md](docs/DESIGN.md); installing it on a home server or a VPS is in [RUNBOOK.md](RUNBOOK.md).
 
 ## How it works
 
@@ -41,14 +41,14 @@ uv run familydb db status         # row counts and the last model calls, with ca
 |---|---|
 | `familydb db migrate` / `status` / `backup DEST` / `retry-failed [--reset]` | Create or upgrade the schema; show counts and recent model calls; online backup; retry failed messages now |
 | `familydb members add NAME --role admin\|member\|kid [--channel --channel-user-id]` | Add a person; kids need no channel |
-| `familydb members list`, `familydb ideas list [--all] [--json]` | Inspect; the ideas lines are exactly what the model sees |
-| `familydb tool NAME --json '{...}'`, `--list`, `--schema` | Run any tool without the model |
+| `familydb members list [--all]`, `familydb ideas list [--all] [--json]` | Inspect; the ideas lines are exactly what the model sees |
+| `familydb tool NAME --json '{...}' [--stdin] [--as NAME]`, `--list`, `--schema` | Run any tool without the model |
 | `familydb chat TEXT [--as NAME] [--fresh]` | One message, one reply |
 | `familydb repl [--as NAME]` | Interactive chat (`/as NAME`, `/ideas`, `/quit`) |
-| `familydb debug prompt TEXT` | The exact API request that would be sent, without sending it |
+| `familydb debug prompt TEXT [--as NAME] [--chat ID]` | The exact API request that would be sent, without sending it |
 | `familydb debug cost [--days N]` | What each message pays for before anyone types, and what the last month actually used |
 | `familydb debug validate-tools` | Have the API validate the tool schemas (needs an Anthropic or Gemini key) |
-| `familydb google auth --client-secrets FILE` / `calendars` / `events` | One-time Google sign-in; find the calendar id; connection test |
+| `familydb google auth --client-secrets FILE` / `calendars` / `events [--days N]` | One-time Google sign-in; find the calendar id; connection test |
 | `familydb enrich [--idea N] [--limit N]` | Look pending ideas up on the web now; `--idea` redoes one (needs `WEB_TOOLS_ENABLED=true`) |
 | `familydb suggest [--window this-weekend\|next-weekend\|someday\|START..END] [--discover] [--json]` | Run the suggestion engine and print its verdicts; `--discover` also searches the web |
 | `familydb digest [--now]` | Show the weekend digest schedule, or post it to the family chat now |

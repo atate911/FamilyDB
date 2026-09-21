@@ -42,8 +42,8 @@ FamilyDB installer
 
 Options
   --mode docker|venv   How to run it. Default: docker when available, else a virtualenv.
-  --yes                Accept every default. Still asks for the API key unless it is in the
-                       environment already.
+  --yes                Accept every default. Still asks for the secrets it cannot guess: the
+                       API keys and the Telegram token, unless they are in the environment.
   --non-interactive    Never prompt. Every answer must come from the environment (below).
   --config-only        Write .env and stop, installing nothing.
   --dry-run            Say what would happen; change nothing.
@@ -135,18 +135,49 @@ ask_key() { # ask_key VAR provider "Label" "where to get one" "what it starts wi
   set_env "$var" "${!var:-}"
 }
 
+quote_env() { # quote_env VALUE -> how that value must be written so .env reads it back whole
+  # A bare value loses everything from a '#' onwards and any trailing space, so a password with
+  # either in it silently becomes a different password. Single quotes are literal to all three
+  # readers of this file (python-dotenv, systemd EnvironmentFile, docker compose env_file), and
+  # a value with an apostrophe in it cannot use them, so that one falls back to double quotes.
+  local value="$1"
+  case "$value" in
+    "") printf '' ;;
+    *[!A-Za-z0-9_.:/@+,=-]*)
+      case "$value" in
+        *\'*)
+          case "$value" in
+            *[\$\`\\]*)
+              warn "a value with both an apostrophe and one of \$ \` \\ cannot be stored safely; edit .env by hand if this one matters"
+              ;;
+          esac
+          printf '"%s"' "$(printf '%s' "$value" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
+          ;;
+        *) printf "'%s'" "$value" ;;
+      esac
+      ;;
+    *) printf '%s' "$value" ;;
+  esac
+}
+
 set_env() { # set_env KEY VALUE
-  local key="$1" value="$2"
+  local key="$1" value="$2" written line replaced=0
   [ "$DRY_RUN" = 1 ] && { note "would set $key"; return 0; }
+  written="$(quote_env "$value")"
   if grep -q "^${key}=" "$ENV_FILE" 2>/dev/null; then
-    awk -v k="$key" -v v="$value" '
-      BEGIN { done = 0 }
-      !done && index($0, k "=") == 1 { print k "=" v; done = 1; next }
-      { print }
-    ' "$ENV_FILE" > "${ENV_FILE}.tmp"
+    # Read and write by hand: awk -v would read a backslash in the value as an escape.
+    while IFS= read -r line || [ -n "$line" ]; do
+      if [ "$replaced" = 0 ] && [ "${line%%=*}" = "$key" ] && [ "$line" != "${line#*=}" ]; then
+        printf '%s=%s\n' "$key" "$written"
+        replaced=1
+      else
+        printf '%s\n' "$line"
+      fi
+    done < "$ENV_FILE" > "${ENV_FILE}.tmp"
     mv "${ENV_FILE}.tmp" "$ENV_FILE"
+    chmod 600 "$ENV_FILE"
   else
-    printf '%s=%s\n' "$key" "$value" >> "$ENV_FILE"
+    printf '%s=%s\n' "$key" "$written" >> "$ENV_FILE"
   fi
 }
 
@@ -410,9 +441,15 @@ if [ "$KEEP_ENV" = 0 ]; then
       fi
     fi
     if [ "$needs_password" = 1 ] && [ "${#WEB_PASSWORD}" -lt 12 ]; then
+      if [ "$NON_INTERACTIVE" = 1 ] && [ -n "${WEB_PASSWORD:-}" ]; then
+        # A build script gave a password on purpose. Replacing it with one printed to a log
+        # nobody reads would leave the family locked out of their own page.
+        die "WEB_PASSWORD is ${#WEB_PASSWORD} characters; a page on the network needs 12 or more."
+      fi
       warn "a page reachable from other machines needs 12 characters or more; generating one."
       WEB_PASSWORD="$(random_password)"
       say "  Password: ${B}${WEB_PASSWORD}${OFF}"
+      say "  Write it down now. It is in .env too, but nowhere else."
     fi
     set_env WEB_PASSWORD "${WEB_PASSWORD:-}"
     if [ "$MODE" = docker ]; then
@@ -424,7 +461,7 @@ if [ "$KEEP_ENV" = 0 ]; then
   # --- things nobody can know yet ---
   note ""
   note "Left empty on purpose, because they cannot be known until the bot is running:"
-  note "  DIGEST_CHAT_ID   the family group's chat id, for the weekly digest (RUNBOOK section 10)"
+  note "  DIGEST_CHAT_ID   the family group's chat id, for the weekly digest (RUNBOOK section 9)"
   note "  GOOGLE_CALENDAR_ID and the Google token, which need a browser (RUNBOOK section 5)"
 
   [ "$DRY_RUN" = 1 ] || chmod 600 "$ENV_FILE"
@@ -490,10 +527,31 @@ if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
       unit="${REPO_ROOT}/deploy/familydb.service"
       [ -f "$unit" ] || die "missing ${unit}"
       if [ "$DRY_RUN" = 1 ]; then
-        note "would install /etc/systemd/system/familydb.service pointing at ${REPO_ROOT}"
+        note "would create the familydb user and install /etc/systemd/system/familydb.service"
+        note "would give ${REPO_ROOT}/data and .env to that user"
       else
+        # The unit runs as its own user, so create it here: an installed unit that cannot start
+        # because the user it names does not exist is not an install, it is homework.
+        if id familydb >/dev/null 2>&1; then
+          ok "The familydb user already exists."
+        elif $SUDO useradd --system --home-dir "$REPO_ROOT" --shell /usr/sbin/nologin familydb \
+             2>/dev/null; then
+          ok "Created the familydb system user."
+        else
+          warn "Could not create the familydb user. Create it, or edit User= in the unit:"
+          warn "  sudo useradd --system --home-dir ${REPO_ROOT} --shell /usr/sbin/nologin familydb"
+        fi
         tmp_unit="$(mktemp)"
         sed -e "s#/opt/familydb#${REPO_ROOT}#g" "$unit" > "$tmp_unit"
+        # ProtectHome=true hides /home from the service, so a checkout there would start into an
+        # empty directory and stop. Read-only keeps the hardening; ReadWritePaths still lets the
+        # data folder through.
+        case "$REPO_ROOT" in
+          /home/*|/root/*)
+            sed -i -e 's#^ProtectHome=true#ProtectHome=read-only#' "$tmp_unit"
+            note "Checkout is under ${REPO_ROOT%%/*}/, so the unit uses ProtectHome=read-only."
+            ;;
+        esac
         if $SUDO cp "$tmp_unit" /etc/systemd/system/familydb.service \
           && $SUDO systemctl daemon-reload \
           && { $SUDO systemctl enable familydb >/dev/null 2>&1 || true; }; then
@@ -502,10 +560,18 @@ if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
           warn "Could not install the systemd unit. Everything else is set up; see RUNBOOK section 2b."
         fi
         rm -f "$tmp_unit"
+        # The service has to read the secrets and write the database; nobody else should.
+        if id familydb >/dev/null 2>&1; then
+          if $SUDO chown -R familydb:familydb "${REPO_ROOT}/data" 2>/dev/null \
+             && { [ ! -f "$ENV_FILE" ] || $SUDO chown familydb:familydb "$ENV_FILE"; }; then
+            ok "data/ and .env now belong to the familydb user."
+            note "Run the CLI as that user: sudo -u familydb ${REPO_ROOT}/.venv/bin/familydb repl"
+          else
+            warn "Could not hand data/ and .env to the familydb user. Do it before starting:"
+            warn "  sudo chown -R familydb:familydb ${REPO_ROOT}/data ${REPO_ROOT}/.env"
+          fi
+        fi
       fi
-      note "The unit runs as the 'familydb' user. Create it, or edit User= in the unit file:"
-      note "  sudo useradd --system --home ${REPO_ROOT} --shell /usr/sbin/nologin familydb"
-      note "  sudo chown -R familydb:familydb ${REPO_ROOT}/data ${REPO_ROOT}/.env"
     fi
   else
     note "No root and no sudo, so the systemd unit was skipped. See RUNBOOK section 2b."
@@ -559,7 +625,7 @@ fi
 [ -z "${TELEGRAM_BOT_TOKEN:-}" ] && say "  · add a Telegram bot token to chat from your phones (RUNBOOK section 4)"
 [ -z "${HOME_LAT:-}" ] && say "  · add HOME_LAT and HOME_LON for the weather (RUNBOOK section 6)"
 say "  · connect Google Calendar from a machine with a browser (RUNBOOK section 5)"
-say "  · set DIGEST_CHAT_ID once the family group exists (RUNBOOK section 10)"
+say "  · set DIGEST_CHAT_ID once the family group exists (RUNBOOK section 9)"
 say ""
 say "What it costs to run: ${CLI} debug cost"
 say "Everything else:      RUNBOOK.md"

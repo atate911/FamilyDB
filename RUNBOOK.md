@@ -1,12 +1,13 @@
-# Runbook: running FamilyDB on the home server
+# Runbook: running FamilyDB on a home server or a VPS
 
 Two supported ways to run it: Docker Compose, or a Python virtualenv managed by systemd. Both use the same `.env` file and the same `data/` folder for the database and tokens. Pick one.
 
 ## Requirements
 
 - Linux with either Docker (with the compose plugin) or Python 3.11+ and [uv](https://docs.astral.sh/uv/).
-- Outbound HTTPS only. No ports need to be opened; no domain or reverse proxy.
-- An Anthropic API key.
+- Outbound HTTPS only. The bot itself needs no inbound ports, no domain and no reverse proxy;
+  the web page, if you turn it on, is the one thing that does (section 10).
+- A key for one of the three providers: Anthropic, OpenAI or Gemini (section 11).
 
 ## 1. Get the code and the config
 
@@ -32,7 +33,7 @@ ANTHROPIC_API_KEY=sk-ant-... FAMILYDB_TZ=America/Vancouver HOME_AREA="Vancouver,
 ```
 
 Three things it deliberately leaves empty, because nobody can know them before the bot is
-running: the Telegram chat id for the digest (section 10), the Google Calendar id and its token
+running: the Telegram chat id for the digest (section 9), the Google Calendar id and its token
 (section 5), and your coordinates if it could not look your town up (section 6).
 
 To set everything up by hand instead:
@@ -65,13 +66,18 @@ cd /opt/familydb
 uv sync --frozen --no-dev            # creates .venv
 .venv/bin/familydb db migrate
 .venv/bin/familydb members add Sam --role admin
-sudo useradd --system --home /opt/familydb --shell /usr/sbin/nologin familydb
+sudo useradd --system --home-dir /opt/familydb --shell /usr/sbin/nologin familydb
 sudo chown -R familydb:familydb /opt/familydb/data /opt/familydb/.env
 sudo cp deploy/familydb.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now familydb
 journalctl -u familydb -f
 ```
+
+`scripts/install.sh` does all of this, the user included. Check `User=` and the paths in the unit
+if you cloned somewhere other than `/opt/familydb`. A checkout under `/home` needs one change:
+`ProtectHome=true` hides `/home` from the service, so the unit would start into an empty
+directory. Use `ProtectHome=read-only` there, which the installer does for you.
 
 The unit sets `FAMILYDB_PATH` and `GOOGLE_TOKEN_PATH` under `/opt/familydb/data` and locks the service down to that folder. To chat from the shell, run commands as the service user so the database stays owned by it: `sudo -u familydb /opt/familydb/.venv/bin/familydb repl`.
 
@@ -112,14 +118,34 @@ Set `HOME_LAT` and `HOME_LON` (and `WEATHER_UNITS=imperial` for Fahrenheit). Ope
 
 ## 7. Backups
 
-The database is one file. Nightly:
+The database is one file, and everything the family has said is in it. Nightly:
 
 ```
-# crontab -e (as the user that owns data/)
-15 3 * * * /opt/familydb/.venv/bin/familydb db backup /opt/familydb/backups/familydb-$(date +\%F).sqlite3
+# crontab -e (as the user that owns data/, which is `familydb` after a systemd install:
+#   sudo -u familydb crontab -e)
+15 3 * * * FAMILYDB_PATH=/opt/familydb/data/familydb.sqlite3 /opt/familydb/.venv/bin/familydb db backup /opt/familydb/backups/familydb-$(date +\%F).sqlite3
 ```
 
-or with Docker: `docker compose exec bot familydb db backup /data/backups/familydb-$(date +%F).sqlite3`. The backup uses SQLite's online backup API and is safe while the bot runs. Keep a copy off the server. Calendar events are also in Google.
+`FAMILYDB_PATH` is set here because cron runs with no working directory to speak of, and the
+default path in `.env` is relative to the checkout. Without it the backup would have nothing to
+copy; it now says so and writes nothing rather than backing up an empty database.
+
+With Docker: `docker compose exec bot familydb db backup /data/backups/familydb-$(date +%F).sqlite3`.
+The backup uses SQLite's online backup API and is safe while the bot runs. Keep a copy off the
+server: a backup on the same disk is not a backup. Calendar events are also in Google.
+
+**Restoring one.** Stop the bot first, because the file it has open is the one being replaced:
+
+```bash
+sudo systemctl stop familydb                       # or: docker compose stop bot
+sudo -u familydb cp backups/familydb-2026-09-14.sqlite3 data/familydb.sqlite3
+sudo -u familydb rm -f data/familydb.sqlite3-wal data/familydb.sqlite3-shm
+sudo systemctl start familydb                      # or: docker compose start bot
+```
+
+The write-ahead files belong to the database that was replaced, so they go too; SQLite makes new
+ones. `familydb db status` afterwards shows the row counts and the schema version, and a restored
+file from an older version is migrated on the next start.
 
 An API key stored from the settings page lives in this file, so it is in every backup. That is
 the price of being able to change a key from a phone. If these backups go anywhere you do not
@@ -146,7 +172,7 @@ Migrations run automatically on start. Never edit an applied migration; add a ne
 
 **Follow-ups.** The morning after a plan (`FOLLOW_UP_HOUR`, default 10:00), the bot asks "How was #57 Hopscotch Portland on Saturday? Worth doing again?" in the chat the plan was made in, once per plan, unless someone already said how it went. The answer is recorded as feedback and feeds future suggestions. `familydb follow-ups --now` asks by hand.
 
-**Cost.** Enrichment is at most three searches and three page reads per idea; discovery at most four searches per weekend per twelve hours. Both use the same model as chat.
+**Cost.** Enrichment is at most three searches and three page reads per idea; discovery at most four searches per weekend per twelve hours. Both run on the smaller worker model (`WORKER_MODEL` and its OpenAI and Gemini counterparts), not on the one that writes the replies.
 
 ## 10. The web page
 
@@ -192,7 +218,9 @@ Leave the bot's own port published to `127.0.0.1` only, so the internet reaches 
 else, and let the firewall through on 80 and 443 alone (`ufw allow 80,443/tcp`). `WEB_TRUST_PROXY`
 makes the page read the real visitor address and the HTTPS scheme from Caddy's headers, and marks
 the login cookie `Secure` so it never crosses plain HTTP. Only turn it on with a proxy actually in
-front: it means trusting those headers.
+front: it means trusting those headers. Caddy keeps the certificate and its private key in
+`caddy/` beside the checkout, which is deliberately not inside `data/`: a key in there would be
+readable from the bot's container and would land in every backup.
 
 Running without Docker, put nginx or Caddy in front the same way and keep `WEB_HOST=127.0.0.1`.
 
@@ -208,8 +236,8 @@ set `WEB_ALLOW_NO_PASSWORD=true` on purpose.
 Be clear-eyed about what signing in now buys someone: the ideas and plans are read-only, but the
 settings page can change which model answers, read the API keys, and point the bot at a different
 calendar. On a machine on the internet, that one password is what stands between a stranger and
-your API bill. Make it long, and use section 11's status page to notice a month that does not
-look like yours.
+your API bill. Make it long, and use the status page at the end of this section to notice a
+month that does not look like yours.
 
 **Checking it.**
 
@@ -305,13 +333,83 @@ with storage off. `familydb debug validate-tools` works on Claude and Gemini, wh
 to count tokens without generating anything; OpenAI has no such endpoint, so there the first real
 message is the check.
 
-## 12. Troubleshooting
+## 12. Looking after the server
 
-- **`cache_read` stays 0 in `db status`.** Something volatile is in the cached prefix. `familydb debug prompt "hi"` prints the request: the two `system` blocks and the `tools` list must be byte-identical between two runs. Also, the cache expires after five minutes of quiet; set `ANTHROPIC_CACHE_TTL=1h` if usage is bursty.
+Everything above gets the bot running. This is what a machine on the internet needs around it.
+
+**Where things live.** One folder, `/opt/familydb` (or wherever you cloned it):
+
+| Path | What it is | In backups? |
+|---|---|---|
+| `data/familydb.sqlite3` | everything: messages, ideas, plans, places, the settings changed from the page, and any key stored there | yes, this is the backup |
+| `data/google_token.json` | the calendar's OAuth token | no, re-authorise instead (section 5) |
+| `data/web_secret` | signs the login cookie; delete it to sign everyone out | no |
+| `.env` | the secrets not set from the page | no, keep your own copy |
+| `caddy/` | only with the `tls` profile: the certificate and its private key | no, and keep it that way |
+
+**A firewall.** The bot needs nothing inbound. With the web page behind Caddy, open 80 and 443
+and nothing else:
+
+```bash
+sudo ufw default deny incoming && sudo ufw default allow outgoing
+sudo ufw allow OpenSSH           # do this before enabling, or you will lock yourself out
+sudo ufw allow 80,443/tcp        # only with the tls profile; skip it otherwise
+sudo ufw enable
+```
+
+Do not open 8080. Compose publishes the page to `127.0.0.1` so that Caddy, and only Caddy, can
+reach it; the firewall is the second lock on the same door.
+
+**Keeping the machine patched.** `sudo apt install unattended-upgrades` and answer yes. It is the
+one piece of maintenance that matters more than anything in this file.
+
+**Logs.** With systemd, journald keeps them and honours `SystemMaxUse` in
+`/etc/systemd/journald.conf`; set it to something like `500M` on a small disk. With Docker the
+compose file caps each container at five files of 10 MB. Nothing here writes a log file of its
+own. `LOG_LEVEL=DEBUG` also logs every HTTP request, and a Telegram request carries the bot token
+in its URL, so turn it back down when you are done.
+
+**Disk.** The install is about 600 MB and the database grows by a few MB a year for a family.
+Backups are the part that grows; keep a fortnight and delete the rest:
+
+```
+30 3 * * * find /opt/familydb/backups -name 'familydb-*.sqlite3' -mtime +14 -delete
+```
+
+**When a secret gets out.**
+
+- *An API key.* Revoke it in the vendor's console first, make a new one, then put the new one in
+  `.env` and restart, or on the settings page, where it takes effect immediately. `/status` shows
+  which key each provider is using and where it came from.
+- *The Telegram bot token.* `/revoke` in BotFather makes a new one and kills the old; put it in
+  `.env` and restart. Nobody can read the family's messages with the old one afterwards.
+- *The page password.* Change `WEB_PASSWORD` in `.env` and restart. Every session opened with the
+  old password ends at that point, so a stolen cookie stops working too. `WEB_PASSWORD` is
+  deliberately not on the settings page: a form cannot change the lock on its own door.
+- *The whole server.* The database holds everything the family said. Rotate all of the above, and
+  assume anything stored on the settings page was read.
+
+**Stopping it for good.**
+
+```bash
+sudo systemctl disable --now familydb && sudo rm /etc/systemd/system/familydb.service
+sudo systemctl daemon-reload
+# or, with Docker:
+docker compose down                 # add -v only if you mean to delete the volumes
+```
+
+Take a backup first if the ideas are worth keeping. The database is a plain SQLite file and any
+SQLite browser opens it.
+
+## 13. Troubleshooting
+
+- **`cache_read` stays 0 in `db status`.** Something volatile is in the cached prefix. `familydb debug prompt "hi"` prints the request: the two `system` blocks and the `tools` list must be byte-identical between two runs. Check `ANTHROPIC_CACHE_TTL` is still `1h`, the default: at `5m` a family's gaps between messages are longer than the cache.
 - **`database is locked`.** Two processes writing at once. Run one bot process; the CLI can be used alongside it (short transactions, busy timeout), but not a second `familydb run`.
 - **"Saved your message, but I couldn't process it right now."** The model call failed. `journalctl` or `docker compose logs` has the error. The running bot retries the message every `RETRY_INTERVAL_MINUTES` up to `RETRY_MAX_ATTEMPTS` times and delivers the answer when it succeeds; `familydb db retry-failed` does it by hand, and `--reset` re-arms messages that gave up after a configuration problem you have since fixed.
 - **"Google credentials are expired or revoked."** Run `familydb google auth` again on a laptop and copy the new token over. If this happens weekly, the OAuth consent screen is still in Testing (section 5, step 2).
 - **"no family members yet".** Add an admin with `familydb members add NAME --role admin`.
+- **"a setting will not do" at startup.** A value in `.env` is not of the type the setting takes; the line names it. An empty line is fine and means "not set" — it is a value like `WEB_PORT=eighty` that stops it. Quote anything with a space or a `#` in it.
+- **The service will not start under systemd.** `systemctl status familydb` says which. The two that bite: the `familydb` user does not exist or does not own `data/` and `.env`, and a checkout under `/home` with `ProtectHome=true` (section 2b).
 - **"Sorry, I only talk to the family."** The sender is not in `members` for that channel; the reply includes the id to add.
 - **A refusal.** Rare. `llm_calls.stop_reason` is `refusal`; server-side fallbacks are on by default (`ANTHROPIC_FALLBACKS`), so it means every model declined.
 - **Replies are coming from the wrong provider.** `familydb debug cost` says who answers each surface. If it is not what you set, the other one is probably standing in because the chosen one has no key; the log says so at the time.
@@ -320,7 +418,7 @@ message is the check.
 - **Suggestions say "web discovery off" or "hours unknown".** Web tools are off (`WEB_TOOLS_ENABLED`), or the idea has not been looked up yet; the enrichment job runs only in the long-running `familydb run` process.
 - **The digest never arrives.** `familydb digest` shows the schedule and chat; the log says why a run was skipped (no chat id, nothing to send with, no admin). The bot must be in the group and see its messages (section 4, step 3).
 - **"the web page is not serving" in the log.** Either the settings forbid it (a page off the loopback with no `WEB_PASSWORD`) or the port is taken. The log line says which. The bot keeps running either way.
-- **The web page asks for the password again and again.** The login cookie could not be stored or its signing key keeps changing. Check that `data/` is writable, or set `WEB_SECRET_KEY`. Over HTTPS, `WEB_TRUST_PROXY` must be true or the `Secure` cookie is never set.
+- **The web page asks for the password again and again.** The login cookie could not be stored or its signing key keeps changing. Check that `data/` is writable, or set `WEB_SECRET_KEY`. Over HTTPS, `WEB_TRUST_PROXY` must be true or the `Secure` cookie is never set. Changing `WEB_PASSWORD` also ends every session opened with the old one, on purpose, so everybody signs in once after that.
 - **The web page is unreachable from another device.** `WEB_HOST` is probably still `127.0.0.1`, or the compose `ports` line still starts with `127.0.0.1:`. Both have to change, and a password has to be set.
 - **A setting in `.env` does nothing.** Something on the settings page is set for it, and that wins. `familydb config` marks every value with where it came from; empty that box on the page and `.env` applies again.
 - **"stored settings are not usable" in the log.** A value in the database no longer validates, usually because an upgrade narrowed what a setting will take. The bot keeps running on what `.env` says and names the setting in the same line; fix or empty that box on the settings page.

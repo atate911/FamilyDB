@@ -433,7 +433,7 @@ def chat(
     as_member: str | None = typer.Option(None, "--as", help="Speak as this family member."),
     fresh: bool = typer.Option(False, "--fresh", help="Start a new chat with no history."),
 ) -> None:
-    """Send one message to the bot and print its reply. Needs an Anthropic API key."""
+    """Send one message to the bot and print its reply. Needs a key for one of the providers."""
     application = build_app()
     sender = _console_member(application, as_member)
     chat_id = f"console:{uuid4().hex[:8]}" if fresh else DEFAULT_CHAT
@@ -453,7 +453,7 @@ def repl(
     as_member: str | None = typer.Option(None, "--as", help="Speak as this family member."),
     fresh: bool = typer.Option(False, "--fresh", help="Start a new chat with no history."),
 ) -> None:
-    """Chat with the bot interactively. Needs an Anthropic API key."""
+    """Chat with the bot interactively. Needs a key for one of the providers."""
     application = build_app()
     sender = _console_member(application, as_member)
     chat_id = f"console:{uuid4().hex[:8]}" if fresh else DEFAULT_CHAT

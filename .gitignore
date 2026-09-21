@@ -1,6 +1,7 @@
 # secrets and local data
 .env
 data/
+caddy/
 *.db
 *.sqlite
 *.sqlite3

@@ -21,6 +21,13 @@ services:
       - "127.0.0.1:8080:8080"
     restart: unless-stopped
     init: true
+    # Without a cap the json log grows until the disk is full, which on a small VPS is months
+    # rather than years away, and takes the bot with it.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   # Optional: HTTPS for a server on the internet. Needs WEB_DOMAIN pointing at this machine.
   #   docker compose --profile tls up -d
@@ -36,5 +43,12 @@ services:
       - "443:443"
     command: caddy reverse-proxy --from ${WEB_DOMAIN:-localhost} --to bot:8080
     volumes:
-      - ./data/caddy:/data
+      # Its own folder, not ./data: the certificate's private key has no business being inside
+      # the bot's volume, in the bot's container, and in every `familydb db backup`.
+      - ./caddy:/data
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
