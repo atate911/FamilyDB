@@ -28,23 +28,60 @@ of it has yet been lived with for a month, which is what this alpha is for.
 
 ### Installing it
 
-`scripts/install.sh` asks a handful of questions, writes `.env`, installs for
-Docker or a virtualenv, migrates, adds the first family member, creates the
-service user and installs the systemd unit. Clone into `/opt/familydb`: a home
-directory is closed to other users, so a service running as its own user cannot
-start from one, and the installer will tell you so rather than leave a unit that
-never starts. `RUNBOOK.md` covers a VPS end to end: firewall, backups and
-restores, upgrades, rotating a leaked key, and what to do when something is
-wrong.
+Start at [docs/INSTALL.md](docs/INSTALL.md), which goes from a fresh VPS to a
+running bot. On the server:
+
+```bash
+sudo bash scripts/bootstrap.sh
+```
+
+That is the only script that assumes nothing. It installs the system packages,
+puts the code in `/opt/familydb`, creates the service account, hands over to
+`scripts/install.sh` for the questions, starts the service and checks the
+result. Before it touches anything it prints what it will change on the machine
+and why, and what it will not touch, and asks.
+
+Getting the code onto a bare server is a step of its own, because the
+repository is private: a deploy key, a token in the environment, or a copy you
+put there yourself. All three are in the install guide.
+
+Clone into `/opt/familydb` and not a home directory. A home directory is closed
+to other users, so a service running as its own account cannot start from one.
+The installer checks this and refuses rather than leaving a unit that will
+never start.
+
+### Looking after it
+
+- `familydb doctor` checks the whole install and says what is wrong and what to
+  do about it. `--online` also tests the keys against the APIs, `--json` is for
+  scripts, and `--fix` puts right the few things that can be put right without a
+  decision.
+- `scripts/maintain.sh` does status, check, backup, restore, upgrade, logs,
+  restart and nightly backups. A restore backs up the database it is about to
+  replace, so it can itself be undone.
+- `scripts/uninstall.sh` removes the service and the installed files but keeps
+  `.env`, `data/` and the backups, which is what a reinstall wants. `--purge`
+  removes those too, after taking a backup and asking you to type a
+  confirmation.
+
+Every one of these explains a failure rather than printing one: which step, the
+command, its exit code, what it said, what that usually means, and what to try.
+`RUNBOOK.md` covers running it day to day; `docs/INSTALL.md` has a section on
+each failure.
 
 ### What has been checked
 
-Every push runs the test suite on Python 3.11 and 3.12, lints, shellchecks the
-installer, installs from an untouched checkout and runs the bot as the service
-user it created, and builds the Docker image, migrates inside the container,
-serves the page and stops it with a signal. What no test covers is a real
-conversation with a real model: that needs a key, and it is what this alpha is
-for.
+Every push runs the test suite on Python 3.11 and 3.12, lints and shellchecks
+every script, and then, on a real machine: a bootstrap install into `/opt`, the
+bot running as the service account it created, `doctor` and its `--fix`, a
+backup, a restore over the database, an uninstall that keeps the data followed
+by a reinstall that picks it back up, and a purge that backs up first and leaves
+nothing. It also refuses an install from a home directory, and builds the Docker
+image, migrates inside the container, serves the page and stops it with a
+signal.
+
+What no test covers is a real conversation with a real model: that needs a key,
+and it is what this alpha is for.
 
 ### Known limits
 
@@ -56,4 +93,7 @@ for.
 - The page's site-wide lockout, which stops distributed password guessing, also
   means a determined stranger can keep the family off the page for fifteen
   minutes at a time. On a public server, that is the trade being made.
+- Upgrading on a private repository needs the credential the install used. With
+  a deploy key the bootstrap wires it up; with a token there is nothing stored,
+  and `maintain.sh upgrade` says so and what to do.
 - There is no LICENSE file: all rights reserved by default.
