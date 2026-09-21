@@ -44,10 +44,50 @@ jobs:
           NO_COLOR: "1"
         run: |
           scripts/install.sh --non-interactive --mode venv
-          .venv/bin/familydb config > /dev/null
-          .venv/bin/familydb db status > /dev/null
-          .venv/bin/familydb members list | grep -q Sam
+      - name: The service user it created can run the bot
+        # The installer gives data/ and .env to the familydb user, so this is the account that
+        # has to work afterwards. Anyone else reading .env is supposed to be refused.
+        run: |
+          sudo -u familydb .venv/bin/familydb config > /dev/null
+          sudo -u familydb .venv/bin/familydb db status > /dev/null
+          sudo -u familydb .venv/bin/familydb members list | grep -q Sam
+          test -f /etc/systemd/system/familydb.service
+          grep -q "ProtectHome=read-only" /etc/systemd/system/familydb.service
       - name: The example config is a working config
         run: |
-          rm -f .env && cp .env.example .env
-          .venv/bin/familydb config > /dev/null
+          sudo rm -f .env && cp .env.example .env
+          sudo chown familydb .env
+          sudo -u familydb .venv/bin/familydb config > /dev/null
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: The compose file is valid
+        run: docker compose config > /dev/null
+      - name: Build the image
+        run: docker compose build
+      - name: Migrate and inspect inside the container
+        run: |
+          mkdir -p data && sudo chown -R 1000:1000 data
+          docker compose run --rm -T bot familydb db migrate
+          docker compose run --rm -T bot familydb members add Sam --role admin
+          docker compose run --rm -T bot familydb members list | grep -q Sam
+          docker compose run --rm -T bot familydb config > /dev/null
+          docker compose run --rm -T bot familydb tool --list > /dev/null
+      - name: The database landed on the mounted volume, not inside the container
+        run: test -f data/familydb.sqlite3
+      - name: It starts, serves the page and stops on a signal
+        run: |
+          printf 'WEB_ENABLED=true\nWEB_PASSWORD=%s\n' "'a long enough password'" >> .env
+          docker compose up -d
+          for _ in $(seq 30); do
+            curl -sf http://127.0.0.1:8080/healthz && break
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:8080/healthz | grep -q ok
+          curl -si http://127.0.0.1:8080/ | grep -q "Location: /login"
+          docker compose logs bot | tail -20
+          docker compose logs bot | grep -q "serving the web page"
+          timeout 30 docker compose stop bot
+          docker compose down
