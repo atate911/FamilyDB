@@ -90,6 +90,14 @@ class App:
             self._geocoder = Geocoder(self.settings)
         return self._geocoder
 
+    @property
+    def base_settings(self) -> Settings:
+        """What the environment and the .env file said, before anything stored on top.
+
+        The settings page needs this to say what a box falls back to when it is emptied.
+        """
+        return self._base
+
     def provider(self, surface: str = "chat", api: Any = None) -> Any:
         """The model provider for this surface, built fresh so a settings change takes effect."""
         from familydb.agent import providers

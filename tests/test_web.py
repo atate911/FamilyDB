@@ -477,8 +477,8 @@ def test_the_lockout_table_does_not_grow_without_limit(settings, clock) -> None:
     assert lockout.locked("198.51.100.4", now)
 
 
-def test_the_web_package_has_no_way_to_write_to_the_database() -> None:
-    """The page is read-only by construction, not only by intent."""
+def test_the_pages_have_no_way_to_write_to_the_database() -> None:
+    """The pages are read-only by construction, not only by intent."""
     import ast
 
     import familydb.web as package
@@ -519,6 +519,8 @@ def test_the_web_package_has_no_way_to_write_to_the_database() -> None:
         "add",
     }
     for module in sorted(Path(package.__file__).parent.glob("*.py")):
+        if module.name == "settings.py":
+            continue  # it writes; the next test pins exactly how far that goes
         tree = ast.parse(module.read_text("utf-8"), filename=module.name)
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom) and (node.module or "").startswith(
@@ -531,6 +533,36 @@ def test_the_web_package_has_no_way_to_write_to_the_database() -> None:
                 called = node.func.attr
                 writing = isinstance(base, ast.Name) and base.id in stores and called in writes
                 assert not writing, f"{module.name}:{node.lineno} calls {called} on a store"
+
+
+def test_only_the_settings_page_writes_and_only_to_the_settings() -> None:
+    """One module may write, to one table, through one repository, and that is the whole of it."""
+    import ast
+
+    import familydb.web as package
+
+    module = Path(package.__file__).parent / "settings.py"
+    tree = ast.parse(module.read_text("utf-8"), filename=module.name)
+    imported = {
+        f"{node.module}.{alias.name}"
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom) and (node.module or "").startswith("familydb.store")
+        for alias in node.names
+    }
+    assert imported == {
+        "familydb.store.settings",  # the only repository it may reach
+        "familydb.store.settings.SECRETS",
+        "familydb.store.db.transaction",  # a write has to be inside one
+    }
+    called = {
+        node.func.attr
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "settings_store"
+    }
+    assert called == {"overrides", "history", "set_many"}
 
 
 def _free_port() -> int:

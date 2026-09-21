@@ -6,6 +6,7 @@ The wording here is for people reading a page. The model's view of an idea lives
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, date, datetime
 from typing import Any
 from urllib.parse import quote
@@ -253,4 +254,44 @@ def outcome_row(outcome: Outcome) -> dict[str, Any]:
         "rating": f"{outcome.rating}/10" if outcome.rating is not None else None,
         "repeat": repeat,
         "notes": outcome.notes,
+    }
+
+
+def local_moment(value: str, tz: ZoneInfo) -> str:
+    """A stored UTC instant as the day and time it was where the family lives."""
+    try:
+        moment = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return value
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=UTC)
+    here = moment.astimezone(tz)
+    return f"{here.day} {here:%b}, {here:%H:%M}"
+
+
+def setting_text(value: str | None) -> str:
+    """A stored JSON value as the page shows it. Nothing stored reads as the fallback."""
+    if value is None:
+        return "—"
+    try:
+        loaded = json.loads(value)
+    except ValueError:
+        return value
+    if loaded is None:
+        return "from the environment"
+    if isinstance(loaded, bool):
+        return "yes" if loaded else "no"
+    return str(loaded)
+
+
+def change_row(line: dict[str, Any], tz: ZoneInfo) -> dict[str, Any]:
+    """One line of the settings history. A key's value is never in there to show."""
+    return {
+        "when": local_moment(line["changed_at"], tz),
+        "key": line["key"],
+        "secret": bool(line["secret"]),
+        "old": setting_text(line["old_value"]),
+        "new": setting_text(line["new_value"]),
+        "who": line.get("changed_by_name"),
+        "source": line["source"],
     }

@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}Settings · {{ site_title }}{% endblock %}
+{% macro box(entry) %}
+  {% set one = entry.field %}
+  <div class="setting{% if entry.problem %} bad{% endif %}">
+    <label for="f-{{ one.key }}">{{ one.label }}</label>
+    {% if one.choices %}
+      <select id="f-{{ one.key }}" name="{{ one.key }}">
+        <option value="">From the environment ({{ entry.placeholder }})</option>
+        {% for choice in one.choices %}
+          <option value="{{ choice }}" {% if entry.value == choice %}selected{% endif %}>
+            {%- if one.kind == "toggle" -%}
+              {{ "yes" if choice == "true" else "no" }}
+            {%- else -%}
+              {{ choice }}
+            {%- endif -%}
+          </option>
+        {% endfor %}
+      </select>
+    {% else %}
+      <input
+        id="f-{{ one.key }}"
+        name="{{ one.key }}"
+        type="text"
+        value="{{ entry.value }}"
+        placeholder="{{ entry.placeholder }}"
+        {% if one.kind in ("int", "float") %}inputmode="decimal"{% endif %}
+      />
+    {% endif %}
+    {% if entry.problem %}
+      <p class="error" role="alert">{{ entry.problem }}</p>
+    {% elif one.note %}
+      <p class="muted hint">{{ one.note }}</p>
+    {% endif %}
+  </div>
+{% endmacro %}
+{% block content %}
+  <h1>Settings</h1>
+  {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  <p class="muted">
+    A box left empty uses whatever the environment or the <code>.env</code> file says, and that
+    value is what the empty box shows. A change reaches the next message and the next page at
+    once, and the jobs that run on a schedule within a few minutes. Nothing needs restarting.
+  </p>
+
+  <form method="post" action="{{ url_for('settings.save') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    {% for group in groups %}
+      <section class="panel">
+        <h2>{{ group.title }}</h2>
+        {% if group.note %}<p class="muted">{{ group.note }}</p>{% endif %}
+        <div class="grid">
+          {% for entry in group.boxes %}{{ box(entry) }}{% endfor %}
+        </div>
+      </section>
+    {% endfor %}
+    <button type="submit">Save settings</button>
+  </form>
+
+  <section class="panel" id="keys">
+    <h2>API keys</h2>
+    <p class="muted">
+      Keys are stored in the database, so they are in your backups. Leave a box empty to keep the
+      key that is already there.
+    </p>
+    <form method="post" action="{{ url_for('settings.save_keys') }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+      {% for row in keys %}
+        <div class="setting{% if row.problem %} bad{% endif %}">
+          <label for="k-{{ row.key }}">{{ row.label }}</label>
+          <input
+            id="k-{{ row.key }}"
+            name="{{ row.key }}"
+            type="password"
+            autocomplete="off"
+            placeholder="{% if row.set %}set; type a new one to replace it{% else %}not set{% endif %}"
+          />
+          {% if row.problem %}<p class="error" role="alert">{{ row.problem }}</p>{% endif %}
+          <p class="muted hint">
+            {% if row.stored %}Set here.
+            {% elif row.set %}From the environment.
+            {% else %}Not set.
+            {% endif %}
+            {% if row.stored %}
+              <label class="inline">
+                <input type="checkbox" name="remove_{{ row.key }}" value="1" />
+                Remove it
+              </label>
+            {% endif %}
+          </p>
+          {% if row.revealed %}<p class="revealed"><code>{{ row.revealed }}</code></p>{% endif %}
+        </div>
+      {% endfor %}
+      <button type="submit">Save keys</button>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2>See a key</h2>
+    <p class="muted">
+      {% if needs_password %}
+        Type the family password again. The key is shown once and never put in the address bar.
+      {% else %}
+        This page has no password, so a key is shown to anyone who can reach it.
+      {% endif %}
+    </p>
+    <form method="post" action="{{ url_for('settings.reveal') }}" class="filters">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+      <div class="field">
+        <label for="reveal-key">Key</label>
+        <select id="reveal-key" name="key">
+          {% for row in keys %}
+            <option value="{{ row.key }}">{{ row.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% if needs_password %}
+        <div class="field">
+          <label for="reveal-password">Family password</label>
+          <input
+            id="reveal-password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+          />
+        </div>
+      {% endif %}
+      <div class="actions"><button class="quiet" type="submit">Show it</button></div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2>What has changed</h2>
+    {% if history %}
+      <ul class="plain">
+        {% for line in history %}
+          <li>
+            <strong>{{ line.key }}</strong>
+            {% if line.secret %}
+              replaced
+            {% else %}
+              {{ line.old }} → {{ line.new }}
+            {% endif %}
+            <div class="muted">
+              {{ line.when }}{% if line.who %} · {{ line.who }}{% endif %} · {{ line.source }}
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">Nothing has been changed here yet.</p>
+    {% endif %}
+  </section>
+{% endblock %}

@@ -1,0 +1,213 @@
+"""The settings page: the one part of the web surface that writes."""
+
+from __future__ import annotations
+
+import re
+
+import pytest
+
+from familydb.app import App
+from familydb.store import db
+from familydb.store import settings as settings_store
+from familydb.store.settings import BEHAVIOUR, SECRETS
+from familydb.web import create_app, fields
+
+PASSWORD = "open sesame please"
+
+
+@pytest.fixture
+def page(settings, clock, conn, family):
+    """A signed-in client on a database the test can also reach through `conn`."""
+    app = App(settings.model_copy(update={"web_password": PASSWORD}), clock)
+    client = create_app(app).test_client()
+    assert client.post("/login", data={"password": PASSWORD}).status_code == 302
+    client.app = app  # the test looks at what the page put in force
+    return client
+
+
+def _token(client) -> str:
+    found = re.search(r'name="csrf" value="([^"]+)"', client.get("/settings").text)
+    assert found is not None
+    return found.group(1)
+
+
+def _whole_form(client, **changes) -> dict[str, str]:
+    """Every box on the page, empty, with the given ones filled in: what a browser sends."""
+    form = {one.key: "" for one in fields.FIELDS}
+    form["csrf"] = _token(client)
+    form.update({key: str(value) for key, value in changes.items()})
+    return form
+
+
+def _errors(text: str) -> list[str]:
+    return [one.strip() for one in re.findall(r'class="error" role="alert">\s*([^<]+)', text)]
+
+
+def test_the_page_offers_every_setting_that_can_be_stored() -> None:
+    """A setting the store accepts but the page never shows would be unreachable."""
+    shown = [one.key for one in fields.FIELDS]
+    assert sorted(shown) == sorted(BEHAVIOUR)
+    assert len(shown) == len(set(shown))
+    assert not set(shown) & set(SECRETS)  # keys have their own form, and are never echoed
+
+
+def test_a_box_left_empty_says_what_it_falls_back_to(page) -> None:
+    text = page.get("/settings").text
+    assert "From the environment (anthropic)" in text  # the provider dropdown
+    assert "Between 0 and 23." in text  # read off the setting, not written out twice
+    assert 'placeholder="claude-opus-5"' in text
+
+
+def test_saving_puts_it_in_force_at_once(page, conn) -> None:
+    form = _whole_form(page, provider="gemini", digest_hour=19, web_tools_enabled="true")
+    saved = page.post("/settings", data=form)
+    assert saved.status_code == 302 and saved.headers["Location"] == "/settings"
+    assert settings_store.overrides(conn) == {
+        "provider": "gemini",
+        "digest_hour": 19,
+        "web_tools_enabled": True,
+    }
+    assert page.app.settings.provider == "gemini"  # no restart, no wait
+    after = page.get("/settings").text
+    assert "Saved. Changed: provider, web_tools_enabled, digest_hour." in after
+    assert 'value="gemini" selected' in after
+
+
+def test_emptying_a_box_goes_back_to_the_environment(page, conn) -> None:
+    page.post("/settings", data=_whole_form(page, web_title="The Tate family"))
+    assert page.app.settings.web_title == "The Tate family"
+    page.post("/settings", data=_whole_form(page))
+    assert settings_store.overrides(conn) == {}
+    assert page.app.settings.web_title == "FamilyDB"
+
+
+def test_a_value_the_setting_will_not_take_is_refused_on_its_own_box(page, conn) -> None:
+    refused = page.post("/settings", data=_whole_form(page, digest_hour="seven"))
+    assert refused.status_code == 400
+    assert "That needs to be a whole number." in _errors(refused.text)
+    assert 'value="seven"' in refused.text  # what was typed comes back, not a blank box
+
+    refused = page.post("/settings", data=_whole_form(page, digest_hour=99))
+    assert refused.status_code == 400
+    assert "Input should be less than or equal to 23" in _errors(refused.text)
+    assert settings_store.overrides(conn) == {}  # and not one box was written
+
+
+def test_a_form_without_this_session_s_token_is_refused(page, conn) -> None:
+    form = _whole_form(page, provider="gemini")
+    refused = page.post("/settings", data={**form, "csrf": "made up"})
+    assert refused.status_code == 400
+    assert settings_store.overrides(conn) == {}
+    no_token = page.post("/settings", data={key: "" for key in form})
+    assert no_token.status_code == 400
+    elsewhere = page.post(
+        "/settings", data=form, headers={"Origin": "https://not-this-page.example"}
+    )
+    assert elsewhere.status_code == 400
+
+
+def test_a_key_is_stored_but_never_shown_and_never_logged(page, conn) -> None:
+    stored = page.post(
+        "/settings/keys", data={"csrf": _token(page), "openai_api_key": "sk-secret-value"}
+    )
+    assert stored.status_code == 302
+    assert settings_store.get(conn, "openai_api_key") == "sk-secret-value"
+    assert page.app.settings.openai_api_key == "sk-secret-value"
+
+    text = page.get("/settings").text
+    assert "sk-secret-value" not in text
+    assert "openai_api_key</strong>" in text and "replaced" in text
+    line = settings_store.history(conn)[0]
+    assert line["secret"] == 1 and line["old_value"] is None and line["new_value"] is None
+    assert line["source"].startswith("web ")
+
+
+def test_a_blank_key_box_leaves_the_key_alone(page, conn) -> None:
+    page.post("/settings/keys", data={"csrf": _token(page), "gemini_api_key": "gm-1"})
+    page.post("/settings/keys", data={"csrf": _token(page), "gemini_api_key": "  "})
+    assert settings_store.get(conn, "gemini_api_key") == "gm-1"
+    page.post("/settings/keys", data={"csrf": _token(page), "remove_gemini_api_key": "1"})
+    assert settings_store.get(conn, "gemini_api_key") is None
+
+
+def test_a_key_that_was_pasted_wrong_is_refused(page, conn) -> None:
+    refused = page.post(
+        "/settings/keys", data={"csrf": _token(page), "openai_api_key": "API key: sk-abc"}
+    )
+    assert refused.status_code == 400
+    assert "A key has no spaces in it. Check what was pasted." in _errors(refused.text)
+    assert settings_store.get(conn, "openai_api_key") is None
+
+
+def test_seeing_a_key_needs_the_password_again(page, conn) -> None:
+    page.post("/settings/keys", data={"csrf": _token(page), "openai_api_key": "sk-shown-once"})
+    token = _token(page)
+
+    without = page.post("/settings/reveal", data={"csrf": token, "key": "openai_api_key"})
+    assert without.status_code == 400 and "sk-shown-once" not in without.text
+
+    wrong = page.post(
+        "/settings/reveal", data={"csrf": token, "key": "openai_api_key", "password": "guess"}
+    )
+    assert wrong.status_code == 401 and "sk-shown-once" not in wrong.text
+
+    shown = page.post(
+        "/settings/reveal", data={"csrf": token, "key": "openai_api_key", "password": PASSWORD}
+    )
+    assert shown.status_code == 200 and "sk-shown-once" in shown.text
+    assert shown.headers["Cache-Control"] == "no-store"
+    assert "sk-shown-once" not in page.get("/settings").text  # once, not from then on
+
+
+def test_guessing_at_the_reveal_never_shuts_the_family_out(page) -> None:
+    token = _token(page)
+    for _ in range(5):
+        page.post(
+            "/settings/reveal", data={"csrf": token, "key": "openai_api_key", "password": "no"}
+        )
+    locked = page.post(
+        "/settings/reveal", data={"csrf": token, "key": "openai_api_key", "password": PASSWORD}
+    )
+    assert locked.status_code == 429
+    assert page.get("/settings").status_code == 200  # the page itself is still theirs
+    assert page.post("/logout").status_code == 302
+    assert page.post("/login", data={"password": PASSWORD}).status_code == 302
+
+
+def test_a_key_nobody_named_is_not_a_key(page) -> None:
+    refused = page.post(
+        "/settings/reveal",
+        data={"csrf": _token(page), "key": "web_password", "password": PASSWORD},
+    )
+    assert refused.status_code == 400 and PASSWORD not in refused.text
+
+
+def test_the_history_shows_what_moved_and_who_moved_it(page, conn, family) -> None:
+    with db.transaction(conn):
+        settings_store.set_many(conn, {"effort": "high"}, changed_by=family["sam"].id, source="cli")
+    text = page.get("/settings").text
+    assert "effort</strong>" in text
+    assert "from the environment → high" in text
+    assert "Sam" in text and "cli" in text
+
+
+def test_a_setting_cannot_be_reached_through_the_form_unless_the_page_offers_it(page, conn) -> None:
+    """A crafted post naming something else changes nothing: only the boxes are read."""
+    form = _whole_form(page, provider="gemini")
+    form["web_password"] = "changed from the page"
+    form["familydb_path"] = "/tmp/elsewhere.sqlite3"
+    assert page.post("/settings", data=form).status_code == 302
+    assert set(settings_store.overrides(conn)) == {"provider"}
+    assert page.app.settings.web_password == PASSWORD
+
+
+def test_a_page_with_no_password_shows_a_key_to_whoever_can_reach_it(settings, clock, conn):
+    """The relaxed home posture: there is no second password to ask for, and the page says so."""
+    app = App(settings.model_copy(update={"openai_api_key": "sk-home"}), clock)
+    client = create_app(app).test_client()
+    text = client.get("/settings").text
+    assert "This page has no password" in text
+    assert "Family password" not in text
+    token = re.search(r'name="csrf" value="([^"]+)"', text).group(1)
+    shown = client.post("/settings/reveal", data={"csrf": token, "key": "openai_api_key"})
+    assert shown.status_code == 200 and "sk-home" in shown.text

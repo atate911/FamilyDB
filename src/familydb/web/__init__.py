@@ -18,6 +18,7 @@ from familydb.availability import web_is_public, web_password_required
 from familydb.config import Settings
 from familydb.errors import ConfigError
 from familydb.web import auth, routes
+from familydb.web import settings as settings_page
 from familydb.web.keys import session_secret
 
 log = logging.getLogger(__name__)
@@ -92,9 +93,11 @@ def create_app(app: App) -> Flask:
     # Read through `app` rather than closing over `settings`: a change made on the settings page
     # replaces the whole object, and these must follow it.
     web.jinja_env.globals["password_in_use"] = lambda: auth.password_in_use(app.settings)
+    web.jinja_env.globals["csrf_token"] = auth.csrf_token
     web.context_processor(lambda: {"site_title": app.settings.web_title})
     web.register_blueprint(auth.bp)
     web.register_blueprint(routes.bp)
+    web.register_blueprint(settings_page.bp)
     web.before_request(_picking_up_settings(app, web))
     web.before_request(auth.require_login)
     web.after_request(security_headers)

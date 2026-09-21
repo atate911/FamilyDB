@@ -155,3 +155,27 @@ h3 { font-size: 0.95rem; margin: 1.25rem 0 0.25rem; }
 
 .links { display: flex; flex-wrap: wrap; gap: 0.9rem; margin: 0.6rem 0 0; font-size: 0.92rem; }
 .plain > li > div { margin-top: 0.15rem; }
+
+/* The settings page. */
+.grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+.setting { min-width: 0; }
+.setting + .setting { margin-top: 1rem; }
+.grid .setting + .setting { margin-top: 0; }
+.setting.bad input, .setting.bad select { border-color: var(--warn); }
+.hint { margin: 0.25rem 0 0; font-size: 0.85rem; }
+.setting .error { margin: 0.25rem 0 0; font-size: 0.85rem; border-left-width: 2px; }
+label.inline { display: inline; margin-left: 0.4rem; font-weight: 500; }
+label.inline input { margin-right: 0.15rem; }
+.said {
+  color: var(--accent);
+  border-left: 3px solid var(--accent);
+  padding-left: 0.6rem;
+}
+.revealed {
+  margin: 0.4rem 0 0;
+  padding: 0.5rem 0.6rem;
+  background: var(--bg);
+  border: 1px dashed var(--warn);
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}

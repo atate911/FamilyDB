@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hmac
 import logging
+import secrets
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -35,6 +36,7 @@ log = logging.getLogger(__name__)
 bp = Blueprint("auth", __name__)
 
 SESSION_KEY = "signed_in"
+CSRF_KEY = "csrf"
 # A browser or a monitor asking to read gets the login page; anything else gets a plain refusal.
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 MAX_ATTEMPTS = 5
@@ -53,11 +55,16 @@ HOME = "/"
 WRONG_PASSWORD = "That password is not right."
 LOCKED_OUT = "Too many tries. Wait a quarter of an hour and try again."
 BAD_ORIGIN = "That request did not come from this page."
+STALE_FORM = "That form was too old to use. Here it is again."
 
 
 @dataclass
 class Lockout:
-    """Failed logins per client address. In memory: a restart forgives, which is fine."""
+    """Wrong passwords per client address. In memory: a restart forgives, which is fine.
+
+    The address is the usual identity, but anything can be counted: the settings page counts its
+    reveal form separately, so a slip there never shuts the family out of the page itself.
+    """
 
     failures: dict[str, int] = field(default_factory=dict)
     until: dict[str, datetime] = field(default_factory=dict)
@@ -112,15 +119,15 @@ class Lockout:
             self.failures[who] = count
             if self.everyone == GLOBAL_ATTEMPTS:
                 log.warning(
-                    "%d failed web logins in %d minutes: refusing every login for a while",
+                    "%d wrong web passwords in %d minutes: refusing every one for a while",
                     self.everyone,
                     GLOBAL_WINDOW_MINUTES,
                 )
             if count >= MAX_ATTEMPTS:
                 self.until[who] = now + timedelta(minutes=LOCKOUT_MINUTES)
-                log.warning("locking out %s after %d failed web logins", who, count)
+                log.warning("locking out %s after %d wrong passwords", who, count)
             else:
-                log.warning("failed web login from %s (%d/%d)", who, count, MAX_ATTEMPTS)
+                log.warning("wrong web password from %s (%d/%d)", who, count, MAX_ATTEMPTS)
 
     def passed(self, who: str) -> None:
         with self.lock:
@@ -157,6 +164,25 @@ def safe_next(target: str | None) -> str | None:
     if parts.scheme or parts.netloc:
         return None
     return target
+
+
+def csrf_token() -> str:
+    """This session's token for its forms, made the first time a form is drawn.
+
+    The session cookie is SameSite=Lax and every post checks the Origin header, so this is the
+    third lock on the same door. It is the one that still holds if a browser ever forgets the
+    other two.
+    """
+    token = session.get(CSRF_KEY)
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session[CSRF_KEY] = token
+    return token
+
+
+def csrf_ok(given: str | None) -> bool:
+    expected = session.get(CSRF_KEY)
+    return bool(expected) and bool(given) and hmac.compare_digest(given, expected)
 
 
 def origin_ok() -> bool:
