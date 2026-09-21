@@ -1,0 +1,41 @@
+name: Release
+
+# Pushing a vN.N.N tag publishes the release. The notes are the matching section of
+# CHANGELOG.md, so the file in the repo and the release page cannot drift apart.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: The tag and the version in pyproject.toml must agree
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          packaged=$(grep -m1 '^version = ' pyproject.toml | cut -d'"' -f2)
+          echo "tag=$tag packaged=$packaged"
+          test "$tag" = "$packaged"
+      - name: Take the notes from the changelog
+        run: |
+          awk -v want="## ${GITHUB_REF_NAME} " '
+            index($0, want) == 1 { inside = 1; next }
+            inside && /^## / { exit }
+            inside { print }
+          ' CHANGELOG.md > notes.md
+          test -s notes.md
+          cat notes.md
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # An alpha is a pre-release: it says plainly that this has not been lived with yet.
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file notes.md \
+            --prerelease \
+            --verify-tag

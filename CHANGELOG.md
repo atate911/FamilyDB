@@ -30,9 +30,21 @@ of it has yet been lived with for a month, which is what this alpha is for.
 
 `scripts/install.sh` asks a handful of questions, writes `.env`, installs for
 Docker or a virtualenv, migrates, adds the first family member, creates the
-service user and installs the systemd unit. `RUNBOOK.md` covers a VPS end to
-end: firewall, backups and restores, upgrades, rotating a leaked key, and what
-to do when something is wrong.
+service user and installs the systemd unit. Clone into `/opt/familydb`: a home
+directory is closed to other users, so a service running as its own user cannot
+start from one, and the installer will tell you so rather than leave a unit that
+never starts. `RUNBOOK.md` covers a VPS end to end: firewall, backups and
+restores, upgrades, rotating a leaked key, and what to do when something is
+wrong.
+
+### What has been checked
+
+Every push runs the test suite on Python 3.11 and 3.12, lints, shellchecks the
+installer, installs from an untouched checkout and runs the bot as the service
+user it created, and builds the Docker image, migrates inside the container,
+serves the page and stops it with a signal. What no test covers is a real
+conversation with a real model: that needs a key, and it is what this alpha is
+for.
 
 ### Known limits
 
