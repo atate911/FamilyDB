@@ -252,6 +252,7 @@ def _think(
             current.append(note)
     turn = build_messages(history, current)
     chat = app.provider("chat", api=api)
+    spare = None if api is not None else app.fallback("chat", chat.name)
     ctx = ToolContext(
         conn=conn,
         settings=settings,
@@ -266,6 +267,8 @@ def _think(
     )
     return run_turn(
         provider=chat,
+        surface="chat",
+        fallback=spare,
         settings=settings,
         registry=app.registry,
         ctx=ctx,

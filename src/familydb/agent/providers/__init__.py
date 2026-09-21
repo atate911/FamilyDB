@@ -56,6 +56,17 @@ def for_surface(settings: Settings, surface: Surface, api: Any = None) -> Provid
     return build(chosen(settings, surface), settings, api=api)
 
 
+def fallback_for(settings: Settings, surface: Surface, primary: str) -> Provider | None:
+    """The other provider, when it is switched on and has a key. None means there is nowhere
+    else to go, which is the ordinary case for a family using one account."""
+    if not settings.provider_fallback:
+        return None
+    spare = build(other(primary), settings)
+    if not spare.configured():
+        return None
+    return spare
+
+
 __all__ = [
     "NAMES",
     "Exchange",
@@ -72,6 +83,7 @@ __all__ = [
     "WebAccess",
     "build",
     "chosen",
+    "fallback_for",
     "for_surface",
     "other",
 ]

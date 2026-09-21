@@ -52,6 +52,14 @@ class TurnResult:
     provider: str | None = None
 
 
+def worth_switching(exc: AgentError) -> bool:
+    """Whether the other provider might do better: this one is busy, unreachable or unusable."""
+    if exc.retryable:
+        return True
+    reason = str(exc).lower()
+    return "credential" in reason or "api key" in reason or "authentication" in reason
+
+
 def run_turn(
     *,
     provider: Provider,
@@ -66,8 +74,15 @@ def run_turn(
     model: str | None = None,
     effort: str | None = None,
     max_tokens: int | None = None,
+    surface: str = "chat",
+    fallback: Provider | None = None,
 ) -> TurnResult:
-    """Drive one inbound message to a reply."""
+    """Drive one inbound message to a reply.
+
+    With a `fallback` provider, a first call the chosen one cannot take is tried there instead.
+    Only the first call: once a tool has run, starting again elsewhere would repeat whatever it
+    did, and a half-finished turn is the retry job's business rather than this one's.
+    """
     request = TurnRequest(
         system=system,
         messages=messages,
@@ -80,11 +95,25 @@ def run_turn(
     limit = max_iterations or settings.agent_max_iterations
     actions: list[dict[str, Any]] = []
     totals: dict[str, int] = dict.fromkeys(USAGE_KEYS, 0)
-    asked = provider.name
+
+    active = provider
+    if fallback is not None and not active.configured():
+        log.warning("%s has no credentials; asking %s instead", active.name, fallback.name)
+        active = fallback
+        request.model = model or active.model_for(surface)
 
     for iteration in range(1, limit + 1):
         started = time.monotonic()
-        reply = provider.send(request)
+        try:
+            reply = active.send(request)
+        except AgentError as exc:
+            switchable = fallback is not None and active is not fallback
+            if not (switchable and first_call_only(request) and worth_switching(exc)):
+                raise
+            log.warning("%s could not take this (%s); asking %s", active.name, exc, fallback.name)
+            active = fallback
+            request.model = model or active.model_for(surface)
+            reply = active.send(request)
         duration_ms = int((time.monotonic() - started) * 1000)
 
         for key in USAGE_KEYS:
@@ -94,7 +123,7 @@ def run_turn(
                 ctx.conn,
                 message_id=ctx.message_id,
                 iteration=iteration,
-                model=request.model or provider.model_for("chat"),
+                model=request.model or active.model_for(surface),
                 served_model=reply.model,
                 request_id=reply.request_id,
                 stop_reason=reply.stop,
@@ -104,7 +133,7 @@ def run_turn(
             )
 
         if reply.stop == "refusal":
-            log.warning("%s refused the request (category=%s)", asked, reply.refusal)
+            log.warning("%s refused the request (category=%s)", active.name, reply.refusal)
             return TurnResult(
                 "refused",
                 REFUSAL_REPLY,
@@ -112,11 +141,11 @@ def run_turn(
                 iteration,
                 totals,
                 error=f"refusal:{reply.refusal}",
-                provider=asked,
+                provider=active.name,
             )
         if reply.stop == "max_tokens":
             return TurnResult(
-                "failed", "", actions, iteration, totals, error="max_tokens", provider=asked
+                "failed", "", actions, iteration, totals, error="max_tokens", provider=active.name
             )
 
         exchange = Exchange(reply=reply)
@@ -124,7 +153,7 @@ def run_turn(
         if reply.stop == "paused":
             continue  # a hosted tool paused the turn; sending the transcript back resumes it
         if not reply.tool_calls:
-            return TurnResult("ok", reply.text, actions, iteration, totals, provider=asked)
+            return TurnResult("ok", reply.text, actions, iteration, totals, provider=active.name)
 
         for call in reply.tool_calls:
             tool_started = time.monotonic()
@@ -147,7 +176,9 @@ def run_turn(
                 ToolOutcome(id=call.id, content=result.content, is_error=result.is_error)
             )
 
-    return TurnResult("failed", "", actions, limit, totals, error="max_iterations", provider=asked)
+    return TurnResult(
+        "failed", "", actions, limit, totals, error="max_iterations", provider=active.name
+    )
 
 
 def first_call_only(request: TurnRequest) -> bool:
@@ -169,4 +200,5 @@ __all__ = [
     "WebAccess",
     "first_call_only",
     "run_turn",
+    "worth_switching",
 ]

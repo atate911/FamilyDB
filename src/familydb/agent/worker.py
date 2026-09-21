@@ -18,6 +18,7 @@ from familydb.agent.providers import (
     SystemBlock,
     ToolDef,
     WebAccess,
+    fallback_for,
     for_surface,
 )
 from familydb.clock import Clock
@@ -91,8 +92,11 @@ def run_worker_turn(
         geocoder=geocoder,
     )
     worker: Provider = provider or for_surface(settings, "worker", api=api)
+    spare = None if api is not None else fallback_for(settings, "worker", worker.name)
     result = run_turn(
         provider=worker,
+        surface="worker",
+        fallback=spare,
         settings=settings,
         registry=registry,
         ctx=ctx,

@@ -80,6 +80,12 @@ class App:
 
         return providers.for_surface(self.settings, surface, api=api)
 
+    def fallback(self, surface: str, primary: str) -> Any:
+        """Somewhere else to ask when the chosen provider cannot take a message right now."""
+        from familydb.agent import providers
+
+        return providers.fallback_for(self.settings, surface, primary)
+
     def connect(self) -> sqlite3.Connection:
         """A fresh connection. SQLite connections are per thread; do not share them."""
         return db.connect(self.settings.familydb_path)
