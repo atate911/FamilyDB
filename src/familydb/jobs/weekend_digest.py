@@ -23,8 +23,15 @@ DIGEST_TEXT = "Weekend digest: what should we do this weekend?"
 
 
 def digest_channel(chat_id: str) -> str:
-    """Console chats are for trying things out; anything else is a Telegram chat id."""
-    return "console" if chat_id.startswith("console") else "telegram"
+    """Which channel a configured chat id belongs to.
+
+    A Telegram chat id is a number, so the two chats that are not Telegram are named instead:
+    "console" for trying things out, "web" for the chat on the page.
+    """
+    for named in ("console", "web"):
+        if chat_id.startswith(named):
+            return named
+    return "telegram"
 
 
 def run_digest(app: App, *, api: MessagesAPI | None = None) -> OutgoingMessage | None:

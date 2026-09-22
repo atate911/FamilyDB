@@ -13,6 +13,12 @@ Role = Literal["admin", "member", "kid"]
 ROLES: tuple[str, ...] = ("admin", "member", "kid")
 
 
+# Channels with no account of their own behind them: the console, where whoever is at the
+# keyboard says who they are, and the web page, which is behind one shared family password and
+# so has to ask. Both name a member by display name instead of a channel user id.
+BY_NAME = frozenset({"console", "web"})
+
+
 class Member(BaseModel):
     id: int
     display_name: str
@@ -65,8 +71,8 @@ def find_by_name(conn: sqlite3.Connection, name: str) -> Member | None:
 
 
 def resolve(conn: sqlite3.Connection, channel: str, channel_user_id: str) -> Member | None:
-    """Who is messaging. The console channel identifies people by display name."""
-    if channel == "console":
+    """Who is messaging. Some channels identify people by display name rather than by an id."""
+    if channel in BY_NAME:
         return find_by_name(conn, channel_user_id)
     row = conn.execute(
         "SELECT * FROM members WHERE active = 1 AND channel = ? AND channel_user_id = ?",

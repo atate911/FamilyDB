@@ -1,7 +1,11 @@
-"""The read-only web page: browse the ideas list, one idea, the restaurants and the plans.
+"""The web page: the whole bot in a browser.
 
-`create_app` builds a Flask application around an existing `App`, so the page reads the same
-database and settings as the bot. It serves GET requests only, apart from signing in and out.
+`create_app` builds a Flask application around an existing `App`, so the page works on the same
+database and settings as the bot itself. Most of it reads — the ideas list, one idea, the
+restaurants, the plans, what is connected and what it has cost. Three parts write, each through
+one door: `chat.py` hands a message to the pipeline, `edits.py` changes an idea, an outcome or a
+plan through the same tools the model calls, and `settings.py` is the only thing that touches
+`app_settings`. Every other module in this package reads and nothing else.
 """
 
 from __future__ import annotations
@@ -15,9 +19,10 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 from familydb.app import App
 from familydb.availability import web_is_public, web_password_required
+from familydb.channels.web import WebChat
 from familydb.config import Settings
 from familydb.errors import ConfigError
-from familydb.web import auth, routes
+from familydb.web import auth, chat, edits, routes
 from familydb.web import settings as settings_page
 from familydb.web.keys import session_secret
 
@@ -70,8 +75,12 @@ def security_headers(response: Any) -> Any:
     return response
 
 
-def create_app(app: App) -> Flask:
-    """A Flask application over this App's database and settings."""
+def create_app(app: App, *, api: Any = None) -> Flask:
+    """A Flask application over this App's database and settings.
+
+    `api` stands in for the model on the chat page, which is how the tests drive a whole turn
+    without a network. Left alone, every turn picks its provider from the settings in force.
+    """
     app.refresh()  # start from the settings in force, not only from what the environment said
     settings = app.settings
     check_configuration(settings)
@@ -86,6 +95,9 @@ def create_app(app: App) -> Flask:
         MAX_CONTENT_LENGTH=MAX_BODY_BYTES,
         FAMILYDB_APP=app,
         FAMILYDB_LOCKOUT=auth.Lockout(),
+        # A turn outlives the request that asked for it, so the thing running turns belongs to
+        # the application rather than to any one view.
+        FAMILYDB_CHAT=WebChat(app, api=api),
     )
     if settings.web_trust_proxy:
         web.wsgi_app = ProxyFix(web.wsgi_app, x_for=1, x_proto=1, x_host=1)  # type: ignore[method-assign]
@@ -97,6 +109,8 @@ def create_app(app: App) -> Flask:
     web.context_processor(lambda: {"site_title": app.settings.web_title})
     web.register_blueprint(auth.bp)
     web.register_blueprint(routes.bp)
+    web.register_blueprint(chat.bp)
+    web.register_blueprint(edits.bp)
     web.register_blueprint(settings_page.bp)
     # The gate first: somebody who is not signed in should not be able to make the page work,
     # not even for one small query.

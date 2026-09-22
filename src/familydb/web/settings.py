@@ -41,6 +41,7 @@ log = logging.getLogger(__name__)
 bp = Blueprint("settings", __name__)
 
 HISTORY_LIMIT = 12
+NOTICE = "settings"
 SAVED = "Saved. {what}"
 NOTHING_CHANGED = "Nothing was different, so nothing was written."
 NEEDS_PASSWORD = "Type the family password to see a key."
@@ -77,20 +78,6 @@ def _save(values: dict[str, Any]) -> list[str]:
     return changed
 
 
-def refused() -> str | None:
-    """None when the form may be acted on, else what to tell whoever sent it.
-
-    A missing token is not the same thing as a request from somewhere else: signing out and back
-    in leaves an open page holding a token nobody recognises any more, and telling that person
-    their form came from another site would be a lie they cannot act on.
-    """
-    if not auth.origin_ok():
-        return auth.BAD_ORIGIN
-    if not auth.csrf_ok(request.form.get("csrf")):
-        return auth.STALE_FORM
-    return None
-
-
 def problems_from(exc: ValidationError) -> dict[str, str]:
     """Pydantic's complaints, one sentence per box, in the words it used."""
     found: dict[str, str] = {}
@@ -114,8 +101,9 @@ def page(
     live = app.settings
     base = app.base_settings
     if said is None:
-        # What the last save said, handed over by the redirect that followed it.
-        told = get_flashed_messages()
+        # What the last save said, handed over by the redirect that followed it. Named,
+        # because the edit forms flash too and their notices belong on their own pages.
+        told = get_flashed_messages(category_filter=[NOTICE])
         said = told[0] if told else None
     with closing(app.connect()) as conn:
         overrides = settings_store.overrides(conn)
@@ -170,7 +158,7 @@ def show() -> tuple[str, int]:
 @bp.post("/settings")
 def save() -> Response | tuple[str, int]:
     """Store the behaviour settings, or say which box is wrong and keep what was typed."""
-    if (complaint := refused()) is not None:
+    if (complaint := auth.refused()) is not None:
         return page(error=complaint, status=400)
     values, problems = fields.read_form(request.form)
     typed = {one.key: request.form[one.key] for one in fields.FIELDS if one.key in request.form}
@@ -186,14 +174,14 @@ def save() -> Response | tuple[str, int]:
             problems = problems_from(exc)
     if problems:
         return page(problems=problems, error="Nothing was saved.", typed=typed, status=400)
-    flash(_said(_save(values)))
+    flash(_said(_save(values)), NOTICE)
     return redirect(url_for("settings.show"))
 
 
 @bp.post("/settings/keys")
 def save_keys() -> Response | tuple[str, int]:
     """Store or remove an API key. A key's value never reaches a log or the change history."""
-    if (complaint := refused()) is not None:
+    if (complaint := auth.refused()) is not None:
         return page(error=complaint, status=400)
     values: dict[str, Any] = {}
     problems: dict[str, str] = {}
@@ -212,7 +200,7 @@ def save_keys() -> Response | tuple[str, int]:
             values[name] = given
     if problems:
         return page(problems=problems, error="Nothing was saved.", status=400)
-    flash(_said(_save(values), keys=True))
+    flash(_said(_save(values), keys=True), NOTICE)
     return redirect(url_for("settings.show"))
 
 
@@ -224,7 +212,7 @@ def reveal() -> tuple[str, int]:
     whoever picks it up. Guessing here is counted and locked out the same way signing in is.
     """
     app = _app()
-    if (complaint := refused()) is not None:
+    if (complaint := auth.refused()) is not None:
         return page(error=complaint, status=400)
     name = request.form.get("key", "")
     if name not in SECRETS:

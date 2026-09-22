@@ -477,8 +477,11 @@ def test_the_lockout_table_does_not_grow_without_limit(settings, clock) -> None:
     assert lockout.locked("198.51.100.4", now)
 
 
-def test_the_pages_have_no_way_to_write_to_the_database() -> None:
-    """The pages are read-only by construction, not only by intent."""
+def test_no_page_reaches_a_table_to_write_to_it() -> None:
+    """No module in the package may write to a table itself, and that includes the three
+    that change things: the chat page hands a message to the pipeline, the edit forms call the
+    tools, the settings page goes through one repository. Every write is somebody else's, which
+    is what keeps the checks, the transactions and the audit rows in one place."""
     import ast
 
     import familydb.web as package
@@ -523,7 +526,7 @@ def test_the_pages_have_no_way_to_write_to_the_database() -> None:
     stores.add("settings_store")
     for module in sorted(Path(package.__file__).parent.glob("*.py")):
         if module.name == "settings.py":
-            continue  # it writes; the next test pins exactly how far that goes
+            continue  # app_settings is its own table; the next test pins how far it goes
         tree = ast.parse(module.read_text("utf-8"), filename=module.name)
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom) and (node.module or "").startswith(
@@ -536,6 +539,88 @@ def test_the_pages_have_no_way_to_write_to_the_database() -> None:
                 called = node.func.attr
                 writing = isinstance(base, ast.Name) and base.id in stores and called in writes
                 assert not writing, f"{module.name}:{node.lineno} calls {called} on a store"
+
+
+def test_only_three_pages_can_change_anything_and_only_the_agreed_way() -> None:
+    """Which modules may cause a write, and what each one is allowed to go through.
+
+    Nothing here writes, so the previous test alone would pass even if a page had quietly grown
+    a way to change an idea. This one names the doors instead: the chat page may reach the
+    pipeline and nothing else, the edit forms may dispatch a fixed list of tools and nothing
+    else, and every other module in the package may do neither.
+    """
+    import ast
+
+    import familydb.web as package
+
+    folder = Path(package.__file__).parent
+    trees = {
+        module.name: ast.parse(module.read_text("utf-8"), filename=module.name)
+        for module in sorted(folder.glob("*.py"))
+    }
+
+    # The chat page hands a message over, and the handing over is all it does.
+    chat = trees["chat.py"]
+    assert {
+        f"{node.module}.{alias.name}"
+        for node in ast.walk(chat)
+        if isinstance(node, ast.ImportFrom) and (node.module or "").startswith("familydb.channels")
+        for alias in node.names
+    } == {"familydb.channels.web.DEFAULT_CHAT", "familydb.channels.web.WebChat"}
+    assert not [
+        node
+        for node in ast.walk(chat)
+        if isinstance(node, ast.ImportFrom) and (node.module or "").startswith("familydb.pipeline")
+    ], "chat.py reaches the pipeline through the channel, not around it"
+
+    # The edit forms may run these tools and no others. A new one is a deliberate line here.
+    edits = trees["edits.py"]
+    dispatched = {
+        node.args[0].value
+        for node in ast.walk(edits)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "run"
+        and node.args
+        and isinstance(node.args[0], ast.Constant)
+    }
+    assert dispatched == {
+        "add_idea",
+        "update_idea",
+        "record_outcome",
+        "create_event",
+        "delete_event",
+    }
+    # And it runs them the one way: through the registry, which validates and owns the
+    # transaction. Constructing a store call or a connection of its own would not be that.
+    assert (
+        sum(
+            1
+            for node in ast.walk(edits)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "dispatch"
+        )
+        == 1
+    )
+
+    # And the doors are shut to everything else. Not whole packages: `views.py` reads opening
+    # hours out of `tools.places` and tidies a link with `tools.urls`, which write nothing. It
+    # is the two ways of causing a write that are spoken for — the pipeline, and dispatch.
+    for name, tree in trees.items():
+        reached = {node.module or "" for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)}
+        dispatches = any(
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "dispatch"
+            for node in ast.walk(tree)
+        )
+        assert not any(module.startswith("familydb.pipeline") for module in reached), name
+        if name not in {"chat.py", "__init__.py"}:  # the factory builds the thing chat.py uses
+            assert not any(module.startswith("familydb.channels") for module in reached), name
+        if name != "edits.py":
+            assert "familydb.tools" not in reached, f"{name} imports the tool machinery"
+            assert not dispatches, f"{name} dispatches a tool"
 
 
 def test_only_the_settings_page_writes_and_only_to_the_settings() -> None:

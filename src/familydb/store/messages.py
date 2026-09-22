@@ -117,6 +117,19 @@ def recent_for_chat(
     return [Message.from_row(row) for row in reversed(rows)]
 
 
+def last_for_chat(conn: sqlite3.Connection, chat_id: str, *, limit: int) -> list[Message]:
+    """The last `limit` messages in a chat, however old, oldest first.
+
+    What the page shows. The agent's own view of a chat is `recent_for_chat`, which also draws a
+    line under anything said long enough ago that the model should not be reading it again.
+    """
+    rows = conn.execute(
+        "SELECT * FROM messages WHERE chat_id = ? ORDER BY id DESC LIMIT ?",
+        (chat_id, limit),
+    ).fetchall()
+    return [Message.from_row(row) for row in reversed(rows)]
+
+
 def failed(conn: sqlite3.Connection, *, max_retries: int | None = None) -> list[Message]:
     """Failed inbound messages, oldest first, optionally only those still eligible for a retry."""
     sql = "SELECT * FROM messages WHERE status = 'failed' AND direction = 'in'"

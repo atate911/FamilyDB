@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Chat · {{ site_title }}{% endblock %}
+{# While an answer is on its way the browser fetches the page again by itself. No script: a
+   meta refresh is the one thing every browser still does, and the content policy forbids the
+   alternative. It is only ever set when something really is being thought about. #}
+{% block head %}
+  {% if refresh %}<meta http-equiv="refresh" content="{{ refresh }}" />{% endif %}
+{% endblock %}
+{% block content %}
+  <h1>Chat</h1>
+
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+  <form class="panel ask" method="post" action="{{ url_for('chat.show') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    <div class="field wide">
+      <label for="text">Message</label>
+      <textarea id="text" name="text" rows="3" required
+                placeholder="what should we do this weekend?">{{ typed or again or '' }}</textarea>
+    </div>
+    <div class="field">
+      <label for="who">From</label>
+      <select id="who" name="who" required>
+        {% if not who %}<option value="">who is asking?</option>{% endif %}
+        {% for name in family %}
+          <option value="{{ name }}" {{ 'selected' if name == who }}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <button type="submit" {{ 'disabled' if thinking or not family }}>Send</button>
+    </div>
+  </form>
+
+  {% if thinking %}
+    <p class="muted waiting">Thinking about the last message. This page will show the answer
+      when it arrives.</p>
+  {% elif stalled %}
+    <p class="error">{{ stalled_note }}</p>
+  {% endif %}
+
+  {# Newest first, under the box. A chat usually runs the other way, but without a script
+     nothing can scroll the page to the bottom, and the newest message is the one to read. #}
+  {% if lines %}
+    <ol class="panel thread">
+      {% for line in lines | reverse %}
+        <li class="{{ 'said-bot' if line.from_bot else 'said' }}">
+          <div class="said-by">
+            <strong>{{ line.who }}</strong>
+            <span class="muted">{{ line.when }}</span>
+            {% if line.trouble %}<span class="tag warn">{{ line.trouble }}</span>{% endif %}
+          </div>
+          <div class="said-text">{{ line.text }}</div>
+          {% if line.did %}
+            <div class="muted">used {{ line.did | join(', ') }}</div>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ol>
+  {% else %}
+    <p class="muted">Nothing said here yet. Anything you would ask in Telegram works.</p>
+  {% endif %}
+{% endblock %}

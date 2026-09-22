@@ -6,11 +6,13 @@
     <title>{% block title %}{{ site_title }}{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
     <link rel="icon" href="data:," />
+    {% block head %}{% endblock %}
   </head>
   <body>
     <header class="bar">
       <a class="brand" href="{{ url_for('web.ideas') }}">{{ site_title }}</a>
       <nav>
+        <a href="{{ url_for('chat.show') }}">Chat</a>
         <a href="{{ url_for('web.ideas') }}">Ideas</a>
         <a href="{{ url_for('web.restaurants') }}">Restaurants</a>
         <a href="{{ url_for('web.plans') }}">Plans</a>
@@ -23,6 +25,13 @@
         </form>
       {% endif %}
     </header>
-    <main>{% block content %}{% endblock %}</main>
+    <main>
+      {# What the last form said, handed over by the redirect that followed it. The settings
+         page keeps its own under another name and draws it in its own place. #}
+      {% for said in get_flashed_messages(category_filter=['edit']) %}
+        <p class="said">{{ said }}</p>
+      {% endfor %}
+      {% block content %}{% endblock %}
+    </main>
   </body>
 </html>

@@ -13,6 +13,7 @@ from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 from familydb.store.ideas import Idea
+from familydb.store.messages import Message
 from familydb.store.outcomes import Outcome
 from familydb.store.places import Place
 from familydb.store.plans import Plan
@@ -254,6 +255,30 @@ def outcome_row(outcome: Outcome) -> dict[str, Any]:
         "rating": f"{outcome.rating}/10" if outcome.rating is not None else None,
         "repeat": repeat,
         "notes": outcome.notes,
+    }
+
+
+# What the message log's status column means to somebody reading the chat. "received" is a
+# message the bot has not answered yet, which the page says in its own way below.
+TROUBLE = {
+    "failed": "this one did not go through",
+    "received": "waiting for an answer",
+}
+
+
+def chat_line(message: Message, names: dict[int, str], tz: ZoneInfo) -> dict[str, Any]:
+    """One message in the chat: who said it, when, and whether anything went wrong."""
+    mine = message.direction == "out"
+    return {
+        "id": message.id,
+        "who": "FamilyDB" if mine else names.get(message.member_id or -1, "someone"),
+        "from_bot": mine,
+        "text": message.text,
+        "when": local_moment(message.received_at, tz),
+        "trouble": None if mine else TROUBLE.get(message.status),
+        # Every tool the turn ran, so the chat says what it actually changed rather than only
+        # what it claimed to. Failures included: those are the ones worth seeing.
+        "did": [action.get("tool") for action in (message.actions or []) if action.get("tool")],
     }
 
 

@@ -74,6 +74,11 @@ label { display: block; margin-bottom: 0.3rem; font-weight: 600; }
 input[type="text"],
 input[type="password"],
 input[type="search"],
+input[type="url"],
+input[type="date"],
+input[type="datetime-local"],
+input:not([type]),
+textarea,
 select {
   width: 100%;
   padding: 0.5rem 0.6rem;
@@ -100,6 +105,17 @@ button.quiet {
   background: transparent;
   border: 1px solid var(--line);
   font-weight: 500;
+}
+button[disabled] { opacity: 0.55; cursor: default; }
+/* A link that does what a button does, so Edit sits beside Drop without looking odd. */
+.button {
+  display: inline-block;
+  padding: 0.5rem 0.9rem;
+  font-weight: 600;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-radius: 8px;
+  text-decoration: none;
 }
 
 nav { display: flex; gap: 1rem; margin-left: auto; }
@@ -185,3 +201,31 @@ label.inline input { margin-right: 0.15rem; }
 .light.on { color: var(--accent); }
 .light.off { color: var(--warn); }
 .light.part { color: var(--muted); }
+
+/* The forms that change something: the idea form, and the small ones on a page of its own. */
+.form { display: flex; flex-wrap: wrap; gap: 0.75rem 1rem; align-items: flex-end; }
+.form .field { flex: 1 1 10rem; min-width: 0; }
+.form .field.wide { flex: 1 1 100%; }
+.form button { margin-top: 0; }
+.form fieldset { border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.75rem; }
+.form legend { color: var(--muted); font-size: 0.9rem; padding: 0 0.3rem; }
+.form .muted { display: block; font-size: 0.85rem; margin-top: 0.2rem; }
+label.check { display: inline-block; margin-right: 0.9rem; font-weight: 500; }
+label.check input { width: auto; margin-right: 0.3rem; }
+.actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+.actions form { margin: 0; }
+
+/* The chat page. */
+.ask { display: flex; flex-wrap: wrap; gap: 0.75rem 1rem; align-items: flex-end; }
+.ask .field { flex: 1 1 10rem; }
+.ask .field.wide { flex: 1 1 100%; }
+.ask button { margin-top: 0; }
+.ask textarea { resize: vertical; }
+.waiting { margin: 0.75rem 0; }
+.thread { list-style: none; margin: 1rem 0 0; padding: 0; }
+.thread > li { padding: 0.6rem 0; border-bottom: 1px solid var(--line); }
+.thread > li:last-child { border-bottom: 0; }
+.said-by { display: flex; flex-wrap: wrap; gap: 0.3rem 0.6rem; align-items: baseline; font-size: 0.9rem; }
+/* Replies keep the line breaks the model wrote; escaping still happens, this is only layout. */
+.said-text { margin-top: 0.2rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.said-bot .said-text { color: var(--ink); }
