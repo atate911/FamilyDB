@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Ideas · {{ site_title }}{% endblock %}
 {% block content %}
-  <p class="actions"><a class="button" href="{{ url_for('web.new_idea') }}">Add an idea</a></p>
+  <div class="actions"><a class="button" href="{{ url_for('web.new_idea') }}">Add an idea</a></div>
   <form class="panel filters" method="get" action="{{ url_for('web.ideas') }}">
     <div class="field wide">
       <label for="q">Search</label>

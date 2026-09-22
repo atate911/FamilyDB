@@ -44,6 +44,10 @@ THREAD_LIMIT = 60
 # seconds when it answers straight off and the better part of a minute when it runs tools, so
 # this is a compromise: short enough to feel like a chat, long enough not to be a poll.
 REFRESH_SECONDS = 3
+# The newest line carries this id, and every way back to the page points at it: a redirect
+# after sending, the refresh while waiting, and the link in the bar. Without a script nothing
+# can scroll a page, and a chat read from the top is a chat read backwards.
+LATEST = "latest"
 NOBODY = "Say who is asking."
 NO_FAMILY = "There is nobody in the family list yet. Add someone with `familydb member add`."
 STALLED = (
@@ -76,11 +80,24 @@ def page(*, error: str | None = None, typed: str | None = None, status: int = 20
         family = member_store.list_all(conn)
         thread = message_store.last_for_chat(conn, DEFAULT_CHAT, limit=THREAD_LIMIT)
     names = {member.id: member.display_name for member in family}
-    lines = [views.chat_line(message, names, app.settings.tzinfo) for message in thread]
-    # A message still waiting with nothing thinking about it is one whose turn died with the
-    # process. Saying so beats refreshing for ever, and the text comes back in the box.
+    # The log keeps a turn's tool calls against the question; the page shows them under the
+    # answer. Pairing them here also says which questions have been answered at all.
+    answered = {message.reply_to for message in thread if message.reply_to is not None}
+    actions = {message.id: message.actions for message in thread}
+    lines = [
+        views.chat_line(
+            message,
+            names,
+            app.settings.tzinfo,
+            did=views.tools_used(actions.get(message.reply_to)),
+            waiting=message.id not in answered,
+        )
+        for message in thread
+    ]
+    # A message nothing has answered, with nothing thinking about it, is one whose turn died
+    # with the process. Saying so beats refreshing for ever, and the text comes back in the box.
     last = thread[-1] if thread else None
-    stalled = last is not None and last.direction == "in" and last.status == "received"
+    stalled = last is not None and last.direction == "in" and last.id not in answered
     return (
         render_template(
             "chat.html",
@@ -93,6 +110,8 @@ def page(*, error: str | None = None, typed: str | None = None, status: int = 20
             error=error or (NO_FAMILY if not family else None),
             typed=typed,
             refresh=REFRESH_SECONDS if thinking else None,
+            here=url_for("chat.show", _anchor=LATEST),
+            latest=LATEST,
             stalled_note=STALLED,
         ),
         status,
@@ -119,4 +138,4 @@ def send() -> Response | Any:
     log.info("web chat: %s asked something", who)
     # Redirect rather than render: the browser is about to be asked to refresh this page every
     # few seconds, and refreshing a POST would send the message again.
-    return redirect(url_for("chat.show"))
+    return redirect(url_for("chat.show", _anchor=LATEST))

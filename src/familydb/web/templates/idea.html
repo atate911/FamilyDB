@@ -16,7 +16,7 @@
     <h1>{{ idea.title }}</h1>
     <p class="muted meta">
       <span>#{{ idea.id }}</span>
-      <span class="tag">{{ idea.kind }}</span>
+      <span class="tag">{{ row.kind }}</span>
       <span class="tag status-{{ idea.status }}">{{ idea.status }}</span>
       {% if idea.suggested_by_name %}<span>suggested by {{ idea.suggested_by_name }}</span>{% endif %}
       <span>added {{ row.added }}</span>
@@ -47,7 +47,7 @@
     {% if idea.tags %}
       <p class="tags">{% for tag in idea.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</p>
     {% endif %}
-    <p class="actions">
+    <div class="actions">
       <a class="button" href="{{ url_for('web.edit_idea', idea_id=idea.id) }}">Edit</a>
       <form method="post" action="{{ url_for('edits.set_status', idea_id=idea.id) }}">
         <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
@@ -56,7 +56,7 @@
           {{ 'Bring it back' if idea.status == 'dropped' else 'Drop it' }}
         </button>
       </form>
-    </p>
+    </div>
   </article>
 
   {% if place %}
@@ -146,7 +146,8 @@
   {% endif %}
 
   <section class="panel">
-    <h2>Plan it</h2>
+    <details class="more">
+      <summary><span class="h2">Plan it</span></summary>
     {% if can_schedule %}
       <form class="form" method="post" action="{{ url_for('edits.add_plan') }}">
         <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
@@ -155,11 +156,7 @@
         <div class="field">
           <label for="start">When</label>
           <input id="start" name="start" type="datetime-local" required />
-        </div>
-        <div class="field">
-          <label class="check">
-            <input type="checkbox" name="all_day" value="yes" /> All day
-          </label>
+          <label class="check"><input type="checkbox" name="all_day" value="yes" /> All day</label>
         </div>
         <div class="field">
           <label for="location">Where</label>
@@ -174,10 +171,12 @@
       <p class="muted">Google Calendar is not connected, so nothing here can be scheduled.
         See the <a href="{{ url_for('web.status') }}">status page</a>.</p>
     {% endif %}
+    </details>
   </section>
 
   <section class="panel">
-    <h2>Record how it went</h2>
+    <details class="more">
+      <summary><span class="h2">Record how it went</span></summary>
     <form class="form" method="post" action="{{ url_for('edits.record_outcome', idea_id=idea.id) }}">
       <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
       <div class="field">
@@ -208,6 +207,7 @@
         <button type="submit">Record it</button>
       </div>
     </form>
+    </details>
   </section>
 
   <p><a href="{{ url_for('web.ideas') }}">Back to the ideas list</a></p>

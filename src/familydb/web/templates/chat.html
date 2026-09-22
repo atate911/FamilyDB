@@ -1,13 +1,42 @@
 {% extends "base.html" %}
 {% block title %}Chat · {{ site_title }}{% endblock %}
-{# While an answer is on its way the browser fetches the page again by itself. No script: a
-   meta refresh is the one thing every browser still does, and the content policy forbids the
-   alternative. It is only ever set when something really is being thought about. #}
+{# While an answer is on its way the browser fetches the page again by itself, landing back on
+   the newest line. No script: a meta refresh is the one thing every browser still does, and the
+   content policy forbids the alternative. It is only set when something really is being thought
+   about, so the page goes quiet as soon as the reply is in the log. #}
 {% block head %}
-  {% if refresh %}<meta http-equiv="refresh" content="{{ refresh }}" />{% endif %}
+  {% if refresh %}<meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" />{% endif %}
 {% endblock %}
 {% block content %}
   <h1>Chat</h1>
+
+  {% if lines %}
+    <ol class="panel thread">
+      {% for line in lines %}
+        <li class="{{ 'said-bot' if line.from_bot else 'said-them' }}"
+            {% if loop.last %}id="{{ latest }}"{% endif %}>
+          <div class="said-by">
+            <strong>{{ line.who }}</strong>
+            <span class="muted">{{ line.when }}</span>
+            {% if line.trouble %}<span class="tag warn">{{ line.trouble }}</span>{% endif %}
+          </div>
+          <div class="said-text">{{ line.text }}</div>
+          {% if line.did %}
+            <div class="muted did">used {{ line.did | join(', ') }}</div>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ol>
+  {% else %}
+    <p class="muted">Nothing said here yet. Anything you would ask in Telegram works.</p>
+  {% endif %}
+
+  {% if thinking %}
+    <p class="muted waiting">Thinking about the last message. This page will show the answer
+      when it arrives.</p>
+  {% elif stalled %}
+    <p class="error">{{ stalled_note }}</p>
+  {% endif %}
 
   {% if error %}<p class="error">{{ error }}</p>{% endif %}
 
@@ -31,33 +60,4 @@
       <button type="submit" {{ 'disabled' if thinking or not family }}>Send</button>
     </div>
   </form>
-
-  {% if thinking %}
-    <p class="muted waiting">Thinking about the last message. This page will show the answer
-      when it arrives.</p>
-  {% elif stalled %}
-    <p class="error">{{ stalled_note }}</p>
-  {% endif %}
-
-  {# Newest first, under the box. A chat usually runs the other way, but without a script
-     nothing can scroll the page to the bottom, and the newest message is the one to read. #}
-  {% if lines %}
-    <ol class="panel thread">
-      {% for line in lines | reverse %}
-        <li class="{{ 'said-bot' if line.from_bot else 'said' }}">
-          <div class="said-by">
-            <strong>{{ line.who }}</strong>
-            <span class="muted">{{ line.when }}</span>
-            {% if line.trouble %}<span class="tag warn">{{ line.trouble }}</span>{% endif %}
-          </div>
-          <div class="said-text">{{ line.text }}</div>
-          {% if line.did %}
-            <div class="muted">used {{ line.did | join(', ') }}</div>
-          {% endif %}
-        </li>
-      {% endfor %}
-    </ol>
-  {% else %}
-    <p class="muted">Nothing said here yet. Anything you would ask in Telegram works.</p>
-  {% endif %}
 {% endblock %}

@@ -68,6 +68,11 @@ def rating_text(idea: Idea) -> str | None:
     return f"done {times}, rated {idea.avg_rating:g}/10"
 
 
+def kind_text(kind: str) -> str:
+    """`day_trip` is how it is stored and how the model says it; nobody wants to read it."""
+    return kind.replace("_", " ")
+
+
 def details_text(idea: Idea) -> str:
     return DETAILS.get(idea.enrichment, idea.enrichment)
 
@@ -92,7 +97,7 @@ def idea_row(idea: Idea, tz: ZoneInfo) -> dict[str, Any]:
         # Links reach the page from chat and from pages the lookup worker read. Anything that is
         # not an ordinary web address is dropped here rather than put in an href.
         "url": clean_url(idea.url),
-        "kind": idea.kind,
+        "kind": kind_text(idea.kind),
         "status": idea.status,
         "where": idea.location_name,
         "who": participants_text(idea),
@@ -240,6 +245,9 @@ def plan_row(plan: Plan, today: date) -> dict[str, Any]:
         "when": day_text(plan.start) if not plan.all_day else day_text(plan.start[:10]),
         "relative": relative_text(plan.start, today),
         "all_day": plan.all_day,
+        # What a datetime-local box wants: the stored start, with a time when there is none,
+        # so re-opening the form shows where the plan is now rather than an empty box.
+        "start_value": plan.start if len(plan.start) > 10 else f"{plan.start[:10]}T09:00",
         "location": plan.location,
         "notes": plan.notes,
         "status": plan.status,
@@ -258,28 +266,43 @@ def outcome_row(outcome: Outcome) -> dict[str, Any]:
     }
 
 
-# What the message log's status column means to somebody reading the chat. "received" is a
-# message the bot has not answered yet, which the page says in its own way below.
-TROUBLE = {
-    "failed": "this one did not go through",
-    "received": "waiting for an answer",
-}
+def chat_line(
+    message: Message, names: dict[int, str], tz: ZoneInfo, *, did: list[str], waiting: bool
+) -> dict[str, Any]:
+    """One message in the chat: who said it, when, what the turn ran, and what went wrong.
 
-
-def chat_line(message: Message, names: dict[int, str], tz: ZoneInfo) -> dict[str, Any]:
-    """One message in the chat: who said it, when, and whether anything went wrong."""
-    mine = message.direction == "out"
+    `did` is the turn's tool calls, which the log stores against the question rather than the
+    answer. They belong under the answer: "used suggest" beneath somebody's own message reads
+    as though they had run it. `waiting` is for a message nothing has replied to yet, which is
+    a fact about the thread rather than about the row, so the caller works it out.
+    """
+    from_bot = message.direction == "out"
+    trouble = None
+    if not from_bot:
+        if message.status == "failed":
+            trouble = "this one did not go through"
+        elif waiting:
+            trouble = "waiting for an answer"
     return {
         "id": message.id,
-        "who": "FamilyDB" if mine else names.get(message.member_id or -1, "someone"),
-        "from_bot": mine,
+        "who": "FamilyDB" if from_bot else names.get(message.member_id or -1, "someone"),
+        "from_bot": from_bot,
         "text": message.text,
         "when": local_moment(message.received_at, tz),
-        "trouble": None if mine else TROUBLE.get(message.status),
-        # Every tool the turn ran, so the chat says what it actually changed rather than only
-        # what it claimed to. Failures included: those are the ones worth seeing.
-        "did": [action.get("tool") for action in (message.actions or []) if action.get("tool")],
+        "trouble": trouble,
+        "did": did if from_bot else [],
     }
+
+
+def tools_used(actions: Any) -> list[str]:
+    """The tools a turn ran, in order, named once each. Failures included: those are the ones
+    worth seeing."""
+    seen: list[str] = []
+    for action in actions or []:
+        name = action.get("tool") if isinstance(action, dict) else None
+        if name and name not in seen:
+            seen.append(name)
+    return seen
 
 
 def local_moment(value: str, tz: ZoneInfo) -> str:

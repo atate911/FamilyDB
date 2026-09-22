@@ -15,10 +15,35 @@
     </div>
     {% if plan.notes %}<div class="muted">{{ plan.notes }}</div>{% endif %}
     {% if cancellable and plan.status != 'cancelled' %}
-      <form method="post" action="{{ url_for('edits.cancel_plan', plan_id=plan.id) }}">
-        <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-        <button class="quiet" type="submit">Cancel</button>
-      </form>
+      <div class="actions row">
+        <details class="more">
+          <summary>Move it</summary>
+          <form class="form" method="post" action="{{ url_for('edits.move_plan', plan_id=plan.id) }}">
+            <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+            <div class="field">
+              <label for="start-{{ plan.id }}">New time</label>
+              <input id="start-{{ plan.id }}" name="start" type="datetime-local" required
+                     value="{{ plan.start_value }}" />
+              <label class="check">
+                <input type="checkbox" name="all_day" value="yes" {{ 'checked' if plan.all_day }} />
+                All day
+              </label>
+            </div>
+
+            <div class="field"><button type="submit">Move it</button></div>
+          </form>
+        </details>
+        {# Taking a plan off the calendar really removes the Google event, and without a script
+           there is no dialogue to ask twice, so the button asks for itself. #}
+        <details class="more">
+          <summary>Cancel it</summary>
+          <form method="post" action="{{ url_for('edits.cancel_plan', plan_id=plan.id) }}">
+            <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+            <p class="muted">This takes it off the family calendar for everyone.</p>
+            <button class="quiet" type="submit">Yes, cancel it</button>
+          </form>
+        </details>
+      </div>
     {% endif %}
   </li>
 {% endmacro %}
@@ -45,8 +70,6 @@
         <div class="field">
           <label for="start">When</label>
           <input id="start" name="start" type="datetime-local" required />
-        </div>
-        <div class="field">
           <label class="check"><input type="checkbox" name="all_day" value="yes" /> All day</label>
         </div>
         <div class="field">

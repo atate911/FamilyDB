@@ -589,6 +589,7 @@ def test_only_three_pages_can_change_anything_and_only_the_agreed_way() -> None:
         "update_idea",
         "record_outcome",
         "create_event",
+        "update_event",
         "delete_event",
     }
     # And it runs them the one way: through the registry, which validates and owns the

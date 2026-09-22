@@ -183,6 +183,46 @@ def test_a_plan_can_be_made_from_an_idea_and_cancelled(planning, conn) -> None:
     assert ideas.get(conn, 1).status == "idea"  # and the idea goes back to being one
 
 
+def test_a_plan_can_be_moved_rather_than_cancelled_and_remade(planning, conn) -> None:
+    """Cancelling and adding it again would lose the link to the idea and the notes."""
+    planning.post("/ideas/new", data=_idea_form(planning))
+    planning.post(
+        "/plans/new",
+        data={
+            "csrf": _token(planning, "/idea/1"),
+            "idea_id": "1",
+            "title": "Ramen place",
+            "start": "2026-09-26T18:30",
+        },
+    )
+    moved = planning.post(
+        "/plan/1/move",
+        data={"csrf": _token(planning, "/plans"), "start": "2026-09-27T19:00"},
+    )
+    assert moved.status_code == 302
+    plan = plans.get(conn, 1)
+    assert plan.start.startswith("2026-09-27T19:00")
+    assert plan.idea_id == 1 and plan.google_event_id  # the same event, moved
+    assert plan.status == "confirmed"
+    assert ideas.get(conn, 1).status == "planned"
+    assert "Moved to" in _said(planning.get("/plans"))
+
+
+def test_moving_a_plan_into_the_past_is_refused_by_the_tool(planning, conn) -> None:
+    planning.post(
+        "/plans/new",
+        data={
+            "csrf": _token(planning, "/plans"),
+            "title": "Harvest festival",
+            "start": "2026-09-26T18:30",
+        },
+    )
+    planning.post(
+        "/plan/1/move", data={"csrf": _token(planning, "/plans"), "start": "2020-01-01T10:00"}
+    )
+    assert plans.get(conn, 1).start.startswith("2026-09-26")  # unmoved
+
+
 def test_an_all_day_plan_keeps_only_the_date(planning, conn) -> None:
     planning.post(
         "/plans/new",
@@ -218,6 +258,7 @@ def test_without_a_calendar_the_page_offers_no_plan_form_and_refuses_one_anyway(
         ("/idea/1/outcome", {"rating": "9"}),
         ("/plans/new", {"title": "Sneaky", "start": "2026-09-26T18:30"}),
         ("/plan/1/cancel", {}),
+        ("/plan/1/move", {"start": "2026-09-27T19:00"}),
     ],
 )
 def test_every_form_refuses_a_post_from_another_site(page, conn, path, form) -> None:

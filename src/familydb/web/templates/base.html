@@ -12,7 +12,7 @@
     <header class="bar">
       <a class="brand" href="{{ url_for('web.ideas') }}">{{ site_title }}</a>
       <nav>
-        <a href="{{ url_for('chat.show') }}">Chat</a>
+        <a href="{{ url_for('chat.show', _anchor='latest') }}">Chat</a>
         <a href="{{ url_for('web.ideas') }}">Ideas</a>
         <a href="{{ url_for('web.restaurants') }}">Restaurants</a>
         <a href="{{ url_for('web.plans') }}">Plans</a>

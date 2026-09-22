@@ -71,6 +71,9 @@ p { margin: 0.5rem 0; }
 }
 
 label { display: block; margin-bottom: 0.3rem; font-weight: 600; }
+/* Wide enough for its longest option, so a dropdown never lies about what it holds — but
+   never wider than what it sits in, or it hangs off the edge of a panel on a phone. */
+select { min-width: min(max-content, 100%); }
 input[type="text"],
 input[type="password"],
 input[type="search"],
@@ -118,12 +121,12 @@ button[disabled] { opacity: 0.55; cursor: default; }
   text-decoration: none;
 }
 
-nav { display: flex; gap: 1rem; margin-left: auto; }
+nav { display: flex; flex-wrap: wrap; gap: 0.35rem 1rem; margin-left: auto; min-width: 0; }
 nav a { text-decoration: none; font-weight: 500; }
 .bar form { margin-left: 0.5rem; }
 
 .filters { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; }
-.filters .field { flex: 1 1 9rem; }
+.filters .field { flex: 1 1 9rem; min-width: 0; }
 .filters .field.wide { flex: 2 1 14rem; }
 .filters .actions { display: flex; align-items: center; gap: 0.75rem; flex: 0 0 auto; }
 .filters button { margin-top: 0; }
@@ -158,8 +161,9 @@ nav a { text-decoration: none; font-weight: 500; }
 .facts dd { margin: 0; overflow-wrap: anywhere; }
 
 .hours { border-collapse: collapse; margin-top: 0.4rem; }
-.hours th { text-align: left; font-weight: 500; color: var(--muted); padding-right: 1.25rem; }
+.hours th { text-align: left; font-weight: 500; color: var(--muted); }
 .hours th, .hours td { padding: 0.15rem 0; }
+.hours th { padding-right: 1.25rem; }
 
 h3 { font-size: 0.95rem; margin: 1.25rem 0 0.25rem; }
 .sources { font-size: 0.85rem; overflow-wrap: anywhere; }
@@ -203,14 +207,14 @@ label.inline input { margin-right: 0.15rem; }
 .light.part { color: var(--muted); }
 
 /* The forms that change something: the idea form, and the small ones on a page of its own. */
-.form { display: flex; flex-wrap: wrap; gap: 0.75rem 1rem; align-items: flex-end; }
-.form .field { flex: 1 1 10rem; min-width: 0; }
+.form { display: flex; flex-wrap: wrap; gap: 0.75rem 1rem; align-items: flex-start; }
+.form .field { flex: 1 1 11rem; min-width: 0; }
 .form .field.wide { flex: 1 1 100%; }
 .form button { margin-top: 0; }
 .form fieldset { border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.75rem; }
 .form legend { color: var(--muted); font-size: 0.9rem; padding: 0 0.3rem; }
 .form .muted { display: block; font-size: 0.85rem; margin-top: 0.2rem; }
-label.check { display: inline-block; margin-right: 0.9rem; font-weight: 500; }
+label.check { display: inline-block; margin: 0.35rem 0.9rem 0 0; font-weight: 500; }
 label.check input { width: auto; margin-right: 0.3rem; }
 .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
 .actions form { margin: 0; }
@@ -228,4 +232,27 @@ label.check input { width: auto; margin-right: 0.3rem; }
 .said-by { display: flex; flex-wrap: wrap; gap: 0.3rem 0.6rem; align-items: baseline; font-size: 0.9rem; }
 /* Replies keep the line breaks the model wrote; escaping still happens, this is only layout. */
 .said-text { margin-top: 0.2rem; white-space: pre-wrap; overflow-wrap: anywhere; }
-.said-bot .said-text { color: var(--ink); }
+/* The family's own lines are set in from the bot's, so a glance tells them apart without
+   colour doing the work: the reply is the thing being read, so it keeps the plain column. */
+.said-them { padding-left: 1rem; border-left: 3px solid var(--accent); }
+.said-them .said-by strong { color: var(--accent); }
+.did { font-size: 0.85rem; margin-top: 0.25rem; }
+.ask { margin-top: 1rem; }
+
+/* Folded-away detail: the second half of the idea form, the forms on an idea page that are
+   used now and then, and the two things you can do to a plan. Native <details>, no script. */
+.more > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--accent);
+  padding: 0.3rem 0;
+  list-style-position: inside;
+}
+.more > summary:hover { text-decoration: underline; }
+.more[open] > summary { margin-bottom: 0.5rem; }
+/* A heading that is also the thing you click, so the page reads the same folded or open. */
+.h2 { font-size: 1.15rem; color: var(--ink); }
+.more .inner { margin-top: 0.25rem; }
+.more .muted { margin: 0 0 0.5rem; }
+.actions.row { gap: 1.25rem; margin-top: 0.4rem; }
+.actions.row .more { font-size: 0.92rem; }

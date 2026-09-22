@@ -1,8 +1,8 @@
 """Changing an idea, an outcome or a plan from the page.
 
 The page does not know how to save anything. Every form here turns into one call to a tool in
-`familydb.tools` — `add_idea`, `update_idea`, `record_outcome`, `create_event`, `delete_event` —
-which is the same code the model calls when somebody asks for the same thing in chat. So a title
+`familydb.tools` — `add_idea`, `update_idea`, `record_outcome`, `create_event`, `update_event`
+and `delete_event` — the code the model calls when somebody asks for the same thing. So a title
 typed into a box is checked the way a title said in chat is checked, a duplicate is caught the
 same way, the transaction is the tool's own, and a calendar that is not connected says so
 instead of half-writing a plan. Nothing in this module reaches a table by itself.
@@ -26,7 +26,7 @@ from werkzeug.datastructures import MultiDict
 from familydb.app import App
 from familydb.store import members as member_store
 from familydb.tools import ToolContext
-from familydb.web import auth
+from familydb.web import auth, views
 from familydb.web.chat import WHO_KEY
 
 log = logging.getLogger(__name__)
@@ -40,6 +40,7 @@ CHANGED_IDEA = "Changed #{id} {title}."
 DUPLICATE = "There is already an idea called that: #{id}. Nothing was added."
 RECORDED = "Recorded. #{id} is marked done."
 SCHEDULED = "On the calendar: {title}."
+MOVED = "Moved to {when}."
 CANCELLED = "Cancelled."
 NEEDS_TITLE = "An idea needs a title."
 NEEDS_KIND = "An idea needs a kind: restaurant, outing, trip, show…"
@@ -256,6 +257,25 @@ def add_plan() -> Response:
     else:
         _say(SCHEDULED.format(title=result["plan"]["title"]))
     return _back(back[0], **back[1])
+
+
+@bp.post("/plan/<int:plan_id>/move")
+def move_plan(plan_id: int) -> Response:
+    """Change when a plan is. Cancelling and adding it again would lose its link and its notes."""
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+        return _back("web.plans")
+    all_day = bool(request.form.get("all_day"))
+    start = _text(request.form, "start")
+    result, complaint = run(
+        "update_event",
+        {"plan_id": plan_id, "start": start[:10] if all_day else start, "all_day": all_day},
+    )
+    if result is None:
+        _say(complaint or "")
+    else:
+        _say(MOVED.format(when=views.day_text(result["plan"]["start"])))
+    return _back("web.plans")
 
 
 @bp.post("/plan/<int:plan_id>/cancel")

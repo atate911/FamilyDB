@@ -55,7 +55,8 @@ def test_a_message_goes_through_the_pipeline_and_the_answer_lands_on_the_page(
 ) -> None:
     client = _client(settings, clock, *replies)
     sent = _say(client, "what should we do this weekend?")
-    assert sent.status_code == 302 and sent.headers["Location"] == "/chat"
+    # Back to the newest line: nothing can scroll the page, so the link says where to land.
+    assert sent.status_code == 302 and sent.headers["Location"] == "/chat#latest"
     assert client.chat.wait(10)
 
     page = client.get("/chat").text
@@ -63,10 +64,32 @@ def test_a_message_goes_through_the_pipeline_and_the_answer_lands_on_the_page(
     assert "Saturday looks dry. The museum?" in page
     assert 'http-equiv="refresh"' not in page  # nothing left to wait for
 
+    assert page.index("what should we do this weekend?") < page.index("Saturday looks dry")
+    assert 'id="latest"' in page
+
     thread = messages.last_for_chat(conn, DEFAULT_CHAT, limit=10)
     assert [(m.direction, m.status) for m in thread] == [("in", "processed"), ("out", "processed")]
     assert thread[0].member_id == family["sam"].id
     assert thread[0].channel == "web"
+
+
+def test_the_tools_a_turn_ran_are_shown_under_the_answer(settings, clock, conn, family) -> None:
+    """The log keeps them against the question, which would read as though Sam had run them."""
+    client = _client(
+        settings,
+        clock,
+        fakes.message(
+            [fakes.tool_use("tu_1", "add_idea", {"title": "Ramen place", "kind": "restaurant"})],
+            stop_reason="tool_use",
+        ),
+        fakes.message([fakes.text("Saved #1.")]),
+    )
+    _say(client, "we should try the ramen place")
+    assert client.chat.wait(10)
+    page = client.get("/chat").text
+    assert page.index("we should try the ramen place") < page.index("used add_idea")
+    assert page.index("Saved #1.") < page.index("used add_idea")
+    assert "waiting for an answer" not in page  # it was answered, whatever the row says
 
 
 def test_the_page_says_it_is_thinking_and_asks_to_be_shown_again(

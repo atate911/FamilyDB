@@ -17,7 +17,8 @@
     <div class="field">
       <label for="kind">Kind</label>
       {# A list, not a closed choice: the model invents a kind when none fits, and so may you. #}
-      <input id="kind" name="kind" required list="kinds" value="{{ idea.kind if editing else '' }}" />
+      <input id="kind" name="kind" required list="kinds" placeholder="restaurant"
+             value="{{ idea.kind if editing else '' }}" />
       <datalist id="kinds">
         {% for kind in kinds %}<option value="{{ kind }}"></option>{% endfor %}
       </datalist>
@@ -48,6 +49,10 @@
       <label for="description">Description</label>
       <textarea id="description" name="description" rows="3">{{ idea.description or '' if editing else '' }}</textarea>
     </div>
+
+    <details class="more" {{ 'open' if editing }}>
+      <summary>Everything else</summary>
+      <div class="form inner">
 
     <div class="field">
       <label for="location_name">Where</label>
@@ -136,6 +141,9 @@
                {{ 'checked' if editing and idea.needs_booking }} /> Needs booking
       </label>
     </div>
+
+      </div>
+    </details>
 
     <div class="field wide actions">
       <button type="submit">{{ 'Save changes' if editing else 'Add it' }}</button>
