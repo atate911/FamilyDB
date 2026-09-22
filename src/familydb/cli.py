@@ -724,7 +724,7 @@ def web(
     host: str | None = typer.Option(None, "--host", help="Override WEB_HOST for this run."),
     port: int | None = typer.Option(None, "--port", help="Override WEB_PORT for this run."),
 ) -> None:
-    """Serve the read-only web page in the foreground until interrupted."""
+    """Serve the web page in the foreground until interrupted."""
     from familydb.web.server import serve
 
     overrides: dict[str, Any] = {}

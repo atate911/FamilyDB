@@ -417,7 +417,8 @@ def check_integrations(app: App, report: Report) -> None:
             "weekend digest",
             WARN,
             "no chat id, so the weekly digest is not sent",
-            "Set DIGEST_CHAT_ID once the family group exists (RUNBOOK section 9)",
+            "Set DIGEST_CHAT_ID to the family group, or to 'web' for the page's own chat "
+            "(RUNBOOK section 9)",
         )
 
 
@@ -431,7 +432,7 @@ def check_web(app: App, report: Report) -> None:
         report.add(
             "web page",
             WARN,
-            "off, so there is no settings page and no status page",
+            "off, so there is no page to chat on, edit from, or configure it with",
             "WEB_ENABLED=true, then restart",
         )
         return

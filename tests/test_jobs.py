@@ -323,7 +323,8 @@ def test_scheduler_registers_enrichment_only_with_web_tools(settings, clock) -> 
 
 from datetime import timedelta  # noqa: E402
 
-from familydb.jobs.weekend_digest import DIGEST_TEXT, run_digest  # noqa: E402
+from familydb.channels.web import WebChat  # noqa: E402
+from familydb.jobs.weekend_digest import DIGEST_TEXT, digest_channel, run_digest  # noqa: E402
 from familydb.store import members, suggestions  # noqa: E402
 
 
@@ -397,6 +398,25 @@ def test_digest_failure_is_left_for_the_retry_job(settings, thursday_clock, conn
     assert printed == ["Late digest."]
     assert messages.get(conn, inbound.id).status == "processed"
     assert run_digest(app, api=fakes.FakeMessagesAPI()) is None  # still one per day
+
+
+def test_the_digest_can_go_to_the_web_page(settings, thursday_clock, conn, family) -> None:
+    """A Telegram chat id cannot be known before somebody writes in the group; "web" can."""
+    assert digest_channel("web") == "web"
+    assert digest_channel("console") == "console"
+    assert digest_channel("-100") == "telegram"
+
+    app = _digest_app(settings, thursday_clock, chat_id="web")
+    chat = WebChat(app)  # registering it is what gives the channel a sender
+    assert app.senders["web"] is not None
+    reply = run_digest(app, api=fakes.FakeMessagesAPI(*_digest_script()))
+    assert reply.status == "ok"
+    inbound = messages.get(conn, reply.in_message_id)
+    assert inbound.channel == "web" and inbound.chat_id == "web"
+    # Delivering to the page is storing it, which is where the page reads from.
+    thread = messages.last_for_chat(conn, "web", limit=10)
+    assert [line.text for line in thread] == [DIGEST_TEXT, "Here is what I found."]
+    assert chat.busy("web") is False  # the digest is not a turn the page is waiting on
 
 
 def test_scheduler_registers_the_digest_only_with_a_chat_id(settings, clock) -> None:
