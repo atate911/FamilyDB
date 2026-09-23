@@ -35,6 +35,10 @@ Python 3.11+ yourself, then run it again with `--no-packages`. x86_64 and arm64 
 **A non-root user with sudo, reachable over SSH with a key.** Do not do this as root. The
 scripts ask for root only where they need it, and say what for each time.
 
+**A way into the repository.** FamilyDB is private (section 3). Only the repository's owner can
+add a deploy key or make a token scoped to it; if that is not you, ask the owner for one of the
+two, or for a `.tar.gz` of the code (option 3), before you start.
+
 **An API key** from OpenAI, Anthropic or Google. One is enough. OpenAI's GPT-6 Luna answers by
 default, because it is the cheapest capable model of the three; the others are a setting away.
 Give more than one key and the others become spares for when the first is rate limited (RUNBOOK
@@ -69,8 +73,19 @@ ssh-copy-id sam@your-server
 ssh sam@your-server 'echo in'
 ```
 
+If the provider set the server up for key-only logins, `ssh-copy-id` cannot get in as `sam` (no
+password to type). Copy root's key across instead, as root on the server:
+
+```bash
+install -d -m 700 -o sam -g sam /home/sam/.ssh
+install -m 600 -o sam -g sam /root/.ssh/authorized_keys /home/sam/.ssh/
+```
+
 With that working, in `/etc/ssh/sshd_config` set `PasswordAuthentication no` and
-`PermitRootLogin no`, then `sudo systemctl reload ssh`.
+`PermitRootLogin no`, then `sudo systemctl reload ssh`. Ubuntu cloud images often carry a file in
+`/etc/ssh/sshd_config.d/` (such as `50-cloud-init.conf`) that says `PasswordAuthentication yes`
+and wins over the main file; set it to `no` there too. `sudo sshd -T | grep -i passwordauth`
+shows what is actually in force.
 
 **A firewall.** The order matters more than the rules:
 
@@ -100,6 +115,15 @@ settings page changes it later if you get it wrong:
 ```bash
 timedatectl list-timezones | grep Vancouver
 sudo timedatectl set-timezone America/Vancouver
+```
+
+**If the page will have a domain** (section 6), point it at the server and open the web ports
+now, before the install: the installer sets up HTTPS, and the certificate can only be fetched
+once the name leads here and ports 80 and 443 are open.
+
+```bash
+dig +short familydb.example.com      # should print this server's address
+sudo ufw allow 80,443/tcp
 ```
 
 **Swap, if memory is tight.** On a 1 GB box the install step that builds the virtualenv is the
@@ -135,11 +159,12 @@ each of these starts by getting at least the `scripts/` folder there.
 
 ### Option 1: a deploy key
 
-On the server, make a key that exists for this one purpose:
+On the server, make a key that exists for this one purpose. It lives in `/root`, because
+upgrades run as root and read it from there for as long as the install exists:
 
 ```bash
-ssh-keygen -t ed25519 -C "familydb deploy" -f ~/.ssh/familydb_deploy -N ""
-cat ~/.ssh/familydb_deploy.pub
+sudo ssh-keygen -t ed25519 -C "familydb deploy" -f /root/familydb_deploy -N ""
+sudo cat /root/familydb_deploy.pub
 ```
 
 Copy that public line. In GitHub, open the repository, then **Settings → Deploy keys → Add
@@ -147,23 +172,23 @@ deploy key**. Title it after the machine, paste the key, and leave **Allow write
 unticked: the server never needs to push. Check it from the server:
 
 ```bash
-ssh -T git@github.com -i ~/.ssh/familydb_deploy
+sudo ssh -T git@github.com -i /root/familydb_deploy
 # "Hi atate911/FamilyDB! You've successfully authenticated, but GitHub does not provide shell
 #  access." is the answer you want.
 ```
 
-Then put the scripts on the box and run bootstrap with the key. From your own computer, in
-your own clone:
+Then fetch a copy for the scripts with that key, on the server, and run bootstrap from it.
+Bootstrap still clones its own copy into `/opt/familydb` with the key, so upgrades can fetch:
 
 ```bash
-scp -r scripts sam@your-server:~/
+sudo git -c core.sshCommand="ssh -i /root/familydb_deploy -o IdentitiesOnly=yes" \
+  clone --depth 1 git@github.com:atate911/FamilyDB.git /root/familydb-scripts
+sudo bash /root/familydb-scripts/scripts/bootstrap.sh --deploy-key /root/familydb_deploy
+sudo rm -rf /root/familydb-scripts      # once it has finished
 ```
 
-And on the server:
-
-```bash
-sudo bash ~/scripts/bootstrap.sh --deploy-key ~/.ssh/familydb_deploy
-```
+(Or, if you have a clone of your own: `scp -r scripts sam@your-server:~/` from it, and
+`sudo bash ~/scripts/bootstrap.sh --deploy-key /root/familydb_deploy` on the server.)
 
 Bootstrap rewrites the repository URL to its SSH form, clones with that key, and then clears
 the credential out of the saved remote so nobody reading `.git/config` later finds one.
@@ -175,42 +200,44 @@ Generate new token**. Give it the shortest expiry you can live with, set **Repos
 to **Only select repositories** and pick FamilyDB, and under **Permissions → Repository
 permissions** set **Contents** to **Read-only**. Nothing else.
 
-```bash
-scp -r scripts sam@your-server:~/                      # from your own computer
-```
+On the server, read the token in without it landing in your shell history, fetch the scripts
+with it, and run bootstrap. `sudo` drops the environment unless told to keep that one variable:
 
 ```bash
-sudo GITHUB_TOKEN=github_pat_... bash ~/scripts/bootstrap.sh
+read -rs GITHUB_TOKEN && export GITHUB_TOKEN        # paste the token, then Enter
+git clone --depth 1 "https://x-access-token:${GITHUB_TOKEN}@github.com/atate911/FamilyDB.git" ~/familydb-scripts
+sudo --preserve-env=GITHUB_TOKEN bash ~/familydb-scripts/scripts/bootstrap.sh
+rm -rf ~/familydb-scripts
 ```
 
 The token is used for the clone and nothing else: it is never written to `.env`, never written
 to the log, and the saved remote is reset to the plain HTTPS URL afterwards so it does not sit
-in `.git/config`. It does go into your shell history, though, so clear that line out
-(`history -d`), or read it in with `read -rs GITHUB_TOKEN` first and `export` it.
+in `.git/config`. That also means an upgrade needs it again (section 8); switching to a deploy
+key later avoids that.
 
 ### Option 3: copy it from your own computer
 
-No credential reaches the server at all. Clone locally, then copy it across without the
-virtualenv, the database or your own `.env`:
+No credential reaches the server at all. On a computer that can read the repository, make an
+archive of the committed code (which leaves out the virtualenv, the database and any `.env`,
+because none of them are committed) and copy it across:
 
 ```bash
-git clone git@github.com:atate911/FamilyDB.git ~/FamilyDB
-rsync -a --exclude .venv --exclude data --exclude .env ~/FamilyDB/ sam@your-server:~/FamilyDB/
-# or, without rsync:  scp -r ~/FamilyDB sam@your-server:~/
+git clone git@github.com:atate911/FamilyDB.git ~/FamilyDB     # if you have no clone yet
+git -C ~/FamilyDB archive --format=tar.gz --prefix=FamilyDB/ -o ~/familydb.tar.gz HEAD
+scp ~/familydb.tar.gz sam@your-server:~/
 ```
 
-Then on the server:
+Then on the server, unpack the scripts and point bootstrap at the archive:
 
 ```bash
-sudo bash ~/FamilyDB/scripts/bootstrap.sh --from ~/FamilyDB
+tar -xzf ~/familydb.tar.gz
+sudo bash ~/FamilyDB/scripts/bootstrap.sh --from ~/familydb.tar.gz
 ```
 
-`--from` also takes a `.tar.gz` of a checkout, which is easier to move around than a directory
-tree. Excluding `.env` matters: yours holds your own keys, and a copy of it landing on the
-server means the installer finds a configuration that was never meant for that machine.
-
-If bootstrap is run from inside a checkout and given nothing else, it installs that checkout,
-so `sudo bash ~/FamilyDB/scripts/bootstrap.sh` on its own does the same thing.
+Copy the archive rather than a working directory: a `.env` of your own landing on the server
+would carry your keys there, and the installer would take it for this machine's configuration.
+If bootstrap is run from inside a checkout and given no deploy key and no token, it installs that
+checkout, so `sudo bash ~/FamilyDB/scripts/bootstrap.sh` on its own does the same thing.
 
 ## 4. Run the bootstrap
 
@@ -230,13 +257,13 @@ installed.
 ### The run itself
 
 ```bash
-sudo bash ~/scripts/bootstrap.sh --deploy-key ~/.ssh/familydb_deploy
+sudo bash /root/familydb-scripts/scripts/bootstrap.sh --deploy-key /root/familydb_deploy
 ```
 
 Useful flags, all in `--help`. `--dry-run` says what would happen and changes nothing, which
 is worth one pass. `--mode docker` installs Docker Engine and the compose plugin and runs it
 that way; the default is `venv`, the smaller install and the one the rest of this file assumes.
-`--target DIR` and `--user NAME` move the install and rename the service account. `--ref v0.1.0`
+`--target DIR` and `--user NAME` move the install and rename the service account. `--ref NAME`
 installs that tag, branch or commit, and `--repo URL` clones from somewhere else. Without
 `--ref`, what it installs depends on `CHANGELOG.md`: while the newest version there is marked "in
 progress", as v0.1.0 is now, it installs the default branch, where that version is being built;
@@ -264,8 +291,10 @@ install the service, whether to schedule backups, and, with a domain, whether to
 Everything else it decides for you, and all of it can be changed on the page later:
 
 - The web page is on, with a family password of at least twelve characters. It makes one up and
-  **prints it once**: write it down. It is in `/opt/familydb/.env` too, and nowhere else. To
-  choose your own, run `sudo WEB_PASSWORD='...' bash ~/scripts/bootstrap.sh ...` instead.
+  **prints it once**: write it down. If it scrolled past, `sudo grep WEB_PASSWORD
+  /opt/familydb/.env` shows it; that file is the only other place it is. To choose your own,
+  run `sudo WEB_PASSWORD='...' bash .../bootstrap.sh ...` instead, and to change it later, RUNBOOK
+  section 12.
 - The timezone is the machine's.
 - Web lookups are on, so new ideas get their address and opening hours filled in.
 - The weekend digest goes to the chat on the web page, which needs no setting up.
@@ -379,25 +408,21 @@ gives you, and paste it on the settings page under **API keys** as the Telegram 
 takes effect within seconds. `/status` then says "connected as @yourbot"; if it says "the token
 was refused by Telegram", the token was mistyped.
 
-Then each person sends the bot a message. The reply tells them their id on that channel. On the
-**Family** page, add them (or press Change beside their name) and type that number as their
-Telegram id. Their next message gets a real answer. Kids need no id: the kid role is enough for them to be named as
+Then each person sends the bot a message. It will not answer them yet, but it notes who asked:
+the **Family** page lists them under "Asked to talk to the bot", with their Telegram name and a
+button to add them (it keeps who and when, never what they said, and forgets them after a
+month). For someone already on the list, press Change beside their name instead and type the id
+the bot's reply gave them. Their next message gets a real answer. Kids need no id: the kid role is enough for them to be named as
 participants. For a family group, `/setprivacy` → Disable in BotFather, then add the bot to the
 group.
 
 ### The weekend digest
 
 The Thursday digest goes to the chat on the web page, which works from the first week. To send
-it to the family's Telegram group instead, you need the group's chat id, which only exists once
-the group does and somebody has written in it with the bot there. Group ids are negative
-numbers:
-
-```bash
-sudo -u familydb /opt/familydb/.venv/bin/python -c "import sqlite3; print(sqlite3.connect('/opt/familydb/data/familydb.sqlite3').execute(\"select distinct chat_id from messages where channel = 'telegram'\").fetchall())"
-```
-
-Put it in the **Digest chat** box on the settings page (under "When it speaks first"), where the
-day and the hour are too. `familydb digest` prints the schedule and `familydb digest --now` posts
+it to the family's Telegram group instead, add the bot to the group and have somebody on the
+family list mention it there once (`@yourbot hello`). Then the **Digest chat** box on the
+settings page (under "When it speaks first") offers that group, by the time it was last written
+in; pick it and save. The day and the hour are in the same place. `familydb digest` prints the schedule and `familydb digest --now` posts
 one immediately. RUNBOOK section 9.
 
 ## 6. Putting the web page on the internet properly
@@ -443,8 +468,10 @@ certificate from certbot; the steps are at the top of that file.
 address and that the connection was HTTPS, and marks the login cookie `Secure`. Behind a proxy
 the page will not serve without a password at all.
 
-**Adding a domain later.** If you installed without one, add `WEB_DOMAIN=your.domain` and
-`WEB_TRUST_PROXY=true` to `/opt/familydb/.env`, set up Caddy as the top of `deploy/Caddyfile`
+**Adding a domain later.** If you installed without one, point the domain here and open the
+ports (section 2), then `sudoedit /opt/familydb/.env` (the file is the service
+user's alone) and fill in the two lines already there: `WEB_DOMAIN=your.domain` and
+`WEB_TRUST_PROXY=true`. Set up Caddy as the top of `deploy/Caddyfile`
 says (`sudo apt install caddy`, copy the file, put your domain in it, reload Caddy), open the
 firewall as above, and `sudo systemctl restart familydb`. On the Docker path, add
 `COMPOSE_PROFILES=tls` as well and run `docker compose up -d` instead of installing Caddy.
@@ -522,28 +549,37 @@ if the target does not contain what is installed now, it refuses and changes not
 
 If you installed with `--deploy-key`, bootstrap already wired it up: it left the SSH remote in
 place and recorded the key's path in the checkout's `core.sshCommand`, so upgrades work as long
-as that key file stays where it is. Keep it somewhere durable, such as `/root/familydb_deploy`,
-rather than in the home directory of an account you might remove.
+as that key file stays where it is (`/root/familydb_deploy`, if you followed section 3).
 
-If you installed with a token, bootstrap deliberately did not write it down, so there is no
-credential to fetch with. Either point the checkout at a deploy key once:
+If you installed with a token, bootstrap deliberately did not write it down, so give it again
+for each upgrade; it is used for that fetch and not kept:
 
 ```bash
-sudo install -m 600 -o root -g root ~/.ssh/familydb_deploy /root/familydb_deploy
+read -rs GITHUB_TOKEN && export GITHUB_TOKEN
+sudo --preserve-env=GITHUB_TOKEN /opt/familydb/scripts/maintain.sh upgrade
+```
+
+Tokens expire. To stop needing one, make a deploy key as in section 3 and point the checkout at
+it once:
+
+```bash
 sudo git -C /opt/familydb remote set-url origin git@github.com:atate911/FamilyDB.git
 sudo git -C /opt/familydb config core.sshCommand \
   "ssh -i /root/familydb_deploy -o IdentitiesOnly=yes"
 sudo git -C /opt/familydb fetch --tags origin      # should now work
 ```
 
-or fetch once with the token, without storing it:
+If you brought a copy yourself there is nothing to fetch from at all. Take a backup, make a new
+archive as in section 3, copy it across, and unpack it over the install; `.env` and `data/` are
+not in the archive, so they are left as they are. Then run the installer again, which
+reinstalls the dependencies, migrates and restarts:
 
 ```bash
-sudo git -C /opt/familydb -c http.extraheader="AUTHORIZATION: bearer $TOKEN" fetch --tags origin
+sudo /opt/familydb/scripts/maintain.sh backup
+sudo tar -xzf ~/familydb.tar.gz -C /opt/familydb --strip-components=1 --no-same-owner
+sudo bash /opt/familydb/scripts/install.sh
 ```
-
-If you brought a copy yourself there is nothing to fetch from at all: copy a newer checkout over
-the top, keeping `.env` and `data/`, then run `scripts/install.sh` again. `upgrade` says all of
+ `upgrade` says all of
 this itself when a fetch fails, so you do not have to remember it. RUNBOOK section 8 says
 which version an upgrade moves to.
 
@@ -560,11 +596,17 @@ That is one line in root's crontab, for either Docker or systemd: a safe SQLite 
 at 03:15 into `/opt/familydb/backups/`, followed by pruning files older than `--keep-days` only
 if the backup succeeds. Each backup is readable by its owner alone. An older schedule in the
 `familydb` user's crontab is removed at the same time, so the two do not both run. A backup on
-the same disk is not a backup, so copy them off as well, from your own computer:
+the same disk is not a backup, so copy them off as well. They are readable by root alone, so
+hand yourself a bundle on the server and fetch that:
 
 ```bash
-rsync -av sam@your-server:/opt/familydb/backups/ ~/familydb-backups/
+sudo tar -C /opt/familydb -czf ~/familydb-backups.tar.gz backups && sudo chown sam ~/familydb-backups.tar.gz
+scp sam@your-server:familydb-backups.tar.gz .       # on your own computer
 ```
+
+**The family password** lives in `.env`, not on the page, so that a stolen sign-in cannot change
+it: `sudoedit /opt/familydb/.env`, change `WEB_PASSWORD`, then
+`sudo systemctl restart familydb`. Everyone signs in again with the new one.
 
 RUNBOOK section 7 covers restoring by hand and what is and is not inside a backup; section 12
 covers journald limits, disk, and what to do when a secret gets out.
@@ -634,11 +676,11 @@ nothing was fetched. Bootstrap removes the half-made directory, so there is noth
 *How to check:*
 
 ```bash
-ssh -T git@github.com -i ~/.ssh/familydb_deploy     # names the repository if the key works
+sudo ssh -T git@github.com -i /root/familydb_deploy   # names the repository if the key works
 git ls-remote https://x-access-token:$GITHUB_TOKEN@github.com/atate911/FamilyDB.git | head -1
 ```
 
-*How to fix:* a deploy key must be the **private** half (`~/.ssh/familydb_deploy`, not the
+*How to fix:* a deploy key must be the **private** half (`/root/familydb_deploy`, not the
 `.pub`) and its public half must be on **this** repository's deploy keys, not on your account.
 A token must not have expired and must have Contents: Read on this repository. If neither can
 be made to work from the server, fall back to option 3 in section 3 and copy the code across

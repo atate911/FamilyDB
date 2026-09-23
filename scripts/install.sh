@@ -692,11 +692,11 @@ if [ "$MODE" = docker ]; then
   LOGS="docker compose logs -f bot"
   CLI="docker compose exec bot familydb"
 else
-  START="sudo systemctl start familydb   # or: .venv/bin/familydb run"
+  START="sudo systemctl start familydb   # or, from ${REPO_ROOT}: .venv/bin/familydb run"
   LOGS="journalctl -u familydb -f"
-  CLI="${REPO_ROOT}/.venv/bin/familydb"
+  CLI="cd ${REPO_ROOT} && .venv/bin/familydb"
   # data/ and .env belong to the service now, so a command that reads them has to be that user.
-  [ "$HAND_OVER_TO_SERVICE" = 1 ] && CLI="sudo -u familydb ${REPO_ROOT}/.venv/bin/familydb"
+  [ "$HAND_OVER_TO_SERVICE" = 1 ] && CLI="cd ${REPO_ROOT} && sudo -u familydb .venv/bin/familydb"
 fi
 
 say "Start it:   ${B}${START}${OFF}"
@@ -709,7 +709,7 @@ if [ "$HTTPS_READY" = 1 ]; then
   note "  sudo ufw allow 80,443/tcp"
 else
   say "Then open the page and sign in with the family password. From your own computer:"
-  say "  ssh -L ${PORT}:127.0.0.1:${PORT} $(id -un)@$(hostname -I 2>/dev/null | awk '{print $1}')"
+  say "  ssh -L ${PORT}:127.0.0.1:${PORT} ${SUDO_USER:-$(id -un)}@$(hostname -I 2>/dev/null | awk '{print $1}')"
   say "  and open ${B}http://127.0.0.1:${PORT}/${OFF}"
 fi
 say ""

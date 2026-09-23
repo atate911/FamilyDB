@@ -126,7 +126,7 @@ Sam and Alex are placeholder family members. Dates assume today is Sunday 20 Sep
 ## 5. Message pipeline
 
 1. An update arrives from the channel. Deduplicate on the channel's update id so a restart never processes a message twice.
-2. Look up the sender in `members`. Unknown senders get a short refusal that includes their id so an admin can add them. Nothing else runs for them.
+2. Look up the sender in `members`. Unknown senders get a short refusal that includes their id, and who knocked (id, name, when; never the text) is kept for a month so the Family page can offer to add them. Nothing else runs for them.
 3. Insert the raw message into `messages` with status `received`. From here on it is worked on under a lease (`delivery.lease`): a claim with an expiry that the worker renews while it runs. A second worker cannot take it, and one that dies lets the claim lapse, so the retry job can finish what a restart interrupted. A message from somebody who has since been taken off the family list is dropped rather than answered.
 4. Build the prompt, in this order:
    - the stable system prompt (rules, tone, tool guidance, the suggestion procedure);

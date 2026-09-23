@@ -89,8 +89,8 @@ Afterwards
 
 Examples
   sudo bash bootstrap.sh                          # ask, install, start
-  sudo bash bootstrap.sh --from ./FamilyDB        # code already copied onto this box
-  sudo GITHUB_TOKEN=ghp_... bash bootstrap.sh --ref v0.1.0
+  sudo bash bootstrap.sh --from ~/familydb.tar.gz # code already copied onto this box
+  sudo --preserve-env=GITHUB_TOKEN bash bootstrap.sh --ref NAME   # token exported first
   sudo bash bootstrap.sh --deploy-key /root/familydb_deploy --mode docker
 USAGE
 }
@@ -315,7 +315,10 @@ if [ "$MODE" = docker ]; then install_docker; else install_uv; fi
 checkpoint "runtime"
 
 # -------------------------------------------------------------- the code ----
-if [ -z "$SOURCE_DIR" ] && [ -f "${HERE}/../pyproject.toml" ] \
+# A deploy key or a token means "clone it", so upgrades have a credential: then the checkout this
+# runs from is only where the script came from.
+if [ -z "$SOURCE_DIR" ] && [ -z "$DEPLOY_KEY" ] && [ -z "${GITHUB_TOKEN:-}" ] \
+   && [ -f "${HERE}/../pyproject.toml" ] \
    && grep -q 'name = "familydb"' "${HERE}/../pyproject.toml" 2>/dev/null; then
   SOURCE_DIR="$(cd -- "${HERE}/.." && pwd -P)"
   note "Running from a checkout at ${SOURCE_DIR}, so that is what will be installed."
@@ -343,8 +346,11 @@ fetch_code() {
         return 0
       fi
       step "Copying ${SOURCE_DIR} into ${TARGET}" as_root cp -a "${SOURCE_DIR}/." "${TARGET}/"
+      # cp -a keeps the owner of the copy (you), and the code is meant to be root's.
+      step "Making the code root's" as_root chown -R root:root "$TARGET"
     elif [ -f "$SOURCE_DIR" ]; then
-      step "Unpacking ${SOURCE_DIR}" as_root tar -xzf "$SOURCE_DIR" -C "$TARGET" --strip-components=1
+      step "Unpacking ${SOURCE_DIR}" as_root tar -xzf "$SOURCE_DIR" -C "$TARGET" --strip-components=1 \
+        --no-same-owner
     else
       die "--from ${SOURCE_DIR} is neither a directory nor a file" \
           "Point it at a checkout, or at a .tar.gz of one."
@@ -509,14 +515,14 @@ if [ "$START" = 1 ] && [ "$DRY_RUN" = 0 ]; then
       note ""
       note "What this usually means: a setting it will not accept, or a file it cannot write."
       note "What to try:"
-      note "  sudo -u ${SERVICE_USER} ${TARGET}/.venv/bin/familydb doctor"
+      note "  cd ${TARGET} && sudo -u ${SERVICE_USER} .venv/bin/familydb doctor"
       note "  sudo systemctl status familydb"
       note "Then: sudo systemctl restart familydb"
     fi
   else
     warn "No systemd unit was installed, so nothing has been started."
     note "The installer says why above. Run it in the foreground meanwhile:"
-    note "  sudo -u ${SERVICE_USER} ${TARGET}/.venv/bin/familydb run"
+    note "  cd ${TARGET} && sudo -u ${SERVICE_USER} .venv/bin/familydb run"
   fi
 fi
 checkpoint "started"
@@ -573,7 +579,7 @@ if [ -n "$WEB_LINE" ]; then
     case "${host:-}" in
       127.0.0.1|localhost|"")
         note "  It is bound to this machine only, which is the safe default. Reach it over SSH:"
-        note "    ssh -L ${port:-8080}:127.0.0.1:${port:-8080} $(id -un)@$(hostname -I 2>/dev/null | awk '{print $1}')"
+        note "    ssh -L ${port:-8080}:127.0.0.1:${port:-8080} ${SUDO_USER:-$(id -un)}@$(hostname -I 2>/dev/null | awk '{print $1}')"
         note "  then open http://127.0.0.1:${port:-8080}/ on your own computer."
         ;;
     esac
@@ -586,7 +592,7 @@ if [ "$MODE" = docker ]; then
   say "Check it:      docker compose --project-directory ${TARGET} run --rm bot familydb doctor"
 else
   say "Watch it:      sudo journalctl -u familydb -f"
-  say "Check it:      sudo -u ${SERVICE_USER} ${TARGET}/.venv/bin/familydb doctor"
+  say "Check it:      cd ${TARGET} && sudo -u ${SERVICE_USER} .venv/bin/familydb doctor"
 fi
 say "Look after it: sudo ${TARGET}/scripts/maintain.sh --help"
 say "Remove it:     sudo ${TARGET}/scripts/uninstall.sh --help"

@@ -176,10 +176,12 @@ one at a time:
    effect within seconds, with no restart. `/status` then says "connected as @yourbot", "the
    token was refused by Telegram" or "cannot reach Telegram; trying again". A token put in
    `TELEGRAM_BOT_TOKEN` in `.env` instead is read when `familydb run` starts.
-2. Each family member sends the bot a direct message. The reply says "Your id on this channel is
-   12345"; type that number into their Telegram id on the Family page, or run
-   `familydb members add NAME --channel telegram --channel-user-id 12345`. Their next message
-   gets a real answer.
+2. Each family member sends the bot a direct message. It does not answer strangers, but it
+   notes who asked (id, Telegram name, when; never what they said, and only for a month), and
+   the Family page lists them under "Asked to talk to the bot" with a button to add each one.
+   The reply also tells them their id, for an admin to type into their Telegram id on the Family
+   page instead, or to use with `familydb members add NAME --channel telegram --channel-user-id
+   12345`. Their next message gets a real answer.
 3. For a family group, send BotFather `/setprivacy` and choose Disable so the bot sees every message, then add the bot to the group. A dedicated "Ideas & Plans" group works best. In a busier group set `TELEGRAM_REQUIRE_MENTION=true` so it only answers when @mentioned or replied to.
 4. Long polling means nothing is exposed; if the server is off, Telegram keeps updates for a day and the bot catches up on restart without double-processing.
 
@@ -323,13 +325,7 @@ Two upgrades from an older checkout ask something of you once:
 
 **Suggestions.** "What should we do this weekend?" runs the engine once: free time from the calendar, the forecast, every idea against the looked-up details, and, with lookups on, a search for time-bound things near the home area (cached for twelve hours per weekend). Each verdict is logged in `suggestions`. `familydb suggest --window this-weekend --discover` runs the same engine from the shell.
 
-**Weekend digest.** The installer sends it to the chat on the web page (`web`), which needs no id looked up and so works from the first Thursday. To send it to the family's Telegram group instead, put the group's chat id in the Digest chat box on the settings page (under "When it speaks first"); empty the box and no digest is sent. Telegram group ids are negative numbers, and the id exists only once someone has written in the group with the bot in it. Find it with:
-
-```bash
-sudo -u familydb /opt/familydb/.venv/bin/python -c "import sqlite3; print(sqlite3.connect('/opt/familydb/data/familydb.sqlite3').execute(\"select distinct chat_id from messages where channel = 'telegram'\").fetchall())"
-```
-
-(with Docker, `docker compose exec bot python -c ...` with `/data/familydb.sqlite3` as the path). Digest day and hour (default Thursday 18:00 in the family's timezone) are on the same part of the page; `familydb digest` prints the schedule and `familydb digest --now` posts a digest immediately. The digest is asked as the first admin and stored like any message, so it goes out at most once a day; if the model call fails it is retried like a failed message, and if the bot was off at the scheduled hour it sends the digest a minute after it next starts on the same day.
+**Weekend digest.** The installer sends it to the chat on the web page (`web`), which needs no id looked up and so works from the first Thursday. To send it to the family's Telegram group instead, add the bot to the group and have somebody on the family list mention it there once; the Digest chat box on the settings page (under "When it speaks first") then offers that group among the chats the bot has seen, by when each was last written in. Pick it and save; empty the box and no digest is sent. A Telegram group's id is a negative number, and can be typed in by hand too. Digest day and hour (default Thursday 18:00 in the family's timezone) are on the same part of the page; `familydb digest` prints the schedule and `familydb digest --now` posts a digest immediately. The digest is asked as the first admin and stored like any message, so it goes out at most once a day; if the model call fails it is retried like a failed message, and if the bot was off at the scheduled hour it sends the digest a minute after it next starts on the same day.
 
 **Follow-ups.** The morning after a plan (`FOLLOW_UP_HOUR`, default 10:00), the bot asks "How was #57 Hopscotch Portland on Saturday? Worth doing again?" in the chat the plan was made in, once per plan, unless someone already said how it went. The answer is recorded as feedback and feeds future suggestions. `familydb follow-ups --now` asks by hand. It makes no model call.
 
@@ -625,7 +621,7 @@ SQLite browser opens it. `scripts/uninstall.sh` does this with a backup and asks
 - **"no family members yet".** Add an admin with `familydb members add NAME --role admin`.
 - **"a setting will not do" at startup.** A value in `.env` is not of the type the setting takes; the line names it. An empty line is fine and means "not set" — it is a value like `WEB_PORT=eighty` that stops it. Quote anything with a space or a `#` in it.
 - **The service will not start under systemd.** `systemctl status familydb` says which. The three that bite: the `familydb` user does not exist or does not own `data/` and `.env`; a checkout inside a home directory, which that user cannot enter at all; and `ProtectHome=true` with a checkout under `/home`. Section 2b covers all three, and `/opt/familydb` avoids the last two.
-- **"Sorry, I only talk to the family."** The sender is not on the family list for that channel; the reply includes the id to type into their Telegram id on the Family page.
+- **"Sorry, I only talk to the family."** The sender is not on the family list for that channel; they are listed on the Family page under "Asked to talk to the bot", with a button to add them, and the reply includes their id.
 - **A refusal.** Rare. `llm_calls.stop_reason` is `refusal`; on Claude, server-side fallbacks are on by default (`ANTHROPIC_FALLBACKS`), so it means every model declined.
 - **Replies are coming from the wrong provider.** `/status` or `familydb debug cost` says who answers each surface. If it is not what you set, the other one is probably standing in because the chosen one has no key; the log says so at the time.
 - **"validation failed" from `debug validate-tools`.** That check counts tokens, which Claude and Gemini offer and OpenAI does not. With `PROVIDER=openai`, send one real message instead, or point `PROVIDER` at another provider for the length of the check.

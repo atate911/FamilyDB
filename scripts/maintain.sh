@@ -148,12 +148,12 @@ start_bot() {
       as_root journalctl -u familydb -n 20 --no-pager >&2 || true
       note ""
       note "What to try, in order:"
-      note "  sudo -u ${SERVICE_USER} ${FAMILYDB} doctor     # names what is wrong"
+      note "  cd ${TARGET} && sudo -u ${SERVICE_USER} ${FAMILYDB} doctor     # names what is wrong"
       note "  sudo systemctl status familydb"
       note "  sudo journalctl -u familydb -n 100 --no-pager"
     fi
   else
-    note "No service to start. Run it in the foreground: sudo -u ${SERVICE_USER} ${FAMILYDB} run"
+    note "No service to start. Run it in the foreground: cd ${TARGET} && sudo -u ${SERVICE_USER} ${FAMILYDB} run"
   fi
 }
 
@@ -267,8 +267,10 @@ cmd_backup() {
   take_backup "$BACKUP_DIR" "so today's state can be put back if something goes wrong"
   say ""
   say "Backup: ${B}${LAST_BACKUP}${OFF}"
-  say "Copy it somewhere that is not this machine. A backup on the same disk is not a backup:"
-  say "  scp ${LAST_BACKUP} you@your-computer:~/"
+  say "Copy it somewhere that is not this machine. A backup on the same disk is not a backup."
+  say "It is readable by root only, so hand yourself a copy here, then fetch it:"
+  say "  sudo install -m 600 -o ${SUDO_USER:-\$USER} ${LAST_BACKUP} ~/"
+  say "  scp ${SUDO_USER:-you}@$(hostname -I 2>/dev/null | awk '{print $1}'):$(basename "$LAST_BACKUP") .    # on your own computer"
 }
 
 cmd_restore() {
@@ -348,7 +350,20 @@ cmd_upgrade() {
   # when one was used, and deliberately does not write a token down, so say which case this is.
   # shellcheck disable=SC2034  # lib/common.sh names this in its failure report.
   FAILED_STEP="fetching the newest code"
-  if ! as_root git -C "$TARGET" fetch --tags --quiet origin 2>>"${LOG_FILE:-/dev/null}"; then
+  local -a fetch_from=(origin)
+  local origin_url
+  origin_url="$(as_root git -C "$TARGET" remote get-url origin 2>/dev/null || true)"
+  if [ -n "${GITHUB_TOKEN:-}" ]; then
+    case "$origin_url" in
+      https://github.com/*)
+        # Used for this fetch only, as bootstrap did for the clone: never written down.
+        fetch_from=("https://x-access-token:${GITHUB_TOKEN}@github.com/${origin_url#https://github.com/}"
+                    "+refs/heads/*:refs/remotes/origin/*")
+        note "Fetching over HTTPS with the token from the environment." ;;
+      *) warn "GITHUB_TOKEN only helps with an https://github.com/... remote; this one is ${origin_url}" ;;
+    esac
+  fi
+  if ! as_root git -C "$TARGET" fetch --tags --quiet "${fetch_from[@]}" 2>>"${LOG_FILE:-/dev/null}"; then
     local remote sshcmd
     remote="$(as_root git -C "$TARGET" remote get-url origin 2>/dev/null || echo unknown)"
     sshcmd="$(as_root git -C "$TARGET" config core.sshCommand 2>/dev/null || true)"
@@ -361,10 +376,13 @@ cmd_upgrade() {
         "      sudo git -C ${TARGET} remote set-url origin git@github.com:atate911/FamilyDB.git" \
         "      sudo git -C ${TARGET} config core.sshCommand 'ssh -i /path/to/key -o IdentitiesOnly=yes'" \
         "      sudo git -C ${TARGET} fetch --tags origin       # should now work" \
-        "  · with a token — fetch once with it, without writing it down:" \
-        "      sudo git -C ${TARGET} -c http.extraheader=\"AUTHORIZATION: bearer \$TOKEN\" fetch --tags origin" \
-        "  · with a copy you made yourself — there is nothing to fetch from. Copy the new" \
-        "    version over the top, keeping .env and data/, then run: sudo ${0} restart" \
+        "  · with a token — give it again for this run; it is not written down:" \
+        "      read -rs GITHUB_TOKEN && export GITHUB_TOKEN" \
+        "      sudo --preserve-env=GITHUB_TOKEN bash ${0} upgrade" \
+        "    (a token that has expired needs a new one; a deploy key never expires)" \
+        "  · with a copy you made yourself — there is nothing to fetch from. Unpack the new" \
+        "    version over ${TARGET} (.env and data/ are not in it, so they stay) and run" \
+        "    sudo bash ${TARGET}/scripts/install.sh; docs/INSTALL.md, section 8, has the steps." \
         "" \
         "Currently configured: ${sshcmd:-no core.sshCommand set}" \
         "docs/INSTALL.md, 'Getting the code onto the box', covers all three."
@@ -485,9 +503,8 @@ cmd_schedule_backups() {
   fi
   ok "Scheduled. Check it with: sudo crontab -u root -l"
   say ""
-  say "A backup on the same disk is only half a backup. Copy them off the machine too, for"
-  say "example from your own computer:"
-  say "  rsync -av ${SERVICE_USER}@$(hostname -I 2>/dev/null | awk '{print $1}'):${BACKUP_DIR}/ ~/familydb-backups/"
+  say "A backup on the same disk is only half a backup. Copy them off the machine now and then:"
+  say "  sudo ${0} backup      # takes one and prints how to fetch it to your own computer"
 }
 
 case "$COMMAND" in
