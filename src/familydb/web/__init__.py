@@ -34,6 +34,7 @@ CONTENT_SECURITY_POLICY = (
     "frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
 )
 HSTS = "max-age=31536000"
+REFERRER_POLICY = "same-origin"
 MIN_PASSWORD = 12
 NO_PASSWORD = (
     "WEB_HOST is {host}, so the page would be reachable from other machines, but WEB_PASSWORD is "
@@ -68,7 +69,13 @@ def security_headers(response: Any) -> Any:
         response.headers.setdefault("Cache-Control", "no-store")
     response.headers.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY)
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
-    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    # Not "no-referrer": under that policy a browser sends `Origin: null` with every form it
+    # posts, and `auth.origin_ok` rightly refuses a null origin, so nobody could sign in or send
+    # a form from a real browser. The test client sends no Origin at all, which is why no test
+    # noticed. "same-origin" keeps the point of the old value — a link out to a restaurant's
+    # site still carries no referrer — while letting this site's own posts say where they came
+    # from.
+    response.headers.setdefault("Referrer-Policy", REFERRER_POLICY)
     response.headers.setdefault("X-Frame-Options", "DENY")
     if request.is_secure:
         response.headers.setdefault("Strict-Transport-Security", HSTS)

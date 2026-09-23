@@ -102,11 +102,32 @@ def test_every_response_carries_the_security_headers(settings, clock) -> None:
     assert "script-src 'none'" in plain.headers["Content-Security-Policy"]
     assert "frame-ancestors 'none'" in plain.headers["Content-Security-Policy"]
     assert plain.headers["X-Content-Type-Options"] == "nosniff"
-    assert plain.headers["Referrer-Policy"] == "no-referrer"
+    assert plain.headers["Referrer-Policy"] == "same-origin"
     assert plain.headers["X-Frame-Options"] == "DENY"
     assert "Strict-Transport-Security" not in plain.headers  # plain HTTP: nothing to promise
     secure = client.get("/login", base_url="https://familydb.example")
     assert secure.headers["Strict-Transport-Security"].startswith("max-age=")
+
+
+def test_a_browser_s_own_posts_carry_an_origin_the_page_accepts(settings, clock) -> None:
+    """Under `Referrer-Policy: no-referrer` Chromium posts every form with `Origin: null`.
+
+    The check below is right to refuse that — a null origin is also what a sandboxed frame on
+    another site sends — so the policy is what has to let the real origin through. Both halves
+    are pinned: a null origin is refused, and the policy is one under which browsers send the
+    real one. The test client sends no Origin header on its own, so without this nothing would
+    notice the page being unusable in a browser, which is how it went unnoticed before.
+    """
+    client = _client(settings, clock, web_password=PASSWORD)
+    refused = client.post("/login", data={"password": PASSWORD}, headers={"Origin": "null"})
+    assert refused.status_code == 400
+    policy = client.get("/login").headers["Referrer-Policy"]
+    # The policies under which a browser still names this origin on a same-site post.
+    assert policy in {"same-origin", "strict-origin", "strict-origin-when-cross-origin"}
+    accepted = client.post(
+        "/login", data={"password": PASSWORD}, headers={"Origin": "http://localhost"}
+    )
+    assert accepted.status_code == 302
 
 
 def test_a_loopback_page_without_a_password_is_open(settings, clock) -> None:
