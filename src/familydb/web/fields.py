@@ -241,7 +241,12 @@ GROUPS: tuple[tuple[str, str, tuple[Field, ...]], ...] = (
         "When it speaks first",
         "The messages the bot sends without being asked, and what it does after a failure.",
         (
-            field("digest_chat_id", "Digest chat", "Empty means no weekend digest is sent."),
+            field(
+                "digest_chat_id",
+                "Digest chat",
+                "Choose from the chats it has seen, or type a Telegram chat id. A group is offered"
+                " once somebody on the family list has written in it. Empty sends no digest.",
+            ),
             field("digest_day", "Digest day"),
             field("digest_hour", "Digest hour", "24-hour clock, in the family's timezone."),
             field("follow_up_hour", "Follow-up hour", "When it asks how yesterday's plan went."),

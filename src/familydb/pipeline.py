@@ -19,7 +19,7 @@ from familydb.clock import FixedClock
 from familydb.dates import utc_iso
 from familydb.delivery import deliver, lease
 from familydb.errors import AgentError
-from familydb.store import calls, members, messages, suggestions
+from familydb.store import calls, knocks, members, messages, suggestions
 from familydb.store.db import transaction
 from familydb.store.members import Member
 from familydb.tools import ToolContext
@@ -27,7 +27,7 @@ from familydb.tools import ToolContext
 log = logging.getLogger(__name__)
 
 UNKNOWN_SENDER = (
-    "Sorry, I only talk to the family. Your id on this channel is {id}; ask an admin to add you."
+    "Sorry, I only talk to the family. Ask one of them to add you; your id here is {id}."
 )
 RETRY_REPLY = "Saved your message, but I couldn't process it right now. I'll retry later."
 NO_KEY_REPLY = (
@@ -88,6 +88,15 @@ def _handle(
     member = members.resolve(conn, msg.channel, msg.channel_user_id)
     if member is None:
         log.warning("unknown sender %s on %s", msg.channel_user_id, msg.channel)
+        with transaction(conn):
+            knocks.record(
+                conn,
+                channel=msg.channel,
+                channel_user_id=msg.channel_user_id,
+                name=msg.sender_name,
+                chat_id=msg.chat_id,
+                now=app.clock.now(),
+            )
         return OutgoingMessage(
             msg.chat_id, UNKNOWN_SENDER.format(id=msg.channel_user_id), "unknown_sender"
         )

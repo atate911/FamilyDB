@@ -295,3 +295,20 @@ def _digest(app: App) -> tuple[bool | None, str]:
     if not app.can_ask("chat"):
         return None, f"{chat}, once there is a model key to write it"
     return True, chat
+
+
+def digest_chats(conn: sqlite3.Connection, tz: Any, limit: int = 10) -> list[tuple[str, str]]:
+    """Chats the digest could go to, as (chat id, what it is), so nobody has to dig for an id.
+
+    A Telegram group appears once somebody on the family list has written in it.
+    """
+    offers = [("web", "the chat on this page")]
+    for chat in messages.chats(conn, "telegram")[:limit]:
+        chat_id = chat["chat_id"]
+        if chat_id.startswith("-"):
+            what = "Telegram group"
+        else:
+            member = members.resolve(conn, "telegram", chat_id)
+            what = f"Telegram, private chat with {member.display_name}" if member else "Telegram"
+        offers.append((chat_id, f"{what}, last message {views.local_moment(chat['last_at'], tz)}"))
+    return offers

@@ -26,8 +26,9 @@ from flask import (
 from familydb import family as rules
 from familydb.app import App
 from familydb.dates import utc_iso
+from familydb.store import knocks as knock_store
 from familydb.store import members as member_store
-from familydb.web import auth
+from familydb.web import auth, views
 from familydb.web.once import once
 
 log = logging.getLogger(__name__)
@@ -50,12 +51,15 @@ def _say(message: str) -> None:
 
 @bp.get("/family")
 def show() -> str:
-    with closing(_app().connect()) as conn:
+    app = _app()
+    with closing(app.connect()) as conn:
         everyone = member_store.list_all(conn, active_only=False)
+        strangers = knock_store.recent(conn, channel=rules.TELEGRAM)
     return render_template(
         "family.html",
         people=[_person(person) for person in everyone],
         roles=member_store.ROLES,
+        knocks=[views.knock_row(knock, app.settings.tzinfo) for knock in strangers],
     )
 
 

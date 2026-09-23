@@ -7,6 +7,8 @@ import re
 import pytest
 
 from familydb.app import App
+from familydb.channels.base import IncomingMessage
+from familydb.pipeline import handle_incoming
 from familydb.store import members
 from familydb.web import create_app
 
@@ -122,3 +124,28 @@ def test_the_family_page_is_behind_the_password(settings, clock, conn, family) -
     assert stranger.get("/family").status_code == 302
     assert stranger.post("/family", data={"name": "Mallory"}).status_code == 401
     assert members.find_by_name(conn, "Mallory") is None
+
+
+def test_a_stranger_who_messaged_the_bot_can_be_added_from_the_page(
+    page, settings, clock, conn
+) -> None:
+    stranger = IncomingMessage(
+        "telegram", "77", "5555", "5555", "open the pod bay doors", sender_name="Robin Lee @robin"
+    )
+    reply = handle_incoming(App(settings, clock), stranger, conn=conn)
+    assert reply.status == "unknown_sender" and "5555" in reply.text
+
+    text = page.get("/family").text
+    assert "Asked to talk to the bot" in text
+    assert 'value="Robin Lee"' in text and "@robin" in text and "Telegram 5555" in text
+    assert (
+        "pod bay" not in re.findall(r'id="knocking".*?</section>', text, re.S)[0].split("</h2>")[1]
+    )
+
+    sent = page.post(
+        "/family",
+        data={"csrf": _token(page), "name": "Robin", "role": "member", "telegram_id": "5555"},
+    )
+    assert sent.status_code == 302
+    assert members.find_by_name(conn, "Robin").channel_user_id == "5555"
+    assert "Asked to talk to the bot" not in page.get("/family").text  # gone once added

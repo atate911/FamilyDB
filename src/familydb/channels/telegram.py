@@ -50,7 +50,15 @@ def incoming_from_update(update: Any) -> IncomingMessage | None:
         chat_id=str(chat.id),
         channel_user_id=str(user.id),
         text=message.text,
+        sender_name=sender_name(user),
     )
+
+
+def sender_name(user: Any) -> str | None:
+    """How a stranger introduced themselves: their name and @handle, as Telegram gives them."""
+    name = getattr(user, "full_name", None)
+    handle = getattr(user, "username", None)
+    return " ".join(part for part in (name, f"@{handle}" if handle else None) if part) or None
 
 
 def addressed_to_bot(update: Any, bot_username: str | None, bot_id: int | None) -> bool:

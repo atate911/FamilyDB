@@ -41,6 +41,7 @@ from familydb.store import settings as settings_store
 from familydb.store.db import transaction
 from familydb.store.settings import SECRETS
 from familydb.web import auth, fields, keys, views
+from familydb.web import status as status_page
 
 log = logging.getLogger(__name__)
 
@@ -201,6 +202,7 @@ def page(
     with closing(app.connect()) as conn:
         overrides = settings_store.overrides(conn)
         history = settings_store.history(conn, limit=HISTORY_LIMIT)
+        chats = status_page.digest_chats(conn, live.tzinfo)
     groups = [
         {
             "title": title,
@@ -212,6 +214,9 @@ def page(
                     "placeholder": fields.placeholder(one, getattr(base, one.key)),
                     "problem": (problems or {}).get(one.key),
                     "stored": one.key in overrides,
+                    "offers": chats
+                    if one.key == "digest_chat_id"
+                    else [(name, "") for name in one.suggested],
                 }
                 for one in group
             ],

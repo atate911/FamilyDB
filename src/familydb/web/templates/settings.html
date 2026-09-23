@@ -25,11 +25,11 @@
         value="{{ entry.value }}"
         placeholder="{{ entry.placeholder }}"
         {% if one.kind in ("int", "float") %}inputmode="decimal"{% endif %}
-        {% if one.suggested %}list="s-{{ one.key }}" autocomplete="off"{% endif %}
+        {% if entry.offers %}list="s-{{ one.key }}" autocomplete="off"{% endif %}
       />
-      {% if one.suggested %}
+      {% if entry.offers %}
         <datalist id="s-{{ one.key }}">
-          {% for name in one.suggested %}<option value="{{ name }}"></option>{% endfor %}
+          {% for value, what in entry.offers %}<option value="{{ value }}">{{ what }}</option>{% endfor %}
         </datalist>
       {% endif %}
     {% endif %}

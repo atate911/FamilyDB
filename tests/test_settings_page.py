@@ -367,3 +367,26 @@ def test_the_home_page_lists_what_is_left_to_set_up(page) -> None:
     assert "Finish setting up" in text
     assert "Say where home is" in text and "Connect Google Calendar" in text
     assert "Give it a model key" not in text  # the test settings have one
+
+
+def test_the_digest_chat_is_offered_from_the_chats_it_has_seen(page, conn) -> None:
+    from familydb.store import messages
+
+    with db.transaction(conn):
+        for chat_id, update in (("-100200", "1"), ("1001", "2")):
+            messages.insert_in(
+                conn,
+                channel="telegram",
+                channel_update_id=update,
+                chat_id=chat_id,
+                member_id=None,
+                text="hello",
+                now="2026-09-20T10:00:00Z",
+            )
+    offers = re.search(
+        r'<datalist id="s-digest_chat_id">(.*?)</datalist>', page.get("/settings").text, re.S
+    )
+    assert offers is not None
+    listed = offers.group(1)
+    assert 'value="web"' in listed and 'value="-100200">Telegram group' in listed
+    assert "private chat with Sam" in listed and "hello" not in listed

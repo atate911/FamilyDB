@@ -413,3 +413,19 @@ def change_row(line: dict[str, Any], tz: ZoneInfo) -> dict[str, Any]:
         "who": line.get("changed_by_name"),
         "source": line["source"],
     }
+
+
+def knock_row(knock: Any, tz: Any) -> dict[str, Any]:
+    """Somebody who messaged the bot and is not on the family list, as the Family page shows it."""
+    words = (knock.name or "").split()
+    name = " ".join(word for word in words if not word.startswith("@"))
+    handle = next((word for word in words if word.startswith("@")), "")
+    group = (knock.chat_id or "").startswith("-")
+    return {
+        "telegram_id": knock.channel_user_id,
+        "name": name,
+        "handle": handle,
+        "when": local_moment(knock.last_at, tz),
+        "times": knock.times,
+        "where": "in a group" if group else "in a private chat",
+    }

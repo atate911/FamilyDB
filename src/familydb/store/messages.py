@@ -220,3 +220,13 @@ def reset_retries(conn: sqlite3.Connection) -> int:
         "UPDATE messages SET retries = 0, give_up = 0 WHERE status = 'failed' AND direction = 'in'"
     )
     return int(cur.rowcount)
+
+
+def chats(conn: sqlite3.Connection, channel: str) -> list[dict[str, str]]:
+    """Each chat on a channel the family has written in, with when it was last written in."""
+    rows = conn.execute(
+        "SELECT chat_id, max(received_at) AS last_at FROM messages "
+        "WHERE channel = ? AND direction = 'in' GROUP BY chat_id ORDER BY last_at DESC",
+        (channel,),
+    ).fetchall()
+    return [{"chat_id": row["chat_id"], "last_at": row["last_at"]} for row in rows]
