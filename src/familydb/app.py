@@ -160,6 +160,11 @@ class App:
             log.info("settings reloaded (%d stored)", len(values))
             return True
 
+    def forget_calendar(self) -> None:
+        """A new Google token was saved: build the calendar client again from it."""
+        if "calendar" not in self._given:
+            self._calendar = None
+
     def _forget_built(self) -> None:
         """Drop what was built from the settings that just changed, so it is built again.
 

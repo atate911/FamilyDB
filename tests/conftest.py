@@ -42,6 +42,8 @@ def settings(tmp_path: Path) -> Settings:
         provider="anthropic",
         anthropic_api_key="test-key",
         familydb_path=tmp_path / "familydb.sqlite3",
+        # Relative by default, which would be the checkout's own data/ folder.
+        google_token_path=tmp_path / "google_token.json",
         family_tz="America/Vancouver",
     )
 

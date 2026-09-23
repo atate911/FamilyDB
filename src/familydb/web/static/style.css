@@ -408,3 +408,15 @@ table.month td.today time { border-radius: 50%; background: var(--accent); color
   .bar form { margin-left: auto; }
   .bar button.quiet { padding: 0.3rem 0.6rem; font-size: 0.9rem; }
 }
+
+/* Connecting Google Calendar on the settings page. */
+#google fieldset {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  margin: 0 0 0.75rem;
+  display: grid;
+  gap: 0.35rem;
+}
+#google textarea { width: 100%; resize: vertical; font-family: ui-monospace, monospace; }
+.steps { padding-left: 1.25rem; display: grid; gap: 0.5rem; }

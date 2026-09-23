@@ -13,7 +13,10 @@ since a password box is empty every time the page is drawn.
 from __future__ import annotations
 
 import logging
+import secrets
+import time
 from contextlib import closing
+from pathlib import Path
 from typing import Any
 
 from flask import (
@@ -33,6 +36,7 @@ from pydantic import ValidationError
 from familydb.agent import providers
 from familydb.app import App
 from familydb.config import Settings, apply_overrides
+from familydb.integrations import google_calendar as google
 from familydb.store import settings as settings_store
 from familydb.store.db import transaction
 from familydb.store.settings import SECRETS
@@ -115,6 +119,36 @@ def problems_from(exc: ValidationError) -> dict[str, str]:
     return found
 
 
+# Connecting Google from the page: the consent started, and the calendars found once it finished.
+# In memory, like the form tokens: a restart in the middle means starting the connection again.
+GOOGLE_KEY = "google_consent"
+CONSENT_MINUTES = 15
+GOOGLE_EXPIRED = "That connection was started too long ago, or before a restart. Start again."
+CALENDAR_SET = "Saved. The bot now uses {name}."
+
+
+def _consents() -> dict[str, dict[str, Any]]:
+    return current_app.config.setdefault("FAMILYDB_GOOGLE", {})
+
+
+def _pending() -> dict[str, Any] | None:
+    """This session's consent in progress, if it is recent enough to finish."""
+    found = _consents().get(session.get(GOOGLE_KEY, ""))
+    if found is None or time.monotonic() - found["started"] > CONSENT_MINUTES * 60:
+        return None
+    return found
+
+
+def google_panel(live: Any) -> dict[str, Any]:
+    pending = _pending()
+    return {
+        "connected": Path(live.google_token_path).exists(),
+        "calendar": live.google_calendar_id,
+        "consent_url": pending["url"] if pending and "calendars" not in pending else None,
+        "calendars": pending.get("calendars") if pending else None,
+    }
+
+
 def page(
     *,
     problems: dict[str, str] | None = None,
@@ -173,6 +207,7 @@ def page(
             said=said,
             error=error,
             needs_password=auth.password_in_use(live),
+            google=google_panel(live),
         ),
         status,
     )
@@ -303,6 +338,68 @@ def sign_out_everyone() -> Response | tuple[str, int]:
     session.clear()
     log.warning("%s signed everyone out", who)
     return redirect(url_for("auth.login"))
+
+
+@bp.post("/settings/google/start")
+def google_start() -> tuple[str, int]:
+    """Take the OAuth client pasted in, and give back Google's consent link."""
+    if (complaint := auth.refused()) is not None:
+        return page(error=complaint, status=400)
+    try:
+        config = google.client_config(request.form.get("client", ""))
+        url, flow, state = google.begin_consent(config)
+    except google.GoogleSetupError as exc:
+        return page(error=str(exc), status=400)
+    key = secrets.token_urlsafe(16)
+    consents = _consents()
+    for old in [k for k, v in consents.items() if time.monotonic() - v["started"] > 3600]:
+        consents.pop(old, None)
+    consents[key] = {"flow": flow, "state": state, "url": url, "started": time.monotonic()}
+    session[GOOGLE_KEY] = key
+    return page(said="Open the link below, allow access, then paste where it sends you.")
+
+
+@bp.post("/settings/google/finish")
+def google_finish() -> tuple[str, int]:
+    """Exchange the pasted address for a token, save it, and offer the calendars it can see."""
+    app = _app()
+    if (complaint := auth.refused()) is not None:
+        return page(error=complaint, status=400)
+    pending = _pending()
+    if pending is None:
+        return page(error=GOOGLE_EXPIRED, status=400)
+    try:
+        creds = google.finish_consent(
+            pending["flow"],
+            request.form.get("pasted", ""),
+            Path(app.settings.google_token_path),
+            state=pending["state"],
+        )
+        pending["calendars"] = google.list_calendars(creds)
+    except google.GoogleSetupError as exc:
+        return page(error=str(exc), status=400)
+    except Exception as exc:  # the token is saved; only listing the calendars failed
+        log.warning("connected to Google but could not list the calendars: %s", exc)
+        pending["calendars"] = []
+    app.forget_calendar()
+    log.info("Google Calendar connected from the page by %s", auth.client_address())
+    return page(said="Connected to Google. Choose the family calendar.")
+
+
+@bp.post("/settings/google/calendar")
+def google_calendar_choice() -> Response | tuple[str, int]:
+    """The calendar the bot keeps plans on, chosen from the ones the connection can see."""
+    if (complaint := auth.refused()) is not None:
+        return page(error=complaint, status=400)
+    pending = _pending()
+    offered = {row["id"]: row for row in (pending or {}).get("calendars") or []}
+    chosen = request.form.get("calendar_id", "")
+    if chosen not in offered:
+        return page(error=GOOGLE_EXPIRED, status=400)
+    _save({"google_calendar_id": chosen})
+    _consents().pop(session.pop(GOOGLE_KEY, ""), None)
+    flash(CALENDAR_SET.format(name=offered[chosen]["summary"] or chosen), NOTICE)
+    return redirect(url_for("settings.show"))
 
 
 def _said(changed: list[str], *, keys: bool = False) -> str:
