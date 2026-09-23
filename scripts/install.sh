@@ -443,6 +443,15 @@ if [ "$KEEP_ENV" = 0 ]; then
     WEB_DOMAIN=""
   fi
   if [ -n "$WEB_DOMAIN" ]; then
+    # Caddy can only get a certificate for a name that points here. Not a reason to stop, since
+    # DNS may simply be catching up, but worth saying now rather than as a silent Caddy retry.
+    resolved="$(getent ahostsv4 "$WEB_DOMAIN" 2>/dev/null | awk 'NR==1 {print $1}' || true)"
+    if [ -z "$resolved" ]; then
+      warn "${WEB_DOMAIN} does not resolve yet. Point an A record at this server; Caddy keeps trying."
+    elif ! hostname -I 2>/dev/null | tr ' ' '\n' | grep -qx "$resolved"; then
+      note "${WEB_DOMAIN} points at ${resolved}, which is not an address of this machine. Fine behind"
+      note "a NAT or a load balancer; otherwise correct the DNS record before expecting HTTPS."
+    fi
     set_env WEB_DOMAIN "$WEB_DOMAIN"
     # A proxy in front terminates HTTPS and says who the visitor really is.
     set_env WEB_TRUST_PROXY true
@@ -494,9 +503,12 @@ run mkdir -p "${REPO_ROOT}/data"
 # Every message the family sends is in there, and any key typed into the settings page.
 run chmod 700 "${REPO_ROOT}/data"
 
+# Both of these download a few hundred megabytes, which is where a new server most often fails:
+# a network that is not up yet, a proxy, a full disk. `retry` waits and tries again, and on a
+# final failure says what the error means and what to try, rather than only that it stopped.
+on_failure_hint "Run this again once it is fixed: it picks up where it stopped, and never touches .env or the database twice."
 if [ "$MODE" = docker ]; then
-  run docker compose --project-directory "$REPO_ROOT" build
-  ok "Image built."
+  retry 2 "Building the image" docker compose --project-directory "$REPO_ROOT" build
   FAMILYDB=(docker compose --project-directory "$REPO_ROOT" run --rm -T bot familydb)
   # The container runs as uid 1000 and needs to write the database into data/.
   if [ "$DRY_RUN" = 0 ] && ! chown -R 1000:1000 "${REPO_ROOT}/data" 2>/dev/null; then
@@ -504,16 +516,14 @@ if [ "$MODE" = docker ]; then
     note "  sudo chown -R 1000:1000 ${REPO_ROOT}/data"
   fi
 else
-  run uv sync --frozen --no-dev --project "$REPO_ROOT"
-  ok "Dependencies installed."
+  retry 3 "Installing the dependencies" uv sync --frozen --no-dev --project "$REPO_ROOT"
   FAMILYDB=("${REPO_ROOT}/.venv/bin/familydb")
 fi
 
 runfamilydb() { if [ "$DRY_RUN" = 1 ]; then note "would run: familydb $*"; else "${FAMILYDB[@]}" "$@"; fi; }
 
 head2 "Setting up the database"
-runfamilydb db migrate
-ok "Schema created."
+step "Creating the database" runfamilydb db migrate
 
 # --- the first family member ---
 have_members=0
