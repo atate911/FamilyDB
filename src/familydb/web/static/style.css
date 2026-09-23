@@ -256,3 +256,10 @@ label.check input { width: auto; margin-right: 0.3rem; }
 .more .muted { margin: 0 0 0.5rem; }
 .actions.row { gap: 1.25rem; margin-top: 0.4rem; }
 .actions.row .more { font-size: 0.92rem; }
+
+/* The Family page. */
+.people > li { display: grid; gap: 0.15rem 1rem; grid-template-columns: 1fr auto; align-items: center; }
+.people > li > .muted { grid-column: 1; font-size: 0.9rem; }
+.people > li > a { grid-column: 2; grid-row: 1 / span 2; }
+.people > li.off .person strong { color: var(--muted); }
+.person { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: baseline; }

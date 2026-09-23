@@ -129,6 +129,27 @@ def claimed_in_chat(conn: sqlite3.Connection, chat_id: str, *, now: str) -> bool
     return row is not None
 
 
+def member_is_being_answered(conn: sqlite3.Connection, member_id: int, *, now: str) -> bool:
+    """Whether a worker holds a live claim on one of this member's messages."""
+    row = conn.execute(
+        "SELECT 1 FROM messages WHERE member_id = ? AND direction = 'in' AND claim_until > ? "
+        "LIMIT 1",
+        (member_id, now),
+    ).fetchone()
+    return row is not None
+
+
+def give_up_for_member(conn: sqlite3.Connection, member_id: int, *, now: str) -> int:
+    """Stop the retry job answering anything this member left unanswered. Returns how many."""
+    cur = conn.execute(
+        "UPDATE messages SET status = 'failed', error = 'member_inactive', processed_at = ?, "
+        "give_up = 1 WHERE member_id = ? AND direction = 'in' "
+        "AND status IN ('received', 'failed') AND give_up = 0",
+        (now, member_id),
+    )
+    return int(cur.rowcount)
+
+
 def last_for_chat(conn: sqlite3.Connection, chat_id: str, *, limit: int) -> list[Message]:
     """The last `limit` messages in a chat, however old, oldest first.
 

@@ -562,13 +562,14 @@ def test_no_page_reaches_a_table_to_write_to_it() -> None:
                 assert not writing, f"{module.name}:{node.lineno} calls {called} on a store"
 
 
-def test_only_three_pages_can_change_anything_and_only_the_agreed_way() -> None:
+def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
     """Which modules may cause a write, and what each one is allowed to go through.
 
     Nothing here writes, so the previous test alone would pass even if a page had quietly grown
     a way to change an idea. This one names the doors instead: the chat page may reach the
     pipeline and nothing else, the edit forms may dispatch a fixed list of tools and nothing
-    else, and every other module in the package may do neither.
+    else, the family page may add and change people through `familydb.family` and nothing else,
+    and every other module in the package may do none of it.
     """
     import ast
 
@@ -626,6 +627,19 @@ def test_only_three_pages_can_change_anything_and_only_the_agreed_way() -> None:
         == 1
     )
 
+    # The family page adds and changes people, through the rules module, and that is all.
+    family = trees["family.py"]
+    ruled = {
+        node.func.attr
+        for node in ast.walk(family)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "rules"
+    }
+    assert ruled <= {"add", "change", "revision"}, ruled
+    assert {"add", "change"} <= ruled
+
     # And the doors are shut to everything else. Not whole packages: `views.py` reads opening
     # hours out of `tools.places` and tidies a link with `tools.urls`, which write nothing. It
     # is the two ways of causing a write that are spoken for — the pipeline, and dispatch.
@@ -638,6 +652,16 @@ def test_only_three_pages_can_change_anything_and_only_the_agreed_way() -> None:
             for node in ast.walk(tree)
         )
         assert not any(module.startswith("familydb.pipeline") for module in reached), name
+        if name != "family.py":
+            family_rules = any(
+                isinstance(node, ast.ImportFrom)
+                and (
+                    node.module == "familydb.family"
+                    or (node.module == "familydb" and any(a.name == "family" for a in node.names))
+                )
+                for node in ast.walk(tree)
+            )
+            assert not family_rules, f"{name} reaches the family rules"
         if name not in {"chat.py", "__init__.py"}:  # the factory builds the thing chat.py uses
             assert not any(module.startswith("familydb.channels") for module in reached), name
         if name != "edits.py":

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Family · {{ site_title }}{% endblock %}
+{% block content %}
+  <h1>Family</h1>
+  <p class="muted">Who the bot talks to. On the web page and in the console people say who they
+    are; on Telegram the bot knows them by their Telegram id, so add it here to let somebody
+    message it from their phone. Anybody not on this list who writes is told their id and
+    turned away.</p>
+
+  <ul class="panel plain people">
+    {% for person in people %}
+      <li class="{{ '' if person.active else 'off' }}">
+        <div class="person">
+          <strong>{{ person.name }}</strong>
+          <span class="tag">{{ person.role }}</span>
+          {% if not person.active %}<span class="tag warn">switched off</span>{% endif %}
+        </div>
+        <div class="muted">
+          {% if person.telegram_id %}Telegram {{ person.telegram_id }}
+          {% elif person.elsewhere %}known on {{ person.elsewhere }}
+          {% elif person.role == 'kid' %}named in ideas, does not message the bot
+          {% else %}web page and console only{% endif %}
+        </div>
+        <a href="{{ url_for('family.edit', member_id=person.id) }}">Change</a>
+      </li>
+    {% else %}
+      <li class="muted">Nobody yet. Add yourself first, as an admin.</li>
+    {% endfor %}
+  </ul>
+
+  <section class="panel">
+    <h2>Add somebody</h2>
+    <form class="form" method="post" action="{{ url_for('family.add') }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+      <div class="field">
+        <label for="name">Name</label>
+        <input id="name" name="name" required maxlength="80" placeholder="Alex" />
+      </div>
+      <div class="field">
+        <label for="role">Role</label>
+        <select id="role" name="role">
+          {% for role in roles %}
+            <option value="{{ role }}" {{ 'selected' if role == ('admin' if not people else 'member') }}>{{ role }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="telegram_id">Telegram id</label>
+        <input id="telegram_id" name="telegram_id" inputmode="numeric" placeholder="optional" />
+      </div>
+      <div class="field wide actions">
+        <button type="submit">Add</button>
+      </div>
+    </form>
+  </section>
+{% endblock %}

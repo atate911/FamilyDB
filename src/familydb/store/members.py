@@ -83,3 +83,22 @@ def resolve(conn: sqlite3.Connection, channel: str, channel_user_id: str) -> Mem
 
 def set_active(conn: sqlite3.Connection, member_id: int, active: bool) -> None:
     conn.execute("UPDATE members SET active = ? WHERE id = ?", (int(active), member_id))
+
+
+def update_profile(
+    conn: sqlite3.Connection,
+    member_id: int,
+    *,
+    display_name: str,
+    role: Role,
+    active: bool,
+    channel: str | None,
+    channel_user_id: str | None,
+) -> Member | None:
+    """Change who somebody is to the bot, keeping their id and so everything they ever said."""
+    conn.execute(
+        "UPDATE members SET display_name = ?, role = ?, active = ?, channel = ?, "
+        "channel_user_id = ? WHERE id = ?",
+        (display_name.strip(), role, int(active), channel, channel_user_id, member_id),
+    )
+    return get(conn, member_id)
