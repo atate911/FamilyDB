@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import threading
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -169,8 +170,19 @@ def load_credentials(token_path: Path) -> Any:
             creds.refresh(Request())
         except RefreshError as exc:
             raise ToolUnavailable(REAUTH) from exc
-        token_path.write_text(creds.to_json())
+        save_token(token_path, creds.to_json())
     return creds
+
+
+def save_token(token_path: Path, text: str) -> None:
+    """Write the token owner-only, and whole: a half-written token is a lost calendar."""
+    token_path.parent.mkdir(parents=True, exist_ok=True)
+    fresh = token_path.with_name(token_path.name + ".new")
+    handle = os.open(fresh, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600)
+    with os.fdopen(handle, "w", encoding="utf-8") as out:
+        out.write(text)
+    os.chmod(fresh, 0o600)  # in case an older file of that name was there with other rights
+    os.replace(fresh, token_path)
 
 
 def run_auth_flow(client_secrets: Path, token_path: Path) -> Any:
@@ -179,8 +191,7 @@ def run_auth_flow(client_secrets: Path, token_path: Path) -> Any:
 
     flow = InstalledAppFlow.from_client_secrets_file(str(client_secrets), SCOPES)
     creds = flow.run_local_server(port=0)
-    token_path.parent.mkdir(parents=True, exist_ok=True)
-    token_path.write_text(creds.to_json())
+    save_token(token_path, creds.to_json())
     return creds
 
 

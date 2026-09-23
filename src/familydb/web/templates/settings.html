@@ -139,6 +139,30 @@
   </section>
 
   <section class="panel">
+    <h2>Sign everyone out</h2>
+    <p class="muted">
+      Ends every sign-in on every phone and computer, this one included, and makes every browser
+      a stranger again. For a lost phone or a password shared too widely; change the password too
+      if it is the password that got out.
+    </p>
+    <form method="post" action="{{ url_for('settings.sign_out_everyone') }}" class="filters">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+      {% if needs_password %}
+        <div class="field">
+          <label for="everyone-password">Family password</label>
+          <input
+            id="everyone-password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+          />
+        </div>
+      {% endif %}
+      <div class="actions"><button class="quiet" type="submit">Sign everyone out</button></div>
+    </form>
+  </section>
+
+  <section class="panel">
     <h2>What has changed</h2>
     {% if history %}
       <ul class="plain">

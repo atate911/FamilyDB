@@ -288,3 +288,42 @@ def test_a_company_that_cannot_be_asked_does_not_block_a_save(page, monkeypatch)
     monkeypatch.setattr(settings_view.providers, "build", lambda name, settings: _Company(None))
     page.post("/settings", data=_whole_form(page, openai_model="gpt-6-sol"))
     assert page.app.settings.openai_model == "gpt-6-sol"
+
+
+def test_signing_everyone_out_ends_every_session_and_needs_the_password(page) -> None:
+    from familydb.web.auth import DEVICE_COOKIE
+
+    other = page.application.test_client()  # the same family on another phone
+    assert other.post("/login", data={"password": PASSWORD}).status_code == 302
+    assert other.get("/").status_code == 200
+
+    refused = page.post(
+        "/settings/sign-out-everyone", data={"csrf": _token(page), "password": "not it"}
+    )
+    assert refused.status_code == 401 and other.get("/").status_code == 200
+
+    done = page.post(
+        "/settings/sign-out-everyone", data={"csrf": _token(page), "password": PASSWORD}
+    )
+    assert done.status_code == 302 and done.headers["Location"] == "/login"
+    assert other.get("/").status_code == 302  # signed out, with nothing done on that phone
+    assert page.get("/").status_code == 302  # and this one too
+    # The known-browser mark was signed with the old key, so it no longer spares anyone.
+    from familydb.web.auth import known_device
+
+    with page.application.test_request_context(
+        "/login", headers={"Cookie": f"{DEVICE_COOKIE}={other.get_cookie(DEVICE_COOKIE).value}"}
+    ):
+        assert not known_device(page.app.settings)
+
+
+def test_a_pinned_key_cannot_be_rotated_from_the_page(settings, clock, conn, family) -> None:
+    pinned = settings.model_copy(
+        update={"web_password": PASSWORD, "web_secret_key": "set in the environment file"}
+    )
+    client = create_app(App(pinned, clock)).test_client()
+    client.post("/login", data={"password": PASSWORD})
+    response = client.post(
+        "/settings/sign-out-everyone", data={"csrf": _token(client), "password": PASSWORD}
+    )
+    assert response.status_code == 409 and "WEB_SECRET_KEY" in response.text

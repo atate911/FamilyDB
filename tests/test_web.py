@@ -784,6 +784,17 @@ def test_only_the_settings_page_writes_and_only_to_the_settings() -> None:
     }
     assert called == {"overrides", "history", "set_many"}
 
+    # Signing everyone out replaces the session key: a write to a file, not a table, and this
+    # page is the one place that may do it.
+    for other in sorted(module.parent.glob("*.py")):
+        rotates = any(
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "rotate"
+            for node in ast.walk(ast.parse(other.read_text("utf-8")))
+        )
+        assert rotates == (other.name == "settings.py"), other.name
+
 
 def _free_port() -> int:
     with socket.socket() as probe:

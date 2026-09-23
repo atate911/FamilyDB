@@ -61,3 +61,22 @@ def session_secret(settings: Settings) -> str:
         out.write(key)
     log.info("generated a web session key at %s", path)
     return key
+
+
+def rotate(settings: Settings) -> str | None:
+    """Replace the stored key, which signs every session and every known browser out at once.
+
+    None when the key is pinned by WEB_SECRET_KEY, which only the file it came from can change.
+    Another process serving the page keeps the old key until it restarts.
+    """
+    if settings.web_secret_key:
+        return None
+    path = secret_path(settings)
+    key = secrets.token_urlsafe(KEY_BYTES)
+    fresh = path.with_name(path.name + ".new")
+    handle = os.open(fresh, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600)
+    with os.fdopen(handle, "w", encoding="utf-8") as out:
+        out.write(key)
+    os.replace(fresh, path)
+    log.warning("the web session key was replaced: everyone is signed out")
+    return key

@@ -25,6 +25,7 @@ from flask import (
     redirect,
     render_template,
     request,
+    session,
     url_for,
 )
 from pydantic import ValidationError
@@ -35,7 +36,7 @@ from familydb.config import Settings, apply_overrides
 from familydb.store import settings as settings_store
 from familydb.store.db import transaction
 from familydb.store.settings import SECRETS
-from familydb.web import auth, fields, views
+from familydb.web import auth, fields, keys, views
 
 log = logging.getLogger(__name__)
 
@@ -266,6 +267,42 @@ def reveal() -> tuple[str, int]:
         return page(error=f"There is no {KEY_LABELS[name]} key to show.", status=404)
     log.warning("%s was shown to %s", name, who)
     return page(revealed=(name, value), said=f"{KEY_LABELS[name]} is shown below, this once.")
+
+
+KEY_PINNED = (
+    "The signing key is set in WEB_SECRET_KEY, so only changing it there, and restarting, signs "
+    "everyone out."
+)
+
+
+@bp.post("/settings/sign-out-everyone")
+def sign_out_everyone() -> Response | tuple[str, int]:
+    """End every session, on every device, this one included, after the password is typed again.
+
+    For a phone that went missing or a password that was shared too widely: every login cookie
+    and every known-browser mark was signed with the key this replaces.
+    """
+    app = _app()
+    if (complaint := auth.refused()) is not None:
+        return page(error=complaint, status=400)
+    who = auth.client_address()
+    attempt = f"{who} reveal"
+    lockout = current_app.config["FAMILYDB_LOCKOUT"]
+    now = app.clock.now()
+    if lockout.locked(attempt, now):
+        return page(error=LOCKED_OUT, status=429)
+    if auth.password_in_use(app.settings):
+        if not auth.password_matches(app.settings, request.form.get("password", "")):
+            lockout.failed(attempt, now)
+            return page(error=WRONG_PASSWORD, status=401)
+        lockout.passed(attempt)
+    fresh = keys.rotate(app.settings)
+    if fresh is None:
+        return page(error=KEY_PINNED, status=409)
+    current_app.secret_key = fresh
+    session.clear()
+    log.warning("%s signed everyone out", who)
+    return redirect(url_for("auth.login"))
 
 
 def _said(changed: list[str], *, keys: bool = False) -> str:

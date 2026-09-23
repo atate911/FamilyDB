@@ -16,7 +16,7 @@ from uuid import uuid4
 
 import typer
 
-from familydb import __version__
+from familydb import __version__, privacy
 from familydb.agent.history import load_history
 from familydb.agent.prompt import build_messages, build_system_blocks
 from familydb.agent.providers.base import Message, TurnRequest
@@ -81,6 +81,7 @@ def main(
     ),
 ) -> None:
     """FamilyDB command-line interface."""
+    privacy.private_by_default()
 
 
 def _ready(application: App) -> sqlite3.Connection:
@@ -509,6 +510,7 @@ def run() -> None:
     """Start the bot: apply migrations, then serve the configured channels until stopped."""
     application = build_app()
     application.migrate()
+    privacy.tighten(application.settings)
     application.refresh()  # before anything reads a setting, including the scheduler
     settings = application.settings
     chat = application.provider("chat")
@@ -739,6 +741,7 @@ def web(
         overrides["web_port"] = port
     application = build_app(**overrides)
     application.migrate()
+    privacy.tighten(application.settings)
     try:
         serve(application)
     except FamilyDBError as exc:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sqlite3
 from collections.abc import Iterator
 from datetime import datetime
@@ -21,6 +22,15 @@ from familydb.tools import ToolContext, ToolRegistry, build_registry
 TZ = ZoneInfo("America/Vancouver")
 NOW = datetime(2026, 9, 20, 14, 3)  # a Sunday afternoon, PDT
 NOW_ISO = "2026-09-20T21:03:00Z"
+
+
+@pytest.fixture(autouse=True)
+def keep_umask() -> Iterator[None]:
+    """The CLI makes its process owner-only; the tests run it in-process, so put that back."""
+    before = os.umask(0o022)
+    os.umask(before)
+    yield
+    os.umask(before)
 
 
 @pytest.fixture

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import sqlite3
 import threading
 from collections.abc import Callable
@@ -211,9 +212,30 @@ def set_log_level(wanted: int) -> None:
         logging.getLogger(name).setLevel(transport)
 
 
+# A Telegram bot token travels in the request URL, which the HTTP transport logs at DEBUG. The
+# settings page can turn DEBUG on, so the token is taken out of every line instead of relying on
+# the level: with it, anyone who can read the journal could run the family's bot.
+TELEGRAM_TOKEN = re.compile(r"bot\d{5,}:[A-Za-z0-9_-]{20,}")
+
+
+class RedactSecrets(logging.Filter):
+    """Replaces a bot token in a log line with a marker. Attached to handlers, so it sees every
+    record whichever logger it came from."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        text = record.getMessage()
+        if TELEGRAM_TOKEN.search(text):
+            record.msg = TELEGRAM_TOKEN.sub("bot<token>", text)
+            record.args = None
+        return True
+
+
 def configure_logging(level: str) -> None:
     wanted = getattr(logging, level.upper(), logging.INFO)
     logging.basicConfig(level=wanted, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    for handler in logging.getLogger().handlers:
+        if not any(isinstance(one, RedactSecrets) for one in handler.filters):
+            handler.addFilter(RedactSecrets())
     # basicConfig does nothing once a handler exists, and this is called again after a reload.
     set_log_level(wanted)
 

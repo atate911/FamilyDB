@@ -53,6 +53,7 @@ Answers can be supplied as environment variables, which is what --non-interactiv
   TELEGRAM_BOT_TOKEN  WEB_ENABLED  WEB_HOST  WEB_PORT  WEB_PASSWORD  WEB_TOOLS_ENABLED
   DIGEST_CHAT_ID
   ADMIN_NAME
+  BACKUPS              yes (the default) schedules a nightly backup; no leaves it to you
 
 Examples
   scripts/install.sh                          # ask a handful of questions, then install
@@ -196,7 +197,10 @@ service_can_reach_checkout() { # can the familydb user get to the files it has t
 random_password() {
   if have openssl; then openssl rand -base64 18 | tr -d '/+=' | cut -c1-20
   elif [ -r /dev/urandom ]; then LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 20
-  else date +%s | sha256sum | cut -c1-20
+  else
+    # A password made from the clock is guessable from the install time; better none at all.
+    die "no source of randomness (openssl or /dev/urandom) to make a password with" \
+        "Set WEB_PASSWORD yourself and run this again."
   fi
 }
 
@@ -559,6 +563,8 @@ fi
 head2 "Installing"
 
 run mkdir -p "${REPO_ROOT}/data"
+# Every message the family sends is in there, and any key typed into the settings page.
+run chmod 700 "${REPO_ROOT}/data"
 
 if [ "$MODE" = docker ]; then
   run docker compose --project-directory "$REPO_ROOT" build
@@ -698,6 +704,21 @@ if [ "$HAND_OVER_TO_SERVICE" = 1 ] && [ "$DRY_RUN" = 0 ] && id familydb >/dev/nu
   fi
 fi
 
+# -------------------------------------------------------------- backups ----
+# The database is one file and everything the family has said is in it, so a nightly copy is
+# part of installing, not a chore for later. BACKUPS=no skips it for a scripted build.
+BACKUPS_SCHEDULED=0
+if [ "${BACKUPS:-yes}" != no ] && [ "$DRY_RUN" = 0 ]; then
+  head2 "Backups"
+  if confirm "Back the database up every night at 03:15, keeping two weeks?" yes; then
+    if bash "${REPO_ROOT}/scripts/maintain.sh" schedule-backups --target "$REPO_ROOT" --yes; then
+      BACKUPS_SCHEDULED=1
+    else
+      warn "Could not schedule them. Later: sudo ${REPO_ROOT}/scripts/maintain.sh schedule-backups"
+    fi
+  fi
+fi
+
 # ----------------------------------------------------------- what is next ----
 head2 "Done"
 
@@ -725,6 +746,13 @@ fi
 [ -z "${HOME_LAT:-}" ] && say "  · add HOME_LAT and HOME_LON for the weather (RUNBOOK section 6)"
 say "  · connect Google Calendar from a machine with a browser (RUNBOOK section 5)"
 [ -z "${DIGEST_CHAT_ID:-}" ] && say "  · set DIGEST_CHAT_ID once the family group exists (RUNBOOK section 9)"
+say ""
+if [ "$BACKUPS_SCHEDULED" = 1 ]; then
+  say "  · copy ${REPO_ROOT}/backups somewhere off this server now and then: a backup on the"
+  say "    same disk is not a backup"
+else
+  say "  · schedule nightly backups: sudo ${REPO_ROOT}/scripts/maintain.sh schedule-backups"
+fi
 say ""
 say "What it costs to run: ${CLI} debug cost"
 say "Check it over:        ${CLI} doctor"
