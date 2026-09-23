@@ -159,7 +159,9 @@ nav a[aria-current="page"] { color: var(--ink); font-weight: 700; box-shadow: in
 .bar form { margin-left: 0.5rem; }
 
 .filters { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; }
-.filters .field { flex: 1 1 9rem; min-width: 0; }
+/* Sized by what they hold, and wrapped rather than squeezed: a dropdown squeezed below its
+   longest option shows half a word ("any but dropp"). */
+.filters .field { flex: 1 0 auto; min-width: 0; }
 .filters .field.wide { flex: 2 1 14rem; }
 .filters .actions { display: flex; align-items: center; gap: 0.75rem; flex: 0 0 auto; }
 .filters button { margin-top: 0; }
@@ -210,7 +212,9 @@ h3 { font-size: 0.95rem; margin: 1.25rem 0 0.25rem; }
 .plain > li > div { margin-top: 0.15rem; }
 
 /* The settings page. */
-.grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+/* Wide enough for "From the environment (anthropic)": at three to a row the part in brackets,
+   which is the part worth reading, was cut off. */
+.grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); }
 .setting { min-width: 0; }
 .setting + .setting { margin-top: 1rem; }
 .grid .setting + .setting { margin-top: 0; }
