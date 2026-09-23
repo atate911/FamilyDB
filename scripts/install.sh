@@ -591,7 +591,7 @@ if [ "$have_members" = 0 ]; then
   if [ -n "$ADMIN_NAME" ]; then
     runfamilydb members add "$ADMIN_NAME" --role admin >/dev/null && ok "Added ${ADMIN_NAME} as an admin."
   fi
-  note "Add the rest with: familydb members add NAME --role member|kid"
+  note "Add the rest on the web page's Family page, or: familydb members add NAME --role member|kid"
   note "Anyone messaging on Telegram also needs --channel telegram --channel-user-id THEIR_ID,"
   note "which the bot tells them the first time they write (RUNBOOK section 4)."
 else

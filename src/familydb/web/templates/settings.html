@@ -41,7 +41,9 @@
   <p class="muted">
     A box left empty uses whatever the environment or the <code>.env</code> file says, and that
     value is what the empty box shows. A change reaches the next message and the next page at
-    once, and the jobs that run on a schedule within a few minutes. Nothing needs restarting.
+    once, and the jobs that run on a schedule within a few minutes. The one exception is the
+    Telegram bot token: after adding, replacing or clearing it, restart FamilyDB so the bot
+    connects with the new one.
   </p>
 
   <form method="post" action="{{ url_for('settings.save') }}">

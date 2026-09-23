@@ -107,7 +107,7 @@ that can be put right without a decision. What it looks at, and what each one me
 
 1. `familydb config` shows the settings you expect (the key is masked).
 2. `familydb db migrate` reports the schema version.
-3. `familydb members add` for everyone who will message the bot (admin or member) and for kids (`--role kid`) so they can be named as participants.
+3. `familydb members add` for everyone who will message the bot (admin or member) and for kids (`--role kid`) so they can be named as participants. Once the web page is on, the Family page does the same without a terminal.
 4. `familydb chat "we should try that new ramen place on Main St sometime"` saves idea #1.
 5. `familydb chat "tell me about #1"` answers from history.
 6. `familydb db status` shows `cache_read` greater than zero on the second call. If it stays zero, see troubleshooting.
@@ -119,7 +119,7 @@ that can be put right without a decision. What it looks at, and what each one me
 ## 4. Telegram
 
 1. In Telegram, talk to BotFather: `/newbot`, pick a name and a username, copy the token into `TELEGRAM_BOT_TOKEN`, then start (or restart) the bot with `familydb run`.
-2. Each family member sends the bot a direct message. The reply says "your id on this channel is 12345"; add them with `familydb members add NAME --channel telegram --channel-user-id 12345`. Their next message gets a real answer.
+2. Each family member sends the bot a direct message. The reply says "your id on this channel is 12345"; add them with `familydb members add NAME --channel telegram --channel-user-id 12345`, or type the id into the Family page. Their next message gets a real answer.
 3. For a family group, send BotFather `/setprivacy` and choose Disable so the bot sees every message, then add the bot to the group. A dedicated "Ideas & Plans" group works best. In a busier group set `TELEGRAM_REQUIRE_MENTION=true` so it only answers when @mentioned or replied to.
 4. Long polling means nothing is exposed; if the server is off, Telegram keeps updates for a day and the bot catches up on restart without double-processing.
 
@@ -268,10 +268,12 @@ set `WEB_ALLOW_NO_PASSWORD=true` on purpose.
 
 Be clear-eyed about what signing in now buys someone. It is the whole bot: the chat page spends
 tokens with every message, the forms add and change ideas, record outcomes and put things on the
-family calendar, and the settings page can change which model answers, read the API keys, and
-point the bot at a different calendar. On a machine on the internet, that one password is what
-stands between a stranger and your API bill. Nothing is destroyed — an idea is dropped rather
-than deleted, and every change is a row like any other — but it is all reachable. Make it long, and use the status page at the end of this section to notice a
+family calendar, the Family page decides who may message the bot on Telegram, and the settings
+page can change which model answers, read the API keys, and point the bot at a different
+calendar. On a machine on the internet, that one password is what stands between a stranger and
+your API bill. Nothing is destroyed — an idea is dropped rather than deleted, somebody taken off
+the family list keeps everything they said, and every change is a row like any other — but it
+is all reachable. Make it long, and use the status page at the end of this section to notice a
 month that does not look like yours.
 
 **Checking it.**
@@ -307,7 +309,8 @@ came from.
 
 A change reaches the next message and the next page straight away. The jobs that run on a
 schedule — the digest, the follow-ups, the lookups, the retries — pick a new time or interval up
-within five minutes. Nothing here needs `familydb run` restarted.
+within five minutes. The one exception is the Telegram bot token: after adding, replacing or
+clearing it, restart `familydb run` so the bot connects with the new one.
 
 **Who answers.** Any of the three can, and the choice is made per surface, so the two halves of
 the work can go to different places:
