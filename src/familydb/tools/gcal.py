@@ -92,13 +92,19 @@ def on_day(event: CalendarEvent, day: date, tz: ZoneInfo) -> bool:
 
 
 def free_blocks(events: list[CalendarEvent], day: date, tz: ZoneInfo) -> list[str]:
-    """Which of morning, afternoon and evening have no timed event. All-day events don't block."""
+    """Which of morning, afternoon and evening are free.
+
+    A busy all-day event — a camping trip — takes the whole day. One marked free in Google — a
+    birthday — takes none of it, and neither does a free timed event.
+    """
     free: list[str] = []
     for name, start_t, end_t in BLOCKS:
         block_start = datetime.combine(day, start_t, tzinfo=tz)
         block_end = datetime.combine(day, end_t, tzinfo=tz)
         busy = any(
-            not event.all_day and event.start < block_end and event.end > block_start  # type: ignore[operator]
+            event.busy
+            and on_day(event, day, tz)
+            and (event.all_day or (event.start < block_end and event.end > block_start))  # type: ignore[operator]
             for event in events
         )
         if not busy:

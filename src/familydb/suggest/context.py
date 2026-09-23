@@ -28,6 +28,7 @@ def build_context(ctx: ToolContext, window: tuple[date, date] | None) -> Context
     tz = ctx.clock.tz
 
     free_by_day: dict[str, list[str]] = {}
+    commitments: dict[str, list[str]] = {}
     free_known = True
     if ctx.calendar is None:
         skipped.append("calendar not connected")
@@ -36,6 +37,7 @@ def build_context(ctx: ToolContext, window: tuple[date, date] | None) -> Context
         try:
             for day in calendar_days(ctx.calendar, start, end, tz):
                 free_by_day[day["date"]] = list(day["free"])
+                commitments[day["date"]] = day["all_day"] + [e["title"] for e in day["events"]]
         except Exception as exc:  # a transport error must not fail the whole suggestion
             if not isinstance(exc, ToolError):
                 log.exception("calendar check failed")
@@ -65,6 +67,7 @@ def build_context(ctx: ToolContext, window: tuple[date, date] | None) -> Context
                 free=free_by_day.get(day.isoformat(), list(ALL_BLOCKS)),
                 free_known=free_known,
                 forecast=forecasts.get(day),
+                commitments=commitments.get(day.isoformat(), []),
             )
         )
         day += timedelta(days=1)

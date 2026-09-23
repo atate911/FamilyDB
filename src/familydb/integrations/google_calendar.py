@@ -35,6 +35,9 @@ class CalendarEvent:
     description: str | None = None
     status: str = "confirmed"
     link: str | None = None
+    # Whether it takes the time up. Google calls this transparency: an event marked "free",
+    # like a birthday, is on the calendar without keeping anybody from doing something.
+    busy: bool = True
 
     def to_public(self) -> dict[str, Any]:
         return {
@@ -47,6 +50,7 @@ class CalendarEvent:
             "description": self.description,
             "status": self.status,
             "link": self.link,
+            "busy": self.busy,
         }
 
 
@@ -93,6 +97,8 @@ def parse_event(item: dict[str, Any], tz: ZoneInfo) -> CalendarEvent:
         description=item.get("description"),
         status=item.get("status", "confirmed"),
         link=item.get("htmlLink"),
+        busy=item.get("transparency", "opaque") != "transparent"
+        and item.get("status") != "cancelled",
     )
 
 

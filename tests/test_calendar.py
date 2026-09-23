@@ -63,7 +63,7 @@ def test_free_blocks_and_on_day() -> None:
     at = lambda h, m=0: datetime(2026, 9, 26, h, m, tzinfo=TZ)  # noqa: E731
     events = [
         CalendarEvent("a", "Dentist", at(10), at(11), False),
-        CalendarEvent("b", "Grandma visiting", day, day + timedelta(days=1), True),
+        CalendarEvent("b", "Grandma visiting", day, day + timedelta(days=1), True, busy=False),
     ]
     assert free_blocks(events, day, TZ) == ["afternoon", "evening"]
     events.append(CalendarEvent("c", "Dinner", at(16, 30), at(18), False))
@@ -95,7 +95,7 @@ def test_get_calendar_reports_days(registry, conn, calendar_settings, clock, fam
     ]
     assert saturday["free"] == ["afternoon", "evening"]
     assert sunday["all_day"] == ["Sam away"]
-    assert sunday["free"] == ["morning", "afternoon"]
+    assert sunday["free"] == []  # a busy all-day event takes the whole day
     result, data = _call(registry, ctx, "get_calendar", start="2026-09-27", end="2026-09-26")
     assert result.is_error and "before start" in data["error"]
 

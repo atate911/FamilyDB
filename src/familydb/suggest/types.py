@@ -68,6 +68,7 @@ class DaySummary(BaseModel):
     weekday: str
     free: list[str]
     free_known: bool
+    commitments: list[str] = Field(default_factory=list)
     forecast: str | None = None
     rain_chance_pct: int | None = None
     high: float | None = None
@@ -105,6 +106,7 @@ class DayContext:
     free: list[str]
     free_known: bool
     forecast: DayForecast | None
+    commitments: list[str] = field(default_factory=list)
 
 
 @dataclass

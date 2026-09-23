@@ -87,3 +87,13 @@ def average_rating(conn: sqlite3.Connection, idea_id: int) -> float | None:
         (idea_id,),
     ).fetchone()
     return float(row["avg"]) if row and row["avg"] is not None else None
+
+
+def do_not_repeat(conn: sqlite3.Connection) -> set[int]:
+    """Latest explicit preference wins; unrated feedback does not erase a preference."""
+    rows = conn.execute(
+        "SELECT idea_id, would_repeat FROM outcomes "
+        "WHERE idea_id IS NOT NULL AND would_repeat IS NOT NULL ORDER BY happened_on, id"
+    )
+    preferences = {row["idea_id"]: row["would_repeat"] for row in rows}
+    return {idea_id for idea_id, repeat in preferences.items() if not repeat}

@@ -5,7 +5,8 @@ theme per commit, so each can be read beside the change that made it pass.
 """
 
 import json
-from datetime import date
+from dataclasses import replace
+from datetime import date, timedelta
 from types import SimpleNamespace
 
 import pytest
@@ -16,10 +17,14 @@ from familydb.agent.providers.gemini import GeminiProvider
 from familydb.agent.worker import run_worker_turn
 from familydb.app import App
 from familydb.errors import AgentError
-from familydb.store import ideas
+from familydb.store import ideas, outcomes, places
 from familydb.suggest.context import build_context
 from familydb.suggest.discover import discover
+from familydb.suggest.engine import run
+from familydb.suggest.evaluate import overlap_minutes
+from familydb.suggest.types import SuggestInput
 from familydb.tools import ToolContext, build_registry
+from familydb.tools.gcal import free_blocks
 from tests.fakes import FakeCalendar, FakeMessagesAPI, discover_script, message, text, tool_use
 
 
@@ -165,3 +170,72 @@ def test_worker_rejects_undeclared_mutation_and_wrong_idea(env):
         assert not turn.result.actions[0]["ok"]
         assert ideas.get(env.conn, data["id"]).status == "idea"
         assert ideas.get(env.conn, data["id"]).enrichment == "pending"
+
+
+# --- suggestions checked against the day as it really is ------------------------------------------
+
+
+def test_busy_all_day_trip_blocks_but_transparent_birthday_does_not(env):
+    day = date(2026, 9, 26)
+    event = env.cal.seed("Away camping", day, day + timedelta(days=2), all_day=True)
+    assert free_blocks([event], day, env.app.clock.tz) == []
+    context = build_context(env.ctx, (day, day))
+    assert context.days[0].free_known and context.days[0].free == []
+    assert "Away camping" in context.days[0].commitments
+    transparent = replace(event, busy=False)
+    assert free_blocks([transparent], day, env.app.clock.tz) == ["morning", "afternoon", "evening"]
+
+
+def test_four_hour_visit_cannot_fit_one_hour_open(env):
+    _, data = call(
+        env,
+        "add_idea",
+        title="Four hour museum",
+        kind="activity",
+        duration_min=240,
+        duration_max=240,
+        setting="indoor",
+    )
+    place = places.insert(
+        env.conn,
+        name="Museum",
+        hours={"sat": [{"open": "10:00", "close": "11:00"}]},
+        last_checked_at="2026-09-24T19:00:00Z",
+    )
+    ideas.update(env.conn, data["id"], {"place_id": place.id, "enrichment": "done"})
+    result = run(
+        env.ctx,
+        SuggestInput(
+            window="dates",
+            start="2026-09-26",
+            end="2026-09-26",
+            discover=False,
+            question="What can we do?",
+        ),
+    )
+    assert next(c for c in result.candidates if c.idea_id == data["id"]).verdict == "ruled_out"
+
+
+def test_opening_intersection_is_continuous_and_allows_round_trip():
+    split = [{"open": "10:00", "close": "11:00"}, {"open": "14:00", "close": "15:00"}]
+    assert overlap_minutes(split, ["morning", "afternoon"]) == 60
+    assert overlap_minutes([{"open": "08:00", "close": "12:00"}], ["morning"], travel=30) == 180
+
+
+def test_do_not_repeat_is_honored_and_explicit_new_preference_can_override(env):
+    _, data = call(env, "add_idea", title="Unwanted repeat", kind="restaurant")
+    result, _ = call(
+        env,
+        "record_outcome",
+        idea_id=data["id"],
+        happened_on="2026-06-01",
+        would_repeat=False,
+        notes="Never again",
+    )
+    assert not result.is_error
+    result = run(
+        env.ctx, SuggestInput(window="someday", discover=False, question="What can we do?")
+    )
+    assert next(c for c in result.candidates if c.idea_id == data["id"]).verdict == "ruled_out"
+    call(env, "record_outcome", idea_id=data["id"], happened_on="2026-06-02", would_repeat=True)
+    assert data["id"] not in outcomes.do_not_repeat(env.conn)
