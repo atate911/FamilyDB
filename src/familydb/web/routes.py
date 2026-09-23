@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from contextlib import closing
-from datetime import timedelta
+from datetime import date, timedelta
 from typing import Any
 
 from flask import Blueprint, Response, abort, current_app, render_template, request, session
@@ -16,8 +16,8 @@ from familydb.store import outcomes as outcome_store
 from familydb.store import places as place_store
 from familydb.store import plans as plan_store
 from familydb.store.ideas import KIND_SUGGESTIONS
+from familydb.web import agenda, views
 from familydb.web import status as status_page
-from familydb.web import views
 from familydb.web.chat import WHO_KEY
 
 bp = Blueprint("web", __name__)
@@ -184,29 +184,72 @@ def restaurants() -> str:
     return render_template("restaurants.html", cards=cards)
 
 
+def _month(asked: str | None, today: date) -> date:
+    """The first of the month asked for as YYYY-MM, or of this one. Anything else is a 404."""
+    if not asked:
+        return today.replace(day=1)
+    try:
+        first = date.fromisoformat(f"{asked}-01")
+    except ValueError:
+        abort(404)
+    if not 2000 <= first.year <= 2100:
+        abort(404)
+    return first
+
+
 @bp.get("/plans")
 def plans() -> str:
-    """What is on the family calendar: the next three months, then the past month."""
+    """What is on: the next three months, then the past month, as a list."""
     app = _app()
     today = app.clock.today()
     with closing(app.connect()) as conn:
-        # list_between excludes its end, and a date sorts before that day's timed plans, so the
-        # exclusive bound is the day after the last one we want to show.
-        upcoming = plan_store.list_between(
-            conn, today.isoformat(), (today + timedelta(days=PLANS_AHEAD_DAYS + 1)).isoformat()
-        )
-        recent = plan_store.list_between(
-            conn, (today - timedelta(days=PLANS_BEHIND_DAYS)).isoformat(), today.isoformat()
+        seen = agenda.read(
+            app,
+            conn,
+            today - timedelta(days=PLANS_BEHIND_DAYS),
+            today + timedelta(days=PLANS_AHEAD_DAYS),
         )
         titles = {row.id: row.title for row in idea_store.list_all(conn, include_dropped=True)}
         asking = _who(conn)
+    # Something that ends today or later is still to come, or going on now.
+    upcoming = [entry for entry in seen.entries if entry.days()[-1] >= today]
+    recent = [entry for entry in seen.entries if entry.days()[-1] < today]
     return render_template(
         "plans.html",
-        today=today.isoformat(),
-        can_schedule=calendar_available(_app().settings),
-        **asking,
-        upcoming=[views.plan_row(plan, today) for plan in upcoming],
-        recent=[views.plan_row(plan, today) for plan in reversed(recent)],
+        upcoming=[views.entry_row(entry, today) for entry in upcoming],
+        recent=[views.entry_row(entry, today) for entry in reversed(recent)],
         titles=titles,
         ahead=PLANS_AHEAD_DAYS,
+        source=seen.source,
+        source_note=views.AGENDA_NOTES[seen.source],
+        today=today.isoformat(),
+        can_schedule=calendar_available(app.settings),
+        **asking,
+    )
+
+
+@bp.get("/plans/month")
+def plans_month() -> str:
+    """One month as a calendar, or as a list of its busy days on a screen too narrow for one."""
+    app = _app()
+    today = app.clock.today()
+    first = _month(request.args.get("month"), today)
+    weeks_first = first - timedelta(days=first.weekday())
+    last_day = (first.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+    weeks_last = last_day + timedelta(days=6 - last_day.weekday())
+    with closing(app.connect()) as conn:
+        seen = agenda.read(app, conn, weeks_first, weeks_last)
+    previous = (first - timedelta(days=1)).replace(day=1)
+    following = last_day + timedelta(days=1)
+    weeks = views.month_weeks(seen.entries, first, today)
+    return render_template(
+        "plans_month.html",
+        month=f"{first:%B %Y}",
+        weeks=weeks,
+        busy_days=[day for week in weeks for day in week if day["current"] and day["entries"]],
+        previous=f"{previous:%Y-%m}",
+        following=f"{following:%Y-%m}",
+        this_month=first == today.replace(day=1),
+        source=seen.source,
+        source_note=views.AGENDA_NOTES[seen.source],
     )

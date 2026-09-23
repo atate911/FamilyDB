@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from datetime import date, timedelta
 from typing import Any, Literal
 
 from pydantic import BaseModel
@@ -126,6 +127,31 @@ def list_between(conn: sqlite3.Connection, start: str, end: str) -> list[Plan]:
         (start, end),
     )
     return [Plan.from_row(row) for row in rows]
+
+
+def overlapping(conn: sqlite3.Connection, first: str, last: str) -> list[Plan]:
+    """Live plans touching the days from `first` to `last` inclusive, earliest first.
+
+    Unlike `list_between` this keeps a plan that started before `first` and is still going,
+    such as a weekend away. Dates compare as strings: a date sorts before that day's timed
+    plans, so the day after `last` is the exclusive bound on the start.
+    """
+    after = (date.fromisoformat(last) + timedelta(days=1)).isoformat()
+    rows = conn.execute(
+        "SELECT * FROM plans WHERE status != 'cancelled' AND start < ? "
+        "AND coalesce(end, start) >= ? ORDER BY start",
+        (after, first),
+    )
+    return [Plan.from_row(row) for row in rows]
+
+
+def by_google_event(conn: sqlite3.Connection, calendar_id: str | None) -> dict[str, Plan]:
+    """The bot's own plans on one Google calendar, by the id of their event."""
+    rows = conn.execute(
+        "SELECT * FROM plans WHERE calendar_id = ? AND google_event_id IS NOT NULL",
+        (calendar_id,),
+    )
+    return {row["google_event_id"]: Plan.from_row(row) for row in rows}
 
 
 def due_for_follow_up(conn: sqlite3.Connection, *, today: str, since: str) -> list[Plan]:

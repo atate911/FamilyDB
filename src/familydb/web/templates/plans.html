@@ -5,6 +5,7 @@
     <strong>{{ plan.when }}</strong>
     {% if plan.relative %}<span class="muted">({{ plan.relative }})</span>{% endif %}
     {% if plan.status != 'confirmed' %}<span class="tag">{{ plan.status }}</span>{% endif %}
+    {% if plan.from_google %}<span class="tag">added in Google</span>{% endif %}
     <div>
       {% if plan.idea_id and plan.idea_id in titles %}
         <a href="{{ url_for('web.idea', idea_id=plan.idea_id) }}">{{ plan.title }}</a>
@@ -14,7 +15,7 @@
       {% if plan.location %}<span class="muted">· {{ plan.location }}</span>{% endif %}
     </div>
     {% if plan.notes %}<div class="muted">{{ plan.notes }}</div>{% endif %}
-    {% if cancellable and plan.status != 'cancelled' %}
+    {% if cancellable and plan.id and plan.status != 'cancelled' %}
       <div class="actions row">
         <details class="more">
           <summary>Move it</summary>
@@ -51,6 +52,11 @@
 {% endmacro %}
 {% block content %}
   <h1>Plans</h1>
+  <nav class="tabs" aria-label="How to show the plans">
+    <a href="{{ url_for('web.plans') }}" aria-current="page">List</a>
+    <a href="{{ url_for('web.plans_month') }}">Month</a>
+  </nav>
+  <p class="muted source source-{{ source }}">{{ source_note }}</p>
   <section class="panel">
     <h2>Coming up</h2>
     {% if upcoming %}

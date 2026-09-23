@@ -652,6 +652,15 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
             for node in ast.walk(tree)
         )
         assert not any(module.startswith("familydb.pipeline") for module in reached), name
+        # The page reads Google through calendar_sync's pure translation of an event; the two
+        # functions there that bring stored plans up to date are writes, and belong to the bot.
+        synced = {
+            alias.name
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom) and node.module == "familydb.calendar_sync"
+            for alias in node.names
+        }
+        assert synced <= {"event_changes"}, f"{name} imports {synced}"
         if name != "family.py":
             family_rules = any(
                 isinstance(node, ast.ImportFrom)

@@ -6,6 +6,7 @@ The wording here is for people reading a page. The model's view of an idea lives
 
 from __future__ import annotations
 
+import calendar as months
 import json
 from datetime import UTC, date, datetime
 from typing import Any
@@ -20,6 +21,7 @@ from familydb.store.plans import Plan
 from familydb.suggest.shortlist import fmt_minutes
 from familydb.tools.places import DAYS, checked_days_ago, format_ranges, is_stale, open_on
 from familydb.tools.urls import clean_url
+from familydb.web.agenda import Entry
 
 DAY_NAMES = {
     "mon": "Monday",
@@ -254,6 +256,67 @@ def plan_row(plan: Plan, today: date) -> dict[str, Any]:
         "notes": plan.notes,
         "status": plan.status,
     }
+
+
+def entry_row(entry: Entry, today: date) -> dict[str, Any]:
+    """One line of the calendar: what, when, and whether the bot can move it."""
+    days = entry.days()
+    when = day_text(entry.start[:10] if entry.all_day else entry.start)
+    if entry.all_day and len(days) > 1:
+        when = f"{day_text(entry.start[:10])} to {day_text(days[-1].isoformat())}"
+    return {
+        "id": entry.plan_id,
+        "idea_id": entry.idea_id,
+        "title": entry.title,
+        "when": when,
+        "time": None if entry.all_day else entry.start[11:16],
+        "relative": "now" if days[0] < today <= days[-1] else relative_text(entry.start, today),
+        "all_day": entry.all_day,
+        "location": entry.location,
+        "notes": entry.notes,
+        "status": entry.status,
+        # Made somewhere other than here, so this page can show it but not move it.
+        "from_google": entry.plan_id is None,
+        "start_value": entry.start[:16] if not entry.all_day else f"{entry.start[:10]}T09:00",
+    }
+
+
+def month_weeks(entries: list[Entry], first: date, today: date) -> list[list[dict[str, Any]]]:
+    """A month as weeks of days, Monday first, each day with what is on it.
+
+    `first` is any day in the month. The weeks run from the Monday on or before the 1st to the
+    Sunday on or after the last day, so the grid is always whole weeks.
+    """
+    grid = months.Calendar(firstweekday=0).monthdatescalendar(first.year, first.month)
+    by_day: dict[date, list[dict[str, Any]]] = {}
+    for entry in entries:
+        row = entry_row(entry, today)
+        for day in entry.days():
+            by_day.setdefault(day, []).append(row)
+    return [
+        [
+            {
+                "date": day,
+                "day": day.day,
+                "name": f"{day:%A} {day.day} {day:%B}",
+                "current": day.month == first.month,
+                "today": day == today,
+                "entries": by_day.get(day, []),
+            }
+            for day in week
+        ]
+        for week in grid
+    ]
+
+
+AGENDA_NOTES = {
+    "google": "From Google Calendar, including anything added there directly.",
+    "saved": "Google Calendar is not connected, so these are the plans the bot made.",
+    "unavailable": (
+        "Google Calendar did not answer, so these are the plans as the bot last saw them. "
+        "Times may have moved since."
+    ),
+}
 
 
 def outcome_row(outcome: Outcome) -> dict[str, Any]:
