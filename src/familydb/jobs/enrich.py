@@ -122,6 +122,7 @@ def enrich_idea(app: App, conn: Any, idea: Idea, *, api: MessagesAPI | None = No
     try:
         turn: WorkerTurn = run_worker_turn(
             kind="enrich",
+            idea_id=idea.id,
             api=api,
             settings=app.settings,
             clock=app.clock,

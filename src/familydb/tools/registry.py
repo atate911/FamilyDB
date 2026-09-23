@@ -38,6 +38,8 @@ class ToolContext:
     geocoder: Any = None  # a GeocoderAPI (integrations.geocode) when available
     api: Any = None  # the MessagesAPI, for tools that run a worker turn (discovery)
     discover_cache: Any = None  # the App-level cache of discovery results
+    allowed_tools: frozenset[str] | None = None
+    worker_idea_id: int | None = None
     scratch: dict[str, Any] = field(default_factory=dict)  # per-turn hand-back area
 
     def now_iso(self) -> str:
@@ -164,6 +166,8 @@ class ToolRegistry:
         ]
 
     def dispatch(self, name: str, raw_input: Any, ctx: ToolContext) -> ToolResult:
+        if ctx.allowed_tools is not None and name not in ctx.allowed_tools:
+            return _error(name, "tool is not permitted in this turn")
         spec = self._specs.get(name)
         if spec is None:
             return _error(name, f"unknown tool {name!r}")
@@ -181,6 +185,8 @@ class ToolRegistry:
             return _error(name, f"invalid input: {problems}")
         if not spec.available(ctx.settings):
             return _unavailable(name, spec.unavailable_reason)
+        if ctx.worker_idea_id is not None and getattr(args, "idea_id", None) != ctx.worker_idea_id:
+            return _error(name, "worker may only write its assigned idea")
         try:
             result = spec.handler(ctx, args)
         except ToolUnavailable as exc:

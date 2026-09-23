@@ -13,12 +13,14 @@ import pytest
 from familydb.agent.providers.anthropic import AnthropicProvider
 from familydb.agent.providers.base import Message, TurnRequest, WebAccess
 from familydb.agent.providers.gemini import GeminiProvider
+from familydb.agent.worker import run_worker_turn
 from familydb.app import App
 from familydb.errors import AgentError
+from familydb.store import ideas
 from familydb.suggest.context import build_context
 from familydb.suggest.discover import discover
 from familydb.tools import ToolContext, build_registry
-from tests.fakes import FakeCalendar, FakeMessagesAPI, discover_script
+from tests.fakes import FakeCalendar, FakeMessagesAPI, discover_script, message, text, tool_use
 
 
 @pytest.fixture
@@ -135,3 +137,31 @@ def test_what_a_request_carries_follows_the_model(env) -> None:
     assert payload("claude-fable-5-1")["fallbacks"] == "default"
     assert "fallbacks" not in payload("claude-haiku-4-5-20251001")
     assert "betas" not in payload("claude-sonnet-5")
+
+
+# --- a lookup turn may use only the tools it was given, on its own idea ---------------------------
+
+
+def test_worker_rejects_undeclared_mutation_and_wrong_idea(env):
+    _, data = call(env, "add_idea", title="Keep this idea", kind="activity")
+    for name, args in [
+        ("update_idea", {"id": data["id"], "status": "dropped"}),
+        ("skip_place", {"idea_id": data["id"], "status": "skipped", "reason": "wrong"}),
+    ]:
+        api = FakeMessagesAPI(
+            message([tool_use("injected", name, args)], stop_reason="tool_use"),
+            message([text("Done")]),
+        )
+        turn = run_worker_turn(
+            kind="enrich",
+            api=api,
+            settings=env.settings,
+            clock=env.app.clock,
+            registry=env.registry,
+            conn=env.conn,
+            request="Look up another venue",
+            idea_id=999,
+        )
+        assert not turn.result.actions[0]["ok"]
+        assert ideas.get(env.conn, data["id"]).status == "idea"
+        assert ideas.get(env.conn, data["id"]).enrichment == "pending"
