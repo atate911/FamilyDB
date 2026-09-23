@@ -123,6 +123,11 @@ class Provider(Protocol):
         """One round trip. Raises AgentError, with `retryable` set, for anything that failed."""
         ...
 
+    def model_exists(self, model: str) -> bool | None:
+        """Whether the vendor knows this model name. None when it cannot be asked (no key, no
+        network), which must never be taken as a no. Costs no tokens."""
+        ...
+
     def count_tokens(self, request: TurnRequest) -> int:
         """What this request would cost in input tokens. Also how `validate-tools` checks the
         schemas: the API rejects a malformed tool before counting anything."""

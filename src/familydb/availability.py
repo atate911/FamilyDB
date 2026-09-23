@@ -41,5 +41,12 @@ def web_is_public(settings: Settings) -> bool:
 
 
 def web_password_required(settings: Settings) -> bool:
-    """A page off the loopback needs a password unless that was waived on purpose."""
+    """A page the network can reach needs a password.
+
+    Off the loopback that can be waived on purpose, for a home network. Behind a proxy it cannot:
+    the page is bound to the loopback there precisely so that the proxy can carry the internet to
+    it, and a loopback address says nothing about who is on the other end.
+    """
+    if settings.web_trust_proxy:
+        return True
     return web_is_public(settings) and not settings.web_allow_no_password

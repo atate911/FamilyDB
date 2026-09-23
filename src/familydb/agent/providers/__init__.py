@@ -89,6 +89,15 @@ def fallback_for(settings: Settings, surface: Surface, primary: str) -> Provider
     return None
 
 
+def ready(settings: Settings, surface: Surface, api: Any = None) -> bool:
+    """Whether any model can be asked on this surface: the chosen one has a key, or another does
+    and the fallback is on. False is the ordinary state of a fresh install, before a key is typed
+    on the settings page, and everything that would call a model checks this first rather than
+    failing on the way."""
+    primary = for_surface(settings, surface, api=api)
+    return primary.configured() or fallback_for(settings, surface, primary.name) is not None
+
+
 __all__ = [
     "NAMES",
     "Exchange",

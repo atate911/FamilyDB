@@ -4,6 +4,49 @@ The reviewed defects have fixes and regression coverage in this working tree. Th
 for installation testing with a disposable calendar. Real Telegram, Google OAuth, paid AI
 requests, and a Linux installation still need an end-to-end smoke test before family alpha.
 
+## Found in the pre-VPS review (September 23)
+
+### Follow-up correctness fixes
+
+- A spending-limit interruption after successful writes now returns a local summary of the
+  completed operations and their record numbers. The message is completed rather than retried;
+  any remaining work must be requested separately after reviewing what was saved.
+- Paid requests are serialized per database across threads and processes, from the budget check
+  through cost recording. The lock is released before tools run, so nested discovery can proceed.
+  A process crash releases the OS lock automatically. One accounted request may cross the
+  estimated limit; unknown charges from timeouts, vendor retries, or a crash before accounting
+  remain outside that guarantee. This is not a provider-enforced billing cap.
+- Browser calendar forms reuse a durable operation identity after a restart or lost response.
+  Other forms retain the in-memory double-submit guard; it is not a durable operation ledger.
+- Idea edits carry a content revision that is checked inside the update transaction, including
+  when two saves arrive in the same second. Older forms must be reloaded.
+- Changing the timezone rebuilds the application clock immediately, without a restart.
+- Windows startup no longer invokes POSIX ownership APIs. Linux keeps its existing permission
+  hardening; Windows relies on the account's inherited filesystem ACLs, not chmod guarantees.
+
+These changes have local regression tests. Live default-model quality, Google consent, and
+Telegram onboarding still require the live-account checklist below.
+
+A second review, before installing on a VPS, found these and fixed them:
+
+- **Nobody could sign in behind the HTTPS proxy.** Waitress strips forwarding headers from a
+  peer it has not been told to trust, before Flask sees them, so behind Caddy every request
+  looked like plain HTTP from the proxy: the Origin check refused every sign-in, and five wrong
+  guesses from anyone locked the whole family out. The server is now told which proxy to trust,
+  and the tests go through the real server. Checked in Chromium through Caddy and nginx.
+- **A fresh install got the old code, and an upgrade could go backwards.** The `v0.1.0` tag
+  predated the web page and these fixes. While CHANGELOG.md says a version is in progress,
+  installs follow the default branch; an upgrade never moves to anything older.
+- **The database was readable by every account on the machine**, keys typed on the page
+  included. Everything is owner-only now, and the systemd unit is sandboxed.
+- **Behind a proxy on the loopback, the page could run with no password.** It cannot now.
+- **Strangers could hold sign-in shut** with the site-wide guess ceiling; a browser that has
+  signed in before is spared it.
+- **Nothing capped what the models could cost.** A daily spending limit is checked before
+  every call; the default model is now GPT-6 Luna, the cheapest capable one.
+- **Setup meant editing a file and restarting.** It is done on the page, Google Calendar and
+  the Telegram token included, and the installer asks two questions.
+
 ## How these fixes arrived
 
 This review and its fixes came as PR #2, one commit that also rebuilt the web page. The fixes
@@ -55,7 +98,8 @@ migration, so upgrading does not resend old conversations. Fresh outgoing messag
 
 ## Verification
 
-- Full local suite: **353 passed, 4 skipped** on Windows/Python 3.12.
+- Full local suite: **353 passed, 4 skipped** on Windows/Python 3.12 when the review was
+  ported; the suite is larger now, and CI runs it on Linux with Python 3.11 and 3.12.
 - Ruff lint and formatting, shell syntax, and Git whitespace checks pass. The source archive
   and wheel build successfully; the wheel includes the new migration and recovery modules.
 - Includes **23 added regression cases**, covering interrupted processing, lost calendar responses,
@@ -64,25 +108,30 @@ migration, so upgrading does not resend old conversations. Fresh outgoing messag
 - Four shell integration cases exercise the actual backup function with mocked privilege and
   Docker commands: successful backups preserve committed WAL data, and failures leave no backup
   falsely reported as usable. They do not substitute for testing a real Docker daemon.
-- Linux CI now includes Docker backup/restore and ownership checks. The updated CI workflow has
-  not been run remotely as part of this local change.
+- Linux CI includes Docker backup/restore and ownership checks, and it runs on every push.
 - The non-live test suite blocks outbound network connections while allowing local web-server
   tests. No real credentials or paid integration validation were used.
 
 ## Installation and live alpha gate
 
-1. Install the updated code on the chosen Linux server using a dedicated test calendar. Start
-   FamilyDB so the new migration is applied; run `familydb doctor` and address its findings.
-2. Configure one provider. Existing `.env` or saved settings override defaults: if using Gemini
-   for lookups, replace an older worker model with a supported Gemini 3 model. Verify actual
-   capture, enrichment, discovery and scheduling on the selected account/model.
-3. Add the Telegram token and family members, then restart with `sudo systemctl restart familydb`
-   or `docker compose restart bot`. Check two users in private chat and the intended group.
-4. Create, move and cancel a test event. Edit one directly in Google, and verify the plans page
+1. Install the updated code on the chosen Linux server with `scripts/bootstrap.sh`, giving the
+   page's domain, and use a dedicated test calendar. Sign in to the page and follow its
+   "Finish setting up" list; run `familydb doctor` and address its findings.
+2. Paste an OpenAI key on the settings page and check that saving `gpt-6-luna` is accepted (the
+   page asks OpenAI whether the model exists). Verify actual capture, enrichment, discovery and
+   scheduling on it, and that `/status` shows today's spend. Set a spending limit on the key in
+   OpenAI's console too. If using Gemini for lookups, check `gemini-3.8-flash` the same way.
+3. Paste the Telegram token on the settings page; within seconds `/status` should say
+   "connected as @…" with no restart. Add each person's Telegram id on the Family page. Check two
+   users in private chat and the intended group.
+4. Connect Google Calendar from the settings page: paste the Desktop-app client JSON, open the
+   consent link, paste back the address Google sends the browser to. This flow is new and
+   untried against Google; if it fails, `familydb google auth` on a laptop still works.
+5. Create, move and cancel a test event. Edit one directly in Google, and verify the plans page
    and a subsequent chat edit reflect it. Test a busy all-day trip and a transparent birthday.
-5. Restart during processing, temporarily interrupt delivery, and verify eventual recovery.
+6. Restart during processing, temporarily interrupt delivery, and verify eventual recovery.
    Restore a fresh backup onto a separate test installation and check recent records.
-6. Reboot the Linux host and verify startup, persistent data, logs, dashboard access, and backups.
+7. Reboot the Linux host and verify startup, persistent data, logs, dashboard access, and backups.
    Keep the dashboard private or behind correctly configured HTTPS. Keep an off-host backup and
    a separate recovery copy of `.env` and Google credentials.
 
@@ -98,6 +147,11 @@ arguments represent a different intent; the operation log is not a semantic dupl
 
 Suggestion availability still uses coarse morning/afternoon/evening blocks and estimated travel.
 It may omit a short usable gap. It does not establish actual reservations or ticket availability.
+
+The daily spending limit is an estimate from a price table checked by hand in September 2026,
+not the bill. The model IDs `gpt-6-luna` and `gemini-3.8-flash` were taken from published
+documentation that could not be opened from where this was built; the settings page's model
+check is the first live confirmation.
 
 The dashboard still uses a shared administrator password. Do not give that password to someone
 who should not manage settings or reveal credentials. Separate viewer/admin web roles, recurring

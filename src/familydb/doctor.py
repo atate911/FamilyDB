@@ -212,7 +212,9 @@ def check_database(app: App, report: Report) -> sqlite3.Connection | None:
     return conn
 
 
-def check_family(conn: sqlite3.Connection | None, report: Report) -> None:
+def check_family(
+    conn: sqlite3.Connection | None, report: Report, *, telegram: bool = False
+) -> None:
     if conn is None:
         report.add("family", SKIP, "no database to read")
         return
@@ -242,13 +244,13 @@ def check_family(conn: sqlite3.Connection | None, report: Report) -> None:
     else:
         report.add("family", OK, f"{len(everyone)} member(s), {len(admins)} admin(s)")
     reachable = [m for m in everyone if m.channel and m.channel_user_id]
-    if not reachable:
+    if not reachable and telegram:
+        # Only Telegram needs ids: the web page's chat asks who is writing.
         report.add(
             "family on a channel",
             WARN,
-            "no member has a channel id, so nobody can message the bot yet",
-            "Have each person message the bot, then familydb members add NAME "
-            "--channel telegram --channel-user-id THEIR_ID",
+            "nobody has a Telegram id yet, so nobody can message the bot from a phone",
+            "Have each person message the bot; its reply gives their id to type on the Family page",
         )
     else:
         report.add("family on a channel", OK, f"{len(reachable)} member(s) can message the bot")
@@ -262,7 +264,7 @@ def check_provider(app: App, report: Report, *, online: bool) -> None:
             "model key",
             FAIL,
             "no key for any provider, so the bot can save a message but never answer it",
-            "Put a key in .env, or type one on the settings page",
+            "Type one on the settings page (API keys), or put it in .env",
         )
         return
     chosen = settings.provider
@@ -330,8 +332,8 @@ def check_channels(app: App, report: Report, *, online: bool) -> None:
         report.add(
             "telegram",
             WARN,
-            "no bot token, so the family can only use the console",
-            "Create a bot with @BotFather and set TELEGRAM_BOT_TOKEN (RUNBOOK section 4)",
+            "no bot token, so the family can only use the web page's chat",
+            "Create a bot with @BotFather and paste its token on the settings page",
         )
         return
     shape_ok = ":" in token and token.split(":", 1)[0].isdigit()
@@ -375,14 +377,14 @@ def check_integrations(app: App, report: Report) -> None:
             "google calendar",
             WARN,
             f"a calendar id is set but no token at {settings.google_token_path}",
-            "familydb google auth on a machine with a browser (RUNBOOK section 5)",
+            "Connect it again on the settings page (Google Calendar)",
         )
     else:
         report.add(
             "google calendar",
             WARN,
             "not connected, so plans are remembered but never put on a calendar",
-            "RUNBOOK section 5",
+            "Connect it on the settings page (Google Calendar)",
         )
 
     if weather_available(settings):
@@ -392,7 +394,7 @@ def check_integrations(app: App, report: Report) -> None:
             "weather",
             WARN,
             "no coordinates, so suggestions cannot use the forecast",
-            "Set HOME_LAT and HOME_LON (RUNBOOK section 6)",
+            "Type the home area on the settings page; it is found on the map",
         )
 
     if web_tools_available(settings):
@@ -402,7 +404,7 @@ def check_integrations(app: App, report: Report) -> None:
             "web lookups",
             WARN,
             "off, so ideas are never filled in and suggestions say 'hours unknown'",
-            "WEB_TOOLS_ENABLED=true",
+            "Turn on 'Look ideas up on the web' on the settings page",
         )
 
     if digest_configured(settings):
@@ -417,8 +419,8 @@ def check_integrations(app: App, report: Report) -> None:
             "weekend digest",
             WARN,
             "no chat id, so the weekly digest is not sent",
-            "Set DIGEST_CHAT_ID to the family group, or to 'web' for the page's own chat "
-            "(RUNBOOK section 9)",
+            "Set the digest chat on the settings page: 'web' for the page's own chat, or the "
+            "family group's id",
         )
 
 
@@ -565,7 +567,7 @@ def run(app: App, *, online: bool = False) -> Report:
     check_settings(app, report)
     conn = check_database(app, report)
     try:
-        check_family(conn, report)
+        check_family(conn, report, telegram=bool(app.settings.telegram_bot_token))
         check_provider(app, report, online=online)
         check_channels(app, report, online=online)
         check_integrations(app, report)

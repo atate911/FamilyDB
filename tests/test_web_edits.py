@@ -46,6 +46,10 @@ def _said(response) -> str:
 
 def _idea_form(client, path="/ideas/new", **changes) -> dict[str, str]:
     form = {"csrf": _token(client, path), "title": "Ramen place", "kind": "restaurant"}
+    if path.endswith("/edit"):
+        form["revision"] = re.search(
+            r'name="revision" value="([^"]+)"', client.get(path).text
+        ).group(1)
     form.update({key: str(value) for key, value in changes.items()})
     return form
 

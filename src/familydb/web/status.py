@@ -10,7 +10,8 @@ import sqlite3
 from datetime import timedelta
 from typing import Any
 
-from familydb.agent import providers
+from familydb.agent import compose, gateway, providers
+from familydb.agent.spending import spent_today
 from familydb.app import App
 from familydb.availability import (
     calendar_available,
@@ -19,7 +20,7 @@ from familydb.availability import (
     web_is_public,
 )
 from familydb.dates import utc_iso
-from familydb.store import calls, ideas, messages
+from familydb.store import calls, ideas, members, messages
 from familydb.store import settings as settings_store
 from familydb.store.settings import SECRETS
 from familydb.web import views
@@ -91,14 +92,18 @@ def keys(app: App, stored: dict[str, Any]) -> list[dict[str, Any]]:
         )
         for name in providers.NAMES
     ]
-    rows.append(
-        _row(
-            "Telegram bot token",
-            bool(live.telegram_bot_token),
-            _where("telegram_bot_token", live, stored),
-        )
-    )
+    telegram = _where("telegram_bot_token", live, stored)
+    state = app.channel_states.get("telegram")
+    if live.telegram_bot_token and state:
+        telegram = f"{telegram}; {state}"
+    rows.append(_row("Telegram bot token", telegram_working(app), telegram))
     return rows
+
+
+def telegram_working(app: App) -> bool:
+    """A token is set and Telegram has not refused it or been out of reach, as far as is known."""
+    state = app.channel_states.get("telegram", "")
+    return bool(app.settings.telegram_bot_token) and not state.startswith(("the token", "cannot"))
 
 
 def services(app: App) -> list[dict[str, Any]]:
@@ -120,33 +125,47 @@ def services(app: App) -> list[dict[str, Any]]:
     return [
         _row("Google Calendar", calendar_available(live), calendar),
         _row("Weather and travel", weather_available(live), weather),
-        _row(
-            "Reading the web",
-            enrichment_available(live),
-            "ideas are looked up automatically, and discovery may search"
-            if enrichment_available(live)
-            else "off: no idea is filled in and nothing new is discovered",
-        ),
-        _row("Weekend digest", bool(live.digest_chat_id), live.digest_chat_id or "not sent"),
+        _row("Reading the web", *_lookups(app)),
+        _row("Weekend digest", *_digest(app)),
         _row("This page", None if not live.web_password else True, page),
     ]
 
 
-def spending(conn: sqlite3.Connection, since: str) -> dict[str, Any]:
-    """Tokens per model, and how much of the input came from the cache at a tenth of the price."""
+def spending(
+    conn: sqlite3.Connection, since: str, settings: Any = None, now: Any = None
+) -> dict[str, Any]:
+    """Tokens and estimated dollars per model, how much of the input came from the cache, and
+    how much of today's limit is used."""
     rows = calls.usage_since(conn, since=since)
+    kinds = [
+        {**row, "purpose": gateway.purpose(row["kind"])}
+        for row in calls.usage_by_kind(conn, since=since)
+    ]
+    measured = calls.sections_since(conn, since=since)
+    where = [
+        {"purpose": gateway.purpose(kind), "parts": parts}
+        for kind in gateway.KINDS
+        if (parts := compose.breakdown(row for row in measured if row["kind"] == kind))
+    ]
+    today = spent_today(conn, settings, now) if settings is not None else 0.0
     fresh = sum(row["input_tokens"] for row in rows)
     cached = sum(row["cache_read"] for row in rows)
     written = sum(row["cache_write"] for row in rows)
     served = fresh + cached + written
     return {
         "rows": rows,
+        "kinds": kinds,
+        "where": where,
         "calls": sum(row["calls"] for row in rows),
         "input": fresh,
         "cached": cached,
         "written": written,
         "output": sum(row["output_tokens"] for row in rows),
         "cache_share": round(cached / served * 100) if served else 0,
+        "dollars": sum(row["cost_usd"] for row in rows),
+        "estimated": any(row["cost_estimated"] for row in rows),
+        "today": today,
+        "limit": getattr(settings, "daily_spend_limit", 0),
     }
 
 
@@ -226,8 +245,82 @@ def status(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
         "models": models(app),
         "keys": keys(app, {name: stored[name] for name in SECRETS if name in stored}),
         "services": services(app),
-        "spending": spending(conn, since),
+        "spending": spending(conn, since, app.settings, app.clock.now()),
         "last": last_call(conn, tz),
         "waiting": waiting(conn, tz),
         "troubles": troubles(conn, since, tz),
     }
+
+
+def setup_steps(app: App, conn: sqlite3.Connection) -> list[dict[str, str]]:
+    """What is left before the bot can do all it is for, most important first. Empty when done.
+
+    Each is a sentence and the place on the page where it is done: nothing here needs a file.
+    """
+    live = app.settings
+    steps = [
+        (
+            any(getattr(live, KEY_FOR[name]) for name in providers.NAMES),
+            "Give it a model key. Until then it saves what it is told but cannot answer.",
+            "/settings#keys",
+        ),
+        (
+            bool(live.home_area) and live.home_lat is not None,
+            "Say where home is, for the weather and for what is on nearby.",
+            "/settings#home",
+        ),
+        (
+            calendar_available(live),
+            "Connect Google Calendar, so plans land on the family calendar.",
+            "/settings#google",
+        ),
+        (
+            telegram_working(app),
+            "Add a Telegram bot, so the family can message it from their phones.",
+            "/settings#keys",
+        ),
+    ]
+    if live.telegram_bot_token:
+        reachable = any(member.channel_user_id for member in members.list_all(conn))
+        steps.append(
+            (
+                reachable,
+                "Add each person's Telegram id, so it knows who is writing.",
+                "/family",
+            )
+        )
+    return [{"text": text, "link": link} for done, text, link in steps if not done]
+
+
+def _lookups(app: App) -> tuple[bool | None, str]:
+    if not enrichment_available(app.settings):
+        return False, "off: no idea is filled in and nothing new is discovered"
+    if not app.can_ask("worker"):
+        return None, "on, and waiting for a model key: new ideas are looked up once there is one"
+    return True, "ideas are looked up automatically, and discovery may search"
+
+
+def _digest(app: App) -> tuple[bool | None, str]:
+    chat = app.settings.digest_chat_id
+    if not chat:
+        return False, "not sent"
+    if not app.can_ask("chat"):
+        return None, f"{chat}, once there is a model key to write it"
+    return True, chat
+
+
+def digest_chats(conn: sqlite3.Connection, tz: Any, limit: int = 10) -> list[tuple[str, str]]:
+    """Chats the digest could go to, as (chat id, what it is), so nobody has to dig for an id.
+
+    A Telegram group appears once somebody on the family list has written in it.
+    """
+    offers = [("web", "the chat on this page")]
+    for chat in messages.chats(conn, "telegram")[:limit]:
+        chat_id = chat["chat_id"]
+        if chat_id.startswith("-"):
+            what = "Telegram group"
+        else:
+            member = members.resolve(conn, "telegram", chat_id)
+            what = f"Telegram, private chat with {member.display_name}" if member else "Telegram"
+        offers.append((chat_id, f"{what}, last message {views.local_moment(chat['last_at'], tz)}"))
+    return offers

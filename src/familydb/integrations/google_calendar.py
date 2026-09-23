@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import json
 import logging
+import os
 import threading
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Protocol
+from urllib.parse import parse_qs, urlsplit
 from zoneinfo import ZoneInfo
 
 from familydb.config import Settings
@@ -169,8 +172,19 @@ def load_credentials(token_path: Path) -> Any:
             creds.refresh(Request())
         except RefreshError as exc:
             raise ToolUnavailable(REAUTH) from exc
-        token_path.write_text(creds.to_json())
+        save_token(token_path, creds.to_json())
     return creds
+
+
+def save_token(token_path: Path, text: str) -> None:
+    """Write the token owner-only, and whole: a half-written token is a lost calendar."""
+    token_path.parent.mkdir(parents=True, exist_ok=True)
+    fresh = token_path.with_name(token_path.name + ".new")
+    handle = os.open(fresh, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600)
+    with os.fdopen(handle, "w", encoding="utf-8") as out:
+        out.write(text)
+    os.chmod(fresh, 0o600)  # in case an older file of that name was there with other rights
+    os.replace(fresh, token_path)
 
 
 def run_auth_flow(client_secrets: Path, token_path: Path) -> Any:
@@ -179,8 +193,75 @@ def run_auth_flow(client_secrets: Path, token_path: Path) -> Any:
 
     flow = InstalledAppFlow.from_client_secrets_file(str(client_secrets), SCOPES)
     creds = flow.run_local_server(port=0)
-    token_path.parent.mkdir(parents=True, exist_ok=True)
-    token_path.write_text(creds.to_json())
+    save_token(token_path, creds.to_json())
+    return creds
+
+
+# Connecting from the web page, on a server with no browser of its own. Google sends the browser
+# back to this address after consent. Nothing answers there, so the browser shows an error, but
+# the address it shows carries the code: pasting it into the page finishes the connection. It is
+# the loopback address a "Desktop app" client is allowed to use, so the same client works here
+# and with `familydb google auth` on a laptop.
+CONSENT_RETURN = "http://127.0.0.1:53682/"
+NOT_JSON = "That is not the file Google gave you: it should be JSON, starting with {."
+WEB_CLIENT = (
+    "That client is of type Web application. Create one of type Desktop app in Google Cloud "
+    "(Credentials, Create credentials, OAuth client ID) and paste that one instead."
+)
+NO_CLIENT = (
+    "That JSON has no OAuth client in it. Download it from the client's page in Google Cloud."
+)
+NO_CODE = "There is no code in that. Paste the whole address the browser was sent to."
+MIXED_UP = "That address belongs to an earlier try. Start again and use the newest link."
+
+
+class GoogleSetupError(ValueError):
+    """Something the person connecting the calendar can put right; the message says what."""
+
+
+def client_config(text: str) -> dict[str, Any]:
+    """The OAuth client pasted into the page, checked for being the right kind."""
+    try:
+        config = json.loads(text)
+    except ValueError:
+        raise GoogleSetupError(NOT_JSON) from None
+    if not isinstance(config, dict):
+        raise GoogleSetupError(NOT_JSON)
+    if "installed" not in config:
+        raise GoogleSetupError(WEB_CLIENT if "web" in config else NO_CLIENT)
+    return config
+
+
+def begin_consent(config: dict[str, Any]) -> tuple[str, Any, str]:
+    """Google's consent address, the flow that must finish it (it holds the PKCE secret), and
+    the state the address will come back carrying."""
+    from google_auth_oauthlib.flow import Flow
+
+    flow = Flow.from_client_config(config, SCOPES, redirect_uri=CONSENT_RETURN)
+    # offline and consent: a refresh token every time, so the calendar keeps working for months.
+    url, state = flow.authorization_url(access_type="offline", prompt="consent")
+    return url, flow, state
+
+
+def finish_consent(flow: Any, pasted: str, token_path: Path, *, state: str | None = None) -> Any:
+    """Exchange what was pasted (the address, or just the code) for a token, and save it."""
+    pasted = pasted.strip()
+    code = pasted
+    if pasted.startswith(("http://", "https://")):
+        query = parse_qs(urlsplit(pasted).query)
+        if "error" in query:
+            raise GoogleSetupError(f"Google said: {query['error'][0]}. Start again.")
+        if state and query.get("state", [state])[0] != state:
+            raise GoogleSetupError(MIXED_UP)
+        code = (query.get("code") or [""])[0]
+    if not code:
+        raise GoogleSetupError(NO_CODE)
+    try:
+        flow.fetch_token(code=code)
+    except Exception as exc:  # oauthlib raises a family of its own; each means the same here
+        raise GoogleSetupError(f"Google would not take that code ({exc}). Start again.") from exc
+    creds = flow.credentials
+    save_token(token_path, creds.to_json())
     return creds
 
 

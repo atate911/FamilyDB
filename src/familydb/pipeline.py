@@ -8,17 +8,18 @@ from contextlib import closing
 from datetime import datetime
 from typing import Any
 
+from familydb.agent import gateway
 from familydb.agent.history import load_history
-from familydb.agent.loop import MessagesAPI, TurnResult, run_turn
-from familydb.agent.prompt import build_messages, build_system_blocks
+from familydb.agent.loop import MessagesAPI, TurnResult
 from familydb.agent.render import render_retry_note, render_user_turn
+from familydb.agent.spending import SpendingLimitReached
 from familydb.app import App
 from familydb.channels.base import IncomingMessage, OutgoingMessage
 from familydb.clock import FixedClock
 from familydb.dates import utc_iso
 from familydb.delivery import deliver, lease
 from familydb.errors import AgentError
-from familydb.store import calls, members, messages, suggestions
+from familydb.store import calls, knocks, members, messages, suggestions
 from familydb.store.db import transaction
 from familydb.store.members import Member
 from familydb.tools import ToolContext
@@ -26,9 +27,13 @@ from familydb.tools import ToolContext
 log = logging.getLogger(__name__)
 
 UNKNOWN_SENDER = (
-    "Sorry, I only talk to the family. Your id on this channel is {id}; ask an admin to add you."
+    "Sorry, I only talk to the family. Ask one of them to add you; your id here is {id}."
 )
 RETRY_REPLY = "Saved your message, but I couldn't process it right now. I'll retry later."
+NO_KEY_REPLY = (
+    "I can't answer yet: no model key has been added. An admin can add one on the settings "
+    "page, and then ask me again."
+)
 CONFIG_REPLY = (
     "Saved your message, but I can't reach the model at the moment. "
     "An admin needs to check the logs."
@@ -71,7 +76,7 @@ def handle_synthetic(
     inbound_id = _store_inbound(app, conn, msg, member)
     if inbound_id is None:
         return None
-    return _run(app, msg, member, inbound_id, api, conn, notify=False)
+    return _run(app, msg, member, inbound_id, api, conn, notify=False, kind="digest")
 
 
 def _handle(
@@ -83,6 +88,15 @@ def _handle(
     member = members.resolve(conn, msg.channel, msg.channel_user_id)
     if member is None:
         log.warning("unknown sender %s on %s", msg.channel_user_id, msg.channel)
+        with transaction(conn):
+            knocks.record(
+                conn,
+                channel=msg.channel,
+                channel_user_id=msg.channel_user_id,
+                name=msg.sender_name,
+                chat_id=msg.chat_id,
+                now=app.clock.now(),
+            )
         return OutgoingMessage(
             msg.chat_id, UNKNOWN_SENDER.format(id=msg.channel_user_id), "unknown_sender"
         )
@@ -133,6 +147,7 @@ def _run(
     *,
     notify: bool,
     retry: bool = False,
+    kind: str = "chat",
 ) -> OutgoingMessage | None:
     with lease(app, conn, inbound_id) as owned:
         if not owned:
@@ -156,7 +171,9 @@ def _run(
                 conn.execute(
                     "UPDATE messages SET retries = retries + 1 WHERE id = ?", (inbound_id,)
                 )
-        return _run_owned(app, msg, member, inbound_id, api, conn, notify=notify, retry=retry)
+        return _run_owned(
+            app, msg, member, inbound_id, api, conn, notify=notify, retry=retry, kind=kind
+        )
 
 
 def _run_owned(
@@ -169,16 +186,26 @@ def _run_owned(
     *,
     notify: bool,
     retry: bool = False,
+    kind: str = "chat",
 ) -> OutgoingMessage:
     """Think and persist the outcome. With notify off (retries) failures stay silent."""
+    if not app.can_ask("chat", api=api):
+        # A fresh install before its key is typed in: say so plainly, and do not keep retrying.
+        log.warning("message %s saved, but there is no model key to answer it with", inbound_id)
+        with transaction(conn):
+            messages.give_up(conn, inbound_id)
+        return _fail(app, conn, msg, inbound_id, "no model key", NO_KEY_REPLY if notify else None)
     try:
-        result = _think(app, msg, member, inbound_id, api, conn, retry=retry)
+        result = _think(app, msg, member, inbound_id, api, conn, retry=retry, kind=kind)
     except AgentError as exc:
         log.error("agent error on message %s: %s (retryable=%s)", inbound_id, exc, exc.retryable)
         if not exc.retryable:
             with transaction(conn):
                 messages.give_up(conn, inbound_id)
-        reply = RETRY_REPLY if exc.retryable else CONFIG_REPLY
+        if isinstance(exc, SpendingLimitReached):
+            reply = exc.reply
+        else:
+            reply = RETRY_REPLY if exc.retryable else CONFIG_REPLY
         return _fail(app, conn, msg, inbound_id, str(exc), reply if notify else None)
     except Exception as exc:
         log.exception("unexpected error on message %s", inbound_id)
@@ -249,7 +276,7 @@ def retry_message(
         text=row.text,
     )
     log.info("retrying message %s (attempt %s)", message_id, row.retries + 1)
-    reply = _run(app, msg, member, message_id, api, conn, notify=False, retry=True)
+    reply = _run(app, msg, member, message_id, api, conn, notify=False, retry=True, kind="retry")
     if reply is not None and reply.out_message_id is not None:
         deliver(app, reply.out_message_id)
     return reply
@@ -264,10 +291,10 @@ def _think(
     conn: sqlite3.Connection,
     *,
     retry: bool = False,
+    kind: str = "chat",
 ) -> TurnResult:
     app.refresh(conn)  # a model or a limit changed on the settings page applies from here on
     settings = app.settings
-    system = build_system_blocks(conn, settings)
     history = load_history(
         conn,
         msg.chat_id,
@@ -297,9 +324,6 @@ def _think(
         note = render_retry_note(calls.tool_calls_for_message(conn, inbound_id), write_tools)
         if note:
             current.append(note)
-    turn = build_messages(history, current)
-    chat = app.provider("chat", api=api)
-    spare = None if api is not None else app.fallback("chat", chat.name)
     ctx = ToolContext(
         conn=conn,
         settings=settings,
@@ -312,15 +336,14 @@ def _think(
         api=api,  # a stand-in for the discovery worker inside `suggest`, when a test injects one
         discover_cache=app.discover_cache,
     )
-    return run_turn(
-        provider=chat,
-        surface="chat",
-        fallback=spare,
+    return gateway.ask(
+        kind,
         settings=settings,
         registry=app.registry,
         ctx=ctx,
-        system=system,
-        messages=turn,
+        current=current,
+        history=history,
+        api=api,
     )
 
 

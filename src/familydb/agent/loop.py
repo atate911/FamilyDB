@@ -12,6 +12,9 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol
 
+from familydb.agent import admission, spending
+from familydb.agent.compose import exchange_chars
+from familydb.agent.providers import prices
 from familydb.agent.providers.base import (
     Exchange,
     Message,
@@ -76,8 +79,14 @@ def run_turn(
     max_tokens: int | None = None,
     surface: str = "chat",
     fallback: Provider | None = None,
+    kind: str | None = None,
+    sections: dict[str, int] | None = None,
 ) -> TurnResult:
     """Drive one inbound message to a reply.
+
+    Callers in the package go through `agent.gateway.ask`, which declares each kind of call and
+    passes its `kind` on to be recorded with every model call, with `sections`: the size of each
+    part of the request, to which each later call adds the earlier steps of the turn.
 
     With a `fallback` provider, a first call the chosen one cannot take is tried there instead.
     Only the first call: once a tool has run, starting again elsewhere would repeat whatever it
@@ -105,39 +114,69 @@ def run_turn(
         request.model = active.model_for(surface)
 
     for iteration in range(1, limit + 1):
-        started = time.monotonic()
         try:
-            reply = active.send(request)
-        except AgentError as exc:
-            switchable = fallback is not None and active is not fallback
-            if not (switchable and first_call_only(request) and worth_switching(exc)):
-                raise
-            log.warning("%s could not take this (%s); asking %s", active.name, exc, fallback.name)
-            active = fallback
-            request.model = active.model_for(surface)
-            try:
-                reply = active.send(request)
-            except AgentError as spare_exc:
-                # 4. Report the first failure, not the second. A message the primary would have
-                # answered after a pause must not be given up on because the spare said 400.
-                log.warning("%s could not take it either: %s", active.name, spare_exc)
-                raise exc from spare_exc
-        duration_ms = int((time.monotonic() - started) * 1000)
+            with admission.locked(ctx.conn):
+                spending.check(ctx.conn, settings, ctx.clock.now())
+                started = time.monotonic()
+                try:
+                    reply = active.send(request)
+                except AgentError as exc:
+                    switchable = fallback is not None and active is not fallback
+                    if not (switchable and first_call_only(request) and worth_switching(exc)):
+                        raise
+                    log.warning(
+                        "%s could not take this (%s); asking %s", active.name, exc, fallback.name
+                    )
+                    active = fallback
+                    request.model = active.model_for(surface)
+                    try:
+                        reply = active.send(request)
+                    except AgentError as spare_exc:
+                        # Preserve a retryable primary failure even if the spare says 400.
+                        log.warning("%s could not take it either: %s", active.name, spare_exc)
+                        raise exc from spare_exc
+                duration_ms = int((time.monotonic() - started) * 1000)
 
-        for key in USAGE_KEYS:
-            totals[key] += reply.usage.get(key) or 0
-        with transaction(ctx.conn):
-            calls.log_llm_call(
-                ctx.conn,
-                message_id=ctx.message_id,
-                iteration=iteration,
-                model=request.model or active.model_for(surface),
-                served_model=reply.model,
-                request_id=reply.request_id,
-                stop_reason=reply.stop,
-                usage=reply.usage,
-                duration_ms=duration_ms,
-                now=ctx.now_iso(),
+                for key in USAGE_KEYS:
+                    totals[key] += reply.usage.get(key) or 0
+                asked = request.model or active.model_for(surface)
+                dollars, listed = prices.cost(
+                    active.name,
+                    reply.model or asked,
+                    reply.usage,
+                    cache_ttl=settings.anthropic_cache_ttl,
+                )
+                with transaction(ctx.conn):
+                    calls.log_llm_call(
+                        ctx.conn,
+                        message_id=ctx.message_id,
+                        iteration=iteration,
+                        model=asked,
+                        served_model=reply.model,
+                        request_id=reply.request_id,
+                        stop_reason=reply.stop,
+                        usage=reply.usage,
+                        duration_ms=duration_ms,
+                        now=ctx.now_iso(),
+                        provider=active.name,
+                        cost_usd=dollars,
+                        cost_estimated=not listed,
+                        kind=kind,
+                        sections=_sizes(sections, request),
+                    )
+        except spending.SpendingLimitReached as exc:
+            written = {spec.name for spec in registry.specs() if spec.writes}
+            completed = [a for a in actions if a.get("ok") and a.get("tool") in written]
+            if not completed:
+                raise
+            return TurnResult(
+                "ok",
+                spending.completed_reply(completed),
+                actions,
+                iteration - 1,
+                totals,
+                error=str(exc),
+                provider=active.name,
             )
 
         if reply.stop == "refusal":
@@ -192,6 +231,13 @@ def run_turn(
     return TurnResult(
         "failed", "", actions, limit, totals, error="max_iterations", provider=active.name
     )
+
+
+def _sizes(sections: dict[str, int] | None, request: TurnRequest) -> dict[str, int] | None:
+    if sections is None:
+        return None
+    earlier = exchange_chars(request.exchanges)
+    return {**sections, "earlier steps": earlier} if earlier else dict(sections)
 
 
 def first_call_only(request: TurnRequest) -> bool:

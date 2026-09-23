@@ -36,27 +36,71 @@
 
   <section class="panel">
     <h2>What it has cost</h2>
+    <p>
+      Today: about ${{ "%.2f"|format(spending.today) }}
+      {% if spending.limit %}
+        of the ${{ "%.2f"|format(spending.limit) }} daily limit.
+        {% if spending.today >= spending.limit %}
+          <strong>The limit is reached: nothing more is asked of a model until midnight.</strong>
+        {% endif %}
+      {% else %}
+        (no daily limit is set).
+      {% endif %}
+    </p>
     {% if spending.rows %}
       <p>
         {{ "{:,}".format(spending.calls) }} model call{{ "" if spending.calls == 1 else "s" }} in
-        the last {{ days }} days. {{ spending.cache_share }}% of what was sent came back from the
-        cache, at a tenth of the price.
+        the last {{ days }} days, about ${{ "%.2f"|format(spending.dollars) }}.
+        {{ spending.cache_share }}% of what was sent came back from the cache, at a tenth of the
+        price.
+        {% if spending.estimated %}
+          Some calls were to a model without a listed price and are counted high.
+        {% endif %}
       </p>
       <table class="hours">
-        <tr>
-          <th>model</th><th>calls</th><th>sent</th><th>cached</th><th>written</th><th>back</th>
-        </tr>
-        {% for row in spending.rows %}
+        <tr><th>what for</th><th>calls</th><th>US$</th></tr>
+        {% for row in spending.kinds %}
           <tr>
-            <td>{{ row.model }}</td>
+            <td>{{ row.purpose }}</td>
             <td>{{ "{:,}".format(row.calls) }}</td>
-            <td>{{ "{:,}".format(row.input_tokens) }}</td>
-            <td>{{ "{:,}".format(row.cache_read) }}</td>
-            <td>{{ "{:,}".format(row.cache_write) }}</td>
-            <td>{{ "{:,}".format(row.output_tokens) }}</td>
+            <td>{{ "%.2f"|format(row.cost_usd) }}</td>
           </tr>
         {% endfor %}
       </table>
+      {% for kind in spending.where %}
+        <p class="muted">Where the input of {{ kind.purpose }} went, per call: the real total
+          over {{ "{:,}".format(kind.parts[0].calls) }} call{{ "" if kind.parts[0].calls == 1 else "s" }},
+          shared out by the size of each part.</p>
+        <table class="hours">
+          <tr><th>part</th><th>tokens</th><th>share</th></tr>
+          {% for part in kind.parts %}
+            <tr>
+              <td>{{ part.label }}</td>
+              <td>{{ "{:,}".format(part.tokens) }}</td>
+              <td>{{ part.share }}%</td>
+            </tr>
+          {% endfor %}
+        </table>
+      {% endfor %}
+      <div class="scroll">
+        <table class="hours">
+          <tr>
+            <th>model</th><th>calls</th><th>sent</th><th>cached</th><th>written</th><th>back</th>
+            <th>US$</th>
+          </tr>
+          {% for row in spending.rows %}
+            <tr>
+              <td>{{ row.model }}</td>
+              <td>{{ "{:,}".format(row.calls) }}</td>
+              <td>{{ "{:,}".format(row.input_tokens) }}</td>
+              <td>{{ "{:,}".format(row.cache_read) }}</td>
+              <td>{{ "{:,}".format(row.cache_write) }}</td>
+              <td>{{ "{:,}".format(row.output_tokens) }}</td>
+              <td>{{ "%.2f"|format(row.cost_usd) }}{% if row.cost_estimated %}*{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </table>
+      </div>
     {% else %}
       <p class="muted">Nothing has been asked of a model in the last {{ days }} days.</p>
     {% endif %}

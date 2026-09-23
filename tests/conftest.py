@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sqlite3
 from collections.abc import Iterator
 from datetime import datetime
@@ -23,12 +24,26 @@ NOW = datetime(2026, 9, 20, 14, 3)  # a Sunday afternoon, PDT
 NOW_ISO = "2026-09-20T21:03:00Z"
 
 
+@pytest.fixture(autouse=True)
+def keep_umask() -> Iterator[None]:
+    """The CLI makes its process owner-only; the tests run it in-process, so put that back."""
+    before = os.umask(0o022)
+    os.umask(before)
+    yield
+    os.umask(before)
+
+
 @pytest.fixture
 def settings(tmp_path: Path) -> Settings:
+    # Pinned to Claude because the scripted fake in tests/fakes.py speaks its API; the default
+    # provider is OpenAI and has tests of its own.
     return Settings(
         _env_file=None,
+        provider="anthropic",
         anthropic_api_key="test-key",
         familydb_path=tmp_path / "familydb.sqlite3",
+        # Relative by default, which would be the checkout's own data/ folder.
+        google_token_path=tmp_path / "google_token.json",
         family_tz="America/Vancouver",
     )
 

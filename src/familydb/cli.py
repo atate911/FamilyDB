@@ -16,9 +16,8 @@ from uuid import uuid4
 
 import typer
 
-from familydb import __version__
+from familydb import __version__, privacy
 from familydb.agent.history import load_history
-from familydb.agent.prompt import build_messages, build_system_blocks
 from familydb.agent.providers.base import Message, TurnRequest
 from familydb.agent.render import render_idea_line, render_user_turn
 from familydb.app import App, build_app
@@ -81,6 +80,7 @@ def main(
     ),
 ) -> None:
     """FamilyDB command-line interface."""
+    privacy.private_by_default()
 
 
 def _ready(application: App) -> sqlite3.Connection:
@@ -309,35 +309,61 @@ def tool_cmd(
 
 @debug_app.command("prompt")
 def debug_prompt(
-    text: str = typer.Argument(..., help="The message to build a request for."),
+    text: str = typer.Argument("", help="The message to build a chat request for."),
     as_member: str | None = typer.Option(None, "--as", help="Act as this family member."),
     chat_id: str = typer.Option("console", "--chat", help="Chat whose history to include."),
+    kind: str = typer.Option(
+        "chat", "--kind", help="Which kind of call: chat, digest, retry or enrich."
+    ),
+    idea_id: int | None = typer.Option(None, "--idea", help="For --kind enrich: which idea."),
 ) -> None:
-    """Print the exact request that would be sent for TEXT, without calling the API."""
+    """Print the exact request that would be sent, without calling the API.
+
+    Built by the same code that sends it (agent/gateway.py), so what is printed is what goes.
+    Discovery is asked from inside a suggestion; `familydb suggest --discover` runs one.
+    """
+    from familydb.agent import gateway
+    from familydb.agent.worker import worker_turn
+    from familydb.jobs.enrich import render_enrich_request
+    from familydb.store import places
+
+    if kind not in gateway.KINDS or kind == "discover":
+        typer.echo("--kind is one of chat, digest, retry or enrich", err=True)
+        raise typer.Exit(code=2)
     application = build_app()
     settings = application.settings
+    call = gateway.spec(kind)
     with closing(_ready(application)) as conn:
-        member = _acting_member(application, conn, as_member)
-        sender = member.display_name if member else "someone"
-        system = build_system_blocks(conn, settings)
-        history = load_history(
-            conn,
-            chat_id,
-            clock=application.clock,
-            limit=settings.history_limit,
-            since_hours=settings.history_hours,
-        )
-        messages = build_messages(history, render_user_turn(sender, text, application.clock))
-        provider = application.provider("chat")
-        request = provider.payload(
-            TurnRequest(
-                system=system,
-                messages=messages,
-                tools=application.registry.tool_defs(),
-                model=provider.model_for("chat"),
+        if kind == "enrich":
+            idea = ideas.get(conn, idea_id) if idea_id is not None else None
+            if idea is None:
+                typer.echo("--kind enrich needs --idea N, the number of an idea", err=True)
+                raise typer.Exit(code=2)
+            place = places.get(conn, idea.place_id) if idea.place_id else None
+            current = worker_turn(application.clock, render_enrich_request(idea, place, settings))
+            history = []
+        else:
+            member = _acting_member(application, conn, as_member)
+            sender = member.display_name if member else "someone"
+            history = load_history(
+                conn,
+                chat_id,
+                clock=application.clock,
+                limit=settings.history_limit,
+                since_hours=settings.history_hours,
             )
-        )
-    typer.echo(json.dumps(request, indent=2, ensure_ascii=False, default=str))
+            current = render_user_turn(sender, text, application.clock)
+        provider = application.provider(call.surface)
+        request = gateway.build_request(
+            kind,
+            conn=conn,
+            settings=settings,
+            registry=application.registry,
+            provider=provider,
+            current=current,
+            history=history,
+        ).request
+    typer.echo(json.dumps(provider.payload(request), indent=2, ensure_ascii=False, default=str))
 
 
 @debug_app.command("cost")
@@ -347,15 +373,18 @@ def debug_cost(
     """What the model has cost lately, and what each message pays for before anyone types."""
     import json as _json
 
-    from familydb.agent.prompt import build_system_blocks
+    from familydb.agent import compose, gateway
 
     application = build_app()
     settings = application.settings
+    chat_call = gateway.spec("chat")
     with closing(_ready(application)) as conn:
-        blocks = build_system_blocks(conn, settings)
-        tools = application.registry.tool_defs()
+        blocks, _ = compose.prefix(chat_call, conn, settings)
+        tools = compose.tool_defs(chat_call, application.registry)
         since = utc_iso(application.clock.now() - timedelta(days=days))
         rows = calls.usage_since(conn, since=since)
+        kinds = calls.usage_by_kind(conn, since=since)
+        measured = calls.sections_since(conn, since=since)
 
     # Four characters to the token is rough, but enough to show what is large.
     system_tokens = sum(len(block.text) for block in blocks) // 4
@@ -381,6 +410,13 @@ def debug_cost(
         typer.echo(f"\nNo model calls in the last {days} days.")
         return
     typer.echo(f"\nActually used in the last {days} days:")
+    typer.echo(f"  {'what for':<42} {'calls':>6} {'sent':>10} {'out':>8} {'US$':>7}")
+    for row in kinds:
+        typer.echo(
+            f"  {gateway.purpose(row['kind']):<42} {row['calls']:>6,d} {row['sent']:>10,d} "
+            f"{row['output_tokens']:>8,d} {row['cost_usd']:>7.2f}"
+        )
+    typer.echo("")
     header = f"  {'model':<28} {'calls':>6} {'in':>9} {'cached':>9} {'written':>9} {'out':>8}"
     typer.echo(header)
     for row in rows:
@@ -393,6 +429,17 @@ def debug_cost(
     served = total_in + cached + sum(r["cache_write"] for r in rows)
     share = (cached / served * 100) if served else 0.0
     typer.echo(f"  {share:.0f}% of input tokens came from the cache at a tenth of the price.")
+    for kind in gateway.KINDS:
+        split = compose.breakdown(row for row in measured if row["kind"] == kind)
+        if not split:
+            continue
+        counted = split[0]["calls"]
+        typer.echo(
+            f"\nWhere the input of {gateway.purpose(kind)} went, per call "
+            f"({counted:,d} call{'' if counted == 1 else 's'}; the real total shared out by size):"
+        )
+        for part in split:
+            typer.echo(f"  {part['label']:<42} ~{part['tokens']:>7,d} tokens  {part['share']:>3d}%")
 
 
 @debug_app.command("validate-tools")
@@ -447,8 +494,12 @@ def chat(
     else:
         typer.echo(reply.text)
     if reply.status in {"failed", "unknown_sender"}:
-        if reply.status == "failed" and not application.settings.anthropic_api_key:
-            typer.echo("hint: ANTHROPIC_API_KEY is not set (see .env.example)", err=True)
+        if reply.status == "failed" and not application.can_ask("chat"):
+            name = application.settings.provider.upper()
+            typer.echo(
+                f"hint: no model key: type one on the settings page, or set {name}_API_KEY",
+                err=True,
+            )
         raise typer.Exit(code=1)
 
 
@@ -509,6 +560,7 @@ def run() -> None:
     """Start the bot: apply migrations, then serve the configured channels until stopped."""
     application = build_app()
     application.migrate()
+    privacy.tighten(application.settings)
     application.refresh()  # before anything reads a setting, including the scheduler
     settings = application.settings
     chat = application.provider("chat")
@@ -530,23 +582,23 @@ def run() -> None:
         from familydb.web.server import serve_in_thread
 
         stop_web = serve_in_thread(application)
-    try:
-        if settings.telegram_bot_token:
-            from familydb.channels.telegram import TelegramChannel
+    # Telegram is watched rather than started once: a token added or changed on the settings
+    # page takes effect in seconds, without a restart.
+    from familydb.channels.telegram import TelegramSupervisor
 
-            channel = TelegramChannel(application)
-            log.info("starting the Telegram channel (long polling)")
-            channel.run()
-        else:
-            _wait_for_stop()
+    telegram = TelegramSupervisor(application)
+    telegram.start()
+    try:
+        _wait_for_stop(quiet=bool(settings.telegram_bot_token) or stop_web is not None)
     finally:
+        telegram.stop()
         if stop_web is not None:
             stop_web()
         scheduler.shutdown(wait=False)
     log.info("stopped")
 
 
-def _wait_for_stop() -> None:
+def _wait_for_stop(*, quiet: bool = False) -> None:
     stop = threading.Event()
 
     def _stop(signum: int, _frame: object) -> None:
@@ -555,7 +607,11 @@ def _wait_for_stop() -> None:
 
     signal.signal(signal.SIGTERM, _stop)
     signal.signal(signal.SIGINT, _stop)
-    log.info("no chat channel configured; waiting. Use `familydb chat` or `familydb repl`.")
+    if not quiet:
+        log.info(
+            "no chat channel yet; waiting. Add a Telegram token or turn the web page on; "
+            "meanwhile `familydb chat` and `familydb repl` work."
+        )
     stop.wait()
 
 
@@ -739,6 +795,7 @@ def web(
         overrides["web_port"] = port
     application = build_app(**overrides)
     application.migrate()
+    privacy.tighten(application.settings)
     try:
         serve(application)
     except FamilyDBError as exc:
@@ -773,6 +830,9 @@ def digest(
     application.migrate()
     _cli_senders(application)
     application.senders["console"] = lambda _chat_id, text: typer.echo(text)
+    if not application.can_ask("chat"):
+        typer.echo("digest not sent: there is no model key yet to write it with")
+        return
     reply = run_digest(application)
     if reply is None:
         typer.echo("digest not sent: already sent today, or no sender or admin (see the log)")

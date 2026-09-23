@@ -4,8 +4,9 @@ This is the long way round: a bare VPS at the start, the family messaging the bo
 It assumes nothing is installed and nothing is configured, and it explains why each step is
 there, because most of them are only obvious once you have been bitten by the alternative.
 
-`scripts/bootstrap.sh` does most of the work. What it cannot do are the parts that need a
-browser, a phone, or a password only you know; those are here too.
+`scripts/bootstrap.sh` does most of the work, and asks two questions on the way. Everything
+else, from the model key to Telegram and Google Calendar, is set up afterwards on the bot's own
+web page, which lists what is left to do; those steps are here too.
 
 Once it runs, [RUNBOOK.md](../RUNBOOK.md) is the reference. It has a section per integration
 and per setting, and this file points at those sections by number rather than repeating them.
@@ -34,16 +35,24 @@ Python 3.11+ yourself, then run it again with `--no-packages`. x86_64 and arm64 
 **A non-root user with sudo, reachable over SSH with a key.** Do not do this as root. The
 scripts ask for root only where they need it, and say what for each time.
 
-**An API key** from one of Anthropic, OpenAI or Google. One is enough. Give more than one and
-the others become spares for when the first is rate limited (RUNBOOK section 11).
+**A way into the repository.** FamilyDB is private (section 3). Only the repository's owner can
+add a deploy key or make a token scoped to it; if that is not you, ask the owner for one of the
+two, or for a `.tar.gz` of the code (option 3), before you start.
+
+**An API key** from OpenAI, Anthropic or Google. One is enough. OpenAI's GPT-6 Luna answers by
+default, because it is the cheapest capable model of the three; the others are a setting away.
+Give more than one key and the others become spares for when the first is rate limited (RUNBOOK
+section 11). You type it on the web page after the install, not during it. While you are in the
+provider's console, set a monthly spending limit on the key: the bot keeps its own daily limit
+($2.00 by default), but that is an estimate, and the provider's figure is the bill.
 
 **Optionally, a Telegram bot** so the family can message it from their phones, and **a Google
 account** with a shared calendar. Neither is needed to get it running and both can be added
-later; without Telegram you talk to it with `familydb repl` on the server, which is fine for a
-first look and no use to anyone else in the house.
+later from the page; without Telegram the family talks to it on the page's Chat.
 
-**A domain, only if** you want the web page reachable from the internet (section 6). The bot
-itself makes outgoing connections only: no inbound ports, no domain, no reverse proxy.
+**A domain, if** you want the family to reach the web page from their phones and other
+machines, over HTTPS (section 6). Without one the page stays on the server and you reach it
+over an SSH tunnel. The bot itself makes outgoing connections only.
 
 ## 2. Prepare the server
 
@@ -64,8 +73,19 @@ ssh-copy-id sam@your-server
 ssh sam@your-server 'echo in'
 ```
 
+If the provider set the server up for key-only logins, `ssh-copy-id` cannot get in as `sam` (no
+password to type). Copy root's key across instead, as root on the server:
+
+```bash
+install -d -m 700 -o sam -g sam /home/sam/.ssh
+install -m 600 -o sam -g sam /root/.ssh/authorized_keys /home/sam/.ssh/
+```
+
 With that working, in `/etc/ssh/sshd_config` set `PasswordAuthentication no` and
-`PermitRootLogin no`, then `sudo systemctl reload ssh`.
+`PermitRootLogin no`, then `sudo systemctl reload ssh`. Ubuntu cloud images often carry a file in
+`/etc/ssh/sshd_config.d/` (such as `50-cloud-init.conf`) that says `PasswordAuthentication yes`
+and wins over the main file; set it to `no` there too. `sudo sshd -T | grep -i passwordauth`
+shows what is actually in force.
 
 **A firewall.** The order matters more than the rules:
 
@@ -88,12 +108,22 @@ sudo apt update && sudo apt install -y unattended-upgrades
 sudo dpkg-reconfigure --priority=low unattended-upgrades    # answer yes
 ```
 
-**The timezone.** The bot works out what "this weekend" means from `FAMILYDB_TZ`, which the
-installer offers to take from the machine, so it is worth setting the machine first:
+**The timezone.** The bot works out what "this weekend" means from the family's timezone,
+which the installer takes from the machine, so it is worth setting the machine first. The
+settings page changes it later if you get it wrong:
 
 ```bash
 timedatectl list-timezones | grep Vancouver
 sudo timedatectl set-timezone America/Vancouver
+```
+
+**If the page will have a domain** (section 6), point it at the server and open the web ports
+now, before the install: the installer sets up HTTPS, and the certificate can only be fetched
+once the name leads here and ports 80 and 443 are open.
+
+```bash
+dig +short familydb.example.com      # should print this server's address
+sudo ufw allow 80,443/tcp
 ```
 
 **Swap, if memory is tight.** On a 1 GB box the install step that builds the virtualenv is the
@@ -129,11 +159,12 @@ each of these starts by getting at least the `scripts/` folder there.
 
 ### Option 1: a deploy key
 
-On the server, make a key that exists for this one purpose:
+On the server, make a key that exists for this one purpose. It lives in `/root`, because
+upgrades run as root and read it from there for as long as the install exists:
 
 ```bash
-ssh-keygen -t ed25519 -C "familydb deploy" -f ~/.ssh/familydb_deploy -N ""
-cat ~/.ssh/familydb_deploy.pub
+sudo ssh-keygen -t ed25519 -C "familydb deploy" -f /root/familydb_deploy -N ""
+sudo cat /root/familydb_deploy.pub
 ```
 
 Copy that public line. In GitHub, open the repository, then **Settings → Deploy keys → Add
@@ -141,23 +172,23 @@ deploy key**. Title it after the machine, paste the key, and leave **Allow write
 unticked: the server never needs to push. Check it from the server:
 
 ```bash
-ssh -T git@github.com -i ~/.ssh/familydb_deploy
+sudo ssh -T git@github.com -i /root/familydb_deploy
 # "Hi atate911/FamilyDB! You've successfully authenticated, but GitHub does not provide shell
 #  access." is the answer you want.
 ```
 
-Then put the scripts on the box and run bootstrap with the key. From your own computer, in
-your own clone:
+Then fetch a copy for the scripts with that key, on the server, and run bootstrap from it.
+Bootstrap still clones its own copy into `/opt/familydb` with the key, so upgrades can fetch:
 
 ```bash
-scp -r scripts sam@your-server:~/
+sudo git -c core.sshCommand="ssh -i /root/familydb_deploy -o IdentitiesOnly=yes" \
+  clone --depth 1 git@github.com:atate911/FamilyDB.git /root/familydb-scripts
+sudo bash /root/familydb-scripts/scripts/bootstrap.sh --deploy-key /root/familydb_deploy
+sudo rm -rf /root/familydb-scripts      # once it has finished
 ```
 
-And on the server:
-
-```bash
-sudo bash ~/scripts/bootstrap.sh --deploy-key ~/.ssh/familydb_deploy
-```
+(Or, if you have a clone of your own: `scp -r scripts sam@your-server:~/` from it, and
+`sudo bash ~/scripts/bootstrap.sh --deploy-key /root/familydb_deploy` on the server.)
 
 Bootstrap rewrites the repository URL to its SSH form, clones with that key, and then clears
 the credential out of the saved remote so nobody reading `.git/config` later finds one.
@@ -169,42 +200,44 @@ Generate new token**. Give it the shortest expiry you can live with, set **Repos
 to **Only select repositories** and pick FamilyDB, and under **Permissions → Repository
 permissions** set **Contents** to **Read-only**. Nothing else.
 
-```bash
-scp -r scripts sam@your-server:~/                      # from your own computer
-```
+On the server, read the token in without it landing in your shell history, fetch the scripts
+with it, and run bootstrap. `sudo` drops the environment unless told to keep that one variable:
 
 ```bash
-sudo GITHUB_TOKEN=github_pat_... bash ~/scripts/bootstrap.sh
+read -rs GITHUB_TOKEN && export GITHUB_TOKEN        # paste the token, then Enter
+git clone --depth 1 "https://x-access-token:${GITHUB_TOKEN}@github.com/atate911/FamilyDB.git" ~/familydb-scripts
+sudo --preserve-env=GITHUB_TOKEN bash ~/familydb-scripts/scripts/bootstrap.sh
+rm -rf ~/familydb-scripts
 ```
 
 The token is used for the clone and nothing else: it is never written to `.env`, never written
 to the log, and the saved remote is reset to the plain HTTPS URL afterwards so it does not sit
-in `.git/config`. It does go into your shell history, though, so clear that line out
-(`history -d`), or read it in with `read -rs GITHUB_TOKEN` first and `export` it.
+in `.git/config`. That also means an upgrade needs it again (section 8); switching to a deploy
+key later avoids that.
 
 ### Option 3: copy it from your own computer
 
-No credential reaches the server at all. Clone locally, then copy it across without the
-virtualenv, the database or your own `.env`:
+No credential reaches the server at all. On a computer that can read the repository, make an
+archive of the committed code (which leaves out the virtualenv, the database and any `.env`,
+because none of them are committed) and copy it across:
 
 ```bash
-git clone git@github.com:atate911/FamilyDB.git ~/FamilyDB
-rsync -a --exclude .venv --exclude data --exclude .env ~/FamilyDB/ sam@your-server:~/FamilyDB/
-# or, without rsync:  scp -r ~/FamilyDB sam@your-server:~/
+git clone git@github.com:atate911/FamilyDB.git ~/FamilyDB     # if you have no clone yet
+git -C ~/FamilyDB archive --format=tar.gz --prefix=FamilyDB/ -o ~/familydb.tar.gz HEAD
+scp ~/familydb.tar.gz sam@your-server:~/
 ```
 
-Then on the server:
+Then on the server, unpack the scripts and point bootstrap at the archive:
 
 ```bash
-sudo bash ~/FamilyDB/scripts/bootstrap.sh --from ~/FamilyDB
+tar -xzf ~/familydb.tar.gz
+sudo bash ~/FamilyDB/scripts/bootstrap.sh --from ~/familydb.tar.gz
 ```
 
-`--from` also takes a `.tar.gz` of a checkout, which is easier to move around than a directory
-tree. Excluding `.env` matters: yours holds your own keys, and a copy of it landing on the
-server means the installer finds a configuration that was never meant for that machine.
-
-If bootstrap is run from inside a checkout and given nothing else, it installs that checkout,
-so `sudo bash ~/FamilyDB/scripts/bootstrap.sh` on its own does the same thing.
+Copy the archive rather than a working directory: a `.env` of your own landing on the server
+would carry your keys there, and the installer would take it for this machine's configuration.
+If bootstrap is run from inside a checkout and given no deploy key and no token, it installs that
+checkout, so `sudo bash ~/FamilyDB/scripts/bootstrap.sh` on its own does the same thing.
 
 ## 4. Run the bootstrap
 
@@ -224,15 +257,17 @@ installed.
 ### The run itself
 
 ```bash
-sudo bash ~/scripts/bootstrap.sh --deploy-key ~/.ssh/familydb_deploy
+sudo bash /root/familydb-scripts/scripts/bootstrap.sh --deploy-key /root/familydb_deploy
 ```
 
 Useful flags, all in `--help`. `--dry-run` says what would happen and changes nothing, which
 is worth one pass. `--mode docker` installs Docker Engine and the compose plugin and runs it
 that way; the default is `venv`, the smaller install and the one the rest of this file assumes.
-`--target DIR` and `--user NAME` move the install and rename the service account. `--ref v0.1.0`
-installs that tag, branch or commit, where the default is the newest release tag and the default
-branch only if there are no tags, and `--repo URL` clones from somewhere else. `--no-packages`
+`--target DIR` and `--user NAME` move the install and rename the service account. `--ref NAME`
+installs that tag, branch or commit, and `--repo URL` clones from somewhere else. Without
+`--ref`, what it installs depends on `CHANGELOG.md`: while the newest version there is marked "in
+progress", as v0.1.0 is now, it installs the default branch, where that version is being built;
+once the version carries a date instead, it installs the newest release tag. `--no-packages`
 installs nothing with apt, `--no-install` stops before the questions, `--no-start` leaves it
 stopped, and `--yes` takes every default and asks nothing, for a scripted build.
 
@@ -245,24 +280,34 @@ other services, home directories and inbound ports. Then it asks.
 
 After that it works through apt packages (`ca-certificates curl git tzdata`), uv or Docker, the
 code into `/opt/familydb` and the `familydb` user, then hands over to `scripts/install.sh`,
-which asks:
+which asks two things:
 
-- which model answers: Claude, OpenAI or Gemini, and a key for each one you have
-- the timezone, offered from the machine's own setting
-- your town or area, which it geocodes into `HOME_LAT`/`HOME_LON` for the forecast
-- metric or imperial
-- a Telegram bot token, if you have one already
-- whether to turn web lookups on
-- whether to turn the web page on, and on which address and port, with a generated password
-- your name, as the family says it, which becomes the first admin
+- **the domain name for the web page**, if it has one. Leave it empty to keep the page on the
+  server, reached over an SSH tunnel. With a domain, the page is served over HTTPS (section 6).
+- **your name**, as the family says it, which becomes the first admin.
 
-Three things are left deliberately empty, because nobody can know them before the bot is
-running: `DIGEST_CHAT_ID`, `GOOGLE_CALENDAR_ID` and the Google token. Section 5 fills them in.
+Beyond those two it asks only yes-or-no questions before it changes the machine: whether to
+install the service, whether to schedule backups, and, with a domain, whether to set up Caddy.
+Everything else it decides for you, and all of it can be changed on the page later:
+
+- The web page is on, with a family password of at least twelve characters. It makes one up and
+  **prints it once**: write it down. If it scrolled past, `sudo grep WEB_PASSWORD
+  /opt/familydb/.env` shows it; that file is the only other place it is. To choose your own,
+  run `sudo WEB_PASSWORD='...' bash .../bootstrap.sh ...` instead, and to change it later, RUNBOOK
+  section 12.
+- The timezone is the machine's.
+- Web lookups are on, so new ideas get their address and opening hours filled in.
+- The weekend digest goes to the chat on the web page, which needs no setting up.
+- With a domain, it turns on HTTPS through Caddy. On this, the virtualenv path, it asks before
+  installing Caddy with apt and writing `/etc/caddy/Caddyfile` for your domain.
+- `data/` is made readable by the `familydb` user alone, and it asks before scheduling a nightly
+  backup at 03:15 in root's crontab, keeping two weeks (installing cron if the machine has none).
 
 It finishes by starting the service and running `familydb doctor`, which prints a line per
 check. A `✓` is something that was looked at and is fine. A `!` is usually something not set up
-yet, which is normal on a first install; Telegram, the calendar and the digest are all `!`
-until you do section 5. A `✗` must be fixed before anything works.
+yet, which is normal on a first install: Telegram and the calendar are `!` until you do section
+5. On a first install the model key is a `✗` until you type one on the page; any other `✗` must
+be fixed before anything works. The last thing it prints is the page's address.
 
 A transcript of the whole run is at `/var/log/familydb-bootstrap.log`, and how far it got is
 at `/var/log/familydb-bootstrap.progress`. Running it again is safe: it installs what is
@@ -270,58 +315,71 @@ missing, leaves an existing `/opt/familydb` alone, and says where the last run s
 
 ## 5. Finish the setup
 
-### The web page, over an SSH tunnel
+Everything in this section is done on the web page, and none of it needs a file edited or a
+restart. The one exception is the laptop route for Google Calendar, kept as a fallback.
 
-If you turned the page on, it is bound to `127.0.0.1` and reaches nothing but the server
-itself. That is the right default, and you can still use it from your own computer without
-opening a single port. From your own computer:
+### Open the page
+
+With a domain, go to `https://your.domain/` once the domain points at the server and ports 80
+and 443 are open (section 6).
+
+Without one, the page is bound to `127.0.0.1` and reaches nothing but the server itself. That
+is the safe default, and you can still use it from your own computer without opening a single
+port. From your own computer:
 
 ```bash
 ssh -L 8080:127.0.0.1:8080 sam@your-server
 ```
 
-Leave that open and go to `http://127.0.0.1:8080/` in a browser. Sign in with the family
-password the installer printed. Everything below can be done on `/settings` instead of in
-`.env`, and most settings changed there take effect on the next message; adding or changing the Telegram bot token requires restarting FamilyDB
-(RUNBOOK section 11).
+Leave that open and go to `http://127.0.0.1:8080/` in a browser.
 
-### The keys
+Sign in with the family password the installer printed. The home page has a **Finish setting
+up** list of what is missing, most important first, and each line links to where it is done.
+Work down it; it disappears when everything is done. The rest of this section is those lines
+in more detail.
 
-If you skipped the keys during the install, `/settings` is where to type them. One consequence
-worth knowing: a key stored there lives in `data/familydb.sqlite3`, so it is in every backup you
-take, and a key in `.env` is not. Either is fine on a machine you control; if the backups go
-somewhere you do not, keep the keys in `.env` (RUNBOOK sections 7 and 11).
+### A model key
 
-### Telegram
+Settings, **API keys**. Paste the key for the company that answers (OpenAI, unless you changed
+it) and press Save keys. It takes effect on the next message. One consequence worth knowing: a
+key stored there lives in `data/familydb.sqlite3`, so it is in every backup, and a key in `.env`
+is not. Either is fine on a machine you control; if the backups go somewhere you do not, put the
+keys in `.env` instead and restart (RUNBOOK sections 7 and 11). The page never shows a key back
+except through "See a key", which asks for the family password again.
 
-RUNBOOK section 4 is the full version. In short: `/newbot` to @BotFather, copy the token into
-`TELEGRAM_BOT_TOKEN` in `.env` or onto `/settings`, then restart, because the Telegram
-connection is opened once when the service starts:
+Then check the daily spending limit under **What it may spend**: $2.00 a day by default, an
+estimate across every model call. Once it is used up the bot says so and stops asking a model
+until midnight. 0 turns it off.
 
-```bash
-sudo systemctl restart familydb
-```
+### Where home is
 
-Then each person messages the bot. The reply tells them their id on that channel, and you add
-them with it:
-
-```bash
-cd /opt/familydb
-sudo -u familydb .venv/bin/familydb members add "Jo" --role member \
-  --channel telegram --channel-user-id 12345678
-```
-
-Kids need no channel: `--role kid` is enough for them to be named as participants. For a family
-group, `/setprivacy` → Disable in BotFather, then add the bot to the group.
+Settings, **Home**. Type the home area as you would tell someone, such as `Vancouver, WA`, leave
+latitude and longitude empty, and save. The page looks the place up on OpenStreetMap's map,
+fills the coordinates in, and says what it found. If it finds nothing, or the wrong town, type
+the coordinates yourself; typed ones win. Units and the timezone are in the same group.
 
 ### Google Calendar
 
-RUNBOOK section 5 has the Google Cloud side, and one detail there is worth repeating because
-it bites a week later: set the OAuth consent screen to **In production**. Left in Testing,
-refresh tokens expire after seven days and the bot quietly stops writing to the calendar every
-week.
+The Google Cloud side is done once, in a browser. RUNBOOK section 5 has it step by step, and the
+settings page repeats it: a project, the Google Calendar API turned on, the OAuth consent screen
+set to External and **In production**, and an OAuth client of type **Desktop app**, whose JSON
+you download. The "In production" part bites a week later if you miss it: left in Testing,
+refresh tokens expire after seven days and the bot quietly stops writing to the calendar.
 
-The sign-in needs a browser, so it happens on your laptop and not on the server:
+Then, on the settings page under **Google Calendar**:
+
+1. Paste the client's JSON and press **Get the consent link**.
+2. Open the link, sign in as the account that owns the family calendar, and allow access. Google
+   may warn that the app is unverified; it is your own, so go on.
+3. Google sends the browser to an address starting `http://127.0.0.1:53682/`, which **will not
+   load**. That is expected. Copy the whole address from the address bar, paste it into the page,
+   and press **Connect**. Do it within a quarter of an hour and without restarting the bot in
+   between, or start again.
+4. Choose the family calendar from the list. Calendars you can only read are marked, because
+   plans cannot be added to them.
+
+This way of connecting has not yet been tried against a live Google account, so try it first,
+and if it will not connect, do the sign-in on a laptop instead:
 
 ```bash
 uv run familydb google auth --client-secrets ~/Downloads/client_secret_XXX.json
@@ -336,55 +394,47 @@ sudo install -o familydb -g familydb -m 600 /tmp/google_token.json /opt/familydb
 rm /tmp/google_token.json
 ```
 
-Put the calendar id in `GOOGLE_CALENDAR_ID` (`.env` or `/settings`), restart, and check:
+Put the calendar id in the **Google calendar id** box (under Home) and restart
+(`sudo systemctl restart familydb`). Either way, check it:
 
 ```bash
 cd /opt/familydb && sudo -u familydb .venv/bin/familydb google events
 ```
 
-### The chat id for the digest
+### Telegram
 
-The Thursday digest needs the family group's chat id, which only exists once the group does.
-Group ids are negative numbers. Once somebody has written in the group:
+RUNBOOK section 4 is the full version. In short: send `/newbot` to @BotFather, copy the token it
+gives you, and paste it on the settings page under **API keys** as the Telegram bot token. It
+takes effect within seconds. `/status` then says "connected as @yourbot"; if it says "the token
+was refused by Telegram", the token was mistyped.
 
-```bash
-sudo -u familydb sqlite3 /opt/familydb/data/familydb.sqlite3 \
-  "select distinct chat_id from messages where channel = 'telegram'"
-```
+Then each person sends the bot a message. It will not answer them yet, but it notes who asked:
+the **Family** page lists them under "Asked to talk to the bot", with their Telegram name and a
+button to add them (it keeps who and when, never what they said, and forgets them after a
+month). For someone already on the list, press Change beside their name instead and type the id
+the bot's reply gave them. Their next message gets a real answer. Kids need no id: the kid role is enough for them to be named as
+participants. For a family group, `/setprivacy` → Disable in BotFather, then add the bot to the
+group.
 
-Put it in `DIGEST_CHAT_ID` and check with `familydb digest`, which prints the schedule, or
-`familydb digest --now`, which posts one immediately. RUNBOOK section 9.
+### The weekend digest
+
+The Thursday digest goes to the chat on the web page, which works from the first week. To send
+it to the family's Telegram group instead, add the bot to the group and have somebody on the
+family list mention it there once (`@yourbot hello`). Then the **Digest chat** box on the
+settings page (under "When it speaks first") offers that group, by the time it was last written
+in; pick it and save. The day and the hour are in the same place. `familydb digest` prints the schedule and `familydb digest --now` posts
+one immediately. RUNBOOK section 9.
 
 ## 6. Putting the web page on the internet properly
 
-Only do this if you want it: the tunnel in section 5 is safer and costs nothing. If you do,
-plain HTTP would send the family password in the clear, so it goes behind Caddy with a real
-certificate.
+The tunnel in section 5 is the safest way and costs nothing. A domain is what lets the family
+use the page from their phones. Plain HTTP would send the family password in the clear, so with
+a domain the page goes behind Caddy with a real certificate, and the installer sets that up.
 
-**DNS.** An A record for `familydb.example.com` pointing at the server's address, and an AAAA
-record if it has IPv6. Check it has propagated before you start Caddy, or the certificate
-request fails: `dig +short familydb.example.com`.
-
-**`.env`:**
-
-```
-WEB_ENABLED=true
-WEB_HOST=0.0.0.0
-WEB_PASSWORD=a-long-random-password
-WEB_TRUST_PROXY=true
-WEB_DOMAIN=familydb.example.com
-```
-
-**Caddy.** The `tls` profile is part of `docker-compose.yml`, so this is the Docker path:
-
-```bash
-cd /opt/familydb
-sudo docker compose --profile tls up -d
-sudo docker compose logs -f caddy
-```
-
-On the virtualenv path there is no profile to start; install Caddy or nginx yourself, proxy to
-`127.0.0.1:8080`, and leave `WEB_HOST=127.0.0.1` so nothing but the proxy can reach the page.
+**DNS first.** An A record for `familydb.example.com` pointing at the server's address, and an
+AAAA record if it has IPv6. Check it has propagated before Caddy asks for a certificate, or the
+request fails: `dig +short familydb.example.com`. Then give that name when the installer asks
+for a domain.
 
 **The firewall.** Open 80 and 443, and nothing else:
 
@@ -393,20 +443,48 @@ sudo ufw allow 80,443/tcp
 sudo ufw status
 ```
 
-Do not open 8080. Compose publishes the page to `127.0.0.1` so that Caddy, and only Caddy, can
-reach it; the firewall is the second lock on the same door.
+Do not open 8080. The page listens on `127.0.0.1` so that Caddy, and only Caddy, can reach it;
+the firewall is the second lock on the same door.
 
-`WEB_TRUST_PROXY=true` makes the page read the real visitor address and the HTTPS scheme from
-Caddy's headers, and marks the login cookie `Secure`. Only turn it on with a proxy actually in
-front, because it means trusting those headers.
+**What the installer wrote.** In `.env`:
+
+```
+WEB_ENABLED=true
+WEB_HOST=127.0.0.1
+WEB_PASSWORD=...
+WEB_TRUST_PROXY=true
+WEB_DOMAIN=familydb.example.com
+```
+
+and, if you said yes, `/etc/caddy/Caddyfile` from `deploy/Caddyfile` with your domain in it.
+Caddy fetches the certificate itself once the domain points at the server and the ports are
+open; `sudo journalctl -u caddy -n 50` says how that went. On the Docker path it writes
+`COMPOSE_PROFILES=tls` instead, so every `docker compose up -d` also starts a Caddy container.
+If nginx is already on the machine, `deploy/nginx-familydb.conf` does the same job with a
+certificate from certbot; the steps are at the top of that file.
+
+`WEB_TRUST_PROXY=true` makes the page believe the forwarding headers from exactly one proxy
+(Caddy on this machine, or the Caddy container on the Docker path), to learn the real visitor
+address and that the connection was HTTPS, and marks the login cookie `Secure`. Behind a proxy
+the page will not serve without a password at all.
+
+**Adding a domain later.** If you installed without one, point the domain here and open the
+ports (section 2), then `sudoedit /opt/familydb/.env` (the file is the service
+user's alone) and fill in the two lines already there: `WEB_DOMAIN=your.domain` and
+`WEB_TRUST_PROXY=true`. Set up Caddy as the top of `deploy/Caddyfile`
+says (`sudo apt install caddy`, copy the file, put your domain in it, reload Caddy), open the
+firewall as above, and `sudo systemctl restart familydb`. On the Docker path, add
+`COMPOSE_PROFILES=tls` as well and run `docker compose up -d` instead of installing Caddy.
 
 **The warning worth reading twice.** One shared password is all that stands between a stranger
 and your API bill. Signing in is the whole bot: chatting with it spends tokens, the forms add and
 change ideas and put things on the family calendar, the Family page decides who may message the
-bot on Telegram, and the settings page can change which model answers, read the API keys back,
-and point the bot at a different calendar. Make the password long, and look at `/status` now
-and then for a month that does not look like yours. RUNBOOK section 10 has what else protects
-the page: rate limits, lockouts, CSRF tokens and a content security policy.
+bot on Telegram, and the settings page can change which model answers, raise the spending
+limit, show a key to anyone who knows the password, and point the bot at a different calendar.
+Make the password long, set a spending limit on the API key with the provider, and look at
+`/status` now and then for a month that does not look like yours. RUNBOOK section 10 has what
+else protects the page: lockouts, CSRF tokens and a content security policy. If a phone goes
+missing, "Sign everyone out" on the settings page ends every sign-in on every device.
 
 ## 7. Check it works end to end
 
@@ -419,15 +497,16 @@ sudo /opt/familydb/scripts/maintain.sh check
 That runs `familydb doctor`, which checks the settings, `.env`'s permissions, the disk, the
 database and its schema, who is in the family, the keys, the models, Telegram, the calendar,
 the weather, the lookups, the digest, the web page and the service, and prints a fix under
-anything that is wrong. `--online` also asks the model API and Telegram whether the keys
-actually work, which costs nothing but a token count:
+anything that is wrong. `--online` also asks Telegram whether its token works, and asks Claude or
+Gemini whether their key works by counting tokens, which is free. OpenAI, the default, has no
+free way to ask, so there the first real message is the check:
 
 ```bash
 cd /opt/familydb
 sudo -u familydb env HOME=/opt/familydb .venv/bin/familydb doctor --online
 ```
 
-Then a real message, either from a phone over Telegram or from the server:
+Then a real message, on the page's Chat, from a phone over Telegram, or from the server:
 
 ```bash
 cd /opt/familydb
@@ -440,8 +519,9 @@ sudo -u familydb .venv/bin/familydb db status
 working and most of each message is not being paid for twice. If it stays zero, section 10.
 
 Finally `/status` in the browser: which model answers chat and which does the lookups, whether
-each key is set and where it came from, what is connected, what the last thirty days cost, and
-what is waiting. It asks nothing of a model, so refreshing it is free.
+each key is set and where it came from, whether Telegram is connected, what else is connected,
+what today has cost against the daily limit, what the last thirty days cost per purpose and per
+model, which part of each request the tokens went on, and what is waiting. It asks nothing of a model, so refreshing it is free.
 
 ## 8. Day to day
 
@@ -454,60 +534,79 @@ sudo /opt/familydb/scripts/maintain.sh logs 200           # follow the log
 sudo /opt/familydb/scripts/maintain.sh restart
 sudo /opt/familydb/scripts/maintain.sh backup
 sudo /opt/familydb/scripts/maintain.sh restore FILE       # stops it, puts it back, starts it
-sudo /opt/familydb/scripts/maintain.sh upgrade            # newest release, backup taken first
+sudo /opt/familydb/scripts/maintain.sh upgrade            # newer code, backup taken first
 ```
 
 `restore` backs up the database it is about to replace, so a restore can itself be undone.
-`upgrade` takes a backup, fetches the newest release tag, reinstalls the locked dependencies,
-migrates and restarts, and prints the command to go back to the previous release if it went
-badly.
+`upgrade` takes a backup, fetches, moves to the newer code, reinstalls the locked dependencies,
+migrates and restarts, and prints the command to go back if it went badly. It follows the same
+rule as bootstrap: the default branch while `CHANGELOG.md` marks the newest version "in
+progress", and the newest release tag once that version has a date. It only ever moves forward:
+if the target does not contain what is installed now, it refuses and changes nothing. Do not use
+`git pull` instead; the checkout is on a detached commit, where it fails.
 
 **Upgrades on a private repository.** `upgrade` fetches from `origin`, which needs a credential.
 
 If you installed with `--deploy-key`, bootstrap already wired it up: it left the SSH remote in
 place and recorded the key's path in the checkout's `core.sshCommand`, so upgrades work as long
-as that key file stays where it is. Keep it somewhere durable, such as `/root/familydb_deploy`,
-rather than in the home directory of an account you might remove.
+as that key file stays where it is (`/root/familydb_deploy`, if you followed section 3).
 
-If you installed with a token, bootstrap deliberately did not write it down, so there is no
-credential to fetch with. Either point the checkout at a deploy key once:
+If you installed with a token, bootstrap deliberately did not write it down, so give it again
+for each upgrade; it is used for that fetch and not kept:
 
 ```bash
-sudo install -m 600 -o root -g root ~/.ssh/familydb_deploy /root/familydb_deploy
+read -rs GITHUB_TOKEN && export GITHUB_TOKEN
+sudo --preserve-env=GITHUB_TOKEN /opt/familydb/scripts/maintain.sh upgrade
+```
+
+Tokens expire. To stop needing one, make a deploy key as in section 3 and point the checkout at
+it once:
+
+```bash
 sudo git -C /opt/familydb remote set-url origin git@github.com:atate911/FamilyDB.git
 sudo git -C /opt/familydb config core.sshCommand \
   "ssh -i /root/familydb_deploy -o IdentitiesOnly=yes"
 sudo git -C /opt/familydb fetch --tags origin      # should now work
 ```
 
-or fetch once with the token, without storing it:
+If you brought a copy yourself there is nothing to fetch from at all. Take a backup, make a new
+archive as in section 3, copy it across, and unpack it over the install; `.env` and `data/` are
+not in the archive, so they are left as they are. Then run the installer again, which
+reinstalls the dependencies, migrates and restarts:
 
 ```bash
-sudo git -C /opt/familydb -c http.extraheader="AUTHORIZATION: bearer $TOKEN" fetch --tags origin
+sudo /opt/familydb/scripts/maintain.sh backup
+sudo tar -xzf ~/familydb.tar.gz -C /opt/familydb --strip-components=1 --no-same-owner
+sudo bash /opt/familydb/scripts/install.sh
 ```
-
-If you brought a copy yourself there is nothing to fetch from at all: copy a newer checkout over
-the top, keeping `.env` and `data/`, then run `scripts/install.sh` again. `upgrade` says all of
-this itself when a fetch fails, so you do not have to remember it. RUNBOOK section 8 covers
-upgrading by hand.
+ `upgrade` says all of
+this itself when a fetch fails, so you do not have to remember it. RUNBOOK section 8 says
+which version an upgrade moves to.
 
 **Backups, nightly and off the machine.** The database is one file and everything the family
-has ever said is in it:
+has ever said is in it. If you said yes during the install, the nightly backup is already
+scheduled; check, or schedule it now:
 
 ```bash
-sudo /opt/familydb/scripts/maintain.sh schedule-backups --keep-days 14
 sudo crontab -u root -l
+sudo /opt/familydb/scripts/maintain.sh schedule-backups --keep-days 14
 ```
 
-That adds one line to root's crontab, for either Docker or systemd: a safe SQLite online
-backup at 03:15 followed by pruning files older than `--keep-days` only if the backup succeeds.
-An older schedule in the `familydb` user's crontab is removed at the same time, so the two do
-not both run. A backup on the same disk is not a backup, so copy them off as well, from your
-own computer:
+That is one line in root's crontab, for either Docker or systemd: a safe SQLite online backup
+at 03:15 into `/opt/familydb/backups/`, followed by pruning files older than `--keep-days` only
+if the backup succeeds. Each backup is readable by its owner alone. An older schedule in the
+`familydb` user's crontab is removed at the same time, so the two do not both run. A backup on
+the same disk is not a backup, so copy them off as well. They are readable by root alone, so
+hand yourself a bundle on the server and fetch that:
 
 ```bash
-rsync -av sam@your-server:/opt/familydb/backups/ ~/familydb-backups/
+sudo tar -C /opt/familydb -czf ~/familydb-backups.tar.gz backups && sudo chown sam ~/familydb-backups.tar.gz
+scp sam@your-server:familydb-backups.tar.gz .       # on your own computer
 ```
+
+**The family password** lives in `.env`, not on the page, so that a stolen sign-in cannot change
+it: `sudoedit /opt/familydb/.env`, change `WEB_PASSWORD`, then
+`sudo systemctl restart familydb`. Everyone signs in again with the new one.
 
 RUNBOOK section 7 covers restoring by hand and what is and is not inside a backup; section 12
 covers journald limits, disk, and what to do when a secret gets out.
@@ -577,11 +676,11 @@ nothing was fetched. Bootstrap removes the half-made directory, so there is noth
 *How to check:*
 
 ```bash
-ssh -T git@github.com -i ~/.ssh/familydb_deploy     # names the repository if the key works
+sudo ssh -T git@github.com -i /root/familydb_deploy   # names the repository if the key works
 git ls-remote https://x-access-token:$GITHUB_TOKEN@github.com/atate911/FamilyDB.git | head -1
 ```
 
-*How to fix:* a deploy key must be the **private** half (`~/.ssh/familydb_deploy`, not the
+*How to fix:* a deploy key must be the **private** half (`/root/familydb_deploy`, not the
 `.pub`) and its public half must be on **this** repository's deploy keys, not on your account.
 A token must not have expired and must have Contents: Read on this repository. If neither can
 be made to work from the server, fall back to option 3 in section 3 and copy the code across
@@ -772,11 +871,13 @@ of those succeeds.
 ```bash
 cd /opt/familydb
 sudo -u familydb env HOME=/opt/familydb .venv/bin/familydb doctor --online
-curl -sS -o /dev/null -w '%{http_code}\n' https://api.anthropic.com/v1/models
+curl -sS -o /dev/null -w '%{http_code}\n' https://api.openai.com/v1/models   # 401 means reachable
 sudo journalctl -u familydb -n 50 --no-pager | grep -i error
 ```
 
-*How to fix:* a wrong key goes in `.env` or on `/settings`, where it takes effect immediately.
+*How to fix:* a wrong key goes on `/settings`, where it takes effect immediately, or in `.env`.
+If the reply is instead "Today's spending limit ... is used up", nothing is wrong: the daily
+limit was reached, and RUNBOOK section 13 says what to do.
 A network failure is usually DNS on a freshly booted VPS (`ping -c1 1.1.1.1`, then
 `cat /etc/resolv.conf`) or a clock more than a day out, which breaks every certificate
 (`date -u`, then `sudo timedatectl set-ntp true`). Retry the backlog by hand with
@@ -801,7 +902,8 @@ grep -E '^WEB_(ENABLED|HOST|PORT)=' /opt/familydb/.env
 *How to fix:* on the virtualenv path, set `WEB_HOST=0.0.0.0` and a password of at least twelve
 characters, then restart. On the Docker path change the `ports` line in `docker-compose.yml`
 from `"127.0.0.1:8080:8080"` to `"8080:8080"` as well — both have to change. Then let the
-firewall through. On a machine facing the internet, do section 6 instead and leave 8080 shut:
+firewall through. On a machine facing the internet, give it a domain instead (section 6) and
+leave 8080 shut:
 the page refuses to serve off the loopback with no password at all, unless you set
 `WEB_ALLOW_NO_PASSWORD=true` on purpose.
 
@@ -823,7 +925,8 @@ sudo journalctl -u familydb -n 50 --no-pager | grep -i web
 *How to fix:* make sure `data/` is writable by the bot's user, or set `WEB_SECRET_KEY` in
 `.env`, which is also what to do if you run the page in more than one process. Behind Caddy,
 `WEB_TRUST_PROXY` must be `true` or the `Secure` cookie is never set. Changing `WEB_PASSWORD`
-ends every session opened with the old one, on purpose, so everybody signs in once after that.
+or pressing "Sign everyone out" ends every session, on purpose, so everybody signs in once after
+that.
 
 ### `cache_read` stays 0
 

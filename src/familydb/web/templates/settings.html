@@ -25,7 +25,13 @@
         value="{{ entry.value }}"
         placeholder="{{ entry.placeholder }}"
         {% if one.kind in ("int", "float") %}inputmode="decimal"{% endif %}
+        {% if entry.offers %}list="s-{{ one.key }}" autocomplete="off"{% endif %}
       />
+      {% if entry.offers %}
+        <datalist id="s-{{ one.key }}">
+          {% for value, what in entry.offers %}<option value="{{ value }}">{{ what }}</option>{% endfor %}
+        </datalist>
+      {% endif %}
     {% endif %}
     {% if entry.problem %}
       <p class="error" role="alert">{{ entry.problem }}</p>
@@ -41,24 +47,9 @@
   <p class="muted">
     A box left empty uses whatever the environment or the <code>.env</code> file says, and that
     value is what the empty box shows. A change reaches the next message and the next page at
-    once, and the jobs that run on a schedule within a few minutes. The one exception is the
-    Telegram bot token: after adding, replacing or clearing it, restart FamilyDB so the bot
-    connects with the new one.
+    once, the jobs that run on a schedule within a few minutes, and a new Telegram bot token
+    within a few seconds: the status page says whether Telegram took it.
   </p>
-
-  <form method="post" action="{{ url_for('settings.save') }}">
-    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-    {% for group in groups %}
-      <section class="panel">
-        <h2>{{ group.title }}</h2>
-        {% if group.note %}<p class="muted">{{ group.note }}</p>{% endif %}
-        <div class="grid">
-          {% for entry in group.boxes %}{{ box(entry) }}{% endfor %}
-        </div>
-      </section>
-    {% endfor %}
-    <button type="submit">Save settings</button>
-  </form>
 
   <section class="panel" id="keys">
     <h2>API keys</h2>
@@ -98,6 +89,105 @@
     </form>
   </section>
 
+  <section class="panel" id="google">
+    <h2>Google Calendar</h2>
+    {% if google.calendars is not none %}
+      {% if google.calendars %}
+        <form method="post" action="{{ url_for('settings.google_calendar_choice') }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+          <fieldset>
+            <legend>Which calendar is the family's?</legend>
+            {% for row in google.calendars %}
+              <label class="inline">
+                <input
+                  type="radio"
+                  name="calendar_id"
+                  value="{{ row.id }}"
+                  {% if row.id == google.calendar or (not google.calendar and row.primary) %}checked{% endif %}
+                />
+                {{ row.summary or row.id }}{% if row.primary %} (your main one){% endif %}
+                {% if row.access not in ("owner", "writer") %}
+                  <span class="muted">· read-only, so plans cannot be added</span>
+                {% endif %}
+              </label>
+            {% endfor %}
+          </fieldset>
+          <button type="submit">Use this calendar</button>
+        </form>
+      {% else %}
+        <p class="muted">
+          Connected, but no calendars could be listed. Type the calendar's id into the
+          <em>Google calendar id</em> box above.
+        </p>
+      {% endif %}
+    {% elif google.consent_url %}
+      <ol class="steps">
+        <li>
+          <a href="{{ google.consent_url }}" target="_blank" rel="noopener noreferrer">
+            Open Google's consent page</a>, sign in as the account that owns the family calendar,
+          and allow access. Google may warn that the app is unverified: it is your own, so go on.
+        </li>
+        <li>
+          Google then sends the browser to an address starting <code>http://127.0.0.1:53682</code>,
+          which will not load. That is expected: copy the whole address from the address bar.
+        </li>
+      </ol>
+      <form method="post" action="{{ url_for('settings.google_finish') }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+        <div class="setting">
+          <label for="google-pasted">The address it sent you to</label>
+          <input id="google-pasted" name="pasted" type="text" autocomplete="off" required />
+        </div>
+        <button type="submit">Connect</button>
+      </form>
+    {% else %}
+      <p class="muted">
+        {% if google.connected and google.calendar %}
+          Connected, using <code>{{ google.calendar }}</code>. Connect again to change the account.
+        {% elif google.connected %}
+          Connected, but no calendar is chosen yet. Connect again to pick one.
+        {% else %}
+          Not connected, so plans are remembered here but never put on a calendar.
+        {% endif %}
+      </p>
+      <details {% if not google.connected %}open{% endif %}>
+        <summary>Connect Google Calendar</summary>
+        <p class="muted">
+          Once, in <a href="https://console.cloud.google.com/" target="_blank"
+          rel="noopener noreferrer">Google Cloud</a>: make a project, turn on the Google Calendar
+          API, set the OAuth consent screen to External and <strong>In production</strong> (left
+          in Testing, the connection stops working after a week), and create an OAuth client of
+          type <strong>Desktop app</strong>. Download its JSON and paste it here.
+        </p>
+        <form method="post" action="{{ url_for('settings.google_start') }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+          <div class="setting">
+            <label for="google-client">The client's JSON</label>
+            <textarea id="google-client" name="client" rows="4" required
+              placeholder='{"installed": {"client_id": "…", …}}'></textarea>
+          </div>
+          <button type="submit">Get the consent link</button>
+        </form>
+      </details>
+    {% endif %}
+  </section>
+
+  <form method="post" action="{{ url_for('settings.save') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    {% for group in groups %}
+      <section class="panel" id="{{ group.title|lower|replace(' ', '-') }}">
+        <h2>{{ group.title }}</h2>
+        {% if group.note %}<p class="muted">{{ group.note }}</p>{% endif %}
+        <div class="grid">
+          {% for entry in group.boxes %}{{ box(entry) }}{% endfor %}
+        </div>
+      </section>
+    {% endfor %}
+    <button type="submit">Save settings</button>
+  </form>
+
+
+
   <section class="panel">
     <h2>See a key</h2>
     <p class="muted">
@@ -129,6 +219,30 @@
         </div>
       {% endif %}
       <div class="actions"><button class="quiet" type="submit">Show it</button></div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2>Sign everyone out</h2>
+    <p class="muted">
+      Ends every sign-in on every phone and computer, this one included, and makes every browser
+      a stranger again. For a lost phone or a password shared too widely; change the password too
+      if it is the password that got out.
+    </p>
+    <form method="post" action="{{ url_for('settings.sign_out_everyone') }}" class="filters">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+      {% if needs_password %}
+        <div class="field">
+          <label for="everyone-password">Family password</label>
+          <input
+            id="everyone-password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+          />
+        </div>
+      {% endif %}
+      <div class="actions"><button class="quiet" type="submit">Sign everyone out</button></div>
     </form>
   </section>
 

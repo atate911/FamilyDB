@@ -13,6 +13,8 @@ class IncomingMessage:
     chat_id: str
     channel_user_id: str
     text: str
+    # How the channel names the sender, for offering to add a stranger. Never trusted for more.
+    sender_name: str | None = None
 
 
 @dataclass(frozen=True)

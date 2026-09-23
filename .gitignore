@@ -1,10 +1,15 @@
 # secrets and local data
 .env
+# the copies the installer keeps when it replaces .env hold the same keys
+.env.*
+!.env.example
 data/
 caddy/
+backups/
 *.db
 *.sqlite
 *.sqlite3
+*.spending-lock
 token.json
 
 # python

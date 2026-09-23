@@ -60,7 +60,8 @@ Where the code comes from (a private repository needs one of these)
                        With nothing else given, and this script inside a checkout, that
                        checkout is what gets installed.
   --repo URL           Clone from somewhere other than the default GitHub URL.
-  --ref NAME           Tag, branch or commit. Default: the newest release tag.
+  --ref NAME           Tag, branch or commit. Default: the newest release, or the default
+                       branch while CHANGELOG.md says the next version is in progress.
 
 Where it goes
   --target DIR         Default: /opt/familydb. Keep it out of a home directory: the service
@@ -77,9 +78,9 @@ How it runs
   --dry-run            Say what would happen; change nothing at all.
   -h, --help           This text.
 
-Anything else is passed to scripts/install.sh, which asks the questions. Its answers can come
-from the environment instead (ANTHROPIC_API_KEY, FAMILYDB_TZ, HOME_AREA, ADMIN_NAME,
-WEB_ENABLED, WEB_PASSWORD and more). See scripts/install.sh --help.
+Anything else is passed to scripts/install.sh, which asks the two questions. Its answers can
+come from the environment instead (WEB_DOMAIN, WEB_PASSWORD, ADMIN_NAME, BACKUPS and more).
+Everything else is set on the web page. See scripts/install.sh --help.
 
 Afterwards
   scripts/maintain.sh   backups, restores, upgrades, logs, status
@@ -88,8 +89,8 @@ Afterwards
 
 Examples
   sudo bash bootstrap.sh                          # ask, install, start
-  sudo bash bootstrap.sh --from ./FamilyDB        # code already copied onto this box
-  sudo GITHUB_TOKEN=ghp_... bash bootstrap.sh --ref v0.1.0
+  sudo bash bootstrap.sh --from ~/familydb.tar.gz # code already copied onto this box
+  sudo --preserve-env=GITHUB_TOKEN bash bootstrap.sh --ref NAME   # token exported first
   sudo bash bootstrap.sh --deploy-key /root/familydb_deploy --mode docker
 USAGE
 }
@@ -314,7 +315,10 @@ if [ "$MODE" = docker ]; then install_docker; else install_uv; fi
 checkpoint "runtime"
 
 # -------------------------------------------------------------- the code ----
-if [ -z "$SOURCE_DIR" ] && [ -f "${HERE}/../pyproject.toml" ] \
+# A deploy key or a token means "clone it", so upgrades have a credential: then the checkout this
+# runs from is only where the script came from.
+if [ -z "$SOURCE_DIR" ] && [ -z "$DEPLOY_KEY" ] && [ -z "${GITHUB_TOKEN:-}" ] \
+   && [ -f "${HERE}/../pyproject.toml" ] \
    && grep -q 'name = "familydb"' "${HERE}/../pyproject.toml" 2>/dev/null; then
   SOURCE_DIR="$(cd -- "${HERE}/.." && pwd -P)"
   note "Running from a checkout at ${SOURCE_DIR}, so that is what will be installed."
@@ -342,8 +346,11 @@ fetch_code() {
         return 0
       fi
       step "Copying ${SOURCE_DIR} into ${TARGET}" as_root cp -a "${SOURCE_DIR}/." "${TARGET}/"
+      # cp -a keeps the owner of the copy (you), and the code is meant to be root's.
+      step "Making the code root's" as_root chown -R root:root "$TARGET"
     elif [ -f "$SOURCE_DIR" ]; then
-      step "Unpacking ${SOURCE_DIR}" as_root tar -xzf "$SOURCE_DIR" -C "$TARGET" --strip-components=1
+      step "Unpacking ${SOURCE_DIR}" as_root tar -xzf "$SOURCE_DIR" -C "$TARGET" --strip-components=1 \
+        --no-same-owner
     else
       die "--from ${SOURCE_DIR} is neither a directory nor a file" \
           "Point it at a checkout, or at a .tar.gz of one."
@@ -406,12 +413,12 @@ fetch_code() {
     [ -n "${GITHUB_TOKEN:-}" ] && note "The token was not written down, so an upgrade will ask for one again."
   fi
   if [ -z "$REF" ]; then
-    local latest
-    latest="$(as_root git -C "$TARGET" tag -l 'v*' --sort=-v:refname 2>/dev/null | head -1 || true)"
-    if [ -n "$latest" ]; then
-      step "Checking out ${latest}, the newest release" as_root git -C "$TARGET" checkout --quiet "$latest"
-    else
-      note "No release tag was found, so this is the default branch."
+    local kind name
+    read -r kind name <<<"$(wanted_version "$TARGET")"
+    if [ "$kind" = tag ]; then
+      step "Checking out ${name}, the newest release" as_root git -C "$TARGET" checkout --quiet "$name"
+    elif [ "$kind" = branch ]; then
+      note "The newest version is still being built, so this is ${name}, where it is being built."
     fi
   fi
   forget_undo
@@ -449,8 +456,8 @@ fi
 
 # ------------------------------------------------------------- configure ----
 head2 "Configuring"
-say "scripts/install.sh takes over now. It asks a few questions, writes ${TARGET}/.env,"
-say "installs the dependencies, creates the database, and adds the first family member."
+say "scripts/install.sh takes over now. It asks where the web page will be reached and who you"
+say "are, writes ${TARGET}/.env, installs, and adds you as the first family member."
 say ""
 
 INSTALL_ARGS=("--mode" "$MODE")
@@ -462,7 +469,7 @@ FORWARD_VARS=(
   PROVIDER ANTHROPIC_API_KEY OPENAI_API_KEY GEMINI_API_KEY
   FAMILYDB_TZ HOME_AREA HOME_LAT HOME_LON WEATHER_UNITS
   TELEGRAM_BOT_TOKEN WEB_ENABLED WEB_HOST WEB_PORT WEB_PASSWORD WEB_TOOLS_ENABLED
-  ADMIN_NAME NO_COLOR TERM
+  WEB_DOMAIN DIGEST_CHAT_ID BACKUPS ADMIN_NAME NO_COLOR TERM
   HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy
   SSL_CERT_FILE SSL_CERT_DIR REQUESTS_CA_BUNDLE CURL_CA_BUNDLE GIT_SSL_CAINFO
 )
@@ -508,14 +515,14 @@ if [ "$START" = 1 ] && [ "$DRY_RUN" = 0 ]; then
       note ""
       note "What this usually means: a setting it will not accept, or a file it cannot write."
       note "What to try:"
-      note "  sudo -u ${SERVICE_USER} ${TARGET}/.venv/bin/familydb doctor"
+      note "  cd ${TARGET} && sudo -u ${SERVICE_USER} .venv/bin/familydb doctor"
       note "  sudo systemctl status familydb"
       note "Then: sudo systemctl restart familydb"
     fi
   else
     warn "No systemd unit was installed, so nothing has been started."
     note "The installer says why above. Run it in the foreground meanwhile:"
-    note "  sudo -u ${SERVICE_USER} ${TARGET}/.venv/bin/familydb run"
+    note "  cd ${TARGET} && sudo -u ${SERVICE_USER} .venv/bin/familydb run"
   fi
 fi
 checkpoint "started"
@@ -546,13 +553,16 @@ if [ "$DRY_RUN" = 1 ]; then
   exit 0
 fi
 
-WEB_LINE=""; host=""; port=""
+WEB_LINE=""; host=""; port=""; domain=""
 if as_root test -r "${TARGET}/.env"; then
-  read_env() { as_root grep -E "^${1}=" "${TARGET}/.env" 2>/dev/null | cut -d= -f2- | tr -d "'\"" || true; }
+  read_env() { as_root grep -E "^${1}=" "${TARGET}/.env" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d "'\"" || true; }
   enabled="$(read_env WEB_ENABLED)"
   port="$(read_env WEB_PORT)"
   host="$(read_env WEB_HOST)"
-  if [ "$enabled" = true ]; then
+  domain="$(read_env WEB_DOMAIN)"
+  if [ -n "$domain" ]; then
+    WEB_LINE="https://${domain}/"
+  elif [ "$enabled" = true ]; then
     shown="${host:-127.0.0.1}"
     case "$shown" in 0.0.0.0|::) shown="$(hostname -I 2>/dev/null | awk '{print $1}')" ;; esac
     WEB_LINE="http://${shown:-127.0.0.1}:${port:-8080}/"
@@ -561,30 +571,28 @@ fi
 
 if [ -n "$WEB_LINE" ]; then
   say "The web page: ${B}${WEB_LINE}${OFF}"
-  say "  Sign in with the family password, then finish the setup on /settings: the API keys,"
-  say "  where home is, and when it speaks first. /status says what is connected and what it costs."
-  case "${host:-}" in
-    127.0.0.1|localhost|"")
-      note "  It is bound to this machine only, which is the safe default. Reach it over SSH:"
-      note "    ssh -L ${port:-8080}:127.0.0.1:${port:-8080} $(id -un)@$(hostname -I 2>/dev/null | awk '{print $1}')"
-      note "  then open http://127.0.0.1:${port:-8080}/ on your own computer."
-      ;;
-  esac
+  say "  Sign in with the family password. Its home page lists what is left to set up, in the"
+  say "  order it matters: a model key, Telegram, Google Calendar and where home is."
+  if [ -n "$domain" ]; then
+    note "  The domain must point at this machine, with ports 80 and 443 open (sudo ufw allow 80,443/tcp)."
+  else
+    case "${host:-}" in
+      127.0.0.1|localhost|"")
+        note "  It is bound to this machine only, which is the safe default. Reach it over SSH:"
+        note "    ssh -L ${port:-8080}:127.0.0.1:${port:-8080} ${SUDO_USER:-$(id -un)}@$(hostname -I 2>/dev/null | awk '{print $1}')"
+        note "  then open http://127.0.0.1:${port:-8080}/ on your own computer."
+        ;;
+    esac
+  fi
   say ""
 fi
 
-say "Still to do, in the order they matter:"
-say "  1. A model key, if you have not given one: the /settings page, or ${TARGET}/.env"
-say "  2. Telegram, so the family can message it from their phones (RUNBOOK section 4)"
-say "  3. Google Calendar, from a machine with a browser (RUNBOOK section 5)"
-say "  4. The family group's chat id, for the weekly digest (RUNBOOK section 9)"
-say ""
 if [ "$MODE" = docker ]; then
   say "Watch it:      docker compose --project-directory ${TARGET} logs -f bot"
   say "Check it:      docker compose --project-directory ${TARGET} run --rm bot familydb doctor"
 else
   say "Watch it:      sudo journalctl -u familydb -f"
-  say "Check it:      sudo -u ${SERVICE_USER} ${TARGET}/.venv/bin/familydb doctor"
+  say "Check it:      cd ${TARGET} && sudo -u ${SERVICE_USER} .venv/bin/familydb doctor"
 fi
 say "Look after it: sudo ${TARGET}/scripts/maintain.sh --help"
 say "Remove it:     sudo ${TARGET}/scripts/uninstall.sh --help"

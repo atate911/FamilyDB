@@ -165,6 +165,13 @@ def update_idea(ctx: ToolContext, args: UpdateIdeaInput) -> dict[str, Any]:
     if not changes:
         raise ToolError("nothing to change: give at least one field besides id")
     with transaction(ctx.conn):
+        if ctx.idea_revision is not None:
+            current = ideas.get(ctx.conn, args.id)
+            if current is None or ideas.revision(current) != ctx.idea_revision:
+                raise ToolError(
+                    f"#{args.id} was changed since you opened it, so nothing was saved. "
+                    "Here it is as it is now; make your change again."
+                )
         idea = ideas.update(ctx.conn, args.id, changes, now=ctx.now_iso())
     if idea is None:
         raise ToolError(f"no idea #{args.id}")

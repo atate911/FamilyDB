@@ -37,7 +37,7 @@ def test_a_busy_provider_hands_over(settings, registry, ctx) -> None:
     result = _turn(paired, registry, ctx, busy, spare)
     assert result.status == "ok" and result.text == "Hi Sam!"
     assert result.provider == "openai"
-    assert spare_api.requests[0]["model"] == "gpt-5"  # the other provider's own model
+    assert spare_api.requests[0]["model"] == "gpt-6-luna"  # the other provider's own model
     assert calls.recent_llm_calls(ctx.conn)[0]["served_model"] == "gpt-5"
 
 
@@ -119,7 +119,7 @@ def test_the_whole_pipeline_hands_over(settings, clock, conn, family, monkeypatc
     reply = one_shot(App(only_openai, clock), "hi there", "Sam")
     assert reply.status == "ok" and reply.text == "Hello from the spare."
     assert len(api.requests) == 1
-    assert api.requests[0]["model"] == "gpt-5"
+    assert api.requests[0]["model"] == "gpt-6-luna"
 
 
 def test_the_spare_is_asked_with_its_own_model(settings, registry, ctx) -> None:
@@ -139,8 +139,8 @@ def test_the_spare_is_asked_with_its_own_model(settings, registry, ctx) -> None:
         fallback=build("openai", paired, api=spare_api),
     )
     assert turn.result.status == "ok" and turn.result.provider == "openai"
-    # gpt-5-mini, not claude-haiku: asking for the other one's model would be a 404.
-    assert spare_api.requests[0]["model"] == "gpt-5-mini"
+    # OpenAI's lookup model, not claude-haiku: asking for the other one's model would be a 404.
+    assert spare_api.requests[0]["model"] == "gpt-6-luna"
 
 
 def test_a_spare_that_also_fails_reports_the_first_failure(settings, registry, ctx) -> None:

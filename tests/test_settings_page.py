@@ -69,7 +69,8 @@ def test_saving_puts_it_in_force_at_once(page, conn) -> None:
     }
     assert page.app.settings.provider == "gemini"  # no restart, no wait
     after = page.get("/settings").text
-    assert "Saved. Changed: provider, web_tools_enabled, digest_hour." in after
+    # In the words on the page, not the setting names.
+    assert "Saved. Changed: Chat model company, Look ideas up on the web, Digest hour." in after
     assert 'value="gemini" selected' in after
 
 
@@ -236,3 +237,156 @@ def test_a_page_with_no_password_shows_a_key_to_whoever_can_reach_it(settings, c
     token = re.search(r'name="csrf" value="([^"]+)"', text).group(1)
     shown = client.post("/settings/reveal", data={"csrf": token, "key": "openai_api_key"})
     assert shown.status_code == 200 and "sk-home" in shown.text
+
+
+def test_a_model_box_suggests_models_without_limiting_them(page) -> None:
+    text = page.get("/settings").text
+    assert 'list="s-openai_model"' in text
+    assert '<datalist id="s-openai_model">' in text and '<option value="gpt-6-luna">' in text
+    # Anything typed is still taken: a model released next week has to fit.
+    page.post("/settings", data=_whole_form(page, openai_model="gpt-6-sol"))
+    assert page.app.settings.openai_model == "gpt-6-sol"
+
+
+def test_the_daily_limit_is_on_the_page(page) -> None:
+    page.post("/settings", data=_whole_form(page, daily_spend_limit="0.5"))
+    assert page.app.settings.daily_spend_limit == 0.5
+    assert "of the $0.50 daily limit" in page.get("/status").text
+
+
+class _Company:
+    """Stands in for a provider, answering only the question the settings page asks."""
+
+    def __init__(self, known: set[str] | None) -> None:
+        self.known = known
+        self.asked: list[str] = []
+
+    def model_exists(self, model: str) -> bool | None:
+        self.asked.append(model)
+        return None if self.known is None else model in self.known
+
+
+def test_a_model_the_company_does_not_have_is_refused(page, monkeypatch) -> None:
+    from familydb.web import settings as settings_view
+
+    company = _Company({"gpt-6-luna"})
+    monkeypatch.setattr(settings_view.providers, "build", lambda name, settings: company)
+    response = page.post("/settings", data=_whole_form(page, openai_model="gpt-6-lunar"))
+    assert response.status_code == 400
+    assert "OpenAI says it has no model called gpt-6-lunar. Check the spelling." in _errors(
+        response.text
+    )
+    assert page.app.settings.openai_model == "gpt-6-luna"
+    # A save that leaves the model alone does not ask again.
+    company.asked.clear()
+    page.post("/settings", data=_whole_form(page, effort="low"))
+    assert company.asked == []
+
+
+def test_a_company_that_cannot_be_asked_does_not_block_a_save(page, monkeypatch) -> None:
+    from familydb.web import settings as settings_view
+
+    monkeypatch.setattr(settings_view.providers, "build", lambda name, settings: _Company(None))
+    page.post("/settings", data=_whole_form(page, openai_model="gpt-6-sol"))
+    assert page.app.settings.openai_model == "gpt-6-sol"
+
+
+def test_signing_everyone_out_ends_every_session_and_needs_the_password(page) -> None:
+    from familydb.web.auth import DEVICE_COOKIE
+
+    other = page.application.test_client()  # the same family on another phone
+    assert other.post("/login", data={"password": PASSWORD}).status_code == 302
+    assert other.get("/").status_code == 200
+
+    refused = page.post(
+        "/settings/sign-out-everyone", data={"csrf": _token(page), "password": "not it"}
+    )
+    assert refused.status_code == 401 and other.get("/").status_code == 200
+
+    done = page.post(
+        "/settings/sign-out-everyone", data={"csrf": _token(page), "password": PASSWORD}
+    )
+    assert done.status_code == 302 and done.headers["Location"] == "/login"
+    assert other.get("/").status_code == 302  # signed out, with nothing done on that phone
+    assert page.get("/").status_code == 302  # and this one too
+    # The known-browser mark was signed with the old key, so it no longer spares anyone.
+    from familydb.web.auth import known_device
+
+    with page.application.test_request_context(
+        "/login", headers={"Cookie": f"{DEVICE_COOKIE}={other.get_cookie(DEVICE_COOKIE).value}"}
+    ):
+        assert not known_device(page.app.settings)
+
+
+def test_a_pinned_key_cannot_be_rotated_from_the_page(settings, clock, conn, family) -> None:
+    pinned = settings.model_copy(
+        update={"web_password": PASSWORD, "web_secret_key": "set in the environment file"}
+    )
+    client = create_app(App(pinned, clock)).test_client()
+    client.post("/login", data={"password": PASSWORD})
+    response = client.post(
+        "/settings/sign-out-everyone", data={"csrf": _token(client), "password": PASSWORD}
+    )
+    assert response.status_code == 409 and "WEB_SECRET_KEY" in response.text
+
+
+def test_the_timezone_is_set_on_the_page(page) -> None:
+    page.post("/settings", data=_whole_form(page, family_tz="Europe/London"))
+    assert page.app.settings.tz == "Europe/London"
+    refused = page.post("/settings", data=_whole_form(page, family_tz="Mars/Olympus_Mons"))
+    assert refused.status_code == 400 and page.app.settings.tz == "Europe/London"
+
+
+def test_a_home_area_typed_on_the_page_is_found_on_the_map(settings, clock, conn, family) -> None:
+    from familydb.integrations.geocode import GeoPoint
+    from tests.fakes import FakeGeocoder
+
+    point = GeoPoint(45.6387, -122.6615, "Vancouver, Washington", "nominatim")
+    app = App(
+        settings.model_copy(update={"web_password": PASSWORD}),
+        clock,
+        geocoder=FakeGeocoder(default=point),
+    )
+    client = create_app(app).test_client()
+    client.post("/login", data={"password": PASSWORD})
+    saved = client.post(
+        "/settings", data=_whole_form(client, home_area="Vancouver, WA"), follow_redirects=True
+    )
+    assert "Found Vancouver, Washington" in saved.text
+    assert (app.settings.home_lat, app.settings.home_lon) == (45.6387, -122.6615)
+    # Coordinates typed by hand win over the map.
+    client.post(
+        "/settings",
+        data=_whole_form(client, home_area="Portland, OR", home_lat="45.5", home_lon="-122.7"),
+    )
+    assert (app.settings.home_lat, app.settings.home_lon) == (45.5, -122.7)
+
+
+def test_the_home_page_lists_what_is_left_to_set_up(page) -> None:
+    text = page.get("/").text
+    assert "Finish setting up" in text
+    assert "Say where home is" in text and "Connect Google Calendar" in text
+    assert "Give it a model key" not in text  # the test settings have one
+
+
+def test_the_digest_chat_is_offered_from_the_chats_it_has_seen(page, conn) -> None:
+    from familydb.store import messages
+
+    with db.transaction(conn):
+        for chat_id, update in (("-100200", "1"), ("1001", "2")):
+            messages.insert_in(
+                conn,
+                channel="telegram",
+                channel_update_id=update,
+                chat_id=chat_id,
+                member_id=None,
+                text="hello",
+                now="2026-09-20T10:00:00Z",
+            )
+    offers = re.search(
+        r'<datalist id="s-digest_chat_id">(.*?)</datalist>', page.get("/settings").text, re.S
+    )
+    assert offers is not None
+    listed = offers.group(1)
+    assert 'value="web"' in listed and 'value="-100200">Telegram group' in listed
+    assert "private chat with Sam" in listed and "hello" not in listed

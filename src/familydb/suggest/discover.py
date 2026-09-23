@@ -12,6 +12,7 @@ import logging
 from datetime import date, timedelta
 from typing import Any
 
+from familydb.agent import providers
 from familydb.agent.worker import home_location, run_worker_turn
 from familydb.availability import web_tools_available
 from familydb.config import Settings
@@ -24,6 +25,7 @@ log = logging.getLogger(__name__)
 DISCOVER_CACHE_SECONDS = 12 * 3600
 NOTE_OFF = "web discovery off"
 NOTE_FAILED = "web discovery failed"
+NOTE_NO_KEY = "web discovery waits for a model key"
 
 
 def cache_key(window: tuple[date, date] | None) -> str:
@@ -53,6 +55,8 @@ def discover(ctx: ToolContext, context: Context, question: str) -> tuple[list[We
     """Finds for the window, plus a note for `skipped_checks` when discovery did not run."""
     if not web_tools_available(ctx.settings):
         return [], NOTE_OFF
+    if not providers.ready(ctx.settings, "worker", api=ctx.api):
+        return [], NOTE_NO_KEY
     request = render_discover_request(context, question, ctx.settings)
     key = (
         cache_key(context.window)

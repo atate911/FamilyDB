@@ -192,6 +192,8 @@ class GeminiProvider:
         if thoughts:
             # Thinking is billed as output, so it belongs in the same column as the answer.
             answer = (answer or 0) + thoughts
+        grounding = getattr(candidate, "grounding_metadata", None)
+        searches = len(getattr(grounding, "web_search_queries", None) or [])
         return ModelReply(
             stop=stop,
             text="\n".join(texts).strip(),
@@ -201,6 +203,7 @@ class GeminiProvider:
                 "cache_read_input_tokens": cached,
                 "cache_creation_input_tokens": None,
                 "output_tokens": answer,
+                "web_searches": searches,
             },
             model=getattr(response, "model_version", None),
             request_id=getattr(response, "response_id", None),
@@ -209,6 +212,23 @@ class GeminiProvider:
         )
 
     # -- the call -------------------------------------------------------------------------
+    def model_exists(self, model: str) -> bool | None:
+        try:
+            client = make_client(self.settings)
+        except AgentError:
+            return None
+        try:
+            client.models.get(model=model)
+        except genai_errors.ClientError as exc:
+            if _status(exc) == 404:
+                return False
+            log.info("could not ask Gemini about %s: %s", model, exc)
+            return None
+        except Exception as exc:  # unreachable: not an answer about the name
+            log.info("could not ask Gemini about %s: %s", model, exc)
+            return None
+        return True
+
     def count_tokens(self, request: TurnRequest) -> int:
         payload = self.payload(request)
         counted = self.api.count_tokens(model=payload["model"], contents=payload["contents"])

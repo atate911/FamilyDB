@@ -639,7 +639,7 @@ def test_lookups_work_on_openai_too(settings, clock, conn, family) -> None:
     assert places.get(conn, stored.place_id).booking_url == "https://example.com/tickets"
     # It was asked with the worker model, the hosted search and the two hand-back tools.
     request = api.requests[0]
-    assert request["model"] == "gpt-5-mini"
+    assert request["model"] == "gpt-6-luna"
     assert sorted(t.get("name", t["type"]) for t in request["tools"]) == [
         "save_place",
         "skip_place",
@@ -656,7 +656,7 @@ def test_a_mixed_setup_sends_each_surface_to_its_own_provider(settings, clock, c
     idea, _ = _captured_idea(conn, family)
     api = fakes.FakeResponsesAPI(*fakes.oa_enrich_script({"idea_id": idea.id, "name": "Hopscotch"}))
     assert run_enrichment(app, api=api)["done"] == 1
-    assert api.requests[0]["model"] == "gpt-5-mini"
+    assert api.requests[0]["model"] == "gpt-6-luna"
     assert app.provider("chat").name == "anthropic"
     assert app.provider("worker").name == "openai"
 
@@ -677,3 +677,17 @@ def test_lookups_work_on_gemini_too(settings, clock, conn, family) -> None:
         "skip_place",
     ]
     assert "google_search" in groups[1]  # it can search and hand back in the same turn
+
+
+def test_a_schedule_on_another_clock_is_a_different_schedule() -> None:
+    from zoneinfo import ZoneInfo
+
+    from apscheduler.triggers.cron import CronTrigger
+
+    from familydb.jobs.scheduler import same_schedule
+
+    here = CronTrigger(hour=18, timezone=ZoneInfo("America/Vancouver"))
+    again = CronTrigger(hour=18, timezone=ZoneInfo("America/Vancouver"))
+    there = CronTrigger(hour=18, timezone=ZoneInfo("Europe/London"))
+    assert same_schedule(here, again)
+    assert not same_schedule(here, there)

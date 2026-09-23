@@ -43,6 +43,9 @@ def run_digest(app: App, *, api: MessagesAPI | None = None) -> OutgoingMessage |
     if not digest_configured(settings):
         log.info("digest skipped: DIGEST_CHAT_ID is not set")
         return None
+    if not app.can_ask("chat", api=api):
+        log.info("digest skipped: there is no model key yet")
+        return None
     chat_id = settings.digest_chat_id or ""
     channel = digest_channel(chat_id)
     sender = app.senders.get(channel)

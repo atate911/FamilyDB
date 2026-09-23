@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import sqlite3
 import threading
 from collections.abc import Callable
@@ -55,6 +56,8 @@ class App:
         # sender is here rather than on the page so a web message can be retried, and a web
         # digest sent, by a process that is not serving the page.
         self.senders: dict[str, Callable[[str, str], None]] = {"web": lambda _chat, _text: None}
+        # What each long-running channel last said about itself, for the status page.
+        self.channel_states: dict[str, str] = {}
         # Web discovery results per window, kept for a while (see suggest/discover.py).
         self.discover_cache: dict[str, Any] = {}
         self.clock = clock or SystemClock(settings.tzinfo, southern=settings.southern_hemisphere)
@@ -107,6 +110,12 @@ class App:
 
         return providers.for_surface(self.settings, surface, api=api)
 
+    def can_ask(self, surface: str = "chat", api: Any = None) -> bool:
+        """Whether a model can be asked at all, which a fresh install without a key cannot."""
+        from familydb.agent import providers
+
+        return providers.ready(self.settings, surface, api=api)  # type: ignore[arg-type]
+
     def fallback(self, surface: str, primary: str) -> Any:
         """Somewhere else to ask when the chosen provider cannot take a message right now."""
         from familydb.agent import providers
@@ -157,6 +166,11 @@ class App:
             log.info("settings reloaded (%d stored)", len(values))
             return True
 
+    def forget_calendar(self) -> None:
+        """A new Google token was saved: build the calendar client again from it."""
+        if "calendar" not in self._given:
+            self._calendar = None
+
     def _forget_built(self) -> None:
         """Drop what was built from the settings that just changed, so it is built again.
 
@@ -168,7 +182,10 @@ class App:
         for name in ("calendar", "weather", "geocoder"):
             if name not in self._given:
                 setattr(self, f"_{name}", None)
-        if "clock" not in self._given and self.clock.southern != self.settings.southern_hemisphere:
+        if "clock" not in self._given and (
+            self.clock.southern != self.settings.southern_hemisphere
+            or self.clock.tz != self.settings.tzinfo
+        ):
             self.clock = SystemClock(
                 self.settings.tzinfo, southern=self.settings.southern_hemisphere
             )
@@ -211,9 +228,30 @@ def set_log_level(wanted: int) -> None:
         logging.getLogger(name).setLevel(transport)
 
 
+# A Telegram bot token travels in the request URL, which the HTTP transport logs at DEBUG. The
+# settings page can turn DEBUG on, so the token is taken out of every line instead of relying on
+# the level: with it, anyone who can read the journal could run the family's bot.
+TELEGRAM_TOKEN = re.compile(r"bot\d{5,}:[A-Za-z0-9_-]{20,}")
+
+
+class RedactSecrets(logging.Filter):
+    """Replaces a bot token in a log line with a marker. Attached to handlers, so it sees every
+    record whichever logger it came from."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        text = record.getMessage()
+        if TELEGRAM_TOKEN.search(text):
+            record.msg = TELEGRAM_TOKEN.sub("bot<token>", text)
+            record.args = None
+        return True
+
+
 def configure_logging(level: str) -> None:
     wanted = getattr(logging, level.upper(), logging.INFO)
     logging.basicConfig(level=wanted, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    for handler in logging.getLogger().handlers:
+        if not any(isinstance(one, RedactSecrets) for one in handler.filters):
+            handler.addFilter(RedactSecrets())
     # basicConfig does nothing once a handler exists, and this is called again after a reload.
     set_log_level(wanted)
 

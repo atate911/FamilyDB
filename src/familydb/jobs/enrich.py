@@ -7,7 +7,9 @@ import logging
 from contextlib import closing
 from typing import Any
 
+from familydb.agent import spending
 from familydb.agent.loop import MessagesAPI
+from familydb.agent.spending import SpendingLimitReached
 from familydb.agent.worker import WorkerTurn, home_location, run_worker_turn
 from familydb.app import App
 from familydb.availability import enrichment_available
@@ -131,7 +133,7 @@ def enrich_idea(app: App, conn: Any, idea: Idea, *, api: MessagesAPI | None = No
             user_location=home_location(app.settings),
         )
     except AgentError as exc:
-        if exc.retryable:
+        if exc.retryable or isinstance(exc, SpendingLimitReached):
             log.warning("enrichment of idea %s deferred: %s", idea.id, exc)
             return "deferred"
         _mark(conn, app, idea.id, "failed", f"worker: {exc}")
@@ -142,7 +144,7 @@ def enrich_idea(app: App, conn: Any, idea: Idea, *, api: MessagesAPI | None = No
         _mark(conn, app, idea.id, "failed", f"error: {type(exc).__name__}: {exc}")
         return "failed"
 
-    if turn.handed_back("save_place") or turn.handed_back("skip_place"):
+    if turn.handed_back():
         current = ideas.get(conn, idea.id)
         status = current.enrichment if current else "failed"
         if status == "done" and current is not None:
@@ -176,12 +178,19 @@ def run_enrichment(
         if not enrichment_available(app.settings):
             log.debug("enrichment skipped: web tools are off")
             return counts
+        if not app.can_ask("worker", api=api):
+            # Not a failure: the ideas wait, pending, and are looked up once a key is added.
+            log.debug("enrichment waits: there is no model key yet")
+            return counts
         if idea_id is not None:
             idea = ideas.get(conn, idea_id)
             batch = [idea] if idea is not None else []
         else:
             batch = ideas.pending_enrichment(conn, limit=limit or app.settings.enrich_batch)
         if not batch:
+            return counts
+        if spending.used_up(conn, app.settings, app.clock.now()):
+            log.debug("enrichment waits for tomorrow: the daily spending limit is used up")
             return counts
         for idea in batch:
             outcome = enrich_idea(app, conn, idea, api=api)

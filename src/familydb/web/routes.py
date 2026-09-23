@@ -94,6 +94,7 @@ def home() -> Response | str:
     with closing(app.connect()) as conn:
         seen = agenda.read(app, conn, today, today + timedelta(days=HOME_AHEAD_DAYS))
         everything = idea_store.list_all(conn)
+        unfinished = status_page.setup_steps(app, conn)
     coming = [entry for entry in seen.entries if entry.days()[-1] >= today][:HOME_PLANS]
     newest = sorted(everything, key=lambda idea: idea.created_at, reverse=True)[:HOME_IDEAS]
     return render_template(
@@ -106,6 +107,7 @@ def home() -> Response | str:
         idea_count=len(everything),
         restaurant_count=sum(1 for idea in everything if idea.kind == RESTAURANT_KIND),
         weekend_question=WEEKEND_QUESTION,
+        setup=unfinished,
     )
 
 
@@ -178,6 +180,7 @@ def _idea_form(record: Any = None) -> str:
     return render_template(
         "idea_form.html",
         idea=record,
+        revision=idea_store.revision(record) if record else None,
         kinds=sorted(set(kinds) | set(KIND_SUGGESTIONS)),
         statuses=STATUSES,
         settings=SETTINGS,

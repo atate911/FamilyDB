@@ -197,8 +197,9 @@ nav a[aria-current="page"] { color: var(--ink); font-weight: 700; box-shadow: in
 
 .hours { border-collapse: collapse; margin-top: 0.4rem; }
 .hours th { text-align: left; font-weight: 500; color: var(--muted); }
-.hours th, .hours td { padding: 0.15rem 0; }
-.hours th { padding-right: 1.25rem; }
+.hours th, .hours td { padding: 0.15rem 1rem 0.15rem 0; }
+/* A table with more columns than a phone has room for scrolls inside itself, not the page. */
+.scroll { overflow-x: auto; }
 
 h3 { font-size: 0.95rem; margin: 1.25rem 0 0.25rem; }
 .sources { font-size: 0.85rem; overflow-wrap: anywhere; }
@@ -408,3 +409,19 @@ table.month td.today time { border-radius: 50%; background: var(--accent); color
   .bar form { margin-left: auto; }
   .bar button.quiet { padding: 0.3rem 0.6rem; font-size: 0.9rem; }
 }
+
+/* Connecting Google Calendar on the settings page. */
+#google fieldset {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  margin: 0 0 0.75rem;
+  display: grid;
+  gap: 0.35rem;
+}
+#google textarea { width: 100%; resize: vertical; font-family: ui-monospace, monospace; }
+.steps { padding-left: 1.25rem; display: grid; gap: 0.5rem; }
+
+/* What is left to set up, on the home page until it is all done. */
+.setup { border-left: 4px solid var(--accent); }
+.setup ol { margin: 0; padding-left: 1.25rem; display: grid; gap: 0.35rem; }

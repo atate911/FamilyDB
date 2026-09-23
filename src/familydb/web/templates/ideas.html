@@ -52,7 +52,10 @@
   </p>
 
   {% if not rows %}
-    <p class="panel muted">Nothing here yet. Ideas arrive by messaging the bot.</p>
+    <p class="panel muted">
+      Nothing here yet. <a href="{{ url_for('web.new_idea') }}">Add one</a>, or tell the bot in the
+      chat.
+    </p>
   {% endif %}
 
   <ul class="cards">

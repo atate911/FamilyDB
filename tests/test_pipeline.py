@@ -207,3 +207,15 @@ def test_synthetic_messages_are_stored_deduped_and_fail_quietly(settings, clock,
     assert inbound.status == "failed" and inbound.member_id == family["sam"].id
     assert handle_synthetic(app, msg, family["sam"], api=api, conn=conn) is None  # seen
     assert len(api.requests) == 1
+
+
+def test_an_unknown_sender_is_listed_for_the_admin_without_what_they_said(
+    settings, clock, conn, family
+) -> None:
+    msg = IncomingMessage(
+        "telegram", "80", "chat-9", "5555", "secret words", sender_name="Robin @robin"
+    )
+    handle_incoming(_app(settings, clock), msg, api=fakes.FakeMessagesAPI(), conn=conn)
+    row = conn.execute("SELECT * FROM knocks").fetchone()
+    assert row["channel_user_id"] == "5555" and row["name"] == "Robin @robin"
+    assert "secret words" not in " ".join(str(value) for value in tuple(row))

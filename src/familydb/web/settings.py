@@ -13,7 +13,10 @@ since a password box is empty every time the page is drawn.
 from __future__ import annotations
 
 import logging
+import secrets
+import time
 from contextlib import closing
+from pathlib import Path
 from typing import Any
 
 from flask import (
@@ -25,16 +28,20 @@ from flask import (
     redirect,
     render_template,
     request,
+    session,
     url_for,
 )
 from pydantic import ValidationError
 
+from familydb.agent import providers
 from familydb.app import App
-from familydb.config import apply_overrides
+from familydb.config import Settings, apply_overrides
+from familydb.integrations import google_calendar as google
 from familydb.store import settings as settings_store
 from familydb.store.db import transaction
 from familydb.store.settings import SECRETS
-from familydb.web import auth, fields, views
+from familydb.web import auth, fields, keys, views
+from familydb.web import status as status_page
 
 log = logging.getLogger(__name__)
 
@@ -49,6 +56,16 @@ WRONG_PASSWORD = "That password is not right."
 LOCKED_OUT = "Too many tries. Wait a quarter of an hour."
 KEY_HAS_SPACES = "A key has no spaces in it. Check what was pasted."
 UNKNOWN_KEY = "There is no such key."
+UNKNOWN_MODEL = "{company} says it has no model called {name}. Check the spelling."
+# Which company each model box belongs to, so a new name can be checked with that company.
+MODEL_BOXES = {
+    "openai_model": ("openai", "OpenAI"),
+    "openai_worker_model": ("openai", "OpenAI"),
+    "anthropic_model": ("anthropic", "Anthropic"),
+    "worker_model": ("anthropic", "Anthropic"),
+    "gemini_model": ("gemini", "Google"),
+    "gemini_worker_model": ("gemini", "Google"),
+}
 KEY_LABELS = {
     "anthropic_api_key": "Claude (Anthropic)",
     "openai_api_key": "OpenAI",
@@ -78,6 +95,53 @@ def _save(values: dict[str, Any]) -> list[str]:
     return changed
 
 
+def unknown_models(values: dict[str, Any], stored: dict[str, Any], proposed: Settings) -> dict:
+    """The model names this save would introduce that their company says do not exist.
+
+    Asked only about a name that is changing, and only a definite no counts: a company that
+    cannot be reached, or has no key yet, is not a reason to refuse what was typed.
+    """
+    found: dict[str, str] = {}
+    for key, (company, label) in MODEL_BOXES.items():
+        name = values.get(key)
+        if not name or name == stored.get(key):
+            continue
+        if providers.build(company, proposed).model_exists(name) is False:
+            found[key] = UNKNOWN_MODEL.format(company=label, name=name)
+    return found
+
+
+NOT_ON_THE_MAP = "Could not find {area} on the map. Type its latitude and longitude as well."
+FOUND_HOME = "Found {label}, at {lat}, {lon}."
+
+
+def locate_home(values: dict[str, Any], stored: dict[str, Any]) -> tuple[dict[str, Any], str]:
+    """Coordinates for a home area typed on the page, looked up as the installer used to.
+
+    Only when the area is changing and no new coordinates were typed with it: coordinates typed
+    by hand win. Returns the coordinates to store, and a sentence saying what happened.
+    """
+    area = values.get("home_area")
+    if not area or area == stored.get("home_area"):
+        return {}, ""
+    typed = any(
+        values.get(key) is not None and values.get(key) != stored.get(key)
+        for key in ("home_lat", "home_lon")
+    )
+    if typed:
+        return {}, ""
+    try:
+        found = _app().geocoder.geocode(area)
+    except Exception as exc:  # a map service that is down is not a reason to refuse the save
+        log.warning("could not look up %s: %s", area, exc)
+        found = None
+    if found is None:
+        return {}, NOT_ON_THE_MAP.format(area=area)
+    lat, lon = round(found.lat, 4), round(found.lon, 4)
+    said = FOUND_HOME.format(label=found.label, lat=lat, lon=lon)
+    return {"home_lat": lat, "home_lon": lon}, said
+
+
 def problems_from(exc: ValidationError) -> dict[str, str]:
     """Pydantic's complaints, one sentence per box, in the words it used."""
     found: dict[str, str] = {}
@@ -85,6 +149,36 @@ def problems_from(exc: ValidationError) -> dict[str, str]:
         key = str(error["loc"][0]) if error["loc"] else ""
         found.setdefault(key, error["msg"])
     return found
+
+
+# Connecting Google from the page: the consent started, and the calendars found once it finished.
+# In memory, like the form tokens: a restart in the middle means starting the connection again.
+GOOGLE_KEY = "google_consent"
+CONSENT_MINUTES = 15
+GOOGLE_EXPIRED = "That connection was started too long ago, or before a restart. Start again."
+CALENDAR_SET = "Saved. The bot now uses {name}."
+
+
+def _consents() -> dict[str, dict[str, Any]]:
+    return current_app.config.setdefault("FAMILYDB_GOOGLE", {})
+
+
+def _pending() -> dict[str, Any] | None:
+    """This session's consent in progress, if it is recent enough to finish."""
+    found = _consents().get(session.get(GOOGLE_KEY, ""))
+    if found is None or time.monotonic() - found["started"] > CONSENT_MINUTES * 60:
+        return None
+    return found
+
+
+def google_panel(live: Any) -> dict[str, Any]:
+    pending = _pending()
+    return {
+        "connected": Path(live.google_token_path).exists(),
+        "calendar": live.google_calendar_id,
+        "consent_url": pending["url"] if pending and "calendars" not in pending else None,
+        "calendars": pending.get("calendars") if pending else None,
+    }
 
 
 def page(
@@ -108,6 +202,7 @@ def page(
     with closing(app.connect()) as conn:
         overrides = settings_store.overrides(conn)
         history = settings_store.history(conn, limit=HISTORY_LIMIT)
+        chats = status_page.digest_chats(conn, live.tzinfo)
     groups = [
         {
             "title": title,
@@ -119,6 +214,9 @@ def page(
                     "placeholder": fields.placeholder(one, getattr(base, one.key)),
                     "problem": (problems or {}).get(one.key),
                     "stored": one.key in overrides,
+                    "offers": chats
+                    if one.key == "digest_chat_id"
+                    else [(name, "") for name in one.suggested],
                 }
                 for one in group
             ],
@@ -134,7 +232,7 @@ def page(
             "problem": (problems or {}).get(name),
             "revealed": revealed[1] if revealed and revealed[0] == name else None,
         }
-        for name in SECRETS
+        for name in _key_order(live.provider)
     ]
     return (
         render_template(
@@ -145,6 +243,7 @@ def page(
             said=said,
             error=error,
             needs_password=auth.password_in_use(live),
+            google=google_panel(live),
         ),
         status,
     )
@@ -163,18 +262,22 @@ def save() -> Response | tuple[str, int]:
     values, problems = fields.read_form(request.form)
     typed = {one.key: request.form[one.key] for one in fields.FIELDS if one.key in request.form}
     if not problems:
-        proposed = {**_stored(), **values}
+        stored = _stored()
+        proposed = {**stored, **values}
         try:
             # Validate the whole configuration this would leave behind, not only the new boxes.
-            apply_overrides(
+            candidate = apply_overrides(
                 _app().base_settings,
                 {key: value for key, value in proposed.items() if value is not None},
             )
         except ValidationError as exc:
             problems = problems_from(exc)
+        else:
+            problems = unknown_models(values, stored, candidate)
     if problems:
         return page(problems=problems, error="Nothing was saved.", typed=typed, status=400)
-    flash(_said(_save(values)), NOTICE)
+    located, where = locate_home(values, stored)
+    flash(" ".join(part for part in (_said(_save({**values, **located})), where) if part), NOTICE)
     return redirect(url_for("settings.show"))
 
 
@@ -238,10 +341,118 @@ def reveal() -> tuple[str, int]:
     return page(revealed=(name, value), said=f"{KEY_LABELS[name]} is shown below, this once.")
 
 
+KEY_PINNED = (
+    "The signing key is set in WEB_SECRET_KEY, so only changing it there, and restarting, signs "
+    "everyone out."
+)
+
+
+@bp.post("/settings/sign-out-everyone")
+def sign_out_everyone() -> Response | tuple[str, int]:
+    """End every session, on every device, this one included, after the password is typed again.
+
+    For a phone that went missing or a password that was shared too widely: every login cookie
+    and every known-browser mark was signed with the key this replaces.
+    """
+    app = _app()
+    if (complaint := auth.refused()) is not None:
+        return page(error=complaint, status=400)
+    who = auth.client_address()
+    attempt = f"{who} reveal"
+    lockout = current_app.config["FAMILYDB_LOCKOUT"]
+    now = app.clock.now()
+    if lockout.locked(attempt, now):
+        return page(error=LOCKED_OUT, status=429)
+    if auth.password_in_use(app.settings):
+        if not auth.password_matches(app.settings, request.form.get("password", "")):
+            lockout.failed(attempt, now)
+            return page(error=WRONG_PASSWORD, status=401)
+        lockout.passed(attempt)
+    fresh = keys.rotate(app.settings)
+    if fresh is None:
+        return page(error=KEY_PINNED, status=409)
+    current_app.secret_key = fresh
+    session.clear()
+    log.warning("%s signed everyone out", who)
+    return redirect(url_for("auth.login"))
+
+
+@bp.post("/settings/google/start")
+def google_start() -> tuple[str, int]:
+    """Take the OAuth client pasted in, and give back Google's consent link."""
+    if (complaint := auth.refused()) is not None:
+        return page(error=complaint, status=400)
+    try:
+        config = google.client_config(request.form.get("client", ""))
+        url, flow, state = google.begin_consent(config)
+    except google.GoogleSetupError as exc:
+        return page(error=str(exc), status=400)
+    key = secrets.token_urlsafe(16)
+    consents = _consents()
+    for old in [k for k, v in consents.items() if time.monotonic() - v["started"] > 3600]:
+        consents.pop(old, None)
+    consents[key] = {"flow": flow, "state": state, "url": url, "started": time.monotonic()}
+    session[GOOGLE_KEY] = key
+    return page(said="Open the link below, allow access, then paste where it sends you.")
+
+
+@bp.post("/settings/google/finish")
+def google_finish() -> tuple[str, int]:
+    """Exchange the pasted address for a token, save it, and offer the calendars it can see."""
+    app = _app()
+    if (complaint := auth.refused()) is not None:
+        return page(error=complaint, status=400)
+    pending = _pending()
+    if pending is None:
+        return page(error=GOOGLE_EXPIRED, status=400)
+    try:
+        creds = google.finish_consent(
+            pending["flow"],
+            request.form.get("pasted", ""),
+            Path(app.settings.google_token_path),
+            state=pending["state"],
+        )
+        pending["calendars"] = google.list_calendars(creds)
+    except google.GoogleSetupError as exc:
+        return page(error=str(exc), status=400)
+    except Exception as exc:  # the token is saved; only listing the calendars failed
+        log.warning("connected to Google but could not list the calendars: %s", exc)
+        pending["calendars"] = []
+    app.forget_calendar()
+    log.info("Google Calendar connected from the page by %s", auth.client_address())
+    return page(said="Connected to Google. Choose the family calendar.")
+
+
+@bp.post("/settings/google/calendar")
+def google_calendar_choice() -> Response | tuple[str, int]:
+    """The calendar the bot keeps plans on, chosen from the ones the connection can see."""
+    if (complaint := auth.refused()) is not None:
+        return page(error=complaint, status=400)
+    pending = _pending()
+    offered = {row["id"]: row for row in (pending or {}).get("calendars") or []}
+    chosen = request.form.get("calendar_id", "")
+    if chosen not in offered:
+        return page(error=GOOGLE_EXPIRED, status=400)
+    _save({"google_calendar_id": chosen})
+    _consents().pop(session.pop(GOOGLE_KEY, ""), None)
+    flash(CALENDAR_SET.format(name=offered[chosen]["summary"] or chosen), NOTICE)
+    return redirect(url_for("settings.show"))
+
+
+def _key_order(provider: str) -> list[str]:
+    """The key of the company answering now first, as that is the one a new install needs."""
+    first = f"{provider}_api_key"
+    return sorted(SECRETS, key=lambda name: (name != first, name == "telegram_bot_token"))
+
+
 def _said(changed: list[str], *, keys: bool = False) -> str:
+    """What moved, in the words the page uses for it."""
     if not changed:
         return NOTHING_CHANGED
-    if keys:
-        labels = ", ".join(KEY_LABELS.get(name, name) for name in changed)
-        return SAVED.format(what=f"Changed: {labels}.")
-    return SAVED.format(what=f"Changed: {', '.join(changed)}.")
+    labels = [
+        KEY_LABELS.get(name, name)
+        if keys
+        else (fields.BY_KEY[name].label if name in fields.BY_KEY else name)
+        for name in changed
+    ]
+    return SAVED.format(what=f"Changed: {', '.join(labels)}.")

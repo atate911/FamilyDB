@@ -23,13 +23,17 @@ runner = CliRunner()
 def env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     monkeypatch.setenv("FAMILYDB_PATH", str(tmp_path / "cli.sqlite3"))
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.setenv("PROVIDER", "anthropic")  # the scripted fake speaks Claude's API
     monkeypatch.setenv("FAMILYDB_TZ", "America/Vancouver")
     monkeypatch.delenv("CONSOLE_MEMBER", raising=False)
     return tmp_path
 
 
 def _fake_client(*responses):
-    return SimpleNamespace(beta=SimpleNamespace(messages=fakes.FakeMessagesAPI(*responses)))
+    return SimpleNamespace(
+        beta=SimpleNamespace(messages=fakes.FakeMessagesAPI(*responses)),
+        close=lambda: None,  # the provider closes the one it builds to check for a key
+    )
 
 
 def test_version_flag() -> None:
@@ -64,7 +68,7 @@ def test_db_members_and_ideas_commands(env: Path) -> None:
     result = runner.invoke(app, ["tool", "add_idea", "--json", "{}"])
     assert result.exit_code == 1
     result = runner.invoke(app, ["db", "status"])
-    assert f"schema version: {len(db.list_migrations())}" in result.output
+    assert f"schema version: {db.list_migrations()[-1][0]}" in result.output
     assert "ideas: 1" in result.output
 
 
@@ -215,7 +219,7 @@ def test_config_says_where_each_setting_came_from(env: Path) -> None:
     assert lines["effort"] == "high  # set on the settings page"
     assert lines["gemini_api_key"] == "****  # set on the settings page"
     assert lines["anthropic_api_key"] == "****  # from the environment"  # the fixture sets it
-    assert lines["provider"] == "anthropic"  # nobody set it, so it is just the default
+    assert lines["weather_units"] == "metric"  # nobody set it, so it is just the default
     assert "gm-hunter2" not in result.output
 
 

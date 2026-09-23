@@ -24,9 +24,28 @@ RestartSec=5
 # lost if it is killed (each tool owns its transaction), but let it finish where it can.
 TimeoutStopSec=150
 
-# Hardening: read-only system, no privilege escalation, only the data folder writable.
+# Hardening: read-only system, no privilege escalation, only the data folder writable, and
+# nothing it writes readable by another account (the database holds every message and any key
+# typed into the settings page).
+UMask=0077
 NoNewPrivileges=true
 PrivateTmp=true
+PrivateDevices=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectClock=true
+ProtectHostname=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
 ProtectSystem=strict
 # /home is hidden from the service. A checkout under /home would then start into an empty
 # directory, so use ProtectHome=read-only there instead (the installer does this for you).

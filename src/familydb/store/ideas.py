@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import difflib
+import hashlib
 import re
 import sqlite3
 from collections.abc import Iterable
@@ -356,3 +357,8 @@ def apply_outcome(
         (happened_on, happened_on, avg_rating, now or utcnow_iso(), idea_id),
     )
     return get(conn, idea_id)
+
+
+def revision(idea: Idea) -> str:
+    """A content revision, including changes made within the same clock second."""
+    return hashlib.sha256(idea.model_dump_json().encode()).hexdigest()

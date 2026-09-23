@@ -33,8 +33,10 @@ log = logging.getLogger(__name__)
 
 NAME = "openai"
 NO_CREDENTIALS = "no OpenAI credentials configured: set OPENAI_API_KEY (see .env.example)"
-# The Responses API takes one reasoning effort; ours has five names, so the top ones collapse.
+# GPT-6 takes all five of our effort names as they are. The models before it stop at high, so
+# the top two collapse there; sending them xhigh would be a 400 on every request.
 EFFORT = {"low": "low", "medium": "medium", "high": "high", "xhigh": "high", "max": "high"}
+FULL_EFFORT_MODELS = ("gpt-6",)
 REFUSAL_REASONS = {"content_filter", "refusal"}
 
 
@@ -84,6 +86,12 @@ def _accepts_null(schema: dict[str, Any]) -> bool:
     if schema.get("type") == "null" or "null" in (schema.get("type") or []):
         return True
     return any(_accepts_null(branch) for branch in schema.get("anyOf") or [])
+
+
+def reasoning_effort(model: str, effort: str) -> str:
+    if model.startswith(FULL_EFFORT_MODELS):
+        return effort
+    return EFFORT.get(effort, "medium")
 
 
 def _search_effort(max_uses: int | None) -> str:
@@ -196,13 +204,14 @@ class OpenAIProvider:
 
     def payload(self, request: TurnRequest) -> dict[str, Any]:
         settings = self.settings
+        model = request.model or settings.openai_model
         payload: dict[str, Any] = {
-            "model": request.model or settings.openai_model,
+            "model": model,
             "instructions": self.instructions(request.system),
             "input": self.transcript(request),
             "tools": self.tools(request),
             "max_output_tokens": request.max_tokens or settings.max_output_tokens,
-            "reasoning": {"effort": EFFORT.get(request.effort or settings.effort, "medium")},
+            "reasoning": {"effort": reasoning_effort(model, request.effort or settings.effort)},
             "store": False,  # the family's messages are not left on someone else's server
         }
         key = self.cache_key(request.system)
@@ -272,6 +281,9 @@ class OpenAIProvider:
                 "cache_read_input_tokens": cached,
                 "cache_creation_input_tokens": written,
                 "output_tokens": getattr(usage, "output_tokens", None),
+                "web_searches": sum(
+                    1 for item in output if getattr(item, "type", None) == "web_search_call"
+                ),
             },
             model=getattr(response, "model", None),
             request_id=getattr(response, "_request_id", None) or getattr(response, "id", None),
@@ -280,6 +292,22 @@ class OpenAIProvider:
         )
 
     # -- the call -------------------------------------------------------------------------
+    def model_exists(self, model: str) -> bool | None:
+        try:
+            client = make_client(self.settings)
+        except AgentError:
+            return None
+        try:
+            client.with_options(timeout=10.0, max_retries=0).models.retrieve(model)
+        except openai.NotFoundError:
+            return False
+        except Exception as exc:  # unreachable, unauthorised: not an answer about the name
+            log.info("could not ask OpenAI about %s: %s", model, exc)
+            return None
+        finally:
+            client.close()
+        return True
+
     def count_tokens(self, request: TurnRequest) -> int:
         raise NotImplementedError(
             "OpenAI has no token-counting endpoint; send a short message to check the schemas"

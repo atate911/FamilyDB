@@ -278,7 +278,7 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
     scope = (
         str(ctx.message_id)
         if ctx.message_id is not None
-        else ctx.scratch.setdefault("calendar_scope", uuid.uuid4().hex)
+        else ctx.operation_id or ctx.scratch.setdefault("calendar_scope", uuid.uuid4().hex)
     )
     intent = {
         "calendar": ctx.settings.google_calendar_id,

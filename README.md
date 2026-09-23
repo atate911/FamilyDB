@@ -2,7 +2,7 @@
 
 A private family assistant that lives in our chat app. It remembers the things we say we'd like to do, puts confirmed plans on the shared Google Calendar, and suggests what to do this weekend based on the calendar, the weather and the ideas we've collected.
 
-**Status:** usable by the family. Capture, the Telegram channel, Google Calendar (plans created, moved and cancelled from chat, free time read live), the weather forecast and automatic retries are in, and so are the checked suggestions: a background lookup fills in each idea's place details (address, hours, booking, travel time), a staged engine checks every idea against the free time, the forecast and those details, web discovery finds what is on that weekend, a Thursday digest posts the weekend's options to the family chat, and the bot asks how a plan went the day after. It runs on Claude, OpenAI or Gemini, chosen per surface, with another as a spare when the first is busy. A web page behind a shared family password does the lot in a browser: chat with the bot, browse and search the ideas list, the restaurants and the plans, add and change an idea, record how something went, put a plan on the calendar or cancel it, see what is connected and what the models have cost, and change every setting and key without editing a file or restarting anything. Next: richer data (Google Places, real routing, link previews). An alpha review in September found and fixed a set of faults that only showed on a real install — lookups and discovery never ran on the default models, nobody could sign in to the page from a real browser, a restart could strand a message — and what still needs checking against live Google, Telegram and model accounts is listed in [docs/ALPHA_READINESS.md](docs/ALPHA_READINESS.md). The design and roadmap are in [docs/DESIGN.md](docs/DESIGN.md); installing it on a home server or a VPS is in [RUNBOOK.md](RUNBOOK.md).
+**Status:** usable by the family. Capture, the Telegram channel, Google Calendar (plans created, moved and cancelled from chat, free time read live), the weather forecast and automatic retries are in, and so are the checked suggestions: a background lookup fills in each idea's place details (address, hours, booking, travel time), a staged engine checks every idea against the free time, the forecast and those details, web discovery finds what is on that weekend, a Thursday digest posts the weekend's options to the family chat, and the bot asks how a plan went the day after. It runs on OpenAI's GPT-6 Luna by default, and on Claude or Gemini when chosen per surface, with another as a spare when the first is busy, and it stops asking any of them once the day's spending limit is used up. A web page behind a shared family password does the lot in a browser: chat with the bot, browse and search the ideas list, the restaurants and the plans, add and change an idea, record how something went, put a plan on the calendar or cancel it, see what is connected and what the models have cost, and set the bot up — keys, models, Telegram, Google Calendar, where home is — without editing a file or restarting anything. Next: richer data (Google Places, real routing, link previews). An alpha review in September found and fixed a set of faults that only showed on a real install — lookups and discovery never ran on the default models, nobody could sign in to the page from a real browser, a restart could strand a message — and what still needs checking against live Google, Telegram and model accounts is listed in [docs/ALPHA_READINESS.md](docs/ALPHA_READINESS.md). The design and roadmap are in [docs/DESIGN.md](docs/DESIGN.md); installing it on a home server or a VPS is in [RUNBOOK.md](RUNBOOK.md).
 
 ## How it works
 
@@ -12,7 +12,7 @@ A private family assistant that lives in our chat app. It remembers the things w
 - The day after a plan, the bot asks how it went so it can suggest repeats or avoid duds.
 - A web page does the same things in a browser, for anyone who would rather not open Telegram. It opens on what is coming up and what was added lately. Ask it something on the chat page and the answer arrives there, from the same pipeline and with the same checks. Search and filter the ideas, open one to see its hours, travel time and booking link, browse the restaurants, and see the family calendar as a list or a month, read live from Google so an event somebody added on their phone is there too. The Family page adds people and their Telegram ids, so nobody needs a terminal to let a new family member talk to the bot.
 - Adding an idea, fixing its details, dropping it, recording how it went and putting a plan on the calendar all work from the page too. Each form runs the same tool the bot runs when you ask it in chat, so the duplicate check, the rating bounds and the calendar round-trip are the same code, not a second copy of it.
-- What the page also changes is the bot itself — which model answers, how hard it thinks, where home is, when it speaks first, and the API keys — on a settings page, with a status page saying what is connected, what is waiting and what the last month cost.
+- What the page also changes is the bot itself — which model answers, how hard it thinks, what it may spend a day, where home is, when it speaks first, the API keys, the Telegram bot and the Google Calendar connection — on a settings page, with a status page saying what is connected, what is waiting and what today and the last month cost. Until everything is set, the home page lists what is left, each linked to where it is done.
 
 One Python process does all of it. A chat adapter hands each message to a pipeline that saves it first, builds a prompt from the family context, the full ideas list and the recent conversation, and lets the model decide which tools to call. The tools are ordinary functions over a SQLite file, and every model call and tool call is logged.
 
@@ -27,9 +27,10 @@ sudo bash scripts/bootstrap.sh
 ```
 
 It says what it will change on the machine and why before it changes anything: the packages, the
-`familydb` user it creates, the directory it writes to, and the systemd unit. Then it installs,
-starts the service and checks the result. `scripts/install.sh` is the configuration half on its
-own, for a machine that is already prepared.
+`familydb` user it creates, the directory it writes to, and the systemd unit. Then it asks two
+things — the domain the page will be reached at, if any, and your name — installs, starts the
+service and checks the result. Everything else is set on the page. `scripts/install.sh` is the
+configuration half on its own, for a machine that is already prepared.
 
 Afterwards: `familydb doctor` says whether the install is right and what to do about anything
 that is not, `scripts/maintain.sh` does backups, restores, upgrades and logs, and
@@ -45,7 +46,7 @@ uv run familydb members add "the girls" --role kid
 uv run familydb tool add_idea --json '{"title": "Ramen place on Main St", "kind": "restaurant"}'
 uv run familydb ideas list
 
-export ANTHROPIC_API_KEY=...      # or OPENAI_API_KEY, or GEMINI_API_KEY, or put it in .env
+export OPENAI_API_KEY=...         # or ANTHROPIC_API_KEY or GEMINI_API_KEY with PROVIDER set
 uv run familydb chat "we should try that new ramen place on Main St sometime"
 uv run familydb chat "tell me about #1"
 uv run familydb repl
@@ -62,16 +63,16 @@ uv run familydb db status         # row counts and the last model calls, with ca
 | `familydb tool NAME --json '{...}' [--stdin] [--as NAME]`, `--list`, `--schema` | Run any tool without the model |
 | `familydb chat TEXT [--as NAME] [--fresh]` | One message, one reply |
 | `familydb repl [--as NAME]` | Interactive chat (`/as NAME`, `/ideas`, `/quit`) |
-| `familydb debug prompt TEXT [--as NAME] [--chat ID]` | The exact API request that would be sent, without sending it |
-| `familydb debug cost [--days N]` | What each message pays for before anyone types, and what the last month actually used |
+| `familydb debug prompt TEXT [--as NAME] [--chat ID] [--kind KIND] [--idea N]` | The exact API request that would be sent (a chat message, or `--kind enrich --idea N` for a lookup), without sending it |
+| `familydb debug cost [--days N]` | What each message pays for before anyone types, and what the last month cost per purpose (chat, digest, lookups, ...) and per model |
 | `familydb debug validate-tools` | Have the API validate the tool schemas (needs an Anthropic or Gemini key) |
-| `familydb google auth --client-secrets FILE` / `calendars` / `events [--days N]` | One-time Google sign-in; find the calendar id; connection test |
+| `familydb google auth --client-secrets FILE` / `calendars` / `events [--days N]` | Google sign-in on a machine with a browser (the settings page does it without one); find the calendar id; connection test |
 | `familydb enrich [--idea N] [--limit N]` | Look pending ideas up on the web now; `--idea` redoes one (needs `WEB_TOOLS_ENABLED=true`) |
 | `familydb suggest [--window this-weekend\|next-weekend\|someday\|START..END] [--discover] [--json]` | Run the suggestion engine and print its verdicts; `--discover` also searches the web |
 | `familydb digest [--now]` | Show the weekend digest schedule, or post it to the family chat now |
 | `familydb follow-ups [--now]` | Ask how recent plans went, in the chat each plan was made in |
 | `familydb web [--host H] [--port N]` | Serve the web page in the foreground |
-| `familydb run` | The long-running service: migrates, starts the scheduler (retries, lookups, the digest, follow-ups) and the web page when it is enabled, then polls Telegram (or waits when no token is set) |
+| `familydb run` | The long-running service: migrates, starts the scheduler (retries, lookups, the digest, follow-ups), the web page when it is enabled, and Telegram whenever a token is set, taking up a new one without a restart |
 | `familydb config` | Resolved settings with secrets masked, saying where each one came from |
 | `familydb doctor [--online] [--fix] [--json]` | Check the whole install and say what is wrong and how to fix it; `--fix` puts right what it safely can |
 
@@ -82,21 +83,33 @@ src/familydb/
   cli.py          commands            pipeline.py     one message end to end
   config.py       settings (.env)     app.py          wiring: settings, clock, db, client
   clock.py        time abstraction    dates.py        parsing in the family timezone
-  agent/          prompt builder, history, the tool loop, worker turns, prompts/{system,enrich,discover}.md
-  agent/providers/ one module per model vendor behind a small protocol
+  delivery.py     message leases and at-least-once delivery of stored replies
+  calendar_sync.py  plans brought in line with their Google events
+  family.py       the rules for adding and changing family members (not a tool)
+  doctor.py       the install check   privacy.py      owner-only files and umask
+  agent/          prompt builder, history, the tool loop, worker turns, the daily spending
+                  limit, prompts/{system,enrich,discover}.md
+  agent/providers/ one module per model vendor behind a small protocol, and the price table
   tools/          registry, strict schemas, one module per tool group (ideas, outcomes, calendar,
                   weather, places, suggest, now)
   suggest/        the suggestion engine: context, shortlist, evaluate, discover, compose, log
   store/          SQLite connection, migrations/, one repository per table
-  channels/       message shapes, the console channel and the Telegram channel
-  web/            the page: app factory, password gate, the reading views, status, settings, templates
+  channels/       message shapes, the console, Telegram (with the supervisor that follows its
+                  token) and web channels
+  web/            the page: app factory, password gate, home, chat, the reading views, the edit
+                  forms, Family, the agenda read from Google, status, settings (with Google
+                  connection and signing everyone out), once-only forms, templates
   integrations/   Google Calendar, Open-Meteo and the keyless geocoder
   jobs/           the scheduler; retries, enrichment, the weekend digest, follow-ups, catch-up
-tests/            pytest suite with a scripted fake of the Anthropic API
+tests/            pytest suite with scripted fakes of each provider's SDK, Google and the weather
 scripts/          bootstrap (bare server to running bot), install, maintain, uninstall,
                   and lib/common.sh: the shared logging, error reporting and retries
-deploy/           systemd unit; Dockerfile and docker-compose.yml at the root
-docs/             DESIGN.md, and INSTALL.md for a server from zero
+deploy/           systemd unit, a Caddyfile and an nginx site for HTTPS; Dockerfile and
+                  docker-compose.yml at the root
+docs/             DESIGN.md, INSTALL.md for a server from zero, ALPHA_READINESS.md (what the
+                  September review found and what still needs a live check), MEMORY.md (the
+                  household-memory design, not yet built), AI_CALLS.md (how model calls
+                  are decided, fed and trusted: the framework, mostly not yet built)
 ```
 
 ## Development
