@@ -159,8 +159,8 @@ start_bot() {
 # prints for a person to read, and the two would arrive mixed together.
 LAST_BACKUP=""
 take_backup() { # take_backup DEST_DIR "why"
-  local dir="$1" why="$2" dest stamp
-  stamp="$(date +%Y%m%d%H%M%S)"
+  local dir="$1" why="$2" dest stamp owner
+  stamp="$(date +%Y%m%d%H%M%S%N)"
   dest="${dir}/familydb-${stamp}.sqlite3"
   LAST_BACKUP="$dest"
   [ -f "$DB" ] || die "there is no database at ${DB}, so there is nothing to back up" \
@@ -168,24 +168,34 @@ take_backup() { # take_backup DEST_DIR "why"
   system_change "Write a backup to ${dest}" "$why"
   if [ "$DRY_RUN" = 1 ]; then return 0; fi
   as_root mkdir -p "$dir"
+  dir="$(cd -- "$dir" && pwd -P)"
+  dest="${dir}/familydb-${stamp}.sqlite3"
+  LAST_BACKUP="$dest"
+  owner="${SERVICE_USER}:${SERVICE_USER}"
+  if [ "$DOCKER_MODE" = 1 ]; then owner="$(stat -c '%u:%g' "$DB")"; fi
   # The online backup runs as the service account, so the folder has to be its to write.
   try_step "Making sure ${SERVICE_USER} can write to ${dir}" \
-    as_root chown "${SERVICE_USER}:${SERVICE_USER}" "$dir"
+    as_root chown "$owner" "$dir"
   require_free_mb "$dir" \
     "$(( $(stat -c %s "$DB" 2>/dev/null || echo 10000000) / 1000000 + 50 ))" "this backup"
-  if familydb_cmd db backup "$dest" >>"${LOG_FILE:-/dev/null}" 2>&1; then
+  local success=0
+  if [ "$DOCKER_MODE" = 1 ]; then
+    if as_root docker compose --project-directory "$TARGET" run --rm -T --no-deps \
+      --user "$owner" -v "${dir}:/backup" bot familydb db backup \
+      "/backup/$(basename "$dest")" >>"${LOG_FILE:-/dev/null}" 2>&1; then success=1; fi
+  elif familydb_cmd db backup "$dest" >>"${LOG_FILE:-/dev/null}" 2>&1; then
+    success=1
+  fi
+  if [ "$success" = 1 ] && [ -s "$dest" ]; then
     ok "Backup written with SQLite's online backup, which is safe while the bot is running."
   else
-    warn "The online backup did not work, so the file was copied instead."
-    note "What this means: a plain copy of a database that is being written to can be"
-    note "inconsistent. It is usually fine, but it is not guaranteed."
-    note "What to try: stop the bot and run this again —"
-    note "  sudo ${0} restart    (or: sudo systemctl stop familydb)"
-    note "The reason the online backup failed is in ${LOG_FILE:-the transcript}."
-    step "Copying the database" as_root cp "$DB" "$dest"
+    # An incomplete backup must not look usable to restore, upgrade, or an operator.
+    as_root rm -f -- "$dest"
+    die "SQLite online backup failed; no backup was created" \
+      "The database was not copied or replaced. See ${LOG_FILE:-the transcript} and fix the error before continuing."
   fi
   as_root chmod 600 "$dest"
-  as_root chown "${SERVICE_USER}:${SERVICE_USER}" "$dest" 2>/dev/null || true
+  as_root chown "$owner" "$dest"
 }
 
 # ---------------------------------------------------------------- status ----
@@ -235,7 +245,9 @@ cmd_status() {
     note "Take one now:  sudo ${0} backup"
     note "Or nightly:    sudo ${0} schedule-backups"
   fi
-  if as_root crontab -u "$SERVICE_USER" -l 2>/dev/null | grep -q 'familydb db backup'; then
+  if as_root crontab -u root -l 2>/dev/null | grep -q 'familydb-maintain-backup'; then
+    say "Scheduled:  a nightly backup is in root's crontab"
+  elif as_root crontab -u "$SERVICE_USER" -l 2>/dev/null | grep -q 'familydb db backup'; then
     say "Scheduled:  a nightly backup is in ${SERVICE_USER}'s crontab"
   fi
   say ""
@@ -261,11 +273,20 @@ cmd_restore() {
   [ -n "$RESTORE_FILE" ] || die "which backup?" "Usage: ${0} restore /path/to/familydb-....sqlite3"
   [ -f "$RESTORE_FILE" ] || die "no such file: ${RESTORE_FILE}" \
     "Look in ${BACKUP_DIR}:" "  ls -lh ${BACKUP_DIR}"
-  # A truncated or wrong file would replace the real database with rubbish.
-  if have sqlite3; then
-    sqlite3 "$RESTORE_FILE" "pragma quick_check;" >/dev/null 2>&1 \
-      || die "${RESTORE_FILE} is not a readable SQLite database" \
-             "Check you named the right file, and that the copy finished."
+  # Always validate before stopping or replacing anything. A successful sqlite3 exit
+  # code alone does not mean quick_check returned 'ok'.
+  local validate target_owner
+  validate='import sqlite3,sys; from pathlib import Path; c=sqlite3.connect(Path(sys.argv[1]).resolve().as_uri()+"?mode=ro",uri=True); assert c.execute("pragma quick_check").fetchone()[0]=="ok"; c.execute("select id from members limit 1"); c.close()'
+  target_owner="${SERVICE_USER}:${SERVICE_USER}"
+  if [ "$DOCKER_MODE" = 1 ]; then
+    RESTORE_FILE="$(cd -- "$(dirname -- "$RESTORE_FILE")" && pwd -P)/$(basename -- "$RESTORE_FILE")"
+    as_root docker compose --project-directory "$TARGET" run --rm -T --no-deps \
+      --user 0:0 -v "${RESTORE_FILE}:/restore.sqlite3:ro" bot python -c "$validate" /restore.sqlite3 \
+      || die "backup validation failed; nothing was restored"
+    target_owner="$(stat -c '%u:%g' "$DB" 2>/dev/null || echo 1000:1000)"
+  else
+    as_root "${TARGET}/.venv/bin/python" -c "$validate" "$RESTORE_FILE" \
+      || die "backup validation failed; nothing was restored"
   fi
 
   head2 "Putting a backup back"
@@ -286,7 +307,8 @@ cmd_restore() {
   step "Putting ${RESTORE_FILE} in place" as_root cp "$RESTORE_FILE" "$DB"
   # The write-ahead files belong to the database that was just replaced.
   try_step "Clearing the write-ahead files" as_root rm -f "${DB}-wal" "${DB}-shm"
-  step "Giving it to ${SERVICE_USER}" as_root chown "${SERVICE_USER}:${SERVICE_USER}" "$DB"
+  step "Restoring database ownership" as_root chown "$target_owner" "$DB"
+  step "Protecting the restored database" as_root chmod 600 "$DB"
   step "Bringing the schema up to date" familydb_cmd db migrate
   start_bot
   head2 "Done"
@@ -398,35 +420,52 @@ cmd_restart() {
 # ------------------------------------------------------ scheduled backups ----
 cmd_schedule_backups() {
   head2 "Nightly backups"
-  local line prune
-  line="15 3 * * * FAMILYDB_PATH=${DB} ${FAMILYDB} db backup ${BACKUP_DIR}/familydb-\$(date +\\%F).sqlite3"
-  prune="30 3 * * * find ${BACKUP_DIR} -name 'familydb-*.sqlite3' -mtime +${KEEP_DAYS} -delete"
-  plan_item "Add two lines to ${SERVICE_USER}'s crontab" \
-    "one takes a backup at 03:15 every night, the other deletes backups older than ${KEEP_DAYS} days"
+  case "$KEEP_DAYS" in ''|*[!0-9]*) die "--keep-days must be a nonnegative integer" ;; esac
+  case "${TARGET}${BACKUP_DIR}" in *$'\n'*|*%*) die "cron paths cannot contain newlines or percent signs" ;; esac
+  local line command quoted target_q dir_q
+  printf -v target_q '%q' "$TARGET"
+  printf -v dir_q '%q' "$BACKUP_DIR"
+  command="/bin/bash ${target_q}/scripts/maintain.sh backup --target ${target_q} --backup-dir ${dir_q} --yes && find ${dir_q} -maxdepth 1 -name 'familydb-*.sqlite3' -mtime +${KEEP_DAYS} -delete"
+  printf -v quoted '%q' "$command"
+  line="15 3 * * * /bin/bash -c ${quoted} # familydb-maintain-backup"
+  plan_item "Add a line to root's crontab" \
+    "takes a backup at 03:15 and prunes old backups only after a successful backup; supports Docker and systemd"
   plan_item "Create ${BACKUP_DIR}" \
     "where those backups are written"
+  plan_item "Remove the older schedule from ${SERVICE_USER}'s crontab, if it is there" \
+    "the two lines earlier versions added; this one line replaces them"
   plan_untouched "any backup that already exists"
   show_plan "What scheduling backups does"
   say "The lines themselves:"
   say "  ${line}"
-  say "  ${prune}"
   say ""
-  note "FAMILYDB_PATH is set because cron has no working directory to speak of, and the"
-  note "default path in .env is relative to the checkout."
+  note "It runs this script rather than familydb itself, so a Docker install and a systemd one"
+  note "back up the same way, and a backup that fails is never followed by the prune."
   say ""
   approve "Add them to the crontab?" || { say "Nothing was changed."; exit 0; }
 
   if [ "$DRY_RUN" = 1 ]; then note "[dry run] would install the crontab"; return 0; fi
   as_root mkdir -p "$BACKUP_DIR"
-  as_root chown "${SERVICE_USER}:${SERVICE_USER}" "$BACKUP_DIR"
   local existing
-  existing="$(as_root crontab -u "$SERVICE_USER" -l 2>/dev/null | grep -v 'familydb db backup' | grep -v "familydb-\*.sqlite3" || true)"
-  printf '%s\n%s\n%s\n' "$existing" "$line" "$prune" \
+  existing="$(as_root crontab -u root -l 2>/dev/null | grep -v 'familydb-maintain-backup' || true)"
+  printf '%s\n%s\n' "$existing" "$line" \
     | sed '/^$/d' \
-    | as_root crontab -u "$SERVICE_USER" - \
-    || die "could not write ${SERVICE_USER}'s crontab" \
+    | as_root crontab -u root - \
+    || die "could not write root's crontab" \
            "Check that cron is installed: sudo apt-get install cron"
-  ok "Scheduled. Check it with: sudo crontab -u ${SERVICE_USER} -l"
+  # Earlier versions put a backup line and a prune line in the service account's crontab. Left
+  # there, they would keep pruning on their own schedule whether or not the backup worked.
+  local older
+  older="$(as_root crontab -u "$SERVICE_USER" -l 2>/dev/null || true)"
+  if printf '%s\n' "$older" | grep -q -e 'familydb db backup' -e 'familydb-\*\.sqlite3'; then
+    printf '%s\n' "$older" \
+      | grep -v -e 'familydb db backup' -e 'familydb-\*\.sqlite3' \
+      | sed '/^$/d' \
+      | as_root crontab -u "$SERVICE_USER" - \
+      && ok "Removed the older schedule from ${SERVICE_USER}'s crontab." \
+      || warn "Could not remove the older schedule; see: sudo crontab -u ${SERVICE_USER} -l"
+  fi
+  ok "Scheduled. Check it with: sudo crontab -u root -l"
   say ""
   say "A backup on the same disk is only half a backup. Copy them off the machine too, for"
   say "example from your own computer:"
