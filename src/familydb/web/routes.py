@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from contextlib import closing
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from typing import Any
 
 from flask import (
@@ -316,21 +316,9 @@ def tasks() -> str:
     with closing(app.connect()) as conn:
         rows = task_store.list_all(conn, status=status, query=request.args.get("q", ""))
         people = member_store.list_all(conn)
-    for row in rows:
-        row["due_input"] = (
-            datetime.fromisoformat(row["due_at"])
-            .astimezone(app.settings.tzinfo)
-            .strftime("%Y-%m-%dT%H:%M")
-            if row["due_at"]
-            else ""
-        )
-        if row["reminder"]:
-            row["reminder"]["local_time"] = views.local_moment(
-                row["reminder"]["remind_at"], app.settings.tzinfo
-            )
     return render_template(
         "tasks.html",
-        tasks=rows,
+        rows=[views.task_row(task, app.settings.tzinfo) for task in rows],
         people=people,
         status=status,
         zone=app.settings.tz,

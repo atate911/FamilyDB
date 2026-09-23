@@ -18,6 +18,7 @@ from familydb.store.messages import Message
 from familydb.store.outcomes import Outcome
 from familydb.store.places import Place
 from familydb.store.plans import Plan
+from familydb.store.tasks import Task
 from familydb.suggest.shortlist import fmt_minutes
 from familydb.tools.places import DAYS, checked_days_ago, format_ranges, is_stale, open_on
 from familydb.tools.urls import clean_url
@@ -109,6 +110,19 @@ def idea_row(idea: Idea, tz: ZoneInfo) -> dict[str, Any]:
         "rating": rating_text(idea),
         "details": details_text(idea),
         "pending": idea.enrichment == "pending",
+    }
+
+
+def task_row(task: Task, tz: ZoneInfo) -> dict[str, Any]:
+    """One task on the tasks page, with its times as the family's clock shows them."""
+    return {
+        "task": task,
+        "due_input": (
+            datetime.fromisoformat(task.due_at).astimezone(tz).strftime("%Y-%m-%dT%H:%M")
+            if task.due_at
+            else ""
+        ),
+        "reminder_time": local_moment(task.reminder.remind_at, tz) if task.reminder else None,
     }
 
 

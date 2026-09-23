@@ -24,15 +24,11 @@ def run_reminders(app: App) -> int:
     now = utc_iso(moment)
     queued: list[int] = []
     with closing(app.connect()) as conn, transaction(conn):
-        rows = conn.execute(
-            "SELECT r.id,r.task_id,r.remind_at FROM reminders r JOIN tasks t ON t.id=r.task_id "
-            "WHERE r.cancelled_at IS NULL AND r.message_id IS NULL AND r.remind_at<=? "
-            "AND t.status='open' ORDER BY r.remind_at LIMIT 100",
-            (now,),
-        ).fetchall()
-        for row in rows:
-            task = tasks.get(conn, row["task_id"])
-            due = datetime.fromisoformat(row["remind_at"])
+        for reminder in tasks.due_reminders(conn, now):
+            task = tasks.get(conn, reminder.task_id)
+            if task is None:
+                continue
+            due = datetime.fromisoformat(reminder.remind_at)
             due_when = (
                 due.astimezone(app.clock.tz).strftime("%a %d %b at %H:%M")
                 if moment - due > LATE_AFTER
@@ -40,11 +36,11 @@ def run_reminders(app: App) -> int:
             )
             out = messages.insert_out(
                 conn,
-                channel=task["channel"],
-                chat_id=task["chat_id"],
+                channel=task.channel,
+                chat_id=task.chat_id,
                 text=reminder_text(task, due_when=due_when),
                 now=now,
             )
-            conn.execute("UPDATE reminders SET message_id=? WHERE id=?", (out.id, row["id"]))
+            tasks.attach_message(conn, reminder.id, out.id)
             queued.append(out.id)
     return sum(deliver(app, message_id) for message_id in queued)
