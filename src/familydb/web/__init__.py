@@ -15,7 +15,6 @@ from datetime import timedelta
 from typing import Any
 
 from flask import Flask, render_template, request
-from werkzeug.middleware.proxy_fix import ProxyFix
 
 from familydb.app import App
 from familydb.availability import web_is_public, web_password_required
@@ -41,10 +40,13 @@ NO_PASSWORD = (
     "empty. Set a password, bind to 127.0.0.1, or set WEB_ALLOW_NO_PASSWORD=true if this is a "
     "home network you trust."
 )
+NO_PASSWORD_BEHIND_PROXY = (
+    "WEB_TRUST_PROXY is on, so a proxy is bringing the internet to this page, but WEB_PASSWORD is "
+    f"empty. Set one of at least {MIN_PASSWORD} characters."
+)
 SHORT_PASSWORD = (
     "WEB_PASSWORD is {length} characters. A page reachable from other machines needs at least "
-    f"{MIN_PASSWORD}, because one password guards everything and there is no second factor. "
-    "Bind to 127.0.0.1 instead if you would rather keep a short one."
+    f"{MIN_PASSWORD}, because one password guards everything and there is no second factor."
 )
 NO_PROXY_TRUSTED = (
     "The page is on %s with WEB_TRUST_PROXY off. If a reverse proxy is in front, set it to true: "
@@ -58,6 +60,8 @@ def check_configuration(settings: Settings) -> None:
     if not web_password_required(settings):
         return
     if not settings.web_password:
+        if settings.web_trust_proxy:
+            raise ConfigError(NO_PASSWORD_BEHIND_PROXY)
         raise ConfigError(NO_PASSWORD.format(host=settings.web_host))
     if len(settings.web_password) < MIN_PASSWORD:
         raise ConfigError(SHORT_PASSWORD.format(length=len(settings.web_password)))
@@ -108,8 +112,6 @@ def create_app(app: App, *, api: Any = None) -> Flask:
         # Where each form's first post went, so a second one goes there too (see once.py).
         FAMILYDB_ONCE=once.Once(),
     )
-    if settings.web_trust_proxy:
-        web.wsgi_app = ProxyFix(web.wsgi_app, x_for=1, x_proto=1, x_host=1)  # type: ignore[method-assign]
 
     # Read through `app` rather than closing over `settings`: a change made on the settings page
     # replaces the whole object, and these must follow it.

@@ -24,6 +24,33 @@ THREAD_NAME = "familydb-web"
 IDENT = "FamilyDB"
 
 
+# The headers Caddy and nginx set. Waitress reads them only from the proxy it is told to trust,
+# and strips them from anyone else, so a visitor cannot claim to be somebody else.
+PROXY_HEADERS = frozenset({"x-forwarded-for", "x-forwarded-proto", "x-forwarded-host"})
+
+
+def proxy_options(settings: Any) -> dict[str, Any]:
+    """How far to believe the forwarding headers: not at all unless WEB_TRUST_PROXY is set.
+
+    This has to be the server's job rather than the Flask app's. Waitress removes forwarding
+    headers from any peer it was not told to trust before the app ever runs, so a middleware in
+    the app saw none: behind Caddy every request looked like plain HTTP from the proxy itself,
+    the Origin check refused every sign-in, and the whole family shared one lockout.
+
+    A page on the loopback trusts the proxy on this machine. One bound to every interface is in
+    a container, where Caddy's address is not known in advance; the compose file publishes the
+    port to the host's loopback only, so nothing but the proxy can reach it to lie.
+    """
+    if not settings.web_trust_proxy:
+        return {}
+    local = settings.web_host.strip().lower() in {"127.0.0.1", "localhost", "::1"}
+    return {
+        "trusted_proxy": "127.0.0.1" if local else "*",
+        "trusted_proxy_count": 1,
+        "trusted_proxy_headers": set(PROXY_HEADERS),
+    }
+
+
 def create_server(app: App) -> Any:
     """A waitress server with the socket already bound, so a clash is reported here."""
     settings = app.settings
@@ -36,6 +63,7 @@ def create_server(app: App) -> Any:
         # waitress will take a gigabyte by default. Stop it at the socket instead: nothing the
         # page accepts is larger than a settings form.
         max_request_body_size=MAX_BODY_BYTES,
+        **proxy_options(settings),
     )
 
 

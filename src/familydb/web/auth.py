@@ -28,6 +28,7 @@ from flask import (
     session,
     url_for,
 )
+from itsdangerous import BadSignature, URLSafeSerializer
 
 from familydb.app import App
 from familydb.config import Settings
@@ -55,6 +56,13 @@ MAX_TRACKED = 4096
 # never come near it.
 GLOBAL_ATTEMPTS = 50
 GLOBAL_WINDOW_MINUTES = 15
+# A browser that has signed in before carries this, and the site-wide ceiling does not apply to
+# it. Otherwise fifty wrong guesses from anywhere would keep the family out as well, for as long
+# as someone cared to keep guessing. The per-address lockout still applies. The cookie holds only
+# a signed mark of the password it was earned with, so a new password makes every one worthless.
+DEVICE_COOKIE = "familydb_device"
+DEVICE_SALT = "familydb-device"
+DEVICE_DAYS = 365
 # Long enough for any real address, IPv6 with a zone included.
 MAX_ADDRESS = 64
 # Endpoints reachable without signing in. "static" covers the stylesheet on the login page.
@@ -80,10 +88,13 @@ class Lockout:
     everyone_since: datetime | None = None
     lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
-    def locked(self, who: str, now: datetime) -> bool:
-        """Whether this address, or the whole site, is being kept waiting."""
+    def locked(self, who: str, now: datetime, *, known: bool = False) -> bool:
+        """Whether this address, or the whole site, is being kept waiting.
+
+        `known` says the browser has signed in here before, which the site-wide ceiling spares.
+        """
         with self.lock:
-            if self._everyone_locked(now):
+            if not known and self._everyone_locked(now):
                 return True
             deadline = self.until.get(who)
             if deadline is None:
@@ -160,6 +171,33 @@ def password_mark(settings: Settings) -> str:
 def password_matches(settings: Settings, given: str) -> bool:
     expected = settings.web_password or ""
     return bool(expected) and hmac.compare_digest(given.encode(), expected.encode())
+
+
+def _devices() -> URLSafeSerializer:
+    return URLSafeSerializer(current_app.secret_key, salt=DEVICE_SALT)
+
+
+def known_device(settings: Settings) -> bool:
+    """Whether this browser signed in here before, under the password in force now."""
+    raw = request.cookies.get(DEVICE_COOKIE)
+    if not raw:
+        return False
+    try:
+        mark = _devices().loads(raw)
+    except BadSignature:
+        return False
+    return isinstance(mark, str) and hmac.compare_digest(mark, password_mark(settings))
+
+
+def remember_device(response: Response, settings: Settings) -> None:
+    response.set_cookie(
+        DEVICE_COOKIE,
+        _devices().dumps(password_mark(settings)),
+        max_age=DEVICE_DAYS * 24 * 3600,
+        httponly=True,
+        samesite="Lax",
+        secure=settings.web_trust_proxy,
+    )
 
 
 def client_address() -> str:
@@ -284,13 +322,14 @@ def sign_in() -> Response | str:
     now = app.clock.now()
     lockout = _lockout()
     who = client_address()
-    if lockout.locked(who, now):
+    known = known_device(settings)
+    if lockout.locked(who, now, known=known):
         return render_template("login.html", error=LOCKED_OUT, next=None), 429
 
     target = safe_next(request.form.get("next"))
     if not password_matches(settings, request.form.get("password", "")):
         lockout.failed(who, now)
-        error = LOCKED_OUT if lockout.locked(who, now) else WRONG_PASSWORD
+        error = LOCKED_OUT if lockout.locked(who, now, known=known) else WRONG_PASSWORD
         return render_template("login.html", error=error, next=target), 401
 
     lockout.passed(who)
@@ -299,7 +338,9 @@ def sign_in() -> Response | str:
     session[PASSWORD_KEY] = password_mark(settings)
     session.permanent = True
     log.info("web login from %s", who)
-    return redirect(target or HOME)
+    response = redirect(target or HOME)
+    remember_device(response, settings)
+    return response
 
 
 @bp.post("/logout")

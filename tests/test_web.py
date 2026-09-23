@@ -147,18 +147,89 @@ def test_a_public_page_without_a_password_refuses_to_start(settings, clock) -> N
     assert _client(settings, clock, web_host="0.0.0.0", web_allow_no_password=True) is not None
 
 
+def _post(port: int, path: str, form: dict[str, str], headers: dict[str, str]):
+    """One form post to a real server, the way a browser behind Caddy arrives."""
+    import http.client
+    from urllib.parse import urlencode
+
+    connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+    try:
+        connection.request(
+            "POST",
+            path,
+            body=urlencode(form),
+            headers={"Content-Type": "application/x-www-form-urlencoded", **headers},
+        )
+        response = connection.getresponse()
+        response.read()
+        return response
+    finally:
+        connection.close()
+
+
+# What Caddy sends on for a browser at https://fam.example.com.
+CADDY = {
+    "Host": "fam.example.com",
+    "Origin": "https://fam.example.com",
+    "X-Forwarded-Proto": "https",
+    "X-Forwarded-Host": "fam.example.com",
+    "X-Forwarded-For": "203.0.113.7",
+}
+
+
 def test_behind_a_proxy_the_cookie_is_secure_and_the_client_is_the_real_one(settings, clock):
-    client = _client(settings, clock, web_password=PASSWORD, web_trust_proxy=True)
-    forwarded = {"X-Forwarded-Proto": "https", "X-Forwarded-For": "203.0.113.7"}
-    response = client.post("/login", data={"password": PASSWORD}, headers=forwarded)
-    assert response.status_code == 302 and "Secure" in response.headers["Set-Cookie"]
-    client.post("/logout", headers=forwarded)
-    # The lockout counts the forwarded address, so one guesser cannot lock the whole family out.
-    for _ in range(5):
-        client.post("/login", data={"password": "no"}, headers=forwarded)
-    assert client.post("/login", data={"password": PASSWORD}, headers=forwarded).status_code == 429
-    other = {**forwarded, "X-Forwarded-For": "203.0.113.8"}
-    assert client.post("/login", data={"password": PASSWORD}, headers=other).status_code == 302
+    """Through the real server, because that is where the headers were being lost.
+
+    Waitress strips forwarding headers from a peer it was not told to trust before Flask sees
+    them, and Flask's test client skips waitress altogether, so a test like this one written
+    against the test client passed while nobody could sign in through Caddy.
+    """
+    from familydb.web.server import serve_in_thread
+
+    port = _free_port()
+    configured = {"web_port": port, "web_password": PASSWORD, "web_trust_proxy": True}
+    stop = serve_in_thread(App(settings.model_copy(update=configured), clock))
+    assert stop is not None
+    try:
+        signed_in = _post(port, "/login", {"password": PASSWORD}, CADDY)
+        assert signed_in.status == 302
+        assert "Secure" in signed_in.getheader("Set-Cookie", "")
+        assert signed_in.getheader("Strict-Transport-Security")
+        # The lockout counts the visitor's address, not the proxy's, so one guesser cannot lock
+        # the whole family out.
+        for _ in range(5):
+            _post(port, "/login", {"password": "no"}, CADDY)
+        assert _post(port, "/login", {"password": PASSWORD}, CADDY).status == 429
+        other = {**CADDY, "X-Forwarded-For": "203.0.113.8"}
+        assert _post(port, "/login", {"password": PASSWORD}, other).status == 302
+    finally:
+        stop()
+
+
+def test_without_trusting_a_proxy_its_headers_mean_nothing(settings, clock):
+    from familydb.web.server import serve_in_thread
+
+    port = _free_port()
+    stop = serve_in_thread(
+        App(settings.model_copy(update={"web_port": port, "web_password": PASSWORD}), clock)
+    )
+    assert stop is not None
+    try:
+        # Claiming to have come through HTTPS changes nothing, so the https Origin is a mismatch.
+        assert _post(port, "/login", {"password": PASSWORD}, CADDY).status == 400
+        direct = {"Origin": f"http://127.0.0.1:{port}"}
+        assert _post(port, "/login", {"password": PASSWORD}, direct).status == 302
+    finally:
+        stop()
+
+
+def test_a_page_behind_a_proxy_needs_a_password_however_it_is_bound(settings, clock) -> None:
+    loopback = settings.model_copy(update={"web_host": "127.0.0.1", "web_trust_proxy": True})
+    with pytest.raises(ConfigError, match="WEB_TRUST_PROXY is on"):
+        create_app(App(loopback, clock))
+    short = loopback.model_copy(update={"web_password": "short"})
+    with pytest.raises(ConfigError, match="at least"):
+        create_app(App(short, clock))
 
 
 def _idea(conn, title, **fields):
@@ -813,6 +884,35 @@ def test_guessing_from_many_addresses_still_runs_out(settings, clock) -> None:
     assert lockout.locked("198.51.100.1", now)  # the site as a whole stops answering
     clock.advance(timedelta(minutes=16))
     assert not lockout.locked("198.51.100.1", clock.now())
+
+
+def test_a_browser_that_signed_in_before_is_not_kept_out_by_strangers(settings, clock) -> None:
+    from familydb.web.auth import DEVICE_COOKIE, GLOBAL_ATTEMPTS
+
+    family = _client(settings, clock, web_password=PASSWORD)
+    assert family.post("/login", data={"password": PASSWORD}).status_code == 302
+    assert family.get_cookie(DEVICE_COOKIE) is not None
+    family.post("/logout")
+    lockout = family.application.config["FAMILYDB_LOCKOUT"]
+    for number in range(GLOBAL_ATTEMPTS):
+        lockout.failed(f"203.0.113.{number}", clock.now())  # strangers, one guess each
+    stranger = family.application.test_client()
+    assert stranger.post("/login", data={"password": PASSWORD}).status_code == 429
+    assert family.post("/login", data={"password": PASSWORD}).status_code == 302
+
+
+def test_a_new_password_makes_every_known_browser_a_stranger_again(settings, clock) -> None:
+    from familydb.web.auth import DEVICE_COOKIE, GLOBAL_ATTEMPTS
+
+    before = _client(settings, clock, web_password=PASSWORD)
+    before.post("/login", data={"password": PASSWORD})
+    device = before.get_cookie(DEVICE_COOKIE)
+    after = _client(settings, clock, web_password="a different long one")
+    after.set_cookie(DEVICE_COOKIE, device.value)
+    lockout = after.application.config["FAMILYDB_LOCKOUT"]
+    for number in range(GLOBAL_ATTEMPTS):
+        lockout.failed(f"203.0.113.{number}", clock.now())
+    assert after.post("/login", data={"password": "a different long one"}).status_code == 429
 
 
 def test_an_impossible_idea_number_is_a_missing_page(settings, clock, conn, family) -> None:
