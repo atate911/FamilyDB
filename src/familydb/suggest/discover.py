@@ -3,11 +3,14 @@
 The chat agent never searches the web itself. When discovery is on, this stage runs one worker
 turn (its own prompt, the web tools, `report_finds` as the hand-back) and keeps the finds per
 window for `DISCOVER_CACHE_SECONDS`, so a digest and the questions that follow it share one search.
+The request is built from the window and the constraints only, never the question's wording, so
+"what's on this weekend" and "anything fun Saturday" ask the same thing and share one search.
 """
 
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 from datetime import date, timedelta
 from typing import Any
@@ -17,7 +20,7 @@ from familydb.agent.worker import home_location, run_worker_turn
 from familydb.availability import web_tools_available
 from familydb.config import Settings
 from familydb.errors import AgentError
-from familydb.suggest.types import Context, WebFind
+from familydb.suggest.types import DAY_START, Constraints, Context, WebFind
 from familydb.tools import ToolContext, build_registry
 
 log = logging.getLogger(__name__)
@@ -34,8 +37,12 @@ def cache_key(window: tuple[date, date] | None) -> str:
     return f"{window[0].isoformat()}:{window[1].isoformat()}"
 
 
-def render_discover_request(context: Context, question: str, settings: Settings) -> str:
-    """What the worker is asked: the window, the home area and the family's own words."""
+def _part_of_day(minute: int) -> str:
+    return "morning" if minute < 12 * 60 else "afternoon" if minute < 17 * 60 else "evening"
+
+
+def render_discover_request(context: Context, constraints: Constraints, settings: Settings) -> str:
+    """What the worker is asked: the window, the home area and who and what it is for."""
     lines = ["Find time-bound things a family could go to near home."]
     if context.window is None:
         lines.append("Window: no fixed dates; look at the next four weeks or so.")
@@ -45,19 +52,32 @@ def render_discover_request(context: Context, question: str, settings: Settings)
             lines.append(f"Window: {start:%A %d %B %Y}.")
         else:
             lines.append(f"Window: {start:%A %d %B} to {end:%A %d %B %Y}.")
+        first = context.days[0].bounds[0] if context.days else DAY_START
+        if first > DAY_START:
+            # Coarse on purpose: the hour would make every question a new search.
+            lines.append(f"From the {_part_of_day(first)} of the first day.")
     lines.append(f"Home area: {settings.home_area or 'not set'}.")
-    if question.strip():
-        lines.append(f'The family asked: "{question.strip()}"')
+    wanted = {
+        "who": constraints.participants or None,
+        "max_cost_level": constraints.max_cost_level,
+        "setting": constraints.setting,
+        "max_travel_minutes": constraints.max_travel_minutes,
+    }
+    wanted = {k: v for k, v in wanted.items() if v is not None}
+    if wanted:
+        lines.append("Constraints: " + json.dumps(wanted, sort_keys=True))
     return "\n".join(lines)
 
 
-def discover(ctx: ToolContext, context: Context, question: str) -> tuple[list[WebFind], str | None]:
+def discover(
+    ctx: ToolContext, context: Context, constraints: Constraints
+) -> tuple[list[WebFind], str | None]:
     """Finds for the window, plus a note for `skipped_checks` when discovery did not run."""
     if not web_tools_available(ctx.settings):
         return [], NOTE_OFF
     if not providers.ready(ctx.settings, "worker", api=ctx.api):
         return [], NOTE_NO_KEY
-    request = render_discover_request(context, question, ctx.settings)
+    request = render_discover_request(context, constraints, ctx.settings)
     key = (
         cache_key(context.window)
         + ":"

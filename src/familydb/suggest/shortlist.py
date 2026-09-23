@@ -16,9 +16,9 @@ RAIN_CODES = {51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99}
 SNOW_CODES = {71, 73, 75, 77, 85, 86}
 WARM_C = 18.0
 WARM_F = 64.0
-BLOCK_ORDER = ("morning", "afternoon", "evening")
-BLOCK_MINUTES = {"morning": 240, "afternoon": 300, "evening": 300}
 LONG_IDEA_MINUTES = 480
+# The least free time worth offering an idea of unknown length for.
+SHORT_VISIT_MINUTES = 60
 SHORTLIST_MAX = 8
 ANYONE = {"whole family", "family", "everyone", "anyone", "all of us"}
 
@@ -29,20 +29,9 @@ def fmt_minutes(minutes: int) -> str:
     return f"{minutes / 60:g} h"
 
 
-def longest_free_span(free: list[str]) -> int:
-    """Minutes in the longest run of consecutive free blocks."""
-    best = current = 0
-    for block in BLOCK_ORDER:
-        if block in free:
-            current += BLOCK_MINUTES[block]
-            best = max(best, current)
-        else:
-            current = 0
-    return best
-
-
-def whole_day_free(free: list[str]) -> bool:
-    return all(block in free for block in BLOCK_ORDER)
+def longest_free_span(spans: list[tuple[int, int]]) -> int:
+    """Minutes in the longest free stretch."""
+    return max((b - a for a, b in spans), default=0)
 
 
 def day_is_dry(forecast: DayForecast | None) -> bool | None:
@@ -159,19 +148,19 @@ def _duration_fit(idea: Idea, days: list[date], context: Context) -> tuple[list[
     if not contexts or not contexts[0].free_known:
         return days, None
     if idea.kind == "trip":
-        if all(whole_day_free(c.free) for c in context.days):
+        if all(c.whole for c in context.days):
             return days, None
         return [], "needs the whole window free"
     fits: list[date] = []
     best_block = 0
     for day in contexts:
-        span = longest_free_span(day.free)
+        span = day.longest
         best_block = max(best_block, span)
         if long_idea:
-            if whole_day_free(day.free):
+            if day.whole and span >= LONG_IDEA_MINUTES:
                 fits.append(day.date)
         elif needs is None:
-            if day.free:
+            if span >= SHORT_VISIT_MINUTES:
                 fits.append(day.date)
         elif needs <= span:
             fits.append(day.date)

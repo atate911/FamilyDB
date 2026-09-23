@@ -145,6 +145,56 @@ def free_blocks(events: list[CalendarEvent], day: date, tz: ZoneInfo) -> list[st
     return free
 
 
+def free_spans(
+    events: list[CalendarEvent], day: date, tz: ZoneInfo, start: int, end: int
+) -> list[tuple[int, int]]:
+    """The free stretches of a day between two minutes after midnight, busy events taken out.
+
+    The same rules as `free_blocks`: a busy all-day event takes the whole day, and nothing marked
+    free in Google takes any of it. Minutes are family clock time, so a stretch reads as it would
+    on the kitchen wall even on the day the clocks change.
+    """
+    todays = [event for event in events if event.busy and on_day(event, day, tz)]
+    if any(event.all_day for event in todays):
+        return []
+
+    def minute(moment: datetime) -> int:
+        local = moment.astimezone(tz)
+        if local.date() < day:
+            return 0
+        if local.date() > day:
+            return 24 * 60
+        return local.hour * 60 + local.minute
+
+    busy = sorted((minute(e.start), minute(e.end)) for e in todays)  # type: ignore[arg-type]
+    spans: list[tuple[int, int]] = []
+    cursor = start
+    for left, right in busy:
+        if left > cursor:
+            spans.append((cursor, min(left, end)))
+        cursor = max(cursor, right)
+        if cursor >= end:
+            break
+    if cursor < end:
+        spans.append((cursor, end))
+    return [(a, b) for a, b in spans if b > a]
+
+
+def events_by_day(
+    calendar: CalendarAPI, start: date, end: date, tz: ZoneInfo
+) -> list[tuple[date, list[CalendarEvent]]]:
+    """Each day of a window with the events that touch it, from one call to Google."""
+    window_start, _ = _day_bounds(start, tz)
+    _, window_end = _day_bounds(end, tz)
+    events = calendar.list_events(window_start, window_end)
+    days = []
+    day = start
+    while day <= end:
+        days.append((day, [event for event in events if on_day(event, day, tz)]))
+        day += timedelta(days=1)
+    return days
+
+
 def _timed_or_all_day(
     start_text: str,
     end_text: str | None,
@@ -190,36 +240,28 @@ def _end_keeping_duration(
 def calendar_days(
     calendar: CalendarAPI, start: date, end: date, tz: ZoneInfo
 ) -> list[dict[str, Any]]:
-    """Per-day timed events, all-day entries and free blocks. Shared with the suggestion engine."""
-    window_start, _ = _day_bounds(start, tz)
-    _, window_end = _day_bounds(end, tz)
-    events = calendar.list_events(window_start, window_end)
-    days = []
-    day = start
-    while day <= end:
-        todays = [event for event in events if on_day(event, day, tz)]
-        days.append(
-            {
-                "date": day.isoformat(),
-                "weekday": day.strftime("%A"),
-                "events": [
-                    {
-                        "google_event_id": e.id,
-                        "title": e.title,
-                        "start": e.start.strftime("%H:%M"),  # type: ignore[union-attr]
-                        "end": e.end.strftime("%H:%M"),  # type: ignore[union-attr]
-                        "location": e.location,
-                    }
-                    for e in todays
-                    if not e.all_day
-                ],
-                "all_day": [e.title for e in todays if e.all_day],
-                "all_day_events": [e.to_public() for e in todays if e.all_day],
-                "free": free_blocks(todays, day, tz),
-            }
-        )
-        day += timedelta(days=1)
-    return days
+    """Per-day timed events, all-day entries and free blocks, as `get_calendar` reports them."""
+    return [
+        {
+            "date": day.isoformat(),
+            "weekday": day.strftime("%A"),
+            "events": [
+                {
+                    "google_event_id": e.id,
+                    "title": e.title,
+                    "start": e.start.strftime("%H:%M"),  # type: ignore[union-attr]
+                    "end": e.end.strftime("%H:%M"),  # type: ignore[union-attr]
+                    "location": e.location,
+                }
+                for e in todays
+                if not e.all_day
+            ],
+            "all_day": [e.title for e in todays if e.all_day],
+            "all_day_events": [e.to_public() for e in todays if e.all_day],
+            "free": free_blocks(todays, day, tz),
+        }
+        for day, todays in events_by_day(calendar, start, end, tz)
+    ]
 
 
 @tool(
