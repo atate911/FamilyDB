@@ -24,10 +24,12 @@ from flask import Blueprint, Response, current_app, flash, redirect, request, se
 from werkzeug.datastructures import MultiDict
 
 from familydb.app import App
+from familydb.store import ideas as idea_store
 from familydb.store import members as member_store
 from familydb.tools import ToolContext
 from familydb.web import auth, views
 from familydb.web.chat import WHO_KEY
+from familydb.web.once import once
 
 log = logging.getLogger(__name__)
 
@@ -38,6 +40,10 @@ NOTICE = "edit"
 SAVED_IDEA = "Saved #{id} {title}."
 CHANGED_IDEA = "Changed #{id} {title}."
 DUPLICATE = "There is already an idea called that: #{id}. Nothing was added."
+STALE_IDEA = (
+    "#{id} was changed since you opened it, so nothing was saved. Here it is as it is now; "
+    "make your change again."
+)
 RECORDED = "Recorded. #{id} is marked done."
 SCHEDULED = "On the calendar: {title}."
 MOVED = "Moved to {when}."
@@ -147,6 +153,20 @@ def idea_fields(form: MultiDict[str, str]) -> tuple[dict[str, Any], str | None]:
     return values, None
 
 
+def _changed_since(idea_id: int, seen: str) -> bool:
+    """Whether the idea moved on since its form was drawn, by somebody else or by a lookup.
+
+    The form sends back the updated time it was drawn with. The check and the save are two
+    steps, so two saves in the same instant can still both land; what this stops is the usual
+    case, a form left open while somebody else changed the idea, silently undoing their edit.
+    """
+    if not seen:
+        return False  # a form drawn before this was here
+    with closing(_app().connect()) as conn:
+        current = idea_store.get(conn, idea_id)
+    return current is not None and current.updated_at != seen
+
+
 def _back(target: str, **values: Any) -> Response:
     return redirect(url_for(target, **values))
 
@@ -156,6 +176,7 @@ def _say(message: str) -> None:
 
 
 @bp.post("/ideas/new")
+@once
 def add_idea() -> Response:
     """Save an idea typed into the page, through the same tool chat uses."""
     if (complaint := auth.refused()) is not None:
@@ -177,6 +198,7 @@ def add_idea() -> Response:
 
 
 @bp.post("/idea/<int:idea_id>/edit")
+@once
 def edit_idea(idea_id: int) -> Response:
     if (complaint := auth.refused()) is not None:
         _say(complaint)
@@ -184,6 +206,9 @@ def edit_idea(idea_id: int) -> Response:
     values, complaint = idea_fields(request.form)
     if complaint:
         _say(complaint)
+        return _back("web.edit_idea", idea_id=idea_id)
+    if _changed_since(idea_id, _text(request.form, "revision")):
+        _say(STALE_IDEA.format(id=idea_id))
         return _back("web.edit_idea", idea_id=idea_id)
     status = _text(request.form, "status")
     if status:
@@ -197,6 +222,7 @@ def edit_idea(idea_id: int) -> Response:
 
 
 @bp.post("/idea/<int:idea_id>/status")
+@once
 def set_status(idea_id: int) -> Response:
     """Drop an idea, or bring a dropped one back. One button, no form to fill in."""
     if (complaint := auth.refused()) is not None:
@@ -211,6 +237,7 @@ def set_status(idea_id: int) -> Response:
 
 
 @bp.post("/idea/<int:idea_id>/outcome")
+@once
 def record_outcome(idea_id: int) -> Response:
     """How it went. The tool marks the idea done and keeps its average up to date."""
     if (complaint := auth.refused()) is not None:
@@ -231,6 +258,7 @@ def record_outcome(idea_id: int) -> Response:
 
 
 @bp.post("/plans/new")
+@once
 def add_plan() -> Response:
     """Put something on the shared calendar. Needs Google Calendar connected, and says so."""
     if (complaint := auth.refused()) is not None:
@@ -260,6 +288,7 @@ def add_plan() -> Response:
 
 
 @bp.post("/plan/<int:plan_id>/move")
+@once
 def move_plan(plan_id: int) -> Response:
     """Change when a plan is. Cancelling and adding it again would lose its link and its notes."""
     if (complaint := auth.refused()) is not None:
@@ -279,6 +308,7 @@ def move_plan(plan_id: int) -> Response:
 
 
 @bp.post("/plan/<int:plan_id>/cancel")
+@once
 def cancel_plan(plan_id: int) -> Response:
     """Take a plan off the calendar. The idea goes back to being an idea."""
     if (complaint := auth.refused()) is not None:

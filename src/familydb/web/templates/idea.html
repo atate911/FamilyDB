@@ -51,6 +51,7 @@
       <a class="button" href="{{ url_for('web.edit_idea', idea_id=idea.id) }}">Edit</a>
       <form method="post" action="{{ url_for('edits.set_status', idea_id=idea.id) }}">
         <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+        <input type="hidden" name="once" value="{{ once_token() }}" />
         <input type="hidden" name="status" value="{{ 'idea' if idea.status == 'dropped' else 'dropped' }}" />
         <button class="quiet" type="submit">
           {{ 'Bring it back' if idea.status == 'dropped' else 'Drop it' }}
@@ -151,6 +152,7 @@
     {% if can_schedule %}
       <form class="form" method="post" action="{{ url_for('edits.add_plan') }}">
         <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+        <input type="hidden" name="once" value="{{ once_token() }}" />
         <input type="hidden" name="idea_id" value="{{ idea.id }}" />
         <input type="hidden" name="title" value="{{ idea.title }}" />
         <div class="field">
@@ -179,6 +181,7 @@
       <summary><span class="h2">Record how it went</span></summary>
     <form class="form" method="post" action="{{ url_for('edits.record_outcome', idea_id=idea.id) }}">
       <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+      <input type="hidden" name="once" value="{{ once_token() }}" />
       <div class="field">
         <label for="happened_on">When</label>
         <input id="happened_on" name="happened_on" type="date" value="{{ today }}" max="{{ today }}" />

@@ -28,6 +28,7 @@ from familydb.app import App
 from familydb.dates import utc_iso
 from familydb.store import members as member_store
 from familydb.web import auth
+from familydb.web.once import once
 
 log = logging.getLogger(__name__)
 
@@ -59,6 +60,7 @@ def show() -> str:
 
 
 @bp.post("/family")
+@once
 def add() -> Response:
     if (complaint := auth.refused()) is not None:
         _say(complaint)
@@ -92,6 +94,7 @@ def edit(member_id: int) -> str:
 
 
 @bp.post(f"/family/<int(max={MAX_ID}):member_id>")
+@once
 def change(member_id: int) -> Response:
     back = redirect(url_for("family.edit", member_id=member_id))
     if (complaint := auth.refused()) is not None:

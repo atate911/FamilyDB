@@ -7,6 +7,11 @@
         method="post"
         action="{{ url_for('edits.edit_idea', idea_id=idea.id) if editing else url_for('edits.add_idea') }}">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    {% if editing %}
+      {# When this was drawn: a save on top of a change made since is refused, not merged. #}
+      <input type="hidden" name="revision" value="{{ idea.updated_at }}" />
+    {% endif %}
+    <input type="hidden" name="once" value="{{ once_token() }}" />
 
     <div class="field wide">
       <label for="title">Title</label>

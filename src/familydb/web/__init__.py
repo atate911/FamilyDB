@@ -22,7 +22,7 @@ from familydb.availability import web_is_public, web_password_required
 from familydb.channels.web import WebChat
 from familydb.config import Settings
 from familydb.errors import ConfigError
-from familydb.web import auth, chat, edits, family, routes
+from familydb.web import auth, chat, edits, family, once, routes
 from familydb.web import settings as settings_page
 from familydb.web.keys import session_secret
 
@@ -105,6 +105,8 @@ def create_app(app: App, *, api: Any = None) -> Flask:
         # A turn outlives the request that asked for it, so the thing running turns belongs to
         # the application rather than to any one view.
         FAMILYDB_CHAT=WebChat(app, api=api),
+        # Where each form's first post went, so a second one goes there too (see once.py).
+        FAMILYDB_ONCE=once.Once(),
     )
     if settings.web_trust_proxy:
         web.wsgi_app = ProxyFix(web.wsgi_app, x_for=1, x_proto=1, x_host=1)  # type: ignore[method-assign]
@@ -113,6 +115,7 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     # replaces the whole object, and these must follow it.
     web.jinja_env.globals["password_in_use"] = lambda: auth.password_in_use(app.settings)
     web.jinja_env.globals["csrf_token"] = auth.csrf_token
+    web.jinja_env.globals["once_token"] = once.once_token
     web.context_processor(lambda: {"site_title": app.settings.web_title})
     web.register_blueprint(auth.bp)
     web.register_blueprint(routes.bp)

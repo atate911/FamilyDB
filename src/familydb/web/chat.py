@@ -34,6 +34,7 @@ from familydb.store import members as member_store
 from familydb.store import messages as message_store
 from familydb.store.messages import Message
 from familydb.web import auth, views
+from familydb.web.once import once
 
 log = logging.getLogger(__name__)
 
@@ -157,6 +158,7 @@ def show() -> Any:
 
 
 @bp.post("/chat")
+@once
 def send() -> Response | Any:
     """Hand one message to the channel and come straight back to the thread."""
     if (complaint := auth.refused()) is not None:

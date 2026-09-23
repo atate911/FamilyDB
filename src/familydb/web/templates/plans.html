@@ -20,6 +20,7 @@
           <summary>Move it</summary>
           <form class="form" method="post" action="{{ url_for('edits.move_plan', plan_id=plan.id) }}">
             <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+            <input type="hidden" name="once" value="{{ once_token() }}" />
             <div class="field">
               <label for="start-{{ plan.id }}">New time</label>
               <input id="start-{{ plan.id }}" name="start" type="datetime-local" required
@@ -39,6 +40,7 @@
           <summary>Cancel it</summary>
           <form method="post" action="{{ url_for('edits.cancel_plan', plan_id=plan.id) }}">
             <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+            <input type="hidden" name="once" value="{{ once_token() }}" />
             <p class="muted">This takes it off the family calendar for everyone.</p>
             <button class="quiet" type="submit">Yes, cancel it</button>
           </form>
@@ -63,6 +65,7 @@
     {% if can_schedule %}
       <form class="form" method="post" action="{{ url_for('edits.add_plan') }}">
         <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+        <input type="hidden" name="once" value="{{ once_token() }}" />
         <div class="field wide">
           <label for="title">What</label>
           <input id="title" name="title" required maxlength="200" placeholder="Dinner at the ramen place" />

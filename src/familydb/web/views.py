@@ -245,9 +245,11 @@ def plan_row(plan: Plan, today: date) -> dict[str, Any]:
         "when": day_text(plan.start) if not plan.all_day else day_text(plan.start[:10]),
         "relative": relative_text(plan.start, today),
         "all_day": plan.all_day,
-        # What a datetime-local box wants: the stored start, with a time when there is none,
-        # so re-opening the form shows where the plan is now rather than an empty box.
-        "start_value": plan.start if len(plan.start) > 10 else f"{plan.start[:10]}T09:00",
+        # What a datetime-local box wants, "2026-09-26T18:30": the stored start without its
+        # offset — plans are stored in the family's own time, so the wall time is the first
+        # sixteen characters — or a morning on the day of an all-day plan. A box handed the
+        # offset as well shows nothing at all.
+        "start_value": plan.start[:16] if len(plan.start) > 10 else f"{plan.start[:10]}T09:00",
         "location": plan.location,
         "notes": plan.notes,
         "status": plan.status,
