@@ -56,7 +56,8 @@ def render_idea_line(idea: Idea) -> str:
         if idea.avg_rating is not None:
             done += f", rating {idea.avg_rating:g}/10"
         parts.append(done)
-    parts.append(f"details: {idea.enrichment}")
+    # Not whether its details have been looked up: that flips a minute after every new idea and
+    # would make the next message write the cached prefix again. describe_idea says it.
     return " | ".join(parts)
 
 

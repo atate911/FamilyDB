@@ -101,7 +101,7 @@ def test_system_prompt_routes_questions_through_suggest() -> None:
     text = load_system_prompt()
     assert "Call suggest once" in text
     assert "Weekend digest:" in text and "How was #57" in text
-    assert '"details: done"' in text
+    assert "describe_idea or lookup_place" in text
 
 
 def test_the_chat_list_leaves_out_the_worker_hand_back_tools(registry, settings) -> None:
