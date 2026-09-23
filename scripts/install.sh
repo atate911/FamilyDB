@@ -312,7 +312,7 @@ else
       "so it starts at boot and restarts if it stops; you are asked before this happens"
   fi
 fi
-plan_untouched "the system Python, your firewall, and every other service"
+plan_untouched "the system Python, your firewall, and every other service (Caddy only if you give a domain, and it asks first)"
 plan_untouched "any database that is already here: an existing one is migrated, never replaced"
 show_plan "What this installer changes"
 
@@ -631,6 +631,10 @@ BACKUPS_SCHEDULED=0
 if [ "${BACKUPS:-yes}" != no ] && [ "$DRY_RUN" = 0 ]; then
   head2 "Backups"
   if confirm "Back the database up every night at 03:15, keeping two weeks?" yes; then
+    # A minimal Debian has no cron; without it the schedule has nowhere to live.
+    if ! have crontab && have apt-get; then
+      $SUDO apt-get install -y -q cron >/dev/null 2>&1 || warn "Could not install cron with apt."
+    fi
     if bash "${REPO_ROOT}/scripts/maintain.sh" schedule-backups --target "$REPO_ROOT" --yes; then
       BACKUPS_SCHEDULED=1
     else
