@@ -6,31 +6,24 @@ settings cap it. The caller says which kind and brings what is particular to thi
 conversation, and the context its tools run in); this module does the rest the same way every
 time, and every call it makes is recorded under its kind.
 
-What the answer means stays with the caller: this module knows how to ask, not what a good
-weekend is. `docs/AI_CALLS.md` is the reasoning behind it; a test checks that nothing else in
-the package starts a turn.
+What goes into the request, part by part, is built and measured by `agent.compose`. What the
+answer means stays with the caller: this module knows how to ask, not what a good weekend is.
+`docs/AI_CALLS.md` is the reasoning behind it; a test checks that nothing else in the package
+starts a turn.
 """
 
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from familydb.agent import compose
+from familydb.agent.compose import Composed
+from familydb.agent.history import HistoryTurn
 from familydb.agent.loop import MessagesAPI, TurnResult, run_turn
-from familydb.agent.prompt import build_system_blocks, load_prompt
-from familydb.agent.providers import (
-    Message,
-    Provider,
-    Surface,
-    SystemBlock,
-    ToolDef,
-    TurnRequest,
-    WebAccess,
-    fallback_for,
-    for_surface,
-    ready,
-)
+from familydb.agent.providers import Provider, Surface, fallback_for, for_surface, ready
 from familydb.config import Settings
 from familydb.tools import ToolContext, ToolRegistry
 
@@ -106,48 +99,30 @@ def can_ask(settings: Settings, kind: str, api: MessagesAPI | None = None) -> bo
     return ready(settings, spec(kind).surface, api=api)
 
 
-def system_blocks(
-    call: CallSpec, conn: sqlite3.Connection, settings: Settings
-) -> list[SystemBlock]:
-    """The cached part of the request. Nothing in it may change from one call to the next."""
-    if call.prompt == "system":
-        return build_system_blocks(conn, settings)
-    home = f"Home area: {settings.home_area or 'not set'}\nTimezone: {settings.tz}"
-    return [
-        SystemBlock(load_prompt(call.prompt), cacheable=True),
-        SystemBlock(home, cacheable=True),
-    ]
-
-
-def tool_defs(call: CallSpec, registry: ToolRegistry) -> list[ToolDef]:
-    return registry.tool_defs() if call.tools is None else registry.tool_defs(call.tools)
-
-
-def web_access(call: CallSpec, user_location: dict[str, Any] | None) -> WebAccess | None:
-    if call.web_searches is None:
-        return None
-    return WebAccess(max_uses=call.web_searches, user_location=user_location)
-
-
 def build_request(
     kind: str,
     *,
     conn: sqlite3.Connection,
     settings: Settings,
     registry: ToolRegistry,
-    messages: list[Message],
     provider: Provider,
+    current: list[str],
+    history: Sequence[HistoryTurn] = (),
     user_location: dict[str, Any] | None = None,
-) -> TurnRequest:
-    """The request `ask` would open with, for `familydb debug prompt` to show without sending."""
-    call = spec(kind)
-    return TurnRequest(
-        system=system_blocks(call, conn, settings),
-        messages=messages,
-        tools=tool_defs(call, registry),
-        web=web_access(call, user_location),
-        model=provider.model_for(call.surface),
-        effort=getattr(settings, call.effort) if call.effort else None,
+) -> Composed:
+    """The request `ask` would open with, and the size of each part of it.
+
+    `familydb debug prompt` prints it without sending, so what it shows is what goes.
+    """
+    return compose.compose(
+        spec(kind),
+        conn=conn,
+        settings=settings,
+        registry=registry,
+        provider=provider,
+        current=current,
+        history=history,
+        user_location=user_location,
     )
 
 
@@ -157,7 +132,8 @@ def ask(
     settings: Settings,
     registry: ToolRegistry,
     ctx: ToolContext,
-    messages: list[Message],
+    current: list[str],
+    history: Sequence[HistoryTurn] = (),
     api: MessagesAPI | None = None,
     provider: Provider | None = None,
     fallback: Provider | None = None,
@@ -165,24 +141,27 @@ def ask(
 ) -> TurnResult:
     """Ask a model: one turn of the given kind, run to its answer, every call recorded.
 
-    `messages` is the conversation this call is about; `ctx` is what its tools run in. An
-    injected `api` (a test's fake) means the configured provider and no spare; otherwise the
-    spare is whichever other provider is switched on and has a key.
+    `current` is what this call is about (today's date, who is asking, what they said) and
+    `history` the conversation before it; `ctx` is what the tools run in. An injected `api` (a
+    test's fake) means the configured provider and no spare; otherwise the spare is whichever
+    other provider is switched on and has a key.
     """
     call = spec(kind)
     chosen = provider or for_surface(settings, call.surface, api=api)
     spare = fallback
     if spare is None and api is None:
         spare = fallback_for(settings, call.surface, chosen.name)
-    request = build_request(
+    composed = build_request(
         kind,
         conn=ctx.conn,
         settings=settings,
         registry=registry,
-        messages=messages,
         provider=chosen,
+        current=current,
+        history=history,
         user_location=user_location,
     )
+    request = composed.request
     return run_turn(
         provider=chosen,
         surface=call.surface,
@@ -198,6 +177,7 @@ def ask(
         model=request.model,
         effort=request.effort,
         kind=call.kind,
+        sections=composed.sections,
     )
 
 

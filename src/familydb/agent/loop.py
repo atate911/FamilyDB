@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol
 
 from familydb.agent import spending
+from familydb.agent.compose import exchange_chars
 from familydb.agent.providers import prices
 from familydb.agent.providers.base import (
     Exchange,
@@ -79,11 +80,13 @@ def run_turn(
     surface: str = "chat",
     fallback: Provider | None = None,
     kind: str | None = None,
+    sections: dict[str, int] | None = None,
 ) -> TurnResult:
     """Drive one inbound message to a reply.
 
     Callers in the package go through `agent.gateway.ask`, which declares each kind of call and
-    passes its `kind` on to be recorded with every model call.
+    passes its `kind` on to be recorded with every model call, with `sections`: the size of each
+    part of the request, to which each later call adds the earlier steps of the turn.
 
     With a `fallback` provider, a first call the chosen one cannot take is tried there instead.
     Only the first call: once a tool has run, starting again elsewhere would repeat whatever it
@@ -156,6 +159,7 @@ def run_turn(
                 cost_usd=dollars,
                 cost_estimated=not listed,
                 kind=kind,
+                sections=_sizes(sections, request),
             )
 
         if reply.stop == "refusal":
@@ -210,6 +214,13 @@ def run_turn(
     return TurnResult(
         "failed", "", actions, limit, totals, error="max_iterations", provider=active.name
     )
+
+
+def _sizes(sections: dict[str, int] | None, request: TurnRequest) -> dict[str, int] | None:
+    if sections is None:
+        return None
+    earlier = exchange_chars(request.exchanges)
+    return {**sections, "earlier steps": earlier} if earlier else dict(sections)
 
 
 def first_call_only(request: TurnRequest) -> bool:

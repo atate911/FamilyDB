@@ -18,7 +18,6 @@ import typer
 
 from familydb import __version__, privacy
 from familydb.agent.history import load_history
-from familydb.agent.prompt import build_messages
 from familydb.agent.providers.base import Message, TurnRequest
 from familydb.agent.render import render_idea_line, render_user_turn
 from familydb.app import App, build_app
@@ -324,7 +323,7 @@ def debug_prompt(
     Discovery is asked from inside a suggestion; `familydb suggest --discover` runs one.
     """
     from familydb.agent import gateway
-    from familydb.agent.worker import worker_messages
+    from familydb.agent.worker import worker_turn
     from familydb.jobs.enrich import render_enrich_request
     from familydb.store import places
 
@@ -341,7 +340,8 @@ def debug_prompt(
                 typer.echo("--kind enrich needs --idea N, the number of an idea", err=True)
                 raise typer.Exit(code=2)
             place = places.get(conn, idea.place_id) if idea.place_id else None
-            turn = worker_messages(application.clock, render_enrich_request(idea, place, settings))
+            current = worker_turn(application.clock, render_enrich_request(idea, place, settings))
+            history = []
         else:
             member = _acting_member(application, conn, as_member)
             sender = member.display_name if member else "someone"
@@ -352,16 +352,17 @@ def debug_prompt(
                 limit=settings.history_limit,
                 since_hours=settings.history_hours,
             )
-            turn = build_messages(history, render_user_turn(sender, text, application.clock))
+            current = render_user_turn(sender, text, application.clock)
         provider = application.provider(call.surface)
         request = gateway.build_request(
             kind,
             conn=conn,
             settings=settings,
             registry=application.registry,
-            messages=turn,
             provider=provider,
-        )
+            current=current,
+            history=history,
+        ).request
     typer.echo(json.dumps(provider.payload(request), indent=2, ensure_ascii=False, default=str))
 
 
@@ -372,17 +373,18 @@ def debug_cost(
     """What the model has cost lately, and what each message pays for before anyone types."""
     import json as _json
 
-    from familydb.agent import gateway
+    from familydb.agent import compose, gateway
 
     application = build_app()
     settings = application.settings
     chat_call = gateway.spec("chat")
     with closing(_ready(application)) as conn:
-        blocks = gateway.system_blocks(chat_call, conn, settings)
-        tools = gateway.tool_defs(chat_call, application.registry)
+        blocks, _ = compose.prefix(chat_call, conn, settings)
+        tools = compose.tool_defs(chat_call, application.registry)
         since = utc_iso(application.clock.now() - timedelta(days=days))
         rows = calls.usage_since(conn, since=since)
         kinds = calls.usage_by_kind(conn, since=since)
+        measured = calls.sections_since(conn, since=since)
 
     # Four characters to the token is rough, but enough to show what is large.
     system_tokens = sum(len(block.text) for block in blocks) // 4
@@ -427,6 +429,17 @@ def debug_cost(
     served = total_in + cached + sum(r["cache_write"] for r in rows)
     share = (cached / served * 100) if served else 0.0
     typer.echo(f"  {share:.0f}% of input tokens came from the cache at a tenth of the price.")
+    for kind in gateway.KINDS:
+        split = compose.breakdown(row for row in measured if row["kind"] == kind)
+        if not split:
+            continue
+        counted = split[0]["calls"]
+        typer.echo(
+            f"\nWhere the input of {gateway.purpose(kind)} went, per call "
+            f"({counted:,d} call{'' if counted == 1 else 's'}; the real total shared out by size):"
+        )
+        for part in split:
+            typer.echo(f"  {part['label']:<42} ~{part['tokens']:>7,d} tokens  {part['share']:>3d}%")
 
 
 @debug_app.command("validate-tools")

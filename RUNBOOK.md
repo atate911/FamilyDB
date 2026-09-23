@@ -430,11 +430,13 @@ per request, which is safe alongside the bot writing: SQLite is in WAL mode.
 does the lookups, whether each key is set and whether it came from `.env` or the page, whether
 Telegram is connected ("connected as @name", "the token was refused by Telegram" or "cannot
 reach Telegram; trying again"), whether the calendar, the weather and the web lookups are
-connected, what today has cost against the daily limit, what each model has cost in dollars over
-the last thirty days and how much came back from the prompt cache, what is waiting to be looked
-up, which messages did not go through, and the failures worth a look. Every dollar figure is an
-estimate from a price table; one marked with an asterisk is for a model the table does not list,
-and is counted high. It asks nothing of a model, so refreshing it is free.
+connected, what today has cost against the daily limit, what each purpose (answering the family,
+the digest, lookups, ...) and each model has cost in dollars over the last thirty days, where the
+input of each purpose went (instructions, tools, the idea list, history, the message; the real
+total shared out by the size of each part), how much came back from the prompt cache, what is
+waiting to be looked up, which messages did not go through, and the failures worth a look.
+Every dollar figure is an estimate from a price table; one marked with an asterisk is for a model
+the table does not list, and is counted high. It asks nothing of a model, so refreshing it is free.
 
 ## 11. Settings, and choosing OpenAI, Claude or Gemini
 

@@ -62,13 +62,15 @@ def log_llm_call(
     cost_usd: float | None = None,
     cost_estimated: bool = False,
     kind: str | None = None,
+    sections: dict[str, int] | None = None,
 ) -> int:
     usage = usage or {}
     cur = conn.execute(
         "INSERT INTO llm_calls (message_id, iteration, model, served_model, request_id, "
         "stop_reason, input_tokens, cache_creation_input_tokens, cache_read_input_tokens, "
         "output_tokens, duration_ms, created_at, provider, web_searches, cost_usd, "
-        "cost_estimated, kind) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "cost_estimated, kind, sections) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             message_id,
             iteration,
@@ -84,6 +86,7 @@ def log_llm_call(
             cost_usd,
             int(cost_estimated),
             kind,
+            to_json(sections) if sections is not None else None,
         ),
     )
     return int(cur.lastrowid or 0)
@@ -142,6 +145,17 @@ def usage_by_kind(conn: sqlite3.Connection, *, since: str) -> list[dict[str, Any
         "coalesce(sum(cost_usd), 0) AS cost_usd, "
         "count(DISTINCT message_id) AS messages "
         "FROM llm_calls WHERE created_at >= ? GROUP BY kind ORDER BY cost_usd DESC, calls DESC",
+        (since,),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def sections_since(conn: sqlite3.Connection, *, since: str) -> list[dict[str, Any]]:
+    """Each call's kind, the size of each part of what it sent, and the input tokens it sent."""
+    rows = conn.execute(
+        "SELECT kind, sections, coalesce(input_tokens, 0) + coalesce(cache_read_input_tokens, 0) "
+        "+ coalesce(cache_creation_input_tokens, 0) AS sent "
+        "FROM llm_calls WHERE created_at >= ? AND sections IS NOT NULL ORDER BY id",
         (since,),
     ).fetchall()
     return [dict(row) for row in rows]

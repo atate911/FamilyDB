@@ -93,6 +93,7 @@ def test_a_database_that_ran_the_retired_0007_still_gets_what_follows(tmp_path):
         conn.execute("DROP INDEX llm_calls_created_idx")
         conn.execute("DROP TABLE knocks")
         conn.execute("ALTER TABLE llm_calls DROP COLUMN kind")
-        assert db.migrate(conn) == [8, 9, 10]
+        conn.execute("ALTER TABLE llm_calls DROP COLUMN sections")
+        assert db.migrate(conn) == [8, 9, 10, 11]
         columns = {row["name"] for row in conn.execute("PRAGMA table_info(llm_calls)")}
         assert {"provider", "web_searches", "cost_usd", "cost_estimated"} <= columns

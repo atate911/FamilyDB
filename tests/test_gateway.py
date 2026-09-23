@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from familydb.agent import gateway
+from familydb.agent import compose, gateway
 from familydb.agent.prompt import load_prompt
-from familydb.agent.worker import run_worker_turn, worker_messages
+from familydb.agent.worker import run_worker_turn, worker_turn
 from familydb.app import App
 from familydb.channels.base import IncomingMessage
 from familydb.channels.console import one_shot
@@ -60,7 +60,7 @@ def test_each_kind_is_declared_whole(kind, registry, settings) -> None:
     specs = {spec.name: spec for spec in registry.specs()}
     if call.tools is None:  # the chat tools: never the ones a worker hands back with
         assert call.web_searches is None and not call.hand_back
-        assert all(not specs[t.name].worker_only for t in gateway.tool_defs(call, registry))
+        assert all(not specs[t.name].worker_only for t in compose.tool_defs(call, registry))
     else:  # a worker: its own tools, its hand-back among them, and a cap on the web
         assert set(call.tools) <= set(specs) and set(call.hand_back) <= set(call.tools)
         assert all(specs[name].worker_only for name in call.tools)
@@ -114,10 +114,10 @@ def test_a_lookup_is_recorded_as_one_and_sends_what_debug_prompt_shows(
         conn=conn,
         settings=settings,
         registry=registry,
-        messages=worker_messages(clock, request),
         provider=provider,
+        current=worker_turn(clock, request),
     )
-    assert provider.payload(shown) == api.requests[0]
+    assert provider.payload(shown.request) == api.requests[0]
 
 
 def test_an_unknown_kind_is_refused() -> None:

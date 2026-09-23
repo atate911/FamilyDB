@@ -13,7 +13,7 @@ from typing import Any, Literal
 
 from familydb.agent import gateway
 from familydb.agent.loop import MessagesAPI, TurnResult
-from familydb.agent.providers import Message, Provider
+from familydb.agent.providers import Provider
 from familydb.clock import Clock
 from familydb.config import Settings
 from familydb.tools import ToolContext, ToolRegistry
@@ -43,9 +43,9 @@ def home_location(settings: Settings) -> dict[str, Any] | None:
     return location
 
 
-def worker_messages(clock: Clock, request: str) -> list[Message]:
+def worker_turn(clock: Clock, request: str) -> list[str]:
     """A worker's whole conversation: today's date, then what it is asked to do."""
-    return [Message("user", [f"Today is {clock.describe()}.", request])]
+    return [f"Today is {clock.describe()}.", request]
 
 
 def run_worker_turn(
@@ -79,7 +79,7 @@ def run_worker_turn(
         settings=settings,
         registry=registry,
         ctx=ctx,
-        messages=worker_messages(clock, request),
+        current=worker_turn(clock, request),
         api=api,
         provider=provider,
         fallback=fallback,

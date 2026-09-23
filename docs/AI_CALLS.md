@@ -135,6 +135,40 @@ hand-back that ends the turn for workers, the gate each kind needs before it run
 check a key and the spending limit themselves today), per-kind retry rules, and a model that a
 kind may escalate to.
 
+## The composer: what goes in, part by part
+
+Under the gateway sits the composer (`agent/compose.py`), and under that the providers:
+
+| Layer | Its one job |
+|---|---|
+| Gateway | which kind of call this is, its rules, and the record of it |
+| Composer | exactly what goes in, and (to come) turning what comes back into something usable |
+| Providers | each vendor's exact format, both ways |
+
+The composer builds every request from labelled parts: the instructions, who the family is, the
+idea list, where home is, the tool definitions, the recent conversation, the message with
+today's date, and the earlier steps of the same turn. It is where token efficiency is decided,
+and it works by choosing what goes in, not by squeezing words:
+
+- **Measure before trimming.** Built: every call records the size of each part. A provider
+  reports one real input total per call and never its split, and counting each part exactly would
+  cost a request of its own, so the real total is shared out in proportion to the parts' sizes.
+  The split is an estimate; the total is what was billed. `/status` and `familydb debug cost`
+  show, per purpose, how many tokens each part takes per call and its share.
+- **Budgets per part** (to come). Each part gets a token budget, and code fits it: the history
+  by recency, the ideas by what bears on the message. A firm requirement (an allergy, a
+  must-have) is never trimmed away; if requirements alone exceed a budget, the composer says so
+  rather than dropping one quietly.
+- **The prefix stays still** (to come as a check). The parts before the conversation are cached
+  by the provider, which is the biggest saving there is. The composer must never tailor them to a
+  message; selected parts belong after them.
+- **Reading the answer** (to come). The one place that validates what comes back, checks the
+  model's claims that code can check (the idea exists, the date is inside the window), and,
+  later, takes the memory changes of `docs/MEMORY.md` out of the answer.
+
+Two things it must never do: ask a model to shorten a prompt (it spends tokens to save them,
+and can change the meaning), or rewrite the cached part per request.
+
 ## Choosing models
 
 The default is the cheapest model that meets measured quality, per kind, not one model for

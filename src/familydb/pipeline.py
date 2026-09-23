@@ -11,7 +11,6 @@ from typing import Any
 from familydb.agent import gateway
 from familydb.agent.history import load_history
 from familydb.agent.loop import MessagesAPI, TurnResult
-from familydb.agent.prompt import build_messages
 from familydb.agent.render import render_retry_note, render_user_turn
 from familydb.agent.spending import SpendingLimitReached
 from familydb.app import App
@@ -325,7 +324,6 @@ def _think(
         note = render_retry_note(calls.tool_calls_for_message(conn, inbound_id), write_tools)
         if note:
             current.append(note)
-    turn = build_messages(history, current)
     ctx = ToolContext(
         conn=conn,
         settings=settings,
@@ -343,7 +341,8 @@ def _think(
         settings=settings,
         registry=app.registry,
         ctx=ctx,
-        messages=turn,
+        current=current,
+        history=history,
         api=api,
     )
 

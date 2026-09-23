@@ -520,8 +520,8 @@ working and most of each message is not being paid for twice. If it stays zero, 
 
 Finally `/status` in the browser: which model answers chat and which does the lookups, whether
 each key is set and where it came from, whether Telegram is connected, what else is connected,
-what today has cost against the daily limit, what the last thirty days cost per model, and what
-is waiting. It asks nothing of a model, so refreshing it is free.
+what today has cost against the daily limit, what the last thirty days cost per purpose and per
+model, which part of each request the tokens went on, and what is waiting. It asks nothing of a model, so refreshing it is free.
 
 ## 8. Day to day
 

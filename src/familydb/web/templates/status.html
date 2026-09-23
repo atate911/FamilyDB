@@ -67,23 +67,40 @@
           </tr>
         {% endfor %}
       </table>
-      <table class="hours">
-        <tr>
-          <th>model</th><th>calls</th><th>sent</th><th>cached</th><th>written</th><th>back</th>
-          <th>US$</th>
-        </tr>
-        {% for row in spending.rows %}
+      {% for kind in spending.where %}
+        <p class="muted">Where the input of {{ kind.purpose }} went, per call: the real total
+          over {{ "{:,}".format(kind.parts[0].calls) }} call{{ "" if kind.parts[0].calls == 1 else "s" }},
+          shared out by the size of each part.</p>
+        <table class="hours">
+          <tr><th>part</th><th>tokens</th><th>share</th></tr>
+          {% for part in kind.parts %}
+            <tr>
+              <td>{{ part.label }}</td>
+              <td>{{ "{:,}".format(part.tokens) }}</td>
+              <td>{{ part.share }}%</td>
+            </tr>
+          {% endfor %}
+        </table>
+      {% endfor %}
+      <div class="scroll">
+        <table class="hours">
           <tr>
-            <td>{{ row.model }}</td>
-            <td>{{ "{:,}".format(row.calls) }}</td>
-            <td>{{ "{:,}".format(row.input_tokens) }}</td>
-            <td>{{ "{:,}".format(row.cache_read) }}</td>
-            <td>{{ "{:,}".format(row.cache_write) }}</td>
-            <td>{{ "{:,}".format(row.output_tokens) }}</td>
-            <td>{{ "%.2f"|format(row.cost_usd) }}{% if row.cost_estimated %}*{% endif %}</td>
+            <th>model</th><th>calls</th><th>sent</th><th>cached</th><th>written</th><th>back</th>
+            <th>US$</th>
           </tr>
-        {% endfor %}
-      </table>
+          {% for row in spending.rows %}
+            <tr>
+              <td>{{ row.model }}</td>
+              <td>{{ "{:,}".format(row.calls) }}</td>
+              <td>{{ "{:,}".format(row.input_tokens) }}</td>
+              <td>{{ "{:,}".format(row.cache_read) }}</td>
+              <td>{{ "{:,}".format(row.cache_write) }}</td>
+              <td>{{ "{:,}".format(row.output_tokens) }}</td>
+              <td>{{ "%.2f"|format(row.cost_usd) }}{% if row.cost_estimated %}*{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </table>
+      </div>
     {% else %}
       <p class="muted">Nothing has been asked of a model in the last {{ days }} days.</p>
     {% endif %}

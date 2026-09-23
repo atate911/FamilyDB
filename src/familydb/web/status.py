@@ -10,7 +10,7 @@ import sqlite3
 from datetime import timedelta
 from typing import Any
 
-from familydb.agent import gateway, providers
+from familydb.agent import compose, gateway, providers
 from familydb.agent.spending import spent_today
 from familydb.app import App
 from familydb.availability import (
@@ -141,6 +141,12 @@ def spending(
         {**row, "purpose": gateway.purpose(row["kind"])}
         for row in calls.usage_by_kind(conn, since=since)
     ]
+    measured = calls.sections_since(conn, since=since)
+    where = [
+        {"purpose": gateway.purpose(kind), "parts": parts}
+        for kind in gateway.KINDS
+        if (parts := compose.breakdown(row for row in measured if row["kind"] == kind))
+    ]
     today = spent_today(conn, settings, now) if settings is not None else 0.0
     fresh = sum(row["input_tokens"] for row in rows)
     cached = sum(row["cache_read"] for row in rows)
@@ -149,6 +155,7 @@ def spending(
     return {
         "rows": rows,
         "kinds": kinds,
+        "where": where,
         "calls": sum(row["calls"] for row in rows),
         "input": fresh,
         "cached": cached,

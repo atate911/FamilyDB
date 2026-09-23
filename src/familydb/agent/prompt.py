@@ -37,22 +37,30 @@ def trim_ideas(everything: list[Any], limit: int) -> tuple[list[Any], int]:
     return everything[-limit:], len(everything) - limit
 
 
-def build_system_blocks(conn: sqlite3.Connection, settings: Settings) -> list[SystemBlock]:
-    """Two blocks, both cache breakpoints: the system prompt, then family context + idea list."""
+def chat_prefix(conn: sqlite3.Connection, settings: Settings) -> tuple[str, str, str]:
+    """The chat prefix in its three parts: the system prompt, the family, the idea list."""
     family = render_family_context(members.list_all(conn), settings)
     everything = ideas.list_for_prompt(conn)
     shown, hidden = trim_ideas(everything, settings.prompt_idea_limit)
-    idea_lines = render_idea_list(shown)
-    context = f"{family}\n\n{IDEAS_HEADER}\n{idea_lines}"
+    idea_list = f"{IDEAS_HEADER}\n{render_idea_list(shown)}"
     if hidden:
-        context += (
+        idea_list += (
             f"\n({hidden} older idea{'s' if hidden != 1 else ''} not listed here; "
             "use search_ideas to find them.)"
         )
+    return load_system_prompt(), family, idea_list
+
+
+def chat_blocks(instructions: str, family: str, idea_list: str) -> list[SystemBlock]:
+    """Two blocks, both cache breakpoints: the system prompt, then family context + idea list."""
     return [
-        SystemBlock(load_system_prompt(), cacheable=True),
-        SystemBlock(context, cacheable=True),
+        SystemBlock(instructions, cacheable=True),
+        SystemBlock(f"{family}\n\n{idea_list}", cacheable=True),
     ]
+
+
+def build_system_blocks(conn: sqlite3.Connection, settings: Settings) -> list[SystemBlock]:
+    return chat_blocks(*chat_prefix(conn, settings))
 
 
 def build_messages(history: list[HistoryTurn], current: list[str]) -> list[Message]:
