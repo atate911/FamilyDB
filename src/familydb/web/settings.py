@@ -110,6 +110,37 @@ def unknown_models(values: dict[str, Any], stored: dict[str, Any], proposed: Set
     return found
 
 
+NOT_ON_THE_MAP = "Could not find {area} on the map. Type its latitude and longitude as well."
+FOUND_HOME = "Found {label}, at {lat}, {lon}."
+
+
+def locate_home(values: dict[str, Any], stored: dict[str, Any]) -> tuple[dict[str, Any], str]:
+    """Coordinates for a home area typed on the page, looked up as the installer used to.
+
+    Only when the area is changing and no new coordinates were typed with it: coordinates typed
+    by hand win. Returns the coordinates to store, and a sentence saying what happened.
+    """
+    area = values.get("home_area")
+    if not area or area == stored.get("home_area"):
+        return {}, ""
+    typed = any(
+        values.get(key) is not None and values.get(key) != stored.get(key)
+        for key in ("home_lat", "home_lon")
+    )
+    if typed:
+        return {}, ""
+    try:
+        found = _app().geocoder.geocode(area)
+    except Exception as exc:  # a map service that is down is not a reason to refuse the save
+        log.warning("could not look up %s: %s", area, exc)
+        found = None
+    if found is None:
+        return {}, NOT_ON_THE_MAP.format(area=area)
+    lat, lon = round(found.lat, 4), round(found.lon, 4)
+    said = FOUND_HOME.format(label=found.label, lat=lat, lon=lon)
+    return {"home_lat": lat, "home_lon": lon}, said
+
+
 def problems_from(exc: ValidationError) -> dict[str, str]:
     """Pydantic's complaints, one sentence per box, in the words it used."""
     found: dict[str, str] = {}
@@ -240,7 +271,8 @@ def save() -> Response | tuple[str, int]:
             problems = unknown_models(values, stored, candidate)
     if problems:
         return page(problems=problems, error="Nothing was saved.", typed=typed, status=400)
-    flash(_said(_save(values)), NOTICE)
+    located, where = locate_home(values, stored)
+    flash(" ".join(part for part in (_said(_save({**values, **located})), where) if part), NOTICE)
     return redirect(url_for("settings.show"))
 
 

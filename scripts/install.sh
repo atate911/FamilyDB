@@ -37,29 +37,34 @@ FamilyDB installer
 
   scripts/install.sh [options]
 
+It asks two things: the domain name for the web page, if it has one, and your name as the
+first family member. Everything else (the model and its key, Telegram, Google Calendar, where
+home is, what it may spend) is set on the web page once it is running.
+
 Options
   --mode docker|venv   How to run it. Default: docker when available, else a virtualenv.
                        (bootstrap.sh always passes this explicitly, and chooses venv.)
-  --yes                Accept every default. Still asks for the secrets it cannot guess: the
-                       API keys and the Telegram token, unless they are in the environment.
-  --non-interactive    Never prompt. Every answer must come from the environment (below).
+  --yes                Accept every default.
+  --non-interactive    Never prompt. Every answer comes from the environment (below).
   --config-only        Write .env and stop, installing nothing.
   --dry-run            Say what would happen; change nothing.
   -h, --help           This text.
 
 Answers can be supplied as environment variables, which is what --non-interactive reads:
-  PROVIDER  ANTHROPIC_API_KEY  OPENAI_API_KEY  GEMINI_API_KEY
-  FAMILYDB_TZ  HOME_AREA  HOME_LAT  HOME_LON  WEATHER_UNITS
-  TELEGRAM_BOT_TOKEN  WEB_ENABLED  WEB_HOST  WEB_PORT  WEB_PASSWORD  WEB_TOOLS_ENABLED
-  DIGEST_CHAT_ID
-  ADMIN_NAME
+  WEB_DOMAIN           the page's domain; empty keeps it on this machine
+  WEB_PASSWORD         the family password (12 characters or more); made up when not given
+  ADMIN_NAME           the first family member
   BACKUPS              yes (the default) schedules a nightly backup; no leaves it to you
+and, for a scripted build that wants them in .env rather than set on the page:
+  PROVIDER  OPENAI_API_KEY  ANTHROPIC_API_KEY  GEMINI_API_KEY  TELEGRAM_BOT_TOKEN
+  FAMILYDB_TZ  HOME_AREA  HOME_LAT  HOME_LON  WEATHER_UNITS  WEB_TOOLS_ENABLED
+  WEB_HOST  WEB_PORT  DIGEST_CHAT_ID
 
 Examples
-  scripts/install.sh                          # ask a handful of questions, then install
-  scripts/install.sh --yes                    # defaults for everything answerable
-  ANTHROPIC_API_KEY=sk-ant-... FAMILYDB_TZ=America/Vancouver ADMIN_NAME=Sam \
-    scripts/install.sh --non-interactive --mode venv
+  scripts/install.sh                          # two questions, then install
+  scripts/install.sh --yes                    # this machine only, a generated password
+  WEB_DOMAIN=family.example.com ADMIN_NAME=Sam \
+    scripts/install.sh --non-interactive --mode docker
 USAGE
 }
 
@@ -388,165 +393,88 @@ fi
 if [ "$KEEP_ENV" = 0 ]; then
   [ "$DRY_RUN" = 1 ] || { cp "$EXAMPLE_FILE" "$ENV_FILE"; chmod 600 "$ENV_FILE"; }
 
-  # --- who answers ---
   say ""
-  say "Which model answers: Claude, OpenAI or Gemini. Give more than one key and it will ask"
-  say "another when the first is rate limited or down. All three can be changed later from the"
-  say "settings page, so this is not a decision you are stuck with."
-  ask PROVIDER "claude, openai or gemini" "${PROVIDER:-claude}"
-  case "$PROVIDER" in
+  say "Almost everything is set on the web page once it is running: which model answers and its"
+  say "key, Telegram, Google Calendar, where the family lives, and what it may spend a day. This"
+  say "asks only what the page cannot answer for itself: how you will reach it."
+
+  # A scripted build can still give any of these; they are written as given, and the page can
+  # change them later. Asked for, none of them is: the page does it better.
+  case "${PROVIDER:-}" in
+    claude|Claude|anthropic) PROVIDER=anthropic ;;
     openai|OpenAI|OPENAI|gpt|GPT) PROVIDER=openai ;;
     gemini|Gemini|GEMINI|google|Google|GOOGLE) PROVIDER=gemini ;;
-    *) PROVIDER=anthropic ;;
   esac
-  set_env PROVIDER "$PROVIDER"
-
-  ask_key ANTHROPIC_API_KEY anthropic "Claude" \
-    "https://console.anthropic.com/settings/keys" "sk-ant-"
-  ask_key OPENAI_API_KEY openai "OpenAI" "https://platform.openai.com/api-keys" "sk-"
-  ask_key GEMINI_API_KEY gemini "Gemini" "https://aistudio.google.com/apikey" "AIza"
-
-  case "$PROVIDER" in
-    anthropic) CHOSEN_KEY="${ANTHROPIC_API_KEY:-}" ;;
-    openai) CHOSEN_KEY="${OPENAI_API_KEY:-}" ;;
-    gemini) CHOSEN_KEY="${GEMINI_API_KEY:-}" ;;
-  esac
-  if [ -z "${ANTHROPIC_API_KEY:-}${OPENAI_API_KEY:-}${GEMINI_API_KEY:-}" ]; then
-    warn "No key at all. The bot will save messages but cannot reply until you add one to .env."
-  elif [ -z "$CHOSEN_KEY" ]; then
-    warn "You chose ${PROVIDER} but gave no key for it; it will ask one of the others instead."
+  for var in PROVIDER ANTHROPIC_API_KEY OPENAI_API_KEY GEMINI_API_KEY HOME_AREA HOME_LAT HOME_LON \
+             WEATHER_UNITS TELEGRAM_BOT_TOKEN DIGEST_CHAT_ID; do
+    [ -n "${!var:-}" ] && set_env "$var" "${!var}"
+  done
+  if [ -n "${HOME_AREA:-}" ] && [ -z "${HOME_LAT:-}" ]; then
+    if place="$(look_up_place "$HOME_AREA")"; then
+      set_env HOME_LAT "$(printf '%s' "$place" | cut -d' ' -f1)"
+      set_env HOME_LON "$(printf '%s' "$place" | cut -d' ' -f2)"
+    fi
   fi
+  # Looking ideas up is most of what makes a suggestion good, and the daily spending limit keeps
+  # it bounded, so it starts on. The page turns it off.
+  set_env WEB_TOOLS_ENABLED "${WEB_TOOLS_ENABLED:-true}"
+  # The page's own chat can be spoken to from the first Thursday; a Telegram group cannot until
+  # someone has written in it. Moved to Telegram on the page later.
+  [ -z "${DIGEST_CHAT_ID:-}" ] && set_env DIGEST_CHAT_ID web
 
-  # --- where the family is ---
-  detected_tz="$(detect_timezone)"
-  ask FAMILYDB_TZ "Timezone" "$detected_tz"
+  FAMILYDB_TZ="${FAMILYDB_TZ:-$(detect_timezone)}"
   if ! valid_timezone "$FAMILYDB_TZ"; then
-    warn "'${FAMILYDB_TZ}' is not an IANA zone name. Using ${detected_tz}."
-    FAMILYDB_TZ="$detected_tz"
+    warn "'${FAMILYDB_TZ}' is not an IANA zone name. Using $(detect_timezone)."
+    FAMILYDB_TZ="$(detect_timezone)"
   fi
   set_env FAMILYDB_TZ "$FAMILYDB_TZ"
+  note "Timezone: ${FAMILYDB_TZ}, from this machine. The settings page changes it."
 
+  # --- the web page, which is how everything else gets set ---
+  set_env WEB_ENABLED true
   say ""
-  say "Your town or area. It is used for the weather and for searching what is on nearby."
-  ask HOME_AREA "Town, region" "${HOME_AREA:-}"
-  set_env HOME_AREA "$HOME_AREA"
-  if [ -n "$HOME_AREA" ] && [ -z "${HOME_LAT:-}" ]; then
-    if place="$(look_up_place "$HOME_AREA")"; then
-      HOME_LAT="$(printf '%s' "$place" | cut -d' ' -f1)"
-      HOME_LON="$(printf '%s' "$place" | cut -d' ' -f2)"
-      ok "Found $(printf '%s' "$place" | cut -d' ' -f3-) at ${HOME_LAT}, ${HOME_LON}"
-    else
-      note "Could not look that up. The forecast needs coordinates; add HOME_LAT and HOME_LON to .env later."
-    fi
+  say "The page is reached one of two ways:"
+  say "  · through a domain name that points at this machine, over HTTPS; or"
+  say "  · from this machine only, which you reach over an SSH tunnel or Tailscale."
+  ask WEB_DOMAIN "Domain name for the page (leave it empty for this machine only)" "${WEB_DOMAIN:-}"
+  WEB_DOMAIN="${WEB_DOMAIN#https://}"; WEB_DOMAIN="${WEB_DOMAIN#http://}"; WEB_DOMAIN="${WEB_DOMAIN%%/*}"
+  if [ -n "$WEB_DOMAIN" ] && ! printf '%s' "$WEB_DOMAIN" | grep -Eq '^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'; then
+    warn "'${WEB_DOMAIN}' does not look like a domain name; keeping the page on this machine."
+    WEB_DOMAIN=""
   fi
-  set_env HOME_LAT "${HOME_LAT:-}"
-  set_env HOME_LON "${HOME_LON:-}"
-  ask WEATHER_UNITS "Temperatures in metric or imperial" "${WEATHER_UNITS:-metric}"
-  case "$WEATHER_UNITS" in metric|imperial) ;; *) WEATHER_UNITS=metric ;; esac
-  set_env WEATHER_UNITS "$WEATHER_UNITS"
+  if [ -n "$WEB_DOMAIN" ]; then
+    set_env WEB_DOMAIN "$WEB_DOMAIN"
+    # A proxy in front terminates HTTPS and says who the visitor really is.
+    set_env WEB_TRUST_PROXY true
+    # Compose reads this from .env, so every `docker compose up` brings Caddy up too.
+    [ "$MODE" = docker ] && set_env COMPOSE_PROFILES tls
+    ok "The page will be https://${WEB_DOMAIN}/ once the domain points here."
+  fi
+  if [ "$MODE" = docker ]; then
+    WEB_HOST="${WEB_HOST:-0.0.0.0}"   # inside the container; the compose file keeps it to this machine
+  else
+    WEB_HOST="${WEB_HOST:-127.0.0.1}"
+    valid_host "$WEB_HOST" || { warn "'${WEB_HOST}' is not an address to bind; using 127.0.0.1."; WEB_HOST=127.0.0.1; }
+  fi
+  WEB_PORT="${WEB_PORT:-8080}"
+  if ! printf '%s' "$WEB_PORT" | grep -Eq '^[0-9]+$' || [ "$WEB_PORT" -lt 1025 ] || [ "$WEB_PORT" -gt 65535 ]; then
+    warn "port must be a number between 1025 and 65535; using 8080."
+    WEB_PORT=8080
+  fi
+  set_env WEB_HOST "$WEB_HOST"
+  set_env WEB_PORT "$WEB_PORT"
 
-  # --- Telegram ---
-  say ""
-  say "Telegram is how the family talks to it. Create a bot with @BotFather and paste the token."
-  note "Skip this to use the console for now (familydb repl); you can add it later."
-  if [ -z "${TELEGRAM_BOT_TOKEN:-}" ]; then
-    ask_secret TELEGRAM_BOT_TOKEN "Bot token"
+  # Always a password: the page is where the keys are typed in. Twelve characters at least.
+  if [ -n "${WEB_PASSWORD:-}" ] && [ "${#WEB_PASSWORD}" -lt 12 ]; then
+    die "WEB_PASSWORD is ${#WEB_PASSWORD} characters; the page needs 12 or more."
   fi
-  if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && ! printf '%s' "$TELEGRAM_BOT_TOKEN" | grep -Eq '^[0-9]+:[A-Za-z0-9_-]+$'; then
-    warn "that does not look like a BotFather token (digits, a colon, then letters). Storing it anyway."
-  fi
-  set_env TELEGRAM_BOT_TOKEN "${TELEGRAM_BOT_TOKEN:-}"
-  [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && ok "Telegram configured." || note "No Telegram token: console only for now."
-
-  # --- what it is allowed to spend ---
-  say ""
-  say "Looking ideas up on the web fills in addresses, opening hours and booking links,"
-  say "and finds events on nearby. It costs a few searches per new idea."
-  if [ -z "${WEB_TOOLS_ENABLED:-}" ]; then
-    if confirm "Turn web lookups on?" yes; then WEB_TOOLS_ENABLED=true; else WEB_TOOLS_ENABLED=false; fi
-  fi
-  set_env WEB_TOOLS_ENABLED "$WEB_TOOLS_ENABLED"
-
-  # --- the web page ---
-  say ""
-  say "A web page is the whole bot in a browser: chat with it, browse the ideas, the restaurants"
-  say "and the plans, add and change an idea, record how something went, put a plan on the"
-  say "calendar, see what the models have cost, and change the settings and the keys without"
-  say "editing a file. It is the way in when there is no Telegram token yet."
-  if [ -z "${WEB_ENABLED:-}" ]; then
-    if confirm "Turn the web page on?" no; then WEB_ENABLED=true; else WEB_ENABLED=false; fi
-  fi
-  set_env WEB_ENABLED "$WEB_ENABLED"
-  if [ "$WEB_ENABLED" = true ]; then
-    if [ "$MODE" = docker ]; then
-      WEB_HOST="${WEB_HOST:-0.0.0.0}"
-      note "In Docker the page binds every interface inside the container; docker-compose.yml decides who reaches it."
-    else
-      say "127.0.0.1 keeps the page on this machine. 0.0.0.0 serves the network."
-      ask WEB_HOST "Bind address" "${WEB_HOST:-127.0.0.1}"
-      if ! valid_host "$WEB_HOST"; then
-        warn "'${WEB_HOST}' is not an address to bind. Using 127.0.0.1; change WEB_HOST in .env later."
-        WEB_HOST=127.0.0.1
-      fi
-    fi
-    ask WEB_PORT "Port" "${WEB_PORT:-8080}"
-    if ! printf '%s' "$WEB_PORT" | grep -Eq '^[0-9]+$' || [ "$WEB_PORT" -lt 1025 ] || [ "$WEB_PORT" -gt 65535 ]; then
-      warn "port must be a number between 1025 and 65535; using 8080."
-      WEB_PORT=8080
-    fi
-    set_env WEB_HOST "$WEB_HOST"
-    set_env WEB_PORT "$WEB_PORT"
-
-    needs_password=1
-    case "$WEB_HOST" in 127.0.0.1|localhost|::1|"") needs_password=0 ;; esac
-    if [ -z "${WEB_PASSWORD:-}" ] && [ "$needs_password" = 1 ]; then
-      if confirm "Generate a password for the page?" yes; then
-        WEB_PASSWORD="$(random_password)"
-        say "  Password: ${B}${WEB_PASSWORD}${OFF}"
-        say "  Write it down now. It is in .env too, but nowhere else."
-      else
-        ask_secret WEB_PASSWORD "Password for the page (12 characters or more)"
-      fi
-    fi
-    if [ "$needs_password" = 1 ] && [ "${#WEB_PASSWORD}" -lt 12 ]; then
-      if [ "$NON_INTERACTIVE" = 1 ] && [ -n "${WEB_PASSWORD:-}" ]; then
-        # A build script gave a password on purpose. Replacing it with one printed to a log
-        # nobody reads would leave the family locked out of their own page.
-        die "WEB_PASSWORD is ${#WEB_PASSWORD} characters; a page on the network needs 12 or more."
-      fi
-      warn "a page reachable from other machines needs 12 characters or more; generating one."
-      WEB_PASSWORD="$(random_password)"
-      say "  Password: ${B}${WEB_PASSWORD}${OFF}"
-      say "  Write it down now. It is in .env too, but nowhere else."
-    fi
-    set_env WEB_PASSWORD "${WEB_PASSWORD:-}"
-    if [ "$MODE" = docker ]; then
-      note "The page is published to this machine only. To reach it from elsewhere, edit the"
-      note "ports line in docker-compose.yml, or put Caddy in front (RUNBOOK section 10)."
-    fi
-  fi
-
-  # --- the weekly digest ---
-  # It needs somewhere to speak, and a Telegram group's chat id is not knowable until somebody
-  # has written in it. The page's own chat is knowable now, so a family with the page on can
-  # have the digest from the first Thursday and move it to Telegram later.
-  if [ -z "${DIGEST_CHAT_ID:-}" ] && [ "$WEB_ENABLED" = true ]; then
+  if [ -z "${WEB_PASSWORD:-}" ]; then
+    WEB_PASSWORD="$(random_password)"
     say ""
-    say "Every Thursday evening it can work out what to do at the weekend and post the answer."
-    say "Telegram's chat id is not knowable yet, but the page's chat is."
-    if confirm "Send the weekly digest to the web page for now?" yes; then
-      DIGEST_CHAT_ID=web
-    fi
+    say "  The family password for the page: ${B}${WEB_PASSWORD}${OFF}"
+    say "  Write it down now. It is in .env too, and nowhere else."
   fi
-  set_env DIGEST_CHAT_ID "${DIGEST_CHAT_ID:-}"
-
-  # --- things nobody can know yet ---
-  note ""
-  note "Left empty on purpose, because they cannot be known until the bot is running:"
-  if [ -z "${DIGEST_CHAT_ID:-}" ]; then
-    note "  DIGEST_CHAT_ID   the family group's chat id, for the weekly digest (RUNBOOK section 9)"
-  fi
-  note "  GOOGLE_CALENDAR_ID and the Google token, which need a browser (RUNBOOK section 5)"
+  set_env WEB_PASSWORD "$WEB_PASSWORD"
 
   [ "$DRY_RUN" = 1 ] || chmod 600 "$ENV_FILE"
   ok "Wrote $(basename "$ENV_FILE") (readable only by you)."
@@ -680,14 +608,6 @@ else
     rm -f /tmp/familydb-tools.$$
     ok "${ready} tools ready${waiting:+, ${waiting} waiting on a service you have not set up yet}."
   fi
-  # Only where counting tokens is free: OpenAI has no such endpoint, so there is nothing to ask.
-  if [ -n "${CHOSEN_KEY:-}" ] && [ "${PROVIDER:-anthropic}" != openai ]; then
-    if runfamilydb debug validate-tools >/dev/null 2>&1; then
-      ok "The API accepted the key and every tool definition."
-    else
-      warn "Could not reach the API. Check the key with: familydb debug validate-tools"
-    fi
-  fi
 fi
 
 # --------------------------------------------------- handing it to the service ----
@@ -719,6 +639,37 @@ if [ "${BACKUPS:-yes}" != no ] && [ "$DRY_RUN" = 0 ]; then
   fi
 fi
 
+# ---------------------------------------------------------------- HTTPS ----
+# With a domain, something has to hold the certificate. In Docker that is the Caddy container
+# (COMPOSE_PROFILES=tls above); here it is Caddy on the machine, set up from deploy/Caddyfile.
+env_value() { grep -E "^${1}=" "$ENV_FILE" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d "'\"" || true; }
+DOMAIN="$(env_value WEB_DOMAIN)"
+HTTPS_READY=0
+if [ -n "$DOMAIN" ] && [ "$MODE" = docker ]; then
+  HTTPS_READY=1
+elif [ -n "$DOMAIN" ] && [ "$MODE" = venv ] && [ "$DRY_RUN" = 0 ]; then
+  head2 "HTTPS"
+  if confirm "Set up Caddy to serve https://${DOMAIN}/ and get its certificate?" yes; then
+    if ! have caddy && have apt-get; then
+      $SUDO apt-get install -y -q caddy >/dev/null 2>&1 || warn "Could not install Caddy with apt."
+    fi
+    caddyfile=/etc/caddy/Caddyfile
+    if ! have caddy; then
+      warn "Caddy is not installed. Install it, then use ${REPO_ROOT}/deploy/Caddyfile."
+    elif [ -f "$caddyfile" ] && ! grep -q -e '/usr/share/caddy' -e 'reverse_proxy 127.0.0.1' "$caddyfile"; then
+      warn "${caddyfile} already serves something else. Add the site in deploy/Caddyfile to it."
+    elif sed -e "s/familydb.example.com/${DOMAIN}/g" \
+             -e "s/127.0.0.1:8080/127.0.0.1:$(env_value WEB_PORT)/" \
+             "${REPO_ROOT}/deploy/Caddyfile" | $SUDO tee "$caddyfile" >/dev/null \
+         && $SUDO systemctl reload-or-restart caddy; then
+      ok "Caddy serves https://${DOMAIN}/ and fetches the certificate once the domain points here."
+      HTTPS_READY=1
+    else
+      warn "Could not configure Caddy; see ${REPO_ROOT}/deploy/Caddyfile."
+    fi
+  fi
+fi
+
 # ----------------------------------------------------------- what is next ----
 head2 "Done"
 
@@ -736,22 +687,25 @@ fi
 
 say "Start it:   ${B}${START}${OFF}"
 say "Watch it:   ${LOGS}"
-say "Talk to it: ${CLI} repl"
 say ""
-say "Still to do, when you are ready:"
-if [ -z "${ANTHROPIC_API_KEY:-}${OPENAI_API_KEY:-}${GEMINI_API_KEY:-}" ]; then
-  say "  · add a key in .env or on the settings page, or it cannot reply"
-fi
-[ -z "${TELEGRAM_BOT_TOKEN:-}" ] && say "  · add a Telegram bot token to chat from your phones (RUNBOOK section 4)"
-[ -z "${HOME_LAT:-}" ] && say "  · add HOME_LAT and HOME_LON for the weather (RUNBOOK section 6)"
-say "  · connect Google Calendar from a machine with a browser (RUNBOOK section 5)"
-[ -z "${DIGEST_CHAT_ID:-}" ] && say "  · set DIGEST_CHAT_ID once the family group exists (RUNBOOK section 9)"
-say ""
-if [ "$BACKUPS_SCHEDULED" = 1 ]; then
-  say "  · copy ${REPO_ROOT}/backups somewhere off this server now and then: a backup on the"
-  say "    same disk is not a backup"
+PORT="$(env_value WEB_PORT)"; PORT="${PORT:-8080}"
+if [ "$HTTPS_READY" = 1 ]; then
+  say "Then open ${B}https://${DOMAIN}/${OFF} and sign in with the family password."
+  note "The domain has to point at this machine, and ports 80 and 443 be open:"
+  note "  sudo ufw allow 80,443/tcp"
 else
-  say "  · schedule nightly backups: sudo ${REPO_ROOT}/scripts/maintain.sh schedule-backups"
+  say "Then open the page and sign in with the family password. From your own computer:"
+  say "  ssh -L ${PORT}:127.0.0.1:${PORT} $(id -un)@$(hostname -I 2>/dev/null | awk '{print $1}')"
+  say "  and open ${B}http://127.0.0.1:${PORT}/${OFF}"
+fi
+say ""
+say "The page's home says what is left to set up, in the order it matters: a model key,"
+say "Telegram, Google Calendar and where home is are all done there, not in a file."
+if [ "$BACKUPS_SCHEDULED" = 1 ]; then
+  say "Copy ${REPO_ROOT}/backups off this server now and then: a backup on the same disk is not"
+  say "a backup."
+else
+  say "Schedule nightly backups: sudo ${REPO_ROOT}/scripts/maintain.sh schedule-backups"
 fi
 say ""
 say "What it costs to run: ${CLI} debug cost"

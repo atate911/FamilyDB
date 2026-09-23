@@ -420,3 +420,7 @@ table.month td.today time { border-radius: 50%; background: var(--accent); color
 }
 #google textarea { width: 100%; resize: vertical; font-family: ui-monospace, monospace; }
 .steps { padding-left: 1.25rem; display: grid; gap: 0.5rem; }
+
+/* What is left to set up, on the home page until it is all done. */
+.setup { border-left: 4px solid var(--accent); }
+.setup ol { margin: 0; padding-left: 1.25rem; display: grid; gap: 0.35rem; }

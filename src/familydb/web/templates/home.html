@@ -15,6 +15,17 @@
     <div class="welcome-art" aria-hidden="true"><span class="sun"></span><span class="hill back"></span><span class="hill front"></span></div>
   </section>
 
+  {% if setup %}
+    <section class="panel setup">
+      <h2>Finish setting up</h2>
+      <ol>
+        {% for step in setup %}
+          <li><a href="{{ step.link }}">{{ step.text }}</a></li>
+        {% endfor %}
+      </ol>
+    </section>
+  {% endif %}
+
   <div class="dashboard">
     <section class="coming">
       <div class="section-head">

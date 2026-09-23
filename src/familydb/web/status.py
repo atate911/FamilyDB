@@ -20,7 +20,7 @@ from familydb.availability import (
     web_is_public,
 )
 from familydb.dates import utc_iso
-from familydb.store import calls, ideas, messages
+from familydb.store import calls, ideas, members, messages
 from familydb.store import settings as settings_store
 from familydb.store.settings import SECRETS
 from familydb.web import views
@@ -96,14 +96,14 @@ def keys(app: App, stored: dict[str, Any]) -> list[dict[str, Any]]:
     state = app.channel_states.get("telegram")
     if live.telegram_bot_token and state:
         telegram = f"{telegram}; {state}"
-    rows.append(
-        _row(
-            "Telegram bot token",
-            bool(live.telegram_bot_token) and not (state or "").startswith(("the token", "cannot")),
-            telegram,
-        )
-    )
+    rows.append(_row("Telegram bot token", telegram_working(app), telegram))
     return rows
+
+
+def telegram_working(app: App) -> bool:
+    """A token is set and Telegram has not refused it or been out of reach, as far as is known."""
+    state = app.channel_states.get("telegram", "")
+    return bool(app.settings.telegram_bot_token) and not state.startswith(("the token", "cannot"))
 
 
 def services(app: App) -> list[dict[str, Any]]:
@@ -244,3 +244,43 @@ def status(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
         "waiting": waiting(conn, tz),
         "troubles": troubles(conn, since, tz),
     }
+
+
+def setup_steps(app: App, conn: sqlite3.Connection) -> list[dict[str, str]]:
+    """What is left before the bot can do all it is for, most important first. Empty when done.
+
+    Each is a sentence and the place on the page where it is done: nothing here needs a file.
+    """
+    live = app.settings
+    steps = [
+        (
+            any(getattr(live, KEY_FOR[name]) for name in providers.NAMES),
+            "Give it a model key. Until then it saves what it is told but cannot answer.",
+            "/settings#keys",
+        ),
+        (
+            bool(live.home_area) and live.home_lat is not None,
+            "Say where home is, for the weather and for what is on nearby.",
+            "/settings#home",
+        ),
+        (
+            calendar_available(live),
+            "Connect Google Calendar, so plans land on the family calendar.",
+            "/settings#google",
+        ),
+        (
+            telegram_working(app),
+            "Add a Telegram bot, so the family can message it from their phones.",
+            "/settings#keys",
+        ),
+    ]
+    if live.telegram_bot_token:
+        reachable = any(member.channel_user_id for member in members.list_all(conn))
+        steps.append(
+            (
+                reachable,
+                "Add each person's Telegram id, so it knows who is writing.",
+                "/family",
+            )
+        )
+    return [{"text": text, "link": link} for done, text, link in steps if not done]

@@ -334,3 +334,35 @@ def test_the_timezone_is_set_on_the_page(page) -> None:
     assert page.app.settings.tz == "Europe/London"
     refused = page.post("/settings", data=_whole_form(page, family_tz="Mars/Olympus_Mons"))
     assert refused.status_code == 400 and page.app.settings.tz == "Europe/London"
+
+
+def test_a_home_area_typed_on_the_page_is_found_on_the_map(settings, clock, conn, family) -> None:
+    from familydb.integrations.geocode import GeoPoint
+    from tests.fakes import FakeGeocoder
+
+    point = GeoPoint(45.6387, -122.6615, "Vancouver, Washington", "nominatim")
+    app = App(
+        settings.model_copy(update={"web_password": PASSWORD}),
+        clock,
+        geocoder=FakeGeocoder(default=point),
+    )
+    client = create_app(app).test_client()
+    client.post("/login", data={"password": PASSWORD})
+    saved = client.post(
+        "/settings", data=_whole_form(client, home_area="Vancouver, WA"), follow_redirects=True
+    )
+    assert "Found Vancouver, Washington" in saved.text
+    assert (app.settings.home_lat, app.settings.home_lon) == (45.6387, -122.6615)
+    # Coordinates typed by hand win over the map.
+    client.post(
+        "/settings",
+        data=_whole_form(client, home_area="Portland, OR", home_lat="45.5", home_lon="-122.7"),
+    )
+    assert (app.settings.home_lat, app.settings.home_lon) == (45.5, -122.7)
+
+
+def test_the_home_page_lists_what_is_left_to_set_up(page) -> None:
+    text = page.get("/").text
+    assert "Finish setting up" in text
+    assert "Say where home is" in text and "Connect Google Calendar" in text
+    assert "Give it a model key" not in text  # the test settings have one
