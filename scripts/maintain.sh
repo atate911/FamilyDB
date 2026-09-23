@@ -341,6 +341,8 @@ cmd_upgrade() {
   approve "Upgrade now?" || { say "Nothing was changed."; exit 0; }
 
   take_backup "$BACKUP_DIR" "so a bad upgrade can be undone"
+  local before upgrade_backup="$LAST_BACKUP"
+  before="$(as_root git -C "$TARGET" rev-parse HEAD 2>/dev/null || echo unknown)"
 
   # A private repository needs a credential here. bootstrap.sh leaves the deploy key wired up
   # when one was used, and deliberately does not write a token down, so say which case this is.
@@ -402,8 +404,16 @@ cmd_upgrade() {
 
   head2 "Done"
   say "Now on $(as_root git -C "$TARGET" describe --tags --always 2>/dev/null || echo unknown)."
-  say "If something is wrong, go back to the previous release:"
-  say "  sudo git -C ${TARGET} checkout ${current} && sudo ${0} restart"
+  # Going back is the code, what it was installed with, and the database from before its
+  # migrations, in that order: the restore restarts the bot on the code checked out above it.
+  say "If something is wrong, go back to what was installed (${current}), database and all:"
+  say "  sudo git -C ${TARGET} checkout --quiet --detach ${before}"
+  if [ "$DOCKER_MODE" = 1 ]; then
+    say "  sudo docker compose --project-directory ${TARGET} build"
+  else
+    say "  sudo uv sync --frozen --no-dev --project ${TARGET}"
+  fi
+  say "  sudo ${0} restore ${upgrade_backup}"
   familydb_cmd doctor || true
 }
 
