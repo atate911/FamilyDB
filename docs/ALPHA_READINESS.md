@@ -138,6 +138,20 @@ migration, so upgrading does not resend old conversations. Fresh outgoing messag
 7. Reboot the Linux host and verify startup, persistent data, logs, dashboard access, and backups.
    Keep the dashboard private or behind correctly configured HTTPS. Keep an off-host backup and
    a separate recovery copy of `.env` and Google credentials.
+8. With something on the test calendar this afternoon, ask "I'm bored, what can we do now?",
+   "anything for tonight?" and "what about Saturday morning?". Check the free times it reports
+   leave out the event and the part of today that has gone, and that an option says when it can
+   start ("can go 16:10-17:55 today"). Ask two differently worded weekend questions with
+   discovery on and check `/status` shows one discovery search, not two.
+9. Add a restaurant idea and watch its lookup: `/status` should show one fewer call per lookup
+   than before (the turn ends at `save_place`), and a "home" idea with no place is skipped with
+   no call at all. Send a web chat question while a lookup runs: it must not wait for it.
+10. Set a reminder a few minutes ahead, stop the service past its time, start it again: the
+    reminder arrives once and says when it was due.
+
+After a week of family use, read `/status` and `familydb debug cost` by kind before changing
+anything for cost: at `gpt-6-luna` prices the chat prefix is about $0.0006 a message and each web
+search $0.01, so lookups and discovery, not chat, are where the money goes.
 
 ## Intentional limits
 
@@ -149,8 +163,9 @@ Calendar creation deduplicates the same normalized event intent within an inboun
 A separate new user message can intentionally create another event. Significantly changed event
 arguments represent a different intent; the operation log is not a semantic duplicate detector.
 
-Suggestion availability still uses coarse morning/afternoon/evening blocks and estimated travel.
-It may omit a short usable gap. It does not establish actual reservations or ticket availability.
+Suggestion availability uses the calendar's real free stretches in minutes, but travel is a
+straight-line estimate from home, not from where the family is when they ask, and the forecast is
+per day, not per hour. It does not establish actual reservations or ticket availability.
 
 The daily spending limit is an estimate from a price table checked by hand in September 2026,
 not the bill. The model IDs `gpt-6-luna` and `gemini-3.8-flash` were taken from published

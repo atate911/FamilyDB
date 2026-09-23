@@ -700,7 +700,13 @@ def _cli_senders(application: App) -> None:
         application.senders["telegram"] = lambda chat_id, text: send_once(token, chat_id, text)
 
 
-WINDOWS = {"this-weekend": "this_weekend", "next-weekend": "next_weekend", "someday": "someday"}
+WINDOWS = {
+    "now": "now",
+    "today": "today",
+    "this-weekend": "this_weekend",
+    "next-weekend": "next_weekend",
+    "someday": "someday",
+}
 
 
 def _window_payload(window: str) -> dict[str, Any]:
@@ -715,7 +721,7 @@ def _window_payload(window: str) -> dict[str, Any]:
 def _print_suggestion(data: dict[str, Any]) -> None:
     typer.echo(data["window"]["label"])
     for day in data["days"]:
-        free = ", ".join(day["free"]) if day["free"] else "no free block"
+        free = ", ".join(day["free"]) if day["free"] else "no free time"
         if not day["free_known"]:
             free += " (calendar not checked)"
         weather = day.get("forecast") or "no forecast"
@@ -739,7 +745,9 @@ def _print_suggestion(data: dict[str, Any]) -> None:
 @app.command()
 def suggest(
     window: str = typer.Option(
-        "this-weekend", "--window", help="this-weekend, next-weekend, someday, or START..END."
+        "this-weekend",
+        "--window",
+        help="now, today, this-weekend, next-weekend, someday, or START..END.",
     ),
     as_member: str | None = typer.Option(None, "--as", help="Ask as this family member."),
     discover: bool = typer.Option(

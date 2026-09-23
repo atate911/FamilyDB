@@ -12,6 +12,9 @@ backups/
 *.spending-lock
 token.json
 
+# agents' working copies of the repo
+.claude/worktrees/
+
 # python
 __pycache__/
 *.pyc
