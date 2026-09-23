@@ -425,3 +425,7 @@ src/familydb/
                          follow_ups.py, catch_up.py
 tests/                   pytest suite with a scripted fake of each SDK; test_live.py opt-in
 ```
+
+
+See [product examples](PRODUCT_EXAMPLES.md) for the guiding scenarios and
+[tasks and capture](TASKS_AND_CAPTURE.md) for the current foundation.

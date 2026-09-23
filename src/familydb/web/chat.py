@@ -170,6 +170,8 @@ def send() -> Response | Any:
     who = request.form.get("who", "").strip()
     if not who:
         return page(error=NOBODY, typed=text, status=400)
+    if request.form.get("intent") == "save_idea" and text.strip():
+        text = "Save this idea for later:\n" + text
     session[WHO_KEY] = who
     if (complaint := _chat().ask(text, who, DEFAULT_CHAT)) is not None:
         return page(error=complaint, typed=text, status=400)

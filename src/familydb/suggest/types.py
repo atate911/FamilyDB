@@ -17,6 +17,10 @@ WindowKind = Literal["this_weekend", "next_weekend", "dates", "someday"]
 
 
 class SuggestInput(BaseModel):
+    idea_ids: list[int] = Field(
+        default_factory=list,
+        description="Relevant saved idea IDs for this topic; empty considers all ideas.",
+    )
     window: WindowKind = Field(
         description="this_weekend, next_weekend, dates (give start and end), or someday."
     )
@@ -93,6 +97,7 @@ class SuggestResult(BaseModel):
 
 @dataclass
 class Constraints:
+    idea_ids: list[int] = field(default_factory=list)
     participants: list[str] = field(default_factory=list)
     max_cost_level: int | None = None
     setting: str | None = None

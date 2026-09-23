@@ -13,6 +13,7 @@ def build_registry() -> ToolRegistry:
         outcomes,
         places,
         suggest,
+        tasks,
         weather,
     )
 

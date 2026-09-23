@@ -97,7 +97,7 @@ def deliver(app: App, message_id: int, sender: Sender | None = None) -> bool:
         if not owned:
             return False
         row = messages.get(conn, message_id)
-        if row is None or row.direction != "out" or row.delivered_at:
+        if row is None or row.direction != "out" or row.delivered_at or row.cancelled_at:
             return False
         send = sender or app.senders.get(row.channel)
         if send is None:
@@ -122,7 +122,7 @@ def run_deliveries(app: App) -> int:
             r[0]
             for r in conn.execute(
                 "SELECT id FROM messages WHERE direction = 'out' "
-                "AND delivered_at IS NULL ORDER BY id"
+                "AND delivered_at IS NULL AND cancelled_at IS NULL ORDER BY id"
             )
         ]
     return sum(deliver(app, message_id) for message_id in ids)

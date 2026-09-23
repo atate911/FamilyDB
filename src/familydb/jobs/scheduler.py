@@ -25,6 +25,7 @@ from familydb.availability import digest_configured, enrichment_available
 from familydb.jobs.catch_up import run_catch_up
 from familydb.jobs.enrich import run_enrichment
 from familydb.jobs.follow_ups import run_follow_ups
+from familydb.jobs.reminders import run_reminders
 from familydb.jobs.retry_failed import run_retries
 from familydb.jobs.weekend_digest import run_digest
 
@@ -53,6 +54,7 @@ def job_specs(app: App) -> list[JobSpec]:
     settings = app.settings
     zone = settings.tzinfo
     return [
+        JobSpec("reminders", "deliver task reminders", run_reminders, IntervalTrigger(minutes=1)),
         JobSpec(
             "retry_failed",
             "retry failed messages",

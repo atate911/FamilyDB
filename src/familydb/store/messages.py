@@ -29,6 +29,7 @@ class Message(BaseModel):
     claim_token: str | None = None
     claim_until: str | None = None
     delivered_at: str | None = None
+    cancelled_at: str | None = None
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> Message:
@@ -114,7 +115,8 @@ def recent_for_chat(
 ) -> list[Message]:
     """The last `limit` messages in a chat received at or after `since`, oldest first."""
     rows = conn.execute(
-        "SELECT * FROM messages WHERE chat_id = ? AND received_at >= ? ORDER BY id DESC LIMIT ?",
+        "SELECT * FROM messages WHERE chat_id = ? AND cancelled_at IS NULL "
+        "AND received_at >= ? ORDER BY id DESC LIMIT ?",
         (chat_id, since, limit),
     ).fetchall()
     return [Message.from_row(row) for row in reversed(rows)]
@@ -157,7 +159,8 @@ def last_for_chat(conn: sqlite3.Connection, chat_id: str, *, limit: int) -> list
     line under anything said long enough ago that the model should not be reading it again.
     """
     rows = conn.execute(
-        "SELECT * FROM messages WHERE chat_id = ? ORDER BY id DESC LIMIT ?",
+        "SELECT * FROM messages WHERE chat_id = ? AND cancelled_at IS NULL "
+        "ORDER BY id DESC LIMIT ?",
         (chat_id, limit),
     ).fetchall()
     return [Message.from_row(row) for row in reversed(rows)]
