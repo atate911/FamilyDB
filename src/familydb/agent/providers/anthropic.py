@@ -32,6 +32,48 @@ FALLBACK_BETA = "server-side-fallback-2026-07-01"
 CREDENTIAL_ATTRS = ("api_key", "auth_token", "credentials")
 WEB_SEARCH: dict[str, Any] = {"type": "web_search_20260209", "name": "web_search", "max_uses": 5}
 WEB_FETCH: dict[str, Any] = {"type": "web_fetch_20260209", "name": "web_fetch", "max_uses": 5}
+# The versions without dynamic filtering, for the models that cannot run it.
+BASIC_WEB_SEARCH = "web_search_20250305"
+BASIC_WEB_FETCH = "web_fetch_20250910"
+
+# What a request may carry depends on the model, and the settings page can point either surface
+# at any model, so it is read from the name each time. Getting it wrong is not a degraded answer
+# but a 400 on every request: that is how lookups on the default Haiku worker failed before.
+#
+# Adaptive thinking and effort: every current model takes them, the older ones below do not
+# (Haiku 4.5 still wants a fixed thinking budget and rejects effort outright). Listed by what
+# they are rather than by what works, so a model released later gets thinking by default.
+OLDER_MODELS = (
+    "claude-3",
+    "claude-haiku-4-5",
+    "claude-sonnet-4-5",
+    "claude-opus-4-5",
+    "claude-opus-4-1",
+    "claude-opus-4-0",
+    "claude-sonnet-4-0",
+    "claude-opus-4-2",  # the undotted first Claude 4 names, claude-opus-4-20250514
+    "claude-sonnet-4-2",
+)
+# The web tools with dynamic filtering: only these families. Anything else gets the basic
+# versions, which are slower to read a page but work everywhere.
+DYNAMIC_WEB_MODELS = (
+    "claude-opus-4-6",
+    "claude-opus-4-7",
+    "claude-opus-4-8",
+    "claude-opus-5",  # and claude-opus-5-5
+    "claude-sonnet-4-6",
+    "claude-sonnet-5",
+)
+# Server-side refusal fallbacks exist for the models whose safety classifiers can decline a
+# request. A worker on Haiku has no such classifier, so the parameter is not sent to it.
+REFUSAL_FALLBACK_MODELS = ("claude-opus-5", "claude-fable-5", "claude-mythos-5")
+
+
+def thinks(model: str) -> bool:
+    """Whether this model takes adaptive thinking and an effort level."""
+    return not model.startswith(OLDER_MODELS)
+
+
 NO_CREDENTIALS = "no Anthropic credentials configured: set ANTHROPIC_API_KEY (see .env.example)"
 
 
@@ -58,8 +100,10 @@ def _request_id(exc: Exception) -> str | None:
     return headers.get("request-id") if headers is not None else None
 
 
-def web_tools(access: WebAccess) -> list[dict[str, Any]]:
+def web_tools(access: WebAccess, model: str) -> list[dict[str, Any]]:
     search, fetch = dict(WEB_SEARCH), dict(WEB_FETCH)
+    if not model.startswith(DYNAMIC_WEB_MODELS):
+        search["type"], fetch["type"] = BASIC_WEB_SEARCH, BASIC_WEB_FETCH
     if access.max_uses is not None:
         search["max_uses"] = access.max_uses
         fetch["max_uses"] = access.max_uses
@@ -128,19 +172,21 @@ class AnthropicProvider:
             }
             for tool in request.tools
         ]
+        model = request.model or settings.anthropic_model
         if request.web is not None:
-            tools += web_tools(request.web)
+            tools += web_tools(request.web, model)
 
         payload: dict[str, Any] = {
-            "model": request.model or settings.anthropic_model,
+            "model": model,
             "max_tokens": request.max_tokens or settings.max_output_tokens,
-            "thinking": {"type": "adaptive"},
-            "output_config": {"effort": request.effort or settings.effort},
             "system": system,
             "tools": tools,
             "messages": self.transcript(request),
         }
-        if settings.anthropic_fallbacks:
+        if thinks(model):
+            payload["thinking"] = {"type": "adaptive"}
+            payload["output_config"] = {"effort": request.effort or settings.effort}
+        if settings.anthropic_fallbacks and model.startswith(REFUSAL_FALLBACK_MODELS):
             payload["betas"] = [FALLBACK_BETA]
             payload["fallbacks"] = "default"
         return payload

@@ -7,6 +7,7 @@ window for `DISCOVER_CACHE_SECONDS`, so a digest and the questions that follow i
 
 from __future__ import annotations
 
+import hashlib
 import logging
 from datetime import date, timedelta
 from typing import Any
@@ -22,7 +23,6 @@ log = logging.getLogger(__name__)
 
 DISCOVER_CACHE_SECONDS = 12 * 3600
 NOTE_OFF = "web discovery off"
-NOTE_NO_API = "web discovery not available here"
 NOTE_FAILED = "web discovery failed"
 
 
@@ -53,10 +53,12 @@ def discover(ctx: ToolContext, context: Context, question: str) -> tuple[list[We
     """Finds for the window, plus a note for `skipped_checks` when discovery did not run."""
     if not web_tools_available(ctx.settings):
         return [], NOTE_OFF
-    if ctx.api is None:
-        return [], NOTE_NO_API
-
-    key = cache_key(context.window)
+    request = render_discover_request(context, question, ctx.settings)
+    key = (
+        cache_key(context.window)
+        + ":"
+        + hashlib.sha256((str(context.today) + request).encode()).hexdigest()
+    )
     # The cache lives on the App and is shared by the chat thread and the scheduler thread; a
     # dict is safe enough for that, the worst case being one duplicated search.
     cache: dict[str, Any] = ctx.discover_cache if ctx.discover_cache is not None else {}
@@ -65,7 +67,6 @@ def discover(ctx: ToolContext, context: Context, question: str) -> tuple[list[We
     if entry is not None and entry["expires_at"] > now:
         return [WebFind(**find) for find in entry["finds"]], None
 
-    request = render_discover_request(context, question, ctx.settings)
     try:
         turn = run_worker_turn(
             kind="discover",

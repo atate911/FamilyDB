@@ -45,7 +45,7 @@ def _call(conn, *, model: str, stop: str = "end", usage=None, duration=1000) -> 
 def test_a_model_name_says_whose_it_is() -> None:
     assert owner("claude-opus-5") == "anthropic"
     assert owner("gpt-5-mini") == "openai" and owner("o3-mini") == "openai"
-    assert owner("gemini-2.5-flash") == "gemini"
+    assert owner("gemini-3.8-flash") == "gemini"
     assert owner("something-else") is None and owner(None) is None
 
 
@@ -54,7 +54,7 @@ def test_it_says_who_answers_and_where_each_key_came_from(status, conn, settings
         settings_store.set_many(conn, {"gemini_api_key": "gm-never-shown", "provider": "gemini"})
     text = _flat(status.get("/status"))
     assert "Google Gemini, gemini-2.5-pro" in text  # chat, from the page's own setting
-    assert "Google Gemini, gemini-2.5-flash" in text  # the lookup turns
+    assert "Google Gemini, gemini-3.8-flash" in text  # the lookup turns
     assert "Claude (Anthropic) answers instead" in text  # the environment's key is the spare
     assert "set on this page" in text and "set in the environment" in text
     assert "no key" in text  # OpenAI
@@ -77,12 +77,12 @@ def test_it_adds_up_what_the_models_cost(status, conn) -> None:
         },
         duration=3400,
     )
-    _call(conn, model="gemini-2.5-flash", usage={"input_tokens": 300, "output_tokens": 50})
+    _call(conn, model="gemini-3.8-flash", usage={"input_tokens": 300, "output_tokens": 50})
     text = _flat(status.get("/status"))
     assert "2 model calls in the last 30 days" in text
     assert "44% of what was sent came back from the cache" in text
     assert "4,800" in text and "claude-opus-5" in text
-    assert "gemini-2.5-flash (Google Gemini)" in text  # the last one, and who served it
+    assert "gemini-3.8-flash (Google Gemini)" in text  # the last one, and who served it
 
 
 def test_it_shows_what_is_waiting(status, conn, family) -> None:
@@ -121,11 +121,11 @@ def test_it_shows_what_went_wrong(status, conn, family) -> None:
             },
             now=NOW_ISO,
         )
-    _call(conn, model="gemini-2.5-flash", stop="max_tokens")
+    _call(conn, model="gemini-3.8-flash", stop="max_tokens")
     _call(conn, model="claude-opus-5", stop="end")  # an ordinary one is not worth a look
     text = _flat(status.get("/status"))
     assert "Worth a look" in text
-    assert "gemini-2.5-flash — max_tokens" in text
+    assert "gemini-3.8-flash — max_tokens" in text
     assert "worker: no website found" in text and "#1 Ramen place" in text
     assert "claude-opus-5 — end" not in text
 

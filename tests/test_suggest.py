@@ -282,8 +282,14 @@ def test_suggest_end_to_end_with_verdicts(
 
 
 def test_suggest_requeues_stale_places_when_web_is_on(
-    registry, conn, full_settings, thursday_clock, family
+    registry, conn, full_settings, thursday_clock, family, monkeypatch
 ) -> None:
+    from familydb.errors import AgentError
+
+    def unavailable(**kwargs):
+        raise AgentError("test worker unavailable", retryable=False)
+
+    monkeypatch.setattr("familydb.suggest.discover.run_worker_turn", unavailable)
     web_on = full_settings.model_copy(update={"web_tools_enabled": True})
     ctx = _ctx(
         conn,
@@ -302,7 +308,7 @@ def test_suggest_requeues_stale_places_when_web_is_on(
     _, data = _suggest(registry, ctx, discover=True)
     assert ideas.get(conn, stale.id).enrichment == "pending"
     assert "stale place details re-queued for a refresh" in data["skipped_checks"]
-    assert "web discovery not available here" in data["skipped_checks"]
+    assert "web discovery failed: test worker unavailable" in data["skipped_checks"]
 
 
 def test_suggest_without_services_and_recent_variety(
@@ -402,7 +408,7 @@ def test_discovery_runs_a_worker_turn_and_caches_the_finds(
     asked = request["messages"][0]["content"][1]["text"]
     assert "Window: Saturday 26 September to Sunday 27 September 2026." in asked
     assert "Home area: Vancouver, WA." in asked and "what should we do this weekend?" in asked
-    assert list(cache) == ["2026-09-26:2026-09-27"]
+    assert len(cache) == 1
     # The suggestions log carries the finds too.
     row = suggestions.list_recent(conn, limit=1)[0]
     assert row.web_finds[0]["url"] == FIND["url"]

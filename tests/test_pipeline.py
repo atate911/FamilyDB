@@ -190,7 +190,7 @@ def test_suggest_turn_runs_discovery_inside_the_chat_turn(settings, thursday_clo
         "calendar not connected",
         "weather not configured",
     ]
-    assert list(app.discover_cache) == ["2026-09-26:2026-09-27"]
+    assert len(app.discover_cache) == 1
     # Everything is audited under the one inbound message: 5 model calls, 2 tool calls.
     logged = calls.tool_calls_for_message(conn, reply.in_message_id)
     assert [t["tool_name"] for t in logged] == ["report_finds", "suggest"]

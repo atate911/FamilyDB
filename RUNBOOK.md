@@ -328,7 +328,7 @@ WORKER_MODEL=claude-haiku-4-5-20251001
 OPENAI_MODEL=gpt-5
 OPENAI_WORKER_MODEL=gpt-5-mini
 GEMINI_MODEL=gemini-2.5-pro
-GEMINI_WORKER_MODEL=gemini-2.5-flash
+GEMINI_WORKER_MODEL=gemini-3.8-flash
 ```
 
 Check those names against your own account before relying on them; model names change and these

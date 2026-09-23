@@ -160,6 +160,8 @@ class App:
         Coordinates, units and the timezone are baked into these at construction. Anything
         handed to the constructor stays: it belongs to whoever passed it.
         """
+        # A find depends on home and the models as well as the window, and both can have moved.
+        self.discover_cache.clear()
         for name in ("calendar", "weather", "geocoder"):
             if name not in self._given:
                 setattr(self, f"_{name}", None)

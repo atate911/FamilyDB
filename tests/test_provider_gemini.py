@@ -72,7 +72,13 @@ def test_effort_becomes_a_thinking_budget(settings) -> None:
 
 def test_search_rides_alongside_our_own_tools(settings) -> None:
     tool = ToolDef(name="save_place", description="save", schema={"type": "object"})
-    request = TurnRequest(system=[], messages=[], tools=[tool], web=WebAccess(max_uses=3))
+    request = TurnRequest(
+        system=[],
+        messages=[],
+        tools=[tool],
+        web=WebAccess(max_uses=3),
+        model=settings.gemini_worker_model,
+    )
     tools = _provider(settings).payload(request)["config"]["tools"]
     assert len(tools) == 2  # our declarations in one group, the hosted search in another
     assert "function_declarations" in tools[0] and "google_search" in tools[1]
@@ -145,7 +151,7 @@ def test_api_failures_become_agent_errors(settings, registry, ctx) -> None:
 def test_the_model_per_surface_and_the_key(settings) -> None:
     provider = _provider(settings)
     assert provider.model_for("chat") == "gemini-2.5-pro"
-    assert provider.model_for("worker") == "gemini-2.5-flash"
+    assert provider.model_for("worker") == "gemini-3.8-flash"
     assert _provider(settings, gemini_worker_model="").model_for("worker") == "gemini-2.5-pro"
     from familydb.agent.providers.gemini import GeminiProvider
 
