@@ -67,7 +67,7 @@ def test_the_request_carries_instructions_tools_and_a_cache_key(settings) -> Non
         tools=[tool],
     )
     payload = _provider(settings).payload(request)
-    assert payload["model"] == "gpt-5"
+    assert payload["model"] == "gpt-6-luna"
     assert payload["instructions"] == "rules\n\ntoday"  # one string, not blocks
     assert payload["store"] is False  # the family's messages stay off their servers
     assert payload["reasoning"] == {"effort": "medium"}
@@ -97,10 +97,16 @@ def test_the_request_carries_instructions_tools_and_a_cache_key(settings) -> Non
     ]
 
 
-def test_effort_names_collapse_onto_the_three_it_takes(settings) -> None:
+def test_effort_names_collapse_onto_the_three_older_models_take(settings) -> None:
     for ours, theirs in [("low", "low"), ("medium", "medium"), ("xhigh", "high"), ("max", "high")]:
-        request = TurnRequest(system=[], messages=[], effort=ours)
+        request = TurnRequest(system=[], messages=[], effort=ours, model="gpt-5")
         assert _provider(settings).payload(request)["reasoning"] == {"effort": theirs}
+
+
+def test_gpt6_takes_every_effort_name_as_it_is(settings) -> None:
+    for ours in ("low", "medium", "high", "xhigh", "max"):
+        request = TurnRequest(system=[], messages=[], effort=ours, model="gpt-6-luna")
+        assert _provider(settings).payload(request)["reasoning"] == {"effort": ours}
 
 
 def test_a_plain_reply(settings, registry, ctx) -> None:
@@ -198,9 +204,11 @@ def test_hosted_search_is_one_tool_and_caps_the_turn(settings) -> None:
 
 def test_the_model_per_surface(settings) -> None:
     provider = _provider(settings)
-    assert provider.model_for("chat") == "gpt-5"
-    assert provider.model_for("worker") == "gpt-5-mini"
-    same = _provider(settings, openai_worker_model="")
+    assert provider.model_for("chat") == "gpt-6-luna"
+    assert provider.model_for("worker") == "gpt-6-luna"
+    split = _provider(settings, openai_model="gpt-5", openai_worker_model="gpt-5-mini")
+    assert (split.model_for("chat"), split.model_for("worker")) == ("gpt-5", "gpt-5-mini")
+    same = _provider(settings, openai_model="gpt-5", openai_worker_model="")
     assert same.model_for("worker") == "gpt-5"
 
 

@@ -36,15 +36,31 @@
 
   <section class="panel">
     <h2>What it has cost</h2>
+    <p>
+      Today: about ${{ "%.2f"|format(spending.today) }}
+      {% if spending.limit %}
+        of the ${{ "%.2f"|format(spending.limit) }} daily limit.
+        {% if spending.today >= spending.limit %}
+          <strong>The limit is reached: nothing more is asked of a model until midnight.</strong>
+        {% endif %}
+      {% else %}
+        (no daily limit is set).
+      {% endif %}
+    </p>
     {% if spending.rows %}
       <p>
         {{ "{:,}".format(spending.calls) }} model call{{ "" if spending.calls == 1 else "s" }} in
-        the last {{ days }} days. {{ spending.cache_share }}% of what was sent came back from the
-        cache, at a tenth of the price.
+        the last {{ days }} days, about ${{ "%.2f"|format(spending.dollars) }}.
+        {{ spending.cache_share }}% of what was sent came back from the cache, at a tenth of the
+        price.
+        {% if spending.estimated %}
+          Some calls were to a model without a listed price and are counted high.
+        {% endif %}
       </p>
       <table class="hours">
         <tr>
           <th>model</th><th>calls</th><th>sent</th><th>cached</th><th>written</th><th>back</th>
+          <th>US$</th>
         </tr>
         {% for row in spending.rows %}
           <tr>
@@ -54,6 +70,7 @@
             <td>{{ "{:,}".format(row.cache_read) }}</td>
             <td>{{ "{:,}".format(row.cache_write) }}</td>
             <td>{{ "{:,}".format(row.output_tokens) }}</td>
+            <td>{{ "%.2f"|format(row.cost_usd) }}{% if row.cost_estimated %}*{% endif %}</td>
           </tr>
         {% endfor %}
       </table>

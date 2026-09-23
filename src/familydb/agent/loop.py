@@ -12,6 +12,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol
 
+from familydb.agent import spending
+from familydb.agent.providers import prices
 from familydb.agent.providers.base import (
     Exchange,
     Message,
@@ -105,6 +107,7 @@ def run_turn(
         request.model = active.model_for(surface)
 
     for iteration in range(1, limit + 1):
+        spending.check(ctx.conn, settings, ctx.clock.now())
         started = time.monotonic()
         try:
             reply = active.send(request)
@@ -126,18 +129,28 @@ def run_turn(
 
         for key in USAGE_KEYS:
             totals[key] += reply.usage.get(key) or 0
+        asked = request.model or active.model_for(surface)
+        dollars, listed = prices.cost(
+            active.name,
+            reply.model or asked,
+            reply.usage,
+            cache_ttl=settings.anthropic_cache_ttl,
+        )
         with transaction(ctx.conn):
             calls.log_llm_call(
                 ctx.conn,
                 message_id=ctx.message_id,
                 iteration=iteration,
-                model=request.model or active.model_for(surface),
+                model=asked,
                 served_model=reply.model,
                 request_id=reply.request_id,
                 stop_reason=reply.stop,
                 usage=reply.usage,
                 duration_ms=duration_ms,
                 now=ctx.now_iso(),
+                provider=active.name,
+                cost_usd=dollars,
+                cost_estimated=not listed,
             )
 
         if reply.stop == "refusal":

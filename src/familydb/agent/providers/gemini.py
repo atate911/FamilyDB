@@ -192,6 +192,8 @@ class GeminiProvider:
         if thoughts:
             # Thinking is billed as output, so it belongs in the same column as the answer.
             answer = (answer or 0) + thoughts
+        grounding = getattr(candidate, "grounding_metadata", None)
+        searches = len(getattr(grounding, "web_search_queries", None) or [])
         return ModelReply(
             stop=stop,
             text="\n".join(texts).strip(),
@@ -201,6 +203,7 @@ class GeminiProvider:
                 "cache_read_input_tokens": cached,
                 "cache_creation_input_tokens": None,
                 "output_tokens": answer,
+                "web_searches": searches,
             },
             model=getattr(response, "model_version", None),
             request_id=getattr(response, "response_id", None),

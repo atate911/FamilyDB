@@ -25,8 +25,11 @@ NOW_ISO = "2026-09-20T21:03:00Z"
 
 @pytest.fixture
 def settings(tmp_path: Path) -> Settings:
+    # Pinned to Claude because the scripted fake in tests/fakes.py speaks its API; the default
+    # provider is OpenAI and has tests of its own.
     return Settings(
         _env_file=None,
+        provider="anthropic",
         anthropic_api_key="test-key",
         familydb_path=tmp_path / "familydb.sqlite3",
         family_tz="America/Vancouver",

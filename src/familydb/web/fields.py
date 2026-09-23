@@ -14,6 +14,7 @@ import typing
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from familydb.agent.providers.prices import suggestions
 from familydb.config import Settings
 from familydb.store.settings import BEHAVIOUR
 
@@ -32,6 +33,8 @@ class Field:
     note: str
     kind: str  # choice, toggle, int, float or text
     choices: tuple[str, ...] = ()
+    # Offered as the box is typed in, without limiting it: a model released next week still fits.
+    suggested: tuple[str, ...] = ()
 
 
 def _bare(annotation: Any) -> Any:
@@ -106,7 +109,13 @@ def limits(key: str) -> str:
     return f"More than {low}, up to {high}." if over else f"Between {low} and {high}."
 
 
-def field(key: str, label: str, note: str = "", choices: tuple[str, ...] = ()) -> Field:
+def field(
+    key: str,
+    label: str,
+    note: str = "",
+    choices: tuple[str, ...] = (),
+    suggested: tuple[str, ...] = (),
+) -> Field:
     kind, derived = _shape(Settings.model_fields[key].annotation)
     return Field(
         key=key,
@@ -114,7 +123,11 @@ def field(key: str, label: str, note: str = "", choices: tuple[str, ...] = ()) -
         note=" ".join(part for part in (note, limits(key)) if part),
         kind=kind,
         choices=choices or derived,
+        suggested=suggested,
     )
+
+
+MODEL_NOTE = "Pick one or type any model name the company offers; the cheapest are listed first."
 
 
 # The page, in the order it reads. Every name in BEHAVIOUR appears exactly once; a test says so.
@@ -134,18 +147,31 @@ GROUPS: tuple[tuple[str, str, tuple[Field, ...]], ...] = (
                 "Ask the other one when the first cannot",
                 "Only ever before anything has been done, so nothing happens twice.",
             ),
-            field("anthropic_model", "Claude: chat model"),
-            field("worker_model", "Claude: lookup model", "A smaller one is usually plenty."),
-            field("openai_model", "OpenAI: chat model"),
-            field("openai_worker_model", "OpenAI: lookup model"),
-            field("gemini_model", "Gemini: chat model"),
-            field("gemini_worker_model", "Gemini: lookup model"),
+            field(
+                "openai_model", "OpenAI: chat model", MODEL_NOTE, suggested=suggestions("openai")
+            ),
+            field("openai_worker_model", "OpenAI: lookup model", suggested=suggestions("openai")),
+            field("anthropic_model", "Claude: chat model", suggested=suggestions("anthropic")),
+            field(
+                "worker_model",
+                "Claude: lookup model",
+                "A smaller one is usually plenty.",
+                suggested=suggestions("anthropic"),
+            ),
+            field("gemini_model", "Gemini: chat model", suggested=suggestions("gemini")),
+            field("gemini_worker_model", "Gemini: lookup model", suggested=suggestions("gemini")),
         ),
     ),
     (
-        "How hard it thinks",
+        "What it may spend",
         "The settings that decide what a message costs. Lower is cheaper and usually enough.",
         (
+            field(
+                "daily_spend_limit",
+                "Daily spending limit (US$)",
+                "Estimated across every model call; it stops answering until midnight once "
+                "reached. 0 means no limit. Set a limit on the API key with the company too.",
+            ),
             field("effort", "Chat thinking", "How long it may think before answering."),
             field("worker_effort", "Lookup thinking"),
             field("max_output_tokens", "Longest answer", "In tokens. An answer is rarely near it."),

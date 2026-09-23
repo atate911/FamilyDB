@@ -254,7 +254,12 @@ class AnthropicProvider:
                 for b in response.content
                 if b.type == "tool_use"
             ],
-            usage={key: getattr(usage, key, None) for key in USAGE_KEYS},
+            usage={
+                **{key: getattr(usage, key, None) for key in USAGE_KEYS},
+                "web_searches": getattr(
+                    getattr(usage, "server_tool_use", None), "web_search_requests", None
+                ),
+            },
             model=getattr(response, "model", None),
             request_id=getattr(response, "_request_id", None),
             refusal=refusal,

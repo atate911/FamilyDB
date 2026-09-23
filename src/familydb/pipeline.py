@@ -12,6 +12,7 @@ from familydb.agent.history import load_history
 from familydb.agent.loop import MessagesAPI, TurnResult, run_turn
 from familydb.agent.prompt import build_messages, build_system_blocks
 from familydb.agent.render import render_retry_note, render_user_turn
+from familydb.agent.spending import SpendingLimitReached
 from familydb.app import App
 from familydb.channels.base import IncomingMessage, OutgoingMessage
 from familydb.clock import FixedClock
@@ -178,7 +179,10 @@ def _run_owned(
         if not exc.retryable:
             with transaction(conn):
                 messages.give_up(conn, inbound_id)
-        reply = RETRY_REPLY if exc.retryable else CONFIG_REPLY
+        if isinstance(exc, SpendingLimitReached):
+            reply = exc.reply
+        else:
+            reply = RETRY_REPLY if exc.retryable else CONFIG_REPLY
         return _fail(app, conn, msg, inbound_id, str(exc), reply if notify else None)
     except Exception as exc:
         log.exception("unexpected error on message %s", inbound_id)

@@ -87,9 +87,9 @@ class Settings(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", extra="ignore", validate_by_name=True
     )
 
-    # Claude
     # Who answers. `worker_provider` empty means the lookup and discovery turns use `provider`.
-    provider: ProviderName = "anthropic"
+    # GPT-6 Luna for both by default: the cheapest capable model any of the three offers.
+    provider: ProviderName = "openai"
     worker_provider: ProviderName | Literal[""] = ""
     provider_fallback: bool = True
 
@@ -98,8 +98,8 @@ class Settings(BaseSettings):
     gemini_worker_model: str = "gemini-3.8-flash"
 
     openai_api_key: str | None = None
-    openai_model: str = "gpt-5"
-    openai_worker_model: str = "gpt-5-mini"
+    openai_model: str = "gpt-6-luna"
+    openai_worker_model: str = "gpt-6-luna"
 
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-opus-5"
@@ -112,14 +112,17 @@ class Settings(BaseSettings):
     max_output_tokens: int = Field(
         default=16000,
         ge=256,
-        le=200_000,
+        le=64_000,
         validation_alias=AliasChoices("MAX_OUTPUT_TOKENS", "ANTHROPIC_MAX_TOKENS"),
     )
+    # Dollars a day across every model call, estimated from agent/providers/prices.py and checked
+    # before each call. Days are the family's. 0 turns the limit off.
+    daily_spend_limit: float = Field(default=2.0, ge=0, le=500)
     anthropic_fallbacks: bool = True
     # An hour, because a family writes in bursts with long gaps: a five-minute cache would be
     # cold almost every time and the whole prefix would be paid for again.
     anthropic_cache_ttl: CacheTTL = "1h"
-    agent_max_iterations: int = Field(default=8, ge=1, le=50)
+    agent_max_iterations: int = Field(default=8, ge=1, le=20)
     history_limit: int = Field(default=20, ge=0, le=200)
     # The ideas list rides in the cached prompt on every message, so it cannot grow without end.
     # Past this many, the oldest are left out and the model is told to search for them.
@@ -147,9 +150,9 @@ class Settings(BaseSettings):
 
     # Enrichment, suggestions and scheduled prompts
     enrich_interval_minutes: int = Field(default=2, ge=1, le=1440)
-    enrich_batch: int = Field(default=3, ge=1, le=50)
+    enrich_batch: int = Field(default=3, ge=1, le=20)
     place_stale_days: int = Field(default=30, ge=1, le=3650)
-    worker_max_iterations: int = Field(default=12, ge=1, le=50)
+    worker_max_iterations: int = Field(default=12, ge=1, le=30)
     # Looking a place up and finding events are extraction jobs, not judgement calls, so they run
     # on a smaller model with less thinking. Empty falls back to the chat model.
     worker_model: str = "claude-haiku-4-5-20251001"

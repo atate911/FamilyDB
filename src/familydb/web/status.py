@@ -11,6 +11,7 @@ from datetime import timedelta
 from typing import Any
 
 from familydb.agent import providers
+from familydb.agent.spending import spent_today
 from familydb.app import App
 from familydb.availability import (
     calendar_available,
@@ -132,9 +133,13 @@ def services(app: App) -> list[dict[str, Any]]:
     ]
 
 
-def spending(conn: sqlite3.Connection, since: str) -> dict[str, Any]:
-    """Tokens per model, and how much of the input came from the cache at a tenth of the price."""
+def spending(
+    conn: sqlite3.Connection, since: str, settings: Any = None, now: Any = None
+) -> dict[str, Any]:
+    """Tokens and estimated dollars per model, how much of the input came from the cache, and
+    how much of today's limit is used."""
     rows = calls.usage_since(conn, since=since)
+    today = spent_today(conn, settings, now) if settings is not None else 0.0
     fresh = sum(row["input_tokens"] for row in rows)
     cached = sum(row["cache_read"] for row in rows)
     written = sum(row["cache_write"] for row in rows)
@@ -147,6 +152,10 @@ def spending(conn: sqlite3.Connection, since: str) -> dict[str, Any]:
         "written": written,
         "output": sum(row["output_tokens"] for row in rows),
         "cache_share": round(cached / served * 100) if served else 0,
+        "dollars": sum(row["cost_usd"] for row in rows),
+        "estimated": any(row["cost_estimated"] for row in rows),
+        "today": today,
+        "limit": getattr(settings, "daily_spend_limit", 0),
     }
 
 
@@ -226,7 +235,7 @@ def status(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
         "models": models(app),
         "keys": keys(app, {name: stored[name] for name in SECRETS if name in stored}),
         "services": services(app),
-        "spending": spending(conn, since),
+        "spending": spending(conn, since, app.settings, app.clock.now()),
         "last": last_call(conn, tz),
         "waiting": waiting(conn, tz),
         "troubles": troubles(conn, since, tz),

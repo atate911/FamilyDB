@@ -26,6 +26,7 @@ BEHAVIOUR = (
     "effort",
     "worker_effort",
     "max_output_tokens",
+    "daily_spend_limit",
     "anthropic_cache_ttl",
     "agent_max_iterations",
     "worker_max_iterations",

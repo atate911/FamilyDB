@@ -236,3 +236,18 @@ def test_a_page_with_no_password_shows_a_key_to_whoever_can_reach_it(settings, c
     token = re.search(r'name="csrf" value="([^"]+)"', text).group(1)
     shown = client.post("/settings/reveal", data={"csrf": token, "key": "openai_api_key"})
     assert shown.status_code == 200 and "sk-home" in shown.text
+
+
+def test_a_model_box_suggests_models_without_limiting_them(page) -> None:
+    text = page.get("/settings").text
+    assert 'list="s-openai_model"' in text
+    assert '<datalist id="s-openai_model">' in text and '<option value="gpt-6-luna">' in text
+    # Anything typed is still taken: a model released next week has to fit.
+    page.post("/settings", data=_whole_form(page, openai_model="gpt-6-sol"))
+    assert page.app.settings.openai_model == "gpt-6-sol"
+
+
+def test_the_daily_limit_is_on_the_page(page) -> None:
+    page.post("/settings", data=_whole_form(page, daily_spend_limit="0.5"))
+    assert page.app.settings.daily_spend_limit == 0.5
+    assert "of the $0.50 daily limit" in page.get("/status").text
