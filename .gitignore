@@ -9,6 +9,7 @@ backups/
 *.db
 *.sqlite
 *.sqlite3
+*.spending-lock
 token.json
 
 # python

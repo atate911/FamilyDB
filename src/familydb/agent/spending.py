@@ -4,14 +4,16 @@ Every paid call goes through the turn loop, so checking there covers the chat, t
 discovery searches and the digest alike. The estimate comes from `providers/prices.py`; a model
 not listed there is counted dearer than any that is, so the limit errs towards stopping.
 
-A turn already running when the limit is crossed stops before its next call rather than half way
-through one, so a day can end slightly over the limit, by at most one call.
+Paid calls and their accounting are serialized per database by agent.admission. The limit is
+checked after acquiring that lock. One successfully accounted call can cross the estimated
+limit; a timed-out call with unknown vendor charges cannot be included in that guarantee.
 """
 
 from __future__ import annotations
 
 import sqlite3
 from datetime import datetime, time
+from typing import Any
 
 from familydb.config import Settings
 from familydb.dates import utc_iso
@@ -22,6 +24,38 @@ REPLY = (
     "Today's spending limit (${limit:.2f}) is used up, so I can't answer until tomorrow. "
     "Ask again then, or raise the limit on the settings page."
 )
+
+
+def completed_reply(actions: list[dict[str, Any]]) -> str:
+    """Explain durable progress without spending another model call to acknowledge it."""
+    labels = {
+        "create_event": "Created calendar plan",
+        "update_event": "Updated calendar plan",
+        "delete_event": "Cancelled calendar plan",
+        "add_idea": "Saved idea",
+        "update_idea": "Updated idea",
+        "record_outcome": "Recorded outcome",
+        "save_place": "Saved place details",
+        "skip_place": "Marked lookup skipped",
+    }
+    lines = []
+    for action in actions:
+        label = labels.get(action["tool"], "Completed " + action["tool"])
+        identity = next(
+            (
+                action[k]
+                for k in ("plan_id", "idea_id", "id", "outcome_id")
+                if action.get(k) is not None
+            ),
+            None,
+        )
+        if action.get("duplicate_of") is not None:
+            label, identity = "Kept existing idea", action["duplicate_of"]
+        lines.append(label + (f" #{identity}" if identity is not None else "") + ".")
+    return " ".join(lines) + (
+        " These changes are saved. Today's spending limit stopped the rest of this request. "
+        "Review the saved changes before asking for any remaining work; do not repeat them."
+    )
 
 
 class SpendingLimitReached(AgentError):

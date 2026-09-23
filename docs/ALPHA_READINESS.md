@@ -6,6 +6,27 @@ requests, and a Linux installation still need an end-to-end smoke test before fa
 
 ## Found in the pre-VPS review (September 23)
 
+### Follow-up correctness fixes
+
+- A spending-limit interruption after successful writes now returns a local summary of the
+  completed operations and their record numbers. The message is completed rather than retried;
+  any remaining work must be requested separately after reviewing what was saved.
+- Paid requests are serialized per database across threads and processes, from the budget check
+  through cost recording. The lock is released before tools run, so nested discovery can proceed.
+  A process crash releases the OS lock automatically. One accounted request may cross the
+  estimated limit; unknown charges from timeouts, vendor retries, or a crash before accounting
+  remain outside that guarantee. This is not a provider-enforced billing cap.
+- Browser calendar forms reuse a durable operation identity after a restart or lost response.
+  Other forms retain the in-memory double-submit guard; it is not a durable operation ledger.
+- Idea edits carry a content revision that is checked inside the update transaction, including
+  when two saves arrive in the same second. Older forms must be reloaded.
+- Changing the timezone rebuilds the application clock immediately, without a restart.
+- Windows startup no longer invokes POSIX ownership APIs. Linux keeps its existing permission
+  hardening; Windows relies on the account's inherited filesystem ACLs, not chmod guarantees.
+
+These changes have local regression tests. Live default-model quality, Google consent, and
+Telegram onboarding still require the live-account checklist below.
+
 A second review, before installing on a VPS, found these and fixed them:
 
 - **Nobody could sign in behind the HTTPS proxy.** Waitress strips forwarding headers from a

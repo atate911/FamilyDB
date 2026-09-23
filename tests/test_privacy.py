@@ -7,6 +7,7 @@ import logging
 import os
 import stat
 
+import pytest
 from typer.testing import CliRunner
 
 from familydb import privacy
@@ -20,6 +21,7 @@ def _mode(path) -> int:
     return stat.S_IMODE(os.stat(path).st_mode)
 
 
+@pytest.mark.skipif(os.name != "posix", reason="POSIX file permissions")
 def test_a_database_the_bot_creates_is_owner_only(tmp_path, monkeypatch) -> None:
     before = os.umask(0o022)  # the usual default, under which files come out 0644
     try:
@@ -31,6 +33,7 @@ def test_a_database_the_bot_creates_is_owner_only(tmp_path, monkeypatch) -> None
         os.umask(before)
 
 
+@pytest.mark.skipif(os.name != "posix", reason="POSIX file permissions")
 def test_files_an_older_version_left_readable_are_tightened(settings, tmp_path) -> None:
     database = settings.familydb_path
     database.write_bytes(b"")
@@ -44,6 +47,7 @@ def test_files_an_older_version_left_readable_are_tightened(settings, tmp_path) 
     assert privacy.tighten(settings) == []  # nothing left to do the second time
 
 
+@pytest.mark.skipif(os.name != "posix", reason="POSIX file permissions")
 def test_the_google_token_is_written_owner_only(tmp_path) -> None:
     from familydb.integrations.google_calendar import save_token
 

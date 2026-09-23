@@ -41,6 +41,10 @@ def sensitive_files(settings: Settings) -> list[Path]:
 
 def tighten(settings: Settings) -> list[Path]:
     """Take group and other access off each sensitive file this process owns. Returns them."""
+    # Windows uses ACLs, not POSIX owner/group bits. Keep the user's inherited ACLs;
+    # chmod there cannot provide the owner-only guarantee this routine implements.
+    if os.name != "posix":
+        return []
     changed: list[Path] = []
     for path in sensitive_files(settings):
         try:

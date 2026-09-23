@@ -40,6 +40,8 @@ class ToolContext:
     discover_cache: Any = None  # the App-level cache of discovery results
     allowed_tools: frozenset[str] | None = None
     worker_idea_id: int | None = None
+    operation_id: str | None = None  # durable browser calendar operation, not model input
+    idea_revision: str | None = None  # browser optimistic concurrency precondition
     scratch: dict[str, Any] = field(default_factory=dict)  # per-turn hand-back area
 
     def now_iso(self) -> str:

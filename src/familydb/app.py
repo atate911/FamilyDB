@@ -182,7 +182,10 @@ class App:
         for name in ("calendar", "weather", "geocoder"):
             if name not in self._given:
                 setattr(self, f"_{name}", None)
-        if "clock" not in self._given and self.clock.southern != self.settings.southern_hemisphere:
+        if "clock" not in self._given and (
+            self.clock.southern != self.settings.southern_hemisphere
+            or self.clock.tz != self.settings.tzinfo
+        ):
             self.clock = SystemClock(
                 self.settings.tzinfo, southern=self.settings.southern_hemisphere
             )

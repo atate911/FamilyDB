@@ -15,6 +15,7 @@ than as a missing one.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 from contextlib import closing
@@ -24,7 +25,6 @@ from flask import Blueprint, Response, current_app, flash, redirect, request, se
 from werkzeug.datastructures import MultiDict
 
 from familydb.app import App
-from familydb.store import ideas as idea_store
 from familydb.store import members as member_store
 from familydb.tools import ToolContext
 from familydb.web import auth, views
@@ -83,6 +83,15 @@ def run(name: str, values: dict[str, Any]) -> tuple[dict[str, Any] | None, str |
             calendar=app.calendar,
             weather=app.weather,
             geocoder=app.geocoder,
+            operation_id=(
+                "web:"
+                + hashlib.sha256(
+                    f"{session.get(auth.CSRF_KEY, '')}:{request.form['once']}".encode()
+                ).hexdigest()
+                if name == "create_event" and request.form.get("once")
+                else None
+            ),
+            idea_revision=request.form.get("revision") if name == "update_idea" else None,
         )
         result = app.registry.dispatch(name, values, ctx)
     payload = json.loads(result.content)
@@ -153,20 +162,6 @@ def idea_fields(form: MultiDict[str, str]) -> tuple[dict[str, Any], str | None]:
     return values, None
 
 
-def _changed_since(idea_id: int, seen: str) -> bool:
-    """Whether the idea moved on since its form was drawn, by somebody else or by a lookup.
-
-    The form sends back the updated time it was drawn with. The check and the save are two
-    steps, so two saves in the same instant can still both land; what this stops is the usual
-    case, a form left open while somebody else changed the idea, silently undoing their edit.
-    """
-    if not seen:
-        return False  # a form drawn before this was here
-    with closing(_app().connect()) as conn:
-        current = idea_store.get(conn, idea_id)
-    return current is not None and current.updated_at != seen
-
-
 def _back(target: str, **values: Any) -> Response:
     return redirect(url_for(target, **values))
 
@@ -203,12 +198,12 @@ def edit_idea(idea_id: int) -> Response:
     if (complaint := auth.refused()) is not None:
         _say(complaint)
         return _back("web.edit_idea", idea_id=idea_id)
+    if not _text(request.form, "revision"):
+        _say(STALE_IDEA.format(id=idea_id))
+        return _back("web.edit_idea", idea_id=idea_id)
     values, complaint = idea_fields(request.form)
     if complaint:
         _say(complaint)
-        return _back("web.edit_idea", idea_id=idea_id)
-    if _changed_since(idea_id, _text(request.form, "revision")):
-        _say(STALE_IDEA.format(id=idea_id))
         return _back("web.edit_idea", idea_id=idea_id)
     status = _text(request.form, "status")
     if status:

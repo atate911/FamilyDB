@@ -11,8 +11,9 @@ does the work and remembers where it sent the browser; any later post with the s
 from the same session, is sent there too, without doing anything. One that arrives while the
 first is still working waits for it.
 
-In memory, because a duplicate arrives within seconds of the first and a restart in between
-is a risk worth nothing: a table would be one more thing to write on every form.
+This guard is in memory and handles rapid repeats. Calendar creation additionally carries the
+form identity into the durable calendar operation log, so it survives a restart or lost reply.
+Other forms still have only this process-local double-submit guard.
 """
 
 from __future__ import annotations

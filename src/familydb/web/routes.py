@@ -180,6 +180,7 @@ def _idea_form(record: Any = None) -> str:
     return render_template(
         "idea_form.html",
         idea=record,
+        revision=idea_store.revision(record) if record else None,
         kinds=sorted(set(kinds) | set(KIND_SUGGESTIONS)),
         statuses=STATUSES,
         settings=SETTINGS,
