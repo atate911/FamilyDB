@@ -69,7 +69,8 @@ def test_saving_puts_it_in_force_at_once(page, conn) -> None:
     }
     assert page.app.settings.provider == "gemini"  # no restart, no wait
     after = page.get("/settings").text
-    assert "Saved. Changed: provider, web_tools_enabled, digest_hour." in after
+    # In the words on the page, not the setting names.
+    assert "Saved. Changed: Chat model company, Look ideas up on the web, Digest hour." in after
     assert 'value="gemini" selected' in after
 
 

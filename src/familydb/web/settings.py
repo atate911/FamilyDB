@@ -227,7 +227,7 @@ def page(
             "problem": (problems or {}).get(name),
             "revealed": revealed[1] if revealed and revealed[0] == name else None,
         }
-        for name in SECRETS
+        for name in _key_order(live.provider)
     ]
     return (
         render_template(
@@ -434,10 +434,20 @@ def google_calendar_choice() -> Response | tuple[str, int]:
     return redirect(url_for("settings.show"))
 
 
+def _key_order(provider: str) -> list[str]:
+    """The key of the company answering now first, as that is the one a new install needs."""
+    first = f"{provider}_api_key"
+    return sorted(SECRETS, key=lambda name: (name != first, name == "telegram_bot_token"))
+
+
 def _said(changed: list[str], *, keys: bool = False) -> str:
+    """What moved, in the words the page uses for it."""
     if not changed:
         return NOTHING_CHANGED
-    if keys:
-        labels = ", ".join(KEY_LABELS.get(name, name) for name in changed)
-        return SAVED.format(what=f"Changed: {labels}.")
-    return SAVED.format(what=f"Changed: {', '.join(changed)}.")
+    labels = [
+        KEY_LABELS.get(name, name)
+        if keys
+        else (fields.BY_KEY[name].label if name in fields.BY_KEY else name)
+        for name in changed
+    ]
+    return SAVED.format(what=f"Changed: {', '.join(labels)}.")

@@ -51,20 +51,6 @@
     within a few seconds: the status page says whether Telegram took it.
   </p>
 
-  <form method="post" action="{{ url_for('settings.save') }}">
-    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-    {% for group in groups %}
-      <section class="panel" id="{{ group.title|lower|replace(' ', '-') }}">
-        <h2>{{ group.title }}</h2>
-        {% if group.note %}<p class="muted">{{ group.note }}</p>{% endif %}
-        <div class="grid">
-          {% for entry in group.boxes %}{{ box(entry) }}{% endfor %}
-        </div>
-      </section>
-    {% endfor %}
-    <button type="submit">Save settings</button>
-  </form>
-
   <section class="panel" id="keys">
     <h2>API keys</h2>
     <p class="muted">
@@ -185,6 +171,22 @@
       </details>
     {% endif %}
   </section>
+
+  <form method="post" action="{{ url_for('settings.save') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    {% for group in groups %}
+      <section class="panel" id="{{ group.title|lower|replace(' ', '-') }}">
+        <h2>{{ group.title }}</h2>
+        {% if group.note %}<p class="muted">{{ group.note }}</p>{% endif %}
+        <div class="grid">
+          {% for entry in group.boxes %}{{ box(entry) }}{% endfor %}
+        </div>
+      </section>
+    {% endfor %}
+    <button type="submit">Save settings</button>
+  </form>
+
+
 
   <section class="panel">
     <h2>See a key</h2>
