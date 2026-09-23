@@ -108,7 +108,8 @@ deploy/           systemd unit, a Caddyfile and an nginx site for HTTPS; Dockerf
                   docker-compose.yml at the root
 docs/             DESIGN.md, INSTALL.md for a server from zero, ALPHA_READINESS.md (what the
                   September review found and what still needs a live check), MEMORY.md (the
-                  household-memory design, not yet built)
+                  household-memory design, not yet built), AI_CALLS.md (how model calls
+                  are decided, fed and trusted: the framework, mostly not yet built)
 ```
 
 ## Development

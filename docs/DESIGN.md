@@ -8,6 +8,8 @@ Token economy is a core product constraint. Human replies must be terse; machine
 content carries only necessary structured fields. Use local code instead of paid inference
 where possible and budget the complete operation, including tool loops and retries.
 
+How each model call is decided, what it sees, what it may do and how its answer is used is
+framed in [AI_CALLS.md](AI_CALLS.md), with what the first inventory of the calls found.
 Automatic household memory is planned in [MEMORY.md](MEMORY.md). It will extract compact
 memory changes during already-required AI requests, with local persistence and retrieval.
 A separate AI memory pass after each message is explicitly out of scope. That document is

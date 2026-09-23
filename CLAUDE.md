@@ -10,6 +10,7 @@ FamilyDB is a family planning chat bot: Python 3.11+, SQLite, a model from Anthr
 - Memory storage, deterministic deduplication, expiry, indexing and retrieval run locally. Supply only relevant context under a budget, always including applicable firm requirements. Preserve prompt-cache stability.
 - Bound calls, tool iterations, context, output and retries; account for all billable surfaces. Choose the least expensive configured model that meets measured quality requirements: GPT-6 Luna is the default for chat and lookups for that reason.
 - A daily spending limit exists and is tested (`agent/spending.py`, checked in the loop before every call): each call's cost is estimated from `agent/providers/prices.py` and stored in `llm_calls`. A model missing from that table is counted dearer than any listed, so add a price when adding a model worth suggesting. It is an estimate, not the bill; do not describe it as more.
+- How every model call decides, sees, acts and is trusted is framed in `docs/AI_CALLS.md`: code knows, the model understands and words. A new kind of call answers its five questions before it is added.
 - The automatic-memory design and acceptance criteria are in `docs/MEMORY.md`. The earlier idea of an AI memory worker after every message is superseded. Memory is planned, not implemented.
 
 ## Commands

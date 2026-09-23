@@ -40,7 +40,10 @@ older than what is installed. It gets a date when it is released.
 - **Set up from that page.** The keys, the models, Telegram (taken up within
   seconds, no restart), Google Calendar (connected from the page, with no laptop
   needed), where home is (found on the map), the timezone and the spending
-  limit. The page can also sign everyone out on every device.
+  limit. The page can also sign everyone out on every device. Somebody new who
+  messages the bot on Telegram is listed on the Family page with a button to
+  add them, and the digest chat is chosen from the chats the bot has seen, so
+  nobody copies an id by hand.
 
 ### Installing it
 
