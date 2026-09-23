@@ -2,6 +2,17 @@
 
 Status: living design. Phases 0 to 2 are built and phase 4 is under way: the store, the tools, the agent loop with prompt caching, the console and Telegram channels, Google Calendar, weather, retries, enrichment, the suggestion engine, web discovery, the digest, follow-ups, three providers behind one protocol, and the web page with its status and settings screens. See the README for what works today, section 15 for the roadmap and section 16 for what is decided and what is still open.
 
+## Governing cost and memory decision (September 21, 2026)
+
+Token economy is a core product constraint. Human replies must be terse; machine-facing
+content carries only necessary structured fields. Use local code instead of paid inference
+where possible and budget the complete operation, including tool loops and retries.
+
+Automatic household memory is planned in [MEMORY.md](MEMORY.md). It will extract compact
+memory changes during already-required AI requests, with local persistence and retrieval.
+A separate AI memory pass after each message is explicitly out of scope. That document is
+the governing memory design; it is not a claim that memory or spending ceilings already exist.
+
 ## 1. What it is
 
 A private family assistant that lives in a chat app and owns three things:

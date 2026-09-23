@@ -265,8 +265,8 @@ link from another site cannot make a change on the family's behalf. Refusing to 
 deliberate: a page bound off the loopback with no password will not serve, and says so, unless you
 set `WEB_ALLOW_NO_PASSWORD=true` on purpose.
 
-Be clear-eyed about what signing in now buys someone: the ideas and plans are read-only, but the
-settings page can change which model answers, read the API keys, and point the bot at a different
+Be clear-eyed about what signing in now buys someone: they can edit ideas and restaurants,
+manage calendar plans, and use the AI assistant. The settings page can also change which model answers, read the API keys, and point the bot at a different
 calendar. On a machine on the internet, that one password is what stands between a stranger and
 your API bill. Make it long, and use the status page at the end of this section to notice a
 month that does not look like yours.
@@ -304,7 +304,7 @@ came from.
 
 A change reaches the next message and the next page straight away. The jobs that run on a
 schedule — the digest, the follow-ups, the lookups, the retries — pick a new time or interval up
-within five minutes. Nothing here needs `familydb run` restarted.
+within five minutes. Telegram token changes require restarting `familydb run`, including the first token added on the settings page. Other behavior settings apply without a restart.
 
 **Who answers.** Any of the three can, and the choice is made per surface, so the two halves of
 the work can go to different places:
@@ -325,7 +325,7 @@ WORKER_MODEL=claude-haiku-4-5-20251001
 OPENAI_MODEL=gpt-5
 OPENAI_WORKER_MODEL=gpt-5-mini
 GEMINI_MODEL=gemini-2.5-pro
-GEMINI_WORKER_MODEL=gemini-2.5-flash
+GEMINI_WORKER_MODEL=gemini-3.8-flash
 ```
 
 Check those names against your own account before relying on them; model names change and these

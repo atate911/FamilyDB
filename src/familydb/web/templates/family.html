@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Our family · {{ site_title }}{% endblock %}
+{% block content %}
+<div class="page-heading"><p class="eyebrow">BETTER TOGETHER</p><h1>Our family</h1><p class="muted">Add the people who make a plan worth making.</p></div>
+<p class="notice">Everyone uses the same family password. Names identify who is speaking to the assistant; these are not separate accounts. Roles describe family members to the bot and do not restrict website access.</p>
+<div class="dashboard-grid"><section><h2>Around the table</h2>
+{% for person in people %}<article class="panel"><h3>{{ person.display_name }}{% if not person.active %} <span class="tag">Inactive</span>{% endif %}</h3><p class="muted">{{ {'admin':'Administrator','member':'Family member','kid':'Child'}[person.role] }}{% if person.channel %} · Connected to {{ person.channel }}{% endif %}</p><a href="{{ url_for('actions.edit_member',member_id=person.id) }}">{{ 'Edit profile' if person.active else 'Restore or edit profile' }} →</a></article>{% else %}<div class="panel empty-state"><h3>Start with your name.</h3><p>Add a family member here to start using the assistant.</p></div>{% endfor %}
+<a href="{{ url_for('actions.assistant') }}">Talk to the assistant →</a></section>
+<section><h2>Add a family member</h2>{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<form class="panel" method="post"><input type="hidden" name="csrf" value="{{ csrf_token() }}"><input type="hidden" name="operation" value="{{ operation }}"><div class="field"><label for="display_name">Name</label><input id="display_name" name="display_name" required maxlength="80" autocomplete="off" value="{{ form.get('display_name','') }}"></div><div class="field"><label for="role">Family role</label><select id="role" name="role">{% for value,label in [('member','Family member'),('admin','Administrator'),('kid','Child')] %}<option value="{{ value }}" {{ 'selected' if form.get('role','member' if people else 'admin') == value }}>{{ label }}</option>{% endfor %}</select></div><button type="submit">Add to family</button></form>
+<p class="muted">This page adds browser participants. Telegram access still requires server setup. Edit a profile to rename someone, change their role, or deactivate them.</p></section></div>
+{% endblock %}

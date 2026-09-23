@@ -77,3 +77,14 @@ def resolve(conn: sqlite3.Connection, channel: str, channel_user_id: str) -> Mem
 
 def set_active(conn: sqlite3.Connection, member_id: int, active: bool) -> None:
     conn.execute("UPDATE members SET active = ? WHERE id = ?", (int(active), member_id))
+
+
+def update_profile(
+    conn: sqlite3.Connection, member_id: int, *, display_name: str, role: Role, active: bool
+) -> Member | None:
+    """Change a profile without replacing its identity, channel binding, or history."""
+    conn.execute(
+        "UPDATE members SET display_name = ?, role = ?, active = ? WHERE id = ?",
+        (display_name.strip(), role, int(active), member_id),
+    )
+    return get(conn, member_id)

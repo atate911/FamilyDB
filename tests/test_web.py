@@ -102,7 +102,7 @@ def test_every_response_carries_the_security_headers(settings, clock) -> None:
     assert "script-src 'none'" in plain.headers["Content-Security-Policy"]
     assert "frame-ancestors 'none'" in plain.headers["Content-Security-Policy"]
     assert plain.headers["X-Content-Type-Options"] == "nosniff"
-    assert plain.headers["Referrer-Policy"] == "no-referrer"
+    assert plain.headers["Referrer-Policy"] == "same-origin"
     assert plain.headers["X-Frame-Options"] == "DENY"
     assert "Strict-Transport-Security" not in plain.headers  # plain HTTP: nothing to promise
     secure = client.get("/login", base_url="https://familydb.example")
@@ -477,8 +477,8 @@ def test_the_lockout_table_does_not_grow_without_limit(settings, clock) -> None:
     assert lockout.locked("198.51.100.4", now)
 
 
-def test_the_pages_have_no_way_to_write_to_the_database() -> None:
-    """The pages are read-only by construction, not only by intent."""
+def test_reading_pages_have_no_way_to_write_to_the_database() -> None:
+    """Writes stay in guarded form modules; reading views remain read-only."""
     import ast
 
     import familydb.web as package
@@ -522,8 +522,8 @@ def test_the_pages_have_no_way_to_write_to_the_database() -> None:
     }
     stores.add("settings_store")
     for module in sorted(Path(package.__file__).parent.glob("*.py")):
-        if module.name == "settings.py":
-            continue  # it writes; the next test pins exactly how far that goes
+        if module.name in {"settings.py", "actions.py"}:
+            continue  # Form security is exercised by the settings and web action tests.
         tree = ast.parse(module.read_text("utf-8"), filename=module.name)
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom) and (node.module or "").startswith(
@@ -538,8 +538,8 @@ def test_the_pages_have_no_way_to_write_to_the_database() -> None:
                 assert not writing, f"{module.name}:{node.lineno} calls {called} on a store"
 
 
-def test_only_the_settings_page_writes_and_only_to_the_settings() -> None:
-    """One module may write, to one table, through one repository, and that is the whole of it."""
+def test_settings_page_writes_only_to_the_settings() -> None:
+    """Settings forms cannot modify family records."""
     import ast
 
     import familydb.web as package

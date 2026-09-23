@@ -10,6 +10,7 @@ from familydb.agent.loop import MessagesAPI
 from familydb.agent.render import render_idea_line
 from familydb.app import App
 from familydb.channels.base import IncomingMessage, OutgoingMessage
+from familydb.delivery import deliver
 from familydb.pipeline import handle_incoming
 from familydb.store import ideas
 
@@ -72,4 +73,7 @@ def run_repl(
             output_fn("\n".join(render_idea_line(idea) for idea in rows) or "(no ideas yet)")
             continue
         reply = one_shot(app, line, current, chat_id, api=api)
-        output_fn(reply.text if reply else "(duplicate message ignored)")
+        if reply is not None and reply.out_message_id is not None:
+            deliver(app, reply.out_message_id, lambda _chat, text: output_fn(text))
+        else:
+            output_fn(reply.text if reply else "(duplicate message ignored)")

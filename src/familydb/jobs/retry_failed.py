@@ -7,6 +7,8 @@ from contextlib import closing
 
 from familydb.agent.loop import MessagesAPI
 from familydb.app import App
+from familydb.dates import utc_iso
+from familydb.delivery import run_deliveries
 from familydb.pipeline import retry_message
 from familydb.store import messages
 
@@ -17,7 +19,10 @@ def run_retries(app: App, *, api: MessagesAPI | None = None) -> int:
     """Retry every eligible failed message once. Returns how many were processed successfully."""
     with closing(app.connect()) as conn:
         app.refresh(conn)
-        pending = messages.failed(conn, max_retries=app.settings.retry_max_attempts)
+        run_deliveries(app)
+        pending = messages.pending(
+            conn, max_retries=app.settings.retry_max_attempts, now=utc_iso(app.clock.now())
+        )
         if not pending:
             return 0
         log.info("retrying %s failed message(s)", len(pending))

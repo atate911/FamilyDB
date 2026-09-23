@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Restaurants · {{ site_title }}{% endblock %}
 {% block content %}
-  <h1>Restaurants</h1>
+  <div class="section-heading page-heading"><div><p class="eyebrow">AROUND THE TABLE</p><h1>Where shall we eat?</h1></div><a class="button" href="{{ url_for('actions.edit_idea',kind='restaurant') }}">+ Add a restaurant</a></div>
   <p class="muted count">
     {{ cards | length }} place{{ '' if cards | length == 1 else 's' }} the family has talked about.
   </p>
 
   {% if not cards %}
-    <p class="panel muted">No restaurants yet. Tell the bot about one and it will appear here.</p>
+    <p class="panel muted">No restaurants yet. Add a place above or ask the assistant for a recommendation.</p>
   {% endif %}
 
   <ul class="cards">

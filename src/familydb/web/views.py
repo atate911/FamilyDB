@@ -7,7 +7,7 @@ The wording here is for people reading a page. The model's view of an idea lives
 from __future__ import annotations
 
 import json
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
@@ -243,6 +243,37 @@ def plan_row(plan: Plan, today: date) -> dict[str, Any]:
         "notes": plan.notes,
         "status": plan.status,
     }
+
+
+def local_plan(plan: Plan, tz: ZoneInfo) -> Plan:
+    """Render timed events in the family's timezone, including UTC Google events."""
+    if plan.all_day:
+        return plan
+    changes = {}
+    for key in ("start", "end"):
+        value = getattr(plan, key)
+        if value:
+            moment = datetime.fromisoformat(value)
+            if moment.tzinfo is None:
+                moment = moment.replace(tzinfo=tz)
+            changes[key] = moment.astimezone(tz).isoformat()
+    return plan.model_copy(update=changes)
+
+
+def plan_overlaps(plan: Plan, first: date, last: date, tz: ZoneInfo) -> bool:
+    """Half-open day window: a midnight ending belongs only to the previous day."""
+    if plan.status == "cancelled":
+        return False
+    plan = local_plan(plan, tz)
+    if plan.all_day:
+        start_day = date.fromisoformat(plan.start[:10])
+        end_day = date.fromisoformat(plan.end[:10]) if plan.end else start_day + timedelta(days=1)
+        return start_day < last and end_day > first
+    start = datetime.fromisoformat(plan.start)
+    end = datetime.fromisoformat(plan.end) if plan.end else start + timedelta(microseconds=1)
+    return start < datetime.combine(last, time.min, tz) and end > datetime.combine(
+        first, time.min, tz
+    )
 
 
 def outcome_row(outcome: Outcome) -> dict[str, Any]:

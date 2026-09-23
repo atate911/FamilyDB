@@ -282,7 +282,7 @@ ssh -L 8080:127.0.0.1:8080 sam@your-server
 
 Leave that open and go to `http://127.0.0.1:8080/` in a browser. Sign in with the family
 password the installer printed. Everything below can be done on `/settings` instead of in
-`.env`, and a setting changed there takes effect on the next message with no restart at all
+`.env`, and most settings changed there take effect on the next message; adding or changing the Telegram bot token requires restarting FamilyDB
 (RUNBOOK section 11).
 
 ### The keys
@@ -401,8 +401,8 @@ Caddy's headers, and marks the login cookie `Secure`. Only turn it on with a pro
 front, because it means trusting those headers.
 
 **The warning worth reading twice.** One shared password is all that stands between a stranger
-and your API bill. Signing in gets somebody the ideas and plans read-only, but the settings
-page can change which model answers, read the API keys back, and point the bot at a different
+and your API bill. Signing in allows editing ideas and restaurants, changing calendar plans, and using
+the AI assistant. The settings page can also change which model answers, read the API keys back, and point the bot at a different
 calendar. Make the password long, and look at `/status` now and then for a month that does not
 look like yours. RUNBOOK section 10 has what else protects the page: rate limits, lockouts,
 CSRF tokens and a content security policy.
@@ -495,12 +495,13 @@ has ever said is in it:
 
 ```bash
 sudo /opt/familydb/scripts/maintain.sh schedule-backups --keep-days 14
-sudo crontab -u familydb -l
+sudo crontab -u root -l
 ```
 
-That adds two lines to the `familydb` user's crontab: a backup at 03:15 using SQLite's online
-backup, which is safe while the bot runs, and a prune at 03:30 of anything older than
-`--keep-days`. A backup on the same disk is not a backup, so copy them off as well, from your
+That adds one line to root's crontab, for either Docker or systemd: a safe SQLite online
+backup at 03:15 followed by pruning files older than `--keep-days` only if the backup succeeds.
+When replacing an older schedule, remove its two FamilyDB lines from the `familydb` user's
+crontab. A backup on the same disk is not a backup, so copy them off as well, from your
 own computer:
 
 ```bash

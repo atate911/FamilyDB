@@ -126,7 +126,7 @@ def test_worker_turns_use_the_cheaper_model_and_less_thinking(settings, clock, c
     _run("enrich", api, settings, clock, registry, conn)
     request = api.requests[0]
     assert request["model"] == settings.worker_model == "claude-haiku-4-5-20251001"
-    assert request["output_config"] == {"effort": "low"}
+    assert "output_config" not in request and "thinking" not in request
     assert request["model"] != settings.anthropic_model  # chat keeps the bigger one
 
     # An empty WORKER_MODEL means "use the chat model for these too".

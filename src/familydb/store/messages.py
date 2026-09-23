@@ -26,6 +26,9 @@ class Message(BaseModel):
     processed_at: str | None = None
     retries: int = 0
     give_up: bool = False
+    claim_token: str | None = None
+    claim_until: str | None = None
+    delivered_at: str | None = None
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> Message:
@@ -125,6 +128,15 @@ def failed(conn: sqlite3.Connection, *, max_retries: int | None = None) -> list[
         sql += " AND retries < ? AND give_up = 0"
         params.append(max_retries)
     rows = conn.execute(sql + " ORDER BY id", params)
+    return [Message.from_row(row) for row in rows]
+
+
+def pending(conn: sqlite3.Connection, *, max_retries: int, now: str) -> list[Message]:
+    rows = conn.execute(
+        "SELECT * FROM messages WHERE direction = 'in' AND status IN ('received', 'failed') "
+        "AND give_up = 0 AND retries < ? AND (claim_until IS NULL OR claim_until <= ?) ORDER BY id",
+        (max_retries, now),
+    )
     return [Message.from_row(row) for row in rows]
 
 

@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import json
+from dataclasses import asdict
 from datetime import date, timedelta
 
 from familydb.availability import enrichment_available
 from familydb.dates import parse_date_range, utc_iso, weekend_window
 from familydb.errors import ToolError
-from familydb.store import ideas, suggestions
+from familydb.store import ideas, outcomes, suggestions
 from familydb.store.db import transaction
 from familydb.suggest.compose import compose
 from familydb.suggest.context import build_context
@@ -15,7 +17,7 @@ from familydb.suggest.discover import discover
 from familydb.suggest.evaluate import evaluate
 from familydb.suggest.log import log_suggestion
 from familydb.suggest.shortlist import shortlist
-from familydb.suggest.types import Constraints, SuggestInput, SuggestResult
+from familydb.suggest.types import Candidate, Constraints, SuggestInput, SuggestResult
 from familydb.tools import ToolContext
 
 RECENT_SUGGESTION_DAYS = 14
@@ -59,7 +61,20 @@ def run(ctx: ToolContext, args: SuggestInput) -> SuggestResult:
         max_duration_minutes=args.max_duration_minutes,
     )
     all_ideas = ideas.list_all(ctx.conn)
-    kept, ruled_out, extras = shortlist(all_ideas, context, constraints, ctx.settings)
+    excluded = outcomes.do_not_repeat(ctx.conn)
+    kept, ruled_out, extras = shortlist(
+        [idea for idea in all_ideas if idea.id not in excluded], context, constraints, ctx.settings
+    )
+    ruled_out.extend(
+        Candidate(
+            idea_id=idea.id,
+            title=idea.title,
+            verdict="ruled_out",
+            reasons=["family said they would not repeat this"],
+        )
+        for idea in all_ideas
+        if idea.id in excluded and idea.status != "dropped"
+    )
     evaluated, stale_ids = evaluate(ctx.conn, kept, context, constraints, ctx.settings, ctx.clock)
     skipped = list(context.skipped)
     if stale_ids and enrichment_available(ctx.settings):
@@ -69,7 +84,10 @@ def run(ctx: ToolContext, args: SuggestInput) -> SuggestResult:
 
     finds, note = ([], None)
     if args.discover:
-        finds, note = discover(ctx, context, args.question)
+        question = (
+            args.question + "\nConstraints: " + json.dumps(asdict(constraints), sort_keys=True)
+        )
+        finds, note = discover(ctx, context, question)
     if note:
         skipped.append(note)
 

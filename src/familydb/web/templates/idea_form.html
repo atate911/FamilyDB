@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit idea' if record else 'Save an idea' }} · {{ site_title }}{% endblock %}
+{% macro input(name, label, type='text', placeholder='') %}<div class="field"><label for="{{ name }}">{{ label }}</label><input id="{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ form.get(name) if form.get(name) is not none else '' }}" placeholder="{{ placeholder }}" {% if type == 'number' %}min="0" max="100000"{% endif %}{% if name == 'title' %}required maxlength="200"{% endif %}></div>{% endmacro %}
+{% macro select(name, label, options) %}<div class="field"><label for="{{ name }}">{{ label }}</label><select id="{{ name }}" name="{{ name }}">{% for value, text in options %}<option value="{{ value }}" {{ 'selected' if form.get(name)|string == value|string }}>{{ text }}</option>{% endfor %}</select></div>{% endmacro %}
+{% block content %}
+<div class="page-heading"><p class="eyebrow">THE FAMILY NOTEBOOK</p><h1>{{ 'Edit idea' if record else 'Keep a good idea' }}</h1><p class="muted">Save the essentials now. Fill in the details when you have them.</p></div>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<form class="panel editor" method="post">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}"><input type="hidden" name="operation" value="{{ operation }}"><input type="hidden" name="revision" value="{{ revision }}">
+  {{ input('title', 'What would you like to do?', placeholder='A picnic by the lake') }}
+  <div class="form-grid"><div class="field"><label for="kind">Kind of idea</label><input id="kind" name="kind" list="kinds" value="{{ form.get('kind','activity') }}" required maxlength="40"><datalist id="kinds">{% for kind in kinds %}<option value="{{ kind }}">{% endfor %}</datalist></div>{{ select('status', 'Status', [('idea','Someday'),('planned','Planned'),('done','Done'),('dropped','Archived')]) }}</div>
+  <div class="field"><label for="description">What makes it a good idea?</label><textarea id="description" name="description" rows="4">{{ form.get('description') or '' }}</textarea></div>
+  <div class="form-grid">{{ input('location_name','Place or address') }}{{ input('url','Website','url','https://') }}{{ input('participants','Who is it for?','text','Whole family, adults') }}{{ input('tags','Tags, separated by commas','text','weekend, nearby') }}</div>
+  <details {% if error %}open{% endif %}><summary>Timing, budget & other details</summary><div class="form-grid">
+    {{ input('duration_min','Minimum minutes','number') }}{{ input('duration_max','Maximum minutes','number') }}
+    {{ select('cost_level','Budget',[('','Not sure'),(0,'Free'),(1,'$ · Low'),(2,'$$ · Moderate'),(3,'$$$ · Higher'),(4,'$$$$ · Special occasion')]) }}
+    {{ select('setting','Setting',[('either','Indoors or outdoors'),('indoor','Indoors'),('outdoor','Outdoors')]) }}
+    {{ select('weather','Weather',[('any','Any weather'),('dry','Dry'),('warm','Warm'),('snow','Snow')]) }}
+    {{ input('seasons','Seasons, separated by commas','text','spring, summer, autumn, winter') }}
+    {{ input('lead_time_days','Days to book ahead','number') }}
+    <label class="check"><input type="checkbox" name="needs_booking" {{ 'checked' if form.get('needs_booking') }}> Needs a booking or tickets</label>
+  </div></details>
+  <div class="button-row"><button type="submit">Save idea</button><a href="{{ url_for('web.idea',idea_id=record.id) if record else url_for('web.ideas') }}">Cancel</a></div>
+</form>
+{% endblock %}

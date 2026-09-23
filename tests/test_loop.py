@@ -88,7 +88,7 @@ def test_parallel_tools_return_one_user_message(settings, registry, ctx) -> None
     assert [r["tool_use_id"] for r in results] == ["tu_a", "tu_b"]
     assert results[0]["is_error"] is False
     assert results[1]["is_error"] is True
-    assert "unknown tool" in json.loads(results[1]["content"])["error"]
+    assert "not permitted" in json.loads(results[1]["content"])["error"]
     assert [a["ok"] for a in result.actions] == [True, False]
 
 

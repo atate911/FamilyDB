@@ -14,10 +14,13 @@
       {% if plan.location %}<span class="muted">· {{ plan.location }}</span>{% endif %}
     </div>
     {% if plan.notes %}<div class="muted">{{ plan.notes }}</div>{% endif %}
+    {% if plan.id %}<a href="{{ url_for('actions.edit_plan',plan_id=plan.id) }}">Edit plan</a>{% else %}<span class="muted">Managed in Google Calendar</span>{% endif %}
   </li>
 {% endmacro %}
 {% block content %}
-  <h1>Plans</h1>
+  <div class="section-heading page-heading"><div><p class="eyebrow">TIME TOGETHER</p><h1>Plans</h1></div><a class="button" href="{{ url_for('actions.edit_plan') }}">+ Make a plan</a></div>
+  <p class="muted">{{ calendar_note }}</p>
+  <p><a href="{{ url_for('web.calendar') }}">View month calendar →</a></p>
   <section class="panel">
     <h2>Coming up</h2>
     {% if upcoming %}

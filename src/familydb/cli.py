@@ -440,7 +440,12 @@ def chat(
     if reply is None:
         typer.echo("(duplicate message ignored)")
         return
-    typer.echo(reply.text)
+    if reply.out_message_id is not None:
+        from familydb.delivery import deliver
+
+        deliver(application, reply.out_message_id, lambda _chat, text: typer.echo(text))
+    else:
+        typer.echo(reply.text)
     if reply.status in {"failed", "unknown_sender"}:
         if reply.status == "failed" and not application.settings.anthropic_api_key:
             typer.echo("hint: ANTHROPIC_API_KEY is not set (see .env.example)", err=True)
@@ -724,7 +729,7 @@ def web(
     host: str | None = typer.Option(None, "--host", help="Override WEB_HOST for this run."),
     port: int | None = typer.Option(None, "--port", help="Override WEB_PORT for this run."),
 ) -> None:
-    """Serve the read-only web page in the foreground until interrupted."""
+    """Serve the family web app in the foreground until interrupted."""
     from familydb.web.server import serve
 
     overrides: dict[str, Any] = {}

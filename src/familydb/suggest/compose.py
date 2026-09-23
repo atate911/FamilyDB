@@ -32,6 +32,7 @@ def day_summaries(context: Context) -> list[DaySummary]:
             weekday=d.date.strftime("%A"),
             free=list(d.free),
             free_known=d.free_known,
+            commitments=d.commitments,
             forecast=_forecast_text(d.forecast),
             rain_chance_pct=d.forecast.rain_chance if d.forecast else None,
             high=d.forecast.high if d.forecast else None,

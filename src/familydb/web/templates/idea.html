@@ -3,6 +3,7 @@
 {% block content %}
   <article class="panel">
     <h1>{{ idea.title }}</h1>
+    <div class="button-row"><a class="button secondary" href="{{ url_for('actions.edit_idea',idea_id=idea.id) }}">Edit idea</a><a class="button" href="{{ url_for('actions.edit_plan',idea_id=idea.id) }}">Make a plan ↗</a></div>
     <p class="muted meta">
       <span>#{{ idea.id }}</span>
       <span class="tag">{{ idea.kind }}</span>

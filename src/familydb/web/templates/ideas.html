@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Ideas · {{ site_title }}{% endblock %}
 {% block content %}
+  <div class="section-heading page-heading"><div><p class="eyebrow">THE FAMILY NOTEBOOK</p><h1>Ideas for another good day</h1></div><a class="button" href="{{ url_for('actions.edit_idea') }}">+ Save an idea</a></div>
   <form class="panel filters" method="get" action="{{ url_for('web.ideas') }}">
     <div class="field wide">
       <label for="q">Search</label>
@@ -44,7 +45,7 @@
   </p>
 
   {% if not rows %}
-    <p class="panel muted">Nothing here yet. Ideas arrive by messaging the bot.</p>
+    <p class="panel muted">No ideas here yet. Save an idea above or ask the assistant for inspiration.</p>
   {% endif %}
 
   <ul class="cards">

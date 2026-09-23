@@ -52,3 +52,22 @@ def test_phase2_columns_exist(conn) -> None:
 
     assert "enrichment_note" in columns("ideas")
     assert {"followed_up_at", "channel", "chat_id"} <= columns("plans")
+
+
+def test_recovery_migration_does_not_resend_historical_replies(tmp_path):
+    from contextlib import closing
+
+    from familydb.store import messages
+
+    with closing(db.connect(tmp_path / "old.sqlite3")) as conn:
+        db.schema_version(conn)
+        for version, _name, sql in db.list_migrations():
+            if version >= 6:
+                break
+            conn.executescript(sql)
+            conn.execute("INSERT INTO schema_version VALUES (?, '2026-09-20')", (version,))
+        old = messages.insert_out(conn, channel="telegram", chat_id="1", text="Old reply")
+        assert db.migrate(conn) == [6, 7]
+        assert messages.get(conn, old.id).delivered_at is not None
+        new = messages.insert_out(conn, channel="telegram", chat_id="1", text="New reply")
+        assert messages.get(conn, new.id).delivered_at is None

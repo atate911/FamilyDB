@@ -35,6 +35,7 @@ class CalendarEvent:
     description: str | None = None
     status: str = "confirmed"
     link: str | None = None
+    busy: bool = True
 
     def to_public(self) -> dict[str, Any]:
         return {
@@ -47,6 +48,7 @@ class CalendarEvent:
             "description": self.description,
             "status": self.status,
             "link": self.link,
+            "busy": self.busy,
         }
 
 
@@ -54,6 +56,8 @@ class CalendarAPI(Protocol):
     """What the tools need from a calendar. `GoogleCalendar` implements it; tests fake it."""
 
     def list_events(self, start: datetime, end: datetime) -> list[CalendarEvent]: ...
+
+    def get_event(self, event_id: str) -> CalendarEvent | None: ...
 
     def insert_event(
         self,
@@ -64,6 +68,7 @@ class CalendarAPI(Protocol):
         all_day: bool,
         location: str | None,
         description: str | None,
+        event_id: str | None = None,
     ) -> CalendarEvent: ...
 
     def patch_event(self, event_id: str, **changes: Any) -> CalendarEvent: ...
@@ -93,6 +98,8 @@ def parse_event(item: dict[str, Any], tz: ZoneInfo) -> CalendarEvent:
         description=item.get("description"),
         status=item.get("status", "confirmed"),
         link=item.get("htmlLink"),
+        busy=item.get("transparency", "opaque") != "transparent"
+        and item.get("status") != "cancelled",
     )
 
 
@@ -105,6 +112,7 @@ def event_body(
     all_day: bool | None = None,
     location: str | None = None,
     description: str | None = None,
+    status: str | None = None,
     clear_other_time_key: bool = False,
 ) -> dict[str, Any]:
     """The request body for insert or patch. Times come as a set: start, end and all_day.
@@ -119,6 +127,8 @@ def event_body(
         body["location"] = location
     if description is not None:
         body["description"] = description
+    if status is not None:
+        body["status"] = status
     if start is not None and end is not None:
         if all_day:
             body["start"] = {"date": start.isoformat()}
@@ -240,6 +250,14 @@ class GoogleCalendar:
                 break
         return [parse_event(i, self.tz) for i in items if i.get("status") != "cancelled"]
 
+    def get_event(self, event_id: str) -> CalendarEvent | None:
+        item = self._execute(
+            self._events().get(calendarId=self.calendar_id, eventId=event_id), ignore=(404, 410)
+        )
+        if not item or item.get("status") == "cancelled":
+            return None
+        return parse_event(item, self.tz)
+
     def insert_event(
         self,
         *,
@@ -249,6 +267,7 @@ class GoogleCalendar:
         all_day: bool,
         location: str | None,
         description: str | None,
+        event_id: str | None = None,
     ) -> CalendarEvent:
         body = event_body(
             tz=self.tz,
@@ -259,7 +278,18 @@ class GoogleCalendar:
             location=location,
             description=description,
         )
-        item = self._execute(self._events().insert(calendarId=self.calendar_id, body=body))
+        if event_id:
+            body["id"] = event_id
+        item = self._execute(
+            self._events().insert(calendarId=self.calendar_id, body=body), ignore=(409,)
+        )
+        if item is None and event_id:
+            existing = self.get_event(event_id)
+            if existing is not None:
+                return existing
+            raise ToolError(
+                "Calendar operation already exists but is unavailable; check Google Calendar"
+            )
         return parse_event(item, self.tz)
 
     def patch_event(self, event_id: str, **changes: Any) -> CalendarEvent:

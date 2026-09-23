@@ -1,12 +1,12 @@
-"""The read-only web page: browse the ideas list, one idea, the restaurants and the plans.
+"""The family web app: browsing, guarded forms, and a persistent AI conversation.
 
-`create_app` builds a Flask application around an existing `App`, so the page reads the same
-database and settings as the bot. It serves GET requests only, apart from signing in and out.
+The Flask application shares the bot database, settings, and tool handlers.
 """
 
 from __future__ import annotations
 
 import logging
+import threading
 from datetime import timedelta
 from typing import Any
 
@@ -17,7 +17,7 @@ from familydb.app import App
 from familydb.availability import web_is_public, web_password_required
 from familydb.config import Settings
 from familydb.errors import ConfigError
-from familydb.web import auth, routes
+from familydb.web import actions, auth, routes
 from familydb.web import settings as settings_page
 from familydb.web.keys import session_secret
 
@@ -63,7 +63,7 @@ def security_headers(response: Any) -> Any:
         response.headers.setdefault("Cache-Control", "no-store")
     response.headers.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY)
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
-    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    response.headers.setdefault("Referrer-Policy", "same-origin")
     response.headers.setdefault("X-Frame-Options", "DENY")
     if request.is_secure:
         response.headers.setdefault("Strict-Transport-Security", HSTS)
@@ -86,6 +86,7 @@ def create_app(app: App) -> Flask:
         MAX_CONTENT_LENGTH=MAX_BODY_BYTES,
         FAMILYDB_APP=app,
         FAMILYDB_LOCKOUT=auth.Lockout(),
+        FAMILYDB_WEB_CHAT_GATE=threading.BoundedSemaphore(1),
     )
     if settings.web_trust_proxy:
         web.wsgi_app = ProxyFix(web.wsgi_app, x_for=1, x_proto=1, x_host=1)  # type: ignore[method-assign]
@@ -97,6 +98,7 @@ def create_app(app: App) -> Flask:
     web.context_processor(lambda: {"site_title": app.settings.web_title})
     web.register_blueprint(auth.bp)
     web.register_blueprint(routes.bp)
+    web.register_blueprint(actions.bp)
     web.register_blueprint(settings_page.bp)
     # The gate first: somebody who is not signed in should not be able to make the page work,
     # not even for one small query.

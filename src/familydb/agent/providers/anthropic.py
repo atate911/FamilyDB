@@ -30,8 +30,9 @@ log = logging.getLogger(__name__)
 NAME = "anthropic"
 FALLBACK_BETA = "server-side-fallback-2026-07-01"
 CREDENTIAL_ATTRS = ("api_key", "auth_token", "credentials")
-WEB_SEARCH: dict[str, Any] = {"type": "web_search_20260209", "name": "web_search", "max_uses": 5}
-WEB_FETCH: dict[str, Any] = {"type": "web_fetch_20260209", "name": "web_fetch", "max_uses": 5}
+# Basic versions also work on Haiku; dynamic filtering requires newer model capabilities.
+WEB_SEARCH: dict[str, Any] = {"type": "web_search_20250305", "name": "web_search", "max_uses": 5}
+WEB_FETCH: dict[str, Any] = {"type": "web_fetch_20250910", "name": "web_fetch", "max_uses": 5}
 NO_CREDENTIALS = "no Anthropic credentials configured: set ANTHROPIC_API_KEY (see .env.example)"
 
 
@@ -134,12 +135,25 @@ class AnthropicProvider:
         payload: dict[str, Any] = {
             "model": request.model or settings.anthropic_model,
             "max_tokens": request.max_tokens or settings.max_output_tokens,
-            "thinking": {"type": "adaptive"},
-            "output_config": {"effort": request.effort or settings.effort},
             "system": system,
             "tools": tools,
             "messages": self.transcript(request),
         }
+        # Haiku 4.5 and older models reject adaptive thinking. Only opt in for
+        # model families with documented support; ordinary tool use needs no thinking.
+        model = payload["model"]
+        if model.startswith(
+            (
+                "claude-opus-4-6",
+                "claude-sonnet-4-6",
+                "claude-opus-4-7",
+                "claude-opus-4-8",
+                "claude-sonnet-5",
+                "claude-opus-5",
+            )
+        ):
+            payload["thinking"] = {"type": "adaptive"}
+            payload["output_config"] = {"effort": request.effort or settings.effort}
         if settings.anthropic_fallbacks:
             payload["betas"] = [FALLBACK_BETA]
             payload["fallbacks"] = "default"

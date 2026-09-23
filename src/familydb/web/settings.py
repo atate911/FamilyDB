@@ -1,4 +1,4 @@
-"""The settings page: the only part of the web surface that writes.
+"""The settings page: guarded configuration forms.
 
 It writes to one place and one place only, `app_settings`, through `store.settings`. Nothing
 here can reach an idea, a plan or a message. Every change is logged, and a key's value is never

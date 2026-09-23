@@ -6,16 +6,21 @@
     <title>{% block title %}{{ site_title }}{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
     <link rel="icon" href="data:," />
+    {% block head %}{% endblock %}
   </head>
   <body>
     <header class="bar">
-      <a class="brand" href="{{ url_for('web.ideas') }}">{{ site_title }}</a>
-      <nav>
-        <a href="{{ url_for('web.ideas') }}">Ideas</a>
-        <a href="{{ url_for('web.restaurants') }}">Restaurants</a>
-        <a href="{{ url_for('web.plans') }}">Plans</a>
-        <a href="{{ url_for('web.status') }}">Status</a>
-        <a href="{{ url_for('settings.show') }}">Settings</a>
+      <a class="brand" href="{{ url_for('web.home') }}"><span class="brand-mark">F</span> {{ site_title }}</a>
+      <nav aria-label="Main navigation">
+        <a href="{{ url_for('web.home') }}" {% if request.endpoint == 'web.home' %}aria-current="page"{% endif %}>Home</a>
+        <a href="{{ url_for('web.ideas') }}" {% if request.endpoint == 'web.ideas' %}aria-current="page"{% endif %}>Ideas</a>
+        <a href="{{ url_for('web.restaurants') }}" {% if request.endpoint == 'web.restaurants' %}aria-current="page"{% endif %}>Restaurants</a>
+        <a href="{{ url_for('web.plans') }}" {% if request.endpoint == 'web.plans' %}aria-current="page"{% endif %}>Plans</a>
+        <a href="{{ url_for('web.calendar') }}" {% if request.endpoint == 'web.calendar' %}aria-current="page"{% endif %}>Calendar</a>
+        <a href="{{ url_for('actions.assistant') }}" {% if request.endpoint == 'actions.assistant' %}aria-current="page"{% endif %}>Ask AI</a>
+        <a href="{{ url_for('web.status') }}" {% if request.endpoint == 'web.status' %}aria-current="page"{% endif %}>Status</a>
+        <a href="{{ url_for('actions.family') }}" {% if request.endpoint == 'actions.family' %}aria-current="page"{% endif %}>Family</a>
+        <a href="{{ url_for('settings.show') }}" {% if request.endpoint == 'settings.show' %}aria-current="page"{% endif %}>Settings</a>
       </nav>
       {% if password_in_use() and session.get('signed_in') %}
         <form method="post" action="{{ url_for('auth.logout') }}">
@@ -23,6 +28,13 @@
         </form>
       {% endif %}
     </header>
-    <main>{% block content %}{% endblock %}</main>
+    <a class="skip" href="#content">Skip to content</a>
+    <main id="content">
+      {% if request.blueprint != 'settings' %}
+        {% for message in get_flashed_messages() %}<p class="notice" role="status">{{ message }}</p>{% endfor %}
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+    <footer class="site-footer">A little less planning. A little more together.</footer>
   </body>
 </html>

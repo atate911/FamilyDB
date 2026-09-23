@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Ask the assistant · {{ site_title }}{% endblock %}
+{% block head %}{% if pending and not error %}<meta http-equiv="refresh" content="8">{% endif %}{% endblock %}
+{% block content %}
+<div class="page-heading"><p class="eyebrow">A LITTLE HELP MAKING PLANS</p><h1>Your family assistant</h1><p class="muted">Discover places, save ideas, and manage plans. This conversation is shared with everyone who uses the family password.</p></div>
+<section class="conversation" aria-label="Family conversation">
+{% for row in rows %}
+<article class="chat-message {{ 'from-family' if row.direction == 'in' else 'from-assistant' }}">
+  <p class="eyebrow">{{ row.display_name or 'Family' if row.direction == 'in' else 'Family assistant' }}</p>
+  <p class="message-text">{{ row.text }}</p>
+  {% if row.direction == 'in' and row.status != 'processed' %}
+    <p class="muted">{% if row.error == 'member_inactive' %}This request was stopped because its family member is inactive.{% elif row.give_up or row.retries >= retry_limit %}Automatic retries stopped. Check Status before sending a new request.{% elif row.status == 'received' %}Waiting for the assistant…{% else %}The assistant could not finish this request. Saved for the retry worker; check Status if it persists.{% endif %}</p>
+    {% if not row.give_up and row.retries < retry_limit %}<form method="post" action="{{ url_for('actions.retry_assistant', message_id=row.id) }}"><input type="hidden" name="csrf" value="{{ csrf_token() }}"><input type="hidden" name="operation" value="{{ retry_tokens[row.id] }}"><button class="quiet" type="submit">Resume saved request</button></form>{% endif %}
+  {% endif %}
+</article>
+{% else %}<div class="panel empty-state"><h2>What shall we do next?</h2><p>“Find a rainy-day activity for Saturday.”</p><p>“Save the new ramen place downtown.”</p><p>“What is on our calendar this weekend?”</p></div>{% endfor %}
+</section>
+{% if pending %}<p class="notice" role="status">Your message is saved. This page refreshes while the assistant works. You can safely browse elsewhere.</p><a href="{{ url_for('actions.assistant') }}">Refresh conversation</a>{% endif %}
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+{% if not pending or error %}<form class="panel composer" method="post"><input type="hidden" name="csrf" value="{{ csrf_token() }}"><input type="hidden" name="operation" value="{{ operation }}"><div class="field"><label for="member_id">Speaking as</label><select id="member_id" name="member_id" required><option value="">Choose your name</option>{% for person in people %}<option value="{{ person.id }}" {{ 'selected' if form.get('member_id') == person.id|string }}>{{ person.display_name }}</option>{% endfor %}</select><p class="muted">For attribution, not a separate login.</p></div><div class="field"><label for="message">How can I help?</label><textarea id="message" name="message" rows="3" required maxlength="8000" placeholder="Help us plan something good…">{{ form.get('message','') }}</textarea></div><button type="submit" {% if not people %}disabled{% endif %}>Send message ↗</button><p class="muted">The assistant can change ideas and calendar plans. Requests use your configured AI provider.</p>{% if not people %}<p class="warn"><a href="{{ url_for('actions.family') }}">Add a family member</a> to start a conversation.</p>{% endif %}</form>{% endif %}
+{% endblock %}

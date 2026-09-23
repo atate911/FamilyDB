@@ -91,6 +91,12 @@ class GeminiProvider:
         """Our own tools in one group, then the hosted search as its own, which is how this API
         expects them. Models that cannot take both together will say so."""
         tools: list[dict[str, Any]] = []
+        model = request.model or self.settings.gemini_model
+        if request.web is not None and request.tools and not model.startswith("gemini-3"):
+            raise AgentError(
+                "Gemini web workers require a Gemini 3 model; set GEMINI_WORKER_MODEL",
+                retryable=False,
+            )
         if request.tools:
             tools.append({"function_declarations": [_declaration(t) for t in request.tools]})
         if request.web is not None:
@@ -131,6 +137,10 @@ class GeminiProvider:
             "thinking_config": {"thinking_budget": THINKING.get(effort, -1)},
         }
         tools = self.tools(request)
+        if (request.model or settings.gemini_model).startswith("gemini-3"):
+            config["thinking_config"] = {"thinking_level": "LOW" if effort == "low" else "HIGH"}
+        if request.web is not None and request.tools:
+            config["tool_config"] = {"include_server_side_tool_invocations": True}
         if tools:
             config["tools"] = tools
         return {key: value for key, value in config.items() if value is not None}

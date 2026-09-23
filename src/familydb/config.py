@@ -95,7 +95,7 @@ class Settings(BaseSettings):
 
     gemini_api_key: str | None = None
     gemini_model: str = "gemini-2.5-pro"
-    gemini_worker_model: str = "gemini-2.5-flash"
+    gemini_worker_model: str = "gemini-3.8-flash"
 
     openai_api_key: str | None = None
     openai_model: str = "gpt-5"

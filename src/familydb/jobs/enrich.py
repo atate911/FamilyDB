@@ -13,6 +13,7 @@ from familydb.app import App
 from familydb.availability import enrichment_available
 from familydb.config import Settings
 from familydb.dates import utc_iso
+from familydb.delivery import deliver
 from familydb.errors import AgentError
 from familydb.store import ideas, messages, places
 from familydb.store.db import transaction
@@ -101,7 +102,7 @@ def _notify(app: App, conn: Any, idea: Idea) -> None:
         return
     text = render_place_note(idea, place)
     with transaction(conn):
-        messages.insert_out(
+        outbound = messages.insert_out(
             conn,
             channel=origin.channel,
             chat_id=origin.chat_id,
@@ -109,10 +110,7 @@ def _notify(app: App, conn: Any, idea: Idea) -> None:
             reply_to=origin.id,
             now=utc_iso(app.clock.now()),
         )
-    try:
-        sender(origin.chat_id, text)
-    except Exception:
-        log.exception("could not deliver the enrichment note for idea %s", idea.id)
+    deliver(app, outbound.id)
 
 
 def enrich_idea(app: App, conn: Any, idea: Idea, *, api: MessagesAPI | None = None) -> str:
@@ -122,6 +120,7 @@ def enrich_idea(app: App, conn: Any, idea: Idea, *, api: MessagesAPI | None = No
     try:
         turn: WorkerTurn = run_worker_turn(
             kind="enrich",
+            idea_id=idea.id,
             api=api,
             settings=app.settings,
             clock=app.clock,

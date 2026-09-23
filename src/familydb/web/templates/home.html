@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Home · {{ site_title }}{% endblock %}
+{% block content %}
+<section class="hero">
+  <p class="eyebrow">YOUR FAMILY, TOGETHER · {{ today }}</p>
+  <h1>Make room for<br>the good stuff.</h1>
+  <p>Somewhere new to eat. A Saturday adventure. A plan everyone can look forward to.</p>
+  <div class="button-row"><a class="button" href="{{ url_for('actions.assistant') }}">Find something to do <span aria-hidden="true">↗</span></a><a class="button secondary" href="{{ url_for('actions.edit_idea') }}">+ Save an idea</a></div>
+  <div class="hero-art" aria-hidden="true"><div class="sun"></div><div class="hill hill-back"></div><div class="hill hill-front"></div><span class="art-caption">TIME WELL SPENT</span></div>
+</section>
+<div class="dashboard-grid">
+  <section>
+    <div class="section-heading"><div><p class="eyebrow">THE FAMILY NOTEBOOK</p><h2>Good ideas start here</h2></div><a href="{{ url_for('web.ideas') }}">View all {{ idea_count }} →</a></div>
+    <div class="idea-grid">
+    {% for idea in ideas %}
+      <a class="panel notebook-card" href="{{ url_for('web.idea', idea_id=idea.id) }}"><span class="eyebrow">{{ idea.kind | replace('_', ' ') }}</span><h3>{{ idea.title }}</h3><p class="muted">{{ idea.where or 'An idea for another good day' }}</p><span class="tag">{{ idea.who }}</span></a>
+    {% else %}
+      <div class="panel empty-state"><h3>Your next adventure starts with an idea.</h3><p>Save a place, activity, or restaurant your family wants to try.</p><a href="{{ url_for('actions.edit_idea') }}">Save your first idea →</a></div>
+    {% endfor %}
+    </div>
+    <a class="restaurant-banner" href="{{ url_for('web.restaurants') }}"><span><span class="eyebrow">SOMETHING DELICIOUS</span><strong>The places we want to try</strong><span>{{ restaurant_count }} restaurant{{ '' if restaurant_count == 1 else 's' }} in your notebook</span></span><span aria-hidden="true">↗</span></a>
+  </section>
+  <aside><div class="section-heading"><div><p class="eyebrow">ON THE HORIZON</p><h2>Coming up</h2></div></div><div class="panel agenda">
+    <p class="muted">Saved family plans. Open Plans for the live calendar.</p>
+    {% for plan in plans %}<div class="agenda-item"><span class="eyebrow">{{ plan.when }}</span><h3>{{ plan.title }}</h3>{% if plan.location %}<p class="muted">{{ plan.location }}</p>{% endif %}<a href="{{ url_for('actions.edit_plan', plan_id=plan.id) }}">View plan →</a></div>{% else %}<div class="empty-state"><h3>A little space for possibility.</h3><p>No upcoming saved plans yet.</p></div>{% endfor %}
+    <a class="button secondary full" href="{{ url_for('actions.edit_plan') }}">+ Make a plan</a>
+  </div><div class="assistant-tip"><p class="eyebrow">A HAND WITH THE PLANNING</p><h3>“What could we do this weekend?”</h3><p>Your assistant can help turn a free afternoon into a family plan.</p><a href="{{ url_for('actions.assistant') }}">Ask the assistant →</a></div></aside>
+</div>
+{% endblock %}

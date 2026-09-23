@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit plan' if record else 'Make a plan' }} · {{ site_title }}{% endblock %}
+{% block content %}
+<div class="page-heading"><p class="eyebrow">TIME TOGETHER</p><h1>{{ 'Edit your plan' if record else 'Something to look forward to' }}</h1><p class="muted">Plans are saved to your connected Google Calendar. Times are in {{ timezone }}.</p></div>
+{% if not connected %}<p class="warn">Connect Google Calendar before saving plans. See the installation guide for the Google authorization step.</p>{% endif %}
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<form class="panel editor" method="post">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}"><input type="hidden" name="operation" value="{{ operation }}">
+  <div class="field"><label for="title">What is the plan?</label><input id="title" name="title" required maxlength="200" value="{{ form.get('title') or '' }}"></div>
+  <label class="check"><input type="checkbox" name="all_day" {{ 'checked' if form.get('all_day') }}> All day</label>
+  <p class="muted" id="date-help">For all-day plans, leave times empty. The end date is the first day after the plan. With no end, new plans last one day or two hours; edits keep their duration.</p>
+  <div class="form-grid">
+  {% for prefix, label in [('start','Starts'),('end','Ends')] %}
+    <div class="field"><label for="{{ prefix }}_date">{{ label }} on</label><input id="{{ prefix }}_date" name="{{ prefix }}_date" type="date" value="{{ form.get(prefix ~ '_date', (form.get(prefix) or '')[:10]) }}" {% if prefix == 'start' %}required{% endif %} aria-describedby="date-help"></div>
+    <div class="field"><label for="{{ prefix }}_time">{{ label }} at</label><input id="{{ prefix }}_time" name="{{ prefix }}_time" type="time" value="{{ form.get(prefix ~ '_time', (form.get(prefix) or '')[11:16]) }}" aria-describedby="date-help"></div>
+  {% endfor %}
+  <div class="field"><label for="location">Location</label><input id="location" name="location" value="{{ form.get('location') or '' }}"></div>
+  {% if not record %}<div class="field"><label for="idea_id">Link to an idea</label><select id="idea_id" name="idea_id"><option value="">No linked idea</option>{% for idea in ideas %}<option value="{{ idea.id }}" {{ 'selected' if form.get('idea_id')|string == idea.id|string }}>{{ idea.title }}</option>{% endfor %}</select></div>{% endif %}</div>
+  <div class="field"><label for="notes">Notes</label><textarea id="notes" name="notes" rows="4">{{ form.get('notes') or '' }}</textarea></div>
+  <div class="button-row"><button type="submit" {% if not connected %}disabled{% endif %}>Save to calendar</button><a href="{{ url_for('web.plans') }}">Back to plans</a></div>
+</form>
+{% if record and record.status != 'cancelled' %}<details class="panel editor"><summary>Cancel this plan</summary><p>This removes “{{ record.title }}” from Google Calendar and marks the saved plan cancelled.</p><form method="post" action="{{ url_for('actions.cancel_plan',plan_id=record.id) }}"><input type="hidden" name="csrf" value="{{ csrf_token() }}"><input type="hidden" name="operation" value="{{ cancel_operation }}"><label class="check"><input type="checkbox" name="confirm" value="yes" required> Yes, cancel this plan</label><button class="danger" type="submit">Cancel plan</button></form></details>{% endif %}
+{% endblock %}

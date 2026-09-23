@@ -16,6 +16,7 @@ dist/
 build/
 .ruff_cache/
 .pytest_cache/
+pytest-of-*/
 
 # node (web UI later)
 node_modules/

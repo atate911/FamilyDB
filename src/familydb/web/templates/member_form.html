@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Edit family member · {{ site_title }}{% endblock %}
+{% block content %}
+<div class="page-heading"><p class="eyebrow">OUR FAMILY</p><h1>Edit {{ person.display_name }}</h1><p class="muted">Update their profile while keeping their saved ideas, messages, and channel connection.</p></div>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<form class="panel editor" method="post"><input type="hidden" name="csrf" value="{{ csrf_token() }}"><input type="hidden" name="operation" value="{{ operation }}"><input type="hidden" name="revision" value="{{ revision }}">
+<div class="field"><label for="display_name">Name</label><input id="display_name" name="display_name" required maxlength="80" value="{{ form.get('display_name','') }}"></div>
+<div class="form-grid"><div class="field"><label for="role">Family role</label><select id="role" name="role">{% for value,label in [('member','Family member'),('admin','Administrator'),('kid','Child')] %}<option value="{{ value }}" {{ 'selected' if form.get('role') == value }}>{{ label }}</option>{% endfor %}</select></div>
+<div class="field"><label for="active">Membership</label><select id="active" name="active"><option value="yes" {{ 'selected' if form.get('active') in [true,'yes'] }}>Active</option><option value="no" {{ 'selected' if form.get('active') in [false,'no'] }}>Inactive</option></select></div></div>
+<p class="muted">Deactivating removes this name from the assistant and stops their bot access and pending requests. Reactivating restores the profile, but does not restart stopped requests.</p>
+<p class="notice">The website still uses a shared password. Deactivation does not revoke that password or prevent someone who knows it from signing in.</p>
+<div class="button-row"><button type="submit">Save profile</button><a href="{{ url_for('actions.family') }}">Cancel</a></div></form>
+{% endblock %}

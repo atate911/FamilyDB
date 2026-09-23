@@ -35,13 +35,15 @@
   </div>
 {% endmacro %}
 {% block content %}
+  <p><a href="{{ url_for('actions.family') }}">Manage the family list →</a></p>
   <h1>Settings</h1>
   {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
   {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
   <p class="muted">
     A box left empty uses whatever the environment or the <code>.env</code> file says, and that
     value is what the empty box shows. A change reaches the next message and the next page at
-    once, and the jobs that run on a schedule within a few minutes. Nothing needs restarting.
+    once, and scheduled jobs within a few minutes. After adding, replacing, or clearing the
+    Telegram bot token, restart FamilyDB to connect the bot using that token.
   </p>
 
   <form method="post" action="{{ url_for('settings.save') }}">
