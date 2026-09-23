@@ -25,19 +25,14 @@ class AddTaskInput(BaseModel):
     )
     due_at: str | None = Field(
         default=None,
-        description=(
-            "Optional deadline, YYYY-MM-DDTHH:MM in family timezone. Does not schedule a reminder. "
-        ),
+        description=("Deadline, YYYY-MM-DDTHH:MM family time. Not a reminder."),
     )
     preferred_window: str = Field(
         default="", description="Flexible intent, e.g. some Saturday morning. Not a scheduled time."
     )
     remind_at: str | None = Field(
         default=None,
-        description=(
-            "Explicit reminder time YYYY-MM-DDTHH:MM in family timezone. Ask for time "
-            "if ambiguous. "
-        ),
+        description=("Reminder time, YYYY-MM-DDTHH:MM family time."),
     )
 
 
@@ -89,9 +84,8 @@ def _time(ctx: ToolContext, value: str | None, *, future: bool = False) -> str |
 @tool(
     name="add_task",
     description=(
-        "Save an intention or obligation, optionally with an explicit reminder. "
-        "Does not create a calendar event. Reminders return to this chat; browser "
-        "reminders appear in web chat. "
+        "Save an obligation, optionally with a reminder. Not a calendar event. "
+        "Reminders arrive in this chat; from the page, in its Chat."
     ),
     writes=True,
 )
@@ -130,9 +124,8 @@ def add_task(ctx: ToolContext, args: AddTaskInput) -> dict[str, Any]:
 @tool(
     name="update_task",
     description=(
-        "Edit, complete, cancel, reopen, or snooze a saved task. Completing or "
-        "cancelling stops pending reminders. Reopening does not restore old "
-        "reminders. "
+        "Edit, complete, cancel, reopen or snooze a task. Completing or cancelling "
+        "stops its reminders; reopening does not restore them."
     ),
     writes=True,
 )
@@ -169,18 +162,48 @@ def update_task(ctx: ToolContext, args: UpdateTaskInput) -> dict[str, Any]:
 @tool(
     name="list_tasks",
     description=(
-        "Find saved tasks and obligations, including their deadlines, flexible "
-        "windows, reminder delivery state and task IDs. Defaults to open tasks; "
-        "search before editing or answering what is unfinished. "
+        "Find tasks and their ids, deadlines and reminders; open ones by default. "
+        "Use before changing one or saying what is unfinished."
     ),
 )
 def list_tasks(ctx: ToolContext, args: ListTasksInput) -> dict[str, Any]:
+    found = tasks.list_all(
+        ctx.conn,
+        status=args.status,
+        query=args.query,
+        owner_id=_owner(ctx, args.owner) if args.owner else None,
+    )
     return {
-        "tasks": tasks.list_all(
-            ctx.conn,
-            status=args.status,
-            query=args.query,
-            owner_id=_owner(ctx, args.owner) if args.owner else None,
-        ),
-        "limit": 100,
+        "tasks": [_brief(ctx, task) for task in found[:LISTED]],
+        "not_shown": max(0, len(found) - LISTED),
     }
+
+
+# Enough to answer "what's unfinished?"; a narrower query finds the rest.
+LISTED = 25
+NOTES_SHOWN = 200
+
+
+def _brief(ctx: ToolContext, task: dict[str, Any]) -> dict[str, Any]:
+    """What the model needs to talk about a task or change it, and nothing it does not."""
+
+    def local(value: str | None) -> str | None:
+        if not value:
+            return None
+        return datetime.fromisoformat(value).astimezone(ctx.clock.tz).strftime("%Y-%m-%dT%H:%M")
+
+    notes = task["notes"]
+    brief = {
+        "id": task["id"],
+        "title": task["title"],
+        "status": task["status"],
+        "owner": task["owner"],
+        "notes": notes if len(notes) <= NOTES_SHOWN else notes[:NOTES_SHOWN] + "…",
+        "due": local(task["due_at"]),
+        "window": task["preferred_window"],
+    }
+    reminder = task["reminder"]
+    if reminder:
+        brief["reminder"] = local(reminder["remind_at"])
+        brief["reminder_sent"] = bool(reminder["delivered_at"])
+    return {k: v for k, v in brief.items() if v not in (None, "")}

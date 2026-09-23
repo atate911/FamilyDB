@@ -11,13 +11,17 @@ requests, and a Linux installation still need an end-to-end smoke test before fa
 - A spending-limit interruption after successful writes now returns a local summary of the
   completed operations and their record numbers. The message is completed rather than retried;
   any remaining work must be requested separately after reviewing what was saved.
-- Paid requests are serialized per database across threads and processes, from the budget check
-  through cost recording. The lock is released before tools run, so nested discovery can proceed.
-  A process crash releases the OS lock automatically. One accounted request may cross the
-  estimated limit; unknown charges from timeouts, vendor retries, or a crash before accounting
-  remain outside that guarantee. This is not a provider-enforced billing cap.
-- Browser calendar forms reuse a durable operation identity after a restart or lost response.
-  Other forms retain the in-memory double-submit guard; it is not a durable operation ledger.
+- Before each paid request, the budget check and a hold on that request's estimated cost happen
+  in one short write transaction, so two processes cannot spend the same remaining allowance.
+  Nothing is locked while the request is on the network, so a slow lookup does not hold up
+  chat; every vendor client times out after two minutes. A hold left by a crash stops counting
+  after 30 minutes. One accounted request may cross the estimated limit; unknown charges from
+  timeouts, vendor retries, or a crash before accounting remain outside that guarantee. This is
+  not a provider-enforced billing cap. (The first version held an OS lock over every request,
+  which made all paid calls wait on each other; it was replaced.)
+- Browser calendar forms reuse a durable operation identity after a restart or lost response,
+  and a form drawn again after a lost reply from Google takes over the unfinished attempt
+  rather than creating a second event. Other forms retain the in-memory double-submit guard.
 - Idea edits carry a content revision that is checked inside the update transaction, including
   when two saves arrive in the same second. Older forms must be reloaded.
 - Changing the timezone rebuilds the application clock immediately, without a restart.

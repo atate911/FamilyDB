@@ -165,7 +165,7 @@ def idea(idea_id: int) -> str:
     return render_template(
         "idea.html",
         idea=record,
-        original_message=original.text if original else None,
+        original_message=message_store.as_said(original.text) if original else None,
         today=today.isoformat(),
         ratings=RATINGS,
         can_schedule=calendar_available(settings),

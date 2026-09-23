@@ -288,7 +288,23 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
         "idea_id": args.idea_id,
     }
     key = hashlib.sha256((scope + to_json(intent)).encode()).hexdigest()
+    # A form drawn again after a lost reply has a new identity. The same browser session asking
+    # for the same event takes over the unfinished attempt, which may already have made it.
+    resume = (
+        hashlib.sha256((ctx.resume_scope + to_json(intent)).encode()).hexdigest()
+        if ctx.resume_scope
+        else None
+    )
     with transaction(ctx.conn):
+        if resume:
+            earlier = ctx.conn.execute(
+                "SELECT c.operation_key FROM calendar_unfinished u "
+                "JOIN calendar_creations c ON c.event_id = u.event_id "
+                "WHERE u.resume_key = ? AND c.result IS NULL",
+                (resume,),
+            ).fetchone()
+            if earlier is not None:
+                key = earlier["operation_key"]
         ctx.conn.execute(
             "INSERT OR IGNORE INTO calendar_creations(operation_key, event_id) VALUES (?, ?)",
             (key, uuid.uuid4().hex),
@@ -296,6 +312,11 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
         operation = ctx.conn.execute(
             "SELECT * FROM calendar_creations WHERE operation_key = ?", (key,)
         ).fetchone()
+        if resume and not operation["result"]:
+            ctx.conn.execute(
+                "INSERT OR REPLACE INTO calendar_unfinished(resume_key, event_id) VALUES (?, ?)",
+                (resume, operation["event_id"]),
+            )
     if operation["result"]:
         return from_json(operation["result"])
     event = calendar.get_event(operation["event_id"])
@@ -317,6 +338,8 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
         ).fetchone()["result"]
         if completed:
             return from_json(completed)
+        if resume:
+            ctx.conn.execute("DELETE FROM calendar_unfinished WHERE resume_key = ?", (resume,))
         plan = plans.insert(
             ctx.conn,
             title=args.title.strip(),

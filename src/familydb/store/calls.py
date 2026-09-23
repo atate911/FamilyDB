@@ -101,6 +101,27 @@ def spent_since(conn: sqlite3.Connection, *, since: str) -> float:
     return float(row["spent"])
 
 
+def held_since(conn: sqlite3.Connection, *, since: str) -> float:
+    """Estimated dollars set aside by calls still in flight, counting holds made since then."""
+    row = conn.execute(
+        "SELECT coalesce(sum(cost_usd), 0) AS held FROM spend_holds WHERE created_at >= ?",
+        (since,),
+    ).fetchone()
+    return float(row["held"])
+
+
+def hold(conn: sqlite3.Connection, *, cost_usd: float, now: str) -> int:
+    cur = conn.execute(
+        "INSERT INTO spend_holds (cost_usd, created_at) VALUES (?, ?)", (cost_usd, now)
+    )
+    return int(cur.lastrowid or 0)
+
+
+def release(conn: sqlite3.Connection, hold_id: int, *, stale_before: str) -> None:
+    """Give a hold back, and clear any a crashed process left older than any call runs."""
+    conn.execute("DELETE FROM spend_holds WHERE id = ? OR created_at < ?", (hold_id, stale_before))
+
+
 def recent_llm_calls(conn: sqlite3.Connection, limit: int = 5) -> list[dict[str, Any]]:
     rows = conn.execute("SELECT * FROM llm_calls ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
     return [dict(row) for row in rows]

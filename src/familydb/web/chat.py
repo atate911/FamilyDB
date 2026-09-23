@@ -170,10 +170,11 @@ def send() -> Response | Any:
     who = request.form.get("who", "").strip()
     if not who:
         return page(error=NOBODY, typed=text, status=400)
+    sent = text
     if request.form.get("intent") == "save_idea" and text.strip():
-        text = "Save this idea for later:\n" + text
+        sent = message_store.CAPTURE_PREFIX + text
     session[WHO_KEY] = who
-    if (complaint := _chat().ask(text, who, DEFAULT_CHAT)) is not None:
+    if (complaint := _chat().ask(sent, who, DEFAULT_CHAT)) is not None:
         return page(error=complaint, typed=text, status=400)
     log.info("web chat: %s asked something", who)
     # Redirect rather than render: the browser is about to be asked to refresh this page every

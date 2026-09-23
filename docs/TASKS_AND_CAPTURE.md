@@ -40,7 +40,9 @@ or browser operation identity plus arguments. Browser updates check a revision. 
 and cancellation suppress queued reminders; reopening does not restore old ones. Edits
 are refused while a reminder is actively being sent, since an in-flight send cannot be recalled.
 
-Queued messages use existing delivery claims and retries. As elsewhere in the app, external
+Queued messages use existing delivery claims and retries: the minute job sends a reminder once
+when it queues it, and one that could not go is retried by the retry job on its interval. A
+reminder queued more than ten minutes late, after downtime, says when it was due. As elsewhere in the app, external
 send delivery is at least once: a provider accepting a send before the process dies can
 cause a duplicate on retry. Database queuing itself is deduplicated.
 

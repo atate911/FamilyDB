@@ -126,9 +126,11 @@ def update(
         return latest
 
 
-def reminder_text(task: dict[str, Any]) -> str:
+def reminder_text(task: dict[str, Any], *, due_when: str | None = None) -> str:
+    """The reminder as sent. `due_when` says when it was due, for one sent late after downtime."""
     who = f" ({task['owner']})" if task.get("owner") else ""
+    late = f" This was due {due_when}; I was offline then." if due_when else ""
     return (
-        f"Reminder: {task['title']}{who}  -  task #{task['id']}. "
+        f"Reminder: {task['title']}{who}  -  task #{task['id']}.{late} "
         "Tell me when it's done or ask to snooze it."
     )

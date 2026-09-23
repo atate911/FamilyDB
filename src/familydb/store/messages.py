@@ -9,6 +9,15 @@ from pydantic import BaseModel
 
 from familydb.store.db import from_json, to_json, utcnow_iso
 
+# What the Ideas page's "save a thought" box puts before the words, so the model knows to save
+# them. It is an instruction, not what anybody said, so `as_said` takes it off again.
+CAPTURE_PREFIX = "Save this idea for later:\n"
+
+
+def as_said(text: str) -> str:
+    """A stored message's words as the family typed them."""
+    return text.removeprefix(CAPTURE_PREFIX)
+
 
 class Message(BaseModel):
     id: int

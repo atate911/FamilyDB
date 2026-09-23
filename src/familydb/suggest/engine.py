@@ -53,15 +53,18 @@ def run(ctx: ToolContext, args: SuggestInput) -> SuggestResult:
     today = ctx.clock.today()
     window, label = resolve_window(args, today)
     context = build_context(ctx, window)
+    all_ideas = ideas.list_all(ctx.conn)
+    listed = {idea.id for idea in all_ideas if idea.status != "dropped"}
+    unknown = sorted(set(args.idea_ids) - listed)
+    idea_ids = [idea_id for idea_id in args.idea_ids if idea_id in listed]
     constraints = Constraints(
-        idea_ids=list(args.idea_ids),
+        idea_ids=idea_ids,
         participants=list(args.participants),
         max_cost_level=args.max_cost_level,
         setting=args.setting,
         max_travel_minutes=args.max_travel_minutes,
         max_duration_minutes=args.max_duration_minutes,
     )
-    all_ideas = ideas.list_all(ctx.conn)
     excluded = outcomes.do_not_repeat(ctx.conn)
     kept, ruled_out, extras = shortlist(
         [idea for idea in all_ideas if idea.id not in excluded], context, constraints, ctx.settings
@@ -76,10 +79,15 @@ def run(ctx: ToolContext, args: SuggestInput) -> SuggestResult:
         for idea in all_ideas
         if idea.id in excluded
         and idea.status != "dropped"
-        and (not args.idea_ids or idea.id in args.idea_ids)
+        and (not idea_ids or idea.id in idea_ids)
     )
     evaluated, stale_ids = evaluate(ctx.conn, kept, context, constraints, ctx.settings, ctx.clock)
     skipped = list(context.skipped)
+    if unknown:
+        # A wrong number must not quietly empty the answer: say so, and widen when nothing is left.
+        names = ", ".join(f"#{idea_id}" for idea_id in unknown)
+        widened = "; considered every idea instead" if not idea_ids else ""
+        skipped.append(f"no idea {names} on the list{widened}")
     if stale_ids and enrichment_available(ctx.settings):
         with transaction(ctx.conn):
             ideas.requeue_enrichment(ctx.conn, stale_ids, now=ctx.now_iso())
