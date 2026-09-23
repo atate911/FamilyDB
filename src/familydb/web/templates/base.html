@@ -9,16 +9,24 @@
     {% block head %}{% endblock %}
   </head>
   <body>
+    <a class="skip" href="#content">Skip to the page</a>
+    {# Which item in the bar the page belongs to, by the view that drew it. #}
+    {% set here = request.endpoint or '' %}
+    {% macro item(label, target, owns) %}
+      <a href="{{ target }}"{% if here in owns %} aria-current="page"{% endif %}>{{ label }}</a>
+    {% endmacro %}
     <header class="bar">
-      <a class="brand" href="{{ url_for('web.ideas') }}">{{ site_title }}</a>
-      <nav>
-        <a href="{{ url_for('chat.show', _anchor='latest') }}">Chat</a>
-        <a href="{{ url_for('web.ideas') }}">Ideas</a>
-        <a href="{{ url_for('web.restaurants') }}">Restaurants</a>
-        <a href="{{ url_for('web.plans') }}">Plans</a>
-        <a href="{{ url_for('family.show') }}">Family</a>
-        <a href="{{ url_for('web.status') }}">Status</a>
-        <a href="{{ url_for('settings.show') }}">Settings</a>
+      <a class="brand" href="{{ url_for('web.home') }}">
+        <span class="brand-mark" aria-hidden="true">{{ site_title[:1] }}</span>
+        <span>{{ site_title }}</span>
+      </a>
+      <nav aria-label="Main">
+        {{ item('Chat', url_for('chat.show', _anchor='latest'), ['chat.show']) }}
+        {{ item('Ideas', url_for('web.ideas'), ['web.ideas', 'web.idea', 'web.new_idea', 'web.edit_idea', 'web.restaurants']) }}
+        {{ item('Plans', url_for('web.plans'), ['web.plans', 'web.plans_month']) }}
+        {{ item('Family', url_for('family.show'), ['family.show', 'family.edit']) }}
+        {{ item('Status', url_for('web.status'), ['web.status']) }}
+        {{ item('Settings', url_for('settings.show'), ['settings.show']) }}
       </nav>
       {% if password_in_use() and session.get('signed_in') %}
         <form method="post" action="{{ url_for('auth.logout') }}">
@@ -26,13 +34,14 @@
         </form>
       {% endif %}
     </header>
-    <main>
+    <main id="content">
       {# What the last form said, handed over by the redirect that followed it. The settings
          page keeps its own under another name and draws it in its own place. #}
       {% for said in get_flashed_messages(category_filter=['edit']) %}
-        <p class="said">{{ said }}</p>
+        <p class="said" role="status">{{ said }}</p>
       {% endfor %}
       {% block content %}{% endblock %}
     </main>
+    <footer class="foot">A little less planning. A little more together.</footer>
   </body>
 </html>

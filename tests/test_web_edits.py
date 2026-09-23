@@ -41,7 +41,7 @@ def _token(client, path: str) -> str:
 
 
 def _said(response) -> str:
-    return " ".join(re.findall(r'class="said">\s*([^<]+)', response.text))
+    return " ".join(re.findall(r'class="said"[^>]*>\s*([^<]+)', response.text))
 
 
 def _idea_form(client, path="/ideas/new", **changes) -> dict[str, str]:

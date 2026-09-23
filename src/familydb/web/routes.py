@@ -6,7 +6,17 @@ from contextlib import closing
 from datetime import date, timedelta
 from typing import Any
 
-from flask import Blueprint, Response, abort, current_app, render_template, request, session
+from flask import (
+    Blueprint,
+    Response,
+    abort,
+    current_app,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 
 from familydb.app import App
 from familydb.availability import calendar_available
@@ -31,6 +41,11 @@ SEASONS = ("spring", "summer", "autumn", "winter")
 COSTS = ((0, "free"), (1, "cheap"), (2, "moderate"), (3, "pricey"), (4, "expensive"))
 RATINGS = tuple(range(10, 0, -1))
 RESTAURANT_KIND = "restaurant"
+FILTERS = ("q", "kind", "status", "who")
+HOME_AHEAD_DAYS = 60
+HOME_PLANS = 5
+HOME_IDEAS = 4
+WEEKEND_QUESTION = "What should we do this weekend?"
 PLANS_AHEAD_DAYS = 90
 PLANS_BEHIND_DAYS = 30
 
@@ -69,6 +84,32 @@ def status() -> str:
 
 
 @bp.get("/")
+def home() -> Response | str:
+    """What is coming up, what was added lately, and one tap to ask or add something."""
+    if any(request.args.get(key) for key in FILTERS):
+        # The ideas list used to live here; a bookmarked search should still find it.
+        return redirect(url_for("web.ideas", **request.args))
+    app = _app()
+    today = app.clock.today()
+    with closing(app.connect()) as conn:
+        seen = agenda.read(app, conn, today, today + timedelta(days=HOME_AHEAD_DAYS))
+        everything = idea_store.list_all(conn)
+    coming = [entry for entry in seen.entries if entry.days()[-1] >= today][:HOME_PLANS]
+    newest = sorted(everything, key=lambda idea: idea.created_at, reverse=True)[:HOME_IDEAS]
+    return render_template(
+        "home.html",
+        today=views.day_text(today.isoformat()),
+        coming=[views.entry_row(entry, today) for entry in coming],
+        source=seen.source,
+        source_note=views.AGENDA_NOTES[seen.source],
+        ideas=[views.idea_row(idea, app.settings.tzinfo) for idea in newest],
+        idea_count=len(everything),
+        restaurant_count=sum(1 for idea in everything if idea.kind == RESTAURANT_KIND),
+        weekend_question=WEEKEND_QUESTION,
+    )
+
+
+@bp.get("/ideas")
 def ideas() -> str:
     app = _app()
     query = request.args.get("q", "").strip()

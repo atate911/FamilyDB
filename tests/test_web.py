@@ -194,7 +194,7 @@ def test_the_ideas_list_shows_what_is_stored(settings, clock, conn, family) -> N
         suggested_by=family["sam"].id,
     )
     _idea(conn, "Museum day", kind="outing", participants=["with the girls"])
-    page = _client(settings, clock).get("/")
+    page = _client(settings, clock).get("/ideas")
     assert page.status_code == 200
     assert page.text.count('class="panel card"') == 2
     assert "2 ideas" in page.text
@@ -211,15 +211,15 @@ def test_the_ideas_list_filters(settings, clock, conn, family) -> None:
     _idea(conn, "Old plan", kind="outing", status="done")
     dropped = _idea(conn, "Never again", kind="outing", status="dropped")
     client = _client(settings, clock)
-    assert client.get("/").text.count('class="panel card"') == 3  # dropped is hidden
-    assert "Ramen place" in client.get("/?kind=restaurant").text
-    assert "Museum day" not in client.get("/?kind=restaurant").text
-    assert client.get("/?status=done").text.count('class="panel card"') == 1
-    assert f'href="/idea/{dropped.id}"' in client.get("/?status=dropped").text
-    assert client.get("/?who=with+the+girls").text.count('class="panel card"') == 1
-    assert "Museum" in client.get("/?q=museum").text
-    assert client.get("/?q=nothinglikethis").text.count('class="panel card"') == 0
-    assert "Clear" in client.get("/?kind=outing").text  # a way back to everything
+    assert client.get("/ideas").text.count('class="panel card"') == 3  # dropped is hidden
+    assert "Ramen place" in client.get("/ideas?kind=restaurant").text
+    assert "Museum day" not in client.get("/ideas?kind=restaurant").text
+    assert client.get("/ideas?status=done").text.count('class="panel card"') == 1
+    assert f'href="/idea/{dropped.id}"' in client.get("/ideas?status=dropped").text
+    assert client.get("/ideas?who=with+the+girls").text.count('class="panel card"') == 1
+    assert "Museum" in client.get("/ideas?q=museum").text
+    assert client.get("/ideas?q=nothinglikethis").text.count('class="panel card"') == 0
+    assert "Clear" in client.get("/ideas?kind=outing").text  # a way back to everything
 
 
 def test_an_idea_page_shows_its_place_details(settings, clock, conn, family) -> None:
@@ -453,9 +453,11 @@ def test_the_plans_page_when_the_calendar_is_empty(settings, clock, conn, family
 def test_the_nav_reaches_every_page(settings, clock, conn, family) -> None:
     client = _client(settings, clock)
     home = client.get("/")
-    for target in ("/", "/restaurants", "/plans"):
-        assert f'href="{target}"' in home.text, target
+    for target in ("/", "/ideas", "/plans", "/family", "/status", "/settings"):
+        assert f'href="{target}' in home.text, target  # "/chat" goes to its newest line
         assert client.get(target).status_code == 200
+    assert 'href="/chat#latest"' in home.text
+    assert 'href="/restaurants"' in client.get("/ideas").text  # a tab of the ideas now
 
 
 def test_links_that_are_not_web_addresses_never_become_links(settings, clock, conn, family) -> None:
@@ -588,7 +590,11 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
         for node in ast.walk(chat)
         if isinstance(node, ast.ImportFrom) and (node.module or "").startswith("familydb.channels")
         for alias in node.names
-    } == {"familydb.channels.web.DEFAULT_CHAT", "familydb.channels.web.WebChat"}
+    } == {
+        "familydb.channels.web.DEFAULT_CHAT",
+        "familydb.channels.web.MAX_MESSAGE",  # how long a question handed over may be
+        "familydb.channels.web.WebChat",
+    }
     assert not [
         node
         for node in ast.walk(chat)

@@ -34,7 +34,7 @@ def _revision(client, member_id: int) -> str:
 
 
 def _said(response) -> str:
-    return " ".join(re.findall(r'class="said">\s*([^<]+)', response.text))
+    return " ".join(re.findall(r'class="said"[^>]*>\s*([^<]+)', response.text))
 
 
 def test_the_list_shows_everybody_and_how_the_bot_knows_them(page, family) -> None:

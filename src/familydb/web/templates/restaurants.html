@@ -1,7 +1,14 @@
 {% extends "base.html" %}
 {% block title %}Restaurants · {{ site_title }}{% endblock %}
 {% block content %}
-  <h1>Restaurants</h1>
+  <div class="page-head">
+    <h1>Ideas</h1>
+    <a class="button" href="{{ url_for('web.new_idea') }}">Add an idea</a>
+  </div>
+  <nav class="tabs" aria-label="Which ideas">
+    <a href="{{ url_for('web.ideas') }}">All ideas</a>
+    <a href="{{ url_for('web.restaurants') }}" aria-current="page">Restaurants</a>
+  </nav>
   <p class="muted count">
     {{ cards | length }} place{{ '' if cards | length == 1 else 's' }} the family has talked about.
   </p>

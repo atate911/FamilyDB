@@ -28,7 +28,7 @@ from flask import (
 )
 
 from familydb.app import App
-from familydb.channels.web import DEFAULT_CHAT, WebChat
+from familydb.channels.web import DEFAULT_CHAT, MAX_MESSAGE, WebChat
 from familydb.config import Settings
 from familydb.store import members as member_store
 from familydb.store import messages as message_store
@@ -154,7 +154,10 @@ def page(*, error: str | None = None, typed: str | None = None, status: int = 20
 
 @bp.get("/chat")
 def show() -> Any:
-    return page()
+    # A question handed over by a link, such as the home page's "what should we do this
+    # weekend?", waits in the box; nothing is sent until somebody presses Send.
+    asked = request.args.get("ask", "")[:MAX_MESSAGE].strip()
+    return page(typed=asked or None)
 
 
 @bp.post("/chat")

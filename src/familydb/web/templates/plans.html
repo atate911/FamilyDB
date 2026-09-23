@@ -67,7 +67,8 @@
   </section>
 
   <section class="panel">
-    <h2>Add something</h2>
+    <details class="more" {{ 'open' if not upcoming }}>
+      <summary><span class="h2">Put something on the calendar</span></summary>
     {% if can_schedule %}
       <form class="form" method="post" action="{{ url_for('edits.add_plan') }}">
         <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
@@ -108,6 +109,7 @@
       <p class="muted">Google Calendar is not connected, so nothing can be added here.
         See the <a href="{{ url_for('web.status') }}">status page</a>.</p>
     {% endif %}
+    </details>
   </section>
 
   {% if recent %}

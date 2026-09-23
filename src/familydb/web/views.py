@@ -263,7 +263,12 @@ def entry_row(entry: Entry, today: date) -> dict[str, Any]:
     days = entry.days()
     when = day_text(entry.start[:10] if entry.all_day else entry.start)
     if entry.all_day and len(days) > 1:
-        when = f"{day_text(entry.start[:10])} to {day_text(days[-1].isoformat())}"
+        first, last = days[0], days[-1]
+        if (first.year, first.month) == (last.year, last.month):
+            # "Saturday 3 to Sunday 4 October": the month once, where it cannot be mistaken.
+            when = f"{first:%A} {first.day} to {day_text(last.isoformat())}"
+        else:
+            when = f"{day_text(first.isoformat())} to {day_text(last.isoformat())}"
     return {
         "id": entry.plan_id,
         "idea_id": entry.idea_id,
