@@ -397,7 +397,8 @@ src/familydb/
   clock.py, dates.py     time abstraction and date parsing in the family timezone
   availability.py        which integrations are configured
   pipeline.py            one inbound message end to end; handle_synthetic for the digest
-  agent/                 prompt.py, render.py, history.py, loop.py, worker.py, spending.py (the
+  agent/                 gateway.py (the one door to a model, each kind of call declared),
+                         prompt.py, render.py, history.py, loop.py, worker.py, spending.py (the
                          daily limit), prompts/{system,enrich,discover}.md
   agent/providers/       base.py (the protocol and the types), anthropic.py, openai.py, gemini.py,
                          prices.py (the price table, no SDK)

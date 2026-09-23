@@ -78,8 +78,12 @@ def run_turn(
     max_tokens: int | None = None,
     surface: str = "chat",
     fallback: Provider | None = None,
+    kind: str | None = None,
 ) -> TurnResult:
     """Drive one inbound message to a reply.
+
+    Callers in the package go through `agent.gateway.ask`, which declares each kind of call and
+    passes its `kind` on to be recorded with every model call.
 
     With a `fallback` provider, a first call the chosen one cannot take is tried there instead.
     Only the first call: once a tool has run, starting again elsewhere would repeat whatever it
@@ -151,6 +155,7 @@ def run_turn(
                 provider=active.name,
                 cost_usd=dollars,
                 cost_estimated=not listed,
+                kind=kind,
             )
 
         if reply.stop == "refusal":

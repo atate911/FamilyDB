@@ -63,8 +63,8 @@ uv run familydb db status         # row counts and the last model calls, with ca
 | `familydb tool NAME --json '{...}' [--stdin] [--as NAME]`, `--list`, `--schema` | Run any tool without the model |
 | `familydb chat TEXT [--as NAME] [--fresh]` | One message, one reply |
 | `familydb repl [--as NAME]` | Interactive chat (`/as NAME`, `/ideas`, `/quit`) |
-| `familydb debug prompt TEXT [--as NAME] [--chat ID]` | The exact API request that would be sent, without sending it |
-| `familydb debug cost [--days N]` | What each message pays for before anyone types, and what the last month actually used |
+| `familydb debug prompt TEXT [--as NAME] [--chat ID] [--kind KIND] [--idea N]` | The exact API request that would be sent (a chat message, or `--kind enrich --idea N` for a lookup), without sending it |
+| `familydb debug cost [--days N]` | What each message pays for before anyone types, and what the last month cost per purpose (chat, digest, lookups, ...) and per model |
 | `familydb debug validate-tools` | Have the API validate the tool schemas (needs an Anthropic or Gemini key) |
 | `familydb google auth --client-secrets FILE` / `calendars` / `events [--days N]` | Google sign-in on a machine with a browser (the settings page does it without one); find the calendar id; connection test |
 | `familydb enrich [--idea N] [--limit N]` | Look pending ideas up on the web now; `--idea` redoes one (needs `WEB_TOOLS_ENABLED=true`) |

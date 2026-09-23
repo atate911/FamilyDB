@@ -1,9 +1,10 @@
 # How FamilyDB uses a model
 
 Design framework, September 23, 2026. It sets the questions every model call has to answer and
-the direction the code should grow in. It is not a description of finished work: "today" below is
-what the code does now, and the proposals are not built. `docs/MEMORY.md` is the companion on
-what the bot remembers; the token-economy rules in `CLAUDE.md` are the constraints both work in.
+the direction the code should grow in. The gateway it describes is built (`agent/gateway.py`);
+the rest is direction, and "today" below is what the code does now. `docs/MEMORY.md` is the
+companion on what the bot remembers; the token-economy rules in `CLAUDE.md` are the constraints
+both work in.
 
 ## The one idea
 
@@ -96,33 +97,43 @@ Context is built in three layers, and every piece of information belongs to exac
 | Enrich | every 2 minutes, up to 3 pending ideas | worker model | worker prompt, home area, the idea and what was saved before | web search (3), `save_place`, `skip_place` | a place record |
 | Discover | a `suggest` call, cached 12 hours | worker model | worker prompt, home area, the window and the question | web search (4), `report_finds` | up to 6 finds |
 
-All of them go through one loop (`agent/loop.run_turn`), which checks the spending limit before
-each call and records each call in `llm_calls`. `model_exists` and token counting call a
-provider but generate nothing.
+All of them go through one door, `agent/gateway.ask`, which runs the loop
+(`agent/loop.run_turn`): the spending limit is checked before each call, and each call is
+recorded in `llm_calls` with its kind. `model_exists` and token counting call a provider but
+generate nothing.
 
-## Proposal: a declaration per kind of call
+## The gateway: one door, a declaration per kind of call
 
-Today the answers to the five questions are spread across `config.py`, `worker.py`, the job that
-starts the turn and the loop. The proposal is one declaration per kind, in code, that the loop
-reads:
+Everything that wants an answer from a model asks `gateway.ask` for a kind of call, and brings
+only what is particular to this one: the conversation, and the context its tools run in. What
+does not change from one call of that kind to the next is declared once, in `gateway.KINDS`:
 
 ```
-kind            chat | digest | retry | enrich | discover | ...
-model tier      which setting names the model, and whether it may escalate
-prompt          which prompt file and which context builders, with their budgets
-tools           the fixed tool list
-hand-back       the tool that ends the turn, if any
-limits          calls, output tokens, searches, retries, provider switch
-gate            what must be true before it runs
+kind            chat | digest | retry | enrich | discover
+purpose         what it is for, in words, as the cost reports say it
+surface         which model setting answers: the chat model or the lookup model
+prompt          which prompt file ("system" also brings the family and the idea list)
+tools           the fixed tool list (None: every chat tool)
+hand_back       the tools whose success is a worker's result
+web_searches    the cap on hosted search; none means no web at all
+iterations      the setting that caps model calls in one turn
+effort          the setting naming the reasoning effort
 ```
 
-What that buys:
+What it gives now:
 
-- `llm_calls` records the kind, so `familydb debug cost` and `/status` can say what the digest
-  costs apart from chat, which today they cannot when both use the same model.
-- `familydb debug prompt` can show the exact request for any kind, not just chat.
-- A test pins each kind's request shape, as one already does for chat.
-- Choosing a different model for one kind is one line, and the price table says what it costs.
+- `llm_calls` records the kind (migration 0010), so `familydb debug cost` and `/status` say what
+  answering the family, the digest, retries, lookups and discovery each cost.
+- `familydb debug prompt` builds its request with the same function `ask` sends with, for chat
+  and for a lookup (`--kind enrich --idea N`); a test checks the two are identical.
+- A test fails if anything else in the package starts a turn or sends to a provider, and another
+  checks each declaration is whole: its prompt exists, its tools exist, a worker's hand-back is
+  among its tools, and only workers get the web.
+
+Still to come in the declaration, each as its own measured change: an output limit and a
+hand-back that ends the turn for workers, the gate each kind needs before it runs (callers
+check a key and the spending limit themselves today), per-kind retry rules, and a model that a
+kind may escalate to.
 
 ## Choosing models
 
@@ -164,9 +175,9 @@ for effort, and each should be measured before and after.
    one tool call. A small cap bounds a runaway turn.
 6. **A turn that ran out of iterations is retried in full,** up to three times, at the same cost,
    with the same context. It should give up and say so.
-7. **Accounting cannot tell the kinds apart,** and `debug cost` estimates the prefix from
-   characters. Recording the kind and reporting measured tokens and cost comes first, because
-   every item above needs to be measured.
+7. **Accounting could not tell the kinds apart.** Now done: every call is recorded with its kind
+   and reported by purpose. `debug cost` still estimates the prefix from characters; measuring
+   it in real tokens is what is left.
 8. **History is not budgeted.** Up to 20 messages of the last six hours are sent as they were
    written, however long. With Claude, only the system blocks are cached; history and earlier
    tool results in a turn are sent at full price each iteration.

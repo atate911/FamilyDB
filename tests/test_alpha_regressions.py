@@ -64,7 +64,7 @@ def test_discovery_uses_configured_provider_without_injected_api(env, monkeypatc
 
     api = FakeMessagesAPI(*discover_script([]))
     monkeypatch.setattr(
-        "familydb.agent.worker.for_surface",
+        "familydb.agent.gateway.for_surface",
         lambda settings, surface, api=None: build("anthropic", settings, api=fake),
     )
     fake = api

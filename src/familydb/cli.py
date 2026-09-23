@@ -18,7 +18,7 @@ import typer
 
 from familydb import __version__, privacy
 from familydb.agent.history import load_history
-from familydb.agent.prompt import build_messages, build_system_blocks
+from familydb.agent.prompt import build_messages
 from familydb.agent.providers.base import Message, TurnRequest
 from familydb.agent.render import render_idea_line, render_user_turn
 from familydb.app import App, build_app
@@ -310,35 +310,59 @@ def tool_cmd(
 
 @debug_app.command("prompt")
 def debug_prompt(
-    text: str = typer.Argument(..., help="The message to build a request for."),
+    text: str = typer.Argument("", help="The message to build a chat request for."),
     as_member: str | None = typer.Option(None, "--as", help="Act as this family member."),
     chat_id: str = typer.Option("console", "--chat", help="Chat whose history to include."),
+    kind: str = typer.Option(
+        "chat", "--kind", help="Which kind of call: chat, digest, retry or enrich."
+    ),
+    idea_id: int | None = typer.Option(None, "--idea", help="For --kind enrich: which idea."),
 ) -> None:
-    """Print the exact request that would be sent for TEXT, without calling the API."""
+    """Print the exact request that would be sent, without calling the API.
+
+    Built by the same code that sends it (agent/gateway.py), so what is printed is what goes.
+    Discovery is asked from inside a suggestion; `familydb suggest --discover` runs one.
+    """
+    from familydb.agent import gateway
+    from familydb.agent.worker import worker_messages
+    from familydb.jobs.enrich import render_enrich_request
+    from familydb.store import places
+
+    if kind not in gateway.KINDS or kind == "discover":
+        typer.echo("--kind is one of chat, digest, retry or enrich", err=True)
+        raise typer.Exit(code=2)
     application = build_app()
     settings = application.settings
+    call = gateway.spec(kind)
     with closing(_ready(application)) as conn:
-        member = _acting_member(application, conn, as_member)
-        sender = member.display_name if member else "someone"
-        system = build_system_blocks(conn, settings)
-        history = load_history(
-            conn,
-            chat_id,
-            clock=application.clock,
-            limit=settings.history_limit,
-            since_hours=settings.history_hours,
-        )
-        messages = build_messages(history, render_user_turn(sender, text, application.clock))
-        provider = application.provider("chat")
-        request = provider.payload(
-            TurnRequest(
-                system=system,
-                messages=messages,
-                tools=application.registry.tool_defs(),
-                model=provider.model_for("chat"),
+        if kind == "enrich":
+            idea = ideas.get(conn, idea_id) if idea_id is not None else None
+            if idea is None:
+                typer.echo("--kind enrich needs --idea N, the number of an idea", err=True)
+                raise typer.Exit(code=2)
+            place = places.get(conn, idea.place_id) if idea.place_id else None
+            turn = worker_messages(application.clock, render_enrich_request(idea, place, settings))
+        else:
+            member = _acting_member(application, conn, as_member)
+            sender = member.display_name if member else "someone"
+            history = load_history(
+                conn,
+                chat_id,
+                clock=application.clock,
+                limit=settings.history_limit,
+                since_hours=settings.history_hours,
             )
+            turn = build_messages(history, render_user_turn(sender, text, application.clock))
+        provider = application.provider(call.surface)
+        request = gateway.build_request(
+            kind,
+            conn=conn,
+            settings=settings,
+            registry=application.registry,
+            messages=turn,
+            provider=provider,
         )
-    typer.echo(json.dumps(request, indent=2, ensure_ascii=False, default=str))
+    typer.echo(json.dumps(provider.payload(request), indent=2, ensure_ascii=False, default=str))
 
 
 @debug_app.command("cost")
@@ -348,15 +372,17 @@ def debug_cost(
     """What the model has cost lately, and what each message pays for before anyone types."""
     import json as _json
 
-    from familydb.agent.prompt import build_system_blocks
+    from familydb.agent import gateway
 
     application = build_app()
     settings = application.settings
+    chat_call = gateway.spec("chat")
     with closing(_ready(application)) as conn:
-        blocks = build_system_blocks(conn, settings)
-        tools = application.registry.tool_defs()
+        blocks = gateway.system_blocks(chat_call, conn, settings)
+        tools = gateway.tool_defs(chat_call, application.registry)
         since = utc_iso(application.clock.now() - timedelta(days=days))
         rows = calls.usage_since(conn, since=since)
+        kinds = calls.usage_by_kind(conn, since=since)
 
     # Four characters to the token is rough, but enough to show what is large.
     system_tokens = sum(len(block.text) for block in blocks) // 4
@@ -382,6 +408,13 @@ def debug_cost(
         typer.echo(f"\nNo model calls in the last {days} days.")
         return
     typer.echo(f"\nActually used in the last {days} days:")
+    typer.echo(f"  {'what for':<42} {'calls':>6} {'sent':>10} {'out':>8} {'US$':>7}")
+    for row in kinds:
+        typer.echo(
+            f"  {gateway.purpose(row['kind']):<42} {row['calls']:>6,d} {row['sent']:>10,d} "
+            f"{row['output_tokens']:>8,d} {row['cost_usd']:>7.2f}"
+        )
+    typer.echo("")
     header = f"  {'model':<28} {'calls':>6} {'in':>9} {'cached':>9} {'written':>9} {'out':>8}"
     typer.echo(header)
     for row in rows:

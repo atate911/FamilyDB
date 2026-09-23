@@ -61,13 +61,14 @@ def log_llm_call(
     provider: str | None = None,
     cost_usd: float | None = None,
     cost_estimated: bool = False,
+    kind: str | None = None,
 ) -> int:
     usage = usage or {}
     cur = conn.execute(
         "INSERT INTO llm_calls (message_id, iteration, model, served_model, request_id, "
         "stop_reason, input_tokens, cache_creation_input_tokens, cache_read_input_tokens, "
         "output_tokens, duration_ms, created_at, provider, web_searches, cost_usd, "
-        "cost_estimated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "cost_estimated, kind) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             message_id,
             iteration,
@@ -82,6 +83,7 @@ def log_llm_call(
             usage.get("web_searches"),
             cost_usd,
             int(cost_estimated),
+            kind,
         ),
     )
     return int(cur.lastrowid or 0)
@@ -120,6 +122,26 @@ def usage_since(conn: sqlite3.Connection, *, since: str) -> list[dict[str, Any]]
         "coalesce(sum(cost_usd), 0) AS cost_usd, "
         "max(cost_estimated) AS cost_estimated "
         "FROM llm_calls WHERE created_at >= ? GROUP BY 1 ORDER BY calls DESC",
+        (since,),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def usage_by_kind(conn: sqlite3.Connection, *, since: str) -> list[dict[str, Any]]:
+    """Calls, tokens and estimated dollars per kind of call since a timestamp, dearest first.
+
+    A kind is what a call was for (answering the family, looking ideas up, ...), as declared in
+    `agent.gateway.KINDS`. Calls recorded before kinds were have none.
+    """
+    rows = conn.execute(
+        "SELECT kind, count(*) AS calls, "
+        "coalesce(sum(input_tokens), 0) + coalesce(sum(cache_read_input_tokens), 0) "
+        "+ coalesce(sum(cache_creation_input_tokens), 0) AS sent, "
+        "coalesce(sum(output_tokens), 0) AS output_tokens, "
+        "coalesce(sum(web_searches), 0) AS web_searches, "
+        "coalesce(sum(cost_usd), 0) AS cost_usd, "
+        "count(DISTINCT message_id) AS messages "
+        "FROM llm_calls WHERE created_at >= ? GROUP BY kind ORDER BY cost_usd DESC, calls DESC",
         (since,),
     ).fetchall()
     return [dict(row) for row in rows]

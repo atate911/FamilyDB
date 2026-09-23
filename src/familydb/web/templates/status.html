@@ -58,6 +58,16 @@
         {% endif %}
       </p>
       <table class="hours">
+        <tr><th>what for</th><th>calls</th><th>US$</th></tr>
+        {% for row in spending.kinds %}
+          <tr>
+            <td>{{ row.purpose }}</td>
+            <td>{{ "{:,}".format(row.calls) }}</td>
+            <td>{{ "%.2f"|format(row.cost_usd) }}</td>
+          </tr>
+        {% endfor %}
+      </table>
+      <table class="hours">
         <tr>
           <th>model</th><th>calls</th><th>sent</th><th>cached</th><th>written</th><th>back</th>
           <th>US$</th>

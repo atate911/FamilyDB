@@ -144,7 +144,7 @@ def enrich_idea(app: App, conn: Any, idea: Idea, *, api: MessagesAPI | None = No
         _mark(conn, app, idea.id, "failed", f"error: {type(exc).__name__}: {exc}")
         return "failed"
 
-    if turn.handed_back("save_place") or turn.handed_back("skip_place"):
+    if turn.handed_back():
         current = ideas.get(conn, idea.id)
         status = current.enrichment if current else "failed"
         if status == "done" and current is not None:

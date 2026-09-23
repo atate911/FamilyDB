@@ -10,7 +10,7 @@ import sqlite3
 from datetime import timedelta
 from typing import Any
 
-from familydb.agent import providers
+from familydb.agent import gateway, providers
 from familydb.agent.spending import spent_today
 from familydb.app import App
 from familydb.availability import (
@@ -137,6 +137,10 @@ def spending(
     """Tokens and estimated dollars per model, how much of the input came from the cache, and
     how much of today's limit is used."""
     rows = calls.usage_since(conn, since=since)
+    kinds = [
+        {**row, "purpose": gateway.purpose(row["kind"])}
+        for row in calls.usage_by_kind(conn, since=since)
+    ]
     today = spent_today(conn, settings, now) if settings is not None else 0.0
     fresh = sum(row["input_tokens"] for row in rows)
     cached = sum(row["cache_read"] for row in rows)
@@ -144,6 +148,7 @@ def spending(
     served = fresh + cached + written
     return {
         "rows": rows,
+        "kinds": kinds,
         "calls": sum(row["calls"] for row in rows),
         "input": fresh,
         "cached": cached,
