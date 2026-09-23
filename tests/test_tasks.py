@@ -34,6 +34,9 @@ def test_deadlines_and_flexible_windows_do_not_schedule_reminders(ctx):
     assert task["due_at"] == "2026-09-22T16:00:00Z"
     assert task["reminder"] is None
     assert task["owner"] == "Sam"
+    # The tool result is the task's columns, less its idempotency key, plus owner and reminder.
+    columns = {row["name"] for row in ctx.conn.execute("PRAGMA table_info(tasks)")}
+    assert set(task) == columns - {"operation_key"} | {"owner", "reminder"}
     assert not ctx.conn.execute("SELECT * FROM plans").fetchall()
 
 
@@ -83,8 +86,8 @@ def test_overdue_reminder_survives_restart_and_is_queued_once(ctx):
     app = App(ctx.settings, ctx.clock)
     assert run_reminders(app) == 1
     assert run_reminders(App(ctx.settings, ctx.clock)) == 0
-    reminder = tasks.get(ctx.conn, task["id"])["reminder"]
-    assert reminder["delivered_at"]
+    reminder = tasks.get(ctx.conn, task["id"]).reminder
+    assert reminder.delivered_at
     assert len(messages.last_for_chat(ctx.conn, "web", limit=100)) == 1
 
 
@@ -104,13 +107,13 @@ def test_failed_send_retries_without_creating_another_message(ctx):
     ctx.clock.advance(timedelta(minutes=2))
     app = App(ctx.settings, ctx.clock)
     assert run_reminders(app) == 0
-    queued = tasks.get(ctx.conn, task["id"])["reminder"]["message_id"]
+    queued = tasks.get(ctx.conn, task["id"]).reminder.message_id
     sent = []
     app.senders["telegram"] = lambda chat, text: sent.append((chat, text))
     # Not tried again every minute by this job: the retry job has it, on its own interval.
     assert run_reminders(app) == 0 and not sent
     assert run_deliveries(app) == 1
-    assert tasks.get(ctx.conn, task["id"])["reminder"]["message_id"] == queued
+    assert tasks.get(ctx.conn, task["id"]).reminder.message_id == queued
     assert sent[0][0] == "family-group"
 
 
@@ -153,7 +156,7 @@ def test_in_flight_reminder_cannot_be_recalled(ctx):
     app = App(ctx.settings, ctx.clock)
     app.senders.clear()
     run_reminders(app)
-    message_id = tasks.get(ctx.conn, task["id"])["reminder"]["message_id"]
+    message_id = tasks.get(ctx.conn, task["id"]).reminder.message_id
     with lease(app, ctx.conn, message_id) as owned:
         assert owned
         with pytest.raises(ToolError, match="being delivered"):
@@ -173,14 +176,14 @@ def test_browser_task_form_and_revision_guard(settings, clock, conn, family):
     page = client.get("/tasks")
     assert "Scheduled" in page.text
     edit = dict(form, revision="0", once="new-edit", status="done")
-    client.post(f"/task/{task['id']}/edit", data=edit)
-    assert tasks.get(conn, task["id"])["status"] == "open"
+    client.post(f"/task/{task.id}/edit", data=edit)
+    assert tasks.get(conn, task.id).status == "open"
     for odd in ("", "²", "1e3", "9" * 40):
         bad = dict(form, revision=odd, once=f"odd-{len(odd)}-{odd[:1]}", status="done")
-        assert client.post(f"/task/{task['id']}/edit", data=bad).status_code == 302
+        assert client.post(f"/task/{task.id}/edit", data=bad).status_code == 302
     bad = {k: v for k, v in form.items() if k != "revision"} | {"once": "none", "status": "done"}
-    assert client.post(f"/task/{task['id']}/edit", data=bad).status_code == 302
-    assert tasks.get(conn, task["id"])["status"] == "open"
+    assert client.post(f"/task/{task.id}/edit", data=bad).status_code == 302
+    assert tasks.get(conn, task.id).status == "open"
     assert client.get("/tasks?status=invalid").status_code == 400
 
 

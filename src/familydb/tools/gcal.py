@@ -22,8 +22,8 @@ from familydb.dates import (
 )
 from familydb.errors import ToolError, ToolUnavailable
 from familydb.integrations.google_calendar import CalendarAPI, CalendarEvent
-from familydb.store import ideas, messages, plans
-from familydb.store.db import from_json, to_json, transaction
+from familydb.store import calendar_ops, ideas, messages, plans
+from familydb.store.db import to_json, transaction
 from familydb.tools.registry import ToolContext, tool
 
 NOT_CONFIGURED = "Google Calendar is not connected (no calendar id or token configured)"
@@ -339,29 +339,13 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
     )
     with transaction(ctx.conn):
         if resume:
-            earlier = ctx.conn.execute(
-                "SELECT c.operation_key FROM calendar_unfinished u "
-                "JOIN calendar_creations c ON c.event_id = u.event_id "
-                "WHERE u.resume_key = ? AND c.result IS NULL",
-                (resume,),
-            ).fetchone()
-            if earlier is not None:
-                key = earlier["operation_key"]
-        ctx.conn.execute(
-            "INSERT OR IGNORE INTO calendar_creations(operation_key, event_id) VALUES (?, ?)",
-            (key, uuid.uuid4().hex),
-        )
-        operation = ctx.conn.execute(
-            "SELECT * FROM calendar_creations WHERE operation_key = ?", (key,)
-        ).fetchone()
-        if resume and not operation["result"]:
-            ctx.conn.execute(
-                "INSERT OR REPLACE INTO calendar_unfinished(resume_key, event_id) VALUES (?, ?)",
-                (resume, operation["event_id"]),
-            )
-    if operation["result"]:
-        return from_json(operation["result"])
-    event = calendar.get_event(operation["event_id"])
+            key = calendar_ops.unfinished_key(ctx.conn, resume) or key
+        operation = calendar_ops.reserve(ctx.conn, key, uuid.uuid4().hex)
+        if resume and not operation.result:
+            calendar_ops.mark_unfinished(ctx.conn, resume, operation.event_id)
+    if operation.result:
+        return operation.result
+    event = calendar.get_event(operation.event_id)
     if event is None:
         ensure_not_past(start, ctx.clock)
         event = calendar.insert_event(
@@ -371,17 +355,15 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
             all_day=all_day,
             location=args.location,
             description=args.notes,
-            event_id=operation["event_id"],
+            event_id=operation.event_id,
         )
     origin = messages.get(ctx.conn, ctx.message_id) if ctx.message_id is not None else None
     with transaction(ctx.conn):
-        completed = ctx.conn.execute(
-            "SELECT result FROM calendar_creations WHERE operation_key = ?", (key,)
-        ).fetchone()["result"]
-        if completed:
-            return from_json(completed)
+        completed = calendar_ops.get(ctx.conn, key)
+        if completed is not None and completed.result:
+            return completed.result
         if resume:
-            ctx.conn.execute("DELETE FROM calendar_unfinished WHERE resume_key = ?", (resume,))
+            calendar_ops.clear_unfinished(ctx.conn, resume)
         plan = plans.insert(
             ctx.conn,
             title=args.title.strip(),
@@ -406,10 +388,7 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
             "event": event.to_public(),
             "idea": idea.model_dump(mode="json") if idea else None,
         }
-        ctx.conn.execute(
-            "UPDATE calendar_creations SET result = ? WHERE operation_key = ?",
-            (to_json(result), key),
-        )
+        calendar_ops.record_result(ctx.conn, key, result)
     return result
 
 
