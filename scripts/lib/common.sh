@@ -450,3 +450,42 @@ confirm() { # confirm "question" yes|no  - honours ASSUME_YES and a missing term
   reply="${reply:-$default}"
   case "$reply" in [Yy]*|yes) return 0 ;; *) return 1 ;; esac
 }
+
+# --------------------------------------------------------- which version ----
+# While the newest version in CHANGELOG.md is still being built, its heading says so
+# ("## v0.1.0 — in progress") and an install follows the default branch, where it is being
+# built. Once it is released the heading carries a date instead, and an install follows the
+# release tags. Either way, an upgrade only ever moves forward.
+
+in_progress() { # in_progress DIR REF - succeeds when REF's changelog says its newest version is unreleased
+  as_root git -C "$1" show "${2}:CHANGELOG.md" 2>/dev/null \
+    | grep -m1 '^## v' | grep -qi 'in progress'
+}
+
+default_branch() { # default_branch DIR - the remote's default branch, as a bare name
+  local ref
+  ref="$(as_root git -C "$1" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)"
+  if [ -z "$ref" ]; then
+    as_root git -C "$1" remote set-head origin --auto >/dev/null 2>&1 || true
+    ref="$(as_root git -C "$1" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)"
+  fi
+  printf '%s\n' "${ref#origin/}"
+}
+
+wanted_version() { # wanted_version DIR - prints "branch NAME", "tag NAME" or "none"
+  local branch tag
+  branch="$(default_branch "$1")"
+  tag="$(as_root git -C "$1" tag -l 'v*' --sort=-v:refname 2>/dev/null | head -1 || true)"
+  if [ -n "$branch" ] && { [ -z "$tag" ] || in_progress "$1" "origin/${branch}"; }; then
+    printf 'branch %s\n' "$branch"
+  elif [ -n "$tag" ]; then
+    printf 'tag %s\n' "$tag"
+  else
+    printf 'none\n'
+  fi
+}
+
+moves_forward() { # moves_forward DIR TARGET - succeeds when TARGET holds everything installed now, and more
+  as_root git -C "$1" merge-base --is-ancestor HEAD "$2" \
+    && ! as_root git -C "$1" merge-base --is-ancestor "$2" HEAD
+}

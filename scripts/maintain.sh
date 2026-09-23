@@ -44,8 +44,10 @@ Commands
   backup               Take a backup now, using SQLite's online backup, safe while it runs.
   restore FILE         Stop the bot, put that backup in place, start it again. The database
                        being replaced is itself backed up first.
-  upgrade              Fetch the newest release, reinstall the dependencies, migrate and
-                       restart. Takes a backup first.
+  upgrade              Move to the newest version, reinstall the dependencies, migrate and
+                       restart. Takes a backup first. That is the default branch while
+                       CHANGELOG.md says the next version is in progress, else the newest
+                       release; it never moves to anything older than what is installed.
   logs [N]             Follow the log, starting with the last N lines (default 50).
   restart              Restart it, and say whether it came back.
   schedule-backups     Add a nightly backup to cron, and prune ones older than --keep-days.
@@ -326,7 +328,7 @@ cmd_upgrade() {
   current="$(as_root git -C "$TARGET" describe --tags --always 2>/dev/null || echo unknown)"
   say "Currently on: ${current}"
 
-  plan_item "Fetch the newest release from the git remote" \
+  plan_item "Fetch the newest version from the git remote" \
     "this is the code the bot runs; nothing about your configuration or data changes"
   plan_item "Reinstall the dependencies at their locked versions" \
     "a new release may need a library version this machine does not have"
@@ -368,18 +370,24 @@ cmd_upgrade() {
   # shellcheck disable=SC2034  # cleared so a later failure does not name this step.
   FAILED_STEP=""
   ok "Fetched the newest code"
-  local latest
-  latest="$(as_root git -C "$TARGET" tag -l 'v*' --sort=-v:refname 2>/dev/null | head -1 || true)"
-  if [ -z "$latest" ]; then
-    warn "No release tags found; staying on the current branch and pulling it instead."
-    step "Pulling" as_root git -C "$TARGET" pull --ff-only --quiet
-  elif [ "$latest" = "$current" ]; then
-    ok "Already on ${latest}, the newest release. Nothing to do."
+  local kind name target
+  read -r kind name <<<"$(wanted_version "$TARGET")"
+  case "$kind" in
+    branch) target="origin/${name}"; note "The newest version is still being built, so this follows ${name}." ;;
+    tag) target="$name" ;;
+    *) die "there is nothing to upgrade to: the remote has no default branch and no release" ;;
+  esac
+  if as_root git -C "$TARGET" merge-base --is-ancestor "$target" HEAD; then
+    ok "Already up to date with ${name}. Nothing to do."
     return 0
-  else
-    say "Upgrading to: ${latest}"
-    step "Checking out ${latest}" as_root git -C "$TARGET" checkout --quiet "$latest"
   fi
+  # Only forward. A release tag older than what is installed would take the database back past
+  # migrations it has already run; a branch that lacks what is here would lose it.
+  moves_forward "$TARGET" "$target" \
+    || die "${name} does not contain what is installed now (${current}), so moving to it would go backwards" \
+           "Nothing was changed. To choose a version yourself: sudo git -C ${TARGET} checkout NAME"
+  say "Upgrading to: ${name}"
+  step "Checking out ${name}" as_root git -C "$TARGET" checkout --quiet --detach "$target"
 
   stop_bot
   if [ "$DOCKER_MODE" = 1 ]; then

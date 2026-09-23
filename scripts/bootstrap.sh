@@ -60,7 +60,8 @@ Where the code comes from (a private repository needs one of these)
                        With nothing else given, and this script inside a checkout, that
                        checkout is what gets installed.
   --repo URL           Clone from somewhere other than the default GitHub URL.
-  --ref NAME           Tag, branch or commit. Default: the newest release tag.
+  --ref NAME           Tag, branch or commit. Default: the newest release, or the default
+                       branch while CHANGELOG.md says the next version is in progress.
 
 Where it goes
   --target DIR         Default: /opt/familydb. Keep it out of a home directory: the service
@@ -406,12 +407,12 @@ fetch_code() {
     [ -n "${GITHUB_TOKEN:-}" ] && note "The token was not written down, so an upgrade will ask for one again."
   fi
   if [ -z "$REF" ]; then
-    local latest
-    latest="$(as_root git -C "$TARGET" tag -l 'v*' --sort=-v:refname 2>/dev/null | head -1 || true)"
-    if [ -n "$latest" ]; then
-      step "Checking out ${latest}, the newest release" as_root git -C "$TARGET" checkout --quiet "$latest"
-    else
-      note "No release tag was found, so this is the default branch."
+    local kind name
+    read -r kind name <<<"$(wanted_version "$TARGET")"
+    if [ "$kind" = tag ]; then
+      step "Checking out ${name}, the newest release" as_root git -C "$TARGET" checkout --quiet "$name"
+    elif [ "$kind" = branch ]; then
+      note "The newest version is still being built, so this is ${name}, where it is being built."
     fi
   fi
   forget_undo

@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.1.0 — first alpha (2026-09-21)
+## v0.1.0 — in progress
 
 The first version meant to be installed on a real machine and used by a family.
 Everything below has been running against the tests and a scripted install; none

@@ -42,6 +42,17 @@ jobs:
           packaged=$(grep -m1 '^version = ' pyproject.toml | cut -d'"' -f2)
           echo "version=$VERSION packaged=$packaged"
           test "${VERSION#v}" = "$packaged"
+      - name: The version must be finished
+        # While CHANGELOG.md says a version is in progress, installs follow the default branch
+        # (scripts/lib/common.sh, wanted_version). Releasing it means giving it a date first.
+        run: |
+          heading=$(grep -m1 "^## ${VERSION} " CHANGELOG.md || true)
+          echo "$heading"
+          test -n "$heading"
+          if echo "$heading" | grep -qi 'in progress'; then
+            echo "CHANGELOG.md still says ${VERSION} is in progress; give it a date to release it." >&2
+            exit 1
+          fi
       - name: Take the notes from the changelog
         run: |
           awk -v want="## ${VERSION} " '
