@@ -251,3 +251,40 @@ def test_the_daily_limit_is_on_the_page(page) -> None:
     page.post("/settings", data=_whole_form(page, daily_spend_limit="0.5"))
     assert page.app.settings.daily_spend_limit == 0.5
     assert "of the $0.50 daily limit" in page.get("/status").text
+
+
+class _Company:
+    """Stands in for a provider, answering only the question the settings page asks."""
+
+    def __init__(self, known: set[str] | None) -> None:
+        self.known = known
+        self.asked: list[str] = []
+
+    def model_exists(self, model: str) -> bool | None:
+        self.asked.append(model)
+        return None if self.known is None else model in self.known
+
+
+def test_a_model_the_company_does_not_have_is_refused(page, monkeypatch) -> None:
+    from familydb.web import settings as settings_view
+
+    company = _Company({"gpt-6-luna"})
+    monkeypatch.setattr(settings_view.providers, "build", lambda name, settings: company)
+    response = page.post("/settings", data=_whole_form(page, openai_model="gpt-6-lunar"))
+    assert response.status_code == 400
+    assert "OpenAI says it has no model called gpt-6-lunar. Check the spelling." in _errors(
+        response.text
+    )
+    assert page.app.settings.openai_model == "gpt-6-luna"
+    # A save that leaves the model alone does not ask again.
+    company.asked.clear()
+    page.post("/settings", data=_whole_form(page, effort="low"))
+    assert company.asked == []
+
+
+def test_a_company_that_cannot_be_asked_does_not_block_a_save(page, monkeypatch) -> None:
+    from familydb.web import settings as settings_view
+
+    monkeypatch.setattr(settings_view.providers, "build", lambda name, settings: _Company(None))
+    page.post("/settings", data=_whole_form(page, openai_model="gpt-6-sol"))
+    assert page.app.settings.openai_model == "gpt-6-sol"

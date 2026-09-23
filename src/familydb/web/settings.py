@@ -29,8 +29,9 @@ from flask import (
 )
 from pydantic import ValidationError
 
+from familydb.agent import providers
 from familydb.app import App
-from familydb.config import apply_overrides
+from familydb.config import Settings, apply_overrides
 from familydb.store import settings as settings_store
 from familydb.store.db import transaction
 from familydb.store.settings import SECRETS
@@ -49,6 +50,16 @@ WRONG_PASSWORD = "That password is not right."
 LOCKED_OUT = "Too many tries. Wait a quarter of an hour."
 KEY_HAS_SPACES = "A key has no spaces in it. Check what was pasted."
 UNKNOWN_KEY = "There is no such key."
+UNKNOWN_MODEL = "{company} says it has no model called {name}. Check the spelling."
+# Which company each model box belongs to, so a new name can be checked with that company.
+MODEL_BOXES = {
+    "openai_model": ("openai", "OpenAI"),
+    "openai_worker_model": ("openai", "OpenAI"),
+    "anthropic_model": ("anthropic", "Anthropic"),
+    "worker_model": ("anthropic", "Anthropic"),
+    "gemini_model": ("gemini", "Google"),
+    "gemini_worker_model": ("gemini", "Google"),
+}
 KEY_LABELS = {
     "anthropic_api_key": "Claude (Anthropic)",
     "openai_api_key": "OpenAI",
@@ -76,6 +87,22 @@ def _save(values: dict[str, Any]) -> list[str]:
         app.refresh()  # the page it redirects to should already show the new state
         log.info("settings changed from the page: %s", ", ".join(changed))
     return changed
+
+
+def unknown_models(values: dict[str, Any], stored: dict[str, Any], proposed: Settings) -> dict:
+    """The model names this save would introduce that their company says do not exist.
+
+    Asked only about a name that is changing, and only a definite no counts: a company that
+    cannot be reached, or has no key yet, is not a reason to refuse what was typed.
+    """
+    found: dict[str, str] = {}
+    for key, (company, label) in MODEL_BOXES.items():
+        name = values.get(key)
+        if not name or name == stored.get(key):
+            continue
+        if providers.build(company, proposed).model_exists(name) is False:
+            found[key] = UNKNOWN_MODEL.format(company=label, name=name)
+    return found
 
 
 def problems_from(exc: ValidationError) -> dict[str, str]:
@@ -163,15 +190,18 @@ def save() -> Response | tuple[str, int]:
     values, problems = fields.read_form(request.form)
     typed = {one.key: request.form[one.key] for one in fields.FIELDS if one.key in request.form}
     if not problems:
-        proposed = {**_stored(), **values}
+        stored = _stored()
+        proposed = {**stored, **values}
         try:
             # Validate the whole configuration this would leave behind, not only the new boxes.
-            apply_overrides(
+            candidate = apply_overrides(
                 _app().base_settings,
                 {key: value for key, value in proposed.items() if value is not None},
             )
         except ValidationError as exc:
             problems = problems_from(exc)
+        else:
+            problems = unknown_models(values, stored, candidate)
     if problems:
         return page(problems=problems, error="Nothing was saved.", typed=typed, status=400)
     flash(_said(_save(values)), NOTICE)

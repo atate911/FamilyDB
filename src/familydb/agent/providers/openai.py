@@ -292,6 +292,22 @@ class OpenAIProvider:
         )
 
     # -- the call -------------------------------------------------------------------------
+    def model_exists(self, model: str) -> bool | None:
+        try:
+            client = make_client(self.settings)
+        except AgentError:
+            return None
+        try:
+            client.with_options(timeout=10.0, max_retries=0).models.retrieve(model)
+        except openai.NotFoundError:
+            return False
+        except Exception as exc:  # unreachable, unauthorised: not an answer about the name
+            log.info("could not ask OpenAI about %s: %s", model, exc)
+            return None
+        finally:
+            client.close()
+        return True
+
     def count_tokens(self, request: TurnRequest) -> int:
         raise NotImplementedError(
             "OpenAI has no token-counting endpoint; send a short message to check the schemas"

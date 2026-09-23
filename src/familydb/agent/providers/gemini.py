@@ -212,6 +212,23 @@ class GeminiProvider:
         )
 
     # -- the call -------------------------------------------------------------------------
+    def model_exists(self, model: str) -> bool | None:
+        try:
+            client = make_client(self.settings)
+        except AgentError:
+            return None
+        try:
+            client.models.get(model=model)
+        except genai_errors.ClientError as exc:
+            if _status(exc) == 404:
+                return False
+            log.info("could not ask Gemini about %s: %s", model, exc)
+            return None
+        except Exception as exc:  # unreachable: not an answer about the name
+            log.info("could not ask Gemini about %s: %s", model, exc)
+            return None
+        return True
+
     def count_tokens(self, request: TurnRequest) -> int:
         payload = self.payload(request)
         counted = self.api.count_tokens(model=payload["model"], contents=payload["contents"])
