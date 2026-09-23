@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import threading
+from contextlib import closing
 
 import pytest
 
@@ -171,25 +172,65 @@ def test_the_chat_is_behind_the_password(settings, clock, conn, family) -> None:
     assert stranger.post("/chat", data={"text": "hi", "who": "Sam"}).status_code == 401
 
 
-def test_a_message_left_unanswered_by_a_restart_says_so(settings, clock, conn, family) -> None:
-    """Nothing is thinking about it any more, so the page stops waiting and offers it back."""
-    client = _client(settings, clock)
-    with client.application.config["FAMILYDB_APP"].connect() as own:
-        from familydb.store.db import transaction
+def _interrupted(client, family, *, at: str):
+    """A web message a restart left behind: stored, never answered, nothing working on it."""
+    from familydb.store.db import transaction
 
-        with transaction(own):
-            messages.insert_in(
-                own,
-                channel="web",
-                channel_update_id="gone",
-                chat_id=DEFAULT_CHAT,
-                member_id=family["sam"].id,
-                text="what happened to this?",
-            )
+    with closing(client.application.config["FAMILYDB_APP"].connect()) as own, transaction(own):
+        return messages.insert_in(
+            own,
+            channel="web",
+            channel_update_id="gone",
+            chat_id=DEFAULT_CHAT,
+            member_id=family["sam"].id,
+            text="what happened to this?",
+            now=at,
+        )
+
+
+def test_a_message_a_restart_interrupted_waits_for_the_retry_job(settings, clock, conn, family):
+    """The retry job answers it, so the page says so and checks back rather than asking for it
+    to be sent again, which would have got two answers."""
+    client = _client(settings, clock)
+    _interrupted(client, family, at="2026-09-20T21:00:00Z")  # three minutes ago
     page = client.get("/chat").text
-    assert "never answered" in page
+    assert "tried again automatically" in page
+    assert 'content="30;' in page  # a slow check, not the three-second one
+    assert "what happened to this?</textarea>" not in page  # not handed back to send twice
+
+
+def test_the_retry_job_answers_it_and_the_page_shows_the_answer(settings, clock, conn, family):
+    from familydb.jobs.retry_failed import run_retries
+
+    client = _client(settings, clock)
+    _interrupted(client, family, at="2026-09-20T21:00:00Z")
+    app = client.application.config["FAMILYDB_APP"]
+    assert run_retries(app, api=fakes.FakeMessagesAPI(fakes.message([fakes.text("Here.")]))) == 1
+    page = client.get("/chat").text
+    assert "Here." in page and "tried again" not in page and 'http-equiv="refresh"' not in page
+
+
+def test_a_message_the_retries_never_reached_is_handed_back(settings, clock, conn, family):
+    client = _client(settings, clock)
+    _interrupted(client, family, at="2026-09-20T18:00:00Z")  # three hours ago: long given up
+    page = client.get("/chat").text
+    assert "not answered" in page
     assert 'http-equiv="refresh"' not in page
-    assert "what happened to this?" in page  # and it comes back in the box
+    assert "what happened to this?</textarea>" in page  # and it comes back in the box
+
+
+def test_a_turn_the_retry_job_is_running_counts_as_thinking(settings, clock, conn, family):
+    from familydb.delivery import lease
+
+    client = _client(settings, clock)
+    row = _interrupted(client, family, at="2026-09-20T21:00:00Z")
+    app = client.application.config["FAMILYDB_APP"]
+    with closing(app.connect()) as other, lease(app, other, row.id) as owned:
+        assert owned
+        page = client.get("/chat").text
+        assert "Thinking about the last message" in page and "disabled" in page
+        refused = _say(client, "and this?")
+        assert refused.status_code == 400 and BUSY in refused.text
 
 
 def test_a_reply_the_turn_failed_to_produce_is_shown_as_trouble(settings, clock, conn, family):

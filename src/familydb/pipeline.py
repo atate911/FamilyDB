@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import sqlite3
 from contextlib import closing
+from datetime import datetime
 from typing import Any
 
 from familydb.agent.history import load_history
@@ -13,7 +14,9 @@ from familydb.agent.prompt import build_messages, build_system_blocks
 from familydb.agent.render import render_retry_note, render_user_turn
 from familydb.app import App
 from familydb.channels.base import IncomingMessage, OutgoingMessage
+from familydb.clock import FixedClock
 from familydb.dates import utc_iso
+from familydb.delivery import deliver, lease
 from familydb.errors import AgentError
 from familydb.store import calls, members, messages, suggestions
 from familydb.store.db import transaction
@@ -130,6 +133,42 @@ def _run(
     *,
     notify: bool,
     retry: bool = False,
+) -> OutgoingMessage | None:
+    with lease(app, conn, inbound_id) as owned:
+        if not owned:
+            return None
+        row = messages.get(conn, inbound_id)
+        if row is None or row.status == "processed" or row.give_up:
+            return None
+        current_member = members.get(conn, member.id)
+        if current_member is None or not current_member.active:
+            with transaction(conn):
+                messages.mark_failed(
+                    conn, inbound_id, "member_inactive", now=utc_iso(app.clock.now())
+                )
+                messages.give_up(conn, inbound_id)
+            return None
+        member = current_member
+        if retry:
+            if row.retries >= app.settings.retry_max_attempts:
+                return None
+            with transaction(conn):
+                conn.execute(
+                    "UPDATE messages SET retries = retries + 1 WHERE id = ?", (inbound_id,)
+                )
+        return _run_owned(app, msg, member, inbound_id, api, conn, notify=notify, retry=retry)
+
+
+def _run_owned(
+    app: App,
+    msg: IncomingMessage,
+    member: Member,
+    inbound_id: int,
+    api: MessagesAPI | None,
+    conn: sqlite3.Connection,
+    *,
+    notify: bool,
+    retry: bool = False,
 ) -> OutgoingMessage:
     """Think and persist the outcome. With notify off (retries) failures stay silent."""
     try:
@@ -190,7 +229,7 @@ def retry_message(
         with closing(app.connect()) as own:
             return retry_message(app, message_id, api=api, conn=own)
     row = messages.get(conn, message_id)
-    if row is None or row.direction != "in" or row.status != "failed":
+    if row is None or row.direction != "in" or row.status not in {"failed", "received"}:
         return None
     if row.give_up or row.retries >= app.settings.retry_max_attempts:
         return None
@@ -202,11 +241,6 @@ def retry_message(
     if member is None:
         log.warning("cannot retry message %s: sender unknown", message_id)
         return None
-    with transaction(conn):
-        claimed = messages.claim_retry(conn, message_id, row.retries)
-    if not claimed:
-        log.info("not retrying message %s: another process has taken this attempt", message_id)
-        return None
     msg = IncomingMessage(
         channel=row.channel,
         channel_update_id=row.channel_update_id,
@@ -216,13 +250,8 @@ def retry_message(
     )
     log.info("retrying message %s (attempt %s)", message_id, row.retries + 1)
     reply = _run(app, msg, member, message_id, api, conn, notify=False, retry=True)
-    if reply.status in {"ok", "refused"}:
-        sender = app.senders.get(row.channel)
-        if sender is not None:
-            try:
-                sender(row.chat_id, reply.text)
-            except Exception:
-                log.exception("could not deliver the retried reply for message %s", message_id)
+    if reply is not None and reply.out_message_id is not None:
+        deliver(app, reply.out_message_id)
     return reply
 
 
@@ -248,7 +277,21 @@ def _think(
         exclude_message_id=inbound_id,
         exclude_replies_to=inbound_id if retry else None,
     )
-    current = render_user_turn(member.display_name, msg.text, app.clock)
+    origin = messages.get(conn, inbound_id)
+    received_clock = (
+        FixedClock(
+            datetime.fromisoformat(origin.received_at), app.clock.tz, southern=app.clock.southern
+        )
+        if origin
+        else app.clock
+    )
+    current = render_user_turn(member.display_name, msg.text, received_clock)
+    if retry:
+        current.append(
+            "Processing retry now: "
+            + app.clock.describe()
+            + ". Resolve relative dates from the original message time above."
+        )
     if retry:
         write_tools = {spec.name for spec in app.registry.specs() if spec.writes}
         note = render_retry_note(calls.tool_calls_for_message(conn, inbound_id), write_tools)

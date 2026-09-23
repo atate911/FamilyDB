@@ -440,7 +440,12 @@ def chat(
     if reply is None:
         typer.echo("(duplicate message ignored)")
         return
-    typer.echo(reply.text)
+    if reply.out_message_id is not None:
+        from familydb.delivery import deliver
+
+        deliver(application, reply.out_message_id, lambda _chat, text: typer.echo(text))
+    else:
+        typer.echo(reply.text)
     if reply.status in {"failed", "unknown_sender"}:
         if reply.status == "failed" and not application.settings.anthropic_api_key:
             typer.echo("hint: ANTHROPIC_API_KEY is not set (see .env.example)", err=True)

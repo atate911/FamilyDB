@@ -34,8 +34,8 @@
   {% if thinking %}
     <p class="muted waiting">Thinking about the last message. This page will show the answer
       when it arrives.</p>
-  {% elif stalled %}
-    <p class="error">{{ stalled_note }}</p>
+  {% elif note %}
+    <p class="{{ 'error' if again else 'muted waiting' }}">{{ note }}</p>
   {% endif %}
 
   {% if error %}<p class="error">{{ error }}</p>{% endif %}

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import logging
 from contextlib import closing
+from datetime import datetime, timedelta
 from typing import Any
 
 from flask import (
@@ -28,8 +29,10 @@ from flask import (
 
 from familydb.app import App
 from familydb.channels.web import DEFAULT_CHAT, WebChat
+from familydb.config import Settings
 from familydb.store import members as member_store
 from familydb.store import messages as message_store
+from familydb.store.messages import Message
 from familydb.web import auth, views
 
 log = logging.getLogger(__name__)
@@ -49,11 +52,18 @@ REFRESH_SECONDS = 3
 # can scroll a page, and a chat read from the top is a chat read backwards.
 LATEST = "latest"
 NOBODY = "Say who is asking."
-NO_FAMILY = "There is nobody in the family list yet. Add someone with `familydb member add`."
-STALLED = (
-    "That message was never answered: the bot was probably restarted while it was thinking. "
-    "Send it again."
+NO_FAMILY = "There is nobody in the family list yet. Add someone on the Family page."
+# While a message a restart interrupted waits for the retry job, the page asks again this
+# often: nothing is running yet, so the three-second pace would only be noise.
+RETRY_REFRESH_SECONDS = 30
+# How long to keep saying "it will be retried" before admitting it will not: every attempt the
+# settings allow, a retry interval apart, and a little slack for the job's own schedule.
+RETRY_SLACK_MINUTES = 5
+RETRYING = (
+    "That message was interrupted, probably by a restart. It will be tried again automatically "
+    "within a few minutes, and the answer will appear here."
 )
+LOST = "That message was not answered. Send it again if it still matters."
 
 
 def _app() -> App:
@@ -70,6 +80,31 @@ def _who(names: list[str]) -> str | None:
     if chosen in names:
         return chosen
     return names[0] if len(names) == 1 else None
+
+
+def waiting_on(
+    last: Message | None, answered: set[int], *, busy: bool, now: datetime, settings: Settings
+) -> str | None:
+    """What the newest message is waiting for: None, "thinking", "retrying" or "lost".
+
+    Thinking is a turn running now, from the page or from the retry job. A message nothing is
+    running for is one a restart interrupted; the retry job picks those up, so for as long as
+    it still has attempts left the page says so and checks back now and then. After that the
+    page stops promising and hands the text back.
+    """
+    if last is None or last.direction != "in" or last.id in answered:
+        return None
+    if busy:
+        return "thinking"
+    received = datetime.fromisoformat(last.received_at.replace("Z", "+00:00"))
+    window = timedelta(
+        minutes=settings.retry_interval_minutes * (settings.retry_max_attempts + 1)
+        + RETRY_SLACK_MINUTES
+    )
+    attempts_left = not last.give_up and last.retries < settings.retry_max_attempts
+    if attempts_left and now - received < window:
+        return "retrying"
+    return "lost"
 
 
 def page(*, error: str | None = None, typed: str | None = None, status: int = 200) -> Any:
@@ -94,25 +129,23 @@ def page(*, error: str | None = None, typed: str | None = None, status: int = 20
         )
         for message in thread
     ]
-    # A message nothing has answered, with nothing thinking about it, is one whose turn died
-    # with the process. Saying so beats refreshing for ever, and the text comes back in the box.
     last = thread[-1] if thread else None
-    stalled = last is not None and last.direction == "in" and last.id not in answered
+    state = waiting_on(last, answered, busy=thinking, now=app.clock.now(), settings=app.settings)
+    refresh = {"thinking": REFRESH_SECONDS, "retrying": RETRY_REFRESH_SECONDS}.get(state or "")
     return (
         render_template(
             "chat.html",
             lines=lines,
             who=_who([member.display_name for member in family]),
             family=[member.display_name for member in family],
-            thinking=thinking,
-            stalled=stalled and not thinking,
-            again=last.text if stalled and not thinking and last else None,
+            thinking=state == "thinking",
+            note={"retrying": RETRYING, "lost": LOST}.get(state or ""),
+            again=last.text if state == "lost" and last else None,
             error=error or (NO_FAMILY if not family else None),
             typed=typed,
-            refresh=REFRESH_SECONDS if thinking else None,
+            refresh=refresh,
             here=url_for("chat.show", _anchor=LATEST),
             latest=LATEST,
-            stalled_note=STALLED,
         ),
         status,
     )

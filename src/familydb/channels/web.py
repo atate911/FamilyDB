@@ -21,8 +21,10 @@ from uuid import uuid4
 from familydb.agent.loop import MessagesAPI
 from familydb.app import App
 from familydb.channels.base import IncomingMessage
+from familydb.dates import utc_iso
+from familydb.delivery import deliver
 from familydb.pipeline import handle_incoming
-from familydb.store import members
+from familydb.store import members, messages
 
 log = logging.getLogger(__name__)
 
@@ -52,14 +54,6 @@ def incoming(text: str, member_name: str, chat_id: str = DEFAULT_CHAT) -> Incomi
     )
 
 
-def delivered(_chat_id: str, _text: str) -> None:
-    """Deliver a reply to the page, which the pipeline has already done by storing it.
-
-    Registered as this channel's sender all the same. A channel with no sender is one the retry
-    job will not retry and the digest will not write to, and both of those should work here.
-    """
-
-
 class WebChat:
     """What this process is thinking about, and how to start it thinking about something else.
 
@@ -73,12 +67,16 @@ class WebChat:
         self._api = api  # a test's fake model; the real one is chosen per turn from the settings
         self._running: dict[str, threading.Thread] = {}
         self._lock = threading.Lock()
-        app.senders[CHANNEL] = delivered
 
     def busy(self, chat_id: str = DEFAULT_CHAT) -> bool:
-        """Whether a turn for this chat is being thought about here and now."""
+        """Whether a turn for this chat is being thought about, here or by the retry job."""
         with self._lock:
-            return self._alive(chat_id)
+            if self._alive(chat_id):
+                return True
+        # The retry job picks up a message a restart interrupted, on its own thread and under
+        # a claim; that is a turn in this chat as much as one started from the page.
+        with closing(self.app.connect()) as conn:
+            return messages.claimed_in_chat(conn, chat_id, now=utc_iso(self.app.clock.now()))
 
     def _alive(self, chat_id: str) -> bool:
         """Caller holds the lock. Forgets a thread that has finished, so the table stays small."""
@@ -106,6 +104,8 @@ class WebChat:
         with closing(self.app.connect()) as conn:
             if members.find_by_name(conn, member_name) is None:
                 return UNKNOWN_MEMBER.format(name=member_name)
+            if messages.claimed_in_chat(conn, chat_id, now=utc_iso(self.app.clock.now())):
+                return BUSY
         with self._lock:
             if self._alive(chat_id):
                 return BUSY
@@ -130,8 +130,14 @@ class WebChat:
             # here is the database being unreachable, which is worth a log and nothing else.
             log.exception("the web chat turn in %s could not run", chat_id)
             return
-        if reply is not None and reply.status == "unknown_sender":
+        if reply is None:
+            return
+        if reply.status == "unknown_sender":
             log.warning("web chat: %s is no longer in the family", member_name)
+        elif reply.out_message_id is not None:
+            # The reply is already on the page; this only marks it sent, so the delivery job
+            # has nothing to find.
+            deliver(self.app, reply.out_message_id)
 
     def wait(self, timeout: float = 30.0) -> bool:
         """Block until nothing is being thought about. True when it went quiet in time."""

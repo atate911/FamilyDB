@@ -53,14 +53,12 @@ def test_only_one_process_can_take_a_retry(settings, clock, conn, family) -> Non
     # replies scripted would raise if it were asked for one.
     messages.reset_retries(conn)
     lost = fakes.FakeMessagesAPI()
-    from familydb import pipeline
+    from familydb.delivery import lease
 
-    original = pipeline.messages.claim_retry
-    try:
-        pipeline.messages.claim_retry = lambda *args, **kwargs: False
+    with lease(app, conn, message_id) as owned:
+        assert owned
         assert retry_message(app, message_id, api=lost, conn=conn) is None
-    finally:
-        pipeline.messages.claim_retry = original
+    assert lost.requests == []
 
 
 def test_retries_are_bounded(settings, clock, conn, family) -> None:
@@ -162,8 +160,8 @@ def test_retry_tells_the_model_what_already_ran(settings, clock, conn, family) -
     assert [m["role"] for m in request] == ["user"]  # the failure notice is not replayed
     blocks = request[0]["content"]
     assert blocks[1]["text"] == "[Sam] we should try the ramen place"
-    assert "add_idea (#1)" in blocks[2]["text"]
-    assert "must not be repeated" in blocks[2]["text"]
+    assert "add_idea (#1)" in blocks[-1]["text"]
+    assert "must not be repeated" in blocks[-1]["text"]
 
 
 # --- enrichment ---------------------------------------------------------------------------------

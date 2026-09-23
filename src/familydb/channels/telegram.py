@@ -19,6 +19,7 @@ from telegram.ext import (
 
 from familydb.app import App
 from familydb.channels.base import IncomingMessage
+from familydb.delivery import deliver
 from familydb.pipeline import handle_incoming
 
 log = logging.getLogger(__name__)
@@ -128,6 +129,7 @@ class TelegramChannel:
             await update.effective_message.reply_text(START_TEXT)
 
     async def on_message(self, update: Any, context: Any) -> None:
+        await asyncio.to_thread(self.app.refresh)
         chat = update.effective_chat
         bot = context.bot
         in_group = chat is not None and chat.type in GROUP_TYPES
@@ -154,8 +156,20 @@ class TelegramChannel:
         reply = await asyncio.to_thread(handle_incoming, self.app, msg)
         if reply is None:
             return
-        for chunk in split_text(reply.text):
-            await update.effective_message.reply_text(chunk)
+
+        async def send_reply():
+            for chunk in split_text(reply.text):
+                await update.effective_message.reply_text(chunk)
+
+        if reply.out_message_id is None:
+            await send_reply()
+        else:
+            loop = asyncio.get_running_loop()
+
+            def sender(_chat_id, _text):
+                asyncio.run_coroutine_threadsafe(send_reply(), loop).result(timeout=120)
+
+            await asyncio.to_thread(deliver, self.app, reply.out_message_id, sender)
 
     def send_text_threadsafe(self, chat_id: str, text: str) -> None:
         """Deliver a message from another thread (background jobs)."""
