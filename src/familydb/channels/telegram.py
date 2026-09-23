@@ -4,10 +4,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import threading
+import time
+from collections.abc import Callable
 from typing import Any
 
 from telegram import Update
 from telegram.constants import ChatAction, ChatType, MessageLimit
+from telegram.error import InvalidToken, NetworkError
 from telegram.ext import (
     Application,
     ApplicationBuilder,
@@ -110,6 +114,7 @@ class TelegramChannel:
         if not token:
             raise RuntimeError("TELEGRAM_BOT_TOKEN is not set")
         self._loop: asyncio.AbstractEventLoop | None = None
+        self.username: str | None = None
         self.application: Application = (
             ApplicationBuilder().token(token).post_init(self._post_init).build()
         )
@@ -122,6 +127,7 @@ class TelegramChannel:
         self._loop = asyncio.get_running_loop()
         self.app.senders[CHANNEL] = self.send_text_threadsafe
         me = await application.bot.get_me()
+        self.username = me.username
         log.info("telegram: polling as @%s", me.username)
 
     async def on_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -181,9 +187,126 @@ class TelegramChannel:
             )
             future.result(timeout=30)
 
+    async def start(self) -> None:
+        """Start polling inside the running event loop. Raises InvalidToken for a bad token."""
+        await self.application.initialize()  # asks Telegram who the bot is: a bad token fails here
+        await self._post_init(self.application)
+        await self.application.start()
+        assert self.application.updater is not None
+        await self.application.updater.start_polling(
+            allowed_updates=[Update.MESSAGE], bootstrap_retries=-1
+        )
+
+    async def stop(self) -> None:
+        if self.app.senders.get(CHANNEL) == self.send_text_threadsafe:
+            self.app.senders.pop(CHANNEL, None)
+        updater = self.application.updater
+        if updater is not None and updater.running:
+            await updater.stop()
+        if self.application.running:
+            await self.application.stop()
+        await self.application.shutdown()
+
     def run(self) -> None:
         """Block until SIGINT or SIGTERM. python-telegram-bot installs the signal handlers."""
         # bootstrap_retries=-1: a server that boots before its network is up, or a Telegram
         # blip at the wrong moment, must not end the process. Once polling is up the updater
         # already retries forever, so this covers the one gap that took the bot down.
         self.application.run_polling(allowed_updates=[Update.MESSAGE], bootstrap_retries=-1)
+
+
+class TelegramSupervisor:
+    """Keeps the Telegram channel running with whatever token the settings hold now.
+
+    A token added, replaced or cleared on the settings page takes effect within a few seconds,
+    with no restart: the old connection is closed and a new one opened. A token Telegram refuses
+    is not tried again until it changes; one that fails only because Telegram cannot be reached
+    is tried again every `RETRY_SECONDS`.
+    """
+
+    CHECK_SECONDS = 5.0
+    RETRY_SECONDS = 30.0
+
+    def __init__(
+        self,
+        app: App,
+        *,
+        make_channel: Callable[[App, str], Any] | None = None,
+        check_seconds: float | None = None,
+    ) -> None:
+        self.app = app
+        self.make_channel = make_channel or (lambda app, token: TelegramChannel(app, token=token))
+        self.check_seconds = check_seconds if check_seconds is not None else self.CHECK_SECONDS
+        self.state: str = "off"
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
+
+    def start(self) -> None:
+        self._thread = threading.Thread(target=self._run, name="familydb-telegram", daemon=True)
+        self._thread.start()
+
+    def stop(self, timeout: float = 30.0) -> None:
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout)
+
+    def _run(self) -> None:
+        try:
+            asyncio.run(self._watch())
+        except Exception:
+            log.exception("telegram: the channel supervisor stopped unexpectedly")
+
+    def _set(self, state: str) -> None:
+        self.state = state
+        self.app.channel_states[CHANNEL] = state
+
+    async def _watch(self) -> None:
+        running: Any = None
+        token: str | None = None
+        refused = False
+        retry_at = 0.0
+        while not self._stop.is_set():
+            await asyncio.to_thread(self.app.refresh)
+            wanted = self.app.settings.telegram_bot_token or None
+            if wanted != token:
+                if running is not None:
+                    await running.stop()
+                    running = None
+                    log.info("telegram: the token changed on the settings page; reconnecting")
+                token, refused, retry_at = wanted, False, 0.0
+                if token is None:
+                    self._set("off")
+            if token and running is None and not refused and time.monotonic() >= retry_at:
+                running, refused = await self._open(token)
+                if running is None and not refused:
+                    retry_at = time.monotonic() + self.RETRY_SECONDS
+            await asyncio.to_thread(self._stop.wait, self.check_seconds)
+        if running is not None:
+            await running.stop()
+        self._set("off")
+
+    async def _open(self, token: str) -> tuple[Any, bool]:
+        """A started channel, or None and whether Telegram refused the token outright."""
+        channel = self.make_channel(self.app, token)
+        try:
+            await channel.start()
+        except InvalidToken:
+            log.error("telegram: Telegram refused the bot token; replace it on the settings page")
+            self._set("the token was refused by Telegram")
+            await _quietly_stop(channel)
+            return None, True
+        except NetworkError as exc:
+            log.warning("telegram: cannot reach Telegram (%s); trying again shortly", exc)
+            self._set("cannot reach Telegram; trying again")
+            await _quietly_stop(channel)
+            return None, False
+        name = getattr(channel, "username", None)
+        self._set(f"connected as @{name}" if name else "connected")
+        return channel, False
+
+
+async def _quietly_stop(channel: Any) -> None:
+    try:
+        await channel.stop()
+    except Exception:
+        log.debug("telegram: tidying up a channel that did not start", exc_info=True)

@@ -677,3 +677,17 @@ def test_lookups_work_on_gemini_too(settings, clock, conn, family) -> None:
         "skip_place",
     ]
     assert "google_search" in groups[1]  # it can search and hand back in the same turn
+
+
+def test_a_schedule_on_another_clock_is_a_different_schedule() -> None:
+    from zoneinfo import ZoneInfo
+
+    from apscheduler.triggers.cron import CronTrigger
+
+    from familydb.jobs.scheduler import same_schedule
+
+    here = CronTrigger(hour=18, timezone=ZoneInfo("America/Vancouver"))
+    again = CronTrigger(hour=18, timezone=ZoneInfo("America/Vancouver"))
+    there = CronTrigger(hour=18, timezone=ZoneInfo("Europe/London"))
+    assert same_schedule(here, again)
+    assert not same_schedule(here, there)

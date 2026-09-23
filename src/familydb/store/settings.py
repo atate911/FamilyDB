@@ -38,6 +38,7 @@ BEHAVIOUR = (
     "prompt_idea_limit",
     "history_limit",
     "history_hours",
+    "family_tz",
     "home_area",
     "home_lat",
     "home_lon",

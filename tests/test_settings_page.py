@@ -327,3 +327,10 @@ def test_a_pinned_key_cannot_be_rotated_from_the_page(settings, clock, conn, fam
         "/settings/sign-out-everyone", data={"csrf": _token(client), "password": PASSWORD}
     )
     assert response.status_code == 409 and "WEB_SECRET_KEY" in response.text
+
+
+def test_the_timezone_is_set_on_the_page(page) -> None:
+    page.post("/settings", data=_whole_form(page, family_tz="Europe/London"))
+    assert page.app.settings.tz == "Europe/London"
+    refused = page.post("/settings", data=_whole_form(page, family_tz="Mars/Olympus_Mons"))
+    assert refused.status_code == 400 and page.app.settings.tz == "Europe/London"

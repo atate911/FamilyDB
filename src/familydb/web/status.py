@@ -92,11 +92,15 @@ def keys(app: App, stored: dict[str, Any]) -> list[dict[str, Any]]:
         )
         for name in providers.NAMES
     ]
+    telegram = _where("telegram_bot_token", live, stored)
+    state = app.channel_states.get("telegram")
+    if live.telegram_bot_token and state:
+        telegram = f"{telegram}; {state}"
     rows.append(
         _row(
             "Telegram bot token",
-            bool(live.telegram_bot_token),
-            _where("telegram_bot_token", live, stored),
+            bool(live.telegram_bot_token) and not (state or "").startswith(("the token", "cannot")),
+            telegram,
         )
     )
     return rows

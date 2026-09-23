@@ -93,6 +93,10 @@ def same_schedule(current: BaseTrigger, wanted: BaseTrigger) -> bool:
     """
     if type(current) is not type(wanted):
         return False
+    # A cron trigger's text leaves its timezone out, so a family that moves, or corrects its
+    # timezone on the settings page, would otherwise keep its digest on the old clock.
+    if str(getattr(current, "timezone", "")) != str(getattr(wanted, "timezone", "")):
+        return False
     if isinstance(wanted, IntervalTrigger):
         return current.interval == wanted.interval  # type: ignore[attr-defined]
     return str(current) == str(wanted)

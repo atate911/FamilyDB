@@ -222,6 +222,12 @@ GROUPS: tuple[tuple[str, str, tuple[Field, ...]], ...] = (
         "Home",
         "Where the family is, which decides the weather, the travel estimates and what is nearby.",
         (
+            field(
+                "family_tz",
+                "Timezone",
+                "An IANA name such as America/Vancouver. Dates, the digest and follow-ups "
+                "keep this clock.",
+            ),
             field("home_area", "Home area", "In words, as you would tell someone: town and state."),
             field("home_lat", "Latitude", "Negative south of the equator."),
             field("home_lon", "Longitude", "Negative west of Greenwich."),

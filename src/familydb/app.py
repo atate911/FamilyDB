@@ -56,6 +56,8 @@ class App:
         # sender is here rather than on the page so a web message can be retried, and a web
         # digest sent, by a process that is not serving the page.
         self.senders: dict[str, Callable[[str, str], None]] = {"web": lambda _chat, _text: None}
+        # What each long-running channel last said about itself, for the status page.
+        self.channel_states: dict[str, str] = {}
         # Web discovery results per window, kept for a while (see suggest/discover.py).
         self.discover_cache: dict[str, Any] = {}
         self.clock = clock or SystemClock(settings.tzinfo, southern=settings.southern_hemisphere)

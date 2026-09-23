@@ -532,23 +532,23 @@ def run() -> None:
         from familydb.web.server import serve_in_thread
 
         stop_web = serve_in_thread(application)
-    try:
-        if settings.telegram_bot_token:
-            from familydb.channels.telegram import TelegramChannel
+    # Telegram is watched rather than started once: a token added or changed on the settings
+    # page takes effect in seconds, without a restart.
+    from familydb.channels.telegram import TelegramSupervisor
 
-            channel = TelegramChannel(application)
-            log.info("starting the Telegram channel (long polling)")
-            channel.run()
-        else:
-            _wait_for_stop()
+    telegram = TelegramSupervisor(application)
+    telegram.start()
+    try:
+        _wait_for_stop(quiet=bool(settings.telegram_bot_token) or stop_web is not None)
     finally:
+        telegram.stop()
         if stop_web is not None:
             stop_web()
         scheduler.shutdown(wait=False)
     log.info("stopped")
 
 
-def _wait_for_stop() -> None:
+def _wait_for_stop(*, quiet: bool = False) -> None:
     stop = threading.Event()
 
     def _stop(signum: int, _frame: object) -> None:
@@ -557,7 +557,11 @@ def _wait_for_stop() -> None:
 
     signal.signal(signal.SIGTERM, _stop)
     signal.signal(signal.SIGINT, _stop)
-    log.info("no chat channel configured; waiting. Use `familydb chat` or `familydb repl`.")
+    if not quiet:
+        log.info(
+            "no chat channel yet; waiting. Add a Telegram token or turn the web page on; "
+            "meanwhile `familydb chat` and `familydb repl` work."
+        )
     stop.wait()
 
 
