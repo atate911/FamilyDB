@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from contextlib import closing
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from flask import (
@@ -22,9 +22,11 @@ from familydb.app import App
 from familydb.availability import calendar_available
 from familydb.store import ideas as idea_store
 from familydb.store import members as member_store
+from familydb.store import messages as message_store
 from familydb.store import outcomes as outcome_store
 from familydb.store import places as place_store
 from familydb.store import plans as plan_store
+from familydb.store import tasks as task_store
 from familydb.store.ideas import KIND_SUGGESTIONS
 from familydb.web import agenda, views
 from familydb.web import status as status_page
@@ -128,9 +130,11 @@ def ideas() -> str:
             limit=LIST_LIMIT,
         )
         kinds, people = _choices(idea_store.list_all(conn, include_dropped=True))
+        capture_people = member_store.list_all(conn)
     filtered = bool(query or kind or status or who)
     return render_template(
         "ideas.html",
+        capture_people=capture_people,
         rows=[views.idea_row(idea, app.settings.tzinfo) for idea in found],
         kinds=kinds,
         people=people,
@@ -151,6 +155,9 @@ def idea(idea_id: int) -> str:
         record = idea_store.get(conn, idea_id)
         if record is None:
             abort(404)
+        original = (
+            message_store.get(conn, record.source_message_id) if record.source_message_id else None
+        )
         place = place_store.get(conn, record.place_id) if record.place_id else None
         outcomes = outcome_store.list_for_idea(conn, idea_id)
         plans = plan_store.for_idea(conn, idea_id)
@@ -158,6 +165,7 @@ def idea(idea_id: int) -> str:
     return render_template(
         "idea.html",
         idea=record,
+        original_message=original.text if original else None,
         today=today.isoformat(),
         ratings=RATINGS,
         can_schedule=calendar_available(settings),
@@ -296,4 +304,35 @@ def plans_month() -> str:
         this_month=first == today.replace(day=1),
         source=seen.source,
         source_note=views.AGENDA_NOTES[seen.source],
+    )
+
+
+@bp.get("/tasks")
+def tasks() -> str:
+    app = _app()
+    status = request.args.get("status", "open")
+    if status not in {"open", "done", "cancelled", "all"}:
+        abort(400)
+    with closing(app.connect()) as conn:
+        rows = task_store.list_all(conn, status=status, query=request.args.get("q", ""))
+        people = member_store.list_all(conn)
+    for row in rows:
+        row["due_input"] = (
+            datetime.fromisoformat(row["due_at"])
+            .astimezone(app.settings.tzinfo)
+            .strftime("%Y-%m-%dT%H:%M")
+            if row["due_at"]
+            else ""
+        )
+        if row["reminder"]:
+            row["reminder"]["local_time"] = views.local_moment(
+                row["reminder"]["remind_at"], app.settings.tzinfo
+            )
+    return render_template(
+        "tasks.html",
+        tasks=rows,
+        people=people,
+        status=status,
+        zone=app.settings.tz,
+        query=request.args.get("q", ""),
     )

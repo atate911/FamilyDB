@@ -54,6 +54,7 @@ def run(ctx: ToolContext, args: SuggestInput) -> SuggestResult:
     window, label = resolve_window(args, today)
     context = build_context(ctx, window)
     constraints = Constraints(
+        idea_ids=list(args.idea_ids),
         participants=list(args.participants),
         max_cost_level=args.max_cost_level,
         setting=args.setting,
@@ -73,7 +74,9 @@ def run(ctx: ToolContext, args: SuggestInput) -> SuggestResult:
             reasons=["family said they would not repeat this"],
         )
         for idea in all_ideas
-        if idea.id in excluded and idea.status != "dropped"
+        if idea.id in excluded
+        and idea.status != "dropped"
+        and (not args.idea_ids or idea.id in args.idea_ids)
     )
     evaluated, stale_ids = evaluate(ctx.conn, kept, context, constraints, ctx.settings, ctx.clock)
     skipped = list(context.skipped)

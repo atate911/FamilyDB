@@ -686,6 +686,8 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
     assert dispatched == {
         "add_idea",
         "update_idea",
+        "add_task",
+        "update_task",
         "record_outcome",
         "create_event",
         "update_event",

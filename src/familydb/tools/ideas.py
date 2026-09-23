@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from familydb.agent.render import render_idea_line
 from familydb.errors import ToolError
-from familydb.store import ideas, members, outcomes, places
+from familydb.store import ideas, members, messages, outcomes, places
 from familydb.store.db import transaction
 from familydb.store.ideas import KIND_SUGGESTIONS
 from familydb.tools.registry import ToolContext, tool
@@ -190,7 +190,9 @@ def describe_idea(ctx: ToolContext, args: DescribeIdeaInput) -> dict[str, Any]:
     if idea is None:
         raise ToolError(f"no idea #{args.id}")
     place = places.get(ctx.conn, idea.place_id) if idea.place_id else None
+    original = messages.get(ctx.conn, idea.source_message_id) if idea.source_message_id else None
     return {
+        "original_message": original.text if original else None,
         "idea": idea.model_dump(mode="json"),
         "place": place.model_dump(mode="json") if place else None,
         "outcomes": [o.model_dump(mode="json") for o in outcomes.list_for_idea(ctx.conn, idea.id)],

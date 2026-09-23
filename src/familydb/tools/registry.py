@@ -40,8 +40,9 @@ class ToolContext:
     discover_cache: Any = None  # the App-level cache of discovery results
     allowed_tools: frozenset[str] | None = None
     worker_idea_id: int | None = None
-    operation_id: str | None = None  # durable browser calendar operation, not model input
+    operation_id: str | None = None  # durable browser write operation, not model input
     idea_revision: str | None = None  # browser optimistic concurrency precondition
+    task_revision: int | None = None
     scratch: dict[str, Any] = field(default_factory=dict)  # per-turn hand-back area
 
     def now_iso(self) -> str:
@@ -203,7 +204,7 @@ class ToolRegistry:
             for key in ("id", "duplicate_of"):
                 if key in result:
                     summary[key] = result[key]
-            for key in ("plan", "idea", "outcome", "place", "suggestion"):
+            for key in ("plan", "idea", "outcome", "place", "suggestion", "task"):
                 nested = result.get(key)
                 if isinstance(nested, dict) and "id" in nested:
                     summary[f"{key}_id"] = nested["id"]

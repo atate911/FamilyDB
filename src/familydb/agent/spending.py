@@ -29,6 +29,8 @@ REPLY = (
 def completed_reply(actions: list[dict[str, Any]]) -> str:
     """Explain durable progress without spending another model call to acknowledge it."""
     labels = {
+        "add_task": "Saved task",
+        "update_task": "Updated task",
         "create_event": "Created calendar plan",
         "update_event": "Updated calendar plan",
         "delete_event": "Cancelled calendar plan",
@@ -44,7 +46,7 @@ def completed_reply(actions: list[dict[str, Any]]) -> str:
         identity = next(
             (
                 action[k]
-                for k in ("plan_id", "idea_id", "id", "outcome_id")
+                for k in ("task_id", "plan_id", "idea_id", "id", "outcome_id")
                 if action.get(k) is not None
             ),
             None,

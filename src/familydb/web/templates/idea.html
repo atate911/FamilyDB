@@ -23,6 +23,9 @@
     </p>
     {% if idea.description %}<p>{{ idea.description }}</p>{% endif %}
 
+    {% if original_message %}<details><summary>Original thought</summary>
+      <p class="said-text">{{ original_message }}</p>
+    </details>{% endif %}
     <dl class="facts">
       <dt>For</dt><dd>{{ row.who }}</dd>
       {% if row.where %}<dt>Where</dt><dd>{{ row.where }}</dd>{% endif %}

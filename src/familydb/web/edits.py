@@ -88,10 +88,11 @@ def run(name: str, values: dict[str, Any]) -> tuple[dict[str, Any] | None, str |
                 + hashlib.sha256(
                     f"{session.get(auth.CSRF_KEY, '')}:{request.form['once']}".encode()
                 ).hexdigest()
-                if name == "create_event" and request.form.get("once")
+                if name in {"create_event", "add_task"} and request.form.get("once")
                 else None
             ),
             idea_revision=request.form.get("revision") if name == "update_idea" else None,
+            task_revision=int(request.form["revision"]) if name == "update_task" else None,
         )
         result = app.registry.dispatch(name, values, ctx)
     payload = json.loads(result.content)
@@ -312,3 +313,47 @@ def cancel_plan(plan_id: int) -> Response:
     _, complaint = run("delete_event", {"plan_id": plan_id})
     _say(complaint or CANCELLED)
     return _back("web.plans")
+
+
+def task_fields() -> dict[str, Any]:
+    return {
+        "title": _text(request.form, "title"),
+        "notes": _text(request.form, "notes"),
+        "owner": _text(request.form, "owner") or None,
+        "due_at": _text(request.form, "due_at") or None,
+        "preferred_window": _text(request.form, "preferred_window"),
+        "remind_at": _text(request.form, "remind_at") or None,
+    }
+
+
+@bp.post("/tasks/new")
+@once
+def add_task() -> Response:
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+    elif not request.form.get("once"):
+        _say("Reload the form before saving.")
+    else:
+        result, complaint = run("add_task", task_fields())
+        _say(complaint or f"Saved task #{result['task']['id']}. Reminders appear in Chat.")
+    return _back("web.tasks")
+
+
+@bp.post("/task/<int(max=9223372036854775807):task_id>/edit")
+@once
+def edit_task(task_id: int) -> Response:
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+    elif not _text(request.form, "revision").isdigit():
+        _say("Reload this task before editing.")
+    else:
+        values = task_fields()
+        values.update(
+            task_id=task_id,
+            status=_text(request.form, "status"),
+            clear_due=not bool(values["due_at"]),
+            clear_reminder=bool(request.form.get("clear_reminder")),
+        )
+        result, complaint = run("update_task", values)
+        _say(complaint or f"Updated task #{result['task']['id']}.")
+    return _back("web.tasks")

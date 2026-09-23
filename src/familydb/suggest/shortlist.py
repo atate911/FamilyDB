@@ -197,6 +197,8 @@ def shortlist(
         )
 
     for idea in all_ideas:
+        if constraints.idea_ids and idea.id not in constraints.idea_ids:
+            continue
         if idea.status == "dropped":
             continue
         reason = _status_reason(idea, context.today)
