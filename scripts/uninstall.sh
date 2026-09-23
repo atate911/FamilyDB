@@ -181,13 +181,23 @@ if [ "$PURGE" = 1 ] && [ "$BACKUP" = 1 ] && [ -f "$DB" ]; then
     note "would back the database up to ${dest}"
   else
     as_root mkdir -p "$BACKUP_DIR"
-    # The online backup API where the venv still exists, a copy where it does not.
+    # Never copy a main SQLite file alone: committed data may still be in its WAL.
     if [ -x "${TARGET}/.venv/bin/familydb" ] \
        && as_root env FAMILYDB_PATH="$DB" "${TARGET}/.venv/bin/familydb" db backup "$dest" >/dev/null 2>&1; then
       ok "Backup written with SQLite's backup API."
     else
-      as_root cp "$DB" "$dest"
-      ok "Backup copied."
+      have python3 || die "Python 3 is needed for a safe backup; purge stopped"
+      as_root python3 - "$DB" "$dest" <<'PY'
+import sqlite3, sys
+from contextlib import closing
+from pathlib import Path
+with closing(sqlite3.connect(Path(sys.argv[1]).as_uri() + '?mode=ro', uri=True)) as source:
+    with closing(sqlite3.connect(sys.argv[2])) as target:
+        source.backup(target)
+        if target.execute('PRAGMA quick_check').fetchone()[0] != 'ok':
+            raise SystemExit('Backup validation failed; purge stopped')
+PY
+      ok "Backup written with SQLite's backup API."
     fi
     as_root chmod 600 "$dest"
     say "  ${B}${dest}${OFF}"
@@ -214,6 +224,14 @@ fi
 
 # ---------------------------------------------------------------- removal ----
 head2 "Removing"
+
+# Remove only the schedule installed by maintain.sh; leave unrelated root jobs alone.
+if [ "$DRY_RUN" = 0 ] && have crontab; then
+  current_cron="$(as_root crontab -u root -l 2>/dev/null || true)"
+  if printf '%s\n' "$current_cron" | grep -q 'familydb-maintain-backup'; then
+    printf '%s\n' "$current_cron" | sed '/familydb-maintain-backup/d' | as_root crontab -u root -
+  fi
+fi
 
 # What an install puts there, and nothing else: a reinstall rebuilds every one of these.
 # `.cache` is uv's, which lands here because the service user's home is the install itself.

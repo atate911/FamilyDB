@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}{{ person.name }} · {{ site_title }}{% endblock %}
+{% block content %}
+  <h1>{{ person.name }}</h1>
+  <form class="panel form" method="post" action="{{ url_for('family.change', member_id=person.id) }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    <input type="hidden" name="once" value="{{ once_token() }}" />
+    {# What the profile was when this was drawn: a save on top of somebody else's is refused. #}
+    <input type="hidden" name="revision" value="{{ person.revision }}" />
+    <div class="field">
+      <label for="name">Name</label>
+      <input id="name" name="name" required maxlength="80" value="{{ person.name }}" />
+    </div>
+    <div class="field">
+      <label for="role">Role</label>
+      <select id="role" name="role">
+        {% for role in roles %}
+          <option value="{{ role }}" {{ 'selected' if role == person.role }}>{{ role }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="telegram_id">Telegram id</label>
+      <input id="telegram_id" name="telegram_id" inputmode="numeric"
+             value="{{ person.telegram_id or '' }}" placeholder="none" />
+      {% if person.elsewhere %}<span class="muted">Also known on {{ person.elsewhere }}.</span>{% endif %}
+    </div>
+    <div class="field">
+      <label for="active">On the list</label>
+      <select id="active" name="active">
+        <option value="yes" {{ 'selected' if person.active }}>yes, the bot talks to them</option>
+        <option value="no" {{ 'selected' if not person.active }}>no, switched off</option>
+      </select>
+    </div>
+    <div class="field wide actions">
+      <button type="submit">Save</button>
+      <a class="quiet" href="{{ url_for('family.show') }}">Cancel</a>
+    </div>
+  </form>
+  <p class="muted">Switching somebody off keeps everything they ever said and did; the bot just
+    stops answering them, including anything they sent that is still waiting.</p>
+{% endblock %}

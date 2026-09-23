@@ -26,6 +26,9 @@ class Message(BaseModel):
     processed_at: str | None = None
     retries: int = 0
     give_up: bool = False
+    claim_token: str | None = None
+    claim_until: str | None = None
+    delivered_at: str | None = None
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> Message:
@@ -117,6 +120,49 @@ def recent_for_chat(
     return [Message.from_row(row) for row in reversed(rows)]
 
 
+def claimed_in_chat(conn: sqlite3.Connection, chat_id: str, *, now: str) -> bool:
+    """Whether some worker holds a live claim on a message in this chat: a turn is running."""
+    row = conn.execute(
+        "SELECT 1 FROM messages WHERE chat_id = ? AND direction = 'in' AND claim_until > ? LIMIT 1",
+        (chat_id, now),
+    ).fetchone()
+    return row is not None
+
+
+def member_is_being_answered(conn: sqlite3.Connection, member_id: int, *, now: str) -> bool:
+    """Whether a worker holds a live claim on one of this member's messages."""
+    row = conn.execute(
+        "SELECT 1 FROM messages WHERE member_id = ? AND direction = 'in' AND claim_until > ? "
+        "LIMIT 1",
+        (member_id, now),
+    ).fetchone()
+    return row is not None
+
+
+def give_up_for_member(conn: sqlite3.Connection, member_id: int, *, now: str) -> int:
+    """Stop the retry job answering anything this member left unanswered. Returns how many."""
+    cur = conn.execute(
+        "UPDATE messages SET status = 'failed', error = 'member_inactive', processed_at = ?, "
+        "give_up = 1 WHERE member_id = ? AND direction = 'in' "
+        "AND status IN ('received', 'failed') AND give_up = 0",
+        (now, member_id),
+    )
+    return int(cur.rowcount)
+
+
+def last_for_chat(conn: sqlite3.Connection, chat_id: str, *, limit: int) -> list[Message]:
+    """The last `limit` messages in a chat, however old, oldest first.
+
+    What the page shows. The agent's own view of a chat is `recent_for_chat`, which also draws a
+    line under anything said long enough ago that the model should not be reading it again.
+    """
+    rows = conn.execute(
+        "SELECT * FROM messages WHERE chat_id = ? ORDER BY id DESC LIMIT ?",
+        (chat_id, limit),
+    ).fetchall()
+    return [Message.from_row(row) for row in reversed(rows)]
+
+
 def failed(conn: sqlite3.Connection, *, max_retries: int | None = None) -> list[Message]:
     """Failed inbound messages, oldest first, optionally only those still eligible for a retry."""
     sql = "SELECT * FROM messages WHERE status = 'failed' AND direction = 'in'"
@@ -125,6 +171,15 @@ def failed(conn: sqlite3.Connection, *, max_retries: int | None = None) -> list[
         sql += " AND retries < ? AND give_up = 0"
         params.append(max_retries)
     rows = conn.execute(sql + " ORDER BY id", params)
+    return [Message.from_row(row) for row in rows]
+
+
+def pending(conn: sqlite3.Connection, *, max_retries: int, now: str) -> list[Message]:
+    rows = conn.execute(
+        "SELECT * FROM messages WHERE direction = 'in' AND status IN ('received', 'failed') "
+        "AND give_up = 0 AND retries < ? AND (claim_until IS NULL OR claim_until <= ?) ORDER BY id",
+        (max_retries, now),
+    )
     return [Message.from_row(row) for row in rows]
 
 

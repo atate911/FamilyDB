@@ -95,6 +95,7 @@ def test_debug_prompt_prints_request(env: Path) -> None:
     assert "[Sam] what should we do?" in result.output
 
 
+@pytest.mark.skipif(os.name == "nt", reason="Windows terminate does not deliver POSIX SIGTERM")
 def test_run_command_waits_and_stops_on_sigterm(env: Path) -> None:
     proc = subprocess.Popen(
         [sys.executable, "-m", "familydb", "run"],

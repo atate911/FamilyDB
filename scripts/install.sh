@@ -51,6 +51,7 @@ Answers can be supplied as environment variables, which is what --non-interactiv
   PROVIDER  ANTHROPIC_API_KEY  OPENAI_API_KEY  GEMINI_API_KEY
   FAMILYDB_TZ  HOME_AREA  HOME_LAT  HOME_LON  WEATHER_UNITS
   TELEGRAM_BOT_TOKEN  WEB_ENABLED  WEB_HOST  WEB_PORT  WEB_PASSWORD  WEB_TOOLS_ENABLED
+  DIGEST_CHAT_ID
   ADMIN_NAME
 
 Examples
@@ -464,8 +465,10 @@ if [ "$KEEP_ENV" = 0 ]; then
 
   # --- the web page ---
   say ""
-  say "A web page lets you browse the ideas, the restaurants and the plans in a browser, see"
-  say "what the models have cost, and change the settings and the keys without editing a file."
+  say "A web page is the whole bot in a browser: chat with it, browse the ideas, the restaurants"
+  say "and the plans, add and change an idea, record how something went, put a plan on the"
+  say "calendar, see what the models have cost, and change the settings and the keys without"
+  say "editing a file. It is the way in when there is no Telegram token yet."
   if [ -z "${WEB_ENABLED:-}" ]; then
     if confirm "Turn the web page on?" no; then WEB_ENABLED=true; else WEB_ENABLED=false; fi
   fi
@@ -519,10 +522,26 @@ if [ "$KEEP_ENV" = 0 ]; then
     fi
   fi
 
+  # --- the weekly digest ---
+  # It needs somewhere to speak, and a Telegram group's chat id is not knowable until somebody
+  # has written in it. The page's own chat is knowable now, so a family with the page on can
+  # have the digest from the first Thursday and move it to Telegram later.
+  if [ -z "${DIGEST_CHAT_ID:-}" ] && [ "$WEB_ENABLED" = true ]; then
+    say ""
+    say "Every Thursday evening it can work out what to do at the weekend and post the answer."
+    say "Telegram's chat id is not knowable yet, but the page's chat is."
+    if confirm "Send the weekly digest to the web page for now?" yes; then
+      DIGEST_CHAT_ID=web
+    fi
+  fi
+  set_env DIGEST_CHAT_ID "${DIGEST_CHAT_ID:-}"
+
   # --- things nobody can know yet ---
   note ""
   note "Left empty on purpose, because they cannot be known until the bot is running:"
-  note "  DIGEST_CHAT_ID   the family group's chat id, for the weekly digest (RUNBOOK section 9)"
+  if [ -z "${DIGEST_CHAT_ID:-}" ]; then
+    note "  DIGEST_CHAT_ID   the family group's chat id, for the weekly digest (RUNBOOK section 9)"
+  fi
   note "  GOOGLE_CALENDAR_ID and the Google token, which need a browser (RUNBOOK section 5)"
 
   [ "$DRY_RUN" = 1 ] || chmod 600 "$ENV_FILE"
@@ -572,7 +591,7 @@ if [ "$have_members" = 0 ]; then
   if [ -n "$ADMIN_NAME" ]; then
     runfamilydb members add "$ADMIN_NAME" --role admin >/dev/null && ok "Added ${ADMIN_NAME} as an admin."
   fi
-  note "Add the rest with: familydb members add NAME --role member|kid"
+  note "Add the rest on the web page's Family page, or: familydb members add NAME --role member|kid"
   note "Anyone messaging on Telegram also needs --channel telegram --channel-user-id THEIR_ID,"
   note "which the bot tells them the first time they write (RUNBOOK section 4)."
 else
@@ -705,7 +724,7 @@ fi
 [ -z "${TELEGRAM_BOT_TOKEN:-}" ] && say "  · add a Telegram bot token to chat from your phones (RUNBOOK section 4)"
 [ -z "${HOME_LAT:-}" ] && say "  · add HOME_LAT and HOME_LON for the weather (RUNBOOK section 6)"
 say "  · connect Google Calendar from a machine with a browser (RUNBOOK section 5)"
-say "  · set DIGEST_CHAT_ID once the family group exists (RUNBOOK section 9)"
+[ -z "${DIGEST_CHAT_ID:-}" ] && say "  · set DIGEST_CHAT_ID once the family group exists (RUNBOOK section 9)"
 say ""
 say "What it costs to run: ${CLI} debug cost"
 say "Check it over:        ${CLI} doctor"

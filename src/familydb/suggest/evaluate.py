@@ -22,21 +22,34 @@ def _minutes(value: str) -> int:
     return int(hours) * 60 + int(minutes)
 
 
-def overlap_minutes(ranges: list[dict[str, str]], free: list[str]) -> int:
-    """How many minutes of the open ranges fall inside the free blocks."""
-    total = 0
+def overlap_minutes(ranges: list[dict[str, str]], free: list[str], travel: int = 0) -> int:
+    """Longest continuous opening within free time, allowing travel at both ends."""
+    blocks: list[tuple[int, int]] = []
+    for name, start, end in BLOCKS:
+        if name not in free:
+            continue
+        left, right = start.hour * 60 + start.minute, end.hour * 60 + end.minute
+        if blocks and blocks[-1][1] == left:
+            blocks[-1] = (blocks[-1][0], right)
+        else:
+            blocks.append((left, right))
+    intervals = []
     for entry in ranges:
         open_at = _minutes(entry["open"])
         close_at = _minutes(entry["close"])
         if close_at <= open_at:
             close_at = 24 * 60
-        for name, start, end in BLOCKS:
-            if name not in free:
-                continue
-            block_start = start.hour * 60 + start.minute
-            block_end = end.hour * 60 + end.minute
-            total += max(0, min(close_at, block_end) - max(open_at, block_start))
-    return total
+        for left, right in blocks:
+            a, b = max(open_at, left + travel), min(close_at, right - travel)
+            if a < b:
+                intervals.append((a, b))
+    merged: list[tuple[int, int]] = []
+    for a, b in sorted(intervals):
+        if merged and a <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(b, merged[-1][1]))
+        else:
+            merged.append((a, b))
+    return max((b - a for a, b in merged), default=0)
 
 
 def _hours_check(
@@ -68,12 +81,11 @@ def _hours_check(
         if day_context is None or not day_context.free_known:
             open_days.append(day)
         else:
-            overlap = overlap_minutes(ranges, free)
-            need = min(MIN_VISIT_MINUTES, item.idea.duration_min or MIN_VISIT_MINUTES)
+            overlap = overlap_minutes(ranges, free, place.travel_minutes or 0)
+            need = item.idea.duration_min or item.idea.duration_max or MIN_VISIT_MINUTES
             if overlap >= need:
                 open_days.append(day)
             elif overlap > 0:
-                open_days.append(day)
                 partial = True
             else:
                 continue
@@ -81,7 +93,11 @@ def _hours_check(
             hours_text = format_ranges(ranges)
     if not open_days:
         checks.open = "closed"
-        reasons.append("closed " + " and ".join(f"{d:%A}" for d in fits))
+        reasons.append(
+            "not enough continuous opening and free time"
+            if partial
+            else "closed " + " and ".join(f"{d:%A}" for d in fits)
+        )
         return [], True, False
     checks.open = "open"
     checks.hours = hours_text
@@ -166,8 +182,8 @@ def evaluate(
                     need = 2 * minutes + (idea.duration_min or MIN_VISIT_MINUTES)
                     checks.travel_fits = need <= max(spans)
                     if not checks.travel_fits:
-                        soft = True
-                        reasons.append("tight: the drive plus the visit barely fit the free time")
+                        hard_fail = True
+                        reasons.append("the drive plus the visit do not fit the free time")
 
         if item.weather == "ok" and (idea.setting == "outdoor" or idea.weather != "any"):
             reasons.append("weather looks fine")

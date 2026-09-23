@@ -6,6 +6,7 @@ The wording here is for people reading a page. The model's view of an idea lives
 
 from __future__ import annotations
 
+import calendar as months
 import json
 from datetime import UTC, date, datetime
 from typing import Any
@@ -13,12 +14,14 @@ from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 from familydb.store.ideas import Idea
+from familydb.store.messages import Message
 from familydb.store.outcomes import Outcome
 from familydb.store.places import Place
 from familydb.store.plans import Plan
 from familydb.suggest.shortlist import fmt_minutes
 from familydb.tools.places import DAYS, checked_days_ago, format_ranges, is_stale, open_on
 from familydb.tools.urls import clean_url
+from familydb.web.agenda import Entry
 
 DAY_NAMES = {
     "mon": "Monday",
@@ -67,6 +70,11 @@ def rating_text(idea: Idea) -> str | None:
     return f"done {times}, rated {idea.avg_rating:g}/10"
 
 
+def kind_text(kind: str) -> str:
+    """`day_trip` is how it is stored and how the model says it; nobody wants to read it."""
+    return kind.replace("_", " ")
+
+
 def details_text(idea: Idea) -> str:
     return DETAILS.get(idea.enrichment, idea.enrichment)
 
@@ -91,7 +99,7 @@ def idea_row(idea: Idea, tz: ZoneInfo) -> dict[str, Any]:
         # Links reach the page from chat and from pages the lookup worker read. Anything that is
         # not an ordinary web address is dropped here rather than put in an href.
         "url": clean_url(idea.url),
-        "kind": idea.kind,
+        "kind": kind_text(idea.kind),
         "status": idea.status,
         "where": idea.location_name,
         "who": participants_text(idea),
@@ -239,10 +247,81 @@ def plan_row(plan: Plan, today: date) -> dict[str, Any]:
         "when": day_text(plan.start) if not plan.all_day else day_text(plan.start[:10]),
         "relative": relative_text(plan.start, today),
         "all_day": plan.all_day,
+        # What a datetime-local box wants, "2026-09-26T18:30": the stored start without its
+        # offset — plans are stored in the family's own time, so the wall time is the first
+        # sixteen characters — or a morning on the day of an all-day plan. A box handed the
+        # offset as well shows nothing at all.
+        "start_value": plan.start[:16] if len(plan.start) > 10 else f"{plan.start[:10]}T09:00",
         "location": plan.location,
         "notes": plan.notes,
         "status": plan.status,
     }
+
+
+def entry_row(entry: Entry, today: date) -> dict[str, Any]:
+    """One line of the calendar: what, when, and whether the bot can move it."""
+    days = entry.days()
+    when = day_text(entry.start[:10] if entry.all_day else entry.start)
+    if entry.all_day and len(days) > 1:
+        first, last = days[0], days[-1]
+        if (first.year, first.month) == (last.year, last.month):
+            # "Saturday 3 to Sunday 4 October": the month once, where it cannot be mistaken.
+            when = f"{first:%A} {first.day} to {day_text(last.isoformat())}"
+        else:
+            when = f"{day_text(first.isoformat())} to {day_text(last.isoformat())}"
+    return {
+        "id": entry.plan_id,
+        "idea_id": entry.idea_id,
+        "title": entry.title,
+        "when": when,
+        "time": None if entry.all_day else entry.start[11:16],
+        "relative": "now" if days[0] < today <= days[-1] else relative_text(entry.start, today),
+        "all_day": entry.all_day,
+        "location": entry.location,
+        "notes": entry.notes,
+        "status": entry.status,
+        # Made somewhere other than here, so this page can show it but not move it.
+        "from_google": entry.plan_id is None,
+        "start_value": entry.start[:16] if not entry.all_day else f"{entry.start[:10]}T09:00",
+    }
+
+
+def month_weeks(entries: list[Entry], first: date, today: date) -> list[list[dict[str, Any]]]:
+    """A month as weeks of days, Monday first, each day with what is on it.
+
+    `first` is any day in the month. The weeks run from the Monday on or before the 1st to the
+    Sunday on or after the last day, so the grid is always whole weeks.
+    """
+    grid = months.Calendar(firstweekday=0).monthdatescalendar(first.year, first.month)
+    by_day: dict[date, list[dict[str, Any]]] = {}
+    for entry in entries:
+        row = entry_row(entry, today)
+        for day in entry.days():
+            by_day.setdefault(day, []).append(row)
+    return [
+        [
+            {
+                "date": day,
+                "day": day.day,
+                "name": f"{day:%A} {day.day} {day:%B}",
+                "current": day.month == first.month,
+                "today": day == today,
+                "entries": by_day.get(day, []),
+            }
+            for day in week
+        ]
+        for week in grid
+    ]
+
+
+AGENDA_NOTES = {
+    "google": "From Google Calendar, including anything added there directly.",
+    "saved": "Google Calendar is not connected, so these are the plans the bot made.",
+    "unavailable": (
+        "Google Calendar did not answer, so these are the plans as the bot last saw them. "
+        "Times may have moved since."
+    ),
+}
 
 
 def outcome_row(outcome: Outcome) -> dict[str, Any]:
@@ -255,6 +334,45 @@ def outcome_row(outcome: Outcome) -> dict[str, Any]:
         "repeat": repeat,
         "notes": outcome.notes,
     }
+
+
+def chat_line(
+    message: Message, names: dict[int, str], tz: ZoneInfo, *, did: list[str], waiting: bool
+) -> dict[str, Any]:
+    """One message in the chat: who said it, when, what the turn ran, and what went wrong.
+
+    `did` is the turn's tool calls, which the log stores against the question rather than the
+    answer. They belong under the answer: "used suggest" beneath somebody's own message reads
+    as though they had run it. `waiting` is for a message nothing has replied to yet, which is
+    a fact about the thread rather than about the row, so the caller works it out.
+    """
+    from_bot = message.direction == "out"
+    trouble = None
+    if not from_bot:
+        if message.status == "failed":
+            trouble = "this one did not go through"
+        elif waiting:
+            trouble = "waiting for an answer"
+    return {
+        "id": message.id,
+        "who": "FamilyDB" if from_bot else names.get(message.member_id or -1, "someone"),
+        "from_bot": from_bot,
+        "text": message.text,
+        "when": local_moment(message.received_at, tz),
+        "trouble": trouble,
+        "did": did if from_bot else [],
+    }
+
+
+def tools_used(actions: Any) -> list[str]:
+    """The tools a turn ran, in order, named once each. Failures included: those are the ones
+    worth seeing."""
+    seen: list[str] = []
+    for action in actions or []:
+        name = action.get("tool") if isinstance(action, dict) else None
+        if name and name not in seen:
+            seen.append(name)
+    return seen
 
 
 def local_moment(value: str, tz: ZoneInfo) -> str:

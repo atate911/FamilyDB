@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{{ month }} · {{ site_title }}{% endblock %}
+{% macro event(entry) %}
+  <div class="event{{ ' from-google' if entry.from_google }}">
+    {% if entry.idea_id %}
+      <a href="{{ url_for('web.idea', idea_id=entry.idea_id) }}">{{ entry.title }}</a>
+    {% else %}
+      {{ entry.title }}
+    {% endif %}
+    {% if entry.time %}<small>{{ entry.time }}</small>{% endif %}
+  </div>
+{% endmacro %}
+{% block content %}
+  <h1>Plans</h1>
+  <nav class="tabs" aria-label="How to show the plans">
+    <a href="{{ url_for('web.plans') }}">List</a>
+    <a href="{{ url_for('web.plans_month') }}" aria-current="page">Month</a>
+  </nav>
+  <p class="muted source source-{{ source }}">{{ source_note }}</p>
+
+  <div class="month-head">
+    <h2>{{ month }}</h2>
+    <p class="month-nav">
+      <a href="{{ url_for('web.plans_month', month=previous) }}">&larr; Earlier</a>
+      {% if not this_month %}<a href="{{ url_for('web.plans_month') }}">This month</a>{% endif %}
+      <a href="{{ url_for('web.plans_month', month=following) }}">Later &rarr;</a>
+    </p>
+  </div>
+
+  {# Two drawings of the same days, and the stylesheet shows one: seven columns where there is
+     room for them, and on a phone just the days that have something on, as a list. #}
+  <table class="panel month">
+    <thead>
+      <tr>{% for name in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}<th scope="col">{{ name }}</th>{% endfor %}</tr>
+    </thead>
+    <tbody>
+      {% for week in weeks %}
+        <tr>
+          {% for day in week %}
+            <td class="{{ 'outside' if not day.current }}{{ ' today' if day.today }}">
+              <time datetime="{{ day.date.isoformat() }}">{{ day.day }}</time>
+              {% for entry in day.entries %}{{ event(entry) }}{% endfor %}
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <ol class="panel plain month-list">
+    {% for day in busy_days %}
+      <li class="{{ 'today' if day.today }}">
+        <strong>{{ day.name }}</strong>{% if day.today %} <span class="tag">today</span>{% endif %}
+        {% for entry in day.entries %}{{ event(entry) }}{% endfor %}
+      </li>
+    {% else %}
+      <li class="muted">Nothing on in {{ month }}.</li>
+    {% endfor %}
+  </ol>
+{% endblock %}

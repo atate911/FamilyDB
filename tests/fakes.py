@@ -122,6 +122,9 @@ class FakeCalendar:
         ]
         return sorted(found, key=lambda e: self._as_datetime(e.start))
 
+    def get_event(self, event_id: str) -> CalendarEvent | None:
+        return self.events.get(event_id)
+
     def insert_event(
         self,
         *,
@@ -131,10 +134,13 @@ class FakeCalendar:
         all_day: bool,
         location: str | None,
         description: str | None,
+        event_id: str | None = None,
     ) -> CalendarEvent:
+        if event_id in self.events:
+            return self.events[event_id]
         self._counter += 1
         event = CalendarEvent(
-            id=f"evt{self._counter}",
+            id=event_id or f"evt{self._counter}",
             title=title,
             start=start,
             end=end,
@@ -156,7 +162,7 @@ class FakeCalendar:
             "all_day": changes.get("all_day", current.all_day),
             "location": changes.get("location", current.location),
             "description": changes.get("description", current.description),
-            "status": current.status,
+            "status": changes.get("status", current.status),
             "link": current.link,
         }
         event = CalendarEvent(**data)

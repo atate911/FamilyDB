@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pytest
@@ -72,7 +73,9 @@ def test_web_secret_key_is_generated_once_and_kept(tmp_path: Path) -> None:
     first = session_secret(s)
     assert len(first) > 20 and session_secret(s) == first  # stable across calls
     path = secret_path(s)
-    assert path.read_text() == first and path.stat().st_mode & 0o777 == 0o600
+    assert path.read_text() == first
+    if os.name != "nt":
+        assert path.stat().st_mode & 0o777 == 0o600
     pinned = s.model_copy(update={"web_secret_key": "pinned"})
     assert session_secret(pinned) == "pinned"  # the setting wins over the file
 

@@ -12,7 +12,9 @@ from contextlib import closing
 from datetime import date, timedelta
 
 from familydb.app import App
+from familydb.calendar_sync import sync_plans
 from familydb.dates import utc_iso
+from familydb.delivery import deliver, run_deliveries
 from familydb.store import messages, outcomes, plans
 from familydb.store.db import transaction
 from familydb.store.plans import Plan
@@ -31,8 +33,19 @@ def render_follow_up(plan: Plan) -> str:
 def run_follow_ups(app: App) -> int:
     """Ask about each plan that ended before today and was not asked about; returns how many."""
     asked = 0
+    run_deliveries(app)  # anything an earlier run could not send goes first, and only once
     with closing(app.connect()) as conn:
         app.refresh(conn)
+        # Asking how a plan went that somebody cancelled in Google would be a small insult.
+        # When Google cannot be asked, the questions wait for a run that can check first.
+        if app.calendar is not None:
+            try:
+                sync_plans(
+                    conn, app.calendar, app.settings.google_calendar_id, utc_iso(app.clock.now())
+                )
+            except Exception:
+                log.exception("follow-ups deferred: the calendar could not be checked")
+                return 0
         today = app.clock.today()
         since = today - timedelta(days=FOLLOW_UP_DAYS)
         due = plans.due_for_follow_up(conn, today=today.isoformat(), since=since.isoformat())
@@ -55,13 +68,14 @@ def run_follow_ups(app: App) -> int:
                 continue
             text = render_follow_up(plan)
             with transaction(conn):
-                messages.insert_out(
+                # Recheck under the write lock: a run by hand can race the scheduler.
+                if plans.get(conn, plan.id).followed_up_at is not None:  # type: ignore[union-attr]
+                    continue
+                outbound = messages.insert_out(
                     conn, channel=plan.channel or "", chat_id=plan.chat_id, text=text, now=now
                 )
                 plans.mark_followed_up(conn, plan.id, now=now)
-            try:
-                sender(plan.chat_id, text)
-            except Exception:
-                log.exception("could not deliver the follow-up for plan %s", plan.id)
+            # Stored first, sent second: a send that fails stays queued for the next run.
+            deliver(app, outbound.id)
             asked += 1
     return asked

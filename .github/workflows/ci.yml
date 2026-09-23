@@ -152,6 +152,18 @@ jobs:
           docker compose run --rm -T bot familydb tool --list > /dev/null
       - name: The database landed on the mounted volume, not inside the container
         run: test -f data/familydb.sqlite3
+      - name: Docker backup and restore preserve data and container ownership
+        run: |
+          sudo bash scripts/maintain.sh backup --yes --backup-dir "$PWD/test-backups"
+          backup=$(find "$PWD/test-backups" -name 'familydb-*.sqlite3' | head -1)
+          test -s "$backup"
+          docker compose run --rm -T bot familydb members add Temporary
+          sudo bash scripts/maintain.sh restore "$backup" --yes --backup-dir "$PWD/test-backups"
+          docker compose run --rm -T bot familydb members list | grep -q Sam
+          ! docker compose run --rm -T bot familydb members list | grep -q Temporary
+          test "$(stat -c %u data/familydb.sqlite3)" = 1000
+          test "$(stat -c %a data/familydb.sqlite3)" = 600
+          docker compose down
       - name: It starts, serves the page and stops on a signal
         run: |
           printf 'WEB_ENABLED=true\nWEB_PASSWORD=%s\n' "'a long enough password'" >> .env

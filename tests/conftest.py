@@ -85,12 +85,23 @@ def calendar_settings(settings: Settings, tmp_path: Path) -> Settings:
 
 
 @pytest.fixture(autouse=True)
-def no_network(monkeypatch: pytest.MonkeyPatch) -> None:
+def no_network(monkeypatch: pytest.MonkeyPatch, request) -> None:
     """Tests never reach the network: the raw fetchers raise unless a test patches them."""
 
     def _boom(*_args, **_kwargs):
         raise AssertionError("network access is disabled in tests")
 
+    if request.node.get_closest_marker("live") is None:
+        import socket
+
+        original_connect = socket.socket.connect
+
+        def local_only(sock, address):
+            if isinstance(address, tuple) and address[0] not in {"127.0.0.1", "::1", "localhost"}:
+                _boom()
+            return original_connect(sock, address)
+
+        monkeypatch.setattr(socket.socket, "connect", local_only)
     monkeypatch.setattr(Geocoder, "_fetch", staticmethod(_boom))
     monkeypatch.setattr(OpenMeteo, "_fetch", staticmethod(_boom))
 

@@ -102,11 +102,32 @@ def test_every_response_carries_the_security_headers(settings, clock) -> None:
     assert "script-src 'none'" in plain.headers["Content-Security-Policy"]
     assert "frame-ancestors 'none'" in plain.headers["Content-Security-Policy"]
     assert plain.headers["X-Content-Type-Options"] == "nosniff"
-    assert plain.headers["Referrer-Policy"] == "no-referrer"
+    assert plain.headers["Referrer-Policy"] == "same-origin"
     assert plain.headers["X-Frame-Options"] == "DENY"
     assert "Strict-Transport-Security" not in plain.headers  # plain HTTP: nothing to promise
     secure = client.get("/login", base_url="https://familydb.example")
     assert secure.headers["Strict-Transport-Security"].startswith("max-age=")
+
+
+def test_a_browser_s_own_posts_carry_an_origin_the_page_accepts(settings, clock) -> None:
+    """Under `Referrer-Policy: no-referrer` Chromium posts every form with `Origin: null`.
+
+    The check below is right to refuse that — a null origin is also what a sandboxed frame on
+    another site sends — so the policy is what has to let the real origin through. Both halves
+    are pinned: a null origin is refused, and the policy is one under which browsers send the
+    real one. The test client sends no Origin header on its own, so without this nothing would
+    notice the page being unusable in a browser, which is how it went unnoticed before.
+    """
+    client = _client(settings, clock, web_password=PASSWORD)
+    refused = client.post("/login", data={"password": PASSWORD}, headers={"Origin": "null"})
+    assert refused.status_code == 400
+    policy = client.get("/login").headers["Referrer-Policy"]
+    # The policies under which a browser still names this origin on a same-site post.
+    assert policy in {"same-origin", "strict-origin", "strict-origin-when-cross-origin"}
+    accepted = client.post(
+        "/login", data={"password": PASSWORD}, headers={"Origin": "http://localhost"}
+    )
+    assert accepted.status_code == 302
 
 
 def test_a_loopback_page_without_a_password_is_open(settings, clock) -> None:
@@ -173,7 +194,7 @@ def test_the_ideas_list_shows_what_is_stored(settings, clock, conn, family) -> N
         suggested_by=family["sam"].id,
     )
     _idea(conn, "Museum day", kind="outing", participants=["with the girls"])
-    page = _client(settings, clock).get("/")
+    page = _client(settings, clock).get("/ideas")
     assert page.status_code == 200
     assert page.text.count('class="panel card"') == 2
     assert "2 ideas" in page.text
@@ -190,15 +211,15 @@ def test_the_ideas_list_filters(settings, clock, conn, family) -> None:
     _idea(conn, "Old plan", kind="outing", status="done")
     dropped = _idea(conn, "Never again", kind="outing", status="dropped")
     client = _client(settings, clock)
-    assert client.get("/").text.count('class="panel card"') == 3  # dropped is hidden
-    assert "Ramen place" in client.get("/?kind=restaurant").text
-    assert "Museum day" not in client.get("/?kind=restaurant").text
-    assert client.get("/?status=done").text.count('class="panel card"') == 1
-    assert f'href="/idea/{dropped.id}"' in client.get("/?status=dropped").text
-    assert client.get("/?who=with+the+girls").text.count('class="panel card"') == 1
-    assert "Museum" in client.get("/?q=museum").text
-    assert client.get("/?q=nothinglikethis").text.count('class="panel card"') == 0
-    assert "Clear" in client.get("/?kind=outing").text  # a way back to everything
+    assert client.get("/ideas").text.count('class="panel card"') == 3  # dropped is hidden
+    assert "Ramen place" in client.get("/ideas?kind=restaurant").text
+    assert "Museum day" not in client.get("/ideas?kind=restaurant").text
+    assert client.get("/ideas?status=done").text.count('class="panel card"') == 1
+    assert f'href="/idea/{dropped.id}"' in client.get("/ideas?status=dropped").text
+    assert client.get("/ideas?who=with+the+girls").text.count('class="panel card"') == 1
+    assert "Museum" in client.get("/ideas?q=museum").text
+    assert client.get("/ideas?q=nothinglikethis").text.count('class="panel card"') == 0
+    assert "Clear" in client.get("/ideas?kind=outing").text  # a way back to everything
 
 
 def test_an_idea_page_shows_its_place_details(settings, clock, conn, family) -> None:
@@ -432,9 +453,11 @@ def test_the_plans_page_when_the_calendar_is_empty(settings, clock, conn, family
 def test_the_nav_reaches_every_page(settings, clock, conn, family) -> None:
     client = _client(settings, clock)
     home = client.get("/")
-    for target in ("/", "/restaurants", "/plans"):
-        assert f'href="{target}"' in home.text, target
+    for target in ("/", "/ideas", "/plans", "/family", "/status", "/settings"):
+        assert f'href="{target}' in home.text, target  # "/chat" goes to its newest line
         assert client.get(target).status_code == 200
+    assert 'href="/chat#latest"' in home.text
+    assert 'href="/restaurants"' in client.get("/ideas").text  # a tab of the ideas now
 
 
 def test_links_that_are_not_web_addresses_never_become_links(settings, clock, conn, family) -> None:
@@ -477,8 +500,11 @@ def test_the_lockout_table_does_not_grow_without_limit(settings, clock) -> None:
     assert lockout.locked("198.51.100.4", now)
 
 
-def test_the_pages_have_no_way_to_write_to_the_database() -> None:
-    """The pages are read-only by construction, not only by intent."""
+def test_no_page_reaches_a_table_to_write_to_it() -> None:
+    """No module in the package may write to a table itself, and that includes the three
+    that change things: the chat page hands a message to the pipeline, the edit forms call the
+    tools, the settings page goes through one repository. Every write is somebody else's, which
+    is what keeps the checks, the transactions and the audit rows in one place."""
     import ast
 
     import familydb.web as package
@@ -523,7 +549,7 @@ def test_the_pages_have_no_way_to_write_to_the_database() -> None:
     stores.add("settings_store")
     for module in sorted(Path(package.__file__).parent.glob("*.py")):
         if module.name == "settings.py":
-            continue  # it writes; the next test pins exactly how far that goes
+            continue  # app_settings is its own table; the next test pins how far it goes
         tree = ast.parse(module.read_text("utf-8"), filename=module.name)
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom) and (node.module or "").startswith(
@@ -536,6 +562,126 @@ def test_the_pages_have_no_way_to_write_to_the_database() -> None:
                 called = node.func.attr
                 writing = isinstance(base, ast.Name) and base.id in stores and called in writes
                 assert not writing, f"{module.name}:{node.lineno} calls {called} on a store"
+
+
+def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
+    """Which modules may cause a write, and what each one is allowed to go through.
+
+    Nothing here writes, so the previous test alone would pass even if a page had quietly grown
+    a way to change an idea. This one names the doors instead: the chat page may reach the
+    pipeline and nothing else, the edit forms may dispatch a fixed list of tools and nothing
+    else, the family page may add and change people through `familydb.family` and nothing else,
+    and every other module in the package may do none of it.
+    """
+    import ast
+
+    import familydb.web as package
+
+    folder = Path(package.__file__).parent
+    trees = {
+        module.name: ast.parse(module.read_text("utf-8"), filename=module.name)
+        for module in sorted(folder.glob("*.py"))
+    }
+
+    # The chat page hands a message over, and the handing over is all it does.
+    chat = trees["chat.py"]
+    assert {
+        f"{node.module}.{alias.name}"
+        for node in ast.walk(chat)
+        if isinstance(node, ast.ImportFrom) and (node.module or "").startswith("familydb.channels")
+        for alias in node.names
+    } == {
+        "familydb.channels.web.DEFAULT_CHAT",
+        "familydb.channels.web.MAX_MESSAGE",  # how long a question handed over may be
+        "familydb.channels.web.WebChat",
+    }
+    assert not [
+        node
+        for node in ast.walk(chat)
+        if isinstance(node, ast.ImportFrom) and (node.module or "").startswith("familydb.pipeline")
+    ], "chat.py reaches the pipeline through the channel, not around it"
+
+    # The edit forms may run these tools and no others. A new one is a deliberate line here.
+    edits = trees["edits.py"]
+    dispatched = {
+        node.args[0].value
+        for node in ast.walk(edits)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "run"
+        and node.args
+        and isinstance(node.args[0], ast.Constant)
+    }
+    assert dispatched == {
+        "add_idea",
+        "update_idea",
+        "record_outcome",
+        "create_event",
+        "update_event",
+        "delete_event",
+    }
+    # And it runs them the one way: through the registry, which validates and owns the
+    # transaction. Constructing a store call or a connection of its own would not be that.
+    assert (
+        sum(
+            1
+            for node in ast.walk(edits)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "dispatch"
+        )
+        == 1
+    )
+
+    # The family page adds and changes people, through the rules module, and that is all.
+    family = trees["family.py"]
+    ruled = {
+        node.func.attr
+        for node in ast.walk(family)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "rules"
+    }
+    assert ruled <= {"add", "change", "revision"}, ruled
+    assert {"add", "change"} <= ruled
+
+    # And the doors are shut to everything else. Not whole packages: `views.py` reads opening
+    # hours out of `tools.places` and tidies a link with `tools.urls`, which write nothing. It
+    # is the two ways of causing a write that are spoken for — the pipeline, and dispatch.
+    for name, tree in trees.items():
+        reached = {node.module or "" for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)}
+        dispatches = any(
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "dispatch"
+            for node in ast.walk(tree)
+        )
+        assert not any(module.startswith("familydb.pipeline") for module in reached), name
+        # The page reads Google through calendar_sync's pure translation of an event; the two
+        # functions there that bring stored plans up to date are writes, and belong to the bot.
+        synced = {
+            alias.name
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom) and node.module == "familydb.calendar_sync"
+            for alias in node.names
+        }
+        assert synced <= {"event_changes"}, f"{name} imports {synced}"
+        if name != "family.py":
+            family_rules = any(
+                isinstance(node, ast.ImportFrom)
+                and (
+                    node.module == "familydb.family"
+                    or (node.module == "familydb" and any(a.name == "family" for a in node.names))
+                )
+                for node in ast.walk(tree)
+            )
+            assert not family_rules, f"{name} reaches the family rules"
+        if name not in {"chat.py", "__init__.py"}:  # the factory builds the thing chat.py uses
+            assert not any(module.startswith("familydb.channels") for module in reached), name
+        if name != "edits.py":
+            assert "familydb.tools" not in reached, f"{name} imports the tool machinery"
+            assert not dispatches, f"{name} dispatches a tool"
 
 
 def test_only_the_settings_page_writes_and_only_to_the_settings() -> None:

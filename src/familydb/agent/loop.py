@@ -93,6 +93,7 @@ def run_turn(
         max_tokens=max_tokens,
     )
     limit = max_iterations or settings.agent_max_iterations
+    ctx.allowed_tools = frozenset(tool.name for tool in request.tools)
     actions: list[dict[str, Any]] = []
     totals: dict[str, int] = dict.fromkeys(USAGE_KEYS, 0)
 

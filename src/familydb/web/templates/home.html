@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ site_title }}{% endblock %}
+{% block content %}
+  <section class="welcome">
+    <div class="welcome-words">
+      <p class="eyebrow">{{ today }}</p>
+      <h1>Make room for the good stuff.</h1>
+      <div class="actions">
+        <a class="button" href="{{ url_for('chat.show', ask=weekend_question, _anchor='latest') }}">Ask what to do this weekend</a>
+        <a class="button secondary" href="{{ url_for('web.new_idea') }}">Add an idea</a>
+      </div>
+    </div>
+    {# Drawn in the stylesheet, and only where there is room for it: on a phone the first screen
+       is for what is coming up. #}
+    <div class="welcome-art" aria-hidden="true"><span class="sun"></span><span class="hill back"></span><span class="hill front"></span></div>
+  </section>
+
+  <div class="dashboard">
+    <section class="coming">
+      <div class="section-head">
+        <h2>Coming up</h2>
+        <a href="{{ url_for('web.plans') }}">All plans &rarr;</a>
+      </div>
+      {% if source != 'google' %}<p class="muted source source-{{ source }}">{{ source_note }}</p>{% endif %}
+      <ol class="panel plain agenda">
+        {% for entry in coming %}
+          <li>
+            <div class="when">
+              <strong>{{ entry.when }}</strong>
+              {% if entry.relative %}<span class="muted">{{ entry.relative }}</span>{% endif %}
+            </div>
+            <div>
+              {% if entry.idea_id %}
+                <a href="{{ url_for('web.idea', idea_id=entry.idea_id) }}">{{ entry.title }}</a>
+              {% else %}
+                {{ entry.title }}
+              {% endif %}
+              {% if entry.location %}<span class="muted">&middot; {{ entry.location }}</span>{% endif %}
+            </div>
+          </li>
+        {% else %}
+          <li class="muted">Nothing on the calendar yet. Pick an idea and put it there, or ask
+            what fits this weekend.</li>
+        {% endfor %}
+      </ol>
+    </section>
+
+    <section class="lately">
+      <div class="section-head">
+        <h2>Lately added</h2>
+        <a href="{{ url_for('web.ideas') }}">All {{ idea_count }} &rarr;</a>
+      </div>
+      <div class="idea-cards">
+        {% for idea in ideas %}
+          <a class="panel idea-card" href="{{ url_for('web.idea', idea_id=idea.id) }}">
+            <span class="eyebrow">{{ idea.kind }}</span>
+            <strong>{{ idea.title }}</strong>
+            <span class="muted">{{ idea.where or ('for ' ~ idea.who) }}</span>
+          </a>
+        {% else %}
+          <p class="panel muted">No ideas yet. Say one in the chat, or <a href="{{ url_for('web.new_idea') }}">add it here</a>.</p>
+        {% endfor %}
+      </div>
+      {% if restaurant_count %}
+        <a class="panel restaurants-link" href="{{ url_for('web.restaurants') }}">
+          <span class="eyebrow">Something to eat</span>
+          <strong>{{ restaurant_count }} restaurant{{ '' if restaurant_count == 1 else 's' }} to try</strong>
+        </a>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}

@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% set editing = idea is not none %}
+{% block title %}{{ 'Edit' if editing else 'New idea' }} · {{ site_title }}{% endblock %}
+{% block content %}
+  <h1>{{ 'Edit #%d'|format(idea.id) if editing else 'New idea' }}</h1>
+  <form class="panel form"
+        method="post"
+        action="{{ url_for('edits.edit_idea', idea_id=idea.id) if editing else url_for('edits.add_idea') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    {% if editing %}
+      {# When this was drawn: a save on top of a change made since is refused, not merged. #}
+      <input type="hidden" name="revision" value="{{ idea.updated_at }}" />
+    {% endif %}
+    <input type="hidden" name="once" value="{{ once_token() }}" />
+
+    <div class="field wide">
+      <label for="title">Title</label>
+      <input id="title" name="title" required maxlength="200"
+             value="{{ idea.title if editing else '' }}" placeholder="Ramen place on Main St" />
+    </div>
+
+    <div class="field">
+      <label for="kind">Kind</label>
+      {# A list, not a closed choice: the model invents a kind when none fits, and so may you. #}
+      <input id="kind" name="kind" required list="kinds" placeholder="restaurant"
+             value="{{ idea.kind if editing else '' }}" />
+      <datalist id="kinds">
+        {% for kind in kinds %}<option value="{{ kind }}"></option>{% endfor %}
+      </datalist>
+    </div>
+
+    {% if editing %}
+      <div class="field">
+        <label for="status">Status</label>
+        <select id="status" name="status">
+          {% for option in statuses %}
+            <option value="{{ option }}" {{ 'selected' if option == idea.status }}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    {% else %}
+      <div class="field">
+        <label for="who">Suggested by</label>
+        <select id="who" name="who">
+          <option value="">nobody in particular</option>
+          {% for name in family %}
+            <option value="{{ name }}" {{ 'selected' if name == who }}>{{ name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    {% endif %}
+
+    <div class="field wide">
+      <label for="description">Description</label>
+      <textarea id="description" name="description" rows="3">{{ idea.description or '' if editing else '' }}</textarea>
+    </div>
+
+    <details class="more" {{ 'open' if editing }}>
+      <summary>Everything else</summary>
+      <div class="form inner">
+
+    <div class="field">
+      <label for="location_name">Where</label>
+      <input id="location_name" name="location_name"
+             value="{{ idea.location_name or '' if editing else '' }}" placeholder="Portland" />
+    </div>
+
+    <div class="field">
+      <label for="url">Link</label>
+      <input id="url" name="url" type="url" value="{{ idea.url or '' if editing else '' }}" />
+    </div>
+
+    <div class="field">
+      <label for="participants">Who it is for</label>
+      <input id="participants" name="participants" placeholder="whole family, the girls"
+             value="{{ idea.participants | join(', ') if editing else '' }}" />
+      <span class="muted">Commas between them.</span>
+    </div>
+
+    <div class="field">
+      <label for="tags">Tags</label>
+      <input id="tags" name="tags" placeholder="food, cheap, date night"
+             value="{{ idea.tags | join(', ') if editing else '' }}" />
+      <span class="muted">Commas between them.</span>
+    </div>
+
+    <div class="field">
+      <label for="setting">Indoor or out</label>
+      <select id="setting" name="setting">
+        {% for option in settings %}
+          <option value="{{ option }}" {{ 'selected' if editing and option == idea.setting }}>{{ option }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="weather">Weather it needs</label>
+      <select id="weather" name="weather">
+        {% for option in weathers %}
+          <option value="{{ option }}" {{ 'selected' if editing and option == idea.weather }}>{{ option }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="cost_level">Cost</label>
+      <select id="cost_level" name="cost_level">
+        <option value="">not known</option>
+        {% for level, label in costs %}
+          <option value="{{ level }}" {{ 'selected' if editing and idea.cost_level == level }}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="duration_min">Shortest (minutes)</label>
+      <input id="duration_min" name="duration_min" inputmode="numeric"
+             value="{{ idea.duration_min if editing and idea.duration_min is not none else '' }}" />
+    </div>
+
+    <div class="field">
+      <label for="duration_max">Longest (minutes)</label>
+      <input id="duration_max" name="duration_max" inputmode="numeric"
+             value="{{ idea.duration_max if editing and idea.duration_max is not none else '' }}" />
+    </div>
+
+    <div class="field">
+      <label for="lead_time_days">Book this far ahead (days)</label>
+      <input id="lead_time_days" name="lead_time_days" inputmode="numeric"
+             value="{{ idea.lead_time_days if editing and idea.lead_time_days is not none else '' }}" />
+    </div>
+
+    <fieldset class="field wide">
+      <legend>Only in these seasons</legend>
+      {% for season in seasons %}
+        <label class="check">
+          <input type="checkbox" name="seasons" value="{{ season }}"
+                 {{ 'checked' if editing and season in idea.seasons }} /> {{ season }}
+        </label>
+      {% endfor %}
+    </fieldset>
+
+    <div class="field wide">
+      <label class="check">
+        <input type="checkbox" name="needs_booking" value="yes"
+               {{ 'checked' if editing and idea.needs_booking }} /> Needs booking
+      </label>
+    </div>
+
+      </div>
+    </details>
+
+    <div class="field wide actions">
+      <button type="submit">{{ 'Save changes' if editing else 'Add it' }}</button>
+      <a class="quiet"
+         href="{{ url_for('web.idea', idea_id=idea.id) if editing else url_for('web.ideas') }}">Cancel</a>
+    </div>
+  </form>
+{% endblock %}

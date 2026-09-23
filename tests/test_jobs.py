@@ -53,14 +53,12 @@ def test_only_one_process_can_take_a_retry(settings, clock, conn, family) -> Non
     # replies scripted would raise if it were asked for one.
     messages.reset_retries(conn)
     lost = fakes.FakeMessagesAPI()
-    from familydb import pipeline
+    from familydb.delivery import lease
 
-    original = pipeline.messages.claim_retry
-    try:
-        pipeline.messages.claim_retry = lambda *args, **kwargs: False
+    with lease(app, conn, message_id) as owned:
+        assert owned
         assert retry_message(app, message_id, api=lost, conn=conn) is None
-    finally:
-        pipeline.messages.claim_retry = original
+    assert lost.requests == []
 
 
 def test_retries_are_bounded(settings, clock, conn, family) -> None:
@@ -162,8 +160,8 @@ def test_retry_tells_the_model_what_already_ran(settings, clock, conn, family) -
     assert [m["role"] for m in request] == ["user"]  # the failure notice is not replayed
     blocks = request[0]["content"]
     assert blocks[1]["text"] == "[Sam] we should try the ramen place"
-    assert "add_idea (#1)" in blocks[2]["text"]
-    assert "must not be repeated" in blocks[2]["text"]
+    assert "add_idea (#1)" in blocks[-1]["text"]
+    assert "must not be repeated" in blocks[-1]["text"]
 
 
 # --- enrichment ---------------------------------------------------------------------------------
@@ -323,7 +321,8 @@ def test_scheduler_registers_enrichment_only_with_web_tools(settings, clock) -> 
 
 from datetime import timedelta  # noqa: E402
 
-from familydb.jobs.weekend_digest import DIGEST_TEXT, run_digest  # noqa: E402
+from familydb.channels.web import WebChat  # noqa: E402
+from familydb.jobs.weekend_digest import DIGEST_TEXT, digest_channel, run_digest  # noqa: E402
 from familydb.store import members, suggestions  # noqa: E402
 
 
@@ -397,6 +396,25 @@ def test_digest_failure_is_left_for_the_retry_job(settings, thursday_clock, conn
     assert printed == ["Late digest."]
     assert messages.get(conn, inbound.id).status == "processed"
     assert run_digest(app, api=fakes.FakeMessagesAPI()) is None  # still one per day
+
+
+def test_the_digest_can_go_to_the_web_page(settings, thursday_clock, conn, family) -> None:
+    """A Telegram chat id cannot be known before somebody writes in the group; "web" can."""
+    assert digest_channel("web") == "web"
+    assert digest_channel("console") == "console"
+    assert digest_channel("-100") == "telegram"
+
+    app = _digest_app(settings, thursday_clock, chat_id="web")
+    chat = WebChat(app)  # registering it is what gives the channel a sender
+    assert app.senders["web"] is not None
+    reply = run_digest(app, api=fakes.FakeMessagesAPI(*_digest_script()))
+    assert reply.status == "ok"
+    inbound = messages.get(conn, reply.in_message_id)
+    assert inbound.channel == "web" and inbound.chat_id == "web"
+    # Delivering to the page is storing it, which is where the page reads from.
+    thread = messages.last_for_chat(conn, "web", limit=10)
+    assert [line.text for line in thread] == [DIGEST_TEXT, "Here is what I found."]
+    assert chat.busy("web") is False  # the digest is not a turn the page is waiting on
 
 
 def test_scheduler_registers_the_digest_only_with_a_chat_id(settings, clock) -> None:
@@ -652,7 +670,7 @@ def test_lookups_work_on_gemini_too(settings, clock, conn, family) -> None:
     assert run_enrichment(app, api=api)["done"] == 1
     assert ideas.get(conn, idea.id).enrichment == "done"
     request = api.requests[0]
-    assert request["model"] == "gemini-2.5-flash"
+    assert request["model"] == "gemini-3.8-flash"
     groups = request["config"]["tools"]
     assert sorted(d["name"] for d in groups[0]["function_declarations"]) == [
         "save_place",

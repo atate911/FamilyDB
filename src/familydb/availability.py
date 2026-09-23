@@ -31,7 +31,7 @@ def digest_configured(settings: Settings) -> bool:
 
 
 def web_available(settings: Settings) -> bool:
-    """Whether `familydb run` should also serve the read-only page."""
+    """Whether `familydb run` should also serve the page."""
     return settings.web_enabled
 
 

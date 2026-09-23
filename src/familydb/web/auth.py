@@ -223,6 +223,22 @@ def origin_ok() -> bool:
     return origin == f"{request.scheme}://{request.host}"
 
 
+def refused() -> str | None:
+    """None when a form may be acted on, else what to tell whoever sent it.
+
+    Every form on the page goes through this: the Origin check catches a post from another site,
+    and this session's token catches a browser that did not send one. A missing token is not the
+    same thing as a request from somewhere else, and is not reported as one: signing out and back
+    in leaves an open page holding a token nobody recognises any more, and telling that person
+    their form came from another site would be a lie they cannot act on.
+    """
+    if not origin_ok():
+        return BAD_ORIGIN
+    if not csrf_ok(request.form.get("csrf")):
+        return STALE_FORM
+    return None
+
+
 def _app() -> App:
     return current_app.config["FAMILYDB_APP"]
 

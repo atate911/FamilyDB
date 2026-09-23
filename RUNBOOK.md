@@ -107,7 +107,7 @@ that can be put right without a decision. What it looks at, and what each one me
 
 1. `familydb config` shows the settings you expect (the key is masked).
 2. `familydb db migrate` reports the schema version.
-3. `familydb members add` for everyone who will message the bot (admin or member) and for kids (`--role kid`) so they can be named as participants.
+3. `familydb members add` for everyone who will message the bot (admin or member) and for kids (`--role kid`) so they can be named as participants. Once the web page is on, the Family page does the same without a terminal.
 4. `familydb chat "we should try that new ramen place on Main St sometime"` saves idea #1.
 5. `familydb chat "tell me about #1"` answers from history.
 6. `familydb db status` shows `cache_read` greater than zero on the second call. If it stays zero, see troubleshooting.
@@ -119,7 +119,7 @@ that can be put right without a decision. What it looks at, and what each one me
 ## 4. Telegram
 
 1. In Telegram, talk to BotFather: `/newbot`, pick a name and a username, copy the token into `TELEGRAM_BOT_TOKEN`, then start (or restart) the bot with `familydb run`.
-2. Each family member sends the bot a direct message. The reply says "your id on this channel is 12345"; add them with `familydb members add NAME --channel telegram --channel-user-id 12345`. Their next message gets a real answer.
+2. Each family member sends the bot a direct message. The reply says "your id on this channel is 12345"; add them with `familydb members add NAME --channel telegram --channel-user-id 12345`, or type the id into the Family page. Their next message gets a real answer.
 3. For a family group, send BotFather `/setprivacy` and choose Disable so the bot sees every message, then add the bot to the group. A dedicated "Ideas & Plans" group works best. In a busier group set `TELEGRAM_REQUIRE_MENTION=true` so it only answers when @mentioned or replied to.
 4. Long polling means nothing is exposed; if the server is off, Telegram keeps updates for a day and the bot catches up on restart without double-processing.
 
@@ -200,7 +200,7 @@ Two upgrades ask something of you once:
 
 **Suggestions.** "What should we do this weekend?" runs the engine once: free time from the calendar, the forecast, every idea against the looked-up details, and, with web tools on, a search for time-bound things near `HOME_AREA` (cached for twelve hours per weekend). Each verdict is logged in `suggestions`. `familydb suggest --window this-weekend --discover` runs the same engine from the shell.
 
-**Weekend digest.** Set `DIGEST_CHAT_ID` to the family group's Telegram chat id. Group ids are negative numbers; find it once someone has written in the group with `sqlite3 data/familydb.sqlite3 "select distinct chat_id from messages where channel = 'telegram'"` (or `docker compose exec bot sqlite3 /data/familydb.sqlite3 ...`), or ask the bot in the group and read the id from the log line. `DIGEST_DAY` and `DIGEST_HOUR` (default Thursday 18:00 in `FAMILYDB_TZ`) set the schedule; `familydb digest` prints it and `familydb digest --now` posts a digest immediately. The digest is asked as the first admin and stored like any message, so it goes out at most once a day; if the model call fails it is retried like a failed message, and if the bot was off at the scheduled hour it sends the digest a minute after it next starts on the same day.
+**Weekend digest.** Set `DIGEST_CHAT_ID` to the family group's Telegram chat id, or to `web` to have it land in the chat on the web page, which needs no id looked up and so works from the first Thursday. Telegram group ids are negative numbers; find it once someone has written in the group with `sqlite3 data/familydb.sqlite3 "select distinct chat_id from messages where channel = 'telegram'"` (or `docker compose exec bot sqlite3 /data/familydb.sqlite3 ...`), or ask the bot in the group and read the id from the log line. `DIGEST_DAY` and `DIGEST_HOUR` (default Thursday 18:00 in `FAMILYDB_TZ`) set the schedule; `familydb digest` prints it and `familydb digest --now` posts a digest immediately. The digest is asked as the first admin and stored like any message, so it goes out at most once a day; if the model call fails it is retried like a failed message, and if the bot was off at the scheduled hour it sends the digest a minute after it next starts on the same day.
 
 **Follow-ups.** The morning after a plan (`FOLLOW_UP_HOUR`, default 10:00), the bot asks "How was #57 Hopscotch Portland on Saturday? Worth doing again?" in the chat the plan was made in, once per plan, unless someone already said how it went. The answer is recorded as feedback and feeds future suggestions. `familydb follow-ups --now` asks by hand.
 
@@ -260,15 +260,20 @@ Running without Docker, put nginx or Caddy in front the same way and keep `WEB_H
 address out for fifteen minutes and are logged, and fifty failures from anywhere within a quarter
 of an hour stop the page answering logins at all, so a guesser with many addresses gets nowhere.
 Every page but the login and `/healthz` needs the cookie. Responses carry a content security
-policy that forbids scripts and framing. Every form carries a token from the session as well, so a
+policy that forbids scripts and framing, which still holds: there is no JavaScript on the page,
+and the chat waits for its answer with a meta refresh instead. Every form carries a token from the session as well, so a
 link from another site cannot make a change on the family's behalf. Refusing to start is
 deliberate: a page bound off the loopback with no password will not serve, and says so, unless you
 set `WEB_ALLOW_NO_PASSWORD=true` on purpose.
 
-Be clear-eyed about what signing in now buys someone: the ideas and plans are read-only, but the
-settings page can change which model answers, read the API keys, and point the bot at a different
+Be clear-eyed about what signing in now buys someone. It is the whole bot: the chat page spends
+tokens with every message, the forms add and change ideas, record outcomes and put things on the
+family calendar, the Family page decides who may message the bot on Telegram, and the settings
+page can change which model answers, read the API keys, and point the bot at a different
 calendar. On a machine on the internet, that one password is what stands between a stranger and
-your API bill. Make it long, and use the status page at the end of this section to notice a
+your API bill. Nothing is destroyed — an idea is dropped rather than deleted, somebody taken off
+the family list keeps everything they said, and every change is a row like any other — but it
+is all reachable. Make it long, and use the status page at the end of this section to notice a
 month that does not look like yours.
 
 **Checking it.**
@@ -304,7 +309,8 @@ came from.
 
 A change reaches the next message and the next page straight away. The jobs that run on a
 schedule — the digest, the follow-ups, the lookups, the retries — pick a new time or interval up
-within five minutes. Nothing here needs `familydb run` restarted.
+within five minutes. The one exception is the Telegram bot token: after adding, replacing or
+clearing it, restart `familydb run` so the bot connects with the new one.
 
 **Who answers.** Any of the three can, and the choice is made per surface, so the two halves of
 the work can go to different places:
@@ -325,7 +331,7 @@ WORKER_MODEL=claude-haiku-4-5-20251001
 OPENAI_MODEL=gpt-5
 OPENAI_WORKER_MODEL=gpt-5-mini
 GEMINI_MODEL=gemini-2.5-pro
-GEMINI_WORKER_MODEL=gemini-2.5-flash
+GEMINI_WORKER_MODEL=gemini-3.8-flash
 ```
 
 Check those names against your own account before relying on them; model names change and these

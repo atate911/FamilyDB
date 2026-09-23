@@ -1,11 +1,22 @@
 {% extends "base.html" %}
 {% block title %}{{ idea.title }} · {{ site_title }}{% endblock %}
+{% macro asking(id) %}
+  <div class="field">
+    <label for="who-{{ id }}">Who</label>
+    <select id="who-{{ id }}" name="who">
+      <option value="">nobody in particular</option>
+      {% for name in family %}
+        <option value="{{ name }}" {{ 'selected' if name == who }}>{{ name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+{% endmacro %}
 {% block content %}
   <article class="panel">
     <h1>{{ idea.title }}</h1>
     <p class="muted meta">
       <span>#{{ idea.id }}</span>
-      <span class="tag">{{ idea.kind }}</span>
+      <span class="tag">{{ row.kind }}</span>
       <span class="tag status-{{ idea.status }}">{{ idea.status }}</span>
       {% if idea.suggested_by_name %}<span>suggested by {{ idea.suggested_by_name }}</span>{% endif %}
       <span>added {{ row.added }}</span>
@@ -36,6 +47,17 @@
     {% if idea.tags %}
       <p class="tags">{% for tag in idea.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</p>
     {% endif %}
+    <div class="actions">
+      <a class="button" href="{{ url_for('web.edit_idea', idea_id=idea.id) }}">Edit</a>
+      <form method="post" action="{{ url_for('edits.set_status', idea_id=idea.id) }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+        <input type="hidden" name="once" value="{{ once_token() }}" />
+        <input type="hidden" name="status" value="{{ 'idea' if idea.status == 'dropped' else 'dropped' }}" />
+        <button class="quiet" type="submit">
+          {{ 'Bring it back' if idea.status == 'dropped' else 'Drop it' }}
+        </button>
+      </form>
+    </div>
   </article>
 
   {% if place %}
@@ -123,6 +145,73 @@
       </ul>
     </section>
   {% endif %}
+
+  <section class="panel">
+    <details class="more">
+      <summary><span class="h2">Plan it</span></summary>
+    {% if can_schedule %}
+      <form class="form" method="post" action="{{ url_for('edits.add_plan') }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+        <input type="hidden" name="once" value="{{ once_token() }}" />
+        <input type="hidden" name="idea_id" value="{{ idea.id }}" />
+        <input type="hidden" name="title" value="{{ idea.title }}" />
+        <div class="field">
+          <label for="start">When</label>
+          <input id="start" name="start" type="datetime-local" required />
+          <label class="check"><input type="checkbox" name="all_day" value="yes" /> All day</label>
+        </div>
+        <div class="field">
+          <label for="location">Where</label>
+          <input id="location" name="location" value="{{ row.where or '' }}" />
+        </div>
+        {{ asking('plan') }}
+        <div class="field wide actions">
+          <button type="submit">Put it on the calendar</button>
+        </div>
+      </form>
+    {% else %}
+      <p class="muted">Google Calendar is not connected, so nothing here can be scheduled.
+        See the <a href="{{ url_for('web.status') }}">status page</a>.</p>
+    {% endif %}
+    </details>
+  </section>
+
+  <section class="panel">
+    <details class="more">
+      <summary><span class="h2">Record how it went</span></summary>
+    <form class="form" method="post" action="{{ url_for('edits.record_outcome', idea_id=idea.id) }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+      <input type="hidden" name="once" value="{{ once_token() }}" />
+      <div class="field">
+        <label for="happened_on">When</label>
+        <input id="happened_on" name="happened_on" type="date" value="{{ today }}" max="{{ today }}" />
+      </div>
+      <div class="field">
+        <label for="rating">Out of ten</label>
+        <select id="rating" name="rating">
+          <option value="">no score</option>
+          {% for score in ratings %}<option value="{{ score }}">{{ score }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="would_repeat">Again?</label>
+        <select id="would_repeat" name="would_repeat">
+          <option value="">not saying</option>
+          <option value="yes">would go again</option>
+          <option value="no">would not</option>
+        </select>
+      </div>
+      {{ asking('outcome') }}
+      <div class="field wide">
+        <label for="notes">Notes</label>
+        <textarea id="notes" name="notes" rows="2"></textarea>
+      </div>
+      <div class="field wide actions">
+        <button type="submit">Record it</button>
+      </div>
+    </form>
+    </details>
+  </section>
 
   <p><a href="{{ url_for('web.ideas') }}">Back to the ideas list</a></p>
 {% endblock %}

@@ -95,7 +95,7 @@ class Settings(BaseSettings):
 
     gemini_api_key: str | None = None
     gemini_model: str = "gemini-2.5-pro"
-    gemini_worker_model: str = "gemini-2.5-flash"
+    gemini_worker_model: str = "gemini-3.8-flash"
 
     openai_api_key: str | None = None
     openai_model: str = "gpt-5"
@@ -164,7 +164,7 @@ class Settings(BaseSettings):
     google_token_path: Path = Path("data/google_token.json")
     enrichment_notes: bool = True
 
-    # The read-only web page (see familydb/web/). Off unless WEB_ENABLED is set.
+    # The web page (see familydb/web/). Off unless WEB_ENABLED is set.
     web_enabled: bool = False
     web_host: str = "127.0.0.1"
     web_port: int = Field(default=8080, ge=1, le=65535)
