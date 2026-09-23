@@ -9,3 +9,10 @@ __pycache__
 tests
 docs
 deploy
+# Secrets and data that must never ride into a build context: the old .env copies the installer
+# keeps, Caddy's certificate key, and every backup.
+.env.*
+!.env.example
+caddy
+backups
+*.sqlite3*
