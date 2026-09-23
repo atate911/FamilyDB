@@ -448,8 +448,12 @@ def chat(
     else:
         typer.echo(reply.text)
     if reply.status in {"failed", "unknown_sender"}:
-        if reply.status == "failed" and not application.settings.anthropic_api_key:
-            typer.echo("hint: ANTHROPIC_API_KEY is not set (see .env.example)", err=True)
+        if reply.status == "failed" and not application.can_ask("chat"):
+            name = application.settings.provider.upper()
+            typer.echo(
+                f"hint: no model key: type one on the settings page, or set {name}_API_KEY",
+                err=True,
+            )
         raise typer.Exit(code=1)
 
 
@@ -780,6 +784,9 @@ def digest(
     application.migrate()
     _cli_senders(application)
     application.senders["console"] = lambda _chat_id, text: typer.echo(text)
+    if not application.can_ask("chat"):
+        typer.echo("digest not sent: there is no model key yet to write it with")
+        return
     reply = run_digest(application)
     if reply is None:
         typer.echo("digest not sent: already sent today, or no sender or admin (see the log)")

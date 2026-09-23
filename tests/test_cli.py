@@ -30,7 +30,10 @@ def env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
 
 
 def _fake_client(*responses):
-    return SimpleNamespace(beta=SimpleNamespace(messages=fakes.FakeMessagesAPI(*responses)))
+    return SimpleNamespace(
+        beta=SimpleNamespace(messages=fakes.FakeMessagesAPI(*responses)),
+        close=lambda: None,  # the provider closes the one it builds to check for a key
+    )
 
 
 def test_version_flag() -> None:

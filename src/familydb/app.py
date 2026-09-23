@@ -110,6 +110,12 @@ class App:
 
         return providers.for_surface(self.settings, surface, api=api)
 
+    def can_ask(self, surface: str = "chat", api: Any = None) -> bool:
+        """Whether a model can be asked at all, which a fresh install without a key cannot."""
+        from familydb.agent import providers
+
+        return providers.ready(self.settings, surface, api=api)  # type: ignore[arg-type]
+
     def fallback(self, surface: str, primary: str) -> Any:
         """Somewhere else to ask when the chosen provider cannot take a message right now."""
         from familydb.agent import providers

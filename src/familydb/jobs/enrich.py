@@ -178,6 +178,10 @@ def run_enrichment(
         if not enrichment_available(app.settings):
             log.debug("enrichment skipped: web tools are off")
             return counts
+        if not app.can_ask("worker", api=api):
+            # Not a failure: the ideas wait, pending, and are looked up once a key is added.
+            log.debug("enrichment waits: there is no model key yet")
+            return counts
         if idea_id is not None:
             idea = ideas.get(conn, idea_id)
             batch = [idea] if idea is not None else []

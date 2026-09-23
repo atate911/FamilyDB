@@ -30,6 +30,10 @@ UNKNOWN_SENDER = (
     "Sorry, I only talk to the family. Your id on this channel is {id}; ask an admin to add you."
 )
 RETRY_REPLY = "Saved your message, but I couldn't process it right now. I'll retry later."
+NO_KEY_REPLY = (
+    "I can't answer yet: no model key has been added. An admin can add one on the settings "
+    "page, and then ask me again."
+)
 CONFIG_REPLY = (
     "Saved your message, but I can't reach the model at the moment. "
     "An admin needs to check the logs."
@@ -172,6 +176,12 @@ def _run_owned(
     retry: bool = False,
 ) -> OutgoingMessage:
     """Think and persist the outcome. With notify off (retries) failures stay silent."""
+    if not app.can_ask("chat", api=api):
+        # A fresh install before its key is typed in: say so plainly, and do not keep retrying.
+        log.warning("message %s saved, but there is no model key to answer it with", inbound_id)
+        with transaction(conn):
+            messages.give_up(conn, inbound_id)
+        return _fail(app, conn, msg, inbound_id, "no model key", NO_KEY_REPLY if notify else None)
     try:
         result = _think(app, msg, member, inbound_id, api, conn, retry=retry)
     except AgentError as exc:

@@ -125,14 +125,8 @@ def services(app: App) -> list[dict[str, Any]]:
     return [
         _row("Google Calendar", calendar_available(live), calendar),
         _row("Weather and travel", weather_available(live), weather),
-        _row(
-            "Reading the web",
-            enrichment_available(live),
-            "ideas are looked up automatically, and discovery may search"
-            if enrichment_available(live)
-            else "off: no idea is filled in and nothing new is discovered",
-        ),
-        _row("Weekend digest", bool(live.digest_chat_id), live.digest_chat_id or "not sent"),
+        _row("Reading the web", *_lookups(app)),
+        _row("Weekend digest", *_digest(app)),
         _row("This page", None if not live.web_password else True, page),
     ]
 
@@ -284,3 +278,20 @@ def setup_steps(app: App, conn: sqlite3.Connection) -> list[dict[str, str]]:
             )
         )
     return [{"text": text, "link": link} for done, text, link in steps if not done]
+
+
+def _lookups(app: App) -> tuple[bool | None, str]:
+    if not enrichment_available(app.settings):
+        return False, "off: no idea is filled in and nothing new is discovered"
+    if not app.can_ask("worker"):
+        return None, "on, and waiting for a model key: new ideas are looked up once there is one"
+    return True, "ideas are looked up automatically, and discovery may search"
+
+
+def _digest(app: App) -> tuple[bool | None, str]:
+    chat = app.settings.digest_chat_id
+    if not chat:
+        return False, "not sent"
+    if not app.can_ask("chat"):
+        return None, f"{chat}, once there is a model key to write it"
+    return True, chat
