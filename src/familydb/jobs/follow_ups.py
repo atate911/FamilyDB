@@ -12,6 +12,7 @@ from contextlib import closing
 from datetime import date, timedelta
 
 from familydb.app import App
+from familydb.calendar_sync import sync_plans
 from familydb.dates import utc_iso
 from familydb.delivery import deliver, run_deliveries
 from familydb.store import messages, outcomes, plans
@@ -35,6 +36,16 @@ def run_follow_ups(app: App) -> int:
     run_deliveries(app)  # anything an earlier run could not send goes first, and only once
     with closing(app.connect()) as conn:
         app.refresh(conn)
+        # Asking how a plan went that somebody cancelled in Google would be a small insult.
+        # When Google cannot be asked, the questions wait for a run that can check first.
+        if app.calendar is not None:
+            try:
+                sync_plans(
+                    conn, app.calendar, app.settings.google_calendar_id, utc_iso(app.clock.now())
+                )
+            except Exception:
+                log.exception("follow-ups deferred: the calendar could not be checked")
+                return 0
         today = app.clock.today()
         since = today - timedelta(days=FOLLOW_UP_DAYS)
         due = plans.due_for_follow_up(conn, today=today.isoformat(), since=since.isoformat())

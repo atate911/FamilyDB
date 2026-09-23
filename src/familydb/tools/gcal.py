@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import uuid
 from datetime import date, datetime, time, timedelta
 from typing import Any, Literal
 from zoneinfo import ZoneInfo
@@ -9,6 +11,7 @@ from zoneinfo import ZoneInfo
 from pydantic import BaseModel, Field
 
 from familydb.availability import calendar_available
+from familydb.calendar_sync import refresh_plan, sync_plans
 from familydb.dates import (
     ensure_not_past,
     iso_date,
@@ -20,7 +23,7 @@ from familydb.dates import (
 from familydb.errors import ToolError, ToolUnavailable
 from familydb.integrations.google_calendar import CalendarAPI, CalendarEvent
 from familydb.store import ideas, messages, plans
-from familydb.store.db import transaction
+from familydb.store.db import from_json, to_json, transaction
 from familydb.tools.registry import ToolContext, tool
 
 NOT_CONFIGURED = "Google Calendar is not connected (no calendar id or token configured)"
@@ -67,6 +70,36 @@ class UpdateEventInput(BaseModel):
 
 class DeleteEventInput(BaseModel):
     plan_id: int = Field(description="The plan number returned by create_event.")
+
+
+class SearchPlansInput(BaseModel):
+    query: str = Field(
+        default="", description="Words in the plan title, or empty for recent plans."
+    )
+    include_cancelled: bool = False
+
+
+@tool(
+    name="search_plans",
+    description="Find saved plans and their plan_id before moving or cancelling one. "
+    "Checks current Google dates when connected; use get_calendar to see other Google events.",
+)
+def search_plans(ctx: ToolContext, args: SearchPlansInput) -> dict[str, Any]:
+    checked = ctx.calendar is not None
+    if checked:
+        sync_plans(ctx.conn, ctx.calendar, ctx.settings.google_calendar_id, ctx.now_iso())
+    rows = ctx.conn.execute(
+        "SELECT * FROM plans WHERE lower(title) LIKE ? AND (? OR status != 'cancelled') "
+        "ORDER BY start DESC LIMIT 50",
+        ("%" + args.query.strip().lower() + "%", args.include_cancelled),
+    )
+    return {
+        "calendar_checked": checked,
+        "plans": [
+            {"plan_id": row["id"], **plans.Plan.from_row(row).model_dump(mode="json")}
+            for row in rows
+        ],
+    }
 
 
 def _calendar(ctx: ToolContext) -> CalendarAPI:
@@ -171,6 +204,7 @@ def calendar_days(
                 "weekday": day.strftime("%A"),
                 "events": [
                     {
+                        "google_event_id": e.id,
                         "title": e.title,
                         "start": e.start.strftime("%H:%M"),  # type: ignore[union-attr]
                         "end": e.end.strftime("%H:%M"),  # type: ignore[union-attr]
@@ -180,6 +214,7 @@ def calendar_days(
                     if not e.all_day
                 ],
                 "all_day": [e.title for e in todays if e.all_day],
+                "all_day_events": [e.to_public() for e in todays if e.all_day],
                 "free": free_blocks(todays, day, tz),
             }
         )
@@ -202,6 +237,21 @@ def get_calendar(ctx: ToolContext, args: GetCalendarInput) -> dict[str, Any]:
     if (end - start).days > MAX_WINDOW_DAYS:
         raise ToolError(f"ask for at most {MAX_WINDOW_DAYS} days at a time")
     days = calendar_days(calendar, start, end, ctx.clock.tz)
+    sync_plans(
+        ctx.conn, calendar, ctx.settings.google_calendar_id, ctx.now_iso(), first=start, last=end
+    )
+    owned = {
+        r["google_event_id"]: r["id"]
+        for r in ctx.conn.execute(
+            "SELECT id, google_event_id FROM plans WHERE calendar_id = ?",
+            (ctx.settings.google_calendar_id,),
+        )
+    }
+    for day in days:
+        for event in day["events"]:
+            event["plan_id"] = owned.get(event["google_event_id"])
+        for event in day["all_day_events"]:
+            event["plan_id"] = owned.get(event["id"])
     return {"calendar": ctx.settings.google_calendar_id, "days": days}
 
 
@@ -223,17 +273,50 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
     start, end, all_day, stored_start, stored_end = _timed_or_all_day(
         args.start, args.end, args.all_day, tz
     )
-    ensure_not_past(start, ctx.clock)
-    event = calendar.insert_event(
-        title=args.title.strip(),
-        start=start,
-        end=end,
-        all_day=all_day,
-        location=args.location,
-        description=args.notes,
+    # Persist identity before contacting Google. The same inbound request and normalized
+    # event intent reuse it even after a crash or a lost successful response.
+    scope = (
+        str(ctx.message_id)
+        if ctx.message_id is not None
+        else ctx.scratch.setdefault("calendar_scope", uuid.uuid4().hex)
     )
+    intent = {
+        "calendar": ctx.settings.google_calendar_id,
+        "title": args.title.strip().casefold(),
+        "start": stored_start,
+        "end": stored_end,
+        "idea_id": args.idea_id,
+    }
+    key = hashlib.sha256((scope + to_json(intent)).encode()).hexdigest()
+    with transaction(ctx.conn):
+        ctx.conn.execute(
+            "INSERT OR IGNORE INTO calendar_creations(operation_key, event_id) VALUES (?, ?)",
+            (key, uuid.uuid4().hex),
+        )
+        operation = ctx.conn.execute(
+            "SELECT * FROM calendar_creations WHERE operation_key = ?", (key,)
+        ).fetchone()
+    if operation["result"]:
+        return from_json(operation["result"])
+    event = calendar.get_event(operation["event_id"])
+    if event is None:
+        ensure_not_past(start, ctx.clock)
+        event = calendar.insert_event(
+            title=args.title.strip(),
+            start=start,
+            end=end,
+            all_day=all_day,
+            location=args.location,
+            description=args.notes,
+            event_id=operation["event_id"],
+        )
     origin = messages.get(ctx.conn, ctx.message_id) if ctx.message_id is not None else None
     with transaction(ctx.conn):
+        completed = ctx.conn.execute(
+            "SELECT result FROM calendar_creations WHERE operation_key = ?", (key,)
+        ).fetchone()["result"]
+        if completed:
+            return from_json(completed)
         plan = plans.insert(
             ctx.conn,
             title=args.title.strip(),
@@ -253,11 +336,16 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
         idea = None
         if args.idea_id is not None:
             idea = ideas.update(ctx.conn, args.idea_id, {"status": "planned"}, now=ctx.now_iso())
-    return {
-        "plan": plan.model_dump(mode="json"),
-        "event": event.to_public(),
-        "idea": idea.model_dump(mode="json") if idea else None,
-    }
+        result = {
+            "plan": plan.model_dump(mode="json"),
+            "event": event.to_public(),
+            "idea": idea.model_dump(mode="json") if idea else None,
+        }
+        ctx.conn.execute(
+            "UPDATE calendar_creations SET result = ? WHERE operation_key = ?",
+            (to_json(result), key),
+        )
+    return result
 
 
 def _cancel(ctx: ToolContext, plan: plans.Plan) -> dict[str, Any]:
@@ -292,6 +380,9 @@ def update_event(ctx: ToolContext, args: UpdateEventInput) -> dict[str, Any]:
     plan = plans.get(ctx.conn, args.plan_id)
     if plan is None:
         raise ToolError(f"no plan #{args.plan_id}")
+    if plan.calendar_id != ctx.settings.google_calendar_id:
+        raise ToolError("this plan belongs to a different calendar")
+    plan = refresh_plan(ctx.conn, calendar, plan, ctx.settings.google_calendar_id, ctx.now_iso())
     if plan.status == "cancelled":
         raise ToolError(f"plan #{plan.id} is cancelled; create a new event instead")
     if args.status == "cancelled":
@@ -307,6 +398,7 @@ def update_event(ctx: ToolContext, args: UpdateEventInput) -> dict[str, Any]:
             patch[google_field] = value
     if args.status is not None:
         changes["status"] = args.status
+        patch["status"] = args.status
 
     if args.start is not None or args.end is not None or args.all_day is not None:
         tz = ctx.clock.tz
@@ -349,6 +441,8 @@ def delete_event(ctx: ToolContext, args: DeleteEventInput) -> dict[str, Any]:
     plan = plans.get(ctx.conn, args.plan_id)
     if plan is None:
         raise ToolError(f"no plan #{args.plan_id}")
+    if plan.calendar_id != ctx.settings.google_calendar_id:
+        raise ToolError("this plan belongs to a different calendar")
     if plan.status == "cancelled":
         return {"plan": plan.model_dump(mode="json"), "note": "already cancelled"}
     return _cancel(ctx, plan)

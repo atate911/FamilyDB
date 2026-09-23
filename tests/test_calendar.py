@@ -91,7 +91,14 @@ def test_get_calendar_reports_days(registry, conn, calendar_settings, clock, fam
     assert [d["weekday"] for d in data["days"]] == ["Saturday", "Sunday"]
     saturday, sunday = data["days"]
     assert saturday["events"] == [
-        {"title": "Dentist", "start": "10:00", "end": "11:00", "location": None}
+        {
+            "google_event_id": "evt1",
+            "plan_id": None,
+            "title": "Dentist",
+            "start": "10:00",
+            "end": "11:00",
+            "location": None,
+        }
     ]
     assert saturday["free"] == ["afternoon", "evening"]
     assert sunday["all_day"] == ["Sam away"]
@@ -136,11 +143,11 @@ def test_create_event_links_idea_and_stores_plan(
     plan = data["plan"]
     assert plan["start"] == "2026-09-26T20:00-07:00"
     assert plan["end"] == "2026-09-26T22:00-07:00"
-    assert plan["all_day"] is False and plan["google_event_id"] == "evt1"
+    assert plan["all_day"] is False and plan["google_event_id"] == data["event"]["id"]
     assert plan["calendar_id"] == "family@group.calendar.google.com"
     assert data["idea"]["status"] == "planned"
     assert data["event"]["link"].endswith("evt1")
-    stored = calendar.events["evt1"]
+    stored = next(iter(calendar.events.values()))
     assert (
         stored.start == datetime(2026, 9, 26, 20, tzinfo=TZ) and stored.location == "Concert hall"
     )
@@ -159,7 +166,7 @@ def test_create_event_all_day_past_and_unknown_idea(
     )
     assert data["plan"]["all_day"] is True
     assert (data["plan"]["start"], data["plan"]["end"]) == ("2026-10-03", "2026-10-04")
-    assert calendar.events["evt1"].end == date(2026, 10, 5)  # exclusive end for Google
+    assert next(iter(calendar.events.values())).end == date(2026, 10, 5)  # exclusive, for Google
     result, data = _call(registry, ctx, "create_event", title="Old", start="2026-09-01T10:00")
     assert result.is_error and "in the past" in data["error"]
     result, data = _call(
@@ -193,15 +200,15 @@ def test_update_and_cancel_event(registry, conn, calendar_settings, clock, famil
     )
     assert not result.is_error, data
     assert data["plan"]["start"] == "2026-09-27T09:00-07:00"
-    assert calendar.events["evt1"].title == "Falls hike (moved)"
-    assert calendar.events["evt1"].start == datetime(2026, 9, 27, 9, tzinfo=TZ)
+    assert next(iter(calendar.events.values())).title == "Falls hike (moved)"
+    assert next(iter(calendar.events.values())).start == datetime(2026, 9, 27, 9, tzinfo=TZ)
     result, data = _call(registry, ctx, "update_event", plan_id=plan_id)
     assert result.is_error and "nothing to change" in data["error"]
     result, data = _call(registry, ctx, "update_event", plan_id=plan_id, status="cancelled")
     assert not result.is_error
     assert data["plan"]["status"] == "cancelled"
     assert data["idea"]["status"] == "idea"
-    assert calendar.deleted == ["evt1"]
+    assert calendar.deleted == [created["plan"]["google_event_id"]]
     result, data = _call(registry, ctx, "update_event", plan_id=plan_id, title="x")
     assert result.is_error and "cancelled" in data["error"]
     result, data = _call(registry, ctx, "delete_event", plan_id=999)
@@ -266,7 +273,7 @@ def test_moving_only_the_start_keeps_the_duration(
     )
     _, moved = _call(registry, ctx, "update_event", plan_id=trip["plan"]["id"], start="2026-10-03")
     assert (moved["plan"]["start"], moved["plan"]["end"]) == ("2026-10-03", "2026-10-06")
-    assert calendar.events["evt2"].end == date(2026, 10, 7)
+    assert calendar.events[trip["plan"]["google_event_id"]].end == date(2026, 10, 7)
 
 
 def test_converting_all_day_to_timed_needs_a_time(
@@ -288,7 +295,7 @@ def test_converting_all_day_to_timed_needs_a_time(
         start="2026-10-10T19:00",
     )
     assert timed["plan"]["all_day"] is False and timed["plan"]["start"] == "2026-10-10T19:00-07:00"
-    assert calendar.events["evt1"].all_day is False
+    assert next(iter(calendar.events.values())).all_day is False
 
 
 def test_patch_body_clears_the_unused_time_key() -> None:

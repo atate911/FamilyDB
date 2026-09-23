@@ -7,7 +7,7 @@ theme per commit, so each can be read beside the change that made it pass.
 import json
 from contextlib import closing
 from dataclasses import replace
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from types import SimpleNamespace
 
 import pytest
@@ -339,3 +339,141 @@ def test_normal_reply_uses_same_outbox_and_is_not_sent_twice(env):
     assert deliver(env.app, reply.out_message_id)
     assert not deliver(env.app, reply.out_message_id)
     assert len(sent) == len(api.requests) == 1
+
+
+# --- calendar writes safe to repeat, and Google's own dates ---------------------------------------
+
+
+def test_lost_calendar_response_reuses_persisted_identity_after_context_restart(env):
+    row = messages.insert_in(
+        env.conn,
+        channel="console",
+        channel_update_id="calendar",
+        chat_id="c",
+        member_id=env.member.id,
+        text="Museum Saturday",
+    )
+    env.ctx.message_id = row.id
+    original = env.cal.insert_event
+
+    def committed_then_timeout(**kwargs):
+        original(**kwargs)
+        raise TimeoutError("response lost after server committed")
+
+    env.cal.insert_event = committed_then_timeout
+    payload = dict(title="Museum", start="2026-09-26T10:00", end="2026-09-26T12:00")
+    assert call(env, "create_event", **payload)[0].is_error
+    assert len(env.cal.events) == 1
+    assert env.conn.execute("SELECT count(*) FROM plans").fetchone()[0] == 0
+    env.cal.insert_event = original
+    # The repair must still work after the event's date has passed.
+    env.app.clock.advance(timedelta(days=7))
+    env.ctx = ToolContext(
+        env.conn,
+        env.settings,
+        env.app.clock,
+        member=env.member,
+        calendar=env.cal,
+        message_id=row.id,
+    )
+    second, data = call(env, "create_event", **payload)
+    assert not second.is_error
+    assert len(env.cal.events) == 1
+    assert env.conn.execute("SELECT count(*) FROM plans").fetchone()[0] == 1
+    assert call(env, "create_event", **payload)[1]["plan"]["id"] == data["plan"]["id"]
+
+
+def test_plan_lookup_survives_empty_conversation_history(env):
+    _, created = call(env, "create_event", title="Unlinked museum visit", start="2026-09-26T10:00")
+    assert created["plan"]["idea_id"] is None
+    env.ctx.scratch.clear()
+    result, found = call(env, "search_plans", query="museum")
+    assert not result.is_error
+    assert found["plans"][0]["plan_id"] == created["plan"]["id"]
+
+
+def test_google_insert_conflict_reconciles_by_client_event_id(env):
+    from familydb.integrations.google_calendar import GoogleCalendar
+
+    client = GoogleCalendar(env.settings)
+    item = {
+        "id": "abc123",
+        "summary": "Museum",
+        "start": {"date": "2026-09-26"},
+        "end": {"date": "2026-09-27"},
+    }
+    sent = []
+
+    class Events:
+        def insert(self, **kwargs):
+            sent.append(kwargs)
+            return "insert"
+
+        def get(self, **kwargs):
+            assert kwargs["eventId"] == "abc123"
+            return "get"
+
+    client._events = Events
+
+    def execute(request, *, ignore=()):
+        if request == "insert":
+            assert 409 in ignore
+            return None
+        return item
+
+    client._execute = execute
+    result = client.insert_event(
+        title="Museum",
+        start=date(2026, 9, 26),
+        end=date(2026, 9, 27),
+        all_day=True,
+        location=None,
+        description=None,
+        event_id="abc123",
+    )
+    assert result.id == "abc123" and sent[0]["body"]["id"] == "abc123"
+
+
+def test_external_cancellation_suppresses_followup(env):
+    _, created = call(env, "create_event", title="Museum", start="2026-09-26T10:00")
+    plans.update(env.conn, created["plan"]["id"], {"channel": "telegram", "chat_id": "100"})
+    env.cal.delete_event(created["event"]["id"])
+    env.app.clock.advance(timedelta(days=4))
+    env.app.senders["telegram"] = lambda *_: pytest.fail("cancelled event must not prompt")
+    assert run_follow_ups(env.app) == 0
+    assert plans.get(env.conn, created["plan"]["id"]).status == "cancelled"
+
+
+def test_the_calendar_tool_names_the_plan_behind_each_event_and_reads_google_s_dates(env):
+    """The model can find a plan it made from the calendar alone, even after it moved in Google.
+
+    (PR #2 tested this beside its plans page; the page half is with the page.)
+    """
+    _, created = call(
+        env, "create_event", title="Museum", start="2026-09-26T10:00", end="2026-09-26T12:00"
+    )
+    zone = env.app.clock.tz
+    env.cal.patch_event(
+        created["event"]["id"],
+        start=datetime(2026, 9, 27, 10, tzinfo=zone),
+        end=datetime(2026, 9, 27, 12, tzinfo=zone),
+    )
+    _, result = call(env, "get_calendar", start="2026-09-26", end="2026-09-27")
+    sunday = result["days"][1]
+    assert sunday["events"][0]["plan_id"] == created["plan"]["id"]
+    assert plans.get(env.conn, created["plan"]["id"]).start == "2026-09-27T10:00-07:00"
+
+
+def test_reading_the_calendar_rewrites_nothing_that_did_not_change(env):
+    """Plans are stored to the minute with their offset. Writing Google's own spelling back —
+    seconds included — compared as a change every time and rewrote every plan on every read."""
+    _, timed = call(env, "create_event", title="Museum", start="2026-09-26T10:00")
+    _, whole = call(env, "create_event", title="Camping", start="2026-10-03", end="2026-10-04")
+    before = {p["plan"]["id"]: plans.get(env.conn, p["plan"]["id"]) for p in (timed, whole)}
+    env.app.clock.advance(timedelta(hours=1))
+    env.ctx = ToolContext(
+        env.conn, env.settings, env.app.clock, member=env.member, calendar=env.cal
+    )
+    call(env, "search_plans", query="")  # the full sync
+    for plan_id, plan in before.items():
+        assert plans.get(env.conn, plan_id) == plan  # updated_at included
