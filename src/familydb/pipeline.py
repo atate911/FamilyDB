@@ -8,7 +8,7 @@ from contextlib import closing
 from datetime import datetime
 from typing import Any
 
-from familydb.agent import gateway
+from familydb.agent import gateway, spending
 from familydb.agent.history import load_history
 from familydb.agent.loop import MessagesAPI, TurnResult
 from familydb.agent.render import render_retry_note, render_user_turn
@@ -39,6 +39,16 @@ CONFIG_REPLY = (
     "An admin needs to check the logs."
 )
 EMPTY_REPLY = "Done."
+# A turn that used every step it may take is not tried again: the retry would pay the same for
+# the same context and most likely end the same way. The family is told, once, instead.
+GAVE_UP_REPLY = (
+    "I couldn't finish that within the steps I'm allowed, so I've stopped. "
+    "Try asking again more simply."
+)
+GAVE_UP_PARTLY = (
+    " That much is saved, but I ran out of steps before I finished. "
+    "Check what is saved before asking for the rest, so nothing is done twice."
+)
 
 
 def handle_incoming(
@@ -212,6 +222,14 @@ def _run_owned(
         error = f"{type(exc).__name__}: {exc}"
         return _fail(app, conn, msg, inbound_id, error, RETRY_REPLY if notify else None)
 
+    if result.status == "failed" and result.error == "max_iterations":
+        # Given up for good, so a person who asked is told now, even on a retry; the digest
+        # asked nobody and stays quiet, as its failures always have.
+        log.error("turn on message %s ran out of steps; not retrying it", inbound_id)
+        with transaction(conn):
+            messages.give_up(conn, inbound_id)
+        notice = _gave_up_reply(app, result) if kind != "digest" else None
+        return _fail(app, conn, msg, inbound_id, "max_iterations", notice, result.actions)
     if result.status == "failed":
         log.error("turn failed on message %s: %s", inbound_id, result.error)
         return _fail(
@@ -345,6 +363,15 @@ def _think(
         history=history,
         api=api,
     )
+
+
+def _gave_up_reply(app: App, result: TurnResult) -> str:
+    """What to tell the family when a turn ran out of steps, worded by code, not by a model."""
+    written = {spec.name for spec in app.registry.specs() if spec.writes}
+    completed = [a for a in result.actions if a.get("ok") and a.get("tool") in written]
+    if not completed:
+        return GAVE_UP_REPLY
+    return spending.done_lines(completed) + GAVE_UP_PARTLY
 
 
 def _fail(

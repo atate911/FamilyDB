@@ -12,6 +12,14 @@ from familydb.clock import Clock
 from familydb.dates import utc_iso
 from familydb.store import members, messages
 
+# History is sent at full price on every call of a turn, so it is kept under a budget: the newest
+# messages that fit in HISTORY_CHARS, each cut to MESSAGE_CHARS, so one long paste is not paid for
+# again on every message for the next six hours. Characters, because this runs before any
+# provider is chosen; about 1,500 tokens in all.
+HISTORY_CHARS = 6000
+MESSAGE_CHARS = 1500
+CUT = " [...]"
+
 
 @dataclass(frozen=True)
 class HistoryTurn:
@@ -28,10 +36,12 @@ def load_history(
     since_hours: float,
     exclude_message_id: int | None = None,
     exclude_replies_to: int | None = None,
+    budget: int = HISTORY_CHARS,
 ) -> list[HistoryTurn]:
     """The last `limit` messages of a chat from the last `since_hours`, as plain text turns.
 
     `exclude_replies_to` drops the bot's own notices about a message (used when retrying it).
+    Then `budget` keeps only the newest of them that fit (see `HISTORY_CHARS`).
     """
     since = utc_iso(clock.now() - timedelta(hours=since_hours))
     names = {m.id: m.display_name for m in members.list_all(conn, active_only=False)}
@@ -49,4 +59,20 @@ def load_history(
             turns.append(HistoryTurn("user", render_history_line(sender, message.text)))
         else:
             turns.append(HistoryTurn("assistant", message.text))
-    return turns
+    return within_budget(turns, budget)
+
+
+def within_budget(
+    turns: list[HistoryTurn], budget: int, *, each: int = MESSAGE_CHARS
+) -> list[HistoryTurn]:
+    """The newest turns whose text fits in `budget` characters, each cut to `each` first."""
+    kept: list[HistoryTurn] = []
+    used = 0
+    for turn in reversed(turns):
+        text = turn.text if len(turn.text) <= each else turn.text[: each - len(CUT)] + CUT
+        if used + len(text) > budget:
+            break
+        kept.append(HistoryTurn(turn.role, text))
+        used += len(text)
+    kept.reverse()
+    return kept

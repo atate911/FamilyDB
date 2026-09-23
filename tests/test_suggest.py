@@ -420,7 +420,7 @@ def test_discovery_runs_a_worker_turn_and_caches_the_finds(
 
     # Asking again inside the cache window makes no request at all.
     _, again = _suggest(registry, ctx, discover=True)
-    assert again["web_finds"] == data["web_finds"] and len(api.requests) == 3
+    assert again["web_finds"] == data["web_finds"] and len(api.requests) == 2
 
     # A different window is a different key; an expired key is searched again.
     api.queue.extend(fakes.discover_script([]))
@@ -429,7 +429,7 @@ def test_discovery_runs_a_worker_turn_and_caches_the_finds(
     thursday_clock.advance(timedelta(seconds=DISCOVER_CACHE_SECONDS + 1))
     api.queue.extend(fakes.discover_script([FIND]))
     _, refreshed = _suggest(registry, ctx, discover=True)
-    assert len(refreshed["web_finds"]) == 1 and len(api.requests) == 9
+    assert len(refreshed["web_finds"]) == 1 and len(api.requests) == 6
 
 
 def test_discovery_failures_become_notes_and_are_not_cached(

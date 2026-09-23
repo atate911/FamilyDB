@@ -82,6 +82,7 @@ def run_turn(
     fallback: Provider | None = None,
     kind: str | None = None,
     sections: dict[str, int] | None = None,
+    final_tools: frozenset[str] = frozenset(),
 ) -> TurnResult:
     """Drive one inbound message to a reply.
 
@@ -92,6 +93,10 @@ def run_turn(
     With a `fallback` provider, a first call the chosen one cannot take is tried there instead.
     Only the first call: once a tool has run, starting again elsewhere would repeat whatever it
     did, and a half-finished turn is the retry job's business rather than this one's.
+
+    `final_tools` are the tools whose success is the turn's result (a worker's hand-back): once
+    one succeeds, and nothing else in that step failed, the turn ends there rather than paying
+    for another call only for the model to say it is done. A failed one goes back to the model.
     """
     request = TurnRequest(
         system=system,
@@ -235,10 +240,20 @@ def run_turn(
                     is_error=result.is_error,
                 )
             )
+        if _handed_back(exchange, final_tools):
+            return TurnResult("ok", reply.text, actions, iteration, totals, provider=active.name)
 
     return TurnResult(
         "failed", "", actions, limit, totals, error="max_iterations", provider=active.name
     )
+
+
+def _handed_back(exchange: Exchange, final_tools: frozenset[str]) -> bool:
+    """Whether this step delivered the turn's result: a final tool ran and nothing failed."""
+    outcomes = exchange.outcomes
+    if any(outcome.is_error for outcome in outcomes):
+        return False
+    return any(outcome.name in final_tools for outcome in outcomes)
 
 
 def _estimate(request: TurnRequest, provider: Provider, surface: str, settings: Settings) -> float:
