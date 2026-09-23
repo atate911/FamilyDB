@@ -91,10 +91,10 @@ Context is built in three layers, and every piece of information belongs to exac
 
 | Kind | Trigger | Model | Sees | May do | Returns |
 |---|---|---|---|---|---|
-| Chat | a family message (Telegram, page, console) | chat model | prompt, family, up to 150 ideas in the prefix; date, sender, up to 20 messages of the last 6 hours | 15 chat tools | a reply; tool writes |
+| Chat | a family message (Telegram, page, console) | chat model | prompt, family, up to 150 ideas in the prefix; date, sender, up to 20 messages of the last 6 hours, the newest within 6,000 characters | 15 chat tools | a reply; tool writes |
 | Digest | the weekly schedule, or catch-up after a restart | chat model | the chat context, with a fixed question | the chat tools | a reply to the digest chat |
-| Retry | every 5 minutes, for a failed message, 3 times at most | chat model | the chat context, plus which writes already ran | the chat tools | a reply |
-| Enrich | every 2 minutes, up to 3 pending ideas | worker model | worker prompt, home area, the idea and what was saved before | web search (3), `save_place`, `skip_place` | a place record |
+| Retry | every 5 minutes, for a failed message, 3 times at most; never after running out of steps | chat model | the chat context, plus which writes already ran | the chat tools | a reply |
+| Enrich | every 2 minutes, up to 3 pending ideas; a home idea with no place or link is skipped in code | worker model | worker prompt, home area, the idea and what was saved before | web search (3), `save_place`, `skip_place` | a place record |
 | Discover | a `suggest` call, cached 12 hours | worker model | worker prompt, home area, the window and the question | web search (4), `report_finds` | up to 6 finds |
 
 All of them go through one door, `agent/gateway.ask`, which runs the loop
@@ -190,9 +190,9 @@ everything. The direction:
 Read from the code on September 23, 2026; each is a candidate change, roughly in order of value
 for effort, and each should be measured before and after.
 
-1. **A worker pays one more call after handing back.** The loop does not stop at a successful
-   `save_place`, `skip_place` or `report_finds`, so every lookup costs a further call for the
-   model to finish. Ending the turn at the hand-back saves one call per idea and per discovery.
+1. **A worker pays one more call after handing back.** Now done: a kind's `hand_back` tools
+   are passed to the loop as final, and a step in which one succeeds (and nothing failed) ends
+   the turn. A failed hand-back still goes back to the model. One call fewer per idea and search.
 2. **The idea list churns the chat cache.** Every idea line in the prefix ends in
    `details: pending|done|...` (`agent/render.render_idea_line`), so each finished lookup,
    and each outcome recorded, changes the prefix and the next message pays to write the cache
@@ -203,18 +203,19 @@ for effort, and each should be measured before and after.
    (`suggest/discover.py`), so "what's on this weekend" and "anything fun Saturday" search twice.
    Keying on the window and the constraints would let the digest and the questions after it share
    one search, as the module's docstring intends.
-4. **Some ideas need no lookup at all.** A home project or a vague idea still costs at least two
-   worker calls to be skipped. The kind, and whether there is a location, can decide that in code.
-5. **Workers inherit the chat's output limit** (16,000 tokens) though their only real output is
-   one tool call. A small cap bounds a runaway turn.
-6. **A turn that ran out of iterations is retried in full,** up to three times, at the same cost,
-   with the same context. It should give up and say so.
+4. **Some ideas need no lookup at all.** Done for the clear case: `jobs/enrich.needs_lookup`
+   skips a `home` idea with no location, link or place without a call. A vague idea of another
+   kind still goes to the worker, since a title alone can name a place.
+5. **Workers inherit the chat's output limit.** Now done: worker kinds declare `max_tokens`
+   (4,000, thinking included, never above `max_output_tokens`).
+6. **A turn that ran out of iterations was retried in full.** Now done: it is given up at
+   once and the family told, in code, what was saved. Provider errors are still retried.
 7. **Accounting could not tell the kinds apart.** Now done: every call is recorded with its kind
    and reported by purpose. `debug cost` still estimates the prefix from characters; measuring
    it in real tokens is what is left.
-8. **History is not budgeted.** Up to 20 messages of the last six hours are sent as they were
-   written, however long. With Claude, only the system blocks are cached; history and earlier
-   tool results in a turn are sent at full price each iteration.
+8. **History is not budgeted.** Now done in characters: the newest messages within 6,000,
+   each cut to 1,500 (`agent/history.within_budget`). A budget in real tokens is what is left;
+   earlier tool results within a turn are still sent at full price each iteration.
 
 ## Open questions
 

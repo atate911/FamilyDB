@@ -51,8 +51,8 @@ DONE = {
 }
 
 
-def completed_reply(actions: list[dict[str, Any]]) -> str:
-    """Explain durable progress without spending another model call to acknowledge it."""
+def done_lines(actions: list[dict[str, Any]]) -> str:
+    """What these completed writes did, one short sentence each, worded by code."""
     lines = []
     for action in actions:
         label, key = DONE.get(action["tool"], ("Completed " + action["tool"], "id"))
@@ -60,7 +60,12 @@ def completed_reply(actions: list[dict[str, Any]]) -> str:
         if action.get("duplicate_of") is not None:
             label, identity = "Kept existing idea", action["duplicate_of"]
         lines.append(label + (f" #{identity}" if identity is not None else "") + ".")
-    return " ".join(lines) + (
+    return " ".join(lines)
+
+
+def completed_reply(actions: list[dict[str, Any]]) -> str:
+    """Explain durable progress without spending another model call to acknowledge it."""
+    return done_lines(actions) + (
         " That much is saved, but today's spending limit stopped me before I finished. "
         "Check what is saved before asking for the rest, so nothing is done twice."
     )
