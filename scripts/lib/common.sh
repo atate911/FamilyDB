@@ -78,6 +78,7 @@ again_hint() { AGAIN="$*"; }
 LEDGER_DIR=/var/lib/familydb-install
 LEDGER="${LEDGER_DIR}/ledger"
 # Where the install's SSH keeps GitHub's host key, rather than root's own known_hosts.
+# shellcheck disable=SC2034  # read by bootstrap.sh, which sources this
 KNOWN_HOSTS="${LEDGER_DIR}/known_hosts"
 
 # Only an install run as root changes the system, so only that one writes anything down. A run as
