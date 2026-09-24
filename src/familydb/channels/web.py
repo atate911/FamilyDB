@@ -18,6 +18,7 @@ import threading
 from contextlib import closing
 from uuid import uuid4
 
+from familydb import whereabouts
 from familydb.agent.loop import MessagesAPI
 from familydb.app import App
 from familydb.channels.base import IncomingMessage
@@ -88,7 +89,13 @@ class WebChat:
         del self._running[chat_id]
         return False
 
-    def ask(self, text: str, member_name: str, chat_id: str = DEFAULT_CHAT) -> str | None:
+    def ask(
+        self,
+        text: str,
+        member_name: str,
+        chat_id: str = DEFAULT_CHAT,
+        position: tuple[float, float] | None = None,
+    ) -> str | None:
         """Start a turn. None when it started, else what to tell whoever sent it.
 
         The sender is checked here rather than in the thread: the pipeline turns an unknown one
@@ -113,7 +120,7 @@ class WebChat:
             # and a second message arriving in that gap would be let through.
             thread = threading.Thread(
                 target=self._turn,
-                args=(text, member_name, chat_id),
+                args=(text, member_name, chat_id, position),
                 name=f"{THREAD_NAME}-{chat_id}",
                 daemon=True,  # a stuck model call must not hold the process open on shutdown
             )
@@ -121,8 +128,17 @@ class WebChat:
             thread.start()
         return None
 
-    def _turn(self, text: str, member_name: str, chat_id: str) -> None:
+    def _turn(
+        self,
+        text: str,
+        member_name: str,
+        chat_id: str,
+        position: tuple[float, float] | None = None,
+    ) -> None:
         """One turn, on its own thread. Everything it produces is in the message log."""
+        if position is not None:
+            # Here rather than in the form post: naming the place may wait on the map service.
+            self._note(member_name, position)
         try:
             reply = handle_incoming(self.app, incoming(text, member_name, chat_id), api=self._api)
         except Exception:
@@ -138,6 +154,15 @@ class WebChat:
             # The reply is already on the page; this only marks it sent, so the delivery job
             # has nothing to find.
             deliver(self.app, reply.out_message_id)
+
+    def _note(self, member_name: str, position: tuple[float, float]) -> None:
+        try:
+            with closing(self.app.connect()) as conn:
+                member = members.find_by_name(conn, member_name)
+                if member is not None:
+                    whereabouts.note(self.app, conn, member.id, *position)
+        except Exception:  # where they are is a help, never a reason to drop the message
+            log.exception("could not note where %s is", member_name)
 
     def wait(self, timeout: float = 30.0) -> bool:
         """Block until nothing is being thought about. True when it went quiet in time."""

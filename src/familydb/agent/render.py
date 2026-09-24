@@ -100,6 +100,17 @@ def render_user_turn(sender: str, text: str, clock: Clock) -> list[str]:
     return [f"Today is {clock.describe()}.", f"[{sender}] {text}"]
 
 
+def render_location_line(
+    sender: str, label: str | None, lat: float, lon: float, minutes_ago: int
+) -> str:
+    """Where the sender's phone last said they were, for the current turn only: it changes."""
+    where = f"{label} " if label else ""
+    return (
+        f"{sender}'s location, from their phone {minutes_ago} min ago: {where}"
+        f'({lat:.4f}, {lon:.4f}). For "near here" or "open now", suggest uses it.'
+    )
+
+
 def render_folded_line(lines: list[str]) -> str:
     """Messages that came due in this chat while they were talking, for the reply to carry."""
     return (

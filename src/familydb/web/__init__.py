@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 
 MAX_BODY_BYTES = 64 * 1024  # nothing here takes an upload
 CONTENT_SECURITY_POLICY = (
-    "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'none'; "
+    "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; "
     "frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
 )
 HSTS = "max-age=31536000"

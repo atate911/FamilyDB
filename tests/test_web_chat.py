@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import threading
 from contextlib import closing
@@ -241,3 +242,34 @@ def test_a_reply_the_turn_failed_to_produce_is_shown_as_trouble(settings, clock,
     # The pipeline's own notice to the family, in her words, stored as a reply.
     assert "try again shortly" in page
     assert "this one did not go through" in page
+
+
+def test_the_phone_s_position_goes_with_the_message(settings, clock, conn, family, replies) -> None:
+    from familydb.store import locations
+
+    app = App(settings.model_copy(update={"web_password": PASSWORD}), clock)
+    api = fakes.FakeMessagesAPI(*replies)
+    web = create_app(app, api=api)
+    client = web.test_client()
+    client.post("/login", data={"password": PASSWORD})
+    page = client.get("/chat").text
+    assert 'name="lat"' in page and "locate.js" in page and "<script>" not in page
+    client.chat = web.config["FAMILYDB_CHAT"]
+    _say(client, "sushi open near here?", lat="45.51900", lon="-122.67900")
+    assert client.chat.wait(10)
+    kept = locations.get(conn, family["sam"].id)
+    assert (kept.lat, kept.lon) == (45.519, -122.679)
+    # The model is told in the current turn, never the cached prefix.
+    sent = json.dumps(api.requests[0]["messages"][-1])
+    assert "Sam's location, from their phone 0 min ago: (45.5190, -122.6790)" in sent
+    assert "45.519" not in json.dumps(api.requests[0]["system"])
+
+
+def test_a_position_that_is_not_one_is_ignored(settings, clock, conn, family, replies) -> None:
+    from familydb.store import locations
+
+    client = _client(settings, clock, *replies)
+    for lat, lon in (("", ""), ("nan", "1"), ("91", "0"), ("45", "-181"), ("north", "west")):
+        _say(client, "hi", lat=lat, lon=lon)
+        assert client.chat.wait(10)
+    assert locations.get(conn, family["sam"].id) is None

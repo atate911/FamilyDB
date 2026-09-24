@@ -15,6 +15,7 @@ from familydb.suggest.context import build_context
 from familydb.suggest.discover import discover
 from familydb.suggest.evaluate import evaluate
 from familydb.suggest.log import log_suggestion
+from familydb.suggest.origin import resolve as resolve_origin
 from familydb.suggest.shortlist import shortlist
 from familydb.suggest.types import (
     DAY_END,
@@ -107,6 +108,9 @@ def run(ctx: ToolContext, args: SuggestInput) -> SuggestResult:
     """The whole engine for one question; returns the structured result the chat model composes."""
     window, label, bounds = resolve_window(args, ctx.clock.now())
     context = build_context(ctx, window, bounds)
+    context.origin, where_note = resolve_origin(ctx, args.near, args.window)
+    if where_note:
+        context.skipped.append(where_note)
     all_ideas = ideas.list_all(ctx.conn)
     listed = {idea.id for idea in all_ideas if idea.status != "dropped"}
     unknown = sorted(set(args.idea_ids) - listed)

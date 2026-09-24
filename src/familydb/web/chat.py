@@ -160,6 +160,17 @@ def show() -> Any:
     return page(typed=asked or None)
 
 
+def _position(form: Any) -> tuple[float, float] | None:
+    """Where the phone said it was, from the page's one script; None when it said nothing."""
+    try:
+        lat, lon = float(form.get("lat", "")), float(form.get("lon", ""))
+    except ValueError:
+        return None
+    if not (-90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0):
+        return None  # also refuses nan and inf, which compare false with everything
+    return lat, lon
+
+
 @bp.post("/chat")
 @once
 def send() -> Response | Any:
@@ -174,7 +185,7 @@ def send() -> Response | Any:
     if request.form.get("intent") == "save_idea" and text.strip():
         sent = message_store.CAPTURE_PREFIX + text
     session[WHO_KEY] = who
-    if (complaint := _chat().ask(sent, who, DEFAULT_CHAT)) is not None:
+    if (complaint := _chat().ask(sent, who, DEFAULT_CHAT, _position(request.form))) is not None:
         return page(error=complaint, typed=text, status=400)
     log.info("web chat: %s asked something", who)
     # Redirect rather than render: the browser is about to be asked to refresh this page every

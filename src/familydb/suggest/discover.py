@@ -68,6 +68,11 @@ def render_discover_request(context: Context, constraints: Constraints, settings
             each = zip(context.days, hours, strict=True)
             lines.append("Hours: " + "; ".join(f"{d.date:%a} {h}" for d, h in each) + ".")
     lines.append(f"Home area: {settings.home_area or 'not set'}.")
+    if context.origin is not None:
+        # Rounded to about a hundred metres: close enough to search by, and the same for a phone
+        # that has moved along the street, so the search is shared.
+        origin = context.origin
+        lines.append(f"They are near: {origin.label} ({origin.lat:.3f}, {origin.lon:.3f}).")
     wanted = {
         "who": constraints.participants or None,
         "max_cost_level": constraints.max_cost_level,

@@ -60,6 +60,12 @@ EVENTS: dict[str, Event] = {
         "Filled in #{idea} {place}: {details}.",
         ("idea", "place", "details"),
     ),
+    "location_shared": Event(
+        "A location shared on Telegram",
+        'Got your location{where}. For the next 3 hours, "what\'s near here?" and "open now" '
+        "start from there instead of home.",
+        ("where",),
+    ),
     "limit_reached": Event(
         "The day's spending limit reached",
         "Today's spending limit (${limit}) is used up, so I can't answer until tomorrow. "

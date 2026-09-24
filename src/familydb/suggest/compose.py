@@ -105,5 +105,6 @@ def compose(
         not_shown=held_back,
         web_finds=finds,
         skipped_checks=skipped,
+        travel_from=context.origin.detail if context.origin else "home",
         suggestion={"id": suggestion_id} if suggestion_id is not None else None,
     )
