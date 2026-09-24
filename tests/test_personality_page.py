@@ -118,3 +118,17 @@ def test_her_lines_can_be_rewritten_and_a_bad_one_is_refused(page, conn) -> None
     assert refused.status_code == 400
     assert "Asking how a plan went: {x} is not something it knows" in refused.text
     assert settings_store.overrides(conn)["voice_lines"] == {"reminder": mine}  # unchanged
+
+
+def test_an_unknown_persona_is_refused_even_when_none_is_chosen(page, conn) -> None:
+    page.post(
+        "/settings/personality",
+        data=_form(page, persona="none", persona_text="", about_family=""),
+    )
+    assert settings_store.overrides(conn)["persona"] == "none"
+    unknown = page.post(
+        "/settings/personality",
+        data=_form(page, persona="hal", persona_text="", about_family=""),
+    )
+    assert unknown.status_code == 400 and "no persona called" in unknown.text
+    assert settings_store.overrides(conn)["persona"] == "none"

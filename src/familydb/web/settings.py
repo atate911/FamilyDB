@@ -370,7 +370,9 @@ def personality_page(
     live = _app().settings
     told = get_flashed_messages(category_filter=[NOTICE])
     chosen = (typed or {}).get("persona", live.persona)
-    text = (typed or {}).get("persona_text") or personas.text_for(live) or personas.load(chosen)
+    # A persona nobody has a file for (a hand-made form) is shown as nothing, and refused on save.
+    original = personas.load(chosen) if chosen in personas.available() else ""
+    text = (typed or {}).get("persona_text") or personas.text_for(live) or original
     about = (typed or {}).get("about_family", live.about_family)
     # What she says unasked: the family's line if they wrote one, hers as the placeholder.
     base_lines = voice.lines(live.model_copy(update={"voice_lines": {}}))
