@@ -8,10 +8,11 @@ from contextlib import closing
 from datetime import datetime
 from typing import Any
 
+from familydb import whereabouts
 from familydb.agent import gateway, spending
 from familydb.agent.history import load_history
 from familydb.agent.loop import MessagesAPI, TurnResult
-from familydb.agent.render import render_retry_note, render_user_turn
+from familydb.agent.render import render_location_line, render_retry_note, render_user_turn
 from familydb.agent.spending import SpendingLimitReached
 from familydb.app import App
 from familydb.channels.base import IncomingMessage, OutgoingMessage
@@ -331,6 +332,17 @@ def _think(
         else app.clock
     )
     current = render_user_turn(member.display_name, msg.text, received_clock)
+    shared = whereabouts.current(conn, member.id, app.clock.now())
+    if shared is not None:
+        current.append(
+            render_location_line(
+                member.display_name,
+                shared.label,
+                shared.lat,
+                shared.lon,
+                whereabouts.minutes_ago(shared, app.clock.now()),
+            )
+        )
     if retry:
         current.append(
             "Processing retry now: "

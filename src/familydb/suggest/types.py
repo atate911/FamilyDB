@@ -182,7 +182,7 @@ class Origin:
     lon: float
     label: str  # how each reason names it: "Sam's shared location", "the Pearl"
     detail: str  # how the result names it, with how old a shared location is
-    shared: bool = False  # from a location shared on Telegram, which no model is given
+    shared: bool = False  # from a location the phone sent, rather than a place named in words
 
 
 @dataclass

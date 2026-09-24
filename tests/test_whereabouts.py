@@ -28,6 +28,10 @@ class Places:
         found = self.known.get(query)
         return GeoPoint(*found, query, "test") if found else None
 
+    def reverse(self, lat, lon):
+        self.asked.append((round(lat, 3), round(lon, 3)))
+        return "Old Town, Portland" if abs(lat - DOWNTOWN[0]) < 0.01 else None
+
 
 def _share(app, conn, *, live=False, user="1001"):
     return whereabouts.share(
@@ -61,11 +65,14 @@ def _cafe_downtown(conn):
 
 
 def test_a_share_is_kept_confirmed_once_and_forgotten(full_settings, clock, conn, family):
-    app = App(full_settings, clock)
+    geocoder = Places()
+    app = App(full_settings, clock, geocoder=geocoder)
     first = _share(app, conn, live=True)
-    assert first is not None and "next 3 hours" in first.text
+    assert first is not None and "Got your location (Old Town, Portland)" in first.text
+    assert locations.get(conn, family["sam"].id).label == "Old Town, Portland"
     assert messages.get(conn, first.out_message_id).text == first.text  # delivered like any reply
     assert _share(app, conn, live=True) is None  # the live location moving: no second word
+    assert len(geocoder.asked) == 1  # and the same place is not looked up again
     assert whereabouts.current(conn, family["sam"].id, clock.now()) is not None
     assert whereabouts.current(conn, family["sam"].id, clock.now() + timedelta(hours=4)) is None
     assert _share(app, conn, user="9999") is None  # a stranger's location is not kept
@@ -94,10 +101,10 @@ def test_open_now_after_sharing_measures_from_there(full_settings, clock, conn, 
     at_home = run(ctx, SuggestInput(window="now", question="?", discover=False))
     assert at_home.travel_from == "home"
     assert "about 25 min drive (estimate)" in _reasons(at_home, cafe.id)
-    _share(App(full_settings, clock), conn)
+    _share(App(full_settings, clock, geocoder=Places()), conn)
     out = run(ctx, SuggestInput(window="now", question="?", discover=False))
-    assert out.travel_from.startswith("Sam's shared location, 0 min ago")
-    assert "under 5 min from Sam's shared location (estimate)" in _reasons(out, cafe.id)
+    assert out.travel_from == "Sam's location (Old Town, Portland), 0 min ago"
+    assert "under 5 min from Old Town, Portland (estimate)" in _reasons(out, cafe.id)
     # Not for a question about the weekend: where Sam is now says nothing about Saturday.
     later = run(ctx, SuggestInput(window="this_weekend", question="?", discover=False))
     assert later.travel_from == "home"
@@ -122,22 +129,18 @@ def test_here_without_a_share_says_so(full_settings, clock, conn, family):
     assert any("no location shared" in note for note in out.skipped_checks)
 
 
-def test_a_shared_location_never_reaches_the_discovery_worker(full_settings, clock, conn, family):
+def test_discovery_searches_near_where_the_phone_is(full_settings, clock, conn, family):
     from familydb.suggest.context import build_context
     from familydb.suggest.discover import render_discover_request
     from familydb.suggest.origin import resolve
     from familydb.suggest.types import Constraints
 
-    ctx = _ctx(full_settings, clock, conn, family, geocoder=Places(**{"the Pearl": DOWNTOWN}))
-    _share(App(full_settings, clock), conn)
+    ctx = _ctx(full_settings, clock, conn, family)
+    _share(App(full_settings, clock, geocoder=Places()), conn)
     context = build_context(ctx, (clock.today(), clock.today()))
     context.origin, _ = resolve(ctx, "", "now")
     asked = render_discover_request(context, Constraints(), full_settings)
-    assert "near:" not in asked and "45.5" not in asked
-    context.origin, _ = resolve(ctx, "the Pearl", "now")
-    assert "They are near: the Pearl." in render_discover_request(
-        context, Constraints(), full_settings
-    )
+    assert "They are near: Old Town, Portland (45.519, -122.679)." in asked
 
 
 def _ctx(settings, clock, conn, family, geocoder=None):

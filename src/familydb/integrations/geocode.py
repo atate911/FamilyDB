@@ -18,6 +18,11 @@ from familydb.config import Settings
 log = logging.getLogger(__name__)
 
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
+NOMINATIM_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse"
+# Of the address Nominatim returns for a point, the parts a family would say: the neighbourhood,
+# then the town. Missing parts are skipped.
+AREA_KEYS = ("neighbourhood", "suburb", "quarter", "city_district")
+TOWN_KEYS = ("city", "town", "village", "hamlet")
 OPEN_METEO_GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
 USER_AGENT = "familydb/0.1 (self-hosted family planning bot)"
 MIN_INTERVAL = 1.0  # Nominatim's policy: at most one request per second
@@ -34,6 +39,8 @@ class GeoPoint:
 
 class GeocoderAPI(Protocol):
     def geocode(self, query: str) -> GeoPoint | None: ...
+
+    def reverse(self, lat: float, lon: float) -> str | None: ...
 
 
 def is_short_name(query: str) -> bool:
@@ -79,6 +86,7 @@ class Geocoder:
         self._monotonic = monotonic
         self._last_call: float | None = None
         self._cache: dict[str, GeoPoint | None] = {}
+        self._names: dict[tuple[float, float], str | None] = {}
 
     @staticmethod
     def _fetch(url: str, headers: dict[str, str]) -> Any:
@@ -132,6 +140,30 @@ class Geocoder:
         except (KeyError, TypeError, ValueError):
             return None
 
+    def reverse(self, lat: float, lon: float) -> str | None:
+        """What a family would call where a point is: "Pearl District, Portland". None if unknown.
+
+        Cached to about a hundred metres, so a live location moving along a street asks once."""
+        key = (round(lat, 3), round(lon, 3))
+        if key in self._names:
+            return self._names[key]
+        params = urllib.parse.urlencode(
+            {"lat": f"{lat:.5f}", "lon": f"{lon:.5f}", "format": "json", "zoom": 16}
+        )
+        self._throttle()
+        try:
+            row = self._fetch(
+                f"{NOMINATIM_REVERSE_URL}?{params}",
+                {"User-Agent": USER_AGENT, "Accept-Language": "en"},
+            )
+        except Exception as exc:
+            log.warning("nominatim reverse lookup failed: %s", exc)
+            return None  # not cached: the next share may reach it
+        address = row.get("address") if isinstance(row, dict) else None
+        name = _area_name(address) if isinstance(address, dict) else None
+        self._names[key] = name
+        return name
+
     def geocode(self, query: str) -> GeoPoint | None:
         key = " ".join(query.split()).casefold()
         if not key:
@@ -143,3 +175,10 @@ class Geocoder:
             point = self._open_meteo(query)
         self._cache[key] = point
         return point
+
+
+def _area_name(address: dict[str, Any]) -> str | None:
+    area = next((address[k] for k in AREA_KEYS if address.get(k)), None)
+    town = next((address[k] for k in TOWN_KEYS if address.get(k)), None)
+    parts = [str(p) for p in (area, town) if p]
+    return ", ".join(dict.fromkeys(parts)) or None

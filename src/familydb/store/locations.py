@@ -13,6 +13,7 @@ class SharedLocation(BaseModel):
     lon: float
     live: bool
     shared_at: str
+    label: str | None = None  # "Pearl District, Portland", when the map knew
 
 
 def get(conn: sqlite3.Connection, member_id: int) -> SharedLocation | None:
@@ -23,14 +24,21 @@ def get(conn: sqlite3.Connection, member_id: int) -> SharedLocation | None:
 
 
 def record(
-    conn: sqlite3.Connection, member_id: int, *, lat: float, lon: float, live: bool, now: str
+    conn: sqlite3.Connection,
+    member_id: int,
+    *,
+    lat: float,
+    lon: float,
+    live: bool,
+    now: str,
+    label: str | None = None,
 ) -> None:
     conn.execute(
-        "INSERT INTO member_locations (member_id, lat, lon, live, shared_at) "
-        "VALUES (?, ?, ?, ?, ?) ON CONFLICT(member_id) DO UPDATE SET "
+        "INSERT INTO member_locations (member_id, lat, lon, live, shared_at, label) "
+        "VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(member_id) DO UPDATE SET "
         "lat = excluded.lat, lon = excluded.lon, live = excluded.live, "
-        "shared_at = excluded.shared_at",
-        (member_id, lat, lon, int(live), now),
+        "shared_at = excluded.shared_at, label = excluded.label",
+        (member_id, lat, lon, int(live), now, label),
     )
 
 

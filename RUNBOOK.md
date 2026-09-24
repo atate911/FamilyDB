@@ -183,7 +183,7 @@ one at a time:
    page instead, or to use with `familydb members add NAME --channel telegram --channel-user-id
    12345`. Their next message gets a real answer.
 3. For a family group, send BotFather `/setprivacy` and choose Disable so the bot sees every message, then add the bot to the group. A dedicated "Ideas & Plans" group works best. In a busier group set `TELEGRAM_REQUIRE_MENTION=true` so it only answers when @mentioned or replied to.
-4. To get suggestions measured from where someone is rather than from home, they share their location with the bot (the paperclip, then Location; a live location works too). The bot confirms once, uses it for three hours for "near here" and "open now" questions, keeps only the latest one per person, and deletes it after a day. The coordinates are never sent to a model provider. Nothing is shared unless someone presses that button.
+4. To get suggestions measured from where someone is rather than from home, they share their location with the bot (the paperclip, then Location; a live location keeps itself current for as long as they choose). On the web page's chat the browser asks once for leave to use the location, and then sends it with each message; that needs the page on HTTPS (or opened on the server itself). The bot uses the latest position for three hours for "near here" and "open now" questions, keeps only the latest one per person, deletes it after a day, and sends the place's name and coordinates to the model provider with the message. Nothing is sent unless someone shares it or allows it in the browser.
 5. Long polling means nothing is exposed; if the server is off, Telegram keeps updates for a day and the bot catches up on restart without double-processing.
 
 ## 5. Google Calendar
@@ -391,8 +391,9 @@ new sign-ins altogether, except from a browser that has signed in before: it car
 "known device" cookie (`familydb_device`) for a year, which stops being honoured after the
 password changes or after "Sign everyone out". So a guesser with many addresses gets nowhere and
 the family still gets in. Every page but the login and `/healthz` needs the cookie. Responses
-carry a content security policy that forbids scripts and framing: there is no JavaScript on the
-page, and the chat waits for its answer with a meta refresh instead. Every form carries a token
+carry a content security policy that forbids framing and any script but the page's own one file,
+which sends the phone's location with a chat message; the chat waits for its answer with a meta
+refresh, and everything works with scripts turned off. Every form carries a token
 from the session as well, so a link from another site cannot make a change on the family's
 behalf. Refusing to start is deliberate: a page bound off the loopback with no password will not
 serve, and says so, unless you set `WEB_ALLOW_NO_PASSWORD=true` on purpose, and behind a proxy it

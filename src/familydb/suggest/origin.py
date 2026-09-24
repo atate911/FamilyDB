@@ -36,11 +36,12 @@ def resolve(ctx: ToolContext, near: str, window: str) -> tuple[Origin | None, st
     def from_shared() -> Origin:
         assert shared is not None and ctx.member is not None
         ago = whereabouts.minutes_ago(shared, now)
+        where = f" ({shared.label})" if shared.label else ""
         return Origin(
             shared.lat,
             shared.lon,
-            f"{ctx.member.display_name}'s shared location",
-            f"{ctx.member.display_name}'s shared location, {ago} min ago",
+            shared.label or f"{ctx.member.display_name}'s location",
+            f"{ctx.member.display_name}'s location{where}, {ago} min ago",
             shared=True,
         )
 
