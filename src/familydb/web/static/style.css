@@ -338,6 +338,8 @@ table.month td.today time { border-radius: 50%; background: var(--accent); color
 .skip { position: absolute; left: -10000px; }
 .skip:focus { left: 1rem; top: 0.5rem; z-index: 10; padding: 0.4rem 0.7rem; background: var(--panel); border-radius: 6px; }
 .foot { text-align: center; color: var(--muted); font-size: 0.8rem; padding: 1.25rem 1rem 2rem; border-top: 1px solid var(--line); }
+.foot p { margin: 0; }
+.foot .legal { margin-top: 0.35rem; font-size: 0.75rem; }
 .eyebrow { display: block; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 .page-head, .section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.5rem 1rem; }
 .page-head h1, .section-head h2 { margin: 0.25rem 0 0.5rem; }

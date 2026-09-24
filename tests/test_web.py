@@ -44,6 +44,14 @@ def test_pages_are_behind_the_password(settings, clock) -> None:
     assert page.status_code == 200 and "Family password" in page.text
 
 
+def test_every_page_ends_with_the_copyright_and_the_version(settings, clock) -> None:
+    from familydb import __version__
+
+    page = _client(settings, clock, web_password=PASSWORD).get("/login")  # even before signing in
+    assert "FamilyDB © 2026 by Andrew Tate." in page.text
+    assert f"Version v{__version__}. All rights reserved." in page.text
+
+
 def test_signing_in_and_out(settings, clock) -> None:
     client = _client(settings, clock, web_password=PASSWORD)
     wrong = client.post("/login", data={"password": "guess"})

@@ -16,12 +16,13 @@ from typing import Any
 
 from flask import Flask, render_template, request
 
+from familydb import __version__
 from familydb.app import App
 from familydb.availability import web_is_public, web_password_required
 from familydb.channels.web import WebChat
 from familydb.config import Settings
 from familydb.errors import ConfigError
-from familydb.web import auth, chat, edits, family, once, routes
+from familydb.web import auth, chat, edits, family, once, routes, views
 from familydb.web import settings as settings_page
 from familydb.web.keys import session_secret
 
@@ -118,7 +119,9 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     web.jinja_env.globals["password_in_use"] = lambda: auth.password_in_use(app.settings)
     web.jinja_env.globals["csrf_token"] = auth.csrf_token
     web.jinja_env.globals["once_token"] = once.once_token
-    web.context_processor(lambda: {"site_title": app.settings.web_title})
+    web.context_processor(
+        lambda: {"site_title": app.settings.web_title, "footer": views.footer(__version__)}
+    )
     web.register_blueprint(auth.bp)
     web.register_blueprint(routes.bp)
     web.register_blueprint(chat.bp)
