@@ -2,7 +2,8 @@
 
 `calendar_creations` holds each attempt's event id before Google is contacted and its result
 once the plan is saved. `calendar_unfinished` lets the same browser session asking again from a
-freshly drawn form take over an attempt whose answer never came back.
+freshly drawn form take over an attempt whose answer never came back, and `calendar_links`
+remembers which attempt that form took over, so the form sent again finds it.
 """
 
 from __future__ import annotations
@@ -73,3 +74,18 @@ def mark_unfinished(conn: sqlite3.Connection, resume_key: str, event_id: str) ->
 
 def clear_unfinished(conn: sqlite3.Connection, resume_key: str) -> None:
     conn.execute("DELETE FROM calendar_unfinished WHERE resume_key = ?", (resume_key,))
+
+
+def adopted(conn: sqlite3.Connection, operation_key: str) -> str | None:
+    """The attempt this form's identity took over, if it ever took one over."""
+    row = conn.execute(
+        "SELECT adopted_key FROM calendar_links WHERE operation_key = ?", (operation_key,)
+    ).fetchone()
+    return row["adopted_key"] if row else None
+
+
+def link(conn: sqlite3.Connection, operation_key: str, adopted_key: str) -> None:
+    conn.execute(
+        "INSERT OR IGNORE INTO calendar_links(operation_key, adopted_key) VALUES (?, ?)",
+        (operation_key, adopted_key),
+    )

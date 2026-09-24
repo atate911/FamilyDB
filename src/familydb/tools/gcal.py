@@ -338,8 +338,13 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
         else None
     )
     with transaction(ctx.conn):
+        # This form may already have taken over an earlier attempt, before a restart.
+        key = calendar_ops.adopted(ctx.conn, key) or key
         if resume:
-            key = calendar_ops.unfinished_key(ctx.conn, resume) or key
+            earlier = calendar_ops.unfinished_key(ctx.conn, resume)
+            if earlier is not None and earlier != key:
+                calendar_ops.link(ctx.conn, key, earlier)
+                key = earlier
         operation = calendar_ops.reserve(ctx.conn, key, uuid.uuid4().hex)
         if resume and not operation.result:
             calendar_ops.mark_unfinished(ctx.conn, resume, operation.event_id)

@@ -68,9 +68,17 @@ def test_lost_google_response_then_a_fresh_form_keeps_one_event(planning, conn):
     assert plans.get(conn, 1) is None and len(planning.calendar.events) == 1
     planning.calendar.insert_event = original
     # The family opens the form again: a new drawing, a new token, the same event asked for.
-    planning.post("/plans/new", data={**_form(planning, "/plans"), **fields})
+    second = {**_form(planning, "/plans"), **fields}
+    planning.post("/plans/new", data=second)
     assert len(planning.calendar.events) == 1
     assert plans.get(conn, 1) is not None and plans.get(conn, 2) is None
+    # That second form sent again after a restart, when nothing in memory remembers it: it
+    # took over the first attempt for good, so it finds the plan rather than asking Google.
+    old = planning.application.config["FAMILYDB_APP"]
+    restarted = create_app(App(old.settings, old.clock, calendar=planning.calendar)).test_client()
+    restarted.set_cookie("session", planning.get_cookie("session").value)
+    assert restarted.post("/plans/new", data=second).status_code == 302
+    assert len(planning.calendar.events) == 1 and plans.get(conn, 2) is None
     # Asking for it once more afterwards is a new plan, as it would be for anything finished.
     planning.post("/plans/new", data={**_form(planning, "/plans"), **fields})
     assert len(planning.calendar.events) == 2
