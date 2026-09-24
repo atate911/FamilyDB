@@ -39,6 +39,8 @@ MAX_ID = 2**63 - 1
 NOTICE = "edit"  # the same stream as the other edit forms, drawn by the base template
 ADDED = "{name} is on the family list."
 CHANGED = "Saved {name}."
+LINKED = "Linked. The bot knows {name} on Telegram now, and will answer them."
+NOBODY = "There is nobody by that number any more."
 
 
 def _app() -> App:
@@ -66,9 +68,9 @@ def show() -> str:
 @bp.post("/family")
 @once
 def add() -> Response:
+    back = auth.setup_return(request.form.get("then"))
     if (complaint := auth.refused()) is not None:
-        _say(complaint)
-        return redirect(url_for("family.show"))
+        return _answer(back, problem=complaint, fallback=url_for("family.show"))
     app = _app()
     form = request.form
     try:
@@ -81,11 +83,11 @@ def add() -> Response:
                 now=utc_iso(app.clock.now()),
             )
     except rules.FamilyError as exc:
-        _say(str(exc))
-        return redirect(url_for("family.show"))
+        return _answer(back, problem=str(exc), fallback=url_for("family.show"))
     log.info("family member %s added from the page by %s", person.id, auth.client_address())
-    _say(ADDED.format(name=person.display_name))
-    return redirect(url_for("family.show"))
+    return _answer(
+        back, said=ADDED.format(name=person.display_name), fallback=url_for("family.show")
+    )
 
 
 @bp.get(f"/family/<int(max={MAX_ID}):member_id>")
@@ -100,10 +102,10 @@ def edit(member_id: int) -> str:
 @bp.post(f"/family/<int(max={MAX_ID}):member_id>")
 @once
 def change(member_id: int) -> Response:
-    back = redirect(url_for("family.edit", member_id=member_id))
+    setup = auth.setup_return(request.form.get("then"))
+    here = url_for("family.edit", member_id=member_id)
     if (complaint := auth.refused()) is not None:
-        _say(complaint)
-        return back
+        return _answer(setup, problem=complaint, fallback=here)
     app = _app()
     form = request.form
     try:
@@ -119,11 +121,56 @@ def change(member_id: int) -> Response:
                 now=utc_iso(app.clock.now()),
             )
     except rules.FamilyError as exc:
-        _say(str(exc))
-        return back
+        return _answer(setup, problem=str(exc), fallback=here)
     log.info("family member %s changed from the page by %s", member_id, auth.client_address())
-    _say(CHANGED.format(name=person.display_name))
-    return redirect(url_for("family.show"))
+    return _answer(
+        setup, said=CHANGED.format(name=person.display_name), fallback=url_for("family.show")
+    )
+
+
+@bp.post(f"/family/<int(max={MAX_ID}):member_id>/telegram")
+@once
+def link_telegram(member_id: int) -> Response:
+    """Put a Telegram id on somebody already on the list, as it arrived in a message to the bot.
+
+    The setup page's "That's me", pressed after messaging the bot from a phone. Nothing else about
+    the person changes, so the form carries no revision of its own: the one read here is passed
+    on, and the rules still refuse an id that somebody else already has.
+    """
+    setup = auth.setup_return(request.form.get("then"))
+    here = url_for("family.show")
+    if (complaint := auth.refused()) is not None:
+        return _answer(setup, problem=complaint, fallback=here)
+    app = _app()
+    try:
+        with closing(app.connect()) as conn:
+            person = member_store.get(conn, member_id)
+            if person is None:
+                return _answer(setup, problem=NOBODY, fallback=here)
+            person = rules.change(
+                conn,
+                member_id,
+                name=person.display_name,
+                role=person.role,
+                active=person.active,
+                telegram_id=request.form.get("telegram_id"),
+                seen=rules.revision(person),
+                now=utc_iso(app.clock.now()),
+            )
+    except rules.FamilyError as exc:
+        return _answer(setup, problem=str(exc), fallback=here)
+    log.info("Telegram linked to member %s from the page by %s", member_id, auth.client_address())
+    return _answer(setup, said=LINKED.format(name=person.display_name), fallback=here)
+
+
+def _answer(
+    setup: str | None, *, said: str | None = None, problem: str | None = None, fallback: str
+) -> Response:
+    """Back to the setup page that sent the form, or to this page's own, with what happened."""
+    if setup is not None:
+        return auth.back_to_setup(setup, said=said, problem=problem)
+    _say(problem or said or "")
+    return redirect(fallback)
 
 
 def _person(person: member_store.Member) -> dict[str, Any]:

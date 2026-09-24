@@ -12,6 +12,10 @@ from typing import Any, Literal, Protocol
 
 Stop = Literal["end", "tool_use", "refusal", "max_tokens", "paused"]
 Surface = Literal["chat", "worker"]
+# What a vendor said about a key when asked the free way (`Provider.check_key`). Only "refused"
+# is a definite no; "unchecked" covers everything that is not an answer, such as no network, a
+# timeout, or a key allowed to write replies but not to list models.
+KeyCheck = Literal["works", "refused", "unknown_model", "unchecked", "no_key"]
 
 
 @dataclass(frozen=True)
@@ -126,6 +130,12 @@ class Provider(Protocol):
     def model_exists(self, model: str) -> bool | None:
         """Whether the vendor knows this model name. None when it cannot be asked (no key, no
         network), which must never be taken as a no. Costs no tokens."""
+        ...
+
+    def check_key(self) -> KeyCheck:
+        """Whether the vendor takes this key, found by looking the chat model up: the same free
+        question as `model_exists`, read for what it says about the key instead. For the setup
+        page, which checks a key before storing it."""
         ...
 
     def count_tokens(self, request: TurnRequest) -> int:

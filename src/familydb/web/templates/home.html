@@ -23,6 +23,7 @@
           <li><a href="{{ step.link }}">{{ step.text }}</a></li>
         {% endfor %}
       </ol>
+      <p class="muted">Each one is a short page that says what to do. <a href="{{ url_for('setup.overview') }}">All the setup steps</a></p>
     </section>
   {% endif %}
 

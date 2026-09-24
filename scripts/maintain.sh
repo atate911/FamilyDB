@@ -15,11 +15,13 @@ set -euo pipefail
 # shellcheck disable=SC2034  # read by lib/common.sh when it opens the transcript.
 SCRIPT_ARGS="$*"
 HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
-if [ -r "${HERE}/lib/common.sh" ]; then
+if [ -r "${HERE}/lib/common.sh" ] && [ -r "${HERE}/lib/https.sh" ]; then
   # shellcheck source=lib/common.sh
   . "${HERE}/lib/common.sh"
+  # shellcheck source=lib/https.sh
+  . "${HERE}/lib/https.sh"
 else
-  printf 'This script needs scripts/lib/common.sh beside it.\n' >&2
+  printf 'This script needs scripts/lib/common.sh and scripts/lib/https.sh beside it.\n' >&2
   exit 1
 fi
 
@@ -41,6 +43,12 @@ Commands
   status               Is it running, is it healthy, how big is the database, when was the
                        last backup. Changes nothing.
   check                The full check (familydb doctor), with every finding and its fix.
+  password             A new family password for the web page, for when nobody remembers it.
+                       Printed once; everyone signs in again with it.
+  https [DOMAIN]       Put the page on HTTPS: at DOMAIN if one is given, else at this server's
+                       own address, with a real certificate where it can get one. Opens ports
+                       80 and 443 if ufw is on. Run it again after opening a provider's firewall,
+                       or to move from an SSH tunnel to a link anyone can open.
   backup               Take a backup now, using SQLite's online backup, safe while it runs.
   restore FILE         Stop the bot, put that backup in place, start it again. The database
                        being replaced is itself backed up first.
@@ -73,7 +81,9 @@ USAGE
 COMMAND="$1"; shift
 RESTORE_FILE=""
 LOG_LINES=50
+HTTPS_SITE=""
 case "$COMMAND" in
+  https) case "${1:-}" in ''|-*) ;; *) HTTPS_SITE="$1"; shift ;; esac ;;
   restore) RESTORE_FILE="${1:-}"; [ -n "$RESTORE_FILE" ] && shift ;;
   logs) case "${1:-}" in ''|-*) ;; *) LOG_LINES="$1"; shift ;; esac ;;
 esac
@@ -259,6 +269,46 @@ cmd_status() {
 cmd_check() {
   head2 "Checking the install"
   familydb_cmd doctor || true
+}
+
+cmd_password() {
+  head2 "A new family password"
+  familydb_cmd password
+}
+
+env_file_value() { as_root grep -E "^${1}=" "${TARGET}/.env" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d "'\"" || true; }
+
+env_file_set() { # env_file_set KEY VALUE - in place, keeping the file's owner and mode
+  local file="${TARGET}/.env"
+  if as_root grep -qE "^${1}=" "$file"; then
+    as_root sed -i "s|^${1}=.*|${1}=${2}|" "$file"
+  else
+    printf '%s=%s\n' "$1" "$2" | as_root tee -a "$file" >/dev/null
+  fi
+}
+
+cmd_https() {
+  head2 "HTTPS for the page"
+  [ "$DOCKER_MODE" = 0 ] || die "this is for the virtualenv install" \
+    "With Docker, set WEB_DOMAIN and COMPOSE_PROFILES=tls in ${TARGET}/.env, then: docker compose up -d"
+  as_root test -f "${TARGET}/.env" || die "there is no ${TARGET}/.env" "Run the installer first."
+  local site port
+  site="${HTTPS_SITE#https://}"; site="${site#http://}"; site="${site%%/*}"; site="${site%:*}"
+  [ -n "$site" ] || site="$(env_file_value WEB_DOMAIN)"
+  [ -n "$site" ] || site="$(this_address)"
+  [ -n "$site" ] || die "could not tell this server's address" "Give it: ${0} https your.domain"
+  port="$(env_file_value WEB_PORT)"; port="${port:-8080}"
+  setup_https "$site" "$port" || die "the page could not be put on HTTPS" "What went wrong is above."
+  # The page has to believe Caddy about who is visiting, and listen for nobody but Caddy.
+  env_file_set WEB_DOMAIN "$site"
+  env_file_set WEB_TRUST_PROXY true
+  env_file_set WEB_HOST 127.0.0.1
+  if service_installed; then
+    step "Restarting FamilyDB so the page knows it is behind HTTPS" as_root systemctl restart familydb
+  fi
+  say ""
+  say "The page: ${B}https://${site}/${OFF}"
+  say_how_to_open "$site"
 }
 
 # ---------------------------------------------------------------- backup ----
@@ -481,8 +531,13 @@ cmd_schedule_backups() {
   approve "Add them to the crontab?" || { say "Nothing was changed."; exit 0; }
 
   if [ "$DRY_RUN" = 1 ]; then note "[dry run] would install the crontab"; return 0; fi
+  case "$BACKUP_DIR" in "${TARGET}"/*) ;; *) noting_new "$BACKUP_DIR" dir ;; esac
   as_root mkdir -p "$BACKUP_DIR"
   local existing
+  # Root having no crontab at all before this is worth knowing: then removing FamilyDB removes
+  # the crontab too, rather than leaving an empty one behind.
+  as_root crontab -u root -l >/dev/null 2>&1 || ledger crontab "root"
+  ledger cron-line "familydb-maintain-backup"
   existing="$(as_root crontab -u root -l 2>/dev/null | grep -v 'familydb-maintain-backup' || true)"
   printf '%s\n%s\n' "$existing" "$line" \
     | sed '/^$/d' \
@@ -510,6 +565,8 @@ cmd_schedule_backups() {
 case "$COMMAND" in
   status)           cmd_status ;;
   check)            cmd_check ;;
+  password)         cmd_password ;;
+  https)            cmd_https ;;
   backup)           cmd_backup ;;
   restore)          cmd_restore ;;
   upgrade)          cmd_upgrade ;;

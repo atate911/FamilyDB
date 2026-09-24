@@ -1,6 +1,8 @@
 """The shared-password gate in front of the page.
 
-One password for the whole family, kept in WEB_PASSWORD. A successful login sets a signed session
+One password for the whole family. The installer makes one up and puts it in WEB_PASSWORD; the
+family then chooses their own on the page, which is stored hashed and from then on is the only one
+the page takes. A successful login sets a signed session
 cookie; every page but the login and the health check is behind it. Failed attempts are counted
 per client address and locked out for a while, so a page on the open internet is not worth
 guessing at. When no password is configured and the page is only on the loopback (or the waiver
@@ -22,6 +24,7 @@ from flask import (
     Blueprint,
     Response,
     current_app,
+    flash,
     redirect,
     render_template,
     request,
@@ -30,6 +33,7 @@ from flask import (
 )
 from itsdangerous import BadSignature, URLSafeSerializer
 
+from familydb import passwords
 from familydb.app import App
 from familydb.config import Settings
 
@@ -44,6 +48,9 @@ CSRF_KEY = "csrf"
 # It is an HMAC under the cookie signing key, not the password itself or a plain hash of it, so
 # what sits in the cookie says nothing about the password to anyone holding the cookie.
 PASSWORD_KEY = "pw"
+# When this session signed in, as a Unix time. The first password chosen on the page may skip
+# typing the installer's again, which the person has only just typed, but only this soon after.
+SIGNED_IN_AT = "at"
 # A browser or a monitor asking to read gets the login page; anything else gets a plain refusal.
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 MAX_ATTEMPTS = 5
@@ -68,6 +75,7 @@ MAX_ADDRESS = 64
 # Endpoints reachable without signing in. "static" covers the stylesheet on the login page.
 OPEN_ENDPOINTS = frozenset({"auth.login", "auth.sign_in", "auth.logout", "web.healthz", "static"})
 HOME = "/"
+MIN_PASSWORD = passwords.MIN_LENGTH
 WRONG_PASSWORD = "That password is not right."
 LOCKED_OUT = "Too many tries. Wait a quarter of an hour and try again."
 BAD_ORIGIN = "That request did not come from this page."
@@ -156,7 +164,12 @@ class Lockout:
 
 def password_in_use(settings: Settings) -> bool:
     """Whether visitors have to sign in at all."""
-    return bool(settings.web_password)
+    return bool(settings.web_password or settings.web_password_hash)
+
+
+def password_chosen(settings: Settings) -> bool:
+    """Whether the family has chosen their own password on the page, rather than the installer's."""
+    return bool(settings.web_password_hash)
 
 
 def password_mark(settings: Settings) -> str:
@@ -164,13 +177,17 @@ def password_mark(settings: Settings) -> str:
     key = (current_app.secret_key or b"") if current_app else b""
     if isinstance(key, str):
         key = key.encode()
-    password = (settings.web_password or "").encode()
+    password = (settings.web_password_hash or settings.web_password or "").encode()
     return hmac.new(key, password, hashlib.sha256).hexdigest()[:16]
 
 
 def password_matches(settings: Settings, given: str) -> bool:
+    if settings.web_password_hash:
+        return passwords.hash_matches(settings.web_password_hash, given)
     expected = settings.web_password or ""
-    return bool(expected) and hmac.compare_digest(given.encode(), expected.encode())
+    return bool(expected) and hmac.compare_digest(
+        given.encode("utf-8", "replace"), expected.encode("utf-8")
+    )
 
 
 def _devices() -> URLSafeSerializer:
@@ -223,6 +240,32 @@ def safe_next(target: str | None) -> str | None:
     if parts.scheme or parts.netloc:
         return None
     return target
+
+
+# The setup pages (web/setup.py) send each form to the module that owns that change, and ask to be
+# brought back afterwards. Only ever to a setup page: a hidden field is not a way to send a browser
+# anywhere else, on this site or off it.
+SETUP_PATH = "/setup"
+SETUP_SAID = "setup"
+SETUP_PROBLEM = "setup-problem"
+
+
+def setup_return(target: str | None) -> str | None:
+    """Where a setup page's form asked to go back to: a setup page on this site, or None."""
+    target = safe_next(target)
+    if target is None:
+        return None
+    path = urlsplit(target).path
+    return target if path == SETUP_PATH or path.startswith(SETUP_PATH + "/") else None
+
+
+def back_to_setup(target: str, *, said: str | None = None, problem: str | None = None) -> Response:
+    """Send the browser back to the setup page it came from, with what happened."""
+    if said:
+        flash(said, SETUP_SAID)
+    if problem:
+        flash(problem, SETUP_PROBLEM)
+    return redirect(target)
 
 
 def csrf_token() -> str:
@@ -336,6 +379,7 @@ def sign_in() -> Response | str:
     session.clear()
     session[SESSION_KEY] = True
     session[PASSWORD_KEY] = password_mark(settings)
+    session[SIGNED_IN_AT] = int(now.timestamp())
     session.permanent = True
     log.info("web login from %s", who)
     response = redirect(target or HOME)

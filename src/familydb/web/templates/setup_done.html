@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Set up · {{ site_title }}{% endblock %}
+{% block content %}
+  <header class="step-head">
+    <span class="eyebrow">Setting up</span>
+    <h1>{% if ready %}You’re set up{% else %}Not quite ready yet{% endif %}</h1>
+  </header>
+  {% include "setup_told.html" %}
+  {% if ready %}
+    <p class="lead">{{ site_title }} can answer now. Ask it something to see it work:</p>
+    <div class="actions">
+      <a class="button" href="{{ url_for('chat.show', ask=question, _anchor='latest') }}">Ask “{{ question }}”</a>
+      {% if bot %}<a class="button secondary" href="https://t.me/{{ bot }}" target="_blank" rel="noopener noreferrer">Or message @{{ bot }}</a>{% endif %}
+    </div>
+  {% else %}
+    <p class="lead">It still needs {% for one in later if one.need == 'needed' %}{{ one.title|lower }}{{ ', ' if not loop.last }}{% endfor %}
+      before it can answer anyone.</p>
+  {% endif %}
+
+  {% if later %}
+    <section class="panel">
+      <h2>Left for later</h2>
+      <ul class="plain">
+        {% for one in later %}
+          <li><a href="{{ url_for('setup.step', name=one.name) }}">{{ one.title }}</a>
+            <span class="muted">· {{ one.detail }}</span></li>
+        {% endfor %}
+      </ul>
+      <p class="muted">The home page keeps a list of these until they are done.</p>
+    </section>
+  {% endif %}
+
+  <p class="muted">Everything here can be changed later on the
+    <a href="{{ url_for('settings.show') }}">Settings</a> and
+    <a href="{{ url_for('family.show') }}">Family</a> pages, or by going through
+    <a href="{{ url_for('setup.overview') }}">setup</a> again.</p>
+  <div class="actions"><a class="button{% if ready %} secondary{% endif %}" href="{{ url_for('web.home') if ready else url_for('setup.overview') }}">{% if ready %}Go to the home page{% else %}Back to setup{% endif %}</a></div>
+{% endblock %}

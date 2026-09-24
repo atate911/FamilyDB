@@ -82,4 +82,7 @@ def test_the_status_page_says_what_waits_for_a_key(keyless, clock, conn, family)
     text = page.get("/status").text
     assert "waiting for a model key" in text
     assert "once there is a model key to write it" in text
-    assert "Give it a model key" in page.get("/").text
+    # With no model it cannot answer anyone, so the home page is the setup page until there is.
+    assert page.get("/").headers["Location"] == "/setup"
+    setup = page.get("/setup").text
+    assert "Connect an AI model" in setup and "No AI key yet, so it cannot answer." in setup

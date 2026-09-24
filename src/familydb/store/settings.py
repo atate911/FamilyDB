@@ -60,7 +60,10 @@ SECRETS = ("anthropic_api_key", "openai_api_key", "gemini_api_key", "telegram_bo
 # Who the assistant is and who the family are: long texts with a page of their own
 # (/settings/personality), logged as "rewritten" rather than word for word.
 PROFILE = ("persona", "persona_text", "about_family", "voice_lines")
-EDITABLE = frozenset(BEHAVIOUR) | frozenset(SECRETS) | frozenset(PROFILE)
+# The lock on the page itself: the family password, hashed, set only by its own form (which asks
+# for the password in force) and by `familydb password`. Never on a form of settings.
+LOCK = ("web_password_hash",)
+EDITABLE = frozenset(BEHAVIOUR) | frozenset(SECRETS) | frozenset(PROFILE) | frozenset(LOCK)
 
 
 def overrides(conn: sqlite3.Connection) -> dict[str, Any]:
@@ -117,7 +120,7 @@ def set_many(
                 "updated_at = excluded.updated_at, updated_by = excluded.updated_by",
                 (key, to_json(value), stamped, changed_by),
             )
-        secret = key in SECRETS
+        secret = key in SECRETS or key in LOCK
         conn.execute(
             "INSERT INTO settings_log (key, old_value, new_value, secret, changed_at, changed_by, "
             "source) VALUES (?, ?, ?, ?, ?, ?, ?)",

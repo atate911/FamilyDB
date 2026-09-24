@@ -20,23 +20,17 @@ One Python process does all of it. A chat adapter hands each message to a pipeli
 
 ## Quick start
 
-**On a bare server, start at [docs/INSTALL.md](docs/INSTALL.md)**, which goes from a fresh VPS to
-a running bot: preparing the machine, getting the code onto it (the repository is private, so
-that is its own step), and then one command:
-
-```bash
-sudo bash scripts/bootstrap.sh
-```
-
-It says what it will change on the machine and why before it changes anything: the packages, the
-`familydb` user it creates, the directory it writes to, and the systemd unit. Then it asks one
-thing — the domain the page will be reached at, if any — installs, starts the service and checks
-the result. Everything else is set on the page, starting with adding yourself on the Family page. `scripts/install.sh` is the
-configuration half on its own, for a machine that is already prepared.
+**On a server, follow [docs/INSTALL.md](docs/INSTALL.md):** three steps, about twenty minutes,
+and no Linux knowledge needed. Paste one block into the server's terminal; it walks you through
+letting the server read this private repository, then installs everything, puts the page on
+HTTPS at the server's address, and prints a link and a password. Open the link, and the page
+walks you through the rest: your own password, yourself, an AI key, where home is, Telegram and
+Google Calendar.
 
 Afterwards: `familydb doctor` says whether the install is right and what to do about anything
-that is not, `scripts/maintain.sh` does backups, restores, upgrades and logs, and
-`scripts/uninstall.sh` removes it, with or without the data.
+that is not, `scripts/maintain.sh` does backups, restores, upgrades, logs and a forgotten
+password, and `scripts/uninstall.sh` removes it (`--from-zero` puts the server back as it was
+before FamilyDB, to try the install again).
 
 On your own machine, to try it out:
 

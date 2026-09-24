@@ -1,0 +1,99 @@
+<p class="why">
+  {{ site_title }} uses an AI model to understand what the family says and to write its answers.
+  It needs an account with one of these three companies, and you pay the company for what it
+  uses: for a family, usually a few dollars a month. As well as any limit you set with the
+  company, {{ site_title }} stops for the day once it has spent its own daily limit
+  (US${{ '%.2f' % limit }}).
+</p>
+
+<div class="choices">
+  {% for one in companies %}
+    <a class="choice{% if one.name == company %} chosen{% endif %}"
+       href="{{ url_for('setup.step', name='model', company=one.name) }}"
+       {% if one.name == company %}aria-current="true"{% endif %}>
+      <strong>{{ one.label }}{% if one.name == 'openai' %} <span class="tag need-recommended">recommended</span>{% endif %}</strong>
+      <span class="muted">{{ one.line }}</span>
+      {% if one.has_key %}<span class="muted">✓ a key is saved</span>{% endif %}
+    </a>
+  {% endfor %}
+</div>
+
+<section class="panel">
+  <h2>Get a key from {{ label }}</h2>
+  {% if company == 'openai' %}
+    <ol class="steps">
+      <li>Open <a href="https://platform.openai.com/signup" target="_blank" rel="noopener noreferrer">OpenAI’s
+        developer platform</a> and sign in, or make an account. It is separate from a ChatGPT
+        subscription, which does not include this.</li>
+      <li>Add some credit under <a href="https://platform.openai.com/settings/organization/billing/overview" target="_blank" rel="noopener noreferrer">Billing</a>:
+        add a card, then buy a small amount such as $5 or $10.</li>
+      <li>Set a monthly budget under <a href="https://platform.openai.com/settings/organization/limits" target="_blank" rel="noopener noreferrer">Limits</a>,
+        so it can never cost more than you expect.</li>
+      <li>Open <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">API keys</a>,
+        press <em>Create new secret key</em>, name it {{ site_title }}, and copy it. It starts
+        with <code>sk-</code> and is shown only once, so paste it below straight away.</li>
+    </ol>
+  {% elif company == 'anthropic' %}
+    <ol class="steps">
+      <li>Open the <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer">Claude
+        Console</a> and sign in, or make an account. It is separate from a Claude.ai
+        subscription, which does not include this.</li>
+      <li>Add credit under <a href="https://console.anthropic.com/settings/billing" target="_blank" rel="noopener noreferrer">Billing</a>:
+        $5 or $10 is plenty to start.</li>
+      <li>Set a spend limit under <a href="https://console.anthropic.com/settings/limits" target="_blank" rel="noopener noreferrer">Limits</a>.</li>
+      <li>Open <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">API keys</a>,
+        press <em>Create key</em>, name it {{ site_title }}, and copy it. It starts with
+        <code>sk-ant-</code>.</li>
+    </ol>
+  {% else %}
+    <ol class="steps">
+      <li>Open <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google
+        AI Studio’s API keys</a> and sign in with a Google account.</li>
+      <li>Press <em>Create API key</em>, choosing or making a project if it asks, and copy the key.
+        It starts with <code>AIza</code>.</li>
+      <li>Turn on billing for that project; AI Studio offers it beside the key. Without it, Google
+        gives only a small free allowance and may use what is sent to it to improve its products,
+        which you may not want for a family’s messages.</li>
+    </ol>
+  {% endif %}
+  <p class="muted">These sites change their look now and then; the links go straight to the right
+    place even when it looks a little different.</p>
+
+  <form class="form" method="post" action="{{ url_for('settings.save_model') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    <input type="hidden" name="then" value="{{ then }}" />
+    <input type="hidden" name="provider" value="{{ company }}" />
+    <div class="field wide">
+      <label for="model-key">Paste the {{ label }} key here</label>
+      <input id="model-key" name="key" type="password" autocomplete="off" spellcheck="false"
+             {% if not has_key %}required{% endif %}
+             placeholder="{% if has_key %}a key is saved: paste a new one to replace it{% else %}{{ prefix }}…{% endif %}" />
+      <p class="muted hint">It is checked with {{ label }} before it is kept, which costs nothing.
+        It is stored on your server and never shown on this page again.
+        {% if company == answering %}{{ label }} answers with {{ model }}.{% endif %}</p>
+    </div>
+    <div class="field wide actions">
+      <button type="submit">
+        {%- if has_key and company != answering %}Use {{ label }}{% else %}Save and check the key{% endif -%}
+      </button>
+    </div>
+  </form>
+</section>
+
+<details class="more">
+  <summary>The daily limit: US${{ '%.2f' % limit }}</summary>
+  <div class="inner">
+    <p class="muted">What {{ site_title }} may spend in a day across every message and lookup, as
+      it estimates it. Once reached, it stops asking the AI until midnight and says so. 0 means
+      no limit.</p>
+    <form class="form" method="post" action="{{ url_for('settings.save') }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+      <input type="hidden" name="then" value="{{ then }}" />
+      <div class="field">
+        <label for="daily-limit">Daily limit (US$)</label>
+        <input id="daily-limit" name="daily_spend_limit" inputmode="decimal" value="{{ limit }}" />
+      </div>
+      <div class="field actions"><button type="submit">Save the limit</button></div>
+    </form>
+  </div>
+</details>

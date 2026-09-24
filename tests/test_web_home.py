@@ -17,7 +17,7 @@ def _home(app_settings, clock, calendar=None):
     return create_app(App(app_settings, clock, calendar=calendar)).test_client()
 
 
-def test_home_puts_what_is_coming_up_before_everything_else(calendar_settings, clock, conn):
+def test_home_puts_what_is_coming_up_before_everything_else(calendar_settings, clock, conn, family):
     calendar = fakes.FakeCalendar(TZ)
     calendar.seed(
         "Soccer practice",
@@ -32,7 +32,7 @@ def test_home_puts_what_is_coming_up_before_everything_else(calendar_settings, c
     assert text.index("Coming up") < text.index("Lately added")  # first on a phone
 
 
-def test_home_shows_the_newest_ideas_and_counts_them(settings, clock, conn) -> None:
+def test_home_shows_the_newest_ideas_and_counts_them(settings, clock, conn, family) -> None:
     with db.transaction(conn):
         for number in range(6):
             ideas.insert(
