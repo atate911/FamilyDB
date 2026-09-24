@@ -148,7 +148,13 @@ migration, so upgrading does not resend old conversations. Fresh outgoing messag
    no call at all. Send a web chat question while a lookup runs: it must not wait for it.
 10. On a phone away from home, share your location with the bot on Telegram (paperclip, then Location), then ask "what's open near here?": options should be measured from there, and the reply should say so. On the web page's chat over HTTPS, allow the location when the browser asks, and ask the same: no place should need typing.
 11. Set a reminder a few minutes ahead, stop the service past its time, start it again: the
-    reminder arrives once and says when it was due.
+    reminder arrives once and says when it was due. Set another for a minute ahead and keep
+    chatting in that chat: the next reply should carry it rather than a separate message.
+12. On `/settings/personality`, rewrite one of her lines and add a sentence to "About the
+    family"; the next reminder or follow-up should use the new line, and the next answer should
+    know the sentence. Choosing no persona should leave the replies plain.
+13. With the chosen model's key in the environment, run `uv run python -m evals` (it stops at
+    $0.50 unless `--budget` says otherwise) and read what failed before the family does.
 
 After a week of family use, read `/status` and `familydb debug cost` by kind before changing
 anything for cost: at `gpt-6-luna` prices the chat prefix is about $0.0006 a message and each web
@@ -165,8 +171,9 @@ A separate new user message can intentionally create another event. Significantl
 arguments represent a different intent; the operation log is not a semantic duplicate detector.
 
 Suggestion availability uses the calendar's real free stretches in minutes, but travel is a
-straight-line estimate from home, not from where the family is when they ask, and the forecast is
-per day, not per hour. It does not establish actual reservations or ticket availability.
+straight-line estimate, from home unless someone shared their location in the last three hours
+or named where they are, and the forecast is per day, not per hour. A shared location's name and
+coordinates go to the model provider with the message; the family chose that. It does not establish actual reservations or ticket availability.
 
 The daily spending limit is an estimate from a price table checked by hand in September 2026,
 not the bill. The model IDs `gpt-6-luna` and `gemini-3.8-flash` were taken from published

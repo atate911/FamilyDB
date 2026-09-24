@@ -1,7 +1,10 @@
 # Household memory and token economy
 
 Design decision, September 21, 2026. This specifies the next implementation; it does not claim
-that automatic household memory or the proposed spending controls are already implemented.
+that automatic household memory is already implemented. The daily spending limit it asks for is
+(`agent/spending.py`). What exists today is written by hand: "About the family" on the
+Personality page, which the family edits and which goes, as they wrote it, into the cached family
+context of every chat request.
 
 ## Core principle
 
@@ -86,5 +89,5 @@ Regression checks must also show that relevant requirements survive context limi
 messages do not duplicate memories, and errors do not cause paid retry storms.
 
 Background lookups and discovery elsewhere in FamilyDB should also be bounded, deduplicated,
-and cached where appropriate. Existing cost instrumentation is useful, but hard spending limits
-and all of the memory behavior above remain implementation work.
+and cached where appropriate. The daily spending limit, per-kind accounting and worker budgets
+exist; all of the memory behavior above remains implementation work.

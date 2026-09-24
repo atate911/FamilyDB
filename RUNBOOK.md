@@ -143,11 +143,12 @@ Without uv: `python3 -m venv .venv && .venv/bin/pip install .` gives the same `.
 Open the page (section 10) and sign in with the family password. The home page has a "Finish
 setting up" list of what is missing, most important first, each with a link to where it is done:
 
-1. A model key (settings, API keys). Until there is one, it saves what it is told but cannot answer.
-2. Where home is (settings, Home), for the weather and for what is on nearby (section 6).
-3. Google Calendar (settings, Google Calendar), so plans land on the family calendar (section 5).
-4. A Telegram bot (settings, API keys), so the family can message it from their phones (section 4).
-5. Only once there is a Telegram token: each person's Telegram id (the Family page).
+1. Yourself, as an admin, then the rest of the family (the Family page).
+2. A model key (settings, API keys). Until there is one, it saves what it is told but cannot answer.
+3. Where home is (settings, Home), for the weather and for what is on nearby (section 6).
+4. Google Calendar (settings, Google Calendar), so plans land on the family calendar (section 5).
+5. A Telegram bot (settings, API keys), so the family can message it from their phones (section 4).
+6. Only once there is a Telegram token: each person's Telegram id (the Family page).
 
 The list disappears when everything on it is done. Then try it on the Chat page: "we should try
 that new ramen place on Main St sometime" saves idea #1, and "tell me about #1" answers from
@@ -321,15 +322,17 @@ Two upgrades from an older checkout ask something of you once:
 
 ## 9. Lookups, the weekend digest and follow-ups
 
-**Looking ideas up.** On by default after the installer ("Look ideas up on the web" on the settings page, `WEB_TOOLS_ENABLED` in `.env`). Every `ENRICH_INTERVAL_MINUTES` the bot takes up to `ENRICH_BATCH` new ideas and, in a separate small model call with web search, finds the place, its address, hours, booking link and price notes, geocodes it (OpenStreetMap's Nominatim, no key) and estimates the drive from home. It then posts one line to the chat where the idea was captured ("Filled in #57 Hopscotch Portland: open Sat 10:00-20:00 · about 45 min away (estimate)"); turn off "Say in the chat when an idea is filled in" to keep quiet. Ideas that are not one place ("a picnic somewhere") are skipped, and ideas the worker cannot identify are marked failed and left alone; `familydb enrich --idea 57` redoes one by hand, `familydb ideas list` shows the `details:` state, and `familydb tool describe_idea --json '{"id": 57}'` shows what was saved. Details older than `PLACE_STALE_DAYS` are refreshed the next time the idea comes up in a suggestion. With lookups off, nothing is looked up and suggestions say "hours unknown". Once the daily spending limit is used up, lookups wait for tomorrow.
+**Looking ideas up.** On by default after the installer ("Look ideas up on the web" on the settings page, `WEB_TOOLS_ENABLED` in `.env`). Every `ENRICH_INTERVAL_MINUTES` the bot takes up to `ENRICH_BATCH` new ideas and, in a separate small model call with web search, finds the place, its address, hours, booking link and price notes, geocodes it (OpenStreetMap's Nominatim, no key) and estimates the drive from home. It then posts one line to the chat where the idea was captured ("Looked up #57 Hopscotch Portland: open Sat 10:00-20:00 · about 45 min away (estimate)"); turn off "Say in the chat when an idea is filled in" to keep quiet. Ideas that are not one place ("a picnic somewhere"), and home ideas with no place, link or location, are skipped without a model call, and ideas the worker cannot identify are marked failed and left alone; `familydb enrich --idea 57` redoes one by hand, `familydb ideas list` shows the `details:` state, and `familydb tool describe_idea --json '{"id": 57}'` shows what was saved. Details older than `PLACE_STALE_DAYS` are refreshed the next time the idea comes up in a suggestion. With lookups off, nothing is looked up and suggestions say "hours unknown". Once the daily spending limit is used up, lookups wait for tomorrow.
 
-**Suggestions.** "What should we do this weekend?" runs the engine once: free time from the calendar, the forecast, every idea against the looked-up details, and, with lookups on, a search for time-bound things near the home area (cached for twelve hours per weekend). Each verdict is logged in `suggestions`. `familydb suggest --window this-weekend --discover` runs the same engine from the shell.
+**Suggestions.** "What should we do this weekend?" runs the engine once: free time from the calendar, the forecast, every idea against the looked-up details, and, with lookups on, a search for time-bound things near the home area (cached for twelve hours, shared by questions that ask for the same window, constraints and kind of thing). Each verdict is logged in `suggestions`. It works in minutes, not parts of the day: "I'm bored, what now?" looks at the next few hours, "tonight" at the evening, and an answer for today says when they could be there ("can go 16:10-17:55 today"). `familydb suggest --window this-weekend --discover` runs the same engine from the shell.
 
 **Weekend digest.** The installer sends it to the chat on the web page (`web`), which needs no id looked up and so works from the first Thursday. To send it to the family's Telegram group instead, add the bot to the group and have somebody on the family list mention it there once; the Digest chat box on the settings page (under "When it speaks first") then offers that group among the chats the bot has seen, by when each was last written in. Pick it and save; empty the box and no digest is sent. A Telegram group's id is a negative number, and can be typed in by hand too. Digest day and hour (default Thursday 18:00 in the family's timezone) are on the same part of the page; `familydb digest` prints the schedule and `familydb digest --now` posts a digest immediately. The digest is asked as the first admin and stored like any message, so it goes out at most once a day; if the model call fails it is retried like a failed message, and if the bot was off at the scheduled hour it sends the digest a minute after it next starts on the same day.
 
 **Follow-ups.** The morning after a plan (`FOLLOW_UP_HOUR`, default 10:00), the bot asks "How was #57 Hopscotch Portland on Saturday? Worth doing again?" in the chat the plan was made in, once per plan, unless someone already said how it went. The answer is recorded as feedback and feeds future suggestions. `familydb follow-ups --now` asks by hand. It makes no model call.
 
-**Cost.** Enrichment is at most three searches and three page reads per idea; discovery at most four searches per weekend per twelve hours. Both run on the lookup model (GPT-6 Luna by default, the same as chat; section 11), and all of it counts towards the daily spending limit.
+**Reminders.** A task given a reminder time ("remind me on Tuesday at 9 that we need paper towels", or on `/tasks`) is sent once, when it is due, to the chat it was asked in; browser and console reminders go to the page's chat. A job checks every minute and makes no model call. It runs only in `familydb run`, not `familydb web`; one that fell due while the bot was off is sent when it starts again, and says when it was due. If the family is talking in that chat at the time, the reply they are about to get carries it instead; the follow-ups and lookup notes are handled the same way.
+
+**Cost.** Enrichment is at most three searches and three page reads per idea; discovery at most four searches per window and question kind per twelve hours. Both run on the lookup model (GPT-6 Luna by default, the same as chat; section 11), and all of it counts towards the daily spending limit.
 
 ## 10. The web page
 
@@ -338,8 +341,9 @@ connected, the "Finish setting up" list (section 3). Then: Chat, to talk to the 
 member would; the ideas list with search and filters, and one idea in full with its hours,
 travel estimate and booking link; the restaurants on their own page; the plans as a list or as a
 month, read live from Google Calendar when it is connected and from the saved plans when it is
-not; Family, for who the bot talks to; and the status and settings pages (section 11). The forms
-add and change ideas, record how things went, and create, move and cancel plans, through the
+not; things to do and their reminders; Family, for who the bot talks to; and the status and
+settings pages (section 11), with the Personality page beside them. The forms add and change
+ideas and tasks, record how things went, and create, move and cancel plans, through the
 same tools the bot itself uses, so nothing done on the page is anything the bot could not do.
 
 The installer always turns the page on, with a password. There are two ways to reach it.
@@ -486,9 +490,8 @@ and on which model, which is the quickest way to see that a change took effect.
 **Spending.** `DAILY_SPEND_LIMIT` ("Daily spending limit (US$)" on the page, under "What it may
 spend") is $2.00 a day by default, counted over the family's day in its timezone; 0 turns it
 off. It is checked before every model call, whether for chat, a lookup, discovery or the digest.
-Once it is used up, chat answers "Today's spending limit ($2.00) is used up, so I can't answer
-until tomorrow. Ask again then, or raise the limit on the settings page." and lookups wait for
-tomorrow. A turn already under way stops before its next call, so a day can end over the limit
+Once it is used up, chat says so ("I've reached today's spending limit ($2.00), so I'm stopping
+here until tomorrow.") and lookups wait for tomorrow. A turn already under way stops before its next call, so a day can end over the limit
 by at most one call. The figure is an estimate from a price table: a model the table does not
 list is counted at $15 per million input and $75 per million output tokens, dearer than any it
 does list, so the limit errs towards stopping. It is not the bill. Set a spending limit on the
@@ -504,6 +507,12 @@ every backup you take (section 7) and in every copy of that file. A key in `.env
 is fine on a machine you control; if the backups go somewhere you do not control, keep the keys
 in `.env`. The page never shows a key back to you or writes one to its change log. "See a key"
 shows one only after the family password is typed again, once, on that screen only.
+
+**Personality.** `/settings/personality` holds who the bot is: the persona (Vera unless changed,
+or none), her description rewritten in the family's words, "About the family" (what she should
+know about them, sent with every message, so keep it short), and the lines she uses for
+everything she says unasked, such as reminders and "how was it?". Those lines are filled in by
+code, never by a model call; an emptied one goes back to hers.
 
 **Undoing a change.** The bottom of the settings page lists what has changed, when, and from
 where. To put a setting back the way it was, empty its box: the value from `.env` applies again.
@@ -612,8 +621,8 @@ SQLite browser opens it. `scripts/uninstall.sh` does this with a backup and asks
 
 - **`cache_read` stays 0 in `db status`.** Something volatile is in the cached prefix. `familydb debug prompt "hi"` prints the request: the two `system` blocks and the `tools` list must be byte-identical between two runs. On Claude, check `ANTHROPIC_CACHE_TTL` is still `1h`, the default: at `5m` a family's gaps between messages are longer than the cache.
 - **`database is locked`.** Two processes writing at once. Run one bot process; the CLI can be used alongside it (short transactions, busy timeout), but not a second `familydb run`.
-- **"Saved your message, but I couldn't process it right now."** The model call failed. `journalctl` or `docker compose logs` has the error, and `/status` lists the message. The running bot retries the message every `RETRY_INTERVAL_MINUTES` up to `RETRY_MAX_ATTEMPTS` times and delivers the answer when it succeeds; `familydb db retry-failed` does it by hand, and `--reset` re-arms messages that gave up after a configuration problem you have since fixed.
-- **"Today's spending limit ($2.00) is used up, so I can't answer until tomorrow."** The daily limit was reached; `/status` shows today's estimate against it. Nothing more is asked of a model until midnight in the family's timezone, lookups included. Raise it on the settings page ("Daily spending limit (US$)") if the day was genuine; if it was not, look at `/status` for what spent it.
+- **"Got it, but I can't get to it right now."** (without a persona: "Saved your message, but I couldn't process it right now.") The model call failed. `journalctl` or `docker compose logs` has the error, and `/status` lists the message. The running bot retries the message every `RETRY_INTERVAL_MINUTES` up to `RETRY_MAX_ATTEMPTS` times and delivers the answer when it succeeds; `familydb db retry-failed` does it by hand, and `--reset` re-arms messages that gave up after a configuration problem you have since fixed.
+- **"I've reached today's spending limit ($2.00)"** (or "Today's spending limit ($2.00) is used up" without a persona). The daily limit was reached; `/status` shows today's estimate against it. Nothing more is asked of a model until midnight in the family's timezone, lookups included. Raise it on the settings page ("Daily spending limit (US$)") if the day was genuine; if it was not, look at `/status` for what spent it.
 - **"OpenAI says it has no model called X. Check the spelling."** On saving the settings page: the company's own model list has no model of that name, so nothing was saved. Correct the name or pick one of the suggestions. A company that cannot be reached, or has no key yet, never causes this.
 - **"Could not find X on the map."** The home area could not be looked up. Type the latitude and longitude as well.
 - **Telegram: "the token was refused by Telegram" on `/status`.** The token is wrong, or was revoked in BotFather. Paste the current one on the settings page. A refused token is not tried again until it changes, so nothing is hammering Telegram meanwhile.
