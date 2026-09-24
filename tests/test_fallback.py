@@ -152,3 +152,31 @@ def test_a_spare_that_also_fails_reports_the_first_failure(settings, registry, c
         _turn(paired, registry, ctx, busy, broken)
     assert info.value.retryable is True  # the primary's verdict, so the retry job still tries
     assert "rate limited" in str(info.value)
+
+
+def test_the_spare_s_own_price_is_held_before_it_is_asked(settings, registry, ctx) -> None:
+    """A dearer spare must not run on the cheaper model's hold while others spend the rest."""
+    paired = _both(
+        settings, anthropic_model="claude-haiku-4-5", openai_model="gpt-5", daily_spend_limit=100.0
+    )
+    held: list[float] = []
+
+    def holding() -> float:
+        return ctx.conn.execute("SELECT coalesce(sum(cost_usd), 0) FROM spend_holds").fetchone()[0]
+
+    class Busy(fakes.FakeMessagesAPI):
+        def create(self, **kwargs):
+            held.append(holding())
+            raise fakes.rate_limit_error()
+
+    class Spare(fakes.FakeResponsesAPI):
+        def create(self, **kwargs):
+            held.append(holding())
+            return super().create(**kwargs)
+
+    busy = build("anthropic", paired, api=Busy())
+    spare = build("openai", paired, api=Spare(fakes.oa_response([fakes.oa_text("Hi Sam!")])))
+    assert _turn(paired, registry, ctx, busy, spare).provider == "openai"
+    primary, fallback = held
+    assert fallback > primary > 0
+    assert holding() == 0  # given back once the call was recorded

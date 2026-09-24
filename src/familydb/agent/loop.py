@@ -151,6 +151,13 @@ def run_turn(
                 )
                 active = fallback
                 request.model = active.model_for(surface)
+                spending.adjust(
+                    ctx.conn,
+                    settings,
+                    ctx.clock.now(),
+                    held,
+                    _estimate(request, active, surface, settings),
+                )
                 try:
                     reply = active.send(request)
                 except AgentError as spare_exc:

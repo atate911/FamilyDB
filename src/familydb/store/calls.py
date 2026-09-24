@@ -101,13 +101,18 @@ def spent_since(conn: sqlite3.Connection, *, since: str) -> float:
     return float(row["spent"])
 
 
-def held_since(conn: sqlite3.Connection, *, since: str) -> float:
+def held_since(conn: sqlite3.Connection, *, since: str, other_than: int | None = None) -> float:
     """Estimated dollars set aside by calls still in flight, counting holds made since then."""
     row = conn.execute(
-        "SELECT coalesce(sum(cost_usd), 0) AS held FROM spend_holds WHERE created_at >= ?",
-        (since,),
+        "SELECT coalesce(sum(cost_usd), 0) AS held FROM spend_holds "
+        "WHERE created_at >= ? AND id IS NOT ?",
+        (since, other_than),
     ).fetchone()
     return float(row["held"])
+
+
+def rehold(conn: sqlite3.Connection, hold_id: int, *, cost_usd: float) -> None:
+    conn.execute("UPDATE spend_holds SET cost_usd = ? WHERE id = ?", (cost_usd, hold_id))
 
 
 def hold(conn: sqlite3.Connection, *, cost_usd: float, now: str) -> int:

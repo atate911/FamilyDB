@@ -103,16 +103,40 @@ def estimate(
 
 def admit(conn: sqlite3.Connection, settings: Settings, now: datetime, cost: float) -> int:
     """Check the limit and hold this call's estimated cost; raise when the day is used up."""
-    since = day_start(settings, now)
     with transaction(conn):
-        limit = settings.daily_spend_limit
-        if limit:
-            used = calls.spent_since(conn, since=since) + calls.held_since(
-                conn, since=max(since, utc_iso(now - timedelta(minutes=HOLD_MINUTES)))
-            )
-            if used >= limit:
-                raise SpendingLimitReached(used, limit)
+        _check(conn, settings, now, other_than=None)
         return calls.hold(conn, cost_usd=cost, now=utc_iso(now))
+
+
+def adjust(
+    conn: sqlite3.Connection, settings: Settings, now: datetime, hold_id: int, cost: float
+) -> None:
+    """Hold what the call will now cost, before it is sent: a fallback to a dearer model must not
+    leave the cheaper model's estimate standing while others spend the difference. Checked as
+    `admit` checks, not counting this call's own hold; refused, the hold is given back."""
+    with transaction(conn):
+        try:
+            _check(conn, settings, now, other_than=hold_id)
+        except SpendingLimitReached:
+            settle(conn, hold_id, now)
+            raise
+        calls.rehold(conn, hold_id, cost_usd=cost)
+
+
+def _check(
+    conn: sqlite3.Connection, settings: Settings, now: datetime, *, other_than: int | None
+) -> None:
+    limit = settings.daily_spend_limit
+    if not limit:
+        return
+    since = day_start(settings, now)
+    used = calls.spent_since(conn, since=since) + calls.held_since(
+        conn,
+        since=max(since, utc_iso(now - timedelta(minutes=HOLD_MINUTES))),
+        other_than=other_than,
+    )
+    if used >= limit:
+        raise SpendingLimitReached(used, limit)
 
 
 def settle(conn: sqlite3.Connection, hold_id: int, now: datetime) -> None:
