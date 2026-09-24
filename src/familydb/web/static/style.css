@@ -887,6 +887,7 @@ details.panel[open] > summary { margin-bottom: 1.1rem; }
 .setup li::before { content: ""; flex: none; width: 0.85rem; height: 0.85rem; border: 2px solid var(--amber); border-radius: 50%; transform: translateY(0.12rem); }
 .setup a { color: var(--ink); text-decoration-color: rgb(255 184 80 / 0.5); }
 .setup a:hover { color: var(--amber); }
+.setup > p { margin: 1rem 0 0; font-size: 0.92rem; }
 
 .dashboard { display: grid; gap: 1rem 2rem; }
 .source { margin: -0.35rem 0 0.9rem; font-size: 0.875rem; }
@@ -1496,6 +1497,148 @@ table.month td.today time { color: var(--on-bright); background: var(--amber); b
 .steps { display: grid; gap: 0.6rem; padding-left: 1.4rem; }
 .steps li::marker { color: var(--green); font-weight: 600; }
 
+/* ---- Setting up ---------------------------------------------------------------------------- */
+/* One step at a time (web/setup.py): a row of numbered steps saying where you are, the step's
+   title and what it is for, what to do, and the way on. Numbers are in the machine's voice, and
+   the step you are on is lit. */
+.step-head { margin: 0 0 1.1rem; }
+.step-head .eyebrow { display: block; margin-bottom: 0.6rem; color: var(--green); }
+.step-head h1 { margin: 0; }
+.lead, .why { max-width: 60ch; margin: 0 0 1.25rem; font-size: 1.05rem; color: var(--ink-2); }
+/* Both are <nav>, and the bar's own nav rules are written for the bar; these are not in it. */
+.setup-progress, .step-nav { margin-left: 0; }
+.setup-progress ol { display: flex; flex-wrap: wrap; gap: 0.4rem; list-style: none; margin: 0 0 1.75rem; padding: 0; }
+.setup-progress a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.25rem 0.75rem 0.25rem 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--dim);
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  transition: border-color var(--afterglow), color 0.15s;
+}
+.setup-progress a:hover { color: var(--ink); border-color: var(--edge); transition-duration: var(--glow-in), 0.15s; }
+.setup-progress a > span[aria-hidden] {
+  display: inline-grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  font: 500 0.78rem/1 var(--mono);
+  color: var(--ink-2);
+  background: var(--surface-3);
+  border-radius: 50%;
+}
+.setup-progress .done a > span[aria-hidden] { color: var(--green); background: rgb(109 255 156 / 0.12); }
+.setup-progress a[aria-current="step"] {
+  color: var(--ink);
+  font-weight: 600;
+  border-color: rgb(109 255 156 / 0.55);
+  box-shadow: 0 0 22px -10px rgb(109 255 156 / 0.7);
+}
+.setup-progress a[aria-current="step"] > span[aria-hidden] { color: var(--on-bright); background: var(--green); box-shadow: 0 0 10px rgb(109 255 156 / 0.5); }
+/* A step that is done says so, lit. */
+.state.done {
+  margin: 0 0 1.25rem;
+  padding: 0.75rem 1rem;
+  color: var(--green);
+  background: rgb(109 255 156 / 0.07);
+  border: 1px solid rgb(109 255 156 / 0.28);
+  border-radius: var(--r);
+}
+.step-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 2rem 0 0.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+.step-skip-note { max-width: 60ch; font-size: 0.9rem; }
+.tips { display: grid; gap: 0.4rem; margin: 0 0 1.25rem; padding-left: 1.2rem; color: var(--ink-2); }
+.tips li::marker { color: var(--green); }
+/* The AI companies, as cards to choose between; the chosen one is lit. */
+.choices { display: grid; gap: 0.85rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); margin: 0 0 1.25rem; }
+.choice {
+  display: grid;
+  gap: 0.3rem;
+  align-content: start;
+  padding: 0.9rem 1rem;
+  color: var(--ink);
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow);
+  transition: border-color var(--afterglow), box-shadow var(--afterglow);
+}
+.choice:hover { border-color: rgb(109 255 156 / 0.45); transition-duration: var(--glow-in); }
+.choice.chosen { border-color: var(--green); box-shadow: var(--shadow), 0 0 0 1px var(--green), 0 0 30px -12px rgb(109 255 156 / 0.6); }
+.choice strong { display: flex; flex-wrap: wrap; align-items: center; gap: 0.45rem; font-weight: 600; }
+.choice .muted { font-size: 0.9rem; }
+/* The steps on the overview: a number that turns to a tick, what the step is, and whether it is
+   needed. */
+.setup-list { display: grid; gap: 0.6rem; list-style: none; margin: 0 0 1.5rem; padding: 0; }
+.setup-list > li.panel { margin: 0; padding: 0; }
+.setup-list a {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.9rem;
+  align-items: center;
+  padding: 0.85rem 1.1rem;
+  color: var(--ink);
+  text-decoration: none;
+  border-radius: inherit;
+  transition: background-color 0.15s;
+}
+.setup-list a:hover { background: var(--surface-2); }
+.setup-list a:hover strong { color: var(--green); }
+.setup-list .number {
+  display: inline-grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  font: 500 0.9rem/1 var(--mono);
+  color: var(--ink-2);
+  background: var(--surface-3);
+  border: 1px solid var(--line-2);
+  border-radius: 50%;
+}
+.setup-list .done .number { color: var(--green); background: rgb(109 255 156 / 0.12); border-color: rgb(109 255 156 / 0.35); }
+.setup-list .what { display: grid; min-width: 0; }
+.setup-list .what strong { font-weight: 600; }
+.setup-list .what .muted { font-size: 0.9rem; overflow-wrap: anywhere; }
+.tag.need-needed { color: var(--amber); background: rgb(255 184 80 / 0.1); }
+.tag.need-recommended, .tag.need-done { color: var(--green); background: rgb(109 255 156 / 0.1); }
+/* The family step lists people without faces, one to a line. */
+.people > li:not(:has(> .avatar)) { grid-template-columns: minmax(0, 1fr); }
+.people > li:not(:has(> .avatar)) > .muted { grid-column: 1; }
+.knocks .knock { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; }
+.knocks .knock form { margin: 0; }
+.calendars { display: grid; gap: 0.35rem; margin: 0 0 0.9rem; padding: 0.6rem 0.8rem; background: var(--field); border: 1px solid var(--line-2); border-radius: var(--r-sm); }
+.roles { margin-top: 1rem; font-size: 0.92rem; }
+.steps .button { min-height: 2.25rem; padding: 0.35rem 0.8rem; font-size: 0.9rem; }
+/* On a phone the row of steps is numbers only, but for the one you are on; the names stay there
+   for a screen reader. */
+@media (max-width: 40rem) {
+  .setup-progress ol { gap: 0.3rem; }
+  .setup-progress a { padding-right: 0.25rem; }
+  .setup-progress a[aria-current="step"] { padding-right: 0.75rem; }
+  .setup-progress a:not([aria-current="step"]) .label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
 /* ---- Sign in, and nowhere ----------------------------------------------------------------- */
 .page-signin .places, .page-signin .tools { display: none; }
 .page-signin main, .page-lost main { display: grid; align-content: center; }
@@ -1540,6 +1683,9 @@ table.month td.today time { color: var(--on-bright); background: var(--amber); b
 }
 .foot-mark { font: 500 0.9rem/1 var(--mono); color: var(--ink-2); }
 .foot-mark .icon { width: 1.15rem; height: 1.15rem; color: var(--green); filter: drop-shadow(0 0 3px rgb(109 255 156 / 0.6)); }
+/* The copyright and version on a line of their own, in the machine's small voice, like the banner
+   an old machine printed as it started. */
+.foot .legal { flex-basis: 100%; margin: 0; font: 0.72rem/1.5 var(--mono); letter-spacing: 0.02em; color: var(--faint); }
 @media (max-width: 40rem) { .foot { justify-content: center; text-align: center; } }
 
 /* ---- Motion ------------------------------------------------------------------------------- */

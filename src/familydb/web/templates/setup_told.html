@@ -1,0 +1,3 @@
+{# What the last form said, after it sent the browser back to a setup page. #}
+{% for line in said %}<p class="said" role="status">{{ line }}</p>{% endfor %}
+{% for line in problems %}<p class="error" role="alert">{{ line }}</p>{% endfor %}

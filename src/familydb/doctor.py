@@ -35,8 +35,12 @@ WARN = "warn"
 FAIL = "fail"
 # A check that could not run, usually because an earlier one failed. Not a failure of its own.
 SKIP = "skip"
+# Not done yet, and not a fault: on a new install, what the web page's setup does next.
+TODO = "todo"
 
-MARKS = {OK: "✓", WARN: "!", FAIL: "✗", SKIP: "·"}
+MARKS = {OK: "✓", WARN: "!", FAIL: "✗", SKIP: "·", TODO: "→"}
+# What a new install has not done yet by design, because the page's setup does it.
+NEW_INSTALL_STEPS = {"family": "Add yourself", "model key": "Connect an AI model"}
 # Roughly what the install needs, plus room for the database to grow and a backup beside it.
 FREE_MB_WANTED = 500
 KEY_FIELDS = {
@@ -231,7 +235,7 @@ def check_family(
             "family",
             FAIL,
             "nobody is in the family yet, so no message can be answered",
-            "familydb members add NAME --role admin",
+            "Add yourself on the web page: its setup opens on it",
         )
         return
     if not admins:
@@ -264,7 +268,7 @@ def check_provider(app: App, report: Report, *, online: bool) -> None:
             "model key",
             FAIL,
             "no key for any provider, so the bot can save a message but never answer it",
-            "Type one on the settings page (API keys), or put it in .env",
+            "Add one on the web page: its setup says where to get one",
         )
         return
     chosen = settings.provider
@@ -579,8 +583,20 @@ def run(app: App, *, online: bool = False) -> Report:
     return report
 
 
+def as_new_install(report: Report) -> Report:
+    """The same findings, read as the end of an install: nobody on the list and no model key are
+    the page's first setup steps, not faults. Everything else keeps its verdict."""
+    for check in report.checks:
+        if check.verdict == FAIL and check.name in NEW_INSTALL_STEPS:
+            check.verdict = TODO
+            check.fix = f"next, on the web page: {NEW_INSTALL_STEPS[check.name]}"
+    return report
+
+
 def verdict(report: Report) -> str:
     """The one line somebody reads first."""
+    if not report.failures and any(check.verdict == TODO for check in report.checks):
+        return "It is running. The rest is set up on the web page, which walks you through it."
     if report.failures:
         return f"{len(report.failures)} thing(s) must be fixed before this will work" + (
             f", and {len(report.warnings)} worth a look" if report.warnings else ""

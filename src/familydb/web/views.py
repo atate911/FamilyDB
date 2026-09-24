@@ -43,6 +43,9 @@ DETAILS = {
     "failed": "details could not be found",
     "skipped": "not one place to look up",
 }
+# The last line of every page. The product's name, not the page's title, which the family may
+# change: the copyright is in the software, not in what they call it.
+FOOTER = "FamilyDB © 2026 by Andrew Tate. Version v{version}. All rights reserved."
 MAP_URL = "https://www.openstreetmap.org/?mlat={lat}&mlon={lon}#map=17/{lat}/{lon}"
 MAP_SEARCH = "https://www.openstreetmap.org/search?query={query}"
 
@@ -507,3 +510,8 @@ def knock_row(knock: Any, tz: Any) -> dict[str, Any]:
         "times": knock.times,
         "where": "in a group" if group else "in a private chat",
     }
+
+
+def footer(version: str) -> str:
+    """The copyright and version line at the foot of every page."""
+    return FOOTER.format(version=version)

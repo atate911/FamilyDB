@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}{{ step.title }} · Set up · {{ site_title }}{% endblock %}
+{% block head %}
+  {# Only while this step is waiting on something outside the page, and never for long. #}
+  {% if refresh %}<meta http-equiv="refresh" content="{{ refresh_seconds }};url={{ refresh }}" />{% endif %}
+{% endblock %}
+{% block content %}
+  <nav class="setup-progress" aria-label="Setup steps">
+    <ol>
+      <li><a href="{{ url_for('setup.overview') }}"><span aria-hidden="true">≡</span><span class="label">All</span></a></li>
+      {% for one in steps %}
+        <li{% if one.done %} class="done"{% endif %}>
+          <a href="{{ url_for('setup.step', name=one.name) }}"{% if one.name == step.name %} aria-current="step"{% endif %}>
+            <span aria-hidden="true">{% if one.done %}✓{% else %}{{ loop.index }}{% endif %}</span>
+            <span class="label">{{ one.short }}</span>
+          </a>
+        </li>
+      {% endfor %}
+    </ol>
+  </nav>
+
+  <header class="step-head">
+    <span class="eyebrow">Step {{ number }} of {{ total }} · about {{ step.minutes }} minute{{ '' if step.minutes == 1 else 's' }} · {{ need_words[step.need] }}</span>
+    <h1>{{ step.title }}</h1>
+  </header>
+  {% include "setup_told.html" %}
+  {% if step.done %}<p class="state done">✓ {{ step.detail }}</p>{% endif %}
+
+  {% include "setup/" ~ step.name ~ ".html" %}
+
+  <nav class="step-nav" aria-label="Setup">
+    <a href="{{ previous }}">← Back</a>
+    <a class="button{% if not step.done %} secondary{% endif %}" href="{{ following }}">
+      {%- if step.done %}Next →{% elif step.need == 'needed' %}Skip for now →{% else %}Skip this →{% endif -%}
+    </a>
+  </nav>
+  {% if not step.done and step.need == 'needed' %}
+    <p class="muted step-skip-note">Skipping is fine: nothing else depends on doing it now. It
+      cannot answer anyone until it is done, and the home page will bring you back here.</p>
+  {% endif %}
+{% endblock %}

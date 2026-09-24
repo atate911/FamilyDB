@@ -80,6 +80,21 @@
     {{ icon('right', cls='go') }}
   </a>
 
+  <section class="panel" id="password">
+    <h2>Family password</h2>
+    <p class="muted">
+      {% if not needs_password %}
+        This page has no password, so anyone who can reach it is in. Choose one to lock it.
+      {% elif password.chosen %}
+        The one everybody signs in with. Changing it signs every other browser out.
+      {% else %}
+        Still the one the installer made up. Choose one the family will remember: a short sentence
+        of at least {{ password.least }} characters is easy to remember and hard to guess.
+      {% endif %}
+    </p>
+    {% include "password_form.html" %}
+  </section>
+
   <section class="panel" id="keys">
     <h2>{{ icon('key') }}API keys</h2>
     <p class="muted">

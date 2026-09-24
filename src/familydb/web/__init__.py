@@ -16,13 +16,15 @@ from typing import Any
 
 from flask import Flask, render_template, request
 
+from familydb import __version__
 from familydb.app import App
 from familydb.availability import web_is_public, web_password_required
 from familydb.channels.web import WebChat
 from familydb.config import Settings
 from familydb.errors import ConfigError
-from familydb.web import auth, chat, edits, family, once, routes
+from familydb.web import auth, chat, edits, family, once, routes, setup, views
 from familydb.web import settings as settings_page
+from familydb.web.auth import MIN_PASSWORD
 from familydb.web.keys import session_secret
 
 log = logging.getLogger(__name__)
@@ -34,7 +36,6 @@ CONTENT_SECURITY_POLICY = (
 )
 HSTS = "max-age=31536000"
 REFERRER_POLICY = "same-origin"
-MIN_PASSWORD = 12
 NO_PASSWORD = (
     "WEB_HOST is {host}, so the page would be reachable from other machines, but WEB_PASSWORD is "
     "empty. Set a password, bind to 127.0.0.1, or set WEB_ALLOW_NO_PASSWORD=true if this is a "
@@ -59,6 +60,8 @@ def check_configuration(settings: Settings) -> None:
     """Refuse to serve a page the network could walk into. Raises ConfigError."""
     if not web_password_required(settings):
         return
+    if settings.web_password_hash:
+        return  # chosen on the page, whose form would not take one that was too short
     if not settings.web_password:
         if settings.web_trust_proxy:
             raise ConfigError(NO_PASSWORD_BEHIND_PROXY)
@@ -118,20 +121,23 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     web.jinja_env.globals["password_in_use"] = lambda: auth.password_in_use(app.settings)
     web.jinja_env.globals["csrf_token"] = auth.csrf_token
     web.jinja_env.globals["once_token"] = once.once_token
-    web.context_processor(lambda: {"site_title": app.settings.web_title})
+    web.context_processor(
+        lambda: {"site_title": app.settings.web_title, "footer": views.footer(__version__)}
+    )
     web.register_blueprint(auth.bp)
     web.register_blueprint(routes.bp)
     web.register_blueprint(chat.bp)
     web.register_blueprint(edits.bp)
     web.register_blueprint(family.bp)
     web.register_blueprint(settings_page.bp)
+    web.register_blueprint(setup.bp)
     # The gate first: somebody who is not signed in should not be able to make the page work,
     # not even for one small query.
     web.before_request(auth.require_login)
     web.before_request(_picking_up_settings(app, web))
     web.after_request(security_headers)
     web.register_error_handler(404, _not_found)
-    if web_is_public(settings) and not settings.web_password:
+    if web_is_public(settings) and not auth.password_in_use(settings):
         log.warning("serving the web page on %s with no password", settings.web_host)
     elif web_is_public(settings) and not settings.web_trust_proxy:
         log.warning(NO_PROXY_TRUSTED, settings.web_host)

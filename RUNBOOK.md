@@ -381,6 +381,12 @@ only because the compose file publishes the port to `127.0.0.1` alone. A visitor
 forged `X-Forwarded-For` is ignored. Only turn it on with a proxy actually in front. Behind a
 proxy a password is always required, however the page is bound.
 
+**On a server on the internet with no domain.** Give the installer the server's public IP
+address instead (virtualenv path). It is the same arrangement as a domain, except that Caddy
+signs the certificate itself (`tls internal` in `/etc/caddy/Caddyfile`), so every browser warns
+once per device before it trusts it. The connection is still encrypted. docs/INSTALL.md section
+6 has the Caddyfile, for an install made without it.
+
 **At home, on the local network.** To reach the page from other devices without a domain, set
 `WEB_HOST=0.0.0.0` in `.env`, and with Docker change the compose `ports` line to `"8080:8080"`.
 The page then answers at `http://<server>:8080/`. A page that faces the network needs a password
@@ -595,10 +601,11 @@ default) and deletes the rest.
 - *The Telegram bot token.* `/revoke` in BotFather makes a new one and kills the old; paste it on
   the settings page, where it takes effect within seconds, or put it in `.env` and restart.
   Nobody can read the family's messages with the old one afterwards.
-- *The page password.* Change `WEB_PASSWORD` in `.env` and restart. Every session opened with the
-  old password ends at that point, so a stolen cookie stops working too, and browsers stop being
-  treated as known. `WEB_PASSWORD` is deliberately not on the settings page: a form cannot change
-  the lock on its own door.
+- *The page password.* Change it on the settings page, under Family password: it asks for the
+  one in force, keeps this browser signed in and signs every other one out, and will not take one
+  under twelve characters. Nothing on the server needs editing. It is stored only as a hash, and
+  once the family has chosen one, the installer's `WEB_PASSWORD` no longer opens the page. If
+  nobody remembers it, `sudo /opt/familydb/scripts/maintain.sh password` prints a new one.
 - *A lost phone, or a sign-in shared too widely.* "Sign everyone out" on the settings page, after
   typing the family password again, ends every sign-in on every device, this one included. It
   cannot while `WEB_SECRET_KEY` is set in `.env`; change that and restart instead.
@@ -640,7 +647,7 @@ SQLite browser opens it. `scripts/uninstall.sh` does this with a backup and asks
 - **"details: failed" on an idea.** The lookup worker could not identify the place; `ideas list --json` shows the note. Fix the title or location with "actually it's the one in Vancouver", or on the idea's page, and run `familydb enrich --idea N`.
 - **Suggestions say "web discovery off" or "hours unknown".** Lookups are off ("Look ideas up on the web" on the settings page), the idea has not been looked up yet, or the day's spending limit is used up; the enrichment job runs only in the long-running `familydb run` process.
 - **The digest never arrives.** The Weekend digest row on `/status` and `familydb digest` show the schedule and the chat; the log says why a run was skipped (no chat, nothing to send with, no admin). For a Telegram group, the bot must be in the group and see its messages (section 4, step 3).
-- **"the web page is not serving" in the log.** Either the settings forbid it (a page off the loopback, or behind a proxy, with no `WEB_PASSWORD`) or the port is taken. The log line says which. The bot keeps running either way.
+- **"the web page is not serving" in the log.** Either the settings forbid it (a page off the loopback, or behind a proxy, with no `WEB_PASSWORD` or one under twelve characters) or the port is taken. Behind Caddy it shows in the browser as a 502. The log line says which. The bot keeps running either way.
 - **The web page asks for the password again and again.** The login cookie could not be stored or its signing key keeps changing. Check that `data/` is writable, or set `WEB_SECRET_KEY`. Over HTTPS, `WEB_TRUST_PROXY` must be true or the `Secure` cookie is never set. Changing `WEB_PASSWORD` or pressing "Sign everyone out" also ends every session, on purpose, so everybody signs in once after that.
 - **"Too many tries. Wait a quarter of an hour and try again."** Five wrong passwords from one address, or fifty from anywhere; a browser that has signed in before is spared the second. Waiting is the only way through, which is the point.
 - **The web page is unreachable from another device.** `WEB_HOST` is probably still `127.0.0.1`, or the compose `ports` line still starts with `127.0.0.1:`. Both have to change, and a password has to be set. On a server on the internet, use a domain instead (section 10).

@@ -7,6 +7,7 @@ from typing import Any
 
 from familydb.agent.providers.base import (
     Exchange,
+    KeyCheck,
     Message,
     ModelReply,
     Provider,
@@ -101,6 +102,7 @@ def ready(settings: Settings, surface: Surface, api: Any = None) -> bool:
 __all__ = [
     "NAMES",
     "Exchange",
+    "KeyCheck",
     "Message",
     "ModelReply",
     "Provider",

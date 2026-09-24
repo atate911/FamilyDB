@@ -50,6 +50,14 @@ def test_the_way_in_is_an_old_green_screen(settings, clock) -> None:
     assert "Ready." in page and '<label for="password">Family password</label>' in page
 
 
+def test_every_page_ends_with_the_copyright_and_the_version(settings, clock) -> None:
+    from familydb import __version__
+
+    page = _client(settings, clock, web_password=PASSWORD).get("/login")  # even before signing in
+    assert "FamilyDB © 2026 by Andrew Tate." in page.text
+    assert f"Version v{__version__}. All rights reserved." in page.text
+
+
 def test_signing_in_and_out(settings, clock) -> None:
     client = _client(settings, clock, web_password=PASSWORD)
     wrong = client.post("/login", data={"password": "guess"})
@@ -851,7 +859,7 @@ def test_the_page_really_serves_on_a_thread_and_stops(settings, clock) -> None:
 
 
 def test_changing_the_password_ends_the_sessions_opened_with_the_old_one(
-    settings, clock, conn
+    settings, clock, conn, family
 ) -> None:
     client = _signed_in(settings, clock)
     assert client.get("/").status_code == 200

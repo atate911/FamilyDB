@@ -16,7 +16,7 @@ from uuid import uuid4
 
 import typer
 
-from familydb import __version__, privacy
+from familydb import __version__, passwords, privacy
 from familydb.agent.history import load_history
 from familydb.agent.providers.base import Message, TurnRequest
 from familydb.agent.render import render_idea_line, render_user_turn
@@ -130,6 +130,25 @@ def config() -> None:
         else:
             note = ""
         typer.echo(f"{key}={value}{note}")
+
+
+@app.command("password")
+def password() -> None:
+    """Make up a new family password for the web page, print it once, and sign everyone out.
+
+    For a password nobody remembers: whoever can run this on the server is let back in, and the
+    family then chooses their own again on the page. The old one stops working at once.
+    """
+    application = build_app()
+    fresh = passwords.make_up()
+    with closing(_ready(application)) as conn, db.transaction(conn):
+        settings_store.set_many(
+            conn,
+            {"web_password_hash": passwords.hash_password(fresh)},
+            source="familydb password",
+        )
+    typer.echo(f"The family password is now: {fresh}")
+    typer.echo("Sign in with it, then choose your own under Settings, Family password.")
 
 
 @db_app.command("migrate")
@@ -524,6 +543,12 @@ def doctor(
         False, "--fix", help="Put right the few things that can be, such as file permissions."
     ),
     as_json: bool = typer.Option(False, "--json", help="Machine-readable, for a setup script."),
+    new_install: bool = typer.Option(
+        False,
+        "--new-install",
+        hidden=True,
+        help="As the installer's last word: what the page's setup does next is not a fault.",
+    ),
 ) -> None:
     """Check this install end to end and say what, if anything, is wrong.
 
@@ -539,6 +564,8 @@ def doctor(
     if fix:
         checks.correct(application, report)
         report = checks.run(application, online=online)  # say what is true after the repairs
+    if new_install:
+        checks.as_new_install(report)
     if as_json:
         typer.echo(json.dumps(report.as_dict(), indent=2, sort_keys=True))
     else:
@@ -547,7 +574,7 @@ def doctor(
             typer.echo(f"{mark} {check.name}: {check.detail}")
             if check.corrected:
                 typer.echo(f"    fixed: {check.corrected}")
-            elif check.fix and check.verdict in (checks.FAIL, checks.WARN):
+            elif check.fix and check.verdict in (checks.FAIL, checks.WARN, checks.TODO):
                 typer.echo(f"    → {check.fix}")
         typer.echo("")
         typer.echo(checks.verdict(report))

@@ -87,13 +87,20 @@ def status() -> str:
 
 @bp.get("/")
 def home() -> Response | str:
-    """What is coming up, what was added lately, and one tap to ask or add something."""
+    """What is coming up, what was added lately, and one tap to ask or add something.
+
+    Until it can answer anyone, which takes somebody on the list and a model, the home page is
+    the setup page: there is nothing else here worth showing yet.
+    """
     if any(request.args.get(key) for key in FILTERS):
         # The ideas list used to live here; a bookmarked search should still find it.
         return redirect(url_for("web.ideas", **request.args))
     app = _app()
     today = app.clock.today()
     with closing(app.connect()) as conn:
+        progress = status_page.setup_progress(app, conn)
+        if not status_page.ready_to_answer(progress):
+            return redirect(url_for("setup.overview"))
         seen = agenda.read(app, conn, today, today + timedelta(days=HOME_AHEAD_DAYS))
         everything = idea_store.list_all(conn)
         unfinished = status_page.setup_steps(app, conn)

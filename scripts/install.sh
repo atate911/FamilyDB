@@ -6,11 +6,13 @@ set -euo pipefail
 # shellcheck disable=SC2034  # read by lib/common.sh when it opens the transcript.
 SCRIPT_ARGS="$*"
 HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
-if [ -r "${HERE}/lib/common.sh" ]; then
+if [ -r "${HERE}/lib/common.sh" ] && [ -r "${HERE}/lib/https.sh" ]; then
   # shellcheck source=lib/common.sh
   . "${HERE}/lib/common.sh"
+  # shellcheck source=lib/https.sh
+  . "${HERE}/lib/https.sh"
 else
-  printf 'This script needs scripts/lib/common.sh beside it.\n' >&2
+  printf 'This script needs scripts/lib/common.sh and scripts/lib/https.sh beside it.\n' >&2
   exit 1
 fi
 
@@ -27,6 +29,7 @@ ASSUME_YES=0         # --yes: take every default, ask nothing
 NON_INTERACTIVE=0    # --non-interactive: never prompt; fail if something required is missing
 DRY_RUN=0
 SKIP_INSTALL=0       # --config-only: write .env and stop
+LOCAL_ONLY=0         # --local-only: keep the page on this machine, reached over an SSH tunnel
 
 # Output, logging, failure reporting, retries and confirm() all come from lib/common.sh.
 run() { if [ "$DRY_RUN" = 1 ]; then note "[dry run] $*"; else "$@"; fi; }
@@ -37,7 +40,8 @@ FamilyDB installer
 
   scripts/install.sh [options]
 
-It asks one thing: the domain name for the web page, if it has one. Everything else (yourself
+It asks at most one thing: a domain name for the web page, if it has one. Without one the page is
+served over HTTPS at this server's own address. Everything else (yourself
 and the family, the model and its key, Telegram, Google Calendar, where home is, what it may
 spend) is set on the web page once it is running.
 
@@ -47,11 +51,13 @@ Options
   --yes                Accept every default.
   --non-interactive    Never prompt. Every answer comes from the environment (below).
   --config-only        Write .env and stop, installing nothing.
+  --local-only         Keep the page on this machine, reached from your own computer over an
+                       SSH tunnel, instead of on HTTPS at this server's address.
   --dry-run            Say what would happen; change nothing.
   -h, --help           This text.
 
 Answers can be supplied as environment variables, which is what --non-interactive reads:
-  WEB_DOMAIN           the page's domain; empty keeps it on this machine
+  WEB_DOMAIN           the page's domain name; empty uses this server's own address
   WEB_PASSWORD         the family password (12 characters or more); made up when not given
   ADMIN_NAME           the first family member (otherwise added on the Family page)
   BACKUPS              yes (the default) schedules a nightly backup; no leaves it to you
@@ -62,7 +68,7 @@ and, for a scripted build that wants them in .env rather than set on the page:
 
 Examples
   scripts/install.sh                          # one question, then install
-  scripts/install.sh --yes                    # this machine only, a generated password
+  scripts/install.sh --yes                    # HTTPS at this address, a generated password
   WEB_DOMAIN=family.example.com ADMIN_NAME=Sam \
     scripts/install.sh --non-interactive --mode docker
 USAGE
@@ -75,6 +81,7 @@ while [ $# -gt 0 ]; do
     --yes|-y) ASSUME_YES=1; shift ;;
     --non-interactive) NON_INTERACTIVE=1; ASSUME_YES=1; shift ;;
     --config-only) SKIP_INSTALL=1; shift ;;
+    --local-only) LOCAL_ONLY=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) usage >&2; die "unknown option: $1" ;;
@@ -85,7 +92,8 @@ export ASSUME_YES DRY_RUN
 
 log_to "/var/log/familydb-install.log"
 enable_failure_reporting
-on_failure_hint "Nothing after the failed step ran, and .env and the database were not touched by it. docs/INSTALL.md has a section on each failure."
+on_failure_hint "Nothing after the failed step ran, and .env and the database were not touched by it. docs/INSTALL.md, under Troubleshooting, has a section on each failure."
+again_hint "run it again: sudo bash ${REPO_ROOT}/scripts/install.sh"
 
 # ----------------------------------------------------------------- input ----
 ask() { # ask VAR "question" "default"
@@ -305,14 +313,20 @@ else
   fi
   plan_item "Create ${REPO_ROOT}/data and the SQLite database inside it" \
     "everything the family tells it lives in that one file"
-  plan_item "Add the first family member to that database" \
-    "the bot only answers people it knows, so it needs at least one"
+  if [ -n "${ADMIN_NAME:-}" ]; then
+    plan_item "Add ${ADMIN_NAME} to the family list" \
+      "the bot only answers people it knows; everyone else is added on the page"
+  fi
+  if [ "$MODE" = venv ] && [ "$LOCAL_ONLY" = 0 ]; then
+    plan_item "Put Caddy in front of the page, for HTTPS, and open ports 80 and 443 if ufw is on" \
+      "so the page can be opened from any browser without a tunnel, and nothing crosses the network in the clear"
+  fi
   if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
     plan_item "Offer to create the 'familydb' user and write /etc/systemd/system/familydb.service" \
       "so it starts at boot and restarts if it stops; you are asked before this happens"
   fi
 fi
-plan_untouched "the system Python, your firewall, and every other service (Caddy only if you give a domain, and it asks first)"
+plan_untouched "the system Python, your SSH configuration, and every other service"
 plan_untouched "any database that is already here: an existing one is migrated, never replaced"
 show_plan "What this installer changes"
 
@@ -352,8 +366,12 @@ else
     say "This path needs uv, which manages the Python version and the virtualenv."
     if confirm "Install uv now (downloads and runs the official installer)?" yes; then
       have curl || die "curl is needed to install uv. Install curl, or install uv yourself."
-      run sh -c 'curl -LsSf https://astral.sh/uv/install.sh | sh'
-      export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+      # Into /usr/local/bin, where the service account can see it, and nowhere else: no receipt
+      # in a home directory and no line in anybody's shell profile.
+      noting_new /usr/local/bin/uv
+      noting_new /usr/local/bin/uvx
+      run as_root sh -c 'curl -LsSf https://astral.sh/uv/install.sh | env UV_UNMANAGED_INSTALL=/usr/local/bin sh'
+      export PATH="/usr/local/bin:$PATH"
       have uv || die "uv still not on PATH. Open a new shell and run this script again."
     else
       die "uv is required for the virtualenv path. Use --mode docker instead."
@@ -378,7 +396,7 @@ head2 "Configuration"
 KEEP_ENV=0
 if [ -f "$ENV_FILE" ]; then
   say "There is already a .env here."
-  if [ "$NON_INTERACTIVE" = 1 ]; then
+  if [ "$NON_INTERACTIVE" = 1 ] || [ "${FROM_BOOTSTRAP:-0}" = 1 ]; then
     KEEP_ENV=1
     note "Keeping it as it is."
   elif confirm "Keep it and skip the questions?" yes; then
@@ -433,16 +451,40 @@ if [ "$KEEP_ENV" = 0 ]; then
   # --- the web page, which is how everything else gets set ---
   set_env WEB_ENABLED true
   say ""
-  say "The page is reached one of two ways:"
-  say "  · through a domain name that points at this machine, over HTTPS; or"
-  say "  · from this machine only, which you reach over an SSH tunnel or Tailscale."
-  ask WEB_DOMAIN "Domain name for the page (leave it empty for this machine only)" "${WEB_DOMAIN:-}"
-  WEB_DOMAIN="${WEB_DOMAIN#https://}"; WEB_DOMAIN="${WEB_DOMAIN#http://}"; WEB_DOMAIN="${WEB_DOMAIN%%/*}"
-  if [ -n "$WEB_DOMAIN" ] && ! printf '%s' "$WEB_DOMAIN" | grep -Eq '^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'; then
-    warn "'${WEB_DOMAIN}' does not look like a domain name; keeping the page on this machine."
+  ADDRESS="$(this_address)"
+  if [ "$LOCAL_ONLY" = 1 ] || [ "${WEB_DOMAIN:-}" = local ]; then
     WEB_DOMAIN=""
+    note "The page stays on this machine, reached over an SSH tunnel, as asked."
+  else
+    if [ -z "${WEB_DOMAIN:-}" ]; then
+      say ""
+      if [ -n "$ADDRESS" ] && [ "$MODE" = venv ]; then
+        say "The page will be at ${B}https://${ADDRESS}/${OFF}, this server's address, over HTTPS."
+      fi
+      say "If you have a domain name for it, pointed at this server, type it. Otherwise press Enter."
+    fi
+    ask WEB_DOMAIN "Domain name (optional)" ""
+    WEB_DOMAIN="${WEB_DOMAIN#https://}"; WEB_DOMAIN="${WEB_DOMAIN#http://}"; WEB_DOMAIN="${WEB_DOMAIN%%/*}"
+    WEB_DOMAIN="${WEB_DOMAIN%:*}"   # a port typed after it means nothing here: Caddy answers on 443
+    if [ -n "$WEB_DOMAIN" ] && ! is_ipv4 "$WEB_DOMAIN" \
+       && ! printf '%s' "$WEB_DOMAIN" | grep -Eq '^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'; then
+      warn "'${WEB_DOMAIN}' does not look like a domain name, so the page uses this server's address."
+      WEB_DOMAIN=""
+    fi
+    [ -n "$WEB_DOMAIN" ] || WEB_DOMAIN="$ADDRESS"
+    if [ -n "$WEB_DOMAIN" ] && is_ipv4 "$WEB_DOMAIN" && [ "$MODE" = docker ]; then
+      warn "With Docker the page needs a domain name to be on HTTPS; keeping it on this machine."
+      note "docs/INSTALL.md, 'Opening the page', has the other ways in."
+      WEB_DOMAIN=""
+    fi
   fi
-  if [ -n "$WEB_DOMAIN" ]; then
+  if [ -n "$WEB_DOMAIN" ] && is_ipv4 "$WEB_DOMAIN"; then
+    # Caddy in front, with a certificate for the address itself (see lib/https.sh). Never plain
+    # HTTP on the open internet: that would send the family password in the clear.
+    set_env WEB_DOMAIN "$WEB_DOMAIN"
+    set_env WEB_TRUST_PROXY true
+    ok "The page will be https://${WEB_DOMAIN}/"
+  elif [ -n "$WEB_DOMAIN" ]; then
     # Caddy can only get a certificate for a name that points here. Not a reason to stop, since
     # DNS may simply be catching up, but worth saying now rather than as a silent Caddy retry.
     resolved="$(getent ahostsv4 "$WEB_DOMAIN" 2>/dev/null | awk 'NR==1 {print $1}' || true)"
@@ -480,8 +522,8 @@ if [ "$KEEP_ENV" = 0 ]; then
   if [ -z "${WEB_PASSWORD:-}" ]; then
     WEB_PASSWORD="$(random_password)"
     say ""
-    say "  The family password for the page: ${B}${WEB_PASSWORD}${OFF}"
-    say "  Write it down now. It is in .env too, and nowhere else."
+    say "  A password to get into the page the first time: ${B}${WEB_PASSWORD}${OFF}"
+    say "  The page then asks you to choose your own. This one is shown again at the end."
   fi
   set_env WEB_PASSWORD "$WEB_PASSWORD"
 
@@ -506,7 +548,7 @@ run chmod 700 "${REPO_ROOT}/data"
 # Both of these download a few hundred megabytes, which is where a new server most often fails:
 # a network that is not up yet, a proxy, a full disk. `retry` waits and tries again, and on a
 # final failure says what the error means and what to try, rather than only that it stopped.
-on_failure_hint "Run this again once it is fixed: it picks up where it stopped, and never touches .env or the database twice."
+on_failure_hint "It never touches .env or the database twice, so running it again is safe."
 if [ "$MODE" = docker ]; then
   retry 2 "Building the image" docker compose --project-directory "$REPO_ROOT" build
   FAMILYDB=(docker compose --project-directory "$REPO_ROOT" run --rm -T bot familydb)
@@ -516,7 +558,11 @@ if [ "$MODE" = docker ]; then
     note "  sudo chown -R 1000:1000 ${REPO_ROOT}/data"
   fi
 else
-  retry 3 "Installing the dependencies" uv sync --frozen --no-dev --project "$REPO_ROOT"
+  # uv's download cache and the Python it fetches stay inside the install, whoever runs this, so
+  # removing the install removes them too.
+  retry 3 "Installing the dependencies" env UV_CACHE_DIR="${REPO_ROOT}/.cache/uv" \
+    UV_PYTHON_INSTALL_DIR="${REPO_ROOT}/.local/share/uv/python" \
+    uv sync --frozen --no-dev --project "$REPO_ROOT"
   FAMILYDB=("${REPO_ROOT}/.venv/bin/familydb")
 fi
 
@@ -546,7 +592,7 @@ fi
 if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
   head2 "Running it as a service"
   if [ "$(id -u)" = 0 ] || have sudo; then
-    if confirm "Install the systemd unit so it starts on boot?" yes; then
+    if [ "${FROM_BOOTSTRAP:-0}" = 1 ] || confirm "Install the systemd unit so it starts on boot?" yes; then
       [ "$(id -u)" = 0 ] || SUDO="sudo"
       unit="${REPO_ROOT}/deploy/familydb.service"
       [ -f "$unit" ] || die "missing ${unit}"
@@ -560,6 +606,7 @@ if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
           ok "The familydb user already exists."
         elif $SUDO useradd --system --home-dir "$REPO_ROOT" --shell /usr/sbin/nologin familydb \
              2>/dev/null; then
+          noting_user familydb
           ok "Created the familydb system user."
         else
           warn "Could not create the familydb user. Create it, or edit User= in the unit:"
@@ -589,7 +636,9 @@ if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
           :
         # install, not cp: mktemp made this file 0600, and a unit nobody but root can read is
         # one `systemctl cat` nobody but root can run.
-        elif $SUDO install -m 644 "$tmp_unit" /etc/systemd/system/familydb.service \
+        elif noting_new /etc/systemd/system/familydb.service \
+          && noting_new /etc/systemd/system/multi-user.target.wants/familydb.service link \
+          && $SUDO install -m 644 "$tmp_unit" /etc/systemd/system/familydb.service \
           && $SUDO systemctl daemon-reload \
           && { $SUDO systemctl enable familydb >/dev/null 2>&1 || true; }; then
           ok "Unit installed. Start it with: sudo systemctl start familydb"
@@ -640,10 +689,10 @@ fi
 BACKUPS_SCHEDULED=0
 if [ "${BACKUPS:-yes}" != no ] && [ "$DRY_RUN" = 0 ]; then
   head2 "Backups"
-  if confirm "Back the database up every night at 03:15, keeping two weeks?" yes; then
+  if [ "${FROM_BOOTSTRAP:-0}" = 1 ] || confirm "Back the database up every night at 03:15, keeping two weeks?" yes; then
     # A minimal Debian has no cron; without it the schedule has nowhere to live.
     if ! have crontab && have apt-get; then
-      $SUDO apt-get install -y -q cron >/dev/null 2>&1 || warn "Could not install cron with apt."
+      apt_install_noted cron >/dev/null 2>&1 || warn "Could not install cron with apt."
     fi
     if bash "${REPO_ROOT}/scripts/maintain.sh" schedule-backups --target "$REPO_ROOT" --yes; then
       BACKUPS_SCHEDULED=1
@@ -654,37 +703,28 @@ if [ "${BACKUPS:-yes}" != no ] && [ "$DRY_RUN" = 0 ]; then
 fi
 
 # ---------------------------------------------------------------- HTTPS ----
-# With a domain, something has to hold the certificate. In Docker that is the Caddy container
-# (COMPOSE_PROFILES=tls above); here it is Caddy on the machine, set up from deploy/Caddyfile.
+# Something has to hold the certificate. In Docker that is the Caddy container
+# (COMPOSE_PROFILES=tls above); here it is Caddy on the machine, set up by lib/https.sh.
 env_value() { grep -E "^${1}=" "$ENV_FILE" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d "'\"" || true; }
 DOMAIN="$(env_value WEB_DOMAIN)"
+PORT="$(env_value WEB_PORT)"; PORT="${PORT:-8080}"
 HTTPS_READY=0
 if [ -n "$DOMAIN" ] && [ "$MODE" = docker ]; then
   HTTPS_READY=1
 elif [ -n "$DOMAIN" ] && [ "$MODE" = venv ] && [ "$DRY_RUN" = 0 ]; then
   head2 "HTTPS"
-  if confirm "Set up Caddy to serve https://${DOMAIN}/ and get its certificate?" yes; then
-    if ! have caddy && have apt-get; then
-      $SUDO apt-get install -y -q caddy >/dev/null 2>&1 || warn "Could not install Caddy with apt."
-    fi
-    caddyfile=/etc/caddy/Caddyfile
-    if ! have caddy; then
-      warn "Caddy is not installed. Install it, then use ${REPO_ROOT}/deploy/Caddyfile."
-    elif [ -f "$caddyfile" ] && ! grep -q -e '/usr/share/caddy' -e 'reverse_proxy 127.0.0.1' "$caddyfile"; then
-      warn "${caddyfile} already serves something else. Add the site in deploy/Caddyfile to it."
-    elif sed -e "s/familydb.example.com/${DOMAIN}/g" \
-             -e "s/127.0.0.1:8080/127.0.0.1:$(env_value WEB_PORT)/" \
-             "${REPO_ROOT}/deploy/Caddyfile" | $SUDO tee "$caddyfile" >/dev/null \
-         && $SUDO systemctl reload-or-restart caddy; then
-      ok "Caddy serves https://${DOMAIN}/ and fetches the certificate once the domain points here."
-      HTTPS_READY=1
-    else
-      warn "Could not configure Caddy; see ${REPO_ROOT}/deploy/Caddyfile."
-    fi
+  if setup_https "$DOMAIN" "$PORT"; then
+    HTTPS_READY=1
   fi
 fi
 
 # ----------------------------------------------------------- what is next ----
+# Run by bootstrap.sh, which starts the service and has the last word, with the link in it.
+if [ "${FROM_BOOTSTRAP:-0}" = 1 ]; then
+  [ -n "$LOG_FILE" ] && note "A transcript of the configuration is at ${LOG_FILE}"
+  exit 0
+fi
+
 head2 "Done"
 
 if [ "$MODE" = docker ]; then
@@ -702,19 +742,18 @@ fi
 say "Start it:   ${B}${START}${OFF}"
 say "Watch it:   ${LOGS}"
 say ""
-PORT="$(env_value WEB_PORT)"; PORT="${PORT:-8080}"
 if [ "$HTTPS_READY" = 1 ]; then
   say "Then open ${B}https://${DOMAIN}/${OFF} and sign in with the family password."
-  note "The domain has to point at this machine, and ports 80 and 443 be open:"
-  note "  sudo ufw allow 80,443/tcp"
+  say_how_to_open "$DOMAIN"
 else
-  say "Then open the page and sign in with the family password. From your own computer:"
+  say "Then open the page and sign in with the family password. Run this on your own computer,"
+  say "not on this server; it works from anywhere you can reach the server over SSH:"
   say "  ssh -L ${PORT}:127.0.0.1:${PORT} ${SUDO_USER:-$(id -un)}@$(hostname -I 2>/dev/null | awk '{print $1}')"
-  say "  and open ${B}http://127.0.0.1:${PORT}/${OFF}"
+  say "  and, while it is connected, open ${B}http://127.0.0.1:${PORT}/${OFF} on that computer."
 fi
 say ""
-say "The page's home says what is left to set up, in the order it matters: adding yourself on"
-say "the Family page, a model key, where home is, Google Calendar and Telegram, all done there."
+say "The page walks you through the rest, one step at a time: your own password, yourself, an AI"
+say "key, where home is, then Telegram and Google Calendar if you want them."
 if [ "$BACKUPS_SCHEDULED" = 1 ]; then
   say "Copy ${REPO_ROOT}/backups off this server now and then: a backup on the same disk is not"
   say "a backup."

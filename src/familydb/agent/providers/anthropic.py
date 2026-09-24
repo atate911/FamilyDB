@@ -14,6 +14,7 @@ from typing import Any
 import anthropic
 
 from familydb.agent.providers.base import (
+    KeyCheck,
     ModelReply,
     Stop,
     Surface,
@@ -282,6 +283,24 @@ class AnthropicProvider:
         finally:
             client.close()
         return True
+
+    def check_key(self) -> KeyCheck:
+        try:
+            client = make_client(self.settings)
+        except AgentError:
+            return "no_key"
+        try:
+            client.with_options(timeout=10.0, max_retries=0).models.retrieve(self.model_for("chat"))
+        except anthropic.AuthenticationError:
+            return "refused"
+        except anthropic.NotFoundError:
+            return "unknown_model"
+        except Exception as exc:  # unreachable, or refused for some other reason than the key
+            log.info("could not check the Anthropic key: %s", exc)
+            return "unchecked"
+        finally:
+            client.close()
+        return "works"
 
     def count_tokens(self, request: TurnRequest) -> int:
         payload = self.payload(request)

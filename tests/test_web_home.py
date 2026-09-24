@@ -19,7 +19,7 @@ def _home(app_settings, clock, calendar=None):
     return create_app(App(app_settings, clock, calendar=calendar)).test_client()
 
 
-def test_home_puts_what_is_coming_up_before_everything_else(calendar_settings, clock, conn):
+def test_home_puts_what_is_coming_up_before_everything_else(calendar_settings, clock, conn, family):
     calendar = fakes.FakeCalendar(TZ)
     calendar.seed(
         "Soccer practice",
@@ -34,7 +34,7 @@ def test_home_puts_what_is_coming_up_before_everything_else(calendar_settings, c
     assert text.index("Coming up") < text.index("Lately added")  # first on a phone
 
 
-def test_home_shows_the_newest_ideas_and_counts_them(settings, clock, conn) -> None:
+def test_home_shows_the_newest_ideas_and_counts_them(settings, clock, conn, family) -> None:
     with db.transaction(conn):
         for number in range(6):
             ideas.insert(
@@ -90,7 +90,9 @@ def test_the_radar_puts_sooner_plans_nearer_the_middle() -> None:
     assert reach == sorted(reach) and reach[-1] <= 92  # later is further out, and inside the dial
 
 
-def test_home_draws_what_is_coming_on_a_radar_beside_the_next(calendar_settings, clock, conn):
+def test_home_draws_what_is_coming_on_a_radar_beside_the_next(
+    calendar_settings, clock, conn, family
+):
     calendar = fakes.FakeCalendar(TZ)
     calendar.seed(
         "Soccer practice",
@@ -106,7 +108,7 @@ def test_home_draws_what_is_coming_on_a_radar_beside_the_next(calendar_settings,
     assert "Soccer practice" in text and "1 more on the radar" in text
 
 
-def test_an_empty_radar_says_so_in_words(settings, clock, conn) -> None:
+def test_an_empty_radar_says_so_in_words(settings, clock, conn, family) -> None:
     text = _home(settings, clock).get("/").text
     assert '<div class="radar" aria-hidden="true">' in text and '<g class="blip' not in text
     assert "Nothing on the radar yet." in text

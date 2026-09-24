@@ -118,3 +118,20 @@ def test_online_checks_are_skipped_unless_asked(settings, clock, conn, family) -
     """A first install has no key yet, and a check that hangs is worse than no check."""
     _app, report = _report(settings, clock)
     assert _verdict_of(report, "model reachable") == doctor.SKIP
+
+
+def test_at_the_end_of_an_install_the_pages_first_steps_are_not_faults(
+    settings, clock, conn
+) -> None:
+    """Nobody on the list and no model key is what the page's setup does next, so the installer's
+    last check says so instead of printing two red crosses at somebody who did nothing wrong."""
+    keyless = {"anthropic_api_key": "", "openai_api_key": "", "gemini_api_key": ""}
+    _app, report = _report(settings, clock, provider="openai", provider_fallback=False, **keyless)
+    assert _verdict_of(report, "family") == doctor.FAIL  # on its own, still a fault
+    doctor.as_new_install(report)
+    assert _verdict_of(report, "family") == doctor.TODO
+    assert _verdict_of(report, "model key") == doctor.TODO
+    assert report.healthy
+    assert doctor.verdict(report).startswith("It is running. The rest is set up on the web page")
+    family = next(check for check in report.checks if check.name == "family")
+    assert family.fix == "next, on the web page: Add yourself"
