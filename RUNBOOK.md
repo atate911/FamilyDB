@@ -183,7 +183,8 @@ one at a time:
    page instead, or to use with `familydb members add NAME --channel telegram --channel-user-id
    12345`. Their next message gets a real answer.
 3. For a family group, send BotFather `/setprivacy` and choose Disable so the bot sees every message, then add the bot to the group. A dedicated "Ideas & Plans" group works best. In a busier group set `TELEGRAM_REQUIRE_MENTION=true` so it only answers when @mentioned or replied to.
-4. Long polling means nothing is exposed; if the server is off, Telegram keeps updates for a day and the bot catches up on restart without double-processing.
+4. To get suggestions measured from where someone is rather than from home, they share their location with the bot (the paperclip, then Location; a live location works too). The bot confirms once, uses it for three hours for "near here" and "open now" questions, keeps only the latest one per person, and deletes it after a day. The coordinates are never sent to a model provider. Nothing is shared unless someone presses that button.
+5. Long polling means nothing is exposed; if the server is off, Telegram keeps updates for a day and the bot catches up on restart without double-processing.
 
 ## 5. Google Calendar
 

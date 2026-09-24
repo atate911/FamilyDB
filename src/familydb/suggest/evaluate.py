@@ -7,6 +7,7 @@ from datetime import datetime
 
 from familydb.clock import Clock
 from familydb.config import Settings
+from familydb.integrations.geocode import estimate_travel
 from familydb.store import places
 from familydb.store.places import Place
 from familydb.suggest.types import (
@@ -57,8 +58,26 @@ def overlap_minutes(
     return max((b - a for a, b in doable(ranges, spans, travel)), default=0)
 
 
+def travel_minutes(place: Place | None, context: Context, settings: Settings) -> int | None:
+    """The drive there: from home as the lookup saved it, or from where the family is now."""
+    if place is None:
+        return None
+    if context.origin is None:
+        return place.travel_minutes
+    if place.lat is None or place.lon is None:
+        return None  # only the distance from home is known
+    start = (context.origin.lat, context.origin.lon)
+    estimate = estimate_travel(settings, place.lat, place.lon, start=start)
+    return estimate[0] if estimate else None
+
+
 def _hours_check(
-    item: Shortlisted, place: Place | None, context: Context, checks: Checks, reasons: list[str]
+    item: Shortlisted,
+    place: Place | None,
+    context: Context,
+    checks: Checks,
+    reasons: list[str],
+    travel: int | None,
 ) -> tuple[list, bool, bool]:
     """Returns (fitting days after the hours check, hard_fail, soft)."""
     fits = list(item.fits_days)
@@ -85,7 +104,7 @@ def _hours_check(
         day_context = context.day(day)
         spans = day_context.spans if day_context else []
         need = item.idea.duration_min or item.idea.duration_max or MIN_VISIT_MINUTES
-        stretches = doable(ranges, spans, place.travel_minutes or 0)
+        stretches = doable(ranges, spans, travel or 0)
         # Without a calendar the day's free time is all of the time asked about, so the hours
         # are still held to it: "open now" must not offer a café that closed at noon.
         if day_context is None:
@@ -146,9 +165,10 @@ def evaluate(
         hard_fail = False
         soft = False
         fits = list(item.fits_days)
+        travel = travel_minutes(place, context, settings)
 
         if context.window is not None:
-            fits, hard, soft_hours = _hours_check(item, place, context, checks, reasons)
+            fits, hard, soft_hours = _hours_check(item, place, context, checks, reasons, travel)
             hard_fail = hard_fail or hard
             soft = soft or soft_hours
 
@@ -179,10 +199,15 @@ def evaluate(
                 soft = True
                 reasons.append("needs booking")
 
-        if place is not None and place.travel_minutes is not None:
-            minutes = place.travel_minutes
+        if place is not None and context.origin is not None and travel is None:
+            soft = True
+            reasons.append(f"distance from {context.origin.label} unknown")
+        if travel is not None:
+            minutes = travel
             checks.travel_minutes = minutes
-            reasons.append(f"about {minutes} min drive (estimate)")
+            start = f" from {context.origin.label}" if context.origin else ""
+            near = "under 5 min" if minutes < 5 else f"about {minutes} min drive"
+            reasons.append(f"{near}{start} (estimate)")
             if (
                 constraints.max_travel_minutes is not None
                 and minutes > constraints.max_travel_minutes

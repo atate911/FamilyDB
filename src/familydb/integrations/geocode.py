@@ -49,11 +49,17 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return 2 * EARTH_RADIUS_KM * math.asin(math.sqrt(a))
 
 
-def estimate_travel(settings: Settings, lat: float, lon: float) -> tuple[int, float] | None:
-    """(minutes, km) by road from home as an estimate, or None without home coordinates."""
-    if settings.home_lat is None or settings.home_lon is None:
-        return None
-    km = haversine_km(settings.home_lat, settings.home_lon, lat, lon) * settings.road_factor
+def estimate_travel(
+    settings: Settings, lat: float, lon: float, *, start: tuple[float, float] | None = None
+) -> tuple[int, float] | None:
+    """(minutes, km) by road as an estimate, from home or from `start` when the family is out.
+
+    None without a starting point."""
+    if start is None:
+        if settings.home_lat is None or settings.home_lon is None:
+            return None
+        start = (settings.home_lat, settings.home_lon)
+    km = haversine_km(start[0], start[1], lat, lon) * settings.road_factor
     minutes = round(km / max(settings.travel_speed_kmh, 1.0) * 60)
     return minutes, round(km, 1)
 

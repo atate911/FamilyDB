@@ -7,6 +7,8 @@ import logging
 import threading
 import time
 from collections.abc import Callable
+from contextlib import closing
+from dataclasses import dataclass
 from typing import Any
 
 from telegram import Update
@@ -21,8 +23,9 @@ from telegram.ext import (
     filters,
 )
 
+from familydb import whereabouts
 from familydb.app import App
-from familydb.channels.base import IncomingMessage
+from familydb.channels.base import IncomingMessage, OutgoingMessage
 from familydb.delivery import deliver
 from familydb.pipeline import handle_incoming
 
@@ -52,6 +55,46 @@ def incoming_from_update(update: Any) -> IncomingMessage | None:
         text=message.text,
         sender_name=sender_name(user),
     )
+
+
+@dataclass(frozen=True)
+class SharedLocation:
+    chat_id: str
+    channel_user_id: str
+    lat: float
+    lon: float
+    live: bool
+
+
+def location_from_update(update: Any) -> SharedLocation | None:
+    """A location someone shared, or None. A live location carries how long it is shared for."""
+    message = update.effective_message
+    user = update.effective_user
+    chat = update.effective_chat
+    where = getattr(message, "location", None) if message is not None else None
+    if where is None or user is None or chat is None:
+        return None
+    return SharedLocation(
+        chat_id=str(chat.id),
+        channel_user_id=str(user.id),
+        lat=float(where.latitude),
+        lon=float(where.longitude),
+        live=getattr(where, "live_period", None) is not None,
+    )
+
+
+def record_location(app: App, shared: SharedLocation) -> OutgoingMessage | None:
+    with closing(app.connect()) as conn:
+        return whereabouts.share(
+            app,
+            conn,
+            channel=CHANNEL,
+            channel_user_id=shared.channel_user_id,
+            chat_id=shared.chat_id,
+            lat=shared.lat,
+            lon=shared.lon,
+            live=shared.live,
+        )
 
 
 def sender_name(user: Any) -> str | None:
@@ -130,6 +173,8 @@ class TelegramChannel:
         self.application.add_handler(
             MessageHandler(filters.TEXT & ~filters.COMMAND, self.on_message)
         )
+        # A shared location, and a live one as it moves (those arrive as edits).
+        self.application.add_handler(MessageHandler(filters.LOCATION, self.on_location))
 
     async def _post_init(self, application: Application) -> None:
         self._loop = asyncio.get_running_loop()
@@ -184,6 +229,26 @@ class TelegramChannel:
                 asyncio.run_coroutine_threadsafe(send_reply(), loop).result(timeout=120)
 
             await asyncio.to_thread(deliver, self.app, reply.out_message_id, sender)
+
+    async def on_location(self, update: Any, context: Any) -> None:
+        shared = location_from_update(update)
+        if shared is None:
+            return
+        await asyncio.to_thread(self.app.refresh)
+        reply = await asyncio.to_thread(record_location, self.app, shared)
+        if reply is None or reply.out_message_id is None:
+            return
+        message = update.effective_message
+
+        async def send_reply():
+            await message.reply_text(reply.text)
+
+        loop = asyncio.get_running_loop()
+
+        def sender(_chat_id, _text):
+            asyncio.run_coroutine_threadsafe(send_reply(), loop).result(timeout=120)
+
+        await asyncio.to_thread(deliver, self.app, reply.out_message_id, sender)
 
     def send_text_threadsafe(self, chat_id: str, text: str) -> None:
         """Deliver a message from another thread (background jobs)."""

@@ -68,6 +68,9 @@ def render_discover_request(context: Context, constraints: Constraints, settings
             each = zip(context.days, hours, strict=True)
             lines.append("Hours: " + "; ".join(f"{d.date:%a} {h}" for d, h in each) + ".")
     lines.append(f"Home area: {settings.home_area or 'not set'}.")
+    if context.origin is not None and not context.origin.shared:
+        # A place the family named; a shared location stays with the engine, never a model.
+        lines.append(f"They are near: {context.origin.label}.")
     wanted = {
         "who": constraints.participants or None,
         "max_cost_level": constraints.max_cost_level,

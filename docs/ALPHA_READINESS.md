@@ -146,7 +146,8 @@ migration, so upgrading does not resend old conversations. Fresh outgoing messag
 9. Add a restaurant idea and watch its lookup: `/status` should show one fewer call per lookup
    than before (the turn ends at `save_place`), and a "home" idea with no place is skipped with
    no call at all. Send a web chat question while a lookup runs: it must not wait for it.
-10. Set a reminder a few minutes ahead, stop the service past its time, start it again: the
+10. On a phone away from home, share your location with the bot on Telegram (paperclip, then Location), then ask "what's open near here?": options should be measured from there, and the reply should say so. Ask "what about near downtown?" from the web page chat too.
+11. Set a reminder a few minutes ahead, stop the service past its time, start it again: the
     reminder arrives once and says when it was due.
 
 After a week of family use, read `/status` and `familydb debug cost` by kind before changing

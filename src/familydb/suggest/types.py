@@ -43,6 +43,13 @@ class SuggestInput(BaseModel):
     )
     max_travel_minutes: int | None = None
     max_duration_minutes: int | None = None
+    near: str = Field(
+        default="",
+        description=(
+            "Where they are, only if said: 'downtown Portland', 'the Pearl'; 'here' for the "
+            "location they shared. Empty: from home."
+        ),
+    )
     topic: str = Field(
         default="",
         description="What kind of thing, a few words: live jazz, puppet show. Empty for anything.",
@@ -99,6 +106,7 @@ class Window(BaseModel):
 
 class SuggestResult(BaseModel):
     window: Window
+    travel_from: str = "home"  # where the travel estimates start
     days: list[DaySummary]
     candidates: list[Candidate]
     web_finds: list[WebFind]
@@ -166,6 +174,17 @@ class DayContext:
         return self.longest >= self.bounds[1] - self.bounds[0] > 0
 
 
+@dataclass(frozen=True)
+class Origin:
+    """Where travel is estimated from when the family is not at home."""
+
+    lat: float
+    lon: float
+    label: str  # how each reason names it: "Sam's shared location", "the Pearl"
+    detail: str  # how the result names it, with how old a shared location is
+    shared: bool = False  # from a location shared on Telegram, which no model is given
+
+
 @dataclass
 class Context:
     window: tuple[date, date] | None
@@ -173,6 +192,7 @@ class Context:
     season: str
     today: date
     skipped: list[str] = field(default_factory=list)
+    origin: Origin | None = None  # None: from home
 
     def day(self, when: date) -> DayContext | None:
         return next((d for d in self.days if d.date == when), None)

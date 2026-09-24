@@ -84,6 +84,7 @@ def test_a_database_that_ran_the_retired_0007_still_gets_what_follows(tmp_path):
 
     with closing(db.connect(tmp_path / "pr2.sqlite3")) as conn:
         db.migrate(conn)
+        conn.execute("DROP TABLE member_locations")
         conn.execute("DROP TABLE calendar_links")
         conn.execute("DROP TABLE spend_holds")
         conn.execute("DROP TABLE calendar_unfinished")
@@ -100,6 +101,6 @@ def test_a_database_that_ran_the_retired_0007_still_gets_what_follows(tmp_path):
         conn.execute("DROP TABLE knocks")
         conn.execute("ALTER TABLE llm_calls DROP COLUMN kind")
         conn.execute("ALTER TABLE llm_calls DROP COLUMN sections")
-        assert db.migrate(conn) == [8, 9, 10, 11, 12, 13, 14]
+        assert db.migrate(conn) == [8, 9, 10, 11, 12, 13, 14, 15]
         columns = {row["name"] for row in conn.execute("PRAGMA table_info(llm_calls)")}
         assert {"provider", "web_searches", "cost_usd", "cost_estimated"} <= columns
