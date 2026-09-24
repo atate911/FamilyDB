@@ -183,7 +183,7 @@ def test_a_job_uses_the_settings_in_force(conn, settings, clock, family) -> None
     assert app.settings.log_level == "DEBUG"
 
 
-def test_the_page_follows_the_title_it_is_given(conn, settings, clock) -> None:
+def test_the_page_follows_the_title_it_is_given(conn, settings, clock, family) -> None:
     from familydb.web import create_app
 
     app = App(settings, clock)

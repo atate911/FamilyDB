@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Set up · {{ site_title }}{% endblock %}
+{% block content %}
+  <header class="step-head">
+    <span class="eyebrow">Setting up</span>
+    <h1>{% if ready %}Nearly there{% else %}Let’s get {{ site_title }} ready{% endif %}</h1>
+  </header>
+  <p class="lead">
+    A few short steps, one at a time. Each one says why it matters and exactly what to do, with
+    links straight to the right place. The {{ needed }} marked <em>needed</em> are what it must
+    have before it can answer anyone; the rest can wait. You can stop at any point and come back:
+    this page picks up wherever you are.
+  </p>
+  {% include "setup_told.html" %}
+
+  <ol class="setup-list">
+    {% for one in steps %}
+      <li class="panel{% if one.done %} done{% endif %}">
+        <a href="{{ url_for('setup.step', name=one.name) }}">
+          <span class="number" aria-hidden="true">{% if one.done %}✓{% else %}{{ loop.index }}{% endif %}</span>
+          <span class="what">
+            <strong>{{ one.title }}</strong>
+            <span class="muted">{{ one.detail }}</span>
+          </span>
+          <span class="tag need-{{ 'done' if one.done else one.need }}">
+            {%- if one.done %}done{% else %}{{ one.need }}{% endif -%}
+          </span>
+        </a>
+      </li>
+    {% endfor %}
+  </ol>
+
+  <div class="actions">
+    {% if next_step %}
+      <a class="button" href="{{ url_for('setup.step', name=next_step.name) }}">
+        {%- if started %}Carry on: {{ next_step.title }}{% else %}Start{% endif %} →</a>
+    {% else %}
+      <a class="button" href="{{ url_for('setup.done') }}">Everything is set up →</a>
+    {% endif %}
+    {% if ready %}<a href="{{ url_for('web.home') }}">Go to the home page</a>{% endif %}
+  </div>
+{% endblock %}

@@ -7,6 +7,7 @@ is that someone can answer "is it working, and what is it costing us?" without o
 from __future__ import annotations
 
 import sqlite3
+from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any
 
@@ -258,49 +259,154 @@ def status(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
     }
 
 
+@dataclass(frozen=True)
+class SetupStep:
+    """One step of setting FamilyDB up, and how far it has got, read from what is configured.
+
+    Nothing records that a step was done or skipped: each is done when the thing it sets up is
+    there, so leaving half way, or doing it on the settings page instead, is never out of step.
+    """
+
+    name: str
+    title: str
+    short: str  # a word or two, for the row of steps along the top of each one
+    need: str  # "needed" (it cannot answer without it), "recommended" or "optional"
+    minutes: int
+    done: bool
+    detail: str  # what is set up, or what is missing, in a few words
+    todo: str  # the line on the home page while it is not done
+
+
+SETUP_ORDER = ("password", "you", "model", "home", "telegram", "family", "calendar")
+
+
+def setup_progress(app: App, conn: sqlite3.Connection) -> list[SetupStep]:
+    """Every setup step in order, each done or not. A few small reads, no network."""
+    live = app.settings
+    everyone = members.list_all(conn)
+    admin = next((person for person in everyone if person.role == "admin"), None)
+    linked = [person for person in everyone if person.channel_user_id]
+    chat = app.provider("chat")
+    bot = telegram_name(app)
+    if not password_in_use(live):
+        password = (True, "No password: the page is only reachable from this machine.")
+    elif password_chosen(live):
+        password = (True, "Your own password is in use.")
+    else:
+        password = (False, "Still the password the installer made up.")
+    telegram_state = app.channel_states.get("telegram", "")
+    if telegram_working(app) and linked:
+        telegram = f"@{bot}, and it knows {linked[0].display_name}." if bot else "Connected."
+    elif telegram_working(app):
+        telegram = f"@{bot} is connected; link your phone to it." if bot else "Connected."
+    elif live.telegram_bot_token and telegram_state.startswith("the token"):
+        telegram = "Telegram refused the bot token."
+    elif live.telegram_bot_token:
+        telegram = "A bot token is saved; connecting."
+    else:
+        telegram = "Not set up; the family can use the Chat page meanwhile."
+    return [
+        SetupStep(
+            "password",
+            "Choose the family password",
+            "Password",
+            "recommended",
+            1,
+            password[0],
+            password[1],
+            "Choose your own family password, instead of the one the installer made up.",
+        ),
+        SetupStep(
+            "you",
+            "Add yourself",
+            "You",
+            "needed",
+            1,
+            admin is not None,
+            f"On the list as {admin.display_name}." if admin else "Nobody is on the list yet.",
+            "Add yourself, as an admin, then the rest of the family.",
+        ),
+        SetupStep(
+            "model",
+            "Connect an AI model",
+            "AI model",
+            "needed",
+            5,
+            app.can_ask("chat"),
+            f"{PROVIDER_LABELS.get(chat.name, chat.name)} answers, with {chat.model_for('chat')}."
+            if app.can_ask("chat")
+            else "No AI key yet, so it cannot answer.",
+            "Give it a model key. Until then it saves what it is told but cannot answer.",
+        ),
+        SetupStep(
+            "home",
+            "Where home is",
+            "Home",
+            "recommended",
+            1,
+            bool(live.home_area) and live.home_lat is not None,
+            live.home_area or "Not set, so no forecast and no travel times.",
+            "Say where home is, for the weather and for what is on nearby.",
+        ),
+        SetupStep(
+            "telegram",
+            "Telegram on your phone",
+            "Telegram",
+            "optional",
+            5,
+            telegram_working(app) and bool(linked),
+            telegram,
+            "Link your phone to the Telegram bot, so it knows who is writing."
+            if live.telegram_bot_token
+            else "Add a Telegram bot, so the family can message it from their phones.",
+        ),
+        SetupStep(
+            "family",
+            "The rest of the family",
+            "Family",
+            "optional",
+            2,
+            len(everyone) > 1,
+            f"{len(everyone)} on the list." if everyone else "Nobody yet.",
+            "Add the rest of the family, so plans can include them.",
+        ),
+        SetupStep(
+            "calendar",
+            "Google Calendar",
+            "Calendar",
+            "optional",
+            15,
+            calendar_available(live),
+            live.google_calendar_id
+            if calendar_available(live)
+            else "Not connected, so plans stay on this page.",
+            "Connect Google Calendar, so plans land on the family calendar.",
+        ),
+    ]
+
+
+def ready_to_answer(steps: list[SetupStep]) -> bool:
+    """Whether the steps it cannot answer without are done: somebody to answer, and a model."""
+    return all(step.done for step in steps if step.need == "needed")
+
+
 def setup_steps(app: App, conn: sqlite3.Connection) -> list[dict[str, str]]:
     """What is left before the bot can do all it is for, most important first. Empty when done.
 
-    Each is a sentence and the place on the page where it is done: nothing here needs a file.
+    Each is a sentence and the setup page where it is done: nothing here needs a file.
     """
-    live = app.settings
-    steps = [
-        (
-            any(member.role == "admin" for member in members.list_all(conn)),
-            "Add yourself, as an admin, then the rest of the family.",
-            "/family",
-        ),
-        (
-            any(getattr(live, KEY_FOR[name]) for name in providers.NAMES),
-            "Give it a model key. Until then it saves what it is told but cannot answer.",
-            "/settings#keys",
-        ),
-        (
-            bool(live.home_area) and live.home_lat is not None,
-            "Say where home is, for the weather and for what is on nearby.",
-            "/settings#home",
-        ),
-        (
-            calendar_available(live),
-            "Connect Google Calendar, so plans land on the family calendar.",
-            "/settings#google",
-        ),
-        (
-            telegram_working(app),
-            "Add a Telegram bot, so the family can message it from their phones.",
-            "/settings#keys",
-        ),
+    return [
+        {"text": step.todo, "link": f"/setup/{step.name}"}
+        for step in setup_progress(app, conn)
+        if not step.done
     ]
-    if live.telegram_bot_token:
-        reachable = any(member.channel_user_id for member in members.list_all(conn))
-        steps.append(
-            (
-                reachable,
-                "Add each person's Telegram id, so it knows who is writing.",
-                "/family",
-            )
-        )
-    return [{"text": text, "link": link} for done, text, link in steps if not done]
+
+
+def telegram_name(app: App) -> str | None:
+    """The bot's @name, as Telegram gave it when the channel connected, or None."""
+    state = app.channel_states.get("telegram", "")
+    prefix = "connected as @"
+    return state[len(prefix) :] if state.startswith(prefix) else None
 
 
 def _lookups(app: App) -> tuple[bool | None, str]:

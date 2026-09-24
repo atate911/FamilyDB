@@ -601,12 +601,11 @@ default) and deletes the rest.
 - *The Telegram bot token.* `/revoke` in BotFather makes a new one and kills the old; paste it on
   the settings page, where it takes effect within seconds, or put it in `.env` and restart.
   Nobody can read the family's messages with the old one afterwards.
-- *The page password.* Change `WEB_PASSWORD` in `.env` and restart, keeping it to twelve
-  characters or more: a shorter one stops the page, not the bot, and `familydb doctor` is what
-  says so. Every session opened with the
-  old password ends at that point, so a stolen cookie stops working too, and browsers stop being
-  treated as known. `WEB_PASSWORD` is deliberately not on the settings page: a form cannot change
-  the lock on its own door.
+- *The page password.* Change it on the settings page, under Family password: it asks for the
+  one in force, keeps this browser signed in and signs every other one out, and will not take one
+  under twelve characters. Nothing on the server needs editing. It is stored only as a hash, and
+  once the family has chosen one, the installer's `WEB_PASSWORD` no longer opens the page. If
+  nobody remembers it, `sudo /opt/familydb/scripts/maintain.sh password` prints a new one.
 - *A lost phone, or a sign-in shared too widely.* "Sign everyone out" on the settings page, after
   typing the family password again, ends every sign-in on every device, this one included. It
   cannot while `WEB_SECRET_KEY` is set in `.env`; change that and restart instead.

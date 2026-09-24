@@ -431,3 +431,104 @@ table.month td.today time { border-radius: 50%; background: var(--accent); color
 /* What is left to set up, on the home page until it is all done. */
 .setup { border-left: 4px solid var(--accent); }
 .setup ol { margin: 0; padding-left: 1.25rem; display: grid; gap: 0.35rem; }
+
+/* Setting up, one step at a time (web/setup.py). */
+.lead { font-size: 1.05rem; max-width: 44rem; }
+.why { font-size: 1.05rem; max-width: 44rem; margin-bottom: 1rem; }
+.step-head h1 { font-family: var(--display); font-weight: 400; font-size: 1.75rem; margin: 0.2rem 0 0.6rem; }
+/* Both are <nav>, and the bar's own nav rules are written for the bar; these are not in it. */
+.setup-progress, .step-nav { margin-left: 0; }
+.setup-progress a:hover { color: var(--ink); border-color: var(--accent); }
+.setup-progress ol { list-style: none; display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0 0 1.25rem; padding: 0; }
+.setup-progress a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.65rem 0.2rem 0.25rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+.setup-progress a > span[aria-hidden] {
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--bg);
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+.setup-progress .done a > span[aria-hidden] { background: var(--wash); color: var(--accent); }
+.setup-progress a[aria-current="step"] { border-color: var(--accent); color: var(--ink); font-weight: 600; }
+.setup-progress a[aria-current="step"] > span[aria-hidden] { background: var(--accent); color: var(--accent-ink); }
+.state.done { color: var(--accent); background: var(--wash); border-radius: 8px; padding: 0.55rem 0.8rem; }
+.step-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin: 1.5rem 0 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+.step-skip-note { font-size: 0.9rem; max-width: 44rem; }
+.tips { padding-left: 1.2rem; display: grid; gap: 0.3rem; }
+.choices { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); margin: 1rem 0; }
+.choice {
+  display: grid;
+  gap: 0.25rem;
+  align-content: start;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--ink);
+  text-decoration: none;
+}
+.choice:hover { border-color: var(--accent); }
+.choice.chosen { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.choice .muted { font-size: 0.9rem; }
+.setup-list { list-style: none; padding: 0; margin: 1rem 0 1.25rem; display: grid; gap: 0.5rem; }
+.setup-list > li.panel { margin: 0; padding: 0; }
+.setup-list a { display: grid; grid-template-columns: auto 1fr auto; gap: 0.8rem; align-items: center; padding: 0.75rem 1rem; color: var(--ink); text-decoration: none; }
+.setup-list a:hover strong { color: var(--accent); }
+.setup-list .number {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  font-weight: 700;
+}
+.setup-list .done .number { background: var(--wash); color: var(--accent); border-color: transparent; }
+.setup-list .what { display: grid; min-width: 0; }
+.setup-list .what .muted { font-size: 0.9rem; overflow-wrap: anywhere; }
+.tag.need-needed { color: var(--warn); border-color: var(--warn); }
+.tag.need-recommended, .tag.need-done { color: var(--accent); border-color: var(--accent); }
+.knocks .knock { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; justify-content: space-between; }
+.knocks .knock form { margin: 0; }
+.knocks .knock button { margin: 0; }
+.calendars { display: grid; gap: 0.35rem; border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.75rem; margin: 0 0 0.75rem; }
+.roles { margin-top: 1rem; font-size: 0.92rem; }
+.steps .button { padding: 0.35rem 0.75rem; }
+/* On a phone the row of steps is numbers only, but for the one you are on; the names stay there
+   for a screen reader. */
+@media (max-width: 40rem) {
+  .setup-progress ol { gap: 0.3rem; }
+  .setup-progress a { padding-right: 0.25rem; }
+  .setup-progress a[aria-current="step"] { padding-right: 0.65rem; }
+  .setup-progress a:not([aria-current="step"]) .label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}

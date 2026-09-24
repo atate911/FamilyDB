@@ -853,7 +853,7 @@ def test_the_page_really_serves_on_a_thread_and_stops(settings, clock) -> None:
 
 
 def test_changing_the_password_ends_the_sessions_opened_with_the_old_one(
-    settings, clock, conn
+    settings, clock, conn, family
 ) -> None:
     client = _signed_in(settings, clock)
     assert client.get("/").status_code == 200

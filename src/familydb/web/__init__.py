@@ -22,7 +22,7 @@ from familydb.availability import web_is_public, web_password_required
 from familydb.channels.web import WebChat
 from familydb.config import Settings
 from familydb.errors import ConfigError
-from familydb.web import auth, chat, edits, family, once, routes, views
+from familydb.web import auth, chat, edits, family, once, routes, setup, views
 from familydb.web import settings as settings_page
 from familydb.web.auth import MIN_PASSWORD
 from familydb.web.keys import session_secret
@@ -130,6 +130,7 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     web.register_blueprint(edits.bp)
     web.register_blueprint(family.bp)
     web.register_blueprint(settings_page.bp)
+    web.register_blueprint(setup.bp)
     # The gate first: somebody who is not signed in should not be able to make the page work,
     # not even for one small query.
     web.before_request(auth.require_login)
