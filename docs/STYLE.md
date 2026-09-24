@@ -10,7 +10,9 @@ using a theme.
 It was not always this restrained. The first pass leaned hard into the CRT (pixel type, pixel
 icons, scanlines, a boot screen); the family asked for something more modern that only evokes it,
 and this is that. The rule that came out of it: **nostalgia shows up as light and small winks,
-never as a style the page is imitating.**
+never as a style the page is imitating.** Later the family asked for a little texture back,
+carefully and sparingly, so there is now one kind of picture allowed to *be* a screen: a radar
+scope, hazy and scanlined, used in two places (see "Scopes").
 
 Everything here is carried by one stylesheet (`src/familydb/web/static/style.css`), a handful of
 templates, two open-licensed typefaces and one icon sprite, with no script beyond the one the page
@@ -23,9 +25,9 @@ already had. A change to the page should be checked against this document.
    on a phone, sentence-case labels, readable type. Nothing retro may cost usability.
 2. **The CRT survives as light.** Phosphor green glows only where attention belongs: the mark
    and cursor in the bar (and the bot's face), the primary button, the box being typed in, the
-   key words of the home page's greeting, the next plan, live status and finished tasks, the
-   day's spend, and the 404. The icon tile beside a page title glows in that page's colour, and
-   amber glows for *today*. If everything glowed, nothing would.
+   key words of the home page's greeting, the next plan's blip on the radar, live status and
+   finished tasks, the day's spend, and the 404. The icon tile beside a page title glows in that
+   page's colour, and amber glows for *today*. If everything glowed, nothing would.
 3. **Colour says where you are.** Each part of the site has one colour, and each kind of idea has
    one; colour is used to tell things apart, never as decoration, and never on its own.
 4. **Two voices.** DM Sans for everything read; DM Mono, sparingly, for the machine's small voice:
@@ -33,11 +35,14 @@ already had. A change to the page should be checked against this document.
 5. **Keep the eye still.** A page's title, its one line of purpose and its one or two actions sit
    together at the top. What you do with a thing sits beside it. What is next is the first thing
    on the home page. The chat's box is under the newest line, with Send beside who is sending.
-6. **A few quiet winks.** The blinking cursor after the name. "Ready" above the sign-in. "No
-   signal" and a momentary flicker on the page that is not there. A whisper of scanlines inside
-   the home page's glow. A month that prints as green-bar paper. Each is small, none is in the
-   way, and all motion stops for anyone who asks for less.
-7. **Accessible by construction.** Contrast is measured, focus is always visible, every box has a
+6. **A few quiet winks.** The blinking cursor after the name. "Ready" above the sign-in. A
+   momentary flicker on the page that is not there. A whisper of scanlines inside the home page's
+   glow. A month that prints as green-bar paper. Each is small, none is in the way, and all
+   motion stops for anyone who asks for less.
+7. **One picture may be a screen.** The radar scope is the one place the page is allowed to be
+   hazy: a little blur, a little bloom, scanlines over its face. It earns that by showing
+   something true (what is coming, and how soon), and it appears at most once on a page.
+8. **Accessible by construction.** Contrast is measured, focus is always visible, every box has a
    label, motion, contrast and forced-colour preferences are honoured, and nothing needs a script.
 
 ## Colour
@@ -122,13 +127,47 @@ It is the favicon, the bot's face in the chat, and the mark in the bar, where it
 - **Card**, **segmented tabs**, **pills**, **notices** (a green dot for what a form said, a red
   one for an error).
 - **Date** (`chip` in `_ui.html`): a small calendar leaf, the month in cyan above the day. Today
-  is amber; the next plan, on the home page, glows green. `views.date_chip` splits the date.
+  is amber. `views.date_chip` splits the date.
 - **Relative time**: "tomorrow", "in 2 days" as a small pill beside the date, so a wrapped line
   never starts with a separator.
 - **Live dot**: green, gently breathing; the status page's lights are dots that are lit, hollow
   (red) or half lit (amber), with words beside them.
 - **Meter**: an SVG bar (the content policy allows no inline style, so widths are SVG
   attributes), always with its figure written beside it.
+- **Scope** (`radar` in `_ui.html`): see below.
+
+## Scopes
+
+The one picture on the site that is a screen: a round radar scope, drawn the way a
+long-persistence phosphor drew it. It is in two places and no more.
+
+- **Home, in Next up.** Range rings at a week, two weeks and four weeks, "now" at the middle.
+  Each coming plan is a blip: the nearer its day, the nearer the middle. The sweep turns once
+  every eight seconds and leaves an afterglow; each blip flares as the sweep passes it and fades
+  until it comes round again, and the next plan's blip is the brightest and sends out a ping. The
+  words beside it say the same thing ("Soccer practice, Tuesday 17:00, in 2 days"), and a line
+  under them ("4 more on the radar") leads to the rest.
+- **Not found.** The same scope, empty, still sweeping, with 404 drawn on its face in the
+  phosphor: "Nothing on the radar".
+
+Its texture belongs to it alone: the rings and blips are blurred by a third of a pixel and bloom;
+fine dark scanlines, a darker rim and a little light off the glass lie over the face; a thin
+green ring floats just outside it. The status page's spend figure is the one other thing drawn
+this way, as a figure rather than a picture: its digits are made of lines that bloom, over a
+faint graticule where the light falls.
+
+How it is built, since the content policy allows no inline style and no script:
+
+- It is SVG and CSS. The dial is 200 units across; `views.radar_blips` works out where each plan
+  goes (Jinja has no trigonometry), spreading them round the dial by the golden angle so none
+  sits on another, each on one of twelve bearings.
+- The sweep is a conic gradient turning on `--sweep`. Each blip's flare is timed to the moment
+  the sweep reaches its bearing by a negative delay: the `.b0` to `.b11` rules. The twelve
+  bearings in `views.py` and those twelve rules change together.
+- It is `aria-hidden`: a picture of what the page already says, never the only place it is said.
+  With less motion asked for, the sweep rests at twelve o'clock and every blip stays lit. With
+  more contrast, the blur, bloom and scanlines go. With forced colours and on paper, the scopes
+  are not drawn at all.
 
 ## Page by page
 
@@ -137,8 +176,9 @@ It is the favicon, the bot's face in the chat, and the mark in the bar, where it
   Settings and signing out are icons at the top. From 52rem everything is one bar that stays at
   the top while the page scrolls.
 - **Home.** The greeting and the two things most people came for (ask about the weekend, add an
-  idea) on the left, lit from below; **Next up** on the right: the next plan, its date glowing.
-  Then anything left to set up, what else is coming, and what was added lately.
+  idea) on the left, lit from below; **Next up** on the right: the next plan in words, beside the
+  radar of everything coming (on a phone the words run round the scope). Then anything left to
+  set up, what else is coming, and what was added lately.
 - **Chat.** A messaging layout: the bot on the left with its mark, the family on the right with
   their initial; a typing indicator while it thinks; one box with the message on top and From,
   Send where I am and Send along the bottom, lit green while you write.
@@ -149,8 +189,9 @@ It is the favicon, the bot's face in the chat, and the mark in the bar, where it
 - **Plans.** A list of dates, and a month with today in amber and plans as cyan slips; on a phone
   the month is the busy days as a list.
 - **Things to do**, **Family**, **Settings** (with an index and a save bar that stays in reach),
-  **Status** (three monitors, then the day's spend as the one big glowing number), **Sign in**,
-  **Not found** (a glowing 404 that flickers now and then).
+  **Status** (three monitors, then the day's spend as the one big glowing number, drawn in
+  scanlines on a faint graticule), **Sign in**, **Not found** (an empty radar, still sweeping,
+  with a 404 on its face that flickers now and then).
 - **On paper.** Printing turns any page into green-bar printout: black on white with a pale green
   band on every other line. The month on the fridge.
 
@@ -163,9 +204,10 @@ It is the favicon, the bot's face in the chat, and the mark in the bar, where it
   only, since the box itself says what it is for.
 - Nothing is said by colour alone: the chat tells voices apart by side and face; status lights
   differ in shape and carry words; kinds and statuses are written out.
-- `prefers-reduced-motion` stops the cursor, the typing dots, the breathing dots and the 404's
-  flicker. `prefers-contrast: more` lifts secondary text and edges and takes away the glow and the
-  scanlines. Forced colours keep dots, boxes, dates and faces outlined.
+- `prefers-reduced-motion` stops the cursor, the typing dots, the breathing dots, the radar's
+  sweep and the 404's flicker. `prefers-contrast: more` lifts secondary text and edges and takes
+  away the glow, the blur and the scanlines. Forced colours keep dots, boxes, dates and faces
+  outlined, and leave the scopes out.
 - The page works with scripts off; the only script is still `static/locate.js`.
 
 ## Rules the look has to keep
@@ -179,6 +221,9 @@ It is the favicon, the bot's face in the chat, and the mark in the bar, where it
   on today in the month.
 - Class names are shared across the whole stylesheet: check a new one is not already taken (a
   meter once borrowed `.bar` from the top bar and flattened it).
+- At most one scope to a page, and only where it shows something true. Blur stays inside the
+  scopes, and scanlines inside the scopes, the spend figure and the home page's glow; everywhere
+  else the page is sharp.
 - A new colour, face, glow or motion goes here first, with the reason.
 
 ## Left for later

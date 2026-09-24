@@ -55,8 +55,8 @@ older than what is installed. It gets a date when it is released.
   phosphor green glows only where attention belongs (the button to press, the box
   being typed in, what is next, what is live), each part of the site and each kind
   of idea has its own colour, a tab bar sits under the thumb on a phone, the home
-  page opens on what is next, and a month prints as green-bar paper.
-  `docs/STYLE.md` says what each choice is for.
+  page opens on what is next beside a small radar of everything coming, and a month
+  prints as green-bar paper. `docs/STYLE.md` says what each choice is for.
 - **Set up from that page.** The keys, the models, Telegram (taken up within
   seconds, no restart), Google Calendar (connected from the page, with no laptop
   needed), where home is (found on the map), the timezone and the spending

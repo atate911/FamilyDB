@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import calendar as months
 import json
+import math
 from datetime import UTC, date, datetime
+from itertools import pairwise
 from typing import Any
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
@@ -338,6 +340,51 @@ def month_weeks(entries: list[Entry], first: date, today: date) -> list[list[dic
         ]
         for week in grid
     ]
+
+
+# The home page's radar: a dial 200 units across, its range rings a week, two weeks and four weeks
+# out. Each pair is (days away, distance from the middle).
+RADAR_RINGS = ((0, 12.0), (7, 33.0), (14, 66.0), (28, 92.0))
+# Blips sit on one of twelve bearings, one every 30 degrees: the page times each blip's flare to
+# the moment the sweep passes that bearing (the `.b0` to `.b11` rules in style.css).
+RADAR_BEARINGS = 12
+RADAR_START = 210  # degrees clockwise from twelve o'clock, where the first plan goes
+
+
+def radar_distance(days: int) -> float:
+    """How far from the middle a plan `days` away shows: along the rings, never past the last."""
+    days = max(0, days)
+    for (near_days, near), (far_days, far) in pairwise(RADAR_RINGS):
+        if days <= far_days:
+            return near + (far - near) * (days - near_days) / (far_days - near_days)
+    return RADAR_RINGS[-1][1]
+
+
+def radar_blips(entries: list[Entry], today: date) -> list[dict[str, Any]]:
+    """Where each coming plan shows on the home page's radar.
+
+    The nearer the day, the nearer the middle. Plans are spread round the dial by the golden
+    angle so none sits on another, each on one of the twelve bearings, and the first, the next
+    thing on, is marked so the page can make it the brightest.
+    """
+    blips: list[dict[str, Any]] = []
+    taken: set[int] = set()
+    for index, entry in enumerate(entries):
+        bearing = round((RADAR_START + index * 137.5) % 360 / 30) % RADAR_BEARINGS
+        while bearing in taken and len(taken) < RADAR_BEARINGS:
+            bearing = (bearing + 1) % RADAR_BEARINGS
+        taken.add(bearing)
+        distance = radar_distance((entry.days()[0] - today).days)
+        angle = math.radians(bearing * 360 / RADAR_BEARINGS)
+        blips.append(
+            {
+                "x": round(100 + distance * math.sin(angle), 1),
+                "y": round(100 - distance * math.cos(angle), 1),
+                "bearing": bearing,
+                "next": index == 0,
+            }
+        )
+    return blips
 
 
 AGENDA_NOTES = {

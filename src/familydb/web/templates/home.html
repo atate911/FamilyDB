@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon, kind_label, chip %}
+{% from "_ui.html" import icon, kind_label, chip, radar %}
 {% block title %}{{ site_title }}{% endblock %}
 {% block body_class %}page-home{% endblock %}
 {% macro plan_where(entry) -%}
@@ -11,7 +11,7 @@
 {%- endmacro %}
 {% block content %}
   {% set first = coming[0] if coming else none %}
-  <section class="welcome{{ ' has-next' if first }}">
+  <section class="welcome">
     <div class="welcome-words">
       <p class="eyebrow">{{ today }}</p>
       <h1>Make room for the <span class="glow">good stuff</span>.</h1>
@@ -20,20 +20,26 @@
         <a class="button secondary" href="{{ url_for('web.new_idea') }}">{{ icon('plus') }}Add an idea</a>
       </div>
     </div>
-    {# The one thing most people open the page to know. #}
-    {% if first %}
-      <div class="next-up">
-        <p class="eyebrow"><span class="live" aria-hidden="true"></span>Next up</p>
-        <div class="next-body">
-          {{ chip(first.chip, first.on_today) }}
-          <div>
-            <p class="next-title">{{ plan_where(first) }}</p>
-            <p class="next-when"><strong>{{ first.when }}</strong>{% if first.relative %}<span class="rel">{{ first.relative }}</span>{% endif %}</p>
-            {% if first.location %}<p class="muted next-where">{{ icon('pin') }}{{ first.location }}</p>{% endif %}
-          </div>
-        </div>
+    {# The one thing most people open the page to know, beside a small radar of everything
+       coming: the nearer the day, the nearer the middle, the next one pinging. #}
+    <div class="next-up">
+      {{ radar(blips) }}
+      <div class="next-text">
+        {% if first %}
+          <p class="eyebrow"><span class="live" aria-hidden="true"></span>Next up</p>
+          <p class="next-title">{{ plan_where(first) }}</p>
+          <p class="next-when"><strong>{{ first.when }}</strong>{% if first.relative %} <span class="rel">{{ first.relative }}</span>{% endif %}</p>
+          {% if first.location %}<p class="muted next-where">{{ icon('pin') }}{{ first.location }}</p>{% endif %}
+          {% if coming | length > 1 %}
+            <p class="next-more"><a href="#coming">{{ coming | length - 1 }} more on the radar</a></p>
+          {% endif %}
+        {% else %}
+          <p class="eyebrow">Next up</p>
+          <p class="next-title">Nothing on the radar yet.</p>
+          <p class="muted next-where">Ask what fits this weekend, or plan an idea.</p>
+        {% endif %}
       </div>
-    {% endif %}
+    </div>
   </section>
 
   {% if setup %}
@@ -48,7 +54,7 @@
   {% endif %}
 
   <div class="dashboard">
-    <section class="coming">
+    <section class="coming" id="coming">
       <div class="section-head">
         <h2>Coming up</h2>
         <a href="{{ url_for('web.plans') }}">All plans{{ icon('right') }}</a>
