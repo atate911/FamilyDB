@@ -225,4 +225,7 @@ for effort, and each should be measured before and after.
   prefix is small and very stable; the question is how selection copes with "anything for the
   girls on a rainy day" without a model reading the whole list.
 - What is the quality bar per kind, written down so a cheaper model can be tested against it?
+  For chat, it is now `evals/`: the family's own requests, graded by code on which tools ran
+  with which arguments, what was saved and what the reply says (`uv run python -m evals`).
+  Lookups and discovery have no such set yet, since they depend on what the web says that day.
 - When should the family be told what a question cost?
