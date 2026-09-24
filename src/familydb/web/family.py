@@ -66,9 +66,9 @@ def show() -> str:
 @bp.post("/family")
 @once
 def add() -> Response:
+    back = auth.setup_return(request.form.get("then"))
     if (complaint := auth.refused()) is not None:
-        _say(complaint)
-        return redirect(url_for("family.show"))
+        return _answer(back, problem=complaint, fallback=url_for("family.show"))
     app = _app()
     form = request.form
     try:
@@ -81,11 +81,11 @@ def add() -> Response:
                 now=utc_iso(app.clock.now()),
             )
     except rules.FamilyError as exc:
-        _say(str(exc))
-        return redirect(url_for("family.show"))
+        return _answer(back, problem=str(exc), fallback=url_for("family.show"))
     log.info("family member %s added from the page by %s", person.id, auth.client_address())
-    _say(ADDED.format(name=person.display_name))
-    return redirect(url_for("family.show"))
+    return _answer(
+        back, said=ADDED.format(name=person.display_name), fallback=url_for("family.show")
+    )
 
 
 @bp.get(f"/family/<int(max={MAX_ID}):member_id>")
@@ -100,10 +100,10 @@ def edit(member_id: int) -> str:
 @bp.post(f"/family/<int(max={MAX_ID}):member_id>")
 @once
 def change(member_id: int) -> Response:
-    back = redirect(url_for("family.edit", member_id=member_id))
+    setup = auth.setup_return(request.form.get("then"))
+    here = url_for("family.edit", member_id=member_id)
     if (complaint := auth.refused()) is not None:
-        _say(complaint)
-        return back
+        return _answer(setup, problem=complaint, fallback=here)
     app = _app()
     form = request.form
     try:
@@ -119,11 +119,21 @@ def change(member_id: int) -> Response:
                 now=utc_iso(app.clock.now()),
             )
     except rules.FamilyError as exc:
-        _say(str(exc))
-        return back
+        return _answer(setup, problem=str(exc), fallback=here)
     log.info("family member %s changed from the page by %s", member_id, auth.client_address())
-    _say(CHANGED.format(name=person.display_name))
-    return redirect(url_for("family.show"))
+    return _answer(
+        setup, said=CHANGED.format(name=person.display_name), fallback=url_for("family.show")
+    )
+
+
+def _answer(
+    setup: str | None, *, said: str | None = None, problem: str | None = None, fallback: str
+) -> Response:
+    """Back to the setup page that sent the form, or to this page's own, with what happened."""
+    if setup is not None:
+        return auth.back_to_setup(setup, said=said, problem=problem)
+    _say(problem or said or "")
+    return redirect(fallback)
 
 
 def _person(person: member_store.Member) -> dict[str, Any]:

@@ -49,6 +49,7 @@ SECRET_FIELDS = frozenset(
         "openai_api_key",
         "telegram_bot_token",
         "web_password",
+        "web_password_hash",
         "web_secret_key",
     }
 )
@@ -182,6 +183,9 @@ class Settings(BaseSettings):
     web_host: str = "127.0.0.1"
     web_port: int = Field(default=8080, ge=1, le=65535)
     web_password: str | None = None
+    # The family password as chosen on the page, hashed (see web/auth.py). Once there is one it is
+    # the only password the page takes: WEB_PASSWORD was the installer's, printed in a terminal.
+    web_password_hash: str | None = None
     web_secret_key: str | None = None
     web_session_days: int = Field(default=30, ge=1, le=3650)
     web_allow_no_password: bool = False

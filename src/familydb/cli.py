@@ -16,7 +16,7 @@ from uuid import uuid4
 
 import typer
 
-from familydb import __version__, privacy
+from familydb import __version__, passwords, privacy
 from familydb.agent.history import load_history
 from familydb.agent.providers.base import Message, TurnRequest
 from familydb.agent.render import render_idea_line, render_user_turn
@@ -130,6 +130,25 @@ def config() -> None:
         else:
             note = ""
         typer.echo(f"{key}={value}{note}")
+
+
+@app.command("password")
+def password() -> None:
+    """Make up a new family password for the web page, print it once, and sign everyone out.
+
+    For a password nobody remembers: whoever can run this on the server is let back in, and the
+    family then chooses their own again on the page. The old one stops working at once.
+    """
+    application = build_app()
+    fresh = passwords.make_up()
+    with closing(_ready(application)) as conn, db.transaction(conn):
+        settings_store.set_many(
+            conn,
+            {"web_password_hash": passwords.hash_password(fresh)},
+            source="familydb password",
+        )
+    typer.echo(f"The family password is now: {fresh}")
+    typer.echo("Sign in with it, then choose your own under Settings, Family password.")
 
 
 @db_app.command("migrate")

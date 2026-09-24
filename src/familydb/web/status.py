@@ -24,6 +24,7 @@ from familydb.store import calls, ideas, members, messages
 from familydb.store import settings as settings_store
 from familydb.store.settings import SECRETS
 from familydb.web import views
+from familydb.web.auth import password_chosen, password_in_use
 
 DAYS = 30
 TROUBLE_LIMIT = 6
@@ -118,7 +119,12 @@ def services(app: App) -> list[dict[str, Any]]:
         if weather_available(live)
         else "no home coordinates, so no forecast and no travel estimates"
     )
-    page = "no password: anyone who can reach it is in" if not live.web_password else "password set"
+    if not password_in_use(live):
+        page = "no password: anyone who can reach it is in"
+    elif password_chosen(live):
+        page = "the family's own password"
+    else:
+        page = "the installer's password; choose your own on the setup page"
     if web_is_public(live):
         page += "; reachable from other machines"
         page += ", behind a proxy" if live.web_trust_proxy else ", with no proxy declared"
@@ -127,7 +133,7 @@ def services(app: App) -> list[dict[str, Any]]:
         _row("Weather and travel", weather_available(live), weather),
         _row("Reading the web", *_lookups(app)),
         _row("Weekend digest", *_digest(app)),
-        _row("This page", None if not live.web_password else True, page),
+        _row("This page", password_in_use(live) or None, page),
     ]
 
 

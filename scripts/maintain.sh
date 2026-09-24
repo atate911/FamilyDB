@@ -41,6 +41,8 @@ Commands
   status               Is it running, is it healthy, how big is the database, when was the
                        last backup. Changes nothing.
   check                The full check (familydb doctor), with every finding and its fix.
+  password             A new family password for the web page, for when nobody remembers it.
+                       Printed once; everyone signs in again with it.
   backup               Take a backup now, using SQLite's online backup, safe while it runs.
   restore FILE         Stop the bot, put that backup in place, start it again. The database
                        being replaced is itself backed up first.
@@ -259,6 +261,11 @@ cmd_status() {
 cmd_check() {
   head2 "Checking the install"
   familydb_cmd doctor || true
+}
+
+cmd_password() {
+  head2 "A new family password"
+  familydb_cmd password
 }
 
 # ---------------------------------------------------------------- backup ----
@@ -510,6 +517,7 @@ cmd_schedule_backups() {
 case "$COMMAND" in
   status)           cmd_status ;;
   check)            cmd_check ;;
+  password)         cmd_password ;;
   backup)           cmd_backup ;;
   restore)          cmd_restore ;;
   upgrade)          cmd_upgrade ;;

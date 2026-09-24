@@ -233,7 +233,7 @@ def test_a_page_with_no_password_shows_a_key_to_whoever_can_reach_it(settings, c
     client = create_app(app).test_client()
     text = client.get("/settings").text
     assert "This page has no password" in text
-    assert "Family password" not in text
+    assert 'id="reveal-password"' not in text  # nothing to type to see a key
     token = re.search(r'name="csrf" value="([^"]+)"', text).group(1)
     shown = client.post("/settings/reveal", data={"csrf": token, "key": "openai_api_key"})
     assert shown.status_code == 200 and "sk-home" in shown.text
