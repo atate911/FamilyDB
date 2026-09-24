@@ -2,21 +2,38 @@
 {% from "_ui.html" import icon, kind_label, chip %}
 {% block title %}{{ site_title }}{% endblock %}
 {% block body_class %}page-home{% endblock %}
+{% macro plan_where(entry) -%}
+  {% if entry.idea_id %}
+    <a href="{{ url_for('web.idea', idea_id=entry.idea_id) }}">{{ entry.title }}</a>
+  {% else %}
+    {{ entry.title }}
+  {% endif %}
+{%- endmacro %}
 {% block content %}
-  <section class="welcome">
+  {% set first = coming[0] if coming else none %}
+  <section class="welcome{{ ' has-next' if first }}">
     <div class="welcome-words">
       <p class="eyebrow">{{ today }}</p>
-      <h1>Make room for the good <span class="nowrap">stuff<span class="cursor" aria-hidden="true"></span></span></h1>
+      <h1>Make room for the <span class="glow">good stuff</span>.</h1>
       <div class="actions">
         <a class="button" href="{{ url_for('chat.show', ask=weekend_question, _anchor='latest') }}">{{ icon('sparkles') }}Ask what to do this weekend</a>
         <a class="button secondary" href="{{ url_for('web.new_idea') }}">{{ icon('plus') }}Add an idea</a>
       </div>
     </div>
-    {# A little screen with a picture on it, only where there is room: on a phone the first
-       screen is for what is coming up. Drawn in scripts/pixels.py. #}
-    <div class="welcome-art" aria-hidden="true">
-      <div class="crt"><img src="{{ url_for('static', filename='art/sunset.svg') }}" alt="" width="64" height="48" /></div>
-    </div>
+    {# The one thing most people open the page to know. #}
+    {% if first %}
+      <div class="next-up">
+        <p class="eyebrow"><span class="live" aria-hidden="true"></span>Next up</p>
+        <div class="next-body">
+          {{ chip(first.chip, first.on_today) }}
+          <div>
+            <p class="next-title">{{ plan_where(first) }}</p>
+            <p class="next-when"><strong>{{ first.when }}</strong>{% if first.relative %}<span class="rel">{{ first.relative }}</span>{% endif %}</p>
+            {% if first.location %}<p class="muted next-where">{{ icon('pin') }}{{ first.location }}</p>{% endif %}
+          </div>
+        </div>
+      </div>
+    {% endif %}
   </section>
 
   {% if setup %}
@@ -38,27 +55,22 @@
       </div>
       {% if source != 'google' %}<p class="muted source source-{{ source }}">{{ source_note }}</p>{% endif %}
       <ol class="panel plain agenda">
-        {% for entry in coming %}
+        {% for entry in coming[1:] %}
           <li class="{{ 'is-today' if entry.on_today }}">
             {{ chip(entry.chip, entry.on_today) }}
             <div class="agenda-body">
+              <div class="what">{{ plan_where(entry) }}</div>
               <div class="when">
-                <strong>{{ entry.when }}</strong>
-                {% if entry.relative %}<span class="muted">{{ entry.relative }}</span>{% endif %}
+                <span>{{ entry.when }}</span>
+                {% if entry.relative %}<span class="rel">{{ entry.relative }}</span>{% endif %}
               </div>
-              <div class="what">
-                {% if entry.idea_id %}
-                  <a href="{{ url_for('web.idea', idea_id=entry.idea_id) }}">{{ entry.title }}</a>
-                {% else %}
-                  {{ entry.title }}
-                {% endif %}
-                {% if entry.location %}<span class="muted">&middot; {{ entry.location }}</span>{% endif %}
-              </div>
+              {% if entry.location %}<div class="where">{{ icon('pin') }}{{ entry.location }}</div>{% endif %}
             </div>
           </li>
         {% else %}
-          <li class="muted empty">{{ icon('plans') }}<span>Nothing on the calendar yet. Pick an idea and put it there, or ask
-            what fits this weekend.</span></li>
+          <li class="muted empty">{{ icon('plans') }}<span>
+            {%- if first %}Nothing else on the calendar yet.{% else %}Nothing on the calendar yet. Pick an idea and put it there, or ask
+            what fits this weekend.{% endif %}</span></li>
         {% endfor %}
       </ol>
     </section>

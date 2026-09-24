@@ -2,7 +2,7 @@
 {% from "_ui.html" import icon, page_head %}
 {% block title %}Status · {{ site_title }}{% endblock %}
 {% block body_class %}page-status{% endblock %}
-{# A light says its state three ways: its colour, its shape (a lit square, a hollow one, a half
+{# A light says its state three ways: its colour, its shape (a lit dot, a hollow ring, a half
    one) and the words beside it, so nobody needs to tell green from amber to read it. #}
 {% macro lines(rows) %}
   <ul class="plain lights">
@@ -18,17 +18,19 @@
     {% endfor %}
   </ul>
 {% endmacro %}
-{# A bar drawn in block characters, `width` of them, filled to `share` out of 100. #}
-{% macro blocks(share, width=20) -%}
-  {% set filled = [[((share or 0) * width / 100) | round | int, width] | min, 0] | max -%}
-  <span class="blocks" aria-hidden="true"><span class="blocks-on">{{ '█' * filled }}</span><span class="blocks-off">{{ '░' * (width - filled) }}</span></span>
+{# A bar filled to `share` out of 100. Drawn in SVG, whose widths are attributes, because the
+   content policy allows no inline style. The figure is always written beside it. #}
+{% macro bar(share) -%}
+  {% set filled = [[(share or 0), 100] | min, 0] | max -%}
+  <svg class="meter" aria-hidden="true" focusable="false"><rect class="meter-track" width="100%" height="100%" rx="3"/>
+    {%- if filled > 0 %}<rect class="meter-fill" width="{{ '%.1f' | format([filled, 2] | max) }}%" height="100%" rx="3"/>{% endif %}</svg>
 {%- endmacro %}
 {% block content %}
-  {{ page_head('~/status', 'Status', 'Is it working, and what is it costing?') }}
+  {{ page_head('Status', 'Is it working, and what is it costing?', 'status') }}
 
   <div class="monitors">
     <section class="panel">
-      <h2>{{ icon('bot') }}Who answers</h2>
+      <h2>{{ icon('mark') }}Who answers</h2>
       {{ lines(models) }}
     </section>
 
@@ -50,16 +52,16 @@
     <h2>{{ icon('coin') }}What it has cost</h2>
     {% set used = (spending.today / spending.limit * 100) if spending.limit else none %}
     <div class="readout{{ ' near' if used is not none and used >= 75 }}{{ ' over' if used is not none and used >= 100 }}" aria-hidden="true">
-      <div>
-        <p class="eyebrow">Spent today, about</p>
-        <p class="readout-figure"><span class="readout-dollar">$</span>{{ "%.2f"|format(spending.today) }}</p>
-      </div>
-      {% if used is not none %}
-        <div class="readout-words">
-          <p class="eyebrow">Of the ${{ "%.2f"|format(spending.limit) }} daily limit</p>
-          <p class="meter">{{ blocks(used, 24) }} <span class="meter-share">{{ used | round | int }}%</span></p>
+      <div class="readout-top">
+        <div>
+          <p class="eyebrow">Spent today, about</p>
+          <p class="readout-figure">${{ "%.2f"|format(spending.today) }}</p>
         </div>
-      {% endif %}
+        {% if used is not none %}
+          <p class="readout-of"><strong>{{ used | round | int }}%</strong> of the ${{ "%.2f"|format(spending.limit) }} daily limit</p>
+        {% endif %}
+      </div>
+      {% if used is not none %}{{ bar(used) }}{% endif %}
     </div>
     <p>
       Today: about ${{ "%.2f"|format(spending.today) }}
@@ -105,7 +107,7 @@
                 <tr>
                   <td>{{ part.label }}</td>
                   <td class="num">{{ "{:,}".format(part.tokens) }}</td>
-                  <td class="share">{{ blocks(part.share, 10) }} {{ part.share }}%</td>
+                  <td class="share"><span class="share-cell">{{ bar(part.share) }}<span>{{ part.share }}%</span></span></td>
                 </tr>
               {% endfor %}
             </table>

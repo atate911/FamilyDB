@@ -3,7 +3,7 @@
 {% block title %}Restaurants · {{ site_title }}{% endblock %}
 {% block body_class %}page-restaurants{% endblock %}
 {% block content %}
-  {% call page_head('~/ideas/restaurants', 'Ideas') %}
+  {% call page_head('Ideas', 'Places to go, things to try, and everything the family has mentioned.', 'idea') %}
     <a class="button" href="{{ url_for('web.new_idea') }}">{{ icon('plus') }}Add an idea</a>
   {% endcall %}
   <nav class="tabs" aria-label="Which ideas">

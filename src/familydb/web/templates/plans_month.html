@@ -12,7 +12,7 @@
   </div>
 {% endmacro %}
 {% block content %}
-  {{ page_head('~/plans/month', 'Plans') }}
+  {{ page_head('Plans', none, 'plans') }}
   <nav class="tabs" aria-label="How to show the plans">
     <a href="{{ url_for('web.plans') }}">{{ icon('list') }}List</a>
     <a href="{{ url_for('web.plans_month') }}" aria-current="page">{{ icon('grid') }}Month</a>

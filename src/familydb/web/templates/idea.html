@@ -13,7 +13,9 @@
   </div>
 {% endmacro %}
 {% block content %}
-  <p class="back"><a href="{{ url_for('web.ideas') }}">{{ icon('left') }}Back to the ideas list</a></p>
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="{{ url_for('web.ideas') }}">Ideas</a><span aria-hidden="true">/</span><span aria-current="page">{{ idea.title }}</span>
+  </nav>
 
   {# Three blocks: the idea, what to do with it, and the place. Side by side where there is
      room, with the doing beside the title; on a phone the doing comes before the place's
@@ -81,10 +83,12 @@
               <li>
                 {{ chip(plan.chip) }}
                 <div class="agenda-body">
-                  {{ plan.when }}
-                  {% if plan.relative %}<span class="muted">({{ plan.relative }})</span>{% endif %}
-                  {% if plan.status != 'confirmed' %}<span class="tag">{{ plan.status }}</span>{% endif %}
-                  {% if plan.location %}<div class="muted">{{ plan.location }}</div>{% endif %}
+                  <div class="when">
+                    <span>{{ plan.when }}</span>
+                    {% if plan.relative %}<span class="rel">{{ plan.relative }}</span>{% endif %}
+                    {% if plan.status != 'confirmed' %}<span class="tag">{{ plan.status }}</span>{% endif %}
+                  </div>
+                  {% if plan.location %}<div class="where">{{ icon('pin') }}{{ plan.location }}</div>{% endif %}
                 </div>
               </li>
             {% endfor %}
@@ -178,7 +182,7 @@
 
     {% if place %}
       <section class="panel idea-place">
-        <p class="eyebrow">{{ icon('pin') }}The place</p>
+        <p class="eyebrow">The place</p>
         <h2>{{ place.name }}</h2>
         {% if place.summary %}<p>{{ place.summary }}</p>{% endif %}
         <div class="place-grid">

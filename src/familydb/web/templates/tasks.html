@@ -16,7 +16,7 @@
     <input id="{{ p }}-remind" type="datetime-local" name="remind_at"></div>
 {% endmacro %}
 {% block content %}
-{{ page_head('~/todo', 'Things to do', 'Errands, appointments to arrange, and things you mean to get done.') }}
+{{ page_head('Things to do', 'Errands, appointments to arrange, and things you mean to get done.', 'todo') }}
 <p class="muted small">Times use {{ zone }}. A deadline or preferred window does not set a reminder or book your calendar.</p>
 
 <details class="panel" {% if not rows %}open{% endif %}>

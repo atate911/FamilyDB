@@ -5,21 +5,21 @@
   <li class="{{ 'is-today' if plan.on_today }}">
     {{ chip(plan.chip, plan.on_today) }}
     <div class="agenda-body">
-      <div class="when">
-        <strong>{{ plan.when }}</strong>
-        {% if plan.relative %}<span class="muted">({{ plan.relative }})</span>{% endif %}
-        {% if plan.status != 'confirmed' %}<span class="tag">{{ plan.status }}</span>{% endif %}
-        {% if plan.from_google %}<span class="tag">added in Google</span>{% endif %}
-      </div>
       <div class="what">
         {% if plan.idea_id and plan.idea_id in titles %}
           <a href="{{ url_for('web.idea', idea_id=plan.idea_id) }}">{{ plan.title }}</a>
         {% else %}
           {{ plan.title }}
         {% endif %}
-        {% if plan.location %}<span class="muted">· {{ plan.location }}</span>{% endif %}
       </div>
-      {% if plan.notes %}<div class="muted">{{ plan.notes }}</div>{% endif %}
+      <div class="when">
+        <span>{{ plan.when }}</span>
+        {% if plan.relative %}<span class="rel">{{ plan.relative }}</span>{% endif %}
+        {% if plan.status != 'confirmed' %}<span class="tag">{{ plan.status }}</span>{% endif %}
+        {% if plan.from_google %}<span class="tag">added in Google</span>{% endif %}
+      </div>
+      {% if plan.location %}<div class="where">{{ icon('pin') }}{{ plan.location }}</div>{% endif %}
+      {% if plan.notes %}<div class="note">{{ plan.notes }}</div>{% endif %}
       {% if cancellable and plan.id and plan.status != 'cancelled' %}
         <div class="actions row">
           <details class="more">
@@ -57,7 +57,7 @@
   </li>
 {% endmacro %}
 {% block content %}
-  {{ page_head('~/plans', 'Plans') }}
+  {{ page_head('Plans', none, 'plans') }}
   <nav class="tabs" aria-label="How to show the plans">
     <a href="{{ url_for('web.plans') }}" aria-current="page">{{ icon('list') }}List</a>
     <a href="{{ url_for('web.plans_month') }}">{{ icon('grid') }}Month</a>

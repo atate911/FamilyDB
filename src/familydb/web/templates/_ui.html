@@ -1,7 +1,7 @@
 {# The page's small parts, shared by every template: `{% from "_ui.html" import icon %}`.
-   Icons are drawn in scripts/pixels.py and live in one sprite, static/icons.svg; they take the
-   colour of the text they sit in. An icon beside words is decoration and hidden from a screen
-   reader; an icon on its own gets a label. #}
+   Icons are Lucide's, gathered into one sprite (static/icons.svg) by scripts/icons.py; they
+   take the colour of the words they sit in. An icon beside words is decoration and hidden from
+   a screen reader; an icon on its own gets a label. #}
 
 {% set KIND_ICONS = {
   'restaurant': 'restaurant',
@@ -25,19 +25,27 @@
   {{ icon(KIND_ICONS.get((kind or '') | lower | replace(' ', '_'), 'spark')) }}
 {%- endmacro %}
 
-{# The kind of an idea as a small coloured label, each kind its own colour. #}
+{# The kind of an idea as a small label in its own colour. #}
 {% macro kind_label(kind) -%}
   {% set key = (kind or '') | lower | replace(' ', '_') %}
-  <span class="eyebrow kind kind-{{ key if key in KIND_ICONS else 'other' }}">{{ kind_icon(kind) }}{{ kind }}</span>
+  <span class="kind kind-{{ key if key in KIND_ICONS else 'other' }}">{{ kind_icon(kind) }}{{ kind | capitalize }}</span>
 {%- endmacro %}
 
-{# The top of a page: where you are, as a terminal would say it, then the title, then the one
-   or two things the page is for, on the right where the eye lands after the title. #}
-{% macro page_head(path, title, lede=none) -%}
+{# The top of a page: where it sits (for a page inside another), its icon in the colour of its
+   part of the site, the title, a line on what it is for, and the one or two things to do here
+   on the right, where the eye lands after the title. `crumbs` is a list of (label, href). #}
+{% macro page_head(title, lede=none, glyph=none, crumbs=none) -%}
   <header class="page-head">
     <div class="page-title">
-      <p class="eyebrow prompt">{{ path }}</p>
-      <h1>{{ title }}</h1>
+      {% if crumbs %}
+        <nav class="crumbs" aria-label="Breadcrumb">
+          {% for label, href in crumbs %}<a href="{{ href }}">{{ label }}</a><span aria-hidden="true">/</span>{% endfor %}
+        </nav>
+      {% endif %}
+      <div class="title-row">
+        {% if glyph %}<span class="title-icon" aria-hidden="true">{{ icon(glyph) }}</span>{% endif %}
+        <h1>{{ title }}</h1>
+      </div>
       {% if lede %}<p class="lede">{{ lede }}</p>{% endif %}
     </div>
     {%- if caller is defined %}
@@ -46,13 +54,13 @@
   </header>
 {%- endmacro %}
 
-{# The tear-off date at the start of a plan: weekday, day, month. #}
+{# A plan's day as a small calendar leaf: month, day, weekday. #}
 {% macro chip(parts, today=false) -%}
   {% if parts %}
     <span class="chip{{ ' is-today' if today }}" aria-hidden="true">
-      <span class="chip-dow">{{ parts.weekday }}</span>
-      <span class="chip-day">{{ parts.day }}</span>
       <span class="chip-mon">{{ parts.month }}</span>
+      <span class="chip-day">{{ parts.day }}</span>
+      <span class="chip-dow">{{ parts.weekday }}</span>
     </span>
   {% endif %}
 {%- endmacro %}

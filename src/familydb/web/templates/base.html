@@ -5,11 +5,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#0a0d0c" />
+    <meta name="theme-color" content="#0b0e0d" />
     <title>{% block title %}{{ site_title }}{% endblock %}</title>
-    {# The display face and the reading face are on every screen; fetch them with the page. #}
-    <link rel="preload" href="{{ url_for('static', filename='fonts/vt323.woff2') }}" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="{{ url_for('static', filename='fonts/plex-sans.woff2') }}" as="font" type="font/woff2" crossorigin />
+    {# The reading face is on every screen; fetch it with the page. #}
+    <link rel="preload" href="{{ url_for('static', filename='fonts/dm-sans.woff2') }}" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
     <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml" />
     {% block head %}{% endblock %}
@@ -37,8 +36,8 @@
     {% endmacro %}
     <header class="bar">
       <a class="brand" href="{{ url_for('web.home') }}">
-        <span class="brand-mark">{{ icon('bot') }}</span>
-        <span class="brand-name">{{ site_title }}</span><span class="cursor" aria-hidden="true"></span>
+        <span class="brand-mark">{{ icon('mark') }}</span>
+        <span class="brand-name">{{ site_title }}</span><span class="caret" aria-hidden="true"></span>
       </a>
       {# The five places a day is spent. On a phone they are the tabs along the bottom, where a
          thumb is; on a wider screen they sit in this bar. #}
@@ -70,7 +69,8 @@
       {% block content %}{% endblock %}
     </main>
     <footer class="foot">
-      <p>{{ icon('heart') }} A little less planning. A little more together.</p>
+      <span class="foot-mark">{{ icon('mark') }}{{ site_title }}</span>
+      <span>A little less planning. A little more together.</span>
     </footer>
   </body>
 </html>

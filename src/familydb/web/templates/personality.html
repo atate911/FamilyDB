@@ -2,8 +2,7 @@
 {% from "_ui.html" import icon, page_head %}
 {% block title %}Personality · {{ site_title }}{% endblock %}
 {% block content %}
-  <p class="back"><a href="{{ url_for('settings.show') }}">{{ icon('left') }}All settings</a></p>
-  {{ page_head('~/settings/personality', 'Personality and family') }}
+  {{ page_head('Personality and family', none, 'mark', [('Settings', url_for('settings.show'))]) }}
   {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
   {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
   <p class="muted small">
@@ -16,7 +15,7 @@
     <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
 
     <section class="panel">
-      <h2>{{ icon('bot') }}Who she is</h2>
+      <h2>{{ icon('mark') }}Who she is</h2>
       <div class="setting">
         <label for="p-persona">Personality</label>
         <select id="p-persona" name="persona">

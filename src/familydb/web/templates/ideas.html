@@ -2,7 +2,7 @@
 {% from "_ui.html" import icon, kind_label, page_head %}
 {% block title %}Ideas · {{ site_title }}{% endblock %}
 {% block content %}
-  {% call page_head('~/ideas', 'Ideas') %}
+  {% call page_head('Ideas', 'Places to go, things to try, and everything the family has mentioned.', 'idea') %}
     <a class="button" href="{{ url_for('web.new_idea') }}">{{ icon('plus') }}Add an idea</a>
   {% endcall %}
 
