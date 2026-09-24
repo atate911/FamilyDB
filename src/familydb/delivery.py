@@ -125,4 +125,6 @@ def run_deliveries(app: App) -> int:
                 "AND delivered_at IS NULL AND cancelled_at IS NULL ORDER BY id"
             )
         ]
-    return sum(deliver(app, message_id) for message_id in ids)
+    # A message held for the conversation under way waits for it (voice.hand_over).
+    now = app.clock.now()
+    return sum(deliver(app, i) for i in ids if not app.held.is_held(i, now))

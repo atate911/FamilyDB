@@ -106,6 +106,8 @@ generate nothing.
 
 Chat, the digest and retries speak as a persona, `familydb/personas/vera.md` by default: her name and how she talks, first in the cached prefix and ahead of the product spec, which decides what she does and wins where the two meet. It is how every reply sounds, so it is measured like any other part of the prefix ("who the assistant is" in `/status`, about 2,800 tokens) and checked with `evals/` when it changes. The lookup and discovery workers write for no reader and never carry it.
 
+What she says without being asked (reminders, "how was it?", lookup notes, the notices when she cannot answer) is not a model call at all: `voice.py` words each event from her lines (`personas/vera.lines.toml`) or the family's rewrite of them, so it costs nothing and arrives when the model is down or the day's limit is spent. The one place a model does word such an event is where it was already going to be asked: a reminder or follow-up that comes due while the family is talking is held for a moment and handed to the next chat turn, whose reply mentions it; a reply that forgets is given the written line.
+
 ## The gateway: one door, a declaration per kind of call
 
 Everything that wants an answer from a model asks `gateway.ask` for a kind of call, and brings

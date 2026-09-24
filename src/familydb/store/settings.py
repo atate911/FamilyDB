@@ -59,7 +59,7 @@ BEHAVIOUR = (
 SECRETS = ("anthropic_api_key", "openai_api_key", "gemini_api_key", "telegram_bot_token")
 # Who the assistant is and who the family are: long texts with a page of their own
 # (/settings/personality), logged as "rewritten" rather than word for word.
-PROFILE = ("persona", "persona_text", "about_family")
+PROFILE = ("persona", "persona_text", "about_family", "voice_lines")
 EDITABLE = frozenset(BEHAVIOUR) | frozenset(SECRETS) | frozenset(PROFILE)
 
 

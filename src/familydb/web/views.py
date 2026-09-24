@@ -416,7 +416,7 @@ def setting_text(value: str | None) -> str:
     return str(loaded)
 
 
-LONG_SETTINGS = frozenset({"persona_text", "about_family"})
+LONG_SETTINGS = frozenset({"persona_text", "about_family", "voice_lines"})
 
 
 def change_row(line: dict[str, Any], tz: ZoneInfo) -> dict[str, Any]:

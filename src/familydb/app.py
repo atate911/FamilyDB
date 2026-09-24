@@ -16,6 +16,7 @@ from familydb.clock import Clock, SystemClock
 from familydb.config import Settings, load_settings
 from familydb.store import db
 from familydb.tools import ToolRegistry, build_registry
+from familydb.voice import Holds
 
 log = logging.getLogger(__name__)
 
@@ -60,6 +61,8 @@ class App:
         self.channel_states: dict[str, str] = {}
         # Web discovery results per window, kept for a while (see suggest/discover.py).
         self.discover_cache: dict[str, Any] = {}
+        # Proactive messages waiting for the conversation under way to carry them (voice.py).
+        self.held = Holds()
         self.clock = clock or SystemClock(settings.tzinfo, southern=settings.southern_hemisphere)
         self._registry: ToolRegistry | None = None
 

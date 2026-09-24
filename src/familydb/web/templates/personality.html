@@ -52,6 +52,26 @@
       </div>
     </section>
 
+    <section class="panel">
+      <h2>What she says unasked</h2>
+      <p class="muted">
+        Reminders, "how was it?", notes after a lookup, and notices when she cannot answer are
+        written, not thought up, so they cost nothing and still arrive when the model is down.
+        Each box shows her line; type over it to use your own. A reminder or a follow-up that
+        comes due while you are talking to her is mentioned in her reply instead.
+      </p>
+      {% for line in said_lines %}
+        <div class="setting">
+          <label for="l-{{ line.event }}">{{ line.label }}</label>
+          <textarea id="l-{{ line.event }}" name="line_{{ line.event }}" rows="3"
+                    placeholder="{{ line.placeholder }}">{{ line.value }}</textarea>
+          <p class="muted hint">
+            {% if line.fields %}Can use {{ line.fields }}.{% else %}Takes no {names}.{% endif %}
+          </p>
+        </div>
+      {% endfor %}
+    </section>
+
     <div class="actions"><button type="submit">Save</button></div>
   </form>
 

@@ -13,6 +13,7 @@ cached, with each message; the page and `familydb debug cost` say what that come
 
 from __future__ import annotations
 
+import tomllib
 from functools import lru_cache
 from importlib import resources
 from typing import Any
@@ -37,6 +38,17 @@ def text_for(settings: Any) -> str:
     if settings.persona == NONE:
         return ""
     return settings.persona_text.strip() or load(settings.persona)
+
+
+@lru_cache(maxsize=8)
+def lines(name: str) -> dict[str, str]:
+    """The persona's own wording for what she says unasked (`<name>.lines.toml`), by event."""
+    if not name or name == NONE:
+        return {}
+    source = resources.files(__name__) / f"{name}.lines.toml"
+    if not source.is_file():
+        return {}
+    return {str(k): str(v) for k, v in tomllib.loads(source.read_text("utf-8")).items()}
 
 
 @lru_cache(maxsize=8)

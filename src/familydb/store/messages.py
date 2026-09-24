@@ -140,6 +140,24 @@ def claimed_in_chat(conn: sqlite3.Connection, chat_id: str, *, now: str) -> bool
     return row is not None
 
 
+def last_inbound_at(conn: sqlite3.Connection, channel: str, chat_id: str) -> str | None:
+    """When the family last wrote in this chat, or None."""
+    row = conn.execute(
+        "SELECT max(received_at) AS at FROM messages WHERE channel = ? AND chat_id = ? "
+        "AND direction = 'in'",
+        (channel, chat_id),
+    ).fetchone()
+    return row["at"] if row else None
+
+
+def mark_delivered(conn: sqlite3.Connection, message_ids: list[int], *, now: str) -> None:
+    """Carried by another message (a reply that mentioned it), so there is nothing to send."""
+    conn.executemany(
+        "UPDATE messages SET delivered_at = ? WHERE id = ? AND delivered_at IS NULL",
+        [(now, message_id) for message_id in message_ids],
+    )
+
+
 def member_is_being_answered(conn: sqlite3.Connection, member_id: int, *, now: str) -> bool:
     """Whether a worker holds a live claim on one of this member's messages."""
     row = conn.execute(
