@@ -157,3 +157,19 @@ def _ctx(settings, clock, conn, family, geocoder=None):
 
 def _reasons(result, idea_id):
     return next(c.reasons for c in result.candidates if c.idea_id == idea_id)
+
+
+def test_a_position_is_deleted_after_a_day_even_if_nobody_shares_again(
+    full_settings, clock, conn, family
+) -> None:
+    from familydb.jobs.scheduler import job_specs
+
+    app = App(full_settings, clock, geocoder=Places())
+    _share(app, conn)
+    clock.advance(timedelta(hours=23))
+    assert whereabouts.forget_old(app) == 0  # still within its day
+    clock.advance(timedelta(hours=2))
+    assert whereabouts.forget_old(app) == 1
+    assert locations.get(conn, family["sam"].id) is None
+    # and the scheduler runs it on its own, without anyone sharing
+    assert any(spec.func is whereabouts.forget_old for spec in job_specs(app))

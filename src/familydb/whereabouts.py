@@ -10,6 +10,7 @@ so the chat model and the discovery worker are told where the family is, without
 from __future__ import annotations
 
 import sqlite3
+from contextlib import closing
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -24,7 +25,8 @@ from familydb.store.locations import SharedLocation
 
 # Long enough for an afternoon out; after that "here" is probably somewhere else.
 FRESH = timedelta(hours=3)
-# Kept no longer than a day, then deleted.
+# Kept no longer than a day, then deleted: by the next share, or by `forget_old` on the
+# scheduler's round (a few minutes over the day at most, while the service runs).
 KEEP = timedelta(hours=24)
 
 # Closer than this to the last named position, the name is kept rather than looked up again.
@@ -66,6 +68,12 @@ def note(app: App, conn: sqlite3.Connection, member_id: int, lat: float, lon: fl
     label = _name(app, locations.get(conn, member_id), lat, lon)
     with transaction(conn):
         _keep(conn, member_id, lat, lon, True, label, now)
+
+
+def forget_old(app: App) -> int:
+    """Delete every position older than `KEEP`, whether or not anyone has shared since."""
+    with closing(app.connect()) as conn, transaction(conn):
+        return locations.forget_before(conn, utc_iso(app.clock.now() - KEEP))
 
 
 def shared_text(label: str | None, settings: Any) -> str:

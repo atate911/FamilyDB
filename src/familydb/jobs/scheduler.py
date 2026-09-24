@@ -28,11 +28,14 @@ from familydb.jobs.follow_ups import run_follow_ups
 from familydb.jobs.reminders import run_reminders
 from familydb.jobs.retry_failed import run_retries
 from familydb.jobs.weekend_digest import run_digest
+from familydb.whereabouts import forget_old
 
 log = logging.getLogger(__name__)
 
 # The Telegram sender registers once polling starts, a moment after the scheduler; wait for it.
 CATCH_UP_DELAY_SECONDS = 60
+# How often shared locations past their day are deleted. One DELETE on a tiny table.
+FORGET_INTERVAL_MINUTES = 10
 # How often to look for a settings change. One query against a small table, no model call.
 SETTINGS_INTERVAL_MINUTES = 5
 
@@ -55,6 +58,12 @@ def job_specs(app: App) -> list[JobSpec]:
     zone = settings.tzinfo
     return [
         JobSpec("reminders", "deliver task reminders", run_reminders, IntervalTrigger(minutes=1)),
+        JobSpec(
+            "forget_locations",
+            "delete shared locations after a day",
+            forget_old,
+            IntervalTrigger(minutes=FORGET_INTERVAL_MINUTES),
+        ),
         JobSpec(
             "retry_failed",
             "retry failed messages",
