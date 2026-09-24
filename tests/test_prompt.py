@@ -158,3 +158,18 @@ def test_the_request_is_the_same_one_this_api_always_received(conn, settings, fa
         "Today is Sunday 20 September 2026, 14:03 (America/Vancouver), autumn.",
         "[Sam] what now?",
     ]
+
+
+def test_the_ideas_header_names_the_columns_the_lines_have(conn, settings, family) -> None:
+    from familydb.agent.prompt import IDEAS_HEADER
+
+    # A header naming a column the lines no longer carry tells the model about data it lacks.
+    assert "details" not in IDEAS_HEADER
+
+
+def test_the_discovery_worker_is_told_to_use_what_its_request_carries() -> None:
+    from familydb.agent.prompt import load_prompt
+
+    # suggest/discover.py writes these lines into the request; the prompt must say what they mean.
+    text = load_prompt("discover")
+    assert "Looking for:" in text and "its hours" in text
