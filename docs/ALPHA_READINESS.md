@@ -153,8 +153,8 @@ migration, so upgrading does not resend old conversations. Fresh outgoing messag
 12. On `/settings/personality`, rewrite one of her lines and add a sentence to "About the
     family"; the next reminder or follow-up should use the new line, and the next answer should
     know the sentence. Choosing no persona should leave the replies plain.
-13. With the chosen model's key in the environment, run `uv run python -m evals` (it stops at
-    $0.50 unless `--budget` says otherwise) and read what failed before the family does.
+13. With the chosen model's key in the environment, run `uv run python -m evals` (it spends at
+    most $0.50, and the one call that crosses it, unless `--budget` says otherwise) and read what failed before the family does.
 
 After a week of family use, read `/status` and `familydb debug cost` by kind before changing
 anything for cost: at `gpt-6-luna` prices the chat prefix is about $0.0006 a message and each web

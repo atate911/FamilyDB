@@ -96,7 +96,7 @@ def universal(run: Run) -> list[str]:
     return wrong
 
 
-def settings_for(base: Settings, folder: Path) -> Settings:
+def settings_for(base: Settings, folder: Path, *, limit: float = 1.0) -> Settings:
     token = folder / "google_token.json"
     token.write_text("{}")
     return base.model_copy(
@@ -111,16 +111,20 @@ def settings_for(base: Settings, folder: Path) -> Settings:
             # No web searches: they cost, and what the web says today is not what it says
             # tomorrow. Lookups and discovery are for their own cases, later.
             "web_tools_enabled": False,
-            "daily_spend_limit": 1.0,
+            # The bot's own limit, checked before every call: what is left of the run's budget.
+            "daily_spend_limit": limit,
             "digest_chat_id": None,
         }
     )
 
 
-def run_case(case: Case, base: Settings, *, api: Any = None) -> Run:
-    """One case from a fresh household. `api` stands in for the vendor, for testing this file."""
+def run_case(case: Case, base: Settings, *, api: Any = None, limit: float = 1.0) -> Run:
+    """One case from a fresh household, spending at most `limit` (and the one call that crosses
+    it). `api` stands in for the vendor, for testing this file."""
+    if limit <= 0:
+        raise ValueError("a limit of 0 would turn the spending limit off")
     with tempfile.TemporaryDirectory(prefix="familydb-eval-") as tmp:
-        settings = settings_for(base, Path(tmp))
+        settings = settings_for(base, Path(tmp), limit=limit)
         calendar = FakeCalendar(TZ)
         calendar_events(calendar)
         app = App(
