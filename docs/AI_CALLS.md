@@ -91,11 +91,11 @@ Context is built in three layers, and every piece of information belongs to exac
 
 | Kind | Trigger | Model | Sees | May do | Returns |
 |---|---|---|---|---|---|
-| Chat | a family message (Telegram, page, console) | chat model | prompt, family, up to 150 ideas in the prefix; date, sender, up to 20 messages of the last 6 hours, the newest within 6,000 characters | 15 chat tools | a reply; tool writes |
+| Chat | a family message (Telegram, page, console) | chat model | persona, prompt, family, up to 150 ideas in the prefix; date, sender, a recently shared location, anything due to be carried, up to 20 messages of the last 6 hours, the newest within 6,000 characters | 18 chat tools | a reply; tool writes |
 | Digest | the weekly schedule, or catch-up after a restart | chat model | the chat context, with a fixed question | the chat tools | a reply to the digest chat |
 | Retry | every 5 minutes, for a failed message, 3 times at most; never after running out of steps | chat model | the chat context, plus which writes already ran | the chat tools | a reply |
 | Enrich | every 2 minutes, up to 3 pending ideas; a home idea with no place or link is skipped in code | worker model | worker prompt, home area, the idea and what was saved before | web search (3), `save_place`, `skip_place` | a place record |
-| Discover | a `suggest` call, cached 12 hours | worker model | worker prompt, home area, the window and the question | web search (4), `report_finds` | up to 6 finds |
+| Discover | a `suggest` call, cached 12 hours by window, constraints and topic | worker model | worker prompt, home area and where they are, the window, its hours, the constraints and topic, never the question's wording | web search (4), `report_finds` | up to 6 finds |
 
 All of them go through one door, `agent/gateway.ask`, which runs the loop
 (`agent/loop.run_turn`): the spending limit is checked before each call, and each call is
@@ -120,10 +120,11 @@ purpose         what it is for, in words, as the cost reports say it
 surface         which model setting answers: the chat model or the lookup model
 prompt          which prompt file ("system" also brings the family and the idea list)
 tools           the fixed tool list (None: every chat tool)
-hand_back       the tools whose success is a worker's result
+hand_back       the tools whose success is a worker's result, and ends its turn
 web_searches    the cap on hosted search; none means no web at all
 iterations      the setting that caps model calls in one turn
 effort          the setting naming the reasoning effort
+max_tokens      the output cap, thinking included (4,000 for workers)
 ```
 
 What it gives now:
@@ -136,10 +137,9 @@ What it gives now:
   checks each declaration is whole: its prompt exists, its tools exist, a worker's hand-back is
   among its tools, and only workers get the web.
 
-Still to come in the declaration, each as its own measured change: an output limit and a
-hand-back that ends the turn for workers, the gate each kind needs before it runs (callers
-check a key and the spending limit themselves today), per-kind retry rules, and a model that a
-kind may escalate to.
+Still to come in the declaration, each as its own measured change: the gate each kind needs
+before it runs (callers check a key themselves today, and the loop the spending limit), per-kind
+retry rules, and a model that a kind may escalate to.
 
 ## The composer: what goes in, part by part
 
@@ -205,10 +205,10 @@ for effort, and each should be measured before and after.
    again. Up to 150 lines go to every message whether they bear on it or not. Moving the list
    towards layer 2 (selected under a budget) or keeping only stable fields in the prefix is the
    largest structural saving, and it is where memory retrieval will sit too.
-3. **Discovery's cache rarely hits.** Its key includes the question's wording
-   (`suggest/discover.py`), so "what's on this weekend" and "anything fun Saturday" search twice.
-   Keying on the window and the constraints would let the digest and the questions after it share
-   one search, as the module's docstring intends.
+3. **Discovery's cache rarely hits.** Now done: the worker is asked from the window, its hours,
+   the constraints and the topic, never the question's wording, and the cache is keyed on that
+   request (`suggest/discover.py`), so "what's on this weekend" and "anything fun Saturday"
+   share one search, and so do the digest and the questions after it.
 4. **Some ideas need no lookup at all.** Done for the clear case: `jobs/enrich.needs_lookup`
    skips a `home` idea with no location, link or place without a call. A vague idea of another
    kind still goes to the worker, since a title alone can name a place.

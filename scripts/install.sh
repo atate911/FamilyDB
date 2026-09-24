@@ -37,9 +37,9 @@ FamilyDB installer
 
   scripts/install.sh [options]
 
-It asks two things: the domain name for the web page, if it has one, and your name as the
-first family member. Everything else (the model and its key, Telegram, Google Calendar, where
-home is, what it may spend) is set on the web page once it is running.
+It asks one thing: the domain name for the web page, if it has one. Everything else (yourself
+and the family, the model and its key, Telegram, Google Calendar, where home is, what it may
+spend) is set on the web page once it is running.
 
 Options
   --mode docker|venv   How to run it. Default: docker when available, else a virtualenv.
