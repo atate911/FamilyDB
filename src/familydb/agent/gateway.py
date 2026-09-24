@@ -43,6 +43,7 @@ class CallSpec:
     web_searches: int | None = None  # hosted web search, capped; None means no web at all
     iterations: str = "agent_max_iterations"  # the setting that caps model calls in one turn
     effort: str | None = None  # the setting naming the effort; None is the provider's default
+    max_tokens: int | None = None  # the output cap, thinking included; None: max_output_tokens
 
     @property
     def is_worker(self) -> bool:
@@ -50,7 +51,15 @@ class CallSpec:
 
 
 _CHAT = {"surface": "chat", "prompt": "system", "tools": None}
-_WORKER = {"surface": "worker", "iterations": "worker_max_iterations", "effort": "worker_effort"}
+# A worker's only real output is one hand-back call, a few hundred tokens. The cap bounds a
+# runaway turn and leaves room for the thinking every vendor counts against it at low effort.
+WORKER_MAX_TOKENS = 4000
+_WORKER = {
+    "surface": "worker",
+    "iterations": "worker_max_iterations",
+    "effort": "worker_effort",
+    "max_tokens": WORKER_MAX_TOKENS,
+}
 
 KINDS: dict[str, CallSpec] = {
     spec.kind: spec
@@ -114,8 +123,9 @@ def build_request(
 
     `familydb debug prompt` prints it without sending, so what it shows is what goes.
     """
-    return compose.compose(
-        spec(kind),
+    call = spec(kind)
+    composed = compose.compose(
+        call,
         conn=conn,
         settings=settings,
         registry=registry,
@@ -124,6 +134,10 @@ def build_request(
         history=history,
         user_location=user_location,
     )
+    if call.max_tokens is not None:
+        # Never above the ceiling the family set for every call.
+        composed.request.max_tokens = min(call.max_tokens, settings.max_output_tokens)
+    return composed
 
 
 def ask(
@@ -176,8 +190,10 @@ def ask(
         max_iterations=getattr(settings, call.iterations),
         model=request.model,
         effort=request.effort,
+        max_tokens=request.max_tokens,
         kind=call.kind,
         sections=composed.sections,
+        final_tools=frozenset(call.hand_back),
     )
 
 

@@ -9,9 +9,14 @@ from familydb.clock import Clock
 from familydb.config import Settings
 from familydb.store import places
 from familydb.store.places import Place
-from familydb.suggest.shortlist import longest_free_span
-from familydb.suggest.types import Candidate, Checks, Constraints, Context, Shortlisted
-from familydb.tools.gcal import BLOCKS
+from familydb.suggest.types import (
+    Candidate,
+    Checks,
+    Constraints,
+    Context,
+    Shortlisted,
+    clock,
+)
 from familydb.tools.places import checked_days_ago, format_ranges, is_stale, open_on
 
 MIN_VISIT_MINUTES = 60
@@ -22,24 +27,17 @@ def _minutes(value: str) -> int:
     return int(hours) * 60 + int(minutes)
 
 
-def overlap_minutes(ranges: list[dict[str, str]], free: list[str], travel: int = 0) -> int:
-    """Longest continuous opening within free time, allowing travel at both ends."""
-    blocks: list[tuple[int, int]] = []
-    for name, start, end in BLOCKS:
-        if name not in free:
-            continue
-        left, right = start.hour * 60 + start.minute, end.hour * 60 + end.minute
-        if blocks and blocks[-1][1] == left:
-            blocks[-1] = (blocks[-1][0], right)
-        else:
-            blocks.append((left, right))
+def doable(
+    ranges: list[dict[str, str]], spans: list[tuple[int, int]], travel: int = 0
+) -> list[tuple[int, int]]:
+    """When a place is open and the family is free to be there, allowing travel at both ends."""
     intervals = []
     for entry in ranges:
         open_at = _minutes(entry["open"])
         close_at = _minutes(entry["close"])
         if close_at <= open_at:
             close_at = 24 * 60
-        for left, right in blocks:
+        for left, right in spans:
             a, b = max(open_at, left + travel), min(close_at, right - travel)
             if a < b:
                 intervals.append((a, b))
@@ -49,7 +47,14 @@ def overlap_minutes(ranges: list[dict[str, str]], free: list[str], travel: int =
             merged[-1] = (merged[-1][0], max(b, merged[-1][1]))
         else:
             merged.append((a, b))
-    return max((b - a for a, b in merged), default=0)
+    return merged
+
+
+def overlap_minutes(
+    ranges: list[dict[str, str]], spans: list[tuple[int, int]], travel: int = 0
+) -> int:
+    """Longest continuous opening within free time, allowing travel at both ends."""
+    return max((b - a for a, b in doable(ranges, spans, travel)), default=0)
 
 
 def _hours_check(
@@ -68,6 +73,7 @@ def _hours_check(
     partial = False
     soft = False
     hours_text = None
+    today_text = None
     for day in fits:
         status, ranges = open_on(place, day)
         if status == "closed":
@@ -77,12 +83,15 @@ def _hours_check(
             soft = True
             continue
         day_context = context.day(day)
-        free = day_context.free if day_context else []
-        if day_context is None or not day_context.free_known:
+        spans = day_context.spans if day_context else []
+        need = item.idea.duration_min or item.idea.duration_max or MIN_VISIT_MINUTES
+        stretches = doable(ranges, spans, place.travel_minutes or 0)
+        # Without a calendar the day's free time is all of the time asked about, so the hours
+        # are still held to it: "open now" must not offer a café that closed at noon.
+        if day_context is None:
             open_days.append(day)
         else:
-            overlap = overlap_minutes(ranges, free, place.travel_minutes or 0)
-            need = item.idea.duration_min or item.idea.duration_max or MIN_VISIT_MINUTES
+            overlap = max((b - a for a, b in stretches), default=0)
             if overlap >= need:
                 open_days.append(day)
             elif overlap > 0:
@@ -91,6 +100,12 @@ def _hours_check(
                 continue
         if hours_text is None:
             hours_text = format_ranges(ranges)
+        if day == context.today and today_text is None:
+            # Asked about today: say when they could actually be there, not the posted hours.
+            usable = [(a, b) for a, b in stretches if b - a >= need]
+            if usable:
+                a, b = usable[0]
+                today_text = f"can go {clock(a)}-{clock(b)} today"
     if not open_days:
         checks.open = "closed"
         reasons.append(
@@ -101,7 +116,9 @@ def _hours_check(
         return [], True, False
     checks.open = "open"
     checks.hours = hours_text
-    if hours_text:
+    if today_text and open_days[0] == context.today:
+        reasons.append(today_text)
+    elif hours_text:
         reasons.append(f"open {open_days[0]:%A} {hours_text}")
     if partial:
         soft = True
@@ -174,7 +191,7 @@ def evaluate(
                 reasons.append("further than asked for")
             elif fits and context.window is not None:
                 spans = [
-                    longest_free_span(d.free)
+                    d.longest
                     for d in (context.day(f) for f in fits)
                     if d is not None and d.free_known
                 ]

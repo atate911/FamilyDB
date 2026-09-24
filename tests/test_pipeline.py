@@ -165,7 +165,7 @@ def test_suggest_turn_runs_discovery_inside_the_chat_turn(settings, thursday_clo
             ],
             stop_reason="tool_use",
         ),
-        *fakes.discover_script([find]),  # the nested worker turn's three responses
+        *fakes.discover_script([find]),  # the nested worker turn, ending at its hand-back
         fakes.message([fakes.text("Nothing on the list yet, but there is a harvest festival.")]),
     )
     reply = handle_incoming(
@@ -174,16 +174,16 @@ def test_suggest_turn_runs_discovery_inside_the_chat_turn(settings, thursday_clo
     assert reply.status == "ok" and reply.text.startswith("Nothing on the list yet")
     assert [a["tool"] for a in reply.actions] == ["suggest"]
     # The worker's requests sit between the two chat requests and use the discovery prompt.
-    assert len(api.requests) == 5
+    assert len(api.requests) == 4
     assert api.requests[1]["system"][0]["text"].startswith("You are the discovery worker")
     assert [t["name"] for t in api.requests[1]["tools"]] == [
         "report_finds",
         "web_search",
         "web_fetch",
     ]
-    assert api.requests[4]["system"][0]["text"].startswith("You are FamilyDB")
+    assert api.requests[3]["system"][0]["text"].startswith("You are FamilyDB")
     # The suggest result carried the find to the chat model, and the cache is warm.
-    tool_result = api.requests[4]["messages"][-1]["content"][0]
+    tool_result = api.requests[3]["messages"][-1]["content"][0]
     assert tool_result["type"] == "tool_result"
     data = json.loads(tool_result["content"])
     assert data["web_finds"][0]["url"] == find["url"] and data["skipped_checks"] == [
@@ -191,10 +191,10 @@ def test_suggest_turn_runs_discovery_inside_the_chat_turn(settings, thursday_clo
         "weather not configured",
     ]
     assert len(app.discover_cache) == 1
-    # Everything is audited under the one inbound message: 5 model calls, 2 tool calls.
+    # Everything is audited under the one inbound message: 4 model calls, 2 tool calls.
     logged = calls.tool_calls_for_message(conn, reply.in_message_id)
     assert [t["tool_name"] for t in logged] == ["report_finds", "suggest"]
-    assert len(calls.recent_llm_calls(conn)) == 5
+    assert len(calls.recent_llm_calls(conn)) == 4
 
 
 def test_synthetic_messages_are_stored_deduped_and_fail_quietly(settings, clock, conn, family):
@@ -219,3 +219,31 @@ def test_an_unknown_sender_is_listed_for_the_admin_without_what_they_said(
     row = conn.execute("SELECT * FROM knocks").fetchone()
     assert row["channel_user_id"] == "5555" and row["name"] == "Robin @robin"
     assert "secret words" not in " ".join(str(value) for value in tuple(row))
+
+
+def test_a_turn_out_of_steps_gives_up_and_says_so(settings, clock, conn, family) -> None:
+    from familydb.jobs.retry_failed import run_retries
+    from familydb.pipeline import GAVE_UP_REPLY
+
+    app = _app(settings.model_copy(update={"agent_max_iterations": 2}), clock)
+    looping = fakes.message([fakes.tool_use("tu", "search_ideas", {})], stop_reason="tool_use")
+    api = fakes.FakeMessagesAPI(looping, looping, looping, looping)
+    reply = handle_incoming(app, _telegram("find me something", "77"), api=api, conn=conn)
+    assert reply.status == "failed" and reply.text == GAVE_UP_REPLY
+    inbound = messages.get(conn, reply.in_message_id)
+    assert inbound.give_up and inbound.error == "max_iterations"
+    assert messages.get(conn, reply.out_message_id).text == GAVE_UP_REPLY
+    # The retry job leaves it alone: no second run at the same cost.
+    assert run_retries(app, api=api) == 0 and len(api.requests) == 2
+
+
+def test_a_turn_out_of_steps_reports_what_it_saved(settings, clock, conn, family) -> None:
+    app = _app(settings.model_copy(update={"agent_max_iterations": 1}), clock)
+    api = fakes.FakeMessagesAPI(
+        fakes.message(
+            [fakes.tool_use("tu_1", "add_idea", {"title": "Ramen place", "kind": "restaurant"})],
+            stop_reason="tool_use",
+        )
+    )
+    reply = handle_incoming(app, _telegram("ramen", "78"), api=api, conn=conn)
+    assert reply.text.startswith("Saved idea #1.") and "ran out of steps" in reply.text

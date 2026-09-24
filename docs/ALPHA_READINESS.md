@@ -11,13 +11,17 @@ requests, and a Linux installation still need an end-to-end smoke test before fa
 - A spending-limit interruption after successful writes now returns a local summary of the
   completed operations and their record numbers. The message is completed rather than retried;
   any remaining work must be requested separately after reviewing what was saved.
-- Paid requests are serialized per database across threads and processes, from the budget check
-  through cost recording. The lock is released before tools run, so nested discovery can proceed.
-  A process crash releases the OS lock automatically. One accounted request may cross the
-  estimated limit; unknown charges from timeouts, vendor retries, or a crash before accounting
-  remain outside that guarantee. This is not a provider-enforced billing cap.
-- Browser calendar forms reuse a durable operation identity after a restart or lost response.
-  Other forms retain the in-memory double-submit guard; it is not a durable operation ledger.
+- Before each paid request, the budget check and a hold on that request's estimated cost happen
+  in one short write transaction, so two processes cannot spend the same remaining allowance.
+  Nothing is locked while the request is on the network, so a slow lookup does not hold up
+  chat; every vendor client times out after two minutes. A hold left by a crash stops counting
+  after 30 minutes. One accounted request may cross the estimated limit; unknown charges from
+  timeouts, vendor retries, or a crash before accounting remain outside that guarantee. This is
+  not a provider-enforced billing cap. (The first version held an OS lock over every request,
+  which made all paid calls wait on each other; it was replaced.)
+- Browser calendar forms reuse a durable operation identity after a restart or lost response,
+  and a form drawn again after a lost reply from Google takes over the unfinished attempt
+  rather than creating a second event. Other forms retain the in-memory double-submit guard.
 - Idea edits carry a content revision that is checked inside the update transaction, including
   when two saves arrive in the same second. Older forms must be reloaded.
 - Changing the timezone rebuilds the application clock immediately, without a restart.
@@ -134,6 +138,20 @@ migration, so upgrading does not resend old conversations. Fresh outgoing messag
 7. Reboot the Linux host and verify startup, persistent data, logs, dashboard access, and backups.
    Keep the dashboard private or behind correctly configured HTTPS. Keep an off-host backup and
    a separate recovery copy of `.env` and Google credentials.
+8. With something on the test calendar this afternoon, ask "I'm bored, what can we do now?",
+   "anything for tonight?" and "what about Saturday morning?". Check the free times it reports
+   leave out the event and the part of today that has gone, and that an option says when it can
+   start ("can go 16:10-17:55 today"). Ask two differently worded weekend questions with
+   discovery on and check `/status` shows one discovery search, not two.
+9. Add a restaurant idea and watch its lookup: `/status` should show one fewer call per lookup
+   than before (the turn ends at `save_place`), and a "home" idea with no place is skipped with
+   no call at all. Send a web chat question while a lookup runs: it must not wait for it.
+10. Set a reminder a few minutes ahead, stop the service past its time, start it again: the
+    reminder arrives once and says when it was due.
+
+After a week of family use, read `/status` and `familydb debug cost` by kind before changing
+anything for cost: at `gpt-6-luna` prices the chat prefix is about $0.0006 a message and each web
+search $0.01, so lookups and discovery, not chat, are where the money goes.
 
 ## Intentional limits
 
@@ -145,8 +163,9 @@ Calendar creation deduplicates the same normalized event intent within an inboun
 A separate new user message can intentionally create another event. Significantly changed event
 arguments represent a different intent; the operation log is not a semantic duplicate detector.
 
-Suggestion availability still uses coarse morning/afternoon/evening blocks and estimated travel.
-It may omit a short usable gap. It does not establish actual reservations or ticket availability.
+Suggestion availability uses the calendar's real free stretches in minutes, but travel is a
+straight-line estimate from home, not from where the family is when they ask, and the forecast is
+per day, not per hour. It does not establish actual reservations or ticket availability.
 
 The daily spending limit is an estimate from a price table checked by hand in September 2026,
 not the bill. The model IDs `gpt-6-luna` and `gemini-3.8-flash` were taken from published

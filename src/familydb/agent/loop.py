@@ -7,12 +7,13 @@ are logged the same way whoever served it.
 
 from __future__ import annotations
 
+import json
 import logging
 import time
 from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol
 
-from familydb.agent import admission, spending
+from familydb.agent import spending
 from familydb.agent.compose import exchange_chars
 from familydb.agent.providers import prices
 from familydb.agent.providers.base import (
@@ -81,6 +82,7 @@ def run_turn(
     fallback: Provider | None = None,
     kind: str | None = None,
     sections: dict[str, int] | None = None,
+    final_tools: frozenset[str] = frozenset(),
 ) -> TurnResult:
     """Drive one inbound message to a reply.
 
@@ -91,6 +93,10 @@ def run_turn(
     With a `fallback` provider, a first call the chosen one cannot take is tried there instead.
     Only the first call: once a tool has run, starting again elsewhere would repeat whatever it
     did, and a half-finished turn is the retry job's business rather than this one's.
+
+    `final_tools` are the tools whose success is the turn's result (a worker's hand-back): once
+    one succeeds, and nothing else in that step failed, the turn ends there rather than paying
+    for another call only for the model to say it is done. A failed one goes back to the model.
     """
     request = TurnRequest(
         system=system,
@@ -115,55 +121,9 @@ def run_turn(
 
     for iteration in range(1, limit + 1):
         try:
-            with admission.locked(ctx.conn):
-                spending.check(ctx.conn, settings, ctx.clock.now())
-                started = time.monotonic()
-                try:
-                    reply = active.send(request)
-                except AgentError as exc:
-                    switchable = fallback is not None and active is not fallback
-                    if not (switchable and first_call_only(request) and worth_switching(exc)):
-                        raise
-                    log.warning(
-                        "%s could not take this (%s); asking %s", active.name, exc, fallback.name
-                    )
-                    active = fallback
-                    request.model = active.model_for(surface)
-                    try:
-                        reply = active.send(request)
-                    except AgentError as spare_exc:
-                        # Preserve a retryable primary failure even if the spare says 400.
-                        log.warning("%s could not take it either: %s", active.name, spare_exc)
-                        raise exc from spare_exc
-                duration_ms = int((time.monotonic() - started) * 1000)
-
-                for key in USAGE_KEYS:
-                    totals[key] += reply.usage.get(key) or 0
-                asked = request.model or active.model_for(surface)
-                dollars, listed = prices.cost(
-                    active.name,
-                    reply.model or asked,
-                    reply.usage,
-                    cache_ttl=settings.anthropic_cache_ttl,
-                )
-                with transaction(ctx.conn):
-                    calls.log_llm_call(
-                        ctx.conn,
-                        message_id=ctx.message_id,
-                        iteration=iteration,
-                        model=asked,
-                        served_model=reply.model,
-                        request_id=reply.request_id,
-                        stop_reason=reply.stop,
-                        usage=reply.usage,
-                        duration_ms=duration_ms,
-                        now=ctx.now_iso(),
-                        provider=active.name,
-                        cost_usd=dollars,
-                        cost_estimated=not listed,
-                        kind=kind,
-                        sections=_sizes(sections, request),
-                    )
+            held = spending.admit(
+                ctx.conn, settings, ctx.clock.now(), _estimate(request, active, surface, settings)
+            )
         except spending.SpendingLimitReached as exc:
             written = {spec.name for spec in registry.specs() if spec.writes}
             completed = [a for a in actions if a.get("ok") and a.get("tool") in written]
@@ -178,6 +138,66 @@ def run_turn(
                 error=str(exc),
                 provider=active.name,
             )
+        started = time.monotonic()
+        try:
+            try:
+                reply = active.send(request)
+            except AgentError as exc:
+                switchable = fallback is not None and active is not fallback
+                if not (switchable and first_call_only(request) and worth_switching(exc)):
+                    raise
+                log.warning(
+                    "%s could not take this (%s); asking %s", active.name, exc, fallback.name
+                )
+                active = fallback
+                request.model = active.model_for(surface)
+                spending.adjust(
+                    ctx.conn,
+                    settings,
+                    ctx.clock.now(),
+                    held,
+                    _estimate(request, active, surface, settings),
+                )
+                try:
+                    reply = active.send(request)
+                except AgentError as spare_exc:
+                    # Preserve a retryable primary failure even if the spare says 400.
+                    log.warning("%s could not take it either: %s", active.name, spare_exc)
+                    raise exc from spare_exc
+        except BaseException:
+            with transaction(ctx.conn):
+                spending.settle(ctx.conn, held, ctx.clock.now())
+            raise
+        duration_ms = int((time.monotonic() - started) * 1000)
+
+        for key in USAGE_KEYS:
+            totals[key] += reply.usage.get(key) or 0
+        asked = request.model or active.model_for(surface)
+        dollars, listed = prices.cost(
+            active.name,
+            reply.model or asked,
+            reply.usage,
+            cache_ttl=settings.anthropic_cache_ttl,
+        )
+        with transaction(ctx.conn):
+            calls.log_llm_call(
+                ctx.conn,
+                message_id=ctx.message_id,
+                iteration=iteration,
+                model=asked,
+                served_model=reply.model,
+                request_id=reply.request_id,
+                stop_reason=reply.stop,
+                usage=reply.usage,
+                duration_ms=duration_ms,
+                now=ctx.now_iso(),
+                provider=active.name,
+                cost_usd=dollars,
+                cost_estimated=not listed,
+                kind=kind,
+                sections=_sizes(sections, request),
+            )
+            spending.settle(ctx.conn, held, ctx.clock.now())
 
         if reply.stop == "refusal":
             log.warning("%s refused the request (category=%s)", active.name, reply.refusal)
@@ -227,9 +247,37 @@ def run_turn(
                     is_error=result.is_error,
                 )
             )
+        if _handed_back(exchange, final_tools):
+            return TurnResult("ok", reply.text, actions, iteration, totals, provider=active.name)
 
     return TurnResult(
         "failed", "", actions, limit, totals, error="max_iterations", provider=active.name
+    )
+
+
+def _handed_back(exchange: Exchange, final_tools: frozenset[str]) -> bool:
+    """Whether this step delivered the turn's result: a final tool ran and nothing failed."""
+    outcomes = exchange.outcomes
+    if any(outcome.is_error for outcome in outcomes):
+        return False
+    return any(outcome.name in final_tools for outcome in outcomes)
+
+
+def _estimate(request: TurnRequest, provider: Provider, surface: str, settings: Settings) -> float:
+    """The most this call could cost, held against the limit while it is in flight."""
+    chars = (
+        sum(len(block.text) for block in request.system)
+        + sum(len(message.text) for message in request.messages)
+        + sum(len(tool.description) + len(json.dumps(tool.schema)) for tool in request.tools)
+        + exchange_chars(request.exchanges)
+    )
+    return spending.estimate(
+        provider.name,
+        request.model or provider.model_for(surface),
+        input_chars=chars,
+        max_tokens=request.max_tokens or settings.max_output_tokens,
+        searches=(request.web.max_uses or 0) if request.web else 0,
+        cache_ttl=settings.anthropic_cache_ttl,
     )
 
 

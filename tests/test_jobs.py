@@ -259,8 +259,7 @@ def test_enrichment_skipped_failed_and_deferred(settings, clock, conn, family) -
                 )
             ],
             stop_reason="tool_use",
-        ),
-        fakes.message([fakes.text("Skipped.")]),
+        ),  # the hand-back ends the turn: no further call to say "skipped"
         fakes.message([fakes.text("I could not find it, sorry.")]),  # no hand-back
         fakes.rate_limit_error(),
     )
@@ -691,3 +690,23 @@ def test_a_schedule_on_another_clock_is_a_different_schedule() -> None:
     there = CronTrigger(hour=18, timezone=ZoneInfo("Europe/London"))
     assert same_schedule(here, again)
     assert not same_schedule(here, there)
+
+
+def test_home_ideas_with_nothing_to_look_up_are_skipped_without_a_call(
+    settings, clock, conn, family
+) -> None:
+    from familydb.jobs.enrich import NO_LOOKUP_NOTE, needs_lookup
+
+    app = _web_app(settings, clock)
+    chores, _ = _captured_idea(conn, family, title="Paint the fence")
+    shop, _ = _captured_idea(conn, family, title="New shelves")
+    with db.transaction(conn):
+        ideas.update(conn, chores.id, {"kind": "home"})
+        ideas.update(conn, shop.id, {"kind": "home", "location_name": "IKEA Portland"})
+    assert not needs_lookup(ideas.get(conn, chores.id))
+    assert needs_lookup(ideas.get(conn, shop.id))  # a named place is still looked up
+    api = fakes.FakeMessagesAPI(fakes.message([fakes.text("nothing")]))
+    counts = run_enrichment(app, api=api, idea_id=chores.id)
+    assert counts["skipped"] == 1 and api.requests == []
+    skipped = ideas.get(conn, chores.id)
+    assert skipped.enrichment == "skipped" and skipped.enrichment_note == NO_LOOKUP_NOTE

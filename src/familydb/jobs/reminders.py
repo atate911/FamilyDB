@@ -1,6 +1,11 @@
-"""Turn due reminders into durable outgoing messages. No model calls."""
+"""Turn due reminders into durable outgoing messages. No model calls.
+
+This job sends what it queues. One that could not go is the retry job's, on its own interval
+(`run_deliveries`), rather than tried again here every minute.
+"""
 
 from contextlib import closing
+from datetime import datetime, timedelta
 
 from familydb.app import App
 from familydb.dates import utc_iso
@@ -9,30 +14,33 @@ from familydb.store import messages, tasks
 from familydb.store.db import transaction
 from familydb.task_service import reminder_text
 
+# A reminder queued later than this after its time says when it was due.
+LATE_AFTER = timedelta(minutes=10)
+
 
 def run_reminders(app: App) -> int:
     app.refresh()
-    now = utc_iso(app.clock.now())
-    with closing(app.connect()) as conn:
-        with transaction(conn):
-            rows = conn.execute(
-                "SELECT r.id,r.task_id FROM reminders r JOIN tasks t ON t.id=r.task_id "
-                "WHERE r.cancelled_at IS NULL AND r.message_id IS NULL AND r.remind_at<=? "
-                "AND t.status='open' ORDER BY r.remind_at LIMIT 100",
-                (now,),
-            ).fetchall()
-            for row in rows:
-                task = tasks.get(conn, row["task_id"])
-                out = messages.insert_out(
-                    conn,
-                    channel=task["channel"],
-                    chat_id=task["chat_id"],
-                    text=reminder_text(task),
-                    now=now,
-                )
-                conn.execute("UPDATE reminders SET message_id=? WHERE id=?", (out.id, row["id"]))
-        pending = conn.execute(
-            "SELECT r.message_id FROM reminders r JOIN messages m ON m.id=r.message_id "
-            "WHERE r.cancelled_at IS NULL AND m.delivered_at IS NULL AND m.cancelled_at IS NULL"
-        ).fetchall()
-    return sum(deliver(app, row["message_id"]) for row in pending)
+    moment = app.clock.now()
+    now = utc_iso(moment)
+    queued: list[int] = []
+    with closing(app.connect()) as conn, transaction(conn):
+        for reminder in tasks.due_reminders(conn, now):
+            task = tasks.get(conn, reminder.task_id)
+            if task is None:
+                continue
+            due = datetime.fromisoformat(reminder.remind_at)
+            due_when = (
+                due.astimezone(app.clock.tz).strftime("%a %d %b at %H:%M")
+                if moment - due > LATE_AFTER
+                else None
+            )
+            out = messages.insert_out(
+                conn,
+                channel=task.channel,
+                chat_id=task.chat_id,
+                text=reminder_text(task, due_when=due_when),
+                now=now,
+            )
+            tasks.attach_message(conn, reminder.id, out.id)
+            queued.append(out.id)
+    return sum(deliver(app, message_id) for message_id in queued)

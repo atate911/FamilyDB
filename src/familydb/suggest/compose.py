@@ -4,7 +4,15 @@ from __future__ import annotations
 
 from familydb.integrations.open_meteo import DayForecast
 from familydb.store.ideas import Idea
-from familydb.suggest.types import Candidate, Context, DaySummary, SuggestResult, WebFind, Window
+from familydb.suggest.types import (
+    Candidate,
+    Context,
+    DaySummary,
+    SuggestResult,
+    WebFind,
+    Window,
+    clock,
+)
 
 MAX_REASONS = 3
 VERDICT_ORDER = {"good": 0, "possible": 1, "ruled_out": 2}
@@ -30,7 +38,7 @@ def day_summaries(context: Context) -> list[DaySummary]:
         DaySummary(
             date=d.date.isoformat(),
             weekday=d.date.strftime("%A"),
-            free=list(d.free),
+            free=[f"{clock(a)}-{clock(b)}" for a, b in d.spans],
             free_known=d.free_known,
             commitments=d.commitments,
             forecast=_forecast_text(d.forecast),

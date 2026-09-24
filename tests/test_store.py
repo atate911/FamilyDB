@@ -218,7 +218,7 @@ def test_render_idea_line_is_compact_and_complete(conn, family) -> None:
     assert line == (
         f"#{idea.id} | [restaurant] | Ramen place on Main St | for: whole family | "
         "tags: cheap, food | indoor/any | 1 h to 1.5 h | cost: $$ | needs booking | "
-        "status: idea | by Sam 2026-09-20 | details: pending"
+        "status: idea | by Sam 2026-09-20"
     )
 
 
@@ -360,3 +360,13 @@ def test_outcomes_exists_since(conn, family) -> None:
     assert outcomes.exists_since(conn, idea_id=idea.id, plan_id=None, since="2026-09-19")
     assert not outcomes.exists_since(conn, idea_id=idea.id, plan_id=None, since="2026-09-20")
     assert not outcomes.exists_since(conn, idea_id=None, plan_id=None, since="2026-01-01")
+
+
+def test_a_finished_lookup_leaves_the_idea_line_alone(conn, family) -> None:
+    # The line is in the cached prefix; a lookup finishing must not make the next message pay
+    # to write that cache again.
+    idea = _idea(conn, family)
+    before = render_idea_line(idea)
+    with db.transaction(conn):
+        after = ideas.update(conn, idea.id, {"enrichment": "done"}, now="2026-09-20T22:00:00Z")
+    assert render_idea_line(after) == before

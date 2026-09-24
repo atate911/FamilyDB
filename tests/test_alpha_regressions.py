@@ -28,7 +28,7 @@ from familydb.suggest.context import build_context
 from familydb.suggest.discover import discover
 from familydb.suggest.engine import run
 from familydb.suggest.evaluate import overlap_minutes
-from familydb.suggest.types import SuggestInput
+from familydb.suggest.types import Constraints, SuggestInput
 from familydb.tools import ToolContext, build_registry
 from familydb.tools.gcal import free_blocks
 from tests.fakes import FakeCalendar, FakeMessagesAPI, discover_script, message, text, tool_use
@@ -69,22 +69,44 @@ def test_discovery_uses_configured_provider_without_injected_api(env, monkeypatc
     )
     fake = api
     context = build_context(env.ctx, (date(2026, 9, 26), date(2026, 9, 27)))
-    finds, note = discover(env.ctx, context, "Find things to do")
+    finds, note = discover(env.ctx, context, Constraints())
     assert note is None and finds == [] and api.requests
     assert env.ctx.api is None
 
 
-def test_discovery_cache_separates_questions_and_reuses_identical_search(env):
+def test_discovery_cache_follows_the_constraints_not_the_wording(env):
     env.ctx.discover_cache = {}
     env.ctx.api = FakeMessagesAPI(*discover_script([]), *discover_script([]))
     context = build_context(env.ctx, (date(2026, 9, 26), date(2026, 9, 27)))
-    assert discover(env.ctx, context, "Adult concerts")[1] is None
+    # "Adult concerts" and "anything fun for us grown-ups" frame the same constraints.
+    adults = Constraints(participants=["adults"])
+    assert discover(env.ctx, context, adults)[1] is None
     first_calls = len(env.ctx.api.requests)
-    assert discover(env.ctx, context, "Adult concerts")[1] is None
+    assert discover(env.ctx, context, Constraints(participants=["adults"]))[1] is None
     assert len(env.ctx.api.requests) == first_calls
-    assert discover(env.ctx, context, "Free indoor toddler activities")[1] is None
+    toddlers = Constraints(participants=["toddler"], setting="indoor", max_cost_level=0)
+    assert discover(env.ctx, context, toddlers)[1] is None
     assert len(env.ctx.api.requests) > first_calls
     assert len(env.ctx.discover_cache) == 2
+
+
+def test_discovery_keeps_the_subject_and_the_hours(env):
+    from familydb.suggest.discover import render_discover_request
+    from familydb.suggest.types import DayBounds
+
+    weekend = (date(2026, 9, 26), date(2026, 9, 27))
+    context = build_context(env.ctx, weekend)
+    jazz = render_discover_request(context, Constraints(topic="live jazz"), env.settings)
+    puppets = render_discover_request(context, Constraints(topic="puppet show"), env.settings)
+    assert "Looking for: live jazz." in jazz and jazz != puppets
+    evening = build_context(env.ctx, weekend, DayBounds(start=17 * 60, end=23 * 60 + 30))
+    asked = render_discover_request(evening, Constraints(max_duration_minutes=90), env.settings)
+    assert "Hours: 17:00-24:00." in asked and '"max_duration_minutes": 90' in asked
+    # A question a few minutes later about the same evening asks the same thing.
+    later = build_context(env.ctx, weekend, DayBounds(start=17 * 60 + 10, end=23 * 60 + 20))
+    assert (
+        render_discover_request(later, Constraints(max_duration_minutes=90), env.settings) == asked
+    )
 
 
 def test_default_haiku_request_omits_unsupported_thinking(env):
@@ -186,7 +208,7 @@ def test_busy_all_day_trip_blocks_but_transparent_birthday_does_not(env):
     event = env.cal.seed("Away camping", day, day + timedelta(days=2), all_day=True)
     assert free_blocks([event], day, env.app.clock.tz) == []
     context = build_context(env.ctx, (day, day))
-    assert context.days[0].free_known and context.days[0].free == []
+    assert context.days[0].free_known and context.days[0].spans == []
     assert "Away camping" in context.days[0].commitments
     transparent = replace(event, busy=False)
     assert free_blocks([transparent], day, env.app.clock.tz) == ["morning", "afternoon", "evening"]
@@ -224,8 +246,11 @@ def test_four_hour_visit_cannot_fit_one_hour_open(env):
 
 def test_opening_intersection_is_continuous_and_allows_round_trip():
     split = [{"open": "10:00", "close": "11:00"}, {"open": "14:00", "close": "15:00"}]
-    assert overlap_minutes(split, ["morning", "afternoon"]) == 60
-    assert overlap_minutes([{"open": "08:00", "close": "12:00"}], ["morning"], travel=30) == 180
+    assert overlap_minutes(split, [(8 * 60, 17 * 60)]) == 60
+    assert (
+        overlap_minutes([{"open": "08:00", "close": "12:00"}], [(8 * 60, 12 * 60)], travel=30)
+        == 180
+    )
 
 
 def test_do_not_repeat_is_honored_and_explicit_new_preference_can_override(env):

@@ -48,31 +48,34 @@ def _weekend_ctx(conn, full_settings, thursday_clock, family, *, busy_saturday_m
 
 
 def test_resolve_window(thursday_clock) -> None:
-    today = thursday_clock.today()
-    window, label = resolve_window(SuggestInput(window="this_weekend", question="?"), today)
+    today = thursday_clock.now()
+    window, label, _ = resolve_window(SuggestInput(window="this_weekend", question="?"), today)
     assert window == (SAT, SUN) and label.startswith("this weekend (Sat 26 to Sun 27 Sep)")
-    window, label = resolve_window(SuggestInput(window="next_weekend", question="?"), today)
+    window, label, _ = resolve_window(SuggestInput(window="next_weekend", question="?"), today)
     assert window == (date(2026, 10, 3), date(2026, 10, 4)) and label.startswith("next weekend")
-    window, label = resolve_window(SuggestInput(window="someday", question="?"), today)
+    window, label, _ = resolve_window(SuggestInput(window="someday", question="?"), today)
     assert window is None and label == "someday"
-    window, _ = resolve_window(
+    window, _, _ = resolve_window(
         SuggestInput(window="dates", start="2026-10-10", end="2026-10-11", question="?"), today
     )
     assert window == (date(2026, 10, 10), date(2026, 10, 11))
 
 
 def test_resolve_window_on_a_sunday(clock) -> None:
-    today = clock.today()  # Sunday 20 September
-    window, label = resolve_window(SuggestInput(window="this_weekend", question="?"), today)
+    now = clock.now()  # Sunday 20 September, 14:03
+    today = now.date()
+    window, label, bounds = resolve_window(SuggestInput(window="this_weekend", question="?"), now)
     assert window == (today, today) and label == "this weekend (Sun 20 Sep)"
-    window, label = resolve_window(SuggestInput(window="next_weekend", question="?"), today)
+    # Asked at 14:03 on the day itself: the morning has gone.
+    assert bounds.for_day(today, today, today) == (14 * 60 + 5, 22 * 60)
+    window, label, _ = resolve_window(SuggestInput(window="next_weekend", question="?"), now)
     assert window == (SAT, SUN) and label == "next weekend (Sat 26 to Sun 27 Sep)"
 
 
 def test_context_reports_missing_services(conn, settings, thursday_clock, family) -> None:
     context = build_context(_ctx(conn, settings, thursday_clock, family), (SAT, SUN))
     assert context.skipped == ["calendar not connected", "weather not configured"]
-    assert [d.free for d in context.days] == [["morning", "afternoon", "evening"]] * 2
+    assert [d.spans for d in context.days] == [[(8 * 60, 22 * 60)]] * 2
     assert context.days[0].free_known is False and context.season == "autumn"
 
 
@@ -80,13 +83,14 @@ def test_context_with_calendar_and_forecast(conn, full_settings, thursday_clock,
     ctx = _weekend_ctx(conn, full_settings, thursday_clock, family, busy_saturday_morning=True)
     context = build_context(ctx, (SAT, SUN))
     assert context.skipped == []
-    assert context.days[0].free == ["afternoon", "evening"] and context.days[0].free_known
+    assert context.days[0].spans == [(8 * 60, 9 * 60), (11 * 60, 22 * 60)]
+    assert context.days[0].free_known
     assert context.days[1].forecast.rain_chance == 80
 
 
 def test_free_span_and_participants() -> None:
-    assert longest_free_span(["morning", "afternoon", "evening"]) == 840
-    assert longest_free_span(["morning", "evening"]) == 300
+    assert longest_free_span([(480, 1320)]) == 840
+    assert longest_free_span([(480, 720), (1020, 1320)]) == 300
     assert longest_free_span([]) == 0
     from familydb.store.ideas import Idea
 
@@ -169,9 +173,9 @@ def test_someday_skips_window_rules(conn, settings, thursday_clock, family) -> N
 
 def test_overlap_minutes() -> None:
     ranges = [{"open": "10:00", "close": "20:00"}]
-    assert overlap_minutes(ranges, ["morning", "afternoon", "evening"]) == 600
-    assert overlap_minutes(ranges, ["morning"]) == 120
-    assert overlap_minutes([{"open": "21:00", "close": "02:00"}], ["evening"]) == 60
+    assert overlap_minutes(ranges, [(480, 1320)]) == 600
+    assert overlap_minutes(ranges, [(480, 720)]) == 120
+    assert overlap_minutes([{"open": "21:00", "close": "02:00"}], [(1020, 1320)]) == 60
     assert overlap_minutes(ranges, []) == 0
 
 
@@ -240,7 +244,7 @@ def test_suggest_end_to_end_with_verdicts(
     assert not result.is_error, data
     assert data["window"]["start"] == "2026-09-26" and data["window"]["end"] == "2026-09-27"
     assert (
-        data["days"][0]["free"] == ["afternoon", "evening"]
+        data["days"][0]["free"] == ["08:00-09:00", "11:00-22:00"]
         and data["days"][1]["rain_chance_pct"] == 80
     )
     verdicts = {c["idea_id"]: c for c in data["candidates"]}
@@ -407,7 +411,8 @@ def test_discovery_runs_a_worker_turn_and_caches_the_finds(
     assert request["tools"][1]["user_location"]["city"] == "Vancouver"
     asked = request["messages"][0]["content"][1]["text"]
     assert "Window: Saturday 26 September to Sunday 27 September 2026." in asked
-    assert "Home area: Vancouver, WA." in asked and "what should we do this weekend?" in asked
+    # The wording is not sent: the same window and constraints are the same search.
+    assert "Home area: Vancouver, WA." in asked and "what should we do" not in asked
     assert len(cache) == 1
     # The suggestions log carries the finds too.
     row = suggestions.list_recent(conn, limit=1)[0]
@@ -415,7 +420,7 @@ def test_discovery_runs_a_worker_turn_and_caches_the_finds(
 
     # Asking again inside the cache window makes no request at all.
     _, again = _suggest(registry, ctx, discover=True)
-    assert again["web_finds"] == data["web_finds"] and len(api.requests) == 3
+    assert again["web_finds"] == data["web_finds"] and len(api.requests) == 2
 
     # A different window is a different key; an expired key is searched again.
     api.queue.extend(fakes.discover_script([]))
@@ -424,7 +429,7 @@ def test_discovery_runs_a_worker_turn_and_caches_the_finds(
     thursday_clock.advance(timedelta(seconds=DISCOVER_CACHE_SECONDS + 1))
     api.queue.extend(fakes.discover_script([FIND]))
     _, refreshed = _suggest(registry, ctx, discover=True)
-    assert len(refreshed["web_finds"]) == 1 and len(api.requests) == 9
+    assert len(refreshed["web_finds"]) == 1 and len(api.requests) == 6
 
 
 def test_discovery_failures_become_notes_and_are_not_cached(
@@ -456,7 +461,7 @@ def test_discovery_request_for_someday(conn, settings, thursday_clock, family) -
     from familydb.suggest.discover import cache_key, render_discover_request
 
     context = build_context(_ctx(conn, settings, thursday_clock, family), None)
-    text = render_discover_request(context, "  ", settings)
+    text = render_discover_request(context, Constraints(), settings)
     assert "Window: no fixed dates; look at the next four weeks or so." in text
     assert "Home area: not set." in text and "asked" not in text
     assert cache_key(None) == "someday" and cache_key((SAT, SAT)) == "2026-09-26:2026-09-26"
@@ -494,7 +499,7 @@ def test_context_survives_a_calendar_transport_error(
     result, data = _suggest(registry, ctx)
     assert not result.is_error
     assert data["skipped_checks"] == ["calendar check failed: connection reset"]
-    assert all(d["free_known"] is False and len(d["free"]) == 3 for d in data["days"])
+    assert all(d["free_known"] is False and d["free"] == ["08:00-22:00"] for d in data["days"])
 
 
 def test_the_result_stays_small_however_long_the_list_gets(
@@ -529,3 +534,118 @@ def test_a_short_list_is_returned_whole(registry, conn, full_settings, thursday_
     ctx = _weekend_ctx(conn, full_settings, thursday_clock, family)
     _, data = _suggest(registry, ctx)
     assert len(data["candidates"]) == 2 and data.get("not_shown", 0) == 0
+
+
+# -- right now and today ------------------------------------------------------------------------
+# The `clock` fixture is Sunday 20 September, 14:03 in Vancouver.
+
+
+def _now_ctx(conn, full_settings, clock, family, *busy):
+    calendar = fakes.FakeCalendar(TZ)
+    for start, end in busy:
+        calendar.seed(
+            "Busy",
+            datetime(2026, 9, 20, *start, tzinfo=TZ),
+            datetime(2026, 9, 20, *end, tzinfo=TZ),
+        )
+    return _ctx(conn, full_settings, clock, family, calendar=calendar)
+
+
+def test_now_is_the_next_hours_around_what_is_on(
+    registry, conn, full_settings, clock, family
+) -> None:
+    ctx = _now_ctx(conn, full_settings, clock, family, ((15, 0), (16, 0)))
+    cafe = _idea(conn, "Board game cafe", kind="outing", duration_min=90)
+    _seed_place(conn, cafe, hours={"sun": [{"open": "11:00", "close": "21:00"}]}, travel_minutes=10)
+    shut = _idea(conn, "Ramen place", kind="restaurant", duration_min=60)
+    _seed_place(conn, shut, hours={"sun": []})
+    coast = _idea(conn, "Day at the coast", kind="day_trip")
+    result, data = _suggest(registry, ctx, window="now", question="I'm bored, what now?")
+    assert not result.is_error, data
+    assert data["window"]["label"] == "now until 18:05"
+    # 14:05, not the morning; the hour at three is taken out.
+    assert data["days"][0]["free"] == ["14:05-15:00", "16:00-18:05"]
+    verdicts = {c["idea_id"]: c for c in data["candidates"]}
+    assert verdicts[cafe.id]["verdict"] == "good"
+    # Ten minutes each way: there by 16:10, home by 18:05.
+    assert "can go 16:10-17:55 today" in verdicts[cafe.id]["reasons"]
+    assert verdicts[shut.id]["verdict"] == "ruled_out"
+    assert verdicts[coast.id]["verdict"] == "ruled_out"
+
+
+def test_tonight_is_today_from_five(registry, conn, full_settings, clock, family) -> None:
+    ctx = _now_ctx(conn, full_settings, clock, family)
+    bar = _idea(conn, "Cocktail bar", kind="restaurant", duration_min=90)
+    _seed_place(conn, bar, hours={"sun": [{"open": "16:00", "close": "23:00"}]}, travel_minutes=15)
+    _, data = _suggest(
+        registry, ctx, window="today", from_time="17:00", until_time="23:00", question="tonight?"
+    )
+    assert data["days"][0]["free"] == ["17:00-23:00"]
+    bar_verdict = next(c for c in data["candidates"] if c["idea_id"] == bar.id)
+    assert "can go 17:15-22:45 today" in bar_verdict["reasons"]
+
+
+def test_times_that_make_no_sense_are_refused(registry, conn, full_settings, clock, family) -> None:
+    ctx = _now_ctx(conn, full_settings, clock, family)
+    for overrides in (
+        {"window": "now", "hours": 20},
+        {"window": "today", "until_time": "12:00"},  # it is already after two
+        {
+            "window": "dates",
+            "start": "2026-09-26",
+            "end": "2026-09-26",
+            "from_time": "18:00",
+            "until_time": "09:00",
+        },
+        {"window": "today", "from_time": "tea time"},
+    ):
+        result, _ = _suggest(registry, ctx, **overrides)
+        assert result.is_error, overrides
+
+
+def test_a_later_day_keeps_its_morning(conn, full_settings, clock, family) -> None:
+    now = clock.now()
+    window, label, bounds = resolve_window(
+        SuggestInput(
+            window="dates",
+            start="2026-09-20",
+            end="2026-09-21",
+            from_time="09:00",
+            question="?",
+        ),
+        now,
+    )
+    assert label.endswith("09:00-22:00")
+    first, last = window
+    assert bounds.for_day(first, first, last) == (14 * 60 + 5, 22 * 60)
+    assert bounds.for_day(last, first, last) == (9 * 60, 22 * 60)
+
+
+def test_open_now_without_a_calendar_still_checks_the_hours(
+    registry, conn, full_settings, clock, family
+) -> None:
+    ctx = _ctx(conn, full_settings, clock, family)  # no calendar connected
+    cafe = _idea(conn, "Breakfast cafe", kind="restaurant", duration_min=60)
+    _seed_place(conn, cafe, hours={"sun": [{"open": "08:00", "close": "12:00"}]})
+    _, data = _suggest(registry, ctx, window="now", question="open now?")
+    verdict = next(c for c in data["candidates"] if c["idea_id"] == cafe.id)
+    assert verdict["verdict"] == "ruled_out"
+    assert "calendar not connected" in data["skipped_checks"]
+
+
+def test_the_topic_is_folded_so_the_same_subject_is_one_search(
+    conn, full_settings, thursday_clock, family, monkeypatch
+) -> None:
+    from familydb.suggest import engine
+
+    seen: list[str] = []
+
+    def record(ctx, context, constraints):
+        seen.append(constraints.topic)
+        return [], None
+
+    monkeypatch.setattr(engine, "discover", record)
+    ctx = _ctx(conn, full_settings, thursday_clock, family)
+    for topic in ("Live  Jazz", "live jazz"):
+        engine.run(ctx, SuggestInput(window="this_weekend", question="?", topic=topic))
+    assert seen == ["live jazz", "live jazz"]

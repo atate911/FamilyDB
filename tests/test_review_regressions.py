@@ -1,15 +1,15 @@
 """Failures found during the PR #4 review, exercised through application boundaries."""
 
 import re
-import subprocess
-import sys
 import threading
-import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from datetime import datetime, timedelta
 
+import pytest
+
 from familydb import privacy
+from familydb.agent import spending
 from familydb.app import App
 from familydb.channels.base import IncomingMessage
 from familydb.errors import ToolError
@@ -53,6 +53,35 @@ def test_lost_google_response_recovers_same_operation(planning, conn):
     planning.post("/plans/new", data=form)
     assert len(planning.calendar.events) == 1
     assert plans.get(conn, 1) is not None and plans.get(conn, 2) is None
+
+
+def test_lost_google_response_then_a_fresh_form_keeps_one_event(planning, conn):
+    original = planning.calendar.insert_event
+
+    def lose_response(**kwargs):
+        original(**kwargs)
+        raise ToolError("connection lost after insert")
+
+    planning.calendar.insert_event = lose_response
+    fields = {"title": "Festival", "start": "2026-09-26T10:00"}
+    planning.post("/plans/new", data={**_form(planning, "/plans"), **fields})
+    assert plans.get(conn, 1) is None and len(planning.calendar.events) == 1
+    planning.calendar.insert_event = original
+    # The family opens the form again: a new drawing, a new token, the same event asked for.
+    second = {**_form(planning, "/plans"), **fields}
+    planning.post("/plans/new", data=second)
+    assert len(planning.calendar.events) == 1
+    assert plans.get(conn, 1) is not None and plans.get(conn, 2) is None
+    # That second form sent again after a restart, when nothing in memory remembers it: it
+    # took over the first attempt for good, so it finds the plan rather than asking Google.
+    old = planning.application.config["FAMILYDB_APP"]
+    restarted = create_app(App(old.settings, old.clock, calendar=planning.calendar)).test_client()
+    restarted.set_cookie("session", planning.get_cookie("session").value)
+    assert restarted.post("/plans/new", data=second).status_code == 302
+    assert len(planning.calendar.events) == 1 and plans.get(conn, 2) is None
+    # Asking for it once more afterwards is a new plan, as it would be for anything finished.
+    planning.post("/plans/new", data={**_form(planning, "/plans"), **fields})
+    assert len(planning.calendar.events) == 2
 
 
 def test_stale_edit_in_same_second_preserves_newer_save(page, conn):
@@ -196,7 +225,7 @@ def test_budget_interruption_reports_calendar_success(calendar_settings, conn, c
         conn=conn,
     )
     assert "Created calendar plan #1" in first.text and len(calendar.events) == 1
-    assert "do not repeat" in first.text
+    assert "nothing is done twice" in first.text
     assert messages.get(conn, first.in_message_id).status == "processed"
     assert len(api.requests) == 1
 
@@ -207,49 +236,66 @@ def test_privacy_tightening_does_not_require_getuid_on_windows(settings, monkeyp
     assert privacy.tighten(settings) == []
 
 
-def test_admission_blocks_other_process_and_recovers_after_crash(settings, conn, tmp_path):
-    # File signals avoid terminating a process while it owns a multiprocessing Event mutex.
-    script = """
-import sys, time
-from pathlib import Path
-from familydb.store import db
-from familydb.agent import admission
-conn = db.connect(sys.argv[1])
-Path(sys.argv[2]).touch()
-with admission.locked(conn):
-    Path(sys.argv[3]).touch()
-    time.sleep(30)
-"""
-    workers = []
+def test_a_slow_call_does_not_hold_up_the_others(settings, conn, clock, family):
+    app = App(settings, clock)
+    first_in, second_done = threading.Event(), threading.Event()
 
-    def start(index):
-        ready, acquired = tmp_path / f"ready{index}", tmp_path / f"acquired{index}"
-        process = subprocess.Popen(
-            [sys.executable, "-c", script, str(settings.familydb_path), str(ready), str(acquired)],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
+    class SlowFirst:
+        def __init__(self):
+            self.calls = 0
+
+        def create(self, **kwargs):
+            self.calls += 1
+            if self.calls == 1:
+                first_in.set()
+                # The second call must finish while this one is still waiting on the network.
+                assert second_done.wait(10)
+            return fakes.message([fakes.text("Answered.")])
+
+    api = SlowFirst()
+
+    def ask(number):
+        reply = handle_incoming(
+            app, IncomingMessage("telegram", str(number), "chat", "1001", "hello"), api=api
         )
-        workers.append(process)
-        return ready, acquired
+        if number == 2:
+            second_done.set()
+        return reply
 
-    def wait_for(path):
-        deadline = time.monotonic() + 10
-        while not path.exists() and time.monotonic() < deadline:
-            time.sleep(0.05)
-        assert path.exists()
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(ask, 1)
+        assert first_in.wait(10)
+        second = pool.submit(ask, 2)
+        assert second.result(timeout=10).status == "ok"
+        assert first.result(timeout=10).status == "ok"
+    with closing(db.connect(settings.familydb_path)) as check:
+        assert check.execute("SELECT count(*) FROM spend_holds").fetchone()[0] == 0
 
-    try:
-        _, acquired = start(0)
-        wait_for(acquired)
-        ready, acquired = start(1)
-        wait_for(ready)
-        time.sleep(0.2)
-        assert not acquired.exists()
-        workers[0].terminate()
-        workers[0].wait(timeout=10)
-        wait_for(acquired)
-    finally:
-        for worker in workers:
-            if worker.poll() is None:
-                worker.terminate()
-            worker.communicate(timeout=10)
+
+def test_holds_are_given_back_and_a_crashed_one_expires(settings, conn, clock):
+    limited = settings.model_copy(update={"daily_spend_limit": 1.0})
+    now = clock.now()
+    crashed = spending.admit(conn, limited, now - timedelta(minutes=40), 5.0)
+    assert crashed
+    # Forty minutes old: longer than any call runs, so it no longer counts.
+    held = spending.admit(conn, limited, now, 5.0)
+    # This one is in flight and holds more than the limit, so the next is refused.
+    with pytest.raises(spending.SpendingLimitReached):
+        spending.admit(conn, limited, now, 0.01)
+    with db.transaction(conn):
+        spending.settle(conn, held, now)
+    assert conn.execute("SELECT count(*) FROM spend_holds").fetchone()[0] == 0
+    assert spending.admit(conn, limited, now, 0.01)
+
+
+def test_a_failed_call_gives_its_hold_back(settings, conn, clock, family):
+    class Down:
+        def create(self, **kwargs):
+            raise fakes.server_error()
+
+    app = App(settings, clock)
+    reply = handle_incoming(
+        app, IncomingMessage("telegram", "down", "chat", "1001", "hello"), api=Down(), conn=conn
+    )
+    assert reply.status != "ok"
+    assert conn.execute("SELECT count(*) FROM spend_holds").fetchone()[0] == 0

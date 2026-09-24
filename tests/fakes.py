@@ -224,7 +224,7 @@ class FakeGeocoder:
 
 
 def enrich_script(save_place_input: dict[str, Any]) -> list[BetaMessage]:
-    """A worker that searches (paused turn), then hands back with save_place, then stops."""
+    """A worker that searches (paused turn), then hands back with save_place, which ends it."""
     return [
         message(
             [
@@ -236,12 +236,11 @@ def enrich_script(save_place_input: dict[str, Any]) -> list[BetaMessage]:
             stop_reason="pause_turn",
         ),
         message([tool_use("tu_save", "save_place", save_place_input)], stop_reason="tool_use"),
-        message([text("Saved.")]),
     ]
 
 
 def discover_script(finds: list[dict[str, Any]]) -> list[BetaMessage]:
-    """A worker that searches (paused turn), then hands back with report_finds, then stops."""
+    """A worker that searches (paused turn), then hands back with report_finds, which ends it."""
     return [
         message(
             [
@@ -253,7 +252,6 @@ def discover_script(finds: list[dict[str, Any]]) -> list[BetaMessage]:
             stop_reason="pause_turn",
         ),
         message([tool_use("tu_finds", "report_finds", {"finds": finds})], stop_reason="tool_use"),
-        message([text("Reported.")]),
     ]
 
 

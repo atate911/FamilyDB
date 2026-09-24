@@ -41,6 +41,7 @@ class ToolContext:
     allowed_tools: frozenset[str] | None = None
     worker_idea_id: int | None = None
     operation_id: str | None = None  # durable browser write operation, not model input
+    resume_scope: str | None = None  # the browser session, to resume what a lost reply left
     idea_revision: str | None = None  # browser optimistic concurrency precondition
     task_revision: int | None = None
     scratch: dict[str, Any] = field(default_factory=dict)  # per-turn hand-back area

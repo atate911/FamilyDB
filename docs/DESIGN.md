@@ -17,11 +17,12 @@ the governing memory design; memory is not built yet. A daily spending limit is 
 
 ## 1. What it is
 
-A private family assistant that lives in a chat app and owns three things:
+A private family assistant that lives in a chat app and owns four things:
 
 - An open-ended idea log: restaurants to try, outings, day trips, shows, seasonal things, "one day" ideas. "Idea for one day, we go to the Hopscotch thing in Portland with the girls" is a complete, valid entry.
 - Confirmed plans, mirrored to the shared Google Calendar: "we're going to the symphony next Saturday".
-- Answers to "what should we do this weekend?" that weigh each stored idea against the calendar, the forecast, opening hours, booking needs, travel time and who is coming, and add fresh finds from the web.
+- Things to do and their reminders: "remind me on Tuesday that we need paper towels", "one of these Saturday mornings I need to get my knives sharpened". Ideas are possibilities, tasks are obligations, plans are commitments (section 18).
+- Answers to "what should we do this weekend?", "I'm bored, what now?" and "sushi open now?" that weigh each stored idea against the calendar, the forecast, opening hours, booking needs, travel time and who is coming, and add fresh finds from the web.
 
 It runs as one long-lived Python process on a machine we own, home server or VPS. Language understanding and web reading go to Claude, OpenAI or Gemini, chosen per surface behind one provider protocol, and everything it knows is stored in a SQLite file we own.
 
@@ -272,11 +273,11 @@ The procedure is explicit so it can be tested stage by stage and improved one st
 
 | Stage | What it does | Where |
 |---|---|---|
-| Frame | Work out the window (this weekend, next weekend, given dates, someday), who is coming, and any constraints in the message ("cheap", "somewhere inside", "close by", "with the girls") | the model, as the `suggest` input |
-| Context | Free blocks per day from the calendar, the forecast per day, the season. A missing integration becomes a "skipped check" and the days count as free | `suggest/context.py` over `calendar_days` and `forecast_days` |
-| Shortlist | Rules over every idea, the first failing rule being the reason: already planned; done within 60 days; rated under 5; participants; season; outdoor or weather needs versus each day's forecast (rain chance over 50%, or rain and snow codes); duration versus the free blocks (morning 4 h, afternoon 5 h, evening 5 h; day trips need a whole free day, trips every day); the question's cost, setting and duration limits. Someday windows skip the day-bound rules. At most eight go on to evaluation; the rest are "possible, not checked in detail" | `suggest/shortlist.py` |
-| Evaluate | For each shortlisted idea and fitting day: open that day with usable overlap of its hours and the free blocks (closed everywhere rules it out; unknown hours make it possible); stale details (possible, and re-queued); booking lead time against the days left; travel estimate against the free span and the asked limit. Any hard fail is ruled out, any unknown is possible, else good | `suggest/evaluate.py` over the places cache |
-| Discover | A worker turn (prompt `prompts/discover.md`, at most four searches, home area as the search location) finds time-bound things in the window near home and hands them back with `report_finds`. Results are cached per window for twelve hours on the App; a failure is a note, never cached | `suggest/discover.py` |
+| Frame | Work out the window (now, the rest of today, this weekend, next weekend, given dates, someday) and the part of each day it means ("tonight", "Saturday morning"), who is coming, and any constraints in the message ("cheap", "somewhere inside", "close by", "with the girls") | the model, as the `suggest` input |
+| Context | Free stretches per day from the calendar, in minutes, within the time asked about; the forecast per day, the season. A missing integration becomes a "skipped check" and the time counts as free | `suggest/context.py` over `events_by_day`, `free_spans` and `forecast_days` |
+| Shortlist | Rules over every idea, the first failing rule being the reason: already planned; done within 60 days; rated under 5; participants; season; outdoor or weather needs versus each day's forecast (rain chance over 50%, or rain and snow codes); duration versus the longest free stretch (day trips need eight hours with nothing on, trips every day clear; an idea of unknown length needs an hour); the question's cost, setting and duration limits. Someday windows skip the day-bound rules. At most eight go on to evaluation; the rest are "possible, not checked in detail" | `suggest/shortlist.py` |
+| Evaluate | For each shortlisted idea and fitting day: open that day for long enough inside a free stretch, travel at both ends included (closed everywhere rules it out; unknown hours make it possible); asked about today, it says when they could actually be there ("can go 16:10-17:55 today"); stale details (possible, and re-queued); booking lead time against the days left; travel estimate against the free span and the asked limit. Any hard fail is ruled out, any unknown is possible, else good | `suggest/evaluate.py` over the places cache |
+| Discover | A worker turn (prompt `prompts/discover.md`, at most four searches, home area as the search location) finds time-bound things in the window near home and hands them back with `report_finds`. The request is built from the window and the constraints, never the question's wording, so differently worded questions share one search; results are cached for twelve hours on the App; a failure is a note, never cached | `suggest/discover.py` |
 | Compose | Good first (never done, then best rated), then possible, then ruled out; ideas suggested in the last two weeks sink within their group; at most three reasons each; a summary per day. The model turns this into three to five options with their reason, the ruled-out list, the web finds with links, the skipped checks and an offer to schedule | `suggest/compose.py`, then the model |
 | Log | Every candidate with its verdict and reasons, and the web finds, stored in `suggestions` and linked to the reply message | `suggest/log.py` |
 
@@ -287,6 +288,9 @@ Design notes:
 - The model does not re-check with `get_calendar`, `get_forecast` or `check_open` after `suggest`; those tools remain for direct questions.
 - Web finds are offered, not saved. "Add the harvest festival" turns one into an idea through the normal capture path.
 - Travel is an estimate from straight-line distance until a routing API lands, and every reason says so.
+- Time is minutes, not blocks. Each day is counted between bounds, 08:00 to 22:00 unless the question names a part of the day; "now" is the next few hours from this minute, not held to those bounds; and the part of today that has gone is never free time. The earlier engine counted three fixed blocks and ignored the time it was asked, so "I'm bored" could not be asked and Saturday afternoon's question counted Saturday morning.
+- Travel is from home. A family out and about asking "what's near here" is not answered yet: the location would have to come with the message.
+- The forecast is per day, so "now" uses today's; an hourly forecast would sharpen it.
 
 ## 11. Integrations
 
@@ -356,6 +360,7 @@ Web searches are billed per search on top of tokens. Further levers, all of them
 - **Phase 2, checked suggestions.** Done. Worker turns with web search and fetch, the enrichment job and the places cache (hours, booking, geocoded travel estimate), the real `lookup_place` and `check_open`, the staged engine behind one `suggest` tool with verdicts logged to `suggestions`, web discovery with a per-window cache, the Thursday digest and the day-after follow-ups.
 - **Phase 3, richer data.** Google Places, routing API, link previews for pasted URLs, voice notes, photos.
 - **Phase 4, surfaces.** Mostly done. The web page is a front end rather than a viewer: a home page, the ideas list with search and filters, an idea in full with its place details, the restaurants, the plans as a list and a month read live from Google, a Family page, a shared-password gate and an optional HTTPS front for a public server, a status page and a settings page that configures the bot without editing a file or restarting anything — and a chat page that runs a real turn through the pipeline, and forms that add and change an idea, record how something went, and put a plan on the calendar, move it or take it off. The family can use the whole bot, and look after it, without Telegram or a terminal. Still to come: optional extra channels, OpenClaw or Claude connectors as alternative front ends over the same tools, and the household memory in docs/MEMORY.md.
+- **Alpha readiness (September 2026).** Done: the time frame above; spending holds instead of a lock over every call; worker turns that end at their hand-back, a smaller worker output cap, home ideas skipped without a call, no full retry of a turn that ran out of steps, a budget on history; a discovery cache that hits; tasks and reminders. Next, from what the alpha shows rather than before it: choosing the ideas, tasks and memories a message needs in code under a budget instead of sending the list (the layer [AI_CALLS.md](AI_CALLS.md) calls layer 2, where [MEMORY.md](MEMORY.md) will sit), and where the family is when they ask.
 - **Later.** Semantic search with embeddings, a recurring date-night planner, budgets, a trip-planning mode.
 
 ## 16. Decisions
@@ -403,14 +408,16 @@ src/familydb/
   agent/providers/       base.py (the protocol and the types), anthropic.py, openai.py, gemini.py,
                          prices.py (the price table, no SDK)
   tools/                 registry.py, schema.py, ideas.py, outcomes.py, now.py, urls.py,
-                         gcal.py, weather.py, places.py, suggest.py
+                         gcal.py, weather.py, places.py, suggest.py, tasks.py
   suggest/               types.py, engine.py, context.py, shortlist.py, evaluate.py, discover.py,
                          compose.py, log.py
   store/                 db.py, migrations/, members.py, ideas.py, messages.py, outcomes.py,
-                         calls.py, places.py, plans.py, suggestions.py, settings.py
+                         calls.py, places.py, plans.py, suggestions.py, settings.py, tasks.py,
+                         calendar_ops.py
   delivery.py            message leases and at-least-once delivery of stored replies
   calendar_sync.py       the bot's plans brought in line with their Google events
   family.py              the rules for adding and changing family members
+  task_service.py        tasks and their reminders changed in one place
   privacy.py             the owner-only umask, and tightening older files
   doctor.py              the install check behind `familydb doctor`
   channels/              base.py, console.py, telegram.py (with the token supervisor), web.py
@@ -422,10 +429,69 @@ src/familydb/
                          views.py, server.py, keys.py, templates/, static/style.css
   integrations/          google_calendar.py, open_meteo.py, geocode.py
   jobs/                  scheduler.py, retry_failed.py, enrich.py, weekend_digest.py,
-                         follow_ups.py, catch_up.py
+                         follow_ups.py, reminders.py, catch_up.py
 tests/                   pytest suite with a scripted fake of each SDK; test_live.py opt-in
 ```
 
 
-See [product examples](PRODUCT_EXAMPLES.md) for the guiding scenarios and
-[tasks and capture](TASKS_AND_CAPTURE.md) for the current foundation.
+## 18. Tasks, reminders and free-form capture
+
+Ideas are possibilities; tasks are obligations; calendar entries are commitments.
+The chat layer interprets what somebody means, shared tools validate and save it,
+and deterministic services handle reminders and suggestion checks.
+
+### Using the app
+
+- Ideas has a **Save a thought for later** box. Submit natural language and follow
+  the Chat confirmation. The configured assistant organizes it using existing idea
+  kinds, descriptions, people, locations and tags. Telegram accepts the same language.
+  **Add an idea** remains the direct form that does not need AI.
+- Original inbound messages remain linked to captured ideas and are available through
+  `describe_idea` and the idea page's Original thought section. Chat instructions preserve wording and merge new context into existing
+  ideas. This is still model-mediated organization; users can inspect and correct it.
+- For topic-specific suggestions, the assistant passes relevant saved `idea_ids` to
+  `suggest`. That scope is applied before the eight-item detailed evaluation limit;
+  unrelated older activities can no longer crowd out the selected restaurant or idea.
+  Calendar, weather, duration and availability rules still apply to those candidates.
+  A number that is not on the list is named in the result, and when none of them is,
+  every idea is considered, so a wrong number never quietly empties the answer.
+- **Things to do** supports add, search, edit, done, cancelled, reopen, and snooze.
+  The same operations are available in Chat through `add_task`, `list_tasks`, `update_task`.
+- A deadline never implies a reminder. Flexible timing such as "some Saturday morning"
+  is stored as text; it does not schedule anything. Explicit reminder times are stored
+  as UTC instants. Missing times require clarification; ambiguous or nonexistent local
+  times at clock changes are refused unless an unambiguous offset is supplied.
+- Reminders return to their originating Telegram chat (including groups). Browser and
+  console reminders go to app Chat. Assigning an owner does not change that destination.
+  The app uses the existing shared household access model, not private per-person tasks.
+
+### Running and reliability
+
+Use `familydb run` for the service, including the scheduler. `familydb web` alone serves
+pages but does not run reminder jobs. With the service running, due reminders are checked
+once a minute, including overdue reminders after restart. There are no model calls for
+these checks or sends. No new provider or notification configuration is needed.
+
+Migration 0012 adds tasks, reminders and outgoing-message cancellation. Task writes and
+reminder replacement are atomic. New task creation deduplicates retries by inbound message
+or browser operation identity plus arguments. Browser updates check a revision. Completion
+and cancellation suppress queued reminders; reopening does not restore old ones. Edits
+are refused while a reminder is actively being sent, since an in-flight send cannot be recalled.
+
+Queued messages use existing delivery claims and retries: the minute job sends a reminder once
+when it queues it, and one that could not go is retried by the retry job on its interval. A
+reminder queued more than ten minutes late, after downtime, says when it was due. As elsewhere in the app, external
+send delivery is at least once: a provider accepting a send before the process dies can
+cause a duplicate on retry. Database queuing itself is deduplicated.
+
+### Boundaries and next steps
+
+This supports capture, explicit recall, scoped suggestions, and timed reminders. It does
+not yet implement recurring reminders, automatic free-time/location triggers, passport
+stamp tracking, a learned preference profile, or live booking inventory. Those should
+build on these layers with explicit provenance and user controls.
+
+The product examples are acceptance scenarios, not requests to create real family records.
+No examples are seeded into a production database.
+
+See [product examples](PRODUCT_EXAMPLES.md) for the guiding scenarios in the owner's words.

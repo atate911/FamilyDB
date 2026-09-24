@@ -91,8 +91,14 @@ def run(name: str, values: dict[str, Any]) -> tuple[dict[str, Any] | None, str |
                 if name in {"create_event", "add_task"} and request.form.get("once")
                 else None
             ),
+            resume_scope=(
+                "web-session:"
+                + hashlib.sha256(str(session.get(auth.CSRF_KEY, "")).encode()).hexdigest()
+                if name == "create_event" and session.get(auth.CSRF_KEY)
+                else None
+            ),
             idea_revision=request.form.get("revision") if name == "update_idea" else None,
-            task_revision=int(request.form["revision"]) if name == "update_task" else None,
+            task_revision=_task_revision(request.form) if name == "update_task" else None,
         )
         result = app.registry.dispatch(name, values, ctx)
     payload = json.loads(result.content)
@@ -102,6 +108,12 @@ def run(name: str, values: dict[str, Any]) -> tuple[dict[str, Any] | None, str |
         return None, payload.get("reason", "that is not set up yet")
     log.info("%s from the page by %s", name, auth.client_address())
     return payload, None
+
+
+def _task_revision(form: MultiDict[str, str]) -> int | None:
+    """The task revision the form was drawn at, or None when it is missing or not a number."""
+    given = _text(form, "revision")
+    return int(given) if given.isascii() and given.isdigit() and len(given) <= 18 else None
 
 
 def _remember(who: str) -> str:
@@ -344,7 +356,7 @@ def add_task() -> Response:
 def edit_task(task_id: int) -> Response:
     if (complaint := auth.refused()) is not None:
         _say(complaint)
-    elif not _text(request.form, "revision").isdigit():
+    elif _task_revision(request.form) is None:
         _say("Reload this task before editing.")
     else:
         values = task_fields()

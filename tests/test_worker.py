@@ -51,7 +51,7 @@ def test_enrich_turn_declares_subset_prompt_and_budget(
     assert not turn.handed_back("skip_place")
     assert ideas.get(conn, idea.id).enrichment == "done"
     assert (
-        conn.execute("SELECT COUNT(*) FROM llm_calls WHERE message_id IS NULL").fetchone()[0] == 3
+        conn.execute("SELECT COUNT(*) FROM llm_calls WHERE message_id IS NULL").fetchone()[0] == 2
     )
 
 
@@ -93,13 +93,14 @@ def test_discover_turn_collects_finds(settings, clock, conn, registry) -> None:
             "source": "example.com",
         }
     ]
-    assert turn.result.iterations == 3  # paused web turn, hand-back, final text
+    assert turn.result.iterations == 2  # paused web turn, then the hand-back ends it
 
 
 def test_worker_budget_is_separate_from_the_chat_budget(settings, clock, conn, registry) -> None:
     capped = settings.model_copy(update={"worker_max_iterations": 2, "agent_max_iterations": 8})
+    # A hand-back that fails goes back to the model, so this one loops until the cap.
     looping = fakes.message(
-        [fakes.tool_use("tu", "report_finds", {"finds": []})], stop_reason="tool_use"
+        [fakes.tool_use("tu", "report_finds", {"finds": "not a list"})], stop_reason="tool_use"
     )
     api = fakes.FakeMessagesAPI(looping, looping, looping)
     turn = _run("discover", api, capped, clock, registry, conn)
@@ -134,3 +135,38 @@ def test_worker_turns_use_the_cheaper_model_and_less_thinking(settings, clock, c
     api = fakes.FakeMessagesAPI(fakes.message([fakes.text("done")]))
     _run("enrich", api, same, clock, registry, conn)
     assert api.requests[0]["model"] == same.anthropic_model
+
+
+def test_a_hand_back_ends_the_turn_and_a_failed_one_goes_back(
+    settings, clock, conn, registry
+) -> None:
+    from familydb.store.db import transaction
+
+    with transaction(conn):
+        idea = ideas.insert(conn, title="A picnic", kind="outing", now="2026-09-20T21:03:00Z")
+
+    def skip(idea_id):
+        args = {"idea_id": idea_id, "status": "skipped", "reason": "not a place"}
+        return fakes.message([fakes.tool_use("tu", "skip_place", args)], stop_reason="tool_use")
+
+    # The first hand-back names no idea and fails: that goes back to the model. The second
+    # succeeds and ends the turn; the text queued after it is never asked for.
+    api = fakes.FakeMessagesAPI(skip(999), skip(idea.id), fakes.message([fakes.text("Done.")]))
+    turn = _run("enrich", api, settings, clock, registry, conn)
+    assert turn.result.status == "ok" and turn.handed_back("skip_place")
+    assert len(api.requests) == 2 and turn.result.iterations == 2
+    assert api.requests[1]["messages"][-1]["content"][0]["is_error"] is True
+    assert ideas.get(conn, idea.id).enrichment == "skipped"
+
+
+def test_workers_get_a_small_output_cap(settings, clock, conn, registry) -> None:
+    from familydb.agent.gateway import WORKER_MAX_TOKENS
+
+    api = fakes.FakeMessagesAPI(fakes.message([fakes.text("done")]))
+    _run("discover", api, settings, clock, registry, conn)
+    assert api.requests[0]["max_tokens"] == WORKER_MAX_TOKENS < settings.max_output_tokens
+    # Never above the ceiling set for every call.
+    low = settings.model_copy(update={"max_output_tokens": 1000})
+    api = fakes.FakeMessagesAPI(fakes.message([fakes.text("done")]))
+    _run("enrich", api, low, clock, registry, conn)
+    assert api.requests[0]["max_tokens"] == 1000

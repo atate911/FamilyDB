@@ -12,8 +12,9 @@ from the same session, is sent there too, without doing anything. One that arriv
 first is still working waits for it.
 
 This guard is in memory and handles rapid repeats. Calendar creation additionally carries the
-form identity into the durable calendar operation log, so it survives a restart or lost reply.
-Other forms still have only this process-local double-submit guard.
+form identity into the durable calendar operation log, so it survives a restart, and the browser
+session, so a form drawn again after a lost reply from Google finds the event rather than adding
+another. Task creation carries the form identity too. Other forms have only this guard.
 """
 
 from __future__ import annotations

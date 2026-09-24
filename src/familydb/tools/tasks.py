@@ -14,6 +14,7 @@ from familydb.dates import parse_datetime, utc_iso
 from familydb.errors import ToolError
 from familydb.store import members, messages, tasks
 from familydb.store.db import to_json
+from familydb.store.tasks import Task
 from familydb.tools.registry import ToolContext, tool
 
 
@@ -25,19 +26,14 @@ class AddTaskInput(BaseModel):
     )
     due_at: str | None = Field(
         default=None,
-        description=(
-            "Optional deadline, YYYY-MM-DDTHH:MM in family timezone. Does not schedule a reminder. "
-        ),
+        description=("Deadline, YYYY-MM-DDTHH:MM family time. Not a reminder."),
     )
     preferred_window: str = Field(
         default="", description="Flexible intent, e.g. some Saturday morning. Not a scheduled time."
     )
     remind_at: str | None = Field(
         default=None,
-        description=(
-            "Explicit reminder time YYYY-MM-DDTHH:MM in family timezone. Ask for time "
-            "if ambiguous. "
-        ),
+        description=("Reminder time, YYYY-MM-DDTHH:MM family time."),
     )
 
 
@@ -89,9 +85,8 @@ def _time(ctx: ToolContext, value: str | None, *, future: bool = False) -> str |
 @tool(
     name="add_task",
     description=(
-        "Save an intention or obligation, optionally with an explicit reminder. "
-        "Does not create a calendar event. Reminders return to this chat; browser "
-        "reminders appear in web chat. "
+        "Save an obligation, optionally with a reminder. Not a calendar event. "
+        "Reminders arrive in this chat; from the page, in its Chat."
     ),
     writes=True,
 )
@@ -100,10 +95,13 @@ def add_task(ctx: ToolContext, args: AddTaskInput) -> dict[str, Any]:
         f"message:{ctx.message_id}" if ctx.message_id else uuid.uuid4().hex
     )
     key = hashlib.sha256((scope + to_json(args.model_dump())).encode()).hexdigest()
-    previous = ctx.conn.execute("SELECT id FROM tasks WHERE operation_key=?", (key,)).fetchone()
+    previous = tasks.find_by_operation(ctx.conn, key)
     if previous:
-        task = tasks.get(ctx.conn, previous["id"])
-        return {"task": task, "reminder_destination": task["channel"], "timezone": ctx.clock.tz.key}
+        return {
+            "task": previous.model_dump(mode="json"),
+            "reminder_destination": previous.channel,
+            "timezone": ctx.clock.tz.key,
+        }
     values = args.model_dump(exclude={"owner", "remind_at"})
     values["owner_id"] = (
         _owner(ctx, args.owner) if args.owner else (ctx.member.id if ctx.member else None)
@@ -124,15 +122,18 @@ def add_task(ctx: ToolContext, args: AddTaskInput) -> dict[str, Any]:
         chat_id=chat_id,
         now=ctx.now_iso(),
     )
-    return {"task": task, "reminder_destination": channel, "timezone": ctx.clock.tz.key}
+    return {
+        "task": task.model_dump(mode="json"),
+        "reminder_destination": channel,
+        "timezone": ctx.clock.tz.key,
+    }
 
 
 @tool(
     name="update_task",
     description=(
-        "Edit, complete, cancel, reopen, or snooze a saved task. Completing or "
-        "cancelling stops pending reminders. Reopening does not restore old "
-        "reminders. "
+        "Edit, complete, cancel, reopen or snooze a task. Completing or cancelling "
+        "stops its reminders; reopening does not restore them."
     ),
     writes=True,
 )
@@ -153,34 +154,63 @@ def update_task(ctx: ToolContext, args: UpdateTaskInput) -> dict[str, Any]:
     if args.due_at or args.clear_due:
         values["due_at"] = _time(ctx, args.due_at) if not args.clear_due else None
     reminder = _time(ctx, args.remind_at, future=True)
-    return {
-        "task": task_service.update(
-            ctx.conn,
-            args.task_id,
-            values,
-            now=ctx.now_iso(),
-            reminder=reminder,
-            replace_reminder=bool(args.remind_at or args.clear_reminder),
-            revision=ctx.task_revision,
-        )
-    }
+    task = task_service.update(
+        ctx.conn,
+        args.task_id,
+        values,
+        now=ctx.now_iso(),
+        reminder=reminder,
+        replace_reminder=bool(args.remind_at or args.clear_reminder),
+        revision=ctx.task_revision,
+    )
+    return {"task": task.model_dump(mode="json")}
 
 
 @tool(
     name="list_tasks",
     description=(
-        "Find saved tasks and obligations, including their deadlines, flexible "
-        "windows, reminder delivery state and task IDs. Defaults to open tasks; "
-        "search before editing or answering what is unfinished. "
+        "Find tasks and their ids, deadlines and reminders; open ones by default. "
+        "Use before changing one or saying what is unfinished."
     ),
 )
 def list_tasks(ctx: ToolContext, args: ListTasksInput) -> dict[str, Any]:
+    found = tasks.list_all(
+        ctx.conn,
+        status=args.status,
+        query=args.query,
+        owner_id=_owner(ctx, args.owner) if args.owner else None,
+    )
     return {
-        "tasks": tasks.list_all(
-            ctx.conn,
-            status=args.status,
-            query=args.query,
-            owner_id=_owner(ctx, args.owner) if args.owner else None,
-        ),
-        "limit": 100,
+        "tasks": [_brief(ctx, task) for task in found[:LISTED]],
+        "not_shown": max(0, len(found) - LISTED),
     }
+
+
+# Enough to answer "what's unfinished?"; a narrower query finds the rest.
+LISTED = 25
+NOTES_SHOWN = 200
+
+
+def _brief(ctx: ToolContext, task: Task) -> dict[str, Any]:
+    """What the model needs to talk about a task or change it, and nothing it does not."""
+
+    def local(value: str | None) -> str | None:
+        if not value:
+            return None
+        return datetime.fromisoformat(value).astimezone(ctx.clock.tz).strftime("%Y-%m-%dT%H:%M")
+
+    notes = task.notes
+    brief = {
+        "id": task.id,
+        "title": task.title,
+        "status": task.status,
+        "owner": task.owner,
+        "notes": notes if len(notes) <= NOTES_SHOWN else notes[:NOTES_SHOWN] + "…",
+        "due": local(task.due_at),
+        "window": task.preferred_window,
+    }
+    reminder = task.reminder
+    if reminder:
+        brief["reminder"] = local(reminder.remind_at)
+        brief["reminder_sent"] = bool(reminder.delivered_at)
+    return {k: v for k, v in brief.items() if v not in (None, "")}

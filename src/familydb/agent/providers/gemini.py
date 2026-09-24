@@ -12,8 +12,10 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+import httpx
 from google import genai
 from google.genai import errors as genai_errors
+from google.genai import types as genai_types
 
 from familydb.agent.providers.base import (
     ModelReply,
@@ -43,12 +45,16 @@ REFUSAL_REASONS = {
     "IMAGE_SAFETY",
 }
 RETRYABLE_STATUS = (429, 500, 502, 503, 504)
+TIMEOUT_MS = 120_000
 
 
 def make_client(settings: Settings) -> Any:
     if not settings.gemini_api_key:
         raise AgentError(NO_CREDENTIALS, retryable=False)
-    return genai.Client(api_key=settings.gemini_api_key)
+    # The same two minutes the other vendors' clients allow; the SDK's default is no limit.
+    return genai.Client(
+        api_key=settings.gemini_api_key, http_options=genai_types.HttpOptions(timeout=TIMEOUT_MS)
+    )
 
 
 def _status(exc: Exception) -> int:
@@ -248,6 +254,8 @@ class GeminiProvider:
             raise AgentError(
                 f"Gemini error: {exc}", retryable=_status(exc) in RETRYABLE_STATUS
             ) from exc
+        except httpx.TransportError as exc:  # timed out, or never reached Google
+            raise AgentError(f"could not reach Gemini: {exc}", retryable=True) from exc
         return self.reply(response)
 
 

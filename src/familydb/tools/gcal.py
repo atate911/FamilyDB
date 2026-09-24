@@ -22,8 +22,8 @@ from familydb.dates import (
 )
 from familydb.errors import ToolError, ToolUnavailable
 from familydb.integrations.google_calendar import CalendarAPI, CalendarEvent
-from familydb.store import ideas, messages, plans
-from familydb.store.db import from_json, to_json, transaction
+from familydb.store import calendar_ops, ideas, messages, plans
+from familydb.store.db import to_json, transaction
 from familydb.tools.registry import ToolContext, tool
 
 NOT_CONFIGURED = "Google Calendar is not connected (no calendar id or token configured)"
@@ -145,6 +145,56 @@ def free_blocks(events: list[CalendarEvent], day: date, tz: ZoneInfo) -> list[st
     return free
 
 
+def free_spans(
+    events: list[CalendarEvent], day: date, tz: ZoneInfo, start: int, end: int
+) -> list[tuple[int, int]]:
+    """The free stretches of a day between two minutes after midnight, busy events taken out.
+
+    The same rules as `free_blocks`: a busy all-day event takes the whole day, and nothing marked
+    free in Google takes any of it. Minutes are family clock time, so a stretch reads as it would
+    on the kitchen wall even on the day the clocks change.
+    """
+    todays = [event for event in events if event.busy and on_day(event, day, tz)]
+    if any(event.all_day for event in todays):
+        return []
+
+    def minute(moment: datetime) -> int:
+        local = moment.astimezone(tz)
+        if local.date() < day:
+            return 0
+        if local.date() > day:
+            return 24 * 60
+        return local.hour * 60 + local.minute
+
+    busy = sorted((minute(e.start), minute(e.end)) for e in todays)  # type: ignore[arg-type]
+    spans: list[tuple[int, int]] = []
+    cursor = start
+    for left, right in busy:
+        if left > cursor:
+            spans.append((cursor, min(left, end)))
+        cursor = max(cursor, right)
+        if cursor >= end:
+            break
+    if cursor < end:
+        spans.append((cursor, end))
+    return [(a, b) for a, b in spans if b > a]
+
+
+def events_by_day(
+    calendar: CalendarAPI, start: date, end: date, tz: ZoneInfo
+) -> list[tuple[date, list[CalendarEvent]]]:
+    """Each day of a window with the events that touch it, from one call to Google."""
+    window_start, _ = _day_bounds(start, tz)
+    _, window_end = _day_bounds(end, tz)
+    events = calendar.list_events(window_start, window_end)
+    days = []
+    day = start
+    while day <= end:
+        days.append((day, [event for event in events if on_day(event, day, tz)]))
+        day += timedelta(days=1)
+    return days
+
+
 def _timed_or_all_day(
     start_text: str,
     end_text: str | None,
@@ -190,36 +240,28 @@ def _end_keeping_duration(
 def calendar_days(
     calendar: CalendarAPI, start: date, end: date, tz: ZoneInfo
 ) -> list[dict[str, Any]]:
-    """Per-day timed events, all-day entries and free blocks. Shared with the suggestion engine."""
-    window_start, _ = _day_bounds(start, tz)
-    _, window_end = _day_bounds(end, tz)
-    events = calendar.list_events(window_start, window_end)
-    days = []
-    day = start
-    while day <= end:
-        todays = [event for event in events if on_day(event, day, tz)]
-        days.append(
-            {
-                "date": day.isoformat(),
-                "weekday": day.strftime("%A"),
-                "events": [
-                    {
-                        "google_event_id": e.id,
-                        "title": e.title,
-                        "start": e.start.strftime("%H:%M"),  # type: ignore[union-attr]
-                        "end": e.end.strftime("%H:%M"),  # type: ignore[union-attr]
-                        "location": e.location,
-                    }
-                    for e in todays
-                    if not e.all_day
-                ],
-                "all_day": [e.title for e in todays if e.all_day],
-                "all_day_events": [e.to_public() for e in todays if e.all_day],
-                "free": free_blocks(todays, day, tz),
-            }
-        )
-        day += timedelta(days=1)
-    return days
+    """Per-day timed events, all-day entries and free blocks, as `get_calendar` reports them."""
+    return [
+        {
+            "date": day.isoformat(),
+            "weekday": day.strftime("%A"),
+            "events": [
+                {
+                    "google_event_id": e.id,
+                    "title": e.title,
+                    "start": e.start.strftime("%H:%M"),  # type: ignore[union-attr]
+                    "end": e.end.strftime("%H:%M"),  # type: ignore[union-attr]
+                    "location": e.location,
+                }
+                for e in todays
+                if not e.all_day
+            ],
+            "all_day": [e.title for e in todays if e.all_day],
+            "all_day_events": [e.to_public() for e in todays if e.all_day],
+            "free": free_blocks(todays, day, tz),
+        }
+        for day, todays in events_by_day(calendar, start, end, tz)
+    ]
 
 
 @tool(
@@ -288,17 +330,27 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
         "idea_id": args.idea_id,
     }
     key = hashlib.sha256((scope + to_json(intent)).encode()).hexdigest()
+    # A form drawn again after a lost reply has a new identity. The same browser session asking
+    # for the same event takes over the unfinished attempt, which may already have made it.
+    resume = (
+        hashlib.sha256((ctx.resume_scope + to_json(intent)).encode()).hexdigest()
+        if ctx.resume_scope
+        else None
+    )
     with transaction(ctx.conn):
-        ctx.conn.execute(
-            "INSERT OR IGNORE INTO calendar_creations(operation_key, event_id) VALUES (?, ?)",
-            (key, uuid.uuid4().hex),
-        )
-        operation = ctx.conn.execute(
-            "SELECT * FROM calendar_creations WHERE operation_key = ?", (key,)
-        ).fetchone()
-    if operation["result"]:
-        return from_json(operation["result"])
-    event = calendar.get_event(operation["event_id"])
+        # This form may already have taken over an earlier attempt, before a restart.
+        key = calendar_ops.adopted(ctx.conn, key) or key
+        if resume:
+            earlier = calendar_ops.unfinished_key(ctx.conn, resume)
+            if earlier is not None and earlier != key:
+                calendar_ops.link(ctx.conn, key, earlier)
+                key = earlier
+        operation = calendar_ops.reserve(ctx.conn, key, uuid.uuid4().hex)
+        if resume and not operation.result:
+            calendar_ops.mark_unfinished(ctx.conn, resume, operation.event_id)
+    if operation.result:
+        return operation.result
+    event = calendar.get_event(operation.event_id)
     if event is None:
         ensure_not_past(start, ctx.clock)
         event = calendar.insert_event(
@@ -308,15 +360,15 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
             all_day=all_day,
             location=args.location,
             description=args.notes,
-            event_id=operation["event_id"],
+            event_id=operation.event_id,
         )
     origin = messages.get(ctx.conn, ctx.message_id) if ctx.message_id is not None else None
     with transaction(ctx.conn):
-        completed = ctx.conn.execute(
-            "SELECT result FROM calendar_creations WHERE operation_key = ?", (key,)
-        ).fetchone()["result"]
-        if completed:
-            return from_json(completed)
+        completed = calendar_ops.get(ctx.conn, key)
+        if completed is not None and completed.result:
+            return completed.result
+        if resume:
+            calendar_ops.clear_unfinished(ctx.conn, resume)
         plan = plans.insert(
             ctx.conn,
             title=args.title.strip(),
@@ -341,10 +393,7 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
             "event": event.to_public(),
             "idea": idea.model_dump(mode="json") if idea else None,
         }
-        ctx.conn.execute(
-            "UPDATE calendar_creations SET result = ? WHERE operation_key = ?",
-            (to_json(result), key),
-        )
+        calendar_ops.record_result(ctx.conn, key, result)
     return result
 
 

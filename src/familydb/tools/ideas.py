@@ -192,7 +192,7 @@ def describe_idea(ctx: ToolContext, args: DescribeIdeaInput) -> dict[str, Any]:
     place = places.get(ctx.conn, idea.place_id) if idea.place_id else None
     original = messages.get(ctx.conn, idea.source_message_id) if idea.source_message_id else None
     return {
-        "original_message": original.text if original else None,
+        "original_message": messages.as_said(original.text) if original else None,
         "idea": idea.model_dump(mode="json"),
         "place": place.model_dump(mode="json") if place else None,
         "outcomes": [o.model_dump(mode="json") for o in outcomes.list_for_idea(ctx.conn, idea.id)],

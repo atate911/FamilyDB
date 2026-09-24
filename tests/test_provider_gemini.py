@@ -1,3 +1,4 @@
+import httpx
 import pytest
 
 from familydb.agent.loop import REFUSAL_REPLY, run_turn
@@ -142,10 +143,18 @@ def test_api_failures_become_agent_errors(settings, registry, ctx) -> None:
     for error, retryable in [
         (fakes.gemini_rate_limit(), True),
         (fakes.gemini_server_error(), True),
+        (httpx.ReadTimeout("timed out"), True),
     ]:
         with pytest.raises(AgentError) as info:
             _run(fakes.FakeGeminiAPI(error), settings, registry, ctx)
         assert info.value.retryable is retryable
+
+
+def test_a_client_gives_up_after_two_minutes(settings) -> None:
+    from familydb.agent.providers.gemini import make_client
+
+    client = make_client(_settings(settings))
+    assert client._api_client._http_options.timeout == 120_000
 
 
 def test_the_model_per_surface_and_the_key(settings) -> None:

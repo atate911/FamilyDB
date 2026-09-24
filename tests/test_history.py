@@ -132,3 +132,39 @@ def test_history_can_exclude_replies_to_a_message(conn, family, clock) -> None:
         exclude_replies_to=inbound.id,
     )
     assert turns == []
+
+
+def test_history_keeps_the_newest_turns_within_a_budget() -> None:
+    from familydb.agent.history import CUT, MESSAGE_CHARS, HistoryTurn, within_budget
+
+    paste = "x" * 10_000
+    turns = [
+        HistoryTurn("user", "oldest"),
+        HistoryTurn("user", paste),
+        HistoryTurn("assistant", "a" * 900),
+        HistoryTurn("user", "newest"),
+    ]
+    kept = within_budget(turns, 2410)
+    # The paste is cut to one message's share; the oldest no longer fits and is dropped.
+    assert [t.text[:5] for t in kept] == ["xxxxx", "aaaaa", "newes"]
+    assert len(kept[0].text) == MESSAGE_CHARS and kept[0].text.endswith(CUT)
+    assert within_budget(turns, 2410) == kept  # deterministic
+    assert within_budget(turns, 5) == []
+    assert within_budget(turns[-1:], 6000) == turns[-1:]
+
+
+def test_load_history_applies_the_budget(conn, family, clock) -> None:
+    with db.transaction(conn):
+        for n in range(6):
+            messages.insert_in(
+                conn,
+                channel="console",
+                channel_update_id=f"b{n}",
+                chat_id="console",
+                member_id=family["sam"].id,
+                text=f"{n}" * 3000,
+                now=f"2026-09-20T20:0{n}:00Z",
+            )
+    turns = load_history(conn, "console", clock=clock, limit=20, since_hours=6)
+    assert sum(len(t.text) for t in turns) <= 6000
+    assert turns[-1].text.startswith("[Sam] 5")  # the newest survives

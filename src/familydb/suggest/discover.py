@@ -3,11 +3,14 @@
 The chat agent never searches the web itself. When discovery is on, this stage runs one worker
 turn (its own prompt, the web tools, `report_finds` as the hand-back) and keeps the finds per
 window for `DISCOVER_CACHE_SECONDS`, so a digest and the questions that follow it share one search.
+The request is built from the window and the constraints only, never the question's wording, so
+"what's on this weekend" and "anything fun Saturday" ask the same thing and share one search.
 """
 
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 from datetime import date, timedelta
 from typing import Any
@@ -17,7 +20,7 @@ from familydb.agent.worker import home_location, run_worker_turn
 from familydb.availability import web_tools_available
 from familydb.config import Settings
 from familydb.errors import AgentError
-from familydb.suggest.types import Context, WebFind
+from familydb.suggest.types import DAY_END, DAY_START, Constraints, Context, WebFind, clock
 from familydb.tools import ToolContext, build_registry
 
 log = logging.getLogger(__name__)
@@ -34,9 +37,22 @@ def cache_key(window: tuple[date, date] | None) -> str:
     return f"{window[0].isoformat()}:{window[1].isoformat()}"
 
 
-def render_discover_request(context: Context, question: str, settings: Settings) -> str:
-    """What the worker is asked: the window, the home area and the family's own words."""
+def _hours(bounds: tuple[int, int]) -> str:
+    """A day's bounds to the whole hour, outward: close enough to search by, and the same for
+    questions asked a few minutes apart, so they share one search."""
+    start, end = bounds
+    return f"{clock(start // 60 * 60)}-{clock(min(24 * 60, -(-end // 60) * 60))}"
+
+
+def render_discover_request(context: Context, constraints: Constraints, settings: Settings) -> str:
+    """What the worker is asked: the window and its hours, the home area, what it is for.
+
+    Built from the framing, never the question's wording: two ways of asking for the same thing
+    ask the same, and share one cached search, while a different subject asks something else.
+    """
     lines = ["Find time-bound things a family could go to near home."]
+    if constraints.topic:
+        lines.append(f"Looking for: {constraints.topic}.")
     if context.window is None:
         lines.append("Window: no fixed dates; look at the next four weeks or so.")
     else:
@@ -45,19 +61,35 @@ def render_discover_request(context: Context, question: str, settings: Settings)
             lines.append(f"Window: {start:%A %d %B %Y}.")
         else:
             lines.append(f"Window: {start:%A %d %B} to {end:%A %d %B %Y}.")
+        hours = [_hours(day.bounds) for day in context.days]
+        if len(set(hours)) == 1 and hours[0] != _hours((DAY_START, DAY_END)):
+            lines.append(f"Hours: {hours[0]}.")
+        elif len(set(hours)) > 1:
+            each = zip(context.days, hours, strict=True)
+            lines.append("Hours: " + "; ".join(f"{d.date:%a} {h}" for d, h in each) + ".")
     lines.append(f"Home area: {settings.home_area or 'not set'}.")
-    if question.strip():
-        lines.append(f'The family asked: "{question.strip()}"')
+    wanted = {
+        "who": constraints.participants or None,
+        "max_cost_level": constraints.max_cost_level,
+        "setting": constraints.setting,
+        "max_travel_minutes": constraints.max_travel_minutes,
+        "max_duration_minutes": constraints.max_duration_minutes,
+    }
+    wanted = {k: v for k, v in wanted.items() if v is not None}
+    if wanted:
+        lines.append("Constraints: " + json.dumps(wanted, sort_keys=True))
     return "\n".join(lines)
 
 
-def discover(ctx: ToolContext, context: Context, question: str) -> tuple[list[WebFind], str | None]:
+def discover(
+    ctx: ToolContext, context: Context, constraints: Constraints
+) -> tuple[list[WebFind], str | None]:
     """Finds for the window, plus a note for `skipped_checks` when discovery did not run."""
     if not web_tools_available(ctx.settings):
         return [], NOTE_OFF
     if not providers.ready(ctx.settings, "worker", api=ctx.api):
         return [], NOTE_NO_KEY
-    request = render_discover_request(context, question, ctx.settings)
+    request = render_discover_request(context, constraints, ctx.settings)
     key = (
         cache_key(context.window)
         + ":"

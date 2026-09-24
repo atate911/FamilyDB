@@ -19,6 +19,7 @@ from familydb.pipeline import NO_KEY_REPLY, handle_incoming
 from familydb.store import db, ideas, messages
 from familydb.suggest.context import build_context
 from familydb.suggest.discover import NOTE_NO_KEY, discover
+from familydb.suggest.types import Constraints
 from familydb.tools import ToolContext
 from familydb.web import create_app
 
@@ -72,7 +73,7 @@ def test_no_digest_is_attempted_without_a_key(keyless, clock, conn, family) -> N
 def test_discovery_says_it_is_waiting_for_a_key(keyless, clock, conn, family) -> None:
     ctx = ToolContext(conn=conn, settings=keyless, clock=clock, member=family["sam"])
     context = build_context(ctx, (date(2026, 9, 26), date(2026, 9, 27)))
-    assert discover(ctx, context, "anything on?") == ([], NOTE_NO_KEY)
+    assert discover(ctx, context, Constraints()) == ([], NOTE_NO_KEY)
 
 
 def test_the_status_page_says_what_waits_for_a_key(keyless, clock, conn, family) -> None:
