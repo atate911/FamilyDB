@@ -1,10 +1,18 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon, radar %}
+{% from "_ui.html" import icon, crt, radar %}
 {% block title %}Not found · {{ site_title }}{% endblock %}
 {% block body_class %}page-lost{% endblock %}
 {% block content %}
   <section class="lost">
-    {% call radar([]) %}404{% endcall %}
+    {% call crt('power-on') %}
+      {% call radar([]) %}404{% endcall %}
+      <div class="lost-readout caps">
+        <p><span class="dim">Range</span> 4 wk</p>
+        <p><span class="dim">Contacts</span> 0</p>
+        <p class="bright gap">?Not found</p>
+        <p>Ready.<span class="crt-cursor"></span></p>
+      </div>
+    {% endcall %}
     <p class="eyebrow">Nothing on the radar</p>
     <h1>Not found</h1>
     <p class="muted">There is nothing at that address.</p>

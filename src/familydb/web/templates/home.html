@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon, kind_label, chip, radar %}
+{% from "_ui.html" import icon, kind_label, chip, crt, radar %}
 {% block title %}{{ site_title }}{% endblock %}
 {% block body_class %}page-home{% endblock %}
 {% macro plan_where(entry) -%}
@@ -20,26 +20,26 @@
         <a class="button secondary" href="{{ url_for('web.new_idea') }}">{{ icon('plus') }}Add an idea</a>
       </div>
     </div>
-    {# The one thing most people open the page to know, beside a small radar of everything
-       coming: the nearer the day, the nearer the middle, the next one pinging. #}
-    <div class="next-up">
+    {# The one thing most people open the page to know, on a green screen beside a radar of
+       everything coming: the nearer the day, the nearer the middle, the next one pinging. #}
+    {% call crt('next-up', hidden=false) %}
       {{ radar(blips) }}
       <div class="next-text">
+        <p class="next-label"><span class="inverse caps">Next up</span></p>
         {% if first %}
-          <p class="eyebrow"><span class="live" aria-hidden="true"></span>Next up</p>
-          <p class="next-title">{{ plan_where(first) }}</p>
-          <p class="next-when"><strong>{{ first.when }}</strong>{% if first.relative %} <span class="rel">{{ first.relative }}</span>{% endif %}</p>
-          {% if first.location %}<p class="muted next-where">{{ icon('pin') }}{{ first.location }}</p>{% endif %}
-          {% if coming | length > 1 %}
-            <p class="next-more"><a href="#coming">{{ coming | length - 1 }} more on the radar</a></p>
-          {% endif %}
+          <p class="next-title bright">{{ plan_where(first) }}</p>
+          <p class="next-when">{{ first.when }}{% if first.relative %} <span class="rel">{{ first.relative }}</span>{% endif %}</p>
+          {% if first.location %}<p class="next-where dim">{{ first.location }}</p>{% endif %}
+          <p class="next-more"><span class="dim" aria-hidden="true">&gt;</span>
+            {%- if coming | length > 1 %} <a href="#coming">{{ coming | length - 1 }} more on the radar</a>{% endif -%}
+            <span class="crt-cursor" aria-hidden="true"></span></p>
         {% else %}
-          <p class="eyebrow">Next up</p>
-          <p class="next-title">Nothing on the radar yet.</p>
-          <p class="muted next-where">Ask what fits this weekend, or plan an idea.</p>
+          <p class="next-title bright">Nothing on the radar yet.</p>
+          <p class="next-where dim">Ask what fits this weekend, or plan an idea.</p>
+          <p class="next-more"><span class="dim" aria-hidden="true">&gt;</span><span class="crt-cursor" aria-hidden="true"></span></p>
         {% endif %}
       </div>
-    </div>
+    {% endcall %}
   </section>
 
   {% if setup %}

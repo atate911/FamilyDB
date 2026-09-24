@@ -11,12 +11,13 @@ It was not always this restrained. The first pass leaned hard into the CRT (pixe
 icons, scanlines, a boot screen); the family asked for something more modern that only evokes it,
 and this is that. The rule that came out of it: **nostalgia shows up as light and small winks,
 never as a style the page is imitating.** Later the family asked for a little texture back,
-carefully and sparingly, so there is now one kind of picture allowed to *be* a screen: a radar
-scope, hazy and scanlined, used in two places (see "Scopes").
+carefully and sparingly, with the green-screen monitors of the 1980s as its model. So the page's
+few pictures *are* those monitors: a tube of dark glass in a plastic surround, words drawn on it
+in phosphor, sometimes a radar (see "Green screens").
 
 Everything here is carried by one stylesheet (`src/familydb/web/static/style.css`), a handful of
-templates, two open-licensed typefaces and one icon sprite, with no script beyond the one the page
-already had. A change to the page should be checked against this document.
+templates, three open-licensed typefaces and one icon sprite, with no script beyond the one the
+page already had. A change to the page should be checked against this document.
 
 ## Principles
 
@@ -25,23 +26,25 @@ already had. A change to the page should be checked against this document.
    on a phone, sentence-case labels, readable type. Nothing retro may cost usability.
 2. **The CRT survives as light.** Phosphor green glows only where attention belongs: the mark
    and cursor in the bar (and the bot's face), the primary button, the box being typed in, the
-   key words of the home page's greeting, the next plan's blip on the radar, live status and
-   finished tasks, the day's spend, and the 404. The icon tile beside a page title glows in that
+   key words of the home page's greeting, live status and finished tasks, and the green screens
+   (what is next, the way in, the day's spend, the 404). The icon tile beside a page title glows in that
    page's colour, and amber glows for *today*. If everything glowed, nothing would.
 3. **Colour says where you are.** Each part of the site has one colour, and each kind of idea has
    one; colour is used to tell things apart, never as decoration, and never on its own.
-4. **Two voices.** DM Sans for everything read; DM Mono, sparingly, for the machine's small voice:
-   times and figures, the small labels above data, the name in the bar.
+4. **Two voices, and a third on the screens.** DM Sans for everything read; DM Mono, sparingly,
+   for the machine's small voice: times and figures, the small labels above data, the name in the
+   bar. VT323, a terminal's face, only for words on a green screen.
 5. **Keep the eye still.** A page's title, its one line of purpose and its one or two actions sit
    together at the top. What you do with a thing sits beside it. What is next is the first thing
    on the home page. The chat's box is under the newest line, with Send beside who is sending.
-6. **A few quiet winks.** The blinking cursor after the name. "Ready" above the sign-in. A
-   momentary flicker on the page that is not there. A whisper of scanlines inside the home page's
-   glow. A month that prints as green-bar paper. Each is small, none is in the way, and all
-   motion stops for anyone who asks for less.
-7. **One picture may be a screen.** The radar scope is the one place the page is allowed to be
-   hazy: a little blur, a little bloom, scanlines over its face. It earns that by showing
-   something true (what is coming, and how soon), and it appears at most once on a page.
+6. **A few quiet winks.** The blinking cursor after the name. The mark's face blinking on the
+   sign-in screen. A momentary flicker on the page that is not there. A spend screen that turns
+   amber, like the other monitors of the time, near the limit. A whisper of scanlines inside the
+   home page's glow. A month that prints as green-bar paper. Each is small, none is in the way,
+   and all motion stops for anyone who asks for less.
+7. **The pictures are green screens.** The page's few pictures are old green-screen monitors, and
+   they are the one place it is hazy: a terminal's face, a little blur and bloom, scanlines, the
+   tube's dark edge. Each shows something true, and there is at most one to a page.
 8. **Accessible by construction.** Contrast is measured, focus is always visible, every box has a
    label, motion, contrast and forced-colour preferences are honoured, and nothing needs a script.
 
@@ -88,11 +91,15 @@ so on, in that kind's colour; a card holding one takes the colour for its hover 
 | Face | Where |
 |---|---|
 | **DM Sans** (variable, 100–1000, optical sizes 9–40) | everything read: titles, headings, body, buttons, the bar, labels, the chat |
-| **DM Mono** (400, 500) | times and figures (the spend, table numbers, opening hours), the small uppercase labels above data, the month on a date, the name in the bar, the tools a reply used |
+| **DM Mono** (400, 500) | times and figures (table numbers, opening hours), the small uppercase labels above data, the month on a date, the name in the bar, the tools a reply used |
+| **VT323** (400) | words on a green screen, and nowhere else |
 
-Both are under the SIL Open Font License and served from `static/fonts/` (about 90 kB) because
-the content policy lets fonts come from this site only. DM Sans is friendly and current; DM Mono is
-its sibling with just enough typewriter in it to carry the old screen without dressing up as it.
+All three are under the SIL Open Font License and served from `static/fonts/` (about 110 kB)
+because the content policy lets fonts come from this site only. DM Sans is friendly and current;
+DM Mono is its sibling with just enough typewriter in it to carry the old screen without dressing
+up as it. VT323 is the face of the DEC VT320 terminal, blocky by birth; on a screen it is blurred
+a little and blooms, the way a tube drew it, and it is never set small (1.2rem at least, since its
+letters sit low in their line).
 
 Page titles are 700 weight, tight (-0.025em), 1.9–2.6rem; the home headline goes to 4rem.
 Section headings are 1.2rem semibold. Body is 1rem at 1.6. Paragraphs stop at about 60 characters.
@@ -134,40 +141,58 @@ It is the favicon, the bot's face in the chat, and the mark in the bar, where it
   (red) or half lit (amber), with words beside them.
 - **Meter**: an SVG bar (the content policy allows no inline style, so widths are SVG
   attributes), always with its figure written beside it.
-- **Scope** (`radar` in `_ui.html`): see below.
+- **Green screen** (`crt` in `_ui.html`) and **radar** (`radar`): see below.
 
-## Scopes
+## Green screens
 
-The one picture on the site that is a screen: a round radar scope, drawn the way a
-long-persistence phosphor drew it. It is in two places and no more.
+The page's pictures are the green-screen monitors of the 1980s: an IBM 5151 or a Zenith on a
+desk, a terminal in an office, the screens in *WarGames*. Each is drawn as the thing itself, not
+as a costume for the page around it.
 
-- **Home, in Next up.** Range rings at a week, two weeks and four weeks, "now" at the middle.
-  Each coming plan is a blip: the nearer its day, the nearer the middle. The sweep turns once
-  every eight seconds and leaves an afterglow; each blip flares as the sweep passes it and fades
-  until it comes round again, and the next plan's blip is the brightest and sends out a ping. The
-  words beside it say the same thing ("Soccer practice, Tuesday 17:00, in 2 days"), and a line
-  under them ("4 more on the radar") leads to the rest.
-- **Not found.** The same scope, empty, still sweeping, with 404 drawn on its face in the
-  phosphor: "Nothing on the radar".
+**The monitor.** A dark plastic surround, lit from above, with a thicker chin and a power light
+in it. In it, the tube: dark glass, a faint glow at its middle, its corners and edges falling away
+into shadow as a curved tube's did. Over the picture lie scanlines, a little light off the front
+of the glass and the tube's dark edge.
 
-Its texture belongs to it alone: the rings and blips are blurred by a third of a pixel and bloom;
-fine dark scanlines, a darker rim and a little light off the glass lie over the face; a thin
-green ring floats just outside it. The status page's spend figure is the one other thing drawn
-this way, as a figure rather than a picture: its digits are made of lines that bloom, over a
-faint graticule where the light falls.
+**The picture.** Words are set in VT323 in the phosphor's colour, blurred by a third of a pixel
+and blooming, in the three strengths a monitor drew: dim for what matters least, normal, and
+bright for the one thing to read first. A heading is in inverse video, dark on a green bar. A
+link is underlined, and turns to inverse video when pointed at, as a menu's choice did. A block
+cursor waits after the last line. The phosphor is green; the spend screen turns amber near the
+limit, as the other monitors of the time were, and red past it.
 
-How it is built, since the content policy allows no inline style and no script:
+**The radar** is a program the screen runs: range rings at a week, two weeks and four weeks,
+"now" at the middle, and each coming plan a blip, the nearer its day, the nearer the middle. The
+sweep turns once every eight seconds and leaves an afterglow, as a long-persistence phosphor did;
+each blip flares as the sweep passes and fades until it comes round again, and the next plan's
+blip is the brightest and pings.
 
-- It is SVG and CSS. The dial is 200 units across; `views.radar_blips` works out where each plan
-  goes (Jinja has no trigonometry), spreading them round the dial by the golden angle so none
-  sits on another, each on one of twelve bearings.
-- The sweep is a conic gradient turning on `--sweep`. Each blip's flare is timed to the moment
-  the sweep reaches its bearing by a negative delay: the `.b0` to `.b11` rules. The twelve
-  bearings in `views.py` and those twelve rules change together.
-- It is `aria-hidden`: a picture of what the page already says, never the only place it is said.
-  With less motion asked for, the sweep rests at twelve o'clock and every blip stays lit. With
-  more contrast, the blur, bloom and scanlines go. With forced colours and on paper, the scopes
-  are not drawn at all.
+There are four, one to a page at most:
+
+- **Home, Next up.** The next plan on a green screen, beside the radar of everything coming. These
+  are the page's own words, not a picture of them: they are read out, the title is a link, and "4
+  more on the radar" leads to the rest.
+- **Sign in.** The mark's face, awake, and "READY." with the cursor waiting. It switches on as
+  the page opens, the picture opening out of a bright line, and blinks now and then.
+- **Not found.** A radar console: an empty scope still sweeping, 404 on its face, and beside it
+  the range, no contacts, "?NOT FOUND" and "READY.". It switches on as the page opens.
+- **Status.** The day's spend, a bar of twenty cells in brackets and the share of the limit,
+  beside the same said in words.
+
+How they are built, since the content policy allows no inline style and no script:
+
+- A screen is HTML and CSS; the radar and the face are SVG. `views.radar_blips` works out where
+  each plan goes on the dial (Jinja has no trigonometry), spreading them by the golden angle so
+  none sits on another, each on one of twelve bearings. The sweep is a conic gradient turning on
+  `--sweep`, and each blip's flare is timed to it by a negative delay: the `.b0` to `.b11` rules.
+  The twelve bearings in `views.py` and those twelve rules change together.
+- The spend bar is characters, `[####................]`, twenty cells worked out in the template:
+  VT323 has no block characters, and a terminal would have drawn it this way.
+- A screen that is only a picture is `aria-hidden`, and what it shows is always said in words on
+  the page; Next up is the exception, because its words are the page's own. With less motion
+  asked for, nothing switches on or blinks, the sweep rests at twelve o'clock and every blip stays
+  lit. With more contrast, the blur, bloom and scanlines go. With forced colours, a screen that is
+  only a picture is left out and Next up keeps its words in a plain box; on paper the same.
 
 ## Page by page
 
@@ -176,9 +201,9 @@ How it is built, since the content policy allows no inline style and no script:
   Settings and signing out are icons at the top. From 52rem everything is one bar that stays at
   the top while the page scrolls.
 - **Home.** The greeting and the two things most people came for (ask about the weekend, add an
-  idea) on the left, lit from below; **Next up** on the right: the next plan in words, beside the
-  radar of everything coming (on a phone the words run round the scope). Then anything left to
-  set up, what else is coming, and what was added lately.
+  idea) on the left, lit from below; **Next up** on the right, on a green screen beside the radar
+  of everything coming (on a phone the words run round the scope). Then anything left to set up,
+  what else is coming, and what was added lately.
 - **Chat.** A messaging layout: the bot on the left with its mark, the family on the right with
   their initial; a typing indicator while it thinks; one box with the message on top and From,
   Send where I am and Send along the bottom, lit green while you write.
@@ -189,9 +214,9 @@ How it is built, since the content policy allows no inline style and no script:
 - **Plans.** A list of dates, and a month with today in amber and plans as cyan slips; on a phone
   the month is the busy days as a list.
 - **Things to do**, **Family**, **Settings** (with an index and a save bar that stays in reach),
-  **Status** (three monitors, then the day's spend as the one big glowing number, drawn in
-  scanlines on a faint graticule), **Sign in**, **Not found** (an empty radar, still sweeping,
-  with a 404 on its face that flickers now and then).
+  **Status** (three monitors, then the day's spend on a green screen beside the same in words),
+  **Sign in** (the mark's face on a green screen, then the one question), **Not found** (a radar
+  console with nothing on it, and one way home).
 - **On paper.** Printing turns any page into green-bar printout: black on white with a pale green
   band on every other line. The month on the fridge.
 
@@ -204,10 +229,13 @@ How it is built, since the content policy allows no inline style and no script:
   only, since the box itself says what it is for.
 - Nothing is said by colour alone: the chat tells voices apart by side and face; status lights
   differ in shape and carry words; kinds and statuses are written out.
-- `prefers-reduced-motion` stops the cursor, the typing dots, the breathing dots, the radar's
-  sweep and the 404's flicker. `prefers-contrast: more` lifts secondary text and edges and takes
-  away the glow, the blur and the scanlines. Forced colours keep dots, boxes, dates and faces
-  outlined, and leave the scopes out.
+- `prefers-reduced-motion` stops the cursors, the typing dots, the breathing dots, the screens
+  switching on, the face's blink, the radar's sweep and the 404's flicker. `prefers-contrast:
+  more` lifts secondary text and edges and takes away the glow, the blur and the scanlines.
+  Forced colours keep dots, boxes, dates and faces outlined, leave out the screens that are only
+  pictures, and keep Next up's words in a plain box.
+- Words on a green screen are at least 1.2rem; dim phosphor is 7.6:1 on the tube, normal and
+  bright more.
 - The page works with scripts off; the only script is still `static/locate.js`.
 
 ## Rules the look has to keep
@@ -221,9 +249,9 @@ How it is built, since the content policy allows no inline style and no script:
   on today in the month.
 - Class names are shared across the whole stylesheet: check a new one is not already taken (a
   meter once borrowed `.bar` from the top bar and flattened it).
-- At most one scope to a page, and only where it shows something true. Blur stays inside the
-  scopes, and scanlines inside the scopes, the spend figure and the home page's glow; everywhere
-  else the page is sharp.
+- At most one green screen to a page, and only where it shows something true. VT323 and blur
+  stay on the screens, and scanlines on the screens and in the home page's glow; everywhere else
+  the page is sharp and modern.
 - A new colour, face, glow or motion goes here first, with the reason.
 
 ## Left for later

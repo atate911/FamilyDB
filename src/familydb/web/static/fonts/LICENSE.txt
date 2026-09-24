@@ -1,14 +1,16 @@
-The page's two typefaces, served from here because the content policy allows fonts from this
+The page's three typefaces, served from here because the content policy allows fonts from this
 site only. Latin subsets, woff2, from the Fontsource packages (npm, version 5.3.0).
 
   dm-sans.woff2       DM Sans, weights 100-1000, optical sizes 9-40 (variable)
   dm-mono-400.woff2   DM Mono 400
   dm-mono-500.woff2   DM Mono 500
+  vt323.woff2         VT323 400, for the words on a green screen
 
 Copyright 2014 The DM Sans Project Authors (https://github.com/googlefonts/dm-fonts)
 Copyright 2020 The DM Mono Project Authors (https://www.github.com/googlefonts/dm-mono)
+Copyright 2011, The VT323 Project Authors (peter.hull@oikoi.com)
 
-Both are licensed under the SIL Open Font License, Version 1.1, reproduced below.
+All three are licensed under the SIL Open Font License, Version 1.1, reproduced below.
 
 -----------------------------------------------------------
 SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007

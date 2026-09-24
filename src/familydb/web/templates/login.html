@@ -1,11 +1,17 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon %}
+{% from "_ui.html" import icon, crt %}
 {% block title %}Sign in · {{ site_title }}{% endblock %}
 {% block body_class %}page-signin{% endblock %}
 {% block content %}
   <section class="panel narrow signin">
-    <div class="signin-mark" aria-hidden="true">{{ icon('mark') }}</div>
-    <p class="eyebrow">Ready</p>
+    {# The mark's face, awake on a green screen, the way an old machine greeted you. #}
+    {% call crt('power-on') %}
+      <svg class="crt-face" viewBox="0 0 60 30" focusable="false">
+        <path class="eye" d="M18 4V10"/><path class="eye" d="M42 4V10"/>
+        <path d="M18 20C24.8 25.4 35.2 25.4 42 20"/>
+      </svg>
+      <p class="signin-ready caps">Ready.<span class="crt-cursor"></span></p>
+    {% endcall %}
     <h1>Sign in to {{ site_title }}</h1>
     {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
     <form method="post" action="{{ url_for('auth.sign_in') }}">

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon, page_head %}
+{% from "_ui.html" import icon, page_head, crt %}
 {% block title %}Status · {{ site_title }}{% endblock %}
 {% block body_class %}page-status{% endblock %}
 {# A light says its state three ways: its colour, its shape (a lit dot, a hollow ring, a half
@@ -51,29 +51,30 @@
   <section class="panel spend">
     <h2>{{ icon('coin') }}What it has cost</h2>
     {% set used = (spending.today / spending.limit * 100) if spending.limit else none %}
-    <div class="readout{{ ' near' if used is not none and used >= 75 }}{{ ' over' if used is not none and used >= 100 }}" aria-hidden="true">
-      <div class="readout-top">
-        <div>
-          <p class="eyebrow">Spent today, about</p>
-          <p class="readout-figure">${{ "%.2f"|format(spending.today) }}</p>
-        </div>
+    <div class="spend-now">
+      {# The day's spend as a green screen shows it, with a bar of twenty cells: amber from three
+         quarters of the limit, red past it. The same is written out beside it. #}
+      {% call crt('readout' ~ (' near' if used is not none and used >= 75) ~ (' over' if used is not none and used >= 100)) %}
+        <p class="readout-label dim caps">Spent today, about</p>
+        <p class="readout-figure bright">${{ "%.2f"|format(spending.today) }}</p>
         {% if used is not none %}
-          <p class="readout-of"><strong>{{ used | round | int }}%</strong> of the ${{ "%.2f"|format(spending.limit) }} daily limit</p>
+          {% set lit = (([used, 100] | min) / 5) | round | int %}
+          <p class="readout-bar">[{{ '#' * lit }}{{ '.' * (20 - lit) }}] {{ used | round | int }}%</p>
+          <p class="readout-of dim caps">{% if used >= 100 %}<span class="inverse">Limit reached</span>{% else %}of the ${{ "%.2f"|format(spending.limit) }} daily limit{% endif %}</p>
         {% endif %}
-      </div>
-      {% if used is not none %}{{ bar(used) }}{% endif %}
+      {% endcall %}
+      <p>
+        Today: about ${{ "%.2f"|format(spending.today) }}
+        {% if spending.limit %}
+          of the ${{ "%.2f"|format(spending.limit) }} daily limit.
+          {% if spending.today >= spending.limit %}
+            <strong class="warn">{{ icon('warning') }}The limit is reached: nothing more is asked of a model until midnight.</strong>
+          {% endif %}
+        {% else %}
+          (no daily limit is set).
+        {% endif %}
+      </p>
     </div>
-    <p>
-      Today: about ${{ "%.2f"|format(spending.today) }}
-      {% if spending.limit %}
-        of the ${{ "%.2f"|format(spending.limit) }} daily limit.
-        {% if spending.today >= spending.limit %}
-          <strong class="warn">{{ icon('warning') }}The limit is reached: nothing more is asked of a model until midnight.</strong>
-        {% endif %}
-      {% else %}
-        (no daily limit is set).
-      {% endif %}
-    </p>
     {% if spending.rows %}
       <p>
         {{ "{:,}".format(spending.calls) }} model call{{ "" if spending.calls == 1 else "s" }} in

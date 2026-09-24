@@ -65,11 +65,21 @@
   {% endif %}
 {%- endmacro %}
 
-{# A radar scope, the one picture on the site that is a screen: range rings at a week, two weeks
-   and four, "now" at the middle, a sweep that leaves an afterglow as a long-persistence phosphor
-   did, and hazy scanlines over it all. `blips` come from `views.radar_blips`: each flares as the
-   sweep passes its bearing. Anything in a `call` block is drawn on the scope, in the phosphor.
-   Decoration only; what it shows is always written out elsewhere on the page. #}
+{# An old green-screen monitor, the page's one kind of picture: whatever is in the `call` block
+   is drawn on its tube, in phosphor. `cls` says where it is (and `power-on` to switch it on as the
+   page opens). A screen that is only a picture is hidden from screen readers; one whose words
+   are the page's own, like Next up, passes `hidden=false`. One to a page at most. #}
+{% macro crt(cls='', hidden=true) -%}
+  <div class="crt{{ ' ' ~ cls if cls }}"{% if hidden %} aria-hidden="true"{% endif %}>
+    <div class="crt-tube">{{ caller() }}</div>
+  </div>
+{%- endmacro %}
+
+{# A radar, a program the green screen runs: range rings at a week, two weeks and four, "now" at
+   the middle, and a sweep that leaves an afterglow as a long-persistence phosphor did. `blips`
+   come from `views.radar_blips`: each flares as the sweep passes its bearing. Anything in a
+   `call` block is drawn on the scope. Decoration only; what it shows is always written out
+   elsewhere on the page. #}
 {% macro radar(blips=[]) -%}
   <div class="radar" aria-hidden="true">
     <svg viewBox="0 0 200 200" focusable="false">

@@ -4,8 +4,8 @@
    friendly sans, line icons, generous space. The old monitor survives as light, not as costume:
    phosphor green glows on the few things that deserve it (the name, the button to press, the box
    you are typing in, what is next, today, what is live, the day's spend) and nowhere else, and
-   one picture, the radar scope, is allowed to be a screen. Each part of the site has its own
-   colour, so colour says where you are. docs/STYLE.md says why. */
+   the page's few pictures are old green-screen monitors, the one place it is hazy. Each part of
+   the site has its own colour, so colour says where you are. docs/STYLE.md says why. */
 
 /* ---- Type ------------------------------------------------------------------------------- */
 /* Served from here, because the content policy lets fonts come from this site only. */
@@ -25,6 +25,13 @@
   font-family: "DM Mono";
   src: url("fonts/dm-mono-500.woff2") format("woff2");
   font-weight: 500 700;
+  font-display: swap;
+}
+/* A terminal's face, the DEC VT320's, for the words on a green screen and nowhere else. */
+@font-face {
+  font-family: "VT323";
+  src: url("fonts/vt323.woff2") format("woff2");
+  font-weight: 400;
   font-display: swap;
 }
 
@@ -72,6 +79,7 @@
 
   --sans: "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: "DM Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --terminal: "VT323", "DM Mono", ui-monospace, Menlo, Consolas, monospace;
 
   --tab-h: 4.25rem;          /* the tab bar on a phone */
 }
@@ -617,8 +625,7 @@ label.inline { margin: 0 0 0 0.5rem; }
 .tag.warn { color: var(--amber); background: rgb(255 191 95 / 0.1); }
 /* How far off a date is: "tomorrow", "in 2 days". */
 .rel { padding: 0.05rem 0.5rem; font-size: 0.75rem; font-weight: 500; color: var(--ink-2); background: var(--surface-3); border-radius: 999px; white-space: nowrap; }
-.is-today .rel, .next-up .rel { color: var(--on-bright); background: var(--amber); }
-.next-up .rel { background: var(--green); }
+.is-today .rel { color: var(--on-bright); background: var(--amber); }
 .status-planned { color: var(--cyan); background: rgb(108 212 255 / 0.12); }
 .status-open { color: var(--lemon); background: rgb(247 220 120 / 0.1); }
 .status-done { color: var(--green); background: rgb(109 255 156 / 0.1); }
@@ -804,47 +811,38 @@ details.panel[open] > summary { margin-bottom: 1.1rem; }
   letter-spacing: -0.034em;
 }
 .welcome .actions { gap: 0.7rem; }
-/* What is next, beside the radar that shows it. On a phone the words run round the scope. */
-.next-up {
-  position: relative;
-  display: flow-root;
-  padding: 1.15rem 1.25rem 1.25rem;
-  background: rgb(8 11 10 / 0.55);
-  border: 1px solid var(--line-2);
-  border-radius: var(--r-lg);
-}
+/* What is next, on a green screen, beside the radar that shows it. On a phone the words run
+   round the scope. */
+.next-up .crt-tube { display: flow-root; }
 .next-up .radar {
   float: right;
-  width: 6.75rem;
-  margin: 0.15rem 0.1rem 0.6rem 1rem;
-  shape-outside: circle(50%);
-  shape-margin: 0.85rem;
+  width: 6.5rem;
+  margin: 0.2rem 0 0.4rem 0.8rem;
+  shape-outside: circle(50%) border-box;
+  shape-margin: 0.55rem;
 }
 .next-text { min-width: 0; }
-.next-up .eyebrow { color: var(--green); margin-bottom: 0.9rem; }
-.next-title { margin: 0; font-size: 1.15rem; font-weight: 650; line-height: 1.3; letter-spacing: -0.01em; }
-.next-title a { color: var(--ink); text-decoration-color: rgb(255 255 255 / 0.25); }
-.next-when { margin: 0.3rem 0 0; font-size: 0.92rem; color: var(--ink-2); }
-.next-when strong { font-weight: 600; }
-.next-when .rel { display: inline-block; line-height: 1.5; }
-.next-where { margin: 0.2rem 0 0; font-size: 0.9rem; }
-.next-where .icon { width: 1rem; height: 1rem; }
-.next-more { margin: 0.85rem 0 0; font-size: 0.875rem; }
+.next-up .next-label { margin: 0 0 0.55rem; font-size: 1.2rem; letter-spacing: 0.08em; }
+.next-up .next-title { font-size: 1.95rem; line-height: 1; overflow-wrap: anywhere; }
+.next-up .next-when { margin-top: 0.4rem; font-size: 1.4rem; }
+.next-up .rel {
+  padding: 0;
+  font: inherit;
+  color: var(--phosphor-bright);
+  text-transform: uppercase;
+  background: none;
+  border-radius: 0;
+}
+.next-up .rel::before { content: "["; }
+.next-up .rel::after { content: "]"; }
+.next-up .next-where { font-size: 1.4rem; }
+.next-up .next-more { margin-top: 0.6rem; font-size: 1.4rem; }
 .next-up .radar-label { display: none; }
 @media (min-width: 40rem) {
-  .next-up { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1.5rem; align-items: center; }
-  .next-up .radar { float: none; grid-column: 2; grid-row: 1; width: 9.25rem; margin: 0.35rem; }
+  .next-up .crt-tube { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1.25rem; align-items: center; }
+  .next-up .radar { float: none; grid-column: 2; grid-row: 1; width: 9rem; margin: 0; }
   .next-up .radar-label { display: inline; }
   .next-text { grid-column: 1; grid-row: 1; }
-}
-/* A dot that is on, gently breathing. */
-.live {
-  width: 0.5rem;
-  height: 0.5rem;
-  background: var(--green);
-  border-radius: 50%;
-  box-shadow: 0 0 8px var(--green);
-  animation: breathe 2.6s ease-in-out infinite;
 }
 @media (min-width: 64rem) {
   .welcome { grid-template-columns: minmax(0, 1.2fr) minmax(24rem, 1fr); }
@@ -946,13 +944,122 @@ details.panel[open] > summary { margin-bottom: 1.1rem; }
 .past .chip-mon, .past .chip-day { color: var(--dim); }
 .past .agenda .what, .past .agenda .what a { color: var(--ink-2); }
 
-/* ---- Scopes ------------------------------------------------------------------------------- */
-/* The one picture on the site that is a screen: a radar scope lit the way a long-persistence
-   phosphor was (`radar` in _ui.html). Range rings a week, two weeks and four weeks out, "now" at
-   the middle; a sweep that leaves an afterglow; each plan a blip that flares as the sweep passes
-   and fades until it comes round again, the next one pinging. Only here is the page hazy: a
-   little blur, a little bloom, scanlines over the face. At most one to a page, hidden from screen
-   readers, and never the only place anything is said. */
+/* ---- Green screens ------------------------------------------------------------------------ */
+/* The page's pictures are old green-screen monitors, as on a desk in 1984 (`crt` in _ui.html):
+   a tube of dark glass in a plastic surround with its power light on, and on it words drawn in
+   phosphor. The words are VT323, a terminal's face, blurred a third of a pixel and blooming, in
+   the three strengths a monitor drew (dim, normal and bright) and in inverse video, with a block
+   cursor waiting after the last line. Scanlines, a little light off the front and the tube's
+   dark, curved edge lie over it all. Only the screens are hazy; around them the page is sharp.
+   One to a page at most, and only where there is something to show: what is next, the way in,
+   the page that is not there, and the day's spend. */
+.crt {
+  --phosphor: var(--green);
+  --phosphor-bright: color-mix(in srgb, var(--phosphor) 45%, #fff);
+  --phosphor-dim: color-mix(in srgb, var(--phosphor) 64%, #07120c);
+  --phosphor-glass: color-mix(in srgb, var(--phosphor) 9%, #060a08);
+  position: relative;
+  padding: 0.65rem 0.65rem 1.5rem;
+  background: linear-gradient(180deg, #1d2321, #151a18 45%, #101412);
+  border: 1px solid #2c3431;
+  border-radius: 24px;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.08),
+    inset 0 -2px 3px rgb(0 0 0 / 0.35),
+    0 28px 50px -34px rgb(0 0 0 / 0.95),
+    0 0 80px -36px color-mix(in srgb, var(--phosphor) 45%, transparent);
+}
+/* The power light, in the chin. */
+.crt::after {
+  content: "";
+  position: absolute;
+  right: 1.25rem;
+  bottom: 0.55rem;
+  width: 0.4rem;
+  height: 0.4rem;
+  background: var(--phosphor);
+  border-radius: 50%;
+  box-shadow: 0 0 6px var(--phosphor);
+}
+.crt-tube {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 1rem 1.2rem 1.1rem;
+  color: var(--phosphor);
+  font: 400 1.5rem/1.15 var(--terminal);
+  background: radial-gradient(125% 115% at 50% 40%, var(--phosphor-glass), #07100b 55%, #030705);
+  border-radius: 17px / 19px;
+  box-shadow: inset 0 0 0 1.5px #020403, inset 0 0 36px 6px rgb(0 0 0 / 0.72);
+  text-shadow:
+    0 0 1px color-mix(in srgb, var(--phosphor) 80%, transparent),
+    0 0 9px color-mix(in srgb, var(--phosphor) 45%, transparent),
+    0 0 24px color-mix(in srgb, var(--phosphor) 20%, transparent);
+}
+.crt-tube p { margin: 0; }
+/* The phosphor is soft: everything on the screen is blurred by a third of a pixel. */
+.crt-tube > :not(.radar) { position: relative; filter: blur(0.35px); }
+/* Scanlines over it all, and over those the glass: a little light off the front, and the tube's
+   dark, curved edge. */
+.crt-tube::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom, rgb(2 5 3 / 0.4) 0 1px, transparent 1px 3px);
+}
+.crt-tube::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    radial-gradient(85% 50% at 26% 4%, rgb(255 255 255 / 0.075), transparent 62%),
+    radial-gradient(135% 125% at 50% 42%, transparent 55%, rgb(0 0 0 / 0.6));
+}
+/* The three strengths a monitor drew in, and inverse video, which a link turns to when pointed
+   at, as a menu's choice did. */
+.crt .bright { color: var(--phosphor-bright); }
+.crt .dim { color: var(--phosphor-dim); text-shadow: 0 0 6px color-mix(in srgb, var(--phosphor) 25%, transparent); }
+.crt .inverse, .crt a:hover {
+  color: #04100a;
+  background: var(--phosphor);
+  text-decoration: none;
+  text-shadow: none;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--phosphor) 55%, transparent);
+}
+.crt .inverse { padding: 0 0.3em; }
+.crt a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 55%, transparent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.16em;
+}
+.crt a:focus-visible { outline-color: var(--phosphor); }
+.crt .caps { text-transform: uppercase; letter-spacing: 0.08em; }
+/* The block cursor, waiting for the next line. */
+.crt-cursor {
+  display: inline-block;
+  width: 0.45em;
+  height: 0.62em;
+  margin-left: 0.2em;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+  animation: blink 1.06s steps(1) infinite;
+}
+/* Switched on as the page opens: the picture opens out of a bright line, as a tube warming up
+   did. Only on a page seen now and then, so it never stands between anyone and what they need. */
+.crt.power-on .crt-tube > * { animation: power-on 0.6s cubic-bezier(0.2, 0.7, 0.2, 1); }
+
+/* The radar: a program the green screen can run (`radar` in _ui.html). Range rings a week, two
+   weeks and four weeks out, "now" at the middle; a sweep that leaves an afterglow, as a
+   long-persistence phosphor did; each plan a blip that flares as the sweep passes and fades
+   until it comes round again, the next one pinging. Hidden from screen readers, and never the
+   only place anything is said. */
 .radar {
   --sweep: 8s;
   position: relative;
@@ -1046,6 +1153,10 @@ details.panel[open] > summary { margin-bottom: 1.1rem; }
   filter: blur(0.4px);
   animation: flicker 6s linear infinite;
 }
+/* On a green screen the radar is drawn on the same glass: no ring of its own, no glass. */
+.crt .radar { background: none; outline: 0; box-shadow: none; }
+.crt .radar::after { display: none; }
+.crt .radar-say { font: 400 clamp(3.5rem, 16vw, 4.75rem)/1 var(--terminal); letter-spacing: 0; }
 /* Glass over it all: scanlines, the tube's dark edge, and a little light off the front. */
 .radar::after {
   content: "";
@@ -1251,62 +1362,17 @@ table.month td.today time { color: var(--on-bright); background: var(--amber); b
 .light.off { border: 2px solid var(--red); }
 .light.part { border: 2px solid var(--amber); background: linear-gradient(90deg, var(--amber) 50%, transparent 50%); }
 
-/* The day's spend: the one big number on the site, lit like a readout. */
-.readout {
-  position: relative;
-  isolation: isolate;
-  margin: 0.25rem 0 1.2rem;
-  padding: 1.15rem 1.3rem 1.3rem;
-  background: radial-gradient(70% 140% at 0% 0%, rgb(109 255 156 / 0.09), transparent 70%), var(--field);
-  border: 1px solid var(--line-2);
-  border-radius: var(--r);
-}
-/* A faint graticule where the light falls, as on the face of an oscilloscope. */
-.readout::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  border-radius: inherit;
-  background:
-    linear-gradient(rgb(109 255 156 / 0.07) 1px, transparent 1px) -1px -1px / 1.25rem 1.25rem,
-    linear-gradient(90deg, rgb(109 255 156 / 0.07) 1px, transparent 1px) -1px -1px / 1.25rem 1.25rem;
-  -webkit-mask-image: radial-gradient(65% 120% at 0% 0%, #000, transparent 80%);
-  mask-image: radial-gradient(65% 120% at 0% 0%, #000, transparent 80%);
-}
-.readout-top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0.5rem 1.5rem; margin-bottom: 1rem; }
-.readout .eyebrow { margin-bottom: 0.4rem; }
-.readout-figure {
-  --ray: var(--green);
-  --ray-soft: rgb(109 255 156 / 0.45);
-  width: fit-content;
-  margin: 0;
-  font: 500 clamp(2.4rem, 7vw, 3.4rem)/1 var(--mono);
-  letter-spacing: -0.03em;
-  color: var(--ray);
-  text-shadow: 0 0 0.4em var(--ray-soft);
-}
-/* Where the browser can, the figure is drawn in lines, as a tube drew it, and the lines bloom:
-   the raster is in the light itself, so it stops where the figure does. */
-@supports (background-clip: text) or (-webkit-background-clip: text) {
-  .readout-figure {
-    color: transparent;
-    text-shadow: none;
-    background: repeating-linear-gradient(to bottom, var(--ray) 0 2px, var(--ray-soft) 2px 3px);
-    -webkit-background-clip: text;
-    background-clip: text;
-    filter: drop-shadow(0 0 0.3em var(--ray-soft));
-  }
-}
-.readout-of { margin: 0; color: var(--dim); }
-.readout-of strong { color: var(--ink); font-weight: 600; }
-.readout .meter { height: 8px; }
-.readout .meter-fill { filter: drop-shadow(0 0 4px rgb(109 255 156 / 0.8)); }
-.readout.near .readout-figure { --ray: var(--amber); --ray-soft: rgb(255 191 95 / 0.45); }
-.readout.near .meter-fill { fill: var(--amber); }
-.readout.over .readout-figure { --ray: var(--red); --ray-soft: rgb(255 107 107 / 0.45); }
-.readout.over .meter-fill { fill: var(--red); }
+/* The day's spend, on a green screen that turns amber near the limit, as the other monitors of
+   the time were, and red past it. Beside it, the same in words. */
+.spend-now { display: grid; gap: 1rem 2rem; align-items: center; margin: 0.25rem 0 1.25rem; }
+.spend-now > p { margin: 0; }
+@media (min-width: 52rem) { .spend-now { grid-template-columns: minmax(0, 26rem) minmax(0, 1fr); } }
+.readout.near { --phosphor: var(--amber); }
+.readout.over { --phosphor: var(--red); }
+.readout .crt-tube { padding: 0.95rem 1.25rem 1.05rem; }
+.readout-label, .readout-of { font-size: 1.25rem; }
+.readout .readout-figure { margin: 0.1rem 0 0.2rem; font-size: 3.75rem; line-height: 0.95; }
+.readout-bar { font-size: 1.45rem; white-space: nowrap; }
 .spend .tables { display: grid; gap: 1.5rem 2rem; margin: 1.5rem 0; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); }
 .spend > .scroll { margin-top: 0.5rem; }
 .trouble { --accent: var(--amber); border-color: rgb(255 191 95 / 0.3); }
@@ -1401,28 +1467,26 @@ table.month td.today time { color: var(--on-bright); background: var(--amber); b
 /* ---- Sign in, and nowhere ----------------------------------------------------------------- */
 .page-signin .places, .page-signin .tools { display: none; }
 .page-signin main, .page-lost main { display: grid; align-content: center; }
-.signin { width: 100%; padding: 2rem clamp(1.25rem, 5vw, 2.25rem) 2.25rem; }
-.signin-mark {
-  display: grid;
-  place-items: center;
-  width: 3.75rem;
-  height: 3.75rem;
-  margin: 0 0 1.4rem;
-  color: var(--green);
-  background: radial-gradient(circle at 50% 35%, #173022, #0e1512 70%);
-  border: 1px solid rgb(109 255 156 / 0.3);
-  border-radius: 17px;
-  box-shadow: 0 0 36px -8px rgb(109 255 156 / 0.6);
-}
-.signin-mark .icon { width: 2rem; height: 2rem; stroke-width: 1.9; filter: drop-shadow(0 0 4px rgb(109 255 156 / 0.8)); }
-.signin .eyebrow { color: var(--green); }
-.signin h1 { margin: 0.4rem 0 1.5rem; font-size: 1.75rem; }
+.signin { width: 100%; padding: 1.5rem clamp(1.25rem, 5vw, 2.25rem) 2.25rem; }
+/* The mark's face, awake on a green screen: it blinks now and then. */
+.signin .crt { margin: 0 0 1.75rem; }
+.signin .crt-tube { display: grid; justify-items: center; padding: 1.6rem 1.2rem 1.1rem; }
+.crt .crt-face { display: block; width: 8.5rem; height: auto; overflow: visible; filter: blur(0.35px) drop-shadow(0 0 5px color-mix(in srgb, var(--phosphor) 60%, transparent)); }
+.crt-face path { fill: none; stroke: var(--phosphor); stroke-width: 3.2; stroke-linecap: round; }
+.crt-face .eye { transform-box: fill-box; transform-origin: center; animation: eyes 7s ease-in-out infinite; }
+.signin .signin-ready { justify-self: start; margin-top: 1.1rem; }
+.signin h1 { margin: 0 0 1.5rem; font-size: 1.75rem; }
 .signin form button { width: 100%; }
 
 .lost { width: 100%; max-width: 30rem; margin: 0 auto; text-align: center; }
-/* An empty scope, still sweeping, with the 404 on its face. */
-.lost .radar { width: min(16.5rem, 70vw); margin: 0 auto 2.25rem; }
+/* A radar console on a green screen: an empty scope, still sweeping, with 404 on its face, and
+   beside it what the console makes of that. */
+.lost .crt { margin: 0 0 2rem; text-align: left; }
+.lost .crt-tube { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 1rem; align-items: center; }
+.lost .radar { width: 100%; }
 .lost .radar-label { display: none; }
+.lost-readout { display: grid; gap: 0.15rem; font-size: 1.3rem; line-height: 1.1; }
+.lost-readout .gap { margin-top: 0.8rem; }
 .lost .eyebrow { justify-content: center; }
 .lost h1 { margin: 0.45rem 0 0.5rem; }
 .lost .button { margin-top: 1rem; }
@@ -1456,6 +1520,13 @@ table.month td.today time { color: var(--on-bright); background: var(--amber); b
 @keyframes sweep { to { transform: rotate(1turn); } }
 @keyframes blip { 0% { opacity: 1; } 62%, 100% { opacity: var(--rest, 0.3); } }
 @keyframes ping { 0% { opacity: 0.9; transform: scale(1); } 32%, 100% { opacity: 0; transform: scale(3.6); } }
+@keyframes power-on {
+  0% { opacity: 0; transform: scale(1, 0.01); }
+  30% { opacity: 1; transform: scale(1, 0.01); }
+  65% { transform: scale(1, 1.03); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes eyes { 0%, 92%, 100% { transform: none; } 94%, 96% { transform: scaleY(0.12); } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -1464,18 +1535,19 @@ table.month td.today time { color: var(--on-bright); background: var(--amber); b
 /* ---- Other ways of seeing ----------------------------------------------------------------- */
 @media (prefers-contrast: more) {
   :root { --ink-2: #dde4e0; --dim: #c3ccc7; --faint: #a7b2ac; --line: #3a4541; --line-2: #56625c; --edge: #9fb0a6; }
-  .welcome::before, .radar::after, .readout::before { display: none; }
-  .glow, .radar-say, .chip-day { text-shadow: none; }
-  .readout-figure { color: var(--ray); text-shadow: none; background: none; filter: none; }
-  button, .button, .title-icon, .brand-mark, .chip, .said-bot .avatar, .feature-icon, .signin-mark,
+  .welcome::before, .radar::after, .crt-tube::before, .crt-tube::after { display: none; }
+  .glow, .radar-say, .chip-day, .crt-tube, .crt .dim { text-shadow: none; }
+  button, .button, .title-icon, .brand-mark, .chip, .said-bot .avatar, .feature-icon,
   .task-done .task-box, .radar { box-shadow: none; }
-  .icon, .radar svg, .radar-say { filter: none; }
+  .icon, .radar svg, .radar-say, .crt-tube > *, .crt .crt-face { filter: none; }
 }
 @media (forced-colors: active) {
   .light, .task-box, .chip, .avatar, .title-icon { forced-color-adjust: none; border: 2px solid CanvasText; }
-  .caret, .live, .dots i { background: CanvasText; }
-  .radar, .readout::before { display: none; }
-  .readout-figure { color: CanvasText; background: none; filter: none; }
+  .caret, .dots i { background: CanvasText; }
+  /* A screen that is only a picture goes; one with words on it keeps them, plainly. */
+  .crt[aria-hidden="true"], .radar, .crt::after, .crt-tube::before, .crt-tube::after { display: none; }
+  .crt, .crt-tube { border: 1px solid CanvasText; box-shadow: none; }
+  .crt-tube > * { filter: none; }
 }
 
 /* On paper the page turns into green-bar printout: black on white, a pale green band on every
@@ -1484,17 +1556,19 @@ table.month td.today time { color: var(--on-bright); background: var(--amber); b
   :root { --ink: #111; --ink-2: #222; --dim: #3b5a44; --accent: #0b5a2a; --cyan: #0b5a2a; --green: #0b5a2a; --line: #9fcca9; --line-2: #7fb58c; }
   html, body { background: #fff !important; color: #111; }
   .bar, .skip, .foot, .page-actions, .tabs, .month-nav, .ask, form, details:not([open]), .actions,
-  .index, .save-bar, .title-icon, .next-up .eyebrow, .radar { display: none !important; }
+  .index, .save-bar, .title-icon, .radar, .crt[aria-hidden="true"], .crt::after, .crt-tube::before,
+  .crt-tube::after { display: none !important; }
   main { max-width: none; padding: 0; }
-  .panel, .welcome, .readout, .chip, .bubble, .next-up {
+  .panel, .welcome, .chip, .bubble, .crt, .crt-tube {
     background: none !important;
     box-shadow: none !important;
     border-color: var(--line) !important;
     break-inside: avoid;
   }
-  .welcome::before, .readout::before { display: none; }
-  .glow, .readout-figure, .chip-day { color: #0b5a2a; text-shadow: none; }
-  .readout-figure { background: none; filter: none; }
+  .welcome::before { display: none; }
+  .glow, .chip-day { color: #0b5a2a; text-shadow: none; }
+  .crt-tube { color: #111; text-shadow: none; }
+  .crt-tube > * { filter: none; }
   a { color: inherit; text-decoration: none; }
   .agenda > li:nth-child(odd), .plain > li:nth-child(odd), .data tr:nth-child(odd) td,
   table.month tr:nth-child(odd) td {

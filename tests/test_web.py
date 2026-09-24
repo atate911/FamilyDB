@@ -44,6 +44,12 @@ def test_pages_are_behind_the_password(settings, clock) -> None:
     assert page.status_code == 200 and "Family password" in page.text
 
 
+def test_the_way_in_is_an_old_green_screen(settings, clock) -> None:
+    page = _client(settings, clock, web_password=PASSWORD).get("/login").text
+    assert '<div class="crt power-on" aria-hidden="true">' in page  # a picture beside the form
+    assert "Ready." in page and '<label for="password">Family password</label>' in page
+
+
 def test_signing_in_and_out(settings, clock) -> None:
     client = _client(settings, clock, web_password=PASSWORD)
     wrong = client.post("/login", data={"password": "guess"})
