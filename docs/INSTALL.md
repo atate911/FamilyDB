@@ -4,7 +4,7 @@ This is the long way round: a bare VPS at the start, the family messaging the bo
 It assumes nothing is installed and nothing is configured, and it explains why each step is
 there, because most of them are only obvious once you have been bitten by the alternative.
 
-`scripts/bootstrap.sh` does most of the work, and asks two questions on the way. Everything
+`scripts/bootstrap.sh` does most of the work, and asks one question on the way. Everything
 else, from the model key to Telegram and Google Calendar, is set up afterwards on the bot's own
 web page, which lists what is left to do; those steps are here too.
 
@@ -280,13 +280,14 @@ other services, home directories and inbound ports. Then it asks.
 
 After that it works through apt packages (`ca-certificates curl git tzdata`), uv or Docker, the
 code into `/opt/familydb` and the `familydb` user, then hands over to `scripts/install.sh`,
-which asks two things:
+which asks one thing:
 
 - **the domain name for the web page**, if it has one. Leave it empty to keep the page on the
-  server, reached over an SSH tunnel. With a domain, the page is served over HTTPS (section 6).
-- **your name**, as the family says it, which becomes the first admin.
+  server, reached over an SSH tunnel. With a domain, the page is served over HTTPS (section 6),
+  which is also what lets the chat page use your phone's location.
 
-Beyond those two it asks only yes-or-no questions before it changes the machine: whether to
+You add yourself afterwards, on the page's Family page: it is the first line of the page's
+setup list. Beyond that one question it asks only yes-or-no questions before it changes the machine: whether to
 install the service, whether to schedule backups, and, with a domain, whether to set up Caddy.
 Everything else it decides for you, and all of it can be changed on the page later:
 
@@ -335,8 +336,9 @@ Leave that open and go to `http://127.0.0.1:8080/` in a browser.
 
 Sign in with the family password the installer printed. The home page has a **Finish setting
 up** list of what is missing, most important first, and each line links to where it is done.
-Work down it; it disappears when everything is done. The rest of this section is those lines
-in more detail.
+Work down it; it disappears when everything is done. The first line is adding yourself on the
+Family page, as an admin; add the rest of the family there too. The rest of this section is
+those lines in more detail.
 
 ### A model key
 

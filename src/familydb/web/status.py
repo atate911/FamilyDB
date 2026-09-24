@@ -110,7 +110,7 @@ def services(app: App) -> list[dict[str, Any]]:
     live = app.settings
     calendar = "not configured"
     if live.google_calendar_id and not calendar_available(live):
-        calendar = "calendar named, but nobody has signed in: run `familydb auth google`"
+        calendar = "calendar named, but not connected yet: connect it on the settings page"
     elif calendar_available(live):
         calendar = live.google_calendar_id or ""
     weather = (
@@ -259,6 +259,11 @@ def setup_steps(app: App, conn: sqlite3.Connection) -> list[dict[str, str]]:
     """
     live = app.settings
     steps = [
+        (
+            any(member.role == "admin" for member in members.list_all(conn)),
+            "Add yourself, as an admin, then the rest of the family.",
+            "/family",
+        ),
         (
             any(getattr(live, KEY_FOR[name]) for name in providers.NAMES),
             "Give it a model key. Until then it saves what it is told but cannot answer.",

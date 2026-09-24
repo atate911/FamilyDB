@@ -53,7 +53,7 @@ Options
 Answers can be supplied as environment variables, which is what --non-interactive reads:
   WEB_DOMAIN           the page's domain; empty keeps it on this machine
   WEB_PASSWORD         the family password (12 characters or more); made up when not given
-  ADMIN_NAME           the first family member
+  ADMIN_NAME           the first family member (otherwise added on the Family page)
   BACKUPS              yes (the default) schedules a nightly backup; no leaves it to you
 and, for a scripted build that wants them in .env rather than set on the page:
   PROVIDER  OPENAI_API_KEY  ANTHROPIC_API_KEY  GEMINI_API_KEY  TELEGRAM_BOT_TOKEN
@@ -61,7 +61,7 @@ and, for a scripted build that wants them in .env rather than set on the page:
   WEB_HOST  WEB_PORT  DIGEST_CHAT_ID
 
 Examples
-  scripts/install.sh                          # two questions, then install
+  scripts/install.sh                          # one question, then install
   scripts/install.sh --yes                    # this machine only, a generated password
   WEB_DOMAIN=family.example.com ADMIN_NAME=Sam \
     scripts/install.sh --non-interactive --mode docker
@@ -531,13 +531,13 @@ if [ "$DRY_RUN" = 0 ] && runfamilydb members list 2>/dev/null | grep -qv 'no mem
   have_members=1
 fi
 if [ "$have_members" = 0 ]; then
-  ask ADMIN_NAME "Your name, as the family says it" "${ADMIN_NAME:-${SUDO_USER:-${USER:-Admin}}}"
-  if [ -n "$ADMIN_NAME" ]; then
+  # Not asked: the page's Family page adds the first person, as an admin, and its setup list
+  # says so. A scripted install can still name them here.
+  if [ -n "${ADMIN_NAME:-}" ]; then
     runfamilydb members add "$ADMIN_NAME" --role admin >/dev/null && ok "Added ${ADMIN_NAME} as an admin."
+  else
+    note "Add yourself, and then the family, on the page's Family page."
   fi
-  note "Add the rest on the web page's Family page, or: familydb members add NAME --role member|kid"
-  note "Anyone messaging on Telegram also needs --channel telegram --channel-user-id THEIR_ID,"
-  note "which the bot tells them the first time they write (RUNBOOK section 4)."
 else
   ok "Family members already set up."
 fi
@@ -713,8 +713,8 @@ else
   say "  and open ${B}http://127.0.0.1:${PORT}/${OFF}"
 fi
 say ""
-say "The page's home says what is left to set up, in the order it matters: a model key,"
-say "Telegram, Google Calendar and where home is are all done there, not in a file."
+say "The page's home says what is left to set up, in the order it matters: adding yourself on"
+say "the Family page, a model key, where home is, Google Calendar and Telegram, all done there."
 if [ "$BACKUPS_SCHEDULED" = 1 ]; then
   say "Copy ${REPO_ROOT}/backups off this server now and then: a backup on the same disk is not"
   say "a backup."

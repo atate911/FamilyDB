@@ -146,7 +146,7 @@ def test_the_status_page_is_behind_the_password(settings, clock, conn, family) -
 def test_a_calendar_named_but_not_signed_into_is_not_connected(settings, clock, conn, family):
     app = App(settings.model_copy(update={"google_calendar_id": "family@group.calendar"}), clock)
     text = _flat(create_app(app).test_client().get("/status"))
-    assert "nobody has signed in" in text
+    assert "not connected yet: connect it on the settings page" in text
     assert "no home coordinates" in text
 
 
@@ -183,3 +183,21 @@ def test_the_dates_are_the_family_s(status, conn, clock) -> None:
     _call(conn, model="claude-opus-5")
     assert "20 Sep, 14:03" in _flat(status.get("/status"))  # NOW_ISO is 21:03 UTC
     assert utc_iso(clock.now()) == NOW_ISO
+
+
+def test_a_new_install_starts_by_adding_yourself(settings, clock, conn) -> None:
+    """The installer no longer asks a name: the page's first setup step is the Family page."""
+    from familydb import family
+    from familydb.web.status import services, setup_steps
+
+    app = App(settings, clock)
+    first = setup_steps(app, conn)[0]
+    assert first == {
+        "text": "Add yourself, as an admin, then the rest of the family.",
+        "link": "/family",
+    }
+    family.add(conn, "Sam", "admin", telegram_id=None, now=NOW_ISO)
+    assert all(step["link"] != "/family" for step in setup_steps(app, conn))
+    named = settings.model_copy(update={"google_calendar_id": "family@example.com"})
+    calendar = next(s for s in services(App(named, clock)) if "calendar" in str(s).lower())
+    assert "familydb auth google" not in str(calendar) and "settings page" in str(calendar)
