@@ -1,74 +1,80 @@
 {% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, chip %}
 {% block title %}Plans · {{ site_title }}{% endblock %}
 {% macro plan_line(plan, cancellable) %}
-  <li>
-    <strong>{{ plan.when }}</strong>
-    {% if plan.relative %}<span class="muted">({{ plan.relative }})</span>{% endif %}
-    {% if plan.status != 'confirmed' %}<span class="tag">{{ plan.status }}</span>{% endif %}
-    {% if plan.from_google %}<span class="tag">added in Google</span>{% endif %}
-    <div>
-      {% if plan.idea_id and plan.idea_id in titles %}
-        <a href="{{ url_for('web.idea', idea_id=plan.idea_id) }}">{{ plan.title }}</a>
-      {% else %}
-        {{ plan.title }}
-      {% endif %}
-      {% if plan.location %}<span class="muted">· {{ plan.location }}</span>{% endif %}
-    </div>
-    {% if plan.notes %}<div class="muted">{{ plan.notes }}</div>{% endif %}
-    {% if cancellable and plan.id and plan.status != 'cancelled' %}
-      <div class="actions row">
-        <details class="more">
-          <summary>Move it</summary>
-          <form class="form" method="post" action="{{ url_for('edits.move_plan', plan_id=plan.id) }}">
-            <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-            <input type="hidden" name="once" value="{{ once_token() }}" />
-            <div class="field">
-              <label for="start-{{ plan.id }}">New time</label>
-              <input id="start-{{ plan.id }}" name="start" type="datetime-local" required
-                     value="{{ plan.start_value }}" />
-              <label class="check">
-                <input type="checkbox" name="all_day" value="yes" {{ 'checked' if plan.all_day }} />
-                All day
-              </label>
-            </div>
-
-            <div class="field"><button type="submit">Move it</button></div>
-          </form>
-        </details>
-        {# Taking a plan off the calendar really removes the Google event, and without a script
-           there is no dialogue to ask twice, so the button asks for itself. #}
-        <details class="more">
-          <summary>Cancel it</summary>
-          <form method="post" action="{{ url_for('edits.cancel_plan', plan_id=plan.id) }}">
-            <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-            <input type="hidden" name="once" value="{{ once_token() }}" />
-            <p class="muted">This takes it off the family calendar for everyone.</p>
-            <button class="quiet" type="submit">Yes, cancel it</button>
-          </form>
-        </details>
+  <li class="{{ 'is-today' if plan.on_today }}">
+    {{ chip(plan.chip, plan.on_today) }}
+    <div class="agenda-body">
+      <div class="when">
+        <strong>{{ plan.when }}</strong>
+        {% if plan.relative %}<span class="muted">({{ plan.relative }})</span>{% endif %}
+        {% if plan.status != 'confirmed' %}<span class="tag">{{ plan.status }}</span>{% endif %}
+        {% if plan.from_google %}<span class="tag">added in Google</span>{% endif %}
       </div>
-    {% endif %}
+      <div class="what">
+        {% if plan.idea_id and plan.idea_id in titles %}
+          <a href="{{ url_for('web.idea', idea_id=plan.idea_id) }}">{{ plan.title }}</a>
+        {% else %}
+          {{ plan.title }}
+        {% endif %}
+        {% if plan.location %}<span class="muted">· {{ plan.location }}</span>{% endif %}
+      </div>
+      {% if plan.notes %}<div class="muted">{{ plan.notes }}</div>{% endif %}
+      {% if cancellable and plan.id and plan.status != 'cancelled' %}
+        <div class="actions row">
+          <details class="more">
+            <summary>Move it</summary>
+            <form class="form" method="post" action="{{ url_for('edits.move_plan', plan_id=plan.id) }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+              <input type="hidden" name="once" value="{{ once_token() }}" />
+              <div class="field">
+                <label for="start-{{ plan.id }}">New time</label>
+                <input id="start-{{ plan.id }}" name="start" type="datetime-local" required
+                       value="{{ plan.start_value }}" />
+                <label class="check">
+                  <input type="checkbox" name="all_day" value="yes" {{ 'checked' if plan.all_day }} />
+                  All day
+                </label>
+              </div>
+
+              <div class="field actions end"><button type="submit">Move it</button></div>
+            </form>
+          </details>
+          {# Taking a plan off the calendar really removes the Google event, and without a script
+             there is no dialogue to ask twice, so the button asks for itself. #}
+          <details class="more danger-zone">
+            <summary>Cancel it</summary>
+            <form method="post" action="{{ url_for('edits.cancel_plan', plan_id=plan.id) }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+              <input type="hidden" name="once" value="{{ once_token() }}" />
+              <p class="muted">This takes it off the family calendar for everyone.</p>
+              <button class="danger" type="submit">Yes, cancel it</button>
+            </form>
+          </details>
+        </div>
+      {% endif %}
+    </div>
   </li>
 {% endmacro %}
 {% block content %}
-  <h1>Plans</h1>
+  {{ page_head('~/plans', 'Plans') }}
   <nav class="tabs" aria-label="How to show the plans">
-    <a href="{{ url_for('web.plans') }}" aria-current="page">List</a>
-    <a href="{{ url_for('web.plans_month') }}">Month</a>
+    <a href="{{ url_for('web.plans') }}" aria-current="page">{{ icon('list') }}List</a>
+    <a href="{{ url_for('web.plans_month') }}">{{ icon('grid') }}Month</a>
   </nav>
   <p class="muted source source-{{ source }}">{{ source_note }}</p>
   <section class="panel">
     <h2>Coming up</h2>
     {% if upcoming %}
-      <ul class="plain">{% for plan in upcoming %}{{ plan_line(plan, can_schedule) }}{% endfor %}</ul>
+      <ul class="plain agenda">{% for plan in upcoming %}{{ plan_line(plan, can_schedule) }}{% endfor %}</ul>
     {% else %}
-      <p class="muted">Nothing on the calendar for the next {{ ahead }} days.</p>
+      <p class="muted empty">{{ icon('plans') }}<span>Nothing on the calendar for the next {{ ahead }} days.</span></p>
     {% endif %}
   </section>
 
-  <section class="panel">
+  <section class="panel" id="add">
     <details class="more" {{ 'open' if not upcoming }}>
-      <summary><span class="h2">Put something on the calendar</span></summary>
+      <summary><span class="h2">{{ icon('plus') }}Put something on the calendar</span></summary>
     {% if can_schedule %}
       <form class="form" method="post" action="{{ url_for('edits.add_plan') }}">
         <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
@@ -100,10 +106,10 @@
           <textarea id="notes" name="notes" rows="2"></textarea>
         </div>
         <div class="field wide actions">
-          <button type="submit">Put it on the calendar</button>
+          <button type="submit">{{ icon('plans') }}Put it on the calendar</button>
         </div>
       </form>
-      <p class="muted">To plan an idea already on the list, open it and use the form there:
+      <p class="muted hint">To plan an idea already on the list, open it and use the form there:
         the plan is then linked to the idea.</p>
     {% else %}
       <p class="muted">Google Calendar is not connected, so nothing can be added here.
@@ -113,9 +119,9 @@
   </section>
 
   {% if recent %}
-    <section class="panel">
+    <section class="panel past">
       <h2>Recently</h2>
-      <ul class="plain">{% for plan in recent %}{{ plan_line(plan, false) }}{% endfor %}</ul>
+      <ul class="plain agenda">{% for plan in recent %}{{ plan_line(plan, false) }}{% endfor %}</ul>
     </section>
   {% endif %}
 {% endblock %}

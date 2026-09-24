@@ -51,6 +51,11 @@ older than what is installed. It gets a date when it is released.
   add and change ideas, record how things went and put plans on the calendar
   (through the same tools the bot uses), the Family page, a status page with
   what is connected and what it has cost, and a settings page.
+- **A look of its own.** A modern dark page with an old green screen in its heart:
+  pixel headlines that glow like phosphor, a colour for each part of the site and
+  each kind of idea, pixel icons and pictures, a tab bar under the thumb on a
+  phone, plans as tear-off dates, and a month that prints as green-bar paper.
+  `docs/STYLE.md` says what each choice is for.
 - **Set up from that page.** The keys, the models, Telegram (taken up within
   seconds, no restart), Google Calendar (connected from the page, with no laptop
   needed), where home is (found on the map), the timezone and the spending

@@ -1,23 +1,27 @@
 {% extends "base.html" %}
+{% from "_ui.html" import icon, kind_label, chip %}
 {% block title %}{{ site_title }}{% endblock %}
+{% block body_class %}page-home{% endblock %}
 {% block content %}
   <section class="welcome">
     <div class="welcome-words">
       <p class="eyebrow">{{ today }}</p>
-      <h1>Make room for the good stuff.</h1>
+      <h1>Make room for the good <span class="nowrap">stuff<span class="cursor" aria-hidden="true"></span></span></h1>
       <div class="actions">
-        <a class="button" href="{{ url_for('chat.show', ask=weekend_question, _anchor='latest') }}">Ask what to do this weekend</a>
-        <a class="button secondary" href="{{ url_for('web.new_idea') }}">Add an idea</a>
+        <a class="button" href="{{ url_for('chat.show', ask=weekend_question, _anchor='latest') }}">{{ icon('sparkles') }}Ask what to do this weekend</a>
+        <a class="button secondary" href="{{ url_for('web.new_idea') }}">{{ icon('plus') }}Add an idea</a>
       </div>
     </div>
-    {# Drawn in the stylesheet, and only where there is room for it: on a phone the first screen
-       is for what is coming up. #}
-    <div class="welcome-art" aria-hidden="true"><span class="sun"></span><span class="hill back"></span><span class="hill front"></span></div>
+    {# A little screen with a picture on it, only where there is room: on a phone the first
+       screen is for what is coming up. Drawn in scripts/pixels.py. #}
+    <div class="welcome-art" aria-hidden="true">
+      <div class="crt"><img src="{{ url_for('static', filename='art/sunset.svg') }}" alt="" width="64" height="48" /></div>
+    </div>
   </section>
 
   {% if setup %}
     <section class="panel setup">
-      <h2>Finish setting up</h2>
+      <h2>{{ icon('warning') }}Finish setting up</h2>
       <ol>
         {% for step in setup %}
           <li><a href="{{ step.link }}">{{ step.text }}</a></li>
@@ -30,28 +34,31 @@
     <section class="coming">
       <div class="section-head">
         <h2>Coming up</h2>
-        <a href="{{ url_for('web.plans') }}">All plans &rarr;</a>
+        <a href="{{ url_for('web.plans') }}">All plans{{ icon('right') }}</a>
       </div>
       {% if source != 'google' %}<p class="muted source source-{{ source }}">{{ source_note }}</p>{% endif %}
       <ol class="panel plain agenda">
         {% for entry in coming %}
-          <li>
-            <div class="when">
-              <strong>{{ entry.when }}</strong>
-              {% if entry.relative %}<span class="muted">{{ entry.relative }}</span>{% endif %}
-            </div>
-            <div>
-              {% if entry.idea_id %}
-                <a href="{{ url_for('web.idea', idea_id=entry.idea_id) }}">{{ entry.title }}</a>
-              {% else %}
-                {{ entry.title }}
-              {% endif %}
-              {% if entry.location %}<span class="muted">&middot; {{ entry.location }}</span>{% endif %}
+          <li class="{{ 'is-today' if entry.on_today }}">
+            {{ chip(entry.chip, entry.on_today) }}
+            <div class="agenda-body">
+              <div class="when">
+                <strong>{{ entry.when }}</strong>
+                {% if entry.relative %}<span class="muted">{{ entry.relative }}</span>{% endif %}
+              </div>
+              <div class="what">
+                {% if entry.idea_id %}
+                  <a href="{{ url_for('web.idea', idea_id=entry.idea_id) }}">{{ entry.title }}</a>
+                {% else %}
+                  {{ entry.title }}
+                {% endif %}
+                {% if entry.location %}<span class="muted">&middot; {{ entry.location }}</span>{% endif %}
+              </div>
             </div>
           </li>
         {% else %}
-          <li class="muted">Nothing on the calendar yet. Pick an idea and put it there, or ask
-            what fits this weekend.</li>
+          <li class="muted empty">{{ icon('plans') }}<span>Nothing on the calendar yet. Pick an idea and put it there, or ask
+            what fits this weekend.</span></li>
         {% endfor %}
       </ol>
     </section>
@@ -59,23 +66,27 @@
     <section class="lately">
       <div class="section-head">
         <h2>Lately added</h2>
-        <a href="{{ url_for('web.ideas') }}">All {{ idea_count }} &rarr;</a>
+        <a href="{{ url_for('web.ideas') }}">All {{ idea_count }}{{ icon('right') }}</a>
       </div>
       <div class="idea-cards">
         {% for idea in ideas %}
           <a class="panel idea-card" href="{{ url_for('web.idea', idea_id=idea.id) }}">
-            <span class="eyebrow">{{ idea.kind }}</span>
+            {{ kind_label(idea.kind) }}
             <strong>{{ idea.title }}</strong>
             <span class="muted">{{ idea.where or ('for ' ~ idea.who) }}</span>
           </a>
         {% else %}
-          <p class="panel muted">No ideas yet. Say one in the chat, or <a href="{{ url_for('web.new_idea') }}">add it here</a>.</p>
+          <p class="panel muted empty">{{ icon('idea') }}<span>No ideas yet. Say one in the chat, or <a href="{{ url_for('web.new_idea') }}">add it here</a>.</span></p>
         {% endfor %}
       </div>
       {% if restaurant_count %}
         <a class="panel restaurants-link" href="{{ url_for('web.restaurants') }}">
-          <span class="eyebrow">Something to eat</span>
-          <strong>{{ restaurant_count }} restaurant{{ '' if restaurant_count == 1 else 's' }} to try</strong>
+          <span class="restaurants-icon">{{ icon('restaurant') }}</span>
+          <span>
+            <span class="eyebrow">Something to eat</span>
+            <strong>{{ restaurant_count }} restaurant{{ '' if restaurant_count == 1 else 's' }} to try</strong>
+          </span>
+          {{ icon('right', cls='go') }}
         </a>
       {% endif %}
     </section>

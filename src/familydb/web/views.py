@@ -234,6 +234,15 @@ def day_text(value: str) -> str:
     return f"{moment:%A} {moment.day} {moment:%B}, {moment:%H:%M}"
 
 
+def date_chip(value: str) -> dict[str, Any] | None:
+    """The day something starts in three parts, for the tear-off date beside it: Sat, 26, Sep."""
+    try:
+        day = date.fromisoformat(value.strip()[:10])
+    except ValueError:
+        return None
+    return {"weekday": f"{day:%a}", "day": day.day, "month": f"{day:%b}"}
+
+
 def relative_text(value: str, today: date) -> str | None:
     """'today', 'tomorrow', 'in 3 days', '2 weeks ago'. None when the date will not parse."""
     try:
@@ -260,6 +269,7 @@ def plan_row(plan: Plan, today: date) -> dict[str, Any]:
         "title": plan.title,
         "when": day_text(plan.start) if not plan.all_day else day_text(plan.start[:10]),
         "relative": relative_text(plan.start, today),
+        "chip": date_chip(plan.start),
         "all_day": plan.all_day,
         # What a datetime-local box wants, "2026-09-26T18:30": the stored start without its
         # offset — plans are stored in the family's own time, so the wall time is the first
@@ -290,6 +300,8 @@ def entry_row(entry: Entry, today: date) -> dict[str, Any]:
         "when": when,
         "time": None if entry.all_day else entry.start[11:16],
         "relative": "now" if days[0] < today <= days[-1] else relative_text(entry.start, today),
+        "chip": date_chip(entry.start),
+        "on_today": days[0] <= today <= days[-1],
         "all_day": entry.all_day,
         "location": entry.location,
         "notes": entry.notes,

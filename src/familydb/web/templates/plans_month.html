@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_ui.html" import icon, page_head %}
 {% block title %}{{ month }} · {{ site_title }}{% endblock %}
 {% macro event(entry) %}
   <div class="event{{ ' from-google' if entry.from_google }}">
@@ -11,19 +12,19 @@
   </div>
 {% endmacro %}
 {% block content %}
-  <h1>Plans</h1>
+  {{ page_head('~/plans/month', 'Plans') }}
   <nav class="tabs" aria-label="How to show the plans">
-    <a href="{{ url_for('web.plans') }}">List</a>
-    <a href="{{ url_for('web.plans_month') }}" aria-current="page">Month</a>
+    <a href="{{ url_for('web.plans') }}">{{ icon('list') }}List</a>
+    <a href="{{ url_for('web.plans_month') }}" aria-current="page">{{ icon('grid') }}Month</a>
   </nav>
   <p class="muted source source-{{ source }}">{{ source_note }}</p>
 
   <div class="month-head">
     <h2>{{ month }}</h2>
     <p class="month-nav">
-      <a href="{{ url_for('web.plans_month', month=previous) }}">&larr; Earlier</a>
-      {% if not this_month %}<a href="{{ url_for('web.plans_month') }}">This month</a>{% endif %}
-      <a href="{{ url_for('web.plans_month', month=following) }}">Later &rarr;</a>
+      <a class="button ghost" href="{{ url_for('web.plans_month', month=previous) }}">{{ icon('left') }}Earlier</a>
+      {% if not this_month %}<a class="button ghost" href="{{ url_for('web.plans_month') }}">This month</a>{% endif %}
+      <a class="button ghost" href="{{ url_for('web.plans_month', month=following) }}">Later{{ icon('right') }}</a>
     </p>
   </div>
 

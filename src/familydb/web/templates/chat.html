@@ -1,5 +1,7 @@
 {% extends "base.html" %}
+{% from "_ui.html" import icon, page_head %}
 {% block title %}Chat · {{ site_title }}{% endblock %}
+{% block body_class %}page-chat{% endblock %}
 {# While an answer is on its way the browser fetches the page again by itself, landing back on
    the newest line. No script: a meta refresh is the one thing every browser still does, and the
    content policy forbids the alternative. It is only set when something really is being thought
@@ -8,31 +10,38 @@
   {% if refresh %}<meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" />{% endif %}
 {% endblock %}
 {% block content %}
-  <h1>Chat</h1>
+  {{ page_head('~/chat', 'Chat') }}
 
   {% if lines %}
-    <ol class="panel thread">
+    {# The bot's lines run down the left in the terminal's own type, the family's sit to the
+       right in the reading type: position and type tell them apart, not colour alone. #}
+    <ol class="thread">
       {% for line in lines %}
         <li class="{{ 'said-bot' if line.from_bot else 'said-them' }}"
             {% if loop.last %}id="{{ latest }}"{% endif %}>
-          <div class="said-by">
-            <strong>{{ line.who }}</strong>
-            <span class="muted">{{ line.when }}</span>
-            {% if line.trouble %}<span class="tag warn">{{ line.trouble }}</span>{% endif %}
+          <span class="avatar" aria-hidden="true">
+            {%- if line.from_bot %}{{ icon('bot') }}{% else %}{{ line.who[:1] | upper }}{% endif -%}
+          </span>
+          <div class="bubble">
+            <div class="said-by">
+              <strong>{{ line.who }}</strong>
+              <span class="muted">{{ line.when }}</span>
+              {% if line.trouble %}<span class="tag warn">{{ line.trouble }}</span>{% endif %}
+            </div>
+            <div class="said-text">{{ line.text }}</div>
+            {% if line.did %}
+              <div class="muted did">used {{ line.did | join(', ') }}</div>
+            {% endif %}
           </div>
-          <div class="said-text">{{ line.text }}</div>
-          {% if line.did %}
-            <div class="muted did">used {{ line.did | join(', ') }}</div>
-          {% endif %}
         </li>
       {% endfor %}
     </ol>
   {% else %}
-    <p class="muted">Nothing said here yet. Anything you would ask in Telegram works.</p>
+    <p class="panel muted empty">{{ icon('chat') }}<span>Nothing said here yet. Anything you would ask in Telegram works.</span></p>
   {% endif %}
 
   {% if thinking %}
-    <p class="muted waiting">Thinking about the last message. This page will show the answer
+    <p class="muted waiting thinking">Thinking about the last message. This page will show the answer
       when it arrives.</p>
   {% elif note %}
     <p class="{{ 'error' if again else 'muted waiting' }}">{{ note }}</p>
@@ -50,7 +59,7 @@
       <textarea id="text" name="text" rows="3" required
                 placeholder="what should we do this weekend?">{{ typed or again or '' }}</textarea>
     </div>
-    <div class="field">
+    <div class="field who">
       <label for="who">From</label>
       <select id="who" name="who" required>
         {% if not who %}<option value="">who is asking?</option>{% endif %}
@@ -63,11 +72,11 @@
     <div class="field locate" id="locate" hidden>
       <label>
         <input type="checkbox" name="send_where" value="1" {{ 'checked' if send_where }} />
-        Send where I am
+        {{ icon('locate') }}Send where I am
       </label>
     </div>
-    <div class="field">
-      <button type="submit" {{ 'disabled' if thinking or not family }}>Send</button>
+    <div class="field send">
+      <button type="submit" {{ 'disabled' if thinking or not family }}>{{ icon('send') }}Send</button>
     </div>
     <p id="where" class="muted"></p>
   </form>

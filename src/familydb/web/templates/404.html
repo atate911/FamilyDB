@@ -1,9 +1,16 @@
 {% extends "base.html" %}
+{% from "_ui.html" import icon %}
 {% block title %}Not found · {{ site_title }}{% endblock %}
+{% block body_class %}page-lost{% endblock %}
 {% block content %}
-  <section class="panel narrow">
+  <section class="panel narrow lost">
+    <div class="crt" aria-hidden="true">
+      <img src="{{ url_for('static', filename='art/testcard.svg') }}" alt="" width="48" height="36" />
+      <span class="no-signal">NO SIGNAL</span>
+    </div>
+    <p class="eyebrow">Error 404</p>
     <h1>Not found</h1>
     <p>There is nothing at that address.</p>
-    <p><a href="{{ url_for('web.home') }}">Back to the start</a></p>
+    <p><a class="button" href="{{ url_for('web.home') }}">{{ icon('home') }}Back to the start</a></p>
   </section>
 {% endblock %}

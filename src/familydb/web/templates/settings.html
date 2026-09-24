@@ -1,4 +1,7 @@
 {% extends "base.html" %}
+{% from "_ui.html" import icon, page_head %}
+{% set GROUP_ICONS = {'Who answers': 'bot', 'What it may spend': 'coin', 'Looking things up': 'search',
+                      'Home': 'home', 'When it speaks first': 'bell', 'This page': 'settings'} %}
 {% block title %}Settings · {{ site_title }}{% endblock %}
 {% macro box(entry) %}
   {% set one = entry.field %}
@@ -40,24 +43,45 @@
     {% endif %}
   </div>
 {% endmacro %}
+{% block body_class %}page-settings{% endblock %}
 {% block content %}
-  <h1>Settings</h1>
+  {{ page_head('~/settings', 'Settings') }}
   {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
   {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
-  <p class="muted">
+
+  {# A long page, so an index of it: down the side where there is room, above it on a phone. #}
+  <div class="with-index">
+  <nav class="index" aria-label="On this page">
+    <p class="eyebrow">On this page</p>
+    <ol>
+      <li><a href="{{ url_for('settings.personality') }}">{{ icon('bot') }}Personality and family</a></li>
+      <li><a href="#keys">{{ icon('key') }}API keys</a></li>
+      <li><a href="#google">{{ icon('plans') }}Google Calendar</a></li>
+      {% for group in groups %}
+        <li><a href="#{{ group.title|lower|replace(' ', '-') }}">{{ icon(GROUP_ICONS.get(group.title, 'settings')) }}{{ group.title }}</a></li>
+      {% endfor %}
+      <li><a href="#see-a-key">{{ icon('search') }}See a key</a></li>
+      <li><a href="#everyone">{{ icon('signout') }}Sign everyone out</a></li>
+      <li><a href="#history">{{ icon('clock') }}What has changed</a></li>
+    </ol>
+  </nav>
+  <div class="index-body">
+  <p class="muted small">
     A box left empty uses whatever the environment or the <code>.env</code> file says, and that
     value is what the empty box shows. A change reaches the next message and the next page at
     once, the jobs that run on a schedule within a few minutes, and a new Telegram bot token
     within a few seconds: the status page says whether Telegram took it.
   </p>
 
-  <p>
-    <a href="{{ url_for('settings.personality') }}">Personality and family</a>: who the
-    assistant is, and who you are, in your own words.
-  </p>
+  <a class="panel feature" href="{{ url_for('settings.personality') }}">
+    <span class="feature-icon">{{ icon('bot') }}</span>
+    <span><strong>Personality and family</strong>: who the
+    assistant is, and who you are, in your own words.</span>
+    {{ icon('right', cls='go') }}
+  </a>
 
   <section class="panel" id="keys">
-    <h2>API keys</h2>
+    <h2>{{ icon('key') }}API keys</h2>
     <p class="muted">
       Keys are stored in the database, so they are in your backups. Leave a box empty to keep the
       key that is already there.
@@ -90,12 +114,12 @@
           {% if row.revealed %}<p class="revealed"><code>{{ row.revealed }}</code></p>{% endif %}
         </div>
       {% endfor %}
-      <button type="submit">Save keys</button>
+      <button type="submit">{{ icon('check') }}Save keys</button>
     </form>
   </section>
 
   <section class="panel" id="google">
-    <h2>Google Calendar</h2>
+    <h2>{{ icon('plans') }}Google Calendar</h2>
     {% if google.calendars is not none %}
       {% if google.calendars %}
         <form method="post" action="{{ url_for('settings.google_calendar_choice') }}">
@@ -117,7 +141,7 @@
               </label>
             {% endfor %}
           </fieldset>
-          <button type="submit">Use this calendar</button>
+          <button type="submit">{{ icon('check') }}Use this calendar</button>
         </form>
       {% else %}
         <p class="muted">
@@ -155,8 +179,8 @@
           Not connected, so plans are remembered here but never put on a calendar.
         {% endif %}
       </p>
-      <details {% if not google.connected %}open{% endif %}>
-        <summary>Connect Google Calendar</summary>
+      <details class="more" {% if not google.connected %}open{% endif %}>
+        <summary>{{ icon('plug') }}Connect Google Calendar</summary>
         <p class="muted">
           Once, in <a href="https://console.cloud.google.com/" target="_blank"
           rel="noopener noreferrer">Google Cloud</a>: make a project, turn on the Google Calendar
@@ -181,20 +205,18 @@
     <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
     {% for group in groups %}
       <section class="panel" id="{{ group.title|lower|replace(' ', '-') }}">
-        <h2>{{ group.title }}</h2>
+        <h2>{{ icon(GROUP_ICONS.get(group.title, 'settings')) }}{{ group.title }}</h2>
         {% if group.note %}<p class="muted">{{ group.note }}</p>{% endif %}
         <div class="grid">
           {% for entry in group.boxes %}{{ box(entry) }}{% endfor %}
         </div>
       </section>
     {% endfor %}
-    <button type="submit">Save settings</button>
+    <div class="save-bar"><button type="submit">{{ icon('check') }}Save settings</button></div>
   </form>
 
-
-
-  <section class="panel">
-    <h2>See a key</h2>
+  <section class="panel" id="see-a-key">
+    <h2>{{ icon('search') }}See a key</h2>
     <p class="muted">
       {% if needs_password %}
         Type the family password again. The key is shown once and never put in the address bar.
@@ -227,8 +249,8 @@
     </form>
   </section>
 
-  <section class="panel">
-    <h2>Sign everyone out</h2>
+  <section class="panel" id="everyone">
+    <h2>{{ icon('signout') }}Sign everyone out</h2>
     <p class="muted">
       Ends every sign-in on every phone and computer, this one included, and makes every browser
       a stranger again. For a lost phone or a password shared too widely; change the password too
@@ -247,12 +269,12 @@
           />
         </div>
       {% endif %}
-      <div class="actions"><button class="quiet" type="submit">Sign everyone out</button></div>
+      <div class="actions"><button class="danger" type="submit">Sign everyone out</button></div>
     </form>
   </section>
 
-  <section class="panel">
-    <h2>What has changed</h2>
+  <section class="panel" id="history">
+    <h2>{{ icon('clock') }}What has changed</h2>
     {% if history %}
       <ul class="plain">
         {% for line in history %}
@@ -275,4 +297,6 @@
       <p class="muted">Nothing has been changed here yet.</p>
     {% endif %}
   </section>
+  </div>
+  </div>
 {% endblock %}

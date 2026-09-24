@@ -1,0 +1,58 @@
+{# The page's small parts, shared by every template: `{% from "_ui.html" import icon %}`.
+   Icons are drawn in scripts/pixels.py and live in one sprite, static/icons.svg; they take the
+   colour of the text they sit in. An icon beside words is decoration and hidden from a screen
+   reader; an icon on its own gets a label. #}
+
+{% set KIND_ICONS = {
+  'restaurant': 'restaurant',
+  'activity': 'activity',
+  'outing': 'outing',
+  'day_trip': 'day_trip',
+  'trip': 'trip',
+  'show': 'show',
+  'event': 'event',
+  'seasonal': 'seasonal',
+} %}
+
+{% macro icon(name, label=none, cls='') -%}
+  <svg class="icon{{ ' ' ~ cls if cls }}" focusable="false"
+    {%- if label %} role="img" aria-label="{{ label }}"{% else %} aria-hidden="true"{% endif %}>
+    <use href="{{ url_for('static', filename='icons.svg') }}#i-{{ name }}"></use></svg>
+{%- endmacro %}
+
+{# The icon for a kind of idea; one the family made up gets a spark. #}
+{% macro kind_icon(kind) -%}
+  {{ icon(KIND_ICONS.get((kind or '') | lower | replace(' ', '_'), 'spark')) }}
+{%- endmacro %}
+
+{# The kind of an idea as a small coloured label, each kind its own colour. #}
+{% macro kind_label(kind) -%}
+  {% set key = (kind or '') | lower | replace(' ', '_') %}
+  <span class="eyebrow kind kind-{{ key if key in KIND_ICONS else 'other' }}">{{ kind_icon(kind) }}{{ kind }}</span>
+{%- endmacro %}
+
+{# The top of a page: where you are, as a terminal would say it, then the title, then the one
+   or two things the page is for, on the right where the eye lands after the title. #}
+{% macro page_head(path, title, lede=none) -%}
+  <header class="page-head">
+    <div class="page-title">
+      <p class="eyebrow prompt">{{ path }}</p>
+      <h1>{{ title }}</h1>
+      {% if lede %}<p class="lede">{{ lede }}</p>{% endif %}
+    </div>
+    {%- if caller is defined %}
+      <div class="page-actions">{{ caller() }}</div>
+    {%- endif %}
+  </header>
+{%- endmacro %}
+
+{# The tear-off date at the start of a plan: weekday, day, month. #}
+{% macro chip(parts, today=false) -%}
+  {% if parts %}
+    <span class="chip{{ ' is-today' if today }}" aria-hidden="true">
+      <span class="chip-dow">{{ parts.weekday }}</span>
+      <span class="chip-day">{{ parts.day }}</span>
+      <span class="chip-mon">{{ parts.month }}</span>
+    </span>
+  {% endif %}
+{%- endmacro %}
