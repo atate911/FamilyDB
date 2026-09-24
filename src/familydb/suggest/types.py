@@ -43,6 +43,10 @@ class SuggestInput(BaseModel):
     )
     max_travel_minutes: int | None = None
     max_duration_minutes: int | None = None
+    topic: str = Field(
+        default="",
+        description="What kind of thing, a few words: live jazz, puppet show. Empty for anything.",
+    )
     discover: bool = Field(default=True, description="Also look for time-bound events on the web.")
     question: str = Field(description="The family's question, verbatim.")
 
@@ -111,6 +115,7 @@ class Constraints:
     setting: str | None = None
     max_travel_minutes: int | None = None
     max_duration_minutes: int | None = None
+    topic: str = ""  # what the family asked for, for discovery only
 
 
 # Minutes after midnight. Without a time given, a day is counted from 08:00 to 22:00.

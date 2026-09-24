@@ -90,6 +90,25 @@ def test_discovery_cache_follows_the_constraints_not_the_wording(env):
     assert len(env.ctx.discover_cache) == 2
 
 
+def test_discovery_keeps_the_subject_and_the_hours(env):
+    from familydb.suggest.discover import render_discover_request
+    from familydb.suggest.types import DayBounds
+
+    weekend = (date(2026, 9, 26), date(2026, 9, 27))
+    context = build_context(env.ctx, weekend)
+    jazz = render_discover_request(context, Constraints(topic="live jazz"), env.settings)
+    puppets = render_discover_request(context, Constraints(topic="puppet show"), env.settings)
+    assert "Looking for: live jazz." in jazz and jazz != puppets
+    evening = build_context(env.ctx, weekend, DayBounds(start=17 * 60, end=23 * 60 + 30))
+    asked = render_discover_request(evening, Constraints(max_duration_minutes=90), env.settings)
+    assert "Hours: 17:00-24:00." in asked and '"max_duration_minutes": 90' in asked
+    # A question a few minutes later about the same evening asks the same thing.
+    later = build_context(env.ctx, weekend, DayBounds(start=17 * 60 + 10, end=23 * 60 + 20))
+    assert (
+        render_discover_request(later, Constraints(max_duration_minutes=90), env.settings) == asked
+    )
+
+
 def test_default_haiku_request_omits_unsupported_thinking(env):
     provider = AnthropicProvider(env.settings)
     payload = provider.payload(

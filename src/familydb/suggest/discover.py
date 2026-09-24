@@ -20,7 +20,7 @@ from familydb.agent.worker import home_location, run_worker_turn
 from familydb.availability import web_tools_available
 from familydb.config import Settings
 from familydb.errors import AgentError
-from familydb.suggest.types import DAY_START, Constraints, Context, WebFind
+from familydb.suggest.types import DAY_END, DAY_START, Constraints, Context, WebFind, clock
 from familydb.tools import ToolContext, build_registry
 
 log = logging.getLogger(__name__)
@@ -37,13 +37,22 @@ def cache_key(window: tuple[date, date] | None) -> str:
     return f"{window[0].isoformat()}:{window[1].isoformat()}"
 
 
-def _part_of_day(minute: int) -> str:
-    return "morning" if minute < 12 * 60 else "afternoon" if minute < 17 * 60 else "evening"
+def _hours(bounds: tuple[int, int]) -> str:
+    """A day's bounds to the whole hour, outward: close enough to search by, and the same for
+    questions asked a few minutes apart, so they share one search."""
+    start, end = bounds
+    return f"{clock(start // 60 * 60)}-{clock(min(24 * 60, -(-end // 60) * 60))}"
 
 
 def render_discover_request(context: Context, constraints: Constraints, settings: Settings) -> str:
-    """What the worker is asked: the window, the home area and who and what it is for."""
+    """What the worker is asked: the window and its hours, the home area, what it is for.
+
+    Built from the framing, never the question's wording: two ways of asking for the same thing
+    ask the same, and share one cached search, while a different subject asks something else.
+    """
     lines = ["Find time-bound things a family could go to near home."]
+    if constraints.topic:
+        lines.append(f"Looking for: {constraints.topic}.")
     if context.window is None:
         lines.append("Window: no fixed dates; look at the next four weeks or so.")
     else:
@@ -52,16 +61,19 @@ def render_discover_request(context: Context, constraints: Constraints, settings
             lines.append(f"Window: {start:%A %d %B %Y}.")
         else:
             lines.append(f"Window: {start:%A %d %B} to {end:%A %d %B %Y}.")
-        first = context.days[0].bounds[0] if context.days else DAY_START
-        if first > DAY_START:
-            # Coarse on purpose: the hour would make every question a new search.
-            lines.append(f"From the {_part_of_day(first)} of the first day.")
+        hours = [_hours(day.bounds) for day in context.days]
+        if len(set(hours)) == 1 and hours[0] != _hours((DAY_START, DAY_END)):
+            lines.append(f"Hours: {hours[0]}.")
+        elif len(set(hours)) > 1:
+            each = zip(context.days, hours, strict=True)
+            lines.append("Hours: " + "; ".join(f"{d.date:%a} {h}" for d, h in each) + ".")
     lines.append(f"Home area: {settings.home_area or 'not set'}.")
     wanted = {
         "who": constraints.participants or None,
         "max_cost_level": constraints.max_cost_level,
         "setting": constraints.setting,
         "max_travel_minutes": constraints.max_travel_minutes,
+        "max_duration_minutes": constraints.max_duration_minutes,
     }
     wanted = {k: v for k, v in wanted.items() if v is not None}
     if wanted:

@@ -619,3 +619,33 @@ def test_a_later_day_keeps_its_morning(conn, full_settings, clock, family) -> No
     first, last = window
     assert bounds.for_day(first, first, last) == (14 * 60 + 5, 22 * 60)
     assert bounds.for_day(last, first, last) == (9 * 60, 22 * 60)
+
+
+def test_open_now_without_a_calendar_still_checks_the_hours(
+    registry, conn, full_settings, clock, family
+) -> None:
+    ctx = _ctx(conn, full_settings, clock, family)  # no calendar connected
+    cafe = _idea(conn, "Breakfast cafe", kind="restaurant", duration_min=60)
+    _seed_place(conn, cafe, hours={"sun": [{"open": "08:00", "close": "12:00"}]})
+    _, data = _suggest(registry, ctx, window="now", question="open now?")
+    verdict = next(c for c in data["candidates"] if c["idea_id"] == cafe.id)
+    assert verdict["verdict"] == "ruled_out"
+    assert "calendar not connected" in data["skipped_checks"]
+
+
+def test_the_topic_is_folded_so_the_same_subject_is_one_search(
+    conn, full_settings, thursday_clock, family, monkeypatch
+) -> None:
+    from familydb.suggest import engine
+
+    seen: list[str] = []
+
+    def record(ctx, context, constraints):
+        seen.append(constraints.topic)
+        return [], None
+
+    monkeypatch.setattr(engine, "discover", record)
+    ctx = _ctx(conn, full_settings, thursday_clock, family)
+    for topic in ("Live  Jazz", "live jazz"):
+        engine.run(ctx, SuggestInput(window="this_weekend", question="?", topic=topic))
+    assert seen == ["live jazz", "live jazz"]

@@ -32,6 +32,7 @@ RECENT_SUGGESTION_DAYS = 14
 
 
 NOW_HOURS = 4
+MAX_TOPIC = 80
 MAX_NOW_HOURS = 12
 
 
@@ -117,6 +118,8 @@ def run(ctx: ToolContext, args: SuggestInput) -> SuggestResult:
         setting=args.setting,
         max_travel_minutes=args.max_travel_minutes,
         max_duration_minutes=args.max_duration_minutes,
+        # Folded the same way however it was typed, so the same subject is the same search.
+        topic=" ".join(args.topic.casefold().split())[:MAX_TOPIC],
     )
     excluded = outcomes.do_not_repeat(ctx.conn)
     kept, ruled_out, extras = shortlist(

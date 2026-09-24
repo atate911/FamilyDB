@@ -86,7 +86,9 @@ def _hours_check(
         spans = day_context.spans if day_context else []
         need = item.idea.duration_min or item.idea.duration_max or MIN_VISIT_MINUTES
         stretches = doable(ranges, spans, place.travel_minutes or 0)
-        if day_context is None or not day_context.free_known:
+        # Without a calendar the day's free time is all of the time asked about, so the hours
+        # are still held to it: "open now" must not offer a café that closed at noon.
+        if day_context is None:
             open_days.append(day)
         else:
             overlap = max((b - a for a, b in stretches), default=0)
