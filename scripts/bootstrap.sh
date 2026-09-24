@@ -467,8 +467,8 @@ fi
 
 # ------------------------------------------------------------- configure ----
 head2 "Configuring"
-say "scripts/install.sh takes over now. It asks where the web page will be reached and who you"
-say "are, writes ${TARGET}/.env, installs, and adds you as the first family member."
+say "scripts/install.sh takes over now. It asks at most whether the page has a domain name, then"
+say "writes ${TARGET}/.env, installs, and puts HTTPS in front of the page."
 say ""
 
 INSTALL_ARGS=("--mode" "$MODE")
@@ -484,7 +484,7 @@ FORWARD_VARS=(
   HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy
   SSL_CERT_FILE SSL_CERT_DIR REQUESTS_CA_BUNDLE CURL_CA_BUNDLE GIT_SSL_CAINFO
 )
-forwarded=(HOME="$TARGET" PATH="$SYSTEM_PATH")
+forwarded=(HOME="$TARGET" PATH="$SYSTEM_PATH" FROM_BOOTSTRAP=1)
 for name in "${FORWARD_VARS[@]}"; do
   [ -n "${!name:-}" ] && forwarded+=("${name}=${!name}")
 done
@@ -546,9 +546,9 @@ if [ "$DRY_RUN" = 0 ]; then
   say ""
   FAMILYDB="${TARGET}/.venv/bin/familydb"
   if [ "$MODE" = docker ]; then
-    as_root docker compose --project-directory "$TARGET" run --rm -T bot familydb doctor || true
+    as_root docker compose --project-directory "$TARGET" run --rm -T bot familydb doctor --new-install || true
   elif [ -x "$FAMILYDB" ]; then
-    (cd "$TARGET" && as_service_user env "${forwarded[@]}" "$FAMILYDB" doctor) || true
+    (cd "$TARGET" && as_service_user env "${forwarded[@]}" "$FAMILYDB" doctor --new-install) || true
   else
     warn "There is no familydb command at ${FAMILYDB}, so nothing could be checked."
     note "The install did not finish. Run: sudo ${INSTALLER}"
@@ -564,13 +564,14 @@ if [ "$DRY_RUN" = 1 ]; then
   exit 0
 fi
 
-WEB_LINE=""; host=""; port=""; domain=""
+WEB_LINE=""; host=""; port=""; domain=""; password=""
 if as_root test -r "${TARGET}/.env"; then
   read_env() { as_root grep -E "^${1}=" "${TARGET}/.env" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d "'\"" || true; }
   enabled="$(read_env WEB_ENABLED)"
   port="$(read_env WEB_PORT)"
   host="$(read_env WEB_HOST)"
   domain="$(read_env WEB_DOMAIN)"
+  password="$(read_env WEB_PASSWORD)"
   if [ -n "$domain" ]; then
     WEB_LINE="https://${domain}/"
   elif [ "$enabled" = true ]; then
@@ -580,32 +581,7 @@ if as_root test -r "${TARGET}/.env"; then
   fi
 fi
 
-if [ -n "$WEB_LINE" ]; then
-  say "The web page: ${B}${WEB_LINE}${OFF}"
-  say "  Sign in with the family password. Its home page lists what is left to set up, in the"
-  say "  order it matters: a model key, Telegram, Google Calendar and where home is."
-  if [ -n "$domain" ]; then
-    if printf '%s' "$domain" | grep -Eq '^[0-9.]+$'; then
-      note "  The browser warns about the certificate once on each device: Caddy signed it itself."
-    else
-      note "  The domain must point at this machine."
-    fi
-    note "  Ports 80 and 443 must be open here (sudo ufw allow 80,443/tcp) and in your VPS"
-    note "  provider's own firewall, if it has one."
-  else
-    case "${host:-}" in
-      127.0.0.1|localhost|"")
-        note "  It is bound to this machine only, which is the safe default. From your own computer,"
-        note "  not this server, and from anywhere you can reach it over SSH, run:"
-        note "    ssh -L ${port:-8080}:127.0.0.1:${port:-8080} ${SUDO_USER:-$(id -un)}@$(hostname -I 2>/dev/null | awk '{print $1}')"
-        note "  and while it is connected open http://127.0.0.1:${port:-8080}/ on that computer."
-        note "  To open it by domain or IP address instead: docs/INSTALL.md section 6."
-        ;;
-    esac
-  fi
-  say ""
-fi
-
+# For whoever looks after the server; the link, which is what everybody needs, comes last.
 if [ "$MODE" = docker ]; then
   say "Watch it:      docker compose --project-directory ${TARGET} logs -f bot"
   say "Check it:      docker compose --project-directory ${TARGET} run --rm bot familydb doctor"
@@ -616,6 +592,40 @@ fi
 say "Look after it: sudo ${TARGET}/scripts/maintain.sh --help"
 say "Remove it:     sudo ${TARGET}/scripts/uninstall.sh --help"
 say "Read up:       ${TARGET}/RUNBOOK.md, and ${TARGET}/docs/INSTALL.md"
+say ""
+
+if [ -n "$WEB_LINE" ] && [ -n "$domain" ]; then
+  say "FamilyDB is running. Open this in any browser, on any computer or phone:"
+  say ""
+  say "    ${B}${WEB_LINE}${OFF}"
+  [ -n "$password" ] && say "    password: ${B}${password}${OFF}"
+  say ""
+  say "The page then walks you through the rest, starting with a password of your own."
+  # What a browser will make of it, found by asking the way a browser would.
+  if curl -sS --max-time 8 -o /dev/null "https://${domain}/healthz" 2>/dev/null; then
+    :
+  elif curl -ksS --max-time 8 -o /dev/null "https://${domain}/healthz" 2>/dev/null; then
+    note "The browser warns once that the connection is not private, because the certificate is"
+    note "this server's own. Choose Advanced, then continue: it is still encrypted."
+  else
+    note "If the page does not open, your provider's own firewall is probably in the way. In its"
+    note "control panel, allow TCP ports 80 and 443, then run: sudo ${TARGET}/scripts/maintain.sh https"
+  fi
+  say ""
+elif [ -n "$WEB_LINE" ]; then
+  say "The web page: ${B}${WEB_LINE}${OFF}"
+  [ -n "$password" ] && say "  password: ${B}${password}${OFF}"
+  case "${host:-}" in
+    127.0.0.1|localhost|"")
+      note "  It is on this machine only, as asked. From your own computer, not this server, run:"
+      note "    ssh -L ${port:-8080}:127.0.0.1:${port:-8080} ${SUDO_USER:-$(id -un)}@$(hostname -I 2>/dev/null | awk '{print $1}')"
+      note "  and while it is connected open http://127.0.0.1:${port:-8080}/ on that computer."
+      note "  To open it by its address instead: sudo ${TARGET}/scripts/maintain.sh https"
+      ;;
+  esac
+  say ""
+fi
+
 if [ "$WARNINGS" -gt 0 ]; then
   say ""
   warn "${WARNINGS} warning(s) above are worth reading before you walk away."

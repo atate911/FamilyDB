@@ -6,11 +6,13 @@ set -euo pipefail
 # shellcheck disable=SC2034  # read by lib/common.sh when it opens the transcript.
 SCRIPT_ARGS="$*"
 HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
-if [ -r "${HERE}/lib/common.sh" ]; then
+if [ -r "${HERE}/lib/common.sh" ] && [ -r "${HERE}/lib/https.sh" ]; then
   # shellcheck source=lib/common.sh
   . "${HERE}/lib/common.sh"
+  # shellcheck source=lib/https.sh
+  . "${HERE}/lib/https.sh"
 else
-  printf 'This script needs scripts/lib/common.sh beside it.\n' >&2
+  printf 'This script needs scripts/lib/common.sh and scripts/lib/https.sh beside it.\n' >&2
   exit 1
 fi
 
@@ -27,6 +29,7 @@ ASSUME_YES=0         # --yes: take every default, ask nothing
 NON_INTERACTIVE=0    # --non-interactive: never prompt; fail if something required is missing
 DRY_RUN=0
 SKIP_INSTALL=0       # --config-only: write .env and stop
+LOCAL_ONLY=0         # --local-only: keep the page on this machine, reached over an SSH tunnel
 
 # Output, logging, failure reporting, retries and confirm() all come from lib/common.sh.
 run() { if [ "$DRY_RUN" = 1 ]; then note "[dry run] $*"; else "$@"; fi; }
@@ -37,7 +40,8 @@ FamilyDB installer
 
   scripts/install.sh [options]
 
-It asks one thing: the domain name or public IP address for the web page, if it has one. Everything else (yourself
+It asks at most one thing: a domain name for the web page, if it has one. Without one the page is
+served over HTTPS at this server's own address. Everything else (yourself
 and the family, the model and its key, Telegram, Google Calendar, where home is, what it may
 spend) is set on the web page once it is running.
 
@@ -47,11 +51,13 @@ Options
   --yes                Accept every default.
   --non-interactive    Never prompt. Every answer comes from the environment (below).
   --config-only        Write .env and stop, installing nothing.
+  --local-only         Keep the page on this machine, reached from your own computer over an
+                       SSH tunnel, instead of on HTTPS at this server's address.
   --dry-run            Say what would happen; change nothing.
   -h, --help           This text.
 
 Answers can be supplied as environment variables, which is what --non-interactive reads:
-  WEB_DOMAIN           the page's domain or public IPv4 address; empty keeps it on this machine
+  WEB_DOMAIN           the page's domain name; empty uses this server's own address
   WEB_PASSWORD         the family password (12 characters or more); made up when not given
   ADMIN_NAME           the first family member (otherwise added on the Family page)
   BACKUPS              yes (the default) schedules a nightly backup; no leaves it to you
@@ -62,7 +68,7 @@ and, for a scripted build that wants them in .env rather than set on the page:
 
 Examples
   scripts/install.sh                          # one question, then install
-  scripts/install.sh --yes                    # this machine only, a generated password
+  scripts/install.sh --yes                    # HTTPS at this address, a generated password
   WEB_DOMAIN=family.example.com ADMIN_NAME=Sam \
     scripts/install.sh --non-interactive --mode docker
 USAGE
@@ -75,6 +81,7 @@ while [ $# -gt 0 ]; do
     --yes|-y) ASSUME_YES=1; shift ;;
     --non-interactive) NON_INTERACTIVE=1; ASSUME_YES=1; shift ;;
     --config-only) SKIP_INSTALL=1; shift ;;
+    --local-only) LOCAL_ONLY=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) usage >&2; die "unknown option: $1" ;;
@@ -209,12 +216,6 @@ random_password() {
   fi
 }
 
-is_ipv4() { # a dotted IPv4 address, each part 0-255
-  printf '%s' "$1" | grep -Eq '^([0-9]{1,3}\.){3}[0-9]{1,3}$' || return 1
-  local IFS=. part
-  for part in $1; do [ "$part" -le 255 ] || return 1; done
-}
-
 valid_host() { # an address to bind: an IP, or localhost. A typo means the page never serves.
   case "$1" in localhost|"") return 0 ;; esac
   python3 - "$1" <<'HOSTPY' 2>/dev/null
@@ -311,14 +312,20 @@ else
   fi
   plan_item "Create ${REPO_ROOT}/data and the SQLite database inside it" \
     "everything the family tells it lives in that one file"
-  plan_item "Add the first family member to that database" \
-    "the bot only answers people it knows, so it needs at least one"
+  if [ -n "${ADMIN_NAME:-}" ]; then
+    plan_item "Add ${ADMIN_NAME} to the family list" \
+      "the bot only answers people it knows; everyone else is added on the page"
+  fi
+  if [ "$MODE" = venv ] && [ "$LOCAL_ONLY" = 0 ]; then
+    plan_item "Put Caddy in front of the page, for HTTPS, and open ports 80 and 443 if ufw is on" \
+      "so the page can be opened from any browser without a tunnel, and nothing crosses the network in the clear"
+  fi
   if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
     plan_item "Offer to create the 'familydb' user and write /etc/systemd/system/familydb.service" \
       "so it starts at boot and restarts if it stops; you are asked before this happens"
   fi
 fi
-plan_untouched "the system Python, your firewall, and every other service (Caddy only if you give a domain or an IP address, and it asks first)"
+plan_untouched "the system Python, your SSH configuration, and every other service"
 plan_untouched "any database that is already here: an existing one is migrated, never replaced"
 show_plan "What this installer changes"
 
@@ -439,33 +446,39 @@ if [ "$KEEP_ENV" = 0 ]; then
   # --- the web page, which is how everything else gets set ---
   set_env WEB_ENABLED true
   say ""
-  say "The page is reached one of three ways:"
-  say "  · through a domain name that points at this machine, over HTTPS;"
-  say "  · through this machine's public IP address, over HTTPS with a certificate the browser"
-  say "    warns about once on each device, for a server with no domain; or"
-  say "  · from this machine only, which you reach from your own computer over an SSH tunnel."
-  ask WEB_DOMAIN "Domain name or public IP address for the page (leave it empty for this machine only)" "${WEB_DOMAIN:-}"
-  WEB_DOMAIN="${WEB_DOMAIN#https://}"; WEB_DOMAIN="${WEB_DOMAIN#http://}"; WEB_DOMAIN="${WEB_DOMAIN%%/*}"
-  WEB_DOMAIN="${WEB_DOMAIN%:*}"   # a port typed after it means nothing here: Caddy answers on 443
-  if [ -n "$WEB_DOMAIN" ] && is_ipv4 "$WEB_DOMAIN"; then
-    if [ "$MODE" = docker ]; then
-      warn "An IP address instead of a domain is only set up for the virtualenv install; keeping the"
-      warn "page on this machine. docs/INSTALL.md section 6 says how to reach it."
-      WEB_DOMAIN=""
-    elif ! hostname -I 2>/dev/null | tr ' ' '\n' | grep -qx "$WEB_DOMAIN"; then
-      note "${WEB_DOMAIN} is not an address of this machine. Fine behind a NAT; otherwise check it."
-    fi
-  elif [ -n "$WEB_DOMAIN" ] && ! printf '%s' "$WEB_DOMAIN" | grep -Eq '^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'; then
-    warn "'${WEB_DOMAIN}' does not look like a domain name or an IP address; keeping the page on this machine."
+  ADDRESS="$(this_address)"
+  if [ "$LOCAL_ONLY" = 1 ] || [ "${WEB_DOMAIN:-}" = local ]; then
     WEB_DOMAIN=""
+    note "The page stays on this machine, reached over an SSH tunnel, as asked."
+  else
+    if [ -z "${WEB_DOMAIN:-}" ]; then
+      say ""
+      if [ -n "$ADDRESS" ] && [ "$MODE" = venv ]; then
+        say "The page will be at ${B}https://${ADDRESS}/${OFF}, this server's address, over HTTPS."
+      fi
+      say "If you have a domain name for it, pointed at this server, type it. Otherwise press Enter."
+    fi
+    ask WEB_DOMAIN "Domain name (optional)" ""
+    WEB_DOMAIN="${WEB_DOMAIN#https://}"; WEB_DOMAIN="${WEB_DOMAIN#http://}"; WEB_DOMAIN="${WEB_DOMAIN%%/*}"
+    WEB_DOMAIN="${WEB_DOMAIN%:*}"   # a port typed after it means nothing here: Caddy answers on 443
+    if [ -n "$WEB_DOMAIN" ] && ! is_ipv4 "$WEB_DOMAIN" \
+       && ! printf '%s' "$WEB_DOMAIN" | grep -Eq '^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'; then
+      warn "'${WEB_DOMAIN}' does not look like a domain name, so the page uses this server's address."
+      WEB_DOMAIN=""
+    fi
+    [ -n "$WEB_DOMAIN" ] || WEB_DOMAIN="$ADDRESS"
+    if [ -n "$WEB_DOMAIN" ] && is_ipv4 "$WEB_DOMAIN" && [ "$MODE" = docker ]; then
+      warn "With Docker the page needs a domain name to be on HTTPS; keeping it on this machine."
+      note "docs/INSTALL.md, 'Opening the page', has the other ways in."
+      WEB_DOMAIN=""
+    fi
   fi
   if [ -n "$WEB_DOMAIN" ] && is_ipv4 "$WEB_DOMAIN"; then
-    # No public certificate authority is asked: Caddy signs one itself (`tls internal`), so the
-    # connection is encrypted and each browser warns once. Plain HTTP would send the family
-    # password in the clear, which is why this is not simply the page bound to 0.0.0.0.
+    # Caddy in front, with a certificate for the address itself (see lib/https.sh). Never plain
+    # HTTP on the open internet: that would send the family password in the clear.
     set_env WEB_DOMAIN "$WEB_DOMAIN"
     set_env WEB_TRUST_PROXY true
-    ok "The page will be https://${WEB_DOMAIN}/ once Caddy is in front (asked below)."
+    ok "The page will be https://${WEB_DOMAIN}/"
   elif [ -n "$WEB_DOMAIN" ]; then
     # Caddy can only get a certificate for a name that points here. Not a reason to stop, since
     # DNS may simply be catching up, but worth saying now rather than as a silent Caddy retry.
@@ -504,8 +517,8 @@ if [ "$KEEP_ENV" = 0 ]; then
   if [ -z "${WEB_PASSWORD:-}" ]; then
     WEB_PASSWORD="$(random_password)"
     say ""
-    say "  The family password for the page: ${B}${WEB_PASSWORD}${OFF}"
-    say "  Write it down now. It is in .env too, and nowhere else."
+    say "  A password to get into the page the first time: ${B}${WEB_PASSWORD}${OFF}"
+    say "  The page then asks you to choose your own. This one is shown again at the end."
   fi
   set_env WEB_PASSWORD "$WEB_PASSWORD"
 
@@ -678,42 +691,28 @@ if [ "${BACKUPS:-yes}" != no ] && [ "$DRY_RUN" = 0 ]; then
 fi
 
 # ---------------------------------------------------------------- HTTPS ----
-# With a domain, something has to hold the certificate. In Docker that is the Caddy container
-# (COMPOSE_PROFILES=tls above); here it is Caddy on the machine, set up from deploy/Caddyfile.
+# Something has to hold the certificate. In Docker that is the Caddy container
+# (COMPOSE_PROFILES=tls above); here it is Caddy on the machine, set up by lib/https.sh.
 env_value() { grep -E "^${1}=" "$ENV_FILE" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d "'\"" || true; }
 DOMAIN="$(env_value WEB_DOMAIN)"
+PORT="$(env_value WEB_PORT)"; PORT="${PORT:-8080}"
 HTTPS_READY=0
 if [ -n "$DOMAIN" ] && [ "$MODE" = docker ]; then
   HTTPS_READY=1
 elif [ -n "$DOMAIN" ] && [ "$MODE" = venv ] && [ "$DRY_RUN" = 0 ]; then
   head2 "HTTPS"
-  if confirm "Set up Caddy to serve https://${DOMAIN}/ and get its certificate?" yes; then
-    if ! have caddy && have apt-get; then
-      $SUDO apt-get install -y -q caddy >/dev/null 2>&1 || warn "Could not install Caddy with apt."
-    fi
-    caddyfile=/etc/caddy/Caddyfile
-    if ! have caddy; then
-      warn "Caddy is not installed. Install it, then use ${REPO_ROOT}/deploy/Caddyfile."
-    elif [ -f "$caddyfile" ] && ! grep -q -e '/usr/share/caddy' -e 'reverse_proxy 127.0.0.1' "$caddyfile"; then
-      warn "${caddyfile} already serves something else. Add the site in deploy/Caddyfile to it."
-    elif sed -e "s/familydb.example.com/${DOMAIN}/g" \
-             -e "s/127.0.0.1:8080/127.0.0.1:$(env_value WEB_PORT)/" \
-             -e "$(is_ipv4 "$DOMAIN" && printf '/reverse_proxy/i\\\ttls internal')" \
-             "${REPO_ROOT}/deploy/Caddyfile" | $SUDO tee "$caddyfile" >/dev/null \
-         && $SUDO systemctl reload-or-restart caddy; then
-      if is_ipv4 "$DOMAIN"; then
-        ok "Caddy serves https://${DOMAIN}/ with a certificate it signed itself."
-      else
-        ok "Caddy serves https://${DOMAIN}/ and fetches the certificate once the domain points here."
-      fi
-      HTTPS_READY=1
-    else
-      warn "Could not configure Caddy; see ${REPO_ROOT}/deploy/Caddyfile."
-    fi
+  if setup_https "$DOMAIN" "$PORT"; then
+    HTTPS_READY=1
   fi
 fi
 
 # ----------------------------------------------------------- what is next ----
+# Run by bootstrap.sh, which starts the service and has the last word, with the link in it.
+if [ "${FROM_BOOTSTRAP:-0}" = 1 ]; then
+  [ -n "$LOG_FILE" ] && note "A transcript of the configuration is at ${LOG_FILE}"
+  exit 0
+fi
+
 head2 "Done"
 
 if [ "$MODE" = docker ]; then
@@ -731,28 +730,18 @@ fi
 say "Start it:   ${B}${START}${OFF}"
 say "Watch it:   ${LOGS}"
 say ""
-PORT="$(env_value WEB_PORT)"; PORT="${PORT:-8080}"
 if [ "$HTTPS_READY" = 1 ]; then
   say "Then open ${B}https://${DOMAIN}/${OFF} and sign in with the family password."
-  if is_ipv4 "$DOMAIN"; then
-    note "The browser warns about the certificate the first time on each device, because Caddy"
-    note "signed it itself rather than a public authority; accept it once. The connection is"
-    note "still encrypted."
-  else
-    note "The domain has to point at this machine."
-  fi
-  note "Ports 80 and 443 have to be open, on this machine (sudo ufw allow 80,443/tcp) and in"
-  note "your VPS provider's own firewall, if it has one, which is set in its control panel."
+  say_how_to_open "$DOMAIN"
 else
   say "Then open the page and sign in with the family password. Run this on your own computer,"
   say "not on this server; it works from anywhere you can reach the server over SSH:"
   say "  ssh -L ${PORT}:127.0.0.1:${PORT} ${SUDO_USER:-$(id -un)}@$(hostname -I 2>/dev/null | awk '{print $1}')"
   say "  and, while it is connected, open ${B}http://127.0.0.1:${PORT}/${OFF} on that computer."
-  note "To open it by address instead, with no tunnel, see docs/INSTALL.md section 6."
 fi
 say ""
-say "The page's home says what is left to set up, in the order it matters: adding yourself on"
-say "the Family page, a model key, where home is, Google Calendar and Telegram, all done there."
+say "The page walks you through the rest, one step at a time: your own password, yourself, an AI"
+say "key, where home is, then Telegram and Google Calendar if you want them."
 if [ "$BACKUPS_SCHEDULED" = 1 ]; then
   say "Copy ${REPO_ROOT}/backups off this server now and then: a backup on the same disk is not"
   say "a backup."

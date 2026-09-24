@@ -543,6 +543,12 @@ def doctor(
         False, "--fix", help="Put right the few things that can be, such as file permissions."
     ),
     as_json: bool = typer.Option(False, "--json", help="Machine-readable, for a setup script."),
+    new_install: bool = typer.Option(
+        False,
+        "--new-install",
+        hidden=True,
+        help="As the installer's last word: what the page's setup does next is not a fault.",
+    ),
 ) -> None:
     """Check this install end to end and say what, if anything, is wrong.
 
@@ -558,6 +564,8 @@ def doctor(
     if fix:
         checks.correct(application, report)
         report = checks.run(application, online=online)  # say what is true after the repairs
+    if new_install:
+        checks.as_new_install(report)
     if as_json:
         typer.echo(json.dumps(report.as_dict(), indent=2, sort_keys=True))
     else:
@@ -566,7 +574,7 @@ def doctor(
             typer.echo(f"{mark} {check.name}: {check.detail}")
             if check.corrected:
                 typer.echo(f"    fixed: {check.corrected}")
-            elif check.fix and check.verdict in (checks.FAIL, checks.WARN):
+            elif check.fix and check.verdict in (checks.FAIL, checks.WARN, checks.TODO):
                 typer.echo(f"    → {check.fix}")
         typer.echo("")
         typer.echo(checks.verdict(report))
