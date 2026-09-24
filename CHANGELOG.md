@@ -29,8 +29,8 @@ older than what is installed. It gets a date when it is released.
   time, says when each option could actually start, searches for what is on,
   and logs every verdict.
 - **Knows where the family is when a phone says so.** A location shared on
-  Telegram, or the position the web page's chat sends with a message (the
-  browser asks first), is used for three hours: travel is measured from there
+  Telegram, or the position the web page's chat sends with a message (only
+  while "Send where I am" is ticked), is used for three hours: travel is measured from there
   and discovery searches near it.
 - **Speaks as Vera.** A personality, and a description of the family, both
   editable on the settings page. Everything said unasked (reminders, "how was
