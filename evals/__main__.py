@@ -20,7 +20,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--model", help="and this model, instead of the configured one")
     parser.add_argument("--show", action="store_true", help="print each reply and its calls")
     parser.add_argument(
-        "--budget", type=float, default=0.50, help="stop once this many estimated dollars are spent"
+        "--budget",
+        type=float,
+        default=0.50,
+        help="estimated dollars to spend at most; checked before every model call, so only the "
+        "call that crosses it can go over (default 0.50)",
     )
     parser.add_argument("--json", dest="json_path", help="also write the results here")
     args = parser.parse_args(argv)
@@ -46,8 +50,13 @@ def main(argv: list[str] | None = None) -> int:
             if spent >= args.budget:
                 print(f"\nStopped: ${spent:.4f} spent, the budget is ${args.budget:.2f}.")
                 return _finish(results, spent, args.json_path, stopped=True)
-            run = run_case(case, base)
+            # What is left of the budget is the run's own daily limit, checked before each call.
+            run = run_case(case, base, limit=args.budget - spent)
             spent += run.cost
+            if spent >= args.budget:
+                # The limit stopped it partway, or it just finished at the edge: not graded.
+                print(f"\nStopped in {case.name}: ${spent:.4f} spent of ${args.budget:.2f}.")
+                return _finish(results, spent, args.json_path, stopped=True)
             wrong = grade(case, run)
             passes += not wrong
             problems.extend(wrong)

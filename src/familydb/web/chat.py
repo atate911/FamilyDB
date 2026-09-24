@@ -43,6 +43,8 @@ bp = Blueprint("chat", __name__)
 # Who the person last said they were. Not who they are: the page is behind one family password
 # and cannot know that. It is remembered so nobody has to say it with every message.
 WHO_KEY = "who"
+# Whether this browser sends where it is with each message: off until someone ticks the box.
+WHERE_KEY = "send_where"
 THREAD_LIMIT = 60
 # How long the browser waits before asking again while a reply is on its way. A turn takes a few
 # seconds when it answers straight off and the better part of a minute when it runs tools, so
@@ -147,6 +149,7 @@ def page(*, error: str | None = None, typed: str | None = None, status: int = 20
             refresh=refresh,
             here=url_for("chat.show", _anchor=LATEST),
             latest=LATEST,
+            send_where=bool(session.get(WHERE_KEY)),
         ),
         status,
     )
@@ -161,7 +164,10 @@ def show() -> Any:
 
 
 def _position(form: Any) -> tuple[float, float] | None:
-    """Where the phone said it was, from the page's one script; None when it said nothing."""
+    """Where the phone said it was, from the page's one script; None when it said nothing, or
+    when nobody ticked "Send where I am" (a position without it is not kept)."""
+    if form.get(WHERE_KEY) != "1":
+        return None
     try:
         lat, lon = float(form.get("lat", "")), float(form.get("lon", ""))
     except ValueError:
@@ -185,6 +191,7 @@ def send() -> Response | Any:
     if request.form.get("intent") == "save_idea" and text.strip():
         sent = message_store.CAPTURE_PREFIX + text
     session[WHO_KEY] = who
+    session[WHERE_KEY] = request.form.get(WHERE_KEY) == "1"  # the box stays as they left it
     if (complaint := _chat().ask(sent, who, DEFAULT_CHAT, _position(request.form))) is not None:
         return page(error=complaint, typed=text, status=400)
     log.info("web chat: %s asked something", who)

@@ -14,6 +14,7 @@ from familydb.app import App
 from familydb.availability import digest_configured
 from familydb.jobs.follow_ups import run_follow_ups
 from familydb.jobs.weekend_digest import run_digest
+from familydb.whereabouts import forget_old
 
 log = logging.getLogger(__name__)
 
@@ -32,8 +33,12 @@ def digest_due(app: App) -> bool:
 
 
 def run_catch_up(app: App, *, api: MessagesAPI | None = None) -> dict[str, Any]:
-    """Run the follow-ups, and the digest when it was due earlier today."""
+    """Forget old locations, run the follow-ups, and the digest when it was due earlier today."""
     app.refresh()
+    # A bot that was off for days deletes the locations it should have forgotten meanwhile.
+    forgotten = forget_old(app)
+    if forgotten:
+        log.info("catch-up on start: forgot %s shared location(s) past their day", forgotten)
     result: dict[str, Any] = {"follow_ups": run_follow_ups(app), "digest": "not due"}
     if digest_due(app):
         reply = run_digest(app, api=api)

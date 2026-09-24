@@ -59,6 +59,13 @@
         {% endfor %}
       </select>
     </div>
+    {# Shown by locate.js; with scripts off there is no position to send, so no box. #}
+    <div class="field locate" id="locate" hidden>
+      <label>
+        <input type="checkbox" name="send_where" value="1" {{ 'checked' if send_where }} />
+        Send where I am
+      </label>
+    </div>
     <div class="field">
       <button type="submit" {{ 'disabled' if thinking or not family }}>Send</button>
     </div>

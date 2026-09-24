@@ -51,3 +51,15 @@ def test_every_case_has_a_reason_and_a_unique_name() -> None:
 
     assert len({c.name for c in CASES}) == len(CASES)
     assert all(c.why and c.says and c.checks for c in CASES)
+
+
+def test_the_budget_stops_a_case_between_its_calls(settings) -> None:
+    """What is left of the budget is the run's own limit, so a case cannot run on past it."""
+    case = by_name("capture_restaurant")
+    api = _answer(
+        [fakes.tool_use("t1", "add_idea", {"title": "Ethiopian place", "kind": "restaurant"})],
+        [fakes.text("Saved #6.")],
+    )
+    run = run_case(case, settings, api=api, limit=1e-9)
+    assert run.model_calls == 1  # the first call crossed it; the second was never sent
+    assert run.counts["ideas"] == 6  # and what it did before stopping is kept

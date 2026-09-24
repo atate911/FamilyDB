@@ -263,6 +263,10 @@ label.check input { width: auto; margin-right: 0.3rem; }
 .ask .field.wide { flex: 1 1 100%; }
 .ask button { margin-top: 0; }
 .ask textarea { resize: vertical; }
+.ask .locate { flex: 0 1 auto; align-self: center; }
+.ask .locate label { margin: 0; font-weight: 500; }
+.ask .locate input { margin-right: 0.3rem; }
+[hidden] { display: none !important; }
 .waiting { margin: 0.75rem 0; }
 .thread { list-style: none; margin: 1rem 0 0; padding: 0; }
 .thread > li { padding: 0.6rem 0; border-bottom: 1px solid var(--line); }

@@ -206,6 +206,7 @@ def test_the_schedule_follows_the_settings(conn, settings, clock) -> None:
         "catch_up",
         "settings_watch",
         "reminders",
+        "forget_locations",
     }
     assert scheduler.get_job("retry_failed").trigger.interval == timedelta(
         minutes=settings.retry_interval_minutes

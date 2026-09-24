@@ -254,8 +254,9 @@ def test_the_phone_s_position_goes_with_the_message(settings, clock, conn, famil
     client.post("/login", data={"password": PASSWORD})
     page = client.get("/chat").text
     assert 'name="lat"' in page and "locate.js" in page and "<script>" not in page
+    assert 'name="send_where" value="1"  />' in page  # off until somebody ticks it
     client.chat = web.config["FAMILYDB_CHAT"]
-    _say(client, "sushi open near here?", lat="45.51900", lon="-122.67900")
+    _say(client, "sushi open near here?", lat="45.51900", lon="-122.67900", send_where="1")
     assert client.chat.wait(10)
     kept = locations.get(conn, family["sam"].id)
     assert (kept.lat, kept.lon) == (45.519, -122.679)
@@ -263,6 +264,7 @@ def test_the_phone_s_position_goes_with_the_message(settings, clock, conn, famil
     sent = json.dumps(api.requests[0]["messages"][-1])
     assert "Sam's location, from their phone 0 min ago: (45.5190, -122.6790)" in sent
     assert "45.519" not in json.dumps(api.requests[0]["system"])
+    assert 'name="send_where" value="1" checked />' in client.get("/chat").text  # stays ticked
 
 
 def test_a_position_that_is_not_one_is_ignored(settings, clock, conn, family, replies) -> None:
@@ -270,6 +272,17 @@ def test_a_position_that_is_not_one_is_ignored(settings, clock, conn, family, re
 
     client = _client(settings, clock, *replies)
     for lat, lon in (("", ""), ("nan", "1"), ("91", "0"), ("45", "-181"), ("north", "west")):
-        _say(client, "hi", lat=lat, lon=lon)
+        _say(client, "hi", lat=lat, lon=lon, send_where="1")
         assert client.chat.wait(10)
+    assert locations.get(conn, family["sam"].id) is None
+
+
+def test_a_position_is_not_kept_unless_the_box_is_ticked(
+    settings, clock, conn, family, replies
+) -> None:
+    from familydb.store import locations
+
+    client = _client(settings, clock, *replies)
+    _say(client, "thanks", lat="45.51900", lon="-122.67900")
+    assert client.chat.wait(10)
     assert locations.get(conn, family["sam"].id) is None
