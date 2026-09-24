@@ -134,4 +134,5 @@ def test_start_command(settings, clock) -> None:
     channel = TelegramChannel(App(settings, clock), token="123456:TEST-TOKEN")
     update, replies = _update("/start")
     asyncio.run(channel.on_start(update, None))
-    assert replies == [START_TEXT]
+    assert replies == [START_TEXT.format(name="Vera")]
+    assert replies[0].startswith("Hi! I'm Vera, the family's planning assistant.")

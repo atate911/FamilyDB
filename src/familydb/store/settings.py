@@ -14,6 +14,7 @@ from familydb.store.db import from_json, to_json, utcnow_iso
 
 # What the page may change. Anything not named here stays wherever it already lives.
 BEHAVIOUR = (
+    "persona",
     "provider",
     "worker_provider",
     "provider_fallback",

@@ -102,6 +102,10 @@ All of them go through one door, `agent/gateway.ask`, which runs the loop
 recorded in `llm_calls` with its kind. `model_exists` and token counting call a provider but
 generate nothing.
 
+## Who is speaking
+
+Chat, the digest and retries speak as a persona, `familydb/personas/vera.md` by default: her name and how she talks, first in the cached prefix and ahead of the product spec, which decides what she does and wins where the two meet. It is how every reply sounds, so it is measured like any other part of the prefix ("who the assistant is" in `/status`, about 2,800 tokens) and checked with `evals/` when it changes. The lookup and discovery workers write for no reader and never carry it.
+
 ## The gateway: one door, a declaration per kind of call
 
 Everything that wants an answer from a model asks `gateway.ask` for a kind of call, and brings

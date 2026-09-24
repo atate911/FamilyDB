@@ -103,6 +103,8 @@ class Settings(BaseSettings):
 
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-opus-5"
+    # Who the assistant is to the family: a file in familydb/personas, or empty for none.
+    persona: str = "vera"
     # Applies to whoever answers, so it is not named for one of them. ANTHROPIC_EFFORT still works.
     effort: Effort = Field(
         default="medium", validation_alias=AliasChoices("EFFORT", "ANTHROPIC_EFFORT")
@@ -198,6 +200,18 @@ class Settings(BaseSettings):
                 and names.get(str(key).lower(), str(key).lower()) not in EMPTY_MEANS_UNSET_EXCEPT
             )
         }
+
+    @field_validator("persona")
+    @classmethod
+    def _known_persona(cls, value: str) -> str:
+        from familydb import personas
+
+        name = value.strip().casefold()
+        if name and name not in personas.available():
+            raise ValueError(
+                f"no persona called {value!r}; the choices are {', '.join(personas.available())}"
+            )
+        return name
 
     @field_validator("family_tz")
     @classmethod
