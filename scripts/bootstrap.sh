@@ -78,7 +78,7 @@ How it runs
   --dry-run            Say what would happen; change nothing at all.
   -h, --help           This text.
 
-Anything else is passed to scripts/install.sh, which asks the two questions. Its answers can
+Anything else is passed to scripts/install.sh, which asks one question. Its answers can
 come from the environment instead (WEB_DOMAIN, WEB_PASSWORD, ADMIN_NAME, BACKUPS and more).
 Everything else is set on the web page. See scripts/install.sh --help.
 

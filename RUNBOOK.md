@@ -32,10 +32,9 @@ git clone <this repo> /opt/familydb && cd /opt/familydb
 sudo scripts/install.sh
 ```
 
-The installer asks two things: the domain name for the web page (leave it empty to keep the page
-on this machine) and your name, which becomes the first family member. Everything else is done
-on the page afterwards. It writes `.env`, installs the dependencies, creates the database and
-adds you. It picks Docker when it finds it and a virtualenv otherwise, and it is safe to run
+The installer asks one thing: the domain name for the web page (leave it empty to keep the page
+on this machine). Everything else is done on the page afterwards, starting with adding yourself
+on the Family page. It writes `.env`, installs the dependencies and creates the database. It picks Docker when it finds it and a virtualenv otherwise, and it is safe to run
 again: it never overwrites `.env` without asking and never touches the database. Sections 2a and
 2b below are the same steps by hand.
 

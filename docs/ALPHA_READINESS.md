@@ -49,7 +49,7 @@ A second review, before installing on a VPS, found these and fixed them:
 - **Nothing capped what the models could cost.** A daily spending limit is checked before
   every call; the default model is now GPT-6 Luna, the cheapest capable one.
 - **Setup meant editing a file and restarting.** It is done on the page, Google Calendar and
-  the Telegram token included, and the installer asks two questions.
+  the Telegram token included, and the installer asks one question.
 
 ## How these fixes arrived
 
