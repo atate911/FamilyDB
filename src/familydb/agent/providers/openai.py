@@ -18,6 +18,7 @@ from typing import Any
 import openai
 
 from familydb.agent.providers.base import (
+    KeyCheck,
     ModelReply,
     Stop,
     Surface,
@@ -307,6 +308,24 @@ class OpenAIProvider:
         finally:
             client.close()
         return True
+
+    def check_key(self) -> KeyCheck:
+        try:
+            client = make_client(self.settings)
+        except AgentError:
+            return "no_key"
+        try:
+            client.with_options(timeout=10.0, max_retries=0).models.retrieve(self.model_for("chat"))
+        except openai.AuthenticationError:
+            return "refused"
+        except openai.NotFoundError:
+            return "unknown_model"
+        except Exception as exc:  # unreachable, or a key limited to what it may read
+            log.info("could not check the OpenAI key: %s", exc)
+            return "unchecked"
+        finally:
+            client.close()
+        return "works"
 
     def count_tokens(self, request: TurnRequest) -> int:
         raise NotImplementedError(

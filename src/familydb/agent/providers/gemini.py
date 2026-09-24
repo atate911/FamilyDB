@@ -18,6 +18,7 @@ from google.genai import errors as genai_errors
 from google.genai import types as genai_types
 
 from familydb.agent.providers.base import (
+    KeyCheck,
     ModelReply,
     Stop,
     Surface,
@@ -48,13 +49,18 @@ RETRYABLE_STATUS = (429, 500, 502, 503, 504)
 TIMEOUT_MS = 120_000
 
 
-def make_client(settings: Settings) -> Any:
+def make_client(settings: Settings, timeout_ms: int = TIMEOUT_MS) -> Any:
     if not settings.gemini_api_key:
         raise AgentError(NO_CREDENTIALS, retryable=False)
     # The same two minutes the other vendors' clients allow; the SDK's default is no limit.
     return genai.Client(
-        api_key=settings.gemini_api_key, http_options=genai_types.HttpOptions(timeout=TIMEOUT_MS)
+        api_key=settings.gemini_api_key, http_options=genai_types.HttpOptions(timeout=timeout_ms)
     )
+
+
+# Google answers a key it does not recognise with a 400 rather than a 401, so the words decide.
+BAD_KEY_WORDS = ("API_KEY_INVALID", "API key not valid")
+CHECK_TIMEOUT_MS = 10_000
 
 
 def _status(exc: Exception) -> int:
@@ -234,6 +240,26 @@ class GeminiProvider:
             log.info("could not ask Gemini about %s: %s", model, exc)
             return None
         return True
+
+    def check_key(self) -> KeyCheck:
+        try:
+            client = make_client(self.settings, timeout_ms=CHECK_TIMEOUT_MS)
+        except AgentError:
+            return "no_key"
+        try:
+            client.models.get(model=self.model_for("chat"))
+        except genai_errors.ClientError as exc:
+            status = _status(exc)
+            if status == 401 or (status == 400 and any(w in str(exc) for w in BAD_KEY_WORDS)):
+                return "refused"
+            if status == 404:
+                return "unknown_model"
+            log.info("could not check the Gemini key: %s", exc)
+            return "unchecked"
+        except Exception as exc:  # unreachable: not an answer about the key
+            log.info("could not check the Gemini key: %s", exc)
+            return "unchecked"
+        return "works"
 
     def count_tokens(self, request: TurnRequest) -> int:
         payload = self.payload(request)
