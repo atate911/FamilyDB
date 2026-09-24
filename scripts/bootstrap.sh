@@ -128,8 +128,9 @@ export ASSUME_YES DRY_RUN
 
 log_to "/var/log/familydb-bootstrap.log"
 checkpoint_to "/var/log/familydb-bootstrap.progress"
+again_hint "run the same command again: sudo bash ${BASH_SOURCE[0]}${SCRIPT_ARGS:+ ${SCRIPT_ARGS}}"
 enable_failure_reporting
-on_failure_hint "Everything that already worked is still in place; fix what is above and run this again. docs/INSTALL.md has a section on each failure."
+on_failure_hint "docs/INSTALL.md, under Troubleshooting, has a section on each failure."
 
 as_service_user() {
   if have sudo; then
@@ -210,12 +211,17 @@ if [ "$RUN_INSTALL" = 1 ]; then
   if [ "$MODE" = venv ]; then
     plan_item "Write /etc/systemd/system/familydb.service and enable it" \
       "so the bot starts when the machine boots, and is restarted if it ever stops"
+    plan_item "Install Caddy in front of the web page, and open ports 80 and 443 if ufw is on" \
+      "so the page is on HTTPS at a link any browser can open, and the password never crosses the network in the clear"
   fi
+  plan_item "Schedule a nightly backup of the database, kept for two weeks" \
+    "so a bad day can be undone"
 fi
-plan_untouched "your firewall, your SSH configuration, and any existing user"
+plan_item "Write down every one of these changes in ${LEDGER_DIR}" \
+  "so that uninstall.sh --from-zero can put this server back exactly as it was"
+plan_untouched "your SSH configuration, and any existing user"
 plan_untouched "the system Python, and every other service on this machine"
 plan_untouched "anything inside a home directory"
-plan_untouched "inbound ports: the bot makes outgoing connections only, unless you turn the web page on"
 
 show_plan "What this will change on this machine"
 if [ "$DRY_RUN" = 0 ] && ! confirm "Go ahead?" yes; then
@@ -223,6 +229,9 @@ if [ "$DRY_RUN" = 0 ] && ! confirm "Go ahead?" yes; then
   forget_undo
   exit 0
 fi
+# A fresh install writes down everything from here on, and says so first: uninstall.sh --from-zero
+# then trusts the record alone. Over an install from before the record, it checks the rest too.
+[ -e "$TARGET" ] || ledger began "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 checkpoint "started"
 
 # -------------------------------------------------------------- packages ----
@@ -241,8 +250,7 @@ apt_install() {
     "the pieces this install needs that this machine does not have yet"
   retry 3 "Updating the package lists" \
     as_root env DEBIAN_FRONTEND=noninteractive apt-get update -qq
-  retry 3 "Installing ${missing[*]}" \
-    as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "${missing[@]}"
+  retry 3 "Installing ${missing[*]}" apt_install_noted "${missing[@]}"
 }
 
 # shellcheck disable=SC2086  # our own list, deliberately word-split
@@ -268,6 +276,9 @@ install_docker() {
     "Install Docker yourself, then run this again with --no-packages."
   case "${ID:-ubuntu}" in debian) distro=debian ;; esac
 
+  noting_new /etc/apt/keyrings dir
+  noting_new /etc/apt/keyrings/docker.gpg keyring
+  noting_new /etc/apt/sources.list.d/docker.list apt-source
   step "Making a folder for the repository's signing key" as_root install -m 0755 -d /etc/apt/keyrings
   undo_on_failure "rm -f /etc/apt/keyrings/docker.gpg /etc/apt/sources.list.d/docker.list"
   retry 3 "Fetching Docker's signing key" sh -c \
@@ -276,7 +287,7 @@ install_docker() {
   step "Adding the repository to apt" sh -c \
     "echo 'deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/${distro} ${codename} stable' | ${maybe_sudo} tee /etc/apt/sources.list.d/docker.list >/dev/null"
   retry 3 "Updating the package lists" as_root env DEBIAN_FRONTEND=noninteractive apt-get update -qq
-  retry 3 "Installing Docker" as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
+  retry 3 "Installing Docker" apt_install_noted \
     docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
   try_step "Setting Docker to start at boot" as_root systemctl enable --now docker
   on_system_path docker || die "Docker installed but is not on the system PATH"
@@ -301,7 +312,11 @@ install_uv() {
   script="$(mktemp)"
   undo_on_failure "rm -f ${script}"
   retry 3 "Downloading the uv installer" curl -LsSf https://astral.sh/uv/install.sh -o "$script"
-  step "Running the uv installer" as_root env UV_INSTALL_DIR=/usr/local/bin sh "$script"
+  noting_new /usr/local/bin/uv
+  noting_new /usr/local/bin/uvx
+  # UV_UNMANAGED_INSTALL: the binaries and nothing else. No receipt in root's home, and no line
+  # added to anybody's shell profile, so taking uv away again leaves nothing behind.
+  step "Running the uv installer" as_root env UV_UNMANAGED_INSTALL=/usr/local/bin sh "$script"
   rm -f "$script"
   export PATH="/usr/local/bin:$PATH"
   on_system_path uv \
@@ -334,6 +349,7 @@ fetch_code() {
   system_change "Create ${TARGET} and put the code in it" \
     "apart from one systemd unit, this is the only place on the machine the install writes to"
   if [ "$DRY_RUN" = 1 ]; then note "would put the code in ${TARGET}"; return 0; fi
+  noting_new "$TARGET" dir
   step "Creating ${TARGET}" as_root mkdir -p "$TARGET"
   # A half-written directory is worse than none: undo it if anything below fails.
   undo_on_failure "rm -rf ${TARGET}"
@@ -379,7 +395,11 @@ fetch_code() {
       fi
     fi
     case "$url" in https://github.com/*) url="git@github.com:${url#https://github.com/}" ;; esac
-    git_env=(GIT_SSH_COMMAND="ssh -i ${DEPLOY_KEY} -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new")
+    # The key exists only for this install, so taking the install away takes it too.
+    ledger file "$DEPLOY_KEY"
+    as_root test -f "${DEPLOY_KEY}.pub" && ledger file "${DEPLOY_KEY}.pub"
+    as_root mkdir -p "$LEDGER_DIR" && as_root chmod 700 "$LEDGER_DIR"
+    git_env=(GIT_SSH_COMMAND="ssh -i ${DEPLOY_KEY} -o IdentitiesOnly=yes -o UserKnownHostsFile=${KNOWN_HOSTS} -o StrictHostKeyChecking=accept-new")
     note "Cloning over SSH with the deploy key."
   elif [ -n "${GITHUB_TOKEN:-}" ]; then
     case "$url" in
@@ -408,13 +428,13 @@ fetch_code() {
         "  · the token has expired, or cannot read this repository" \
         "Check a deploy key with:  ssh -T git@github.com -i ${DEPLOY_KEY:-<key>}"
   fi
-  on_failure_hint "Everything that already worked is still in place; fix what is above and run this again. docs/INSTALL.md has a section on each failure."
+  on_failure_hint "docs/INSTALL.md, under Troubleshooting, has a section on each failure."
   if [ -n "$DEPLOY_KEY" ]; then
     # Keep the deploy key wired up, so `maintain.sh upgrade` can fetch later. The key itself
     # stays where it is; only the path to it is written down.
     step "Remembering the deploy key for future upgrades" \
       as_root git -C "$TARGET" config core.sshCommand \
-        "ssh -i ${DEPLOY_KEY} -o IdentitiesOnly=yes"
+        "ssh -i ${DEPLOY_KEY} -o IdentitiesOnly=yes -o UserKnownHostsFile=${KNOWN_HOSTS} -o StrictHostKeyChecking=accept-new"
     note "Upgrades will use ${DEPLOY_KEY}. Keep that file where it is, readable by root."
   else
     # Never leave a token sitting in .git/config for whoever reads it next. The cost is that
@@ -450,6 +470,7 @@ if ! id "$SERVICE_USER" >/dev/null 2>&1; then
     "no password, no login shell, and it owns only the configuration and the database"
   step "Creating ${SERVICE_USER}" \
     as_root useradd --system --home-dir "$TARGET" --shell /usr/sbin/nologin "$SERVICE_USER"
+  noting_user "$SERVICE_USER"
 else
   ok "The ${SERVICE_USER} account already exists."
 fi
@@ -480,7 +501,7 @@ FORWARD_VARS=(
   PROVIDER ANTHROPIC_API_KEY OPENAI_API_KEY GEMINI_API_KEY
   FAMILYDB_TZ HOME_AREA HOME_LAT HOME_LON WEATHER_UNITS
   TELEGRAM_BOT_TOKEN WEB_ENABLED WEB_HOST WEB_PORT WEB_PASSWORD WEB_TOOLS_ENABLED
-  WEB_DOMAIN DIGEST_CHAT_ID BACKUPS ADMIN_NAME NO_COLOR TERM
+  WEB_DOMAIN DIGEST_CHAT_ID BACKUPS ADMIN_NAME NO_COLOR TERM FAMILYDB_AGAIN
   HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy
   SSL_CERT_FILE SSL_CERT_DIR REQUESTS_CA_BUNDLE CURL_CA_BUNDLE GIT_SSL_CAINFO
 )
@@ -498,10 +519,7 @@ else
   # shellcheck disable=SC2034  # lib/common.sh names this in its failure report.
   FAILED_STEP="running scripts/install.sh"
   if ! (cd "$TARGET" && as_root env "${forwarded[@]}" "$INSTALLER" "${INSTALL_ARGS[@]}"); then
-    die "the configuration step failed, and it explained why above" \
-        "Everything before it is still in place. Fix what it reported, then run just that part:" \
-        "  sudo ${INSTALLER}" \
-        "There is no need to run this bootstrap again."
+    die "the configuration step failed, and it explained why above"
   fi
   # shellcheck disable=SC2034  # cleared so a later failure does not name this step.
   FAILED_STEP=""

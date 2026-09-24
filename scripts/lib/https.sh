@@ -59,7 +59,9 @@ caddy_is_at_least() { # caddy_is_at_least MAJOR MINOR
 caddy_from_its_own_repository() { # a current Caddy, from the repository Caddy's own guide uses
   local keyring=/usr/share/keyrings/caddy-stable-archive-keyring.gpg
   local sources=/etc/apt/sources.list.d/caddy-stable.list
-  as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq curl gnupg >/dev/null 2>&1 || true
+  apt_install_noted curl gnupg >/dev/null 2>&1 || true
+  noting_new "$keyring" keyring
+  noting_new "$sources" apt-source
   curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
     | as_root gpg --dearmor --yes -o "$keyring" 2>/dev/null || return 1
   curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
@@ -67,12 +69,14 @@ caddy_from_its_own_repository() { # a current Caddy, from the repository Caddy's
   as_root chmod o+r "$keyring" "$sources"
   as_root env DEBIAN_FRONTEND=noninteractive apt-get update -qq >/dev/null 2>&1 || return 1
   # --force-confold: keep a Caddyfile that is already there rather than stop to ask about it.
-  as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq -o Dpkg::Options::=--force-confold \
-    caddy >/dev/null 2>&1
+  apt_install_noted -o Dpkg::Options::=--force-confold caddy >/dev/null 2>&1
 }
 
 open_web_ports() { # ufw is the one firewall this knows; it says so when there may be another
   if have ufw && as_root ufw status 2>/dev/null | grep -q "^Status: active"; then
+    # Written down only when it was not there already: taking it away again must not close a
+    # door somebody else opened.
+    as_root ufw status 2>/dev/null | grep -qE '^80,443/tcp' || ledger ufw "80,443/tcp"
     if as_root ufw allow 80,443/tcp >/dev/null 2>&1; then
       ok "Opened ports 80 and 443 in this machine's firewall."
     else
@@ -87,6 +91,7 @@ write_caddyfile() { # write_caddyfile SITE PORT HOW - HOW is domain, public-ip o
     public-ip) tls=$'\ttls {\n\t\tissuer acme {\n\t\t\tprofile shortlived\n\t\t}\n\t}\n' ;;
     internal) tls=$'\ttls internal\n' ;;
   esac
+  noting_replaced "$CADDYFILE"
   {
     printf '# FamilyDB, written by its installer. `sudo %s/scripts/maintain.sh https` writes it again.\n' \
       "${TARGET:-${REPO_ROOT:-/opt/familydb}}"
@@ -120,8 +125,11 @@ setup_https() { # setup_https SITE PORT - Caddy in front of 127.0.0.1:PORT for S
   HTTPS_KIND="none"
   HTTPS_BLOCKED=0
   if ! have caddy && have apt-get; then
-    step "Installing Caddy, which holds the certificate" \
-      as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq caddy || true
+    local had_caddy_user=0
+    id caddy >/dev/null 2>&1 && had_caddy_user=1
+    step "Installing Caddy, which holds the certificate" apt_install_noted caddy || true
+    # The package makes an account of its own to run as; it goes when Caddy does.
+    [ "$had_caddy_user" = 0 ] && id caddy >/dev/null 2>&1 && noting_user caddy
   fi
   if ! have caddy; then
     warn "Caddy is not installed, so the page has no HTTPS yet."

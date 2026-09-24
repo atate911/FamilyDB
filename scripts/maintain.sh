@@ -531,8 +531,13 @@ cmd_schedule_backups() {
   approve "Add them to the crontab?" || { say "Nothing was changed."; exit 0; }
 
   if [ "$DRY_RUN" = 1 ]; then note "[dry run] would install the crontab"; return 0; fi
+  case "$BACKUP_DIR" in "${TARGET}"/*) ;; *) noting_new "$BACKUP_DIR" dir ;; esac
   as_root mkdir -p "$BACKUP_DIR"
   local existing
+  # Root having no crontab at all before this is worth knowing: then removing FamilyDB removes
+  # the crontab too, rather than leaving an empty one behind.
+  as_root crontab -u root -l >/dev/null 2>&1 || ledger crontab "root"
+  ledger cron-line "familydb-maintain-backup"
   existing="$(as_root crontab -u root -l 2>/dev/null | grep -v 'familydb-maintain-backup' || true)"
   printf '%s\n%s\n' "$existing" "$line" \
     | sed '/^$/d' \

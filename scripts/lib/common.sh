@@ -62,6 +62,75 @@ log_line() { # one line into the transcript, never onto the screen
 }
 
 on_failure_hint() { HINT="$*"; }  # what to say at the bottom of any failure from here on
+# How to carry on once the cause is fixed, said the same way at the foot of every failure. A script
+# names its own command with again_hint; FAMILYDB_AGAIN, set by the pasted install block, wins,
+# because that block is what the person actually ran and it is safe to run again.
+AGAIN=""
+again_hint() { AGAIN="$*"; }
+
+# ---------------------------------------------------------------- ledger ----
+# Everything the install changes outside its own directory is written down here as it happens,
+# so `uninstall.sh --from-zero` can undo exactly that: the packages it added (not ones that were
+# there already), the files, directories and links it made, the files it replaced (a copy of each
+# original is kept), the users and groups, the cron lines and the firewall rules. One line per
+# change, KIND then a tab then what. It lives outside /opt/familydb so removing the install cannot
+# lose it, and it goes last.
+LEDGER_DIR=/var/lib/familydb-install
+LEDGER="${LEDGER_DIR}/ledger"
+# Where the install's SSH keeps GitHub's host key, rather than root's own known_hosts.
+KNOWN_HOSTS="${LEDGER_DIR}/known_hosts"
+
+# Only an install run as root changes the system, so only that one writes anything down. A run as
+# somebody else is a development checkout, and must not stop to ask for a sudo password.
+_ledger_on() { [ "$(id -u)" = 0 ] && [ "${DRY_RUN:-0}" != 1 ]; }
+
+ledger() { # ledger KIND WHAT - write down one change, once
+  _ledger_on || return 0
+  mkdir -p "${LEDGER_DIR}/saved" 2>/dev/null || return 0
+  chmod 700 "$LEDGER_DIR" 2>/dev/null || true
+  ledger_has "$1" "$2" && return 0
+  printf '%s\t%s\n' "$1" "$2" >>"$LEDGER"
+}
+
+ledger_has() { grep -qxF "$(printf '%s\t%s' "$1" "$2")" "$LEDGER" 2>/dev/null; }
+
+noting_new() { # noting_new PATH [KIND] - before making PATH: note it, unless it is there already
+  _ledger_on || return 0
+  [ -e "$1" ] || [ -L "$1" ] || ledger "${2:-file}" "$1"
+}
+
+noting_replaced() { # noting_replaced PATH - before overwriting PATH: keep the original, once
+  _ledger_on || return 0
+  if [ ! -f "$1" ]; then
+    noting_new "$1"
+    return 0
+  fi
+  ledger_has file "$1" && return 0      # made by an earlier run of the install: ours already
+  ledger_has replaced "$1" && return 0  # the original is already kept
+  local saved="${LEDGER_DIR}/saved${1}"
+  mkdir -p "$(dirname "$saved")" && cp -a "$1" "$saved" && ledger replaced "$1"
+}
+
+installed_packages() { # every package dpkg has fully installed, one per line, sorted
+  dpkg-query -W -f='${db:Status-Abbrev} ${Package}\n' 2>/dev/null | awk '$1 == "ii" {print $2}' | sort
+}
+
+apt_install_noted() { # apt_install_noted [OPTIONS] PACKAGE... - install, and note what was new
+  local before after package
+  before="$(installed_packages)"
+  as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$@" || return $?
+  after="$(installed_packages)"
+  for package in $(comm -13 <(printf '%s\n' "$before") <(printf '%s\n' "$after")); do
+    ledger package "$package"
+  done
+}
+
+noting_user() { # noting_user NAME - after creating a system user: it, and the group it came with
+  _ledger_on || return 0
+  ledger user "$1"
+  getent group "$1" >/dev/null 2>&1 && ledger group "$1"
+  return 0
+}
 
 # --------------------------------------------------------------- failure ----
 # Things to undo if the script dies part-way. Registered as shell commands, run in reverse.
@@ -101,6 +170,12 @@ die() { # die MESSAGE [MORE...] - a failure we diagnosed ourselves
 
 _report_tail() {
   [ -n "$HINT" ] && printf '\n   %s\n' "$HINT" >&2
+  local again="${FAMILYDB_AGAIN:-$AGAIN}"
+  if [ -n "$again" ]; then
+    printf '\n   %sWhen that is sorted, %s.%s It keeps everything that already worked\n' \
+      "$B" "$again" "$OFF" >&2
+    printf '   and carries on from where it stopped.\n' >&2
+  fi
   if [ -n "$LOG_FILE" ]; then
     printf '\n   The full transcript is at %s%s%s\n' "$B" "$LOG_FILE" "$OFF" >&2
     printf '   Send that file if you need someone to look.\n' >&2

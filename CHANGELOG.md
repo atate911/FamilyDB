@@ -61,41 +61,39 @@ older than what is installed. It gets a date when it is released.
 
 ### Installing it
 
-Start at [docs/INSTALL.md](docs/INSTALL.md), which goes from a fresh VPS to a
-running bot. On the server:
+[docs/INSTALL.md](docs/INSTALL.md) is three steps, and needs no Linux
+knowledge:
 
-```bash
-sudo bash scripts/bootstrap.sh
-```
+1. **Paste one block into the server's terminal.** It makes a key that can
+   read this private repository and nothing else, and shows the link and the
+   line to give GitHub. It waits, checks that GitHub took the key, and explains
+   what to check when it did not. Then it runs `scripts/bootstrap.sh`, which
+   lists what it will change on the machine and why, asks once, and installs
+   everything. The installer asks only whether there is a domain name.
+2. **Open the link it prints**, with the password it prints. Without a domain
+   the page is on HTTPS at the server's own address: a real certificate from
+   Let's Encrypt where it can get one, which Caddy renews itself, or Caddy's own
+   one, which each browser warns about once. The installer opens ports 80 and
+   443 in `ufw`, and says plainly when a provider's own firewall is in the way.
+3. **Follow the setup on the page.** Seven short steps, each saying why it
+   matters and what to do: a password of your own, yourself, an AI model (the
+   key is checked with the company, for free, before it is kept), where home
+   is, Telegram (the bot recognises your phone from your first message to it),
+   the rest of the family, and Google Calendar. Any step can be skipped; the
+   home page keeps a list of what is left.
 
-That is the only script that assumes nothing. It installs the system packages,
-puts the code in `/opt/familydb`, creates the service account, hands over to
-`scripts/install.sh`, starts the service and checks the result. Before it
-touches anything it prints what it will change on the machine and why, and what
-it will not touch, and asks.
+When something fails, the script says what went wrong and what to do, and
+that pasting the block again carries on from where it stopped. Nobody edits a
+file on the server: the family password is chosen and changed on the page,
+and `maintain.sh password` makes a new one if it is forgotten.
 
-The installer asks one thing: the domain name the page will be reached at, if
-any. With a domain it puts the page behind HTTPS (Caddy, in Docker or on the
-machine), which is also what lets a phone's browser share its location. It
-keeps the data folder readable by the bot alone and schedules a nightly backup.
-Everything else is set on the page, whose home lists what is left to do,
-starting with adding yourself on the Family page.
+`scripts/uninstall.sh --from-zero` removes everything the install put on a
+server, after asking twice, so the install can be tried again from the start.
 
-Getting the code onto a bare server is a step of its own, because the
-repository is private: a deploy key, a token in the environment, or a copy you
-put there yourself. All three are in the install guide.
-
-With no domain, the installer also takes the server's public IP address: Caddy
-serves the page over HTTPS with a certificate it signs itself, which each browser
-warns about once. Bootstrap offers to take the passphrase off a deploy key that
-has one, since upgrades cannot type it, and the install guide says where the
-tunnel command is run, that bootstrap's commands go in one at a time, and what a
-502 or a timeout from outside means.
-
-Clone into `/opt/familydb` and not a home directory. A home directory is closed
-to other users, so a service running as its own account cannot start from one.
-The installer checks this and refuses rather than leaving a unit that will
-never start.
+The code goes in `/opt/familydb`, not a home directory. The service runs as its
+own account, which cannot enter a home directory, so a service started from one
+would stop at once. The installer checks this and refuses rather than leaving a
+unit that will never start.
 
 ### Looking after it
 

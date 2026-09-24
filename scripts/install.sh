@@ -92,7 +92,8 @@ export ASSUME_YES DRY_RUN
 
 log_to "/var/log/familydb-install.log"
 enable_failure_reporting
-on_failure_hint "Nothing after the failed step ran, and .env and the database were not touched by it. docs/INSTALL.md has a section on each failure."
+on_failure_hint "Nothing after the failed step ran, and .env and the database were not touched by it. docs/INSTALL.md, under Troubleshooting, has a section on each failure."
+again_hint "run it again: sudo bash ${REPO_ROOT}/scripts/install.sh"
 
 # ----------------------------------------------------------------- input ----
 ask() { # ask VAR "question" "default"
@@ -365,8 +366,12 @@ else
     say "This path needs uv, which manages the Python version and the virtualenv."
     if confirm "Install uv now (downloads and runs the official installer)?" yes; then
       have curl || die "curl is needed to install uv. Install curl, or install uv yourself."
-      run sh -c 'curl -LsSf https://astral.sh/uv/install.sh | sh'
-      export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+      # Into /usr/local/bin, where the service account can see it, and nowhere else: no receipt
+      # in a home directory and no line in anybody's shell profile.
+      noting_new /usr/local/bin/uv
+      noting_new /usr/local/bin/uvx
+      run as_root sh -c 'curl -LsSf https://astral.sh/uv/install.sh | env UV_UNMANAGED_INSTALL=/usr/local/bin sh'
+      export PATH="/usr/local/bin:$PATH"
       have uv || die "uv still not on PATH. Open a new shell and run this script again."
     else
       die "uv is required for the virtualenv path. Use --mode docker instead."
@@ -391,7 +396,7 @@ head2 "Configuration"
 KEEP_ENV=0
 if [ -f "$ENV_FILE" ]; then
   say "There is already a .env here."
-  if [ "$NON_INTERACTIVE" = 1 ]; then
+  if [ "$NON_INTERACTIVE" = 1 ] || [ "${FROM_BOOTSTRAP:-0}" = 1 ]; then
     KEEP_ENV=1
     note "Keeping it as it is."
   elif confirm "Keep it and skip the questions?" yes; then
@@ -543,7 +548,7 @@ run chmod 700 "${REPO_ROOT}/data"
 # Both of these download a few hundred megabytes, which is where a new server most often fails:
 # a network that is not up yet, a proxy, a full disk. `retry` waits and tries again, and on a
 # final failure says what the error means and what to try, rather than only that it stopped.
-on_failure_hint "Run this again once it is fixed: it picks up where it stopped, and never touches .env or the database twice."
+on_failure_hint "It never touches .env or the database twice, so running it again is safe."
 if [ "$MODE" = docker ]; then
   retry 2 "Building the image" docker compose --project-directory "$REPO_ROOT" build
   FAMILYDB=(docker compose --project-directory "$REPO_ROOT" run --rm -T bot familydb)
@@ -553,7 +558,11 @@ if [ "$MODE" = docker ]; then
     note "  sudo chown -R 1000:1000 ${REPO_ROOT}/data"
   fi
 else
-  retry 3 "Installing the dependencies" uv sync --frozen --no-dev --project "$REPO_ROOT"
+  # uv's download cache and the Python it fetches stay inside the install, whoever runs this, so
+  # removing the install removes them too.
+  retry 3 "Installing the dependencies" env UV_CACHE_DIR="${REPO_ROOT}/.cache/uv" \
+    UV_PYTHON_INSTALL_DIR="${REPO_ROOT}/.local/share/uv/python" \
+    uv sync --frozen --no-dev --project "$REPO_ROOT"
   FAMILYDB=("${REPO_ROOT}/.venv/bin/familydb")
 fi
 
@@ -583,7 +592,7 @@ fi
 if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
   head2 "Running it as a service"
   if [ "$(id -u)" = 0 ] || have sudo; then
-    if confirm "Install the systemd unit so it starts on boot?" yes; then
+    if [ "${FROM_BOOTSTRAP:-0}" = 1 ] || confirm "Install the systemd unit so it starts on boot?" yes; then
       [ "$(id -u)" = 0 ] || SUDO="sudo"
       unit="${REPO_ROOT}/deploy/familydb.service"
       [ -f "$unit" ] || die "missing ${unit}"
@@ -597,6 +606,7 @@ if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
           ok "The familydb user already exists."
         elif $SUDO useradd --system --home-dir "$REPO_ROOT" --shell /usr/sbin/nologin familydb \
              2>/dev/null; then
+          noting_user familydb
           ok "Created the familydb system user."
         else
           warn "Could not create the familydb user. Create it, or edit User= in the unit:"
@@ -626,7 +636,9 @@ if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
           :
         # install, not cp: mktemp made this file 0600, and a unit nobody but root can read is
         # one `systemctl cat` nobody but root can run.
-        elif $SUDO install -m 644 "$tmp_unit" /etc/systemd/system/familydb.service \
+        elif noting_new /etc/systemd/system/familydb.service \
+          && noting_new /etc/systemd/system/multi-user.target.wants/familydb.service link \
+          && $SUDO install -m 644 "$tmp_unit" /etc/systemd/system/familydb.service \
           && $SUDO systemctl daemon-reload \
           && { $SUDO systemctl enable familydb >/dev/null 2>&1 || true; }; then
           ok "Unit installed. Start it with: sudo systemctl start familydb"
@@ -677,10 +689,10 @@ fi
 BACKUPS_SCHEDULED=0
 if [ "${BACKUPS:-yes}" != no ] && [ "$DRY_RUN" = 0 ]; then
   head2 "Backups"
-  if confirm "Back the database up every night at 03:15, keeping two weeks?" yes; then
+  if [ "${FROM_BOOTSTRAP:-0}" = 1 ] || confirm "Back the database up every night at 03:15, keeping two weeks?" yes; then
     # A minimal Debian has no cron; without it the schedule has nowhere to live.
     if ! have crontab && have apt-get; then
-      $SUDO apt-get install -y -q cron >/dev/null 2>&1 || warn "Could not install cron with apt."
+      apt_install_noted cron >/dev/null 2>&1 || warn "Could not install cron with apt."
     fi
     if bash "${REPO_ROOT}/scripts/maintain.sh" schedule-backups --target "$REPO_ROOT" --yes; then
       BACKUPS_SCHEDULED=1
