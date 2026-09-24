@@ -94,3 +94,27 @@ def test_a_form_from_elsewhere_is_refused(page, conn) -> None:
         "/settings/personality", data={"persona": "", "persona_text": "", "about_family": "x"}
     )
     assert forged.status_code == 400 and settings_store.overrides(conn) == {}
+
+
+def test_her_lines_can_be_rewritten_and_a_bad_one_is_refused(page, conn) -> None:
+    from familydb import voice
+
+    shown = page.get("/settings/personality").text
+    assert "What she says unasked" in shown and "Can use {title}, {who}, {task}." in shown
+    mine = "Psst, {title}. That's #{task}."
+    saved = page.post(
+        "/settings/personality",
+        data=_form(page, persona="vera", persona_text="", about_family="", line_reminder=mine),
+    )
+    assert saved.status_code == 302
+    assert settings_store.overrides(conn)["voice_lines"] == {"reminder": mine}
+    page.app_state.refresh(conn)
+    said = voice.say(page.app_state.settings, "reminder", title="Bins out", who="", task=3)
+    assert said == "Psst, Bins out. That's #3."
+    refused = page.post(
+        "/settings/personality",
+        data=_form(page, persona="vera", persona_text="", about_family="", line_follow_up="{x}"),
+    )
+    assert refused.status_code == 400
+    assert "Asking how a plan went: {x} is not something it knows" in refused.text
+    assert settings_store.overrides(conn)["voice_lines"] == {"reminder": mine}  # unchanged

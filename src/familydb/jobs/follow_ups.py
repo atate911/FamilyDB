@@ -10,11 +10,13 @@ from __future__ import annotations
 import logging
 from contextlib import closing
 from datetime import date, timedelta
+from typing import Any
 
+from familydb import voice
 from familydb.app import App
 from familydb.calendar_sync import sync_plans
 from familydb.dates import utc_iso
-from familydb.delivery import deliver, run_deliveries
+from familydb.delivery import run_deliveries
 from familydb.store import messages, outcomes, plans
 from familydb.store.db import transaction
 from familydb.store.plans import Plan
@@ -24,10 +26,10 @@ log = logging.getLogger(__name__)
 FOLLOW_UP_DAYS = 7  # plans older than this are left alone; asking weeks later is odd
 
 
-def render_follow_up(plan: Plan) -> str:
+def render_follow_up(plan: Plan, settings: Any) -> str:
     when = date.fromisoformat(plan.start[:10])
     label = f"#{plan.idea_id} {plan.title}" if plan.idea_id else plan.title
-    return f"How was {label} on {when:%A}? Worth doing again?"
+    return voice.say(settings, "follow_up", plan=label, day=f"{when:%A}")
 
 
 def run_follow_ups(app: App) -> int:
@@ -66,7 +68,7 @@ def run_follow_ups(app: App) -> int:
                     plan.channel,
                 )
                 continue
-            text = render_follow_up(plan)
+            text = render_follow_up(plan, app.settings)
             with transaction(conn):
                 # Recheck under the write lock: a run by hand can race the scheduler.
                 if plans.get(conn, plan.id).followed_up_at is not None:  # type: ignore[union-attr]
@@ -76,6 +78,14 @@ def run_follow_ups(app: App) -> int:
                 )
                 plans.mark_followed_up(conn, plan.id, now=now)
             # Stored first, sent second: a send that fails stays queued for the next run.
-            deliver(app, outbound.id)
+            voice.hand_over(
+                app,
+                conn,
+                outbound.id,
+                event="follow_up",
+                channel=plan.channel or "",
+                chat_id=plan.chat_id,
+                mention=plan.title,
+            )
             asked += 1
     return asked

@@ -238,5 +238,6 @@ def test_a_reply_the_turn_failed_to_produce_is_shown_as_trouble(settings, clock,
     _say(client, "this will not go well")
     assert client.chat.wait(10)
     page = client.get("/chat").text
-    assert "retry later" in page  # the pipeline's own notice to the family, stored as a reply
+    # The pipeline's own notice to the family, in her words, stored as a reply.
+    assert "try again shortly" in page
     assert "this one did not go through" in page

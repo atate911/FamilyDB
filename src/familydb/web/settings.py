@@ -36,7 +36,7 @@ from flask import (
 )
 from pydantic import ValidationError
 
-from familydb import personas
+from familydb import personas, voice
 from familydb.agent import providers
 from familydb.app import App
 from familydb.config import Settings, apply_overrides
@@ -355,6 +355,7 @@ KEY_PINNED = (
 
 RESTORED = "Restored her original description."
 PROFILE_LABELS = {
+    "voice_lines": "what she says unasked",
     "persona": "personality",
     "persona_text": "her description",
     "about_family": "about the family",
@@ -371,6 +372,18 @@ def personality_page(
     chosen = (typed or {}).get("persona", live.persona)
     text = (typed or {}).get("persona_text") or personas.text_for(live) or personas.load(chosen)
     about = (typed or {}).get("about_family", live.about_family)
+    # What she says unasked: the family's line if they wrote one, hers as the placeholder.
+    base_lines = voice.lines(live.model_copy(update={"voice_lines": {}}))
+    said_lines = [
+        {
+            "event": name,
+            "label": event.label,
+            "value": (typed or {}).get(f"line_{name}", live.voice_lines.get(name, "")),
+            "placeholder": base_lines[name],
+            "fields": ", ".join("{" + f + "}" for f in event.fields),
+        }
+        for name, event in voice.EVENTS.items()
+    ]
     return (
         render_template(
             "personality.html",
@@ -381,6 +394,7 @@ def personality_page(
             text=text,
             rewritten=bool(live.persona_text.strip()),
             about=about,
+            said_lines=said_lines,
             tokens=(len(personas.text_for(live)) + len(live.about_family)) // CHARS_PER_TOKEN,
             limits={
                 name: Settings.model_fields[name].metadata[0].max_length
@@ -404,6 +418,15 @@ def save_personality() -> Response | tuple[str, int]:
     typed = {
         name: request.form.get(name, "") for name in ("persona", "persona_text", "about_family")
     }
+    written = {
+        name: request.form.get(f"line_{name}", "").strip()
+        for name in voice.EVENTS
+        if request.form.get(f"line_{name}", "").strip()
+    }
+    typed.update({f"line_{name}": line for name, line in written.items()})
+    if wrong := voice.problems(written):
+        what = "; ".join(f"{voice.EVENTS[n].label}: {why}" for n, why in wrong.items())
+        return personality_page(error=f"Nothing was saved. {what}.", typed=typed, status=400)
     chosen = typed["persona"].strip()
     text = typed["persona_text"].replace("\r\n", "\n").strip()
     original = personas.load(chosen) if chosen in personas.available() else ""
@@ -412,6 +435,13 @@ def save_personality() -> Response | tuple[str, int]:
         "persona": None if chosen == _app().base_settings.persona else chosen,
         "persona_text": text if original and text and text != original else None,
         "about_family": typed["about_family"].replace("\r\n", "\n").strip() or None,
+        # Only lines that differ from hers are the family's own.
+        "voice_lines": {
+            name: line
+            for name, line in written.items()
+            if line != voice.lines(_app().settings.model_copy(update={"voice_lines": {}}))[name]
+        }
+        or None,
     }
     try:
         apply_overrides(

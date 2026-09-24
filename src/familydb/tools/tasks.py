@@ -162,6 +162,7 @@ def update_task(ctx: ToolContext, args: UpdateTaskInput) -> dict[str, Any]:
         reminder=reminder,
         replace_reminder=bool(args.remind_at or args.clear_reminder),
         revision=ctx.task_revision,
+        settings=ctx.settings,
     )
     return {"task": task.model_dump(mode="json")}
 

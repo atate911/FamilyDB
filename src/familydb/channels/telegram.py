@@ -21,7 +21,7 @@ from telegram.ext import (
     filters,
 )
 
-from familydb import personas
+from familydb import personas, voice
 from familydb.app import App
 from familydb.channels.base import IncomingMessage
 from familydb.delivery import deliver
@@ -31,11 +31,6 @@ log = logging.getLogger(__name__)
 
 CHANNEL = "telegram"
 GROUP_TYPES = {ChatType.GROUP, ChatType.SUPERGROUP}
-START_TEXT = (
-    "Hi! I'm {name}, the family's planning assistant. Tell me ideas "
-    '("we should try that ramen place"), plans ("we\'re going to the symphony next Saturday") '
-    'or ask "what should we do this weekend?"'
-)
 
 
 def incoming_from_update(update: Any) -> IncomingMessage | None:
@@ -143,7 +138,9 @@ class TelegramChannel:
         if update.effective_message is not None:
             persona = self.app.settings.persona
             name = persona.capitalize() if persona != personas.NONE else "FamilyDB"
-            await update.effective_message.reply_text(START_TEXT.format(name=name))
+            await update.effective_message.reply_text(
+                voice.say(self.app.settings, "start", name=name)
+            )
 
     async def on_message(self, update: Any, context: Any) -> None:
         await asyncio.to_thread(self.app.refresh)

@@ -100,6 +100,14 @@ def render_user_turn(sender: str, text: str, clock: Clock) -> list[str]:
     return [f"Today is {clock.describe()}.", f"[{sender}] {text}"]
 
 
+def render_folded_line(lines: list[str]) -> str:
+    """Messages that came due in this chat while they were talking, for the reply to carry."""
+    return (
+        "Also due in this chat just now; mention each in your reply, briefly and in your own "
+        "words, keeping its number:\n" + "\n".join(f"- {line}" for line in lines)
+    )
+
+
 def render_history_line(sender: str, text: str) -> str:
     return f"[{sender}] {text}"
 

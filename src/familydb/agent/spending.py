@@ -30,12 +30,6 @@ HOLD_MINUTES = 30
 # A rough count, used only to size a hold; the call records what the vendor reported.
 CHARS_PER_TOKEN = 4
 
-REPLY = (
-    "Today's spending limit (${limit:.2f}) is used up, so I can't answer until tomorrow. "
-    "Ask again then, or raise the limit on the settings page."
-)
-
-
 # What each writing tool did, and which record in its summary names what it wrote.
 DONE = {
     "add_task": ("Saved task", "task_id"),
@@ -63,12 +57,11 @@ def done_lines(actions: list[dict[str, Any]]) -> str:
     return " ".join(lines)
 
 
-def completed_reply(actions: list[dict[str, Any]]) -> str:
+def completed_reply(actions: list[dict[str, Any]], settings: Settings) -> str:
     """Explain durable progress without spending another model call to acknowledge it."""
-    return done_lines(actions) + (
-        " That much is saved, but today's spending limit stopped me before I finished. "
-        "Check what is saved before asking for the rest, so nothing is done twice."
-    )
+    from familydb import voice
+
+    return done_lines(actions) + " " + voice.say(settings, "limit_partial")
 
 
 class SpendingLimitReached(AgentError):
@@ -79,8 +72,7 @@ class SpendingLimitReached(AgentError):
             f"daily spending limit reached: ${spent:.2f} of ${limit:.2f}", retryable=False
         )
         self.spent = spent
-        self.limit = limit
-        self.reply = REPLY.format(limit=limit)
+        self.limit = limit  # the family is told in the voice layer's words (voice.py)
 
 
 def estimate(
