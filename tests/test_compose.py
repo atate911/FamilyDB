@@ -42,7 +42,7 @@ def test_each_chat_call_records_the_size_of_every_part(settings, clock, conn, fa
         fakes.message([fakes.text("The ramen place.")]),
     )
     first, second, third = _sections(conn)
-    instructions, family_text, idea_list = chat_prefix(conn, settings)
+    _persona, instructions, family_text, idea_list = chat_prefix(conn, settings)
     assert first["instructions"] == len(instructions)
     assert first["family"] == len(family_text) and first["ideas"] == len(idea_list)
     assert first["tools"] > 1000 and first["message"] > len("hello")

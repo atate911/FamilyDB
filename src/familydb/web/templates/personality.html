@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Personality · {{ site_title }}{% endblock %}
+{% block content %}
+  <h1>Personality and family</h1>
+  <p><a href="{{ url_for('settings.show') }}">← All settings</a></p>
+  {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  <p class="muted">
+    Both go with every chat message, before anything else the assistant is told, so they shape
+    every reply. Together they are about {{ "{:,}".format(tokens) }} tokens now, cached between
+    messages; the status page shows what they cost. Lookups on the web never see either.
+  </p>
+
+  <form method="post" action="{{ url_for('settings.save_personality') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+
+    <section class="panel">
+      <h2>Who she is</h2>
+      <div class="setting">
+        <label for="p-persona">Personality</label>
+        <select id="p-persona" name="persona">
+          {% for name in choices %}
+            <option value="{{ name }}" {% if chosen == name %}selected{% endif %}>
+              {{- name | capitalize -}}
+            </option>
+          {% endfor %}
+          <option value="none" {% if chosen == "none" %}selected{% endif %}>None: plain and brief</option>
+        </select>
+      </div>
+      <div class="setting">
+        <label for="p-text">Her description</label>
+        <textarea id="p-text" name="persona_text" rows="18"
+                  maxlength="{{ limits.persona_text }}">{{ text }}</textarea>
+        <p class="muted hint">
+          How she speaks, not what she does: the rules for ideas, plans and reminders stay as
+          they are, and win where the two meet.
+          {% if rewritten %}This is your rewrite of the original.{% endif %}
+        </p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>About the family</h2>
+      <div class="setting">
+        <label for="p-about">In your own words</label>
+        <textarea id="p-about" name="about_family" rows="8" maxlength="{{ limits.about_family }}"
+                  placeholder="Sam and Alex; the girls are 7 and 10 and love animals. Alex is vegetarian. We don't drive more than an hour with the girls. Sam hates crowds.">{{ about }}</textarea>
+        <p class="muted hint">
+          Ages, tastes, what to avoid, how far you will go. The family list on the Family page
+          says who may message her; this says who they are.
+        </p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>What she says unasked</h2>
+      <p class="muted">
+        Reminders, "how was it?", notes after a lookup, and notices when she cannot answer are
+        written, not thought up, so they cost nothing and still arrive when the model is down.
+        Each box shows her line; type over it to use your own. A reminder or a follow-up that
+        comes due while you are talking to her is mentioned in her reply instead.
+      </p>
+      {% for line in said_lines %}
+        <div class="setting">
+          <label for="l-{{ line.event }}">{{ line.label }}</label>
+          <textarea id="l-{{ line.event }}" name="line_{{ line.event }}" rows="3"
+                    placeholder="{{ line.placeholder }}">{{ line.value }}</textarea>
+          <p class="muted hint">
+            {% if line.fields %}Can use {{ line.fields }}.{% else %}Takes no {names}.{% endif %}
+          </p>
+        </div>
+      {% endfor %}
+    </section>
+
+    <div class="actions"><button type="submit">Save</button></div>
+  </form>
+
+  {% if rewritten %}
+    <form method="post" action="{{ url_for('settings.restore_personality') }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+      <div class="actions">
+        <button class="quiet" type="submit">Restore her original description</button>
+      </div>
+    </form>
+  {% endif %}
+{% endblock %}

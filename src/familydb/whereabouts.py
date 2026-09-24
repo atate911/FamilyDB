@@ -11,7 +11,9 @@ from __future__ import annotations
 
 import sqlite3
 from datetime import datetime, timedelta
+from typing import Any
 
+from familydb import voice
 from familydb.app import App
 from familydb.channels.base import OutgoingMessage
 from familydb.dates import utc_iso
@@ -51,7 +53,7 @@ def share(
         _keep(conn, member.id, lat, lon, live, label, now)
         if live and before is not None and before.live and _fresh(before, now):
             return None  # the same live location moving along
-        text = shared_text(label)
+        text = shared_text(label, app.settings)
         out = messages.insert_out(
             conn, channel=channel, chat_id=chat_id, text=text, now=utc_iso(now)
         )
@@ -66,12 +68,9 @@ def note(app: App, conn: sqlite3.Connection, member_id: int, lat: float, lon: fl
         _keep(conn, member_id, lat, lon, True, label, now)
 
 
-def shared_text(label: str | None) -> str:
-    where = f" ({label})" if label else ""
-    return (
-        f'Got your location{where}. For the next 3 hours, "what\'s near here?" and "open now" '
-        "start from there instead of home."
-    )
+def shared_text(label: str | None, settings: Any) -> str:
+    """The confirmation, in the assistant's voice (voice.py)."""
+    return voice.say(settings, "location_shared", where=f" ({label})" if label else "")
 
 
 def _keep(conn, member_id, lat, lon, live, label, now) -> None:

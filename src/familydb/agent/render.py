@@ -79,6 +79,10 @@ def render_family_context(family: list[Member], settings: Settings) -> str:
             lines.append(f"- {member.display_name} ({member.role})")
     if len(lines) == 1:
         lines.append("- (no members configured yet)")
+    about = settings.about_family.strip()
+    if about:
+        # In their own words, from the Personality page. Stable, so it belongs in the prefix.
+        lines.append(f"About the family, in their words:\n{about}")
     lines.append(f"Home area: {settings.home_area or 'not set'}")
     lines.append(f"Timezone: {settings.tz}")
     calendar = "connected" if calendar_available(settings) else "not connected"
@@ -104,6 +108,14 @@ def render_location_line(
     return (
         f"{sender}'s location, from their phone {minutes_ago} min ago: {where}"
         f'({lat:.4f}, {lon:.4f}). For "near here" or "open now", suggest uses it.'
+    )
+
+
+def render_folded_line(lines: list[str]) -> str:
+    """Messages that came due in this chat while they were talking, for the reply to carry."""
+    return (
+        "Also due in this chat just now; mention each in your reply, briefly and in your own "
+        "words, keeping its number:\n" + "\n".join(f"- {line}" for line in lines)
     )
 
 

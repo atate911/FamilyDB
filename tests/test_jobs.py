@@ -228,7 +228,7 @@ def test_enrichment_fills_in_an_idea_and_notes_the_chat(settings, clock, conn, f
     )
     assert len(delivered) == 1 and delivered[0][0] == "-100"
     note = delivered[0][1]
-    assert note.startswith("Filled in #1 Hopscotch Portland:") and "hours saved for sat" in note
+    assert note.startswith("Looked up #1 Hopscotch Portland:") and "hours saved for sat" in note
     assert "closed mon" in note and "tickets: https://example.com/tickets" in note
     outbound = [
         m
@@ -292,7 +292,7 @@ def test_enrichment_note_can_be_turned_off(settings, clock, conn, family) -> Non
     assert delivered == []
 
 
-def test_render_place_note_without_details() -> None:
+def test_render_place_note_without_details(settings) -> None:
     from familydb.store.ideas import Idea
     from familydb.store.places import Place
 
@@ -306,7 +306,9 @@ def test_render_place_note_without_details() -> None:
     place = Place(
         id=1, name="Somewhere", created_at="2026-09-20T00:00:00Z", updated_at="2026-09-20T00:00:00Z"
     )
-    assert render_place_note(idea, place) == "Filled in #7 Somewhere: · hours unknown"
+    plain = settings.model_copy(update={"persona": "none"})
+    assert render_place_note(idea, place, plain) == "Filled in #7 Somewhere: hours unknown."
+    assert render_place_note(idea, place, settings) == "Looked up #7 Somewhere: hours unknown."
 
 
 def test_scheduler_registers_enrichment_only_with_web_tools(settings, clock) -> None:
@@ -505,9 +507,10 @@ def test_follow_ups_skip_answered_plans_and_wait_for_a_sender(
     assert plans.get(conn, waiting.id).followed_up_at is not None
 
 
-def test_render_follow_up_without_an_idea(family, conn) -> None:
+def test_render_follow_up_without_an_idea(family, conn, settings) -> None:
     plan = _plan(conn, family, start="2026-09-20T18:00:00-07:00", title="Dinner out")
-    assert render_follow_up(plan) == "How was Dinner out on Sunday? Worth doing again?"
+    text = render_follow_up(plan, settings)
+    assert text == "How was Dinner out on Sunday? Worth doing again?"
 
 
 def test_scheduler_always_registers_follow_ups(settings, clock) -> None:

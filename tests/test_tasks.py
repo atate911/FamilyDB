@@ -104,7 +104,9 @@ def test_failed_send_retries_without_creating_another_message(ctx):
         )
     ctx.message_id = origin.id
     task = add(ctx, remind_at="2026-09-20T14:04")
-    ctx.clock.advance(timedelta(minutes=2))
+    # Past the minutes in which "Remind me" makes this a conversation under way, which would
+    # hold the reminder for the reply instead (tests/test_voice.py).
+    ctx.clock.advance(timedelta(minutes=6))
     app = App(ctx.settings, ctx.clock)
     assert run_reminders(app) == 0
     queued = tasks.get(ctx.conn, task["id"]).reminder.message_id
@@ -123,7 +125,7 @@ def test_a_reminder_sent_after_downtime_says_when_it_was_due(ctx):
     app = App(ctx.settings, ctx.clock)
     assert run_reminders(app) == 1
     sent = messages.last_for_chat(ctx.conn, "web", limit=1)[0].text
-    assert "This was due Sun 20 Sep at 15:00" in sent
+    assert "was due Sun 20 Sep at 15:00" in sent
 
 
 def test_completion_cancels_queued_delivery_and_reopen_does_not_restore(ctx):

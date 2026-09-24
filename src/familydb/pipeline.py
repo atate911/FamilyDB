@@ -8,11 +8,16 @@ from contextlib import closing
 from datetime import datetime
 from typing import Any
 
-from familydb import whereabouts
+from familydb import voice, whereabouts
 from familydb.agent import gateway, spending
 from familydb.agent.history import load_history
 from familydb.agent.loop import MessagesAPI, TurnResult
-from familydb.agent.render import render_location_line, render_retry_note, render_user_turn
+from familydb.agent.render import (
+    render_folded_line,
+    render_location_line,
+    render_retry_note,
+    render_user_turn,
+)
 from familydb.agent.spending import SpendingLimitReached
 from familydb.app import App
 from familydb.channels.base import IncomingMessage, OutgoingMessage
@@ -26,30 +31,6 @@ from familydb.store.members import Member
 from familydb.tools import ToolContext
 
 log = logging.getLogger(__name__)
-
-UNKNOWN_SENDER = (
-    "Sorry, I only talk to the family. Ask one of them to add you; your id here is {id}."
-)
-RETRY_REPLY = "Saved your message, but I couldn't process it right now. I'll retry later."
-NO_KEY_REPLY = (
-    "I can't answer yet: no model key has been added. An admin can add one on the settings "
-    "page, and then ask me again."
-)
-CONFIG_REPLY = (
-    "Saved your message, but I can't reach the model at the moment. "
-    "An admin needs to check the logs."
-)
-EMPTY_REPLY = "Done."
-# A turn that used every step it may take is not tried again: the retry would pay the same for
-# the same context and most likely end the same way. The family is told, once, instead.
-GAVE_UP_REPLY = (
-    "I couldn't finish that within the steps I'm allowed, so I've stopped. "
-    "Try asking again more simply."
-)
-GAVE_UP_PARTLY = (
-    " That much is saved, but I ran out of steps before I finished. "
-    "Check what is saved before asking for the rest, so nothing is done twice."
-)
 
 
 def handle_incoming(
@@ -109,7 +90,9 @@ def _handle(
                 now=app.clock.now(),
             )
         return OutgoingMessage(
-            msg.chat_id, UNKNOWN_SENDER.format(id=msg.channel_user_id), "unknown_sender"
+            msg.chat_id,
+            voice.say(app.settings, "stranger", id=msg.channel_user_id),
+            "unknown_sender",
         )
 
     inbound_id = _store_inbound(app, conn, msg, member)
@@ -199,29 +182,78 @@ def _run_owned(
     retry: bool = False,
     kind: str = "chat",
 ) -> OutgoingMessage:
+    """Think and persist the outcome, carrying anything held for this conversation (voice.py)."""
+    taken = app.held.take((msg.channel, msg.chat_id), app.clock.now())
+    try:
+        return _answer(
+            app,
+            msg,
+            member,
+            inbound_id,
+            api,
+            conn,
+            notify=notify,
+            retry=retry,
+            kind=kind,
+            taken=taken,
+        )
+    finally:
+        # Whatever the reply did not carry goes as written: at once, not after the wait.
+        app.held.let_go(taken, app.clock.now())
+
+
+def _answer(
+    app: App,
+    msg: IncomingMessage,
+    member: Member,
+    inbound_id: int,
+    api: MessagesAPI | None,
+    conn: sqlite3.Connection,
+    *,
+    notify: bool,
+    retry: bool = False,
+    kind: str = "chat",
+    taken: list[voice.Held],
+) -> OutgoingMessage:
     """Think and persist the outcome. With notify off (retries) failures stay silent."""
     if not app.can_ask("chat", api=api):
         # A fresh install before its key is typed in: say so plainly, and do not keep retrying.
         log.warning("message %s saved, but there is no model key to answer it with", inbound_id)
         with transaction(conn):
             messages.give_up(conn, inbound_id)
-        return _fail(app, conn, msg, inbound_id, "no model key", NO_KEY_REPLY if notify else None)
+        return _fail(
+            app,
+            conn,
+            msg,
+            inbound_id,
+            "no model key",
+            voice.say(app.settings, "no_key") if notify else None,
+        )
     try:
-        result = _think(app, msg, member, inbound_id, api, conn, retry=retry, kind=kind)
+        result = _think(
+            app, msg, member, inbound_id, api, conn, retry=retry, kind=kind, taken=taken
+        )
     except AgentError as exc:
         log.error("agent error on message %s: %s (retryable=%s)", inbound_id, exc, exc.retryable)
         if not exc.retryable:
             with transaction(conn):
                 messages.give_up(conn, inbound_id)
         if isinstance(exc, SpendingLimitReached):
-            reply = exc.reply
+            reply = voice.say(app.settings, "limit_reached", limit=f"{exc.limit:.2f}")
         else:
-            reply = RETRY_REPLY if exc.retryable else CONFIG_REPLY
+            reply = voice.say(app.settings, "retry_later" if exc.retryable else "cannot_reach")
         return _fail(app, conn, msg, inbound_id, str(exc), reply if notify else None)
     except Exception as exc:
         log.exception("unexpected error on message %s", inbound_id)
         error = f"{type(exc).__name__}: {exc}"
-        return _fail(app, conn, msg, inbound_id, error, RETRY_REPLY if notify else None)
+        return _fail(
+            app,
+            conn,
+            msg,
+            inbound_id,
+            error,
+            voice.say(app.settings, "retry_later") if notify else None,
+        )
 
     if result.status == "failed" and result.error == "max_iterations":
         # Given up for good, so a person who asked is told now, even on a retry; the digest
@@ -239,13 +271,19 @@ def _run_owned(
             msg,
             inbound_id,
             result.error or "failed",
-            RETRY_REPLY if notify else None,
+            voice.say(app.settings, "retry_later") if notify else None,
             result.actions,
         )
 
-    reply_text = result.text or EMPTY_REPLY
+    reply_text = result.text or voice.say(app.settings, "done")
+    # What the reply was to carry and did not name goes with it in its written words.
+    forgotten = [h.text for h in taken if h.mention.casefold() not in reply_text.casefold()]
+    if forgotten:
+        reply_text = "\n\n".join([reply_text, *forgotten])
     now = utc_iso(app.clock.now())
     with transaction(conn):
+        # Carried by this reply: marked sent with it, so the delivery job has nothing to find.
+        messages.mark_delivered(conn, [h.message_id for h in taken], now=now)
         outbound = messages.insert_out(
             conn,
             channel=msg.channel,
@@ -258,6 +296,7 @@ def _run_owned(
         for action in result.actions:
             if action.get("tool") == "suggest" and action.get("suggestion_id"):
                 suggestions.set_reply(conn, int(action["suggestion_id"]), outbound.id)
+    app.held.done(taken)
     return OutgoingMessage(
         msg.chat_id, reply_text, result.status, inbound_id, outbound.id, result.actions
     )
@@ -311,6 +350,7 @@ def _think(
     *,
     retry: bool = False,
     kind: str = "chat",
+    taken: list[voice.Held] | None = None,
 ) -> TurnResult:
     app.refresh(conn)  # a model or a limit changed on the settings page applies from here on
     settings = app.settings
@@ -343,6 +383,8 @@ def _think(
                 whereabouts.minutes_ago(shared, app.clock.now()),
             )
         )
+    if taken:
+        current.append(render_folded_line([held.text for held in taken]))
     if retry:
         current.append(
             "Processing retry now: "
@@ -382,8 +424,8 @@ def _gave_up_reply(app: App, result: TurnResult) -> str:
     written = {spec.name for spec in app.registry.specs() if spec.writes}
     completed = [a for a in result.actions if a.get("ok") and a.get("tool") in written]
     if not completed:
-        return GAVE_UP_REPLY
-    return spending.done_lines(completed) + GAVE_UP_PARTLY
+        return voice.say(app.settings, "gave_up")
+    return spending.done_lines(completed) + " " + voice.say(app.settings, "gave_up_partly")
 
 
 def _fail(

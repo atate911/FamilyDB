@@ -7,6 +7,7 @@ import logging
 from contextlib import closing
 from typing import Any
 
+from familydb import voice
 from familydb.agent import spending
 from familydb.agent.loop import MessagesAPI
 from familydb.agent.spending import SpendingLimitReached
@@ -15,7 +16,6 @@ from familydb.app import App
 from familydb.availability import enrichment_available
 from familydb.config import Settings
 from familydb.dates import utc_iso
-from familydb.delivery import deliver
 from familydb.errors import AgentError
 from familydb.store import ideas, messages, places
 from familydb.store.db import transaction
@@ -69,9 +69,9 @@ def render_enrich_request(idea: Idea, place: Place | None, settings: Settings) -
     return "\n".join(lines)
 
 
-def render_place_note(idea: Idea, place: Place) -> str:
-    """The one-line chat note after an idea is filled in."""
-    parts = [f"Filled in #{idea.id} {place.name}:"]
+def render_place_note(idea: Idea, place: Place, settings: Any) -> str:
+    """The one-line chat note after an idea is filled in, in the assistant's voice."""
+    parts: list[str] = []
     if place.summary:
         parts.append(place.summary.rstrip("."))
     if place.hours:
@@ -89,7 +89,8 @@ def render_place_note(idea: Idea, place: Place) -> str:
         parts.append(f"tickets: {place.booking_url}")
     if place.price_note:
         parts.append(place.price_note)
-    return " · ".join(parts)
+    details = " · ".join(parts).rstrip(".")
+    return voice.say(settings, "lookup_done", idea=idea.id, place=place.name, details=details)
 
 
 def _mark(conn: Any, app: App, idea_id: int, status: str, note: str | None) -> None:
@@ -114,7 +115,7 @@ def _notify(app: App, conn: Any, idea: Idea) -> None:
     place = places.get(conn, idea.place_id) if idea.place_id else None
     if sender is None or place is None:
         return
-    text = render_place_note(idea, place)
+    text = render_place_note(idea, place, app.settings)
     with transaction(conn):
         outbound = messages.insert_out(
             conn,
@@ -124,7 +125,15 @@ def _notify(app: App, conn: Any, idea: Idea) -> None:
             reply_to=origin.id,
             now=utc_iso(app.clock.now()),
         )
-    deliver(app, outbound.id)
+    voice.hand_over(
+        app,
+        conn,
+        outbound.id,
+        event="lookup_done",
+        channel=origin.channel,
+        chat_id=origin.chat_id,
+        mention=place.name,
+    )
 
 
 def enrich_idea(app: App, conn: Any, idea: Idea, *, api: MessagesAPI | None = None) -> str:

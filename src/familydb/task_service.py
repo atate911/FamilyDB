@@ -5,6 +5,7 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
+from familydb import voice
 from familydb.errors import ToolError
 from familydb.store import members, tasks
 from familydb.store.db import transaction
@@ -66,6 +67,7 @@ def update(
     reminder: str | None = None,
     replace_reminder: bool = False,
     revision: int | None = None,
+    settings: Any = None,
 ) -> Task:
     with transaction(conn):
         current = tasks.get(conn, task_id)
@@ -92,7 +94,8 @@ def update(
         tasks.update(conn, task_id, changes)
         # A queued but unsent reminder should use the current wording.
         latest = _read(conn, task_id)
-        tasks.reword_queued(conn, task_id, reminder_text(latest))
+        if settings is not None:
+            tasks.reword_queued(conn, task_id, reminder_text(latest, settings))
         return latest
 
 
@@ -103,11 +106,10 @@ def _read(conn: sqlite3.Connection, task_id: int) -> Task:
     return task
 
 
-def reminder_text(task: Task, *, due_when: str | None = None) -> str:
-    """The reminder as sent. `due_when` says when it was due, for one sent late after downtime."""
+def reminder_text(task: Task, settings: Any, *, due_when: str | None = None) -> str:
+    """The reminder as sent, in the assistant's voice. `due_when` marks one sent late."""
     who = f" ({task.owner})" if task.owner else ""
-    late = f" This was due {due_when}; I was offline then." if due_when else ""
-    return (
-        f"Reminder: {task.title}{who}  -  task #{task.id}.{late} "
-        "Tell me when it's done or ask to snooze it."
-    )
+    facts = {"title": task.title, "who": who, "task": task.id}
+    if due_when:
+        return voice.say(settings, "reminder_late", due=due_when, **facts)
+    return voice.say(settings, "reminder", **facts)

@@ -103,6 +103,16 @@ class Settings(BaseSettings):
 
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-opus-5"
+    # Who the assistant is to the family: a file in familydb/personas, or "none". Not empty for
+    # none: an empty setting means "the default" everywhere else, and would bring her back.
+    persona: str = "vera"
+    # Her description as the family rewrote it on the Personality page; empty uses the file's.
+    persona_text: str = Field(default="", max_length=20_000)
+    # Who the family are, in their own words, for every chat: ages, tastes, what to avoid.
+    about_family: str = Field(default="", max_length=4_000)
+    # The family's own wording for what she says unasked, by event (voice.EVENTS); a line left
+    # out uses the persona's, and then the plain one.
+    voice_lines: dict[str, str] = Field(default_factory=dict)
     # Applies to whoever answers, so it is not named for one of them. ANTHROPIC_EFFORT still works.
     effort: Effort = Field(
         default="medium", validation_alias=AliasChoices("EFFORT", "ANTHROPIC_EFFORT")
@@ -198,6 +208,18 @@ class Settings(BaseSettings):
                 and names.get(str(key).lower(), str(key).lower()) not in EMPTY_MEANS_UNSET_EXCEPT
             )
         }
+
+    @field_validator("persona")
+    @classmethod
+    def _known_persona(cls, value: str) -> str:
+        from familydb import personas
+
+        name = value.strip().casefold()
+        if name != personas.NONE and name not in personas.available():
+            raise ValueError(
+                f"no persona called {value!r}; the choices are {', '.join(personas.available())}"
+            )
+        return name
 
     @field_validator("family_tz")
     @classmethod

@@ -416,12 +416,17 @@ def setting_text(value: str | None) -> str:
     return str(loaded)
 
 
+LONG_SETTINGS = frozenset({"persona_text", "about_family", "voice_lines"})
+
+
 def change_row(line: dict[str, Any], tz: ZoneInfo) -> dict[str, Any]:
     """One line of the settings history. A key's value is never in there to show."""
     return {
         "when": local_moment(line["changed_at"], tz),
         "key": line["key"],
         "secret": bool(line["secret"]),
+        # A description is too long to show twice in a list; saying it changed is enough.
+        "long": line["key"] in LONG_SETTINGS,
         "old": setting_text(line["old_value"]),
         "new": setting_text(line["new_value"]),
         "who": line.get("changed_by_name"),

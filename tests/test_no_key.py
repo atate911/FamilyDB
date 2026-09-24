@@ -10,12 +10,13 @@ from datetime import date
 
 import pytest
 
+from familydb import voice
 from familydb.app import App
 from familydb.channels.base import IncomingMessage
 from familydb.integrations.geocode import GeoPoint
 from familydb.jobs.enrich import run_enrichment
 from familydb.jobs.weekend_digest import run_digest
-from familydb.pipeline import NO_KEY_REPLY, handle_incoming
+from familydb.pipeline import handle_incoming
 from familydb.store import db, ideas, messages
 from familydb.suggest.context import build_context
 from familydb.suggest.discover import NOTE_NO_KEY, discover
@@ -47,7 +48,7 @@ def test_a_message_is_saved_and_the_reply_says_a_key_is_missing(keyless, clock, 
         IncomingMessage("telegram", "1", "chat-1", "1001", "we should try the ramen place"),
         conn=conn,
     )
-    assert reply is not None and reply.text == NO_KEY_REPLY
+    assert reply is not None and reply.text == voice.say(keyless, "no_key")
     stored = messages.get(conn, reply.in_message_id)
     assert stored.text == "we should try the ramen place"  # nothing the family said is lost
     assert stored.give_up  # and the retry job does not keep trying without a key

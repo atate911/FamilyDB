@@ -1,9 +1,10 @@
 import json
 
+from familydb import voice
 from familydb.app import App
 from familydb.channels.base import IncomingMessage
 from familydb.channels.console import one_shot, run_repl
-from familydb.pipeline import CONFIG_REPLY, RETRY_REPLY, handle_incoming, handle_synthetic
+from familydb.pipeline import handle_incoming, handle_synthetic
 from familydb.store import calls, ideas, messages
 from tests import fakes
 
@@ -72,12 +73,12 @@ def test_api_failure_keeps_the_message_and_replies(settings, clock, conn, family
     api = fakes.FakeMessagesAPI(fakes.rate_limit_error())
     reply = handle_incoming(app, _telegram("we should go hiking", "9"), api=api, conn=conn)
     assert reply.status == "failed"
-    assert reply.text == RETRY_REPLY
+    assert reply.text == voice.say(settings, "retry_later")
     inbound = messages.get(conn, reply.in_message_id)
     assert inbound.status == "failed"
     assert "rate limited" in inbound.error
     assert [m.id for m in messages.failed(conn)] == [inbound.id]
-    assert messages.get(conn, reply.out_message_id).text == RETRY_REPLY
+    assert messages.get(conn, reply.out_message_id).text == voice.say(settings, "retry_later")
 
 
 def test_history_carries_across_turns(settings, clock, conn, family) -> None:
@@ -129,7 +130,7 @@ def test_configuration_errors_get_the_admin_reply(settings, clock, conn, family)
     api = fakes.FakeMessagesAPI(fakes.bad_request_error())
     reply = handle_incoming(app, _telegram("hi", "10"), api=api, conn=conn)
     assert reply.status == "failed"
-    assert reply.text == CONFIG_REPLY
+    assert reply.text == voice.say(settings, "cannot_reach")
     assert messages.get(conn, reply.in_message_id).status == "failed"
 
 
@@ -181,7 +182,7 @@ def test_suggest_turn_runs_discovery_inside_the_chat_turn(settings, thursday_clo
         "web_search",
         "web_fetch",
     ]
-    assert api.requests[3]["system"][0]["text"].startswith("You are FamilyDB")
+    assert api.requests[3]["system"][0]["text"].startswith("# Who you are\n\nYou are Vera")
     # The suggest result carried the find to the chat model, and the cache is warm.
     tool_result = api.requests[3]["messages"][-1]["content"][0]
     assert tool_result["type"] == "tool_result"
@@ -223,16 +224,17 @@ def test_an_unknown_sender_is_listed_for_the_admin_without_what_they_said(
 
 def test_a_turn_out_of_steps_gives_up_and_says_so(settings, clock, conn, family) -> None:
     from familydb.jobs.retry_failed import run_retries
-    from familydb.pipeline import GAVE_UP_REPLY
+
+    gave_up = voice.say(settings, "gave_up")
 
     app = _app(settings.model_copy(update={"agent_max_iterations": 2}), clock)
     looping = fakes.message([fakes.tool_use("tu", "search_ideas", {})], stop_reason="tool_use")
     api = fakes.FakeMessagesAPI(looping, looping, looping, looping)
     reply = handle_incoming(app, _telegram("find me something", "77"), api=api, conn=conn)
-    assert reply.status == "failed" and reply.text == GAVE_UP_REPLY
+    assert reply.status == "failed" and reply.text == gave_up
     inbound = messages.get(conn, reply.in_message_id)
     assert inbound.give_up and inbound.error == "max_iterations"
-    assert messages.get(conn, reply.out_message_id).text == GAVE_UP_REPLY
+    assert messages.get(conn, reply.out_message_id).text == gave_up
     # The retry job leaves it alone: no second run at the same cost.
     assert run_retries(app, api=api) == 0 and len(api.requests) == 2
 

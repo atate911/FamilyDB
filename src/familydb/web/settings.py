@@ -4,10 +4,13 @@ It writes to one place and one place only, `app_settings`, through `store.settin
 here can reach an idea, a plan or a message. Every change is logged, and a key's value is never
 what gets logged: only that it was replaced.
 
-Two forms, because they are not the same kind of thing. The behaviour form carries every box on
-the page each time it is sent, so an emptied box means "go back to what the environment says".
-The keys form carries only what someone typed: an empty key box means "leave that one alone",
-since a password box is empty every time the page is drawn.
+The Personality page (/settings/personality) writes the three `PROFILE` settings: which persona,
+her description as the family rewrote it, and the family's words about themselves.
+
+Two forms on the main page, because they are not the same kind of thing. The behaviour form
+carries every box on the page each time it is sent, so an emptied box means "go back to what
+the environment says". The keys form carries only what someone typed: an empty key box means
+"leave that one alone", since a password box is empty every time the page is drawn.
 """
 
 from __future__ import annotations
@@ -33,6 +36,7 @@ from flask import (
 )
 from pydantic import ValidationError
 
+from familydb import personas, voice
 from familydb.agent import providers
 from familydb.app import App
 from familydb.config import Settings, apply_overrides
@@ -347,6 +351,121 @@ KEY_PINNED = (
 )
 
 
+# -- who she is, and who the family are ---------------------------------------------------------
+
+RESTORED = "Restored her original description."
+PROFILE_LABELS = {
+    "voice_lines": "what she says unasked",
+    "persona": "personality",
+    "persona_text": "her description",
+    "about_family": "about the family",
+}
+# A rough count, to say what a description adds to every message; the real one is on /status.
+CHARS_PER_TOKEN = 4
+
+
+def personality_page(
+    *, error: str | None = None, typed: dict[str, str] | None = None, status: int = 200
+) -> tuple[str, int]:
+    live = _app().settings
+    told = get_flashed_messages(category_filter=[NOTICE])
+    chosen = (typed or {}).get("persona", live.persona)
+    text = (typed or {}).get("persona_text") or personas.text_for(live) or personas.load(chosen)
+    about = (typed or {}).get("about_family", live.about_family)
+    # What she says unasked: the family's line if they wrote one, hers as the placeholder.
+    base_lines = voice.lines(live.model_copy(update={"voice_lines": {}}))
+    said_lines = [
+        {
+            "event": name,
+            "label": event.label,
+            "value": (typed or {}).get(f"line_{name}", live.voice_lines.get(name, "")),
+            "placeholder": base_lines[name],
+            "fields": ", ".join("{" + f + "}" for f in event.fields),
+        }
+        for name, event in voice.EVENTS.items()
+    ]
+    return (
+        render_template(
+            "personality.html",
+            said=told[0] if told else None,
+            error=error,
+            chosen=chosen,
+            choices=personas.available(),
+            text=text,
+            rewritten=bool(live.persona_text.strip()),
+            about=about,
+            said_lines=said_lines,
+            tokens=(len(personas.text_for(live)) + len(live.about_family)) // CHARS_PER_TOKEN,
+            limits={
+                name: Settings.model_fields[name].metadata[0].max_length
+                for name in ("persona_text", "about_family")
+            },
+        ),
+        status,
+    )
+
+
+@bp.get("/settings/personality")
+def personality() -> tuple[str, int]:
+    return personality_page()
+
+
+@bp.post("/settings/personality")
+def save_personality() -> Response | tuple[str, int]:
+    """Who she is and who the family are. Her text the same as the file's is no rewrite at all."""
+    if (complaint := auth.refused()) is not None:
+        return personality_page(error=complaint, status=400)
+    typed = {
+        name: request.form.get(name, "") for name in ("persona", "persona_text", "about_family")
+    }
+    written = {
+        name: request.form.get(f"line_{name}", "").strip()
+        for name in voice.EVENTS
+        if request.form.get(f"line_{name}", "").strip()
+    }
+    typed.update({f"line_{name}": line for name, line in written.items()})
+    if wrong := voice.problems(written):
+        what = "; ".join(f"{voice.EVENTS[n].label}: {why}" for n, why in wrong.items())
+        return personality_page(error=f"Nothing was saved. {what}.", typed=typed, status=400)
+    chosen = typed["persona"].strip()
+    text = typed["persona_text"].replace("\r\n", "\n").strip()
+    original = personas.load(chosen) if chosen in personas.available() else ""
+    values: dict[str, Any] = {
+        # What the environment already says is not stored over it, as on the main page.
+        "persona": None if chosen == _app().base_settings.persona else chosen,
+        "persona_text": text if original and text and text != original else None,
+        "about_family": typed["about_family"].replace("\r\n", "\n").strip() or None,
+        # Only lines that differ from hers are the family's own.
+        "voice_lines": {
+            name: line
+            for name, line in written.items()
+            if line != voice.lines(_app().settings.model_copy(update={"voice_lines": {}}))[name]
+        }
+        or None,
+    }
+    try:
+        apply_overrides(
+            _app().base_settings,
+            {k: v for k, v in {**_stored(), **values}.items() if v is not None},
+        )
+    except ValidationError as exc:
+        problems = problems_from(exc)
+        return personality_page(
+            error="Nothing was saved. " + " ".join(problems.values()), typed=typed, status=400
+        )
+    flash(_said(_save(values)), NOTICE)
+    return redirect(url_for("settings.personality"))
+
+
+@bp.post("/settings/personality/restore")
+def restore_personality() -> Response | tuple[str, int]:
+    if (complaint := auth.refused()) is not None:
+        return personality_page(error=complaint, status=400)
+    _save({"persona_text": None})
+    flash(RESTORED, NOTICE)
+    return redirect(url_for("settings.personality"))
+
+
 @bp.post("/settings/sign-out-everyone")
 def sign_out_everyone() -> Response | tuple[str, int]:
     """End every session, on every device, this one included, after the password is typed again.
@@ -452,7 +571,9 @@ def _said(changed: list[str], *, keys: bool = False) -> str:
     labels = [
         KEY_LABELS.get(name, name)
         if keys
-        else (fields.BY_KEY[name].label if name in fields.BY_KEY else name)
+        else (
+            fields.BY_KEY[name].label if name in fields.BY_KEY else PROFILE_LABELS.get(name, name)
+        )
         for name in changed
     ]
     return SAVED.format(what=f"Changed: {', '.join(labels)}.")

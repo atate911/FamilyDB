@@ -3,7 +3,6 @@ from types import SimpleNamespace
 
 from familydb.channels.base import OutgoingMessage
 from familydb.channels.telegram import (
-    START_TEXT,
     TelegramChannel,
     addressed_to_bot,
     incoming_from_update,
@@ -134,4 +133,4 @@ def test_start_command(settings, clock) -> None:
     channel = TelegramChannel(App(settings, clock), token="123456:TEST-TOKEN")
     update, replies = _update("/start")
     asyncio.run(channel.on_start(update, None))
-    assert replies == [START_TEXT]
+    assert replies[0].startswith("Hi, I'm Vera.")

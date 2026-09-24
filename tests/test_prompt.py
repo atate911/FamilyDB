@@ -173,3 +173,41 @@ def test_the_discovery_worker_is_told_to_use_what_its_request_carries() -> None:
     # suggest/discover.py writes these lines into the request; the prompt must say what they mean.
     text = load_prompt("discover")
     assert "Looking for:" in text and "its hours" in text
+
+
+def test_vera_speaks_first_and_the_job_follows(conn, settings, family) -> None:
+    from familydb.agent.prompt import build_system_blocks
+
+    first = build_system_blocks(conn, settings)[0].text
+    assert first.startswith("# Who you are\n\nYou are Vera")
+    assert first.index("You are Vera") < first.index("# The job") < first.index("private planning")
+
+
+def test_no_persona_leaves_only_the_job(conn, settings, family) -> None:
+    from familydb.agent.prompt import build_system_blocks
+
+    plain = settings.model_copy(update={"persona": "none"})
+    first = build_system_blocks(conn, plain)[0].text
+    assert first.startswith("You are the private planning assistant") and "Vera" not in first
+
+
+def test_an_unknown_persona_is_refused_when_it_is_saved(settings) -> None:
+    import pytest
+    from pydantic import ValidationError
+
+    from familydb.config import Settings
+
+    with pytest.raises(ValidationError, match="no persona called 'HAL'"):
+        Settings(_env_file=None, persona="HAL")
+    assert Settings(_env_file=None, persona=" Vera ").persona == "vera"
+
+
+def test_the_workers_never_carry_the_persona(conn, settings) -> None:
+    from familydb.agent.compose import prefix
+    from familydb.agent.gateway import KINDS
+
+    for name, call in KINDS.items():
+        blocks, sizes = prefix(call, conn, settings)
+        worker = call.prompt != "system"
+        assert ("personality" in sizes) is not worker, name
+        assert ("Vera" in blocks[0].text) is not worker, name

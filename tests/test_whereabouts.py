@@ -68,7 +68,7 @@ def test_a_share_is_kept_confirmed_once_and_forgotten(full_settings, clock, conn
     geocoder = Places()
     app = App(full_settings, clock, geocoder=geocoder)
     first = _share(app, conn, live=True)
-    assert first is not None and "Got your location (Old Town, Portland)" in first.text
+    assert first is not None and "Got it (Old Town, Portland)" in first.text
     assert locations.get(conn, family["sam"].id).label == "Old Town, Portland"
     assert messages.get(conn, first.out_message_id).text == first.text  # delivered like any reply
     assert _share(app, conn, live=True) is None  # the live location moving: no second word
