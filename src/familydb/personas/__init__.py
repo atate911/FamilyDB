@@ -5,15 +5,17 @@ prefix, ahead of the product spec (`agent/prompts/system.md`), which says what t
 where the two meet. Only turns a person reads carry it: chat, the digest and retries. The lookup
 and discovery workers, whose prose nobody reads, never do.
 
-Choose one on the settings page ("persona"); empty speaks with no persona at all. Adding one is
-adding a file here. Every word is sent, cached, with each message, so `familydb debug cost` shows
-what one costs before it is chosen.
+Chosen, and rewritten in place, on the settings page's Personality page (/settings/personality);
+no persona speaks with none at all. The rewrite is stored as a setting over the file, and
+restoring the original drops it. Adding a persona is adding a file here. Every word is sent,
+cached, with each message; the page and `familydb debug cost` say what that comes to.
 """
 
 from __future__ import annotations
 
 from functools import lru_cache
 from importlib import resources
+from typing import Any
 
 
 def available() -> tuple[str, ...]:
@@ -24,9 +26,22 @@ def available() -> tuple[str, ...]:
     )
 
 
+# The persona setting's value for speaking with none at all.
+NONE = "none"
+
+
+def text_for(settings: Any) -> str:
+    """What the chat is told she is: the family's rewrite if there is one, else the file's.
+
+    No persona chosen means none at all, whatever text was once saved."""
+    if settings.persona == NONE:
+        return ""
+    return settings.persona_text.strip() or load(settings.persona)
+
+
 @lru_cache(maxsize=8)
 def load(name: str) -> str:
     """The persona's text, or "" for none. An unknown name is refused when it is saved."""
-    if not name:
+    if not name or name == NONE:
         return ""
     return (resources.files(__name__) / f"{name}.md").read_text("utf-8").strip()

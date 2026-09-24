@@ -21,6 +21,7 @@ from telegram.ext import (
     filters,
 )
 
+from familydb import personas
 from familydb.app import App
 from familydb.channels.base import IncomingMessage
 from familydb.delivery import deliver
@@ -141,7 +142,7 @@ class TelegramChannel:
     async def on_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if update.effective_message is not None:
             persona = self.app.settings.persona
-            name = persona.capitalize() if persona else "FamilyDB"
+            name = persona.capitalize() if persona != personas.NONE else "FamilyDB"
             await update.effective_message.reply_text(START_TEXT.format(name=name))
 
     async def on_message(self, update: Any, context: Any) -> None:
