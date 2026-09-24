@@ -85,6 +85,13 @@ Getting the code onto a bare server is a step of its own, because the
 repository is private: a deploy key, a token in the environment, or a copy you
 put there yourself. All three are in the install guide.
 
+With no domain, the installer also takes the server's public IP address: Caddy
+serves the page over HTTPS with a certificate it signs itself, which each browser
+warns about once. Bootstrap offers to take the passphrase off a deploy key that
+has one, since upgrades cannot type it, and the install guide says where the
+tunnel command is run, that bootstrap's commands go in one at a time, and what a
+502 or a timeout from outside means.
+
 Clone into `/opt/familydb` and not a home directory. A home directory is closed
 to other users, so a service running as its own account cannot start from one.
 The installer checks this and refuses rather than leaving a unit that will

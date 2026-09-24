@@ -167,9 +167,17 @@ sudo ssh-keygen -t ed25519 -C "familydb deploy" -f /root/familydb_deploy -N ""
 sudo cat /root/familydb_deploy.pub
 ```
 
-Copy that public line. In GitHub, open the repository, then **Settings → Deploy keys → Add
-deploy key**. Title it after the machine, paste the key, and leave **Allow write access**
-unticked: the server never needs to push. Check it from the server:
+The `-N ""` matters: it makes the key without a passphrase. Upgrades fetch with this key on
+their own, with nobody there to type one, so a key with a passphrase works for the install and
+then stops every upgrade. Bootstrap notices one and offers to remove it; to do it yourself,
+`sudo ssh-keygen -p -f /root/familydb_deploy -N ""`.
+
+Copy that public line. In GitHub, open the repository's own page (not your account settings,
+whose "SSH and GPG keys" would give the key every repository you can reach), then its
+**Settings** tab, **Deploy keys** in the sidebar, and **Add deploy key**. The Settings tab is
+only there for the repository's owner and admins, and on a narrow window it hides under the
+**…** at the end of the tab row. Title it after the machine, paste the key, and leave **Allow
+write access** unticked: the server never needs to push. Check it from the server:
 
 ```bash
 sudo ssh -T git@github.com -i /root/familydb_deploy
@@ -178,13 +186,23 @@ sudo ssh -T git@github.com -i /root/familydb_deploy
 ```
 
 Then fetch a copy for the scripts with that key, on the server, and run bootstrap from it.
-Bootstrap still clones its own copy into `/opt/familydb` with the key, so upgrades can fetch:
+Bootstrap still clones its own copy into `/opt/familydb` with the key, so upgrades can fetch.
+Paste these one block at a time: bootstrap asks questions, and anything pasted after it is
+read as the answer to the first one.
 
 ```bash
 sudo git -c core.sshCommand="ssh -i /root/familydb_deploy -o IdentitiesOnly=yes" \
   clone --depth 1 git@github.com:atate911/FamilyDB.git /root/familydb-scripts
+```
+
+```bash
 sudo bash /root/familydb-scripts/scripts/bootstrap.sh --deploy-key /root/familydb_deploy
-sudo rm -rf /root/familydb-scripts      # once it has finished
+```
+
+Once it has finished, and not before, remove the copy:
+
+```bash
+sudo rm -rf /root/familydb-scripts
 ```
 
 (Or, if you have a clone of your own: `scp -r scripts sam@your-server:~/` from it, and
@@ -207,8 +225,9 @@ with it, and run bootstrap. `sudo` drops the environment unless told to keep tha
 read -rs GITHUB_TOKEN && export GITHUB_TOKEN        # paste the token, then Enter
 git clone --depth 1 "https://x-access-token:${GITHUB_TOKEN}@github.com/atate911/FamilyDB.git" ~/familydb-scripts
 sudo --preserve-env=GITHUB_TOKEN bash ~/familydb-scripts/scripts/bootstrap.sh
-rm -rf ~/familydb-scripts
 ```
+
+Answer its questions, and once it has finished: `rm -rf ~/familydb-scripts`.
 
 The token is used for the clone and nothing else: it is never written to `.env`, never written
 to the log, and the saved remote is reset to the plain HTTPS URL afterwards so it does not sit
@@ -282,20 +301,23 @@ After that it works through apt packages (`ca-certificates curl git tzdata`), uv
 code into `/opt/familydb` and the `familydb` user, then hands over to `scripts/install.sh`,
 which asks one thing:
 
-- **the domain name for the web page**, if it has one. Leave it empty to keep the page on the
-  server, reached over an SSH tunnel. With a domain, the page is served over HTTPS (section 6),
-  which is also what lets the chat page use your phone's location.
+- **the domain name or public IP address for the web page**. With a domain, the page is served
+  over HTTPS with a real certificate (section 6), which is also what lets the chat page use
+  your phone's location. With the server's IP address and no domain, it is served over HTTPS
+  with a certificate Caddy signs itself, which each browser warns about once. Left empty, the
+  page stays on the server and you reach it from your own computer over an SSH tunnel.
 
 You add yourself afterwards, on the page's Family page: it is the first line of the page's
 setup list. Beyond that one question it asks only yes-or-no questions before it changes the machine: whether to
-install the service, whether to schedule backups, and, with a domain, whether to set up Caddy.
+install the service, whether to schedule backups, and, with a domain or an IP address, whether
+to set up Caddy.
 Everything else it decides for you, and all of it can be changed on the page later:
 
 - The web page is on, with a family password of at least twelve characters. It makes one up and
   **prints it once**: write it down. If it scrolled past, `sudo grep WEB_PASSWORD
   /opt/familydb/.env` shows it; that file is the only other place it is. To choose your own,
-  run `sudo WEB_PASSWORD='...' bash .../bootstrap.sh ...` instead, and to change it later, RUNBOOK
-  section 12.
+  run `sudo WEB_PASSWORD='...' bash .../bootstrap.sh ...` instead, and to change it later, see
+  "Changing the family password" in section 5.
 - The timezone is the machine's.
 - Web lookups are on, so new ideas get their address and opening hours filled in.
 - The weekend digest goes to the chat on the web page, which needs no setting up.
@@ -322,23 +344,43 @@ restart. The one exception is the laptop route for Google Calendar, kept as a fa
 ### Open the page
 
 With a domain, go to `https://your.domain/` once the domain points at the server and ports 80
-and 443 are open (section 6).
+and 443 are open (section 6). With the server's IP address, go to `https://<the address>/` and
+accept the certificate warning once.
 
-Without one, the page is bound to `127.0.0.1` and reaches nothing but the server itself. That
-is the safe default, and you can still use it from your own computer without opening a single
-port. From your own computer:
+Left empty, the page is bound to `127.0.0.1` on the server. That does not mean you have to sit
+at the server: an SSH tunnel carries it to your own computer, from anywhere, without opening a
+single port. Run this **on your own computer**, not in the server's terminal, with your user
+and the server's address in place of `sam` and the example address (the installer's last lines
+print the exact command):
 
 ```bash
-ssh -L 8080:127.0.0.1:8080 sam@your-server
+ssh -L 8080:127.0.0.1:8080 sam@203.0.113.7
 ```
 
-Leave that open and go to `http://127.0.0.1:8080/` in a browser.
+Leave that connected and go to `http://127.0.0.1:8080/` in a browser on the same computer. It
+is the server's page. On Windows the same command works in PowerShell. To open the page by
+address instead, with no tunnel, see section 6.
 
 Sign in with the family password the installer printed. The home page has a **Finish setting
 up** list of what is missing, most important first, and each line links to where it is done.
 Work down it; it disappears when everything is done. The first line is adding yourself on the
 Family page, as an admin; add the rest of the family there too. The rest of this section is
 those lines in more detail.
+
+### Changing the family password
+
+It lives in `.env`, not on the settings page, so a form cannot change the lock on its own door:
+
+```bash
+sudoedit /opt/familydb/.env        # WEB_PASSWORD=, twelve characters or more
+sudo systemctl restart familydb
+cd /opt/familydb && sudo -u familydb .venv/bin/familydb doctor
+```
+
+Keep it to twelve characters or more. A shorter one is refused for a page anything but the
+server can reach, and the refusal is quiet: the bot keeps running, the page does not, and
+through Caddy the browser shows a 502. `familydb doctor` says so on its "web page" line, which
+is why it is the third command. Changing it signs everybody out once.
 
 ### A model key
 
@@ -432,6 +474,7 @@ one immediately. RUNBOOK section 9.
 The tunnel in section 5 is the safest way and costs nothing. A domain is what lets the family
 use the page from their phones. Plain HTTP would send the family password in the clear, so with
 a domain the page goes behind Caddy with a real certificate, and the installer sets that up.
+With no domain, the server's IP address works too (below), at the cost of a certificate warning.
 
 **DNS first.** An A record for `familydb.example.com` pointing at the server's address, and an
 AAAA record if it has IPv6. Check it has propagated before Caddy asks for a certificate, or the
@@ -477,6 +520,35 @@ user's alone) and fill in the two lines already there: `WEB_DOMAIN=your.domain` 
 says (`sudo apt install caddy`, copy the file, put your domain in it, reload Caddy), open the
 firewall as above, and `sudo systemctl restart familydb`. On the Docker path, add
 `COMPOSE_PROFILES=tls` as well and run `docker compose up -d` instead of installing Caddy.
+
+**No domain: the server's IP address.** Give the installer the server's public IPv4 address
+instead of a domain (virtualenv path only). It writes `WEB_DOMAIN=<the address>` and
+`WEB_TRUST_PROXY=true`, and a Caddyfile with `tls internal` in it:
+
+```
+203.0.113.7 {
+	tls internal
+	reverse_proxy 127.0.0.1:8080
+}
+```
+
+`tls internal` has Caddy sign the certificate itself rather than ask a public authority, so the
+connection is encrypted but every browser warns the first time, once per device: in Firefox
+**Advanced → Accept the Risk and Continue**, in Chrome **Advanced → Proceed**. The error
+Caddy logs about failing to install its root certificate is harmless; it only means the server
+itself does not trust that certificate, which it never needs to. Open 80 and 443 as above. To
+do this on an install made without it, write that Caddyfile to `/etc/caddy/Caddyfile` after
+`sudo apt install caddy`, set the two lines in `.env`, `sudo systemctl reload caddy` and
+`sudo systemctl restart familydb`. A domain later replaces the address on the first line, and
+the `tls internal` line goes.
+
+**Nothing answers from outside.** If `curl -skI https://<address>/` run on the server itself
+gets an answer but the browser times out, the server is fine and something in between is
+not. Most VPS providers have a firewall of their own, set in their control panel and called a
+security group or cloud firewall, that `ufw` knows nothing about; open 80 and 443 there too. A
+**502** is the other way round: Caddy is reached and the page behind it is not serving, which
+is nearly always the password (section 5, "Changing the family password") and which
+`sudo journalctl -u familydb -n 40 | grep 'not serving'` names.
 
 **The warning worth reading twice.** One shared password is all that stands between a stranger
 and your API bill. Signing in is the whole bot: chatting with it spends tokens, the forms add and
@@ -904,8 +976,8 @@ grep -E '^WEB_(ENABLED|HOST|PORT)=' /opt/familydb/.env
 *How to fix:* on the virtualenv path, set `WEB_HOST=0.0.0.0` and a password of at least twelve
 characters, then restart. On the Docker path change the `ports` line in `docker-compose.yml`
 from `"127.0.0.1:8080:8080"` to `"8080:8080"` as well — both have to change. Then let the
-firewall through. On a machine facing the internet, give it a domain instead (section 6) and
-leave 8080 shut:
+firewall through. On a machine facing the internet, give it a domain or its IP address behind
+Caddy instead (section 6) and leave 8080 shut:
 the page refuses to serve off the loopback with no password at all, unless you set
 `WEB_ALLOW_NO_PASSWORD=true` on purpose.
 

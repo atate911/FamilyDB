@@ -367,6 +367,17 @@ fetch_code() {
     [ -r "$DEPLOY_KEY" ] || die "cannot read the deploy key at ${DEPLOY_KEY}" \
       "Check the path, and that this account can read the file."
     as_root chmod 600 "$DEPLOY_KEY" 2>/dev/null || true
+    # Upgrades fetch with this key from cron or a plain `maintain.sh upgrade`, where nobody is
+    # there to type a passphrase, so a key with one works today and stops every upgrade later.
+    if have ssh-keygen && ! as_root ssh-keygen -y -P "" -f "$DEPLOY_KEY" >/dev/null 2>&1; then
+      warn "The deploy key has a passphrase. Upgrades run on their own and cannot type it."
+      if confirm "Remove the passphrase from ${DEPLOY_KEY} now? You type it once more." yes \
+         && as_root ssh-keygen -q -p -f "$DEPLOY_KEY" -N ""; then
+        ok "The deploy key no longer needs a passphrase."
+      else
+        note "Later: sudo ssh-keygen -p -f ${DEPLOY_KEY} -N \"\""
+      fi
+    fi
     case "$url" in https://github.com/*) url="git@github.com:${url#https://github.com/}" ;; esac
     git_env=(GIT_SSH_COMMAND="ssh -i ${DEPLOY_KEY} -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new")
     note "Cloning over SSH with the deploy key."
@@ -574,13 +585,21 @@ if [ -n "$WEB_LINE" ]; then
   say "  Sign in with the family password. Its home page lists what is left to set up, in the"
   say "  order it matters: a model key, Telegram, Google Calendar and where home is."
   if [ -n "$domain" ]; then
-    note "  The domain must point at this machine, with ports 80 and 443 open (sudo ufw allow 80,443/tcp)."
+    if printf '%s' "$domain" | grep -Eq '^[0-9.]+$'; then
+      note "  The browser warns about the certificate once on each device: Caddy signed it itself."
+    else
+      note "  The domain must point at this machine."
+    fi
+    note "  Ports 80 and 443 must be open here (sudo ufw allow 80,443/tcp) and in your VPS"
+    note "  provider's own firewall, if it has one."
   else
     case "${host:-}" in
       127.0.0.1|localhost|"")
-        note "  It is bound to this machine only, which is the safe default. Reach it over SSH:"
+        note "  It is bound to this machine only, which is the safe default. From your own computer,"
+        note "  not this server, and from anywhere you can reach it over SSH, run:"
         note "    ssh -L ${port:-8080}:127.0.0.1:${port:-8080} ${SUDO_USER:-$(id -un)}@$(hostname -I 2>/dev/null | awk '{print $1}')"
-        note "  then open http://127.0.0.1:${port:-8080}/ on your own computer."
+        note "  and while it is connected open http://127.0.0.1:${port:-8080}/ on that computer."
+        note "  To open it by domain or IP address instead: docs/INSTALL.md section 6."
         ;;
     esac
   fi

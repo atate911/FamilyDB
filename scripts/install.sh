@@ -37,7 +37,7 @@ FamilyDB installer
 
   scripts/install.sh [options]
 
-It asks one thing: the domain name for the web page, if it has one. Everything else (yourself
+It asks one thing: the domain name or public IP address for the web page, if it has one. Everything else (yourself
 and the family, the model and its key, Telegram, Google Calendar, where home is, what it may
 spend) is set on the web page once it is running.
 
@@ -51,7 +51,7 @@ Options
   -h, --help           This text.
 
 Answers can be supplied as environment variables, which is what --non-interactive reads:
-  WEB_DOMAIN           the page's domain; empty keeps it on this machine
+  WEB_DOMAIN           the page's domain or public IPv4 address; empty keeps it on this machine
   WEB_PASSWORD         the family password (12 characters or more); made up when not given
   ADMIN_NAME           the first family member (otherwise added on the Family page)
   BACKUPS              yes (the default) schedules a nightly backup; no leaves it to you
@@ -209,6 +209,12 @@ random_password() {
   fi
 }
 
+is_ipv4() { # a dotted IPv4 address, each part 0-255
+  printf '%s' "$1" | grep -Eq '^([0-9]{1,3}\.){3}[0-9]{1,3}$' || return 1
+  local IFS=. part
+  for part in $1; do [ "$part" -le 255 ] || return 1; done
+}
+
 valid_host() { # an address to bind: an IP, or localhost. A typo means the page never serves.
   case "$1" in localhost|"") return 0 ;; esac
   python3 - "$1" <<'HOSTPY' 2>/dev/null
@@ -312,7 +318,7 @@ else
       "so it starts at boot and restarts if it stops; you are asked before this happens"
   fi
 fi
-plan_untouched "the system Python, your firewall, and every other service (Caddy only if you give a domain, and it asks first)"
+plan_untouched "the system Python, your firewall, and every other service (Caddy only if you give a domain or an IP address, and it asks first)"
 plan_untouched "any database that is already here: an existing one is migrated, never replaced"
 show_plan "What this installer changes"
 
@@ -433,16 +439,34 @@ if [ "$KEEP_ENV" = 0 ]; then
   # --- the web page, which is how everything else gets set ---
   set_env WEB_ENABLED true
   say ""
-  say "The page is reached one of two ways:"
-  say "  · through a domain name that points at this machine, over HTTPS; or"
-  say "  · from this machine only, which you reach over an SSH tunnel or Tailscale."
-  ask WEB_DOMAIN "Domain name for the page (leave it empty for this machine only)" "${WEB_DOMAIN:-}"
+  say "The page is reached one of three ways:"
+  say "  · through a domain name that points at this machine, over HTTPS;"
+  say "  · through this machine's public IP address, over HTTPS with a certificate the browser"
+  say "    warns about once on each device, for a server with no domain; or"
+  say "  · from this machine only, which you reach from your own computer over an SSH tunnel."
+  ask WEB_DOMAIN "Domain name or public IP address for the page (leave it empty for this machine only)" "${WEB_DOMAIN:-}"
   WEB_DOMAIN="${WEB_DOMAIN#https://}"; WEB_DOMAIN="${WEB_DOMAIN#http://}"; WEB_DOMAIN="${WEB_DOMAIN%%/*}"
-  if [ -n "$WEB_DOMAIN" ] && ! printf '%s' "$WEB_DOMAIN" | grep -Eq '^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'; then
-    warn "'${WEB_DOMAIN}' does not look like a domain name; keeping the page on this machine."
+  WEB_DOMAIN="${WEB_DOMAIN%:*}"   # a port typed after it means nothing here: Caddy answers on 443
+  if [ -n "$WEB_DOMAIN" ] && is_ipv4 "$WEB_DOMAIN"; then
+    if [ "$MODE" = docker ]; then
+      warn "An IP address instead of a domain is only set up for the virtualenv install; keeping the"
+      warn "page on this machine. docs/INSTALL.md section 6 says how to reach it."
+      WEB_DOMAIN=""
+    elif ! hostname -I 2>/dev/null | tr ' ' '\n' | grep -qx "$WEB_DOMAIN"; then
+      note "${WEB_DOMAIN} is not an address of this machine. Fine behind a NAT; otherwise check it."
+    fi
+  elif [ -n "$WEB_DOMAIN" ] && ! printf '%s' "$WEB_DOMAIN" | grep -Eq '^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'; then
+    warn "'${WEB_DOMAIN}' does not look like a domain name or an IP address; keeping the page on this machine."
     WEB_DOMAIN=""
   fi
-  if [ -n "$WEB_DOMAIN" ]; then
+  if [ -n "$WEB_DOMAIN" ] && is_ipv4 "$WEB_DOMAIN"; then
+    # No public certificate authority is asked: Caddy signs one itself (`tls internal`), so the
+    # connection is encrypted and each browser warns once. Plain HTTP would send the family
+    # password in the clear, which is why this is not simply the page bound to 0.0.0.0.
+    set_env WEB_DOMAIN "$WEB_DOMAIN"
+    set_env WEB_TRUST_PROXY true
+    ok "The page will be https://${WEB_DOMAIN}/ once Caddy is in front (asked below)."
+  elif [ -n "$WEB_DOMAIN" ]; then
     # Caddy can only get a certificate for a name that points here. Not a reason to stop, since
     # DNS may simply be catching up, but worth saying now rather than as a silent Caddy retry.
     resolved="$(getent ahostsv4 "$WEB_DOMAIN" 2>/dev/null | awk 'NR==1 {print $1}' || true)"
@@ -674,9 +698,14 @@ elif [ -n "$DOMAIN" ] && [ "$MODE" = venv ] && [ "$DRY_RUN" = 0 ]; then
       warn "${caddyfile} already serves something else. Add the site in deploy/Caddyfile to it."
     elif sed -e "s/familydb.example.com/${DOMAIN}/g" \
              -e "s/127.0.0.1:8080/127.0.0.1:$(env_value WEB_PORT)/" \
+             -e "$(is_ipv4 "$DOMAIN" && printf '/reverse_proxy/i\\\ttls internal')" \
              "${REPO_ROOT}/deploy/Caddyfile" | $SUDO tee "$caddyfile" >/dev/null \
          && $SUDO systemctl reload-or-restart caddy; then
-      ok "Caddy serves https://${DOMAIN}/ and fetches the certificate once the domain points here."
+      if is_ipv4 "$DOMAIN"; then
+        ok "Caddy serves https://${DOMAIN}/ with a certificate it signed itself."
+      else
+        ok "Caddy serves https://${DOMAIN}/ and fetches the certificate once the domain points here."
+      fi
       HTTPS_READY=1
     else
       warn "Could not configure Caddy; see ${REPO_ROOT}/deploy/Caddyfile."
@@ -705,12 +734,21 @@ say ""
 PORT="$(env_value WEB_PORT)"; PORT="${PORT:-8080}"
 if [ "$HTTPS_READY" = 1 ]; then
   say "Then open ${B}https://${DOMAIN}/${OFF} and sign in with the family password."
-  note "The domain has to point at this machine, and ports 80 and 443 be open:"
-  note "  sudo ufw allow 80,443/tcp"
+  if is_ipv4 "$DOMAIN"; then
+    note "The browser warns about the certificate the first time on each device, because Caddy"
+    note "signed it itself rather than a public authority; accept it once. The connection is"
+    note "still encrypted."
+  else
+    note "The domain has to point at this machine."
+  fi
+  note "Ports 80 and 443 have to be open, on this machine (sudo ufw allow 80,443/tcp) and in"
+  note "your VPS provider's own firewall, if it has one, which is set in its control panel."
 else
-  say "Then open the page and sign in with the family password. From your own computer:"
+  say "Then open the page and sign in with the family password. Run this on your own computer,"
+  say "not on this server; it works from anywhere you can reach the server over SSH:"
   say "  ssh -L ${PORT}:127.0.0.1:${PORT} ${SUDO_USER:-$(id -un)}@$(hostname -I 2>/dev/null | awk '{print $1}')"
-  say "  and open ${B}http://127.0.0.1:${PORT}/${OFF}"
+  say "  and, while it is connected, open ${B}http://127.0.0.1:${PORT}/${OFF} on that computer."
+  note "To open it by address instead, with no tunnel, see docs/INSTALL.md section 6."
 fi
 say ""
 say "The page's home says what is left to set up, in the order it matters: adding yourself on"
