@@ -37,11 +37,10 @@ page already had. A change to the page should be checked against this document.
 5. **Keep the eye still.** A page's title, its one line of purpose and its one or two actions sit
    together at the top. What you do with a thing sits beside it. What is next is the first thing
    on the home page. The chat's box is under the newest line, with Send beside who is sending.
-6. **A few quiet winks.** The blinking cursor after the name. The mark's face blinking on the
-   sign-in screen. A momentary flicker on the page that is not there. A spend screen that turns
-   amber, like the other monitors of the time, near the limit. A whisper of scanlines inside the
-   home page's glow. A month that prints as green-bar paper. Each is small, none is in the way,
-   and all motion stops for anyone who asks for less.
+6. **Small things, here and there.** A modern page that uses nostalgia on purpose, so it is
+   sparing with it: a handful of small period details, each where it means something, none that
+   moves for long or asks to be looked at (see "Small things"). All motion stops for anyone who
+   asks for less.
 7. **The pictures are green screens.** The page's few pictures are old green-screen monitors, and
    they are the one place it is hazy: a terminal's face, a little blur and bloom, scanlines, the
    tube's dark edge. Each shows something true, and there is at most one to a page.
@@ -65,18 +64,30 @@ are near-white; green is light, not text.
 | `--dim` | `#919e98` | quiet text, 6.6:1 |
 | `--faint` | `#7d8a84` | placeholders, ids and meta icons, 5:1 |
 
-The colours, each readable as text on a surface (the ratio is against `--surface`), and each
-carrying dark text (`--on-bright`) when it is a fill:
+The colours are the phosphors of the time, softened for a modern page: the green and the amber
+of the monochrome monitors, and the cyan, yellow, magenta and red of the first colour screens.
+Each is readable as text on every surface (the ratio is against `--surface-3`, the lightest), and
+each carries dark text (`--on-bright`) when it is a fill:
 
 | Token | Value | Belongs to |
 |---|---|---|
-| `--green` | `#6dff9c` (14:1) | the brand, the primary button, focus, what is next and live; Home, Chat, Status, Settings |
-| `--lilac` | `#b7a4ff` (8.5:1) | Ideas; events and kinds the family made up |
-| `--cyan` | `#6cd4ff` (10.9:1) | Plans, and the month on every date |
-| `--lemon` | `#f7dc78` (13:1) | Things to do, open tasks, activities |
-| `--amber` | `#ffbf5f` (11:1) | the Family, grown-ups' faces, restaurants, today, anything needing a look |
-| `--pink`, `--blue`, `--orange` | 9.7, 8.8, 9.4:1 | shows and children's faces, trips, seasonal ideas |
-| `--red` | `#ff6b6b` (6.6:1) | only what went wrong or cannot be undone |
+| `--green` | `#6dff9c` (12.5:1) | the brand and the green screens, the primary button, focus, what is next and live; Home, Chat, Status, Settings; outings |
+| `--amber` | `#ffb850` (9.3:1) | the amber screen: the Family, grown-ups' faces, restaurants, today, anything needing a look |
+| `--cyan` | `#6cd4ff` (9.5:1) | Plans, the month on every date, and going places: day trips and trips |
+| `--lemon` | `#f7dc78` (11.8:1) | Things to do, open tasks, activities |
+| `--lilac` | `#ae9bff` (6.8:1) | Ideas; events and kinds the family made up |
+| `--pink` | `#ff9fd0` (8.5:1) | shows, and children's faces |
+| `--orange` | `#ff956c` (7.4:1) | the seasons |
+| `--red` | `#ff6b6b` (5.8:1) | only what went wrong or cannot be undone |
+
+**Tuned apart.** The colours that share a page (the kinds on a grid of ideas, above all) were
+measured against each other (CIEDE2000), for typical sight and for simulated deuteranopia and
+protanopia, the commonest colour-blindness. The closest pair is 13.6 apart for typical sight and
+5.5 and 5.2 for the other two; before, trips and events were indistinguishable to many people
+(0.1). That took three small moves and one fewer colour: amber a little deeper, nearer a real
+amber phosphor; the seasons a pumpkin coral rather than a second amber; lilac a touch deeper; and
+trips joining day trips in cyan instead of a blue of their own. Colour still never speaks alone:
+every kind carries its icon and its name.
 
 **Sections.** `base.html` works out which part of the site a page belongs to from the view that
 drew it and puts `in-ideas`, `in-plans` and so on on the `<body>`; the stylesheet sets `--accent`
@@ -194,6 +205,28 @@ How they are built, since the content policy allows no inline style and no scrip
   lit. With more contrast, the blur, bloom and scanlines go. With forced colours, a screen that is
   only a picture is left out and Next up keeps its words in a plain box; on paper the same.
 
+## Small things
+
+The page is modern first and uses the old screens on purpose, so it is sparing with them. Beyond
+the green screens there are only a few small details, each where it means something; none moves
+for more than a moment, and none asks to be looked at.
+
+- **Afterglow.** Whatever lights up (a card, a button, the box being typed in, the chat's box)
+  does so at once and fades out over a second, falling fast and then lingering, as a tube's
+  glow did. `--afterglow` and `--glow-in` in the stylesheet.
+- **OK.** A form that worked says so the way an old machine answered a command: a small green
+  OK before the words.
+- **The caret** in any box is phosphor green, and **selected text** is in inverse video, dark
+  on green.
+- **Cursors rest.** The cursor after the name, and those on the screens, blink for a few seconds
+  when a page opens and then stay lit, so nothing blinks at you while you read.
+- **A lit tile.** The icon beside a page's title sits on a small screen of its part's colour,
+  with a faint raster of its own.
+- **Landing.** Where a link on the same page lands ("4 more on the radar", the settings index)
+  lights up and fades.
+- **On paper.** A printed page is green-bar paper, with tractor-feed holes and a perforation
+  down both edges.
+
 ## Page by page
 
 - **The bar.** On a phone the five everyday places (Home, Chat, Ideas, Plans, To do) are a tab
@@ -230,8 +263,10 @@ How they are built, since the content policy allows no inline style and no scrip
 - Nothing is said by colour alone: the chat tells voices apart by side and face; status lights
   differ in shape and carry words; kinds and statuses are written out.
 - `prefers-reduced-motion` stops the cursors, the typing dots, the breathing dots, the screens
-  switching on, the face's blink, the radar's sweep and the 404's flicker. `prefers-contrast:
-  more` lifts secondary text and edges and takes away the glow, the blur and the scanlines.
+  switching on, the face's blink, the radar's sweep, the 404's flicker, the afterglow and the
+  landing glow. `prefers-contrast:
+  more` lifts secondary text and edges and takes away the glow, the blur and the scanlines,
+  the tiles' raster included.
   Forced colours keep dots, boxes, dates and faces outlined, leave out the screens that are only
   pictures, and keep Next up's words in a plain box.
 - Words on a green screen are at least 1.2rem; dim phosphor is 7.6:1 on the tube, normal and
@@ -252,6 +287,9 @@ How they are built, since the content policy allows no inline style and no scrip
 - At most one green screen to a page, and only where it shows something true. VT323 and blur
   stay on the screens, and scanlines on the screens and in the home page's glow; everywhere else
   the page is sharp and modern.
+- A new colour is measured against the others that share its pages, for typical sight and for
+  deuteranopia and protanopia, before it is added.
+- A new small thing has to mean something where it is, and may not move for more than a moment.
 - A new colour, face, glow or motion goes here first, with the reason.
 
 ## Left for later

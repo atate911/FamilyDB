@@ -55,10 +55,12 @@ older than what is installed. It gets a date when it is released.
   phosphor green glows only where attention belongs (the button to press, the box
   being typed in, what is next, what is live), each part of the site and each kind
   of idea has its own colour, a tab bar sits under the thumb on a phone, and a month
-  prints as green-bar paper. Its few pictures are 1980s green-screen monitors: what
-  is next on the home page, beside a radar of everything coming; the sign-in; the
-  day's spend, which turns amber near the limit; and the page that is not there.
-  `docs/STYLE.md` says what each choice is for.
+  prints as green-bar paper, tractor-feed holes and all. The colours are tuned so
+  no two that share a page are easily confused, colour-blind eyes included. Its few
+  pictures are 1980s green-screen monitors: what is next on the home page, beside a
+  radar of everything coming; the sign-in; the day's spend, which turns amber near
+  the limit; and the page that is not there. `docs/STYLE.md` says what each choice
+  is for.
 - **Set up from that page.** The keys, the models, Telegram (taken up within
   seconds, no restart), Google Calendar (connected from the page, with no laptop
   needed), where home is (found on the map), the timezone and the spending
