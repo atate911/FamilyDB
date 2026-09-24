@@ -133,7 +133,12 @@ IN_TURN = timedelta(minutes=10)
 
 
 def lines(settings: Any) -> dict[str, str]:
-    """Every event's wording now: the family's rewrite, else the persona's line, else plain."""
+    """Every event's wording now: the family's rewrite, else the persona's line, else plain.
+
+    No persona means plain throughout, as it does for the chat: the family's rewrites are kept
+    and come back when a persona is chosen again."""
+    if settings.persona == personas.NONE:
+        return {name: event.plain for name, event in EVENTS.items()}
     chosen = personas.lines(settings.persona)
     own = settings.voice_lines or {}
     return {

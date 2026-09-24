@@ -395,6 +395,7 @@ def personality_page(
             rewritten=bool(live.persona_text.strip()),
             about=about,
             said_lines=said_lines,
+            plain=live.persona == personas.NONE,
             tokens=(len(personas.text_for(live)) + len(live.about_family)) // CHARS_PER_TOKEN,
             limits={
                 name: Settings.model_fields[name].metadata[0].max_length

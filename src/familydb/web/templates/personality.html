@@ -60,6 +60,12 @@
         Each box shows her line; type over it to use your own. A reminder or a follow-up that
         comes due while you are talking to her is mentioned in her reply instead.
       </p>
+      {% if plain %}
+        <p class="muted">
+          With no persona these are said plainly, as shown; your own lines are kept for when a
+          persona is chosen again.
+        </p>
+      {% endif %}
       {% for line in said_lines %}
         <div class="setting">
           <label for="l-{{ line.event }}">{{ line.label }}</label>

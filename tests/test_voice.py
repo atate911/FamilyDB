@@ -25,6 +25,9 @@ def test_plain_then_hers_then_the_family_s(settings) -> None:
     )
     own = settings.model_copy(update={"voice_lines": {"reminder": "Psst: {title}, #{task}."}})
     assert voice.say(own, "reminder", **facts) == "Psst: Buy paper towels, #4."
+    # no persona is plain throughout, the family's own lines included, which are kept for later
+    own_but_plain = own.model_copy(update={"persona": "none"})
+    assert voice.say(own_but_plain, "reminder", **facts) == voice.say(plain, "reminder", **facts)
 
 
 def test_a_line_that_cannot_be_used_is_said_plainly(settings) -> None:
