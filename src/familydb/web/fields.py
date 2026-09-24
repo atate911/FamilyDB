@@ -14,7 +14,6 @@ import typing
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from familydb import personas
 from familydb.agent.providers.prices import suggestions
 from familydb.config import Settings
 from familydb.store.settings import BEHAVIOUR
@@ -137,12 +136,6 @@ GROUPS: tuple[tuple[str, str, tuple[Field, ...]], ...] = (
         "Who answers",
         "Which model writes the replies, and which one does the looking up.",
         (
-            field(
-                "persona",
-                "Personality",
-                "Who the assistant is in chat: her name and how she speaks. Empty for none.",
-                choices=("", *personas.available()),
-            ),
             field("provider", "Chat model company", "Who answers a message in the chat."),
             field(
                 "worker_provider",

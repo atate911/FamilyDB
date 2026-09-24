@@ -14,7 +14,6 @@ from familydb.store.db import from_json, to_json, utcnow_iso
 
 # What the page may change. Anything not named here stays wherever it already lives.
 BEHAVIOUR = (
-    "persona",
     "provider",
     "worker_provider",
     "provider_fallback",
@@ -58,7 +57,10 @@ BEHAVIOUR = (
     "log_level",
 )
 SECRETS = ("anthropic_api_key", "openai_api_key", "gemini_api_key", "telegram_bot_token")
-EDITABLE = frozenset(BEHAVIOUR) | frozenset(SECRETS)
+# Who the assistant is and who the family are: long texts with a page of their own
+# (/settings/personality), logged as "rewritten" rather than word for word.
+PROFILE = ("persona", "persona_text", "about_family")
+EDITABLE = frozenset(BEHAVIOUR) | frozenset(SECRETS) | frozenset(PROFILE)
 
 
 def overrides(conn: sqlite3.Connection) -> dict[str, Any]:

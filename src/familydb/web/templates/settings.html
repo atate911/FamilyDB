@@ -51,6 +51,11 @@
     within a few seconds: the status page says whether Telegram took it.
   </p>
 
+  <p>
+    <a href="{{ url_for('settings.personality') }}">Personality and family</a>: who the
+    assistant is, and who you are, in your own words.
+  </p>
+
   <section class="panel" id="keys">
     <h2>API keys</h2>
     <p class="muted">
@@ -255,6 +260,8 @@
             <strong>{{ line.key }}</strong>
             {% if line.secret %}
               replaced
+            {% elif line.long %}
+              rewritten
             {% else %}
               {{ line.old }} → {{ line.new }}
             {% endif %}

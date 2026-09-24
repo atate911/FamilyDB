@@ -186,7 +186,7 @@ def test_vera_speaks_first_and_the_job_follows(conn, settings, family) -> None:
 def test_no_persona_leaves_only_the_job(conn, settings, family) -> None:
     from familydb.agent.prompt import build_system_blocks
 
-    plain = settings.model_copy(update={"persona": ""})
+    plain = settings.model_copy(update={"persona": "none"})
     first = build_system_blocks(conn, plain)[0].text
     assert first.startswith("You are the private planning assistant") and "Vera" not in first
 

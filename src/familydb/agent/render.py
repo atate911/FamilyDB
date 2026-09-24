@@ -79,6 +79,10 @@ def render_family_context(family: list[Member], settings: Settings) -> str:
             lines.append(f"- {member.display_name} ({member.role})")
     if len(lines) == 1:
         lines.append("- (no members configured yet)")
+    about = settings.about_family.strip()
+    if about:
+        # In their own words, from the Personality page. Stable, so it belongs in the prefix.
+        lines.append(f"About the family, in their words:\n{about}")
     lines.append(f"Home area: {settings.home_area or 'not set'}")
     lines.append(f"Timezone: {settings.tz}")
     calendar = "connected" if calendar_available(settings) else "not connected"
