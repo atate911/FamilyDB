@@ -19,9 +19,23 @@ older than what is installed. It gets a date when it is released.
   address, opening hours, booking link, price notes, a geocoded travel estimate.
 - **Keeps the calendar.** Confirmed plans are created, moved and cancelled on the
   shared Google Calendar from chat, and free time is read back live.
-- **Answers "what should we do this weekend?"** A staged engine checks every idea
-  against the free time, the forecast, the opening hours and the travel time,
-  searches for what is on that weekend, and logs every verdict.
+- **Keeps the things to do.** "Remind me on Tuesday that we need paper towels"
+  is a task with a reminder, sent in the chat it was asked in; "one of these
+  Saturday mornings" is a task with no invented date. A page lists them, and
+  a reminder sent late after the bot was off says when it was due.
+- **Answers "what should we do?" for the time asked about:** right now, tonight,
+  Saturday morning or this weekend. A staged engine checks every idea against
+  the free time in minutes, the forecast, the opening hours and the travel
+  time, says when each option could actually start, searches for what is on,
+  and logs every verdict.
+- **Knows where the family is when a phone says so.** A location shared on
+  Telegram, or the position the web page's chat sends with a message (the
+  browser asks first), is used for three hours: travel is measured from there
+  and discovery searches near it.
+- **Speaks as Vera.** A personality, and a description of the family, both
+  editable on the settings page. Everything said unasked (reminders, "how was
+  it?", notices) is written in her words by code, and is carried by her reply
+  instead when the family is already talking to her.
 - **Speaks first.** A Thursday digest of the weekend's options, and a "how was
   it?" the morning after a plan.
 - **Runs on OpenAI's GPT-6 Luna by default,** the cheapest capable model of the
@@ -60,11 +74,12 @@ puts the code in `/opt/familydb`, creates the service account, hands over to
 touches anything it prints what it will change on the machine and why, and what
 it will not touch, and asks.
 
-The installer asks two things: the domain name the page will be reached at, if
-any, and your name as the first family member. With a domain it puts the page
-behind HTTPS (Caddy, in Docker or on the machine). It keeps the data folder
-readable by the bot alone and schedules a nightly backup. Everything else is set
-on the page, whose home lists what is left to do.
+The installer asks one thing: the domain name the page will be reached at, if
+any. With a domain it puts the page behind HTTPS (Caddy, in Docker or on the
+machine), which is also what lets a phone's browser share its location. It
+keeps the data folder readable by the bot alone and schedules a nightly backup.
+Everything else is set on the page, whose home lists what is left to do,
+starting with adding yourself on the Family page.
 
 Getting the code onto a bare server is a step of its own, because the
 repository is private: a deploy key, a token in the environment, or a copy you
@@ -111,14 +126,18 @@ web server discarded the proxy's headers before the page saw them.
 
 What no test covers is a real conversation with a real model, a real Telegram
 bot or a real Google account: those need keys, and they are what this alpha is
-for. Connecting Google from the page in particular is new and has not yet been
+for. `uv run python -m evals` runs the family's own requests against a real
+model and grades what it did, for a few cents; it has not yet been run. Connecting Google from the page in particular is new and has not yet been
 tried against Google itself; `familydb google auth` on a laptop is the fallback.
 
 ### Known limits
 
 - The suggestion engine has been exercised against fixtures and by hand, not yet
   across a real season of weekends.
-- Travel time is a straight-line estimate times a road factor, not real routing.
+- Travel time is a straight-line estimate times a road factor, not real routing,
+  and the forecast is per day, not per hour.
+- The location a phone shares is named with OpenStreetMap's free reverse lookup,
+  which has not yet been reached from a real install.
 - One process at a time writes the database. Run one `familydb run`.
 - The daily spending limit is an estimate from a price table, not the bill. Set a
   limit on the API key with the company as well.
