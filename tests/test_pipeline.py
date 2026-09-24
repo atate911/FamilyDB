@@ -181,7 +181,7 @@ def test_suggest_turn_runs_discovery_inside_the_chat_turn(settings, thursday_clo
         "web_search",
         "web_fetch",
     ]
-    assert api.requests[3]["system"][0]["text"].startswith("You are FamilyDB")
+    assert api.requests[3]["system"][0]["text"].startswith("# Who you are\n\nYou are Vera")
     # The suggest result carried the find to the chat model, and the cache is warm.
     tool_result = api.requests[3]["messages"][-1]["content"][0]
     assert tool_result["type"] == "tool_result"

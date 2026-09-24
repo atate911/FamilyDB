@@ -38,6 +38,7 @@ if TYPE_CHECKING:
 # Every part a request can have, what a person would call it, and which layer of
 # docs/AI_CALLS.md it belongs to: the cached prefix, or the turn itself.
 SECTIONS: dict[str, tuple[str, str]] = {
+    "personality": ("who the assistant is", "prefix"),
     "instructions": ("instructions", "prefix"),
     "family": ("who the family is", "prefix"),
     "ideas": ("the idea list", "prefix"),
@@ -66,9 +67,11 @@ def prefix(
 ) -> tuple[list[SystemBlock], dict[str, int]]:
     """The cached part of the request. Nothing in it may change from one call to the next."""
     if call.prompt == "system":
-        instructions, family, idea_list = chat_prefix(conn, settings)
+        persona, instructions, family, idea_list = chat_prefix(conn, settings)
         sizes = {"instructions": len(instructions), "family": len(family), "ideas": len(idea_list)}
-        return chat_blocks(instructions, family, idea_list), sizes
+        if persona:
+            sizes["personality"] = len(persona)
+        return chat_blocks(persona, instructions, family, idea_list), sizes
     instructions = load_prompt(call.prompt)
     home = f"Home area: {settings.home_area or 'not set'}\nTimezone: {settings.tz}"
     blocks = [SystemBlock(instructions, cacheable=True), SystemBlock(home, cacheable=True)]
