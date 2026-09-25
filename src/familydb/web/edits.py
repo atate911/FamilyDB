@@ -66,7 +66,8 @@ def _app() -> App:
 
 
 def run(name: str, values: dict[str, Any]) -> tuple[dict[str, Any] | None, str | None]:
-    """Run one tool as whoever the form said was asking. Returns its result, or what went wrong.
+    """Run one tool as whoever is signed in, or, while the family shares a password and the page
+    cannot tell, whoever the form said was asking. Returns its result, or what went wrong.
 
     The tool owns its transaction, so a half-done change is not a thing that can happen here.
     A tool that is not available (no calendar) hands back a reason rather than an error, and it
@@ -74,7 +75,7 @@ def run(name: str, values: dict[str, Any]) -> tuple[dict[str, Any] | None, str |
     """
     app = _app()
     with closing(app.connect()) as conn:
-        who = _remember(request.form.get("who", ""))
+        who = auth.visitor().name or _remember(request.form.get("who", ""))
         ctx = ToolContext(
             conn=conn,
             settings=app.settings,

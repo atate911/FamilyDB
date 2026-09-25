@@ -101,11 +101,15 @@ def _stored() -> dict[str, Any]:
 
 
 def _save(values: dict[str, Any]) -> list[str]:
-    """Write the changes and log them. Returns the keys that actually moved."""
+    """Write the changes and log them, with who made them when the page knows. Returns the keys
+    that actually moved."""
     app = _app()
     source = f"web {auth.client_address()}"
+    me = auth.visitor().member
     with closing(app.connect()) as conn, transaction(conn):
-        changed = settings_store.set_many(conn, values, source=source)
+        changed = settings_store.set_many(
+            conn, values, changed_by=me.id if me else None, source=source
+        )
     if changed:
         app.refresh()  # the page it redirects to should already show the new state
         log.info("settings changed from the page: %s", ", ".join(changed))
@@ -220,6 +224,7 @@ def page(
         overrides = settings_store.overrides(conn)
         history = settings_store.history(conn, limit=HISTORY_LIMIT)
         chats = status_page.digest_chats(conn, live.tzinfo)
+        personal = auth.own_passwords(conn)
     groups = [
         {
             "title": title,
@@ -259,7 +264,10 @@ def page(
             history=[views.change_row(line, app.settings.tzinfo) for line in history],
             said=said,
             error=error,
-            needs_password=auth.password_in_use(live),
+            needs_password=auth.visitor().signed_in,
+            # Whose password is typed again before a key is shown: their own, or the family's.
+            own_password=auth.visitor().login is not None,
+            personal=personal,
             google=google_panel(live),
             password={
                 "chosen": auth.password_chosen(live),
@@ -336,7 +344,8 @@ def save_keys() -> Response | tuple[str, int]:
 
 @bp.post("/settings/reveal")
 def reveal() -> tuple[str, int]:
-    """Show one key, once, after the family password is typed again.
+    """Show one key, once, after the password this browser signed in with is typed again: the
+    person's own, or the family's while they share one.
 
     Signing in weeks ago is not enough: a page left open on a phone should not hand a key to
     whoever picks it up. Guessing here is counted and locked out the same way signing in is.
@@ -353,11 +362,11 @@ def reveal() -> tuple[str, int]:
     now = app.clock.now()
     if lockout.locked(attempt, now):
         return page(error=LOCKED_OUT, status=429)
-    if auth.password_in_use(app.settings):
+    if auth.visitor().signed_in:
         given = request.form.get("password", "")
         if not given:
             return page(error=NEEDS_PASSWORD, status=400)
-        if not auth.password_matches(app.settings, given):
+        if not auth.confirms(given):
             lockout.failed(attempt, now)  # counted apart from signing in, and logged there
             return page(error=WRONG_PASSWORD, status=401)
         lockout.passed(attempt)
@@ -446,7 +455,11 @@ PASSWORD_SHORT = (
 )
 PASSWORD_LONG = "That is longer than a password needs to be."
 PASSWORD_CURRENT = "Type the password you use now, to show it is you."
-MAX_PASSWORD = 200
+NO_FAMILY_PASSWORD = (
+    "Everybody signs in as themselves now, so there is no family password to change. Change "
+    "your own on the Your password page."
+)
+MAX_PASSWORD = passwords.MAX_LENGTH
 # The family's first choice may skip typing the installer's password again, which they have only
 # just typed to sign in, but only within this long of signing in with it.
 FIRST_CHOICE_MINUTES = 60
@@ -475,6 +488,9 @@ def change_password() -> Response | tuple[str, int]:
     back = auth.setup_return(request.form.get("then"))
     if (complaint := auth.refused()) is not None:
         return _answer(back, error=complaint)
+    if auth.visitor().kind == "person":
+        # Somebody signed in as themselves, so the shared password already opens nothing.
+        return _answer(back, error=NO_FAMILY_PASSWORD, status=409)
     new, again = request.form.get("new", ""), request.form.get("again", "")
     if new != again:
         return _answer(back, error=PASSWORD_TWICE)
@@ -632,7 +648,8 @@ def restore_personality() -> Response | tuple[str, int]:
 
 @bp.post("/settings/sign-out-everyone")
 def sign_out_everyone() -> Response | tuple[str, int]:
-    """End every session, on every device, this one included, after the password is typed again.
+    """End every session, on every device, this one included, after the password this browser
+    signed in with is typed again.
 
     For a phone that went missing or a password that was shared too widely: every login cookie
     and every known-browser mark was signed with the key this replaces.
@@ -646,8 +663,8 @@ def sign_out_everyone() -> Response | tuple[str, int]:
     now = app.clock.now()
     if lockout.locked(attempt, now):
         return page(error=LOCKED_OUT, status=429)
-    if auth.password_in_use(app.settings):
-        if not auth.password_matches(app.settings, request.form.get("password", "")):
+    if auth.visitor().signed_in:
+        if not auth.confirms(request.form.get("password", "")):
             lockout.failed(attempt, now)
             return page(error=WRONG_PASSWORD, status=401)
         lockout.passed(attempt)

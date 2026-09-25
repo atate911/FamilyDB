@@ -211,7 +211,9 @@ if [ "$RUN_INSTALL" = 1 ]; then
   if [ "$MODE" = venv ]; then
     plan_item "Write /etc/systemd/system/familydb.service and enable it" \
       "so the bot starts when the machine boots, and is restarted if it ever stops"
-    plan_item "Install Caddy in front of the web page, and open ports 80 and 443 if ufw is on" \
+    web_ports="80 and 443"
+    case "${WEB_PUBLIC_PORT:-443}" in 443) ;; random) web_ports="80 and a port picked at random" ;; *) web_ports="80 and ${WEB_PUBLIC_PORT}" ;; esac
+    plan_item "Install Caddy in front of the web page, and open ports ${web_ports} if ufw is on" \
       "so the page is on HTTPS at a link any browser can open, and the password never crosses the network in the clear"
   fi
   plan_item "Schedule a nightly backup of the database, kept for two weeks" \
@@ -501,7 +503,7 @@ FORWARD_VARS=(
   PROVIDER ANTHROPIC_API_KEY OPENAI_API_KEY GEMINI_API_KEY
   FAMILYDB_TZ HOME_AREA HOME_LAT HOME_LON WEATHER_UNITS
   TELEGRAM_BOT_TOKEN WEB_ENABLED WEB_HOST WEB_PORT WEB_PASSWORD WEB_TOOLS_ENABLED
-  WEB_DOMAIN DIGEST_CHAT_ID BACKUPS ADMIN_NAME NO_COLOR TERM FAMILYDB_AGAIN
+  WEB_DOMAIN WEB_PUBLIC_PORT DIGEST_CHAT_ID BACKUPS ADMIN_NAME NO_COLOR TERM FAMILYDB_AGAIN
   HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy
   SSL_CERT_FILE SSL_CERT_DIR REQUESTS_CA_BUNDLE CURL_CA_BUNDLE GIT_SSL_CAINFO
 )
@@ -582,7 +584,7 @@ if [ "$DRY_RUN" = 1 ]; then
   exit 0
 fi
 
-WEB_LINE=""; host=""; port=""; domain=""; password=""
+WEB_LINE=""; host=""; port=""; domain=""; password=""; public_port=443
 if as_root test -r "${TARGET}/.env"; then
   read_env() { as_root grep -E "^${1}=" "${TARGET}/.env" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d "'\"" || true; }
   enabled="$(read_env WEB_ENABLED)"
@@ -590,8 +592,11 @@ if as_root test -r "${TARGET}/.env"; then
   host="$(read_env WEB_HOST)"
   domain="$(read_env WEB_DOMAIN)"
   password="$(read_env WEB_PASSWORD)"
-  if [ -n "$domain" ]; then
+  public_port="$(read_env WEB_PUBLIC_PORT)"; public_port="${public_port:-443}"
+  if [ -n "$domain" ] && [ "$public_port" = 443 ]; then
     WEB_LINE="https://${domain}/"
+  elif [ -n "$domain" ]; then
+    WEB_LINE="https://${domain}:${public_port}/"
   elif [ "$enabled" = true ]; then
     shown="${host:-127.0.0.1}"
     case "$shown" in 0.0.0.0|::) shown="$(hostname -I 2>/dev/null | awk '{print $1}')" ;; esac
@@ -618,16 +623,16 @@ if [ -n "$WEB_LINE" ] && [ -n "$domain" ]; then
   say "    ${B}${WEB_LINE}${OFF}"
   [ -n "$password" ] && say "    password: ${B}${password}${OFF}"
   say ""
-  say "The page then walks you through the rest, starting with a password of your own."
+  say "The page then walks you through the rest: you, then a password of your own."
   # What a browser will make of it, found by asking the way a browser would.
-  if curl -sS --max-time 8 -o /dev/null "https://${domain}/healthz" 2>/dev/null; then
+  if curl -sS --max-time 8 -o /dev/null "${WEB_LINE}healthz" 2>/dev/null; then
     :
-  elif curl -ksS --max-time 8 -o /dev/null "https://${domain}/healthz" 2>/dev/null; then
+  elif curl -ksS --max-time 8 -o /dev/null "${WEB_LINE}healthz" 2>/dev/null; then
     note "The browser warns once that the connection is not private, because the certificate is"
     note "this server's own. Choose Advanced, then continue: it is still encrypted."
   else
     note "If the page does not open, your provider's own firewall is probably in the way. In its"
-    note "control panel, allow TCP ports 80 and 443, then run: sudo ${TARGET}/scripts/maintain.sh https"
+    note "control panel, allow TCP ports 80 and ${public_port}, then run: sudo ${TARGET}/scripts/maintain.sh https"
   fi
   say ""
 elif [ -n "$WEB_LINE" ]; then

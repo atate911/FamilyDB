@@ -16,7 +16,8 @@ from uuid import uuid4
 
 import typer
 
-from familydb import __version__, passwords, privacy
+from familydb import __version__, passwords, privacy, roles
+from familydb import family as family_rules
 from familydb.agent.history import load_history
 from familydb.agent.providers.base import Message, TurnRequest
 from familydb.agent.render import render_idea_line, render_user_turn
@@ -32,7 +33,7 @@ from familydb.config import Settings, apply_overrides, load_settings
 from familydb.dates import utc_iso
 from familydb.errors import ConfigError, FamilyDBError
 from familydb.integrations import google_calendar
-from familydb.store import calls, db, ideas, members, messages
+from familydb.store import calls, db, ideas, logins, members, messages
 from familydb.store import settings as settings_store
 from familydb.store.members import Member
 from familydb.tools import ToolContext
@@ -133,22 +134,64 @@ def config() -> None:
 
 
 @app.command("password")
-def password() -> None:
-    """Make up a new family password for the web page, print it once, and sign everyone out.
+def password(
+    name: str | None = typer.Argument(
+        None,
+        help="Whose, by the name on the family list. Left out: the first admin who signs in, "
+        "or the family password while everybody still shares one.",
+    ),
+) -> None:
+    """A new password for the web page, printed once, for one nobody remembers.
 
-    For a password nobody remembers: whoever can run this on the server is let back in, and the
-    family then chooses their own again on the page. The old one stops working at once.
+    Once people sign in as themselves it is a starting password for one person, the first admin
+    unless a name is given: they sign in with it and choose their own, and are signed out
+    wherever they were. While the family still shares one password, it replaces that one and
+    signs everyone out. Either way whoever can run this on the server is let back in, and the old
+    password stops working at once.
     """
     application = build_app()
-    fresh = passwords.make_up()
-    with closing(_ready(application)) as conn, db.transaction(conn):
-        settings_store.set_many(
-            conn,
-            {"web_password_hash": passwords.hash_password(fresh)},
-            source="familydb password",
-        )
-    typer.echo(f"The family password is now: {fresh}")
-    typer.echo("Sign in with it, then choose your own under Settings, Family password.")
+    with closing(_ready(application)) as conn:
+        personal = logins.admin_can_sign_in(conn)
+        if name is None and not personal:
+            fresh = passwords.make_up()
+            with db.transaction(conn):
+                settings_store.set_many(
+                    conn,
+                    {"web_password_hash": passwords.hash_password(fresh)},
+                    source="familydb password",
+                )
+            typer.echo(f"The family password is now: {fresh}")
+            typer.echo("Sign in with it, then choose your own password: the setup page asks.")
+            return
+        if name is None:
+            person: Member | None = logins.admins_signing_in(conn)[0]
+        else:
+            person = members.find_by_name(conn, name)
+        if person is None:
+            typer.secho(f"There is nobody called {name} on the family list.", err=True)
+            raise typer.Exit(1)
+        if not personal and person.role != "admin":
+            typer.secho(FIRST_OWN_PASSWORD, err=True)
+            raise typer.Exit(1)
+        try:
+            made = family_rules.give_starting_password(
+                conn, person.id, by=None, now=utc_iso(application.clock.now())
+            )
+        except family_rules.FamilyError as exc:
+            typer.secho(str(exc), err=True)
+            raise typer.Exit(1) from exc
+    typer.echo(f"{person.display_name}'s password is now: {made}")
+    typer.echo(
+        f"A starting password: {person.display_name} signs in with it, as {person.display_name}, "
+        "and chooses their own."
+    )
+
+
+FIRST_OWN_PASSWORD = (
+    "Nobody signs in as themselves yet, and the first one to must be an admin: give an admin a "
+    "password first (familydb password THEIR_NAME), or leave the name out for a new family "
+    "password."
+)
 
 
 @db_app.command("migrate")
@@ -206,7 +249,7 @@ def db_backup(dest: Path = typer.Argument(..., help="Path of the backup file to 
 @members_app.command("add")
 def members_add(
     name: str = typer.Argument(..., help="Display name, e.g. Sam."),
-    role: str = typer.Option("member", "--role", help="admin, member or kid."),
+    role: str = typer.Option("parent", "--role", help="admin, parent or kid."),
     channel: str | None = typer.Option(None, "--channel", help="e.g. telegram"),
     channel_user_id: str | None = typer.Option(
         None, "--channel-user-id", help="The person's id on that channel."
@@ -240,12 +283,16 @@ def members_list(
     application = build_app()
     with closing(_ready(application)) as conn:
         rows = members.list_all(conn, active_only=not include_inactive)
+        signs_in = logins.by_member(conn)
     if not rows:
         typer.echo("no members yet; add one with: familydb members add NAME --role admin")
         return
     for member in rows:
         where = f"{member.channel}:{member.channel_user_id}" if member.channel else "no channel"
         flag = "" if member.active else " (inactive)"
+        login = signs_in.get(member.id)
+        if login is not None and roles.may(member.role, "sign_in"):
+            flag += " (starting password)" if login.temporary else " (signs in)"
         typer.echo(f"#{member.id} {member.display_name} [{member.role}] {where}{flag}")
 
 

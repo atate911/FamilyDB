@@ -54,7 +54,7 @@ def seed(conn) -> Household:
         sam = members.add(
             conn, "Sam", "admin", channel="telegram", channel_user_id="1001", now=NOW_ISO
         )
-        members.add(conn, "Alex", "member", channel="telegram", channel_user_id="1002", now=NOW_ISO)
+        members.add(conn, "Alex", "parent", channel="telegram", channel_user_id="1002", now=NOW_ISO)
         members.add(conn, "the girls", "kid", now=NOW_ISO)
 
         def idea(title: str, kind: str, **fields):

@@ -33,7 +33,8 @@ from familydb.store import knocks as knock_store
 from familydb.store import members as member_store
 from familydb.web import auth, views
 from familydb.web import status as status_page
-from familydb.web.settings import COMPANIES, current_password_needed, google_panel
+from familydb.web.family import own_form
+from familydb.web.settings import COMPANIES, google_panel
 
 bp = Blueprint("setup", __name__)
 
@@ -144,14 +145,11 @@ def step(name: str) -> str:
 
 
 def _password(app: App, conn: Any) -> dict[str, Any]:
-    live = app.settings
+    """Your own password: the first admin's, which ends the shared one, or yours to change."""
     return {
-        "in_use": auth.password_in_use(live),
-        "password": {
-            "chosen": auth.password_chosen(live),
-            "needs_current": current_password_needed(live),
-            "least": auth.MIN_PASSWORD,
-        },
+        "personal": auth.own_passwords(conn),
+        "admin": _admin(conn),
+        "own": own_form(conn),
     }
 
 
@@ -247,6 +245,7 @@ def _family(app: App, conn: Any) -> dict[str, Any]:
     return {
         "people": member_store.list_all(conn),
         "roles": member_store.ROLES,
+        "role_words": views.ROLE_WORDS,
         "bot": status_page.telegram_name(app),
         "knocks": [
             views.knock_row(knock, live.tzinfo)

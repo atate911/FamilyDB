@@ -1,16 +1,20 @@
 {% extends "base.html" %}
 {% from "_ui.html" import icon, kind_label, chip %}
 {% block title %}{{ idea.title }} · {{ site_title }}{% endblock %}
+{# Who is doing this: asked only while the family shares a password. Somebody signed in as
+   themselves is who, and the page knows it. #}
 {% macro asking(id) %}
-  <div class="field">
-    <label for="who-{{ id }}">Who</label>
-    <select id="who-{{ id }}" name="who">
-      <option value="">nobody in particular</option>
-      {% for name in family %}
-        <option value="{{ name }}" {{ 'selected' if name == who }}>{{ name }}</option>
-      {% endfor %}
-    </select>
-  </div>
+  {% if not visitor().member %}
+    <div class="field">
+      <label for="who-{{ id }}">Who</label>
+      <select id="who-{{ id }}" name="who">
+        <option value="">nobody in particular</option>
+        {% for name in family %}
+          <option value="{{ name }}" {{ 'selected' if name == who }}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  {% endif %}
 {% endmacro %}
 {% block content %}
   <nav class="crumbs" aria-label="Breadcrumb">

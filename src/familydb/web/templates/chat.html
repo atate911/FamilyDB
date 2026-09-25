@@ -59,13 +59,18 @@
               placeholder="what should we do this weekend?">{{ typed or again or '' }}</textarea>
     <div class="ask-bar">
       <div class="who">
-        <label for="who">From</label>
-        <select id="who" name="who" required>
-          {% if not who %}<option value="">who is asking?</option>{% endif %}
-          {% for name in family %}
-            <option value="{{ name }}" {{ 'selected' if name == who }}>{{ name }}</option>
-          {% endfor %}
-        </select>
+        {% if visitor().member %}
+          {# Signed in as themselves, so there is nobody else they could be asking as. #}
+          <span class="from">From <strong>{{ who }}</strong></span>
+        {% else %}
+          <label for="who">From</label>
+          <select id="who" name="who" required>
+            {% if not who %}<option value="">who is asking?</option>{% endif %}
+            {% for name in family %}
+              <option value="{{ name }}" {{ 'selected' if name == who }}>{{ name }}</option>
+            {% endfor %}
+          </select>
+        {% endif %}
       </div>
       {# Shown by locate.js; with scripts off there is no position to send, so no box. #}
       <div class="locate" id="locate" hidden>

@@ -7,6 +7,13 @@
 # certificates, which Caddy renews by itself), so no browser warns; a private one, or a Caddy too
 # old to ask for it, gets one Caddy signs itself, which each browser warns about once. Either way
 # the password never crosses the network in the clear, and nobody has to open a tunnel.
+#
+# The page is on 443 unless PUBLIC_PORT says otherwise. Any other port keeps it out of the scans
+# that sweep the internet's usual ports, 443 above all; it is not a lock, since a scan of every
+# port on this one machine still finds it, but it is far less often looked at. There Caddy serves
+# HTTPS on that port alone, answers nothing on 80 but a certificate authority checking this machine
+# (a redirect would give the port away), and asks for certificates only that way, the other way
+# needing 443.
 
 CADDYFILE=/etc/caddy/Caddyfile
 # Where the packaged Caddy keeps what it has been issued (its service runs with this HOME).
@@ -18,6 +25,12 @@ CERT_WAIT_SECONDS=90
 
 HTTPS_KIND=""     # after setup_https: public, internal or none
 HTTPS_BLOCKED=0   # after setup_https: 1 when it looked as if nothing outside could reach this machine
+PUBLIC_PORT="${PUBLIC_PORT:-443}"  # before setup_https: the port the page is served on
+# Where a port is picked at random: below the range Linux hands out for outgoing connections, and
+# never one of the thousand ports nmap tries unless told otherwise, the 24 of them in this range.
+RANDOM_PORT_FROM=20000
+RANDOM_PORT_TO=29999
+NMAP_FAVOURITES=" 20000 20005 20031 20221 20222 20828 21571 22939 23502 24444 24800 25734 25735 26214 27000 27352 27353 27355 27356 27715 28201 28211 29672 29831 "
 
 is_ipv4() { # a dotted IPv4 address, each part 0-255
   printf '%s' "$1" | grep -Eq '^([0-9]{1,3}\.){3}[0-9]{1,3}$' || return 1
@@ -72,30 +85,98 @@ caddy_from_its_own_repository() { # a current Caddy, from the repository Caddy's
   apt_install_noted -o Dpkg::Options::=--force-confold caddy >/dev/null 2>&1
 }
 
+public_url() { # public_url SITE - the address a browser opens, with the port unless it is 443
+  if [ "$PUBLIC_PORT" = 443 ]; then printf 'https://%s/' "$1"; else printf 'https://%s:%s/' "$1" "$PUBLIC_PORT"; fi
+}
+
+web_ports_rule() { # the ufw rule the page needs: 80 for the certificate, and the page's own port
+  printf '80,%s/tcp' "$PUBLIC_PORT"
+}
+
+port_listening() { # port_listening PORT - something on this machine listens on that TCP port
+  have ss && ss -ltnH 2>/dev/null | awk '{print $4}' | grep -qE "[:.]${1}\$"
+}
+
+random_public_port() { # a port at random: not a favourite of scanners, and not taken here
+  local tries=0 candidate
+  while [ "$tries" -lt 200 ]; do
+    tries=$((tries + 1))
+    candidate=$((RANDOM_PORT_FROM + (RANDOM * 32768 + RANDOM) % (RANDOM_PORT_TO - RANDOM_PORT_FROM + 1)))
+    case "$NMAP_FAVOURITES" in *" ${candidate} "*) continue ;; esac
+    port_listening "$candidate" && continue
+    printf '%s' "$candidate"
+    return 0
+  done
+  return 1
+}
+
+choose_public_port() { # choose_public_port WANTED APP_PORT - a port to serve on, or why not
+  local wanted="$1" app_port="$2"
+  case "$wanted" in
+    random) random_public_port || { printf 'no free port turned up at random; name one' >&2; return 1; }; return 0 ;;
+    ''|*[!0-9]*) printf '%s is not a port number' "$wanted" >&2; return 1 ;;
+  esac
+  [ "${#wanted}" -le 5 ] || { printf 'a port for the page is 443, or one from 1024 to 65535' >&2; return 1; }
+  wanted=$((10#$wanted))
+  if [ "$wanted" != 443 ] && { [ "$wanted" -lt 1024 ] || [ "$wanted" -gt 65535 ]; }; then
+    printf 'a port for the page is 443, or one from 1024 to 65535' >&2
+    return 1
+  fi
+  if [ "$wanted" = "$app_port" ]; then
+    printf 'port %s is where FamilyDB itself listens, behind Caddy; choose another' "$wanted" >&2
+    return 1
+  fi
+  printf '%s' "$wanted"
+}
+
 open_web_ports() { # ufw is the one firewall this knows; it says so when there may be another
+  local rule
+  rule="$(web_ports_rule)"
   if have ufw && as_root ufw status 2>/dev/null | grep -q "^Status: active"; then
     # Written down only when it was not there already: taking it away again must not close a
     # door somebody else opened.
-    as_root ufw status 2>/dev/null | grep -qE '^80,443/tcp' || ledger ufw "80,443/tcp"
-    if as_root ufw allow 80,443/tcp >/dev/null 2>&1; then
-      ok "Opened ports 80 and 443 in this machine's firewall."
+    as_root ufw status 2>/dev/null | grep -qE "^${rule}" || ledger ufw "$rule"
+    if as_root ufw allow "$rule" >/dev/null 2>&1; then
+      ok "Opened ports 80 and ${PUBLIC_PORT} in this machine's firewall."
     else
-      warn "Could not open ports 80 and 443 with ufw. Do it with: sudo ufw allow 80,443/tcp"
+      warn "Could not open ports 80 and ${PUBLIC_PORT} with ufw. Do it with: sudo ufw allow ${rule}"
     fi
   fi
 }
 
+close_old_web_ports() { # close_old_web_ports OLD_PORT - after a move, the rule for the old port
+  local old="$1" rule
+  [ -n "$old" ] && [ "$old" != "$PUBLIC_PORT" ] || return 0
+  rule="80,${old}/tcp"
+  have ufw && as_root ufw status 2>/dev/null | grep -qE "^${rule}" || return 0
+  # Only a rule the install opened. The new rule keeps 80 open, so this closes only the old port.
+  if ledger_has ufw "$rule" && as_root ufw delete allow "$rule" >/dev/null 2>&1; then
+    ok "Closed port ${old} in this machine's firewall; nothing listens there now."
+  else
+    note "Port ${old} is still open in this machine's firewall, and nothing listens there now."
+    note "If nothing else needs it: sudo ufw delete allow ${rule}"
+  fi
+}
+
 write_caddyfile() { # write_caddyfile SITE PORT HOW - HOW is domain, public-ip or internal
-  local site="$1" port="$2" how="$3" tls=""
+  local site="$1" port="$2" how="$3" tls="" global="" acme=""
+  if [ "$PUBLIC_PORT" != 443 ]; then
+    # HTTPS on its own port, and no redirect on 80 to tell a passing scan where that is.
+    global=$'{\n\thttps_port '"${PUBLIC_PORT}"$'\n\tauto_https disable_redirects\n}\n'
+    # A certificate authority checks this machine on 80 or on 443, never on another port, so
+    # only the check on 80 can work; Caddy listens there just while it is being checked.
+    acme=$'\t\t\tdisable_tlsalpn_challenge\n'
+  fi
   case "$how" in
-    public-ip) tls=$'\ttls {\n\t\tissuer acme {\n\t\t\tprofile shortlived\n\t\t}\n\t}\n' ;;
+    public-ip) tls=$'\ttls {\n\t\tissuer acme {\n\t\t\tprofile shortlived\n'"${acme}"$'\t\t}\n\t}\n' ;;
     internal) tls=$'\ttls internal\n' ;;
+    *) if [ -n "$acme" ]; then tls=$'\ttls {\n\t\tissuer acme {\n'"${acme}"$'\t\t}\n\t}\n'; fi ;;
   esac
   noting_replaced "$CADDYFILE"
   {
     printf '# FamilyDB, written by its installer. `sudo %s/scripts/maintain.sh https` writes it again.\n' \
       "${TARGET:-${REPO_ROOT:-/opt/familydb}}"
-    printf '%s {\n%s\treverse_proxy 127.0.0.1:%s\n}\n' "$site" "$tls" "$port"
+    printf '%s%s {\n%s\treverse_proxy 127.0.0.1:%s\n}\n' "$global" "$site" "$tls" "$port"
   } | as_root tee "$CADDYFILE" >/dev/null
 }
 
@@ -112,7 +193,7 @@ has_public_certificate() { # has_public_certificate SITE - Caddy holds one a bro
     | grep -q .; then
     return 0
   fi
-  curl -sS --max-time 5 -o /dev/null "https://${site}/healthz" 2>/dev/null
+  curl -sS --max-time 5 -o /dev/null "$(public_url "$site")healthz" 2>/dev/null
 }
 
 sounds_unreachable() { # Caddy's log says the certificate authority could not reach this machine
@@ -139,6 +220,11 @@ setup_https() { # setup_https SITE PORT - Caddy in front of 127.0.0.1:PORT for S
   if [ -f "$CADDYFILE" ] && ! grep -q -e '/usr/share/caddy' -e 'reverse_proxy 127.0.0.1' -e 'FamilyDB' "$CADDYFILE"; then
     warn "${CADDYFILE} already serves something else, so it was left alone."
     note "Add this to it yourself:  ${site} { reverse_proxy 127.0.0.1:${port} }"
+    return 1
+  fi
+  if [ "$PUBLIC_PORT" != 443 ] && port_listening "$PUBLIC_PORT" && ! grep -q "https_port ${PUBLIC_PORT}$" "$CADDYFILE" 2>/dev/null; then
+    warn "Something on this machine already listens on port ${PUBLIC_PORT}, so the page cannot."
+    note "Choose another: sudo ${TARGET:-${REPO_ROOT:-/opt/familydb}}/scripts/maintain.sh https --port random"
     return 1
   fi
   open_web_ports
@@ -173,18 +259,18 @@ setup_https() { # setup_https SITE PORT - Caddy in front of 127.0.0.1:PORT for S
   case "$how" in
     domain)
       HTTPS_KIND="public"
-      ok "Caddy serves https://${site}/ and gets its certificate once the name leads here."
+      ok "Caddy serves $(public_url "$site") and gets its certificate once the name leads here."
       ;;
     internal)
       HTTPS_KIND="internal"
-      ok "Caddy serves https://${site}/ with a certificate of its own."
+      ok "Caddy serves $(public_url "$site") with a certificate of its own."
       ;;
     public-ip)
       say "Asking Let's Encrypt for a certificate for ${site}. This can take a minute."
       while [ "$waited" -lt "$CERT_WAIT_SECONDS" ]; do
         if has_public_certificate "$site"; then
           HTTPS_KIND="public"
-          ok "https://${site}/ has a real certificate: no browser will warn."
+          ok "$(public_url "$site") has a real certificate: no browser will warn."
           return 0
         fi
         sleep 5
@@ -203,10 +289,13 @@ setup_https() { # setup_https SITE PORT - Caddy in front of 127.0.0.1:PORT for S
 say_how_to_open() { # say_how_to_open SITE - the lines a person needs to get to the page
   local site="$1"
   if [ "$HTTPS_BLOCKED" = 1 ]; then
-    warn "Nothing outside seems able to reach this server on ports 80 and 443."
+    warn "Nothing outside seems able to reach this server on ports 80 and ${PUBLIC_PORT}."
     note "Most providers have a firewall of their own, in their control panel (it may be called a"
-    note "firewall, a security group or networking). Allow TCP ports 80 and 443 there, then run:"
+    note "firewall, a security group or networking). Allow TCP ports 80 and ${PUBLIC_PORT} there, then run:"
     note "  sudo ${TARGET:-${REPO_ROOT:-/opt/familydb}}/scripts/maintain.sh https"
+  elif [ "$PUBLIC_PORT" != 443 ]; then
+    note "If the provider has a firewall of its own, in its control panel, allow TCP port"
+    note "${PUBLIC_PORT} there, and 80 too, which a certificate authority uses to check this machine."
   fi
   if [ "$HTTPS_KIND" = internal ]; then
     note "The browser warns the first time that the connection is not private: the certificate is"

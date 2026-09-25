@@ -140,15 +140,18 @@ Without uv: `python3 -m venv .venv && .venv/bin/pip install .` gives the same `.
 
 ## 3. First run checklist
 
-Open the page (section 10) and sign in with the family password. The home page has a "Finish
-setting up" list of what is missing, most important first, each with a link to where it is done:
+Open the page (section 10) and sign in with the password the installer printed. The home page has
+a "Finish setting up" list of what is missing, most important first, each with a link to where it
+is done:
 
 1. Yourself, as an admin, then the rest of the family (the Family page).
-2. A model key (settings, API keys). Until there is one, it saves what it is told but cannot answer.
-3. Where home is (settings, Home), for the weather and for what is on nearby (section 6).
-4. Google Calendar (settings, Google Calendar), so plans land on the family calendar (section 5).
-5. A Telegram bot (settings, API keys), so the family can message it from their phones (section 4).
-6. Only once there is a Telegram token: each person's Telegram id (the Family page).
+2. Your own password, which ends the installer's: from then on everybody signs in as themselves,
+   and you give each of them a starting password on the Family page.
+3. A model key (settings, API keys). Until there is one, it saves what it is told but cannot answer.
+4. Where home is (settings, Home), for the weather and for what is on nearby (section 6).
+5. Google Calendar (settings, Google Calendar), so plans land on the family calendar (section 5).
+6. A Telegram bot (settings, API keys), so the family can message it from their phones (section 4).
+7. Only once there is a Telegram token: each person's Telegram id (the Family page).
 
 The list disappears when everything on it is done. Then try it on the Chat page: "we should try
 that new ramen place on Main St sometime" saves idea #1, and "tell me about #1" answers from
@@ -314,6 +317,10 @@ Two upgrades from an older checkout ask something of you once:
 
 - Everyone signs in to the page again the first time after upgrading past the change that ties a
   session to the password it was opened with. Nothing is wrong; it happens once.
+- After upgrading to the version where each person signs in as themselves, the family password
+  keeps working until an admin chooses their own (the setup page's "Your own password", or Your
+  password at the top of any page). From that moment it opens nothing: give everybody else a
+  starting password on the Family page first, or straight after.
 - The `tls` profile now keeps Caddy's certificate in `caddy/` rather than `data/caddy`, so that a
   private key is not inside the bot's volume and its backups. Move the old folder across before
   starting, or let Caddy ask for a fresh certificate, which it will do on its own:
@@ -389,36 +396,83 @@ once per device before it trusts it. The connection is still encrypted. docs/INS
 
 **At home, on the local network.** To reach the page from other devices without a domain, set
 `WEB_HOST=0.0.0.0` in `.env`, and with Docker change the compose `ports` line to `"8080:8080"`.
-The page then answers at `http://<server>:8080/`. A page that faces the network needs a password
-of at least twelve characters, because that one password guards everything and there is no
-second factor.
+The page then answers at `http://<server>:8080/`. A page that faces the network needs passwords
+of at least twelve characters, because a password is all that guards it and there is no second
+factor. `WEB_PORT` moves it off 8080, a port scanners try early, onto any other above 1024.
 
-**What protects it.** One shared password, checked in constant time. Everyone types it once and
-the sign-in lasts `WEB_SESSION_DAYS` (30 by default). Five wrong passwords lock that address out
-for fifteen minutes and are logged. Fifty failures from anywhere within a quarter of an hour stop
-new sign-ins altogether, except from a browser that has signed in before: it carries a signed
-"known device" cookie (`familydb_device`) for a year, which stops being honoured after the
-password changes or after "Sign everyone out". So a guesser with many addresses gets nowhere and
-the family still gets in. Every page but the login and `/healthz` needs the cookie. Responses
-carry a content security policy that forbids framing and any script but the page's own one file,
-which sends the phone's location with a chat message; the chat waits for its answer with a meta
-refresh, and everything works with scripts turned off. Every form carries a token
-from the session as well, so a link from another site cannot make a change on the family's
-behalf. Refusing to start is deliberate: a page bound off the loopback with no password will not
-serve, and says so, unless you set `WEB_ALLOW_NO_PASSWORD=true` on purpose, and behind a proxy it
-will not serve without one at all.
+**A port scans rarely try.** What a scan of a server finds is what listens on its public
+addresses. The page's own port, 8080, is not among them: it listens on `127.0.0.1`, or in Docker
+is published to the loopback alone, so only Caddy on the same machine can reach it. What a scan
+finds is Caddy, on 443 (and 80, for certificates), and SSH on 22. 443 is the third port nmap
+tries and the one every sweep of the internet looks at, so a page there is found by anything that
+looks. To serve it on another port instead:
 
-Be clear-eyed about what signing in buys someone. It is the whole bot: the chat page spends
-tokens with every message, the forms add and change ideas, record outcomes and put things on the
-family calendar, the Family page decides who may message the bot on Telegram, and the settings
-page can change which model answers, raise the spending limit, show an API key to anyone who
-knows the password, and point the bot at a different calendar. On a machine on the internet,
-that one password is what stands between a stranger and your API bill; the daily spending limit
-bounds a day, but the figure is an estimate, so set a limit on the key with the provider too.
-Nothing is destroyed — an idea is dropped rather than deleted, somebody taken off the family
-list keeps everything they said, and every change is a row like any other — but it is all
-reachable. Make the password long, and use the status page to notice a month that does not look
-like yours.
+```bash
+sudo /opt/familydb/scripts/maintain.sh https --port random   # or --port 24613, or --port 443 to go back
+```
+
+`random` picks one from 20000 to 29999 that nothing on the machine uses and that is not among
+the thousand ports nmap tries unless told to try more. The page is then
+`https://your.domain:PORT/`: bookmark that, since the old address finds nothing. Caddy serves
+HTTPS on that port only, and asks for certificates only by the check a certificate authority
+makes on port 80 (the other kind needs 443); it listens on 80 just while it is being checked, and
+sends nobody who tries it anywhere, so 80 gives nothing away. `ufw` is opened for 80 and the new
+port, and the rule for 443 is closed if the installer opened it. Allow the new port in a
+provider's own firewall too, if it has one. With Docker, put `WEB_PUBLIC_PORT=PORT` in `.env` and
+run `docker compose up -d`: the Caddy container still listens on 443, and the host publishes it
+on that port. At install time, `WEB_PUBLIC_PORT=random` in front of the installer does the same.
+
+Be clear about what this buys. It takes the page out of the sweeps that try the usual ports, which
+is most of them, and so out of the log noise and the opportunistic guessing that follow; the
+lockouts would stop those anyway. It is not a lock: a scan of every port of this one machine
+still finds it in minutes, and a domain's certificate is published in the public certificate
+logs the moment it is issued, which is how new sites are found. The passwords and lockouts are
+what keep the page shut. For a page nobody on the internet can find at all, keep it off the
+internet: install with `--local-only` and open it over an SSH tunnel, or use a private network
+such as Tailscale, which puts no port on the internet whatever.
+
+**Who signs in.** Each person signs in as themselves, with their name as it is on the Family page
+and a password of their own, stored only as a scrypt hash. An admin gives everybody else a starting
+password there, shown once, and each person chooses their own the moment they sign in with it; a new
+starting password, or taking a password away, signs that person out on every device, which is what
+to do for a lost phone. There are three roles. A parent uses the bot (chat, ideas, plans, things to
+do, status); an admin also reaches Settings, the setup pages and the Family page; a kid may, for
+now, do whatever a parent may, and gets limits of their own if the family ever wants them, in one
+table (`src/familydb/roles.py`) that the whole page asks. The chat speaks as whoever is signed in,
+and the settings history says who changed what. Until the first admin chooses their own password,
+the page takes the one the installer made up, or one the family chose to share on the settings page;
+that admin's own password ends it for everyone, and from then on there is always an admin who can
+sign in, so it never comes back. For the last admin who forgot theirs, `sudo
+/opt/familydb/scripts/maintain.sh password` prints a new starting password (`password NAME` does it
+for somebody else).
+
+**What protects it.** Every password is checked in constant time, and a name that is nobody's is
+checked against a decoy so it takes as long as a wrong password and gets the same answer. Everyone
+types theirs once and the sign-in lasts `WEB_SESSION_DAYS` (30 by default). Five wrong passwords
+lock that address out for fifteen minutes and are logged. Fifty failures from anywhere within a
+quarter of an hour stop new sign-ins altogether, except from a browser that has signed in before: it
+carries a signed "known device" cookie (`familydb_device`) for a year, which stops being honoured
+after the password it was earned with changes or after "Sign everyone out". So a guesser with many
+addresses gets nowhere and the family still gets in. Every page but the login and `/healthz` needs
+the cookie. Responses carry a content security policy that forbids framing and any script but the
+page's own one file, which sends the phone's location with a chat message; the chat waits for its
+answer with a meta refresh, and everything works with scripts turned off. Every form carries a token
+from the session as well, so a link from another site cannot make a change on the family's behalf.
+Refusing to start is deliberate: a page bound off the loopback with no password will not serve, and
+says so, unless you set `WEB_ALLOW_NO_PASSWORD=true` on purpose, and behind a proxy it will not
+serve without one at all.
+
+Be clear-eyed about what signing in buys someone. A parent's password (or, for now, a kid's) is most
+of the bot: the chat page spends tokens with every message, and the forms add and change ideas,
+record outcomes and put things on the family calendar. An admin's is all of it: the Family page
+decides who may message the bot on Telegram and who signs in, and the settings page can change which
+model answers, raise the spending limit, show an API key to whoever knows that admin's password, and
+point the bot at a different calendar. On a machine on the internet, those passwords are what stand
+between a stranger and your API bill; the daily spending limit bounds a day, but the figure is an
+estimate, so set a limit on the key with the provider too. Nothing is destroyed — an idea is dropped
+rather than deleted, somebody taken off the family list keeps everything they said, and every change
+is a row like any other — but it is all reachable. Make the passwords long, and use the status page
+to notice a month that does not look like yours.
 
 **Checking it.**
 
@@ -512,7 +566,7 @@ consequence worth knowing: a key stored there lives in `data/familydb.sqlite3`, 
 every backup you take (section 7) and in every copy of that file. A key in `.env` is not. Either
 is fine on a machine you control; if the backups go somewhere you do not control, keep the keys
 in `.env`. The page never shows a key back to you or writes one to its change log. "See a key"
-shows one only after the family password is typed again, once, on that screen only.
+shows one only after the password you signed in with is typed again, once, on that screen only.
 
 **Personality.** `/settings/personality` holds who the bot is: the persona (Vera unless changed,
 or none), her description rewritten in the family's words, "About the family" (what she should
@@ -569,7 +623,7 @@ readable by the bot's user alone, and so is everything in it:
 | `caddy/` | only with the Docker `tls` profile: the certificate and its private key | no, and keep it that way |
 
 **A firewall.** The bot needs nothing inbound. With the web page behind Caddy or nginx, open 80
-and 443 and nothing else:
+and 443 (or 80 and the page's own port, section 10) and nothing else:
 
 ```bash
 sudo ufw default deny incoming && sudo ufw default allow outgoing
@@ -602,14 +656,17 @@ default) and deletes the rest.
 - *The Telegram bot token.* `/revoke` in BotFather makes a new one and kills the old; paste it on
   the settings page, where it takes effect within seconds, or put it in `.env` and restart.
   Nobody can read the family's messages with the old one afterwards.
-- *The page password.* Change it on the settings page, under Family password: it asks for the
-  one in force, keeps this browser signed in and signs every other one out, and will not take one
-  under twelve characters. Nothing on the server needs editing. It is stored only as a hash, and
-  once the family has chosen one, the installer's `WEB_PASSWORD` no longer opens the page. If
-  nobody remembers it, `sudo /opt/familydb/scripts/maintain.sh password` prints a new one.
-- *A lost phone, or a sign-in shared too widely.* "Sign everyone out" on the settings page, after
-  typing the family password again, ends every sign-in on every device, this one included. It
-  cannot while `WEB_SECRET_KEY` is set in `.env`; change that and restart instead.
+- *Somebody's page password.* They change their own on Your password (at the top of every page):
+  it asks for the one in force, keeps that browser signed in and signs every other one of theirs
+  out, and will not take one under twelve characters. An admin can also make them a new starting
+  password on the Family page, which signs them out everywhere at once, or take theirs away.
+  Nothing on the server needs editing, and passwords are stored only as hashes. Once an admin has
+  their own, the installer's `WEB_PASSWORD` opens nothing. If the only admin forgot theirs,
+  `sudo /opt/familydb/scripts/maintain.sh password` prints a new starting password for them.
+- *A lost phone, or a sign-in shared too widely.* A new starting password for that person (the
+  Family page) signs them out on every device. "Sign everyone out" on the settings page, after
+  typing your password again, ends every sign-in on every device, this one included. It cannot
+  while `WEB_SECRET_KEY` is set in `.env`; change that and restart instead.
 - *The whole server.* The database holds everything the family said. Rotate all of the above, and
   assume anything stored on the settings page was read.
 
@@ -649,7 +706,7 @@ SQLite browser opens it. `scripts/uninstall.sh` does this with a backup and asks
 - **Suggestions say "web discovery off" or "hours unknown".** Lookups are off ("Look ideas up on the web" on the settings page), the idea has not been looked up yet, or the day's spending limit is used up; the enrichment job runs only in the long-running `familydb run` process.
 - **The digest never arrives.** The Weekend digest row on `/status` and `familydb digest` show the schedule and the chat; the log says why a run was skipped (no chat, nothing to send with, no admin). For a Telegram group, the bot must be in the group and see its messages (section 4, step 3).
 - **"the web page is not serving" in the log.** Either the settings forbid it (a page off the loopback, or behind a proxy, with no `WEB_PASSWORD` or one under twelve characters) or the port is taken. Behind Caddy it shows in the browser as a 502. The log line says which. The bot keeps running either way.
-- **The web page asks for the password again and again.** The login cookie could not be stored or its signing key keeps changing. Check that `data/` is writable, or set `WEB_SECRET_KEY`. Over HTTPS, `WEB_TRUST_PROXY` must be true or the `Secure` cookie is never set. Changing `WEB_PASSWORD` or pressing "Sign everyone out" also ends every session, on purpose, so everybody signs in once after that.
+- **The web page asks for the password again and again.** The login cookie could not be stored or its signing key keeps changing. Check that `data/` is writable, or set `WEB_SECRET_KEY`. Over HTTPS, `WEB_TRUST_PROXY` must be true or the `Secure` cookie is never set. Changing a password (anybody's own, or `WEB_PASSWORD` while the family still shares it) or pressing "Sign everyone out" also ends the sessions opened with the old one, on purpose, so those people sign in once after that.
 - **"Too many tries. Wait a quarter of an hour and try again."** Five wrong passwords from one address, or fifty from anywhere; a browser that has signed in before is spared the second. Waiting is the only way through, which is the point.
 - **The web page is unreachable from another device.** `WEB_HOST` is probably still `127.0.0.1`, or the compose `ports` line still starts with `127.0.0.1:`. Both have to change, and a password has to be set. On a server on the internet, use a domain instead (section 10).
 - **A setting in `.env` does nothing.** Something on the settings page is set for it, and that wins. `familydb config` marks every value with where it came from; empty that box on the page and `.env` applies again.
