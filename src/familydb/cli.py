@@ -16,7 +16,7 @@ from uuid import uuid4
 
 import typer
 
-from familydb import __version__, passwords, privacy
+from familydb import __version__, passwords, privacy, roles
 from familydb import family as family_rules
 from familydb.agent.history import load_history
 from familydb.agent.providers.base import Message, TurnRequest
@@ -249,7 +249,7 @@ def db_backup(dest: Path = typer.Argument(..., help="Path of the backup file to 
 @members_app.command("add")
 def members_add(
     name: str = typer.Argument(..., help="Display name, e.g. Sam."),
-    role: str = typer.Option("member", "--role", help="admin, member or kid."),
+    role: str = typer.Option("parent", "--role", help="admin, parent or kid."),
     channel: str | None = typer.Option(None, "--channel", help="e.g. telegram"),
     channel_user_id: str | None = typer.Option(
         None, "--channel-user-id", help="The person's id on that channel."
@@ -291,7 +291,7 @@ def members_list(
         where = f"{member.channel}:{member.channel_user_id}" if member.channel else "no channel"
         flag = "" if member.active else " (inactive)"
         login = signs_in.get(member.id)
-        if login is not None and member.role in logins.SIGN_IN_ROLES:
+        if login is not None and roles.may(member.role, "sign_in"):
             flag += " (starting password)" if login.temporary else " (signs in)"
         typer.echo(f"#{member.id} {member.display_name} [{member.role}] {where}{flag}")
 

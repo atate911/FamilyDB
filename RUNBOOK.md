@@ -432,17 +432,19 @@ internet: install with `--local-only` and open it over an SSH tunnel, or use a p
 such as Tailscale, which puts no port on the internet whatever.
 
 **Who signs in.** Each person signs in as themselves, with their name as it is on the Family page
-and a password of their own, stored only as a scrypt hash. An admin gives everybody else a
-starting password there, shown once, and each person chooses their own the moment they sign in
-with it; a new starting password, or taking a password away, signs that person out on every
-device, which is what to do for a lost phone. A member uses the bot (chat, ideas, plans, things
-to do, status); only an admin reaches Settings, the setup pages and the Family page; a kid does
-not sign in. The chat speaks as whoever is signed in, and the settings history says who changed
-what. Until the first admin chooses their own password, the page takes the one the installer made
-up, or one the family chose to share on the settings page; that admin's own password ends it for
-everyone, and from then on there is always an admin who can sign in, so it never comes back. For
-the last admin who forgot theirs, `sudo /opt/familydb/scripts/maintain.sh password` prints a new
-starting password (`password NAME` does it for somebody else).
+and a password of their own, stored only as a scrypt hash. An admin gives everybody else a starting
+password there, shown once, and each person chooses their own the moment they sign in with it; a new
+starting password, or taking a password away, signs that person out on every device, which is what
+to do for a lost phone. There are three roles. A parent uses the bot (chat, ideas, plans, things to
+do, status); an admin also reaches Settings, the setup pages and the Family page; a kid may, for
+now, do whatever a parent may, and gets limits of their own if the family ever wants them, in one
+table (`src/familydb/roles.py`) that the whole page asks. The chat speaks as whoever is signed in,
+and the settings history says who changed what. Until the first admin chooses their own password,
+the page takes the one the installer made up, or one the family chose to share on the settings page;
+that admin's own password ends it for everyone, and from then on there is always an admin who can
+sign in, so it never comes back. For the last admin who forgot theirs, `sudo
+/opt/familydb/scripts/maintain.sh password` prints a new starting password (`password NAME` does it
+for somebody else).
 
 **What protects it.** Every password is checked in constant time, and a name that is nobody's is
 checked against a decoy so it takes as long as a wrong password and gets the same answer. Everyone
@@ -460,18 +462,17 @@ Refusing to start is deliberate: a page bound off the loopback with no password 
 says so, unless you set `WEB_ALLOW_NO_PASSWORD=true` on purpose, and behind a proxy it will not
 serve without one at all.
 
-Be clear-eyed about what signing in buys someone. A member's password is most of the bot: the
-chat page spends tokens with every message, and the forms add and change ideas, record outcomes
-and put things on the family calendar. An admin's is all of it: the Family page decides who may
-message the bot on Telegram and who signs in, and the settings page can change which model
-answers, raise the spending limit, show an API key to whoever knows that admin's password, and
-point the bot at a different calendar. On a machine on the internet, those passwords are what
-stand between a stranger and your API bill; the daily spending limit
-bounds a day, but the figure is an estimate, so set a limit on the key with the provider too.
-Nothing is destroyed — an idea is dropped rather than deleted, somebody taken off the family
-list keeps everything they said, and every change is a row like any other — but it is all
-reachable. Make the passwords long, and use the status page to notice a month that does not look
-like yours.
+Be clear-eyed about what signing in buys someone. A parent's password (or, for now, a kid's) is most
+of the bot: the chat page spends tokens with every message, and the forms add and change ideas,
+record outcomes and put things on the family calendar. An admin's is all of it: the Family page
+decides who may message the bot on Telegram and who signs in, and the settings page can change which
+model answers, raise the spending limit, show an API key to whoever knows that admin's password, and
+point the bot at a different calendar. On a machine on the internet, those passwords are what stand
+between a stranger and your API bill; the daily spending limit bounds a day, but the figure is an
+estimate, so set a limit on the key with the provider too. Nothing is destroyed — an idea is dropped
+rather than deleted, somebody taken off the family list keeps everything they said, and every change
+is a row like any other — but it is all reachable. Make the passwords long, and use the status page
+to notice a month that does not look like yours.
 
 **Checking it.**
 

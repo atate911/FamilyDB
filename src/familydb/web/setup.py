@@ -242,6 +242,7 @@ def _family(app: App, conn: Any) -> dict[str, Any]:
     return {
         "people": member_store.list_all(conn),
         "roles": member_store.ROLES,
+        "role_words": views.ROLE_WORDS,
         "bot": status_page.telegram_name(app),
         "knocks": [
             views.knock_row(knock, live.tzinfo)

@@ -2,9 +2,10 @@
 
 Each admin and member may have their own password; familydb/family.py holds the rules and
 store/logins.py the hashes. Signing in with a name and that password opens a session that knows
-who it is: the chat speaks as them, the settings log says who changed what, and only an admin
-reaches Settings, the setup pages and the Family list. Somebody signed in with a starting password
-an admin made up for them goes nowhere until they have chosen their own.
+who it is: the chat speaks as them, the settings log says who changed what, and each part of the
+page is reached only by a role with the permission it needs (familydb/roles.py, and `NEEDS`
+below): Settings, the setup pages and the Family list by an admin alone. Somebody signed in with a
+starting password an admin made up for them goes nowhere until they have chosen their own.
 
 Until an admin has a password of their own, the page takes one the family shares instead: the
 installer makes one up and puts it in WEB_PASSWORD, and the family may choose another on the page,
@@ -48,12 +49,13 @@ from flask import (
 )
 from itsdangerous import BadSignature, URLSafeSerializer
 
-from familydb import passwords
+from familydb import passwords, roles
 from familydb.app import App
 from familydb.config import Settings
 from familydb.store import logins
 from familydb.store.logins import Login, SignIn
 from familydb.store.members import Member
+from familydb.web import views
 
 log = logging.getLogger(__name__)
 
@@ -98,9 +100,16 @@ MAX_ADDRESS = 64
 OPEN_ENDPOINTS = frozenset({"auth.login", "auth.sign_in", "auth.logout", "web.healthz", "static"})
 # Where somebody signed in with a starting password may go before they have chosen their own.
 CHOOSING = frozenset({"family.you", "family.choose"})
-# What only an admin reaches, by blueprint: everything that changes how the bot works or who it
-# talks to. Less the pages that are anybody's own.
-MANAGING = frozenset({"settings", "setup", "family"})
+# The permission each part of the page needs beyond signing in, by blueprint (roles.py says who
+# has which). Reading needs nothing more: home, ideas, plans, things to do and status.
+NEEDS: dict[str, roles.Permission] = {
+    "chat": "chat",
+    "edits": "change",
+    "settings": "manage",
+    "setup": "manage",
+    "family": "manage",
+}
+# Pages in those parts that are anybody's own, and need no more than signing in.
 EVERYBODY_S_OWN = CHOOSING
 HOME = "/"
 MIN_PASSWORD = passwords.MIN_LENGTH
@@ -136,16 +145,20 @@ class Visitor:
         is shown or everybody is signed out."""
         return self.kind in ("family", "person")
 
-    @property
-    def manages(self) -> bool:
-        """Whether they may reach what only an admin should: settings, setup, the family list.
+    def may(self, permission: roles.Permission) -> bool:
+        """Whether they may do this: as their role allows, when they signed in as themselves.
 
-        Anybody the page cannot tell apart may, as the whole family always could, because there
-        is nobody to tell them from.
+        Anybody the page cannot tell apart may do everything, as the whole family always could,
+        because there is nobody to tell them from. A stranger may do nothing.
         """
         if self.kind == "person":
-            return self.member is not None and self.member.role == "admin"
+            return self.member is not None and roles.may(self.member.role, permission)
         return self.kind in ("anyone", "family")
+
+    @property
+    def manages(self) -> bool:
+        """Whether they may reach what only an admin should: settings, setup, the family list."""
+        return self.may("manage")
 
     @property
     def name(self) -> str | None:
@@ -525,14 +538,15 @@ def require_login() -> Response | tuple[str, int] | None:
 
 def _within_reach(who: Visitor) -> Response | tuple[str, int] | None:
     """Keep a person to what they may reach: their own password first, if an admin made it up
-    for them, and nothing only an admin should change, unless they are one."""
+    for them, and no part of the page their role has no permission for."""
     if who.login is not None and who.login.temporary and request.endpoint not in CHOOSING:
         if request.method in SAFE_METHODS:
             return redirect(url_for("family.you"))
         return Response(CHOOSE_FIRST, status=403, mimetype="text/plain")
-    managing = request.blueprint in MANAGING and request.endpoint not in EVERYBODY_S_OWN
-    if managing and not who.manages:
-        return render_template("403.html"), 403
+    needed = NEEDS.get(request.blueprint or "")
+    if needed and request.endpoint not in EVERYBODY_S_OWN and not who.may(needed):
+        title, why = views.REFUSALS[needed]
+        return render_template("403.html", title=title, why=why), 403
     return None
 
 

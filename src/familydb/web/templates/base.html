@@ -44,18 +44,18 @@
          thumb is; on a wider screen they sit in this bar. #}
       <nav class="places" aria-label="Main">
         {{ item('Home', url_for('web.home'), 'home', 'home') }}
-        {{ item('Chat', url_for('chat.show', _anchor='latest'), 'chat', 'chat') }}
+        {% if visitor().may('chat') %}{{ item('Chat', url_for('chat.show', _anchor='latest'), 'chat', 'chat') }}{% endif %}
         {{ item('Ideas', url_for('web.ideas'), 'ideas', 'idea') }}
         {{ item('Plans', url_for('web.plans'), 'plans', 'plans') }}
         {{ item('To do', url_for('web.tasks'), 'todo', 'todo') }}
       </nav>
-      {# And the three for looking after it, kept to one side. Family and Settings are an
-         admin's to change, so nobody else is shown the way to them. #}
+      {# And the three for looking after it, kept to one side. Each is shown only to a role
+         that may go there (familydb/roles.py): Family and Settings to an admin. #}
       {% set visiting = visitor() %}
       <nav class="tools" aria-label="Household">
-        {% if visiting.manages %}{{ item('Family', url_for('family.show'), 'family', 'family') }}{% endif %}
+        {% if visiting.may('manage') %}{{ item('Family', url_for('family.show'), 'family', 'family') }}{% endif %}
         {{ item('Status', url_for('web.status'), 'status', 'status') }}
-        {% if visiting.manages %}{{ item('Settings', url_for('settings.show'), 'settings', 'settings') }}{% endif %}
+        {% if visiting.may('manage') %}{{ item('Settings', url_for('settings.show'), 'settings', 'settings') }}{% endif %}
         {% if visiting.member %}{{ item(visiting.name, url_for('family.you'), 'you', 'user') }}{% endif %}
       </nav>
       {% if visiting.signed_in %}

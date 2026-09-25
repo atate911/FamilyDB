@@ -9,7 +9,7 @@ import pytest
 from typer.testing import CliRunner
 
 from familydb import family as rules
-from familydb import passwords
+from familydb import passwords, roles
 from familydb.app import App
 from familydb.store import ideas, logins, members, messages
 from familydb.store import settings as settings_store
@@ -21,6 +21,7 @@ from tests.conftest import NOW_ISO
 SHARED = "installer-made-password-1"  # what WEB_PASSWORD holds after an install
 SAMS = "sam likes long sentences"
 ALEXS = "alex chose this one today"
+KIDS = "a kid can choose one too"
 
 
 @pytest.fixture
@@ -100,15 +101,16 @@ def test_a_password_is_kept_hashed_and_apart_from_the_member(conn, family) -> No
     assert "password" not in str(members.get(conn, family["alex"].id).model_dump())
 
 
-def test_kids_and_people_switched_off_are_not_given_one(conn, family) -> None:
-    with pytest.raises(rules.FamilyError, match="kids do not sign in"):
-        rules.give_starting_password(conn, family["girls"].id, by=None, now=NOW_ISO)
+def test_nobody_switched_off_is_given_one_and_kids_are_for_now(conn, family) -> None:
+    # A kid may do what a parent may, for now (roles.py), and that includes signing in.
+    made = rules.give_starting_password(conn, family["girls"].id, by=None, now=NOW_ISO)
+    assert passwords.hash_matches(logins.get(conn, family["girls"].id).password_hash, made)
     members.set_active(conn, family["alex"].id, False)
     with pytest.raises(rules.FamilyError, match="switched off"):
         rules.choose_password(conn, family["alex"].id, ALEXS, now=NOW_ISO)
     with pytest.raises(rules.FamilyError, match="at least 12"):
         rules.choose_password(conn, family["sam"].id, "too short", now=NOW_ISO)
-    assert logins.by_member(conn) == {}
+    assert set(logins.by_member(conn)) == {family["girls"].id}
 
 
 def test_only_an_admin_is_first_and_only_while_the_family_shares_one(conn, family) -> None:
@@ -126,7 +128,7 @@ def test_the_last_admin_who_can_sign_in_is_never_lost(conn, family) -> None:
     rules.claim(conn, family["sam"].id, SAMS, now=NOW_ISO)
     sam = members.get(conn, family["sam"].id)
     pat = rules.add(conn, "Pat", "admin", telegram_id=None, now=NOW_ISO)
-    for active, role in ((False, "admin"), (True, "member")):
+    for active, role in ((False, "admin"), (True, "parent")):
         with pytest.raises(rules.FamilyError, match="only admin who can sign in"):
             rules.change(
                 conn,
@@ -228,11 +230,10 @@ def test_a_starting_password_is_shown_once_and_must_be_replaced(app, sam, family
     assert "Signs in with a password of their own." in sam.get(f"/family/{family['alex'].id}").text
 
 
-def test_an_admin_does_not_give_themselves_one_nor_a_kid(app, sam, family) -> None:
-    for member_id, said in ((family["sam"].id, "That is you"), (family["girls"].id, "kids do")):
-        form = {**_tokens(sam, f"/family/{member_id}"), "action": "start"}
-        sam.post(f"/family/{member_id}/password", data=form)
-        assert said in _said(sam.get(f"/family/{member_id}"))
+def test_an_admin_does_not_give_themselves_one(app, sam, family) -> None:
+    form = {**_tokens(sam, f"/family/{family['sam'].id}"), "action": "start"}
+    sam.post(f"/family/{family['sam'].id}/password", data=form)
+    assert "That is you" in _said(sam.get(f"/family/{family['sam'].id}"))
     with closing(app.connect()) as conn:
         assert set(logins.by_member(conn)) == {family["sam"].id}
 
@@ -258,40 +259,39 @@ def test_a_new_starting_password_or_taking_it_away_signs_them_out(app, sam, alex
     assert again.get("/ideas").headers["Location"].startswith("/login")
 
 
-def test_switching_somebody_off_or_making_them_a_kid_signs_them_out(app, sam, family) -> None:
-    for update in ({"active": False}, {"role": "kid"}):
-        with closing(app.connect()) as conn:
-            rules.change(
-                conn,
-                family["alex"].id,
-                **{
-                    "name": "Alex",
-                    "role": "member",
-                    "active": True,
-                    "telegram_id": "1002",
-                    "seen": rules.revision(members.get(conn, family["alex"].id)),
-                    "now": NOW_ISO,
-                },
-            )
-            made = rules.give_starting_password(
-                conn, family["alex"].id, by=family["sam"].id, now=NOW_ISO
-            )
-        alex = _as(app, "Alex", made)
-        with closing(app.connect()) as conn:
-            current = members.get(conn, family["alex"].id)
-            rules.change(
-                conn,
-                current.id,
-                name="Alex",
-                role=update.get("role", "member"),
-                active=update.get("active", True),
-                telegram_id="1002",
-                seen=rules.revision(current),
-                now=NOW_ISO,
-            )
-        assert alex.get("/you").headers["Location"].startswith("/login")
-        refused = _browser(app).post("/login", data={"name": "Alex", "password": made})
-        assert refused.status_code == 401
+def _rewrite(app, member_id: int, **changes) -> None:
+    """Change somebody the way the Family page would."""
+    with closing(app.connect()) as conn:
+        current = members.get(conn, member_id)
+        rules.change(
+            conn,
+            member_id,
+            name=changes.get("name", current.display_name),
+            role=changes.get("role", current.role),
+            active=changes.get("active", current.active),
+            telegram_id=current.channel_user_id,
+            seen=rules.revision(current),
+            now=NOW_ISO,
+        )
+
+
+def test_switching_somebody_off_signs_them_out(app, sam, alex, family) -> None:
+    _rewrite(app, family["alex"].id, active=False)
+    assert alex.get("/you").headers["Location"].startswith("/login")
+    refused = _browser(app).post("/login", data={"name": "Alex", "password": ALEXS})
+    assert refused.status_code == 401
+
+
+def test_a_parent_made_a_kid_stays_signed_in_while_kids_stand_in_for_parents(
+    app, sam, alex, family, monkeypatch
+) -> None:
+    _rewrite(app, family["alex"].id, role="kid")
+    assert alex.get("/ideas").status_code == 200  # a kid may do what a parent may, for now
+    # Were kids ever to lose signing in, the table in roles.py is all it would take.
+    monkeypatch.setitem(roles.PERMISSIONS, "kid", frozenset())
+    assert alex.get("/ideas").headers["Location"].startswith("/login")
+    refused = _browser(app).post("/login", data={"name": "Alex", "password": ALEXS})
+    assert refused.status_code == 401
 
 
 # -- what each person may reach --------------------------------------------------------------------
@@ -410,8 +410,8 @@ def test_familydb_password_lets_the_admin_back_in(settings, conn, family, monkey
 
     named = CliRunner().invoke(cli.app, ["password", "alex"])
     assert named.exit_code == 0 and "Alex's password is now:" in named.output
-    kid = CliRunner().invoke(cli.app, ["password", "the girls"])
-    assert kid.exit_code != 0 and "kids do not sign in" in kid.output
+    kid = CliRunner().invoke(cli.app, ["password", "the girls"])  # as a parent may, for now
+    assert kid.exit_code == 0 and "the girls's password is now:" in kid.output
 
 
 def test_familydb_password_for_a_member_waits_for_an_admin(settings, conn, family, monkeypatch):
@@ -421,3 +421,42 @@ def test_familydb_password_for_a_member_waits_for_an_admin(settings, conn, famil
     refused = CliRunner().invoke(cli.app, ["password", "Alex"])
     assert refused.exit_code != 0 and "must be an admin" in refused.output
     assert logins.by_member(conn) == {}
+
+
+# -- the three roles ------------------------------------------------------------------------------
+
+
+def test_three_roles_and_kids_stand_in_for_parents_for_now() -> None:
+    assert roles.ROLES == ("admin", "parent", "kid")
+    assert roles.PERMISSIONS["admin"] > roles.PERMISSIONS["parent"]
+    assert roles.PERMISSIONS["admin"] - roles.PERMISSIONS["parent"] == {"manage"}
+    assert roles.PERMISSIONS["kid"] == roles.PERMISSIONS["parent"]  # the stand-in
+    assert roles.may("parent", "chat") and not roles.may("parent", "manage")
+    assert not roles.may("member", "sign_in")  # a role nobody has any more may do nothing
+
+
+def test_a_kid_signs_in_and_uses_the_page_as_a_parent_does(app, sam, family) -> None:
+    girls = _as(app, "the girls", _start(sam, family["girls"].id))
+    form = {**_tokens(girls, "/you"), "new": KIDS, "again": KIDS}
+    assert girls.post("/you", data=form).headers["Location"] == "/"
+    for path in ("/", "/chat", "/ideas", "/ideas/new", "/plans", "/tasks", "/status"):
+        assert girls.get(path).status_code == 200, path
+    refused = girls.get("/settings")
+    assert refused.status_code == 403 and "For an admin" in refused.text
+    assert '<span class="tag">signs in</span>' in sam.get("/family").text
+
+
+def test_a_permission_taken_from_kids_is_kept_everywhere(app, sam, family, monkeypatch) -> None:
+    girls = _as(app, "the girls", _start(sam, family["girls"].id))
+    form = {**_tokens(girls, "/you"), "new": KIDS, "again": KIDS}
+    girls.post("/you", data=form)
+    monkeypatch.setitem(roles.PERMISSIONS, "kid", frozenset({"sign_in"}))
+    home = girls.get("/")
+    assert home.status_code == 200 and 'href="/chat#latest"' not in home.text
+    chat = girls.get("/chat")
+    assert chat.status_code == 403 and "Not yet" in chat.text
+    idea = {**_tokens(girls, "/ideas/new"), "title": "Ramen place", "kind": "restaurant"}
+    assert girls.post("/ideas/new", data=idea).status_code == 403
+    assert girls.get("/ideas").status_code == 200  # reading needs nothing more than signing in
+    with closing(app.connect()) as conn:
+        assert ideas.list_all(conn) == []

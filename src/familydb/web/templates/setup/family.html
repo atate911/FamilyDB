@@ -12,7 +12,7 @@
       </div>
       <div class="muted">
         {% if person.channel_user_id %}on Telegram
-        {% elif person.role == 'kid' %}included in plans, does not message it
+        {% elif person.role == 'kid' %}included in plans
         {% else %}the Chat page only, until they message the bot on Telegram{% endif %}
       </div>
     </li>
@@ -42,7 +42,7 @@
             <div class="field">
               <label for="knock-role-{{ loop.index }}">Role</label>
               <select id="knock-role-{{ loop.index }}" name="role">
-                {% for role in roles %}<option value="{{ role }}" {{ 'selected' if role == 'member' }}>{{ role }}</option>{% endfor %}
+                {% for role in roles %}<option value="{{ role }}" {{ 'selected' if role == 'parent' }}>{{ role }}</option>{% endfor %}
               </select>
             </div>
             <div class="field actions"><button type="submit">Let them in</button></div>
@@ -71,17 +71,15 @@
     <div class="field">
       <label for="add-role">Role</label>
       <select id="add-role" name="role">
-        {% for role in roles %}<option value="{{ role }}" {{ 'selected' if role == 'member' }}>{{ role }}</option>{% endfor %}
+        {% for role in roles %}<option value="{{ role }}" {{ 'selected' if role == 'parent' }}>{{ role }}</option>{% endfor %}
       </select>
     </div>
     <div class="field wide actions"><button type="submit">Add</button></div>
   </form>
   <dl class="facts roles">
-    <dt>member</dt><dd>talks to {{ site_title }}: most of the family.</dd>
-    <dt>kid</dt><dd>included in plans, but does not message it.</dd>
-    <dt>admin</dt><dd>looks after it, like you. There is always at least one.</dd>
+    {% for role in roles %}<dt>{{ role }}</dt><dd>{{ role_words[role] }}</dd>{% endfor %}
   </dl>
   <p class="muted">To let somebody use this page as well, open them on the
     <a href="{{ url_for('family.show') }}">Family page</a> and make them a starting password.
-    They choose their own the first time they sign in. Kids do not sign in.</p>
+    They choose their own the first time they sign in.</p>
 </section>

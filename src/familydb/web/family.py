@@ -31,7 +31,7 @@ from flask import (
 )
 
 from familydb import family as rules
-from familydb import passwords
+from familydb import passwords, roles
 from familydb.app import App
 from familydb.dates import utc_iso
 from familydb.store import knocks as knock_store
@@ -95,6 +95,7 @@ def show() -> str:
         "family.html",
         people=[_person(person, passwords_by_member.get(person.id)) for person in everyone],
         roles=member_store.ROLES,
+        role_words=views.ROLE_WORDS,
         knocks=[views.knock_row(knock, app.settings.tzinfo) for knock in strangers],
         personal=personal,
     )
@@ -113,7 +114,7 @@ def add() -> Response:
             person = rules.add(
                 conn,
                 form.get("name", ""),
-                form.get("role", "member"),
+                form.get("role", "parent"),
                 telegram_id=form.get("telegram_id"),
                 now=utc_iso(app.clock.now()),
             )
@@ -383,9 +384,10 @@ def _answer(
 def _person(person: member_store.Member, login: Login | None = None) -> dict[str, Any]:
     telegram = person.channel_user_id if person.channel == rules.TELEGRAM else None
     # How they sign in to the page: "own", "starting", or None when they cannot (no password, a
-    # kid, or switched off, whatever may be stored for them).
+    # role that may not, or switched off, whatever may be stored for them).
+    may_sign_in = person.active and roles.may(person.role, "sign_in")
     sign_in = None
-    if login is not None and person.active and person.role in login_store.SIGN_IN_ROLES:
+    if login is not None and may_sign_in:
         sign_in = "starting" if login.temporary else "own"
     return {
         "id": person.id,
@@ -397,4 +399,5 @@ def _person(person: member_store.Member, login: Login | None = None) -> dict[str
         "elsewhere": person.channel if person.channel not in (None, rules.TELEGRAM) else None,
         "revision": rules.revision(person),
         "sign_in": sign_in,
+        "role_may_sign_in": roles.may(person.role, "sign_in"),
     }

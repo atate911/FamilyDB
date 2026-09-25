@@ -71,11 +71,7 @@ def render_family_context(family: list[Member], settings: Settings) -> str:
     """The stable family block: who, where, which integrations exist. No dates, no sender."""
     lines = ["Family:"]
     for member in family:
-        if not member.active:
-            continue
-        if member.role == "kid":
-            lines.append(f"- {member.display_name} (kid, does not message the bot)")
-        else:
+        if member.active:
             lines.append(f"- {member.display_name} ({member.role})")
     if len(lines) == 1:
         lines.append("- (no members configured yet)")

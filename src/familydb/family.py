@@ -15,8 +15,8 @@ so could any other front end; the rules live here rather than in a form.
 - Taking somebody off the list gives up their unanswered messages, so the retry job does not
   answer for them later.
 
-The same goes for who signs in to the web page, and with what. Each admin and member may have
-their own password; kids do not sign in, as they do not message the bot.
+The same goes for who signs in to the web page, and with what. Each person may have their own
+password if their role may sign in (familydb/roles.py), which for now every role may.
 
 - The first admin to choose their own password ends the family password: from then on it opens
   nothing, and everybody signs in as themselves.
@@ -32,7 +32,7 @@ import hashlib
 import sqlite3
 from typing import Literal
 
-from familydb import passwords
+from familydb import passwords, roles
 from familydb.store import logins, members, messages
 from familydb.store.db import transaction
 from familydb.store.members import Member, Role
@@ -78,7 +78,7 @@ def clean_telegram_id(value: str | None) -> str | None:
 
 def _check_role(role: str) -> Role:
     if role not in members.ROLES:
-        raise FamilyError("Choose admin, member or kid.")
+        raise FamilyError("Choose admin, parent or kid.")
     return role  # type: ignore[return-value]
 
 
@@ -196,9 +196,7 @@ def change(
 LAST_TO_SIGN_IN = (
     "{name} is the only admin who can sign in to the page. Give another admin a password first."
 )
-KIDS_DO_NOT_SIGN_IN = (
-    "{name} is on the list as a kid, and kids do not sign in. Make them a member first."
-)
+ROLE_DOES_NOT_SIGN_IN = "{name} is on the list as a {role}, and a {role} does not sign in."
 SWITCHED_OFF = "{name} is switched off. Switch them back on first."
 NOT_AN_ADMIN = (
     "Only an admin can be the first to have their own password: they give everybody else theirs."
@@ -219,8 +217,8 @@ def check_password(password: str) -> str:
 def _may_sign_in(person: Member) -> None:
     if not person.active:
         raise FamilyError(SWITCHED_OFF.format(name=person.display_name))
-    if person.role not in logins.SIGN_IN_ROLES:
-        raise FamilyError(KIDS_DO_NOT_SIGN_IN.format(name=person.display_name))
+    if not roles.may(person.role, "sign_in"):
+        raise FamilyError(ROLE_DOES_NOT_SIGN_IN.format(name=person.display_name, role=person.role))
 
 
 def _someone(conn: sqlite3.Connection, member_id: int) -> Member:

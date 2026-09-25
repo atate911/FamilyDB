@@ -1,9 +1,10 @@
 """Sign-ins: each person's own password for the web page, hashed, one row per person.
 
 A table of its own rather than a column on `members`: member records go everywhere, the family
-context in the prompt included, and a hash has no business going with them. Only admins and
-members sign in. A kid, or somebody switched off, cannot, whatever is stored here, so every read
-that lets somebody in checks the member as well as the row.
+context in the prompt included, and a hash has no business going with them. Who may sign in is a
+permission of their role (familydb/roles.py): somebody whose role may not, or who is switched
+off, cannot, whatever is stored here, so every read that lets somebody in checks the member as
+well as the row.
 """
 
 from __future__ import annotations
@@ -12,10 +13,8 @@ import sqlite3
 
 from pydantic import BaseModel
 
+from familydb import roles
 from familydb.store.members import Member
-
-# Who signs in to the page: the people who talk to the bot. A kid does neither.
-SIGN_IN_ROLES: tuple[str, ...] = ("admin", "member")
 
 
 class Login(BaseModel):
@@ -33,11 +32,16 @@ class SignIn(BaseModel):
     login: Login
 
 
+# Everybody on the list with a password; whether their role may use it is asked of roles.py as
+# each row is read, so the table there is the only place that decides.
 _SIGNS_IN = (
     "SELECT m.*, l.password_hash, l.temporary, l.set_at, l.set_by FROM members m "
-    "JOIN member_logins l ON l.member_id = m.id "
-    "WHERE m.active = 1 AND m.role IN ('admin', 'member')"
+    "JOIN member_logins l ON l.member_id = m.id WHERE m.active = 1"
 )
+
+
+def _may(row: sqlite3.Row) -> bool:
+    return roles.may(row["role"], "sign_in")
 
 
 def _sign_in(row: sqlite3.Row) -> SignIn:
@@ -65,9 +69,9 @@ def by_member(conn: sqlite3.Connection) -> dict[int, Login]:
 
 
 def signing_in(conn: sqlite3.Connection, member_id: int) -> SignIn | None:
-    """This person and their password, if they may sign in: on the list, and not a kid."""
+    """This person and their password, if they may sign in: on the list, in a role that may."""
     row = conn.execute(_SIGNS_IN + " AND m.id = ?", (member_id,)).fetchone()
-    return _sign_in(row) if row else None
+    return _sign_in(row) if row and _may(row) else None
 
 
 def by_name(conn: sqlite3.Connection, name: str) -> SignIn | None:
@@ -80,20 +84,24 @@ def by_name(conn: sqlite3.Connection, name: str) -> SignIn | None:
     wanted = " ".join(name.split()).casefold()
     if not wanted:
         return None
-    found = [row for row in conn.execute(_SIGNS_IN) if row["display_name"].casefold() == wanted]
+    found = [
+        row
+        for row in conn.execute(_SIGNS_IN)
+        if row["display_name"].casefold() == wanted and _may(row)
+    ]
     return _sign_in(found[0]) if len(found) == 1 else None
 
 
 def admins_signing_in(conn: sqlite3.Connection) -> list[Member]:
     """The admins who can sign in as themselves, oldest first."""
     rows = conn.execute(_SIGNS_IN + " AND m.role = 'admin' ORDER BY m.id")
-    return [_sign_in(row).member for row in rows]
+    return [_sign_in(row).member for row in rows if _may(row)]
 
 
 def admin_can_sign_in(conn: sqlite3.Connection) -> bool:
     """Whether some admin signs in as themselves. From then on everybody does: the password the
     family used to share, the installer's included, opens nothing."""
-    return conn.execute(_SIGNS_IN + " AND m.role = 'admin' LIMIT 1").fetchone() is not None
+    return any(_may(row) for row in conn.execute(_SIGNS_IN + " AND m.role = 'admin'"))
 
 
 def put(

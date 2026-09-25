@@ -25,7 +25,7 @@ def _change(conn, person, **given):
 
 
 def test_somebody_can_be_added_with_their_telegram_id(conn, family_members) -> None:
-    jo = family.add(conn, "  Jo   Smith ", "member", telegram_id="1003", now=NOW)
+    jo = family.add(conn, "  Jo   Smith ", "parent", telegram_id="1003", now=NOW)
     assert jo.display_name == "Jo Smith"  # spaces tidied, so "Jo  Smith" is the same person
     assert (jo.channel, jo.channel_user_id) == ("telegram", "1003")
     assert members.resolve(conn, "telegram", "1003") == jo  # and the bot now answers them
@@ -43,19 +43,19 @@ def test_somebody_can_be_added_with_their_telegram_id(conn, family_members) -> N
 )
 def test_what_cannot_be_added_says_why(conn, family_members, name, telegram, complaint) -> None:
     with pytest.raises(family.FamilyError, match=complaint):
-        family.add(conn, name, "member", telegram_id=telegram, now=NOW)
+        family.add(conn, name, "parent", telegram_id=telegram, now=NOW)
 
 
 def test_a_switched_off_name_is_switched_back_on_not_added_twice(conn, family_members) -> None:
     alex = family_members["alex"]
     _change(conn, alex, active=False)
     with pytest.raises(family.FamilyError, match="switched off"):
-        family.add(conn, "Alex", "member", telegram_id=None, now=NOW)
+        family.add(conn, "Alex", "parent", telegram_id=None, now=NOW)
 
 
 def test_somebody_can_be_renamed_and_given_a_telegram_id(conn, family_members) -> None:
     girls = family_members["girls"]
-    changed = _change(conn, girls, name="The girls", role="member", telegram_id="2001")
+    changed = _change(conn, girls, name="The girls", role="parent", telegram_id="2001")
     assert changed.id == girls.id and changed.display_name == "The girls"
     assert (changed.channel, changed.channel_user_id) == ("telegram", "2001")
     cleared = _change(conn, changed, telegram_id="")
@@ -64,11 +64,11 @@ def test_somebody_can_be_renamed_and_given_a_telegram_id(conn, family_members) -
 
 def test_there_is_always_an_active_admin(conn, family_members) -> None:
     sam = family_members["sam"]  # the only admin
-    for given in ({"active": False}, {"role": "member"}):
+    for given in ({"active": False}, {"role": "parent"}):
         with pytest.raises(family.FamilyError, match="only admin"):
             _change(conn, sam, **given)
     _change(conn, family_members["alex"], role="admin")
-    assert _change(conn, members.get(conn, sam.id), role="member").role == "member"
+    assert _change(conn, members.get(conn, sam.id), role="parent").role == "parent"
 
 
 def test_a_change_on_top_of_somebody_else_s_is_refused(conn, family_members) -> None:
@@ -76,7 +76,7 @@ def test_a_change_on_top_of_somebody_else_s_is_refused(conn, family_members) -> 
     _change(conn, alex, name="Alexandra")  # somebody else saves first
     with pytest.raises(family.FamilyError, match="changed since you opened"):
         _change(conn, alex, role="kid")  # the form still shows the old profile
-    assert members.get(conn, alex.id).role == "member"
+    assert members.get(conn, alex.id).role == "parent"
 
 
 def test_nobody_is_changed_while_the_bot_answers_them(conn, family_members, settings, clock):

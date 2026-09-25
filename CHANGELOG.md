@@ -51,8 +51,10 @@ older than what is installed. It gets a date when it is released.
   things went and put plans on the calendar (through the same tools the bot
   uses), the Family page, a status page with what is connected and what it has
   cost, and a settings page.
-- **Everyone signs in as themselves.** Each admin and member has a password of
-  their own, stored hashed. An admin gives each person a starting password,
+- **Everyone signs in as themselves.** Each person has a password of their own,
+  stored hashed, and one of three roles: admin, parent (what used to be called a
+  member) and kid. Kids may do what a parent may for now; what each role may do
+  is one table, `familydb/roles.py`, so kids' own limits are a line there. An admin gives each person a starting password,
   shown once, which they replace as soon as they sign in with it. The chat speaks
   as whoever is signed in, the settings history says who changed what, and only
   an admin reaches Settings, setup and the Family page. A new starting password

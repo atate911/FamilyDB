@@ -287,7 +287,7 @@ internet altogether.
 <summary>The warning worth reading twice</summary>
 
 The family's passwords are all that stand between a stranger and your API bill. Signing in as a
-member is most of the bot: chatting spends tokens, and the forms change ideas and put things on the
+parent (or, for now, a kid) is most of the bot: chatting spends tokens, and the forms change ideas and put things on the
 family calendar. Signing in as an admin is all of it: the Family page decides who may message the
 bot on Telegram and who signs in, and the settings page can change which model answers, raise the
 spending limit, show a key to that admin, and point the bot at a different calendar. Keep the

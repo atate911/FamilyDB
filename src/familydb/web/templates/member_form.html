@@ -56,8 +56,8 @@
     {% elif mine %}
       <p class="muted">This is you. <a href="{{ url_for('family.you') }}">Change your
         password</a> on the Your password page.</p>
-    {% elif person.role == 'kid' %}
-      <p class="muted">Kids do not sign in to this page. Make them a member to let them.</p>
+    {% elif not person.role_may_sign_in %}
+      <p class="muted">A {{ person.role }} does not sign in to this page.</p>
     {% elif not person.active %}
       <p class="muted">Switched off, so they cannot sign in.</p>
     {% else %}

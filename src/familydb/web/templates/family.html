@@ -29,7 +29,7 @@
         <div class="muted">
           {% if person.telegram_id %}Telegram {{ person.telegram_id }}
           {% elif person.elsewhere %}known on {{ person.elsewhere }}
-          {% elif person.role == 'kid' %}named in ideas, does not message the bot
+          {% elif person.role == 'kid' and not person.sign_in %}named in ideas and plans
           {% else %}web page and console only{% endif %}
         </div>
         <a class="button ghost" href="{{ url_for('family.edit', member_id=person.id) }}">{{ icon('edit') }}Change</a>
@@ -64,7 +64,7 @@
                 <label for="knock-role-{{ loop.index }}">Role</label>
                 <select id="knock-role-{{ loop.index }}" name="role">
                   {% for role in roles %}
-                    <option value="{{ role }}" {{ 'selected' if role == 'member' }}>{{ role }}</option>
+                    <option value="{{ role }}" {{ 'selected' if role == 'parent' }}>{{ role }}</option>
                   {% endfor %}
                 </select>
               </div>
@@ -89,7 +89,7 @@
         <label for="role">Role</label>
         <select id="role" name="role">
           {% for role in roles %}
-            <option value="{{ role }}" {{ 'selected' if role == ('admin' if not people else 'member') }}>{{ role }}</option>
+            <option value="{{ role }}" {{ 'selected' if role == ('admin' if not people else 'parent') }}>{{ role }}</option>
           {% endfor %}
         </select>
       </div>
@@ -101,5 +101,8 @@
         <button type="submit">{{ icon('plus') }}Add</button>
       </div>
     </form>
+    <dl class="facts roles">
+      {% for role in roles %}<dt>{{ role }}</dt><dd>{{ role_words[role] }}</dd>{% endfor %}
+    </dl>
   </section>
 {% endblock %}

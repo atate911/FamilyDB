@@ -219,7 +219,7 @@ def test_the_family_step_lets_in_whoever_messaged_the_bot(fresh, conn) -> None:
         )
     page = fresh.get("/setup/family").text
     assert "Waiting to be let in" in page and "t.me/tate_family_bot" in page
-    _post(fresh, "family", "/family", name="Alex", role="member", telegram_id="777")
+    _post(fresh, "family", "/family", name="Alex", role="parent", telegram_id="777")
     page = fresh.get("/setup/family").text
     assert "Alex is on the family list." in page and "Waiting to be let in" not in page
     assert "✓ 2 on the list." in page
