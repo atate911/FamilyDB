@@ -1,11 +1,11 @@
 # Who the family talks to: the persona layer
 
-Design proposal, September 25, 2026. It looks at the persona layer as built (`familydb/personas/`,
-`voice.py`, the Personality page), says what is wrong or thin in it, and proposes how it should
-be used and configured from here. "Today" is what the code does now; the rest is proposal, and
-the open questions at the end are the family's to decide. `docs/AI_CALLS.md` ("Who is speaking")
-and `docs/MEMORY.md` are the companions; the token-economy rules in `CLAUDE.md` are the
-constraints.
+The design of the persona layer as built, September 25, 2026: `familydb/personas/`, `voice.py`,
+the Personality page, the audience line in the turn and the bot's Telegram contact. It began as
+a proposal (commit dd8a6e8) that found nine things wrong or thin; "What was fixed" says what now
+holds for each, "Decisions" answers the questions it left to the family, and "What is left" is
+the rest. `docs/AI_CALLS.md` ("Who is speaking") and `docs/MEMORY.md` are the companions; the
+token-economy rules in `CLAUDE.md` are the constraints.
 
 ## The one idea
 
@@ -22,104 +22,98 @@ the page lets anybody do. Three rules follow from it:
    for the same reason it can never change the family list: what a setting is, is never the
    model's to decide.
 
-## What it is today
+## What it is
 
-A `Persona` has three parts, and the Personality page holds a fourth thing that is not hers.
+A `Persona` is her name, her label, her character and her lines, one folder each in
+`familydb/personas/`. Two ship, and both are Vera: `default/`, Vera as first written, whom the
+family meet unless they choose another, and `brief/`, a shorter Vera fitted to a family's chat.
+Her label says which of her each is where they are listed together ("{name}, as first written",
+"{name}, in brief"). `personas.active(settings)` is the one in force, with what the family wrote
+on the Personality page laid over her.
 
 | Part | Written in | Where it goes | Who changes it | What it costs |
 |---|---|---|---|---|
-| Her name | `default/persona.toml` | `{name}` in her character and lines, the page (`assistant`), Telegram's `/start` | nobody, short of a new folder | nothing extra |
-| Her character | `default/character.md` | first in the cached chat prefix, for chat, the digest and retries; never the workers | an admin, as a whole rewrite (`persona_text`) | about 2,800 tokens with every call, cached |
-| Her lines | `default/lines.toml` | `voice.say`, for the 15 events in `voice.EVENTS` | an admin, one line at a time (`voice_lines`) | nothing: no model call |
+| Her name, as the family call her | `persona.toml`, with `persona_name` over it | `{name}` in her character, their notes and every line; the page (`assistant`); Telegram's `/start` and the bot's contact | an admin: one line, at most 40 characters, no braces; empty is her own | nothing extra |
+| Her character | `<key>/character.md` | first in the cached chat prefix, for chat, the digest and retries; never the workers | nobody on the page: a rewrite takes its place | Vera as first written about 2,800 tokens with every call, in brief about 740, cached |
+| Their rewrite of her, per persona | `persona_text`, by persona key: the text, and hers as it shipped when they wrote it (`of`) | in place of that persona's character, and nobody else's | an admin, for the persona in force | its length, cached |
+| Their notes | `persona_notes` | after her character, under a header of their own, before the job | an admin, at most 1,000 characters | their length, cached |
+| Her lines and their wordings | `<key>/lines.toml`, where a line may be a list of wordings, with `voice_lines` over them | `voice.say`, for the 15 events in `voice.EVENTS` | an admin, one line at a time, one wording to a row | nothing: no model call |
+| Who is listening | code (`render_audience_line`) | one line in the turn, between the date and the message, in a shared chat only | nobody: read from the chat and the family list | a few tokens, uncached, in a shared chat only |
+| The Telegram contact | the Telegram supervisor | the bot's name and description in Telegram: her name and her `start` line | follows her; under none, the admin in BotFather | nothing: no model call |
 | About the family | the Personality page | the family block of the prefix | an admin (`about_family`) | its length, cached |
 
-`persona = none` is `PLAIN`: the bot as itself, called FamilyDB, with no character and the plain
-wording for every line. The family's rewrites are meant to be kept under none and come back when
-she is chosen again (the module docstring and `ALPHA_READINESS.md` step 12 both say so).
+Under a persona the prefix begins "# Who you are", then her character or their rewrite of her,
+then their notes under "## The family's own notes on how you talk", then "# The job", whose first
+sentence is "Where who you are and the job disagree, the job wins.", then the product spec. The
+request built under any persona differs from the one under none only in that part.
 
-## What is wrong or thin today
+`persona = none` is `PLAIN`: the bot as itself, called FamilyDB, with no character, neither
+header and the plain wording for every line. Their name for her, their rewrites, their notes and
+their lines are kept under none, unused, and come back when a persona is chosen again. Their
+name for her, their notes and their lines are theirs whoever she is; a rewrite is a copy of one
+persona's character and belongs to her alone.
 
-1. **Choosing "None" throws the family's rewrite of her away.** Saving the Personality page with
-   none chosen writes `persona_text` as empty (`save_personality` only keeps a rewrite when a
-   shipped persona is chosen), and under none the page draws the description box empty, so
-   choosing her again saves nothing either. Rewrite her, choose none, save, choose Vera, save:
-   the stored settings go from `{persona_text: ...}` to `{persona: none}` to `{}`, and she is
-   back as she shipped. Her lines survive only because their boxes carry the stored values. This
-   is a bug against what the docs promise, and the smallest fix is its own change: under none,
-   leave `persona_text` as stored.
+A line may have several wordings, and she takes turns with them. Code chooses, not chance: a
+CRC-32 of the event and a seed (the id of the message a notice answers, or the Telegram update
+for a stranger and for `/start`), or with no seed of the facts the line is filled in with. The
+same message always says the same words, after a resend, a retry or a restart, and the next may
+say it another way. A reminder has no seed, so different reminders can take different wordings,
+and the same reminder always takes the same one, however often it comes round.
 
-2. **"The spec wins" is written only in her character.** `prompt.py` says the spec wins where the
-   two meet, "her character says so itself", and it does, in her own last paragraphs ("Your
-   personality governs how you communicate; it does not override ... application rules, tool
-   permissions, or safety requirements"). `PERSONA_HEADER` and `JOB_HEADER` say nothing of it.
-   A family's rewrite that leaves that sentence out leaves the precedence out with it. One
-   sentence in `JOB_HEADER` makes it the product's, for every persona, shipped or rewritten, and
-   costs a dozen cached tokens.
+The audience line says "This is the family's group chat: everyone in it reads your reply" in a
+Telegram group and "This is the family's conversation on the page: everyone who signs in reads
+it" in the page's chat, each ending ", kids among them" when the family list has an active kid.
+A private chat gets no line. Code cannot see who is in a group, so the kids are read from the
+family list. The spec's "Who is listening" says what to do with it, whoever she is.
 
-3. **Keeping it suitable for the kids is her rule, not the product's.** Her character invites
-   cheek ("meet innuendo with a light, knowing response") and relies on the next sentence ("with
-   children or mixed-age audiences, keep the interaction age-appropriate") to stop it. The spec
-   says nothing about children, so a rewrite can keep the cheek and drop the guard. And the model
-   is never told who is listening: Telegram's channel knows whether a chat is a group
-   (`in_group`), and the page's chat is one thread the whole family shares, but neither fact
-   reaches the turn. The family list shows who is a kid; it does not say who can read this chat.
+While a persona is chosen, the Telegram supervisor gives the bot's contact her name, and her
+`start` line as its description: once after each connect, and again when either changes on the
+page. It asks Telegram what the contact says and sets only what differs, cut to Telegram's
+limits. A wait Telegram asks for is waited out; any other failure is logged and not tried again
+until her words change or the bot reconnects, and never stops the channel. Under none the
+contact is left as the admin named it in BotFather.
 
-4. **Her character is written for an assistant in general, not for this job.** It speaks of "the
-   user", of artifacts, formal letters and reports, of verifying cultural facts; the family's
-   chat is several people, kids among them, mostly capturing ideas, setting reminders and asking
-   what to do. At 11,251 characters it is larger than the product spec it sits in front of
-   (7,965). Some of it pulls against the spec: "Ask questions that move the conversation
-   forward" and "follow an interesting tangent" against "Let people correct you rather than
-   interrogating them" and "Short replies"; "Use lists, tables, and headings" against "No bullet
-   walls". The spec wins, but the model reads both on every call.
+## What was fixed
 
-   The case for shortening her is attention, not money, on the default model. At GPT-6 Luna's
-   prices her 2,800 tokens cost about $0.00003 a call from the cache. On Claude Opus 5 they cost
-   about $0.0014 a call from the cache and $0.028 each time the cache is written again, which is
-   the first message after an hour's quiet (`ANTHROPIC_CACHE_TTL=1h`, the default). What a long,
-   general character costs on a small model is adherence to the spec, and that is a number the
-   evals can give (item 7).
-
-5. **Her name cannot be changed from the page.** Naming the family's assistant is likely the
-   first thing a family wants to make its own, the kids especially. Today it takes a new folder.
-   Typing "You are Juno" into her description gives a bot that calls itself Juno in chat while
-   the page, `/start` and every line still say Vera.
-
-6. **A rewrite is a fork.** Once her description is rewritten, the family owns all 11,251
-   characters of it and never gets a later improvement to hers, and nothing tells them hers has
-   changed. Most families want to add a sentence ("no emoji", "Mia likes to be called Captain"),
-   not to take over a page of prose to do it.
-
-7. **Nothing measures her.** The evals run with Vera as she ships. Nothing compares her with
-   none, in pass rate or in tokens, or catches a rewrite that breaks a behaviour the evals hold.
-
-8. **Her rewrite and her lines are not hers alone.** `persona_text` and `voice_lines` are one
-   value each, laid over whichever persona is chosen. With one persona that is harmless; with a
-   second, a rewrite of Vera would be laid over somebody else.
-
-9. **"She" is written into the page.** "Who she is", "Her description", "What she says unasked",
-   "Restore her original description", and `docs/STYLE.md`'s "Her screen". A persona who is not
-   a she would need the page's wording to follow the persona. That is a decision before it is a
-   change (the open questions below).
+1. **Choosing none threw the family's rewrite away.** Under none no description box is drawn and
+   every rewrite is left as stored, so choosing her again brings it back.
+2. **"The spec wins" was written only in her character.** `JOB_HEADER` says it for every persona,
+   so a rewrite that leaves it out still gets it.
+3. **Keeping it suitable for kids was her rule, not the product's.** The spec's "Who is
+   listening" says it whoever she is told she is, and the audience line tells the model when a
+   chat is shared and whether kids read it.
+4. **Her character was written for an assistant in general.** A shorter Vera, `brief/` (2,958
+   characters against 11,250), ships beside her, fitted to a family's chat; Vera as first written
+   is unchanged and still the default.
+5. **Her name could not be changed from the page.** `persona_name` is her name wherever `{name}`
+   is written: the chat, her lines, the page, `/start` and the Telegram contact.
+6. **A rewrite was a fork.** "Anything to add" holds the family's own notes, which last when hers
+   changes, and a rewrite remembers hers as it was, so the page says when hers has changed and
+   shows how.
+7. **Nothing measured her.** `python -m evals --persona` compares personas in runs passed, input
+   tokens and cost, and every reply is held to one emoji, no "as an AI" filler and at most two
+   exclamation marks.
+8. **Her rewrite and her lines were not hers alone.** A rewrite is kept per persona and laid over
+   her alone. Their lines stay one set, theirs whoever she is, like their name for her and their
+   notes.
+9. **"She" was written into the page.** Every persona is a she, by decision, so the page's wording
+   of her stands.
 
 ## Where she can be used
 
 From most to least worthwhile. Each keeps to the rules above.
 
-- **Chat replies** (today). The one place she costs tokens, and the one where she matters most.
-- **What she says unasked** (today). Worth more than it looks: a family reads a reminder or a
-  "how was it?" far more often than they read a long answer. Two cheap improvements below:
-  several wordings of one line, and a preview.
-- **The digest** (today, as a chat turn).
-- **Telegram's own contact.** The bot's name and description in Telegram are set by hand in
-  BotFather; setup's Telegram step tells the admin to call it by her name, and after that
-  nothing keeps the two together. Telegram's Bot API can set them (`setMyName`,
-  `setMyDescription`, `setMyShortDescription`), so the supervisor could make the contact her
-  name, and follow a rename, with no model call and no trip to BotFather. It would run when the
-  persona or her name changes, never on a timer.
-- **Meeting her.** Setup ends without saying who she is. A line on the last setup page ("She is
-  called Vera; you can rename her, or choose none, under Personality") is enough. It is not a
-  setup step: the bot is usable without it.
+- **Chat replies.** The one place she costs tokens, and the one where she matters most.
+- **What she says unasked.** Worth more than it looks: a family reads a reminder or a "how was
+  it?" far more often than they read a long answer. A line may have several wordings, and the
+  Personality page shows how each reads.
+- **The digest**, as a chat turn, with the audience line when it goes to the family group.
+- **Telegram's own contact.** Her name and her `start` line, set by the supervisor through the Bot
+  API with no model call and no trip to BotFather. Telegram is asked after a connect or a change
+  to either, never on a timer.
+- **Meeting her.** The page that ends setup says who answers and that her name, how she talks or
+  none at all are chosen under Personality, and setup's Telegram step says her name will do for
+  the bot. It is not a setup step: the bot is usable without it.
 - **Memory, when it lands.** Two things change then. Her character says "do not ... imply access
   to memories you do not have", which becomes half wrong once she has some. And a style
   preference somebody states in passing ("Sam likes it short", "no emoji for Mia") is a memory,
@@ -131,48 +125,55 @@ Where she never goes: the lookup and discovery workers, whose prose nobody reads
 descriptions and tool results; memory deltas and anything else code reads; the page's own words
 (`views.py`), which are the page's, not hers; and any model call made just to word a line.
 
-## How she should be configured
+## How she is configured
 
 In layers, from least effort for the family to most. Each is written once, rendered by code, and
 changes the cached prefix only when somebody saves it.
 
-1. **Which persona** (today): a shipped folder, or none.
+1. **Which persona**: Vera as first written, Vera in brief, or none. The list shows each by her
+   label, with roughly what she would add to every message as she would be if chosen, the
+   family's name for her, their rewrite of her and their notes included.
 
-2. **Her name** (new): a short `persona_name` setting, empty for hers, laid over her in
-   `personas.active` like the rest. Everything that already asks `active(settings).name` follows
-   with no other change: the prompt, her lines, the page, `/start`, and the Telegram contact if
-   it is synced. One line, a few words, no braces. Under none the bot stays FamilyDB: a name
-   belongs to a persona.
+2. **Her name**: `persona_name`, empty for hers, laid over her in `personas.active`. Everything
+   that asks `active(settings).name` follows with no other change: the prompt, her lines, the
+   page, `/start` and the Telegram contact. One line, at most 40 characters, and no braces, since
+   a `{name}` in it would be filled in again. Under none the bot stays FamilyDB: a name belongs to
+   a persona.
 
-3. **Anything to add** (new): a short box, a thousand characters or so, of the family's own
-   notes on how she talks, put after her character in the prefix. It survives a change to hers,
-   because it is not a copy of her. It is the first thing to offer a family who wants her a bit
-   different, and the rewrite stays for the few who want her very different.
+3. **Anything to add**: `persona_notes`, a few sentences of the family's own on how she talks, at
+   most 1,000 characters, after her character in the prefix. They survive a change to hers,
+   because they are not a copy of her. It is the first thing to offer a family who want her a bit
+   different; the rewrite stays for the few who want her very different.
 
-4. **A full rewrite** (today, improved): as now, but remembering which of her it was written
-   from (a short digest of her character at the time), so the page can say "Vera's own
-   description has changed since you rewrote her" and show the difference. Once a second persona
-   ships, the rewrite and the lines are kept per persona, so each comes back with the one it was
-   written for.
+4. **A full rewrite**: kept per persona, with her own character as it shipped when they wrote it.
+   The box describes the persona in force and saving writes to her alone, never to a persona
+   chosen in the same save. When hers has changed since, the page says so above their rewrite and
+   offers, folded away, a line diff of hers then against hers now, each line marked + or - as
+   well as coloured. Saving a changed rewrite takes hers as it is now, which ends the notice.
+   Restoring drops that persona's rewrite and nobody else's.
 
-5. **Her lines** (today, improved):
+5. **Her lines**:
    - A line may have several wordings: a list in `lines.toml`, one per row in the page's box.
-     Code picks one from the message's own id, so a retry or a resend says the same words, and a
-     daily reminder does not read the same every day. No model call.
-   - Each box shows the line filled in with example facts, by the same `voice.say`, so the family
-     sees "Reminder: bins out (for Sam). Task #12; ..." rather than `{title}{who}`.
+     Code chooses one from the message's own id, or from the facts when there is none, so a
+     retry or a resend says the same words. Different reminders can take different wordings; the
+     same reminder always takes the same one, so a daily reminder reads the same every day. No
+     model call.
+   - Under each box, how the line in force reads: every wording filled in with example facts by
+     the same code as `voice.say`, so the family see "Reminder: bins out (Sam). Task #12; ..."
+     rather than `{title}{who}`.
 
-6. **Who is listening** (new, and not a setting): one line in the turn, from facts code already
-   has, such as "In the family group; kids can read it" or "A direct message with Sam". It goes
-   next to the date line, is a few tokens, and lets any persona choose its register without the
-   character having to guess. The product's rule that everything said where a kid can read it
-   stays suitable for them goes in the spec, where no rewrite reaches it.
+6. **Who is listening** (not a setting): the audience line in the turn, from facts code already
+   has, next to the date line. It is a few tokens, and lets any persona choose its register
+   without the character having to guess. The rule that everything said where a kid can read it
+   stays suitable for them is in the spec, where no rewrite reaches it.
 
-Dials ("how much she says", "humour", "emoji"), each position one fixed sentence, are tempting:
-deterministic, cheap, testable. They are not proposed yet. The spec's own style lines ("Short
+**Not built, and why.** Dials ("how much she says", "humour", "emoji"), each position one fixed
+sentence, are tempting: deterministic, cheap, testable. The spec's own style lines ("Short
 replies. One emoji at most.") would have to move into the persona layer for a dial to loosen
 them, and then none would need a short character of its own. If families keep writing the same
-notes in "Anything to add", those notes are the dials to make.
+notes in "Anything to add", those notes are the dials to make. More personas wait for a reason:
+each is a folder to keep and must earn her place in the evals, which have not yet measured the
+two that ship. Pronouns wait for a persona who is not a she, and every persona is a she.
 
 **Not configurable, on purpose:** what she does (the spec's); a persona per person or per chat,
 which would mean more than one cached prefix and more than one Vera; changing her from the chat;
@@ -182,51 +183,50 @@ a model call to word a line; a picture of her (`docs/STYLE.md`).
 
 Adding a persona is adding a folder, so what a folder must be is written down and tested:
 
-- `persona.toml` names her; `character.md` says `{name}` and never her name; every line in
-  `lines.toml` can be filled in. (Tested today.)
-- Her character is about how she talks. It says nothing about tools, dates, data or what to save,
-  and does not need to say that the spec wins, because the product says it.
+- `persona.toml` names her, and may give her a label with no brace in it but `{name}`;
+  `character.md` says `{name}` and never her name; every wording of every line in `lines.toml`
+  can be filled in. (Tested.)
+- Her character is about how she talks. It names no tool (tested), says nothing about dates,
+  data or what to save, and does not need to say that the job wins, because the product says it.
 - The request built under her differs from the one under none only in the persona section: the
-  same tools, the same spec, the same family block and idea list. (A new test.)
+  same tools, the same spec, the same family block, idea list and conversation. (Tested, for
+  every folder.)
 - She passes the evals at least as well as none does, and what she adds in tokens is known.
+  (Measured against a real model, by hand: "What is left".)
 
 ## Measuring her
 
-- `python -m evals --persona default|none|<file>`, reporting pass rate and input tokens per case,
-  so her cost and her effect are numbers rather than impressions.
-- Checks graded by code, as the evals already are, never by a second model: at most one emoji;
-  replies within each case's length; no "As an AI" filler; after a rename, "what's your name?"
-  gets the new one.
-- A case with a kid writing in the family group, graded on what code can see (length, no tool
-  that was not wanted), so a change to her or to the audience line is held to it.
+- `python -m evals --persona KEY|none|FILE`, repeated to compare: every case runs under each in
+  turn from one budget, and the summary and `--json` give each persona her runs passed, input
+  tokens (new, written to the cache and read from it) and estimated cost. A file is used as a
+  rewrite of the default persona, held to the Personality page's limit.
+- Checks graded by code, never by a second model, on every reply whoever she is: at most one
+  emoji, no "as an AI" filler, at most two exclamation marks, within the length every reply is
+  held to.
+- Cases for who is listening and who she is: a kid asking in the family group, graded on what
+  code can see (suggestions for tomorrow, nothing saved, a reply short enough for a group); the
+  same sensitive reminder asked for in the group, where she asks first, and in private, where it
+  is set at once; and "what's your name?" after a rename, which gets the new one, or FamilyDB
+  under none.
 
 Run them before and after any change to her character, a line or the audience line, and keep a
 change only if they hold, as `CLAUDE.md` asks of any prompt change.
 
-## Suggested order
+## Decisions
 
-One concern per pull request, smallest first:
+- **Is every persona a she?** Yes, as a product decision. The page's wording of her stays, and
+  `persona.toml` has no pronouns.
+- **Should Vera be fitted to this job, or kept as first written?** Kept as first written, and the
+  default. A shorter Vera ships beside her, so nothing of the first is lost; which of them the
+  family meet by default is for the evals to say, against a real model.
+- **Can the plain bot have a name?** No: a name belongs to a persona. Under none the bot is
+  FamilyDB, and the family's name for her is kept for when she comes back.
+- **Should kids ever change her?** No. The Personality page stays an admin's, and the chat can
+  never change her, for anybody.
 
-1. Choosing none keeps the family's rewrite (a bug, item 1).
-2. The spec wins, and stays suitable for kids, as the product's rules; the audience line in the
-   turn. With an eval case, run before and after.
-3. `--persona` in the evals and the voice checks; measure Vera against none.
-4. Her name on the Personality page.
-5. "Anything to add", and a rewrite that remembers what it was written from.
-6. Her character fitted to this job, only if step 3 says it is worth it: either Vera shortened,
-   or a second, shorter persona shipped beside her so nothing of the first is lost.
-7. Several wordings for a line, and previews on the page.
-8. Telegram's contact following her name.
+## What is left
 
-Later, and only with a reason: dials, pronouns, more personas.
-
-## Open questions for the family
-
-- **Is every persona a she?** If yes, it is a product decision and the page's wording stays. If
-  not, `persona.toml` gains pronouns and the page's wording of her goes through the persona.
-- **Should Vera be fitted to this job, or kept as first written?** Shortening her changes who she
-  is; shipping a shorter persona beside her keeps both, and the evals can say which the family
-  should meet by default.
-- **Can the plain bot have a name?** Proposed: no, a name belongs to a persona.
-- **Should kids ever change her?** The Personality page is an admin's today, and stays so under
-  this proposal; renaming her is the one thing a kid is likely to ask for.
+- Run `uv run python -m evals --persona default --persona brief --persona none` against a real
+  model, and choose the default from what it says. There was no key to run it with here, so
+  Vera as first written stays the default until then.
+- Dials, only if the family's notes in "Anything to add" keep saying the same things.
