@@ -54,14 +54,15 @@ ROLE_WORDS = {
     "parent": "uses all the rest: chat, ideas, plans and things to do.",
     "kid": "is in the plans; for now, with a password, may do whatever a parent may.",
 }
-# What somebody is told when their role may not go somewhere, by the permission it needs.
+# What somebody is told when their role may not go somewhere, by the permission it needs. The
+# conversation is hers, so it goes by her name: {name} is the persona in force.
 REFUSALS = {
     "manage": (
         "For an admin",
         "Settings, setting up and the family list are changed by an admin. Ask one if "
         "something here needs to change.",
     ),
-    "chat": ("Not yet", "Talking to the bot here is not part of your role yet. Ask an admin."),
+    "chat": ("Not yet", "Talking to {name} here is not part of your role yet. Ask an admin."),
     "change": (
         "Not yet",
         "Changing ideas, plans and things to do is not part of your role yet. Ask an admin.",

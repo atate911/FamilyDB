@@ -135,16 +135,20 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     web.jinja_env.globals["visitor"] = auth.visitor
     web.jinja_env.globals["csrf_token"] = auth.csrf_token
     web.jinja_env.globals["once_token"] = once.once_token
-    web.context_processor(
-        lambda: {
+
+    def every_page() -> dict[str, Any]:
+        # Who the family talks to, for every page that speaks of her: her name, and whether
+        # there is a her at all, both from the persona in force. With no persona the bot is
+        # FamilyDB and the place is "Chat".
+        her = personas.active(app.settings)
+        return {
             "site_title": app.settings.web_title,
             "footer": views.footer(__version__),
-            # Who the family talks to, for every page that speaks of her: her name, and whether
-            # there is a her at all. With no persona the bot is FamilyDB and the place is "Chat".
-            "assistant": personas.active(app.settings).name,
-            "has_persona": app.settings.persona != personas.NONE,
+            "assistant": her.name,
+            "has_persona": her is not personas.PLAIN,
         }
-    )
+
+    web.context_processor(every_page)
     web.register_blueprint(auth.bp)
     web.register_blueprint(routes.bp)
     web.register_blueprint(chat.bp)
