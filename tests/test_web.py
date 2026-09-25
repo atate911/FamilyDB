@@ -628,6 +628,7 @@ def test_no_page_reaches_a_table_to_write_to_it() -> None:
         "set_reply",
         "set_active",
         "mark_processed",
+        "set_text",
         "mark_failed",
         "claim_retry",
         "give_up",

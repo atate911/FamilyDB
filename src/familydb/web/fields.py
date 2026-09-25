@@ -14,7 +14,7 @@ import typing
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from familydb.agent.providers.prices import suggestions
+from familydb.agent.providers.prices import hearing_suggestions, suggestions
 from familydb.config import Settings
 from familydb.store.settings import BEHAVIOUR
 
@@ -252,6 +252,35 @@ GROUPS: tuple[tuple[str, str, tuple[Field, ...]], ...] = (
             field("follow_up_hour", "Follow-up hour", "When it asks how yesterday's plan went."),
             field("retry_interval_minutes", "Minutes between retries"),
             field("retry_max_attempts", "Retries before giving up"),
+        ),
+    ),
+    (
+        "Voice notes",
+        "Voice notes sent on Telegram are written down by a speech model, then answered as if "
+        "they had been typed. Claude cannot hear them, so they need an OpenAI or Gemini key.",
+        (
+            field("voice_notes", "Listen to voice notes", "Off asks the family to type instead."),
+            field(
+                "voice_max_minutes",
+                "Longest voice note heard (minutes)",
+                "A longer one is not heard at all, since every minute is paid for.",
+            ),
+            field(
+                "transcribe_provider",
+                "Who hears them",
+                "Leave it alone to use the chat company when it can, else another with a key.",
+            ),
+            field(
+                "openai_transcribe_model",
+                "OpenAI: hearing model",
+                suggested=hearing_suggestions("openai"),
+            ),
+            field(
+                "gemini_transcribe_model",
+                "Gemini: hearing model",
+                "Leave it empty to use Gemini's lookup model.",
+                suggested=suggestions("gemini"),
+            ),
         ),
     ),
     (

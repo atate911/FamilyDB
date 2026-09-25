@@ -96,11 +96,19 @@ Context is built in three layers, and every piece of information belongs to exac
 | Retry | every 5 minutes, for a failed message, 3 times at most; never after running out of steps | chat model | the chat context, plus which writes already ran | the chat tools | a reply |
 | Enrich | every 2 minutes, up to 3 pending ideas; a home idea with no place or link is skipped in code | worker model | worker prompt, home area, the idea and what was saved before | web search (3), `save_place`, `skip_place` | a place record |
 | Discover | a `suggest` call, cached 12 hours by window, constraints and topic | worker model | worker prompt, home area and where they are, the window, its hours, the constraints and topic, never the question's wording | web search (4), `report_finds` | up to 6 finds |
+| Transcribe | a voice note from somebody on the family list, before its chat turn | the hearing model: OpenAI's speech-to-text model or a Gemini model; never Claude, which takes no recordings | the recording, and one line naming the family, her and home so they are spelled right | nothing | its words, which become the message |
 
 All of them go through one door, `agent/gateway.ask`, which runs the loop
 (`agent/loop.run_turn`): the spending limit is checked before each call, and each call is
-recorded in `llm_calls` with its kind. `model_exists` and token counting call a provider but
-generate nothing.
+recorded in `llm_calls` with its kind. Hearing a voice note is not a turn (a recording in, its
+words out, no prompt file and no tools), so it has a door of its own beside it, `gateway.listen`,
+held to the same two rules: the limit first, and a record under the kind `transcribe`
+("listening to voice notes" on `/status`). Its five answers: asked only for a voice note from
+the family that is switched on, short enough and has somebody with a key to hear it; sees the
+recording and the names; may do nothing; its words are trusted as what was said, marked as
+spoken so the chat model allows for mishearing; and it costs one bounded request, which is not
+retried because the recording is not kept. `model_exists` and token counting call a provider
+but generate nothing.
 
 ## Who is speaking
 

@@ -15,6 +15,12 @@ older than what is installed. It gets a date when it is released.
 - **Captures ideas from chat.** "We should try that ramen place sometime" becomes
   a stored idea, tagged with what the model can infer, through Telegram, the web
   page's chat or the console.
+- **Hears voice notes.** A voice note on Telegram, as long and rambling as
+  anyone likes, is written down by a speech model (OpenAI's, or Gemini's; Claude
+  cannot hear) and answered as if it had been typed. The words are kept, marked
+  as a voice note; the recording is not. Voice notes can be turned off, capped in
+  length and pointed at either company on the settings page, and hearing them
+  counts against the daily limit like any other call.
 - **Fills them in.** A background worker turn looks each new idea up on the web:
   address, opening hours, booking link, price notes, a geocoded travel estimate.
 - **Keeps the calendar.** Confirmed plans are created, moved and cancelled on the

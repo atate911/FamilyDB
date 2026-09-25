@@ -23,11 +23,12 @@ class Price:
     output: float
     cached: float  # reading the cached prefix
     search: float  # one hosted web search
+    minute: float = 0.0  # a minute of recording, for a model that hears by the minute
 
 
 # Claude writes the cache at 1.25x the input price for five minutes, 2x for an hour.
 CACHE_WRITE = {"5m": 1.25, "1h": 2.0}
-UNLISTED = Price(input=15.0, output=75.0, cached=1.5, search=0.035)
+UNLISTED = Price(input=15.0, output=75.0, cached=1.5, search=0.035, minute=0.1)
 
 
 def _claude(inp: float, out: float) -> Price:
@@ -60,13 +61,26 @@ PRICES: dict[str, dict[str, Price]] = {
 }
 
 
+# Models that only hear voice notes, apart from PRICES so none is offered as a chat model. The
+# audio a token-billed one hears is counted as input tokens; whisper-1 is billed by the minute.
+# Gemini hears with its ordinary models, so it has nothing here.
+HEARING: dict[str, dict[str, Price]] = {
+    "openai": {
+        "gpt-4o-mini-transcribe": Price(input=1.25, output=5.0, cached=0.0, search=0.0),
+        "gpt-4o-transcribe": Price(input=2.5, output=10.0, cached=0.0, search=0.0),
+        "whisper-1": Price(input=0.0, output=0.0, cached=0.0, search=0.0, minute=0.006),
+    },
+}
+
+
 def price(provider: str | None, model: str | None) -> Price | None:
     """The listed price for this model, or None when it is not listed."""
     named = (model or "").lower()
-    table = PRICES.get(provider or "", {})
-    for prefix in sorted(table, key=len, reverse=True):
-        if named == prefix or named.startswith(prefix + "-"):
-            return table[prefix]
+    for tables in (PRICES, HEARING):
+        table = tables.get(provider or "", {})
+        for prefix in sorted(table, key=len, reverse=True):
+            if named == prefix or named.startswith(prefix + "-"):
+                return table[prefix]
     return None
 
 
@@ -74,6 +88,12 @@ def suggestions(provider: str) -> tuple[str, ...]:
     """Models worth offering on the settings page for this provider, cheapest first."""
     table = PRICES.get(provider, {})
     return tuple(sorted(table, key=lambda name: (table[name].output, name)))
+
+
+def hearing_suggestions(provider: str) -> tuple[str, ...]:
+    """Models worth offering for hearing voice notes, cheapest first."""
+    table = HEARING.get(provider, {})
+    return tuple(sorted(table, key=lambda name: (table[name].input, name)))
 
 
 def cost(
@@ -86,14 +106,20 @@ def cost(
     """What one call cost in dollars, and whether the model was listed or counted as UNLISTED.
 
     `input_tokens` is the uncached part only, as every provider reports it to the loop.
+    `audio_seconds` is a recording heard by a model that bills by the minute.
     """
     listed = price(provider, model)
     rate = listed or UNLISTED
     write = rate.input * CACHE_WRITE.get(cache_ttl, 2.0) if provider == "anthropic" else rate.input
     dollars = (
-        (usage.get("input_tokens") or 0) * rate.input
-        + (usage.get("cache_read_input_tokens") or 0) * rate.cached
-        + (usage.get("cache_creation_input_tokens") or 0) * write
-        + (usage.get("output_tokens") or 0) * rate.output
-    ) / PER_MILLION + (usage.get("web_searches") or 0) * rate.search
+        (
+            (usage.get("input_tokens") or 0) * rate.input
+            + (usage.get("cache_read_input_tokens") or 0) * rate.cached
+            + (usage.get("cache_creation_input_tokens") or 0) * write
+            + (usage.get("output_tokens") or 0) * rate.output
+        )
+        / PER_MILLION
+        + (usage.get("web_searches") or 0) * rate.search
+        + (usage.get("audio_seconds") or 0) / 60 * rate.minute
+    )
     return dollars, listed is not None

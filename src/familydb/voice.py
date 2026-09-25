@@ -112,6 +112,28 @@ EVENTS: dict[str, Event] = {
         "page, and then ask me again.",
         (),
     ),
+    "voice_off": Event(
+        "A voice note while they are turned off",
+        "I don't listen to voice notes here, so I didn't hear that one. Could you type it?",
+        (),
+    ),
+    "voice_no_ears": Event(
+        "A voice note with nobody to hear it",
+        "I can't hear voice notes yet: that needs an OpenAI or Gemini key, which an admin can "
+        "add on the settings page. Could you type it for now?",
+        (),
+    ),
+    "voice_too_long": Event(
+        "A voice note too long to hear",
+        "That voice note is longer than the {minutes} minutes I listen to. Could you send it "
+        "in shorter pieces, or type it?",
+        ("minutes",),
+    ),
+    "voice_unheard": Event(
+        "A voice note that could not be heard",
+        "Sorry, I couldn't make out that voice note. Could you send it again, or type it?",
+        (),
+    ),
     "done": Event("Nothing to add after doing it", "Done.", ()),
     "stranger": Event(
         "Someone not in the family",
@@ -122,7 +144,8 @@ EVENTS: dict[str, Event] = {
         "Telegram's /start",
         "Hi! I'm {name}, the family's planning assistant. Tell me ideas (\"we should try that "
         'ramen place"), plans ("we\'re going to the symphony next Saturday") or ask "what '
-        'should we do this weekend?"',
+        'should we do this weekend?" Typed or as a voice note, as long and rambling as you '
+        "like.",
         (),
     ),
 }

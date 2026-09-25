@@ -1,8 +1,14 @@
-"""The Telegram channel: long polling, the pipeline in a worker thread, one lane per bot."""
+"""The Telegram channel: long polling, the pipeline in a worker thread, one lane per bot.
+
+Text and voice notes both reach the pipeline. A voice note arrives as a way to fetch it, which
+the pipeline calls only once the sender is known to be family; the download itself runs on the
+bot's own event loop, like every send.
+"""
 
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import logging
 import threading
 import time
@@ -25,7 +31,7 @@ from telegram.ext import (
 
 from familydb import voice, whereabouts
 from familydb.app import App
-from familydb.channels.base import IncomingMessage, OutgoingMessage
+from familydb.channels.base import IncomingMessage, OutgoingMessage, VoiceNote
 from familydb.delivery import deliver
 from familydb.pipeline import handle_incoming
 
@@ -33,6 +39,23 @@ log = logging.getLogger(__name__)
 
 CHANNEL = "telegram"
 GROUP_TYPES = {ChatType.GROUP, ChatType.SUPERGROUP}
+# How long fetching a voice note may take before it is given up as not heard.
+FETCH_SECONDS = 60
+# A file name for each kind of recording, since the speech endpoint goes by the extension.
+EXTENSIONS = {
+    "audio/ogg": "ogg",
+    "audio/opus": "ogg",
+    "audio/mpeg": "mp3",
+    "audio/mp3": "mp3",
+    "audio/mp4": "m4a",
+    "audio/m4a": "m4a",
+    "audio/x-m4a": "m4a",
+    "audio/aac": "m4a",
+    "audio/wav": "wav",
+    "audio/x-wav": "wav",
+    "audio/webm": "webm",
+    "audio/flac": "flac",
+}
 
 
 def incoming_from_update(update: Any) -> IncomingMessage | None:
@@ -50,6 +73,45 @@ def incoming_from_update(update: Any) -> IncomingMessage | None:
         text=message.text,
         sender_name=sender_name(user),
     )
+
+
+def recording(message: Any) -> Any:
+    """The voice note, or the audio file, a message carries; None for anything else."""
+    if message is None:
+        return None
+    return getattr(message, "voice", None) or getattr(message, "audio", None)
+
+
+def incoming_voice(update: Any, fetch: Any) -> IncomingMessage | None:
+    """A voice note as the pipeline takes it: how long, what kind, and how to fetch it."""
+    message = update.effective_message
+    user = update.effective_user
+    chat = update.effective_chat
+    note = recording(message)
+    if note is None or user is None or chat is None:
+        return None
+    mime = (getattr(note, "mime_type", None) or "audio/ogg").split(";")[0].strip().lower()
+    return IncomingMessage(
+        channel=CHANNEL,
+        channel_update_id=str(update.update_id),
+        chat_id=str(chat.id),
+        channel_user_id=str(user.id),
+        text=(getattr(message, "caption", None) or "").strip(),
+        sender_name=sender_name(user),
+        voice=VoiceNote(
+            seconds=int(getattr(note, "duration", None) or 0),
+            mime=mime,
+            fetch=fetch,
+            name=f"voice.{EXTENSIONS.get(mime, 'ogg')}",
+            size=getattr(note, "file_size", None),
+        ),
+    )
+
+
+async def download(note: Any) -> bytes:
+    """A voice note's bytes, from Telegram."""
+    file = await note.get_file()
+    return bytes(await file.download_as_bytearray())
 
 
 @dataclass(frozen=True)
@@ -104,7 +166,7 @@ def addressed_to_bot(update: Any, bot_username: str | None, bot_id: int | None) 
     message = update.effective_message
     if message is None:
         return False
-    text = (message.text or "").lower()
+    text = (message.text or getattr(message, "caption", None) or "").lower()
     if bot_username and f"@{bot_username.lower()}" in text:
         return True
     reply = getattr(message, "reply_to_message", None)
@@ -168,6 +230,8 @@ class TelegramChannel:
         self.application.add_handler(
             MessageHandler(filters.TEXT & ~filters.COMMAND, self.on_message)
         )
+        # A voice note, or a recording sent as an audio file: heard, then answered as words.
+        self.application.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, self.on_voice))
         # A shared location, and a live one as it moves (those arrive as edits).
         self.application.add_handler(MessageHandler(filters.LOCATION, self.on_location))
 
@@ -203,6 +267,38 @@ class TelegramChannel:
             msg = IncomingMessage(
                 msg.channel, msg.channel_update_id, msg.chat_id, msg.channel_user_id, text
             )
+        await self._answer(update, bot, msg)
+
+    async def on_voice(self, update: Any, context: Any) -> None:
+        """A voice note: handed over with a way to fetch it, heard and answered like words."""
+        await asyncio.to_thread(self.app.refresh)
+        chat = update.effective_chat
+        bot = context.bot
+        in_group = chat is not None and chat.type in GROUP_TYPES
+        if (
+            in_group
+            and self.app.settings.telegram_require_mention
+            and not addressed_to_bot(update, bot.username, bot.id)
+        ):
+            return
+        note = recording(update.effective_message)
+        loop = asyncio.get_running_loop()
+
+        def fetch() -> bytes:
+            # Called from the pipeline's thread; the download runs on this loop.
+            future = asyncio.run_coroutine_threadsafe(download(note), loop)
+            return future.result(timeout=FETCH_SECONDS)
+
+        msg = incoming_voice(update, fetch)
+        if msg is None:
+            return
+        if in_group and msg.text:
+            msg = dataclasses.replace(msg, text=strip_mention(msg.text, bot.username))
+        await self._answer(update, bot, msg)
+
+    async def _answer(self, update: Any, bot: Any, msg: IncomingMessage) -> None:
+        """Run the pipeline on its own thread and send its reply, stored first, in this chat."""
+        chat = update.effective_chat
         try:
             await bot.send_chat_action(chat_id=chat.id, action=ChatAction.TYPING)
         except Exception:  # a failed typing indicator must never block the reply

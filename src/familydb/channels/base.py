@@ -2,8 +2,24 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Literal
+
+
+@dataclass(frozen=True)
+class VoiceNote:
+    """A recording somebody sent, not yet heard: how long it is, and how to fetch it.
+
+    `fetch` downloads it, and is only called once the sender is known to be family, so a
+    stranger's voice note costs nothing, not even the download.
+    """
+
+    seconds: int
+    mime: str
+    fetch: Callable[[], bytes]
+    name: str = "voice.ogg"  # with an extension that says what it is
+    size: int | None = None  # in bytes, when the channel says
 
 
 @dataclass(frozen=True)
@@ -15,6 +31,9 @@ class IncomingMessage:
     text: str
     # How the channel names the sender, for offering to add a stranger. Never trusted for more.
     sender_name: str | None = None
+    # A voice note, for the pipeline to hear before anything is answered. `text` is then any
+    # caption that came with it.
+    voice: VoiceNote | None = None
 
 
 @dataclass(frozen=True)

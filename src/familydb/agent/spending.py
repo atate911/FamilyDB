@@ -93,6 +93,23 @@ def estimate(
     return prices.cost(provider, model, usage, cache_ttl=cache_ttl)[0]
 
 
+# Only to size the hold on hearing a recording; the call records what was billed. Audio at 32
+# tokens a second, Gemini's rate and more than OpenAI counts, and its words at a generous 8.
+AUDIO_TOKENS_PER_SECOND = 32
+WORDS_TOKENS_PER_SECOND = 8
+
+
+def estimate_hearing(provider: str, model: str | None, seconds: int) -> float:
+    """The most hearing one recording could cost, whether it is billed by token or by minute."""
+    seconds = max(seconds, 1)
+    usage = {
+        "input_tokens": seconds * AUDIO_TOKENS_PER_SECOND + 200,
+        "output_tokens": seconds * WORDS_TOKENS_PER_SECOND + 400,
+        "audio_seconds": seconds,
+    }
+    return prices.cost(provider, model, usage)[0]
+
+
 def admit(conn: sqlite3.Connection, settings: Settings, now: datetime, cost: float) -> int:
     """Check the limit and hold this call's estimated cost; raise when the day is used up."""
     with transaction(conn):
