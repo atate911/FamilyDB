@@ -25,7 +25,7 @@
     'family': ['family.show', 'family.edit'],
     'you': ['family.you'],
     'status': ['web.status'],
-    'settings': ['settings.show', 'settings.personality'],
+    'settings': ['settings.show', 'settings.section', 'settings.personality'],
   } %}
   {% set ns = namespace(section='none') %}
   {% for name, owns in SECTIONS.items() %}{% if here in owns %}{% set ns.section = name %}{% endif %}{% endfor %}

@@ -175,7 +175,7 @@ one at a time:
 ## 4. Telegram
 
 1. In Telegram, talk to BotFather: `/newbot`, pick a name and a username, and copy the token it
-   gives you. Paste it on the settings page under API keys, as the Telegram bot token. It takes
+   gives you. Paste it on the settings page under Connections, as the Telegram bot token. It takes
    effect within seconds, with no restart. `/status` then says "connected as @yourbot", "the
    token was refused by Telegram" or "cannot reach Telegram; trying again". A token put in
    `TELEGRAM_BOT_TOKEN` in `.env` instead is read when `familydb run` starts.
@@ -200,7 +200,8 @@ The Google Cloud side is done once, in a browser:
 
 Then connect it from the settings page, which needs no laptop and nothing copied to the server:
 
-4. On `/settings`, under Google Calendar, paste the client's JSON and press "Get the consent link".
+4. On `/settings/connections`, under Google Calendar, paste the client's JSON and press "Get the
+   consent link".
 5. Open the link, sign in as the account that owns the family calendar, and allow access.
 6. Google then sends the browser to an address starting `http://127.0.0.1:53682/`, which will
    not load. That is expected. Copy the whole address from the address bar, paste it into the
@@ -217,7 +218,8 @@ will not work, use the laptop instead:
   `uv run familydb google auth --client-secrets ~/Downloads/client_secret_XXX.json` and sign in as
   the calendar's owner. It writes `data/google_token.json`.
 - `uv run familydb google calendars` lists the calendars and their ids. Put the family calendar's
-  id in the Google calendar id box on the settings page (under Home), or in `GOOGLE_CALENDAR_ID`.
+  id in the Google calendar id box on the settings page (under Connections, "Use a calendar by
+  its id"), or in `GOOGLE_CALENDAR_ID`.
 - Copy `google_token.json` into the server's `data/` folder, owned by the bot's user and mode
   600, and restart the bot.
 
@@ -227,9 +229,10 @@ Saturday at 8" now creates the event; "move that to Sunday" and "cancel the symp
 
 ## 6. Weather
 
-On the settings page, under Home, type the Home area as you would tell someone ("Vancouver,
-WA") and leave latitude and longitude empty: the page looks the place up on OpenStreetMap's map
-and fills them in, and says what it found. Coordinates you type yourself win. Units chooses
+On the settings page, under General, type the home town or area as you would tell someone
+("Vancouver, WA") and leave latitude and longitude (folded away under "Exact position and travel
+times") empty: the page looks the place up on OpenStreetMap's map and fills them in, and says what
+it found. Coordinates you type yourself win. Units chooses
 metric or imperial. In `.env` the same are `HOME_AREA`, `HOME_LAT`, `HOME_LON` and
 `WEATHER_UNITS`. Open-Meteo needs no API key. Check with
 `familydb tool get_forecast --json '{"start": "2026-09-26", "end": "2026-09-27"}'`.
@@ -333,7 +336,7 @@ Two upgrades from an older checkout ask something of you once:
 
 **Suggestions.** "What should we do this weekend?" runs the engine once: free time from the calendar, the forecast, every idea against the looked-up details, and, with lookups on, a search for time-bound things near the home area (cached for twelve hours, shared by questions that ask for the same window, constraints and kind of thing). Each verdict is logged in `suggestions`. It works in minutes, not parts of the day: "I'm bored, what now?" looks at the next few hours, "tonight" at the evening, and an answer for today says when they could be there ("can go 16:10-17:55 today"). `familydb suggest --window this-weekend --discover` runs the same engine from the shell.
 
-**Weekend digest.** The installer sends it to the chat on the web page (`web`), which needs no id looked up and so works from the first Thursday. To send it to the family's Telegram group instead, add the bot to the group and have somebody on the family list mention it there once; the Digest chat box on the settings page (under "When it speaks first") then offers that group among the chats the bot has seen, by when each was last written in. Pick it and save; empty the box and no digest is sent. A Telegram group's id is a negative number, and can be typed in by hand too. Digest day and hour (default Thursday 18:00 in the family's timezone) are on the same part of the page; `familydb digest` prints the schedule and `familydb digest --now` posts a digest immediately. The digest is asked as the first admin and stored like any message, so it goes out at most once a day; if the model call fails it is retried like a failed message, and if the bot was off at the scheduled hour it sends the digest a minute after it next starts on the same day.
+**Weekend digest.** The installer sends it to the chat on the web page (`web`), which needs no id looked up and so works from the first Thursday. To send it to the family's Telegram group instead, add the bot to the group and have somebody on the family list mention it there once; the "Weekend ideas go to" box on the settings page (under Messages) then offers that group among the chats the bot has seen, by when each was last written in. Pick it and save; empty the box and no digest is sent. A Telegram group's id is a negative number, and can be typed in by hand too. The day and time (default Thursday 18:00 in the family's timezone) are chosen beside it; `familydb digest` prints the schedule and `familydb digest --now` posts a digest immediately. The digest is asked as the first admin and stored like any message, so it goes out at most once a day; if the model call fails it is retried like a failed message, and if the bot was off at the scheduled hour it sends the digest a minute after it next starts on the same day.
 
 **Follow-ups.** The morning after a plan (`FOLLOW_UP_HOUR`, default 10:00), the bot asks "How was #57 Hopscotch Portland on Saturday? Worth doing again?" in the chat the plan was made in, once per plan, unless someone already said how it went. The answer is recorded as feedback and feeds future suggestions. `familydb follow-ups --now` asks by hand. It makes no model call.
 
@@ -508,8 +511,14 @@ the table does not list, and is counted high. It asks nothing of a model, so ref
 Every setting in this section can be changed in two places: in `.env`, which needs a restart, or
 on the settings page at `/settings`, which does not. A value set on the page wins over the same
 one in `.env`; empty a box on the page and `.env` applies again, which is what the greyed-out
-value in an empty box is showing you. `familydb config` prints the lot and says where each one
-came from. The page shows the API keys and Google Calendar first, then the rest in groups.
+value in an empty box is showing you (a dropdown says it in words, as "Default (Thursday)"),
+and a box set on the page is marked "changed". `familydb config` prints the lot and says where
+each one came from. `/settings` itself is a card to each part, saying how it stands and marking
+what needs a look: General (where home is, the time zone, units and the page's name), AI model
+(the company, its key, checked with it for free, and the models), Spending, Messages (the weekend
+ideas and the follow-ups), Lookups, Personality and family, Connections (Telegram and Google
+Calendar), Sign-in and security, and What has changed. Each is a short page of its own with one
+Save; the fine-tuning on it is folded away until opened.
 
 A change reaches the next message and the next page straight away, a new Telegram bot token
 within a few seconds, and the timezone at once. The jobs that run on a schedule — the digest, the
@@ -547,8 +556,8 @@ save only on a definite "no such model"; if the company cannot be reached or has
 save goes through. `/status` and `familydb debug cost` both print who is answering each surface
 and on which model, which is the quickest way to see that a change took effect.
 
-**Spending.** `DAILY_SPEND_LIMIT` ("Daily spending limit (US$)" on the page, under "What it may
-spend") is $2.00 a day by default, counted over the family's day in its timezone; 0 turns it
+**Spending.** `DAILY_SPEND_LIMIT` ("Daily spending limit (US$)" on the Spending page) is $2.00
+a day by default, counted over the family's day in its timezone; 0 turns it
 off. It is checked before every model call, whether for chat, a lookup, discovery or the digest.
 Once it is used up, chat says so ("I've reached today's spending limit ($2.00), so I'm stopping
 here until tomorrow.") and lookups wait for tomorrow. A turn already under way stops before its next call, so a day can end over the limit
@@ -557,16 +566,17 @@ list is counted at $15 per million input and $75 per million output tokens, dear
 does list, so the limit errs towards stopping. It is not the bill. Set a spending limit on the
 API key in the provider's own console as well, because theirs is.
 
-The other boxes in that group bound a single message: the longest answer (at most 64,000
-tokens), tool rounds per message (at most 20) and per lookup (at most 30), and, under "Looking
-things up", ideas looked up at a time (at most 20).
+The boxes folded under "What one message may use" on the same page bound a single message: the
+longest answer (at most 64,000 tokens), steps per message (at most 20) and per lookup (at most
+30); on the Lookups page, under "How often", ideas looked up at a time (at most 20).
 
 **Keys on the page.** The settings page is where keys are meant to be typed, and it has one
 consequence worth knowing: a key stored there lives in `data/familydb.sqlite3`, so it is in
 every backup you take (section 7) and in every copy of that file. A key in `.env` is not. Either
 is fine on a machine you control; if the backups go somewhere you do not control, keep the keys
-in `.env`. The page never shows a key back to you or writes one to its change log. "See a key"
-shows one only after the password you signed in with is typed again, once, on that screen only.
+in `.env`. The page never shows a key back to you or writes one to its change log. "See a key",
+under Sign-in and security, shows one only after the password you signed in with is typed again,
+once, on that screen only.
 
 **Personality.** `/settings/personality` holds who the bot is: the persona (Vera unless changed,
 or none), her description rewritten in the family's words, "About the family" (what she should
@@ -575,8 +585,9 @@ everything she says unasked, such as reminders and "how was it?". Those lines ar
 code, never by a model call; an emptied one goes back to hers. Her name is written as `{name}`,
 in her description and in any line, and filled in wherever she speaks, the chat page included.
 
-**Undoing a change.** The bottom of the settings page lists what has changed, when, and from
-where. To put a setting back the way it was, empty its box: the value from `.env` applies again.
+**Undoing a change.** What has changed, the last of the settings pages, lists every change, when,
+by whom and from where, by the names the page gives them. To put a setting back the way it was,
+empty its box: the value from `.env` applies again.
 
 **A worthwhile combination.** Filling in an address and opening hours from a page is extraction,
 not judgement, and it is most of the volume once lookups are on. If you move chat to another

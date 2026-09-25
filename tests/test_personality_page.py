@@ -67,7 +67,8 @@ def test_a_rewrite_is_used_and_can_be_restored(page, conn) -> None:
     told = "# Who you are\n\nYou are Vera. Be very brief, and a little dry."
     assert _prefix(page, conn)[0].text.startswith(told)
     assert settings_store.overrides(conn)["persona_text"] == rewrite  # kept as written
-    history = page.get("/settings").text
+    history = page.get("/settings/history").text
+    assert "Her description</strong>" in history
     assert "rewritten" in history and "a little dry" not in history  # not echoed in the log
     assert page.post("/settings/personality/restore", data=_form(page)).status_code == 302
     assert _prefix(page, conn)[0].text.startswith(
@@ -156,3 +157,15 @@ def test_an_unknown_persona_is_refused_even_when_none_is_chosen(page, conn) -> N
     )
     assert unknown.status_code == 400 and "no persona called" in unknown.text
     assert settings_store.overrides(conn)["persona"] == "none"
+
+
+def test_every_line_she_says_is_in_a_group_of_its_own_kind(page) -> None:
+    """A new line in voice.EVENTS would still be shown, under Other; better it has its group."""
+    from familydb import voice
+    from familydb.web.settings import LINE_GROUPS
+
+    grouped = [name for _, _, names in LINE_GROUPS for name in names]
+    assert sorted(grouped) == sorted(voice.EVENTS) and len(grouped) == len(set(grouped))
+    shown = page.get("/settings/personality").text
+    assert "Reminders and follow-ups" in shown and ">Other<" not in shown
+    assert "<summary>When she cannot answer</summary>" in shown  # folded, until one is written

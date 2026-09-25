@@ -39,7 +39,7 @@ class Flow:
 
 
 def _token(client) -> str:
-    found = re.search(r'name="csrf" value="([^"]+)"', client.get("/settings").text)
+    found = re.search(r'name="csrf" value="([^"]+)"', client.get("/settings/connections").text)
     assert found is not None
     return found.group(1)
 
@@ -84,7 +84,7 @@ def test_connecting_takes_three_steps_on_the_page(page) -> None:
     )
     assert chosen.status_code == 302
     assert page.app.settings.google_calendar_id == "family@group.calendar.google.com"
-    assert "Connected, using" in page.get("/settings").text
+    assert "Connected, using" in page.get("/settings/connections").text
 
 
 def test_a_calendar_the_connection_did_not_offer_is_refused(page) -> None:

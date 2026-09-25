@@ -91,6 +91,14 @@ older than what is installed. It gets a date when it is released.
   messages the bot on Telegram is listed on the Family page with a button to
   add them, and the digest chat is chosen from the chats the bot has seen, so
   nobody copies an id by hand.
+- **Settings in parts.** `/settings` is a card to each part, saying how it
+  stands and marking what needs a look: General, AI model, Spending, Messages,
+  Lookups, Personality and family, Connections, Sign-in and security, and what
+  has changed. Each part is a short page with one Save, a line of help under
+  every box, the default each empty box falls back to (in words: "Default
+  (Thursday)", an hour as "18:00"), a mark on what was changed here, and the
+  fine-tuning folded away. The AI model page chooses the company the way setup
+  does, with its key checked for free before it is kept.
 
 ### Installing it
 

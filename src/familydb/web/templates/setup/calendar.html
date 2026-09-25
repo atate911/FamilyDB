@@ -26,8 +26,9 @@
         <button type="submit">Use this calendar</button>
       </form>
     {% else %}
-      <p>Connected, but Google listed no calendars. Type the calendar’s id into <em>Google
-        calendar id</em> on the <a href="{{ url_for('settings.show') }}#home">Settings page</a>.</p>
+      <p>Connected, but Google listed no calendars. Type the calendar’s id under <em>Use a
+        calendar by its id</em> on the <a href="{{ url_for('settings.section', name='connections', _anchor='google') }}">Connections
+        settings</a>.</p>
     {% endif %}
   </section>
 

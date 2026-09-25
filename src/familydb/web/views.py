@@ -545,7 +545,7 @@ def local_moment(value: str, tz: ZoneInfo) -> str:
 
 
 def setting_text(value: str | None) -> str:
-    """A stored JSON value as the page shows it. Nothing stored reads as the fallback."""
+    """A stored JSON value as the page shows it. Nothing stored reads as the default."""
     if value is None:
         return "—"
     try:
@@ -553,7 +553,7 @@ def setting_text(value: str | None) -> str:
     except ValueError:
         return value
     if loaded is None:
-        return "from the environment"
+        return "default"
     if isinstance(loaded, bool):
         return "yes" if loaded else "no"
     return str(loaded)
