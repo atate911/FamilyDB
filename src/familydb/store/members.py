@@ -13,9 +13,10 @@ Role = Literal["admin", "member", "kid"]
 ROLES: tuple[str, ...] = ("admin", "member", "kid")
 
 
-# Channels with no account of their own behind them: the console, where whoever is at the
-# keyboard says who they are, and the web page, which is behind one shared family password and
-# so has to ask. Both name a member by display name instead of a channel user id.
+# Channels with no account of their own on another service behind them: the console, where
+# whoever is at the keyboard says who they are, and the web page, which names whoever is signed
+# in (or, while the family still shares one password, whoever they said they were). Both name a
+# member by display name instead of a channel user id.
 BY_NAME = frozenset({"console", "web"})
 
 

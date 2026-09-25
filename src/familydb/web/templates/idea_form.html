@@ -43,7 +43,7 @@
           {% endfor %}
         </select>
       </div>
-    {% else %}
+    {% elif not visitor().member %}
       <div class="field">
         <label for="who">Suggested by</label>
         <select id="who" name="who">

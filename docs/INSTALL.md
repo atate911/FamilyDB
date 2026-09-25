@@ -149,13 +149,14 @@ That also gets the page a real certificate, if the first try could not. More in
 ## 3. Follow the setup on the page (10 to 15 minutes)
 
 The page opens on its setup, which has seven short steps in order. Each step says why it matters
-and what to do, with links straight to the right place. The first step asks you to choose a
-password of your own, to replace the one above.
+and what to do, with links straight to the right place. The first two put you on the family list
+and give you a password of your own, which replaces the one above: from then on everybody signs
+in as themselves, and you give each of them a starting password on the Family page.
 
 | Step | | What you will need |
 |---|---|---|
-| Your own password | recommended | |
 | Yourself | needed | your name |
+| Your own password | recommended | |
 | An AI model | needed | an account with OpenAI (the cheapest), Anthropic or Google |
 | Where home is | recommended | your town |
 | Telegram | optional | Telegram on your phone |
@@ -265,15 +266,16 @@ are at the top of that file.
 <details>
 <summary>The warning worth reading twice</summary>
 
-One shared password is all that stands between a stranger and your API bill. Signing in is the
-whole bot: chatting spends tokens, the forms change ideas and put things on the family calendar,
-the Family page decides who may message the bot on Telegram, and the settings page can change
-which model answers, raise the spending limit, show a key to anyone who knows the password, and
-point the bot at a different calendar. Choose a long password on the page, set a spending limit on
-the API key with the company too, and look at `/status` now and then for a month that does not
-look like yours. If a phone goes missing, **Sign everyone out** on the settings page ends every
-sign-in on every device. RUNBOOK section 10 has what else protects the page: lockouts, CSRF tokens
-and a content security policy.
+The family's passwords are all that stand between a stranger and your API bill. Signing in as a
+member is most of the bot: chatting spends tokens, and the forms change ideas and put things on the
+family calendar. Signing in as an admin is all of it: the Family page decides who may message the
+bot on Telegram and who signs in, and the settings page can change which model answers, raise the
+spending limit, show a key to that admin, and point the bot at a different calendar. Keep the
+admins few and their passwords long, set a spending limit on the API key with the company too,
+and look at `/status` now and then for a month that does not look like yours. If a phone goes
+missing, make its owner a new starting password on the Family page, which signs them out on every
+device; **Sign everyone out** on the settings page ends every sign-in there is. RUNBOOK section 10
+has what else protects the page: lockouts, CSRF tokens and a content security policy.
 </details>
 
 ## Keeping the page off the internet
@@ -520,9 +522,11 @@ sudo tar -C /opt/familydb -czf ~/familydb-backups.tar.gz backups && sudo chown s
 scp sam@your-server:familydb-backups.tar.gz .       # on your own computer
 ```
 
-**The family password** lives in `.env`, not on the page, so that a stolen sign-in cannot change
-it: `sudoedit /opt/familydb/.env`, change `WEB_PASSWORD`, then
-`sudo systemctl restart familydb`. Everyone signs in again with the new one.
+**Passwords** are chosen on the page, each person their own, and stored only as hashes. Somebody
+who forgot theirs gets a new starting password from an admin on the Family page. If the only admin
+forgot theirs, `sudo /opt/familydb/scripts/maintain.sh password` prints a new starting password
+for them (`password NAME` does it for somebody else). `WEB_PASSWORD` in `.env` is only the
+installer's, for signing in the first time; it opens nothing once an admin has their own.
 
 RUNBOOK section 7 covers restoring by hand and what is and is not inside a backup; section 12
 covers journald limits, disk, and what to do when a secret gets out.

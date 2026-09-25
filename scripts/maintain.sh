@@ -43,8 +43,10 @@ Commands
   status               Is it running, is it healthy, how big is the database, when was the
                        last backup. Changes nothing.
   check                The full check (familydb doctor), with every finding and its fix.
-  password             A new family password for the web page, for when nobody remembers it.
-                       Printed once; everyone signs in again with it.
+  password [NAME]      A new password for the web page, for one nobody remembers. Printed
+                       once. Once people sign in as themselves it is a starting password for
+                       NAME, or for the first admin: they sign in with it and choose their
+                       own. Until then it is a new family password that everyone signs in with.
   https [DOMAIN]       Put the page on HTTPS: at DOMAIN if one is given, else at this server's
                        own address, with a real certificate where it can get one. Opens ports
                        80 and 443 if ufw is on. Run it again after opening a provider's firewall,
@@ -82,8 +84,10 @@ COMMAND="$1"; shift
 RESTORE_FILE=""
 LOG_LINES=50
 HTTPS_SITE=""
+PASSWORD_FOR=""
 case "$COMMAND" in
   https) case "${1:-}" in ''|-*) ;; *) HTTPS_SITE="$1"; shift ;; esac ;;
+  password) case "${1:-}" in ''|-*) ;; *) PASSWORD_FOR="$1"; shift ;; esac ;;
   restore) RESTORE_FILE="${1:-}"; [ -n "$RESTORE_FILE" ] && shift ;;
   logs) case "${1:-}" in ''|-*) ;; *) LOG_LINES="$1"; shift ;; esac ;;
 esac
@@ -272,8 +276,12 @@ cmd_check() {
 }
 
 cmd_password() {
-  head2 "A new family password"
-  familydb_cmd password
+  head2 "A new password for the web page"
+  if [ -n "$PASSWORD_FOR" ]; then
+    familydb_cmd password "$PASSWORD_FOR"
+  else
+    familydb_cmd password
+  fi
 }
 
 env_file_value() { as_root grep -E "^${1}=" "${TARGET}/.env" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d "'\"" || true; }

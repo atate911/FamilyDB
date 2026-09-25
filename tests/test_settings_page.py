@@ -310,12 +310,16 @@ def test_signing_everyone_out_ends_every_session_and_needs_the_password(page) ->
     assert other.get("/").status_code == 302  # signed out, with nothing done on that phone
     assert page.get("/").status_code == 302  # and this one too
     # The known-browser mark was signed with the old key, so it no longer spares anyone.
+    from contextlib import closing
+
     from familydb.web.auth import known_device
 
-    with page.application.test_request_context(
-        "/login", headers={"Cookie": f"{DEVICE_COOKIE}={other.get_cookie(DEVICE_COOKIE).value}"}
+    cookie = f"{DEVICE_COOKIE}={other.get_cookie(DEVICE_COOKIE).value}"
+    with (
+        closing(page.app.connect()) as conn,
+        page.application.test_request_context("/login", headers={"Cookie": cookie}),
     ):
-        assert not known_device(page.app.settings)
+        assert not known_device(conn, page.app.settings, personal=False)
 
 
 def test_a_pinned_key_cannot_be_rotated_from_the_page(settings, clock, conn, family) -> None:

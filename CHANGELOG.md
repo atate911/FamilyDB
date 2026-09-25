@@ -45,12 +45,19 @@ older than what is installed. It gets a date when it is released.
 - **Stops at a daily spending limit.** Every model call records an estimated
   cost; once the day's limit ($2 unless changed) is used up, nothing more is
   asked of a model until midnight, and the chat says why.
-- **The whole bot in a browser,** behind one shared family password: a home page
-  saying what is coming up and what is left to set up, the chat, the ideas and
-  restaurants, the plans as a list or a month read live from Google, forms that
-  add and change ideas, record how things went and put plans on the calendar
-  (through the same tools the bot uses), the Family page, a status page with
-  what is connected and what it has cost, and a settings page.
+- **The whole bot in a browser:** a home page saying what is coming up and what
+  is left to set up, the chat, the ideas and restaurants, the plans as a list or
+  a month read live from Google, forms that add and change ideas, record how
+  things went and put plans on the calendar (through the same tools the bot
+  uses), the Family page, a status page with what is connected and what it has
+  cost, and a settings page.
+- **Everyone signs in as themselves.** Each admin and member has a password of
+  their own, stored hashed. An admin gives each person a starting password,
+  shown once, which they replace as soon as they sign in with it. The chat speaks
+  as whoever is signed in, the settings history says who changed what, and only
+  an admin reaches Settings, setup and the Family page. A new starting password
+  signs somebody out everywhere, for a lost phone. The shared family password is
+  only the way in until the first admin has their own, which ends it.
 - **A look of its own.** A modern dark page lit the way an old green screen was:
   phosphor green glows only where attention belongs (the button to press, the box
   being typed in, what is next, what is live), each part of the site and each kind
@@ -86,7 +93,7 @@ knowledge:
    one, which each browser warns about once. The installer opens ports 80 and
    443 in `ufw`, and says plainly when a provider's own firewall is in the way.
 3. **Follow the setup on the page.** Seven short steps, each saying why it
-   matters and what to do: a password of your own, yourself, an AI model (the
+   matters and what to do: yourself, a password of your own, an AI model (the
    key is checked with the company, for free, before it is kept), where home
    is, Telegram (the bot recognises your phone from your first message to it),
    the rest of the family, and Google Calendar. Any step can be skipped; the
@@ -94,8 +101,8 @@ knowledge:
 
 When something fails, the script says what went wrong and what to do, and
 that pasting the block again carries on from where it stopped. Nobody edits a
-file on the server: the family password is chosen and changed on the page,
-and `maintain.sh password` makes a new one if it is forgotten.
+file on the server: each person's password is chosen and changed on the page,
+and `maintain.sh password` makes the admin a new one if it is forgotten.
 
 `scripts/uninstall.sh --from-zero` removes everything the install put on a
 server, after asking twice, so the install can be tried again from the start.

@@ -12,7 +12,7 @@ import pytest
 
 from familydb.app import App
 from familydb.integrations.geocode import GeoPoint
-from familydb.store import db, knocks
+from familydb.store import db, knocks, members
 from familydb.web import create_app
 from tests.conftest import NOW_ISO
 from tests.fakes import FakeGeocoder
@@ -45,6 +45,11 @@ def fresh(settings, clock, conn):
     return client
 
 
+def app_client(app):
+    """Another browser on the same install."""
+    return create_app(app).test_client()
+
+
 def _tokens(client, url: str) -> dict[str, str]:
     text = client.get(url).text
     found = {"csrf": re.search(r'name="csrf" value="([^"]+)"', text).group(1)}
@@ -73,17 +78,17 @@ def _say(monkeypatch, verdict: str) -> None:
 def test_a_new_install_opens_on_setup_until_it_can_answer(fresh) -> None:
     assert fresh.get("/").headers["Location"] == "/setup"
     page = fresh.get("/setup").text
-    for title in ("Choose the family password", "Add yourself", "Connect an AI model"):
+    for title in ("Add yourself", "Your own password", "Connect an AI model"):
         assert title in page
     assert page.count('class="tag need-needed">needed<') == 2  # yourself, and a model
-    assert 'href="/setup/password">Start' in page
+    assert 'href="/setup/you">Start' in page
     assert "Go to the home page" not in page  # it would only send you back here
 
 
 def test_every_step_says_where_it_is_and_how_to_leave(fresh) -> None:
     page = fresh.get("/setup/model").text
     assert "Step 3 of 7" in page and 'aria-current="step"' in page
-    assert 'href="/setup/you">← Back' in page
+    assert 'href="/setup/password">← Back' in page
     assert "Skip for now" in page and 'href="/setup/home"' in page
     assert fresh.get("/setup/nothing-like-this").status_code == 404
 
@@ -91,23 +96,26 @@ def test_every_step_says_where_it_is_and_how_to_leave(fresh) -> None:
 def test_the_whole_way_through(fresh, monkeypatch, conn) -> None:
     app = fresh.app
 
-    # 1. The family password, with no need to type the installer's again just after signing in.
-    back = _post(
-        fresh,
-        "password",
-        "/settings/password",
-        new="pancakes on sunday mornings",
-        again="pancakes on sunday mornings",
-    )
-    assert back.headers["Location"] == "/setup/password"
-    page = fresh.get("/setup/password").text
-    assert "That is the family password now" in page
-    assert "✓ Your own password is in use." in page
-
-    # 2. Yourself, as the admin.
+    # 1. Yourself, as the admin.
     back = _post(fresh, "you", "/family", name="Sam", role="admin")
     assert back.headers["Location"] == "/setup/you"
     assert "✓ On the list as Sam." in fresh.get("/setup/you").text
+
+    # 2. Your own password, which signs this browser in as Sam and ends the installer's.
+    sam = members.find_by_name(conn, "Sam")
+    page = fresh.get("/setup/password").text
+    assert f'name="member" value="{sam.id}"' in page and "For <strong>Sam</strong>" in page
+    ours = "pancakes on sunday mornings"
+    back = _post(fresh, "password", "/you", member=str(sam.id), new=ours, again=ours)
+    assert back.headers["Location"] == "/setup/password"
+    page = fresh.get("/setup/password").text
+    assert "You sign in as Sam from now on" in page
+    assert "✓ Everybody signs in as themselves." in page and "You sign in as Sam" in page
+    stranger = app_client(app)
+    assert stranger.post("/login", data={"password": INSTALLERS}).status_code == 400
+    refused = stranger.post("/login", data={"name": "Sam", "password": INSTALLERS})
+    assert refused.status_code == 401
+    assert stranger.post("/login", data={"name": "sam", "password": ours}).status_code == 302
 
     # 3. A model: the key is checked with the company before it is kept.
     _say(monkeypatch, "works")

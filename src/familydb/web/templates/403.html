@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, crt, radar %}
+{% block title %}For an admin · {{ site_title }}{% endblock %}
+{% block body_class %}page-lost{% endblock %}
+{% block content %}
+  <section class="lost">
+    {% call crt('power-on') %}
+      {% call radar([]) %}403{% endcall %}
+      <div class="lost-readout caps">
+        <p><span class="dim">Signed in</span> {{ visitor().name or '' }}</p>
+        <p><span class="dim">Role</span> {{ visitor().member.role if visitor().member else '' }}</p>
+        <p class="bright gap">?For an admin</p>
+        <p>Ready.<span class="crt-cursor"></span></p>
+      </div>
+    {% endcall %}
+    <p class="eyebrow">Looked after by an admin</p>
+    <h1>For an admin</h1>
+    <p class="muted">Settings, setting up and the family list are changed by an admin. Ask one
+      if something here needs to change.</p>
+    <p><a class="button" href="{{ url_for('web.home') }}">{{ icon('home') }}Back to the start</a></p>
+  </section>
+{% endblock %}

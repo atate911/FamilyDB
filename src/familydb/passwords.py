@@ -1,8 +1,9 @@
-"""The family password as it is stored: hashed, never written down in the clear.
+"""Passwords as they are stored: hashed, never written down in the clear.
 
 The installer makes one up and puts it in WEB_PASSWORD, because something has to open the page the
-first time. The family then chooses their own on the page, and that one is kept only as a hash in
-the settings table, where the page and `familydb password` are the only things that set it.
+first time. From then on each person signs in with their own, kept only as a hash in
+`member_logins` (see familydb/family.py). A family that has not moved to those yet may still share
+one password, chosen on the page and kept as a hash in the settings table.
 """
 
 from __future__ import annotations
@@ -12,9 +13,13 @@ import hashlib
 import hmac
 import secrets
 
-# One password guards everything and there is no second factor, so it has to be long enough not to
-# be guessed from the open internet. A short sentence is easy to remember and fits.
+# A password is all that stands between the open internet and a signed-in page, with no second
+# factor, so it has to be long enough not to be guessed. A short sentence is easy to remember.
 MIN_LENGTH = 12
+MAX_LENGTH = 200  # longer than any password needs to be, and short of making hashing a chore
+# A starting password is copied off a screen once and replaced at the first sign-in: long enough
+# never to be guessed in the meantime, short enough to type on a phone.
+STARTING_LENGTH = 16
 # scrypt from the standard library: memory-hard, nothing to install. About 16 MB and a few tens of
 # milliseconds a check, which a sign-in can afford and somebody guessing cannot multiply.
 SCRYPT_N, SCRYPT_R, SCRYPT_P = 2**14, 8, 1
