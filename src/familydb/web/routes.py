@@ -110,6 +110,7 @@ def home() -> Response | str:
         "home.html",
         today=views.day_text(today.isoformat()),
         coming=[views.entry_row(entry, today) for entry in coming],
+        blips=views.radar_blips(coming, today),
         source=seen.source,
         source_note=views.AGENDA_NOTES[seen.source],
         ideas=[views.idea_row(idea, app.settings.tzinfo) for idea in newest],

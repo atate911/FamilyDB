@@ -1,33 +1,45 @@
 {% extends "base.html" %}
+{% from "_ui.html" import icon, kind_label, page_head %}
 {% block title %}Ideas · {{ site_title }}{% endblock %}
 {% block content %}
-  <div class="page-head">
-    <h1>Ideas</h1>
-    <a class="button" href="{{ url_for('web.new_idea') }}">Add an idea</a>
-  </div>
-  <details class="panel" open>
-    <summary>Save a thought for later</summary>
-    <p>A restaurant, food cart pod, neighborhood, passport stop, kids' outing, special occasion,
+  {% call page_head('Ideas', 'Places to go, things to try, and everything the family has mentioned.', 'idea') %}
+    <a class="button" href="{{ url_for('web.new_idea') }}">{{ icon('plus') }}Add an idea</a>
+  {% endcall %}
+
+  {# Folded until wanted, so the list is on the first screen; the summary says what it is. #}
+  <details class="panel capture">
+    <summary>{{ icon('sparkles') }}Save a thought for later</summary>
+    <p class="muted">A restaurant, food cart pod, neighborhood, passport stop, kids' outing, special occasion,
       or just a direction to explore. Write naturally; Chat will organize it and confirm what was saved.</p>
     <form class="form" method="post" action="{{ url_for('chat.send') }}">
       <input type="hidden" name="csrf" value="{{ csrf_token() }}">
       <input type="hidden" name="once" value="{{ once_token() }}">
       <input type="hidden" name="intent" value="save_idea">
-      <label class="wide">Your thought <textarea name="text" required maxlength="3800" rows="3"
-        placeholder="Maybe explore food carts in Portland with the girls on a sunny afternoon..."></textarea></label>
-      <label>From <select name="who" required><option value="">Choose your name</option>
-        {% for person in capture_people %}<option>{{ person.display_name }}</option>{% endfor %}
-      </select></label>
-      <button type="submit">Organize in Chat</button>
-      <p class="wide muted">Uses your configured assistant. Check its confirmation in Chat;
+      <div class="field wide">
+        <label for="capture-text">Your thought</label>
+        <textarea id="capture-text" name="text" required maxlength="3800" rows="3"
+          placeholder="Maybe explore food carts in Portland with the girls on a sunny afternoon..."></textarea>
+      </div>
+      <div class="field">
+        <label for="capture-who">From</label>
+        <select id="capture-who" name="who" required><option value="">Choose your name</option>
+          {% for person in capture_people %}<option>{{ person.display_name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="field actions end">
+        <button type="submit">{{ icon('sparkles') }}Organize in Chat</button>
+      </div>
+      <p class="wide muted hint">Uses your configured assistant. Check its confirmation in Chat;
         you can also use Add an idea to save directly without AI.</p>
     </form>
   </details>
+
   <nav class="tabs" aria-label="Which ideas">
-    <a href="{{ url_for('web.ideas') }}"{% if request.endpoint == 'web.ideas' %} aria-current="page"{% endif %}>All ideas</a>
-    <a href="{{ url_for('web.restaurants') }}"{% if request.endpoint == 'web.restaurants' %} aria-current="page"{% endif %}>Restaurants</a>
+    <a href="{{ url_for('web.ideas') }}"{% if request.endpoint == 'web.ideas' %} aria-current="page"{% endif %}>{{ icon('idea') }}All ideas</a>
+    <a href="{{ url_for('web.restaurants') }}"{% if request.endpoint == 'web.restaurants' %} aria-current="page"{% endif %}>{{ icon('restaurant') }}Restaurants</a>
   </nav>
-  <form class="panel filters" method="get" action="{{ url_for('web.ideas') }}">
+
+  <form class="panel filters" method="get" action="{{ url_for('web.ideas') }}" role="search">
     <div class="field wide">
       <label for="q">Search</label>
       <input id="q" name="q" type="search" value="{{ selected.q }}" placeholder="ramen, museum…" />
@@ -60,8 +72,8 @@
       </select>
     </div>
     <div class="field actions">
-      <button type="submit">Filter</button>
-      {% if filtered %}<a class="clear" href="{{ url_for('web.ideas') }}">Clear</a>{% endif %}
+      <button type="submit">{{ icon('search') }}Filter</button>
+      {% if filtered %}<a class="clear" href="{{ url_for('web.ideas') }}">{{ icon('x') }}Clear</a>{% endif %}
     </div>
   </form>
 
@@ -70,32 +82,32 @@
   </p>
 
   {% if not rows %}
-    <p class="panel muted">
+    <p class="panel muted empty">{{ icon('idea') }}<span>
       Nothing here yet. <a href="{{ url_for('web.new_idea') }}">Add one</a>, or tell the bot in the
-      chat.
+      chat.</span>
     </p>
   {% endif %}
 
   <ul class="cards">
     {% for row in rows %}
       <li class="panel card">
-        <h2>
-          <a href="{{ url_for('web.idea', idea_id=row.id) }}">{{ row.title }}</a>
-          <span class="tag">{{ row.kind }}</span>
+        <p class="card-kind">
+          {{ kind_label(row.kind) }}
           {% if row.status != 'idea' %}<span class="tag status-{{ row.status }}">{{ row.status }}</span>{% endif %}
-        </h2>
+        </p>
+        <h2><a href="{{ url_for('web.idea', idea_id=row.id) }}">{{ row.title }}</a></h2>
         <p class="muted meta">
-          <span>#{{ row.id }}</span>
-          {% if row.where %}<span>{{ row.where }}</span>{% endif %}
-          <span>for {{ row.who }}</span>
-          {% if row.duration %}<span>{{ row.duration }}</span>{% endif %}
-          {% if row.cost %}<span>{{ row.cost }}</span>{% endif %}
-          {% if row.rating %}<span>{{ row.rating }}</span>{% endif %}
-          {% if row.pending %}<span>{{ row.details }}</span>{% endif %}
+          {% if row.where %}<span>{{ icon('pin') }}{{ row.where }}</span>{% endif %}
+          <span>{{ icon('user') }}for {{ row.who }}</span>
+          {% if row.duration %}<span>{{ icon('clock') }}{{ row.duration }}</span>{% endif %}
+          {% if row.cost %}<span class="cost">{{ row.cost }}</span>{% endif %}
+          {% if row.rating %}<span>{{ icon('star') }}{{ row.rating }}</span>{% endif %}
+          {% if row.pending %}<span>{{ icon('hourglass') }}{{ row.details }}</span>{% endif %}
         </p>
         {% if row.tags %}
           <p class="tags">{% for tag in row.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</p>
         {% endif %}
+        <span class="card-id muted">#{{ row.id }}</span>
       </li>
     {% endfor %}
   </ul>

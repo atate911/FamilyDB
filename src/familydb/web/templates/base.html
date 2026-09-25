@@ -1,37 +1,62 @@
+{% from "_ui.html" import icon %}
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0b0e0d" />
     <title>{% block title %}{{ site_title }}{% endblock %}</title>
+    {# The reading face is on every screen; fetch it with the page. #}
+    <link rel="preload" href="{{ url_for('static', filename='fonts/dm-sans.woff2') }}" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
-    <link rel="icon" href="data:," />
+    <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml" />
     {% block head %}{% endblock %}
   </head>
-  <body>
+  {# Which part of the site this page belongs to, by the view that drew it: it lights that
+     item in the bar, and gives the page its colour (see "Sections" in static/style.css). #}
+  {% set here = request.endpoint or '' %}
+  {% set SECTIONS = {
+    'home': ['web.home'],
+    'chat': ['chat.show'],
+    'ideas': ['web.ideas', 'web.idea', 'web.new_idea', 'web.edit_idea', 'web.restaurants'],
+    'plans': ['web.plans', 'web.plans_month'],
+    'todo': ['web.tasks'],
+    'family': ['family.show', 'family.edit'],
+    'status': ['web.status'],
+    'settings': ['settings.show', 'settings.personality'],
+  } %}
+  {% set ns = namespace(section='none') %}
+  {% for name, owns in SECTIONS.items() %}{% if here in owns %}{% set ns.section = name %}{% endif %}{% endfor %}
+  <body class="in-{{ ns.section }} {% block body_class %}{% endblock %}">
     <a class="skip" href="#content">Skip to the page</a>
-    {# Which item in the bar the page belongs to, by the view that drew it. #}
-    {% set here = request.endpoint or '' %}
-    {% macro item(label, target, owns) %}
-      <a href="{{ target }}"{% if here in owns %} aria-current="page"{% endif %}>{{ label }}</a>
+    {% macro item(label, target, section, glyph) %}
+      <a class="to-{{ section }}" href="{{ target }}"{% if section == ns.section %} aria-current="page"{% endif %}>
+        {{- icon(glyph) }}<span class="label">{{ label }}</span></a>
     {% endmacro %}
     <header class="bar">
       <a class="brand" href="{{ url_for('web.home') }}">
-        <span class="brand-mark" aria-hidden="true">{{ site_title[:1] }}</span>
-        <span>{{ site_title }}</span>
+        <span class="brand-mark">{{ icon('mark') }}</span>
+        <span class="brand-name">{{ site_title }}</span><span class="caret" aria-hidden="true"></span>
       </a>
-      <nav aria-label="Main">
-        {{ item('Chat', url_for('chat.show', _anchor='latest'), ['chat.show']) }}
-        {{ item('Ideas', url_for('web.ideas'), ['web.ideas', 'web.idea', 'web.new_idea', 'web.edit_idea', 'web.restaurants']) }}
-        {{ item('Plans', url_for('web.plans'), ['web.plans', 'web.plans_month']) }}
-        {{ item('Things to do', url_for('web.tasks'), ['web.tasks']) }}
-        {{ item('Family', url_for('family.show'), ['family.show', 'family.edit']) }}
-        {{ item('Status', url_for('web.status'), ['web.status']) }}
-        {{ item('Settings', url_for('settings.show'), ['settings.show']) }}
+      {# The five places a day is spent. On a phone they are the tabs along the bottom, where a
+         thumb is; on a wider screen they sit in this bar. #}
+      <nav class="places" aria-label="Main">
+        {{ item('Home', url_for('web.home'), 'home', 'home') }}
+        {{ item('Chat', url_for('chat.show', _anchor='latest'), 'chat', 'chat') }}
+        {{ item('Ideas', url_for('web.ideas'), 'ideas', 'idea') }}
+        {{ item('Plans', url_for('web.plans'), 'plans', 'plans') }}
+        {{ item('To do', url_for('web.tasks'), 'todo', 'todo') }}
+      </nav>
+      {# And the three for looking after it, kept to one side. #}
+      <nav class="tools" aria-label="Household">
+        {{ item('Family', url_for('family.show'), 'family', 'family') }}
+        {{ item('Status', url_for('web.status'), 'status', 'status') }}
+        {{ item('Settings', url_for('settings.show'), 'settings', 'settings') }}
       </nav>
       {% if password_in_use() and session.get('signed_in') %}
-        <form method="post" action="{{ url_for('auth.logout') }}">
-          <button class="quiet" type="submit">Sign out</button>
+        <form class="signout" method="post" action="{{ url_for('auth.logout') }}">
+          <button class="quiet" type="submit">{{ icon('signout') }}<span class="label">Sign out</span></button>
         </form>
       {% endif %}
     </header>
@@ -44,7 +69,8 @@
       {% block content %}{% endblock %}
     </main>
     <footer class="foot">
-      <p>A little less planning. A little more together.</p>
+      <span class="foot-mark">{{ icon('mark') }}{{ site_title }}</span>
+      <span>A little less planning. A little more together.</span>
       <p class="legal">{{ footer }}</p>
     </footer>
   </body>

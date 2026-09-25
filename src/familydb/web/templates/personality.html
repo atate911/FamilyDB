@@ -1,11 +1,11 @@
 {% extends "base.html" %}
+{% from "_ui.html" import icon, page_head %}
 {% block title %}Personality · {{ site_title }}{% endblock %}
 {% block content %}
-  <h1>Personality and family</h1>
-  <p><a href="{{ url_for('settings.show') }}">← All settings</a></p>
+  {{ page_head('Personality and family', none, 'mark', [('Settings', url_for('settings.show'))]) }}
   {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
   {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
-  <p class="muted">
+  <p class="muted small">
     Both go with every chat message, before anything else the assistant is told, so they shape
     every reply. Together they are about {{ "{:,}".format(tokens) }} tokens now, cached between
     messages; the status page shows what they cost. Lookups on the web never see either.
@@ -15,7 +15,7 @@
     <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
 
     <section class="panel">
-      <h2>Who she is</h2>
+      <h2>{{ icon('mark') }}Who she is</h2>
       <div class="setting">
         <label for="p-persona">Personality</label>
         <select id="p-persona" name="persona">
@@ -29,7 +29,7 @@
       </div>
       <div class="setting">
         <label for="p-text">Her description</label>
-        <textarea id="p-text" name="persona_text" rows="18"
+        <textarea id="p-text" class="script" name="persona_text" rows="18"
                   maxlength="{{ limits.persona_text }}">{{ text }}</textarea>
         <p class="muted hint">
           How she speaks, not what she does: the rules for ideas, plans and reminders stay as
@@ -40,7 +40,7 @@
     </section>
 
     <section class="panel">
-      <h2>About the family</h2>
+      <h2>{{ icon('family') }}About the family</h2>
       <div class="setting">
         <label for="p-about">In your own words</label>
         <textarea id="p-about" name="about_family" rows="8" maxlength="{{ limits.about_family }}"
@@ -53,7 +53,7 @@
     </section>
 
     <section class="panel">
-      <h2>What she says unasked</h2>
+      <h2>{{ icon('bell') }}What she says unasked</h2>
       <p class="muted">
         Reminders, "how was it?", notes after a lookup, and notices when she cannot answer are
         written, not thought up, so they cost nothing and still arrive when the model is down.
@@ -78,14 +78,14 @@
       {% endfor %}
     </section>
 
-    <div class="actions"><button type="submit">Save</button></div>
+    <div class="save-bar"><button type="submit">{{ icon('check') }}Save</button></div>
   </form>
 
   {% if rewritten %}
     <form method="post" action="{{ url_for('settings.restore_personality') }}">
       <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
       <div class="actions">
-        <button class="quiet" type="submit">Restore her original description</button>
+        <button class="quiet" type="submit">{{ icon('undo') }}Restore her original description</button>
       </div>
     </form>
   {% endif %}

@@ -1,8 +1,11 @@
 {% extends "base.html" %}
+{% from "_ui.html" import icon, page_head %}
 {% block title %}Family · {{ site_title }}{% endblock %}
 {% block content %}
-  <h1>Family</h1>
-  <p class="muted">Who the bot talks to. On the web page and in the console people say who they
+  {% call page_head('Family', 'Who the bot talks to.', 'family') %}
+    <a class="button" href="#add">{{ icon('person_plus') }}Add somebody</a>
+  {% endcall %}
+  <p class="muted small">On the web page and in the console people say who they
     are; on Telegram the bot knows them by their Telegram id, so add it here to let somebody
     message it from their phone. Anybody not on this list who writes is told their id and
     turned away.</p>
@@ -10,6 +13,7 @@
   <ul class="panel plain people">
     {% for person in people %}
       <li class="{{ '' if person.active else 'off' }}">
+        <span class="avatar role-{{ person.role }}" aria-hidden="true">{{ person.name[:1] | upper }}</span>
         <div class="person">
           <strong>{{ person.name }}</strong>
           <span class="tag">{{ person.role }}</span>
@@ -21,16 +25,16 @@
           {% elif person.role == 'kid' %}named in ideas, does not message the bot
           {% else %}web page and console only{% endif %}
         </div>
-        <a href="{{ url_for('family.edit', member_id=person.id) }}">Change</a>
+        <a class="button ghost" href="{{ url_for('family.edit', member_id=person.id) }}">{{ icon('edit') }}Change</a>
       </li>
     {% else %}
-      <li class="muted">Nobody yet. Add yourself first, as an admin.</li>
+      <li class="muted empty">{{ icon('family') }}<span>Nobody yet. Add yourself first, as an admin.</span></li>
     {% endfor %}
   </ul>
 
   {% if knocks %}
     <section class="panel" id="knocking">
-      <h2>Asked to talk to the bot</h2>
+      <h2>{{ icon('bell') }}Asked to talk to the bot</h2>
       <p class="muted">People who messaged it on Telegram and were turned away, newest first. Add
         the ones you know; ignore the rest, and they drop off this list after a month.</p>
       <ul class="plain knocks">
@@ -57,7 +61,7 @@
                   {% endfor %}
                 </select>
               </div>
-              <div class="field actions"><button type="submit">Add</button></div>
+              <div class="field actions end"><button type="submit">{{ icon('plus') }}Add</button></div>
             </form>
           </li>
         {% endfor %}
@@ -65,8 +69,8 @@
     </section>
   {% endif %}
 
-  <section class="panel">
-    <h2>Add somebody</h2>
+  <section class="panel" id="add">
+    <h2>{{ icon('person_plus') }}Add somebody</h2>
     <form class="form" method="post" action="{{ url_for('family.add') }}">
       <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
       <input type="hidden" name="once" value="{{ once_token() }}" />
@@ -86,8 +90,8 @@
         <label for="telegram_id">Telegram id</label>
         <input id="telegram_id" name="telegram_id" inputmode="numeric" placeholder="optional" />
       </div>
-      <div class="field wide actions">
-        <button type="submit">Add</button>
+      <div class="field actions end">
+        <button type="submit">{{ icon('plus') }}Add</button>
       </div>
     </form>
   </section>

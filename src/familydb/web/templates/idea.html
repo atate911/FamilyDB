@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_ui.html" import icon, kind_label, chip %}
 {% block title %}{{ idea.title }} · {{ site_title }}{% endblock %}
 {% macro asking(id) %}
   <div class="field">
@@ -12,209 +13,230 @@
   </div>
 {% endmacro %}
 {% block content %}
-  <article class="panel">
-    <h1>{{ idea.title }}</h1>
-    <p class="muted meta">
-      <span>#{{ idea.id }}</span>
-      <span class="tag">{{ row.kind }}</span>
-      <span class="tag status-{{ idea.status }}">{{ idea.status }}</span>
-      {% if idea.suggested_by_name %}<span>suggested by {{ idea.suggested_by_name }}</span>{% endif %}
-      <span>added {{ row.added }}</span>
-    </p>
-    {% if idea.description %}<p>{{ idea.description }}</p>{% endif %}
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="{{ url_for('web.ideas') }}">Ideas</a><span aria-hidden="true">/</span><span aria-current="page">{{ idea.title }}</span>
+  </nav>
 
-    {% if original_message %}<details><summary>Original thought</summary>
-      <p class="said-text">{{ original_message }}</p>
-    </details>{% endif %}
-    <dl class="facts">
-      <dt>For</dt><dd>{{ row.who }}</dd>
-      {% if row.where %}<dt>Where</dt><dd>{{ row.where }}</dd>{% endif %}
-      <dt>Setting</dt><dd>{{ setting }}{% if weather %}, {{ weather }}{% endif %}</dd>
-      {% if idea.seasons %}<dt>Seasons</dt><dd>{{ idea.seasons | join(', ') }}</dd>{% endif %}
-      {% if row.duration %}<dt>How long</dt><dd>{{ row.duration }}</dd>{% endif %}
-      {% if row.cost %}<dt>Cost</dt><dd>{{ row.cost }}</dd>{% endif %}
-      {% if idea.needs_booking %}
-        <dt>Booking</dt>
-        <dd>needed{% if idea.lead_time_days %}, about {{ idea.lead_time_days }} days ahead{% endif %}</dd>
-      {% endif %}
-      {% if row.rating %}<dt>So far</dt><dd>{{ row.rating }}</dd>{% endif %}
-      <dt>Lookup</dt>
-      <dd>
-        {{ row.details }}{% if idea.enrichment_note %} ({{ idea.enrichment_note }}){% endif %}
-      </dd>
-      {% if row.url %}
-        <dt>Link</dt>
-        <dd><a href="{{ row.url }}" rel="noopener noreferrer">{{ row.url }}</a></dd>
-      {% endif %}
-    </dl>
-    {% if idea.tags %}
-      <p class="tags">{% for tag in idea.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</p>
-    {% endif %}
-    <div class="actions">
-      <a class="button" href="{{ url_for('web.edit_idea', idea_id=idea.id) }}">Edit</a>
-      <form method="post" action="{{ url_for('edits.set_status', idea_id=idea.id) }}">
-        <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-        <input type="hidden" name="once" value="{{ once_token() }}" />
-        <input type="hidden" name="status" value="{{ 'idea' if idea.status == 'dropped' else 'dropped' }}" />
-        <button class="quiet" type="submit">
-          {{ 'Bring it back' if idea.status == 'dropped' else 'Drop it' }}
-        </button>
-      </form>
-    </div>
-  </article>
+  {# Three blocks: the idea, what to do with it, and the place. Side by side where there is
+     room, with the doing beside the title; on a phone the doing comes before the place's
+     hours and phone number, which are looked up now and then. #}
+  <div class="split">
+    <article class="panel idea-main">
+      <p class="card-kind">
+        {{ kind_label(row.kind) }}
+        <span class="tag status-{{ idea.status }}">{{ idea.status }}</span>
+      </p>
+      <h1>{{ idea.title }}</h1>
+      <p class="muted meta">
+        <span>#{{ idea.id }}</span>
+        {% if idea.suggested_by_name %}<span>suggested by {{ idea.suggested_by_name }}</span>{% endif %}
+        <span>added {{ row.added }}</span>
+      </p>
+      {% if idea.description %}<p class="description">{{ idea.description }}</p>{% endif %}
 
-  {% if place %}
-    <section class="panel">
-      <h2>{{ place.name }}</h2>
-      {% if place.summary %}<p>{{ place.summary }}</p>{% endif %}
+      {% if original_message %}<details class="more original"><summary>Original thought</summary>
+        <p class="said-text">{{ original_message }}</p>
+      </details>{% endif %}
       <dl class="facts">
-        {% if place.address %}
-          <dt>Address</dt>
-          <dd>
-            {{ place.address }}
-            {% if place.map_url %}
-              <a href="{{ place.map_url }}" rel="noopener noreferrer">map</a>
-            {% endif %}
-          </dd>
+        <dt>{{ icon('user') }}For</dt><dd>{{ row.who }}</dd>
+        {% if row.where %}<dt>{{ icon('pin') }}Where</dt><dd>{{ row.where }}</dd>{% endif %}
+        <dt>{{ icon('sun') }}Setting</dt><dd>{{ setting }}{% if weather %}, {{ weather }}{% endif %}</dd>
+        {% if idea.seasons %}<dt>{{ icon('seasonal') }}Seasons</dt><dd>{{ idea.seasons | join(', ') }}</dd>{% endif %}
+        {% if row.duration %}<dt>{{ icon('clock') }}How long</dt><dd>{{ row.duration }}</dd>{% endif %}
+        {% if row.cost %}<dt>{{ icon('coin') }}Cost</dt><dd>{{ row.cost }}</dd>{% endif %}
+        {% if idea.needs_booking %}
+          <dt>{{ icon('bell') }}Booking</dt>
+          <dd>needed{% if idea.lead_time_days %}, about {{ idea.lead_time_days }} days ahead{% endif %}</dd>
         {% endif %}
-        {% if place.travel %}<dt>Getting there</dt><dd>{{ place.travel }}</dd>{% endif %}
-        {% if place.phone %}<dt>Phone</dt><dd>{{ place.phone }}</dd>{% endif %}
-        {% if place.website %}
-          <dt>Website</dt>
-          <dd><a href="{{ place.website }}" rel="noopener noreferrer">{{ place.website }}</a></dd>
+        {% if row.rating %}<dt>{{ icon('star') }}So far</dt><dd>{{ row.rating }}</dd>{% endif %}
+        <dt>{{ icon('search') }}Lookup</dt>
+        <dd>
+          {{ row.details }}{% if idea.enrichment_note %} ({{ idea.enrichment_note }}){% endif %}
+        </dd>
+        {% if row.url %}
+          <dt>{{ icon('link') }}Link</dt>
+          <dd><a href="{{ row.url }}" rel="noopener noreferrer">{{ row.url }}</a></dd>
         {% endif %}
-        {% if place.booking_url %}
-          <dt>Booking</dt>
-          <dd><a href="{{ place.booking_url }}" rel="noopener noreferrer">{{ place.booking_url }}</a></dd>
-        {% endif %}
-        {% if place.price_note %}<dt>Prices</dt><dd>{{ place.price_note }}</dd>{% endif %}
       </dl>
+      {% if idea.tags %}
+        <p class="tags">{% for tag in idea.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</p>
+      {% endif %}
+      <div class="actions">
+        <a class="button secondary" href="{{ url_for('web.edit_idea', idea_id=idea.id) }}">{{ icon('edit') }}Edit</a>
+        <form method="post" action="{{ url_for('edits.set_status', idea_id=idea.id) }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+          <input type="hidden" name="once" value="{{ once_token() }}" />
+          <input type="hidden" name="status" value="{{ 'idea' if idea.status == 'dropped' else 'dropped' }}" />
+          <button class="quiet" type="submit">
+            {{ icon('undo' if idea.status == 'dropped' else 'x') }}{{ 'Bring it back' if idea.status == 'dropped' else 'Drop it' }}
+          </button>
+        </form>
+      </div>
+    </article>
 
-      {% if place.has_hours %}
-        <h3>Opening hours</h3>
-        <table class="hours">
-          <tbody>
-            {% for row in place.hours %}
-              <tr><th scope="row">{{ row.day }}</th><td>{{ row.hours }}</td></tr>
+    <aside class="idea-side">
+      {% if plans %}
+        <section class="panel">
+          <h2>{{ icon('plans') }}On the calendar</h2>
+          <ul class="plain agenda">
+            {% for plan in plans %}
+              <li>
+                {{ chip(plan.chip) }}
+                <div class="agenda-body">
+                  <div class="when">
+                    <span>{{ plan.when }}</span>
+                    {% if plan.relative %}<span class="rel">{{ plan.relative }}</span>{% endif %}
+                    {% if plan.status != 'confirmed' %}<span class="tag">{{ plan.status }}</span>{% endif %}
+                  </div>
+                  {% if plan.location %}<div class="where">{{ icon('pin') }}{{ plan.location }}</div>{% endif %}
+                </div>
+              </li>
             {% endfor %}
-          </tbody>
-        </table>
-      {% else %}
-        <p class="muted">No opening hours were found.</p>
+          </ul>
+        </section>
       {% endif %}
 
-      {% if place.freshness %}
-        <p class="muted {{ 'warn' if place.stale }}">{{ place.freshness }}</p>
+      <section class="panel">
+        <details class="more">
+          <summary><span class="h2">{{ icon('plans') }}Plan it</span></summary>
+        {% if can_schedule %}
+          <form class="form" method="post" action="{{ url_for('edits.add_plan') }}">
+            <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+            <input type="hidden" name="once" value="{{ once_token() }}" />
+            <input type="hidden" name="idea_id" value="{{ idea.id }}" />
+            <input type="hidden" name="title" value="{{ idea.title }}" />
+            <div class="field wide">
+              <label for="start">When</label>
+              <input id="start" name="start" type="datetime-local" required />
+              <label class="check"><input type="checkbox" name="all_day" value="yes" /> All day</label>
+            </div>
+            <div class="field">
+              <label for="location">Where</label>
+              <input id="location" name="location" value="{{ row.where or '' }}" />
+            </div>
+            {{ asking('plan') }}
+            <div class="field wide actions">
+              <button type="submit">{{ icon('plans') }}Put it on the calendar</button>
+            </div>
+          </form>
+        {% else %}
+          <p class="muted">Google Calendar is not connected, so nothing here can be scheduled.
+            See the <a href="{{ url_for('web.status') }}">status page</a>.</p>
+        {% endif %}
+        </details>
+      </section>
+
+      <section class="panel">
+        <details class="more">
+          <summary><span class="h2">{{ icon('star') }}Record how it went</span></summary>
+        <form class="form" method="post" action="{{ url_for('edits.record_outcome', idea_id=idea.id) }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+          <input type="hidden" name="once" value="{{ once_token() }}" />
+          <div class="field">
+            <label for="happened_on">When</label>
+            <input id="happened_on" name="happened_on" type="date" value="{{ today }}" max="{{ today }}" />
+          </div>
+          <div class="field">
+            <label for="rating">Out of ten</label>
+            <select id="rating" name="rating">
+              <option value="">no score</option>
+              {% for score in ratings %}<option value="{{ score }}">{{ score }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label for="would_repeat">Again?</label>
+            <select id="would_repeat" name="would_repeat">
+              <option value="">not saying</option>
+              <option value="yes">would go again</option>
+              <option value="no">would not</option>
+            </select>
+          </div>
+          {{ asking('outcome') }}
+          <div class="field wide">
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="notes" rows="2"></textarea>
+          </div>
+          <div class="field wide actions">
+            <button type="submit">{{ icon('check') }}Record it</button>
+          </div>
+        </form>
+        </details>
+      </section>
+
+      {% if outcomes %}
+        <section class="panel">
+          <h2>{{ icon('heart') }}How it went</h2>
+          <ul class="plain outcomes">
+            {% for outcome in outcomes %}
+              <li>
+                <strong>{{ outcome.when }}</strong>
+                {% if outcome.rating %}<span class="tag score">{{ outcome.rating }}</span>{% endif %}
+                {% if outcome.repeat %}<span class="muted">{{ outcome.repeat }}</span>{% endif %}
+                {% if outcome.notes %}<div class="note">{{ outcome.notes }}</div>{% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </section>
       {% endif %}
-      {% if place.sources %}
-        <p class="muted sources">
-          From
-          {% for url in place.sources %}
-            <a href="{{ url }}" rel="noopener noreferrer">{{ url }}</a>{{ '' if loop.last else ', ' }}
-          {% endfor %}
-        </p>
-      {% endif %}
-    </section>
-  {% endif %}
+    </aside>
 
-  {% if plans %}
-    <section class="panel">
-      <h2>On the calendar</h2>
-      <ul class="plain">
-        {% for plan in plans %}
-          <li>
-            {{ plan.when }}
-            {% if plan.relative %}<span class="muted">({{ plan.relative }})</span>{% endif %}
-            {% if plan.status != 'confirmed' %}<span class="tag">{{ plan.status }}</span>{% endif %}
-            {% if plan.location %}<span class="muted">{{ plan.location }}</span>{% endif %}
-          </li>
-        {% endfor %}
-      </ul>
-    </section>
-  {% endif %}
+    {% if place %}
+      <section class="panel idea-place">
+        <p class="eyebrow">The place</p>
+        <h2>{{ place.name }}</h2>
+        {% if place.summary %}<p>{{ place.summary }}</p>{% endif %}
+        <div class="place-grid">
+          <dl class="facts">
+            {% if place.address %}
+              <dt>Address</dt>
+              <dd>
+                {{ place.address }}
+                {% if place.map_url %}
+                  <a href="{{ place.map_url }}" rel="noopener noreferrer">map</a>
+                {% endif %}
+              </dd>
+            {% endif %}
+            {% if place.travel %}<dt>Getting there</dt><dd>{{ place.travel }}</dd>{% endif %}
+            {% if place.phone %}<dt>Phone</dt><dd>{{ place.phone }}</dd>{% endif %}
+            {% if place.website %}
+              <dt>Website</dt>
+              <dd><a href="{{ place.website }}" rel="noopener noreferrer">{{ place.website }}</a></dd>
+            {% endif %}
+            {% if place.booking_url %}
+              <dt>Booking</dt>
+              <dd><a href="{{ place.booking_url }}" rel="noopener noreferrer">{{ place.booking_url }}</a></dd>
+            {% endif %}
+            {% if place.price_note %}<dt>Prices</dt><dd>{{ place.price_note }}</dd>{% endif %}
+          </dl>
 
-  {% if outcomes %}
-    <section class="panel">
-      <h2>How it went</h2>
-      <ul class="plain">
-        {% for outcome in outcomes %}
-          <li>
-            <strong>{{ outcome.when }}</strong>
-            {% if outcome.rating %}<span class="tag">{{ outcome.rating }}</span>{% endif %}
-            {% if outcome.repeat %}<span class="muted">{{ outcome.repeat }}</span>{% endif %}
-            {% if outcome.notes %}<div>{{ outcome.notes }}</div>{% endif %}
-          </li>
-        {% endfor %}
-      </ul>
-    </section>
-  {% endif %}
+          {% if place.has_hours %}
+            <div>
+              <h3>Opening hours</h3>
+              <table class="hours">
+                <tbody>
+                  {% for row in place.hours %}
+                    <tr><th scope="row">{{ row.day }}</th><td>{{ row.hours }}</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <p class="muted">No opening hours were found.</p>
+          {% endif %}
+        </div>
 
-  <section class="panel">
-    <details class="more">
-      <summary><span class="h2">Plan it</span></summary>
-    {% if can_schedule %}
-      <form class="form" method="post" action="{{ url_for('edits.add_plan') }}">
-        <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-        <input type="hidden" name="once" value="{{ once_token() }}" />
-        <input type="hidden" name="idea_id" value="{{ idea.id }}" />
-        <input type="hidden" name="title" value="{{ idea.title }}" />
-        <div class="field">
-          <label for="start">When</label>
-          <input id="start" name="start" type="datetime-local" required />
-          <label class="check"><input type="checkbox" name="all_day" value="yes" /> All day</label>
-        </div>
-        <div class="field">
-          <label for="location">Where</label>
-          <input id="location" name="location" value="{{ row.where or '' }}" />
-        </div>
-        {{ asking('plan') }}
-        <div class="field wide actions">
-          <button type="submit">Put it on the calendar</button>
-        </div>
-      </form>
-    {% else %}
-      <p class="muted">Google Calendar is not connected, so nothing here can be scheduled.
-        See the <a href="{{ url_for('web.status') }}">status page</a>.</p>
+        {% if place.freshness %}
+          <p class="muted {{ 'warn' if place.stale }}">{{ place.freshness }}</p>
+        {% endif %}
+        {% if place.sources %}
+          <p class="muted sources">
+            From
+            {% for url in place.sources %}
+              <a href="{{ url }}" rel="noopener noreferrer">{{ url }}</a>{{ '' if loop.last else ', ' }}
+            {% endfor %}
+          </p>
+        {% endif %}
+      </section>
     {% endif %}
-    </details>
-  </section>
-
-  <section class="panel">
-    <details class="more">
-      <summary><span class="h2">Record how it went</span></summary>
-    <form class="form" method="post" action="{{ url_for('edits.record_outcome', idea_id=idea.id) }}">
-      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-      <input type="hidden" name="once" value="{{ once_token() }}" />
-      <div class="field">
-        <label for="happened_on">When</label>
-        <input id="happened_on" name="happened_on" type="date" value="{{ today }}" max="{{ today }}" />
-      </div>
-      <div class="field">
-        <label for="rating">Out of ten</label>
-        <select id="rating" name="rating">
-          <option value="">no score</option>
-          {% for score in ratings %}<option value="{{ score }}">{{ score }}</option>{% endfor %}
-        </select>
-      </div>
-      <div class="field">
-        <label for="would_repeat">Again?</label>
-        <select id="would_repeat" name="would_repeat">
-          <option value="">not saying</option>
-          <option value="yes">would go again</option>
-          <option value="no">would not</option>
-        </select>
-      </div>
-      {{ asking('outcome') }}
-      <div class="field wide">
-        <label for="notes">Notes</label>
-        <textarea id="notes" name="notes" rows="2"></textarea>
-      </div>
-      <div class="field wide actions">
-        <button type="submit">Record it</button>
-      </div>
-    </form>
-    </details>
-  </section>
-
-  <p><a href="{{ url_for('web.ideas') }}">Back to the ideas list</a></p>
+  </div>
 {% endblock %}

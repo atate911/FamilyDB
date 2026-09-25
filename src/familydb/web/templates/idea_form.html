@@ -1,9 +1,14 @@
 {% extends "base.html" %}
+{% from "_ui.html" import icon, page_head %}
 {% set editing = idea is not none %}
 {% block title %}{{ 'Edit' if editing else 'New idea' }} · {{ site_title }}{% endblock %}
 {% block content %}
-  <h1>{{ 'Edit #%d'|format(idea.id) if editing else 'New idea' }}</h1>
-  <form class="panel form"
+  {% set crumbs = [('Ideas', url_for('web.ideas'))] %}
+  {% if editing %}{% set crumbs = crumbs + [(idea.title, url_for('web.idea', idea_id=idea.id))] %}{% endif %}
+  {{ page_head('Edit #%d'|format(idea.id) if editing else 'New idea',
+               none if editing else 'Only a title and a kind are needed; the rest can wait.',
+               'edit' if editing else 'plus', crumbs) }}
+  <form class="panel form idea-form"
         method="post"
         action="{{ url_for('edits.edit_idea', idea_id=idea.id) if editing else url_for('edits.add_idea') }}">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
@@ -55,7 +60,7 @@
       <textarea id="description" name="description" rows="3">{{ idea.description or '' if editing else '' }}</textarea>
     </div>
 
-    <details class="more" {{ 'open' if editing }}>
+    <details class="more wide" {{ 'open' if editing }}>
       <summary>Everything else</summary>
       <div class="form inner">
 
@@ -151,8 +156,8 @@
     </details>
 
     <div class="field wide actions">
-      <button type="submit">{{ 'Save changes' if editing else 'Add it' }}</button>
-      <a class="quiet"
+      <button type="submit">{{ icon('check') }}{{ 'Save changes' if editing else 'Add it' }}</button>
+      <a class="button ghost"
          href="{{ url_for('web.idea', idea_id=idea.id) if editing else url_for('web.ideas') }}">Cancel</a>
     </div>
   </form>

@@ -1,52 +1,80 @@
 {% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, crt %}
 {% block title %}Status · {{ site_title }}{% endblock %}
+{% block body_class %}page-status{% endblock %}
+{# A light says its state three ways: its colour, its shape (a lit dot, a hollow ring, a half
+   one) and the words beside it, so nobody needs to tell green from amber to read it. #}
 {% macro lines(rows) %}
-  <ul class="plain">
+  <ul class="plain lights">
     {% for row in rows %}
-      <li>
-        <span class="light {{ 'on' if row.on else ('off' if row.on is sameas false else 'part') }}"
-          >●</span
-        >
-        <strong>{{ row.label }}</strong>
-        <div class="muted">{{ row.detail }}</div>
+      {% set state = 'on' if row.on else ('off' if row.on is sameas false else 'part') %}
+      <li class="light-row {{ state }}">
+        <span class="light {{ state }}" aria-hidden="true"></span>
+        <div>
+          <strong>{{ row.label }}</strong>
+          <div class="muted">{{ row.detail }}</div>
+        </div>
       </li>
     {% endfor %}
   </ul>
 {% endmacro %}
+{# A bar filled to `share` out of 100. Drawn in SVG, whose widths are attributes, because the
+   content policy allows no inline style. The figure is always written beside it. #}
+{% macro bar(share) -%}
+  {% set filled = [[(share or 0), 100] | min, 0] | max -%}
+  <svg class="meter" aria-hidden="true" focusable="false"><rect class="meter-track" width="100%" height="100%" rx="3"/>
+    {%- if filled > 0 %}<rect class="meter-fill" width="{{ '%.1f' | format([filled, 2] | max) }}%" height="100%" rx="3"/>{% endif %}</svg>
+{%- endmacro %}
 {% block content %}
-  <h1>Status</h1>
+  {{ page_head('Status', 'Is it working, and what is it costing?', 'status') }}
 
-  <section class="panel">
-    <h2>Who answers</h2>
-    {{ lines(models) }}
-  </section>
+  <div class="monitors">
+    <section class="panel">
+      <h2>{{ icon('mark') }}Who answers</h2>
+      {{ lines(models) }}
+    </section>
 
-  <section class="panel">
-    <h2>Keys</h2>
-    {{ lines(keys) }}
-    <p class="muted">
-      <a href="{{ url_for('settings.show') }}#keys">Change a key</a>
-    </p>
-  </section>
+    <section class="panel">
+      <h2>{{ icon('key') }}Keys</h2>
+      {{ lines(keys) }}
+      <p class="muted small">
+        <a href="{{ url_for('settings.show') }}#keys">Change a key</a>
+      </p>
+    </section>
 
-  <section class="panel">
-    <h2>Connected to</h2>
-    {{ lines(services) }}
-  </section>
+    <section class="panel">
+      <h2>{{ icon('plug') }}Connected to</h2>
+      {{ lines(services) }}
+    </section>
+  </div>
 
-  <section class="panel">
-    <h2>What it has cost</h2>
-    <p>
-      Today: about ${{ "%.2f"|format(spending.today) }}
-      {% if spending.limit %}
-        of the ${{ "%.2f"|format(spending.limit) }} daily limit.
-        {% if spending.today >= spending.limit %}
-          <strong>The limit is reached: nothing more is asked of a model until midnight.</strong>
+  <section class="panel spend">
+    <h2>{{ icon('coin') }}What it has cost</h2>
+    {% set used = (spending.today / spending.limit * 100) if spending.limit else none %}
+    <div class="spend-now">
+      {# The day's spend as a green screen shows it, with a bar of twenty cells: amber from three
+         quarters of the limit, red past it. The same is written out beside it. #}
+      {% call crt('readout' ~ (' near' if used is not none and used >= 75) ~ (' over' if used is not none and used >= 100)) %}
+        <p class="readout-label dim caps">Spent today, about</p>
+        <p class="readout-figure bright">${{ "%.2f"|format(spending.today) }}</p>
+        {% if used is not none %}
+          {% set lit = (([used, 100] | min) / 5) | round | int %}
+          <p class="readout-bar">[{{ '#' * lit }}{{ '.' * (20 - lit) }}] {{ used | round | int }}%</p>
+          <p class="readout-of dim caps">{% if used >= 100 %}<span class="inverse">Limit reached</span>{% else %}of the ${{ "%.2f"|format(spending.limit) }} daily limit{% endif %}</p>
         {% endif %}
-      {% else %}
-        (no daily limit is set).
-      {% endif %}
-    </p>
+      {% endcall %}
+      <p>
+        Today: about ${{ "%.2f"|format(spending.today) }}
+        {% if spending.limit %}
+          of the ${{ "%.2f"|format(spending.limit) }} daily limit.
+          {% if spending.today >= spending.limit %}
+            <strong class="warn">{{ icon('warning') }}The limit is reached: nothing more is asked of a model until midnight.</strong>
+          {% endif %}
+        {% else %}
+          (no daily limit is set).
+        {% endif %}
+      </p>
+    </div>
     {% if spending.rows %}
       <p>
         {{ "{:,}".format(spending.calls) }} model call{{ "" if spending.calls == 1 else "s" }} in
@@ -57,46 +85,56 @@
           Some calls were to a model without a listed price and are counted high.
         {% endif %}
       </p>
-      <table class="hours">
-        <tr><th>what for</th><th>calls</th><th>US$</th></tr>
-        {% for row in spending.kinds %}
-          <tr>
-            <td>{{ row.purpose }}</td>
-            <td>{{ "{:,}".format(row.calls) }}</td>
-            <td>{{ "%.2f"|format(row.cost_usd) }}</td>
-          </tr>
+      <div class="tables">
+        <div class="scroll">
+          <table class="data">
+            <caption>By kind of call</caption>
+            <tr><th scope="col">what for</th><th scope="col" class="num">calls</th><th scope="col" class="num">US$</th></tr>
+            {% for row in spending.kinds %}
+              <tr>
+                <td>{{ row.purpose }}</td>
+                <td class="num">{{ "{:,}".format(row.calls) }}</td>
+                <td class="num">{{ "%.2f"|format(row.cost_usd) }}</td>
+              </tr>
+            {% endfor %}
+          </table>
+        </div>
+        {% for kind in spending.where %}
+          <div class="scroll">
+            <table class="data">
+              <caption>Where the input of {{ kind.purpose }} went</caption>
+              <tr><th scope="col">part</th><th scope="col" class="num">tokens</th><th scope="col">share</th></tr>
+              {% for part in kind.parts %}
+                <tr>
+                  <td>{{ part.label }}</td>
+                  <td class="num">{{ "{:,}".format(part.tokens) }}</td>
+                  <td class="share"><span class="share-cell">{{ bar(part.share) }}<span>{{ part.share }}%</span></span></td>
+                </tr>
+              {% endfor %}
+            </table>
+            <p class="muted small">Per call: the real total
+              over {{ "{:,}".format(kind.parts[0].calls) }} call{{ "" if kind.parts[0].calls == 1 else "s" }},
+              shared out by the size of each part.</p>
+          </div>
         {% endfor %}
-      </table>
-      {% for kind in spending.where %}
-        <p class="muted">Where the input of {{ kind.purpose }} went, per call: the real total
-          over {{ "{:,}".format(kind.parts[0].calls) }} call{{ "" if kind.parts[0].calls == 1 else "s" }},
-          shared out by the size of each part.</p>
-        <table class="hours">
-          <tr><th>part</th><th>tokens</th><th>share</th></tr>
-          {% for part in kind.parts %}
-            <tr>
-              <td>{{ part.label }}</td>
-              <td>{{ "{:,}".format(part.tokens) }}</td>
-              <td>{{ part.share }}%</td>
-            </tr>
-          {% endfor %}
-        </table>
-      {% endfor %}
+      </div>
       <div class="scroll">
-        <table class="hours">
+        <table class="data">
+          <caption>By model</caption>
           <tr>
-            <th>model</th><th>calls</th><th>sent</th><th>cached</th><th>written</th><th>back</th>
-            <th>US$</th>
+            <th scope="col">model</th><th scope="col" class="num">calls</th><th scope="col" class="num">sent</th>
+            <th scope="col" class="num">cached</th><th scope="col" class="num">written</th><th scope="col" class="num">back</th>
+            <th scope="col" class="num">US$</th>
           </tr>
           {% for row in spending.rows %}
             <tr>
               <td>{{ row.model }}</td>
-              <td>{{ "{:,}".format(row.calls) }}</td>
-              <td>{{ "{:,}".format(row.input_tokens) }}</td>
-              <td>{{ "{:,}".format(row.cache_read) }}</td>
-              <td>{{ "{:,}".format(row.cache_write) }}</td>
-              <td>{{ "{:,}".format(row.output_tokens) }}</td>
-              <td>{{ "%.2f"|format(row.cost_usd) }}{% if row.cost_estimated %}*{% endif %}</td>
+              <td class="num">{{ "{:,}".format(row.calls) }}</td>
+              <td class="num">{{ "{:,}".format(row.input_tokens) }}</td>
+              <td class="num">{{ "{:,}".format(row.cache_read) }}</td>
+              <td class="num">{{ "{:,}".format(row.cache_write) }}</td>
+              <td class="num">{{ "{:,}".format(row.output_tokens) }}</td>
+              <td class="num">{{ "%.2f"|format(row.cost_usd) }}{% if row.cost_estimated %}*{% endif %}</td>
             </tr>
           {% endfor %}
         </table>
@@ -105,7 +143,7 @@
       <p class="muted">Nothing has been asked of a model in the last {{ days }} days.</p>
     {% endif %}
     {% if last %}
-      <p class="muted">
+      <p class="muted small">
         Last call {{ last.when }}: {{ last.model }} ({{ last.provider }}), ended
         “{{ last.stop }}”, took {{ last.seconds }}s.
       </p>
@@ -113,10 +151,10 @@
   </section>
 
   <section class="panel">
-    <h2>Waiting</h2>
+    <h2>{{ icon('hourglass') }}Waiting</h2>
     {% if waiting.lookups %}
       <p class="meta">
-        {% for row in waiting.lookups %}<span>{{ row.count }} {{ row.state }}</span>{% endfor %}
+        {% for row in waiting.lookups %}<span class="tag">{{ row.count }} {{ row.state }}</span>{% endfor %}
       </p>
     {% else %}
       <p class="muted">No ideas yet.</p>
@@ -149,8 +187,8 @@
   </section>
 
   {% if troubles.calls or troubles.lookups %}
-    <section class="panel">
-      <h2>Worth a look</h2>
+    <section class="panel trouble">
+      <h2>{{ icon('warning') }}Worth a look</h2>
       {% if troubles.calls %}
         <h3>Calls that ended oddly</h3>
         <ul class="plain">
