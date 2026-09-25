@@ -434,14 +434,21 @@ def outcome_row(outcome: Outcome) -> dict[str, Any]:
 
 
 def chat_line(
-    message: Message, names: dict[int, str], tz: ZoneInfo, *, did: list[str], waiting: bool
+    message: Message,
+    names: dict[int, str],
+    tz: ZoneInfo,
+    *,
+    did: list[str],
+    waiting: bool,
+    assistant: str,
 ) -> dict[str, Any]:
     """One message in the chat: who said it, when, what the turn ran, and what went wrong.
 
     `did` is the turn's tool calls, which the log stores against the question rather than the
     answer. They belong under the answer: "used suggest" beneath somebody's own message reads
     as though they had run it. `waiting` is for a message nothing has replied to yet, which is
-    a fact about the thread rather than about the row, so the caller works it out.
+    a fact about the thread rather than about the row, so the caller works it out. `assistant`
+    is what the persona in force is called, for the lines that are hers.
     """
     from_bot = message.direction == "out"
     trouble = None
@@ -452,7 +459,7 @@ def chat_line(
             trouble = "waiting for an answer"
     return {
         "id": message.id,
-        "who": "FamilyDB" if from_bot else names.get(message.member_id or -1, "someone"),
+        "who": assistant if from_bot else names.get(message.member_id or -1, "someone"),
         "from_bot": from_bot,
         "text": message.text,
         "when": local_moment(message.received_at, tz),

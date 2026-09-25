@@ -35,7 +35,9 @@ older than what is installed. It gets a date when it is released.
 - **Speaks as Vera.** A personality, and a description of the family, both
   editable on the settings page. Everything said unasked (reminders, "how was
   it?", notices) is written in her words by code, and is carried by her reply
-  instead when the family is already talking to her.
+  instead when the family is already talking to her. Her name is written once
+  and said as `{name}` everywhere else, and the chat page shows her replies
+  under it.
 - **Speaks first.** A Thursday digest of the weekend's options, and a "how was
   it?" the morning after a plan.
 - **Runs on OpenAI's GPT-6 Luna by default,** the cheapest capable model of the

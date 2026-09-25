@@ -122,7 +122,7 @@ def test_the_whole_way_through(fresh, monkeypatch, conn) -> None:
     back = _post(fresh, "model", "/settings/model", provider="openai", key="sk-good")
     assert back.headers["Location"] == "/setup/model"
     page = fresh.get("/setup/model").text
-    assert "OpenAI accepted the key. FamilyDB answers with gpt-6-luna." in page
+    assert "OpenAI accepted the key. Vera answers with gpt-6-luna." in page
     assert app.settings.openai_api_key == "sk-good" and app.settings.provider == "openai"
 
     # It can answer now, so the home page is the home page again.
@@ -169,6 +169,7 @@ def test_telegram_from_a_token_to_a_linked_phone(fresh, monkeypatch, conn) -> No
     _post(fresh, "you", "/family", name="Sam", role="admin")
     first = fresh.get("/setup/telegram").text
     assert "https://t.me/BotFather" in first and "/newbot" in first
+    assert "<em>Vera</em> or <em>The Tates" in first  # what she is called everywhere else
 
     _post(fresh, "telegram", "/settings/keys", telegram_bot_token="7123:AAH-token")
     connecting = fresh.get("/setup/telegram").text

@@ -36,32 +36,55 @@ def _prefix(page, conn):
 def test_the_page_shows_her_and_links_from_settings(page) -> None:
     assert "Personality and family" in page.get("/settings").text
     shown = page.get("/settings/personality").text
-    assert "You are Vera" in shown and "About the family" in shown
-    assert "tokens now" in shown
+    # Her description as written, with {name} where her name goes, and the name it stands for.
+    assert "You are {name}, an AI assistant" in shown and "{name} is her name, Vera" in shown
+    assert 'value="default" selected>Vera</option>' in shown
+    assert "About the family" in shown and "tokens now" in shown
 
 
 def test_about_the_family_reaches_every_chat(page, conn) -> None:
     about = "The girls are 7 and 10 and love animals. Alex is vegetarian."
-    form = _form(page, persona="vera", persona_text=personas.load("vera"), about_family=about)
+    form = _form(
+        page,
+        persona="default",
+        persona_text=personas.load(personas.DEFAULT).character,
+        about_family=about,
+    )
     assert page.post("/settings/personality", data=form).status_code == 302
     family_block = _prefix(page, conn)[1].text
     assert "About the family, in their words:\n" + about in family_block
-    # The same text as the file is no rewrite, and Vera is already the default: only the
-    # family's words are stored.
+    # The same text as hers is no rewrite, and she is already the default: only the family's
+    # words are stored.
     assert settings_store.overrides(conn) == {"about_family": about}
 
 
 def test_a_rewrite_is_used_and_can_be_restored(page, conn) -> None:
-    rewrite = "You are Vera. Be very brief, and a little dry."
+    rewrite = "You are {name}. Be very brief, and a little dry."
     page.post(
         "/settings/personality",
-        data=_form(page, persona="vera", persona_text=rewrite, about_family=""),
+        data=_form(page, persona="default", persona_text=rewrite, about_family=""),
     )
-    assert _prefix(page, conn)[0].text.startswith("# Who you are\n\n" + rewrite)
+    told = "# Who you are\n\nYou are Vera. Be very brief, and a little dry."
+    assert _prefix(page, conn)[0].text.startswith(told)
+    assert settings_store.overrides(conn)["persona_text"] == rewrite  # kept as written
     history = page.get("/settings").text
     assert "rewritten" in history and "a little dry" not in history  # not echoed in the log
     assert page.post("/settings/personality/restore", data=_form(page)).status_code == 302
-    assert _prefix(page, conn)[0].text.startswith("# Who you are\n\n" + personas.load("vera"))
+    assert _prefix(page, conn)[0].text.startswith(
+        "# Who you are\n\n" + personas.load(personas.DEFAULT).prompt
+    )
+
+
+def test_her_own_text_with_her_name_filled_in_is_no_rewrite(page, conn) -> None:
+    """A form drawn before her name was written once showed her name, and the old key."""
+    form = _form(
+        page,
+        persona="vera",
+        persona_text=personas.load(personas.DEFAULT).prompt,
+        about_family="",
+    )
+    assert page.post("/settings/personality", data=form).status_code == 302
+    assert settings_store.overrides(conn) == {}
 
 
 def test_none_means_none_whatever_was_written(page, conn) -> None:
@@ -77,7 +100,7 @@ def test_too_long_or_unknown_is_refused_and_kept(page, conn) -> None:
     long = "x" * 4_001
     refused = page.post(
         "/settings/personality",
-        data=_form(page, persona="vera", persona_text="", about_family=long),
+        data=_form(page, persona="default", persona_text="", about_family=long),
     )
     assert refused.status_code == 400 and "Nothing was saved" in refused.text
     assert long in refused.text  # what was typed is not lost
@@ -100,20 +123,21 @@ def test_her_lines_can_be_rewritten_and_a_bad_one_is_refused(page, conn) -> None
     from familydb import voice
 
     shown = page.get("/settings/personality").text
-    assert "What she says unasked" in shown and "Can use {title}, {who}, {task}." in shown
-    mine = "Psst, {title}. That's #{task}."
+    assert "What she says unasked" in shown
+    assert "Can use {name}, {title}, {who}, {task}." in shown
+    mine = "{name} here: {title}, that's #{task}."
     saved = page.post(
         "/settings/personality",
-        data=_form(page, persona="vera", persona_text="", about_family="", line_reminder=mine),
+        data=_form(page, persona="default", persona_text="", about_family="", line_reminder=mine),
     )
     assert saved.status_code == 302
     assert settings_store.overrides(conn)["voice_lines"] == {"reminder": mine}
     page.app_state.refresh(conn)
     said = voice.say(page.app_state.settings, "reminder", title="Bins out", who="", task=3)
-    assert said == "Psst, Bins out. That's #3."
+    assert said == "Vera here: Bins out, that's #3."
     refused = page.post(
         "/settings/personality",
-        data=_form(page, persona="vera", persona_text="", about_family="", line_follow_up="{x}"),
+        data=_form(page, persona="default", persona_text="", about_family="", line_follow_up="{x}"),
     )
     assert refused.status_code == 400
     assert "Asking how a plan went: {x} is not something it knows" in refused.text

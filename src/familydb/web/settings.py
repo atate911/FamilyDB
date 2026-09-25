@@ -4,8 +4,9 @@ It writes to one place and one place only, `app_settings`, through `store.settin
 here can reach an idea, a plan or a message. Every change is logged, and a key's value is never
 what gets logged: only that it was replaced.
 
-The Personality page (/settings/personality) writes the three `PROFILE` settings: which persona,
-her description as the family rewrote it, and the family's words about themselves.
+The Personality page (/settings/personality) writes the four `PROFILE` settings: which persona,
+her description as the family rewrote it, her lines likewise, and the family's words about
+themselves. Her description is shown and kept as written, with {name} where her name goes.
 
 Two forms on the main page, because they are not the same kind of thing. The behaviour form
 carries every box on the page each time it is sent, so an emptied box means "go back to what
@@ -386,7 +387,7 @@ KEY_REFUSED = (
     "API keys page, all of it, and paste it here."
 )
 KEY_VERDICTS = {
-    "works": "{company} accepted the key. FamilyDB answers with {model}.",
+    "works": "{company} accepted the key. {name} answers with {model}.",
     "unknown_model": (
         "Saved. {company} accepted the key, but says it has no model called {model}: choose "
         "another under Who answers on the Settings page."
@@ -440,7 +441,8 @@ def save_model() -> Response | tuple[str, int]:
         return _answer(back, error=KEY_REFUSED.format(company=label))
     _save(values)
     said = KEY_VERDICTS.get(verdict, KEY_VERDICTS["unchecked"])
-    return _answer(back, said=said.format(company=label, model=chosen.model_for("chat")))
+    her = personas.active(candidate).name
+    return _answer(back, said=said.format(company=label, model=chosen.model_for("chat"), name=her))
 
 
 # -- the family password ----------------------------------------------------------------------
@@ -542,21 +544,22 @@ def personality_page(
     *, error: str | None = None, typed: dict[str, str] | None = None, status: int = 200
 ) -> tuple[str, int]:
     live = _app().settings
+    speaking = personas.active(live)
     told = get_flashed_messages(category_filter=[NOTICE])
-    chosen = (typed or {}).get("persona", live.persona)
-    # A persona nobody has a file for (a hand-made form) is shown as nothing, and refused on save.
-    original = personas.load(chosen) if chosen in personas.available() else ""
-    text = (typed or {}).get("persona_text") or personas.text_for(live) or original
+    chosen = personas.key_for((typed or {}).get("persona", live.persona))
+    # A persona nobody has a folder for (a hand-made form) is shown as nothing, and refused on save.
+    original = personas.load(chosen).character if chosen in personas.available() else ""
+    text = (typed or {}).get("persona_text") or speaking.character or original
     about = (typed or {}).get("about_family", live.about_family)
     # What she says unasked: the family's line if they wrote one, hers as the placeholder.
-    base_lines = voice.lines(live.model_copy(update={"voice_lines": {}}))
+    hers = voice.wording(personas.load(live.persona))
     said_lines = [
         {
             "event": name,
             "label": event.label,
             "value": (typed or {}).get(f"line_{name}", live.voice_lines.get(name, "")),
-            "placeholder": base_lines[name],
-            "fields": ", ".join("{" + f + "}" for f in event.fields),
+            "placeholder": hers[name],
+            "fields": ", ".join("{" + f + "}" for f in voice.usable(name)),
         }
         for name, event in voice.EVENTS.items()
     ]
@@ -566,13 +569,14 @@ def personality_page(
             said=told[0] if told else None,
             error=error,
             chosen=chosen,
-            choices=personas.available(),
+            choices=[personas.load(key) for key in personas.available()],
             text=text,
             rewritten=bool(live.persona_text.strip()),
             about=about,
             said_lines=said_lines,
             plain=live.persona == personas.NONE,
-            tokens=(len(personas.text_for(live)) + len(live.about_family)) // CHARS_PER_TOKEN,
+            her_name=speaking.name,
+            tokens=(len(speaking.prompt) + len(live.about_family)) // CHARS_PER_TOKEN,
             limits={
                 name: Settings.model_fields[name].metadata[0].max_length
                 for name in ("persona_text", "about_family")
@@ -589,7 +593,8 @@ def personality() -> tuple[str, int]:
 
 @bp.post("/settings/personality")
 def save_personality() -> Response | tuple[str, int]:
-    """Who she is and who the family are. Her text the same as the file's is no rewrite at all."""
+    """Who she is and who the family are. Her own text, as written or with her name filled in,
+    is no rewrite at all."""
     if (complaint := auth.refused()) is not None:
         return personality_page(error=complaint, status=400)
     typed = {
@@ -604,21 +609,19 @@ def save_personality() -> Response | tuple[str, int]:
     if wrong := voice.problems(written):
         what = "; ".join(f"{voice.EVENTS[n].label}: {why}" for n, why in wrong.items())
         return personality_page(error=f"Nothing was saved. {what}.", typed=typed, status=400)
-    chosen = typed["persona"].strip()
+    chosen = personas.key_for(typed["persona"])
     text = typed["persona_text"].replace("\r\n", "\n").strip()
-    original = personas.load(chosen) if chosen in personas.available() else ""
+    shipped = personas.load(chosen) if chosen in personas.available() else None
+    hers = voice.wording(personas.load(_app().settings.persona))
     values: dict[str, Any] = {
         # What the environment already says is not stored over it, as on the main page.
         "persona": None if chosen == _app().base_settings.persona else chosen,
-        "persona_text": text if original and text and text != original else None,
+        "persona_text": (
+            text if shipped and text and text not in (shipped.character, shipped.prompt) else None
+        ),
         "about_family": typed["about_family"].replace("\r\n", "\n").strip() or None,
         # Only lines that differ from hers are the family's own.
-        "voice_lines": {
-            name: line
-            for name, line in written.items()
-            if line != voice.lines(_app().settings.model_copy(update={"voice_lines": {}}))[name]
-        }
-        or None,
+        "voice_lines": {name: line for name, line in written.items() if line != hers[name]} or None,
     }
     try:
         apply_overrides(
