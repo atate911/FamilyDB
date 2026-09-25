@@ -12,6 +12,7 @@ FamilyDB is a family planning chat bot: Python 3.11+, SQLite, a model from Anthr
 - A daily spending limit exists and is tested (`agent/spending.py`, checked in the loop before every call): each call's cost is estimated from `agent/providers/prices.py` and stored in `llm_calls`. A model missing from that table is counted dearer than any listed, so add a price when adding a model worth suggesting. It is an estimate, not the bill; do not describe it as more.
 - How every model call decides, sees, acts and is trusted is framed in `docs/AI_CALLS.md`: code knows, the model understands and words. A new kind of call answers its five questions before it is added.
 - The automatic-memory design and acceptance criteria are in `docs/MEMORY.md`. The earlier idea of an AI memory worker after every message is superseded. Memory is planned, not implemented.
+- How the persona is used and configured, what is wrong with it today and the order to fix it in, is proposed in `docs/PERSONAS.md`: she changes how things are said, never what is done.
 
 ## Commands
 
