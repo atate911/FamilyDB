@@ -38,10 +38,13 @@ There is no page without one (colours, type and a way of laying things out are t
 anybody chose them or not), so the only questions are which language, and how hard to push it.
 The language is Phosphor.
 
-Every app has a personality, and that is good, but it also has to do something: the look
-supports what the page does and gets out of its way. Pushed too far, the page is an art project;
-not far enough, it is dull and uninspired. The line between the two is walked one change at a
-time, not found once.
+Every app has a personality, and that is good, but it also has to do something. So the look has
+flair where flair is useful, and steps back wherever it could get between somebody and what they
+came to do: reading, writing to her, deciding, changing something. Where it is in nobody's way
+(an empty list, a thing just done, the way in, a page that is not there, the wait while she
+thinks), it comes forward, and it should be fun and a delight. Pushed too far, the page is an
+art project; held back everywhere, it is dull and uninspired. The line between the two is walked
+place by place, not found once.
 
 **Where it stands.** The language is settled. How hard it is pushed is close. Whether it is
 interesting and appealing enough, and has enough personality, is close but not settled, so it
@@ -306,8 +309,9 @@ How they are built, since the content policy allows no inline style and no scrip
 ## Small things
 
 The page is modern first and uses the old screens on purpose, so it is sparing with them. Beyond
-the green screens there are only a few small details, each where it means something; none moves
-for more than a moment, and none asks to be looked at.
+the green screens there are only a few small details, each where it means something. They sit
+where people are reading and doing, so none moves for more than a moment, and none asks to be
+looked at (see "Two layers").
 
 - **Afterglow.** Whatever lights up (a card, a button, the box being typed in, the chat's box)
   does so at once and fades out over a second, falling fast and then lingering, as a tube's
@@ -398,9 +402,9 @@ for more than a moment, and none asks to be looked at.
   on today in the month.
 - Class names are shared across the whole stylesheet: check a new one is not already taken (a
   meter once borrowed `.bar` from the top bar and flattened it).
-- What the page does comes first, and the look holds it up (see "Two layers"). A change to the
-  look says which way it tips the page, toward an art project or toward the dull and
-  uninspired, and why.
+- What the page does comes first (see "Two layers"). Where somebody is reading, writing,
+  deciding or changing something, the look steps back; where it is in nobody's way, it comes
+  forward and is fun. A change to the look says which kind of place it is in, and why.
 - The black stays near-black, the green bright and the glow scarce (see "Why the green jumps").
 - At most one green screen to a page, and only where it shows something true. VT323 and blur
   stay on the screens, and scanlines on the screens and in the home page's glow; everywhere else
