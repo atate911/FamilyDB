@@ -4,6 +4,7 @@ from datetime import timedelta
 from familydb.agent.history import HistoryTurn
 from familydb.agent.prompt import build_messages, build_system_blocks, load_system_prompt
 from familydb.agent.render import render_audience_line, render_user_turn
+from familydb.config import apply_overrides
 from familydb.store import db, ideas
 from familydb.store.members import Member
 from tests.conftest import NOW_ISO
@@ -227,8 +228,8 @@ def test_the_product_says_the_job_wins_whoever_she_is(conn, settings, family) ->
 
 def test_a_rewrite_of_her_that_leaves_the_rule_out_still_gets_it(conn, settings, family) -> None:
     """Her own character says the job wins; a family's rewrite of her need not."""
-    rewritten = settings.model_copy(
-        update={"persona_text": "You are {name}. Be very brief, and a little dry."}
+    rewritten = apply_overrides(
+        settings, {"persona_text": {"default": "You are {name}. Be very brief, and a little dry."}}
     )
     first = build_system_blocks(conn, rewritten)[0].text
     assert first.startswith(

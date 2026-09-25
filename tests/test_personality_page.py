@@ -7,7 +7,7 @@ from dataclasses import replace
 import pytest
 
 from familydb import personas
-from familydb.agent.prompt import build_system_blocks
+from familydb.agent.prompt import JOB_HEADER, build_system_blocks
 from familydb.app import App
 from familydb.config import PersonaRewrite
 from familydb.store import settings as settings_store
@@ -489,7 +489,8 @@ def test_the_family_s_notes_reach_the_prefix_after_her_character_and_before_the_
         + personas.load(personas.DEFAULT).prompt
         + "\n\n## The family's own notes on how you talk\n\n"
         + NOTES
-        + "\n\n# The job\n\nYou are the private planning assistant"
+        + JOB_HEADER
+        + "You are the private planning assistant"
     )
     assert _prefix(page, conn)[0].text.startswith(told)
     shown = page.get("/settings/personality").text
