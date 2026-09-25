@@ -9,11 +9,18 @@ import time
 from collections.abc import Callable
 from contextlib import closing
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Any
 
 from telegram import Update
-from telegram.constants import ChatAction, ChatType, MessageLimit
-from telegram.error import InvalidToken, NetworkError
+from telegram.constants import (
+    BotDescriptionLimit,
+    BotNameLimit,
+    ChatAction,
+    ChatType,
+    MessageLimit,
+)
+from telegram.error import InvalidToken, NetworkError, RetryAfter
 from telegram.ext import (
     Application,
     ApplicationBuilder,
@@ -23,9 +30,10 @@ from telegram.ext import (
     filters,
 )
 
-from familydb import voice, whereabouts
+from familydb import personas, voice, whereabouts
 from familydb.app import App
 from familydb.channels.base import IncomingMessage, OutgoingMessage
+from familydb.config import Settings
 from familydb.delivery import deliver
 from familydb.pipeline import handle_incoming
 
@@ -183,6 +191,21 @@ class TelegramChannel:
             hello = voice.say(self.app.settings, "start", seed=update.update_id)
             await update.effective_message.reply_text(hello)
 
+    async def introduce(self, name: str, about: str) -> None:
+        """Make the bot's own contact in Telegram say this name and this description.
+
+        The description is what Telegram shows in a chat with the bot before anything is sent.
+        Both are cut to Telegram's limits, and each is set only when what Telegram has differs:
+        a rename is rate-limited, and most calls change nothing.
+        """
+        bot = self.application.bot
+        name = name[: int(BotNameLimit.MAX_NAME_LENGTH)].rstrip()
+        about = about[: int(BotDescriptionLimit.MAX_DESCRIPTION_LENGTH)].rstrip()
+        if (await bot.get_my_name()).name != name:
+            await bot.set_my_name(name)
+        if (await bot.get_my_description()).description != about:
+            await bot.set_my_description(about)
+
     async def on_message(self, update: Any, context: Any) -> None:
         await asyncio.to_thread(self.app.refresh)
         chat = update.effective_chat
@@ -291,6 +314,10 @@ class TelegramSupervisor:
     with no restart: the old connection is closed and a new one opened. A token Telegram refuses
     is not tried again until it changes; one that fails only because Telegram cannot be reached
     is tried again every `RETRY_SECONDS`.
+
+    While a persona is chosen, the bot's own contact in Telegram says her name and her
+    introduction (`_introduce`), and follows them when the page changes them, with no trip to
+    BotFather.
     """
 
     CHECK_SECONDS = 5.0
@@ -309,6 +336,11 @@ class TelegramSupervisor:
         self.state: str = "off"
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
+        # For the contact (`_introduce`): what it was last asked to say on this connection, the
+        # settings it was worked out from, and when Telegram may be asked again after a wait.
+        self._introduced: tuple[str, str] | None = None
+        self._seen: Settings | None = None
+        self._introduce_at = 0.0
 
     def start(self) -> None:
         self._thread = threading.Thread(target=self._run, name="familydb-telegram", daemon=True)
@@ -349,6 +381,8 @@ class TelegramSupervisor:
                 running, refused = await self._open(token)
                 if running is None and not refused:
                     retry_at = time.monotonic() + self.RETRY_SECONDS
+            if running is not None:
+                await self._introduce(running)
             await asyncio.to_thread(self._stop.wait, self.check_seconds)
         if running is not None:
             await running.stop()
@@ -371,7 +405,49 @@ class TelegramSupervisor:
             return None, False
         name = getattr(channel, "username", None)
         self._set(f"connected as @{name}" if name else "connected")
+        # A new connection introduces her afresh, whatever the last one said.
+        self._introduced = self._seen = None
         return channel, False
+
+    async def _introduce(self, channel: Any) -> None:
+        """Make the contact say her name and her introduction, after a connect or a change.
+
+        Telegram is asked after each connect, and again only when her name or her introduction
+        (her /start line) differs from what it was last asked to say: a setting that moves
+        nothing she says asks nothing. Under none the contact is left alone, for the admin to
+        name in BotFather, and choosing her again says it all again. A wait Telegram asks for is
+        waited out, across a reconnect too; any other failure is logged and not tried again until
+        something she says changes or the channel reconnects. Nothing here stops or reconnects
+        the channel. No model call.
+        """
+        settings = self.app.settings
+        # App.refresh builds new settings whenever a stored value moves, so the same ones mean
+        # nothing she says can have changed since the last look.
+        if settings is self._seen or time.monotonic() < self._introduce_at:
+            return
+        self._seen = settings
+        her = personas.active(settings)
+        if her is personas.PLAIN:
+            self._introduced = None
+            return
+        said = (her.name, voice.say(settings, "start"))
+        if said == self._introduced:
+            return
+        try:
+            await channel.introduce(*said)
+        except RetryAfter as exc:
+            wait = exc.retry_after  # seconds; a timedelta from python-telegram-bot 23
+            seconds = wait.total_seconds() if isinstance(wait, timedelta) else float(wait)
+            log.info("telegram: Telegram asks for %.0f seconds before her name is set", seconds)
+            self._seen, self._introduce_at = None, time.monotonic() + seconds
+            return
+        except Exception as exc:
+            log.warning(
+                "telegram: could not give the bot her name and introduction (%s); "
+                "not trying again until either changes or the bot reconnects",
+                exc,
+            )
+        self._introduced = said
 
 
 async def _quietly_stop(channel: Any) -> None:

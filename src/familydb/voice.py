@@ -140,7 +140,7 @@ EVENTS: dict[str, Event] = {
         {"id": "123456789"},
     ),
     "start": Event(
-        "Telegram's /start",
+        "Telegram's /start, and the bot's description there",
         "Hi! I'm {name}, the family's planning assistant. Tell me ideas (\"we should try that "
         'ramen place"), plans ("we\'re going to the symphony next Saturday") or ask "what '
         'should we do this weekend?"',
