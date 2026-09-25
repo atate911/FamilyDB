@@ -59,9 +59,10 @@
     </details>
   </section>
   {{ group(groups.second) }}
-  <div class="save-bar">
+  {# Not floating here: it would float beside the key box above, which it does not save. #}
+  <div class="save-bar still">
     <p class="muted">An empty box uses the default it shows.</p>
-    <button type="submit">{{ icon('check') }}Save</button>
+    <button type="submit">{{ icon('check') }}Save models</button>
   </div>
 </form>
 

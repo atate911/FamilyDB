@@ -495,3 +495,10 @@ def test_a_phone_is_offered_the_keyboard_each_box_needs(page) -> None:
     assert re.search(
         r'name="enrich_batch"[^>]*inputmode="numeric"', page.get("/settings/lookups").text
     )
+
+
+def test_nothing_floats_beside_the_key_box_that_would_not_save_it(page) -> None:
+    """The models' Save stays with its form, so a pasted key is not left behind by the wrong one."""
+    text = page.get("/settings/model").text
+    assert 'class="save-bar still"' in text and 'class="save-bar"' not in text
+    assert "Save models" in text and "Save and check the key" in text

@@ -1684,8 +1684,9 @@ table.month td.today time { color: var(--on-bright); background: var(--amber); b
   .save-bar { bottom: calc(var(--tab-h) + 0.75rem + env(safe-area-inset-bottom)); }
 }
 /* On a phone the bar is only Save, so it stays one row above the tabs; each dropdown still says
-   what its default is. */
+   what its default is. A bar that shares its page with another form's button stays still. */
 @media (max-width: 30rem) { .save-bar p { display: none; } }
+.save-bar.still { position: static; box-shadow: none; }
 .revealed {
   margin: 0.75rem 0 0;
   padding: 0.55rem 0.75rem;
