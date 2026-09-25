@@ -141,13 +141,31 @@ def test_a_line_kept_as_a_string_is_one_wording_breaks_and_all(settings) -> None
     line = "Reminder: {title}{who}.\r\nTask #{task}; say done when it's done."
     own = settings.model_copy(update={"voice_lines": {"reminder": line}})
     for number in range(1, 9):
-        task = SimpleNamespace(id=number, title="bins out", owner=None)
+        task = SimpleNamespace(id=number, title="bins out", owner=None, reminder=None)
         said = reminder_text(task, own)
         assert said == f"Reminder: bins out.\r\nTask #{number}; say done when it's done.", said
     assert voice.wordings(line) == [line]
     assert voice.reads_as(own, "reminder") == [
         "Reminder: bins out (Sam).\r\nTask #12; say done when it's done."
     ]
+
+
+def test_each_time_a_reminder_is_due_it_may_read_another_way(settings) -> None:
+    """A reminder is worded by the reminder in force: snoozed, it may take another of her
+    wordings; worded again for the same time (a changed title), it takes the same one."""
+    from familydb.task_service import reminder_text
+
+    own = settings.model_copy(
+        update={"voice_lines": {"reminder": ["Bins, #{task}.", "#{task}: bins.", "Now: #{task}."]}}
+    )
+
+    def due(reminder: int, title: str = "bins out") -> SimpleNamespace:
+        return SimpleNamespace(id=7, title=title, owner=None, reminder=SimpleNamespace(id=reminder))
+
+    said = {reminder_text(due(n), own) for n in range(1, 21)}
+    assert len(said) > 1  # one task, due twenty times: more than one wording
+    first = reminder_text(due(3), own)
+    assert reminder_text(due(3, "bins and recycling"), own) == first  # same wording, new title
 
 
 def test_what_is_wrong_with_one_of_several_wordings_is_named() -> None:

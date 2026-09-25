@@ -128,6 +128,17 @@ def test_a_reminder_sent_after_downtime_says_when_it_was_due(ctx):
     assert "was due Sun 20 Sep at 15:00" in sent
 
 
+def test_a_late_reminder_worded_again_still_says_when_it_was_due(ctx):
+    task = add(ctx, remind_at="2026-09-20T15:00")
+    ctx.clock.advance(timedelta(days=2))
+    app = App(ctx.settings, ctx.clock)
+    app.senders.clear()  # the send fails, so it waits for the retry job
+    assert run_reminders(app) == 0
+    update_task(ctx, UpdateTaskInput(task_id=task["id"], title="Buy kitchen roll"))
+    queued = messages.get(ctx.conn, tasks.get(ctx.conn, task["id"]).reminder.message_id).text
+    assert "Buy kitchen roll" in queued and "was due Sun 20 Sep at 15:00" in queued
+
+
 def test_completion_cancels_queued_delivery_and_reopen_does_not_restore(ctx):
     task = add(ctx, remind_at="2026-09-20T14:04")
     ctx.clock.advance(timedelta(minutes=2))

@@ -156,9 +156,9 @@ migration, so upgrading does not resend old conversations. Fresh outgoing messag
     on Telegram, and within a few seconds the bot's name and description in Telegram should be
     hers. Rewrite her description and add a line under "Anything to add", then choose no persona:
     the replies should be plain, her lines and your rewrites of them included, and the Telegram
-    contact left as it was. Choose her again: the name, the rewrite, the notes and the lines
-    should all be back. Choose Vera in brief: the list should show her at under 800 tokens a
-    message, your notes included, and a few everyday requests should be answered as well as
+    contact called FamilyDB. Choose her again: the name, the rewrite, the notes and the lines
+    should all be back. Choose Vera in brief: the list should show her at about 740 tokens a
+    message before your notes, and a few everyday requests should be answered as well as
     before; choosing Vera as first written again brings your rewrite of her back.
 13. With the chosen model's key in the environment, run `uv run python -m evals` (it spends at
     most $0.50, and the one call that crosses it, unless `--budget` says otherwise) and read what failed before the family does.

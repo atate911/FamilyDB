@@ -304,6 +304,12 @@ def test_a_member_uses_the_bot_and_an_admin_looks_after_it(app, sam, alex, famil
         refused = alex.get(path)
         assert refused.status_code == 403 and "For an admin" in refused.text, path
     assert alex.post("/settings", data=_tokens(alex, "/you")).status_code == 403
+    # Who she is is an admin's to change, the form as much as the page.
+    for path in ("/settings/personality", "/settings/personality/restore"):
+        form = {**_tokens(alex, "/you"), "persona": "none", "persona_name": "X"}
+        sent = alex.post(path, data=form)
+        assert sent.status_code == 403, path
+    assert app.settings.persona == "default" and app.settings.persona_name == ""
     nav = alex.get("/").text
     assert 'href="/settings"' not in nav and 'href="/family"' not in nav
     assert 'href="/you"' in nav and "Alex" in nav

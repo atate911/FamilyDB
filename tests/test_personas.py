@@ -301,3 +301,26 @@ def test_nobody_can_change_her_by_reading_her() -> None:
     with pytest.raises(AttributeError):
         vera.name = "Hal"  # type: ignore[misc]
     assert personas.load(personas.DEFAULT).lines["reminder"].startswith("Reminder: {title}")
+
+
+def test_the_chat_can_never_change_her() -> None:
+    """Who she is is chosen on the page, by an admin. No tool the model can call reaches the
+    settings store, and no tool is named for her, so no message can talk it into changing her."""
+    import ast
+    from importlib import resources
+
+    tools = resources.files("familydb.tools")
+    for module in (entry for entry in tools.iterdir() if entry.name.endswith(".py")):
+        tree = ast.parse(module.read_text("utf-8"), filename=module.name)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom):
+                named = {node.module or ""} | {f"{node.module}.{a.name}" for a in node.names}
+                assert "familydb.store.settings" not in named, module.name
+            if isinstance(node, ast.Import):
+                assert all(a.name != "familydb.store.settings" for a in node.names), module.name
+            if isinstance(node, ast.Constant) and isinstance(node.value, str):
+                assert "app_settings" not in node.value, module.name
+    from familydb.tools import build_registry
+
+    for spec in build_registry().specs():
+        assert "persona" not in spec.name and "setting" not in spec.name, spec.name

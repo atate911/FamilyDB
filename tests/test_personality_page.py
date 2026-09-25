@@ -203,7 +203,7 @@ def _reads(page, event: str) -> list[str]:
 
 def test_each_line_shows_how_it_reads_with_made_up_details_filled_in(page, conn) -> None:
     shown = page.get("/settings/personality").text
-    assert "Several wordings may be written, one per line, and she picks one each time" in shown
+    assert "Several wordings may be written, one per line: each message takes one of them" in shown
     assert _reads(page, "reminder") == [
         "Reminder: bins out (Sam). Task #12; tell me when it's done, or I can snooze it."
     ]

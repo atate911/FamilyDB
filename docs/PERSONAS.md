@@ -39,7 +39,7 @@ on the Personality page laid over her.
 | Their notes | `persona_notes` | after her character, under a header of their own, before the job | an admin, at most 1,000 characters | their length, cached |
 | Her lines and their wordings | `<key>/lines.toml`, where a line may be a list of wordings, with `voice_lines` over them | `voice.say`, for the 15 events in `voice.EVENTS` | an admin, one line at a time, one wording to a row | nothing: no model call |
 | Who is listening | code (`render_audience_line`) | one line in the turn, between the date and the message, in a shared chat only | nobody: read from the chat and the family list | a few tokens, uncached, in a shared chat only |
-| The Telegram contact | the Telegram supervisor | the bot's name and description in Telegram: her name and her `start` line | follows her; under none, the admin in BotFather | nothing: no model call |
+| The Telegram contact | the Telegram supervisor | the bot's name and description in Telegram: her name and her `start` line, or FamilyDB's under none | follows whoever is speaking | nothing: no model call |
 | About the family | the Personality page | the family block of the prefix | an admin (`about_family`) | its length, cached |
 
 Under a persona the prefix begins "# Who you are", then her character or their rewrite of her,
@@ -57,9 +57,9 @@ A line may have several wordings, kept as a list, and she picks one each time. C
 chance: a CRC-32 of the event and a seed (the id of the message a notice answers, or the
 Telegram update for a stranger and for `/start`), or with no seed of the facts the line is
 filled in with. The same message always says the same words, after a resend, a retry or a
-restart, and the next may say it another way. A reminder has no seed, so different reminders can
-take different wordings, and the same reminder always takes the same one, however often it comes
-round. A line kept as a string is one wording, line breaks and all, as every line was before
+restart, and the next may say it another way. A reminder is seeded by the task and the reminder
+in force, so each time a task comes due (after a snooze, say) it may take another wording, and a
+reminder worded again for the same time (its title changed) takes the same one. A line kept as a string is one wording, line breaks and all, as every line was before
 there could be several, so a line the family saved then still says all of itself; saved again
 unchanged from the page it stays so.
 
@@ -69,13 +69,13 @@ it" in the page's chat, each ending ", kids among them" when the family list has
 A private chat gets no line. Code cannot see who is in a group, so the kids are read from the
 family list. The spec's "Who is listening" says what to do with it, whoever she is.
 
-While a persona is chosen, the Telegram supervisor gives the bot's contact her name, and her
-`start` line as its description: once after each connect, and again when either changes on the
-page. It asks Telegram what the contact says and sets only what differs, cut to Telegram's
+The Telegram supervisor gives the bot's contact the name it goes by, and its `start` line as
+the description: hers, or under none FamilyDB's, as everywhere else the plain bot speaks. It does
+so once after each connect, and again when either changes on the page. It asks Telegram what the contact says and sets only what differs, cut to Telegram's
 limits. A wait Telegram asks for is waited out, and Telegram out of reach is tried again shortly;
 a refusal, or any other failure, is logged and not tried again until her words change or the bot
-reconnects, and never stops the channel. Under none the contact is left as it last was (her name
-and her start line, if she was ever set), for the admin to rename in BotFather.
+reconnects, and never stops the channel. A name typed in BotFather lasts until then: the name the
+bot goes by is hers, chosen on the Personality page; under none it is FamilyDB.
 
 ## What was fixed
 
@@ -112,12 +112,12 @@ From most to least worthwhile. Each keeps to the rules above.
   it?" far more often than they read a long answer. A line may have several wordings, and the
   Personality page shows how each reads.
 - **The digest**, as a chat turn, with the audience line when it goes to the family group.
-- **Telegram's own contact.** Her name and her `start` line, set by the supervisor through the Bot
-  API with no model call and no trip to BotFather. Telegram is asked after a connect or a change
+- **Telegram's own contact.** Her name and her `start` line (FamilyDB's under none), set by the
+  supervisor through the Bot API with no model call and no trip to BotFather. Telegram is asked after a connect or a change
   to either, never on a timer.
 - **Meeting her.** The page that ends setup says who answers and that her name, how she talks or
   none at all are chosen under Personality, and setup's Telegram step says her name will do for
-  the bot. It is not a setup step: the bot is usable without it.
+  the bot (FamilyDB under none). It is not a setup step: the bot is usable without it.
 - **Memory, when it lands.** Two things change then. Her character says "do not ... imply access
   to memories you do not have", which becomes half wrong once she has some. And a style
   preference somebody states in passing ("Sam likes it short", "no emoji for Mia") is a memory,
@@ -158,10 +158,9 @@ changes the cached prefix only when somebody saves it.
 
 5. **Her lines**:
    - A line may have several wordings: a list in `lines.toml`, one per row in the page's box.
-     Code chooses one from the message's own id, or from the facts when there is none, so a
-     retry or a resend says the same words. Different reminders can take different wordings; the
-     same reminder always takes the same one, so a daily reminder reads the same every day. No
-     model call.
+     Code chooses one from the message's own id (for a reminder, the reminder in force), or from
+     the facts when there is none, so a retry or a resend says the same words, and a reminder
+     snoozed and due again may say it another way. No model call.
    - Under each box, how the line in force reads: every wording filled in with example facts by
      the same code as `voice.say`, so the family see "Reminder: bins out (Sam). Task #12; ..."
      rather than `{title}{who}`.

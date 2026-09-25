@@ -150,23 +150,22 @@ def test_a_setting_that_changes_nothing_she_says_asks_telegram_nothing(watched, 
     assert len(Channel.introduced) == 1
 
 
-def test_under_none_the_contact_is_left_alone_until_she_is_chosen_again(watched, conn) -> None:
+def test_under_none_the_contact_says_what_the_bot_calls_itself(watched, conn) -> None:
+    """The plain bot is FamilyDB everywhere, so its contact is too; choosing her again gives it
+    her name back. A contact still called Vera would say one thing while the bot said another."""
     app, _ = watched
     _store(conn, persona="none")
     _token(conn, "only")
-    _until(lambda: app.channel_states.get("telegram") == "connected as @bot_only")
-    time.sleep(0.1)
-    assert Channel.introduced == []
-    _store(conn, persona=None)
     _until(lambda: len(Channel.introduced) == 1)
-    _store(conn, persona="none")
-    _until(lambda: app.settings.persona == "none")
-    time.sleep(0.1)
-    assert len(Channel.introduced) == 1
-    # Chosen again, she says it again: under none the admin may have renamed the bot.
+    assert Channel.introduced[0][1] == "FamilyDB"
+    assert Channel.introduced[0][2] == voice.say(app.settings, "start")
+    assert "Vera" not in Channel.introduced[0][2]
     _store(conn, persona=None)
     _until(lambda: len(Channel.introduced) == 2)
     assert Channel.introduced[1][1] == "Vera"
+    _store(conn, persona="none")
+    _until(lambda: len(Channel.introduced) == 3)
+    assert Channel.introduced[2][1] == "FamilyDB"
 
 
 def test_an_introduction_that_fails_leaves_the_channel_running(watched, conn, caplog) -> None:

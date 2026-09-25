@@ -208,22 +208,23 @@ def test_telegram_from_a_token_to_a_linked_phone(fresh, monkeypatch, conn) -> No
     assert app.settings.digest_chat_id == "555"
 
 
-def test_the_bot_is_named_for_her_or_as_the_admin_likes(fresh, conn) -> None:
-    """While a persona is chosen the running bot gives its Telegram contact her name, the one the
-    family call her included, so the step says hers will do. Under none the contact is left
-    alone, and its name is the admin's to choose in BotFather."""
+def test_the_bot_is_named_for_whoever_speaks(fresh, conn) -> None:
+    """The running bot gives its Telegram contact the name it goes by: hers, the one the family
+    call her included, or FamilyDB under none. So the step says that name will do."""
     _post(fresh, "you", "/family", name="Sam", role="admin")
     with db.transaction(conn):
         settings_store.set_many(conn, {"persona_name": "Juno"})
     said = " ".join(fresh.get("/setup/telegram").text.split())
     assert "<em>Juno</em> will do. Once the bot is connected, its name in Telegram follows" in said
-    assert "The Tates" not in said
+    assert "follows hers, and changes with it if you rename her under Personality." in said
+    assert "The Tates" not in said and "what it calls itself" not in said
 
     with db.transaction(conn):
         settings_store.set_many(conn, {"persona": "none"})
     said = " ".join(fresh.get("/setup/telegram").text.split())
-    assert "such as <em>FamilyDB</em> or <em>The Tates\u2019 helper</em>." in said
-    assert "follows hers" not in said
+    assert "<em>FamilyDB</em> will do. Once the bot is connected, its name in Telegram" in said
+    assert "follows what it calls itself, and becomes hers if you choose a persona" in said
+    assert "The Tates" not in said and "follows hers" not in said
 
 
 def test_the_last_page_says_who_answers(fresh, conn) -> None:

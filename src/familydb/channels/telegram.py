@@ -315,9 +315,9 @@ class TelegramSupervisor:
     is not tried again until it changes; one that fails only because Telegram cannot be reached
     is tried again every `RETRY_SECONDS`.
 
-    While a persona is chosen, the bot's own contact in Telegram says her name and her
-    introduction (`_introduce`), and follows them when the page changes them, with no trip to
-    BotFather.
+    The bot's own contact in Telegram says who is speaking: her name and her introduction, or
+    FamilyDB's plain ones under none (`_introduce`), and follows them when the page changes them,
+    with no trip to BotFather.
     """
 
     CHECK_SECONDS = 5.0
@@ -410,12 +410,13 @@ class TelegramSupervisor:
         return channel, False
 
     async def _introduce(self, channel: Any) -> None:
-        """Make the contact say her name and her introduction, after a connect or a change.
+        """Make the contact say who is speaking, after a connect or a change.
 
-        Telegram is asked after each connect, and again only when her name or her introduction
-        (her /start line) differs from what it was last asked to say: a setting that moves
-        nothing she says asks nothing. Under none the contact is left alone, for the admin to
-        name in BotFather, and choosing her again says it all again. A wait Telegram asks for is
+        That is her name and her introduction (her /start line), or under none FamilyDB's, since
+        the plain bot calls itself FamilyDB everywhere else: a contact still called by her name
+        would say one thing while the bot said another. Telegram is asked after each connect,
+        and again only when the name or the introduction differs from what it was last asked to
+        say: a setting that moves nothing said asks nothing. A wait Telegram asks for is
         waited out, across a reconnect too, and Telegram out of reach is tried again every
         `RETRY_SECONDS`; a refusal, or any other failure, is logged and not tried again until
         something she says changes or the channel reconnects. Nothing here stops or reconnects
@@ -427,11 +428,7 @@ class TelegramSupervisor:
         if settings is self._seen or time.monotonic() < self._introduce_at:
             return
         self._seen = settings
-        her = personas.active(settings)
-        if her is personas.PLAIN:
-            self._introduced = None
-            return
-        said = (her.name, voice.say(settings, "start"))
+        said = (personas.active(settings).name, voice.say(settings, "start"))
         if said == self._introduced:
             return
         try:
