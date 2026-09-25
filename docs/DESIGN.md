@@ -132,7 +132,7 @@ Sam and Alex are placeholder family members. Dates assume today is Sunday 20 Sep
 2. Look up the sender in `members`. Unknown senders get a short refusal that includes their id, and who knocked (id, name, when; never the text) is kept for a month so the Family page can offer to add them. Nothing else runs for them.
 3. Insert the raw message into `messages` with status `received`. From here on it is worked on under a lease (`delivery.lease`): a claim with an expiry that the worker renews while it runs. A second worker cannot take it, and one that dies lets the claim lapse, so the retry job can finish what a restart interrupted. A message from somebody who has since been taken off the family list is dropped rather than answered.
 4. Build the prompt, in this order:
-   - the persona's character, Vera by default (`personas/vera/character.md`, or the family's rewrite of her), then the stable system prompt (rules, tone, tool guidance, the suggestion procedure), which wins where they meet;
+   - the persona's character, Vera by default (`personas/default/character.md` with her name for `{name}`, or the family's rewrite of her), then the stable system prompt (rules, tone, tool guidance, the suggestion procedure), which wins where they meet;
    - family context: members and kids, what the family wrote about themselves, home area, timezone, which integrations are connected;
    - the current idea list in compact form (id, title, kind, participants, tags, status, who suggested it, when, whether details are filled in), so the model can answer most questions and spot duplicates without a search call;
    - the last N messages in this chat from the last few hours, newest first under a size budget, including the bot's own replies and the ids it mentioned, so "the second one" and "make that 7 pm" resolve;
@@ -408,7 +408,7 @@ src/familydb/
                          folded into a reply when the family is talking
   whereabouts.py         where a member said they are, from a shared location, named once
   personas/              the persona layer: Persona (a name, a character, her lines) and the one in
-                         force; vera/ holds persona.toml, character.md and lines.toml
+                         force; default/ (Vera) holds persona.toml, character.md and lines.toml
   agent/                 gateway.py (the one door to a model, each kind of call declared),
                          compose.py, prompt.py, render.py, history.py, loop.py, worker.py, spending.py
                          (the daily limit), prompts/{system,enrich,discover}.md

@@ -107,7 +107,7 @@ class Settings(BaseSettings):
     # Who the assistant is to the family: a persona's folder in familydb/personas, or "none". Not
     # empty for none: an empty setting means "the default" everywhere else, and would bring her
     # back. `personas.active` reads it, and lays `persona_text` and `voice_lines` over her own.
-    persona: str = "vera"
+    persona: str = "default"
     # Her character as the family rewrote it on the Personality page; empty uses her own.
     persona_text: str = Field(default="", max_length=20_000)
     # Who the family are, in their own words, for every chat: ages, tastes, what to avoid.
@@ -219,12 +219,11 @@ class Settings(BaseSettings):
     def _known_persona(cls, value: str) -> str:
         from familydb import personas
 
-        name = value.strip().casefold()
-        if name != personas.NONE and name not in personas.available():
-            raise ValueError(
-                f"no persona called {value!r}; the choices are {', '.join(personas.available())}"
-            )
-        return name
+        key = personas.key_for(value)
+        choices = (*personas.available(), personas.NONE)
+        if key not in choices:
+            raise ValueError(f"no persona called {value!r}; the choices are {', '.join(choices)}")
+        return key
 
     @field_validator("family_tz")
     @classmethod

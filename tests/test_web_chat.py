@@ -75,6 +75,24 @@ def test_a_message_goes_through_the_pipeline_and_the_answer_lands_on_the_page(
     assert thread[0].channel == "web"
 
 
+def test_her_answers_carry_her_name(settings, clock, conn, family, replies) -> None:
+    client = _client(settings, clock, *replies)
+    _say(client, "what should we do this weekend?")
+    assert client.chat.wait(10)
+    page = client.get("/chat").text
+    assert "<strong>Vera</strong>" in page and "<strong>FamilyDB</strong>" not in page
+
+
+def test_with_no_persona_the_answers_are_the_bot_s_own(
+    settings, clock, conn, family, replies
+) -> None:
+    client = _client(settings.model_copy(update={"persona": "none"}), clock, *replies)
+    _say(client, "what should we do this weekend?")
+    assert client.chat.wait(10)
+    page = client.get("/chat").text
+    assert "<strong>FamilyDB</strong>" in page and "Vera" not in page
+
+
 def test_the_tools_a_turn_ran_are_shown_under_the_answer(settings, clock, conn, family) -> None:
     """The log keeps them against the question, which would read as though Sam had run them."""
     client = _client(

@@ -1,42 +1,70 @@
 """The persona layer: who the assistant is, as one object, and the one in force."""
 
+from dataclasses import replace
+
 import pytest
 
 from familydb import personas
+from familydb.config import Settings
 
 
 def test_every_persona_ships_whole() -> None:
-    """A folder is a persona when it names her; her character says who she is."""
-    assert "vera" in personas.available()
+    """A folder is a persona when it names her, and her name is written there and only there."""
+    assert personas.DEFAULT in personas.available()
     for key in personas.available():
         persona = personas.load(key)
         assert persona.key == key and persona.name.strip(), key
-        assert persona.character and persona.name in persona.character, key
+        assert personas.NAME in persona.character, key  # she says {name}, not a name of her own
+        assert persona.name in persona.prompt and personas.NAME not in persona.prompt, key
 
 
-def test_vera_is_who_the_family_meets(settings) -> None:
-    vera = personas.load("vera")
-    assert vera.name == "Vera" and vera.character.startswith("You are Vera")
+def test_the_default_is_vera_as_she_was_first_written(settings) -> None:
+    vera = personas.load(personas.DEFAULT)
+    assert vera.name == "Vera"
+    assert vera.character.startswith("You are {name}, an AI assistant")
+    assert vera.prompt.startswith("You are Vera, an AI assistant")
+    assert "Be recognizably Vera without making every response a demonstration of Vera." in (
+        vera.prompt
+    )
     assert vera.lines["reminder"].startswith("Reminder: {title}")
-    # The default, with nothing of the family's laid over her, is her as she ships.
-    assert personas.active(settings) == vera
+    # With nothing of the family's laid over her, she is who the family meets.
+    assert settings.persona == personas.DEFAULT and personas.active(settings) == vera
+
+
+def test_a_new_name_reaches_all_of_her_character() -> None:
+    juno = replace(personas.load(personas.DEFAULT), name="Juno")
+    assert juno.prompt.startswith("You are Juno, an AI assistant") and "Vera" not in juno.prompt
+    assert "Be recognizably Juno without making every response a demonstration of Juno." in (
+        juno.prompt
+    )
 
 
 def test_the_family_s_words_are_laid_over_hers(settings) -> None:
-    vera = personas.load("vera")
+    vera = personas.load(personas.DEFAULT)
     theirs = settings.model_copy(
         update={
-            "persona_text": "  You are Vera. Be very brief.\n",
+            "persona_text": "  You are {name}. Be very brief.\n",
             "voice_lines": {"reminder": "Psst: {title}.", "follow_up": ""},
         }
     )
     speaking = personas.active(theirs)
-    assert speaking.character == "You are Vera. Be very brief."
+    assert speaking.character == "You are {name}. Be very brief."
+    assert speaking.prompt == "You are Vera. Be very brief."  # their {name} is hers too
     assert speaking.lines["reminder"] == "Psst: {title}."
     assert speaking.lines["follow_up"] == vera.lines["follow_up"]  # an empty box is still hers
-    assert speaking.name == "Vera" and speaking.key == "vera"
+    assert speaking.name == "Vera" and speaking.key == personas.DEFAULT
     # What ships is untouched: restoring her original brings her back as she was.
-    assert personas.load("vera") == vera and vera.lines["reminder"] != "Psst: {title}."
+    assert personas.load(personas.DEFAULT) == vera and vera.lines["reminder"] != "Psst: {title}."
+
+
+def test_a_setting_saved_before_she_had_a_folder_of_her_own_still_finds_her() -> None:
+    """The default persona's folder was "vera". A setting that no longer loads would take every
+    stored setting with it, the keys included, so the old value has to keep working."""
+    for written in ("vera", " Vera ", "VERA", "default", "Default "):
+        assert Settings(_env_file=None, persona=written).persona == personas.DEFAULT, written
+    assert Settings(_env_file=None, persona=" None ").persona == personas.NONE
+    with pytest.raises(ValueError, match="the choices are default, none"):
+        Settings(_env_file=None, persona="hal")
 
 
 def test_none_is_plain_whatever_the_family_wrote(settings) -> None:
@@ -49,21 +77,24 @@ def test_none_is_plain_whatever_the_family_wrote(settings) -> None:
     )
     assert personas.active(plain) is personas.PLAIN
     assert personas.load(personas.NONE) is personas.PLAIN
-    assert personas.PLAIN.character == "" and not personas.PLAIN.lines
+    assert personas.PLAIN.character == personas.PLAIN.prompt == "" and not personas.PLAIN.lines
     assert personas.PLAIN.name == "FamilyDB"
 
 
 def test_only_a_persona_there_is_a_folder_for_is_loaded() -> None:
-    for key in ("hal", "Vera", "", "..", "../agent/prompts", "__pycache__", "vera/character.md"):
+    """Loading is by exact key; an old or loosely written one is the setting's to tidy first."""
+    for key in ("hal", "vera", "Default", "", "..", "../agent/prompts", "__pycache__"):
         with pytest.raises(LookupError):
             personas.load(key)
+    with pytest.raises(LookupError):
+        personas.load("default/character.md")
 
 
 def test_nobody_can_change_her_by_reading_her() -> None:
     """She is loaded once and shared, so she cannot be changed in place by whoever reads her."""
-    vera = personas.load("vera")
+    vera = personas.load(personas.DEFAULT)
     with pytest.raises(TypeError):
         vera.lines["reminder"] = "Changed."  # type: ignore[index]
     with pytest.raises(AttributeError):
         vera.name = "Hal"  # type: ignore[misc]
-    assert personas.load("vera").lines["reminder"].startswith("Reminder: {title}")
+    assert personas.load(personas.DEFAULT).lines["reminder"].startswith("Reminder: {title}")

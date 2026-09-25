@@ -26,6 +26,7 @@ from flask import (
     url_for,
 )
 
+from familydb import personas
 from familydb.agent import providers
 from familydb.app import App
 from familydb.store import knocks as knock_store
@@ -229,6 +230,8 @@ def _telegram(app: App, conn: Any) -> dict[str, Any]:
     return {
         "stage": stage,
         "state": state,
+        # What to call the bot in Telegram: what she is called everywhere else.
+        "assistant": personas.active(live).name,
         "bot": bot,
         "admin": admin,
         "knocks": knocks,

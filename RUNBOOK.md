@@ -518,7 +518,8 @@ shows one only after the family password is typed again, once, on that screen on
 or none), her description rewritten in the family's words, "About the family" (what she should
 know about them, sent with every message, so keep it short), and the lines she uses for
 everything she says unasked, such as reminders and "how was it?". Those lines are filled in by
-code, never by a model call; an emptied one goes back to hers.
+code, never by a model call; an emptied one goes back to hers. Her name is written as `{name}`,
+in her description and in any line, and filled in wherever she speaks, the chat page included.
 
 **Undoing a change.** The bottom of the settings page lists what has changed, when, and from
 where. To put a setting back the way it was, empty its box: the value from `.env` applies again.

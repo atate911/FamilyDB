@@ -1,0 +1,5 @@
+# The default persona: the character the family meets unless they choose another. Her name is
+# written here and nowhere else; character.md and lines.toml say {name} wherever it goes. The
+# folder is her key, the `persona` setting's value.
+
+name = "Vera"

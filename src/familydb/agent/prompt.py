@@ -54,7 +54,7 @@ def chat_prefix(conn: sqlite3.Connection, settings: Settings) -> tuple[str, str,
             f"\n({hidden} older idea{'s' if hidden != 1 else ''} not listed here; "
             "use search_ideas to find them.)"
         )
-    return personas.active(settings).character, load_system_prompt(), family, idea_list
+    return personas.active(settings).prompt, load_system_prompt(), family, idea_list
 
 
 def chat_blocks(

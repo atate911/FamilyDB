@@ -199,7 +199,7 @@ def test_an_unknown_persona_is_refused_when_it_is_saved(settings) -> None:
 
     with pytest.raises(ValidationError, match="no persona called 'HAL'"):
         Settings(_env_file=None, persona="HAL")
-    assert Settings(_env_file=None, persona=" Vera ").persona == "vera"
+    assert Settings(_env_file=None, persona=" Default ").persona == "default"
 
 
 def test_the_workers_never_carry_the_persona(conn, settings) -> None:

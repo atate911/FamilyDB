@@ -50,9 +50,19 @@ def test_her_name_is_the_persona_s_to_give(settings, monkeypatch) -> None:
     plain = settings.model_copy(update={"persona": "none"})
     assert voice.say(plain, "start").startswith("Hi! I'm FamilyDB, the family's")
     # Named otherwise, she introduces herself by that name, whatever a caller passes.
-    juno = replace(personas.load("vera"), name="Juno")
+    juno = replace(personas.load(personas.DEFAULT), name="Juno")
     monkeypatch.setattr(personas, "active", lambda _settings: juno)
     assert voice.say(settings, "start", name="Hal").startswith("Hi, I'm Juno.")
+
+
+def test_any_line_can_say_her_name(settings) -> None:
+    own = settings.model_copy(update={"voice_lines": {"follow_up": "{name} here: how was {plan}?"}})
+    assert voice.say(own, "follow_up", plan="Hopscotch", day="Saturday") == (
+        "Vera here: how was Hopscotch?"
+    )
+    assert voice.problems({"done": "{name} did it."}) == {}
+    refused = voice.problems({"follow_up": "How was {venue}?"})["follow_up"]
+    assert refused.endswith("it can use {name}, {plan}, {day}")
 
 
 def test_what_is_wrong_with_a_written_line_is_named() -> None:

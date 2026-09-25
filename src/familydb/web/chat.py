@@ -27,6 +27,7 @@ from flask import (
     url_for,
 )
 
+from familydb import personas
 from familydb.app import App
 from familydb.channels.web import DEFAULT_CHAT, MAX_MESSAGE, WebChat
 from familydb.config import Settings
@@ -122,6 +123,7 @@ def page(*, error: str | None = None, typed: str | None = None, status: int = 20
     # answer. Pairing them here also says which questions have been answered at all.
     answered = {message.reply_to for message in thread if message.reply_to is not None}
     actions = {message.id: message.actions for message in thread}
+    assistant = personas.active(app.settings).name
     lines = [
         views.chat_line(
             message,
@@ -129,6 +131,7 @@ def page(*, error: str | None = None, typed: str | None = None, status: int = 20
             app.settings.tzinfo,
             did=views.tools_used(actions.get(message.reply_to)),
             waiting=message.id not in answered,
+            assistant=assistant,
         )
         for message in thread
     ]
