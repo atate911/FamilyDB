@@ -104,10 +104,11 @@ class Settings(BaseSettings):
 
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-opus-5"
-    # Who the assistant is to the family: a file in familydb/personas, or "none". Not empty for
-    # none: an empty setting means "the default" everywhere else, and would bring her back.
+    # Who the assistant is to the family: a persona's folder in familydb/personas, or "none". Not
+    # empty for none: an empty setting means "the default" everywhere else, and would bring her
+    # back. `personas.active` reads it, and lays `persona_text` and `voice_lines` over her own.
     persona: str = "vera"
-    # Her description as the family rewrote it on the Personality page; empty uses the file's.
+    # Her character as the family rewrote it on the Personality page; empty uses her own.
     persona_text: str = Field(default="", max_length=20_000)
     # Who the family are, in their own words, for every chat: ages, tastes, what to avoid.
     about_family: str = Field(default="", max_length=4_000)

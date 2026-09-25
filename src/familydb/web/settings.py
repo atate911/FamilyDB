@@ -526,20 +526,21 @@ def personality_page(
     *, error: str | None = None, typed: dict[str, str] | None = None, status: int = 200
 ) -> tuple[str, int]:
     live = _app().settings
+    speaking = personas.active(live)
     told = get_flashed_messages(category_filter=[NOTICE])
     chosen = (typed or {}).get("persona", live.persona)
-    # A persona nobody has a file for (a hand-made form) is shown as nothing, and refused on save.
-    original = personas.load(chosen) if chosen in personas.available() else ""
-    text = (typed or {}).get("persona_text") or personas.text_for(live) or original
+    # A persona nobody has a folder for (a hand-made form) is shown as nothing, and refused on save.
+    original = personas.load(chosen).character if chosen in personas.available() else ""
+    text = (typed or {}).get("persona_text") or speaking.character or original
     about = (typed or {}).get("about_family", live.about_family)
     # What she says unasked: the family's line if they wrote one, hers as the placeholder.
-    base_lines = voice.lines(live.model_copy(update={"voice_lines": {}}))
+    hers = voice.wording(personas.load(live.persona))
     said_lines = [
         {
             "event": name,
             "label": event.label,
             "value": (typed or {}).get(f"line_{name}", live.voice_lines.get(name, "")),
-            "placeholder": base_lines[name],
+            "placeholder": hers[name],
             "fields": ", ".join("{" + f + "}" for f in event.fields),
         }
         for name, event in voice.EVENTS.items()
@@ -550,13 +551,13 @@ def personality_page(
             said=told[0] if told else None,
             error=error,
             chosen=chosen,
-            choices=personas.available(),
+            choices=[personas.load(key) for key in personas.available()],
             text=text,
             rewritten=bool(live.persona_text.strip()),
             about=about,
             said_lines=said_lines,
             plain=live.persona == personas.NONE,
-            tokens=(len(personas.text_for(live)) + len(live.about_family)) // CHARS_PER_TOKEN,
+            tokens=(len(speaking.character) + len(live.about_family)) // CHARS_PER_TOKEN,
             limits={
                 name: Settings.model_fields[name].metadata[0].max_length
                 for name in ("persona_text", "about_family")
@@ -590,19 +591,15 @@ def save_personality() -> Response | tuple[str, int]:
         return personality_page(error=f"Nothing was saved. {what}.", typed=typed, status=400)
     chosen = typed["persona"].strip()
     text = typed["persona_text"].replace("\r\n", "\n").strip()
-    original = personas.load(chosen) if chosen in personas.available() else ""
+    original = personas.load(chosen).character if chosen in personas.available() else ""
+    hers = voice.wording(personas.load(_app().settings.persona))
     values: dict[str, Any] = {
         # What the environment already says is not stored over it, as on the main page.
         "persona": None if chosen == _app().base_settings.persona else chosen,
         "persona_text": text if original and text and text != original else None,
         "about_family": typed["about_family"].replace("\r\n", "\n").strip() or None,
         # Only lines that differ from hers are the family's own.
-        "voice_lines": {
-            name: line
-            for name, line in written.items()
-            if line != voice.lines(_app().settings.model_copy(update={"voice_lines": {}}))[name]
-        }
-        or None,
+        "voice_lines": {name: line for name, line in written.items() if line != hers[name]} or None,
     }
     try:
         apply_overrides(

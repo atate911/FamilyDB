@@ -19,9 +19,9 @@
       <div class="setting">
         <label for="p-persona">Personality</label>
         <select id="p-persona" name="persona">
-          {% for name in choices %}
-            <option value="{{ name }}" {% if chosen == name %}selected{% endif %}>
-              {{- name | capitalize -}}
+          {% for persona in choices %}
+            <option value="{{ persona.key }}" {% if chosen == persona.key %}selected{% endif %}>
+              {{- persona.name -}}
             </option>
           {% endfor %}
           <option value="none" {% if chosen == "none" %}selected{% endif %}>None: plain and brief</option>

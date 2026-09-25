@@ -2,10 +2,10 @@
 
 The chat model speaks for itself, in the persona the prompt gives it. Everything else the bot
 says (a reminder, "how was it?", a lookup note, a notice that it cannot answer) is written by
-code, and comes through `say`: the persona's line for that event (`personas/<name>.lines.toml`),
-the family's own rewrite of it (the Personality page, the `voice_lines` setting), or the plain
-wording below when neither has one. No model call, so it works when the model is down, the key is
-missing or the day's limit is spent.
+code, and comes through `say`: the line the persona in force has for that event
+(`personas.active`: her own, `personas/<key>/lines.toml`, or the family's rewrite of it from the
+Personality page), or the plain wording below when she has none. No model call, so it works when
+the model is down, the key is missing or the day's limit is spent.
 
 A proactive message that lands while the family is talking (`FOLDABLE`) is not sent on its own.
 `hand_over` holds it for a moment; the chat turn that comes next takes it (`take`), the model
@@ -133,24 +133,27 @@ IN_TURN = timedelta(minutes=10)
 
 
 def lines(settings: Any) -> dict[str, str]:
-    """Every event's wording now: the family's rewrite, else the persona's line, else plain.
+    """Every event's wording now, in the words of the persona in force.
 
     No persona means plain throughout, as it does for the chat: the family's rewrites are kept
     and come back when a persona is chosen again."""
-    if settings.persona == personas.NONE:
-        return {name: event.plain for name, event in EVENTS.items()}
-    chosen = personas.lines(settings.persona)
-    own = settings.voice_lines or {}
-    return {
-        name: (own.get(name) or chosen.get(name) or event.plain) for name, event in EVENTS.items()
-    }
+    return wording(personas.active(settings))
+
+
+def wording(persona: personas.Persona) -> dict[str, str]:
+    """Every event's wording in this persona's lines, and plainly where she has none."""
+    return {name: persona.lines.get(name) or event.plain for name, event in EVENTS.items()}
 
 
 def say(settings: Any, event: str, **facts: Any) -> str:
-    """The words for one event. A line that cannot be filled in falls back to the plain one."""
+    """The words for one event. A line that cannot be filled in falls back to the plain one.
+
+    A {name} is always hers: the persona in force gives it, not the caller."""
     spec = EVENTS[event]
+    persona = personas.active(settings)
+    facts = {**facts, "name": persona.name}
     values = {name: facts.get(name, "") for name in spec.fields}
-    line = lines(settings)[event]
+    line = wording(persona)[event]
     try:
         return line.format(**values).strip()
     except (KeyError, IndexError, ValueError):

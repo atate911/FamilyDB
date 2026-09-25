@@ -42,7 +42,9 @@ def test_the_page_shows_her_and_links_from_settings(page) -> None:
 
 def test_about_the_family_reaches_every_chat(page, conn) -> None:
     about = "The girls are 7 and 10 and love animals. Alex is vegetarian."
-    form = _form(page, persona="vera", persona_text=personas.load("vera"), about_family=about)
+    form = _form(
+        page, persona="vera", persona_text=personas.load("vera").character, about_family=about
+    )
     assert page.post("/settings/personality", data=form).status_code == 302
     family_block = _prefix(page, conn)[1].text
     assert "About the family, in their words:\n" + about in family_block
@@ -61,7 +63,9 @@ def test_a_rewrite_is_used_and_can_be_restored(page, conn) -> None:
     history = page.get("/settings").text
     assert "rewritten" in history and "a little dry" not in history  # not echoed in the log
     assert page.post("/settings/personality/restore", data=_form(page)).status_code == 302
-    assert _prefix(page, conn)[0].text.startswith("# Who you are\n\n" + personas.load("vera"))
+    assert _prefix(page, conn)[0].text.startswith(
+        "# Who you are\n\n" + personas.load("vera").character
+    )
 
 
 def test_none_means_none_whatever_was_written(page, conn) -> None:

@@ -37,14 +37,14 @@ def trim_ideas(everything: list[Any], limit: int) -> tuple[list[Any], int]:
     return everything[-limit:], len(everything) - limit
 
 
-# Between the persona and the product spec: who she is, then what the job is. The spec says what
-# to do and wins where the two meet; the persona says so itself.
+# Between the persona's character and the product spec: who she is, then what the job is. The
+# spec says what to do and wins where the two meet; her character says so itself.
 PERSONA_HEADER = "# Who you are\n\n"
 JOB_HEADER = "\n\n# The job\n\n"
 
 
 def chat_prefix(conn: sqlite3.Connection, settings: Settings) -> tuple[str, str, str, str]:
-    """The chat prefix in its parts: the persona, the system prompt, the family, the idea list."""
+    """The chat prefix in its parts: her character, the system prompt, the family, the ideas."""
     family = render_family_context(members.list_all(conn), settings)
     everything = ideas.list_for_prompt(conn)
     shown, hidden = trim_ideas(everything, settings.prompt_idea_limit)
@@ -54,13 +54,15 @@ def chat_prefix(conn: sqlite3.Connection, settings: Settings) -> tuple[str, str,
             f"\n({hidden} older idea{'s' if hidden != 1 else ''} not listed here; "
             "use search_ideas to find them.)"
         )
-    return personas.text_for(settings), load_system_prompt(), family, idea_list
+    return personas.active(settings).character, load_system_prompt(), family, idea_list
 
 
-def chat_blocks(persona: str, instructions: str, family: str, idea_list: str) -> list[SystemBlock]:
+def chat_blocks(
+    character: str, instructions: str, family: str, idea_list: str
+) -> list[SystemBlock]:
     """Two blocks, both cache breakpoints: who she is and the system prompt, which never change,
     then the family context and the idea list, which change when an idea does."""
-    first = f"{PERSONA_HEADER}{persona}{JOB_HEADER}{instructions}" if persona else instructions
+    first = f"{PERSONA_HEADER}{character}{JOB_HEADER}{instructions}" if character else instructions
     return [
         SystemBlock(first, cacheable=True),
         SystemBlock(f"{family}\n\n{idea_list}", cacheable=True),

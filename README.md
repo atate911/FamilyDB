@@ -85,7 +85,7 @@ src/familydb/
   task_service.py tasks and their reminders, changed in one place
   whereabouts.py  where a phone last said a member was, for a few hours
   voice.py        the words for everything said unasked, and folding it into a conversation
-  personas/       who the assistant is: vera.md, and vera.lines.toml for what she says unasked
+  personas/       who the assistant is: a name, a character and her lines, a folder each (vera/)
   doctor.py       the install check   privacy.py      owner-only files and umask
   agent/          prompt builder, history, the tool loop, worker turns, the daily spending
                   limit, prompts/{system,enrich,discover}.md

@@ -1,0 +1,4 @@
+# Who Vera is, by name. Her folder is her key, the `persona` setting's value; how she talks is
+# character.md, and what she says unasked is lines.toml.
+
+name = "Vera"
