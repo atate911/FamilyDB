@@ -49,7 +49,7 @@ from flask import (
 )
 from itsdangerous import BadSignature, URLSafeSerializer
 
-from familydb import passwords, roles
+from familydb import passwords, personas, roles
 from familydb.app import App
 from familydb.config import Settings
 from familydb.store import logins
@@ -546,6 +546,7 @@ def _within_reach(who: Visitor) -> Response | tuple[str, int] | None:
     needed = NEEDS.get(request.blueprint or "")
     if needed and request.endpoint not in EVERYBODY_S_OWN and not who.may(needed):
         title, why = views.REFUSALS[needed]
+        why = why.format(name=personas.active(_app().settings).name)
         return render_template("403.html", title=title, why=why), 403
     return None
 

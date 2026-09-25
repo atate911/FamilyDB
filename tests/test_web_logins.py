@@ -455,6 +455,7 @@ def test_a_permission_taken_from_kids_is_kept_everywhere(app, sam, family, monke
     assert home.status_code == 200 and 'href="/chat#latest"' not in home.text
     chat = girls.get("/chat")
     assert chat.status_code == 403 and "Not yet" in chat.text
+    assert "Talking to Vera here" in chat.text  # her place goes by her name, as its tab does
     idea = {**_tokens(girls, "/ideas/new"), "title": "Ramen place", "kind": "restaurant"}
     assert girls.post("/ideas/new", data=idea).status_code == 403
     assert girls.get("/ideas").status_code == 200  # reading needs nothing more than signing in
