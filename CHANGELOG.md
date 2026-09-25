@@ -21,6 +21,13 @@ older than what is installed. It gets a date when it is released.
   as a voice note; the recording is not. Voice notes can be turned off, capped in
   length and pointed at either company on the settings page, and hearing them
   counts against the daily limit like any other call.
+- **Acts on every part of a long message.** A rambling message or voice note
+  that saves an idea, puts one thing on the calendar and cancels another is done
+  in full, one line of reply per thing done. Whether it is a plan or an idea is
+  decided by commitment; a swap puts the new plan on before taking the old one
+  off. Ideas tied to dates (a festival, a show's run, a concert on the 18th) keep
+  them, and are only suggested on those days. Events somebody put on the calendar
+  by hand can be moved or taken off too, not only the bot's own.
 - **Fills them in.** A background worker turn looks each new idea up on the web:
   address, opening hours, booking link, price notes, a geocoded travel estimate.
 - **Keeps the calendar.** Confirmed plans are created, moved and cancelled on the

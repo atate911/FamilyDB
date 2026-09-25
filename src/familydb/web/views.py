@@ -89,6 +89,21 @@ def participants_text(idea: Idea) -> str:
     return ", ".join(idea.participants) if idea.participants else "anyone"
 
 
+def on_text(idea: Idea) -> str | None:
+    """When a dated idea is on, in the page's words: "Wed 18 Nov 2026, 20:00", "Thu 1 Oct to
+    Sat 31 Oct 2026", "from Thu 1 Oct 2026". None for an idea tied to no date."""
+    first, last = idea.first_day, idea.last_day
+    if first is None:
+        return None
+    time = f", {idea.happens_from[11:16]}" if idea.happens_from and "T" in idea.happens_from else ""
+    if last is None:
+        return f"from {first:%a} {first.day} {first:%b %Y}{time}"
+    if last == first:
+        return f"{first:%a} {first.day} {first:%b %Y}{time}"
+    year = "" if first.year == last.year else f" {first.year}"
+    return f"{first:%a} {first.day} {first:%b}{year}{time} to {last:%a} {last.day} {last:%b %Y}"
+
+
 def rating_text(idea: Idea) -> str | None:
     if not idea.times_done:
         return None
@@ -130,6 +145,7 @@ def idea_row(idea: Idea, tz: ZoneInfo) -> dict[str, Any]:
         "kind": kind_text(idea.kind),
         "status": idea.status,
         "where": idea.location_name,
+        "on": on_text(idea),
         "who": participants_text(idea),
         "tags": idea.tags,
         "duration": duration_text(idea),

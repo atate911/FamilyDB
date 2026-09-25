@@ -31,11 +31,28 @@ def _duration(idea: Idea) -> str | None:
     return None
 
 
+def render_dates(idea: Idea) -> str | None:
+    """When a dated idea is on, as stored: "on 2026-11-18T20:00", "on 2026-10-01 to 2026-10-31",
+    "from 2026-10-01". None for an idea tied to no date. Never relative to today: the idea list
+    is cached."""
+    first, last = idea.happens_from, idea.happens_until
+    if not first:
+        return None
+    if last is None:
+        return f"from {first}"
+    if last == first[:10]:
+        return f"on {first}"
+    return f"on {first} to {last}"
+
+
 def render_idea_line(idea: Idea) -> str:
     """One compact line per idea, exactly what the model sees in its context."""
     parts = [f"#{idea.id}", f"[{idea.kind}]", idea.title]
     if idea.location_name:
         parts.append(f"at {idea.location_name}")
+    dates = render_dates(idea)
+    if dates:
+        parts.append(dates)
     parts.append(f"for: {', '.join(idea.participants) if idea.participants else 'anyone'}")
     if idea.tags:
         parts.append(f"tags: {', '.join(idea.tags)}")

@@ -71,6 +71,26 @@
     </div>
 
     <div class="field">
+      <label for="happens_from">On from</label>
+      <input id="happens_from" name="happens_from" type="date"
+             value="{{ idea.happens_from[:10] if editing and idea.happens_from else '' }}" />
+      <span class="muted">Only for a thing tied to dates: a festival, a show's run.</span>
+    </div>
+
+    <div class="field">
+      <label for="happens_time">Starting at</label>
+      <input id="happens_time" name="happens_time" type="time"
+             value="{{ idea.happens_from[11:16] if editing and idea.happens_from and 'T' in idea.happens_from else '' }}" />
+    </div>
+
+    <div class="field">
+      <label for="happens_until">Until</label>
+      <input id="happens_until" name="happens_until" type="date"
+             value="{{ idea.happens_until or '' if editing else '' }}" />
+      <span class="muted">The last day; the same day for a one-day thing, empty for no end.</span>
+    </div>
+
+    <div class="field">
       <label for="url">Link</label>
       <input id="url" name="url" type="url" value="{{ idea.url or '' if editing else '' }}" />
     </div>

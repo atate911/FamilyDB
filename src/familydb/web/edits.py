@@ -176,6 +176,11 @@ def idea_fields(form: MultiDict[str, str]) -> tuple[dict[str, Any], str | None]:
     cost = _text(form, "cost_level")
     if cost:
         values["cost_level"] = int(cost)  # the form offers a fixed list, so this cannot fail
+    # When a thing tied to dates is on: sent every time, so emptying the boxes clears them, and
+    # checked by the tool as a date said in chat is.
+    first, time = _text(form, "happens_from"), _text(form, "happens_time")
+    values["happens_from"] = f"{first}T{time}" if first and time else first
+    values["happens_until"] = _text(form, "happens_until")
     return values, None
 
 

@@ -73,6 +73,36 @@ def _status_reason(idea: Idea, today: date) -> str | None:
     return None
 
 
+def day_text(day: date) -> str:
+    return f"{day:%a} {day.day} {day:%b}"
+
+
+def dates_text(idea: Idea) -> str:
+    """When a dated idea is on, in a few words: "only on Sun 18 Oct", "on from Thu 1 Oct"."""
+    first, last = idea.first_day, idea.last_day
+    if first is None:
+        return "on no day given"
+    if last is None:
+        return f"on from {day_text(first)}"
+    if last == first:
+        return f"only on {day_text(first)}"
+    return f"on {day_text(first)} to {day_text(last)}"
+
+
+def dates_reason(idea: Idea, context: Context) -> str | None:
+    """Why an idea tied to dates cannot be done in this window: over, or on other days."""
+    if idea.first_day is None and idea.last_day is None:
+        return None
+    last = idea.last_day
+    if last is not None and last < context.today:
+        return f"was over on {day_text(last)}"
+    if context.window is None:
+        return None  # someday: anything still to come will do
+    if any(idea.on(day.date) for day in context.days):
+        return None
+    return dates_text(idea)
+
+
 def participants_match(idea: Idea, requested: list[str]) -> bool:
     if not requested or not idea.participants:
         return True
@@ -115,6 +145,8 @@ def _weather_fit(
     known = False
     bad: list[str] = []
     for day in context.days:
+        if not idea.on(day.date):
+            continue  # a dated idea is only ever a candidate on its own days
         forecast = day.forecast
         if forecast is not None:
             known = True
@@ -199,6 +231,10 @@ def shortlist(
             continue
         if idea.seasons and context.season not in idea.seasons:
             out(idea, f"for {', '.join(idea.seasons)}")
+            continue
+        reason = dates_reason(idea, context)
+        if reason:
+            out(idea, reason)
             continue
         reason = _constraint_reason(idea, constraints)
         if reason:
