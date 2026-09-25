@@ -359,7 +359,12 @@ def test_digest_asks_as_the_first_admin_and_delivers(settings, thursday_clock, c
     assert inbound.channel_update_id == "digest:2026-09-24"
     assert inbound.member_id == family["sam"].id and inbound.text == DIGEST_TEXT
     assert inbound.status == "processed"
-    assert api.requests[0]["messages"][0]["content"][1]["text"] == f"[Sam] {DIGEST_TEXT}"
+    # Sent to the family's group, so the turn says who reads it before the question.
+    asked = [part["text"] for part in api.requests[0]["messages"][0]["content"]]
+    assert asked[1:] == [
+        "This is the family's group chat: everyone in it reads your reply, kids among them.",
+        f"[Sam] {DIGEST_TEXT}",
+    ]
     row = suggestions.list_recent(conn, limit=1)[0]
     assert row.reply_message_id == reply.out_message_id and row.window_start == "2026-09-26"
     # The same day again asks and sends nothing.

@@ -13,6 +13,7 @@ from familydb.agent import gateway, spending
 from familydb.agent.history import load_history
 from familydb.agent.loop import MessagesAPI, TurnResult
 from familydb.agent.render import (
+    render_audience_line,
     render_folded_line,
     render_location_line,
     render_retry_note,
@@ -377,7 +378,9 @@ def _think(
         if origin
         else app.clock
     )
-    current = render_user_turn(member.display_name, msg.text, received_clock)
+    # Who reads the reply depends on the chat, so it goes in the turn and never in the prefix.
+    audience = render_audience_line(msg.channel, msg.chat_id, members.list_all(conn))
+    current = render_user_turn(member.display_name, msg.text, received_clock, audience)
     shared = whereabouts.current(conn, member.id, app.clock.now())
     if shared is not None:
         current.append(

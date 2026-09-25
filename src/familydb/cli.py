@@ -20,7 +20,7 @@ from familydb import __version__, passwords, privacy, roles
 from familydb import family as family_rules
 from familydb.agent.history import load_history
 from familydb.agent.providers.base import Message, TurnRequest
-from familydb.agent.render import render_idea_line, render_user_turn
+from familydb.agent.render import render_audience_line, render_idea_line, render_user_turn
 from familydb.app import App, build_app
 from familydb.availability import (
     digest_configured,
@@ -377,7 +377,9 @@ def tool_cmd(
 def debug_prompt(
     text: str = typer.Argument("", help="The message to build a chat request for."),
     as_member: str | None = typer.Option(None, "--as", help="Act as this family member."),
-    chat_id: str = typer.Option("console", "--chat", help="Chat whose history to include."),
+    chat_id: str = typer.Option(
+        "console", "--chat", help="Chat whose history to include, and who reads it."
+    ),
     kind: str = typer.Option(
         "chat", "--kind", help="Which kind of call: chat, digest, retry or enrich."
     ),
@@ -391,6 +393,7 @@ def debug_prompt(
     from familydb.agent import gateway
     from familydb.agent.worker import worker_turn
     from familydb.jobs.enrich import render_enrich_request
+    from familydb.jobs.weekend_digest import digest_channel
     from familydb.store import places
 
     if kind not in gateway.KINDS or kind == "discover":
@@ -418,7 +421,10 @@ def debug_prompt(
                 limit=settings.history_limit,
                 since_hours=settings.history_hours,
             )
-            current = render_user_turn(sender, text, application.clock)
+            # Named by its chat id alone, as the digest's chat is: "web", "console", or Telegram.
+            channel = digest_channel(chat_id)
+            audience = render_audience_line(channel, chat_id, members.list_all(conn))
+            current = render_user_turn(sender, text, application.clock, audience)
         provider = application.provider(call.surface)
         request = gateway.build_request(
             kind,

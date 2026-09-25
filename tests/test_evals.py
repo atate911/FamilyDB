@@ -46,6 +46,19 @@ def test_either_accepts_a_question_instead(settings) -> None:
     assert grade(case, run_case(case, settings, api=api)) == []
 
 
+def test_a_case_in_the_group_is_sent_there_and_asking_first_passes(settings) -> None:
+    case = by_name("sensitive_reminder_in_the_group")
+    api = _answer([fakes.text("Everyone here reads this, the girls too. Set it here anyway?")])
+    assert grade(case, run_case(case, settings, api=api)) == []
+    turn = [part["text"] for part in api.requests[0]["messages"][-1]["content"]]
+    assert "everyone in it reads your reply, kids among them." in turn[1]
+    # The same words in Sam's own chat are set at once, and a question there fails.
+    private = by_name("sensitive_reminder_in_private")
+    api = _answer([fakes.text("Shall I set it for 8am tomorrow?")])
+    assert "never called add_task" in grade(private, run_case(private, settings, api=api))
+    assert len(api.requests[0]["messages"][-1]["content"]) == 2  # the date, then the message
+
+
 def test_every_case_has_a_reason_and_a_unique_name() -> None:
     from evals.cases import CASES
 

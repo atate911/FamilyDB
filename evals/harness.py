@@ -70,12 +70,19 @@ class Run:
 Check = Callable[[Run], str | None]
 
 
+# The Telegram chats a case can be sent in: Sam's own, and the family's group (a group's id is
+# negative), where the turn says who else reads the reply.
+PRIVATE = "1001"
+GROUP = "-1001234567890"
+
+
 @dataclass(frozen=True)
 class Case:
     name: str
-    says: tuple[str, ...]  # what the family sends, in order, as Sam in a private chat
+    says: tuple[str, ...]  # what the family sends, in order, as Sam, in `chat`
     checks: tuple[Check, ...]
     why: str = ""
+    chat: str = PRIVATE
 
 
 # Every case is also held to these: the bot never names a number that does not exist, never
@@ -139,7 +146,7 @@ def run_case(case: Case, base: Settings, *, api: Any = None, limit: float = 1.0)
             for number, text in enumerate(case.says, start=1):
                 out = handle_incoming(
                     app,
-                    IncomingMessage("telegram", f"{case.name}-{number}", "1001", "1001", text),
+                    IncomingMessage("telegram", f"{case.name}-{number}", case.chat, "1001", text),
                     api=api,
                     conn=conn,
                 )

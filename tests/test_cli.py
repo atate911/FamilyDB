@@ -97,6 +97,17 @@ def test_debug_prompt_prints_request(env: Path) -> None:
     assert result.exit_code == 0, result.output
     assert '"cache_control"' in result.output
     assert "[Sam] what should we do?" in result.output
+    assert "This is the family's" not in result.output  # the console is the sender's alone
+
+
+def test_debug_prompt_says_who_reads_the_chat_it_names(env: Path) -> None:
+    runner.invoke(app, ["members", "add", "Sam", "--role", "admin"])
+    runner.invoke(app, ["members", "add", "Mia", "--role", "kid"])
+    group = runner.invoke(app, ["debug", "prompt", "--chat=-100123", "hi all"])
+    assert group.exit_code == 0, group.output
+    assert "everyone in it reads your reply, kids among them." in group.output
+    page = runner.invoke(app, ["debug", "prompt", "--chat", "web", "hi all"])
+    assert "everyone who signs in reads it, kids among them." in page.output
 
 
 @pytest.mark.skipif(os.name == "nt", reason="Windows terminate does not deliver POSIX SIGTERM")
