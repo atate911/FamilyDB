@@ -24,6 +24,29 @@ ideas and the things to do, puts things on the calendar. So the first thing on H
 question and the box to answer it, the conversation goes by her name, and everything else is
 what she keeps, laid out beside it. She is never drawn (see "Her screen").
 
+## Two layers
+
+The page is two layers, and most changes to it weigh one against the other.
+
+**On top is what it does, and that is Vera**: talking to her, and everything she keeps. It is
+why anybody opens the page, so it decides what each page holds and in what order, and it wins
+wherever the two meet (principles 1 and 10).
+
+**Underneath is the look**, which everything she does sits on: a visual language, thought out
+and kept to on purpose, whose artful choices give the page one coherent feel and a personality.
+There is no page without one (colours, type and a way of laying things out are there whether
+anybody chose them or not), so the only questions are which language, and how hard to push it.
+The language is Phosphor.
+
+Every app has a personality, and that is good, but it also has to do something: the look
+supports what the page does and gets out of its way. Pushed too far, the page is an art project;
+not far enough, it is dull and uninspired. The line between the two is walked one change at a
+time, not found once.
+
+**Where it stands.** The language is settled. How hard it is pushed is close. Whether it is
+interesting and appealing enough, and has enough personality, is close but not settled, so it
+is still being tuned: in small steps, none of which may cost anything the page does.
+
 ## Principles
 
 1. **A real, modern app first.** Layout, spacing, controls and type are those of a good
@@ -63,6 +86,28 @@ what she keeps, laid out beside it. She is never drawn (see "Her screen").
 10. **Every part does work.** Looks are welcome, but nothing on the page is only for show: her
    question on Home is the label of the box you answer it in, and the line on what she takes on
    is that box's placeholder. A thing that is only decoration has to be small.
+
+## Why the green jumps
+
+One thing the family likes about the look is the green jumping off the black, and the glow around
+it: with all that contrast and light, the page looks active and alive. Four things make that,
+working together.
+
+- **Bright colour on near-black.** The green is a vivid colour nearly as bright as the white
+  words, and it sits on charcoal that is almost black: 15.2:1 against the page, and 12.5:1 even
+  on the lightest card. Colour that bright on a ground that dark reads as light coming off the
+  screen, not paint on it.
+- **A glow in layers, the way a tube bloomed.** A glowing word has a tight halo and a wide, faint
+  one (`.glow`); the primary button a ring, and light pooled under it (`--glow`); words on a
+  green screen three halos and a third of a pixel of blur. A soft halo round something bright is
+  one of the ways the eye tells that it gives off light, so the green looks brighter than it is.
+- **Light that behaves as a tube's did.** What lights up does so at once and fades over a
+  second (see "Small things"), the live dots breathe, and the radar's sweep leaves an afterglow.
+- **Scarcity.** Glow is kept for where attention belongs (principle 2), and around it everything
+  is near-white and quiet grey. The more that glowed, the less any of it would jump.
+
+A change that greys the black, dulls the green, flattens the glow or spreads it wider dims all
+of that, however small it looks.
 
 ## Colour
 
@@ -353,6 +398,10 @@ for more than a moment, and none asks to be looked at.
   on today in the month.
 - Class names are shared across the whole stylesheet: check a new one is not already taken (a
   meter once borrowed `.bar` from the top bar and flattened it).
+- What the page does comes first, and the look holds it up (see "Two layers"). A change to the
+  look says which way it tips the page, toward an art project or toward the dull and
+  uninspired, and why.
+- The black stays near-black, the green bright and the glow scarce (see "Why the green jumps").
 - At most one green screen to a page, and only where it shows something true. VT323 and blur
   stay on the screens, and scanlines on the screens and in the home page's glow; everywhere else
   the page is sharp and modern.
@@ -366,5 +415,7 @@ for more than a moment, and none asks to be looked at.
 
 ## Left for later
 
-- **A light theme.** The page is dark on every device, by choice. A daylight version would be a
-  line on the settings page, like everything else the family can change.
+- **A light theme.** The page is dark on every device, by choice, and the dark is half of the
+  look: the same green on white is 1.3:1, and nothing glows on white. A daylight version would be
+  a language of its own, designed as one rather than this one with the lights on, and a line on
+  the settings page, like everything else the family can change.
