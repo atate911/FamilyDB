@@ -583,8 +583,8 @@ def personality_page(
         {
             "event": name,
             "label": event.label,
-            "value": typed.get(f"line_{name}", live.voice_lines.get(name, "")),
-            "placeholder": hers[name],
+            "value": typed.get(f"line_{name}", voice.boxed(live.voice_lines.get(name, ""))),
+            "placeholder": voice.boxed(hers[name]),
             "fields": ", ".join("{" + f + "}" for f in voice.usable(name)),
             "reads": voice.reads_as(live, name),
         }
@@ -648,14 +648,16 @@ def save_personality() -> Response | tuple[str, int]:
             if name in request.form
         }
     )
-    # A line's box holds one wording to a row; blank rows are no part of it.
-    boxes = {name: voice.wordings(request.form.get(f"line_{name}", "")) for name in voice.EVENTS}
-    written = {name: "\n".join(rows) for name, rows in boxes.items() if rows}
-    typed.update({f"line_{name}": line for name, line in written.items()})
+    live = _app().settings
+    written = {
+        name: _line(request.form.get(f"line_{name}", ""), live.voice_lines.get(name))
+        for name in voice.EVENTS
+    }
+    written = {name: line for name, line in written.items() if line}
+    typed.update({f"line_{name}": voice.boxed(line) for name, line in written.items()})
     if wrong := voice.problems(written):
         what = "; ".join(f"{voice.EVENTS[n].label}: {why}" for n, why in wrong.items())
         return personality_page(error=f"Nothing was saved. {what}.", typed=typed, status=400)
-    live = _app().settings
     chosen = personas.key_for(typed["persona"])
     hers = voice.wording(personas.load(live.persona))
     values: dict[str, Any] = {
@@ -663,7 +665,10 @@ def save_personality() -> Response | tuple[str, int]:
         "persona": None if chosen == _app().base_settings.persona else chosen,
         "about_family": typed["about_family"].replace("\r\n", "\n").strip() or None,
         # Only lines that differ from hers are the family's own.
-        "voice_lines": {name: line for name, line in written.items() if line != hers[name]} or None,
+        "voice_lines": {
+            name: line for name, line in written.items() if voice.wordings(line) != hers[name]
+        }
+        or None,
     }
     if "persona_name" in request.form:
         # An empty box, or her own name, is no name of theirs. That is stored only over a name
@@ -673,7 +678,9 @@ def save_personality() -> Response | tuple[str, int]:
             called = ""
         values["persona_name"] = None if called == _app().base_settings.persona_name else called
     if "persona_notes" in request.form:
-        values["persona_notes"] = typed["persona_notes"].replace("\r\n", "\n").strip() or None
+        # Likewise an empty box is stored only over notes the environment gives.
+        notes = typed["persona_notes"].replace("\r\n", "\n").strip()
+        values["persona_notes"] = None if notes == _app().base_settings.persona_notes else notes
     if "persona_text" in request.form:
         # A form drawn before the box said whom it described was drawn for the persona in force.
         described = personas.key_for(typed.get("described", live.persona))
@@ -707,6 +714,23 @@ def restore_personality() -> Response | tuple[str, int]:
         _save({"persona_text": _keeping(rewrites)})
     flash(RESTORED, NOTICE)
     return redirect(url_for("settings.personality"))
+
+
+def _line(box: str, stored: voice.Line | None) -> voice.Line:
+    """What a line's box says: one wording to a row, blank rows no part of it, kept as a string
+    when there is one and a list when there are several. A box left as it was drawn keeps the
+    line as it is stored, so one saved as a string before a line could have several wordings
+    stays one wording, line breaks and all."""
+    rows = _rows(box)
+    if not rows:
+        return ""
+    if stored is not None and rows == _rows(voice.boxed(stored)):
+        return stored
+    return rows[0] if len(rows) == 1 else rows
+
+
+def _rows(box: str) -> list[str]:
+    return [row.strip() for row in box.splitlines() if row.strip()]
 
 
 def _rewrites(settings: Settings) -> dict[str, dict[str, str]]:

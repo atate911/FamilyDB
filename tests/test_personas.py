@@ -21,6 +21,7 @@ def test_every_persona_ships_whole() -> None:
         persona = personas.load(key)
         assert persona.key == key and persona.name.strip(), key
         assert personas.NAME in persona.character, key  # she says {name}, not a name of her own
+        assert not re.search(rf"\b{re.escape(persona.name)}\b", persona.character, re.I), key
         assert persona.name in persona.prompt and personas.NAME not in persona.prompt, key
 
 
@@ -139,10 +140,10 @@ def test_a_label_with_any_brace_but_her_name_is_refused(tmp_path, monkeypatch) -
 
 
 def test_a_line_may_be_one_wording_or_a_list_of_them(tmp_path, monkeypatch) -> None:
-    """A list is kept as the family write theirs on the page: its wordings one to a row."""
+    """A list is kept as a tuple, as the family's are kept as a list: a string is one wording."""
     lines = 'done = "Done."\nfollow_up = ["How was {plan}?", "{plan}: again?"]\n'
     juno = _loaded(tmp_path, monkeypatch, 'name = "Juno"', lines)
-    assert juno.lines == {"done": "Done.", "follow_up": "How was {plan}?\n{plan}: again?"}
+    assert juno.lines == {"done": "Done.", "follow_up": ("How was {plan}?", "{plan}: again?")}
     for number, wrong in enumerate(("done = 3", 'done = ["Done.", 3]', "done = {a = 1}")):
         with pytest.raises(ValueError, match="done is a wording, or a list of wordings"):
             _loaded(tmp_path / str(number), monkeypatch, 'name = "Juno"', wrong)

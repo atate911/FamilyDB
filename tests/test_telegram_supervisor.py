@@ -9,7 +9,7 @@ from typing import ClassVar
 
 import pytest
 from telegram import BotDescription, BotName
-from telegram.error import BadRequest, InvalidToken, NetworkError, RetryAfter
+from telegram.error import BadRequest, InvalidToken, NetworkError, RetryAfter, TimedOut
 
 from familydb import voice
 from familydb.app import App
@@ -181,6 +181,20 @@ def test_an_introduction_that_fails_leaves_the_channel_running(watched, conn, ca
     assert "Bot name is invalid" in caplog.text
     _store(conn, voice_lines={"start": "Hello from {name}."})
     _until(lambda: len(Channel.introduced) == 2)
+    assert Channel.events == ["start only"]
+
+
+def test_telegram_out_of_reach_while_naming_her_is_tried_again(watched, conn, monkeypatch) -> None:
+    """A running channel is never reconnected by an outage, so a timeout left as it was would
+    leave the contact under her old name until a restart."""
+    _, supervisor = watched
+    monkeypatch.setattr(supervisor, "RETRY_SECONDS", 0.05)
+    Channel.refusals = [TimedOut("Timed out"), NetworkError("no route to host")]
+    _token(conn, "only")
+    _until(lambda: len(Channel.introduced) == 3)
+    time.sleep(0.1)
+    assert len(Channel.introduced) == 3  # and once it went, not again
+    assert len(set(Channel.introduced)) == 1
     assert Channel.events == ["start only"]
 
 

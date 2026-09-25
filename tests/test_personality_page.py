@@ -203,7 +203,7 @@ def _reads(page, event: str) -> list[str]:
 
 def test_each_line_shows_how_it_reads_with_made_up_details_filled_in(page, conn) -> None:
     shown = page.get("/settings/personality").text
-    assert "Several wordings may be written, one per line, and she takes turns" in shown
+    assert "Several wordings may be written, one per line, and she picks one each time" in shown
     assert _reads(page, "reminder") == [
         "Reminder: bins out (Sam). Task #12; tell me when it's done, or I can snooze it."
     ]
@@ -213,7 +213,7 @@ def test_each_line_shows_how_it_reads_with_made_up_details_filled_in(page, conn)
     form = _form(page, persona="default", persona_text="", about_family="", line_follow_up=typed)
     assert page.post("/settings/personality", data=form).status_code == 302
     mine = "How was {plan}?\n{name} wants to know: {plan}, again?"
-    assert settings_store.overrides(conn)["voice_lines"] == {"follow_up": mine}
+    assert settings_store.overrides(conn)["voice_lines"] == {"follow_up": mine.split("\n")}
     assert _reads(page, "follow_up") == [
         "How was #31 Hopscotch?",
         "Vera wants to know: #31 Hopscotch, again?",
@@ -223,7 +223,31 @@ def test_each_line_shows_how_it_reads_with_made_up_details_filled_in(page, conn)
     form = _form(page, persona="none", persona_text="", about_family="", line_follow_up=mine)
     assert page.post("/settings/personality", data=form).status_code == 302
     assert _reads(page, "follow_up") == ["How was #31 Hopscotch on Saturday? Worth doing again?"]
-    assert settings_store.overrides(conn)["voice_lines"] == {"follow_up": mine}
+    assert settings_store.overrides(conn)["voice_lines"] == {"follow_up": mine.split("\n")}
+
+
+def test_a_line_saved_as_one_string_stays_one_wording_when_the_page_is_saved(page, conn) -> None:
+    """Before a line could have several wordings the page kept the breaks typed in a line, and
+    said it all as one message. Saved again as it was drawn, it is still one wording; changed, it
+    is read as the box says now."""
+    old = "Reminder: {title}{who}.\r\nTask #{task}; say done when it's done."
+    with transaction(conn):
+        settings_store.set_many(conn, {"voice_lines": {"reminder": old}}, source="test")
+    assert _reads(page, "reminder") == [
+        "Reminder: bins out (Sam).\r\nTask #12; say done when it's done."
+    ]
+    shown = page.get("/settings/personality").text
+    box = re.search(r'name="line_reminder"[^>]*>(.*?)</textarea>', shown, re.S).group(1)
+    assert html.unescape(box) == old
+    form = _drawn(page, line_reminder=html.unescape(box))
+    assert page.post("/settings/personality", data=form).status_code == 302
+    assert settings_store.overrides(conn)["voice_lines"] == {"reminder": old}
+    moved = "Reminder: {title}{who}.\r\nTask #{task}; tell me when it's done."
+    form = _form(page, persona="default", persona_text="", about_family="", line_reminder=moved)
+    assert page.post("/settings/personality", data=form).status_code == 302
+    assert settings_store.overrides(conn)["voice_lines"] == {
+        "reminder": ["Reminder: {title}{who}.", "Task #{task}; tell me when it's done."]
+    }
 
 
 def test_the_brief_persona_s_lines_read_each_way_she_says_them(page, conn) -> None:
@@ -526,6 +550,22 @@ def test_a_box_not_sent_leaves_the_notes_and_an_empty_one_drops_them(page, conn)
     assert emptied.status_code == 302
     assert settings_store.overrides(conn) == {}
     assert personas.active(page.app_state.settings) == personas.load(personas.DEFAULT)
+
+
+def test_an_empty_box_drops_notes_the_environment_gave(settings, clock, conn, family) -> None:
+    """The box shows the notes in force, so emptying it must drop them, even when they come from
+    the environment; the environment's own notes are not stored over it."""
+    noted = settings.model_copy(update={"web_password": PASSWORD, "persona_notes": "From env."})
+    page = _signed_in(App(noted, clock))
+    assert ">From env.</textarea>" in page.get("/settings/personality").text
+    emptied = page.post("/settings/personality", data=_drawn(page, persona_notes=""))
+    assert emptied.status_code == 302 and settings_store.overrides(conn) == {"persona_notes": ""}
+    assert personas.active(page.app_state.settings).notes == ""
+    shown = page.get("/settings/personality").text
+    assert re.search(r'name="persona_notes"[^>]*></textarea>', shown)
+    page.post("/settings/personality", data=_drawn(page, persona_notes="From env."))
+    assert settings_store.overrides(conn) == {}
+    assert personas.active(page.app_state.settings).notes == "From env."
 
 
 def test_notes_too_long_are_refused_and_kept(page, conn) -> None:

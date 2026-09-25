@@ -1,6 +1,6 @@
 # The brief persona's lines: what she says unasked, by event (familydb/voice.py lists them, with
 # the {names} each may use; any of them may say {name}, her name). They started as a copy of the
-# default persona's. A line may be one wording or a list of them, which she takes turns with; a
+# default persona's. A line may be one wording or a list of them, of which she picks one; a
 # line left out here is said plainly. The family can rewrite any of them on the Personality page.
 # Kept short on purpose: most of these arrive with nothing else around them.
 

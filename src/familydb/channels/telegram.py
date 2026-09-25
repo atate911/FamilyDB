@@ -20,7 +20,7 @@ from telegram.constants import (
     ChatType,
     MessageLimit,
 )
-from telegram.error import InvalidToken, NetworkError, RetryAfter
+from telegram.error import BadRequest, InvalidToken, NetworkError, RetryAfter
 from telegram.ext import (
     Application,
     ApplicationBuilder,
@@ -416,7 +416,8 @@ class TelegramSupervisor:
         (her /start line) differs from what it was last asked to say: a setting that moves
         nothing she says asks nothing. Under none the contact is left alone, for the admin to
         name in BotFather, and choosing her again says it all again. A wait Telegram asks for is
-        waited out, across a reconnect too; any other failure is logged and not tried again until
+        waited out, across a reconnect too, and Telegram out of reach is tried again every
+        `RETRY_SECONDS`; a refusal, or any other failure, is logged and not tried again until
         something she says changes or the channel reconnects. Nothing here stops or reconnects
         the channel. No model call.
         """
@@ -441,6 +442,17 @@ class TelegramSupervisor:
             log.info("telegram: Telegram asks for %.0f seconds before her name is set", seconds)
             self._seen, self._introduce_at = None, time.monotonic() + seconds
             return
+        except NetworkError as exc:
+            # BadRequest is a NetworkError too, but it is Telegram refusing, not out of reach.
+            if not isinstance(exc, BadRequest):
+                log.warning("telegram: cannot reach Telegram to give the bot her name (%s)", exc)
+                self._seen, self._introduce_at = None, time.monotonic() + self.RETRY_SECONDS
+                return
+            log.warning(
+                "telegram: Telegram refused her name or introduction (%s); "
+                "not trying again until either changes or the bot reconnects",
+                exc,
+            )
         except Exception as exc:
             log.warning(
                 "telegram: could not give the bot her name and introduction (%s); "

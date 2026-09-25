@@ -8,10 +8,12 @@ Personality page), or the plain wording below when she has none. Any line may sa
 is her name as the persona in force gives it: her own, or the one the family call her. No model
 call, so it works when the model is down, the key is missing or the day's limit is spent.
 
-A line may have several wordings, one to a row, and she takes turns with them. Code chooses, not
+A line may have several wordings, kept as a list, and she picks one each time. Code chooses, not
 chance: the same event with the same seed (a message's own id), or with no seed the same facts,
-always chooses the same wording, so a resend or a retry says the same words and the next message
-may say it another way. The plain wordings are one each.
+always chooses the same wording, so a resend or a retry says the same words, the same reminder
+reads the same every time, and another message may say it another way. A line kept as a string
+is one wording, line breaks and all, as every line was before there could be several. The plain
+wordings are one each.
 
 A proactive message that lands while the family is talking (`FOLDABLE`) is not sent on its own.
 `hand_over` holds it for a moment; the chat turn that comes next takes it (`take`), the model
@@ -27,7 +29,7 @@ import sqlite3
 import string
 import threading
 import zlib
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
@@ -158,23 +160,34 @@ HOLD = timedelta(minutes=2)
 IN_TURN = timedelta(minutes=10)
 
 
-def lines(settings: Any) -> dict[str, str]:
-    """Every event's line now, in the words of the persona in force.
+# A line: one wording, whatever rows it has, or a list of several.
+Line = str | Sequence[str]
+
+
+def lines(settings: Any) -> dict[str, list[str]]:
+    """Every event's wordings now, in the words of the persona in force.
 
     No persona means plain throughout, as it does for the chat: the family's rewrites are kept
     and come back when a persona is chosen again."""
     return wording(personas.active(settings))
 
 
-def wording(persona: personas.Persona) -> dict[str, str]:
-    """Every event's line in this persona's words, its wordings one to a row, and plainly where
-    she has none."""
-    return {name: persona.lines.get(name) or event.plain for name, event in EVENTS.items()}
+def wording(persona: personas.Persona) -> dict[str, list[str]]:
+    """Every event's wordings in this persona's words, and the plain one where she has none."""
+    return {name: _wordings_of(persona, name) for name in EVENTS}
 
 
-def wordings(line: str) -> list[str]:
-    """A line's wordings, one to a row of it, with the blank rows left out."""
-    return [row.strip() for row in line.splitlines() if row.strip()]
+def wordings(line: Line) -> list[str]:
+    """A line's wordings: a string is one, whatever rows it has; a list is several, with the
+    blank ones left out."""
+    several = [line] if isinstance(line, str) else list(line)
+    return [words.strip() for words in several if words.strip()]
+
+
+def boxed(line: Line) -> str:
+    """A line as its box on the Personality page shows it: its wordings one to a row. A string
+    is shown as it is."""
+    return line if isinstance(line, str) else "\n".join(wordings(line))
 
 
 def usable(event: str) -> tuple[str, ...]:
@@ -226,7 +239,7 @@ def _filled(event: str, words: str, name: str, facts: Mapping[str, Any]) -> str:
         return EVENTS[event].plain.format(**values).strip()
 
 
-def problems(written: dict[str, str]) -> dict[str, str]:
+def problems(written: Mapping[str, Line]) -> dict[str, str]:
     """What is wrong with lines the family wrote: an unknown event, or a wording with a {…} it
     cannot fill in. In a line of several wordings, which of them is wrong is said too."""
     found: dict[str, str] = {}

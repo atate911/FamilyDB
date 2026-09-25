@@ -144,8 +144,9 @@ class Settings(BaseSettings):
     # Who the family are, in their own words, for every chat: ages, tastes, what to avoid.
     about_family: str = Field(default="", max_length=4_000)
     # The family's own wording for what she says unasked, by event (voice.EVENTS); a line left
-    # out uses the persona's, and then the plain one.
-    voice_lines: dict[str, str] = Field(default_factory=dict)
+    # out uses the persona's, and then the plain one. A string is one wording, line breaks and
+    # all, as every line was stored before a list could hold several.
+    voice_lines: dict[str, str | list[str]] = Field(default_factory=dict)
     # Applies to whoever answers, so it is not named for one of them. ANTHROPIC_EFFORT still works.
     effort: Effort = Field(
         default="medium", validation_alias=AliasChoices("EFFORT", "ANTHROPIC_EFFORT")

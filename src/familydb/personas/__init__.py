@@ -11,9 +11,9 @@ filled in by code, never by a model call.
 
 Each persona ships as a folder here: `persona.toml` names her and says which of her she is,
 `character.md` is her character and `lines.toml` her lines, which she may go without (a line she
-lacks is said plainly). A line there may be one wording or a list of them, which she takes turns
-with (`voice.say`); `Persona.lines` keeps each line's wordings one to a row, as the family write
-theirs. Adding a persona is adding a folder. Two may share a name, so her label is what tells
+lacks is said plainly). A line there may be one wording or a list of them, of which she picks one
+each time (`voice.say`); `Persona.lines` keeps a list as a tuple, and the family's lines likewise.
+Adding a persona is adding a folder. Two may share a name, so her label is what tells
 them apart where they are listed together: a few words with {name} in them, such as "{name}, in
 brief". `DEFAULT` is the one the family meets unless they choose another: Vera, as she was first
 written. `NONE` chooses none at all, which is `PLAIN`: the bot speaking for itself, with no
@@ -65,8 +65,8 @@ class Persona:
     key: str  # her folder here, and the `persona` setting's value
     name: str  # what she is called
     character: str  # how she talks, as written: {name} wherever her name goes; empty for none
-    # Her line by voice event, its wordings one to a row; one she has no line for is plain.
-    lines: Mapping[str, str]
+    # Her line by voice event: one wording, or a tuple of several; one she has none for is plain.
+    lines: Mapping[str, str | tuple[str, ...]]
     label: str = NAME  # which of her this is: a few words with {name} in them, or just her name
     notes: str = ""  # the family's own notes on how she talks; none ship with her
 
@@ -136,13 +136,13 @@ def load(key: str) -> Persona:
     )
 
 
-def _one_line(key: str, event: str, written: object) -> str:
+def _one_line(key: str, event: str, written: object) -> str | tuple[str, ...]:
     """A line as `lines.toml` writes it, one wording or a list of them, as `Persona.lines` keeps
-    it: its wordings one to a row."""
+    it: a list as a tuple."""
     if isinstance(written, str):
         return written
     if isinstance(written, list) and all(isinstance(wording, str) for wording in written):
-        return "\n".join(written)
+        return tuple(written)
     raise ValueError(f"personas/{key}/{LINES}: {event} is a wording, or a list of wordings")
 
 
@@ -158,7 +158,11 @@ def active(settings: Settings) -> Persona:
     if chosen is PLAIN:
         return PLAIN
     rewrite = settings.persona_text.get(chosen.key)
-    own = {event: line for event, line in settings.voice_lines.items() if line.strip()}
+    own = {
+        event: line if isinstance(line, str) else tuple(line)
+        for event, line in settings.voice_lines.items()
+        if (line if isinstance(line, str) else "".join(line)).strip()
+    }
     return replace(
         chosen,
         name=settings.persona_name.strip() or chosen.name,

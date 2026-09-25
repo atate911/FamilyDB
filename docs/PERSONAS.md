@@ -53,12 +53,15 @@ their lines are kept under none, unused, and come back when a persona is chosen 
 name for her, their notes and their lines are theirs whoever she is; a rewrite is a copy of one
 persona's character and belongs to her alone.
 
-A line may have several wordings, and she takes turns with them. Code chooses, not chance: a
-CRC-32 of the event and a seed (the id of the message a notice answers, or the Telegram update
-for a stranger and for `/start`), or with no seed of the facts the line is filled in with. The
-same message always says the same words, after a resend, a retry or a restart, and the next may
-say it another way. A reminder has no seed, so different reminders can take different wordings,
-and the same reminder always takes the same one, however often it comes round.
+A line may have several wordings, kept as a list, and she picks one each time. Code chooses, not
+chance: a CRC-32 of the event and a seed (the id of the message a notice answers, or the
+Telegram update for a stranger and for `/start`), or with no seed of the facts the line is
+filled in with. The same message always says the same words, after a resend, a retry or a
+restart, and the next may say it another way. A reminder has no seed, so different reminders can
+take different wordings, and the same reminder always takes the same one, however often it comes
+round. A line kept as a string is one wording, line breaks and all, as every line was before
+there could be several, so a line the family saved then still says all of itself; saved again
+unchanged from the page it stays so.
 
 The audience line says "This is the family's group chat: everyone in it reads your reply" in a
 Telegram group and "This is the family's conversation on the page: everyone who signs in reads
@@ -69,9 +72,10 @@ family list. The spec's "Who is listening" says what to do with it, whoever she 
 While a persona is chosen, the Telegram supervisor gives the bot's contact her name, and her
 `start` line as its description: once after each connect, and again when either changes on the
 page. It asks Telegram what the contact says and sets only what differs, cut to Telegram's
-limits. A wait Telegram asks for is waited out; any other failure is logged and not tried again
-until her words change or the bot reconnects, and never stops the channel. Under none the
-contact is left as the admin named it in BotFather.
+limits. A wait Telegram asks for is waited out, and Telegram out of reach is tried again shortly;
+a refusal, or any other failure, is logged and not tried again until her words change or the bot
+reconnects, and never stops the channel. Under none the contact is left as it last was (her name
+and her start line, if she was ever set), for the admin to rename in BotFather.
 
 ## What was fixed
 

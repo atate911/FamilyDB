@@ -142,7 +142,7 @@ def test_start_takes_turns_by_the_update_it_answers(settings, clock) -> None:
     from familydb import voice
     from familydb.app import App
 
-    lines = {"start": "Hi, I'm {name}.\nHello, {name} here.\n{name}, at your service."}
+    lines = {"start": ["Hi, I'm {name}.", "Hello, {name} here.", "{name}, at your service."]}
     app = App(settings.model_copy(update={"voice_lines": lines}), clock)
     channel = TelegramChannel(app, token="123456:TEST-TOKEN")
     said = []

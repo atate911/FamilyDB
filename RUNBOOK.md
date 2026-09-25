@@ -580,10 +580,11 @@ reminders and "how was it?". A rewrite of her description is kept for the person
 when her own description has changed since, the page says so and shows what changed. Choosing
 none keeps every rewrite, the name you gave her, your notes and your lines for when a persona is
 chosen again. Her lines are filled in by code, never by a model call; an emptied one goes back to
-hers. A line may have several wordings, one to a row, which she takes turns with, and "Reads as"
-under each box shows how it reads with made-up details. Her name is written as `{name}`, in her
-description and in any line, and filled in wherever she speaks, the chat page included. While a
-persona is chosen, the bot's name and description in Telegram are her name and her `/start` line.
+hers. A line may have several wordings, one to a row, of which she picks one each time (the same
+message, such as the same reminder, always the same one), and "Reads as" under each box shows how
+it reads with made-up details. Her name is written as `{name}`, in her description and in any
+line, and filled in wherever she speaks, the chat page included. While a persona is chosen, the
+bot's name and description in Telegram are her name and her `/start` line.
 
 **Undoing a change.** The bottom of the settings page lists what has changed, when, and from
 where. To put a setting back the way it was, empty its box: the value from `.env` applies again.
@@ -701,7 +702,7 @@ SQLite browser opens it. `scripts/uninstall.sh` does this with a backup and asks
 - **"OpenAI says it has no model called X. Check the spelling."** On saving the settings page: the company's own model list has no model of that name, so nothing was saved. Correct the name or pick one of the suggestions. A company that cannot be reached, or has no key yet, never causes this.
 - **"Could not find X on the map."** The home area could not be looked up. Type the latitude and longitude as well.
 - **Telegram: "the token was refused by Telegram" on `/status`.** The token is wrong, or was revoked in BotFather. Paste the current one on the settings page. A refused token is not tried again until it changes, so nothing is hammering Telegram meanwhile.
-- **Telegram: the bot's name goes back to hers.** While a persona is chosen, the bot sets its own name and description in Telegram to her name and her `/start` line, after each connect and whenever either changes on the Personality page, so a name set in BotFather lasts only until the bot next connects or her words change. Rename her on the Personality page, or choose none to name the bot in BotFather. If Telegram refuses, the log says "could not give the bot her name and introduction" and it is not tried again until either changes or the bot reconnects; the bot keeps working meanwhile.
+- **Telegram: the bot's name goes back to hers.** While a persona is chosen, the bot sets its own name and description in Telegram to her name and her `/start` line, after each connect and whenever either changes on the Personality page, so a name set in BotFather lasts only until the bot next connects or her words change. Rename her on the Personality page, or choose none to name the bot in BotFather. If Telegram refuses, the log says so and it is not tried again until either changes or the bot reconnects; if Telegram cannot be reached, it is tried again shortly. The bot keeps working meanwhile.
 - **Telegram: "cannot reach Telegram; trying again" on `/status`.** The server cannot get out to Telegram right now. It tries again every thirty seconds by itself; if it lasts, check the machine's network and DNS.
 - **Google: the address will not load.** After allowing access, Google sends the browser to `http://127.0.0.1:53682/...` and it shows an error. That is expected: copy the whole address from the address bar into the page (section 5, step 6).
 - **Google: "That address belongs to an earlier try."** The pasted address came from an older consent link. Press "Get the consent link" again and use the newest one. "That connection was started too long ago, or before a restart" means the same: start again. "That client is of type Web application" means the OAuth client must be made again as a Desktop app.
