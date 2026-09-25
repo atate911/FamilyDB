@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import unicodedata
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Annotated, Any, Literal
@@ -126,8 +127,12 @@ class Settings(BaseSettings):
     anthropic_model: str = "claude-opus-5"
     # Who the assistant is to the family: a persona's folder in familydb/personas, or "none". Not
     # empty for none: an empty setting means "the default" everywhere else, and would bring her
-    # back. `personas.active` reads it, and lays `persona_text` and `voice_lines` over her own.
+    # back. `personas.active` reads it, and lays `persona_name`, `persona_text` and `voice_lines`
+    # over her own.
     persona: str = "default"
+    # What the family call her, from the Personality page; empty for her own name. It is theirs
+    # whoever she is, and with no persona it is kept but not used: the bot is FamilyDB then.
+    persona_name: str = Field(default="", max_length=40)
     # Her character as the family rewrote it on the Personality page, by persona key, so each
     # rewrite is laid over the persona it was written for; a persona with none uses her own.
     # Unparsed from the environment, because a plain string there is a rewrite, not JSON.
@@ -246,6 +251,20 @@ class Settings(BaseSettings):
         if key not in choices:
             raise ValueError(f"no persona called {value!r}; the choices are {', '.join(choices)}")
         return key
+
+    @field_validator("persona_name", mode="before")
+    @classmethod
+    def _one_plain_name(cls, value: Any) -> Any:
+        """A name as it is said: on one line, with no control characters, and no braces, since
+        it goes wherever {name} is written and a {name} inside it would be filled in again."""
+        if not isinstance(value, str):
+            return value  # pydantic says what is wrong with it
+        name = value.strip()
+        if any(unicodedata.category(character) in ("Cc", "Zl", "Zp") for character in name):
+            raise ValueError("her name goes on one line, with no control characters in it")
+        if "{" in name or "}" in name:
+            raise ValueError("her name cannot have a brace in it")
+        return name
 
     @field_validator("persona_text", mode="before")
     @classmethod

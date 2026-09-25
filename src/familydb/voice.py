@@ -5,8 +5,8 @@ says (a reminder, "how was it?", a lookup note, a notice that it cannot answer) 
 code, and comes through `say`: the line the persona in force has for that event
 (`personas.active`: her own, `personas/<key>/lines.toml`, or the family's rewrite of it from the
 Personality page), or the plain wording below when she has none. Any line may say {name}, which
-is her name as the persona gives it. No model call, so it works when the model is down, the key
-is missing or the day's limit is spent.
+is her name as the persona in force gives it: her own, or the one the family call her. No model
+call, so it works when the model is down, the key is missing or the day's limit is spent.
 
 A proactive message that lands while the family is talking (`FOLDABLE`) is not sent on its own.
 `hand_over` holds it for a moment; the chat turn that comes next takes it (`take`), the model

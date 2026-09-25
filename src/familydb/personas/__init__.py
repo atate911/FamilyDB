@@ -15,10 +15,11 @@ for itself, with no character and no lines of its own.
 
 `active(settings)` is the persona in force, and what anything that speaks as her asks: the one
 the `persona` setting chooses, with what the family wrote on the Personality page
-(/settings/personality) laid over her own, the character as her rewrite in `persona_text` and
-the lines as `voice_lines`. A rewrite of her character is a copy of one persona's and is kept
-under her key, so it is laid over her and nobody else; restoring her original drops it. With no
-persona chosen their words are kept but not used, and come back when one is chosen again.
+(/settings/personality) laid over her own, the name they call her as `persona_name`, the
+character as her rewrite in `persona_text` and the lines as `voice_lines`. Their name for her and
+their lines are theirs whoever she is. A rewrite of her character is a copy of one persona's and
+is kept under her key, so it is laid over her and nobody else; restoring her original drops it.
+With no persona chosen their words are kept but not used, and come back when one is chosen again.
 
 Only turns a person reads carry her character: chat, the digest and retries. The lookup and
 discovery workers, whose prose nobody reads, never do. Every word of it is sent, cached, with
@@ -109,9 +110,10 @@ def load(key: str) -> Persona:
 def active(settings: Settings) -> Persona:
     """The persona in force: the one chosen, with the family's own words laid over hers.
 
-    Her character is replaced only by the family's rewrite of her; one written for another
-    persona is never hers. No persona chosen means none at all, whatever the family once wrote
-    for her."""
+    The name the family call her is her name, and so goes wherever {name} is written. Her
+    character is replaced only by the family's rewrite of her; one written for another persona
+    is never hers. No persona chosen means none at all, whatever the family once wrote for her
+    or called her."""
     chosen = load(settings.persona)
     if chosen is PLAIN:
         return PLAIN
@@ -119,6 +121,7 @@ def active(settings: Settings) -> Persona:
     own = {event: line for event, line in settings.voice_lines.items() if line}
     return replace(
         chosen,
+        name=settings.persona_name.strip() or chosen.name,
         character=(rewrite.text.strip() if rewrite else "") or chosen.character,
         lines=MappingProxyType({**chosen.lines, **own}),
     )

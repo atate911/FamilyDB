@@ -4,10 +4,11 @@ It writes to one place and one place only, `app_settings`, through `store.settin
 here can reach an idea, a plan or a message. Every change is logged, and a key's value is never
 what gets logged: only that it was replaced.
 
-The Personality page (/settings/personality) writes the four `PROFILE` settings: which persona,
-her description as the family rewrote it, her lines likewise, and the family's words about
-themselves. Her description is shown and kept as written, with {name} where her name goes, and
-a rewrite of it is kept for the persona it describes, the one in force when the page was drawn.
+The Personality page (/settings/personality) writes the five `PROFILE` settings: which persona,
+the name the family call her, her description as the family rewrote it, her lines likewise, and
+the family's words about themselves. Her description is shown and kept as written, with {name}
+where her name goes, and a rewrite of it is kept for the persona it describes, the one in force
+when the page was drawn. Their name for her is theirs whoever she is, and is what {name} says.
 
 Two forms on the main page, because they are not the same kind of thing. The behaviour form
 carries every box on the page each time it is sent, so an emptied box means "go back to what
@@ -534,6 +535,7 @@ RESTORED = "Restored her original description."
 PROFILE_LABELS = {
     "voice_lines": "what she says unasked",
     "persona": "personality",
+    "persona_name": "her name",
     "persona_text": "her description",
     "about_family": "about the family",
 }
@@ -556,6 +558,8 @@ def personality_page(
     # What was typed goes back in the box only when it was typed for her.
     typed_for_her = personas.key_for(typed.get("described", described)) == described
     text = (typed.get("persona_text", "") if typed_for_her else "") or speaking.character
+    # The name the family call her, with her own as the placeholder: an empty box is hers.
+    name = typed.get("persona_name", live.persona_name)
     about = typed.get("about_family", live.about_family)
     # What she says unasked: the family's line if they wrote one, hers as the placeholder.
     hers = voice.wording(personas.load(live.persona))
@@ -577,6 +581,8 @@ def personality_page(
             chosen=chosen,
             choices=[personas.load(key) for key in personas.available()],
             described=described,
+            name=name,
+            own_name=personas.load(live.persona).name,
             text=text,
             rewritten=not plain and described in live.persona_text,
             # Under none, whether anything they wrote for a persona is waiting for her.
@@ -587,6 +593,7 @@ def personality_page(
             her_name=speaking.name,
             tokens=(len(speaking.prompt) + len(live.about_family)) // CHARS_PER_TOKEN,
             limits={
+                "persona_name": Settings.model_fields["persona_name"].metadata[0].max_length,
                 "persona_text": PersonaRewrite.model_fields["text"].metadata[0].max_length,
                 "about_family": Settings.model_fields["about_family"].metadata[0].max_length,
             },
@@ -606,14 +613,17 @@ def save_personality() -> Response | tuple[str, int]:
 
     The description box is a rewrite of the persona it described when the page was drawn, never
     of one chosen in the same save, and with no box sent (under none) every rewrite stays as it
-    was. Her own text, as written or with her name filled in, is no rewrite at all."""
+    was. Her own text, as written or with her name filled in, is no rewrite at all. Likewise the
+    name box: one not sent leaves their name for her as it was, and her own name is none of
+    theirs."""
     if (complaint := auth.refused()) is not None:
         return personality_page(error=complaint, status=400)
     typed = {
         name: request.form.get(name, "") for name in ("persona", "persona_text", "about_family")
     }
-    if "described" in request.form:
-        typed["described"] = request.form["described"]
+    typed.update(
+        {name: request.form[name] for name in ("described", "persona_name") if name in request.form}
+    )
     written = {
         name: request.form.get(f"line_{name}", "").strip()
         for name in voice.EVENTS
@@ -633,6 +643,13 @@ def save_personality() -> Response | tuple[str, int]:
         # Only lines that differ from hers are the family's own.
         "voice_lines": {name: line for name, line in written.items() if line != hers[name]} or None,
     }
+    if "persona_name" in request.form:
+        # An empty box, or her own name, is no name of theirs. That is stored only over a name
+        # the environment gives her, which would otherwise stay whatever the box said.
+        called = typed["persona_name"].strip()
+        if called == personas.load(live.persona).name:
+            called = ""
+        values["persona_name"] = None if called == _app().base_settings.persona_name else called
     if "persona_text" in request.form:
         # A form drawn before the box said whom it described was drawn for the persona in force.
         described = personas.key_for(typed.get("described", live.persona))

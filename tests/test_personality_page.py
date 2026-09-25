@@ -55,6 +55,8 @@ def _drawn(page, **changes):
     for name in ("persona_text", "about_family"):
         if box := re.search(rf'name="{name}"[^>]*>(.*?)</textarea>', text, re.S):
             form[name] = html.unescape(box.group(1))
+    if called := re.search(r'name="persona_name" value="([^"]*)"', text):
+        form["persona_name"] = html.unescape(called.group(1))
     if described := re.search(r'name="described" value="([^"]+)"', text):
         form["described"] = described.group(1)
     return {**form, **changes}
@@ -69,8 +71,12 @@ def test_the_page_shows_her_and_links_from_settings(page) -> None:
     assert "Personality and family" in page.get("/settings").text
     shown = page.get("/settings/personality").text
     # Her description as written, with {name} where her name goes, and the name it stands for.
-    assert "You are {name}, an AI assistant" in shown and "{name} is her name, Vera" in shown
+    assert "You are {name}, an AI assistant" in shown
+    assert "{name} is what she is called, Vera, wherever it is written." in shown
     assert 'value="default" selected>Vera</option>' in shown
+    # What the family call her: nothing of theirs yet, so her own name is the placeholder.
+    assert "What she is called" in shown
+    assert re.search(r'<input id="p-name"[^>]*value=""[^>]*placeholder="Vera"', shown, re.S)
     assert "About the family" in shown and "tokens now" in shown
 
 
@@ -309,3 +315,95 @@ def test_a_box_said_to_describe_nobody_writes_nothing(page, conn) -> None:
         assert restored.status_code == 302
         assert settings_store.overrides(conn)["persona_text"] == stored
     assert "Zorblax" not in _prefix(page, conn)[0].text
+
+
+def test_a_name_of_their_own_is_hers_wherever_she_is_named(page, conn) -> None:
+    """Everything that asks who she is follows it: the chat model, her lines and the page."""
+    from familydb import voice
+
+    saved = page.post("/settings/personality", data=_drawn(page, persona_name=" Juno "))
+    assert saved.status_code == 302
+    assert settings_store.overrides(conn) == {"persona_name": "Juno"}
+    shown = page.get("/settings/personality").text
+    assert "Saved. Changed: her name." in shown
+    assert re.search(r'<input id="p-name"[^>]*value="Juno"[^>]*placeholder="Vera"', shown, re.S)
+    assert "{name} is what she is called, Juno, wherever it is written." in shown
+    assert _prefix(page, conn)[0].text.startswith("# Who you are\n\nYou are Juno, an AI assistant")
+    assert voice.say(page.app_state.settings, "start").startswith("Hi, I'm Juno.")
+    chat = page.get("/chat").text
+    assert "<title>Juno · " in chat and '<span class="label">Juno</span>' in chat
+    assert "Vera" not in chat
+    history = page.get("/settings").text
+    assert re.search(r"<strong>persona_name</strong>\s*from the environment → Juno", history)
+
+
+def test_under_none_the_bot_is_familydb_and_their_name_for_her_is_kept(page, conn) -> None:
+    """A name belongs to a persona: with none the bot is itself, and the family's name for her
+    comes back with her."""
+    from familydb import voice
+
+    page.post("/settings/personality", data=_drawn(page, persona_name="Juno"))
+    assert page.post("/settings/personality", data=_drawn(page, persona="none")).status_code == 302
+    assert settings_store.overrides(conn) == {"persona": "none", "persona_name": "Juno"}
+    assert all("Juno" not in block.text for block in _prefix(page, conn))
+    assert voice.say(page.app_state.settings, "start").startswith("Hi! I'm FamilyDB,")
+    chat = page.get("/chat").text
+    assert "<title>Chat · " in chat and "Juno" not in chat
+    shown = page.get("/settings/personality").text
+    assert 'name="persona_name"' not in shown
+    assert "The name you gave her, Juno, is kept for when she is chosen again." in shown
+    # Saved under none, with no box for her name, and then with her chosen again.
+    assert page.post("/settings/personality", data=_drawn(page)).status_code == 302
+    again = page.post("/settings/personality", data=_drawn(page, persona="default"))
+    assert again.status_code == 302
+    assert settings_store.overrides(conn) == {"persona_name": "Juno"}
+    assert _prefix(page, conn)[0].text.startswith("# Who you are\n\nYou are Juno, an AI assistant")
+
+
+def test_her_own_name_or_an_empty_box_is_no_name_of_theirs(page, conn) -> None:
+    """Neither is stored; a form drawn before there was a box for her name leaves theirs alone."""
+    for own in ("Vera", " Vera ", ""):
+        saved = page.post("/settings/personality", data=_drawn(page, persona_name=own))
+        assert saved.status_code == 302 and settings_store.overrides(conn) == {}, own
+    page.post("/settings/personality", data=_drawn(page, persona_name="Juno"))
+    old_form = _form(page, persona="default", persona_text="", about_family="")
+    assert page.post("/settings/personality", data=old_form).status_code == 302
+    assert settings_store.overrides(conn) == {"persona_name": "Juno"}
+    page.post("/settings/personality", data=_drawn(page, persona_name="Vera"))
+    assert settings_store.overrides(conn) == {}
+    assert personas.active(page.app_state.settings) == personas.load(personas.DEFAULT)
+
+
+def test_a_name_that_will_not_do_is_refused_and_nothing_is_saved(page, conn) -> None:
+    """A brace would be filled in again wherever {name} is, and a name goes on one line."""
+    assert 'maxlength="40"' in page.get("/settings/personality").text
+    refusals = {
+        "{name}": "cannot have a brace in it",
+        "Ju}no": "cannot have a brace in it",
+        "Ju\nno": "goes on one line",
+        "Ju\x07no": "goes on one line",
+        "J" * 41: "at most 40 characters",
+    }
+    for bad, why in refusals.items():
+        form = _drawn(page, persona_name=bad, about_family="The girls are 7 and 10.")
+        refused = page.post("/settings/personality", data=form)
+        assert refused.status_code == 400 and "Nothing was saved" in refused.text, repr(bad)
+        assert why in refused.text, repr(bad)
+        assert settings_store.overrides(conn) == {}, repr(bad)
+
+
+def test_her_own_name_takes_back_one_the_environment_gave_her(settings, clock, conn, family):
+    """An empty box says she is herself, so it is stored over a name from the environment,
+    which would otherwise stay; the environment's own name is not stored over it."""
+    named = settings.model_copy(update={"web_password": PASSWORD, "persona_name": "Juno"})
+    page = _signed_in(App(named, clock))
+    assert 'value="Juno"' in page.get("/settings/personality").text
+    for own in ("", "Vera"):
+        page.post("/settings/personality", data=_drawn(page, persona_name="Ada"))
+        saved = page.post("/settings/personality", data=_drawn(page, persona_name=own))
+        assert saved.status_code == 302 and settings_store.overrides(conn) == {"persona_name": ""}
+        assert personas.active(page.app_state.settings).name == "Vera", own
+        assert re.search(r'<input id="p-name"[^>]*value=""', page.get("/settings/personality").text)
+    page.post("/settings/personality", data=_drawn(page, persona_name="Juno"))
+    assert settings_store.overrides(conn) == {}
+    assert personas.active(page.app_state.settings).name == "Juno"

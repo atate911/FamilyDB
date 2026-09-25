@@ -39,6 +39,26 @@ def test_a_new_name_reaches_all_of_her_character() -> None:
     )
 
 
+def test_the_family_s_name_for_her_is_her_name_but_never_the_plain_bot_s(settings) -> None:
+    called = settings.model_copy(update={"persona_name": "Juno"})
+    juno = personas.active(called)
+    assert juno.name == "Juno" and juno.prompt.startswith("You are Juno, an AI assistant")
+    assert juno.character == personas.load(personas.DEFAULT).character  # {name} is left in it
+    assert personas.load(personas.DEFAULT).name == "Vera"  # what ships is untouched
+    assert personas.active(called.model_copy(update={"persona": "none"})) is personas.PLAIN
+
+
+def test_her_name_is_one_plain_line() -> None:
+    """It goes wherever {name} is written, in her character and her lines, so a brace in it
+    would be filled in again and a line break would break the line it is in."""
+    assert Settings(_env_file=None, persona_name="  Captain Ada ").persona_name == "Captain Ada"
+    assert Settings(_env_file=None, persona_name=f" {'J' * 40} ").persona_name == "J" * 40
+    assert Settings(_env_file=None, persona_name="").persona_name == ""
+    for bad in ("{name}", "Ju{no", "Ju}no", "Ju\nno", "Ju\rno", "Ju\tno", "Ju\u2028no", "J" * 41):
+        with pytest.raises(ValueError):
+            Settings(_env_file=None, persona_name=bad)
+
+
 def test_the_family_s_words_are_laid_over_hers(settings) -> None:
     vera = personas.load(personas.DEFAULT)
     rewrite = PersonaRewrite(text="  You are {name}. Be very brief.\n")

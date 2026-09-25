@@ -29,10 +29,20 @@
         </select>
       </div>
       {% if plain %}
+        {% if name %}
+          <p class="muted">The name you gave her, {{ name }}, is kept for when she is chosen again.</p>
+        {% endif %}
         {% if kept %}
           <p class="muted">What you wrote for her description is kept for when she is chosen again.</p>
         {% endif %}
       {% else %}
+        <div class="setting">
+          <label for="p-name">What she is called</label>
+          <input id="p-name" type="text" name="persona_name" value="{{ name }}"
+                 maxlength="{{ limits.persona_name }}" placeholder="{{ own_name }}"
+                 autocomplete="off" />
+          <p class="muted hint">Leave it empty and she is {{ own_name }}.</p>
+        </div>
         <div class="setting">
           <label for="p-text">Her description</label>
           <textarea id="p-text" class="script" name="persona_text" rows="18"
@@ -40,7 +50,7 @@
           <p class="muted hint">
             How she speaks, not what she does: the rules for ideas, plans and reminders stay as
             they are, and win where the two meet.
-            {name} is her name, {{ her_name }}, wherever it is written.
+            {name} is what she is called, {{ her_name }}, wherever it is written.
             {% if rewritten %}This is your rewrite of the original.{% endif %}
           </p>
         </div>
