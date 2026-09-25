@@ -11,7 +11,8 @@ kept as written, with {name} where her name goes, and a rewrite of it is kept fo
 describes, the one in force when the page was drawn; when her own has changed since, the page
 says so and shows how. Their name for her and their notes are theirs whoever she is: the name is
 what {name} says, and the notes follow her description, so they last when hers is improved or
-rewritten.
+rewritten. A line of hers may have several wordings, one to a row of its box, and under each box
+the page shows how the line in force reads, filled in with example facts by `voice.reads_as`.
 
 Two forms on the main page, because they are not the same kind of thing. The behaviour form
 carries every box on the page each time it is sent, so an emptied box means "go back to what
@@ -575,7 +576,8 @@ def personality_page(
         if rewrite and rewrite.of
         else []
     )
-    # What she says unasked: the family's line if they wrote one, hers as the placeholder.
+    # What she says unasked: the family's line if they wrote one, hers as the placeholder, and
+    # how the line in force reads now, each of its wordings filled in with example facts.
     hers = voice.wording(personas.load(live.persona))
     said_lines = [
         {
@@ -584,6 +586,7 @@ def personality_page(
             "value": typed.get(f"line_{name}", live.voice_lines.get(name, "")),
             "placeholder": hers[name],
             "fields": ", ".join("{" + f + "}" for f in voice.usable(name)),
+            "reads": voice.reads_as(live, name),
         }
         for name, event in voice.EVENTS.items()
     ]
@@ -645,11 +648,9 @@ def save_personality() -> Response | tuple[str, int]:
             if name in request.form
         }
     )
-    written = {
-        name: request.form.get(f"line_{name}", "").strip()
-        for name in voice.EVENTS
-        if request.form.get(f"line_{name}", "").strip()
-    }
+    # A line's box holds one wording to a row; blank rows are no part of it.
+    boxes = {name: voice.wordings(request.form.get(f"line_{name}", "")) for name in voice.EVENTS}
+    written = {name: "\n".join(rows) for name, rows in boxes.items() if rows}
     typed.update({f"line_{name}": line for name, line in written.items()})
     if wrong := voice.problems(written):
         what = "; ".join(f"{voice.EVENTS[n].label}: {why}" for n, why in wrong.items())

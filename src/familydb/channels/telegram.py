@@ -180,7 +180,8 @@ class TelegramChannel:
 
     async def on_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if update.effective_message is not None:
-            await update.effective_message.reply_text(voice.say(self.app.settings, "start"))
+            hello = voice.say(self.app.settings, "start", seed=update.update_id)
+            await update.effective_message.reply_text(hello)
 
     async def on_message(self, update: Any, context: Any) -> None:
         await asyncio.to_thread(self.app.refresh)

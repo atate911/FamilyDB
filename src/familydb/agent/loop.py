@@ -131,7 +131,7 @@ def run_turn(
                 raise
             return TurnResult(
                 "ok",
-                spending.completed_reply(completed, settings),
+                spending.completed_reply(completed, settings, ctx.message_id),
                 actions,
                 iteration - 1,
                 totals,

@@ -194,6 +194,59 @@ def test_her_lines_can_be_rewritten_and_a_bad_one_is_refused(page, conn) -> None
     assert settings_store.overrides(conn)["voice_lines"] == {"reminder": mine}  # unchanged
 
 
+def _reads(page, event: str) -> list[str]:
+    """How the page says one of her lines reads, wording by wording."""
+    shown = page.get("/settings/personality").text
+    listed = re.search(rf'<ul aria-labelledby="r-{event}">(.*?)</ul>', shown, re.S).group(1)
+    return [html.unescape(words) for words in re.findall(r"<li>(.*?)</li>", listed, re.S)]
+
+
+def test_each_line_shows_how_it_reads_with_made_up_details_filled_in(page, conn) -> None:
+    shown = page.get("/settings/personality").text
+    assert "Several wordings may be written, one per line, and she takes turns" in shown
+    assert _reads(page, "reminder") == [
+        "Reminder: bins out (Sam). Task #12; tell me when it's done, or I can snooze it."
+    ]
+    assert _reads(page, "start")[0].startswith("Hi, I'm Vera. Tell me ideas")
+    # Their own line, typed as a browser sends it, is kept one wording to a row, and each reads.
+    typed = " How was {plan}? \r\n\r\n{name} wants to know: {plan}, again?\r\n"
+    form = _form(page, persona="default", persona_text="", about_family="", line_follow_up=typed)
+    assert page.post("/settings/personality", data=form).status_code == 302
+    mine = "How was {plan}?\n{name} wants to know: {plan}, again?"
+    assert settings_store.overrides(conn)["voice_lines"] == {"follow_up": mine}
+    assert _reads(page, "follow_up") == [
+        "How was #31 Hopscotch?",
+        "Vera wants to know: #31 Hopscotch, again?",
+    ]
+    assert f">{mine}</textarea>" in page.get("/settings/personality").text
+    # With no persona it reads plainly, and their line is kept for when she comes back.
+    form = _form(page, persona="none", persona_text="", about_family="", line_follow_up=mine)
+    assert page.post("/settings/personality", data=form).status_code == 302
+    assert _reads(page, "follow_up") == ["How was #31 Hopscotch on Saturday? Worth doing again?"]
+    assert settings_store.overrides(conn)["voice_lines"] == {"follow_up": mine}
+
+
+def test_the_brief_persona_s_lines_read_each_way_she_says_them(page, conn) -> None:
+    assert page.post("/settings/personality", data=_drawn(page, persona="brief")).status_code == 302
+    assert _reads(page, "lookup_done") == [
+        "Looked up #31 Hopscotch: Indoor play · hours saved for sat, sun · about 20 min away "
+        "(estimate).",
+        "Checked #31 Hopscotch: Indoor play · hours saved for sat, sun · about 20 min away "
+        "(estimate).",
+    ]
+
+
+def test_a_bad_wording_among_several_is_refused_and_named(page, conn) -> None:
+    typed = "How was {plan}?\n{venue}, again?"
+    form = _form(page, persona="default", persona_text="", about_family="", line_follow_up=typed)
+    refused = page.post("/settings/personality", data=form)
+    assert refused.status_code == 400
+    assert "Asking how a plan went: in wording 2, {venue} is not something it knows" in (
+        html.unescape(refused.text)
+    )
+    assert "voice_lines" not in settings_store.overrides(conn)
+
+
 def test_an_unknown_persona_is_refused_even_when_none_is_chosen(page, conn) -> None:
     page.post(
         "/settings/personality",

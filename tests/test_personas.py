@@ -107,13 +107,15 @@ def test_a_label_says_which_of_her_this_is_with_her_name_in_it(settings) -> None
     assert personas.PLAIN.label == personas.NAME and personas.PLAIN.listed_as == "FamilyDB"
 
 
-def _loaded(tmp_path, monkeypatch, manifest: str) -> personas.Persona:
-    """A persona called "juno" with this manifest, as the only folder there is, loaded past the
-    cache so each is read as written."""
+def _loaded(tmp_path, monkeypatch, manifest: str, lines: str | None = None) -> personas.Persona:
+    """A persona called "juno" with this manifest, and these lines if any, as the only folder
+    there is, loaded past the cache so each is read as written."""
     folder = tmp_path / "juno"
     folder.mkdir(parents=True)
     (folder / personas.MANIFEST).write_text(manifest, "utf-8")
     (folder / personas.CHARACTER).write_text("You are {name}.", "utf-8")
+    if lines is not None:
+        (folder / personas.LINES).write_text(lines, "utf-8")
     monkeypatch.setattr(personas.resources, "files", lambda _package: tmp_path)
     return personas.load.__wrapped__("juno")
 
@@ -134,6 +136,16 @@ def test_a_label_with_any_brace_but_her_name_is_refused(tmp_path, monkeypatch) -
         manifest = f'name = "Juno"\nlabel = {json.dumps(label)}'
         with pytest.raises(ValueError, match=refused):
             _loaded(tmp_path / str(number), monkeypatch, manifest)
+
+
+def test_a_line_may_be_one_wording_or_a_list_of_them(tmp_path, monkeypatch) -> None:
+    """A list is kept as the family write theirs on the page: its wordings one to a row."""
+    lines = 'done = "Done."\nfollow_up = ["How was {plan}?", "{plan}: again?"]\n'
+    juno = _loaded(tmp_path, monkeypatch, 'name = "Juno"', lines)
+    assert juno.lines == {"done": "Done.", "follow_up": "How was {plan}?\n{plan}: again?"}
+    for number, wrong in enumerate(("done = 3", 'done = ["Done.", 3]', "done = {a = 1}")):
+        with pytest.raises(ValueError, match="done is a wording, or a list of wordings"):
+            _loaded(tmp_path / str(number), monkeypatch, 'name = "Juno"', wrong)
 
 
 def test_the_family_s_name_for_her_is_her_name_but_never_the_plain_bot_s(settings) -> None:

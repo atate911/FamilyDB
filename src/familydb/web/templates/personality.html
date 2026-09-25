@@ -102,8 +102,9 @@
       <p class="muted">
         Reminders, "how was it?", notes after a lookup, and notices when she cannot answer are
         written, not thought up, so they cost nothing and still arrive when the model is down.
-        Each box shows her line; type over it to use your own. A reminder or a follow-up that
-        comes due while you are talking to her is mentioned in her reply instead.
+        Each box shows her line; type over it to use your own. Under each is how it reads now,
+        with made-up details filled in. A reminder or a follow-up that comes due while you are
+        talking to her is mentioned in her reply instead.
       </p>
       {% if plain %}
         <p class="muted">
@@ -116,7 +117,16 @@
           <label for="l-{{ line.event }}">{{ line.label }}</label>
           <textarea id="l-{{ line.event }}" name="line_{{ line.event }}" rows="3"
                     placeholder="{{ line.placeholder }}">{{ line.value }}</textarea>
-          <p class="muted hint">Can use {{ line.fields }}.</p>
+          <p class="muted hint">
+            Can use {{ line.fields }}.
+            Several wordings may be written, one per line, and she takes turns with them.
+          </p>
+          <div class="reads">
+            <p class="eyebrow" id="r-{{ line.event }}">Reads as</p>
+            <ul aria-labelledby="r-{{ line.event }}">
+              {% for words in line.reads %}<li>{{ words }}</li>{% endfor %}
+            </ul>
+          </div>
         </div>
       {% endfor %}
     </section>
