@@ -70,6 +70,10 @@
   --on-bright: #07130c;      /* words on any of the colours above */
 
   --accent: var(--green);    /* this page's colour; see "Sections" */
+  /* Her light: a small screen lit with nothing on it but its glow and raster (see "Chat"). */
+  --lit-glass:
+    repeating-linear-gradient(to bottom, rgb(0 0 0 / 0.32) 0 1px, transparent 1px 3px),
+    radial-gradient(circle at 50% 46%, rgb(176 255 204 / 0.85), rgb(109 255 156 / 0.3) 30%, #08140e 70%);
 
   --glow: 0 0 0 1px rgb(109 255 156 / 0.35), 0 8px 28px -10px rgb(109 255 156 / 0.7);
   /* Phosphor persistence: what lights up does so at once, and fades the way a tube's glow did,
@@ -811,7 +815,7 @@ details.panel[open] > summary { margin-bottom: 1.1rem; }
   gap: 1.75rem;
   align-items: center;
   margin: 0 0 2.25rem;
-  padding: clamp(1.5rem, 4.5vw, 2.75rem);
+  padding: clamp(1.1rem, 4.5vw, 2.75rem);
   overflow: hidden;
   background:
     radial-gradient(70% 90% at 0% 100%, rgb(109 255 156 / 0.13), transparent 62%),
@@ -832,14 +836,34 @@ details.panel[open] > summary { margin-bottom: 1.1rem; }
   mask-image: radial-gradient(60% 90% at 0% 100%, #000, transparent 75%);
 }
 .welcome-words { position: relative; min-width: 0; }
+/* Who is asking, signed as her lines in the chat are: her face, her name, and the day. */
+.speaker { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.7rem; margin: 0; }
+.speaker strong { font-size: 1.05rem; font-weight: 650; letter-spacing: -0.01em; }
 .welcome h1 {
-  margin: 0.7rem 0 1.6rem;
-  max-width: 14ch;
-  font-size: clamp(2.4rem, 6.2vw, 4rem);
-  line-height: 1.02;
+  margin: 0.85rem 0 0;
+  font-size: clamp(2.2rem, 5.4vw, 3.4rem);
+  line-height: 1.04;
   letter-spacing: -0.034em;
 }
-.welcome .actions { gap: 0.7rem; }
+.welcome .lede { margin: 0.6rem 0 1.35rem; font-size: 1.02rem; }
+/* The page's first question and the box to answer it in. The box is the chat's own; here, where
+   it is the first thing to do, its edge keeps a faint phosphor even at rest, and lights up fully
+   while you write. */
+.welcome .ask {
+  background: rgb(9 12 11 / 0.72);
+  border-color: color-mix(in srgb, var(--green) 30%, var(--edge));
+  box-shadow: var(--shadow), 0 0 38px -20px rgb(109 255 156 / 0.6);
+}
+.welcome .ask:focus-within { border-color: var(--green); box-shadow: var(--shadow), 0 0 0 3px rgb(109 255 156 / 0.14), 0 0 30px -8px rgb(109 255 156 / 0.5); }
+/* How the conversation stands, under the box: her last line, drawn as the chat draws it but cut
+   to three lines, or what she is waiting on; the whole of it is a tap away. */
+.thread.brief { margin: 1.4rem 0 0; }
+.brief > li { max-width: none; }
+.brief .said-text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.brief .pending .said-text { display: block; }
+.brief-more { margin: 0.45rem 0 0 2.9rem; font-size: 0.9rem; font-weight: 500; }
+.brief-more a { display: inline-flex; align-items: center; gap: 0.35em; text-decoration: none; }
+.brief-more .icon { width: 1rem; height: 1rem; }
 /* What is next, on a green screen, beside the radar that shows it. On a phone the words run
    round the scope. */
 .next-up .crt-tube { display: flow-root; }
@@ -874,7 +898,7 @@ details.panel[open] > summary { margin-bottom: 1.1rem; }
   .next-text { grid-column: 1; grid-row: 1; }
 }
 @media (min-width: 64rem) {
-  .welcome { grid-template-columns: minmax(0, 1.2fr) minmax(24rem, 1fr); }
+  .welcome { grid-template-columns: minmax(0, 1.35fr) minmax(22rem, 1fr); }
 }
 
 .setup {
@@ -890,8 +914,52 @@ details.panel[open] > summary { margin-bottom: 1.1rem; }
 .setup > p { margin: 1rem 0 0; font-size: 0.92rem; }
 
 .dashboard { display: grid; gap: 1rem 2rem; }
+.dashboard-column { min-width: 0; }
 .source { margin: -0.35rem 0 0.9rem; font-size: 0.875rem; }
 .source-unavailable { color: var(--amber); }
+/* A section head with two ways on: add one, or see them all. */
+.section-links { display: flex; flex-wrap: wrap; gap: 0.25rem 1.1rem; }
+
+/* What is left to do, each with a tick that marks it done where it stands. */
+.home-todo { --accent: var(--lemon); }
+.checklist > li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.6rem; align-items: center; }
+.checklist > li.empty { display: flex; }
+.checklist .what { font-size: 1.02rem; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+.checklist .when { display: flex; flex-wrap: wrap; gap: 0.15rem 0.8rem; margin-top: 0.15rem; font-size: 0.875rem; color: var(--dim); }
+.checklist .when .warn { color: var(--amber); }
+/* An empty box to tick, on a target a thumb can find; pointed at, it shows the tick it will make. */
+button.tick {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  min-height: 0;
+  margin: -0.35rem 0 -0.35rem -0.6rem;
+  padding: 0;
+  color: transparent;
+  background: none;
+  border: 0;
+  border-radius: 12px;
+  box-shadow: none;
+}
+button.tick::before {
+  content: "";
+  position: absolute;
+  width: 1.4rem;
+  height: 1.4rem;
+  border: 2px solid var(--edge);
+  border-radius: 7px;
+  transition: border-color var(--afterglow), background-color 0.15s, box-shadow var(--afterglow);
+}
+button.tick .icon { position: relative; width: 0.9rem; height: 0.9rem; stroke-width: 3; }
+button.tick:hover { color: var(--accent); background: none; box-shadow: none; }
+button.tick:hover::before { border-color: var(--accent); box-shadow: 0 0 14px -4px color-mix(in srgb, var(--accent) 75%, transparent); transition-duration: var(--glow-in); }
+button.tick:active { color: var(--on-bright); }
+button.tick:active::before { background: var(--accent); border-color: var(--accent); }
+.tick-form { margin: 0; }
+/* On a task's card the box sits level with the first line of its title. */
+.task-head .tick { margin: -0.65rem 0 -0.65rem -0.675rem; }
 
 .idea-cards { display: grid; gap: 0.85rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 12.5rem), 1fr)); margin-bottom: 0.85rem; }
 .idea-card {
@@ -1221,14 +1289,18 @@ details.panel[open] > summary { margin-bottom: 1.1rem; }
   font-weight: 700;
   border-radius: 50%;
 }
-.said-bot .avatar {
-  color: var(--green);
-  background: radial-gradient(circle at 50% 35%, #173022, #0e1512 70%);
-  border: 1px solid rgb(109 255 156 / 0.28);
-  border-radius: 11px;
-  box-shadow: 0 0 18px -6px rgb(109 255 156 / 0.55);
+/* Her light. Vera is never drawn: no face, no figure, no picture of her; she stays behind the
+   glass. Where the page shows her there is only a small screen, lit, with nothing on it but its
+   glow and raster, as a monitor looks with someone at the other end: beside her lines and her
+   name, on her page and where the settings speak of her. The mark with its smile is the page's
+   own, FamilyDB's, and never hers. */
+.presence, .title-icon.presence, .feature-icon.presence {
+  background: var(--lit-glass);
+  border: 1px solid rgb(109 255 156 / 0.32);
+  box-shadow: 0 0 18px -6px rgb(109 255 156 / 0.6), inset 0 0 7px rgb(0 0 0 / 0.6);
 }
-.said-bot .avatar .icon { width: 1.2rem; height: 1.2rem; stroke-width: 2; filter: drop-shadow(0 0 3px rgb(109 255 156 / 0.6)); }
+.avatar.presence { border-radius: 11px; }
+.glyph.presence { display: inline-block; flex: none; width: 1.1rem; height: 1.1rem; border-radius: 4px; box-shadow: 0 0 10px -3px rgb(109 255 156 / 0.65), inset 0 0 4px rgb(0 0 0 / 0.6); }
 .said-them .avatar { color: var(--on-bright); background: var(--amber); }
 .bubble { min-width: 0; padding: 0.75rem 1rem 0.85rem; border-radius: 20px; }
 .said-bot .bubble { background: var(--surface); border: 1px solid var(--line); border-bottom-left-radius: 6px; }
@@ -1239,12 +1311,14 @@ details.panel[open] > summary { margin-bottom: 1.1rem; }
 /* Replies keep the line breaks the model wrote; escaping still happens, this is only layout. */
 .said-text { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.55; }
 .did { margin-top: 0.6rem; font: 0.74rem/1.4 var(--mono); color: var(--faint); }
-.waiting { margin: 0 0 1rem; font-size: 0.95rem; }
-.thinking { display: flex; align-items: center; gap: 0.75rem; color: var(--ink-2); }
-.dots { display: inline-flex; gap: 0.3rem; padding: 0.6rem 0.8rem; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; }
-.dots i { width: 0.42rem; height: 0.42rem; background: var(--green); border-radius: 50%; box-shadow: 0 0 6px var(--green); animation: pulse 1.2s ease-in-out infinite; }
-.dots i:nth-child(2) { animation-delay: 0.15s; }
-.dots i:nth-child(3) { animation-delay: 0.3s; }
+/* While the newest message waits, the page says so in her place, as the thread's last line: her
+   light and name, the same bubble drawn in a dashed line, because the words are the page's, not
+   hers. While she is thinking her light rises and falls, slowly, as a tube's glow does under a
+   changing signal; nothing is shown typing. On Home, which never looks again, it stays still. */
+.pending .bubble { background: transparent; border: 1px dashed var(--line-2); }
+.pending .said-text { color: var(--ink-2); }
+.pending.is-lost .bubble { border-color: rgb(255 184 80 / 0.45); }
+.thread:not(.brief) .pending.is-thinking .presence { animation: thinking 2.6s ease-in-out infinite; }
 
 /* The box: the message on top, who is sending and Send along the bottom, all in one frame that
    lights up while you write. */
@@ -1267,6 +1341,10 @@ details.panel[open] > summary { margin-bottom: 1.1rem; }
   resize: vertical;
 }
 .ask textarea:focus { box-shadow: none; }
+/* Closed while an answer is on its way: the page is about to look again, and would take anything
+   typed with it. The frame goes quiet and the box says when it opens. */
+.ask:has(textarea:disabled) { border-color: var(--line-2); }
+.ask textarea:disabled { cursor: not-allowed; }
 .ask-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1rem; padding: 0.35rem 0.4rem 0 0.8rem; }
 .ask .who { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
 .ask .who label { margin: 0; font-size: 0.875rem; color: var(--dim); }
@@ -1274,8 +1352,37 @@ details.panel[open] > summary { margin-bottom: 1.1rem; }
 .ask .locate label { display: inline-flex; align-items: center; gap: 0.35rem; margin: 0; font-size: 0.9rem; font-weight: 400; color: var(--ink-2); cursor: pointer; }
 .ask .locate .icon { width: 1.05rem; height: 1.05rem; color: var(--amber); }
 .ask .send { margin: 0 0 0 auto; }
+/* On a phone the bar keeps to two rows: who is sending and Send, which shows only its arrow, and
+   under them "Send where I am". */
+@media (max-width: 30rem) {
+  .ask-bar { gap: 0.5rem 0.75rem; padding-left: 0.6rem; }
+  .ask .locate { order: 3; flex-basis: 100%; }
+  .ask .send { width: 2.75rem; padding: 0; }
+  .ask .send .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .ask .send .icon { width: 1.25rem; height: 1.25rem; }
+}
 #where { margin: 0.4rem 0 0 0.8rem; font-size: 0.85rem; }
 #where:empty { display: none; }
+/* Ways to start, under the box: quiet outlined pills that light up when pointed at, and step
+   aside once something is written (ask.js). */
+.starters { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; margin: 0.85rem 0 0; padding: 0; }
+.starters a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.4rem 0.95rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--ink-2);
+  text-decoration: none;
+  background: rgb(255 255 255 / 0.025);
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  transition: color 0.15s, background-color 0.15s, border-color var(--afterglow);
+}
+.starters a:hover { color: var(--ink); background: rgb(109 255 156 / 0.06); border-color: rgb(109 255 156 / 0.45); transition-duration: 0.15s, 0.15s, var(--glow-in); }
+@media (pointer: fine) { .starters a { min-height: 2.3rem; } }
 
 /* ---- An idea ------------------------------------------------------------------------------ */
 .split { display: grid; gap: 1.25rem; grid-template-areas: "main" "side" "place"; }
@@ -1691,7 +1798,10 @@ table.month td.today time { color: var(--on-bright); background: var(--amber); b
 /* ---- Motion ------------------------------------------------------------------------------- */
 @keyframes blink { 50% { opacity: 0; } }
 @keyframes breathe { 50% { opacity: 0.55; } }
-@keyframes pulse { 0%, 100% { opacity: 0.35; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-2px); } }
+/* Her light while she thinks: brighter and softer by turns, never out. */
+@keyframes thinking {
+  50% { filter: brightness(1.45) saturate(1.2); box-shadow: 0 0 26px -4px rgb(109 255 156 / 0.85), inset 0 0 7px rgb(0 0 0 / 0.6); }
+}
 /* Every few seconds the 404 catches, like a tube losing its picture for an instant. */
 @keyframes flicker { 0%, 91%, 94%, 100% { opacity: 1; } 92% { opacity: 0.55; } 93% { opacity: 0.9; } }
 /* The radar's sweep, and the flare and fade of a blip as it passes, on the same clock. */
@@ -1718,8 +1828,9 @@ table.month td.today time { color: var(--on-bright); background: var(--amber); b
   :root { --ink-2: #dde4e0; --dim: #c3ccc7; --faint: #a7b2ac; --line: #3a4541; --line-2: #56625c; --edge: #9fb0a6; }
   .welcome::before, .radar::after, .crt-tube::before, .crt-tube::after { display: none; }
   .glow, .radar-say, .chip-day, .crt-tube, .crt .dim { text-shadow: none; }
-  button, .button, .title-icon, .brand-mark, .chip, .said-bot .avatar, .feature-icon,
-  .task-done .task-box, .radar { box-shadow: none; }
+  button, .button, .title-icon, .brand-mark, .chip, .feature-icon, .task-done .task-box, .radar,
+  .welcome .ask, .presence, .title-icon.presence, .feature-icon.presence { box-shadow: none; }
+  .presence, .title-icon.presence, .feature-icon.presence { background: radial-gradient(circle at 50% 46%, rgb(176 255 204 / 0.85), rgb(109 255 156 / 0.3) 30%, #08140e 70%); }
   .icon, .brand-mark .icon, .title-icon .icon, .foot-mark .icon, .radar svg, .radar-say,
   .crt-tube > *, .crt .crt-face { filter: none; }
   .title-icon { background: color-mix(in srgb, var(--accent) 12%, transparent); }
@@ -1727,7 +1838,13 @@ table.month td.today time { color: var(--on-bright); background: var(--amber); b
 @media (forced-colors: active) {
   .light, .task-box, .chip, .avatar, .title-icon { forced-color-adjust: none; border: 2px solid CanvasText; }
   .title-icon { background: none; }
-  .caret, .dots i { background: CanvasText; }
+  .caret { background: CanvasText; }
+  /* Her light is an empty screen: outlined, and nothing in it. */
+  .presence, .title-icon.presence, .feature-icon.presence { background: none; box-shadow: none; }
+  .glyph.presence { forced-color-adjust: none; border: 2px solid CanvasText; }
+  /* The tick a box would make shows only when pointed at, as it does in colour. */
+  button.tick .icon { visibility: hidden; }
+  button.tick:hover .icon, button.tick:focus-visible .icon { visibility: visible; }
   /* A screen that is only a picture goes; one with words on it keeps them, plainly. */
   .crt[aria-hidden="true"], .radar, .crt::after, .crt-tube::before, .crt-tube::after { display: none; }
   .crt, .crt-tube { border: 1px solid CanvasText; box-shadow: none; }
@@ -1755,7 +1872,7 @@ table.month td.today time { color: var(--on-bright); background: var(--amber); b
   html, body { background: #fff !important; color: #111; }
   .bar, .skip, .foot, .page-actions, .tabs, .month-nav, .ask, form, details:not([open]), .actions,
   .index, .save-bar, .title-icon, .radar, .crt[aria-hidden="true"], .crt::after, .crt-tube::before,
-  .crt-tube::after { display: none !important; }
+  .crt-tube::after, .starters, .brief-more { display: none !important; }
   main { max-width: none; padding: 0; }
   .panel, .welcome, .chip, .bubble, .crt, .crt-tube {
     background: none !important;

@@ -1,9 +1,13 @@
-"""The chat page: ask the bot something without opening Telegram.
+"""The chat page, where the family talks to her, and the box Home shares with it.
 
 Nothing is thought about here. The form hands the message to the web channel, which answers on
 its own thread, and this page only ever reads the message log. That is why it needs no
 JavaScript: while an answer is on its way the page asks the browser to fetch it again in a few
 seconds, and stops asking as soon as the reply is in the log or the turn has given up.
+
+Home shows the same conversation in brief: `glance` says how it stands and what she said last,
+read from the same log with no model call, and Home's box posts here, so a message started
+there lands in the thread it joins.
 
 Writing, then, is the pipeline's: the same dedupe, the same allowlist, the same stored turn as a
 message from any other channel. Nothing in this module touches a table.
@@ -27,8 +31,9 @@ from flask import (
     url_for,
 )
 
+from familydb import personas
 from familydb.app import App
-from familydb.channels.web import DEFAULT_CHAT, MAX_MESSAGE, WebChat
+from familydb.channels.web import DEFAULT_CHAT, MAX_MESSAGE, Handing, WebChat
 from familydb.config import Settings
 from familydb.store import members as member_store
 from familydb.store import messages as message_store
@@ -62,11 +67,32 @@ RETRY_REFRESH_SECONDS = 30
 # How long to keep saying "it will be retried" before admitting it will not: every attempt the
 # settings allow, a retry interval apart, and a little slack for the job's own schedule.
 RETRY_SLACK_MINUTES = 5
+# What the page says in her place while the newest message waits, as the last line of the
+# thread. The page's words, not hers: no model call is made to say them.
+THINKING = "Thinking about the last message. The answer will show here when it arrives."
+HELD = (
+    "Still answering the last message. What you wrote is kept in the box below: send it once "
+    "the answer is in."
+)
 RETRYING = (
     "That message was interrupted, probably by a restart. It will be tried again automatically "
     "within a few minutes, and the answer will appear here."
 )
 LOST = "That message was not answered. Send it again if it still matters."
+# What the empty box says, on Home and in the chat alike: who it goes to, and while an answer
+# is on its way, why it is closed.
+PROMPT = "Message {name}"
+LOCKED = "You can write again once {name} has answered."
+# The same states as Home puts them, more briefly: the conversation is one tap away.
+AT_HOME = {
+    "thinking": "Answering a message now.",
+    "retrying": "A message was interrupted by a restart. It will be tried again shortly.",
+    "lost": "The last message was not answered. It is back in the chat, ready to send again.",
+}
+# What she said last stays on Home for this long; after that it is only in the chat.
+RECENT = timedelta(hours=24)
+# Enough of the log to know how its newest message stands and to find her last line.
+GLANCE_LIMIT = 12
 
 
 def _app() -> App:
@@ -110,14 +136,75 @@ def waiting_on(
     return "lost"
 
 
+def box(family: list[str], *, locked: bool = False) -> dict[str, Any]:
+    """What the box needs wherever it is drawn: who may speak, who spoke last, whether this
+    browser sends where it is, and whether it is closed while an answer is on its way."""
+    name = personas.display_name(_app().settings)
+    return {
+        "family": family,
+        "who": _who(family),
+        "send_where": bool(session.get(WHERE_KEY)),
+        "locked": locked,
+        "placeholder": (LOCKED if locked else PROMPT).format(name=name),
+    }
+
+
+def asked() -> str | None:
+    """A question handed over by a link, which waits in the box until somebody presses Send."""
+    return request.args.get("ask", "")[:MAX_MESSAGE].strip() or None
+
+
+def standing(app: App, thread: list[Message]) -> tuple[str | None, Handing | None]:
+    """How the newest message stands (see `waiting_on`), and a message just handed over that
+    the log does not hold yet.
+
+    A turn stores its message a moment after it starts, and the browser is back sooner. Until
+    the log has it, the page draws it from the channel's memory, and it is being thought about.
+    """
+    chat = _chat()
+    handing = chat.handing_over(DEFAULT_CHAT)
+    if handing is not None and any(m.channel_update_id == handing.update_id for m in thread):
+        handing = None  # stored: the log shows it now
+    if handing is not None:
+        return "thinking", handing
+    answered = {message.reply_to for message in thread if message.reply_to is not None}
+    last = thread[-1] if thread else None
+    busy = chat.busy(DEFAULT_CHAT)
+    return waiting_on(last, answered, busy=busy, now=app.clock.now(), settings=app.settings), None
+
+
+def glance(app: App, conn: Any) -> dict[str, Any]:
+    """How the conversation stands, for Home: waiting on her, or the last thing she said lately.
+
+    Read from the log like the chat page, so the two never disagree, and asked of nobody.
+    """
+    thread = message_store.last_for_chat(conn, DEFAULT_CHAT, limit=GLANCE_LIMIT)
+    now = app.clock.now()
+    state, _ = standing(app, thread)
+    said = next((message for message in reversed(thread) if message.direction == "out"), None)
+    line = None
+    if state is None and said is not None:
+        when = datetime.fromisoformat(said.received_at.replace("Z", "+00:00"))
+        if now - when < RECENT:
+            line = views.chat_line(
+                said,
+                {},
+                app.settings.tzinfo,
+                did=[],
+                waiting=False,
+                assistant=personas.display_name(app.settings),
+            )
+    return {"state": state, "note": AT_HOME.get(state or ""), "line": line}
+
+
 def page(*, error: str | None = None, typed: str | None = None, status: int = 200) -> Any:
     """Draw the chat. Read fresh every time, because the answer arrives on another thread."""
     app = _app()
-    thinking = _chat().busy(DEFAULT_CHAT)
     with closing(app.connect()) as conn:
         family = member_store.list_all(conn)
         thread = message_store.last_for_chat(conn, DEFAULT_CHAT, limit=THREAD_LIMIT)
     names = {member.id: member.display_name for member in family}
+    assistant = personas.display_name(app.settings)
     # The log keeps a turn's tool calls against the question; the page shows them under the
     # answer. Pairing them here also says which questions have been answered at all.
     answered = {message.reply_to for message in thread if message.reply_to is not None}
@@ -129,27 +216,44 @@ def page(*, error: str | None = None, typed: str | None = None, status: int = 20
             app.settings.tzinfo,
             did=views.tools_used(actions.get(message.reply_to)),
             waiting=message.id not in answered,
+            assistant=assistant,
         )
         for message in thread
     ]
     last = thread[-1] if thread else None
-    state = waiting_on(last, answered, busy=thinking, now=app.clock.now(), settings=app.settings)
-    refresh = {"thinking": REFRESH_SECONDS, "retrying": RETRY_REFRESH_SECONDS}.get(state or "")
+    state, handing = standing(app, thread)
+    if handing is not None:
+        lines.append(
+            views.handed_line(
+                handing.member_name, handing.text, app.clock.now(), app.settings.tzinfo
+            )
+        )
+    # A page holding words somebody typed never fetches itself again: the refresh would take
+    # them with it. While an answer is on its way and nothing is typed, the box is closed
+    # instead, so there is nothing to lose; it opens again with the answer.
+    held = bool(typed and typed.strip())
+    locked = state == "thinking" and not held
+    refresh = None
+    if not held:
+        refresh = {"thinking": REFRESH_SECONDS, "retrying": RETRY_REFRESH_SECONDS}.get(state or "")
+    pending = {"thinking": HELD if held else THINKING, "retrying": RETRYING, "lost": LOST}
     return (
         render_template(
             "chat.html",
             lines=lines,
-            who=_who([member.display_name for member in family]),
-            family=[member.display_name for member in family],
-            thinking=state == "thinking",
-            note={"retrying": RETRYING, "lost": LOST}.get(state or ""),
-            again=last.text if state == "lost" and last else None,
+            **box([member.display_name for member in family], locked=locked),
+            state=state,
+            pending=pending.get(state or ""),
+            # A message nobody will answer now comes back to the box, to send again.
+            typed=typed or (last.text if state == "lost" and last else None),
+            starters=[] if lines else views.starters(app.clock.today()),
             error=error or (NO_FAMILY if not family else None),
-            typed=typed,
             refresh=refresh,
+            # With the box open, the script looks again instead, and never while somebody is
+            # writing; only on a page drawn for a visit, since reloading a post would resend it.
+            look_again=refresh if refresh and not locked and request.method == "GET" else None,
             here=url_for("chat.show", _anchor=LATEST),
             latest=LATEST,
-            send_where=bool(session.get(WHERE_KEY)),
         ),
         status,
     )
@@ -157,10 +261,7 @@ def page(*, error: str | None = None, typed: str | None = None, status: int = 20
 
 @bp.get("/chat")
 def show() -> Any:
-    # A question handed over by a link, such as the home page's "what should we do this
-    # weekend?", waits in the box; nothing is sent until somebody presses Send.
-    asked = request.args.get("ask", "")[:MAX_MESSAGE].strip()
-    return page(typed=asked or None)
+    return page(typed=asked())
 
 
 def _position(form: Any) -> tuple[float, float] | None:
@@ -180,7 +281,10 @@ def _position(form: Any) -> tuple[float, float] | None:
 @bp.post("/chat")
 @once
 def send() -> Response | Any:
-    """Hand one message to the channel and come straight back to the thread."""
+    """Hand one message to the channel and come straight back to the thread.
+
+    Home's box posts here too, so a message started there lands in the conversation it joins.
+    """
     if (complaint := auth.refused()) is not None:
         return page(error=complaint, typed=request.form.get("text", ""), status=400)
     text = request.form.get("text", "")

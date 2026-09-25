@@ -46,7 +46,8 @@ older than what is installed. It gets a date when it is released.
   cost; once the day's limit ($2 unless changed) is used up, nothing more is
   asked of a model until midnight, and the chat says why.
 - **The whole bot in a browser,** behind one shared family password: a home page
-  saying what is coming up and what is left to set up, the chat, the ideas and
+  that asks what is on your mind and says what is coming up and what is left to
+  set up, the conversation with Vera, the ideas and
   restaurants, the plans as a list or a month read live from Google, forms that
   add and change ideas, record how things went and put plans on the calendar
   (through the same tools the bot uses), the Family page, a status page with
@@ -61,6 +62,17 @@ older than what is installed. It gets a date when it is released.
   radar of everything coming; the sign-in; the day's spend, which turns amber near
   the limit; and the page that is not there. `docs/STYLE.md` says what each choice
   is for.
+- **Vera at the centre of the page.** Home opens on her question, "What’s on
+  your mind?", and the box to answer it: the chat's own, so a question or an
+  instruction typed there lands in the conversation, which the page moves into
+  while she answers. The conversation goes by her name, and everything she says,
+  a long answer, a reminder or a plain "Done.", is drawn the one way; while she
+  thinks, the thread's last line says so and the box waits closed rather than
+  lose anything typed. She is never drawn as a person: where she appears there is
+  only a small lit screen with nothing on it. What is coming, what is left to do
+  (each ticked off where it stands) and what was added lately sit around the box,
+  and opening any page asks nothing of a model. What is being typed is kept
+  across a refresh, a change of page or signing in again, until it has been sent.
 - **Set up from that page.** The keys, the models, Telegram (taken up within
   seconds, no restart), Google Calendar (connected from the page, with no laptop
   needed), where home is (found on the map), the timezone and the spending

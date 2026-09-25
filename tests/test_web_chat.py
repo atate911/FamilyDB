@@ -13,6 +13,7 @@ from familydb.app import App
 from familydb.channels.web import BUSY, DEFAULT_CHAT, UNKNOWN_MEMBER
 from familydb.store import messages
 from familydb.web import create_app
+from familydb.web.chat import HELD, LOCKED
 from tests import fakes
 
 PASSWORD = "open sesame please"
@@ -50,6 +51,7 @@ def test_an_empty_chat_says_so(settings, clock, conn, family) -> None:
     assert page.status_code == 200
     assert "Nothing said here yet" in page.text
     assert "Sam" in page.text and "the girls" in page.text  # everyone can be spoken for
+    assert 'data-say="What should we do today?"' in page.text  # ways to start, on a Sunday
 
 
 def test_a_message_goes_through_the_pipeline_and_the_answer_lands_on_the_page(
@@ -114,11 +116,69 @@ def test_the_page_says_it_is_thinking_and_asks_to_be_shown_again(
     assert 'http-equiv="refresh"' in page
     assert "Thinking about the last message" in page
     assert "disabled" in page  # and nothing can be sent on top of it
+    # Her line waits at the foot of the thread, under the message it is about.
+    assert page.index('id="latest"') < page.index('class="said-bot pending is-thinking"')
+    # The box is closed while the page keeps looking again, so nothing typed can be lost.
+    assert f'placeholder="{LOCKED.format(name="Vera")}" disabled></textarea>' in page
 
     refused = _say(client, "are you there?")
     assert refused.status_code == 400 and BUSY in refused.text
+    # A page holding words somebody typed never looks again by itself: it would take them.
+    assert ">are you there?</textarea>" in refused.text
+    assert 'http-equiv="refresh"' not in refused.text and HELD in refused.text
+    assert 'placeholder="Message Vera">are you there?</textarea>' in refused.text  # open
     release.set()
     assert client.chat.wait(10)
+
+
+def test_her_lines_carry_her_name_whatever_they_say(settings, clock, conn, family, replies):
+    """A reply, a reminder or a one-word "Done." is hers alike, drawn the one way."""
+    client = _client(settings, clock, *replies)
+    _say(client, "what should we do this weekend?")
+    assert client.chat.wait(10)
+    page = client.get("/chat").text
+    assert "<h1>Vera</h1>" in page and "<strong>Vera</strong>" in page
+    assert page.count('class="said-bot"') == 1 and "FamilyDB</strong>" not in page
+    assert '<span class="label">Vera</span>' in page  # the place in the bar goes by her name
+    # She is never drawn: beside her lines is her light, and the smiling mark is only the
+    # page's own, in the bar and at the foot.
+    assert 'class="avatar presence"' in page and page.count("#i-mark") == 2
+
+    nameless = _client(settings.model_copy(update={"persona": "none"}), clock).get("/chat").text
+    assert "<strong>FamilyDB</strong>" in nameless and '<span class="label">Chat</span>' in nameless
+
+
+def test_a_message_just_sent_shows_before_its_turn_has_stored_it(
+    settings, clock, conn, family, replies, monkeypatch
+) -> None:
+    """The browser is back before the turn stores the message (naming where the phone is can
+    wait on the map service first): the page draws it from the channel until the log has it,
+    rather than seeming to lose it and forgetting to look again."""
+    from familydb.channels import web as channel
+
+    held, release = threading.Event(), threading.Event()
+    real = channel.handle_incoming
+
+    def slow(*args, **kwargs):
+        held.set()
+        assert release.wait(10)
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(channel, "handle_incoming", slow)
+    client = _client(settings, clock, *replies)
+    _say(client, "is the pool open today?")
+    assert held.wait(10)
+    assert messages.last_for_chat(conn, DEFAULT_CHAT, limit=5) == []  # not in the log yet
+    page = client.get("/chat").text
+    assert "is the pool open today?" in page and "waiting for an answer" in page
+    assert 'http-equiv="refresh"' in page and "Thinking about the last message" in page
+    assert page.index('id="latest"') < page.index("is the pool open today?")
+    assert page.index("is the pool open today?") < page.index("pending is-thinking")
+    release.set()
+    assert client.chat.wait(10)
+    page = client.get("/chat").text
+    assert page.count("is the pool open today?") == 1  # drawn once, from the log now
+    assert "Saturday looks dry" in page
 
 
 def test_a_message_from_somebody_who_is_not_family_is_refused(settings, clock, conn, family):
@@ -198,6 +258,10 @@ def test_a_message_a_restart_interrupted_waits_for_the_retry_job(settings, clock
     assert "tried again automatically" in page
     assert 'content="30;' in page  # a slow check, not the three-second one
     assert "what happened to this?</textarea>" not in page  # not handed back to send twice
+    # The box stays open meanwhile, so with a script the page looks again itself, and never
+    # while somebody is writing; the meta refresh is left for a browser without one.
+    assert '<noscript><meta http-equiv="refresh" content="30;' in page
+    assert 'data-refresh="30"' in page and "disabled" not in page
 
 
 def test_the_retry_job_answers_it_and_the_page_shows_the_answer(settings, clock, conn, family):
@@ -253,7 +317,7 @@ def test_the_phone_s_position_goes_with_the_message(settings, clock, conn, famil
     client = web.test_client()
     client.post("/login", data={"password": PASSWORD})
     page = client.get("/chat").text
-    assert 'name="lat"' in page and "locate.js" in page and "<script>" not in page
+    assert 'name="lat"' in page and "ask.js" in page and "<script>" not in page
     assert 'name="send_where" value="1"  />' in page  # off until somebody ticks it
     client.chat = web.config["FAMILYDB_CHAT"]
     _say(client, "sushi open near here?", lat="45.51900", lon="-122.67900", send_where="1")

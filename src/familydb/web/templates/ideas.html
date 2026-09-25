@@ -10,7 +10,7 @@
   <details class="panel capture">
     <summary>{{ icon('sparkles') }}Save a thought for later</summary>
     <p class="muted">A restaurant, food cart pod, neighborhood, passport stop, kids' outing, special occasion,
-      or just a direction to explore. Write naturally; Chat will organize it and confirm what was saved.</p>
+      or just a direction to explore. Write naturally; {{ assistant }} will organize it and say in Chat what was saved.</p>
     <form class="form" method="post" action="{{ url_for('chat.send') }}">
       <input type="hidden" name="csrf" value="{{ csrf_token() }}">
       <input type="hidden" name="once" value="{{ once_token() }}">

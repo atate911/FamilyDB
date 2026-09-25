@@ -118,6 +118,44 @@ def idea_row(idea: Idea, tz: ZoneInfo) -> dict[str, Any]:
     }
 
 
+def task_brief(task: Task, tz: ZoneInfo, today: date) -> dict[str, Any]:
+    """An open task as Home lists it: what, whose, and when it is due, in words."""
+    due = None
+    late = False
+    if task.due_at:
+        moment = datetime.fromisoformat(task.due_at.replace("Z", "+00:00")).astimezone(tz)
+        late = moment.date() < today
+        day = relative_text(moment.date().isoformat(), today)
+        due = f"was due {day}" if late else f"due {day}, {moment:%H:%M}"
+    return {
+        "id": task.id,
+        "title": task.title,
+        "owner": task.owner,
+        "due": due,
+        "late": late,
+        "window": task.preferred_window or None,
+        "reminder": local_moment(task.reminder.remind_at, tz) if task.reminder else None,
+        "revision": task.revision,
+    }
+
+
+# Ways to start, under the box on Home and in an empty chat. The first is the question most
+# people open the page to ask, put the way the day puts it; the other two start an instruction
+# and leave the rest to whoever is typing. Written here, never asked of a model.
+WEEKEND_QUESTION = "What should we do this weekend?"
+TODAY_QUESTION = "What should we do today?"
+STARTERS = ("Remind me to ", "We should try ")
+
+
+def starters(today: date) -> list[dict[str, str]]:
+    """The suggestions under the box: what each puts in it, and how it reads as a link."""
+    question = TODAY_QUESTION if today.weekday() >= 5 else WEEKEND_QUESTION
+    return [
+        {"say": text, "label": text.rstrip() + ("…" if text.endswith(" ") else "")}
+        for text in (question, *STARTERS)
+    ]
+
+
 def task_row(task: Task, tz: ZoneInfo) -> dict[str, Any]:
     """One task on the tasks page, with its times as the family's clock shows them."""
     return {
@@ -413,14 +451,21 @@ def outcome_row(outcome: Outcome) -> dict[str, Any]:
 
 
 def chat_line(
-    message: Message, names: dict[int, str], tz: ZoneInfo, *, did: list[str], waiting: bool
+    message: Message,
+    names: dict[int, str],
+    tz: ZoneInfo,
+    *,
+    did: list[str],
+    waiting: bool,
+    assistant: str,
 ) -> dict[str, Any]:
     """One message in the chat: who said it, when, what the turn ran, and what went wrong.
 
     `did` is the turn's tool calls, which the log stores against the question rather than the
     answer. They belong under the answer: "used suggest" beneath somebody's own message reads
     as though they had run it. `waiting` is for a message nothing has replied to yet, which is
-    a fact about the thread rather than about the row, so the caller works it out.
+    a fact about the thread rather than about the row, so the caller works it out. `assistant`
+    is her name: every line she sends, a reply, a reminder or a plain "Done.", is hers alike.
     """
     from_bot = message.direction == "out"
     trouble = None
@@ -431,12 +476,25 @@ def chat_line(
             trouble = "waiting for an answer"
     return {
         "id": message.id,
-        "who": "FamilyDB" if from_bot else names.get(message.member_id or -1, "someone"),
+        "who": assistant if from_bot else names.get(message.member_id or -1, "someone"),
         "from_bot": from_bot,
         "text": message.text,
         "when": local_moment(message.received_at, tz),
         "trouble": trouble,
         "did": did if from_bot else [],
+    }
+
+
+def handed_line(who: str, text: str, now: datetime, tz: ZoneInfo) -> dict[str, Any]:
+    """A message just sent from the page that the log does not hold yet, drawn as it will be."""
+    return {
+        "id": None,
+        "who": who,
+        "from_bot": False,
+        "text": text,
+        "when": local_moment(now.astimezone(UTC).isoformat(), tz),
+        "trouble": "waiting for an answer",
+        "did": [],
     }
 
 

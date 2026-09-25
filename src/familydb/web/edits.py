@@ -48,6 +48,9 @@ RECORDED = "Recorded. #{id} is marked done."
 SCHEDULED = "On the calendar: {title}."
 MOVED = "Moved to {when}."
 CANCELLED = "Cancelled."
+TICKED = "Done: #{id} {title}."
+# The pages a tick may send the browser back to, by the name its form gives.
+TICK_PAGES = {"home": "web.home", "tasks": "web.tasks"}
 NEEDS_TITLE = "An idea needs a title."
 NEEDS_KIND = "An idea needs a kind: restaurant, outing, trip, show…"
 NOT_A_NUMBER = "{label} needs to be a number."
@@ -369,3 +372,22 @@ def edit_task(task_id: int) -> Response:
         result, complaint = run("update_task", values)
         _say(complaint or f"Updated task #{result['task']['id']}.")
     return _back("web.tasks")
+
+
+@bp.post("/task/<int(max=9223372036854775807):task_id>/done")
+@once
+def finish_task(task_id: int) -> Response:
+    """The tick beside a task: done, and nothing else about it changes.
+
+    The edit form sends every box, so an empty one clears what it held; a tick sends only the
+    status, which `update_task` reads as "leave the rest alone". The revision it was drawn at
+    goes with it, so a task somebody changed in the meantime is not ticked off unseen.
+    """
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+    elif _task_revision(request.form) is None:
+        _say("Reload this task before ticking it off.")
+    else:
+        result, complaint = run("update_task", {"task_id": task_id, "status": "done"})
+        _say(complaint or TICKED.format(id=task_id, title=result["task"]["title"]))
+    return _back(TICK_PAGES.get(request.form.get("back", ""), "web.tasks"))

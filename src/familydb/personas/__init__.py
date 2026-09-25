@@ -29,6 +29,13 @@ def available() -> tuple[str, ...]:
 
 # The persona setting's value for speaking with none at all.
 NONE = "none"
+# What the assistant is called with no persona: the product's own name.
+NAMELESS = "FamilyDB"
+
+
+def display_name(settings: Any) -> str:
+    """What the family calls her, on the page and in Telegram's greeting: Vera, or FamilyDB."""
+    return NAMELESS if settings.persona == NONE else settings.persona.capitalize()
 
 
 def text_for(settings: Any) -> str:

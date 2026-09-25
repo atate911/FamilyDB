@@ -180,8 +180,7 @@ class TelegramChannel:
 
     async def on_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if update.effective_message is not None:
-            persona = self.app.settings.persona
-            name = persona.capitalize() if persona != personas.NONE else "FamilyDB"
+            name = personas.display_name(self.app.settings)
             await update.effective_message.reply_text(
                 voice.say(self.app.settings, "start", name=name)
             )

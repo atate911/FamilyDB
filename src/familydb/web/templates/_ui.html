@@ -43,7 +43,8 @@
         </nav>
       {% endif %}
       <div class="title-row">
-        {% if glyph %}<span class="title-icon" aria-hidden="true">{{ icon(glyph) }}</span>{% endif %}
+        {% if glyph == 'presence' %}{{ presence('title-icon') }}
+        {%- elif glyph %}<span class="title-icon" aria-hidden="true">{{ icon(glyph) }}</span>{% endif %}
         <h1>{{ title }}</h1>
       </div>
       {% if lede %}<p class="lede">{{ lede }}</p>{% endif %}
@@ -52,6 +53,61 @@
       <div class="page-actions">{{ caller() }}</div>
     {%- endif %}
   </header>
+{%- endmacro %}
+
+{# Where she is on the page: never a face or a figure, only a light behind glass, a small screen
+   lit with nothing on it, as a monitor looks with someone at the other end. Beside her lines,
+   her name, and the question on Home. #}
+{% macro presence(cls='avatar') -%}
+  <span class="{{ cls }} presence" aria-hidden="true"></span>
+{%- endmacro %}
+
+{# One line of the conversation, wherever it is shown: hers on the left beside her light, the
+   family's on the right with their initial, so side and mark tell them apart, not colour alone.
+   Everything she says looks the same, a long answer, a reminder or a one-word "Done."; only the
+   words differ. `anchor` is the id the newest line carries. Goes in an <ol class="thread">. #}
+{% macro chat_line(line, anchor=none) -%}
+  <li class="{{ 'said-bot' if line.from_bot else 'said-them' }}"{% if anchor %} id="{{ anchor }}"{% endif %}>
+    {% if line.from_bot %}{{ presence() }}{% else %}<span class="avatar" aria-hidden="true">{{ line.who[:1] | upper }}</span>{% endif %}
+    <div class="bubble">
+      <div class="said-by">
+        <strong>{{ line.who }}</strong>
+        <span>{{ line.when }}</span>
+        {% if line.trouble %}<span class="tag warn">{{ line.trouble }}</span>{% endif %}
+      </div>
+      <div class="said-text">{{ line.text }}</div>
+      {% if line.did %}
+        <div class="did">used {{ line.did | join(', ') }}</div>
+      {% endif %}
+    </div>
+  </li>
+{%- endmacro %}
+
+{# The last line of the thread while the newest message waits: her light and name, and a line
+   in the page's own words (nobody is asked to write it). While she is thinking her light rises
+   and falls; nobody is shown typing. A `call` block adds a way on, as Home's link to the chat. #}
+{% macro waiting_line(name, state, text) -%}
+  <li class="said-bot pending is-{{ state }}">
+    {{ presence() }}
+    <div class="bubble" role="status">
+      <div class="said-by">
+        <strong>{{ name }}</strong>
+      </div>
+      <div class="said-text">{{ text }}{% if caller is defined %} {{ caller() }}{% endif %}</div>
+    </div>
+  </li>
+{%- endmacro %}
+
+{# The tick beside an open task: marks it done where it stands, through `update_task` at the
+   revision it was drawn at, and comes back to `back` (home or tasks). #}
+{% macro tick(task_id, revision, title, back) -%}
+  <form class="tick-form" method="post" action="{{ url_for('edits.finish_task', task_id=task_id) }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    <input type="hidden" name="once" value="{{ once_token() }}" />
+    <input type="hidden" name="revision" value="{{ revision }}" />
+    <input type="hidden" name="back" value="{{ back }}" />
+    <button class="tick" type="submit">{{ icon('check') }}<span class="sr">Done: {{ title }}</span></button>
+  </form>
 {%- endmacro %}
 
 {# A plan's day as a small calendar leaf: month, day, weekday. #}

@@ -40,10 +40,11 @@
         <span class="brand-name">{{ site_title }}</span><span class="caret" aria-hidden="true"></span>
       </a>
       {# The five places a day is spent. On a phone they are the tabs along the bottom, where a
-         thumb is; on a wider screen they sit in this bar. #}
+         thumb is; on a wider screen they sit in this bar. The conversation is hers, so it goes
+         by her name; with no persona it is simply the chat. #}
       <nav class="places" aria-label="Main">
         {{ item('Home', url_for('web.home'), 'home', 'home') }}
-        {{ item('Chat', url_for('chat.show', _anchor='latest'), 'chat', 'chat') }}
+        {{ item(assistant if has_persona else 'Chat', url_for('chat.show', _anchor='latest'), 'chat', 'chat') }}
         {{ item('Ideas', url_for('web.ideas'), 'ideas', 'idea') }}
         {{ item('Plans', url_for('web.plans'), 'plans', 'plans') }}
         {{ item('To do', url_for('web.tasks'), 'todo', 'todo') }}

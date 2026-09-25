@@ -16,7 +16,7 @@ from typing import Any
 
 from flask import Flask, render_template, request
 
-from familydb import __version__
+from familydb import __version__, personas
 from familydb.app import App
 from familydb.availability import web_is_public, web_password_required
 from familydb.channels.web import WebChat
@@ -122,7 +122,14 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     web.jinja_env.globals["csrf_token"] = auth.csrf_token
     web.jinja_env.globals["once_token"] = once.once_token
     web.context_processor(
-        lambda: {"site_title": app.settings.web_title, "footer": views.footer(__version__)}
+        lambda: {
+            "site_title": app.settings.web_title,
+            "footer": views.footer(__version__),
+            # Who the family talks to, for every page that speaks of her: her name, and whether
+            # there is a her at all. With no persona the bot is FamilyDB and the place is "Chat".
+            "assistant": personas.display_name(app.settings),
+            "has_persona": app.settings.persona != personas.NONE,
+        }
     )
     web.register_blueprint(auth.bp)
     web.register_blueprint(routes.bp)

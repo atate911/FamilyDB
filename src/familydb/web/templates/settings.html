@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon, page_head %}
+{% from "_ui.html" import icon, page_head, presence %}
 {% set GROUP_ICONS = {'Who answers': 'mark', 'What it may spend': 'coin', 'Looking things up': 'search',
                       'Home': 'home', 'When it speaks first': 'bell', 'This page': 'settings'} %}
 {% block title %}Settings · {{ site_title }}{% endblock %}
@@ -54,7 +54,7 @@
   <nav class="index" aria-label="On this page">
     <p class="eyebrow">On this page</p>
     <ol>
-      <li><a href="{{ url_for('settings.personality') }}">{{ icon('mark') }}Personality and family</a></li>
+      <li><a href="{{ url_for('settings.personality') }}">{{ presence('glyph') }}Personality and family</a></li>
       <li><a href="#keys">{{ icon('key') }}API keys</a></li>
       <li><a href="#google">{{ icon('plans') }}Google Calendar</a></li>
       {% for group in groups %}
@@ -74,7 +74,7 @@
   </p>
 
   <a class="panel feature" href="{{ url_for('settings.personality') }}">
-    <span class="feature-icon">{{ icon('mark') }}</span>
+    {{ presence('feature-icon') }}
     <span><strong>Personality and family</strong>: who the
     assistant is, and who you are, in your own words.</span>
     {{ icon('right', cls='go') }}
