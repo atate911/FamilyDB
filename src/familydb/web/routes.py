@@ -28,7 +28,7 @@ from familydb.store import places as place_store
 from familydb.store import plans as plan_store
 from familydb.store import tasks as task_store
 from familydb.store.ideas import KIND_SUGGESTIONS
-from familydb.web import agenda, auth, views
+from familydb.web import agenda, auth, chat, views
 from familydb.web import status as status_page
 from familydb.web.chat import WHO_KEY
 
@@ -47,7 +47,7 @@ FILTERS = ("q", "kind", "status", "who")
 HOME_AHEAD_DAYS = 60
 HOME_PLANS = 5
 HOME_IDEAS = 4
-WEEKEND_QUESTION = "What should we do this weekend?"
+HOME_TASKS = 4
 PLANS_AHEAD_DAYS = 90
 PLANS_BEHIND_DAYS = 30
 
@@ -87,18 +87,26 @@ def status() -> str:
 
 @bp.get("/")
 def home() -> Response | str:
-    """What is coming up, what was added lately, and one tap to ask or add something.
+    """What is on your mind: the box to tell her, and around it what is coming up, what is left
+    to do and what was added lately.
 
-    Until it can answer anyone, which takes somebody on the list and a model, the home page is
-    the setup page: there is nothing else here worth showing yet.
+    The box is the chat's own and posts to it, so what is said here lands in the conversation.
+    Everything else is read from the database and worded here: opening this page asks nothing
+    of a model. Until it can answer anyone, which takes somebody on the list and a model, the
+    home page is the setup page: there is nothing else here worth showing yet.
     """
     if any(request.args.get(key) for key in FILTERS):
         # The ideas list used to live here; a bookmarked search should still find it.
         return redirect(url_for("web.ideas", **request.args))
     app = _app()
     today = app.clock.today()
+    tz = app.settings.tzinfo
+    visitor = auth.visitor()
     # Setting up is an admin's, so nobody else is sent to it or shown what is left of it.
-    manages = auth.visitor().manages
+    manages = visitor.manages
+    # The box and how the conversation stands are the chat's, so only for a role that may talk
+    # to her (familydb/roles.py): nobody is shown a way into a page that would refuse them.
+    talks = visitor.may("chat")
     with closing(app.connect()) as conn:
         progress = status_page.setup_progress(app, conn)
         if manages and not status_page.ready_to_answer(progress):
@@ -106,6 +114,9 @@ def home() -> Response | str:
         seen = agenda.read(app, conn, today, today + timedelta(days=HOME_AHEAD_DAYS))
         everything = idea_store.list_all(conn)
         unfinished = status_page.setup_steps(app, conn) if manages else []
+        family = [member.display_name for member in member_store.list_all(conn)]
+        todo = task_store.list_all(conn, status="open")
+        talk = chat.glance(app, conn) if talks else None
     coming = [entry for entry in seen.entries if entry.days()[-1] >= today][:HOME_PLANS]
     newest = sorted(everything, key=lambda idea: idea.created_at, reverse=True)[:HOME_IDEAS]
     return render_template(
@@ -115,11 +126,17 @@ def home() -> Response | str:
         blips=views.radar_blips(coming, today),
         source=seen.source,
         source_note=views.AGENDA_NOTES[seen.source],
-        ideas=[views.idea_row(idea, app.settings.tzinfo) for idea in newest],
+        ideas=[views.idea_row(idea, tz) for idea in newest],
         idea_count=len(everything),
         restaurant_count=sum(1 for idea in everything if idea.kind == RESTAURANT_KIND),
-        weekend_question=WEEKEND_QUESTION,
+        tasks=[views.task_brief(task, tz, today) for task in todo[:HOME_TASKS]],
+        task_count=len(todo),
         setup=unfinished,
+        talk=talk,
+        **chat.box(family, prompt=chat.HOME_PROMPT),
+        question=True,  # the box's label is her question, and the page's heading
+        typed=chat.asked(),  # a way to start, followed with scripts off
+        starters=views.starters(today),
     )
 
 

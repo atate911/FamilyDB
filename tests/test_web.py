@@ -113,7 +113,7 @@ def test_a_post_from_another_site_is_refused(settings, clock) -> None:
 def test_every_response_carries_the_security_headers(settings, clock) -> None:
     client = _client(settings, clock, web_password=PASSWORD)
     plain = client.get("/login")
-    # One script, served from the page itself (static/locate.js); nothing inline, nothing else.
+    # One script, served from the page itself (static/ask.js); nothing inline, nothing else.
     policy = plain.headers["Content-Security-Policy"]
     assert "script-src 'self';" in policy and "unsafe-inline" not in policy
     assert "frame-ancestors 'none'" in plain.headers["Content-Security-Policy"]
@@ -685,6 +685,7 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
         for alias in node.names
     } == {
         "familydb.channels.web.DEFAULT_CHAT",
+        "familydb.channels.web.Handing",  # a message being handed over, drawn until it is stored
         "familydb.channels.web.MAX_MESSAGE",  # how long a question handed over may be
         "familydb.channels.web.WebChat",
     }

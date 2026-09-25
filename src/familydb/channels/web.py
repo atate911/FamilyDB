@@ -16,6 +16,7 @@ from __future__ import annotations
 import logging
 import threading
 from contextlib import closing
+from dataclasses import dataclass
 from uuid import uuid4
 
 from familydb import whereabouts
@@ -56,6 +57,15 @@ def incoming(text: str, member_name: str, chat_id: str = DEFAULT_CHAT) -> Incomi
     )
 
 
+@dataclass(frozen=True)
+class Handing:
+    """A message a turn was started for: who sent it, what it says, and its update id."""
+
+    update_id: str
+    member_name: str
+    text: str
+
+
 class WebChat:
     """What this process is thinking about, and how to start it thinking about something else.
 
@@ -68,6 +78,7 @@ class WebChat:
         self.app = app
         self._api = api  # a test's fake model; the real one is chosen per turn from the settings
         self._running: dict[str, threading.Thread] = {}
+        self._handing: dict[str, Handing] = {}
         self._lock = threading.Lock()
 
     def busy(self, chat_id: str = DEFAULT_CHAT) -> bool:
@@ -80,6 +91,16 @@ class WebChat:
         with closing(self.app.connect()) as conn:
             return messages.claimed_in_chat(conn, chat_id, now=utc_iso(self.app.clock.now()))
 
+    def handing_over(self, chat_id: str = DEFAULT_CHAT) -> Handing | None:
+        """The message a turn here is running for, while it runs.
+
+        The turn stores it a moment after it starts (after naming where the phone is, which can
+        wait on the map service), and the browser comes straight back to the page, often sooner.
+        The page draws it from here until the log has it, so a message never seems to vanish.
+        """
+        with self._lock:
+            return self._handing.get(chat_id) if self._alive(chat_id) else None
+
     def _alive(self, chat_id: str) -> bool:
         """Caller holds the lock. Forgets a thread that has finished, so the table stays small."""
         thread = self._running.get(chat_id)
@@ -88,6 +109,7 @@ class WebChat:
         if thread.is_alive():
             return True
         del self._running[chat_id]
+        self._handing.pop(chat_id, None)
         return False
 
     def ask(
@@ -114,6 +136,7 @@ class WebChat:
                 return UNKNOWN_MEMBER.format(name=member_name)
             if messages.claimed_in_chat(conn, chat_id, now=utc_iso(self.app.clock.now())):
                 return BUSY
+        message = incoming(text, member_name, chat_id)
         with self._lock:
             if self._alive(chat_id):
                 return BUSY
@@ -121,17 +144,18 @@ class WebChat:
             # and a second message arriving in that gap would be let through.
             thread = threading.Thread(
                 target=self._turn,
-                args=(text, member_name, chat_id, position),
+                args=(message, member_name, chat_id, position),
                 name=f"{THREAD_NAME}-{chat_id}",
                 daemon=True,  # a stuck model call must not hold the process open on shutdown
             )
             self._running[chat_id] = thread
+            self._handing[chat_id] = Handing(message.channel_update_id or "", member_name, text)
             thread.start()
         return None
 
     def _turn(
         self,
-        text: str,
+        message: IncomingMessage,
         member_name: str,
         chat_id: str,
         position: tuple[float, float] | None = None,
@@ -141,7 +165,7 @@ class WebChat:
             # Here rather than in the form post: naming the place may wait on the map service.
             self._note(member_name, position)
         try:
-            reply = handle_incoming(self.app, incoming(text, member_name, chat_id), api=self._api)
+            reply = handle_incoming(self.app, message, api=self._api)
         except Exception:
             # The pipeline stores its own failures and the retry job picks them up. What lands
             # here is the database being unreachable, which is worth a log and nothing else.

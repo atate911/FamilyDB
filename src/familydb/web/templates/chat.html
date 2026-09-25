@@ -1,87 +1,37 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon, page_head %}
-{% block title %}Chat · {{ site_title }}{% endblock %}
+{% from "_ui.html" import icon, page_head, chat_line, waiting_line %}
+{% block title %}{{ assistant if has_persona else 'Chat' }} · {{ site_title }}{% endblock %}
 {% block body_class %}page-chat{% endblock %}
 {# While an answer is on its way the browser fetches the page again by itself, landing back on
    the newest line. No script: a meta refresh is the one thing every browser still does, and the
    content policy forbids the alternative. It is only set when something really is being thought
-   about, so the page goes quiet as soon as the reply is in the log. #}
+   about, so the page goes quiet as soon as the reply is in the log, and never on a page holding
+   words somebody typed, which it would take with it. While a turn runs the box is closed, so
+   there is nothing to lose. Waiting on the retry job the box stays open, so with scripts on
+   ask.js does the looking again instead, and never while somebody is writing. #}
 {% block head %}
-  {% if refresh %}<meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" />{% endif %}
+  {% if refresh and locked %}
+    <meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" />
+  {% elif refresh %}
+    <noscript><meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" /></noscript>
+  {% endif %}
 {% endblock %}
 {% block content %}
-  {{ page_head('Chat', 'Anything you would ask in Telegram works here too.', 'chat') }}
+  {# Hers: her name at the top, as on the tab that leads here, beside her screen. #}
+  {{ page_head(assistant if has_persona else 'Chat', 'Weekends, ideas, to-dos and the calendar: anything you would ask in Telegram works here too.', 'presence' if has_persona else 'chat') }}
 
   {% if lines %}
-    {# The bot's lines on the left with its mark, the family's on the right with their
-       initial: side and face tell them apart, not colour alone. #}
     <ol class="thread">
       {% for line in lines %}
-        <li class="{{ 'said-bot' if line.from_bot else 'said-them' }}"
-            {% if loop.last %}id="{{ latest }}"{% endif %}>
-          <span class="avatar" aria-hidden="true">
-            {%- if line.from_bot %}{{ icon('mark') }}{% else %}{{ line.who[:1] | upper }}{% endif -%}
-          </span>
-          <div class="bubble">
-            <div class="said-by">
-              <strong>{{ line.who }}</strong>
-              <span>{{ line.when }}</span>
-              {% if line.trouble %}<span class="tag warn">{{ line.trouble }}</span>{% endif %}
-            </div>
-            <div class="said-text">{{ line.text }}</div>
-            {% if line.did %}
-              <div class="did">used {{ line.did | join(', ') }}</div>
-            {% endif %}
-          </div>
-        </li>
+        {{ chat_line(line, latest if loop.last) }}
       {% endfor %}
+      {% if pending %}{{ waiting_line(assistant, state, pending) }}{% endif %}
     </ol>
   {% else %}
-    <p class="panel muted empty">{{ icon('chat') }}<span>Nothing said here yet. Ask what to do this weekend, save an idea, or set a reminder.</span></p>
-  {% endif %}
-
-  {% if thinking %}
-    <p class="waiting thinking"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>Thinking about the last message. This page will show the answer
-      when it arrives.</p>
-  {% elif note %}
-    <p class="{{ 'error' if again else 'muted waiting' }}">{{ note }}</p>
+    <p class="muted empty">{{ icon('chat') }}<span>Nothing said here yet. Ask {{ assistant }} what to do this weekend, save an idea, or set a reminder.</span></p>
   {% endif %}
 
   {% if error %}<p class="error">{{ error }}</p>{% endif %}
 
-  <form class="ask" method="post" action="{{ url_for('chat.show') }}">
-    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-    <input type="hidden" name="once" value="{{ once_token() }}" />
-    <input type="hidden" name="lat" value="" />
-    <input type="hidden" name="lon" value="" />
-    <label class="sr" for="text">Message</label>
-    <textarea id="text" name="text" rows="3" required
-              placeholder="what should we do this weekend?">{{ typed or again or '' }}</textarea>
-    <div class="ask-bar">
-      <div class="who">
-        {% if visitor().member %}
-          {# Signed in as themselves, so there is nobody else they could be asking as. #}
-          <span class="from">From <strong>{{ who }}</strong></span>
-        {% else %}
-          <label for="who">From</label>
-          <select id="who" name="who" required>
-            {% if not who %}<option value="">who is asking?</option>{% endif %}
-            {% for name in family %}
-              <option value="{{ name }}" {{ 'selected' if name == who }}>{{ name }}</option>
-            {% endfor %}
-          </select>
-        {% endif %}
-      </div>
-      {# Shown by locate.js; with scripts off there is no position to send, so no box. #}
-      <div class="locate" id="locate" hidden>
-        <label>
-          <input type="checkbox" name="send_where" value="1" {{ 'checked' if send_where }} />
-          {{ icon('locate') }}Send where I am
-        </label>
-      </div>
-      <button class="send" type="submit" {{ 'disabled' if thinking or not family }}>{{ icon('send') }}Send</button>
-    </div>
-    <p id="where" class="muted"></p>
-  </form>
-  <script src="{{ url_for('static', filename='locate.js') }}" defer></script>
+  {% include "_ask.html" %}
 {% endblock %}

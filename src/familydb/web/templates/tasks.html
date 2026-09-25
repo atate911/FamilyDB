@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% from "_ui.html" import icon, page_head %}
+{% from "_ui.html" import icon, page_head, tick %}
 {% block title %}Things to do · {{ site_title }}{% endblock %}
 {% macro fields(p, task=none, due_input='') %}
   <div class="field wide"><label for="{{ p }}-title">What needs doing</label>
@@ -42,7 +42,8 @@
 {% for row in rows %}{% set task = row.task %}
 <li class="panel card task task-{{ task.status }}">
   <div class="task-head">
-    <span class="task-box" aria-hidden="true">{% if task.status == 'done' %}{{ icon('check') }}{% elif task.status == 'cancelled' %}{{ icon('x') }}{% endif %}</span>
+    {% if task.status == 'open' %}{{ tick(task.id, task.revision, task.title, 'tasks') }}
+    {%- else %}<span class="task-box" aria-hidden="true">{% if task.status == 'done' %}{{ icon('check') }}{% elif task.status == 'cancelled' %}{{ icon('x') }}{% endif %}</span>{% endif %}
     <h2><span class="muted">#{{ task.id }} ·</span> {{ task.title }}</h2>
   </div>
   <p class="meta muted">
@@ -65,6 +66,6 @@
     </form>
   </details>
 </li>
-{% else %}<li class="panel muted empty">{{ icon('todo') }}<span>No tasks match. Add something above, or ask in Chat.</span></li>{% endfor %}
+{% else %}<li class="panel muted empty">{{ icon('todo') }}<span>No tasks match. Add something above, or ask {{ assistant }}.</span></li>{% endfor %}
 </ul>
 {% endblock %}

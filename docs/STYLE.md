@@ -19,14 +19,20 @@ Everything here is carried by one stylesheet (`src/familydb/web/static/style.css
 templates, three open-licensed typefaces and one icon sprite, with no script beyond the one the
 page already had. A change to the page should be checked against this document.
 
+The page is a way to talk to **Vera**, and she does what it offers: plans the weekend, keeps the
+ideas and the things to do, puts things on the calendar. So the first thing on Home is her
+question and the box to answer it, the conversation goes by her name, and everything else is
+what she keeps, laid out beside it. She is never drawn (see "Her screen").
+
 ## Principles
 
 1. **A real, modern app first.** Layout, spacing, controls and type are those of a good
    present-day product: one clear action per place, 44-pixel targets, a tab bar under the thumb
    on a phone, sentence-case labels, readable type. Nothing retro may cost usability.
 2. **The CRT survives as light.** Phosphor green glows only where attention belongs: the mark
-   and cursor in the bar (and the bot's face), the primary button, the box being typed in, the
-   key words of the home page's greeting, live status and finished tasks, and the green screens
+   and cursor in the bar, her screen, the primary button, the box being typed in (and Home's box,
+   faintly, even at rest), the key word of the home page's question, live status and finished
+   tasks, and the green screens
    (what is next, the way in, the day's spend, the 404). The icon tile beside a page title glows in that
    page's colour, and amber glows for *today*. If everything glowed, nothing would.
 3. **Colour says where you are.** Each part of the site has one colour, and each kind of idea has
@@ -35,17 +41,28 @@ page already had. A change to the page should be checked against this document.
    for the machine's small voice: times and figures, the small labels above data, the name in the
    bar. VT323, a terminal's face, only for words on a green screen.
 5. **Keep the eye still.** A page's title, its one line of purpose and its one or two actions sit
-   together at the top. What you do with a thing sits beside it. What is next is the first thing
-   on the home page. The chat's box is under the newest line, with Send beside who is sending.
+   together at the top. What you do with a thing sits beside it. Her question and the box to
+   answer it are the first thing on the home page, with what is next beside them. The chat's box
+   is under the newest line, with Send beside who is sending.
 6. **Small things, here and there.** A modern page that uses nostalgia on purpose, so it is
    sparing with it: a handful of small period details, each where it means something, none that
    moves for long or asks to be looked at (see "Small things"). All motion stops for anyone who
    asks for less.
 7. **The pictures are green screens.** The page's few pictures are old green-screen monitors, and
    they are the one place it is hazy: a terminal's face, a little blur and bloom, scanlines, the
-   tube's dark edge. Each shows something true, and there is at most one to a page.
+   tube's dark edge. Each shows something true, and there is at most one to a page. Her screen is
+   the one exception: not a picture but where she is, as small as a face would be, beside each of
+   her lines (see "Her screen").
 8. **Accessible by construction.** Contrast is measured, focus is always visible, every box has a
    label, motion, contrast and forced-colour preferences are honoured, and nothing needs a script.
+9. **Vera is felt, not shown.** She is a real presence on the page, in her name, her words and
+   her screen, and never a character: no face, no figure, no picture of her, and nothing that
+   says what she is. Her identity stays behind the glass. The page's own words about her say what
+   she takes on, not who she is, and they are few: no greetings, no quips, nothing said just to
+   seem alive.
+10. **Every part does work.** Looks are welcome, but nothing on the page is only for show: her
+   question on Home is the label of the box you answer it in, and the line on what she takes on
+   is that box's placeholder. A thing that is only decoration has to be small.
 
 ## Colour
 
@@ -71,7 +88,7 @@ each carries dark text (`--on-bright`) when it is a fill:
 
 | Token | Value | Belongs to |
 |---|---|---|
-| `--green` | `#6dff9c` (12.5:1) | the brand and the green screens, the primary button, focus, what is next and live; Home, Chat, Status, Settings; outings |
+| `--green` | `#6dff9c` (12.5:1) | the brand and the green screens, her screen, the primary button, focus, what is next and live; Home, Vera's page, Status, Settings; outings |
 | `--amber` | `#ffb850` (9.3:1) | the amber screen: the Family, grown-ups' faces, restaurants, today, anything needing a look |
 | `--cyan` | `#6cd4ff` (9.5:1) | Plans, the month on every date, and going places: day trips and trips |
 | `--lemon` | `#f7dc78` (11.8:1) | Things to do, open tasks, activities |
@@ -135,13 +152,47 @@ alone gets a label. To add one, put its name in `ICONS` in the script and run
 `uv run python scripts/icons.py`; never edit the sprite by hand.
 
 **The mark** is the page's own: a little monitor with a smile, drawn on the same grid and stroke.
-It is the favicon, the bot's face in the chat, and the mark in the bar, where it glows.
+It is the favicon and the mark in the bar, where it glows. It is FamilyDB's, and never Vera's
+face: she has none.
+
+## Her screen
+
+Vera is never drawn. Where the page shows her there is a small screen full of words nobody can
+read, as if busy: somewhere between a 1980s terminal and the Matrix's falling code (`presence`
+in `_ui.html`). It is columns of glyphs in the terminal's face, VT323, the newest of each run
+bright and the rest dim, with scanlines across them and blurred past reading. The glyphs are
+drawn by the stylesheet, one pattern of sixteen rows, and mean nothing; each of her lines shows
+another part of it (`v0` to `v3`), so a thread of them is not a row of copies. While she is
+thinking the glyphs fall, a row at a time, as a character display moved them; on Home they fall
+for a moment as the page opens, and everywhere else they are still. Nothing is shown typing.
+
+It sits beside her lines in the conversation, beside her name on Home, on the tile of her page,
+and where the settings speak of her. It never gets eyes, a mouth, a silhouette or an expression,
+no picture of anybody stands in for her, and its glyphs never spell anything. With no persona
+the same screen is simply the bot's.
 
 ## The parts
 
 - **Page head** (`page_head` in `_ui.html`): breadcrumbs for a page inside another, the page's
   icon on a tile of its colour, the title, one line of purpose, and the page's actions on the
-  right.
+  right. Her page has her screen on its tile instead of an icon.
+- **The box** (`_ask.html`): the one place anybody writes to her, on Home and at the foot of the
+  chat, and the same everywhere: the message on top, who is sending, "Send where I am" and Send
+  along the bottom, in one frame that lights up while you write. It posts to the chat wherever
+  it is drawn. In the chat it says "Message Vera", and while an answer is on its way it is closed
+  and says when it opens. On Home its label is her question, "What’s on your mind?", printed in
+  the frame above where you write, the page's heading and a way in (a tap on it puts you in the
+  box), and while it is empty it says what she takes on. On a phone Send shows only its arrow,
+  beside who is sending, with "Send where I am" under them. Under it on Home (and in an empty
+  chat), the **ways to start**: three quiet pills, the day's question and two instructions left
+  for the rest to be typed.
+- **A line of the conversation** (`chat_line`): hers on the left beside her screen, the family's
+  on the right with their initial. Everything she says is drawn the same way, a long answer, a
+  reminder or a one-word "Done."; the tools a turn ran sit under it in the machine's voice.
+  **Waiting** (`waiting_line`) is the thread's last line while the newest message waits: her
+  screen and name, the bubble in a dashed line because the words are the page's, not hers.
+- **The tick** (`tick`): an empty box beside an open task, on a 44-pixel target, that shows the
+  tick it will make when pointed at and marks the task done where it stands.
 - **Card**, **segmented tabs**, **pills**, **notices** (a green dot for what a form said, a red
   one for an error).
 - **Date** (`chip` in `_ui.html`): a small calendar leaf, the month in cyan above the day. Today
@@ -231,25 +282,35 @@ for more than a moment, and none asks to be looked at.
 
 ## Page by page
 
-- **The bar.** On a phone the five everyday places (Home, Chat, Ideas, Plans, To do) are a tab
+- **The bar.** On a phone the five everyday places (Home, Vera, Ideas, Plans, To do) are a tab
   bar along the bottom, the current one marked by a pill in its colour; Family, Status and
   Settings, the name of whoever is signed in (their own password) and signing out are icons at
   the top; Family and Settings are shown only to an admin, who alone may change them. From 52rem
-  everything is one bar that stays at the top while the page scrolls.
-- **Home.** The greeting and the two things most people came for (ask about the weekend, add an
-  idea) on the left, lit from below; **Next up** on the right, on a green screen beside the radar
-  of everything coming (on a phone the words run round the scope). Then anything left to set up,
-  what else is coming, and what was added lately.
-- **Chat.** A messaging layout: the bot on the left with its mark, the family on the right with
-  their initial; a typing indicator while it thinks; one box with the message on top and From,
-  Send where I am and Send along the bottom, lit green while you write.
+  everything is one bar that stays at the top while the page scrolls. The conversation's place
+  goes by her name, with the conversation's icon; with no persona it is Chat. It is shown only to
+  a role that may talk to her.
+- **Home.** Signed the way her lines are (her screen, her name, the day), then the box to answer
+  her in, its label her question, "What’s on your mind?", with the one word lit, and the ways to
+  start under it; under those, how the conversation stands: what she said last (the last day's,
+  cut to three lines) or what she is waiting on, and the way into the chat. All of it on the
+  left, lit from below; **Next up** on the right, on a green screen beside the
+  radar of everything coming (on a phone the words run round the scope, under the box). Then
+  anything left to set up, what else is coming, what is left to do with a tick for each, and
+  what was added lately, with a way to add one without her. What a role may not do is not
+  offered (`familydb/roles.py`): without the chat, the day and the page's name stand where her
+  question would; without changing things, each tick is an empty box; and only an admin is shown
+  what is left to set up.
+- **Vera** (the chat). A messaging layout under her name: her lines on the left beside her
+  screen, the family's on the right with their initial; while she thinks, her waiting line at the
+  foot of the thread and the box closed; the box under the newest line.
 - **Ideas.** A grid of cards with the kind in colour, where, who, how long and the cost; the quick
   note that Chat turns into an idea is folded away so the list is on the first screen.
 - **An idea.** The idea on the left; what you do with it (the calendar, plan it, record how it
   went) in a column beside the title; the place's details below.
 - **Plans.** A list of dates, and a month with today in amber and plans as cyan slips; on a phone
   the month is the busy days as a list.
-- **Things to do**, **Family**, **Settings** (with an index and a save bar that stays in reach),
+- **Things to do** (an open task is ticked off where it stands), **Family**, **Settings** (with an
+  index and a save bar that stays in reach),
   **Status** (three monitors, then the day's spend on a green screen beside the same in words),
   **Sign in** (the mark's face on a green screen, then who you are and your password, or the one
   question while the family still shares a password), **For an admin** (the 404's console with
@@ -267,16 +328,19 @@ for more than a moment, and none asks to be looked at.
   only, since the box itself says what it is for.
 - Nothing is said by colour alone: the chat tells voices apart by side and face; status lights
   differ in shape and carry words; kinds and statuses are written out.
-- `prefers-reduced-motion` stops the cursors, the typing dots, the breathing dots, the screens
-  switching on, the face's blink, the radar's sweep, the 404's flicker, the afterglow and the
-  landing glow. `prefers-contrast:
+- `prefers-reduced-motion` stops the cursors, the glyphs falling on her screen, the breathing dots, the
+  screens switching on, the face's blink, the radar's sweep, the 404's flicker, the afterglow and
+  the landing glow. `prefers-contrast:
   more` lifts secondary text and edges and takes away the glow, the blur and the scanlines,
-  the tiles' raster included.
-  Forced colours keep dots, boxes, dates and faces outlined, leave out the screens that are only
+  the tiles' raster and her screen's included.
+  Forced colours keep dots, boxes, dates and initials outlined, draw her screen as an empty
+  outlined square, show a task's tick only when pointed at, leave out the screens that are only
   pictures, and keep Next up's words in a plain box.
 - Words on a green screen are at least 1.2rem; dim phosphor is 7.6:1 on the tube, normal and
   bright more.
-- The page works with scripts off; the only script is still `static/locate.js`.
+- The page works with scripts off; the only script is `static/ask.js`, the box's: it keeps what
+  is being written, fills the box from the ways to start, and sends where the phone is. Without
+  it the ways to start are links, and nothing typed is kept across a change of page.
 
 ## Rules the look has to keep
 
@@ -295,6 +359,9 @@ for more than a moment, and none asks to be looked at.
 - A new colour is measured against the others that share its pages, for typical sight and for
   deuteranopia and protanopia, before it is added.
 - A new small thing has to mean something where it is, and may not move for more than a moment.
+- Vera is never drawn: no face, figure, picture or expression, and the mark is never hers. Where
+  she appears, her screen, and its glyphs never spell anything; where the page speaks of her,
+  what she takes on, never what she is.
 - A new colour, face, glow or motion goes here first, with the reason.
 
 ## Left for later

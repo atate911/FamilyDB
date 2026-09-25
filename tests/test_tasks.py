@@ -189,6 +189,26 @@ def test_browser_task_form_and_revision_guard(settings, clock, conn, family):
     assert client.get("/tasks?status=invalid").status_code == 400
 
 
+def test_an_open_task_ticks_off_where_it_is_listed(settings, clock, conn, family):
+    """The tick sends only "done" and the revision it was drawn at; the rest stays as it was."""
+    client = _client(settings, clock)
+    form = dict(re.findall(r'name="(csrf|once)" value="([^"]+)"', client.get("/tasks").text))
+    form.update(title="Sharpen the knives", notes="At the market", preferred_window="Saturday")
+    client.post("/tasks/new", data=form)
+    task = tasks.list_all(conn)[0]
+    page = client.get("/tasks").text
+    tick = re.search(rf'action="/task/{task.id}/done">(.*?)</form>', page, re.S)
+    assert tick is not None and "Done: Sharpen the knives" in tick.group(1)
+    fields = dict(re.findall(r'name="(\w+)" value="([^"]*)"', tick.group(1)))
+    assert fields["back"] == "tasks"
+    ticked = client.post(f"/task/{task.id}/done", data=fields)
+    assert ticked.headers["Location"] == "/tasks"
+    done = tasks.get(conn, task.id)
+    assert done.status == "done" and done.notes == "At the market"
+    assert done.preferred_window == "Saturday"
+    assert f"/task/{task.id}/done" not in client.get("/tasks?status=done").text  # no tick left
+
+
 def test_topic_selection_is_applied_before_shortlist_limit(ctx):
     with db.transaction(ctx.conn):
         for n in range(12):
