@@ -78,6 +78,33 @@ def test_the_family_s_words_are_laid_over_hers(settings) -> None:
     assert personas.load(personas.DEFAULT) == vera and vera.lines["reminder"] != "Psst: {title}."
 
 
+def test_the_family_s_notes_follow_her_character_whoever_she_is(settings, monkeypatch) -> None:
+    """They are the family's words, not a copy of hers, so they go with any persona, after her
+    character and under a header that says whose they are, with her name filled in."""
+    noted = settings.model_copy(update={"persona_notes": "  No emoji. {name} calls Mia Captain.\n"})
+    vera = personas.active(noted)
+    assert vera.notes == "No emoji. {name} calls Mia Captain."
+    assert vera.prompt == (
+        personas.load(personas.DEFAULT).prompt
+        + "\n\n## The family's own notes on how you talk\n\nNo emoji. Vera calls Mia Captain."
+    )
+    assert personas.active(settings).prompt == personas.load(personas.DEFAULT).prompt
+    brief = replace(personas.load(personas.DEFAULT), key="brief", character="You are {name}.")
+    shipped = personas.load
+    monkeypatch.setattr(personas, "load", lambda key: brief if key == "brief" else shipped(key))
+    as_brief = noted.model_copy(update={"persona": "brief", "persona_name": "Juno"})
+    assert personas.active(as_brief).prompt == (
+        "You are Juno.\n\n## The family's own notes on how you talk\n\n"
+        "No emoji. Juno calls Mia Captain."
+    )
+
+
+def test_notes_are_at_most_a_thousand_characters() -> None:
+    assert Settings(_env_file=None, persona_notes="x" * 1_000).persona_notes == "x" * 1_000
+    with pytest.raises(ValueError):
+        Settings(_env_file=None, persona_notes="x" * 1_001)
+
+
 def test_a_rewrite_is_laid_over_the_persona_it_rewrote_and_nobody_else(
     settings, monkeypatch
 ) -> None:
@@ -137,10 +164,11 @@ def test_none_is_plain_whatever_the_family_wrote(settings) -> None:
         update={
             "persona": "none",
             "persona_text": {personas.DEFAULT: PersonaRewrite(text="You are Zorblax.")},
+            "persona_notes": "No emoji, ever.",
             "voice_lines": {"reminder": "Psst: {title}."},
         }
     )
-    assert personas.active(plain) is personas.PLAIN
+    assert personas.active(plain) is personas.PLAIN and not personas.PLAIN.notes
     assert personas.load(personas.NONE) is personas.PLAIN
     assert personas.PLAIN.character == personas.PLAIN.prompt == "" and not personas.PLAIN.lines
     assert personas.PLAIN.name == "FamilyDB"

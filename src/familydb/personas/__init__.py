@@ -4,8 +4,10 @@ A `Persona` is a name, a character and her own lines. The name is what she is ca
 written once: her character and her lines say `{name}` wherever it goes, so the chat model, her
 lines, Telegram's /start and the chat page all have it from one place. The character is how she
 talks, not what she does: it goes first in the cached chat prefix, ahead of the product spec
-(`agent/prompts/system.md`), which says what to do and wins where the two meet. The lines are her
-wording for what the bot says unasked (`voice.EVENTS`), filled in by code, never by a model call.
+(`agent/prompts/system.md`), which says what to do and wins where the two meet. The family's own
+notes on how she talks, when they have written any, follow her character there, and the spec
+wins over them too. The lines are her wording for what the bot says unasked (`voice.EVENTS`),
+filled in by code, never by a model call.
 
 Each persona ships as a folder here: `persona.toml` names her, `character.md` is her character
 and `lines.toml` her lines, which she may go without (a line she lacks is said plainly). Adding a
@@ -16,10 +18,12 @@ for itself, with no character and no lines of its own.
 `active(settings)` is the persona in force, and what anything that speaks as her asks: the one
 the `persona` setting chooses, with what the family wrote on the Personality page
 (/settings/personality) laid over her own, the name they call her as `persona_name`, the
-character as her rewrite in `persona_text` and the lines as `voice_lines`. Their name for her and
-their lines are theirs whoever she is. A rewrite of her character is a copy of one persona's and
-is kept under her key, so it is laid over her and nobody else; restoring her original drops it.
-With no persona chosen their words are kept but not used, and come back when one is chosen again.
+character as her rewrite in `persona_text`, their notes on how she talks as `persona_notes` and
+the lines as `voice_lines`. Their name for her, their notes and their lines are theirs whoever
+she is. A rewrite of her character is a copy of one persona's and is kept under her key, so it is
+laid over her and nobody else; restoring her original drops it and leaves their notes as they
+are. With no persona chosen their words are kept but not used, and come back when one is chosen
+again.
 
 Only turns a person reads carry her character: chat, the digest and retries. The lookup and
 discovery workers, whose prose nobody reads, never do. Every word of it is sent, cached, with
@@ -45,6 +49,8 @@ CHARACTER = "character.md"
 LINES = "lines.toml"
 # Where her name goes, in her character and in any of her lines.
 NAME = "{name}"
+# What the family's notes follow her character under, so the model reads them as theirs.
+NOTES_HEADER = "## The family's own notes on how you talk\n\n"
 
 
 @dataclass(frozen=True)
@@ -55,11 +61,14 @@ class Persona:
     name: str  # what she is called
     character: str  # how she talks, as written: {name} wherever her name goes; empty for none
     lines: Mapping[str, str]  # her wording by voice event; one she has no line for is plain
+    notes: str = ""  # the family's own notes on how she talks; none ship with her
 
     @property
     def prompt(self) -> str:
-        """Her character as the chat model is told it, with her name in it."""
-        return self.character.replace(NAME, self.name)
+        """Her character as the chat model is told it: the family's notes after it, under a
+        header of their own, and her name in both."""
+        told = f"{self.character}\n\n{NOTES_HEADER}{self.notes}" if self.notes else self.character
+        return told.replace(NAME, self.name)
 
 
 # The persona the family meets unless they choose another.
@@ -112,8 +121,9 @@ def active(settings: Settings) -> Persona:
 
     The name the family call her is her name, and so goes wherever {name} is written. Her
     character is replaced only by the family's rewrite of her; one written for another persona
-    is never hers. No persona chosen means none at all, whatever the family once wrote for her
-    or called her."""
+    is never hers. Their notes on how she talks go with whichever persona is chosen, since they
+    are theirs, not a copy of hers. No persona chosen means none at all, whatever the family once
+    wrote for her or called her."""
     chosen = load(settings.persona)
     if chosen is PLAIN:
         return PLAIN
@@ -124,4 +134,5 @@ def active(settings: Settings) -> Persona:
         name=settings.persona_name.strip() or chosen.name,
         character=(rewrite.text.strip() if rewrite else "") or chosen.character,
         lines=MappingProxyType({**chosen.lines, **own}),
+        notes=settings.persona_notes.strip(),
     )

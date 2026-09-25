@@ -12,7 +12,7 @@ from familydb.app import App
 from familydb.config import PersonaRewrite
 from familydb.store import settings as settings_store
 from familydb.store.db import transaction
-from familydb.web import create_app
+from familydb.web import create_app, views
 
 PASSWORD = "a long family password"
 
@@ -52,7 +52,7 @@ def _drawn(page, **changes):
         "csrf": re.search(r'name="csrf" value="([^"]+)"', text).group(1),
         "persona": re.search(r'<option value="([^"]+)" selected>', text).group(1),
     }
-    for name in ("persona_text", "about_family"):
+    for name in ("persona_text", "persona_notes", "about_family"):
         if box := re.search(rf'name="{name}"[^>]*>(.*?)</textarea>', text, re.S):
             form[name] = html.unescape(box.group(1))
     if called := re.search(r'name="persona_name" value="([^"]*)"', text):
@@ -65,6 +65,12 @@ def _drawn(page, **changes):
 def _prefix(page, conn):
     page.app_state.refresh(conn)
     return build_system_blocks(conn, page.app_state.settings)
+
+
+def _tokens(page) -> int:
+    """What the page says she and the family add to every message."""
+    shown = page.get("/settings/personality").text
+    return int(re.search(r"about ([\d,]+) tokens now", shown).group(1).replace(",", ""))
 
 
 def test_the_page_shows_her_and_links_from_settings(page) -> None:
@@ -407,3 +413,169 @@ def test_her_own_name_takes_back_one_the_environment_gave_her(settings, clock, c
     page.post("/settings/personality", data=_drawn(page, persona_name="Juno"))
     assert settings_store.overrides(conn) == {}
     assert personas.active(page.app_state.settings).name == "Juno"
+
+
+NOTES = "No emoji. Call Mia Captain. Less chat in the mornings."
+
+
+def test_the_family_s_notes_reach_the_prefix_after_her_character_and_before_the_job(
+    page, conn
+) -> None:
+    shown = page.get("/settings/personality").text
+    assert "Anything to add" in shown
+    box = r'<textarea id="p-notes" name="persona_notes" rows="4"\s+maxlength="1000">'
+    assert re.search(box, shown)
+    before = _tokens(page)
+    saved = page.post("/settings/personality", data=_drawn(page, persona_notes=f" {NOTES}\r\n"))
+    assert saved.status_code == 302
+    assert settings_store.overrides(conn) == {"persona_notes": NOTES}
+    told = (
+        "# Who you are\n\n"
+        + personas.load(personas.DEFAULT).prompt
+        + "\n\n## The family's own notes on how you talk\n\n"
+        + NOTES
+        + "\n\n# The job\n\nYou are the private planning assistant"
+    )
+    assert _prefix(page, conn)[0].text.startswith(told)
+    shown = page.get("/settings/personality").text
+    assert "Saved. Changed: notes on how she talks." in shown
+    assert f'maxlength="1000">{NOTES}</textarea>' in shown
+    assert _tokens(page) > before  # what they add to every message is counted
+    history = page.get("/settings").text
+    assert "persona_notes" in history and "Captain" not in history  # not echoed in the log
+
+
+def test_notes_are_kept_under_none_and_unused_and_come_back_with_her(page, conn) -> None:
+    page.post("/settings/personality", data=_drawn(page, persona_notes=NOTES))
+    assert page.post("/settings/personality", data=_drawn(page, persona="none")).status_code == 302
+    assert all("Captain" not in block.text for block in _prefix(page, conn))
+    shown = page.get("/settings/personality").text
+    assert 'name="persona_notes"' not in shown
+    assert "What you added on how she talks is kept for when she is chosen again." in shown
+    # Saved under none, with no box for them, and then with her chosen again.
+    assert page.post("/settings/personality", data=_drawn(page)).status_code == 302
+    again = page.post("/settings/personality", data=_drawn(page, persona="default"))
+    assert again.status_code == 302
+    assert settings_store.overrides(conn) == {"persona_notes": NOTES}
+    assert NOTES in _prefix(page, conn)[0].text
+
+
+def test_a_box_not_sent_leaves_the_notes_and_an_empty_one_drops_them(page, conn) -> None:
+    """A form drawn before there was a box for them leaves them as they are."""
+    page.post("/settings/personality", data=_drawn(page, persona_notes=NOTES))
+    old_form = _form(page, persona="default", persona_text="", about_family="")
+    assert page.post("/settings/personality", data=old_form).status_code == 302
+    assert settings_store.overrides(conn) == {"persona_notes": NOTES}
+    emptied = page.post("/settings/personality", data=_drawn(page, persona_notes=" "))
+    assert emptied.status_code == 302
+    assert settings_store.overrides(conn) == {}
+    assert personas.active(page.app_state.settings) == personas.load(personas.DEFAULT)
+
+
+def test_notes_too_long_are_refused_and_kept(page, conn) -> None:
+    long = "x" * 1_001
+    refused = page.post("/settings/personality", data=_drawn(page, persona_notes=long))
+    assert refused.status_code == 400 and "Nothing was saved" in refused.text
+    assert f">{long}</textarea>" in refused.text and settings_store.overrides(conn) == {}
+
+
+def test_notes_outlast_her_rewrite_being_restored(page, conn) -> None:
+    """They are not a copy of her description, so restoring hers leaves them in force."""
+    rewrite = "You are {name}. Be very brief."
+    page.post("/settings/personality", data=_drawn(page, persona_text=rewrite, persona_notes=NOTES))
+    assert _prefix(page, conn)[0].text.startswith(
+        "# Who you are\n\nYou are Vera. Be very brief.\n\n## The family's own notes"
+    )
+    assert page.post("/settings/personality/restore", data=_form(page)).status_code == 302
+    assert settings_store.overrides(conn) == {"persona_notes": NOTES}
+    first = _prefix(page, conn)[0].text
+    assert first.startswith("# Who you are\n\n" + personas.load(personas.DEFAULT).prompt)
+    assert f"{NOTES}\n\n# The job" in first
+    assert f">{NOTES}</textarea>" in page.get("/settings/personality").text
+
+
+def _rewritten_from(conn, of: str) -> None:
+    """A rewrite of her, written when her own description was `of`."""
+    with transaction(conn):
+        settings_store.set_many(
+            conn, {"persona_text": {"default": {"text": "You are {name}. Dry.", "of": of}}}
+        )
+
+
+def test_the_page_says_when_her_own_description_has_changed_since_she_was_rewritten(
+    page, conn
+) -> None:
+    """Her own, as it was when they rewrote her, with one of its lines worded otherwise then:
+    the page says so above their rewrite, and shows the line as it was and as it is."""
+    hers = personas.load(personas.DEFAULT).character
+    line = "Be recognizably {name} without making every response a demonstration of {name}."
+    assert line in hers
+    _rewritten_from(conn, hers.replace(line, "Be {name}, and do not overdo it."))
+    shown = page.get("/settings/personality").text
+    notice = "Vera's own description has changed since you rewrote her."
+    assert notice in shown and "Your rewrite is as you left it." in shown
+    assert shown.index(notice) < shown.index('name="persona_text"')  # above her description
+    changes = re.search(r'<pre class="changes">(.*?)</pre>', shown, re.S).group(1)
+    assert '<span class="removed">-Be {name}, and do not overdo it.' in changes
+    assert '<span class="added">+Be recognizably {name} without making every response' in changes
+    assert '<span class="same"> ' in changes  # a line either side, as it was
+    assert "@@" not in changes and "---" not in changes  # no headers a family cannot read
+    # With the name they call her, the notice says it.
+    page.post("/settings/personality", data=_drawn(page, persona_name="Juno"))
+    assert "Juno's own description has changed" in page.get("/settings/personality").text
+
+
+def test_changes_far_apart_are_shown_apart_with_what_is_between_left_out() -> None:
+    """Two lines of context either side of each change, and an ellipsis where the rest was."""
+    before = "\n\n".join(f"Paragraph {n}." for n in range(1, 11))
+    now = before.replace("Paragraph 2.", "Paragraph two.")
+    now = now.replace("Paragraph 9.", "Paragraph nine.")
+    assert views.line_changes(before, now) == [
+        {"kind": "same", "text": " Paragraph 1."},
+        {"kind": "same", "text": " "},
+        {"kind": "removed", "text": "-Paragraph 2."},
+        {"kind": "added", "text": "+Paragraph two."},
+        {"kind": "same", "text": " "},
+        {"kind": "same", "text": " Paragraph 3."},
+        {"kind": "same", "text": "…"},
+        {"kind": "same", "text": " Paragraph 8."},
+        {"kind": "same", "text": " "},
+        {"kind": "removed", "text": "-Paragraph 9."},
+        {"kind": "added", "text": "+Paragraph nine."},
+        {"kind": "same", "text": " "},
+        {"kind": "same", "text": " Paragraph 10."},
+    ]
+    assert views.line_changes(before, before) == []
+
+
+def test_no_notice_while_her_own_description_is_as_it_was(page, conn) -> None:
+    """Written from hers as she is now, or before what it was written from was remembered, or not
+    rewritten at all: nothing to say."""
+    assert "own description has changed" not in page.get("/settings/personality").text
+    for of in (personas.load(personas.DEFAULT).character, ""):
+        _rewritten_from(conn, of)
+        shown = page.get("/settings/personality").text
+        assert "This is your rewrite of the original." in shown, repr(of[:20])
+        assert "own description has changed" not in shown and 'class="changes"' not in shown
+
+
+def test_saving_a_changed_rewrite_ends_the_notice(page, conn) -> None:
+    """Saving it unchanged keeps it as it was written; changing it writes it against her now."""
+    _rewritten_from(conn, "You are {name}, as she once was.")
+    assert "own description has changed" in page.get("/settings/personality").text
+    assert page.post("/settings/personality", data=_drawn(page)).status_code == 302
+    assert "own description has changed" in page.get("/settings/personality").text
+    changed = _drawn(page, persona_text="You are {name}. Drier.")
+    assert page.post("/settings/personality", data=changed).status_code == 302
+    rewrite = settings_store.overrides(conn)["persona_text"]["default"]
+    assert rewrite["of"] == personas.load(personas.DEFAULT).character
+    shown = page.get("/settings/personality").text
+    assert "own description has changed" not in shown and 'class="changes"' not in shown
+    assert "This is your rewrite of the original." in shown
+
+
+def test_under_none_nothing_is_said_of_her_own_description_changing(page, conn) -> None:
+    _rewritten_from(conn, "You are {name}, as she once was.")
+    page.post("/settings/personality", data=_drawn(page, persona="none"))
+    shown = page.get("/settings/personality").text
+    assert "own description has changed" not in shown and 'class="changes"' not in shown

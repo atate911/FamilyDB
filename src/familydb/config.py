@@ -127,8 +127,8 @@ class Settings(BaseSettings):
     anthropic_model: str = "claude-opus-5"
     # Who the assistant is to the family: a persona's folder in familydb/personas, or "none". Not
     # empty for none: an empty setting means "the default" everywhere else, and would bring her
-    # back. `personas.active` reads it, and lays `persona_name`, `persona_text` and `voice_lines`
-    # over her own.
+    # back. `personas.active` reads it, and lays `persona_name`, `persona_text`, `persona_notes`
+    # and `voice_lines` over her own.
     persona: str = "default"
     # What the family call her, from the Personality page; empty for her own name. It is theirs
     # whoever she is, and with no persona it is kept but not used: the bot is FamilyDB then.
@@ -137,6 +137,10 @@ class Settings(BaseSettings):
     # rewrite is laid over the persona it was written for; a persona with none uses her own.
     # Unparsed from the environment, because a plain string there is a rewrite, not JSON.
     persona_text: Annotated[dict[str, PersonaRewrite], NoDecode] = Field(default_factory=dict)
+    # The family's own notes on how she talks, from the Personality page, kept after her
+    # description: not a copy of hers, so they last when hers is improved or rewritten. Theirs
+    # whoever she is, and with no persona kept but not used.
+    persona_notes: str = Field(default="", max_length=1_000)
     # Who the family are, in their own words, for every chat: ages, tastes, what to avoid.
     about_family: str = Field(default="", max_length=4_000)
     # The family's own wording for what she says unasked, by event (voice.EVENTS); a line left

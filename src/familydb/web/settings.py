@@ -4,11 +4,14 @@ It writes to one place and one place only, `app_settings`, through `store.settin
 here can reach an idea, a plan or a message. Every change is logged, and a key's value is never
 what gets logged: only that it was replaced.
 
-The Personality page (/settings/personality) writes the five `PROFILE` settings: which persona,
-the name the family call her, her description as the family rewrote it, her lines likewise, and
-the family's words about themselves. Her description is shown and kept as written, with {name}
-where her name goes, and a rewrite of it is kept for the persona it describes, the one in force
-when the page was drawn. Their name for her is theirs whoever she is, and is what {name} says.
+The Personality page (/settings/personality) writes the six `PROFILE` settings: which persona,
+the name the family call her, her description as the family rewrote it, their notes on how she
+talks, her lines likewise, and the family's words about themselves. Her description is shown and
+kept as written, with {name} where her name goes, and a rewrite of it is kept for the persona it
+describes, the one in force when the page was drawn; when her own has changed since, the page
+says so and shows how. Their name for her and their notes are theirs whoever she is: the name is
+what {name} says, and the notes follow her description, so they last when hers is improved or
+rewritten.
 
 Two forms on the main page, because they are not the same kind of thing. The behaviour form
 carries every box on the page each time it is sent, so an emptied box means "go back to what
@@ -537,6 +540,7 @@ PROFILE_LABELS = {
     "persona": "personality",
     "persona_name": "her name",
     "persona_text": "her description",
+    "persona_notes": "notes on how she talks",
     "about_family": "about the family",
 }
 # A rough count, to say what a description adds to every message; the real one is on /status.
@@ -560,7 +564,17 @@ def personality_page(
     text = (typed.get("persona_text", "") if typed_for_her else "") or speaking.character
     # The name the family call her, with her own as the placeholder: an empty box is hers.
     name = typed.get("persona_name", live.persona_name)
+    notes = typed.get("persona_notes", live.persona_notes)
     about = typed.get("about_family", live.about_family)
+    # What has changed in her own description since the family rewrote her, if anything: their
+    # rewrite remembers hers as it was then, and her folder says what it is now. One saved before
+    # that was remembered cannot tell.
+    rewrite = None if plain else live.persona_text.get(described)
+    changes = (
+        views.line_changes(rewrite.of, personas.load(described).character)
+        if rewrite and rewrite.of
+        else []
+    )
     # What she says unasked: the family's line if they wrote one, hers as the placeholder.
     hers = voice.wording(personas.load(live.persona))
     said_lines = [
@@ -584,7 +598,9 @@ def personality_page(
             name=name,
             own_name=personas.load(live.persona).name,
             text=text,
-            rewritten=not plain and described in live.persona_text,
+            rewritten=rewrite is not None,
+            changes=changes,
+            notes=notes,
             # Under none, whether anything they wrote for a persona is waiting for her.
             kept=plain and any(key in personas.available() for key in live.persona_text),
             about=about,
@@ -595,6 +611,7 @@ def personality_page(
             limits={
                 "persona_name": Settings.model_fields["persona_name"].metadata[0].max_length,
                 "persona_text": PersonaRewrite.model_fields["text"].metadata[0].max_length,
+                "persona_notes": Settings.model_fields["persona_notes"].metadata[0].max_length,
                 "about_family": Settings.model_fields["about_family"].metadata[0].max_length,
             },
         ),
@@ -615,14 +632,18 @@ def save_personality() -> Response | tuple[str, int]:
     of one chosen in the same save, and with no box sent (under none) every rewrite stays as it
     was. Her own text, as written or with her name filled in, is no rewrite at all. Likewise the
     name box: one not sent leaves their name for her as it was, and her own name is none of
-    theirs."""
+    theirs. And the box of their notes on how she talks: one not sent leaves them as they were."""
     if (complaint := auth.refused()) is not None:
         return personality_page(error=complaint, status=400)
     typed = {
         name: request.form.get(name, "") for name in ("persona", "persona_text", "about_family")
     }
     typed.update(
-        {name: request.form[name] for name in ("described", "persona_name") if name in request.form}
+        {
+            name: request.form[name]
+            for name in ("described", "persona_name", "persona_notes")
+            if name in request.form
+        }
     )
     written = {
         name: request.form.get(f"line_{name}", "").strip()
@@ -650,6 +671,8 @@ def save_personality() -> Response | tuple[str, int]:
         if called == personas.load(live.persona).name:
             called = ""
         values["persona_name"] = None if called == _app().base_settings.persona_name else called
+    if "persona_notes" in request.form:
+        values["persona_notes"] = typed["persona_notes"].replace("\r\n", "\n").strip() or None
     if "persona_text" in request.form:
         # A form drawn before the box said whom it described was drawn for the persona in force.
         described = personas.key_for(typed.get("described", live.persona))
