@@ -2,21 +2,25 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import (
     AliasChoices,
+    BaseModel,
+    ConfigDict,
     Field,
     PrivateAttr,
     ValidationError,
     field_validator,
     model_validator,
 )
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 from familydb.errors import ConfigError
 
@@ -68,6 +72,22 @@ def _zone_or_none(value: str | None) -> str | None:
     return candidate
 
 
+class PersonaRewrite(BaseModel):
+    """One persona's character as the family rewrote it on the Personality page.
+
+    It belongs to the persona it rewrote and is laid over her alone: a rewrite of one is never
+    somebody else's character.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    # Her character as the family rewrote it, with {name} where her name goes.
+    text: str = Field(max_length=20_000)
+    # Her own character as it shipped when they wrote it, so the page can tell when hers has
+    # changed since. Empty when that is not known, as for a rewrite saved before it was recorded.
+    of: str = Field(default="", max_length=40_000)
+
+
 def _field_names(cls: type[BaseSettings]) -> dict[str, str]:
     """Every name a field answers to, lowercased, mapped to the field name itself."""
     names: dict[str, str] = {}
@@ -108,8 +128,10 @@ class Settings(BaseSettings):
     # empty for none: an empty setting means "the default" everywhere else, and would bring her
     # back. `personas.active` reads it, and lays `persona_text` and `voice_lines` over her own.
     persona: str = "default"
-    # Her character as the family rewrote it on the Personality page; empty uses her own.
-    persona_text: str = Field(default="", max_length=20_000)
+    # Her character as the family rewrote it on the Personality page, by persona key, so each
+    # rewrite is laid over the persona it was written for; a persona with none uses her own.
+    # Unparsed from the environment, because a plain string there is a rewrite, not JSON.
+    persona_text: Annotated[dict[str, PersonaRewrite], NoDecode] = Field(default_factory=dict)
     # Who the family are, in their own words, for every chat: ages, tastes, what to avoid.
     about_family: str = Field(default="", max_length=4_000)
     # The family's own wording for what she says unasked, by event (voice.EVENTS); a line left
@@ -225,6 +247,41 @@ class Settings(BaseSettings):
             raise ValueError(f"no persona called {value!r}; the choices are {', '.join(choices)}")
         return key
 
+    @field_validator("persona_text", mode="before")
+    @classmethod
+    def _rewrites_by_persona(cls, value: Any) -> Any:
+        """Each rewrite under the persona it belongs to, from any value ever stored or set.
+
+        It used to be one string, the rewrite of the only persona there was, and a setting that
+        fails to load takes every stored setting with it, so a string that is not a JSON object
+        still loads, as hers. A key is read as the persona setting reads it, so "vera" is still
+        her; one with no folder is kept and never used, so removing a folder breaks nothing.
+        """
+        from familydb import personas
+
+        if value is None:
+            return {}
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+            except ValueError:
+                parsed = None
+            if not isinstance(parsed, dict):
+                return {personas.DEFAULT: {"text": value}} if value.strip() else {}
+            value = parsed
+        if not isinstance(value, Mapping):
+            return value  # pydantic says what is wrong with it
+        rewrites: dict[str, Any] = {}
+        for key, entry in value.items():
+            if isinstance(entry, PersonaRewrite):
+                entry = entry.model_dump()
+            elif isinstance(entry, str) or entry is None:
+                entry = {"text": entry}
+            if isinstance(entry, Mapping) and not str(entry.get("text") or "").strip():
+                continue  # nothing written is no rewrite
+            rewrites[personas.key_for(str(key))] = entry
+        return rewrites
+
     @field_validator("family_tz")
     @classmethod
     def _valid_zone(cls, value: str | None) -> str | None:
@@ -271,10 +328,10 @@ class Settings(BaseSettings):
         return self.home_lat is not None and self.home_lat < 0
 
     def masked(self) -> dict[str, Any]:
-        """All settings as a dict, with secrets replaced by a marker, plus the resolved zone."""
+        """All settings as a dict, a rewrite of her as one too, with secrets replaced by a marker,
+        plus the resolved zone."""
         out: dict[str, Any] = {}
-        for name in type(self).model_fields:
-            value = getattr(self, name)
+        for name, value in self.model_dump().items():
             if name in SECRET_FIELDS and value:
                 value = "****"
             out[name] = value

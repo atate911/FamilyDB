@@ -223,6 +223,26 @@ def test_config_says_where_each_setting_came_from(env: Path) -> None:
     assert "gm-hunter2" not in result.output
 
 
+def test_config_prints_a_rewrite_of_her_on_one_line(env: Path) -> None:
+    """Kept per persona, a rewrite prints as what it is stored as, its line breaks escaped, even
+    when it was stored as one string before."""
+    from contextlib import closing
+
+    from familydb.app import build_app
+    from familydb.store import settings as settings_store
+
+    assert runner.invoke(app, ["db", "migrate"]).exit_code == 0
+    application = build_app()
+    with closing(application.connect()) as conn, db.transaction(conn):
+        settings_store.set_many(conn, {"persona_text": "You are {name}.\nDry."})
+    result = runner.invoke(app, ["config"])
+    assert result.exit_code == 0, result.output
+    lines = dict(line.split("=", 1) for line in result.output.splitlines())
+    assert lines["persona_text"] == (
+        "{'default': {'text': 'You are {name}.\\nDry.', 'of': ''}}  # set on the settings page"
+    )
+
+
 def test_debug_cost_reports_the_prefix_and_what_was_spent(env: Path) -> None:
     runner.invoke(app, ["members", "add", "Sam", "--role", "admin"])
     result = runner.invoke(app, ["debug", "cost"])

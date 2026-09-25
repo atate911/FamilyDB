@@ -5,7 +5,7 @@ from dataclasses import replace
 import pytest
 
 from familydb import personas
-from familydb.config import Settings
+from familydb.config import PersonaRewrite, Settings
 
 
 def test_every_persona_ships_whole() -> None:
@@ -41,9 +41,10 @@ def test_a_new_name_reaches_all_of_her_character() -> None:
 
 def test_the_family_s_words_are_laid_over_hers(settings) -> None:
     vera = personas.load(personas.DEFAULT)
+    rewrite = PersonaRewrite(text="  You are {name}. Be very brief.\n")
     theirs = settings.model_copy(
         update={
-            "persona_text": "  You are {name}. Be very brief.\n",
+            "persona_text": {personas.DEFAULT: rewrite},
             "voice_lines": {"reminder": "Psst: {title}.", "follow_up": ""},
         }
     )
@@ -55,6 +56,50 @@ def test_the_family_s_words_are_laid_over_hers(settings) -> None:
     assert speaking.name == "Vera" and speaking.key == personas.DEFAULT
     # What ships is untouched: restoring her original brings her back as she was.
     assert personas.load(personas.DEFAULT) == vera and vera.lines["reminder"] != "Psst: {title}."
+
+
+def test_a_rewrite_is_laid_over_the_persona_it_rewrote_and_nobody_else(
+    settings, monkeypatch
+) -> None:
+    """With a second persona beside her, the family's rewrite of Vera must not become hers."""
+    brief = replace(personas.load(personas.DEFAULT), key="brief", character="You are {name}.")
+    shipped = personas.load
+    monkeypatch.setattr(personas, "load", lambda key: brief if key == "brief" else shipped(key))
+    of_vera = {personas.DEFAULT: PersonaRewrite(text="You are {name}. Dry.")}
+    as_brief = settings.model_copy(update={"persona": "brief", "persona_text": of_vera})
+    assert personas.active(as_brief).character == "You are {name}."
+    as_vera = settings.model_copy(update={"persona_text": of_vera})
+    assert personas.active(as_vera).character == "You are {name}. Dry."
+    both = {**of_vera, "brief": PersonaRewrite(text="You are {name}. Terse.")}
+    assert personas.active(as_brief.model_copy(update={"persona_text": both})).character == (
+        "You are {name}. Terse."
+    )
+    assert personas.active(as_vera.model_copy(update={"persona_text": both})).character == (
+        "You are {name}. Dry."
+    )
+
+
+def test_a_rewrite_written_before_it_was_kept_per_persona_still_loads(monkeypatch) -> None:
+    """It was one string, the rewrite of the only persona there was. A setting that fails to load
+    takes every stored setting with it, so each shape it could have been saved in is still read,
+    as hers."""
+    hers = {personas.DEFAULT: PersonaRewrite(text="You are {name}. Dry.")}
+    assert Settings(_env_file=None, persona_text="You are {name}. Dry.").persona_text == hers
+    assert Settings(_env_file=None, persona_text={"vera": "You are {name}. Dry."}).persona_text == (
+        hers
+    )
+    monkeypatch.setenv("PERSONA_TEXT", "You are {name}. Dry.")  # not JSON, and never was
+    assert Settings(_env_file=None).persona_text == hers
+    monkeypatch.setenv("PERSONA_TEXT", '{"Vera": {"text": "You are {name}. Dry."}}')
+    assert Settings(_env_file=None).persona_text == hers
+    monkeypatch.delenv("PERSONA_TEXT")
+    blanks = ({"default": " "}, {"default": None}, {"default": {"text": ""}}, '{"default": null}')
+    for nothing in (None, "", "  \n", {}, *blanks):
+        assert Settings(_env_file=None, persona_text=nothing).persona_text == {}, nothing
+    # A persona whose folder has gone is kept, unused, rather than breaking every setting.
+    gone = Settings(_env_file=None, persona_text={"hal": {"text": "You are {name}.", "of": "x"}})
+    assert gone.persona_text == {"hal": PersonaRewrite(text="You are {name}.", of="x")}
+    assert personas.active(gone) == personas.load(personas.DEFAULT)
 
 
 def test_a_setting_saved_before_she_had_a_folder_of_her_own_still_finds_her() -> None:
@@ -71,7 +116,7 @@ def test_none_is_plain_whatever_the_family_wrote(settings) -> None:
     plain = settings.model_copy(
         update={
             "persona": "none",
-            "persona_text": "You are Zorblax.",
+            "persona_text": {personas.DEFAULT: PersonaRewrite(text="You are Zorblax.")},
             "voice_lines": {"reminder": "Psst: {title}."},
         }
     )

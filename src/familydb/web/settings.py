@@ -6,7 +6,8 @@ what gets logged: only that it was replaced.
 
 The Personality page (/settings/personality) writes the four `PROFILE` settings: which persona,
 her description as the family rewrote it, her lines likewise, and the family's words about
-themselves. Her description is shown and kept as written, with {name} where her name goes.
+themselves. Her description is shown and kept as written, with {name} where her name goes, and
+a rewrite of it is kept for the persona it describes, the one in force when the page was drawn.
 
 Two forms on the main page, because they are not the same kind of thing. The behaviour form
 carries every box on the page each time it is sent, so an emptied box means "go back to what
@@ -40,7 +41,7 @@ from pydantic import ValidationError
 from familydb import passwords, personas, voice
 from familydb.agent import providers
 from familydb.app import App
-from familydb.config import Settings, apply_overrides
+from familydb.config import PersonaRewrite, Settings, apply_overrides
 from familydb.integrations import google_calendar as google
 from familydb.store import settings as settings_store
 from familydb.store.db import transaction
@@ -546,18 +547,23 @@ def personality_page(
     live = _app().settings
     speaking = personas.active(live)
     told = get_flashed_messages(category_filter=[NOTICE])
-    chosen = personas.key_for((typed or {}).get("persona", live.persona))
-    # A persona nobody has a folder for (a hand-made form) is shown as nothing, and refused on save.
-    original = personas.load(chosen).character if chosen in personas.available() else ""
-    text = (typed or {}).get("persona_text") or speaking.character or original
-    about = (typed or {}).get("about_family", live.about_family)
+    typed = typed or {}
+    chosen = personas.key_for(typed.get("persona", live.persona))
+    # The description box describes the persona in force, whichever the list has chosen, and says
+    # which, so that saving writes it to her. Under none nobody is described and there is no box.
+    described = live.persona
+    plain = described == personas.NONE
+    # What was typed goes back in the box only when it was typed for her.
+    typed_for_her = personas.key_for(typed.get("described", described)) == described
+    text = (typed.get("persona_text", "") if typed_for_her else "") or speaking.character
+    about = typed.get("about_family", live.about_family)
     # What she says unasked: the family's line if they wrote one, hers as the placeholder.
     hers = voice.wording(personas.load(live.persona))
     said_lines = [
         {
             "event": name,
             "label": event.label,
-            "value": (typed or {}).get(f"line_{name}", live.voice_lines.get(name, "")),
+            "value": typed.get(f"line_{name}", live.voice_lines.get(name, "")),
             "placeholder": hers[name],
             "fields": ", ".join("{" + f + "}" for f in voice.usable(name)),
         }
@@ -570,16 +576,19 @@ def personality_page(
             error=error,
             chosen=chosen,
             choices=[personas.load(key) for key in personas.available()],
+            described=described,
             text=text,
-            rewritten=bool(live.persona_text.strip()),
+            rewritten=not plain and described in live.persona_text,
+            # Under none, whether anything they wrote for a persona is waiting for her.
+            kept=plain and any(key in personas.available() for key in live.persona_text),
             about=about,
             said_lines=said_lines,
-            plain=live.persona == personas.NONE,
+            plain=plain,
             her_name=speaking.name,
             tokens=(len(speaking.prompt) + len(live.about_family)) // CHARS_PER_TOKEN,
             limits={
-                name: Settings.model_fields[name].metadata[0].max_length
-                for name in ("persona_text", "about_family")
+                "persona_text": PersonaRewrite.model_fields["text"].metadata[0].max_length,
+                "about_family": Settings.model_fields["about_family"].metadata[0].max_length,
             },
         ),
         status,
@@ -593,13 +602,18 @@ def personality() -> tuple[str, int]:
 
 @bp.post("/settings/personality")
 def save_personality() -> Response | tuple[str, int]:
-    """Who she is and who the family are. Her own text, as written or with her name filled in,
-    is no rewrite at all."""
+    """Who she is and who the family are.
+
+    The description box is a rewrite of the persona it described when the page was drawn, never
+    of one chosen in the same save, and with no box sent (under none) every rewrite stays as it
+    was. Her own text, as written or with her name filled in, is no rewrite at all."""
     if (complaint := auth.refused()) is not None:
         return personality_page(error=complaint, status=400)
     typed = {
         name: request.form.get(name, "") for name in ("persona", "persona_text", "about_family")
     }
+    if "described" in request.form:
+        typed["described"] = request.form["described"]
     written = {
         name: request.form.get(f"line_{name}", "").strip()
         for name in voice.EVENTS
@@ -609,20 +623,23 @@ def save_personality() -> Response | tuple[str, int]:
     if wrong := voice.problems(written):
         what = "; ".join(f"{voice.EVENTS[n].label}: {why}" for n, why in wrong.items())
         return personality_page(error=f"Nothing was saved. {what}.", typed=typed, status=400)
+    live = _app().settings
     chosen = personas.key_for(typed["persona"])
-    text = typed["persona_text"].replace("\r\n", "\n").strip()
-    shipped = personas.load(chosen) if chosen in personas.available() else None
-    hers = voice.wording(personas.load(_app().settings.persona))
+    hers = voice.wording(personas.load(live.persona))
     values: dict[str, Any] = {
         # What the environment already says is not stored over it, as on the main page.
         "persona": None if chosen == _app().base_settings.persona else chosen,
-        "persona_text": (
-            text if shipped and text and text not in (shipped.character, shipped.prompt) else None
-        ),
         "about_family": typed["about_family"].replace("\r\n", "\n").strip() or None,
         # Only lines that differ from hers are the family's own.
         "voice_lines": {name: line for name, line in written.items() if line != hers[name]} or None,
     }
+    if "persona_text" in request.form:
+        # A form drawn before the box said whom it described was drawn for the persona in force.
+        described = personas.key_for(typed.get("described", live.persona))
+        text = typed["persona_text"].replace("\r\n", "\n").strip()
+        rewrites = _rewritten(live, described, text)
+        if rewrites != _rewrites(live):
+            values["persona_text"] = _keeping(rewrites)
     try:
         apply_overrides(
             _app().base_settings,
@@ -639,11 +656,45 @@ def save_personality() -> Response | tuple[str, int]:
 
 @bp.post("/settings/personality/restore")
 def restore_personality() -> Response | tuple[str, int]:
+    """Her original description again: the described persona's rewrite goes, and nobody else's."""
     if (complaint := auth.refused()) is not None:
         return personality_page(error=complaint, status=400)
-    _save({"persona_text": None})
+    live = _app().settings
+    described = personas.key_for(request.form.get("described", live.persona))
+    rewrites = _rewrites(live)
+    if rewrites.pop(described, None) is not None:
+        _save({"persona_text": _keeping(rewrites)})
     flash(RESTORED, NOTICE)
     return redirect(url_for("settings.personality"))
+
+
+def _rewrites(settings: Settings) -> dict[str, dict[str, str]]:
+    """The family's rewrites of her, by persona, as they are stored."""
+    return {key: rewrite.model_dump() for key, rewrite in settings.persona_text.items()}
+
+
+def _rewritten(live: Settings, described: str, text: str) -> dict[str, dict[str, str]]:
+    """The family's rewrites with the described persona's as her box now says.
+
+    A blank box, or her own character as written or with her name filled in, is no rewrite. A
+    text unchanged from theirs keeps theirs as it is; a new one is written against her own
+    character now, so the page can tell later when hers has changed. Only a persona there is a
+    folder for can have been described."""
+    rewrites = _rewrites(live)
+    if described not in personas.available():
+        return rewrites
+    own = personas.load(described)
+    theirs = live.persona_text.get(described)
+    if not text or text in (own.character, own.prompt):
+        rewrites.pop(described, None)
+    elif theirs is None or theirs.text.strip() != text:
+        rewrites[described] = {"text": text, "of": own.character}
+    return rewrites
+
+
+def _keeping(rewrites: dict[str, dict[str, str]]) -> dict[str, dict[str, str]] | None:
+    """What to store for these rewrites: nothing when they are what the environment says."""
+    return None if rewrites == _rewrites(_app().base_settings) else rewrites
 
 
 @bp.post("/settings/sign-out-everyone")
