@@ -287,7 +287,8 @@ for more than a moment, and none asks to be looked at.
   Settings, the name of whoever is signed in (their own password) and signing out are icons at
   the top; Family and Settings are shown only to an admin, who alone may change them. From 52rem
   everything is one bar that stays at the top while the page scrolls. The conversation's place
-  goes by her name, with the conversation's icon; with no persona it is Chat.
+  goes by her name, with the conversation's icon; with no persona it is Chat. It is shown only to
+  a role that may talk to her.
 - **Home.** Signed the way her lines are (her screen, her name, the day), then the box to answer
   her in, its label her question, "What’s on your mind?", with the one word lit, and the ways to
   start under it; under those, how the conversation stands: what she said last (the last day's,
@@ -295,7 +296,10 @@ for more than a moment, and none asks to be looked at.
   left, lit from below; **Next up** on the right, on a green screen beside the
   radar of everything coming (on a phone the words run round the scope, under the box). Then
   anything left to set up, what else is coming, what is left to do with a tick for each, and
-  what was added lately, with a way to add one without her.
+  what was added lately, with a way to add one without her. What a role may not do is not
+  offered (`familydb/roles.py`): without the chat, the day and the page's name stand where her
+  question would; without changing things, each tick is an empty box; and only an admin is shown
+  what is left to set up.
 - **Vera** (the chat). A messaging layout under her name: her lines on the left beside her
   screen, the family's on the right with their initial; while she thinks, her waiting line at the
   foot of the thread and the box closed; the box under the newest line.

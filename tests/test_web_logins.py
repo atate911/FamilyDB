@@ -11,7 +11,7 @@ from typer.testing import CliRunner
 from familydb import family as rules
 from familydb import passwords, roles
 from familydb.app import App
-from familydb.store import ideas, logins, members, messages
+from familydb.store import db, ideas, logins, members, messages, tasks
 from familydb.store import settings as settings_store
 from familydb.web import check_configuration, create_app
 from familydb.web.auth import DEVICE_COOKIE, GLOBAL_ATTEMPTS, MAX_ATTEMPTS
@@ -460,3 +460,58 @@ def test_a_permission_taken_from_kids_is_kept_everywhere(app, sam, family, monke
     assert girls.get("/ideas").status_code == 200  # reading needs nothing more than signing in
     with closing(app.connect()) as conn:
         assert ideas.list_all(conn) == []
+
+
+def test_home_offers_only_what_a_role_may_do(app, sam, family, monkeypatch) -> None:
+    """Home's box, its ways to start and how the conversation stands are the chat's, and a tick
+    is a change: a role without those is shown the rest of Home and no way into a refusal."""
+    girls = _as(app, "the girls", _start(sam, family["girls"].id))
+    girls.post("/you", data={**_tokens(girls, "/you"), "new": KIDS, "again": KIDS})
+    with closing(app.connect()) as conn, db.transaction(conn):
+        asked = messages.insert_in(
+            conn,
+            channel="web",
+            channel_update_id="u1",
+            chat_id="web",
+            member_id=family["sam"].id,
+            text="anything on tonight?",
+            now=NOW_ISO,
+        )
+        messages.mark_processed(conn, asked.id, [], now=NOW_ISO)
+        messages.insert_out(
+            conn,
+            channel="web",
+            chat_id="web",
+            text="The park is free.",
+            reply_to=asked.id,
+            now=NOW_ISO,
+        )
+        towels = tasks.insert(
+            conn,
+            title="Buy paper towels",
+            notes="",
+            owner_id=family["sam"].id,
+            due_at=None,
+            preferred_window="",
+            operation_key="test-towels",
+            channel="web",
+            chat_id="web",
+            now=NOW_ISO,
+        )
+    home = girls.get("/").text  # a kid may do what a parent may, for now
+    assert 'action="/chat"' in home and "The park is free." in home
+    assert f'action="/task/{towels}/done"' in home
+
+    monkeypatch.setitem(roles.PERMISSIONS, "kid", frozenset({"sign_in"}))
+    home = girls.get("/")
+    assert home.status_code == 200
+    assert "/chat" not in home.text  # no box, no ways to start, no way into the conversation
+    assert "The park is free." not in home.text and "ask.js" not in home.text
+    assert "<h1>" in home.text  # a heading still, with the box's label gone
+    assert "Buy paper towels" in home.text and "/done" not in home.text
+    listed = girls.get("/tasks").text
+    assert "Buy paper towels" in listed and f"/task/{towels}/done" not in listed
+    tick = {**_tokens(girls, "/tasks"), "revision": "1"}
+    assert girls.post(f"/task/{towels}/done", data=tick).status_code == 403
+    with closing(app.connect()) as conn:
+        assert tasks.get(conn, towels).status == "open"

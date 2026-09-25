@@ -101,8 +101,12 @@ def home() -> Response | str:
     app = _app()
     today = app.clock.today()
     tz = app.settings.tzinfo
+    visitor = auth.visitor()
     # Setting up is an admin's, so nobody else is sent to it or shown what is left of it.
-    manages = auth.visitor().manages
+    manages = visitor.manages
+    # The box and how the conversation stands are the chat's, so only for a role that may talk
+    # to her (familydb/roles.py): nobody is shown a way into a page that would refuse them.
+    talks = visitor.may("chat")
     with closing(app.connect()) as conn:
         progress = status_page.setup_progress(app, conn)
         if manages and not status_page.ready_to_answer(progress):
@@ -112,7 +116,7 @@ def home() -> Response | str:
         unfinished = status_page.setup_steps(app, conn) if manages else []
         family = [member.display_name for member in member_store.list_all(conn)]
         todo = task_store.list_all(conn, status="open")
-        talk = chat.glance(app, conn)
+        talk = chat.glance(app, conn) if talks else None
     coming = [entry for entry in seen.entries if entry.days()[-1] >= today][:HOME_PLANS]
     newest = sorted(everything, key=lambda idea: idea.created_at, reverse=True)[:HOME_IDEAS]
     return render_template(

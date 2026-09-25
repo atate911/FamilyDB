@@ -99,8 +99,10 @@
 {%- endmacro %}
 
 {# The tick beside an open task: marks it done where it stands, through `update_task` at the
-   revision it was drawn at, and comes back to `back` (home or tasks). #}
+   revision it was drawn at, and comes back to `back` (home or tasks). Ticking is a change, so a
+   role that may not change things (familydb/roles.py) is shown the empty box instead. #}
 {% macro tick(task_id, revision, title, back) -%}
+  {% if visitor().may('change') -%}
   <form class="tick-form" method="post" action="{{ url_for('edits.finish_task', task_id=task_id) }}">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
     <input type="hidden" name="once" value="{{ once_token() }}" />
@@ -108,6 +110,9 @@
     <input type="hidden" name="back" value="{{ back }}" />
     <button class="tick" type="submit">{{ icon('check') }}<span class="sr">Done: {{ title }}</span></button>
   </form>
+  {%- else -%}
+  <span class="task-box" aria-hidden="true"></span>
+  {%- endif %}
 {%- endmacro %}
 
 {# A plan's day as a small calendar leaf: month, day, weekday. #}
