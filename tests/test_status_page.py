@@ -236,5 +236,5 @@ def test_a_new_install_starts_by_adding_yourself(settings, clock, conn) -> None:
     family.add(conn, "Sam", "admin", telegram_id=None, now=NOW_ISO)
     assert all(step["link"] != "/setup/you" for step in setup_steps(app, conn))
     named = settings.model_copy(update={"google_calendar_id": "family@example.com"})
-    calendar = next(s for s in services(App(named, clock)) if "calendar" in str(s).lower())
+    calendar = next(s for s in services(App(named, clock), conn) if "calendar" in str(s).lower())
     assert "familydb auth google" not in str(calendar) and "settings page" in str(calendar)

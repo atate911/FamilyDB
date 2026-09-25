@@ -32,7 +32,10 @@ services:
   # Optional: HTTPS for a server on the internet. Needs WEB_DOMAIN pointing at this machine.
   #   docker compose --profile tls up -d
   # Set WEB_TRUST_PROXY=true in .env so the real visitor address and the HTTPS scheme are read
-  # from Caddy's headers and the login cookie is marked Secure.
+  # from Caddy's headers and the login cookie is marked Secure. WEB_PUBLIC_PORT in .env serves
+  # the page on another port of this machine than 443, one the scans that sweep the internet
+  # rarely try; 80 stays open for the certificate authority's check. Caddy's redirect from 80
+  # then points at 443, where nothing answers, rather than giving the port away.
   caddy:
     image: caddy:2-alpine
     profiles: ["tls"]
@@ -40,7 +43,7 @@ services:
       - bot
     ports:
       - "80:80"
-      - "443:443"
+      - "${WEB_PUBLIC_PORT:-443}:443"
     command: caddy reverse-proxy --from ${WEB_DOMAIN:-localhost} --to bot:8080
     volumes:
       # Its own folder, not ./data: the certificate's private key has no business being inside

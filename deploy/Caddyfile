@@ -10,6 +10,17 @@
 # least twelve characters. Caddy fetches the certificate itself once the domain points here and
 # ports 80 and 443 are open. It replaces any X-Forwarded-For a visitor sends with the visitor's
 # real address, which is what the bot's lockout counts.
+#
+# On another port than 443, one the internet's scans rarely try, put this first, with that port,
+# add `tls { issuer acme { disable_tlsalpn_challenge } }` inside the site, and open 80 and that
+# port instead of 80 and 443 (80 answers only the certificate authority's check):
+#
+#   {
+#   	https_port 24613
+#   	auto_https disable_redirects
+#   }
+#
+# `sudo /opt/familydb/scripts/maintain.sh https --port random` writes all of it for you.
 familydb.example.com {
 	reverse_proxy 127.0.0.1:8080
 }

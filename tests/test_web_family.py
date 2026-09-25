@@ -43,14 +43,14 @@ def test_the_list_shows_everybody_and_how_the_bot_knows_them(page, family) -> No
     text = page.get("/family").text
     assert "Sam" in text and "Alex" in text and "the girls" in text
     assert "Telegram 1001" in text
-    assert "named in ideas, does not message the bot" in text  # a kid with no channel
+    assert "named in ideas and plans" in text  # a kid with no channel and no password
     assert 'href="/family"' in page.get("/plans").text  # and the bar reaches it
 
 
 def test_somebody_can_be_added_from_the_page(page, conn) -> None:
     sent = page.post(
         "/family",
-        data={"csrf": _token(page), "name": "Jo", "role": "member", "telegram_id": "1003"},
+        data={"csrf": _token(page), "name": "Jo", "role": "parent", "telegram_id": "1003"},
     )
     assert sent.status_code == 302 and sent.headers["Location"] == "/family"
     jo = members.find_by_name(conn, "Jo")
@@ -59,7 +59,7 @@ def test_somebody_can_be_added_from_the_page(page, conn) -> None:
 
 
 def test_a_name_that_is_taken_is_refused_with_the_reason(page, conn) -> None:
-    page.post("/family", data={"csrf": _token(page), "name": "SAM", "role": "member"})
+    page.post("/family", data={"csrf": _token(page), "name": "SAM", "role": "parent"})
     assert "already somebody called Sam" in _said(page.get("/family"))
     assert len(members.list_all(conn, active_only=False)) == 3
 
@@ -102,7 +102,7 @@ def test_the_last_admin_cannot_be_switched_off_from_the_page(page, conn, family)
 def test_a_form_drawn_before_somebody_else_saved_is_refused(page, conn, family) -> None:
     alex = family["alex"]
     stale = _revision(page, alex.id)
-    form = {"csrf": _token(page), "role": "member", "active": "yes", "telegram_id": "1002"}
+    form = {"csrf": _token(page), "role": "parent", "active": "yes", "telegram_id": "1002"}
     page.post(f"/family/{alex.id}", data={**form, "revision": stale, "name": "Al"})
     page.post(f"/family/{alex.id}", data={**form, "revision": stale, "name": "Lex"})
     assert "changed since you opened" in _said(page.get(f"/family/{alex.id}"))
@@ -144,7 +144,7 @@ def test_a_stranger_who_messaged_the_bot_can_be_added_from_the_page(
 
     sent = page.post(
         "/family",
-        data={"csrf": _token(page), "name": "Robin", "role": "member", "telegram_id": "5555"},
+        data={"csrf": _token(page), "name": "Robin", "role": "parent", "telegram_id": "5555"},
     )
     assert sent.status_code == 302
     assert members.find_by_name(conn, "Robin").channel_user_id == "5555"

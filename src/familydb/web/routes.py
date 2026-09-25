@@ -28,7 +28,7 @@ from familydb.store import places as place_store
 from familydb.store import plans as plan_store
 from familydb.store import tasks as task_store
 from familydb.store.ideas import KIND_SUGGESTIONS
-from familydb.web import agenda, views
+from familydb.web import agenda, auth, views
 from familydb.web import status as status_page
 from familydb.web.chat import WHO_KEY
 
@@ -97,13 +97,15 @@ def home() -> Response | str:
         return redirect(url_for("web.ideas", **request.args))
     app = _app()
     today = app.clock.today()
+    # Setting up is an admin's, so nobody else is sent to it or shown what is left of it.
+    manages = auth.visitor().manages
     with closing(app.connect()) as conn:
         progress = status_page.setup_progress(app, conn)
-        if not status_page.ready_to_answer(progress):
+        if manages and not status_page.ready_to_answer(progress):
             return redirect(url_for("setup.overview"))
         seen = agenda.read(app, conn, today, today + timedelta(days=HOME_AHEAD_DAYS))
         everything = idea_store.list_all(conn)
-        unfinished = status_page.setup_steps(app, conn)
+        unfinished = status_page.setup_steps(app, conn) if manages else []
     coming = [entry for entry in seen.entries if entry.days()[-1] >= today][:HOME_PLANS]
     newest = sorted(everything, key=lambda idea: idea.created_at, reverse=True)[:HOME_IDEAS]
     return render_template(

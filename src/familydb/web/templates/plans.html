@@ -92,15 +92,17 @@
           <label for="location">Where</label>
           <input id="location" name="location" />
         </div>
-        <div class="field">
-          <label for="who">Who</label>
-          <select id="who" name="who">
-            <option value="">nobody in particular</option>
-            {% for name in family %}
-              <option value="{{ name }}" {{ 'selected' if name == who }}>{{ name }}</option>
-            {% endfor %}
-          </select>
-        </div>
+        {% if not visitor().member %}
+          <div class="field">
+            <label for="who">Who</label>
+            <select id="who" name="who">
+              <option value="">nobody in particular</option>
+              {% for name in family %}
+                <option value="{{ name }}" {{ 'selected' if name == who }}>{{ name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        {% endif %}
         <div class="field wide">
           <label for="notes">Notes</label>
           <textarea id="notes" name="notes" rows="2"></textarea>

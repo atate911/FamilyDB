@@ -68,7 +68,7 @@ def family(conn: sqlite3.Connection) -> dict[str, Member]:
             conn, "Sam", "admin", channel="telegram", channel_user_id="1001", now=NOW_ISO
         )
         alex = members.add(
-            conn, "Alex", "member", channel="telegram", channel_user_id="1002", now=NOW_ISO
+            conn, "Alex", "parent", channel="telegram", channel_user_id="1002", now=NOW_ISO
         )
         girls = members.add(conn, "the girls", "kid", now=NOW_ISO)
     return {"sam": sam, "alex": alex, "girls": girls}
