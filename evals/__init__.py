@@ -7,6 +7,7 @@ default model. Run by hand when a prompt, a tool description or the model change
     uv run python -m evals --repeat 3          # how often each passes, not just whether
     uv run python -m evals --provider anthropic --model claude-haiku-4-5
     uv run python -m evals --case sushi_open_now --show
+    uv run python -m evals --persona default --persona none   # her against none, and her cost
 
 Grading is code, never another model: which tools ran with which arguments, what was saved, and
 what the reply says. A check names what it wants, so a failure says what went wrong.

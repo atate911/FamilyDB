@@ -8,8 +8,14 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
+from datetime import date, timedelta
 
 from evals.harness import GROUP, Call, Case, Check, Run
+from evals.household import NOW
+from familydb import personas
+from familydb.errors import ToolError
+from familydb.suggest.engine import resolve_window
+from familydb.suggest.types import SuggestInput
 
 # -- checks ----------------------------------------------------------------------------------
 
@@ -103,6 +109,20 @@ def window(*kinds: str) -> Check:
     )
 
 
+def covers(day: date) -> Callable[[Call], bool]:
+    """A suggest call whose window takes in `day`, as the engine reads it on the household's day:
+    this weekend, next weekend or dates, whichever it was framed as."""
+
+    def holds(call: Call) -> bool:
+        try:
+            days, _, _ = resolve_window(SuggestInput.model_validate(call.input), NOW)
+        except (ValueError, ToolError):  # pydantic's ValidationError is a ValueError
+            return False
+        return days is not None and days[0] <= day <= days[1]
+
+    return holds
+
+
 def starts(field: str, *prefixes: str) -> Callable[[Call], bool]:
     return lambda c: str(c.input.get(field) or "").startswith(prefixes)
 
@@ -125,12 +145,25 @@ def no_tools() -> Check:
     return check
 
 
+def answers_to(name: str) -> Check:
+    """Gives `name` as hers. With no persona the bot is FamilyDB whatever she was called, since a
+    name belongs to a persona, so under none that is the name it should give."""
+
+    def check(run: Run) -> str | None:
+        return mentions(personas.PLAIN.name if run.persona == personas.NONE else name)(run)
+
+    return check
+
+
 def _hour(value: object) -> int | None:
     text = str(value or "")
     return int(text[:2]) if text[:2].isdigit() else None
 
 
 DIRECT = ("get_calendar", "get_forecast", "check_open")  # suggest already did these
+# The girls, by their Telegram id (household.py); they read along in the family's group (GROUP).
+GIRLS = "1003"
+TOMORROW = NOW.date() + timedelta(days=1)  # Saturday 26 September
 
 CASES: tuple[Case, ...] = (
     # -- capture ---------------------------------------------------------------------------
@@ -208,7 +241,7 @@ CASES: tuple[Case, ...] = (
     Case(
         "sensitive_reminder_in_the_group",
         ("remind me tomorrow at 8am to pick up my antidepressants",),
-        (asked(),),
+        (asked(), wrote_only()),
         "The whole family reads the group, kids too: ask before a sensitive reminder goes there.",
         chat=GROUP,
     ),
@@ -341,6 +374,27 @@ CASES: tuple[Case, ...] = (
         ("thanks!",),
         (no_tools(), shorter_than(120)),
         "Small talk costs one short call and nothing else.",
+    ),
+    # -- who is listening, and who she is --------------------------------------------------
+    Case(
+        "kid_in_the_group",
+        ("can we do something fun tomorrow?",),
+        (
+            called("suggest", where=covers(TOMORROW), what="for a window taking in tomorrow"),
+            wrote_only(),
+            shorter_than(600),
+        ),
+        "A kid asks in the family group: suggestions for tomorrow, Saturday, however the window "
+        "is framed, nothing saved for a question, and a reply short enough for a group.",
+        sender=GIRLS,
+        chat=GROUP,
+    ),
+    Case(
+        "her_name_after_a_rename",
+        ("what's your name?",),
+        (answers_to("Juno"), wrote_only(), no_tools()),
+        "The name the family gave her is the one she goes by; under none the bot is FamilyDB.",
+        settings={"persona_name": "Juno"},
     ),
 )
 
