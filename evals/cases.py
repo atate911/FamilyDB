@@ -166,6 +166,24 @@ def cancelled(*, by_event: bool = False) -> Check:
     return check
 
 
+def model_calls_at_most(limit: int) -> Check:
+    """What it cost to answer, in model calls: remembering alone needs no second one."""
+
+    def check(run: Run) -> str | None:
+        return None if run.model_calls <= limit else f"{run.model_calls} model calls, over {limit}"
+
+    return check
+
+
+def remembered(test: Callable[[dict], bool], what: str) -> Check:
+    """A successful remember call with a change that `test` is true of."""
+    return called(
+        "remember",
+        where=lambda c: any(test(change) for change in c.input.get("changes") or []),
+        what=what,
+    )
+
+
 def _hour(value: object) -> int | None:
     text = str(value or "")
     return int(text[:2]) if text[:2].isdigit() else None
@@ -408,6 +426,51 @@ CASES: tuple[Case, ...] = (
             wrote_only("create_event", "update_event", "delete_event", "update_idea"),
         ),
         "A swap is the new plan first, then the old one cancelled, its idea back on the list.",
+    ),
+    # -- remembering -----------------------------------------------------------------------
+    Case(
+        "remember_alone",
+        ("fyi the girls are vegetarian now, so no more burger places for them",),
+        (
+            remembered(
+                lambda change: (
+                    "vegetarian" in str(change.get("fact", "")).casefold()
+                    and "girl" in str(change.get("about", "")).casefold()
+                ),
+                "vegetarian, about the girls",
+            ),
+            wrote_only("remember"),
+            model_calls_at_most(1),
+        ),
+        "Something lasting about the family is remembered, and saying so costs no second call.",
+    ),
+    Case(
+        "remember_in_a_ramble",
+        (
+            "(voice note) so we're thinking about the aquarium in Newport sometime, oh and Alex "
+            "is allergic to shellfish now apparently, keep that in mind for restaurants",
+        ),
+        (
+            remembered(
+                lambda change: (
+                    "shellfish" in str(change.get("fact", "")).casefold() and change.get("firm")
+                ),
+                "a firm shellfish allergy",
+            ),
+            called("add_idea", 1, lambda c: "aquarium" in str(c.input).casefold(), "the aquarium"),
+            wrote_only("remember", "add_idea"),
+        ),
+        "An idea and something to remember in one breath: both kept, the allergy as a must.",
+    ),
+    Case(
+        "feedback_is_not_a_dislike",
+        ("the ramen place was a bit disappointing this time, 6/10",),
+        (
+            called("record_outcome", 1),
+            never("remember"),
+            wrote_only("record_outcome", "update_idea"),
+        ),
+        "One disappointing visit is feedback, not a lasting dislike.",
     ),
     # -- safety and style ------------------------------------------------------------------
     Case(

@@ -71,7 +71,8 @@ Context is built in three layers, and every piece of information belongs to exac
 - A hand-back ends the work. When a worker has made its one hand-back call, the turn is over;
   no further paid call is needed for the model to say it has finished.
 - Durable facts the family states ride along on the call that is already happening (the memory
-  deltas of `docs/MEMORY.md`), not on a second call.
+  deltas of `docs/MEMORY.md`), not on a second call. Built: one `remember` tool, and when
+  remembering is all a message needs, the reply comes in that same call and ends the turn.
 - What the model claims that code can check, code checks: an idea id exists, a date is inside the
   window, a place is the one asked about. A failed check is reported, not silently corrected.
 - Every call is recorded: which kind, which model, tokens, estimated cost, outcome. A reply is
@@ -176,9 +177,10 @@ and it works by choosing what goes in, not by squeezing words:
 - **The prefix stays still** (to come as a check). The parts before the conversation are cached
   by the provider, which is the biggest saving there is. The composer must never tailor them to a
   message; selected parts belong after them.
-- **Reading the answer** (to come). The one place that validates what comes back, checks the
-  model's claims that code can check (the idea exists, the date is inside the window), and,
-  later, takes the memory changes of `docs/MEMORY.md` out of the answer.
+- **Reading the answer** (to come). The one place that validates what comes back, and checks the
+  model's claims that code can check (the idea exists, the date is inside the window). The memory
+  changes of `docs/MEMORY.md` did not wait for it: they come back through the `remember` tool,
+  whose rules check them.
 
 Two things it must never do: ask a model to shorten a prompt (it spends tokens to save them,
 and can change the meaning), or rewrite the cached part per request.

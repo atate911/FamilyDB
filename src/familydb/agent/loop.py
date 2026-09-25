@@ -83,6 +83,7 @@ def run_turn(
     kind: str | None = None,
     sections: dict[str, int] | None = None,
     final_tools: frozenset[str] = frozenset(),
+    closing_tools: frozenset[str] = frozenset(),
 ) -> TurnResult:
     """Drive one inbound message to a reply.
 
@@ -97,6 +98,10 @@ def run_turn(
     `final_tools` are the tools whose success is the turn's result (a worker's hand-back): once
     one succeeds, and nothing else in that step failed, the turn ends there rather than paying
     for another call only for the model to say it is done. A failed one goes back to the model.
+
+    `closing_tools` may end a chat turn in the same way, with the reply the model handed over in
+    their input (`ToolContext.offer_reply`), but only when they are all the step did and all of
+    them succeeded: anything else run beside them has a result the model has not read yet.
     """
     request = TurnRequest(
         system=system,
@@ -249,6 +254,9 @@ def run_turn(
             )
         if _handed_back(exchange, final_tools):
             return TurnResult("ok", reply.text, actions, iteration, totals, provider=active.name)
+        offered = ctx.take_reply()
+        if offered and _closed(exchange, closing_tools):
+            return TurnResult("ok", offered, actions, iteration, totals, provider=active.name)
 
     return TurnResult(
         "failed", "", actions, limit, totals, error="max_iterations", provider=active.name
@@ -261,6 +269,14 @@ def _handed_back(exchange: Exchange, final_tools: frozenset[str]) -> bool:
     if any(outcome.is_error for outcome in outcomes):
         return False
     return any(outcome.name in final_tools for outcome in outcomes)
+
+
+def _closed(exchange: Exchange, closing_tools: frozenset[str]) -> bool:
+    """Whether this step was only tools that may close a turn, and every one of them worked."""
+    outcomes = exchange.outcomes
+    return bool(outcomes) and all(
+        outcome.name in closing_tools and not outcome.is_error for outcome in outcomes
+    )
 
 
 def _estimate(request: TurnRequest, provider: Provider, surface: str, settings: Settings) -> float:

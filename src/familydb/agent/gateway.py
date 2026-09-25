@@ -64,6 +64,9 @@ class CallSpec:
     prompt: str  # the file in agent/prompts/; "system" also brings the family and the ideas
     tools: tuple[str, ...] | None  # None: every chat tool, the same list on every turn
     hand_back: tuple[str, ...] = ()  # the tools whose success is the result of a worker turn
+    # Tools that may end a chat turn with the reply they carry, when they are all a step did:
+    # remembering needs no second call just to say "noted" (tools/memory.py).
+    closes: tuple[str, ...] = ()
     web_searches: int | None = None  # hosted web search, capped; None means no web at all
     iterations: str = "agent_max_iterations"  # the setting that caps model calls in one turn
     effort: str | None = None  # the setting naming the effort; None is the provider's default
@@ -74,7 +77,7 @@ class CallSpec:
         return self.web_searches is not None
 
 
-_CHAT = {"surface": "chat", "prompt": "system", "tools": None}
+_CHAT = {"surface": "chat", "prompt": "system", "tools": None, "closes": ("remember",)}
 # A worker's only real output is one hand-back call, a few hundred tokens. The cap bounds a
 # runaway turn and leaves room for the thinking every vendor counts against it at low effort.
 WORKER_MAX_TOKENS = 4000
@@ -225,6 +228,7 @@ def ask(
         kind=call.kind,
         sections=composed.sections,
         final_tools=frozenset(call.hand_back),
+        closing_tools=frozenset(call.closes),
     )
 
 

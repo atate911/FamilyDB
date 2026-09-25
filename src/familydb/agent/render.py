@@ -12,6 +12,7 @@ from typing import Any
 from familydb.availability import calendar_available, weather_available, web_tools_available
 from familydb.clock import Clock
 from familydb.config import Settings
+from familydb.memory import Chosen, line_of
 from familydb.store.ideas import Idea
 from familydb.store.members import Member
 
@@ -122,6 +123,18 @@ def render_location_line(
         f"{sender}'s location, from their phone {minutes_ago} min ago: {where}"
         f'({lat:.4f}, {lon:.4f}). For "near here" or "open now", suggest uses it.'
     )
+
+
+def render_memories(chosen: Chosen) -> str | None:
+    """What the family told the bot about itself that goes with this message (familydb/memory.py),
+    for the current turn only: it is chosen per message, so it never goes near the cache."""
+    if not chosen.memories:
+        return None
+    lines = ["What the family has told you about itself (m numbers are for remember):"]
+    lines += [line_of(memory) for memory in chosen.memories]
+    if chosen.left_out:
+        lines.append(f"({chosen.left_out} more, on other things.)")
+    return "\n".join(lines)
 
 
 def render_folded_line(lines: list[str]) -> str:

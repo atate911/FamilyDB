@@ -15,8 +15,11 @@ from typing import Any
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
+from familydb.memory import words
 from familydb.store.ideas import Idea
-from familydb.store.messages import Message
+from familydb.store.members import Member
+from familydb.store.memories import Memory
+from familydb.store.messages import VOICE_PREFIX, Message, as_said
 from familydb.store.outcomes import Outcome
 from familydb.store.places import Place
 from familydb.store.plans import Plan
@@ -154,6 +157,97 @@ def idea_row(idea: Idea, tz: ZoneInfo) -> dict[str, Any]:
         "details": details_text(idea),
         "pending": idea.enrichment == "pending",
     }
+
+
+# Each kind of memory in the page's words, in the order the add form offers them.
+MEMORY_KINDS = {
+    "food": "food and drink",
+    "activities": "things to do",
+    "places": "places",
+    "health": "health and needs",
+    "routine": "routines",
+    "other": "anything else",
+}
+# How much of the message a memory came from the page shows.
+SOURCE_CHARS = 140
+
+
+def excerpt(text: str, fact: str, room: int = SOURCE_CHARS) -> str:
+    """The part of a message a memory came from: around the first of its words found in it, so
+    a long voice note shows the line that mattered rather than how it began."""
+    text = " ".join(text.split())
+    if len(text) <= room:
+        return text
+    lowered = text.casefold()
+    found = [lowered.find(word) for word in words(fact)]
+    at = min((index for index in found if index >= 0), default=0)
+    start = max(0, min(at - room // 3, len(text) - room))
+    piece = text[start : start + room]
+    if start > 0 and " " in piece:
+        piece = "…" + piece.split(" ", 1)[1]
+    if start + room < len(text) and " " in piece:
+        piece = piece.rsplit(" ", 1)[0] + "…"
+    return piece
+
+
+def memory_row(memory: Memory, today: date, tz: ZoneInfo) -> dict[str, Any]:
+    """One memory as the page shows it, with where it came from in the family's own words."""
+    when = day_text(local_day(memory.created_at, tz))
+    who = memory.said_by_name
+    if memory.source_message_id is None:
+        source = f"Added on this page{f' by {who}' if who else ''}, {when}"
+        said = None
+    else:
+        text = as_said(memory.source_text or "")
+        voiced = text.startswith(VOICE_PREFIX)
+        source = f"{who or 'Somebody'}, {when}{', in a voice note' if voiced else ''}"
+        said = excerpt(text.removeprefix(VOICE_PREFIX), memory.fact) or None
+    return {
+        "id": memory.id,
+        "fact": memory.fact,
+        "about": memory.about_name or "The family",
+        "kind": MEMORY_KINDS.get(memory.category, memory.category),
+        "firm": memory.firm,
+        "guess": memory.inferred,
+        "until": day_text(memory.until) if memory.until else None,
+        "ended": bool(memory.until and memory.until < today.isoformat()),
+        "source": source,
+        "said": said,
+        "gone": (
+            f"forgotten {day_text(local_day(memory.forgotten_at, tz))}"
+            + (f" by {memory.forgotten_by_name}" if memory.forgotten_by_name else "")
+            if memory.forgotten_at
+            else None
+        ),
+    }
+
+
+def memory_page(
+    memories: list[Memory], people: list[Member], today: date, tz: ZoneInfo
+) -> dict[str, Any]:
+    """What the page lists: what is remembered, by whom it is about (the family first, then each
+    person in the family's order), and what was forgotten. Replaced ones are history."""
+    kept = [m for m in memories if m.status == "active"]
+    order = [None, *(person.id for person in people)]
+    names = {person.id: person.display_name for person in people}
+    groups = []
+    for member_id in order:
+        rows = [memory_row(m, today, tz) for m in kept if m.member_id == member_id]
+        if rows:
+            groups.append(
+                {
+                    "who": names.get(member_id, "The family"),
+                    "family": member_id is None,
+                    "rows": rows,
+                }
+            )
+    strays = [m for m in kept if m.member_id is not None and m.member_id not in names]
+    if strays:  # about somebody since switched off the family list
+        groups.append(
+            {"who": "Others", "family": False, "rows": [memory_row(m, today, tz) for m in strays]}
+        )
+    forgotten = [memory_row(m, today, tz) for m in memories if m.status == "forgotten"]
+    return {"groups": groups, "forgotten": forgotten}
 
 
 def task_brief(task: Task, tz: ZoneInfo, today: date) -> dict[str, Any]:

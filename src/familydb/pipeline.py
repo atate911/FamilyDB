@@ -9,7 +9,7 @@ from contextlib import closing
 from datetime import datetime
 from typing import Any
 
-from familydb import personas, voice, whereabouts
+from familydb import memory, personas, voice, whereabouts
 from familydb.agent import gateway, spending
 from familydb.agent.history import load_history
 from familydb.agent.loop import MessagesAPI, TurnResult
@@ -17,6 +17,7 @@ from familydb.agent.providers import Audio
 from familydb.agent.render import (
     render_folded_line,
     render_location_line,
+    render_memories,
     render_retry_note,
     render_user_turn,
 )
@@ -492,6 +493,11 @@ def _think(
                 whereabouts.minutes_ago(shared, app.clock.now()),
             )
         )
+    remembered = render_memories(
+        memory.choose(conn, msg.text, sender_id=member.id, today=app.clock.today())
+    )
+    if remembered:
+        current.append(remembered)
     if taken:
         current.append(render_folded_line([held.text for held in taken]))
     if retry:

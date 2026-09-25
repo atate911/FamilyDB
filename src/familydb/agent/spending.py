@@ -40,6 +40,7 @@ DONE = {
     "add_idea": ("Saved idea", "idea_id"),
     "update_idea": ("Updated idea", "idea_id"),
     "record_outcome": ("Recorded outcome", "outcome_id"),
+    "remember": ("Noted what you told me", "memory_id"),
     "save_place": ("Saved place details", "idea_id"),
     "skip_place": ("Marked lookup skipped", "idea_id"),
 }

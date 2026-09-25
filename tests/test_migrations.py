@@ -104,7 +104,8 @@ def test_a_database_that_ran_the_retired_0007_still_gets_what_follows(tmp_path):
         conn.execute("DROP TABLE member_logins")
         conn.execute("ALTER TABLE ideas DROP COLUMN happens_from")
         conn.execute("ALTER TABLE ideas DROP COLUMN happens_until")
-        assert db.migrate(conn) == [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+        conn.execute("DROP TABLE memories")
+        assert db.migrate(conn) == [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
         columns = {row["name"] for row in conn.execute("PRAGMA table_info(llm_calls)")}
         assert {"provider", "web_searches", "cost_usd", "cost_estimated"} <= columns
 

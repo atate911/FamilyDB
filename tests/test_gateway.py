@@ -64,6 +64,8 @@ def test_each_kind_is_declared_whole(kind, registry, settings) -> None:
     if call.tools is None:  # the chat tools: never the ones a worker hands back with
         assert call.web_searches is None and not call.hand_back
         assert all(not specs[t.name].worker_only for t in compose.tool_defs(call, registry))
+        # A tool that may close a chat turn is one of the chat's own, and writes something.
+        assert all(specs[name].writes and not specs[name].worker_only for name in call.closes)
     else:  # a worker: its own tools, its hand-back among them, and a cap on the web
         assert set(call.tools) <= set(specs) and set(call.hand_back) <= set(call.tools)
         assert all(specs[name].worker_only for name in call.tools)

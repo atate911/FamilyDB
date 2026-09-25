@@ -22,6 +22,7 @@ from familydb.app import App
 from familydb.availability import calendar_available
 from familydb.store import ideas as idea_store
 from familydb.store import members as member_store
+from familydb.store import memories as memory_store
 from familydb.store import messages as message_store
 from familydb.store import outcomes as outcome_store
 from familydb.store import places as place_store
@@ -239,6 +240,22 @@ def edit_idea(idea_id: int) -> str:
     if record is None:
         abort(404)
     return _idea_form(record)
+
+
+@bp.get("/memory")
+def memory() -> str:
+    """What the family has told her about itself, and what it asked her to forget. Reading only:
+    the forms on it are `edits.py`'s, through the `remember` tool."""
+    app = _app()
+    with closing(app.connect()) as conn:
+        everything = memory_store.list_all(conn)
+        people = member_store.list_all(conn)
+    return render_template(
+        "memory.html",
+        **views.memory_page(everything, people, app.clock.today(), app.settings.tzinfo),
+        people=people,
+        kinds=views.MEMORY_KINDS,
+    )
 
 
 @bp.get("/restaurants")

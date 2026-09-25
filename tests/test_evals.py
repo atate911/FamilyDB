@@ -102,3 +102,18 @@ def test_an_event_put_on_by_hand_is_taken_off_by_its_id(settings) -> None:
     run = run_case(case, settings, api=api)
     assert grade(case, run) == []
     assert [c.name for c in run.calls] == ["get_calendar", "delete_event"]
+
+
+def test_remembering_alone_is_graded_on_what_it_cost(settings) -> None:
+    case = by_name("remember_alone")
+    change = {"action": "add", "about": "the girls", "category": "food", "fact": "vegetarian"}
+    once = _answer(
+        [fakes.tool_use("t1", "remember", {"changes": [change], "reply": "Noted: vegetarian."})]
+    )
+    run = run_case(case, settings, api=once)
+    assert grade(case, run) == [] and run.reply == "Noted: vegetarian."
+    twice = _answer(
+        [fakes.tool_use("t1", "remember", {"changes": [change]})],
+        [fakes.text("Noted: vegetarian.")],
+    )
+    assert "2 model calls, over 1" in grade(case, run_case(case, settings, api=twice))

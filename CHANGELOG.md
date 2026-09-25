@@ -28,6 +28,14 @@ older than what is installed. It gets a date when it is released.
   off. Ideas tied to dates (a festival, a show's run, a concert on the 18th) keep
   them, and are only suggested on those days. Events somebody put on the calendar
   by hand can be moved or taken off too, not only the bot's own.
+- **Remembers what the family says about itself.** "The girls are vegetarian
+  now", "Alex is allergic to shellfish", "no long drives until my back is
+  better": kept, about the person it concerns, as a must or a taste, with its
+  end date when it has one, and weighed whenever it bears on a question. It
+  rides on the call that was happening anyway, and "noted" costs no second one.
+  A page, "What Vera remembers", lists all of it with where each came from, and
+  forgets anything for good: what was forgotten is not brought back from what
+  was said before.
 - **Fills them in.** A background worker turn looks each new idea up on the web:
   address, opening hours, booking link, price notes, a geocoded travel estimate.
 - **Keeps the calendar.** Confirmed plans are created, moved and cancelled on the

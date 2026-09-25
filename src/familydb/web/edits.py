@@ -1,11 +1,12 @@
-"""Changing an idea, an outcome or a plan from the page.
+"""Changing an idea, an outcome, a plan, a task or what she remembers from the page.
 
 The page does not know how to save anything. Every form here turns into one call to a tool in
-`familydb.tools` — `add_idea`, `update_idea`, `record_outcome`, `create_event`, `update_event`
-and `delete_event` — the code the model calls when somebody asks for the same thing. So a title
-typed into a box is checked the way a title said in chat is checked, a duplicate is caught the
-same way, the transaction is the tool's own, and a calendar that is not connected says so
-instead of half-writing a plan. Nothing in this module reaches a table by itself.
+`familydb.tools` — `add_idea`, `update_idea`, `record_outcome`, `create_event`, `update_event`,
+`delete_event`, the task tools and `remember` — the code the model calls when somebody asks for
+the same thing. So a title typed into a box is checked the way a title said in chat is checked,
+a duplicate is caught the same way, the transaction is the tool's own, and a calendar that is
+not connected says so instead of half-writing a plan. Nothing in this module reaches a table by
+itself.
 
 What the forms cannot do is what the tools cannot do: a number that has been set (a cost level, a
 duration) can be changed but not unset, because `update_idea` reads a missing field as "leave
@@ -49,6 +50,9 @@ SCHEDULED = "On the calendar: {title}."
 MOVED = "Moved to {when}."
 CANCELLED = "Cancelled."
 TICKED = "Done: #{id} {title}."
+REMEMBERED = {"saved": "Remembered: {fact}.", "already remembered": "Already remembered: {fact}."}
+FORGOTTEN = "Forgotten: {fact}. It will not come back from what was said before."
+NEEDS_FACT = "Say what to remember."
 # The pages a tick may send the browser back to, by the name its form gives.
 TICK_PAGES = {"home": "web.home", "tasks": "web.tasks"}
 NEEDS_TITLE = "An idea needs a title."
@@ -397,3 +401,45 @@ def finish_task(task_id: int) -> Response:
         result, complaint = run("update_task", {"task_id": task_id, "status": "done"})
         _say(complaint or TICKED.format(id=task_id, title=result["task"]["title"]))
     return _back(TICK_PAGES.get(request.form.get("back", ""), "web.tasks"))
+
+
+@bp.post("/memory/new")
+@once
+def add_memory() -> Response:
+    """Something the family wants remembered, typed in rather than said: through `remember`,
+    which takes back something forgotten only from a person, never from a conversation."""
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+        return _back("web.memory")
+    fact = _text(request.form, "fact")
+    if not fact:
+        _say(NEEDS_FACT)
+        return _back("web.memory")
+    change = {
+        "action": "add",
+        "fact": fact,
+        "about": _text(request.form, "about") or "family",
+        "category": _text(request.form, "category") or "other",
+        "firm": bool(request.form.get("firm")),
+        "until": _text(request.form, "until") or None,
+    }
+    result, complaint = run("remember", {"changes": [change]})
+    if complaint is None and result is not None:
+        done = result["remembered"][0]
+        complaint = REMEMBERED.get(done["result"], "{fact}").format(fact=done["fact"])
+    _say(complaint or "")
+    return _back("web.memory")
+
+
+@bp.post("/memory/<int(max=9223372036854775807):memory_id>/forget")
+@once
+def forget_memory(memory_id: int) -> Response:
+    """Forget one: kept, marked, so the same thing said before is never saved again."""
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+        return _back("web.memory")
+    result, complaint = run("remember", {"changes": [{"action": "forget", "id": memory_id}]})
+    if complaint is None and result is not None:
+        complaint = FORGOTTEN.format(fact=result["remembered"][0]["fact"])
+    _say(complaint or "")
+    return _back("web.memory")

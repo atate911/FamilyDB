@@ -31,6 +31,7 @@ WRITES = frozenset(
         "delete_event",
         "add_task",
         "update_task",
+        "remember",
     }
 )
 
