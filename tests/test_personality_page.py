@@ -13,6 +13,7 @@ from familydb.config import PersonaRewrite
 from familydb.store import settings as settings_store
 from familydb.store.db import transaction
 from familydb.web import create_app, views
+from familydb.web.settings import CHARS_PER_TOKEN
 
 PASSWORD = "a long family password"
 
@@ -31,7 +32,8 @@ def page(settings, clock, conn, family):
 
 @pytest.fixture
 def brief(monkeypatch):
-    """A second persona beside Vera, as a folder of her own would give her."""
+    """The brief persona beside Vera, standing in with a character of one line, so what the
+    prefix starts with under her is plain to read."""
     stand_in = replace(personas.load(personas.DEFAULT), key="brief", character="You are {name}.")
     shipped = personas.load
     monkeypatch.setattr(personas, "available", lambda: (personas.DEFAULT, "brief"))
@@ -79,7 +81,7 @@ def test_the_page_shows_her_and_links_from_settings(page) -> None:
     # Her description as written, with {name} where her name goes, and the name it stands for.
     assert "You are {name}, an AI assistant" in shown
     assert "{name} is what she is called, Vera, wherever it is written." in shown
-    assert 'value="default" selected>Vera</option>' in shown
+    assert 'value="default" selected>Vera, as first written (about ' in shown
     # What the family call her: nothing of theirs yet, so her own name is the placeholder.
     assert "What she is called" in shown
     assert re.search(r'<input id="p-name"[^>]*value=""[^>]*placeholder="Vera"', shown, re.S)
@@ -492,6 +494,56 @@ def test_notes_outlast_her_rewrite_being_restored(page, conn) -> None:
     assert first.startswith("# Who you are\n\n" + personas.load(personas.DEFAULT).prompt)
     assert f"{NOTES}\n\n# The job" in first
     assert f">{NOTES}</textarea>" in page.get("/settings/personality").text
+
+
+def _listed(page) -> dict[str, str]:
+    """Each choice in the list of personas, by key, as it reads."""
+    shown = page.get("/settings/personality").text
+    return dict(re.findall(r'<option value="([^"]+)"[^>]*>([^<]*)</option>', shown))
+
+
+def test_the_list_says_which_of_her_each_is_and_what_she_adds_to_every_message(page, conn) -> None:
+    """Both ship as Vera, so each is listed by her label, the one the family meet first, with
+    roughly what she would add to every message as she would be if chosen: the name they call
+    her, their rewrite of her and their notes included."""
+    vera, brief = (
+        len(personas.load(key).prompt) // CHARS_PER_TOKEN for key in (personas.DEFAULT, "brief")
+    )
+    assert brief < vera
+    assert list(_listed(page)) == [personas.DEFAULT, "brief", "none"]
+    assert _listed(page) == {
+        "default": f"Vera, as first written (about {vera:,} tokens a message)",
+        "brief": f"Vera, in brief (about {brief:,} tokens a message)",
+        "none": "None: plain and brief",
+    }
+    rewrite = "You are {name}. Dry."
+    changes = {"persona_name": "Juno", "persona_text": rewrite, "persona_notes": NOTES}
+    assert page.post("/settings/personality", data=_drawn(page, **changes)).status_code == 302
+    notes = f"\n\n{personas.NOTES_HEADER}{NOTES}"
+    vera = len("You are Juno. Dry." + notes) // CHARS_PER_TOKEN
+    brief = len(personas.load("brief").character.replace("{name}", "Juno") + notes)
+    brief //= CHARS_PER_TOKEN
+    listed = {
+        "default": f"Juno, as first written (about {vera:,} tokens a message)",
+        "brief": f"Juno, in brief (about {brief:,} tokens a message)",
+        "none": "None: plain and brief",
+    }
+    assert _listed(page) == listed
+    # Under none each is listed as she would come back.
+    assert page.post("/settings/personality", data=_drawn(page, persona="none")).status_code == 302
+    assert _listed(page) == listed
+    assert '<option value="none" selected>' in page.get("/settings/personality").text
+
+
+def test_choosing_the_brief_persona_puts_her_in_force(page, conn) -> None:
+    saved = page.post("/settings/personality", data=_drawn(page, persona="brief"))
+    assert saved.status_code == 302 and settings_store.overrides(conn) == {"persona": "brief"}
+    told = "# Who you are\n\n" + personas.load("brief").prompt + "\n\n# The job\n\n"
+    assert _prefix(page, conn)[0].text.startswith(told)
+    shown = page.get("/settings/personality").text
+    assert 'name="described" value="brief"' in shown
+    assert "You are {name}, an AI with a feminine identity (she/her)." in shown
+    assert _tokens(page) == len(personas.load("brief").prompt) // CHARS_PER_TOKEN
 
 
 def _rewritten_from(conn, of: str) -> None:

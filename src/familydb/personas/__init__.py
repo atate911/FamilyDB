@@ -9,11 +9,13 @@ notes on how she talks, when they have written any, follow her character there, 
 wins over them too. The lines are her wording for what the bot says unasked (`voice.EVENTS`),
 filled in by code, never by a model call.
 
-Each persona ships as a folder here: `persona.toml` names her, `character.md` is her character
-and `lines.toml` her lines, which she may go without (a line she lacks is said plainly). Adding a
-persona is adding a folder. `DEFAULT` is the one the family meets unless they choose another:
-Vera, as she was first written. `NONE` chooses none at all, which is `PLAIN`: the bot speaking
-for itself, with no character and no lines of its own.
+Each persona ships as a folder here: `persona.toml` names her and says which of her she is,
+`character.md` is her character and `lines.toml` her lines, which she may go without (a line she
+lacks is said plainly). Adding a persona is adding a folder. Two may share a name, so her label
+is what tells them apart where they are listed together: a few words with {name} in them, such
+as "{name}, in brief". `DEFAULT` is the one the family meets unless they choose another: Vera, as
+she was first written. `NONE` chooses none at all, which is `PLAIN`: the bot speaking for itself,
+with no character and no lines of its own.
 
 `active(settings)` is the persona in force, and what anything that speaks as her asks: the one
 the `persona` setting chooses, with what the family wrote on the Personality page
@@ -27,7 +29,8 @@ again.
 
 Only turns a person reads carry her character: chat, the digest and retries. The lookup and
 discovery workers, whose prose nobody reads, never do. Every word of it is sent, cached, with
-each message; the Personality page and `familydb debug cost` say what that comes to.
+each message; the Personality page says roughly what each persona would add, and
+`familydb debug cost` what the one in force comes to.
 """
 
 from __future__ import annotations
@@ -61,6 +64,7 @@ class Persona:
     name: str  # what she is called
     character: str  # how she talks, as written: {name} wherever her name goes; empty for none
     lines: Mapping[str, str]  # her wording by voice event; one she has no line for is plain
+    label: str = NAME  # which of her this is: a few words with {name} in them, or just her name
     notes: str = ""  # the family's own notes on how she talks; none ship with her
 
     @property
@@ -69,6 +73,11 @@ class Persona:
         header of their own, and her name in both."""
         told = f"{self.character}\n\n{NOTES_HEADER}{self.notes}" if self.notes else self.character
         return told.replace(NAME, self.name)
+
+    @property
+    def listed_as(self) -> str:
+        """Her label as the family read it, beside the others, with her name in it."""
+        return self.label.replace(NAME, self.name)
 
 
 # The persona the family meets unless they choose another.
@@ -103,9 +112,14 @@ def load(key: str) -> Persona:
     if key not in available():
         raise LookupError(f"no persona called {key!r}")
     folder = resources.files(__name__) / key
-    name = tomllib.loads((folder / MANIFEST).read_text("utf-8")).get("name")
+    manifest = tomllib.loads((folder / MANIFEST).read_text("utf-8"))
+    name = manifest.get("name")
     if not isinstance(name, str) or not name.strip():
         raise ValueError(f"personas/{key}/{MANIFEST} does not give her a name")
+    # Her name is the only thing filled in, so any other brace would be shown as it was written.
+    label = manifest.get("label", NAME)
+    if not isinstance(label, str) or any(brace in label.replace(NAME, "") for brace in "{}"):
+        raise ValueError(f"personas/{key}/{MANIFEST}: her label is words, with no brace but {NAME}")
     lines = folder / LINES
     said = tomllib.loads(lines.read_text("utf-8")) if lines.is_file() else {}
     return Persona(
@@ -113,6 +127,7 @@ def load(key: str) -> Persona:
         name=name.strip(),
         character=(folder / CHARACTER).read_text("utf-8").strip(),
         lines=MappingProxyType({str(event): str(line) for event, line in said.items()}),
+        label=label.strip() or NAME,
     )
 
 

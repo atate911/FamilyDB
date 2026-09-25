@@ -22,8 +22,7 @@
         <select id="p-persona" name="persona">
           {% for persona in choices %}
             <option value="{{ persona.key }}" {% if chosen == persona.key %}selected{% endif %}>
-              {{- persona.name -}}
-            </option>
+              {{- persona.label }} (about {{ "{:,}".format(persona.tokens) }} tokens a message)</option>
           {% endfor %}
           <option value="none" {% if chosen == "none" %}selected{% endif %}>None: plain and brief</option>
         </select>

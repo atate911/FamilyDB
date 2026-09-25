@@ -593,7 +593,7 @@ def personality_page(
             said=told[0] if told else None,
             error=error,
             chosen=chosen,
-            choices=[personas.load(key) for key in personas.available()],
+            choices=_choices(live),
             described=described,
             name=name,
             own_name=personas.load(live.persona).name,
@@ -735,6 +735,18 @@ def _rewritten(live: Settings, described: str, text: str) -> dict[str, dict[str,
 def _keeping(rewrites: dict[str, dict[str, str]]) -> dict[str, dict[str, str]] | None:
     """What to store for these rewrites: nothing when they are what the environment says."""
     return None if rewrites == _rewrites(_app().base_settings) else rewrites
+
+
+def _choices(live: Settings) -> list[dict[str, Any]]:
+    """Each persona there is a folder for, the default first, as she would be if chosen: her
+    label, with the name the family call her in it, and roughly what she would add to every
+    message, their rewrite of her and their notes included."""
+    choices = []
+    for key in sorted(personas.available(), key=lambda key: key != personas.DEFAULT):
+        her = personas.active(live.model_copy(update={"persona": key}))
+        tokens = len(her.prompt) // CHARS_PER_TOKEN
+        choices.append({"key": key, "label": her.listed_as, "tokens": tokens})
+    return choices
 
 
 @bp.post("/settings/sign-out-everyone")

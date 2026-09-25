@@ -1,10 +1,16 @@
 """The persona layer: who the assistant is, as one object, and the one in force."""
 
+import json
+import re
 from dataclasses import replace
 
 import pytest
 
 from familydb import personas
+from familydb.agent import gateway, providers
+from familydb.agent.history import HistoryTurn
+from familydb.agent.prompt import JOB_HEADER, PERSONA_HEADER, load_system_prompt
+from familydb.agent.render import render_user_turn
 from familydb.config import PersonaRewrite, Settings
 
 
@@ -31,12 +37,103 @@ def test_the_default_is_vera_as_she_was_first_written(settings) -> None:
     assert settings.persona == personas.DEFAULT and personas.active(settings) == vera
 
 
+def test_the_brief_persona_is_vera_in_fewer_words() -> None:
+    """Fitted to a family's chat, at about a quarter of the first one's length. She never names
+    herself outright, so a name the family give her is the only one she has."""
+    brief = personas.load("brief")
+    assert brief.name == "Vera" and brief.listed_as == "Vera, in brief"
+    assert brief.character.startswith("You are {name}, an AI with a feminine identity (she/her).")
+    assert len(brief.character) < 4_000
+    assert not re.search(r"\bVera\b", brief.character, re.IGNORECASE)
+    assert personas.DEFAULT == "default"  # the family still meet her as first written
+
+
+def test_no_character_names_a_tool(registry) -> None:
+    """A character is about how she talks. What can be done is the tools' and the job's, which
+    hold whoever she is, and a family can rewrite her. A tool whose name is an everyday word
+    ("now", "suggest") counts as named only when it is written as code."""
+    for key in personas.available():
+        character = personas.load(key).character
+        for tool in registry.names():
+            named = rf"\b{tool}\b" if "_" in tool else f"`{tool}`"
+            assert not re.search(named, character), (key, tool)
+
+
+@pytest.mark.parametrize("key", personas.available())
+def test_she_changes_only_the_persona_part_of_the_request(
+    key, conn, settings, family, registry, clock
+) -> None:
+    """Whoever she is, the model is given the same tools, the same job, the same family and
+    ideas and the same conversation as with none: she changes how things are said, never what
+    is done."""
+
+    def request(persona: str):
+        return gateway.build_request(
+            "chat",
+            conn=conn,
+            settings=settings.model_copy(update={"persona": persona}),
+            registry=registry,
+            provider=providers.build("anthropic", settings, api=object()),
+            current=render_user_turn("Sam", "what should we do?", clock),
+            history=[HistoryTurn("user", "[Sam] hello"), HistoryTurn("assistant", "Hi.")],
+        ).request
+
+    hers, plain = request(key), request(personas.NONE)
+    assert hers.tools == plain.tools
+    assert hers.system[1] == plain.system[1]
+    assert hers.messages == plain.messages
+    told = PERSONA_HEADER + personas.load(key).prompt + JOB_HEADER + load_system_prompt()
+    assert hers.system[0].text == told
+    assert plain.system[0].text == load_system_prompt()
+    # And nothing else: with her first block swapped for none's, it is none's request.
+    assert replace(hers, system=[plain.system[0], *hers.system[1:]]) == plain
+
+
 def test_a_new_name_reaches_all_of_her_character() -> None:
     juno = replace(personas.load(personas.DEFAULT), name="Juno")
     assert juno.prompt.startswith("You are Juno, an AI assistant") and "Vera" not in juno.prompt
     assert "Be recognizably Juno without making every response a demonstration of Juno." in (
         juno.prompt
     )
+
+
+def test_a_label_says_which_of_her_this_is_with_her_name_in_it(settings) -> None:
+    """Two personas may share a name, so the page lists each by her label."""
+    vera = personas.load(personas.DEFAULT)
+    assert vera.label == "{name}, as first written" and vera.listed_as == "Vera, as first written"
+    assert replace(vera, name="Juno").listed_as == "Juno, as first written"
+    called = settings.model_copy(update={"persona": "brief", "persona_name": "Juno"})
+    assert personas.active(called).listed_as == "Juno, in brief"
+    assert personas.PLAIN.label == personas.NAME and personas.PLAIN.listed_as == "FamilyDB"
+
+
+def _loaded(tmp_path, monkeypatch, manifest: str) -> personas.Persona:
+    """A persona called "juno" with this manifest, as the only folder there is, loaded past the
+    cache so each is read as written."""
+    folder = tmp_path / "juno"
+    folder.mkdir(parents=True)
+    (folder / personas.MANIFEST).write_text(manifest, "utf-8")
+    (folder / personas.CHARACTER).write_text("You are {name}.", "utf-8")
+    monkeypatch.setattr(personas.resources, "files", lambda _package: tmp_path)
+    return personas.load.__wrapped__("juno")
+
+
+def test_a_folder_may_go_without_a_label_and_is_listed_by_her_name(tmp_path, monkeypatch) -> None:
+    for number, manifest in enumerate(('name = "Juno"', 'name = "Juno"\nlabel = " "')):
+        juno = _loaded(tmp_path / str(number), monkeypatch, manifest)
+        assert juno.label == personas.NAME and juno.listed_as == "Juno", manifest
+    labelled = 'name = "Juno"\nlabel = " {name}, the third "'
+    assert _loaded(tmp_path / "labelled", monkeypatch, labelled).listed_as == "Juno, the third"
+
+
+def test_a_label_with_any_brace_but_her_name_is_refused(tmp_path, monkeypatch) -> None:
+    """Only {name} is filled in, so any other brace would be shown to the family as written."""
+    labels = ("{title}, in brief", "{name, in brief", "{name}}", "{{name}}", "{}", "{name!r}", 3)
+    refused = re.escape("her label is words, with no brace but {name}")
+    for number, label in enumerate(labels):
+        manifest = f'name = "Juno"\nlabel = {json.dumps(label)}'
+        with pytest.raises(ValueError, match=refused):
+            _loaded(tmp_path / str(number), monkeypatch, manifest)
 
 
 def test_the_family_s_name_for_her_is_her_name_but_never_the_plain_bot_s(settings) -> None:
@@ -155,7 +252,7 @@ def test_a_setting_saved_before_she_had_a_folder_of_her_own_still_finds_her() ->
     for written in ("vera", " Vera ", "VERA", "default", "Default "):
         assert Settings(_env_file=None, persona=written).persona == personas.DEFAULT, written
     assert Settings(_env_file=None, persona=" None ").persona == personas.NONE
-    with pytest.raises(ValueError, match="the choices are default, none"):
+    with pytest.raises(ValueError, match="the choices are brief, default, none"):
         Settings(_env_file=None, persona="hal")
 
 
