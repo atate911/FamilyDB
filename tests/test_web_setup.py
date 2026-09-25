@@ -13,6 +13,7 @@ import pytest
 from familydb.app import App
 from familydb.integrations.geocode import GeoPoint
 from familydb.store import db, knocks, members
+from familydb.store import settings as settings_store
 from familydb.web import create_app
 from tests.conftest import NOW_ISO
 from tests.fakes import FakeGeocoder
@@ -169,7 +170,8 @@ def test_telegram_from_a_token_to_a_linked_phone(fresh, monkeypatch, conn) -> No
     _post(fresh, "you", "/family", name="Sam", role="admin")
     first = fresh.get("/setup/telegram").text
     assert "https://t.me/BotFather" in first and "/newbot" in first
-    assert "<em>Vera</em> or <em>The Tates" in first  # what she is called everywhere else
+    # Her name will do, since the bot's contact follows it once connected.
+    assert "<em>Vera</em> will do. Once the bot is connected" in " ".join(first.split())
 
     _post(fresh, "telegram", "/settings/keys", telegram_bot_token="7123:AAH-token")
     connecting = fresh.get("/setup/telegram").text
@@ -204,6 +206,41 @@ def test_telegram_from_a_token_to_a_linked_phone(fresh, monkeypatch, conn) -> No
     # And the weekend ideas can follow them there.
     _post(fresh, "telegram", "/settings", digest_chat_id="555")
     assert app.settings.digest_chat_id == "555"
+
+
+def test_the_bot_is_named_for_her_or_as_the_admin_likes(fresh, conn) -> None:
+    """While a persona is chosen the running bot gives its Telegram contact her name, the one the
+    family call her included, so the step says hers will do. Under none the contact is left
+    alone, and its name is the admin's to choose in BotFather."""
+    _post(fresh, "you", "/family", name="Sam", role="admin")
+    with db.transaction(conn):
+        settings_store.set_many(conn, {"persona_name": "Juno"})
+    said = " ".join(fresh.get("/setup/telegram").text.split())
+    assert "<em>Juno</em> will do. Once the bot is connected, its name in Telegram follows" in said
+    assert "The Tates" not in said
+
+    with db.transaction(conn):
+        settings_store.set_many(conn, {"persona": "none"})
+    said = " ".join(fresh.get("/setup/telegram").text.split())
+    assert "such as <em>FamilyDB</em> or <em>The Tates\u2019 helper</em>." in said
+    assert "follows hers" not in said
+
+
+def test_the_last_page_says_who_answers(fresh, conn) -> None:
+    said = " ".join(fresh.get("/setup/done").text.split())
+    assert (
+        "Vera is who answers. Her name, how she talks, or no persona at all are chosen under "
+        '<a href="/settings/personality">Personality</a>.'
+    ) in said
+
+    with db.transaction(conn):
+        settings_store.set_many(conn, {"persona": "none"})
+    said = " ".join(fresh.get("/setup/done").text.split())
+    assert (
+        "It answers plainly, with no persona. One can be chosen under "
+        '<a href="/settings/personality">Personality</a>.'
+    ) in said
+    assert "who answers" not in said
 
 
 def test_the_family_step_lets_in_whoever_messaged_the_bot(fresh, conn) -> None:

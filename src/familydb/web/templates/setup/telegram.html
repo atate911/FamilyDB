@@ -20,8 +20,14 @@
         search for <em>BotFather</em> in Telegram and choose the one with the blue tick. It is
         Telegram’s own tool for making bots.</li>
       <li>Send it <code>/newbot</code>.</li>
-      <li>It asks for a <strong>name</strong>: what the family will see, such as
-        <em>{{ assistant }}</em> or <em>The Tates’ helper</em>.</li>
+      {% if has_persona %}
+        <li>It asks for a <strong>name</strong>: what the family will see. <em>{{ assistant }}</em>
+          will do. Once the bot is connected, its name in Telegram follows hers, and changes
+          with it if you rename her under Personality.</li>
+      {% else %}
+        <li>It asks for a <strong>name</strong>: what the family will see, such as
+          <em>{{ assistant }}</em> or <em>The Tates’ helper</em>.</li>
+      {% endif %}
       <li>It asks for a <strong>username</strong>: one word ending in <code>bot</code>, such as
         <em>tate_family_bot</em>. If it is taken, try another.</li>
       <li>It replies with a <strong>token</strong>, a long line like

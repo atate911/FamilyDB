@@ -98,6 +98,30 @@ def _ready(application: App) -> sqlite3.Connection:
 
 FROM_PAGE = "set on the settings page"
 FROM_ENV = "from the environment"
+# How much of a long text on the Personality page `familydb config` prints: enough to tell which
+# text it is. A rewrite of her also holds her whole character as it shipped, a page of prose.
+SHOWN_CHARACTERS = 60
+
+
+def _shown_setting(key: str, value: Any) -> Any:
+    """A setting as `familydb config` prints it, on one line.
+
+    A long text written on the Personality page (`store.settings.PROFILE`), on its own or inside
+    a rewrite of her or her lines, is cut to its start with how long it really is, and its line
+    breaks are written as \\n, as they already are inside a rewrite. Anything else prints as it
+    is, and nothing changes the setting itself or what `Settings.masked` gives."""
+    if key not in settings_store.PROFILE:
+        return value
+    shown = _shortened(value)
+    return shown.replace("\r", "\\r").replace("\n", "\\n") if isinstance(shown, str) else shown
+
+
+def _shortened(value: Any) -> Any:
+    if isinstance(value, str) and len(value) > SHOWN_CHARACTERS:
+        return f"{value[:SHOWN_CHARACTERS].rstrip()}… ({len(value):,} characters)"
+    if isinstance(value, dict):
+        return {key: _shortened(item) for key, item in value.items()}
+    return value
 
 
 def stored_settings(settings: Settings) -> dict[str, Any]:
@@ -130,7 +154,7 @@ def config() -> None:
             note = f"  # {FROM_ENV}"
         else:
             note = ""
-        typer.echo(f"{key}={value}{note}")
+        typer.echo(f"{key}={_shown_setting(key, value)}{note}")
 
 
 @app.command("password")

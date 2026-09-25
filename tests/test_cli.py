@@ -254,6 +254,56 @@ def test_config_prints_a_rewrite_of_her_on_one_line(env: Path) -> None:
     )
 
 
+def test_config_shortens_a_long_text_and_says_how_long_it_is(env: Path) -> None:
+    """A rewrite keeps her whole character as it shipped, a page of prose: the printout gives the
+    start of each long text on the Personality page and its real length, one setting to a line,
+    and the settings themselves keep all of it."""
+    from contextlib import closing
+
+    from familydb import personas
+    from familydb.app import build_app
+    from familydb.cli import SHOWN_CHARACTERS
+    from familydb.config import apply_overrides, load_settings
+    from familydb.store import settings as settings_store
+
+    hers = personas.load(personas.DEFAULT).character
+    about = "We are the Tates.\n" + "Mia is eight and climbs anything. " * 10
+    reminder = "Reminder: {title}{who}, task #{task}. Tell me when it's done.\nBins, {who}!"
+    stored = {
+        "persona_text": {"default": {"text": "You are {name}.\nDry.", "of": hers}},
+        "about_family": about,
+        "voice_lines": {"reminder": reminder},
+        "google_calendar_id": "c_" + "0123456789abcdef" * 4 + "@group.calendar.google.com",
+    }
+    assert runner.invoke(app, ["db", "migrate"]).exit_code == 0
+    application = build_app()
+    with closing(application.connect()) as conn, db.transaction(conn):
+        settings_store.set_many(conn, stored)
+    result = runner.invoke(app, ["config"])
+    assert result.exit_code == 0, result.output
+    # One setting to a line: a text's own line breaks would leave a line with no "=" in it.
+    lines = dict(line.split("=", 1) for line in result.output.splitlines())
+
+    page = "  # set on the settings page"
+
+    def cut(text: str) -> str:
+        return f"{text[:SHOWN_CHARACTERS].rstrip()}… ({len(text):,} characters)"
+
+    # A short text is as it was, and a long one its start and its length.
+    rewrite = {"default": {"text": "You are {name}.\nDry.", "of": cut(hers)}}
+    assert lines["persona_text"] == str(rewrite) + page
+    assert lines["about_family"] == cut(about).replace("\n", "\\n") + page
+    assert lines["voice_lines"] == str({"reminder": cut(reminder)}) + page
+    # A setting that is not a text of hers or the family's prints whole, however long.
+    assert lines["google_calendar_id"] == stored["google_calendar_id"] + page
+
+    # Anything else that reads the settings still has all of it.
+    masked = apply_overrides(load_settings(), stored).masked()
+    assert masked["persona_text"]["default"]["of"] == hers
+    assert masked["about_family"] == about
+    assert masked["voice_lines"] == {"reminder": reminder}
+
+
 def test_debug_cost_reports_the_prefix_and_what_was_spent(env: Path) -> None:
     runner.invoke(app, ["members", "add", "Sam", "--role", "admin"])
     result = runner.invoke(app, ["debug", "cost"])
