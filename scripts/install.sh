@@ -58,7 +58,10 @@ Options
 
 Answers can be supplied as environment variables, which is what --non-interactive reads:
   WEB_DOMAIN           the page's domain name; empty uses this server's own address
-  WEB_PASSWORD         the family password (12 characters or more); made up when not given
+  WEB_PUBLIC_PORT      the port the page is served on over HTTPS: 443 unless given, or a
+                       number from 1024 to 65535, or random, for one that scans rarely try
+  WEB_PASSWORD         the first password into the page (12 characters or more); made up
+                       when not given, and replaced by each person's own on the page
   ADMIN_NAME           the first family member (otherwise added on the Family page)
   BACKUPS              yes (the default) schedules a nightly backup; no leaves it to you
 and, for a scripted build that wants them in .env rather than set on the page:
@@ -318,7 +321,9 @@ else
       "the bot only answers people it knows; everyone else is added on the page"
   fi
   if [ "$MODE" = venv ] && [ "$LOCAL_ONLY" = 0 ]; then
-    plan_item "Put Caddy in front of the page, for HTTPS, and open ports 80 and 443 if ufw is on" \
+    web_ports="80 and 443"
+    case "${WEB_PUBLIC_PORT:-443}" in 443) ;; random) web_ports="80 and a port picked at random" ;; *) web_ports="80 and ${WEB_PUBLIC_PORT}" ;; esac
+    plan_item "Put Caddy in front of the page, for HTTPS, and open ports ${web_ports} if ufw is on" \
       "so the page can be opened from any browser without a tunnel, and nothing crosses the network in the clear"
   fi
   if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
@@ -465,7 +470,7 @@ if [ "$KEEP_ENV" = 0 ]; then
     fi
     ask WEB_DOMAIN "Domain name (optional)" ""
     WEB_DOMAIN="${WEB_DOMAIN#https://}"; WEB_DOMAIN="${WEB_DOMAIN#http://}"; WEB_DOMAIN="${WEB_DOMAIN%%/*}"
-    WEB_DOMAIN="${WEB_DOMAIN%:*}"   # a port typed after it means nothing here: Caddy answers on 443
+    WEB_DOMAIN="${WEB_DOMAIN%:*}"   # a port typed after it means nothing here: WEB_PUBLIC_PORT says
     if [ -n "$WEB_DOMAIN" ] && ! is_ipv4 "$WEB_DOMAIN" \
        && ! printf '%s' "$WEB_DOMAIN" | grep -Eq '^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'; then
       warn "'${WEB_DOMAIN}' does not look like a domain name, so the page uses this server's address."
@@ -478,12 +483,21 @@ if [ "$KEEP_ENV" = 0 ]; then
       WEB_DOMAIN=""
     fi
   fi
+  # Another port than 443 when one is given: a number, or "random" (lib/https.sh says why).
+  if [ -n "$WEB_DOMAIN" ] && [ -n "${WEB_PUBLIC_PORT:-}" ]; then
+    if PUBLIC_PORT="$(choose_public_port "$WEB_PUBLIC_PORT" "${WEB_PORT:-8080}")"; then
+      set_env WEB_PUBLIC_PORT "$PUBLIC_PORT"
+    else
+      warn "WEB_PUBLIC_PORT=${WEB_PUBLIC_PORT} will not do, so the page is on 443."
+      PUBLIC_PORT=443
+    fi
+  fi
   if [ -n "$WEB_DOMAIN" ] && is_ipv4 "$WEB_DOMAIN"; then
     # Caddy in front, with a certificate for the address itself (see lib/https.sh). Never plain
     # HTTP on the open internet: that would send the family password in the clear.
     set_env WEB_DOMAIN "$WEB_DOMAIN"
     set_env WEB_TRUST_PROXY true
-    ok "The page will be https://${WEB_DOMAIN}/"
+    ok "The page will be $(public_url "$WEB_DOMAIN")"
   elif [ -n "$WEB_DOMAIN" ]; then
     # Caddy can only get a certificate for a name that points here. Not a reason to stop, since
     # DNS may simply be catching up, but worth saying now rather than as a silent Caddy retry.
@@ -499,7 +513,7 @@ if [ "$KEEP_ENV" = 0 ]; then
     set_env WEB_TRUST_PROXY true
     # Compose reads this from .env, so every `docker compose up` brings Caddy up too.
     [ "$MODE" = docker ] && set_env COMPOSE_PROFILES tls
-    ok "The page will be https://${WEB_DOMAIN}/ once the domain points here."
+    ok "The page will be $(public_url "$WEB_DOMAIN") once the domain points here."
   fi
   if [ "$MODE" = docker ]; then
     WEB_HOST="${WEB_HOST:-0.0.0.0}"   # inside the container; the compose file keeps it to this machine
@@ -708,6 +722,7 @@ fi
 env_value() { grep -E "^${1}=" "$ENV_FILE" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d "'\"" || true; }
 DOMAIN="$(env_value WEB_DOMAIN)"
 PORT="$(env_value WEB_PORT)"; PORT="${PORT:-8080}"
+PUBLIC_PORT="$(env_value WEB_PUBLIC_PORT)"; PUBLIC_PORT="${PUBLIC_PORT:-443}"
 HTTPS_READY=0
 if [ -n "$DOMAIN" ] && [ "$MODE" = docker ]; then
   HTTPS_READY=1
@@ -743,16 +758,16 @@ say "Start it:   ${B}${START}${OFF}"
 say "Watch it:   ${LOGS}"
 say ""
 if [ "$HTTPS_READY" = 1 ]; then
-  say "Then open ${B}https://${DOMAIN}/${OFF} and sign in with the family password."
+  say "Then open ${B}$(public_url "$DOMAIN")${OFF} and sign in with the password above."
   say_how_to_open "$DOMAIN"
 else
-  say "Then open the page and sign in with the family password. Run this on your own computer,"
+  say "Then open the page and sign in with the password above. Run this on your own computer,"
   say "not on this server; it works from anywhere you can reach the server over SSH:"
   say "  ssh -L ${PORT}:127.0.0.1:${PORT} ${SUDO_USER:-$(id -un)}@$(hostname -I 2>/dev/null | awk '{print $1}')"
   say "  and, while it is connected, open ${B}http://127.0.0.1:${PORT}/${OFF} on that computer."
 fi
 say ""
-say "The page walks you through the rest, one step at a time: your own password, yourself, an AI"
+say "The page walks you through the rest, one step at a time: yourself, your own password, an AI"
 say "key, where home is, then Telegram and Google Calendar if you want them."
 if [ "$BACKUPS_SCHEDULED" = 1 ]; then
   say "Copy ${REPO_ROOT}/backups off this server now and then: a backup on the same disk is not"

@@ -144,7 +144,7 @@ ZERO_USERS=()
 ZERO_GROUPS=()
 ZERO_RESTORE=()   # files the install replaced, put back as they were
 ZERO_PROFILES=()  # shell profiles the uv installer added a line to
-ZERO_UFW=0
+ZERO_UFW=()       # firewall rules the install opened for the page, such as 80,443/tcp
 ZERO_CRONTAB=0    # root had no crontab before the install
 ZERO_NGINX=()
 ZERO_CERT=""
@@ -155,6 +155,21 @@ HAS_LEDGER=0
 # A ledger begun by a fresh install is the whole story. Anything less (an install from before the
 # ledger, which a newer script then added to) also gets the checks for what older versions did.
 WHOLE_LEDGER=0
+
+_add_ufw() { # _add_ufw RULE - once
+  local rule
+  for rule in "${ZERO_UFW[@]}"; do [ "$rule" = "$1" ] && return 0; done
+  ZERO_UFW+=("$1")
+}
+
+_ufw_has() { # _ufw_has RULE - ufw is on this machine and has that rule
+  have ufw && as_root ufw status 2>/dev/null | grep -qE "^${1}"
+}
+
+_ports_of() { # _ports_of RULE - "80,443/tcp" as "80 and 443"
+  local ports="${1%/tcp}"
+  printf '%s' "${ports/,/ and }"
+}
 
 _add_path() { # _add_path PATH - once, and only if it is there
   local path="$1" seen
@@ -200,7 +215,7 @@ take_inventory() {
         replaced) ZERO_RESTORE+=("$what") ;;
         user) ZERO_USERS+=("$what") ;;
         group) ZERO_GROUPS+=("$what") ;;
-        ufw) ZERO_UFW=1 ;;
+        ufw) _add_ufw "$what" ;;
         crontab) ZERO_CRONTAB=1 ;;
       esac
     done < <(as_root cat "$LEDGER")
@@ -265,9 +280,11 @@ take_inventory() {
     ZERO_CADDY="keep"
   fi
   # A rule the ledger recorded that is no longer there needs nothing done.
-  if [ "$ZERO_UFW" = 1 ] && ! { have ufw && as_root ufw status 2>/dev/null | grep -qE '^80,443/tcp'; }; then
-    ZERO_UFW=0
-  fi
+  local rule still=()
+  for rule in "${ZERO_UFW[@]}"; do
+    _ufw_has "$rule" && still+=("$rule")
+  done
+  ZERO_UFW=("${still[@]}")
 
   _add_path "$LEDGER_DIR"
 }
@@ -305,8 +322,12 @@ older_leftovers() {
   if [ "$ZERO_CADDY" = none ] && { have caddy || as_root test -d /etc/caddy; }; then
     if caddy_serves_only_familydb; then ZERO_CADDY="remove"; else ZERO_CADDY="keep"; fi
   fi
-  # The firewall rule: the only reason for it on this server was FamilyDB's page.
-  have ufw && as_root ufw status 2>/dev/null | grep -qE '^80,443/tcp' && ZERO_UFW=1
+  # The firewall rule: the only reason for it on this server was FamilyDB's page, on 443 or on
+  # the port .env says the page moved to.
+  local moved
+  moved="$(as_root grep -E '^WEB_PUBLIC_PORT=[0-9]+$' "${TARGET}/.env" 2>/dev/null | tail -1 | cut -d= -f2 || true)"
+  _ufw_has "80,443/tcp" && _add_ufw "80,443/tcp"
+  if [ -n "$moved" ] && _ufw_has "80,${moved}/tcp"; then _add_ufw "80,${moved}/tcp"; fi
   # GitHub's host key in root's known_hosts, which installs from before the ledger put there.
   as_root grep -q '^github\.com[ ,]' /root/.ssh/known_hosts 2>/dev/null && ZERO_KNOWN_HOSTS=1
   return 0
@@ -328,7 +349,9 @@ plan_from_zero() {
     plan_item "Remove ${item} if nothing else is in it" "the install made it"
   done
   [ ${#ZERO_USERS[@]} -gt 0 ] && plan_item "Remove the accounts ${ZERO_USERS[*]}" "they were made for this"
-  [ "$ZERO_UFW" = 1 ] && plan_item "Close ports 80 and 443 in ufw" "they were opened for the page"
+  for item in "${ZERO_UFW[@]}"; do
+    plan_item "Close ports $(_ports_of "$item") in ufw" "they were opened for the page"
+  done
   [ "$ZERO_CRONTAB" = 1 ] && plan_item "Remove root's crontab once the backup line is gone" \
     "root had none before FamilyDB"
   for item in "${ZERO_PROFILES[@]}"; do
@@ -374,9 +397,9 @@ remove_what_was_around_it() {
     try_step "Deleting the certificate for ${ZERO_CERT}" \
       as_root certbot delete --non-interactive --cert-name "$ZERO_CERT"
   fi
-  if [ "$ZERO_UFW" = 1 ]; then
-    try_step "Closing ports 80 and 443 in ufw" as_root ufw delete allow 80,443/tcp
-  fi
+  for item in "${ZERO_UFW[@]}"; do
+    try_step "Closing ports $(_ports_of "$item") in ufw" as_root ufw delete allow "$item"
+  done
   for item in "${ZERO_PROFILES[@]}"; do
     step "Taking uv's line out of ${item}" as_root sed -i '/^\. "\$HOME\/\.local\/bin\/env"$/d' "$item"
   done

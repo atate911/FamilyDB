@@ -121,6 +121,13 @@ unit that will never start.
 - `scripts/maintain.sh` does status, check, backup, restore, upgrade, logs,
   restart and nightly backups. A restore backs up the database it is about to
   replace, so it can itself be undone.
+- **The page on a port scans rarely try.** `maintain.sh https --port random`
+  (or `WEB_PUBLIC_PORT=random` at install, or in `.env` with Docker) serves the
+  page on a port from 20000 to 29999 that none of nmap's thousand usual ports
+  and nothing on the machine uses, instead of 443. Port 80 answers only a
+  certificate authority's check, with no redirect to give the port away, and
+  the firewall rule follows the port. It keeps the page out of the sweeps of the
+  usual ports; it is not a lock, and the RUNBOOK says so.
 - `scripts/uninstall.sh` removes the service and the installed files but keeps
   `.env`, `data/` and the backups, which is what a reinstall wants. `--purge`
   removes those too, after taking a backup and asking you to type a

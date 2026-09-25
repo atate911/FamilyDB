@@ -398,7 +398,38 @@ once per device before it trusts it. The connection is still encrypted. docs/INS
 `WEB_HOST=0.0.0.0` in `.env`, and with Docker change the compose `ports` line to `"8080:8080"`.
 The page then answers at `http://<server>:8080/`. A page that faces the network needs passwords
 of at least twelve characters, because a password is all that guards it and there is no second
-factor.
+factor. `WEB_PORT` moves it off 8080, a port scanners try early, onto any other above 1024.
+
+**A port scans rarely try.** What a scan of a server finds is what listens on its public
+addresses. The page's own port, 8080, is not among them: it listens on `127.0.0.1`, or in Docker
+is published to the loopback alone, so only Caddy on the same machine can reach it. What a scan
+finds is Caddy, on 443 (and 80, for certificates), and SSH on 22. 443 is the third port nmap
+tries and the one every sweep of the internet looks at, so a page there is found by anything that
+looks. To serve it on another port instead:
+
+```bash
+sudo /opt/familydb/scripts/maintain.sh https --port random   # or --port 24613, or --port 443 to go back
+```
+
+`random` picks one from 20000 to 29999 that nothing on the machine uses and that is not among
+the thousand ports nmap tries unless told to try more. The page is then
+`https://your.domain:PORT/`: bookmark that, since the old address finds nothing. Caddy serves
+HTTPS on that port only, and asks for certificates only by the check a certificate authority
+makes on port 80 (the other kind needs 443); it listens on 80 just while it is being checked, and
+sends nobody who tries it anywhere, so 80 gives nothing away. `ufw` is opened for 80 and the new
+port, and the rule for 443 is closed if the installer opened it. Allow the new port in a
+provider's own firewall too, if it has one. With Docker, put `WEB_PUBLIC_PORT=PORT` in `.env` and
+run `docker compose up -d`: the Caddy container still listens on 443, and the host publishes it
+on that port. At install time, `WEB_PUBLIC_PORT=random` in front of the installer does the same.
+
+Be clear about what this buys. It takes the page out of the sweeps that try the usual ports, which
+is most of them, and so out of the log noise and the opportunistic guessing that follow; the
+lockouts would stop those anyway. It is not a lock: a scan of every port of this one machine
+still finds it in minutes, and a domain's certificate is published in the public certificate
+logs the moment it is issued, which is how new sites are found. The passwords and lockouts are
+what keep the page shut. For a page nobody on the internet can find at all, keep it off the
+internet: install with `--local-only` and open it over an SSH tunnel, or use a private network
+such as Tailscale, which puts no port on the internet whatever.
 
 **Who signs in.** Each person signs in as themselves, with their name as it is on the Family page
 and a password of their own, stored only as a scrypt hash. An admin gives everybody else a
@@ -590,7 +621,7 @@ readable by the bot's user alone, and so is everything in it:
 | `caddy/` | only with the Docker `tls` profile: the certificate and its private key | no, and keep it that way |
 
 **A firewall.** The bot needs nothing inbound. With the web page behind Caddy or nginx, open 80
-and 443 and nothing else:
+and 443 (or 80 and the page's own port, section 10) and nothing else:
 
 ```bash
 sudo ufw default deny incoming && sudo ufw default allow outgoing

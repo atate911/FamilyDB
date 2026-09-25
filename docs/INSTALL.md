@@ -251,7 +251,7 @@ name when the installer asks for one does the same thing at install time.
 <summary>What it sets</summary>
 
 In `/opt/familydb/.env`: `WEB_DOMAIN` (the name, or the address when there is none),
-`WEB_TRUST_PROXY=true` and `WEB_HOST=127.0.0.1`. The page then listens only to Caddy on the same
+`WEB_PUBLIC_PORT` (443 unless moved, below), `WEB_TRUST_PROXY=true` and `WEB_HOST=127.0.0.1`. The page then listens only to Caddy on the same
 machine, and believes Caddy about who is visiting and that the connection was HTTPS, which is what
 keeps the lockout per visitor and marks the sign-in cookie `Secure`. Caddy's configuration is
 `/etc/caddy/Caddyfile`; `sudo journalctl -u caddy -n 50` says how getting the certificate went.
@@ -261,6 +261,26 @@ On the Docker path, set `WEB_DOMAIN` and `COMPOSE_PROFILES=tls` in `.env` and ru
 `docker compose up -d`, which starts a Caddy container as well. If nginx is already on the
 machine, `deploy/nginx-familydb.conf` does Caddy's job with a certificate from certbot; the steps
 are at the top of that file.
+</details>
+
+<details>
+<summary>A port that scans rarely try</summary>
+
+Port 8080 is never what a scan of the server finds: the page listens only to Caddy, on the same
+machine. What a scan finds is Caddy on 443, the port every sweep of the internet looks at. To
+serve the page on another port instead:
+
+```bash
+sudo /opt/familydb/scripts/maintain.sh https --port random
+```
+
+It prints the new address, `https://your.domain:PORT/`, which is the one to bookmark from then
+on, and opens that port in `ufw`; allow it in your provider's own firewall too, if it has one.
+Port 80 stays open, because that is where a certificate authority checks the server, but nothing
+there points anyone at the page. `--port 443` moves it back. This keeps the page out of the scans
+that try the usual ports; a scan of every port on your server would still find it, so it is no
+substitute for good passwords. RUNBOOK section 10 says more, and how to keep the page off the
+internet altogether.
 </details>
 
 <details>
