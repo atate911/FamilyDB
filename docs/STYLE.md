@@ -237,7 +237,9 @@ There are four, one to a page at most:
 - **Sign in.** The mark's face, awake, and "READY." with the cursor waiting. It switches on as
   the page opens, the picture opening out of a bright line, and blinks now and then.
 - **Not found.** A radar console: an empty scope still sweeping, 404 on its face, and beside it
-  the range, no contacts, "?NOT FOUND" and "READY.". It switches on as the page opens.
+  the range, no contacts, "?NOT FOUND" and "READY.". It switches on as the page opens. The page
+  a member reaches when only an admin may go there is the same console, with 403 on its face,
+  who is signed in and "?FOR AN ADMIN".
 - **Status.** The day's spend, a bar of twenty cells in brackets and the share of the limit,
   beside the same said in words.
 
@@ -282,9 +284,10 @@ for more than a moment, and none asks to be looked at.
 
 - **The bar.** On a phone the five everyday places (Home, Vera, Ideas, Plans, To do) are a tab
   bar along the bottom, the current one marked by a pill in its colour; Family, Status and
-  Settings and signing out are icons at the top. From 52rem everything is one bar that stays at
-  the top while the page scrolls. The conversation's place goes by her name, with the
-  conversation's icon; with no persona it is Chat.
+  Settings, the name of whoever is signed in (their own password) and signing out are icons at
+  the top; Family and Settings are shown only to an admin, who alone may change them. From 52rem
+  everything is one bar that stays at the top while the page scrolls. The conversation's place
+  goes by her name, with the conversation's icon; with no persona it is Chat.
 - **Home.** Signed the way her lines are (her screen, her name, the day), then the box to answer
   her in, its label her question, "What’s on your mind?", with the one word lit, and the ways to
   start under it; under those, how the conversation stands: what she said last (the last day's,
@@ -305,7 +308,9 @@ for more than a moment, and none asks to be looked at.
 - **Things to do** (an open task is ticked off where it stands), **Family**, **Settings** (with an
   index and a save bar that stays in reach),
   **Status** (three monitors, then the day's spend on a green screen beside the same in words),
-  **Sign in** (the mark's face on a green screen, then the one question), **Not found** (a radar
+  **Sign in** (the mark's face on a green screen, then who you are and your password, or the one
+  question while the family still shares a password), **For an admin** (the 404's console with
+  403 on its face, for a page only an admin changes), **Not found** (a radar
   console with nothing on it, and one way home).
 - **On paper.** Printing turns any page into green-bar printout: black on white with a pale green
   band on every other line. The month on the fridge.

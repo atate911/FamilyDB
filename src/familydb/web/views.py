@@ -46,6 +46,27 @@ DETAILS = {
 # The last line of every page. The product's name, not the page's title, which the family may
 # change: the copyright is in the software, not in what they call it.
 FOOTER = "FamilyDB © 2026 by Andrew Tate. Version v{version}. All rights reserved."
+# Each role in the page's words, for the Family page and setup. What each may do is decided in
+# familydb/roles.py; this is only how the page says it.
+ROLE_WORDS = {
+    "admin": "looks after it: the settings, setup, and who is on the family list. There is "
+    "always at least one.",
+    "parent": "uses all the rest: chat, ideas, plans and things to do.",
+    "kid": "is in the plans; for now, with a password, may do whatever a parent may.",
+}
+# What somebody is told when their role may not go somewhere, by the permission it needs.
+REFUSALS = {
+    "manage": (
+        "For an admin",
+        "Settings, setting up and the family list are changed by an admin. Ask one if "
+        "something here needs to change.",
+    ),
+    "chat": ("Not yet", "Talking to the bot here is not part of your role yet. Ask an admin."),
+    "change": (
+        "Not yet",
+        "Changing ideas, plans and things to do is not part of your role yet. Ask an admin.",
+    ),
+}
 MAP_URL = "https://www.openstreetmap.org/?mlat={lat}&mlon={lon}#map=17/{lat}/{lon}"
 MAP_SEARCH = "https://www.openstreetmap.org/search?query={query}"
 
@@ -465,7 +486,8 @@ def chat_line(
     answer. They belong under the answer: "used suggest" beneath somebody's own message reads
     as though they had run it. `waiting` is for a message nothing has replied to yet, which is
     a fact about the thread rather than about the row, so the caller works it out. `assistant`
-    is her name: every line she sends, a reply, a reminder or a plain "Done.", is hers alike.
+    is what the persona in force is called: every line she sends, a reply, a reminder or a
+    plain "Done.", is hers alike.
     """
     from_bot = message.direction == "out"
     trouble = None

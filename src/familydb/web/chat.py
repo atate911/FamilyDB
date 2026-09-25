@@ -45,8 +45,9 @@ log = logging.getLogger(__name__)
 
 bp = Blueprint("chat", __name__)
 
-# Who the person last said they were. Not who they are: the page is behind one family password
-# and cannot know that. It is remembered so nobody has to say it with every message.
+# Who the person last said they were, while the family still shares a password and the page cannot
+# know who they are. Remembered so nobody has to say it with every message. Somebody signed in as
+# themselves is never asked: they speak as themselves.
 WHO_KEY = "who"
 # Whether this browser sends where it is with each message: off until someone ticks the box.
 WHERE_KEY = "send_where"
@@ -106,7 +107,10 @@ def _chat() -> WebChat:
 
 
 def _who(names: list[str]) -> str | None:
-    """Who the page will speak as: what this session last chose, while they are still family."""
+    """Who the page will speak as: whoever is signed in, or, when the page cannot tell, what this
+    session last chose, while they are still family."""
+    if (me := auth.visitor().name) is not None:
+        return me
     chosen = session.get(WHO_KEY)
     if chosen in names:
         return chosen
@@ -142,7 +146,7 @@ def box(family: list[str], *, locked: bool = False, prompt: str = PROMPT) -> dic
     """What the box needs wherever it is drawn: who may speak, who spoke last, whether this
     browser sends where it is, whether it is closed while an answer is on its way, and what it
     says while it is empty."""
-    name = personas.display_name(_app().settings)
+    name = personas.active(_app().settings).name
     return {
         "family": family,
         "who": _who(family),
@@ -195,7 +199,7 @@ def glance(app: App, conn: Any) -> dict[str, Any]:
                 app.settings.tzinfo,
                 did=[],
                 waiting=False,
-                assistant=personas.display_name(app.settings),
+                assistant=personas.active(app.settings).name,
             )
     return {"state": state, "note": AT_HOME.get(state or ""), "line": line}
 
@@ -207,11 +211,11 @@ def page(*, error: str | None = None, typed: str | None = None, status: int = 20
         family = member_store.list_all(conn)
         thread = message_store.last_for_chat(conn, DEFAULT_CHAT, limit=THREAD_LIMIT)
     names = {member.id: member.display_name for member in family}
-    assistant = personas.display_name(app.settings)
     # The log keeps a turn's tool calls against the question; the page shows them under the
     # answer. Pairing them here also says which questions have been answered at all.
     answered = {message.reply_to for message in thread if message.reply_to is not None}
     actions = {message.id: message.actions for message in thread}
+    assistant = personas.active(app.settings).name
     lines = [
         views.chat_line(
             message,
@@ -291,13 +295,16 @@ def send() -> Response | Any:
     if (complaint := auth.refused()) is not None:
         return page(error=complaint, typed=request.form.get("text", ""), status=400)
     text = request.form.get("text", "")
-    who = request.form.get("who", "").strip()
+    # Signed in as themselves, they are who is asking, whatever the form says.
+    me = auth.visitor().name
+    who = me or request.form.get("who", "").strip()
     if not who:
         return page(error=NOBODY, typed=text, status=400)
     sent = text
     if request.form.get("intent") == "save_idea" and text.strip():
         sent = message_store.CAPTURE_PREFIX + text
-    session[WHO_KEY] = who
+    if me is None:
+        session[WHO_KEY] = who
     session[WHERE_KEY] = request.form.get(WHERE_KEY) == "1"  # the box stays as they left it
     if (complaint := _chat().ask(sent, who, DEFAULT_CHAT, _position(request.form))) is not None:
         return page(error=complaint, typed=text, status=400)

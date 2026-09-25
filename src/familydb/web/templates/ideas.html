@@ -20,12 +20,14 @@
         <textarea id="capture-text" name="text" required maxlength="3800" rows="3"
           placeholder="Maybe explore food carts in Portland with the girls on a sunny afternoon..."></textarea>
       </div>
-      <div class="field">
-        <label for="capture-who">From</label>
-        <select id="capture-who" name="who" required><option value="">Choose your name</option>
-          {% for person in capture_people %}<option>{{ person.display_name }}</option>{% endfor %}
-        </select>
-      </div>
+      {% if not visitor().member %}
+        <div class="field">
+          <label for="capture-who">From</label>
+          <select id="capture-who" name="who" required><option value="">Choose your name</option>
+            {% for person in capture_people %}<option>{{ person.display_name }}</option>{% endfor %}
+          </select>
+        </div>
+      {% endif %}
       <div class="field actions end">
         <button type="submit">{{ icon('sparkles') }}Organize in Chat</button>
       </div>

@@ -22,7 +22,7 @@ def test_backup_reads_wal_and_fails_closed(conn, settings, tmp_path, docker_mode
         pytest.skip("bash required for shell integration")
     conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
     with db.transaction(conn):
-        members.add(conn, "Only in the WAL", "member")
+        members.add(conn, "Only in the WAL", "parent")
     script = (ROOT / "scripts/maintain.sh").read_text()
     start = script.index("take_backup() {")
     function = script[start : script.index("\n# ----", start)]

@@ -77,11 +77,18 @@ def schema_version(conn: sqlite3.Connection) -> int:
     return int(row["v"] or 0)
 
 
+# A migration that rebuilds a table other tables point at starts with this line. SQLite's own way
+# of doing that wants foreign keys off, or dropping the old table runs every ON DELETE action of
+# the tables that point at it. The switch cannot be thrown inside a transaction, so the runner
+# throws it around the migration's own, which checks its work before it commits (see 0018).
+FOREIGN_KEYS_OFF = "-- foreign_keys: off"
+
+
 def migrate(conn: sqlite3.Connection) -> list[int]:
     """Apply pending migrations in order, each in its own transaction. Returns versions applied."""
     current = schema_version(conn)
     applied: list[int] = []
-    for version, _name, sql in list_migrations():
+    for version, name, sql in list_migrations():
         if version <= current:
             continue
         script = (
@@ -90,12 +97,20 @@ def migrate(conn: sqlite3.Connection) -> list[int]:
             f"VALUES ({version}, '{utcnow_iso()}');\n"
             "COMMIT;"
         )
+        keys_off = sql.startswith(FOREIGN_KEYS_OFF)
+        if keys_off:
+            conn.execute("PRAGMA foreign_keys=OFF")
+            if conn.execute("PRAGMA foreign_keys").fetchone()[0]:
+                raise RuntimeError(f"{name} needs foreign keys off, and they would not switch off")
         try:
             conn.executescript(script)
         except Exception:
             if conn.in_transaction:
                 conn.execute("ROLLBACK")
             raise
+        finally:
+            if keys_off:
+                conn.execute("PRAGMA foreign_keys=ON")
         applied.append(version)
     return applied
 

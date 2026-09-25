@@ -73,7 +73,8 @@ initiated, bounded, and cost-estimated; it is not a default scheduled job.
   source explanations. Forgetting must prevent regeneration from old evidence. Related chat
   history must not silently reintroduce a forgotten fact into future requests.
 - Stored locally does not mean processed locally: selected memories are sent to the configured
-  AI provider. The current shared-password app has household-wide access, not private user accounts.
+  AI provider. People sign in to the page as themselves, but what they see is the household's:
+  there are no private per-person records.
 
 ## Budgets and evidence required before release
 

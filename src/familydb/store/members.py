@@ -1,21 +1,20 @@
-"""Family members: the people who message the bot, plus kids who don't."""
+"""Family members: everybody the bot knows, by name and role (familydb/roles.py)."""
 
 from __future__ import annotations
 
 import sqlite3
-from typing import Literal
 
 from pydantic import BaseModel
 
+# Re-exported: everything that knows a member knows their role by these names.
+from familydb.roles import ROLES as ROLES
+from familydb.roles import Role as Role
 from familydb.store.db import utcnow_iso
 
-Role = Literal["admin", "member", "kid"]
-ROLES: tuple[str, ...] = ("admin", "member", "kid")
-
-
-# Channels with no account of their own behind them: the console, where whoever is at the
-# keyboard says who they are, and the web page, which is behind one shared family password and
-# so has to ask. Both name a member by display name instead of a channel user id.
+# Channels with no account of their own on another service behind them: the console, where
+# whoever is at the keyboard says who they are, and the web page, which names whoever is signed
+# in (or, while the family still shares one password, whoever they said they were). Both name a
+# member by display name instead of a channel user id.
 BY_NAME = frozenset({"console", "web"})
 
 
@@ -36,7 +35,7 @@ class Member(BaseModel):
 def add(
     conn: sqlite3.Connection,
     display_name: str,
-    role: Role = "member",
+    role: Role = "parent",
     *,
     channel: str | None = None,
     channel_user_id: str | None = None,

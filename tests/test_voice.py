@@ -1,6 +1,7 @@
 """The voice layer: what she says unasked, and a conversation under way carrying it for her."""
 
 import json
+from dataclasses import replace
 from datetime import timedelta
 
 import pytest
@@ -37,9 +38,31 @@ def test_a_line_that_cannot_be_used_is_said_plainly(settings) -> None:
     )
 
 
-def test_every_line_she_ships_with_is_usable() -> None:
-    assert voice.problems(personas.lines("vera")) == {}
-    assert set(personas.lines("vera")) <= set(voice.EVENTS)
+def test_every_line_a_persona_ships_with_is_usable() -> None:
+    for key in personas.available():
+        shipped = dict(personas.load(key).lines)
+        assert voice.problems(shipped) == {}, key
+        assert set(shipped) <= set(voice.EVENTS), key
+
+
+def test_her_name_is_the_persona_s_to_give(settings, monkeypatch) -> None:
+    assert voice.say(settings, "start").startswith("Hi, I'm Vera.")
+    plain = settings.model_copy(update={"persona": "none"})
+    assert voice.say(plain, "start").startswith("Hi! I'm FamilyDB, the family's")
+    # Named otherwise, she introduces herself by that name, whatever a caller passes.
+    juno = replace(personas.load(personas.DEFAULT), name="Juno")
+    monkeypatch.setattr(personas, "active", lambda _settings: juno)
+    assert voice.say(settings, "start", name="Hal").startswith("Hi, I'm Juno.")
+
+
+def test_any_line_can_say_her_name(settings) -> None:
+    own = settings.model_copy(update={"voice_lines": {"follow_up": "{name} here: how was {plan}?"}})
+    assert voice.say(own, "follow_up", plan="Hopscotch", day="Saturday") == (
+        "Vera here: how was Hopscotch?"
+    )
+    assert voice.problems({"done": "{name} did it."}) == {}
+    refused = voice.problems({"follow_up": "How was {venue}?"})["follow_up"]
+    assert refused.endswith("it can use {name}, {plan}, {day}")
 
 
 def test_what_is_wrong_with_a_written_line_is_named() -> None:

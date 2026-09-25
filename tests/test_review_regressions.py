@@ -225,7 +225,7 @@ def test_budget_interruption_reports_calendar_success(calendar_settings, conn, c
         conn=conn,
     )
     assert "Created calendar plan #1" in first.text and len(calendar.events) == 1
-    assert "nothing happens twice" in first.text  # Vera's line for it (personas/vera.lines.toml)
+    assert "nothing happens twice" in first.text  # Vera's line for it (personas/default/lines.toml)
     assert messages.get(conn, first.in_message_id).status == "processed"
     assert len(api.requests) == 1
 

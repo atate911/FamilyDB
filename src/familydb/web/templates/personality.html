@@ -19,9 +19,9 @@
       <div class="setting">
         <label for="p-persona">Personality</label>
         <select id="p-persona" name="persona">
-          {% for name in choices %}
-            <option value="{{ name }}" {% if chosen == name %}selected{% endif %}>
-              {{- name | capitalize -}}
+          {% for persona in choices %}
+            <option value="{{ persona.key }}" {% if chosen == persona.key %}selected{% endif %}>
+              {{- persona.name -}}
             </option>
           {% endfor %}
           <option value="none" {% if chosen == "none" %}selected{% endif %}>None: plain and brief</option>
@@ -34,6 +34,7 @@
         <p class="muted hint">
           How she speaks, not what she does: the rules for ideas, plans and reminders stay as
           they are, and win where the two meet.
+          {% if not plain %}{name} is her name, {{ her_name }}, wherever it is written.{% endif %}
           {% if rewritten %}This is your rewrite of the original.{% endif %}
         </p>
       </div>
@@ -71,9 +72,7 @@
           <label for="l-{{ line.event }}">{{ line.label }}</label>
           <textarea id="l-{{ line.event }}" name="line_{{ line.event }}" rows="3"
                     placeholder="{{ line.placeholder }}">{{ line.value }}</textarea>
-          <p class="muted hint">
-            {% if line.fields %}Can use {{ line.fields }}.{% else %}Takes no {names}.{% endif %}
-          </p>
+          <p class="muted hint">Can use {{ line.fields }}.</p>
         </div>
       {% endfor %}
     </section>

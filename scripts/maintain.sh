@@ -43,12 +43,17 @@ Commands
   status               Is it running, is it healthy, how big is the database, when was the
                        last backup. Changes nothing.
   check                The full check (familydb doctor), with every finding and its fix.
-  password             A new family password for the web page, for when nobody remembers it.
-                       Printed once; everyone signs in again with it.
-  https [DOMAIN]       Put the page on HTTPS: at DOMAIN if one is given, else at this server's
+  password [NAME]      A new password for the web page, for one nobody remembers. Printed
+                       once. Once people sign in as themselves it is a starting password for
+                       NAME, or for the first admin: they sign in with it and choose their
+                       own. Until then it is a new family password that everyone signs in with.
+  https [DOMAIN] [--port N|random|443]
+                       Put the page on HTTPS: at DOMAIN if one is given, else at this server's
                        own address, with a real certificate where it can get one. Opens ports
                        80 and 443 if ufw is on. Run it again after opening a provider's firewall,
-                       or to move from an SSH tunnel to a link anyone can open.
+                       or to move from an SSH tunnel to a link anyone can open. --port serves the
+                       page on another port instead of 443, one the scans that sweep the
+                       internet rarely try (random picks one), and --port 443 moves it back.
   backup               Take a backup now, using SQLite's online backup, safe while it runs.
   restore FILE         Stop the bot, put that backup in place, start it again. The database
                        being replaced is itself backed up first.
@@ -65,6 +70,7 @@ Options
   --user NAME          The account that owns the data. Default: familydb.
   --backup-dir DIR     Where backups go. Default: <target>/backups.
   --keep-days N        How long scheduled backups are kept. Default: 14.
+  --port N|random      With https: the port the page is served on. Default: as it was, else 443.
   --yes                Do not ask.
   --dry-run            Say what would happen; change nothing.
   -h, --help           This text.
@@ -74,6 +80,7 @@ Examples
   sudo scripts/maintain.sh backup --backup-dir /mnt/backups
   sudo scripts/maintain.sh restore /mnt/backups/familydb-2026-09-14.sqlite3
   sudo scripts/maintain.sh upgrade
+  sudo scripts/maintain.sh https --port random
 USAGE
 }
 
@@ -82,8 +89,11 @@ COMMAND="$1"; shift
 RESTORE_FILE=""
 LOG_LINES=50
 HTTPS_SITE=""
+HTTPS_PORT=""
+PASSWORD_FOR=""
 case "$COMMAND" in
   https) case "${1:-}" in ''|-*) ;; *) HTTPS_SITE="$1"; shift ;; esac ;;
+  password) case "${1:-}" in ''|-*) ;; *) PASSWORD_FOR="$1"; shift ;; esac ;;
   restore) RESTORE_FILE="${1:-}"; [ -n "$RESTORE_FILE" ] && shift ;;
   logs) case "${1:-}" in ''|-*) ;; *) LOG_LINES="$1"; shift ;; esac ;;
 esac
@@ -98,6 +108,8 @@ while [ $# -gt 0 ]; do
     --backup-dir=*) BACKUP_DIR="${1#*=}"; shift ;;
     --keep-days) KEEP_DAYS="${2:-}"; shift 2 ;;
     --keep-days=*) KEEP_DAYS="${1#*=}"; shift ;;
+    --port) HTTPS_PORT="${2:-}"; shift 2 ;;
+    --port=*) HTTPS_PORT="${1#*=}"; shift ;;
     --yes|-y) ASSUME_YES=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
     -h|--help) usage; exit 0 ;;
@@ -272,8 +284,12 @@ cmd_check() {
 }
 
 cmd_password() {
-  head2 "A new family password"
-  familydb_cmd password
+  head2 "A new password for the web page"
+  if [ -n "$PASSWORD_FOR" ]; then
+    familydb_cmd password "$PASSWORD_FOR"
+  else
+    familydb_cmd password
+  fi
 }
 
 env_file_value() { as_root grep -E "^${1}=" "${TARGET}/.env" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d "'\"" || true; }
@@ -292,22 +308,33 @@ cmd_https() {
   [ "$DOCKER_MODE" = 0 ] || die "this is for the virtualenv install" \
     "With Docker, set WEB_DOMAIN and COMPOSE_PROFILES=tls in ${TARGET}/.env, then: docker compose up -d"
   as_root test -f "${TARGET}/.env" || die "there is no ${TARGET}/.env" "Run the installer first."
-  local site port
+  local site port previous chosen
   site="${HTTPS_SITE#https://}"; site="${site#http://}"; site="${site%%/*}"; site="${site%:*}"
   [ -n "$site" ] || site="$(env_file_value WEB_DOMAIN)"
   [ -n "$site" ] || site="$(this_address)"
   [ -n "$site" ] || die "could not tell this server's address" "Give it: ${0} https your.domain"
   port="$(env_file_value WEB_PORT)"; port="${port:-8080}"
+  # The port the page is on stays where it was unless --port moves it.
+  previous="$(env_file_value WEB_PUBLIC_PORT)"; previous="${previous:-443}"
+  chosen="$(choose_public_port "${HTTPS_PORT:-$previous}" "$port")" \
+    || die "that port will not do" "Give --port a number from 1024 to 65535, or random, or 443."
+  PUBLIC_PORT="$chosen"
   setup_https "$site" "$port" || die "the page could not be put on HTTPS" "What went wrong is above."
   # The page has to believe Caddy about who is visiting, and listen for nobody but Caddy.
   env_file_set WEB_DOMAIN "$site"
   env_file_set WEB_TRUST_PROXY true
   env_file_set WEB_HOST 127.0.0.1
+  env_file_set WEB_PUBLIC_PORT "$PUBLIC_PORT"
+  close_old_web_ports "$previous"
   if service_installed; then
     step "Restarting FamilyDB so the page knows it is behind HTTPS" as_root systemctl restart familydb
   fi
   say ""
-  say "The page: ${B}https://${site}/${OFF}"
+  say "The page: ${B}$(public_url "$site")${OFF}"
+  if [ "$PUBLIC_PORT" != "$previous" ]; then
+    note "It moved from port ${previous}: open it at the address above from now on. A bookmark to"
+    note "the old address finds nothing."
+  fi
   say_how_to_open "$site"
 }
 

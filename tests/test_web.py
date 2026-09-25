@@ -606,10 +606,13 @@ def test_no_page_reaches_a_table_to_write_to_it() -> None:
         "messages",
         "calls",
         "suggestions",
+        "logins",
         "idea_store",
         "place_store",
         "plan_store",
         "outcome_store",
+        "login_store",
+        "member_store",
     }
     writes = {
         "insert",
@@ -632,6 +635,9 @@ def test_no_page_reaches_a_table_to_write_to_it() -> None:
         "add",
         "set_many",
         "clear",
+        "put",
+        "remove",
+        "update_profile",
     }
     stores.add("settings_store")
     for module in sorted(Path(package.__file__).parent.glob("*.py")):
@@ -723,7 +729,8 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
         == 1
     )
 
-    # The family page adds and changes people, through the rules module, and that is all.
+    # The family page adds and changes people, and how they sign in, through the rules module,
+    # and that is all.
     family = trees["family.py"]
     ruled = {
         node.func.attr
@@ -733,8 +740,9 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
         and isinstance(node.func.value, ast.Name)
         and node.func.value.id == "rules"
     }
-    assert ruled <= {"add", "change", "revision"}, ruled
-    assert {"add", "change"} <= ruled
+    signing_in = {"choose_password", "claim", "give_starting_password", "remove_login"}
+    assert ruled <= {"add", "change", "revision"} | signing_in, ruled
+    assert {"add", "change"} | signing_in <= ruled
 
     # And the doors are shut to everything else. Not whole packages: `views.py` reads opening
     # hours out of `tools.places` and tidies a link with `tools.urls`, which write nothing. It

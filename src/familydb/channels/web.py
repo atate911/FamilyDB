@@ -44,8 +44,9 @@ THREAD_NAME = "familydb-web-chat"
 def incoming(text: str, member_name: str, chat_id: str = DEFAULT_CHAT) -> IncomingMessage:
     """Web messages name the sender the way console messages do, and never repeat an update id.
 
-    Nobody signs in as themselves — the page is behind one family password — so the sender is
-    whoever the person said they were, resolved against the family list by display name.
+    The page names the sender: whoever is signed in, or, while the family still shares one
+    password, whoever the person said they were. Either way it is resolved against the family
+    list by display name.
     """
     return IncomingMessage(
         channel=CHANNEL,

@@ -40,4 +40,52 @@
   </form>
   <p class="muted small">Switching somebody off keeps everything they ever said and did; the bot just
     stops answering them, including anything they sent that is still waiting.</p>
+
+  <section class="panel" id="signing-in">
+    <h2>{{ icon('key') }}Signing in to this page</h2>
+    {% if made %}
+      <p class="said" role="status">{{ person.name }}'s starting password:
+        <code class="made">{{ made }}</code></p>
+      <p class="muted">Shown this once: send it to {{ person.name }} now. They sign in as
+        {{ person.name }} with it, and choose their own password straight away.</p>
+    {% endif %}
+    {% if not personal %}
+      <p class="muted">Everybody signs in with the family password for now.
+        <a href="{{ url_for('family.you') }}">Choose your own password first</a>, as an admin;
+        then you can give everybody else a starting password here.</p>
+    {% elif mine %}
+      <p class="muted">This is you. <a href="{{ url_for('family.you') }}">Change your
+        password</a> on the Your password page.</p>
+    {% elif not person.role_may_sign_in %}
+      <p class="muted">A {{ person.role }} does not sign in to this page.</p>
+    {% elif not person.active %}
+      <p class="muted">Switched off, so they cannot sign in.</p>
+    {% else %}
+      <p class="muted">
+        {% if person.sign_in == 'own' %}Signs in with a password of their own.
+        {% elif person.sign_in == 'starting' %}Has a starting password they have not used yet.
+        {% else %}Cannot sign in to this page yet.{% endif %}
+      </p>
+      <div class="actions">
+        <form method="post" action="{{ url_for('family.sign_in_for', member_id=person.id) }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+          <input type="hidden" name="once" value="{{ once_token() }}" />
+          <input type="hidden" name="action" value="start" />
+          <button type="submit">{{ icon('key') }}{{ 'Make a new starting password' if person.sign_in else 'Make a starting password' }}</button>
+        </form>
+        {% if person.sign_in %}
+          <form method="post" action="{{ url_for('family.sign_in_for', member_id=person.id) }}">
+            <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+            <input type="hidden" name="once" value="{{ once_token() }}" />
+            <input type="hidden" name="action" value="remove" />
+            <button class="danger" type="submit">Take their password away</button>
+          </form>
+        {% endif %}
+      </div>
+      {% if person.sign_in %}
+        <p class="muted small">A new starting password signs them out on every phone and
+          computer: the thing to do for a lost phone.</p>
+      {% endif %}
+    {% endif %}
+  </section>
 {% endblock %}

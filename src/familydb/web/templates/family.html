@@ -5,10 +5,15 @@
   {% call page_head('Family', 'Who the bot talks to.', 'family') %}
     <a class="button" href="#add">{{ icon('person_plus') }}Add somebody</a>
   {% endcall %}
-  <p class="muted small">On the web page and in the console people say who they
-    are; on Telegram the bot knows them by their Telegram id, so add it here to let somebody
-    message it from their phone. Anybody not on this list who writes is told their id and
-    turned away.</p>
+  <p class="muted small">On Telegram the bot knows people by their Telegram id, so add it here to
+    let somebody message it from their phone. Anybody not on this list who writes is told their
+    id and turned away. On this page each person signs in as themselves, with a password of their
+    own: open somebody to give them a starting password.</p>
+  {% if not personal %}
+    <p class="panel muted">Everybody signs in with the family password for now, so this page
+      cannot tell who is who. <a href="{{ url_for('family.you') }}">Choose your own password</a>,
+      as an admin, then give everybody else a starting password here.</p>
+  {% endif %}
 
   <ul class="panel plain people">
     {% for person in people %}
@@ -18,11 +23,13 @@
           <strong>{{ person.name }}</strong>
           <span class="tag">{{ person.role }}</span>
           {% if not person.active %}<span class="tag warn">switched off</span>{% endif %}
+          {% if person.sign_in == 'own' %}<span class="tag">signs in</span>
+          {% elif person.sign_in == 'starting' %}<span class="tag">starting password</span>{% endif %}
         </div>
         <div class="muted">
           {% if person.telegram_id %}Telegram {{ person.telegram_id }}
           {% elif person.elsewhere %}known on {{ person.elsewhere }}
-          {% elif person.role == 'kid' %}named in ideas, does not message the bot
+          {% elif person.role == 'kid' and not person.sign_in %}named in ideas and plans
           {% else %}web page and console only{% endif %}
         </div>
         <a class="button ghost" href="{{ url_for('family.edit', member_id=person.id) }}">{{ icon('edit') }}Change</a>
@@ -57,7 +64,7 @@
                 <label for="knock-role-{{ loop.index }}">Role</label>
                 <select id="knock-role-{{ loop.index }}" name="role">
                   {% for role in roles %}
-                    <option value="{{ role }}" {{ 'selected' if role == 'member' }}>{{ role }}</option>
+                    <option value="{{ role }}" {{ 'selected' if role == 'parent' }}>{{ role }}</option>
                   {% endfor %}
                 </select>
               </div>
@@ -82,7 +89,7 @@
         <label for="role">Role</label>
         <select id="role" name="role">
           {% for role in roles %}
-            <option value="{{ role }}" {{ 'selected' if role == ('admin' if not people else 'member') }}>{{ role }}</option>
+            <option value="{{ role }}" {{ 'selected' if role == ('admin' if not people else 'parent') }}>{{ role }}</option>
           {% endfor %}
         </select>
       </div>
@@ -94,5 +101,8 @@
         <button type="submit">{{ icon('plus') }}Add</button>
       </div>
     </form>
+    <dl class="facts roles">
+      {% for role in roles %}<dt>{{ role }}</dt><dd>{{ role_words[role] }}</dd>{% endfor %}
+    </dl>
   </section>
 {% endblock %}

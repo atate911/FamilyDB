@@ -30,7 +30,7 @@ def test_members_resolve_by_channel_and_console_name(conn, family) -> None:
     assert members.resolve(conn, "console", "alex").display_name == "Alex"
     assert family["girls"].channel is None
     with pytest.raises(sqlite3.IntegrityError):
-        members.add(conn, "sam", "member", now=NOW_ISO)  # names are unique, case-insensitively
+        members.add(conn, "sam", "parent", now=NOW_ISO)  # names are unique, case-insensitively
 
 
 def test_idea_round_trip_normalises_json_fields(conn, family) -> None:

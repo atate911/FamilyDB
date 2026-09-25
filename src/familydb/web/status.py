@@ -25,7 +25,7 @@ from familydb.store import calls, ideas, members, messages
 from familydb.store import settings as settings_store
 from familydb.store.settings import SECRETS
 from familydb.web import views
-from familydb.web.auth import password_chosen, password_in_use
+from familydb.web.auth import own_passwords, password_chosen, password_in_use
 
 DAYS = 30
 TROUBLE_LIMIT = 6
@@ -108,7 +108,7 @@ def telegram_working(app: App) -> bool:
     return bool(app.settings.telegram_bot_token) and not state.startswith(("the token", "cannot"))
 
 
-def services(app: App) -> list[dict[str, Any]]:
+def services(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
     live = app.settings
     calendar = "not configured"
     if live.google_calendar_id and not calendar_available(live):
@@ -120,10 +120,13 @@ def services(app: App) -> list[dict[str, Any]]:
         if weather_available(live)
         else "no home coordinates, so no forecast and no travel estimates"
     )
-    if not password_in_use(live):
+    personal = own_passwords(conn)
+    if personal:
+        page = "everybody signs in as themselves"
+    elif not password_in_use(live):
         page = "no password: anyone who can reach it is in"
     elif password_chosen(live):
-        page = "the family's own password"
+        page = "one password the family shares; give each person their own on the setup page"
     else:
         page = "the installer's password; choose your own on the setup page"
     if web_is_public(live):
@@ -134,7 +137,7 @@ def services(app: App) -> list[dict[str, Any]]:
         _row("Weather and travel", weather_available(live), weather),
         _row("Reading the web", *_lookups(app)),
         _row("Weekend digest", *_digest(app)),
-        _row("This page", password_in_use(live) or None, page),
+        _row("This page", (personal or password_in_use(live)) or None, page),
     ]
 
 
@@ -251,7 +254,7 @@ def status(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
         "days": DAYS,
         "models": models(app),
         "keys": keys(app, {name: stored[name] for name in SECRETS if name in stored}),
-        "services": services(app),
+        "services": services(app, conn),
         "spending": spending(conn, since, app.settings, app.clock.now()),
         "last": last_call(conn, tz),
         "waiting": waiting(conn, tz),
@@ -277,7 +280,7 @@ class SetupStep:
     todo: str  # the line on the home page while it is not done
 
 
-SETUP_ORDER = ("password", "you", "model", "home", "telegram", "family", "calendar")
+SETUP_ORDER = ("you", "password", "model", "home", "telegram", "family", "calendar")
 
 
 def setup_progress(app: App, conn: sqlite3.Connection) -> list[SetupStep]:
@@ -288,10 +291,12 @@ def setup_progress(app: App, conn: sqlite3.Connection) -> list[SetupStep]:
     linked = [person for person in everyone if person.channel_user_id]
     chat = app.provider("chat")
     bot = telegram_name(app)
-    if not password_in_use(live):
+    if own_passwords(conn):
+        password = (True, "Everybody signs in as themselves.")
+    elif not password_in_use(live):
         password = (True, "No password: the page is only reachable from this machine.")
     elif password_chosen(live):
-        password = (True, "Your own password is in use.")
+        password = (False, "Everybody still shares one password.")
     else:
         password = (False, "Still the password the installer made up.")
     telegram_state = app.channel_states.get("telegram", "")
@@ -307,16 +312,6 @@ def setup_progress(app: App, conn: sqlite3.Connection) -> list[SetupStep]:
         telegram = "Not set up; the family can use the Chat page meanwhile."
     return [
         SetupStep(
-            "password",
-            "Choose the family password",
-            "Password",
-            "recommended",
-            1,
-            password[0],
-            password[1],
-            "Choose your own family password, instead of the one the installer made up.",
-        ),
-        SetupStep(
             "you",
             "Add yourself",
             "You",
@@ -325,6 +320,16 @@ def setup_progress(app: App, conn: sqlite3.Connection) -> list[SetupStep]:
             admin is not None,
             f"On the list as {admin.display_name}." if admin else "Nobody is on the list yet.",
             "Add yourself, as an admin, then the rest of the family.",
+        ),
+        SetupStep(
+            "password",
+            "Your own password",
+            "Password",
+            "recommended",
+            1,
+            password[0],
+            password[1],
+            "Choose your own password, so everybody signs in as themselves.",
         ),
         SetupStep(
             "model",

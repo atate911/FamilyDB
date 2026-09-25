@@ -80,20 +80,34 @@
     {{ icon('right', cls='go') }}
   </a>
 
-  <section class="panel" id="password">
-    <h2>Family password</h2>
-    <p class="muted">
-      {% if not needs_password %}
-        This page has no password, so anyone who can reach it is in. Choose one to lock it.
-      {% elif password.chosen %}
-        The one everybody signs in with. Changing it signs every other browser out.
-      {% else %}
-        Still the one the installer made up. Choose one the family will remember: a short sentence
-        of at least {{ password.least }} characters is easy to remember and hard to guess.
-      {% endif %}
-    </p>
-    {% include "password_form.html" %}
-  </section>
+  {% if personal %}
+    <section class="panel" id="password">
+      <h2>{{ icon('key') }}Signing in</h2>
+      <p class="muted">
+        Everybody signs in as themselves, with a password of their own. Change yours on
+        <a href="{{ url_for('family.you') }}">Your password</a>; give somebody a starting
+        password, or take theirs away, on the <a href="{{ url_for('family.show') }}">Family</a>
+        page.
+      </p>
+    </section>
+  {% else %}
+    <section class="panel" id="password">
+      <h2>Family password</h2>
+      <p class="muted">
+        {% if not needs_password %}
+          This page has no password, so anyone who can reach it is in. Choose one to lock it.
+        {% elif password.chosen %}
+          The one everybody signs in with. Changing it signs every other browser out.
+        {% else %}
+          Still the one the installer made up. Choose one the family will remember: a short sentence
+          of at least {{ password.least }} characters is easy to remember and hard to guess.
+        {% endif %}
+        Better still, give each person a password of their own:
+        <a href="{{ url_for('family.you') }}">choose yours first</a>, as an admin.
+      </p>
+      {% include "password_form.html" %}
+    </section>
+  {% endif %}
 
   <section class="panel" id="keys">
     <h2>{{ icon('key') }}API keys</h2>
@@ -234,7 +248,8 @@
     <h2>{{ icon('search') }}See a key</h2>
     <p class="muted">
       {% if needs_password %}
-        Type the family password again. The key is shown once and never put in the address bar.
+        Type {{ 'your' if own_password else 'the family' }} password again. The key is shown once and
+        never put in the address bar.
       {% else %}
         This page has no password, so a key is shown to anyone who can reach it.
       {% endif %}
@@ -251,7 +266,7 @@
       </div>
       {% if needs_password %}
         <div class="field">
-          <label for="reveal-password">Family password</label>
+          <label for="reveal-password">{{ 'Your password' if own_password else 'Family password' }}</label>
           <input
             id="reveal-password"
             name="password"
@@ -275,7 +290,7 @@
       <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
       {% if needs_password %}
         <div class="field">
-          <label for="everyone-password">Family password</label>
+          <label for="everyone-password">{{ 'Your password' if own_password else 'Family password' }}</label>
           <input
             id="everyone-password"
             name="password"

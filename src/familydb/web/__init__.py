@@ -2,15 +2,18 @@
 
 `create_app` builds a Flask application around an existing `App`, so the page works on the same
 database and settings as the bot itself. Most of it reads — the ideas list, one idea, the
-restaurants, the plans, what is connected and what it has cost. Three parts write, each through
+restaurants, the plans, what is connected and what it has cost. Four parts write, each through
 one door: `chat.py` hands a message to the pipeline, `edits.py` changes an idea, an outcome or a
-plan through the same tools the model calls, and `settings.py` is the only thing that touches
+plan through the same tools the model calls, `family.py` changes who is in the family and how
+they sign in through `familydb.family`, and `settings.py` is the only thing that touches
 `app_settings`. Every other module in this package reads and nothing else.
 """
 
 from __future__ import annotations
 
 import logging
+import sqlite3
+from contextlib import closing
 from datetime import timedelta
 from typing import Any
 
@@ -47,7 +50,7 @@ NO_PASSWORD_BEHIND_PROXY = (
 )
 SHORT_PASSWORD = (
     "WEB_PASSWORD is {length} characters. A page reachable from other machines needs at least "
-    f"{MIN_PASSWORD}, because one password guards everything and there is no second factor."
+    f"{MIN_PASSWORD}, because a password is all that guards it and there is no second factor."
 )
 NO_PROXY_TRUSTED = (
     "The page is on %s with WEB_TRUST_PROXY off. If a reverse proxy is in front, set it to true: "
@@ -56,9 +59,13 @@ NO_PROXY_TRUSTED = (
 )
 
 
-def check_configuration(settings: Settings) -> None:
-    """Refuse to serve a page the network could walk into. Raises ConfigError."""
-    if not web_password_required(settings):
+def check_configuration(settings: Settings, *, own_passwords: bool = False) -> None:
+    """Refuse to serve a page the network could walk into. Raises ConfigError.
+
+    `own_passwords` says people sign in as themselves, each with a password the page would not
+    take too short, so there is no need for a shared one at all.
+    """
+    if not web_password_required(settings) or own_passwords:
         return
     if settings.web_password_hash:
         return  # chosen on the page, whose form would not take one that was too short
@@ -97,7 +104,14 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     """
     app.refresh()  # start from the settings in force, not only from what the environment said
     settings = app.settings
-    check_configuration(settings)
+    try:
+        with closing(app.connect()) as conn:
+            personal = auth.own_passwords(conn)
+    except sqlite3.Error as exc:
+        # Asked as if nobody had a password of their own, which only ever asks for more.
+        log.warning("could not read who signs in to the page: %s", exc)
+        personal = False
+    check_configuration(settings, own_passwords=personal)
     web = Flask(__name__)
     web.config.update(
         SECRET_KEY=session_secret(settings),
@@ -116,9 +130,9 @@ def create_app(app: App, *, api: Any = None) -> Flask:
         FAMILYDB_ONCE=once.Once(),
     )
 
-    # Read through `app` rather than closing over `settings`: a change made on the settings page
-    # replaces the whole object, and these must follow it.
-    web.jinja_env.globals["password_in_use"] = lambda: auth.password_in_use(app.settings)
+    # Who is asking, as the login gate found them: whether to offer signing out, whose name to
+    # show, and whether the pages only an admin changes are in reach.
+    web.jinja_env.globals["visitor"] = auth.visitor
     web.jinja_env.globals["csrf_token"] = auth.csrf_token
     web.jinja_env.globals["once_token"] = once.once_token
     web.context_processor(
@@ -127,7 +141,7 @@ def create_app(app: App, *, api: Any = None) -> Flask:
             "footer": views.footer(__version__),
             # Who the family talks to, for every page that speaks of her: her name, and whether
             # there is a her at all. With no persona the bot is FamilyDB and the place is "Chat".
-            "assistant": personas.display_name(app.settings),
+            "assistant": personas.active(app.settings).name,
             "has_persona": app.settings.persona != personas.NONE,
         }
     )
@@ -144,7 +158,7 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     web.before_request(_picking_up_settings(app, web))
     web.after_request(security_headers)
     web.register_error_handler(404, _not_found)
-    if web_is_public(settings) and not auth.password_in_use(settings):
+    if web_is_public(settings) and not (personal or auth.password_in_use(settings)):
         log.warning("serving the web page on %s with no password", settings.web_host)
     elif web_is_public(settings) and not settings.web_trust_proxy:
         log.warning(NO_PROXY_TRUSTED, settings.web_host)

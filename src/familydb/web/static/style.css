@@ -98,6 +98,7 @@
 .in-plans, .to-plans { --accent: var(--cyan); }
 .in-todo, .to-todo { --accent: var(--lemon); }
 .in-family, .to-family { --accent: var(--amber); }
+.in-you, .to-you { --accent: var(--amber); }
 
 /* And each kind of idea has one, on its label and when its card is hovered. */
 .kind { --kind: var(--lilac); }
@@ -1383,7 +1384,8 @@ button.tick:active::before { background: var(--accent); border-color: var(--acce
 .ask textarea:disabled { cursor: not-allowed; }
 .ask-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1rem; padding: 0.35rem 0.4rem 0 0.8rem; }
 .ask .who { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
-.ask .who label { margin: 0; font-size: 0.875rem; color: var(--dim); }
+.ask .who label, .ask .who .from { margin: 0; font-size: 0.875rem; color: var(--dim); }
+.ask .who .from strong { color: var(--ink); font-weight: 600; }
 .ask .who select { min-height: 2.4rem; padding-top: 0.35rem; padding-bottom: 0.35rem; font-size: 0.95rem; background-color: var(--surface-2); border-color: var(--line-2); }
 .ask .locate label { display: inline-flex; align-items: center; gap: 0.35rem; margin: 0; font-size: 0.9rem; font-weight: 400; color: var(--ink-2); cursor: pointer; }
 .ask .locate .icon { width: 1.05rem; height: 1.05rem; color: var(--amber); }
@@ -1794,6 +1796,7 @@ table.month td.today time { color: var(--on-bright); background: var(--amber); b
 .crt-face .eye { transform-box: fill-box; transform-origin: center; animation: eyes 7s ease-in-out infinite; }
 .signin .signin-ready { justify-self: start; margin-top: 1.1rem; }
 .signin h1 { margin: 0 0 1.5rem; font-size: 1.75rem; }
+.signin input + label { margin-top: 1rem; }
 .signin form button { width: 100%; }
 
 .lost { width: 100%; max-width: 30rem; margin: 0 auto; text-align: center; }

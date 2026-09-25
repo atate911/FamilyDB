@@ -67,11 +67,11 @@ def prefix(
 ) -> tuple[list[SystemBlock], dict[str, int]]:
     """The cached part of the request. Nothing in it may change from one call to the next."""
     if call.prompt == "system":
-        persona, instructions, family, idea_list = chat_prefix(conn, settings)
+        character, instructions, family, idea_list = chat_prefix(conn, settings)
         sizes = {"instructions": len(instructions), "family": len(family), "ideas": len(idea_list)}
-        if persona:
-            sizes["personality"] = len(persona)
-        return chat_blocks(persona, instructions, family, idea_list), sizes
+        if character:
+            sizes["personality"] = len(character)
+        return chat_blocks(character, instructions, family, idea_list), sizes
     instructions = load_prompt(call.prompt)
     home = f"Home area: {settings.home_area or 'not set'}\nTimezone: {settings.tz}"
     blocks = [SystemBlock(instructions, cacheable=True), SystemBlock(home, cacheable=True)]

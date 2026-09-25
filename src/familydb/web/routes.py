@@ -28,7 +28,7 @@ from familydb.store import places as place_store
 from familydb.store import plans as plan_store
 from familydb.store import tasks as task_store
 from familydb.store.ideas import KIND_SUGGESTIONS
-from familydb.web import agenda, chat, views
+from familydb.web import agenda, auth, chat, views
 from familydb.web import status as status_page
 from familydb.web.chat import WHO_KEY
 
@@ -101,13 +101,15 @@ def home() -> Response | str:
     app = _app()
     today = app.clock.today()
     tz = app.settings.tzinfo
+    # Setting up is an admin's, so nobody else is sent to it or shown what is left of it.
+    manages = auth.visitor().manages
     with closing(app.connect()) as conn:
         progress = status_page.setup_progress(app, conn)
-        if not status_page.ready_to_answer(progress):
+        if manages and not status_page.ready_to_answer(progress):
             return redirect(url_for("setup.overview"))
         seen = agenda.read(app, conn, today, today + timedelta(days=HOME_AHEAD_DAYS))
         everything = idea_store.list_all(conn)
-        unfinished = status_page.setup_steps(app, conn)
+        unfinished = status_page.setup_steps(app, conn) if manages else []
         family = [member.display_name for member in member_store.list_all(conn)]
         todo = task_store.list_all(conn, status="open")
         talk = chat.glance(app, conn)

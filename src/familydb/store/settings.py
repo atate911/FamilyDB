@@ -60,8 +60,9 @@ SECRETS = ("anthropic_api_key", "openai_api_key", "gemini_api_key", "telegram_bo
 # Who the assistant is and who the family are: long texts with a page of their own
 # (/settings/personality), logged as "rewritten" rather than word for word.
 PROFILE = ("persona", "persona_text", "about_family", "voice_lines")
-# The lock on the page itself: the family password, hashed, set only by its own form (which asks
-# for the password in force) and by `familydb password`. Never on a form of settings.
+# The password the family shares, hashed, set only by its own form (which asks for the password in
+# force) and by `familydb password`. Never on a form of settings. It opens the page only until an
+# admin has a password of their own (store/logins.py); from then on it opens nothing.
 LOCK = ("web_password_hash",)
 EDITABLE = frozenset(BEHAVIOUR) | frozenset(SECRETS) | frozenset(PROFILE) | frozenset(LOCK)
 

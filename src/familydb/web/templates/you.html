@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head %}
+{% block title %}Your password · {{ site_title }}{% endblock %}
+{% block content %}
+  {{ page_head('Your password', 'How you sign in to this page.', 'key') }}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+  {% if visitor().member %}
+    <section class="panel">
+      {% if own.temporary %}
+        <h2>Choose your own password</h2>
+        <p class="muted">You signed in with a starting password somebody made up for you. Choose
+          one of your own to use from now on; the starting one stops working when you do.</p>
+      {% else %}
+        <h2>Change your password</h2>
+        <p class="muted">You sign in as <strong>{{ visitor().name }}</strong>. A new password
+          signs you out on every other phone and computer.</p>
+      {% endif %}
+      {% include "own_password_form.html" %}
+    </section>
+  {% elif own.claimable %}
+    <section class="panel">
+      <h2>Your own password</h2>
+      <p class="muted">Everybody signs in with the family password for now, so this page cannot
+        tell who you are. Choose your own password, as an admin, and from then on everybody signs
+        in as themselves: the family password stops working, and you give everybody else a
+        starting password on the Family page.</p>
+      {% include "own_password_form.html" %}
+    </section>
+  {% else %}
+    <p class="panel muted">There is no admin on the family list yet, and an admin is the first
+      to have a password of their own. <a href="{{ url_for('setup.step', name='you') }}">Add
+      yourself first</a>.</p>
+  {% endif %}
+
+  <ul class="tips">
+    <li>At least {{ own.least }} characters. A short sentence is easy to remember and hard to
+      guess, like <em>pancakes on sunday mornings</em>.</li>
+    <li>Each phone and computer stays signed in for a while, so it is not typed often.</li>
+    <li>Forgotten? An admin can make you a new starting password on the Family page. If you are
+      the only admin, whoever looks after the server can, with
+      <code>sudo /opt/familydb/scripts/maintain.sh password</code>.</li>
+  </ul>
+{% endblock %}

@@ -16,16 +16,44 @@
     {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
     <form method="post" action="{{ url_for('auth.sign_in') }}">
       {% if next %}<input type="hidden" name="next" value="{{ next }}" />{% endif %}
-      <label for="password">Family password</label>
-      <input
-        id="password"
-        name="password"
-        type="password"
-        autocomplete="current-password"
-        autofocus
-        required
-      />
+      {% if personal %}
+        {# Everybody signs in as themselves: the name is the one on the Family page. #}
+        <label for="name">Your name</label>
+        <input
+          id="name"
+          name="name"
+          autocomplete="username"
+          autocapitalize="words"
+          maxlength="80"
+          value="{{ name }}"
+          {{ '' if name else 'autofocus' }}
+          required
+        />
+        <label for="password">Your password</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          {{ 'autofocus' if name }}
+          required
+        />
+      {% else %}
+        <label for="password">Family password</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          autofocus
+          required
+        />
+      {% endif %}
       <button type="submit">Sign in{{ icon('right') }}</button>
     </form>
+    {% if personal %}
+      <p class="muted hint">Forgotten it? An admin can make you a new starting password on the
+        Family page.</p>
+    {% endif %}
   </section>
 {% endblock %}
