@@ -8,7 +8,7 @@ import sys
 
 from evals.cases import CASES, by_name
 from evals.harness import grade, run_case
-from familydb.agent import providers
+from familydb.agent import gateway, providers
 from familydb.config import Settings
 
 
@@ -18,6 +18,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--repeat", type=int, default=1, help="runs per case (default 1)")
     parser.add_argument("--provider", choices=providers.NAMES, help="answer with this vendor")
     parser.add_argument("--model", help="and this model, instead of the configured one")
+    parser.add_argument(
+        "--level", choices=providers.catalog.LEVELS, help="or its model at this level"
+    )
     parser.add_argument("--show", action="store_true", help="print each reply and its calls")
     parser.add_argument(
         "--budget",
@@ -33,11 +36,16 @@ def main(argv: list[str] | None = None) -> int:
     if args.provider:
         base = base.model_copy(update={"provider": args.provider})
     if args.model:
-        base = base.model_copy(update={f"{base.provider}_model": args.model})
+        # A model named is the everyday one, so a level set in the environment cannot pass it by.
+        base = base.model_copy(
+            update={f"{base.provider}_model": args.model, "chat_level": "everyday"}
+        )
+    if args.level:
+        base = base.model_copy(update={"chat_level": args.level})
     if not providers.ready(base, "chat"):
         print(f"No key for {base.provider}: set it in .env or the environment.", file=sys.stderr)
         return 2
-    model = getattr(base, f"{base.provider}_model")
+    _, model = gateway.answering(base, "chat")
     cases = [by_name(name) for name in args.case] if args.case else list(CASES)
     print(f"{len(cases)} case(s) x {args.repeat} on {base.provider} {model}\n")
 

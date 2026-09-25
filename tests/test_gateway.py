@@ -9,6 +9,7 @@ import pytest
 
 from familydb.agent import compose, gateway
 from familydb.agent.prompt import load_prompt
+from familydb.agent.providers import catalog
 from familydb.agent.worker import run_worker_turn, worker_turn
 from familydb.app import App
 from familydb.channels.base import IncomingMessage
@@ -55,6 +56,7 @@ def test_each_kind_is_declared_whole(kind, registry, settings) -> None:
     call = gateway.spec(kind)
     assert load_prompt(call.prompt)  # the prompt file exists
     assert isinstance(getattr(settings, call.iterations), int)
+    assert getattr(settings, call.level) in catalog.LEVELS  # a level setting, read as one
     if call.effort:
         assert getattr(settings, call.effort)
     specs = {spec.name: spec for spec in registry.specs()}

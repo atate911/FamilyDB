@@ -21,6 +21,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from familydb.errors import ConfigError
 
 Effort = Literal["low", "medium", "high", "xhigh", "max"]
+# How strong a model answers, in the order each company prices them (agent/providers/catalog.py).
+Level = Literal["everyday", "better", "best"]
 ProviderName = Literal["anthropic", "openai", "gemini"]
 CacheTTL = Literal["5m", "1h"]
 Weekday = Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
@@ -93,17 +95,24 @@ class Settings(BaseSettings):
     provider: ProviderName = "openai"
     worker_provider: ProviderName | Literal[""] = ""
     provider_fallback: bool = True
+    # How strong a model answers each situation, whichever company it is. `everyday` is the
+    # company's model named below, its cheapest unless the family chose another; `better` and
+    # `best` are its stronger ones, from agent/providers/catalog.py.
+    chat_level: Level = "everyday"  # answering the family, and answering again after a failure
+    digest_level: Level = "everyday"  # the weekend digest: once a week, so a stronger one is cheap
+    lookup_level: Level = "everyday"  # looking ideas up, and searching for what is on
 
+    # Each company's everyday models: its cheapest, for chat and for the lookups.
     gemini_api_key: str | None = None
-    gemini_model: str = "gemini-2.5-pro"
-    gemini_worker_model: str = "gemini-3.8-flash"
+    gemini_model: str = "gemini-3.1-flash-lite"
+    gemini_worker_model: str = "gemini-3.1-flash-lite"
 
     openai_api_key: str | None = None
     openai_model: str = "gpt-6-luna"
     openai_worker_model: str = "gpt-6-luna"
 
     anthropic_api_key: str | None = None
-    anthropic_model: str = "claude-opus-5"
+    anthropic_model: str = "claude-haiku-4-5"
     # Who the assistant is to the family: a persona's folder in familydb/personas, or "none". Not
     # empty for none: an empty setting means "the default" everywhere else, and would bring her
     # back. `personas.active` reads it, and lays `persona_text` and `voice_lines` over her own.
@@ -167,7 +176,7 @@ class Settings(BaseSettings):
     worker_max_iterations: int = Field(default=12, ge=1, le=30)
     # Looking a place up and finding events are extraction jobs, not judgement calls, so they run
     # on a smaller model with less thinking. Empty falls back to the chat model.
-    worker_model: str = "claude-haiku-4-5-20251001"
+    worker_model: str = "claude-haiku-4-5"
     worker_effort: Effort = "low"
     travel_speed_kmh: float = Field(default=50.0, gt=0, le=200)
     road_factor: float = Field(default=1.3, ge=1, le=3)

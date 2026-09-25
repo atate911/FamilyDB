@@ -11,7 +11,13 @@ def test_defaults_and_masking(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.delenv("TZ", raising=False)
     monkeypatch.delenv("FAMILYDB_TZ", raising=False)
     s = Settings(_env_file=None, anthropic_api_key="sk-secret", familydb_path=tmp_path / "x.db")
-    assert s.anthropic_model == "claude-opus-5"
+    # Each company's cheapest, and every situation answered at the everyday level.
+    assert (s.openai_model, s.anthropic_model, s.gemini_model) == (
+        "gpt-6-luna",
+        "claude-haiku-4-5",
+        "gemini-3.1-flash-lite",
+    )
+    assert (s.chat_level, s.digest_level, s.lookup_level) == ("everyday",) * 3
     assert s.effort == "medium"
     assert s.tz == "UTC"
     assert s.tzinfo.key == "UTC"

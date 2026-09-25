@@ -1,10 +1,12 @@
-"""Model providers. One module per vendor, chosen per surface in the settings."""
+"""Model providers. One module per vendor, chosen per surface in the settings, and a model of
+its lineup chosen by the level each situation asks for (`catalog`)."""
 
 from __future__ import annotations
 
 import logging
 from typing import Any
 
+from familydb.agent.providers import catalog
 from familydb.agent.providers.base import (
     Exchange,
     KeyCheck,
@@ -68,6 +70,20 @@ def chosen(settings: Settings, surface: Surface) -> str:
     return settings.provider
 
 
+def model_at(provider: Provider, surface: Surface, level: str) -> str:
+    """The model this provider answers with at this level.
+
+    At everyday it is the provider's own setting for the surface, which is the company's cheapest
+    unless the family named another; above it, the catalog's model at that level, so a stronger
+    choice holds on whichever company answers, the fallback included.
+    """
+    if level != catalog.EVERYDAY:
+        stronger = catalog.at(provider.name, level)
+        if stronger is not None:
+            return stronger.name
+    return provider.model_for(surface)
+
+
 def others(name: str) -> list[str]:
     """The rest, in a fixed order, so a fallback choice never depends on the weather."""
     return [candidate for candidate in NAMES if candidate != name]
@@ -115,9 +131,11 @@ __all__ = [
     "TurnRequest",
     "WebAccess",
     "build",
+    "catalog",
     "chosen",
     "fallback_for",
     "for_surface",
+    "model_at",
     "others",
     "owner",
 ]

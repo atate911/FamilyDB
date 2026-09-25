@@ -14,6 +14,8 @@
           <option value="{{ choice }}" {% if entry.value == choice %}selected{% endif %}>
             {%- if one.kind == "toggle" -%}
               {{ "yes" if choice == "true" else "no" }}
+            {%- elif entry.labels -%}
+              {{ entry.labels.get(choice, choice) }}
             {%- else -%}
               {{ choice }}
             {%- endif -%}

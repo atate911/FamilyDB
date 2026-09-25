@@ -38,7 +38,7 @@ from flask import (
 from pydantic import ValidationError
 
 from familydb import passwords, personas, voice
-from familydb.agent import providers
+from familydb.agent import gateway, providers
 from familydb.app import App
 from familydb.config import Settings, apply_overrides
 from familydb.integrations import google_calendar as google
@@ -71,6 +71,8 @@ MODEL_BOXES = {
     "gemini_model": ("gemini", "Google"),
     "gemini_worker_model": ("gemini", "Google"),
 }
+# Which surface each level box chooses a model for: that of the kinds of call that read it.
+LEVEL_BOXES = {call.level: call.surface for call in gateway.KINDS.values()}
 KEY_LABELS = {
     "anthropic_api_key": "Claude (Anthropic)",
     "openai_api_key": "OpenAI",
@@ -192,6 +194,28 @@ def _pending() -> dict[str, Any] | None:
     return found
 
 
+def offers(one: fields.Field, chats: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    """What a box offers as it is typed in, each with a word on what it is."""
+    if one.key == "digest_chat_id":
+        return chats
+    company = MODEL_BOXES.get(one.key, ("", ""))[0]
+    return [(name, views.model_offer(company, name)) for name in one.suggested]
+
+
+def level_labels(key: str, live: Settings) -> dict[str, str]:
+    """For a level box, what each level means on the company that answers it now."""
+    surface = LEVEL_BOXES.get(key)
+    if surface is None:
+        return {}
+    answering = providers.for_surface(live, surface)
+    return {
+        level: views.level_choice(
+            level, answering.name, providers.model_at(answering, surface, level)
+        )
+        for level in providers.catalog.LEVELS
+    }
+
+
 def google_panel(live: Any) -> dict[str, Any]:
     pending = _pending()
     return {
@@ -236,9 +260,8 @@ def page(
                     "placeholder": fields.placeholder(one, getattr(base, one.key)),
                     "problem": (problems or {}).get(one.key),
                     "stored": one.key in overrides,
-                    "offers": chats
-                    if one.key == "digest_chat_id"
-                    else [(name, "") for name in one.suggested],
+                    "offers": offers(one, chats),
+                    "labels": level_labels(one.key, live),
                 }
                 for one in group
             ],
@@ -442,7 +465,8 @@ def save_model() -> Response | tuple[str, int]:
     _save(values)
     said = KEY_VERDICTS.get(verdict, KEY_VERDICTS["unchecked"])
     her = personas.active(candidate).name
-    return _answer(back, said=said.format(company=label, model=chosen.model_for("chat"), name=her))
+    _, model = gateway.answering(candidate, "chat")
+    return _answer(back, said=said.format(company=label, model=model, name=her))
 
 
 # -- the family password ----------------------------------------------------------------------

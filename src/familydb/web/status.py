@@ -56,17 +56,26 @@ def _where(name: str, live: Any, stored: dict[str, Any]) -> str:
     return "set in the environment" if getattr(live, name) else "no key"
 
 
+# The situations a level is chosen for, by a kind of call that reads each level setting.
+SITUATIONS = (
+    ("chat", "Chat messages"),
+    ("digest", "The weekend digest"),
+    ("enrich", "Web lookups and discovery"),
+)
+
+
 def models(app: App) -> list[dict[str, Any]]:
     """Who answers what, and on which model. The same question `debug cost` answers."""
     rows = []
-    for surface, what in (("chat", "Chat messages"), ("worker", "Web lookups and discovery")):
-        provider = app.provider(surface)
+    for kind, what in SITUATIONS:
+        provider, model = gateway.answering(app.settings, kind)
+        level = getattr(app.settings, gateway.spec(kind).level)
         rows.append(
             _row(
                 what,
                 provider.configured(),
                 f"{PROVIDER_LABELS.get(provider.name, provider.name)}, "
-                f"{provider.model_for(surface)}"
+                f"{views.model_text(provider.name, model, level)}"
                 + ("" if provider.configured() else " — but there is no key for it"),
             )
         )
@@ -289,7 +298,7 @@ def setup_progress(app: App, conn: sqlite3.Connection) -> list[SetupStep]:
     everyone = members.list_all(conn)
     admin = next((person for person in everyone if person.role == "admin"), None)
     linked = [person for person in everyone if person.channel_user_id]
-    chat = app.provider("chat")
+    chat, chat_model = gateway.answering(live, "chat")
     bot = telegram_name(app)
     if own_passwords(conn):
         password = (True, "Everybody signs in as themselves.")
@@ -338,7 +347,7 @@ def setup_progress(app: App, conn: sqlite3.Connection) -> list[SetupStep]:
             "needed",
             5,
             app.can_ask("chat"),
-            f"{PROVIDER_LABELS.get(chat.name, chat.name)} answers, with {chat.model_for('chat')}."
+            f"{PROVIDER_LABELS.get(chat.name, chat.name)} answers, with {chat_model}."
             if app.can_ask("chat")
             else "No AI key yet, so it cannot answer.",
             "Give it a model key. Until then it saves what it is told but cannot answer.",

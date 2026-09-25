@@ -672,7 +672,7 @@ def test_lookups_work_on_gemini_too(settings, clock, conn, family) -> None:
     assert run_enrichment(app, api=api)["done"] == 1
     assert ideas.get(conn, idea.id).enrichment == "done"
     request = api.requests[0]
-    assert request["model"] == "gemini-3.8-flash"
+    assert request["model"] == "gemini-3.1-flash-lite"
     groups = request["config"]["tools"]
     assert sorted(d["name"] for d in groups[0]["function_declarations"]) == [
         "save_place",

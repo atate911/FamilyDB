@@ -91,11 +91,11 @@ Context is built in three layers, and every piece of information belongs to exac
 
 | Kind | Trigger | Model | Sees | May do | Returns |
 |---|---|---|---|---|---|
-| Chat | a family message (Telegram, page, console) | chat model | persona, prompt, family, up to 150 ideas in the prefix; date, sender, a recently shared location, anything due to be carried, up to 20 messages of the last 6 hours, the newest within 6,000 characters | 18 chat tools | a reply; tool writes |
-| Digest | the weekly schedule, or catch-up after a restart | chat model | the chat context, with a fixed question | the chat tools | a reply to the digest chat |
-| Retry | every 5 minutes, for a failed message, 3 times at most; never after running out of steps | chat model | the chat context, plus which writes already ran | the chat tools | a reply |
-| Enrich | every 2 minutes, up to 3 pending ideas; a home idea with no place or link is skipped in code | worker model | worker prompt, home area, the idea and what was saved before | web search (3), `save_place`, `skip_place` | a place record |
-| Discover | a `suggest` call, cached 12 hours by window, constraints and topic | worker model | worker prompt, home area and where they are, the window, its hours, the constraints and topic, never the question's wording | web search (4), `report_finds` | up to 6 finds |
+| Chat | a family message (Telegram, page, console) | chat model, at the chat level | persona, prompt, family, up to 150 ideas in the prefix; date, sender, a recently shared location, anything due to be carried, up to 20 messages of the last 6 hours, the newest within 6,000 characters | 18 chat tools | a reply; tool writes |
+| Digest | the weekly schedule, or catch-up after a restart | chat model, at the digest level | the chat context, with a fixed question | the chat tools | a reply to the digest chat |
+| Retry | every 5 minutes, for a failed message, 3 times at most; never after running out of steps | chat model, at the chat level | the chat context, plus which writes already ran | the chat tools | a reply |
+| Enrich | every 2 minutes, up to 3 pending ideas; a home idea with no place or link is skipped in code | worker model, at the lookup level | worker prompt, home area, the idea and what was saved before | web search (3), `save_place`, `skip_place` | a place record |
+| Discover | a `suggest` call, cached 12 hours by window, constraints and topic | worker model, at the lookup level | worker prompt, home area and where they are, the window, its hours, the constraints and topic, never the question's wording | web search (4), `report_finds` | up to 6 finds |
 
 All of them go through one door, `agent/gateway.ask`, which runs the loop
 (`agent/loop.run_turn`): the spending limit is checked before each call, and each call is
@@ -118,6 +118,7 @@ does not change from one call of that kind to the next is declared once, in `gat
 kind            chat | digest | retry | enrich | discover
 purpose         what it is for, in words, as the cost reports say it
 surface         which model setting answers: the chat model or the lookup model
+level           the setting naming how strong a model answers: everyday, better or best
 prompt          which prompt file ("system" also brings the family and the idea list)
 tools           the fixed tool list (None: every chat tool)
 hand_back       the tools whose success is a worker's result, and ends its turn
@@ -139,7 +140,7 @@ What it gives now:
 
 Still to come in the declaration, each as its own measured change: the gate each kind needs
 before it runs (callers check a key themselves today, and the loop the spending limit), per-kind
-retry rules, and a model that a kind may escalate to.
+retry rules, and escalating a call to a stronger level on evidence that the first one failed.
 
 ## The composer: what goes in, part by part
 
@@ -181,8 +182,15 @@ The default is the cheapest model that meets measured quality, per kind, not one
 everything. The direction:
 
 - **Route by kind first.** A worker that fills in opening hours and a chat turn that plans a
-  weekend need different things; each kind names its own model setting (chat and lookup already
-  do).
+  weekend need different things; each kind names its own model setting and its own level. Built:
+  every company's lineup is known by level in `agent/providers/catalog.py` (everyday, better,
+  best: GPT-6 Luna, Sol and Astra; Claude Haiku, Sonnet and Opus; Gemini Flash-Lite, Flash and
+  Pro), with what each costs and whether it thinks before answering, and a test holds the catalog
+  to what the provider modules send. `everyday` is each company's own model setting, its cheapest
+  by default (a test holds that too); the family chooses a level per situation (`chat_level` for
+  chat and retries, `digest_level`, `lookup_level` for lookups and discovery), and a call that
+  moves to the fallback company is answered at the same level there. The family chooses; the
+  model never does, and nothing is escalated because a question sounded hard.
 - **Escalate on evidence, not on guesswork.** A cheaper model may hand a task up to a stronger one
   when code can see that it failed: a validation error, a hand-back that did not happen, an empty
   answer. Not because the question sounded hard.

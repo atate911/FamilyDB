@@ -442,9 +442,9 @@ def debug_cost(
     from familydb.agent import compose, gateway
 
     application = build_app()
-    settings = application.settings
     chat_call = gateway.spec("chat")
     with closing(_ready(application)) as conn:
+        settings = application.settings  # with what the page stored, which _ready brought in
         blocks, _ = compose.prefix(chat_call, conn, settings)
         tools = compose.tool_defs(chat_call, application.registry)
         since = utc_iso(application.clock.now() - timedelta(days=days))
@@ -456,16 +456,22 @@ def debug_cost(
     system_tokens = sum(len(block.text) for block in blocks) // 4
     tool_tokens = len(_json.dumps([t.schema for t in tools], ensure_ascii=False)) // 4
     tool_tokens += sum(len(t.name) + len(t.description) for t in tools) // 4
-    chat_provider = application.provider("chat")
-    worker_provider = application.provider("worker")
+    chat_provider, chat_model = gateway.answering(settings, "chat")
+    digest_provider, digest_model = gateway.answering(settings, "digest")
+    worker_provider, worker_model = gateway.answering(settings, "enrich")
     typer.echo("Sent with every chat message, and cached between them:")
     typer.echo(f"  system prompt and family context  ~{system_tokens:>6,d} tokens")
     typer.echo(f"  {len(tools)} tool definitions               ~{tool_tokens:>6,d} tokens")
     typer.echo(f"  {'in total':<33}~{system_tokens + tool_tokens:>6,d} tokens")
-    typer.echo(f"  chat runs on {chat_provider.model_for('chat')} via {chat_provider.name}")
+    typer.echo(f"  chat runs on {chat_model} via {chat_provider.name} ({settings.chat_level})")
+    if (digest_provider.name, digest_model) != (chat_provider.name, chat_model):
+        typer.echo(
+            f"  the weekend digest runs on {digest_model} via {digest_provider.name} "
+            f"({settings.digest_level}), with a prompt cache of its own"
+        )
     typer.echo(
-        f"  lookups and discovery run on {worker_provider.model_for('worker')} "
-        f"via {worker_provider.name}"
+        f"  lookups and discovery run on {worker_model} via {worker_provider.name} "
+        f"({settings.lookup_level})"
     )
     if chat_provider.name == "anthropic":
         typer.echo(f"  the prefix above is cached for {settings.anthropic_cache_ttl}")
@@ -637,12 +643,14 @@ def run() -> None:
     privacy.tighten(application.settings)
     application.refresh()  # before anything reads a setting, including the scheduler
     settings = application.settings
-    chat = application.provider("chat")
+    from familydb.agent import gateway
+
+    chat, chat_model = gateway.answering(settings, "chat")
     log.info(
         "familydb %s starting: db=%s answering on %s via %s, effort=%s, tz=%s",
         __version__,
         settings.familydb_path,
-        chat.model_for("chat"),
+        chat_model,
         chat.name,
         settings.effort,
         settings.tz,

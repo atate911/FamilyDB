@@ -248,6 +248,21 @@ def test_a_model_box_suggests_models_without_limiting_them(page) -> None:
     assert page.app.settings.openai_model == "gpt-6-sol"
 
 
+def test_each_level_says_which_model_it_means_and_what_it_costs(page) -> None:
+    text = page.get("/settings").text
+    # The fixture's Claude, whose everyday model is set to Opus; the stronger ones are the lineup's.
+    assert "everyday: Claude Opus 5 ($5.00 in, $25.00 out)" in text
+    assert "better: Claude Sonnet 5 ($2.00 in, $10.00 out)" in text
+    page.post("/settings", data=_whole_form(page, provider="openai", digest_level="best"))
+    assert page.app.settings.digest_level == "best"
+    text = page.get("/settings").text
+    assert "best: GPT-6 Astra ($10.00 in, $50.00 out)" in text
+    assert '<option value="best" selected>best: GPT-6 Astra' in text
+    # A model box says where each name stands, and what it costs.
+    assert '<option value="gpt-6-sol">GPT-6 Sol, better · $2.00 in, $10.00 out</option>' in text
+    assert '<option value="gpt-5">$1.25 in, $10.00 out</option>' in text
+
+
 def test_the_daily_limit_is_on_the_page(page) -> None:
     page.post("/settings", data=_whole_form(page, daily_spend_limit="0.5"))
     assert page.app.settings.daily_spend_limit == 0.5
@@ -266,11 +281,19 @@ class _Company:
         return None if self.known is None else model in self.known
 
 
+def _ask(monkeypatch, company: _Company) -> None:
+    """OpenAI's answer about a model name comes from `company`; the rest of it is as it is."""
+    from familydb.agent.providers.openai import OpenAIProvider
+
+    monkeypatch.setattr(
+        OpenAIProvider, "model_exists", lambda self, model: company.model_exists(model)
+    )
+
+
 def test_a_model_the_company_does_not_have_is_refused(page, monkeypatch) -> None:
-    from familydb.web import settings as settings_view
 
     company = _Company({"gpt-6-luna"})
-    monkeypatch.setattr(settings_view.providers, "build", lambda name, settings: company)
+    _ask(monkeypatch, company)
     response = page.post("/settings", data=_whole_form(page, openai_model="gpt-6-lunar"))
     assert response.status_code == 400
     assert "OpenAI says it has no model called gpt-6-lunar. Check the spelling." in _errors(
@@ -284,9 +307,8 @@ def test_a_model_the_company_does_not_have_is_refused(page, monkeypatch) -> None
 
 
 def test_a_company_that_cannot_be_asked_does_not_block_a_save(page, monkeypatch) -> None:
-    from familydb.web import settings as settings_view
 
-    monkeypatch.setattr(settings_view.providers, "build", lambda name, settings: _Company(None))
+    _ask(monkeypatch, _Company(None))
     page.post("/settings", data=_whole_form(page, openai_model="gpt-6-sol"))
     assert page.app.settings.openai_model == "gpt-6-sol"
 

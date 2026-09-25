@@ -123,6 +123,8 @@ def test_the_whole_way_through(fresh, monkeypatch, conn) -> None:
     assert back.headers["Location"] == "/setup/model"
     page = fresh.get("/setup/model").text
     assert "OpenAI accepted the key. Vera answers with gpt-6-luna." in page
+    lineup = " ".join(page.split())
+    assert "GPT-6 Luna (everyday, $0.10 in, $0.50 out); GPT-6 Sol (better," in lineup
     assert app.settings.openai_api_key == "sk-good" and app.settings.provider == "openai"
 
     # It can answer now, so the home page is the home page again.

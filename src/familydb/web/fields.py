@@ -127,14 +127,22 @@ def field(
     )
 
 
-MODEL_NOTE = "Pick one or type any model name the company offers; the cheapest are listed first."
+MODEL_NOTE = (
+    "What everyday means for this company: its cheapest unless you choose another. Pick one or "
+    "type any model name the company offers; the cheapest are listed first."
+)
+LEVEL_NOTE = (
+    "Everyday is the company's own model named below; better and best are its stronger ones, "
+    "dearer for every message. Prices are US dollars for a million tokens read and written."
+)
 
 
 # The page, in the order it reads. Every name in BEHAVIOUR appears exactly once; a test says so.
 GROUPS: tuple[tuple[str, str, tuple[Field, ...]], ...] = (
     (
         "Who answers",
-        "Which model writes the replies, and which one does the looking up.",
+        "Which company answers, and how strong a model it answers with in each situation: the "
+        "cheapest by default, a stronger one where it is worth paying for.",
         (
             field("provider", "Chat model company", "Who answers a message in the chat."),
             field(
@@ -145,21 +153,46 @@ GROUPS: tuple[tuple[str, str, tuple[Field, ...]], ...] = (
             field(
                 "provider_fallback",
                 "Ask the other one when the first cannot",
-                "Only ever before anything has been done, so nothing happens twice.",
+                "Only ever before anything has been done, so nothing happens twice. It answers at "
+                "the same level.",
+            ),
+            field("chat_level", "Answering the family", LEVEL_NOTE),
+            field(
+                "digest_level",
+                "The weekend digest",
+                "Once a week, so a stronger model adds little to the month.",
             ),
             field(
-                "openai_model", "OpenAI: chat model", MODEL_NOTE, suggested=suggestions("openai")
+                "lookup_level",
+                "Looking things up",
+                "Filling in an idea's details and finding what is on: everyday is usually plenty.",
             ),
-            field("openai_worker_model", "OpenAI: lookup model", suggested=suggestions("openai")),
-            field("anthropic_model", "Claude: chat model", suggested=suggestions("anthropic")),
+            field(
+                "openai_model",
+                "OpenAI: everyday chat model",
+                MODEL_NOTE,
+                suggested=suggestions("openai"),
+            ),
+            field(
+                "openai_worker_model",
+                "OpenAI: everyday lookup model",
+                suggested=suggestions("openai"),
+            ),
+            field(
+                "anthropic_model", "Claude: everyday chat model", suggested=suggestions("anthropic")
+            ),
             field(
                 "worker_model",
-                "Claude: lookup model",
+                "Claude: everyday lookup model",
                 "A smaller one is usually plenty.",
                 suggested=suggestions("anthropic"),
             ),
-            field("gemini_model", "Gemini: chat model", suggested=suggestions("gemini")),
-            field("gemini_worker_model", "Gemini: lookup model", suggested=suggestions("gemini")),
+            field("gemini_model", "Gemini: everyday chat model", suggested=suggestions("gemini")),
+            field(
+                "gemini_worker_model",
+                "Gemini: everyday lookup model",
+                suggested=suggestions("gemini"),
+            ),
         ),
     ),
     (

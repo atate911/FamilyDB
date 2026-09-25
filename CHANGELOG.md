@@ -44,6 +44,16 @@ older than what is installed. It gets a date when it is released.
   three companies, for chat and lookups alike. Claude and Gemini can be chosen
   per surface on the settings page, with another as a spare when the first is
   rate limited or down, and a mistyped model name is refused when it is saved.
+- **Knows each company's models by level,** everyday, better and best: GPT-6
+  Luna, Sol and Astra; Claude Haiku 4.5, Sonnet 5 and Opus 5; Gemini 3.1
+  Flash-Lite, 3.8 Flash and 3.1 Pro, with what each costs. Every company answers
+  with its cheapest unless the family chooses otherwise, and the chat, the
+  weekend digest and the lookups each have a level of their own on the settings
+  page, which says what each level means and costs on the company answering. A
+  message the spare company takes is answered at the same level. Claude's and
+  Gemini's everyday models are now their cheapest (they were Opus 5 and Gemini
+  2.5 Pro); a `.env` that names a model keeps it. Gemini 3.8 Flash, the Gemini
+  lookup model, had no price and was counted at the unlisted rate.
 - **Stops at a daily spending limit.** Every model call records an estimated
   cost; once the day's limit ($2 unless changed) is used up, nothing more is
   asked of a model until midnight, and the chat says why.

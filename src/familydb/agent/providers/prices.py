@@ -51,10 +51,17 @@ PRICES: dict[str, dict[str, Price]] = {
         # Up to 272K tokens of input; past that a request costs twice as much, which a family
         # conversation never reaches.
         "gpt-6-luna": Price(input=0.10, output=0.50, cached=0.01, search=0.01),
+        "gpt-6-sol": Price(input=2.0, output=10.0, cached=0.20, search=0.01),
+        "gpt-6-astra": Price(input=10.0, output=50.0, cached=1.0, search=0.01),
         "gpt-5-mini": Price(input=0.25, output=2.0, cached=0.025, search=0.01),
         "gpt-5": Price(input=1.25, output=10.0, cached=0.125, search=0.01),
     },
     "gemini": {
+        # Up to 200K tokens of input, and $14 for a thousand grounded searches on Gemini 3.
+        # Google has said the Flash prices double on January 1, 2027.
+        "gemini-3.1-flash-lite": Price(input=0.25, output=1.50, cached=0.025, search=0.014),
+        "gemini-3.8-flash": Price(input=0.75, output=3.75, cached=0.075, search=0.014),
+        "gemini-3.1-pro": Price(input=2.0, output=12.0, cached=0.20, search=0.014),
         "gemini-2.5-pro": Price(input=1.25, output=10.0, cached=0.31, search=0.035),
     },
 }

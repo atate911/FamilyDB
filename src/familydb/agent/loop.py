@@ -15,7 +15,7 @@ from typing import Any, Literal, Protocol
 
 from familydb.agent import spending
 from familydb.agent.compose import exchange_chars
-from familydb.agent.providers import prices
+from familydb.agent.providers import model_at, prices
 from familydb.agent.providers.base import (
     Exchange,
     Message,
@@ -79,6 +79,7 @@ def run_turn(
     effort: str | None = None,
     max_tokens: int | None = None,
     surface: str = "chat",
+    level: str = "everyday",
     fallback: Provider | None = None,
     kind: str | None = None,
     sections: dict[str, int] | None = None,
@@ -90,9 +91,10 @@ def run_turn(
     passes its `kind` on to be recorded with every model call, with `sections`: the size of each
     part of the request, to which each later call adds the earlier steps of the turn.
 
-    With a `fallback` provider, a first call the chosen one cannot take is tried there instead.
-    Only the first call: once a tool has run, starting again elsewhere would repeat whatever it
-    did, and a half-finished turn is the retry job's business rather than this one's.
+    With a `fallback` provider, a first call the chosen one cannot take is tried there instead, on
+    its model at the same `level`. Only the first call: once a tool has run, starting again
+    elsewhere would repeat whatever it did, and a half-finished turn is the retry job's business
+    rather than this one's.
 
     `final_tools` are the tools whose success is the turn's result (a worker's hand-back): once
     one succeeds, and nothing else in that step failed, the turn ends there rather than paying
@@ -117,7 +119,7 @@ def run_turn(
         log.warning("%s has no credentials; asking %s instead", active.name, fallback.name)
         active = fallback
         # Whatever model the caller named belonged to the provider we just left.
-        request.model = active.model_for(surface)
+        request.model = model_at(active, surface, level)  # type: ignore[arg-type]
 
     for iteration in range(1, limit + 1):
         try:
@@ -150,7 +152,7 @@ def run_turn(
                     "%s could not take this (%s); asking %s", active.name, exc, fallback.name
                 )
                 active = fallback
-                request.model = active.model_for(surface)
+                request.model = model_at(active, surface, level)  # type: ignore[arg-type]
                 spending.adjust(
                     ctx.conn,
                     settings,

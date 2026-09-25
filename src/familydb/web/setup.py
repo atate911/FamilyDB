@@ -167,7 +167,12 @@ def _model(app: App, conn: Any) -> dict[str, Any]:
         "prefix": KEY_STARTS[company],
         "has_key": bool(getattr(live, f"{company}_api_key")),
         "answering": live.provider,
-        "model": providers.build(company, live).model_for("chat"),
+        "model": providers.model_at(providers.build(company, live), "chat", live.chat_level),
+        # The company's lineup, cheapest first, and what each level of it costs.
+        "lineup": [
+            {"label": model.label, "level": model.level, "price": views.price_text(model.price)}
+            for model in providers.catalog.lineup(company)
+        ],
         "limit": live.daily_spend_limit,
         "companies": [
             {
