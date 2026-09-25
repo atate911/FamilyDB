@@ -12,18 +12,16 @@
 {% block content %}
   {% set first = coming[0] if coming else none %}
   <section class="welcome">
-    {# Her question, signed the way her lines in the chat are, with her light and name; what she
-       takes on, in a line, without saying what she is; and the box to answer her in: the chat's
-       own, so anything said here, a question or an instruction, lands in the conversation.
-       Under it, how that conversation stands, in the same lines the chat draws. #}
+    {# Signed the way her lines in the chat are, with her screen and name, and the day; then the
+       box to answer her in, its label her question: the chat's own box, so anything said here,
+       a question or an instruction, lands in the conversation. Under it, how that conversation
+       stands, in the same lines the chat draws. #}
     <div class="welcome-words">
       <p class="speaker">
-        {{ presence() }}
+        {{ presence(variant=2) }}
         <strong>{{ assistant }}</strong>
         <span class="eyebrow">{{ today }}</span>
       </p>
-      <h1>What’s on your <span class="glow">mind</span>?</h1>
-      <p class="lede">Weekend plans, ideas to keep, reminders, the calendar: {{ assistant }} takes it from there.</p>
       {% include "_ask.html" %}
       {% if talk.state %}
         <ol class="thread brief">

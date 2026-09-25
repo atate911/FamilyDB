@@ -83,6 +83,8 @@ LOST = "That message was not answered. Send it again if it still matters."
 # is on its way, why it is closed.
 PROMPT = "Message {name}"
 LOCKED = "You can write again once {name} has answered."
+# On Home, under her question, what the box is for: what she takes on, without saying what she is.
+HOME_PROMPT = "Plans for the weekend, an idea to keep, a reminder, the calendar…"
 # The same states as Home puts them, more briefly: the conversation is one tap away.
 AT_HOME = {
     "thinking": "Answering a message now.",
@@ -136,16 +138,17 @@ def waiting_on(
     return "lost"
 
 
-def box(family: list[str], *, locked: bool = False) -> dict[str, Any]:
+def box(family: list[str], *, locked: bool = False, prompt: str = PROMPT) -> dict[str, Any]:
     """What the box needs wherever it is drawn: who may speak, who spoke last, whether this
-    browser sends where it is, and whether it is closed while an answer is on its way."""
+    browser sends where it is, whether it is closed while an answer is on its way, and what it
+    says while it is empty."""
     name = personas.display_name(_app().settings)
     return {
         "family": family,
         "who": _who(family),
         "send_where": bool(session.get(WHERE_KEY)),
         "locked": locked,
-        "placeholder": (LOCKED if locked else PROMPT).format(name=name),
+        "placeholder": (LOCKED if locked else prompt).format(name=name),
     }
 
 

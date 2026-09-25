@@ -2,17 +2,23 @@
 {# The box everyone writes to her in, on Home and at the foot of the chat: the message on top, who
    is sending, "Send where I am" and Send along the bottom, in one frame that lights up while you
    write. It posts to the chat wherever it is drawn, so what is started on Home lands in the
-   conversation it joins. Closed (`locked`) while an answer is on its way. The page's one script
-   (ask.js) keeps what is being written until it has been sent; without it the box still does
-   everything it must. Needs: family, who, send_where, typed, locked, placeholder, assistant. #}
+   conversation it joins. Closed (`locked`) while an answer is on its way. On Home its label is
+   her question, printed in the frame above where you write, and the page's heading (`question`);
+   elsewhere the label is for screen readers. The page's one script (ask.js) keeps what is being
+   written until it has been sent; without it the box still does everything it must. Needs:
+   family, who, send_where, typed, locked, placeholder, assistant, and `question` on Home. #}
 <form class="ask" id="ask" method="post" action="{{ url_for('chat.send') }}"
       {%- if look_again %} data-refresh="{{ look_again }}"{% endif %}>
   <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
   <input type="hidden" name="once" value="{{ once_token() }}" />
   <input type="hidden" name="lat" value="" />
   <input type="hidden" name="lon" value="" />
-  <label class="sr" for="text">Message to {{ assistant }}</label>
-  <textarea id="text" name="text" rows="3" required placeholder="{{ placeholder }}"
+  {% if question %}
+    <h1 class="ask-question"><label for="text">What’s on your <span class="glow">mind</span>?</label></h1>
+  {% else %}
+    <label class="sr" for="text">Message to {{ assistant }}</label>
+  {% endif %}
+  <textarea id="text" name="text" rows="{{ 2 if question else 3 }}" required placeholder="{{ placeholder }}"
             {%- if locked %} disabled{% endif %}>{{ typed or '' }}</textarea>
   <div class="ask-bar">
     <div class="who">

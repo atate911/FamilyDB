@@ -55,20 +55,20 @@
   </header>
 {%- endmacro %}
 
-{# Where she is on the page: never a face or a figure, only a light behind glass, a small screen
-   lit with nothing on it, as a monitor looks with someone at the other end. Beside her lines,
-   her name, and the question on Home. #}
-{% macro presence(cls='avatar') -%}
-  <span class="{{ cls }} presence" aria-hidden="true"></span>
+{# Where she is on the page: never a face or a figure, only her screen, small and full of words
+   nobody can read, as if busy. The glyphs are the stylesheet's and mean nothing. `variant` (0 to
+   3) shows another part of the same screen, so her lines down a thread do not all look alike. #}
+{% macro presence(cls='avatar', variant=0) -%}
+  <span class="{{ cls }} presence v{{ variant }}" aria-hidden="true"><span class="presence-glass"></span></span>
 {%- endmacro %}
 
-{# One line of the conversation, wherever it is shown: hers on the left beside her light, the
+{# One line of the conversation, wherever it is shown: hers on the left beside her screen, the
    family's on the right with their initial, so side and mark tell them apart, not colour alone.
    Everything she says looks the same, a long answer, a reminder or a one-word "Done."; only the
    words differ. `anchor` is the id the newest line carries. Goes in an <ol class="thread">. #}
 {% macro chat_line(line, anchor=none) -%}
   <li class="{{ 'said-bot' if line.from_bot else 'said-them' }}"{% if anchor %} id="{{ anchor }}"{% endif %}>
-    {% if line.from_bot %}{{ presence() }}{% else %}<span class="avatar" aria-hidden="true">{{ line.who[:1] | upper }}</span>{% endif %}
+    {% if line.from_bot %}{{ presence(variant=(line.id or 0) % 4) }}{% else %}<span class="avatar" aria-hidden="true">{{ line.who[:1] | upper }}</span>{% endif %}
     <div class="bubble">
       <div class="said-by">
         <strong>{{ line.who }}</strong>
@@ -83,12 +83,12 @@
   </li>
 {%- endmacro %}
 
-{# The last line of the thread while the newest message waits: her light and name, and a line
-   in the page's own words (nobody is asked to write it). While she is thinking her light rises
-   and falls; nobody is shown typing. A `call` block adds a way on, as Home's link to the chat. #}
+{# The last line of the thread while the newest message waits: her screen and name, and a line
+   in the page's own words (nobody is asked to write it). While she is thinking the glyphs on her
+   screen fall; nobody is shown typing. A `call` block adds a way on, as Home's link to the chat. #}
 {% macro waiting_line(name, state, text) -%}
   <li class="said-bot pending is-{{ state }}">
-    {{ presence() }}
+    {{ presence(variant=1) }}
     <div class="bubble" role="status">
       <div class="said-by">
         <strong>{{ name }}</strong>

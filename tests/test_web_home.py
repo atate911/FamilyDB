@@ -12,6 +12,7 @@ from familydb.app import App
 from familydb.store import db, ideas, messages, tasks
 from familydb.web import create_app, views
 from familydb.web.agenda import Entry
+from familydb.web.chat import HOME_PROMPT
 from tests import fakes
 from tests.conftest import NOW_ISO
 
@@ -92,7 +93,10 @@ def test_what_is_on_your_mind_is_asked_on_home_and_answered_in_the_chat(
     web = create_app(App(settings, clock), api=api)
     client = web.test_client()
     home = client.get("/").text
-    assert "What\u2019s on your" in home and "ask.js" in home  # the question, typeset
+    assert "ask.js" in home
+    # Her question is the box's label, and the page's heading: a tap on it is a way in.
+    assert '<h1 class="ask-question"><label for="text">What\u2019s on your' in _box(home)
+    assert f'placeholder="{HOME_PROMPT}"' in _box(home)
     assert 'action="/chat"' in _box(home)  # the chat's own box, not a second way in
 
     sent = _say(client, home, "what should we do this weekend?")

@@ -127,7 +127,8 @@ def home() -> Response | str:
         task_count=len(todo),
         setup=unfinished,
         talk=talk,
-        **chat.box(family),
+        **chat.box(family, prompt=chat.HOME_PROMPT),
+        question=True,  # the box's label is her question, and the page's heading
         typed=chat.asked(),  # a way to start, followed with scripts off
         starters=views.starters(today),
     )

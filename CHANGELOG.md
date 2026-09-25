@@ -62,14 +62,15 @@ older than what is installed. It gets a date when it is released.
   radar of everything coming; the sign-in; the day's spend, which turns amber near
   the limit; and the page that is not there. `docs/STYLE.md` says what each choice
   is for.
-- **Vera at the centre of the page.** Home opens on her question, "What’s on
-  your mind?", and the box to answer it: the chat's own, so a question or an
-  instruction typed there lands in the conversation, which the page moves into
-  while she answers. The conversation goes by her name, and everything she says,
+- **Vera at the centre of the page.** Home opens on the box to answer her
+  question, "What’s on your mind?", which is its label: the chat's own box, so a
+  question or an instruction typed there lands in the conversation, which the
+  page moves into while she answers. The conversation goes by her name, and everything she says,
   a long answer, a reminder or a plain "Done.", is drawn the one way; while she
   thinks, the thread's last line says so and the box waits closed rather than
   lose anything typed. She is never drawn as a person: where she appears there is
-  only a small lit screen with nothing on it. What is coming, what is left to do
+  only a small screen full of glyphs nobody can read, between an 80s terminal
+  and the Matrix, falling while she thinks. What is coming, what is left to do
   (each ticked off where it stands) and what was added lately sit around the box,
   and opening any page asks nothing of a model. What is being typed is kept
   across a refresh, a change of page or signing in again, until it has been sent.
