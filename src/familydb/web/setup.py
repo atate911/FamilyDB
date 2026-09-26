@@ -214,6 +214,7 @@ def _telegram(app: App, conn: Any) -> dict[str, Any]:
         "refresh_seconds": WAIT_SECONDS,
         "gave_up": waiting and refresh is None,
         "digest_here": live.digest_chat_id == "web",
+        "digest_day": views.DAY_NAMES[live.digest_day],
     }
 
 

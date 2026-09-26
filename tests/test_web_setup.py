@@ -223,6 +223,18 @@ def test_telegram_from_a_token_to_a_linked_phone(fresh, monkeypatch, conn) -> No
     assert app.settings.digest_chat_id == "555"
 
 
+def test_the_weekend_ideas_are_offered_by_the_day_they_come(fresh, conn) -> None:
+    with db.transaction(conn):
+        members.add(conn, "Sam", "admin", channel="telegram", channel_user_id="555", now=NOW_ISO)
+        settings_store.set_many(
+            conn,
+            {"telegram_bot_token": "7123:AAH-token", "digest_chat_id": "web", "digest_day": "sat"},
+        )
+    fresh.app.channel_states["telegram"] = "connected as @tate_family_bot"
+    page = " ".join(fresh.get("/setup/telegram").text.split())
+    assert "Every Saturday FamilyDB sends ideas for the weekend" in page
+
+
 def test_the_bot_is_named_for_whoever_speaks(fresh, conn) -> None:
     """The running bot gives its Telegram contact the name it goes by: hers, the one the family
     call her included, or FamilyDB under none. So the step says that name will do."""
