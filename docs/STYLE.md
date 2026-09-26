@@ -374,7 +374,9 @@ looked at (see "Two layers").
   the top; Family and Settings are shown only to an admin, who alone may change them. From 52rem
   everything is one bar that stays at the top while the page scrolls. The conversation's place
   goes by her name, with the conversation's icon; with no persona it is Chat. It is shown only to
-  a role that may talk to her.
+  a role that may talk to her. Kept on a phone's home screen, the page opens full-screen, without
+  the browser's bars (`display: standalone` in the manifest, the status bar black above the
+  page's charcoal), so the tab bar and the page's own ways back are all there is to get about by.
 - **Home.** Signed the way her lines are (her screen, her name, the day), then the box to answer
   her in, its label her question, "What’s on your mind?", with the one word lit, and the ways to
   start under it; under those, how the conversation stands: what she said last (the last day's,
