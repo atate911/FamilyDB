@@ -366,7 +366,8 @@ for more than a moment, and none asks to be looked at.
 - Vera is never drawn: no face, figure, picture or expression, and the mark is never hers. Where
   she appears, her screen, and its glyphs never spell anything; where the page speaks of her,
   what she takes on, never what she is.
-- A new colour, face, glow or motion goes here first, with the reason.
+- A new colour, face, glow or motion is written down here, with the reason, in the change that
+  brings it. Trying one out on a branch needs no entry until it stays.
 
 ## Left for later
 

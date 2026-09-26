@@ -20,8 +20,10 @@ results; the model frames the question and writes the reply. It never recomputes
 
 ## Five questions every call answers
 
-Every kind of call, present or future, answers these explicitly. A call that cannot answer one
-of them is not ready to be added.
+Every kind of call, present or future, answers these explicitly before it is on by default. An
+experiment may answer "not known yet" to the fifth, so long as it is off unless a setting turns it
+on, goes through the gateway and the spending limit like any other call, and is measured before
+it becomes a default.
 
 ### 1. Should a model be asked at all?
 

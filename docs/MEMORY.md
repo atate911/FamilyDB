@@ -1,6 +1,8 @@
 # Household memory and token economy
 
-Design decision, September 21, 2026. This specifies the next implementation; it does not claim
+Design decision, September 21, 2026. The constraints and acceptance criteria below bind the next
+implementation; how it meets them (the tables, the response format, the retrieval) is open, and
+the implementation is free to find a better shape than the one sketched here. It does not claim
 that automatic household memory is already implemented. The daily spending limit it asks for is
 (`agent/spending.py`). What exists today is written by hand: "About the family" on the
 Personality page, which the family edits and which goes, as they wrote it, into the cached family
