@@ -24,7 +24,8 @@ the feel and the structure of the pages are meant to evolve with the app, and wh
 on it, an AI agent included, is free to change any of them without asking first: a new layout, a
 new page, a different picture, a principle rewritten. Update this document in the same change, so
 the next person knows what the look is and why. Only the floors under "What does not move" stay
-put, because they are about people being able to use the page and it being safe, not about taste.
+put, because they are about people being able to use the page, it being safe and what it
+costs, not about taste.
 
 The page is a way to talk to **Vera**, and she does what it offers: plans the weekend, keeps the
 ideas and the things to do, puts things on the calendar. So the first thing on Home is her
@@ -92,7 +93,8 @@ says where the family have got to, not what may be tried (see above): what they 
    the one exception: not a picture but where she is, as small as a face would be, beside each of
    her lines (see "Her screen").
 8. **Accessible by construction.** Contrast is measured, focus is always visible, every box has a
-   label, motion, contrast and forced-colour preferences are honoured, and nothing needs a script.
+   label, motion, contrast and forced-colour preferences are honoured, and reading, every form and
+   sending a message work without a script.
 9. **Vera is felt, not shown.** She is a real presence on the page, in her name, her words and
    her screen, and never a character: no face, no figure, no picture of her, and nothing that
    says what she is. Her identity stays behind the glass. The page's own words about her say what
@@ -435,6 +437,8 @@ looked at (see "Two layers").
   forms and sending working without scripts. A new colour is measured against the others that
   share its pages, for typical sight and for deuteranopia and protanopia, before it is added.
 - Nothing from an idea, a place or a fetched page is marked safe in a template.
+- No page view is a model call: the page reads what is stored and words its own lines, and only
+  a message sent asks a model (`test_browsing_asks_nothing_of_a_model` holds it).
 
 ## The look as it stands
 
@@ -453,9 +457,8 @@ it, and say why here.
 - The black is near-black, the green bright and the glow scarce, since together they make the
   green jump (see "Why the green jumps").
 - One green screen to a page, where it shows something true, since two start to turn the light
-  back into a costume. VT323 and blur stay on the
-  screens, and scanlines on the screens and in the home page's glow; everywhere else the page is
-  sharp and modern.
+  back into a costume. VT323 and blur stay on the screens, and scanlines on the screens and in
+  the home page's glow; everywhere else the page is sharp and modern.
 - A small thing means something where it is, and moves for no more than a moment.
 - Vera is not drawn: no face, figure, picture or expression, and the mark is not hers. Where
   she appears, her screen, and its glyphs spell nothing; where the page speaks of her, what she
