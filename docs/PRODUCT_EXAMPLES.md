@@ -1,6 +1,6 @@
 # Examples of the intended FamilyDB experience
 
-Captured from the owner's product discussion on September 23, 2026.
+Captured from the owner's product discussion.
 
 These are illustrative requests, not an exhaustive feature list, a committed roadmap, or a
 claim about what the app supports today. They describe the breadth of the intended experience
@@ -52,14 +52,13 @@ work between layers, and return useful results. The highest-level decision-makin
 still an open design question: how should the app interpret a broad request, decide which
 specialists and information sources to consult, and coordinate them for the best outcome?
 
-An approach discussed, but not yet a settled implementation, is AI interpretation and delegation
-within program-enforced permissions, budgets, and recovery rules. The experience should make
-clear what was checked, why an option fits, what remains uncertain, and what was actually done.
+The approach in use is AI interpretation and delegation within program-enforced permissions,
+budgets, and recovery rules (`docs/AI_CALLS.md`). The experience should make clear what was
+checked, why an option fits, what remains uncertain, and what was actually done.
 
 Use these examples to keep future proposals grounded in the owner's intended experience.
 Choose implementation priorities separately; do not assume their order here implies priority
 or that every example needs its own feature, model call, or architectural layer.
-
 
 ## Free-form capture and contextual recall
 
@@ -71,4 +70,5 @@ attribute who suggested it; infer supported tags without inventing facts.
 
 When asked what to do or where to eat, retrieve relevant saved ideas before considering
 new discoveries. An idea about a neighborhood need not become a specific venue.
-Automatic context-triggered nudges are a later capability, not a promise of this increment.
+A task kept for a window is brought up when that window comes round free (the `nudges` job);
+nudging a saved idea when the context fits is a later capability.
