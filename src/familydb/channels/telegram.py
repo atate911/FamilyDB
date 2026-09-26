@@ -353,9 +353,7 @@ class TelegramChannel:
             text = strip_mention(msg.text, bot.username)
             if not text:
                 return
-            msg = IncomingMessage(
-                msg.channel, msg.channel_update_id, msg.chat_id, msg.channel_user_id, text
-            )
+            msg = dataclasses.replace(msg, text=text)
         await self._answer(update, bot, msg)
 
     async def on_voice(self, update: Any, context: Any) -> None:

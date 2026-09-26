@@ -150,6 +150,23 @@ def test_group_mention_mode(settings, clock, monkeypatch) -> None:
     assert replies == ["ok"]
 
 
+def test_a_group_message_keeps_who_sent_it(settings, clock, monkeypatch) -> None:
+    """The mention comes off the words and the sender's name stays, for a stranger's knock."""
+    from familydb.app import App
+
+    channel = TelegramChannel(App(settings, clock), token="123456:TEST-TOKEN")
+    seen = []
+    monkeypatch.setattr(
+        "familydb.channels.telegram.handle_incoming",
+        lambda application, msg: seen.append(msg) or OutgoingMessage(msg.chat_id, "ok", "ok"),
+    )
+    context, _ = _context()
+    update, _ = _update("@familybot hello", chat_type="group", chat_id=-100)
+    update.effective_user.full_name = "Jo Bloggs"
+    asyncio.run(channel.on_message(update, context))
+    assert seen[0].text == "hello" and seen[0].sender_name == "Jo Bloggs"
+
+
 def test_duplicate_update_sends_nothing(settings, clock, monkeypatch) -> None:
     from familydb.app import App
 
