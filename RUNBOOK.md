@@ -147,10 +147,10 @@ is done:
 1. Yourself, as an admin, then the rest of the family (the Family page).
 2. Your own password, which ends the installer's: from then on everybody signs in as themselves,
    and you give each of them a starting password on the Family page.
-3. A model key (settings, API keys). Until there is one, it saves what it is told but cannot answer.
-4. Where home is (settings, Home), for the weather and for what is on nearby (section 6).
-5. Google Calendar (settings, Google Calendar), so plans land on the family calendar (section 5).
-6. A Telegram bot (settings, API keys), so the family can message it from their phones (section 4).
+3. A model key (settings, AI model). Until there is one, it saves what it is told but cannot answer.
+4. Where home is (settings, General), for the weather and for what is on nearby (section 6).
+5. Google Calendar (settings, Connections), so plans land on the family calendar (section 5).
+6. A Telegram bot (settings, Connections), so the family can message it from their phones (section 4).
 7. Only once there is a Telegram token: each person's Telegram id (the Family page).
 
 The list disappears when everything on it is done. Then try it on the Chat page: "we should try
@@ -552,8 +552,8 @@ one to a dear strong one, and FamilyDB knows each family by level
 
 Prices are US dollars per million tokens read and written, as published in September 2026 (Google
 has said its Flash prices double on January 1, 2027). Everything answers at `everyday` unless the
-family chooses otherwise, and each situation has a level of its own, under "Who answers" on the
-page:
+family chooses otherwise, and each situation has a level of its own, under "How strong a model
+answers" on the AI model settings page:
 
 ```
 CHAT_LEVEL=everyday        # answering the family, and answering again after a failure

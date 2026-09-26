@@ -438,7 +438,7 @@ GROUPS: tuple[Group, ...] = (
                 "Who hears them",
                 "Leave it alone to use the chat company when it can, else another with a key.",
                 words=tuple(COMPANIES.items()),
-                unset="the company that answers, when it can",
+                unset="the chat company if it can",
             ),
             field(
                 "openai_transcribe_model",
