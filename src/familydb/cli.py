@@ -517,10 +517,15 @@ def debug_cost(
 @debug_app.command("validate-tools")
 def debug_validate_tools() -> None:
     """Have the API validate the tool schemas via count_tokens (no generation, needs a key)."""
+    from familydb.agent import gateway
+
     application = build_app()
-    provider = application.provider("chat")
+    with closing(_ready(application)):  # the key and the level the page stored count too
+        provider, model = gateway.answering(application.settings, "chat")
     everything = application.registry.tool_defs(application.registry.names())
-    request = TurnRequest(system=[], messages=[Message("user", ["hello"])], tools=everything)
+    request = TurnRequest(
+        system=[], messages=[Message("user", ["hello"])], tools=everything, model=model
+    )
     try:
         tokens = provider.count_tokens(request)
     except (FamilyDBError, NotImplementedError) as exc:
@@ -530,7 +535,7 @@ def debug_validate_tools() -> None:
         typer.echo(f"validation failed: {exc}", err=True)
         raise typer.Exit(code=1) from exc
     typer.echo(
-        f"{len(everything)} tools accepted by {provider.model_for('chat')} "
+        f"{len(everything)} tools accepted by {model} "
         f"via {provider.name}; prompt would be {tokens} input tokens"
     )
 

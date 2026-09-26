@@ -465,7 +465,10 @@ def save_model() -> Response | tuple[str, int]:
     _save(values)
     said = KEY_VERDICTS.get(verdict, KEY_VERDICTS["unchecked"])
     her = personas.active(candidate).name
-    _, model = gateway.answering(candidate, "chat")
+    # The check asked about the everyday model, so that is the one a "no such model" names.
+    asked = chosen.model_for("chat")
+    answers = providers.model_at(chosen, "chat", candidate.chat_level)
+    model = asked if verdict == "unknown_model" else answers
     return _answer(back, said=said.format(company=label, model=model, name=her))
 
 

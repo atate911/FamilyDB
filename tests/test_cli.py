@@ -133,6 +133,32 @@ def test_validate_tools_reports_missing_credentials(
     assert "validation failed: no Anthropic credentials" in result.output
 
 
+def test_validate_tools_asks_about_the_model_that_answers_the_chat(
+    env: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """At the level the page stored, which a command that did not read the page would miss."""
+    from contextlib import closing
+
+    from familydb.agent.providers.anthropic import AnthropicProvider
+    from familydb.app import build_app
+    from familydb.store import settings as settings_store
+
+    runner.invoke(app, ["db", "migrate"])
+    with closing(build_app().connect()) as conn, db.transaction(conn):
+        settings_store.set_many(conn, {"chat_level": "best"})
+    asked: list[str | None] = []
+
+    def count(self, request):
+        asked.append(request.model)
+        return 1234
+
+    monkeypatch.setattr(AnthropicProvider, "count_tokens", count)
+    result = runner.invoke(app, ["debug", "validate-tools"])
+    assert result.exit_code == 0, result.output
+    assert asked == ["claude-opus-5"]
+    assert "accepted by claude-opus-5 via anthropic" in result.output
+
+
 def test_enrich_command_requires_web_tools(env: Path) -> None:
     result = runner.invoke(app, ["enrich"])
     assert result.exit_code == 1

@@ -552,7 +552,7 @@ LOOKUP_LEVEL=everyday      # looking ideas up and searching for what is on
 A level is chosen, not a model name, so it holds on whichever company answers: when the first one
 cannot take a message and another answers instead, it answers at the same level. A level up
 never answers with a model cheaper than everyday: if the everyday model already costs more than
-the table's (Claude Opus 5, say), it answers at better and best too. Each level's box on the page
+the table's (Claude Opus 5, say), or has no price listed, it answers at better and best too. Each level's box on the page
 says which model it means for the company answering now, and what it costs. A situation on a
 stronger model than the chat has a prompt cache of its own, written the first time it is asked.
 

@@ -191,8 +191,8 @@ everything. The direction:
   chat and retries, `digest_level` for the digest and its retries, `lookup_level` for lookups
   and discovery), and a call that moves to the fallback company is answered at the same level
   there. A level up never answers with a cheaper model than everyday, so an everyday model set
-  above the lineup's stays. The family chooses; the model never does, and nothing is escalated
-  because a question sounded hard.
+  above the lineup's, or one the price table does not list, stays. The family chooses; the model
+  never does, and nothing is escalated because a question sounded hard.
 - **Escalate on evidence, not on guesswork.** A cheaper model may hand a task up to a stronger one
   when code can see that it failed: a validation error, a hand-back that did not happen, an empty
   answer. Not because the question sounded hard.

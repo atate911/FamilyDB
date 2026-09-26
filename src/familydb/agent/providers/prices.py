@@ -61,7 +61,7 @@ PRICES: dict[str, dict[str, Price]] = {
         # Google has said the Flash prices double on January 1, 2027.
         "gemini-3.1-flash-lite": Price(input=0.25, output=1.50, cached=0.025, search=0.014),
         "gemini-3.8-flash": Price(input=0.75, output=3.75, cached=0.075, search=0.014),
-        "gemini-3.1-pro": Price(input=2.0, output=12.0, cached=0.20, search=0.014),
+        "gemini-3.1-pro-preview": Price(input=2.0, output=12.0, cached=0.20, search=0.014),
         "gemini-2.5-pro": Price(input=1.25, output=10.0, cached=0.31, search=0.035),
     },
 }

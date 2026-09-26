@@ -48,6 +48,12 @@ def test_by_default_every_company_answers_with_its_everyday_model(tmp_path: Path
         assert provider.model_for("chat") == provider.model_for("worker") == everyday
 
 
+def test_the_page_offers_each_lineup_model_by_the_name_its_company_takes() -> None:
+    for company in NAMES:
+        offered = prices.suggestions(company)
+        assert all(model.name in offered for model in catalog.lineup(company)), company
+
+
 def test_the_catalog_agrees_with_what_each_provider_sends() -> None:
     """What the catalog says a model can do is what its provider module shapes the request for."""
     for model in catalog.lineup("anthropic"):
@@ -106,6 +112,9 @@ def test_a_level_up_never_answers_with_a_cheaper_model(settings) -> None:
     assert model_at(sonnet, "chat", "best") == "claude-opus-5"
     older = build("openai", settings.model_copy(update={"openai_model": "gpt-5"}))
     assert model_at(older, "chat", "better") == "gpt-6-sol"  # no cheaper, so the lineup's
+    # A model the price table does not list counts as dearer than any it does.
+    newer = build("anthropic", settings.model_copy(update={"anthropic_model": "claude-opus-6"}))
+    assert model_at(newer, "chat", "better") == "claude-opus-6"
 
 
 def test_each_situation_is_answered_at_its_own_level(settings, clock, conn, family) -> None:
