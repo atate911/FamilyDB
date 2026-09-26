@@ -801,3 +801,110 @@ SQLite browser opens it. `scripts/uninstall.sh` does this with a backup and asks
 - **A setting in `.env` does nothing.** Something on the settings page is set for it, and that wins. `familydb config` marks every value with where it came from; empty that box on the page and `.env` applies again.
 - **"stored settings are not usable" in the log.** A value in the database no longer validates, usually because an upgrade narrowed what a setting will take. The bot keeps running on what `.env` says and names the setting in the same line; fix or empty that box on the settings page.
 - **A changed digest hour or lookup interval did not take effect.** Those move within five minutes of the change, not instantly; `journalctl` shows a "settings changed" line when they do. Anything that has not moved after that is worth reporting.
+
+## 14. Checking it against live accounts
+
+The tests run against fakes of every provider, Google, Telegram and the weather, and CI installs
+it on a real machine, but nothing automatic talks to a real model, a real Telegram bot or a real
+Google account. Before the family relies on a new install, or after an upgrade that touched one of
+them, go through these with a dedicated test calendar:
+
+1. Install with [docs/INSTALL.md](docs/INSTALL.md), follow the setup on the page, then run
+   `familydb doctor --online` and deal with what it says.
+2. Save the key and the model the family will use on the settings page (AI model). The page asks
+   the company whether the model exists, for free, before keeping it: every id in the lineup
+   (`agent/providers/catalog.py`) was taken from the companies' published documentation, and this
+   is its first live check. Then check capture, a lookup, discovery and scheduling on it, and that
+   `/status` shows today's spend. Set a spending limit on the key in the company's own console too.
+3. Paste the Telegram token on the settings page: within seconds `/status` should say "connected
+   as @…", with no restart. Add each person's Telegram id on the Family page, then check two people
+   in private chat and in the family group.
+4. Connect Google Calendar from the settings page (section 5). If that flow fails against Google,
+   `familydb google auth` on a laptop still works.
+5. Create, move and cancel a test event from chat. Edit one directly in Google and check that the
+   plans page and the next chat edit follow it. Check that a busy all-day trip blocks suggestions
+   and a transparent birthday does not.
+6. Restart the service while a message is being answered, interrupt delivery for a while, and
+   check that both recover. Restore a fresh backup onto a separate test install and check recent
+   records.
+7. Reboot the machine and check it starts, keeps its data, logs, serves the page and takes its
+   backups. Keep the page private or behind HTTPS, an off-machine backup, and a separate copy of
+   `.env` and the Google credentials.
+8. With something on the test calendar this afternoon, ask "I'm bored, what can we do now?",
+   "anything for tonight?" and "what about Saturday morning?". The free times it reports should
+   leave out the event and the part of today that has gone, and an option should say when it can
+   start ("can go 16:10-17:55 today"). Ask two differently worded weekend questions with
+   discovery on: `/status` should show one discovery search, not two. Within a couple of hours of
+   sunset, ask "anything outdoors tonight?": an outdoor idea that needs longer than the daylight
+   left should be offered as one in the dark, which shows the forecast's sunrise and sunset were
+   read.
+9. Add a restaurant idea and watch its lookup on `/status`: it should end at its `save_place`,
+   with no call after it, and a "home" idea with no place should be skipped with no call at all.
+   Send a question on the web chat while a lookup runs: it must not wait for it.
+10. On a phone away from home, share your location with the bot on Telegram (the paperclip, then
+    Location), then ask "what's open near here?": options should be measured from there, and the
+    reply should say so. Share a live location instead and move a few streets: asking again
+    should name where you are now, with no second "Got it", and none when you stop sharing. On
+    the web page's chat over HTTPS, tick "Send where I am", allow the location, and ask the same:
+    no place should need typing. Untick it and send "thanks": no position should be kept for that
+    message.
+11. Reminders, taps and the commands:
+    - Set a reminder a few minutes ahead, stop the service past its time and start it again: the
+      reminder arrives once and says when it was due. Set another for a minute ahead and keep
+      chatting in that chat: the next reply should carry it, with its buttons under the reply.
+    - In the family group, tap "In an hour" on a reminder: everyone should see who snoozed it and
+      until when, with the buttons gone, and it should come back an hour later; tap "✓ Done" and
+      it should not. Somebody not on the family list who taps one should be told only the family
+      can, and nothing should change. The day after a plan, tap an answer under "how was it?" and
+      check the idea's page.
+    - Ask for something every day at a time a few minutes ahead: it should come, and come again
+      the next day at the same time; tick it off and it should still come the day after.
+    - Say "Grandma would love a gardening apron", then set Grandma's birthday with a reminder a
+      few minutes ahead: the reminder should list the apron, and the apron's page should say it is
+      "not one place to look up", with no lookup in the status page's costs.
+    - On Telegram, type "/": today, week, tasks and now should be offered, and each should answer
+      at once with no model call on the status page: /today and /week with what Google shows,
+      /tasks with this chat's tasks only, and /now with what could start in the next few hours.
+      From somebody not on the list, /today should get the stranger's line.
+    - Put an outdoor idea on the calendar for tomorrow when the forecast says rain, set the
+      evening check to the next hour on the settings page, and wait: a heads-up should come once,
+      with an indoor idea for the same time if one fits; a dry day's plan should get nothing.
+    - On a Wednesday, say "one of these Thursday evenings I need to fix the bike light": the
+      answer, and the tasks page, should say it comes up on a free Thursday evening. On Thursday
+      it should come up once, with buttons, from 18:00 if the calendar is clear then, or once an
+      hour is free after whatever is on, and not again that day.
+12. On `/settings/personality`, rewrite one of her lines and add a sentence to "About the
+    family": the next reminder or follow-up should use the new line, and the next answer should
+    know the sentence. Give her another name: "what's your name?" should get it, in the chat and on
+    Telegram, and within a few seconds the bot's name and description in Telegram should be hers.
+    Rewrite her description and add a line under "Anything to add", then choose no persona: the
+    replies should be plain, her lines and your rewrites of them included, and the Telegram
+    contact called FamilyDB. Choose her again: the name, the rewrite, the notes and the lines
+    should all be back. Choose Vera in brief: the list should show her at about 740 tokens a
+    message before your notes, and a few everyday requests should be answered as well as before.
+13. With the chosen model's key in the environment, run `uv run python -m evals` (it stops once
+    $0.50 is spent, unless `--budget` says otherwise, so only the call that crosses it can go
+    over) and read what failed before the family does.
+
+After a week of family use, read `/status` and `familydb debug cost` by kind before changing
+anything for cost: at GPT-6 Luna's prices the chat prefix is about $0.0006 a message and each web
+search $0.01, so lookups and discovery, not chat, are where the money goes.
+
+What these checks will not change, by design:
+
+- Telegram delivery is at least once. Telegram has no idempotency key, so a send that succeeded
+  but whose answer was lost can arrive twice, as can chunks of a split long reply. Sending it again
+  never runs the model or repeats a calendar write.
+- Creating an event is deduplicated within one message, by the same event said the same way. A new
+  message can deliberately create another, and the operation log is not a detector of events that
+  merely look alike.
+- Travel is a straight-line estimate, from home unless someone shared their location in the last
+  three hours or named where they are, and the forecast is per day, not per hour. Nothing checks
+  real reservations or ticket availability.
+- The daily spending limit is an estimate from a price table checked by hand, not the bill.
+- The Anthropic and Gemini request shapes follow the companies' documentation on
+  [extended thinking](https://platform.claude.com/docs/en/build-with-claude/extended-thinking),
+  [web search](https://platform.claude.com/docs/en/agents-and-tools/tool-use/web-search-tool),
+  [web fetch](https://platform.claude.com/docs/en/agents-and-tools/tool-use/web-fetch-tool) and
+  [combining tools](https://ai.google.dev/gemini-api/docs/generate-content/tool-combination); what
+  a live account accepts is part of these checks.
