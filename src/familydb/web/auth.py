@@ -9,9 +9,9 @@ starting password an admin made up for them goes nowhere until they have chosen 
 
 Until an admin has a password of their own, the page takes one the family shares instead: the
 installer makes one up and puts it in WEB_PASSWORD, and the family may choose another on the page,
-stored hashed. A session opened with it does not know who anybody is, so it may do everything,
-as the family always could. The first admin to choose their own password ends that: from then on
-the shared one opens nothing, and every session opened with it ends.
+stored hashed. A session opened with it does not know who anybody is, so it may do everything.
+The first admin to choose their own password ends that: from then on the shared one opens
+nothing, and every session opened with it ends.
 
 A successful sign-in sets a signed session cookie; every page but the login and the health check
 is behind it. Failed attempts are counted per client address and locked out for a while, and
@@ -101,7 +101,7 @@ OPEN_ENDPOINTS = frozenset({"auth.login", "auth.sign_in", "auth.logout", "web.he
 # Where somebody signed in with a starting password may go before they have chosen their own.
 CHOOSING = frozenset({"family.you", "family.choose"})
 # The permission each part of the page needs beyond signing in, by blueprint (roles.py says who
-# has which). Reading needs nothing more: home, ideas, plans, things to do and status.
+# has which). Reading needs nothing more: every page routes.py draws.
 NEEDS: dict[str, roles.Permission] = {
     "chat": "chat",
     "edits": "change",
@@ -148,8 +148,8 @@ class Visitor:
     def may(self, permission: roles.Permission) -> bool:
         """Whether they may do this: as their role allows, when they signed in as themselves.
 
-        Anybody the page cannot tell apart may do everything, as the whole family always could,
-        because there is nobody to tell them from. A stranger may do nothing.
+        Anybody the page cannot tell apart may do everything, because there is nobody to tell
+        them from. A stranger may do nothing.
         """
         if self.kind == "person":
             return self.member is not None and roles.may(self.member.role, permission)
@@ -338,7 +338,7 @@ def _devices() -> URLSafeSerializer:
 
 def device_mark(login: Login | None, settings: Settings) -> str:
     """What the known-browser cookie holds: whose password it was earned with, and a mark of
-    that password. Without a person, the mark of the shared password, as it always was."""
+    that password. Without a person, the mark of the shared password alone."""
     if login is None:
         return password_mark(settings)
     return f"{login.member_id}:{login_mark(login)}"
@@ -514,7 +514,7 @@ def require_login() -> Response | tuple[str, int] | None:
         if found is not None and _marked(login_mark(found.login)):
             g.visitor = Visitor("person", found.member, found.login)
             return _within_reach(g.visitor)
-        # A new password, switched off, made a kid, or their password taken away.
+        # A new password, switched off, a role that may not sign in, or their password taken away.
         session.clear()
     elif session.get(SESSION_KEY):
         if _marked(password_mark(settings)):

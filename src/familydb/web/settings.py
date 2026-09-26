@@ -1,14 +1,15 @@
 """The settings pages: the only part of the web surface that writes settings.
 
-It writes to one place and one place only, `app_settings`, through `store.settings`. Nothing
-here can reach an idea, a plan or a message. Every change is logged, and a key's value is never
-what gets logged: only that it was replaced.
+It writes `app_settings` through `store.settings`, and two files: the session key
+(`keys.rotate`, which signs everyone out) and the Google token (`google.finish_consent`).
+Nothing here can reach an idea, a plan or a message. Every change is logged, and a key's value
+is never what gets logged: only that it was replaced.
 
 /settings says how each part stands, in a line or two, and each part has a page of its own,
 /settings/<name> (`fields.SECTIONS`). Every form on one of those pages says which page it is on,
-so what it did is said on the page it was sent from. A form that names no page (from an older
-page, or a test) comes back to /settings, and a complaint about it is drawn on the page its boxes
-are on.
+so what it did is said on the page it was sent from. A form that names no page (a test, or a
+page an older version drew) comes back to /settings, and a complaint about it is drawn on the
+page its boxes are on.
 
 The Personality page (/settings/personality) writes the six `PROFILE` settings: which persona,
 the name the family call her, her description as the family rewrote it, their notes on how she
@@ -168,7 +169,7 @@ FOUND_HOME = "Found {label}, at {lat}, {lon}."
 
 
 def locate_home(values: dict[str, Any], stored: dict[str, Any]) -> tuple[dict[str, Any], str]:
-    """Coordinates for a home area typed on the page, looked up as the installer used to.
+    """Coordinates for a home area typed on the page, looked up on the map.
 
     Only when the area is changing and no new coordinates were typed with it: coordinates typed
     by hand win. Returns the coordinates to store, and a sentence saying what happened.
@@ -256,8 +257,8 @@ def google_panel(live: Any) -> dict[str, Any]:
 
 # -- the three companies, as setup and the AI model page both offer them -------------------------
 
-# Who each company is, in a line, for choosing between them. The default model's price decides
-# the order of the words, not a preference: prices.py is where the numbers are.
+# Who each company is, in a line, for choosing between them. What a line says of price follows
+# the company's default model in prices.py, not a preference.
 COMPANY_LINES = {
     "openai": "The least expensive by far for what FamilyDB does, so it is the one it starts with.",
     "anthropic": "Claude. Several times dearer a message with the model it starts on.",
@@ -956,8 +957,8 @@ def personality_page(
     notes = typed.get("persona_notes", live.persona_notes)
     about = typed.get("about_family", live.about_family)
     # What has changed in her own description since the family rewrote her, if anything: their
-    # rewrite remembers hers as it was then, and her folder says what it is now. One saved before
-    # that was remembered cannot tell.
+    # rewrite remembers hers as it was then (`of`), and her folder says what it is now. A rewrite
+    # stored without `of` cannot tell.
     rewrite = None if plain else live.persona_text.get(described)
     changes = (
         views.line_changes(rewrite.of, personas.load(described).character)
@@ -1038,10 +1039,10 @@ def save_personality() -> Response | tuple[str, int]:
     """Who she is and who the family are.
 
     The description box is a rewrite of the persona it described when the page was drawn, never
-    of one chosen in the same save, and with no box sent (under none) every rewrite stays as it
-    was. Her own text, as written or with her name filled in, is no rewrite at all. Likewise the
-    name box: one not sent leaves their name for her as it was, and her own name is none of
-    theirs. And the box of their notes on how she talks: one not sent leaves them as they were."""
+    of one chosen in the same save. A box that is not sent (under none there is no description,
+    name or notes box) leaves what it stands for as it was: every rewrite, their name for her,
+    their notes. Her own text, as written or with her name filled in, is no rewrite, and her own
+    name is none of theirs."""
     if (complaint := auth.refused()) is not None:
         return personality_page(error=complaint, status=400)
     typed = {
@@ -1088,7 +1089,7 @@ def save_personality() -> Response | tuple[str, int]:
         notes = typed["persona_notes"].replace("\r\n", "\n").strip()
         values["persona_notes"] = None if notes == _app().base_settings.persona_notes else notes
     if "persona_text" in request.form:
-        # A form drawn before the box said whom it described was drawn for the persona in force.
+        # A form that does not say whom its box described was drawn for the persona in force.
         described = personas.key_for(typed.get("described", live.persona))
         text = typed["persona_text"].replace("\r\n", "\n").strip()
         rewrites = _rewritten(live, described, text)
@@ -1125,8 +1126,7 @@ def restore_personality() -> Response | tuple[str, int]:
 def _line(box: str, stored: voice.Line | None) -> voice.Line:
     """What a line's box says: one wording to a row, blank rows no part of it, kept as a string
     when there is one and a list when there are several. A box left as it was drawn keeps the
-    line as it is stored, so one saved as a string before a line could have several wordings
-    stays one wording, line breaks and all."""
+    line as it is stored, so a single wording with line breaks in it stays one wording."""
     rows = _rows(box)
     if not rows:
         return ""

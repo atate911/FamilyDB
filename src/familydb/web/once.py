@@ -2,9 +2,9 @@
 
 A double click, a refresh that resends, the back button and Send again: each posts the same
 form twice. For most forms that is harmless, but not for these: twice "put it on the calendar"
-is two events on everybody's phone, twice "record how it went" counts the visit twice. The
-content policy forbids the script that would disable a button after one press, so the page
-does it on the other side.
+is two events on everybody's phone, twice "record how it went" counts the visit twice. A script
+that disabled a button after one press would not stop a resend or the back button, and every
+form must work with scripts off, so the page does it on the server.
 
 Every such form carries a token drawn fresh when the page is drawn. The first post with a token
 does the work and remembers where it sent the browser; any later post with the same token,
@@ -78,7 +78,7 @@ def once(view: Callable[..., Any]) -> Callable[..., Any]:
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         token = request.form.get(FIELD, "")
         if not token or len(token) > MAX_TOKEN:
-            return view(*args, **kwargs)  # a page drawn before this existed: nothing to match
+            return view(*args, **kwargs)  # a form drawn without a token: nothing to match
         registry: Once = current_app.config["FAMILYDB_ONCE"]
         # Keyed on the session too, so a token only ever matches the browser it was drawn for.
         sent, first = registry.claim(f"{session.get(CSRF_KEY, '')}:{token}")

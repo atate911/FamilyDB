@@ -582,7 +582,8 @@ def month_weeks(entries: list[Entry], first: date, today: date) -> list[list[dic
 # out. Each pair is (days away, distance from the middle).
 RADAR_RINGS = ((0, 12.0), (7, 33.0), (14, 66.0), (28, 92.0))
 # Blips sit on one of twelve bearings, one every 30 degrees: the page times each blip's flare to
-# the moment the sweep passes that bearing (the `.b0` to `.b11` rules in style.css).
+# the moment the sweep passes that bearing (the `.b1` to `.b11` rules in style.css; bearing 0,
+# at twelve o'clock, needs no delay).
 RADAR_BEARINGS = 12
 RADAR_START = 210  # degrees clockwise from twelve o'clock, where the first plan goes
 

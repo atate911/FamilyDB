@@ -6,7 +6,7 @@
   <p class="muted">{{ who.note }}</p>
   {% include "_company_cards.html" %}
   {# The company's key, checked with it before anything is kept. Saved here, it also makes that
-     company the one that answers: a company can only be chosen with a key that works. #}
+     company the one that answers: a company can only be chosen with a key it has not refused. #}
   <form class="form" method="post" action="{{ url_for('settings.save_model') }}">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
     <input type="hidden" name="section" value="model" />
