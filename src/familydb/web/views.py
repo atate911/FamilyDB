@@ -293,8 +293,41 @@ def starters(today: date) -> list[dict[str, str]]:
     ]
 
 
+# How often a task may come round, as the tasks page offers it: "every:unit" and its words.
+REPEATS = (
+    ("", "Doesn't repeat"),
+    ("1:day", "Every day"),
+    ("1:week", "Every week"),
+    ("2:week", "Every 2 weeks"),
+    ("1:month", "Every month"),
+    ("3:month", "Every 3 months"),
+    ("6:month", "Every 6 months"),
+    ("1:year", "Every year"),
+)
+
+
+def repeat_text(task: Task, tz: ZoneInfo) -> str | None:
+    """How often a task comes round, in words: "Every 2 weeks · last done Sun 20 Sep"."""
+    if not task.repeats:
+        return None
+    unit = (
+        task.repeat_unit if task.repeat_every == 1 else f"{task.repeat_every} {task.repeat_unit}s"
+    )
+    words = f"Every {unit}"
+    if task.repeat_from == "done":
+        words += ", counted from when it is done"
+    if task.last_done_at:
+        done = datetime.fromisoformat(task.last_done_at).astimezone(tz)
+        words += f" · last done {done:%a %d %b}"
+    return words
+
+
 def task_row(task: Task, tz: ZoneInfo) -> dict[str, Any]:
     """One task on the tasks page, with its times as the family's clock shows them."""
+    choice = f"{task.repeat_every}:{task.repeat_unit}" if task.repeats else ""
+    options = list(REPEATS)
+    if choice and choice not in dict(REPEATS):  # set in the chat to something the list lacks
+        options.insert(1, (choice, f"Every {task.repeat_every} {task.repeat_unit}s (as it is)"))
     return {
         "task": task,
         "due_input": (
@@ -303,6 +336,11 @@ def task_row(task: Task, tz: ZoneInfo) -> dict[str, Any]:
             else ""
         ),
         "reminder_time": local_moment(task.reminder.remind_at, tz) if task.reminder else None,
+        "repeats": repeat_text(task, tz),
+        "repeat_choice": choice,
+        "repeat_options": options,
+        # What the form was drawn with, so saving it changes the repeat only when that did.
+        "repeat_was": f"{choice}:{task.repeat_from}" if choice else "",
     }
 
 

@@ -76,6 +76,7 @@ Decide what the message is: an idea, a plan, a question about what to do, a corr
 - Obligations (buy paper towels, arrange an appointment) are tasks, not ideas or plans; arranging an appointment is not the appointment.
 - A deadline is not a reminder. Keep vague timing ("some Saturday morning") as preferred_window; never invent a date or promise to spot free time.
 - Ask for a reminder's time when it is missing or ambiguous, then echo the date, time and where it will arrive.
+- Something that comes round again ("bins out every Sunday at 7pm", "the furnace filter every 3 months") is one task: remind_at is the first time, with repeat_every and repeat_unit. Counted from the last time ("the dentist six months after the last visit") is repeat_from done. Done on it records this time and keeps it coming round; cancelling ends it. Echo how often.
 
 ## Who is listening
 

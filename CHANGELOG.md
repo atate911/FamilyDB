@@ -43,7 +43,11 @@ older than what is installed. It gets a date when it is released.
 - **Keeps the things to do.** "Remind me on Tuesday that we need paper towels"
   is a task with a reminder, sent in the chat it was asked in; "one of these
   Saturday mornings" is a task with no invented date. A page lists them, and
-  a reminder sent late after the bot was off says when it was due. On
+  a reminder sent late after the bot was off says when it was due. A task can
+  come round again: "bins out every Sunday at 7pm", or "the dentist six months
+  after the last visit"; ticking it off records it and keeps it coming, the
+  hour holds when the clocks change, and a stretch with the bot off sends one
+  late reminder rather than a pile. The tasks page sets and shows it too. On
   Telegram a reminder comes with ✓ Done, In an hour and Tomorrow buttons, and
   "how was it?" with Yes, again, Not again and Didn't go: a tap is done by code
   with no model call, so it answers at once and works when the model does not,

@@ -375,6 +375,7 @@ def tasks() -> str:
     return render_template(
         "tasks.html",
         rows=[views.task_row(task, app.settings.tzinfo) for task in rows],
+        repeat_options=views.REPEATS,
         people=people,
         status=status,
         zone=app.settings.tz,

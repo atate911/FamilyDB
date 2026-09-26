@@ -878,6 +878,7 @@ LINE_GROUPS = (
         True,
         (
             "tap_done",
+            "tap_done_again",
             "tap_snoozed",
             "tap_again",
             "tap_not_again",

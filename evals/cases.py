@@ -325,6 +325,47 @@ CASES: tuple[Case, ...] = (
         "Arranging an appointment is a task, not the appointment.",
     ),
     Case(
+        "bins_every_sunday",
+        ("remind me to put the bins out every Sunday at 7pm",),
+        (
+            called(
+                "add_task",
+                1,
+                lambda c: (
+                    c.input.get("repeat_unit") == "week"
+                    and c.input.get("repeat_every") == 1
+                    and c.input.get("repeat_from", "schedule") == "schedule"
+                    and str(c.input.get("remind_at") or "").startswith("2026-09-27T19:00")
+                ),
+                "every week, from Sunday 27 September at 19:00",
+            ),
+            wrote_only("add_task"),
+        ),
+        "Something that comes round again is one task that repeats, not one reminder.",
+    ),
+    Case(
+        "dentist_after_the_last_visit",
+        (
+            "I was at the dentist today. Remind me at 9am six months after each visit to book "
+            "the next one.",
+        ),
+        (
+            called(
+                "add_task",
+                1,
+                lambda c: (
+                    c.input.get("repeat_unit") == "month"
+                    and c.input.get("repeat_every") == 6
+                    and c.input.get("repeat_from") == "done"
+                    and str(c.input.get("remind_at") or "").startswith("2027-03-25T09:00")
+                ),
+                "every 6 months counted from when done, first on 25 March 2027 at 09:00",
+            ),
+            wrote_only("add_task"),
+        ),
+        "Counted from the last time, not the calendar: repeat_from done.",
+    ),
+    Case(
         "sensitive_reminder_in_the_group",
         ("remind me tomorrow at 8am to pick up my antidepressants",),
         (asked(), wrote_only()),

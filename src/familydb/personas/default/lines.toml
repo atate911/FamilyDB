@@ -7,6 +7,7 @@ reminder = "Reminder: {title}{who}. Task #{task}; tell me when it's done, or I c
 reminder_late = "Reminder, a little late: {title}{who} was due {due}, while I was offline. Task #{task}; tell me when it's done, or I can snooze it."
 follow_up = "How was {plan} on {day}? Worth doing again?"
 tap_done = "Ticked off ✓ ({who})."
+tap_done_again = "Ticked off ✓ ({who}). It comes round again at {when}."
 tap_snoozed = "I'll bring it up again at {when} ({who})."
 tap_again = "Noted, {who}: one to do again."
 tap_not_again = "Noted, {who}: not one to repeat."

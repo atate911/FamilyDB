@@ -154,7 +154,13 @@ def tap(
     if result.is_error:
         log.warning("tap %s on #%s did not go through: %s", action, number, result.content)
         return Tapped(voice.say(settings, "tap_failed", seed=kept.id))
-    line = voice.say(settings, job.event, seed=kept.id, who=member.display_name, **job.facts)
+    event, facts = job.event, job.facts
+    after = tasks.get(conn, job.values["task_id"]) if job.event == "tap_done" else None
+    if after is not None and after.status == "open" and after.reminder is not None:
+        # A task that comes round again: done this time, and it says when next.
+        moment = datetime.fromisoformat(after.reminder.remind_at).astimezone(app.clock.tz)
+        event, facts = "tap_done_again", {"when": when_text(moment, app.clock.today())}
+    line = voice.say(settings, event, seed=kept.id, who=member.display_name, **facts)
     return Tapped(line, line, finished=True)
 
 

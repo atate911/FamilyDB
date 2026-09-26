@@ -379,3 +379,20 @@ def test_remembering_alone_is_graded_on_what_it_cost(settings) -> None:
         [fakes.text("Noted: vegetarian.")],
     )
     assert "2 model calls, over 1" in grade(case, run_case(case, settings, api=twice))
+
+
+def test_a_repeat_is_graded_on_how_often_and_from_when(settings) -> None:
+    case = by_name("bins_every_sunday")
+    weekly = {
+        "title": "Bins out",
+        "remind_at": "2026-09-27T19:00",
+        "repeat_every": 1,
+        "repeat_unit": "week",
+    }
+    api = _answer([fakes.tool_use("t1", "add_task", weekly)], [fakes.text("Every Sunday, 7pm.")])
+    assert grade(case, run_case(case, settings, api=api)) == []
+    once = {"title": "Bins out", "remind_at": "2026-09-27T19:00"}
+    api = _answer([fakes.tool_use("t1", "add_task", once)], [fakes.text("Sunday, 7pm.")])
+    assert "add_task was called, but not every week" in " ".join(
+        grade(case, run_case(case, settings, api=api))
+    )

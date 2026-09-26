@@ -78,6 +78,12 @@ EVENTS: dict[str, Event] = {
     # A button under one of those tapped (buttons.py). Each is shown to whoever tapped, and the
     # ones that did something are added under the message, for everyone in the chat.
     "tap_done": Event("A reminder's Done tapped", "Done ✓ ({who}).", ("who",), {"who": "Sam"}),
+    "tap_done_again": Event(
+        "A repeating reminder's Done tapped",
+        "Done ✓ ({who}). Next time: {when}.",
+        ("who", "when"),
+        {"who": "Sam", "when": "19:00 on Sun 04 Oct"},
+    ),
     "tap_snoozed": Event(
         "A reminder snoozed with its button",
         "Snoozed until {when} ({who}).",

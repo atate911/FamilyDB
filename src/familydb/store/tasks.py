@@ -22,6 +22,9 @@ class Reminder(BaseModel):
         return cls(**dict(row))
 
 
+Unit = Literal["day", "week", "month", "year"]
+
+
 class Task(BaseModel):
     id: int
     title: str
@@ -33,11 +36,21 @@ class Task(BaseModel):
     preferred_window: str = ""
     status: Literal["open", "done", "cancelled"] = "open"
     revision: int = 1
+    # Coming round again (task_service.py): all four set, or none.
+    repeat_every: int | None = None
+    repeat_unit: Unit | None = None
+    repeat_from: Literal["schedule", "done"] | None = None
+    repeat_anchor: str | None = None
+    last_done_at: str | None = None
     channel: str
     chat_id: str
     created_at: str
     updated_at: str
     reminder: Reminder | None = None
+
+    @property
+    def repeats(self) -> bool:
+        return self.repeat_every is not None and self.repeat_unit is not None
 
     @classmethod
     def from_row(cls, row: sqlite3.Row, reminder: Reminder | None) -> Task:
@@ -93,22 +106,25 @@ def insert(
     channel: str,
     chat_id: str,
     now: str,
+    repeat: dict[str, Any] | None = None,
 ) -> int:
+    """A new task. `repeat` holds the four repeat_ columns, when it comes round again."""
+    row = {
+        "title": title,
+        "notes": notes,
+        "owner_id": owner_id,
+        "due_at": due_at,
+        "preferred_window": preferred_window,
+        "operation_key": operation_key,
+        "channel": channel,
+        "chat_id": chat_id,
+        "created_at": now,
+        "updated_at": now,
+        **(repeat or {}),
+    }
     cur = conn.execute(
-        "INSERT INTO tasks(title,notes,owner_id,due_at,preferred_window,operation_key,"
-        "channel,chat_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
-        (
-            title,
-            notes,
-            owner_id,
-            due_at,
-            preferred_window,
-            operation_key,
-            channel,
-            chat_id,
-            now,
-            now,
-        ),
+        f"INSERT INTO tasks({','.join(row)}) VALUES ({','.join('?' * len(row))})",
+        tuple(row.values()),
     )
     return int(cur.lastrowid or 0)
 
@@ -124,6 +140,15 @@ def update(conn: sqlite3.Connection, task_id: int, changes: dict[str, Any]) -> N
 
 def add_reminder(conn: sqlite3.Connection, task_id: int, remind_at: str) -> None:
     conn.execute("INSERT INTO reminders(task_id,remind_at) VALUES (?,?)", (task_id, remind_at))
+
+
+def has_pending_reminder(conn: sqlite3.Connection, task_id: int) -> bool:
+    """Whether a live reminder is waiting for its time, not yet turned into a message."""
+    row = conn.execute(
+        "SELECT 1 FROM reminders WHERE task_id=? AND cancelled_at IS NULL AND message_id IS NULL",
+        (task_id,),
+    ).fetchone()
+    return row is not None
 
 
 def reminder_in_flight(conn: sqlite3.Connection, task_id: int, now: str) -> bool:

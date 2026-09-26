@@ -19,6 +19,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 from contextlib import closing
 from typing import Any
 
@@ -58,6 +59,7 @@ TICK_PAGES = {"home": "web.home", "tasks": "web.tasks"}
 NEEDS_TITLE = "An idea needs a title."
 NEEDS_KIND = "An idea needs a kind: restaurant, outing, trip, show…"
 NOT_A_NUMBER = "{label} needs to be a number."
+NOT_A_REPEAT = "Choose how often it repeats from the list."
 # Boxes an idea form sends every time, so emptying one clears it rather than leaving it be.
 IDEA_TEXT = ("description", "location_name", "url")
 # Boxes only sent when filled in, because the tool reads a missing one as "leave it alone".
@@ -351,6 +353,27 @@ def task_fields() -> dict[str, Any]:
     }
 
 
+# How often, as the form sends it: "every:unit", and from when as a box of its own.
+REPEAT_CHOICE = re.compile(r"(\d{1,3}):(day|week|month|year)")
+
+
+def repeat_chosen(form: MultiDict[str, str]) -> str:
+    """The repeat the form asks for, "every:unit:from", or "" for none."""
+    choice = _text(form, "repeat")
+    if not choice:
+        return ""
+    return f"{choice}:{'done' if form.get('repeat_after_done') else 'schedule'}"
+
+
+def repeat_fields(chosen: str) -> dict[str, Any] | None:
+    """The tool's repeat fields for a choice; None when it is not one the page offers."""
+    every_unit, _, start = chosen.rpartition(":")
+    found = REPEAT_CHOICE.fullmatch(every_unit)
+    if found is None or start not in ("schedule", "done"):
+        return None
+    return {"repeat_every": int(found[1]), "repeat_unit": found[2], "repeat_from": start}
+
+
 @bp.post("/tasks/new")
 @once
 def add_task() -> Response:
@@ -358,8 +381,13 @@ def add_task() -> Response:
         _say(complaint)
     elif not request.form.get("once"):
         _say("Reload the form before saving.")
+    elif (chosen := repeat_chosen(request.form)) and repeat_fields(chosen) is None:
+        _say(NOT_A_REPEAT)
     else:
-        result, complaint = run("add_task", task_fields())
+        values = task_fields()
+        if chosen:
+            values.update(repeat_fields(chosen) or {})
+        result, complaint = run("add_task", values)
         _say(complaint or f"Saved task #{result['task']['id']}. Reminders appear in Chat.")
     return _back("web.tasks")
 
@@ -371,6 +399,8 @@ def edit_task(task_id: int) -> Response:
         _say(complaint)
     elif _task_revision(request.form) is None:
         _say("Reload this task before editing.")
+    elif (chosen := repeat_chosen(request.form)) and repeat_fields(chosen) is None:
+        _say(NOT_A_REPEAT)
     else:
         values = task_fields()
         values.update(
@@ -379,6 +409,13 @@ def edit_task(task_id: int) -> Response:
             clear_due=not bool(values["due_at"]),
             clear_reminder=bool(request.form.get("clear_reminder")),
         )
+        # The repeat is sent only when it changed: sent again as it was, it would move the
+        # schedule to wherever a snooze had left the reminder.
+        if chosen != _text(request.form, "repeat_was"):
+            if chosen:
+                values.update(repeat_fields(chosen) or {})
+            else:
+                values["stop_repeating"] = True
         result, complaint = run("update_task", values)
         _say(complaint or f"Updated task #{result['task']['id']}.")
     return _back("web.tasks")
