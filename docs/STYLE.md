@@ -211,11 +211,15 @@ one pinned release, gathered into one sprite (`static/icons.svg`) by `scripts/ic
 used through the `icon()` macro in `templates/_ui.html`. They are drawn with a 1.75 stroke in the
 colour of the words beside them; an icon beside words is hidden from screen readers, one standing
 alone gets a label. To add one, put its name in `ICONS` in the script and run
-`uv run python scripts/icons.py`; never edit the sprite by hand.
+`uv run python scripts/icons.py`; never edit the sprite, the favicon or the home-screen icons by
+hand.
 
 **The mark** is the page's own: a little monitor with a smile, drawn on the same grid and stroke.
-It is the favicon and the mark in the bar, where it glows. It is FamilyDB's, and never Vera's
-face: she has none.
+It is the favicon, the mark in the bar, where it glows, and the icon of the page kept on a phone's
+home screen: phosphor green on the page's charcoal, filling the square, since the phone rounds the
+corners itself and would show black through anything transparent, with a margin that round masks
+leave alone. A phone takes no SVG there, so the script draws that one as PNGs, from the same
+shapes. It is FamilyDB's, and never Vera's face: she has none.
 
 ## Her screen
 
@@ -370,7 +374,9 @@ looked at (see "Two layers").
   the top; Family and Settings are shown only to an admin, who alone may change them. From 52rem
   everything is one bar that stays at the top while the page scrolls. The conversation's place
   goes by her name, with the conversation's icon; with no persona it is Chat. It is shown only to
-  a role that may talk to her.
+  a role that may talk to her. Kept on a phone's home screen, the page opens full-screen, without
+  the browser's bars (`display: standalone` in the manifest, the status bar black above the
+  page's charcoal), so the tab bar and the page's own ways back are all there is to get about by.
 - **Home.** Signed the way her lines are (her screen, her name, the day), then the box to answer
   her in, its label her question, "What’s on your mind?", with the one word lit, and the ways to
   start under it; under those, how the conversation stands: what she said last (the last day's,

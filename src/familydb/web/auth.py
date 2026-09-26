@@ -13,11 +13,11 @@ stored hashed. A session opened with it does not know who anybody is, so it may 
 The first admin to choose their own password ends that: from then on the shared one opens
 nothing, and every session opened with it ends.
 
-A successful sign-in sets a signed session cookie; every page but the login and the health check
-is behind it. Failed attempts are counted per client address and locked out for a while, and
-across the whole site past that, so a page on the open internet is not worth guessing at. When
-there is no password of either kind and the page is only on the loopback (or the waiver is set on
-purpose), there is nothing to sign in to and every page is open.
+A successful sign-in sets a signed session cookie; every page but the login, the health check and
+the home-screen manifest is behind it. Failed attempts are counted per client address and locked
+out for a while, and across the whole site past that, so a page on the open internet is not worth
+guessing at. When there is no password of either kind and the page is only on the loopback (or the
+waiver is set on purpose), there is nothing to sign in to and every page is open.
 """
 
 from __future__ import annotations
@@ -96,8 +96,11 @@ DEVICE_SALT = "familydb-device"
 DEVICE_DAYS = 365
 # Long enough for any real address, IPv6 with a zone included.
 MAX_ADDRESS = 64
-# Endpoints reachable without signing in. "static" covers the stylesheet on the login page.
-OPEN_ENDPOINTS = frozenset({"auth.login", "auth.sign_in", "auth.logout", "web.healthz", "static"})
+# Endpoints reachable without signing in. "static" covers the stylesheet on the login page and
+# the home-screen icons, which a phone fetches without the cookie, as it does the manifest.
+OPEN_ENDPOINTS = frozenset(
+    {"auth.login", "auth.sign_in", "auth.logout", "web.healthz", "web.manifest", "static"}
+)
 # Where somebody signed in with a starting password may go before they have chosen their own.
 CHOOSING = frozenset({"family.you", "family.choose"})
 # The permission each part of the page needs beyond signing in, by blueprint (roles.py says who
@@ -130,9 +133,9 @@ Kind = Literal["stranger", "anyone", "family", "person"]
 class Visitor:
     """Who is looking at the page.
 
-    A stranger has not signed in, and sees only the login page and the health check. On a page
-    with nothing to sign in to it is anyone at all. The family is whoever the shared password let
-    in, whom the page cannot tell apart. A person signed in as themselves.
+    A stranger has not signed in, and sees only the login page, the health check and the manifest.
+    On a page with nothing to sign in to it is anyone at all. The family is whoever the shared
+    password let in, whom the page cannot tell apart. A person signed in as themselves.
     """
 
     kind: Kind

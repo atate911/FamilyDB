@@ -112,6 +112,9 @@ older than what is installed. It gets a date when it is released.
   Google, forms that add and change ideas, record how things went and put plans
   on the calendar (through the same tools the bot uses), the Family page, a
   status page with what is connected and what it has cost, and a settings page.
+- **On a phone's home screen.** Added from Safari's Share button, or Chrome's
+  menu on Android, the page opens full-screen as an app, with the mark for its
+  icon and the page's name under it.
 - **Everyone signs in as themselves.** Each person has a password of their own,
   stored hashed, and one of three roles: admin, parent and kid. Kids may do what
   a parent may for now; what each role may do is one table, `familydb/roles.py`,
