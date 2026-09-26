@@ -4,13 +4,14 @@ Two supported ways to run it: Docker Compose, or a Python virtualenv managed by 
 
 Almost everything is set up on the web page once it is running: the model and its key,
 Telegram, Google Calendar, where home is and what it may spend. The files are for what the page
-cannot decide for itself, such as how the page is reached and its password.
+cannot decide for itself, such as how the page is reached and the first password into it.
 
 ## Requirements
 
 - Linux with either Docker (with the compose plugin) or Python 3.11+ and [uv](https://docs.astral.sh/uv/).
-- Outbound HTTPS. The bot itself needs no inbound ports. The web page is kept to the machine
-  itself unless you give it a domain, and then it needs ports 80 and 443 (section 10).
+- Outbound HTTPS. The bot itself needs no inbound ports. The web page needs ports 80 and 443
+  when it is served over HTTPS, which the installer does unless told to keep the page on the
+  machine itself (section 10).
 - A key for one of the three providers: OpenAI, which answers by default, Anthropic or Gemini
   (section 11). You type it on the settings page.
 
@@ -32,39 +33,45 @@ git clone <this repo> /opt/familydb && cd /opt/familydb
 sudo scripts/install.sh
 ```
 
-The installer asks one thing: the domain name for the web page (leave it empty to keep the page
-on this machine). Everything else is done on the page afterwards, starting with adding yourself
-on the Family page. It writes `.env`, installs the dependencies and creates the database. It picks Docker when it finds it and a virtualenv otherwise, and it is safe to run
-again: it never overwrites `.env` without asking and never touches the database. Sections 2a and
-2b below are the same steps by hand.
+The installer asks one thing: a domain name for the web page. Left empty, a virtualenv install
+serves the page over HTTPS at the server's own address, and a Docker one keeps it on this
+machine (section 10). Everything else is done on the page afterwards, starting with adding
+yourself (section 3). It writes `.env`, installs the dependencies and creates the database. It
+picks Docker when it finds it and a virtualenv otherwise, and it is safe to run again: it never
+overwrites `.env` without asking, and migrates an existing database rather than replacing it.
+Sections 2a and 2b below are the same steps by hand.
 
 What it decides without asking:
 
 - The web page is on (`WEB_ENABLED=true`) and always has a password. Unless you give one in
-  `WEB_PASSWORD` (twelve characters or more), it makes one up and prints it once. Write it down;
-  it is in `.env` too, and nowhere else.
+  `WEB_PASSWORD` (twelve characters or more), it makes one up, prints it and keeps it in `.env`.
+  It is only the way in until you choose your own on the page (section 10, "Who signs in").
 - The timezone comes from the machine. The settings page changes it.
 - Web lookups are on (`WEB_TOOLS_ENABLED=true`), and the weekend digest goes to the page's own
   chat (`DIGEST_CHAT_ID=web`). Both can be changed on the page.
-- With a domain, it writes `WEB_DOMAIN` and `WEB_TRUST_PROXY=true`. With Docker it also writes
-  `COMPOSE_PROFILES=tls`, so every `docker compose up -d` starts Caddy for HTTPS as well. With a
-  virtualenv it offers to install Caddy with apt, write `/etc/caddy/Caddyfile` from
-  `deploy/Caddyfile` with your domain in it, and reload Caddy. Either way, open ports 80 and 443
-  (`sudo ufw allow 80,443/tcp`) and point the domain at the machine.
+- For HTTPS it writes `WEB_DOMAIN` (the domain, or the server's address) and
+  `WEB_TRUST_PROXY=true`. With Docker, which needs a domain for this, it also writes
+  `COMPOSE_PROFILES=tls`, so every `docker compose up -d` starts Caddy as well. With a virtualenv
+  it installs Caddy with apt, writes `/etc/caddy/Caddyfile` for the page (the shape of
+  `deploy/Caddyfile`), reloads Caddy, and opens ports 80 and 443 in `ufw` if `ufw` is on. Point
+  the domain at the machine, and open the same ports in the provider's own firewall if it has one.
 - `data/` is made readable by its owner alone, and a nightly backup is scheduled in root's
   crontab at 03:15, keeping fourteen days (section 7). It installs cron with apt if the machine
   has none. `BACKUPS=no` skips this.
 
-It ends by telling you where the page is: `https://your.domain/`, or, with no domain, through an
-SSH tunnel (`ssh -L 8080:127.0.0.1:8080 you@server`, then `http://127.0.0.1:8080/`). Sign in, and
-follow the "Finish setting up" list on the home page (section 3).
+It does not start the bot. It ends by saying how (`sudo systemctl start familydb`, or
+`docker compose up -d`) and where the page will be: `https://your.domain/` or the server's own
+address, or, for a page kept on this machine, through an SSH tunnel
+(`ssh -L 8080:127.0.0.1:8080 you@server`, then `http://127.0.0.1:8080/`). Sign in, and follow
+the setup the page opens on (section 3).
 
-Useful flags: `--mode docker|venv` to choose, `--config-only` to write `.env` and stop,
-`--dry-run` to see what it would do, `--yes` to take every default, and `--non-interactive` to
-read every answer from the environment. `scripts/install.sh --help` lists the variables it reads.
-For a scripted build it also writes any of `PROVIDER`, the three `*_API_KEY`s,
-`TELEGRAM_BOT_TOKEN`, `FAMILYDB_TZ`, `HOME_AREA`, `HOME_LAT`, `HOME_LON`, `WEATHER_UNITS`,
-`WEB_HOST`, `WEB_PORT` and `DIGEST_CHAT_ID` that it finds in the environment:
+Useful flags: `--mode docker|venv` to choose, `--local-only` to keep the page on this machine,
+`--config-only` to write `.env` and stop, `--dry-run` to see what it would do, `--yes` to take
+every default, and `--non-interactive` to read every answer from the environment.
+`scripts/install.sh --help` lists the variables it reads. For a scripted build it also writes
+any of `PROVIDER`, the three `*_API_KEY`s, `TELEGRAM_BOT_TOKEN`, `FAMILYDB_TZ`, `HOME_AREA`,
+`HOME_LAT`, `HOME_LON`, `WEATHER_UNITS`, `WEB_TOOLS_ENABLED`, `WEB_HOST`, `WEB_PORT` and
+`DIGEST_CHAT_ID` that it finds in the environment:
 
 ```bash
 WEB_DOMAIN=family.example.com ADMIN_NAME=Sam OPENAI_API_KEY=sk-... \
@@ -133,29 +140,31 @@ and `SystemCallFilter=@system-service`. To chat from the shell, run commands as 
 so the database stays owned by it: `sudo -u familydb /opt/familydb/.venv/bin/familydb repl`.
 
 Every `familydb` command runs with a umask of 077 as well, and `familydb run` and `familydb web`
-make an older database, its write-ahead files, the Google token and `data/web_secret`
-owner-only when they start, if an earlier version left them readable by others.
+take group and other access off the database, its write-ahead files, the Google token and
+`data/web_secret` when they start, which puts right any that an older version left readable.
 
 Without uv: `python3 -m venv .venv && .venv/bin/pip install .` gives the same `.venv/bin/familydb`.
 
 ## 3. First run checklist
 
-Open the page (section 10) and sign in with the password the installer printed. The home page has
-a "Finish setting up" list of what is missing, most important first, each with a link to where it
-is done:
+Open the page (section 10) and sign in with the password the installer printed. It opens on its
+setup (`/setup`), seven short steps in order, each saying why it matters and what to do:
 
-1. Yourself, as an admin, then the rest of the family (the Family page).
+1. Yourself, as an admin.
 2. Your own password, which ends the installer's: from then on everybody signs in as themselves,
    and you give each of them a starting password on the Family page.
-3. A model key (settings, AI model). Until there is one, it saves what it is told but cannot answer.
-4. Where home is (settings, General), for the weather and for what is on nearby (section 6).
-5. Google Calendar (settings, Connections), so plans land on the family calendar (section 5).
-6. A Telegram bot (settings, Connections), so the family can message it from their phones (section 4).
-7. Only once there is a Telegram token: each person's Telegram id (the Family page).
+3. An AI model and its key. Until there is one, it saves what it is told but cannot answer.
+4. Where home is, for the weather and for what is on nearby (section 6).
+5. Telegram, so the family can message it from their phones, and your phone linked to it
+   (section 4).
+6. The rest of the family.
+7. Google Calendar, so plans land on the family calendar (section 5).
 
-The list disappears when everything on it is done. Then try it on the Chat page: "we should try
-that new ramen place on Main St sometime" saves idea #1, and "tell me about #1" answers from
-history. `/status` says which model answered, what is connected, and what today has cost.
+Until somebody is on the list and there is a model, the home page sends an admin back to the
+setup. After that it lists what is left under "Finish setting up", until everything is done.
+Then try it on the Chat page: "we should try that new ramen place on Main St sometime" saves
+idea #1, and "tell me about #1" answers from history. `/status` says which model answered, what
+is connected, and what today has cost.
 
 From the shell instead, `familydb doctor` looks at all of this in one command and says what to do
 about anything that is wrong; `--online` also asks Telegram and the model API whether the keys
@@ -163,8 +172,8 @@ work, and `--fix` puts right the few things that can be put right without a deci
 one at a time:
 
 1. `familydb config` shows the settings you expect (keys are masked) and where each came from.
-2. `familydb db migrate` reports the schema version.
-3. `familydb members add` for everyone who will message the bot (admin or member) and for kids (`--role kid`) so they can be named as participants. The Family page does the same.
+2. `familydb db migrate` applies any new migrations and says which, or that it is up to date.
+3. `familydb members add` for everyone who will message the bot (`--role admin`, or a parent, the default) and for kids (`--role kid`) so they can be named as participants. The Family page does the same.
 4. `familydb chat "we should try that new ramen place on Main St sometime"` saves idea #1.
 5. `familydb chat "tell me about #1"` answers from history.
 6. `familydb db status` shows `cache_read` greater than zero on the second call. If it stays zero, see troubleshooting.
@@ -188,7 +197,7 @@ one at a time:
    page instead, or to use with `familydb members add NAME --channel telegram --channel-user-id
    12345`. Their next message gets a real answer.
 3. For a family group, send BotFather `/setprivacy` and choose Disable so the bot sees every message, then add the bot to the group. A dedicated "Ideas & Plans" group works best. In a busier group set `TELEGRAM_REQUIRE_MENTION=true` so it only answers when @mentioned or replied to.
-4. To get suggestions measured from where someone is rather than from home, they share their location with the bot (the paperclip, then Location; a live location keeps itself current for as long as they choose). On the web page's chat, ticking "Send where I am" (beside Send) asks the browser for the location and sends it with each message until the box is unticked; it stays as it was left for that browser, is off to begin with, and needs the page on HTTPS (or opened on the server itself). The bot uses the latest position for three hours for "near here" and "open now" questions, keeps only the latest one per person, deletes it after a day (within ten minutes of that, while the service runs, whether or not anyone shares again), and sends the place's name and coordinates to the model provider with the message. Nothing is sent unless someone shares it or ticks the box.
+4. To get suggestions measured from where someone is rather than from home, they share their location with the bot (the paperclip, then Location; a live location keeps itself current for as long as they choose). On the web page, ticking "Send where I am" (beside Send, with scripts on) asks the browser for the location and sends it with each message until the box is unticked; it stays as it was left for that browser, is off to begin with, and needs the page on HTTPS (or opened on the server itself). The bot uses the latest position for three hours for "near here" and "open now" questions, keeps only the latest one per person, deletes it after a day (within ten minutes of that, while the service runs, whether or not anyone shares again), and sends the place's name and coordinates to the model provider with the message. Nothing is sent unless someone shares it or ticks the box.
 5. Long polling means nothing is exposed; if the server is off, Telegram keeps updates for a day and the bot catches up on restart without double-processing.
 6. Voice notes work like typed messages, as long and rambling as anyone likes: a speech model writes the words down and the bot answers them, doing everything they ask for (an idea, a plan, a change to one, something to remember). The words are kept as the message, marked "(voice note)"; the recording itself is not kept. Claude cannot hear, so voice notes need an OpenAI or Gemini key even when the chat runs on Claude; with neither, the bot says so and asks for the message typed. On the settings page, AI model, under "Voice notes": turn them off, cap their length (5 minutes unless changed; a longer one is not heard at all), and choose who hears them and with which model. Hearing is a model call like any other: it counts against the daily limit and shows on `/status` as "listening to voice notes", about $0.003 a minute on OpenAI's gpt-4o-mini-transcribe. A voice note that could not be heard (the service down, no words in it) is not retried, since the recording is gone; the bot asks for it again.
 
@@ -215,20 +224,30 @@ Then connect it from the settings page, which needs no laptop and nothing copied
 
 The token is saved owner-only at `GOOGLE_TOKEN_PATH` (`data/google_token.json`). This way of
 connecting has not yet been tried against a live Google account, so try it first, and if it
-will not work, use the laptop instead:
+will not work, sign in on a laptop instead:
 
-- On a laptop with a browser (not inside Docker), run
+- On a laptop with a browser (not inside Docker), from a copy of the code, run
   `uv run familydb google auth --client-secrets ~/Downloads/client_secret_XXX.json` and sign in as
   the calendar's owner. It writes `data/google_token.json`.
 - `uv run familydb google calendars` lists the calendars and their ids. Put the family calendar's
   id in the Google calendar id box on the settings page (under Connections, "Use a calendar by
   its id"), or in `GOOGLE_CALENDAR_ID`.
-- Copy `google_token.json` into the server's `data/` folder, owned by the bot's user and mode
-  600, and restart the bot.
+- Copy the token into the server's `data/`, owned by the bot's user and readable by it alone,
+  and restart the bot:
+
+  ```bash
+  scp data/google_token.json you@server:/tmp/        # on the laptop
+  sudo install -o familydb -g familydb -m 600 /tmp/google_token.json /opt/familydb/data/
+  rm /tmp/google_token.json
+  sudo systemctl restart familydb
+  ```
+
+  With Docker the owner is uid 1000 (`-o 1000 -g 1000`), and `docker compose restart bot`
+  restarts it.
 
 Either way, check with `familydb google events`. A dedicated family Google account keeps the
 bot's token separate from anyone's personal mail. From chat, "we're going to the symphony next
-Saturday at 8" now creates the event; "move that to Sunday" and "cancel the symphony" update it.
+Saturday at 8" then creates the event; "move that to Sunday" and "cancel the symphony" update it.
 
 ## 6. Weather
 
@@ -252,8 +271,9 @@ sudo crontab -u root -l
 
 That puts one line in root's crontab, for Docker or systemd alike: at 03:15 it takes a backup
 into `backups/` with SQLite's online backup, which is safe while the bot runs, and only when that
-succeeded deletes backups older than `--keep-days`. `sudo scripts/maintain.sh backup` takes one
-now. Each backup is readable by its owner alone.
+succeeded deletes backups older than `--keep-days`. It also takes out the backup lines an older
+install put in the `familydb` user's crontab, so the two never both run.
+`sudo scripts/maintain.sh backup` takes one now. Each backup is readable by its owner alone.
 
 The same without the script, in root's crontab (`sudo crontab -e`), for a systemd install:
 
@@ -261,14 +281,21 @@ The same without the script, in root's crontab (`sudo crontab -e`), for a system
 15 3 * * * sudo -u familydb env FAMILYDB_PATH=/opt/familydb/data/familydb.sqlite3 /opt/familydb/.venv/bin/familydb db backup /opt/familydb/backups/familydb-$(date +\%F).sqlite3
 ```
 
-`FAMILYDB_PATH` is set there because cron runs with no working directory to speak of, and the
-default path in `.env` is relative to the checkout. Without it the backup would have nothing to
-copy; it says so and writes nothing rather than backing up an empty database. The `backups/`
-folder must be writable by `familydb`.
+`FAMILYDB_PATH` is set there because cron does not run in the checkout, so `.env` is not read
+and the default path, which is relative, would point at nothing. The backup then says so and
+writes nothing rather than backing up an empty database. The `backups/` folder must be writable
+by `familydb`.
 
 With Docker: `docker compose exec bot familydb db backup /data/backups/familydb-$(date +%F).sqlite3`.
-Keep a copy off the server: a backup on the same disk is not a backup. Calendar events are also
-in Google.
+Calendar events are also in Google.
+
+Keep a copy off the server: a backup on the same disk is not a backup. The backups are readable
+by their owner and root alone, so hand yourself a bundle on the server and fetch that:
+
+```bash
+sudo tar -C /opt/familydb -czf ~/familydb-backups.tar.gz backups && sudo chown "$USER" ~/familydb-backups.tar.gz
+scp you@server:familydb-backups.tar.gz .       # on your own computer
+```
 
 **Restoring one.**
 
@@ -276,10 +303,10 @@ in Google.
 sudo scripts/maintain.sh restore backups/familydb-XXXX.sqlite3
 ```
 
-It stops the bot, backs up the database it is about to replace (so a restore can be undone),
-puts the backup in place, clears the old write-ahead files, sets the owner and permissions,
-migrates and starts it again. By hand, stop the bot first, because the file it has open is the
-one being replaced:
+It checks the backup is a sound database first, then stops the bot, backs up the database it is
+about to replace (so a restore can be undone), puts the backup in place, clears the old
+write-ahead files, sets the owner and permissions, migrates and starts it again. By hand, stop
+the bot first, because the file it has open is the one being replaced:
 
 ```bash
 sudo systemctl stop familydb                       # or: docker compose stop bot
@@ -292,10 +319,8 @@ The write-ahead files belong to the database that was replaced, so they go too; 
 ones. `familydb db status` afterwards shows the row counts and the schema version, and a restored
 file from an older version is migrated on the next start.
 
-An API key or Telegram token stored from the settings page lives in this file, so it is in every
-backup. That is the price of being able to change a key from a phone. If these backups go
-anywhere you do not control, keep the keys in `.env` instead (section 11) and the backup holds
-none.
+An API key or Telegram token saved on the settings page lives in this file, so it is in every
+backup; section 11 says when to keep the keys in `.env` instead.
 
 ## 8. Upgrades
 
@@ -305,37 +330,28 @@ sudo /opt/familydb/scripts/maintain.sh upgrade
 
 It takes a backup, fetches, moves to the newer code, reinstalls the locked dependencies (or
 rebuilds the Docker image), applies any new migrations and restarts, then prints the command to
-go back if it went badly. On a private repository the fetch needs a credential; docs/INSTALL.md,
-section 8, says how.
+go back if it went badly. Do not `git pull` in the checkout instead: it is on a detached commit,
+where that fails. On a private repository the fetch needs a credential; docs/INSTALL.md, under
+Day to day, says how.
 
-Which code it moves to: while the newest heading in `CHANGELOG.md` says "in progress" (as
-`v0.1.0` does now), bootstrap installs the default branch and `upgrade` follows it. Once a
-version heading carries a date instead, both follow the newest release tag. An upgrade only
-ever moves forward: if the target does not contain what is installed now, it refuses and changes
-nothing rather than taking the database back past migrations it has already run. To pin a tag,
-branch or commit when installing, use `bootstrap.sh --ref NAME`.
+Which code it moves to: while the newest heading in `CHANGELOG.md` says "in progress",
+bootstrap installs the default branch and `upgrade` follows it. Once a version heading carries a
+date instead, both follow the newest release tag. An upgrade only ever moves forward: if the
+target does not contain what is installed now, it refuses and changes nothing rather than taking
+the database back past migrations it has already run. To pin a tag, branch or commit when
+installing, use `bootstrap.sh --ref NAME`.
 
-Migrations also run on every start. Never edit an applied migration; add a new numbered file.
-Check `systemctl status familydb` or `docker compose logs bot` once it is back: a setting that no
-longer validates is named in one line rather than stopping silently.
+Migrations also run on every start. Check `systemctl status familydb` or
+`docker compose logs bot` once it is back: a setting that no longer validates is named in one
+line rather than stopping silently.
 
-Two upgrades from an older checkout ask something of you once:
-
-- Everyone signs in to the page again the first time after upgrading past the change that ties a
-  session to the password it was opened with. Nothing is wrong; it happens once.
-- After upgrading to the version where each person signs in as themselves, the family password
-  keeps working until an admin chooses their own (the setup page's "Your own password", or Your
-  password at the top of any page). From that moment it opens nothing: give everybody else a
-  starting password on the Family page first, or straight after.
-- The `tls` profile now keeps Caddy's certificate in `caddy/` rather than `data/caddy`, so that a
-  private key is not inside the bot's volume and its backups. Move the old folder across before
-  starting, or let Caddy ask for a fresh certificate, which it will do on its own:
-  `mv data/caddy caddy`. Any copy you made of the whole `data/` folder holds the old key, so
-  delete it; `familydb db backup` copies only the database and never held one.
+A Docker install whose Caddy kept its certificate in `data/caddy` should move it to `caddy/`
+before starting (`mv data/caddy caddy`), or delete it and let Caddy get a new one, and delete
+any copy of `data/` that holds it: a private key there is readable from the bot's container.
 
 ## 9. Lookups, the weekend digest and follow-ups
 
-**Looking ideas up.** On by default after the installer ("Look ideas up on the web" on the settings page, `WEB_TOOLS_ENABLED` in `.env`). Every `ENRICH_INTERVAL_MINUTES` the bot takes up to `ENRICH_BATCH` new ideas and, in a separate small model call with web search, finds the place, its address, hours, booking link and price notes, geocodes it (OpenStreetMap's Nominatim, no key) and estimates the drive from home. It then posts one line to the chat where the idea was captured ("Looked up #57 Hopscotch Portland: open Sat 10:00-20:00 · about 45 min away (estimate)"); turn off "Say in the chat when an idea is filled in" to keep quiet. Ideas that are not one place ("a picnic somewhere"), and home ideas with no place, link or location, are skipped without a model call, and ideas the worker cannot identify are marked failed and left alone; `familydb enrich --idea 57` redoes one by hand, `familydb ideas list` shows the `details:` state, and `familydb tool describe_idea --json '{"id": 57}'` shows what was saved. Details older than `PLACE_STALE_DAYS` are refreshed the next time the idea comes up in a suggestion. With lookups off, nothing is looked up and suggestions say "hours unknown". Once the daily spending limit is used up, lookups wait for tomorrow.
+**Looking ideas up.** On by default after the installer ("Look ideas up on the web" on the settings page, `WEB_TOOLS_ENABLED` in `.env`). Every `ENRICH_INTERVAL_MINUTES` the bot takes up to `ENRICH_BATCH` new ideas and, in a separate small model call with web search, finds the place, its address, hours, booking link and price notes, geocodes it (OpenStreetMap's Nominatim, no key) and estimates the drive from home. It then posts one line to the chat where the idea was captured ("Looked up #57 Hopscotch Portland: open Sat 10:00-20:00 · about 45 min away (estimate)"); turn off "Say in the chat when an idea is filled in" to keep quiet. Home ideas with no place, link or location, and gifts with no place, are skipped without a model call, the lookup skips ideas that are not one place ("a picnic somewhere"), and ideas it cannot identify are marked failed and left alone; `familydb enrich --idea 57` redoes one by hand, `familydb ideas list` shows the `details:` state, and `familydb tool describe_idea --json '{"id": 57}'` shows what was saved. Details older than `PLACE_STALE_DAYS` are refreshed the next time the idea comes up in a suggestion. With lookups off, nothing is looked up and suggestions say "hours unknown". Once the daily spending limit is used up, lookups wait for tomorrow.
 
 **Suggestions.** "What should we do this weekend?" runs the engine once: free time from the calendar, the forecast, every idea against the looked-up details, and, with lookups on, a search for time-bound things near the home area (cached for twelve hours, shared by questions that ask for the same window, constraints and kind of thing). Each verdict is logged in `suggestions`. It works in minutes, not parts of the day: "I'm bored, what now?" looks at the next few hours, "tonight" at the evening, and an answer for today says when they could be there ("can go 16:10-17:55 today"). `familydb suggest --window this-weekend --discover` runs the same engine from the shell.
 
@@ -344,6 +360,10 @@ Two upgrades from an older checkout ask something of you once:
 **Follow-ups.** The morning after a plan (`FOLLOW_UP_HOUR`, default 10:00), the bot asks "How was #57 Hopscotch Portland on Saturday? Worth doing again?" in the chat the plan was made in, once per plan, unless someone already said how it went. The answer is recorded as feedback and feeds future suggestions. `familydb follow-ups --now` asks by hand. It makes no model call.
 
 **Reminders.** A task given a reminder time ("remind me on Tuesday at 9 that we need paper towels", or on `/tasks`) is sent once, when it is due, to the chat it was asked in; browser and console reminders go to the page's chat. A job checks every minute and makes no model call. It runs only in `familydb run`, not `familydb web`; one that fell due while the bot was off is sent when it starts again, and says when it was due. If the family is talking in that chat at the time, the reply they are about to get carries it instead; the follow-ups and lookup notes are handled the same way.
+
+**The evening before a plan.** At `PLAN_CHECK_HOUR` (19:00 unless changed), each plan for tomorrow is checked again in code: rain forecast for an outdoor idea, or its place listed as closed at that time, gets a heads-up in the chat the plan was made in, with another idea for the same time when one fits. When all is well nothing is said. It makes no model call, and "Check tomorrow's plans the evening before" on the settings page (under Messages) turns it off.
+
+**Tasks kept for a window.** A task kept for "one of these Saturday mornings" is brought up in the chat it was asked in when such a morning comes round and the calendar is free for the hour ahead: each task once a week at most, and one a day in each chat. Only plain days and parts of the day count; "before Christmas" is left alone. It makes no model call, and the settings page (under Messages) turns it off.
 
 **Cost.** Enrichment is at most three searches and three page reads per idea; discovery at most four searches per window and question kind per twelve hours. Both run on the lookup model (GPT-6 Luna by default, the same as chat; section 11), and all of it counts towards the daily spending limit.
 
@@ -354,24 +374,27 @@ connected, the "Finish setting up" list (section 3). Then: Chat, to talk to the 
 member would; the ideas list with search and filters, and one idea in full with its hours,
 travel estimate and booking link; the restaurants on their own page; the plans as a list or as a
 month, read live from Google Calendar when it is connected and from the saved plans when it is
-not; things to do and their reminders; Family, for who the bot talks to; and the status and
-settings pages (section 11), with the Personality page beside them. The forms add and change
-ideas and tasks, record how things went, and create, move and cancel plans, through the
-same tools the bot itself uses, so nothing done on the page is anything the bot could not do.
+not; things to do and their reminders; Memory, what the bot remembers about the family and where
+each thing came from; Family, for who the bot talks to; and the status and settings pages
+(section 11), with the Personality page among them. The forms add and change ideas and tasks,
+record how things went, create, move and cancel plans, and add to or forget what the bot
+remembers, through the same tools the bot itself uses, so nothing done on the page is anything
+the bot could not do.
 
-The installer always turns the page on, with a password. There are two ways to reach it.
+The installer always turns the page on, with a password. These are the ways to reach it.
 
-**Kept to the machine, over a tunnel.** With no domain, the page is bound to `127.0.0.1` (with
-Docker, the compose file publishes it to `127.0.0.1:8080`). From your own computer run
-`ssh -L 8080:127.0.0.1:8080 you@server` and open `http://127.0.0.1:8080/`, or use Tailscale. That
-is the safest option and opens no port.
+**Kept to the machine, over a tunnel.** With `--local-only`, or with Docker and no domain, the
+page is bound to `127.0.0.1` (with Docker, the compose file publishes it to `127.0.0.1:8080`).
+From your own computer run `ssh -L 8080:127.0.0.1:8080 you@server` and open
+`http://127.0.0.1:8080/`, or use Tailscale. That is the safest option and opens no port.
 
 **On a server on the internet, over HTTPS.** Give the installer a domain, point the domain at the
-machine, and open 80 and 443 (`sudo ufw allow 80,443/tcp`). The installer has then written:
+machine, and open 80 and 443 in the provider's firewall if it has one (on a virtualenv install
+the installer opens them in `ufw`). The installer has then written:
 
 ```
 WEB_ENABLED=true
-WEB_PASSWORD=...                 # made up and printed once, unless you gave one
+WEB_PASSWORD=...                 # made up and printed, unless you gave one
 WEB_TRUST_PROXY=true
 WEB_DOMAIN=familydb.example.com
 COMPOSE_PROFILES=tls             # Docker only: `docker compose up -d` starts Caddy too
@@ -380,11 +403,12 @@ COMPOSE_PROFILES=tls             # Docker only: `docker compose up -d` starts Ca
 With Docker, the Caddy container gets the certificate and keeps it, with its private key, in
 `caddy/` beside the checkout, deliberately not inside `data/`: a key in there would be readable
 from the bot's container and would land in every backup. With a virtualenv, Caddy runs on the
-machine from `deploy/Caddyfile`, which the installer offered to install; to do it yourself, the
-steps are at the top of that file. If nginx is already there, `deploy/nginx-familydb.conf` does
-the same with a certificate from certbot, and works on a port other than 443. Both have been
-tested with a real browser signing in and posting a form over HTTPS. Keep `WEB_HOST=127.0.0.1`
-on a virtualenv install so nothing but the proxy can reach the page, and never open 8080.
+machine, and the installer writes its `/etc/caddy/Caddyfile`, as `maintain.sh https` does
+again; to do it by hand, the steps are at the top of `deploy/Caddyfile`. If nginx is already
+there, `deploy/nginx-familydb.conf` does the same with a certificate from certbot, and works on a
+port other than 443. Both have been tested with a real browser signing in and posting a form
+over HTTPS. Keep `WEB_HOST=127.0.0.1` on a virtualenv install so nothing but the proxy can reach
+the page, and never open 8080.
 
 `WEB_TRUST_PROXY` makes the page believe the forwarding headers from exactly one proxy hop, to
 learn the real visitor address and that the connection was HTTPS, and marks the login cookie
@@ -394,11 +418,15 @@ only because the compose file publishes the port to `127.0.0.1` alone. A visitor
 forged `X-Forwarded-For` is ignored. Only turn it on with a proxy actually in front. Behind a
 proxy a password is always required, however the page is bound.
 
-**On a server on the internet with no domain.** Give the installer the server's public IP
-address instead (virtualenv path). It is the same arrangement as a domain, except that Caddy
-signs the certificate itself (`tls internal` in `/etc/caddy/Caddyfile`), so every browser warns
-once per device before it trusts it. The connection is still encrypted. docs/INSTALL.md section
-6 has the Caddyfile, for an install made without it.
+**On a server on the internet with no domain.** This is what a virtualenv install does when it
+is given no domain: the same arrangement as a domain, at the server's own address. A public
+IPv4 address gets a real certificate from Let's Encrypt, a short-lived one Caddy renews by
+itself; when the distribution's Caddy is too old to ask for one (before 2.10), the installer
+brings a newer one from Caddy's own apt repository. A private address, or a certificate that
+does not arrive within a minute and a half, gets one Caddy signs itself (`tls internal`), which
+every browser warns about once per device before it trusts it. The connection is encrypted
+either way. `sudo /opt/familydb/scripts/maintain.sh https` sets this up on an install made
+without it, and is the thing to run again once a provider's firewall lets 80 and 443 through.
 
 **At home, on the local network.** To reach the page from other devices without a domain, set
 `WEB_HOST=0.0.0.0` in `.env`, and with Docker change the compose `ports` line to `"8080:8080"`.
@@ -448,9 +476,9 @@ table (`src/familydb/roles.py`) that the whole page asks. The chat speaks as who
 and the settings history says who changed what. Until the first admin chooses their own password,
 the page takes the one the installer made up, or one the family chose to share on the settings page;
 that admin's own password ends it for everyone, and from then on there is always an admin who can
-sign in, so it never comes back. For the last admin who forgot theirs, `sudo
-/opt/familydb/scripts/maintain.sh password` prints a new starting password (`password NAME` does it
-for somebody else).
+sign in, so it never comes back. For the last admin who forgot theirs,
+`sudo /opt/familydb/scripts/maintain.sh password` prints a new starting password
+(`password NAME` does it for somebody else).
 
 **What protects it.** Every password is checked in constant time, and a name that is nobody's is
 checked against a decoy so it takes as long as a wrong password and gets the same answer. Everyone
@@ -461,9 +489,10 @@ carries a signed "known device" cookie (`familydb_device`) for a year, which sto
 after the password it was earned with changes or after "Sign everyone out". So a guesser with many
 addresses gets nowhere and the family still gets in. Every page but the login and `/healthz` needs
 the cookie. Responses carry a content security policy that forbids framing and any script but the
-page's own one file, which sends the phone's location with a chat message; the chat waits for its
-answer with a meta refresh, and everything works with scripts turned off. Every form carries a token
-from the session as well, so a link from another site cannot make a change on the family's behalf.
+page's own one file, the message box's (it keeps an unsent message, and sends the phone's position
+when asked); reading, every form and sending a message work with scripts turned off. Every form
+carries a token from the session as well, so a link from another site cannot make a change on the
+family's behalf.
 Refusing to start is deliberate: a page bound off the loopback with no password will not serve, and
 says so, unless you set `WEB_ALLOW_NO_PASSWORD=true` on purpose, and behind a proxy it will not
 serve without one at all.
@@ -487,8 +516,9 @@ curl -sI http://127.0.0.1:8080/            # 302 to /login, plus the security he
 curl -s http://127.0.0.1:8080/healthz      # ok
 ```
 
-`familydb web --port 8099` serves the page alone in the foreground, which is the quickest way to
-try settings without restarting the bot.
+`familydb web --port 8099` serves the page alone in the foreground, with no Telegram and no
+scheduled jobs, which is the quickest way to try a change to the `WEB_` lines in `.env` without
+restarting the bot.
 
 **Notes.** The login cookie is signed with a key generated once into `data/web_secret`. "Sign
 everyone out" on the settings page replaces it, which ends every sign-in on every device. Set
@@ -497,11 +527,11 @@ out at random; the page cannot replace a key pinned there. The port must stay ab
 the bot runs unprivileged in both Docker and systemd. The page opens its own database connection
 per request, which is safe alongside the bot writing: SQLite is in WAL mode.
 
-**Status.** `/status` answers "is it working?" without a log: which model answers chat and which
-does the lookups, whether each key is set and whether it came from `.env` or the page, whether
-Telegram is connected ("connected as @name", "the token was refused by Telegram" or "cannot
-reach Telegram; trying again"), whether the calendar, the weather and the web lookups are
-connected, what today has cost against the daily limit, what each purpose (answering the family,
+**Status.** `/status` answers "is it working?" without a log: which model answers chat, the
+digest and the lookups, whether each key is set and whether it came from `.env` or the page,
+whether Telegram is connected ("connected as @name", "the token was refused by Telegram" or
+"cannot reach Telegram; trying again"), whether the calendar, the weather, the web lookups and
+the digest are set up, what today has cost against the daily limit, what each purpose (answering the family,
 the digest, lookups, ...) and each model has cost in dollars over the last thirty days, where the
 input of each purpose went (instructions, tools, the idea list, history, the message; the real
 total shared out by the size of each part), how much came back from the prompt cache, what is
@@ -518,15 +548,16 @@ value in an empty box is showing you (a dropdown says it in words, as "Default (
 and a box set on the page is marked "changed". `familydb config` prints the lot and says where
 each one came from. `/settings` itself is a card to each part, saying how it stands and marking
 what needs a look: General (where home is, the time zone, units and the page's name), AI model
-(the company, its key, checked with it for free, and the models), Spending, Messages (the weekend
-ideas and the follow-ups), Lookups, Personality and family, Connections (Telegram and Google
-Calendar), Sign-in and security, and What has changed. Each is a short page of its own with one
-Save; the fine-tuning on it is folded away until opened.
+(the company, its key, checked with it for free, and the models), Spending, Messages (what is
+sent without being asked, and when), Lookups, Personality and family, Connections (Telegram and
+Google Calendar), Sign-in and security, and What has changed. Each is a short page of its own
+with one Save; the fine-tuning on it is folded away until opened.
 
 A change reaches the next message and the next page straight away, a new Telegram bot token
 within a few seconds, and the timezone at once. The jobs that run on a schedule — the digest, the
-follow-ups, the lookups, the retries — pick a new time or interval up within five minutes, and
-the digest and follow-up hours keep the family's timezone as it is set on the page.
+follow-ups, the evening check of tomorrow's plans, the nudges, the lookups, the retries — pick a
+new time or interval up within five minutes, and their hours keep the family's timezone as it is
+set on the page.
 
 **Who answers.** Any of the three can, and the choice is made per surface, so the two halves of
 the work can go to different places:
@@ -564,9 +595,10 @@ LOOKUP_LEVEL=everyday      # looking ideas up and searching for what is on
 A level is chosen, not a model name, so it holds on whichever company answers: when the first one
 cannot take a message and another answers instead, it answers at the same level. A level up
 never answers with a model cheaper than everyday: if the everyday model already costs more than
-the table's (Claude Opus 5, say), or has no price listed, it answers at better and best too. Each level's box on the page
-says which model it means for the company answering now, and what it costs. A situation on a
-stronger model than the chat has a prompt cache of its own, written the first time it is asked.
+the table's (Claude Opus 5, say), or has no price listed, it answers at better and best too.
+Each level's box on the page says which model it means for the company answering now, and what
+it costs. A situation on a stronger model than the chat has a prompt cache of its own, written
+the first time it is asked.
 
 `everyday` is each company's own pair of models, one for chat and one for the mechanical lookups,
 which default to its cheapest and can be set to any model name it offers:
@@ -583,24 +615,26 @@ GEMINI_WORKER_MODEL=gemini-3.1-flash-lite
 The default is OpenAI's GPT-6 Luna for both chat and lookups, the cheapest capable model of the
 three companies, with web search at $10 per 1,000 searches. Claude and Gemini remain a setting
 away. Claude Haiku 4.5 answers without thinking first, so the thinking settings do nothing for
-it. A `.env` written before levels came in names Claude Opus 5 and Gemini 2.5 Pro as the everyday
-models; those lines still decide until they are emptied or a box on the page names another, and
-Claude Opus 5 as everyday leaves nothing stronger for better and best. The model boxes on the
-page suggest the models it knows, each with its level and price, but take any name, such as
+it. A model line in `.env` decides the everyday model until it is emptied or a box on the page
+names another; an older `.env` may still name Claude Opus 5 or Gemini 2.5 Pro there, and Claude
+Opus 5 as everyday leaves nothing stronger for better and best. The model boxes on the page
+suggest the models it knows, each with its level and price, but take any name, such as
 `claude-fable-5-1` or `claude-opus-5-5`. When a model name changes, the page asks that company's
 model list, which spends no tokens, and refuses the save only on a definite "no such model"; if
-the company cannot be reached or has no key yet, the save goes through. `/status` and `familydb debug cost` both print who is answering each situation
-and on which model, which is the quickest way to see that a change took effect.
+the company cannot be reached or has no key yet, the save goes through. `/status` and
+`familydb debug cost` both print who is answering each situation and on which model, which is
+the quickest way to see that a change took effect.
 
 **Spending.** `DAILY_SPEND_LIMIT` ("Daily spending limit (US$)" on the Spending page) is $2.00
-a day by default, counted over the family's day in its timezone; 0 turns it
-off. It is checked before every model call, whether for chat, a lookup, discovery or the digest.
-Once it is used up, chat says so ("I've reached today's spending limit ($2.00), so I'm stopping
-here until tomorrow.") and lookups wait for tomorrow. A turn already under way stops before its next call, so a day can end over the limit
-by at most one call. The figure is an estimate from a price table: a model the table does not
-list is counted at $15 per million input and $75 per million output tokens, dearer than any it
-does list, so the limit errs towards stopping. It is not the bill. Set a spending limit on the
-API key in the provider's own console as well, because theirs is.
+a day by default, counted over the family's day in its timezone; 0 turns it off. It is checked
+before every model call, whether for chat, a lookup, discovery, the digest or hearing a voice
+note. Once it is used up, chat says so ("I've reached today's spending limit ($2.00), so I'm
+stopping here until tomorrow.") and lookups wait for tomorrow. A turn already under way stops
+before its next call, so a day can end over the limit by at most one call. The figure is an
+estimate from a price table: a model the table does not list is counted at $15 per million input
+and $75 per million output tokens, dearer than any it does list, so the limit errs towards
+stopping. It is not the bill. Set a spending limit on the API key in the provider's own console
+as well, because theirs is.
 
 The boxes folded under "What one message may use" on the same page bound a single message: the
 longest answer (at most 64,000 tokens), steps per message (at most 20) and per lookup (at most
@@ -625,14 +659,14 @@ when her own description has changed since, the page says so and shows what chan
 none keeps every rewrite, the name you gave her, your notes and your lines for when a persona is
 chosen again. Her lines are filled in by code, never by a model call; an emptied one goes back to
 hers. A line may have several wordings, one to a row: each message takes one of them, the same
-message always the same one, and "Reads as" under each box shows how
-it reads with made-up details. Her name is written as `{name}`, in her description and in any
-line, and filled in wherever she speaks, the chat page included. The bot's name and description
-in Telegram are her name and her `/start` line, or FamilyDB's under none.
+message always the same one, and "Reads as" under each box shows how it reads with made-up
+details. Her name is written as `{name}`, in her description and in any line, and filled in
+wherever she speaks, the chat page included. The bot's name and description in Telegram are her
+name and her `/start` line, or FamilyDB's under none.
 
-**Undoing a change.** What has changed, the last of the settings pages, lists every change, when,
-by whom and from where, by the names the page gives them. To put a setting back the way it was,
-empty its box: the value from `.env` applies again.
+**Undoing a change.** What has changed, the last of the settings pages, lists the latest fifty
+changes, when, by whom and from where, by the names the page gives them. To put a setting back
+the way it was, empty its box: the value from `.env` applies again.
 
 **A worthwhile combination.** Filling in an address and opening hours from a page is extraction,
 not judgement, and it is most of the volume once lookups are on. If you move chat to another
@@ -644,25 +678,29 @@ WORKER_PROVIDER=openai
 ```
 
 **What the fallback does and does not do.** A message the chosen provider cannot take, because it
-is rate limited, unreachable or has no key, is asked of the other one. Only before any tool has
-run: once the bot has saved an idea or put something on the calendar, starting again elsewhere
-would do it twice, so a turn that fails after that stays failed and the retry job picks it up as
-usual. A malformed request is not handed over either, since it would fail the same way twice.
-Turn it off with `PROVIDER_FALLBACK=false`.
+is rate limited, unreachable or has no key, is asked of another that has a key. Only before any
+tool has run: once the bot has saved an idea or put something on the calendar, starting again
+elsewhere would do it twice, so a turn that fails after that stays failed and the retry job picks
+it up as usual. A malformed request is not handed over either, since it would fail the same way
+twice. Turn it off with `PROVIDER_FALLBACK=false`.
 
 **What differs between them.** Claude's prompt cache is marked explicitly and lasts
 `ANTHROPIC_CACHE_TTL`; OpenAI and Gemini cache long prefixes on their own, so that setting does
 nothing there. Lookups and discovery work on all three. Conversations sent to OpenAI are sent
 with storage off. `familydb debug validate-tools` and `familydb doctor --online` check the key
 and the tools on Claude and Gemini, which can be asked to count tokens without generating
-anything; OpenAI has no such endpoint, so there the first real message is the check.
+anything; OpenAI has no such endpoint, so there the first real message checks the tools.
+Choosing the company that answers and its key on the settings page checks that key with the
+company, for free, whichever company it is.
 
 ## 12. Looking after the server
 
 `scripts/maintain.sh` does most of what follows, and says what it is about to change before it
 changes it: `status` (is it running, how big is the database, when was the last backup), `check`
-(the full `familydb doctor` report), `backup`, `restore FILE`, `upgrade`, `logs`, `restart` and
-`schedule-backups`. The rest of this section is what it does, and how to do it by hand.
+(the full `familydb doctor` report), `backup`, `restore FILE`, `upgrade`, `logs`, `restart`,
+`schedule-backups`, `https` (section 10) and `password` (a starting password for somebody who
+forgot theirs). `--help` says more. The rest of this section is what it does, and how to do it
+by hand.
 
 Everything above gets the bot running. This is what a machine on the internet needs around it.
 
@@ -679,20 +717,14 @@ readable by the bot's user alone, and so is everything in it:
 | `caddy/` | only with the Docker `tls` profile: the certificate and its private key | no, and keep it that way |
 
 **A firewall.** The bot needs nothing inbound. With the web page behind Caddy or nginx, open 80
-and 443 (or 80 and the page's own port, section 10) and nothing else:
+and 443 (or 80 and the page's own port, section 10), and SSH, and nothing else. docs/INSTALL.md,
+under "Looking after the server itself", has the `ufw` commands in the order that does not lock
+you out. Do not open 8080. The page listens on `127.0.0.1` so that the proxy, and only the
+proxy, can reach it; the firewall is the second lock on the same door.
 
-```bash
-sudo ufw default deny incoming && sudo ufw default allow outgoing
-sudo ufw allow OpenSSH           # do this before enabling, or you will lock yourself out
-sudo ufw allow 80,443/tcp        # only with a domain; skip it otherwise
-sudo ufw enable
-```
-
-Do not open 8080. The page listens on `127.0.0.1` so that the proxy, and only the proxy, can
-reach it; the firewall is the second lock on the same door.
-
-**Keeping the machine patched.** `sudo apt install unattended-upgrades` and answer yes. It is the
-one piece of maintenance that matters more than anything in this file.
+**Keeping the machine patched.** Unattended security updates are the one piece of maintenance
+that matters more than anything in this file; the same part of docs/INSTALL.md has the two
+commands that turn them on.
 
 **Logs.** With systemd, journald keeps them and honours `SystemMaxUse` in
 `/etc/systemd/journald.conf`; set it to something like `500M` on a small disk. With Docker the
@@ -740,7 +772,7 @@ SQLite browser opens it. `scripts/uninstall.sh` does this with a backup and asks
 
 ## 13. Troubleshooting
 
-- **`cache_read` stays 0 in `db status`.** Something volatile is in the cached prefix. `familydb debug prompt "hi"` prints the request: the two `system` blocks and the `tools` list must be byte-identical between two runs. On Claude, check `ANTHROPIC_CACHE_TTL` is still `1h`, the default: at `5m` a family's gaps between messages are longer than the cache.
+- **`cache_read` stays 0 in `db status`.** Something volatile is in the cached prefix. `familydb debug prompt "hi"` prints the request: the instructions (`instructions` on OpenAI, `system` on Claude, `system_instruction` on Gemini) and the `tools` list must be byte-identical between two runs. On Claude, check `ANTHROPIC_CACHE_TTL` is still `1h`, the default: at `5m` a family's gaps between messages are longer than the cache.
 - **`database is locked`.** Two processes writing at once. Run one bot process; the CLI can be used alongside it (short transactions, busy timeout), but not a second `familydb run`.
 - **"Got it, but I can't get to it right now."** (without a persona: "Saved your message, but I couldn't process it right now.") The model call failed. `journalctl` or `docker compose logs` has the error, and `/status` lists the message. The running bot retries the message every `RETRY_INTERVAL_MINUTES` up to `RETRY_MAX_ATTEMPTS` times and delivers the answer when it succeeds; `familydb db retry-failed` does it by hand, and `--reset` re-arms messages that gave up after a configuration problem you have since fixed.
 - **"I've reached today's spending limit ($2.00)"** (or "Today's spending limit ($2.00) is used up" without a persona). The daily limit was reached; `/status` shows today's estimate against it. Nothing more is asked of a model until midnight in the family's timezone, lookups included. Raise it on the settings page ("Daily spending limit (US$)") if the day was genuine; if it was not, look at `/status` for what spent it.
@@ -752,20 +784,20 @@ SQLite browser opens it. `scripts/uninstall.sh` does this with a backup and asks
 - **Google: the address will not load.** After allowing access, Google sends the browser to `http://127.0.0.1:53682/...` and it shows an error. That is expected: copy the whole address from the address bar into the page (section 5, step 6).
 - **Google: "That address belongs to an earlier try."** The pasted address came from an older consent link. Press "Get the consent link" again and use the newest one. "That connection was started too long ago, or before a restart" means the same: start again. "That client is of type Web application" means the OAuth client must be made again as a Desktop app.
 - **"Google credentials are expired or revoked."** Connect again from the settings page (Google Calendar), or run `familydb google auth` on a laptop and copy the new token over. If this happens weekly, the OAuth consent screen is still in Testing (section 5, step 2).
-- **"no family members yet".** Add an admin with `familydb members add NAME --role admin`.
+- **"no family members yet".** Add yourself on the page (its setup opens on it), or add an admin with `familydb members add NAME --role admin`.
 - **"a setting will not do" at startup.** A value in `.env` is not of the type the setting takes; the line names it. An empty line is fine and means "not set" — it is a value like `WEB_PORT=eighty` that stops it. Quote anything with a space or a `#` in it.
 - **The service will not start under systemd.** `systemctl status familydb` says which. The three that bite: the `familydb` user does not exist or does not own `data/` and `.env`; a checkout inside a home directory, which that user cannot enter at all; and `ProtectHome=true` with a checkout under `/home`. Section 2b covers all three, and `/opt/familydb` avoids the last two.
 - **"Sorry, I only talk to the family."** The sender is not on the family list for that channel; they are listed on the Family page under "Asked to talk to the bot", with a button to add them, and the reply includes their id.
 - **A refusal.** Rare. `llm_calls.stop_reason` is `refusal`; on Claude, server-side fallbacks are on by default (`ANTHROPIC_FALLBACKS`), so it means every model declined.
-- **Replies are coming from the wrong provider.** `/status` or `familydb debug cost` says who answers each surface. If it is not what you set, the other one is probably standing in because the chosen one has no key; the log says so at the time.
+- **Replies are coming from the wrong provider.** `/status` or `familydb debug cost` says who answers each surface. If it is not what you set, another one is probably standing in because the chosen one has no key; the log says so at the time.
 - **"validation failed" from `debug validate-tools`.** That check counts tokens, which Claude and Gemini offer and OpenAI does not. With `PROVIDER=openai`, send one real message instead, or point `PROVIDER` at another provider for the length of the check.
 - **"details: failed" on an idea.** The lookup worker could not identify the place; `ideas list --json` shows the note. Fix the title or location with "actually it's the one in Vancouver", or on the idea's page, and run `familydb enrich --idea N`.
 - **Suggestions say "web discovery off" or "hours unknown".** Lookups are off ("Look ideas up on the web" on the settings page), the idea has not been looked up yet, or the day's spending limit is used up; the enrichment job runs only in the long-running `familydb run` process.
 - **The digest never arrives.** The Weekend digest row on `/status` and `familydb digest` show the schedule and the chat; the log says why a run was skipped (no chat, nothing to send with, no admin). For a Telegram group, the bot must be in the group and see its messages (section 4, step 3).
-- **"the web page is not serving" in the log.** Either the settings forbid it (a page off the loopback, or behind a proxy, with no `WEB_PASSWORD` or one under twelve characters) or the port is taken. Behind Caddy it shows in the browser as a 502. The log line says which. The bot keeps running either way.
+- **"the web page is not serving" in the log.** Either the settings forbid it (a page off the loopback, or behind a proxy, with no password: no `WEB_PASSWORD` of twelve characters or more, no family password chosen on the page, and nobody signing in with their own) or the port is taken. Behind Caddy it shows in the browser as a 502. The log line says which. The bot keeps running either way.
 - **The web page asks for the password again and again.** The login cookie could not be stored or its signing key keeps changing. Check that `data/` is writable, or set `WEB_SECRET_KEY`. Over HTTPS, `WEB_TRUST_PROXY` must be true or the `Secure` cookie is never set. Changing a password (anybody's own, or `WEB_PASSWORD` while the family still shares it) or pressing "Sign everyone out" also ends the sessions opened with the old one, on purpose, so those people sign in once after that.
 - **"Too many tries. Wait a quarter of an hour and try again."** Five wrong passwords from one address, or fifty from anywhere; a browser that has signed in before is spared the second. Waiting is the only way through, which is the point.
-- **The web page is unreachable from another device.** `WEB_HOST` is probably still `127.0.0.1`, or the compose `ports` line still starts with `127.0.0.1:`. Both have to change, and a password has to be set. On a server on the internet, use a domain instead (section 10).
+- **The web page is unreachable from another device.** `WEB_HOST` is probably still `127.0.0.1`, or the compose `ports` line still starts with `127.0.0.1:`. Both have to change, and a password has to be set. On a server on the internet, put the page on HTTPS instead (section 10).
 - **A setting in `.env` does nothing.** Something on the settings page is set for it, and that wins. `familydb config` marks every value with where it came from; empty that box on the page and `.env` applies again.
 - **"stored settings are not usable" in the log.** A value in the database no longer validates, usually because an upgrade narrowed what a setting will take. The bot keeps running on what `.env` says and names the setting in the same line; fix or empty that box on the settings page.
 - **A changed digest hour or lookup interval did not take effect.** Those move within five minutes of the change, not instantly; `journalctl` shows a "settings changed" line when they do. Anything that has not moved after that is worth reporting.

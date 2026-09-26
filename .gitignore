@@ -9,7 +9,6 @@ backups/
 *.db
 *.sqlite
 *.sqlite3
-*.spending-lock
 token.json
 
 # agents' working copies of the repo
@@ -26,5 +25,6 @@ build/
 .pytest_cache/
 pytest-of-*/
 
-# node (web UI later)
-node_modules/
+# uv's cache and the Python it fetched, which the installer keeps inside the checkout
+/.cache/
+/.local/

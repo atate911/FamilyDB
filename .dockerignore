@@ -9,6 +9,11 @@ __pycache__
 tests
 docs
 deploy
+# Large, and nothing the image needs: agents' working copies of the repo, and the uv cache and
+# Python that a virtualenv install keeps in the checkout.
+.claude
+.cache
+.local
 # Secrets and data that must never ride into a build context: the old .env copies the installer
 # keeps, Caddy's certificate key, and every backup.
 .env.*
