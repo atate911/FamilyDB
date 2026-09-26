@@ -17,7 +17,15 @@ in phosphor, sometimes a radar (see "Green screens").
 
 Everything here is carried by one stylesheet (`src/familydb/web/static/style.css`), a handful of
 templates, three open-licensed typefaces and one icon sprite, with no script beyond the one the
-page already had. A change to the page should be checked against this document.
+page already had.
+
+This document is a record of the look as it stands and why, not a fence around it. The design,
+the feel and the structure of the pages are meant to evolve with the app, and whoever is working
+on it, an AI agent included, is free to change any of them without asking first: a new layout, a
+new page, a different picture, a principle rewritten. Update this document in the same change, so
+the next person knows what the look is and why. Only the floors under "What does not move" stay
+put, because they are about people being able to use the page, it being safe and what it
+costs, not about taste.
 
 The page is a way to talk to **Vera**, and she does what it offers: plans the weekend, keeps the
 ideas and the things to do, puts things on the calendar. So the first thing on Home is her
@@ -27,17 +35,45 @@ she, by decision (`docs/PERSONAS.md`), so the page's words about her stay "she" 
 whichever is chosen, and her name is the one the persona in force gives, the family's own if
 they have renamed her.
 
+## Two layers
+
+The page is two layers, and most changes to it weigh one against the other.
+
+**On top is what it does, and that is Vera**: talking to her, and everything she keeps. It is
+why anybody opens the page, so it decides what each page holds and in what order, and it wins
+wherever the two meet (principles 1 and 10).
+
+**Underneath is the look**, which everything she does sits on: a visual language, thought out
+and kept to on purpose, whose artful choices give the page one coherent feel and a personality.
+There is no page without one (colours, type and a way of laying things out are there whether
+anybody chose them or not), so the only questions are which language, and how hard to push it.
+The language is Phosphor.
+
+Every app has a personality, and that is good, but it also has to do something. So the look has
+flair where flair is useful, and steps back wherever it could get between somebody and what they
+came to do: reading, writing to her, deciding, changing something. Where it is in nobody's way
+(an empty list, a thing just done, the way in, a page that is not there, the wait while she
+thinks), it comes forward, and it should be fun and a delight. Pushed too far, the page is an
+art project; held back everywhere, it is dull and uninspired. The line between the two is walked
+place by place, not found once.
+
+**Where it stands.** The language is settled. How hard it is pushed is close. Whether it is
+interesting and appealing enough, and has enough personality, is close but not settled, so it
+is still being tuned: in small steps, none of which may cost anything the page does. Settled
+says where the family have got to, not what may be tried (see above): what they like about it
+("Why the green jumps") is what a change to it weighs first.
+
 ## Principles
 
 1. **A real, modern app first.** Layout, spacing, controls and type are those of a good
    present-day product: one clear action per place, 44-pixel targets, a tab bar under the thumb
    on a phone, sentence-case labels, readable type. Nothing retro may cost usability.
 2. **The CRT survives as light.** Phosphor green glows only where attention belongs: the mark
-   and cursor in the bar, her screen, the primary button, the box being typed in (and Home's box,
-   faintly, even at rest), the key word of the home page's question, live status and finished
-   tasks, and the green screens
-   (what is next, the way in, the day's spend, the 404). The icon tile beside a page title glows in that
-   page's colour, and amber glows for *today*. If everything glowed, nothing would.
+   and cursor in the bar, her screen, the primary button, the box being typed in (and Home's
+   box, faintly, even at rest), the key word of the home page's question, live status and
+   finished tasks, and the green screens (what is next, the way in, the day's spend, the 404,
+   and where the listed places are). The icon tile beside a page title glows in that page's
+   colour, and amber glows for *today*. If everything glowed, nothing would.
 3. **Colour says where you are.** Each part of the site has one colour, and each kind of idea has
    one; colour is used to tell things apart, never as decoration, and never on its own.
 4. **Two voices, and a third on the screens.** DM Sans for everything read; DM Mono, sparingly,
@@ -57,7 +93,8 @@ they have renamed her.
    the one exception: not a picture but where she is, as small as a face would be, beside each of
    her lines (see "Her screen").
 8. **Accessible by construction.** Contrast is measured, focus is always visible, every box has a
-   label, motion, contrast and forced-colour preferences are honoured, and nothing needs a script.
+   label, motion, contrast and forced-colour preferences are honoured, and reading, every form and
+   sending a message work without a script.
 9. **Vera is felt, not shown.** She is a real presence on the page, in her name, her words and
    her screen, and never a character: no face, no figure, no picture of her, and nothing that
    says what she is. Her identity stays behind the glass. The page's own words about her say what
@@ -66,6 +103,28 @@ they have renamed her.
 10. **Every part does work.** Looks are welcome, but nothing on the page is only for show: her
    question on Home is the label of the box you answer it in, and the line on what she takes on
    is that box's placeholder. A thing that is only decoration has to be small.
+
+## Why the green jumps
+
+One thing the family likes about the look is the green jumping off the black, and the glow around
+it: with all that contrast and light, the page looks active and alive. Four things make that,
+working together.
+
+- **Bright colour on near-black.** The green is a vivid colour nearly as bright as the white
+  words, and it sits on charcoal that is almost black: 15.2:1 against the page, and 12.5:1 even
+  on the lightest surface. Colour that bright on a ground that dark reads as light coming off the
+  screen, not paint on it.
+- **A glow in layers, the way a tube bloomed.** A glowing word has a tight halo and a wide, faint
+  one (`.glow`); the primary button a ring, and light pooled under it (`--glow`); words on a
+  green screen three halos and a third of a pixel of blur. A soft halo round something bright is
+  one of the ways the eye tells that it gives off light, so the green looks brighter than it is.
+- **Light that behaves as a tube's did.** What lights up does so at once and fades over a
+  second (see "Small things"), the live dots breathe, and the radar's sweep leaves an afterglow.
+- **Scarcity.** Glow is kept for where attention belongs (principle 2), and around it everything
+  is near-white and quiet grey. The more that glowed, the less any of it would jump.
+
+A change that greys the black, dulls the green, flattens the glow or spreads it wider dims all
+of that, however small it looks.
 
 ## Colour
 
@@ -263,7 +322,7 @@ There are five, one to a page at most:
   below says its own drive and direction ("about 19 min south of home"), so the map shows
   nothing the page does not say.
 
-How they are built, since the content policy allows no inline style and no script:
+How they are built, since the content policy allows no inline style or inline script:
 
 - A screen is HTML and CSS; the radar and the face are SVG. `views.radar_blips` works out where
   each plan goes on the dial (Jinja has no trigonometry), spreading them by the golden angle so
@@ -282,8 +341,9 @@ How they are built, since the content policy allows no inline style and no scrip
 ## Small things
 
 The page is modern first and uses the old screens on purpose, so it is sparing with them. Beyond
-the green screens there are only a few small details, each where it means something; none moves
-for more than a moment, and none asks to be looked at.
+the green screens there are only a few small details, each where it means something. They sit
+where people are reading and doing, so none moves for more than a moment, and none asks to be
+looked at (see "Two layers").
 
 - **Afterglow.** Whatever lights up (a card, a button, the box being typed in, the chat's box)
   does so at once and fades out over a second, falling fast and then lingering, as a tube's
@@ -352,43 +412,62 @@ for more than a moment, and none asks to be looked at.
   only, since the box itself says what it is for.
 - Nothing is said by colour alone: the chat tells voices apart by side and face; status lights
   differ in shape and carry words; kinds and statuses are written out.
-- `prefers-reduced-motion` stops the cursors, the glyphs falling on her screen, the breathing dots, the
-  screens switching on, the face's blink, the radar's sweep, the 404's flicker, the afterglow and
-  the landing glow. `prefers-contrast:
-  more` lifts secondary text and edges and takes away the glow, the blur and the scanlines,
-  the tiles' raster and her screen's included.
+- `prefers-reduced-motion` stops the cursors, the glyphs falling on her screen, the breathing
+  dots, the screens switching on, the face's blink, the radar's sweep, the 404's flicker, the
+  afterglow and the landing glow. `prefers-contrast: more` lifts secondary text and edges and
+  takes away the glow, the blur and the scanlines, the tiles' raster and her screen's included.
   Forced colours keep dots, boxes, dates and initials outlined, draw her screen as an empty
   outlined square, show a task's tick only when pointed at, leave out the screens that are only
   pictures, and keep Next up's words in a plain box.
 - Words on a green screen are at least 1.2rem; dim phosphor is 7.6:1 on the tube, normal and
   bright more.
-- The page works with scripts off; the only script is `static/ask.js`, the box's: it keeps what
-  is being written, fills the box from the ways to start, and sends where the phone is. Without
-  it the ways to start are links, and nothing typed is kept across a change of page.
+- Reading, every form and sending a message work with scripts off; scripts add to that. Today
+  the one script is `static/ask.js`, the box's: it keeps what is being written, fills the box
+  from the ways to start, and sends where the phone is. Without it the ways to start are links,
+  and nothing typed is kept across a change of page.
 
-## Rules the look has to keep
+## What does not move
 
-- The content policy is `default-src 'self'` with `style-src 'self'`: no inline `style`
-  attributes, no `<style>` blocks, no fonts or pictures from anywhere else. Anything that needs a
-  computed size is SVG with attributes.
-- A few pieces of markup are what the tests read, and they stay exactly as they are:
-  `class="panel card"` on each card of the ideas and restaurants lists, `class="said"` with the
-  text right after it, `<summary>Move it</summary>` on a plan that can be moved, `class=" today"`
-  on today in the month.
+- The content policy is `default-src 'self'` with `style-src 'self'` and `script-src 'self'`: no
+  inline `style` attributes, no `<style>` blocks, no inline script, no fonts, pictures or scripts
+  from anywhere else. Anything that needs a computed size is SVG with attributes.
+- The accessibility above: measured contrast, visible focus, a label for every box, nothing said
+  by colour alone, the motion, contrast and forced-colour preferences honoured, and reading,
+  forms and sending working without scripts. A new colour is measured against the others that
+  share its pages, for typical sight and for deuteranopia and protanopia, before it is added.
+- Nothing from an idea, a place or a fetched page is marked safe in a template.
+- No page view is a model call: the page reads what is stored and words its own lines, and only
+  a message sent asks a model (`test_browsing_asks_nothing_of_a_model` holds it).
+
+## The look as it stands
+
+These are today's choices, each with its reason. Change any of them when a better page needs
+it, and say why here.
+
+- A few pieces of markup are what the tests read: `class="panel card"` on each card of the
+  ideas and restaurants lists, `class="said"` with the text right after it,
+  `<summary>Move it</summary>` on a plan that can be moved, `class=" today"` on today in the
+  month. They can change; change them and the tests together.
 - Class names are shared across the whole stylesheet: check a new one is not already taken (a
   meter once borrowed `.bar` from the top bar and flattened it).
-- At most one green screen to a page, and only where it shows something true. VT323 and blur
-  stay on the screens, and scanlines on the screens and in the home page's glow; everywhere else
-  the page is sharp and modern.
-- A new colour is measured against the others that share its pages, for typical sight and for
-  deuteranopia and protanopia, before it is added.
-- A new small thing has to mean something where it is, and may not move for more than a moment.
-- Vera is never drawn: no face, figure, picture or expression, and the mark is never hers. Where
-  she appears, her screen, and its glyphs never spell anything; where the page speaks of her,
-  what she takes on, never what she is.
-- A new colour, face, glow or motion goes here first, with the reason.
+- What the page does comes first (see "Two layers"). Where somebody is reading, writing,
+  deciding or changing something, the look steps back; where it is in nobody's way, it comes
+  forward and is fun. A change to the look says which kind of place it is in, and why.
+- The black is near-black, the green bright and the glow scarce, since together they make the
+  green jump (see "Why the green jumps").
+- One green screen to a page, where it shows something true, since two start to turn the light
+  back into a costume. VT323 and blur stay on the screens, and scanlines on the screens and in
+  the home page's glow; everywhere else the page is sharp and modern.
+- A small thing means something where it is, and moves for no more than a moment.
+- Vera is not drawn: no face, figure, picture or expression, and the mark is not hers. Where
+  she appears, her screen, and its glyphs spell nothing; where the page speaks of her, what she
+  takes on, not what she is. Principle 9 says why, and "Her screen" what she has instead.
+- A new colour, face, glow or motion is written down here, with the reason, in the change that
+  brings it. Trying one out on a branch needs no entry until it stays.
 
 ## Left for later
 
-- **A light theme.** The page is dark on every device, by choice. A daylight version would be a
-  line on the settings page, like everything else the family can change.
+- **A light theme.** The page is dark on every device, by choice, and the dark is half of the
+  look: the same green on white is 1.3:1, and nothing glows on white. A daylight version would be
+  a language of its own, designed as one rather than this one with the lights on, and a line on
+  the settings page, like everything else the family can change.

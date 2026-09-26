@@ -212,8 +212,9 @@ Adding a persona is adding a folder, so what a folder must be is written down an
   is set at once; and "what's your name?" after a rename, which gets the new one, or FamilyDB
   under none.
 
-Run them before and after any change to her character, a line or the audience line, and keep a
-change only if they hold, as `CLAUDE.md` asks of any prompt change.
+Run them before and after any change to her character, a line or the audience line, as
+`CLAUDE.md` asks of any prompt change: a case that stops holding is a regression to fix, or a case
+that encoded the old behaviour, updated with the reason.
 
 ## Decisions
 
