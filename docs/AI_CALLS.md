@@ -110,10 +110,10 @@ words out, no prompt file and no tools), so it has a door of its own beside it, 
 held to the same two rules: the limit first, and a record under the kind `transcribe`
 ("listening to voice notes" on `/status`). Its five answers: asked only for a voice note from
 the family, while voice notes are switched on, when it is short enough and somebody with a key
-can hear it; sees the recording and the names; may do nothing; its words are trusted as what was said, marked as
-spoken so the chat model allows for mishearing; and it costs one bounded request, which is not
-retried because the recording is not kept. `model_exists` and token counting call a provider
-but generate nothing.
+can hear it; sees the recording and the names; may do nothing; its words are trusted as what
+was said, marked as spoken so the chat model allows for mishearing; and it costs one bounded
+request, which is not retried because the recording is not kept. `model_exists` and token
+counting call a provider but generate nothing.
 
 ## Who is speaking
 

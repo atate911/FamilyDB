@@ -52,9 +52,9 @@ work between layers, and return useful results. The highest-level decision-makin
 still an open design question: how should the app interpret a broad request, decide which
 specialists and information sources to consult, and coordinate them for the best outcome?
 
-The approach in use is AI interpretation and delegation within program-enforced permissions,
-budgets, and recovery rules (`docs/AI_CALLS.md`). The experience should make clear what was
-checked, why an option fits, what remains uncertain, and what was actually done.
+The approach taken so far is AI interpretation and delegation within program-enforced
+permissions, budgets, and recovery rules (`docs/AI_CALLS.md`). The experience should make clear
+what was checked, why an option fits, what remains uncertain, and what was actually done.
 
 Use these examples to keep future proposals grounded in the owner's intended experience.
 Choose implementation priorities separately; do not assume their order here implies priority

@@ -23,7 +23,7 @@ When a rule and a reason disagree, the reason wins: fix the rule.
 - A daily spending limit exists and is tested (`agent/spending.py`, checked before every call: in the loop for each turn's calls, and in `gateway.listen` for a voice note): each call's cost is estimated from `agent/providers/prices.py` and stored in `llm_calls`. A model missing from that table is counted dearer than any listed, so add a price when adding a model worth suggesting. It is an estimate, not the bill; do not describe it as more.
 - How every model call decides, sees, acts and is trusted is framed in `docs/AI_CALLS.md`: code knows, the model understands and words. A new kind of call answers its five questions before it is on by default (`docs/AI_CALLS.md` says what an experiment behind a setting may leave open).
 - The automatic-memory design and acceptance criteria are in `docs/MEMORY.md`. Memory rides on the chat call: the `remember` tool (`tools/memory.py`), whose `reply` ends a turn that only remembered; `familydb/memory.py` chooses what each message is sent, in the uncached current turn, firm ones always; `/memory` shows it and forgets it.
-- How the persona is used and configured, what was fixed and what is left, is in `docs/PERSONAS.md`: she changes how things are said, never what is done.
+- How the persona is used and configured, what the family decided and what is left, is in `docs/PERSONAS.md`: she changes how things are said, never what is done.
 
 ## Commands
 
