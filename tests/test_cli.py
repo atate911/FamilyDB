@@ -3,7 +3,7 @@ import os
 import signal
 import subprocess
 import sys
-import time
+import threading
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -135,14 +135,33 @@ def test_run_command_waits_and_stops_on_sigterm(env: Path) -> None:
         stderr=subprocess.STDOUT,
         text=True,
     )
+    lines: list[str] = []
+    waiting = threading.Event()
+
+    def read() -> None:
+        for line in proc.stdout:
+            lines.append(line)
+            if "no chat channel yet; waiting" in line:
+                waiting.set()
+        waiting.set()  # the output closed: the process has gone, so stop waiting for the line
+
+    reader = threading.Thread(target=read, daemon=True)
+    reader.start()
     try:
-        time.sleep(1.5)
-        assert proc.poll() is None, "run exited early"
+        # SIGTERM stops it cleanly only once its handler is in place, which it logs just after.
+        # On a busy machine that can take seconds, so wait for that line rather than a set time.
+        assert waiting.wait(timeout=60), "run never said it was waiting"
+        assert proc.poll() is None, "run exited early:\n" + "".join(lines)
         proc.send_signal(signal.SIGTERM)
-        output, _ = proc.communicate(timeout=15)
+        try:
+            proc.wait(timeout=15)
+        except subprocess.TimeoutExpired:
+            pytest.fail("run did not stop on SIGTERM:\n" + "".join(lines))
     finally:
         if proc.poll() is None:
             proc.kill()
+        reader.join(timeout=5)
+    output = "".join(lines)
     assert proc.returncode == 0, output
     assert "waiting" in output
     assert "stopped" in output
