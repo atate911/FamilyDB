@@ -143,6 +143,7 @@ def home() -> Response | str:
 @bp.get("/ideas")
 def ideas() -> str:
     app = _app()
+    settings = app.settings
     query = request.args.get("q", "").strip()
     kind = request.args.get("kind", "").strip()
     status = request.args.get("status", "").strip()
@@ -158,11 +159,22 @@ def ideas() -> str:
         )
         kinds, people = _choices(idea_store.list_all(conn, include_dropped=True))
         capture_people = member_store.list_all(conn)
+        # Where each listed idea is from home, for its card and the radar of the list.
+        away = {
+            idea.id: views.away_from_home(place_store.get(conn, idea.place_id), settings)
+            for idea in found
+            if idea.place_id
+        }
     filtered = bool(query or kind or status or who)
+    rows = []
+    for idea in found:
+        spot = away.get(idea.id)
+        rows.append({**views.idea_row(idea, settings.tzinfo), "away": spot.text if spot else None})
     return render_template(
         "ideas.html",
         capture_people=capture_people,
-        rows=[views.idea_row(idea, app.settings.tzinfo) for idea in found],
+        rows=rows,
+        on_radar=views.places_radar([(i, away[i.id]) for i in found if away.get(i.id)]),
         kinds=kinds,
         people=people,
         statuses=STATUSES,

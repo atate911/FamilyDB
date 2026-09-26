@@ -227,9 +227,12 @@ limit, as the other monitors of the time were, and red past it.
 "now" at the middle, and each coming plan a blip, the nearer its day, the nearer the middle. The
 sweep turns once every eight seconds and leaves an afterglow, as a long-persistence phosphor did;
 each blip flares as the sweep passes and fades until it comes round again, and the next plan's
-blip is the brightest and pings.
+blip is the brightest and pings. On the Ideas page the same scope is a map: home at the middle,
+north at the top, each saved place a blip on the bearing it really lies on, as far out as the
+drive there, the rings a quarter of an hour, three quarters and two hours away by road, and the
+nearest place pinging.
 
-There are four, one to a page at most:
+There are five, one to a page at most:
 
 - **Home, Next up.** The next plan on a green screen, beside the radar of everything coming. These
   are the page's own words, not a picture of them: they are read out, the title is a link, and "4
@@ -242,14 +245,20 @@ There are four, one to a page at most:
   who is signed in and "?FOR AN ADMIN".
 - **Status.** The day's spend, a bar of twenty cells in brackets and the share of the limit,
   beside the same said in words.
+- **Ideas, On the radar.** Where the listed places are, beside how many there are, the nearest
+  and the furthest, each a link. It follows the filters, and it is drawn only when home is set
+  and something listed is on the map. Like Next up, its words are the page's own, and each card
+  below says its own drive and direction ("about 19 min south of home"), so the map shows
+  nothing the page does not say.
 
 How they are built, since the content policy allows no inline style and no script:
 
 - A screen is HTML and CSS; the radar and the face are SVG. `views.radar_blips` works out where
   each plan goes on the dial (Jinja has no trigonometry), spreading them by the golden angle so
-  none sits on another, each on one of twelve bearings. The sweep is a conic gradient turning on
-  `--sweep`, and each blip's flare is timed to it by a negative delay: the `.b0` to `.b11` rules.
-  The twelve bearings in `views.py` and those twelve rules change together.
+  none sits on another, each on one of twelve bearings; `views.places_radar` puts each place
+  on its true bearing and times its flare to the nearest of the twelve. The sweep is a conic
+  gradient turning on `--sweep`, and each blip's flare is timed to it by a negative delay: the
+  `.b0` to `.b11` rules. The twelve bearings in `views.py` and those twelve rules change together.
 - The spend bar is characters, `[####................]`, twenty cells worked out in the template:
   VT323 has no block characters, and a terminal would have drawn it this way.
 - A screen that is only a picture is `aria-hidden`, and what it shows is always said in words on

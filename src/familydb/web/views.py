@@ -9,12 +9,15 @@ from __future__ import annotations
 import calendar as months
 import json
 import math
+from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from itertools import pairwise
 from typing import Any
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
+from familydb.config import Settings
+from familydb.integrations.geocode import estimate_travel
 from familydb.store.ideas import Idea
 from familydb.store.messages import Message
 from familydb.store.outcomes import Outcome
@@ -414,13 +417,14 @@ RADAR_BEARINGS = 12
 RADAR_START = 210  # degrees clockwise from twelve o'clock, where the first plan goes
 
 
-def radar_distance(days: int) -> float:
-    """How far from the middle a plan `days` away shows: along the rings, never past the last."""
-    days = max(0, days)
-    for (near_days, near), (far_days, far) in pairwise(RADAR_RINGS):
-        if days <= far_days:
-            return near + (far - near) * (days - near_days) / (far_days - near_days)
-    return RADAR_RINGS[-1][1]
+def radar_distance(away: float, rings: tuple[tuple[int, float], ...] = RADAR_RINGS) -> float:
+    """How far from the middle something `away` shows (days for a plan, minutes for a place):
+    along the rings, never past the last."""
+    away = max(0, away)
+    for (near_away, near), (far_away, far) in pairwise(rings):
+        if away <= far_away:
+            return near + (far - near) * (away - near_away) / (far_away - near_away)
+    return rings[-1][1]
 
 
 def radar_blips(entries: list[Entry], today: date) -> list[dict[str, Any]]:
@@ -448,6 +452,107 @@ def radar_blips(entries: list[Entry], today: date) -> list[dict[str, Any]]:
             }
         )
     return blips
+
+
+# The ideas page's radar is a map: home at the middle, north at the top, and each saved place as
+# far out as it is by road, its rings a quarter of an hour, three quarters and two hours away.
+# Each pair is (minutes away, distance from the middle), as in RADAR_RINGS.
+PLACE_RINGS = ((0, 8.0), (15, 33.0), (45, 66.0), (120, 92.0))
+PLACE_RING_LABELS = ("15m", "45m", "2h")
+COMPASS = ("north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west")
+POINTS = ("N", "NE", "E", "SE", "S", "SW", "W", "NW")
+
+
+def bearing(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Which way the second point lies from the first, in degrees clockwise from north."""
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dlmb = math.radians(lon2 - lon1)
+    east = math.sin(dlmb) * math.cos(phi2)
+    north = math.cos(phi1) * math.sin(phi2) - math.sin(phi1) * math.cos(phi2) * math.cos(dlmb)
+    return math.degrees(math.atan2(east, north)) % 360
+
+
+def drive_text(minutes: int) -> str:
+    """A drive's length as people say it: "25 min", "1 h 35 min", to five minutes past an hour."""
+    if minutes < 60:
+        return f"{minutes} min"
+    hours, rest = divmod(5 * round(minutes / 5), 60)
+    return f"{hours} h {rest} min" if rest else f"{hours} h"
+
+
+@dataclass(frozen=True)
+class Away:
+    """Where a saved place lies from home: the drive, as the lookups estimate it, and which way."""
+
+    minutes: int
+    degrees: float
+
+    @property
+    def near(self) -> bool:
+        return self.minutes < 5
+
+    @property
+    def text(self) -> str:
+        """For a card: "about 25 min north-east of home (estimate)"."""
+        if self.near:
+            return "under 5 min from home (estimate)"
+        way = COMPASS[round(self.degrees / 45) % 8]
+        return f"about {drive_text(self.minutes)} {way} of home (estimate)"
+
+    @property
+    def short(self) -> str:
+        """For the green screen beside the radar: "25 min NE"."""
+        if self.near:
+            return "under 5 min"
+        return f"{drive_text(self.minutes)} {POINTS[round(self.degrees / 45) % 8]}"
+
+
+def away_from_home(place: Place | None, settings: Settings) -> Away | None:
+    """How far and which way a place is from home; None unless both are on the map."""
+    if place is None or place.lat is None or place.lon is None:
+        return None
+    if settings.home_lat is None or settings.home_lon is None:
+        return None
+    estimate = estimate_travel(settings, place.lat, place.lon)
+    if estimate is None:
+        return None
+    return Away(estimate[0], bearing(settings.home_lat, settings.home_lon, place.lat, place.lon))
+
+
+def places_radar(placed: list[tuple[Idea, Away]]) -> dict[str, Any] | None:
+    """The ideas page's radar and the words beside it; None when nothing listed is on the map.
+
+    Each place shows where it is from home, the further by road the further out, never past
+    the last ring. It flares as the sweep passes its bearing, the nearest one brightest and
+    pinging, since the words beside the radar name it.
+    """
+    if not placed:
+        return None
+    ordered = sorted(placed, key=lambda pair: (pair[1].minutes, pair[0].id))
+    blips = []
+    for index, (_, away) in enumerate(ordered):
+        distance = radar_distance(away.minutes, PLACE_RINGS)
+        angle = math.radians(away.degrees)
+        blips.append(
+            {
+                "x": round(100 + distance * math.sin(angle), 1),
+                "y": round(100 - distance * math.cos(angle), 1),
+                "bearing": round(away.degrees / 30) % RADAR_BEARINGS,
+                "next": index == 0,
+            }
+        )
+
+    def named(pair: tuple[Idea, Away]) -> dict[str, Any]:
+        idea, away = pair
+        return {"id": idea.id, "title": idea.title, "away": away.short}
+
+    return {
+        "blips": blips,
+        "rings": PLACE_RING_LABELS,
+        "count": len(ordered),
+        "nearest": named(ordered[0]),
+        "furthest": named(ordered[-1]) if len(ordered) > 1 else None,
+    }
 
 
 AGENDA_NOTES = {

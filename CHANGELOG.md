@@ -74,8 +74,10 @@ older than what is installed. It gets a date when it is released.
   no two that share a page are easily confused, colour-blind eyes included. Its few
   pictures are 1980s green-screen monitors: what is next on the home page, beside a
   radar of everything coming; the sign-in; the day's spend, which turns amber near
-  the limit; and the page that is not there. `docs/STYLE.md` says what each choice
-  is for.
+  the limit; the page that is not there; and, on the Ideas page, a radar that is a
+  map of where the listed places are from home, following the filters, while each
+  card says its own drive and direction. `docs/STYLE.md` says what each choice is
+  for.
 - **Vera at the centre of the page.** Home opens on the box to answer her
   question, "What’s on your mind?", which is its label: the chat's own box, so a
   question or an instruction typed there lands in the conversation, which the
