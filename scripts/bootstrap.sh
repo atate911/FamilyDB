@@ -349,7 +349,7 @@ fetch_code() {
     return 0
   fi
   system_change "Create ${TARGET} and put the code in it" \
-    "apart from one systemd unit, this is the only place on the machine the install writes to"
+    "the program, its configuration and the database all live here, in one directory"
   if [ "$DRY_RUN" = 1 ]; then note "would put the code in ${TARGET}"; return 0; fi
   noting_new "$TARGET" dir
   step "Creating ${TARGET}" as_root mkdir -p "$TARGET"

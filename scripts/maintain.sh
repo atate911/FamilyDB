@@ -301,7 +301,7 @@ env_file_set() { # env_file_set KEY VALUE - in place, keeping the file's owner a
 cmd_https() {
   head2 "HTTPS for the page"
   [ "$DOCKER_MODE" = 0 ] || die "this is for the virtualenv install" \
-    "With Docker, set WEB_DOMAIN and COMPOSE_PROFILES=tls in ${TARGET}/.env, then: docker compose up -d"
+    "With Docker, set WEB_DOMAIN, WEB_TRUST_PROXY=true and COMPOSE_PROFILES=tls in ${TARGET}/.env, then: docker compose up -d"
   as_root test -f "${TARGET}/.env" || die "there is no ${TARGET}/.env" "Run the installer first."
   local site port previous chosen
   site="${HTTPS_SITE#https://}"; site="${site#http://}"; site="${site%%/*}"; site="${site%:*}"

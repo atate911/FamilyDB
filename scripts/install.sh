@@ -47,7 +47,7 @@ spend) is set on the web page once it is running.
 
 Options
   --mode docker|venv   How to run it. Default: docker when available, else a virtualenv.
-                       (bootstrap.sh always passes this explicitly, and chooses venv.)
+                       (bootstrap.sh always passes this explicitly: venv unless told otherwise.)
   --yes                Accept every default.
   --non-interactive    Never prompt. Every answer comes from the environment (below).
   --config-only        Write .env and stop, installing nothing.
@@ -504,12 +504,16 @@ if [ "$KEEP_ENV" = 0 ]; then
     WEB_PASSWORD="$(random_password)"
     say ""
     say "  A password to get into the page the first time: ${B}${WEB_PASSWORD}${OFF}"
-    say "  The page then asks you to choose your own. This one is shown again at the end."
+    say "  The page then asks you to choose your own."
   fi
   set_env WEB_PASSWORD "$WEB_PASSWORD"
 
-  [ "$DRY_RUN" = 1 ] || chmod 600 "$ENV_FILE"
-  ok "Wrote $(basename "$ENV_FILE") (readable only by you)."
+  if [ "$DRY_RUN" = 1 ]; then
+    note "[dry run] would write $(basename "$ENV_FILE"), readable only by you"
+  else
+    chmod 600 "$ENV_FILE"
+    ok "Wrote $(basename "$ENV_FILE") (readable only by you)."
+  fi
 fi
 
 if [ "$SKIP_INSTALL" = 1 ]; then
