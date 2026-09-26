@@ -7,6 +7,7 @@ reminder = "Reminder: {title}{who}. Task #{task}; tell me when it's done, or I c
 reminder_late = "Reminder, a little late: {title}{who} was due {due}, while I was offline. Task #{task}; tell me when it's done, or I can snooze it."
 gift_ideas = "Gift ideas you've saved for {who}: {ideas}."
 gift_ideas_none = "Nothing saved yet as a gift for {who}; tell me any ideas and I'll keep them."
+nudge = "It's {when}, a good moment for this one: {title}{who}. Task #{task}; tell me when it's done, or I can remind you later."
 follow_up = "How was {plan} on {day}? Worth doing again?"
 tap_done = "Ticked off ✓ ({who})."
 tap_done_again = "Ticked off ✓ ({who}). It comes round again at {when}."

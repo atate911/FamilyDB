@@ -9,7 +9,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from familydb import task_service
+from familydb import task_service, windows
 from familydb.dates import parse_datetime, utc_iso
 from familydb.errors import ToolError
 from familydb.store import members, messages, tasks
@@ -108,11 +108,15 @@ def add_task(ctx: ToolContext, args: AddTaskInput) -> dict[str, Any]:
     key = hashlib.sha256((scope + to_json(args.model_dump())).encode()).hexdigest()
     previous = tasks.find_by_operation(ctx.conn, key)
     if previous:
-        return {
-            "task": previous.model_dump(mode="json"),
-            "reminder_destination": previous.channel,
-            "timezone": ctx.clock.tz.key,
-        }
+        return _with_nudges(
+            ctx,
+            previous,
+            {
+                "task": previous.model_dump(mode="json"),
+                "reminder_destination": previous.channel,
+                "timezone": ctx.clock.tz.key,
+            },
+        )
     values = args.model_dump(
         exclude={"owner", "remind_at", "repeat_every", "repeat_unit", "repeat_from"}
     )
@@ -136,11 +140,15 @@ def add_task(ctx: ToolContext, args: AddTaskInput) -> dict[str, Any]:
         now=ctx.now_iso(),
         repeat=_repeat(args),
     )
-    return {
-        "task": task.model_dump(mode="json"),
-        "reminder_destination": channel,
-        "timezone": ctx.clock.tz.key,
-    }
+    return _with_nudges(
+        ctx,
+        task,
+        {
+            "task": task.model_dump(mode="json"),
+            "reminder_destination": channel,
+            "timezone": ctx.clock.tz.key,
+        },
+    )
 
 
 @tool(
@@ -192,7 +200,7 @@ def update_task(ctx: ToolContext, args: UpdateTaskInput) -> dict[str, Any]:
         repeat=_repeat(args),
         stop_repeating=args.stop_repeating,
     )
-    return {"task": task.model_dump(mode="json")}
+    return _with_nudges(ctx, task, {"task": task.model_dump(mode="json")})
 
 
 def _repeat(args: AddTaskInput | UpdateTaskInput) -> dict[str, Any] | None:
@@ -256,4 +264,19 @@ def _brief(ctx: ToolContext, task: Task) -> dict[str, Any]:
     brief["repeats"] = task_service.repeat_words(task)
     brief["last_done"] = local(task.last_done_at)
     brief["gift_for"] = task.gift_for
+    brief["nudges"] = nudges(ctx, task)
     return {k: v for k, v in brief.items() if v not in (None, "")}
+
+
+def nudges(ctx: ToolContext, task: Task) -> str | None:
+    """When the task will be brought up by itself (jobs/nudges.py), for the model to say:
+    "on a free Saturday morning". None when it will not, and then nothing may be promised."""
+    if not ctx.settings.task_nudges or task.status != "open" or task.repeats:
+        return None
+    window = windows.read(task.preferred_window)
+    return f"on {window.words('free')}" if window else None
+
+
+def _with_nudges(ctx: ToolContext, task: Task, result: dict[str, Any]) -> dict[str, Any]:
+    said = nudges(ctx, task)
+    return {**result, "nudges": said} if said else result

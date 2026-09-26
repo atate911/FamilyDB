@@ -81,6 +81,17 @@ EVENTS: dict[str, Event] = {
         ("who",),
         {"who": "Grandma"},
     ),
+    "nudge": Event(
+        "Bringing up a task kept for some Saturday morning",
+        "It's {when}: time for {title}{who}? Task #{task}; tell me when it's done.",
+        ("when", "title", "who", "task"),
+        {
+            "when": "Saturday morning",
+            "title": "get the knives sharpened",
+            "who": " (Sam)",
+            "task": 14,
+        },
+    ),
     "follow_up": Event(
         "Asking how a plan went",
         "How was {plan} on {day}? Worth doing again?",
@@ -232,7 +243,7 @@ EVENTS: dict[str, Event] = {
 }
 
 # Messages the bot sends unasked, which a conversation under way can carry instead.
-FOLDABLE = frozenset({"reminder", "reminder_late", "follow_up", "lookup_done"})
+FOLDABLE = frozenset({"reminder", "reminder_late", "nudge", "follow_up", "lookup_done"})
 # A chat whose family wrote this recently is a conversation under way.
 ACTIVE = timedelta(minutes=5)
 # How long a held message waits for the next turn before it is sent as written.

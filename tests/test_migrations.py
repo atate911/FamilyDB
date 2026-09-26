@@ -106,9 +106,9 @@ def test_a_database_that_ran_the_retired_0007_still_gets_what_follows(tmp_path):
         conn.execute("ALTER TABLE ideas DROP COLUMN happens_until")
         conn.execute("DROP TABLE memories")
         conn.execute("ALTER TABLE messages DROP COLUMN buttons")
-        # tasks, dropped above, comes back with 0012 and takes 0022's repeats and 0023's
-        # gift_for on again.
-        assert db.migrate(conn) == [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+        # tasks, dropped above, comes back with 0012 and takes 0022's repeats, 0023's gift_for
+        # and 0024's nudged_at on again.
+        assert db.migrate(conn) == list(range(8, 25))
         columns = {row["name"] for row in conn.execute("PRAGMA table_info(llm_calls)")}
         assert {"provider", "web_searches", "cost_usd", "cost_estimated"} <= columns
 

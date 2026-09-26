@@ -58,7 +58,9 @@
     {% if row.due_input %}<span>{{ icon('clock') }}Due {{ row.due_input|replace('T',' ') }}</span>{% endif %}
   </p>
   {% if task.notes %}<p>{{ task.notes }}</p>{% endif %}
-  {% if task.preferred_window %}<p class="muted">Preferred window: {{ task.preferred_window }}</p>{% endif %}
+  {% if task.preferred_window %}<p class="muted">Preferred window: {{ task.preferred_window }}
+    {%- if row.nudge and row.nudge.on %} · {{ assistant }} brings it up on {{ row.nudge.on }}{% if row.nudge.last %}, last on {{ row.nudge.last }}{% endif %}
+    {%- elif row.nudge %} · not a day or part of the day {{ assistant }} can read, so it comes up only when asked about{% endif %}</p>{% endif %}
   {% if row.repeats %}<p class="muted">{{ row.repeats }}</p>{% endif %}
   {% if task.reminder %}<p class="reminder">{{ icon('bell') }}Reminder: {{ row.reminder_time }} · {{ 'Delivered' if task.reminder.delivered_at else ('Waiting for delivery' if task.reminder.message_id else 'Scheduled') }} · {{ 'App Chat' if task.channel=='web' else 'Original Telegram chat' }}</p>{% else %}<p class="muted small">No active reminder.</p>{% endif %}
   <details class="more"><summary>{{ icon('edit') }}Edit, complete, or snooze</summary>

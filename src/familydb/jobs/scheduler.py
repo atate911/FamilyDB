@@ -25,6 +25,7 @@ from familydb.availability import digest_configured, enrichment_available
 from familydb.jobs.catch_up import run_catch_up
 from familydb.jobs.enrich import run_enrichment
 from familydb.jobs.follow_ups import run_follow_ups
+from familydb.jobs.nudges import run_nudges
 from familydb.jobs.reminders import run_reminders
 from familydb.jobs.retry_failed import run_retries
 from familydb.jobs.weekend_digest import run_digest
@@ -38,6 +39,9 @@ CATCH_UP_DELAY_SECONDS = 60
 FORGET_INTERVAL_MINUTES = 10
 # How often to look for a settings change. One query against a small table, no model call.
 SETTINGS_INTERVAL_MINUTES = 5
+# How often to look for a task whose window has come round. One query; the calendar is asked
+# only when a nudge could go, and each chat hears one a day at most.
+NUDGE_INTERVAL_MINUTES = 15
 
 
 @dataclass(frozen=True)
@@ -91,6 +95,13 @@ def job_specs(app: App) -> list[JobSpec]:
             run_follow_ups,
             CronTrigger(hour=settings.follow_up_hour, timezone=zone),
             misfire_grace_time=3600,
+        ),
+        JobSpec(
+            "nudges",
+            "bring up tasks kept for a part of the week",
+            run_nudges,
+            IntervalTrigger(minutes=NUDGE_INTERVAL_MINUTES),
+            wanted=settings.task_nudges,
         ),
     ]
 

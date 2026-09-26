@@ -44,6 +44,8 @@ class Task(BaseModel):
     last_done_at: str | None = None
     # Whose birthday or anniversary it is: its reminder lists the gifts saved for them.
     gift_for: str | None = None
+    # When it was last brought up for its preferred window (jobs/nudges.py).
+    nudged_at: str | None = None
     channel: str
     chat_id: str
     created_at: str
@@ -200,3 +202,29 @@ def due_reminders(conn: sqlite3.Connection, now: str, *, limit: int = 100) -> li
 
 def attach_message(conn: sqlite3.Connection, reminder_id: int, message_id: int) -> None:
     conn.execute("UPDATE reminders SET message_id=? WHERE id=?", (message_id, reminder_id))
+
+
+def nudge_candidates(
+    conn: sqlite3.Connection, *, said_before: str, nudged_before: str, chats_quiet_since: str
+) -> list[Task]:
+    """Open tasks kept for a preferred window with nothing else to bring them up: no reminder
+    waiting, no repeat, said before `said_before`, not nudged since `nudged_before`, in a chat
+    with no nudge since `chats_quiet_since`. The one nudged longest ago first, never nudged
+    before all, then the oldest. Whether the window can be read is for the caller."""
+    rows = conn.execute(
+        "SELECT t.id FROM tasks t WHERE t.status='open' AND t.preferred_window!='' "
+        "AND t.repeat_every IS NULL AND t.created_at<? "
+        "AND (t.nudged_at IS NULL OR t.nudged_at<?) "
+        "AND NOT EXISTS (SELECT 1 FROM reminders r WHERE r.task_id=t.id "
+        "AND r.cancelled_at IS NULL AND r.message_id IS NULL) "
+        "AND NOT EXISTS (SELECT 1 FROM tasks o WHERE o.channel=t.channel AND o.chat_id=t.chat_id "
+        "AND o.nudged_at>=?) "
+        "ORDER BY t.nudged_at IS NOT NULL, t.nudged_at, t.id LIMIT 100",
+        (said_before, nudged_before, chats_quiet_since),
+    ).fetchall()
+    return [task for row in rows if (task := get(conn, row["id"])) is not None]
+
+
+def mark_nudged(conn: sqlite3.Connection, task_id: int, now: str) -> None:
+    """Note a nudge. Not an edit: the revision stays, so a form drawn before it still saves."""
+    conn.execute("UPDATE tasks SET nudged_at=? WHERE id=?", (now, task_id))

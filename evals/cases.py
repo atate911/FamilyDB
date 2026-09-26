@@ -85,6 +85,18 @@ def mentions(*words: str) -> Check:
     return check
 
 
+def promises_nothing() -> Check:
+    """No promise to bring something up by itself: nothing will, so none may be made."""
+    promises = ("i'll nudge", "i will nudge", "i'll remind", "i will remind", "i'll bring it up")
+
+    def check(run: Run) -> str | None:
+        reply = run.reply.casefold().replace("\u2019", "'")
+        made = [p for p in promises if p in reply]
+        return f"promised: {', '.join(made)}" if made else None
+
+    return check
+
+
 def caveated(subject: str, *caveats: str) -> Check:
     """A reply that offers `subject` also says one of `caveats`. Leaving it out is fine."""
 
@@ -317,6 +329,16 @@ CASES: tuple[Case, ...] = (
             wrote_only("add_task"),
         ),
         "Vague timing stays vague: a window, no reminder, no deadline, no calendar entry.",
+    ),
+    Case(
+        "gutters_before_christmas",
+        ("Sometime before Christmas I need to clean out the gutters.",),
+        (
+            called("add_task", 1, lambda c: not c.input.get("remind_at"), "with no reminder"),
+            wrote_only("add_task"),
+            promises_nothing(),
+        ),
+        "No day or part of the day to bring it up on, so no promise that it will come up.",
     ),
     Case(
         "arrange_not_book",

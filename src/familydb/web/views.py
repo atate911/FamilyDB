@@ -17,6 +17,7 @@ from typing import Any
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
+from familydb import windows
 from familydb.agent.providers import catalog, prices
 from familydb.config import Settings
 from familydb.integrations.geocode import estimate_travel
@@ -322,8 +323,26 @@ def repeat_text(task: Task, tz: ZoneInfo) -> str | None:
     return words
 
 
-def task_row(task: Task, tz: ZoneInfo) -> dict[str, Any]:
-    """One task on the tasks page, with its times as the family's clock shows them."""
+def nudge_words(task: Task, tz: ZoneInfo) -> dict[str, str] | None:
+    """Whether an open task kept for a window is brought up by itself (jobs/nudges.py), for the
+    tasks page: `on`, "a free Saturday morning", and `last`, when it last was; or `unread` when
+    its window is not a day or part of the day that can be read, so the family can say it
+    again. None for a task that is not waiting on a window."""
+    if task.status != "open" or task.repeats or not task.preferred_window:
+        return None
+    window = windows.read(task.preferred_window)
+    if window is None:
+        return {"unread": "yes"}
+    said = {"on": window.words("free")}
+    if task.nudged_at:
+        last = datetime.fromisoformat(task.nudged_at).astimezone(tz)
+        said["last"] = f"{last:%a %d %b}"
+    return said
+
+
+def task_row(task: Task, tz: ZoneInfo, *, nudging: bool = False) -> dict[str, Any]:
+    """One task on the tasks page, with its times as the family's clock shows them. `nudging`
+    is whether tasks kept for a window are being brought up at all (the `task_nudges` setting)."""
     choice = f"{task.repeat_every}:{task.repeat_unit}" if task.repeats else ""
     options = list(REPEATS)
     if choice and choice not in dict(REPEATS):  # set in the chat to something the list lacks
@@ -341,6 +360,7 @@ def task_row(task: Task, tz: ZoneInfo) -> dict[str, Any]:
         "repeat_options": options,
         # What the form was drawn with, so saving it changes the repeat only when that did.
         "repeat_was": f"{choice}:{task.repeat_from}" if choice else "",
+        "nudge": nudge_words(task, tz) if nudging else None,
     }
 
 

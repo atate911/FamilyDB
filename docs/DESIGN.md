@@ -235,7 +235,7 @@ Notes:
 - `messages` is both the audit log and the raw material for an eval set later: real family phrasings paired with the actions they should produce.
 - `outcomes` is separate from `ideas` so a restaurant can be done five times with five ratings.
 - `tool_calls` and `llm_calls` (added during the build) log every tool call and every model call with token usage and cache hits: the ground truth for cost and for whether caching works. `messages.reply_to` links a reply to the message it answers; `ideas.title_norm` backs duplicate detection.
-- Added since: `app_settings` and `settings_log` (0005), what the page has changed and who changed it; `calendar_creations` and `messages.claim_token`, `claim_until` and `delivered_at` (0006), for idempotent event creation, message leases and at-least-once delivery; and `llm_calls.provider`, `web_searches`, `cost_usd` and `cost_estimated` (0008), which the daily spending limit adds up. Number 0007 is retired: PR #2 used it for a migration that was not taken. Then `knocks` (0009), who messaged the bot without being on the list; `llm_calls.kind` and `sections` (0010, 0011), what each call was for and the size of each part it sent; `tasks` and their reminders (0012); `spend_holds` (0013), the cost set aside for a call in flight; `calendar_links` (0014); and `member_locations` with its `label` (0015, 0016), where somebody last shared their location from; `member_logins` and the parent role (0017, 0018); `ideas.happens_from` and `happens_until` (0019), the days an idea tied to dates is on; `memories` (0020), what the family has told the bot about itself (MEMORY.md); `messages.buttons` (0021), the buttons a message goes with; `tasks.repeat_every`, `repeat_unit`, `repeat_from`, `repeat_anchor` and `last_done_at` (0022), a task that comes round again; and `tasks.gift_for` (0023), whose birthday or anniversary a task is. The next is 0024.
+- Added since: `app_settings` and `settings_log` (0005), what the page has changed and who changed it; `calendar_creations` and `messages.claim_token`, `claim_until` and `delivered_at` (0006), for idempotent event creation, message leases and at-least-once delivery; and `llm_calls.provider`, `web_searches`, `cost_usd` and `cost_estimated` (0008), which the daily spending limit adds up. Number 0007 is retired: PR #2 used it for a migration that was not taken. Then `knocks` (0009), who messaged the bot without being on the list; `llm_calls.kind` and `sections` (0010, 0011), what each call was for and the size of each part it sent; `tasks` and their reminders (0012); `spend_holds` (0013), the cost set aside for a call in flight; `calendar_links` (0014); and `member_locations` with its `label` (0015, 0016), where somebody last shared their location from; `member_logins` and the parent role (0017, 0018); `ideas.happens_from` and `happens_until` (0019), the days an idea tied to dates is on; `memories` (0020), what the family has told the bot about itself (MEMORY.md); `messages.buttons` (0021), the buttons a message goes with; `tasks.repeat_every`, `repeat_unit`, `repeat_from`, `repeat_anchor` and `last_done_at` (0022), a task that comes round again; `tasks.gift_for` (0023), whose birthday or anniversary a task is; and `tasks.nudged_at` (0024), when a task kept for a window was last brought up. The next is 0025.
 
 ## 8. Agent behaviour
 
@@ -482,12 +482,27 @@ and deterministic services handle reminders and suggestion checks.
 - A task can come round again (`task_service.py`): every so many days, weeks, months or years, on a schedule counted from its first reminder ("bins out every Sunday at 19:00"), or counted from when it was last done ("the dentist six months after the last visit"). Done records this time round (`last_done_at`) and keeps it going; cancelling ends it; a new reminder on its own is a snooze of this time round and leaves the schedule alone. A scheduled one's next reminder is added as each is sent, the first time still to come, so a stretch with the bot off sends one late reminder, not a flood. Times go on in the family's wall time from the first one: a reminder keeps its hour when the clocks change, and one on the 31st lands on the last day of a shorter month without drifting. The tasks page sets and shows it; its form sends the repeat only when it changed, so saving a task as drawn never moves its schedule.
 - A birthday or anniversary is a yearly task with `gift_for`, whose it is. Its reminder lists the gift ideas saved for them, ideas of kind `gift` naming them among the participants, the newest five not given or dropped (`ideas.gifts_for`), or asks for some when there are none (`voice.EVENTS` `gift_ideas`, `gift_ideas_none`); the list is read when the reminder goes, so it is never out of date. A gift is never offered as something to do (`suggest/shortlist.py`), and never looked up on the web unless it names a place (`jobs/enrich.needs_lookup`), since its link is to the thing itself.
 - A deadline never implies a reminder. Flexible timing such as "some Saturday morning"
-  is stored as text; it does not schedule anything. Explicit reminder times are stored
-  as UTC instants. Missing times require clarification; ambiguous or nonexistent local
+  is stored as text; it does not schedule anything, but it can bring the task up (below).
+  Explicit reminder times are stored as UTC instants. Missing times require clarification; ambiguous or nonexistent local
   times at clock changes are refused unless an unambiguous offset is supplied.
 - Reminders return to their originating Telegram chat (including groups). Browser and
   console reminders go to app Chat. Assigning an owner does not change that destination.
   The app uses the existing shared household access model, not private per-person tasks.
+- A task kept for a window is brought up when the window comes round free (`jobs/nudges.py`,
+  every 15 minutes, no model call). The window is read in code (`windows.py`) from a short list
+  of words: days, the weekend and weekdays, and morning (08:00-12:00), afternoon (12:00-17:00)
+  and evening (17:00-22:00), with fillers such as "one of these" or "a free". Any other word
+  ("before Christmas", "after school", "not Sunday", "next Saturday") and the window is not read,
+  so a nudge never comes at a time the family did not mean. One read goes from an hour into
+  the part of the day to an hour before its end, when the calendar is free for the hour ahead
+  (without a calendar, or when it cannot be asked, it goes anyway), to the chat the task was
+  asked in, in her words (`voice.EVENTS` `nudge`) with a reminder's buttons, held for a reply
+  like a reminder. A task is brought up at most once a week (`tasks.nudged_at`), not in the
+  twelve hours after it was said, and not while a reminder waits for it or it repeats; a chat
+  hears one a day, the task waiting longest first. The tool results and the list say when one
+  will come (`nudges`, "on a free Saturday morning"), so the model promises only that, and the
+  tasks page says it too, or that the window could not be read. The `task_nudges` setting turns
+  it off.
 
 ### Running and reliability
 
@@ -511,7 +526,8 @@ cause a duplicate on retry. Database queuing itself is deduplicated.
 ### Boundaries and next steps
 
 This supports capture, explicit recall, scoped suggestions, and timed reminders, one-off or
-repeating. It does not yet implement automatic free-time/location triggers, passport
+repeating, and brings up a task kept for a free part of the week. It does not yet implement
+location triggers, passport
 stamp tracking, a learned preference profile, or live booking inventory. Those should
 build on these layers with explicit provenance and user controls.
 

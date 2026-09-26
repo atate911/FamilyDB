@@ -398,6 +398,16 @@ def test_a_repeat_is_graded_on_how_often_and_from_when(settings) -> None:
     )
 
 
+def test_a_window_nothing_will_bring_up_is_graded_on_what_was_promised(settings) -> None:
+    case = by_name("gutters_before_christmas")
+    gutters = {"title": "Clean out the gutters", "preferred_window": "before Christmas"}
+    kept = [fakes.tool_use("t1", "add_task", gutters)]
+    api = _answer(kept, [fakes.text("Saved as task #1, for before Christmas.")])
+    assert grade(case, run_case(case, settings, api=api)) == []
+    api = _answer(kept, [fakes.text("Saved. I\u2019ll nudge you when you have a free day.")])
+    assert "promised: i'll nudge" in " ".join(grade(case, run_case(case, settings, api=api)))
+
+
 def test_a_birthday_is_graded_on_whose_it_is_and_a_gift_on_its_kind(settings) -> None:
     case = by_name("grandmas_birthday")
     yearly = {

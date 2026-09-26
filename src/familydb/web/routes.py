@@ -374,7 +374,10 @@ def tasks() -> str:
         people = member_store.list_all(conn)
     return render_template(
         "tasks.html",
-        rows=[views.task_row(task, app.settings.tzinfo) for task in rows],
+        rows=[
+            views.task_row(task, app.settings.tzinfo, nudging=app.settings.task_nudges)
+            for task in rows
+        ],
         repeat_options=views.REPEATS,
         people=people,
         status=status,

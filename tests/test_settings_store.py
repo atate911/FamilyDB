@@ -207,6 +207,7 @@ def test_the_schedule_follows_the_settings(conn, settings, clock) -> None:
         "settings_watch",
         "reminders",
         "forget_locations",
+        "nudges",
     }
     assert scheduler.get_job("retry_failed").trigger.interval == timedelta(
         minutes=settings.retry_interval_minutes
@@ -225,6 +226,10 @@ def test_the_schedule_follows_the_settings(conn, settings, clock) -> None:
     _store(conn, {"digest_chat_id": None})
     assert apply_settings(app, scheduler) == ["weekend_digest off"]
     assert scheduler.get_job("weekend_digest") is None
+
+    _store(conn, {"task_nudges": False})
+    assert apply_settings(app, scheduler) == ["nudges off"]
+    assert scheduler.get_job("nudges") is None
 
 
 def test_the_schedule_moves_even_when_the_page_saw_the_change_first(conn, settings, clock) -> None:

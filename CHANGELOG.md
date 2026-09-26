@@ -50,7 +50,12 @@ older than what is installed. It gets a date when it is released.
   late reminder rather than a pile. The tasks page sets and shows it too. A
   birthday or anniversary is a yearly task whose reminder lists the gift ideas
   saved for whoever's it is ("Grandma would love a gardening apron" is kept as
-  one), or asks for some when there are none. On
+  one), or asks for some when there are none. A task kept for "one of these
+  Saturday mornings" is brought up when such a morning comes round and the
+  calendar is free for the hour ahead, with a reminder's buttons: each task
+  once a week at most, one a day in each chat, and only when its words name
+  days or a part of the day plainly ("before Christmas" is left alone). The
+  tasks page says when each comes up, and the settings page turns it off. On
   Telegram a reminder comes with ✓ Done, In an hour and Tomorrow buttons, and
   "how was it?" with Yes, again, Not again and Didn't go: a tap is done by code
   with no model call, so it answers at once and works when the model does not,
