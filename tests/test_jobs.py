@@ -274,6 +274,22 @@ def test_enrichment_skipped_failed_and_deferred(settings, clock, conn, family) -
     assert [i.id for i in ideas.pending_enrichment(conn, limit=10)] == [third.id]
 
 
+def test_enrichment_crash_marks_the_idea_failed_and_continues(settings, clock, conn, family):
+    app = _web_app(settings, clock)
+    first, _ = _captured_idea(conn, family, title="Crashes")
+    second, _ = _captured_idea(conn, family, title="Works")
+    api = fakes.FakeMessagesAPI(
+        RuntimeError("boom"),
+        *fakes.enrich_script({"idea_id": second.id, "name": "Works"}),
+    )
+    counts = run_enrichment(app, api=api)
+    assert counts == {"done": 1, "skipped": 0, "failed": 1, "deferred": 0}
+    failed = ideas.get(conn, first.id)
+    assert failed.enrichment == "failed" and failed.enrichment_note == "error: RuntimeError: boom"
+    assert ideas.get(conn, second.id).enrichment == "done"
+    assert ideas.pending_enrichment(conn, limit=10) == []  # nothing left to retry forever
+
+
 def test_enrichment_is_a_noop_without_web_tools(settings, clock, conn, family) -> None:
     app = App(settings, clock)
     _captured_idea(conn, family)
@@ -311,6 +327,115 @@ def test_render_place_note_without_details(settings) -> None:
     plain = settings.model_copy(update={"persona": "none"})
     assert render_place_note(idea, place, plain) == "Filled in #7 Somewhere: hours unknown."
     assert render_place_note(idea, place, settings) == "Looked up #7 Somewhere: hours unknown."
+
+
+def test_home_ideas_with_nothing_to_look_up_are_skipped_without_a_call(
+    settings, clock, conn, family
+) -> None:
+    from familydb.jobs.enrich import NO_LOOKUP_NOTE, needs_lookup
+
+    app = _web_app(settings, clock)
+    chores, _ = _captured_idea(conn, family, title="Paint the fence")
+    shop, _ = _captured_idea(conn, family, title="New shelves")
+    with db.transaction(conn):
+        ideas.update(conn, chores.id, {"kind": "home"})
+        ideas.update(conn, shop.id, {"kind": "home", "location_name": "IKEA Portland"})
+    assert not needs_lookup(ideas.get(conn, chores.id))
+    assert needs_lookup(ideas.get(conn, shop.id))  # a named place is still looked up
+    api = fakes.FakeMessagesAPI(fakes.message([fakes.text("nothing")]))
+    counts = run_enrichment(app, api=api, idea_id=chores.id)
+    assert counts["skipped"] == 1 and api.requests == []
+    skipped = ideas.get(conn, chores.id)
+    assert skipped.enrichment == "skipped"
+    assert skipped.enrichment_note == NO_LOOKUP_NOTE.format(kind="home")
+
+
+def test_a_gift_is_looked_up_only_when_it_names_a_place(conn, family) -> None:
+    from familydb.jobs.enrich import needs_lookup
+
+    apron, _ = _captured_idea(conn, family, title="A gardening apron")
+    pottery, _ = _captured_idea(conn, family, title="A pottery class")
+    with db.transaction(conn):
+        ideas.update(conn, apron.id, {"kind": "gift", "url": "https://shop.example/apron"})
+        ideas.update(conn, pottery.id, {"kind": "gift", "location_name": "Clay Space"})
+    assert not needs_lookup(ideas.get(conn, apron.id))  # its link is to the thing, not a place
+    assert needs_lookup(ideas.get(conn, pottery.id))
+
+
+def _openai_app(settings, clock, **extra):
+    """An app pointed at another provider, with lookups on."""
+    configured = settings.model_copy(
+        update={
+            "web_tools_enabled": True,
+            "home_lat": 45.63,
+            "home_lon": -122.67,
+            "provider": "openai",
+            "openai_api_key": "sk-test",
+            **extra,
+        }
+    )
+    return App(configured, clock, geocoder=fakes.FakeGeocoder(default=POINT))
+
+
+def test_lookups_work_on_openai_too(settings, clock, conn, family) -> None:
+    app = _openai_app(settings, clock)
+    idea, _ = _captured_idea(conn, family)
+    api = fakes.FakeResponsesAPI(
+        *fakes.oa_enrich_script(
+            {
+                "idea_id": idea.id,
+                "name": "Hopscotch Portland",
+                "summary": "Immersive art experience.",
+                "hours": [{"day": "sat", "open": "10:00", "close": "20:00"}],
+                "booking_url": "https://example.com/tickets",
+            }
+        )
+    )
+    counts = run_enrichment(app, api=api)
+    assert counts == {"done": 1, "skipped": 0, "failed": 0, "deferred": 0}
+    stored = ideas.get(conn, idea.id)
+    assert stored.enrichment == "done" and stored.place_id is not None
+    assert places.get(conn, stored.place_id).booking_url == "https://example.com/tickets"
+    # It was asked with the worker model, the hosted search and the two hand-back tools.
+    request = api.requests[0]
+    assert request["model"] == "gpt-6-luna"
+    assert sorted(t.get("name", t["type"]) for t in request["tools"]) == [
+        "save_place",
+        "skip_place",
+        "web_search",
+    ]
+    assert request["instructions"].startswith("You are the lookup worker")
+    assert "Home area" in request["instructions"]  # both system blocks, joined into one string
+    assert calls.recent_llm_calls(conn)[0]["served_model"] == "gpt-5"
+
+
+def test_a_mixed_setup_sends_each_surface_to_its_own_provider(settings, clock, conn, family):
+    """Chat on Claude for the writing, the mechanical lookups on OpenAI."""
+    app = _openai_app(settings, clock, provider="anthropic", worker_provider="openai")
+    idea, _ = _captured_idea(conn, family)
+    api = fakes.FakeResponsesAPI(*fakes.oa_enrich_script({"idea_id": idea.id, "name": "Hopscotch"}))
+    assert run_enrichment(app, api=api)["done"] == 1
+    assert api.requests[0]["model"] == "gpt-6-luna"
+    assert app.provider("chat").name == "anthropic"
+    assert app.provider("worker").name == "openai"
+
+
+def test_lookups_work_on_gemini_too(settings, clock, conn, family) -> None:
+    app = _openai_app(
+        settings, clock, provider="gemini", gemini_api_key="gm-test", openai_api_key=None
+    )
+    idea, _ = _captured_idea(conn, family)
+    api = fakes.FakeGeminiAPI(*fakes.gm_enrich_script({"idea_id": idea.id, "name": "Hopscotch"}))
+    assert run_enrichment(app, api=api)["done"] == 1
+    assert ideas.get(conn, idea.id).enrichment == "done"
+    request = api.requests[0]
+    assert request["model"] == "gemini-3.1-flash-lite"
+    groups = request["config"]["tools"]
+    assert sorted(d["name"] for d in groups[0]["function_declarations"]) == [
+        "save_place",
+        "skip_place",
+    ]
+    assert "google_search" in groups[1]  # it can search and hand back in the same turn
 
 
 def test_scheduler_registers_enrichment_only_with_web_tools(settings, clock) -> None:
@@ -538,25 +663,9 @@ def test_scheduler_always_registers_follow_ups(settings, clock) -> None:
     assert job.misfire_grace_time == 3600
 
 
-# --- review hardening --------------------------------------------------------------------------
+# --- catch-up after a restart ------------------------------------------------------------------
 
 from familydb.jobs.catch_up import run_catch_up  # noqa: E402
-
-
-def test_enrichment_crash_marks_the_idea_failed_and_continues(settings, clock, conn, family):
-    app = _web_app(settings, clock)
-    first, _ = _captured_idea(conn, family, title="Crashes")
-    second, _ = _captured_idea(conn, family, title="Works")
-    api = fakes.FakeMessagesAPI(
-        RuntimeError("boom"),
-        *fakes.enrich_script({"idea_id": second.id, "name": "Works"}),
-    )
-    counts = run_enrichment(app, api=api)
-    assert counts == {"done": 1, "skipped": 0, "failed": 1, "deferred": 0}
-    failed = ideas.get(conn, first.id)
-    assert failed.enrichment == "failed" and failed.enrichment_note == "error: RuntimeError: boom"
-    assert ideas.get(conn, second.id).enrichment == "done"
-    assert ideas.pending_enrichment(conn, limit=10) == []  # nothing left to retry forever
 
 
 def test_catch_up_sends_a_digest_that_was_due_today(settings, thursday_clock, conn, family):
@@ -601,6 +710,9 @@ def test_scheduler_registers_the_catch_up(settings, clock) -> None:
     assert job.trigger.run_date == clock.now() + timedelta(seconds=CATCH_UP_DELAY_SECONDS)
 
 
+# --- every job ---------------------------------------------------------------------------------
+
+
 def test_no_job_calls_the_model_when_there_is_nothing_to_do(settings, clock, conn, family) -> None:
     """Every scheduled job must be free when the family is quiet. The API is billed per call."""
     from familydb.jobs.catch_up import run_catch_up
@@ -622,82 +734,6 @@ def test_no_job_calls_the_model_when_there_is_nothing_to_do(settings, clock, con
     assert api.requests == []
 
 
-def _openai_app(settings, clock, **extra):
-    """An app pointed at another provider, with lookups on."""
-    configured = settings.model_copy(
-        update={
-            "web_tools_enabled": True,
-            "home_lat": 45.63,
-            "home_lon": -122.67,
-            "provider": "openai",
-            "openai_api_key": "sk-test",
-            **extra,
-        }
-    )
-    return App(configured, clock, geocoder=fakes.FakeGeocoder(default=POINT))
-
-
-def test_lookups_work_on_openai_too(settings, clock, conn, family) -> None:
-    app = _openai_app(settings, clock)
-    idea, _ = _captured_idea(conn, family)
-    api = fakes.FakeResponsesAPI(
-        *fakes.oa_enrich_script(
-            {
-                "idea_id": idea.id,
-                "name": "Hopscotch Portland",
-                "summary": "Immersive art experience.",
-                "hours": [{"day": "sat", "open": "10:00", "close": "20:00"}],
-                "booking_url": "https://example.com/tickets",
-            }
-        )
-    )
-    counts = run_enrichment(app, api=api)
-    assert counts == {"done": 1, "skipped": 0, "failed": 0, "deferred": 0}
-    stored = ideas.get(conn, idea.id)
-    assert stored.enrichment == "done" and stored.place_id is not None
-    assert places.get(conn, stored.place_id).booking_url == "https://example.com/tickets"
-    # It was asked with the worker model, the hosted search and the two hand-back tools.
-    request = api.requests[0]
-    assert request["model"] == "gpt-6-luna"
-    assert sorted(t.get("name", t["type"]) for t in request["tools"]) == [
-        "save_place",
-        "skip_place",
-        "web_search",
-    ]
-    assert request["instructions"].startswith("You are the lookup worker")
-    assert "Home area" in request["instructions"]  # both system blocks, joined into one string
-    assert calls.recent_llm_calls(conn)[0]["served_model"] == "gpt-5"
-
-
-def test_a_mixed_setup_sends_each_surface_to_its_own_provider(settings, clock, conn, family):
-    """Chat on Claude for the writing, the mechanical lookups on OpenAI."""
-    app = _openai_app(settings, clock, provider="anthropic", worker_provider="openai")
-    idea, _ = _captured_idea(conn, family)
-    api = fakes.FakeResponsesAPI(*fakes.oa_enrich_script({"idea_id": idea.id, "name": "Hopscotch"}))
-    assert run_enrichment(app, api=api)["done"] == 1
-    assert api.requests[0]["model"] == "gpt-6-luna"
-    assert app.provider("chat").name == "anthropic"
-    assert app.provider("worker").name == "openai"
-
-
-def test_lookups_work_on_gemini_too(settings, clock, conn, family) -> None:
-    app = _openai_app(
-        settings, clock, provider="gemini", gemini_api_key="gm-test", openai_api_key=None
-    )
-    idea, _ = _captured_idea(conn, family)
-    api = fakes.FakeGeminiAPI(*fakes.gm_enrich_script({"idea_id": idea.id, "name": "Hopscotch"}))
-    assert run_enrichment(app, api=api)["done"] == 1
-    assert ideas.get(conn, idea.id).enrichment == "done"
-    request = api.requests[0]
-    assert request["model"] == "gemini-3.1-flash-lite"
-    groups = request["config"]["tools"]
-    assert sorted(d["name"] for d in groups[0]["function_declarations"]) == [
-        "save_place",
-        "skip_place",
-    ]
-    assert "google_search" in groups[1]  # it can search and hand back in the same turn
-
-
 def test_a_schedule_on_another_clock_is_a_different_schedule() -> None:
     from zoneinfo import ZoneInfo
 
@@ -710,36 +746,3 @@ def test_a_schedule_on_another_clock_is_a_different_schedule() -> None:
     there = CronTrigger(hour=18, timezone=ZoneInfo("Europe/London"))
     assert same_schedule(here, again)
     assert not same_schedule(here, there)
-
-
-def test_home_ideas_with_nothing_to_look_up_are_skipped_without_a_call(
-    settings, clock, conn, family
-) -> None:
-    from familydb.jobs.enrich import NO_LOOKUP_NOTE, needs_lookup
-
-    app = _web_app(settings, clock)
-    chores, _ = _captured_idea(conn, family, title="Paint the fence")
-    shop, _ = _captured_idea(conn, family, title="New shelves")
-    with db.transaction(conn):
-        ideas.update(conn, chores.id, {"kind": "home"})
-        ideas.update(conn, shop.id, {"kind": "home", "location_name": "IKEA Portland"})
-    assert not needs_lookup(ideas.get(conn, chores.id))
-    assert needs_lookup(ideas.get(conn, shop.id))  # a named place is still looked up
-    api = fakes.FakeMessagesAPI(fakes.message([fakes.text("nothing")]))
-    counts = run_enrichment(app, api=api, idea_id=chores.id)
-    assert counts["skipped"] == 1 and api.requests == []
-    skipped = ideas.get(conn, chores.id)
-    assert skipped.enrichment == "skipped"
-    assert skipped.enrichment_note == NO_LOOKUP_NOTE.format(kind="home")
-
-
-def test_a_gift_is_looked_up_only_when_it_names_a_place(conn, family) -> None:
-    from familydb.jobs.enrich import needs_lookup
-
-    apron, _ = _captured_idea(conn, family, title="A gardening apron")
-    pottery, _ = _captured_idea(conn, family, title="A pottery class")
-    with db.transaction(conn):
-        ideas.update(conn, apron.id, {"kind": "gift", "url": "https://shop.example/apron"})
-        ideas.update(conn, pottery.id, {"kind": "gift", "location_name": "Clay Space"})
-    assert not needs_lookup(ideas.get(conn, apron.id))  # its link is to the thing, not a place
-    assert needs_lookup(ideas.get(conn, pottery.id))
