@@ -333,7 +333,7 @@ def _answer(
     kind: str = "chat",
     taken: list[voice.Held],
 ) -> OutgoingMessage:
-    """Think and persist the outcome. With notify off (retries) failures stay silent."""
+    """Think and persist the outcome. With notify off (a retry, the digest) failures stay silent."""
     if not app.can_ask("chat", api=api):
         # A fresh install before its key is typed in: say so plainly, and do not keep retrying.
         log.warning("message %s saved, but there is no model key to answer it with", inbound_id)
@@ -379,7 +379,7 @@ def _answer(
 
     if result.status == "failed" and result.error == "max_iterations":
         # Given up for good, so a person who asked is told now, even on a retry; the digest
-        # asked nobody and stays quiet, as its failures always have.
+        # asked nobody and stays quiet, as it does on every failure.
         log.error("turn on message %s ran out of steps; not retrying it", inbound_id)
         with transaction(conn):
             messages.give_up(conn, inbound_id)
@@ -538,7 +538,6 @@ def _think(
             + app.clock.describe()
             + ". Resolve relative dates from the original message time above."
         )
-    if retry:
         write_tools = {spec.name for spec in app.registry.specs() if spec.writes}
         note = render_retry_note(calls.tool_calls_for_message(conn, inbound_id), write_tools)
         if note:

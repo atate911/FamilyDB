@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Shared machinery for the FamilyDB scripts: output, logging, error reporting, retries and
-# undo. Source it, do not run it.
+# Shared machinery for the FamilyDB scripts: output, logging, error reporting, retries, undo, the
+# ledger of what an install changed, and which version to install. Source it, do not run it.
 #
 # The point of this file is that a script using it cannot fail quietly. Every step runs through
-# `step`, which captures the command's output, and any failure prints what was being done, the
-# command, its exit code, the last lines of what it said, and the one thing to try next. The
-# whole run is also written to a log file that the failure message names, so somebody who needs
-# help has one file to send.
+# `step` or `retry`, which capture the command's output, and any failure prints what was being
+# done, the command, its exit code, the last lines of what it said, and the one thing to try next.
+# The whole run is also written to a log file that the failure message names, so somebody who
+# needs help has one file to send.
 #
 #   source "$(dirname "$0")/lib/common.sh"
 #   log_to /var/log/familydb-install.log
@@ -14,7 +14,6 @@
 #   retry 3 "Downloading uv" curl -fsSL https://example -o /tmp/uv
 #   on_failure_hint "Read RUNBOOK section 13."
 
-# Guard against being sourced twice.
 [ -n "${FAMILYDB_COMMON_SOURCED:-}" ] && return 0
 FAMILYDB_COMMON_SOURCED=1
 
@@ -329,20 +328,6 @@ on_system_path() { # every user has to find it, not just whoever is running this
 
 as_root() { if [ "$(id -u)" = 0 ]; then "$@"; else sudo "$@"; fi; }
 
-require_command() { # require_command NAME "how to get it"
-  have "$1" && return 0
-  die "${1} is not installed, and this cannot go on without it" "$2"
-}
-
-require_writable() { # require_writable PATH
-  local path="$1"
-  [ -e "$path" ] || path="$(dirname -- "$path")"
-  [ -w "$path" ] && return 0
-  die "cannot write to ${path}" \
-      "Run this as the user that owns it, or with sudo." \
-      "Who owns it: $(stat -c '%U:%G %a' "$path" 2>/dev/null || echo unknown)"
-}
-
 require_free_mb() { # require_free_mb PATH MB "what for"
   local path="$1" wanted="$2" what="$3" free
   [ -e "$path" ] || path="$(dirname -- "$path")"
@@ -420,7 +405,7 @@ diagnose() { # diagnose "<the command's output>"
       _explain "The server refused the credentials, so the code could not be fetched." \
         "For a deploy key: ssh -T git@github.com -i <the key>   # should name the repository" \
         "For a token: it needs read access to this repository and must not have expired." \
-        "docs/INSTALL.md, 'Getting the code onto the box', has the whole flow." ;;
+        "docs/INSTALL.md, 'Other ways to get the code onto the server', has the whole flow." ;;
     *"Permission denied"*|*"Operation not permitted"*)
       _explain "The account running this may not touch that file or directory." \
         "ls -ld <the path it named>    # who owns it, and what the mode is" \
@@ -469,32 +454,24 @@ show_plan() { # show_plan "heading"
   head2 "${1:-What this will change on this machine}"
   local i
   for i in "${!PLAN_WHAT[@]}"; do
-    printf '  %s%s%s
-' "$B" "${PLAN_WHAT[i]}" "$OFF"
-    printf '      %swhy: %s%s
-' "$DIM" "${PLAN_WHY[i]}" "$OFF"
+    printf '  %s%s%s\n' "$B" "${PLAN_WHAT[i]}" "$OFF"
+    printf '      %swhy: %s%s\n' "$DIM" "${PLAN_WHY[i]}" "$OFF"
     log_line "plan: ${PLAN_WHAT[i]} :: ${PLAN_WHY[i]}"
   done
   if [ ${#PLAN_UNTOUCHED[@]} -gt 0 ]; then
-    printf '
-  %sIt does not touch:%s
-' "$DIM" "$OFF"
+    printf '\n  %sIt does not touch:%s\n' "$DIM" "$OFF"
     local item
     for item in "${PLAN_UNTOUCHED[@]}"; do
-      printf '      %s· %s%s
-' "$DIM" "$item" "$OFF"
+      printf '      %s· %s%s\n' "$DIM" "$item" "$OFF"
     done
   fi
-  printf '
-'
+  printf '\n'
 }
 
 # Announce one system-level change as it happens: what, and why, in a sentence.
 system_change() { # system_change "what" "why"
-  printf '  %s→%s %s
-' "$B" "$OFF" "$1"
-  printf '    %s%s%s
-' "$DIM" "$2" "$OFF"
+  printf '  %s→%s %s\n' "$B" "$OFF" "$1"
+  printf '    %s%s%s\n' "$DIM" "$2" "$OFF"
   log_line "change: $1 :: $2"
 }
 

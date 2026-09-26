@@ -80,7 +80,8 @@ def test_once_it_is_released_an_install_follows_the_tag(remote, tmp_path) -> Non
 
 
 def test_an_early_tag_is_never_a_step_forward_from_newer_work(remote, tmp_path) -> None:
-    """The case that made this: v0.1.0 was tagged early, and upgrading went back to it."""
+    """A version tagged before the work on its branch was done is behind that work, so an
+    upgrade to it would go backwards."""
     commit(remote, "## v0.1.0 — in progress")
     install = clone(remote, tmp_path)  # on main, past the tag
     assert shell(install, 'moves_forward "$INSTALL" v0.1.0').returncode != 0

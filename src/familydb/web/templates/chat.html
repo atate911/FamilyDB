@@ -3,12 +3,12 @@
 {% block title %}{{ assistant if has_persona else 'Chat' }} · {{ site_title }}{% endblock %}
 {% block body_class %}page-chat{% endblock %}
 {# While an answer is on its way the browser fetches the page again by itself, landing back on
-   the newest line. No script: a meta refresh is the one thing every browser still does, and the
-   content policy forbids the alternative. It is only set when something really is being thought
-   about, so the page goes quiet as soon as the reply is in the log, and never on a page holding
-   words somebody typed, which it would take with it. While a turn runs the box is closed, so
-   there is nothing to lose. Waiting on the retry job the box stays open, so with scripts on
-   ask.js does the looking again instead, and never while somebody is writing. #}
+   the newest line: a meta refresh, which every browser does, scripts or not. It is only set when
+   something really is being thought about, so the page goes quiet as soon as the reply is in the
+   log, and never on a page holding words somebody typed, which it would take with it. While a
+   turn runs the box is closed, so there is nothing to lose. Waiting on the retry job the box
+   stays open, so with scripts on ask.js does the looking again instead, and never while somebody
+   is writing. #}
 {% block head %}
   {% if refresh and locked %}
     <meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" />

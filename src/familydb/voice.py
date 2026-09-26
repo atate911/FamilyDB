@@ -12,8 +12,8 @@ A line may have several wordings, kept as a list, and she picks one each time. C
 chance: the same event with the same seed (a message's own id), or with no seed the same facts,
 always chooses the same wording, so a resend or a retry says the same words, the same reminder
 reads the same every time, and another message may say it another way. A line kept as a string
-is one wording, line breaks and all, as every line was before there could be several. The plain
-wordings are one each.
+is one wording, line breaks and all, as older installs stored every line. The plain wordings are
+one each.
 
 A proactive message that lands while the family is talking (`FOLDABLE`) is not sent on its own.
 `hand_over` holds it for a moment; the chat turn that comes next takes it (`take`), the model
@@ -289,14 +289,6 @@ IN_TURN = timedelta(minutes=10)
 
 # A line: one wording, whatever rows it has, or a list of several.
 Line = str | Sequence[str]
-
-
-def lines(settings: Any) -> dict[str, list[str]]:
-    """Every event's wordings now, in the words of the persona in force.
-
-    No persona means plain throughout, as it does for the chat: the family's rewrites are kept
-    and come back when a persona is chosen again."""
-    return wording(personas.active(settings))
 
 
 def wording(persona: personas.Persona) -> dict[str, list[str]]:

@@ -81,9 +81,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # An alpha is a pre-release: it says plainly that this has not been lived with yet.
-          # On a tag push the tag is already there and is checked; run by hand, GitHub makes it
-          # at this commit.
+          # Every release is a pre-release while FamilyDB is an alpha: it says plainly that it
+          # has not been lived with yet. On a tag push the tag is already there and is checked;
+          # run by hand, GitHub makes it at this commit.
           if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
             gh release create "$VERSION" \
               --title "$VERSION" \

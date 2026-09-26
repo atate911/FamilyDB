@@ -2,22 +2,27 @@
 
 from __future__ import annotations
 
+import json
 import os
 import sqlite3
 from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Any
 from zoneinfo import ZoneInfo
 
 import pytest
 
+from familydb.app import App
 from familydb.clock import FixedClock
 from familydb.config import Settings
 from familydb.integrations.geocode import Geocoder
 from familydb.integrations.open_meteo import OpenMeteo
 from familydb.store import db, members
 from familydb.store.members import Member
-from familydb.tools import ToolContext, ToolRegistry, build_registry
+from familydb.tools import ToolContext, ToolRegistry, ToolResult, build_registry
+from tests.fakes import FakeCalendar
 
 TZ = ZoneInfo("America/Vancouver")
 NOW = datetime(2026, 9, 20, 14, 3)  # a Sunday afternoon, PDT
@@ -137,3 +142,32 @@ THURSDAY = datetime(2026, 9, 24, 18, 0)  # the evening before the weekend of Sat
 @pytest.fixture
 def thursday_clock() -> FixedClock:
     return FixedClock(THURSDAY, TZ)
+
+
+@pytest.fixture
+def env(
+    full_settings: Settings,
+    thursday_clock: FixedClock,
+    conn: sqlite3.Connection,
+    family: dict[str, Member],
+) -> SimpleNamespace:
+    """Thursday evening with lookups on: the app, its fake calendar, and Sam's tool context."""
+    settings = full_settings.model_copy(update={"web_tools_enabled": True})
+    calendar = FakeCalendar(thursday_clock.tz)
+    app = App(settings, clock=thursday_clock, calendar=calendar)
+    ctx = ToolContext(conn, settings, app.clock, member=family["sam"], calendar=calendar)
+    return SimpleNamespace(
+        app=app,
+        conn=conn,
+        ctx=ctx,
+        cal=calendar,
+        settings=settings,
+        registry=build_registry(),
+        member=family["sam"],
+    )
+
+
+def call(env: SimpleNamespace, name: str, **args: Any) -> tuple[ToolResult, Any]:
+    """Run a tool in `env`'s context: its result, and the JSON it answered with."""
+    result = env.registry.dispatch(name, args, env.ctx)
+    return result, json.loads(result.content)

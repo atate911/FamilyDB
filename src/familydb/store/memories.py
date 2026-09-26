@@ -11,14 +11,13 @@ from __future__ import annotations
 import re
 import sqlite3
 from datetime import date
-from typing import Literal, get_args
+from typing import Literal
 
 from pydantic import BaseModel
 
 from familydb.store.db import utcnow_iso
 
 Category = Literal["food", "activities", "places", "health", "routine", "other"]
-CATEGORIES: tuple[str, ...] = get_args(Category)
 Status = Literal["active", "replaced", "forgotten"]
 
 _SELECT = (
@@ -58,10 +57,6 @@ class Memory(BaseModel):
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> Memory:
         return cls(**dict(row))
-
-    def applies(self, today: date) -> bool:
-        """In force: remembered, and not past its last day."""
-        return self.status == "active" and (self.until is None or self.until >= today.isoformat())
 
 
 def normalize(fact: str) -> str:

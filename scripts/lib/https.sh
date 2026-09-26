@@ -129,7 +129,7 @@ choose_public_port() { # choose_public_port WANTED APP_PORT - a port to serve on
   printf '%s' "$wanted"
 }
 
-open_web_ports() { # ufw is the one firewall this knows; it says so when there may be another
+open_web_ports() { # in ufw, the one firewall this knows; say_how_to_open speaks of a provider's own
   local rule
   rule="$(web_ports_rule)"
   if have ufw && as_root ufw status 2>/dev/null | grep -q "^Status: active"; then
@@ -286,8 +286,7 @@ setup_https() { # setup_https SITE PORT - Caddy in front of 127.0.0.1:PORT for S
   return 0
 }
 
-say_how_to_open() { # say_how_to_open SITE - the lines a person needs to get to the page
-  local site="$1"
+say_how_to_open() { # the lines a person needs to get to the page
   if [ "$HTTPS_BLOCKED" = 1 ]; then
     warn "Nothing outside seems able to reach this server on ports 80 and ${PUBLIC_PORT}."
     note "Most providers have a firewall of their own, in their control panel (it may be called a"
@@ -302,5 +301,4 @@ say_how_to_open() { # say_how_to_open SITE - the lines a person needs to get to 
     note "this server's own rather than a public authority's. Choose Advanced, then continue. The"
     note "connection is still encrypted, and a domain name later removes the warning."
   fi
-  : "$site"
 }

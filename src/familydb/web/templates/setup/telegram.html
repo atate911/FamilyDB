@@ -107,7 +107,7 @@
     {% if digest_here %}
       <section class="panel">
         <h2>The weekend ideas, on Telegram</h2>
-        <p class="muted">Every Thursday {{ site_title }} sends ideas for the weekend. At the moment
+        <p class="muted">Every {{ digest_day }} {{ site_title }} sends ideas for the weekend. At the moment
           they go to the Chat page, where nobody might see them.</p>
         <form class="form" method="post" action="{{ url_for('settings.save') }}">
           <input type="hidden" name="csrf" value="{{ csrf_token() }}" />

@@ -64,8 +64,8 @@ jobs:
           .venv/bin/familydb config > /dev/null       # still usable by whoever installed it
           .venv/bin/familydb members list | grep -q Sam
       - name: The documented install, in /opt, is complete
-        # Through bootstrap.sh, which is what docs/INSTALL.md tells people to run: it is the
-        # only path that makes uv reachable by the service account as well as by the installer.
+        # Through bootstrap.sh, which is what docs/INSTALL.md tells people to run, and which puts
+        # uv where the service account can reach it as well as the installer.
         env:
           ADMIN_NAME: Sam
           FAMILYDB_TZ: America/Vancouver

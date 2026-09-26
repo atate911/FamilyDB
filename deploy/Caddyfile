@@ -1,12 +1,14 @@
-# HTTPS in front of the web page, for a virtualenv install on a server with a domain.
-# (A Docker install does not need this file: `docker compose --profile tls up -d` runs Caddy.)
+# HTTPS in front of the web page, by hand, for a virtualenv install on a server with a domain.
+# The installer and `sudo /opt/familydb/scripts/maintain.sh https` write /etc/caddy/Caddyfile in
+# this shape themselves. (A Docker install does not need this file: the compose file's tls
+# profile runs Caddy.)
 #
 #   sudo apt install caddy
 #   sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
 #   sudo sed -i 's/familydb.example.com/YOUR.DOMAIN/' /etc/caddy/Caddyfile
 #   sudo systemctl reload caddy
 #
-# and in the bot's settings: WEB_HOST=127.0.0.1, WEB_TRUST_PROXY=true and a WEB_PASSWORD of at
+# and in the bot's .env: WEB_HOST=127.0.0.1, WEB_TRUST_PROXY=true and a WEB_PASSWORD of at
 # least twelve characters. Caddy fetches the certificate itself once the domain points here and
 # ports 80 and 443 are open. It replaces any X-Forwarded-For a visitor sends with the visitor's
 # real address, which is what the bot's lockout counts.

@@ -17,7 +17,7 @@ COPY src ./src
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
-# Run as an unprivileged user; /data holds the database and the Google token.
+# Run as an unprivileged user; /data holds the database, the Google token and the login key.
 RUN useradd --create-home --uid 1000 familydb \
     && mkdir -p /data \
     && chown familydb:familydb /data

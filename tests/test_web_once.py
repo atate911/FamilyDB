@@ -10,8 +10,10 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from familydb.app import App
+from familydb.errors import ToolError
 from familydb.store import ideas, messages, outcomes, plans
 from familydb.web import create_app
+from familydb.web.once import Once
 from tests import fakes
 
 PASSWORD = "open sesame please"
@@ -105,6 +107,65 @@ def test_a_second_send_while_the_first_is_at_google_waits_for_it(planning, conn)
     assert answers["a"].headers["Location"] == answers["b"].headers["Location"] == "/plans"
 
 
+def test_restart_replay_keeps_one_calendar_event(planning, conn):
+    form = {**_form(planning, "/plans"), "title": "Festival", "start": "2026-09-26T10:00"}
+    planning.post("/plans/new", data=form)
+    old = planning.application.config["FAMILYDB_APP"]
+    restarted = create_app(App(old.settings, old.clock, calendar=planning.calendar)).test_client()
+    restarted.set_cookie("session", planning.get_cookie("session").value)
+    replay = restarted.post("/plans/new", data=form)
+    assert replay.status_code == 302
+    assert len(planning.calendar.events) == 1
+    assert plans.get(conn, 1) is not None and plans.get(conn, 2) is None
+
+
+def test_lost_google_response_recovers_same_operation(planning, conn):
+    original = planning.calendar.insert_event
+
+    def lose_response(**kwargs):
+        original(**kwargs)
+        raise ToolError("connection lost after insert")
+
+    planning.calendar.insert_event = lose_response
+    form = {**_form(planning, "/plans"), "title": "Festival", "start": "2026-09-26T10:00"}
+    planning.post("/plans/new", data=form)
+    assert plans.get(conn, 1) is None
+    planning.application.config["FAMILYDB_ONCE"] = Once()
+    planning.calendar.insert_event = original
+    planning.post("/plans/new", data=form)
+    assert len(planning.calendar.events) == 1
+    assert plans.get(conn, 1) is not None and plans.get(conn, 2) is None
+
+
+def test_lost_google_response_then_a_fresh_form_keeps_one_event(planning, conn):
+    original = planning.calendar.insert_event
+
+    def lose_response(**kwargs):
+        original(**kwargs)
+        raise ToolError("connection lost after insert")
+
+    planning.calendar.insert_event = lose_response
+    fields = {"title": "Festival", "start": "2026-09-26T10:00"}
+    planning.post("/plans/new", data={**_form(planning, "/plans"), **fields})
+    assert plans.get(conn, 1) is None and len(planning.calendar.events) == 1
+    planning.calendar.insert_event = original
+    # The family opens the form again: a new drawing, a new token, the same event asked for.
+    second = {**_form(planning, "/plans"), **fields}
+    planning.post("/plans/new", data=second)
+    assert len(planning.calendar.events) == 1
+    assert plans.get(conn, 1) is not None and plans.get(conn, 2) is None
+    # That second form sent again after a restart, when nothing in memory remembers it: it
+    # took over the first attempt for good, so it finds the plan rather than asking Google.
+    old = planning.application.config["FAMILYDB_APP"]
+    restarted = create_app(App(old.settings, old.clock, calendar=planning.calendar)).test_client()
+    restarted.set_cookie("session", planning.get_cookie("session").value)
+    assert restarted.post("/plans/new", data=second).status_code == 302
+    assert len(planning.calendar.events) == 1 and plans.get(conn, 2) is None
+    # Asking for it once more afterwards is a new plan, as it would be for anything finished.
+    planning.post("/plans/new", data={**_form(planning, "/plans"), **fields})
+    assert len(planning.calendar.events) == 2
+
+
 def test_a_token_only_counts_for_the_browser_it_was_drawn_for(settings, clock, conn, family):
     one = _client(settings, clock)
     two = one.application.test_client()
@@ -150,6 +211,28 @@ def test_an_edit_on_top_of_somebody_else_s_is_refused(page, conn) -> None:
     assert refused.headers["Location"] == "/idea/1/edit"
     assert "was changed since you opened it" in page.get("/idea/1/edit").text
     assert ideas.get(conn, 1).title == "Art museum" and ideas.get(conn, 1).tags == []
+
+
+def test_stale_edit_in_same_second_preserves_newer_save(page, conn):
+    page.post("/ideas/new", data={**_form(page, "/ideas/new"), "title": "Museum", "kind": "outing"})
+    revision = re.search(r'name="revision" value="([^"]+)"', page.get("/idea/1/edit").text).group(1)
+    first = {
+        **_form(page, "/idea/1/edit"),
+        "revision": revision,
+        "title": "Art museum",
+        "kind": "outing",
+    }
+    second = {
+        **_form(page, "/idea/1/edit"),
+        "revision": revision,
+        "title": "Museum",
+        "kind": "outing",
+        "tags": "art",
+    }
+    page.post("/idea/1/edit", data=first)
+    rejected = page.post("/idea/1/edit", data=second)
+    assert rejected.headers["Location"] == "/idea/1/edit"
+    assert ideas.get(conn, 1).title == "Art museum"
 
 
 def test_the_move_form_shows_where_the_plan_is_now(planning, conn) -> None:

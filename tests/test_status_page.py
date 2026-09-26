@@ -111,7 +111,7 @@ def test_it_shows_what_is_waiting(status, conn, family) -> None:
             now=NOW_ISO,
         )
         messages.mark_failed(conn, stuck.id, "AgentError: overloaded", now=NOW_ISO)
-        assert messages.claim_retry(conn, stuck.id, 0) is True
+        conn.execute("UPDATE messages SET retries = 1 WHERE id = ?", (stuck.id,))  # one try
     text = _flat(status.get("/status"))
     assert "2 waiting to be looked up" in text and "1 looked up" in text
     assert 'href="/idea/1"' in text and "#1 Idea 0" in text
@@ -234,7 +234,7 @@ def test_the_dates_are_the_family_s(status, conn, clock) -> None:
 
 
 def test_a_new_install_starts_by_adding_yourself(settings, clock, conn) -> None:
-    """The installer no longer asks a name: the page's first setup step is the Family page."""
+    """The installer asks for no name: the first setup step on the page is adding yourself."""
     from familydb import family
     from familydb.web.status import services, setup_steps
 

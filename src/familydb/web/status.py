@@ -1,7 +1,8 @@
-"""What the status page shows: what is connected, what it has cost, and what is stuck.
+"""What the status page shows (what is connected, what it has cost, what is stuck), and how far
+setting up has got (`setup_progress`), which the setup pages, Home and Settings read too.
 
-Reads only. Everything here is a query and a sentence; no decision is taken from it. The point
-is that someone can answer "is it working, and what is it costing us?" without opening a log.
+Reads only: everything here is a query and a sentence. The point is that someone can answer "is
+it working, and what is it costing us?" without opening a log.
 """
 
 from __future__ import annotations

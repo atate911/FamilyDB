@@ -142,7 +142,8 @@ def test_the_ideas_block_stops_growing(conn, settings, family) -> None:
 
 
 def test_the_request_is_the_same_one_this_api_always_received(conn, settings, family, clock):
-    """Only the newest turn is blocks; the history behind it is one piece of text, as before."""
+    """Only the newest turn is sent as blocks; the history behind it is one piece of text. The
+    request for a given message is pinned here, to be checked after touching a provider."""
     from familydb.agent.providers import build
     from familydb.agent.providers.base import TurnRequest
 
@@ -165,7 +166,7 @@ def test_the_request_is_the_same_one_this_api_always_received(conn, settings, fa
 def test_the_ideas_header_names_the_columns_the_lines_have(conn, settings, family) -> None:
     from familydb.agent.prompt import IDEAS_HEADER
 
-    # A header naming a column the lines no longer carry tells the model about data it lacks.
+    # A header naming a column the lines do not carry tells the model about data it lacks.
     assert "details" not in IDEAS_HEADER
 
 
@@ -290,5 +291,5 @@ def test_the_audience_line_goes_between_the_date_and_the_message(clock) -> None:
         f"{GROUP}.",
         "[Sam] hi all",
     ]
-    # A private chat's turn is what it always was: the date, then the message.
+    # A private chat's turn has no such line: the date, then the message.
     assert render_user_turn("Sam", "hi", clock, None) == [today, "[Sam] hi"]

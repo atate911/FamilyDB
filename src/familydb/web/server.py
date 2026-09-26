@@ -34,8 +34,9 @@ def proxy_options(settings: Any) -> dict[str, Any]:
 
     This has to be the server's job rather than the Flask app's. Waitress removes forwarding
     headers from any peer it was not told to trust before the app ever runs, so a middleware in
-    the app saw none: behind Caddy every request looked like plain HTTP from the proxy itself,
-    the Origin check refused every sign-in, and the whole family shared one lockout.
+    the app would see none: behind Caddy every request would look like plain HTTP from the proxy
+    itself, the Origin check would refuse every sign-in, and the whole family would share one
+    lockout.
 
     A page on the loopback trusts the proxy on this machine. One bound to every interface is in
     a container, where Caddy's address is not known in advance; the compose file publishes the

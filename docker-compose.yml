@@ -31,6 +31,7 @@ services:
 
   # Optional: HTTPS for a server on the internet. Needs WEB_DOMAIN pointing at this machine.
   #   docker compose --profile tls up -d
+  # or COMPOSE_PROFILES=tls in .env, which the installer writes, and a plain docker compose up -d.
   # Set WEB_TRUST_PROXY=true in .env so the real visitor address and the HTTPS scheme are read
   # from Caddy's headers and the login cookie is marked Secure. WEB_PUBLIC_PORT in .env serves
   # the page on another port of this machine than 443, one the scans that sweep the internet

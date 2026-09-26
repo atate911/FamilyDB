@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # FamilyDB installer. Works on a home server or a VPS, with Docker or a virtualenv.
-# Safe to run again: it never overwrites a .env without asking, and never touches your database.
+# Safe to run again: it never overwrites a .env without asking, and never replaces your database,
+# only migrates it.
 set -euo pipefail
 
 # shellcheck disable=SC2034  # read by lib/common.sh when it opens the transcript.
@@ -31,7 +32,6 @@ DRY_RUN=0
 SKIP_INSTALL=0       # --config-only: write .env and stop
 LOCAL_ONLY=0         # --local-only: keep the page on this machine, reached over an SSH tunnel
 
-# Output, logging, failure reporting, retries and confirm() all come from lib/common.sh.
 run() { if [ "$DRY_RUN" = 1 ]; then note "[dry run] $*"; else "$@"; fi; }
 
 usage() {
@@ -47,7 +47,7 @@ spend) is set on the web page once it is running.
 
 Options
   --mode docker|venv   How to run it. Default: docker when available, else a virtualenv.
-                       (bootstrap.sh always passes this explicitly, and chooses venv.)
+                       (bootstrap.sh always passes this explicitly: venv unless told otherwise.)
   --yes                Accept every default.
   --non-interactive    Never prompt. Every answer comes from the environment (below).
   --config-only        Write .env and stop, installing nothing.
@@ -112,40 +112,7 @@ ask() { # ask VAR "question" "default"
   printf -v "$var" '%s' "${reply:-$default}"
 }
 
-ask_secret() { # ask_secret VAR "question"
-  local var="$1" question="$2" reply
-  if [ -n "${!var:-}" ]; then return 0; fi
-  if [ "$NON_INTERACTIVE" = 1 ] || [ ! -t 0 ]; then printf -v "$var" '%s' ""; return 0; fi
-  read -r -s -p "$question: " reply || reply=""
-  printf '\n'
-  printf -v "$var" '%s' "$reply"
-}
-
 # --------------------------------------------------------------- helpers ----
-ask_key() { # ask_key VAR provider "Label" "where to get one" "what it starts with"
-  local var="$1" owner="$2" label="$3" where="$4" prefix="$5"
-  if [ -z "${!var:-}" ]; then
-    # Explaining where to get a key is only worth doing to somebody who is about to be asked.
-    if [ "$NON_INTERACTIVE" = 0 ] && [ -t 0 ]; then
-      say ""
-      say "A key for ${label}. Create one at ${where}"
-      if [ "$PROVIDER" = "$owner" ]; then
-        note "This is the one you chose, so this is the key it will answer with."
-      else
-        note "Optional. With a key here, ${label} answers when the one you chose cannot."
-      fi
-      note "Leave it blank to fill in later; everything else will still be set up."
-    fi
-    ask_secret "$var" "${label} key"
-  fi
-  case "${!var:-}" in
-    "") ;;
-    ${prefix}*) ok "${label} key stored." ;;
-    *) warn "that does not look like a ${label} key (they start ${prefix}). Storing it anyway." ;;
-  esac
-  set_env "$var" "${!var:-}"
-}
-
 quote_env() { # quote_env VALUE -> how that value must be written so .env reads it back whole
   # A bare value loses everything from a '#' onwards and any trailing space, so a password with
   # either in it silently becomes a different password. Single quotes are literal to all three
@@ -479,7 +446,7 @@ if [ "$KEEP_ENV" = 0 ]; then
     [ -n "$WEB_DOMAIN" ] || WEB_DOMAIN="$ADDRESS"
     if [ -n "$WEB_DOMAIN" ] && is_ipv4 "$WEB_DOMAIN" && [ "$MODE" = docker ]; then
       warn "With Docker the page needs a domain name to be on HTTPS; keeping it on this machine."
-      note "docs/INSTALL.md, 'Opening the page', has the other ways in."
+      note "docs/INSTALL.md, 'A domain name instead of the address', says how to give it one."
       WEB_DOMAIN=""
     fi
   fi
@@ -537,12 +504,16 @@ if [ "$KEEP_ENV" = 0 ]; then
     WEB_PASSWORD="$(random_password)"
     say ""
     say "  A password to get into the page the first time: ${B}${WEB_PASSWORD}${OFF}"
-    say "  The page then asks you to choose your own. This one is shown again at the end."
+    say "  The page then asks you to choose your own."
   fi
   set_env WEB_PASSWORD "$WEB_PASSWORD"
 
-  [ "$DRY_RUN" = 1 ] || chmod 600 "$ENV_FILE"
-  ok "Wrote $(basename "$ENV_FILE") (readable only by you)."
+  if [ "$DRY_RUN" = 1 ]; then
+    note "[dry run] would write $(basename "$ENV_FILE"), readable only by you"
+  else
+    chmod 600 "$ENV_FILE"
+    ok "Wrote $(basename "$ENV_FILE") (readable only by you)."
+  fi
 fi
 
 if [ "$SKIP_INSTALL" = 1 ]; then
@@ -560,8 +531,7 @@ run mkdir -p "${REPO_ROOT}/data"
 run chmod 700 "${REPO_ROOT}/data"
 
 # Both of these download a few hundred megabytes, which is where a new server most often fails:
-# a network that is not up yet, a proxy, a full disk. `retry` waits and tries again, and on a
-# final failure says what the error means and what to try, rather than only that it stopped.
+# a network that is not up yet, a proxy, a full disk.
 on_failure_hint "It never touches .env or the database twice, so running it again is safe."
 if [ "$MODE" = docker ]; then
   retry 2 "Building the image" docker compose --project-directory "$REPO_ROOT" build
@@ -759,7 +729,7 @@ say "Watch it:   ${LOGS}"
 say ""
 if [ "$HTTPS_READY" = 1 ]; then
   say "Then open ${B}$(public_url "$DOMAIN")${OFF} and sign in with the password above."
-  say_how_to_open "$DOMAIN"
+  say_how_to_open
 else
   say "Then open the page and sign in with the password above. Run this on your own computer,"
   say "not on this server; it works from anywhere you can reach the server over SSH:"

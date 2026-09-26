@@ -1,8 +1,9 @@
 """The daily spending limit: estimated dollars across every model call, checked before each one.
 
-Every paid call goes through the turn loop, so checking there covers the chat, the lookups, the
-discovery searches and the digest alike. The estimate comes from `providers/prices.py`; a model
-not listed there is counted dearer than any that is, so the limit errs towards stopping.
+Every paid call is checked here first: each model call of a turn by the turn loop, which covers
+the chat, the lookups, the discovery searches and the digest, and each voice note by
+`gateway.listen`. The estimate comes from `providers/prices.py`; a model not listed there is
+counted dearer than any that is, so the limit errs towards stopping.
 
 Before a call goes out, `admit` checks the limit and sets aside the call's estimated cost as a
 hold, in one short write transaction, so two processes cannot both pass on the same dollars and
@@ -69,14 +70,16 @@ def completed_reply(
 
 
 class SpendingLimitReached(AgentError):
-    """The day's limit is used up. Not retryable: the answer is tomorrow or a higher limit."""
+    """The day's limit is used up. Not retryable: the answer is tomorrow or a higher limit.
+
+    In the chat the family is told in the voice layer's words (`voice.py`), not this message."""
 
     def __init__(self, spent: float, limit: float) -> None:
         super().__init__(
             f"daily spending limit reached: ${spent:.2f} of ${limit:.2f}", retryable=False
         )
         self.spent = spent
-        self.limit = limit  # the family is told in the voice layer's words (voice.py)
+        self.limit = limit
 
 
 def estimate(

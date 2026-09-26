@@ -1,8 +1,8 @@
-# systemd unit for running FamilyDB without Docker.
-# Install: copy to /etc/systemd/system/familydb.service, then
+# systemd unit for running FamilyDB without Docker. scripts/install.sh installs it with the paths
+# of the checkout it runs from. By hand: copy it to /etc/systemd/system/familydb.service, then
 #   sudo systemctl daemon-reload && sudo systemctl enable --now familydb
-# Assumes the repo is checked out at /opt/familydb with a venv at /opt/familydb/.venv
-# (uv sync --frozen --no-dev) and secrets in /opt/familydb/.env, owned by the familydb user.
+# It expects the checkout at /opt/familydb with a venv at /opt/familydb/.venv
+# (uv sync --frozen --no-dev), and /opt/familydb/.env and data/ owned by the familydb user.
 
 [Unit]
 Description=FamilyDB family planning bot
@@ -51,7 +51,7 @@ ProtectSystem=strict
 # directory, so use ProtectHome=read-only there instead (the installer does this for you).
 ProtectHome=true
 # The web page, when WEB_ENABLED is set, binds WEB_HOST:WEB_PORT. The port must stay above 1024:
-# this unit runs unprivileged and NoNewPrivileges blocks binding a low port.
+# the service runs unprivileged, with no capabilities, so it cannot bind a lower one.
 ReadWritePaths=/opt/familydb/data
 
 [Install]

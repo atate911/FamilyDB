@@ -33,7 +33,7 @@ def _token(client) -> str:
 
 def _whole_form(client, **changes) -> dict[str, str]:
     """Every box on every page, empty, with the given ones filled in, and no page named: what an
-    older page, drawn as one form, sent."""
+    older page, drawn as one form, sends."""
     form = {one.key: "" for one in fields.FIELDS}
     form["csrf"] = _token(client)
     form.update({key: str(value) for key, value in changes.items()})

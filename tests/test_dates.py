@@ -35,7 +35,6 @@ def test_ensure_not_past(clock: FixedClock) -> None:
         ensure_not_past(date(2026, 9, 19), clock)
     with pytest.raises(ToolError):
         ensure_not_past(datetime(2026, 9, 20, 13, 0, tzinfo=TZ), clock)
-    ensure_not_past(date(2020, 1, 1), clock, backfill=True)
 
 
 def test_utc_iso() -> None:

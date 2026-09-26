@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 _NORTHERN_SEASONS = {
@@ -41,9 +41,6 @@ class Clock:
     def today(self) -> date:
         return self.now().date()
 
-    def utcnow(self) -> datetime:
-        return self.now().astimezone(UTC)
-
     def season(self) -> str:
         return season_for(self.today(), southern=self.southern)
 
@@ -61,7 +58,8 @@ class SystemClock(Clock):
 
 
 class FixedClock(Clock):
-    """A clock pinned to one instant. `advance` moves it; used in tests and replays."""
+    """A clock pinned to one instant: the tests' and the evals' clock, and a message's own
+    arrival time when its turn is written (pipeline.py). `advance` moves it."""
 
     def __init__(self, at: datetime, tz: ZoneInfo, *, southern: bool = False) -> None:
         super().__init__(tz, southern=southern)

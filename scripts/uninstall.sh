@@ -134,8 +134,8 @@ caddy_serves_only_familydb() { # nothing in the Caddyfile but what FamilyDB's se
 }
 
 # Everything --from-zero removes besides the install itself, found before anything is removed:
-# first what the install wrote down in its ledger as it made each change, then everything an older
-# version, or the older guide's steps by hand, could have left without writing it down. Each is
+# first what the install wrote down in its ledger as it made each change, then what the guide's
+# steps by hand, or an install from before the ledger, leave without writing it down. Each is
 # listed in the plan by name before anything happens.
 ZERO_PATHS=()     # files, directories and links to delete
 ZERO_EMPTY=()     # directories the install made that are deleted only if left empty
@@ -153,7 +153,7 @@ ZERO_APT_UPDATE=0
 ZERO_CADDY="none" # none, remove (it serves only FamilyDB) or keep (it serves something else too)
 HAS_LEDGER=0
 # A ledger begun by a fresh install is the whole story. Anything less (an install from before the
-# ledger, which a newer script then added to) also gets the checks for what older versions did.
+# ledger, which a later run then added to) also gets the checks in older_leftovers.
 WHOLE_LEDGER=0
 
 _add_ufw() { # _add_ufw RULE - once
@@ -260,10 +260,10 @@ take_inventory() {
     ZERO_CERT="$WEB_DOMAIN_NOW"
   fi
 
-  # What only an install from before the ledger could have left without writing it down. With a
-  # ledger begun by a fresh install, the ledger alone says what the install added, and anything
-  # else here (a uv of your own, say) was here first and stays.
-  # And never on a machine FamilyDB was not installed on: then a uv, say, is somebody else's.
+  # What only an install from before the ledger leaves without writing it down. With a ledger
+  # begun by a fresh install, the ledger alone says what the install added, and anything else (a
+  # uv of your own, say) was here first and stays. So does everything on a machine FamilyDB was
+  # never installed on.
   [ "$WHOLE_LEDGER" = 1 ] || ! familydb_was_here || older_leftovers
 
   # Caddy, when it is going: its package, folders, account and the package source it came from.
@@ -302,7 +302,7 @@ familydb_was_here() { # anything an install, of any version, always leaves until
 
 older_leftovers() {
   local file rc
-  # uv, when an older installer, run with sudo, put it in root's home: the binaries, the receipt,
+  # uv in root's home, where older installers run with sudo put it: the binaries, the receipt,
   # its caches, and the line it added to each of root's shell profiles. Nobody else's home: there,
   # uv is that person's own.
   if as_root test -f /root/.local/bin/uv; then
@@ -452,7 +452,7 @@ remove_what_was_around_it() {
     try_step "Refreshing the package lists" as_root env DEBIAN_FRONTEND=noninteractive apt-get update -qq
   fi
   if [ "$DRY_RUN" = 0 ] && { [ "$ZERO_CRONTAB" = 1 ] || [ "$WHOLE_LEDGER" = 0 ]; }; then
-    # Only ever when nothing but FamilyDB's line was in it.
+    # Only when it is empty now that FamilyDB's line is gone.
     if have crontab && ! as_root crontab -u root -l 2>/dev/null | grep -q '[^[:space:]]'; then
       as_root crontab -r -u root >/dev/null 2>&1 || true
     fi
@@ -677,8 +677,8 @@ if [ "$DRY_RUN" = 0 ] && have crontab; then
 fi
 
 if [ "$INSTALL_PRESENT" = 1 ]; then
-# What an install puts there, and nothing else: a reinstall rebuilds every one of these.
-# `.cache` is uv's, which lands here because the service user's home is the install itself.
+# Only what can be rebuilt: the virtualenv and the caches. `.cache` is uv's: the installer keeps
+# its cache inside the install, which is also the service user's home.
 for path in .venv .cache .ruff_cache .pytest_cache; do
   if [ -e "${TARGET}/${path}" ]; then
     step "Removing ${path}" as_root rm -rf "${TARGET:?}/${path}"

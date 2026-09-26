@@ -59,7 +59,7 @@ def test_a_message_goes_through_the_pipeline_and_the_answer_lands_on_the_page(
 ) -> None:
     client = _client(settings, clock, *replies)
     sent = _say(client, "what should we do this weekend?")
-    # Back to the newest line: nothing can scroll the page, so the link says where to land.
+    # Back to the newest line: nothing scrolls the page, so the link says where to land.
     assert sent.status_code == 302 and sent.headers["Location"] == "/chat#latest"
     assert client.chat.wait(10)
 
@@ -117,7 +117,7 @@ def test_the_tools_a_turn_ran_are_shown_under_the_answer(settings, clock, conn, 
 def test_the_page_says_it_is_thinking_and_asks_to_be_shown_again(
     settings, clock, conn, family
 ) -> None:
-    """No script can scroll this page, so while a reply is coming it refreshes itself."""
+    """No script scrolls this page, so while a reply is coming it refreshes itself."""
     client = _client(settings, clock)
     asked, release = threading.Event(), threading.Event()
 

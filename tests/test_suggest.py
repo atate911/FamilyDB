@@ -1,17 +1,20 @@
 import json
+from dataclasses import replace
 from datetime import date, datetime, timedelta
 
 from familydb.integrations.open_meteo import DayForecast
-from familydb.store import db, ideas, places, suggestions
+from familydb.store import db, ideas, outcomes, places, suggestions
 from familydb.suggest.context import build_context
-from familydb.suggest.discover import DISCOVER_CACHE_SECONDS
-from familydb.suggest.engine import resolve_window
-from familydb.suggest.evaluate import in_daylight, overlap_minutes
-from familydb.suggest.shortlist import longest_free_span, participants_match, shortlist
+from familydb.suggest.discover import DISCOVER_CACHE_SECONDS, discover
+from familydb.suggest.engine import resolve_window, run
+from familydb.suggest.evaluate import doable, in_daylight
+from familydb.suggest.shortlist import participants_match, shortlist
 from familydb.suggest.types import Constraints, SuggestInput
 from familydb.tools import ToolContext
+from familydb.tools.gcal import free_blocks
 from tests import fakes
-from tests.conftest import NOW_ISO, TZ
+from tests.conftest import NOW_ISO, TZ, call
+from tests.fakes import FakeMessagesAPI, discover_script
 
 SAT = date(2026, 9, 26)
 SUN = date(2026, 9, 27)
@@ -88,10 +91,18 @@ def test_context_with_calendar_and_forecast(conn, full_settings, thursday_clock,
     assert context.days[1].forecast.rain_chance == 80
 
 
-def test_free_span_and_participants() -> None:
-    assert longest_free_span([(480, 1320)]) == 840
-    assert longest_free_span([(480, 720), (1020, 1320)]) == 300
-    assert longest_free_span([]) == 0
+def test_busy_all_day_trip_blocks_but_transparent_birthday_does_not(env):
+    day = date(2026, 9, 26)
+    event = env.cal.seed("Away camping", day, day + timedelta(days=2), all_day=True)
+    assert free_blocks([event], day, env.app.clock.tz) == []
+    context = build_context(env.ctx, (day, day))
+    assert context.days[0].free_known and context.days[0].spans == []
+    assert "Away camping" in context.days[0].commitments
+    transparent = replace(event, busy=False)
+    assert free_blocks([transparent], day, env.app.clock.tz) == ["morning", "afternoon", "evening"]
+
+
+def test_participants_match() -> None:
     from familydb.store.ideas import Idea
 
     def idea(participants):
@@ -171,12 +182,72 @@ def test_someday_skips_window_rules(conn, settings, thursday_clock, family) -> N
     assert [s.idea.id for s in kept] == [hike.id] and kept[0].fits_days == [] and ruled_out == []
 
 
-def test_overlap_minutes() -> None:
+def test_do_not_repeat_is_honored_and_explicit_new_preference_can_override(env):
+    _, data = call(env, "add_idea", title="Unwanted repeat", kind="restaurant")
+    result, _ = call(
+        env,
+        "record_outcome",
+        idea_id=data["id"],
+        happened_on="2026-06-01",
+        would_repeat=False,
+        notes="Never again",
+    )
+    assert not result.is_error
+    result = run(
+        env.ctx, SuggestInput(window="someday", discover=False, question="What can we do?")
+    )
+    assert next(c for c in result.candidates if c.idea_id == data["id"]).verdict == "ruled_out"
+    call(env, "record_outcome", idea_id=data["id"], happened_on="2026-06-02", would_repeat=True)
+    assert data["id"] not in outcomes.do_not_repeat(env.conn)
+
+
+def _longest(ranges, spans, travel=0) -> int:
+    """The longest stretch `doable` leaves: how long the family could be there in one go."""
+    return max((b - a for a, b in doable(ranges, spans, travel)), default=0)
+
+
+def test_the_longest_open_stretch_within_free_time() -> None:
     ranges = [{"open": "10:00", "close": "20:00"}]
-    assert overlap_minutes(ranges, [(480, 1320)]) == 600
-    assert overlap_minutes(ranges, [(480, 720)]) == 120
-    assert overlap_minutes([{"open": "21:00", "close": "02:00"}], [(1020, 1320)]) == 60
-    assert overlap_minutes(ranges, []) == 0
+    assert _longest(ranges, [(480, 1320)]) == 600
+    assert _longest(ranges, [(480, 720)]) == 120
+    assert _longest([{"open": "21:00", "close": "02:00"}], [(1020, 1320)]) == 60
+    assert _longest(ranges, []) == 0
+
+
+def test_opening_intersection_is_continuous_and_allows_round_trip():
+    split = [{"open": "10:00", "close": "11:00"}, {"open": "14:00", "close": "15:00"}]
+    assert _longest(split, [(8 * 60, 17 * 60)]) == 60
+    assert _longest([{"open": "08:00", "close": "12:00"}], [(8 * 60, 12 * 60)], travel=30) == 180
+
+
+def test_four_hour_visit_cannot_fit_one_hour_open(env):
+    _, data = call(
+        env,
+        "add_idea",
+        title="Four hour museum",
+        kind="activity",
+        duration_min=240,
+        duration_max=240,
+        setting="indoor",
+    )
+    place = places.insert(
+        env.conn,
+        name="Museum",
+        hours={"sat": [{"open": "10:00", "close": "11:00"}]},
+        last_checked_at="2026-09-24T19:00:00Z",
+    )
+    ideas.update(env.conn, data["id"], {"place_id": place.id, "enrichment": "done"})
+    result = run(
+        env.ctx,
+        SuggestInput(
+            window="dates",
+            start="2026-09-26",
+            end="2026-09-26",
+            discover=False,
+            question="What can we do?",
+        ),
+    )
+    assert next(c for c in result.candidates if c.idea_id == data["id"]).verdict == "ruled_out"
 
 
 def test_in_daylight() -> None:
@@ -505,6 +576,56 @@ def test_discovery_crash_is_a_note_and_not_cached(
     assert not result.is_error
     assert "web discovery failed: RuntimeError: boom" in data["skipped_checks"]
     assert data["web_finds"] == [] and cache == {}
+
+
+def test_discovery_uses_configured_provider_without_injected_api(env, monkeypatch):
+    from familydb.agent.providers import build
+
+    api = FakeMessagesAPI(*discover_script([]))
+    monkeypatch.setattr(
+        "familydb.agent.gateway.for_surface",
+        lambda settings, surface, api=None: build("anthropic", settings, api=fake),
+    )
+    fake = api
+    context = build_context(env.ctx, (date(2026, 9, 26), date(2026, 9, 27)))
+    finds, note = discover(env.ctx, context, Constraints())
+    assert note is None and finds == [] and api.requests
+    assert env.ctx.api is None
+
+
+def test_discovery_cache_follows_the_constraints_not_the_wording(env):
+    env.ctx.discover_cache = {}
+    env.ctx.api = FakeMessagesAPI(*discover_script([]), *discover_script([]))
+    context = build_context(env.ctx, (date(2026, 9, 26), date(2026, 9, 27)))
+    # "Adult concerts" and "anything fun for us grown-ups" frame the same constraints.
+    adults = Constraints(participants=["adults"])
+    assert discover(env.ctx, context, adults)[1] is None
+    first_calls = len(env.ctx.api.requests)
+    assert discover(env.ctx, context, Constraints(participants=["adults"]))[1] is None
+    assert len(env.ctx.api.requests) == first_calls
+    toddlers = Constraints(participants=["toddler"], setting="indoor", max_cost_level=0)
+    assert discover(env.ctx, context, toddlers)[1] is None
+    assert len(env.ctx.api.requests) > first_calls
+    assert len(env.ctx.discover_cache) == 2
+
+
+def test_discovery_keeps_the_subject_and_the_hours(env):
+    from familydb.suggest.discover import render_discover_request
+    from familydb.suggest.types import DayBounds
+
+    weekend = (date(2026, 9, 26), date(2026, 9, 27))
+    context = build_context(env.ctx, weekend)
+    jazz = render_discover_request(context, Constraints(topic="live jazz"), env.settings)
+    puppets = render_discover_request(context, Constraints(topic="puppet show"), env.settings)
+    assert "Looking for: live jazz." in jazz and jazz != puppets
+    evening = build_context(env.ctx, weekend, DayBounds(start=17 * 60, end=23 * 60 + 30))
+    asked = render_discover_request(evening, Constraints(max_duration_minutes=90), env.settings)
+    assert "Hours: 17:00-24:00." in asked and '"max_duration_minutes": 90' in asked
+    # A question a few minutes later about the same evening asks the same thing.
+    later = build_context(env.ctx, weekend, DayBounds(start=17 * 60 + 10, end=23 * 60 + 20))
+    assert (
+        render_discover_request(later, Constraints(max_duration_minutes=90), env.settings) == asked
+    )
 
 
 class _BrokenCalendar:

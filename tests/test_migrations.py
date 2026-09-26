@@ -30,8 +30,8 @@ def test_fresh_database_reaches_latest_version(settings: Settings) -> None:
     conn.close()
 
 
-# PR #2 shipped a 0007_web.sql that was not taken. The number stays unused so that a database
-# which ran it never mistakes a new 0007 for one it already has.
+# 0007 stays unused: a database may have run a 0007_web.sql that FamilyDB never kept, and must
+# not mistake a new 0007 for it.
 RETIRED = {7}
 
 

@@ -7,17 +7,16 @@ glow on the handful of things that deserve attention, and nowhere else. Anyone w
 a green monochrome monitor should feel a flicker of recognition; nobody should feel they are
 using a theme.
 
-It was not always this restrained. The first pass leaned hard into the CRT (pixel type, pixel
-icons, scanlines, a boot screen); the family asked for something more modern that only evokes it,
-and this is that. The rule that came out of it: **nostalgia shows up as light and small winks,
-never as a style the page is imitating.** Later the family asked for a little texture back,
+The family want a modern page that only evokes the CRT, not one that leans into it (pixel type,
+pixel icons, scanlines everywhere, a boot screen). The rule: **nostalgia shows up as light and
+small winks, never as a style the page is imitating.** They also want a little texture, used
 carefully and sparingly, with the green-screen monitors of the 1980s as its model. So the page's
 few pictures *are* those monitors: a tube of dark glass in a plastic surround, words drawn on it
 in phosphor, sometimes a radar (see "Green screens").
 
 Everything here is carried by one stylesheet (`src/familydb/web/static/style.css`), a handful of
-templates, three open-licensed typefaces and one icon sprite, with no script beyond the one the
-page already had.
+templates, three open-licensed typefaces and one icon sprite. None of it needs a script: the
+page's one script (`static/ask.js`) is the box's, and the look does not depend on it.
 
 This document is a record of the look as it stands and why, not a fence around it. The design,
 the feel and the structure of the pages are meant to evolve with the app, and whoever is working
@@ -78,7 +77,8 @@ says where the family have got to, not what may be tried (see above): what they 
    one; colour is used to tell things apart, never as decoration, and never on its own.
 4. **Two voices, and a third on the screens.** DM Sans for everything read; DM Mono, sparingly,
    for the machine's small voice: times and figures, the small labels above data, the name in the
-   bar. VT323, a terminal's face, only for words on a green screen.
+   bar. VT323, a terminal's face, only on the screens: words on a green screen, and the glyphs on
+   hers.
 5. **Keep the eye still.** A page's title, its one line of purpose and its one or two actions sit
    together at the top. What you do with a thing sits beside it. Her question and the box to
    answer it are the first thing on the home page, with what is next beside them. The chat's box
@@ -129,7 +129,7 @@ of that, however small it looks.
 ## Colour
 
 Surfaces are charcoal with a breath of green in them, the colour of a screen switched off. Words
-are near-white; green is light, not text.
+are near-white; green is light, not text. The ratios here are on a card (`--surface`).
 
 | Token | Value | Used for |
 |---|---|---|
@@ -138,7 +138,7 @@ are near-white; green is light, not text.
 | `--field` | `#0e1211` | inside a box you type into |
 | `--line` / `--line-2` | `#232a27` / `#2f3834` | hairlines and dividers |
 | `--edge` | `#5c6862` | the border of a box you type into: 3.1:1 on a surface |
-| `--ink` | `#edf2ef` | text, 17:1 |
+| `--ink` | `#edf2ef` | text, 16:1 |
 | `--ink-2` | `#bac5bf` | secondary text, 10:1 |
 | `--dim` | `#919e98` | quiet text, 6.6:1 |
 | `--faint` | `#7d8a84` | placeholders, ids and meta icons, 5:1 |
@@ -151,7 +151,7 @@ each carries dark text (`--on-bright`) when it is a fill:
 | Token | Value | Belongs to |
 |---|---|---|
 | `--green` | `#6dff9c` (12.5:1) | the brand and the green screens, her screen, the primary button, focus, what is next and live; Home, Vera's page, Status, Settings; outings |
-| `--amber` | `#ffb850` (9.3:1) | the amber screen: the Family, grown-ups' faces, restaurants, today, anything needing a look |
+| `--amber` | `#ffb850` (9.3:1) | the amber screen: the Family, Memory and Your password, grown-ups' faces, restaurants, today, anything needing a look |
 | `--cyan` | `#6cd4ff` (9.5:1) | Plans, the month on every date, and going places: day trips and trips |
 | `--lemon` | `#f7dc78` (11.8:1) | Things to do, open tasks, activities |
 | `--lilac` | `#ae9bff` (6.8:1) | Ideas; events and kinds the family made up |
@@ -159,14 +159,13 @@ each carries dark text (`--on-bright`) when it is a fill:
 | `--orange` | `#ff956c` (7.4:1) | the seasons |
 | `--red` | `#ff6b6b` (5.8:1) | only what went wrong or cannot be undone |
 
-**Tuned apart.** The colours that share a page (the kinds on a grid of ideas, above all) were
+**Tuned apart.** The colours that share a page (the kinds on a grid of ideas, above all) are
 measured against each other (CIEDE2000), for typical sight and for simulated deuteranopia and
 protanopia, the commonest colour-blindness. The closest pair is 13.6 apart for typical sight and
-5.5 and 5.2 for the other two; before, trips and events were indistinguishable to many people
-(0.1). That took three small moves and one fewer colour: amber a little deeper, nearer a real
-amber phosphor; the seasons a pumpkin coral rather than a second amber; lilac a touch deeper; and
-trips joining day trips in cyan instead of a blue of their own. Colour still never speaks alone:
-every kind carries its icon and its name.
+5.5 and 5.2 for the other two. So amber sits near a real amber phosphor, the seasons are a
+pumpkin coral rather than a second amber, and trips share day trips' cyan: a blue of their own
+would sit almost on events' lilac for many people. Colour still never speaks alone: every kind
+carries its icon and its name.
 
 **Sections.** `base.html` works out which part of the site a page belongs to from the view that
 drew it and puts `in-ideas`, `in-plans` and so on on the `<body>`; the stylesheet sets `--accent`
@@ -182,17 +181,18 @@ so on, in that kind's colour; a card holding one takes the colour for its hover 
 |---|---|
 | **DM Sans** (variable, 100–1000, optical sizes 9–40) | everything read: titles, headings, body, buttons, the bar, labels, the chat |
 | **DM Mono** (400, 500) | times and figures (table numbers, opening hours), the small uppercase labels above data, the month on a date, the name in the bar, the tools a reply used |
-| **VT323** (400) | words on a green screen, and nowhere else |
+| **VT323** (400) | words on a green screen and the glyphs on hers, and nowhere else |
 
 All three are under the SIL Open Font License and served from `static/fonts/` (about 110 kB)
 because the content policy lets fonts come from this site only. DM Sans is friendly and current;
 DM Mono is its sibling with just enough typewriter in it to carry the old screen without dressing
 up as it. VT323 is the face of the DEC VT320 terminal, blocky by birth; on a screen it is blurred
-a little and blooms, the way a tube drew it, and it is never set small (1.2rem at least, since its
-letters sit low in their line).
+a little and blooms, the way a tube drew it, and where it is to be read it is never set small
+(1.2rem at least, since its letters sit low in their line).
 
-Page titles are 700 weight, tight (-0.025em), 1.9–2.6rem; the home headline goes to 4rem.
-Section headings are 1.2rem semibold. Body is 1rem at 1.6. Paragraphs stop at about 60 characters.
+Page titles are 700 weight, tight (-0.025em), 1.9–2.6rem. Home's heading is her question, the
+box's label, and smaller (1.3–1.6rem), since it sits in the box's frame. Section headings are
+1.2rem semibold. Body is 1rem at 1.6. Paragraphs stop at about 60 characters.
 
 ## Shape and space
 
@@ -255,8 +255,8 @@ the same screen is simply the bot's.
   screen and name, the bubble in a dashed line because the words are the page's, not hers.
 - **The tick** (`tick`): an empty box beside an open task, on a 44-pixel target, that shows the
   tick it will make when pointed at and marks the task done where it stands.
-- **Card**, **segmented tabs**, **pills**, **notices** (a green dot for what a form said, a red
-  one for an error).
+- **Card**, **segmented tabs**, **pills**, **notices** (a small green OK for what a form said, a
+  red dot for an error).
 - **Date** (`chip` in `_ui.html`): a small calendar leaf, the month in cyan above the day. Today
   is amber. `views.date_chip` splits the date.
 - **Relative time**: "tomorrow", "in 2 days" as a small pill beside the date, so a wrapped line
@@ -313,7 +313,7 @@ There are five, one to a page at most:
 - **Not found.** A radar console: an empty scope still sweeping, 404 on its face, and beside it
   the range, no contacts, "?NOT FOUND" and "READY.". It switches on as the page opens. The page
   a member reaches when only an admin may go there is the same console, with 403 on its face,
-  who is signed in and "?FOR AN ADMIN".
+  who is signed in, their role and "?FOR AN ADMIN".
 - **Status.** The day's spend, a bar of twenty cells in brackets and the share of the limit,
   beside the same said in words.
 - **Ideas, On the radar.** Where the listed places are, beside how many there are, the nearest
@@ -329,7 +329,8 @@ How they are built, since the content policy allows no inline style or inline sc
   none sits on another, each on one of twelve bearings; `views.places_radar` puts each place
   on its true bearing and times its flare to the nearest of the twelve. The sweep is a conic
   gradient turning on `--sweep`, and each blip's flare is timed to it by a negative delay: the
-  `.b0` to `.b11` rules. The twelve bearings in `views.py` and those twelve rules change together.
+  `.b1` to `.b11` rules (the first bearing needs none). The twelve bearings in `views.py` and
+  those rules change together.
 - The spend bar is characters, `[####................]`, twenty cells worked out in the template:
   VT323 has no block characters, and a terminal would have drawn it this way.
 - A screen that is only a picture is `aria-hidden`, and what it shows is always said in words on
@@ -364,7 +365,7 @@ looked at (see "Two layers").
 ## Page by page
 
 - **The bar.** On a phone the five everyday places (Home, Vera, Ideas, Plans, To do) are a tab
-  bar along the bottom, the current one marked by a pill in its colour; Family, Status and
+  bar along the bottom, the current one marked by a pill in its colour; Memory, Family, Status and
   Settings, the name of whoever is signed in (their own password) and signing out are icons at
   the top; Family and Settings are shown only to an admin, who alone may change them. From 52rem
   everything is one bar that stays at the top while the page scrolls. The conversation's place
@@ -394,7 +395,9 @@ looked at (see "Two layers").
   look; each part is a short page of its own, the others listed down the side where there is room
   (on a phone the way back is Settings, above the title), with one Save in a bar that stays in
   reach while its form is on screen (one row above the tabs on a phone).
-- **Things to do** (an open task is ticked off where it stands), **Family**,
+- **Things to do** (an open task is ticked off where it stands), **Family**, **What she
+  remembers** (each memory under whom it is about, with where it came from and a way to forget
+  it; adding one, and what was forgotten, folded away below),
   **Status** (three monitors, then the day's spend on a green screen beside the same in words),
   **Sign in** (the mark's face on a green screen, then who you are and your password, or the one
   question while the family still shares a password), **For an admin** (the 404's console with
@@ -419,12 +422,13 @@ looked at (see "Two layers").
   Forced colours keep dots, boxes, dates and initials outlined, draw her screen as an empty
   outlined square, show a task's tick only when pointed at, leave out the screens that are only
   pictures, and keep Next up's words in a plain box.
-- Words on a green screen are at least 1.2rem; dim phosphor is 7.6:1 on the tube, normal and
-  bright more.
+- Words on a green screen are at least 1.2rem; dim green phosphor is 5.8:1 at the tube's
+  brightest, normal and bright more.
 - Reading, every form and sending a message work with scripts off; scripts add to that. Today
   the one script is `static/ask.js`, the box's: it keeps what is being written, fills the box
-  from the ways to start, and sends where the phone is. Without it the ways to start are links,
-  and nothing typed is kept across a change of page.
+  from the ways to start, sends where the phone is, and looks again for an answer only while
+  nobody is writing. Without it the ways to start are links, "Send where I am" is not shown,
+  nothing typed is kept across a change of page, and the page looks again with a meta refresh.
 
 ## What does not move
 
@@ -448,8 +452,8 @@ it, and say why here.
   ideas and restaurants lists, `class="said"` with the text right after it,
   `<summary>Move it</summary>` on a plan that can be moved, `class=" today"` on today in the
   month. They can change; change them and the tests together.
-- Class names are shared across the whole stylesheet: check a new one is not already taken (a
-  meter once borrowed `.bar` from the top bar and flattened it).
+- Class names are shared across the whole stylesheet: check a new one is not already taken
+  (`.bar` is the top bar, and anything else given it takes the bar's rules).
 - What the page does comes first (see "Two layers"). Where somebody is reading, writing,
   deciding or changing something, the look steps back; where it is in nobody's way, it comes
   forward and is fun. A change to the look says which kind of place it is in, and why.

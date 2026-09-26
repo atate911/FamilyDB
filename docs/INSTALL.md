@@ -196,9 +196,10 @@ Before it changes anything, it lists these and asks. In the order it does them:
 | Writes `/opt/familydb/.env`, readable only by `familydb` | the first password and the page's address are kept there. Everything else is set on the page |
 | Creates the database, `/opt/familydb/data/familydb.sqlite3` | everything the family tells it lives in that one file |
 | Writes and enables `/etc/systemd/system/familydb.service` | so it starts when the machine boots, and restarts if it ever stops |
-| Installs Caddy and writes `/etc/caddy/Caddyfile` | Caddy puts HTTPS in front of the page and renews its certificate, so the password never crosses the network in the clear |
-| Opens ports 80 and 443 in `ufw`, if `ufw` is on | so browsers can reach the page. The bot needs nothing else inbound |
 | Adds a nightly backup to root's crontab, kept for two weeks, in `/opt/familydb/backups` | so a bad day can be undone |
+| Installs Caddy and writes `/etc/caddy/Caddyfile`; for a public address with no domain, Caddy 2.10 or newer, from Caddy's own apt repository when the system's is older | Caddy puts HTTPS in front of the page and renews its certificate, so the password never crosses the network in the clear. An older Caddy cannot get a certificate for an address alone |
+| Opens ports 80 and 443 in `ufw`, if `ufw` is on | so browsers can reach the page. The bot needs nothing else inbound |
+| Writes down each of these changes in `/var/lib/familydb-install` as it makes it | so `uninstall.sh --from-zero` can put the server back as it was |
 
 It does not touch your SSH configuration, the system Python, any other service, or anything in a
 home directory. Running it again is safe: it installs only what is missing, keeps `.env` and the
@@ -226,8 +227,8 @@ installer checks for this and refuses to install a service it knows cannot run.
 - `--yes` takes every default, for a scripted build.
 
 Which version it installs without `--ref` depends on `CHANGELOG.md`. While the newest version
-there is marked "in progress", as v0.1.0 is now, it installs the default branch; once that
-version has a date, it installs the newest release tag.
+there is marked "in progress", it installs the default branch; once that version has a date, it
+installs the newest release tag.
 </details>
 
 ## A domain name instead of the address
@@ -251,16 +252,17 @@ name when the installer asks for one does the same thing at install time.
 <summary>What it sets</summary>
 
 In `/opt/familydb/.env`: `WEB_DOMAIN` (the name, or the address when there is none),
-`WEB_PUBLIC_PORT` (443 unless moved, below), `WEB_TRUST_PROXY=true` and `WEB_HOST=127.0.0.1`. The page then listens only to Caddy on the same
-machine, and believes Caddy about who is visiting and that the connection was HTTPS, which is what
-keeps the lockout per visitor and marks the sign-in cookie `Secure`. Caddy's configuration is
-`/etc/caddy/Caddyfile`; `sudo journalctl -u caddy -n 50` says how getting the certificate went.
-Port 8080 is never opened to the outside.
+`WEB_PUBLIC_PORT` (443 unless moved, below), `WEB_TRUST_PROXY=true` and `WEB_HOST=127.0.0.1`.
+The page then listens only to Caddy on the same machine, and believes Caddy about who is visiting
+and that the connection was HTTPS, which is what keeps the lockout per visitor and marks the
+sign-in cookie `Secure`. Caddy's configuration is `/etc/caddy/Caddyfile`;
+`sudo journalctl -u caddy -n 50` says how getting the certificate went. Port 8080 is never opened
+to the outside.
 
-On the Docker path, set `WEB_DOMAIN` and `COMPOSE_PROFILES=tls` in `.env` and run
-`docker compose up -d`, which starts a Caddy container as well. If nginx is already on the
-machine, `deploy/nginx-familydb.conf` does Caddy's job with a certificate from certbot; the steps
-are at the top of that file.
+On the Docker path, set `WEB_DOMAIN`, `WEB_TRUST_PROXY=true` and `COMPOSE_PROFILES=tls` in
+`.env` and run `docker compose up -d`, which starts a Caddy container as well. If nginx is
+already on the machine, `deploy/nginx-familydb.conf` does Caddy's job with a certificate from
+certbot; the steps are at the top of that file.
 </details>
 
 <details>
@@ -286,16 +288,12 @@ internet altogether.
 <details>
 <summary>The warning worth reading twice</summary>
 
-The family's passwords are all that stand between a stranger and your API bill. Signing in as a
-parent (or, for now, a kid) is most of the bot: chatting spends tokens, and the forms change ideas and put things on the
-family calendar. Signing in as an admin is all of it: the Family page decides who may message the
-bot on Telegram and who signs in, and the settings page can change which model answers, raise the
-spending limit, show a key to that admin, and point the bot at a different calendar. Keep the
+The family's passwords are all that stand between a stranger and your API bill: a parent's is
+most of the bot, and an admin's is all of it, the keys and the spending limit included. Keep the
 admins few and their passwords long, set a spending limit on the API key with the company too,
 and look at `/status` now and then for a month that does not look like yours. If a phone goes
 missing, make its owner a new starting password on the Family page, which signs them out on every
-device; **Sign everyone out** on the settings page ends every sign-in there is. RUNBOOK section 10
-has what else protects the page: lockouts, CSRF tokens and a content security policy.
+device. RUNBOOK section 10 says what each role can reach, and what else protects the page.
 </details>
 
 ## Keeping the page off the internet
@@ -374,8 +372,8 @@ sudo rm -rf /root/familydb-scripts
 (Or, if you have a clone of your own: `scp -r scripts sam@your-server:~/` from it, and
 `sudo bash ~/scripts/bootstrap.sh --deploy-key /root/familydb_deploy` on the server.)
 
-Bootstrap rewrites the repository URL to its SSH form, clones with that key, and then clears
-the credential out of the saved remote so nobody reading `.git/config` later finds one.
+Bootstrap rewrites the repository URL to its SSH form, clones with that key, and writes the
+key's path (never the key) into the checkout's `core.sshCommand`, so upgrades fetch with it.
 
 ### A fine-grained personal access token
 
@@ -397,8 +395,8 @@ Answer its questions, and once it has finished: `rm -rf ~/familydb-scripts`.
 
 The token is used for the clone and nothing else: it is never written to `.env`, never written
 to the log, and the saved remote is reset to the plain HTTPS URL afterwards so it does not sit
-in `.git/config`. That also means an upgrade needs it again ([Day to day](#day-to-day)); switching to a deploy
-key later avoids that.
+in `.git/config`. That also means an upgrade needs it again ([Day to day](#day-to-day));
+switching to a deploy key later avoids that.
 
 ### Copy it from your own computer
 
@@ -436,8 +434,9 @@ That runs `familydb doctor`, which checks the settings, `.env`'s permissions, th
 database and its schema, who is in the family, the keys, the models, Telegram, the calendar,
 the weather, the lookups, the digest, the web page and the service, and prints a fix under
 anything that is wrong. `--online` also asks Telegram whether its token works, and asks Claude or
-Gemini whether their key works by counting tokens, which is free. OpenAI, the default, has no
-free way to ask, so there the first real message is the check:
+Gemini whether their key and the tools work by counting tokens, which is free. OpenAI, the
+default, cannot count tokens without answering, so doctor leaves it to the first real message
+(the page checks a key with its company, for free, when the company is chosen there):
 
 ```bash
 cd /opt/familydb
@@ -454,12 +453,11 @@ sudo -u familydb .venv/bin/familydb db status
 ```
 
 `db status` should show `cache_read` greater than zero on the second call: the prompt cache is
-working and most of each message is not being paid for twice. If it stays zero, see [Troubleshooting](#troubleshooting).
+working and most of each message is not being paid for twice. If it stays zero, see
+[Troubleshooting](#troubleshooting).
 
-Finally `/status` in the browser: which model answers chat and which does the lookups, whether
-each key is set and where it came from, whether Telegram is connected, what else is connected,
-what today has cost against the daily limit, what the last thirty days cost per purpose and per
-model, which part of each request the tokens went on, and what is waiting. It asks nothing of a model, so refreshing it is free.
+Finally `/status` in the browser, which says who answers, what is connected, what it has cost
+and what is waiting, without asking anything of a model. RUNBOOK section 10 has the whole list.
 
 ## Day to day
 
@@ -475,13 +473,9 @@ sudo /opt/familydb/scripts/maintain.sh restore FILE       # stops it, puts it ba
 sudo /opt/familydb/scripts/maintain.sh upgrade            # newer code, backup taken first
 ```
 
-`restore` backs up the database it is about to replace, so a restore can itself be undone.
-`upgrade` takes a backup, fetches, moves to the newer code, reinstalls the locked dependencies,
-migrates and restarts, and prints the command to go back if it went badly. It follows the same
-rule as bootstrap: the default branch while `CHANGELOG.md` marks the newest version "in
-progress", and the newest release tag once that version has a date. It only ever moves forward:
-if the target does not contain what is installed now, it refuses and changes nothing. Do not use
-`git pull` instead; the checkout is on a detached commit, where it fails.
+`restore` and `upgrade` each take a backup first, so either can be undone. `upgrade` is the way
+to newer code, not `git pull`, which fails on the detached commit an upgrade leaves. RUNBOOK
+section 8 says what an upgrade does and which version it moves to.
 
 **Upgrades on a private repository.** `upgrade` fetches from `origin`, which needs a credential.
 
@@ -497,8 +491,8 @@ read -rs GITHUB_TOKEN && export GITHUB_TOKEN
 sudo --preserve-env=GITHUB_TOKEN /opt/familydb/scripts/maintain.sh upgrade
 ```
 
-Tokens expire. To stop needing one, make a deploy key as in [A deploy key, by hand](#a-deploy-key-by-hand) and point the checkout at
-it once:
+Tokens expire. To stop needing one, make a deploy key as in
+[A deploy key, by hand](#a-deploy-key-by-hand) and point the checkout at it once:
 
 ```bash
 sudo git -C /opt/familydb remote set-url origin git@github.com:atate911/FamilyDB.git
@@ -508,39 +502,25 @@ sudo git -C /opt/familydb fetch --tags origin      # should now work
 ```
 
 If you brought a copy yourself there is nothing to fetch from at all. Take a backup, make a new
-archive as in [Copy it from your own computer](#copy-it-from-your-own-computer), copy it across, and unpack it over the install; `.env` and `data/` are
-not in the archive, so they are left as they are. Then run the installer again, which
-reinstalls the dependencies, migrates and restarts:
+archive as in [Copy it from your own computer](#copy-it-from-your-own-computer), copy it
+across, and unpack it over the install; `.env` and `data/` are not in the archive, so they are
+left as they are. Then run the installer again, which reinstalls the dependencies and migrates,
+and restart:
 
 ```bash
 sudo /opt/familydb/scripts/maintain.sh backup
 sudo tar -xzf ~/familydb.tar.gz -C /opt/familydb --strip-components=1 --no-same-owner
 sudo bash /opt/familydb/scripts/install.sh
-```
- `upgrade` says all of
-this itself when a fetch fails, so you do not have to remember it. RUNBOOK section 8 says
-which version an upgrade moves to.
-
-**Backups, nightly and off the machine.** The database is one file and everything the family
-has ever said is in it. If you said yes during the install, the nightly backup is already
-scheduled; check, or schedule it now:
-
-```bash
-sudo crontab -u root -l
-sudo /opt/familydb/scripts/maintain.sh schedule-backups --keep-days 14
+sudo /opt/familydb/scripts/maintain.sh restart
 ```
 
-That is one line in root's crontab, for either Docker or systemd: a safe SQLite online backup
-at 03:15 into `/opt/familydb/backups/`, followed by pruning files older than `--keep-days` only
-if the backup succeeds. Each backup is readable by its owner alone. An older schedule in the
-`familydb` user's crontab is removed at the same time, so the two do not both run. A backup on
-the same disk is not a backup, so copy them off as well. They are readable by root alone, so
-hand yourself a bundle on the server and fetch that:
+`upgrade` says all of this itself when a fetch fails, so you do not have to remember it.
 
-```bash
-sudo tar -C /opt/familydb -czf ~/familydb-backups.tar.gz backups && sudo chown sam ~/familydb-backups.tar.gz
-scp sam@your-server:familydb-backups.tar.gz .       # on your own computer
-```
+**Backups, nightly and off the machine.** The install scheduled a nightly backup, kept for two
+weeks; `sudo crontab -u root -l` shows it, and
+`sudo /opt/familydb/scripts/maintain.sh schedule-backups` puts it back if it has gone. A backup
+on the same disk is not a backup: RUNBOOK section 7 says how to copy them off the machine, how
+to restore one by hand, and what is and is not inside one.
 
 **Passwords** are chosen on the page, each person their own, and stored only as hashes. Somebody
 who forgot theirs gets a new starting password from an admin on the Family page. If the only admin
@@ -548,8 +528,7 @@ forgot theirs, `sudo /opt/familydb/scripts/maintain.sh password` prints a new st
 for them (`password NAME` does it for somebody else). `WEB_PASSWORD` in `.env` is only the
 installer's, for signing in the first time; it opens nothing once an admin has their own.
 
-RUNBOOK section 7 covers restoring by hand and what is and is not inside a backup; section 12
-covers journald limits, disk, and what to do when a secret gets out.
+RUNBOOK section 12 covers journald limits, disk, and what to do when a secret gets out.
 
 ## Removing it
 
@@ -565,11 +544,11 @@ Three levels, from gentle to everything.
 the beginning. The installer writes down every change it makes as it makes it, in
 `/var/lib/familydb-install`: each package it added (not ones that were there already), each file,
 folder and link, the accounts, the cron line and the firewall rule, and a copy of any file it
-replaced. `--from-zero` undoes exactly that, and puts replaced files back. For an install made
-before that record existed, it also looks for everything older versions and the older guide's
-steps by hand could leave: Caddy when it serves nothing but FamilyDB, uv and the line its
-installer added to root's shell profiles, the deploy key, copies of the code and backups in home
-directories, GitHub in root's `known_hosts`, and the logs.
+replaced. `--from-zero` undoes exactly that, and puts replaced files back. An install without
+that record, or with only part of one, gets a wider search for what could have been left: Caddy
+when it serves nothing but FamilyDB, uv and the line its installer added to root's shell
+profiles, the deploy key, copies of the code and backups in home directories, GitHub in root's
+`known_hosts`, and the logs.
 
 Like `--purge`, it asks twice before removing anything: a yes-or-no question after listing,
 by name, everything it will remove (Enter means no), then typing `remove everything` in full.
@@ -605,6 +584,7 @@ A new install can reuse the bot, the Google client and the keys as they are.
 
 ```bash
 less /var/log/familydb-bootstrap.log         # the whole bootstrap run, step by step
+less /var/log/familydb-install.log           # the configuration step it hands over to
 sudo journalctl -u familydb -n 100 --no-pager
 sudo journalctl -u familydb -f               # follow it
 cd /opt/familydb && sudo docker compose logs -f bot    # the Docker path
@@ -634,8 +614,8 @@ git ls-remote https://x-access-token:$GITHUB_TOKEN@github.com/atate911/FamilyDB.
 *How to fix:* a deploy key must be the **private** half (`/root/familydb_deploy`, not the
 `.pub`) and its public half must be on **this** repository's deploy keys, not on your account.
 A token must not have expired and must have Contents: Read on this repository. If neither can
-be made to work from the server, fall back to [copying it yourself](#copy-it-from-your-own-computer)
-yourself; no credential is needed for that.
+be made to work from the server, fall back to [copying it yourself](#copy-it-from-your-own-computer);
+no credential is needed for that.
 
 ### "The familydb user cannot get into ..."
 
@@ -643,8 +623,9 @@ yourself; no credential is needed for that.
 not install the systemd unit. Or, after installing one by hand, `systemctl status familydb`
 shows a permission error on the working directory.
 
-*What it means:* the checkout is inside somebody's home directory. Home directories are mode
-0750, so the service account cannot enter one, and no amount of unit hardening changes that.
+*What it means:* the checkout is inside somebody's home directory. Home directories are closed
+to other users (mode 0750 or 0700), so the service account cannot enter one, and no amount of
+unit hardening changes that.
 
 *How to check:*
 
@@ -743,8 +724,8 @@ sudo chown -R familydb:familydb /opt/familydb/data /opt/familydb/.env
 sudo systemctl restart familydb
 ```
 
-On the Docker path the container runs as uid 1000 instead: `sudo chown -R 1000:1000
-/opt/familydb/data`.
+On the Docker path the container runs as uid 1000 instead:
+`sudo chown -R 1000:1000 /opt/familydb/data`.
 
 ### No space left on device
 
@@ -804,13 +785,14 @@ free -m
 sudo dmesg -T | grep -i 'killed process' | tail
 ```
 
-*How to fix:* add swap (see [Looking after the server itself](#looking-after-the-server-itself)) and paste the install block again. Nothing is lost: everything that
-had already worked is still in place.
+*How to fix:* add swap (see [Looking after the server itself](#looking-after-the-server-itself))
+and paste the install block again. Nothing is lost: everything that had already worked is still
+in place.
 
 ### Cannot reach the model API
 
-*Symptom:* "Saved your message, but I couldn't process it right now", or doctor's
-`model reachable` says the API refused.
+*Symptom:* "Got it, but I can't get to it right now" ("Saved your message, but I couldn't
+process it right now" with no persona), or doctor's `model reachable` says the API refused.
 
 *What it means:* either the key is wrong or unpaid, or the machine cannot get out to the
 internet at all. The message itself is safe: it is stored and retried every
@@ -827,13 +809,12 @@ sudo journalctl -u familydb -n 50 --no-pager | grep -i error
 ```
 
 *How to fix:* a wrong key goes on `/settings`, where it takes effect immediately, or in `.env`.
-If the reply is instead "Today's spending limit ... is used up", nothing is wrong: the daily
-limit was reached, and RUNBOOK section 13 says what to do.
-A network failure is usually DNS on a freshly booted VPS (`ping -c1 1.1.1.1`, then
-`cat /etc/resolv.conf`) or a clock more than a day out, which breaks every certificate
-(`date -u`, then `sudo timedatectl set-ntp true`). Retry the backlog by hand with
-`familydb db retry-failed`, and `--reset` re-arms messages that gave up over a configuration
-problem you have since fixed.
+If the reply is instead about today's spending limit, nothing is wrong: the daily limit was
+reached, and RUNBOOK section 13 says what to do. A network failure is usually DNS on a freshly
+booted VPS (`ping -c1 1.1.1.1`, then `cat /etc/resolv.conf`) or a clock more than a day out,
+which breaks every certificate (`date -u`, then `sudo timedatectl set-ntp true`). Retry the
+backlog by hand with `familydb db retry-failed`, and `--reset` re-arms messages that gave up over
+a configuration problem you have since fixed.
 
 ### The page does not open
 
@@ -853,31 +834,15 @@ sudo /opt/familydb/scripts/maintain.sh https
 ```
 
 which also gets a real certificate if the first try could not. A **502** from the browser is the
-other way round: Caddy is reached, and FamilyDB behind it is not serving. `sudo journalctl -u
-familydb -n 40 | grep 'not serving'` names why.
+other way round: Caddy is reached, and FamilyDB behind it is not serving.
+`sudo journalctl -u familydb -n 40 | grep 'not serving'` names why.
 
 ### Google will not connect from the page
 
 Connecting Google Calendar from the page has not yet been tried against a live Google account. If
-it will not connect, do the sign-in on a computer with a browser instead, from a copy of the code:
-
-```bash
-uv run familydb google auth --client-secrets ~/Downloads/client_secret_XXX.json
-uv run familydb google calendars          # find the family calendar's id
-```
-
-Copy the token to the server and give it to the service account:
-
-```bash
-scp data/google_token.json you@203.0.113.7:/tmp/
-sudo install -o familydb -g familydb -m 600 /tmp/google_token.json /opt/familydb/data/
-rm /tmp/google_token.json
-```
-
-Put the calendar id in the **Google calendar id** box on the settings page (Connections), and
-restart:
-`sudo systemctl restart familydb`. Check with
-`cd /opt/familydb && sudo -u familydb .venv/bin/familydb google events`.
+it will not connect, do the sign-in on a computer with a browser instead, from a copy of the
+code, and copy the token it writes to the server: RUNBOOK section 5 has the commands. Check it
+with `cd /opt/familydb && sudo -u familydb .venv/bin/familydb google events`.
 
 ### The page asks for the password again and again
 
@@ -896,8 +861,9 @@ sudo journalctl -u familydb -n 50 --no-pager | grep -i web
 
 *How to fix:* make sure `data/` is writable by the bot's user, or set `WEB_SECRET_KEY` in
 `.env`, which is also what to do if you run the page in more than one process. Behind Caddy,
-`WEB_TRUST_PROXY` must be `true` or the `Secure` cookie is never set. Changing `WEB_PASSWORD`
-or pressing "Sign everyone out" ends every session, on purpose, so everybody signs in once after
+`WEB_TRUST_PROXY` must be `true` or the `Secure` cookie is never set. Changing a password
+(somebody's own, or `WEB_PASSWORD` while the family still shares it) or pressing "Sign everyone
+out" ends the sessions opened with the old one, on purpose, so those people sign in once after
 that.
 
 ### `cache_read` stays 0
@@ -914,14 +880,14 @@ Tokens are the running cost here, and this roughly doubles it.
 cd /opt/familydb
 sudo -u familydb .venv/bin/familydb debug prompt "hi" > /tmp/a
 sudo -u familydb .venv/bin/familydb debug prompt "hi" > /tmp/b
-diff /tmp/a /tmp/b        # the system blocks and the tools list must be byte-identical
+diff /tmp/a /tmp/b        # the instructions and the tools list must be byte-identical
 ```
 
 *How to fix:* if they differ, something with a date, a name or a per-request id has got into
-the prefix, which is a bug worth reporting with that diff. If they match, check
-`ANTHROPIC_CACHE_TTL` is still `1h`: at `5m` a family's gaps between messages are longer than
-the cache. On OpenAI and Gemini the caching happens their side and this counter behaves
-differently. RUNBOOK section 13.
+the prefix, which is a bug worth reporting with that diff. If they match and the bot runs on
+Claude, check `ANTHROPIC_CACHE_TTL` is still `1h`: at `5m` a family's gaps between messages are
+longer than the cache. OpenAI and Gemini cache long prefixes on their own, with no setting to
+check, and not every repeat is a hit.
 
 ### Port already in use
 
@@ -995,7 +961,7 @@ shows what is actually in force.
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
 sudo ufw allow OpenSSH        # BEFORE enabling. Skip this line and you lock yourself out.
-sudo ufw allow 80,443/tcp     # the page
+sudo ufw allow 80,443/tcp     # the page (80 and its own port instead, if it was moved)
 sudo ufw enable
 sudo ufw status
 ```

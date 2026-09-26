@@ -53,7 +53,7 @@
   keep(); // whatever the box holds now, put back here or handed back by the page
   box.addEventListener("input", keep);
 
-  // Ctrl+Enter, or Cmd+Enter on a Mac, sends; Enter alone starts a new line, as it always has.
+  // Ctrl+Enter, or Cmd+Enter on a Mac, sends; Enter alone starts a new line, as in any text box.
   box.addEventListener("keydown", function (event) {
     if (event.key !== "Enter" || !(event.ctrlKey || event.metaKey)) return;
     event.preventDefault();

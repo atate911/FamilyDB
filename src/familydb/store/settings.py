@@ -69,7 +69,8 @@ BEHAVIOUR = (
 )
 SECRETS = ("anthropic_api_key", "openai_api_key", "gemini_api_key", "telegram_bot_token")
 # Who the assistant is and who the family are, with a page of their own (/settings/personality).
-# The long texts among them are logged as "rewritten" rather than word for word.
+# The page's list of changes shows the long texts among them as "rewritten" rather than word for
+# word (web/views.py `LONG_SETTINGS`).
 PROFILE = (
     "persona",
     "persona_name",

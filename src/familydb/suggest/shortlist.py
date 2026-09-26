@@ -29,11 +29,6 @@ def fmt_minutes(minutes: int) -> str:
     return f"{minutes / 60:g} h"
 
 
-def longest_free_span(spans: list[tuple[int, int]]) -> int:
-    """Minutes in the longest free stretch."""
-    return max((b - a for a, b in spans), default=0)
-
-
 def day_is_dry(forecast: DayForecast | None) -> bool | None:
     if forecast is None:
         return None
@@ -167,8 +162,6 @@ def _weather_fit(
             fits.append(day.date)
     if not fits:
         return [], "poor", "; ".join(bad) or "weather does not fit"
-    if not (needs_dry or needs_warm or needs_snow):
-        return fits, ("ok" if known else "unknown"), None
     return fits, ("ok" if known else "unknown"), None
 
 

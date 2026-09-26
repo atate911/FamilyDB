@@ -1,10 +1,10 @@
 """The setup pages: FamilyDB set up one step at a time, in order, with the how-to beside each form.
 
-A new install lands here from the home page until it can answer anyone. Each step says why it
-matters, what to do outside FamilyDB (where to get a key, what to send BotFather, what to click in
-Google Cloud), and has one small form. The forms are the ones the rest of the page already uses:
-each posts to the module that owns that change (settings.py, family.py) and asks to be brought
-back here, so this module only reads, and setting up is never a second way of changing anything.
+The home page sends an admin here until it can answer anyone. Each step says why it matters,
+what to do outside FamilyDB (where to get a key, what to send BotFather, what to click in Google
+Cloud), and has one small form. The forms are the ones the rest of the page already uses: each
+posts to the module that owns that change (settings.py, family.py) and asks to be brought back
+here, so this module only reads, and setting up is never a second way of changing anything.
 
 Nothing records progress. A step is done when what it sets up is there (`status.setup_progress`),
 so leaving half way, or doing a step on the settings page instead, never leaves setup out of step.
@@ -48,7 +48,6 @@ NEED_WORDS = {
     "recommended": "recommended",
     "optional": "optional",
 }
-WEEKEND_QUESTION = "What should we do this weekend?"
 
 
 def _app() -> App:
@@ -98,7 +97,7 @@ def done() -> str:
         later=[step for step in steps if not step.done],
         bot=status_page.telegram_name(app),
         admin=admin,
-        question=WEEKEND_QUESTION,
+        question=views.WEEKEND_QUESTION,
         **_told(),
     )
 
@@ -215,6 +214,7 @@ def _telegram(app: App, conn: Any) -> dict[str, Any]:
         "refresh_seconds": WAIT_SECONDS,
         "gave_up": waiting and refresh is None,
         "digest_here": live.digest_chat_id == "web",
+        "digest_day": views.DAY_NAMES[live.digest_day],
     }
 
 

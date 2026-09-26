@@ -1,7 +1,8 @@
 """The key that signs the web session cookie.
 
 Set WEB_SECRET_KEY to pin it. Otherwise one is generated once and kept beside the database, so
-a restart does not sign everyone out. Read and write it through `session_secret`, never directly.
+a restart does not sign everyone out. Read it through `session_secret` and replace it through
+`rotate`, never directly.
 """
 
 from __future__ import annotations

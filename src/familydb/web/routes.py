@@ -94,11 +94,11 @@ def home() -> Response | str:
 
     The box is the chat's own and posts to it, so what is said here lands in the conversation.
     Everything else is read from the database and worded here: opening this page asks nothing
-    of a model. Until it can answer anyone, which takes somebody on the list and a model, the
-    home page is the setup page: there is nothing else here worth showing yet.
+    of a model. Until it can answer anyone, which takes somebody on the list and a model, an
+    admin is sent to the setup page instead: there is nothing else here worth showing yet.
     """
     if any(request.args.get(key) for key in FILTERS):
-        # The ideas list used to live here; a bookmarked search should still find it.
+        # Home takes no search: one sent here, as an old bookmark may, goes on to the ideas list.
         return redirect(url_for("web.ideas", **request.args))
     app = _app()
     today = app.clock.today()

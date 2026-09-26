@@ -2,7 +2,8 @@
 
 - `near` names a place ("downtown Portland", "the Pearl"): it is looked up with the free geocoder,
   and a match far from home is tried again with the home area added, so "Main St" is the local one.
-- `near` says "here": the asker's location shared on Telegram in the last few hours.
+- `near` says "here": the asker's location from the last few hours, shared on Telegram or sent
+  with a message from the page (`familydb/whereabouts.py`).
 - Nothing said, but a question about now or today and a fresh shared location: that location.
   Someone who shared where they are and asks what's open now means near there.
 

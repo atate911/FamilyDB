@@ -81,8 +81,8 @@ def model_at(provider: Provider, surface: Surface, level: str) -> str:
     unless the family named another; above it, the catalog's model at that level, so a stronger
     choice holds on whichever company answers, the fallback included. A level up never answers
     with a cheaper model than everyday: an everyday model the family set above the lineup's (Opus
-    for Claude, as an older .env said) answers at better too, and so does one the price table does
-    not list, which counts as dearer than any it does (prices.UNLISTED).
+    for Claude, as an older .env may name) answers at better too, and so does one the price table
+    does not list, which counts as dearer than any it does (prices.UNLISTED).
     """
     everyday = provider.model_for(surface)
     stronger = catalog.at(provider.name, level) if level != catalog.EVERYDAY else None
@@ -93,7 +93,7 @@ def model_at(provider: Provider, surface: Surface, level: str) -> str:
 
 
 def others(name: str) -> list[str]:
-    """The rest, in a fixed order, so a fallback choice never depends on the weather."""
+    """The rest, in a fixed order, so the same spare is chosen every time."""
     return [candidate for candidate in NAMES if candidate != name]
 
 

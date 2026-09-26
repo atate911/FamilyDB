@@ -3,6 +3,8 @@ from familydb.agent.worker import home_location, run_worker_turn
 from familydb.integrations.geocode import GeoPoint
 from familydb.store import ideas
 from tests import fakes
+from tests.conftest import call
+from tests.fakes import FakeMessagesAPI, message, text, tool_use
 
 POINT = GeoPoint(45.5, -122.6, "Hopscotch", "nominatim")
 
@@ -170,3 +172,28 @@ def test_workers_get_a_small_output_cap(settings, clock, conn, registry) -> None
     api = fakes.FakeMessagesAPI(fakes.message([fakes.text("done")]))
     _run("enrich", api, low, clock, registry, conn)
     assert api.requests[0]["max_tokens"] == 1000
+
+
+def test_worker_rejects_undeclared_mutation_and_wrong_idea(env):
+    _, data = call(env, "add_idea", title="Keep this idea", kind="activity")
+    for name, args in [
+        ("update_idea", {"id": data["id"], "status": "dropped"}),
+        ("skip_place", {"idea_id": data["id"], "status": "skipped", "reason": "wrong"}),
+    ]:
+        api = FakeMessagesAPI(
+            message([tool_use("injected", name, args)], stop_reason="tool_use"),
+            message([text("Done")]),
+        )
+        turn = run_worker_turn(
+            kind="enrich",
+            api=api,
+            settings=env.settings,
+            clock=env.app.clock,
+            registry=env.registry,
+            conn=env.conn,
+            request="Look up another venue",
+            idea_id=999,
+        )
+        assert not turn.result.actions[0]["ok"]
+        assert ideas.get(env.conn, data["id"]).status == "idea"
+        assert ideas.get(env.conn, data["id"]).enrichment == "pending"

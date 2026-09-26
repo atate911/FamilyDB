@@ -51,13 +51,6 @@ def doable(
     return merged
 
 
-def overlap_minutes(
-    ranges: list[dict[str, str]], spans: list[tuple[int, int]], travel: int = 0
-) -> int:
-    """Longest continuous opening within free time, allowing travel at both ends."""
-    return max((b - a for a, b in doable(ranges, spans, travel)), default=0)
-
-
 def in_daylight(
     spans: list[tuple[int, int]], light: tuple[int, int], travel: int = 0
 ) -> list[tuple[int, int]]:

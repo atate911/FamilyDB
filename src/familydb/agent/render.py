@@ -1,7 +1,9 @@
-"""Deterministic text rendering shared by the prompt builder and the CLI.
+"""Deterministic text rendering shared by the prompt builder, the pipeline and the CLI.
 
-Nothing here may depend on the current time or on who is asking: the idea list is part of the
-cached prompt prefix, and any variation defeats the cache.
+The idea list and the family context are part of the cached prompt prefix, so they may not depend
+on the current time or on who is asking: any variation defeats the cache. What does vary (the
+date, the sender, who reads the chat, where they are, what is remembered) is rendered here for
+the current user turn only.
 """
 
 from __future__ import annotations

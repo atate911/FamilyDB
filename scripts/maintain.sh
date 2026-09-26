@@ -1,15 +1,10 @@
 #!/usr/bin/env bash
-# Looking after a running FamilyDB: backups, restores, upgrades, logs and status.
+# Looking after a running FamilyDB: backups, restores, upgrades, HTTPS, logs and status.
+# `scripts/maintain.sh --help` lists every command.
 #
-#   scripts/maintain.sh status          is it running, and is it healthy?
-#   scripts/maintain.sh backup          take a backup now
-#   scripts/maintain.sh restore FILE    put a backup back
-#   scripts/maintain.sh upgrade         fetch the newest release and restart
-#   scripts/maintain.sh logs            follow the log
-#   scripts/maintain.sh schedule-backups   a nightly backup in cron
-#
-# Every one of these says what it is about to change before it changes it, and explains any
-# failure in terms of what to do next. Nothing here ever deletes a backup.
+# Each command says what it is about to change before it changes it, and explains any failure in
+# terms of what to do next. Nothing here deletes a backup except the nightly prune that
+# schedule-backups sets up, which runs only after a new backup has been written.
 set -euo pipefail
 
 # shellcheck disable=SC2034  # read by lib/common.sh when it opens the transcript.
@@ -306,7 +301,7 @@ env_file_set() { # env_file_set KEY VALUE - in place, keeping the file's owner a
 cmd_https() {
   head2 "HTTPS for the page"
   [ "$DOCKER_MODE" = 0 ] || die "this is for the virtualenv install" \
-    "With Docker, set WEB_DOMAIN and COMPOSE_PROFILES=tls in ${TARGET}/.env, then: docker compose up -d"
+    "With Docker, set WEB_DOMAIN, WEB_TRUST_PROXY=true and COMPOSE_PROFILES=tls in ${TARGET}/.env, then: docker compose up -d"
   as_root test -f "${TARGET}/.env" || die "there is no ${TARGET}/.env" "Run the installer first."
   local site port previous chosen
   site="${HTTPS_SITE#https://}"; site="${site#http://}"; site="${site%%/*}"; site="${site%:*}"
@@ -335,7 +330,7 @@ cmd_https() {
     note "It moved from port ${previous}: open it at the address above from now on. A bookmark to"
     note "the old address finds nothing."
   fi
-  say_how_to_open "$site"
+  say_how_to_open
 }
 
 # ---------------------------------------------------------------- backup ----
@@ -354,8 +349,8 @@ cmd_restore() {
   [ -n "$RESTORE_FILE" ] || die "which backup?" "Usage: ${0} restore /path/to/familydb-....sqlite3"
   [ -f "$RESTORE_FILE" ] || die "no such file: ${RESTORE_FILE}" \
     "Look in ${BACKUP_DIR}:" "  ls -lh ${BACKUP_DIR}"
-  # Always validate before stopping or replacing anything. A successful sqlite3 exit
-  # code alone does not mean quick_check returned 'ok'.
+  # Validate before stopping or replacing anything. quick_check reports damage in its answer, not
+  # as an error, so the answer itself must be 'ok'; reading members shows it is FamilyDB's.
   local validate target_owner
   validate='import sqlite3,sys; from pathlib import Path; c=sqlite3.connect(Path(sys.argv[1]).resolve().as_uri()+"?mode=ro",uri=True); assert c.execute("pragma quick_check").fetchone()[0]=="ok"; c.execute("select id from members limit 1"); c.close()'
   target_owner="${SERVICE_USER}:${SERVICE_USER}"
@@ -459,10 +454,10 @@ cmd_upgrade() {
         "    (a token that has expired needs a new one; a deploy key never expires)" \
         "  · with a copy you made yourself — there is nothing to fetch from. Unpack the new" \
         "    version over ${TARGET} (.env and data/ are not in it, so they stay) and run" \
-        "    sudo bash ${TARGET}/scripts/install.sh; docs/INSTALL.md, section 8, has the steps." \
+        "    sudo bash ${TARGET}/scripts/install.sh; docs/INSTALL.md, 'Day to day', has the steps." \
         "" \
         "Currently configured: ${sshcmd:-no core.sshCommand set}" \
-        "docs/INSTALL.md, 'Getting the code onto the box', covers all three."
+        "docs/INSTALL.md, 'Other ways to get the code onto the server', covers all three."
   fi
   # shellcheck disable=SC2034  # cleared so a later failure does not name this step.
   FAILED_STEP=""
@@ -571,8 +566,8 @@ cmd_schedule_backups() {
     | as_root crontab -u root - \
     || die "could not write root's crontab" \
            "Check that cron is installed: sudo apt-get install cron"
-  # Earlier versions put a backup line and a prune line in the service account's crontab. Left
-  # there, they would keep pruning on their own schedule whether or not the backup worked.
+  # An install from before this schedule has a backup line and a prune line in the service
+  # account's crontab. Left there, they would keep pruning whether or not the backup worked.
   local older
   older="$(as_root crontab -u "$SERVICE_USER" -l 2>/dev/null || true)"
   if printf '%s\n' "$older" | grep -q -e 'familydb db backup' -e 'familydb-\*\.sqlite3'; then

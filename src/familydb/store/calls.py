@@ -160,7 +160,7 @@ def usage_by_kind(conn: sqlite3.Connection, *, since: str) -> list[dict[str, Any
     """Calls, tokens and estimated dollars per kind of call since a timestamp, dearest first.
 
     A kind is what a call was for (answering the family, looking ideas up, ...), as declared in
-    `agent.gateway.KINDS`. Calls recorded before kinds were have none.
+    `agent.gateway.KINDS`. Calls an older version recorded have none.
     """
     rows = conn.execute(
         "SELECT kind, count(*) AS calls, "

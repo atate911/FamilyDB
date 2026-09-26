@@ -237,9 +237,8 @@ def test_a_rewrite_is_laid_over_the_persona_it_rewrote_and_nobody_else(
 
 
 def test_a_rewrite_written_before_it_was_kept_per_persona_still_loads(monkeypatch) -> None:
-    """It was one string, the rewrite of the only persona there was. A setting that fails to load
-    takes every stored setting with it, so each shape it could have been saved in is still read,
-    as hers."""
+    """A rewrite older installs stored as one string, or under her old key, is still read as
+    hers: a setting that fails to load takes every stored setting with it."""
     hers = {personas.DEFAULT: PersonaRewrite(text="You are {name}. Dry.")}
     assert Settings(_env_file=None, persona_text="You are {name}. Dry.").persona_text == hers
     assert Settings(_env_file=None, persona_text={"vera": "You are {name}. Dry."}).persona_text == (
@@ -260,8 +259,8 @@ def test_a_rewrite_written_before_it_was_kept_per_persona_still_loads(monkeypatc
 
 
 def test_a_setting_saved_before_she_had_a_folder_of_her_own_still_finds_her() -> None:
-    """The default persona's folder was "vera". A setting that no longer loads would take every
-    stored setting with it, the keys included, so the old value has to keep working."""
+    """Accepts "vera", the key older installs stored for her: a setting that fails to load takes
+    every stored setting with it, the keys included."""
     for written in ("vera", " Vera ", "VERA", "default", "Default "):
         assert Settings(_env_file=None, persona=written).persona == personas.DEFAULT, written
     assert Settings(_env_file=None, persona=" None ").persona == personas.NONE
