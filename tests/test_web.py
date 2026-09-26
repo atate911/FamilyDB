@@ -113,7 +113,7 @@ def test_a_post_from_another_site_is_refused(settings, clock) -> None:
 def test_every_response_carries_the_security_headers(settings, clock) -> None:
     client = _client(settings, clock, web_password=PASSWORD)
     plain = client.get("/login")
-    # One script, served from the page itself (static/ask.js); nothing inline, nothing else.
+    # Scripts only from the page itself; nothing inline, nothing from elsewhere.
     policy = plain.headers["Content-Security-Policy"]
     assert "script-src 'self';" in policy and "unsafe-inline" not in policy
     assert "frame-ancestors 'none'" in plain.headers["Content-Security-Policy"]

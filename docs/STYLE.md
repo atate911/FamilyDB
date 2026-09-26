@@ -17,10 +17,14 @@ in phosphor, sometimes a radar (see "Green screens").
 
 Everything here is carried by one stylesheet (`src/familydb/web/static/style.css`), a handful of
 templates, three open-licensed typefaces and one icon sprite, with no script beyond the one the
-page already had. A change to the page should be checked against this document. It describes a
-look the family chose, not a fence around it: a page may do something this document never
-imagined so long as it keeps the principles, and a principle that stands in the way of a better
-page is changed here, with the reason, in the same change, and the family asked.
+page already had.
+
+This document is a record of the look as it stands and why, not a fence around it. The design,
+the feel and the structure of the pages are meant to evolve with the app, and whoever is working
+on it, an AI agent included, is free to change any of them without asking first: a new layout, a
+new page, a different picture, a principle rewritten. Update this document in the same change, so
+the next person knows what the look is and why. Only the floors under "What does not move" stay
+put, because they are about people being able to use the page and it being safe, not about taste.
 
 The page is a way to talk to **Vera**, and she does what it offers: plans the weekend, keeps the
 ideas and the things to do, puts things on the calendar. So the first thing on Home is her
@@ -341,31 +345,41 @@ for more than a moment, and none asks to be looked at.
   pictures, and keep Next up's words in a plain box.
 - Words on a green screen are at least 1.2rem; dim phosphor is 7.6:1 on the tube, normal and
   bright more.
-- The page works with scripts off; the only script is `static/ask.js`, the box's: it keeps what
-  is being written, fills the box from the ways to start, and sends where the phone is. Without
-  it the ways to start are links, and nothing typed is kept across a change of page.
+- Reading, every form and sending a message work with scripts off; scripts add to that. Today
+  the one script is `static/ask.js`, the box's: it keeps what is being written, fills the box
+  from the ways to start, and sends where the phone is. Without it the ways to start are links,
+  and nothing typed is kept across a change of page.
 
-## Rules the look has to keep
+## What does not move
 
-- The content policy is `default-src 'self'` with `style-src 'self'`: no inline `style`
-  attributes, no `<style>` blocks, no fonts or pictures from anywhere else. Anything that needs a
-  computed size is SVG with attributes.
+- The content policy is `default-src 'self'` with `style-src 'self'` and `script-src 'self'`: no
+  inline `style` attributes, no `<style>` blocks, no inline script, no fonts, pictures or scripts
+  from anywhere else. Anything that needs a computed size is SVG with attributes.
+- The accessibility above: measured contrast, visible focus, a label for every box, nothing said
+  by colour alone, the motion, contrast and forced-colour preferences honoured, and reading,
+  forms and sending working without scripts. A new colour is measured against the others that
+  share its pages, for typical sight and for deuteranopia and protanopia, before it is added.
+- Nothing from an idea, a place or a fetched page is marked safe in a template.
+
+## The look as it stands
+
+These are today's choices, each with its reason. Change any of them when a better page needs
+it, and say why here.
+
 - A few pieces of markup are what the tests read: `class="panel card"` on each card of the
   ideas and restaurants lists, `class="said"` with the text right after it,
   `<summary>Move it</summary>` on a plan that can be moved, `class=" today"` on today in the
   month. They can change; change them and the tests together.
 - Class names are shared across the whole stylesheet: check a new one is not already taken (a
   meter once borrowed `.bar` from the top bar and flattened it).
-- One green screen to a page, where it shows something true; a second on the same page is
-  decided here first, since two turn the light back into a costume. VT323 and blur stay on the
+- One green screen to a page, where it shows something true, since two start to turn the light
+  back into a costume. VT323 and blur stay on the
   screens, and scanlines on the screens and in the home page's glow; everywhere else the page is
   sharp and modern.
-- A new colour is measured against the others that share its pages, for typical sight and for
-  deuteranopia and protanopia, before it is added.
-- A new small thing has to mean something where it is, and may not move for more than a moment.
-- Vera is never drawn: no face, figure, picture or expression, and the mark is never hers. Where
-  she appears, her screen, and its glyphs never spell anything; where the page speaks of her,
-  what she takes on, never what she is.
+- A small thing means something where it is, and moves for no more than a moment.
+- Vera is not drawn: no face, figure, picture or expression, and the mark is not hers. Where
+  she appears, her screen, and its glyphs spell nothing; where the page speaks of her, what she
+  takes on, not what she is. "Her screen" says why.
 - A new colour, face, glow or motion is written down here, with the reason, in the change that
   brings it. Trying one out on a branch needs no entry until it stays.
 
