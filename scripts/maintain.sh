@@ -459,10 +459,10 @@ cmd_upgrade() {
         "    (a token that has expired needs a new one; a deploy key never expires)" \
         "  · with a copy you made yourself — there is nothing to fetch from. Unpack the new" \
         "    version over ${TARGET} (.env and data/ are not in it, so they stay) and run" \
-        "    sudo bash ${TARGET}/scripts/install.sh; docs/INSTALL.md, section 8, has the steps." \
+        "    sudo bash ${TARGET}/scripts/install.sh; docs/INSTALL.md, 'Day to day', has the steps." \
         "" \
         "Currently configured: ${sshcmd:-no core.sshCommand set}" \
-        "docs/INSTALL.md, 'Getting the code onto the box', covers all three."
+        "docs/INSTALL.md, 'Other ways to get the code onto the server', covers all three."
   fi
   # shellcheck disable=SC2034  # cleared so a later failure does not name this step.
   FAILED_STEP=""

@@ -479,7 +479,7 @@ if [ "$KEEP_ENV" = 0 ]; then
     [ -n "$WEB_DOMAIN" ] || WEB_DOMAIN="$ADDRESS"
     if [ -n "$WEB_DOMAIN" ] && is_ipv4 "$WEB_DOMAIN" && [ "$MODE" = docker ]; then
       warn "With Docker the page needs a domain name to be on HTTPS; keeping it on this machine."
-      note "docs/INSTALL.md, 'Opening the page', has the other ways in."
+      note "docs/INSTALL.md, 'A domain name instead of the address', says how to give it one."
       WEB_DOMAIN=""
     fi
   fi

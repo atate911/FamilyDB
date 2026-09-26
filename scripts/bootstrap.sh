@@ -16,7 +16,7 @@
 #
 # FamilyDB lives in a private repository, so the code has to be let onto the machine somehow: a
 # deploy key (--deploy-key), a token (GITHUB_TOKEN), or a copy you put there yourself (--from).
-# docs/INSTALL.md walks through each one.
+# docs/INSTALL.md, 'Other ways to get the code onto the server', walks through each one.
 set -euo pipefail
 
 # shellcheck disable=SC2034  # read by lib/common.sh when it opens the transcript.
@@ -147,7 +147,7 @@ head2 "FamilyDB bootstrap ${VERSION}"
 
 [ "$(uname -s)" = Linux ] \
   || die "this installs a Linux service, and this is $(uname -s)" \
-         "On macOS, follow docs/INSTALL.md by hand instead."
+         "On macOS, follow the Quick start in README.md by hand instead."
 if [ "$(id -u)" != 0 ]; then
   have sudo || die "this changes system files, so it needs root, and sudo is not installed" \
     "Run it as root instead: su - , then bash ${BASH_SOURCE[0]}"
@@ -415,7 +415,7 @@ fetch_code() {
 
   local -a clone=(git clone --quiet)
   [ -n "$REF" ] && clone+=(--branch "$REF")
-  on_failure_hint "A private repository needs credentials: --deploy-key FILE, GITHUB_TOKEN=..., or --from PATH for a copy you put on the machine yourself. docs/INSTALL.md, 'Getting the code onto the box', walks through all three."
+  on_failure_hint "A private repository needs credentials: --deploy-key FILE, GITHUB_TOKEN=..., or --from PATH for a copy you put on the machine yourself. docs/INSTALL.md, 'Other ways to get the code onto the server', walks through all three."
   if as_root env "${git_env[@]}" "${clone[@]}" "$url" "$TARGET" 2>>"${LOG_FILE:-/dev/null}"; then
     ok "Cloned ${REPO}"
   elif [ -n "$REF" ]; then

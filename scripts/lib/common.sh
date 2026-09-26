@@ -420,7 +420,7 @@ diagnose() { # diagnose "<the command's output>"
       _explain "The server refused the credentials, so the code could not be fetched." \
         "For a deploy key: ssh -T git@github.com -i <the key>   # should name the repository" \
         "For a token: it needs read access to this repository and must not have expired." \
-        "docs/INSTALL.md, 'Getting the code onto the box', has the whole flow." ;;
+        "docs/INSTALL.md, 'Other ways to get the code onto the server', has the whole flow." ;;
     *"Permission denied"*|*"Operation not permitted"*)
       _explain "The account running this may not touch that file or directory." \
         "ls -ld <the path it named>    # who owns it, and what the mode is" \
