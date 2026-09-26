@@ -250,8 +250,11 @@ class TelegramChannel:
         self.application.add_handler(
             MessageHandler(filters.TEXT & ~filters.COMMAND & NEW, self.on_message)
         )
-        # A voice note, or a recording sent as an audio file: heard, then answered as words.
-        self.application.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, self.on_voice))
+        # A voice note, or a recording sent as an audio file: heard, then answered as words. Only
+        # when new: an edited caption would otherwise be paid for and answered a second time.
+        self.application.add_handler(
+            MessageHandler((filters.VOICE | filters.AUDIO) & NEW, self.on_voice)
+        )
         # A shared location, and a live one as it moves (those arrive as edits).
         self.application.add_handler(MessageHandler(filters.LOCATION, self.on_location))
 

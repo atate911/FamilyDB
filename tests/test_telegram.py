@@ -201,12 +201,15 @@ def test_an_edit_is_taken_only_as_a_live_location_moving(settings, clock) -> Non
     question = {"text": "what should we do?"}
     start = {"text": "/start", "entities": [{"type": "bot_command", "offset": 0, "length": 6}]}
     here = {"location": {"latitude": 45.52, "longitude": -122.68, "live_period": 900}}
+    spoken = {"voice": {"file_id": "v1", "file_unique_id": "u1", "duration": 4}}
     assert _takers(channel, _telegram("message", **question)) == ["on_message"]
     assert _takers(channel, _telegram("message", **start)) == ["on_start"]
+    assert _takers(channel, _telegram("message", **spoken)) == ["on_voice"]
     assert _takers(channel, _telegram("message", **here)) == ["on_location"]
-    # An edited question or command is not answered a second time.
+    # An edited question, command or voice note is not answered, or heard, a second time.
     assert _takers(channel, _telegram("edited_message", **question)) == []
     assert _takers(channel, _telegram("edited_message", **start)) == []
+    assert _takers(channel, _telegram("edited_message", **spoken)) == []
     assert _takers(channel, _telegram("edited_message", **here)) == ["on_location"]
 
 
