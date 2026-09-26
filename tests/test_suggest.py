@@ -323,6 +323,26 @@ def test_suggest_requeues_stale_places_when_web_is_on(
     assert "web discovery failed: test worker unavailable" in data["skipped_checks"]
 
 
+def test_code_that_runs_the_engine_can_leave_stale_places_alone(
+    conn, full_settings, thursday_clock, family
+) -> None:
+    """/now and the evening check make no model call, so they must not queue a paid lookup."""
+    from familydb.suggest.engine import run
+
+    web_on = full_settings.model_copy(update={"web_tools_enabled": True})
+    ctx = _ctx(conn, web_on, thursday_clock, family, weather=fakes.FakeForecast([DRY_SAT]))
+    stale = _idea(conn, "Old museum", setting="indoor", duration_min=90)
+    with db.transaction(conn):
+        old = places.insert(
+            conn, name="Old museum", now=NOW_ISO, last_checked_at="2026-01-01T00:00:00Z"
+        )
+        ideas.update(conn, stale.id, {"place_id": old.id, "enrichment": "done"}, now=NOW_ISO)
+    asked = SuggestInput(window="this_weekend", question="?", discover=False)
+    result = run(ctx, asked, refresh_stale=False)
+    assert ideas.get(conn, stale.id).enrichment == "done"
+    assert "stale place details re-queued for a refresh" not in result.skipped_checks
+
+
 def test_suggest_without_services_and_recent_variety(
     registry, conn, settings, thursday_clock, family
 ) -> None:

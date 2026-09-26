@@ -875,7 +875,17 @@ LINE_GROUPS = (
     (
         "Reminders and follow-ups",
         False,
-        ("reminder", "reminder_late", "gift_ideas", "gift_ideas_none", "nudge", "follow_up"),
+        (
+            "reminder",
+            "reminder_late",
+            "gift_ideas",
+            "gift_ideas_none",
+            "nudge",
+            "plan_rain",
+            "plan_closed",
+            "plan_backup",
+            "follow_up",
+        ),
     ),
     (
         "When a button is tapped",

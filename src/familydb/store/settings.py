@@ -53,6 +53,8 @@ BEHAVIOUR = (
     "digest_hour",
     "follow_up_hour",
     "task_nudges",
+    "plan_checks",
+    "plan_check_hour",
     "retry_interval_minutes",
     "retry_max_attempts",
     "voice_notes",

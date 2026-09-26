@@ -99,6 +99,32 @@ EVENTS: dict[str, Event] = {
     "cmd_now": Event(
         "Answering /now", "From the list, {window}:", ("window",), {"window": "now until 19:30"}
     ),
+    "plan_rain": Event(
+        "The evening before an outdoor plan, when rain is likely",
+        "A heads-up for tomorrow: {weather} for {plan}, which is outdoors.",
+        ("plan", "weather"),
+        {"plan": "#4 The falls hike", "weather": "70% chance of rain"},
+    ),
+    "plan_closed": Event(
+        "The evening before a plan, when the place looks closed then",
+        "A heads-up for tomorrow's {plan}: {place} is {hours}.",
+        ("plan", "place", "hours"),
+        {
+            "plan": "#1 Ramen night",
+            "place": "Ramen Ichiban",
+            "hours": "listed as closed on Mondays",
+        },
+    ),
+    "plan_backup": Event(
+        "Another idea offered with a heads-up",
+        "Instead, maybe #{idea} {title}: {why}.",
+        ("idea", "title", "why"),
+        {
+            "idea": 7,
+            "title": "Board game cafe",
+            "why": "can go 10:00-12:00 Saturday, about 10 min drive (estimate)",
+        },
+    ),
     "follow_up": Event(
         "Asking how a plan went",
         "How was {plan} on {day}? Worth doing again?",
@@ -250,7 +276,9 @@ EVENTS: dict[str, Event] = {
 }
 
 # Messages the bot sends unasked, which a conversation under way can carry instead.
-FOLDABLE = frozenset({"reminder", "reminder_late", "nudge", "follow_up", "lookup_done"})
+FOLDABLE = frozenset(
+    {"reminder", "reminder_late", "nudge", "follow_up", "plan_rain", "plan_closed", "lookup_done"}
+)
 # A chat whose family wrote this recently is a conversation under way.
 ACTIVE = timedelta(minutes=5)
 # How long a held message waits for the next turn before it is sent as written.

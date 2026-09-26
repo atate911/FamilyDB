@@ -168,6 +168,9 @@ migration, so upgrading does not resend old conversations. Fresh outgoing messag
     /tasks with this chat's tasks only (none from a private chat in the group), and /now with
     what could start in the next few hours. From somebody not on the list, /today should get
     the stranger's line.
+    Put an outdoor idea on the calendar for tomorrow when the forecast says rain, set the check
+    to the next hour on the settings page, and wait: a heads-up should come once, with an
+    indoor idea for the same time if one fits; a dry day's plan should get nothing.
     On a Wednesday, say "one of these Thursday evenings I need to fix the bike light": the
     answer should say it comes up on a free Thursday evening, and the tasks page should say so
     too. On Thursday it should come up once, with buttons, from 18:00 if the calendar is clear

@@ -86,7 +86,10 @@ older than what is installed. It gets a date when it is released.
   and said as `{name}` everywhere else, and the chat page shows her replies
   under it.
 - **Speaks first.** A Thursday digest of the weekend's options, and a "how was
-  it?" the morning after a plan.
+  it?" the morning after a plan. The evening before a plan it checks the forecast
+  and the place's hours again, with no model call, and speaks only when one is
+  off: rain for an outdoor plan, or the place listed as closed then, with another
+  idea for the same time when one fits. The hour, or not at all, is a setting.
 - **Runs on OpenAI's GPT-6 Luna by default,** the cheapest capable model of the
   three companies, for chat and lookups alike. Claude and Gemini can be chosen
   per surface on the settings page, with another as a spare when the first is

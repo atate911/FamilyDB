@@ -244,7 +244,8 @@ def _now(
         weather=app.weather,
         geocoder=app.geocoder,
     )
-    result = suggest(ctx, SuggestInput(window="now", question="/now", discover=False))
+    asked = SuggestInput(window="now", question="/now", discover=False)
+    result = suggest(ctx, asked, refresh_stale=False)
     offered = [c for c in result.candidates if c.verdict in ("good", "possible")]
     lines = [_option_text(c) for c in offered[:MAX_NOW]]
     more = len(offered) - MAX_NOW + result.not_shown

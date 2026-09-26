@@ -208,6 +208,7 @@ def test_the_schedule_follows_the_settings(conn, settings, clock) -> None:
         "reminders",
         "forget_locations",
         "nudges",
+        "plan_checks",
     }
     assert scheduler.get_job("retry_failed").trigger.interval == timedelta(
         minutes=settings.retry_interval_minutes
@@ -230,6 +231,12 @@ def test_the_schedule_follows_the_settings(conn, settings, clock) -> None:
     _store(conn, {"task_nudges": False})
     assert apply_settings(app, scheduler) == ["nudges off"]
     assert scheduler.get_job("nudges") is None
+
+    _store(conn, {"plan_check_hour": 20})
+    assert apply_settings(app, scheduler) == ["plan_checks"]
+    assert str(scheduler.get_job("plan_checks").trigger) == "cron[hour='20']"
+    _store(conn, {"plan_checks": False})
+    assert apply_settings(app, scheduler) == ["plan_checks off"]
 
 
 def test_the_schedule_moves_even_when_the_page_saw_the_change_first(conn, settings, clock) -> None:

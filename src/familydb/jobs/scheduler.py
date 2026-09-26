@@ -26,6 +26,7 @@ from familydb.jobs.catch_up import run_catch_up
 from familydb.jobs.enrich import run_enrichment
 from familydb.jobs.follow_ups import run_follow_ups
 from familydb.jobs.nudges import run_nudges
+from familydb.jobs.plan_checks import run_plan_checks
 from familydb.jobs.reminders import run_reminders
 from familydb.jobs.retry_failed import run_retries
 from familydb.jobs.weekend_digest import run_digest
@@ -94,6 +95,14 @@ def job_specs(app: App) -> list[JobSpec]:
             "ask how plans went",
             run_follow_ups,
             CronTrigger(hour=settings.follow_up_hour, timezone=zone),
+            misfire_grace_time=3600,
+        ),
+        JobSpec(
+            "plan_checks",
+            "check tomorrow's plans",
+            run_plan_checks,
+            CronTrigger(hour=settings.plan_check_hour, timezone=zone),
+            wanted=settings.plan_checks,
             misfire_grace_time=3600,
         ),
         JobSpec(

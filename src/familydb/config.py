@@ -229,6 +229,9 @@ class Settings(BaseSettings):
     follow_up_hour: int = Field(default=10, ge=0, le=23)
     # Bring up a task kept for "some Saturday morning" when one comes round free (jobs/nudges.py).
     task_nudges: bool = True
+    # The evening before a plan, check its weather and hours (jobs/plan_checks.py), at this hour.
+    plan_checks: bool = True
+    plan_check_hour: int = Field(default=19, ge=0, le=23)
     google_calendar_id: str | None = None
     google_token_path: Path = Path("data/google_token.json")
     enrichment_notes: bool = True
