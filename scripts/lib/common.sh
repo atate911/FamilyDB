@@ -328,20 +328,6 @@ on_system_path() { # every user has to find it, not just whoever is running this
 
 as_root() { if [ "$(id -u)" = 0 ]; then "$@"; else sudo "$@"; fi; }
 
-require_command() { # require_command NAME "how to get it"
-  have "$1" && return 0
-  die "${1} is not installed, and this cannot go on without it" "$2"
-}
-
-require_writable() { # require_writable PATH
-  local path="$1"
-  [ -e "$path" ] || path="$(dirname -- "$path")"
-  [ -w "$path" ] && return 0
-  die "cannot write to ${path}" \
-      "Run this as the user that owns it, or with sudo." \
-      "Who owns it: $(stat -c '%U:%G %a' "$path" 2>/dev/null || echo unknown)"
-}
-
 require_free_mb() { # require_free_mb PATH MB "what for"
   local path="$1" wanted="$2" what="$3" free
   [ -e "$path" ] || path="$(dirname -- "$path")"

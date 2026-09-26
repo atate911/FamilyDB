@@ -330,7 +330,7 @@ cmd_https() {
     note "It moved from port ${previous}: open it at the address above from now on. A bookmark to"
     note "the old address finds nothing."
   fi
-  say_how_to_open "$site"
+  say_how_to_open
 }
 
 # ---------------------------------------------------------------- backup ----

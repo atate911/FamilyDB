@@ -112,40 +112,7 @@ ask() { # ask VAR "question" "default"
   printf -v "$var" '%s' "${reply:-$default}"
 }
 
-ask_secret() { # ask_secret VAR "question"
-  local var="$1" question="$2" reply
-  if [ -n "${!var:-}" ]; then return 0; fi
-  if [ "$NON_INTERACTIVE" = 1 ] || [ ! -t 0 ]; then printf -v "$var" '%s' ""; return 0; fi
-  read -r -s -p "$question: " reply || reply=""
-  printf '\n'
-  printf -v "$var" '%s' "$reply"
-}
-
 # --------------------------------------------------------------- helpers ----
-ask_key() { # ask_key VAR provider "Label" "where to get one" "what it starts with"
-  local var="$1" owner="$2" label="$3" where="$4" prefix="$5"
-  if [ -z "${!var:-}" ]; then
-    # Explaining where to get a key is only worth doing to somebody who is about to be asked.
-    if [ "$NON_INTERACTIVE" = 0 ] && [ -t 0 ]; then
-      say ""
-      say "A key for ${label}. Create one at ${where}"
-      if [ "$PROVIDER" = "$owner" ]; then
-        note "This is the one you chose, so this is the key it will answer with."
-      else
-        note "Optional. With a key here, ${label} answers when the one you chose cannot."
-      fi
-      note "Leave it blank to fill in later; everything else will still be set up."
-    fi
-    ask_secret "$var" "${label} key"
-  fi
-  case "${!var:-}" in
-    "") ;;
-    ${prefix}*) ok "${label} key stored." ;;
-    *) warn "that does not look like a ${label} key (they start ${prefix}). Storing it anyway." ;;
-  esac
-  set_env "$var" "${!var:-}"
-}
-
 quote_env() { # quote_env VALUE -> how that value must be written so .env reads it back whole
   # A bare value loses everything from a '#' onwards and any trailing space, so a password with
   # either in it silently becomes a different password. Single quotes are literal to all three
@@ -758,7 +725,7 @@ say "Watch it:   ${LOGS}"
 say ""
 if [ "$HTTPS_READY" = 1 ]; then
   say "Then open ${B}$(public_url "$DOMAIN")${OFF} and sign in with the password above."
-  say_how_to_open "$DOMAIN"
+  say_how_to_open
 else
   say "Then open the page and sign in with the password above. Run this on your own computer,"
   say "not on this server; it works from anywhere you can reach the server over SSH:"
