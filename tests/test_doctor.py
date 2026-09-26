@@ -77,6 +77,17 @@ def test_a_page_that_would_not_serve_is_a_failure(settings, clock, conn, family)
     assert _verdict_of(report, "web page") == doctor.FAIL
 
 
+def test_a_page_whose_family_sign_in_as_themselves_needs_no_shared_password(
+    settings, clock, conn, family
+) -> None:
+    """The page serves without WEB_PASSWORD once an admin has their own, and doctor agrees."""
+    from familydb import family as family_rules
+
+    family_rules.claim(conn, family["sam"].id, "a long enough password", now="2026-09-20T21:03:00Z")
+    _app, report = _report(settings, clock, web_enabled=True, web_host="0.0.0.0", web_password=None)
+    assert _verdict_of(report, "web page") == doctor.OK
+
+
 def test_the_report_is_json_a_script_can_read(settings, clock, conn, family) -> None:
     _app, report = _report(settings, clock)
     as_dict = report.as_dict()

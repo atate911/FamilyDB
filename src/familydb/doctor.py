@@ -432,9 +432,10 @@ def check_integrations(app: App, report: Report) -> None:
         )
 
 
-def check_web(app: App, report: Report) -> None:
+def check_web(app: App, report: Report, conn: sqlite3.Connection | None = None) -> None:
     from familydb.errors import ConfigError
     from familydb.web import check_configuration
+    from familydb.web.auth import own_passwords
     from familydb.web.keys import secret_path
 
     settings = app.settings
@@ -446,8 +447,14 @@ def check_web(app: App, report: Report) -> None:
             "WEB_ENABLED=true, then restart",
         )
         return
+    # Asked as the page asks it before it serves: people with passwords of their own need no
+    # shared one. A database that cannot say is asked as if nobody had one, which asks for more.
     try:
-        check_configuration(settings)
+        personal = conn is not None and own_passwords(conn)
+    except sqlite3.Error:
+        personal = False
+    try:
+        check_configuration(settings, own_passwords=personal)
     except ConfigError as exc:
         report.add("web page", FAIL, str(exc), "Set WEB_PASSWORD, or bind to 127.0.0.1")
         return
@@ -579,7 +586,7 @@ def run(app: App, *, online: bool = False) -> Report:
         check_provider(app, report, online=online)
         check_channels(app, report, online=online)
         check_integrations(app, report)
-        check_web(app, report)
+        check_web(app, report, conn)
         check_service(report)
     finally:
         if conn is not None:
