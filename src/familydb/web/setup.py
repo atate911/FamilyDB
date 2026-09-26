@@ -48,7 +48,6 @@ NEED_WORDS = {
     "recommended": "recommended",
     "optional": "optional",
 }
-WEEKEND_QUESTION = "What should we do this weekend?"
 
 
 def _app() -> App:
@@ -98,7 +97,7 @@ def done() -> str:
         later=[step for step in steps if not step.done],
         bot=status_page.telegram_name(app),
         admin=admin,
-        question=WEEKEND_QUESTION,
+        question=views.WEEKEND_QUESTION,
         **_told(),
     )
 

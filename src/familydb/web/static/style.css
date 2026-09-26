@@ -179,7 +179,6 @@ h3 {
 .muted { color: var(--dim); }
 .small { font-size: 0.9rem; }
 .warn { color: var(--amber); }
-.nowrap { white-space: nowrap; }
 .sr {
   position: absolute;
   width: 1px;
@@ -2044,7 +2043,7 @@ table.month td.today time { color: var(--on-bright); background: var(--amber); b
   :root { --ink: #111; --ink-2: #222; --dim: #3b5a44; --accent: #0b5a2a; --cyan: #0b5a2a; --green: #0b5a2a; --line: #9fcca9; --line-2: #7fb58c; }
   html, body { background: #fff !important; color: #111; }
   .bar, .skip, .foot, .page-actions, .tabs, .month-nav, .ask, form, details:not([open]), .actions,
-  .index, .save-bar, .title-icon, .radar, .crt[aria-hidden="true"], .crt::after, .crt-tube::before,
+  .save-bar, .title-icon, .radar, .crt[aria-hidden="true"], .crt::after, .crt-tube::before,
   .crt-tube::after, .starters, .brief-more, .presence-glass { display: none !important; }
   main { max-width: none; padding: 0; }
   .panel, .welcome, .chip, .bubble, .crt, .crt-tube {

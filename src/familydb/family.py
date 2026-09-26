@@ -30,7 +30,6 @@ from __future__ import annotations
 
 import hashlib
 import sqlite3
-from typing import Literal
 
 from familydb import passwords, roles
 from familydb.store import logins, members, messages
@@ -39,7 +38,6 @@ from familydb.store.members import Member, Role
 
 TELEGRAM = "telegram"
 MAX_NAME = 80
-Outcome = Literal["added", "changed"]
 NOBODY = "There is nobody by that number any more."
 PASSWORD_SHORT = (
     "That one is {length} characters. It needs at least {least}: a short sentence is easy to "

@@ -74,10 +74,6 @@ class CallSpec:
     effort: str | None = None  # the setting naming the effort; None is the provider's default
     max_tokens: int | None = None  # the output cap, thinking included; None: max_output_tokens
 
-    @property
-    def is_worker(self) -> bool:
-        return self.web_searches is not None
-
 
 _CHAT = {
     "surface": "chat",

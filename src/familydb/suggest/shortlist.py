@@ -167,8 +167,6 @@ def _weather_fit(
             fits.append(day.date)
     if not fits:
         return [], "poor", "; ".join(bad) or "weather does not fit"
-    if not (needs_dry or needs_warm or needs_snow):
-        return fits, ("ok" if known else "unknown"), None
     return fits, ("ok" if known else "unknown"), None
 
 

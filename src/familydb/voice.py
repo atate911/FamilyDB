@@ -291,14 +291,6 @@ IN_TURN = timedelta(minutes=10)
 Line = str | Sequence[str]
 
 
-def lines(settings: Any) -> dict[str, list[str]]:
-    """Every event's wordings now, in the words of the persona in force.
-
-    No persona means plain throughout, as it does for the chat: the family's rewrites are kept
-    and come back when a persona is chosen again."""
-    return wording(personas.active(settings))
-
-
 def wording(persona: personas.Persona) -> dict[str, list[str]]:
     """Every event's wordings in this persona's words, and the plain one where she has none."""
     return {name: _wordings_of(persona, name) for name in EVENTS}

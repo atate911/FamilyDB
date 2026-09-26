@@ -27,7 +27,6 @@ EDITABLE_FIELDS = frozenset(
         "last_checked_at",
     }
 )
-JSON_FIELDS = ("hours", "source_urls")
 
 
 class Place(BaseModel):

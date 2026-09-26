@@ -77,10 +77,6 @@ def always(_settings: Settings) -> bool:
     return True
 
 
-def never(_settings: Settings) -> bool:
-    return False
-
-
 @dataclass(frozen=True)
 class ToolSpec:
     name: str

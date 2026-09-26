@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 _NORTHERN_SEASONS = {
@@ -40,9 +40,6 @@ class Clock:
 
     def today(self) -> date:
         return self.now().date()
-
-    def utcnow(self) -> datetime:
-        return self.now().astimezone(UTC)
 
     def season(self) -> str:
         return season_for(self.today(), southern=self.southern)
