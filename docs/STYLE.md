@@ -58,7 +58,9 @@ place by place, not found once.
 
 **Where it stands.** The language is settled. How hard it is pushed is close. Whether it is
 interesting and appealing enough, and has enough personality, is close but not settled, so it
-is still being tuned: in small steps, none of which may cost anything the page does.
+is still being tuned: in small steps, none of which may cost anything the page does. Settled
+says where the family have got to, not what may be tried (see above): what they like about it
+("Why the green jumps") is what a change to it weighs first.
 
 ## Principles
 
@@ -448,7 +450,8 @@ it, and say why here.
 - What the page does comes first (see "Two layers"). Where somebody is reading, writing,
   deciding or changing something, the look steps back; where it is in nobody's way, it comes
   forward and is fun. A change to the look says which kind of place it is in, and why.
-- The black stays near-black, the green bright and the glow scarce (see "Why the green jumps").
+- The black is near-black, the green bright and the glow scarce, since together they make the
+  green jump (see "Why the green jumps").
 - One green screen to a page, where it shows something true, since two start to turn the light
   back into a costume. VT323 and blur stay on the
   screens, and scanlines on the screens and in the home page's glow; everywhere else the page is
