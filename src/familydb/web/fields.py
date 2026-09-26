@@ -29,9 +29,11 @@ TOO_LONG = "That is longer than a setting should be."
 MAX_LENGTH = 400
 # The three companies by the names the page gives them everywhere, setup included.
 COMPANIES = {"openai": "OpenAI", "anthropic": "Anthropic", "gemini": "Google"}
-# The zones worth offering: places, not the legacy aliases and offsets.
+# The zones worth offering: places, not the legacy aliases and offsets, and UTC itself, which
+# many a server keeps.
 ZONE_PREFIXES = ("Africa/", "America/", "Antarctica/", "Asia/", "Atlantic/", "Australia/")
 ZONE_PREFIXES += ("Europe/", "Indian/", "Pacific/")
+ZONE_ALSO = frozenset({"UTC"})
 
 
 @dataclass(frozen=True)
@@ -197,8 +199,12 @@ def _keyboard(key: str, kind: str) -> str:
 
 
 def zones() -> list[str]:
-    """Every time zone worth offering, by the place it is named for."""
-    return sorted(zone for zone in available_timezones() if zone.startswith(ZONE_PREFIXES))
+    """Every time zone worth offering, by the place it is named for, and UTC."""
+    return sorted(
+        zone
+        for zone in available_timezones()
+        if zone.startswith(ZONE_PREFIXES) or zone in ZONE_ALSO
+    )
 
 
 YES_NO = (("true", "yes"), ("false", "no"))
@@ -281,7 +287,9 @@ GROUPS: tuple[Group, ...] = (
                 "family_tz",
                 "Time zone",
                 "It decides what “tonight” and “this weekend” mean, and when the messages that "
-                "go out on their own are sent.",
+                "go out on their own are sent. Choose the nearest city in the same zone.",
+                # Drawn under the region each is named for, with its offset now (views.py).
+                choices=tuple(zones()),
             ),
             field(
                 "weather_units",

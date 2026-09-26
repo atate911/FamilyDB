@@ -11,7 +11,7 @@ import difflib
 import json
 import math
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from itertools import islice, pairwise
 from typing import Any
 from urllib.parse import quote
@@ -912,6 +912,57 @@ def change_row(line: dict[str, Any], tz: ZoneInfo) -> dict[str, Any]:
         "who": line.get("changed_by_name"),
         "source": line["source"],
     }
+
+
+# The regions time zones are named for, as the time zone dropdown heads them, in its order. A zone
+# named for no region (UTC) goes last, on its own.
+ZONE_REGIONS = {
+    "Africa": "Africa",
+    "America": "Americas",
+    "Antarctica": "Antarctica",
+    "Asia": "Asia",
+    "Atlantic": "Atlantic",
+    "Australia": "Australia",
+    "Europe": "Europe",
+    "Indian": "Indian Ocean",
+    "Pacific": "Pacific",
+}
+ZONE_OTHERS = "Other"
+
+
+def utc_offset(zone: str, now: datetime) -> str:
+    """How far a zone is from UTC at this moment, daylight saving and all: "UTC-07:00"."""
+    offset = now.astimezone(ZoneInfo(zone)).utcoffset() or timedelta(0)
+    total = round(offset.total_seconds() / 60)
+    hours, minutes = divmod(abs(total), 60)
+    return f"UTC{'-' if total < 0 else '+'}{hours:02d}:{minutes:02d}"
+
+
+def zone_label(zone: str, now: datetime) -> str:
+    """A time zone as the dropdown offers it: the place it is named for first, so typing a city
+    finds it, then its offset now. "Vancouver · UTC-07:00", "Buenos Aires, Argentina ·
+    UTC-03:00", and "UTC" as itself."""
+    rest = zone.partition("/")[2]
+    if not rest:
+        return zone
+    place = ", ".join(reversed(rest.replace("_", " ").split("/")))
+    return f"{place} · {utc_offset(zone, now)}"
+
+
+def zone_groups(zones: list[str], now: datetime) -> list[tuple[str, list[tuple[str, str]]]]:
+    """Time zones for a dropdown: under the region each is named for, the places in alphabetical
+    order, each as (zone, how it reads)."""
+    grouped: dict[str, list[tuple[str, str]]] = {}
+    for zone in zones:
+        region, _, rest = zone.partition("/")
+        heading = ZONE_REGIONS.get(region, ZONE_OTHERS) if rest else ZONE_OTHERS
+        grouped.setdefault(heading, []).append((zone, zone_label(zone, now)))
+    order = [*ZONE_REGIONS.values(), ZONE_OTHERS]
+    return [
+        (heading, sorted(grouped[heading], key=lambda row: row[1].casefold()))
+        for heading in order
+        if heading in grouped
+    ]
 
 
 def knock_row(knock: Any, tz: Any) -> dict[str, Any]:

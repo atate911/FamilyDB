@@ -269,9 +269,13 @@ the same screen is simply the bot's.
 - **A setting** (`box` in `_settings.html`): its label, a small green CHANGED beside it when it
   was set on the page, the box, and a line of help under it that a screen reader hears with the
   box. Empty, a box shows the default it falls back to; a dropdown's first choice says it in
-  words, "Default (Thursday)", never "thu" or "true". Settings that belong together sit in a
-  panel under a heading, and the fine-tuning is a panel folded away (a native `<details>`), which
-  opens by itself when one of its boxes is wrong and says, folded, how many were changed.
+  words, "Default (Thursday)", never "thu" or "true". A long list is headed in groups: the time
+  zones sit under the region each is named for, each read as its place first (so typing a city
+  finds it) and its offset that day, "Buenos Aires, Argentina · UTC-03:00". A value stored that
+  a dropdown does not offer is offered too, chosen, so a save never loses it. Settings that
+  belong together sit in a panel under a heading, and the fine-tuning is a panel folded away (a
+  native `<details>`), which opens by itself when one of its boxes is wrong and says, folded, how
+  many were changed.
 - **Section card** (on `/settings`): a quiet tile with the part's icon, what the part is called,
   how it stands in a line or two, and an arrow; a part that needs a look says so in amber, in
   words. The tiles do not glow, since nine lit tiles would light nothing.

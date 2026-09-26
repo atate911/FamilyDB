@@ -302,15 +302,21 @@ def _box(
     typed: dict[str, str],
     offers: dict[str, list[tuple[str, str]]],
     live: Settings,
+    grouped: dict[str, list[tuple[str, list[tuple[str, str]]]]] | None = None,
 ) -> dict[str, Any]:
+    # A dropdown drawn in groups (the time zones) says its default in the words it offers it in.
+    headed = (grouped or {}).get(one.key)
+    reads = {value: words for _, rows in headed or () for value, words in rows}
+    fallback = fields.fallback(one, base)
     return {
         "field": one,
         "value": typed.get(one.key, fields.shown(one, overrides.get(one.key))),
-        "placeholder": fields.placeholder(one, fields.fallback(one, base)),
+        "placeholder": reads.get(fallback) or fields.placeholder(one, fallback),
         "problem": problems.get(one.key),
         "stored": one.key in overrides,
         "offers": offers.get(one.key) or suggested(one),
         "labels": level_labels(one.key, live),
+        "grouped": headed,
     }
 
 
@@ -373,11 +379,14 @@ def page(
         overrides = settings_store.overrides(conn)
         extra = PAGES[section](app, conn)
     offers = extra.pop("offers", {})
+    grouped = extra.pop("grouped", {})
     groups = {
         group.name: _group(
             group,
             [
-                _box(one, overrides, app.base_settings, problems, typed or {}, offers, live)
+                _box(
+                    one, overrides, app.base_settings, problems, typed or {}, offers, live, grouped
+                )
                 for one in group.fields
             ],
         )
@@ -402,7 +411,7 @@ def page(
 
 
 def _general(app: App, conn: Any) -> dict[str, Any]:
-    return {"offers": {"family_tz": [(zone, "") for zone in fields.zones()]}}
+    return {"grouped": {"family_tz": views.zone_groups(fields.zones(), app.clock.now())}}
 
 
 def _model(app: App, conn: Any) -> dict[str, Any]:
