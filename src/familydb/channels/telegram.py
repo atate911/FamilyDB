@@ -33,6 +33,12 @@ log = logging.getLogger(__name__)
 
 CHANNEL = "telegram"
 GROUP_TYPES = {ChatType.GROUP, ChatType.SUPERGROUP}
+# What the bot asks Telegram for. A live location moving along arrives as edits to the message
+# that shared it, and Telegram sends a bot only the kinds of update it asks for.
+UPDATES = [Update.MESSAGE, Update.EDITED_MESSAGE]
+# Everything but a location answers new messages only, so an edited question is not answered
+# a second time.
+NEW = filters.UpdateType.MESSAGE
 
 
 def incoming_from_update(update: Any) -> IncomingMessage | None:
@@ -62,7 +68,12 @@ class SharedLocation:
 
 
 def location_from_update(update: Any) -> SharedLocation | None:
-    """A location someone shared, or None. A live location carries how long it is shared for."""
+    """A location someone shared, or None.
+
+    A live location carries how long it is shared for while it is active. An edit is live
+    however it reads: a location sent once cannot be edited, and the last edit, when sharing
+    stops, no longer carries that period.
+    """
     message = update.effective_message
     user = update.effective_user
     chat = update.effective_chat
@@ -74,7 +85,8 @@ def location_from_update(update: Any) -> SharedLocation | None:
         channel_user_id=str(user.id),
         lat=float(where.latitude),
         lon=float(where.longitude),
-        live=getattr(where, "live_period", None) is not None,
+        live=getattr(where, "live_period", None) is not None
+        or getattr(update, "edited_message", None) is not None,
     )
 
 
@@ -164,9 +176,9 @@ class TelegramChannel:
         self.application: Application = (
             ApplicationBuilder().token(token).post_init(self._post_init).build()
         )
-        self.application.add_handler(CommandHandler("start", self.on_start))
+        self.application.add_handler(CommandHandler("start", self.on_start, filters=NEW))
         self.application.add_handler(
-            MessageHandler(filters.TEXT & ~filters.COMMAND, self.on_message)
+            MessageHandler(filters.TEXT & ~filters.COMMAND & NEW, self.on_message)
         )
         # A shared location, and a live one as it moves (those arrive as edits).
         self.application.add_handler(MessageHandler(filters.LOCATION, self.on_location))
@@ -261,9 +273,7 @@ class TelegramChannel:
         await self._post_init(self.application)
         await self.application.start()
         assert self.application.updater is not None
-        await self.application.updater.start_polling(
-            allowed_updates=[Update.MESSAGE], bootstrap_retries=-1
-        )
+        await self.application.updater.start_polling(allowed_updates=UPDATES, bootstrap_retries=-1)
 
     async def stop(self) -> None:
         if self.app.senders.get(CHANNEL) == self.send_text_threadsafe:
@@ -280,7 +290,7 @@ class TelegramChannel:
         # bootstrap_retries=-1: a server that boots before its network is up, or a Telegram
         # blip at the wrong moment, must not end the process. Once polling is up the updater
         # already retries forever, so this covers the one gap that took the bot down.
-        self.application.run_polling(allowed_updates=[Update.MESSAGE], bootstrap_retries=-1)
+        self.application.run_polling(allowed_updates=UPDATES, bootstrap_retries=-1)
 
 
 class TelegramSupervisor:
