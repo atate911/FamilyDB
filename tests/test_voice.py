@@ -1,8 +1,12 @@
 """The voice layer: what she says unasked, and a conversation under way carrying it for her."""
 
 import json
+import os
+import subprocess
+import sys
 from dataclasses import replace
 from datetime import timedelta
+from types import SimpleNamespace
 
 import pytest
 
@@ -11,7 +15,8 @@ from familydb.app import App
 from familydb.channels.base import IncomingMessage
 from familydb.jobs.reminders import run_reminders
 from familydb.pipeline import handle_incoming
-from familydb.store import messages, tasks
+from familydb.store import db, messages, tasks
+from familydb.store import settings as settings_store
 from tests import fakes
 
 # -- the lines -----------------------------------------------------------------------------------
@@ -73,6 +78,166 @@ def test_what_is_wrong_with_a_written_line_is_named() -> None:
     assert "{title}" in found["reminder"]  # and it says what it could use
     assert "not closed" in found["follow_up"]
     assert "no 'nonsense' message" in found["nonsense"]
+
+
+# -- several wordings for a line -----------------------------------------------------------------
+
+# Three wordings of a follow-up, a blank one and stray spaces among them.
+THREE = ["One: {plan}.", "", "  Two: {plan}.", "Three: {plan}. "]
+SAID = {"One: Hopscotch.", "Two: Hopscotch.", "Three: Hopscotch."}
+
+
+def _asked(settings, seed=None, **facts) -> str:
+    return voice.say(settings, "follow_up", seed=seed, **{"plan": "Hopscotch", **facts})
+
+
+def test_a_line_of_several_wordings_takes_turns_the_same_way_every_time(settings) -> None:
+    own = settings.model_copy(update={"voice_lines": {"follow_up": THREE}})
+    by_seed = {seed: _asked(own, seed, day="Saturday") for seed in range(20)}
+    assert set(by_seed.values()) <= SAID and len(set(by_seed.values())) > 1
+    # The same seed and facts say the same words, so a resend or a retry reads as it did.
+    assert all(_asked(own, seed, day="Saturday") == said for seed, said in by_seed.items())
+    # With no seed the facts choose, in whatever order they are given.
+    unseeded = _asked(own, day="Saturday")
+    assert unseeded in SAID
+    assert voice.say(own, "follow_up", day="Saturday", plan="Hopscotch") == unseeded
+
+
+def test_the_choice_is_the_same_in_every_process(settings) -> None:
+    """Python salts hash() afresh in every process, so a choice made with it would change with
+    each restart."""
+    script = (
+        "import json\n"
+        "from familydb import voice\n"
+        "from familydb.config import Settings\n"
+        f"lines = {{'follow_up': {THREE!r}}}\n"
+        "own = Settings(_env_file=None, persona='default', voice_lines=lines)\n"
+        "said = [voice.say(own, 'follow_up', seed=n, plan='Hopscotch') for n in range(20)]\n"
+        "print(json.dumps(said))\n"
+    )
+    there = subprocess.run(
+        [sys.executable, "-c", script],
+        env={**os.environ, "PYTHONHASHSEED": "random"},
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    own = settings.model_copy(update={"voice_lines": {"follow_up": THREE}})
+    assert json.loads(there.stdout) == [_asked(own, seed) for seed in range(20)]
+
+
+def test_a_wording_that_cannot_be_used_is_said_plainly(settings) -> None:
+    """The wordings that can be used still are; the one that cannot is the plain line."""
+    own = settings.model_copy(update={"voice_lines": {"follow_up": ["One: {plan}.", "{venue}?"]}})
+    said = {_asked(own, seed, day="Saturday") for seed in range(20)}
+    assert said == {"One: Hopscotch.", "How was Hopscotch on Saturday? Worth doing again?"}
+
+
+def test_a_line_kept_as_a_string_is_one_wording_breaks_and_all(settings) -> None:
+    """Every line was one string before a line could have several wordings, and the page kept
+    the breaks typed in it: such a line still says all of itself, every time."""
+    from familydb.task_service import reminder_text
+
+    line = "Reminder: {title}{who}.\r\nTask #{task}; say done when it's done."
+    own = settings.model_copy(update={"voice_lines": {"reminder": line}})
+    for number in range(1, 9):
+        task = SimpleNamespace(id=number, title="bins out", owner=None, reminder=None)
+        said = reminder_text(task, own)
+        assert said == f"Reminder: bins out.\r\nTask #{number}; say done when it's done.", said
+    assert voice.wordings(line) == [line]
+    assert voice.reads_as(own, "reminder") == [
+        "Reminder: bins out (Sam).\r\nTask #12; say done when it's done."
+    ]
+
+
+def test_each_time_a_reminder_is_due_it_may_read_another_way(settings) -> None:
+    """A reminder is worded by the reminder in force: snoozed, it may take another of her
+    wordings; worded again for the same time (a changed title), it takes the same one."""
+    from familydb.task_service import reminder_text
+
+    own = settings.model_copy(
+        update={"voice_lines": {"reminder": ["Bins, #{task}.", "#{task}: bins.", "Now: #{task}."]}}
+    )
+
+    def due(reminder: int, title: str = "bins out") -> SimpleNamespace:
+        return SimpleNamespace(id=7, title=title, owner=None, reminder=SimpleNamespace(id=reminder))
+
+    said = {reminder_text(due(n), own) for n in range(1, 21)}
+    assert len(said) > 1  # one task, due twenty times: more than one wording
+    first = reminder_text(due(3), own)
+    assert reminder_text(due(3, "bins and recycling"), own) == first  # same wording, new title
+
+
+def test_what_is_wrong_with_one_of_several_wordings_is_named() -> None:
+    found = voice.problems(
+        {
+            "follow_up": ["How was {plan}?", "", "How was {venue}?"],
+            "reminder": ["{title}, #{task}.", "{title"],
+            "done": ["Done.", "All done."],
+        }
+    )
+    assert found["follow_up"].startswith("in wording 2, {venue} is not something it knows")
+    assert found["follow_up"].endswith("it can use {name}, {plan}, {day}")
+    assert found["reminder"].startswith("in wording 2, a { or } is not closed")
+    assert "done" not in found
+
+
+def test_every_event_s_example_fills_every_field_it_declares() -> None:
+    """The examples are what the Personality page fills a line in with to show how it reads."""
+    for name, event in voice.EVENTS.items():
+        assert set(event.example) == set(event.fields), name
+        filled = voice.EVENTS[name].plain.format(name="Vera", **event.example)
+        assert "{" not in filled and "}" not in filled, name
+
+
+def test_the_brief_persona_takes_turns_and_vera_says_each_thing_one_way(settings) -> None:
+    """Vera's lines stay as first written, one wording each. The brief persona's second wording
+    of a line is no longer than her first: she is the short one."""
+    brief = personas.load("brief")
+    for event in ("follow_up", "lookup_done"):
+        first, second = voice.wordings(brief.lines[event])
+        assert len(second) <= len(first), event
+    vera = personas.load(personas.DEFAULT)
+    assert all(len(voice.wordings(line)) == 1 for line in vera.lines.values())
+    as_brief = settings.model_copy(update={"persona": "brief"})
+    assert voice.reads_as(as_brief, "follow_up") == [
+        "How was #31 Hopscotch on Saturday? Worth doing again?",
+        "How did #31 Hopscotch go on Saturday? Do it again?",
+    ]
+
+
+def test_how_a_line_reads_is_every_wording_in_force_filled_in(settings) -> None:
+    own = settings.model_copy(
+        update={"voice_lines": {"reminder": ["{name}: {title}{who}.", "#{task}"]}}
+    )
+    assert voice.reads_as(own, "reminder") == ["Vera: bins out (Sam).", "#12"]
+    assert voice.reads_as(settings, "reminder") == [
+        "Reminder: bins out (Sam). Task #12; tell me when it's done, or I can snooze it."
+    ]
+    # With no persona the line in force is the plain one, whatever the family wrote.
+    plain = own.model_copy(update={"persona": "none"})
+    assert voice.reads_as(plain, "reminder") == [
+        "Reminder: bins out (Sam)  -  task #12. Tell me when it's done or ask to snooze it."
+    ]
+
+
+def test_a_notice_is_worded_by_the_message_it_answers(settings, clock, conn, family) -> None:
+    """A notice has no facts of its own, so without the message's id to choose by it would read
+    the same every time."""
+    lines = {"retry_later": ["Not now.", "Later, then.", "Give me a minute."]}
+    app = App(settings.model_copy(update={"voice_lines": lines}), clock)
+    said = set()
+    for update in range(8):
+        reply = handle_incoming(
+            app,
+            IncomingMessage("telegram", f"u{update}", "chat-1", "1001", "we should go hiking"),
+            api=fakes.FakeMessagesAPI(fakes.rate_limit_error()),
+            conn=conn,
+        )
+        assert reply.text == voice.say(app.settings, "retry_later", seed=reply.in_message_id)
+        assert messages.get(conn, reply.out_message_id).text == reply.text
+        said.add(reply.text)
+    assert len(said) > 1
 
 
 # -- a conversation under way carries what comes due ---------------------------------------------
@@ -164,3 +329,41 @@ def test_a_quiet_chat_gets_it_straight_away(settings, clock, conn, family) -> No
     add_task(ctx, AddTaskInput(title="Water the plants", remind_at="2026-09-20T14:05"))
     clock.advance(timedelta(minutes=2))
     assert run_reminders(app) == 1 and sent[0].startswith("Reminder: Water the plants")
+
+
+def test_a_held_message_carries_the_wording_chosen_for_it(settings, clock, conn, family) -> None:
+    """A reminder is worded once, when it is stored, and whatever carries it carries those
+    words: a reply that forgets it takes them as they were chosen, not a new choice."""
+    from familydb.task_service import reminder_text
+
+    lines = {"reminder": ["Psst: {title}.", "Don't forget: {title}.", "{title}, as promised."]}
+    app = App(settings.model_copy(update={"voice_lines": lines}), clock)
+    app.senders["telegram"] = lambda chat, text: None
+    handle_incoming(
+        app,
+        IncomingMessage("telegram", "u1", "chat-1", "1001", "remind me at 14:05 to call grandma"),
+        api=fakes.FakeMessagesAPI(
+            fakes.message(
+                [
+                    fakes.tool_use(
+                        "t1", "add_task", {"title": "Call grandma", "remind_at": "2026-09-20T14:05"}
+                    )
+                ]
+            ),
+            fakes.message([fakes.text("Set for 14:05.")]),
+        ),
+        conn=conn,
+    )
+    clock.advance(timedelta(minutes=2))
+    assert run_reminders(app) == 1
+    task = tasks.list_all(conn)[0]
+    held = messages.get(conn, task.reminder.message_id).text
+    assert app.held.is_held(task.reminder.message_id, clock.now())
+    assert held == reminder_text(task, app.settings) and "Call grandma" in held
+    # Her lines change before the reply: a new choice would now read otherwise.
+    with db.transaction(conn):
+        settings_store.set_many(conn, {"voice_lines": {"reminder": "Other: {title}."}})
+    app.refresh(conn)
+    assert reminder_text(task, app.settings) != held
+    out, _ = _next(app, conn, "Pasta tonight.")
+    assert out.text == "Pasta tonight.\n\n" + held

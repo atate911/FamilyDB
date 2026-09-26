@@ -14,7 +14,6 @@ from __future__ import annotations
 
 from contextlib import closing
 from typing import Any
-from zoneinfo import available_timezones
 
 from flask import (
     Blueprint,
@@ -31,10 +30,10 @@ from familydb.agent import providers
 from familydb.app import App
 from familydb.store import knocks as knock_store
 from familydb.store import members as member_store
-from familydb.web import auth, views
+from familydb.web import auth, fields, views
 from familydb.web import status as status_page
 from familydb.web.family import own_form
-from familydb.web.settings import COMPANIES, google_panel
+from familydb.web.settings import company_choice, google_panel
 
 bp = Blueprint("setup", __name__)
 
@@ -49,17 +48,6 @@ NEED_WORDS = {
     "recommended": "recommended",
     "optional": "optional",
 }
-# Who each company is, in a line, for choosing between them. The default model's price decides
-# the order of the words, not a preference: prices.py is where the numbers are.
-COMPANY_LINES = {
-    "openai": "The least expensive by far for what FamilyDB does, so it is the one it starts with.",
-    "anthropic": "Claude. Several times dearer a message with the model it starts on.",
-    "gemini": "Gemini, from Google. In between on price.",
-}
-KEY_STARTS = {"openai": "sk-", "anthropic": "sk-ant-", "gemini": "AIza"}
-# The zones worth offering: places, not the legacy aliases and offsets.
-ZONE_PREFIXES = ("Africa/", "America/", "Antarctica/", "Asia/", "Atlantic/", "Australia/")
-ZONE_PREFIXES += ("Europe/", "Indian/", "Pacific/")
 WEEKEND_QUESTION = "What should we do this weekend?"
 
 
@@ -159,25 +147,15 @@ def _you(app: App, conn: Any) -> dict[str, Any]:
 
 def _model(app: App, conn: Any) -> dict[str, Any]:
     live = app.settings
-    asked = request.args.get("company", "")
-    company = asked if asked in providers.NAMES else live.provider
+    choice = company_choice(live, request.args.get("company", ""))
     return {
-        "company": company,
-        "label": COMPANIES[company],
-        "prefix": KEY_STARTS[company],
-        "has_key": bool(getattr(live, f"{company}_api_key")),
-        "answering": live.provider,
-        "model": providers.build(company, live).model_for("chat"),
-        "limit": live.daily_spend_limit,
-        "companies": [
-            {
-                "name": name,
-                "label": COMPANIES[name],
-                "line": COMPANY_LINES[name],
-                "has_key": bool(getattr(live, f"{name}_api_key")),
-            }
-            for name in ("openai", "anthropic", "gemini")
+        **choice,
+        # The company's lineup, cheapest first, and what each level of it costs.
+        "lineup": [
+            {"label": model.label, "level": model.level, "price": views.price_text(model.price)}
+            for model in providers.catalog.lineup(choice["company"])
         ],
+        "limit": live.daily_spend_limit,
     }
 
 
@@ -191,7 +169,7 @@ def _home(app: App, conn: Any) -> dict[str, Any]:
             "tz": live.tzinfo.key,
             "units": live.weather_units,
         },
-        "zones": sorted(zone for zone in available_timezones() if zone.startswith(ZONE_PREFIXES)),
+        "zones": fields.zones(),
     }
 
 

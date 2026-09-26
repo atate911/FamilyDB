@@ -49,6 +49,8 @@ EDITABLE_FIELDS = frozenset(
         "cost_level",
         "needs_booking",
         "lead_time_days",
+        "happens_from",
+        "happens_until",
         "status",
         "place_id",
         "enrichment",
@@ -81,6 +83,9 @@ class Idea(BaseModel):
     cost_level: int | None = None
     needs_booking: bool = False
     lead_time_days: int | None = None
+    # When it is on, for an idea tied to dates (see migration 0019); both None for the rest.
+    happens_from: str | None = None
+    happens_until: str | None = None
     status: Status = "idea"
     place_id: int | None = None
     enrichment: Enrichment = "pending"
@@ -101,6 +106,21 @@ class Idea(BaseModel):
         for key in JSON_FIELDS:
             data[key] = from_json(data.get(key), [])
         return cls(**data)
+
+    @property
+    def first_day(self) -> date | None:
+        """The first day a dated idea is on; None when it has no start."""
+        return date.fromisoformat(self.happens_from[:10]) if self.happens_from else None
+
+    @property
+    def last_day(self) -> date | None:
+        """The last day a dated idea is on; None when it has no end."""
+        return date.fromisoformat(self.happens_until) if self.happens_until else None
+
+    def on(self, day: date) -> bool:
+        """Whether it is on that day. An idea tied to no date always is."""
+        first, last = self.first_day, self.last_day
+        return (first is None or first <= day) and (last is None or day <= last)
 
 
 def normalize_title(title: str) -> str:

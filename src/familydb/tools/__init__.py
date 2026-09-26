@@ -9,6 +9,7 @@ def build_registry() -> ToolRegistry:
     from familydb.tools import (  # noqa: F401
         gcal,
         ideas,
+        memory,
         now,
         outcomes,
         places,

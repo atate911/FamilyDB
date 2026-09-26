@@ -71,7 +71,8 @@ Context is built in three layers, and every piece of information belongs to exac
 - A hand-back ends the work. When a worker has made its one hand-back call, the turn is over;
   no further paid call is needed for the model to say it has finished.
 - Durable facts the family states ride along on the call that is already happening (the memory
-  deltas of `docs/MEMORY.md`), not on a second call.
+  deltas of `docs/MEMORY.md`), not on a second call. Built: one `remember` tool, and when
+  remembering is all a message needs, the reply comes in that same call and ends the turn.
 - What the model claims that code can check, code checks: an idea id exists, a date is inside the
   window, a place is the one asked about. A failed check is reported, not silently corrected.
 - Every call is recorded: which kind, which model, tokens, estimated cost, outcome. A reply is
@@ -91,22 +92,32 @@ Context is built in three layers, and every piece of information belongs to exac
 
 | Kind | Trigger | Model | Sees | May do | Returns |
 |---|---|---|---|---|---|
-| Chat | a family message (Telegram, page, console) | chat model | persona, prompt, family, up to 150 ideas in the prefix; date, sender, a recently shared location, anything due to be carried, up to 20 messages of the last 6 hours, the newest within 6,000 characters | 18 chat tools | a reply; tool writes |
-| Digest | the weekly schedule, or catch-up after a restart | chat model | the chat context, with a fixed question | the chat tools | a reply to the digest chat |
-| Retry | every 5 minutes, for a failed message, 3 times at most; never after running out of steps | chat model | the chat context, plus which writes already ran | the chat tools | a reply |
-| Enrich | every 2 minutes, up to 3 pending ideas; a home idea with no place or link is skipped in code | worker model | worker prompt, home area, the idea and what was saved before | web search (3), `save_place`, `skip_place` | a place record |
-| Discover | a `suggest` call, cached 12 hours by window, constraints and topic | worker model | worker prompt, home area and where they are, the window, its hours, the constraints and topic, never the question's wording | web search (4), `report_finds` | up to 6 finds |
+| Chat | a family message (Telegram, page, console) | chat model, at the chat level | persona, prompt, family, up to 150 ideas in the prefix; date, who reads a shared chat, sender, a recently shared location, anything due to be carried, up to 20 messages of the last 6 hours, the newest within 6,000 characters | 19 chat tools | a reply; tool writes |
+| Digest | the weekly schedule, or catch-up after a restart; after a failure, the retry job, still as the digest | chat model, at the digest level | the chat context, with a fixed question | the chat tools | a reply to the digest chat |
+| Retry | every 5 minutes, for a failed message other than the digest, 3 times at most; never after running out of steps | chat model, at the chat level | the chat context, plus which writes already ran | the chat tools | a reply |
+| Enrich | every 2 minutes, up to 3 pending ideas; a home idea with no place or link is skipped in code | worker model, at the lookup level | worker prompt, home area, the idea and what was saved before | web search (3), `save_place`, `skip_place` | a place record |
+| Discover | a `suggest` call, cached 12 hours by window, constraints and topic | worker model, at the lookup level | worker prompt, home area and where they are, the window, its hours, the constraints and topic, never the question's wording | web search (4), `report_finds` | up to 6 finds |
+| Transcribe | a voice note from somebody on the family list, before its chat turn | the hearing model: OpenAI's speech-to-text model or a Gemini model; never Claude, which takes no recordings | the recording, and one line naming the family, her and home so they are spelled right | nothing | its words, which become the message |
 
 All of them go through one door, `agent/gateway.ask`, which runs the loop
 (`agent/loop.run_turn`): the spending limit is checked before each call, and each call is
-recorded in `llm_calls` with its kind. `model_exists` and token counting call a provider but
-generate nothing.
+recorded in `llm_calls` with its kind. Hearing a voice note is not a turn (a recording in, its
+words out, no prompt file and no tools), so it has a door of its own beside it, `gateway.listen`,
+held to the same two rules: the limit first, and a record under the kind `transcribe`
+("listening to voice notes" on `/status`). Its five answers: asked only for a voice note from
+the family that is switched on, short enough and has somebody with a key to hear it; sees the
+recording and the names; may do nothing; its words are trusted as what was said, marked as
+spoken so the chat model allows for mishearing; and it costs one bounded request, which is not
+retried because the recording is not kept. `model_exists` and token counting call a provider
+but generate nothing.
 
 ## Who is speaking
 
-Chat, the digest and retries speak as a persona, Vera by default. The persona layer (`familydb/personas/`) holds her name, her character and her lines, and `personas.active` gives the one in force, with the family's rewrites laid over her own. Her name is written once, in `default/persona.toml`; her character and lines say `{name}`, filled in by code before anything is sent, so the prefix the model sees names her and stays the same from one message to the next. Her character, how she talks (`default/character.md`), goes first in the cached prefix, ahead of the product spec, which decides what she does and wins where the two meet. It is how every reply sounds, so it is measured like any other part of the prefix ("who the assistant is" in `/status`, about 2,800 tokens) and checked with `evals/` when it changes. The lookup and discovery workers write for no reader and never carry it.
+Chat, the digest and retries speak as a persona, Vera by default. The persona layer (`familydb/personas/`) holds her name, her character and her lines, one folder each: `default/` is Vera as first written, and `brief/` a shorter Vera fitted to a family's chat. `personas.active` gives the one in force, with what the family wrote on the Personality page laid over her: the name they call her (`persona_name`), their rewrite of that persona's character, kept per persona (`persona_text`), their notes on how she talks (`persona_notes`) and their lines. Her name is written once, in `persona.toml`, unless the family give her one; her character and lines say `{name}`, filled in by code before anything is sent, so the prefix the model sees names her and stays the same from one message to the next. Her character, how she talks, goes first in the cached prefix, with their notes after it, ahead of the product spec, which decides what she does. The product says the job wins, not her character: the job's header begins "Where who you are and the job disagree, the job wins.", so a rewrite of her cannot leave it out. It is how every reply sounds, so it is measured like any other part of the prefix ("who the assistant is" in `/status`: about 2,800 tokens for Vera as first written, about 740 in brief) and checked with `python -m evals --persona` when it changes. The lookup and discovery workers write for no reader and never carry it. `docs/PERSONAS.md` is the design.
 
-What she says without being asked (reminders, "how was it?", lookup notes, the notices when she cannot answer) is not a model call at all: `voice.py` words each event from her lines (`personas/default/lines.toml`) or the family's rewrite of them, so it costs nothing and arrives when the model is down or the day's limit is spent. The one place a model does word such an event is where it was already going to be asked: a reminder or follow-up that comes due while the family is talking is held for a moment and handed to the next chat turn, whose reply mentions it; a reply that forgets is given the written line.
+Who reads the reply is not hers to guess. In a shared chat, a Telegram group or the page's conversation, one line in the turn, between the date and the message, says that everyone there reads it, and whether kids are among them (`render_audience_line`); a private chat gets none. It goes in the turn, never the prefix, because it depends on the chat. The spec says what follows from it whoever she is: keep everything suitable for kids where they can read or a kid is writing, and ask before a sensitive reminder goes in a shared chat.
+
+What she says without being asked (reminders, "how was it?", lookup notes, the notices when she cannot answer) is not a model call at all: `voice.py` words each event from her lines (`personas/<key>/lines.toml`) or the family's rewrite of them, so it costs nothing and arrives when the model is down or the day's limit is spent. A line may have several wordings, and code chooses one by a CRC-32 of the event and the message's own id, or of the facts when there is none, so the same message says the same words after a retry or a restart. The one place a model does word such an event is where it was already going to be asked: a reminder or follow-up that comes due while the family is talking is held for a moment and handed to the next chat turn, whose reply mentions it; a reply that forgets is given the written line.
 
 ## The gateway: one door, a declaration per kind of call
 
@@ -118,6 +129,7 @@ does not change from one call of that kind to the next is declared once, in `gat
 kind            chat | digest | retry | enrich | discover
 purpose         what it is for, in words, as the cost reports say it
 surface         which model setting answers: the chat model or the lookup model
+level           the setting naming how strong a model answers: everyday, better or best
 prompt          which prompt file ("system" also brings the family and the idea list)
 tools           the fixed tool list (None: every chat tool)
 hand_back       the tools whose success is a worker's result, and ends its turn
@@ -139,7 +151,7 @@ What it gives now:
 
 Still to come in the declaration, each as its own measured change: the gate each kind needs
 before it runs (callers check a key themselves today, and the loop the spending limit), per-kind
-retry rules, and a model that a kind may escalate to.
+retry rules, and escalating a call to a stronger level on evidence that the first one failed.
 
 ## The composer: what goes in, part by part
 
@@ -168,9 +180,10 @@ and it works by choosing what goes in, not by squeezing words:
 - **The prefix stays still** (to come as a check). The parts before the conversation are cached
   by the provider, which is the biggest saving there is. The composer must never tailor them to a
   message; selected parts belong after them.
-- **Reading the answer** (to come). The one place that validates what comes back, checks the
-  model's claims that code can check (the idea exists, the date is inside the window), and,
-  later, takes the memory changes of `docs/MEMORY.md` out of the answer.
+- **Reading the answer** (to come). The one place that validates what comes back, and checks the
+  model's claims that code can check (the idea exists, the date is inside the window). The memory
+  changes of `docs/MEMORY.md` did not wait for it: they come back through the `remember` tool,
+  whose rules check them.
 
 Two things it must never do: ask a model to shorten a prompt (it spends tokens to save them,
 and can change the meaning), or rewrite the cached part per request.
@@ -181,8 +194,17 @@ The default is the cheapest model that meets measured quality, per kind, not one
 everything. The direction:
 
 - **Route by kind first.** A worker that fills in opening hours and a chat turn that plans a
-  weekend need different things; each kind names its own model setting (chat and lookup already
-  do).
+  weekend need different things; each kind names its own model setting and its own level. Built:
+  every company's lineup is known by level in `agent/providers/catalog.py` (everyday, better,
+  best: GPT-6 Luna, Sol and Astra; Claude Haiku, Sonnet and Opus; Gemini Flash-Lite, Flash and
+  Pro), with what each costs and whether it thinks before answering, and a test holds the catalog
+  to what the provider modules send. `everyday` is each company's own model setting, its cheapest
+  by default (a test holds that too); the family chooses a level per situation (`chat_level` for
+  chat and retries, `digest_level` for the digest and its retries, `lookup_level` for lookups
+  and discovery), and a call that moves to the fallback company is answered at the same level
+  there. A level up never answers with a cheaper model than everyday, so an everyday model set
+  above the lineup's, or one the price table does not list, stays. The family chooses; the model
+  never does, and nothing is escalated because a question sounded hard.
 - **Escalate on evidence, not on guesswork.** A cheaper model may hand a task up to a stronger one
   when code can see that it failed: a validation error, a hand-back that did not happen, an empty
   answer. Not because the question sounded hard.

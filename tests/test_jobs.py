@@ -359,7 +359,12 @@ def test_digest_asks_as_the_first_admin_and_delivers(settings, thursday_clock, c
     assert inbound.channel_update_id == "digest:2026-09-24"
     assert inbound.member_id == family["sam"].id and inbound.text == DIGEST_TEXT
     assert inbound.status == "processed"
-    assert api.requests[0]["messages"][0]["content"][1]["text"] == f"[Sam] {DIGEST_TEXT}"
+    # Sent to the family's group, so the turn says who reads it before the question.
+    asked = [part["text"] for part in api.requests[0]["messages"][0]["content"]]
+    assert asked[1:] == [
+        "This is the family's group chat: everyone in it reads your reply, kids among them.",
+        f"[Sam] {DIGEST_TEXT}",
+    ]
     row = suggestions.list_recent(conn, limit=1)[0]
     assert row.reply_message_id == reply.out_message_id and row.window_start == "2026-09-26"
     # The same day again asks and sends nothing.
@@ -672,7 +677,7 @@ def test_lookups_work_on_gemini_too(settings, clock, conn, family) -> None:
     assert run_enrichment(app, api=api)["done"] == 1
     assert ideas.get(conn, idea.id).enrichment == "done"
     request = api.requests[0]
-    assert request["model"] == "gemini-3.8-flash"
+    assert request["model"] == "gemini-3.1-flash-lite"
     groups = request["config"]["tools"]
     assert sorted(d["name"] for d in groups[0]["function_declarations"]) == [
         "save_place",

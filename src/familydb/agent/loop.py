@@ -15,7 +15,7 @@ from typing import Any, Literal, Protocol
 
 from familydb.agent import spending
 from familydb.agent.compose import exchange_chars
-from familydb.agent.providers import prices
+from familydb.agent.providers import model_at, prices
 from familydb.agent.providers.base import (
     Exchange,
     Message,
@@ -79,10 +79,12 @@ def run_turn(
     effort: str | None = None,
     max_tokens: int | None = None,
     surface: str = "chat",
+    level: str = "everyday",
     fallback: Provider | None = None,
     kind: str | None = None,
     sections: dict[str, int] | None = None,
     final_tools: frozenset[str] = frozenset(),
+    closing_tools: frozenset[str] = frozenset(),
 ) -> TurnResult:
     """Drive one inbound message to a reply.
 
@@ -90,13 +92,18 @@ def run_turn(
     passes its `kind` on to be recorded with every model call, with `sections`: the size of each
     part of the request, to which each later call adds the earlier steps of the turn.
 
-    With a `fallback` provider, a first call the chosen one cannot take is tried there instead.
-    Only the first call: once a tool has run, starting again elsewhere would repeat whatever it
-    did, and a half-finished turn is the retry job's business rather than this one's.
+    With a `fallback` provider, a first call the chosen one cannot take is tried there instead, on
+    its model at the same `level`. Only the first call: once a tool has run, starting again
+    elsewhere would repeat whatever it did, and a half-finished turn is the retry job's business
+    rather than this one's.
 
     `final_tools` are the tools whose success is the turn's result (a worker's hand-back): once
     one succeeds, and nothing else in that step failed, the turn ends there rather than paying
     for another call only for the model to say it is done. A failed one goes back to the model.
+
+    `closing_tools` may end a chat turn in the same way, with the reply the model handed over in
+    their input (`ToolContext.offer_reply`), but only when they are all the step did and all of
+    them succeeded: anything else run beside them has a result the model has not read yet.
     """
     request = TurnRequest(
         system=system,
@@ -117,7 +124,7 @@ def run_turn(
         log.warning("%s has no credentials; asking %s instead", active.name, fallback.name)
         active = fallback
         # Whatever model the caller named belonged to the provider we just left.
-        request.model = active.model_for(surface)
+        request.model = model_at(active, surface, level)  # type: ignore[arg-type]
 
     for iteration in range(1, limit + 1):
         try:
@@ -131,7 +138,7 @@ def run_turn(
                 raise
             return TurnResult(
                 "ok",
-                spending.completed_reply(completed, settings),
+                spending.completed_reply(completed, settings, ctx.message_id),
                 actions,
                 iteration - 1,
                 totals,
@@ -150,7 +157,7 @@ def run_turn(
                     "%s could not take this (%s); asking %s", active.name, exc, fallback.name
                 )
                 active = fallback
-                request.model = active.model_for(surface)
+                request.model = model_at(active, surface, level)  # type: ignore[arg-type]
                 spending.adjust(
                     ctx.conn,
                     settings,
@@ -249,6 +256,9 @@ def run_turn(
             )
         if _handed_back(exchange, final_tools):
             return TurnResult("ok", reply.text, actions, iteration, totals, provider=active.name)
+        offered = ctx.take_reply()
+        if offered and _closed(exchange, closing_tools):
+            return TurnResult("ok", offered, actions, iteration, totals, provider=active.name)
 
     return TurnResult(
         "failed", "", actions, limit, totals, error="max_iterations", provider=active.name
@@ -261,6 +271,14 @@ def _handed_back(exchange: Exchange, final_tools: frozenset[str]) -> bool:
     if any(outcome.is_error for outcome in outcomes):
         return False
     return any(outcome.name in final_tools for outcome in outcomes)
+
+
+def _closed(exchange: Exchange, closing_tools: frozenset[str]) -> bool:
+    """Whether this step was only tools that may close a turn, and every one of them worked."""
+    outcomes = exchange.outcomes
+    return bool(outcomes) and all(
+        outcome.name in closing_tools and not outcome.is_error for outcome in outcomes
+    )
 
 
 def _estimate(request: TurnRequest, provider: Provider, surface: str, settings: Settings) -> float:

@@ -16,11 +16,16 @@ from uuid import uuid4
 
 import typer
 
-from familydb import __version__, passwords, privacy, roles
+from familydb import __version__, memory, passwords, privacy, roles
 from familydb import family as family_rules
 from familydb.agent.history import load_history
 from familydb.agent.providers.base import Message, TurnRequest
-from familydb.agent.render import render_idea_line, render_user_turn
+from familydb.agent.render import (
+    render_audience_line,
+    render_idea_line,
+    render_memories,
+    render_user_turn,
+)
 from familydb.app import App, build_app
 from familydb.availability import (
     digest_configured,
@@ -98,6 +103,30 @@ def _ready(application: App) -> sqlite3.Connection:
 
 FROM_PAGE = "set on the settings page"
 FROM_ENV = "from the environment"
+# How much of a long text on the Personality page `familydb config` prints: enough to tell which
+# text it is. A rewrite of her also holds her whole character as it shipped, a page of prose.
+SHOWN_CHARACTERS = 60
+
+
+def _shown_setting(key: str, value: Any) -> Any:
+    """A setting as `familydb config` prints it, on one line.
+
+    A long text written on the Personality page (`store.settings.PROFILE`), on its own or inside
+    a rewrite of her or her lines, is cut to its start with how long it really is, and its line
+    breaks are written as \\n, as they already are inside a rewrite. Anything else prints as it
+    is, and nothing changes the setting itself or what `Settings.masked` gives."""
+    if key not in settings_store.PROFILE:
+        return value
+    shown = _shortened(value)
+    return shown.replace("\r", "\\r").replace("\n", "\\n") if isinstance(shown, str) else shown
+
+
+def _shortened(value: Any) -> Any:
+    if isinstance(value, str) and len(value) > SHOWN_CHARACTERS:
+        return f"{value[:SHOWN_CHARACTERS].rstrip()}… ({len(value):,} characters)"
+    if isinstance(value, dict):
+        return {key: _shortened(item) for key, item in value.items()}
+    return value
 
 
 def stored_settings(settings: Settings) -> dict[str, Any]:
@@ -130,7 +159,7 @@ def config() -> None:
             note = f"  # {FROM_ENV}"
         else:
             note = ""
-        typer.echo(f"{key}={value}{note}")
+        typer.echo(f"{key}={_shown_setting(key, value)}{note}")
 
 
 @app.command("password")
@@ -377,7 +406,9 @@ def tool_cmd(
 def debug_prompt(
     text: str = typer.Argument("", help="The message to build a chat request for."),
     as_member: str | None = typer.Option(None, "--as", help="Act as this family member."),
-    chat_id: str = typer.Option("console", "--chat", help="Chat whose history to include."),
+    chat_id: str = typer.Option(
+        "console", "--chat", help="Chat whose history to include, and who reads it."
+    ),
     kind: str = typer.Option(
         "chat", "--kind", help="Which kind of call: chat, digest, retry or enrich."
     ),
@@ -391,15 +422,16 @@ def debug_prompt(
     from familydb.agent import gateway
     from familydb.agent.worker import worker_turn
     from familydb.jobs.enrich import render_enrich_request
+    from familydb.jobs.weekend_digest import digest_channel
     from familydb.store import places
 
     if kind not in gateway.KINDS or kind == "discover":
         typer.echo("--kind is one of chat, digest, retry or enrich", err=True)
         raise typer.Exit(code=2)
     application = build_app()
-    settings = application.settings
     call = gateway.spec(kind)
     with closing(_ready(application)) as conn:
+        settings = application.settings  # with what the page stored, which _ready brought in
         if kind == "enrich":
             idea = ideas.get(conn, idea_id) if idea_id is not None else None
             if idea is None:
@@ -418,7 +450,19 @@ def debug_prompt(
                 limit=settings.history_limit,
                 since_hours=settings.history_hours,
             )
-            current = render_user_turn(sender, text, application.clock)
+            # Named by its chat id alone, as the digest's chat is: "web", "console", or Telegram.
+            channel = digest_channel(chat_id)
+            audience = render_audience_line(channel, chat_id, members.list_all(conn))
+            current = render_user_turn(sender, text, application.clock, audience)
+            chosen = memory.choose(
+                conn,
+                text,
+                sender_id=member.id if member else None,
+                today=application.clock.today(),
+            )
+            remembered = render_memories(chosen)
+            if remembered:
+                current.append(remembered)
         provider = application.provider(call.surface)
         request = gateway.build_request(
             kind,
@@ -442,9 +486,9 @@ def debug_cost(
     from familydb.agent import compose, gateway
 
     application = build_app()
-    settings = application.settings
     chat_call = gateway.spec("chat")
     with closing(_ready(application)) as conn:
+        settings = application.settings  # with what the page stored, which _ready brought in
         blocks, _ = compose.prefix(chat_call, conn, settings)
         tools = compose.tool_defs(chat_call, application.registry)
         since = utc_iso(application.clock.now() - timedelta(days=days))
@@ -456,16 +500,22 @@ def debug_cost(
     system_tokens = sum(len(block.text) for block in blocks) // 4
     tool_tokens = len(_json.dumps([t.schema for t in tools], ensure_ascii=False)) // 4
     tool_tokens += sum(len(t.name) + len(t.description) for t in tools) // 4
-    chat_provider = application.provider("chat")
-    worker_provider = application.provider("worker")
+    chat_provider, chat_model = gateway.answering(settings, "chat")
+    digest_provider, digest_model = gateway.answering(settings, "digest")
+    worker_provider, worker_model = gateway.answering(settings, "enrich")
     typer.echo("Sent with every chat message, and cached between them:")
     typer.echo(f"  system prompt and family context  ~{system_tokens:>6,d} tokens")
     typer.echo(f"  {len(tools)} tool definitions               ~{tool_tokens:>6,d} tokens")
     typer.echo(f"  {'in total':<33}~{system_tokens + tool_tokens:>6,d} tokens")
-    typer.echo(f"  chat runs on {chat_provider.model_for('chat')} via {chat_provider.name}")
+    typer.echo(f"  chat runs on {chat_model} via {chat_provider.name} ({settings.chat_level})")
+    if (digest_provider.name, digest_model) != (chat_provider.name, chat_model):
+        typer.echo(
+            f"  the weekend digest runs on {digest_model} via {digest_provider.name} "
+            f"({settings.digest_level}), with a prompt cache of its own"
+        )
     typer.echo(
-        f"  lookups and discovery run on {worker_provider.model_for('worker')} "
-        f"via {worker_provider.name}"
+        f"  lookups and discovery run on {worker_model} via {worker_provider.name} "
+        f"({settings.lookup_level})"
     )
     if chat_provider.name == "anthropic":
         typer.echo(f"  the prefix above is cached for {settings.anthropic_cache_ttl}")
@@ -511,10 +561,15 @@ def debug_cost(
 @debug_app.command("validate-tools")
 def debug_validate_tools() -> None:
     """Have the API validate the tool schemas via count_tokens (no generation, needs a key)."""
+    from familydb.agent import gateway
+
     application = build_app()
-    provider = application.provider("chat")
+    with closing(_ready(application)):  # the key and the level the page stored count too
+        provider, model = gateway.answering(application.settings, "chat")
     everything = application.registry.tool_defs(application.registry.names())
-    request = TurnRequest(system=[], messages=[Message("user", ["hello"])], tools=everything)
+    request = TurnRequest(
+        system=[], messages=[Message("user", ["hello"])], tools=everything, model=model
+    )
     try:
         tokens = provider.count_tokens(request)
     except (FamilyDBError, NotImplementedError) as exc:
@@ -524,7 +579,7 @@ def debug_validate_tools() -> None:
         typer.echo(f"validation failed: {exc}", err=True)
         raise typer.Exit(code=1) from exc
     typer.echo(
-        f"{len(everything)} tools accepted by {provider.model_for('chat')} "
+        f"{len(everything)} tools accepted by {model} "
         f"via {provider.name}; prompt would be {tokens} input tokens"
     )
 
@@ -637,12 +692,14 @@ def run() -> None:
     privacy.tighten(application.settings)
     application.refresh()  # before anything reads a setting, including the scheduler
     settings = application.settings
-    chat = application.provider("chat")
+    from familydb.agent import gateway
+
+    chat, chat_model = gateway.answering(settings, "chat")
     log.info(
         "familydb %s starting: db=%s answering on %s via %s, effort=%s, tz=%s",
         __version__,
         settings.familydb_path,
-        chat.model_for("chat"),
+        chat_model,
         chat.name,
         settings.effort,
         settings.tz,

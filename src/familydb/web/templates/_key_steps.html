@@ -1,0 +1,39 @@
+{# How to get a key from each company, for setup's model step and the AI model settings page. #}
+{% if company == 'openai' %}
+  <ol class="steps">
+    <li>Open <a href="https://platform.openai.com/signup" target="_blank" rel="noopener noreferrer">OpenAI’s
+      developer platform</a> and sign in, or make an account. It is separate from a ChatGPT
+      subscription, which does not include this.</li>
+    <li>Add some credit under <a href="https://platform.openai.com/settings/organization/billing/overview" target="_blank" rel="noopener noreferrer">Billing</a>:
+      add a card, then buy a small amount such as $5 or $10.</li>
+    <li>Set a monthly budget under <a href="https://platform.openai.com/settings/organization/limits" target="_blank" rel="noopener noreferrer">Limits</a>,
+      so it can never cost more than you expect.</li>
+    <li>Open <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">API keys</a>,
+      press <em>Create new secret key</em>, name it {{ site_title }}, and copy it. It starts
+      with <code>sk-</code> and is shown only once, so paste it below straight away.</li>
+  </ol>
+{% elif company == 'anthropic' %}
+  <ol class="steps">
+    <li>Open the <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer">Claude
+      Console</a> and sign in, or make an account. It is separate from a Claude.ai
+      subscription, which does not include this.</li>
+    <li>Add credit under <a href="https://console.anthropic.com/settings/billing" target="_blank" rel="noopener noreferrer">Billing</a>:
+      $5 or $10 is plenty to start.</li>
+    <li>Set a spend limit under <a href="https://console.anthropic.com/settings/limits" target="_blank" rel="noopener noreferrer">Limits</a>.</li>
+    <li>Open <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">API keys</a>,
+      press <em>Create key</em>, name it {{ site_title }}, and copy it. It starts with
+      <code>sk-ant-</code>.</li>
+  </ol>
+{% else %}
+  <ol class="steps">
+    <li>Open <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google
+      AI Studio’s API keys</a> and sign in with a Google account.</li>
+    <li>Press <em>Create API key</em>, choosing or making a project if it asks, and copy the key.
+      It starts with <code>AIza</code>.</li>
+    <li>Turn on billing for that project; AI Studio offers it beside the key. Without it, Google
+      gives only a small free allowance and may use what is sent to it to improve its products,
+      which you may not want for a family’s messages.</li>
+  </ol>
+{% endif %}
+<p class="muted">These sites change their look now and then; the links go straight to the right
+  place even when it looks a little different.</p>

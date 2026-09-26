@@ -99,6 +99,7 @@
 .in-todo, .to-todo { --accent: var(--lemon); }
 .in-family, .to-family { --accent: var(--amber); }
 .in-you, .to-you { --accent: var(--amber); }
+.in-memory, .to-memory { --accent: var(--amber); }
 
 /* And each kind of idea has one, on its label and when its card is hovered. */
 .kind { --kind: var(--lilac); }
@@ -513,6 +514,7 @@ input[type="password"],
 input[type="search"],
 input[type="url"],
 input[type="date"],
+input[type="time"],
 input[type="datetime-local"],
 input:not([type]),
 textarea,
@@ -752,8 +754,8 @@ details.panel[open] > summary { margin-bottom: 1.1rem; }
 }
 .cards > .panel { margin: 0; }
 /* Where a link on the same page lands lights up, then fades like phosphor: "4 more on the radar"
-   to what is coming, the settings index to its section. */
-.panel:target, :target > .panel { animation: landed 1.8s cubic-bezier(0.2, 0.7, 0.3, 1); }
+   to what is coming, "Change a key" to the keys. */
+.panel:target, :target > .panel, .fold:has(> :target) { animation: landed 1.8s cubic-bezier(0.2, 0.7, 0.3, 1); }
 .card { display: flex; flex-direction: column; gap: 0.65rem; transition: border-color var(--afterglow), background-color 0.2s, transform 0.2s, box-shadow var(--afterglow); }
 .card-kind { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; margin: 0; }
 .card h2 { margin: 0; font-size: 1.12rem; font-weight: 650; line-height: 1.3; color: var(--ink); }
@@ -1291,7 +1293,7 @@ button.tick:active::before { background: var(--accent); border-color: var(--acce
    reading. They are drawn here and mean nothing. They fall while she thinks, and on Home for a
    moment as the page opens. Beside her lines and her name, on her page and where the settings
    speak of her. The mark with its smile is the page's own, FamilyDB's, and never hers. */
-.presence, .title-icon.presence, .feature-icon.presence {
+.presence, .title-icon.presence, .section-icon.presence {
   position: relative;
   overflow: hidden;
   background: radial-gradient(circle at 50% 45%, rgb(109 255 156 / 0.16), #06110b 72%);
@@ -1309,7 +1311,7 @@ button.tick:active::before { background: var(--accent); border-color: var(--acce
   mask-image: repeating-linear-gradient(to bottom, #000 0 2px, rgb(0 0 0 / 0.4) 2px 3px);
 }
 .title-icon .presence-glass { font-size: 6.5px; }
-.feature-icon .presence-glass { font-size: 7px; }
+.section-icon .presence-glass { font-size: 7px; }
 .glyph .presence-glass { font-size: 4px; }
 /* Two layers of the same grid: the trails, dim, and the head of each run, bright. The pattern is
    sixteen rows, three times over, so the fall can go round without a seam. */
@@ -1581,91 +1583,186 @@ table.month td.today time { color: var(--on-bright); background: var(--amber); b
 .trouble { --accent: var(--amber); border-color: rgb(255 184 80 / 0.3); }
 
 /* ---- Settings ----------------------------------------------------------------------------- */
-.with-index { display: grid; gap: 1.5rem; }
-.index-body { min-width: 0; }
-.index { padding: 0.9rem 1rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); }
-.index ol { display: flex; flex-wrap: wrap; gap: 0.35rem; list-style: none; margin: 0.6rem 0 0; padding: 0; }
-.index a {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.45rem 0.65rem;
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--ink-2);
-  text-decoration: none;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-}
-.index a:hover { color: var(--ink); background: var(--surface-2); }
-.index .icon { width: 1rem; height: 1rem; color: var(--dim); }
-@media (min-width: 62rem) {
-  .with-index { grid-template-columns: 15rem minmax(0, 1fr); align-items: start; }
-  .index { position: sticky; top: 5.25rem; }
-  .index ol { display: grid; gap: 0.1rem; }
-  .index a { border-color: transparent; }
-}
-.feature {
-  display: flex;
-  align-items: center;
+/* /settings is a card to each page of settings (web/fields.py, SECTIONS): its icon on a quiet
+   tile, how it stands in a line or two, and an arrow. One that needs a look says so, in words, in
+   amber. The tiles do not glow: nine lit tiles would light nothing. */
+.section-cards {
+  display: grid;
   gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 21rem), 1fr));
+  list-style: none;
+  margin: 0 0 1.5rem;
+  padding: 0;
+}
+.section-cards > li { display: flex; }
+.section-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.95rem;
+  align-items: start;
+  width: 100%;
+  margin: 0;
   color: var(--ink);
   text-decoration: none;
   transition: border-color var(--afterglow), background-color 0.2s;
 }
-.feature:hover { background: var(--surface-2); border-color: rgb(109 255 156 / 0.4); transition-duration: var(--glow-in), 0.15s; }
-.feature strong { font-weight: 600; }
-.feature-icon {
+.section-card:hover { background: var(--surface-2); border-color: rgb(109 255 156 / 0.4); transition-duration: var(--glow-in), 0.15s; }
+.section-card.look { border-color: rgb(255 184 80 / 0.35); }
+.section-card.look:hover { border-color: rgb(255 184 80 / 0.65); }
+.section-icon {
   display: grid;
   place-items: center;
   flex: none;
-  width: 3rem;
-  height: 3rem;
-  color: var(--green);
-  background: radial-gradient(circle at 50% 35%, #173022, #0e1512 70%);
-  border: 1px solid rgb(109 255 156 / 0.28);
+  width: 2.6rem;
+  height: 2.6rem;
+  color: var(--accent);
+  background: var(--surface-3);
+  border: 1px solid var(--line-2);
   border-radius: 13px;
-  box-shadow: 0 0 22px -8px rgb(109 255 156 / 0.6);
 }
-.feature-icon .icon { width: 1.4rem; height: 1.4rem; stroke-width: 2; }
-.feature .go { color: var(--dim); }
-/* Wide enough for "From the environment (anthropic)": at three to a row the part in brackets,
-   which is the part worth reading, was cut off. */
+.section-icon .icon { width: 1.3rem; height: 1.3rem; }
+.section-what { display: grid; gap: 0.2rem; min-width: 0; }
+.section-what strong { font-size: 1.05rem; font-weight: 600; line-height: 1.35; }
+.section-state { font-size: 0.9rem; line-height: 1.45; color: var(--dim); overflow-wrap: anywhere; }
+.section-what .tag { justify-self: start; margin-top: 0.35rem; }
+.section-card .go { align-self: center; color: var(--dim); transition: transform 0.15s, color 0.15s; }
+.section-card:hover .go { color: var(--accent); transform: translateX(2px); }
+
+/* A page of settings: the others down the side where there is room, and the page beside them.
+   On a narrower screen the way to the others is Settings, above the title. */
+.settings-layout { display: grid; gap: 1.5rem; }
+.settings-body { min-width: 0; }
+.settings-nav { display: none; }
+.settings-nav ol { display: grid; gap: 0.15rem; list-style: none; margin: 0; padding: 0; }
+.settings-nav a {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--ink-2);
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  transition: background-color 0.15s, color 0.15s;
+}
+.settings-nav a:hover { color: var(--ink); background: var(--surface-2); }
+.settings-nav .icon { width: 1.05rem; height: 1.05rem; color: var(--dim); }
+.settings-nav a[aria-current="page"] { color: var(--ink); background: var(--surface-2); border-color: var(--line-2); }
+.settings-nav a[aria-current="page"] .icon { color: var(--accent); }
+@media (min-width: 62rem) {
+  .settings-layout { grid-template-columns: 14.5rem minmax(0, 1fr); align-items: start; }
+  .settings-nav { display: block; position: sticky; top: 5.25rem; }
+}
+
+/* Boxes two or three to a row where they fit, wide enough for "Default (the company that
+   answers)": squeezed to three, the part in brackets, the part worth reading, was cut off. */
 .grid { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); }
 .setting { min-width: 0; }
 .setting + .setting { margin-top: 1.1rem; }
 .grid .setting + .setting { margin-top: 0; }
 .setting.bad input, .setting.bad select { border-color: var(--red); }
-/* The big form's save button stays in reach while the form is on screen. */
+/* A box's label, and beside it whether the family changed it here: an empty box is the default. */
+.setting-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 0.75rem; }
+.changed {
+  padding: 0.12rem 0.45rem 0.1rem;
+  font: 500 0.68rem/1.3 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--green);
+  background: rgb(109 255 156 / 0.1);
+  border-radius: 999px;
+}
+.key-state { font-size: 0.8rem; color: var(--dim); }
+.setting .check { margin-top: 0.5rem; }
+/* Fine-tuning, folded away: the heading is the thing to click, and says how much was changed. */
+.fold > summary { align-items: center; gap: 0.6rem; }
+.fold > summary .changed { margin-left: auto; }
+.more > summary .changed { margin-left: 0.5rem; }
+/* A word before the boxes: what has been spent, or what is missing before they can do anything. */
+.notice { display: flex; align-items: flex-start; gap: 0.75rem; }
+.notice > .icon { flex: none; margin-top: 0.2rem; color: var(--amber); }
+.notice.spent > .icon { color: var(--accent); }
+.state-line { margin: 0 0 1rem; color: var(--ink-2); }
+/* Each page's Save stays in reach while its form is on screen, with what an empty box means. */
 .save-bar {
   position: sticky;
   bottom: 1rem;
   z-index: 5;
   display: flex;
-  justify-content: flex-end;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
   margin: 0 0 1.25rem;
-  padding: 0.65rem;
+  padding: 0.65rem 0.65rem 0.65rem 1.1rem;
   background: rgb(18 22 21 / 0.9);
   border: 1px solid var(--line-2);
   border-radius: var(--r-lg);
   box-shadow: 0 -8px 30px rgb(0 0 0 / 0.45);
 }
+.save-bar p { margin: 0; font-size: 0.875rem; }
+.save-bar button { margin: 0 0 0 auto; }
 @supports (backdrop-filter: blur(1px)) { .save-bar { backdrop-filter: blur(14px); } }
 @media (max-width: 51.99rem) {
   .save-bar { bottom: calc(var(--tab-h) + 0.75rem + env(safe-area-inset-bottom)); }
 }
+/* On a phone the bar is only Save, so it stays one row above the tabs; each dropdown still says
+   what its default is. A bar that shares its page with another form's button stays still. */
+@media (max-width: 30rem) { .save-bar p { display: none; } }
+.save-bar.still { position: static; box-shadow: none; }
 .revealed {
-  margin: 0.5rem 0 0;
+  margin: 0.75rem 0 0;
   padding: 0.55rem 0.75rem;
   background: var(--field);
   border: 1px dashed var(--amber);
   border-radius: var(--r-sm);
   overflow-wrap: anywhere;
 }
+/* Her own description has changed since the family rewrote her: said above their rewrite, with
+   what changed folded away under it. That is a line diff in the machine's small voice, and each
+   line keeps its + or -, so the difference never rests on colour: a new line is lit in the
+   page's colour, one that has gone is quiet, and the rest are as they were. Kept to .drift: the
+   history of changes on the settings pages is a list called .changes too. */
+.drift { margin: 0 0 0.9rem; }
+.drift > .hint { margin: 0 0 0.3rem; }
+.drift .changes {
+  max-height: 24rem;
+  margin: 0.6rem 0 0;
+  padding: 0.55rem 0;
+  overflow: auto;
+  font: 0.82rem/1.6 var(--mono);
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--field);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-sm);
+}
+.drift .changes > span { display: block; padding: 0 0.8rem; border-left: 3px solid transparent; }
+.drift .changes > .added { color: var(--ink); background: color-mix(in srgb, var(--accent) 9%, transparent); border-left-color: var(--accent); }
+.drift .changes > .removed { color: var(--dim); background: rgb(255 255 255 / 0.025); border-left-color: var(--edge); }
+/* How one of her lines reads now, under the box that writes it: each of its wordings filled in
+   with made-up details, as the family would get it. Quieter than the box above, which is what is
+   being written, and joined by a rule down the left as the one line they are. */
+.reads { margin: 0.7rem 0 0; }
+.reads > ul { display: grid; gap: 0.3rem; margin: 0.35rem 0 0; padding: 0; list-style: none; }
+.reads li { padding: 0.05rem 0 0.05rem 0.75rem; font-size: 0.92rem; color: var(--ink-2); border-left: 2px solid var(--line-2); overflow-wrap: anywhere; }
 #google fieldset { display: grid; gap: 0.5rem; margin: 0 0 0.9rem; }
+#google > .more:last-child { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--line); }
 #google textarea { font: 0.88rem/1.5 var(--mono); }
 .steps { display: grid; gap: 0.6rem; padding-left: 1.4rem; }
 .steps li::marker { color: var(--green); font-weight: 600; }
+/* Her lines on the Personality page, a group under each small heading. */
+.lines { display: grid; gap: 1.1rem; margin-bottom: 0.5rem; }
+.lines .setting + .setting { margin-top: 0; }
+.lines textarea { min-height: 0; }
+#lines h3 { display: flex; align-items: center; gap: 0.6rem; margin-top: 1.75rem; }
+#lines .more { margin-top: 1.5rem; }
+.changes strong { margin-right: 0.3rem; font-weight: 600; }
 
 /* ---- Setting up ---------------------------------------------------------------------------- */
 /* One step at a time (web/setup.py): a row of numbered steps saying where you are, the step's
@@ -1809,6 +1906,14 @@ table.month td.today time { color: var(--on-bright); background: var(--amber); b
   }
 }
 
+/* ---- What she remembers -------------------------------------------------------------------- */
+.memories > li { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; }
+.memory-fact { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.4rem; margin: 0; }
+.memory-source { margin: 0.3rem 0 0; }
+.memory form { flex: none; margin: 0; }
+.memories > li.gone { display: block; }
+.memory.ended .memory-fact strong, .memory.gone .memory-fact span { color: var(--dim); }
+
 /* ---- Sign in, and nowhere ----------------------------------------------------------------- */
 .page-signin .places, .page-signin .tools { display: none; }
 .page-signin main, .page-lost main { display: grid; align-content: center; }
@@ -1891,8 +1996,8 @@ table.month td.today time { color: var(--on-bright); background: var(--amber); b
   :root { --ink-2: #dde4e0; --dim: #c3ccc7; --faint: #a7b2ac; --line: #3a4541; --line-2: #56625c; --edge: #9fb0a6; }
   .welcome::before, .radar::after, .crt-tube::before, .crt-tube::after { display: none; }
   .glow, .radar-say, .chip-day, .crt-tube, .crt .dim { text-shadow: none; }
-  button, .button, .title-icon, .brand-mark, .chip, .feature-icon, .task-done .task-box, .radar,
-  .welcome .ask, .presence, .title-icon.presence, .feature-icon.presence { box-shadow: none; }
+  button, .button, .title-icon, .brand-mark, .chip, .task-done .task-box, .radar,
+  .welcome .ask, .presence, .title-icon.presence, .section-icon.presence { box-shadow: none; }
   .presence-glass { -webkit-mask-image: none; mask-image: none; }
   .presence-glass::before, .presence-glass::after { filter: none; text-shadow: none; }
   .icon, .brand-mark .icon, .title-icon .icon, .foot-mark .icon, .radar svg, .radar-say,
@@ -1904,7 +2009,7 @@ table.month td.today time { color: var(--on-bright); background: var(--amber); b
   .title-icon { background: none; }
   .caret { background: CanvasText; }
   /* Her screen is an empty one: outlined, and nothing on it. */
-  .presence, .title-icon.presence, .feature-icon.presence { background: none; box-shadow: none; }
+  .presence, .title-icon.presence, .section-icon.presence { background: none; box-shadow: none; }
   .presence-glass { display: none; }
   .glyph.presence { forced-color-adjust: none; border: 2px solid CanvasText; }
   /* The tick a box would make shows only when pointed at, as it does in colour. */

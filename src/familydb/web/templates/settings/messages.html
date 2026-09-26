@@ -1,0 +1,10 @@
+{% from "_settings.html" import form %}
+{% from "_ui.html" import icon %}
+{% if not can_answer %}
+  <p class="panel notice">{{ icon('warning') }}<span>Weekend ideas are written by the AI model, and
+    there is no key for it yet, so none are sent until there is one: see
+    <a href="{{ url_for('settings.section', name='model') }}">AI model</a>.</span></p>
+{% endif %}
+{{ form('messages', groups.values()) }}
+<p class="muted small">What these messages say, word for word, is on the
+  <a href="{{ url_for('settings.personality', _anchor='lines') }}">Personality and family</a> page.</p>

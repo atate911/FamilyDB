@@ -7,19 +7,24 @@ The wording here is for people reading a page. The model's view of an idea lives
 from __future__ import annotations
 
 import calendar as months
+import difflib
 import json
 import math
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
-from itertools import pairwise
+from itertools import islice, pairwise
 from typing import Any
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
+from familydb.agent.providers import catalog, prices
 from familydb.config import Settings
 from familydb.integrations.geocode import estimate_travel
+from familydb.memory import words
 from familydb.store.ideas import Idea
-from familydb.store.messages import Message
+from familydb.store.members import Member
+from familydb.store.memories import Memory
+from familydb.store.messages import VOICE_PREFIX, Message, as_said
 from familydb.store.outcomes import Outcome
 from familydb.store.places import Place
 from familydb.store.plans import Plan
@@ -92,6 +97,21 @@ def participants_text(idea: Idea) -> str:
     return ", ".join(idea.participants) if idea.participants else "anyone"
 
 
+def on_text(idea: Idea) -> str | None:
+    """When a dated idea is on, in the page's words: "Wed 18 Nov 2026, 20:00", "Thu 1 Oct to
+    Sat 31 Oct 2026", "from Thu 1 Oct 2026". None for an idea tied to no date."""
+    first, last = idea.first_day, idea.last_day
+    if first is None:
+        return None
+    time = f", {idea.happens_from[11:16]}" if idea.happens_from and "T" in idea.happens_from else ""
+    if last is None:
+        return f"from {first:%a} {first.day} {first:%b %Y}{time}"
+    if last == first:
+        return f"{first:%a} {first.day} {first:%b %Y}{time}"
+    year = "" if first.year == last.year else f" {first.year}"
+    return f"{first:%a} {first.day} {first:%b}{year}{time} to {last:%a} {last.day} {last:%b %Y}"
+
+
 def rating_text(idea: Idea) -> str | None:
     if not idea.times_done:
         return None
@@ -133,6 +153,7 @@ def idea_row(idea: Idea, tz: ZoneInfo) -> dict[str, Any]:
         "kind": kind_text(idea.kind),
         "status": idea.status,
         "where": idea.location_name,
+        "on": on_text(idea),
         "who": participants_text(idea),
         "tags": idea.tags,
         "duration": duration_text(idea),
@@ -141,6 +162,97 @@ def idea_row(idea: Idea, tz: ZoneInfo) -> dict[str, Any]:
         "details": details_text(idea),
         "pending": idea.enrichment == "pending",
     }
+
+
+# Each kind of memory in the page's words, in the order the add form offers them.
+MEMORY_KINDS = {
+    "food": "food and drink",
+    "activities": "things to do",
+    "places": "places",
+    "health": "health and needs",
+    "routine": "routines",
+    "other": "anything else",
+}
+# How much of the message a memory came from the page shows.
+SOURCE_CHARS = 140
+
+
+def excerpt(text: str, fact: str, room: int = SOURCE_CHARS) -> str:
+    """The part of a message a memory came from: around the first of its words found in it, so
+    a long voice note shows the line that mattered rather than how it began."""
+    text = " ".join(text.split())
+    if len(text) <= room:
+        return text
+    lowered = text.casefold()
+    found = [lowered.find(word) for word in words(fact)]
+    at = min((index for index in found if index >= 0), default=0)
+    start = max(0, min(at - room // 3, len(text) - room))
+    piece = text[start : start + room]
+    if start > 0 and " " in piece:
+        piece = "…" + piece.split(" ", 1)[1]
+    if start + room < len(text) and " " in piece:
+        piece = piece.rsplit(" ", 1)[0] + "…"
+    return piece
+
+
+def memory_row(memory: Memory, today: date, tz: ZoneInfo) -> dict[str, Any]:
+    """One memory as the page shows it, with where it came from in the family's own words."""
+    when = day_text(local_day(memory.created_at, tz))
+    who = memory.said_by_name
+    if memory.source_message_id is None:
+        source = f"Added on this page{f' by {who}' if who else ''}, {when}"
+        said = None
+    else:
+        text = as_said(memory.source_text or "")
+        voiced = text.startswith(VOICE_PREFIX)
+        source = f"{who or 'Somebody'}, {when}{', in a voice note' if voiced else ''}"
+        said = excerpt(text.removeprefix(VOICE_PREFIX), memory.fact) or None
+    return {
+        "id": memory.id,
+        "fact": memory.fact,
+        "about": memory.about_name or "The family",
+        "kind": MEMORY_KINDS.get(memory.category, memory.category),
+        "firm": memory.firm,
+        "guess": memory.inferred,
+        "until": day_text(memory.until) if memory.until else None,
+        "ended": bool(memory.until and memory.until < today.isoformat()),
+        "source": source,
+        "said": said,
+        "gone": (
+            f"forgotten {day_text(local_day(memory.forgotten_at, tz))}"
+            + (f" by {memory.forgotten_by_name}" if memory.forgotten_by_name else "")
+            if memory.forgotten_at
+            else None
+        ),
+    }
+
+
+def memory_page(
+    memories: list[Memory], people: list[Member], today: date, tz: ZoneInfo
+) -> dict[str, Any]:
+    """What the page lists: what is remembered, by whom it is about (the family first, then each
+    person in the family's order), and what was forgotten. Replaced ones are history."""
+    kept = [m for m in memories if m.status == "active"]
+    order = [None, *(person.id for person in people)]
+    names = {person.id: person.display_name for person in people}
+    groups = []
+    for member_id in order:
+        rows = [memory_row(m, today, tz) for m in kept if m.member_id == member_id]
+        if rows:
+            groups.append(
+                {
+                    "who": names.get(member_id, "The family"),
+                    "family": member_id is None,
+                    "rows": rows,
+                }
+            )
+    strays = [m for m in kept if m.member_id is not None and m.member_id not in names]
+    if strays:  # about somebody since switched off the family list
+        groups.append(
+            {"who": "Others", "family": False, "rows": [memory_row(m, today, tz) for m in strays]}
+        )
+    forgotten = [memory_row(m, today, tz) for m in memories if m.status == "forgotten"]
+    return {"groups": groups, "forgotten": forgotten}
 
 
 def task_brief(task: Task, tz: ZoneInfo, today: date) -> dict[str, Any]:
@@ -650,7 +762,7 @@ def local_moment(value: str, tz: ZoneInfo) -> str:
 
 
 def setting_text(value: str | None) -> str:
-    """A stored JSON value as the page shows it. Nothing stored reads as the fallback."""
+    """A stored JSON value as the page shows it. Nothing stored reads as the default."""
     if value is None:
         return "—"
     try:
@@ -658,13 +770,74 @@ def setting_text(value: str | None) -> str:
     except ValueError:
         return value
     if loaded is None:
-        return "from the environment"
+        return "default"
     if isinstance(loaded, bool):
         return "yes" if loaded else "no"
     return str(loaded)
 
 
-LONG_SETTINGS = frozenset({"persona_text", "about_family", "voice_lines"})
+def price_text(price: prices.Price | None) -> str | None:
+    """What a model costs, in US dollars per million tokens read and written, or for a minute of
+    recording when that is how it is billed (a hearing model, prices.HEARING)."""
+    if price is None:
+        return None
+    if price.minute and not (price.input or price.output):
+        return f"${price.minute:.3f} a minute"
+    return f"${price.input:.2f} in, ${price.output:.2f} out"
+
+
+def model_offer(provider: str, name: str) -> str:
+    """A model name as a box offers it: what it is called, where it stands in its company's
+    lineup, and what it costs. Only the price, for one the lineup does not list."""
+    known = catalog.known(provider, name)
+    said = f"{known.label}, {known.level}" if known else ""
+    cost = price_text(prices.price(provider, name))
+    return " · ".join(part for part in (said, cost) if part)
+
+
+def level_choice(level: str, provider: str, name: str) -> str:
+    """A level as the settings page offers it: the model it means for the company answering."""
+    known = catalog.known(provider, name)
+    cost = price_text(prices.price(provider, name))
+    said = f"{level}: {known.label if known else name}"
+    return f"{said} ({cost})" if cost else said
+
+
+def model_text(provider: str, name: str, level: str) -> str:
+    """Which model answers, as the status page and setup say it: its name, and its level when
+    that is not the everyday one, or when the model does not think before answering."""
+    known = catalog.known(provider, name)
+    notes = [] if level == catalog.EVERYDAY else [level]
+    if known is not None and not known.thinks:
+        notes.append("without thinking first")
+    return f"{name} ({', '.join(notes)})" if notes else name
+
+
+LONG_SETTINGS = frozenset({"persona_text", "persona_notes", "about_family", "voice_lines"})
+# How many unchanged lines are shown either side of a change. A persona's character is written in
+# paragraphs, one to a line with a blank line between them, so with one either side the only
+# context would be the blank.
+CHANGE_CONTEXT = 2
+
+
+def line_changes(before: str, now: str) -> list[dict[str, str]]:
+    """What changed from one text to the other, line by line, as a unified diff shows it.
+
+    Each line keeps the mark the diff gives it (+ for one that is new, - for one that has gone, a
+    space for one either side that has not changed) and a kind the stylesheet colours, so a
+    change never rests on colour alone. The diff's headers and line numbers say nothing to a
+    family, so they are left out and its parts are parted by an ellipsis."""
+    shown: list[dict[str, str]] = []
+    diff = difflib.unified_diff(
+        before.splitlines(), now.splitlines(), lineterm="", n=CHANGE_CONTEXT
+    )
+    for line in islice(diff, 2, None):  # past the two headers naming what was compared
+        if line.startswith("@@"):
+            if shown:
+                shown.append({"kind": "same", "text": "…"})
+            continue
+        shown.append({"kind": {"+": "added", "-": "removed"}.get(line[:1], "same"), "text": line})
+    return shown
 
 
 def change_row(line: dict[str, Any], tz: ZoneInfo) -> dict[str, Any]:

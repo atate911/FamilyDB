@@ -7,23 +7,18 @@ here every minute. It also sends, as written, any held message no conversation c
 """
 
 from contextlib import closing
-from datetime import datetime, timedelta
 
 from familydb import voice
 from familydb.app import App
 from familydb.dates import utc_iso
 from familydb.store import messages, tasks
 from familydb.store.db import transaction
-from familydb.task_service import reminder_text
-
-# A reminder queued later than this after its time says when it was due.
-LATE_AFTER = timedelta(minutes=10)
+from familydb.task_service import late_note, reminder_text
 
 
 def run_reminders(app: App) -> int:
     app.refresh()
-    moment = app.clock.now()
-    now = utc_iso(moment)
+    now = utc_iso(app.clock.now())
     queued: list[tuple[int, str, str, str, str]] = []
     with closing(app.connect()) as conn:
         with transaction(conn):
@@ -31,12 +26,7 @@ def run_reminders(app: App) -> int:
                 task = tasks.get(conn, reminder.task_id)
                 if task is None:
                     continue
-                due = datetime.fromisoformat(reminder.remind_at)
-                due_when = (
-                    due.astimezone(app.clock.tz).strftime("%a %d %b at %H:%M")
-                    if moment - due > LATE_AFTER
-                    else None
-                )
+                due_when = late_note(reminder.remind_at, now, app.clock.tz)
                 out = messages.insert_out(
                     conn,
                     channel=task.channel,

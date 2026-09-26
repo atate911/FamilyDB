@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
 from familydb.agent.render import render_idea_line
+from familydb.dates import parse_date, parse_datetime
 from familydb.errors import ToolError
 from familydb.store import ideas, members, messages, outcomes, places
 from familydb.store.db import transaction
@@ -28,6 +30,15 @@ PARTICIPANTS_HELP = (
     "Who it is for, as said, e.g. ['whole family'], ['with the girls'], ['adults']. "
     "Empty means anyone."
 )
+FROM_HELP = (
+    "Only for a thing tied to dates (a festival, a show's run, a concert): the first day it is "
+    "on, YYYY-MM-DD, or YYYY-MM-DDTHH:MM when a start time was said."
+)
+UNTIL_HELP = (
+    "The last day it is on, YYYY-MM-DD: the same day for a one-day thing, empty when it has no "
+    "end. A start time alone means one day."
+)
+CLEARS = " An empty string clears it."
 
 
 class AddIdeaInput(BaseModel):
@@ -57,6 +68,8 @@ class AddIdeaInput(BaseModel):
     lead_time_days: int | None = Field(
         default=None, description="How far ahead it must be booked, in days."
     )
+    happens_from: str | None = Field(default=None, description=FROM_HELP)
+    happens_until: str | None = Field(default=None, description=UNTIL_HELP)
     suggested_by: str | None = Field(
         default=None,
         description="Family member's name, only when someone other than the sender suggested it.",
@@ -80,6 +93,8 @@ class UpdateIdeaInput(BaseModel):
     cost_level: CostLevel | None = None
     needs_booking: bool | None = None
     lead_time_days: int | None = None
+    happens_from: str | None = Field(default=None, description=FROM_HELP + CLEARS)
+    happens_until: str | None = Field(default=None, description=UNTIL_HELP + CLEARS)
     status: Status | None = Field(
         default=None,
         description="'dropped' removes it from the list; 'idea' brings a done idea back.",
@@ -111,6 +126,59 @@ class SearchIdeasInput(BaseModel):
     limit: int = Field(default=50, description="1 to 200.")
 
 
+DATES = ("happens_from", "happens_until")
+
+
+def _dated(
+    ctx: ToolContext,
+    given_from: str | None,
+    given_until: str | None,
+    before: ideas.Idea | None = None,
+) -> dict[str, str | None]:
+    """What changes in the days an idea is on, checked and spelled one way; {} for nothing.
+
+    `before` is the idea as it stands. An empty string clears one, and clearing the first day
+    clears both. A first day with a time and no last day is a one-day thing. Days given again
+    as they were are no change, so a form sent back as drawn passes; changed ones that are
+    already over are refused, since an idea is for something still to come.
+    """
+    changes: dict[str, str | None] = {}
+    if given_from is not None:
+        changes["happens_from"] = _first(ctx, given_from) if given_from.strip() else None
+    if given_until is not None:
+        # The last day only: an end time ("until 11pm") says nothing about which days it is on.
+        last_day = given_until.strip().split("T")[0]
+        changes["happens_until"] = parse_date(last_day).isoformat() if last_day else None
+    elif given_from is not None and not given_from.strip():
+        changes["happens_until"] = None  # no longer tied to dates at all
+    was = {
+        "happens_from": before.happens_from if before else None,
+        "happens_until": before.happens_until if before else None,
+    }
+    changes = {key: value for key, value in changes.items() if value != was[key]}
+    if not changes:
+        return {}
+    first = changes.get("happens_from", was["happens_from"])
+    last = changes.get("happens_until", was["happens_until"])
+    if first and "T" in first and last is None and given_until is None:
+        last = changes["happens_until"] = first[:10]
+    if first is None and last is not None:
+        raise ToolError("give happens_from, the first day it is on, as well as the last")
+    if first and last and last < first[:10]:
+        raise ToolError(f"happens_until {last} is before happens_from {first[:10]}")
+    if last and date.fromisoformat(last) < ctx.clock.today():
+        raise ToolError(f"that was over on {last}; an idea is for something still to come")
+    return changes
+
+
+def _first(ctx: ToolContext, text: str) -> str:
+    """A first day as stored: the date, with the time of day when one was said."""
+    text = text.strip()
+    if len(text) <= 10:
+        return parse_date(text).isoformat()
+    return parse_datetime(text, ctx.clock.tz).strftime("%Y-%m-%dT%H:%M")
+
+
 def _resolve_member_name(ctx: ToolContext, name: str | None) -> int | None:
     if name is None:
         return ctx.member.id if ctx.member else None
@@ -138,7 +206,8 @@ def add_idea(ctx: ToolContext, args: AddIdeaInput) -> dict[str, Any]:
             "idea": existing.model_dump(mode="json"),
         }
     suggested_by = _resolve_member_name(ctx, args.suggested_by)
-    fields = args.model_dump(exclude={"title", "kind", "suggested_by"})
+    fields = args.model_dump(exclude={"title", "kind", "suggested_by", *DATES})
+    fields |= _dated(ctx, args.happens_from, args.happens_until)
     with transaction(ctx.conn):
         idea = ideas.insert(
             ctx.conn,
@@ -161,17 +230,22 @@ def add_idea(ctx: ToolContext, args: AddIdeaInput) -> dict[str, Any]:
     writes=True,
 )
 def update_idea(ctx: ToolContext, args: UpdateIdeaInput) -> dict[str, Any]:
-    changes = {k: v for k, v in args.model_dump(exclude={"id"}).items() if v is not None}
-    if not changes:
+    changes = {k: v for k, v in args.model_dump(exclude={"id", *DATES}).items() if v is not None}
+    dated = args.happens_from is not None or args.happens_until is not None
+    if not changes and not dated:
         raise ToolError("nothing to change: give at least one field besides id")
     with transaction(ctx.conn):
-        if ctx.idea_revision is not None:
-            current = ideas.get(ctx.conn, args.id)
-            if current is None or ideas.revision(current) != ctx.idea_revision:
-                raise ToolError(
-                    f"#{args.id} was changed since you opened it, so nothing was saved. "
-                    "Here it is as it is now; make your change again."
-                )
+        current = ideas.get(ctx.conn, args.id)
+        if ctx.idea_revision is not None and (
+            current is None or ideas.revision(current) != ctx.idea_revision
+        ):
+            raise ToolError(
+                f"#{args.id} was changed since you opened it, so nothing was saved. "
+                "Here it is as it is now; make your change again."
+            )
+        if current is None:
+            raise ToolError(f"no idea #{args.id}")
+        changes |= _dated(ctx, args.happens_from, args.happens_until, current)
         idea = ideas.update(ctx.conn, args.id, changes, now=ctx.now_iso())
     if idea is None:
         raise ToolError(f"no idea #{args.id}")

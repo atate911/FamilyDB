@@ -84,6 +84,26 @@ class ModelReply:
     raw: Any = None  # the provider's own assistant output, replayed when resuming a paused turn
 
 
+@dataclass(frozen=True)
+class Audio:
+    """A recording to be heard, such as a voice note, as its channel handed it over."""
+
+    data: bytes
+    mime: str  # what the channel says it is, e.g. audio/ogg
+    seconds: int
+    name: str = "voice.ogg"  # with the right extension: one vendor goes by it
+
+
+@dataclass(frozen=True)
+class Heard:
+    """The words a model heard in a recording, and what hearing them cost."""
+
+    text: str
+    usage: dict[str, int | None] = field(default_factory=dict)
+    model: str | None = None
+    request_id: str | None = None
+
+
 @dataclass
 class Exchange:
     """An assistant answer and the tool results sent back to it."""
@@ -141,4 +161,13 @@ class Provider(Protocol):
     def count_tokens(self, request: TurnRequest) -> int:
         """What this request would cost in input tokens. Also how `validate-tools` checks the
         schemas: the API rejects a malformed tool before counting anything."""
+        ...
+
+    def listener(self) -> str | None:
+        """The model this vendor hears recordings with, or None when it cannot hear at all."""
+        ...
+
+    def transcribe(self, audio: Audio, hints: str) -> Heard:
+        """The words in a recording. `hints` names people and places it may mention, so they
+        are spelled as the family spells them. Raises AgentError, with `retryable` set."""
         ...

@@ -1,0 +1,28 @@
+{% from "_ui.html" import icon %}
+<section class="panel" id="changes">
+  {% if history %}
+    {# A key or a password is never shown, only that it was replaced; a long text only that it
+       was rewritten. #}
+    <ul class="plain changes">
+      {% for line in history %}
+        <li>
+          <div>
+            <strong>{{ line.label }}</strong>
+            {% if line.secret %}
+              replaced
+            {% elif line.long %}
+              rewritten
+            {% else %}
+              {{ line.old }} → {{ line.new }}
+            {% endif %}
+          </div>
+          <div class="muted">
+            {{ line.when }}{% if line.who %} · {{ line.who }}{% endif %} · {{ line.source }}
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="muted empty">{{ icon('clock') }}<span>Nothing has been changed here yet.</span></p>
+  {% endif %}
+</section>

@@ -24,6 +24,10 @@ from familydb.tools.schema import strict_schema
 log = logging.getLogger(__name__)
 
 
+# Where a tool leaves a reply it offers to end the turn with (`ToolContext.offer_reply`).
+OFFERED = "offered_reply"
+
+
 @dataclass
 class ToolContext:
     """What a tool handler gets: a connection, settings, the clock, and who is asking."""
@@ -48,6 +52,14 @@ class ToolContext:
 
     def now_iso(self) -> str:
         return utc_iso(self.clock.now())
+
+    def offer_reply(self, text: str) -> None:
+        """A tool that can be all a turn does hands the family's reply over with its input; the
+        loop ends the turn with it when nothing else ran in that step (see `run_turn`)."""
+        self.scratch[OFFERED] = text
+
+    def take_reply(self) -> str | None:
+        return self.scratch.pop(OFFERED, None)
 
 
 @dataclass(frozen=True)

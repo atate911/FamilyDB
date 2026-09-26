@@ -28,6 +28,7 @@ from familydb.agent.providers import (
     ToolDef,
     TurnRequest,
     WebAccess,
+    model_at,
 )
 from familydb.config import Settings
 from familydb.tools import ToolRegistry
@@ -118,7 +119,7 @@ def compose(
         messages=messages,
         tools=tools,
         web=web,
-        model=provider.model_for(call.surface),
+        model=model_at(provider, call.surface, getattr(settings, call.level)),
         effort=getattr(settings, call.effort) if call.effort else None,
     )
     return Composed(request, {name: size for name, size in sections.items() if size})

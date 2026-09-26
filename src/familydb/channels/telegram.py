@@ -1,19 +1,32 @@
-"""The Telegram channel: long polling, the pipeline in a worker thread, one lane per bot."""
+"""The Telegram channel: long polling, the pipeline in a worker thread, one lane per bot.
+
+Text and voice notes both reach the pipeline. A voice note arrives as a way to fetch it, which
+the pipeline calls only once the sender is known to be family; the download itself runs on the
+bot's own event loop, like every send.
+"""
 
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import logging
 import threading
 import time
 from collections.abc import Callable
 from contextlib import closing
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Any
 
 from telegram import Update
-from telegram.constants import ChatAction, ChatType, MessageLimit
-from telegram.error import InvalidToken, NetworkError
+from telegram.constants import (
+    BotDescriptionLimit,
+    BotNameLimit,
+    ChatAction,
+    ChatType,
+    MessageLimit,
+)
+from telegram.error import BadRequest, InvalidToken, NetworkError, RetryAfter
 from telegram.ext import (
     Application,
     ApplicationBuilder,
@@ -23,9 +36,10 @@ from telegram.ext import (
     filters,
 )
 
-from familydb import voice, whereabouts
+from familydb import personas, voice, whereabouts
 from familydb.app import App
-from familydb.channels.base import IncomingMessage, OutgoingMessage
+from familydb.channels.base import IncomingMessage, OutgoingMessage, VoiceNote
+from familydb.config import Settings
 from familydb.delivery import deliver
 from familydb.pipeline import handle_incoming
 
@@ -39,6 +53,23 @@ UPDATES = [Update.MESSAGE, Update.EDITED_MESSAGE]
 # Everything but a location answers new messages only, so an edited question is not answered
 # a second time.
 NEW = filters.UpdateType.MESSAGE
+# How long fetching a voice note may take before it is given up as not heard.
+FETCH_SECONDS = 60
+# A file name for each kind of recording, since the speech endpoint goes by the extension.
+EXTENSIONS = {
+    "audio/ogg": "ogg",
+    "audio/opus": "ogg",
+    "audio/mpeg": "mp3",
+    "audio/mp3": "mp3",
+    "audio/mp4": "m4a",
+    "audio/m4a": "m4a",
+    "audio/x-m4a": "m4a",
+    "audio/aac": "m4a",
+    "audio/wav": "wav",
+    "audio/x-wav": "wav",
+    "audio/webm": "webm",
+    "audio/flac": "flac",
+}
 
 
 def incoming_from_update(update: Any) -> IncomingMessage | None:
@@ -56,6 +87,45 @@ def incoming_from_update(update: Any) -> IncomingMessage | None:
         text=message.text,
         sender_name=sender_name(user),
     )
+
+
+def recording(message: Any) -> Any:
+    """The voice note, or the audio file, a message carries; None for anything else."""
+    if message is None:
+        return None
+    return getattr(message, "voice", None) or getattr(message, "audio", None)
+
+
+def incoming_voice(update: Any, fetch: Any) -> IncomingMessage | None:
+    """A voice note as the pipeline takes it: how long, what kind, and how to fetch it."""
+    message = update.effective_message
+    user = update.effective_user
+    chat = update.effective_chat
+    note = recording(message)
+    if note is None or user is None or chat is None:
+        return None
+    mime = (getattr(note, "mime_type", None) or "audio/ogg").split(";")[0].strip().lower()
+    return IncomingMessage(
+        channel=CHANNEL,
+        channel_update_id=str(update.update_id),
+        chat_id=str(chat.id),
+        channel_user_id=str(user.id),
+        text=(getattr(message, "caption", None) or "").strip(),
+        sender_name=sender_name(user),
+        voice=VoiceNote(
+            seconds=int(getattr(note, "duration", None) or 0),
+            mime=mime,
+            fetch=fetch,
+            name=f"voice.{EXTENSIONS.get(mime, 'ogg')}",
+            size=getattr(note, "file_size", None),
+        ),
+    )
+
+
+async def download(note: Any) -> bytes:
+    """A voice note's bytes, from Telegram."""
+    file = await note.get_file()
+    return bytes(await file.download_as_bytearray())
 
 
 @dataclass(frozen=True)
@@ -116,7 +186,7 @@ def addressed_to_bot(update: Any, bot_username: str | None, bot_id: int | None) 
     message = update.effective_message
     if message is None:
         return False
-    text = (message.text or "").lower()
+    text = (message.text or getattr(message, "caption", None) or "").lower()
     if bot_username and f"@{bot_username.lower()}" in text:
         return True
     reply = getattr(message, "reply_to_message", None)
@@ -180,6 +250,8 @@ class TelegramChannel:
         self.application.add_handler(
             MessageHandler(filters.TEXT & ~filters.COMMAND & NEW, self.on_message)
         )
+        # A voice note, or a recording sent as an audio file: heard, then answered as words.
+        self.application.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, self.on_voice))
         # A shared location, and a live one as it moves (those arrive as edits).
         self.application.add_handler(MessageHandler(filters.LOCATION, self.on_location))
 
@@ -192,7 +264,23 @@ class TelegramChannel:
 
     async def on_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if update.effective_message is not None:
-            await update.effective_message.reply_text(voice.say(self.app.settings, "start"))
+            hello = voice.say(self.app.settings, "start", seed=update.update_id)
+            await update.effective_message.reply_text(hello)
+
+    async def introduce(self, name: str, about: str) -> None:
+        """Make the bot's own contact in Telegram say this name and this description.
+
+        The description is what Telegram shows in a chat with the bot before anything is sent.
+        Both are cut to Telegram's limits, and each is set only when what Telegram has differs:
+        a rename is rate-limited, and most calls change nothing.
+        """
+        bot = self.application.bot
+        name = name[: int(BotNameLimit.MAX_NAME_LENGTH)].rstrip()
+        about = about[: int(BotDescriptionLimit.MAX_DESCRIPTION_LENGTH)].rstrip()
+        if (await bot.get_my_name()).name != name:
+            await bot.set_my_name(name)
+        if (await bot.get_my_description()).description != about:
+            await bot.set_my_description(about)
 
     async def on_message(self, update: Any, context: Any) -> None:
         await asyncio.to_thread(self.app.refresh)
@@ -215,6 +303,38 @@ class TelegramChannel:
             msg = IncomingMessage(
                 msg.channel, msg.channel_update_id, msg.chat_id, msg.channel_user_id, text
             )
+        await self._answer(update, bot, msg)
+
+    async def on_voice(self, update: Any, context: Any) -> None:
+        """A voice note: handed over with a way to fetch it, heard and answered like words."""
+        await asyncio.to_thread(self.app.refresh)
+        chat = update.effective_chat
+        bot = context.bot
+        in_group = chat is not None and chat.type in GROUP_TYPES
+        if (
+            in_group
+            and self.app.settings.telegram_require_mention
+            and not addressed_to_bot(update, bot.username, bot.id)
+        ):
+            return
+        note = recording(update.effective_message)
+        loop = asyncio.get_running_loop()
+
+        def fetch() -> bytes:
+            # Called from the pipeline's thread; the download runs on this loop.
+            future = asyncio.run_coroutine_threadsafe(download(note), loop)
+            return future.result(timeout=FETCH_SECONDS)
+
+        msg = incoming_voice(update, fetch)
+        if msg is None:
+            return
+        if in_group and msg.text:
+            msg = dataclasses.replace(msg, text=strip_mention(msg.text, bot.username))
+        await self._answer(update, bot, msg)
+
+    async def _answer(self, update: Any, bot: Any, msg: IncomingMessage) -> None:
+        """Run the pipeline on its own thread and send its reply, stored first, in this chat."""
+        chat = update.effective_chat
         try:
             await bot.send_chat_action(chat_id=chat.id, action=ChatAction.TYPING)
         except Exception:  # a failed typing indicator must never block the reply
@@ -300,6 +420,10 @@ class TelegramSupervisor:
     with no restart: the old connection is closed and a new one opened. A token Telegram refuses
     is not tried again until it changes; one that fails only because Telegram cannot be reached
     is tried again every `RETRY_SECONDS`.
+
+    The bot's own contact in Telegram says who is speaking: her name and her introduction, or
+    FamilyDB's plain ones under none (`_introduce`), and follows them when the page changes them,
+    with no trip to BotFather.
     """
 
     CHECK_SECONDS = 5.0
@@ -318,6 +442,11 @@ class TelegramSupervisor:
         self.state: str = "off"
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
+        # For the contact (`_introduce`): what it was last asked to say on this connection, the
+        # settings it was worked out from, and when Telegram may be asked again after a wait.
+        self._introduced: tuple[str, str] | None = None
+        self._seen: Settings | None = None
+        self._introduce_at = 0.0
 
     def start(self) -> None:
         self._thread = threading.Thread(target=self._run, name="familydb-telegram", daemon=True)
@@ -358,6 +487,8 @@ class TelegramSupervisor:
                 running, refused = await self._open(token)
                 if running is None and not refused:
                     retry_at = time.monotonic() + self.RETRY_SECONDS
+            if running is not None:
+                await self._introduce(running)
             await asyncio.to_thread(self._stop.wait, self.check_seconds)
         if running is not None:
             await running.stop()
@@ -380,7 +511,58 @@ class TelegramSupervisor:
             return None, False
         name = getattr(channel, "username", None)
         self._set(f"connected as @{name}" if name else "connected")
+        # A new connection introduces her afresh, whatever the last one said.
+        self._introduced = self._seen = None
         return channel, False
+
+    async def _introduce(self, channel: Any) -> None:
+        """Make the contact say who is speaking, after a connect or a change.
+
+        That is her name and her introduction (her /start line), or under none FamilyDB's, since
+        the plain bot calls itself FamilyDB everywhere else: a contact still called by her name
+        would say one thing while the bot said another. Telegram is asked after each connect,
+        and again only when the name or the introduction differs from what it was last asked to
+        say: a setting that moves nothing said asks nothing. A wait Telegram asks for is
+        waited out, across a reconnect too, and Telegram out of reach is tried again every
+        `RETRY_SECONDS`; a refusal, or any other failure, is logged and not tried again until
+        something she says changes or the channel reconnects. Nothing here stops or reconnects
+        the channel. No model call.
+        """
+        settings = self.app.settings
+        # App.refresh builds new settings whenever a stored value moves, so the same ones mean
+        # nothing she says can have changed since the last look.
+        if settings is self._seen or time.monotonic() < self._introduce_at:
+            return
+        self._seen = settings
+        said = (personas.active(settings).name, voice.say(settings, "start"))
+        if said == self._introduced:
+            return
+        try:
+            await channel.introduce(*said)
+        except RetryAfter as exc:
+            wait = exc.retry_after  # seconds; a timedelta from python-telegram-bot 23
+            seconds = wait.total_seconds() if isinstance(wait, timedelta) else float(wait)
+            log.info("telegram: Telegram asks for %.0f seconds before her name is set", seconds)
+            self._seen, self._introduce_at = None, time.monotonic() + seconds
+            return
+        except NetworkError as exc:
+            # BadRequest is a NetworkError too, but it is Telegram refusing, not out of reach.
+            if not isinstance(exc, BadRequest):
+                log.warning("telegram: cannot reach Telegram to give the bot her name (%s)", exc)
+                self._seen, self._introduce_at = None, time.monotonic() + self.RETRY_SECONDS
+                return
+            log.warning(
+                "telegram: Telegram refused her name or introduction (%s); "
+                "not trying again until either changes or the bot reconnects",
+                exc,
+            )
+        except Exception as exc:
+            log.warning(
+                "telegram: could not give the bot her name and introduction (%s); "
+                "not trying again until either changes or the bot reconnects",
+                exc,
+            )
+        self._introduced = said
 
 
 async def _quietly_stop(channel: Any) -> None:

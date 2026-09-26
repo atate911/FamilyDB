@@ -15,6 +15,27 @@ older than what is installed. It gets a date when it is released.
 - **Captures ideas from chat.** "We should try that ramen place sometime" becomes
   a stored idea, tagged with what the model can infer, through Telegram, the web
   page's chat or the console.
+- **Hears voice notes.** A voice note on Telegram, as long and rambling as
+  anyone likes, is written down by a speech model (OpenAI's, or Gemini's; Claude
+  cannot hear) and answered as if it had been typed. The words are kept, marked
+  as a voice note; the recording is not. Voice notes can be turned off, capped in
+  length and pointed at either company on the settings page, and hearing them
+  counts against the daily limit like any other call.
+- **Acts on every part of a long message.** A rambling message or voice note
+  that saves an idea, puts one thing on the calendar and cancels another is done
+  in full, one line of reply per thing done. Whether it is a plan or an idea is
+  decided by commitment; a swap puts the new plan on before taking the old one
+  off. Ideas tied to dates (a festival, a show's run, a concert on the 18th) keep
+  them, and are only suggested on those days. Events somebody put on the calendar
+  by hand can be moved or taken off too, not only the bot's own.
+- **Remembers what the family says about itself.** "The girls are vegetarian
+  now", "Alex is allergic to shellfish", "no long drives until my back is
+  better": kept, about the person it concerns, as a must or a taste, with its
+  end date when it has one, and weighed whenever it bears on a question. It
+  rides on the call that was happening anyway, and "noted" costs no second one.
+  A page, "What Vera remembers", lists all of it with where each came from, and
+  forgets anything for good: what was forgotten is not brought back from what
+  was said before.
 - **Fills them in.** A background worker turn looks each new idea up on the web:
   address, opening hours, booking link, price notes, a geocoded travel estimate.
 - **Keeps the calendar.** Confirmed plans are created, moved and cancelled on the
@@ -48,6 +69,18 @@ older than what is installed. It gets a date when it is released.
   three companies, for chat and lookups alike. Claude and Gemini can be chosen
   per surface on the settings page, with another as a spare when the first is
   rate limited or down, and a mistyped model name is refused when it is saved.
+- **Knows each company's models by level,** everyday, better and best: GPT-6
+  Luna, Sol and Astra; Claude Haiku 4.5, Sonnet 5 and Opus 5; Gemini 3.1
+  Flash-Lite, 3.8 Flash and 3.1 Pro, with what each costs. Every company answers
+  with its cheapest unless the family chooses otherwise, and the chat, the
+  weekend digest and the lookups each have a level of their own on the settings
+  page, which says what each level means and costs on the company answering. A
+  message the spare company takes is answered at the same level, a level up
+  never answers with a cheaper model than everyday, and a weekend digest that
+  fails is retried as the digest: at its level, and quiet if it gives up.
+  Claude's and Gemini's everyday models are now their cheapest (they were Opus 5
+  and Gemini 2.5 Pro); a `.env` that names a model keeps it. Gemini 3.8 Flash,
+  the Gemini lookup model, had no price and was counted at the unlisted rate.
 - **Stops at a daily spending limit.** Every model call records an estimated
   cost; once the day's limit ($2 unless changed) is used up, nothing more is
   asked of a model until midnight, and the chat says why.
@@ -97,6 +130,14 @@ older than what is installed. It gets a date when it is released.
   messages the bot on Telegram is listed on the Family page with a button to
   add them, and the digest chat is chosen from the chats the bot has seen, so
   nobody copies an id by hand.
+- **Settings in parts.** `/settings` is a card to each part, saying how it
+  stands and marking what needs a look: General, AI model, Spending, Messages,
+  Lookups, Personality and family, Connections, Sign-in and security, and what
+  has changed. Each part is a short page with one Save, a line of help under
+  every box, the default each empty box falls back to (in words: "Default
+  (Thursday)", an hour as "18:00"), a mark on what was changed here, and the
+  fine-tuning folded away. The AI model page chooses the company the way setup
+  does, with its key checked for free before it is kept.
 
 ### Installing it
 

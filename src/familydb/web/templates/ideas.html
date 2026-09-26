@@ -124,6 +124,7 @@
         <p class="muted meta">
           {% if row.where %}<span>{{ icon('pin') }}{{ row.where }}</span>{% endif %}
           {% if row.away %}<span>{{ icon('day_trip') }}{{ row.away }}</span>{% endif %}
+          {% if row.on %}<span>{{ icon('plans') }}{{ row.on }}</span>{% endif %}
           <span>{{ icon('user') }}for {{ row.who }}</span>
           {% if row.duration %}<span>{{ icon('clock') }}{{ row.duration }}</span>{% endif %}
           {% if row.cost %}<span class="cost">{{ row.cost }}</span>{% endif %}

@@ -97,6 +97,6 @@ def test_tools_and_web_access_are_rendered(settings) -> None:
 def test_the_model_per_surface(settings) -> None:
     provider = _provider(settings)
     assert provider.model_for("chat") == "claude-opus-5"
-    assert provider.model_for("worker") == "claude-haiku-4-5-20251001"
+    assert provider.model_for("worker") == "claude-haiku-4-5"
     same = _provider(settings, worker_model="")
     assert same.model_for("worker") == same.model_for("chat")
