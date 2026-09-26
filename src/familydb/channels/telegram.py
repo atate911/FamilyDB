@@ -500,6 +500,9 @@ class TelegramChannel:
         await self._post_init(self.application)
         await self.application.start()
         assert self.application.updater is not None
+        # bootstrap_retries=-1: a server that boots before its network is up, or a Telegram blip
+        # at the wrong moment, must not end the process. Once polling is up the updater retries
+        # forever on its own, so this covers the one gap left.
         await self.application.updater.start_polling(allowed_updates=UPDATES, bootstrap_retries=-1)
 
     async def stop(self) -> None:
@@ -516,9 +519,7 @@ class TelegramChannel:
 
     def run(self) -> None:
         """Block until SIGINT or SIGTERM. python-telegram-bot installs the signal handlers."""
-        # bootstrap_retries=-1: a server that boots before its network is up, or a Telegram
-        # blip at the wrong moment, must not end the process. Once polling is up the updater
-        # already retries forever, so this covers the one gap that took the bot down.
+        # bootstrap_retries=-1 for the reason `start` gives.
         self.application.run_polling(allowed_updates=UPDATES, bootstrap_retries=-1)
 
 

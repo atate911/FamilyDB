@@ -146,7 +146,7 @@ def update(
         resulting_status = values.get("status", current.status)
         if reminder and resulting_status != "open":
             raise ToolError("Reopen the task before setting a reminder.")
-        # Refuse cancellation while a send is in flight.
+        # Nothing changes while a reminder is being sent: the change could cancel or reword it.
         if tasks.reminder_in_flight(conn, task_id, now):
             raise ToolError("A reminder is being delivered. Try again in a moment.")
         if reminder and current.reminder and reminder == current.reminder.remind_at:

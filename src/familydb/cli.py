@@ -572,10 +572,7 @@ def debug_validate_tools() -> None:
     )
     try:
         tokens = provider.count_tokens(request)
-    except (FamilyDBError, NotImplementedError) as exc:
-        typer.echo(f"validation failed: {exc}", err=True)
-        raise typer.Exit(code=1) from exc
-    except Exception as exc:  # whatever the SDK raises for a rejected schema
+    except Exception as exc:  # ours, or whatever the SDK raises for a rejected schema
         typer.echo(f"validation failed: {exc}", err=True)
         raise typer.Exit(code=1) from exc
     typer.echo(
@@ -846,7 +843,9 @@ def _window_payload(window: str) -> dict[str, Any]:
     start, sep, end = window.partition("..")
     if sep and start and end:
         return {"window": "dates", "start": start.strip(), "end": end.strip()}
-    raise typer.BadParameter("use this-weekend, next-weekend, someday, or START..END (YYYY-MM-DD)")
+    raise typer.BadParameter(
+        "use now, today, this-weekend, next-weekend, someday, or START..END (YYYY-MM-DD)"
+    )
 
 
 def _print_suggestion(data: dict[str, Any]) -> None:
@@ -891,12 +890,10 @@ def suggest(
     payload = _window_payload(window)
     payload["question"] = f"what should we do {window.replace('-', ' ')}?"
     payload["discover"] = discover
-    api = None
-    if discover:
-        if not web_tools_available(application.settings):
-            typer.echo("set WEB_TOOLS_ENABLED=true to look for events on the web", err=True)
-            raise typer.Exit(code=1)
-        api = None  # the settings decide which provider runs discovery
+    if discover and not web_tools_available(application.settings):
+        typer.echo("set WEB_TOOLS_ENABLED=true to look for events on the web", err=True)
+        raise typer.Exit(code=1)
+    api = None  # the settings decide which provider runs discovery
     with closing(_ready(application)) as conn:
         ctx = ToolContext(
             conn=conn,

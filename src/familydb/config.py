@@ -35,7 +35,7 @@ Latitude = Annotated[float, Field(ge=-90, le=90)]
 Longitude = Annotated[float, Field(ge=-180, le=180)]
 
 # An empty line in .env (`HOME_LAT=`) says "I have not set this", not "the empty string": it is
-# what `cp .env.example .env` leaves behind, and what the installer writes when a lookup
+# what `cp .env.example .env` leaves behind, and what the installer leaves when a lookup
 # fails. Every such value is dropped before validation so the default applies. These few are the
 # exceptions, where empty is an answer in itself: no separate worker provider, no separate worker
 # model (use the chat one), no home area.
@@ -87,7 +87,7 @@ class PersonaRewrite(BaseModel):
     # Her character as the family rewrote it, with {name} where her name goes.
     text: str = Field(max_length=20_000)
     # Her own character as it shipped when they wrote it, so the page can tell when hers has
-    # changed since. Empty when that is not known, as for a rewrite saved before it was recorded.
+    # changed since. Empty when that is not known, as in a rewrite an older version saved.
     of: str = Field(default="", max_length=40_000)
 
 
@@ -154,14 +154,15 @@ class Settings(BaseSettings):
     about_family: str = Field(default="", max_length=4_000)
     # The family's own wording for what she says unasked, by event (voice.EVENTS); a line left
     # out uses the persona's, and then the plain one. A string is one wording, line breaks and
-    # all, as every line was stored before a list could hold several.
+    # all, as older installs stored every line.
     voice_lines: dict[str, str | list[str]] = Field(default_factory=dict)
-    # Applies to whoever answers, so it is not named for one of them. ANTHROPIC_EFFORT still works.
+    # Applies to whoever answers, so it is not named for one of them. Accepts ANTHROPIC_EFFORT,
+    # the name older .env files use.
     effort: Effort = Field(
         default="medium", validation_alias=AliasChoices("EFFORT", "ANTHROPIC_EFFORT")
     )
-    # Named for no vendor, because it caps the answer on either. The old ANTHROPIC_MAX_TOKENS
-    # still works for anyone who already has it in a .env.
+    # Named for no vendor, because it caps the answer on any of them. Accepts
+    # ANTHROPIC_MAX_TOKENS, the name older .env files use.
     max_output_tokens: int = Field(
         default=16000,
         ge=256,
@@ -218,7 +219,8 @@ class Settings(BaseSettings):
     place_stale_days: int = Field(default=30, ge=1, le=3650)
     worker_max_iterations: int = Field(default=12, ge=1, le=30)
     # Looking a place up and finding events are extraction jobs, not judgement calls, so they run
-    # on a smaller model with less thinking. Empty falls back to the chat model.
+    # with less thinking. `worker_model` is Anthropic's lookup model, as `openai_worker_model` and
+    # `gemini_worker_model` are the others'; empty uses `anthropic_model`.
     worker_model: str = "claude-haiku-4-5"
     worker_effort: Effort = "low"
     travel_speed_kmh: float = Field(default=50.0, gt=0, le=200)
@@ -241,8 +243,9 @@ class Settings(BaseSettings):
     web_host: str = "127.0.0.1"
     web_port: int = Field(default=8080, ge=1, le=65535)
     web_password: str | None = None
-    # The family password as chosen on the page, hashed (see web/auth.py). Once there is one it is
-    # the only password the page takes: WEB_PASSWORD was the installer's, printed in a terminal.
+    # The family password as chosen on the page or by `familydb password`, hashed (see
+    # web/auth.py). Once there is one, WEB_PASSWORD opens nothing: that was the installer's,
+    # printed in a terminal.
     web_password_hash: str | None = None
     web_secret_key: str | None = None
     web_session_days: int = Field(default=30, ge=1, le=3650)
@@ -274,6 +277,7 @@ class Settings(BaseSettings):
     @field_validator("persona")
     @classmethod
     def _known_persona(cls, value: str) -> str:
+        """A persona's folder, or "none". Accepts `vera`, the key older installs stored for her."""
         from familydb import personas
 
         key = personas.key_for(value)
@@ -301,10 +305,10 @@ class Settings(BaseSettings):
     def _rewrites_by_persona(cls, value: Any) -> Any:
         """Each rewrite under the persona it belongs to, from any value ever stored or set.
 
-        It used to be one string, the rewrite of the only persona there was, and a setting that
-        fails to load takes every stored setting with it, so a string that is not a JSON object
-        still loads, as hers. A key is read as the persona setting reads it, so "vera" is still
-        her; one with no folder is kept and never used, so removing a folder breaks nothing.
+        Accepts a string that is not a JSON object, the form older installs stored, as a rewrite
+        of the default persona: a setting that fails to load takes every stored setting with it.
+        A key is read as the persona setting reads it, so "vera" is still her; one with no folder
+        is kept and never used, so removing a folder breaks nothing.
         """
         from familydb import personas
 

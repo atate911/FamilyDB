@@ -213,9 +213,9 @@ class App:
         return applied
 
 
-# httpx logs every request at INFO with its full URL, and a Telegram URL carries the bot token
-# in its path, so at INFO these would put the token in the journal on every poll. The vendor SDKs
-# send their keys in headers, which are never logged, so only the transport needs quietening.
+# httpx logs every request at INFO with its full URL: a line on every Telegram poll, with the bot
+# token in its path. The vendor SDKs send their keys in headers, which are never logged, so only
+# the transport needs quietening; `RedactSecrets` takes the token out of whatever gets through.
 QUIET_LOGGERS = ("httpx", "httpcore")
 
 
@@ -224,11 +224,11 @@ def set_log_level(wanted: int) -> None:
 
     Called again whenever the level changes on the settings page, so the two never drift: a
     family that turns DEBUG on to read the traffic, and then turns it back down, must not be
-    left with the transport still logging the Telegram token.
+    left with the transport still logging every request.
     """
     logging.getLogger().setLevel(wanted)
-    # LOG_LEVEL=DEBUG is someone deliberately looking at the traffic, and is told in the runbook
-    # that the token comes with it. Every other level keeps it out.
+    # LOG_LEVEL=DEBUG is someone deliberately looking at the traffic, which the runbook warns is
+    # loud. Every other level keeps it out.
     transport = logging.DEBUG if wanted <= logging.DEBUG else logging.WARNING
     for name in QUIET_LOGGERS:
         logging.getLogger(name).setLevel(transport)
@@ -258,7 +258,7 @@ def configure_logging(level: str) -> None:
     for handler in logging.getLogger().handlers:
         if not any(isinstance(one, RedactSecrets) for one in handler.filters):
             handler.addFilter(RedactSecrets())
-    # basicConfig does nothing once a handler exists, and this is called again after a reload.
+    # basicConfig leaves the level alone once a handler exists, so it is set here as well.
     set_log_level(wanted)
 
 

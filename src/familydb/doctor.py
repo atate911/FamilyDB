@@ -249,7 +249,7 @@ def check_family(
         report.add("family", OK, f"{len(everyone)} member(s), {len(admins)} admin(s)")
     reachable = [m for m in everyone if m.channel and m.channel_user_id]
     if not reachable and telegram:
-        # Only Telegram needs ids: the web page's chat asks who is writing.
+        # Only Telegram needs ids: the web page's chat knows people by name.
         report.add(
             "family on a channel",
             WARN,

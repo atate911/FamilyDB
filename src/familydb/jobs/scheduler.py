@@ -1,6 +1,6 @@
 """The in-process scheduler for background jobs.
 
-Each job's schedule comes from the settings, which the family can now change from the web page.
+Each job's schedule comes from the settings, which the family can change from the web page.
 So the schedule is described once in `job_specs` and applied twice: when the scheduler is built,
 and again whenever a settings change moves one. Nothing here calls the model.
 """
@@ -188,7 +188,7 @@ def build_scheduler(app: App) -> BackgroundScheduler:
         if spec.wanted:
             _add(scheduler, app, spec)
     # The cron jobs above live in memory: a bot that was off at their hour would skip them until
-    # the next day or week, so run them once shortly after start (both are idempotent).
+    # the next day or week, so run them once shortly after start (each is idempotent).
     scheduler.add_job(
         run_catch_up,
         DateTrigger(run_date=app.clock.now() + timedelta(seconds=CATCH_UP_DELAY_SECONDS)),

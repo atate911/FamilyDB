@@ -61,7 +61,8 @@ class SystemClock(Clock):
 
 
 class FixedClock(Clock):
-    """A clock pinned to one instant. `advance` moves it; used in tests and replays."""
+    """A clock pinned to one instant: the tests' and the evals' clock, and a message's own
+    arrival time when its turn is written (pipeline.py). `advance` moves it."""
 
     def __init__(self, at: datetime, tz: ZoneInfo, *, southern: bool = False) -> None:
         super().__init__(tz, southern=southern)
