@@ -129,7 +129,7 @@ choose_public_port() { # choose_public_port WANTED APP_PORT - a port to serve on
   printf '%s' "$wanted"
 }
 
-open_web_ports() { # ufw is the one firewall this knows; it says so when there may be another
+open_web_ports() { # in ufw, the one firewall this knows; say_how_to_open speaks of a provider's own
   local rule
   rule="$(web_ports_rule)"
   if have ufw && as_root ufw status 2>/dev/null | grep -q "^Status: active"; then

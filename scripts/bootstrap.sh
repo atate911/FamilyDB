@@ -512,8 +512,8 @@ for name in "${FORWARD_VARS[@]}"; do
   [ -n "${!name:-}" ] && forwarded+=("${name}=${!name}")
 done
 
-# The installer runs as root because it writes a systemd unit. It ends by handing .env and data/
-# to the service account; the code itself stays root-owned, so the bot cannot rewrite its program.
+# The installer runs as root because it writes a systemd unit, and ends by handing .env and data/
+# to the service account.
 if [ "$DRY_RUN" = 1 ]; then
   note "would run: ${INSTALLER} ${INSTALL_ARGS[*]}"
 else

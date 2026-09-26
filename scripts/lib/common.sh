@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Shared machinery for the FamilyDB scripts: output, logging, error reporting, retries and
-# undo. Source it, do not run it.
+# Shared machinery for the FamilyDB scripts: output, logging, error reporting, retries, undo, the
+# ledger of what an install changed, and which version to install. Source it, do not run it.
 #
 # The point of this file is that a script using it cannot fail quietly. Every step runs through
-# `step`, which captures the command's output, and any failure prints what was being done, the
-# command, its exit code, the last lines of what it said, and the one thing to try next. The
-# whole run is also written to a log file that the failure message names, so somebody who needs
-# help has one file to send.
+# `step` or `retry`, which capture the command's output, and any failure prints what was being
+# done, the command, its exit code, the last lines of what it said, and the one thing to try next.
+# The whole run is also written to a log file that the failure message names, so somebody who
+# needs help has one file to send.
 #
 #   source "$(dirname "$0")/lib/common.sh"
 #   log_to /var/log/familydb-install.log
@@ -14,7 +14,6 @@
 #   retry 3 "Downloading uv" curl -fsSL https://example -o /tmp/uv
 #   on_failure_hint "Read RUNBOOK section 13."
 
-# Guard against being sourced twice.
 [ -n "${FAMILYDB_COMMON_SOURCED:-}" ] && return 0
 FAMILYDB_COMMON_SOURCED=1
 
@@ -469,32 +468,24 @@ show_plan() { # show_plan "heading"
   head2 "${1:-What this will change on this machine}"
   local i
   for i in "${!PLAN_WHAT[@]}"; do
-    printf '  %s%s%s
-' "$B" "${PLAN_WHAT[i]}" "$OFF"
-    printf '      %swhy: %s%s
-' "$DIM" "${PLAN_WHY[i]}" "$OFF"
+    printf '  %s%s%s\n' "$B" "${PLAN_WHAT[i]}" "$OFF"
+    printf '      %swhy: %s%s\n' "$DIM" "${PLAN_WHY[i]}" "$OFF"
     log_line "plan: ${PLAN_WHAT[i]} :: ${PLAN_WHY[i]}"
   done
   if [ ${#PLAN_UNTOUCHED[@]} -gt 0 ]; then
-    printf '
-  %sIt does not touch:%s
-' "$DIM" "$OFF"
+    printf '\n  %sIt does not touch:%s\n' "$DIM" "$OFF"
     local item
     for item in "${PLAN_UNTOUCHED[@]}"; do
-      printf '      %s· %s%s
-' "$DIM" "$item" "$OFF"
+      printf '      %s· %s%s\n' "$DIM" "$item" "$OFF"
     done
   fi
-  printf '
-'
+  printf '\n'
 }
 
 # Announce one system-level change as it happens: what, and why, in a sentence.
 system_change() { # system_change "what" "why"
-  printf '  %s→%s %s
-' "$B" "$OFF" "$1"
-  printf '    %s%s%s
-' "$DIM" "$2" "$OFF"
+  printf '  %s→%s %s\n' "$B" "$OFF" "$1"
+  printf '    %s%s%s\n' "$DIM" "$2" "$OFF"
   log_line "change: $1 :: $2"
 }
 

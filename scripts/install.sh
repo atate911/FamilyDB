@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # FamilyDB installer. Works on a home server or a VPS, with Docker or a virtualenv.
-# Safe to run again: it never overwrites a .env without asking, and never touches your database.
+# Safe to run again: it never overwrites a .env without asking, and never replaces your database,
+# only migrates it.
 set -euo pipefail
 
 # shellcheck disable=SC2034  # read by lib/common.sh when it opens the transcript.
@@ -31,7 +32,6 @@ DRY_RUN=0
 SKIP_INSTALL=0       # --config-only: write .env and stop
 LOCAL_ONLY=0         # --local-only: keep the page on this machine, reached over an SSH tunnel
 
-# Output, logging, failure reporting, retries and confirm() all come from lib/common.sh.
 run() { if [ "$DRY_RUN" = 1 ]; then note "[dry run] $*"; else "$@"; fi; }
 
 usage() {
@@ -560,8 +560,7 @@ run mkdir -p "${REPO_ROOT}/data"
 run chmod 700 "${REPO_ROOT}/data"
 
 # Both of these download a few hundred megabytes, which is where a new server most often fails:
-# a network that is not up yet, a proxy, a full disk. `retry` waits and tries again, and on a
-# final failure says what the error means and what to try, rather than only that it stopped.
+# a network that is not up yet, a proxy, a full disk.
 on_failure_hint "It never touches .env or the database twice, so running it again is safe."
 if [ "$MODE" = docker ]; then
   retry 2 "Building the image" docker compose --project-directory "$REPO_ROOT" build
