@@ -19,8 +19,9 @@ from typing import Any
 from familydb import voice
 from familydb.dates import utc_iso
 from familydb.errors import ToolError
-from familydb.store import members, messages, tasks
+from familydb.store import ideas, members, messages, tasks
 from familydb.store.db import transaction
+from familydb.store.ideas import Idea
 from familydb.store.tasks import Task
 
 # A reminder queued later than this after its time says when it was due.
@@ -40,6 +41,10 @@ def _validate(conn: sqlite3.Connection, values: dict[str, Any]) -> None:
     for key in ("notes", "preferred_window"):
         if key in values and len(values[key]) > 4000:
             raise ToolError(f"{key} must be at most 4000 characters.")
+    if "gift_for" in values:
+        values["gift_for"] = (values["gift_for"] or "").strip() or None
+        if values["gift_for"] and len(values["gift_for"]) > 80:
+            raise ToolError("gift_for is a name: at most 80 characters.")
     if values.get("owner_id") is not None:
         owner = members.get(conn, values["owner_id"])
         if owner is None or not owner.active:
@@ -92,6 +97,7 @@ def create(
             chat_id=chat_id,
             now=now,
             repeat=columns,
+            gift_for=values.get("gift_for"),
         )
         if reminder:
             tasks.add_reminder(conn, task_id, reminder)
@@ -156,7 +162,7 @@ def update(
         if round_done and rule is not None and rule["repeat_from"] == "schedule":
             # On a schedule it keeps going; one paused with nothing waiting starts again.
             _add_next(conn, task_id, rule, after=datetime.fromisoformat(now), zone=zone)
-        allowed = {"title", "notes", "owner_id", "due_at", "preferred_window", "status"}
+        allowed = {"title", "notes", "owner_id", "due_at", "preferred_window", "status", "gift_for"}
         changes = {key: value for key, value in values.items() if key in allowed}
         changes.update(columns)
         if round_done:
@@ -173,7 +179,9 @@ def update(
                 message = messages.get(conn, reminder.message_id)
                 if message:
                     due_when = late_note(reminder.remind_at, message.received_at, settings.tzinfo)
-            tasks.reword_queued(conn, task_id, reminder_text(latest, settings, due_when=due_when))
+            gifts = gifts_for(conn, latest)
+            words = reminder_text(latest, settings, due_when=due_when, gifts=gifts)
+            tasks.reword_queued(conn, task_id, words)
         return latest
 
 
@@ -286,13 +294,27 @@ def late_note(remind_at: str, queued_at: str, tz: tzinfo) -> str | None:
     return due.astimezone(tz).strftime("%a %d %b at %H:%M")
 
 
-def reminder_text(task: Task, settings: Any, *, due_when: str | None = None) -> str:
-    """The reminder as sent, in the assistant's voice. `due_when` marks one sent late."""
+def gifts_for(conn: sqlite3.Connection, task: Task) -> list[Idea]:
+    """The gift ideas a birthday's reminder lists; none for a task that is nobody's occasion."""
+    return ideas.gifts_for(conn, task.gift_for) if task.gift_for else []
+
+
+def reminder_text(
+    task: Task, settings: Any, *, due_when: str | None = None, gifts: list[Idea] | None = None
+) -> str:
+    """The reminder as sent, in the assistant's voice. `due_when` marks one sent late; a
+    birthday's (`gift_for`) goes with the gift ideas saved for them, or says there are none."""
     who = f" ({task.owner})" if task.owner else ""
     facts = {"title": task.title, "who": who, "task": task.id}
     # Each time it is due is its own message, by the reminder in force: a snoozed reminder may
     # take another of her wordings, and the same one worded again (a changed title) the same.
     seed = f"{task.id}:{task.reminder.id if task.reminder else ''}"
     if due_when:
-        return voice.say(settings, "reminder_late", seed=seed, due=due_when, **facts)
-    return voice.say(settings, "reminder", seed=seed, **facts)
+        words = voice.say(settings, "reminder_late", seed=seed, due=due_when, **facts)
+    else:
+        words = voice.say(settings, "reminder", seed=seed, **facts)
+    if not task.gift_for:
+        return words
+    listed = ", ".join(f"#{idea.id} {idea.title}" for idea in gifts or [])
+    event = "gift_ideas" if listed else "gift_ideas_none"
+    return f"{words}\n{voice.say(settings, event, seed=seed, who=task.gift_for, ideas=listed)}"

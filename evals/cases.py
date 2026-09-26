@@ -366,6 +366,42 @@ CASES: tuple[Case, ...] = (
         "Counted from the last time, not the calendar: repeat_from done.",
     ),
     Case(
+        "grandmas_birthday",
+        ("Grandma's birthday is October 12th. Remind me two weeks before at 9am.",),
+        (
+            called(
+                "add_task",
+                1,
+                lambda c: (
+                    c.input.get("repeat_unit") == "year"
+                    and c.input.get("repeat_every") == 1
+                    and "grandma" in str(c.input.get("gift_for") or "").casefold()
+                    and str(c.input.get("remind_at") or "").startswith("2026-09-28T09:00")
+                ),
+                "yearly, for Grandma's gifts, from Monday 28 September at 09:00",
+            ),
+            wrote_only("add_task"),
+        ),
+        "A birthday comes round every year, and its reminder brings the gifts saved for her.",
+    ),
+    Case(
+        "a_gift_for_grandma",
+        ("Grandma would love a new gardening apron",),
+        (
+            called(
+                "add_idea",
+                1,
+                lambda c: (
+                    c.input.get("kind") == "gift"
+                    and any("grandma" in p.casefold() for p in c.input.get("participants") or [])
+                ),
+                "a gift, for Grandma",
+            ),
+            wrote_only("add_idea", "remember"),
+        ),
+        "A present somebody would like is a gift idea for them, not an outing.",
+    ),
+    Case(
         "sensitive_reminder_in_the_group",
         ("remind me tomorrow at 8am to pick up my antidepressants",),
         (asked(), wrote_only()),

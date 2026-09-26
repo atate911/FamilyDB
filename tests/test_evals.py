@@ -396,3 +396,28 @@ def test_a_repeat_is_graded_on_how_often_and_from_when(settings) -> None:
     assert "add_task was called, but not every week" in " ".join(
         grade(case, run_case(case, settings, api=api))
     )
+
+
+def test_a_birthday_is_graded_on_whose_it_is_and_a_gift_on_its_kind(settings) -> None:
+    case = by_name("grandmas_birthday")
+    yearly = {
+        "title": "Grandma's birthday, 12 Oct",
+        "remind_at": "2026-09-28T09:00",
+        "repeat_every": 1,
+        "repeat_unit": "year",
+        "gift_for": "Grandma",
+    }
+    api = _answer([fakes.tool_use("t1", "add_task", yearly)], [fakes.text("Mon 28 Sep, 9am.")])
+    assert grade(case, run_case(case, settings, api=api)) == []
+    nobodys = {key: value for key, value in yearly.items() if key != "gift_for"}
+    api = _answer([fakes.tool_use("t1", "add_task", nobodys)], [fakes.text("Mon 28 Sep, 9am.")])
+    assert "not yearly, for Grandma's gifts" in " ".join(
+        grade(case, run_case(case, settings, api=api))
+    )
+    case = by_name("a_gift_for_grandma")
+    apron = {"title": "Gardening apron", "kind": "gift", "participants": ["Grandma"]}
+    api = _answer([fakes.tool_use("t1", "add_idea", apron)], [fakes.text("Saved as a gift.")])
+    assert grade(case, run_case(case, settings, api=api)) == []
+    outing = {**apron, "kind": "home"}
+    api = _answer([fakes.tool_use("t1", "add_idea", outing)], [fakes.text("Saved.")])
+    assert "not a gift, for Grandma" in " ".join(grade(case, run_case(case, settings, api=api)))

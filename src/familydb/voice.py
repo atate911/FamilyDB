@@ -69,6 +69,18 @@ EVENTS: dict[str, Event] = {
         ("title", "who", "task", "due"),
         {"title": "bins out", "who": " (Sam)", "task": 12, "due": "Tue 22 Sep at 07:30"},
     ),
+    "gift_ideas": Event(
+        "Gift ideas under a birthday's reminder",
+        "Gift ideas saved for {who}: {ideas}.",
+        ("who", "ideas"),
+        {"who": "Grandma", "ideas": "#41 a gardening apron, #52 a pottery class"},
+    ),
+    "gift_ideas_none": Event(
+        "A birthday's reminder with no gift ideas saved",
+        "No gift ideas saved for {who} yet; tell me any and I'll keep them.",
+        ("who",),
+        {"who": "Grandma"},
+    ),
     "follow_up": Event(
         "Asking how a plan went",
         "How was {plan} on {day}? Worth doing again?",

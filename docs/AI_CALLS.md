@@ -232,8 +232,9 @@ for effort, and each should be measured before and after.
    request (`suggest/discover.py`), so "what's on this weekend" and "anything fun Saturday"
    share one search, and so do the digest and the questions after it.
 4. **Some ideas need no lookup at all.** Done for the clear case: `jobs/enrich.needs_lookup`
-   skips a `home` idea with no location, link or place without a call. A vague idea of another
-   kind still goes to the worker, since a title alone can name a place.
+   skips a `home` idea with no location, link or place, and a `gift` that names no place (its
+   link is to the thing itself), without a call. A vague idea of another kind still goes to the
+   worker, since a title alone can name a place.
 5. **Workers inherit the chat's output limit.** Now done: worker kinds declare `max_tokens`
    (4,000, thinking included, never above `max_output_tokens`).
 6. **A turn that ran out of iterations was retried in full.** Now done: it is given up at

@@ -160,6 +160,9 @@ migration, so upgrading does not resend old conversations. Fresh outgoing messag
     The day after a plan, tap an answer under "how was it?" and check the idea's page.
     Ask for something every day at a time a few minutes ahead: it should come, and come again
     the next day at the same time; tick it off and it should still come the day after.
+    Say "Grandma would love a gardening apron", then set Grandma's birthday with a reminder a
+    few minutes ahead: the reminder should list the apron, and the apron's page should say it
+    is "not one place to look up", with no lookup on the status page's costs.
 12. On `/settings/personality`, rewrite one of her lines and add a sentence to "About the
     family"; the next reminder or follow-up should use the new line, and the next answer should
     know the sentence. Give her another name: "what's your name?" should get it, in the chat and

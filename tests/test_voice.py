@@ -141,7 +141,9 @@ def test_a_line_kept_as_a_string_is_one_wording_breaks_and_all(settings) -> None
     line = "Reminder: {title}{who}.\r\nTask #{task}; say done when it's done."
     own = settings.model_copy(update={"voice_lines": {"reminder": line}})
     for number in range(1, 9):
-        task = SimpleNamespace(id=number, title="bins out", owner=None, reminder=None)
+        task = SimpleNamespace(
+            id=number, title="bins out", owner=None, reminder=None, gift_for=None
+        )
         said = reminder_text(task, own)
         assert said == f"Reminder: bins out.\r\nTask #{number}; say done when it's done.", said
     assert voice.wordings(line) == [line]
@@ -160,7 +162,9 @@ def test_each_time_a_reminder_is_due_it_may_read_another_way(settings) -> None:
     )
 
     def due(reminder: int, title: str = "bins out") -> SimpleNamespace:
-        return SimpleNamespace(id=7, title=title, owner=None, reminder=SimpleNamespace(id=reminder))
+        return SimpleNamespace(
+            id=7, title=title, owner=None, reminder=SimpleNamespace(id=reminder), gift_for=None
+        )
 
     said = {reminder_text(due(n), own) for n in range(1, 21)}
     assert len(said) > 1  # one task, due twenty times: more than one wording

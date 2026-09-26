@@ -47,7 +47,10 @@ older than what is installed. It gets a date when it is released.
   come round again: "bins out every Sunday at 7pm", or "the dentist six months
   after the last visit"; ticking it off records it and keeps it coming, the
   hour holds when the clocks change, and a stretch with the bot off sends one
-  late reminder rather than a pile. The tasks page sets and shows it too. On
+  late reminder rather than a pile. The tasks page sets and shows it too. A
+  birthday or anniversary is a yearly task whose reminder lists the gift ideas
+  saved for whoever's it is ("Grandma would love a gardening apron" is kept as
+  one), or asks for some when there are none. On
   Telegram a reminder comes with ✓ Done, In an hour and Tomorrow buttons, and
   "how was it?" with Yes, again, Not again and Didn't go: a tap is done by code
   with no model call, so it answers at once and works when the model does not,

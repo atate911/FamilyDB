@@ -258,3 +258,80 @@ def test_the_page_sets_changes_and_stops_a_repeat(settings, clock, conn, family)
     # A choice the page never offered is refused, and changes nothing.
     edit("e4", repeat_was="", repeat="7:fortnight")
     assert tasks.get(conn, task.id).repeat_every is None
+
+
+# -- birthdays and the gifts saved for them --------------------------------------------------------
+
+
+def _gift(conn, title, *, who="Grandma", kind="gift", status="idea"):
+    from familydb.store import db, ideas
+
+    with db.transaction(conn):
+        return ideas.insert(
+            conn,
+            title=title,
+            kind=kind,
+            participants=[who],
+            status=status,
+            now="2026-09-01T00:00:00Z",
+        )
+
+
+def test_a_birthday_reminder_lists_the_gifts_saved_for_them(settings, clock, conn, family) -> None:
+    app = App(settings, clock)
+    said = _sent(app)
+    ctx = _ctx(settings, clock, conn, family)
+    apron = _gift(conn, "a gardening apron")
+    pottery = _gift(conn, "a pottery class", who="for Grandma")
+    _gift(conn, "a fishing rod", who="Grandpa")
+    _gift(conn, "an old idea", status="dropped")
+    _gift(conn, "Grandma's favourite cafe", kind="restaurant")  # somewhere to go, not a gift
+    task = add_task(
+        ctx,
+        AddTaskInput(
+            title="Grandma's birthday, 12 Oct",
+            remind_at="2026-09-20T15:00",
+            repeat_every=1,
+            repeat_unit="year",
+            gift_for="Grandma",
+        ),
+    )["task"]
+    assert task["gift_for"] == "Grandma"
+    clock.advance(timedelta(hours=1))
+    assert run_reminders(app) == 1
+    assert said[-1].endswith(
+        f"Gift ideas you've saved for Grandma: #{pottery.id} a pottery class, "
+        f"#{apron.id} a gardening apron."
+    )
+    assert _local(tasks.get(conn, task["id"]).reminder.remind_at) == "Mon 2027-09-20 15:00"
+
+
+def test_with_no_gifts_saved_it_asks_for_some(settings, clock, conn, family) -> None:
+    app = App(settings, clock)
+    said = _sent(app)
+    ctx = _ctx(settings, clock, conn, family)
+    _add(ctx, remind_at="2026-09-20T15:00", gift_for="Sam")
+    _gift(conn, "a kite", who="Samantha")  # a whole name, not part of one
+    clock.advance(timedelta(hours=1))
+    run_reminders(app)
+    assert said[-1].endswith(
+        "Nothing saved yet as a gift for Sam; tell me any ideas and I'll keep them."
+    )
+
+
+def test_a_gift_is_never_offered_as_something_to_do(settings, clock, conn, family) -> None:
+    from familydb.suggest.engine import run
+    from familydb.suggest.types import SuggestInput
+
+    gift = _gift(conn, "a gardening apron")
+    ctx = _ctx(settings, clock, conn, family)
+    result = run(ctx, SuggestInput(window="this_weekend", question="?", discover=False))
+    assert gift.id not in {c.idea_id for c in result.candidates}
+
+
+def test_whose_occasion_it_is_can_be_set_and_cleared(settings, clock, conn, family) -> None:
+    ctx = _ctx(settings, clock, conn, family)
+    task = _add(ctx, remind_at="2026-09-28T09:00", repeat_every=1, repeat_unit="year")
+    assert _update(ctx, task["id"], gift_for="Alex")["gift_for"] == "Alex"
+    assert list_tasks(ctx, ListTasksInput())["tasks"][0]["gift_for"] == "Alex"
+    assert _update(ctx, task["id"], gift_for="")["gift_for"] is None

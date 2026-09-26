@@ -872,7 +872,11 @@ CHARS_PER_TOKEN = 4
 # Her lines as the Personality page groups them, each group with whether it starts folded. A line
 # no group names (a new one in voice.EVENTS) is shown under "Other", so it is never left off.
 LINE_GROUPS = (
-    ("Reminders and follow-ups", False, ("reminder", "reminder_late", "follow_up")),
+    (
+        "Reminders and follow-ups",
+        False,
+        ("reminder", "reminder_late", "gift_ideas", "gift_ideas_none", "follow_up"),
+    ),
     (
         "When a button is tapped",
         True,

@@ -717,4 +717,17 @@ def test_home_ideas_with_nothing_to_look_up_are_skipped_without_a_call(
     counts = run_enrichment(app, api=api, idea_id=chores.id)
     assert counts["skipped"] == 1 and api.requests == []
     skipped = ideas.get(conn, chores.id)
-    assert skipped.enrichment == "skipped" and skipped.enrichment_note == NO_LOOKUP_NOTE
+    assert skipped.enrichment == "skipped"
+    assert skipped.enrichment_note == NO_LOOKUP_NOTE.format(kind="home")
+
+
+def test_a_gift_is_looked_up_only_when_it_names_a_place(conn, family) -> None:
+    from familydb.jobs.enrich import needs_lookup
+
+    apron, _ = _captured_idea(conn, family, title="A gardening apron")
+    pottery, _ = _captured_idea(conn, family, title="A pottery class")
+    with db.transaction(conn):
+        ideas.update(conn, apron.id, {"kind": "gift", "url": "https://shop.example/apron"})
+        ideas.update(conn, pottery.id, {"kind": "gift", "location_name": "Clay Space"})
+    assert not needs_lookup(ideas.get(conn, apron.id))  # its link is to the thing, not a place
+    assert needs_lookup(ideas.get(conn, pottery.id))

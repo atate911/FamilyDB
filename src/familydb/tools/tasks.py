@@ -38,6 +38,9 @@ class AddTaskInput(BaseModel):
     repeat_every: int | None = Field(default=None, description="With remind_at as the first.")
     repeat_unit: Literal["day", "week", "month", "year"] | None = None
     repeat_from: Literal["schedule", "done"] = "schedule"
+    gift_for: str | None = Field(
+        default=None, description="Whose birthday or anniversary: its reminder lists their gifts."
+    )
 
 
 class UpdateTaskInput(BaseModel):
@@ -57,6 +60,7 @@ class UpdateTaskInput(BaseModel):
     repeat_unit: Literal["day", "week", "month", "year"] | None = None
     repeat_from: Literal["schedule", "done"] | None = None
     stop_repeating: bool = False
+    gift_for: str | None = None
 
 
 class ListTasksInput(BaseModel):
@@ -251,4 +255,5 @@ def _brief(ctx: ToolContext, task: Task) -> dict[str, Any]:
         brief["reminder_sent"] = bool(reminder.delivered_at)
     brief["repeats"] = task_service.repeat_words(task)
     brief["last_done"] = local(task.last_done_at)
+    brief["gift_for"] = task.gift_for
     return {k: v for k, v in brief.items() if v not in (None, "")}

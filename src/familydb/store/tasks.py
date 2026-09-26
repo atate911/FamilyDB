@@ -42,6 +42,8 @@ class Task(BaseModel):
     repeat_from: Literal["schedule", "done"] | None = None
     repeat_anchor: str | None = None
     last_done_at: str | None = None
+    # Whose birthday or anniversary it is: its reminder lists the gifts saved for them.
+    gift_for: str | None = None
     channel: str
     chat_id: str
     created_at: str
@@ -107,6 +109,7 @@ def insert(
     chat_id: str,
     now: str,
     repeat: dict[str, Any] | None = None,
+    gift_for: str | None = None,
 ) -> int:
     """A new task. `repeat` holds the four repeat_ columns, when it comes round again."""
     row = {
@@ -121,6 +124,7 @@ def insert(
         "created_at": now,
         "updated_at": now,
         **(repeat or {}),
+        **({"gift_for": gift_for} if gift_for else {}),
     }
     cur = conn.execute(
         f"INSERT INTO tasks({','.join(row)}) VALUES ({','.join('?' * len(row))})",
