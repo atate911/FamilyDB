@@ -672,9 +672,12 @@ def setting_text(value: str | None) -> str:
 
 
 def price_text(price: prices.Price | None) -> str | None:
-    """What a model costs, in US dollars per million tokens read and written."""
+    """What a model costs, in US dollars per million tokens read and written, or for a minute of
+    recording when that is how it is billed (a hearing model, prices.HEARING)."""
     if price is None:
         return None
+    if price.minute and not (price.input or price.output):
+        return f"${price.minute:.3f} a minute"
     return f"${price.input:.2f} in, ${price.output:.2f} out"
 
 

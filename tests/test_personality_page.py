@@ -125,7 +125,7 @@ def test_a_rewrite_is_used_and_can_be_restored(page, conn) -> None:
     assert _prefix(page, conn)[0].text.startswith(
         "# Who you are\n\n" + personas.load(personas.DEFAULT).prompt
     )
-    assert "Vera, as she was written." in page.get("/settings").text
+    assert "Vera, as first written." in page.get("/settings").text
 
 
 def test_her_own_text_with_her_name_filled_in_is_no_rewrite(page, conn) -> None:
@@ -312,6 +312,13 @@ def test_under_none_nothing_is_said_to_be_kept_when_nothing_was_written(page) ->
     page.post("/settings/personality", data=_drawn(page, persona="none"))
     shown = page.get("/settings/personality").text
     assert 'name="persona_text"' not in shown and "kept for when she is chosen again" not in shown
+
+
+def test_the_overview_says_which_of_her_is_in_force(page) -> None:
+    """Two personas may share her name, so the settings overview names her by her label."""
+    assert "Vera, as first written." in page.get("/settings").text
+    assert page.post("/settings/personality", data=_drawn(page, persona="brief")).status_code == 302
+    assert "Vera, in brief." in page.get("/settings").text
 
 
 def test_a_rewrite_belongs_to_the_persona_it_described(page, conn, brief) -> None:

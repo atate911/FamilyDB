@@ -333,6 +333,22 @@ def test_a_model_the_company_does_not_have_is_refused(page, monkeypatch) -> None
     assert company.asked == []
 
 
+def test_a_hearing_model_is_offered_and_checked_like_the_other_models(page, monkeypatch) -> None:
+    """Each with what it costs, by the minute for one billed so, and a name its company does not
+    have is refused, as every voice note would otherwise go unheard."""
+    text = page.get("/settings/model").text
+    assert '<option value="whisper-1">$0.006 a minute</option>' in text
+    assert '<option value="gpt-4o-mini-transcribe">$1.25 in, $5.00 out</option>' in text
+    _ask(monkeypatch, _Company({"gpt-4o-mini-transcribe"}))
+    typo = _whole_form(page, openai_transcribe_model="gpt-4o-mini-transcrib")
+    response = page.post("/settings", data=typo)
+    assert response.status_code == 400
+    assert "OpenAI says it has no model called gpt-4o-mini-transcrib. Check the spelling." in (
+        _errors(response.text)
+    )
+    assert page.app.settings.openai_transcribe_model == "gpt-4o-mini-transcribe"
+
+
 def test_a_company_that_cannot_be_asked_does_not_block_a_save(page, monkeypatch) -> None:
 
     _ask(monkeypatch, _Company(None))

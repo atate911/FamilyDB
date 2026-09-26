@@ -110,6 +110,22 @@ def test_debug_prompt_says_who_reads_the_chat_it_names(env: Path) -> None:
     assert "everyone who signs in reads it, kids among them." in page.output
 
 
+def test_debug_prompt_is_built_from_what_the_page_stored(env: Path) -> None:
+    """Her name and the chat's level as the page set them, as the pipeline would send them."""
+    from contextlib import closing
+
+    from familydb.app import build_app
+    from familydb.store import settings as settings_store
+
+    runner.invoke(app, ["members", "add", "Sam", "--role", "admin"])
+    with closing(build_app().connect()) as conn, db.transaction(conn):
+        settings_store.set_many(conn, {"persona_name": "Juno", "chat_level": "best"})
+    result = runner.invoke(app, ["debug", "prompt", "hi"])
+    assert result.exit_code == 0, result.output
+    assert '"model": "claude-opus-5"' in result.output
+    assert "You are Juno" in result.output and "You are Vera" not in result.output
+
+
 @pytest.mark.skipif(os.name == "nt", reason="Windows terminate does not deliver POSIX SIGTERM")
 def test_run_command_waits_and_stops_on_sigterm(env: Path) -> None:
     proc = subprocess.Popen(

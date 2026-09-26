@@ -429,9 +429,9 @@ def debug_prompt(
         typer.echo("--kind is one of chat, digest, retry or enrich", err=True)
         raise typer.Exit(code=2)
     application = build_app()
-    settings = application.settings
     call = gateway.spec(kind)
     with closing(_ready(application)) as conn:
+        settings = application.settings  # with what the page stored, which _ready brought in
         if kind == "enrich":
             idea = ideas.get(conn, idea_id) if idea_id is not None else None
             if idea is None:

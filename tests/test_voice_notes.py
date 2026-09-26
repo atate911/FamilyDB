@@ -110,6 +110,30 @@ def test_a_voice_note_that_will_not_be_heard_costs_nothing_and_says_why(
     assert messages.pending(conn, max_retries=3, now=NOW_ISO) == []  # nothing left to retry
 
 
+def test_a_notice_with_several_wordings_is_chosen_by_its_voice_note(
+    settings, clock, conn, family
+) -> None:
+    """As every other notice is: another voice note may read another way, the same one the same."""
+    wordings = [f"Not listening, take {n}." for n in range(1, 9)]
+    changed = settings.model_copy(
+        update={"voice_notes": False, "voice_lines": {"voice_off": wordings}}
+    )
+    ears = fakes.FakeTranscriptionsAPI()
+    replies = [
+        handle_incoming(
+            App(changed, clock),
+            _voice(f"v{n}"),
+            api=fakes.FakeMessagesAPI(),
+            conn=conn,
+            hearing=ears,
+        )
+        for n in range(1, 9)
+    ]
+    for reply in replies:
+        assert reply.text == voice.say(changed, "voice_off", seed=reply.in_message_id)
+    assert len({reply.text for reply in replies}) > 1
+
+
 @pytest.mark.parametrize(
     "answer", [fakes.openai_rate_limit(), fakes.oa_transcription("   ")], ids=["fails", "empty"]
 )

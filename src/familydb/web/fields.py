@@ -444,6 +444,7 @@ GROUPS: tuple[Group, ...] = (
                 "openai_transcribe_model",
                 "OpenAI hearing model",
                 suggested=hearing_suggestions("openai"),
+                company="openai",
             ),
             field(
                 "gemini_transcribe_model",
@@ -451,6 +452,7 @@ GROUPS: tuple[Group, ...] = (
                 "Leave it empty to use Gemini's lookup model.",
                 suggested=suggestions("gemini"),
                 unset="Gemini's lookup model",
+                company="gemini",
             ),
         ),
     ),

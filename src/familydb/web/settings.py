@@ -513,7 +513,8 @@ def overview(*, said: str | None, error: str | None, status: int) -> tuple[str, 
     elif live.persona in live.persona_text:
         who = f"{persona.name}, in your words."
     else:
-        who = f"{persona.name}, as she was written."
+        # By her label, which says which of her it is: two personas may share a name.
+        who = f"{persona.listed_as}."
     if live.digest_chat_id:
         day = fields.BY_KEY["digest_day"].word(live.digest_day)
         weekend = f"Weekend ideas on {day}s at {hour(live.digest_hour)}."

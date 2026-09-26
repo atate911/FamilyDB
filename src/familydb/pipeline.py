@@ -271,7 +271,9 @@ def _not_heard(
     log.warning("voice note %s not heard: %s", inbound_id, error)
     with transaction(conn):
         messages.give_up(conn, inbound_id)
-    notice = voice.say(app.settings, event, **facts)
+    # Seeded by the message, as every other notice here is, so a line with several wordings
+    # may read another way for another voice note, and the same way if this one is sent again.
+    notice = voice.say(app.settings, event, seed=inbound_id, **facts)
     return _fail(app, conn, msg, inbound_id, f"voice note: {error}", notice)
 
 
