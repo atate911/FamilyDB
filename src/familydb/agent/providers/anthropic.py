@@ -1,4 +1,4 @@
-"""Claude, through the Anthropic SDK. The behaviour the bot was built on.
+"""Claude, through the Anthropic SDK.
 
 Everything specific to this vendor lives here: the request shape, prompt-cache markers, the
 server-side web tools, the content blocks a reply comes back in, and which failures are worth
@@ -41,11 +41,11 @@ BASIC_WEB_FETCH = "web_fetch_20250910"
 
 # What a request may carry depends on the model, and the settings page can point either surface
 # at any model, so it is read from the name each time. Getting it wrong is not a degraded answer
-# but a 400 on every request: that is how lookups on the default Haiku worker failed before.
+# but a 400 on every request.
 #
 # Adaptive thinking and effort: every current model takes them, the older ones below do not
-# (Haiku 4.5 still wants a fixed thinking budget and rejects effort outright). Listed by what
-# they are rather than by what works, so a model released later gets thinking by default.
+# (Haiku 4.5 wants a fixed thinking budget and rejects effort outright). Listed by what they are
+# rather than by what works, so a model released later gets thinking by default.
 OLDER_MODELS = (
     "claude-3",
     "claude-haiku-4-5",
@@ -122,7 +122,7 @@ class AnthropicProvider:
 
     def __init__(self, settings: Settings, api: Any = None) -> None:
         self.settings = settings
-        self._api = api  # tests and the CLI inject a scripted stand-in
+        self._api = api  # a test's scripted stand-in, when one is injected
 
     # -- wiring ---------------------------------------------------------------------------
     def configured(self) -> bool:
@@ -199,8 +199,8 @@ class AnthropicProvider:
         last = request.messages[-1] if request.messages else None
         for message in request.messages:
             if message.role == "assistant" or message is not last:
-                # Only the newest turn is sent as separate blocks; everything behind it is one
-                # piece of text, which is how this API has always been sent it.
+                # Only the newest turn is sent as separate blocks, so its date line stays apart
+                # from the message; each turn behind it goes as one piece of text.
                 messages.append({"role": message.role, "content": message.text})
             else:
                 messages.append(

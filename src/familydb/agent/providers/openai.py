@@ -54,8 +54,9 @@ def openai_schema(schema: dict[str, Any]) -> dict[str, Any]:
     """The same JSON Schema, as strict function calling wants it.
 
     Strict mode will not accept a property that is merely absent from `required`, so every
-    property is required and the ones our models treat as optional are already nullable through
-    the `anyOf` pydantic emits. Nested objects are rewritten the same way.
+    property is made required, and one that may be left out is nullable instead: an optional
+    field already is, through the `anyOf` pydantic emits, and one with a default gets a null
+    branch here. Nested objects are rewritten the same way.
     """
     if not isinstance(schema, dict):
         return schema
@@ -76,8 +77,8 @@ def openai_schema(schema: dict[str, Any]) -> dict[str, Any]:
         for name, child in out["properties"].items():
             if name in already or _accepts_null(child):
                 continue
-            # It was optional because it has a default. Strict mode will not let it be absent,
-            # so it gets a way to say nothing instead, and the handler applies the default.
+            # Optional only because it has a default: null stands for leaving it out, and
+            # dispatch drops a top-level null so the input model's default applies.
             out["properties"][name] = {"anyOf": [child, {"type": "null"}]}
         out["required"] = list(out["properties"])
         out.setdefault("additionalProperties", False)

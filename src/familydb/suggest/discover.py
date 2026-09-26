@@ -3,8 +3,8 @@
 The chat agent never searches the web itself. When discovery is on, this stage runs one worker
 turn (its own prompt, the web tools, `report_finds` as the hand-back) and keeps the finds per
 window for `DISCOVER_CACHE_SECONDS`, so a digest and the questions that follow it share one search.
-The request is built from the window and the constraints only, never the question's wording, so
-"what's on this weekend" and "anything fun Saturday" ask the same thing and share one search.
+The request is built from the framing (the window, where they are, the constraints), never the
+question's wording, so "what's on this weekend" and "anything fun Saturday" share one search.
 """
 
 from __future__ import annotations
@@ -45,7 +45,8 @@ def _hours(bounds: tuple[int, int]) -> str:
 
 
 def render_discover_request(context: Context, constraints: Constraints, settings: Settings) -> str:
-    """What the worker is asked: the window and its hours, the home area, what it is for.
+    """What the worker is asked: the window and its hours, the home area, where they are, and
+    what it is for.
 
     Built from the framing, never the question's wording: two ways of asking for the same thing
     ask the same, and share one cached search, while a different subject asks something else.

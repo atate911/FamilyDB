@@ -35,8 +35,8 @@ def _claude(inp: float, out: float) -> Price:
     return Price(input=inp, output=out, cached=inp / 10, search=0.01)
 
 
-# Longest name first where one is the start of another, since lookup is by prefix: a dated
-# snapshot such as claude-haiku-4-5-20251001 costs what its family does.
+# Looked up by prefix, longest first (`price`), so a dated snapshot such as
+# claude-haiku-4-5-20251001 costs what its family does.
 PRICES: dict[str, dict[str, Price]] = {
     "anthropic": {
         "claude-fable-5-1": _claude(10.0, 50.0),

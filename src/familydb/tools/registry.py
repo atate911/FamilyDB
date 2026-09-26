@@ -40,7 +40,7 @@ class ToolContext:
     calendar: Any = None  # a CalendarAPI (integrations.google_calendar) when connected
     weather: Any = None  # a ForecastAPI (integrations.open_meteo) when configured
     geocoder: Any = None  # a GeocoderAPI (integrations.geocode) when available
-    api: Any = None  # the MessagesAPI, for tools that run a worker turn (discovery)
+    api: Any = None  # a test's stand-in model, for tools that run a worker turn (discovery)
     discover_cache: Any = None  # the App-level cache of discovery results
     allowed_tools: frozenset[str] | None = None
     worker_idea_id: int | None = None

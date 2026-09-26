@@ -3,9 +3,9 @@
 The third provider behind the same protocol. What differs here: the system prompt is one
 `system_instruction`; tools are function declarations grouped into a Tool, and the hosted search
 is a Tool of its own alongside them; a tool call's arguments arrive already parsed; caching is
-implicit for a long enough prefix, so the cacheable flag steers nothing; and thinking is a token
-budget rather than a named effort. A voice note is heard by the same endpoint, sent the recording
-itself with a line asking for its words.
+implicit for a long enough prefix, so the cacheable flag steers nothing; and thinking is a level
+(low or high) on Gemini 3 and a token budget before it, rather than a named effort. A voice note
+is heard by the same endpoint, sent the recording itself with a line asking for its words.
 """
 
 from __future__ import annotations
@@ -38,7 +38,8 @@ log = logging.getLogger(__name__)
 
 NAME = "gemini"
 NO_CREDENTIALS = "no Gemini credentials configured: set GEMINI_API_KEY (see .env.example)"
-# Our five effort names as a thinking budget in tokens. -1 lets the model decide.
+# Our five effort names as a thinking budget in tokens, for the models before Gemini 3 (which
+# take a level instead, in `config`). -1 lets the model decide.
 THINKING = {"low": 0, "medium": -1, "high": -1, "xhigh": 24576, "max": 32768}
 REFUSAL_REASONS = {
     "SAFETY",
@@ -112,7 +113,8 @@ class GeminiProvider:
 
     def tools(self, request: TurnRequest) -> list[dict[str, Any]]:
         """Our own tools in one group, then the hosted search as its own, which is how this API
-        expects them. Models that cannot take both together will say so."""
+        expects them. Only Gemini 3 takes the two together, so a web worker on an older model is
+        refused here, before anything is sent."""
         tools: list[dict[str, Any]] = []
         model = request.model or self.settings.gemini_model
         if request.web is not None and request.tools and not model.startswith("gemini-3"):

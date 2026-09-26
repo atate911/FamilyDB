@@ -154,8 +154,8 @@ class Provider(Protocol):
 
     def check_key(self) -> KeyCheck:
         """Whether the vendor takes this key, found by looking the chat model up: the same free
-        question as `model_exists`, read for what it says about the key instead. For the setup
-        page, which checks a key before storing it."""
+        question as `model_exists`, read for what it says about the key instead. For the
+        company-and-key form (setup and the AI model page), which checks a key before storing it."""
         ...
 
     def count_tokens(self, request: TurnRequest) -> int:

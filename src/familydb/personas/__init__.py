@@ -89,9 +89,9 @@ DEFAULT = "default"
 # itself, under the product's name, with no character and the plain wording for everything.
 NONE = "none"
 PLAIN = Persona(NONE, "FamilyDB", "", MappingProxyType({}))
-# Keys a setting may still hold from before a persona's folder was renamed. The default one was
-# "vera" until her name was written once, apart from her folder; a setting that fails to load
-# takes every stored setting down with it, keys included, so an old value must still find her.
+# Keys older installs may hold for a persona whose folder has another name: "vera" is the
+# default one. A setting that fails to load takes every stored setting down with it, keys
+# included, so an old value must still find her.
 RENAMED = {"vera": DEFAULT}
 
 

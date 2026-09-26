@@ -1,4 +1,5 @@
-"""Assemble the request: cached system blocks first, everything volatile last."""
+"""The prompt's parts: the prompt files, the chat's cached system blocks, and the conversation
+with everything volatile in its last turn. `agent.compose` puts them together into a request."""
 
 from __future__ import annotations
 
@@ -37,11 +38,11 @@ def trim_ideas(everything: list[Any], limit: int) -> tuple[list[Any], int]:
     return everything[-limit:], len(everything) - limit
 
 
-# Between the persona's character and the product spec: who she is, then what the job is. Who
-# she is includes the family's own notes on how she talks, after her character, so the job comes
-# after those too. The spec says what to do and wins where the two meet, and the header says so
-# for every persona: her own character says it too, but a family's rewrite of her need not.
-# Under none neither header is sent, as there is no character for the job to win against.
+# Between the persona's character and the product spec: who she is (her character, then the
+# family's notes on how she talks), then what the job is. The spec says what to do and wins where
+# the two meet, and the header says so for every persona, since a character need not say it and
+# a family's rewrite may not. Under none neither header is sent, as there is no character for the
+# job to win against.
 PERSONA_HEADER = "# Who you are\n\n"
 JOB_HEADER = "\n\n# The job\n\nWhere who you are and the job disagree, the job wins.\n\n"
 
@@ -64,8 +65,9 @@ def chat_prefix(conn: sqlite3.Connection, settings: Settings) -> tuple[str, str,
 def chat_blocks(
     character: str, instructions: str, family: str, idea_list: str
 ) -> list[SystemBlock]:
-    """Two blocks, both cache breakpoints: who she is and the system prompt, which never change,
-    then the family context and the idea list, which change when an idea does."""
+    """Two blocks, both cache breakpoints: who she is and the system prompt, which change rarely
+    (another persona, or the family editing her), then the family context and the idea list,
+    which change whenever the family or an idea does."""
     first = f"{PERSONA_HEADER}{character}{JOB_HEADER}{instructions}" if character else instructions
     return [
         SystemBlock(first, cacheable=True),
