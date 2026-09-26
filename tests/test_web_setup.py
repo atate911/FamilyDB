@@ -15,6 +15,7 @@ from familydb.integrations.geocode import GeoPoint
 from familydb.store import db, knocks, members
 from familydb.store import settings as settings_store
 from familydb.web import create_app
+from tests.conftest import NOW_ISO
 from tests.fakes import FakeGeocoder
 
 INSTALLERS = "installer-made-password-1"
