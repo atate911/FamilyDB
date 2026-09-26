@@ -33,6 +33,7 @@ WRITES = frozenset(
         "delete_event",
         "add_task",
         "update_task",
+        "remember",
     }
 )
 
@@ -53,6 +54,7 @@ class Run:
     calls: list[Call] = field(default_factory=list)
     ids: set[int] = field(default_factory=set)  # every idea, plan and task number that exists
     counts: dict[str, int] = field(default_factory=dict)
+    statuses: dict[int, str] = field(default_factory=dict)  # each idea's status at the end
     cost: float = 0.0
     model_calls: int = 0
     input_tokens: int = 0  # every input token its calls sent, from the cache or not
@@ -250,6 +252,7 @@ def run_case(case: Case, base: Settings, *, api: Any = None, limit: float = 1.0)
             for table in ("ideas", "plans", "tasks"):
                 run.counts[table] = conn.execute(f"SELECT count(*) FROM {table}").fetchone()[0]
                 run.ids |= {r[0] for r in conn.execute(f"SELECT id FROM {table}")}
+            run.statuses = {r[0]: r[1] for r in conn.execute("SELECT id, status FROM ideas")}
             # Input counts whether it was new, written to the cache or read from it. Each
             # provider module splits what a call was sent into these three columns, taking the
             # cached tokens out of the total where the vendor counts them inside it (OpenAI and

@@ -12,6 +12,7 @@ from typing import Any
 from familydb.availability import calendar_available, weather_available, web_tools_available
 from familydb.clock import Clock
 from familydb.config import Settings
+from familydb.memory import Chosen, line_of
 from familydb.store.ideas import Idea
 from familydb.store.members import Member
 
@@ -31,11 +32,28 @@ def _duration(idea: Idea) -> str | None:
     return None
 
 
+def render_dates(idea: Idea) -> str | None:
+    """When a dated idea is on, as stored: "on 2026-11-18T20:00", "on 2026-10-01 to 2026-10-31",
+    "from 2026-10-01". None for an idea tied to no date. Never relative to today: the idea list
+    is cached."""
+    first, last = idea.happens_from, idea.happens_until
+    if not first:
+        return None
+    if last is None:
+        return f"from {first}"
+    if last == first[:10]:
+        return f"on {first}"
+    return f"on {first} to {last}"
+
+
 def render_idea_line(idea: Idea) -> str:
     """One compact line per idea, exactly what the model sees in its context."""
     parts = [f"#{idea.id}", f"[{idea.kind}]", idea.title]
     if idea.location_name:
         parts.append(f"at {idea.location_name}")
+    dates = render_dates(idea)
+    if dates:
+        parts.append(dates)
     parts.append(f"for: {', '.join(idea.participants) if idea.participants else 'anyone'}")
     if idea.tags:
         parts.append(f"tags: {', '.join(idea.tags)}")
@@ -130,6 +148,18 @@ def render_location_line(
         f"{sender}'s location, from their phone {minutes_ago} min ago: {where}"
         f'({lat:.4f}, {lon:.4f}). For "near here" or "open now", suggest uses it.'
     )
+
+
+def render_memories(chosen: Chosen) -> str | None:
+    """What the family told the bot about itself that goes with this message (familydb/memory.py),
+    for the current turn only: it is chosen per message, so it never goes near the cache."""
+    if not chosen.memories:
+        return None
+    lines = ["What the family has told you about itself (m numbers are for remember):"]
+    lines += [line_of(memory) for memory in chosen.memories]
+    if chosen.left_out:
+        lines.append(f"({chosen.left_out} more, on other things.)")
+    return "\n".join(lines)
 
 
 def render_folded_line(lines: list[str]) -> str:

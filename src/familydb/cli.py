@@ -16,11 +16,16 @@ from uuid import uuid4
 
 import typer
 
-from familydb import __version__, passwords, privacy, roles
+from familydb import __version__, memory, passwords, privacy, roles
 from familydb import family as family_rules
 from familydb.agent.history import load_history
 from familydb.agent.providers.base import Message, TurnRequest
-from familydb.agent.render import render_audience_line, render_idea_line, render_user_turn
+from familydb.agent.render import (
+    render_audience_line,
+    render_idea_line,
+    render_memories,
+    render_user_turn,
+)
 from familydb.app import App, build_app
 from familydb.availability import (
     digest_configured,
@@ -449,6 +454,15 @@ def debug_prompt(
             channel = digest_channel(chat_id)
             audience = render_audience_line(channel, chat_id, members.list_all(conn))
             current = render_user_turn(sender, text, application.clock, audience)
+            chosen = memory.choose(
+                conn,
+                text,
+                sender_id=member.id if member else None,
+                today=application.clock.today(),
+            )
+            remembered = render_memories(chosen)
+            if remembered:
+                current.append(remembered)
         provider = application.provider(call.surface)
         request = gateway.build_request(
             kind,

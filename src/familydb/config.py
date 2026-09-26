@@ -188,6 +188,17 @@ class Settings(BaseSettings):
     telegram_bot_token: str | None = None
     # In groups, only answer messages that mention the bot or reply to it.
     telegram_require_mention: bool = False
+    # Voice notes sent on Telegram are heard by a speech model, then answered as if typed
+    # (agent/gateway.listen). Claude hears nothing, so a family on Claude alone needs an OpenAI
+    # or Gemini key for them.
+    voice_notes: bool = True
+    # A longer one is not heard at all: every minute of it is paid for.
+    voice_max_minutes: int = Field(default=5, ge=1, le=30)
+    # Who hears them. Empty: the chat company when it can, else another that can and has a key.
+    transcribe_provider: Literal["", "openai", "gemini"] = ""
+    openai_transcribe_model: str = "gpt-4o-mini-transcribe"
+    # Empty hears with Gemini's lookup model.
+    gemini_transcribe_model: str = ""
     # Failed messages are retried this often, this many times.
     retry_interval_minutes: int = Field(default=5, ge=1, le=1440)
     retry_max_attempts: int = Field(default=3, ge=0, le=20)

@@ -305,3 +305,57 @@ def test_a_reply_at_the_limits_of_style_passes(settings) -> None:
     case = by_name("thanks")
     reply = "Any time! As an aside, swim lessons are at 9 tomorrow! 🙂"
     assert grade(case, run_case(case, settings, api=_answer([fakes.text(reply)]))) == []
+
+
+def test_a_swap_is_graded_on_its_order_and_on_what_it_leaves(settings) -> None:
+    case = by_name("ramble_swap")
+    hike = {"title": "Falls hike", "start": "2026-10-03T13:00", "idea_id": 4}
+    swap = {"title": "Hopscotch", "start": "2026-10-03T13:00", "idea_id": 3}
+    right = _answer(
+        [fakes.tool_use("t1", "create_event", hike)],
+        [fakes.text("On the calendar: the falls hike, Sat 3 Oct at 1pm.")],
+        [
+            fakes.tool_use("t2", "create_event", swap),
+            fakes.tool_use("t3", "update_event", {"plan_id": 1, "status": "cancelled"}),
+        ],
+        [fakes.text("Swapped: Hopscotch Sat 3 Oct at 1pm; the hike is back on the list (#4).")],
+    )
+    assert grade(case, run_case(case, settings, api=right)) == []
+
+    backwards = _answer(
+        [fakes.tool_use("t1", "create_event", hike)],
+        [fakes.text("On the calendar.")],
+        [fakes.tool_use("t3", "update_event", {"plan_id": 1, "status": "cancelled"})],
+        [fakes.tool_use("t2", "create_event", swap)],
+        [fakes.text("Swapped.")],
+    )
+    assert "update_event ran before create_event" in grade(
+        case, run_case(case, settings, api=backwards)
+    )
+
+
+def test_an_event_put_on_by_hand_is_taken_off_by_its_id(settings) -> None:
+    case = by_name("ramble_cancel_by_hand")
+    api = _answer(
+        [fakes.tool_use("t1", "get_calendar", {"start": "2026-09-26", "end": "2026-09-26"})],
+        [fakes.tool_use("t2", "delete_event", {"event_id": "evt2"})],
+        [fakes.text("Took swim lessons on Saturday off the calendar.")],
+    )
+    run = run_case(case, settings, api=api)
+    assert grade(case, run) == []
+    assert [c.name for c in run.calls] == ["get_calendar", "delete_event"]
+
+
+def test_remembering_alone_is_graded_on_what_it_cost(settings) -> None:
+    case = by_name("remember_alone")
+    change = {"action": "add", "about": "the girls", "category": "food", "fact": "vegetarian"}
+    once = _answer(
+        [fakes.tool_use("t1", "remember", {"changes": [change], "reply": "Noted: vegetarian."})]
+    )
+    run = run_case(case, settings, api=once)
+    assert grade(case, run) == [] and run.reply == "Noted: vegetarian."
+    twice = _answer(
+        [fakes.tool_use("t1", "remember", {"changes": [change]})],
+        [fakes.text("Noted: vegetarian.")],
+    )
+    assert "2 model calls, over 1" in grade(case, run_case(case, settings, api=twice))

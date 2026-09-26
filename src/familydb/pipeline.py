@@ -2,20 +2,23 @@
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 import sqlite3
 from contextlib import closing
 from datetime import datetime
 from typing import Any
 
-from familydb import voice, whereabouts
+from familydb import memory, personas, voice, whereabouts
 from familydb.agent import gateway, spending
 from familydb.agent.history import load_history
 from familydb.agent.loop import MessagesAPI, TurnResult
+from familydb.agent.providers import Audio
 from familydb.agent.render import (
     render_audience_line,
     render_folded_line,
     render_location_line,
+    render_memories,
     render_retry_note,
     render_user_turn,
 )
@@ -33,6 +36,9 @@ from familydb.tools import ToolContext
 
 log = logging.getLogger(__name__)
 
+# The most a voice note may weigh: what Telegram lets a bot download.
+MAX_AUDIO_BYTES = 20 * 1024 * 1024
+
 
 def handle_incoming(
     app: App,
@@ -40,12 +46,16 @@ def handle_incoming(
     *,
     api: MessagesAPI | None = None,
     conn: sqlite3.Connection | None = None,
+    hearing: Any = None,
 ) -> OutgoingMessage | None:
-    """Process one message. Returns None for an update already seen (a restart, a retry)."""
+    """Process one message. Returns None for an update already seen (a restart, a retry).
+
+    A voice note is heard first (`hearing` stands in for the speech endpoint in tests).
+    """
     if conn is not None:
-        return _handle(app, msg, api, conn)
+        return _handle(app, msg, api, conn, hearing)
     with closing(app.connect()) as own:
-        return _handle(app, msg, api, own)
+        return _handle(app, msg, api, own, hearing)
 
 
 def handle_synthetic(
@@ -73,7 +83,11 @@ def handle_synthetic(
 
 
 def _handle(
-    app: App, msg: IncomingMessage, api: MessagesAPI | None, conn: sqlite3.Connection
+    app: App,
+    msg: IncomingMessage,
+    api: MessagesAPI | None,
+    conn: sqlite3.Connection,
+    hearing: Any = None,
 ) -> OutgoingMessage | None:
     if _seen(conn, msg):
         return None
@@ -101,7 +115,7 @@ def _handle(
     inbound_id = _store_inbound(app, conn, msg, member)
     if inbound_id is None:
         return None
-    return _run(app, msg, member, inbound_id, api, conn, notify=True)
+    return _run(app, msg, member, inbound_id, api, conn, notify=True, hearing=hearing)
 
 
 def _seen(conn: sqlite3.Connection, msg: IncomingMessage) -> bool:
@@ -114,7 +128,11 @@ def _seen(conn: sqlite3.Connection, msg: IncomingMessage) -> bool:
 def _store_inbound(
     app: App, conn: sqlite3.Connection, msg: IncomingMessage, member: Member
 ) -> int | None:
-    """Store the inbound message; None when the same update landed at the same moment."""
+    """Store the inbound message; None when the same update landed at the same moment.
+
+    A voice note is stored as a mark saying how long it was, before a byte of it is fetched:
+    its words replace the mark once they are heard.
+    """
     try:
         with transaction(conn):
             inbound = messages.insert_in(
@@ -123,7 +141,7 @@ def _store_inbound(
                 channel_update_id=msg.channel_update_id,
                 chat_id=msg.chat_id,
                 member_id=member.id,
-                text=msg.text,
+                text=messages.unheard(msg.voice.seconds) if msg.voice else msg.text,
                 now=utc_iso(app.clock.now()),
             )
     except sqlite3.IntegrityError:
@@ -145,6 +163,7 @@ def _run(
     notify: bool,
     retry: bool = False,
     kind: str = "chat",
+    hearing: Any = None,
 ) -> OutgoingMessage | None:
     with lease(app, conn, inbound_id) as owned:
         if not owned:
@@ -161,6 +180,15 @@ def _run(
                 messages.give_up(conn, inbound_id)
             return None
         member = current_member
+        if msg.voice is not None:
+            heard = _hear(app, msg, inbound_id, conn, hearing)
+            if isinstance(heard, OutgoingMessage):
+                return heard
+            msg = heard
+        elif messages.is_unheard(row.text):
+            # Stored, and then the process stopped before it was heard. The recording is not
+            # kept, so there is nothing to answer: say so, even on a retry, since it is final.
+            return _not_heard(app, conn, msg, inbound_id, "stopped before it was heard")
         if retry:
             if row.retries >= app.settings.retry_max_attempts:
                 return None
@@ -171,6 +199,88 @@ def _run(
         return _run_owned(
             app, msg, member, inbound_id, api, conn, notify=notify, retry=retry, kind=kind
         )
+
+
+def _hear(
+    app: App, msg: IncomingMessage, inbound_id: int, conn: sqlite3.Connection, hearing: Any
+) -> IncomingMessage | OutgoingMessage:
+    """A voice note's words, stored in place of its mark and handed on as the message's text.
+
+    Or the notice saying why it was not heard, worded by code: turned off, nobody with a key
+    who can hear, too long, not fetched, not heard, or the day's limit spent. The recording is
+    not kept, so a voice note that was not heard is given up rather than retried.
+    """
+    note = msg.voice
+    assert note is not None
+    settings = app.settings
+    if not settings.voice_notes:
+        return _not_heard(app, conn, msg, inbound_id, "voice notes are off", "voice_off")
+    if not gateway.can_listen(settings, audio=hearing):
+        return _not_heard(app, conn, msg, inbound_id, "nobody can hear", "voice_no_ears")
+    minutes = settings.voice_max_minutes
+    if note.seconds > minutes * 60 or (note.size or 0) > MAX_AUDIO_BYTES:
+        return _not_heard(app, conn, msg, inbound_id, "too long", "voice_too_long", minutes=minutes)
+    try:
+        data = note.fetch()
+    except Exception as exc:
+        log.warning("could not fetch voice note %s: %s", inbound_id, exc)
+        return _not_heard(app, conn, msg, inbound_id, f"not fetched: {type(exc).__name__}")
+    if len(data) > MAX_AUDIO_BYTES:
+        return _not_heard(
+            app, conn, msg, inbound_id, "too large", "voice_too_long", minutes=minutes
+        )
+    try:
+        heard = gateway.listen(
+            settings=settings,
+            conn=conn,
+            clock=app.clock,
+            audio=Audio(data=data, mime=note.mime, seconds=note.seconds, name=note.name),
+            hints=_hints(app, conn),
+            message_id=inbound_id,
+            api=hearing,
+        )
+    except SpendingLimitReached as exc:
+        return _not_heard(
+            app, conn, msg, inbound_id, str(exc), "limit_reached", limit=f"{exc.limit:.2f}"
+        )
+    except AgentError as exc:
+        return _not_heard(app, conn, msg, inbound_id, str(exc))
+    words = heard.text.strip()
+    if not words:
+        return _not_heard(app, conn, msg, inbound_id, "no words in it")
+    caption = msg.text.strip()
+    text = messages.VOICE_PREFIX + words + (f"\n\n{caption}" if caption else "")
+    with transaction(conn):
+        messages.set_text(conn, inbound_id, text)
+    log.info("heard voice note %s: %s s, %s characters", inbound_id, note.seconds, len(words))
+    return dataclasses.replace(msg, text=text, voice=None)
+
+
+def _not_heard(
+    app: App,
+    conn: sqlite3.Connection,
+    msg: IncomingMessage,
+    inbound_id: int,
+    error: str,
+    event: str = "voice_unheard",
+    **facts: Any,
+) -> OutgoingMessage:
+    log.warning("voice note %s not heard: %s", inbound_id, error)
+    with transaction(conn):
+        messages.give_up(conn, inbound_id)
+    notice = voice.say(app.settings, event, **facts)
+    return _fail(app, conn, msg, inbound_id, f"voice note: {error}", notice)
+
+
+def _hints(app: App, conn: sqlite3.Connection) -> str:
+    """Names a voice note may say, so they are written the family's way: who is in the family,
+    what she is called, where home is. The same for every voice note, and short."""
+    names = [member.display_name for member in members.list_all(conn) if member.active]
+    names.append(personas.active(app.settings).name)
+    hints = "Names: " + ", ".join(names) + "."
+    if app.settings.home_area:
+        hints += f" Home: {app.settings.home_area}."
+    return hints
 
 
 def _run_owned(
@@ -392,6 +502,11 @@ def _think(
                 whereabouts.minutes_ago(shared, app.clock.now()),
             )
         )
+    remembered = render_memories(
+        memory.choose(conn, msg.text, sender_id=member.id, today=app.clock.today())
+    )
+    if remembered:
+        current.append(remembered)
     if taken:
         current.append(render_folded_line([held.text for held in taken]))
     if retry:

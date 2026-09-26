@@ -857,6 +857,10 @@ LINE_GROUPS = (
             "retry_later",
             "cannot_reach",
             "no_key",
+            "voice_off",
+            "voice_no_ears",
+            "voice_too_long",
+            "voice_unheard",
         ),
     ),
 )

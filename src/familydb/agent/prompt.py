@@ -15,8 +15,8 @@ from familydb.config import Settings
 from familydb.store import ideas, members
 
 IDEAS_HEADER = (
-    "Ideas list, one per line: number | kind | title | where | who it is for | tags | "
-    "setting/weather | seasons | duration | cost | booking | status | suggested by, date"
+    "Ideas list, one per line: number | kind | title | where | when it is on | who it is for | "
+    "tags | setting/weather | seasons | duration | cost | booking | status | suggested by, date"
 )
 
 

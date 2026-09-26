@@ -99,6 +99,7 @@
 .in-todo, .to-todo { --accent: var(--lemon); }
 .in-family, .to-family { --accent: var(--amber); }
 .in-you, .to-you { --accent: var(--amber); }
+.in-memory, .to-memory { --accent: var(--amber); }
 
 /* And each kind of idea has one, on its label and when its card is hovered. */
 .kind { --kind: var(--lilac); }
@@ -513,6 +514,7 @@ input[type="password"],
 input[type="search"],
 input[type="url"],
 input[type="date"],
+input[type="time"],
 input[type="datetime-local"],
 input:not([type]),
 textarea,
@@ -1877,6 +1879,14 @@ table.month td.today time { color: var(--on-bright); background: var(--amber); b
     white-space: nowrap;
   }
 }
+
+/* ---- What she remembers -------------------------------------------------------------------- */
+.memories > li { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; }
+.memory-fact { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.4rem; margin: 0; }
+.memory-source { margin: 0.3rem 0 0; }
+.memory form { flex: none; margin: 0; }
+.memories > li.gone { display: block; }
+.memory.ended .memory-fact strong, .memory.gone .memory-fact span { color: var(--dim); }
 
 /* ---- Sign in, and nowhere ----------------------------------------------------------------- */
 .page-signin .places, .page-signin .tools { display: none; }

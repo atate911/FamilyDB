@@ -24,6 +24,7 @@
     'todo': ['web.tasks'],
     'family': ['family.show', 'family.edit'],
     'you': ['family.you'],
+    'memory': ['web.memory'],
     'status': ['web.status'],
     'settings': ['settings.show', 'settings.section', 'settings.personality'],
   } %}
@@ -50,10 +51,12 @@
         {{ item('Plans', url_for('web.plans'), 'plans', 'plans') }}
         {{ item('To do', url_for('web.tasks'), 'todo', 'todo') }}
       </nav>
-      {# And the three for looking after it, kept to one side. Each is shown only to a role
-         that may go there (familydb/roles.py): Family and Settings to an admin. #}
+      {# And the ones for looking after it, kept to one side. Each is shown only to a role
+         that may go there (familydb/roles.py): Family and Settings to an admin. What she
+         remembers of the family is everybody's to see. #}
       {% set visiting = visitor() %}
       <nav class="tools" aria-label="Household">
+        {{ item('Memory', url_for('web.memory'), 'memory', 'heart') }}
         {% if visiting.may('manage') %}{{ item('Family', url_for('family.show'), 'family', 'family') }}{% endif %}
         {{ item('Status', url_for('web.status'), 'status', 'status') }}
         {% if visiting.may('manage') %}{{ item('Settings', url_for('settings.show'), 'settings', 'settings') }}{% endif %}

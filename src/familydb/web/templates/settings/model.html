@@ -66,6 +66,18 @@
   </div>
 </form>
 
+{# Who hears a voice note, if anyone does, with a Save of its own, still for the same reason:
+   floating, it would sit beside the models above, which it does not save. #}
+<form method="post" action="{{ url_for('settings.save') }}">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+  <input type="hidden" name="section" value="model" />
+  {{ group(groups.voice) }}
+  <div class="save-bar still">
+    <p class="muted">An empty box uses the default it shows.</p>
+    <button type="submit">{{ icon('check') }}Save voice notes</button>
+  </div>
+</form>
+
 {# Every key at once: for a second company's, which is not checked or chosen, and for taking a
    key away. Folded, since the key that matters is the one above. #}
 {% set ai_keys = keys.values() | rejectattr('key', 'equalto', 'telegram_bot_token') | list %}
