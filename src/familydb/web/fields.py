@@ -222,14 +222,14 @@ MODEL_KEYS = {
 
 
 def _models(company: str, label: str) -> tuple[Field, Field]:
-    """A company's two model boxes, offering its models without limiting them to those."""
+    """A company's two everyday model boxes, offering its models without limiting them to those."""
     chat, worker = MODEL_KEYS[company]
     offered = suggestions(company)
     return (
-        field(chat, f"{label} chat model", suggested=offered, company=company),
+        field(chat, f"{label} everyday chat model", suggested=offered, company=company),
         field(
             worker,
-            f"{label} lookup model",
+            f"{label} everyday lookup model",
             "A smaller one is usually plenty." if company == "anthropic" else "",
             suggested=offered,
             company=company,
@@ -362,9 +362,36 @@ GROUPS: tuple[Group, ...] = (
     ),
     Group(
         "model",
+        "levels",
+        "How strong a model answers",
+        "How strong a model answers in each situation, whichever company it is: the cheapest by "
+        "default, a stronger one where it is worth paying for.",
+        (
+            field(
+                "chat_level",
+                "Answering the family",
+                "Everyday is the company's own model below; better and best are its stronger "
+                "ones, never cheaper than everyday. Prices are US dollars for a million tokens "
+                "read and written.",
+            ),
+            field(
+                "digest_level",
+                "The weekend digest",
+                "Once a week, so a stronger model adds little to the month.",
+            ),
+            field(
+                "lookup_level",
+                "Looking things up",
+                "Filling in an idea's details and finding what is on: everyday is usually plenty.",
+            ),
+        ),
+    ),
+    Group(
+        "model",
         "models",
         "Models",
-        "Pick one, or type any model the company offers; the least expensive are listed first.",
+        "What everyday means for each company: its cheapest unless you choose another. Pick one, "
+        "or type any model the company offers; the least expensive are listed first.",
         (
             *_models("openai", "OpenAI"),
             *_models("anthropic", "Claude"),
@@ -389,7 +416,7 @@ GROUPS: tuple[Group, ...] = (
                 "provider_fallback",
                 "Ask another company when the first cannot",
                 "Only one with a key, and only before anything has been done, so nothing "
-                "happens twice.",
+                "happens twice. It answers at the same level.",
             ),
         ),
     ),

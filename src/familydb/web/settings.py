@@ -52,7 +52,7 @@ from flask import (
 from pydantic import ValidationError
 
 from familydb import passwords, personas, voice
-from familydb.agent import providers
+from familydb.agent import gateway, providers
 from familydb.agent.spending import spent_today
 from familydb.app import App
 from familydb.availability import enrichment_available
@@ -83,6 +83,8 @@ COMPANIES = fields.COMPANIES
 MODEL_BOXES = {
     one.key: (one.company, COMPANIES[one.company]) for one in fields.FIELDS if one.company
 }
+# Which surface each level box chooses a model for: that of the kinds of call that read it.
+LEVEL_BOXES = {call.level: call.surface for call in gateway.KINDS.values()}
 KEY_LABELS = {
     "anthropic_api_key": "Anthropic key",
     "openai_api_key": "OpenAI key",
@@ -221,6 +223,27 @@ def _pending() -> dict[str, Any] | None:
     return found
 
 
+def suggested(one: fields.Field) -> list[tuple[str, str]]:
+    """The names a box suggests as it is typed in, each with a word on what it is: a model's
+    place in its company's lineup, and its price."""
+    company = MODEL_BOXES.get(one.key, ("", ""))[0]
+    return [(name, views.model_offer(company, name)) for name in one.suggested]
+
+
+def level_labels(key: str, live: Settings) -> dict[str, str]:
+    """For a level box, what each level means on the company that answers it now."""
+    surface = LEVEL_BOXES.get(key)
+    if surface is None:
+        return {}
+    answering = providers.for_surface(live, surface)
+    return {
+        level: views.level_choice(
+            level, answering.name, providers.model_at(answering, surface, level)
+        )
+        for level in providers.catalog.LEVELS
+    }
+
+
 def google_panel(live: Any) -> dict[str, Any]:
     pending = _pending()
     return {
@@ -253,7 +276,8 @@ def company_choice(live: Settings, asked: str) -> dict[str, Any]:
         "prefix": KEY_STARTS[company],
         "has_key": bool(getattr(live, f"{company}_api_key")),
         "answering": live.provider,
-        "model": getattr(live, fields.MODEL_KEYS[company][0]),
+        # What it answers the family with: its everyday model, or a stronger one a level up.
+        "model": providers.model_at(providers.build(company, live), "chat", live.chat_level),
         "companies": [
             {
                 "name": name,
@@ -276,6 +300,7 @@ def _box(
     problems: dict[str, str],
     typed: dict[str, str],
     offers: dict[str, list[tuple[str, str]]],
+    live: Settings,
 ) -> dict[str, Any]:
     return {
         "field": one,
@@ -283,7 +308,8 @@ def _box(
         "placeholder": fields.placeholder(one, fields.fallback(one, base)),
         "problem": problems.get(one.key),
         "stored": one.key in overrides,
-        "offers": offers.get(one.key) or [(name, "") for name in one.suggested],
+        "offers": offers.get(one.key) or suggested(one),
+        "labels": level_labels(one.key, live),
     }
 
 
@@ -350,7 +376,7 @@ def page(
         group.name: _group(
             group,
             [
-                _box(one, overrides, app.base_settings, problems, typed or {}, offers)
+                _box(one, overrides, app.base_settings, problems, typed or {}, offers, live)
                 for one in group.fields
             ],
         )
@@ -728,9 +754,11 @@ def save_model() -> Response | tuple[str, int]:
     _save(values)
     said = KEY_VERDICTS.get(verdict, KEY_VERDICTS["unchecked"])
     her = personas.active(candidate).name
-    return _answer(
-        back, here, said=said.format(company=label, model=chosen.model_for("chat"), name=her)
-    )
+    # The check asked about the everyday model, so that is the one a "no such model" names.
+    asked = chosen.model_for("chat")
+    answers = providers.model_at(chosen, "chat", candidate.chat_level)
+    model = asked if verdict == "unknown_model" else answers
+    return _answer(back, here, said=said.format(company=label, model=model, name=her))
 
 
 # -- the family password ----------------------------------------------------------------------

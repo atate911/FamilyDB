@@ -9,7 +9,7 @@ import sys
 from evals.cases import CASES, by_name
 from evals.harness import grade, run_case, under_persona
 from familydb import personas
-from familydb.agent import providers
+from familydb.agent import gateway, providers
 from familydb.config import Settings
 
 
@@ -18,7 +18,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--case", action="append", help="run only this case (repeatable)")
     parser.add_argument("--repeat", type=int, default=1, help="runs per case (default 1)")
     parser.add_argument("--provider", choices=providers.NAMES, help="answer with this vendor")
-    parser.add_argument("--model", help="and this model, instead of the configured one")
+    which = parser.add_mutually_exclusive_group()
+    which.add_argument("--model", help="and this model, instead of the configured one")
+    which.add_argument(
+        "--level", choices=providers.catalog.LEVELS, help="or its model at this level"
+    )
     parser.add_argument(
         "--persona",
         action="append",
@@ -43,7 +47,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.provider:
         base = base.model_copy(update={"provider": args.provider})
     if args.model:
-        base = base.model_copy(update={f"{base.provider}_model": args.model})
+        # A model named is the everyday one, so a level set in the environment cannot pass it by.
+        base = base.model_copy(
+            update={f"{base.provider}_model": args.model, "chat_level": "everyday"}
+        )
+    if args.level:
+        base = base.model_copy(update={"chat_level": args.level})
     if not providers.ready(base, "chat"):
         print(f"No key for {base.provider}: set it in .env or the environment.", file=sys.stderr)
         return 2
@@ -53,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, ValueError) as exc:  # pydantic's ValidationError is a ValueError
         print(f"--persona: {exc}", file=sys.stderr)
         return 2
-    model = getattr(base, f"{base.provider}_model")
+    _, model = gateway.answering(base, "chat")
     cases = [by_name(name) for name in args.case] if args.case else list(CASES)
     several = len(under) > 1
     print(

@@ -26,6 +26,7 @@ from flask import (
 )
 
 from familydb import personas
+from familydb.agent import providers
 from familydb.app import App
 from familydb.store import knocks as knock_store
 from familydb.store import members as member_store
@@ -146,8 +147,14 @@ def _you(app: App, conn: Any) -> dict[str, Any]:
 
 def _model(app: App, conn: Any) -> dict[str, Any]:
     live = app.settings
+    choice = company_choice(live, request.args.get("company", ""))
     return {
-        **company_choice(live, request.args.get("company", "")),
+        **choice,
+        # The company's lineup, cheapest first, and what each level of it costs.
+        "lineup": [
+            {"label": model.label, "level": model.level, "price": views.price_text(model.price)}
+            for model in providers.catalog.lineup(choice["company"])
+        ],
         "limit": live.daily_spend_limit,
     }
 

@@ -1,10 +1,10 @@
 """The one door to a model. Everything that wants an answer from one comes through `ask`.
 
-Each kind of call is declared once, in `KINDS`: what it is for, which model setting answers it,
-which prompt it is given, which tools it may use, how much of the web it may search, and which
-settings cap it. The caller says which kind and brings what is particular to this one call (the
-conversation, and the context its tools run in); this module does the rest the same way every
-time, and every call it makes is recorded under its kind.
+Each kind of call is declared once, in `KINDS`: what it is for, which model setting answers it
+and at which level, which prompt it is given, which tools it may use, how much of the web it may
+search, and which settings cap it. The caller says which kind and brings what is particular to
+this one call (the conversation, and the context its tools run in); this module does the rest the
+same way every time, and every call it makes is recorded under its kind.
 
 What goes into the request, part by part, is built and measured by `agent.compose`. What the
 answer means stays with the caller: this module knows how to ask, not what a good weekend is.
@@ -38,6 +38,7 @@ from familydb.agent.providers import (
     fallback_for,
     for_surface,
     hearers,
+    model_at,
     prices,
     ready,
 )
@@ -61,6 +62,7 @@ class CallSpec:
     kind: Kind
     purpose: str  # for people: what these calls were for, as `debug cost` and /status say it
     surface: Surface  # which model answers: the chat model, or the lookup (worker) model
+    level: str  # the setting naming how strong a model answers (catalog.LEVELS)
     prompt: str  # the file in agent/prompts/; "system" also brings the family and the ideas
     tools: tuple[str, ...] | None  # None: every chat tool, the same list on every turn
     hand_back: tuple[str, ...] = ()  # the tools whose success is the result of a worker turn
@@ -77,12 +79,19 @@ class CallSpec:
         return self.web_searches is not None
 
 
-_CHAT = {"surface": "chat", "prompt": "system", "tools": None, "closes": ("remember",)}
+_CHAT = {
+    "surface": "chat",
+    "level": "chat_level",
+    "prompt": "system",
+    "tools": None,
+    "closes": ("remember",),
+}
 # A worker's only real output is one hand-back call, a few hundred tokens. The cap bounds a
 # runaway turn and leaves room for the thinking every vendor counts against it at low effort.
 WORKER_MAX_TOKENS = 4000
 _WORKER = {
     "surface": "worker",
+    "level": "lookup_level",
     "iterations": "worker_max_iterations",
     "effort": "worker_effort",
     "max_tokens": WORKER_MAX_TOKENS,
@@ -92,7 +101,7 @@ KINDS: dict[str, CallSpec] = {
     spec.kind: spec
     for spec in (
         CallSpec("chat", "answering the family", **_CHAT),
-        CallSpec("digest", "the weekend digest", **_CHAT),
+        CallSpec("digest", "the weekend digest", **{**_CHAT, "level": "digest_level"}),
         CallSpec("retry", "answering a message again after a failure", **_CHAT),
         CallSpec(
             "enrich",
@@ -135,6 +144,18 @@ def purpose(kind: str | None) -> str:
     if kind == LISTEN:
         return LISTEN_PURPOSE
     return KINDS[kind].purpose if kind in KINDS else kind
+
+
+def answering(
+    settings: Settings, kind: str, api: MessagesAPI | None = None
+) -> tuple[Provider, str]:
+    """Who answers this kind of call first, and with which model: what `ask` would send to.
+
+    For the pages and the command line, which say it without asking anything of a model.
+    """
+    call = spec(kind)
+    provider = for_surface(settings, call.surface, api=api)
+    return provider, model_at(provider, call.surface, getattr(settings, call.level))
 
 
 def can_ask(settings: Settings, kind: str, api: MessagesAPI | None = None) -> bool:
@@ -213,6 +234,7 @@ def ask(
     return run_turn(
         provider=chosen,
         surface=call.surface,
+        level=getattr(settings, call.level),
         fallback=spare,
         settings=settings,
         registry=registry,

@@ -291,13 +291,15 @@ def test_openai_hearing_by_the_minute_and_its_failures(settings) -> None:
 
 def test_gemini_hears_the_recording_sent_with_one_line(settings) -> None:
     api = fakes.FakeGeminiAPI(fakes.gm_response([fakes.gm_text("pick up the cake")]))
-    provider = build("gemini", _keys(settings, gemini_api_key="g"), api=api)
-    assert provider.listener() == "gemini-3.8-flash"  # the lookup model, unless one is named
+    keyed = _keys(settings, gemini_api_key="g")
+    provider = build("gemini", keyed, api=api)
+    # The lookup model, unless one is named: its everyday one, Flash-Lite unless changed.
+    assert provider.listener() == keyed.gemini_worker_model == "gemini-3.1-flash-lite"
     heard = provider.transcribe(Audio(OGG, "audio/ogg", 10), "Names: Sam.")
     assert heard.text == "pick up the cake"
     assert heard.usage["input_tokens"] == 100 and heard.usage["output_tokens"] == 10
     sent = api.requests[0]
-    assert sent["model"] == "gemini-3.8-flash"
+    assert sent["model"] == "gemini-3.1-flash-lite"
     parts = sent["contents"][0]["parts"]
     assert parts[0] == {"inline_data": {"mime_type": "audio/ogg", "data": OGG}}
     assert (

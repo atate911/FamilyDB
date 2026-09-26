@@ -285,13 +285,17 @@ def check_provider(app: App, report: Report, *, online: bool) -> None:
         report.add("model key", OK, f"{', '.join(have)} configured; {chosen} answers chat")
 
     try:
-        chat = app.provider("chat")
-        worker = app.provider("worker")
+        from familydb.agent import gateway
+
+        chat, chat_model = gateway.answering(app.settings, "chat")
+        digest, digest_model = gateway.answering(app.settings, "digest")
+        worker, worker_model = gateway.answering(app.settings, "enrich")
         report.add(
             "models",
             OK,
-            f"chat on {chat.model_for('chat')} via {chat.name}; "
-            f"lookups on {worker.model_for('worker')} via {worker.name}",
+            f"chat on {chat_model} via {chat.name}; "
+            f"the digest on {digest_model} via {digest.name}; "
+            f"lookups on {worker_model} via {worker.name}",
         )
     except Exception as exc:  # a provider that will not build is a configuration problem
         report.add("models", FAIL, f"could not build a provider: {exc}", "familydb config")

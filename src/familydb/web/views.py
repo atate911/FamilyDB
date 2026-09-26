@@ -16,6 +16,7 @@ from typing import Any
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
+from familydb.agent.providers import catalog, prices
 from familydb.memory import words
 from familydb.store.ideas import Idea
 from familydb.store.members import Member
@@ -668,6 +669,40 @@ def setting_text(value: str | None) -> str:
     if isinstance(loaded, bool):
         return "yes" if loaded else "no"
     return str(loaded)
+
+
+def price_text(price: prices.Price | None) -> str | None:
+    """What a model costs, in US dollars per million tokens read and written."""
+    if price is None:
+        return None
+    return f"${price.input:.2f} in, ${price.output:.2f} out"
+
+
+def model_offer(provider: str, name: str) -> str:
+    """A model name as a box offers it: what it is called, where it stands in its company's
+    lineup, and what it costs. Only the price, for one the lineup does not list."""
+    known = catalog.known(provider, name)
+    said = f"{known.label}, {known.level}" if known else ""
+    cost = price_text(prices.price(provider, name))
+    return " · ".join(part for part in (said, cost) if part)
+
+
+def level_choice(level: str, provider: str, name: str) -> str:
+    """A level as the settings page offers it: the model it means for the company answering."""
+    known = catalog.known(provider, name)
+    cost = price_text(prices.price(provider, name))
+    said = f"{level}: {known.label if known else name}"
+    return f"{said} ({cost})" if cost else said
+
+
+def model_text(provider: str, name: str, level: str) -> str:
+    """Which model answers, as the status page and setup say it: its name, and its level when
+    that is not the everyday one, or when the model does not think before answering."""
+    known = catalog.known(provider, name)
+    notes = [] if level == catalog.EVERYDAY else [level]
+    if known is not None and not known.thinks:
+        notes.append("without thinking first")
+    return f"{name} ({', '.join(notes)})" if notes else name
 
 
 LONG_SETTINGS = frozenset({"persona_text", "persona_notes", "about_family", "voice_lines"})

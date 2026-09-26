@@ -24,6 +24,16 @@
       <p class="muted hint">It is checked with {{ label }} before it is kept, which costs nothing.
         It is stored on your server and never shown on this page again.
         {% if company == answering %}{{ label }} answers with {{ model }}.{% endif %}</p>
+      {% if lineup %}
+        <p class="muted hint">{{ label }}’s models, cheapest first:
+          {% for one in lineup -%}
+            {{ one.label }} ({{ one.level }}{% if one.price %}, {{ one.price }}{% endif %}){{ "; " if not loop.last else "." }}
+          {% endfor -%}
+          Everyday answers unless you choose a stronger one for the chat, the weekend digest or
+          the lookups, under How strong a model answers on the
+          <a href="{{ url_for('settings.section', name='model', _anchor='levels') }}">AI model</a> settings page.
+          Prices are US dollars for a million tokens read and written.</p>
+      {% endif %}
     </div>
     <div class="field wide actions">
       <button type="submit">

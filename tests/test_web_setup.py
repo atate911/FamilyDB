@@ -124,6 +124,8 @@ def test_the_whole_way_through(fresh, monkeypatch, conn) -> None:
     assert back.headers["Location"] == "/setup/model"
     page = fresh.get("/setup/model").text
     assert "OpenAI accepted the key. Vera answers with gpt-6-luna." in page
+    lineup = " ".join(page.split())
+    assert "GPT-6 Luna (everyday, $0.10 in, $0.50 out); GPT-6 Sol (better," in lineup
     assert app.settings.openai_api_key == "sk-good" and app.settings.provider == "openai"
 
     # It can answer now, so the home page is the home page again.
@@ -154,6 +156,19 @@ def test_a_company_that_cannot_be_asked_does_not_stop_the_key(fresh, monkeypatch
     assert "Google could not be asked just now" in page
     assert fresh.app.settings.gemini_api_key == "AIza-maybe"
     assert fresh.app.settings.provider == "gemini"
+
+
+def test_a_key_check_names_the_model_it_asked_about(fresh, monkeypatch, conn) -> None:
+    """The check looks the everyday model up; a stronger chat level is what then answers."""
+    with db.transaction(conn):
+        settings_store.set_many(conn, {"chat_level": "better"})
+    _say(monkeypatch, "unknown_model")
+    _post(fresh, "model", "/settings/model", provider="openai", key="sk-good")
+    assert "says it has no model called gpt-6-luna" in fresh.get("/setup/model").text
+    _say(monkeypatch, "works")
+    _post(fresh, "model", "/settings/model", provider="openai", key="sk-good")
+    page = fresh.get("/setup/model").text
+    assert "OpenAI accepted the key. Vera answers with gpt-6-sol." in page
 
 
 def test_choosing_a_company_shows_its_own_instructions(fresh) -> None:

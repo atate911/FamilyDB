@@ -42,6 +42,8 @@
 <form method="post" action="{{ url_for('settings.save') }}">
   <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
   <input type="hidden" name="section" value="model" />
+  {# How strong a model answers each situation: each level says the model it means now. #}
+  {{ group(groups.levels) }}
   <section class="panel" id="models">
     <h2>{{ models.group.title }}</h2>
     <p class="muted">{{ models.group.note }}</p>

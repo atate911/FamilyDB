@@ -538,25 +538,58 @@ PROVIDER_FALLBACK=true     # ask another one when the first cannot take a messag
 ```
 
 Give whichever keys you have. `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` and `GEMINI_API_KEY` sit side
-by side; the ones you did not choose become spares. Each vendor has its own pair of models, one
-for chat and one for the mechanical lookups:
+by side; the ones you did not choose become spares.
+
+**How strong a model answers.** Each company sells a small family of models, from a cheap quick
+one to a dear strong one, and FamilyDB knows each family by level
+(`src/familydb/agent/providers/catalog.py`):
+
+| Level | OpenAI | Claude | Gemini |
+|---|---|---|---|
+| everyday | GPT-6 Luna, $0.10 / $0.50 | Claude Haiku 4.5, $1 / $5 | Gemini 3.1 Flash-Lite, $0.25 / $1.50 |
+| better | GPT-6 Sol, $2 / $10 | Claude Sonnet 5, $2 / $10 | Gemini 3.8 Flash, $0.75 / $3.75 |
+| best | GPT-6 Astra, $10 / $50 | Claude Opus 5, $5 / $25 | Gemini 3.1 Pro, $2 / $12 |
+
+Prices are US dollars per million tokens read and written, as published in September 2026 (Google
+has said its Flash prices double on January 1, 2027). Everything answers at `everyday` unless the
+family chooses otherwise, and each situation has a level of its own, under "Who answers" on the
+page:
+
+```
+CHAT_LEVEL=everyday        # answering the family, and answering again after a failure
+DIGEST_LEVEL=everyday      # the weekend digest, retries included: once a week, so better costs little
+LOOKUP_LEVEL=everyday      # looking ideas up and searching for what is on
+```
+
+A level is chosen, not a model name, so it holds on whichever company answers: when the first one
+cannot take a message and another answers instead, it answers at the same level. A level up
+never answers with a model cheaper than everyday: if the everyday model already costs more than
+the table's (Claude Opus 5, say), or has no price listed, it answers at better and best too. Each level's box on the page
+says which model it means for the company answering now, and what it costs. A situation on a
+stronger model than the chat has a prompt cache of its own, written the first time it is asked.
+
+`everyday` is each company's own pair of models, one for chat and one for the mechanical lookups,
+which default to its cheapest and can be set to any model name it offers:
 
 ```
 OPENAI_MODEL=gpt-6-luna
 OPENAI_WORKER_MODEL=gpt-6-luna
-ANTHROPIC_MODEL=claude-opus-5
-WORKER_MODEL=claude-haiku-4-5-20251001
-GEMINI_MODEL=gemini-2.5-pro
-GEMINI_WORKER_MODEL=gemini-3.8-flash
+ANTHROPIC_MODEL=claude-haiku-4-5
+WORKER_MODEL=claude-haiku-4-5
+GEMINI_MODEL=gemini-3.1-flash-lite
+GEMINI_WORKER_MODEL=gemini-3.1-flash-lite
 ```
 
 The default is OpenAI's GPT-6 Luna for both chat and lookups, the cheapest capable model of the
-three companies: $0.10 per million input tokens, $0.50 per million output tokens, and web search
-at $10 per 1,000 searches, as published in September 2026. Claude and Gemini remain a setting
-away. The model boxes on the page suggest the models it knows but take any name. When a model
-name changes, the page asks that company's model list, which spends no tokens, and refuses the
-save only on a definite "no such model"; if the company cannot be reached or has no key yet, the
-save goes through. `/status` and `familydb debug cost` both print who is answering each surface
+three companies, with web search at $10 per 1,000 searches. Claude and Gemini remain a setting
+away. Claude Haiku 4.5 answers without thinking first, so the thinking settings do nothing for
+it. A `.env` written before levels came in names Claude Opus 5 and Gemini 2.5 Pro as the everyday
+models; those lines still decide until they are emptied or a box on the page names another, and
+Claude Opus 5 as everyday leaves nothing stronger for better and best. The model boxes on the
+page suggest the models it knows, each with its level and price, but take any name, such as
+`claude-fable-5-1` or `claude-opus-5-5`. When a model name changes, the page asks that company's
+model list, which spends no tokens, and refuses the save only on a definite "no such model"; if
+the company cannot be reached or has no key yet, the save goes through. `/status` and `familydb debug cost` both print who is answering each situation
 and on which model, which is the quickest way to see that a change took effect.
 
 **Spending.** `DAILY_SPEND_LIMIT` ("Daily spending limit (US$)" on the Spending page) is $2.00

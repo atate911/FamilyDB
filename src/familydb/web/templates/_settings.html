@@ -16,7 +16,7 @@
         {%- if entry.problem or one.note %} aria-describedby="{{ told }}"{% endif %}>
         <option value="">Default ({{ entry.placeholder }})</option>
         {% for choice in one.choices %}
-          <option value="{{ choice }}" {% if entry.value == choice %}selected{% endif %}>{{ one.word(choice) }}</option>
+          <option value="{{ choice }}" {% if entry.value == choice %}selected{% endif %}>{{ entry.labels.get(choice) or one.word(choice) }}</option>
         {% endfor %}
       </select>
     {% else %}
