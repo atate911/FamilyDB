@@ -38,7 +38,8 @@ def test_the_request_shape(settings) -> None:
         messages=[Message("user", ["Today is Sunday.", "[Sam] hello"])],
         tools=[tool],
     )
-    payload = _provider(settings).payload(request)
+    # Gemini 2.5, whose thinking is a token budget; Gemini 3 takes a level instead.
+    payload = _provider(settings, gemini_model="gemini-2.5-pro").payload(request)
     assert payload["model"] == "gemini-2.5-pro"
     config = payload["config"]
     assert config["system_instruction"] == "rules\n\ntoday"  # one instruction, not blocks
@@ -65,7 +66,7 @@ def test_the_request_shape(settings) -> None:
 
 def test_effort_becomes_a_thinking_budget(settings) -> None:
     for ours, budget in [("low", 0), ("medium", -1), ("xhigh", 24576), ("max", 32768)]:
-        request = TurnRequest(system=[], messages=[], effort=ours)
+        request = TurnRequest(system=[], messages=[], effort=ours, model="gemini-2.5-pro")
         assert _provider(settings).payload(request)["config"]["thinking_config"] == {
             "thinking_budget": budget
         }
@@ -159,9 +160,10 @@ def test_a_client_gives_up_after_two_minutes(settings) -> None:
 
 def test_the_model_per_surface_and_the_key(settings) -> None:
     provider = _provider(settings)
-    assert provider.model_for("chat") == "gemini-2.5-pro"
-    assert provider.model_for("worker") == "gemini-3.8-flash"
-    assert _provider(settings, gemini_worker_model="").model_for("worker") == "gemini-2.5-pro"
+    assert provider.model_for("chat") == "gemini-3.1-flash-lite"
+    assert provider.model_for("worker") == "gemini-3.1-flash-lite"
+    split = _provider(settings, gemini_model="gemini-3.1-pro-preview", gemini_worker_model="")
+    assert split.model_for("worker") == "gemini-3.1-pro-preview"
     from familydb.agent.providers.gemini import GeminiProvider
 
     assert not GeminiProvider(settings).configured()

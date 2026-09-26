@@ -51,10 +51,21 @@ def test_a_model_name_says_whose_it_is() -> None:
 
 def test_it_says_who_answers_and_where_each_key_came_from(status, conn, settings) -> None:
     with db.transaction(conn):
-        settings_store.set_many(conn, {"gemini_api_key": "gm-never-shown", "provider": "gemini"})
+        settings_store.set_many(
+            conn,
+            {
+                "gemini_api_key": "gm-never-shown",
+                "provider": "gemini",
+                "gemini_worker_model": "gemini-3.8-flash",
+                "digest_level": "best",
+            },
+        )
     text = _flat(status.get("/status"))
-    assert "Google Gemini, gemini-2.5-pro" in text  # chat, from the page's own setting
-    assert "Google Gemini, gemini-3.8-flash" in text  # the lookup turns
+    # Chat on Google's cheapest, from the page's own setting; the digest a level up; the lookups
+    # on the model typed for them.
+    assert "Google Gemini, gemini-3.1-flash-lite" in text
+    assert "The weekend digest" in text and "Google Gemini, gemini-3.1-pro-preview (best)" in text
+    assert "Google Gemini, gemini-3.8-flash" in text
     assert "Claude (Anthropic) answers instead" in text  # the environment's key is the spare
     assert "set on this page" in text and "set in the environment" in text
     assert "no key" in text  # OpenAI

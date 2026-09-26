@@ -249,3 +249,56 @@ def test_a_turn_out_of_steps_reports_what_it_saved(settings, clock, conn, family
     )
     reply = handle_incoming(app, _telegram("ramen", "78"), api=api, conn=conn)
     assert reply.text.startswith("Saved idea #1.") and "ran out of steps" in reply.text
+
+
+TODAY = "Today is Sunday 20 September 2026, 14:03 (America/Vancouver), autumn."
+
+
+def _turn(request) -> list[str]:
+    return [part["text"] for part in request["messages"][-1]["content"]]
+
+
+def test_a_shared_chat_is_told_who_reads_it_and_a_private_one_is_not(
+    settings, clock, conn, family
+) -> None:
+    app = _app(settings, clock)
+    api = fakes.FakeMessagesAPI(*(fakes.message([fakes.text("Hi.")]) for _ in range(3)))
+    for msg in (
+        IncomingMessage("telegram", "90", "-100", "1001", "hi"),
+        _telegram("hi", "91"),
+        IncomingMessage("web", "92", "web", "Sam", "hi"),
+    ):
+        assert handle_incoming(app, msg, api=api, conn=conn).status == "ok"
+    group, private, page = api.requests
+    # The family has a kid in it, the girls, so a shared chat says they read it too.
+    assert _turn(group) == [
+        TODAY,
+        "This is the family's group chat: everyone in it reads your reply, kids among them.",
+        "[Sam] hi",
+    ]
+    assert _turn(private) == [TODAY, "[Sam] hi"]
+    assert _turn(page) == [
+        TODAY,
+        "This is the family's conversation on the page: everyone who signs in reads it, "
+        "kids among them.",
+        "[Sam] hi",
+    ]
+    # Who is listening is the turn's alone: the cached prefix and the tools are the same.
+    for other in (private, page):
+        assert other["system"] == group["system"] and other["tools"] == group["tools"]
+
+
+def test_a_retried_group_message_is_still_told_who_reads_it(settings, clock, conn, family):
+    from familydb.pipeline import retry_message
+
+    app = _app(settings, clock)
+    group = IncomingMessage("telegram", "93", "-100", "1001", "hi all")
+    down = fakes.FakeMessagesAPI(fakes.rate_limit_error())
+    failed = handle_incoming(app, group, api=down, conn=conn)
+    app.senders["telegram"] = lambda chat_id, text: None
+    api = fakes.FakeMessagesAPI(fakes.message([fakes.text("Hi all.")]))
+    assert retry_message(app, failed.in_message_id, api=api, conn=conn).status == "ok"
+    assert _turn(api.requests[0])[1:3] == [
+        "This is the family's group chat: everyone in it reads your reply, kids among them.",
+        "[Sam] hi all",
+    ]

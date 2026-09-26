@@ -40,6 +40,7 @@ DONE = {
     "add_idea": ("Saved idea", "idea_id"),
     "update_idea": ("Updated idea", "idea_id"),
     "record_outcome": ("Recorded outcome", "outcome_id"),
+    "remember": ("Noted what you told me", "memory_id"),
     "save_place": ("Saved place details", "idea_id"),
     "skip_place": ("Marked lookup skipped", "idea_id"),
 }
@@ -57,11 +58,14 @@ def done_lines(actions: list[dict[str, Any]]) -> str:
     return " ".join(lines)
 
 
-def completed_reply(actions: list[dict[str, Any]], settings: Settings) -> str:
-    """Explain durable progress without spending another model call to acknowledge it."""
+def completed_reply(
+    actions: list[dict[str, Any]], settings: Settings, message_id: int | None = None
+) -> str:
+    """Explain durable progress without spending another model call to acknowledge it. The
+    message being answered, when there is one, chooses the wording (`voice.say`)."""
     from familydb import voice
 
-    return done_lines(actions) + " " + voice.say(settings, "limit_partial")
+    return done_lines(actions) + " " + voice.say(settings, "limit_partial", seed=message_id)
 
 
 class SpendingLimitReached(AgentError):
@@ -91,6 +95,23 @@ def estimate(
         "web_searches": searches,
     }
     return prices.cost(provider, model, usage, cache_ttl=cache_ttl)[0]
+
+
+# Only to size the hold on hearing a recording; the call records what was billed. Audio at 32
+# tokens a second, Gemini's rate and more than OpenAI counts, and its words at a generous 8.
+AUDIO_TOKENS_PER_SECOND = 32
+WORDS_TOKENS_PER_SECOND = 8
+
+
+def estimate_hearing(provider: str, model: str | None, seconds: int) -> float:
+    """The most hearing one recording could cost, whether it is billed by token or by minute."""
+    seconds = max(seconds, 1)
+    usage = {
+        "input_tokens": seconds * AUDIO_TOKENS_PER_SECOND + 200,
+        "output_tokens": seconds * WORDS_TOKENS_PER_SECOND + 400,
+        "audio_seconds": seconds,
+    }
+    return prices.cost(provider, model, usage)[0]
 
 
 def admit(conn: sqlite3.Connection, settings: Settings, now: datetime, cost: float) -> int:

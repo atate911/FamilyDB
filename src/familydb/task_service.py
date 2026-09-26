@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 import sqlite3
+from datetime import datetime, timedelta, tzinfo
 from typing import Any
 
 from familydb import voice
 from familydb.errors import ToolError
-from familydb.store import members, tasks
+from familydb.store import members, messages, tasks
 from familydb.store.db import transaction
 from familydb.store.tasks import Task
+
+# A reminder queued later than this after its time says when it was due.
+LATE_AFTER = timedelta(minutes=10)
 
 
 def _validate(conn: sqlite3.Connection, values: dict[str, Any]) -> None:
@@ -95,7 +99,14 @@ def update(
         # A queued but unsent reminder should use the current wording.
         latest = _read(conn, task_id)
         if settings is not None:
-            tasks.reword_queued(conn, task_id, reminder_text(latest, settings))
+            # One queued late keeps saying when it was due.
+            due_when = None
+            reminder = latest.reminder
+            if reminder and reminder.message_id:
+                message = messages.get(conn, reminder.message_id)
+                if message:
+                    due_when = late_note(reminder.remind_at, message.received_at, settings.tzinfo)
+            tasks.reword_queued(conn, task_id, reminder_text(latest, settings, due_when=due_when))
         return latest
 
 
@@ -106,10 +117,21 @@ def _read(conn: sqlite3.Connection, task_id: int) -> Task:
     return task
 
 
+def late_note(remind_at: str, queued_at: str, tz: tzinfo) -> str | None:
+    """When a reminder queued at `queued_at` was due, if that was over LATE_AFTER before."""
+    due = datetime.fromisoformat(remind_at)
+    if datetime.fromisoformat(queued_at) - due <= LATE_AFTER:
+        return None
+    return due.astimezone(tz).strftime("%a %d %b at %H:%M")
+
+
 def reminder_text(task: Task, settings: Any, *, due_when: str | None = None) -> str:
     """The reminder as sent, in the assistant's voice. `due_when` marks one sent late."""
     who = f" ({task.owner})" if task.owner else ""
     facts = {"title": task.title, "who": who, "task": task.id}
+    # Each time it is due is its own message, by the reminder in force: a snoozed reminder may
+    # take another of her wordings, and the same one worded again (a changed title) the same.
+    seed = f"{task.id}:{task.reminder.id if task.reminder else ''}"
     if due_when:
-        return voice.say(settings, "reminder_late", due=due_when, **facts)
-    return voice.say(settings, "reminder", **facts)
+        return voice.say(settings, "reminder_late", seed=seed, due=due_when, **facts)
+    return voice.say(settings, "reminder", seed=seed, **facts)

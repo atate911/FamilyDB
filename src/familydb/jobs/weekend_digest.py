@@ -15,7 +15,7 @@ from familydb.app import App
 from familydb.availability import digest_configured
 from familydb.channels.base import IncomingMessage, OutgoingMessage
 from familydb.delivery import deliver, run_deliveries
-from familydb.pipeline import handle_synthetic
+from familydb.pipeline import DIGEST_UPDATE, handle_synthetic
 from familydb.store import members
 
 log = logging.getLogger(__name__)
@@ -59,7 +59,7 @@ def run_digest(app: App, *, api: MessagesAPI | None = None) -> OutgoingMessage |
             return None
         msg = IncomingMessage(
             channel=channel,
-            channel_update_id=f"digest:{app.clock.today().isoformat()}",
+            channel_update_id=f"{DIGEST_UPDATE}{app.clock.today().isoformat()}",
             chat_id=chat_id,
             channel_user_id=admin.channel_user_id or admin.display_name,
             text=DIGEST_TEXT,

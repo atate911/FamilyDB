@@ -29,7 +29,7 @@ def page(settings, clock, conn, family):
 
 
 def _token(client) -> str:
-    return re.search(r'name="csrf" value="([^"]+)"', client.get("/settings").text).group(1)
+    return re.search(r'name="csrf" value="([^"]+)"', client.get("/settings/security").text).group(1)
 
 
 def _choose(client, new: str, again: str | None = None, **extra: str):
@@ -108,7 +108,7 @@ def test_the_log_says_it_changed_and_never_what_to(page, conn) -> None:
     line = settings_store.history(conn, limit=1)[0]
     assert line["key"] == "web_password_hash" and line["secret"]
     assert line["old_value"] is None and line["new_value"] is None
-    assert "replaced" in page.get("/settings").text
+    assert "replaced" in page.get("/settings/history").text
 
 
 def test_setup_asks_to_come_back_and_nowhere_else(page) -> None:

@@ -147,10 +147,10 @@ is done:
 1. Yourself, as an admin, then the rest of the family (the Family page).
 2. Your own password, which ends the installer's: from then on everybody signs in as themselves,
    and you give each of them a starting password on the Family page.
-3. A model key (settings, API keys). Until there is one, it saves what it is told but cannot answer.
-4. Where home is (settings, Home), for the weather and for what is on nearby (section 6).
-5. Google Calendar (settings, Google Calendar), so plans land on the family calendar (section 5).
-6. A Telegram bot (settings, API keys), so the family can message it from their phones (section 4).
+3. A model key (settings, AI model). Until there is one, it saves what it is told but cannot answer.
+4. Where home is (settings, General), for the weather and for what is on nearby (section 6).
+5. Google Calendar (settings, Connections), so plans land on the family calendar (section 5).
+6. A Telegram bot (settings, Connections), so the family can message it from their phones (section 4).
 7. Only once there is a Telegram token: each person's Telegram id (the Family page).
 
 The list disappears when everything on it is done. Then try it on the Chat page: "we should try
@@ -175,10 +175,12 @@ one at a time:
 ## 4. Telegram
 
 1. In Telegram, talk to BotFather: `/newbot`, pick a name and a username, and copy the token it
-   gives you. Paste it on the settings page under API keys, as the Telegram bot token. It takes
-   effect within seconds, with no restart. `/status` then says "connected as @yourbot", "the
-   token was refused by Telegram" or "cannot reach Telegram; trying again". A token put in
-   `TELEGRAM_BOT_TOKEN` in `.env` instead is read when `familydb run` starts.
+   gives you. The name lasts only until the bot connects: from then on its name and description
+   in Telegram are the ones it goes by (hers, or FamilyDB's under none). Paste the token on the
+   settings page under Connections, as the Telegram bot token. It takes effect within seconds,
+   with no restart. `/status` then says "connected as @yourbot", "the token was refused by
+   Telegram" or "cannot reach Telegram; trying again". A token put in `TELEGRAM_BOT_TOKEN` in
+   `.env` instead is read when `familydb run` starts.
 2. Each family member sends the bot a direct message. It does not answer strangers, but it
    notes who asked (id, Telegram name, when; never what they said, and only for a month), and
    the Family page lists them under "Asked to talk to the bot" with a button to add each one.
@@ -188,6 +190,7 @@ one at a time:
 3. For a family group, send BotFather `/setprivacy` and choose Disable so the bot sees every message, then add the bot to the group. A dedicated "Ideas & Plans" group works best. In a busier group set `TELEGRAM_REQUIRE_MENTION=true` so it only answers when @mentioned or replied to.
 4. To get suggestions measured from where someone is rather than from home, they share their location with the bot (the paperclip, then Location; a live location keeps itself current for as long as they choose). On the web page's chat, ticking "Send where I am" (beside Send) asks the browser for the location and sends it with each message until the box is unticked; it stays as it was left for that browser, is off to begin with, and needs the page on HTTPS (or opened on the server itself). The bot uses the latest position for three hours for "near here" and "open now" questions, keeps only the latest one per person, deletes it after a day (within ten minutes of that, while the service runs, whether or not anyone shares again), and sends the place's name and coordinates to the model provider with the message. Nothing is sent unless someone shares it or ticks the box.
 5. Long polling means nothing is exposed; if the server is off, Telegram keeps updates for a day and the bot catches up on restart without double-processing.
+6. Voice notes work like typed messages, as long and rambling as anyone likes: a speech model writes the words down and the bot answers them, doing everything they ask for (an idea, a plan, a change to one, something to remember). The words are kept as the message, marked "(voice note)"; the recording itself is not kept. Claude cannot hear, so voice notes need an OpenAI or Gemini key even when the chat runs on Claude; with neither, the bot says so and asks for the message typed. On the settings page, AI model, under "Voice notes": turn them off, cap their length (5 minutes unless changed; a longer one is not heard at all), and choose who hears them and with which model. Hearing is a model call like any other: it counts against the daily limit and shows on `/status` as "listening to voice notes", about $0.003 a minute on OpenAI's gpt-4o-mini-transcribe. A voice note that could not be heard (the service down, no words in it) is not retried, since the recording is gone; the bot asks for it again.
 
 ## 5. Google Calendar
 
@@ -200,7 +203,8 @@ The Google Cloud side is done once, in a browser:
 
 Then connect it from the settings page, which needs no laptop and nothing copied to the server:
 
-4. On `/settings`, under Google Calendar, paste the client's JSON and press "Get the consent link".
+4. On `/settings/connections`, under Google Calendar, paste the client's JSON and press "Get the
+   consent link".
 5. Open the link, sign in as the account that owns the family calendar, and allow access.
 6. Google then sends the browser to an address starting `http://127.0.0.1:53682/`, which will
    not load. That is expected. Copy the whole address from the address bar, paste it into the
@@ -217,7 +221,8 @@ will not work, use the laptop instead:
   `uv run familydb google auth --client-secrets ~/Downloads/client_secret_XXX.json` and sign in as
   the calendar's owner. It writes `data/google_token.json`.
 - `uv run familydb google calendars` lists the calendars and their ids. Put the family calendar's
-  id in the Google calendar id box on the settings page (under Home), or in `GOOGLE_CALENDAR_ID`.
+  id in the Google calendar id box on the settings page (under Connections, "Use a calendar by
+  its id"), or in `GOOGLE_CALENDAR_ID`.
 - Copy `google_token.json` into the server's `data/` folder, owned by the bot's user and mode
   600, and restart the bot.
 
@@ -227,9 +232,10 @@ Saturday at 8" now creates the event; "move that to Sunday" and "cancel the symp
 
 ## 6. Weather
 
-On the settings page, under Home, type the Home area as you would tell someone ("Vancouver,
-WA") and leave latitude and longitude empty: the page looks the place up on OpenStreetMap's map
-and fills them in, and says what it found. Coordinates you type yourself win. Units chooses
+On the settings page, under General, type the home town or area as you would tell someone
+("Vancouver, WA") and leave latitude and longitude (folded away under "Exact position and travel
+times") empty: the page looks the place up on OpenStreetMap's map and fills them in, and says what
+it found. Coordinates you type yourself win. Units chooses
 metric or imperial. In `.env` the same are `HOME_AREA`, `HOME_LAT`, `HOME_LON` and
 `WEATHER_UNITS`. Open-Meteo needs no API key. Check with
 `familydb tool get_forecast --json '{"start": "2026-09-26", "end": "2026-09-27"}'`.
@@ -333,7 +339,7 @@ Two upgrades from an older checkout ask something of you once:
 
 **Suggestions.** "What should we do this weekend?" runs the engine once: free time from the calendar, the forecast, every idea against the looked-up details, and, with lookups on, a search for time-bound things near the home area (cached for twelve hours, shared by questions that ask for the same window, constraints and kind of thing). Each verdict is logged in `suggestions`. It works in minutes, not parts of the day: "I'm bored, what now?" looks at the next few hours, "tonight" at the evening, and an answer for today says when they could be there ("can go 16:10-17:55 today"). `familydb suggest --window this-weekend --discover` runs the same engine from the shell.
 
-**Weekend digest.** The installer sends it to the chat on the web page (`web`), which needs no id looked up and so works from the first Thursday. To send it to the family's Telegram group instead, add the bot to the group and have somebody on the family list mention it there once; the Digest chat box on the settings page (under "When it speaks first") then offers that group among the chats the bot has seen, by when each was last written in. Pick it and save; empty the box and no digest is sent. A Telegram group's id is a negative number, and can be typed in by hand too. Digest day and hour (default Thursday 18:00 in the family's timezone) are on the same part of the page; `familydb digest` prints the schedule and `familydb digest --now` posts a digest immediately. The digest is asked as the first admin and stored like any message, so it goes out at most once a day; if the model call fails it is retried like a failed message, and if the bot was off at the scheduled hour it sends the digest a minute after it next starts on the same day.
+**Weekend digest.** The installer sends it to the chat on the web page (`web`), which needs no id looked up and so works from the first Thursday. To send it to the family's Telegram group instead, add the bot to the group and have somebody on the family list mention it there once; the "Weekend ideas go to" box on the settings page (under Messages) then offers that group among the chats the bot has seen, by when each was last written in. Pick it and save; empty the box and no digest is sent. A Telegram group's id is a negative number, and can be typed in by hand too. The day and time (default Thursday 18:00 in the family's timezone) are chosen beside it; `familydb digest` prints the schedule and `familydb digest --now` posts a digest immediately. The digest is asked as the first admin and stored like any message, so it goes out at most once a day; if the model call fails it is retried like a failed message, and if the bot was off at the scheduled hour it sends the digest a minute after it next starts on the same day.
 
 **Follow-ups.** The morning after a plan (`FOLLOW_UP_HOUR`, default 10:00), the bot asks "How was #57 Hopscotch Portland on Saturday? Worth doing again?" in the chat the plan was made in, once per plan, unless someone already said how it went. The answer is recorded as feedback and feeds future suggestions. `familydb follow-ups --now` asks by hand. It makes no model call.
 
@@ -508,8 +514,14 @@ the table does not list, and is counted high. It asks nothing of a model, so ref
 Every setting in this section can be changed in two places: in `.env`, which needs a restart, or
 on the settings page at `/settings`, which does not. A value set on the page wins over the same
 one in `.env`; empty a box on the page and `.env` applies again, which is what the greyed-out
-value in an empty box is showing you. `familydb config` prints the lot and says where each one
-came from. The page shows the API keys and Google Calendar first, then the rest in groups.
+value in an empty box is showing you (a dropdown says it in words, as "Default (Thursday)"),
+and a box set on the page is marked "changed". `familydb config` prints the lot and says where
+each one came from. `/settings` itself is a card to each part, saying how it stands and marking
+what needs a look: General (where home is, the time zone, units and the page's name), AI model
+(the company, its key, checked with it for free, and the models), Spending, Messages (the weekend
+ideas and the follow-ups), Lookups, Personality and family, Connections (Telegram and Google
+Calendar), Sign-in and security, and What has changed. Each is a short page of its own with one
+Save; the fine-tuning on it is folded away until opened.
 
 A change reaches the next message and the next page straight away, a new Telegram bot token
 within a few seconds, and the timezone at once. The jobs that run on a schedule — the digest, the
@@ -526,29 +538,62 @@ PROVIDER_FALLBACK=true     # ask another one when the first cannot take a messag
 ```
 
 Give whichever keys you have. `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` and `GEMINI_API_KEY` sit side
-by side; the ones you did not choose become spares. Each vendor has its own pair of models, one
-for chat and one for the mechanical lookups:
+by side; the ones you did not choose become spares.
+
+**How strong a model answers.** Each company sells a small family of models, from a cheap quick
+one to a dear strong one, and FamilyDB knows each family by level
+(`src/familydb/agent/providers/catalog.py`):
+
+| Level | OpenAI | Claude | Gemini |
+|---|---|---|---|
+| everyday | GPT-6 Luna, $0.10 / $0.50 | Claude Haiku 4.5, $1 / $5 | Gemini 3.1 Flash-Lite, $0.25 / $1.50 |
+| better | GPT-6 Sol, $2 / $10 | Claude Sonnet 5, $2 / $10 | Gemini 3.8 Flash, $0.75 / $3.75 |
+| best | GPT-6 Astra, $10 / $50 | Claude Opus 5, $5 / $25 | Gemini 3.1 Pro, $2 / $12 |
+
+Prices are US dollars per million tokens read and written, as published in September 2026 (Google
+has said its Flash prices double on January 1, 2027). Everything answers at `everyday` unless the
+family chooses otherwise, and each situation has a level of its own, under "How strong a model
+answers" on the AI model settings page:
+
+```
+CHAT_LEVEL=everyday        # answering the family, and answering again after a failure
+DIGEST_LEVEL=everyday      # the weekend digest, retries included: once a week, so better costs little
+LOOKUP_LEVEL=everyday      # looking ideas up and searching for what is on
+```
+
+A level is chosen, not a model name, so it holds on whichever company answers: when the first one
+cannot take a message and another answers instead, it answers at the same level. A level up
+never answers with a model cheaper than everyday: if the everyday model already costs more than
+the table's (Claude Opus 5, say), or has no price listed, it answers at better and best too. Each level's box on the page
+says which model it means for the company answering now, and what it costs. A situation on a
+stronger model than the chat has a prompt cache of its own, written the first time it is asked.
+
+`everyday` is each company's own pair of models, one for chat and one for the mechanical lookups,
+which default to its cheapest and can be set to any model name it offers:
 
 ```
 OPENAI_MODEL=gpt-6-luna
 OPENAI_WORKER_MODEL=gpt-6-luna
-ANTHROPIC_MODEL=claude-opus-5
-WORKER_MODEL=claude-haiku-4-5-20251001
-GEMINI_MODEL=gemini-2.5-pro
-GEMINI_WORKER_MODEL=gemini-3.8-flash
+ANTHROPIC_MODEL=claude-haiku-4-5
+WORKER_MODEL=claude-haiku-4-5
+GEMINI_MODEL=gemini-3.1-flash-lite
+GEMINI_WORKER_MODEL=gemini-3.1-flash-lite
 ```
 
 The default is OpenAI's GPT-6 Luna for both chat and lookups, the cheapest capable model of the
-three companies: $0.10 per million input tokens, $0.50 per million output tokens, and web search
-at $10 per 1,000 searches, as published in September 2026. Claude and Gemini remain a setting
-away. The model boxes on the page suggest the models it knows but take any name. When a model
-name changes, the page asks that company's model list, which spends no tokens, and refuses the
-save only on a definite "no such model"; if the company cannot be reached or has no key yet, the
-save goes through. `/status` and `familydb debug cost` both print who is answering each surface
+three companies, with web search at $10 per 1,000 searches. Claude and Gemini remain a setting
+away. Claude Haiku 4.5 answers without thinking first, so the thinking settings do nothing for
+it. A `.env` written before levels came in names Claude Opus 5 and Gemini 2.5 Pro as the everyday
+models; those lines still decide until they are emptied or a box on the page names another, and
+Claude Opus 5 as everyday leaves nothing stronger for better and best. The model boxes on the
+page suggest the models it knows, each with its level and price, but take any name, such as
+`claude-fable-5-1` or `claude-opus-5-5`. When a model name changes, the page asks that company's
+model list, which spends no tokens, and refuses the save only on a definite "no such model"; if
+the company cannot be reached or has no key yet, the save goes through. `/status` and `familydb debug cost` both print who is answering each situation
 and on which model, which is the quickest way to see that a change took effect.
 
-**Spending.** `DAILY_SPEND_LIMIT` ("Daily spending limit (US$)" on the page, under "What it may
-spend") is $2.00 a day by default, counted over the family's day in its timezone; 0 turns it
+**Spending.** `DAILY_SPEND_LIMIT` ("Daily spending limit (US$)" on the Spending page) is $2.00
+a day by default, counted over the family's day in its timezone; 0 turns it
 off. It is checked before every model call, whether for chat, a lookup, discovery or the digest.
 Once it is used up, chat says so ("I've reached today's spending limit ($2.00), so I'm stopping
 here until tomorrow.") and lookups wait for tomorrow. A turn already under way stops before its next call, so a day can end over the limit
@@ -557,26 +602,37 @@ list is counted at $15 per million input and $75 per million output tokens, dear
 does list, so the limit errs towards stopping. It is not the bill. Set a spending limit on the
 API key in the provider's own console as well, because theirs is.
 
-The other boxes in that group bound a single message: the longest answer (at most 64,000
-tokens), tool rounds per message (at most 20) and per lookup (at most 30), and, under "Looking
-things up", ideas looked up at a time (at most 20).
+The boxes folded under "What one message may use" on the same page bound a single message: the
+longest answer (at most 64,000 tokens), steps per message (at most 20) and per lookup (at most
+30); on the Lookups page, under "How often", ideas looked up at a time (at most 20).
 
 **Keys on the page.** The settings page is where keys are meant to be typed, and it has one
 consequence worth knowing: a key stored there lives in `data/familydb.sqlite3`, so it is in
 every backup you take (section 7) and in every copy of that file. A key in `.env` is not. Either
 is fine on a machine you control; if the backups go somewhere you do not control, keep the keys
-in `.env`. The page never shows a key back to you or writes one to its change log. "See a key"
-shows one only after the password you signed in with is typed again, once, on that screen only.
+in `.env`. The page never shows a key back to you or writes one to its change log. "See a key",
+under Sign-in and security, shows one only after the password you signed in with is typed again,
+once, on that screen only.
 
-**Personality.** `/settings/personality` holds who the bot is: the persona (Vera unless changed,
-or none), her description rewritten in the family's words, "About the family" (what she should
-know about them, sent with every message, so keep it short), and the lines she uses for
-everything she says unasked, such as reminders and "how was it?". Those lines are filled in by
-code, never by a model call; an emptied one goes back to hers. Her name is written as `{name}`,
-in her description and in any line, and filled in wherever she speaks, the chat page included.
+**Personality.** `/settings/personality` holds who the bot is: the persona (Vera as first written
+unless changed, Vera in brief, a shorter one, or none), with roughly what each adds to every
+message; what she is called, if not Vera; her description rewritten in the family's words;
+"Anything to add", a few sentences of your own on how she talks, which last when her own
+description is improved; "About the family" (what she should know about them, sent with every
+message, so keep it short); and the lines she uses for everything she says unasked, such as
+reminders and "how was it?". A rewrite of her description is kept for the persona it rewrote, and
+when her own description has changed since, the page says so and shows what changed. Choosing
+none keeps every rewrite, the name you gave her, your notes and your lines for when a persona is
+chosen again. Her lines are filled in by code, never by a model call; an emptied one goes back to
+hers. A line may have several wordings, one to a row: each message takes one of them, the same
+message always the same one, and "Reads as" under each box shows how
+it reads with made-up details. Her name is written as `{name}`, in her description and in any
+line, and filled in wherever she speaks, the chat page included. The bot's name and description
+in Telegram are her name and her `/start` line, or FamilyDB's under none.
 
-**Undoing a change.** The bottom of the settings page lists what has changed, when, and from
-where. To put a setting back the way it was, empty its box: the value from `.env` applies again.
+**Undoing a change.** What has changed, the last of the settings pages, lists every change, when,
+by whom and from where, by the names the page gives them. To put a setting back the way it was,
+empty its box: the value from `.env` applies again.
 
 **A worthwhile combination.** Filling in an address and opening hours from a page is extraction,
 not judgement, and it is most of the volume once lookups are on. If you move chat to another
@@ -691,6 +747,7 @@ SQLite browser opens it. `scripts/uninstall.sh` does this with a backup and asks
 - **"OpenAI says it has no model called X. Check the spelling."** On saving the settings page: the company's own model list has no model of that name, so nothing was saved. Correct the name or pick one of the suggestions. A company that cannot be reached, or has no key yet, never causes this.
 - **"Could not find X on the map."** The home area could not be looked up. Type the latitude and longitude as well.
 - **Telegram: "the token was refused by Telegram" on `/status`.** The token is wrong, or was revoked in BotFather. Paste the current one on the settings page. A refused token is not tried again until it changes, so nothing is hammering Telegram meanwhile.
+- **Telegram: the bot's name changes back by itself.** The bot sets its own name and description in Telegram to the name it goes by and its `/start` line (hers, or FamilyDB's under none), after each connect and whenever either changes on the Personality page, so a name set in BotFather lasts only until the bot next connects or her words change. Under none the contact is always FamilyDB and cannot be renamed; to give the bot another name, choose a persona on the Personality page and set what she is called there. If Telegram refuses, the log says so and it is not tried again until either changes or the bot reconnects; if Telegram cannot be reached, it is tried again shortly. The bot keeps working meanwhile.
 - **Telegram: "cannot reach Telegram; trying again" on `/status`.** The server cannot get out to Telegram right now. It tries again every thirty seconds by itself; if it lasts, check the machine's network and DNS.
 - **Google: the address will not load.** After allowing access, Google sends the browser to `http://127.0.0.1:53682/...` and it shows an error. That is expected: copy the whole address from the address bar into the page (section 5, step 6).
 - **Google: "That address belongs to an earlier try."** The pasted address came from an older consent link. Press "Get the consent link" again and use the newest one. "That connection was started too long ago, or before a restart" means the same: start again. "That client is of type Web application" means the OAuth client must be made again as a Desktop app.

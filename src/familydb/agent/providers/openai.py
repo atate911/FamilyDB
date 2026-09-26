@@ -5,7 +5,8 @@ apart. The differences that matter here: the system prompt is `instructions` rat
 caching happens automatically on a long prefix instead of being marked, so `cacheable` is used
 only to key the cache; strict function calling wants every property listed as required, with the
 optional ones nullable; and a hosted search is capped by the number of tool calls a turn may make
-rather than by a per-tool limit.
+rather than by a per-tool limit. Voice notes go to a separate speech-to-text endpoint, which takes
+the recording as a file.
 """
 
 from __future__ import annotations
@@ -18,6 +19,8 @@ from typing import Any
 import openai
 
 from familydb.agent.providers.base import (
+    Audio,
+    Heard,
     KeyCheck,
     ModelReply,
     Stop,
@@ -107,19 +110,27 @@ class OpenAIProvider:
 
     name = NAME
 
-    def __init__(self, settings: Settings, api: Any = None) -> None:
+    def __init__(self, settings: Settings, api: Any = None, audio: Any = None) -> None:
         self.settings = settings
         self._api = api
+        self._audio = audio  # `client.audio.transcriptions`, or a test's stand-in for it
 
     # -- wiring ---------------------------------------------------------------------------
     def configured(self) -> bool:
-        return self._api is not None or bool(self.settings.openai_api_key)
+        injected = self._api is not None or self._audio is not None
+        return injected or bool(self.settings.openai_api_key)
 
     @property
     def api(self) -> Any:
         if self._api is None:
             self._api = make_client(self.settings).responses
         return self._api
+
+    @property
+    def audio_api(self) -> Any:
+        if self._audio is None:
+            self._audio = make_client(self.settings).audio.transcriptions
+        return self._audio
 
     def model_for(self, surface: Surface) -> str:
         if surface == "worker":
@@ -335,20 +346,61 @@ class OpenAIProvider:
     def send(self, request: TurnRequest) -> ModelReply:
         try:
             response = self.api.create(**self.payload(request))
-        except openai.RateLimitError as exc:
-            raise AgentError(f"rate limited: {exc}", retryable=True) from exc
-        except openai.APIConnectionError as exc:
-            raise AgentError(f"connection error: {exc}", retryable=True) from exc
-        except openai.APIStatusError as exc:
-            status = getattr(exc, "status_code", None) or 0
-            raise AgentError(
-                f"API error {status}: {exc}",
-                retryable=status >= 500,
-                request_id=getattr(exc, "request_id", None),
-            ) from exc
         except openai.OpenAIError as exc:
-            raise AgentError(f"OpenAI error: {exc}", retryable=False) from exc
+            raise _failure(exc) from exc
         return self.reply(response)
+
+    # -- hearing --------------------------------------------------------------------------
+    def listener(self) -> str | None:
+        return self.settings.openai_transcribe_model or None
+
+    def transcribe(self, audio: Audio, hints: str) -> Heard:
+        """One request to the speech-to-text endpoint, which takes the recording as a file."""
+        model = self.listener()
+        if model is None:
+            raise AgentError("no OpenAI model is set to hear voice notes", retryable=False)
+        payload: dict[str, Any] = {
+            "model": model,
+            "file": (audio.name, audio.data, audio.mime),
+            "response_format": "json",
+        }
+        if hints:
+            payload["prompt"] = hints
+        try:
+            result = self.audio_api.create(**payload)
+        except openai.OpenAIError as exc:
+            raise _failure(exc) from exc
+        usage = getattr(result, "usage", None)
+        heard: dict[str, int | None] = {}
+        if getattr(usage, "type", None) == "tokens":
+            heard = {
+                "input_tokens": getattr(usage, "input_tokens", None),
+                "output_tokens": getattr(usage, "output_tokens", None),
+            }
+        elif getattr(usage, "type", None) == "duration":
+            heard = {"audio_seconds": round(getattr(usage, "seconds", 0) or 0)}
+        return Heard(
+            text=(getattr(result, "text", "") or "").strip(),
+            usage=heard,
+            model=model,
+            request_id=getattr(result, "_request_id", None),
+        )
+
+
+def _failure(exc: openai.OpenAIError) -> AgentError:
+    """A failed request as the loop understands it: worth trying again later, or not."""
+    if isinstance(exc, openai.RateLimitError):
+        return AgentError(f"rate limited: {exc}", retryable=True)
+    if isinstance(exc, openai.APIConnectionError):
+        return AgentError(f"connection error: {exc}", retryable=True)
+    if isinstance(exc, openai.APIStatusError):
+        status = getattr(exc, "status_code", None) or 0
+        return AgentError(
+            f"API error {status}: {exc}",
+            retryable=status >= 500,
+            request_id=getattr(exc, "request_id", None),
+        )
+    return AgentError(f"OpenAI error: {exc}", retryable=False)
 
 
 def _arguments(item: Any) -> dict[str, Any]:

@@ -84,7 +84,7 @@ replaced. Where the port differs from PR #2:
 |---|---|
 | Discovery skipped under production wiring | Workers use the configured provider without requiring a test API injection. |
 | Discovery cache reused unrelated answers | Cache identity includes date, question, constraints and home location; settings changes clear it. |
-| Unsupported worker requests | Haiku requests omit adaptive thinking and effort, and use basic web tool versions. Gemini workers default to `gemini-3.8-flash`, include server tool context circulation, and reject unsupported older model combinations before making a request. |
+| Unsupported worker requests | Haiku requests omit adaptive thinking and effort, and use basic web tool versions. Gemini workers default to `gemini-3.1-flash-lite` (Gemini 3, which searches alongside our tools), include server tool context circulation, and reject unsupported older model combinations before making a request. |
 | Duplicate calendar creation after a lost response | Persist a client-generated Google event ID before insertion; reconcile that ID on retry and persist the local result atomically. Identical event creation within one inbound message reuses the operation. |
 | Received messages stranded on restart | Retry unfinished inbound records using renewable database claims. A dead claim expires after five minutes; the next retry job can recover it. Relative dates retain the original message's time context. |
 | Replies, digests and follow-ups lost on send failure | Persist outgoing messages and mark delivery only after sending succeeds. Retry delivery separately from AI processing and calendar writes. |
@@ -152,7 +152,14 @@ migration, so upgrading does not resend old conversations. Fresh outgoing messag
     chatting in that chat: the next reply should carry it rather than a separate message.
 12. On `/settings/personality`, rewrite one of her lines and add a sentence to "About the
     family"; the next reminder or follow-up should use the new line, and the next answer should
-    know the sentence. Choosing no persona should leave the replies plain, her lines and your rewrites of them included; choosing her again brings your rewrites back.
+    know the sentence. Give her another name: "what's your name?" should get it, in the chat and
+    on Telegram, and within a few seconds the bot's name and description in Telegram should be
+    hers. Rewrite her description and add a line under "Anything to add", then choose no persona:
+    the replies should be plain, her lines and your rewrites of them included, and the Telegram
+    contact called FamilyDB. Choose her again: the name, the rewrite, the notes and the lines
+    should all be back. Choose Vera in brief: the list should show her at about 740 tokens a
+    message before your notes, and a few everyday requests should be answered as well as
+    before; choosing Vera as first written again brings your rewrite of her back.
 13. With the chosen model's key in the environment, run `uv run python -m evals` (it spends at
     most $0.50, and the one call that crosses it, unless `--budget` says otherwise) and read what failed before the family does.
 

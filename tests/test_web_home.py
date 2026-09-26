@@ -130,7 +130,16 @@ def test_browsing_asks_nothing_of_a_model(settings, clock, conn, family) -> None
         )
         ideas.insert(conn, title="Ramen place", kind="restaurant", now=NOW_ISO)
     client = create_app(App(settings, clock), api=api).test_client()
-    for path in ("/", "/chat", "/ideas", "/plans", "/plans/month", "/tasks", "/restaurants"):
+    for path in (
+        "/",
+        "/chat",
+        "/ideas",
+        "/plans",
+        "/plans/month",
+        "/tasks",
+        "/restaurants",
+        "/memory",
+    ):
         assert client.get(path).status_code == 200, path
     assert api.requests == []
     assert conn.execute("SELECT count(*) FROM llm_calls").fetchone()[0] == 0

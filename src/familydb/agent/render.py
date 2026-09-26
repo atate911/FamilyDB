@@ -12,6 +12,7 @@ from typing import Any
 from familydb.availability import calendar_available, weather_available, web_tools_available
 from familydb.clock import Clock
 from familydb.config import Settings
+from familydb.memory import Chosen, line_of
 from familydb.store.ideas import Idea
 from familydb.store.members import Member
 
@@ -31,11 +32,28 @@ def _duration(idea: Idea) -> str | None:
     return None
 
 
+def render_dates(idea: Idea) -> str | None:
+    """When a dated idea is on, as stored: "on 2026-11-18T20:00", "on 2026-10-01 to 2026-10-31",
+    "from 2026-10-01". None for an idea tied to no date. Never relative to today: the idea list
+    is cached."""
+    first, last = idea.happens_from, idea.happens_until
+    if not first:
+        return None
+    if last is None:
+        return f"from {first}"
+    if last == first[:10]:
+        return f"on {first}"
+    return f"on {first} to {last}"
+
+
 def render_idea_line(idea: Idea) -> str:
     """One compact line per idea, exactly what the model sees in its context."""
     parts = [f"#{idea.id}", f"[{idea.kind}]", idea.title]
     if idea.location_name:
         parts.append(f"at {idea.location_name}")
+    dates = render_dates(idea)
+    if dates:
+        parts.append(dates)
     parts.append(f"for: {', '.join(idea.participants) if idea.participants else 'anyone'}")
     if idea.tags:
         parts.append(f"tags: {', '.join(idea.tags)}")
@@ -88,12 +106,37 @@ def render_family_context(family: list[Member], settings: Settings) -> str:
     return "\n".join(lines)
 
 
-def render_user_turn(sender: str, text: str, clock: Clock) -> list[str]:
-    """The current message in parts: the date line, then the sender-prefixed text.
+def render_audience_line(channel: str, chat_id: str, family: list[Member]) -> str | None:
+    """Who reads the reply besides the sender, for the current turn only: it depends on the chat.
+
+    None for a private chat (the console, a Telegram chat with one person), which is what no line
+    means to the model. A Telegram group's chat id is negative; the page's chat is one
+    conversation the whole family shares. Whether kids are among them is read from the family
+    list, since code cannot see who is in a group.
+    """
+    if channel == "web":
+        line = "This is the family's conversation on the page: everyone who signs in reads it"
+    elif channel == "telegram" and chat_id.startswith("-"):
+        line = "This is the family's group chat: everyone in it reads your reply"
+    else:
+        return None
+    if any(member.active and member.role == "kid" for member in family):
+        line += ", kids among them"
+    return line + "."
+
+
+def render_user_turn(
+    sender: str, text: str, clock: Clock, audience: str | None = None
+) -> list[str]:
+    """The current message in parts: the date line, who reads the chat when it is shared, then
+    the sender-prefixed text.
 
     They stay separate so the volatile date never merges into the message itself.
     """
-    return [f"Today is {clock.describe()}.", f"[{sender}] {text}"]
+    parts = [f"Today is {clock.describe()}."]
+    if audience:
+        parts.append(audience)
+    return [*parts, f"[{sender}] {text}"]
 
 
 def render_location_line(
@@ -105,6 +148,18 @@ def render_location_line(
         f"{sender}'s location, from their phone {minutes_ago} min ago: {where}"
         f'({lat:.4f}, {lon:.4f}). For "near here" or "open now", suggest uses it.'
     )
+
+
+def render_memories(chosen: Chosen) -> str | None:
+    """What the family told the bot about itself that goes with this message (familydb/memory.py),
+    for the current turn only: it is chosen per message, so it never goes near the cache."""
+    if not chosen.memories:
+        return None
+    lines = ["What the family has told you about itself (m numbers are for remember):"]
+    lines += [line_of(memory) for memory in chosen.memories]
+    if chosen.left_out:
+        lines.append(f"({chosen.left_out} more, on other things.)")
+    return "\n".join(lines)
 
 
 def render_folded_line(lines: list[str]) -> str:

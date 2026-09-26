@@ -1,0 +1,7 @@
+{% from "_settings.html" import form %}
+{% from "_ui.html" import icon %}
+{% call form('spending', groups.values()) %}
+  <p class="panel notice spent">{{ icon('coin') }}<span>About <strong>${{ '%.2f' | format(today) }}</strong>
+    spent today{% if limit %}, of the ${{ '%.2f' | format(limit) }} limit{% endif %}.
+    <a href="{{ url_for('web.status') }}">What it cost, call by call</a></span></p>
+{% endcall %}

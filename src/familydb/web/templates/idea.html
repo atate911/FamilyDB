@@ -44,6 +44,7 @@
       <dl class="facts">
         <dt>{{ icon('user') }}For</dt><dd>{{ row.who }}</dd>
         {% if row.where %}<dt>{{ icon('pin') }}Where</dt><dd>{{ row.where }}</dd>{% endif %}
+        {% if row.on %}<dt>{{ icon('plans') }}On</dt><dd>{{ row.on }}</dd>{% endif %}
         <dt>{{ icon('sun') }}Setting</dt><dd>{{ setting }}{% if weather %}, {{ weather }}{% endif %}</dd>
         {% if idea.seasons %}<dt>{{ icon('seasonal') }}Seasons</dt><dd>{{ idea.seasons | join(', ') }}</dd>{% endif %}
         {% if row.duration %}<dt>{{ icon('clock') }}How long</dt><dd>{{ row.duration }}</dd>{% endif %}
@@ -111,7 +112,8 @@
             <input type="hidden" name="title" value="{{ idea.title }}" />
             <div class="field wide">
               <label for="start">When</label>
-              <input id="start" name="start" type="datetime-local" required />
+              <input id="start" name="start" type="datetime-local" required
+                     value="{{ idea.happens_from if idea.happens_from and 'T' in idea.happens_from else '' }}" />
               <label class="check"><input type="checkbox" name="all_day" value="yes" /> All day</label>
             </div>
             <div class="field">

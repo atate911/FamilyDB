@@ -13,6 +13,7 @@ import pytest
 from familydb.app import App
 from familydb.integrations.geocode import GeoPoint
 from familydb.store import db, knocks, members
+from familydb.store import settings as settings_store
 from familydb.web import create_app
 from tests.conftest import NOW_ISO
 from tests.fakes import FakeGeocoder
@@ -123,6 +124,8 @@ def test_the_whole_way_through(fresh, monkeypatch, conn) -> None:
     assert back.headers["Location"] == "/setup/model"
     page = fresh.get("/setup/model").text
     assert "OpenAI accepted the key. Vera answers with gpt-6-luna." in page
+    lineup = " ".join(page.split())
+    assert "GPT-6 Luna (everyday, $0.10 in, $0.50 out); GPT-6 Sol (better," in lineup
     assert app.settings.openai_api_key == "sk-good" and app.settings.provider == "openai"
 
     # It can answer now, so the home page is the home page again.
@@ -155,6 +158,19 @@ def test_a_company_that_cannot_be_asked_does_not_stop_the_key(fresh, monkeypatch
     assert fresh.app.settings.provider == "gemini"
 
 
+def test_a_key_check_names_the_model_it_asked_about(fresh, monkeypatch, conn) -> None:
+    """The check looks the everyday model up; a stronger chat level is what then answers."""
+    with db.transaction(conn):
+        settings_store.set_many(conn, {"chat_level": "better"})
+    _say(monkeypatch, "unknown_model")
+    _post(fresh, "model", "/settings/model", provider="openai", key="sk-good")
+    assert "says it has no model called gpt-6-luna" in fresh.get("/setup/model").text
+    _say(monkeypatch, "works")
+    _post(fresh, "model", "/settings/model", provider="openai", key="sk-good")
+    page = fresh.get("/setup/model").text
+    assert "OpenAI accepted the key. Vera answers with gpt-6-sol." in page
+
+
 def test_choosing_a_company_shows_its_own_instructions(fresh) -> None:
     assert "platform.openai.com/api-keys" in fresh.get("/setup/model").text
     anthropic = fresh.get("/setup/model?company=anthropic").text
@@ -169,7 +185,8 @@ def test_telegram_from_a_token_to_a_linked_phone(fresh, monkeypatch, conn) -> No
     _post(fresh, "you", "/family", name="Sam", role="admin")
     first = fresh.get("/setup/telegram").text
     assert "https://t.me/BotFather" in first and "/newbot" in first
-    assert "<em>Vera</em> or <em>The Tates" in first  # what she is called everywhere else
+    # Her name will do, since the bot's contact follows it once connected.
+    assert "<em>Vera</em> will do. Once the bot is connected" in " ".join(first.split())
 
     _post(fresh, "telegram", "/settings/keys", telegram_bot_token="7123:AAH-token")
     connecting = fresh.get("/setup/telegram").text
@@ -204,6 +221,42 @@ def test_telegram_from_a_token_to_a_linked_phone(fresh, monkeypatch, conn) -> No
     # And the weekend ideas can follow them there.
     _post(fresh, "telegram", "/settings", digest_chat_id="555")
     assert app.settings.digest_chat_id == "555"
+
+
+def test_the_bot_is_named_for_whoever_speaks(fresh, conn) -> None:
+    """The running bot gives its Telegram contact the name it goes by: hers, the one the family
+    call her included, or FamilyDB under none. So the step says that name will do."""
+    _post(fresh, "you", "/family", name="Sam", role="admin")
+    with db.transaction(conn):
+        settings_store.set_many(conn, {"persona_name": "Juno"})
+    said = " ".join(fresh.get("/setup/telegram").text.split())
+    assert "<em>Juno</em> will do. Once the bot is connected, its name in Telegram follows" in said
+    assert "follows hers, and changes with it if you rename her under Personality." in said
+    assert "The Tates" not in said and "what it calls itself" not in said
+
+    with db.transaction(conn):
+        settings_store.set_many(conn, {"persona": "none"})
+    said = " ".join(fresh.get("/setup/telegram").text.split())
+    assert "<em>FamilyDB</em> will do. Once the bot is connected, its name in Telegram" in said
+    assert "follows what it calls itself, and becomes hers if you choose a persona" in said
+    assert "The Tates" not in said and "follows hers" not in said
+
+
+def test_the_last_page_says_who_answers(fresh, conn) -> None:
+    said = " ".join(fresh.get("/setup/done").text.split())
+    assert (
+        "Vera is who answers. Her name, how she talks, or no persona at all are chosen under "
+        '<a href="/settings/personality">Personality</a>.'
+    ) in said
+
+    with db.transaction(conn):
+        settings_store.set_many(conn, {"persona": "none"})
+    said = " ".join(fresh.get("/setup/done").text.split())
+    assert (
+        "It answers plainly, with no persona. One can be chosen under "
+        '<a href="/settings/personality">Personality</a>.'
+    ) in said
+    assert "who answers" not in said
 
 
 def test_the_family_step_lets_in_whoever_messaged_the_bot(fresh, conn) -> None:

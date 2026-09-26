@@ -874,7 +874,8 @@ sudo install -o familydb -g familydb -m 600 /tmp/google_token.json /opt/familydb
 rm /tmp/google_token.json
 ```
 
-Put the calendar id in the **Google calendar id** box on the settings page, and restart:
+Put the calendar id in the **Google calendar id** box on the settings page (Connections), and
+restart:
 `sudo systemctl restart familydb`. Check with
 `cd /opt/familydb && sudo -u familydb .venv/bin/familydb google events`.
 
