@@ -17,8 +17,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--case", action="append", help="run only this case (repeatable)")
     parser.add_argument("--repeat", type=int, default=1, help="runs per case (default 1)")
     parser.add_argument("--provider", choices=providers.NAMES, help="answer with this vendor")
-    parser.add_argument("--model", help="and this model, instead of the configured one")
-    parser.add_argument(
+    which = parser.add_mutually_exclusive_group()
+    which.add_argument("--model", help="and this model, instead of the configured one")
+    which.add_argument(
         "--level", choices=providers.catalog.LEVELS, help="or its model at this level"
     )
     parser.add_argument("--show", action="store_true", help="print each reply and its calls")

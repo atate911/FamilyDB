@@ -6,7 +6,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from familydb.agent.providers import catalog
+from familydb.agent.providers import catalog, prices
 from familydb.agent.providers.base import (
     Exchange,
     KeyCheck,
@@ -75,13 +75,18 @@ def model_at(provider: Provider, surface: Surface, level: str) -> str:
 
     At everyday it is the provider's own setting for the surface, which is the company's cheapest
     unless the family named another; above it, the catalog's model at that level, so a stronger
-    choice holds on whichever company answers, the fallback included.
+    choice holds on whichever company answers, the fallback included. A level up never answers
+    with a cheaper model than everyday: an everyday model the family set above the lineup's (Opus
+    for Claude, as an older .env said) answers at better too.
     """
-    if level != catalog.EVERYDAY:
-        stronger = catalog.at(provider.name, level)
-        if stronger is not None:
-            return stronger.name
-    return provider.model_for(surface)
+    everyday = provider.model_for(surface)
+    stronger = catalog.at(provider.name, level) if level != catalog.EVERYDAY else None
+    if stronger is None:
+        return everyday
+    own = prices.price(provider.name, everyday)
+    if own is not None and stronger.price is not None and own.output > stronger.price.output:
+        return everyday
+    return stronger.name
 
 
 def others(name: str) -> list[str]:

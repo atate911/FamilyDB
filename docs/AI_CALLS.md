@@ -92,8 +92,8 @@ Context is built in three layers, and every piece of information belongs to exac
 | Kind | Trigger | Model | Sees | May do | Returns |
 |---|---|---|---|---|---|
 | Chat | a family message (Telegram, page, console) | chat model, at the chat level | persona, prompt, family, up to 150 ideas in the prefix; date, sender, a recently shared location, anything due to be carried, up to 20 messages of the last 6 hours, the newest within 6,000 characters | 18 chat tools | a reply; tool writes |
-| Digest | the weekly schedule, or catch-up after a restart | chat model, at the digest level | the chat context, with a fixed question | the chat tools | a reply to the digest chat |
-| Retry | every 5 minutes, for a failed message, 3 times at most; never after running out of steps | chat model, at the chat level | the chat context, plus which writes already ran | the chat tools | a reply |
+| Digest | the weekly schedule, or catch-up after a restart; after a failure, the retry job, still as the digest | chat model, at the digest level | the chat context, with a fixed question | the chat tools | a reply to the digest chat |
+| Retry | every 5 minutes, for a failed message other than the digest, 3 times at most; never after running out of steps | chat model, at the chat level | the chat context, plus which writes already ran | the chat tools | a reply |
 | Enrich | every 2 minutes, up to 3 pending ideas; a home idea with no place or link is skipped in code | worker model, at the lookup level | worker prompt, home area, the idea and what was saved before | web search (3), `save_place`, `skip_place` | a place record |
 | Discover | a `suggest` call, cached 12 hours by window, constraints and topic | worker model, at the lookup level | worker prompt, home area and where they are, the window, its hours, the constraints and topic, never the question's wording | web search (4), `report_finds` | up to 6 finds |
 
@@ -188,9 +188,11 @@ everything. The direction:
   Pro), with what each costs and whether it thinks before answering, and a test holds the catalog
   to what the provider modules send. `everyday` is each company's own model setting, its cheapest
   by default (a test holds that too); the family chooses a level per situation (`chat_level` for
-  chat and retries, `digest_level`, `lookup_level` for lookups and discovery), and a call that
-  moves to the fallback company is answered at the same level there. The family chooses; the
-  model never does, and nothing is escalated because a question sounded hard.
+  chat and retries, `digest_level` for the digest and its retries, `lookup_level` for lookups
+  and discovery), and a call that moves to the fallback company is answered at the same level
+  there. A level up never answers with a cheaper model than everyday, so an everyday model set
+  above the lineup's stays. The family chooses; the model never does, and nothing is escalated
+  because a question sounded hard.
 - **Escalate on evidence, not on guesswork.** A cheaper model may hand a task up to a stronger one
   when code can see that it failed: a validation error, a hand-back that did not happen, an empty
   answer. Not because the question sounded hard.

@@ -14,7 +14,7 @@ from familydb.app import App
 from familydb.channels.base import IncomingMessage
 from familydb.config import Settings
 from familydb.jobs.enrich import render_enrich_request
-from familydb.pipeline import handle_incoming, handle_synthetic
+from familydb.pipeline import DIGEST_UPDATE, handle_incoming, handle_synthetic, retry_message
 from familydb.store import ideas
 from familydb.store.db import transaction
 from tests import fakes
@@ -79,26 +79,64 @@ def test_the_stronger_models_have_prices() -> None:
 # -- choosing by level --------------------------------------------------------------------------
 
 
+# Claude's everyday as it is by default, where the fixture's is Opus for the sake of its scripts.
+CHEAPEST = {"anthropic_model": "claude-haiku-4-5"}
+
+
 def test_everyday_is_the_model_set_and_the_others_come_from_the_catalog(settings) -> None:
-    pinned = settings.model_copy(update={"anthropic_model": "claude-fable-5-1", "worker_model": ""})
-    claude = build("anthropic", pinned)
-    assert model_at(claude, "chat", "everyday") == "claude-fable-5-1"
-    assert model_at(claude, "worker", "everyday") == "claude-fable-5-1"  # empty: the chat one
-    assert model_at(claude, "chat", "better") == "claude-sonnet-5"
-    assert model_at(claude, "worker", "best") == "claude-opus-5"
+    pinned = settings.model_copy(update={"openai_model": "gpt-5-mini", "openai_worker_model": ""})
+    openai = build("openai", pinned)
+    assert model_at(openai, "chat", "everyday") == "gpt-5-mini"
+    assert model_at(openai, "worker", "everyday") == "gpt-5-mini"  # empty: the chat one
+    assert model_at(openai, "chat", "better") == "gpt-6-sol"
+    assert model_at(openai, "worker", "best") == "gpt-6-astra"
+
+
+def test_a_level_up_never_answers_with_a_cheaper_model(settings) -> None:
+    """An everyday model set above the lineup's stays: Opus, as an older .env named it."""
+    opus = build("anthropic", settings)  # the fixture's everyday Claude is Opus 5
+    assert model_at(opus, "chat", "better") == model_at(opus, "chat", "best") == "claude-opus-5"
+    fable = build("anthropic", settings.model_copy(update={"anthropic_model": "claude-fable-5-1"}))
+    assert model_at(fable, "chat", "best") == "claude-fable-5-1"
+    # Price is what decides, so an older model that costs more stays too.
+    sonnet = build(
+        "anthropic", settings.model_copy(update={"anthropic_model": "claude-sonnet-4-6"})
+    )
+    assert model_at(sonnet, "chat", "better") == "claude-sonnet-4-6"
+    assert model_at(sonnet, "chat", "best") == "claude-opus-5"
+    older = build("openai", settings.model_copy(update={"openai_model": "gpt-5"}))
+    assert model_at(older, "chat", "better") == "gpt-6-sol"  # no cheaper, so the lineup's
 
 
 def test_each_situation_is_answered_at_its_own_level(settings, clock, conn, family) -> None:
-    app = App(settings.model_copy(update={"chat_level": "better", "digest_level": "best"}), clock)
+    chosen = {**CHEAPEST, "chat_level": "better", "digest_level": "best"}
+    app = App(settings.model_copy(update=chosen), clock)
     answer = fakes.FakeMessagesAPI(fakes.message([fakes.text("Sounds good.")]))
     handle_incoming(app, IncomingMessage("telegram", "1", "c", "1001", "hi"), api=answer, conn=conn)
-    digest = IncomingMessage("telegram", "digest:2026-09-24", "-100", "1001", "Weekend digest")
+    digest = IncomingMessage("telegram", f"{DIGEST_UPDATE}2026-09-24", "-100", "1001", "Digest")
     weekly = fakes.FakeMessagesAPI(fakes.message([fakes.text("Here is the weekend.")]))
     handle_synthetic(app, digest, family["sam"], api=weekly, conn=conn)
     assert answer.requests[0]["model"] == "claude-sonnet-5"
     assert weekly.requests[0]["model"] == "claude-opus-5"
     models = [row[0] for row in conn.execute("SELECT model FROM llm_calls ORDER BY id")]
     assert models == ["claude-sonnet-5", "claude-opus-5"]  # and recorded, so priced, as such
+
+
+def test_a_digest_asked_again_is_still_the_digest(settings, clock, conn, family) -> None:
+    """At the digest's level, recorded as the digest, and quiet if it gives up: nobody asked."""
+    chosen = {**CHEAPEST, "digest_level": "best", "chat_level": "better", "agent_max_iterations": 1}
+    app = App(settings.model_copy(update=chosen), clock)
+    app.senders["telegram"] = lambda chat_id, text: None
+    digest = IncomingMessage("telegram", f"{DIGEST_UPDATE}2026-09-24", "-100", "1001", "Digest")
+    busy = fakes.FakeMessagesAPI(fakes.rate_limit_error())
+    failed = handle_synthetic(app, digest, family["sam"], api=busy, conn=conn)
+    assert failed.status == "failed"
+    looping = fakes.message([fakes.tool_use("tu", "search_ideas", {})], stop_reason="tool_use")
+    again = fakes.FakeMessagesAPI(looping)
+    reply = retry_message(app, failed.in_message_id, api=again, conn=conn)
+    assert again.requests[0]["model"] == "claude-opus-5"  # the digest's best, not the chat's
+    assert reply.status == "failed" and reply.out_message_id is None  # gave up, said nothing
+    assert [row[0] for row in conn.execute("SELECT kind FROM llm_calls")] == ["digest"]
 
 
 def test_a_lookup_is_asked_at_the_lookup_level(settings, clock, conn, registry) -> None:

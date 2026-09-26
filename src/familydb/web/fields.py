@@ -133,7 +133,7 @@ MODEL_NOTE = (
 )
 LEVEL_NOTE = (
     "Everyday is the company's own model named below; better and best are its stronger ones, "
-    "dearer for every message. Prices are US dollars for a million tokens read and written."
+    "never cheaper than everyday. Prices are US dollars for a million tokens read and written."
 )
 
 

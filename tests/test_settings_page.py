@@ -248,15 +248,28 @@ def test_a_model_box_suggests_models_without_limiting_them(page) -> None:
     assert page.app.settings.openai_model == "gpt-6-sol"
 
 
+def _choices(text: str, key: str) -> list[str]:
+    """What one dropdown offers, as it reads."""
+    found = re.search(rf'<select id="f-{key}"[^>]*>(.*?)</select>', text, re.S)
+    assert found is not None
+    return [" ".join(one.split()) for one in re.findall(r">([^<]+)</option>", found.group(1))]
+
+
 def test_each_level_says_which_model_it_means_and_what_it_costs(page) -> None:
-    text = page.get("/settings").text
-    # The fixture's Claude, whose everyday model is set to Opus; the stronger ones are the lineup's.
-    assert "everyday: Claude Opus 5 ($5.00 in, $25.00 out)" in text
-    assert "better: Claude Sonnet 5 ($2.00 in, $10.00 out)" in text
+    # The fixture's everyday Claude is Opus: a level up never answers with a cheaper model.
+    assert _choices(page.get("/settings").text, "chat_level")[1:] == [
+        "everyday: Claude Opus 5 ($5.00 in, $25.00 out)",
+        "better: Claude Opus 5 ($5.00 in, $25.00 out)",
+        "best: Claude Opus 5 ($5.00 in, $25.00 out)",
+    ]
     page.post("/settings", data=_whole_form(page, provider="openai", digest_level="best"))
     assert page.app.settings.digest_level == "best"
     text = page.get("/settings").text
-    assert "best: GPT-6 Astra ($10.00 in, $50.00 out)" in text
+    assert _choices(text, "digest_level")[1:] == [
+        "everyday: GPT-6 Luna ($0.10 in, $0.50 out)",
+        "better: GPT-6 Sol ($2.00 in, $10.00 out)",
+        "best: GPT-6 Astra ($10.00 in, $50.00 out)",
+    ]
     assert '<option value="best" selected>best: GPT-6 Astra' in text
     # A model box says where each name stands, and what it costs.
     assert '<option value="gpt-6-sol">GPT-6 Sol, better · $2.00 in, $10.00 out</option>' in text

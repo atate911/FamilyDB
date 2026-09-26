@@ -8,9 +8,10 @@ moves to the fallback company is answered at the same level there.
 
 `everyday` is the company's model as the settings name it, per surface: its cheapest unless the
 family typed another (a test holds the defaults to that). `better` and `best` are the ones
-listed here. What a model costs is `prices.py`'s business, and how a request is shaped for it the
-provider module's; this table only says where each model stands and what it can do, and a test
-checks that against what the provider modules send.
+listed here, unless the everyday model already costs more (`providers.model_at`): a level up
+never answers with a cheaper model. What a model costs is `prices.py`'s business, and how a
+request is shaped for it the provider module's; this table only says where each model stands and
+what it can do, and a test checks that against what the provider modules send.
 
 No SDK is imported here, so the settings page can read it without loading one.
 """

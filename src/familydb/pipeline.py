@@ -32,6 +32,10 @@ from familydb.tools import ToolContext
 
 log = logging.getLogger(__name__)
 
+# What the weekend digest's question is stored under, followed by the day, so the retry job can
+# tell a digest from a message somebody wrote.
+DIGEST_UPDATE = "digest:"
+
 
 def handle_incoming(
     app: App,
@@ -334,7 +338,10 @@ def retry_message(
         text=row.text,
     )
     log.info("retrying message %s (attempt %s)", message_id, row.retries + 1)
-    reply = _run(app, msg, member, message_id, api, conn, notify=False, retry=True, kind="retry")
+    # The digest asked again is still the digest: answered at its level, and quiet if it gives up.
+    digest = (row.channel_update_id or "").startswith(DIGEST_UPDATE)
+    kind = "digest" if digest else "retry"
+    reply = _run(app, msg, member, message_id, api, conn, notify=False, retry=True, kind=kind)
     if reply is not None and reply.out_message_id is not None:
         deliver(app, reply.out_message_id)
     return reply

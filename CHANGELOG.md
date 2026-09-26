@@ -50,10 +50,12 @@ older than what is installed. It gets a date when it is released.
   with its cheapest unless the family chooses otherwise, and the chat, the
   weekend digest and the lookups each have a level of their own on the settings
   page, which says what each level means and costs on the company answering. A
-  message the spare company takes is answered at the same level. Claude's and
-  Gemini's everyday models are now their cheapest (they were Opus 5 and Gemini
-  2.5 Pro); a `.env` that names a model keeps it. Gemini 3.8 Flash, the Gemini
-  lookup model, had no price and was counted at the unlisted rate.
+  message the spare company takes is answered at the same level, a level up
+  never answers with a cheaper model than everyday, and a weekend digest that
+  fails is retried as the digest: at its level, and quiet if it gives up.
+  Claude's and Gemini's everyday models are now their cheapest (they were Opus 5
+  and Gemini 2.5 Pro); a `.env` that names a model keeps it. Gemini 3.8 Flash,
+  the Gemini lookup model, had no price and was counted at the unlisted rate.
 - **Stops at a daily spending limit.** Every model call records an estimated
   cost; once the day's limit ($2 unless changed) is used up, nothing more is
   asked of a model until midnight, and the chat says why.
