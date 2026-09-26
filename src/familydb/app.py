@@ -57,6 +57,9 @@ class App:
         # sender is here rather than on the page so a web message can be retried, and a web
         # digest sent, by a process that is not serving the page.
         self.senders: dict[str, Callable[[str, str], None]] = {"web": lambda _chat, _text: None}
+        # A channel that can put buttons under a message registers how here as well; a message
+        # with buttons goes through it, and anywhere else its words go alone (buttons.py).
+        self.button_senders: dict[str, Callable[[str, str, list[dict[str, str]]], None]] = {}
         # What each long-running channel last said about itself, for the status page.
         self.channel_states: dict[str, str] = {}
         # Web discovery results per window, kept for a while (see suggest/discover.py).

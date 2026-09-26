@@ -17,6 +17,9 @@ CAPTURE_PREFIX = "Save this idea for later:\n"
 # Until it has been heard it is `unheard`: the mark with how long it was, and nothing else.
 VOICE_PREFIX = "(voice note) "
 UNHEARD = "(voice note, {length}, not heard)"
+# A button tapped is kept as a message from whoever tapped it, after this mark, so the history
+# says it was a tap and what it was on (familydb/buttons.py).
+TAP_PREFIX = "(tapped) "
 
 
 def as_said(text: str) -> str:
@@ -55,11 +58,13 @@ class Message(BaseModel):
     claim_until: str | None = None
     delivered_at: str | None = None
     cancelled_at: str | None = None
+    buttons: list[dict[str, str]] | None = None
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> Message:
         data = dict(row)
         data["actions"] = from_json(data.get("actions"))
+        data["buttons"] = from_json(data.get("buttons"))
         return cls(**data)
 
 
@@ -99,12 +104,24 @@ def insert_out(
     text: str,
     reply_to: int | None = None,
     now: str | None = None,
+    buttons: list[dict[str, str]] | None = None,
 ) -> Message:
     stamp = now or utcnow_iso()
+    row = {
+        "channel": channel,
+        "chat_id": chat_id,
+        "direction": "out",
+        "text": text,
+        "received_at": stamp,
+        "status": "processed",
+        "reply_to": reply_to,
+        "processed_at": stamp,
+    }
+    if buttons:  # named only when there are some, so a database before 0021 can still be written
+        row["buttons"] = to_json(buttons)
     cur = conn.execute(
-        "INSERT INTO messages (channel, chat_id, direction, text, received_at, status, reply_to, "
-        "processed_at) VALUES (?, ?, 'out', ?, ?, 'processed', ?, ?)",
-        (channel, chat_id, text, stamp, reply_to, stamp),
+        f"INSERT INTO messages ({', '.join(row)}) VALUES ({', '.join('?' * len(row))})",
+        tuple(row.values()),
     )
     message = get(conn, int(cur.lastrowid or 0))
     assert message is not None

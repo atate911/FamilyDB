@@ -2,7 +2,8 @@
 
 Text and voice notes both reach the pipeline. A voice note arrives as a way to fetch it, which
 the pipeline calls only once the sender is known to be family; the download itself runs on the
-bot's own event loop, like every send.
+bot's own event loop, like every send. A button under one of her messages (a reminder's Done) is
+done by code, never the pipeline (buttons.py).
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any
 
-from telegram import Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import (
     BotDescriptionLimit,
     BotNameLimit,
@@ -30,13 +31,14 @@ from telegram.error import BadRequest, InvalidToken, NetworkError, RetryAfter
 from telegram.ext import (
     Application,
     ApplicationBuilder,
+    CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
     MessageHandler,
     filters,
 )
 
-from familydb import personas, voice, whereabouts
+from familydb import buttons, personas, voice, whereabouts
 from familydb.app import App
 from familydb.channels.base import IncomingMessage, OutgoingMessage, VoiceNote
 from familydb.config import Settings
@@ -48,8 +50,9 @@ log = logging.getLogger(__name__)
 CHANNEL = "telegram"
 GROUP_TYPES = {ChatType.GROUP, ChatType.SUPERGROUP}
 # What the bot asks Telegram for. A live location moving along arrives as edits to the message
-# that shared it, and Telegram sends a bot only the kinds of update it asks for.
-UPDATES = [Update.MESSAGE, Update.EDITED_MESSAGE]
+# that shared it, a button tapped as a callback query, and Telegram sends a bot only the kinds of
+# update it asks for.
+UPDATES = [Update.MESSAGE, Update.EDITED_MESSAGE, Update.CALLBACK_QUERY]
 # Everything but a location answers new messages only, so an edited question is not answered
 # a second time.
 NEW = filters.UpdateType.MESSAGE
@@ -221,6 +224,28 @@ def split_text(text: str, limit: int = int(MessageLimit.MAX_TEXT_LENGTH)) -> lis
     return chunks
 
 
+def keyboard(row: list[dict[str, str]]) -> InlineKeyboardMarkup:
+    """A message's buttons, as one row under it (buttons.py)."""
+    return InlineKeyboardMarkup(
+        [[InlineKeyboardButton(button["label"], callback_data=button["data"]) for button in row]]
+    )
+
+
+def tap_in_thread(app: App, query: Any) -> buttons.Tapped | None:
+    """Do what a tapped button says, from the pipeline's side of the thread boundary."""
+    chat = getattr(query.message, "chat", None) if query.message is not None else None
+    with closing(app.connect()) as conn:
+        return buttons.tap(
+            app,
+            conn,
+            channel=CHANNEL,
+            chat_id=str(chat.id) if chat is not None else str(query.from_user.id),
+            channel_user_id=str(query.from_user.id),
+            tap_id=str(query.id),
+            data=query.data or "",
+        )
+
+
 def send_once(token: str, chat_id: str, text: str) -> None:
     """Send from a process that is not running the bot, such as the manual retry command."""
     from telegram import Bot
@@ -257,10 +282,13 @@ class TelegramChannel:
         )
         # A shared location, and a live one as it moves (those arrive as edits).
         self.application.add_handler(MessageHandler(filters.LOCATION, self.on_location))
+        # A button under one of her messages.
+        self.application.add_handler(CallbackQueryHandler(self.on_tap))
 
     async def _post_init(self, application: Application) -> None:
         self._loop = asyncio.get_running_loop()
         self.app.senders[CHANNEL] = self.send_text_threadsafe
+        self.app.button_senders[CHANNEL] = self.send_buttons_threadsafe
         me = await application.bot.get_me()
         self.username = me.username
         log.info("telegram: polling as @%s", me.username)
@@ -347,8 +375,15 @@ class TelegramChannel:
             return
 
         async def send_reply():
-            for chunk in split_text(reply.text):
-                await update.effective_message.reply_text(chunk)
+            chunks = split_text(reply.text)
+            for index, chunk in enumerate(chunks):
+                if reply.buttons and index == len(chunks) - 1:
+                    # A reminder this reply carries keeps its buttons, under the last part.
+                    await update.effective_message.reply_text(
+                        chunk, reply_markup=keyboard(reply.buttons)
+                    )
+                else:
+                    await update.effective_message.reply_text(chunk)
 
         if reply.out_message_id is None:
             await send_reply()
@@ -380,13 +415,53 @@ class TelegramChannel:
 
         await asyncio.to_thread(deliver, self.app, reply.out_message_id, sender)
 
+    async def on_tap(self, update: Any, context: Any) -> None:
+        """A button under one of her messages: done by code, said in her words (buttons.py).
+
+        Whoever tapped is told what happened; when it did something, everyone in the chat sees
+        who did what under the message, and its buttons go, having done their job."""
+        query = update.callback_query
+        if query is None:
+            return
+        await asyncio.to_thread(self.app.refresh)
+        tapped = await asyncio.to_thread(tap_in_thread, self.app, query)
+        try:
+            await query.answer(tapped.toast if tapped else None)
+        except Exception:  # an answer that does not arrive leaves a spinner, nothing worse
+            log.debug("telegram: could not answer a tap", exc_info=True)
+        if tapped is None or not tapped.finished:
+            return
+        words = getattr(query.message, "text", None) if query.message is not None else None
+        if tapped.note and words:
+            try:
+                await query.edit_message_text(f"{words}\n\n{tapped.note}")
+                return
+            except Exception:  # too long with the note, say: the buttons still go below
+                log.info("telegram: could not add who did it to a message", exc_info=True)
+        try:
+            await query.edit_message_reply_markup(reply_markup=None)
+        except Exception:  # too old to change, or changed already: what was done still stands
+            log.info("telegram: could not take the buttons off a message", exc_info=True)
+
     def send_text_threadsafe(self, chat_id: str, text: str) -> None:
         """Deliver a message from another thread (background jobs)."""
+        self._send_threadsafe(chat_id, text, None)
+
+    def send_buttons_threadsafe(self, chat_id: str, text: str, row: list[dict[str, str]]) -> None:
+        """Deliver a message with its buttons from another thread; they go under the last part."""
+        self._send_threadsafe(chat_id, text, row)
+
+    def _send_threadsafe(self, chat_id: str, text: str, row: list[dict[str, str]] | None) -> None:
         if self._loop is None:
             raise RuntimeError("Telegram is not running")
-        for chunk in split_text(text):
+        chunks = split_text(text)
+        for index, chunk in enumerate(chunks):
+            markup = keyboard(row) if row and index == len(chunks) - 1 else None
             future = asyncio.run_coroutine_threadsafe(
-                self.application.bot.send_message(chat_id=int(chat_id), text=chunk), self._loop
+                self.application.bot.send_message(
+                    chat_id=int(chat_id), text=chunk, reply_markup=markup
+                ),
+                self._loop,
             )
             future.result(timeout=30)
 
@@ -401,6 +476,8 @@ class TelegramChannel:
     async def stop(self) -> None:
         if self.app.senders.get(CHANNEL) == self.send_text_threadsafe:
             self.app.senders.pop(CHANNEL, None)
+        if self.app.button_senders.get(CHANNEL) == self.send_buttons_threadsafe:
+            self.app.button_senders.pop(CHANNEL, None)
         updater = self.application.updater
         if updater is not None and updater.running:
             await updater.stop()

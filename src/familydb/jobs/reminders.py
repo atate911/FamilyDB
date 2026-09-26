@@ -8,7 +8,7 @@ here every minute. It also sends, as written, any held message no conversation c
 
 from contextlib import closing
 
-from familydb import voice
+from familydb import buttons, voice
 from familydb.app import App
 from familydb.dates import utc_iso
 from familydb.store import messages, tasks
@@ -33,6 +33,7 @@ def run_reminders(app: App) -> int:
                     chat_id=task.chat_id,
                     text=reminder_text(task, app.settings, due_when=due_when),
                     now=now,
+                    buttons=buttons.for_reminder(task.id),
                 )
                 tasks.attach_message(conn, reminder.id, out.id)
                 event = "reminder_late" if due_when else "reminder"

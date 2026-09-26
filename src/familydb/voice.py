@@ -75,6 +75,45 @@ EVENTS: dict[str, Event] = {
         ("plan", "day"),
         {"plan": "#31 Hopscotch", "day": "Saturday"},
     ),
+    # A button under one of those tapped (buttons.py). Each is shown to whoever tapped, and the
+    # ones that did something are added under the message, for everyone in the chat.
+    "tap_done": Event("A reminder's Done tapped", "Done ✓ ({who}).", ("who",), {"who": "Sam"}),
+    "tap_snoozed": Event(
+        "A reminder snoozed with its button",
+        "Snoozed until {when} ({who}).",
+        ("who", "when"),
+        {"who": "Sam", "when": "09:30 tomorrow"},
+    ),
+    "tap_again": Event(
+        "A plan worth doing again, tapped",
+        "Noted: worth doing again ({who}).",
+        ("who",),
+        {"who": "Sam"},
+    ),
+    "tap_not_again": Event(
+        "A plan not to repeat, tapped",
+        "Noted: not one to repeat ({who}).",
+        ("who",),
+        {"who": "Sam"},
+    ),
+    "tap_missed": Event(
+        "A plan that did not happen, tapped",
+        "Noted: you didn't go, so it's back on the list ({who}).",
+        ("who",),
+        {"who": "Sam"},
+    ),
+    "tap_already": Event(
+        "A button tapped for something already dealt with", "That's already dealt with.", ()
+    ),
+    "tap_stale": Event("A button that no longer works", "That button no longer works.", ()),
+    "tap_failed": Event(
+        "A button tapped that could not be done",
+        "That didn't go through. Tell me in words instead?",
+        (),
+    ),
+    "tap_stranger": Event(
+        "A button tapped by someone not in the family", "Only the family can use these.", ()
+    ),
     "lookup_done": Event(
         "An idea looked up",
         "Filled in #{idea} {place}: {details}.",

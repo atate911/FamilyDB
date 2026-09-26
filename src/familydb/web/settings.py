@@ -873,6 +873,21 @@ CHARS_PER_TOKEN = 4
 # no group names (a new one in voice.EVENTS) is shown under "Other", so it is never left off.
 LINE_GROUPS = (
     ("Reminders and follow-ups", False, ("reminder", "reminder_late", "follow_up")),
+    (
+        "When a button is tapped",
+        True,
+        (
+            "tap_done",
+            "tap_snoozed",
+            "tap_again",
+            "tap_not_again",
+            "tap_missed",
+            "tap_already",
+            "tap_stale",
+            "tap_failed",
+            "tap_stranger",
+        ),
+    ),
     ("Notes", False, ("lookup_done", "location_shared", "done")),
     ("On Telegram", False, ("start", "stranger")),
     (

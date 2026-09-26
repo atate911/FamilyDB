@@ -402,6 +402,14 @@ def _answer(
     forgotten = [h.text for h in taken if h.mention.casefold() not in reply_text.casefold()]
     if forgotten:
         reply_text = "\n\n".join([reply_text, *forgotten])
+    # A reply that carries one message with buttons (a reminder) goes with its buttons; with
+    # several, which is which would be a guess, and their words are there to answer in.
+    carried = [
+        held.buttons
+        for held in (messages.get(conn, h.message_id) for h in taken)
+        if held is not None and held.buttons
+    ]
+    reply_buttons = carried[0] if len(carried) == 1 else None
     now = utc_iso(app.clock.now())
     with transaction(conn):
         # Carried by this reply: marked sent with it, so the delivery job has nothing to find.
@@ -413,6 +421,7 @@ def _answer(
             text=reply_text,
             reply_to=inbound_id,
             now=now,
+            buttons=reply_buttons,
         )
         messages.mark_processed(conn, inbound_id, result.actions, now=now)
         for action in result.actions:
@@ -420,7 +429,13 @@ def _answer(
                 suggestions.set_reply(conn, int(action["suggestion_id"]), outbound.id)
     app.held.done(taken)
     return OutgoingMessage(
-        msg.chat_id, reply_text, result.status, inbound_id, outbound.id, result.actions
+        msg.chat_id,
+        reply_text,
+        result.status,
+        inbound_id,
+        outbound.id,
+        result.actions,
+        reply_buttons or [],
     )
 
 

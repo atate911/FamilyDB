@@ -43,7 +43,11 @@ older than what is installed. It gets a date when it is released.
 - **Keeps the things to do.** "Remind me on Tuesday that we need paper towels"
   is a task with a reminder, sent in the chat it was asked in; "one of these
   Saturday mornings" is a task with no invented date. A page lists them, and
-  a reminder sent late after the bot was off says when it was due.
+  a reminder sent late after the bot was off says when it was due. On
+  Telegram a reminder comes with ✓ Done, In an hour and Tomorrow buttons, and
+  "how was it?" with Yes, again, Not again and Didn't go: a tap is done by code
+  with no model call, so it answers at once and works when the model does not,
+  and the message then says who did what, for everyone in the chat.
 - **Answers "what should we do?" for the time asked about:** right now, tonight,
   Saturday morning or this weekend. A staged engine checks every idea against
   the free time in minutes, the forecast, the opening hours and the travel

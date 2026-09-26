@@ -11,6 +11,7 @@ from familydb.channels.telegram import (
     TelegramChannel,
     addressed_to_bot,
     incoming_from_update,
+    keyboard,
     location_from_update,
     record_location,
     split_text,
@@ -192,6 +193,7 @@ def test_polling_asks_for_the_edits_a_live_location_moves_by(settings, clock, mo
     channel.run()  # and on its own
     assert [a["allowed_updates"] for a in asked] == [UPDATES, UPDATES]
     assert Update.MESSAGE in UPDATES and Update.EDITED_MESSAGE in UPDATES
+    assert Update.CALLBACK_QUERY in UPDATES  # a button tapped
 
 
 def test_an_edit_is_taken_only_as_a_live_location_moving(settings, clock) -> None:
@@ -255,3 +257,109 @@ def test_start_takes_turns_by_the_update_it_answers(settings, clock) -> None:
         assert replies == [voice.say(app.settings, "start", seed=update_id)]
         said.append(replies[0])
     assert len(set(said)) > 1
+
+
+# -- buttons ---------------------------------------------------------------------------------------
+
+
+def _query(data, *, who=1001, text="Reminder: bins out. Task #1.", tap_id="cb1"):
+    """A tap on a button under one of her messages, as python-telegram-bot hands it over."""
+    seen: dict[str, Any] = {}
+
+    async def answer(words=None):
+        seen["answer"] = words
+
+    async def edit_message_text(words):
+        seen["text"] = words
+
+    async def edit_message_reply_markup(reply_markup=None):
+        seen["markup"] = reply_markup
+
+    query = SimpleNamespace(
+        id=tap_id,
+        data=data,
+        from_user=SimpleNamespace(id=who),
+        message=SimpleNamespace(chat=SimpleNamespace(id=42), text=text),
+        answer=answer,
+        edit_message_text=edit_message_text,
+        edit_message_reply_markup=edit_message_reply_markup,
+    )
+    return SimpleNamespace(callback_query=query), seen
+
+
+def test_a_tap_is_routed_to_the_buttons(settings, clock) -> None:
+    from familydb.app import App
+
+    channel = TelegramChannel(App(settings, clock), token=TOKEN)
+    tapped = Update.de_json(
+        {
+            "update_id": 9,
+            "callback_query": {
+                "id": "cb1",
+                "from": {"id": 1001, "is_bot": False, "first_name": "Sam"},
+                "chat_instance": "c1",
+                "data": "done:1",
+            },
+        },
+        Bot(TOKEN),
+    )
+    assert _takers(channel, tapped) == ["on_tap"]
+
+
+def test_a_tap_is_answered_and_the_message_says_who_did_it(settings, clock, conn, family):
+    from familydb.app import App
+    from familydb.store import tasks
+    from familydb.tools import ToolContext
+    from familydb.tools.tasks import AddTaskInput, add_task
+
+    app = App(settings, clock)
+    ctx = ToolContext(conn=conn, settings=settings, clock=clock, member=family["sam"])
+    task = add_task(ctx, AddTaskInput(title="Bins out", remind_at="2026-09-20T18:00"))["task"]
+    channel = TelegramChannel(app, token=TOKEN)
+    update, seen = _query(f"done:{task['id']}")
+    asyncio.run(channel.on_tap(update, None))
+    assert seen["answer"] == "Ticked off ✓ (Sam)."
+    assert seen["text"] == "Reminder: bins out. Task #1.\n\nTicked off ✓ (Sam)."
+    assert tasks.get(conn, task["id"]).status == "done"
+    # A message that cannot take the note still loses its buttons, its job done.
+    task = add_task(ctx, AddTaskInput(title="Recycling", remind_at="2026-09-20T18:00"))["task"]
+    update, seen = _query(f"done:{task['id']}", tap_id="cb2")
+
+    async def too_long(words):
+        raise RuntimeError("message is too long")
+
+    update.callback_query.edit_message_text = too_long
+    asyncio.run(channel.on_tap(update, None))
+    assert seen["markup"] is None and "text" not in seen
+    # Somebody not in the family: told so, and the buttons stay for the family.
+    update, seen = _query(f"done:{task['id']}", who=9999, tap_id="cb3")
+    asyncio.run(channel.on_tap(update, None))
+    assert seen == {"answer": "Sorry, only the family can use these."}
+
+
+def test_buttons_go_under_the_last_part_of_what_is_sent(settings, clock, monkeypatch) -> None:
+    from familydb.app import App
+
+    row = [{"label": "✓ Done", "data": "done:12"}, {"label": "Tomorrow", "data": "tomorrow:12"}]
+    markup = keyboard(row)
+    assert [(b.text, b.callback_data) for b in markup.inline_keyboard[0]] == [
+        ("✓ Done", "done:12"),
+        ("Tomorrow", "tomorrow:12"),
+    ]
+    # A reply carrying a reminder puts its buttons under its last part.
+    channel = TelegramChannel(App(settings, clock), token=TOKEN)
+    monkeypatch.setattr(
+        "familydb.channels.telegram.handle_incoming",
+        lambda application, msg: OutgoingMessage(msg.chat_id, "x" * 5000, "ok", buttons=row),
+    )
+    sent: list[tuple[str, Any]] = []
+
+    async def reply_text(value, reply_markup=None):
+        sent.append((value, reply_markup))
+
+    update, _ = _update("thanks")
+    update.effective_message.reply_text = reply_text
+    context, _ = _context()
+    asyncio.run(channel.on_message(update, context))
+    assert [markup is None for _, markup in sent] == [True, False]
+    assert sent[-1][1].inline_keyboard[0][0].callback_data == "done:12"

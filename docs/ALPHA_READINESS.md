@@ -152,7 +152,12 @@ migration, so upgrading does not resend old conversations. Fresh outgoing messag
 10. On a phone away from home, share your location with the bot on Telegram (paperclip, then Location), then ask "what's open near here?": options should be measured from there, and the reply should say so. Share a live location instead and move a few streets: asking again should name where you are now, not where you started, with no second "Got it", and none when you stop sharing. On the web page's chat over HTTPS, tick "Send where I am", allow the location when the browser asks, and ask the same: no place should need typing. Untick it and send "thanks": no position should be kept for that message.
 11. Set a reminder a few minutes ahead, stop the service past its time, start it again: the
     reminder arrives once and says when it was due. Set another for a minute ahead and keep
-    chatting in that chat: the next reply should carry it rather than a separate message.
+    chatting in that chat: the next reply should carry it rather than a separate message, with
+    its buttons under the reply. In the family group, tap "In an hour" on a reminder: everyone
+    should see who snoozed it and until when, with the buttons gone, and it should come back an
+    hour later; tap "✓ Done" on that one and it should not come back. Have someone not on the
+    family list tap one: they should be told only the family can, and nothing should change.
+    The day after a plan, tap an answer under "how was it?" and check the idea's page.
 12. On `/settings/personality`, rewrite one of her lines and add a sentence to "About the
     family"; the next reminder or follow-up should use the new line, and the next answer should
     know the sentence. Give her another name: "what's your name?" should get it, in the chat and

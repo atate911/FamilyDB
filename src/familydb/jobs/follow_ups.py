@@ -12,7 +12,7 @@ from contextlib import closing
 from datetime import date, timedelta
 from typing import Any
 
-from familydb import voice
+from familydb import buttons, voice
 from familydb.app import App
 from familydb.calendar_sync import sync_plans
 from familydb.dates import utc_iso
@@ -74,7 +74,13 @@ def run_follow_ups(app: App) -> int:
                 if plans.get(conn, plan.id).followed_up_at is not None:  # type: ignore[union-attr]
                     continue
                 outbound = messages.insert_out(
-                    conn, channel=plan.channel or "", chat_id=plan.chat_id, text=text, now=now
+                    conn,
+                    channel=plan.channel or "",
+                    chat_id=plan.chat_id,
+                    text=text,
+                    now=now,
+                    # Its answers as buttons, when there is an idea to record them against.
+                    buttons=buttons.for_follow_up(plan.id) if plan.idea_id else None,
                 )
                 plans.mark_followed_up(conn, plan.id, now=now)
             # Stored first, sent second: a send that fails stays queued for the next run.

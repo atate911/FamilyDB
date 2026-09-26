@@ -292,6 +292,18 @@ def test_the_next_reply_carries_it(talking, conn, clock) -> None:
     assert run_reminders(app) == 0 and sent == []  # and never on its own as well
 
 
+def test_the_reply_that_carries_it_keeps_its_buttons(talking, conn) -> None:
+    """Carried by a reply, a reminder can still be ticked off with a tap (buttons.py)."""
+    from familydb import buttons
+
+    app, _, held_id = talking
+    out, _ = _next(app, conn, "Pasta tonight. And it's time to call grandma (task #1).")
+    held = messages.get(conn, held_id)
+    assert held.buttons == buttons.for_reminder(1)
+    assert out.buttons == held.buttons
+    assert messages.get(conn, out.out_message_id).buttons == held.buttons
+
+
 def test_a_reply_that_forgets_it_takes_the_written_line(talking, conn) -> None:
     app, _, held_id = talking
     out, _ = _next(app, conn, "Pasta tonight.")

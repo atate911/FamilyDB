@@ -44,3 +44,5 @@ class OutgoingMessage:
     in_message_id: int | None = None
     out_message_id: int | None = None
     actions: list[dict[str, Any]] = field(default_factory=list)
+    # The buttons the reply goes with, when it carries a message that had them (buttons.py).
+    buttons: list[dict[str, str]] = field(default_factory=list)
