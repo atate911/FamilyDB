@@ -1,11 +1,9 @@
 # Who the family talks to: the persona layer
 
-The design of the persona layer as built, September 25, 2026: `familydb/personas/`, `voice.py`,
-the Personality page, the audience line in the turn and the bot's Telegram contact. It began as
-a proposal (commit dd8a6e8) that found nine things wrong or thin; "What was fixed" says what now
-holds for each, "Decisions" answers the questions it left to the family, and "What is left" is
-the rest. `docs/AI_CALLS.md` ("Who is speaking") and `docs/MEMORY.md` are the companions; the
-token-economy rules in `CLAUDE.md` are the constraints.
+The design of the persona layer: `familydb/personas/`, `voice.py`, the Personality page, the
+audience line in the turn and the bot's Telegram contact. "Decisions" records what the family
+decided, and "What is left" what is still open. `docs/AI_CALLS.md` ("Who is speaking") and
+`docs/MEMORY.md` are the companions; the token-economy rules in `CLAUDE.md` are the constraints.
 
 ## The one idea
 
@@ -37,15 +35,16 @@ on the Personality page laid over her.
 | Her character | `<key>/character.md` | first in the cached chat prefix, for chat, the digest and retries; never the workers | nobody on the page: a rewrite takes its place | Vera as first written about 2,800 tokens with every call, in brief about 740, cached |
 | Their rewrite of her, per persona | `persona_text`, by persona key: the text, and hers as it shipped when they wrote it (`of`) | in place of that persona's character, and nobody else's | an admin, for the persona in force | its length, cached |
 | Their notes | `persona_notes` | after her character, under a header of their own, before the job | an admin, at most 1,000 characters | their length, cached |
-| Her lines and their wordings | `<key>/lines.toml`, where a line may be a list of wordings, with `voice_lines` over them | `voice.say`, for the 19 events in `voice.EVENTS` | an admin, one line at a time, one wording to a row | nothing: no model call |
+| Her lines and their wordings | `<key>/lines.toml`, where a line may be a list of wordings, with `voice_lines` over them | `voice.say`, for every event in `voice.EVENTS` | an admin, one line at a time, one wording to a row | nothing: no model call |
 | Who is listening | code (`render_audience_line`) | one line in the turn, between the date and the message, in a shared chat only | nobody: read from the chat and the family list | a few tokens, uncached, in a shared chat only |
 | The Telegram contact | the Telegram supervisor | the bot's name and description in Telegram: her name and her `start` line, or FamilyDB's under none | follows whoever is speaking | nothing: no model call |
 | About the family | the Personality page | the family block of the prefix | an admin (`about_family`) | its length, cached |
 
 Under a persona the prefix begins "# Who you are", then her character or their rewrite of her,
 then their notes under "## The family's own notes on how you talk", then "# The job", whose first
-sentence is "Where who you are and the job disagree, the job wins.", then the product spec. The
-request built under any persona differs from the one under none only in that part.
+sentence is "Where who you are and the job disagree, the job wins.", then the product spec. That
+sentence is the product's (`JOB_HEADER`), so a rewrite of her that leaves it out still gets it.
+The request built under any persona differs from the one under none only in that part.
 
 `persona = none` is `PLAIN`: the bot as itself, called FamilyDB, with no character, neither
 header and the plain wording for every line. Their name for her, their rewrites, their notes and
@@ -59,9 +58,9 @@ Telegram update for a stranger and for `/start`), or with no seed of the facts t
 filled in with. The same message always says the same words, after a resend, a retry or a
 restart, and the next may say it another way. A reminder is seeded by the task and the reminder
 in force, so each time a task comes due (after a snooze, say) it may take another wording, and a
-reminder worded again for the same time (its title changed) takes the same one. A line kept as a string is one wording, line breaks and all, as every line was before
-there could be several, so a line the family saved then still says all of itself; saved again
-unchanged from the page it stays so.
+reminder worded again for the same time (its title changed) takes the same one. A line kept as a
+string is one wording, line breaks and all, as older installs stored every line, and saving it
+unchanged from the page keeps it so.
 
 The audience line says "This is the family's group chat: everyone in it reads your reply" in a
 Telegram group and "This is the family's conversation on the page: everyone who signs in reads
@@ -71,37 +70,12 @@ family list. The spec's "Who is listening" says what to do with it, whoever she 
 
 The Telegram supervisor gives the bot's contact the name it goes by, and its `start` line as
 the description: hers, or under none FamilyDB's, as everywhere else the plain bot speaks. It does
-so once after each connect, and again when either changes on the page. It asks Telegram what the contact says and sets only what differs, cut to Telegram's
-limits. A wait Telegram asks for is waited out, and Telegram out of reach is tried again shortly;
-a refusal, or any other failure, is logged and not tried again until her words change or the bot
-reconnects, and never stops the channel. A name typed in BotFather lasts until then: the name the
-bot goes by is hers, chosen on the Personality page; under none it is FamilyDB.
-
-## What was fixed
-
-1. **Choosing none threw the family's rewrite away.** Under none no description box is drawn and
-   every rewrite is left as stored, so choosing her again brings it back.
-2. **"The spec wins" was written only in her character.** `JOB_HEADER` says it for every persona,
-   so a rewrite that leaves it out still gets it.
-3. **Keeping it suitable for kids was her rule, not the product's.** The spec's "Who is
-   listening" says it whoever she is told she is, and the audience line tells the model when a
-   chat is shared and whether kids read it.
-4. **Her character was written for an assistant in general.** A shorter Vera, `brief/` (2,958
-   characters against 11,250), ships beside her, fitted to a family's chat; Vera as first written
-   is unchanged and still the default.
-5. **Her name could not be changed from the page.** `persona_name` is her name wherever `{name}`
-   is written: the chat, her lines, the page, `/start` and the Telegram contact.
-6. **A rewrite was a fork.** "Anything to add" holds the family's own notes, which last when hers
-   changes, and a rewrite remembers hers as it was, so the page says when hers has changed and
-   shows how.
-7. **Nothing measured her.** `python -m evals --persona` compares personas in runs passed, input
-   tokens and cost, and every reply is held to one emoji, no "as an AI" filler and at most two
-   exclamation marks.
-8. **Her rewrite and her lines were not hers alone.** A rewrite is kept per persona and laid over
-   her alone. Their lines stay one set, theirs whoever she is, like their name for her and their
-   notes.
-9. **"She" was written into the page.** Every persona is a she, by decision, so the page's wording
-   of her stands.
+so once after each connect, and again when either changes on the page. It asks Telegram what the
+contact says and sets only what differs, cut to Telegram's limits. A wait Telegram asks for is
+waited out, and Telegram out of reach is tried again shortly; a refusal, or any other failure, is
+logged and not tried again until her words change or the bot reconnects, and never stops the
+channel. A name typed in BotFather lasts until then: the name the bot goes by is hers, chosen on
+the Personality page; under none it is FamilyDB.
 
 ## Where she can be used
 
@@ -113,17 +87,15 @@ From most to least worthwhile. Each keeps to the rules above.
   Personality page shows how each reads.
 - **The digest**, as a chat turn, with the audience line when it goes to the family group.
 - **Telegram's own contact.** Her name and her `start` line (FamilyDB's under none), set by the
-  supervisor through the Bot API with no model call and no trip to BotFather. Telegram is asked after a connect or a change
-  to either, never on a timer.
+  supervisor through the Bot API with no model call and no trip to BotFather. Telegram is asked
+  after a connect or a change to either, never on a timer.
 - **Meeting her.** The page that ends setup says who answers and that her name, how she talks or
   none at all are chosen under Personality, and setup's Telegram step says her name will do for
   the bot (FamilyDB under none). It is not a setup step: the bot is usable without it.
-- **Memory, when it lands.** Two things change then. Her character says "do not ... imply access
-  to memories you do not have", which becomes half wrong once she has some. And a style
-  preference somebody states in passing ("Sam likes it short", "no emoji for Mia") is a memory,
-  selected into the turn for the people it concerns, not a setting and not a rewrite of her. The
-  boundary: settings are what an admin chose deliberately, in the cached prefix; memories are
-  what the family said in passing, in selected context.
+- **Memory.** A style preference somebody states in passing ("Sam likes it short", "no emoji for
+  Mia") is a memory (`docs/MEMORY.md`), chosen by code to go with the messages it bears on, not a
+  setting and not a rewrite of her. The boundary: settings are what an admin chose deliberately,
+  in the cached prefix; memories are what the family said in passing, in selected context.
 
 Where she never goes: the lookup and discovery workers, whose prose nobody reads; tool
 descriptions and tool results; memory deltas and anything else code reads; the page's own words
@@ -231,6 +203,9 @@ that encoded the old behaviour, updated with the reason.
 ## What is left
 
 - Run `uv run python -m evals --persona default --persona brief --persona none` against a real
-  model, and choose the default from what it says. There was no key to run it with here, so
-  Vera as first written stays the default until then.
+  model, and choose the default from what it says; until then Vera as first written is the
+  default.
+- Vera as first written says "do not ... imply access to memories you do not have", while what the
+  family have told her goes with every message it bears on (`docs/MEMORY.md`). Whether that line
+  makes her shy of using it wants an eval case with a memory in place, which there is not yet.
 - Dials, only if the family's notes in "Anything to add" keep saying the same things.
