@@ -80,4 +80,4 @@ FamilyDB is a family planning chat bot: Python 3.11+, SQLite, a model from Anthr
 - No page view is a model call. Home and the chat read the log and word their own lines (her last line, "Answering a message now.", the ways to start); only a message sent is a call, through the pipeline. `test_browsing_asks_nothing_of_a_model` holds it.
 - Vera is the one the family talks to, so the page speaks of her by name (`personas.active(settings).name`, in every template as `assistant`), and never draws her: no face, figure or picture. Where she appears it is her screen, full of glyphs nobody can read (`presence` in `_ui.html`, drawn by the stylesheet); the smiling mark is FamilyDB's. `docs/STYLE.md` ("Her screen") says why.
 - Keep replies short; edit `prompts/system.md` to change behaviour before touching code.
-- One concern per pull request, reviewed before it is merged. A change that touches a hundred files cannot be reviewed, and what slips through lands on the family.
+- Every pull request is reviewed before it is merged, however much it carries: what slips through lands on the family. Separate concerns in separate commits keep a large one readable.
