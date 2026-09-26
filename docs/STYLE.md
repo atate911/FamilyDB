@@ -211,11 +211,15 @@ one pinned release, gathered into one sprite (`static/icons.svg`) by `scripts/ic
 used through the `icon()` macro in `templates/_ui.html`. They are drawn with a 1.75 stroke in the
 colour of the words beside them; an icon beside words is hidden from screen readers, one standing
 alone gets a label. To add one, put its name in `ICONS` in the script and run
-`uv run python scripts/icons.py`; never edit the sprite by hand.
+`uv run python scripts/icons.py`; never edit the sprite, the favicon or the home-screen icons by
+hand.
 
 **The mark** is the page's own: a little monitor with a smile, drawn on the same grid and stroke.
-It is the favicon and the mark in the bar, where it glows. It is FamilyDB's, and never Vera's
-face: she has none.
+It is the favicon, the mark in the bar, where it glows, and the icon of the page kept on a phone's
+home screen: phosphor green on the page's charcoal, filling the square, since the phone rounds the
+corners itself and would show black through anything transparent, with a margin that round masks
+leave alone. A phone takes no SVG there, so the script draws that one as PNGs, from the same
+shapes. It is FamilyDB's, and never Vera's face: she has none.
 
 ## Her screen
 
