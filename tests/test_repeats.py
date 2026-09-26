@@ -48,11 +48,13 @@ def _sent(app) -> list[str]:
 
 
 def test_a_schedule_keeps_its_hour_on_the_wall_when_the_clocks_change() -> None:
-    first = datetime(2026, 10, 25, 19, 0, tzinfo=TZ)  # PDT; the clocks go back on 1 November
-    after = datetime(2026, 10, 26, 9, 0, tzinfo=TZ)
+    """At a change the tz data has settled for good: the rules ahead can move, and have.
+    British Columbia stays on -07:00 from 2026, so 1 November 2026 is no change any more."""
+    first = datetime(2025, 10, 26, 19, 0, tzinfo=TZ)  # PDT; the clocks went back on 2 November
+    after = datetime(2025, 10, 27, 9, 0, tzinfo=TZ)
     later = task_service.next_time(first, 1, "week", after)
-    assert later == datetime(2026, 11, 1, 19, 0, tzinfo=TZ)  # still 19:00, now PST
-    assert later.utcoffset() == timedelta(hours=-8)
+    assert later == datetime(2025, 11, 2, 19, 0, tzinfo=TZ)  # still 19:00, now PST
+    assert (first.utcoffset(), later.utcoffset()) == (timedelta(hours=-7), timedelta(hours=-8))
 
 
 def test_the_end_of_a_month_does_not_drift() -> None:
