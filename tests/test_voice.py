@@ -141,7 +141,9 @@ def test_a_line_kept_as_a_string_is_one_wording_breaks_and_all(settings) -> None
     line = "Reminder: {title}{who}.\r\nTask #{task}; say done when it's done."
     own = settings.model_copy(update={"voice_lines": {"reminder": line}})
     for number in range(1, 9):
-        task = SimpleNamespace(id=number, title="bins out", owner=None, reminder=None)
+        task = SimpleNamespace(
+            id=number, title="bins out", owner=None, reminder=None, gift_for=None
+        )
         said = reminder_text(task, own)
         assert said == f"Reminder: bins out.\r\nTask #{number}; say done when it's done.", said
     assert voice.wordings(line) == [line]
@@ -160,7 +162,9 @@ def test_each_time_a_reminder_is_due_it_may_read_another_way(settings) -> None:
     )
 
     def due(reminder: int, title: str = "bins out") -> SimpleNamespace:
-        return SimpleNamespace(id=7, title=title, owner=None, reminder=SimpleNamespace(id=reminder))
+        return SimpleNamespace(
+            id=7, title=title, owner=None, reminder=SimpleNamespace(id=reminder), gift_for=None
+        )
 
     said = {reminder_text(due(n), own) for n in range(1, 21)}
     assert len(said) > 1  # one task, due twenty times: more than one wording
@@ -290,6 +294,18 @@ def test_the_next_reply_carries_it(talking, conn, clock) -> None:
     assert messages.get(conn, held_id).delivered_at is not None  # sent with the reply
     clock.advance(timedelta(minutes=5))
     assert run_reminders(app) == 0 and sent == []  # and never on its own as well
+
+
+def test_the_reply_that_carries_it_keeps_its_buttons(talking, conn) -> None:
+    """Carried by a reply, a reminder can still be ticked off with a tap (buttons.py)."""
+    from familydb import buttons
+
+    app, _, held_id = talking
+    out, _ = _next(app, conn, "Pasta tonight. And it's time to call grandma (task #1).")
+    held = messages.get(conn, held_id)
+    assert held.buttons == buttons.for_reminder(1)
+    assert out.buttons == held.buttons
+    assert messages.get(conn, out.out_message_id).buttons == held.buttons
 
 
 def test_a_reply_that_forgets_it_takes_the_written_line(talking, conn) -> None:

@@ -7,18 +7,20 @@ here every minute. It also sends, as written, any held message no conversation c
 """
 
 from contextlib import closing
+from datetime import datetime
 
-from familydb import voice
+from familydb import buttons, voice
 from familydb.app import App
 from familydb.dates import utc_iso
 from familydb.store import messages, tasks
 from familydb.store.db import transaction
-from familydb.task_service import late_note, reminder_text
+from familydb.task_service import gifts_for, late_note, reminder_text, schedule_next
 
 
 def run_reminders(app: App) -> int:
     app.refresh()
-    now = utc_iso(app.clock.now())
+    moment = app.clock.now()
+    now = utc_iso(moment)
     queued: list[tuple[int, str, str, str, str]] = []
     with closing(app.connect()) as conn:
         with transaction(conn):
@@ -31,10 +33,16 @@ def run_reminders(app: App) -> int:
                     conn,
                     channel=task.channel,
                     chat_id=task.chat_id,
-                    text=reminder_text(task, app.settings, due_when=due_when),
+                    text=reminder_text(
+                        task, app.settings, due_when=due_when, gifts=gifts_for(conn, task)
+                    ),
                     now=now,
+                    buttons=buttons.for_reminder(task.id),
                 )
                 tasks.attach_message(conn, reminder.id, out.id)
+                # A task on a schedule gets its next time round now, the first one still to come.
+                due = datetime.fromisoformat(reminder.remind_at)
+                schedule_next(conn, task, after=max(moment, due), zone=app.clock.tz)
                 event = "reminder_late" if due_when else "reminder"
                 queued.append((out.id, event, task.channel, task.chat_id, task.title))
         # Committed first: sending marks the message delivered from a connection of its own.

@@ -69,11 +69,112 @@ EVENTS: dict[str, Event] = {
         ("title", "who", "task", "due"),
         {"title": "bins out", "who": " (Sam)", "task": 12, "due": "Tue 22 Sep at 07:30"},
     ),
+    "gift_ideas": Event(
+        "Gift ideas under a birthday's reminder",
+        "Gift ideas saved for {who}: {ideas}.",
+        ("who", "ideas"),
+        {"who": "Grandma", "ideas": "#41 a gardening apron, #52 a pottery class"},
+    ),
+    "gift_ideas_none": Event(
+        "A birthday's reminder with no gift ideas saved",
+        "No gift ideas saved for {who} yet; tell me any and I'll keep them.",
+        ("who",),
+        {"who": "Grandma"},
+    ),
+    "nudge": Event(
+        "Bringing up a task kept for some Saturday morning",
+        "It's {when}: time for {title}{who}? Task #{task}; tell me when it's done.",
+        ("when", "title", "who", "task"),
+        {
+            "when": "Saturday morning",
+            "title": "get the knives sharpened",
+            "who": " (Sam)",
+            "task": 14,
+        },
+    ),
+    # The heading of each command's answer (commands.py), one line, which the facts follow.
+    "cmd_today": Event("Answering /today", "Today, {day}:", ("day",), {"day": "Sat 26 Sep"}),
+    "cmd_week": Event("Answering /week", "The next seven days:", ()),
+    "cmd_tasks": Event("Answering /tasks", "Open tasks in this chat:", ()),
+    "cmd_now": Event(
+        "Answering /now", "From the list, {window}:", ("window",), {"window": "now until 19:30"}
+    ),
+    "plan_rain": Event(
+        "The evening before an outdoor plan, when rain is likely",
+        "A heads-up for tomorrow: {weather} for {plan}, which is outdoors.",
+        ("plan", "weather"),
+        {"plan": "#4 The falls hike", "weather": "70% chance of rain"},
+    ),
+    "plan_closed": Event(
+        "The evening before a plan, when the place looks closed then",
+        "A heads-up for tomorrow's {plan}: {place} is {hours}.",
+        ("plan", "place", "hours"),
+        {
+            "plan": "#1 Ramen night",
+            "place": "Ramen Ichiban",
+            "hours": "listed as closed on Mondays",
+        },
+    ),
+    "plan_backup": Event(
+        "Another idea offered with a heads-up",
+        "Instead, maybe #{idea} {title}: {why}.",
+        ("idea", "title", "why"),
+        {
+            "idea": 7,
+            "title": "Board game cafe",
+            "why": "can go 10:00-12:00 Saturday, about 10 min drive (estimate)",
+        },
+    ),
     "follow_up": Event(
         "Asking how a plan went",
         "How was {plan} on {day}? Worth doing again?",
         ("plan", "day"),
         {"plan": "#31 Hopscotch", "day": "Saturday"},
+    ),
+    # A button under one of those tapped (buttons.py). Each is shown to whoever tapped, and the
+    # ones that did something are added under the message, for everyone in the chat.
+    "tap_done": Event("A reminder's Done tapped", "Done ✓ ({who}).", ("who",), {"who": "Sam"}),
+    "tap_done_again": Event(
+        "A repeating reminder's Done tapped",
+        "Done ✓ ({who}). Next time: {when}.",
+        ("who", "when"),
+        {"who": "Sam", "when": "19:00 on Sun 04 Oct"},
+    ),
+    "tap_snoozed": Event(
+        "A reminder snoozed with its button",
+        "Snoozed until {when} ({who}).",
+        ("who", "when"),
+        {"who": "Sam", "when": "09:30 tomorrow"},
+    ),
+    "tap_again": Event(
+        "A plan worth doing again, tapped",
+        "Noted: worth doing again ({who}).",
+        ("who",),
+        {"who": "Sam"},
+    ),
+    "tap_not_again": Event(
+        "A plan not to repeat, tapped",
+        "Noted: not one to repeat ({who}).",
+        ("who",),
+        {"who": "Sam"},
+    ),
+    "tap_missed": Event(
+        "A plan that did not happen, tapped",
+        "Noted: you didn't go, so it's back on the list ({who}).",
+        ("who",),
+        {"who": "Sam"},
+    ),
+    "tap_already": Event(
+        "A button tapped for something already dealt with", "That's already dealt with.", ()
+    ),
+    "tap_stale": Event("A button that no longer works", "That button no longer works.", ()),
+    "tap_failed": Event(
+        "A button tapped that could not be done",
+        "That didn't go through. Tell me in words instead?",
+        (),
+    ),
+    "tap_stranger": Event(
+        "A button tapped by someone not in the family", "Only the family can use these.", ()
     ),
     "lookup_done": Event(
         "An idea looked up",
@@ -175,7 +276,9 @@ EVENTS: dict[str, Event] = {
 }
 
 # Messages the bot sends unasked, which a conversation under way can carry instead.
-FOLDABLE = frozenset({"reminder", "reminder_late", "follow_up", "lookup_done"})
+FOLDABLE = frozenset(
+    {"reminder", "reminder_late", "nudge", "follow_up", "plan_rain", "plan_closed", "lookup_done"}
+)
 # A chat whose family wrote this recently is a conversation under way.
 ACTIVE = timedelta(minutes=5)
 # How long a held message waits for the next turn before it is sent as written.

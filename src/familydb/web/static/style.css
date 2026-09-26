@@ -875,7 +875,7 @@ details.panel[open] > summary { margin-bottom: 1.1rem; }
 .next-up .next-label { margin: 0 0 0.55rem; font-size: 1.2rem; letter-spacing: 0.08em; }
 .next-up .next-title { font-size: 1.95rem; line-height: 1; overflow-wrap: anywhere; }
 .next-up .next-when { margin-top: 0.4rem; font-size: 1.4rem; }
-.next-up .rel {
+.next-up .rel, .on-radar .rel {
   padding: 0;
   font: inherit;
   color: var(--phosphor-bright);
@@ -883,8 +883,8 @@ details.panel[open] > summary { margin-bottom: 1.1rem; }
   background: none;
   border-radius: 0;
 }
-.next-up .rel::before { content: "["; }
-.next-up .rel::after { content: "]"; }
+.next-up .rel::before, .on-radar .rel::before { content: "["; }
+.next-up .rel::after, .on-radar .rel::after { content: "]"; }
 .next-up .next-where { font-size: 1.4rem; }
 .next-up .next-more { margin-top: 0.6rem; font-size: 1.4rem; }
 .next-up .radar-label { display: none; }
@@ -1050,7 +1050,7 @@ button.tick:active::before { background: var(--accent); border-color: var(--acce
    cursor waiting after the last line. Scanlines, a little light off the front and the tube's
    dark, curved edge lie over it all. Only the screens are hazy; around them the page is sharp.
    One to a page at most, and only where there is something to show: what is next, the way in,
-   the page that is not there, and the day's spend. */
+   the page that is not there, the day's spend, and where the listed ideas are. */
 .crt {
   --phosphor: var(--green);
   --phosphor-bright: color-mix(in srgb, var(--phosphor) 45%, #fff);
@@ -1423,6 +1423,31 @@ button.tick:active::before { background: var(--accent); border-color: var(--acce
 }
 .starters a:hover { color: var(--ink); background: rgb(109 255 156 / 0.06); border-color: rgb(109 255 156 / 0.45); transition-duration: 0.15s, 0.15s, var(--glow-in); }
 @media (pointer: fine) { .starters a { min-height: 2.3rem; } }
+
+/* ---- Ideas -------------------------------------------------------------------------------- */
+/* Where the listed places are, on a green screen laid out as Next up is: the radar beside the
+   words that say what it shows, the words running round it on a phone. It is a map, so it is
+   drawn larger. */
+.on-radar { margin: 0 0 1.25rem; }
+.on-radar .crt-tube { display: flow-root; }
+.on-radar .radar {
+  float: right;
+  width: 7.5rem;
+  margin: 0.2rem 0 0.4rem 0.8rem;
+  shape-outside: circle(50%) border-box;
+  shape-margin: 0.55rem;
+}
+.on-radar .radar-label { display: none; }
+.on-radar-label { margin: 0 0 0.55rem; font-size: 1.2rem; letter-spacing: 0.08em; }
+.on-radar-count { font-size: 1.95rem; line-height: 1; }
+.on-radar-line { margin-top: 0.4rem; font-size: 1.4rem; overflow-wrap: anywhere; }
+.on-radar-more { margin-top: 0.6rem; font-size: 1.2rem; }
+@media (min-width: 40rem) {
+  .on-radar .crt-tube { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1.5rem; align-items: center; }
+  .on-radar .radar { float: none; grid-column: 2; grid-row: 1; width: 13rem; margin: 0; }
+  .on-radar .radar-label { display: inline; }
+  .on-radar-text { grid-column: 1; grid-row: 1; }
+}
 
 /* ---- An idea ------------------------------------------------------------------------------ */
 .split { display: grid; gap: 1.25rem; grid-template-areas: "main" "side" "place"; }

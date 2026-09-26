@@ -102,8 +102,13 @@ def deliver(app: App, message_id: int, sender: Sender | None = None) -> bool:
         send = sender or app.senders.get(row.channel)
         if send is None:
             return False
+        # Its buttons go with it where the channel can show them; anywhere else, its words do.
+        with_buttons = app.button_senders.get(row.channel) if row.buttons and not sender else None
         try:
-            send(row.chat_id, row.text)
+            if with_buttons is not None:
+                with_buttons(row.chat_id, row.text, row.buttons)
+            else:
+                send(row.chat_id, row.text)
         except Exception:
             log.exception("delivery pending for message %s", message_id)
             return False

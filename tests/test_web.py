@@ -4,6 +4,7 @@ import time
 import urllib.request
 from datetime import UTC, timedelta
 from pathlib import Path
+from types import SimpleNamespace
 from urllib.error import URLError
 
 import pytest
@@ -11,7 +12,7 @@ import pytest
 from familydb.app import App
 from familydb.errors import ConfigError
 from familydb.store import db, ideas, outcomes, places, plans
-from familydb.web import check_configuration, create_app
+from familydb.web import check_configuration, create_app, views
 from tests.conftest import NOW_ISO
 
 PASSWORD = "open sesame please"  # at least MIN_PASSWORD characters
@@ -307,6 +308,61 @@ def test_the_ideas_list_filters(settings, clock, conn, family) -> None:
     assert "Museum" in client.get("/ideas?q=museum").text
     assert client.get("/ideas?q=nothinglikethis").text.count('class="panel card"') == 0
     assert "Clear" in client.get("/ideas?kind=outing").text  # a way back to everything
+
+
+def test_where_a_place_lies_from_home_in_words_and_on_the_dial() -> None:
+    assert [round(views.bearing(45, -122, *there)) for there in ((46, -122), (45, -121))] == [0, 90]
+    assert [round(views.bearing(45, -122, *there)) for there in ((44, -122), (45, -123))] == [
+        180,
+        270,
+    ]
+    assert [views.drive_text(m) for m in (12, 58, 60, 97, 150)] == [
+        "12 min",
+        "58 min",
+        "1 h",
+        "1 h 35 min",
+        "2 h 30 min",
+    ]
+    assert views.Away(12, 44.0).text == "about 12 min north-east of home (estimate)"
+    assert views.Away(3, 200.0).text == "under 5 min from home (estimate)"
+    assert views.places_radar([]) is None
+    mountain = (SimpleNamespace(id=2, title="Mount St Helens"), views.Away(150, 0.0))
+    ramen = (SimpleNamespace(id=3, title="Ramen"), views.Away(12, 90.0))
+    park = (SimpleNamespace(id=4, title="Corner park"), views.Away(3, 225.0))
+    radar = views.places_radar([mountain, ramen, park])
+    assert radar["count"] == 3 and radar["rings"] == ("15m", "45m", "2h")
+    assert radar["nearest"] == {"id": 4, "title": "Corner park", "away": "under 5 min"}
+    assert radar["furthest"] == {"id": 2, "title": "Mount St Helens", "away": "2 h 30 min N"}
+    near, east, north = radar["blips"]  # nearest first, and it is the one that pings
+    assert [near["next"], east["next"], north["next"]] == [True, False, False]
+    assert (east["x"], east["y"]) == (128.0, 100.0)  # east to the right, 12 min along the rings
+    assert (north["x"], north["y"]) == (100.0, 8.0)  # north at the top, held to the last ring
+    # Each flares as the sweep passes its bearing, one of the twelve the stylesheet times.
+    assert [blip["bearing"] for blip in radar["blips"]] == [8, 3, 0]
+
+
+def test_the_ideas_list_draws_its_places_on_a_radar(settings, clock, conn, family) -> None:
+    ramen = _idea(conn, "Ramen <Main St>", kind="restaurant")
+    _with_place(conn, ramen, lat=45.70, lon=-122.67)  # north of home
+    museum = _idea(conn, "Museum day", kind="outing")
+    _with_place(conn, museum, lat=45.63, lon=-122.40)  # east, and further
+    _idea(conn, "A picnic somewhere", kind="outing")  # not one place: listed, not on the radar
+    client = _client(settings, clock, home_lat=45.63, home_lon=-122.67)
+    page = client.get("/ideas").text
+    assert '<div class="radar" aria-hidden="true">' in page  # a picture of what the words say
+    assert "2 places from home" in page
+    assert f'href="/idea/{ramen.id}">#{ramen.id} Ramen &lt;Main St&gt;</a>' in page
+    assert "[" not in page.split("Nearest", 1)[1].split("</p>", 1)[0]  # brackets are the CSS's
+    assert ">15m<" in page and ">1w<" not in page  # rings of drive time, not of weeks
+    # Every card with a place says the drive and the way, which is all the radar shows.
+    assert "about 12 min north of home (estimate)" in page
+    assert "about 33 min east of home (estimate)" in page
+    # It follows the filters.
+    restaurants = client.get("/ideas?kind=restaurant").text
+    assert "1 place from home" in restaurants and "Museum day" not in restaurants
+    # Nothing listed on the map, or no home to measure from: no radar.
+    assert 'class="radar"' not in client.get("/ideas?q=picnic").text
+    assert 'class="radar"' not in _client(settings, clock).get("/ideas").text
 
 
 def test_an_idea_page_shows_its_place_details(settings, clock, conn, family) -> None:

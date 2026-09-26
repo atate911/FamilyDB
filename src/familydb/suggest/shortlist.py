@@ -6,7 +6,7 @@ from datetime import date
 
 from familydb.config import Settings
 from familydb.integrations.open_meteo import DayForecast
-from familydb.store.ideas import Idea
+from familydb.store.ideas import GIFT, Idea
 from familydb.suggest.types import Candidate, Constraints, Context, Shortlisted
 
 RECENTLY_DONE_DAYS = 60
@@ -220,8 +220,8 @@ def shortlist(
     for idea in all_ideas:
         if constraints.idea_ids and idea.id not in constraints.idea_ids:
             continue
-        if idea.status == "dropped":
-            continue
+        if idea.status == "dropped" or idea.kind.casefold() == GIFT:
+            continue  # a present to give is not something to go and do
         reason = _status_reason(idea, context.today)
         if reason:
             out(idea, reason)

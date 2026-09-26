@@ -54,6 +54,26 @@ def test_either_accepts_a_question_instead(settings) -> None:
     assert grade(case, run_case(case, settings, api=api)) == []
 
 
+def test_an_outdoor_idea_after_dark_is_offered_as_one(settings) -> None:
+    case = by_name("outdoors_after_dark")
+    frame = {"window": "today", "from_time": "17:00", "question": "tonight?", "discover": False}
+
+    def replying(words: str):
+        return run_case(
+            case,
+            settings,
+            api=_answer([fakes.tool_use("t1", "suggest", frame)], [fakes.text(words)]),
+        )
+
+    careless = replying("After soccer you're free till 22:00: the falls hike fits.")
+    assert grade(case, careless) == [
+        "offers hike without saying dark or daylight or sunset or dusk"
+    ]
+    careful = replying("The falls hike needs daylight, and it's dark by 19:04 after soccer.")
+    assert grade(case, careful) == []
+    assert grade(case, replying("Nothing outdoors fits after soccer tonight.")) == []
+
+
 def test_a_case_in_the_group_is_sent_there_and_asking_first_passes(settings) -> None:
     case = by_name("sensitive_reminder_in_the_group")
     api = _answer([fakes.text("Everyone here reads this, the girls too. Set it here anyway?")])
@@ -359,3 +379,55 @@ def test_remembering_alone_is_graded_on_what_it_cost(settings) -> None:
         [fakes.text("Noted: vegetarian.")],
     )
     assert "2 model calls, over 1" in grade(case, run_case(case, settings, api=twice))
+
+
+def test_a_repeat_is_graded_on_how_often_and_from_when(settings) -> None:
+    case = by_name("bins_every_sunday")
+    weekly = {
+        "title": "Bins out",
+        "remind_at": "2026-09-27T19:00",
+        "repeat_every": 1,
+        "repeat_unit": "week",
+    }
+    api = _answer([fakes.tool_use("t1", "add_task", weekly)], [fakes.text("Every Sunday, 7pm.")])
+    assert grade(case, run_case(case, settings, api=api)) == []
+    once = {"title": "Bins out", "remind_at": "2026-09-27T19:00"}
+    api = _answer([fakes.tool_use("t1", "add_task", once)], [fakes.text("Sunday, 7pm.")])
+    assert "add_task was called, but not every week" in " ".join(
+        grade(case, run_case(case, settings, api=api))
+    )
+
+
+def test_a_window_nothing_will_bring_up_is_graded_on_what_was_promised(settings) -> None:
+    case = by_name("gutters_before_christmas")
+    gutters = {"title": "Clean out the gutters", "preferred_window": "before Christmas"}
+    kept = [fakes.tool_use("t1", "add_task", gutters)]
+    api = _answer(kept, [fakes.text("Saved as task #1, for before Christmas.")])
+    assert grade(case, run_case(case, settings, api=api)) == []
+    api = _answer(kept, [fakes.text("Saved. I\u2019ll nudge you when you have a free day.")])
+    assert "promised: i'll nudge" in " ".join(grade(case, run_case(case, settings, api=api)))
+
+
+def test_a_birthday_is_graded_on_whose_it_is_and_a_gift_on_its_kind(settings) -> None:
+    case = by_name("grandmas_birthday")
+    yearly = {
+        "title": "Grandma's birthday, 12 Oct",
+        "remind_at": "2026-09-28T09:00",
+        "repeat_every": 1,
+        "repeat_unit": "year",
+        "gift_for": "Grandma",
+    }
+    api = _answer([fakes.tool_use("t1", "add_task", yearly)], [fakes.text("Mon 28 Sep, 9am.")])
+    assert grade(case, run_case(case, settings, api=api)) == []
+    nobodys = {key: value for key, value in yearly.items() if key != "gift_for"}
+    api = _answer([fakes.tool_use("t1", "add_task", nobodys)], [fakes.text("Mon 28 Sep, 9am.")])
+    assert "not yearly, for Grandma's gifts" in " ".join(
+        grade(case, run_case(case, settings, api=api))
+    )
+    case = by_name("a_gift_for_grandma")
+    apron = {"title": "Gardening apron", "kind": "gift", "participants": ["Grandma"]}
+    api = _answer([fakes.tool_use("t1", "add_idea", apron)], [fakes.text("Saved as a gift.")])
+    assert grade(case, run_case(case, settings, api=api)) == []
+    outing = {**apron, "kind": "home"}
+    api = _answer([fakes.tool_use("t1", "add_idea", outing)], [fakes.text("Saved.")])
+    assert "not a gift, for Grandma" in " ".join(grade(case, run_case(case, settings, api=api)))

@@ -18,10 +18,11 @@ NOW = datetime(2026, 9, 25, 15, 30)
 NOW_ISO = "2026-09-25T22:30:00Z"
 EVERY_DAY = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 
+# Sunrise and sunset in minutes after midnight, as they are at home those days: dark by 19:04.
 FORECAST = [
-    DayForecast(date(2026, 9, 25), 1, "mainly clear", 21.0, 11.0, 5, 0.0),
-    DayForecast(date(2026, 9, 26), 2, "partly cloudy", 19.0, 10.0, 10, 0.0),
-    DayForecast(date(2026, 9, 27), 61, "light rain", 14.0, 9.0, 80, 6.5),
+    DayForecast(date(2026, 9, 25), 1, "mainly clear", 21.0, 11.0, 5, 0.0, 419, 1144),
+    DayForecast(date(2026, 9, 26), 2, "partly cloudy", 19.0, 10.0, 10, 0.0, 420, 1142),
+    DayForecast(date(2026, 9, 27), 61, "light rain", 14.0, 9.0, 80, 6.5, 422, 1141),
 ]
 
 

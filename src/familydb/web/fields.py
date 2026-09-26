@@ -568,6 +568,25 @@ GROUPS: tuple[Group, ...] = (
                 words=HOUR_WORDS,
             ),
             field(
+                "plan_checks",
+                "Check tomorrow's plans the evening before",
+                "Rain for an outdoor plan, or the place listed as closed then: said only when "
+                "something is off, with another idea for the same time when one fits.",
+            ),
+            field(
+                "plan_check_hour",
+                "Time to check tomorrow's plans",
+                "In the family's time zone.",
+                choices=HOURS,
+                words=HOUR_WORDS,
+            ),
+            field(
+                "task_nudges",
+                "Bring up a task kept for “some Saturday morning”",
+                "When such a morning comes round and the calendar is free for the hour ahead: "
+                "each task once a week at most, and one a day in each chat.",
+            ),
+            field(
                 "enrichment_notes",
                 "Say in the chat when an idea is filled in",
                 "A short note with what was found.",

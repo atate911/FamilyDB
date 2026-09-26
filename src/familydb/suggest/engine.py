@@ -104,8 +104,12 @@ def resolve_window(
     return (start_day, end_day), label, frame
 
 
-def run(ctx: ToolContext, args: SuggestInput) -> SuggestResult:
-    """The whole engine for one question; returns the structured result the chat model composes."""
+def run(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> SuggestResult:
+    """The whole engine for one question; returns the structured result the chat model composes.
+
+    `refresh_stale` queues a paid lookup for each place whose details have gone stale. Code that
+    runs the engine with no model call (commands.py, the evening check) passes False, so that it
+    never causes one either."""
     window, label, bounds = resolve_window(args, ctx.clock.now())
     context = build_context(ctx, window, bounds)
     context.origin, where_note = resolve_origin(ctx, args.near, args.window)
@@ -148,7 +152,7 @@ def run(ctx: ToolContext, args: SuggestInput) -> SuggestResult:
         names = ", ".join(f"#{idea_id}" for idea_id in unknown)
         widened = "; considered every idea instead" if not idea_ids else ""
         skipped.append(f"no idea {names} on the list{widened}")
-    if stale_ids and enrichment_available(ctx.settings):
+    if stale_ids and refresh_stale and enrichment_available(ctx.settings):
         with transaction(ctx.conn):
             ideas.requeue_enrichment(ctx.conn, stale_ids, now=ctx.now_iso())
         skipped.append("stale place details re-queued for a refresh")

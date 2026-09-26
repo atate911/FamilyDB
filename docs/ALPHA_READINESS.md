@@ -142,14 +142,39 @@ migration, so upgrading does not resend old conversations. Fresh outgoing messag
    "anything for tonight?" and "what about Saturday morning?". Check the free times it reports
    leave out the event and the part of today that has gone, and that an option says when it can
    start ("can go 16:10-17:55 today"). Ask two differently worded weekend questions with
-   discovery on and check `/status` shows one discovery search, not two.
+   discovery on and check `/status` shows one discovery search, not two. Within a couple of
+   hours of sunset, ask "anything outdoors tonight?": an outdoor idea that needs longer than
+   the daylight left should be offered as one in the dark, which shows the real forecast's
+   sunrise and sunset were read.
 9. Add a restaurant idea and watch its lookup: `/status` should show one fewer call per lookup
    than before (the turn ends at `save_place`), and a "home" idea with no place is skipped with
    no call at all. Send a web chat question while a lookup runs: it must not wait for it.
-10. On a phone away from home, share your location with the bot on Telegram (paperclip, then Location), then ask "what's open near here?": options should be measured from there, and the reply should say so. On the web page's chat over HTTPS, tick "Send where I am", allow the location when the browser asks, and ask the same: no place should need typing. Untick it and send "thanks": no position should be kept for that message.
+10. On a phone away from home, share your location with the bot on Telegram (paperclip, then Location), then ask "what's open near here?": options should be measured from there, and the reply should say so. Share a live location instead and move a few streets: asking again should name where you are now, not where you started, with no second "Got it", and none when you stop sharing. On the web page's chat over HTTPS, tick "Send where I am", allow the location when the browser asks, and ask the same: no place should need typing. Untick it and send "thanks": no position should be kept for that message.
 11. Set a reminder a few minutes ahead, stop the service past its time, start it again: the
     reminder arrives once and says when it was due. Set another for a minute ahead and keep
-    chatting in that chat: the next reply should carry it rather than a separate message.
+    chatting in that chat: the next reply should carry it rather than a separate message, with
+    its buttons under the reply. In the family group, tap "In an hour" on a reminder: everyone
+    should see who snoozed it and until when, with the buttons gone, and it should come back an
+    hour later; tap "✓ Done" on that one and it should not come back. Have someone not on the
+    family list tap one: they should be told only the family can, and nothing should change.
+    The day after a plan, tap an answer under "how was it?" and check the idea's page.
+    Ask for something every day at a time a few minutes ahead: it should come, and come again
+    the next day at the same time; tick it off and it should still come the day after.
+    Say "Grandma would love a gardening apron", then set Grandma's birthday with a reminder a
+    few minutes ahead: the reminder should list the apron, and the apron's page should say it
+    is "not one place to look up", with no lookup on the status page's costs.
+    On Telegram, type "/": today, week, tasks and now should be offered. Each should answer at
+    once with no model call on the status page: /today and /week with what Google shows,
+    /tasks with this chat's tasks only (none from a private chat in the group), and /now with
+    what could start in the next few hours. From somebody not on the list, /today should get
+    the stranger's line.
+    Put an outdoor idea on the calendar for tomorrow when the forecast says rain, set the check
+    to the next hour on the settings page, and wait: a heads-up should come once, with an
+    indoor idea for the same time if one fits; a dry day's plan should get nothing.
+    On a Wednesday, say "one of these Thursday evenings I need to fix the bike light": the
+    answer should say it comes up on a free Thursday evening, and the tasks page should say so
+    too. On Thursday it should come up once, with buttons, from 18:00 if the calendar is clear
+    then, or once an hour is free after whatever is on; and not again that day.
 12. On `/settings/personality`, rewrite one of her lines and add a sentence to "About the
     family"; the next reminder or follow-up should use the new line, and the next answer should
     know the sentence. Give her another name: "what's your name?" should get it, in the chat and

@@ -24,8 +24,12 @@ KIND_SUGGESTIONS: tuple[str, ...] = (
     "event",
     "seasonal",
     "home",
+    "gift",
     "other",
 )
+# A present somebody would like: kept with the ideas, listed under their birthday's reminder,
+# and never offered as something to go and do.
+GIFT = "gift"
 Setting = Literal["indoor", "outdoor", "either"]
 Weather = Literal["any", "dry", "warm", "snow"]
 Status = Literal["idea", "planned", "done", "dropped"]
@@ -242,6 +246,22 @@ def list_all(conn: sqlite3.Connection, *, include_dropped: bool = False) -> list
     where = "" if include_dropped else " WHERE i.status != 'dropped'"
     rows = conn.execute(f"{_SELECT}{where} ORDER BY i.id")
     return [Idea.from_row(row) for row in rows]
+
+
+def gifts_for(conn: sqlite3.Connection, who: str, *, limit: int = 5) -> list[Idea]:
+    """Presents saved for somebody, newest first: ideas of kind gift, not yet given or dropped,
+    with them among the participants as a whole word ("Grandma", "for Grandma")."""
+    wanted = re.compile(rf"\b{re.escape(who.strip().casefold())}\b")
+    rows = conn.execute(
+        f"{_SELECT} WHERE lower(i.kind) = ? AND i.status IN ('idea', 'planned') ORDER BY i.id DESC",
+        (GIFT,),
+    )
+    found = [
+        idea
+        for idea in (Idea.from_row(row) for row in rows)
+        if any(wanted.search(person.casefold()) for person in idea.participants)
+    ]
+    return found[:limit]
 
 
 def search(

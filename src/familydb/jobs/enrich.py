@@ -19,7 +19,7 @@ from familydb.dates import utc_iso
 from familydb.errors import AgentError
 from familydb.store import ideas, messages, places
 from familydb.store.db import transaction
-from familydb.store.ideas import Idea
+from familydb.store.ideas import GIFT, Idea
 from familydb.store.places import Place
 
 log = logging.getLogger(__name__)
@@ -27,16 +27,18 @@ log = logging.getLogger(__name__)
 OUTCOMES = ("done", "skipped", "failed", "deferred")
 # Kinds that are never a place to look up. Kept narrow on purpose: a title alone can name a place
 # ("Pizza Luna"), so only a kind that means "not out anywhere" decides it, and only while the
-# family has given nothing to look up (no location, no link, no place already attached).
-NO_LOOKUP_KINDS = frozenset({"home"})
-NO_LOOKUP_NOTE = "nothing to look up: a home idea with no place or link"
+# family has given nothing to look up (no location, no link, no place already attached). A gift's
+# link is to the thing itself, so only a place named for it (a class somewhere) is looked up.
+NO_LOOKUP_KINDS = frozenset({"home", GIFT})
+NO_LOOKUP_NOTE = "nothing to look up: a {kind} idea with no place or link"
 
 
 def needs_lookup(idea: Idea) -> bool:
     """Whether a worker turn could find anything for this idea. Decided in code, for free."""
     if idea.kind not in NO_LOOKUP_KINDS:
         return True
-    return bool(idea.location_name or idea.url or idea.place_id)
+    link = idea.url if idea.kind != GIFT else None
+    return bool(idea.location_name or link or idea.place_id)
 
 
 def render_enrich_request(idea: Idea, place: Place | None, settings: Settings) -> str:
@@ -139,7 +141,7 @@ def _notify(app: App, conn: Any, idea: Idea) -> None:
 def enrich_idea(app: App, conn: Any, idea: Idea, *, api: MessagesAPI | None = None) -> str:
     """Look one idea up. Returns done, skipped, failed or deferred (try again later)."""
     if not needs_lookup(idea):
-        _mark(conn, app, idea.id, "skipped", NO_LOOKUP_NOTE)
+        _mark(conn, app, idea.id, "skipped", NO_LOOKUP_NOTE.format(kind=idea.kind))
         log.info("idea %s enrichment skipped without a model call", idea.id)
         return "skipped"
     place = places.get(conn, idea.place_id) if idea.place_id else None

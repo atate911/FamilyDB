@@ -872,9 +872,44 @@ CHARS_PER_TOKEN = 4
 # Her lines as the Personality page groups them, each group with whether it starts folded. A line
 # no group names (a new one in voice.EVENTS) is shown under "Other", so it is never left off.
 LINE_GROUPS = (
-    ("Reminders and follow-ups", False, ("reminder", "reminder_late", "follow_up")),
+    (
+        "Reminders and follow-ups",
+        False,
+        (
+            "reminder",
+            "reminder_late",
+            "gift_ideas",
+            "gift_ideas_none",
+            "nudge",
+            "plan_rain",
+            "plan_closed",
+            "plan_backup",
+            "follow_up",
+        ),
+    ),
+    (
+        "When a button is tapped",
+        True,
+        (
+            "tap_done",
+            "tap_done_again",
+            "tap_snoozed",
+            "tap_again",
+            "tap_not_again",
+            "tap_missed",
+            "tap_already",
+            "tap_stale",
+            "tap_failed",
+            "tap_stranger",
+        ),
+    ),
     ("Notes", False, ("lookup_done", "location_shared", "done")),
     ("On Telegram", False, ("start", "stranger")),
+    (
+        "Answering /today, /week, /tasks and /now",
+        True,
+        ("cmd_today", "cmd_week", "cmd_tasks", "cmd_now"),
+    ),
     (
         "When she cannot answer",
         True,
