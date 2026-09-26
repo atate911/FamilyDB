@@ -112,7 +112,7 @@ working together.
 
 - **Bright colour on near-black.** The green is a vivid colour nearly as bright as the white
   words, and it sits on charcoal that is almost black: 15.2:1 against the page, and 12.5:1 even
-  on the lightest card. Colour that bright on a ground that dark reads as light coming off the
+  on the lightest surface. Colour that bright on a ground that dark reads as light coming off the
   screen, not paint on it.
 - **A glow in layers, the way a tube bloomed.** A glowing word has a tight halo and a wide, faint
   one (`.glow`); the primary button a ring, and light pooled under it (`--glow`); words on a
@@ -322,7 +322,7 @@ There are five, one to a page at most:
   below says its own drive and direction ("about 19 min south of home"), so the map shows
   nothing the page does not say.
 
-How they are built, since the content policy allows no inline style and no script:
+How they are built, since the content policy allows no inline style or inline script:
 
 - A screen is HTML and CSS; the radar and the face are SVG. `views.radar_blips` works out where
   each plan goes on the dial (Jinja has no trigonometry), spreading them by the golden angle so
@@ -462,7 +462,7 @@ it, and say why here.
 - A small thing means something where it is, and moves for no more than a moment.
 - Vera is not drawn: no face, figure, picture or expression, and the mark is not hers. Where
   she appears, her screen, and its glyphs spell nothing; where the page speaks of her, what she
-  takes on, not what she is. "Her screen" says why.
+  takes on, not what she is. Principle 9 says why, and "Her screen" what she has instead.
 - A new colour, face, glow or motion is written down here, with the reason, in the change that
   brings it. Trying one out on a branch needs no entry until it stays.
 
