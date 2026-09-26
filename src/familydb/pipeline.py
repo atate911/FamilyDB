@@ -13,6 +13,7 @@ from familydb.agent import gateway, spending
 from familydb.agent.history import load_history
 from familydb.agent.loop import MessagesAPI, TurnResult
 from familydb.agent.render import (
+    render_audience_line,
     render_folded_line,
     render_location_line,
     render_retry_note,
@@ -89,9 +90,11 @@ def _handle(
                 chat_id=msg.chat_id,
                 now=app.clock.now(),
             )
+        # Their message is not stored, so the update itself chooses the words: the same knock
+        # sent again reads the same, and the next one may not.
         return OutgoingMessage(
             msg.chat_id,
-            voice.say(app.settings, "stranger", id=msg.channel_user_id),
+            voice.say(app.settings, "stranger", seed=msg.channel_update_id, id=msg.channel_user_id),
             "unknown_sender",
         )
 
@@ -227,7 +230,7 @@ def _answer(
             msg,
             inbound_id,
             "no model key",
-            voice.say(app.settings, "no_key") if notify else None,
+            voice.say(app.settings, "no_key", seed=inbound_id) if notify else None,
         )
     try:
         result = _think(
@@ -239,9 +242,13 @@ def _answer(
             with transaction(conn):
                 messages.give_up(conn, inbound_id)
         if isinstance(exc, SpendingLimitReached):
-            reply = voice.say(app.settings, "limit_reached", limit=f"{exc.limit:.2f}")
+            reply = voice.say(
+                app.settings, "limit_reached", seed=inbound_id, limit=f"{exc.limit:.2f}"
+            )
         else:
-            reply = voice.say(app.settings, "retry_later" if exc.retryable else "cannot_reach")
+            reply = voice.say(
+                app.settings, "retry_later" if exc.retryable else "cannot_reach", seed=inbound_id
+            )
         return _fail(app, conn, msg, inbound_id, str(exc), reply if notify else None)
     except Exception as exc:
         log.exception("unexpected error on message %s", inbound_id)
@@ -252,7 +259,7 @@ def _answer(
             msg,
             inbound_id,
             error,
-            voice.say(app.settings, "retry_later") if notify else None,
+            voice.say(app.settings, "retry_later", seed=inbound_id) if notify else None,
         )
 
     if result.status == "failed" and result.error == "max_iterations":
@@ -261,7 +268,7 @@ def _answer(
         log.error("turn on message %s ran out of steps; not retrying it", inbound_id)
         with transaction(conn):
             messages.give_up(conn, inbound_id)
-        notice = _gave_up_reply(app, result) if kind != "digest" else None
+        notice = _gave_up_reply(app, result, inbound_id) if kind != "digest" else None
         return _fail(app, conn, msg, inbound_id, "max_iterations", notice, result.actions)
     if result.status == "failed":
         log.error("turn failed on message %s: %s", inbound_id, result.error)
@@ -271,11 +278,11 @@ def _answer(
             msg,
             inbound_id,
             result.error or "failed",
-            voice.say(app.settings, "retry_later") if notify else None,
+            voice.say(app.settings, "retry_later", seed=inbound_id) if notify else None,
             result.actions,
         )
 
-    reply_text = result.text or voice.say(app.settings, "done")
+    reply_text = result.text or voice.say(app.settings, "done", seed=inbound_id)
     # What the reply was to carry and did not name goes with it in its written words.
     forgotten = [h.text for h in taken if h.mention.casefold() not in reply_text.casefold()]
     if forgotten:
@@ -371,7 +378,9 @@ def _think(
         if origin
         else app.clock
     )
-    current = render_user_turn(member.display_name, msg.text, received_clock)
+    # Who reads the reply depends on the chat, so it goes in the turn and never in the prefix.
+    audience = render_audience_line(msg.channel, msg.chat_id, members.list_all(conn))
+    current = render_user_turn(member.display_name, msg.text, received_clock, audience)
     shared = whereabouts.current(conn, member.id, app.clock.now())
     if shared is not None:
         current.append(
@@ -419,13 +428,14 @@ def _think(
     )
 
 
-def _gave_up_reply(app: App, result: TurnResult) -> str:
+def _gave_up_reply(app: App, result: TurnResult, inbound_id: int) -> str:
     """What to tell the family when a turn ran out of steps, worded by code, not by a model."""
     written = {spec.name for spec in app.registry.specs() if spec.writes}
     completed = [a for a in result.actions if a.get("ok") and a.get("tool") in written]
     if not completed:
-        return voice.say(app.settings, "gave_up")
-    return spending.done_lines(completed) + " " + voice.say(app.settings, "gave_up_partly")
+        return voice.say(app.settings, "gave_up", seed=inbound_id)
+    partly = voice.say(app.settings, "gave_up_partly", seed=inbound_id)
+    return spending.done_lines(completed) + " " + partly
 
 
 def _fail(

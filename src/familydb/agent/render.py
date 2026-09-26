@@ -88,12 +88,37 @@ def render_family_context(family: list[Member], settings: Settings) -> str:
     return "\n".join(lines)
 
 
-def render_user_turn(sender: str, text: str, clock: Clock) -> list[str]:
-    """The current message in parts: the date line, then the sender-prefixed text.
+def render_audience_line(channel: str, chat_id: str, family: list[Member]) -> str | None:
+    """Who reads the reply besides the sender, for the current turn only: it depends on the chat.
+
+    None for a private chat (the console, a Telegram chat with one person), which is what no line
+    means to the model. A Telegram group's chat id is negative; the page's chat is one
+    conversation the whole family shares. Whether kids are among them is read from the family
+    list, since code cannot see who is in a group.
+    """
+    if channel == "web":
+        line = "This is the family's conversation on the page: everyone who signs in reads it"
+    elif channel == "telegram" and chat_id.startswith("-"):
+        line = "This is the family's group chat: everyone in it reads your reply"
+    else:
+        return None
+    if any(member.active and member.role == "kid" for member in family):
+        line += ", kids among them"
+    return line + "."
+
+
+def render_user_turn(
+    sender: str, text: str, clock: Clock, audience: str | None = None
+) -> list[str]:
+    """The current message in parts: the date line, who reads the chat when it is shared, then
+    the sender-prefixed text.
 
     They stay separate so the volatile date never merges into the message itself.
     """
-    return [f"Today is {clock.describe()}.", f"[{sender}] {text}"]
+    parts = [f"Today is {clock.describe()}."]
+    if audience:
+        parts.append(audience)
+    return [*parts, f"[{sender}] {text}"]
 
 
 def render_location_line(

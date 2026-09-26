@@ -1637,6 +1637,34 @@ table.month td.today time { color: var(--on-bright); background: var(--amber); b
   border-radius: var(--r-sm);
   overflow-wrap: anywhere;
 }
+/* Her own description has changed since the family rewrote her: said above their rewrite, with
+   what changed folded away under it. That is a line diff in the machine's small voice, and each
+   line keeps its + or -, so the difference never rests on colour: a new line is lit in the
+   page's colour, one that has gone is quiet, and the rest are as they were. */
+.drift { margin: 0 0 0.9rem; }
+.drift > .hint { margin: 0 0 0.3rem; }
+.changes {
+  max-height: 24rem;
+  margin: 0.6rem 0 0;
+  padding: 0.55rem 0;
+  overflow: auto;
+  font: 0.82rem/1.6 var(--mono);
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--field);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-sm);
+}
+.changes > span { display: block; padding: 0 0.8rem; border-left: 3px solid transparent; }
+.changes > .added { color: var(--ink); background: color-mix(in srgb, var(--accent) 9%, transparent); border-left-color: var(--accent); }
+.changes > .removed { color: var(--dim); background: rgb(255 255 255 / 0.025); border-left-color: var(--edge); }
+/* How one of her lines reads now, under the box that writes it: each of its wordings filled in
+   with made-up details, as the family would get it. Quieter than the box above, which is what is
+   being written, and joined by a rule down the left as the one line they are. */
+.reads { margin: 0.7rem 0 0; }
+.reads > ul { display: grid; gap: 0.3rem; margin: 0.35rem 0 0; padding: 0; list-style: none; }
+.reads li { padding: 0.05rem 0 0.05rem 0.75rem; font-size: 0.92rem; color: var(--ink-2); border-left: 2px solid var(--line-2); overflow-wrap: anywhere; }
 #google fieldset { display: grid; gap: 0.5rem; margin: 0 0 0.9rem; }
 #google textarea { font: 0.88rem/1.5 var(--mono); }
 .steps { display: grid; gap: 0.6rem; padding-left: 1.4rem; }

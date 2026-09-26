@@ -1,9 +1,17 @@
 """The behaviour checks in evals/ grade what they claim to: a right answer passes, a wrong one fails
 with a reason. Run offline here with a scripted model; the real runs are `python -m evals`."""
 
-from evals.cases import by_name
-from evals.harness import grade, run_case
+import functools
+import json
 
+import pytest
+from evals import __main__ as evals_cli
+from evals.cases import by_name
+from evals.harness import GROUP, Case, emoji_in, grade, run_case, under_persona
+
+from familydb import personas
+from familydb.config import apply_overrides
+from familydb.store import messages
 from tests import fakes
 
 
@@ -46,6 +54,19 @@ def test_either_accepts_a_question_instead(settings) -> None:
     assert grade(case, run_case(case, settings, api=api)) == []
 
 
+def test_a_case_in_the_group_is_sent_there_and_asking_first_passes(settings) -> None:
+    case = by_name("sensitive_reminder_in_the_group")
+    api = _answer([fakes.text("Everyone here reads this, the girls too. Set it here anyway?")])
+    assert grade(case, run_case(case, settings, api=api)) == []
+    turn = [part["text"] for part in api.requests[0]["messages"][-1]["content"]]
+    assert "everyone in it reads your reply, kids among them." in turn[1]
+    # The same words in Sam's own chat are set at once, and a question there fails.
+    private = by_name("sensitive_reminder_in_private")
+    api = _answer([fakes.text("Shall I set it for 8am tomorrow?")])
+    assert "never called add_task" in grade(private, run_case(private, settings, api=api))
+    assert len(api.requests[0]["messages"][-1]["content"]) == 2  # the date, then the message
+
+
 def test_every_case_has_a_reason_and_a_unique_name() -> None:
     from evals.cases import CASES
 
@@ -63,3 +84,224 @@ def test_the_budget_stops_a_case_between_its_calls(settings) -> None:
     run = run_case(case, settings, api=api, limit=1e-9)
     assert run.model_calls == 1  # the first call crossed it; the second was never sent
     assert run.counts["ideas"] == 6  # and what it did before stopping is kept
+
+
+def test_input_tokens_are_counted_cached_or_not(settings) -> None:
+    """New, written to the cache and read from it, each once; a column the vendor left empty
+    counts nothing."""
+    case = by_name("capture_restaurant")
+    cached = {"input_tokens": 40, "cache_creation_input_tokens": 300, "cache_read_input_tokens": 5}
+    api = fakes.FakeMessagesAPI(
+        fakes.message(
+            [fakes.tool_use("t1", "add_idea", {"title": "Ethiopian place", "kind": "restaurant"})],
+            usage=cached,
+        ),
+        fakes.message([fakes.text("Saved #6.")]),  # input_tokens only, the fake's 100
+    )
+    assert run_case(case, settings, api=api).input_tokens == 40 + 300 + 5 + 100
+
+
+def _said(request) -> str:
+    """Everything a request put before the model: its system blocks, then the conversation."""
+    system = " ".join(block["text"] for block in request.get("system") or [])
+    return system + " " + json.dumps(request["messages"], ensure_ascii=False)
+
+
+# -- personas ----------------------------------------------------------------------------------
+
+
+def test_two_personas_are_compared_side_by_side(settings, monkeypatch, tmp_path, capsys) -> None:
+    """Each case runs under each persona, and the summary gives each its own line."""
+    api = _answer([fakes.text("Any time.")], [fakes.text("Any time.")])
+    monkeypatch.setattr(evals_cli, "Settings", lambda: settings)
+    monkeypatch.setattr(evals_cli, "run_case", functools.partial(run_case, api=api))
+    out = tmp_path / "results.json"
+    argv = ["--case", "thanks", "--persona", "default", "--persona", "none", "--json", str(out)]
+
+    assert evals_cli.main(argv) == 0
+
+    printed = capsys.readouterr().out
+    assert printed.splitlines()[0].endswith("personas default, none")
+    assert "default  1/1 runs passed, 100 input tokens" in printed
+    assert "none     1/1 runs passed, 100 input tokens" in printed
+    results = json.loads(out.read_text())
+    assert [(r["case"], r["persona"], r["input_tokens"]) for r in results["results"]] == [
+        ("thanks", "default", 100),
+        ("thanks", "none", 100),
+    ]
+    assert [p["persona"] for p in results["personas"]] == ["default", "none"]
+    assert results["input_tokens"] == 200
+    # And each ran as itself: her character under default, none of it under none.
+    hers = personas.load("default").prompt.splitlines()[0]
+    assert hers in _said(api.requests[0])
+    assert hers not in _said(api.requests[1])
+
+
+def test_the_personas_share_one_budget(settings, monkeypatch, capsys) -> None:
+    """What the first spends is gone for the second: here all of it, so the second never asks."""
+    api = _answer([fakes.text("Any time.")], [fakes.text("Any time.")])
+    monkeypatch.setattr(evals_cli, "Settings", lambda: settings)
+    monkeypatch.setattr(evals_cli, "run_case", functools.partial(run_case, api=api))
+    argv = ["--case", "thanks", "--persona", "default", "--persona", "none", "--budget", "1e-9"]
+
+    assert evals_cli.main(argv) == 1
+
+    assert len(api.requests) == 1
+    printed = capsys.readouterr().out
+    assert "Stopped in thanks (default)" in printed
+    assert "0/0 runs passed, 100 input tokens" in printed
+
+
+def test_a_file_persona_is_used_as_the_rewrite(settings, tmp_path) -> None:
+    rewrite = tmp_path / "rhyming.md"
+    rewrite.write_text("You are {name}, and you answer every question in rhyme.")
+
+    label, chosen = under_persona(settings, str(rewrite))
+
+    assert (label, chosen.persona) == (str(rewrite), personas.DEFAULT)
+    api = _answer([fakes.text("Any time.")])
+    run_case(by_name("thanks"), chosen, api=api)
+    said = _said(api.requests[0])
+    assert "You are Vera, and you answer every question in rhyme." in said
+    assert personas.load("default").prompt.splitlines()[0] not in said
+
+
+def test_a_persona_by_key_is_her_as_she_ships(settings, tmp_path) -> None:
+    """The family's words already in the settings are not laid over the persona a run names."""
+    rewritten = apply_overrides(
+        settings,
+        {
+            "persona_text": {"default": {"text": "You are {name}, and brief."}},
+            "persona_notes": "Rhyme everything.",
+            "persona_name": "Juno",
+        },
+    )
+
+    label, chosen = under_persona(rewritten, "Vera")  # her older key, as a setting may hold it
+
+    assert (label, chosen.persona, chosen.persona_text) == ("default", "default", {})
+    assert personas.active(chosen) == personas.load(personas.DEFAULT)
+    with pytest.raises(ValueError, match="not a persona"):
+        under_persona(settings, str(tmp_path / "missing.md"))
+    empty = tmp_path / "empty.md"
+    empty.write_text("\n")
+    with pytest.raises(ValueError, match="empty"):
+        under_persona(settings, str(empty))
+
+
+# -- who is listening --------------------------------------------------------------------------
+
+
+def test_a_cases_sender_and_chat_reach_the_pipeline(settings, monkeypatch) -> None:
+    """The girls, writing in the family group, are who the model hears from, and the message is
+    stored as the group's. A case that names neither is Sam in his own chat."""
+    stored: list[str] = []
+    insert_in = messages.insert_in
+
+    def keep(conn, **fields):
+        stored.append(fields["chat_id"])
+        return insert_in(conn, **fields)
+
+    monkeypatch.setattr(messages, "insert_in", keep)
+    api = _answer([fakes.text("Swim lessons till 11, then Hopscotch?")], [fakes.text("Any time.")])
+
+    run_case(by_name("kid_in_the_group"), settings, api=api)
+    run_case(by_name("thanks"), settings, api=api)
+
+    assert stored == [GROUP, "1001"]
+    assert "[the girls] can we do something fun tomorrow?" in _said(api.requests[0])
+    assert "[Sam] thanks!" in _said(api.requests[1])
+
+
+MISSED_TOMORROW = "suggest was called, but not for a window taking in tomorrow"
+
+
+@pytest.mark.parametrize(
+    ("frame", "wrong"),
+    [
+        ({"window": "this_weekend"}, []),
+        ({"window": "dates", "start": "2026-09-26", "end": "2026-09-27"}, []),
+        ({"window": "today"}, [MISSED_TOMORROW]),
+        ({"window": "next_weekend"}, [MISSED_TOMORROW]),
+    ],
+)
+def test_tomorrow_is_asked_about_however_it_is_framed(settings, frame, wrong) -> None:
+    case = by_name("kid_in_the_group")
+    api = _answer(
+        [fakes.tool_use("t1", "suggest", {"question": "fun tomorrow?", **frame})],
+        [fakes.text("Swim lessons till 11, then Hopscotch in Portland?")],
+    )
+    problems = grade(case, run_case(case, settings, api=api))
+    assert [problem.split(":")[0] for problem in problems] == wrong
+
+
+# -- who she is --------------------------------------------------------------------------------
+
+
+def test_a_cases_settings_are_laid_over_the_run(settings) -> None:
+    case = Case("about_us", ("hi",), (), "why", settings={"about_family": "Mia is seven."})
+    api = _answer([fakes.text("Hi.")])
+    run_case(case, settings, api=api)
+    assert "Mia is seven." in _said(api.requests[0])
+
+
+@pytest.mark.parametrize(
+    ("persona", "reply", "wrong"),
+    [
+        ("default", "I'm Juno.", []),
+        ("default", "I'm Vera.", ["reply does not mention Juno"]),
+        ("none", "I'm FamilyDB.", []),
+        ("none", "I'm Juno.", ["reply does not mention FamilyDB"]),
+    ],
+)
+def test_her_name_is_the_one_she_was_given_and_none_keeps_its_own(
+    settings, persona, reply, wrong
+) -> None:
+    """The rename is a setting Settings may not have yet, and must not stop the case running."""
+    case = by_name("her_name_after_a_rename")
+    _, chosen = under_persona(settings, persona)
+    assert grade(case, run_case(case, chosen, api=_answer([fakes.text(reply)]))) == wrong
+
+
+# -- style, whoever she is ---------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("text", "count"),
+    [
+        ("Saved #6 as a restaurant idea.", 0),
+        ("21°C and dry, © ™ → ↗", 0),  # symbols, but not from the blocks emoji are drawn from
+        ("Done 👍", 1),
+        ("🎉🎉", 2),
+        ("☀ then ⛅, ⏰ at 9 ✅", 4),  # the blocks below U+1F000 count too
+        ("👨\u200d👩\u200d👧\u200d👦", 1),  # a family, joined
+        ("👍\U0001f3fd ❤\ufe0f", 2),  # a skin tone and U+FE0F add nothing
+        ("🇺🇸 🇬🇧", 2),  # two indicators to a flag
+        ("🇺🇸🇬🇧", 2),
+    ],
+)
+def test_emoji_are_counted_once_however_they_are_built(text, count) -> None:
+    assert emoji_in(text) == count
+
+
+@pytest.mark.parametrize(
+    ("reply", "problem"),
+    [
+        ("Any time 🙂🎉", "reply has 2 emoji, over 1"),
+        ("As an AI, I don't mind at all.", "says 'As an AI', which is filler"),
+        ("as an artificial intelligence I'm glad", "which is filler"),
+        ("Happy to help, AS A LANGUAGE MODEL.", "which is filler"),
+        ("Any time! Really! Truly!", "reply has 3 exclamation marks, over 2"),
+    ],
+)
+def test_each_style_check_fires_on_a_reply_that_breaks_it(settings, reply, problem) -> None:
+    case = by_name("thanks")
+    problems = grade(case, run_case(case, settings, api=_answer([fakes.text(reply)])))
+    assert any(problem in p for p in problems), problems
+
+
+def test_a_reply_at_the_limits_of_style_passes(settings) -> None:
+    """One emoji, two exclamation marks, and "as an aside", which is not "as an AI"."""
+    case = by_name("thanks")
+    reply = "Any time! As an aside, swim lessons are at 9 tomorrow! 🙂"
+    assert grade(case, run_case(case, settings, api=_answer([fakes.text(reply)]))) == []

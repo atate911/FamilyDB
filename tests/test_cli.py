@@ -97,6 +97,17 @@ def test_debug_prompt_prints_request(env: Path) -> None:
     assert result.exit_code == 0, result.output
     assert '"cache_control"' in result.output
     assert "[Sam] what should we do?" in result.output
+    assert "This is the family's" not in result.output  # the console is the sender's alone
+
+
+def test_debug_prompt_says_who_reads_the_chat_it_names(env: Path) -> None:
+    runner.invoke(app, ["members", "add", "Sam", "--role", "admin"])
+    runner.invoke(app, ["members", "add", "Mia", "--role", "kid"])
+    group = runner.invoke(app, ["debug", "prompt", "--chat=-100123", "hi all"])
+    assert group.exit_code == 0, group.output
+    assert "everyone in it reads your reply, kids among them." in group.output
+    page = runner.invoke(app, ["debug", "prompt", "--chat", "web", "hi all"])
+    assert "everyone who signs in reads it, kids among them." in page.output
 
 
 @pytest.mark.skipif(os.name == "nt", reason="Windows terminate does not deliver POSIX SIGTERM")
@@ -221,6 +232,76 @@ def test_config_says_where_each_setting_came_from(env: Path) -> None:
     assert lines["anthropic_api_key"] == "****  # from the environment"  # the fixture sets it
     assert lines["weather_units"] == "metric"  # nobody set it, so it is just the default
     assert "gm-hunter2" not in result.output
+
+
+def test_config_prints_a_rewrite_of_her_on_one_line(env: Path) -> None:
+    """Kept per persona, a rewrite prints as what it is stored as, its line breaks escaped, even
+    when it was stored as one string before."""
+    from contextlib import closing
+
+    from familydb.app import build_app
+    from familydb.store import settings as settings_store
+
+    assert runner.invoke(app, ["db", "migrate"]).exit_code == 0
+    application = build_app()
+    with closing(application.connect()) as conn, db.transaction(conn):
+        settings_store.set_many(conn, {"persona_text": "You are {name}.\nDry."})
+    result = runner.invoke(app, ["config"])
+    assert result.exit_code == 0, result.output
+    lines = dict(line.split("=", 1) for line in result.output.splitlines())
+    assert lines["persona_text"] == (
+        "{'default': {'text': 'You are {name}.\\nDry.', 'of': ''}}  # set on the settings page"
+    )
+
+
+def test_config_shortens_a_long_text_and_says_how_long_it_is(env: Path) -> None:
+    """A rewrite keeps her whole character as it shipped, a page of prose: the printout gives the
+    start of each long text on the Personality page and its real length, one setting to a line,
+    and the settings themselves keep all of it."""
+    from contextlib import closing
+
+    from familydb import personas
+    from familydb.app import build_app
+    from familydb.cli import SHOWN_CHARACTERS
+    from familydb.config import apply_overrides, load_settings
+    from familydb.store import settings as settings_store
+
+    hers = personas.load(personas.DEFAULT).character
+    about = "We are the Tates.\n" + "Mia is eight and climbs anything. " * 10
+    reminder = "Reminder: {title}{who}, task #{task}. Tell me when it's done.\nBins, {who}!"
+    stored = {
+        "persona_text": {"default": {"text": "You are {name}.\nDry.", "of": hers}},
+        "about_family": about,
+        "voice_lines": {"reminder": reminder},
+        "google_calendar_id": "c_" + "0123456789abcdef" * 4 + "@group.calendar.google.com",
+    }
+    assert runner.invoke(app, ["db", "migrate"]).exit_code == 0
+    application = build_app()
+    with closing(application.connect()) as conn, db.transaction(conn):
+        settings_store.set_many(conn, stored)
+    result = runner.invoke(app, ["config"])
+    assert result.exit_code == 0, result.output
+    # One setting to a line: a text's own line breaks would leave a line with no "=" in it.
+    lines = dict(line.split("=", 1) for line in result.output.splitlines())
+
+    page = "  # set on the settings page"
+
+    def cut(text: str) -> str:
+        return f"{text[:SHOWN_CHARACTERS].rstrip()}… ({len(text):,} characters)"
+
+    # A short text is as it was, and a long one its start and its length.
+    rewrite = {"default": {"text": "You are {name}.\nDry.", "of": cut(hers)}}
+    assert lines["persona_text"] == str(rewrite) + page
+    assert lines["about_family"] == cut(about).replace("\n", "\\n") + page
+    assert lines["voice_lines"] == str({"reminder": cut(reminder)}) + page
+    # A setting that is not a text of hers or the family's prints whole, however long.
+    assert lines["google_calendar_id"] == stored["google_calendar_id"] + page
+
+    # Anything else that reads the settings still has all of it.
+    masked = apply_overrides(load_settings(), stored).masked()
+    assert masked["persona_text"]["default"]["of"] == hers
+    assert masked["about_family"] == about
+    assert masked["voice_lines"] == {"reminder": reminder}
 
 
 def test_debug_cost_reports_the_prefix_and_what_was_spent(env: Path) -> None:

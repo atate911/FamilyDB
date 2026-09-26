@@ -7,10 +7,11 @@ The wording here is for people reading a page. The model's view of an idea lives
 from __future__ import annotations
 
 import calendar as months
+import difflib
 import json
 import math
 from datetime import UTC, date, datetime
-from itertools import pairwise
+from itertools import islice, pairwise
 from typing import Any
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
@@ -559,7 +560,31 @@ def setting_text(value: str | None) -> str:
     return str(loaded)
 
 
-LONG_SETTINGS = frozenset({"persona_text", "about_family", "voice_lines"})
+LONG_SETTINGS = frozenset({"persona_text", "persona_notes", "about_family", "voice_lines"})
+# How many unchanged lines are shown either side of a change. A persona's character is written in
+# paragraphs, one to a line with a blank line between them, so with one either side the only
+# context would be the blank.
+CHANGE_CONTEXT = 2
+
+
+def line_changes(before: str, now: str) -> list[dict[str, str]]:
+    """What changed from one text to the other, line by line, as a unified diff shows it.
+
+    Each line keeps the mark the diff gives it (+ for one that is new, - for one that has gone, a
+    space for one either side that has not changed) and a kind the stylesheet colours, so a
+    change never rests on colour alone. The diff's headers and line numbers say nothing to a
+    family, so they are left out and its parts are parted by an ellipsis."""
+    shown: list[dict[str, str]] = []
+    diff = difflib.unified_diff(
+        before.splitlines(), now.splitlines(), lineterm="", n=CHANGE_CONTEXT
+    )
+    for line in islice(diff, 2, None):  # past the two headers naming what was compared
+        if line.startswith("@@"):
+            if shown:
+                shown.append({"kind": "same", "text": "…"})
+            continue
+        shown.append({"kind": {"+": "added", "-": "removed"}.get(line[:1], "same"), "text": line})
+    return shown
 
 
 def change_row(line: dict[str, Any], tz: ZoneInfo) -> dict[str, Any]:

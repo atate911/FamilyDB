@@ -3,8 +3,10 @@ from datetime import timedelta
 
 from familydb.agent.history import HistoryTurn
 from familydb.agent.prompt import build_messages, build_system_blocks, load_system_prompt
-from familydb.agent.render import render_user_turn
+from familydb.agent.render import render_audience_line, render_user_turn
+from familydb.config import apply_overrides
 from familydb.store import db, ideas
+from familydb.store.members import Member
 from tests.conftest import NOW_ISO
 
 
@@ -211,3 +213,82 @@ def test_the_workers_never_carry_the_persona(conn, settings) -> None:
         worker = call.prompt != "system"
         assert ("personality" in sizes) is not worker, name
         assert ("Vera" in blocks[0].text) is not worker, name
+
+
+PRECEDENCE = "Where who you are and the job disagree, the job wins."
+
+
+def test_the_product_says_the_job_wins_whoever_she_is(conn, settings, family) -> None:
+    first = build_system_blocks(conn, settings)[0].text
+    assert first.count(PRECEDENCE) == 1
+    assert first.index("You are Vera") < first.index(PRECEDENCE) < first.index("private planning")
+    plain = settings.model_copy(update={"persona": "none"})
+    assert PRECEDENCE not in build_system_blocks(conn, plain)[0].text
+
+
+def test_a_rewrite_of_her_that_leaves_the_rule_out_still_gets_it(conn, settings, family) -> None:
+    """Her own character says the job wins; a family's rewrite of her need not."""
+    rewritten = apply_overrides(
+        settings, {"persona_text": {"default": "You are {name}. Be very brief, and a little dry."}}
+    )
+    first = build_system_blocks(conn, rewritten)[0].text
+    assert first.startswith(
+        "# Who you are\n\nYou are Vera. Be very brief, and a little dry.\n\n# The job\n\n"
+        f"{PRECEDENCE}\n\nYou are the private planning assistant"
+    )
+
+
+def test_the_spec_keeps_it_suitable_for_kids_whoever_she_is() -> None:
+    """The rule is the product's, where no rewrite of her reaches it, and it is written once."""
+    text = load_system_prompt()
+    assert "a line before the message says who reads it" in text
+    listening = text.index("## Who is listening")
+    assert listening < text.index("## Reply style")
+    assert "whoever you are told you are" in text[listening:]
+    assert text.count("sensitive reminder") == 1
+    assert text.index("sensitive reminder") > listening
+
+
+def _member(name: str, role: str, *, active: bool = True) -> Member:
+    return Member(id=len(name), display_name=name, role=role, active=active, created_at=NOW_ISO)
+
+
+GROWN_UPS = [_member("Sam", "admin"), _member("Alex", "parent")]
+WITH_A_KID = [*GROWN_UPS, _member("Mia", "kid")]
+GROUP = "This is the family's group chat: everyone in it reads your reply"
+PAGE = "This is the family's conversation on the page: everyone who signs in reads it"
+
+
+def test_a_private_chat_has_no_audience_line() -> None:
+    assert render_audience_line("telegram", "1001", WITH_A_KID) is None
+    assert render_audience_line("console", "console", WITH_A_KID) is None
+
+
+def test_a_group_says_everyone_in_it_reads_the_reply() -> None:
+    assert render_audience_line("telegram", "-100123", GROWN_UPS) == f"{GROUP}."
+
+
+def test_a_group_says_kids_read_it_when_the_family_has_one() -> None:
+    assert render_audience_line("telegram", "-100123", WITH_A_KID) == f"{GROUP}, kids among them."
+
+
+def test_the_page_s_chat_is_read_by_everyone_who_signs_in() -> None:
+    assert render_audience_line("web", "web", GROWN_UPS) == f"{PAGE}."
+    assert render_audience_line("web", "web", WITH_A_KID) == f"{PAGE}, kids among them."
+
+
+def test_a_kid_who_is_switched_off_is_not_counted() -> None:
+    family = [*GROWN_UPS, _member("Mia", "kid", active=False)]
+    assert render_audience_line("telegram", "-100123", family) == f"{GROUP}."
+    assert render_audience_line("web", "web", family) == f"{PAGE}."
+
+
+def test_the_audience_line_goes_between_the_date_and_the_message(clock) -> None:
+    today = "Today is Sunday 20 September 2026, 14:03 (America/Vancouver), autumn."
+    assert render_user_turn("Sam", "hi all", clock, f"{GROUP}.") == [
+        today,
+        f"{GROUP}.",
+        "[Sam] hi all",
+    ]
+    # A private chat's turn is what it always was: the date, then the message.
+    assert render_user_turn("Sam", "hi", clock, None) == [today, "[Sam] hi"]

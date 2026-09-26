@@ -37,14 +37,18 @@ def trim_ideas(everything: list[Any], limit: int) -> tuple[list[Any], int]:
     return everything[-limit:], len(everything) - limit
 
 
-# Between the persona's character and the product spec: who she is, then what the job is. The
-# spec says what to do and wins where the two meet; her character says so itself.
+# Between the persona's character and the product spec: who she is, then what the job is. Who
+# she is includes the family's own notes on how she talks, after her character, so the job comes
+# after those too. The spec says what to do and wins where the two meet, and the header says so
+# for every persona: her own character says it too, but a family's rewrite of her need not.
+# Under none neither header is sent, as there is no character for the job to win against.
 PERSONA_HEADER = "# Who you are\n\n"
-JOB_HEADER = "\n\n# The job\n\n"
+JOB_HEADER = "\n\n# The job\n\nWhere who you are and the job disagree, the job wins.\n\n"
 
 
 def chat_prefix(conn: sqlite3.Connection, settings: Settings) -> tuple[str, str, str, str]:
-    """The chat prefix in its parts: her character, the system prompt, the family, the ideas."""
+    """The chat prefix in its parts: her character (with the family's notes on how she talks),
+    the system prompt, the family, the ideas."""
     family = render_family_context(members.list_all(conn), settings)
     everything = ideas.list_for_prompt(conn)
     shown, hidden = trim_ideas(everything, settings.prompt_idea_limit)

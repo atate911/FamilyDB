@@ -22,7 +22,10 @@ page already had. A change to the page should be checked against this document.
 The page is a way to talk to **Vera**, and she does what it offers: plans the weekend, keeps the
 ideas and the things to do, puts things on the calendar. So the first thing on Home is her
 question and the box to answer it, the conversation goes by her name, and everything else is
-what she keeps, laid out beside it. She is never drawn (see "Her screen").
+what she keeps, laid out beside it. She is never drawn (see "Her screen"). Every persona is a
+she, by decision (`docs/PERSONAS.md`), so the page's words about her stay "she" and "her"
+whichever is chosen, and her name is the one the persona in force gives, the family's own if
+they have renamed her.
 
 ## Principles
 

@@ -20,7 +20,7 @@ from familydb import __version__, passwords, privacy, roles
 from familydb import family as family_rules
 from familydb.agent.history import load_history
 from familydb.agent.providers.base import Message, TurnRequest
-from familydb.agent.render import render_idea_line, render_user_turn
+from familydb.agent.render import render_audience_line, render_idea_line, render_user_turn
 from familydb.app import App, build_app
 from familydb.availability import (
     digest_configured,
@@ -98,6 +98,30 @@ def _ready(application: App) -> sqlite3.Connection:
 
 FROM_PAGE = "set on the settings page"
 FROM_ENV = "from the environment"
+# How much of a long text on the Personality page `familydb config` prints: enough to tell which
+# text it is. A rewrite of her also holds her whole character as it shipped, a page of prose.
+SHOWN_CHARACTERS = 60
+
+
+def _shown_setting(key: str, value: Any) -> Any:
+    """A setting as `familydb config` prints it, on one line.
+
+    A long text written on the Personality page (`store.settings.PROFILE`), on its own or inside
+    a rewrite of her or her lines, is cut to its start with how long it really is, and its line
+    breaks are written as \\n, as they already are inside a rewrite. Anything else prints as it
+    is, and nothing changes the setting itself or what `Settings.masked` gives."""
+    if key not in settings_store.PROFILE:
+        return value
+    shown = _shortened(value)
+    return shown.replace("\r", "\\r").replace("\n", "\\n") if isinstance(shown, str) else shown
+
+
+def _shortened(value: Any) -> Any:
+    if isinstance(value, str) and len(value) > SHOWN_CHARACTERS:
+        return f"{value[:SHOWN_CHARACTERS].rstrip()}… ({len(value):,} characters)"
+    if isinstance(value, dict):
+        return {key: _shortened(item) for key, item in value.items()}
+    return value
 
 
 def stored_settings(settings: Settings) -> dict[str, Any]:
@@ -130,7 +154,7 @@ def config() -> None:
             note = f"  # {FROM_ENV}"
         else:
             note = ""
-        typer.echo(f"{key}={value}{note}")
+        typer.echo(f"{key}={_shown_setting(key, value)}{note}")
 
 
 @app.command("password")
@@ -377,7 +401,9 @@ def tool_cmd(
 def debug_prompt(
     text: str = typer.Argument("", help="The message to build a chat request for."),
     as_member: str | None = typer.Option(None, "--as", help="Act as this family member."),
-    chat_id: str = typer.Option("console", "--chat", help="Chat whose history to include."),
+    chat_id: str = typer.Option(
+        "console", "--chat", help="Chat whose history to include, and who reads it."
+    ),
     kind: str = typer.Option(
         "chat", "--kind", help="Which kind of call: chat, digest, retry or enrich."
     ),
@@ -391,6 +417,7 @@ def debug_prompt(
     from familydb.agent import gateway
     from familydb.agent.worker import worker_turn
     from familydb.jobs.enrich import render_enrich_request
+    from familydb.jobs.weekend_digest import digest_channel
     from familydb.store import places
 
     if kind not in gateway.KINDS or kind == "discover":
@@ -418,7 +445,10 @@ def debug_prompt(
                 limit=settings.history_limit,
                 since_hours=settings.history_hours,
             )
-            current = render_user_turn(sender, text, application.clock)
+            # Named by its chat id alone, as the digest's chat is: "web", "console", or Telegram.
+            channel = digest_channel(chat_id)
+            audience = render_audience_line(channel, chat_id, members.list_all(conn))
+            current = render_user_turn(sender, text, application.clock, audience)
         provider = application.provider(call.surface)
         request = gateway.build_request(
             kind,

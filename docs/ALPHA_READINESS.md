@@ -152,7 +152,14 @@ migration, so upgrading does not resend old conversations. Fresh outgoing messag
     chatting in that chat: the next reply should carry it rather than a separate message.
 12. On `/settings/personality`, rewrite one of her lines and add a sentence to "About the
     family"; the next reminder or follow-up should use the new line, and the next answer should
-    know the sentence. Choosing no persona should leave the replies plain, her lines and your rewrites of them included; choosing her again brings your rewrites back.
+    know the sentence. Give her another name: "what's your name?" should get it, in the chat and
+    on Telegram, and within a few seconds the bot's name and description in Telegram should be
+    hers. Rewrite her description and add a line under "Anything to add", then choose no persona:
+    the replies should be plain, her lines and your rewrites of them included, and the Telegram
+    contact called FamilyDB. Choose her again: the name, the rewrite, the notes and the lines
+    should all be back. Choose Vera in brief: the list should show her at about 740 tokens a
+    message before your notes, and a few everyday requests should be answered as well as
+    before; choosing Vera as first written again brings your rewrite of her back.
 13. With the chosen model's key in the environment, run `uv run python -m evals` (it spends at
     most $0.50, and the one call that crosses it, unless `--budget` says otherwise) and read what failed before the family does.
 
