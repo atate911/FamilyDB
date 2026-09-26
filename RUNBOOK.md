@@ -465,6 +465,18 @@ what keep the page shut. For a page nobody on the internet can find at all, keep
 internet: install with `--local-only` and open it over an SSH tunnel, or use a private network
 such as Tailscale, which puts no port on the internet whatever.
 
+**On a phone, as an app.** On an iPhone, open the page in Safari, tap Share, then *Add to Home
+Screen* and *Add*; on Android, Chrome's menu has *Add to Home screen*. The page is then an icon
+of its own, the mark on the page's charcoal with the page's name under it (the *Name of this
+page* setting as it was when the icon was added; the phone offers to change it there and then),
+and it opens full-screen, without the browser's bars, getting about by the page's own tabs. On an
+iPhone it keeps its own sign-in, apart from Safari's, so each person signs in once more inside
+it, and that lasts `WEB_SESSION_DAYS` like any other. Over HTTPS it wants a certificate the phone
+already trusts, a domain's or the one for the server's public address: one Caddy signed itself
+will not do, since an app on the home screen has nowhere to accept the warning Safari shows. It
+is the same page, not a new way to be told things: reminders and heads-ups still come on
+Telegram.
+
 **Who signs in.** Each person signs in as themselves, with their name as it is on the Family page
 and a password of their own, stored only as a scrypt hash. An admin gives everybody else a starting
 password there, shown once, and each person chooses their own the moment they sign in with it; a new
@@ -487,7 +499,8 @@ lock that address out for fifteen minutes and are logged. Fifty failures from an
 quarter of an hour stop new sign-ins altogether, except from a browser that has signed in before: it
 carries a signed "known device" cookie (`familydb_device`) for a year, which stops being honoured
 after the password it was earned with changes or after "Sign everyone out". So a guesser with many
-addresses gets nowhere and the family still gets in. Every page but the login and `/healthz` needs
+addresses gets nowhere and the family still gets in. Every page but the login, `/healthz` and the
+home-screen manifest (`/manifest.webmanifest`, which a phone asks for without the cookie) needs
 the cookie. Responses carry a content security policy that forbids framing and any script but the
 page's own one file, the message box's (it keeps an unsent message, and sends the phone's position
 when asked); reading, every form and sending a message work with scripts turned off. Every form
