@@ -72,3 +72,18 @@ def test_invalid_input_and_unknown_tools_are_errors(registry, ctx) -> None:
     assert result.is_error and "setting" in data["error"]
     result, data = _call(registry, ctx, "teleport", {})
     assert result.is_error and "unknown tool" in data["error"]
+
+
+def test_a_null_at_any_depth_leaves_the_field_to_its_default(registry, ctx) -> None:
+    """OpenAI's strict mode makes every field required, so a model sends null for one it leaves
+    unsaid, inside each of remember's changes too. The default applies there as at the top."""
+    change = {"action": "add", "id": None, "about": None, "category": None, "fact": "vegetarian"}
+    result, data = _call(
+        registry,
+        ctx,
+        "remember",
+        changes=[{**change, "firm": None, "inferred": None, "until": None}],
+        reply=None,
+    )
+    assert not result.is_error, data
+    assert data["remembered"][0]["about"] == "family"

@@ -183,10 +183,9 @@ class ToolRegistry:
         spec = self._specs.get(name)
         if spec is None:
             return _error(name, f"unknown tool {name!r}")
-        # A provider whose strict mode forbids an absent field sends null instead. Dropping
-        # those lets the input model's own default apply, as it does everywhere else.
-        if isinstance(raw_input, dict):
-            raw_input = {key: value for key, value in raw_input.items() if value is not None}
+        # A provider whose strict mode forbids an absent field sends null instead, at any depth.
+        # Dropping those lets the input model's own default apply, as it does everywhere else.
+        raw_input = _without_nulls(raw_input)
         try:
             args = spec.input_model.model_validate(raw_input or {})
         except ValidationError as exc:
@@ -218,6 +217,16 @@ class ToolRegistry:
                 if isinstance(nested, dict) and "id" in nested:
                     summary[f"{key}_id"] = nested["id"]
         return ToolResult(dump(result), False, summary)
+
+
+def _without_nulls(value: Any) -> Any:
+    """`value` with the null fields of every object in it left out, however deep. A null item in
+    a list stays: it is an item, not a field left unsaid."""
+    if isinstance(value, dict):
+        return {key: _without_nulls(item) for key, item in value.items() if item is not None}
+    if isinstance(value, list):
+        return [_without_nulls(item) for item in value]
+    return value
 
 
 def _infer_input_model(handler: Handler) -> type[BaseModel]:

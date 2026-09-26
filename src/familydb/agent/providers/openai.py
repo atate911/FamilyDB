@@ -78,7 +78,7 @@ def openai_schema(schema: dict[str, Any]) -> dict[str, Any]:
             if name in already or _accepts_null(child):
                 continue
             # Optional only because it has a default: null stands for leaving it out, and
-            # dispatch drops a top-level null so the input model's default applies.
+            # dispatch drops a null at any depth so the input model's default applies.
             out["properties"][name] = {"anyOf": [child, {"type": "null"}]}
         out["required"] = list(out["properties"])
         out.setdefault("additionalProperties", False)
