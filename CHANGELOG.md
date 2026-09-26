@@ -77,8 +77,7 @@ older than what is installed. It gets a date when it is released.
   Telegram, or the position the web page's chat sends with a message (only
   while "Send where I am" is ticked), is used for three hours: travel is measured from there
   and discovery searches near it. A live location shared on Telegram follows the phone as it
-  moves; an earlier build kept only where it started, because it never asked Telegram for
-  the edits a live location moves by.
+  moves.
 - **Speaks as Vera.** A personality, and a description of the family, both
   editable on the settings page. Everything said unasked (reminders, "how was
   it?", notices) is written in her words by code, and is carried by her reply
@@ -102,10 +101,8 @@ older than what is installed. It gets a date when it is released.
   page, which says what each level means and costs on the company answering. A
   message the spare company takes is answered at the same level, a level up
   never answers with a cheaper model than everyday, and a weekend digest that
-  fails is retried as the digest: at its level, and quiet if it gives up.
-  Claude's and Gemini's everyday models are now their cheapest (they were Opus 5
-  and Gemini 2.5 Pro); a `.env` that names a model keeps it. Gemini 3.8 Flash,
-  the Gemini lookup model, had no price and was counted at the unlisted rate.
+  fails is retried as the digest: at its level, and quiet if it gives up. A
+  model named in `.env` is kept.
 - **Stops at a daily spending limit.** Every model call records an estimated
   cost; once the day's limit ($2 unless changed) is used up, nothing more is
   asked of a model until midnight, and the chat says why.
@@ -116,10 +113,10 @@ older than what is installed. It gets a date when it is released.
   on the calendar (through the same tools the bot uses), the Family page, a
   status page with what is connected and what it has cost, and a settings page.
 - **Everyone signs in as themselves.** Each person has a password of their own,
-  stored hashed, and one of three roles: admin, parent (what used to be called a
-  member) and kid. Kids may do what a parent may for now; what each role may do
-  is one table, `familydb/roles.py`, so kids' own limits are a line there. An admin gives each person a starting password,
-  shown once, which they replace as soon as they sign in with it. The chat speaks
+  stored hashed, and one of three roles: admin, parent and kid. Kids may do what
+  a parent may for now; what each role may do is one table, `familydb/roles.py`,
+  so kids' own limits are a line there. An admin gives each person a starting
+  password, shown once, which they replace as soon as they sign in with it. The chat speaks
   as whoever is signed in, the settings history says who changed what, and only
   an admin reaches Settings, setup and the Family page. A new starting password
   signs somebody out everywhere, for a lost phone. The shared family password is
@@ -238,14 +235,14 @@ the page, refuses an install from a home directory, and builds the Docker image,
 migrates inside the container, serves the page and stops it with a signal.
 
 Signing in through Caddy and through nginx over HTTPS was checked in a real
-browser: an earlier build could not sign anyone in behind a proxy, because the
-web server discarded the proxy's headers before the page saw them.
+browser.
 
 What no test covers is a real conversation with a real model, a real Telegram
 bot or a real Google account: those need keys, and they are what this alpha is
 for. `uv run python -m evals` runs the family's own requests against a real
-model and grades what it did, for a few cents; it has not yet been run. Connecting Google from the page in particular is new and has not yet been
-tried against Google itself; `familydb google auth` on a laptop is the fallback.
+model and grades what it did, for a few cents; it has not yet been run.
+Connecting Google from the page has not yet been tried against Google itself;
+`familydb google auth` on a laptop is the fallback.
 
 ### Known limits
 
@@ -261,7 +258,6 @@ tried against Google itself; `familydb google auth` on a laptop is the fallback.
 - The page's site-wide lockout stops distributed password guessing. A browser
   that has signed in before is spared it; a new phone may have to wait fifteen
   minutes while someone is guessing.
-- Household memory is designed (`docs/MEMORY.md`) but not built.
 - Upgrading on a private repository needs the credential the install used. With
   a deploy key the bootstrap wires it up; with a token there is nothing stored,
   and `maintain.sh upgrade` says so and what to do.
