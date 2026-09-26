@@ -14,6 +14,8 @@ from typing import Any
 import anthropic
 
 from familydb.agent.providers.base import (
+    Audio,
+    Heard,
     KeyCheck,
     ModelReply,
     Stop,
@@ -301,6 +303,13 @@ class AnthropicProvider:
         finally:
             client.close()
         return "works"
+
+    # -- hearing --------------------------------------------------------------------------
+    def listener(self) -> str | None:
+        return None  # Claude takes text, images and documents, but no recordings
+
+    def transcribe(self, audio: Audio, hints: str) -> Heard:
+        raise AgentError("Claude cannot hear recordings; OpenAI or Gemini can", retryable=False)
 
     def count_tokens(self, request: TurnRequest) -> int:
         payload = self.payload(request)

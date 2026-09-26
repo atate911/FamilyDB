@@ -122,6 +122,51 @@ def test_the_edit_form_comes_up_filled_in(page, conn) -> None:
     assert '<option value="2" selected>moderate</option>' in form
 
 
+def test_the_days_a_thing_is_on_are_set_shown_and_cleared_from_the_page(planning, conn) -> None:
+    planning.post(
+        "/ideas/new",
+        data=_idea_form(
+            planning,
+            title="Lantern festival",
+            kind="event",
+            happens_from="2026-10-17",
+            happens_time="18:30",
+            happens_until="2026-10-18",
+        ),
+    )
+    saved = ideas.get(conn, 1)
+    assert (saved.happens_from, saved.happens_until) == ("2026-10-17T18:30", "2026-10-18")
+    shown = planning.get("/idea/1").text
+    assert "Sat 17 Oct, 18:30 to Sun 18 Oct 2026" in shown
+    assert 'value="2026-10-17T18:30"' in shown  # the plan form starts at its start
+    form = planning.get("/idea/1/edit").text
+    assert 'value="2026-10-17"' in form and 'value="18:30"' in form
+    # Emptied boxes clear them, as an emptied text box does.
+    planning.post(
+        "/idea/1/edit",
+        data=_idea_form(
+            planning,
+            path="/idea/1/edit",
+            title="Lantern festival",
+            kind="event",
+            happens_from="",
+            happens_time="",
+            happens_until="",
+        ),
+    )
+    cleared = ideas.get(conn, 1)
+    assert (cleared.happens_from, cleared.happens_until) == (None, None)
+
+
+def test_days_that_are_over_are_refused_by_the_tool(page, conn) -> None:
+    sent = page.post(
+        "/ideas/new",
+        data=_idea_form(page, happens_from="2026-09-01", happens_until="2026-09-02"),
+    )
+    assert "was over on 2026-09-02" in _said(page.get(sent.headers["Location"]))
+    assert ideas.list_all(conn) == []
+
+
 def test_an_idea_can_be_dropped_and_brought_back(page, conn) -> None:
     page.post("/ideas/new", data=_idea_form(page))
     page.post("/idea/1/status", data={"csrf": _token(page, "/idea/1"), "status": "dropped"})

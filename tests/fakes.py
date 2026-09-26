@@ -458,3 +458,40 @@ def gm_enrich_script(save_place_input: dict[str, Any]) -> list[Any]:
         gm_response([gm_tool_call("c1", "save_place", save_place_input)]),
         gm_response([gm_text("Saved.")]),
     ]
+
+
+# --- Hearing voice notes ----------------------------------------------------------------------
+
+
+def oa_transcription(text: str, *, input_tokens: int = 250, output_tokens: int = 40) -> Any:
+    """What OpenAI's speech-to-text endpoint answers for a token-billed model."""
+    from openai.types.audio import Transcription
+
+    return Transcription.model_validate(
+        {
+            "text": text,
+            "usage": {
+                "type": "tokens",
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "total_tokens": input_tokens + output_tokens,
+            },
+        }
+    )
+
+
+class FakeTranscriptionsAPI:
+    """Scripted stand-in for `client.audio.transcriptions`, recording every request."""
+
+    def __init__(self, *responses: Any) -> None:
+        self.queue = list(responses)
+        self.requests: list[dict[str, Any]] = []
+
+    def create(self, **kwargs: Any) -> Any:
+        self.requests.append(kwargs)
+        if not self.queue:
+            raise AssertionError("no scripted transcription left for this request")
+        item = self.queue.pop(0)
+        if isinstance(item, BaseException):
+            raise item
+        return item

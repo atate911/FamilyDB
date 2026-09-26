@@ -4,7 +4,8 @@ The third provider behind the same protocol. What differs here: the system promp
 `system_instruction`; tools are function declarations grouped into a Tool, and the hosted search
 is a Tool of its own alongside them; a tool call's arguments arrive already parsed; caching is
 implicit for a long enough prefix, so the cacheable flag steers nothing; and thinking is a token
-budget rather than a named effort.
+budget rather than a named effort. A voice note is heard by the same endpoint, sent the recording
+itself with a line asking for its words.
 """
 
 from __future__ import annotations
@@ -18,6 +19,8 @@ from google.genai import errors as genai_errors
 from google.genai import types as genai_types
 
 from familydb.agent.providers.base import (
+    Audio,
+    Heard,
     KeyCheck,
     ModelReply,
     Stop,
@@ -47,6 +50,14 @@ REFUSAL_REASONS = {
 }
 RETRYABLE_STATUS = (429, 500, 502, 503, 504)
 TIMEOUT_MS = 120_000
+# What a recording is sent with: its words, nothing added, so they can be answered as if typed.
+HEAR = (
+    "Write down what is said in this recording, word for word, in the language it is spoken. "
+    "Only the words: no timestamps, speaker labels, notes or summary."
+)
+# Room for the words of a recording: generous for fast speech, plus the thinking it may do.
+HEARD_TOKENS = 400
+HEARD_TOKENS_PER_SECOND = 8
 
 
 def make_client(settings: Settings, timeout_ms: int = TIMEOUT_MS) -> Any:
@@ -269,20 +280,69 @@ class GeminiProvider:
     def send(self, request: TurnRequest) -> ModelReply:
         try:
             response = self.api.generate_content(**self.payload(request))
-        except genai_errors.ServerError as exc:
-            raise AgentError(f"server error: {exc}", retryable=True) from exc
-        except genai_errors.ClientError as exc:
-            status = _status(exc)
-            raise AgentError(
-                f"API error {status or '?'}: {exc}", retryable=status in RETRYABLE_STATUS
-            ) from exc
-        except genai_errors.APIError as exc:
-            raise AgentError(
-                f"Gemini error: {exc}", retryable=_status(exc) in RETRYABLE_STATUS
-            ) from exc
-        except httpx.TransportError as exc:  # timed out, or never reached Google
-            raise AgentError(f"could not reach Gemini: {exc}", retryable=True) from exc
+        except (genai_errors.APIError, httpx.TransportError) as exc:
+            raise _failure(exc) from exc
         return self.reply(response)
+
+    # -- hearing --------------------------------------------------------------------------
+    def listener(self) -> str | None:
+        return self.settings.gemini_transcribe_model or self.model_for("worker")
+
+    def hearing(self, audio: Audio, hints: str) -> dict[str, Any]:
+        """The request for one recording: the audio, then the line asking for its words."""
+        model = self.listener() or self.settings.gemini_model
+        ask = f"{HEAR} {hints}".strip()
+        budget = HEARD_TOKENS + HEARD_TOKENS_PER_SECOND * max(audio.seconds, 1)
+        # Thinking as a lookup gets it (low effort), for the same models, so it is known to work.
+        shape = TurnRequest(system=[], messages=[], model=model, effort="low", max_tokens=budget)
+        config = self.config(shape)
+        config["max_output_tokens"] = min(budget, self.settings.max_output_tokens)
+        return {
+            "model": model,
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [
+                        {"inline_data": {"mime_type": audio.mime, "data": audio.data}},
+                        {"text": ask},
+                    ],
+                }
+            ],
+            "config": config,
+        }
+
+    def transcribe(self, audio: Audio, hints: str) -> Heard:
+        try:
+            response = self.api.generate_content(**self.hearing(audio, hints))
+        except (genai_errors.APIError, httpx.TransportError) as exc:
+            raise _failure(exc) from exc
+        reply = self.reply(response)
+        if reply.stop == "refusal":
+            raise AgentError(f"Gemini would not transcribe it ({reply.refusal})", retryable=False)
+        if reply.stop == "max_tokens":
+            log.warning("a voice note was longer than its words were allowed; keeping what came")
+        return Heard(
+            text=reply.text,
+            usage={
+                key: reply.usage.get(key)
+                for key in ("input_tokens", "cache_read_input_tokens", "output_tokens")
+            },
+            model=reply.model or self.listener(),
+            request_id=reply.request_id,
+        )
+
+
+def _failure(exc: Exception) -> AgentError:
+    """A failed request as the loop understands it: worth trying again later, or not."""
+    if isinstance(exc, genai_errors.ServerError):
+        return AgentError(f"server error: {exc}", retryable=True)
+    if isinstance(exc, genai_errors.ClientError):
+        status = _status(exc)
+        return AgentError(f"API error {status or '?'}: {exc}", retryable=status in RETRYABLE_STATUS)
+    if isinstance(exc, genai_errors.APIError):
+        return AgentError(f"Gemini error: {exc}", retryable=_status(exc) in RETRYABLE_STATUS)
+    # httpx.TransportError: timed out, or never reached Google
+    return AgentError(f"could not reach Gemini: {exc}", retryable=True)
 
 
 def _declaration(tool: ToolDef) -> dict[str, Any]:

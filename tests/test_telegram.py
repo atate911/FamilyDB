@@ -134,3 +134,21 @@ def test_start_command(settings, clock) -> None:
     update, replies = _update("/start")
     asyncio.run(channel.on_start(update, None))
     assert replies[0].startswith("Hi, I'm Vera.")
+
+
+def test_start_takes_turns_by_the_update_it_answers(settings, clock) -> None:
+    """/start has no facts of its own, so without the update's id to choose by it would read the
+    same every time; with it, the same update sent again reads as it did."""
+    from familydb import voice
+    from familydb.app import App
+
+    lines = {"start": ["Hi, I'm {name}.", "Hello, {name} here.", "{name}, at your service."]}
+    app = App(settings.model_copy(update={"voice_lines": lines}), clock)
+    channel = TelegramChannel(app, token="123456:TEST-TOKEN")
+    said = []
+    for update_id in range(12):
+        update, replies = _update("/start", update_id=update_id)
+        asyncio.run(channel.on_start(update, None))
+        assert replies == [voice.say(app.settings, "start", seed=update_id)]
+        said.append(replies[0])
+    assert len(set(said)) > 1

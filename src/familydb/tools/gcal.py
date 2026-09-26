@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 from pydantic import BaseModel, Field
 
 from familydb.availability import calendar_available
-from familydb.calendar_sync import refresh_plan, sync_plans
+from familydb.calendar_sync import event_changes, refresh_plan, sync_plans
 from familydb.dates import (
     ensure_not_past,
     iso_date,
@@ -53,8 +53,16 @@ class CreateEventInput(BaseModel):
     idea_id: int | None = Field(default=None, description="The idea this plan is for, if any.")
 
 
+PLAN_HELP = "The plan number, from create_event, search_plans or get_calendar."
+EVENT_HELP = (
+    "Instead of plan_id, for an event somebody put on the calendar by hand (get_calendar shows "
+    "it with no plan_id): its google_event_id."
+)
+
+
 class UpdateEventInput(BaseModel):
-    plan_id: int = Field(description="The plan number returned by create_event.")
+    plan_id: int | None = Field(default=None, description=PLAN_HELP)
+    event_id: str | None = Field(default=None, description=EVENT_HELP)
     title: str | None = None
     start: str | None = Field(
         default=None, description="New start. With no new end, the plan keeps its duration."
@@ -69,7 +77,8 @@ class UpdateEventInput(BaseModel):
 
 
 class DeleteEventInput(BaseModel):
-    plan_id: int = Field(description="The plan number returned by create_event.")
+    plan_id: int | None = Field(default=None, description=PLAN_HELP)
+    event_id: str | None = Field(default=None, description=EVENT_HELP)
 
 
 class SearchPlansInput(BaseModel):
@@ -225,15 +234,15 @@ def _timed_or_all_day(
 
 
 def _end_keeping_duration(
-    plan: plans.Plan, new_start: str, all_day: bool, tz: ZoneInfo
+    start: str, end: str | None, was_all_day: bool, new_start: str, all_day: bool, tz: ZoneInfo
 ) -> str | None:
     """When only the start moves, carry the plan's length over to the new start."""
-    if plan.end is None or all_day != plan.all_day:
+    if end is None or all_day != was_all_day:
         return None
     if all_day:
-        span = parse_date(plan.end) - parse_date(plan.start)
+        span = parse_date(end) - parse_date(start)
         return iso_date(parse_date(new_start[:10]) + span)
-    duration = parse_datetime(plan.end, tz) - parse_datetime(plan.start, tz)
+    duration = parse_datetime(end, tz) - parse_datetime(start, tz)
     return iso_datetime(parse_datetime(new_start, tz) + duration)
 
 
@@ -414,11 +423,49 @@ def _cancel(ctx: ToolContext, plan: plans.Plan) -> dict[str, Any]:
     }
 
 
+def _target(
+    ctx: ToolContext, plan_id: int | None, event_id: str | None
+) -> tuple[plans.Plan | None, CalendarEvent | None]:
+    """The plan, or the hand-made event, that a change is for: exactly one of the two.
+
+    An event the bot made is always worked on as its plan, however it was named, so the plan
+    and its idea stay in step. Only an event nobody made through the bot is changed directly.
+    """
+    if (plan_id is None) == (event_id is None):
+        raise ToolError("give plan_id, or event_id for an event put on the calendar by hand")
+    calendar = _calendar(ctx)
+    if plan_id is None:
+        assert event_id is not None
+        owned = ctx.conn.execute(
+            "SELECT id FROM plans WHERE google_event_id = ? AND calendar_id = ?",
+            (event_id, ctx.settings.google_calendar_id),
+        ).fetchone()
+        if owned is None:
+            event = calendar.get_event(event_id)
+            if event is None:
+                raise ToolError(f"no event {event_id} on the calendar; get_calendar lists them")
+            return None, event
+        plan_id = int(owned["id"])
+    plan = plans.get(ctx.conn, plan_id)
+    if plan is None:
+        raise ToolError(f"no plan #{plan_id}")
+    if plan.calendar_id != ctx.settings.google_calendar_id:
+        raise ToolError("this plan belongs to a different calendar")
+    return plan, None
+
+
+def _remove_event(ctx: ToolContext, event: CalendarEvent) -> dict[str, Any]:
+    """Take an event that is not the bot's own off the calendar, and say which it was."""
+    _calendar(ctx).delete_event(event.id)
+    return {"plan": None, "removed": event.to_public()}
+
+
 @tool(
     name="update_event",
     description=(
         "Change a plan on the calendar: new time, title, place, notes, or cancel it. Moving only "
-        "the start keeps the plan's length."
+        "the start keeps the plan's length. An event put on the calendar by hand is changed by "
+        "its event_id."
     ),
     available=calendar_available,
     unavailable_reason=NOT_CONFIGURED,
@@ -426,16 +473,20 @@ def _cancel(ctx: ToolContext, plan: plans.Plan) -> dict[str, Any]:
 )
 def update_event(ctx: ToolContext, args: UpdateEventInput) -> dict[str, Any]:
     calendar = _calendar(ctx)
-    plan = plans.get(ctx.conn, args.plan_id)
-    if plan is None:
-        raise ToolError(f"no plan #{args.plan_id}")
-    if plan.calendar_id != ctx.settings.google_calendar_id:
-        raise ToolError("this plan belongs to a different calendar")
-    plan = refresh_plan(ctx.conn, calendar, plan, ctx.settings.google_calendar_id, ctx.now_iso())
-    if plan.status == "cancelled":
-        raise ToolError(f"plan #{plan.id} is cancelled; create a new event instead")
-    if args.status == "cancelled":
-        return _cancel(ctx, plan)
+    plan, event = _target(ctx, args.plan_id, args.event_id)
+    if plan is not None:
+        plan = refresh_plan(
+            ctx.conn, calendar, plan, ctx.settings.google_calendar_id, ctx.now_iso()
+        )
+        if plan.status == "cancelled":
+            raise ToolError(f"plan #{plan.id} is cancelled; create a new event instead")
+        if args.status == "cancelled":
+            return _cancel(ctx, plan)
+    elif args.status == "cancelled":
+        assert event is not None
+        return _remove_event(ctx, event)
+    # What it is now, spelled the way plans are stored, for a plan and a hand-made event alike.
+    current = plan.model_dump() if plan is not None else event_changes(event)  # type: ignore[arg-type]
 
     changes: dict[str, Any] = {}
     patch: dict[str, Any] = {}
@@ -451,14 +502,16 @@ def update_event(ctx: ToolContext, args: UpdateEventInput) -> dict[str, Any]:
 
     if args.start is not None or args.end is not None or args.all_day is not None:
         tz = ctx.clock.tz
-        all_day = plan.all_day if args.all_day is None else args.all_day
-        start_text = args.start if args.start is not None else plan.start
+        all_day = current["all_day"] if args.all_day is None else args.all_day
+        start_text = args.start if args.start is not None else current["start"]
         if args.end is not None:
             end_text: str | None = args.end
         elif args.start is not None:
-            end_text = _end_keeping_duration(plan, args.start, all_day, tz)
+            end_text = _end_keeping_duration(
+                current["start"], current["end"], current["all_day"], args.start, all_day, tz
+            )
         else:
-            end_text = plan.end
+            end_text = current["end"]
         start, end, all_day, stored_start, stored_end = _timed_or_all_day(
             start_text, end_text, all_day, tz, strict=args.all_day is False
         )
@@ -468,30 +521,36 @@ def update_event(ctx: ToolContext, args: UpdateEventInput) -> dict[str, Any]:
 
     if not changes:
         raise ToolError("nothing to change")
-    event = None
+    if plan is None:
+        assert event is not None
+        moved = calendar.patch_event(event.id, **patch)
+        return {"plan": None, "event": moved.to_public(), "was": event.to_public()}
+    patched = None
     if patch and plan.google_event_id:
-        event = calendar.patch_event(plan.google_event_id, **patch)
+        patched = calendar.patch_event(plan.google_event_id, **patch)
     with transaction(ctx.conn):
         updated = plans.update(ctx.conn, plan.id, changes, now=ctx.now_iso())
     return {
         "plan": updated.model_dump(mode="json") if updated else None,
-        "event": event.to_public() if event else None,
+        "event": patched.to_public() if patched else None,
     }
 
 
 @tool(
     name="delete_event",
-    description="Remove a plan from the calendar entirely. Prefer cancelling via update_event.",
+    description=(
+        "Take something off the calendar entirely: a plan by plan_id, or an event put there by "
+        "hand by its event_id. Prefer cancelling a plan via update_event."
+    ),
     available=calendar_available,
     unavailable_reason=NOT_CONFIGURED,
     writes=True,
 )
 def delete_event(ctx: ToolContext, args: DeleteEventInput) -> dict[str, Any]:
-    plan = plans.get(ctx.conn, args.plan_id)
+    plan, event = _target(ctx, args.plan_id, args.event_id)
     if plan is None:
-        raise ToolError(f"no plan #{args.plan_id}")
-    if plan.calendar_id != ctx.settings.google_calendar_id:
-        raise ToolError("this plan belongs to a different calendar")
+        assert event is not None
+        return _remove_event(ctx, event)
     if plan.status == "cancelled":
         return {"plan": plan.model_dump(mode="json"), "note": "already cancelled"}
     return _cancel(ctx, plan)

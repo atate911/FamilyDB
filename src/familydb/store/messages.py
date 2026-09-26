@@ -12,11 +12,27 @@ from familydb.store.db import from_json, to_json, utcnow_iso
 # What the Ideas page's "save a thought" box puts before the words, so the model knows to save
 # them. It is an instruction, not what anybody said, so `as_said` takes it off again.
 CAPTURE_PREFIX = "Save this idea for later:\n"
+# A voice note is stored as the words heard in it after this mark, so the model, the history and
+# an idea's original thought all say they were spoken and written down by machine, not typed.
+# Until it has been heard it is `unheard`: the mark with how long it was, and nothing else.
+VOICE_PREFIX = "(voice note) "
+UNHEARD = "(voice note, {length}, not heard)"
 
 
 def as_said(text: str) -> str:
-    """A stored message's words as the family typed them."""
+    """A stored message's words as the family typed them (a voice note keeps its mark)."""
     return text.removeprefix(CAPTURE_PREFIX)
+
+
+def unheard(seconds: int) -> str:
+    """What a voice note is stored as until its words are known."""
+    minutes, rest = divmod(max(int(seconds), 0), 60)
+    return UNHEARD.format(length=f"{minutes}:{rest:02d}")
+
+
+def is_unheard(text: str) -> bool:
+    """Whether a stored message is a voice note whose words never arrived."""
+    return text.startswith(UNHEARD.split("{", 1)[0]) and text.endswith(", not heard)")
 
 
 class Message(BaseModel):
@@ -112,6 +128,11 @@ def mark_failed(
         "UPDATE messages SET status = 'failed', error = ?, processed_at = ? WHERE id = ?",
         (error[:2000], now or utcnow_iso(), message_id),
     )
+
+
+def set_text(conn: sqlite3.Connection, message_id: int, text: str) -> None:
+    """Replace what an inbound message says: a voice note's words, once they are heard."""
+    conn.execute("UPDATE messages SET text = ? WHERE id = ?", (text, message_id))
 
 
 def get(conn: sqlite3.Connection, message_id: int) -> Message | None:

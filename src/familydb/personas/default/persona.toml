@@ -1,5 +1,7 @@
 # The default persona: the character the family meets unless they choose another. Her name is
 # written here and nowhere else; character.md and lines.toml say {name} wherever it goes. The
-# folder is her key, the `persona` setting's value.
+# folder is her key, the `persona` setting's value. Her label says which of her this is, where
+# the Personality page lists her beside the others, with {name} where her name goes.
 
 name = "Vera"
+label = "{name}, as first written"

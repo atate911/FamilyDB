@@ -102,7 +102,10 @@ def test_a_database_that_ran_the_retired_0007_still_gets_what_follows(tmp_path):
         conn.execute("ALTER TABLE llm_calls DROP COLUMN kind")
         conn.execute("ALTER TABLE llm_calls DROP COLUMN sections")
         conn.execute("DROP TABLE member_logins")
-        assert db.migrate(conn) == [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+        conn.execute("ALTER TABLE ideas DROP COLUMN happens_from")
+        conn.execute("ALTER TABLE ideas DROP COLUMN happens_until")
+        conn.execute("DROP TABLE memories")
+        assert db.migrate(conn) == [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
         columns = {row["name"] for row in conn.execute("PRAGMA table_info(llm_calls)")}
         assert {"provider", "web_searches", "cost_usd", "cost_estimated"} <= columns
 
@@ -140,7 +143,7 @@ def test_a_member_becomes_a_parent_and_nobody_loses_their_history(tmp_path, monk
             "INSERT INTO member_logins (member_id, password_hash, temporary, set_at, set_by) "
             f"VALUES (2, 'scrypt$x', 0, '{now}', 1);"
         )
-        assert db.migrate(conn) == [18]
+        assert db.migrate(conn)[0] == 18
         rows = conn.execute("SELECT id, display_name, role, active FROM members ORDER BY id")
         assert [tuple(row) for row in rows] == [
             (1, "Sam", "admin", 1),
@@ -202,7 +205,7 @@ def test_a_rebuild_that_would_leave_a_reference_to_nobody_is_rolled_back(tmp_pat
     import pytest
 
     every = db.list_migrations()
-    version, name, sql = every[-1]
+    version, name, sql = next(m for m in every if m[0] == 18)
     assert name == "0018_parent_role.sql"
     lossy = sql.replace("    FROM members;", "    FROM members WHERE display_name != 'Alex';")
     assert lossy != sql

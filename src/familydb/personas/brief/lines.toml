@@ -1,0 +1,30 @@
+# The brief persona's lines: what she says unasked, by event (familydb/voice.py lists them, with
+# the {names} each may use; any of them may say {name}, her name). They started as a copy of the
+# default persona's. A line may be one wording or a list of them, of which she picks one; a
+# line left out here is said plainly. The family can rewrite any of them on the Personality page.
+# Kept short on purpose: most of these arrive with nothing else around them.
+
+reminder = "Reminder: {title}{who}. Task #{task}; tell me when it's done, or I can snooze it."
+reminder_late = "Reminder, a little late: {title}{who} was due {due}, while I was offline. Task #{task}; tell me when it's done, or I can snooze it."
+follow_up = [
+  "How was {plan} on {day}? Worth doing again?",
+  "How did {plan} go on {day}? Do it again?",
+]
+lookup_done = [
+  "Looked up #{idea} {place}: {details}.",
+  "Checked #{idea} {place}: {details}.",
+]
+location_shared = "Got it{where}. For the next three hours, \"near here\" and \"open now\" start from there rather than home."
+limit_reached = "I've reached today's spending limit (${limit}), so I'm stopping here until tomorrow. It can be raised on the settings page."
+limit_partial = "That part is saved. The spending limit stopped me before the rest; check what's there before asking again, so nothing happens twice."
+gave_up = "I went around in circles on that one and stopped before it got expensive. Could you ask it a simpler way?"
+gave_up_partly = "That part is saved, but I ran out of steps before the rest. Check what's there before asking again, so nothing is done twice."
+retry_later = "Got it, but I can't get to it right now. I'll try again shortly."
+cannot_reach = "Got it, but I can't reach my model at the moment. Someone should look at the logs."
+no_key = "I can't answer yet: nobody has given me a model key. An admin can add one on the settings page."
+voice_off = "I'm not listening to voice notes at the moment, so that one went unheard. Could you type it?"
+voice_no_ears = "I can't hear voice notes yet: I need an OpenAI or Gemini key for that, which an admin can add on the settings page. Could you type it meanwhile?"
+voice_too_long = "That one runs past the {minutes} minutes I listen to. Could you send it in shorter pieces, or type it?"
+voice_unheard = "Sorry, I couldn't make that voice note out. Could you send it again, or type it?"
+stranger = "Sorry, I only talk to the family. Ask one of them to add you; your id here is {id}."
+start = "Hi, I'm {name}. Tell me ideas (\"we should try that ramen place\"), plans (\"we're going to the symphony next Saturday\"), or ask what we should do this weekend. Type it or send a voice note; rambling is fine."

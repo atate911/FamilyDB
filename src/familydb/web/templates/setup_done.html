@@ -30,6 +30,13 @@
     </section>
   {% endif %}
 
+  <p class="muted">
+    {% if has_persona %}{{ assistant }} is who answers. Her name, how she talks, or no persona at
+      all are chosen under <a href="{{ url_for('settings.personality') }}">Personality</a>.
+    {% else %}It answers plainly, with no persona. One can be chosen under
+      <a href="{{ url_for('settings.personality') }}">Personality</a>.{% endif %}
+  </p>
+
   <p class="muted">Everything here can be changed later on the
     <a href="{{ url_for('settings.show') }}">Settings</a> and
     <a href="{{ url_for('family.show') }}">Family</a> pages, or by going through

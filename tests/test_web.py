@@ -613,6 +613,8 @@ def test_no_page_reaches_a_table_to_write_to_it() -> None:
         "outcome_store",
         "login_store",
         "member_store",
+        "memories",
+        "memory_store",
     }
     writes = {
         "insert",
@@ -628,6 +630,10 @@ def test_no_page_reaches_a_table_to_write_to_it() -> None:
         "set_reply",
         "set_active",
         "mark_processed",
+        "set_text",
+        "firm_up",
+        "replace",
+        "forget",
         "mark_failed",
         "claim_retry",
         "give_up",
@@ -715,6 +721,7 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
         "create_event",
         "update_event",
         "delete_event",
+        "remember",  # what the family types on the memory page, and forgetting
     }
     # And it runs them the one way: through the registry, which validates and owns the
     # transaction. Constructing a store call or a connection of its own would not be that.

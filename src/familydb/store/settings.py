@@ -17,6 +17,9 @@ BEHAVIOUR = (
     "provider",
     "worker_provider",
     "provider_fallback",
+    "chat_level",
+    "digest_level",
+    "lookup_level",
     "anthropic_model",
     "worker_model",
     "openai_model",
@@ -51,15 +54,27 @@ BEHAVIOUR = (
     "follow_up_hour",
     "retry_interval_minutes",
     "retry_max_attempts",
+    "voice_notes",
+    "voice_max_minutes",
+    "transcribe_provider",
+    "openai_transcribe_model",
+    "gemini_transcribe_model",
     "web_title",
     "web_session_days",
     "google_calendar_id",
     "log_level",
 )
 SECRETS = ("anthropic_api_key", "openai_api_key", "gemini_api_key", "telegram_bot_token")
-# Who the assistant is and who the family are: long texts with a page of their own
-# (/settings/personality), logged as "rewritten" rather than word for word.
-PROFILE = ("persona", "persona_text", "about_family", "voice_lines")
+# Who the assistant is and who the family are, with a page of their own (/settings/personality).
+# The long texts among them are logged as "rewritten" rather than word for word.
+PROFILE = (
+    "persona",
+    "persona_name",
+    "persona_text",
+    "persona_notes",
+    "about_family",
+    "voice_lines",
+)
 # The password the family shares, hashed, set only by its own form (which asks for the password in
 # force) and by `familydb password`. Never on a form of settings. It opens the page only until an
 # admin has a password of their own (store/logins.py); from then on it opens nothing.

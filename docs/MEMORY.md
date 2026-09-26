@@ -1,12 +1,10 @@
 # Household memory and token economy
 
-Design decision, September 21, 2026. The constraints and acceptance criteria below bind the next
-implementation; how it meets them (the tables, the response format, the retrieval) is open, and
-the implementation is free to find a better shape than the one sketched here. It does not claim
-that automatic household memory is already implemented. The daily spending limit it asks for is
-(`agent/spending.py`). What exists today is written by hand: "About the family" on the
-Personality page, which the family edits and which goes, as they wrote it, into the cached family
-context of every chat request.
+Design decision, September 21, 2026; first built September 25, 2026. The daily spending limit it
+asks for is (`agent/spending.py`). "About the family" on the Personality page, which the family
+writes and which goes, as they wrote it, into the cached family context of every chat request,
+stays beside it. How it was built, and what is still to come, is at the end
+("As built").
 
 ## Core principle
 
@@ -94,3 +92,41 @@ messages do not duplicate memories, and errors do not cause paid retry storms.
 Background lookups and discovery elsewhere in FamilyDB should also be bounded, deduplicated,
 and cached where appropriate. The daily spending limit, per-kind accounting and worker budgets
 exist; all of the memory behavior above remains implementation work.
+
+## As built
+
+What the first version does, against the design above.
+
+- **One small tool, riding on the call that is already happening.** The chat model has one
+  more tool, `remember` (`tools/memory.py`), taking at most five changes: add, replace by its m
+  number, or forget. Its schema is the same on every turn. When remembering is all a message
+  needs, the model puts its whole reply in the tool's `reply`, and the turn ends there
+  (`ToolContext.offer_reply`, and `closing_tools` in `agent/loop.py`): "noted" costs no second
+  call. Beside any other tool call, or with anything not saved, the turn carries on as usual,
+  so a message that also saves an idea costs what it did. `evals/` holds it to one call.
+- **Stored locally** in `memories` (migration 0020): who it is about (a member, or the family),
+  one of six kinds (food, activities, places, health, routine, other), the fact in their words
+  and its normal form, firm or not, a guess or said outright, an optional last day, the source
+  message and who said it, and when. Code supplies the ids, times and provenance.
+- **Rules in code**, whatever the model asks: a name not on the family list is refused; the same
+  thing about the same person is not kept twice, and said outright it stops being a guess; a
+  guess is never a must; a correction replaces and points at what replaced it; nothing is
+  deleted; a whole call is saved or none of it.
+- **Chosen locally for each message** (`familydb/memory.py`), in the uncached part of the
+  request, so the cached prefix never moves when a memory does: every firm one in force, however
+  long they run; then the rest under a budget (1,600 characters), those sharing a word with the
+  message, of a kind it touches on or about whoever is asking first. What has passed its last
+  day is not sent. Each is one line with its m number, marked "must", "a guess" or "until".
+- **Forgetting** keeps the words, marked forgotten, and the tool will not save the same thing
+  about the same person again from a conversation, whichever message it seems to come from;
+  a person typing it on the memory page can. So old evidence and the history in the prompt
+  cannot bring it back.
+- **The memory page** (`/memory`, "What Vera remembers", in the bar for everybody signed in)
+  lists what is remembered by whom it is about, where each came from (who, when, and the part
+  of their message it came from), what was forgotten and when, with a Forget button and a form
+  to add one, both through `remember`.
+
+Still to come: code applying firm requirements in the suggestion engine itself (today the model
+weighs them, told to never offer what breaks one); editing a memory's wording on the page (today
+it is forget and add again); and a measured comparison of task cost before and after on live
+models, which `evals/` (the remembering cases) is ready to run.

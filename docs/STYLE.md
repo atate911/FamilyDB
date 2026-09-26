@@ -29,7 +29,10 @@ put, because they are about people being able to use the page and it being safe,
 The page is a way to talk to **Vera**, and she does what it offers: plans the weekend, keeps the
 ideas and the things to do, puts things on the calendar. So the first thing on Home is her
 question and the box to answer it, the conversation goes by her name, and everything else is
-what she keeps, laid out beside it. She is never drawn (see "Her screen").
+what she keeps, laid out beside it. She is never drawn (see "Her screen"). Every persona is a
+she, by decision (`docs/PERSONAS.md`), so the page's words about her stay "she" and "her"
+whichever is chosen, and her name is the one the persona in force gives, the family's own if
+they have renamed her.
 
 ## Principles
 
@@ -211,6 +214,15 @@ the same screen is simply the bot's.
 - **Meter**: an SVG bar (the content policy allows no inline style, so widths are SVG
   attributes), always with its figure written beside it.
 - **Green screen** (`crt` in `_ui.html`) and **radar** (`radar`): see below.
+- **A setting** (`box` in `_settings.html`): its label, a small green CHANGED beside it when it
+  was set on the page, the box, and a line of help under it that a screen reader hears with the
+  box. Empty, a box shows the default it falls back to; a dropdown's first choice says it in
+  words, "Default (Thursday)", never "thu" or "true". Settings that belong together sit in a
+  panel under a heading, and the fine-tuning is a panel folded away (a native `<details>`), which
+  opens by itself when one of its boxes is wrong and says, folded, how many were changed.
+- **Section card** (on `/settings`): a quiet tile with the part's icon, what the part is called,
+  how it stands in a line or two, and an arrow; a part that needs a look says so in amber, in
+  words. The tiles do not glow, since nine lit tiles would light nothing.
 
 ## Green screens
 
@@ -282,7 +294,7 @@ for more than a moment, and none asks to be looked at.
   when a page opens and then stay lit, so nothing blinks at you while you read.
 - **A lit tile.** The icon beside a page's title sits on a small screen of its part's colour,
   with a faint raster of its own.
-- **Landing.** Where a link on the same page lands ("4 more on the radar", the settings index)
+- **Landing.** Where a link lands ("4 more on the radar", "Change a key" on the status page)
   lights up and fades.
 - **On paper.** A printed page is green-bar paper, with tractor-feed holes and a perforation
   down both edges.
@@ -316,8 +328,11 @@ for more than a moment, and none asks to be looked at.
   went) in a column beside the title; the place's details below.
 - **Plans.** A list of dates, and a month with today in amber and plans as cyan slips; on a phone
   the month is the busy days as a list.
-- **Things to do** (an open task is ticked off where it stands), **Family**, **Settings** (with an
-  index and a save bar that stays in reach),
+- **Settings.** A card to each part, saying how it stands and marking in amber what needs a
+  look; each part is a short page of its own, the others listed down the side where there is room
+  (on a phone the way back is Settings, above the title), with one Save in a bar that stays in
+  reach while its form is on screen (one row above the tabs on a phone).
+- **Things to do** (an open task is ticked off where it stands), **Family**,
   **Status** (three monitors, then the day's spend on a green screen beside the same in words),
   **Sign in** (the mark's face on a green screen, then who you are and your password, or the one
   question while the family still shares a password), **For an admin** (the 404's console with
