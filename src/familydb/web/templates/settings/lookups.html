@@ -1,0 +1,10 @@
+{% from "_settings.html" import form %}
+{% from "_ui.html" import icon %}
+{% if on and not can_look %}
+  <p class="panel notice">{{ icon('warning') }}<span>Looking ideas up is on, but there is no key
+    for the company that does it, so nothing is looked up until there is one: see
+    <a href="{{ url_for('settings.section', name='model') }}">AI model</a>.</span></p>
+{% endif %}
+{{ form('lookups', groups.values()) }}
+<p class="muted small">Which company and which model look things up is on the
+  <a href="{{ url_for('settings.section', name='model', _anchor='models') }}">AI model</a> page.</p>

@@ -1,0 +1,83 @@
+{# The settings pages' small parts: `{% from "_settings.html" import box, group, form %}`.
+   A box says what it is, what it does in a line under it, what it falls back to when left
+   empty (in the box, or as the dropdown's first choice), and whether it was changed here. #}
+{% from "_ui.html" import icon %}
+
+{% macro box(entry) -%}
+  {% set one = entry.field %}
+  {% set told = 'h-' ~ one.key %}
+  <div class="setting{% if entry.problem %} bad{% endif %}">
+    <div class="setting-head">
+      <label for="f-{{ one.key }}">{{ one.label }}</label>
+      {% if entry.stored %}<span class="changed">changed</span>{% endif %}
+    </div>
+    {% if one.choices %}
+      <select id="f-{{ one.key }}" name="{{ one.key }}"
+        {%- if entry.problem or one.note %} aria-describedby="{{ told }}"{% endif %}>
+        <option value="">Default ({{ entry.placeholder }})</option>
+        {% for choice in one.choices %}
+          <option value="{{ choice }}" {% if entry.value == choice %}selected{% endif %}>{{ one.word(choice) }}</option>
+        {% endfor %}
+      </select>
+    {% else %}
+      <input
+        id="f-{{ one.key }}"
+        name="{{ one.key }}"
+        type="text"
+        value="{{ entry.value }}"
+        placeholder="{{ entry.placeholder }}"
+        {% if one.keyboard %}inputmode="{{ one.keyboard }}"{% endif %}
+        {% if entry.offers %}list="s-{{ one.key }}" autocomplete="off"{% endif %}
+        {% if entry.problem or one.note %}aria-describedby="{{ told }}"{% endif %}
+      />
+      {% if entry.offers %}
+        <datalist id="s-{{ one.key }}">
+          {% for value, what in entry.offers %}<option value="{{ value }}">{{ what }}</option>{% endfor %}
+        </datalist>
+      {% endif %}
+    {% endif %}
+    {% if entry.problem %}
+      <p id="{{ told }}" class="error" role="alert">{{ entry.problem }}</p>
+    {% elif one.note %}
+      <p id="{{ told }}" class="muted hint">{{ one.note }}</p>
+    {% endif %}
+  </div>
+{%- endmacro %}
+
+{# A group of boxes under its heading. Fine-tuning is folded away, and opens by itself when one
+   of its boxes has a complaint; folded, it says how many of its boxes were changed here. #}
+{% macro group(entry) -%}
+  {% set g = entry.group %}
+  {% if g.folded %}
+    <details class="panel fold" id="{{ g.name }}"{% if entry.open %} open{% endif %}>
+      <summary>
+        <span class="h2">{{ g.title }}</span>
+        {% if entry.changed %}<span class="changed">{{ entry.changed }} changed</span>{% endif %}
+      </summary>
+      {% if g.note %}<p class="muted">{{ g.note }}</p>{% endif %}
+      <div class="grid">{% for one in entry.boxes %}{{ box(one) }}{% endfor %}</div>
+    </details>
+  {% else %}
+    <section class="panel" id="{{ g.name }}">
+      <h2>{{ g.title }}</h2>
+      {% if g.note %}<p class="muted">{{ g.note }}</p>{% endif %}
+      <div class="grid">{% for one in entry.boxes %}{{ box(one) }}{% endfor %}</div>
+    </section>
+  {% endif %}
+{%- endmacro %}
+
+{# A page's boxes in one form with one Save, which stays in reach while the form is on screen.
+   Everything in the form is saved, and a box that was emptied goes back to its default; the
+   boxes of other pages are not in it, so they stay as they are. A `call` block goes first. #}
+{% macro form(section, groups=[]) -%}
+  <form method="post" action="{{ url_for('settings.save') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    <input type="hidden" name="section" value="{{ section }}" />
+    {% if caller is defined %}{{ caller() }}{% endif %}
+    {% for entry in groups %}{{ group(entry) }}{% endfor %}
+    <div class="save-bar">
+      <p class="muted">An empty box uses the default it shows.</p>
+      <button type="submit">{{ icon('check') }}Save</button>
+    </div>
+  </form>
+{%- endmacro %}

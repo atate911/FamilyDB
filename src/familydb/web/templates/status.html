@@ -37,9 +37,11 @@
     <section class="panel">
       <h2>{{ icon('key') }}Keys</h2>
       {{ lines(keys) }}
-      <p class="muted small">
-        <a href="{{ url_for('settings.show') }}#keys">Change a key</a>
-      </p>
+      {% if visitor().may('manage') %}
+        <p class="muted small">
+          <a href="{{ url_for('settings.section', name='model', _anchor='keys') }}">Change a key</a>
+        </p>
+      {% endif %}
     </section>
 
     <section class="panel">
@@ -72,6 +74,9 @@
           {% endif %}
         {% else %}
           (no daily limit is set).
+        {% endif %}
+        {% if visitor().may('manage') %}
+          <a href="{{ url_for('settings.section', name='spending') }}">Change the limit</a>
         {% endif %}
       </p>
     </div>

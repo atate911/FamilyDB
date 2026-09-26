@@ -1,0 +1,103 @@
+{% from "_ui.html" import icon %}
+{% from "_settings.html" import box, group %}
+{% set who = groups.who.group %}
+<section class="panel" id="who">
+  <h2>{{ who.title }}</h2>
+  <p class="muted">{{ who.note }}</p>
+  {% include "_company_cards.html" %}
+  {# The company's key, checked with it before anything is kept. Saved here, it also makes that
+     company the one that answers: a company can only be chosen with a key that works. #}
+  <form class="form" method="post" action="{{ url_for('settings.save_model') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    <input type="hidden" name="section" value="model" />
+    <input type="hidden" name="provider" value="{{ company }}" />
+    <div class="field wide">
+      <label for="model-key">{{ label }} key</label>
+      <input id="model-key" name="key" type="password" autocomplete="off" spellcheck="false"
+             aria-describedby="model-key-said" {% if not has_key %}required{% endif %}
+             placeholder="{% if has_key %}a key is saved: paste a new one to replace it{% else %}{{ prefix }}…{% endif %}" />
+      <p class="muted hint" id="model-key-said">
+        It is checked with {{ label }} before it is kept, which costs nothing.
+        {% if company == answering and has_key %}{{ label }} answers now, with {{ model }}.
+        {%- elif company == answering %}Until there is one, nothing can be answered.
+        {%- else %}Saving makes {{ label }} the company that answers, with {{ model }}.{% endif %}
+      </p>
+    </div>
+    <div class="field wide actions">
+      <button type="submit">
+        {%- if company == answering %}Save and check the key
+        {%- elif has_key %}Answer with {{ label }}
+        {%- else %}Check the key and answer with {{ label }}{% endif -%}
+      </button>
+    </div>
+  </form>
+  <details class="more">
+    <summary>How to get a key from {{ label }}</summary>
+    <div class="inner">{% include "_key_steps.html" %}</div>
+  </details>
+</section>
+
+{% set models = groups.models %}
+{% set others = models.boxes | rejectattr('field.key', 'in', in_use) | list %}
+<form method="post" action="{{ url_for('settings.save') }}">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+  <input type="hidden" name="section" value="model" />
+  <section class="panel" id="models">
+    <h2>{{ models.group.title }}</h2>
+    <p class="muted">{{ models.group.note }}</p>
+    {# The two at work first, the chat's and the lookups', then every other one, folded. #}
+    <div class="grid">
+      {% for key in in_use %}{% for one in models.boxes if one.field.key == key %}{{ box(one) }}{% endfor %}{% endfor %}
+    </div>
+    <details class="more"{% if others | selectattr('problem') | list %} open{% endif %}>
+      <summary>Other models{% set changed = others | selectattr('stored') | list | length %}{% if changed %} <span class="changed">{{ changed }} changed</span>{% endif %}</summary>
+      <div class="inner">
+        <p class="muted">Each company's own, used whenever that company answers, looks things up, or
+          stands in.</p>
+        <div class="grid">{% for one in others %}{{ box(one) }}{% endfor %}</div>
+      </div>
+    </details>
+  </section>
+  {{ group(groups.second) }}
+  {# Not floating here: it would float beside the key box above, which it does not save. #}
+  <div class="save-bar still">
+    <p class="muted">An empty box uses the default it shows.</p>
+    <button type="submit">{{ icon('check') }}Save models</button>
+  </div>
+</form>
+
+{# Every key at once: for a second company's, which is not checked or chosen, and for taking a
+   key away. Folded, since the key that matters is the one above. #}
+{% set ai_keys = keys.values() | rejectattr('key', 'equalto', 'telegram_bot_token') | list %}
+{# The form inside carries the address "Change a key" leads to, so a browser opens the fold. #}
+<details class="panel fold" id="all-keys"{% if ai_keys | selectattr('problem') | list %} open{% endif %}>
+  <summary><span class="h2">Every company's key</span></summary>
+  <p class="muted">
+    A second company's key lets it look things up, or stand in when the first cannot answer. Keys
+    saved here are kept in the database, so they are in your backups. They are not checked with
+    the company as they are saved; the status page says whether each works.
+  </p>
+  <form id="keys" method="post" action="{{ url_for('settings.save_keys') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    <input type="hidden" name="section" value="model" />
+    <div class="grid">
+      {% for row in ai_keys %}
+        <div class="setting{% if row.problem %} bad{% endif %}">
+          <div class="setting-head">
+            <label for="k-{{ row.key }}">{{ row.label }}</label>
+            <span class="key-state">{% if row.stored %}saved here{% elif row.set %}from the server's .env file{% else %}not saved yet{% endif %}</span>
+          </div>
+          <input id="k-{{ row.key }}" name="{{ row.key }}" type="password" autocomplete="off" spellcheck="false"
+                 placeholder="{% if row.set %}paste a new one to replace it{% else %}paste one here{% endif %}" />
+          {% if row.problem %}<p class="error" role="alert">{{ row.problem }}</p>{% endif %}
+          {% if row.stored %}
+            <label class="check"><input type="checkbox" name="remove_{{ row.key }}" value="1" />Remove it</label>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+    <button type="submit">{{ icon('check') }}Save keys</button>
+  </form>
+  <p class="muted small">A key already saved can be seen again under
+    <a href="{{ url_for('settings.section', name='security', _anchor='reveal') }}">Sign-in and security</a>.</p>
+</details>

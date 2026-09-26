@@ -117,12 +117,15 @@ def test_a_rewrite_is_used_and_can_be_restored(page, conn) -> None:
     assert settings_store.overrides(conn)["persona_text"] == {
         "default": {"text": rewrite, "of": written_of}
     }
-    history = page.get("/settings").text
+    history = page.get("/settings/history").text
+    assert "Her description</strong>" in history
     assert "rewritten" in history and "a little dry" not in history  # not echoed in the log
+    assert "Vera, in your words." in page.get("/settings").text  # the overview's card says so
     assert page.post("/settings/personality/restore", data=_form(page)).status_code == 302
     assert _prefix(page, conn)[0].text.startswith(
         "# Who you are\n\n" + personas.load(personas.DEFAULT).prompt
     )
+    assert "Vera, as she was written." in page.get("/settings").text
 
 
 def test_her_own_text_with_her_name_filled_in_is_no_rewrite(page, conn) -> None:
@@ -418,8 +421,8 @@ def test_a_name_of_their_own_is_hers_wherever_she_is_named(page, conn) -> None:
     chat = page.get("/chat").text
     assert "<title>Juno · " in chat and '<span class="label">Juno</span>' in chat
     assert "Vera" not in chat
-    history = page.get("/settings").text
-    assert re.search(r"<strong>persona_name</strong>\s*from the environment → Juno", history)
+    history = page.get("/settings/history").text
+    assert re.search(r"<strong>Her name</strong>\s*default → Juno", history)
 
 
 def test_under_none_the_bot_is_familydb_and_their_name_for_her_is_kept(page, conn) -> None:
@@ -502,7 +505,7 @@ def test_the_family_s_notes_reach_the_prefix_after_her_character_and_before_the_
 ) -> None:
     shown = page.get("/settings/personality").text
     assert "Anything to add" in shown
-    box = r'<textarea id="p-notes" name="persona_notes" rows="4"\s+maxlength="1000">'
+    box = r'<textarea id="p-notes" name="persona_notes" rows="4"[^>]*\smaxlength="1000"[^>]*>'
     assert re.search(box, shown)
     before = _tokens(page)
     saved = page.post("/settings/personality", data=_drawn(page, persona_notes=f" {NOTES}\r\n"))
@@ -521,8 +524,9 @@ def test_the_family_s_notes_reach_the_prefix_after_her_character_and_before_the_
     assert "Saved. Changed: notes on how she talks." in shown
     assert f'maxlength="1000">{NOTES}</textarea>' in shown
     assert _tokens(page) > before  # what they add to every message is counted
-    history = page.get("/settings").text
-    assert "persona_notes" in history and "Captain" not in history  # not echoed in the log
+    history = page.get("/settings/history").text
+    assert "Notes on how she talks</strong>" in history
+    assert "Captain" not in history  # not echoed in the log
 
 
 def test_notes_are_kept_under_none_and_unused_and_come_back_with_her(page, conn) -> None:
@@ -725,3 +729,15 @@ def test_under_none_nothing_is_said_of_her_own_description_changing(page, conn) 
     page.post("/settings/personality", data=_drawn(page, persona="none"))
     shown = page.get("/settings/personality").text
     assert "own description has changed" not in shown and 'class="changes"' not in shown
+
+
+def test_every_line_she_says_is_in_a_group_of_its_own_kind(page) -> None:
+    """A new line in voice.EVENTS would still be shown, under Other; better it has its group."""
+    from familydb import voice
+    from familydb.web.settings import LINE_GROUPS
+
+    grouped = [name for _, _, names in LINE_GROUPS for name in names]
+    assert sorted(grouped) == sorted(voice.EVENTS) and len(grouped) == len(set(grouped))
+    shown = page.get("/settings/personality").text
+    assert "Reminders and follow-ups" in shown and ">Other<" not in shown
+    assert "<summary>When she cannot answer</summary>" in shown  # folded, until one is written

@@ -1,4 +1,4 @@
-"""The settings page: the one part of the web surface that writes."""
+"""The settings pages: the one part of the web surface that writes settings."""
 
 from __future__ import annotations
 
@@ -26,13 +26,14 @@ def page(settings, clock, conn, family):
 
 
 def _token(client) -> str:
-    found = re.search(r'name="csrf" value="([^"]+)"', client.get("/settings").text)
+    found = re.search(r'name="csrf" value="([^"]+)"', client.get("/settings/general").text)
     assert found is not None
     return found.group(1)
 
 
 def _whole_form(client, **changes) -> dict[str, str]:
-    """Every box on the page, empty, with the given ones filled in: what a browser sends."""
+    """Every box on every page, empty, with the given ones filled in, and no page named: what an
+    older page, drawn as one form, sent."""
     form = {one.key: "" for one in fields.FIELDS}
     form["csrf"] = _token(client)
     form.update({key: str(value) for key, value in changes.items()})
@@ -52,10 +53,14 @@ def test_the_page_offers_every_setting_that_can_be_stored() -> None:
 
 
 def test_a_box_left_empty_says_what_it_falls_back_to(page) -> None:
-    text = page.get("/settings").text
-    assert "From the environment (anthropic)" in text  # the provider dropdown
-    assert "Between 0 and 23." in text  # read off the setting, not written out twice
-    assert 'placeholder="claude-opus-5"' in text
+    spending = page.get("/settings/spending").text
+    assert "Default (Medium)" in spending  # a dropdown, in the page's words rather than "medium"
+    assert "Between 1 and 20." in spending  # read off the setting, not written out twice
+    assert 'placeholder="claude-opus-5"' in page.get("/settings/model").text
+    messages = page.get("/settings/messages").text
+    assert "Default (18:00)" in messages and "Default (Thursday)" in messages
+    assert "Default (yes)" in messages  # a yes or no, never true or false
+    assert "Between 0 and 23." not in messages  # an hour is chosen from a list, not typed
 
 
 def test_saving_puts_it_in_force_at_once(page, conn) -> None:
@@ -70,8 +75,12 @@ def test_saving_puts_it_in_force_at_once(page, conn) -> None:
     assert page.app.settings.provider == "gemini"  # no restart, no wait
     after = page.get("/settings").text
     # In the words on the page, not the setting names.
-    assert "Saved. Changed: Chat model company, Look ideas up on the web, Digest hour." in after
-    assert 'value="gemini" selected' in after
+    assert (
+        "Saved. Changed: Company that answers, Weekend ideas time, Look ideas up on the web."
+        in (after)
+    )
+    assert '<label for="model-key">Google key</label>' in page.get("/settings/model").text
+    assert 'value="19" selected' in page.get("/settings/messages").text
 
 
 def test_emptying_a_box_goes_back_to_the_environment(page, conn) -> None:
@@ -83,14 +92,17 @@ def test_emptying_a_box_goes_back_to_the_environment(page, conn) -> None:
 
 
 def test_a_value_the_setting_will_not_take_is_refused_on_its_own_box(page, conn) -> None:
-    refused = page.post("/settings", data=_whole_form(page, digest_hour="seven"))
+    refused = page.post("/settings", data=_whole_form(page, enrich_batch="seven"))
     assert refused.status_code == 400
     assert "That needs to be a whole number." in _errors(refused.text)
     assert 'value="seven"' in refused.text  # what was typed comes back, not a blank box
+    # On the page the box is on, with its folded group opened so the complaint is in sight.
+    assert "<h1>Lookups</h1>" in refused.text
+    assert '<details class="panel fold" id="pace" open>' in refused.text
 
-    refused = page.post("/settings", data=_whole_form(page, digest_hour=99))
+    refused = page.post("/settings", data=_whole_form(page, enrich_batch=99))
     assert refused.status_code == 400
-    assert "Input should be less than or equal to 23" in _errors(refused.text)
+    assert "Input should be less than or equal to 20" in _errors(refused.text)
     assert settings_store.overrides(conn) == {}  # and not one box was written
 
 
@@ -119,9 +131,10 @@ def test_a_key_is_stored_but_never_shown_and_never_logged(page, conn) -> None:
     assert settings_store.get(conn, "openai_api_key") == "sk-secret-value"
     assert page.app.settings.openai_api_key == "sk-secret-value"
 
-    text = page.get("/settings").text
-    assert "sk-secret-value" not in text
-    assert "openai_api_key</strong>" in text and "replaced" in text
+    for path in ("/settings", "/settings/model", "/settings/security"):
+        assert "sk-secret-value" not in page.get(path).text
+    text = page.get("/settings/history").text
+    assert "OpenAI key</strong>" in text and "replaced" in text
     line = settings_store.history(conn)[0]
     assert line["secret"] == 1 and line["old_value"] is None and line["new_value"] is None
     assert line["source"].startswith("web ")
@@ -161,7 +174,7 @@ def test_seeing_a_key_needs_the_password_again(page, conn) -> None:
     )
     assert shown.status_code == 200 and "sk-shown-once" in shown.text
     assert shown.headers["Cache-Control"] == "no-store"
-    assert "sk-shown-once" not in page.get("/settings").text  # once, not from then on
+    assert "sk-shown-once" not in page.get("/settings/security").text  # once, not from then on
 
 
 def test_guessing_at_the_reveal_never_shuts_the_family_out(page) -> None:
@@ -190,10 +203,11 @@ def test_a_key_nobody_named_is_not_a_key(page) -> None:
 def test_the_history_shows_what_moved_and_who_moved_it(page, conn, family) -> None:
     with db.transaction(conn):
         settings_store.set_many(conn, {"effort": "high"}, changed_by=family["sam"].id, source="cli")
-    text = page.get("/settings").text
-    assert "effort</strong>" in text
-    assert "from the environment → high" in text
+    text = page.get("/settings/history").text
+    assert "Chat thinking</strong>" in text  # by the name on the page, not the setting's
+    assert "default → High" in text
     assert "Sam" in text and "cli" in text
+    assert "Last: Chat thinking" in page.get("/settings").text
 
 
 def test_a_setting_cannot_be_reached_through_the_form_unless_the_page_offers_it(page, conn) -> None:
@@ -231,7 +245,7 @@ def test_a_page_with_no_password_shows_a_key_to_whoever_can_reach_it(settings, c
     """The relaxed home posture: there is no second password to ask for, and the page says so."""
     app = App(settings.model_copy(update={"openai_api_key": "sk-home"}), clock)
     client = create_app(app).test_client()
-    text = client.get("/settings").text
+    text = client.get("/settings/security").text
     assert "This page has no password" in text
     assert 'id="reveal-password"' not in text  # nothing to type to see a key
     token = re.search(r'name="csrf" value="([^"]+)"', text).group(1)
@@ -240,7 +254,7 @@ def test_a_page_with_no_password_shows_a_key_to_whoever_can_reach_it(settings, c
 
 
 def test_a_model_box_suggests_models_without_limiting_them(page) -> None:
-    text = page.get("/settings").text
+    text = page.get("/settings/model").text
     assert 'list="s-openai_model"' in text
     assert '<datalist id="s-openai_model">' in text and '<option value="gpt-6-luna">' in text
     # Anything typed is still taken: a model released next week has to fit.
@@ -388,9 +402,103 @@ def test_the_digest_chat_is_offered_from_the_chats_it_has_seen(page, conn) -> No
                 now="2026-09-20T10:00:00Z",
             )
     offers = re.search(
-        r'<datalist id="s-digest_chat_id">(.*?)</datalist>', page.get("/settings").text, re.S
+        r'<datalist id="s-digest_chat_id">(.*?)</datalist>',
+        page.get("/settings/messages").text,
+        re.S,
     )
     assert offers is not None
     listed = offers.group(1)
     assert 'value="web"' in listed and 'value="-100200">Telegram group' in listed
     assert "private chat with Sam" in listed and "hello" not in listed
+
+
+# -- one page for each part --------------------------------------------------------------------
+
+
+def _drawn(text: str) -> set[str]:
+    """The settings a page's forms carry, by the names its boxes post."""
+    return {key for key in BEHAVIOUR if f'name="{key}"' in text}
+
+
+def test_every_setting_is_on_exactly_one_page_and_the_right_one(page) -> None:
+    """Split into pages, a setting could fall between them, or turn up on two and be saved twice."""
+    found: dict[str, list[str]] = {}
+    for section in fields.SECTIONS:
+        response = page.get(f"/settings/{section.name}")
+        assert response.status_code == 200, section.name
+        for key in _drawn(response.text):
+            found.setdefault(key, []).append(section.name)
+    assert sorted(found) == sorted(BEHAVIOUR)
+    assert {key: pages for key, pages in found.items() if len(pages) > 1} == {}
+    assert {key: pages[0] for key, pages in found.items()} == fields.SECTION_OF
+
+
+def test_the_list_of_pages_says_how_each_stands_and_leads_to_it(page) -> None:
+    text = page.get("/settings").text
+    for section in fields.SECTIONS:
+        assert f'href="/settings/{section.name}"' in text, section.name
+        assert section.title in text
+    assert "Claude (Anthropic) answers, with claude-opus-5." in text  # the test settings' model
+    assert "Home is not set yet" in text and "Needs a look" in text
+    assert 'name="csrf"' not in text  # nothing to send here: every form is on its own page
+
+
+def test_a_page_that_is_not_one_is_not_found(page) -> None:
+    assert page.get("/settings/everything").status_code == 404
+
+
+def test_a_page_s_form_comes_back_to_that_page(page, conn) -> None:
+    form = {"csrf": _token(page), "section": "lookups", "web_tools_enabled": "true"}
+    saved = page.post("/settings", data=form)
+    assert saved.status_code == 302 and saved.headers["Location"] == "/settings/lookups"
+    after = page.get("/settings/lookups").text
+    assert "Saved. Changed: Look ideas up on the web." in after
+    assert '<span class="changed">changed</span>' in after  # set here, not the default
+    # Only the boxes the form carried were touched: every other page's are left alone.
+    assert settings_store.overrides(conn) == {"web_tools_enabled": True}
+
+
+def test_a_complaint_from_a_page_is_drawn_on_that_page(page, conn) -> None:
+    form = {"csrf": _token(page), "section": "spending", "history_hours": "a while"}
+    refused = page.post("/settings", data=form)
+    assert refused.status_code == 400 and "<h1>Spending</h1>" in refused.text
+    assert "That needs to be a number." in _errors(refused.text)
+    assert '<details class="panel fold" id="each" open>' in refused.text
+    assert settings_store.overrides(conn) == {}
+
+
+def test_keys_come_back_to_the_page_they_were_saved_on(page, conn) -> None:
+    ai = {"csrf": _token(page), "section": "model", "gemini_api_key": "gm-spare"}
+    assert page.post("/settings/keys", data=ai).headers["Location"] == "/settings/model"
+    bot = {"csrf": _token(page), "section": "connections", "telegram_bot_token": "7123:AA"}
+    assert page.post("/settings/keys", data=bot).headers["Location"] == "/settings/connections"
+    assert settings_store.get(conn, "telegram_bot_token") == "7123:AA"
+    refused = page.post(
+        "/settings/keys", data={"csrf": _token(page), "telegram_bot_token": "7123: AA"}
+    )
+    assert refused.status_code == 400 and "<h1>Connections</h1>" in refused.text
+
+
+def test_the_other_pages_say_where_the_rest_is(page) -> None:
+    """The nav down the side reaches every page, and marks the one you are on."""
+    text = page.get("/settings/messages").text
+    assert '<nav class="settings-nav" aria-label="Settings">' in text
+    assert 'href="/settings/messages" aria-current="page"' in text
+    assert text.count('aria-current="page"') == 2  # this page, and Settings in the bar
+
+
+def test_a_phone_is_offered_the_keyboard_each_box_needs(page) -> None:
+    general = page.get("/settings/general").text
+    # A longitude may be negative, and a phone's number pads have no minus sign.
+    assert re.search(r'name="home_lon"[^>]*inputmode', general) is None
+    assert re.search(r'name="road_factor"[^>]*inputmode="decimal"', general)
+    assert re.search(
+        r'name="enrich_batch"[^>]*inputmode="numeric"', page.get("/settings/lookups").text
+    )
+
+
+def test_nothing_floats_beside_the_key_box_that_would_not_save_it(page) -> None:
+    """The models' Save stays with its form, so a pasted key is not left behind by the wrong one."""
+    text = page.get("/settings/model").text
+    assert 'class="save-bar still"' in text and 'class="save-bar"' not in text
+    assert "Save models" in text and "Save and check the key" in text

@@ -1,0 +1,139 @@
+{% from "_ui.html" import icon %}
+{% from "_settings.html" import box %}
+{% set token = keys.telegram_bot_token %}
+<section class="panel" id="telegram">
+  <h2>{{ icon('send') }}Telegram</h2>
+  <p class="state-line">
+    {% if bot %}Connected as <a href="https://t.me/{{ bot }}" target="_blank" rel="noopener noreferrer">@{{ bot }}</a>.
+    {% elif token.set and telegram.startswith('the token') %}<span class="warn">Telegram refused the token that is saved.</span>
+      Copy it again from BotFather (send it <code>/mybots</code>, choose the bot, then <em>API Token</em>).
+    {% elif token.set %}A token is saved{% if telegram %}: {{ telegram }}{% endif %}.
+    {% else %}Not set up, so the family uses the chat on this page instead.{% endif %}
+  </p>
+  <form method="post" action="{{ url_for('settings.save_keys') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    <input type="hidden" name="section" value="connections" />
+    <div class="setting{% if token.problem %} bad{% endif %}">
+      <div class="setting-head">
+        <label for="k-telegram_bot_token">{{ token.label }}</label>
+        <span class="key-state">{% if token.stored %}saved here{% elif token.set %}from the server's .env file{% else %}not saved yet{% endif %}</span>
+      </div>
+      <input id="k-telegram_bot_token" name="telegram_bot_token" type="password" autocomplete="off"
+             spellcheck="false" aria-describedby="token-said"
+             placeholder="{% if token.set %}paste a new one to replace it{% else %}7123456789:AA…{% endif %}" />
+      {% if token.problem %}
+        <p id="token-said" class="error" role="alert">{{ token.problem }}</p>
+      {% else %}
+        <p class="muted hint" id="token-said">The long line BotFather sent when the bot was made.
+          A new one reaches the bot within a few seconds.</p>
+      {% endif %}
+      {% if token.stored %}
+        <label class="check"><input type="checkbox" name="remove_telegram_bot_token" value="1" />Remove it</label>
+      {% endif %}
+    </div>
+    <button type="submit">{{ icon('check') }}Save the token</button>
+  </form>
+  <p class="muted small">Making a bot, linking your phone to it and adding the family's group chat
+    are in <a href="{{ url_for('setup.step', name='telegram') }}">the Telegram step of setup</a>,
+    one step at a time.</p>
+</section>
+
+<section class="panel" id="google">
+  <h2>{{ icon('plans') }}Google Calendar</h2>
+  {% if google.calendars is not none %}
+    {% if google.calendars %}
+      <form method="post" action="{{ url_for('settings.google_calendar_choice') }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+        <input type="hidden" name="section" value="connections" />
+        <fieldset>
+          <legend>Which calendar is the family's?</legend>
+          {% for row in google.calendars %}
+            <label class="inline">
+              <input
+                type="radio"
+                name="calendar_id"
+                value="{{ row.id }}"
+                {% if row.id == google.calendar or (not google.calendar and row.primary) %}checked{% endif %}
+              />
+              {{ row.summary or row.id }}{% if row.primary %} (your main one){% endif %}
+              {% if row.access not in ("owner", "writer") %}
+                <span class="muted">· read-only, so plans cannot be added</span>
+              {% endif %}
+            </label>
+          {% endfor %}
+        </fieldset>
+        <button type="submit">{{ icon('check') }}Use this calendar</button>
+      </form>
+    {% else %}
+      <p class="muted">
+        Connected, but no calendars could be listed. Type the calendar's id under
+        <em>Use a calendar by its id</em>, below.
+      </p>
+    {% endif %}
+  {% elif google.consent_url %}
+    <ol class="steps">
+      <li>
+        <a href="{{ google.consent_url }}" target="_blank" rel="noopener noreferrer">
+          Open Google's consent page</a>, sign in as the account that owns the family calendar,
+        and allow access. Google may warn that the app is unverified: it is your own, so go on.
+      </li>
+      <li>
+        Google then sends the browser to an address starting <code>http://127.0.0.1:53682</code>,
+        which will not load. That is expected: copy the whole address from the address bar.
+      </li>
+    </ol>
+    <form method="post" action="{{ url_for('settings.google_finish') }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+      <div class="setting">
+        <label for="google-pasted">The address it sent you to</label>
+        <input id="google-pasted" name="pasted" type="text" autocomplete="off" required
+               placeholder="http://127.0.0.1:53682/?state=…&code=…" />
+      </div>
+      <button type="submit">Connect</button>
+    </form>
+  {% else %}
+    <p class="state-line">
+      {% if google.connected and google.calendar %}
+        Connected, using <code>{{ google.calendar }}</code>. Connect again to change the account.
+      {% elif google.connected %}
+        Connected, but no calendar is chosen yet. Connect again to pick one.
+      {% else %}
+        Not connected, so plans are kept here but never put on a calendar.
+      {% endif %}
+    </p>
+    <details class="more" {% if not google.connected %}open{% endif %}>
+      <summary>{{ icon('plug') }}{% if google.connected %}Connect again{% else %}Connect Google Calendar{% endif %}</summary>
+      <div class="inner">
+        <p class="muted">
+          Once, in <a href="https://console.cloud.google.com/" target="_blank"
+          rel="noopener noreferrer">Google Cloud</a>: make a project, turn on the Google Calendar
+          API, set the OAuth consent screen to External and <strong>In production</strong> (left
+          in Testing, the connection stops working after a week), and create an OAuth client of
+          type <strong>Desktop app</strong>. Download its JSON and paste it here. The
+          <a href="{{ url_for('setup.step', name='calendar') }}">Google Calendar step of setup</a>
+          goes through it click by click.
+        </p>
+        <form method="post" action="{{ url_for('settings.google_start') }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+          <div class="setting">
+            <label for="google-client">The client's JSON</label>
+            <textarea id="google-client" name="client" rows="4" required
+              placeholder='{"installed": {"client_id": "…", …}}'></textarea>
+          </div>
+          <button type="submit">Get the consent link</button>
+        </form>
+      </div>
+    </details>
+  {% endif %}
+
+  {% set calendar = groups.calendar %}
+  <details class="more"{% if calendar.open or google.calendars == [] %} open{% endif %}>
+    <summary>Use a calendar by its id</summary>
+    <form class="inner" method="post" action="{{ url_for('settings.save') }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+      <input type="hidden" name="section" value="connections" />
+      <div class="grid">{% for one in calendar.boxes %}{{ box(one) }}{% endfor %}</div>
+      <button type="submit">{{ icon('check') }}Save the id</button>
+    </form>
+  </details>
+</section>

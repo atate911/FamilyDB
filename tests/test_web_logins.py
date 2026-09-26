@@ -13,7 +13,7 @@ from familydb import passwords, roles
 from familydb.app import App
 from familydb.store import db, ideas, logins, members, messages, tasks
 from familydb.store import settings as settings_store
-from familydb.web import check_configuration, create_app
+from familydb.web import check_configuration, create_app, fields
 from familydb.web.auth import DEVICE_COOKIE, GLOBAL_ATTEMPTS, MAX_ATTEMPTS
 from tests import fakes
 from tests.conftest import NOW_ISO
@@ -300,7 +300,8 @@ def test_a_parent_made_a_kid_stays_signed_in_while_kids_stand_in_for_parents(
 def test_a_member_uses_the_bot_and_an_admin_looks_after_it(app, sam, alex, family) -> None:
     for path in ("/", "/chat", "/ideas", "/ideas/new", "/plans", "/tasks", "/status", "/you"):
         assert alex.get(path).status_code == 200, path
-    for path in ("/settings", "/settings/personality", "/family", "/family/1", "/setup"):
+    every_settings_page = [f"/settings/{section.name}" for section in fields.SECTIONS]
+    for path in ("/settings", *every_settings_page, "/family", "/family/1", "/setup"):
         refused = alex.get(path)
         assert refused.status_code == 403 and "For an admin" in refused.text, path
     assert alex.post("/settings", data=_tokens(alex, "/you")).status_code == 403
@@ -360,19 +361,19 @@ def test_changing_your_password_needs_the_one_in_use_and_keeps_this_browser(app,
 
 
 def test_showing_a_key_and_signing_everyone_out_ask_for_your_own(app, sam) -> None:
-    page = sam.get("/settings").text
+    page = sam.get("/settings/security").text
     assert '<label for="reveal-password">Your password</label>' in page
     assert "Everybody signs in as themselves" in page and "New family password" not in page
-    form = {**_tokens(sam, "/settings"), "key": "anthropic_api_key"}
+    form = {**_tokens(sam, "/settings/security"), "key": "anthropic_api_key"}
     assert sam.post("/settings/reveal", data={**form, "password": SHARED}).status_code == 401
     shown = sam.post("/settings/reveal", data={**form, "password": SAMS})
     assert shown.status_code == 200 and "test-key" in shown.text
-    family_one = {**_tokens(sam, "/settings"), "new": "a family one again", "again": "x"}
+    family_one = {**_tokens(sam, "/settings/security"), "new": "a family one again", "again": "x"}
     assert sam.post("/settings/password", data=family_one).status_code == 409
 
 
 def test_the_settings_history_says_who_changed_what(app, sam, conn) -> None:
-    form = {**_tokens(sam, "/settings"), "web_title": "The Hendersons"}
+    form = {**_tokens(sam, "/settings/general"), "web_title": "The Hendersons"}
     sam.post("/settings", data=form)
     [latest] = settings_store.history(conn, limit=1)
     assert latest["key"] == "web_title" and latest["changed_by_name"] == "Sam"
