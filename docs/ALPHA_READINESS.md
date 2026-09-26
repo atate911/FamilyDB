@@ -142,7 +142,10 @@ migration, so upgrading does not resend old conversations. Fresh outgoing messag
    "anything for tonight?" and "what about Saturday morning?". Check the free times it reports
    leave out the event and the part of today that has gone, and that an option says when it can
    start ("can go 16:10-17:55 today"). Ask two differently worded weekend questions with
-   discovery on and check `/status` shows one discovery search, not two.
+   discovery on and check `/status` shows one discovery search, not two. Within a couple of
+   hours of sunset, ask "anything outdoors tonight?": an outdoor idea that needs longer than
+   the daylight left should be offered as one in the dark, which shows the real forecast's
+   sunrise and sunset were read.
 9. Add a restaurant idea and watch its lookup: `/status` should show one fewer call per lookup
    than before (the turn ends at `save_place`), and a "home" idea with no place is skipped with
    no call at all. Send a web chat question while a lookup runs: it must not wait for it.

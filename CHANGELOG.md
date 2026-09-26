@@ -27,7 +27,9 @@ older than what is installed. It gets a date when it is released.
   Saturday morning or this weekend. A staged engine checks every idea against
   the free time in minutes, the forecast, the opening hours and the travel
   time, says when each option could actually start, searches for what is on,
-  and logs every verdict.
+  and logs every verdict. An outdoor idea is held to the daylight: one that
+  only fits after dark is offered as possible, with the reason, and asked about
+  today, the reply is told when dark comes.
 - **Knows where the family is when a phone says so.** A location shared on
   Telegram, or the position the web page's chat sends with a message (only
   while "Send where I am" is ticked), is used for three hours: travel is measured from there

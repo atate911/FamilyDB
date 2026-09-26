@@ -6,7 +6,7 @@ from familydb.store import db, ideas, places, suggestions
 from familydb.suggest.context import build_context
 from familydb.suggest.discover import DISCOVER_CACHE_SECONDS
 from familydb.suggest.engine import resolve_window
-from familydb.suggest.evaluate import overlap_minutes
+from familydb.suggest.evaluate import in_daylight, overlap_minutes
 from familydb.suggest.shortlist import longest_free_span, participants_match, shortlist
 from familydb.suggest.types import Constraints, SuggestInput
 from familydb.tools import ToolContext
@@ -177,6 +177,14 @@ def test_overlap_minutes() -> None:
     assert overlap_minutes(ranges, [(480, 720)]) == 120
     assert overlap_minutes([{"open": "21:00", "close": "02:00"}], [(1020, 1320)]) == 60
     assert overlap_minutes(ranges, []) == 0
+
+
+def test_in_daylight() -> None:
+    light = (7 * 60, 19 * 60)
+    assert in_daylight([(17 * 60, 23 * 60)], light) == [(17 * 60, 19 * 60)]
+    assert in_daylight([(17 * 60, 23 * 60)], light, travel=10) == [(17 * 60 + 10, 19 * 60)]
+    assert in_daylight([(5 * 60, 8 * 60), (20 * 60, 23 * 60)], light) == [(7 * 60, 8 * 60)]
+    assert in_daylight([(20 * 60, 23 * 60)], light) == []
 
 
 def _seed_place(conn, idea, **fields):
@@ -583,6 +591,93 @@ def test_tonight_is_today_from_five(registry, conn, full_settings, clock, family
     assert data["days"][0]["free"] == ["17:00-23:00"]
     bar_verdict = next(c for c in data["candidates"] if c["idea_id"] == bar.id)
     assert "can go 17:15-22:45 today" in bar_verdict["reasons"]
+
+
+# Sunday 20 September in Vancouver: light from 07:00, dark from 19:05.
+SUNDAY_LIT = DayForecast(date(2026, 9, 20), 1, "mainly clear", 21.0, 11.0, 5, 0.0, 420, 1145)
+
+
+def _tonight(registry, conn, full_settings, clock, family, forecast):
+    ctx = _ctx(
+        conn,
+        full_settings,
+        clock,
+        family,
+        calendar=fakes.FakeCalendar(TZ),
+        weather=fakes.FakeForecast([forecast]),
+    )
+    park_hours = {"sun": [{"open": "06:00", "close": "22:00"}]}
+    walk = _idea(conn, "Evening walk by the river", setting="outdoor", duration_min=60)
+    _seed_place(conn, walk, hours=park_hours, travel_minutes=10)
+    ride = _idea(conn, "Bike ride round the park", setting="outdoor", duration_min=150)
+    _seed_place(conn, ride, hours=park_hours, travel_minutes=10)
+    bar = _idea(conn, "Cocktail bar", kind="restaurant", setting="indoor", duration_min=90)
+    _seed_place(conn, bar, hours={"sun": [{"open": "16:00", "close": "23:00"}]}, travel_minutes=15)
+    _, data = _suggest(
+        registry, ctx, window="today", from_time="17:00", until_time="23:00", question="tonight?"
+    )
+    verdicts = {c["idea_id"]: c for c in data["candidates"]}
+    return verdicts[walk.id], verdicts[ride.id], verdicts[bar.id]
+
+
+def test_tonight_outdoors_says_when_dark_comes(registry, conn, full_settings, clock, family):
+    walk, ride, bar = _tonight(registry, conn, full_settings, clock, family, SUNDAY_LIT)
+    # An hour's walk fits before dark: still good, and it says when to be done by.
+    assert walk["verdict"] == "good"
+    assert walk["reasons"][:2] == ["can go 17:10-22:00 today", "daylight until 19:05"]
+    # Two and a half hours on a bike does not: possible rather than ruled out, since some
+    # outdoor things are for the dark, and the reason is kept among the three sent on.
+    assert ride["verdict"] == "possible"
+    assert ride["reasons"][:2] == [
+        "can go 17:10-22:00 today",
+        "too dark then (daylight 07:00-19:05)",
+    ]
+    assert not any("dark" in r or "daylight" in r for r in bar["reasons"])  # indoors
+
+
+def test_without_sunset_in_the_forecast_nothing_is_said(
+    registry, conn, full_settings, clock, family
+):
+    unlit = DayForecast(date(2026, 9, 20), 1, "mainly clear", 21.0, 11.0, 5, 0.0)
+    walk, ride, _ = _tonight(registry, conn, full_settings, clock, family, unlit)
+    assert walk["verdict"] == ride["verdict"] == "good"
+    assert not any("dark" in r or "daylight" in r for r in walk["reasons"] + ride["reasons"])
+
+
+def test_a_weekend_free_only_after_dark_flags_outdoor_ideas(
+    registry, conn, full_settings, thursday_clock, family
+) -> None:
+    calendar = fakes.FakeCalendar(TZ)
+    for day in (26, 27):
+        calendar.seed(
+            "Tournament",
+            datetime(2026, 9, day, 8, tzinfo=TZ),
+            datetime(2026, 9, day, 19, tzinfo=TZ),
+        )
+    lit = [
+        DayForecast(SAT, 1, "mainly clear", 19.0, 9.0, 5, 0.0, 427, 1141),
+        DayForecast(SUN, 1, "mainly clear", 18.0, 9.0, 5, 0.0, 428, 1139),
+    ]
+    ctx = _ctx(
+        conn,
+        full_settings,
+        thursday_clock,
+        family,
+        calendar=calendar,
+        weather=fakes.FakeForecast(lit),
+    )
+    picnic = _idea(conn, "Picnic in the park", setting="outdoor", duration_min=90)
+    games = _idea(conn, "Board game night", setting="indoor", duration_min=90)
+    _, data = _suggest(registry, ctx)
+    verdicts = {c["idea_id"]: c for c in data["candidates"]}
+    assert verdicts[picnic.id]["verdict"] == "possible"
+    assert "too dark then (daylight 07:07-19:01)" in verdicts[picnic.id]["reasons"]
+    assert not any("dark" in r for r in verdicts[games.id]["reasons"])
+    # A weekend with daylight in the free time says nothing about it: no noise on every idea.
+    calendar.events.clear()
+    _, data = _suggest(registry, ctx)
+    picnic_again = next(c for c in data["candidates"] if c["idea_id"] == picnic.id)
+    assert not any("dark" in r or "daylight" in r for r in picnic_again["reasons"])
 
 
 def test_times_that_make_no_sense_are_refused(registry, conn, full_settings, clock, family) -> None:

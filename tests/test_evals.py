@@ -46,6 +46,26 @@ def test_either_accepts_a_question_instead(settings) -> None:
     assert grade(case, run_case(case, settings, api=api)) == []
 
 
+def test_an_outdoor_idea_after_dark_is_offered_as_one(settings) -> None:
+    case = by_name("outdoors_after_dark")
+    frame = {"window": "today", "from_time": "17:00", "question": "tonight?", "discover": False}
+
+    def replying(words: str):
+        return run_case(
+            case,
+            settings,
+            api=_answer([fakes.tool_use("t1", "suggest", frame)], [fakes.text(words)]),
+        )
+
+    careless = replying("After soccer you're free till 22:00: the falls hike fits.")
+    assert grade(case, careless) == [
+        "offers hike without saying dark or daylight or sunset or dusk"
+    ]
+    careful = replying("The falls hike needs daylight, and it's dark by 19:04 after soccer.")
+    assert grade(case, careful) == []
+    assert grade(case, replying("Nothing outdoors fits after soccer tonight.")) == []
+
+
 def test_every_case_has_a_reason_and_a_unique_name() -> None:
     from evals.cases import CASES
 

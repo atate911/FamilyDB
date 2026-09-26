@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime
+from datetime import date, datetime
 
 from familydb.clock import Clock
 from familydb.config import Settings
@@ -56,6 +56,19 @@ def overlap_minutes(
 ) -> int:
     """Longest continuous opening within free time, allowing travel at both ends."""
     return max((b - a for a, b in doable(ranges, spans, travel)), default=0)
+
+
+def in_daylight(
+    spans: list[tuple[int, int]], light: tuple[int, int], travel: int = 0
+) -> list[tuple[int, int]]:
+    """When the family could be there between sunrise and sunset, allowing travel at both ends."""
+    rise, fall = light
+    stretches = []
+    for left, right in spans:
+        a, b = max(rise, left + travel), min(fall, right - travel)
+        if a < b:
+            stretches.append((a, b))
+    return stretches
 
 
 def travel_minutes(place: Place | None, context: Context, settings: Settings) -> int | None:
@@ -145,6 +158,46 @@ def _hours_check(
     return open_days, False, soft
 
 
+def _daylight_check(
+    item: Shortlisted,
+    place: Place | None,
+    fits: list[date],
+    context: Context,
+    reasons: list[str],
+    travel: int | None,
+) -> bool:
+    """Whether an outdoor idea could only be done in the dark (soft); says when dark comes today.
+
+    Never a rule: something outdoor that is meant for the dark (lights, stars) is as outdoor as
+    a hike, so no daylight in the free time makes an idea possible, not ruled out.
+    """
+    if item.idea.setting != "outdoor":
+        return False
+    need = item.idea.duration_min or item.idea.duration_max or MIN_VISIT_MINUTES
+    dark: tuple[int, int] | None = None
+    for day in fits:
+        day_context = context.day(day)
+        light = day_context.forecast.daylight if day_context and day_context.forecast else None
+        if day_context is None or light is None:
+            continue
+        # When they could be there: free, and open when the hours are known, travel allowed.
+        there, margin = day_context.spans, travel or 0
+        if place is not None and place.hours:
+            status, ranges = open_on(place, day)
+            if status == "open":
+                there, margin = doable(ranges, day_context.spans, travel or 0), 0
+        if any(b - a >= need for a, b in in_daylight(there, light, margin)):
+            # Asked about today, and they could stay on after sunset: say when dark comes.
+            if day == context.today and max(b - margin for _, b in there) > light[1]:
+                reasons.append(f"daylight until {clock(light[1])}")
+            return False
+        dark = dark or light
+    if dark is None:
+        return False  # the forecast gives no sunrise or sunset: nothing to say
+    reasons.append(f"too dark then (daylight {clock(dark[0])}-{clock(dark[1])})")
+    return True
+
+
 def evaluate(
     conn: sqlite3.Connection,
     kept: list[Shortlisted],
@@ -171,6 +224,8 @@ def evaluate(
             fits, hard, soft_hours = _hours_check(item, place, context, checks, reasons, travel)
             hard_fail = hard_fail or hard
             soft = soft or soft_hours
+            # Straight after the hours, so the reply's three reasons keep it.
+            soft = _daylight_check(item, place, fits, context, reasons, travel) or soft
 
         if place is not None and is_stale(place, now, settings.place_stale_days):
             checks.stale = True

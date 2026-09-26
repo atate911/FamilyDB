@@ -79,6 +79,18 @@ def mentions(*words: str) -> Check:
     return check
 
 
+def caveated(subject: str, *caveats: str) -> Check:
+    """A reply that offers `subject` also says one of `caveats`. Leaving it out is fine."""
+
+    def check(run: Run) -> str | None:
+        reply = run.reply.casefold()
+        if subject.casefold() not in reply or any(c.casefold() in reply for c in caveats):
+            return None
+        return f"offers {subject} without saying {' or '.join(caveats)}"
+
+    return check
+
+
 def shorter_than(characters: int) -> Check:
     def check(run: Run) -> str | None:
         n = len(run.reply)
@@ -128,6 +140,21 @@ def no_tools() -> Check:
 def _hour(value: object) -> int | None:
     text = str(value or "")
     return int(text[:2]) if text[:2].isdigit() else None
+
+
+def tonight() -> Check:
+    """Asked about tonight: today from the evening, or the next few hours."""
+    return either(
+        called(
+            "suggest",
+            where=lambda c: (
+                c.input.get("window") == "today" and (_hour(c.input.get("from_time")) or 0) >= 16
+            ),
+            what="today from the evening",
+        ),
+        window("now"),
+        what="not asked about tonight",
+    )
 
 
 DIRECT = ("get_calendar", "get_forecast", "check_open")  # suggest already did these
@@ -221,23 +248,19 @@ CASES: tuple[Case, ...] = (
     Case(
         "tonight",
         ("anything fun we could do tonight?",),
+        (tonight(), never(*DIRECT), wrote_only()),
+        "Tonight is today from the evening.",
+    ),
+    Case(
+        "outdoors_after_dark",
+        ("anything outdoors we could do tonight?",),
         (
-            either(
-                called(
-                    "suggest",
-                    where=lambda c: (
-                        c.input.get("window") == "today"
-                        and (_hour(c.input.get("from_time")) or 0) >= 16
-                    ),
-                    what="today from the evening",
-                ),
-                window("now"),
-                what="not asked about tonight",
-            ),
+            tonight(),
             never(*DIRECT),
             wrote_only(),
+            caveated("hike", "dark", "daylight", "sunset", "dusk"),
         ),
-        "Tonight is today from the evening.",
+        "After soccer it is dark by 19:04: the falls hike is not offered as if it were light.",
     ),
     Case(
         "this_weekend",
