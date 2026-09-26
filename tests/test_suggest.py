@@ -7,8 +7,8 @@ from familydb.store import db, ideas, outcomes, places, suggestions
 from familydb.suggest.context import build_context
 from familydb.suggest.discover import DISCOVER_CACHE_SECONDS, discover
 from familydb.suggest.engine import resolve_window, run
-from familydb.suggest.evaluate import in_daylight, overlap_minutes
-from familydb.suggest.shortlist import longest_free_span, participants_match, shortlist
+from familydb.suggest.evaluate import doable, in_daylight
+from familydb.suggest.shortlist import participants_match, shortlist
 from familydb.suggest.types import Constraints, SuggestInput
 from familydb.tools import ToolContext
 from familydb.tools.gcal import free_blocks
@@ -102,10 +102,7 @@ def test_busy_all_day_trip_blocks_but_transparent_birthday_does_not(env):
     assert free_blocks([transparent], day, env.app.clock.tz) == ["morning", "afternoon", "evening"]
 
 
-def test_free_span_and_participants() -> None:
-    assert longest_free_span([(480, 1320)]) == 840
-    assert longest_free_span([(480, 720), (1020, 1320)]) == 300
-    assert longest_free_span([]) == 0
+def test_participants_match() -> None:
     from familydb.store.ideas import Idea
 
     def idea(participants):
@@ -204,21 +201,23 @@ def test_do_not_repeat_is_honored_and_explicit_new_preference_can_override(env):
     assert data["id"] not in outcomes.do_not_repeat(env.conn)
 
 
-def test_overlap_minutes() -> None:
+def _longest(ranges, spans, travel=0) -> int:
+    """The longest stretch `doable` leaves: how long the family could be there in one go."""
+    return max((b - a for a, b in doable(ranges, spans, travel)), default=0)
+
+
+def test_the_longest_open_stretch_within_free_time() -> None:
     ranges = [{"open": "10:00", "close": "20:00"}]
-    assert overlap_minutes(ranges, [(480, 1320)]) == 600
-    assert overlap_minutes(ranges, [(480, 720)]) == 120
-    assert overlap_minutes([{"open": "21:00", "close": "02:00"}], [(1020, 1320)]) == 60
-    assert overlap_minutes(ranges, []) == 0
+    assert _longest(ranges, [(480, 1320)]) == 600
+    assert _longest(ranges, [(480, 720)]) == 120
+    assert _longest([{"open": "21:00", "close": "02:00"}], [(1020, 1320)]) == 60
+    assert _longest(ranges, []) == 0
 
 
 def test_opening_intersection_is_continuous_and_allows_round_trip():
     split = [{"open": "10:00", "close": "11:00"}, {"open": "14:00", "close": "15:00"}]
-    assert overlap_minutes(split, [(8 * 60, 17 * 60)]) == 60
-    assert (
-        overlap_minutes([{"open": "08:00", "close": "12:00"}], [(8 * 60, 12 * 60)], travel=30)
-        == 180
-    )
+    assert _longest(split, [(8 * 60, 17 * 60)]) == 60
+    assert _longest([{"open": "08:00", "close": "12:00"}], [(8 * 60, 12 * 60)], travel=30) == 180
 
 
 def test_four_hour_visit_cannot_fit_one_hour_open(env):

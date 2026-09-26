@@ -45,15 +45,8 @@ def test_only_one_process_can_take_a_retry(settings, clock, conn, family) -> Non
     message_id = _failed_message(app, conn, fakes.rate_limit_error())
     app.senders["console"] = lambda chat_id, text: None
 
-    # What the loser of the race holds: the row as it was before the winner claimed it.
-    stale = messages.get(conn, message_id)
-    assert messages.claim_retry(conn, message_id, stale.retries) is True
-    assert messages.claim_retry(conn, message_id, stale.retries) is False
-    assert messages.get(conn, message_id).retries == 1  # one attempt, not two
-
-    # The one that loses the race stops there, without paying for a model call. An API with no
-    # replies scripted would raise if it were asked for one.
-    messages.reset_retries(conn)
+    # Whoever holds the message's lease has it. The other stops there, without paying for a
+    # model call: an API with no replies scripted would raise if it were asked for one.
     lost = fakes.FakeMessagesAPI()
     from familydb.delivery import lease
 

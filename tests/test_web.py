@@ -692,7 +692,6 @@ def test_no_page_reaches_a_table_to_write_to_it() -> None:
         "replace",
         "forget",
         "mark_failed",
-        "claim_retry",
         "give_up",
         "reset_retries",
         "add",
