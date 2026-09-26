@@ -896,6 +896,11 @@ LINE_GROUPS = (
     ("Notes", False, ("lookup_done", "location_shared", "done")),
     ("On Telegram", False, ("start", "stranger")),
     (
+        "Answering /today, /week, /tasks and /now",
+        True,
+        ("cmd_today", "cmd_week", "cmd_tasks", "cmd_now"),
+    ),
+    (
         "When she cannot answer",
         True,
         (

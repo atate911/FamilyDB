@@ -60,6 +60,12 @@ older than what is installed. It gets a date when it is released.
   "how was it?" with Yes, again, Not again and Didn't go: a tap is done by code
   with no model call, so it answers at once and works when the model does not,
   and the message then says who did what, for everyone in the chat.
+- **Answers /today, /week, /tasks and /now on Telegram by itself.** What is on
+  today and for the next seven days, the open tasks kept in that chat, and what
+  on the list could start right now are answered from the calendar, the task
+  list and the suggestion engine at once, with no model call, so they work when
+  the model is down or the day's limit is spent. They are in Telegram's "/"
+  menu, only the family may ask, and each answer is kept in the conversation.
 - **Answers "what should we do?" for the time asked about:** right now, tonight,
   Saturday morning or this weekend. A staged engine checks every idea against
   the free time in minutes, the forecast, the opening hours and the travel

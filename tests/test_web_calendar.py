@@ -109,7 +109,7 @@ def test_the_phone_list_says_when_a_month_is_empty(google) -> None:
 
 
 def test_an_entry_knows_its_days() -> None:
-    from familydb.web.agenda import Entry
+    from familydb.agenda import Entry
 
     def entry(start, end, all_day):
         return Entry("x", start, end, all_day, None, None, "confirmed", None, None)

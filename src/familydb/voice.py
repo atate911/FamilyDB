@@ -92,6 +92,13 @@ EVENTS: dict[str, Event] = {
             "task": 14,
         },
     ),
+    # The heading of each command's answer (commands.py), one line, which the facts follow.
+    "cmd_today": Event("Answering /today", "Today, {day}:", ("day",), {"day": "Sat 26 Sep"}),
+    "cmd_week": Event("Answering /week", "The next seven days:", ()),
+    "cmd_tasks": Event("Answering /tasks", "Open tasks in this chat:", ()),
+    "cmd_now": Event(
+        "Answering /now", "From the list, {window}:", ("window",), {"window": "now until 19:30"}
+    ),
     "follow_up": Event(
         "Asking how a plan went",
         "How was {plan} on {day}? Worth doing again?",

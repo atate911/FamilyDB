@@ -163,6 +163,11 @@ migration, so upgrading does not resend old conversations. Fresh outgoing messag
     Say "Grandma would love a gardening apron", then set Grandma's birthday with a reminder a
     few minutes ahead: the reminder should list the apron, and the apron's page should say it
     is "not one place to look up", with no lookup on the status page's costs.
+    On Telegram, type "/": today, week, tasks and now should be offered. Each should answer at
+    once with no model call on the status page: /today and /week with what Google shows,
+    /tasks with this chat's tasks only (none from a private chat in the group), and /now with
+    what could start in the next few hours. From somebody not on the list, /today should get
+    the stranger's line.
     On a Wednesday, say "one of these Thursday evenings I need to fix the bike light": the
     answer should say it comes up on a free Thursday evening, and the tasks page should say so
     too. On Thursday it should come up once, with buttons, from 18:00 if the calendar is clear

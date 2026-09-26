@@ -304,7 +304,7 @@ Design notes:
 
 **Google Calendar.** One Google account owns the shared family calendar, either an existing person's account or a dedicated family account. A one-time OAuth consent on a laptop produces a refresh token that is copied to the server. Gotcha: a Google Cloud project whose OAuth consent screen is left in "Testing" issues refresh tokens that expire after seven days. Set the app to "In production"; it shows an "unverified app" warning during consent, which is fine for our own use. Scope: calendar events read and write only.
 
-**Telegram.** A bot created with BotFather. Long polling means the server needs no inbound ports. Two ways to use it: DM the bot, or a dedicated family group ("Ideas & Plans") with the bot added and privacy mode disabled so everything posted there is for the bot. The bot's own name and description in Telegram are the name it goes by and its `/start` line (hers, or FamilyDB's under none), set through the Bot API after a connect and whenever either changes. Voice notes and audio files are heard (section 5): OpenAI's speech-to-text endpoint (gpt-4o-mini-transcribe unless changed) or a Gemini model sent the recording itself, told the family's names and home so they are spelled the family's way. Claude takes no recordings, so a family on Claude alone needs an OpenAI or Gemini key for them. A reminder and a "how was it?" go with buttons under them (`buttons.py`): a tap arrives as a callback query and is done by code, never a model turn, through the tool the model would have called, as the member who tapped, after checking the family list; the message is then edited to say who did what, with its buttons gone.
+**Telegram.** A bot created with BotFather. Long polling means the server needs no inbound ports. Two ways to use it: DM the bot, or a dedicated family group ("Ideas & Plans") with the bot added and privacy mode disabled so everything posted there is for the bot. The bot's own name and description in Telegram are the name it goes by and its `/start` line (hers, or FamilyDB's under none), set through the Bot API after a connect and whenever either changes. Voice notes and audio files are heard (section 5): OpenAI's speech-to-text endpoint (gpt-4o-mini-transcribe unless changed) or a Gemini model sent the recording itself, told the family's names and home so they are spelled the family's way. Claude takes no recordings, so a family on Claude alone needs an OpenAI or Gemini key for them. A reminder and a "how was it?" go with buttons under them (`buttons.py`): a tap arrives as a callback query and is done by code, never a model turn, through the tool the model would have called, as the member who tapped, after checking the family list; the message is then edited to say who did what, with its buttons gone. Four commands are answered by code, never a model turn (`commands.py`): /today and /week are the calendar as the page reads it (`agenda.py`), with this chat's reminders and deadlines for today; /tasks is the open tasks asked for in that chat, since only it gets their reminders; /now is the suggestion engine run for the next hours without the web, its verdicts and reasons listed as they come. Only the family may ask; the command is kept as a message marked processed as it is stored, so the retry job never makes a turn of it, and the answer as her reply to it, headed by one of her lines (`voice.EVENTS` `cmd_*`). They are offered in Telegram's "/" menu, set at start when it differs.
 
 **Web search and fetch.** The provider's server-side tools, declared on the request alongside our own. No scraper to host, no search API key. Fetch only follows URLs already in the conversation, which is what we want: links from search results or an idea's saved website.
 
@@ -438,18 +438,20 @@ src/familydb/
   calendar_sync.py       the bot's plans brought in line with their Google events
   family.py              the rules for adding and changing family members
   task_service.py        tasks and their reminders changed in one place
+  agenda.py              what is on, from Google or the saved plans, for the page and /today
+  commands.py            Telegram's /today, /week, /tasks and /now, answered by code
+  windows.py             a task's preferred window read as days and parts of the day
   privacy.py             the owner-only umask, and tightening older files
   doctor.py              the install check behind `familydb doctor`
   channels/              base.py, console.py, telegram.py (with the token supervisor), web.py
   web/                   __init__.py (the Flask factory), auth.py, routes.py, status.py,
                          chat.py, edits.py and family.py (the three that change things),
                          settings.py (the fourth: app_settings, the session key and the Google
-                         token), once.py,
-                         agenda.py (what is on, from Google or the saved plans), fields.py,
+                         token), once.py, fields.py,
                          views.py, server.py, keys.py, templates/, static/style.css, static/ask.js
   integrations/          google_calendar.py, open_meteo.py, geocode.py
   jobs/                  scheduler.py, retry_failed.py, enrich.py, weekend_digest.py,
-                         follow_ups.py, reminders.py, catch_up.py
+                         follow_ups.py, reminders.py, nudges.py, catch_up.py
 tests/                   pytest suite with a scripted fake of each SDK; test_live.py opt-in
 evals/                   the family's own requests against a real model, graded by code
                          (`uv run python -m evals`)

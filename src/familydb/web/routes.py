@@ -18,6 +18,7 @@ from flask import (
     url_for,
 )
 
+from familydb import agenda
 from familydb.app import App
 from familydb.availability import calendar_available
 from familydb.store import ideas as idea_store
@@ -29,7 +30,7 @@ from familydb.store import places as place_store
 from familydb.store import plans as plan_store
 from familydb.store import tasks as task_store
 from familydb.store.ideas import KIND_SUGGESTIONS
-from familydb.web import agenda, auth, chat, views
+from familydb.web import auth, chat, views
 from familydb.web import status as status_page
 from familydb.web.chat import WHO_KEY
 

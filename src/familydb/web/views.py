@@ -18,6 +18,7 @@ from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 from familydb import windows
+from familydb.agenda import Entry
 from familydb.agent.providers import catalog, prices
 from familydb.config import Settings
 from familydb.integrations.geocode import estimate_travel
@@ -33,7 +34,6 @@ from familydb.store.tasks import Task
 from familydb.suggest.shortlist import fmt_minutes
 from familydb.tools.places import DAYS, checked_days_ago, format_ranges, is_stale, open_on
 from familydb.tools.urls import clean_url
-from familydb.web.agenda import Entry
 
 DAY_NAMES = {
     "mon": "Monday",

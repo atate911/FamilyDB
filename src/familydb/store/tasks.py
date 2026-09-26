@@ -92,6 +92,18 @@ def list_all(
     return [task for row in rows if (task := get(conn, row["id"])) is not None]
 
 
+def in_chat(
+    conn: sqlite3.Connection, channel: str, chat_id: str, *, limit: int = 100
+) -> list[Task]:
+    """Open tasks asked for in one chat, whose reminders go there: deadlines first, then oldest."""
+    rows = conn.execute(
+        "SELECT id FROM tasks WHERE status='open' AND channel=? AND chat_id=? "
+        "ORDER BY due_at IS NULL, due_at, id LIMIT ?",
+        (channel, chat_id, limit),
+    ).fetchall()
+    return [task for row in rows if (task := get(conn, row["id"])) is not None]
+
+
 def find_by_operation(conn: sqlite3.Connection, operation_key: str) -> Task | None:
     """The task an earlier attempt at the same request already saved, if any."""
     row = conn.execute("SELECT id FROM tasks WHERE operation_key=?", (operation_key,)).fetchone()

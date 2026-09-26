@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import (
     BotDescriptionLimit,
     BotNameLimit,
@@ -38,7 +38,7 @@ from telegram.ext import (
     filters,
 )
 
-from familydb import buttons, personas, voice, whereabouts
+from familydb import buttons, commands, personas, voice, whereabouts
 from familydb.app import App
 from familydb.channels.base import IncomingMessage, OutgoingMessage, VoiceNote
 from familydb.config import Settings
@@ -272,6 +272,10 @@ class TelegramChannel:
             ApplicationBuilder().token(token).post_init(self._post_init).build()
         )
         self.application.add_handler(CommandHandler("start", self.on_start, filters=NEW))
+        # /today, /week, /tasks and /now: answered by code, with no model call (commands.py).
+        self.application.add_handler(
+            CommandHandler(sorted(commands.NAMES), self.on_command, filters=NEW)
+        )
         self.application.add_handler(
             MessageHandler(filters.TEXT & ~filters.COMMAND & NEW, self.on_message)
         )
@@ -292,11 +296,29 @@ class TelegramChannel:
         me = await application.bot.get_me()
         self.username = me.username
         log.info("telegram: polling as @%s", me.username)
+        await self.offer_commands(application.bot)
+
+    async def offer_commands(self, bot: Any) -> None:
+        """Telegram's "/" menu: the commands answered by code. Set only when it differs, since
+        most starts change nothing; a failure leaves the commands working, only unlisted."""
+        wanted = [BotCommand(name, about) for name, about in commands.MENU]
+        try:
+            if list(await bot.get_my_commands()) != wanted:
+                await bot.set_my_commands(wanted)
+        except Exception:
+            log.warning("telegram: the command menu could not be set", exc_info=True)
 
     async def on_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if update.effective_message is not None:
             hello = voice.say(self.app.settings, "start", seed=update.update_id)
             await update.effective_message.reply_text(hello)
+
+    async def on_command(self, update: Any, context: Any) -> None:
+        """/today, /week, /tasks or /now, answered by code and stored as her reply."""
+        msg = incoming_from_update(update)
+        if msg is None:
+            return
+        await self._answer(update, context.bot, msg, handle=commands.answer)
 
     async def introduce(self, name: str, about: str) -> None:
         """Make the bot's own contact in Telegram say this name and this description.
@@ -363,14 +385,21 @@ class TelegramChannel:
             msg = dataclasses.replace(msg, text=strip_mention(msg.text, bot.username))
         await self._answer(update, bot, msg)
 
-    async def _answer(self, update: Any, bot: Any, msg: IncomingMessage) -> None:
-        """Run the pipeline on its own thread and send its reply, stored first, in this chat."""
+    async def _answer(
+        self,
+        update: Any,
+        bot: Any,
+        msg: IncomingMessage,
+        handle: Callable[[App, IncomingMessage], OutgoingMessage | None] | None = None,
+    ) -> None:
+        """Run the pipeline (or `handle`) on its own thread and send its reply, stored first,
+        in this chat."""
         chat = update.effective_chat
         try:
             await bot.send_chat_action(chat_id=chat.id, action=ChatAction.TYPING)
         except Exception:  # a failed typing indicator must never block the reply
             log.debug("typing action failed", exc_info=True)
-        reply = await asyncio.to_thread(handle_incoming, self.app, msg)
+        reply = await asyncio.to_thread(handle or handle_incoming, self.app, msg)
         if reply is None:
             return
 

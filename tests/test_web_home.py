@@ -8,10 +8,10 @@ import threading
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
+from familydb.agenda import Entry
 from familydb.app import App
 from familydb.store import db, ideas, messages, tasks
 from familydb.web import create_app, views
-from familydb.web.agenda import Entry
 from familydb.web.chat import HOME_PROMPT
 from tests import fakes
 from tests.conftest import NOW_ISO
