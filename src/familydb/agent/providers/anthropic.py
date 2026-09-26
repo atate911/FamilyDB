@@ -199,8 +199,8 @@ class AnthropicProvider:
         last = request.messages[-1] if request.messages else None
         for message in request.messages:
             if message.role == "assistant" or message is not last:
-                # Only the newest turn is sent as separate blocks, so its date line stays apart
-                # from the message; each turn behind it goes as one piece of text.
+                # Only the newest turn is sent as separate blocks, one per part (its per-turn
+                # lines, then the message); each turn behind it goes as one piece of text.
                 messages.append({"role": message.role, "content": message.text})
             else:
                 messages.append(
