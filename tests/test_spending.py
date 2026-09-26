@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
+from datetime import timedelta
+
 import pytest
 
 from familydb.agent import spending
@@ -141,3 +146,159 @@ def test_lookups_wait_for_tomorrow_rather_than_fail(settings, clock, conn, famil
     counts = run_enrichment(app, api=api)
     assert api.requests == [] and counts["failed"] == 0
     assert idea.id in [pending.id for pending in ideas.pending_enrichment(conn, limit=10)]
+
+
+def test_spending_limit_after_write_reports_saved_idea(settings, conn, clock, family):
+    limited = settings.model_copy(update={"daily_spend_limit": 0.001})
+    api = fakes.FakeMessagesAPI(
+        fakes.message(
+            [
+                fakes.tool_use(
+                    "tool_review", "add_idea", {"title": "Budget crossing idea", "kind": "outing"}
+                )
+            ],
+            usage={"input_tokens": 1000, "output_tokens": 100},
+        )
+    )
+    reply = handle_incoming(
+        App(limited, clock),
+        IncomingMessage("telegram", "budget", "chat", "1001", "save an idea"),
+        api=api,
+        conn=conn,
+    )
+    assert ideas.list_all(conn)[0].title == "Budget crossing idea"
+    assert "Saved idea #1" in reply.text and "Ask again" not in reply.text
+    assert messages.get(conn, reply.in_message_id).status == "processed"
+    assert reply.actions[0]["tool"] == "add_idea"
+
+
+def test_budget_interruption_reports_calendar_success(calendar_settings, conn, clock, family):
+    limited = calendar_settings.model_copy(update={"daily_spend_limit": 0.001})
+    calendar = fakes.FakeCalendar(clock.tz)
+    app = App(limited, clock, calendar=calendar)
+    api = fakes.FakeMessagesAPI(
+        fakes.message(
+            [
+                fakes.tool_use(
+                    "calendar_review",
+                    "create_event",
+                    {"title": "Festival", "start": "2026-09-26T10:00"},
+                )
+            ],
+            usage={"input_tokens": 1000, "output_tokens": 100},
+        )
+    )
+    first = handle_incoming(
+        app,
+        IncomingMessage("telegram", "first", "chat", "1001", "schedule festival"),
+        api=api,
+        conn=conn,
+    )
+    assert "Created calendar plan #1" in first.text and len(calendar.events) == 1
+    assert "nothing happens twice" in first.text  # Vera's line for it (personas/default/lines.toml)
+    assert messages.get(conn, first.in_message_id).status == "processed"
+    assert len(api.requests) == 1
+
+
+# -- what a call in flight holds back -----------------------------------------------------------
+
+
+def test_concurrent_model_calls_cannot_spend_same_remaining_allowance(
+    settings, conn, clock, family
+):
+    limited = settings.model_copy(update={"daily_spend_limit": 0.001})
+    app = App(limited, clock)
+    entered, release = threading.Event(), threading.Event()
+
+    class SlowAPI:
+        requests = 0
+
+        def create(self, **kwargs):
+            self.requests += 1
+            entered.set()
+            assert release.wait(10)
+            return fakes.message(
+                [fakes.text("Answered.")], usage={"input_tokens": 1000, "output_tokens": 100}
+            )
+
+    api = SlowAPI()
+
+    def ask(number):
+        return handle_incoming(
+            app, IncomingMessage("telegram", str(number), "chat", "1001", "hello"), api=api
+        )
+
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        first = pool.submit(ask, 1)
+        assert entered.wait(10)
+        others = [pool.submit(ask, number) for number in (2, 3)]
+        release.set()
+        results = [first.result(), *(future.result() for future in others)]
+    assert api.requests == 1
+    assert sum(result.status == "ok" for result in results) == 1
+    assert sum("spending limit" in result.text for result in results) == 2
+
+
+def test_a_slow_call_does_not_hold_up_the_others(settings, conn, clock, family):
+    app = App(settings, clock)
+    first_in, second_done = threading.Event(), threading.Event()
+
+    class SlowFirst:
+        def __init__(self):
+            self.calls = 0
+
+        def create(self, **kwargs):
+            self.calls += 1
+            if self.calls == 1:
+                first_in.set()
+                # The second call must finish while this one is still waiting on the network.
+                assert second_done.wait(10)
+            return fakes.message([fakes.text("Answered.")])
+
+    api = SlowFirst()
+
+    def ask(number):
+        reply = handle_incoming(
+            app, IncomingMessage("telegram", str(number), "chat", "1001", "hello"), api=api
+        )
+        if number == 2:
+            second_done.set()
+        return reply
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(ask, 1)
+        assert first_in.wait(10)
+        second = pool.submit(ask, 2)
+        assert second.result(timeout=10).status == "ok"
+        assert first.result(timeout=10).status == "ok"
+    with closing(db.connect(settings.familydb_path)) as check:
+        assert check.execute("SELECT count(*) FROM spend_holds").fetchone()[0] == 0
+
+
+def test_holds_are_given_back_and_a_crashed_one_expires(settings, conn, clock):
+    limited = settings.model_copy(update={"daily_spend_limit": 1.0})
+    now = clock.now()
+    crashed = spending.admit(conn, limited, now - timedelta(minutes=40), 5.0)
+    assert crashed
+    # Forty minutes old: longer than any call runs, so it no longer counts.
+    held = spending.admit(conn, limited, now, 5.0)
+    # This one is in flight and holds more than the limit, so the next is refused.
+    with pytest.raises(spending.SpendingLimitReached):
+        spending.admit(conn, limited, now, 0.01)
+    with db.transaction(conn):
+        spending.settle(conn, held, now)
+    assert conn.execute("SELECT count(*) FROM spend_holds").fetchone()[0] == 0
+    assert spending.admit(conn, limited, now, 0.01)
+
+
+def test_a_failed_call_gives_its_hold_back(settings, conn, clock, family):
+    class Down:
+        def create(self, **kwargs):
+            raise fakes.server_error()
+
+    app = App(settings, clock)
+    reply = handle_incoming(
+        app, IncomingMessage("telegram", "down", "chat", "1001", "hello"), api=Down(), conn=conn
+    )
+    assert reply.status != "ok"
+    assert conn.execute("SELECT count(*) FROM spend_holds").fetchone()[0] == 0

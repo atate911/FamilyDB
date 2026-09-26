@@ -47,6 +47,12 @@ def test_files_an_older_version_left_readable_are_tightened(settings, tmp_path) 
     assert privacy.tighten(settings) == []  # nothing left to do the second time
 
 
+def test_privacy_tightening_does_not_require_getuid_on_windows(settings, monkeypatch):
+    monkeypatch.setattr(privacy.os, "name", "nt")
+    monkeypatch.delattr(privacy.os, "getuid", raising=False)
+    assert privacy.tighten(settings) == []
+
+
 @pytest.mark.skipif(os.name != "posix", reason="POSIX file permissions")
 def test_the_google_token_is_written_owner_only(tmp_path) -> None:
     from familydb.integrations.google_calendar import save_token

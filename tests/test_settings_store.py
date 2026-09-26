@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
+
 import pytest
 
 from familydb.app import App
 from familydb.channels.base import IncomingMessage
 from familydb.config import apply_overrides
-from familydb.store import db
+from familydb.store import db, plans
 from familydb.store import settings as settings_store
+from familydb.tools import ToolContext
 from tests import fakes
 from tests.conftest import NOW_ISO
 
@@ -99,6 +102,24 @@ def test_a_handed_in_client_is_never_replaced(conn, settings, clock) -> None:
     assert app.refresh() is True
     assert app.calendar is calendar
     assert app.clock is clock
+
+
+def test_timezone_change_updates_planning_without_restart(settings, conn, family):
+    app = App(settings, calendar=fakes.FakeCalendar(settings.tzinfo))
+    with db.transaction(conn):
+        settings_store.set_many(conn, {"family_tz": "America/New_York"}, source="review")
+    app.refresh(conn)
+    assert app.clock.tz.key == app.settings.tzinfo.key == "America/New_York"
+    # Exercise the calendar tool's interpretation of a wall-clock time after the reload.
+    future = (app.clock.today() + timedelta(days=2)).isoformat() + "T10:00"
+    ctx = ToolContext(conn, app.settings, app.clock, calendar=app.calendar)
+    # Calendar availability also checks the presence of a token.
+    app.settings.google_token_path.write_text("{}")
+    ctx.settings = app.settings.model_copy(update={"google_calendar_id": "family"})
+    result = app.registry.dispatch("create_event", {"title": "Morning", "start": future}, ctx)
+    assert not result.is_error
+    expected = datetime.fromisoformat(future).replace(tzinfo=app.settings.tzinfo)
+    assert plans.get(conn, 1).start == expected.isoformat(timespec="minutes")
 
 
 def test_a_stored_value_that_will_not_validate_leaves_the_settings_alone(

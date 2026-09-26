@@ -1,3 +1,5 @@
+import pytest
+
 from familydb.app import App
 from familydb.channels.console import one_shot
 from familydb.jobs.retry_failed import run_retries
@@ -438,7 +440,7 @@ def test_scheduler_registers_the_digest_only_with_a_chat_id(settings, clock) -> 
 from familydb.agent.history import load_history  # noqa: E402
 from familydb.jobs.follow_ups import render_follow_up, run_follow_ups  # noqa: E402
 from familydb.store import outcomes, plans  # noqa: E402
-from tests.conftest import NOW_ISO  # noqa: E402
+from tests.conftest import NOW_ISO, call  # noqa: E402
 
 
 def _plan(
@@ -510,6 +512,16 @@ def test_follow_ups_skip_answered_plans_and_wait_for_a_sender(
     app.senders["telegram"] = lambda *_: None
     assert run_follow_ups(app) == 1
     assert plans.get(conn, waiting.id).followed_up_at is not None
+
+
+def test_external_cancellation_suppresses_followup(env):
+    _, created = call(env, "create_event", title="Museum", start="2026-09-26T10:00")
+    plans.update(env.conn, created["plan"]["id"], {"channel": "telegram", "chat_id": "100"})
+    env.cal.delete_event(created["event"]["id"])
+    env.app.clock.advance(timedelta(days=4))
+    env.app.senders["telegram"] = lambda *_: pytest.fail("cancelled event must not prompt")
+    assert run_follow_ups(env.app) == 0
+    assert plans.get(env.conn, created["plan"]["id"]).status == "cancelled"
 
 
 def test_render_follow_up_without_an_idea(family, conn, settings) -> None:

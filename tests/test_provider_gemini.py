@@ -5,6 +5,7 @@ from familydb.agent.loop import REFUSAL_REPLY, run_turn
 from familydb.agent.prompt import build_messages, build_system_blocks
 from familydb.agent.providers import build
 from familydb.agent.providers.base import Message, SystemBlock, ToolDef, TurnRequest, WebAccess
+from familydb.agent.providers.gemini import GeminiProvider
 from familydb.agent.render import render_user_turn
 from familydb.errors import AgentError
 from familydb.store import calls, ideas
@@ -86,6 +87,28 @@ def test_search_rides_alongside_our_own_tools(settings) -> None:
     assert "function_declarations" in tools[0] and "google_search" in tools[1]
     plain = _provider(settings).payload(TurnRequest(system=[], messages=[], tools=[tool]))
     assert len(plain["config"]["tools"]) == 1
+
+
+def test_gemini_rejects_unsupported_combination_before_network(env):
+    from familydb.agent.providers.base import ToolDef
+
+    provider = GeminiProvider(env.settings)
+    request = TurnRequest(
+        system=[],
+        messages=[],
+        tools=[ToolDef("save", "save", {})],
+        web=WebAccess(),
+        model="gemini-2.5-flash",
+    )
+    with pytest.raises(AgentError, match="Gemini 3"):
+        provider.payload(request)
+    request.model = env.settings.gemini_worker_model
+    payload = provider.payload(request)
+    assert payload["config"]["tool_config"]["include_server_side_tool_invocations"]
+    # Check against the installed SDK, not just a dict our fake accepts.
+    from google.genai.types import GenerateContentConfig
+
+    GenerateContentConfig.model_validate(payload["config"])
 
 
 def test_a_plain_reply(settings, registry, ctx) -> None:

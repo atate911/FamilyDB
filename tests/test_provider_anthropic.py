@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from familydb.agent.providers import build
-from familydb.agent.providers.anthropic import ensure_credentials
+from familydb.agent.providers.anthropic import AnthropicProvider, ensure_credentials
 from familydb.agent.providers.base import Message, SystemBlock, ToolDef, TurnRequest, WebAccess
 from familydb.errors import AgentError
 
@@ -34,6 +34,47 @@ def test_the_request_follows_the_settings(settings) -> None:
     payload = quiet.payload(request)
     assert "fallbacks" not in payload and "betas" not in payload
     assert payload["output_config"] == {"effort": "low"}
+
+
+def test_what_a_request_carries_follows_the_model(env) -> None:
+    """Thinking and effort for every current model, the fast web tools only where they run, and
+    refusal fallbacks only where a classifier can refuse. Each wrong guess is a 400 every time."""
+    provider = AnthropicProvider(env.settings)
+
+    def payload(model: str, **extra):
+        return provider.payload(TurnRequest(system=[], messages=[], model=model, **extra))
+
+    for model in ("claude-opus-5", "claude-opus-5-5", "claude-fable-5-1", "claude-sonnet-5"):
+        assert payload(model)["thinking"] == {"type": "adaptive"}, model
+        assert "effort" in payload(model)["output_config"], model
+    for model in ("claude-haiku-4-5-20251001", "claude-sonnet-4-5", "claude-opus-4-20250514"):
+        assert "thinking" not in payload(model) and "output_config" not in payload(model), model
+
+    worker = payload("claude-sonnet-5", web=WebAccess())["tools"]
+    assert [t["type"] for t in worker] == ["web_search_20260209", "web_fetch_20260209"]
+
+    assert payload("claude-opus-5")["fallbacks"] == "default"
+    assert payload("claude-fable-5-1")["fallbacks"] == "default"
+    assert "fallbacks" not in payload("claude-haiku-4-5-20251001")
+    assert "betas" not in payload("claude-sonnet-5")
+
+
+def test_default_haiku_request_omits_unsupported_thinking(env):
+    provider = AnthropicProvider(env.settings)
+    payload = provider.payload(
+        TurnRequest(
+            system=[],
+            messages=[Message("user", ["lookup"])],
+            model=provider.model_for("worker"),
+            effort="low",
+        )
+    )
+    assert "thinking" not in payload and "output_config" not in payload
+    request = TurnRequest(
+        system=[], messages=[], model=provider.model_for("worker"), web=WebAccess()
+    )
+    tools = provider.payload(request)["tools"]
+    assert [tool["type"] for tool in tools] == ["web_search_20250305", "web_fetch_20250910"]
 
 
 def test_system_blocks_carry_the_cache_marker(settings) -> None:

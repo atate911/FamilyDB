@@ -1,6 +1,10 @@
 import json
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 
-from familydb.store import ideas
+from familydb.app import App
+from familydb.store import db, ideas
 from familydb.tools import ToolContext, ToolRegistry
 
 
@@ -90,3 +94,21 @@ def test_search_ideas_returns_compact_lines(registry, ctx) -> None:
     assert hikes["count"] == 1 and "falls hike" in hikes["ideas"][0]
     _, indoor = _call(registry, ctx, "search_ideas", setting="indoor")
     assert indoor["count"] == 1  # the hike is outdoor-only; the restaurant defaults to 'either'
+
+
+def test_simultaneous_edits_only_commit_one_revision(settings, conn, clock, family):
+    with db.transaction(conn):
+        idea = ideas.insert(conn, title="Museum", kind="outing")
+    seen = ideas.revision(idea)
+    barrier = threading.Barrier(2)
+    app = App(settings, clock)
+
+    def edit(title):
+        with closing(app.connect()) as own:
+            ctx = ToolContext(own, settings, clock, idea_revision=seen)
+            barrier.wait(timeout=10)
+            return app.registry.dispatch("update_idea", {"id": idea.id, "title": title}, ctx)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(edit, ["First edit", "Second edit"]))
+    assert sum(not result.is_error for result in results) == 1
