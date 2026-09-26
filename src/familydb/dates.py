@@ -28,15 +28,11 @@ def parse_datetime(value: str, tz: ZoneInfo) -> datetime:
     return parsed.astimezone(tz)
 
 
-def ensure_not_past(when: date | datetime, clock: Clock, *, backfill: bool = False) -> None:
-    """Refuse a date before today or a time before now, unless the caller flags a backfill."""
-    if backfill:
-        return
+def ensure_not_past(when: date | datetime, clock: Clock) -> None:
+    """Refuse a date before today or a time before now."""
     past = when < clock.now() if isinstance(when, datetime) else when < clock.today()
     if past:
-        raise ToolError(
-            f"{when.isoformat()} is in the past; set backfill=true to record it anyway."
-        )
+        raise ToolError(f"{when.isoformat()} is in the past.")
 
 
 def parse_date_range(start_text: str, end_text: str) -> tuple[date, date]:
