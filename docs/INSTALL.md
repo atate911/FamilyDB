@@ -474,8 +474,8 @@ sudo /opt/familydb/scripts/maintain.sh upgrade            # newer code, backup t
 ```
 
 `restore` and `upgrade` each take a backup first, so either can be undone. `upgrade` is the way
-to newer code: `git pull` fails on the detached commit the checkout is on. RUNBOOK section 8
-says what an upgrade does and which version it moves to.
+to newer code, not `git pull`, which fails on the detached commit an upgrade leaves. RUNBOOK
+section 8 says what an upgrade does and which version it moves to.
 
 **Upgrades on a private repository.** `upgrade` fetches from `origin`, which needs a credential.
 

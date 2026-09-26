@@ -330,9 +330,9 @@ sudo /opt/familydb/scripts/maintain.sh upgrade
 
 It takes a backup, fetches, moves to the newer code, reinstalls the locked dependencies (or
 rebuilds the Docker image), applies any new migrations and restarts, then prints the command to
-go back if it went badly. Do not `git pull` in the checkout instead: it is on a detached commit,
-where that fails. On a private repository the fetch needs a credential; docs/INSTALL.md, under
-Day to day, says how.
+go back if it went badly. Do not `git pull` in the checkout instead: after an upgrade it is on
+a detached commit, where that fails, and it would skip the backup and the dependencies. On a
+private repository the fetch needs a credential; docs/INSTALL.md, under Day to day, says how.
 
 Which code it moves to: while the newest heading in `CHANGELOG.md` says "in progress",
 bootstrap installs the default branch and `upgrade` follows it. Once a version heading carries a
