@@ -96,7 +96,7 @@ class FakeCalendar:
         self.deleted: list[str] = []
         self._counter = 0
 
-    def _as_datetime(self, value: datetime | date, *, end: bool = False) -> datetime:
+    def _as_datetime(self, value: datetime | date) -> datetime:
         if isinstance(value, datetime):
             return value
         return datetime.combine(value, time.min, tzinfo=self.tz)
@@ -373,15 +373,6 @@ def oa_enrich_script(save_place_input: dict[str, Any]) -> list[Any]:
         oa_response([oa_web_call("ws_1")]),
         oa_response([oa_tool_call("call_save", "save_place", save_place_input)]),
         oa_response([oa_text("Saved.")]),
-    ]
-
-
-def oa_discover_script(finds: list[dict[str, Any]]) -> list[Any]:
-    """A worker that searches, then hands back with report_finds, then stops."""
-    return [
-        oa_response([oa_web_call("ws_2")]),
-        oa_response([oa_tool_call("call_finds", "report_finds", {"finds": finds})]),
-        oa_response([oa_text("Reported.")]),
     ]
 
 

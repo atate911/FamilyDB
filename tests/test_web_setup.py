@@ -15,7 +15,6 @@ from familydb.integrations.geocode import GeoPoint
 from familydb.store import db, knocks, members
 from familydb.store import settings as settings_store
 from familydb.web import create_app
-from tests.conftest import NOW_ISO
 from tests.fakes import FakeGeocoder
 
 INSTALLERS = "installer-made-password-1"
@@ -328,4 +327,3 @@ def test_nothing_on_a_setup_page_writes(settings, clock, conn) -> None:
         assert client.get(f"/setup{name}").status_code == 200
     assert client.get("/setup/done").status_code == 200
     assert conn.total_changes == before
-    assert NOW_ISO  # the fixed clock the pages read

@@ -114,7 +114,7 @@ def test_the_whole_pipeline_hands_over(settings, clock, conn, family, monkeypatc
     api = fakes.FakeResponsesAPI(fakes.oa_response([fakes.oa_text("Hello from the spare.")]))
     monkeypatch.setattr(
         "familydb.agent.providers.openai.make_client",
-        lambda settings_: SimpleNamespace(responses=api),
+        lambda _settings: SimpleNamespace(responses=api),
     )
     reply = one_shot(App(only_openai, clock), "hi there", "Sam")
     assert reply.status == "ok" and reply.text == "Hello from the spare."
