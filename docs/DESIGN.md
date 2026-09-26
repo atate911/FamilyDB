@@ -231,7 +231,7 @@ Notes:
 - `messages` is both the audit log and the raw material for an eval set later: real family phrasings paired with the actions they should produce.
 - `outcomes` is separate from `ideas` so a restaurant can be done five times with five ratings.
 - `tool_calls` and `llm_calls` (added during the build) log every tool call and every model call with token usage and cache hits: the ground truth for cost and for whether caching works. `messages.reply_to` links a reply to the message it answers; `ideas.title_norm` backs duplicate detection.
-- Added since: `app_settings` and `settings_log` (0005), what the page has changed and who changed it; `calendar_creations` and `messages.claim_token`, `claim_until` and `delivered_at` (0006), for idempotent event creation, message leases and at-least-once delivery; and `llm_calls.provider`, `web_searches`, `cost_usd` and `cost_estimated` (0008), which the daily spending limit adds up. Number 0007 is retired: PR #2 used it for a migration that was not taken. Then `knocks` (0009), who messaged the bot without being on the list; `llm_calls.kind` and `sections` (0010, 0011), what each call was for and the size of each part it sent; `tasks` and their reminders (0012); `spend_holds` (0013), the cost set aside for a call in flight; `calendar_links` (0014); and `member_locations` with its `label` (0015, 0016), where somebody last shared their location from. The next is 0017.
+- Added since: `app_settings` and `settings_log` (0005), what the page has changed and who changed it; `calendar_creations` and `messages.claim_token`, `claim_until` and `delivered_at` (0006), for idempotent event creation, message leases and at-least-once delivery; and `llm_calls.provider`, `web_searches`, `cost_usd` and `cost_estimated` (0008), which the daily spending limit adds up. Number 0007 is retired: PR #2 used it for a migration that was not taken. Then `knocks` (0009), who messaged the bot without being on the list; `llm_calls.kind` and `sections` (0010, 0011), what each call was for and the size of each part it sent; `tasks` and their reminders (0012); `spend_holds` (0013), the cost set aside for a call in flight; `calendar_links` (0014); and `member_locations` with its `label` (0015, 0016), where somebody last shared their location from; `member_logins` (0017), each person's own password apart from their member record; and the parent role (0018), which rebuilds `members`. The next is 0019.
 
 ## 8. Agent behaviour
 
@@ -367,7 +367,7 @@ Web searches are billed per search on top of tokens. Further levers, all of them
 
 ## 16. Decisions
 
-Decided so far: Telegram as the chat channel and Python as the language. The rest are recommendations awaiting a call.
+A decided row is the call as it was made and why it was made, so that whoever comes to it later can tell whether the reason still holds; it is revisited by changing the row, with the new reason, not by treating it as final or by working round it. An open row is a recommendation awaiting a call.
 
 | Decision | Status | Why |
 |---|---|---|

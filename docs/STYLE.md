@@ -17,7 +17,10 @@ in phosphor, sometimes a radar (see "Green screens").
 
 Everything here is carried by one stylesheet (`src/familydb/web/static/style.css`), a handful of
 templates, three open-licensed typefaces and one icon sprite, with no script beyond the one the
-page already had. A change to the page should be checked against this document.
+page already had. A change to the page should be checked against this document. It describes a
+look the family chose, not a fence around it: a page may do something this document never
+imagined so long as it keeps the principles, and a principle that stands in the way of a better
+page is changed here, with the reason, in the same change, and the family asked.
 
 The page is a way to talk to **Vera**, and she does what it offers: plans the weekend, keeps the
 ideas and the things to do, puts things on the calendar. So the first thing on Home is her
@@ -347,15 +350,16 @@ for more than a moment, and none asks to be looked at.
 - The content policy is `default-src 'self'` with `style-src 'self'`: no inline `style`
   attributes, no `<style>` blocks, no fonts or pictures from anywhere else. Anything that needs a
   computed size is SVG with attributes.
-- A few pieces of markup are what the tests read, and they stay exactly as they are:
-  `class="panel card"` on each card of the ideas and restaurants lists, `class="said"` with the
-  text right after it, `<summary>Move it</summary>` on a plan that can be moved, `class=" today"`
-  on today in the month.
+- A few pieces of markup are what the tests read: `class="panel card"` on each card of the
+  ideas and restaurants lists, `class="said"` with the text right after it,
+  `<summary>Move it</summary>` on a plan that can be moved, `class=" today"` on today in the
+  month. They can change; change them and the tests together.
 - Class names are shared across the whole stylesheet: check a new one is not already taken (a
   meter once borrowed `.bar` from the top bar and flattened it).
-- At most one green screen to a page, and only where it shows something true. VT323 and blur
-  stay on the screens, and scanlines on the screens and in the home page's glow; everywhere else
-  the page is sharp and modern.
+- One green screen to a page, where it shows something true; a second on the same page is
+  decided here first, since two turn the light back into a costume. VT323 and blur stay on the
+  screens, and scanlines on the screens and in the home page's glow; everywhere else the page is
+  sharp and modern.
 - A new colour is measured against the others that share its pages, for typical sight and for
   deuteranopia and protanopia, before it is added.
 - A new small thing has to mean something where it is, and may not move for more than a moment.
