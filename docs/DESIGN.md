@@ -14,7 +14,8 @@ Automatic household memory is designed in [MEMORY.md](MEMORY.md) and built as it
 memory changes emitted during already-required AI requests (one `remember` tool, whose reply can
 end the turn), with local persistence, local choice of what each message needs, and a page to
 see and forget it all. A separate AI memory pass after each message is explicitly out of scope.
-That document is the governing memory design. A daily spending limit is (section 14).
+That document is the governing memory design. A daily spending limit is checked before every
+model call (section 14).
 
 ## 1. What it is
 

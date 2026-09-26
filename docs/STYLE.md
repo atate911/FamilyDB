@@ -69,11 +69,11 @@ says where the family have got to, not what may be tried (see above): what they 
    present-day product: one clear action per place, 44-pixel targets, a tab bar under the thumb
    on a phone, sentence-case labels, readable type. Nothing retro may cost usability.
 2. **The CRT survives as light.** Phosphor green glows only where attention belongs: the mark
-   and cursor in the bar, her screen, the primary button, the box being typed in (and Home's box,
-   faintly, even at rest), the key word of the home page's question, live status and finished
-   tasks, and the green screens
-   (what is next, the way in, the day's spend, the 404). The icon tile beside a page title glows in that
-   page's colour, and amber glows for *today*. If everything glowed, nothing would.
+   and cursor in the bar, her screen, the primary button, the box being typed in (and Home's
+   box, faintly, even at rest), the key word of the home page's question, live status and
+   finished tasks, and the green screens (what is next, the way in, the day's spend, the 404,
+   and where the listed places are). The icon tile beside a page title glows in that page's
+   colour, and amber glows for *today*. If everything glowed, nothing would.
 3. **Colour says where you are.** Each part of the site has one colour, and each kind of idea has
    one; colour is used to tell things apart, never as decoration, and never on its own.
 4. **Two voices, and a third on the screens.** DM Sans for everything read; DM Mono, sparingly,
@@ -412,11 +412,10 @@ looked at (see "Two layers").
   only, since the box itself says what it is for.
 - Nothing is said by colour alone: the chat tells voices apart by side and face; status lights
   differ in shape and carry words; kinds and statuses are written out.
-- `prefers-reduced-motion` stops the cursors, the glyphs falling on her screen, the breathing dots, the
-  screens switching on, the face's blink, the radar's sweep, the 404's flicker, the afterglow and
-  the landing glow. `prefers-contrast:
-  more` lifts secondary text and edges and takes away the glow, the blur and the scanlines,
-  the tiles' raster and her screen's included.
+- `prefers-reduced-motion` stops the cursors, the glyphs falling on her screen, the breathing
+  dots, the screens switching on, the face's blink, the radar's sweep, the 404's flicker, the
+  afterglow and the landing glow. `prefers-contrast: more` lifts secondary text and edges and
+  takes away the glow, the blur and the scanlines, the tiles' raster and her screen's included.
   Forced colours keep dots, boxes, dates and initials outlined, draw her screen as an empty
   outlined square, show a task's tick only when pointed at, leave out the screens that are only
   pictures, and keep Next up's words in a plain box.
