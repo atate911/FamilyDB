@@ -1,4 +1,4 @@
-"""Daily forecasts from Open-Meteo: free, no key, sixteen days ahead."""
+"""Daily forecasts from Open-Meteo, with sunrise and sunset: free, no key, 16 days ahead."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from typing import Any, Protocol
 
 from familydb.config import Settings
@@ -24,6 +24,8 @@ DAILY_FIELDS = (
     "temperature_2m_min",
     "precipitation_probability_max",
     "precipitation_sum",
+    "sunrise",
+    "sunset",
 )
 CACHE_SECONDS = 3600
 # Open-Meteo serves 16 forecast days including today, so the last one is today + 15.
@@ -70,6 +72,15 @@ class DayForecast:
     low: float | None
     rain_chance: int | None  # percent
     precipitation: float | None  # mm or inches, per settings
+    sunrise: int | None = None  # minutes after midnight, in the family's timezone
+    sunset: int | None = None
+
+    @property
+    def daylight(self) -> tuple[int, int] | None:
+        """Sunrise to sunset, in minutes after midnight, when the forecast gives both."""
+        if self.sunrise is None or self.sunset is None or self.sunrise >= self.sunset:
+            return None
+        return self.sunrise, self.sunset
 
     def to_public(self, units: str) -> dict[str, Any]:
         temp = "F" if units == "imperial" else "C"
@@ -94,6 +105,18 @@ def summarize_code(code: int | None) -> str:
     return WEATHER_CODES.get(int(code), f"weather code {code}")
 
 
+def local_minutes(value: Any, day: date) -> int | None:
+    """A local "YYYY-MM-DDTHH:MM", as the forecast gives sunrise and sunset, in minutes after
+    midnight of `day`. None when it is missing, unreadable or on another day."""
+    if value is None:
+        return None
+    try:
+        moment = datetime.fromisoformat(str(value))
+    except ValueError:
+        return None
+    return moment.hour * 60 + moment.minute if moment.date() == day else None
+
+
 def parse_daily(payload: dict[str, Any]) -> list[DayForecast]:
     """The `daily` block of an Open-Meteo response to one record per day."""
     daily = payload.get("daily") or {}
@@ -108,18 +131,23 @@ def parse_daily(payload: dict[str, Any]) -> list[DayForecast]:
     lows = column("temperature_2m_min")
     chances = column("precipitation_probability_max")
     sums = column("precipitation_sum")
+    sunrises = column("sunrise")
+    sunsets = column("sunset")
     out: list[DayForecast] = []
     for i, day in enumerate(dates):
         code = codes[i]
+        when = date.fromisoformat(day)
         out.append(
             DayForecast(
-                date=date.fromisoformat(day),
+                date=when,
                 code=None if code is None else int(code),
                 summary=summarize_code(code),
                 high=None if highs[i] is None else float(highs[i]),
                 low=None if lows[i] is None else float(lows[i]),
                 rain_chance=None if chances[i] is None else int(chances[i]),
                 precipitation=None if sums[i] is None else float(sums[i]),
+                sunrise=local_minutes(sunrises[i], when),
+                sunset=local_minutes(sunsets[i], when),
             )
         )
     return out

@@ -18,6 +18,7 @@ from flask import (
     url_for,
 )
 
+from familydb import agenda
 from familydb.app import App
 from familydb.availability import calendar_available
 from familydb.store import ideas as idea_store
@@ -29,7 +30,7 @@ from familydb.store import places as place_store
 from familydb.store import plans as plan_store
 from familydb.store import tasks as task_store
 from familydb.store.ideas import KIND_SUGGESTIONS
-from familydb.web import agenda, auth, chat, views
+from familydb.web import auth, chat, views
 from familydb.web import status as status_page
 from familydb.web.chat import WHO_KEY
 
@@ -144,6 +145,7 @@ def home() -> Response | str:
 @bp.get("/ideas")
 def ideas() -> str:
     app = _app()
+    settings = app.settings
     query = request.args.get("q", "").strip()
     kind = request.args.get("kind", "").strip()
     status = request.args.get("status", "").strip()
@@ -159,11 +161,22 @@ def ideas() -> str:
         )
         kinds, people = _choices(idea_store.list_all(conn, include_dropped=True))
         capture_people = member_store.list_all(conn)
+        # Where each listed idea is from home, for its card and the radar of the list.
+        away = {
+            idea.id: views.away_from_home(place_store.get(conn, idea.place_id), settings)
+            for idea in found
+            if idea.place_id
+        }
     filtered = bool(query or kind or status or who)
+    rows = []
+    for idea in found:
+        spot = away.get(idea.id)
+        rows.append({**views.idea_row(idea, settings.tzinfo), "away": spot.text if spot else None})
     return render_template(
         "ideas.html",
         capture_people=capture_people,
-        rows=[views.idea_row(idea, app.settings.tzinfo) for idea in found],
+        rows=rows,
+        on_radar=views.places_radar([(i, away[i.id]) for i in found if away.get(i.id)]),
         kinds=kinds,
         people=people,
         statuses=STATUSES,
@@ -362,7 +375,11 @@ def tasks() -> str:
         people = member_store.list_all(conn)
     return render_template(
         "tasks.html",
-        rows=[views.task_row(task, app.settings.tzinfo) for task in rows],
+        rows=[
+            views.task_row(task, app.settings.tzinfo, nudging=app.settings.task_nudges)
+            for task in rows
+        ],
+        repeat_options=views.REPEATS,
         people=people,
         status=status,
         zone=app.settings.tz,

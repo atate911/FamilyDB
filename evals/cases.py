@@ -85,6 +85,30 @@ def mentions(*words: str) -> Check:
     return check
 
 
+def promises_nothing() -> Check:
+    """No promise to bring something up by itself: nothing will, so none may be made."""
+    promises = ("i'll nudge", "i will nudge", "i'll remind", "i will remind", "i'll bring it up")
+
+    def check(run: Run) -> str | None:
+        reply = run.reply.casefold().replace("\u2019", "'")
+        made = [p for p in promises if p in reply]
+        return f"promised: {', '.join(made)}" if made else None
+
+    return check
+
+
+def caveated(subject: str, *caveats: str) -> Check:
+    """A reply that offers `subject` also says one of `caveats`. Leaving it out is fine."""
+
+    def check(run: Run) -> str | None:
+        reply = run.reply.casefold()
+        if subject.casefold() not in reply or any(c.casefold() in reply for c in caveats):
+            return None
+        return f"offers {subject} without saying {' or '.join(caveats)}"
+
+    return check
+
+
 def shorter_than(characters: int) -> Check:
     def check(run: Run) -> str | None:
         n = len(run.reply)
@@ -219,6 +243,21 @@ def _hour(value: object) -> int | None:
     return int(text[:2]) if text[:2].isdigit() else None
 
 
+def tonight() -> Check:
+    """Asked about tonight: today from the evening, or the next few hours."""
+    return either(
+        called(
+            "suggest",
+            where=lambda c: (
+                c.input.get("window") == "today" and (_hour(c.input.get("from_time")) or 0) >= 16
+            ),
+            what="today from the evening",
+        ),
+        window("now"),
+        what="not asked about tonight",
+    )
+
+
 DIRECT = ("get_calendar", "get_forecast", "check_open")  # suggest already did these
 # The girls, by their Telegram id (household.py); they read along in the family's group (GROUP).
 GIRLS = "1003"
@@ -292,10 +331,97 @@ CASES: tuple[Case, ...] = (
         "Vague timing stays vague: a window, no reminder, no deadline, no calendar entry.",
     ),
     Case(
+        "gutters_before_christmas",
+        ("Sometime before Christmas I need to clean out the gutters.",),
+        (
+            called("add_task", 1, lambda c: not c.input.get("remind_at"), "with no reminder"),
+            wrote_only("add_task"),
+            promises_nothing(),
+        ),
+        "No day or part of the day to bring it up on, so no promise that it will come up.",
+    ),
+    Case(
         "arrange_not_book",
         ("Don't let me forget to make a dentist appointment.",),
         (called("add_task", 1), wrote_only("add_task")),
         "Arranging an appointment is a task, not the appointment.",
+    ),
+    Case(
+        "bins_every_sunday",
+        ("remind me to put the bins out every Sunday at 7pm",),
+        (
+            called(
+                "add_task",
+                1,
+                lambda c: (
+                    c.input.get("repeat_unit") == "week"
+                    and c.input.get("repeat_every") == 1
+                    and c.input.get("repeat_from", "schedule") == "schedule"
+                    and str(c.input.get("remind_at") or "").startswith("2026-09-27T19:00")
+                ),
+                "every week, from Sunday 27 September at 19:00",
+            ),
+            wrote_only("add_task"),
+        ),
+        "Something that comes round again is one task that repeats, not one reminder.",
+    ),
+    Case(
+        "dentist_after_the_last_visit",
+        (
+            "I was at the dentist today. Remind me at 9am six months after each visit to book "
+            "the next one.",
+        ),
+        (
+            called(
+                "add_task",
+                1,
+                lambda c: (
+                    c.input.get("repeat_unit") == "month"
+                    and c.input.get("repeat_every") == 6
+                    and c.input.get("repeat_from") == "done"
+                    and str(c.input.get("remind_at") or "").startswith("2027-03-25T09:00")
+                ),
+                "every 6 months counted from when done, first on 25 March 2027 at 09:00",
+            ),
+            wrote_only("add_task"),
+        ),
+        "Counted from the last time, not the calendar: repeat_from done.",
+    ),
+    Case(
+        "grandmas_birthday",
+        ("Grandma's birthday is October 12th. Remind me two weeks before at 9am.",),
+        (
+            called(
+                "add_task",
+                1,
+                lambda c: (
+                    c.input.get("repeat_unit") == "year"
+                    and c.input.get("repeat_every") == 1
+                    and "grandma" in str(c.input.get("gift_for") or "").casefold()
+                    and str(c.input.get("remind_at") or "").startswith("2026-09-28T09:00")
+                ),
+                "yearly, for Grandma's gifts, from Monday 28 September at 09:00",
+            ),
+            wrote_only("add_task"),
+        ),
+        "A birthday comes round every year, and its reminder brings the gifts saved for her.",
+    ),
+    Case(
+        "a_gift_for_grandma",
+        ("Grandma would love a new gardening apron",),
+        (
+            called(
+                "add_idea",
+                1,
+                lambda c: (
+                    c.input.get("kind") == "gift"
+                    and any("grandma" in p.casefold() for p in c.input.get("participants") or [])
+                ),
+                "a gift, for Grandma",
+            ),
+            wrote_only("add_idea", "remember"),
+        ),
+        "A present somebody would like is a gift idea for them, not an outing.",
     ),
     Case(
         "sensitive_reminder_in_the_group",
@@ -329,23 +455,19 @@ CASES: tuple[Case, ...] = (
     Case(
         "tonight",
         ("anything fun we could do tonight?",),
+        (tonight(), never(*DIRECT), wrote_only()),
+        "Tonight is today from the evening.",
+    ),
+    Case(
+        "outdoors_after_dark",
+        ("anything outdoors we could do tonight?",),
         (
-            either(
-                called(
-                    "suggest",
-                    where=lambda c: (
-                        c.input.get("window") == "today"
-                        and (_hour(c.input.get("from_time")) or 0) >= 16
-                    ),
-                    what="today from the evening",
-                ),
-                window("now"),
-                what="not asked about tonight",
-            ),
+            tonight(),
             never(*DIRECT),
             wrote_only(),
+            caveated("hike", "dark", "daylight", "sunset", "dusk"),
         ),
-        "Tonight is today from the evening.",
+        "After soccer it is dark by 19:04: the falls hike is not offered as if it were light.",
     ),
     Case(
         "this_weekend",

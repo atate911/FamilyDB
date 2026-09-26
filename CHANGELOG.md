@@ -43,16 +43,42 @@ older than what is installed. It gets a date when it is released.
 - **Keeps the things to do.** "Remind me on Tuesday that we need paper towels"
   is a task with a reminder, sent in the chat it was asked in; "one of these
   Saturday mornings" is a task with no invented date. A page lists them, and
-  a reminder sent late after the bot was off says when it was due.
+  a reminder sent late after the bot was off says when it was due. A task can
+  come round again: "bins out every Sunday at 7pm", or "the dentist six months
+  after the last visit"; ticking it off records it and keeps it coming, the
+  hour holds when the clocks change, and a stretch with the bot off sends one
+  late reminder rather than a pile. The tasks page sets and shows it too. A
+  birthday or anniversary is a yearly task whose reminder lists the gift ideas
+  saved for whoever's it is ("Grandma would love a gardening apron" is kept as
+  one), or asks for some when there are none. A task kept for "one of these
+  Saturday mornings" is brought up when such a morning comes round and the
+  calendar is free for the hour ahead, with a reminder's buttons: each task
+  once a week at most, one a day in each chat, and only when its words name
+  days or a part of the day plainly ("before Christmas" is left alone). The
+  tasks page says when each comes up, and the settings page turns it off. On
+  Telegram a reminder comes with ✓ Done, In an hour and Tomorrow buttons, and
+  "how was it?" with Yes, again, Not again and Didn't go: a tap is done by code
+  with no model call, so it answers at once and works when the model does not,
+  and the message then says who did what, for everyone in the chat.
+- **Answers /today, /week, /tasks and /now on Telegram by itself.** What is on
+  today and for the next seven days, the open tasks kept in that chat, and what
+  on the list could start right now are answered from the calendar, the task
+  list and the suggestion engine at once, with no model call, so they work when
+  the model is down or the day's limit is spent. They are in Telegram's "/"
+  menu, only the family may ask, and each answer is kept in the conversation.
 - **Answers "what should we do?" for the time asked about:** right now, tonight,
   Saturday morning or this weekend. A staged engine checks every idea against
   the free time in minutes, the forecast, the opening hours and the travel
   time, says when each option could actually start, searches for what is on,
-  and logs every verdict.
+  and logs every verdict. An outdoor idea is held to the daylight: one that
+  only fits after dark is offered as possible, with the reason, and asked about
+  today, the reply is told when dark comes.
 - **Knows where the family is when a phone says so.** A location shared on
   Telegram, or the position the web page's chat sends with a message (only
   while "Send where I am" is ticked), is used for three hours: travel is measured from there
-  and discovery searches near it.
+  and discovery searches near it. A live location shared on Telegram follows the phone as it
+  moves; an earlier build kept only where it started, because it never asked Telegram for
+  the edits a live location moves by.
 - **Speaks as Vera.** A personality, and a description of the family, both
   editable on the settings page. Everything said unasked (reminders, "how was
   it?", notices) is written in her words by code, and is carried by her reply
@@ -60,7 +86,10 @@ older than what is installed. It gets a date when it is released.
   and said as `{name}` everywhere else, and the chat page shows her replies
   under it.
 - **Speaks first.** A Thursday digest of the weekend's options, and a "how was
-  it?" the morning after a plan.
+  it?" the morning after a plan. The evening before a plan it checks the forecast
+  and the place's hours again, with no model call, and speaks only when one is
+  off: rain for an outdoor plan, or the place listed as closed then, with another
+  idea for the same time when one fits. The hour, or not at all, is a setting.
 - **Runs on OpenAI's GPT-6 Luna by default,** the cheapest capable model of the
   three companies, for chat and lookups alike. Claude and Gemini can be chosen
   per surface on the settings page, with another as a spare when the first is
@@ -103,8 +132,10 @@ older than what is installed. It gets a date when it is released.
   no two that share a page are easily confused, colour-blind eyes included. Its few
   pictures are 1980s green-screen monitors: what is next on the home page, beside a
   radar of everything coming; the sign-in; the day's spend, which turns amber near
-  the limit; and the page that is not there. `docs/STYLE.md` says what each choice
-  is for.
+  the limit; the page that is not there; and, on the Ideas page, a radar that is a
+  map of where the listed places are from home, following the filters, while each
+  card says its own drive and direction. `docs/STYLE.md` says what each choice is
+  for.
 - **Vera at the centre of the page.** Home opens on the box to answer her
   question, "What’s on your mind?", which is its label: the chat's own box, so a
   question or an instruction typed there lands in the conversation, which the

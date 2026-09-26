@@ -1,7 +1,7 @@
 """Catch up on start: the cron jobs live in memory, so a restart after the hour would skip them.
 
-Both jobs are idempotent (one digest per day, one question per plan), so running them once
-shortly after start costs nothing when they already ran.
+They are idempotent (one digest per day, one question and one check per plan), so running them
+once shortly after start costs nothing when they already ran.
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ from familydb.agent.loop import MessagesAPI
 from familydb.app import App
 from familydb.availability import digest_configured
 from familydb.jobs.follow_ups import run_follow_ups
+from familydb.jobs.plan_checks import run_plan_checks
 from familydb.jobs.weekend_digest import run_digest
 from familydb.whereabouts import forget_old
 
@@ -32,14 +33,22 @@ def digest_due(app: App) -> bool:
     )
 
 
+def plan_checks_due(app: App) -> bool:
+    """Whether today's check of tomorrow's plans should have run by now."""
+    return app.settings.plan_checks and app.clock.now().hour >= app.settings.plan_check_hour
+
+
 def run_catch_up(app: App, *, api: MessagesAPI | None = None) -> dict[str, Any]:
-    """Forget old locations, run the follow-ups, and the digest when it was due earlier today."""
+    """Forget old locations, run the follow-ups, tomorrow's plan checks when their hour has
+    passed, and the digest when it was due earlier today."""
     app.refresh()
     # A bot that was off for days deletes the locations it should have forgotten meanwhile.
     forgotten = forget_old(app)
     if forgotten:
         log.info("catch-up on start: forgot %s shared location(s) past their day", forgotten)
     result: dict[str, Any] = {"follow_ups": run_follow_ups(app), "digest": "not due"}
+    if plan_checks_due(app):
+        result["plan_checks"] = run_plan_checks(app)
     if digest_due(app):
         reply = run_digest(app, api=api)
         result["digest"] = "skipped" if reply is None else reply.status

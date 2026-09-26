@@ -41,6 +41,8 @@ class Plan(BaseModel):
     status: Literal["confirmed", "tentative", "cancelled"] = "confirmed"
     created_by: int | None = None
     followed_up_at: str | None = None
+    # When it was checked the evening before (jobs/plan_checks.py).
+    checked_at: str | None = None
     channel: str | None = None
     chat_id: str | None = None
     created_at: str
@@ -163,6 +165,21 @@ def due_for_follow_up(conn: sqlite3.Connection, *, today: str, since: str) -> li
         (today, since),
     )
     return [Plan.from_row(row) for row in rows]
+
+
+def due_for_check(conn: sqlite3.Connection, *, day: str) -> list[Plan]:
+    """Live plans for an idea that start on `day`, made in a chat, and not checked yet."""
+    rows = conn.execute(
+        "SELECT * FROM plans WHERE status != 'cancelled' AND checked_at IS NULL "
+        "AND idea_id IS NOT NULL AND chat_id IS NOT NULL AND substr(start, 1, 10) = ? "
+        "ORDER BY start",
+        (day,),
+    )
+    return [Plan.from_row(row) for row in rows]
+
+
+def mark_checked(conn: sqlite3.Connection, plan_id: int, *, now: str) -> None:
+    conn.execute("UPDATE plans SET checked_at = ? WHERE id = ?", (now, plan_id))
 
 
 def mark_followed_up(conn: sqlite3.Connection, plan_id: int, *, now: str | None = None) -> None:

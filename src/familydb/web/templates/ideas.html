@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon, kind_label, page_head %}
+{% from "_ui.html" import icon, kind_label, page_head, crt, radar %}
 {% block title %}Ideas · {{ site_title }}{% endblock %}
 {% block content %}
   {% call page_head('Ideas', 'Places to go, things to try, and everything the family has mentioned.', 'idea') %}
@@ -79,6 +79,29 @@
     </div>
   </form>
 
+  {# Where the listed places are, on a green screen: a radar that is a map, home at the middle,
+     north at the top, the nearer by road the nearer the middle, and the nearest pinging. It
+     follows the filters. The words beside it are the page's own, and each card below says its
+     own distance and direction. #}
+  {% if on_radar %}
+    {% call crt('on-radar', hidden=false) %}
+      {{ radar(on_radar.blips, rings=on_radar.rings) }}
+      <div class="on-radar-text">
+        <p class="on-radar-label"><span class="inverse caps">On the radar</span></p>
+        <p class="on-radar-count bright">{{ on_radar.count }} place{{ '' if on_radar.count == 1 else 's' }} from home</p>
+        <p class="on-radar-line"><span class="dim">Nearest</span>
+          <a href="{{ url_for('web.idea', idea_id=on_radar.nearest.id) }}">#{{ on_radar.nearest.id }} {{ on_radar.nearest.title }}</a>
+          <span class="rel">{{ on_radar.nearest.away }}</span></p>
+        {% if on_radar.furthest %}
+          <p class="on-radar-line"><span class="dim">Furthest</span>
+            <a href="{{ url_for('web.idea', idea_id=on_radar.furthest.id) }}">#{{ on_radar.furthest.id }} {{ on_radar.furthest.title }}</a>
+            <span class="rel">{{ on_radar.furthest.away }}</span></p>
+        {% endif %}
+        <p class="on-radar-more dim">North at the top. Rings at 15 min, 45 min and 2 h by road.<span class="crt-cursor" aria-hidden="true"></span></p>
+      </div>
+    {% endcall %}
+  {% endif %}
+
   <p class="muted count">
     {{ rows | length }} idea{{ '' if rows | length == 1 else 's' }}{% if filtered %} match{{ 'es' if rows | length == 1 else '' }}{% endif %}{% if rows | length == limit %}, showing the first {{ limit }}{% endif %}
   </p>
@@ -100,6 +123,7 @@
         <h2><a href="{{ url_for('web.idea', idea_id=row.id) }}">{{ row.title }}</a></h2>
         <p class="muted meta">
           {% if row.where %}<span>{{ icon('pin') }}{{ row.where }}</span>{% endif %}
+          {% if row.away %}<span>{{ icon('day_trip') }}{{ row.away }}</span>{% endif %}
           {% if row.on %}<span>{{ icon('plans') }}{{ row.on }}</span>{% endif %}
           <span>{{ icon('user') }}for {{ row.who }}</span>
           {% if row.duration %}<span>{{ icon('clock') }}{{ row.duration }}</span>{% endif %}
