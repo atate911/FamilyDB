@@ -234,7 +234,7 @@ def test_the_dates_are_the_family_s(status, conn, clock) -> None:
 
 
 def test_a_new_install_starts_by_adding_yourself(settings, clock, conn) -> None:
-    """The installer no longer asks a name: the page's first setup step is the Family page."""
+    """The installer asks for no name: the first setup step on the page is adding yourself."""
     from familydb import family
     from familydb.web.status import services, setup_steps
 

@@ -133,7 +133,7 @@ def test_a_browser_s_own_posts_carry_an_origin_the_page_accepts(settings, clock)
     another site sends — so the policy is what has to let the real origin through. Both halves
     are pinned: a null origin is refused, and the policy is one under which browsers send the
     real one. The test client sends no Origin header on its own, so without this nothing would
-    notice the page being unusable in a browser, which is how it went unnoticed before.
+    notice the page being unusable in a browser.
     """
     client = _client(settings, clock, web_password=PASSWORD)
     refused = client.post("/login", data={"password": PASSWORD}, headers={"Origin": "null"})
@@ -195,11 +195,11 @@ CADDY = {
 
 
 def test_behind_a_proxy_the_cookie_is_secure_and_the_client_is_the_real_one(settings, clock):
-    """Through the real server, because that is where the headers were being lost.
+    """Through the real server, because that is where the forwarding headers are kept or lost.
 
-    Waitress strips forwarding headers from a peer it was not told to trust before Flask sees
-    them, and Flask's test client skips waitress altogether, so a test like this one written
-    against the test client passed while nobody could sign in through Caddy.
+    Waitress strips them from a peer it was not told to trust before Flask sees them, and
+    Flask's test client skips waitress altogether, so this test written against the test client
+    would pass even while nobody could sign in through Caddy.
     """
     from familydb.web.server import serve_in_thread
 
@@ -600,12 +600,12 @@ def test_the_nav_reaches_every_page(settings, clock, conn, family) -> None:
         assert f'href="{target}' in home.text, target  # "/chat" goes to its newest line
         assert client.get(target).status_code == 200
     assert 'href="/chat#latest"' in home.text
-    assert 'href="/restaurants"' in client.get("/ideas").text  # a tab of the ideas now
+    assert 'href="/restaurants"' in client.get("/ideas").text  # a tab of the ideas page
 
 
 def test_links_that_are_not_web_addresses_never_become_links(settings, clock, conn, family) -> None:
-    # An idea's link comes straight from a chat message, and a place saved before links were
-    # filtered may hold anything. Neither may reach an href.
+    # An idea's link comes straight from a chat message, and a place an older install saved may
+    # hold any link at all. Neither may reach an href.
     idea = _idea(conn, "Dodgy link", url="javascript:alert(1)")
     _with_place(
         conn,
@@ -644,10 +644,11 @@ def test_the_lockout_table_does_not_grow_without_limit(settings, clock) -> None:
 
 
 def test_no_page_reaches_a_table_to_write_to_it() -> None:
-    """No module in the package may write to a table itself, and that includes the three
-    that change things: the chat page hands a message to the pipeline, the edit forms call the
-    tools, the settings page goes through one repository. Every write is somebody else's, which
-    is what keeps the checks, the transactions and the audit rows in one place."""
+    """No module in the package may write to a table itself, and that includes the four that
+    change things: the chat page hands a message to the pipeline, the edit forms call the tools,
+    the family page goes through the family rules, and the settings page through one repository.
+    Every write is somebody else's, which is what keeps the checks, the transactions and the
+    audit rows in one place."""
     import ast
 
     import familydb.web as package

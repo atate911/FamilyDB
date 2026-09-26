@@ -439,7 +439,7 @@ def test_three_roles_and_kids_stand_in_for_parents_for_now() -> None:
     assert roles.PERMISSIONS["admin"] - roles.PERMISSIONS["parent"] == {"manage"}
     assert roles.PERMISSIONS["kid"] == roles.PERMISSIONS["parent"]  # the stand-in
     assert roles.may("parent", "chat") and not roles.may("parent", "manage")
-    assert not roles.may("member", "sign_in")  # a role nobody has any more may do nothing
+    assert not roles.may("member", "sign_in")  # a role that is not one of the three may do nothing
 
 
 def test_a_kid_signs_in_and_uses_the_page_as_a_parent_does(app, sam, family) -> None:

@@ -277,7 +277,8 @@ def test_a_cases_settings_are_laid_over_the_run(settings) -> None:
 def test_her_name_is_the_one_she_was_given_and_none_keeps_its_own(
     settings, persona, reply, wrong
 ) -> None:
-    """The rename is a setting Settings may not have yet, and must not stop the case running."""
+    """The case's name for her is laid over whichever persona the run is under, and under none
+    the bot is still FamilyDB."""
     case = by_name("her_name_after_a_rename")
     _, chosen = under_persona(settings, persona)
     assert grade(case, run_case(case, chosen, api=_answer([fakes.text(reply)]))) == wrong

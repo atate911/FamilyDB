@@ -134,8 +134,8 @@ def test_a_wording_that_cannot_be_used_is_said_plainly(settings) -> None:
 
 
 def test_a_line_kept_as_a_string_is_one_wording_breaks_and_all(settings) -> None:
-    """Every line was one string before a line could have several wordings, and the page kept
-    the breaks typed in it: such a line still says all of itself, every time."""
+    """A line older installs stored as one string, line breaks and all, is one wording: it says
+    all of itself, every time."""
     from familydb.task_service import reminder_text
 
     line = "Reminder: {title}{who}.\r\nTask #{task}; say done when it's done."

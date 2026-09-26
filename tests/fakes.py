@@ -1,4 +1,4 @@
-"""Scripted stand-ins for the Anthropic messages API."""
+"""Scripted stand-ins for each provider's API, Google Calendar, the forecast and the geocoder."""
 
 from __future__ import annotations
 

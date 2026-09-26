@@ -78,7 +78,8 @@ def test_the_stronger_models_have_prices() -> None:
     assert prices.cost("openai", "gpt-6-sol", million_out) == (10.0, True)
     assert prices.cost("openai", "gpt-6-astra", million_out) == (50.0, True)
     assert prices.cost("gemini", "gemini-3.1-pro-preview", million_out) == (12.0, True)
-    # The lookup model Gemini installs had was counted as unlisted, twenty times too dear.
+    # Gemini's better model, which an install may name for lookups: unlisted, it would count as
+    # twenty times dearer than it is.
     assert prices.cost("gemini", "gemini-3.8-flash", million_out) == (3.75, True)
 
 

@@ -466,10 +466,7 @@ def test_plan_lookup_survives_empty_conversation_history(env):
 
 
 def test_the_calendar_tool_names_the_plan_behind_each_event_and_reads_google_s_dates(env):
-    """The model can find a plan it made from the calendar alone, even after it moved in Google.
-
-    (PR #2 tested this beside its plans page; the page half is with the page.)
-    """
+    """The model can find a plan it made from the calendar alone, even after it moved in Google."""
     _, created = call(
         env, "create_event", title="Museum", start="2026-09-26T10:00", end="2026-09-26T12:00"
     )
@@ -486,8 +483,9 @@ def test_the_calendar_tool_names_the_plan_behind_each_event_and_reads_google_s_d
 
 
 def test_reading_the_calendar_rewrites_nothing_that_did_not_change(env):
-    """Plans are stored to the minute with their offset. Writing Google's own spelling back —
-    seconds included — compared as a change every time and rewrote every plan on every read."""
+    """Plans are stored to the minute with their offset, so Google's own spelling of the same
+    time, seconds included, is no change: counting it as one would rewrite every plan on every
+    read."""
     _, timed = call(env, "create_event", title="Museum", start="2026-09-26T10:00")
     _, whole = call(env, "create_event", title="Camping", start="2026-10-03", end="2026-10-04")
     before = {p["plan"]["id"]: plans.get(env.conn, p["plan"]["id"]) for p in (timed, whole)}

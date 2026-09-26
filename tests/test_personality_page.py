@@ -129,7 +129,7 @@ def test_a_rewrite_is_used_and_can_be_restored(page, conn) -> None:
 
 
 def test_her_own_text_with_her_name_filled_in_is_no_rewrite(page, conn) -> None:
-    """A form drawn before her name was written once showed her name, and the old key."""
+    """A form from an older page sends her name written out, and her old key: still no rewrite."""
     form = _form(
         page,
         persona="vera",
@@ -230,9 +230,8 @@ def test_each_line_shows_how_it_reads_with_made_up_details_filled_in(page, conn)
 
 
 def test_a_line_saved_as_one_string_stays_one_wording_when_the_page_is_saved(page, conn) -> None:
-    """Before a line could have several wordings the page kept the breaks typed in a line, and
-    said it all as one message. Saved again as it was drawn, it is still one wording; changed, it
-    is read as the box says now."""
+    """A line older installs stored as one string, line breaks and all, is one wording: saved
+    again as it was drawn it stays one, and changed it is read as the box says now."""
     old = "Reminder: {title}{who}.\r\nTask #{task}; say done when it's done."
     with transaction(conn):
         settings_store.set_many(conn, {"voice_lines": {"reminder": old}}, source="test")
@@ -298,7 +297,7 @@ def test_choosing_none_keeps_her_rewrite_for_when_she_is_chosen_again(page, conn
     assert 'name="persona_text"' not in shown and 'name="described"' not in shown
     assert "What you wrote for her description is kept for when she is chosen again." in shown
     assert settings_store.overrides(conn)["persona_text"]["default"]["text"] == rewrite
-    # A form drawn under none before the box said whom it described sent an empty one.
+    # An older page's form, drawn under none, sends the box empty, not saying whom it describes.
     old_form = _form(page, persona="none", persona_text="", about_family="")
     assert page.post("/settings/personality", data=old_form).status_code == 302
     again = page.post("/settings/personality", data=_drawn(page, persona="default"))
@@ -364,8 +363,8 @@ def test_a_rewrite_says_which_of_her_it_was_written_from(page, conn) -> None:
 
 
 def test_a_rewrite_stored_as_it_used_to_be_is_still_hers(page, conn) -> None:
-    """One string, from before rewrites were kept per persona: shown as hers, used as hers, and
-    not written again by a save that changes nothing."""
+    """A rewrite older installs stored as one string is shown as hers, used as hers, and not
+    written again by a save that changes nothing."""
     theirs = "You are {name}. Dry."
     with transaction(conn):
         settings_store.set_many(conn, {"persona_text": theirs})
@@ -456,7 +455,7 @@ def test_under_none_the_bot_is_familydb_and_their_name_for_her_is_kept(page, con
 
 
 def test_her_own_name_or_an_empty_box_is_no_name_of_theirs(page, conn) -> None:
-    """Neither is stored; a form drawn before there was a box for her name leaves theirs alone."""
+    """Neither is stored; a form from an older page, with no box for her name, keeps theirs."""
     for own in ("Vera", " Vera ", ""):
         saved = page.post("/settings/personality", data=_drawn(page, persona_name=own))
         assert saved.status_code == 302 and settings_store.overrides(conn) == {}, own
@@ -552,7 +551,7 @@ def test_notes_are_kept_under_none_and_unused_and_come_back_with_her(page, conn)
 
 
 def test_a_box_not_sent_leaves_the_notes_and_an_empty_one_drops_them(page, conn) -> None:
-    """A form drawn before there was a box for them leaves them as they are."""
+    """A form from an older page, with no box for them, leaves them as they are."""
     page.post("/settings/personality", data=_drawn(page, persona_notes=NOTES))
     old_form = _form(page, persona="default", persona_text="", about_family="")
     assert page.post("/settings/personality", data=old_form).status_code == 302
@@ -706,8 +705,8 @@ def test_changes_far_apart_are_shown_apart_with_what_is_between_left_out() -> No
 
 
 def test_no_notice_while_her_own_description_is_as_it_was(page, conn) -> None:
-    """Written from hers as she is now, or before what it was written from was remembered, or not
-    rewritten at all: nothing to say."""
+    """Written from hers as she is now, stored without what it was written from (as older
+    installs have it), or not rewritten at all: nothing to say."""
     assert "own description has changed" not in page.get("/settings/personality").text
     for of in (personas.load(personas.DEFAULT).character, ""):
         _rewritten_from(conn, of)

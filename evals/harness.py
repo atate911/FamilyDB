@@ -200,7 +200,7 @@ def settings_for(base: Settings, folder: Path, *, limit: float = 1.0) -> Setting
             "home_area": "Vancouver, WA",
             "family_tz": "America/Vancouver",
             # No web searches: they cost, and what the web says today is not what it says
-            # tomorrow. Lookups and discovery are for their own cases, later.
+            # tomorrow, so no case looks anything up or discovers anything.
             "web_tools_enabled": False,
             # The bot's own limit, checked before every call: what is left of the run's budget.
             "daily_spend_limit": limit,

@@ -1,4 +1,5 @@
-"""Task persistence, delivery recovery, capture, and context selection regressions."""
+"""Tasks and their reminders from the tools and the page, a thought saved for later, and a
+question narrowed to the ideas it names."""
 
 import re
 from datetime import timedelta
