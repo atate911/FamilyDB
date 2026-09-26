@@ -740,7 +740,10 @@ def _wait_for_stop(*, quiet: bool = False) -> None:
             "no chat channel yet; waiting. Add a Telegram token or turn the web page on; "
             "meanwhile `familydb chat` and `familydb repl` work."
         )
-    stop.wait()
+    # In slices: the kernel may hand SIGTERM to any of the bot's threads, and Python runs the
+    # handler only when the main thread next runs, which an untimed wait never lets it do.
+    while not stop.wait(1):
+        pass
 
 
 @db_app.command("retry-failed")
