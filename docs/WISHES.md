@@ -133,7 +133,7 @@ days; so the nudges thin out as she improves. "I want" earns a warm word at most
 days. The prompt keeps it to one kind line at her age, never a lecture, and never when "we"
 really is the family.
 
-### Her conversation, her limit, the two messages to parents (planned)
+### Her conversation (built), her limit and the two messages to parents (planned)
 
 A kid's chat is `member:<id>`: private, read by parents at `/chat?with=<id>`. Her calls are
 summed per day against `kid_daily_spend`; past it, a line from `voice.say` and no call. Ideas her

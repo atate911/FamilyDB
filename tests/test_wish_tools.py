@@ -227,3 +227,11 @@ def test_in_a_shared_chat_her_topics_stay_hers(settings, clock, conn, family, mi
     )
     sent = json.dumps(api.requests[0]["messages"][-1])
     assert "Mia is a girl, 9." in sent and "pet" not in sent
+
+
+def test_a_kid_s_own_conversation_on_the_page_is_private(conn, family) -> None:
+    from familydb.agent.render import render_audience_line
+
+    everyone = members.list_all(conn)
+    assert render_audience_line("web", f"member:{family['girls'].id}", everyone) is None
+    assert "everyone who signs in" in render_audience_line("web", "web", everyone)

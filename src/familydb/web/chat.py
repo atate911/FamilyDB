@@ -23,6 +23,7 @@ from typing import Any
 from flask import (
     Blueprint,
     Response,
+    abort,
     current_app,
     redirect,
     render_template,
@@ -106,6 +107,24 @@ def _chat() -> WebChat:
     return current_app.config["FAMILYDB_CHAT"]
 
 
+# A kid's own conversation with her: nobody else writes in it, and a parent may read it
+# (docs/WISHES.md). The family's shared conversation is DEFAULT_CHAT.
+PRIVATE = "member:{id}"
+
+
+def private_chat(member_id: int) -> str:
+    return PRIVATE.format(id=member_id)
+
+
+def my_chat() -> str:
+    """Which conversation this visitor talks in: a kid, who may not decide for the others, her
+    own; everybody else the family's."""
+    visitor = auth.visitor()
+    if visitor.member is not None and not visitor.may("decide"):
+        return private_chat(visitor.member.id)
+    return DEFAULT_CHAT
+
+
 def _who(names: list[str]) -> str | None:
     """Who the page will speak as: whoever is signed in, or, when the page cannot tell, what this
     session last chose, while they are still family."""
@@ -161,7 +180,9 @@ def asked() -> str | None:
     return request.args.get("ask", "")[:MAX_MESSAGE].strip() or None
 
 
-def standing(app: App, thread: list[Message]) -> tuple[str | None, Handing | None]:
+def standing(
+    app: App, thread: list[Message], chat_id: str = DEFAULT_CHAT
+) -> tuple[str | None, Handing | None]:
     """How the newest message stands (see `waiting_on`), and a message just handed over that
     the log does not hold yet.
 
@@ -169,14 +190,14 @@ def standing(app: App, thread: list[Message]) -> tuple[str | None, Handing | Non
     the log has it, the page draws it from the channel's memory, and it is being thought about.
     """
     chat = _chat()
-    handing = chat.handing_over(DEFAULT_CHAT)
+    handing = chat.handing_over(chat_id)
     if handing is not None and any(m.channel_update_id == handing.update_id for m in thread):
         handing = None  # stored: the log shows it now
     if handing is not None:
         return "thinking", handing
     answered = {message.reply_to for message in thread if message.reply_to is not None}
     last = thread[-1] if thread else None
-    busy = chat.busy(DEFAULT_CHAT)
+    busy = chat.busy(chat_id)
     return waiting_on(last, answered, busy=busy, now=app.clock.now(), settings=app.settings), None
 
 
@@ -185,9 +206,10 @@ def glance(app: App, conn: Any) -> dict[str, Any]:
 
     Read from the log like the chat page, so the two never disagree, and asked of nobody.
     """
-    thread = message_store.last_for_chat(conn, DEFAULT_CHAT, limit=GLANCE_LIMIT)
+    chat_id = my_chat()
+    thread = message_store.last_for_chat(conn, chat_id, limit=GLANCE_LIMIT)
     now = app.clock.now()
-    state, _ = standing(app, thread)
+    state, _ = standing(app, thread, chat_id)
     said = next((message for message in reversed(thread) if message.direction == "out"), None)
     line = None
     if state is None and said is not None:
@@ -204,12 +226,22 @@ def glance(app: App, conn: Any) -> dict[str, Any]:
     return {"state": state, "note": AT_HOME.get(state or ""), "line": line}
 
 
-def page(*, error: str | None = None, typed: str | None = None, status: int = 200) -> Any:
-    """Draw the chat. Read fresh every time, because the answer arrives on another thread."""
+def page(
+    *,
+    error: str | None = None,
+    typed: str | None = None,
+    status: int = 200,
+    reading: member_store.Member | None = None,
+) -> Any:
+    """Draw the chat. Read fresh every time, because the answer arrives on another thread.
+
+    `reading` is a kid whose own conversation a parent is reading: no box, since it is hers."""
     app = _app()
+    chat_id = private_chat(reading.id) if reading is not None else my_chat()
     with closing(app.connect()) as conn:
         family = member_store.list_all(conn)
-        thread = message_store.last_for_chat(conn, DEFAULT_CHAT, limit=THREAD_LIMIT)
+        thread = message_store.last_for_chat(conn, chat_id, limit=THREAD_LIMIT)
+    kids = [m for m in family if m.role == "kid"] if auth.visitor().may("decide") else []
     names = {member.id: member.display_name for member in family}
     # The log keeps a turn's tool calls against the question; the page shows them under the
     # answer. Pairing them here also says which questions have been answered at all.
@@ -228,7 +260,7 @@ def page(*, error: str | None = None, typed: str | None = None, status: int = 20
         for message in thread
     ]
     last = thread[-1] if thread else None
-    state, handing = standing(app, thread)
+    state, handing = standing(app, thread, chat_id)
     if handing is not None:
         lines.append(
             views.handed_line(
@@ -259,8 +291,11 @@ def page(*, error: str | None = None, typed: str | None = None, status: int = 20
             # With the box open, the script looks again instead, and never while somebody is
             # writing; only on a page drawn for a visit, since reloading a post would resend it.
             look_again=refresh if refresh and not locked and request.method == "GET" else None,
-            here=url_for("chat.show", _anchor=LATEST),
+            here=url_for("chat.show", _anchor=LATEST, **({"with": reading.id} if reading else {})),
             latest=LATEST,
+            reading=reading.display_name if reading else None,
+            kids=[{"id": kid.id, "name": kid.display_name} for kid in kids],
+            private=chat_id != DEFAULT_CHAT and reading is None,
         ),
         status,
     )
@@ -268,7 +303,17 @@ def page(*, error: str | None = None, typed: str | None = None, status: int = 20
 
 @bp.get("/chat")
 def show() -> Any:
-    return page(typed=asked())
+    wanted = request.args.get("with", "")
+    if not wanted:
+        return page(typed=asked())
+    # A kid's own conversation, for a parent to read: nobody else's, and nobody else may.
+    if not wanted.isdigit() or not auth.visitor().may("decide"):
+        abort(404)
+    with closing(_app().connect()) as conn:
+        kid = member_store.get(conn, int(wanted))
+    if kid is None or kid.role != "kid":
+        abort(404)
+    return page(reading=kid)
 
 
 def _position(form: Any) -> tuple[float, float] | None:
@@ -306,7 +351,7 @@ def send() -> Response | Any:
     if me is None:
         session[WHO_KEY] = who
     session[WHERE_KEY] = request.form.get(WHERE_KEY) == "1"  # the box stays as they left it
-    if (complaint := _chat().ask(sent, who, DEFAULT_CHAT, _position(request.form))) is not None:
+    if (complaint := _chat().ask(sent, who, my_chat(), _position(request.form))) is not None:
         return page(error=complaint, typed=text, status=400)
     log.info("web chat: %s asked something", who)
     # Redirect rather than render: the browser is about to be asked to refresh this page every

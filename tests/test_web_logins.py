@@ -515,14 +515,36 @@ def test_home_offers_only_what_a_role_may_do(app, sam, family, monkeypatch) -> N
             now=NOW_ISO,
         )
     home = girls.get("/").text  # a kid talks to the bot but changes nothing
-    assert 'action="/chat"' in home and "The park is free." in home
+    # Her Home is her own conversation, never the family's.
+    assert 'action="/chat"' in home and "The park is free." not in home
+    with closing(app.connect()) as conn, db.transaction(conn):
+        mine = messages.insert_in(
+            conn,
+            channel="web",
+            channel_update_id="u2",
+            chat_id=f"member:{family['girls'].id}",
+            member_id=family["girls"].id,
+            text="can we go to the park?",
+            now=NOW_ISO,
+        )
+        messages.mark_processed(conn, mine.id, [], now=NOW_ISO)
+        messages.insert_out(
+            conn,
+            channel="web",
+            chat_id=f"member:{family['girls'].id}",
+            text="The swings are waiting.",
+            reply_to=mine.id,
+            now=NOW_ISO,
+        )
+    home = girls.get("/").text
+    assert "The swings are waiting." in home and "The park is free." not in home
     assert "Buy paper towels" in home and f'action="/task/{towels}/done"' not in home
 
     monkeypatch.setitem(roles.PERMISSIONS, "kid", frozenset({"sign_in"}))
     home = girls.get("/")
     assert home.status_code == 200
     assert "/chat" not in home.text  # no box, no ways to start, no way into the conversation
-    assert "The park is free." not in home.text and "ask.js" not in home.text
+    assert "The swings are waiting." not in home.text and "ask.js" not in home.text
     assert "<h1>" in home.text  # a heading still, with the box's label gone
     assert "Buy paper towels" in home.text and "/done" not in home.text
     listed = girls.get("/tasks").text
@@ -556,3 +578,34 @@ def test_a_kid_is_never_shown_a_present_or_its_plan(app, sam, family) -> None:
     assert "Roller skates" in sam.get("/ideas").text
     assert "Pick up the skates" in sam.get("/plans").text
     assert sam.get(f"/idea/{gift.id}").status_code == 200
+
+
+def test_a_kid_talks_to_the_bot_on_her_own_and_a_parent_reads_along(app, sam, family) -> None:
+    girls = _as(app, "the girls", _start(sam, family["girls"].id))
+    girls.post("/you", data={**_tokens(girls, "/you"), "new": KIDS, "again": KIDS})
+    with closing(app.connect()) as conn, db.transaction(conn):
+        for chat_id, who, text in (
+            ("web", family["sam"].id, "the grown-ups plans"),
+            (f"member:{family['girls'].id}", family["girls"].id, "I want a hamster"),
+        ):
+            said = messages.insert_in(
+                conn,
+                channel="web",
+                channel_update_id=chat_id,
+                chat_id=chat_id,
+                member_id=who,
+                text=text,
+                now=NOW_ISO,
+            )
+            messages.mark_processed(conn, said.id, [], now=NOW_ISO)
+    hers = girls.get("/chat").text
+    assert "I want a hamster" in hers and "the grown-ups plans" not in hers
+    assert "Just you and Vera" in hers
+    # She may read nobody else's, not even by asking for it.
+    assert girls.get(f"/chat?with={family['girls'].id}").status_code == 404
+    shared = sam.get("/chat").text
+    assert "the grown-ups plans" in shared and "I want a hamster" not in shared
+    assert f'href="/chat?with={family["girls"].id}#latest"' in shared
+    read = sam.get(f"/chat?with={family['girls'].id}").text
+    assert "I want a hamster" in read and 'action="/chat"' not in read  # read, not written
+    assert sam.get(f"/chat?with={family['sam'].id}").status_code == 404  # only a kid's

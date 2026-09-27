@@ -111,12 +111,12 @@ def render_family_context(family: list[Member], settings: Settings) -> str:
 def render_audience_line(channel: str, chat_id: str, family: list[Member]) -> str | None:
     """Who reads the reply besides the sender, for the current turn only: it depends on the chat.
 
-    None for a private chat (the console, a Telegram chat with one person), which is what no line
-    means to the model. A Telegram group's chat id is negative; the page's chat is one
-    conversation the whole family shares. Whether kids are among them is read from the family
-    list, since code cannot see who is in a group.
+    None for a private chat (the console, a Telegram chat with one person, a kid's own
+    conversation on the page), which is what no line means to the model. A Telegram group's chat
+    id is negative; the page's "web" chat is one conversation the whole family shares. Whether
+    kids are among them is read from the family list, since code cannot see who is in a group.
     """
-    if channel == "web":
+    if channel == "web" and chat_id == "web":
         line = "This is the family's conversation on the page: everyone who signs in reads it"
     elif channel == "telegram" and chat_id.startswith("-"):
         line = "This is the family's group chat: everyone in it reads your reply"
