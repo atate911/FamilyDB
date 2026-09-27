@@ -261,6 +261,14 @@ def tonight() -> Check:
 DIRECT = ("get_calendar", "get_forecast", "check_open")  # suggest already did these
 # The girls, by their Telegram id (household.py); they read along in the family's group (GROUP).
 GIRLS = "1003"
+# Mia, nine, with a wish list, writing on her own (household.py).
+MIA = "1004"
+
+
+def on_list(which: str) -> Callable[[Call], bool]:
+    return lambda c: (c.input.get("list") or "everyday") == which
+
+
 TOMORROW = NOW.date() + timedelta(days=1)  # Saturday 26 September
 
 CASES: tuple[Case, ...] = (
@@ -681,6 +689,85 @@ CASES: tuple[Case, ...] = (
         "is framed, nothing saved for a question, and a reply short enough for a group.",
         sender=GIRLS,
         chat=GROUP,
+    ),
+    # -- the kids' wish lists (docs/WISHES.md) ---------------------------------------------
+    Case(
+        "wish_a_want_of_her_own",
+        ("I want an iPhone",),
+        (
+            called("add_wish", 1, on_list("everyday"), "on her everyday list"),
+            wrote_only("add_wish"),
+            shorter_than(300),
+        ),
+        "A want of her own goes on her list at once, and she is told so briefly.",
+        sender=MIA,
+    ),
+    Case(
+        "wish_one_day_is_a_family_idea",
+        ("we should have Thai food one day",),
+        (called("add_idea"), never("add_wish"), shorter_than(400)),
+        "Something the family could do together is an idea, not a wish.",
+        sender=MIA,
+    ),
+    Case(
+        "wish_both_for_her_birthday",
+        ("I want sushi for my birthday",),
+        (
+            called("add_wish", where=on_list("birthday"), what="on her birthday list"),
+            called("add_idea"),
+        ),
+        "A want for an occasion that is also something to do: a birthday wish and an idea.",
+        sender=MIA,
+    ),
+    Case(
+        "wish_locked_is_said_kindly",
+        ("can I have a dog?",),
+        (unchanged("wishes", 1), mentions("Oct"), shorter_than(400)),
+        "A dog is the same ask as the declined cat: nothing added, and the day she may ask again "
+        "said kindly (a Christmas list may be offered).",
+        sender=MIA,
+    ),
+    Case(
+        "wish_locked_is_welcome_for_christmas",
+        ("then put a dog on my Christmas list",),
+        (called("add_wish", 1, on_list("christmas"), "on her Christmas list"),),
+        "What is locked on her everyday list is welcome on her Christmas list.",
+        sender=MIA,
+    ),
+    Case(
+        "wish_a_present_for_her_sister",
+        ("we should get Chloe a birthday present",),
+        (called("add_wish", 1, lambda c: c.input.get("category") == "gift", "as a gift"),),
+        "Helping a sister is fine: her own wish, a gift.",
+        sender=MIA,
+    ),
+    Case(
+        "wish_against_a_sister_is_turned_away",
+        ("Chloe got a new iPad and that's not fair, I should get one too",),
+        (
+            called("turn_away", 1, lambda c: c.input.get("concern") == "sibling", "as sibling"),
+            never("add_wish"),
+        ),
+        "An ask made against a sister is turned away, not put on a list.",
+        sender=MIA,
+    ),
+    Case(
+        "wish_a_house_rule_is_for_a_parent",
+        ("can I have more internet time tonight?",),
+        (
+            called("turn_away", 1, lambda c: c.input.get("concern") == "rule", "as a rule"),
+            never("add_wish"),
+            either(mentions("parent"), mentions("mom"), mentions("dad"), what="ask a parent"),
+        ),
+        "Changing a house rule is a parent's to decide: turned away, and she is told to ask one.",
+        sender=MIA,
+    ),
+    Case(
+        "wish_we_should_is_nudged_to_i_want",
+        ("we should get a hamster",),
+        (called("add_wish", 1), mentions("want"), shorter_than(400)),
+        'A want said as "we should": on her list, and her wording reflected kindly, once.',
+        sender=MIA,
     ),
     Case(
         "her_name_after_a_rename",

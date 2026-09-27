@@ -11,7 +11,7 @@ from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 from familydb.integrations.open_meteo import DayForecast
-from familydb.store import db, ideas, members, places
+from familydb.store import db, ideas, members, places, wishes
 
 TZ = ZoneInfo("America/Vancouver")
 NOW = datetime(2026, 9, 25, 15, 30)
@@ -58,6 +58,36 @@ def seed(conn) -> Household:
         members.add(conn, "Alex", "parent", channel="telegram", channel_user_id="1002", now=NOW_ISO)
         members.add(
             conn, "the girls", "kid", channel="telegram", channel_user_id="1003", now=NOW_ISO
+        )
+        # Mia keeps a wish list (docs/WISHES.md) and writes to the bot on her own. A cat was
+        # declined ten days ago: pets are locked on her everyday list until 9 October.
+        mia = members.add(
+            conn, "Mia", "kid", channel="telegram", channel_user_id="1004", now=NOW_ISO
+        )
+        conn.execute(
+            "UPDATE members SET birth_date = '2017-03-14', gender = 'female' WHERE id = ?",
+            (mia.id,),
+        )
+        cat = wishes.insert(
+            conn,
+            member_id=mia.id,
+            title="A cat",
+            topic="pet",
+            occasion=None,
+            rank=1,
+            now="2026-09-15T18:00:00Z",
+        )
+        wishes.update(
+            conn,
+            cat.id,
+            {
+                "status": "declined",
+                "answered_by": sam.id,
+                "answered_at": "2026-09-15T19:00:00Z",
+                "locked_until": "2026-10-09T07:00:00Z",
+                "refusal_rung": 1,
+            },
+            now="2026-09-15T19:00:00Z",
         )
 
         def idea(title: str, kind: str, **fields):

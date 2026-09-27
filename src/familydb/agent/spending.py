@@ -42,6 +42,9 @@ DONE = {
     "update_idea": ("Updated idea", "idea_id"),
     "record_outcome": ("Recorded outcome", "outcome_id"),
     "remember": ("Noted what you told me", "memory_id"),
+    "add_wish": ("Put it on the wish list", "wish_id"),
+    "update_wish": ("Updated wish", "wish_id"),
+    "turn_away": ("Noted the request", "wish_id"),
     "save_place": ("Saved place details", "idea_id"),
     "skip_place": ("Marked lookup skipped", "idea_id"),
 }

@@ -425,6 +425,16 @@ def turn_away(
     now_iso = utc_iso(now)
     week_ago = utc_iso(now - timedelta(days=7))
     with transaction(conn):
+        # A turn tried again after a failure must not keep, or tell the parents of, it twice.
+        if message_id is not None:
+            row = conn.execute(
+                "SELECT id FROM wishes WHERE source_message_id = ? AND status = 'turned_away' "
+                "AND concern = ?",
+                (message_id, concern),
+            ).fetchone()
+            if row is not None:
+                kept = _get(conn, int(row[0]))
+                return TurnedAway(kept, tell_parents=False, may_ask_parent=False)
         asked = conn.execute(
             "SELECT count(*) FROM wishes WHERE member_id = ? AND parent_review != 'none' "
             "AND updated_at >= ?",

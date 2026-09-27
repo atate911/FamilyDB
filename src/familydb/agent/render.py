@@ -141,6 +141,34 @@ def render_user_turn(
     return [*parts, f"[{sender}] {text}"]
 
 
+# At most this many of a kid's wish topics go with her message: the locked ones first.
+KID_TOPICS = 12
+PRONOUN = {"female": "Her", "male": "His"}
+
+
+def render_kid_line(
+    name: str,
+    age: int | None,
+    gender: str | None,
+    topics: list[tuple[str, str | None]] | None,
+    wording: str | None,
+) -> str:
+    """Who a kid is and where her wishes stand, for the current turn only: code chose each part
+    (docs/WISHES.md), and it changes with her birthday and her lists, so never in the prefix.
+    Her topics are left out (None) where anybody else reads the reply."""
+    who = {"female": "a girl", "male": "a boy"}.get(gender or "", "a kid")
+    line = f"{name} is {who}" + (f", {age}" if age is not None else "") + "."
+    if topics:
+        shown = [
+            f"{topic} (locked to {until[:10]})" if until else topic
+            for topic, until in topics[:KID_TOPICS]
+        ]
+        line += f" {PRONOUN.get(gender or '', 'Their')} wish topics: {', '.join(shown)}."
+    if wording:
+        line += f" Wording: {wording}."
+    return line
+
+
 def render_location_line(
     sender: str, label: str | None, lat: float, lon: float, minutes_ago: int
 ) -> str:

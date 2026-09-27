@@ -9,7 +9,7 @@ from contextlib import closing
 from datetime import datetime
 from typing import Any
 
-from familydb import memory, personas, voice, whereabouts
+from familydb import family, memory, personas, roles, voice, whereabouts, wording
 from familydb.agent import gateway, spending
 from familydb.agent.history import load_history
 from familydb.agent.loop import MessagesAPI, TurnResult
@@ -17,6 +17,7 @@ from familydb.agent.providers import Audio, Picture
 from familydb.agent.render import (
     render_audience_line,
     render_folded_line,
+    render_kid_line,
     render_location_line,
     render_memories,
     render_retry_note,
@@ -29,7 +30,7 @@ from familydb.clock import FixedClock
 from familydb.dates import utc_iso
 from familydb.delivery import deliver, lease
 from familydb.errors import AgentError
-from familydb.store import calls, knocks, members, messages, suggestions
+from familydb.store import calls, knocks, members, messages, suggestions, wishes
 from familydb.store.db import transaction
 from familydb.store.members import Member
 from familydb.tools import ToolContext
@@ -673,6 +674,8 @@ def _think(
                 whereabouts.minutes_ago(shared, app.clock.now()),
             )
         )
+    if roles.may(member.role, "wish") and not roles.may(member.role, "decide"):
+        current.append(_kid_line(app, conn, member, msg.text, private=audience is None))
     remembered = render_memories(
         memory.choose(conn, msg.text, sender_id=member.id, today=app.clock.today())
     )
@@ -710,6 +713,22 @@ def _think(
         current=current,
         history=history,
         api=api,
+    )
+
+
+def _kid_line(
+    app: App, conn: sqlite3.Connection, member: Member, text: str, *, private: bool
+) -> str:
+    """A kid's age, and, in a chat nobody else reads, her wish topics; and whether to nudge or
+    praise her wording (docs/WISHES.md). All of it chosen by code."""
+    now = app.clock.now()
+    today = now.astimezone(app.settings.tzinfo).date()
+    return render_kid_line(
+        member.display_name,
+        family.age_on(member.birth_date, today),
+        member.gender,
+        wishes.topics(conn, member.id, utc_iso(now)) if private else None,
+        wording.choose(conn, app.settings, member.id, text, now),
     )
 
 

@@ -108,18 +108,22 @@ idea and the message it came from. `wish_days` counts each kid's everyday asks a
 - **Who**: a kid adds, retitles, reorders, flags and withdraws her own; `decide` does it for any
   kid and grants or declines.
 
-### Tools and what the model sees (planned)
+### Tools and what the model sees (built)
 
-Two chat tools: `add_wish` (title, topic, occasion, category, notes, for whom: parents only, the
+Three chat tools: `add_wish` (title, topic, occasion, category, notes, for whom: parents only, the
 idea made alongside) and `update_wish` (position, occasion, status, answer note, parent review);
 and `turn_away` (a one-line summary, the concern, whether a parent may review it). Results are a
 few fields. There is no list tool: her topics come in her turn line, and parents use the page.
 
-In her private chat only, code adds one line to the current (uncached) turn, for example
-`Mia, 9. Topics: pet (locked to Nov 3), phone, roblox. Wording: nudge.` At most twelve topics,
-the locked first. Usually under 30 tokens; nothing is added to the cached prefix but the tools.
+Every message from a kid carries one line in the current (uncached) turn, built by code
+(`render.render_kid_line`), for example `Mia is a girl, 9. Her wish topics: pet (locked to
+2026-10-09), phone. Wording: nudge.` Her topics go only where nobody else reads the reply; at most
+twelve, the locked first. Usually under 30 tokens. The cached prefix grew by about 800 tokens
+(the three tools and a short section of `prompts/system.md`), read from the cache on every
+message. The evals in `evals/cases.py` (`wish_*`, with Mia in `evals/household.py`) hold the
+behaviour.
 
-### Wording (planned)
+### Wording (built)
 
 Code spots "we should", "we could", "can we", "let's get", and "I want" / "I'd like", and keeps a
 little state per kid: how often she said "we should" in the last week, and when she was last

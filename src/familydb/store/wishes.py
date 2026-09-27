@@ -175,6 +175,44 @@ def count_day(
     )
 
 
+def mark_wording(conn: sqlite3.Connection, member_id: int, day: str, kind: str) -> None:
+    """Note that her wording was nudged, or praised, that day."""
+    column = {"nudge": "nudged", "praise": "praised"}[kind]
+    conn.execute(
+        f"INSERT INTO wish_days (member_id, day, {column}) VALUES (?, ?, 1) "
+        f"ON CONFLICT (member_id, day) DO UPDATE SET {column} = 1",
+        (member_id, day),
+    )
+
+
+def last_wording(conn: sqlite3.Connection, member_id: int, kind: str) -> str | None:
+    """The last day her wording was nudged, or praised."""
+    column = {"nudge": "nudged", "praise": "praised"}[kind]
+    row = conn.execute(
+        f"SELECT max(day) FROM wish_days WHERE member_id = ? AND {column} = 1", (member_id,)
+    ).fetchone()
+    return row[0] if row else None
+
+
+def topics(conn: sqlite3.Connection, member_id: int, now: str) -> list[tuple[str, str | None]]:
+    """Her topics as the bot is told them: those locked on her everyday list, with when they
+    unlock, then the ones open on any list, each once."""
+    locked = conn.execute(
+        "SELECT topic, max(locked_until) FROM wishes WHERE member_id = ? AND occasion IS NULL "
+        "AND status = 'declined' AND locked_until > ? GROUP BY topic ORDER BY min(id)",
+        (member_id, now),
+    ).fetchall()
+    open_ = conn.execute(
+        "SELECT topic FROM wishes WHERE member_id = ? AND status = 'open' "
+        "GROUP BY topic ORDER BY min(rank), min(id)",
+        (member_id,),
+    ).fetchall()
+    seen: dict[str, str | None] = {row[0]: row[1] for row in locked}
+    for row in open_:
+        seen.setdefault(row[0], None)
+    return list(seen.items())
+
+
 def renumber(conn: sqlite3.Connection, ordered: list[int]) -> None:
     """Give these wishes the ranks 1, 2, 3… in this order. Only the order is theirs to change,
     so the revision is left alone: a move never makes somebody else's form stale."""
