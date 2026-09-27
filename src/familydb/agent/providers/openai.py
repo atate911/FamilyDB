@@ -432,8 +432,13 @@ class OpenAIProvider:
 
 
 def _failure(exc: openai.OpenAIError) -> AgentError:
-    """A failed request as the loop understands it: worth trying again later, or not."""
+    """A failed request as the loop understands it: worth trying again later, or not.
+
+    OpenAI says an account is out of credit with a 429, the status it also uses for "slow
+    down", so the code on it tells the two apart: that one is not worth waiting for."""
     if isinstance(exc, openai.RateLimitError):
+        if getattr(exc, "code", None) == "insufficient_quota" or "insufficient_quota" in str(exc):
+            return AgentError(f"out of credit: {exc}", retryable=False, trouble="credit")
         return AgentError(f"rate limited: {exc}", retryable=True)
     if isinstance(exc, openai.APIConnectionError):
         return AgentError(f"connection error: {exc}", retryable=True)
@@ -443,6 +448,7 @@ def _failure(exc: openai.OpenAIError) -> AgentError:
             f"API error {status}: {exc}",
             retryable=status >= 500,
             request_id=getattr(exc, "request_id", None),
+            trouble="key" if status in (401, 403) else None,
         )
     return AgentError(f"OpenAI error: {exc}", retryable=False)
 

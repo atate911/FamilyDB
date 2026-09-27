@@ -383,6 +383,13 @@ def _failure(exc: Exception) -> AgentError:
         return AgentError(f"server error: {exc}", retryable=True)
     if isinstance(exc, genai_errors.ClientError):
         status = _status(exc)
+        said = str(exc).lower()
+        # Google refuses a bad key with a 400 as often as a 401 or 403, and says an account is
+        # out of prepaid credit with a 429, the status it also uses for "slow down".
+        if status in (401, 403) or (status == 400 and "api key" in said):
+            return AgentError(f"API error {status}: {exc}", retryable=False, trouble="key")
+        if status == 429 and ("billing" in said or "credit" in said or "prepay" in said):
+            return AgentError(f"out of credit: {exc}", retryable=False, trouble="credit")
         return AgentError(f"API error {status or '?'}: {exc}", retryable=status in RETRYABLE_STATUS)
     if isinstance(exc, genai_errors.APIError):
         return AgentError(f"Gemini error: {exc}", retryable=_status(exc) in RETRYABLE_STATUS)

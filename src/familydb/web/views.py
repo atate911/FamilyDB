@@ -811,6 +811,35 @@ def tools_used(actions: Any) -> list[str]:
     return seen
 
 
+# What needs an admin, by kind (familydb/alerts.py), as the status page heads it.
+ALERT_TITLES = {
+    "credit": "{company} is out of credit",
+    "key": "{company} refused its key",
+    "limit": "The day's spending limit was used up",
+    "calendar": "Google Calendar stopped letting the bot in",
+}
+COMPANY_WORDS = {"openai": "OpenAI", "anthropic": "Anthropic", "gemini": "Google Gemini"}
+
+
+def alert_row(alert: Any, tz: ZoneInfo, *, telling: bool, admins: int) -> dict[str, Any]:
+    """One trouble as a light on the status page: what it is, since when, and who was told."""
+    title = ALERT_TITLES.get(alert.kind, alert.kind).format(
+        company=COMPANY_WORDS.get(alert.subject, alert.subject)
+    )
+    seen = f"since {local_moment(alert.first_at, tz)}"
+    if alert.times > 1:
+        seen += f", {alert.times} times, last {local_moment(alert.last_at, tz)}"
+    if alert.told_at:
+        told = f"admins told on Telegram {local_moment(alert.told_at, tz)}"
+    elif not telling:
+        told = "telling admins is switched off (Settings, Messages)"
+    elif not admins:
+        told = "no admin has a Telegram id to be told on"
+    else:
+        told = "admins are told on Telegram within a minute"
+    return {"label": title, "detail": f"{seen}; {told}.", "on": False}
+
+
 def local_moment(value: str, tz: ZoneInfo) -> str:
     """A stored UTC instant as the day and time it was where the family lives."""
     try:

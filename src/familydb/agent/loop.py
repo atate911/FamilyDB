@@ -13,6 +13,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol
 
+from familydb import alerts
 from familydb.agent import spending
 from familydb.agent.compose import exchange_chars
 from familydb.agent.providers import model_at, prices
@@ -57,7 +58,7 @@ class TurnResult:
 
 def worth_switching(exc: AgentError) -> bool:
     """Whether the other provider might do better: this one is busy, unreachable or unusable."""
-    if exc.retryable:
+    if exc.retryable or exc.trouble in ("credit", "key"):
         return True
     reason = str(exc).lower()
     return "credential" in reason or "api key" in reason or "authentication" in reason
@@ -149,6 +150,7 @@ def run_turn(
             try:
                 reply = active.send(request)
             except AgentError as exc:
+                alerts.noticed(ctx.conn, exc, provider=active.name, now=ctx.clock.now())
                 switchable = fallback is not None and active is not fallback
                 if not (switchable and first_call_only(request) and worth_switching(exc)):
                     raise
@@ -167,6 +169,7 @@ def run_turn(
                 try:
                     reply = active.send(request)
                 except AgentError as spare_exc:
+                    alerts.noticed(ctx.conn, spare_exc, provider=active.name, now=ctx.clock.now())
                     # Preserve a retryable primary failure even if the spare says 400.
                     log.warning("%s could not take it either: %s", active.name, spare_exc)
                     raise exc from spare_exc
@@ -204,6 +207,7 @@ def run_turn(
                 sections=_sizes(sections, request),
             )
             spending.settle(ctx.conn, held, ctx.clock.now())
+            alerts.answered(ctx.conn, active.name)
 
         if reply.stop == "refusal":
             log.warning("%s refused the request (category=%s)", active.name, reply.refusal)

@@ -54,6 +54,7 @@ BEHAVIOUR = (
     "digest_hour",
     "follow_up_hour",
     "task_nudges",
+    "admin_alerts",
     "plan_checks",
     "plan_check_hour",
     "retry_interval_minutes",

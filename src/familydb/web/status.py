@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any
 
+from familydb import alerts
 from familydb.agent import compose, gateway, providers
 from familydb.agent.spending import spent_today
 from familydb.app import App
@@ -22,6 +23,7 @@ from familydb.availability import (
     web_is_public,
 )
 from familydb.dates import utc_iso
+from familydb.store import alerts as alert_store
 from familydb.store import calls, ideas, members, messages
 from familydb.store import settings as settings_store
 from familydb.store.settings import SECRETS
@@ -256,6 +258,19 @@ def troubles(conn: sqlite3.Connection, since: str, tz: Any) -> dict[str, Any]:
     }
 
 
+def attention(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    """What only an admin can fix, while it lasts (familydb/alerts.py)."""
+    now = app.clock.now()
+    found = alert_store.current(conn, since=utc_iso(now - alerts.KEEP))
+    if not found:
+        return []
+    admins = len(alerts.admins_on_telegram(conn))
+    return [
+        views.alert_row(one, app.settings.tzinfo, telling=app.settings.admin_alerts, admins=admins)
+        for one in found
+    ]
+
+
 def status(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
     """Everything the status page shows, in one pass over a handful of small queries."""
     tz = app.settings.tzinfo
@@ -270,6 +285,7 @@ def status(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
         "last": last_call(conn, tz),
         "waiting": waiting(conn, tz),
         "troubles": troubles(conn, since, tz),
+        "attention": attention(app, conn),
     }
 
 

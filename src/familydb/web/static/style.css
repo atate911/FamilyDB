@@ -1730,6 +1730,10 @@ table.month td.today time { color: var(--on-bright); background: var(--amber); b
   .settings-nav { display: block; position: sticky; top: 5.25rem; }
 }
 
+/* What needs an admin, first on the status page: edged in red, which is kept for what went wrong. */
+.attention { margin-bottom: 1.25rem; border-color: color-mix(in srgb, var(--red) 45%, var(--line)); }
+.attention h2 .icon { color: var(--red); }
+
 /* A list to choose from, with a box under it for another, shown only while "Another" is chosen.
    A browser without :has() drops the rule and shows the box always, which still works. */
 .pick { display: grid; gap: 0.55rem; }

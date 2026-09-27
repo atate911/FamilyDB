@@ -7,6 +7,7 @@ import logging
 import os
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
@@ -305,12 +306,26 @@ class GoogleCalendar:
         self._read_lock = threading.Lock()
         self._writes = 0
         self._now = time.monotonic
+        # Told when Google stops letting the bot in (what it said) and when it answers again
+        # (None), for an admin (alerts.py). Set by App; nobody listens in a test or a command.
+        self.report: Callable[[str | None], None] | None = None
+        # Unknown at first, so the first answer clears a note left from before a restart.
+        self._troubled = True
 
     def _events(self) -> Any:
         with self._lock:
             if self._service is None:
-                self._service = build_service(load_credentials(self.token_path))
+                try:
+                    self._service = build_service(load_credentials(self.token_path))
+                except ToolUnavailable as exc:
+                    self._shut_out(str(exc))
+                    raise
             return self._service.events()
+
+    def _shut_out(self, said: str) -> None:
+        self._troubled = True
+        if self.report is not None:
+            self.report(said)
 
     def _execute(self, request: Any, *, ignore: tuple[int, ...] = ()) -> Any:
         from google.auth.exceptions import RefreshError
@@ -318,14 +333,20 @@ class GoogleCalendar:
 
         try:
             with self._lock:
-                return request.execute()
+                answer = request.execute()
         except HttpError as exc:
             status = getattr(exc.resp, "status", None)
             if status in ignore:
                 return None
             raise ToolError(f"Google Calendar error {status or '?'}: {exc.reason}") from exc
         except RefreshError as exc:
+            self._shut_out(REAUTH)
             raise ToolUnavailable(REAUTH) from exc
+        if self._troubled:
+            self._troubled = False
+            if self.report is not None:
+                self.report(None)
+        return answer
 
     def list_events(self, start: datetime, end: datetime) -> list[CalendarEvent]:
         items: list[dict[str, Any]] = []

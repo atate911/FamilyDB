@@ -972,6 +972,7 @@ LINE_GROUPS = (
         "When she cannot answer",
         True,
         (
+            "kid_limit",
             "limit_reached",
             "limit_partial",
             "gave_up",
@@ -987,6 +988,11 @@ LINE_GROUPS = (
             "photo_too_large",
             "photo_unseen",
         ),
+    ),
+    (
+        "Telling an admin what needs fixing",
+        True,
+        ("alert_credit", "alert_key", "alert_limit", "alert_calendar"),
     ),
 )
 

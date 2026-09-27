@@ -119,6 +119,16 @@ def has_credentials(settings: Settings) -> bool:
     return True
 
 
+def trouble(status: int, said: str) -> str | None:
+    """What an admin would have to fix, from a refusal: a key refused (401, or 403, not allowed),
+    or the account out of credit, which Anthropic answers with a 400 saying so."""
+    if status in (401, 403):
+        return "key"
+    if status in (400, 402) and "credit balance" in said.lower():
+        return "credit"
+    return None
+
+
 def make_client(settings: Settings) -> anthropic.Anthropic:
     """A client for the configured key. With no key the SDK uses its own credential lookup."""
     client = anthropic.Anthropic(api_key=settings.anthropic_api_key, max_retries=2, timeout=120.0)
@@ -402,6 +412,7 @@ class AnthropicProvider:
                 f"API error {exc.status_code}: {exc.message}",
                 retryable=exc.status_code >= 500,
                 request_id=_request_id(exc),
+                trouble=trouble(exc.status_code, str(exc.message)),
             ) from exc
         except TypeError as exc:
             # The SDK raises a bare TypeError when it finds no credentials at all.

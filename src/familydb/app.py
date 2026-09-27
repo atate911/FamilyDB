@@ -85,7 +85,22 @@ class App:
             from familydb.integrations.google_calendar import GoogleCalendar
 
             self._calendar = GoogleCalendar(self.settings)
+            self._calendar.report = self._calendar_said
         return self._calendar
+
+    def _calendar_said(self, trouble: str | None) -> None:
+        """Google would not let the bot in (what it said), or answered again (None): noted for
+        an admin, or forgotten (alerts.py)."""
+        from familydb import alerts
+
+        try:
+            with closing(self.connect()) as conn:
+                if trouble is None:
+                    alerts.working(conn, "calendar")
+                else:
+                    alerts.note(conn, "calendar", "", trouble, self.clock.now())
+        except (sqlite3.Error, OSError) as exc:
+            log.warning("could not note what Google Calendar said: %s", exc)
 
     @property
     def weather(self) -> Any:

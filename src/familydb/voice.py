@@ -200,6 +200,34 @@ EVENTS: dict[str, Event] = {
         ("limit",),
         {"limit": "2.00"},
     ),
+    "alert_credit": Event(
+        "Telling an admin: a company is out of credit",
+        "{company} says the account is out of credit, so I can't ask it anything until it is "
+        "topped up with {company}. Another company's key on the settings page would let me carry "
+        "on meanwhile.",
+        ("company",),
+        {"company": "OpenAI"},
+    ),
+    "alert_key": Event(
+        "Telling an admin: a company refused the key",
+        "{company} refused my key, so I can't ask it anything. A new one can be pasted on the "
+        "settings page, under AI model.",
+        ("company",),
+        {"company": "OpenAI"},
+    ),
+    "alert_limit": Event(
+        "Telling an admin: the day's limit is used up",
+        "Today's spending limit (${limit}) is used up, so I'm not answering anyone until "
+        "tomorrow. It can be raised on the settings page, under Spending.",
+        ("limit",),
+        {"limit": "2.00"},
+    ),
+    "alert_calendar": Event(
+        "Telling an admin: Google shut me out",
+        "Google Calendar stopped letting me in, so plans aren't reaching the calendar. It can be "
+        "connected again on the settings page, under Connections.",
+        (),
+    ),
     "kid_limit": Event(
         "A kid's messages for the day used up",
         "That's {limit} messages today, which is all for today. Ask me again tomorrow, or ask a "

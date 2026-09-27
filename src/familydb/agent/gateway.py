@@ -28,6 +28,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Literal
 
+from familydb import alerts
 from familydb.agent import compose, spending
 from familydb.agent.compose import Composed
 from familydb.agent.history import HistoryTurn
@@ -377,6 +378,7 @@ def _written_down(
             written = request(provider)
         except AgentError as exc:
             _let_go(conn, held, clock.now())
+            alerts.noticed(conn, exc, provider=provider.name, now=clock.now())
             if not worth_switching(exc):
                 raise
             log.warning("%s could not %s (%s)", provider.name, doing, exc)
@@ -404,6 +406,7 @@ def _written_down(
                 kind=kind,
             )
             spending.settle(conn, held, clock.now())
+            alerts.answered(conn, provider.name)
         if written.stop == "refusal":
             raise AgentError(f"{provider.name} would not {doing}", retryable=False)
         if written.stop == "max_tokens":

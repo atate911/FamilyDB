@@ -637,6 +637,21 @@ GROUPS: tuple[Group, ...] = (
     ),
     Group(
         "messages",
+        "admins",
+        "When something needs fixing",
+        "Written, not thought up, so they cost nothing. The status page lists the same.",
+        (
+            field(
+                "admin_alerts",
+                "Tell admins on Telegram",
+                "When a company says its account is out of credit or refuses its key, the day's "
+                "spending limit is used up, or Google stops letting it at the calendar: each admin "
+                "with a Telegram id is told, and again at most twice a day while it lasts.",
+            ),
+        ),
+    ),
+    Group(
+        "messages",
         "retries",
         "When a message cannot be answered",
         "If the model cannot be reached, the message is kept and tried again later.",

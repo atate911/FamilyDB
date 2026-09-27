@@ -175,6 +175,10 @@ class Settings(BaseSettings):
     # Messages each kid may have answered by a model in a day, the family's day (roles.py says who
     # is limited). Commands and buttons, which ask no model, do not count. 0 is no limit.
     kid_daily_messages: int = Field(default=0, ge=0, le=500)
+    # Tell every admin with a Telegram id when something only an admin can fix goes wrong: a
+    # company out of credit or refusing its key, the day's limit used up, Google shutting the
+    # bot out (alerts.py). No model call.
+    admin_alerts: bool = True
     anthropic_fallbacks: bool = True
     # An hour, because a family writes in bursts with long gaps: a five-minute cache would be
     # cold almost every time and the whole prefix would be paid for again.

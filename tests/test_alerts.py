@@ -1,0 +1,185 @@
+"""Telling an admin what only an admin can fix: what counts, where it is noted, who is told."""
+
+from __future__ import annotations
+
+from datetime import datetime, timedelta
+
+import pytest
+
+from familydb import alerts, voice
+from familydb.agent import spending
+from familydb.agent.providers import build
+from familydb.app import App
+from familydb.clock import FixedClock
+from familydb.errors import AgentError, ToolUnavailable
+from familydb.store import alerts as alert_store
+from familydb.store import messages
+from familydb.store import settings as settings_store
+from familydb.store.db import transaction
+from familydb.web import create_app
+from tests import fakes
+from tests.conftest import NOW, TZ
+from tests.test_fallback import _both, _turn
+
+
+def _found(conn) -> set[tuple[str, str]]:
+    return {(row["kind"], row["subject"]) for row in conn.execute("SELECT * FROM alerts")}
+
+
+# -- what counts ---------------------------------------------------------------------------------
+
+
+def test_each_company_s_empty_account_and_refused_key_are_read_as_such() -> None:
+    import openai
+    from google.genai import errors
+
+    from familydb.agent.loop import worth_switching
+    from familydb.agent.providers import anthropic as claude
+    from familydb.agent.providers import gemini
+    from familydb.agent.providers import openai as oa
+
+    empty = openai.RateLimitError(
+        "You exceeded your current quota",
+        response=fakes._response(429),
+        body={"code": "insufficient_quota", "message": "You exceeded your current quota"},
+    )
+    assert oa._failure(empty).trouble == "credit" and not oa._failure(empty).retryable
+    assert oa._failure(fakes.openai_rate_limit()).trouble is None  # only slow down
+    refused = openai.AuthenticationError("bad key", response=fakes._response(401), body=None)
+    assert oa._failure(refused).trouble == "key"
+
+    assert claude.trouble(400, "Your credit balance is too low to access the Anthropic API") == (
+        "credit"
+    )
+    assert claude.trouble(401, "invalid x-api-key") == "key"
+    assert claude.trouble(400, "tools.0: bad schema") is None
+
+    prepaid = errors.ClientError(
+        429, {"error": {"message": "Your prepayment credits are depleted. Check billing."}}
+    )
+    assert gemini._failure(prepaid).trouble == "credit"
+    assert gemini._failure(fakes.gemini_rate_limit()).trouble is None
+    bad_key = errors.ClientError(400, {"error": {"message": "API key not valid."}})
+    assert gemini._failure(bad_key).trouble == "key"
+
+    # Both are worth asking the other company instead.
+    assert worth_switching(AgentError("out of credit", retryable=False, trouble="credit"))
+    assert worth_switching(AgentError("API error 401", retryable=False, trouble="key"))
+
+
+# -- where it is noted ---------------------------------------------------------------------------
+
+
+def test_an_empty_account_is_noted_even_when_the_other_company_answers(
+    settings, registry, ctx
+) -> None:
+    import anthropic
+
+    paired = _both(settings)
+    empty = anthropic.BadRequestError(
+        "Your credit balance is too low to access the Anthropic API",
+        response=fakes._response(400),
+        body=None,
+    )
+    primary = build("anthropic", paired, api=fakes.FakeMessagesAPI(empty))
+    spare = build(
+        "openai", paired, api=fakes.FakeResponsesAPI(fakes.oa_response([fakes.oa_text("Hi")]))
+    )
+    assert _turn(paired, registry, ctx, primary, spare).text == "Hi"
+    assert _found(ctx.conn) == {("credit", "anthropic")}
+
+    # Topped up: the next answer from Claude forgets it.
+    topped = build(
+        "anthropic", paired, api=fakes.FakeMessagesAPI(fakes.message([fakes.text("ok")]))
+    )
+    assert _turn(paired, registry, ctx, topped, None).text == "ok"
+    assert _found(ctx.conn) == set()
+
+
+def test_the_day_s_limit_is_noted_and_forgotten_once_a_call_is_let_through(conn, settings) -> None:
+    now = datetime(2026, 9, 20, 14, 3, tzinfo=TZ)
+    tight = settings.model_copy(update={"daily_spend_limit": 0.01})
+    with transaction(conn):
+        conn.execute(
+            "INSERT INTO llm_calls (iteration, model, created_at, cost_usd) VALUES (1, 'm', ?, 1)",
+            ("2026-09-20T20:00:00Z",),
+        )
+    with pytest.raises(spending.SpendingLimitReached):
+        spending.admit(conn, tight, now, 0.001)
+    assert _found(conn) == {("limit", "2026-09-20")}
+    spending.admit(conn, tight.model_copy(update={"daily_spend_limit": 50}), now, 0.001)
+    assert _found(conn) == set()
+
+
+def test_google_shutting_the_bot_out_is_noted_and_forgotten_when_it_answers(
+    calendar_settings, clock, conn
+) -> None:
+    from google.auth.exceptions import RefreshError
+
+    app = App(calendar_settings, clock)
+    client = app.calendar
+    assert client.report is not None
+
+    class Refused:
+        def execute(self):
+            raise RefreshError("invalid_grant")
+
+    class Fine:
+        def execute(self):
+            return {"items": []}
+
+    with pytest.raises(ToolUnavailable):
+        client._execute(Refused())
+    assert _found(conn) == {("calendar", "")}
+    client._execute(Fine())
+    assert _found(conn) == set()
+
+
+# -- who is told -------------------------------------------------------------------------------
+
+
+def test_admins_on_telegram_are_told_once_and_again_while_it_lasts(settings, conn, family) -> None:
+    sent: list[tuple[str, str]] = []
+    clock = FixedClock(NOW, TZ)
+    app = App(settings, clock)
+    app.senders["telegram"] = lambda chat, text: sent.append((chat, text))
+    alerts.note(conn, "credit", "openai", "insufficient_quota", clock.now())
+
+    assert alerts.run_alerts(app) == 1
+    wording = voice.say(settings, "alert_credit", company="OpenAI", limit="2.00")
+    assert sent == [("1001", wording)]  # Sam, the admin; never Alex, a parent
+    stored = messages.last_for_chat(conn, "1001", limit=1)[0]
+    assert stored.text == wording and stored.delivered_at is not None
+    assert alerts.run_alerts(app) == 0  # told already
+
+    # Still going half a day later: told again. Gone quiet: not.
+    later = App(settings, FixedClock(NOW + timedelta(hours=13), TZ))
+    later.senders["telegram"] = app.senders["telegram"]
+    assert alerts.run_alerts(later) == 0
+    alerts.note(conn, "credit", "openai", "insufficient_quota", later.clock.now())
+    assert alerts.run_alerts(later) == 1 and len(sent) == 2
+
+    # Switched off on the settings page: nobody is told.
+    alerts.note(conn, "key", "gemini", "API key not valid", later.clock.now())
+    with transaction(conn):
+        settings_store.set_many(conn, {"admin_alerts": False})
+    assert alerts.run_alerts(later) == 0 and len(sent) == 2
+
+
+def test_nothing_is_read_twice_or_asked_of_a_model_when_nothing_is_wrong(settings, clock, conn):
+    app = App(settings, clock)
+    app.senders["telegram"] = lambda chat, text: pytest.fail("nothing to say")
+    assert alerts.run_alerts(app) == 0
+
+
+def test_the_status_page_says_what_needs_attention_and_who_was_told(
+    settings, clock, conn, family
+) -> None:
+    alerts.note(conn, "credit", "openai", "insufficient_quota", clock.now())
+    text = create_app(App(settings, clock)).test_client().get("/status").text
+    assert "Needs attention" in text and "OpenAI is out of credit" in text
+    assert "admins are told on Telegram within a minute" in text
+    with transaction(conn):
+        alert_store.mark_told(conn, "credit", "openai", now="2026-09-20T21:04:00Z")
+    text = create_app(App(settings, clock)).test_client().get("/status").text
+    assert "admins told on Telegram 20 Sep, 14:04" in text

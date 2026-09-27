@@ -28,6 +28,14 @@
 {% block content %}
   {{ page_head('Status', 'Is it working, and what is it costing?', 'status') }}
 
+  {% if attention %}
+    {# What only an admin can fix, first: each admin with a Telegram id is told as well. #}
+    <section class="panel attention" id="attention">
+      <h2>{{ icon('warning') }}Needs attention</h2>
+      {{ lines(attention) }}
+    </section>
+  {% endif %}
+
   <div class="monitors">
     <section class="panel">
       <h2>{{ presence('glyph') }}Who answers</h2>

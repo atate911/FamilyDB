@@ -20,6 +20,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
+from familydb.alerts import run_alerts
 from familydb.app import App
 from familydb.availability import digest_configured, enrichment_available
 from familydb.jobs.catch_up import run_catch_up
@@ -63,6 +64,13 @@ def job_specs(app: App) -> list[JobSpec]:
     zone = settings.tzinfo
     return [
         JobSpec("reminders", "deliver task reminders", run_reminders, IntervalTrigger(minutes=1)),
+        JobSpec(
+            "alerts",
+            "tell admins what needs fixing",
+            run_alerts,
+            IntervalTrigger(minutes=1),
+            wanted=settings.admin_alerts,
+        ),
         JobSpec(
             "forget_locations",
             "delete shared locations after a day",
