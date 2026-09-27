@@ -321,6 +321,42 @@ def test_with_no_gifts_saved_it_asks_for_some(settings, clock, conn, family) -> 
     )
 
 
+def test_a_kid_s_birthday_reminder_lists_her_own_birthday_wishes(
+    settings, clock, conn, family
+) -> None:
+    from familydb.store import db, wishes
+
+    app = App(settings, clock)
+    said = _sent(app)
+    ctx = _ctx(settings, clock, conn, family)
+    girls = family["girls"]
+    with db.transaction(conn):
+        for rank, title in enumerate(("Roller skates", "A sushi dinner"), start=1):
+            wishes.insert(
+                conn,
+                member_id=girls.id,
+                title=title,
+                topic=title,
+                occasion="birthday",
+                rank=rank,
+                now="2026-09-01T00:00:00Z",
+            )
+        wishes.insert(
+            conn,
+            member_id=girls.id,
+            title="An iPhone",
+            topic="phone",
+            occasion=None,
+            rank=1,
+            now="2026-09-01T00:00:00Z",
+        )
+    _add(ctx, remind_at="2026-09-20T15:00", gift_for="the girls")
+    clock.advance(timedelta(hours=1))
+    run_reminders(app)
+    assert said[-1].endswith("On the girls's own birthday list: Roller skates, A sushi dinner.")
+    assert "iPhone" not in said[-1]  # her everyday list is not her birthday's
+
+
 def test_a_gift_is_never_offered_as_something_to_do(settings, clock, conn, family) -> None:
     from familydb.suggest.engine import run
     from familydb.suggest.types import SuggestInput

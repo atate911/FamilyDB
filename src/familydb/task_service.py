@@ -19,7 +19,7 @@ from typing import Any
 from familydb import voice
 from familydb.dates import utc_iso
 from familydb.errors import ToolError
-from familydb.store import ideas, members, messages, tasks
+from familydb.store import ideas, members, messages, tasks, wishes
 from familydb.store.db import transaction
 from familydb.store.ideas import Idea
 from familydb.store.tasks import Task
@@ -180,7 +180,13 @@ def update(
                 if message:
                     due_when = late_note(reminder.remind_at, message.received_at, settings.tzinfo)
             gifts = gifts_for(conn, latest)
-            words = reminder_text(latest, settings, due_when=due_when, gifts=gifts)
+            words = reminder_text(
+                latest,
+                settings,
+                due_when=due_when,
+                gifts=gifts,
+                wished=birthday_wishes(conn, latest),
+            )
             tasks.reword_queued(conn, task_id, words)
         return latest
 
@@ -294,16 +300,33 @@ def late_note(remind_at: str, queued_at: str, tz: tzinfo) -> str | None:
     return due.astimezone(tz).strftime("%a %d %b at %H:%M")
 
 
+def birthday_wishes(conn: sqlite3.Connection, task: Task) -> list[str]:
+    """What is on the birthday wish list of the person whose birthday it is, in her order: for
+    a birthday's reminder, which goes to whoever set it, never to her (docs/WISHES.md)."""
+    if not task.gift_for:
+        return []
+    person = members.find_by_name(conn, task.gift_for)
+    if person is None:
+        return []
+    return [wish.title for wish in wishes.open_list(conn, person.id, "birthday")]
+
+
 def gifts_for(conn: sqlite3.Connection, task: Task) -> list[Idea]:
     """The gift ideas a birthday's reminder lists; none for a task that is nobody's occasion."""
     return ideas.gifts_for(conn, task.gift_for) if task.gift_for else []
 
 
 def reminder_text(
-    task: Task, settings: Any, *, due_when: str | None = None, gifts: list[Idea] | None = None
+    task: Task,
+    settings: Any,
+    *,
+    due_when: str | None = None,
+    gifts: list[Idea] | None = None,
+    wished: list[str] | None = None,
 ) -> str:
     """The reminder as sent, in the assistant's voice. `due_when` marks one sent late; a
-    birthday's (`gift_for`) goes with the gift ideas saved for them, or says there are none."""
+    birthday's (`gift_for`) goes with the gift ideas saved for them, or says there are none,
+    and with what is on their own birthday wish list, when there is anything."""
     who = f" ({task.owner})" if task.owner else ""
     facts = {"title": task.title, "who": who, "task": task.id}
     # Each time it is due is its own message, by the reminder in force: a snoozed reminder may
@@ -317,4 +340,10 @@ def reminder_text(
         return words
     listed = ", ".join(f"#{idea.id} {idea.title}" for idea in gifts or [])
     event = "gift_ideas" if listed else "gift_ideas_none"
-    return f"{words}\n{voice.say(settings, event, seed=seed, who=task.gift_for, ideas=listed)}"
+    words = f"{words}\n{voice.say(settings, event, seed=seed, who=task.gift_for, ideas=listed)}"
+    if wished:
+        on_list = ", ".join(wished)
+        words += "\n" + voice.say(
+            settings, "birthday_wishes", seed=seed, who=task.gift_for, wishes=on_list
+        )
+    return words

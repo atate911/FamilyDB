@@ -923,6 +923,7 @@ LINE_GROUPS = (
             "reminder_late",
             "gift_ideas",
             "gift_ideas_none",
+            "birthday_wishes",
             "nudge",
             "plan_rain",
             "plan_closed",
