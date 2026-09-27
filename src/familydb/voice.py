@@ -270,6 +270,26 @@ EVENTS: dict[str, Event] = {
         ("id",),
         {"id": "123456789"},
     ),
+    "invite_linked": Event(
+        "Somebody's Telegram linked by the link made for them",
+        "Welcome, {who}! This Telegram is linked to you now, so I'll know it's you. Tell me "
+        "ideas and plans, or ask what to do this weekend.",
+        ("who",),
+        {"who": "Alex"},
+    ),
+    "invite_stale": Event(
+        "A link that no longer works",
+        "That link no longer works: it was used already, or it's more than a day old. Ask "
+        "whoever sent it for a new one.",
+        (),
+    ),
+    "invite_taken": Event(
+        "A link opened by a Telegram already on the list",
+        "This Telegram is already {who}'s on the family list, so I left the link for whoever it "
+        "was made for.",
+        ("who",),
+        {"who": "Sam"},
+    ),
     "joined_group": Event(
         "Added to a family group where she reads every message",
         "Hi all, I'm {name}, the family's planning assistant. Tell me ideas and plans as they come "

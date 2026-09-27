@@ -41,6 +41,35 @@
   <p class="muted small">Switching somebody off keeps everything they ever said and did; the bot just
     stops answering them, including anything they sent that is still waiting.</p>
 
+  {# A link that links their Telegram to them: shown once, since only a hash of it is kept. #}
+  <section class="panel" id="telegram-link">
+    <h2>{{ icon('send') }}Linking their Telegram</h2>
+    {% if invite %}
+      <p class="said" role="status">Send {{ person.name }} this link:
+        <code class="made">{{ invite }}</code></p>
+      <p class="muted">Shown this once. It works once, for {{ invite_hours }} hours: opened on their
+        phone, pressing Start links their Telegram to {{ person.name }}, and the bot welcomes them.
+        Whoever opens it first is taken for {{ person.name }}, so send it to them alone.</p>
+    {% elif not person.active %}
+      <p class="muted">Switched off, so there is nothing to link.</p>
+    {% elif bot %}
+      <p class="muted">
+        {%- if person.telegram_id %} The bot knows {{ person.name }} on Telegram. For a new phone
+          or account, make them a link:
+        {%- else %} Instead of looking up their Telegram id, make {{ person.name }} a link:
+        {%- endif %} opened on their phone, pressing Start links their Telegram to them. It works
+        once, for {{ invite_hours }} hours, and a new one replaces the last.</p>
+      <form method="post" action="{{ url_for('family.invite', member_id=person.id) }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+        <input type="hidden" name="once" value="{{ once_token() }}" />
+        <button type="submit">{{ icon('send') }}Make a link for {{ person.name }}</button>
+      </form>
+    {% else %}
+      <p class="muted">Once the Telegram bot is connected, a link can be made here that links
+        {{ person.name }}'s Telegram when they open it and press Start.</p>
+    {% endif %}
+  </section>
+
   <section class="panel" id="signing-in">
     <h2>{{ icon('key') }}Signing in to this page</h2>
     {% if made %}

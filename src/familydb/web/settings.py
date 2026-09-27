@@ -951,7 +951,16 @@ LINE_GROUPS = (
     (
         "On Telegram",
         False,
-        ("start", "stranger", "cannot_read", "joined_group", "joined_group_mentioned"),
+        (
+            "start",
+            "stranger",
+            "cannot_read",
+            "invite_linked",
+            "invite_stale",
+            "invite_taken",
+            "joined_group",
+            "joined_group_mentioned",
+        ),
     ),
     (
         "Answering /today, /week, /tasks and /now",

@@ -39,6 +39,7 @@ from familydb.store import logins as login_store
 from familydb.store import members as member_store
 from familydb.store.logins import Login
 from familydb.web import auth, views
+from familydb.web import status as status_page
 from familydb.web.once import once
 
 log = logging.getLogger(__name__)
@@ -68,11 +69,16 @@ YOURS_FIRST = (
     "Choose your own password first, as an admin; then you can give everybody else one here."
 )
 THAT_IS_YOU = "That is you: change your own password on the Your password page."
+NO_BOT = "Connect the Telegram bot first, on the setup page's Telegram step: the link names it."
+INVITE_LINK = "https://t.me/{bot}?start={code}"
 # A starting password waits here for the page that shows it, once, and is gone when shown. In
 # memory, like the form tokens: a password must not ride in the session cookie, which is signed
 # but not sealed, and a restart before it is shown only means making another.
 MADE_KEY = "FAMILYDB_MADE"
 MADE_MINUTES = 10
+# What is held there: a starting password, or a link that links somebody's Telegram.
+PASSWORD = "password"
+INVITE = "invite"
 
 
 def _app() -> App:
@@ -142,6 +148,9 @@ def edit(member_id: int) -> str:
         personal=personal,
         mine=me is not None and me.id == member_id,
         made=_take_made(member_id),
+        invite=_take_made(member_id, INVITE),
+        bot=status_page.telegram_name(_app()),
+        invite_hours=rules.INVITE_HOURS,
     )
 
 
@@ -207,6 +216,30 @@ def link_telegram(member_id: int) -> Response:
         return _answer(setup, problem=str(exc), fallback=here)
     log.info("Telegram linked to member %s from the page by %s", member_id, auth.client_address())
     return _answer(setup, said=LINKED.format(name=person.display_name), fallback=here)
+
+
+@bp.post(f"/family/<int(max={MAX_ID}):member_id>/invite")
+@once
+def invite(member_id: int) -> Response:
+    """A link that links somebody's Telegram to them when they open it and press Start: shown on
+    their page, once. Only a hash of its code is kept, so it cannot be shown again; making
+    another replaces it. The bot has to be connected, since the link names it."""
+    here = url_for("family.edit", member_id=member_id)
+    if (complaint := auth.refused()) is not None:
+        return _answer(None, problem=complaint, fallback=here)
+    app = _app()
+    bot = status_page.telegram_name(app)
+    if bot is None:
+        return _answer(None, problem=NO_BOT, fallback=here)
+    me = auth.visitor().member
+    try:
+        with closing(app.connect()) as conn:
+            code = rules.invite(conn, member_id, by=me.id if me else None, now=app.clock.now())
+    except rules.FamilyError as exc:
+        return _answer(None, problem=str(exc), fallback=here)
+    _keep_made(member_id, INVITE_LINK.format(bot=bot, code=code), INVITE)
+    log.warning("a Telegram link was made for member %s from %s", member_id, auth.client_address())
+    return redirect(here)
 
 
 @bp.post(f"/family/<int(max={MAX_ID}):member_id>/password")
@@ -349,23 +382,24 @@ def _chosen(
     return redirect(url_for("web.home"))
 
 
-def _keep_made(member_id: int, password: str) -> None:
-    """Hold a starting password for this browser's next look at that person's page."""
+def _keep_made(member_id: int, secret: str, kind: str = PASSWORD) -> None:
+    """Hold a starting password, or a link, for this browser's next look at that person's page."""
     made: dict[str, tuple[str, float]] = current_app.config.setdefault(MADE_KEY, {})
     now = time.monotonic()
     for key in [key for key, (_, at) in made.items() if now - at > MADE_MINUTES * 60]:
         made.pop(key, None)
-    made[f"{session.get(auth.CSRF_KEY, '')}:{member_id}"] = (password, now)
+    made[f"{kind}:{session.get(auth.CSRF_KEY, '')}:{member_id}"] = (secret, now)
 
 
-def _take_made(member_id: int) -> str | None:
-    """The starting password this browser just made for that person, once, then never again.
+def _take_made(member_id: int, kind: str = PASSWORD) -> str | None:
+    """The starting password (or link) this browser just made for that person, once, then never
+    again.
 
     Keyed on the session's form token, which was there before the form was sent: a double click
     lands on the page with the password on it even if the browser never saw the first answer.
     """
     made: dict[str, tuple[str, float]] = current_app.config.setdefault(MADE_KEY, {})
-    found = made.pop(f"{session.get(auth.CSRF_KEY, '')}:{member_id}", None)
+    found = made.pop(f"{kind}:{session.get(auth.CSRF_KEY, '')}:{member_id}", None)
     if found is None or time.monotonic() - found[1] > MADE_MINUTES * 60:
         return None
     return found[0]

@@ -15,10 +15,12 @@ only the tasks asked for in it, as only it gets their reminders.
 
 /start is her introduction to the family, and to anyone else the stranger's line with a knock,
 so that pressing Start on the bot's link shows on the Family and setup pages as any message
-would. A sticker, a file or a video sent with no words is answered with one of her lines
-(`cannot_read`), since there is nothing in it a model could act on; neither is kept. Added to a
-group by somebody on the family list, she introduces herself there (`joined_group`), saying how
-to talk to her in it; that is kept, like anything she says unasked.
+would. Started from a link an admin made for somebody (familydb/family.py `invite`), it links
+the sender's Telegram to them first. A sticker, a file or a video sent with no words is
+answered with one of her lines (`cannot_read`), since there is nothing in it a model could act
+on; neither is kept. Added to a group by somebody on the family list, she introduces herself
+there (`joined_group`), saying how to talk to her in it; that is kept, like anything she says
+unasked.
 """
 
 from __future__ import annotations
@@ -29,7 +31,7 @@ from collections.abc import Callable
 from contextlib import closing
 from datetime import date, datetime, timedelta
 
-from familydb import agenda, task_service, voice
+from familydb import agenda, family, task_service, voice
 from familydb.agenda import Agenda, Entry
 from familydb.app import App
 from familydb.channels.base import IncomingMessage, OutgoingMessage
@@ -79,8 +81,44 @@ def answer(app: App, msg: IncomingMessage) -> OutgoingMessage | None:
 
 
 def start(app: App, msg: IncomingMessage) -> OutgoingMessage:
-    """/start: her introduction, or to a stranger their line, with a knock. Not kept."""
+    """/start: her introduction, or to a stranger their line, with a knock. Not kept.
+
+    With a link's code (t.me/<bot>?start=<code>, made on the Family page), in a private chat, it
+    first links the sender's Telegram to whoever the link was made for, and welcomes them.
+    """
+    words = msg.text.split()
+    private = msg.chat_id == msg.channel_user_id
+    if private and len(words) == 2:
+        linked = _linked_by(app, msg, words[1])
+        if linked is not None:
+            return linked
     return _said_by_code(app, msg, "start")
+
+
+def _linked_by(app: App, msg: IncomingMessage, code: str) -> OutgoingMessage | None:
+    """What a link's Start says: welcome, now linked; or why the link did nothing. None for
+    somebody already on the list whose link is spent (opened a second time, say): they are
+    greeted as anybody on the list would be."""
+    seed = msg.channel_update_id
+    with closing(app.connect()) as conn:
+        app.refresh(conn)
+        try:
+            person = family.accept_invite(
+                conn, code, telegram_id=msg.channel_user_id, now=app.clock.now()
+            )
+        except family.InviteRefused as refused:
+            if refused.why == "taken":
+                said = voice.say(app.settings, "invite_taken", seed=seed, who=refused.owner or "")
+                return OutgoingMessage(msg.chat_id, said, "ok")
+            if members.resolve(conn, msg.channel, msg.channel_user_id) is not None:
+                return None
+            # Knocked all the same, so they can still be let in from the Family page.
+            _stranger(app, conn, msg)
+            said = voice.say(app.settings, "invite_stale", seed=seed)
+            return OutgoingMessage(msg.chat_id, said, "unknown_sender")
+    log.warning("Telegram %s linked to member %s by a link", msg.channel_user_id, person.id)
+    said = voice.say(app.settings, "invite_linked", seed=seed, who=person.display_name)
+    return OutgoingMessage(msg.chat_id, said, "ok")
 
 
 def cannot_read(app: App, msg: IncomingMessage) -> OutgoingMessage:
