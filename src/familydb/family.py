@@ -100,14 +100,24 @@ def _name_taken(conn: sqlite3.Connection, name: str, *, besides: int | None = No
             )
 
 
-def _telegram_taken(conn: sqlite3.Connection, telegram: str, *, besides: int | None) -> None:
+def _telegram_owner(
+    conn: sqlite3.Connection, telegram: str, *, besides: int | None
+) -> Member | None:
+    """Whoever on the list, switched off or not, already has this Telegram id."""
     for person in members.list_all(conn, active_only=False):
         if (
             person.id != besides
             and person.channel == TELEGRAM
             and person.channel_user_id == telegram
         ):
-            raise FamilyError(f"That Telegram id is already {person.display_name}'s.")
+            return person
+    return None
+
+
+def _telegram_taken(conn: sqlite3.Connection, telegram: str, *, besides: int | None) -> None:
+    owner = _telegram_owner(conn, telegram, besides=besides)
+    if owner is not None:
+        raise FamilyError(f"That Telegram id is already {owner.display_name}'s.")
 
 
 def add(
@@ -364,22 +374,20 @@ def accept_invite(
     if telegram is None or not is_invite_code(code):
         raise InviteRefused("stale")
     stamp = utc_iso(now)
+    # On their own, as a refusal below undoes whatever its transaction did.
+    with transaction(conn):
+        invites.forget_expired(conn, stamp)
     try:
         with transaction(conn):
             found = invites.find(conn, invites.digest(code))
-            if found is None or found.expires_at <= stamp:
-                invites.forget_expired(conn, stamp)
+            if found is None:
                 raise InviteRefused("stale")
             person = members.get(conn, found.member_id)
             if person is None or not person.active:
                 raise InviteRefused("stale")
-            for somebody in members.list_all(conn, active_only=False):
-                if (
-                    somebody.id != person.id
-                    and somebody.channel == TELEGRAM
-                    and somebody.channel_user_id == telegram
-                ):
-                    raise InviteRefused("taken", somebody.display_name)
+            owner = _telegram_owner(conn, telegram, besides=person.id)
+            if owner is not None:
+                raise InviteRefused("taken", owner.display_name)
             linked = members.update_profile(
                 conn,
                 person.id,

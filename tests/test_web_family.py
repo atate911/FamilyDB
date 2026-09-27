@@ -162,7 +162,7 @@ def test_a_link_is_made_for_somebody_and_shown_once(page, conn, family) -> None:
         f"/family/{alex.id}/invite", data={"csrf": _token(page)}, follow_redirects=True
     )
     assert "Connect the Telegram bot first" in refused.text  # the link would name no bot
-    assert invites.for_member(conn, alex.id) is None
+    assert conn.execute("SELECT count(*) FROM telegram_invites").fetchone()[0] == 0
     app.channel_states["telegram"] = "connected as @tate_family_bot"
     offered = page.get(f"/family/{alex.id}").text
     assert "Make a link for Alex" in offered
@@ -171,5 +171,5 @@ def test_a_link_is_made_for_somebody_and_shown_once(page, conn, family) -> None:
     shown = page.get(f"/family/{alex.id}").text
     link = re.search(r"https://t\.me/tate_family_bot\?start=([A-Za-z0-9_-]+)", shown)
     assert link is not None and "Shown this once" in shown
-    assert invites.for_member(conn, alex.id).code_hash == invites.digest(link.group(1))
+    assert invites.find(conn, invites.digest(link.group(1))).member_id == alex.id
     assert "t.me/tate_family_bot?start=" not in page.get(f"/family/{alex.id}").text  # once

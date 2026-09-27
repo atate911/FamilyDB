@@ -138,8 +138,8 @@ def test_a_link_links_whoever_opens_it_to_its_person_once(conn, family_members) 
     jo = family.add(conn, "Jo", "parent", telegram_id=None, now=NOW)
     code = family.invite(conn, jo.id, by=family_members["sam"].id, now=_at())
     assert family.is_invite_code(code) and len(code) <= 64  # Telegram's start parameter
-    kept = invites.for_member(conn, jo.id)
-    assert kept is not None and kept.code_hash != code  # only a hash of it is kept
+    kept = conn.execute("SELECT code_hash FROM telegram_invites WHERE member_id = ?", (jo.id,))
+    assert kept.fetchone()["code_hash"] == invites.digest(code) != code  # only a hash is kept
     linked = family.accept_invite(conn, code, telegram_id="1003", now=_at(1))
     assert (linked.id, linked.channel, linked.channel_user_id) == (jo.id, "telegram", "1003")
     assert members.resolve(conn, "telegram", "1003") == linked  # the bot answers them now
@@ -186,3 +186,12 @@ def test_no_link_for_somebody_switched_off_or_not_there(conn, family_members) ->
         family.invite(conn, jo.id, by=None, now=_at())
     with pytest.raises(family.FamilyError, match="nobody by that number"):
         family.invite(conn, 999, by=None, now=_at())
+
+
+def test_links_past_their_day_are_forgotten_whatever_is_opened(conn, family_members) -> None:
+    """A refusal undoes its own transaction, so forgetting expired links has one of its own."""
+    jo = family.add(conn, "Jo", "parent", telegram_id=None, now=NOW)
+    family.invite(conn, jo.id, by=None, now=_at())
+    with pytest.raises(family.InviteRefused):
+        family.accept_invite(conn, "x" * 32, telegram_id="1003", now=_at(family.INVITE_HOURS))
+    assert conn.execute("SELECT count(*) FROM telegram_invites").fetchone()[0] == 0

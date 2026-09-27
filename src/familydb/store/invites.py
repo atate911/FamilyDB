@@ -52,13 +52,6 @@ def find(conn: sqlite3.Connection, code_hash: str) -> Invite | None:
     return Invite(**dict(row)) if row else None
 
 
-def for_member(conn: sqlite3.Connection, member_id: int) -> Invite | None:
-    row = conn.execute(
-        "SELECT * FROM telegram_invites WHERE member_id = ?", (member_id,)
-    ).fetchone()
-    return Invite(**dict(row)) if row else None
-
-
 def remove(conn: sqlite3.Connection, code_hash: str) -> None:
     conn.execute("DELETE FROM telegram_invites WHERE code_hash = ?", (code_hash,))
 
