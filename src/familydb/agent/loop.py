@@ -225,6 +225,8 @@ def run_turn(
             )
             spending.settle(ctx.conn, held, ctx.clock.now())
             alerts.answered(ctx.conn, active.name, asked)
+        if reply.dropped:
+            alerts.dropped(ctx.conn, active.name, asked, reply.dropped, ctx.clock.now())
 
         if reply.stop == "refusal":
             log.warning("%s refused the request (category=%s)", active.name, reply.refusal)

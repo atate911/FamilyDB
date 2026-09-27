@@ -75,13 +75,17 @@ def test_what_a_request_carries_follows_the_model(env) -> None:
     for model in ("claude-haiku-4-5-20251001", "claude-sonnet-4-5", "claude-opus-4-20250514"):
         assert "thinking" not in payload(model) and "output_config" not in payload(model), model
 
-    worker = payload("claude-sonnet-5", web=WebAccess())["tools"]
-    assert [t["type"] for t in worker] == ["web_search_20260209", "web_fetch_20260209"]
+    # A model released after this was written is taken as current, not as an older one.
+    for model in ("claude-sonnet-5", "claude-fable-5-1", "claude-opus-6"):
+        worker = payload(model, web=WebAccess())["tools"]
+        assert [t["type"] for t in worker] == ["web_search_20260209", "web_fetch_20260209"], model
 
     assert payload("claude-opus-5")["fallbacks"] == "default"
     assert payload("claude-fable-5-1")["fallbacks"] == "default"
+    assert payload("claude-opus-6")["fallbacks"] == "default"
     assert "fallbacks" not in payload("claude-haiku-4-5-20251001")
     assert "betas" not in payload("claude-sonnet-5")
+    assert "betas" not in payload("claude-haiku-5")
 
 
 def test_default_haiku_request_omits_unsupported_thinking(env):

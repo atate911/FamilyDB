@@ -10,9 +10,13 @@ Four kinds of trouble:
 - price: the price of a model they use moved (told once for each new price);
 - prices: a price list could not be read, or the lists disagree about a model in use;
 - new: new models to choose from (once a day at most, for each company);
-- shift: what a kind of call costs or does moved a long way in a week (usage_watch.py).
+- shift: what a kind of call costs or does moved a long way in a week (usage_watch.py);
+- api: a company refused a part of a request (a dated beta, a tool version, a setting) for a
+  model, which is now sent without it (agent/providers/parts.py; about: company, model, part);
+- refused: a company refused requests for a reason FamilyDB cannot read (about: the company),
+  told once it has happened twice without an answer between, since one odd request is not news.
 
-The last five come from the daily check of models and prices (model_watch.py).
+Five come from the daily check of models and prices (model_watch.py).
 
 Each is noted where it is seen, in a short write of its own: a refusal read by the provider
 module (`AgentError.trouble`) in the loop and the gateway, the limit in `spending.admit`, Google
@@ -41,9 +45,23 @@ from familydb.store.db import transaction
 
 log = logging.getLogger(__name__)
 
-KINDS = ("credit", "key", "limit", "calendar", "model", "price", "prices", "new", "shift")
+KINDS = (
+    "credit",
+    "key",
+    "limit",
+    "calendar",
+    "model",
+    "price",
+    "prices",
+    "new",
+    "shift",
+    "api",
+    "refused",
+)
 # About a company: the ones a company's own answer clears.
-COMPANY_KINDS = ("credit", "key")
+COMPANY_KINDS = ("credit", "key", "refused")
+# Told only once seen this many times: a single refusal may be one odd request.
+TOLD_AFTER = {"refused": 2}
 TELL_AGAIN = timedelta(hours=12)
 KEEP = timedelta(days=7)
 TELEGRAM = "telegram"
@@ -100,6 +118,28 @@ def noticed(
         )
 
 
+def dropped(
+    conn: sqlite3.Connection,
+    provider: str,
+    model: str | None,
+    left_out: tuple[str, ...],
+    now: datetime,
+) -> None:
+    """A company answered once a part of the request it refused was left out: tell an admin
+    once, since it is working, but without something it used to have."""
+    company = COMPANY_NAMES.get(provider, provider)
+    for part in left_out:
+        note(
+            conn,
+            "api",
+            f"{provider}:{(model or '').lower()}:{part}",
+            f"{company} no longer takes {part} for {model}, so it is now left out and the rest "
+            "works without it; a newer FamilyDB may know what takes its place",
+            now,
+            once=True,
+        )
+
+
 def answered(conn: sqlite3.Connection, provider: str, model: str | None = None) -> None:
     """A company answered. Call inside the transaction that records the call: one small delete,
     and only when there was something to forget."""
@@ -147,7 +187,11 @@ def run_alerts(app: Any) -> int:
             return 0
         now = app.clock.now()
         told_before = utc_iso(now - TELL_AGAIN)
-        due = alert_store.due(conn, told_before=told_before)
+        due = [
+            alert
+            for alert in alert_store.due(conn, told_before=told_before)
+            if alert.times >= TOLD_AFTER.get(alert.kind, 1)
+        ]
         if not due:
             return 0
         admins = admins_on_telegram(conn)

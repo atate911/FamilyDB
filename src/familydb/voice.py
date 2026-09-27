@@ -290,6 +290,22 @@ EVENTS: dict[str, Event] = {
         ("detail",),
         {"detail": "answering the family costs 62% more a message ($0.004, was $0.0025)"},
     ),
+    "alert_api": Event(
+        "Telling an admin: a company stopped taking part of a request",
+        "Heads up: {detail}. Everything still works; the status page has it.",
+        ("detail",),
+        {
+            "detail": "Anthropic no longer takes the refusal fallback for claude-opus-5, so it is "
+            "now left out and the rest works without it"
+        },
+    ),
+    "alert_refused": Event(
+        "Telling an admin: a company keeps refusing requests",
+        "{company} keeps refusing what I send it, for a reason I can't read: {detail}. "
+        "The status page has it; another model, or a newer FamilyDB, may be needed.",
+        ("company", "detail"),
+        {"company": "OpenAI", "detail": "API error 400: Unsupported parameter"},
+    ),
     "kid_limit": Event(
         "A kid's messages for the day used up",
         "That's {limit} messages today, which is all for today. Ask me again tomorrow, or ask a "

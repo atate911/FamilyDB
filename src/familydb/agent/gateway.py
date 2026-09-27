@@ -409,6 +409,8 @@ def _written_down(
             )
             spending.settle(conn, held, clock.now())
             alerts.answered(conn, provider.name, model)
+        if written.dropped:
+            alerts.dropped(conn, provider.name, model, written.dropped, clock.now())
         if written.stop == "refusal":
             raise AgentError(f"{provider.name} would not {doing}", retryable=False)
         if written.stop == "max_tokens":

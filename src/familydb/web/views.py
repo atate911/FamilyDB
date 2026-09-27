@@ -19,7 +19,7 @@ from typing import Any
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
-from familydb import windows
+from familydb import alerts, windows
 from familydb.agenda import Entry
 from familydb.agent.providers import catalog, prices
 from familydb.config import Settings
@@ -822,9 +822,11 @@ ALERT_TITLES = {
     "prices": "The price lists need a look",
     "new": "New models to choose from",
     "shift": "What the calls cost or do moved",
+    "api": "A company stopped taking part of a request",
+    "refused": "{company} is refusing requests",
 }
-# Kinds whose subject is not a company: what the notice says is the detail, shown with it.
-SAID_IN_DETAIL = frozenset({"model", "price", "prices", "new", "shift"})
+# Kinds whose detail says what happened: shown with the row.
+SAID_IN_DETAIL = frozenset({"model", "price", "prices", "new", "shift", "api", "refused"})
 COMPANY_WORDS = {"openai": "OpenAI", "anthropic": "Anthropic", "gemini": "Google Gemini"}
 
 
@@ -913,7 +915,7 @@ AUTOMATIC = (
         "admins",
         "What needs fixing, to admins",
         "free",
-        ("alert_credit", "alert_key", "alert_limit", "alert_calendar"),
+        tuple(f"alert_{kind}" for kind in alerts.KINDS),
     ),
 )
 AUTOMATIC_BY_EVENT = {event: title for _, _, title, _, events in AUTOMATIC for event in events}

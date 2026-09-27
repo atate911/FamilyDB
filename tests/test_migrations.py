@@ -121,7 +121,7 @@ def test_a_database_that_ran_the_retired_0007_still_gets_what_follows(tmp_path):
             conn.execute(f"DROP TABLE {table}")
         # tasks, dropped above, comes back with 0012 and takes 0022's repeats, 0023's gift_for
         # and 0024's nudged_at on again.
-        assert db.migrate(conn) == list(range(8, 32))
+        assert db.migrate(conn) == list(range(8, 33))
         columns = {row["name"] for row in conn.execute("PRAGMA table_info(llm_calls)")}
         assert {"provider", "web_searches", "cost_usd", "cost_estimated"} <= columns
 
@@ -254,7 +254,7 @@ def test_the_alerts_already_noted_outlast_the_model_watch_rebuild(tmp_path, monk
             "'2026-09-20T22:03:00Z', 3, '2026-09-20T21:04:00Z')"
         )
         conn.commit()
-        assert db.migrate(conn)[0] == 31
+        assert db.migrate(conn)[:2] == [31, 32]
         row = conn.execute("SELECT * FROM alerts").fetchone()
         assert (row["kind"], row["subject"], row["times"], row["told_at"]) == (
             "credit",

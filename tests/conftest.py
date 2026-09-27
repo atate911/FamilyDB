@@ -41,6 +41,16 @@ def built_in_prices() -> Iterator[None]:
 
 
 @pytest.fixture(autouse=True)
+def nothing_left_out() -> Iterator[None]:
+    """Every request whole, whatever a test taught a provider to leave out (providers/parts.py)."""
+    from familydb.agent.providers import parts
+
+    parts.forget()
+    yield
+    parts.forget()
+
+
+@pytest.fixture(autouse=True)
 def keep_umask() -> Iterator[None]:
     """The CLI makes its process owner-only; the tests run it in-process, so put that back."""
     before = os.umask(0o022)

@@ -82,6 +82,9 @@ class ModelReply:
     request_id: str | None = None
     refusal: str | None = None
     raw: Any = None  # the provider's own assistant output, replayed when resuming a paused turn
+    # Parts of the request the company refused and the provider sent it again without
+    # (providers/parts.py), for an admin to hear of.
+    dropped: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -105,6 +108,7 @@ class Heard:
     # How it ended, as a reply's `stop` does: a refusal or an answer cut short is still billed,
     # so it comes back to be recorded, and the gateway decides what it means.
     stop: Stop = "end"
+    dropped: tuple[str, ...] = ()  # as a reply's: parts of the request left out on refusal
 
 
 # What a model saw in a picture, written down: the same shape as what it heard.

@@ -52,7 +52,10 @@ def test_each_company_s_empty_account_and_refused_key_are_read_as_such() -> None
         "credit"
     )
     assert claude.trouble(401, "invalid x-api-key") == "key"
-    assert claude.trouble(400, "tools.0: bad schema") is None
+    # A refusal nothing here can read is still worth telling of, once it happens again.
+    assert claude.trouble(400, "tools.0: bad schema") == "refused"
+    assert claude.trouble(404, "Not found: /v1/messages/count") == "refused"  # not a model
+    assert claude.trouble(429, "slow down") is None
 
     prepaid = errors.ClientError(
         429, {"error": {"message": "Your prepayment credits are depleted. Check billing."}}
@@ -195,6 +198,40 @@ def test_admins_on_telegram_are_told_once_and_again_while_it_lasts(settings, con
     with transaction(conn):
         settings_store.set_many(conn, {"admin_alerts": False})
     assert alerts.run_alerts(later) == 0 and len(sent) == 2
+
+
+def test_a_refusal_nothing_can_read_is_told_once_it_happens_again(
+    settings, registry, ctx, family
+) -> None:
+    """One odd request is not news; the same company refusing twice with no answer between may
+    be a change on its side, which only an admin can look into."""
+    import anthropic
+
+    def refusing():
+        said = anthropic.BadRequestError(
+            "messages: an unexpected field", response=fakes._response(400), body=None
+        )
+        return build("anthropic", settings, api=fakes.FakeMessagesAPI(said))
+
+    sent: list[tuple[str, str]] = []
+    app = App(settings, ctx.clock)
+    app.senders["telegram"] = lambda chat, text: sent.append((chat, text))
+    with pytest.raises(AgentError):
+        _turn(settings, registry, ctx, refusing(), None)
+    assert _found(ctx.conn) == {("refused", "anthropic")}
+    assert alerts.run_alerts(app) == 0 and sent == []  # once: not yet
+    with pytest.raises(AgentError):
+        _turn(settings, registry, ctx, refusing(), None)
+    assert alerts.run_alerts(app) == 1
+    assert sent[0][1].startswith("Anthropic keeps refusing what I send it")
+    assert "an unexpected field" in sent[0][1]
+
+    # It answers again: forgotten.
+    fine = build(
+        "anthropic", settings, api=fakes.FakeMessagesAPI(fakes.message([fakes.text("ok")]))
+    )
+    assert _turn(settings, registry, ctx, fine, None).text == "ok"
+    assert _found(ctx.conn) == set()
 
 
 def test_nothing_is_read_twice_or_asked_of_a_model_when_nothing_is_wrong(settings, clock, conn):
