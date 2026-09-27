@@ -205,6 +205,10 @@ class Settings(BaseSettings):
     web_tools_enabled: bool = False
     telegram_bot_token: str | None = None
     # In groups, only answer messages that mention the bot or reply to it.
+    # Seconds to wait before answering a message on Telegram, so that several sent one after
+    # another are answered together, in one turn and one reply (pipeline.receive). 0 answers
+    # each at once.
+    gather_seconds: int = Field(default=4, ge=0, le=30)
     telegram_require_mention: bool = False
     # Voice notes sent on Telegram are heard by a speech model, then answered as if typed
     # (agent/gateway.listen). Claude hears nothing, so a family on Claude alone needs an OpenAI

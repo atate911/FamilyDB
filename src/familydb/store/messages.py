@@ -246,6 +246,31 @@ def replies_to(conn: sqlite3.Connection, message_id: int) -> list[Message]:
     return [Message.from_row(row) for row in rows]
 
 
+def gathering(
+    conn: sqlite3.Connection,
+    chat_id: str,
+    member_id: int,
+    *,
+    after: int | None = None,
+    before: int | None = None,
+) -> list[Message]:
+    """Messages from one person in one chat waiting to be answered together (pipeline.receive),
+    newer or older than one of them, oldest first."""
+    sql = (
+        "SELECT * FROM messages WHERE direction = 'in' AND chat_id = ? AND member_id = ? "
+        "AND status = 'received' AND give_up = 0 AND claim_token = 'gather'"
+    )
+    params: list[Any] = [chat_id, member_id]
+    if after is not None:
+        sql += " AND id > ?"
+        params.append(after)
+    if before is not None:
+        sql += " AND id < ?"
+        params.append(before)
+    rows = conn.execute(sql + " ORDER BY id", params).fetchall()
+    return [Message.from_row(row) for row in rows]
+
+
 def mark_sent_as(conn: sqlite3.Connection, message_id: int, kind: str) -> None:
     """Say which kind of message she sent of her own accord (voice.hand_over)."""
     conn.execute("UPDATE messages SET sent_as = ? WHERE id = ?", (kind, message_id))

@@ -56,7 +56,7 @@ from familydb.channels import markup
 from familydb.channels.base import IncomingMessage, OutgoingMessage, PhotoNote, VoiceNote
 from familydb.config import Settings
 from familydb.delivery import deliver
-from familydb.pipeline import handle_incoming
+from familydb.pipeline import answer_gathered, handle_incoming, receive
 from familydb.store import members, messages
 
 log = logging.getLogger(__name__)
@@ -540,7 +540,34 @@ class TelegramChannel:
             if not text:
                 return
             msg = dataclasses.replace(msg, text=text)
-        await self._answer(update, bot, msg, quiet=in_group and not addressed)
+        if self.app.settings.gather_seconds:
+            await self._after_a_pause(update, bot, msg, quiet=in_group and not addressed)
+        else:
+            await self._answer(update, bot, msg, quiet=in_group and not addressed)
+
+    async def _after_a_pause(
+        self, update: Any, bot: Any, msg: IncomingMessage, *, quiet: bool
+    ) -> None:
+        """Keep a message now and answer it after `gather_seconds`, with any the same person
+        sends in this chat meanwhile (pipeline.receive and answer_gathered). This returns at
+        once, so the next update is kept while this one waits; "typing…" is up for the pause."""
+        kept = await asyncio.to_thread(receive, self.app, msg)
+        if kept is None:
+            return
+        if isinstance(kept, OutgoingMessage):  # a stranger, answered at once as ever
+            await self._answer(update, bot, msg, handle=lambda _app, _msg: kept, quiet=quiet)
+            return
+        pause = self.app.settings.gather_seconds
+
+        def later(app: App, message: IncomingMessage) -> OutgoingMessage | None:
+            time.sleep(pause)
+            return answer_gathered(app, message, kept)
+
+        task = asyncio.get_running_loop().create_task(
+            self._answer(update, bot, msg, handle=later, quiet=quiet)
+        )
+        self._gathering.add(task)
+        task.add_done_callback(self._gathering.discard)
 
     async def on_voice(self, update: Any, context: Any) -> None:
         """A voice note: handed over with a way to fetch it, heard and answered like words."""

@@ -732,6 +732,21 @@ GROUPS: tuple[Group, ...] = (
     ),
     Group(
         "connections",
+        "telegram-answering",
+        "Answering on Telegram",
+        "",
+        (
+            field(
+                "gather_seconds",
+                "Seconds to wait for more before answering",
+                "Several messages sent one after another are answered together, in one reply "
+                "and one model call, when each comes within this long of the last. Every "
+                "answer waits this long first. 0 answers each at once.",
+            ),
+        ),
+    ),
+    Group(
+        "connections",
         "telegram-groups",
         "In a Telegram group",
         "",

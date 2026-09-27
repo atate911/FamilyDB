@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Collection
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import Literal
@@ -37,6 +38,8 @@ def load_history(
     exclude_message_id: int | None = None,
     exclude_replies_to: int | None = None,
     budget: int = HISTORY_CHARS,
+    also_exclude: Collection[int] = (),
+    before_id: int | None = None,
 ) -> list[HistoryTurn]:
     """The last `limit` messages of a chat from the last `since_hours`, as plain text turns.
 
@@ -47,10 +50,15 @@ def load_history(
     names = {m.id: m.display_name for m in members.list_all(conn, active_only=False)}
     # The current inbound message is already stored and is the newest row; fetch one extra
     # so excluding it still leaves `limit` earlier messages.
-    fetch = limit + 1 if exclude_message_id is not None else limit
+    # `also_exclude` are the earlier messages of a burst answered with it (pipeline.receive).
+    fetch = (limit + 1 if exclude_message_id is not None else limit) + len(also_exclude)
     turns: list[HistoryTurn] = []
     for message in messages.recent_for_chat(conn, chat_id, limit=fetch, since=since):
-        if message.id == exclude_message_id:
+        if message.id == exclude_message_id or message.id in also_exclude:
+            continue
+        # A message somebody sent after this one is not the conversation before it: it is
+        # still waiting for a turn of its own (a burst from somebody else, pipeline.receive).
+        if before_id is not None and message.direction == "in" and message.id > before_id:
             continue
         if exclude_replies_to is not None and message.reply_to == exclude_replies_to:
             continue

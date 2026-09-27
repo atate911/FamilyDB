@@ -34,6 +34,15 @@
     <button type="submit">{{ icon('check') }}Save the token</button>
   </form>
 
+  {% set answering = groups['telegram-answering'] %}
+  <h3 id="{{ answering.group.name }}">{{ answering.group.title }}</h3>
+  <form method="post" action="{{ url_for('settings.save') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    <input type="hidden" name="section" value="connections" />
+    <div class="grid">{% for one in answering.boxes %}{{ box(one) }}{% endfor %}</div>
+    <button class="quiet" type="submit">{{ icon('check') }}Save</button>
+  </form>
+
   {% set in_groups = groups['telegram-groups'] %}
   <h3 id="{{ in_groups.group.name }}">{{ in_groups.group.title }}</h3>
   {% if reads_groups %}
