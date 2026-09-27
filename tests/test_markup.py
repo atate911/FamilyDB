@@ -57,6 +57,23 @@ def test_crossed_marks_are_left_as_written_rather_than_refused() -> None:
     assert to_html("**a *b** c* `d`") == "**a *b** c* <code>d</code>"
 
 
+def test_an_address_never_swallows_what_is_set_aside_next_to_it() -> None:
+    """Models often write a link as its own address; and an address can run into code."""
+    link = "https://example.com/tickets"
+    assert to_html(f"[{link}]({link})") == f'<a href="{link}">{link}</a>'
+    assert to_html("https://a.com`x`") == "https://a.com<code>x</code>"
+
+
+def test_the_stand_ins_cannot_be_forged_from_the_words() -> None:
+    """The characters the stand-ins are made of are taken out first, so words that happen to
+    hold them (an idea's title from a fetched page) neither break it nor show."""
+    assert to_html("x \ue0000\ue001 y **z**") == "x 0 y <b>z</b>"
+
+
+def test_marks_that_cross_a_link_are_left_as_written_and_the_link_kept() -> None:
+    assert to_html("*see [this*](https://a.com)") == '*see <a href="https://a.com">this*</a>'
+
+
 def test_a_heading_is_drawn_bold() -> None:
     assert to_html("Here's today:\n10:00 Soccer", heading=True) == (
         "<b>Here's today:</b>\n10:00 Soccer"

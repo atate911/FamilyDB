@@ -19,12 +19,14 @@ import re
 from collections.abc import Callable
 
 # Stand-ins for what is already markup, so the marks after cannot reach inside it: code, a link's
-# tags and a bare address, whose underscores are not italics.
-KEPT = re.compile("\ue000(\\d+)\ue001")
+# tags and a bare address, whose underscores are not italics. Their two characters are private
+# use: taken out of what is sent before anything else, and never part of an address.
+OPEN, SHUT = "\ue000", "\ue001"
+KEPT = re.compile(f"{OPEN}(\\d+){SHUT}")
 FENCE = re.compile(r"```[\w+-]*\n?(.*?)```", re.DOTALL)
 CODE = re.compile(r"`([^`\n]+)`")
-LINK = re.compile(r"\[([^\]\n]+)\]\((https?://[^\s()]+)\)")
-URL = re.compile(r"https?://[^\s<>]+")
+LINK = re.compile(f"\\[([^\\]\\n]+)\\]\\((https?://[^\\s(){OPEN}{SHUT}]+)\\)")
+URL = re.compile(f"https?://[^\\s<>{OPEN}{SHUT}]+")
 TAG = re.compile(r"<(/?)(\w+)[^>]*>")
 HEADING = re.compile(r"^#{1,6}[ \t]+(.+?)[ \t#]*$", re.MULTILINE)
 BULLET = re.compile(r"^([ \t]*)[*-][ \t]+(?=\S)", re.MULTILINE)
@@ -48,6 +50,10 @@ def to_html(text: str, *, heading: bool = False) -> str:
     def escaped(words: str) -> str:
         return html.escape(words, quote=False)
 
+    def restored(markup: str) -> str:
+        return KEPT.sub(lambda m: kept[int(m.group(1))], markup)
+
+    text = text.replace(OPEN, "").replace(SHUT, "")
     text = FENCE.sub(lambda m: keep(f"<pre>{escaped(m.group(1).strip(chr(10)))}</pre>"), text)
     text = CODE.sub(lambda m: keep(f"<code>{escaped(m.group(1))}</code>"), text)
     text = LINK.sub(
@@ -58,13 +64,18 @@ def to_html(text: str, *, heading: bool = False) -> str:
     marked = text
     for mark, tag in MARKS:
         marked = mark.sub(_tagged(tag), marked)
-    if _nests(marked):
-        text = marked
     if heading:
-        first, newline, rest = text.partition("\n")
-        if first.strip() and not first.startswith("<b>"):
-            text = f"<b>{first}</b>{newline}{rest}"
-    return KEPT.sub(lambda m: kept[int(m.group(1))], text)
+        marked, text = _bold_first_line(marked), _bold_first_line(text)
+    # Checked with the links' tags back in place, which a mark may cross as well.
+    drawn = restored(marked)
+    return drawn if _nests(drawn) else restored(text)
+
+
+def _bold_first_line(markup: str) -> str:
+    first, newline, rest = markup.partition("\n")
+    if first.strip() and not first.startswith("<b>"):
+        return f"<b>{first}</b>{newline}{rest}"
+    return markup
 
 
 def _tagged(tag: str) -> Callable[[re.Match[str]], str]:
