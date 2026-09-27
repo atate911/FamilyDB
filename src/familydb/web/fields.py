@@ -879,6 +879,14 @@ GROUPS: tuple[Group, ...] = (
                 "the family uses for other things too. No suits a group kept for planning, where "
                 "everything said is for her.",
             ),
+            field(
+                "private_when_personal",
+                "Send what's for one person to their own chat",
+                "A reminder for somebody's own task, a note on an idea they added, how their "
+                "plan went: to their own chat with the bot, once they have written to it there, "
+                "rather than to the whole group. What is for everyone stays in the group. Either "
+                'way, a plain "saved" in the group is a 👌 on the message, which buzzes nobody.',
+            ),
         ),
     ),
     Group(

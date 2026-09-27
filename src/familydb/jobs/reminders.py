@@ -9,7 +9,7 @@ here every minute. It also sends, as written, any held message no conversation c
 from contextlib import closing
 from datetime import datetime
 
-from familydb import buttons, voice
+from familydb import buttons, routing, voice
 from familydb.app import App
 from familydb.dates import utc_iso
 from familydb.store import messages, tasks
@@ -29,7 +29,10 @@ def run_reminders(app: App) -> int:
                 if task is None:
                     continue
                 due_when = late_note(reminder.remind_at, now, app.clock.tz)
-                channel, chat = task.channel, task.chat_id
+                # The owner's own reminder goes to them, not to the whole group (routing.py).
+                channel, chat = routing.for_person(
+                    conn, app.settings, task.channel, task.chat_id, task.owner_id
+                )
                 out = messages.insert_out(
                     conn,
                     channel=channel,

@@ -15,6 +15,7 @@ from familydb.availability import calendar_available, weather_available, web_too
 from familydb.clock import Clock
 from familydb.config import Settings
 from familydb.memory import Chosen, line_of
+from familydb.routing import CONFIRMED
 from familydb.store.ideas import Idea
 from familydb.store.members import Member
 
@@ -115,6 +116,8 @@ def render_audience_line(channel: str, chat_id: str, family: list[Member]) -> st
     conversation on the page), which is what no line means to the model. A Telegram group's chat
     id is negative; the page's "web" chat is one conversation the whole family shares. Whether
     kids are among them is read from the family list, since code cannot see who is in a group.
+    In a Telegram group she is told that a reply saying only that something was saved is
+    `CONFIRMED`, which the channel shows as a reaction rather than a message to everyone.
     """
     if channel == "web" and chat_id == "web":
         line = "This is the family's conversation on the page: everyone who signs in reads it"
@@ -124,6 +127,12 @@ def render_audience_line(channel: str, chat_id: str, family: list[Member]) -> st
         return None
     if any(member.active and member.role == "kid" for member in family):
         line += ", kids among them"
+    if channel == "telegram":
+        # Shown as a reaction on their message, so a plain "saved" buzzes nobody (routing.py).
+        line += (
+            f". When you have only saved what was asked and have nothing to add, reply with "
+            f"just {CONFIRMED}"
+        )
     return line + "."
 
 

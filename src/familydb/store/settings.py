@@ -79,6 +79,7 @@ BEHAVIOUR = (
     "retry_interval_minutes",
     "retry_max_attempts",
     "telegram_require_mention",
+    "private_when_personal",
     "gather_seconds",
     "voice_notes",
     "voice_max_minutes",

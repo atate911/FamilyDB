@@ -273,7 +273,8 @@ def test_a_shared_chat_is_told_who_reads_it_and_a_private_one_is_not(
     # The family has a kid in it, the girls, so a shared chat says they read it too.
     assert _turn(group) == [
         TODAY,
-        "This is the family's group chat: everyone in it reads your reply, kids among them.",
+        "This is the family's group chat: everyone in it reads your reply, kids among them. "
+        "When you have only saved what was asked and have nothing to add, reply with just ✓.",
         "[Sam] hi",
     ]
     assert _turn(private) == [TODAY, "[Sam] hi"]
@@ -299,7 +300,8 @@ def test_a_retried_group_message_is_still_told_who_reads_it(settings, clock, con
     api = fakes.FakeMessagesAPI(fakes.message([fakes.text("Hi all.")]))
     assert retry_message(app, failed.in_message_id, api=api, conn=conn).status == "ok"
     assert _turn(api.requests[0])[1:3] == [
-        "This is the family's group chat: everyone in it reads your reply, kids among them.",
+        "This is the family's group chat: everyone in it reads your reply, kids among them. "
+        "When you have only saved what was asked and have nothing to add, reply with just ✓.",
         "[Sam] hi all",
     ]
 

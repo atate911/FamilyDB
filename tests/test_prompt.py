@@ -258,6 +258,8 @@ GROWN_UPS = [_member("Sam", "admin"), _member("Alex", "parent")]
 WITH_A_KID = [*GROWN_UPS, _member("Mia", "kid")]
 GROUP = "This is the family's group chat: everyone in it reads your reply"
 PAGE = "This is the family's conversation on the page: everyone who signs in reads it"
+# In a Telegram group only: a plain "saved" is shown as a reaction (routing.py).
+SAVED = ". When you have only saved what was asked and have nothing to add, reply with just ✓"
 
 
 def test_a_private_chat_has_no_audience_line() -> None:
@@ -266,11 +268,12 @@ def test_a_private_chat_has_no_audience_line() -> None:
 
 
 def test_a_group_says_everyone_in_it_reads_the_reply() -> None:
-    assert render_audience_line("telegram", "-100123", GROWN_UPS) == f"{GROUP}."
+    assert render_audience_line("telegram", "-100123", GROWN_UPS) == f"{GROUP}{SAVED}."
 
 
 def test_a_group_says_kids_read_it_when_the_family_has_one() -> None:
-    assert render_audience_line("telegram", "-100123", WITH_A_KID) == f"{GROUP}, kids among them."
+    said = render_audience_line("telegram", "-100123", WITH_A_KID)
+    assert said == f"{GROUP}, kids among them{SAVED}."
 
 
 def test_the_page_s_chat_is_read_by_everyone_who_signs_in() -> None:
@@ -280,7 +283,7 @@ def test_the_page_s_chat_is_read_by_everyone_who_signs_in() -> None:
 
 def test_a_kid_who_is_switched_off_is_not_counted() -> None:
     family = [*GROWN_UPS, _member("Mia", "kid", active=False)]
-    assert render_audience_line("telegram", "-100123", family) == f"{GROUP}."
+    assert render_audience_line("telegram", "-100123", family) == f"{GROUP}{SAVED}."
     assert render_audience_line("web", "web", family) == f"{PAGE}."
 
 

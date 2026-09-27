@@ -496,7 +496,8 @@ def test_digest_asks_as_the_first_admin_and_delivers(settings, thursday_clock, c
     # Sent to the family's group, so the turn says who reads it before the question.
     asked = [part["text"] for part in api.requests[0]["messages"][0]["content"]]
     assert asked[1:] == [
-        "This is the family's group chat: everyone in it reads your reply, kids among them.",
+        "This is the family's group chat: everyone in it reads your reply, kids among them. "
+        "When you have only saved what was asked and have nothing to add, reply with just ✓.",
         f"[Sam] {DIGEST_TEXT}",
     ]
     row = suggestions.list_recent(conn, limit=1)[0]
@@ -879,3 +880,24 @@ def test_what_she_sends_unasked_is_kept_as_such_and_follow_ups_can_be_switched_o
     off = App(settings.model_copy(update={"follow_ups": False}), thursday_clock)
     off.senders["telegram"] = app.senders["telegram"]
     assert run_follow_ups(off) == 0  # nobody is asked
+
+
+def test_how_a_plan_went_is_asked_of_whoever_made_it(settings, thursday_clock, conn, family):
+    """A plan made in the family group: how it went is asked in its maker's own chat, once they
+    have written there, so one answer is enough and the rest of the group is not buzzed."""
+    app = App(settings, thursday_clock)
+    with db.transaction(conn):
+        messages.insert_in(
+            conn,
+            channel="telegram",
+            channel_update_id="dm",
+            chat_id="1001",
+            member_id=family["sam"].id,
+            text="/start",
+            now="2026-09-01T00:00:00Z",
+        )
+    _plan(conn, family, start="2026-09-19", title="Hopscotch Portland")
+    sent: list[tuple[str, str]] = []
+    app.senders["telegram"] = lambda chat_id, text: sent.append((chat_id, text))
+    assert run_follow_ups(app) == 1
+    assert [chat for chat, _ in sent] == ["1001"]
