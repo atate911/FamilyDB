@@ -3,17 +3,24 @@
 Text and voice notes both reach the pipeline. A voice note arrives as a way to fetch it, which
 the pipeline calls only once the sender is known to be family; the download itself runs on the
 bot's own event loop, like every send. A button under one of her messages (a reminder's Done) is
-done by code, never the pipeline (buttons.py).
+done by code, never the pipeline (buttons.py). So are /start and a sticker, file or video with
+no words (commands.py); the words that come with one are answered as a message, marked as having
+come with something not seen.
+
+"typing…" stays up while an answer is on its way, as Telegram shows it for five seconds only. In
+a group, a stranger is answered only when they address the bot: a family group is full of people
+talking among themselves, and their knock is kept for the Family page either way.
 """
 
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import dataclasses
 import logging
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
 from contextlib import closing
 from dataclasses import dataclass
 from datetime import timedelta
@@ -44,6 +51,7 @@ from familydb.channels.base import IncomingMessage, OutgoingMessage, VoiceNote
 from familydb.config import Settings
 from familydb.delivery import deliver
 from familydb.pipeline import handle_incoming
+from familydb.store import members, messages
 
 log = logging.getLogger(__name__)
 
@@ -58,6 +66,32 @@ UPDATES = [Update.MESSAGE, Update.EDITED_MESSAGE, Update.CALLBACK_QUERY]
 NEW = filters.UpdateType.MESSAGE
 # How long fetching a voice note may take before it is given up as not heard.
 FETCH_SECONDS = 60
+# Telegram shows "typing…" for five seconds, or until the bot sends something: it is sent again
+# this often while an answer is on its way, and for no longer than a turn could take.
+TYPING_EVERY = 4.5
+TYPING_AT_MOST = 180.0
+# What a message may carry that nobody reads, in the words its caption is kept under, the first
+# found naming it: an animation carries a document too, and is a GIF.
+UNREAD = (
+    ("video_note", "a video"),
+    ("video", "a video"),
+    ("animation", "a GIF"),
+    ("sticker", "a sticker"),
+    ("document", "a file"),
+    ("contact", "a contact"),
+    ("poll", "a poll"),
+    ("dice", "a dice roll"),
+)
+UNREADABLE = (
+    filters.VIDEO_NOTE
+    | filters.VIDEO
+    | filters.ANIMATION
+    | filters.Sticker.ALL
+    | filters.Document.ALL
+    | filters.CONTACT
+    | filters.POLL
+    | filters.Dice.ALL
+)
 # A file name for each kind of recording, since the speech endpoint goes by the extension.
 EXTENSIONS = {
     "audio/ogg": "ogg",
@@ -90,6 +124,40 @@ def incoming_from_update(update: Any) -> IncomingMessage | None:
         text=message.text,
         sender_name=sender_name(user),
     )
+
+
+def unread(message: Any) -> str | None:
+    """What a message carries that cannot be read, in words ("a video"), or None."""
+    if message is None:
+        return None
+    return next((words for field, words in UNREAD if getattr(message, field, None)), None)
+
+
+def incoming_unread(update: Any, bot_username: str | None = None) -> IncomingMessage | None:
+    """A sticker, a file or a video, as the words that came with it, less any mention of the bot
+    and marked as having come with something not seen; with no words, an empty message for code
+    to answer. None if it is none of those."""
+    message = update.effective_message
+    user = update.effective_user
+    chat = update.effective_chat
+    what = unread(message)
+    if what is None or user is None or chat is None:
+        return None
+    words = strip_mention(getattr(message, "caption", None) or "", bot_username)
+    return IncomingMessage(
+        channel=CHANNEL,
+        channel_update_id=str(update.update_id),
+        chat_id=str(chat.id),
+        channel_user_id=str(user.id),
+        text=messages.unseen(what, words) if words else "",
+        sender_name=sender_name(user),
+    )
+
+
+def family_knows(app: App, channel_user_id: str) -> bool:
+    """Whether this Telegram account is somebody on the family list."""
+    with closing(app.connect()) as conn:
+        return members.resolve(conn, CHANNEL, channel_user_id) is not None
 
 
 def recording(message: Any) -> Any:
@@ -284,6 +352,8 @@ class TelegramChannel:
         self.application.add_handler(
             MessageHandler((filters.VOICE | filters.AUDIO) & NEW, self.on_voice)
         )
+        # A sticker, a file, a video: its words answered, or with none, her line saying so.
+        self.application.add_handler(MessageHandler(UNREADABLE & NEW, self.on_unread))
         # A shared location, and a live one as it moves (those arrive as edits).
         self.application.add_handler(MessageHandler(filters.LOCATION, self.on_location))
         # A button under one of her messages.
@@ -309,9 +379,12 @@ class TelegramChannel:
             log.warning("telegram: the command menu could not be set", exc_info=True)
 
     async def on_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        if update.effective_message is not None:
-            hello = voice.say(self.app.settings, "start", seed=update.update_id)
-            await update.effective_message.reply_text(hello)
+        """/start: her introduction to the family, or the stranger's line and a knock, so that
+        whoever pressed Start shows on the Family and setup pages, ready to be let in."""
+        msg = incoming_from_update(update)
+        if msg is None:
+            return
+        await self._answer(update, context.bot, msg, handle=commands.start)
 
     async def on_command(self, update: Any, context: Any) -> None:
         """/today, /week, /tasks or /now, answered by code and stored as her reply."""
@@ -340,11 +413,8 @@ class TelegramChannel:
         chat = update.effective_chat
         bot = context.bot
         in_group = chat is not None and chat.type in GROUP_TYPES
-        if (
-            in_group
-            and self.app.settings.telegram_require_mention
-            and not addressed_to_bot(update, bot.username, bot.id)
-        ):
+        addressed = in_group and addressed_to_bot(update, bot.username, bot.id)
+        if in_group and self.app.settings.telegram_require_mention and not addressed:
             return
         msg = incoming_from_update(update)
         if msg is None:
@@ -354,7 +424,7 @@ class TelegramChannel:
             if not text:
                 return
             msg = dataclasses.replace(msg, text=text)
-        await self._answer(update, bot, msg)
+        await self._answer(update, bot, msg, quiet=in_group and not addressed)
 
     async def on_voice(self, update: Any, context: Any) -> None:
         """A voice note: handed over with a way to fetch it, heard and answered like words."""
@@ -362,11 +432,8 @@ class TelegramChannel:
         chat = update.effective_chat
         bot = context.bot
         in_group = chat is not None and chat.type in GROUP_TYPES
-        if (
-            in_group
-            and self.app.settings.telegram_require_mention
-            and not addressed_to_bot(update, bot.username, bot.id)
-        ):
+        addressed = in_group and addressed_to_bot(update, bot.username, bot.id)
+        if in_group and self.app.settings.telegram_require_mention and not addressed:
             return
         note = recording(update.effective_message)
         loop = asyncio.get_running_loop()
@@ -381,7 +448,55 @@ class TelegramChannel:
             return
         if in_group and msg.text:
             msg = dataclasses.replace(msg, text=strip_mention(msg.text, bot.username))
-        await self._answer(update, bot, msg)
+        await self._answer(update, bot, msg, quiet=in_group and not addressed)
+
+    async def on_unread(self, update: Any, context: Any) -> None:
+        """A sticker, a file or a video. Its words are answered as a message would be, marked as
+        having come with something not seen. With none, code says it cannot be read, and in a
+        group only when it was sent to her: a family group shares these among themselves."""
+        await asyncio.to_thread(self.app.refresh)
+        chat = update.effective_chat
+        bot = context.bot
+        in_group = chat is not None and chat.type in GROUP_TYPES
+        addressed = in_group and addressed_to_bot(update, bot.username, bot.id)
+        msg = incoming_unread(update, bot.username)
+        if msg is None or (in_group and not addressed and not msg.text):
+            return
+        if not msg.text:
+            await self._answer(update, bot, msg, handle=commands.cannot_read)
+        elif not (in_group and self.app.settings.telegram_require_mention and not addressed):
+            await self._answer(update, bot, msg, quiet=in_group and not addressed)
+
+    @contextlib.asynccontextmanager
+    async def _typing(self, bot: Any, chat_id: Any, *, shown: bool = True) -> AsyncIterator[None]:
+        """Keep "typing…" up in this chat while the body runs: sent at once, then again every
+        `TYPING_EVERY` seconds, for `TYPING_AT_MOST` at most. A typing indicator that fails
+        never holds up the reply."""
+
+        async def show() -> None:
+            try:
+                await bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
+            except Exception:
+                log.debug("typing action failed", exc_info=True)
+
+        async def keep_up() -> None:
+            waited = 0.0
+            while waited + TYPING_EVERY <= TYPING_AT_MOST:
+                await asyncio.sleep(TYPING_EVERY)
+                waited += TYPING_EVERY
+                await show()
+
+        if not shown:
+            yield
+            return
+        await show()
+        again = asyncio.create_task(keep_up())
+        try:
+            yield
+        finally:
+            again.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await again
 
     async def _answer(
         self,
@@ -389,16 +504,19 @@ class TelegramChannel:
         bot: Any,
         msg: IncomingMessage,
         handle: Callable[[App, IncomingMessage], OutgoingMessage | None] | None = None,
+        *,
+        quiet: bool = False,
     ) -> None:
         """Run the pipeline (or `handle`) on its own thread and send its reply, stored first,
-        in this chat."""
+        in this chat, with "typing…" up meanwhile.
+
+        `quiet` is for a group message not addressed to her: a stranger is then not answered,
+        and not shown her typing, though the pipeline still keeps their knock."""
         chat = update.effective_chat
-        try:
-            await bot.send_chat_action(chat_id=chat.id, action=ChatAction.TYPING)
-        except Exception:  # a failed typing indicator must never block the reply
-            log.debug("typing action failed", exc_info=True)
-        reply = await asyncio.to_thread(handle or handle_incoming, self.app, msg)
-        if reply is None:
+        family = not quiet or await asyncio.to_thread(family_knows, self.app, msg.channel_user_id)
+        async with self._typing(bot, chat.id, shown=family):
+            reply = await asyncio.to_thread(handle or handle_incoming, self.app, msg)
+        if reply is None or (quiet and reply.status == "unknown_sender"):
             return
 
         async def send_reply():

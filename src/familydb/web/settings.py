@@ -947,7 +947,7 @@ LINE_GROUPS = (
         ),
     ),
     ("Notes", False, ("lookup_done", "location_shared", "done")),
-    ("On Telegram", False, ("start", "stranger")),
+    ("On Telegram", False, ("start", "stranger", "cannot_read")),
     (
         "Answering /today, /week, /tasks and /now",
         True,

@@ -1,4 +1,5 @@
-"""Telegram's commands, answered by code with no model call: /today, /week, /tasks and /now.
+"""Telegram's commands, answered by code with no model call: /today, /week, /tasks and /now,
+and /start; and a message with nothing in it to read.
 
 What is on, what is left to do and what could start right now are asked often, and code knows
 the answers exactly: the calendar (agenda.py), the task list, and the suggestion engine run for
@@ -11,6 +12,11 @@ Only the family may ask: anyone else gets the stranger's line and a knock, as wi
 The heading of each answer is one of her lines (`voice.EVENTS` `cmd_*`), one line so that the
 family can rewrite it on the Personality page; the facts under it are worded here. A chat sees
 only the tasks asked for in it, as only it gets their reminders.
+
+/start is her introduction to the family, and to anyone else the stranger's line with a knock,
+so that pressing Start on the bot's link shows on the Family and setup pages as any message
+would. A sticker, a file or a video sent with no words is answered with one of her lines
+(`cannot_read`), since there is nothing in it a model could act on; neither is kept.
 """
 
 from __future__ import annotations
@@ -70,6 +76,43 @@ def answer(app: App, msg: IncomingMessage) -> OutgoingMessage | None:
         return _answer(app, conn, msg)
 
 
+def start(app: App, msg: IncomingMessage) -> OutgoingMessage:
+    """/start: her introduction, or to a stranger their line, with a knock. Not kept."""
+    return _said_by_code(app, msg, "start")
+
+
+def cannot_read(app: App, msg: IncomingMessage) -> OutgoingMessage:
+    """A sticker, a file or a video with no words: her line saying so, or a stranger's. Not
+    kept, as there is nothing in it to keep."""
+    return _said_by_code(app, msg, "cannot_read")
+
+
+def _said_by_code(app: App, msg: IncomingMessage, event: str) -> OutgoingMessage:
+    with closing(app.connect()) as conn:
+        app.refresh(conn)
+        if members.resolve(conn, msg.channel, msg.channel_user_id) is None:
+            return _stranger(app, conn, msg)
+    said = voice.say(app.settings, event, seed=msg.channel_update_id)
+    return OutgoingMessage(msg.chat_id, said, "ok")
+
+
+def _stranger(app: App, conn: sqlite3.Connection, msg: IncomingMessage) -> OutgoingMessage:
+    """Somebody not on the family list: a knock for the Family page, and their line."""
+    with transaction(conn):
+        knocks.record(
+            conn,
+            channel=msg.channel,
+            channel_user_id=msg.channel_user_id,
+            name=msg.sender_name,
+            chat_id=msg.chat_id,
+            now=app.clock.now(),
+        )
+    stranger = voice.say(
+        app.settings, "stranger", seed=msg.channel_update_id, id=msg.channel_user_id
+    )
+    return OutgoingMessage(msg.chat_id, stranger, "unknown_sender")
+
+
 def _answer(app: App, conn: sqlite3.Connection, msg: IncomingMessage) -> OutgoingMessage | None:
     name = name_of(msg.text)
     if name is None:
@@ -79,19 +122,7 @@ def _answer(app: App, conn: sqlite3.Connection, msg: IncomingMessage) -> Outgoin
     app.refresh(conn)
     member = members.resolve(conn, msg.channel, msg.channel_user_id)
     if member is None:
-        with transaction(conn):
-            knocks.record(
-                conn,
-                channel=msg.channel,
-                channel_user_id=msg.channel_user_id,
-                name=msg.sender_name,
-                chat_id=msg.chat_id,
-                now=app.clock.now(),
-            )
-        stranger = voice.say(
-            app.settings, "stranger", seed=msg.channel_update_id, id=msg.channel_user_id
-        )
-        return OutgoingMessage(msg.chat_id, stranger, "unknown_sender")
+        return _stranger(app, conn, msg)
     now = utc_iso(app.clock.now())
     try:
         with transaction(conn):

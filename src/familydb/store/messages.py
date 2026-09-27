@@ -20,11 +20,20 @@ UNHEARD = "(voice note, {length}, not heard)"
 # A button tapped is kept as a message from whoever tapped it, after this mark, so the history
 # says it was a tap and what it was on (familydb/buttons.py).
 TAP_PREFIX = "(tapped) "
+# Words that came with something nobody could look at (a video, a file) are kept after this mark,
+# so the model, the history and the page all say what came with them and that it was not seen.
+UNSEEN = "(with {what}, not seen) "
 
 
 def as_said(text: str) -> str:
     """A stored message's words as the family typed them (a voice note keeps its mark)."""
     return text.removeprefix(CAPTURE_PREFIX)
+
+
+def unseen(what: str, words: str) -> str:
+    """Words that came with something not looked at, as they are kept: "(with a video, not
+    seen) we should do this hike"."""
+    return UNSEEN.format(what=what) + words
 
 
 def unheard(seconds: int) -> str:

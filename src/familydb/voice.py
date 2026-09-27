@@ -258,6 +258,11 @@ EVENTS: dict[str, Event] = {
         "Sorry, I couldn't make out that voice note. Could you send it again, or type it?",
         (),
     ),
+    "cannot_read": Event(
+        "A sticker, file or video sent with no words",
+        "I can't open that kind of message. Could you tell me in words?",
+        (),
+    ),
     "done": Event("Nothing to add after doing it", "Done.", ()),
     "stranger": Event(
         "Someone not in the family",
