@@ -1,3 +1,5 @@
+import hashlib
+import re
 import socket
 import threading
 import time
@@ -9,6 +11,7 @@ from urllib.error import URLError
 
 import pytest
 
+import familydb.web as web_module
 from familydb.app import App
 from familydb.errors import ConfigError
 from familydb.store import db, ideas, outcomes, places, plans
@@ -584,7 +587,9 @@ def test_the_plans_page_shows_what_is_coming_and_what_just_happened(
     assert f'href="/idea/{idea.id}"' in page.text and "Portland" in page.text
     assert "Farmers market" in page.text and "Saturday 12 September" in page.text
     assert "Cancelled dinner" not in page.text  # cancelled plans are not shown
-    assert "Next summer" not in page.text and str(far.id) not in page.text.split("Recently")[0]
+    assert (
+        "Next summer" not in page.text and f"/plan/{far.id}/" not in page.text.split("Recently")[0]
+    )
 
 
 def test_the_plans_page_when_the_calendar_is_empty(settings, clock, conn, family) -> None:
@@ -1031,8 +1036,33 @@ def test_a_page_the_bot_serves_is_never_cached(settings, clock, conn, family) ->
     client = _client(settings, clock)
     assert client.get("/").headers["Cache-Control"] == "no-store"
     assert client.get("/login").headers["Cache-Control"] == "no-store"
-    # The stylesheet keeps whatever Flask decided; only the family's own pages are held back.
+    # Only the family's own pages are held back; the stylesheet is the same for everyone.
     assert client.get("/static/style.css").headers["Cache-Control"] != "no-store"
+
+
+def test_a_browser_keeps_what_the_page_links_to_until_it_changes(settings, clock, conn, family):
+    """Named with a fingerprint of what is in it, a file is kept for a year rather than asked
+    about again on every page, and an upgrade that changes it changes its name."""
+    client = _client(settings, clock)
+    page = client.get("/").text
+    stylesheet = re.search(r'href="(/static/style\.css\?v=([0-9a-f]{12}))"', page)
+    assert stylesheet is not None
+    style = (Path(web_module.__file__).parent / "static" / "style.css").read_bytes()
+    assert stylesheet.group(2) == hashlib.sha256(style).hexdigest()[:12]
+    assert re.search(r'src="/static/ask\.js\?v=[0-9a-f]{12}"', page)
+    assert re.search(r'<use href="/static/icons\.svg\?v=[0-9a-f]{12}#i-', page)
+    kept = client.get(stylesheet.group(1))
+    assert kept.status_code == 200 and "immutable" in kept.headers["Cache-Control"]
+    # A name it no longer has, or none, is still asked about every time.
+    for stale in ("/static/style.css?v=000000000000", "/static/style.css"):
+        assert client.get(stale).headers["Cache-Control"] == "no-cache"
+    # The stylesheet names the fonts itself, so the preload names them the same way, bare, or
+    # the browser would fetch each twice; they are kept a day.
+    assert '<link rel="preload" href="/static/fonts/dm-sans.woff2"' in page
+    assert 'url("fonts/dm-sans.woff2")' in style.decode()
+    font = client.get("/static/fonts/dm-sans.woff2")
+    assert font.headers["Cache-Control"] == "public, max-age=86400"
+    assert client.get("/static/nothing.css?v=abc").status_code == 404
 
 
 def test_the_added_date_is_the_family_s_date(settings, clock, conn, family) -> None:

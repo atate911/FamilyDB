@@ -12,13 +12,17 @@ module in this package reads and nothing else.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import sqlite3
+from collections.abc import Callable
 from contextlib import closing
 from datetime import timedelta
+from pathlib import Path
 from typing import Any
 
 from flask import Flask, render_template, request
+from werkzeug.security import safe_join
 
 from familydb import __version__, personas
 from familydb.app import App
@@ -39,6 +43,14 @@ CONTENT_SECURITY_POLICY = (
     "frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
 )
 HSTS = "max-age=31536000"
+# What the page links to is named with a fingerprint of what is in it (`style.css?v=…`), so a
+# browser keeps it for a year, and still fetches the new one the moment an upgrade changes it,
+# rather than asking again about every file on every page. The fonts are named by the stylesheet,
+# where no fingerprint reaches, and the page's preload has to name them the same way or the
+# browser fetches them twice, so they go unmarked and are kept a day.
+STATIC_FOREVER = "public, max-age=31536000, immutable"
+STATIC_FONTS = "public, max-age=86400"
+FONTS = "fonts/"
 REFERRER_POLICY = "same-origin"
 NO_PASSWORD = (
     "WEB_HOST is {host}, so the page would be reachable from other machines, but WEB_PASSWORD is "
@@ -94,6 +106,50 @@ def security_headers(response: Any) -> Any:
     if request.is_secure:
         response.headers.setdefault("Strict-Transport-Security", HSTS)
     return response
+
+
+def fingerprints(folder: str | Path) -> Callable[[str], str | None]:
+    """A short hash of each static file's contents, read once: they change only with an upgrade,
+    which restarts the page. None for a file that is not there."""
+    known: dict[str, str | None] = {}
+
+    def fingerprint(filename: str) -> str | None:
+        if filename not in known:
+            path = safe_join(str(folder), filename)
+            try:
+                data = Path(path).read_bytes() if path else None
+            except OSError:
+                data = None
+            known[filename] = hashlib.sha256(data).hexdigest()[:12] if data is not None else None
+        return known[filename]
+
+    return fingerprint
+
+
+def _static_caching(web: Flask) -> None:
+    """Name each static file with its fingerprint, and let a browser keep what it names."""
+    fingerprint = fingerprints(web.static_folder or "")
+
+    @web.url_defaults
+    def named_with_fingerprint(endpoint: str, values: dict[str, Any]) -> None:
+        filename = values.get("filename", "")
+        if endpoint != "static" or "v" in values or filename.startswith(FONTS):
+            return
+        stamp = fingerprint(filename)
+        if stamp:
+            values["v"] = stamp
+
+    @web.after_request
+    def kept(response: Any) -> Any:
+        # Only a file that was found: a name somebody made up is never read, let alone kept.
+        if request.endpoint != "static" or response.status_code not in (200, 304):
+            return response
+        filename = (request.view_args or {}).get("filename", "")
+        if filename.startswith(FONTS):
+            response.headers["Cache-Control"] = STATIC_FONTS
+        elif request.args.get("v") and request.args.get("v") == fingerprint(filename):
+            response.headers["Cache-Control"] = STATIC_FOREVER
+        return response
 
 
 def create_app(app: App, *, api: Any = None) -> Flask:
@@ -161,6 +217,7 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     web.before_request(auth.require_login)
     web.before_request(_picking_up_settings(app, web))
     web.after_request(security_headers)
+    _static_caching(web)
     web.register_error_handler(404, _not_found)
     if web_is_public(settings) and not (personal or auth.password_in_use(settings)):
         log.warning("serving the web page on %s with no password", settings.web_host)
