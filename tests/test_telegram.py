@@ -27,7 +27,7 @@ def _update(
 ):
     replies: list[str] = []
 
-    async def reply_text(value: str) -> None:
+    async def reply_text(value: str, **_: Any) -> None:
         replies.append(value)
 
     message = SimpleNamespace(
@@ -308,7 +308,7 @@ def _query(data, *, who=1001, text="Reminder: bins out. Task #1.", tap_id="cb1")
     async def answer(words=None):
         seen["answer"] = words
 
-    async def edit_message_text(words):
+    async def edit_message_text(words, **_):
         seen["text"] = words
 
     async def edit_message_reply_markup(reply_markup=None):
@@ -393,7 +393,7 @@ def test_buttons_go_under_the_last_part_of_what_is_sent(settings, clock, monkeyp
     )
     sent: list[tuple[str, Any]] = []
 
-    async def reply_text(value, reply_markup=None):
+    async def reply_text(value, reply_markup=None, **_):
         sent.append((value, reply_markup))
 
     update, _ = _update("thanks")
@@ -667,3 +667,48 @@ def test_answer_only_when_mentioned_is_set_on_the_page(settings, clock, conn, fa
     update, replies = _update("just chatting", chat_type="group", chat_id=-100)
     asyncio.run(channel.on_message(update, _context()[0]))
     assert seen == [] and replies == [] and app.settings.telegram_require_mention
+
+
+# -- formatting ------------------------------------------------------------------------------------
+
+
+def test_what_a_job_sends_goes_formatted_with_its_buttons(settings, clock) -> None:
+    """A reminder or a digest is sent from a job's thread onto the bot's own loop."""
+    import threading
+
+    from familydb.app import App
+
+    channel = TelegramChannel(App(settings, clock), token=TOKEN)
+    sent: list[tuple[int, str, dict[str, Any]]] = []
+
+    async def send_message(chat_id, text, **extra):
+        sent.append((chat_id, text, extra))
+
+    channel.application = SimpleNamespace(bot=SimpleNamespace(send_message=send_message))
+    loop = asyncio.new_event_loop()
+    running = threading.Thread(target=loop.run_forever, daemon=True)
+    running.start()
+    channel._loop = loop
+    try:
+        row = [{"label": "✓ Done", "data": "done:1"}]
+        channel.send_buttons_threadsafe("42", "Reminder: **bins** out & back", row)
+    finally:
+        loop.call_soon_threadsafe(loop.stop)
+        running.join(timeout=5)
+    [(chat, text, extra)] = sent
+    assert (chat, text, extra["parse_mode"]) == (42, "Reminder: <b>bins</b> out &amp; back", "HTML")
+    assert extra["reply_markup"].inline_keyboard[0][0].callback_data == "done:1"
+
+
+def test_a_tap_keeps_the_message_s_own_formatting(settings, clock, conn, family) -> None:
+    from familydb.app import App
+    from familydb.tools import ToolContext
+    from familydb.tools.tasks import AddTaskInput, add_task
+
+    ctx = ToolContext(conn=conn, settings=settings, clock=clock, member=family["sam"])
+    task = add_task(ctx, AddTaskInput(title="Bins out", remind_at="2026-09-20T18:00"))["task"]
+    channel = TelegramChannel(App(settings, clock), token=TOKEN)
+    update, seen = _query(f"done:{task['id']}", text="Reminder: bins out & back")
+    update.callback_query.message.text_html = "Reminder: <b>bins</b> out &amp; back"
+    asyncio.run(channel.on_tap(update, None))
+    assert seen["text"] == "Reminder: <b>bins</b> out &amp; back\n\nTicked off ✓ (Sam)."

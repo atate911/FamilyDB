@@ -197,7 +197,7 @@ def test_telegram_sends_the_answer_as_a_reply(settings, clock, conn, family) -> 
     channel = TelegramChannel(App(settings, FixedClock(FRIDAY, TZ)), token=TOKEN)
     replies: list[str] = []
 
-    async def reply_text(value: str) -> None:
+    async def reply_text(value: str, **_: object) -> None:
         replies.append(value)
 
     async def send_chat_action(**_: object) -> None:
@@ -211,10 +211,13 @@ def test_telegram_sends_the_answer_as_a_reply(settings, clock, conn, family) -> 
     )
     context = SimpleNamespace(bot=SimpleNamespace(send_chat_action=send_chat_action))
     asyncio.run(channel.on_command(update, context))
+    # Drawn with its heading in bold; kept as it was written, for the page and the history.
     assert replies == [
-        "Here's today, Fri 25 Sep:\nNothing on.\n"
+        "<b>Here's today, Fri 25 Sep:</b>\nNothing on.\n"
         "Google Calendar isn't connected, so these are the saved plans only."
     ]
+    kept = conn.execute("SELECT text FROM messages WHERE direction='out'").fetchone()["text"]
+    assert kept.startswith("Here's today, Fri 25 Sep:\n")
     sent = conn.execute("SELECT delivered_at FROM messages WHERE direction='out'").fetchone()
     assert sent["delivered_at"] is not None  # stored first, marked delivered once it went
 

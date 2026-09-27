@@ -17,13 +17,15 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import dataclasses
+import html
 import logging
 import threading
 import time
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import closing
 from dataclasses import dataclass
 from datetime import timedelta
+from functools import partial
 from typing import Any
 
 from telegram import BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -34,6 +36,7 @@ from telegram.constants import (
     ChatMemberStatus,
     ChatType,
     MessageLimit,
+    ParseMode,
 )
 from telegram.error import BadRequest, InvalidToken, NetworkError, RetryAfter
 from telegram.ext import (
@@ -49,6 +52,7 @@ from telegram.ext import (
 
 from familydb import buttons, commands, personas, voice, whereabouts
 from familydb.app import App
+from familydb.channels import markup
 from familydb.channels.base import IncomingMessage, OutgoingMessage, VoiceNote
 from familydb.config import Settings
 from familydb.delivery import deliver
@@ -281,6 +285,28 @@ def strip_mention(text: str, bot_username: str | None) -> str:
     return " ".join(cleaned.split())
 
 
+async def formatted(
+    send: Callable[..., Awaitable[Any]],
+    words: str,
+    *,
+    heading: bool = False,
+    drawn: str | None = None,
+    **extra: Any,
+) -> Any:
+    """Send one part as Telegram HTML, its bold and links drawn (markup.py), or `drawn` when it
+    is already HTML; should Telegram refuse the formatting, as the words themselves, so nothing
+    is lost to it. `send` takes the text first: a message's reply_text or edit_message_text, or
+    send_message with the chat given."""
+    try:
+        html_text = drawn if drawn is not None else markup.to_html(words, heading=heading)
+        return await send(html_text, parse_mode=ParseMode.HTML, **extra)
+    except BadRequest as exc:
+        if "parse entities" not in str(exc).lower():
+            raise
+        log.warning("telegram: the formatting was refused, so it went as plain words (%s)", exc)
+        return await send(words, **extra)
+
+
 def split_text(text: str, limit: int = int(MessageLimit.MAX_TEXT_LENGTH)) -> list[str]:
     """Telegram caps messages; split long replies at line breaks when possible."""
     text = text.strip() or "…"
@@ -326,7 +352,7 @@ def send_once(token: str, chat_id: str, text: str) -> None:
     async def _send() -> None:
         async with Bot(token) as bot:
             for chunk in split_text(text):
-                await bot.send_message(chat_id=int(chat_id), text=chunk)
+                await formatted(partial(bot.send_message, int(chat_id)), chunk)
 
     asyncio.run(_send())
 
@@ -430,11 +456,12 @@ class TelegramChannel:
         await self._answer(update, context.bot, msg, handle=commands.start)
 
     async def on_command(self, update: Any, context: Any) -> None:
-        """/today, /week, /tasks or /now, answered by code and stored as her reply."""
+        """/today, /week, /tasks or /now, answered by code and stored as her reply, under its
+        heading in bold."""
         msg = incoming_from_update(update)
         if msg is None:
             return
-        await self._answer(update, context.bot, msg, handle=commands.answer)
+        await self._answer(update, context.bot, msg, handle=commands.answer, heading=True)
 
     async def introduce(self, name: str, about: str) -> None:
         """Make the bot's own contact in Telegram say this name and this description.
@@ -549,12 +576,14 @@ class TelegramChannel:
         handle: Callable[[App, IncomingMessage], OutgoingMessage | None] | None = None,
         *,
         quiet: bool = False,
+        heading: bool = False,
     ) -> None:
         """Run the pipeline (or `handle`) on its own thread and send its reply, stored first,
         in this chat, with "typing…" up meanwhile.
 
         `quiet` is for a group message not addressed to her: a stranger is then not answered,
-        and not shown her typing, though the pipeline still keeps their knock."""
+        and not shown her typing, though the pipeline still keeps their knock. `heading` draws
+        the first line of an answer bold, for a command's."""
         chat = update.effective_chat
         family = not quiet or await asyncio.to_thread(family_knows, self.app, msg.channel_user_id)
         async with self._typing(bot, chat.id, shown=family):
@@ -564,14 +593,14 @@ class TelegramChannel:
 
         async def send_reply():
             chunks = split_text(reply.text)
+            bold = heading and reply.status == "ok"  # a stranger's line has no heading
             for index, chunk in enumerate(chunks):
+                extra = {}
                 if reply.buttons and index == len(chunks) - 1:
                     # A reminder this reply carries keeps its buttons, under the last part.
-                    await update.effective_message.reply_text(
-                        chunk, reply_markup=keyboard(reply.buttons)
-                    )
-                else:
-                    await update.effective_message.reply_text(chunk)
+                    extra["reply_markup"] = keyboard(reply.buttons)
+                reply_text = update.effective_message.reply_text
+                await formatted(reply_text, chunk, heading=bold and index == 0, **extra)
 
         if reply.out_message_id is None:
             await send_reply()
@@ -594,7 +623,7 @@ class TelegramChannel:
         message = update.effective_message
 
         async def send_reply():
-            await message.reply_text(reply.text)
+            await formatted(message.reply_text, reply.text)
 
         loop = asyncio.get_running_loop()
 
@@ -621,8 +650,14 @@ class TelegramChannel:
             return
         words = getattr(query.message, "text", None) if query.message is not None else None
         if tapped.note and words:
+            # The message keeps its own formatting, as Telegram gives it back, with the note under.
+            kept = getattr(query.message, "text_html", None) or html.escape(words, quote=False)
             try:
-                await query.edit_message_text(f"{words}\n\n{tapped.note}")
+                await formatted(
+                    query.edit_message_text,
+                    f"{words}\n\n{tapped.note}",
+                    drawn=f"{kept}\n\n{markup.to_html(tapped.note)}",
+                )
                 return
             except Exception:  # too long with the note, say: the buttons still go below
                 log.info("telegram: could not add who did it to a message", exc_info=True)
@@ -643,13 +678,11 @@ class TelegramChannel:
         if self._loop is None:
             raise RuntimeError("Telegram is not running")
         chunks = split_text(text)
+        send = partial(self.application.bot.send_message, int(chat_id))
         for index, chunk in enumerate(chunks):
-            markup = keyboard(row) if row and index == len(chunks) - 1 else None
+            under = keyboard(row) if row and index == len(chunks) - 1 else None
             future = asyncio.run_coroutine_threadsafe(
-                self.application.bot.send_message(
-                    chat_id=int(chat_id), text=chunk, reply_markup=markup
-                ),
-                self._loop,
+                formatted(send, chunk, reply_markup=under), self._loop
             )
             future.result(timeout=30)
 

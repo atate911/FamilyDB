@@ -356,7 +356,7 @@ def test_claude_hears_nothing(settings) -> None:
 def _voice_update(*, duration=12, caption=None, chat_type="private", reply_from=None, audio=None):
     replies: list[str] = []
 
-    async def reply_text(value: str) -> None:
+    async def reply_text(value: str, **_: object) -> None:
         replies.append(value)
 
     async def download_as_bytearray() -> bytearray:
