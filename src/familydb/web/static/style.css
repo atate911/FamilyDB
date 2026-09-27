@@ -1733,6 +1733,11 @@ table.month td.today time { color: var(--on-bright); background: var(--amber); b
   .settings-nav { display: block; position: sticky; top: 5.25rem; }
 }
 
+/* Numbered steps, as in the guide to giving the page a name, and a command to copy. */
+ol.steps { display: grid; gap: 0.9rem; margin: 1rem 0 0; padding-left: 1.3rem; }
+ol.steps li { padding-left: 0.2rem; }
+pre.command { margin: 0.5rem 0; padding: 0.7rem 0.85rem; overflow-x: auto; font: 0.85rem/1.5 var(--mono); background: var(--field); border: 1px solid var(--line); border-radius: var(--r-sm); }
+
 /* The status page's recent activity: each line a link to its history, whole-row to tap. */
 .activity li + li { border-top: 1px solid var(--line); }
 .activity a { display: grid; gap: 0.2rem; padding: 0.65rem 0.2rem; color: var(--ink); text-decoration: none; border-radius: var(--r-sm); }

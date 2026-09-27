@@ -745,3 +745,24 @@ def test_the_messages_page_says_what_goes_out_unasked_and_how_often(page, conn) 
     assert 'How did it go?</strong> <span class="tag">off</span>' in " ".join(
         page.get("/settings/messages").text.split()
     )
+
+
+def test_the_general_page_says_how_to_give_the_page_a_name(page) -> None:
+    from familydb.web.settings import reached_by
+
+    text = page.get("/settings/general").text
+    assert "A name for the page" in text and "family.example.com" in text
+    assert "https family.example.com</code>" in text  # the example until a name is typed
+
+    named = page.get("/settings/general?domain=Family.Tates.ORG.").text
+    assert "https family.tates.org</code>" in named and "dig +short family.tates.org" in named
+    assert "WEB_DOMAIN=family.tates.org" in named  # the Docker way too
+
+    refused = page.get("/settings/general?domain=<script>alert(1)</script>").text
+    assert "That is not a name that can be pointed at a server" in refused
+    assert "<script>alert" not in refused and "https family.example.com</code>" in refused
+
+    assert reached_by("93.184.216.34") == "public"
+    assert reached_by("192.168.1.20") == "private"
+    assert reached_by("127.0.0.1") == "local" and reached_by("localhost") == "local"
+    assert reached_by("family.example.com") == "name"

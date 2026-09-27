@@ -416,6 +416,9 @@ looked at (see "Two layers").
   suggestions, ending in "Another…", which opens a box under it to type one the list does not
   have. The stylesheet shows that box only while "Another" is chosen (`:has()`); a browser
   without it shows the box always, and it is read only when "Another" is chosen.
+  The General page ends with where the page is served and a guide to giving it a name, in
+  numbered steps with the commands to copy; typing the name fills it into them, and saves
+  nothing, since how the page is reached is the server's to change.
   The Messages page opens with what she sends unasked: each kind as a light (on or off), when
   it goes, what it costs and how often it went in the last month, with the way to its switch,
   then the latest ones, each folded to one line that opens to the words she sent.

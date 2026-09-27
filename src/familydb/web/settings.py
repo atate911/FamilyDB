@@ -30,7 +30,9 @@ every time the page is drawn.
 
 from __future__ import annotations
 
+import ipaddress
 import logging
+import re
 import secrets
 import time
 from contextlib import closing
@@ -435,6 +437,8 @@ def served(app: App) -> dict[str, Any]:
     live = app.settings
     opened = urlsplit(request.host_url)
     script = CHECKOUT / "scripts" / "maintain.sh"
+    host = opened.hostname or ""
+    wanted = request.args.get("domain", "").strip().lower().rstrip(".")
     return {
         "opened": request.host_url,
         "port": opened.port or (443 if opened.scheme == "https" else 80),
@@ -443,7 +447,31 @@ def served(app: App) -> dict[str, Any]:
         "proxied": live.web_trust_proxy,
         "local": not web_is_public(live),
         "script": script if script.exists() else INSTALLED / "scripts" / "maintain.sh",
+        # For the guide to giving the page a name: what it is reached at now, and the name
+        # somebody typed to see the steps with it filled in (a view, never saved).
+        "host": host,
+        "reached_by": reached_by(host),
+        "domain": wanted if DOMAIN.fullmatch(wanted) else "",
+        "domain_refused": bool(wanted) and not DOMAIN.fullmatch(wanted),
     }
+
+
+# A name somebody could point at the server: letters, digits and hyphens, in two parts or more.
+DOMAIN = re.compile(r"(?=.{4,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}")
+
+
+def reached_by(host: str) -> str:
+    """How the page was reached: "name", "public" or "private" address, or "local" (this
+    machine, or a tunnel to it)."""
+    if host in ("localhost", "") or host.endswith(".localhost"):
+        return "local"
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        return "name"
+    if address.is_loopback:
+        return "local"
+    return "private" if address.is_private else "public"
 
 
 def _model(app: App, conn: Any) -> dict[str, Any]:
