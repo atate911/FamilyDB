@@ -71,7 +71,7 @@ def models(app: App) -> list[dict[str, Any]]:
     for kind, what in SITUATIONS:
         provider, model = gateway.answering(app.settings, kind)
         level = getattr(app.settings, gateway.spec(kind).level)
-        keyed = provider.configured()  # on Claude this builds a client, so once a row
+        keyed = provider.configured()
         rows.append(
             _row(
                 what,

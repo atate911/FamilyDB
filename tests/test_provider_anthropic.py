@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from familydb.agent.providers import anthropic as anthropic_provider
 from familydb.agent.providers import build
 from familydb.agent.providers.anthropic import AnthropicProvider, ensure_credentials
 from familydb.agent.providers.base import Message, SystemBlock, ToolDef, TurnRequest, WebAccess
@@ -19,6 +20,30 @@ def test_ensure_credentials_requires_some_source() -> None:
     assert info.value.retryable is False
     ensure_credentials(SimpleNamespace(api_key="sk", auth_token=None, credentials=None))
     ensure_credentials(SimpleNamespace(api_key=None, auth_token="tok", credentials=None))
+
+
+def test_asking_whether_there_is_a_key_builds_no_connection_pool(settings, monkeypatch) -> None:
+    """Home, the status page and the settings pages ask on every view. A pool of its own for
+    each question loaded the certificate bundle every time, which was most of their time; the SDK
+    still decides, including from its own places the settings never see."""
+    for name in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"):
+        monkeypatch.delenv(name, raising=False)
+    built = []
+    real = anthropic_provider.anthropic.DefaultHttpxClient
+    monkeypatch.setattr(anthropic_provider, "_idle_http", None)
+    monkeypatch.setattr(
+        anthropic_provider.anthropic,
+        "DefaultHttpxClient",
+        lambda *args, **kwargs: built.append(1) or real(*args, **kwargs),
+    )
+
+    assert AnthropicProvider(settings).configured()  # the key in the settings
+    assert not AnthropicProvider(
+        settings.model_copy(update={"anthropic_api_key": None})
+    ).configured()
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "from-the-environment")
+    assert AnthropicProvider(settings.model_copy(update={"anthropic_api_key": None})).configured()
+    assert len(built) == 1  # one idle pool, shared by every question
 
 
 def test_the_request_follows_the_settings(settings) -> None:

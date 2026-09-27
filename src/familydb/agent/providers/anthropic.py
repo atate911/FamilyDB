@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import base64
 import logging
+import threading
 from typing import Any
 
 import anthropic
@@ -90,6 +91,34 @@ def ensure_credentials(client: Any) -> None:
         raise AgentError(NO_CREDENTIALS, retryable=False)
 
 
+# Asking the SDK whether it can find credentials means building a client, and a client builds
+# its own connection pool, which loads the machine's certificate bundle: some 50 ms each time, on
+# every page that asks whether a model is there. Nothing is ever sent through this one, so one
+# idle pool, built on first use and never closed, answers every such question in well under one.
+_idle_http: Any = None
+_idle_lock = threading.Lock()
+
+
+def _idle_pool() -> Any:
+    global _idle_http
+    with _idle_lock:
+        if _idle_http is None:
+            _idle_http = anthropic.DefaultHttpxClient()
+        return _idle_http
+
+
+def has_credentials(settings: Settings) -> bool:
+    """Whether the SDK finds credentials, in the settings or in any of its own places."""
+    try:
+        # Not closed: closing it would close the shared idle pool with it.
+        ensure_credentials(
+            anthropic.Anthropic(api_key=settings.anthropic_api_key, http_client=_idle_pool())
+        )
+    except AgentError:
+        return False
+    return True
+
+
 def make_client(settings: Settings) -> anthropic.Anthropic:
     """A client for the configured key. With no key the SDK uses its own credential lookup."""
     client = anthropic.Anthropic(api_key=settings.anthropic_api_key, max_retries=2, timeout=120.0)
@@ -132,17 +161,13 @@ class AnthropicProvider:
     def configured(self) -> bool:
         """Whether a call could be made at all.
 
-        This one builds a throwaway client, because the SDK looks for credentials in places the
-        settings never see. It is closed again straight away: the status page asks this question
-        on every view, and a leaked pool per view is a slow way to run out of sockets.
+        This one asks the SDK, because it looks for credentials in places the settings never
+        see. Home, the status page and the settings pages ask on every view, so it is asked over
+        one idle connection pool rather than a new one each time (see `has_credentials`).
         """
         if self._api is not None:
             return True
-        try:
-            make_client(self.settings).close()
-        except AgentError:
-            return False
-        return True
+        return has_credentials(self.settings)
 
     @property
     def api(self) -> Any:
