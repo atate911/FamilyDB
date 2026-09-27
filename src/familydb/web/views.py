@@ -840,6 +840,48 @@ def alert_row(alert: Any, tz: ZoneInfo, *, telling: bool, admins: int) -> dict[s
     return {"label": title, "detail": f"{seen}; {told}.", "on": False}
 
 
+# Each kind of message she sends of her own accord, as the Messages page lists them: the group
+# on that page where it is switched (none for reminders, which somebody asked for), what sending
+# it costs, and which of her lines (voice.EVENTS, or "digest") are its messages.
+AUTOMATIC = (
+    ("weekend", "weekend", "Weekend ideas", "one model call a week", ("digest",)),
+    ("reminders", "", "Reminders", "free", ("reminder", "reminder_late")),
+    ("follow_ups", "others", "How did it go?", "free", ("follow_up",)),
+    (
+        "checks",
+        "others",
+        "Tomorrow's plans, checked",
+        "free",
+        ("plan_rain", "plan_closed", "plan_backup"),
+    ),
+    ("nudges", "others", "A task brought up", "free", ("nudge",)),
+    (
+        "lookups",
+        "others",
+        "What a lookup found",
+        "free to send; each lookup is a small model call",
+        ("lookup_done", "lookups_done"),
+    ),
+    (
+        "alerts",
+        "admins",
+        "What needs fixing, to admins",
+        "free",
+        ("alert_credit", "alert_key", "alert_limit", "alert_calendar"),
+    ),
+)
+AUTOMATIC_BY_EVENT = {event: title for _, _, title, _, events in AUTOMATIC for event in events}
+
+
+def chat_words(conn_chat: str, member_name: str | None) -> str:
+    """Which chat a message went to, as the page says it."""
+    if conn_chat == "web":
+        return "the chat on this page"
+    if conn_chat.startswith("-"):
+        return "a Telegram group"
+    return f"Telegram, {member_name}" if member_name else "Telegram"
+
+
 def lookups_when(settings: Any) -> str:
     """When ideas waiting are looked up, as the page says it."""
     if settings.lookups_when == "asap":

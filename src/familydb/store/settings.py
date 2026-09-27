@@ -54,6 +54,7 @@ BEHAVIOUR = (
     "digest_chat_id",
     "digest_day",
     "digest_hour",
+    "follow_ups",
     "follow_up_hour",
     "task_nudges",
     "admin_alerts",

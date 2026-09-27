@@ -5,6 +5,42 @@
     there is no key for it yet, so none are sent until there is one: see
     <a href="{{ url_for('settings.section', name='model') }}">AI model</a>.</span></p>
 {% endif %}
+{# Everything she sends unasked, at a glance: whether it is on, when it goes, what it costs, and
+   how often it went lately, each with the way to its switch below. Then the latest few, in full. #}
+<section class="panel" id="on-her-own">
+  <h2>{{ icon('bell') }}What {{ assistant if has_persona else 'it' }} sends unasked</h2>
+  <ul class="plain lights automatic">
+    {% for kind in automatic.kinds %}
+      {% set state = 'on' if kind.on else 'off' %}
+      <li class="light-row {{ state }}">
+        <span class="light {{ state }}" aria-hidden="true"></span>
+        <div>
+          <strong>{{ kind.title }}</strong>
+          <span class="tag">{{ 'on' if kind.on else 'off' }}</span>
+          <div class="muted">{{ kind.when[:1] | upper }}{{ kind.when[1:] }}. Costs: {{ kind.cost }}.
+            {% if kind.sent %}{{ kind.sent }} sent in {{ automatic.days }} days, the last {{ kind.last }}.
+            {% else %}None sent in {{ automatic.days }} days.{% endif %}
+            {% if kind.group %}<a href="#{{ kind.group }}">Change</a>{% endif %}</div>
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+  {% if automatic.recent %}
+    <h3>Sent lately</h3>
+    <ul class="plain sent-lately">
+      {% for one in automatic.recent %}
+        <li>
+          <details>
+            <summary><span class="muted">{{ one.when }}</span> {{ one.kind }} · {{ one.chat }}{% if not one.delivered %} · <span class="warn">not sent yet</span>{% endif %}</summary>
+            <p class="said-text">{{ one.text }}</p>
+          </details>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="muted">Nothing sent unasked in the last {{ automatic.days }} days.</p>
+  {% endif %}
+</section>
 {{ form('messages', groups.values()) }}
 <p class="muted small">What these messages say, word for word, is on the
   <a href="{{ url_for('settings.personality', _anchor='lines') }}">Personality and family</a> page.</p>

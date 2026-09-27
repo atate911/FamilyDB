@@ -18,6 +18,7 @@ from familydb.agent.spending import spent_today
 from familydb.app import App
 from familydb.availability import (
     calendar_available,
+    digest_configured,
     enrichment_available,
     weather_available,
     web_is_public,
@@ -466,6 +467,84 @@ def _digest(app: App) -> tuple[bool | None, str]:
     if not app.can_ask("chat"):
         return None, f"{chat}, once there is a model key to write it"
     return True, chat
+
+
+AUTOMATIC_DAYS = 30
+AUTOMATIC_RECENT = 20
+
+
+def automatic(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
+    """What she sends of her own accord: each kind, whether it is on, when, what it costs and how
+    often it went in the last month, and the latest few in full (messages.sent_as)."""
+    settings, tz = app.settings, app.settings.tzinfo
+    since = utc_iso(app.clock.now() - timedelta(days=AUTOMATIC_DAYS))
+    counts = messages.sent_on_their_own_counts(conn, since=since)
+    hour = "{:02d}:00".format
+    digest_chat = dict(digest_chats(conn, tz)).get(settings.digest_chat_id, settings.digest_chat_id)
+    state = {
+        "weekend": (
+            digest_configured(settings),
+            f"{views.DAY_NAMES.get(settings.digest_day, settings.digest_day)} at "
+            f"{hour(settings.digest_hour)}, to {digest_chat.split(', last message')[0]}"
+            if settings.digest_chat_id
+            else "nowhere chosen, so none is sent",
+        ),
+        "reminders": (True, "when a reminder somebody asked for is due"),
+        "follow_ups": (
+            settings.follow_ups,
+            f"the day after a plan, at {hour(settings.follow_up_hour)}",
+        ),
+        "checks": (
+            settings.plan_checks,
+            f"the evening before a plan, at {hour(settings.plan_check_hour)}, only when "
+            "something is off",
+        ),
+        "nudges": (
+            settings.task_nudges,
+            "when the part of the week a task was kept for comes round, and the calendar is free",
+        ),
+        "lookups": (
+            settings.enrichment_notes and enrichment_available(settings),
+            f"after ideas are looked up, {views.lookups_when(settings)}",
+        ),
+        "alerts": (
+            settings.admin_alerts,
+            "when something only an admin can fix goes wrong, to each admin with a Telegram id",
+        ),
+    }
+    kinds = []
+    for key, group, title, cost, events in views.AUTOMATIC:
+        sent = [counts[event] for event in events if event in counts]
+        on, when = state[key]
+        last = max((stamp for _, stamp in sent), default=None)
+        kinds.append(
+            {
+                "key": key,
+                "group": group,
+                "title": title,
+                "on": on,
+                "when": when,
+                "cost": cost,
+                "sent": sum(count for count, _ in sent),
+                "last": views.local_moment(last, tz) if last else None,
+            }
+        )
+    names = {
+        str(person.channel_user_id): person.display_name
+        for person in members.list_all(conn, active_only=False)
+        if person.channel == "telegram"
+    }
+    recent = [
+        {
+            "when": views.local_moment(message.received_at, tz),
+            "kind": views.AUTOMATIC_BY_EVENT.get(message.sent_as or "", message.sent_as),
+            "chat": views.chat_words(message.chat_id, names.get(message.chat_id)),
+            "text": message.text,
+            "delivered": message.delivered_at is not None,
+        }
+        for message in messages.sent_on_their_own(conn, since=since, limit=AUTOMATIC_RECENT)
+    ]
+    return {"kinds": kinds, "recent": recent, "days": AUTOMATIC_DAYS}
 
 
 def digest_chats(conn: sqlite3.Connection, tz: Any, limit: int = 10) -> list[tuple[str, str]]:

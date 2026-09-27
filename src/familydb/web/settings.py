@@ -465,6 +465,7 @@ def _messages(app: App, conn: Any) -> dict[str, Any]:
     return {
         "offers": {"digest_chat_id": status_page.digest_chats(conn, app.settings.tzinfo)},
         "can_answer": app.can_ask("chat"),
+        "automatic": status_page.automatic(app, conn),
     }
 
 

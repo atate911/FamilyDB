@@ -103,6 +103,9 @@ class Message(BaseModel):
     delivered_at: str | None = None
     cancelled_at: str | None = None
     buttons: list[dict[str, str]] | None = None
+    # Which kind of message she sent of her own accord (a voice event, or "digest"); None for
+    # a reply or a message in.
+    sent_as: str | None = None
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> Message:
@@ -149,6 +152,7 @@ def insert_out(
     reply_to: int | None = None,
     now: str | None = None,
     buttons: list[dict[str, str]] | None = None,
+    sent_as: str | None = None,
 ) -> Message:
     stamp = now or utcnow_iso()
     row = {
@@ -163,6 +167,8 @@ def insert_out(
     }
     if buttons:  # named only when there are some, so a database before 0021 can still be written
         row["buttons"] = to_json(buttons)
+    if sent_as:  # the same, for 0029
+        row["sent_as"] = sent_as
     cur = conn.execute(
         f"INSERT INTO messages ({', '.join(row)}) VALUES ({', '.join('?' * len(row))})",
         tuple(row.values()),
@@ -230,6 +236,31 @@ def last_inbound_at(conn: sqlite3.Connection, channel: str, chat_id: str) -> str
         (channel, chat_id),
     ).fetchone()
     return row["at"] if row else None
+
+
+def mark_sent_as(conn: sqlite3.Connection, message_id: int, kind: str) -> None:
+    """Say which kind of message she sent of her own accord (voice.hand_over)."""
+    conn.execute("UPDATE messages SET sent_as = ? WHERE id = ?", (kind, message_id))
+
+
+def sent_on_their_own(conn: sqlite3.Connection, *, since: str, limit: int) -> list[Message]:
+    """What she sent of her own accord since a moment, newest first."""
+    rows = conn.execute(
+        "SELECT * FROM messages WHERE sent_as IS NOT NULL AND received_at >= ? "
+        "ORDER BY received_at DESC, id DESC LIMIT ?",
+        (since, limit),
+    ).fetchall()
+    return [Message.from_row(row) for row in rows]
+
+
+def sent_on_their_own_counts(conn: sqlite3.Connection, *, since: str) -> dict[str, tuple[int, str]]:
+    """How many of each kind she sent of her own accord since a moment, and the last one's time."""
+    rows = conn.execute(
+        "SELECT sent_as, count(*) AS n, max(received_at) AS last FROM messages "
+        "WHERE sent_as IS NOT NULL AND received_at >= ? GROUP BY sent_as",
+        (since,),
+    ).fetchall()
+    return {row["sent_as"]: (int(row["n"]), row["last"]) for row in rows}
 
 
 def mark_delivered(conn: sqlite3.Connection, message_ids: list[int], *, now: str) -> None:

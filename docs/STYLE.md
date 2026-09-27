@@ -416,6 +416,9 @@ looked at (see "Two layers").
   suggestions, ending in "Another…", which opens a box under it to type one the list does not
   have. The stylesheet shows that box only while "Another" is chosen (`:has()`); a browser
   without it shows the box always, and it is read only when "Another" is chosen.
+  The Messages page opens with what she sends unasked: each kind as a light (on or off), when
+  it goes, what it costs and how often it went in the last month, with the way to its switch,
+  then the latest ones, each folded to one line that opens to the words she sent.
 - **Things to do** (an open task is ticked off where it stands), **Family**, **What she
   remembers** (each memory under whom it is about, with where it came from and a way to forget
   it; adding one, and what was forgotten, folded away below),

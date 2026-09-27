@@ -588,6 +588,8 @@ def _answer(
             reply_to=inbound_id,
             now=now,
             buttons=reply_buttons,
+            # The weekend ideas are hers unasked, however they came to be written.
+            sent_as="digest" if kind == "digest" else None,
         )
         messages.mark_processed(conn, inbound_id, result.actions, now=now)
         for action in result.actions:

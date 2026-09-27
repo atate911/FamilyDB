@@ -861,3 +861,21 @@ def test_look_up_now_takes_every_idea_waiting_or_those_named(settings, clock, co
     assert (
         json.loads(off.registry.dispatch("look_up_now", {}, ctx_off).content)["available"] is False
     )
+
+
+def test_what_she_sends_unasked_is_kept_as_such_and_follow_ups_can_be_switched_off(
+    settings, thursday_clock, conn, family
+) -> None:
+    app = App(settings, thursday_clock)
+    with db.transaction(conn):
+        idea = ideas.insert(conn, title="Hopscotch Portland", kind="outing", now=NOW_ISO)
+    first = _plan(conn, family, start="2026-09-19", title="Hopscotch Portland", idea_id=idea.id)
+    app.senders["telegram"] = lambda chat_id, text: None
+    assert run_follow_ups(app) == 1
+    assert [row["sent_as"] for row in conn.execute("SELECT sent_as FROM messages")] == ["follow_up"]
+    assert plans.get(conn, first.id).followed_up_at is not None
+
+    _plan(conn, family, start="2026-09-20", title="Zoo")
+    off = App(settings.model_copy(update={"follow_ups": False}), thursday_clock)
+    off.senders["telegram"] = app.senders["telegram"]
+    assert run_follow_ups(off) == 0  # nobody is asked

@@ -603,9 +603,15 @@ GROUPS: tuple[Group, ...] = (
         "These are written, not thought up, so they cost nothing.",
         (
             field(
+                "follow_ups",
+                "Ask how a plan went",
+                "The day after, with buttons to answer in one tap, so the ideas list learns what "
+                "you liked. No means nobody is asked; how it went can still be told any time.",
+            ),
+            field(
                 "follow_up_hour",
                 "Time to ask how a plan went",
-                "The day after a plan, so the ideas list learns what you liked.",
+                "The day after a plan, in the family's time zone.",
                 choices=HOURS,
                 words=HOUR_WORDS,
             ),

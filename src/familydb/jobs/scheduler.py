@@ -103,6 +103,7 @@ def job_specs(app: App) -> list[JobSpec]:
             "ask how plans went",
             run_follow_ups,
             CronTrigger(hour=settings.follow_up_hour, timezone=zone),
+            wanted=settings.follow_ups,
             misfire_grace_time=3600,
         ),
         JobSpec(

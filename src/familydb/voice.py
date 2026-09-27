@@ -577,7 +577,11 @@ def hand_over(
     `FOLDABLE`, or a chat nobody is talking in, is delivered at once.
     """
     from familydb.delivery import deliver
+    from familydb.store.db import transaction
 
+    # Kept with the message, so the Messages page can say what went out unasked, and how often.
+    with transaction(conn):
+        messages.mark_sent_as(conn, message_id, event)
     now = app.clock.now()
     if event in FOLDABLE and _talking(conn, channel, chat_id, now):
         stored = messages.get(conn, message_id)

@@ -712,3 +712,36 @@ def test_the_connections_page_says_what_the_bot_can_read_in_a_group(page) -> Non
     assert saved.headers["Location"] == "/settings/connections"
     assert app.settings.telegram_require_mention is True
     assert app.settings.google_calendar_id is None  # the other form's box, left alone
+
+
+def test_the_messages_page_says_what_goes_out_unasked_and_how_often(page, conn) -> None:
+    from familydb.store import messages
+
+    with db.transaction(conn):
+        asked = messages.insert_out(
+            conn,
+            channel="telegram",
+            chat_id="-100",
+            text="How was Hopscotch on Saturday?",
+            now="2026-09-19T17:00:00Z",
+            sent_as="follow_up",
+        )
+        messages.mark_delivered(conn, [asked.id], now="2026-09-19T17:00:01Z")
+        messages.insert_out(
+            conn, channel="web", chat_id="web", text="An answer", now="2026-09-20T21:00:00Z"
+        )
+    text = page.get("/settings/messages").text
+    listed = re.search(r'<section class="panel" id="on-her-own">.*?</section>', text, re.S)
+    assert listed is not None
+    shown = " ".join(listed.group(0).split())
+    assert "How did it go?" in shown and "1 sent in 30 days, the last 19 Sep, 10:00." in shown
+    assert "Weekend ideas" in shown and "Nowhere chosen, so none is sent" in shown
+    assert "Costs: one model call a week." in shown and '<a href="#others">Change</a>' in shown
+    assert "How was Hopscotch on Saturday?" in shown and "a Telegram group" in shown
+    assert "An answer" not in shown  # a reply is not hers unasked
+    # And the switch for it is on the same page.
+    page.post("/settings", data=_whole_form(page, follow_ups="false"))
+    assert page.app.settings.follow_ups is False
+    assert 'How did it go?</strong> <span class="tag">off</span>' in " ".join(
+        page.get("/settings/messages").text.split()
+    )
