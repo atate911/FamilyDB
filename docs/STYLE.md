@@ -419,7 +419,7 @@ looked at (see "Two layers").
 - **Things to do** (an open task is ticked off where it stands), **Family**, **What she
   remembers** (each memory under whom it is about, with where it came from and a way to forget
   it; adding one, and what was forgotten, folded away below),
-  **Status** (three monitors, then the day's spend on a green screen beside the same in words),
+  **Status** (what needs an admin first, when anything does, edged in red; then three monitors, then the day's spend on a green screen beside the same in words),
   **Sign in** (the mark's face on a green screen, then who you are and your password, or the one
   question while the family still shares a password), **For an admin** (the 404's console with
   403 on its face, for a page only an admin changes), **Not found** (a radar
