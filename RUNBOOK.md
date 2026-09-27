@@ -347,8 +347,14 @@ It fetches first and says what the new version brings (how many changes and the 
 them, whether the database gains migrations, whether the libraries move) before asking. Then it
 takes a backup, moves to the newer code, reinstalls the locked dependencies (or rebuilds the
 Docker image), applies any new migrations and restarts, waits for the page to answer, and prints
-the command to go back if it went badly. With nothing newer it says so and takes no backup;
-`--dry-run` stops once it has said what it would do. Do not `git pull` in the checkout instead: after an upgrade it is on
+the command to go back if it went badly. It works through six numbered stages, each timed, and
+ends on one panel: what it is on now and came from, the changes, the migrations applied, the
+libraries, the backup, whether the page answers and what `familydb doctor` found. With nothing
+newer it says so and takes no backup; `--dry-run` stops once it has said what it would do.
+
+If it stops part-way (the network drops while the libraries install, say), the failure names the
+stage, and running `upgrade` again finishes it, keeping the backup from before the code moved;
+the same message gives the three commands that go back instead. Do not `git pull` in the checkout instead: after an upgrade it is on
 a detached commit, where that fails, and it would skip the backup and the dependencies. On a
 private repository the fetch needs a credential; docs/INSTALL.md, under Day to day, says how.
 

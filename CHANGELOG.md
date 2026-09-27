@@ -234,7 +234,9 @@ unit that will never start.
   it is and whether HTTPS stands, the disk, how old the newest backup is, and
   whether a newer version is waiting, then what wants a look. `upgrade` says
   what the new version brings, and whether the database changes, before it
-  asks; a restart waits for the page to answer.
+  asks, then works through six numbered, timed stages in colour and ends on a
+  panel of what happened. One that stops part-way is finished by running it
+  again. A restart waits for the page to answer.
 - **The page on a port scans rarely try.** `maintain.sh https --port random`
   (or `WEB_PUBLIC_PORT=random` at install, or in `.env` with Docker) serves the
   page on a port from 20000 to 29999 that none of nmap's thousand usual ports

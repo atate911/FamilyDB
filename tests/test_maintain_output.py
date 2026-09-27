@@ -111,3 +111,72 @@ def test_the_page_says_where_it_is_and_whether_https_stands(tmp_path) -> None:
     (tmp_path / ".env").write_text("WEB_PORT=8080\nWEB_HOST=0.0.0.0\n")
     bare = _run(stubs + "this_address() { printf 203.0.113.7; }\nstatus_page", "status_page")
     assert "! Address      http://203.0.113.7:8080/, without HTTPS" in bare.stdout
+
+
+# -- the upgrade ---------------------------------------------------------------------------------
+
+UPGRADE = ("stage", "stage_done", "rule", "upgrade_summary")
+
+
+def test_each_stage_fills_the_bar_and_is_timed() -> None:
+    done = _run(
+        'UP_STAGES=3; UP_STAGE=0; UP_STAGE_NAME=""; UP_TIMES=(); UP_HINT=""\n'
+        'stage "Backing up" backup; ok "Backup written"; stage "Moving" code; stage_done\n'
+        'echo "${UP_TIMES[*]}"',
+        *UPGRADE,
+    )
+    assert done.returncode == 0, done.stderr
+    lines = [line for line in done.stdout.splitlines() if line]
+    assert lines[0] == "━━──── 1/3  Backing up"
+    assert lines[1] == "      ✓ Backup written"  # a stage's steps sit under it
+    assert lines[2] == "━━━━── 2/3  Moving"
+    assert lines[3] == "backup 0 code 0"
+
+
+def test_past_the_backup_a_failure_says_where_it_stopped_and_how_to_go_on() -> None:
+    done = _run(
+        'UP_STAGES=6; UP_STAGE=2; UP_STAGE_NAME=""; UP_TIMES=(); UP_HINT="Finish it."\n'
+        'stage "Installing the libraries" libraries >/dev/null; echo "$HINT"',
+        *UPGRADE,
+    )
+    assert done.stdout.strip() == "It stopped at 3/6, installing the libraries. Finish it."
+
+
+def _summary(tmp_path: Path, **env: str):
+    backup = tmp_path / "familydb-1.sqlite3"
+    backup.write_bytes(b"x" * 3_000_000)
+    stubs = (
+        f'TARGET="{tmp_path}"; DOCKER_MODE=0; UP_COUNT=12; UP_NEWEST="A mic on the page"\n'
+        "UP_MIGRATIONS=$'0035_wishes\\n0036_wording'; UP_DEPS=moved\n"
+        'UP_TIMES=("backup 2" "libraries 40")\n'
+        'as_root() { if [ "$1" = git ]; then echo v0.2.0; else "$@"; fi; }\n'
+        "SECONDS=48; WARNINGS=${WARN_COUNT:-0}; PAGE_STATE=${PAGE_STATE:-answering}\n"
+    )
+    summary = f'upgrade_summary v0.1.0 main "{backup}" "${{CHECK:-0}}"'
+    return _run(stubs + summary, *UPGRADE, **env)
+
+
+def test_the_summary_says_what_happened_in_one_panel(tmp_path) -> None:
+    done = _summary(tmp_path)
+    assert done.returncode == 0, done.stderr
+    said = done.stdout
+    assert "╭─ Upgraded ─" in said
+    assert "│  Now on     v0.2.0" in said
+    assert "│  From       v0.1.0" in said
+    assert "│  Changes    12, the newest: A mic on the page" in said
+    assert "│  Database   2 migrations applied, 0035_wishes to 0036_wording" in said
+    assert "│  Libraries  moved to the new locked versions" in said
+    assert "(3 MB)" in said
+    assert "│  Page       ✓ answering on port 8080" in said
+    assert "│  Check      ✓ familydb doctor found nothing" in said
+    assert "│  Took       48s  (backup 2s · libraries 40s)" in said
+    assert "Warnings" not in said
+
+
+def test_the_summary_turns_to_something_to_look_at(tmp_path) -> None:
+    done = _summary(tmp_path, PAGE_STATE="silent", CHECK="1", WARN_COUNT="2")
+    said = done.stdout
+    assert "╭─ Upgraded, with something to look at ─" in said
+    assert "│  Page       ✗ not answering on port 8080 yet" in said
+    assert "│  Check      ✗ familydb doctor found something to fix" in said
+    assert "│  Warnings   2, above" in said

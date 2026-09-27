@@ -18,17 +18,23 @@
 FAMILYDB_COMMON_SOURCED=1
 
 # ---------------------------------------------------------------- output ----
+# shellcheck disable=SC2034  # CYN is for the scripts that source this file.
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
-  B=$'\033[1m'; DIM=$'\033[2m'; RED=$'\033[31m'; YEL=$'\033[33m'; GRN=$'\033[32m'; OFF=$'\033[0m'
+  B=$'\033[1m'; DIM=$'\033[2m'; RED=$'\033[31m'; YEL=$'\033[33m'; GRN=$'\033[32m'; CYN=$'\033[36m'
+  OFF=$'\033[0m'
 else
-  B=""; DIM=""; RED=""; YEL=""; GRN=""; OFF=""
+  B=""; DIM=""; RED=""; YEL=""; GRN=""; CYN=""; OFF=""
 fi
+
+# What goes in front of each line from note, ok and warn: a script working through stages sets it
+# so each stage's steps sit under its heading. Empty unless a script says otherwise.
+INDENT=""
 
 say()   { printf '%s\n' "$*"; }
 head2() { printf '\n%s%s%s\n' "$B" "$*" "$OFF"; log_line "== $*"; }
-note()  { printf '%s%s%s\n' "$DIM" "$*" "$OFF"; log_line "-- $*"; }
-ok()    { printf '%s✓%s %s\n' "$GRN" "$OFF" "$*"; log_line "ok: $*"; }
-warn()  { printf '%s!%s %s\n' "$YEL" "$OFF" "$*" >&2; log_line "warn: $*"; WARNINGS=$((WARNINGS + 1)); }
+note()  { printf '%s%s%s%s\n' "$INDENT" "$DIM" "$*" "$OFF"; log_line "-- $*"; }
+ok()    { printf '%s%s✓%s %s\n' "$INDENT" "$GRN" "$OFF" "$*"; log_line "ok: $*"; }
+warn()  { printf '%s%s!%s %s\n' "$INDENT" "$YEL" "$OFF" "$*" >&2; log_line "warn: $*"; WARNINGS=$((WARNINGS + 1)); }
 
 WARNINGS=0
 LOG_FILE=""
@@ -470,8 +476,8 @@ show_plan() { # show_plan "heading"
 
 # Announce one system-level change as it happens: what, and why, in a sentence.
 system_change() { # system_change "what" "why"
-  printf '  %s→%s %s\n' "$B" "$OFF" "$1"
-  printf '    %s%s%s\n' "$DIM" "$2" "$OFF"
+  printf '%s  %s→%s %s\n' "$INDENT" "$B" "$OFF" "$1"
+  printf '%s    %s%s%s\n' "$INDENT" "$DIM" "$2" "$OFF"
   log_line "change: $1 :: $2"
 }
 

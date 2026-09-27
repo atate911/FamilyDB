@@ -253,9 +253,12 @@ say_if_answering() {
   local status=0
   wait_until_answering 30 || status=$?
   case "$status" in
-    0) ok "It came back up, and the page answers on port $(app_port) (after $((WAITED + 3))s)." ;;
-    2) ok "It came back up." ; note "(curl is not installed, so whether the page answers was not checked.)" ;;
-    *) warn "It is running, but the page did not answer on port $(app_port) within 30 seconds."
+    0) PAGE_STATE=answering
+       ok "It came back up, and the page answers on port $(app_port) (after $((WAITED + 3))s)." ;;
+    2) PAGE_STATE=unchecked
+       ok "It came back up." ; note "(curl is not installed, so whether the page answers was not checked.)" ;;
+    *) PAGE_STATE=silent
+       warn "It is running, but the page did not answer on port $(app_port) within 30 seconds."
        note "It may still be starting. Look again in a minute:  ${0} status"
        note "If it stays that way, the log says why:             ${0} logs 100" ;;
   esac
@@ -716,18 +719,56 @@ cmd_restore() {
 }
 
 # --------------------------------------------------------------- upgrade ----
+# An upgrade is six stages, each with a heading, a bar that fills as it goes and the time it took,
+# and ends on one panel that says what happened. What it brings is said before anyone is asked.
+
+UP_STAGES=6
+UP_STAGE=0
+UP_STAGE_NAME=""
+UP_STAGE_START=0
+UP_TIMES=()   # "name seconds" per stage finished, for the panel at the end
+UP_COUNT=0
+UP_NEWEST=""
+UP_MIGRATIONS=""
+UP_DEPS=same
+PAGE_STATE=""
+UP_HINT=""   # once the code may have moved: how to finish the upgrade, and how to go back
+
+stage() { # stage "Title" "short name" - finish the stage before, open this one
+  stage_done
+  UP_STAGE=$((UP_STAGE + 1))
+  UP_STAGE_NAME="$2"
+  UP_STAGE_START=$SECONDS
+  # Heavy for the stages reached, light for those to come, so it reads without colour too.
+  local filled="" empty="" i
+  for (( i = 1; i <= UP_STAGES; i++ )); do
+    if [ "$i" -le "$UP_STAGE" ]; then filled+="━━"; else empty+="──"; fi
+  done
+  INDENT=""
+  printf '\n%s%s%s%s%s%s %s%s%s/%s%s  %s%s%s\n' "$CYN" "$filled" "$OFF" "$DIM" "$empty" "$OFF" \
+    "$CYN$B" "$UP_STAGE" "$OFF$DIM" "$UP_STAGES" "$OFF" "$B" "$1" "$OFF"
+  log_line "== stage ${UP_STAGE}/${UP_STAGES}: $1"
+  [ -z "$UP_HINT" ] || on_failure_hint "It stopped at ${UP_STAGE}/${UP_STAGES}, ${1,}. ${UP_HINT}"
+  INDENT="      "
+}
+
+stage_done() { # note how long the open stage took
+  [ -n "$UP_STAGE_NAME" ] || return 0
+  UP_TIMES+=("${UP_STAGE_NAME} $((SECONDS - UP_STAGE_START))")
+  UP_STAGE_NAME=""
+}
+
 cmd_upgrade() {
-  head2 "Upgrading"
+  printf '\n%s%s Upgrading FamilyDB %s\n' "$CYN$B" "▌" "$OFF"
   [ -d "${TARGET}/.git" ] || die "${TARGET} is not a git checkout, so there is nothing to pull" \
     "Upgrade by unpacking a new copy over it, keeping .env and data/."
 
-  local current
+  local current before
   current="$(as_root git -C "$TARGET" describe --tags --always 2>/dev/null || echo unknown)"
-  say "Currently on: ${current}"
-
-  local before
   before="$(as_root git -C "$TARGET" rev-parse HEAD 2>/dev/null || echo unknown)"
+  printf '  %sInstalled now:%s %s\n' "$DIM" "$OFF" "$current"
 
+  stage "Looking for a newer version" "fetch"
   # A private repository needs a credential here. bootstrap.sh leaves the deploy key wired up
   # when one was used, and deliberately does not write a token down, so say which case this is.
   # shellcheck disable=SC2034  # lib/common.sh names this in its failure report.
@@ -749,6 +790,7 @@ cmd_upgrade() {
     local remote sshcmd
     remote="$(as_root git -C "$TARGET" remote get-url origin 2>/dev/null || echo unknown)"
     sshcmd="$(as_root git -C "$TARGET" config core.sshCommand 2>/dev/null || true)"
+    INDENT=""
     die "could not fetch from ${remote}" \
         "What this means: this is a private repository, and this checkout has no credential" \
         "it can use. Nothing was changed." \
@@ -777,19 +819,40 @@ cmd_upgrade() {
   case "$kind" in
     branch) target="origin/${name}"; note "The newest version is still being built, so this follows ${name}." ;;
     tag) target="$name" ;;
-    *) die "there is nothing to upgrade to: the remote has no default branch and no release" ;;
+    *) INDENT=""; die "there is nothing to upgrade to: the remote has no default branch and no release" ;;
   esac
-  if as_root git -C "$TARGET" merge-base --is-ancestor "$target" HEAD; then
+  # An upgrade that stopped after moving the code left a note of where it came from: this run
+  # finishes that one, rather than finding the code new and saying there is nothing to do.
+  local unfinished="${TARGET}/.git/familydb-upgrade-unfinished" base="HEAD" resumed_backup=""
+  if as_root test -f "$unfinished" \
+    && [ "$(as_root cut -d' ' -f1 "$unfinished")" = "$before" ]; then
+    # It went back to where that upgrade started, so there is nothing of it to finish.
+    as_root rm -f "$unfinished"
+  fi
+  if as_root test -f "$unfinished"; then
+    read -r before resumed_backup current < <(as_root cat "$unfinished")
+    base="$before"; target="HEAD"
+    name="$(as_root git -C "$TARGET" describe --tags --always 2>/dev/null || echo "the new code")"
+    note "The last upgrade, from ${current}, stopped part-way after moving the code. This run finishes it."
+  elif as_root git -C "$TARGET" merge-base --is-ancestor "$target" HEAD; then
     ok "Already up to date with ${name}. Nothing to do."
+    INDENT=""
     return 0
   fi
   # Only forward. A release tag older than what is installed would take the database back past
   # migrations it has already run; a branch that lacks what is here would lose it.
-  moves_forward "$TARGET" "$target" \
-    || die "${name} does not contain what is installed now (${current}), so moving to it would go backwards" \
-           "Nothing was changed. To choose a version yourself: sudo git -C ${TARGET} checkout NAME"
+  [ "$target" = HEAD ] || moves_forward "$TARGET" "$target" || {
+    INDENT=""
+    die "${name} does not contain what is installed now (${current}), so moving to it would go backwards" \
+        "Nothing was changed. To choose a version yourself: sudo git -C ${TARGET} checkout NAME"
+  }
+  local short
+  short="$(as_root git -C "$TARGET" rev-parse --short "$target" 2>/dev/null || true)"
+  ok "Found ${name}${short:+ (${short})}"
+  stage_done
+  INDENT=""
 
-  upgrade_preview "$target" "$name"
+  upgrade_preview "$target" "$name" "$current" "$base"
   plan_item "Take a backup of the database" \
     "so a bad upgrade can be undone, database and all"
   plan_item "Check out ${name} and reinstall the dependencies at their locked versions" \
@@ -806,67 +869,162 @@ cmd_upgrade() {
   fi
   approve "Upgrade now?" || { say "Nothing was changed."; exit 0; }
 
-  take_backup "$BACKUP_DIR" "so a bad upgrade can be undone"
-  local upgrade_backup="$LAST_BACKUP"
-  step "Checking out ${name}" as_root git -C "$TARGET" checkout --quiet --detach "$target"
-
-  stop_bot
+  stage "Backing up the database" "backup"
+  if [ -n "$resumed_backup" ] && as_root test -s "$resumed_backup"; then
+    # The one taken before the code moved is the way back; one taken now might hold migrations.
+    ok "Keeping the backup from before the code moved: ${resumed_backup}"
+    LAST_BACKUP="$resumed_backup"
+  else
+    take_backup "$BACKUP_DIR" "so a bad upgrade can be undone"
+  fi
+  local upgrade_backup="$LAST_BACKUP" nl=$'\n      '
+  # From here on a failure leaves it part-way, so the foot of any failure says how to go on, and
+  # how to go back.
+  local way_back="sudo git -C ${TARGET} checkout --quiet --detach ${before}"
   if [ "$DOCKER_MODE" = 1 ]; then
+    way_back+="${nl}sudo docker compose --project-directory ${TARGET} build"
+  else
+    way_back+="${nl}sudo uv sync --frozen --no-dev --project ${TARGET}"
+  fi
+  way_back+="${nl}sudo ${0} restore ${upgrade_backup}"
+  UP_HINT="The bot may be stopped. Once what is above is fixed, finish the upgrade:${nl}sudo ${0} upgrade"
+  UP_HINT+=$'\n\n   '"Or go back to ${current}, database and all:${nl}${way_back}"
+
+  stage "Moving to the new code" "code"
+  step "Checking out ${name}" as_root git -C "$TARGET" checkout --quiet --detach "$target"
+  printf '%s %s %s\n' "$before" "$upgrade_backup" "$current" | as_root tee "$unfinished" >/dev/null
+  stop_bot
+
+  if [ "$DOCKER_MODE" = 1 ]; then
+    stage "Rebuilding the image" "image"
     step "Rebuilding the image" as_root docker compose --project-directory "$TARGET" build
   else
-    retry 2 "Installing the dependencies" \
+    if [ "$UP_DEPS" = moved ]; then
+      stage "Installing the libraries (new versions, this is the slow part)" "libraries"
+    else
+      stage "Checking the libraries" "libraries"
+    fi
+    retry 2 "Installing the dependencies at their locked versions" \
       as_root env PATH="$SYSTEM_PATH" uv sync --frozen --no-dev --project "$TARGET"
     try_step "Keeping the code owned by root" as_root chmod -R go-w "$TARGET"
   fi
-  step "Applying any new migrations" familydb_cmd db migrate
-  start_bot
 
-  head2 "Done"
-  say "Now on ${B}$(as_root git -C "$TARGET" describe --tags --always 2>/dev/null || echo unknown)${OFF}, from ${current}."
-  # Going back is the code, what it was installed with, and the database from before its
-  # migrations, in that order: the restore restarts the bot on the code checked out above it.
-  say ""
-  say "If something is wrong, go back to what was installed (${current}), database and all:"
-  say "  sudo git -C ${TARGET} checkout --quiet --detach ${before}"
+  stage "Updating the database" "database"
+  step "Applying $([ -n "$UP_MIGRATIONS" ] && echo "$(wc -l <<<"$UP_MIGRATIONS") new migrations" || echo "any new migrations")" \
+    familydb_cmd db migrate
+
+  stage "Starting it again, and checking" "start"
+  start_bot
+  local check_state=0
+  note "familydb doctor says:"
+  familydb_cmd doctor 2>&1 | sed "s/^/${INDENT}  /" || check_state=$?
+  stage_done
+  INDENT=""
+  as_root rm -f "$unfinished"
+  UP_HINT=""
+  on_failure_hint ""
+
+  upgrade_summary "$current" "$name" "$upgrade_backup" "$check_state"
+  printf '\n  %sIf something is wrong, go back to %s, database and all:%s\n' "$DIM" "$current" "$OFF"
+  printf '  %s%s%s\n' "$DIM" "sudo git -C ${TARGET} checkout --quiet --detach ${before}" "$OFF"
   if [ "$DOCKER_MODE" = 1 ]; then
-    say "  sudo docker compose --project-directory ${TARGET} build"
+    printf '  %s%s%s\n' "$DIM" "sudo docker compose --project-directory ${TARGET} build" "$OFF"
   else
-    say "  sudo uv sync --frozen --no-dev --project ${TARGET}"
+    printf '  %s%s%s\n' "$DIM" "sudo uv sync --frozen --no-dev --project ${TARGET}" "$OFF"
   fi
-  say "  sudo ${0} restore ${upgrade_backup}"
-  head2 "The check, on the new version"
-  familydb_cmd doctor || true
+  printf '  %s%s%s\n' "$DIM" "sudo ${0} restore ${upgrade_backup}" "$OFF"
+  [ -n "$LOG_FILE" ] && printf '\n  %sEvery step is in %s%s\n' "$DIM" "$LOG_FILE" "$OFF"
+  return 0
 }
 
 # What an upgrade brings, said before anyone is asked: how many changes, the newest of them in
 # their own words, whether the database changes, and whether the dependencies do.
-upgrade_preview() { # upgrade_preview TARGET NAME
-  local target="$1" name="$2" count subjects migrations deps shown=12
-  count="$(as_root git -C "$TARGET" rev-list --count --no-merges "HEAD..${target}" 2>/dev/null || echo 0)"
-  head2 "What ${name} brings"
-  say "  ${count} changes since ${current}. The newest:"
-  subjects="$(as_root git -C "$TARGET" log --no-merges --format='%s' "HEAD..${target}" 2>/dev/null || true)"
-  printf '%s\n' "$subjects" | head -"$shown" | sed 's/^/    · /'
-  [ "$count" -gt "$shown" ] 2>/dev/null && note "    … and $((count - shown)) more:  git -C ${TARGET} log --oneline HEAD..${target}"
-  migrations="$(as_root git -C "$TARGET" diff --name-only --diff-filter=A "HEAD" "$target" \
+upgrade_preview() { # upgrade_preview TARGET NAME CURRENT [BASE] - BASE is what is installed, HEAD
+  local target="$1" name="$2" current="$3" base="${4:-HEAD}" subjects shown=12
+  UP_COUNT="$(as_root git -C "$TARGET" rev-list --count --no-merges "${base}..${target}" 2>/dev/null || echo 0)"
+  printf '\n%sWhat %s brings%s\n' "$B" "$name" "$OFF"
+  printf '  %s%s changes%s since %s. The newest:\n' "$B" "$UP_COUNT" "$OFF" "$current"
+  subjects="$(as_root git -C "$TARGET" log --no-merges --format='%s' "${base}..${target}" 2>/dev/null || true)"
+  UP_NEWEST="$(head -1 <<<"$subjects")"
+  printf '%s\n' "$subjects" | head -"$shown" | sed "s/^/    ${CYN}·${OFF} /"
+  if [ "$UP_COUNT" -gt "$shown" ] 2>/dev/null; then
+    printf '    %s… and %s more:  git -C %s log --oneline %s..%s%s\n' \
+      "$DIM" "$((UP_COUNT - shown))" "$TARGET" "$base" "$target" "$OFF"
+  fi
+  UP_MIGRATIONS="$(as_root git -C "$TARGET" diff --name-only --diff-filter=A "$base" "$target" \
     -- src/familydb/store/migrations/ 2>/dev/null | sed 's|.*/||; s|\.sql$||' || true)"
-  if [ -z "$migrations" ]; then
-    say "  The database is not changed."
+  printf '\n'
+  if [ -z "$UP_MIGRATIONS" ]; then
+    printf '  %s✓%s The database is not changed.\n' "$GRN" "$OFF"
   else
     local n first last
-    n="$(wc -l <<<"$migrations")"; first="$(head -1 <<<"$migrations")"; last="$(tail -1 <<<"$migrations")"
+    n="$(wc -l <<<"$UP_MIGRATIONS")"; first="$(head -1 <<<"$UP_MIGRATIONS")"; last="$(tail -1 <<<"$UP_MIGRATIONS")"
     if [ "$n" = 1 ]; then
-      say "  The database gains one migration, ${first}. The backup taken first is the way back."
+      printf '  %s◆%s The database gains one migration, %s. The backup taken first is the way back.\n' \
+        "$YEL" "$OFF" "$first"
     else
-      say "  The database gains ${n} migrations, ${first} to ${last}. The backup taken first is the way back."
+      printf '  %s◆%s The database gains %s migrations, %s to %s. The backup taken first is the way back.\n' \
+        "$YEL" "$OFF" "$n" "$first" "$last"
     fi
   fi
-  deps="$(as_root git -C "$TARGET" diff --quiet HEAD "$target" -- uv.lock 2>/dev/null && echo same || echo moved)"
-  if [ "$deps" = moved ]; then
-    say "  Some libraries move to new versions, which takes a minute to install."
+  UP_DEPS="$(as_root git -C "$TARGET" diff --quiet "$base" "$target" -- uv.lock 2>/dev/null && echo same || echo moved)"
+  if [ "$UP_DEPS" = moved ]; then
+    printf '  %s◆%s Some libraries move to new versions, which takes a minute to install.\n' "$YEL" "$OFF"
   else
-    say "  The libraries stay as they are."
+    printf '  %s✓%s The libraries stay as they are.\n' "$GRN" "$OFF"
   fi
+}
+
+rule() { local i; for (( i = 0; i < $1; i++ )); do printf '─'; done; }  # rule N - a line N long
+
+# The panel at the end: one line a thing, the border green when all went well, amber when
+# something on the way wants a look.
+upgrade_summary() { # upgrade_summary CURRENT NAME BACKUP CHECK_STATUS
+  local current="$1" name="$2" backup="$3" check="$4" now colour="$GRN" title="Upgraded" size
+  now="$(as_root git -C "$TARGET" describe --tags --always 2>/dev/null || echo unknown)"
+  if [ "$WARNINGS" -gt 0 ] || [ "$check" != 0 ] || [ "$PAGE_STATE" = silent ]; then
+    colour="$YEL"; title="Upgraded, with something to look at"
+  fi
+  size="$(human_size "$(as_root stat -c %s "$backup" 2>/dev/null || echo 0)")"
+  printf '\n%s╭─ %s%s%s%s %s%s\n' "$colour" "$B" "$title" "$OFF" "$colour" "$(rule $((56 - ${#title})))" "$OFF"
+  _panel() { printf '%s│%s  %-10s %s\n' "$colour" "$OFF" "$1" "$2"; }
+  _panel "Now on" "${B}${now}${OFF}"
+  _panel "From" "$current"
+  _panel "Changes" "${UP_COUNT}${UP_NEWEST:+, the newest: ${UP_NEWEST}}"
+  if [ -n "$UP_MIGRATIONS" ]; then
+    local n; n="$(wc -l <<<"$UP_MIGRATIONS")"
+    if [ "$n" = 1 ]; then
+      _panel "Database" "one migration applied, $(head -1 <<<"$UP_MIGRATIONS")"
+    else
+      _panel "Database" "${n} migrations applied, $(head -1 <<<"$UP_MIGRATIONS") to $(tail -1 <<<"$UP_MIGRATIONS")"
+    fi
+  else
+    _panel "Database" "unchanged"
+  fi
+  if [ "$DOCKER_MODE" = 1 ]; then
+    _panel "Libraries" "rebuilt into the image"
+  elif [ "$UP_DEPS" = moved ]; then
+    _panel "Libraries" "moved to the new locked versions"
+  else
+    _panel "Libraries" "as they were"
+  fi
+  _panel "Backup" "${backup} (${size})"
+  case "$PAGE_STATE" in
+    answering) _panel "Page" "${GRN}✓${OFF} answering on port $(app_port)" ;;
+    silent)    _panel "Page" "${RED}✗${OFF} not answering on port $(app_port) yet: ${0} status" ;;
+    unchecked) _panel "Page" "running; not checked, as curl is not installed" ;;
+    *)         _panel "Page" "not started: no service here to start" ;;
+  esac
+  if [ "$check" = 0 ]; then
+    _panel "Check" "${GRN}✓${OFF} familydb doctor found nothing that stops it working"
+  else
+    _panel "Check" "${RED}✗${OFF} familydb doctor found something to fix, above"
+  fi
+  [ "$WARNINGS" -gt 0 ] && _panel "Warnings" "${YEL}${WARNINGS}${OFF}, above"
+  local parts="" entry
+  for entry in "${UP_TIMES[@]}"; do parts+="${parts:+ · }${entry% *} $(took "${entry##* }")"; done
+  _panel "Took" "$(took "$SECONDS")  ${DIM}(${parts})${OFF}"
+  printf '%s╰%s%s\n' "$colour" "$(rule 59)" "$OFF"
 }
 
 # ------------------------------------------------------------------ logs ----
@@ -965,7 +1123,7 @@ esac
 # The foot of anything that changed the machine: how long it took, whether anything wanted a look
 # on the way, and where the whole run is written down.
 case "$COMMAND" in
-  https|port|backup|restore|upgrade|restart|schedule-backups)
+  https|port|backup|restore|restart|schedule-backups)
     [ "$DRY_RUN" = 1 ] && exit 0
     say ""
     if [ "$WARNINGS" -gt 0 ]; then
