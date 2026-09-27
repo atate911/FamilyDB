@@ -258,8 +258,12 @@ def test_a_slow_call_does_not_hold_up_the_others(settings, conn, clock, family):
     api = SlowFirst()
 
     def ask(number):
+        # Two chats: turns in one chat go one at a time (pipeline._one_at_a_time), whatever
+        # the spending holds do.
         reply = handle_incoming(
-            app, IncomingMessage("telegram", str(number), "chat", "1001", "hello"), api=api
+            app,
+            IncomingMessage("telegram", str(number), f"chat-{number}", "1001", "hello"),
+            api=api,
         )
         if number == 2:
             second_done.set()

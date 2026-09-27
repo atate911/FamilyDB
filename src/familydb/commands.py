@@ -1,5 +1,8 @@
-"""Telegram's commands, answered by code with no model call: /today, /week, /tasks and /now,
-and /start; and a message with nothing in it to read.
+"""Telegram's commands, answered by code with no model call: /today, /week, /tasks, /now and
+/lookup, and /start; and a message with nothing in it to read.
+
+/lookup asks for every idea waiting to be looked up to be looked up now, rather than with the
+evening's lookups: code calling `look_up_now` as the member who asked, as a button's tap does.
 
 What is on, what is left to do and what could start right now are asked often, and code knows
 the answers exactly: the calendar (agenda.py), the task list, and the suggestion engine run for
@@ -25,6 +28,7 @@ unasked.
 
 from __future__ import annotations
 
+import json
 import logging
 import sqlite3
 from collections.abc import Callable
@@ -52,6 +56,7 @@ MENU = (
     ("week", "The next seven days"),
     ("tasks", "Open tasks in this chat"),
     ("now", "What could start right now"),
+    ("lookup", "Look up the ideas waiting, now"),
 )
 NAMES = frozenset(name for name, _ in MENU)
 MAX_TASKS = 12
@@ -384,9 +389,32 @@ def _under(heading: str, lines: list[str]) -> str:
     return "\n".join([heading, *lines])
 
 
+def _lookup(
+    app: App, conn: sqlite3.Connection, _msg: IncomingMessage, member: Member, seed: int
+) -> str:
+    """Every idea waiting, looked up on the next run rather than in the evening."""
+    ctx = ToolContext(
+        conn=conn,
+        settings=app.settings,
+        clock=app.clock,
+        member=member,
+        message_id=seed,
+    )
+    result = app.registry.dispatch("look_up_now", {}, ctx)
+    answered = json.loads(result.content)
+    if answered.get("available") is False:
+        return voice.say(app.settings, "lookups_off", seed=seed)
+    asked = len(answered.get("asked") or [])
+    if not asked:
+        return voice.say(app.settings, "lookups_none", seed=seed)
+    count = "1 idea" if asked == 1 else f"{asked} ideas"
+    return voice.say(app.settings, "lookups_asked", seed=seed, count=count)
+
+
 ANSWERS: dict[str, Callable[[App, sqlite3.Connection, IncomingMessage, Member, int], str]] = {
     "today": _today,
     "week": _week,
     "tasks": _tasks,
     "now": _now,
+    "lookup": _lookup,
 }

@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from familydb.app import App
-from familydb.store import ideas, outcomes, plans
+from familydb.store import db, ideas, outcomes, plans
 from familydb.web import create_app
 from tests import fakes
 
@@ -346,3 +346,26 @@ def test_the_forms_are_behind_the_password(settings, clock, conn, family) -> Non
     for path in ("/ideas/new", "/idea/1/edit", "/idea/1/status", "/plans/new"):
         assert stranger.post(path, data={"title": "x"}).status_code == 401
     assert stranger.get("/ideas/new").status_code == 302
+
+
+def test_an_idea_or_every_one_waiting_can_be_looked_up_now(settings, clock, conn, family):
+    looking = _client(settings.model_copy(update={"web_tools_enabled": True}), clock)
+    with db.transaction(conn):
+        first = ideas.insert(conn, title="Hopscotch", kind="outing")
+        second = ideas.insert(conn, title="Ramen", kind="restaurant")
+    page = looking.get(f"/idea/{first.id}").text
+    assert "Looked up together at 21:00 each evening." in page and "Look it up now" in page
+    sent = looking.post(f"/idea/{first.id}/lookup", data={"csrf": _token(looking, "/")})
+    assert sent.headers["Location"] == f"/idea/{first.id}"
+    after = looking.get(f"/idea/{first.id}").text
+    assert "Looking it up now: within a few minutes." in after
+    assert "Asked for now: within a few minutes." in after and "Look it up now" not in after
+
+    status = looking.get("/status").text
+    assert "Ideas are looked up together at 21:00 each evening." in status
+    looking.post("/lookups/now", data={"csrf": _token(looking, "/status")})
+    assert "Looking 2 ideas up now" in _said(looking.get("/status"))
+    assert ideas.get(conn, second.id).lookup_wanted_at is not None
+    # Without lookups on, neither button is there.
+    plain = _client(settings, clock).get("/status").text
+    assert "Look them up now" not in plain

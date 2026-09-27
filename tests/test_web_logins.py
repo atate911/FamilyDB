@@ -318,6 +318,29 @@ def test_a_member_uses_the_bot_and_an_admin_looks_after_it(app, sam, alex, famil
     assert 'href="/settings"' in admin_nav and 'href="/family"' in admin_nav
 
 
+def test_the_settings_tile_opens_a_menu_with_every_settings_page_then_you(app, sam, alex) -> None:
+    """Every page of settings, then who is signed in, their password and signing out, in one
+    menu at the end of the bar; somebody who may not change settings sees only the last three."""
+    menu = re.search(r'<details class="menu[^"]*">.*?</details>', sam.get("/status").text, re.S)
+    assert menu is not None
+    links = re.findall(r'<a[^>]* href="([^"]+)"', menu.group(0))
+    assert links == [
+        "/settings",
+        *(f"/settings/{section.name}" for section in fields.SECTIONS),
+        "/you",
+    ]
+    assert "Signed in as <strong>Sam</strong>" in menu.group(0)
+    assert 'action="/logout"' in menu.group(0)
+    here = sam.get("/settings/spending").text
+    assert '<details class="menu here">' in here
+    assert re.search(r'href="/settings/spending" aria-current="page"', here)
+
+    theirs = re.search(r'<details class="menu[^"]*">.*?</details>', alex.get("/").text, re.S)
+    assert theirs is not None and "/settings" not in theirs.group(0)
+    assert re.findall(r'<a[^>]* href="([^"]+)"', theirs.group(0)) == ["/you"]
+    assert "Alex" in theirs.group(0) and 'action="/logout"' in theirs.group(0)
+
+
 def test_the_chat_speaks_as_whoever_is_signed_in(app, sam, family, conn) -> None:
     replies = [fakes.message([fakes.text("Saturday looks dry.")])]
     with closing(app.connect()) as other:

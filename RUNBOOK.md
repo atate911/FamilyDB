@@ -379,8 +379,8 @@ The page is the bot's front door. The home page shows what is coming up and, unt
 connected, the "Finish setting up" list (section 3). Then: Chat, to talk to the bot as a family
 member would; the ideas list with search and filters, and one idea in full with its hours,
 travel estimate and booking link; the restaurants on their own page; the plans as a list or as a
-month, read live from Google Calendar when it is connected and from the saved plans when it is
-not; things to do and their reminders; Memory, what the bot remembers about the family and where
+month, read from Google Calendar when it is connected (an event added on a phone shows within a
+minute) and from the saved plans when it is not; things to do and their reminders; Memory, what the bot remembers about the family and where
 each thing came from; Family, for who the bot talks to; and the status and settings pages
 (section 11), with the Personality page among them. The forms add and change ideas and tasks,
 record how things went, create, move and cancel plans, and add to or forget what the bot

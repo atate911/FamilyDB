@@ -12,23 +12,30 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any
 
+from familydb import alerts
+from familydb import model_watch as watch
 from familydb.agent import compose, gateway, providers
 from familydb.agent.spending import spent_today
 from familydb.app import App
 from familydb.availability import (
     calendar_available,
+    digest_configured,
     enrichment_available,
     weather_available,
     web_is_public,
 )
 from familydb.dates import utc_iso
+from familydb.store import alerts as alert_store
 from familydb.store import calls, ideas, members, messages
+from familydb.store import judgements as judgement_store
+from familydb.store import model_watch as model_store
 from familydb.store import settings as settings_store
 from familydb.store.settings import SECRETS
-from familydb.web import views
+from familydb.web import fields, views
 from familydb.web.auth import own_passwords, password_chosen, password_in_use
 
 DAYS = 30
+CHANGES_DAYS = 30  # what the daily check of models found changed, shown this far back
 TROUBLE_LIMIT = 6
 WAITING_LIMIT = 5
 LOOKUP_STATES = {
@@ -71,7 +78,7 @@ def models(app: App) -> list[dict[str, Any]]:
     for kind, what in SITUATIONS:
         provider, model = gateway.answering(app.settings, kind)
         level = getattr(app.settings, gateway.spec(kind).level)
-        keyed = provider.configured()  # on Claude this builds a client, so once a row
+        keyed = provider.configured()
         rows.append(
             _row(
                 what,
@@ -256,6 +263,104 @@ def troubles(conn: sqlite3.Connection, since: str, tz: Any) -> dict[str, Any]:
     }
 
 
+ACTIVITY_DAYS = 7
+ACTIVITY_SHOWN = 25
+
+
+def activity(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    """What the models were asked lately, newest first, each line opening its history in full
+    (web/activity.py): a message answered, with what a lookup it started cost, or a lookup."""
+    tz = app.settings.tzinfo
+    since = utc_iso(app.clock.now() - timedelta(days=ACTIVITY_DAYS))
+    names = {person.id: person.display_name for person in members.list_all(conn, active_only=False)}
+    rows = []
+    for row in calls.activity_since(conn, since=since, limit=ACTIVITY_SHOWN):
+        kinds = [kind for kind in (row["kinds"] or "").split(",") if kind]
+        what = ", ".join(dict.fromkeys(gateway.purpose(kind) for kind in kinds))
+        asked = messages.get(conn, row["message_id"]) if row["message_id"] is not None else None
+        if "digest" in kinds:
+            title = "Weekend ideas"
+        elif asked is not None:
+            title = views.asked_line(asked.text, names.get(asked.member_id or -1, "someone"))
+        elif "enrich" in kinds and row["about"]:
+            title = f"Looking up {row['about']}"
+        else:
+            title = row["about"] or what or "a model call"
+        rows.append(
+            {
+                "key": row["key"],
+                "when": views.local_moment(row["started"], tz),
+                "title": title,
+                "what": what,
+                "calls": row["calls"],
+                "tokens": row["sent"] + row["back"],
+                "searches": row["searches"],
+                "cost": row["cost_usd"],
+            }
+        )
+    return rows
+
+
+def attention(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    """What only an admin can fix, while it lasts (familydb/alerts.py). New models to choose
+    from are news rather than a trouble: they are under Models and prices instead."""
+    now = app.clock.now()
+    found = [
+        one
+        for one in alert_store.current(conn, since=utc_iso(now - alerts.KEEP))
+        if one.kind not in ("new", "advice")
+    ]
+    if not found:
+        return []
+    admins = len(alerts.admins_on_telegram(conn))
+    rows = []
+    for one in found:
+        row = views.alert_row(
+            one, app.settings.tzinfo, telling=app.settings.admin_alerts, admins=admins
+        )
+        if one.kind == "model":
+            row["switch"] = switch_for(app, conn, one.subject)
+        rows.append(row)
+    return rows
+
+
+def switch_for(app: App, conn: sqlite3.Connection, subject: str) -> dict[str, Any] | None:
+    """For a model going or gone, the one to put in its place with one press: the settings
+    boxes that name it now, and what they would be set to. None when no box names it (a level's
+    model, which the daily check puts in by itself on the day) or there is nothing to offer."""
+    company, _, rest = subject.partition(":")
+    name = rest.split(":")[0]
+    live = app.settings
+    boxes = [
+        one.key
+        for one in fields.FIELDS
+        if one.company == company and str(getattr(live, one.key, "") or "").lower() == name
+    ]
+    instead = watch.replacement_for(conn, company, name, app.clock.today())
+    if not boxes or instead is None:
+        return None
+    return {"boxes": boxes, "to": instead.model, "words": views.model_offer(company, instead.model)}
+
+
+def model_watch(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
+    """How the daily check of models and prices went, and what it found changed lately."""
+    tz = app.settings.tzinfo
+    since = utc_iso(app.clock.now() - timedelta(days=CHANGES_DAYS))
+    return {
+        "on": app.settings.model_watch,
+        "sources": [views.source_row(one, tz) for one in model_store.sources(conn)],
+        "changes": [
+            views.model_change_row(one, tz) for one in model_store.changes_since(conn, since=since)
+        ],
+        "days": CHANGES_DAYS,
+        "judgements": [
+            views.judgement_row(one, tz, app.settings)
+            for one in judgement_store.recent(conn, since=since)
+        ],
+        "judging": app.settings.judgements,
+    }
+
+
 def status(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
     """Everything the status page shows, in one pass over a handful of small queries."""
     tz = app.settings.tzinfo
@@ -268,8 +373,16 @@ def status(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
         "services": services(app, conn),
         "spending": spending(conn, since, app.settings, app.clock.now()),
         "last": last_call(conn, tz),
-        "waiting": waiting(conn, tz),
+        "waiting": {
+            **waiting(conn, tz),
+            "when": views.lookups_when(app.settings),
+            "can_look_up": enrichment_available(app.settings),
+        },
         "troubles": troubles(conn, since, tz),
+        "attention": attention(app, conn),
+        "model_watch": model_watch(app, conn),
+        "activity": activity(app, conn),
+        "activity_days": ACTIVITY_DAYS,
     }
 
 
@@ -446,6 +559,90 @@ def _digest(app: App) -> tuple[bool | None, str]:
     if not app.can_ask("chat"):
         return None, f"{chat}, once there is a model key to write it"
     return True, chat
+
+
+AUTOMATIC_DAYS = 30
+AUTOMATIC_RECENT = 20
+
+
+def automatic(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
+    """What she sends of her own accord: each kind, whether it is on, when, what it costs and how
+    often it went in the last month, and the latest few in full (messages.sent_as)."""
+    settings, tz = app.settings, app.settings.tzinfo
+    since = utc_iso(app.clock.now() - timedelta(days=AUTOMATIC_DAYS))
+    counts = messages.sent_on_their_own_counts(conn, since=since)
+    hour = "{:02d}:00".format
+    digest_chat = dict(digest_chats(conn, tz)).get(settings.digest_chat_id, settings.digest_chat_id)
+    state = {
+        "weekend": (
+            digest_configured(settings),
+            f"{views.DAY_NAMES.get(settings.digest_day, settings.digest_day)} at "
+            f"{hour(settings.digest_hour)}, to {digest_chat.split(', last message')[0]}"
+            if settings.digest_chat_id
+            else "nowhere chosen, so none is sent",
+        ),
+        "reminders": (True, "when a reminder somebody asked for is due"),
+        "follow_ups": (
+            settings.follow_ups,
+            f"the day after a plan, at {hour(settings.follow_up_hour)}",
+        ),
+        "checks": (
+            settings.plan_checks,
+            f"the evening before a plan, at {hour(settings.plan_check_hour)}, only when "
+            "something is off",
+        ),
+        "nudges": (
+            settings.task_nudges,
+            "when the part of the week a task was kept for comes round, and the calendar is free",
+        ),
+        "lookups": (
+            settings.enrichment_notes and enrichment_available(settings),
+            f"after ideas are looked up, {views.lookups_when(settings)}",
+        ),
+        "alerts": (
+            settings.admin_alerts,
+            "when something only an admin can fix goes wrong, to each admin with a Telegram id",
+        ),
+        "kids_asks": (
+            True,
+            "when a kid asks for something that isn't OK, or asks for a parent, to each parent "
+            "with a Telegram id",
+        ),
+        "kids_answers": (True, "when a parent answers a wish, in the kid's own chat"),
+    }
+    kinds = []
+    for key, group, title, cost, events in views.AUTOMATIC:
+        sent = [counts[event] for event in events if event in counts]
+        on, when = state[key]
+        last = max((stamp for _, stamp in sent), default=None)
+        kinds.append(
+            {
+                "key": key,
+                "group": group,
+                "title": title,
+                "on": on,
+                "when": when,
+                "cost": cost,
+                "sent": sum(count for count, _ in sent),
+                "last": views.local_moment(last, tz) if last else None,
+            }
+        )
+    names = {
+        str(person.channel_user_id): person.display_name
+        for person in members.list_all(conn, active_only=False)
+        if person.channel == "telegram"
+    }
+    recent = [
+        {
+            "when": views.local_moment(message.received_at, tz),
+            "kind": views.AUTOMATIC_BY_EVENT.get(message.sent_as or "", message.sent_as),
+            "chat": views.chat_words(message.chat_id, names.get(message.chat_id)),
+            "text": message.text,
+            "delivered": message.delivered_at is not None,
+        }
+        for message in messages.sent_on_their_own(conn, since=since, limit=AUTOMATIC_RECENT)
+    ]
+    return {"kinds": kinds, "recent": recent, "days": AUTOMATIC_DAYS}
 
 
 def digest_chats(conn: sqlite3.Connection, tz: Any, limit: int = 10) -> list[tuple[str, str]]:

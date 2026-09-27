@@ -11,7 +11,9 @@ photo is looked at the same way.
 
 from __future__ import annotations
 
+import dataclasses
 import logging
+from collections.abc import Callable
 from typing import Any
 
 import httpx
@@ -19,6 +21,7 @@ from google import genai
 from google.genai import errors as genai_errors
 from google.genai import types as genai_types
 
+from familydb.agent.providers import parts
 from familydb.agent.providers.base import (
     LOOK_TOKENS,
     Audio,
@@ -45,6 +48,41 @@ NO_CREDENTIALS = "no Gemini credentials configured: set GEMINI_API_KEY (see .env
 # Our five effort names as a thinking budget in tokens, for the models before Gemini 3 (which
 # take a level instead, in `config`). -1 lets the model decide.
 THINKING = {"low": 0, "medium": -1, "high": -1, "xhigh": 24576, "max": 32768}
+# The generations before Gemini 3, which take a thinking budget and cannot search alongside our
+# own tools. Named by what they are rather than by what works, as anthropic.OLDER_MODELS is, so
+# a model released later (a Gemini 4, an alias such as gemini-flash-latest) is sent the current
+# shape: the daily check offers new models as they come.
+OLDER_MODELS = ("gemini-1", "gemini-2")
+
+
+def current(model: str) -> bool:
+    """Whether a model takes a thinking level and hosted search beside our tools."""
+    return not model.lower().startswith(OLDER_MODELS)
+
+
+# What a request carries that a model may not take: sent again without it when a 400 names it
+# (providers/parts.py). Gemini 2.5 Pro cannot switch its thinking off, which a budget of 0 asks.
+THINKING_OFF = parts.Part("switching thinking off", ("budget 0", "thinking mode", "budget"))
+THINKING_LEVEL = parts.Part("the thinking level", ("thinking_level", "thinking level"))
+SEARCH_BESIDE_TOOLS = parts.Part(
+    "search beside our own tools", ("include_server_side_tool_invocations", "server_side")
+)
+PARTS = (THINKING_OFF, THINKING_LEVEL, SEARCH_BESIDE_TOOLS)
+
+
+def _carried(payload: dict[str, Any]) -> set[str]:
+    config = payload.get("config") or {}
+    thinking = config.get("thinking_config") or {}
+    carried: set[str] = set()
+    if thinking.get("thinking_budget") == 0:
+        carried.add(THINKING_OFF.name)
+    if "thinking_level" in thinking:
+        carried.add(THINKING_LEVEL.name)
+    if "tool_config" in config:
+        carried.add(SEARCH_BESIDE_TOOLS.name)
+    return carried
+
+
 REFUSAL_REASONS = {
     "SAFETY",
     "PROHIBITED_CONTENT",
@@ -121,7 +159,7 @@ class GeminiProvider:
         refused here, before anything is sent."""
         tools: list[dict[str, Any]] = []
         model = request.model or self.settings.gemini_model
-        if request.web is not None and request.tools and not model.startswith("gemini-3"):
+        if request.web is not None and request.tools and not current(model):
             raise AgentError(
                 "Gemini web workers require a Gemini 3 model; set GEMINI_WORKER_MODEL",
                 retryable=False,
@@ -160,15 +198,21 @@ class GeminiProvider:
     def config(self, request: TurnRequest) -> dict[str, Any]:
         settings = self.settings
         effort = request.effort or settings.effort
+        model = request.model or settings.gemini_model
+        left_out = parts.left_out(NAME, model)
+        budget = THINKING.get(effort, -1)
+        if budget == 0 and THINKING_OFF.name in left_out:
+            budget = -1  # let the model decide, since it cannot not think
         config: dict[str, Any] = {
             "system_instruction": self.instructions(request.system) or None,
             "max_output_tokens": request.max_tokens or settings.max_output_tokens,
-            "thinking_config": {"thinking_budget": THINKING.get(effort, -1)},
+            "thinking_config": {"thinking_budget": budget},
         }
         tools = self.tools(request)
-        if (request.model or settings.gemini_model).startswith("gemini-3"):
-            config["thinking_config"] = {"thinking_level": "LOW" if effort == "low" else "HIGH"}
-        if request.web is not None and request.tools:
+        if current(model):
+            level = {"thinking_level": "LOW" if effort == "low" else "HIGH"}
+            config["thinking_config"] = None if THINKING_LEVEL.name in left_out else level
+        if request.web is not None and request.tools and SEARCH_BESIDE_TOOLS.name not in left_out:
             config["tool_config"] = {"include_server_side_tool_invocations": True}
         if tools:
             config["tools"] = tools
@@ -258,6 +302,18 @@ class GeminiProvider:
             return None
         return True
 
+    def listed_models(self) -> list[str] | None:
+        try:
+            client = make_client(self.settings, timeout_ms=CHECK_TIMEOUT_MS)
+        except AgentError:
+            return None
+        try:
+            # Named "models/gemini-3.8-flash" in the list, and sent without the prefix.
+            return [str(model.name).removeprefix("models/") for model in client.models.list()]
+        except Exception as exc:  # unreachable, unauthorised: not an answer about the models
+            log.info("could not ask Gemini for its models: %s", exc)
+            return None
+
     def check_key(self) -> KeyCheck:
         try:
             client = make_client(self.settings, timeout_ms=CHECK_TIMEOUT_MS)
@@ -284,11 +340,25 @@ class GeminiProvider:
         return int(counted.total_tokens)
 
     def send(self, request: TurnRequest) -> ModelReply:
-        try:
-            response = self.api.generate_content(**self.payload(request))
-        except (genai_errors.APIError, httpx.TransportError) as exc:
-            raise _failure(exc) from exc
-        return self.reply(response)
+        response, dropped = self._create(lambda: self.payload(request))
+        return dataclasses.replace(self.reply(response), dropped=dropped)
+
+    def _create(self, build: Callable[[], dict[str, Any]]) -> tuple[Any, tuple[str, ...]]:
+        """One request, and again without any part a 400 names (PARTS), each at most once."""
+        dropped: list[str] = []
+        while True:
+            payload = build()
+            try:
+                return self.api.generate_content(**payload), tuple(dropped)
+            except genai_errors.ClientError as exc:
+                part = parts.refused(str(exc), PARTS, _carried(payload))
+                if _status(exc) != 400 or part is None or part.name in dropped:
+                    raise _failure(exc) from exc
+                log.warning("Gemini refused %s for %s; leaving it out", part.name, payload["model"])
+                parts.leave_out(NAME, payload["model"], part.name)
+                dropped.append(part.name)
+            except (genai_errors.APIError, httpx.TransportError) as exc:
+                raise _failure(exc) from exc
 
     # -- hearing --------------------------------------------------------------------------
     def listener(self) -> str | None:
@@ -318,10 +388,7 @@ class GeminiProvider:
         }
 
     def transcribe(self, audio: Audio, hints: str) -> Heard:
-        try:
-            response = self.api.generate_content(**self.hearing(audio, hints))
-        except (genai_errors.APIError, httpx.TransportError) as exc:
-            raise _failure(exc) from exc
+        response, dropped = self._create(lambda: self.hearing(audio, hints))
         reply = self.reply(response)
         return Heard(
             text=reply.text,
@@ -332,6 +399,7 @@ class GeminiProvider:
             model=reply.model or self.listener(),
             request_id=reply.request_id,
             stop=reply.stop,
+            dropped=dropped,
         )
 
     # -- looking --------------------------------------------------------------------------
@@ -360,10 +428,7 @@ class GeminiProvider:
         }
 
     def describe(self, picture: Picture, ask: str) -> Seen:
-        try:
-            response = self.api.generate_content(**self.seeing(picture, ask))
-        except (genai_errors.APIError, httpx.TransportError) as exc:
-            raise _failure(exc) from exc
+        response, dropped = self._create(lambda: self.seeing(picture, ask))
         reply = self.reply(response)
         return Seen(
             text=reply.text,
@@ -374,6 +439,7 @@ class GeminiProvider:
             model=reply.model or self.viewer(),
             request_id=reply.request_id,
             stop=reply.stop,
+            dropped=dropped,
         )
 
 
@@ -383,7 +449,21 @@ def _failure(exc: Exception) -> AgentError:
         return AgentError(f"server error: {exc}", retryable=True)
     if isinstance(exc, genai_errors.ClientError):
         status = _status(exc)
-        return AgentError(f"API error {status or '?'}: {exc}", retryable=status in RETRYABLE_STATUS)
+        said = str(exc).lower()
+        # Google refuses a bad key with a 400 as often as a 401 or 403, and says an account is
+        # out of prepaid credit with a 429, the status it also uses for "slow down".
+        if status in (401, 403) or (status == 400 and "api key" in said):
+            return AgentError(f"API error {status}: {exc}", retryable=False, trouble="key")
+        if status == 429 and ("billing" in said or "credit" in said or "prepay" in said):
+            return AgentError(f"out of credit: {exc}", retryable=False, trouble="credit")
+        if status == 404 and "model" in said:
+            return AgentError(f"API error 404: {exc}", retryable=False, trouble="model")
+        refused = 400 <= status < 500 and status not in RETRYABLE_STATUS
+        return AgentError(
+            f"API error {status or '?'}: {exc}",
+            retryable=status in RETRYABLE_STATUS,
+            trouble="refused" if refused else None,
+        )
     if isinstance(exc, genai_errors.APIError):
         return AgentError(f"Gemini error: {exc}", retryable=_status(exc) in RETRYABLE_STATUS)
     # httpx.TransportError: timed out, or never reached Google

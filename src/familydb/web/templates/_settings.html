@@ -38,6 +38,34 @@
           {% endfor %}
         {% endif %}
       </select>
+    {% elif entry.offers and one.another %}
+      {# The list to choose from, each with what it is, then "Another", which opens a box to
+         type any other in: a model released next week still fits. The box shows only while
+         "Another" is chosen, by the stylesheet alone; a browser that cannot tell shows it
+         always, and it is read only when "Another" is chosen. #}
+      {% set listed = entry.offers | map('first') | list %}
+      {% set typed_in = entry.value and entry.value not in listed %}
+      <div class="pick">
+        <select id="f-{{ one.key }}" name="{{ one.key }}"
+          {%- if entry.problem or one.note %} aria-describedby="{{ told }}"{% endif %}>
+          <option value="">Default ({{ entry.placeholder }})</option>
+          {% for value, what in entry.offers %}
+            {# A model by its name, which is what the company calls it, then what it is; a chat
+               by what it is, as its id says nothing. #}
+            <option value="{{ value }}"{% if entry.value == value %} selected{% endif %}>
+              {%- if one.company %}{{ value }}{% if what %} · {{ what }}{% endif %}{% else %}{{ what or value }}{% endif -%}
+            </option>
+          {% endfor %}
+          <option value="another"{% if typed_in %} selected{% endif %}>{{ one.another }}…</option>
+        </select>
+        <div class="another">
+          <label for="a-{{ one.key }}">{{ one.another }}</label>
+          <input id="a-{{ one.key }}" name="{{ one.key }}_another" type="text" autocomplete="off"
+                 spellcheck="false" value="{{ entry.value if typed_in else '' }}"
+                 placeholder="{{ 'its name, as the company writes it' if one.company else 'its id, such as -1001234567890' }}"
+                 {% if one.keyboard %}inputmode="{{ one.keyboard }}"{% endif %} />
+        </div>
+      </div>
     {% else %}
       <input
         id="f-{{ one.key }}"

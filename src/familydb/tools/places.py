@@ -9,6 +9,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from familydb import roles
 from familydb.availability import enrichment_available
 from familydb.dates import parse_date
 from familydb.errors import ToolError
@@ -59,6 +60,13 @@ class SavePlaceInput(BaseModel):
     closed_days: list[Day] = Field(default_factory=list, description="Days it is closed.")
     price_note: str | None = Field(default=None, description="e.g. 'adults $28, kids free'.")
     source_urls: list[str] = Field(default_factory=list, description="Pages the facts came from.")
+
+
+class LookUpNowInput(BaseModel):
+    idea_ids: list[int] = Field(
+        default_factory=list,
+        description="Ideas to look up now, again if they were already. Empty: every idea waiting.",
+    )
 
 
 class SkipPlaceInput(BaseModel):
@@ -170,6 +178,30 @@ def lookup_place(ctx: ToolContext, args: LookupPlaceInput) -> dict[str, Any]:
             "note": idea.enrichment_note if idea else None,
         }
     return {"found": True, "idea_id": idea.id if idea else None, "place": place_summary(place, ctx)}
+
+
+@tool(
+    name="look_up_now",
+    description=(
+        "Look ideas up on the web within minutes instead of with the evening's lookups. Only "
+        "when someone asks for it now."
+    ),
+    available=enrichment_available,
+    unavailable_reason="looking ideas up on the web is switched off",
+    writes=True,
+)
+def look_up_now(ctx: ToolContext, args: LookUpNowInput) -> dict[str, Any]:
+    # A kid's lookups wait for the evening with everybody's (docs/WISHES.md): only somebody who
+    # may change the ideas may have them looked up at once.
+    if ctx.member is not None and not roles.may(ctx.member.role, "change"):
+        raise ToolError("lookups wait for the evening; a parent can ask for one now")
+    with transaction(ctx.conn):
+        asked = ideas.want_lookup(ctx.conn, args.idea_ids or None, now=ctx.now_iso())
+    return {
+        "asked": asked,
+        "unknown": [idea_id for idea_id in args.idea_ids if idea_id not in asked],
+        "within_minutes": ctx.settings.enrich_interval_minutes,
+    }
 
 
 @tool(

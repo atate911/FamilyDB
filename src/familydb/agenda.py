@@ -1,7 +1,9 @@
 """What is on, day by day: the family calendar as the Plans page and the home page show it.
 
-With Google Calendar connected this is Google's calendar, read live, so an event somebody added
-on their phone is there and a plan somebody moved in Google shows where it is now. The bot's own
+With Google Calendar connected this is Google's calendar, so an event somebody added on their
+phone is there and a plan somebody moved in Google shows where it is now: within a minute, since
+the page keeps what Google said that long (`PAGE_READ_SECONDS`), and at once for anything the bot
+itself wrote. The bot's own
 plans are recognised by their event and keep their number, which is what the move and cancel
 forms need. Without Google, or when it does not answer, it is the plans the bot saved, and the
 page says which of the three it is showing rather than letting a stale list pass for the truth.
@@ -84,7 +86,7 @@ def read(app: App, conn: sqlite3.Connection, first: date, last: date) -> Agenda:
         return Agenda(saved, "saved")
     tz = app.clock.tz
     try:
-        events = calendar.list_events(
+        events = calendar.recent_events(
             datetime.combine(first, time.min, tzinfo=tz),
             datetime.combine(last + timedelta(days=1), time.min, tzinfo=tz),
         )

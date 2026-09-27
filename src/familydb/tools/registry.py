@@ -49,6 +49,10 @@ class ToolContext:
     idea_revision: str | None = None  # browser optimistic concurrency precondition
     task_revision: int | None = None
     scratch: dict[str, Any] = field(default_factory=dict)  # per-turn hand-back area
+    # Which turn the calls belong to (set by the loop), and what a worker turn is about (the
+    # idea looked up, the weekend searched), for the status page's history of each.
+    turn: str | None = None
+    about: str | None = None
 
     def now_iso(self) -> str:
         return utc_iso(self.clock.now())

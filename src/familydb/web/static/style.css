@@ -289,12 +289,83 @@ nav a:hover { color: var(--ink); background: var(--surface-2); }
 nav a[aria-current="page"] { color: var(--ink); background: var(--surface-3); }
 nav a[aria-current="page"] .icon { color: var(--accent); filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 70%, transparent)); }
 
-.tools { display: flex; gap: 0.15rem; margin-left: auto; }
-.tools a { padding: 0.6rem; }
-.tools .label, .signout .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.tools { display: flex; align-items: center; gap: 0.15rem; margin-left: auto; }
+.tools > a { padding: 0.6rem; }
+.tools .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* The last tile in the bar opens a menu: the pages of settings, then who is signed in, their
+   password and signing out. Its tile looks like the others, with a caret that turns as it opens. */
+.menu { position: relative; }
+.menu > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem;
+  color: var(--dim);
+  font: 500 0.92rem/1 var(--sans);
+  list-style: none;
+  cursor: pointer;
+  border-radius: var(--r-sm);
+  transition: color 0.15s, background-color 0.15s;
+}
+.menu > summary::-webkit-details-marker { display: none; }
+.menu > summary::before { content: none; }
+.menu > summary::after {
+  content: "";
+  width: 0.36rem;
+  height: 0.36rem;
+  margin-top: -0.2rem;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+  transition: transform 0.15s;
+}
+.menu[open] > summary::after { margin-top: 0.2rem; transform: rotate(-135deg); }
+.menu > summary .icon { width: 1.25rem; height: 1.25rem; }
+.menu > summary:hover, .menu[open] > summary { color: var(--ink); background: var(--surface-2); }
+.menu.here > summary { color: var(--ink); background: var(--surface-3); }
+.menu.here > summary .icon { color: var(--accent); filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 70%, transparent)); }
+.menu-list {
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  right: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  width: max-content;
+  min-width: 14.5rem;
+  max-width: calc(100vw - 2rem);
+  max-height: calc(100dvh - 5.5rem);
+  overflow-y: auto;
+  padding: 0.4rem;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r);
+  box-shadow: 0 22px 44px -18px rgb(0 0 0 / 0.95);
+}
+.menu-list a { gap: 0.65rem; padding: 0.6rem 0.7rem; color: var(--ink-2); line-height: 1.3; }
+.menu-list a .icon { width: 1.05rem; height: 1.05rem; color: var(--dim); }
+.menu-list a[aria-current="page"] { color: var(--ink); background: var(--surface-2); }
+.menu-list a[aria-current="page"] .icon { color: var(--accent); filter: none; }
+.menu-all { margin-bottom: 0.2rem; padding-bottom: 0.2rem; }
+.menu-you { display: flex; flex-direction: column; gap: 0.1rem; }
+.menu-list a + .menu-you { margin-top: 0.3rem; padding-top: 0.4rem; border-top: 1px solid var(--line); }
+.menu-who { margin: 0.3rem 0.7rem 0.35rem; color: var(--dim); font-size: 0.85rem; }
+.menu-who strong { color: var(--ink); font-weight: 600; }
 .signout { margin: 0; }
-.signout button { min-height: 0; padding: 0.6rem; border-color: transparent; }
-.signout button:hover { border-color: transparent; }
+.signout button.quiet {
+  justify-content: flex-start;
+  gap: 0.65rem;
+  width: 100%;
+  min-height: 0;
+  padding: 0.6rem 0.7rem;
+  color: var(--ink-2);
+  font: 500 0.92rem/1.3 var(--sans);
+  border-color: transparent;
+}
+.signout button.quiet .icon { width: 1.05rem; height: 1.05rem; color: var(--dim); }
+.signout button.quiet:hover { border-color: transparent; }
 
 /* On a phone: the places are tabs along the bottom, where a thumb is, one column each: five,
    or six with the wish lists. */
@@ -354,8 +425,8 @@ nav a[aria-current="page"] .icon { color: var(--accent); filter: drop-shadow(0 0
   }
 }
 @media (min-width: 84rem) {
-  .tools a, .signout button { padding: 0.55rem 0.8rem; }
-  .tools .label, .signout .label { position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
+  .tools > a, .menu > summary { padding: 0.55rem 0.8rem; }
+  .tools .label { position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
 }
 @media (max-width: 51.99rem) {
   .foot { padding-bottom: calc(var(--tab-h) + 1.5rem + env(safe-area-inset-bottom)) !important; }
@@ -586,6 +657,9 @@ input[type="checkbox"], input[type="radio"] {
 .form .muted { display: block; font-size: 0.85rem; margin-top: 0.35rem; }
 .form > p { margin: 0; }
 .form .more .inner { margin-top: 0.75rem; }
+/* A button that sits at the end of a line of words, such as "Look it up now" on an idea. */
+form.inline { display: inline; margin: 0 0 0 0.35rem; }
+button.small { min-height: 0; padding: 0.3rem 0.7rem; font-size: 0.85rem; }
 label.check, label.inline {
   display: inline-flex;
   align-items: center;
@@ -1566,6 +1640,7 @@ table.month td.today time { color: var(--on-bright); background: var(--amber); b
 .lights > li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.8rem; align-items: start; }
 .lights strong { font-weight: 600; }
 .lights .muted { font-size: 0.9rem; }
+.lights .inline-action { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.8rem; margin-top: 0.5rem; }
 /* Lit, dark, or half lit: the shape says it as well as the colour. */
 .light { width: 0.62rem; height: 0.62rem; margin-top: 0.48rem; border-radius: 50%; }
 .light.on { background: var(--green); box-shadow: 0 0 8px var(--green), 0 0 18px rgb(109 255 156 / 0.45); animation: breathe 3.2s ease-in-out infinite; }
@@ -1661,6 +1736,30 @@ table.month td.today time { color: var(--on-bright); background: var(--amber); b
   .settings-layout { grid-template-columns: 14.5rem minmax(0, 1fr); align-items: start; }
   .settings-nav { display: block; position: sticky; top: 5.25rem; }
 }
+
+/* Numbered steps, as in the guide to giving the page a name, and a command to copy. */
+ol.steps { display: grid; gap: 0.9rem; margin: 1rem 0 0; padding-left: 1.3rem; }
+ol.steps li { padding-left: 0.2rem; }
+pre.command { margin: 0.5rem 0; padding: 0.7rem 0.85rem; overflow-x: auto; font: 0.85rem/1.5 var(--mono); background: var(--field); border: 1px solid var(--line); border-radius: var(--r-sm); }
+
+/* The status page's recent activity: each line a link to its history, whole-row to tap. */
+.activity li + li { border-top: 1px solid var(--line); }
+.activity a { display: grid; gap: 0.2rem; padding: 0.65rem 0.2rem; color: var(--ink); text-decoration: none; border-radius: var(--r-sm); }
+.activity a:hover { background: var(--surface-2); }
+.activity-title { font-weight: 550; overflow-wrap: anywhere; }
+pre.json { max-height: 24rem; overflow: auto; padding: 0.75rem; font: 0.8rem/1.45 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; background: var(--field); border: 1px solid var(--line); border-radius: var(--r-sm); }
+.tool-calls li + li { margin-top: 0.4rem; }
+
+/* What needs an admin, first on the status page: edged in red, which is kept for what went wrong. */
+.attention { margin-bottom: 1.25rem; border-color: color-mix(in srgb, var(--red) 45%, var(--line)); }
+.attention h2 .icon { color: var(--red); }
+
+/* A list to choose from, with a box under it for another, shown only while "Another" is chosen.
+   A browser without :has() drops the rule and shows the box always, which still works. */
+.pick { display: grid; gap: 0.55rem; }
+.pick .another { display: grid; gap: 0.35rem; }
+.pick .another label { color: var(--dim); font-size: 0.85rem; font-weight: 500; }
+.pick:not(:has(option[value="another"]:checked)) .another { display: none; }
 
 /* Boxes two or three to a row where they fit, wide enough for "Default (the company that
    answers)": squeezed narrower, the part in brackets, the part worth reading, would be cut off. */

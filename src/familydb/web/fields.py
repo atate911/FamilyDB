@@ -56,6 +56,9 @@ class Field:
     company: str = ""
     # The keyboard a phone offers for it: digits, digits and a point, or all of it.
     keyboard: str = ""
+    # For a box offering a list (the models, the chats), the words for the last choice, which
+    # opens a box to type any other in: "Another model". Empty for every other box.
+    another: str = ""
 
     def word(self, value: str) -> str:
         """A value as the page says it."""
@@ -171,6 +174,7 @@ def field(
     words: tuple[tuple[str, str], ...] = (),
     unset: str = "",
     company: str = "",
+    another: str = "",
 ) -> Field:
     kind, derived = _shape(Settings.model_fields[key].annotation)
     if kind == "toggle" and not words:
@@ -187,6 +191,7 @@ def field(
         unset=unset,
         company=company,
         keyboard=_keyboard(key, kind),
+        another=another or ("Another model" if suggested else ""),
     )
 
 
@@ -224,6 +229,8 @@ EFFORT = (
 )
 
 
+# Boxes whose list is fixed rather than what the daily check of models found: the hearing model.
+FIXED_OFFERS = frozenset({"openai_transcribe_model"})
 # Each company's two models: the one that answers in the chat, and the one that looks things up.
 MODEL_KEYS = {
     "openai": ("openai_model", "openai_worker_model"),
@@ -404,12 +411,91 @@ GROUPS: tuple[Group, ...] = (
         "models",
         "Models",
         "What everyday means for each company: its cheapest unless you choose another. Pick one, "
-        "or type any model the company offers; the least expensive are listed first.",
+        "least expensive first, or choose Another model to type any the company offers.",
         (
             *_models("openai", "OpenAI"),
             *_models("anthropic", "Claude"),
             *_models("gemini", "Gemini"),
         ),
+    ),
+    Group(
+        "model",
+        "watch",
+        "Keeping up with the companies",
+        "Once a day it asks each company you have a key for which models the key can use, and "
+        "reads two public price lists, LiteLLM's and OpenRouter's, taking a price when they "
+        "agree. New models then appear here and new prices are counted, and admins are told on "
+        "Telegram when a model you use is going or its price moves. No model call, and nothing "
+        "about the family is sent.",
+        (
+            field(
+                "model_watch",
+                "Check models and prices daily",
+                "Off, the prices built into this version are used, and nobody is told.",
+            ),
+        ),
+    ),
+    Group(
+        "model",
+        "judgement",
+        "Asking a stronger model to weigh a change",
+        "Some changes need judgement rather than a rule: which model should take the place of one "
+        "that is going, what a refusal nobody can read means, which new models belong at which "
+        "level, and what a price the lists disagree on really is. With this on, the questions "
+        "that come up are asked together once a day, with the evening's lookups, in one call; "
+        "only a refusal is asked at once. The answer is checked, told to admins, and never "
+        "changes a setting by itself. It is sent model names, prices and error messages, never "
+        "the family's messages.",
+        (
+            field(
+                "judgements",
+                "Ask a stronger model when a change needs judgement",
+                "A few cents each time, and nothing on a day with no question.",
+            ),
+            field(
+                "judgement_level",
+                "How strong a model weighs it",
+                "Best by default: rare questions, where a better answer is worth a cent more.",
+            ),
+            field(
+                "judgement_acts",
+                "What it may do by itself",
+                "A better model at the same cost or less can be put in by itself, and admins are "
+                "told, with a way to put it back; anything dearer waits for an admin.",
+                words=(
+                    ("within_cost", "Put in a model at the same cost or less"),
+                    ("suggest", "Only suggest"),
+                ),
+            ),
+            field(
+                "judgement_budget",
+                "Most to spend on it in a month (US$)",
+                "Counted within the daily limit as well. 0 asks nothing.",
+            ),
+        ),
+    ),
+    Group(
+        "model",
+        "stronger",
+        "Better and best models",
+        "The models a company answers with at the better and best levels. Empty uses the ones "
+        "this version knows (shown as the default); a judgement may suggest newer ones.",
+        tuple(
+            field(
+                f"{company}_{level}_model",
+                f"{label} {level} model",
+                suggested=suggestions(company),
+                unset="this version's",
+                company=company,
+            )
+            for company, label in (
+                ("openai", "OpenAI"),
+                ("anthropic", "Claude"),
+                ("gemini", "Gemini"),
+            )
+            for level in ("better", "best")
+        ),
+        folded=True,
     ),
     Group(
         "model",
@@ -499,17 +585,18 @@ GROUPS: tuple[Group, ...] = (
                 "limit with the company too.",
             ),
             field(
+                "kid_daily_messages",
+                "Messages a kid may send a day",
+                "For each kid on the family list, counting only messages a model answered: "
+                "/today and the buttons under a reminder cost nothing and are not counted. Past "
+                "it, she says so and answers again tomorrow. 0 means no limit.",
+            ),
+            field(
                 "kid_daily_spend",
                 "Each kid's daily share (US$)",
                 "What each kid's own messages may spend in a day, within the limit above. When "
                 "it is used up she is told, kindly, to come back tomorrow; her wish list still "
                 "works. 0 means no share of her own.",
-            ),
-            field(
-                "kid_lookup_hour",
-                "When the kids' lookups run",
-                "Places a kid's messages gave to look up wait for this hour of the day (0 to "
-                "23), and are all looked up then, rather than each as it comes.",
             ),
         ),
     ),
@@ -615,9 +702,10 @@ GROUPS: tuple[Group, ...] = (
             field(
                 "digest_chat_id",
                 "Weekend ideas go to",
-                "Choose a chat it has seen, or type a Telegram chat id. A group is offered once "
-                "somebody on the family list has written in it. Empty sends none.",
+                "Choose a chat it has seen, or another Telegram chat by its id. A group is "
+                "offered once somebody on the family list has written in it. Default sends none.",
                 unset="nowhere",
+                another="Another Telegram chat",
             ),
             field("digest_day", "Weekend ideas day", words=tuple(DAY_NAMES.items())),
             field(
@@ -636,9 +724,15 @@ GROUPS: tuple[Group, ...] = (
         "These are written, not thought up, so they cost nothing.",
         (
             field(
+                "follow_ups",
+                "Ask how a plan went",
+                "The day after, with buttons to answer in one tap, so the ideas list learns what "
+                "you liked. No means nobody is asked; how it went can still be told any time.",
+            ),
+            field(
                 "follow_up_hour",
                 "Time to ask how a plan went",
-                "The day after a plan, so the ideas list learns what you liked.",
+                "The day after a plan, in the family's time zone.",
                 choices=HOURS,
                 words=HOUR_WORDS,
             ),
@@ -665,6 +759,21 @@ GROUPS: tuple[Group, ...] = (
                 "enrichment_notes",
                 "Say in the chat when an idea is filled in",
                 "A short note with what was found.",
+            ),
+        ),
+    ),
+    Group(
+        "messages",
+        "admins",
+        "When something needs fixing",
+        "Written, not thought up, so they cost nothing. The status page lists the same.",
+        (
+            field(
+                "admin_alerts",
+                "Tell admins on Telegram",
+                "When a company says its account is out of credit or refuses its key, the day's "
+                "spending limit is used up, or Google stops letting it at the calendar: each admin "
+                "with a Telegram id is told, and again at most twice a day while it lasts.",
             ),
         ),
     ),
@@ -701,18 +810,61 @@ GROUPS: tuple[Group, ...] = (
     ),
     Group(
         "lookups",
+        "when",
+        "When",
+        "Filling an idea in rarely changes what you do next, so by default it waits for the "
+        "evening and every idea waiting is looked up together, with one note in each chat for "
+        "what was found. Asked for now, by asking her, by the button on the status page or an "
+        "idea's page, or by /lookup on Telegram, one is looked up within a few minutes.",
+        (
+            field(
+                "lookups_when",
+                "Look ideas up",
+                words=(("evening", "together, each evening"), ("asap", "as soon as each is added")),
+            ),
+            field(
+                "lookup_hour",
+                "Time for the evening's lookups",
+                "In the family's time zone.",
+                choices=HOURS,
+                words=HOUR_WORDS,
+            ),
+        ),
+    ),
+    Group(
+        "lookups",
         "pace",
         "How often",
         "",
         (
             field(
                 "enrich_interval_minutes",
-                "Minutes between lookups",
-                "How often it checks for ideas waiting to be looked up.",
+                "Minutes between checks",
+                "How often it checks for ideas due to be looked up: how soon one asked for now is.",
             ),
-            field("enrich_batch", "Ideas looked up at a time"),
+            field(
+                "enrich_batch",
+                "Ideas looked up at a time",
+                "When each is looked up as it is added. The evening's lookups take every idea "
+                "waiting.",
+            ),
         ),
         folded=True,
+    ),
+    Group(
+        "connections",
+        "telegram-answering",
+        "Answering on Telegram",
+        "",
+        (
+            field(
+                "gather_seconds",
+                "Seconds to wait for more before answering",
+                "Several messages sent one after another are answered together, in one reply "
+                "and one model call, when each comes within this long of the last. Every "
+                "answer waits this long first. 0 answers each at once.",
+            ),
+        ),
     ),
     Group(
         "connections",
@@ -788,6 +940,18 @@ def parse(one: Field, given: str) -> Any:
     return text
 
 
+# The value of the last choice in a list box, which means "the one typed under it".
+ANOTHER = "another"
+
+
+def given(one: Field, form: Any) -> str:
+    """What one box sent: the choice, or, when the choice was "Another", what was typed for it."""
+    chosen = form[one.key]
+    if one.another and chosen == ANOTHER:
+        return form.get(f"{one.key}_{ANOTHER}", "")
+    return chosen
+
+
 def read_form(form: Any) -> tuple[dict[str, Any], dict[str, str]]:
     """Every box the form carried, as values and as complaints. Absent boxes are left alone."""
     values: dict[str, Any] = {}
@@ -796,7 +960,7 @@ def read_form(form: Any) -> tuple[dict[str, Any], dict[str, str]]:
         if one.key not in form:
             continue
         try:
-            values[one.key] = parse(one, form[one.key])
+            values[one.key] = parse(one, given(one, form))
         except ValueError as exc:
             problems[one.key] = str(exc)
     return values, problems
@@ -823,6 +987,7 @@ def placeholder(one: Field, value: Any) -> str:
 
 
 __all__ = [
+    "ANOTHER",
     "BEHAVIOUR",
     "BY_KEY",
     "COMPANIES",
@@ -834,6 +999,7 @@ __all__ = [
     "Group",
     "Section",
     "fallback",
+    "given",
     "groups_in",
     "parse",
     "placeholder",

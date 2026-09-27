@@ -376,6 +376,54 @@ def check_channels(app: App, report: Report, *, online: bool) -> None:
             report.add("telegram live", WARN, f"could not reach Telegram: {exc}")
 
 
+# What a link may answer and still be there: a page behind a sign-in says 401 or 403.
+LINK_THERE = frozenset({401, 403, 405})
+
+
+def check_links(report: Report, fetch: Any = None) -> None:
+    """Whether every page outside FamilyDB the page links to still answers (web/links.py), and
+    where one that moved to another site now is. Online only: it asks each once."""
+    from urllib.parse import urlparse
+
+    from familydb.web.links import LINKS
+
+    if fetch is None:
+        import httpx
+
+        def fetch(url: str) -> tuple[int, str]:
+            answer = httpx.get(url, follow_redirects=True, timeout=10)
+            return answer.status_code, str(answer.url)
+
+    dead: list[str] = []
+    moved: list[str] = []
+    for key, url in LINKS.items():
+        try:
+            status, landed = fetch(url)
+        except Exception as exc:
+            dead.append(f"{key} ({type(exc).__name__})")
+            continue
+        if status >= 400 and status not in LINK_THERE:
+            dead.append(f"{key} ({status})")
+        elif urlparse(landed).hostname != urlparse(url).hostname:
+            moved.append(f"{key} now at {landed}")
+    if dead or moved:
+        report.add(
+            "links",
+            WARN,
+            "; ".join(
+                part
+                for part in (
+                    f"no answer from {', '.join(dead)}" if dead else "",
+                    "; ".join(moved),
+                )
+                if part
+            ),
+            "Change the address in src/familydb/web/links.py",
+        )
+    else:
+        report.add("links", OK, f"all {len(LINKS)} pages the setup steps link to answer")
+
+
 def check_integrations(app: App, report: Report) -> None:
     settings = app.settings
     if calendar_available(settings):
@@ -587,6 +635,8 @@ def run(app: App, *, online: bool = False) -> Report:
         check_channels(app, report, online=online)
         check_integrations(app, report)
         check_web(app, report, conn)
+        if online:
+            check_links(report)
         check_service(report)
     finally:
         if conn is not None:

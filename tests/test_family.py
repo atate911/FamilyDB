@@ -239,3 +239,143 @@ def test_an_age_and_the_next_birthday_are_worked_out_by_code() -> None:
     assert family.next_birthday("2017-03-14", today) == date(2027, 3, 14)
     assert family.next_birthday("2016-02-29", today) == date(2027, 3, 1)  # no 29th in 2027
     assert family.next_birthday("2016-02-29", date(2027, 12, 1)) == date(2028, 2, 29)
+
+
+# -- taking somebody off for good ------------------------------------------------------------------
+
+
+def test_every_column_that_points_at_a_member_is_named_for_taking_somebody_off(conn) -> None:
+    """A table added later that points at a member must say what happens to it, or taking
+    somebody off would stop on it."""
+    pointing = {
+        (table, fk["from"])
+        for (table,) in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
+        for fk in conn.execute(f"PRAGMA foreign_key_list({table})")
+        if fk["table"] == "members"
+    }
+    assert pointing == set(members.POINTING_AT)
+
+
+def test_somebody_taken_off_leaves_what_they_said_unnamed_and_takes_what_was_theirs(
+    conn, family_members
+) -> None:
+    from familydb.store import ideas, locations, logins, memories
+
+    alex, sam = family_members["alex"], family_members["sam"]
+    with db.transaction(conn):
+        said = messages.insert_in(
+            conn,
+            channel="telegram",
+            channel_update_id="9",
+            chat_id="c",
+            member_id=alex.id,
+            text="we should try the ramen place",
+            now=NOW,
+        )
+        idea = ideas.insert(conn, title="Ramen", kind="restaurant", suggested_by=alex.id, now=NOW)
+        about = memories.insert(
+            conn,
+            member_id=alex.id,
+            category="food",
+            fact="Alex is vegetarian",
+            firm=True,
+            inferred=False,
+            until=None,
+            source_message_id=said.id,
+            said_by=alex.id,
+            now=NOW,
+        )
+        told = memories.insert(
+            conn,
+            member_id=None,
+            category="food",
+            fact="The family likes ramen",
+            firm=False,
+            inferred=True,
+            until=None,
+            source_message_id=said.id,
+            said_by=alex.id,
+            now=NOW,
+        )
+        conn.execute("UPDATE memories SET replaced_by = ? WHERE id = ?", (about.id, told.id))
+        locations.record(conn, alex.id, lat=1.0, lon=2.0, live=False, now=NOW)
+    family.give_starting_password(conn, alex.id, by=sam.id, now=NOW)
+    family.invite(conn, alex.id, by=sam.id, now=_at())
+
+    gone = family.remove(conn, alex.id, by=sam.id, seen=family.revision(alex), now=NOW)
+    assert gone.display_name == "Alex" and members.get(conn, alex.id) is None
+    kept = messages.get(conn, said.id)
+    assert kept.text == "we should try the ramen place" and kept.member_id is None
+    assert ideas.get(conn, idea.id).suggested_by is None
+    # What she knew about Alex went; what Alex told her about the family stays, unnamed.
+    assert [row["id"] for row in conn.execute("SELECT id FROM memories")] == [told.id]
+    assert conn.execute("SELECT said_by, replaced_by FROM memories").fetchone()[:] == (None, None)
+    assert logins.get(conn, alex.id) is None
+    for table in ("member_locations", "telegram_invites"):
+        assert conn.execute(f"SELECT count(*) FROM {table}").fetchone()[0] == 0, table
+    # The name is free again, for somebody new.
+    family.add(conn, "Alex", "parent", telegram_id="1002", now=NOW)
+
+
+def test_nobody_takes_themselves_or_the_last_admin_off(conn, family_members) -> None:
+    sam, alex = family_members["sam"], family_members["alex"]
+    with pytest.raises(family.FamilyError, match="yourself"):
+        family.remove(conn, alex.id, by=alex.id, seen=family.revision(alex), now=NOW)
+    with pytest.raises(family.FamilyError, match="only admin"):
+        family.remove(conn, sam.id, by=alex.id, seen=family.revision(sam), now=NOW)
+    with pytest.raises(family.FamilyError, match="changed since"):
+        family.remove(conn, alex.id, by=sam.id, seen="stale", now=NOW)
+    assert members.get(conn, sam.id) and members.get(conn, alex.id)
+
+
+def test_nothing_more_is_said_in_the_private_chat_of_somebody_taken_off(conn, family_members):
+    from familydb.store import plans, tasks
+
+    alex, sam = family_members["alex"], family_members["sam"]
+    private = alex.channel_user_id
+    with db.transaction(conn):
+        task = tasks.insert(
+            conn,
+            title="Dentist",
+            notes="",
+            owner_id=alex.id,
+            due_at=None,
+            preferred_window="",
+            operation_key="k1",
+            channel="telegram",
+            chat_id=private,
+            now=NOW,
+        )
+        tasks.add_reminder(conn, task, "2026-09-21T16:00:00Z")
+        plan = plans.insert(
+            conn,
+            title="Zoo",
+            start="2026-09-26",
+            end=None,
+            all_day=True,
+            channel="telegram",
+            chat_id=private,
+            now=NOW,
+        )
+        queued = messages.insert_out(
+            conn, channel="telegram", chat_id=private, text="Reminder", now=NOW
+        )
+        shared = tasks.insert(
+            conn,
+            title="Bins",
+            notes="",
+            owner_id=alex.id,
+            due_at=None,
+            preferred_window="",
+            operation_key="k2",
+            channel="telegram",
+            chat_id="-100",
+            now=NOW,
+        )
+
+    family.remove(conn, alex.id, by=sam.id, seen=family.revision(alex), now=NOW)
+    assert tasks.get(conn, task).status == "cancelled"
+    assert not tasks.has_pending_reminder(conn, task)
+    assert plans.get(conn, plan.id).chat_id is None  # no follow-up or evening check there
+    assert messages.get(conn, queued.id).cancelled_at is not None
+    assert tasks.get(conn, shared).status == "open"  # the family group's task stays

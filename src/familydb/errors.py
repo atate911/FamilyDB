@@ -20,9 +20,26 @@ class ConfigError(FamilyDBError):
 
 
 class AgentError(FamilyDBError):
-    """The model call failed. `retryable` says whether a later attempt may succeed."""
+    """The model call failed. `retryable` says whether a later attempt may succeed.
 
-    def __init__(self, message: str, *, retryable: bool, request_id: str | None = None) -> None:
+    `trouble` names a failure only an admin can fix, as the provider module read it: "credit",
+    the company's account is out of credit or over its quota; "key", the company refused the
+    key; "model", the company does not have the model asked for (retired, or mistyped);
+    "refused", the company refused the request for a reason the provider module cannot name
+    (a 4xx it does not know), which may be a change on the company's side. All are worth telling
+    an admin (alerts.py); all but "refused" are worth asking the other company instead, since a
+    request refused as it was sent may fail the same way anywhere.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        retryable: bool,
+        request_id: str | None = None,
+        trouble: str | None = None,
+    ) -> None:
         super().__init__(message)
         self.retryable = retryable
         self.request_id = request_id
+        self.trouble = trouble

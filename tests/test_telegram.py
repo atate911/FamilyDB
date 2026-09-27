@@ -2,6 +2,7 @@ import asyncio
 from types import SimpleNamespace
 from typing import Any
 
+import pytest
 from telegram import Bot, Update, User
 from telegram.ext import Application, Updater
 
@@ -20,6 +21,13 @@ from familydb.channels.telegram import (
 from familydb.store import locations
 
 TOKEN = "123456:TEST-TOKEN"
+
+
+@pytest.fixture
+def settings(settings):
+    """Answered at once: these are about what is answered and how it is sent. Waiting to answer
+    several messages together has tests of its own (test_gathering.py)."""
+    return settings.model_copy(update={"gather_seconds": 0})
 
 
 def _update(

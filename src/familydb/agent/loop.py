@@ -10,9 +10,11 @@ from __future__ import annotations
 import json
 import logging
 import time
+import uuid
 from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol
 
+from familydb import alerts
 from familydb.agent import spending
 from familydb.agent.compose import exchange_chars
 from familydb.agent.providers import model_at, prices
@@ -57,7 +59,7 @@ class TurnResult:
 
 def worth_switching(exc: AgentError) -> bool:
     """Whether the other provider might do better: this one is busy, unreachable or unusable."""
-    if exc.retryable:
+    if exc.retryable or exc.trouble in ("credit", "key", "model"):
         return True
     reason = str(exc).lower()
     return "credential" in reason or "api key" in reason or "authentication" in reason
@@ -115,6 +117,8 @@ def run_turn(
     )
     limit = max_iterations or settings.agent_max_iterations
     ctx.allowed_tools = frozenset(tool.name for tool in request.tools)
+    if ctx.turn is None:
+        ctx.turn = uuid.uuid4().hex[:16]
     actions: list[dict[str, Any]] = []
     totals: dict[str, int] = dict.fromkeys(USAGE_KEYS, 0)
 
@@ -149,6 +153,13 @@ def run_turn(
             try:
                 reply = active.send(request)
             except AgentError as exc:
+                alerts.noticed(
+                    ctx.conn,
+                    exc,
+                    provider=active.name,
+                    now=ctx.clock.now(),
+                    model=request.model or active.model_for(surface),  # type: ignore[arg-type]
+                )
                 switchable = fallback is not None and active is not fallback
                 if not (switchable and first_call_only(request) and worth_switching(exc)):
                     raise
@@ -167,6 +178,13 @@ def run_turn(
                 try:
                     reply = active.send(request)
                 except AgentError as spare_exc:
+                    alerts.noticed(
+                        ctx.conn,
+                        spare_exc,
+                        provider=active.name,
+                        now=ctx.clock.now(),
+                        model=request.model or active.model_for(surface),  # type: ignore[arg-type]
+                    )
                     # Preserve a retryable primary failure even if the spare says 400.
                     log.warning("%s could not take it either: %s", active.name, spare_exc)
                     raise exc from spare_exc
@@ -202,8 +220,13 @@ def run_turn(
                 cost_estimated=not listed,
                 kind=kind,
                 sections=_sizes(sections, request),
+                turn=ctx.turn,
+                about=ctx.about,
             )
             spending.settle(ctx.conn, held, ctx.clock.now())
+            alerts.answered(ctx.conn, active.name, asked)
+        if reply.dropped:
+            alerts.dropped(ctx.conn, active.name, asked, reply.dropped, ctx.clock.now())
 
         if reply.stop == "refusal":
             log.warning("%s refused the request (category=%s)", active.name, reply.refusal)
@@ -243,6 +266,7 @@ def run_turn(
                     is_error=result.is_error,
                     duration_ms=int((time.monotonic() - tool_started) * 1000),
                     now=ctx.now_iso(),
+                    turn=ctx.turn,
                 )
             actions.append(result.summary)
             exchange.outcomes.append(

@@ -38,6 +38,8 @@ def run_follow_ups(app: App) -> int:
     run_deliveries(app)  # anything an earlier run could not send goes first, and only once
     with closing(app.connect()) as conn:
         app.refresh(conn)
+        if not app.settings.follow_ups:
+            return 0
         # Asking how a plan went that somebody cancelled in Google would be a small insult.
         # When Google cannot be asked, the questions wait for a run that can check first.
         if app.calendar is not None:

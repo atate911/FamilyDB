@@ -32,8 +32,10 @@ from flask import (
 
 from familydb import family as rules
 from familydb import passwords, roles
+from familydb.agent import spending
 from familydb.app import App
 from familydb.dates import utc_iso
+from familydb.store import calls
 from familydb.store import knocks as knock_store
 from familydb.store import logins as login_store
 from familydb.store import members as member_store
@@ -50,6 +52,10 @@ MAX_ID = 2**63 - 1
 NOTICE = "edit"  # the same stream as the other edit forms, drawn by the base template
 ADDED = "{name} is on the family list."
 CHANGED = "Saved {name}."
+REMOVED = (
+    "{name} is off the family list for good. What they said stays in the chat, without their name."
+)
+NOT_SURE = "Tick the box to say you are sure first: taking somebody off cannot be undone."
 LINKED = "Linked. The bot knows {name} on Telegram now, and will answer them."
 NOBODY = "There is nobody by that number any more."
 PASSWORD_SAVED = (
@@ -97,9 +103,19 @@ def show() -> str:
         strangers = knock_store.recent(conn, channel=rules.TELEGRAM)
         passwords_by_member = login_store.by_member(conn)
         personal = auth.own_passwords(conn)
+        # How many messages each kid has had answered today, when the family set a number.
+        limit = app.settings.kid_daily_messages
+        since = spending.day_start(app.settings, app.clock.now())
+        today = {
+            person.id: calls.answered_for(conn, person.id, since=since)
+            for person in everyone
+            if limit and roles.daily_limited(person.role)
+        }
     return render_template(
         "family.html",
         people=[_person(person, passwords_by_member.get(person.id)) for person in everyone],
+        today=today,
+        daily_limit=limit,
         roles=member_store.ROLES,
         role_words=views.ROLE_WORDS,
         knocks=[views.knock_row(knock, app.settings.tzinfo) for knock in strangers],
@@ -184,6 +200,34 @@ def change(member_id: int) -> Response:
     log.info("family member %s changed from the page by %s", member_id, auth.client_address())
     return _answer(
         setup, said=CHANGED.format(name=person.display_name), fallback=url_for("family.show")
+    )
+
+
+@bp.post(f"/family/<int(max={MAX_ID}):member_id>/remove")
+@once
+def remove(member_id: int) -> Response:
+    """Take somebody off the list for good, once the form's box saying so is ticked."""
+    here = url_for("family.edit", member_id=member_id)
+    if (complaint := auth.refused()) is not None:
+        return _answer(None, problem=complaint, fallback=here)
+    if request.form.get("sure") != "yes":
+        return _answer(None, problem=NOT_SURE, fallback=here)
+    app = _app()
+    visiting = auth.visitor()
+    try:
+        with closing(app.connect()) as conn:
+            person = rules.remove(
+                conn,
+                member_id,
+                by=visiting.member.id if visiting.member else None,
+                seen=request.form.get("revision", ""),
+                now=utc_iso(app.clock.now()),
+            )
+    except rules.FamilyError as exc:
+        return _answer(None, problem=str(exc), fallback=here)
+    log.info("family member %s removed from the page by %s", member_id, auth.client_address())
+    return _answer(
+        None, said=REMOVED.format(name=person.display_name), fallback=url_for("family.show")
     )
 
 

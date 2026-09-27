@@ -178,6 +178,15 @@ def due_for_check(conn: sqlite3.Connection, *, day: str) -> list[Plan]:
     return [Plan.from_row(row) for row in rows]
 
 
+def leave_chat(conn: sqlite3.Connection, channel: str, chat_id: str) -> int:
+    """Forget which chat plans were made in, so nothing about them is said there again: the chat
+    of somebody taken off the list. The plans themselves stay."""
+    return conn.execute(
+        "UPDATE plans SET channel = NULL, chat_id = NULL WHERE channel = ? AND chat_id = ?",
+        (channel, chat_id),
+    ).rowcount
+
+
 def mark_checked(conn: sqlite3.Connection, plan_id: int, *, now: str) -> None:
     conn.execute("UPDATE plans SET checked_at = ? WHERE id = ?", (now, plan_id))
 

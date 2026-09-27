@@ -269,22 +269,14 @@ def test_a_kid_past_her_share_is_told_by_code_and_nothing_is_asked(
     assert len(api.requests) == 1
 
 
-def test_a_kid_s_lookups_wait_for_the_hour_and_go_together(settings, conn, family, mia) -> None:
-    from familydb.clock import FixedClock
-    from familydb.jobs.enrich import _held_back
-    from familydb.store import ideas
-
-    with db.transaction(conn):
-        hers = ideas.insert(conn, title="Thai place", kind="restaurant", suggested_by=mia.id)
-        ours = ideas.insert(conn, title="Ramen", kind="restaurant", suggested_by=family["sam"].id)
-    daytime = App(settings, FixedClock(datetime(2026, 9, 20, 14, 3), TZ))
-    held = _held_back(daytime, conn)
-    assert mia.id in held and family["sam"].id not in held
-    waiting = ideas.pending_enrichment(conn, limit=10, holding=held)
-    assert [i.id for i in waiting] == [ours.id]
-    evening = App(settings, FixedClock(datetime(2026, 9, 20, settings.kid_lookup_hour, 5), TZ))
-    assert _held_back(evening, conn) == ()
-    assert {i.id for i in ideas.pending_enrichment(conn, limit=10)} == {hers.id, ours.id}
+def test_a_kid_cannot_have_lookups_done_at_once(conn, settings, clock, family, mia, registry):
+    """Her lookups wait for the evening with everybody's; a parent may still ask for one now."""
+    web = settings.model_copy(update={"web_tools_enabled": True})
+    kid = ToolContext(conn=conn, settings=web, clock=clock, member=mia)
+    parent = ToolContext(conn=conn, settings=web, clock=clock, member=family["alex"])
+    refused = _run(registry, "look_up_now", {"idea_ids": []}, kid)
+    assert "error" in refused and "evening" in refused["error"]["error"]
+    assert "error" not in _run(registry, "look_up_now", {"idea_ids": []}, parent)
 
 
 # -- the two messages to the parents, and her answers ---------------------------------------------

@@ -56,7 +56,7 @@ def test_a_box_left_empty_says_what_it_falls_back_to(page) -> None:
     spending = page.get("/settings/spending").text
     assert "Default (Medium)" in spending  # a dropdown, in the page's words rather than "medium"
     assert "Between 1 and 20." in spending  # read off the setting, not written out twice
-    assert 'placeholder="claude-opus-5"' in page.get("/settings/model").text
+    assert "Default (claude-opus-5)" in page.get("/settings/model").text
     messages = page.get("/settings/messages").text
     assert "Default (18:00)" in messages and "Default (Thursday)" in messages
     assert "Default (yes)" in messages  # a yes or no, never true or false
@@ -253,13 +253,31 @@ def test_a_page_with_no_password_shows_a_key_to_whoever_can_reach_it(settings, c
     assert shown.status_code == 200 and "sk-home" in shown.text
 
 
-def test_a_model_box_suggests_models_without_limiting_them(page) -> None:
+def test_a_model_box_offers_models_without_limiting_them(page) -> None:
+    """A dropdown of the company's models, each with what it is, and "Another model" opening a
+    box to type one the list does not have: a model released next week has to fit."""
     text = page.get("/settings/model").text
-    assert 'list="s-openai_model"' in text
-    assert '<datalist id="s-openai_model">' in text and '<option value="gpt-6-luna">' in text
-    # Anything typed is still taken: a model released next week has to fit.
+    assert _choices(text, "openai_model")[0] == "Default (gpt-6-luna)"
+    assert "gpt-6-luna · GPT-6 Luna, everyday · $0.10 in, $0.50 out" in _choices(
+        text, "openai_model"
+    )
+    assert _choices(text, "openai_model")[-1] == "Another model…"
+    assert '<input id="a-openai_model" name="openai_model_another"' in text
     page.post("/settings", data=_whole_form(page, openai_model="gpt-6-sol"))
     assert page.app.settings.openai_model == "gpt-6-sol"
+    assert '<option value="gpt-6-sol" selected>' in page.get("/settings/model").text
+
+    # Another, typed: taken, and shown again as typed, with "Another" chosen.
+    typed = _whole_form(page, openai_model="another", openai_model_another="gpt-7-nova")
+    page.post("/settings", data=typed)
+    assert page.app.settings.openai_model == "gpt-7-nova"
+    text = page.get("/settings/model").text
+    assert '<option value="another" selected>Another model…</option>' in text
+    assert 'name="openai_model_another" type="text" autocomplete="off"' in text
+    assert 'value="gpt-7-nova"' in text
+    # What was typed under a list that did not say "Another" is not read.
+    page.post("/settings", data=_whole_form(page, openai_model="", openai_model_another="x"))
+    assert page.app.settings.openai_model == "gpt-6-luna"
 
 
 def _choices(text: str, key: str) -> list[str]:
@@ -286,8 +304,8 @@ def test_each_level_says_which_model_it_means_and_what_it_costs(page) -> None:
     ]
     assert '<option value="best" selected>best: GPT-6 Astra' in text
     # A model box says where each name stands, and what it costs.
-    assert '<option value="gpt-6-sol">GPT-6 Sol, better · $2.00 in, $10.00 out</option>' in text
-    assert '<option value="gpt-5">$1.25 in, $10.00 out</option>' in text
+    assert "gpt-6-sol · GPT-6 Sol, better · $2.00 in, $10.00 out" in _choices(text, "openai_model")
+    assert "gpt-5 · $1.25 in, $10.00 out" in _choices(text, "openai_model")
 
 
 def test_the_daily_limit_is_on_the_page(page) -> None:
@@ -337,8 +355,9 @@ def test_a_hearing_model_is_offered_and_checked_like_the_other_models(page, monk
     """Each with what it costs, by the minute for one billed so, and a name its company does not
     have is refused, as every voice note would otherwise go unheard."""
     text = page.get("/settings/model").text
-    assert '<option value="whisper-1">$0.006 a minute</option>' in text
-    assert '<option value="gpt-4o-mini-transcribe">$1.25 in, $5.00 out</option>' in text
+    offered = _choices(text, "openai_transcribe_model")
+    assert "whisper-1 · $0.006 a minute" in offered
+    assert "gpt-4o-mini-transcribe · $1.25 in, $5.00 out" in offered
     _ask(monkeypatch, _Company({"gpt-4o-mini-transcribe"}))
     typo = _whole_form(page, openai_transcribe_model="gpt-4o-mini-transcrib")
     response = page.post("/settings", data=typo)
@@ -528,7 +547,7 @@ def test_the_digest_chat_is_offered_from_the_chats_it_has_seen(page, conn) -> No
                 now="2026-09-20T10:00:00Z",
             )
     offers = re.search(
-        r'<datalist id="s-digest_chat_id">(.*?)</datalist>',
+        r'<select id="f-digest_chat_id"[^>]*>(.*?)</select>',
         page.get("/settings/messages").text,
         re.S,
     )
@@ -693,3 +712,57 @@ def test_the_connections_page_says_what_the_bot_can_read_in_a_group(page) -> Non
     assert saved.headers["Location"] == "/settings/connections"
     assert app.settings.telegram_require_mention is True
     assert app.settings.google_calendar_id is None  # the other form's box, left alone
+
+
+def test_the_messages_page_says_what_goes_out_unasked_and_how_often(page, conn) -> None:
+    from familydb.store import messages
+
+    with db.transaction(conn):
+        asked = messages.insert_out(
+            conn,
+            channel="telegram",
+            chat_id="-100",
+            text="How was Hopscotch on Saturday?",
+            now="2026-09-19T17:00:00Z",
+            sent_as="follow_up",
+        )
+        messages.mark_delivered(conn, [asked.id], now="2026-09-19T17:00:01Z")
+        messages.insert_out(
+            conn, channel="web", chat_id="web", text="An answer", now="2026-09-20T21:00:00Z"
+        )
+    text = page.get("/settings/messages").text
+    listed = re.search(r'<section class="panel" id="on-her-own">.*?</section>', text, re.S)
+    assert listed is not None
+    shown = " ".join(listed.group(0).split())
+    assert "How did it go?" in shown and "1 sent in 30 days, the last 19 Sep, 10:00." in shown
+    assert "Weekend ideas" in shown and "Nowhere chosen, so none is sent" in shown
+    assert "Costs: one model call a week." in shown and '<a href="#others">Change</a>' in shown
+    assert "How was Hopscotch on Saturday?" in shown and "a Telegram group" in shown
+    assert "An answer" not in shown  # a reply is not hers unasked
+    # And the switch for it is on the same page.
+    page.post("/settings", data=_whole_form(page, follow_ups="false"))
+    assert page.app.settings.follow_ups is False
+    assert 'How did it go?</strong> <span class="tag">off</span>' in " ".join(
+        page.get("/settings/messages").text.split()
+    )
+
+
+def test_the_general_page_says_how_to_give_the_page_a_name(page) -> None:
+    from familydb.web.settings import reached_by
+
+    text = page.get("/settings/general").text
+    assert "A name for the page" in text and "family.example.com" in text
+    assert "https family.example.com</code>" in text  # the example until a name is typed
+
+    named = page.get("/settings/general?domain=Family.Tates.ORG.").text
+    assert "https family.tates.org</code>" in named and "dig +short family.tates.org" in named
+    assert "WEB_DOMAIN=family.tates.org" in named  # the Docker way too
+
+    refused = page.get("/settings/general?domain=<script>alert(1)</script>").text
+    assert "That is not a name that can be pointed at a server" in refused
+    assert "<script>alert" not in refused and "https family.example.com</code>" in refused
+
+    assert reached_by("93.184.216.34") == "public"
+    assert reached_by("192.168.1.20") == "private"
+    assert reached_by("127.0.0.1") == "local" and reached_by("localhost") == "local"
+    assert reached_by("family.example.com") == "name"

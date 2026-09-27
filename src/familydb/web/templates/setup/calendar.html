@@ -67,19 +67,19 @@
       Google Cloud. It is free, and you do it once. Sign in as the Google account that owns the
       family calendar throughout.</p>
     <ol class="steps">
-      <li><a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener noreferrer">Make
+      <li><a href="{{ links.google_project }}" target="_blank" rel="noopener noreferrer">Make
         a project</a>: name it {{ site_title }} and press <em>Create</em>. Wait for it to finish,
         and check that it is the project chosen at the top of the page.</li>
-      <li><a href="https://console.cloud.google.com/apis/library/calendar-json.googleapis.com" target="_blank" rel="noopener noreferrer">Turn
+      <li><a href="{{ links.google_calendar_api }}" target="_blank" rel="noopener noreferrer">Turn
         on the Google Calendar API</a>: press <em>Enable</em>.</li>
-      <li><a href="https://console.cloud.google.com/auth/overview" target="_blank" rel="noopener noreferrer">Set
+      <li><a href="{{ links.google_consent }}" target="_blank" rel="noopener noreferrer">Set
         up the sign-in screen</a>: press <em>Get started</em>. App name: {{ site_title }}; support
         email: yours. Audience: <em>External</em>. Contact email: yours. Agree, and
         <em>Create</em>.</li>
-      <li><a href="https://console.cloud.google.com/auth/audience" target="_blank" rel="noopener noreferrer">Publish
+      <li><a href="{{ links.google_audience }}" target="_blank" rel="noopener noreferrer">Publish
         it</a>: press <em>Publish app</em> and confirm. <strong>Do not skip this</strong>: left in
         “Testing”, Google cuts the connection off after seven days.</li>
-      <li><a href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener noreferrer">Make
+      <li><a href="{{ links.google_clients }}" target="_blank" rel="noopener noreferrer">Make
         the client</a>: <em>Create client</em>, application type <em>Desktop app</em>, name
         {{ site_title }}, <em>Create</em>. Then press <em>Download JSON</em>, open the file it
         saves, and copy everything in it.</li>

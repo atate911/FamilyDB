@@ -12,13 +12,16 @@ the recording as a file; a photo goes to the same endpoint as a message, as a da
 from __future__ import annotations
 
 import base64
+import dataclasses
 import hashlib
 import json
 import logging
+from collections.abc import Callable
 from typing import Any
 
 import openai
 
+from familydb.agent.providers import parts
 from familydb.agent.providers.base import (
     LOOK_TOKENS,
     Audio,
@@ -41,10 +44,22 @@ log = logging.getLogger(__name__)
 
 NAME = "openai"
 NO_CREDENTIALS = "no OpenAI credentials configured: set OPENAI_API_KEY (see .env.example)"
-# GPT-6 takes all five of our effort names as they are. The models before it stop at high, so
-# the top two collapse there; sending them xhigh would be a 400 on every request.
+# GPT-6 takes all five of our effort names as they are. The reasoning models before it stop at
+# high, so the top two collapse there; sending them xhigh would be a 400 on every request. The
+# models before those do not reason at all, and take no `reasoning` (GPT-4o, GPT-4.1). Named by
+# what they are rather than by what works, so a model released later is sent everything; if it
+# turns out not to take a part, the provider leaves it out (PARTS).
 EFFORT = {"low": "low", "medium": "medium", "high": "high", "xhigh": "high", "max": "high"}
-FULL_EFFORT_MODELS = ("gpt-6",)
+HIGH_AT_MOST_MODELS = ("gpt-5", "o1", "o3", "o4")
+NO_REASONING_MODELS = ("gpt-3", "gpt-4", "chatgpt-")
+
+# What a request carries that a model may not take: sent again without it when a 400 names it
+# (providers/parts.py). In order: capping the effort is tried before leaving reasoning out.
+TOP_EFFORT = parts.Part("the top effort levels", ("xhigh", "'max'", '"max"'))
+REASONING = parts.Part("reasoning settings", ("reasoning",))
+CACHE_KEY = parts.Part("the prompt cache key", ("prompt_cache_key",))
+TOOL_CAP = parts.Part("the cap on tool calls", ("max_tool_calls",))
+PARTS = (TOP_EFFORT, REASONING, CACHE_KEY, TOOL_CAP)
 REFUSAL_REASONS = {"content_filter", "refusal"}
 
 
@@ -98,9 +113,30 @@ def _accepts_null(schema: dict[str, Any]) -> bool:
 
 
 def reasoning_effort(model: str, effort: str) -> str:
-    if model.startswith(FULL_EFFORT_MODELS):
-        return effort
-    return EFFORT.get(effort, "medium")
+    if model.startswith(HIGH_AT_MOST_MODELS) or TOP_EFFORT.name in parts.left_out(NAME, model):
+        return EFFORT.get(effort, "medium")
+    return effort
+
+
+def reasons(model: str) -> bool:
+    """Whether this model takes reasoning settings."""
+    return not model.startswith(NO_REASONING_MODELS) and (
+        REASONING.name not in parts.left_out(NAME, model)
+    )
+
+
+def _carried(payload: dict[str, Any]) -> set[str]:
+    carried: set[str] = set()
+    reasoning = payload.get("reasoning")
+    if reasoning:
+        carried.add(REASONING.name)
+        if reasoning.get("effort") in ("xhigh", "max"):
+            carried.add(TOP_EFFORT.name)
+    if "prompt_cache_key" in payload:
+        carried.add(CACHE_KEY.name)
+    if "max_tool_calls" in payload:
+        carried.add(TOOL_CAP.name)
+    return carried
 
 
 def _search_effort(max_uses: int | None) -> str:
@@ -228,13 +264,21 @@ class OpenAIProvider:
             "input": self.transcript(request),
             "tools": self.tools(request),
             "max_output_tokens": request.max_tokens or settings.max_output_tokens,
-            "reasoning": {"effort": reasoning_effort(model, request.effort or settings.effort)},
             "store": False,  # the family's messages are not left on someone else's server
         }
+        if reasons(model):
+            payload["reasoning"] = {
+                "effort": reasoning_effort(model, request.effort or settings.effort)
+            }
+        left_out = parts.left_out(NAME, model)
         key = self.cache_key(request.system)
-        if key:
+        if key and CACHE_KEY.name not in left_out:
             payload["prompt_cache_key"] = key
-        if request.web is not None and request.web.max_uses is not None:
+        if (
+            request.web is not None
+            and request.web.max_uses is not None
+            and TOOL_CAP.name not in left_out
+        ):
             # There is no per-tool cap here, only a cap on the whole turn, and that cap counts
             # the hand-back call too. Leaving room for each declared tool once means a worker
             # that has used all its searches can still report what it found.
@@ -325,6 +369,19 @@ class OpenAIProvider:
             client.close()
         return True
 
+    def listed_models(self) -> list[str] | None:
+        try:
+            client = make_client(self.settings)
+        except AgentError:
+            return None
+        try:
+            return [model.id for model in client.with_options(timeout=20.0).models.list()]
+        except Exception as exc:  # unreachable, unauthorised: not an answer about the models
+            log.info("could not ask OpenAI for its models: %s", exc)
+            return None
+        finally:
+            client.close()
+
     def check_key(self) -> KeyCheck:
         try:
             client = make_client(self.settings)
@@ -349,11 +406,25 @@ class OpenAIProvider:
         )
 
     def send(self, request: TurnRequest) -> ModelReply:
-        try:
-            response = self.api.create(**self.payload(request))
-        except openai.OpenAIError as exc:
-            raise _failure(exc) from exc
-        return self.reply(response)
+        response, dropped = self._create(lambda: self.payload(request))
+        return dataclasses.replace(self.reply(response), dropped=dropped)
+
+    def _create(self, build: Callable[[], dict[str, Any]]) -> tuple[Any, tuple[str, ...]]:
+        """One request, and again without any part a 400 names (PARTS), each at most once."""
+        dropped: list[str] = []
+        while True:
+            payload = build()
+            try:
+                return self.api.create(**payload), tuple(dropped)
+            except openai.BadRequestError as exc:
+                part = parts.refused(str(exc), PARTS, _carried(payload))
+                if part is None or part.name in dropped:
+                    raise _failure(exc) from exc
+                log.warning("OpenAI refused %s for %s; leaving it out", part.name, payload["model"])
+                parts.leave_out(NAME, payload["model"], part.name)
+                dropped.append(part.name)
+            except openai.OpenAIError as exc:
+                raise _failure(exc) from exc
 
     # -- hearing --------------------------------------------------------------------------
     def listener(self) -> str | None:
@@ -417,10 +488,7 @@ class OpenAIProvider:
         return payload
 
     def describe(self, picture: Picture, ask: str) -> Seen:
-        try:
-            response = self.api.create(**self.seeing(picture, ask))
-        except openai.OpenAIError as exc:
-            raise _failure(exc) from exc
+        response, dropped = self._create(lambda: self.seeing(picture, ask))
         reply = self.reply(response)
         return Seen(
             text=reply.text,
@@ -428,12 +496,18 @@ class OpenAIProvider:
             model=reply.model,
             request_id=reply.request_id,
             stop=reply.stop,
+            dropped=dropped,
         )
 
 
 def _failure(exc: openai.OpenAIError) -> AgentError:
-    """A failed request as the loop understands it: worth trying again later, or not."""
+    """A failed request as the loop understands it: worth trying again later, or not.
+
+    OpenAI says an account is out of credit with a 429, the status it also uses for "slow
+    down", so the code on it tells the two apart: that one is not worth waiting for."""
     if isinstance(exc, openai.RateLimitError):
+        if getattr(exc, "code", None) == "insufficient_quota" or "insufficient_quota" in str(exc):
+            return AgentError(f"out of credit: {exc}", retryable=False, trouble="credit")
         return AgentError(f"rate limited: {exc}", retryable=True)
     if isinstance(exc, openai.APIConnectionError):
         return AgentError(f"connection error: {exc}", retryable=True)
@@ -443,8 +517,20 @@ def _failure(exc: openai.OpenAIError) -> AgentError:
             f"API error {status}: {exc}",
             retryable=status >= 500,
             request_id=getattr(exc, "request_id", None),
+            trouble=_trouble(status, str(exc)),
         )
     return AgentError(f"OpenAI error: {exc}", retryable=False)
+
+
+def _trouble(status: int, said: str) -> str | None:
+    """What an admin would have to fix, from a refusal (a 429 is read above)."""
+    if status in (401, 403):
+        return "key"
+    if status == 404 and "model" in said.lower():
+        return "model"  # retired, or never was
+    if 400 <= status < 500 and status != 429:
+        return "refused"  # something about the request this module cannot name
+    return None
 
 
 def _arguments(item: Any) -> dict[str, Any]:

@@ -9,11 +9,15 @@ carried on the reply as `raw` rather than normalised away.
 from __future__ import annotations
 
 import base64
+import dataclasses
 import logging
+import threading
+from collections.abc import Callable
 from typing import Any
 
 import anthropic
 
+from familydb.agent.providers import parts
 from familydb.agent.providers.base import (
     LOOK_TOKENS,
     Audio,
@@ -61,24 +65,38 @@ OLDER_MODELS = (
     "claude-opus-4-2",  # the undotted first Claude 4 names, claude-opus-4-20250514
     "claude-sonnet-4-2",
 )
-# The web tools with dynamic filtering: only these families. Anything else gets the basic
-# versions, which are slower to read a page but work everywhere.
-DYNAMIC_WEB_MODELS = (
-    "claude-opus-4-6",
-    "claude-opus-4-7",
-    "claude-opus-4-8",
-    "claude-opus-5",  # and claude-opus-5-5
-    "claude-sonnet-4-6",
-    "claude-sonnet-5",
-)
+# The web tools with dynamic filtering run on every model since Opus 4.6 and Sonnet 4.6; the
+# models before them, the same older ones, get the basic versions, which are slower to read a
+# page but work everywhere. Named by what they are, so a model released later gets the newer
+# tools; if it turns out not to take them, the provider leaves them out (PARTS).
+BASIC_WEB_MODELS = OLDER_MODELS
 # Server-side refusal fallbacks exist for the models whose safety classifiers can decline a
-# request. A worker on Haiku has no such classifier, so the parameter is not sent to it.
-REFUSAL_FALLBACK_MODELS = ("claude-opus-5", "claude-fable-5", "claude-mythos-5")
+# request: the strongest, not Sonnet or Haiku, which have no such classifier, nor the older ones.
+# Named by what does not take them, so a stronger model released later has them too.
+NO_REFUSAL_FALLBACK_MODELS = (*OLDER_MODELS, "claude-sonnet", "claude-haiku")
+
+# What a request carries that the company may stop taking, or a new model may not take yet: sent
+# again without it when a 400 names it (providers/parts.py).
+FALLBACK = parts.Part(
+    "the refusal fallback", (FALLBACK_BETA, "fallbacks", "anthropic-beta", "betas")
+)
+NEWER_WEB = parts.Part(
+    "the newer web tools", (WEB_SEARCH["type"], WEB_FETCH["type"], "dynamic filtering")
+)
+THINKING = parts.Part("thinking and effort", ("thinking", "effort", "output_config"))
+PARTS = (FALLBACK, NEWER_WEB, THINKING)
 
 
 def thinks(model: str) -> bool:
     """Whether this model takes adaptive thinking and an effort level."""
-    return not model.startswith(OLDER_MODELS)
+    return not model.startswith(OLDER_MODELS) and THINKING.name not in parts.left_out(NAME, model)
+
+
+def falls_back(model: str) -> bool:
+    """Whether a refusal on this model may be answered by the server's fallback model."""
+    return not model.startswith(NO_REFUSAL_FALLBACK_MODELS) and (
+        FALLBACK.name not in parts.left_out(NAME, model)
+    )
 
 
 NO_CREDENTIALS = "no Anthropic credentials configured: set ANTHROPIC_API_KEY (see .env.example)"
@@ -88,6 +106,49 @@ def ensure_credentials(client: Any) -> None:
     """Fail early, and clearly, when the SDK found no credentials from any source."""
     if all(getattr(client, name, None) is None for name in CREDENTIAL_ATTRS):
         raise AgentError(NO_CREDENTIALS, retryable=False)
+
+
+# Asking the SDK whether it can find credentials means building a client, and a client builds
+# its own connection pool, which loads the machine's certificate bundle: some 50 ms each time, on
+# every page that asks whether a model is there. Nothing is ever sent through this one, so one
+# idle pool, built on first use and never closed, answers every such question in well under one.
+_idle_http: Any = None
+_idle_lock = threading.Lock()
+
+
+def _idle_pool() -> Any:
+    global _idle_http
+    with _idle_lock:
+        if _idle_http is None:
+            _idle_http = anthropic.DefaultHttpxClient()
+        return _idle_http
+
+
+def has_credentials(settings: Settings) -> bool:
+    """Whether the SDK finds credentials, in the settings or in any of its own places."""
+    try:
+        # Not closed: closing it would close the shared idle pool with it.
+        ensure_credentials(
+            anthropic.Anthropic(api_key=settings.anthropic_api_key, http_client=_idle_pool())
+        )
+    except AgentError:
+        return False
+    return True
+
+
+def trouble(status: int, said: str) -> str | None:
+    """What an admin would have to fix, from a refusal: a key refused (401, or 403, not allowed),
+    the account out of credit, which Anthropic answers with a 400 saying so, or a model it no
+    longer has (404)."""
+    if status in (401, 403):
+        return "key"
+    if status in (400, 402) and "credit balance" in said.lower():
+        return "credit"
+    if status == 404 and "model" in said.lower():
+        return "model"  # retired, or never was
+    if 400 <= status < 500 and status != 429:
+        return "refused"  # something about the request this module cannot name
+    return None
 
 
 def make_client(settings: Settings) -> anthropic.Anthropic:
@@ -107,9 +168,31 @@ def _request_id(exc: Exception) -> str | None:
     return headers.get("request-id") if headers is not None else None
 
 
+def _status_failure(exc: anthropic.APIStatusError) -> AgentError:
+    return AgentError(
+        f"API error {exc.status_code}: {exc.message}",
+        retryable=exc.status_code >= 500,
+        request_id=_request_id(exc),
+        trouble=trouble(exc.status_code, str(exc.message)),
+    )
+
+
+def _carried(payload: dict[str, Any]) -> set[str]:
+    """Which of the parts a company may refuse this request carries."""
+    carried: set[str] = set()
+    if payload.get("betas") or "fallbacks" in payload:
+        carried.add(FALLBACK.name)
+    newer = {WEB_SEARCH["type"], WEB_FETCH["type"]}
+    if any(tool.get("type") in newer for tool in payload.get("tools") or []):
+        carried.add(NEWER_WEB.name)
+    if "thinking" in payload or "output_config" in payload:
+        carried.add(THINKING.name)
+    return carried
+
+
 def web_tools(access: WebAccess, model: str) -> list[dict[str, Any]]:
     search, fetch = dict(WEB_SEARCH), dict(WEB_FETCH)
-    if not model.startswith(DYNAMIC_WEB_MODELS):
+    if model.startswith(BASIC_WEB_MODELS) or NEWER_WEB.name in parts.left_out(NAME, model):
         search["type"], fetch["type"] = BASIC_WEB_SEARCH, BASIC_WEB_FETCH
     if access.max_uses is not None:
         search["max_uses"] = access.max_uses
@@ -132,17 +215,13 @@ class AnthropicProvider:
     def configured(self) -> bool:
         """Whether a call could be made at all.
 
-        This one builds a throwaway client, because the SDK looks for credentials in places the
-        settings never see. It is closed again straight away: the status page asks this question
-        on every view, and a leaked pool per view is a slow way to run out of sockets.
+        This one asks the SDK, because it looks for credentials in places the settings never
+        see. Home, the status page and the settings pages ask on every view, so it is asked over
+        one idle connection pool rather than a new one each time (see `has_credentials`).
         """
         if self._api is not None:
             return True
-        try:
-            make_client(self.settings).close()
-        except AgentError:
-            return False
-        return True
+        return has_credentials(self.settings)
 
     @property
     def api(self) -> Any:
@@ -193,7 +272,7 @@ class AnthropicProvider:
         if thinks(model):
             payload["thinking"] = {"type": "adaptive"}
             payload["output_config"] = {"effort": request.effort or settings.effort}
-        if settings.anthropic_fallbacks and model.startswith(REFUSAL_FALLBACK_MODELS):
+        if settings.anthropic_fallbacks and falls_back(model):
             payload["betas"] = [FALLBACK_BETA]
             payload["fallbacks"] = "default"
         return payload
@@ -290,6 +369,19 @@ class AnthropicProvider:
             client.close()
         return True
 
+    def listed_models(self) -> list[str] | None:
+        try:
+            client = make_client(self.settings)
+        except AgentError:
+            return None
+        try:
+            return [model.id for model in client.with_options(timeout=20.0).models.list(limit=1000)]
+        except Exception as exc:  # unreachable, unauthorised: not an answer about the models
+            log.info("could not ask Anthropic for its models: %s", exc)
+            return None
+        finally:
+            client.close()
+
     def check_key(self) -> KeyCheck:
         try:
             client = make_client(self.settings)
@@ -324,7 +416,8 @@ class AnthropicProvider:
         return int(self.api.count_tokens(**payload).input_tokens)
 
     def send(self, request: TurnRequest) -> ModelReply:
-        return self.reply(self._create(self.payload(request)))
+        response, dropped = self._create(lambda: self.payload(request))
+        return dataclasses.replace(self.reply(response), dropped=dropped)
 
     # -- looking --------------------------------------------------------------------------
     def viewer(self) -> str | None:
@@ -353,19 +446,40 @@ class AnthropicProvider:
         return payload
 
     def describe(self, picture: Picture, ask: str) -> Seen:
-        reply = self.reply(self._create(self.seeing(picture, ask)))
+        response, dropped = self._create(lambda: self.seeing(picture, ask))
+        reply = self.reply(response)
         return Seen(
             text=reply.text,
             usage=reply.usage,
             model=reply.model,
             request_id=reply.request_id,
             stop=reply.stop,
+            dropped=dropped,
         )
 
-    def _create(self, payload: dict[str, Any]) -> Any:
-        """One request, its failures as the loop understands them."""
+    def _create(self, build: Callable[[], dict[str, Any]]) -> tuple[Any, tuple[str, ...]]:
+        """One request, and again without any part a 400 names (PARTS), each at most once; its
+        failures as the loop understands them. Returns the response and what was left out."""
+        dropped: list[str] = []
+        while True:
+            payload = build()
+            try:
+                return self._send_once(payload), tuple(dropped)
+            except anthropic.BadRequestError as exc:
+                part = parts.refused(str(exc.message), PARTS, _carried(payload))
+                if part is None or part.name in dropped:
+                    raise _status_failure(exc) from exc
+                log.warning(
+                    "Anthropic refused %s for %s; leaving it out", part.name, payload["model"]
+                )
+                parts.leave_out(NAME, payload["model"], part.name)
+                dropped.append(part.name)
+
+    def _send_once(self, payload: dict[str, Any]) -> Any:
         try:
             return self.api.create(**payload)
+        except anthropic.BadRequestError:
+            raise
         except anthropic.RateLimitError as exc:
             raise AgentError(
                 f"rate limited: {exc}", retryable=True, request_id=_request_id(exc)
@@ -373,11 +487,7 @@ class AnthropicProvider:
         except anthropic.APIConnectionError as exc:
             raise AgentError(f"connection error: {exc}", retryable=True) from exc
         except anthropic.APIStatusError as exc:
-            raise AgentError(
-                f"API error {exc.status_code}: {exc.message}",
-                retryable=exc.status_code >= 500,
-                request_id=_request_id(exc),
-            ) from exc
+            raise _status_failure(exc) from exc
         except TypeError as exc:
             # The SDK raises a bare TypeError when it finds no credentials at all.
             if "authentication" not in str(exc).lower():

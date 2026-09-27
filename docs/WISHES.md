@@ -136,10 +136,11 @@ really is the family.
 
 A kid's chat is `member:<id>`: private, read by parents at `/chat?with=<id>`. Her calls are
 summed per day against `kid_daily_spend` (default $0.25, on the spending settings), checked before
-each of her messages, so one may cross it; past it, `voice.EVENTS` `kid_limit` and no call. Ideas
-her messages make wait for one pass a day in the hour `kid_lookup_hour` (default 19): the lookup
-job holds them back at any other hour. A parent's answer is a line in
-her chat, worded by `voice.say`.
+each of her messages, so one may cross it; past it, `voice.EVENTS` `kid_share` and no call. The
+family's number of messages a day (`kid_daily_messages`, `kid_limit`) holds as well. Ideas her
+messages make are looked up with everybody's in the evening pass (`lookups_when`,
+`lookup_hour`), and `look_up_now` refuses anybody who may not `change`, so she cannot ask for
+them at once. A parent's answer is a line in her chat, worded by `voice.say`.
 
 Telegram goes to the parents for two things only: an inappropriate request (`turn_away`, sent
 straight after her turn), and her Ask a parent (`update_wish` with `ask_parent`, once, for an ask
@@ -160,7 +161,8 @@ buttons, and by dragging where scripts run (`static/wishes.js`).
 
 ## Settings (built)
 
-On the Spending page: `daily_spend_limit` and each kid's share of it, `kid_daily_spend`; the hour
-her lookups run, `kid_lookup_hour`; and a group for the wish lists: `wish_daily_count`,
+On the Spending page: `daily_spend_limit`, each kid's number of messages a day,
+`kid_daily_messages`, and her share of the dollars, `kid_daily_spend`; and a group for the wish
+lists: `wish_daily_count`,
 `occasion_list_size`, `parent_asks_per_week` and `wording_daily_after`. The cap on moves in a day
 (`wish_service.WISH_MOVES_PER_DAY`, 300) stays in code: it only stops excess.

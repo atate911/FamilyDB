@@ -169,6 +169,7 @@ def _tell_parents(
             text=voice.say(settings, event, seed=wish.id, kid=kid.display_name, what=wish.title),
             now=now,
             buttons=buttons.for_wish(wish.id),
+            sent_as=event,
         )
         told += 1
     return told
@@ -206,7 +207,14 @@ def _tell_kid(
             note=note,
             again=again,
         )
-    messages.insert_out(conn, channel="web", chat_id=private_chat(kid.id), text=text, now=now)
+    messages.insert_out(
+        conn,
+        channel="web",
+        chat_id=private_chat(kid.id),
+        text=text,
+        now=now,
+        sent_as="wish_granted" if wish.status == "granted" else "wish_declined",
+    )
 
 
 # -- asking ---------------------------------------------------------------------------------------

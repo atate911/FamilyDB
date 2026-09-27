@@ -25,6 +25,15 @@ AREA_KEYS = ("neighbourhood", "suburb", "quarter", "city_district")
 TOWN_KEYS = ("city", "town", "village", "hamlet")
 OPEN_METEO_GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
 USER_AGENT = "familydb/0.1 (self-hosted family planning bot)"
+
+
+def user_agent(contact: str) -> str:
+    """Who is asking, as Nominatim's usage policy wants it said: the application, and a way to
+    reach whoever runs it when the operator has given one (GEOCODER_CONTACT)."""
+    contact = " ".join(contact.split())
+    return f"{USER_AGENT[:-1]}; {contact})" if contact else USER_AGENT
+
+
 MIN_INTERVAL = 1.0  # Nominatim's policy: at most one request per second
 EARTH_RADIUS_KM = 6371.0
 
@@ -87,6 +96,7 @@ class Geocoder:
         self._last_call: float | None = None
         self._cache: dict[str, GeoPoint | None] = {}
         self._names: dict[tuple[float, float], str | None] = {}
+        self._agent = user_agent(getattr(settings, "geocoder_contact", "") or "")
 
     @staticmethod
     def _fetch(url: str, headers: dict[str, str]) -> Any:
@@ -106,7 +116,7 @@ class Geocoder:
         self._throttle()
         try:
             rows = self._fetch(
-                f"{NOMINATIM_URL}?{params}", {"User-Agent": USER_AGENT, "Accept-Language": "en"}
+                f"{NOMINATIM_URL}?{params}", {"User-Agent": self._agent, "Accept-Language": "en"}
             )
         except Exception as exc:
             log.warning("nominatim lookup failed for %r: %s", query, exc)
@@ -154,7 +164,7 @@ class Geocoder:
         try:
             row = self._fetch(
                 f"{NOMINATIM_REVERSE_URL}?{params}",
-                {"User-Agent": USER_AGENT, "Accept-Language": "en"},
+                {"User-Agent": self._agent, "Accept-Language": "en"},
             )
         except Exception as exc:
             log.warning("nominatim reverse lookup failed: %s", exc)

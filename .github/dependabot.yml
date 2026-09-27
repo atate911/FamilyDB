@@ -1,0 +1,24 @@
+# Once a month, a pull request for what FamilyDB depends on that has a newer release: the Python
+# packages (uv.lock), the Actions CI runs on, and the Docker images. The companies change their
+# SDKs as they change their APIs, so a month is about as long as it is safe to go without looking;
+# CI runs the tests on each pull request, and it is reviewed and merged like any other change.
+version: 2
+updates:
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    groups:
+      # The minor and patch releases together, one pull request; a major release (a new SDK
+      # generation, which the bounds in pyproject.toml hold back) comes on its own.
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "monthly"

@@ -32,6 +32,9 @@
           {% elif person.elsewhere %}known on {{ person.elsewhere }}
           {% elif person.role == 'kid' and not person.sign_in %}named in ideas and plans
           {% else %}web page and console only{% endif %}
+          {% if person.id in today %}
+            · {{ today[person.id] }} of {{ daily_limit }} messages today
+          {% endif %}
         </div>
         <a class="button ghost" href="{{ url_for('family.edit', member_id=person.id) }}">{{ icon('edit') }}Change</a>
       </li>

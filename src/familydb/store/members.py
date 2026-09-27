@@ -118,3 +118,57 @@ def update_profile(
         ),
     )
     return get(conn, member_id)
+
+
+# Every column that points at a member, and what taking somebody off the list for good does to
+# it, as the family chose: what was theirs alone goes with them (how they signed in, where they
+# were, a link for their Telegram, what she remembers about them), and what they said and did
+# stays, with nobody's name on it, so a conversation still reads. `erase` works through this
+# list, and a test holds it to the schema: a table added later that points at a member has to
+# be named here, or taking somebody off would fail on it.
+POINTING_AT = {
+    ("app_settings", "updated_by"): "unname",
+    ("ideas", "suggested_by"): "unname",
+    ("member_locations", "member_id"): "delete",
+    ("member_logins", "member_id"): "delete",
+    ("member_logins", "set_by"): "unname",
+    ("memories", "forgotten_by"): "unname",
+    ("memories", "member_id"): "delete",
+    ("memories", "said_by"): "unname",
+    ("messages", "member_id"): "unname",
+    ("outcomes", "recorded_by"): "unname",
+    ("plans", "created_by"): "unname",
+    ("settings_log", "changed_by"): "unname",
+    ("suggestions", "asked_by"): "unname",
+    ("tasks", "owner_id"): "unname",
+    ("telegram_invites", "made_by"): "unname",
+    ("telegram_invites", "member_id"): "delete",
+    # A kid's wish lists go with her; a parent's answer stays on the others', unnamed.
+    ("wish_days", "member_id"): "delete",
+    ("wishes", "answered_by"): "unname",
+    ("wishes", "member_id"): "delete",
+}
+
+
+def erase(conn: sqlite3.Connection, member_id: int) -> dict[str, int]:
+    """Take a member off the list for good, as POINTING_AT says. Call inside a transaction.
+
+    Returns how many rows each table lost or had the name taken off, for the log.
+    """
+    touched: dict[str, int] = {}
+    # A memory about them may have replaced another, or been replaced by one that stays.
+    conn.execute(
+        "UPDATE memories SET replaced_by = NULL WHERE replaced_by IN "
+        "(SELECT id FROM memories WHERE member_id = ?)",
+        (member_id,),
+    )
+    for (table, column), how in sorted(POINTING_AT.items(), key=lambda item: item[1] == "delete"):
+        if how == "unname":
+            sql = f"UPDATE {table} SET {column} = NULL WHERE {column} = ?"
+        else:
+            sql = f"DELETE FROM {table} WHERE {column} = ?"
+        count = conn.execute(sql, (member_id,)).rowcount
+        if count:
+            touched[f"{table}.{column}"] = count
+    conn.execute("DELETE FROM members WHERE id = ?", (member_id,))
+    return touched

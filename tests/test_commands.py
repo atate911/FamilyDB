@@ -286,3 +286,19 @@ def test_a_link_that_does_nothing_says_why(settings, conn, family) -> None:
     grouped = _started(app, f"/start {code}", chat="-100")
     assert grouped.text.startswith("Sorry, I only talk to the family")
     assert _started(app, f"/start {code}", update="32").text.startswith("Welcome, Jo!")
+
+
+def test_lookup_asks_for_every_idea_waiting_to_be_looked_up_now(settings, conn, family) -> None:
+    from familydb.store import db, ideas
+    from familydb.voice import say
+
+    looking = _app(settings, web_tools_enabled=True)
+    assert _ask(looking, "/lookup", update="l1") == say(looking.settings, "lookups_none", seed=0)
+    with db.transaction(conn):
+        first = ideas.insert(conn, title="Hopscotch", kind="outing")
+        ideas.insert(conn, title="Ramen", kind="restaurant")
+    asked = _ask(looking, "/lookup", update="l2")
+    assert asked == say(looking.settings, "lookups_asked", seed=0, count="2 ideas")
+    assert ideas.get(conn, first.id).lookup_wanted_at is not None
+    off = _app(settings, web_tools_enabled=False)
+    assert _ask(off, "/lookup", update="l3") == say(off.settings, "lookups_off", seed=0)

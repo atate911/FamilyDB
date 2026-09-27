@@ -30,7 +30,9 @@ every time the page is drawn.
 
 from __future__ import annotations
 
+import ipaddress
 import logging
+import re
 import secrets
 import time
 from contextlib import closing
@@ -55,6 +57,7 @@ from pydantic import ValidationError
 
 from familydb import passwords, personas, voice
 from familydb.agent import gateway, providers
+from familydb.agent.providers import prices
 from familydb.agent.spending import spent_today
 from familydb.app import App
 from familydb.availability import enrichment_available, web_is_public
@@ -229,7 +232,11 @@ def suggested(one: fields.Field) -> list[tuple[str, str]]:
     """The names a box suggests as it is typed in, each with a word on what it is: a model's
     place in its company's lineup, and its price."""
     company = MODEL_BOXES.get(one.key, ("", ""))[0]
-    return [(name, views.model_offer(company, name)) for name in one.suggested]
+    # A company's models as the daily check last found them (prices.suggestions), except the
+    # hearing models, which it does not follow.
+    live = company and one.key not in fields.FIXED_OFFERS
+    names = prices.suggestions(company) if live else one.suggested
+    return [(name, views.model_offer(company, name)) for name in names]
 
 
 def level_labels(key: str, live: Settings) -> dict[str, str]:
@@ -435,6 +442,8 @@ def served(app: App) -> dict[str, Any]:
     live = app.settings
     opened = urlsplit(request.host_url)
     script = CHECKOUT / "scripts" / "maintain.sh"
+    host = opened.hostname or ""
+    wanted = request.args.get("domain", "").strip().lower().rstrip(".")
     return {
         "opened": request.host_url,
         "port": opened.port or (443 if opened.scheme == "https" else 80),
@@ -443,7 +452,31 @@ def served(app: App) -> dict[str, Any]:
         "proxied": live.web_trust_proxy,
         "local": not web_is_public(live),
         "script": script if script.exists() else INSTALLED / "scripts" / "maintain.sh",
+        # For the guide to giving the page a name: what it is reached at now, and the name
+        # somebody typed to see the steps with it filled in (a view, never saved).
+        "host": host,
+        "reached_by": reached_by(host),
+        "domain": wanted if DOMAIN.fullmatch(wanted) else "",
+        "domain_refused": bool(wanted) and not DOMAIN.fullmatch(wanted),
     }
+
+
+# A name somebody could point at the server: letters, digits and hyphens, in two parts or more.
+DOMAIN = re.compile(r"(?=.{4,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}")
+
+
+def reached_by(host: str) -> str:
+    """How the page was reached: "name", "public" or "private" address, or "local" (this
+    machine, or a tunnel to it)."""
+    if host in ("localhost", "") or host.endswith(".localhost"):
+        return "local"
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        return "name"
+    if address.is_loopback:
+        return "local"
+    return "private" if address.is_private else "public"
 
 
 def _model(app: App, conn: Any) -> dict[str, Any]:
@@ -465,6 +498,7 @@ def _messages(app: App, conn: Any) -> dict[str, Any]:
     return {
         "offers": {"digest_chat_id": status_page.digest_chats(conn, app.settings.tzinfo)},
         "can_answer": app.can_ask("chat"),
+        "automatic": status_page.automatic(app, conn),
     }
 
 
@@ -635,7 +669,9 @@ def save() -> Response | tuple[str, int]:
     if (complaint := auth.refused()) is not None:
         return _answer(back, here, error=complaint)
     values, problems = fields.read_form(request.form)
-    typed = {one.key: request.form[one.key] for one in fields.FIELDS if one.key in request.form}
+    typed = {
+        one.key: fields.given(one, request.form) for one in fields.FIELDS if one.key in request.form
+    }
     if not problems:
         stored = _stored()
         proposed = {**stored, **values}
@@ -956,7 +992,7 @@ LINE_GROUPS = (
         True,
         ("wish_granted", "wish_declined", "kid_flagged", "kid_asks_parent"),
     ),
-    ("Notes", False, ("lookup_done", "location_shared", "done")),
+    ("Notes", False, ("lookup_done", "lookups_done", "location_shared", "done")),
     (
         "On Telegram",
         False,
@@ -972,16 +1008,25 @@ LINE_GROUPS = (
         ),
     ),
     (
-        "Answering /today, /week, /tasks and /now",
+        "Answering /today, /week, /tasks, /now and /lookup",
         True,
-        ("cmd_today", "cmd_week", "cmd_tasks", "cmd_now"),
+        (
+            "cmd_today",
+            "cmd_week",
+            "cmd_tasks",
+            "cmd_now",
+            "lookups_asked",
+            "lookups_none",
+            "lookups_off",
+        ),
     ),
     (
         "When she cannot answer",
         True,
         (
-            "limit_reached",
             "kid_limit",
+            "limit_reached",
+            "kid_share",
             "limit_partial",
             "gave_up",
             "gave_up_partly",
@@ -995,6 +1040,24 @@ LINE_GROUPS = (
             "photo_off",
             "photo_too_large",
             "photo_unseen",
+        ),
+    ),
+    (
+        "Telling an admin what needs fixing",
+        True,
+        (
+            "alert_credit",
+            "alert_key",
+            "alert_limit",
+            "alert_calendar",
+            "alert_model",
+            "alert_price",
+            "alert_prices",
+            "alert_new",
+            "alert_shift",
+            "alert_api",
+            "alert_refused",
+            "alert_advice",
         ),
     ),
 )

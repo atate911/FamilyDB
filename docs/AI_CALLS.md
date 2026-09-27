@@ -60,7 +60,10 @@ Context is built in three layers, and every piece of information belongs to exac
   whole of its authority. Dispatch refuses anything undeclared, validates every input, and
   enforces scope (an enrichment turn writes only its own idea).
 - Some things are never the model's to decide, however it is asked: who may talk to the bot, what
-  a setting is, how much may be spent, which model answers.
+  a setting is, how much may be spent, which model answers. The one exception is the family's
+  own: with `judgement_acts` at "within_cost", a judgement call's choice of model is put in by
+  code when it costs no more than the model it takes over from, from options code drew up, and
+  admins are told with a way to put it back (below).
 - Web access happens only in worker turns, with their own prompt, tool subset and search limit.
   The chat never searches the web directly.
 - A write the family would want to undo (deleting a plan, moving an event) is done by a tool
@@ -102,6 +105,8 @@ Context is built in three layers, and every piece of information belongs to exac
 | Enrich | every 2 minutes, up to 3 pending ideas; a home idea with no place, link or location, and a gift that names no place, are skipped in code | worker model, at the lookup level | worker prompt, home area, the idea and what was saved before | web search (3), `save_place`, `skip_place` | a place record |
 | Discover | a `suggest` call, cached 12 hours by window, constraints and topic | worker model, at the lookup level | worker prompt, home area and where they are, the window, its hours, the constraints and topic, never the question's wording | web search (4), `report_finds` | up to 6 finds |
 | Transcribe | a voice note from somebody on the family list, before its chat turn | the hearing model: OpenAI's speech-to-text model or a Gemini model; never Claude, which takes no recordings | the recording, and one line naming the family, her and home so they are spelled right | nothing | its words, which become the message |
+| Judge | a question code filed when a change needs weighing (a model in use going with several to take its place, new models for a company in use, a refusal nobody could read), only while `judgements` is on; the day's questions together with the evening's lookups, a refusal at once; within `judgement_budget` a month | the model at `judgement_level` (best by default) of the lookup company | `prompts/judge.md`; model names, prices, releases, what the family's calls use a model for, a refusal's status and error text; never the family's messages | `give_judgement` only, choosing among the options code gave | one choice per question, which code checks and acts on within `judgement_acts` |
+| Price check | a price of a model in use the two price lists disagree on, filed like a judgement and asked with it | worker model, at the lookup level | `prompts/price_check.md`; the model and what each list says | web search (3), `report_price` | a price from the company's own page, taken only when it matches a list |
 | Look | a photo from somebody on the family list, before its chat turn, one call each for up to four of an album's; in a group, only one sent to the bot | the lookup model of the company that looks things up, with a lookup's effort | the picture, at most 1600 pixels on its long side and 3.9 MB (Claude counts its 5 MB on the base64), `prompts/look.md` and the same line of names | nothing | what it is and the words in it that matter, at most 120 words, which become the message |
 
 All of them go through one door, `agent/gateway.ask`, which runs the loop
@@ -131,6 +136,28 @@ arrive a moment apart, are gathered for a second and a half, up to four of them 
 the family asked once. The lookup model rather than the chat model, since writing down what a picture says is
 extraction, not judgement, and a call of its own rather than the picture in front of the chat
 model, so the picture is sent once and what it showed stays in the conversation as words.
+
+Judging a change is the one call made for the install rather than for the family's day
+(`familydb/judgement.py`). Its five answers: asked only for a question code filed, while the
+family has it on, within its own monthly budget and the day's limit, and on a day with no
+question never; questions wait for the evening's lookups and go together in one call, and only a
+refusal, which may be stopping the bot, is asked at once; a question with no answer is asked
+once more the next evening and then let go, the rule's choice standing. It sees what code knows
+about the models, never a message; it may only hand back a choice among the options code gave,
+which the tool checks; code decides what follows: under "within_cost" a model at the same cost
+or less (a tenth either way) is put in, told to admins with a Put back button on the Status page,
+and anything dearer waits there for an admin's press; a refusal read as out of credit, a wrong
+key or a gone model is noted as that, and a part of a request named is left out for that model in
+every process. It costs a few cents on the best level, recorded as `judge`. Checking a disputed
+price is the same door with the web and the lookup model (reading a page, not weighing), its
+figure taken only when it matches one of the lists, recorded as `price_check`. Whether the
+judgements are good is for admins to see: each question, its answer, its reason and what came of
+it are listed under Models and prices on the Status page.
+
+Batch pricing (each company's half-price, non-real-time endpoints) was weighed for these and left
+out: at a few cents a month the saving is cents, and it would mean submitting on one run and
+collecting hours later, with spending holds that outlive a call. The evening lookups are where it
+would pay, if their cost ever matters.
 
 ## Who is speaking
 

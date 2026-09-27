@@ -6,8 +6,9 @@
   the kids wish for.
 - kid: reads the ideas and the plans, talks to the bot, and keeps her own wish lists; changes
   nothing else, and does not see the household's pages (what she remembers, what it costs) or
-  anybody else's things to do. What she may not do is decided in `PERMISSIONS` below, and
-  nowhere else.
+  anybody else's things to do; all within a number of messages a day the family sets
+  (`kid_daily_messages`, for every role in `DAILY_LIMITED`). What she may not do is decided in
+  `PERMISSIONS` below, and nowhere else.
 
 The page asks about a permission (`may`), never about a role, so giving kids limits of their
 own, or adding a role, is a change to this table alone. The gate in web/auth.py says which part
@@ -38,6 +39,15 @@ PERMISSIONS: dict[str, frozenset[Permission]] = {
     "parent": PARENT,
     "kid": KID,
 }
+
+
+# Whose messages count against the day's number the family sets (`kid_daily_messages`).
+DAILY_LIMITED: frozenset[str] = frozenset({"kid"})
+
+
+def daily_limited(role: str) -> bool:
+    """Whether somebody in this role has a number of messages a day."""
+    return role in DAILY_LIMITED
 
 
 def may(role: str, permission: Permission) -> bool:

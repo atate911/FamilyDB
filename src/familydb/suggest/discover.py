@@ -120,6 +120,7 @@ def discover(
             request=request,
             message_id=ctx.message_id,
             user_location=home_location(ctx.settings),
+            about=f"what is on, {cache_key(context.window).replace(':', ' to ')}",
         )
     except AgentError as exc:
         log.warning("discovery failed for %s: %s", key, exc)

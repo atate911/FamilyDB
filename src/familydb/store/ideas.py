@@ -95,6 +95,8 @@ class Idea(BaseModel):
     enrichment: Enrichment = "pending"
     enriched_at: str | None = None
     enrichment_note: str | None = None
+    # Somebody asked for it to be looked up now, rather than with the evening's lookups.
+    lookup_wanted_at: str | None = None
     suggested_by: int | None = None
     suggested_by_name: str | None = None
     source_message_id: int | None = None
@@ -206,16 +208,11 @@ def is_gift(idea: Idea) -> bool:
     return idea.kind.strip().lower() == GIFT
 
 
-def pending_enrichment(
-    conn: sqlite3.Connection, *, limit: int, holding: tuple[int, ...] = ()
-) -> list[Idea]:
-    """Ideas waiting for a place lookup, oldest first, less those suggested by `holding`."""
-    marks = ", ".join("?" for _ in holding)
-    held = f" AND (i.suggested_by IS NULL OR i.suggested_by NOT IN ({marks}))" if holding else ""
+def pending_enrichment(conn: sqlite3.Connection, *, limit: int) -> list[Idea]:
+    """Ideas waiting for a place lookup, oldest first."""
     rows = conn.execute(
-        f"{_SELECT} WHERE i.enrichment = 'pending' AND i.status != 'dropped'{held} "
-        "ORDER BY i.id LIMIT ?",
-        (*holding, limit),
+        f"{_SELECT} WHERE i.enrichment = 'pending' AND i.status != 'dropped' ORDER BY i.id LIMIT ?",
+        (limit,),
     )
     return [Idea.from_row(row) for row in rows]
 
@@ -247,11 +244,52 @@ def requeue_enrichment(
         return 0
     placeholders = ", ".join("?" for _ in ids)
     cur = conn.execute(
-        f"UPDATE ideas SET enrichment = 'pending', updated_at = ? "
+        f"UPDATE ideas SET enrichment = 'pending', lookup_wanted_at = NULL, updated_at = ? "
         f"WHERE id IN ({placeholders}) AND enrichment != 'pending'",
         [now or utcnow_iso(), *ids],
     )
     return int(cur.rowcount)
+
+
+def want_lookup(conn: sqlite3.Connection, idea_ids: Iterable[int] | None, *, now: str) -> list[int]:
+    """Ask for ideas to be looked up now: the ones named, looked up again if they were already,
+    or with none named every idea waiting. Never a dropped idea. Returns the ones asked for."""
+    if idea_ids is None:
+        rows = conn.execute(
+            "SELECT id FROM ideas WHERE enrichment = 'pending' AND status != 'dropped'"
+        ).fetchall()
+    else:
+        ids = [int(i) for i in idea_ids]
+        if not ids:
+            return []
+        placeholders = ", ".join("?" for _ in ids)
+        rows = conn.execute(
+            f"SELECT id FROM ideas WHERE id IN ({placeholders}) AND status != 'dropped'", ids
+        ).fetchall()
+    wanted = [int(row["id"]) for row in rows]
+    for idea_id in wanted:
+        conn.execute(
+            "UPDATE ideas SET enrichment = 'pending', lookup_wanted_at = ? WHERE id = ?",
+            (now, idea_id),
+        )
+    return wanted
+
+
+def lookup_asked_for(conn: sqlite3.Connection, idea_id: int) -> None:
+    """The lookup somebody asked for has run: the next one waits for the evening again."""
+    conn.execute("UPDATE ideas SET lookup_wanted_at = NULL WHERE id = ?", (idea_id,))
+
+
+def due_enrichment(conn: sqlite3.Connection, *, before: str | None, limit: int) -> list[Idea]:
+    """Ideas whose lookup is due, the ones somebody asked for first, then oldest first: every one
+    waiting when `before` is None, or else those asked for and those waiting since before it."""
+    rows = conn.execute(
+        f"{_SELECT} WHERE i.enrichment = 'pending' AND i.status != 'dropped' "
+        "AND (i.lookup_wanted_at IS NOT NULL OR ? IS NULL OR i.updated_at < ?) "
+        "ORDER BY i.lookup_wanted_at IS NULL, i.id LIMIT ?",
+        (before, before, limit),
+    )
+    return [Idea.from_row(row) for row in rows]
 
 
 def list_all(conn: sqlite3.Connection, *, include_dropped: bool = False) -> list[Idea]:
