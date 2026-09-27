@@ -35,6 +35,9 @@ class UpdateWishInput(BaseModel):
     notes: str | None = None
     status: Literal["withdrawn", "granted", "declined"] | None = None
     answer_note: str | None = None
+    ask_parent: bool = Field(
+        default=False, description="She asks a parent about a turned-away ask."
+    )
 
 
 class TurnAwayInput(BaseModel):
@@ -120,6 +123,8 @@ def update_wish(ctx: ToolContext, args: UpdateWishInput) -> dict[str, Any]:
             occasion=_occasion(args.list),
             now=now,
         )
+    if args.ask_parent:
+        wish = wish_service.ask_parent(ctx.conn, ctx.settings, by=by, wish_id=args.wish_id, now=now)
     if args.status == "withdrawn":
         wish = wish_service.withdraw(ctx.conn, by=by, wish_id=args.wish_id, now=now)
     elif args.status in ("granted", "declined"):

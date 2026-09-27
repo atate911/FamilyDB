@@ -164,6 +164,28 @@ EVENTS: dict[str, Event] = {
         ("who",),
         {"who": "Sam"},
     ),
+    "tap_wish_yes": Event(
+        "A kid's ask answered yes with its button",
+        "Yes ✓ ({who}). I've told {kid}.",
+        ("who", "kid"),
+        {"who": "Sam", "kid": "Mia"},
+    ),
+    "tap_wish_no": Event(
+        "A kid's ask answered not this time with its button",
+        "Not this time ({who}). I've told {kid}, kindly.",
+        ("who", "kid"),
+        {"who": "Sam", "kid": "Mia"},
+    ),
+    "tap_later": Event(
+        "A kid's ask left for later with its button",
+        "Left for later. It's on the Kids card on Home when you're ready.",
+        (),
+    ),
+    "tap_parents_only": Event(
+        "A kid's ask tapped by somebody who may not answer it",
+        "Only a parent can answer that.",
+        (),
+    ),
     "tap_already": Event(
         "A button tapped for something already dealt with", "That's already dealt with.", ()
     ),
@@ -199,6 +221,30 @@ EVENTS: dict[str, Event] = {
         "Ask again then, or raise the limit on the settings page.",
         ("limit",),
         {"limit": "2.00"},
+    ),
+    "kid_flagged": Event(
+        "To the parents: a kid asked for something inappropriate",
+        "{kid} asked me for something that isn't OK, and I said no: {what}.",
+        ("kid", "what"),
+        {"kid": "Mia", "what": "a video game rated for adults"},
+    ),
+    "kid_asks_parent": Event(
+        "To the parents: a kid would like a parent to decide",
+        "{kid} would like you to decide this one: {what}.",
+        ("kid", "what"),
+        {"kid": "Mia", "what": "more internet time tonight"},
+    ),
+    "wish_granted": Event(
+        "To a kid: a parent said yes to her wish",
+        "Good news, {kid}: yes to {wish}!{note}",
+        ("kid", "wish", "note"),
+        {"kid": "Mia", "wish": "roller skates", "note": " Saturday, at the shop."},
+    ),
+    "wish_declined": Event(
+        "To a kid: a parent said not this time",
+        "{kid}, not this time for {wish}.{note} You can ask again after {again}.",
+        ("kid", "wish", "note", "again"),
+        {"kid": "Mia", "wish": "a cat", "note": " The allergies, love.", "again": "4 October"},
     ),
     "kid_limit": Event(
         "A kid's own share of the day used up",

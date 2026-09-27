@@ -218,10 +218,10 @@ def test_a_turned_away_ask_is_kept_and_ask_a_parent_is_limited(conn, settings, k
     ]
     assert [o.may_ask_parent for o in offers] == [True, True, False]
     assert not any(o.tell_parents for o in offers)
-    asked = ws.ask_parent(conn, by=kids["mia"], wish_id=offers[0].wish.id, now=NOW)
+    asked = ws.ask_parent(conn, settings, by=kids["mia"], wish_id=offers[0].wish.id, now=NOW)
     assert asked.parent_review == "asked"
     with pytest.raises(ToolError, match="nothing to ask"):
-        ws.ask_parent(conn, by=kids["mia"], wish_id=offers[0].wish.id, now=NOW)
+        ws.ask_parent(conn, settings, by=kids["mia"], wish_id=offers[0].wish.id, now=NOW)
     not_reviewable = ws.turn_away(
         conn,
         settings,

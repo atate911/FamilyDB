@@ -9,7 +9,16 @@ from contextlib import closing
 from datetime import datetime
 from typing import Any
 
-from familydb import family, memory, personas, roles, voice, whereabouts, wording
+from familydb import (
+    family,
+    memory,
+    personas,
+    roles,
+    voice,
+    whereabouts,
+    wish_service,
+    wording,
+)
 from familydb.agent import gateway, spending
 from familydb.agent.history import load_history
 from familydb.agent.loop import MessagesAPI, TurnResult
@@ -585,6 +594,10 @@ def _answer(
             if action.get("tool") == "suggest" and action.get("suggestion_id"):
                 suggestions.set_reply(conn, int(action["suggestion_id"]), outbound.id)
     app.held.done(taken)
+    if any(action.get("tool") in ("turn_away", "update_wish") for action in result.actions):
+        # A kid's ask the parents are to hear of goes now, not on the retry job's next round.
+        for waiting in wish_service.waiting_for_parents(conn):
+            deliver(app, waiting)
     return OutgoingMessage(
         msg.chat_id,
         reply_text,

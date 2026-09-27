@@ -133,7 +133,7 @@ days; so the nudges thin out as she improves. "I want" earns a warm word at most
 days. The prompt keeps it to one kind line at her age, never a lecture, and never when "we"
 really is the family.
 
-### Her conversation and her limit (built), the two messages to parents (planned)
+### Her conversation, her limit, the two messages to parents (built)
 
 A kid's chat is `member:<id>`: private, read by parents at `/chat?with=<id>`. Her calls are
 summed per day against `kid_daily_spend` (default $0.25, on the spending settings), checked before
@@ -142,9 +142,14 @@ her messages make wait for one pass a day in the hour `kid_lookup_hour` (default
 job holds them back at any other hour. A parent's answer is a line in
 her chat, worded by `voice.say`.
 
-Telegram goes to the parents for two things only: an inappropriate request, and an Ask-a-parent
-tap. Each has buttons (Yes!, Not this time, Later) that answer through `update_wish` as the parent
-who tapped, with no model call.
+Telegram goes to the parents for two things only: an inappropriate request (`turn_away`, sent
+straight after her turn), and her Ask a parent (`update_wish` with `ask_parent`, once, for an ask
+it was offered for). Each goes to every parent the bot reaches on Telegram, worded by
+`voice.EVENTS` `kid_flagged` or `kid_asks_parent`, with buttons (`buttons.WISH`: Yes!, Not this
+time, Later) that answer through `update_wish` as the parent who tapped, with no model call; Later
+only says it waits on the Kids card. A kid who taps is told only a parent can answer. Whatever the
+answer comes from (a tap, the chat, the page), she is told in her own conversation, worded by
+`wish_granted` or `wish_declined` with the day she may ask again.
 
 ### Screens (planned)
 

@@ -285,3 +285,127 @@ def test_a_kid_s_lookups_wait_for_the_hour_and_go_together(settings, conn, famil
     evening = App(settings, FixedClock(datetime(2026, 9, 20, settings.kid_lookup_hour, 5), TZ))
     assert _held_back(evening, conn) == ()
     assert {i.id for i in ideas.pending_enrichment(conn, limit=10)} == {hers.id, ours.id}
+
+
+# -- the two messages to the parents, and her answers ---------------------------------------------
+
+
+def _parents_telegram(conn) -> list[tuple[str, str, str]]:
+    rows = conn.execute(
+        "SELECT chat_id, text, buttons FROM messages WHERE direction = 'out' "
+        "AND channel = 'telegram' ORDER BY id"
+    ).fetchall()
+    return [(row[0], row[1], row[2]) for row in rows]
+
+
+def test_an_inappropriate_ask_goes_to_each_parent_at_once(
+    settings, clock, conn, family, mia
+) -> None:
+    app = App(settings, clock)
+    sent: list[tuple[str, str, list]] = []
+    app.button_senders["telegram"] = lambda chat, text, buttons: sent.append((chat, text, buttons))
+    app.senders["telegram"] = lambda chat, text: None
+    api = fakes.FakeMessagesAPI(
+        fakes.message(
+            [
+                fakes.tool_use(
+                    "tu_1",
+                    "turn_away",
+                    {
+                        "summary": "a game rated for adults",
+                        "concern": "inappropriate",
+                        "parent_may_review": False,
+                    },
+                )
+            ],
+            stop_reason="tool_use",
+        ),
+        fakes.message([fakes.text("No, that one isn't for you.")]),
+    )
+    handle_incoming(
+        app, IncomingMessage("telegram", "k5", "1003", "1003", "get me GTA"), api=api, conn=conn
+    )
+    to_parents = [(chat, text) for chat, text, _ in sent if chat in ("1001", "1002")]
+    assert sorted(chat for chat, _ in to_parents) == ["1001", "1002"]
+    assert all("Mia asked me for something that isn't OK" in text for _, text in to_parents)
+    assert all("a game rated for adults" in text for _, text in to_parents)
+    assert all(
+        [b["data"].split(":")[0] for b in buttons] == ["wish_yes", "wish_no", "wish_later"]
+        for chat, _, buttons in sent
+        if chat in ("1001", "1002")
+    )
+
+
+def test_a_rule_ask_reaches_the_parents_only_when_she_asks_one(
+    settings, clock, conn, family, mia, registry
+) -> None:
+    kid = _as(conn, settings, clock, mia)
+    ask = {"summary": "more internet time", "concern": "rule", "parent_may_review": True}
+    _run(registry, "turn_away", ask, kid)
+    assert _parents_telegram(conn) == []  # nothing on its own
+    wish_id = conn.execute("SELECT max(id) FROM wishes").fetchone()[0]
+    _run(registry, "update_wish", {"wish_id": wish_id, "ask_parent": True}, kid)
+    told = _parents_telegram(conn)
+    assert len(told) == 2 and "Mia would like you to decide this one" in told[0][1]
+    again = _run(registry, "update_wish", {"wish_id": wish_id, "ask_parent": True}, kid)
+    assert "error" in again and len(_parents_telegram(conn)) == 2  # once
+
+
+def test_a_parent_answers_with_a_tap_and_she_hears_in_her_chat(
+    settings, clock, conn, family, mia, registry
+) -> None:
+    from familydb import buttons
+
+    app = App(settings, clock)
+    kid = _as(conn, settings, clock, mia)
+    ask = {"summary": "more internet time", "concern": "rule", "parent_may_review": True}
+    _run(registry, "turn_away", ask, kid)
+    wish_id = conn.execute("SELECT max(id) FROM wishes").fetchone()[0]
+
+    def tap(data, who="1001", tap_id="t1"):
+        return buttons.tap(
+            app,
+            conn,
+            channel="telegram",
+            chat_id=who,
+            channel_user_id=who,
+            tap_id=tap_id,
+            data=data,
+        )
+
+    later = tap(f"wish_later:{wish_id}", tap_id="t0")
+    assert "Left for later" in later.toast and not later.finished
+    refused = tap(f"wish_yes:{wish_id}", who="1003", tap_id="t9")  # the kid herself
+    assert refused.toast == "Only a parent can answer that."
+    no = tap(f"wish_no:{wish_id}")
+    assert no.toast == "Not this time (Sam). I've told Mia, kindly." and no.finished
+    assert wishes.get(conn, wish_id).status == "declined"
+    hers = conn.execute(
+        "SELECT text FROM messages WHERE chat_id = ? AND direction = 'out'",
+        (f"member:{mia.id}",),
+    ).fetchall()
+    assert hers[-1][0] == (
+        "Mia, not this time for more internet time. You can ask again after 4 October."
+    )
+    assert "already" in tap(f"wish_yes:{wish_id}", tap_id="t2").toast
+
+
+def test_a_yes_from_the_page_or_the_chat_reaches_her_too(
+    settings, clock, conn, family, mia, registry
+) -> None:
+    kid = _as(conn, settings, clock, mia)
+    parent = _as(conn, settings, clock, family["alex"])
+    wish_id = _run(registry, "add_wish", {"title": "Roller skates", "topic": "skates"}, kid)[
+        "wish"
+    ]["id"]
+    _run(
+        registry,
+        "update_wish",
+        {"wish_id": wish_id, "status": "granted", "answer_note": "Saturday, at the shop."},
+        parent,
+    )
+    said = conn.execute(
+        "SELECT text FROM messages WHERE chat_id = ? AND direction = 'out'",
+        (f"member:{mia.id}",),
+    ).fetchone()[0]
+    assert said == "Good news, Mia: yes to Roller skates! Saturday, at the shop."

@@ -18,11 +18,11 @@ from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from typing import Any, Literal
 
-from familydb import family, roles
+from familydb import buttons, family, roles, voice
 from familydb.config import Settings
 from familydb.dates import utc_iso
 from familydb.errors import ToolError
-from familydb.store import members, wishes
+from familydb.store import members, messages, wishes
 from familydb.store.db import transaction
 from familydb.store.members import Member
 from familydb.store.wishes import Concern, Occasion, Wish
@@ -143,6 +143,72 @@ def occasion_passes(settings: Settings, occasion: Occasion, owner: Member, today
         return christmas + timedelta(days=1)
     birthday = family.next_birthday(owner.birth_date, today)
     return (birthday or today + timedelta(days=364)) + timedelta(days=1)
+
+
+# -- telling ------------------------------------------------------------------------------------
+
+
+def private_chat(member_id: int) -> str:
+    """A kid's own conversation on the page (web/chat.py)."""
+    return f"member:{member_id}"
+
+
+def _tell_parents(
+    conn: sqlite3.Connection, settings: Settings, wish: Wish, event: str, kid: Member, now: str
+) -> int:
+    """Store a message about a kid's ask for each parent the bot reaches on Telegram, with the
+    buttons to answer it; delivery sends them (docs/WISHES.md: only two things ever do this)."""
+    told = 0
+    for person in members.list_all(conn):
+        if not roles.may(person.role, "decide"):
+            continue
+        if person.channel != "telegram" or not person.channel_user_id:
+            continue
+        messages.insert_out(
+            conn,
+            channel="telegram",
+            chat_id=person.channel_user_id,
+            text=voice.say(settings, event, seed=wish.id, kid=kid.display_name, what=wish.title),
+            now=now,
+            buttons=buttons.for_wish(wish.id),
+        )
+        told += 1
+    return told
+
+
+def waiting_for_parents(conn: sqlite3.Connection) -> list[int]:
+    """Messages about a kid's ask stored for the parents and not sent yet, to send at once."""
+    rows = conn.execute(
+        "SELECT id FROM messages WHERE direction = 'out' AND delivered_at IS NULL "
+        "AND cancelled_at IS NULL AND buttons LIKE '%\"wish_yes:%' ORDER BY id"
+    )
+    return [int(row[0]) for row in rows]
+
+
+def _tell_kid(
+    conn: sqlite3.Connection, settings: Settings, wish: Wish, kid: Member, today: date, now: str
+) -> None:
+    """A parent's answer, in her own conversation, worded by code; only a kid is told so."""
+    if roles.may(kid.role, "decide"):
+        return
+    note = f" {wish.answer_note}" if wish.answer_note else ""
+    if wish.status == "granted":
+        text = voice.say(
+            settings, "wish_granted", seed=wish.id, kid=kid.display_name, wish=wish.title, note=note
+        )
+    else:
+        until = date.fromisoformat((wish.locked_until or now)[:10])
+        again = f"{until.day} {until:%B}" + (f" {until.year}" if until.year != today.year else "")
+        text = voice.say(
+            settings,
+            "wish_declined",
+            seed=wish.id,
+            kid=kid.display_name,
+            wish=wish.title,
+            note=note,
+            again=again,
+        )
+    messages.insert_out(conn, channel="web", chat_id=private_chat(kid.id), text=text, now=now)
 
 
 # -- asking ---------------------------------------------------------------------------------------
@@ -392,6 +458,7 @@ def answer(
         changed = wishes.update(conn, wish_id, changes, now=now_iso)
         rest = [w.id for w in wishes.open_list(conn, owner.id, wish.occasion)]
         wishes.renumber(conn, rest)
+        _tell_kid(conn, settings, changed, owner, today, now_iso)
         return changed
 
 
@@ -454,14 +521,23 @@ def turn_away(
             parent_review="offered" if offered else "none",
             source_message_id=message_id,
         )
+        if concern == "inappropriate":
+            _tell_parents(conn, settings, wish, "kid_flagged", owner, now_iso)
     return TurnedAway(wish, tell_parents=concern == "inappropriate", may_ask_parent=offered)
 
 
-def ask_parent(conn: sqlite3.Connection, *, by: Member, wish_id: int, now: datetime) -> Wish:
-    """She pressed Ask a parent: it works once, for an ask it was offered for."""
+def ask_parent(
+    conn: sqlite3.Connection, settings: Settings, *, by: Member, wish_id: int, now: datetime
+) -> Wish:
+    """She pressed Ask a parent: it works once, for an ask it was offered for, and the parents
+    get it on Telegram with the buttons to answer."""
+    now_iso = utc_iso(now)
     with transaction(conn):
         wish = _get(conn, wish_id)
-        _may_keep(by, _owner_of(conn, wish))
+        owner = _owner_of(conn, wish)
+        _may_keep(by, owner)
         if wish.parent_review != "offered":
             raise ToolError("there is nothing to ask a parent about here")
-        return wishes.update(conn, wish_id, {"parent_review": "asked"}, now=utc_iso(now))
+        asked = wishes.update(conn, wish_id, {"parent_review": "asked"}, now=now_iso)
+        _tell_parents(conn, settings, asked, "kid_asks_parent", owner, now_iso)
+        return asked

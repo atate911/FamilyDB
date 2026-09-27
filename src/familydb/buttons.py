@@ -23,9 +23,9 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from typing import Any
 
-from familydb import voice
+from familydb import roles, voice
 from familydb.dates import utc_iso
-from familydb.store import calls, ideas, members, messages, outcomes, plans, tasks
+from familydb.store import calls, ideas, members, messages, outcomes, plans, tasks, wishes
 from familydb.store.db import transaction
 from familydb.tools.registry import ToolContext
 
@@ -35,7 +35,9 @@ log = logging.getLogger(__name__)
 # what it does is the action's, in `_task_job` and `_plan_job`.
 REMINDER = (("done", "✓ Done"), ("hour", "In an hour"), ("tomorrow", "Tomorrow"))
 FOLLOW_UP = (("again", "Yes, again"), ("not_again", "Not again"), ("missed", "Didn't go"))
-LABELS = dict(REMINDER + FOLLOW_UP)
+# Under a kid's ask sent to the parents (wish_service.py): what a parent may answer at once.
+WISH = (("wish_yes", "Yes!"), ("wish_no", "Not this time"), ("wish_later", "Later"))
+LABELS = dict(REMINDER + FOLLOW_UP + WISH)
 SNOOZES = {"hour": timedelta(hours=1), "tomorrow": timedelta(days=1)}
 # Telegram hands back at most 64 bytes of a button; the longest here is well inside that.
 MAX_NUMBER_DIGITS = 18
@@ -49,6 +51,10 @@ def for_reminder(task_id: int) -> list[Button]:
 
 def for_follow_up(plan_id: int) -> list[Button]:
     return _row(FOLLOW_UP, plan_id)
+
+
+def for_wish(wish_id: int) -> list[Button]:
+    return _row(WISH, wish_id)
 
 
 def _row(choices: tuple[tuple[str, str], ...], number: int) -> list[Button]:
@@ -101,10 +107,19 @@ def tap(
     digits = number.isascii() and number.isdigit()
     if action not in LABELS or not digits or len(number) > MAX_NUMBER_DIGITS:
         return Tapped(voice.say(settings, "tap_stale", seed=tap_id), finished=True)
+    if action.startswith("wish_"):
+        early = _wish_check(conn, member, action, int(number))
+        if early is not None:
+            return Tapped(voice.say(settings, early, seed=tap_id), finished=early != "tap_later")
     update_id = f"tap:{tap_id}"
     if messages.exists_update(conn, channel, update_id):
         return None
-    planned = _task_job if action in SNOOZES or action == "done" else _plan_job
+    if action.startswith("wish_"):
+        planned: Any = _wish_job
+    elif action in SNOOZES or action == "done":
+        planned = _task_job
+    else:
+        planned = _plan_job
     job = planned(app, conn, action, int(number))
     if isinstance(job, str):
         return Tapped(voice.say(settings, job, seed=tap_id), finished=True)
@@ -162,6 +177,37 @@ def tap(
         event, facts = "tap_done_again", {"when": when_text(moment, app.clock.today())}
     line = voice.say(settings, event, seed=kept.id, who=member.display_name, **facts)
     return Tapped(line, line, finished=True)
+
+
+def _wish_check(
+    conn: sqlite3.Connection, member: members.Member, action: str, wish_id: int
+) -> str | None:
+    """Why a tap on a kid's ask does nothing, if it does: only a parent answers, Later is only
+    a note, and an ask already answered is answered."""
+    if not roles.may(member.role, "decide"):
+        return "tap_parents_only"
+    wish = wishes.get(conn, wish_id)
+    if wish is None:
+        return "tap_stale"
+    if wish.status not in ("open", "turned_away"):
+        return "tap_already"
+    return "tap_later" if action == "wish_later" else None
+
+
+def _wish_job(app: Any, conn: sqlite3.Connection, action: str, wish_id: int) -> _Job | str:
+    """A parent's answer to a kid's ask, as update_wish, with her told in her own chat."""
+    wish = wishes.get(conn, wish_id)
+    owner = members.get(conn, wish.member_id) if wish is not None else None
+    if wish is None or owner is None:
+        return "tap_stale"
+    yes = action == "wish_yes"
+    return _Job(
+        "update_wish",
+        {"wish_id": wish.id, "status": "granted" if yes else "declined"},
+        f"{owner.display_name}'s ask #{wish.id} {wish.title}",
+        "tap_wish_yes" if yes else "tap_wish_no",
+        {"kid": owner.display_name},
+    )
 
 
 def _task_job(app: Any, conn: sqlite3.Connection, action: str, task_id: int) -> _Job | str:
