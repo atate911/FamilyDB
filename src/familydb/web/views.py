@@ -57,6 +57,12 @@ DETAILS = {
 # The last line of every page. The product's name, not the page's title, which the family may
 # change: the copyright is in the software, not in what they call it.
 FOOTER = "FamilyDB © 2026 by Andrew Tate. Version v{version}. All rights reserved."
+# The Status tile's light for an admin (status.light): its mark, drawn in the tile's corner and
+# never by its colour alone, and what it says to a screen reader, or beside it on a wide screen.
+STATUS_LIGHTS = {
+    "bad": ("■", "not answering"),
+    "warn": ("▲", "needs a look"),
+}
 # The same without the version, for somebody signed in who does not see how it works (a kid).
 FOOTER_PLAIN = "FamilyDB © 2026 by Andrew Tate. All rights reserved."
 # Each role in the page's words, for the Family page and setup. What each may do is decided in

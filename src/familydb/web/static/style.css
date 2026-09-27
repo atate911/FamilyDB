@@ -2234,3 +2234,28 @@ button.mic.listening {
 .field.can-dictate > [data-dictate] { padding-right: 3.4rem; }
 .field.can-dictate > button.mic { position: absolute; right: 0.35rem; bottom: 0.35rem; width: 2.25rem; height: 2.25rem; min-height: 2.25rem; border-color: transparent; background: transparent; }
 .field.can-dictate > button.mic.listening { background: var(--green); }
+
+/* The Status tile's light, for an admin (web/status.light): a mark in the icon's corner, amber ▲
+   while something needs a look, red ■ while the family cannot be answered. Shape and word as
+   well as colour, so it never says anything by colour alone. */
+.tools > a.lit { position: relative; }
+.tools > a.lit .light {
+  position: absolute;
+  top: 0.05rem;
+  right: -0.2rem;
+  display: grid;
+  place-items: center;
+  width: 0.8rem;
+  height: 0.8rem;
+  font-size: 0.45rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--bg);
+  border: 2px solid var(--bg);
+  border-radius: 50%;
+  box-sizing: content-box;
+}
+.tools > a.lit-warn .icon { color: var(--amber); }
+.tools > a.lit-warn .light { background: var(--amber); }
+.tools > a.lit-bad .icon { color: var(--red); }
+.tools > a.lit-bad .light { background: var(--red); }

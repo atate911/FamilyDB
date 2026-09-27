@@ -680,3 +680,30 @@ def test_a_kid_is_never_shown_how_it_works(app, sam, family) -> None:
     grown_up = " ".join(_words(sam.get(path).text) for path in pages)
     for said in ("Version v", "Google Calendar", "Times use", "worker:", "Scheduled"):
         assert said in grown_up, said
+
+
+def test_an_admin_s_status_tile_lights_up_while_something_is_wrong(app, sam, family, alex):
+    """Amber ▲ while something only an admin can fix goes on, red ■ while nobody can be
+    answered; a parent's tile never lights, and a kid has none."""
+    from familydb.store import alerts as alert_store
+    from familydb.web import status as status_page
+
+    def note(kind: str) -> None:
+        with closing(app.connect()) as conn, db.transaction(conn):
+            alert_store.note(conn, kind, "", "test", now=NOW_ISO, keep_after="2026-01-01T00:00:00Z")
+
+    def tile(browser) -> str:
+        page = browser.get("/ideas").text
+        found = re.search(r'<a class="to-status[^"]*"[^>]*>.*?</a>', page, re.S)
+        return found.group(0) if found else ""
+
+    assert "lit" not in tile(sam) and "Status</span>" in tile(sam)
+    note("price")  # news, not trouble
+    assert "lit" not in tile(sam)
+    note("calendar")
+    assert "lit-warn" in tile(sam) and "Status: needs a look" in tile(sam) and "▲" in tile(sam)
+    note("key")
+    assert "lit-bad" in tile(sam) and "Status: not answering" in tile(sam) and "■" in tile(sam)
+    assert "lit" not in tile(alex) and "Status</span>" in tile(alex)
+    with closing(app.connect()) as conn:
+        assert status_page.light(app, conn) == "bad"

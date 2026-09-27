@@ -377,6 +377,10 @@ looked at (see "Two layers").
 - **The bar.** On a phone the everyday places (Home, Vera, Ideas, Plans, To do, and Wishes, or
   My wishes for a kid) are a tab bar along the bottom, one column each, the current one marked by a pill in its colour; Memory, Family, Status and
   a last tile are icons at the top (Memory and Status not for a kid); Family is shown only to an admin, who alone may change it.
+  For an admin the Status icon carries a light while something only an admin can fix goes on
+  (`web/status.light`, one read of the troubles the status page lists): the pulse turns amber
+  with a ▲ in its corner for a look, red with a ■ while the family cannot be answered, and says
+  so in words to a screen reader. A parent's never lights: the fix is not theirs.
   The last tile opens a menu (a `<details>`, so it works with scripts off; `menu.js` closes it on
   a click elsewhere or Escape): for an admin it is the Settings gear, and lists every page of
   settings, then who is signed in, Your password and Sign out; anybody else sees their own name

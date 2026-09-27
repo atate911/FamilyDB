@@ -44,6 +44,7 @@ from familydb.web import (
     views,
 )
 from familydb.web import settings as settings_page
+from familydb.web import status as status_page
 from familydb.web.auth import MIN_PASSWORD
 from familydb.web.keys import session_secret
 
@@ -216,10 +217,20 @@ def create_app(app: App, *, api: Any = None) -> Flask:
         # A kid sees nothing of how it works, its version included (roles.py `browse`).
         who = auth.visitor()
         plain = who.member is not None and not who.may("browse")
+        # An admin's Status tile lights up while something only an admin can fix goes on.
+        light = None
+        if who.may("manage"):
+            try:
+                with closing(app.connect()) as conn:
+                    light = status_page.light(app, conn)
+            except sqlite3.Error:
+                log.debug("the status light is off: the troubles could not be read", exc_info=True)
         return {
             "site_title": app.settings.web_title,
             "footer": views.footer(__version__, plain=plain),
             "dictation": app.settings.web_dictation,
+            "status_light": light,
+            "status_words": views.STATUS_LIGHTS.get(light or ""),
             "assistant": her.name,
             "has_persona": her is not personas.PLAIN,
         }
