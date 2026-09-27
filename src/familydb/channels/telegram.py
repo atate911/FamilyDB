@@ -487,7 +487,11 @@ class TelegramChannel:
         if not joined or changed.from_user is None:
             return
         await asyncio.to_thread(self.app.refresh)
-        me = await context.bot.get_me()
+        try:
+            me = await context.bot.get_me()
+        except Exception as exc:  # a hello that does not go is nothing worse
+            log.info("telegram: could not ask Telegram about the bot to say hello (%s)", exc)
+            return
         needs = self.app.settings.telegram_require_mention or not me.can_read_all_group_messages
         stored = await asyncio.to_thread(
             commands.joined_group,

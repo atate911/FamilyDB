@@ -15,6 +15,7 @@ from __future__ import annotations
 import types
 import typing
 from dataclasses import dataclass
+from functools import cache
 from typing import Any, Literal
 from zoneinfo import available_timezones
 
@@ -198,12 +199,16 @@ def _keyboard(key: str, kind: str) -> str:
     return "numeric" if kind == "int" else "decimal"
 
 
-def zones() -> list[str]:
-    """Every time zone worth offering, by the place it is named for, and UTC."""
-    return sorted(
-        zone
-        for zone in available_timezones()
-        if zone.startswith(ZONE_PREFIXES) or zone in ZONE_ALSO
+@cache
+def zones() -> tuple[str, ...]:
+    """Every time zone worth offering, by the place it is named for, and UTC. Read once: the
+    list does not change while the process runs, and reading it walks the zone files."""
+    return tuple(
+        sorted(
+            zone
+            for zone in available_timezones()
+            if zone.startswith(ZONE_PREFIXES) or zone in ZONE_ALSO
+        )
     )
 
 
@@ -289,7 +294,7 @@ GROUPS: tuple[Group, ...] = (
                 "It decides what “tonight” and “this weekend” mean, and when the messages that "
                 "go out on their own are sent. Choose the nearest city in the same zone.",
                 # Drawn under the region each is named for, with its offset now (views.py).
-                choices=tuple(zones()),
+                choices=zones(),
             ),
             field(
                 "weather_units",

@@ -10,6 +10,7 @@ import calendar as months
 import difflib
 import json
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from itertools import islice, pairwise
@@ -949,7 +950,7 @@ def zone_label(zone: str, now: datetime) -> str:
     return f"{place} · {utc_offset(zone, now)}"
 
 
-def zone_groups(zones: list[str], now: datetime) -> list[tuple[str, list[tuple[str, str]]]]:
+def zone_groups(zones: Sequence[str], now: datetime) -> list[tuple[str, list[tuple[str, str]]]]:
     """Time zones for a dropdown: under the region each is named for, the places in alphabetical
     order, each as (zone, how it reads)."""
     grouped: dict[str, list[tuple[str, str]]] = {}

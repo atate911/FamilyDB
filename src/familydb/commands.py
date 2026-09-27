@@ -108,7 +108,8 @@ def _linked_by(app: App, msg: IncomingMessage, code: str) -> OutgoingMessage | N
             )
         except family.InviteRefused as refused:
             if refused.why == "taken":
-                said = voice.say(app.settings, "invite_taken", seed=seed, who=refused.owner or "")
+                owner = refused.owner or "somebody else"  # linked in the same moment
+                said = voice.say(app.settings, "invite_taken", seed=seed, who=owner)
                 return OutgoingMessage(msg.chat_id, said, "ok")
             if members.resolve(conn, msg.channel, msg.channel_user_id) is not None:
                 return None
