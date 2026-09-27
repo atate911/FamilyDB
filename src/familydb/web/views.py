@@ -13,6 +13,7 @@ import math
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
+from functools import lru_cache
 from itertools import islice, pairwise
 from typing import Any
 from urllib.parse import quote
@@ -950,20 +951,30 @@ def zone_label(zone: str, now: datetime) -> str:
     return f"{place} · {utc_offset(zone, now)}"
 
 
-def zone_groups(zones: Sequence[str], now: datetime) -> list[tuple[str, list[tuple[str, str]]]]:
+ZoneGroups = tuple[tuple[str, tuple[tuple[str, str], ...]], ...]
+
+
+def zone_groups(zones: Sequence[str], now: datetime) -> ZoneGroups:
     """Time zones for a dropdown: under the region each is named for, the places in alphabetical
-    order, each as (zone, how it reads)."""
+    order, each as (zone, how it reads). Worked out for the hour, since the offsets move only as
+    clocks change, and there are nearly five hundred of them to work out."""
+    hour = now.astimezone(UTC).replace(minute=0, second=0, microsecond=0)
+    return _zone_groups(tuple(zones), hour)
+
+
+@lru_cache(maxsize=2)
+def _zone_groups(zones: tuple[str, ...], hour: datetime) -> ZoneGroups:
     grouped: dict[str, list[tuple[str, str]]] = {}
     for zone in zones:
         region, _, rest = zone.partition("/")
         heading = ZONE_REGIONS.get(region, ZONE_OTHERS) if rest else ZONE_OTHERS
-        grouped.setdefault(heading, []).append((zone, zone_label(zone, now)))
+        grouped.setdefault(heading, []).append((zone, zone_label(zone, hour)))
     order = [*ZONE_REGIONS.values(), ZONE_OTHERS]
-    return [
-        (heading, sorted(grouped[heading], key=lambda row: row[1].casefold()))
+    return tuple(
+        (heading, tuple(sorted(grouped[heading], key=lambda row: row[1].casefold())))
         for heading in order
         if heading in grouped
-    ]
+    )
 
 
 def knock_row(knock: Any, tz: Any) -> dict[str, Any]:

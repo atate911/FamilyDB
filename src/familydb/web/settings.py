@@ -57,7 +57,7 @@ from familydb import passwords, personas, voice
 from familydb.agent import gateway, providers
 from familydb.agent.spending import spent_today
 from familydb.app import App
-from familydb.availability import enrichment_available
+from familydb.availability import enrichment_available, web_is_public
 from familydb.config import PersonaRewrite, Settings, apply_overrides
 from familydb.integrations import google_calendar as google
 from familydb.store import settings as settings_store
@@ -303,7 +303,7 @@ def _box(
     typed: dict[str, str],
     offers: dict[str, list[tuple[str, str]]],
     live: Settings,
-    grouped: dict[str, list[tuple[str, list[tuple[str, str]]]]] | None = None,
+    grouped: dict[str, views.ZoneGroups] | None = None,
 ) -> dict[str, Any]:
     # A dropdown drawn in groups (the time zones) says its default in the words it offers it in.
     headed = (grouped or {}).get(one.key)
@@ -422,7 +422,6 @@ def _general(app: App, conn: Any) -> dict[str, Any]:
 # so there the installer's own folder stands in.
 CHECKOUT = Path(__file__).resolve().parents[3]
 INSTALLED = Path("/opt/familydb")
-LOOPBACK = frozenset({"127.0.0.1", "localhost", "::1"})
 
 
 def served(app: App) -> dict[str, Any]:
@@ -442,7 +441,7 @@ def served(app: App) -> dict[str, Any]:
         "own": f"{live.web_host}:{live.web_port}",
         "own_port": live.web_port,
         "proxied": live.web_trust_proxy,
-        "local": live.web_host.strip().lower() in LOOPBACK,
+        "local": not web_is_public(live),
         "script": script if script.exists() else INSTALLED / "scripts" / "maintain.sh",
     }
 
