@@ -339,3 +339,10 @@ def test_maintain_explains_how_to_move_familydbs_own_port() -> None:
         timeout=60,
     ).stdout
     assert "port N|random" in usage and "maintain.sh port 9090" in usage
+
+
+def test_with_docker_a_port_something_else_listens_on_changes_nothing(tmp_path) -> None:
+    env = "WEB_PORT=8080\nWEB_DOMAIN=family.example.com\nCOMPOSE_PROFILES=tls\n"
+    done, calls = _port(tmp_path, "https_port_in_docker", env, HTTPS_PORT="8443", BUSY="8443")
+    assert done.returncode != 0 and "already listens on port 8443" in done.stderr
+    assert "WEB_PUBLIC_PORT" not in (tmp_path / ".env").read_text() and calls == []

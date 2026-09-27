@@ -357,6 +357,10 @@ https_port_in_docker() {
   previous="$(env_file_value WEB_PUBLIC_PORT)"; previous="${previous:-443}"
   chosen="$(choose_public_port "$HTTPS_PORT" "$port")" \
     || die "that port will not do" "Give --port a number from 1024 to 65535, or random, or 443."
+  if [ "$chosen" != "$previous" ] && port_listening "$chosen"; then
+    die "something on this machine already listens on port ${chosen}, so the page cannot" \
+      "Nothing was changed. Choose another: sudo ${0} https --port random"
+  fi
   PUBLIC_PORT="$chosen"
   if [ "$chosen" = "$previous" ]; then
     ok "The page is already served on port ${chosen}. Nothing to do."
