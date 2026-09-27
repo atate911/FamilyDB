@@ -42,7 +42,7 @@ from datetime import datetime, timedelta
 
 from familydb import passwords, roles
 from familydb.dates import utc_iso
-from familydb.store import invites, logins, members, messages
+from familydb.store import invites, logins, members, messages, plans, tasks
 from familydb.store.db import transaction
 from familydb.store.members import Member, Role
 
@@ -245,6 +245,13 @@ def remove(
                 f"The bot is answering {current.display_name} right now. Try again in a moment."
             )
         messages.give_up_for_member(conn, member_id, now=now)
+        if current.channel == TELEGRAM and current.channel_user_id:
+            # Their private chat with the bot, whose id is theirs: nothing more is said there,
+            # not a reminder, a follow-up, a check of tomorrow's plans, or anything queued.
+            private = current.channel_user_id
+            tasks.cancel_in_chat(conn, TELEGRAM, private, now)
+            plans.leave_chat(conn, TELEGRAM, private)
+            messages.cancel_unsent(conn, TELEGRAM, private, now=now)
         touched = members.erase(conn, member_id)
     log.info("member %s taken off the list for good: %s", member_id, touched)
     return current

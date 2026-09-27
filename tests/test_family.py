@@ -282,3 +282,56 @@ def test_nobody_takes_themselves_or_the_last_admin_off(conn, family_members) -> 
     with pytest.raises(family.FamilyError, match="changed since"):
         family.remove(conn, alex.id, by=sam.id, seen="stale", now=NOW)
     assert members.get(conn, sam.id) and members.get(conn, alex.id)
+
+
+def test_nothing_more_is_said_in_the_private_chat_of_somebody_taken_off(conn, family_members):
+    from familydb.store import plans, tasks
+
+    alex, sam = family_members["alex"], family_members["sam"]
+    private = alex.channel_user_id
+    with db.transaction(conn):
+        task = tasks.insert(
+            conn,
+            title="Dentist",
+            notes="",
+            owner_id=alex.id,
+            due_at=None,
+            preferred_window="",
+            operation_key="k1",
+            channel="telegram",
+            chat_id=private,
+            now=NOW,
+        )
+        tasks.add_reminder(conn, task, "2026-09-21T16:00:00Z")
+        plan = plans.insert(
+            conn,
+            title="Zoo",
+            start="2026-09-26",
+            end=None,
+            all_day=True,
+            channel="telegram",
+            chat_id=private,
+            now=NOW,
+        )
+        queued = messages.insert_out(
+            conn, channel="telegram", chat_id=private, text="Reminder", now=NOW
+        )
+        shared = tasks.insert(
+            conn,
+            title="Bins",
+            notes="",
+            owner_id=alex.id,
+            due_at=None,
+            preferred_window="",
+            operation_key="k2",
+            channel="telegram",
+            chat_id="-100",
+            now=NOW,
+        )
+
+    family.remove(conn, alex.id, by=sam.id, seen=family.revision(alex), now=NOW)
+    assert tasks.get(conn, task).status == "cancelled"
+    assert not tasks.has_pending_reminder(conn, task)
+    assert plans.get(conn, plan.id).chat_id is None  # no follow-up or evening check there
+    assert messages.get(conn, queued.id).cancelled_at is not None
+    assert tasks.get(conn, shared).status == "open"  # the family group's task stays

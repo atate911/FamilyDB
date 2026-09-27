@@ -192,6 +192,26 @@ def cancel_reminders(conn: sqlite3.Connection, task_id: int, now: str) -> None:
     )
 
 
+def cancel_in_chat(conn: sqlite3.Connection, channel: str, chat_id: str, now: str) -> int:
+    """Cancel every open task kept in one chat, with its reminders: the chat of somebody taken
+    off the list. Returns how many. Call inside a transaction."""
+    open_ids = [
+        int(row["id"])
+        for row in conn.execute(
+            "SELECT id FROM tasks WHERE channel = ? AND chat_id = ? AND status = 'open'",
+            (channel, chat_id),
+        )
+    ]
+    for task_id in open_ids:
+        cancel_reminders(conn, task_id, now)
+        conn.execute(
+            "UPDATE tasks SET status = 'cancelled', revision = revision + 1, updated_at = ? "
+            "WHERE id = ?",
+            (now, task_id),
+        )
+    return len(open_ids)
+
+
 def reword_queued(conn: sqlite3.Connection, task_id: int, text: str) -> None:
     """Give a queued but unsent reminder message for this task new words."""
     conn.execute(
