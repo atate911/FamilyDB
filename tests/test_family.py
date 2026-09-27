@@ -195,3 +195,47 @@ def test_links_past_their_day_are_forgotten_whatever_is_opened(conn, family_memb
     with pytest.raises(family.InviteRefused):
         family.accept_invite(conn, "x" * 32, telegram_id="1003", now=_at(family.INVITE_HOURS))
     assert conn.execute("SELECT count(*) FROM telegram_invites").fetchone()[0] == 0
+
+
+def test_a_birthday_and_a_gender_are_kept_until_changed(conn, family_members) -> None:
+    kid = family.add(conn, "Mia", "kid", telegram_id=None, now=NOW)
+    mia = _change(conn, kid, birth_date="2017-03-14", gender="female")
+    assert (mia.birth_date, mia.gender) == ("2017-03-14", "female")
+    assert family.revision(mia) != family.revision(kid)  # a form drawn before is refused
+    # A change that says nothing of them (linking Telegram, say) keeps both.
+    mia = _change(conn, mia, telegram_id="1009")
+    assert (mia.birth_date, mia.gender) == ("2017-03-14", "female")
+    # An empty one takes it away.
+    mia = _change(conn, mia, birth_date="", gender="")
+    assert (mia.birth_date, mia.gender) == (None, None)
+
+
+@pytest.mark.parametrize(
+    ("birth_date", "gender", "complaint"),
+    [
+        ("14/03/2017", None, "is a date"),
+        ("2027-01-01", None, "not a day that has been"),
+        ("1850-01-01", None, "not a day that has been"),
+        (None, "robot", "male or female"),
+    ],
+)
+def test_a_birthday_or_gender_that_cannot_be_is_refused(
+    conn, family_members, birth_date, gender, complaint
+) -> None:
+    kid = family.add(conn, "Mia", "kid", telegram_id=None, now=NOW)
+    given = {"birth_date": birth_date} if birth_date else {"gender": gender}
+    with pytest.raises(family.FamilyError, match=complaint):
+        _change(conn, kid, **given)
+
+
+def test_an_age_and_the_next_birthday_are_worked_out_by_code() -> None:
+    from datetime import date
+
+    today = date(2026, 9, 27)
+    assert family.age_on("2017-09-28", today) == 8  # the day before
+    assert family.age_on("2017-09-27", today) == 9  # on the day
+    assert family.age_on(None, today) is None
+    assert family.next_birthday("2017-09-27", today) == today
+    assert family.next_birthday("2017-03-14", today) == date(2027, 3, 14)
+    assert family.next_birthday("2016-02-29", today) == date(2027, 3, 1)  # no 29th in 2027
+    assert family.next_birthday("2016-02-29", date(2027, 12, 1)) == date(2028, 2, 29)

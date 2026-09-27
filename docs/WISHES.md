@@ -74,11 +74,14 @@ parent's chat can still find one with the idea search, which drops gifts for any
 `decide`. Vera cannot mention a gift she was never shown, and every request gets a little
 smaller. A kid's wish to give a sister something is a wish on her own list, category `gift`.
 
-### Birthdate and age (planned)
+### Birthday, age, and male or female (built)
 
-`members.birth_date`, set by an admin on the Family page through `familydb/family.py` (the
-family list is never a tool). Code works out her age and the days to her birthday in the family's
-timezone. Only her age reaches the model, in her turn line; never the date.
+`members.birth_date` and, for a kid, `members.gender` (male or female), set by an admin on the
+Family page through `familydb/family.py` (the family list is never a tool). A change that does not
+mention them keeps them. Code works out an age (`family.age_on`) and the next birthday
+(`family.next_birthday`; born on 29 February, it is 1 March in other years). The Family list shows
+each age. Only the age reaches the model, with male or female for a kid, in her turn line
+(*planned*); never the date.
 
 ### Wishes (planned)
 

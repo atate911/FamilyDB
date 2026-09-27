@@ -67,6 +67,8 @@ ROLE_WORDS = {
     "kid": "is in the plans; with a password, reads the ideas and plans, talks to the bot, "
     "and sees only her own things to do.",
 }
+# The choice on a kid's Family page, as the page words it; stored as the key.
+GENDER_WORDS = {"female": "Female", "male": "Male"}
 # What somebody is told when their role may not go somewhere, by the permission it needs. The
 # conversation is hers, so it goes by her name: {name} is the persona in force.
 REFUSALS = {

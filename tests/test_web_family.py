@@ -173,3 +173,31 @@ def test_a_link_is_made_for_somebody_and_shown_once(page, conn, family) -> None:
     assert link is not None and "Shown this once" in shown
     assert invites.find(conn, invites.digest(link.group(1))).member_id == alex.id
     assert "t.me/tate_family_bot?start=" not in page.get(f"/family/{alex.id}").text  # once
+
+
+def test_a_kid_is_given_a_birthday_and_male_or_female(page, conn, family) -> None:
+    girls = family["girls"]
+    form = page.get(f"/family/{girls.id}").text
+    assert 'name="birth_date"' in form and 'name="gender"' in form
+    assert '<option value="female"' in form and '<option value="male"' in form
+    page.post(
+        f"/family/{girls.id}",
+        data={
+            "csrf": _token(page),
+            "revision": _revision(page, girls.id),
+            "name": "the girls",
+            "role": "kid",
+            "active": "yes",
+            "telegram_id": "",
+            "birth_date": "2017-03-14",
+            "gender": "female",
+        },
+    )
+    saved = members.get(conn, girls.id)
+    assert (saved.birth_date, saved.gender) == ("2017-03-14", "female")
+    assert '<span class="tag">9</span>' in page.get("/family").text  # her age, worked out
+
+
+def test_a_grown_up_is_given_a_birthday_but_no_gender_box(page, conn, family) -> None:
+    form = page.get(f"/family/{family['alex'].id}").text
+    assert 'name="birth_date"' in form and 'name="gender"' not in form

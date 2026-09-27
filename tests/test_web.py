@@ -806,7 +806,9 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
     signing_in = {"choose_password", "claim", "give_starting_password", "remove_login"}
     # A link that links somebody's Telegram to them (the family chose it; DESIGN.md section 16).
     linking = {"invite"}
-    assert ruled <= {"add", "change", "revision"} | signing_in | linking, ruled
+    # How old somebody is, worked out from their birthday: a reading, not a write.
+    reading = {"revision", "age_on"}
+    assert ruled <= {"add", "change"} | reading | signing_in | linking, ruled
     assert {"add", "change"} | signing_in | linking <= ruled
 
     # And the doors are shut to everything else. Not whole packages: `views.py` reads opening

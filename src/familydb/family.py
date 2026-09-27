@@ -37,13 +37,14 @@ from __future__ import annotations
 import hashlib
 import secrets
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
+from typing import Any
 
 from familydb import passwords, roles
 from familydb.dates import utc_iso
 from familydb.store import invites, logins, members, messages
 from familydb.store.db import transaction
-from familydb.store.members import Member, Role
+from familydb.store.members import Gender, Member, Role
 
 TELEGRAM = "telegram"
 MAX_NAME = 80
@@ -61,8 +62,63 @@ class FamilyError(ValueError):
 
 def revision(member: Member) -> str:
     """A short mark of a profile as it stands. The members table keeps no updated time."""
-    seen = f"{member.display_name}|{member.role}|{member.active}|{member.channel_user_id}"
+    seen = (
+        f"{member.display_name}|{member.role}|{member.active}|{member.channel_user_id}"
+        f"|{member.birth_date}|{member.gender}"
+    )
     return hashlib.sha256(seen.encode()).hexdigest()[:16]
+
+
+# A change that does not mention a birthday or a gender keeps the one stored.
+KEEP: Any = object()
+OLDEST = 1900
+
+
+def clean_birth_date(value: str | None, *, today: date) -> str | None:
+    """A birthday as a date input sends it (YYYY-MM-DD), a day that has been, or nothing."""
+    value = (value or "").strip()
+    if not value:
+        return None
+    try:
+        born = date.fromisoformat(value)
+    except ValueError:
+        raise FamilyError("A birthday is a date, such as 2017-03-14.") from None
+    if born > today or born.year < OLDEST:
+        raise FamilyError("That birthday is not a day that has been.")
+    return born.isoformat()
+
+
+def clean_gender(value: str | None) -> Gender | None:
+    value = (value or "").strip().lower()
+    if not value:
+        return None
+    if value not in members.GENDERS:
+        raise FamilyError("Choose male or female, or leave it unsaid.")
+    return value  # type: ignore[return-value]
+
+
+def age_on(birth_date: str | None, today: date) -> int | None:
+    """How old somebody born on this day is today, in whole years; None with no birthday."""
+    if not birth_date:
+        return None
+    born = date.fromisoformat(birth_date)
+    return today.year - born.year - ((today.month, today.day) < (born.month, born.day))
+
+
+def next_birthday(birth_date: str | None, today: date) -> date | None:
+    """The next birthday on or after today. Born on 29 February, it falls on 1 March in a year
+    without one."""
+    if not birth_date:
+        return None
+    born = date.fromisoformat(birth_date)
+    for year in (today.year, today.year + 1):
+        try:
+            day = born.replace(year=year)
+        except ValueError:
+            day = date(year, 3, 1)
+        if day >= today:
+            return day
+    raise AssertionError("a birthday comes round within a year")
 
 
 def clean_name(name: str) -> str:
@@ -153,10 +209,17 @@ def change(
     telegram_id: str | None,
     seen: str,
     now: str,
+    birth_date: Any = KEEP,
+    gender: Any = KEEP,
 ) -> Member:
-    """Change somebody, given the `revision` the form was drawn from. Raises FamilyError."""
+    """Change somebody, given the `revision` the form was drawn from. Raises FamilyError.
+
+    A birthday or a gender not given (`KEEP`) stays as it is; an empty one is taken away."""
     name, role_ = clean_name(name), _check_role(role)
     telegram = clean_telegram_id(telegram_id)
+    today = datetime.fromisoformat(now.replace("Z", "+00:00")).date()
+    born = birth_date if birth_date is KEEP else clean_birth_date(birth_date, today=today)
+    gender_ = gender if gender is KEEP else clean_gender(gender)
     try:
         with transaction(conn):
             current = members.get(conn, member_id)
@@ -199,6 +262,8 @@ def change(
                 active=active,
                 channel=channel,
                 channel_user_id=channel_user_id,
+                birth_date=current.birth_date if born is KEEP else born,
+                gender=current.gender if gender_ is KEEP else gender_,
             )
             if current.active and not active:
                 messages.give_up_for_member(conn, member_id, now=now)
