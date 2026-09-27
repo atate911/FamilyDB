@@ -14,7 +14,7 @@ A private family assistant, Vera, who lives in our chat app. She remembers the t
 - "What should we do this weekend?" checks each stored idea against the free time, the forecast, opening hours, booking needs and travel time, searches the web for things happening that weekend, and returns a short list with the reasoning, plus an offer to schedule. On Thursday evenings the weekend's options are posted to the family chat unasked.
 - The evening before a plan, the bot checks the forecast and the place's hours again, and speaks up only if something is off ("80% chance of rain for the falls hike"), with another idea for the same time.
 - The day after a plan, the bot asks how it went so it can suggest repeats or avoid duds. On Telegram the question comes with buttons (Yes, again / Not again / Didn't go), and a reminder with ✓ Done, In an hour and Tomorrow: a tap does it at once, with no model call.
-- Voice notes sent on Telegram are heard by a speech model and answered as if typed; the words are kept, the recording is not. /today, /week, /tasks and /now answer at once from the calendar, the task list and the ideas, with no model call.
+- Voice notes sent on Telegram are heard by a speech model and answered as if typed; the words are kept, the recording is not. A photo (a poster, a menu, a ticket) is read by the lookup model the same way, and answered from what it shows. /today, /week, /tasks and /now answer at once from the calendar, the task list and the ideas, with no model call.
 - She speaks as Vera, a personality the family can rename, add to or rewrite on the settings page, or swap for a shorter Vera or for none at all. Everything said unasked (reminders, follow-ups, notices) is worded by code from her lines, and folded into the conversation when the family is already talking.
 - A web page, where each person signs in as themselves, does the same things in a browser. It opens on the box to ask Vera something, with what is coming up, what is left to do and what was added lately around it. Search and filter the ideas, see on a radar where the places among them lie from home, open one to see its hours, travel time and booking link, browse the restaurants, and see the family calendar as a list or a month, read live from Google. Adding an idea, fixing its details, recording how it went, putting a plan on the calendar and ticking off a task all work from the page, and each form runs the same tool the bot runs when you ask it in chat, so the checks are the same code, not a second copy of it.
 - An admin also sets the bot up from the page: which company's model answers and how strong, what it may spend a day, where home is, when it speaks first, the API keys, the Telegram bot, the Google Calendar connection and who is in the family, with a status page saying what is connected and what the models have cost. Until everything is set, the home page lists what is left, each linked to where it is done.
@@ -87,11 +87,12 @@ src/familydb/
   delivery.py     message leases and at-least-once delivery of stored replies
   calendar_sync.py  plans brought in line with their Google events
   agenda.py       what is on, from Google or else the saved plans
-  family.py       the rules for adding and changing family members (not a tool)
+  family.py       the rules for adding and changing family members (not a tool), and the
+                  one-time links that link somebody's Telegram
   roles.py        the three roles, admin, parent and kid, and what each may do
   task_service.py tasks, their reminders and repeats, changed in one place
   windows.py      a task's preferred window ("some Saturday morning"), read by code
-  commands.py     Telegram's /today, /week, /tasks and /now, answered by code
+  commands.py     Telegram's /start, /today, /week, /tasks and /now, answered by code
   buttons.py      the buttons under a reminder or a follow-up, and what a tap does
   memory.py       which of the family's memories each message is sent
   whereabouts.py  where a phone last said a member was, for a few hours
@@ -101,7 +102,7 @@ src/familydb/
   doctor.py       the install check   privacy.py      owner-only files and umask
   agent/          the gateway (the one door to a model), the request and prompt builders,
                   history, the tool loop, worker turns, the daily spending limit,
-                  prompts/{system,enrich,discover}.md
+                  prompts/{system,enrich,discover,look}.md
   agent/providers/ one module per model vendor behind a small protocol, the price table and
                   each company's models by level
   tools/          registry, strict schemas, one module per tool group (ideas, outcomes,
@@ -109,7 +110,7 @@ src/familydb/
   suggest/        the suggestion engine: context, shortlist, evaluate, discover, compose, log
   store/          SQLite connection, migrations/, one repository per table
   channels/       message shapes, the console, Telegram (with the supervisor that follows its
-                  token) and the web chat
+                  token, and markup.py, which draws a reply's bold and links) and the web chat
   web/            the page: app factory, sign-in and roles, home, chat, the reading views, the
                   edit forms, Family, status, settings and setup, once-only forms, templates
   integrations/   Google Calendar, Open-Meteo and the keyless geocoder
