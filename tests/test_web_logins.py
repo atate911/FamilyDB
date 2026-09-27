@@ -632,3 +632,78 @@ def test_a_kid_talks_to_the_bot_on_her_own_and_a_parent_reads_along(app, sam, fa
     read = sam.get(f"/chat?with={family['girls'].id}").text
     assert "I want a hamster" in read and 'action="/chat"' not in read  # read, not written
     assert sam.get(f"/chat?with={family['sam'].id}").status_code == 404  # only a kid's
+
+
+# What a kid is never shown: how the bot works, or what is wrong with it.
+MACHINERY = re.compile(
+    r"Version v|Google Calendar|Times use|Waiting for delivery|Telegram chat|restart|retry job|"
+    r"settings page|How it was looked up|worker:|error:",
+    re.IGNORECASE,
+)
+
+
+def _words(page: str) -> str:
+    """What a page says, without its markup, scripts or styles."""
+    return re.sub(r"<[^>]+>", " ", re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", page, flags=re.S))
+
+
+def test_a_kid_is_never_shown_how_it_works(app, sam, family) -> None:
+    """No calendar notes, lookup errors, reminder delivery, time zone or version for a kid; the
+    grown-ups still see them all."""
+    girls_id = family["girls"].id
+    with closing(app.connect()) as conn, db.transaction(conn):
+        idea = ideas.insert(conn, title="Ramen place", kind="restaurant", now=NOW_ISO)
+        failed = {"enrichment": "failed", "enrichment_note": "worker: the web search tool is off"}
+        ideas.update(conn, idea.id, failed, now=NOW_ISO)
+        task_id = tasks.insert(
+            conn,
+            title="Pack the swim bag",
+            notes="",
+            owner_id=girls_id,
+            due_at=None,
+            preferred_window="",
+            operation_key="swim",
+            channel="telegram",
+            chat_id="-100",
+            now=NOW_ISO,
+        )
+        tasks.add_reminder(conn, task_id, "2026-09-26T16:00:00Z")
+    girls = _as(app, "the girls", _start(sam, girls_id))
+    girls.post("/you", data={**_tokens(girls, "/you"), "new": KIDS, "again": KIDS})
+    pages = ("/", "/chat", "/ideas", f"/idea/{idea.id}", "/plans", "/plans/month", "/tasks")
+    for path in (*pages, "/wishes", "/you"):
+        page = girls.get(path)
+        assert page.status_code == 200, path
+        shown = MACHINERY.findall(_words(page.text))
+        assert not shown, (path, shown)
+    assert "Pack the swim bag" in girls.get("/tasks").text  # her own things to do, all the same
+    grown_up = " ".join(_words(sam.get(path).text) for path in pages)
+    for said in ("Version v", "Google Calendar", "Times use", "worker:", "Scheduled"):
+        assert said in grown_up, said
+
+
+def test_an_admin_s_status_tile_lights_up_while_something_is_wrong(app, sam, family, alex):
+    """Amber ▲ while something only an admin can fix goes on, red ■ while nobody can be
+    answered; a parent's tile never lights, and a kid has none."""
+    from familydb.store import alerts as alert_store
+    from familydb.web import status as status_page
+
+    def note(kind: str) -> None:
+        with closing(app.connect()) as conn, db.transaction(conn):
+            alert_store.note(conn, kind, "", "test", now=NOW_ISO, keep_after="2026-01-01T00:00:00Z")
+
+    def tile(browser) -> str:
+        page = browser.get("/ideas").text
+        found = re.search(r'<a class="to-status[^"]*"[^>]*>.*?</a>', page, re.S)
+        return found.group(0) if found else ""
+
+    assert "lit" not in tile(sam) and "Status</span>" in tile(sam)
+    note("price")  # news, not trouble
+    assert "lit" not in tile(sam)
+    note("calendar")
+    assert "lit-warn" in tile(sam) and "Status: needs a look" in tile(sam) and "▲" in tile(sam)
+    note("key")
+    assert "lit-bad" in tile(sam) and "Status: not answering" in tile(sam) and "■" in tile(sam)
+    assert "lit" not in tile(alex) and "Status</span>" in tile(alex)
+    with closing(app.connect()) as conn:
+        assert status_page.light(app, conn) == "bad"

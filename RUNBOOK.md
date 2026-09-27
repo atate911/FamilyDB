@@ -212,15 +212,24 @@ one at a time:
 The Google Cloud side is done once, in a browser:
 
 1. Create a Google Cloud project and enable the Google Calendar API.
-2. Configure the OAuth consent screen as External and set the publishing status to **In production**. Left in Testing, refresh tokens expire after seven days and the bot stops writing to the calendar every week. The "unverified app" warning during consent is expected for a private app.
-3. Create OAuth credentials of type **Desktop app** and download the JSON. A client of type Web
-   application will not do; the page says so if you paste one.
+2. Under Google Auth Platform, press Get started to set up the sign-in screen: the app's name,
+   your email, audience **External**. Then, on Audience, press Publish app, so the publishing
+   status is **In production**. Left in Testing, refresh tokens expire after seven days and the
+   bot stops writing to the calendar every week. The "unverified app" warning during consent is
+   expected for a private app, which may have up to 100 users without Google verifying it.
+3. Under Clients, create a client of type **Desktop app**, and press Download JSON in the box
+   that opens as it is made: Google shows a client's secret only then, and a JSON downloaded
+   later from the list has none (the page says so if you paste one; make another client). A
+   client of type Web application will not do either; the page says so too.
 
 Then connect it from the settings page, which needs no laptop and nothing copied to the server:
 
 4. On `/settings/connections`, under Google Calendar, paste the client's JSON and press "Get the
    consent link".
-5. Open the link, sign in as the account that owns the family calendar, and allow access.
+5. Open the link and sign in as the account that owns the family calendar. Past the "unverified
+   app" warning (Advanced, then Go to FamilyDB), Google lists what the app may use with a box
+   beside each: tick them all, or Select all, and press Continue. With one left unticked the
+   page says so, and you start again.
 6. Google then sends the browser to an address starting `http://127.0.0.1:53682/`, which will
    not load. That is expected. Copy the whole address from the address bar, paste it into the
    page, and press Connect. Do this within a quarter of an hour of getting the link, and without

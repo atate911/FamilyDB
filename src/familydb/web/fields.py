@@ -345,6 +345,13 @@ GROUPS: tuple[Group, ...] = (
                 "In the bar, on the sign-in page and in the browser's tab. Your family's name "
                 "works well.",
             ),
+            field(
+                "web_dictation",
+                "A mic to speak instead of typing",
+                "Beside each box that takes words. The browser writes down what is said: Safari "
+                "sends the sound to Apple, Chrome to Google, as a phone keyboard's mic does. It "
+                "never passes through FamilyDB and costs nothing. Firefox has no mic.",
+            ),
         ),
     ),
     Group(
@@ -878,6 +885,14 @@ GROUPS: tuple[Group, ...] = (
                 "Yes: only a message that @mentions the bot or replies to it. Suits a busy group "
                 "the family uses for other things too. No suits a group kept for planning, where "
                 "everything said is for her.",
+            ),
+            field(
+                "private_when_personal",
+                "Send what's for one person to their own chat",
+                "A reminder for somebody's own task, a note on an idea they added, how their "
+                "plan went: to their own chat with the bot, once they have written to it there, "
+                "rather than to the whole group. What is for everyone stays in the group. Either "
+                'way, a plain "saved" in the group is a 👌 on the message, which buzzes nobody.',
             ),
         ),
     ),

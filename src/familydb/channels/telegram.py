@@ -38,7 +38,7 @@ from telegram.constants import (
     MessageLimit,
     ParseMode,
 )
-from telegram.error import BadRequest, InvalidToken, NetworkError, RetryAfter
+from telegram.error import BadRequest, InvalidToken, NetworkError, RetryAfter, TelegramError
 from telegram.ext import (
     Application,
     ApplicationBuilder,
@@ -50,7 +50,7 @@ from telegram.ext import (
     filters,
 )
 
-from familydb import buttons, commands, personas, voice, whereabouts
+from familydb import buttons, commands, personas, routing, voice, whereabouts
 from familydb.app import App
 from familydb.channels import markup
 from familydb.channels.base import IncomingMessage, OutgoingMessage, PhotoNote, VoiceNote
@@ -340,6 +340,16 @@ async def formatted(
             raise
         log.warning("telegram: the formatting was refused, so it went as plain words (%s)", exc)
         return await send(words, **extra)
+
+
+async def confirm(message: Any) -> None:
+    """A group's "saved" (routing.CONFIRMED): a reaction on the message it answers, which buzzes
+    nobody. Where the group allows no reactions, the ✓ as a reply without a sound."""
+    try:
+        await message.set_reaction(routing.REACTION)
+    except TelegramError as exc:
+        log.info("telegram: no reaction here (%s), so the ✓ goes quietly", exc)
+        await message.reply_text(routing.CONFIRMED, disable_notification=True)
 
 
 def split_text(text: str, limit: int = int(MessageLimit.MAX_TEXT_LENGTH)) -> list[str]:
@@ -736,6 +746,9 @@ class TelegramChannel:
             return
 
         async def send_reply():
+            if chat.type in GROUP_TYPES and routing.is_confirmation(reply.text):
+                await confirm(update.effective_message)
+                return
             chunks = split_text(reply.text)
             bold = heading and reply.status == "ok"  # a stranger's line has no heading
             for index, chunk in enumerate(chunks):
@@ -822,7 +835,11 @@ class TelegramChannel:
         if self._loop is None:
             raise RuntimeError("Telegram is not running")
         chunks = split_text(text)
-        send = partial(self.application.bot.send_message, int(chat_id))
+        # A "saved" sent later than its turn cannot be a reaction any more; in a group it goes
+        # without a sound, as one would have.
+        quiet = routing.is_group(CHANNEL, chat_id) and routing.is_confirmation(text)
+        hushed = {"disable_notification": True} if quiet else {}
+        send = partial(self.application.bot.send_message, int(chat_id), **hushed)
         for index, chunk in enumerate(chunks):
             under = keyboard(row) if row and index == len(chunks) - 1 else None
             future = asyncio.run_coroutine_threadsafe(

@@ -16,7 +16,7 @@ from contextlib import closing
 from datetime import datetime, time, timedelta
 from typing import Any
 
-from familydb import voice
+from familydb import routing, voice
 from familydb.agent import spending
 from familydb.agent.loop import MessagesAPI
 from familydb.agent.spending import SpendingLimitReached
@@ -168,15 +168,21 @@ def _notify(app: App, conn: Any, idea: Idea) -> None:
     _send_note(app, conn, origin, render_place_note(idea, place, app.settings), place.name)
 
 
+def _to(app: App, conn: Any, origin: Any) -> tuple[str, str]:
+    """Where a note on an idea goes: to whoever told her it, in their own chat when it came from
+    a group (routing.py), else where it came from."""
+    return routing.for_person(conn, app.settings, origin.channel, origin.chat_id, origin.member_id)
+
+
 def _notify_together(app: App, conn: Any, done: list[int]) -> None:
-    """One note in each chat for everything the evening's lookups found there."""
+    """One note in each chat for everything the evening's lookups found for it."""
     by_chat: dict[tuple[str, str], list[tuple[Any, Idea, Place]]] = defaultdict(list)
     for idea_id in done:
         idea = ideas.get(conn, idea_id)
         found = _origin(app, conn, idea) if idea is not None else None
         if idea is not None and found is not None:
             origin, place = found
-            by_chat[(origin.channel, origin.chat_id)].append((origin, idea, place))
+            by_chat[_to(app, conn, origin)].append((origin, idea, place))
     for rows in by_chat.values():
         text = render_evening_note([(idea, place) for _, idea, place in rows], app.settings)
         _send_note(app, conn, rows[-1][0], text, rows[0][2].name, together=len(rows) > 1)
@@ -185,13 +191,15 @@ def _notify_together(app: App, conn: Any, done: list[int]) -> None:
 def _send_note(
     app: App, conn: Any, origin: Any, text: str, mention: str, *, together: bool = False
 ) -> None:
+    channel, chat_id = _to(app, conn, origin)
+    here = (channel, chat_id) == (origin.channel, origin.chat_id)
     with transaction(conn):
         outbound = messages.insert_out(
             conn,
-            channel=origin.channel,
-            chat_id=origin.chat_id,
+            channel=channel,
+            chat_id=chat_id,
             text=text,
-            reply_to=origin.id,
+            reply_to=origin.id if here else None,
             now=utc_iso(app.clock.now()),
         )
     voice.hand_over(
@@ -199,8 +207,8 @@ def _send_note(
         conn,
         outbound.id,
         event="lookups_done" if together else "lookup_done",
-        channel=origin.channel,
-        chat_id=origin.chat_id,
+        channel=channel,
+        chat_id=chat_id,
         mention=mention,
     )
 

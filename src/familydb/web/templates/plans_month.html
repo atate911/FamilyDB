@@ -17,7 +17,7 @@
     <a href="{{ url_for('web.plans') }}">{{ icon('list') }}List</a>
     <a href="{{ url_for('web.plans_month') }}" aria-current="page">{{ icon('grid') }}Month</a>
   </nav>
-  <p class="muted source source-{{ source }}">{{ source_note }}</p>
+  {% if visitor().may('browse') %}<p class="muted source source-{{ source }}">{{ source_note }}</p>{% endif %}
 
   <div class="month-head">
     <h2>{{ month }}</h2>

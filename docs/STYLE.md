@@ -16,8 +16,9 @@ in phosphor, sometimes a radar (see "Green screens").
 
 Everything here is carried by one stylesheet (`src/familydb/web/static/style.css`), a handful of
 templates, three open-licensed typefaces and one icon sprite. None of it needs a script: the
-page's three scripts are the box's (`static/ask.js`), the bar menu's (`static/menu.js`) and the
-wish lists' (`static/wishes.js`, dragging a wish into place), and the look depends on none.
+page's four scripts are the box's (`static/ask.js`), the bar menu's (`static/menu.js`), the
+wish lists' (`static/wishes.js`, dragging a wish into place) and the mic's (`static/dictate.js`,
+speaking instead of typing), and the look depends on none.
 
 This document is a record of the look as it stands and why, not a fence around it. The design,
 the feel and the structure of the pages are meant to evolve with the app, and whoever is working
@@ -376,6 +377,10 @@ looked at (see "Two layers").
 - **The bar.** On a phone the everyday places (Home, Vera, Ideas, Plans, To do, and Wishes, or
   My wishes for a kid) are a tab bar along the bottom, one column each, the current one marked by a pill in its colour; Memory, Family, Status and
   a last tile are icons at the top (Memory and Status not for a kid); Family is shown only to an admin, who alone may change it.
+  For an admin the Status icon carries a light while something only an admin can fix goes on
+  (`web/status.light`, one read of the troubles the status page lists): the pulse turns amber
+  with a ▲ in its corner for a look, red with a ■ while the family cannot be answered, and says
+  so in words to a screen reader. A parent's never lights: the fix is not theirs.
   The last tile opens a menu (a `<details>`, so it works with scripts off; `menu.js` closes it on
   a click elsewhere or Escape): for an admin it is the Settings gear, and lists every page of
   settings, then who is signed in, Your password and Sign out; anybody else sees their own name
@@ -452,7 +457,11 @@ looked at (see "Two layers").
 - Words on a green screen are at least 1.2rem; dim green phosphor is 5.8:1 at the tube's
   brightest, normal and bright more.
 - Reading, every form and sending a message work with scripts off; scripts add to that. Today
-  there are three. `static/wishes.js`, only on the wish lists, makes the number on a wish a handle
+  there are four. `static/dictate.js`, while the family has it on, puts a round mic beside each
+  box that takes words (inside its right-hand end, and beside Send in the message box); pressed,
+  it turns phosphor green and its ring breathes (still, under reduced motion) while the browser
+  writes down what is said into the box. Without it, or in a browser that cannot, there is no
+  mic, and a phone keyboard's own still works. `static/wishes.js`, only on the wish lists, makes the number on a wish a handle
   to drag it into place, and sends the card's own Move form with its new place; without it the
   Top, Up and Down buttons do the same. `static/ask.js` is the box's: it keeps what is being written, fills the box
   from the ways to start, sends where the phone is, and looks again for an answer only while

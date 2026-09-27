@@ -2192,3 +2192,70 @@ pre.json { max-height: 24rem; overflow: auto; padding: 0.75rem; font: 0.8rem/1.4
 .wish.dragging { opacity: 0.6; outline: 2px dashed var(--accent); }
 .home-wishes { --accent: var(--pink); margin-bottom: 1.25rem; }
 .home-wishes h3 { font-size: 1rem; margin: 0.25rem 0; }
+
+/* Speaking instead of typing (dictate.js): a round mic beside each box that takes words, drawn
+   only where the browser can write speech down. Listening, it lights up green and its ring
+   breathes; the words land in the box as they are said. At least 44px, for a finger. */
+button.mic {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  color: var(--ink-2);
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  border-radius: 50%;
+  box-shadow: none;
+}
+button.mic:hover { color: var(--ink); border-color: var(--edge); background: var(--surface-3); box-shadow: none; }
+button.mic .icon { width: 1.2rem; height: 1.2rem; }
+button.mic.listening {
+  color: var(--bg);
+  background: var(--green);
+  border-color: transparent;
+  box-shadow: 0 0 0 4px rgb(109 255 156 / 0.18), 0 0 22px -4px rgb(109 255 156 / 0.7);
+  animation: listening 1.4s ease-in-out infinite;
+}
+@keyframes listening {
+  50% { box-shadow: 0 0 0 8px rgb(109 255 156 / 0.08), 0 0 22px -4px rgb(109 255 156 / 0.7); }
+}
+@media (prefers-reduced-motion: reduce) {
+  button.mic.listening { animation: none; }
+}
+/* In the box, beside Send. */
+.ask .mic-slot { display: inline-flex; margin-left: auto; }
+.ask .mic-slot:empty { display: none; }
+.ask .mic-slot:not(:empty) + .send { margin-left: 0; }
+/* Anywhere else, inside the right-hand end of the box it fills. */
+.field.can-dictate { position: relative; }
+.field.can-dictate > [data-dictate] { padding-right: 3.4rem; }
+.field.can-dictate > button.mic { position: absolute; right: 0.35rem; bottom: 0.35rem; width: 2.25rem; height: 2.25rem; min-height: 2.25rem; border-color: transparent; background: transparent; }
+.field.can-dictate > button.mic.listening { background: var(--green); }
+
+/* The Status tile's light, for an admin (web/status.light): a mark in the icon's corner, amber ▲
+   while something needs a look, red ■ while the family cannot be answered. Shape and word as
+   well as colour, so it never says anything by colour alone. */
+.tools > a.lit { position: relative; }
+.tools > a.lit .light {
+  position: absolute;
+  top: 0.05rem;
+  right: -0.2rem;
+  display: grid;
+  place-items: center;
+  width: 0.8rem;
+  height: 0.8rem;
+  font-size: 0.45rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--bg);
+  border: 2px solid var(--bg);
+  border-radius: 50%;
+  box-sizing: content-box;
+}
+.tools > a.lit-warn .icon { color: var(--amber); }
+.tools > a.lit-warn .light { background: var(--amber); }
+.tools > a.lit-bad .icon { color: var(--red); }
+.tools > a.lit-bad .light { background: var(--red); }

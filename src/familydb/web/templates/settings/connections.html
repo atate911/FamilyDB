@@ -102,7 +102,8 @@
       <li>
         <a href="{{ google.consent_url }}" target="_blank" rel="noopener noreferrer">
           Open Google's consent page</a>, sign in as the account that owns the family calendar,
-        and allow access. Google may warn that the app is unverified: it is your own, so go on.
+        and allow access. Google warns that the app is unverified: it is your own, so press
+        Advanced and go on. Then tick every box it offers (or Select all) and press Continue.
       </li>
       <li>
         Google then sends the browser to an address starting <code>http://127.0.0.1:53682</code>,
@@ -134,9 +135,11 @@
         <p class="muted">
           Once, in <a href="{{ links.google_cloud }}" target="_blank"
           rel="noopener noreferrer">Google Cloud</a>: make a project, turn on the Google Calendar
-          API, set the OAuth consent screen to External and <strong>In production</strong> (left
-          in Testing, the connection stops working after a week), and create an OAuth client of
-          type <strong>Desktop app</strong>. Download its JSON and paste it here. The
+          API, set up its sign-in screen (Google Auth Platform) for External users and publish
+          it, so it is <strong>In production</strong> (left in Testing, the connection stops
+          working after a week), and create a client of type <strong>Desktop app</strong>. Press
+          Download JSON in the box that opens as the client is made, since Google shows its
+          secret only then, and paste the file here. The
           <a href="{{ url_for('setup.step', name='calendar') }}">Google Calendar step of setup</a>
           goes through it click by click.
         </p>

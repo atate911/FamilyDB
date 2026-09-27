@@ -57,7 +57,7 @@
         {{ hidden(kid) }}
         <div class="field wide">
           <label for="note-{{ row.id }}">A note for {{ kid.name }} <span class="optional">optional</span></label>
-          <input id="note-{{ row.id }}" name="note" maxlength="500" />
+          <input id="note-{{ row.id }}" name="note" maxlength="500" data-dictate />
         </div>
         <div class="field wide actions">
           <button type="submit" name="status" value="granted">{{ icon('check') }}Yes!</button>
@@ -94,7 +94,7 @@
           {% if parent %}<input type="hidden" name="for_whom" value="{{ kid.name }}" />{% endif %}
           <div class="field wide">
             <label for="wish-title-{{ kid.id }}">{{ 'Add a wish for ' ~ kid.name if parent else 'I wish for…' }}</label>
-            <input id="wish-title-{{ kid.id }}" name="title" required maxlength="120" />
+            <input id="wish-title-{{ kid.id }}" name="title" required maxlength="120" data-dictate />
           </div>
           <div class="field">
             <label for="wish-list-{{ kid.id }}">On</label>

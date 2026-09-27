@@ -39,11 +39,14 @@
       <li><a class="button" href="{{ google.consent_url }}" target="_blank" rel="noopener noreferrer">Open
         Google’s sign-in page</a> and choose the account that owns the family calendar.</li>
       <li>Google warns that it <em>hasn’t verified this app</em>. It is your own app, so press
-        <em>Advanced</em>, then <em>Go to {{ site_title }}</em>, then <em>Continue</em> to allow
-        access to the calendar.</li>
+        <em>Advanced</em>, then <em>Go to {{ site_title }} (unsafe)</em>.</li>
+      <li>Google asks what {{ site_title }} may use, with a box beside each. <strong>Tick every
+        box</strong>, or <em>Select all</em>, then press <em>Continue</em>: one lets it put plans
+        on the calendar, the other lets it list your calendars.</li>
       <li>The browser then tries to open a page starting <code>http://127.0.0.1:53682</code>,
         which does not load. <strong>That is expected.</strong> Copy the whole address from the
-        address bar and paste it here, within a quarter of an hour.</li>
+        address bar (on a phone, tap the address bar to see all of it) and paste it here, within
+        a quarter of an hour.</li>
     </ol>
     <form class="form" method="post" action="{{ url_for('settings.google_finish') }}">
       <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
@@ -81,8 +84,10 @@
         “Testing”, Google cuts the connection off after seven days.</li>
       <li><a href="{{ links.google_clients }}" target="_blank" rel="noopener noreferrer">Make
         the client</a>: <em>Create client</em>, application type <em>Desktop app</em>, name
-        {{ site_title }}, <em>Create</em>. Then press <em>Download JSON</em>, open the file it
-        saves, and copy everything in it.</li>
+        {{ site_title }}, <em>Create</em>. A box opens with the client’s ID and secret:
+        <strong>press <em>Download JSON</em> in that box</strong>, before closing it. Google shows
+        the secret only this once; if the box has closed, make another client the same way. Open
+        the file it saves and copy everything in it.</li>
     </ol>
     <p class="muted">Google rearranges these pages now and then; the names above stay close even
       when the layout moves.</p>

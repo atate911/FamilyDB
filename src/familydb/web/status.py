@@ -301,6 +301,26 @@ def activity(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
     return rows
 
 
+# The troubles that stop the family being answered, and the others worth an admin's look
+# (familydb/alerts.py). A price moving, a week's figures shifting, new models and a judgement's
+# answer are news, not trouble: they leave the light alone.
+STOPPING = frozenset({"credit", "key", "limit"})
+WORRYING = frozenset({"calendar", "model", "prices", "api", "refused"})
+
+
+def light(app: App, conn: sqlite3.Connection) -> str | None:
+    """The Status tile's light, for an admin: "bad" while the family cannot be answered, "warn"
+    while something else only an admin can fix goes on, None when all is well. One read of the
+    troubles table, as the status page makes; no model call."""
+    since = utc_iso(app.clock.now() - alerts.KEEP)
+    kinds = {one.kind for one in alert_store.current(conn, since=since)}
+    if kinds & STOPPING:
+        return "bad"
+    if kinds & WORRYING:
+        return "warn"
+    return None
+
+
 def attention(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
     """What only an admin can fix, while it lasts (familydb/alerts.py). New models to choose
     from are news rather than a trouble: they are under Models and prices instead."""
