@@ -21,6 +21,7 @@ calls themselves cost and do is usage_watch.py, run from the same job.
 from __future__ import annotations
 
 import logging
+import math
 import re
 import sqlite3
 from collections.abc import Callable
@@ -51,6 +52,12 @@ SOURCE_FAILURES = 3  # checks in a row a list may fail before an admin is told
 NEW_SHOWN = 5  # new models named in one notice
 UNSEEN = timedelta(days=7)  # no list has named a model this long: no longer offered
 NEW_FOR = timedelta(days=30)  # a model first seen this lately is marked new where it is offered
+# A model to take another's place is looked for at about its price: one no more than this much
+# dearer if there is any, the nearest in price among those.
+DEARER = 1.25
+# What the family spends is theirs to decide: a model goes in another's place by itself only when
+# it costs no more than this much more. A dearer one is suggested, and waits for an admin.
+SWAP_DEARER = 2.0
 # Words in a model's name that say it is not for chatting, or not a model of its own (an alias
 # that moves, an experiment, an open model Google also serves), whatever a list calls it.
 NOT_FOR_CHAT = (
@@ -366,13 +373,25 @@ def _tell(
         model = seen.get((company, name))
         subject = f"{company}:{name}"
         company_name = alerts.COMPANY_NAMES.get(company, company)
+        instead = replacement(seen, company, name, today)
         if model is not None and model.listed is False:
+            if instead and swaps_for(model, instead):
+                in_place = (
+                    f"; {instead.model} ({_price_words(instead)}) answers in its place until "
+                    "another is chosen"
+                )
+            elif instead:
+                in_place = (
+                    f", so everything asked of it fails until another is chosen; "
+                    f"{instead.model} ({_price_words(instead)}) is the nearest on offer"
+                )
+            else:
+                in_place = ", so everything asked of it fails until another is chosen"
             alerts.note(
                 conn,
                 "model",
                 subject,
-                f"{company_name} no longer offers {name} to the family's key, so everything "
-                "asked of it fails until another is chosen",
+                f"{company_name} no longer offers {name} to the family's key{in_place}",
                 now,
             )
         else:
@@ -381,11 +400,16 @@ def _tell(
             left = (date.fromisoformat(model.retires_on) - today).days
             if 0 <= left <= RETIRING_DAYS:
                 soon = ":soon" if left <= SOON_DAYS else ""
+                could = ""
+                if instead:
+                    could = f"; {instead.model} ({_price_words(instead)}) could take its place"
+                    if swaps_for(model, instead):
+                        could += ", and will on the day unless another is chosen"
                 alerts.note(
                     conn,
                     "model",
                     f"{subject}:{model.retires_on}{soon}",
-                    f"{company_name} retires {name} on {model.retires_on}, in {left} days",
+                    f"{company_name} retires {name} on {model.retires_on}, in {left} days{could}",
                     now,
                     once=True,
                 )
@@ -448,15 +472,66 @@ def _offerable(seen: Seen, today: date) -> bool:
     return not (seen.retires_on and seen.retires_on <= today.isoformat())
 
 
+def gone(seen: Seen, today: date) -> bool:
+    """Whether asking this model now would fail: the company no longer lists it for the key, or
+    a list says its day has passed."""
+    return seen.listed is False or bool(seen.retires_on and seen.retires_on <= today.isoformat())
+
+
+def swaps_for(old: Seen | None, instead: Seen) -> bool:
+    """Whether `instead` may answer in `old`'s place without anybody choosing it: when it costs
+    no more than `SWAP_DEARER` times as much, or either price is unknown to compare."""
+    if old is None or not old.output or not instead.output:
+        return True
+    return instead.output <= SWAP_DEARER * old.output
+
+
+def replacement(
+    seen: dict[tuple[str, str], Seen], company: str, name: str, today: date
+) -> Seen | None:
+    """The model to suggest in this one's place: one of the same company's on offer, not going
+    within `RETIRING_DAYS` itself, at about its price (no more than `DEARER` times it when
+    any is), the nearest in price among those. None when there is nothing to offer."""
+    old = seen.get((company, name.lower()))
+    horizon = (today + timedelta(days=RETIRING_DAYS)).isoformat()
+    choices = [
+        model
+        for (owner, other), model in seen.items()
+        if owner == company
+        and other != name.lower()
+        and _offerable(model, today)
+        and not (model.retires_on and model.retires_on <= horizon)
+    ]
+    names = {model.model for model in choices}
+    choices = [model for model in choices if not _snapshot_of(model.model, names)]
+    if not choices:
+        return None
+    target = old.output if old is not None and old.output else None
+
+    def nearness(model: Seen) -> tuple[bool, float, float]:
+        cost = model.output or 0.0
+        if target is None or not cost:
+            return (False, 0.0, cost)
+        return (cost > DEARER * target, abs(math.log(cost / target)), cost)
+
+    return min(choices, key=lambda model: (nearness(model), model.model))
+
+
+def replacement_for(conn: sqlite3.Connection, company: str, name: str, today: date) -> Seen | None:
+    """As `replacement`, from what the last check kept: for the status page."""
+    return replacement(store.all_seen(conn), company, name, today)
+
+
 def load(conn: sqlite3.Connection, *, today: date | None = None) -> None:
     """Put what the checks found in force in this process: prices first from them, the built-in
-    table for the rest; the models the settings page offers; and a word on those new lately or
-    going."""
+    table for the rest; the models the settings page offers; a word on those new lately or
+    going; and, for each model gone, the one that answers in its place (`prices.swapped`)."""
     today = today or date.today()
     seen = store.all_seen(conn)
     live: dict[str, dict[str, Price]] = {}
     offered: dict[str, list[Seen]] = {}
     notes: dict[tuple[str, str], str] = {}
+    swaps: dict[tuple[str, str], str] = {}
     # Everything kept on the first check is as old as the first check: only what came after is new.
     first = min((model.first_seen for model in seen.values()), default="")[:10]
     lately = (today - NEW_FOR).isoformat()
@@ -465,6 +540,9 @@ def load(conn: sqlite3.Connection, *, today: date | None = None) -> None:
             notes[(company, name)] = f"goes {model.retires_on}"
         elif model.first_seen[:10] > max(first, lately):
             notes[(company, name)] = "new"
+        instead = replacement(seen, company, name, today) if gone(model, today) else None
+        if instead is not None and swaps_for(model, instead):
+            swaps[(company, name)] = instead.model
         if model.input is None or model.output is None:
             continue
         live.setdefault(company, {})[name] = Price(
@@ -481,7 +559,7 @@ def load(conn: sqlite3.Connection, *, today: date | None = None) -> None:
         keep = [m for m in models if not _snapshot_of(m.model, names)]
         keep.sort(key=lambda m: (m.output or 0, m.model))
         shown[company] = tuple(m.model for m in keep)
-    prices.use(live, shown, notes)
+    prices.use(live, shown, notes, swaps)
 
 
 def _snapshot_of(name: str, names: set[str]) -> bool:

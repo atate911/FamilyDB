@@ -90,9 +90,13 @@ def model_at(provider: Provider, surface: Surface, level: str) -> str:
     everyday = provider.model_for(surface)
     stronger = catalog.at(provider.name, level) if level != catalog.EVERYDAY else None
     if stronger is None or stronger.price is None:
-        return everyday
-    own = prices.price(provider.name, everyday) or prices.UNLISTED
-    return everyday if own.output > stronger.price.output else stronger.name
+        chosen = everyday
+    else:
+        own = prices.price(provider.name, everyday) or prices.UNLISTED
+        chosen = everyday if own.output > stronger.price.output else stronger.name
+    # A model the company no longer offers, or past its day, fails every call: the daily check's
+    # choice answers in its place until the family chooses another (model_watch.py).
+    return prices.swapped(provider.name, chosen)
 
 
 def others(name: str) -> list[str]:

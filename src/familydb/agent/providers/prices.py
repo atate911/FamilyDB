@@ -92,16 +92,24 @@ SEARCH = {"anthropic": 0.01, "openai": 0.01, "gemini": 0.014}
 _LIVE: dict[str, dict[str, Price]] = {}
 _OFFERED: dict[str, tuple[str, ...]] = {}
 _NOTES: dict[tuple[str, str], str] = {}
+_SWAPS: dict[tuple[str, str], str] = {}
 
 
 def use(
     live: dict[str, dict[str, Price]],
     offered: dict[str, tuple[str, ...]],
     notes: dict[tuple[str, str], str] | None = None,
+    swaps: dict[tuple[str, str], str] | None = None,
 ) -> None:
     """Put what the daily check found in force, in place of what it found before."""
-    global _LIVE, _OFFERED, _NOTES
-    _LIVE, _OFFERED, _NOTES = live, offered, notes or {}
+    global _LIVE, _OFFERED, _NOTES, _SWAPS
+    _LIVE, _OFFERED, _NOTES, _SWAPS = live, offered, notes or {}, swaps or {}
+
+
+def swapped(provider: str, model: str) -> str:
+    """The model to ask in this one's place: itself, unless the daily check found it gone or
+    past its day, when the one it chose to take its place (model_watch.replacement)."""
+    return _SWAPS.get((provider, model.lower()), model)
 
 
 def note(provider: str, model: str) -> str | None:

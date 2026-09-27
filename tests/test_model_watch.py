@@ -328,14 +328,47 @@ def test_a_model_in_use_that_is_going_is_told_of_once_and_again_near_the_day(set
     )
     model_watch.check(_app(settings, day=2), lists=going, listers=listers)
     subject = "anthropic:claude-haiku-4-5:2026-10-01"
-    assert (
-        _alerts(conn)[("model", subject)]
-        == "Anthropic retires claude-haiku-4-5 on 2026-10-01, in 29 days"
+    # The key has only Opus besides: five times the price, so only suggested, never put in.
+    assert _alerts(conn)[("model", subject)] == (
+        "Anthropic retires claude-haiku-4-5 on 2026-10-01, in 29 days; claude-opus-5 "
+        "($5 in, $25 out) could take its place"
     )
     model_watch.check(_app(settings, day=3), lists=going, listers=listers)
     assert len([k for k in _alerts(conn) if k[0] == "model"]) == 1  # not again the next day
     model_watch.check(_app(settings, day=20), lists=going, listers=listers)
     assert ("model", f"{subject}:soon") in _alerts(conn)  # eleven days to go
+
+
+def test_a_model_past_its_day_is_answered_for_by_the_nearest_in_price(settings, conn) -> None:
+    """Everything asked of a model that has gone fails: the nearest on offer at no more than
+    twice its price answers in its place, and an admin is told which, until one is chosen."""
+    from familydb.agent import providers
+
+    listers = _claude("claude-haiku-4-5", "claude-sonnet-5", "claude-opus-5")
+    going = _both(
+        anthropic={**CLAUDE, "claude-haiku-4-5": _listed(1.0, 5.0, retires_on="2026-09-25")}
+    )
+    model_watch.check(_app(settings, day=20), lists=going, listers=listers)
+    assert _alerts(conn)[("model", "anthropic:claude-haiku-4-5:2026-09-25:soon")].endswith(
+        "claude-sonnet-5 ($2 in, $10 out) could take its place, and will on the day unless "
+        "another is chosen"
+    )
+    watching = settings.model_copy(update={"model_watch": True, "worker_model": "claude-haiku-4-5"})
+    worker = providers.build("anthropic", watching)
+    assert providers.model_at(worker, "worker", "everyday") == "claude-haiku-4-5"  # not yet
+
+    model_watch.check(_app(settings, day=26), lists=going, listers=listers)
+    assert providers.model_at(worker, "worker", "everyday") == "claude-sonnet-5"
+    assert "claude-haiku-4-5" not in prices.suggestions("anthropic")
+
+    # Gone for the key, with nothing near its price: told so, and nothing is put in its place.
+    listers = _claude("claude-opus-5")
+    model_watch.check(_app(settings, day=27), lists=_both(), listers=listers)
+    assert prices.swapped("anthropic", "claude-haiku-4-5") == "claude-haiku-4-5"
+    assert (
+        "claude-opus-5 ($5 in, $25 out) is the nearest on offer"
+        in (_alerts(conn)[("model", "anthropic:claude-haiku-4-5")])
+    )
 
 
 def test_admins_hear_of_it_on_telegram(settings, conn, family) -> None:
@@ -403,3 +436,28 @@ def test_the_status_page_says_when_the_check_is_off(settings, clock, conn) -> No
 
     text = create_app(App(settings, clock)).test_client().get("/status").text
     assert "The daily check is switched off" in text
+
+
+def test_one_press_on_the_status_page_puts_the_suggested_model_in(settings, conn, family) -> None:
+    from familydb.web import create_app
+
+    listers = _claude("claude-haiku-4-5", "claude-sonnet-5", "claude-opus-5")
+    going = _both(
+        anthropic={**CLAUDE, "claude-haiku-4-5": _listed(1.0, 5.0, retires_on="2026-10-10")}
+    )
+    model_watch.check(_app(settings, day=20), lists=going, listers=listers)
+    app = _app(settings, day=20, hour=9)
+    client = create_app(app).test_client()
+    page = client.get("/status").text
+    form = re.search(
+        r'<form method="post" action="/settings" class="inline-action">.*?</form>', page, re.S
+    )
+    assert form is not None and "Use claude-sonnet-5 instead" in form.group(0)
+    boxes = dict(re.findall(r'name="([a-z_]+)" value="([^"]*)"', form.group(0)))
+    assert boxes["section"] == "model" and boxes["worker_model"] == "claude-sonnet-5"
+    assert "anthropic_model" not in boxes  # the chat's model is Opus, which is not going
+
+    answer = client.post("/settings", data=boxes)
+    assert answer.status_code == 302 and answer.headers["Location"].endswith("/settings/model")
+    app.refresh()
+    assert app.settings.worker_model == "claude-sonnet-5"

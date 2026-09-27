@@ -13,6 +13,7 @@ from datetime import timedelta
 from typing import Any
 
 from familydb import alerts
+from familydb import model_watch as watch
 from familydb.agent import compose, gateway, providers
 from familydb.agent.spending import spent_today
 from familydb.app import App
@@ -29,7 +30,7 @@ from familydb.store import calls, ideas, members, messages
 from familydb.store import model_watch as model_store
 from familydb.store import settings as settings_store
 from familydb.store.settings import SECRETS
-from familydb.web import views
+from familydb.web import fields, views
 from familydb.web.auth import own_passwords, password_chosen, password_in_use
 
 DAYS = 30
@@ -311,10 +312,33 @@ def attention(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
     if not found:
         return []
     admins = len(alerts.admins_on_telegram(conn))
-    return [
-        views.alert_row(one, app.settings.tzinfo, telling=app.settings.admin_alerts, admins=admins)
-        for one in found
+    rows = []
+    for one in found:
+        row = views.alert_row(
+            one, app.settings.tzinfo, telling=app.settings.admin_alerts, admins=admins
+        )
+        if one.kind == "model":
+            row["switch"] = switch_for(app, conn, one.subject)
+        rows.append(row)
+    return rows
+
+
+def switch_for(app: App, conn: sqlite3.Connection, subject: str) -> dict[str, Any] | None:
+    """For a model going or gone, the one to put in its place with one press: the settings
+    boxes that name it now, and what they would be set to. None when no box names it (a level's
+    model, which the daily check puts in by itself on the day) or there is nothing to offer."""
+    company, _, rest = subject.partition(":")
+    name = rest.split(":")[0]
+    live = app.settings
+    boxes = [
+        one.key
+        for one in fields.FIELDS
+        if one.company == company and str(getattr(live, one.key, "") or "").lower() == name
     ]
+    instead = watch.replacement_for(conn, company, name, app.clock.today())
+    if not boxes or instead is None:
+        return None
+    return {"boxes": boxes, "to": instead.model, "words": views.model_offer(company, instead.model)}
 
 
 def model_watch(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
