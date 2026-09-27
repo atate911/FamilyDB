@@ -48,6 +48,20 @@ def test_nominatim_query_and_result(settings) -> None:
     assert headers["User-Agent"].startswith("familydb/")
 
 
+def test_the_operator_s_contact_goes_to_nominatim_only_when_given(settings) -> None:
+    """OpenStreetMap asks to be able to reach whoever sends lookups; it leaves the house with each
+    one, so only an operator who set GEOCODER_CONTACT sends it."""
+    given = settings.model_copy(update={"geocoder_contact": "sam@example.org"})
+    geocoder, calls, _ = _geocoder(given, [NOMINATIM_ROW])
+    geocoder.geocode("Hopscotch Portland")
+    assert calls[0][1]["User-Agent"] == (
+        "familydb/0.1 (self-hosted family planning bot; sam@example.org)"
+    )
+    geocoder, calls, _ = _geocoder(settings, [NOMINATIM_ROW])
+    geocoder.geocode("Hopscotch Portland")
+    assert "@" not in calls[0][1]["User-Agent"]
+
+
 def test_throttle_between_nominatim_calls(settings) -> None:
     # monotonic() is read once after the first call and twice around the second
     geocoder, _, sleeps = _geocoder(settings, [NOMINATIM_ROW, NOMINATIM_ROW], times=[0.0, 0.3, 0.3])

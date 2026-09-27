@@ -282,6 +282,10 @@ class Settings(BaseSettings):
     # Console and logging
     console_member: str | None = None
     log_level: str = "INFO"
+    # How OpenStreetMap's geocoder may reach whoever runs this install, sent with each lookup as
+    # its usage policy asks (an email address or a web page). Empty, none is sent: it is the
+    # operator's to give, since it leaves the house with every lookup.
+    geocoder_contact: str = ""
 
     @model_validator(mode="before")
     @classmethod
