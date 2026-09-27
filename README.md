@@ -18,7 +18,7 @@ A private family assistant, Vera, who lives in our chat app. She remembers the t
 - She speaks as Vera, a personality the family can rename, add to or rewrite on the settings page, or swap for a shorter Vera or for none at all. Everything said unasked (reminders, follow-ups, notices) is worded by code from her lines, and folded into the conversation when the family is already talking.
 - A web page, where each person signs in as themselves, does the same things in a browser. It opens on the box to ask Vera something, with what is coming up, what is left to do and what was added lately around it. Search and filter the ideas, see on a radar where the places among them lie from home, open one to see its hours, travel time and booking link, browse the restaurants, and see the family calendar as a list or a month, read from Google. Adding an idea, fixing its details, recording how it went, putting a plan on the calendar and ticking off a task all work from the page, and each form runs the same tool the bot runs when you ask it in chat, so the checks are the same code, not a second copy of it. Kept on a phone's home screen, the page opens full-screen as an app of its own.
 - An admin also sets the bot up from the page: which company's model answers and how strong, what it may spend a day, where home is, when it speaks first, the API keys, the Telegram bot, the Google Calendar connection and who is in the family, with a status page saying what is connected and what the models have cost. Until everything is set, the home page lists what is left, each linked to where it is done.
-- It runs on OpenAI's GPT-6 Luna by default, or on Claude or Gemini, chosen per surface: each company's cheapest model unless the family chooses a stronger one for the chat, the weekend digest or the lookups, with another company as a spare when the first is busy. Once the day's spending limit is used up, nothing more is asked of any model until midnight.
+- It runs on OpenAI's GPT-6 Luna by default, or on Claude or Gemini, chosen per surface: each company's cheapest model unless the family chooses a stronger one for the chat, the weekend digest or the lookups, with another company as a spare when the first is busy. Once the day's spending limit is used up, nothing more is asked of any model until midnight. Once a day, with no model call, it asks each company which models the key may use and reads two public price lists against each other, so the prices it counts and the models it offers stay current; admins are told on Telegram when a model in use is going or gone, when its price moves, or when what the calls cost or do shifts a long way.
 
 One Python process does all of it. A chat adapter hands each message to a pipeline that saves it first, builds a prompt from the family context, the ideas list and the recent conversation, and lets the model decide which tools to call. The tools are ordinary functions over a SQLite file, and every model call and tool call is logged.
 
@@ -98,6 +98,8 @@ src/familydb/
   whereabouts.py  where a phone last said a member was, for a few hours
   voice.py        the words for everything said unasked, and folding it into a conversation
   alerts.py       telling admins on Telegram what only they can fix, with no model call
+  model_watch.py  the daily check of each company's models and the price lists, and what
+                  changed; usage_watch.py, the weekly look at what the calls cost and do
   personas/       who the assistant is: a name, a character and her lines, a folder each
                   (default/, Vera as first written, and brief/, a shorter Vera)
   doctor.py       the install check   privacy.py      owner-only files and umask
@@ -114,10 +116,10 @@ src/familydb/
                   token, and markup.py, which draws a reply's bold and links) and the web chat
   web/            the page: app factory, sign-in and roles, home, chat, the reading views, the
                   edit forms, Family, status, settings and setup, once-only forms, templates
-  integrations/   Google Calendar, Open-Meteo and the keyless geocoder
+  integrations/   Google Calendar, Open-Meteo, the keyless geocoder and the price lists
   jobs/           the scheduler and its jobs: retries, lookups, the weekend digest, follow-ups,
                   the evening-before check, reminders, nudges, forgetting shared locations,
-                  catch-up after a restart, and following settings changed on the page
+                  the daily check of models and prices, catch-up after a restart, and following settings changed on the page
 tests/            pytest suite with scripted fakes of each provider's SDK, Google and the weather
 evals/            the family's own requests run against a real model, graded by code
 scripts/          bootstrap (bare server to running bot), install, maintain, uninstall; lib/ for
