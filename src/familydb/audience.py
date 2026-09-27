@@ -38,7 +38,8 @@ def readers(
         person = members.resolve(conn, "telegram", chat_id)
         return [person] if person is not None else ([sender] if sender else [])
     if channel == "web" and chat_id.startswith(WEB_PRIVATE):
-        owner = members.get(conn, int(chat_id.removeprefix(WEB_PRIVATE) or 0))
+        number = chat_id.removeprefix(WEB_PRIVATE)
+        owner = members.get(conn, int(number)) if number.isdigit() else None
         parents = [member for member in everyone if roles.may(member.role, "decide")]
         return ([owner] if owner is not None else []) + parents
     if channel == "web" and chat_id == WEB_SHARED:
