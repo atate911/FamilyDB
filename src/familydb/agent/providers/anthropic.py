@@ -121,11 +121,14 @@ def has_credentials(settings: Settings) -> bool:
 
 def trouble(status: int, said: str) -> str | None:
     """What an admin would have to fix, from a refusal: a key refused (401, or 403, not allowed),
-    or the account out of credit, which Anthropic answers with a 400 saying so."""
+    the account out of credit, which Anthropic answers with a 400 saying so, or a model it no
+    longer has (404)."""
     if status in (401, 403):
         return "key"
     if status in (400, 402) and "credit balance" in said.lower():
         return "credit"
+    if status == 404:
+        return "model"  # retired, or never was: a 404 is about the model a request names
     return None
 
 
@@ -324,6 +327,19 @@ class AnthropicProvider:
         finally:
             client.close()
         return True
+
+    def listed_models(self) -> list[str] | None:
+        try:
+            client = make_client(self.settings)
+        except AgentError:
+            return None
+        try:
+            return [model.id for model in client.with_options(timeout=20.0).models.list(limit=1000)]
+        except Exception as exc:  # unreachable, unauthorised: not an answer about the models
+            log.info("could not ask Anthropic for its models: %s", exc)
+            return None
+        finally:
+            client.close()
 
     def check_key(self) -> KeyCheck:
         try:

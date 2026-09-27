@@ -117,9 +117,11 @@ def test_a_database_that_ran_the_retired_0007_still_gets_what_follows(tmp_path):
         conn.execute("ALTER TABLE llm_calls DROP COLUMN turn")
         conn.execute("ALTER TABLE llm_calls DROP COLUMN about")
         conn.execute("ALTER TABLE tool_calls DROP COLUMN turn")
+        for table in ("models", "model_changes", "model_sources"):
+            conn.execute(f"DROP TABLE {table}")
         # tasks, dropped above, comes back with 0012 and takes 0022's repeats, 0023's gift_for
         # and 0024's nudged_at on again.
-        assert db.migrate(conn) == list(range(8, 31))
+        assert db.migrate(conn) == list(range(8, 32))
         columns = {row["name"] for row in conn.execute("PRAGMA table_info(llm_calls)")}
         assert {"provider", "web_searches", "cost_usd", "cost_estimated"} <= columns
 
@@ -237,3 +239,30 @@ def test_a_rebuild_that_would_leave_a_reference_to_nobody_is_rolled_back(tmp_pat
         assert db.schema_version(conn) == 17
         assert conn.execute("SELECT role FROM members WHERE id = 2").fetchone()[0] == "member"
         assert conn.execute("PRAGMA foreign_keys").fetchone()[0] == 1
+
+
+def test_the_alerts_already_noted_outlast_the_model_watch_rebuild(tmp_path, monkeypatch):
+    """0031 rebuilds alerts to take the new kinds; a trouble noted before it, and who was told,
+    are still there after."""
+    from contextlib import closing
+
+    with closing(db.connect(tmp_path / "old.sqlite3")) as conn:
+        _up_to(monkeypatch, conn, 30)
+        conn.execute(
+            "INSERT INTO alerts (kind, subject, detail, first_at, last_at, times, told_at) "
+            "VALUES ('credit', 'openai', 'insufficient_quota', '2026-09-20T21:03:00Z', "
+            "'2026-09-20T22:03:00Z', 3, '2026-09-20T21:04:00Z')"
+        )
+        conn.commit()
+        assert db.migrate(conn)[0] == 31
+        row = conn.execute("SELECT * FROM alerts").fetchone()
+        assert (row["kind"], row["subject"], row["times"], row["told_at"]) == (
+            "credit",
+            "openai",
+            3,
+            "2026-09-20T21:04:00Z",
+        )
+        conn.execute(
+            "INSERT INTO alerts (kind, subject, first_at, last_at) "
+            "VALUES ('shift', 'chat:2026-W39', '2026-09-27T05:17:00Z', '2026-09-27T05:17:00Z')"
+        )

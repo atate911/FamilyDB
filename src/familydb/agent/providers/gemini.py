@@ -45,6 +45,18 @@ NO_CREDENTIALS = "no Gemini credentials configured: set GEMINI_API_KEY (see .env
 # Our five effort names as a thinking budget in tokens, for the models before Gemini 3 (which
 # take a level instead, in `config`). -1 lets the model decide.
 THINKING = {"low": 0, "medium": -1, "high": -1, "xhigh": 24576, "max": 32768}
+# The generations before Gemini 3, which take a thinking budget and cannot search alongside our
+# own tools. Named by what they are rather than by what works, as anthropic.OLDER_MODELS is, so
+# a model released later (a Gemini 4, an alias such as gemini-flash-latest) is sent the current
+# shape: the daily check offers new models as they come.
+OLDER_MODELS = ("gemini-1", "gemini-2")
+
+
+def current(model: str) -> bool:
+    """Whether a model takes a thinking level and hosted search beside our tools."""
+    return not model.lower().startswith(OLDER_MODELS)
+
+
 REFUSAL_REASONS = {
     "SAFETY",
     "PROHIBITED_CONTENT",
@@ -121,7 +133,7 @@ class GeminiProvider:
         refused here, before anything is sent."""
         tools: list[dict[str, Any]] = []
         model = request.model or self.settings.gemini_model
-        if request.web is not None and request.tools and not model.startswith("gemini-3"):
+        if request.web is not None and request.tools and not current(model):
             raise AgentError(
                 "Gemini web workers require a Gemini 3 model; set GEMINI_WORKER_MODEL",
                 retryable=False,
@@ -166,7 +178,7 @@ class GeminiProvider:
             "thinking_config": {"thinking_budget": THINKING.get(effort, -1)},
         }
         tools = self.tools(request)
-        if (request.model or settings.gemini_model).startswith("gemini-3"):
+        if current(request.model or settings.gemini_model):
             config["thinking_config"] = {"thinking_level": "LOW" if effort == "low" else "HIGH"}
         if request.web is not None and request.tools:
             config["tool_config"] = {"include_server_side_tool_invocations": True}
@@ -257,6 +269,18 @@ class GeminiProvider:
             log.info("could not ask Gemini about %s: %s", model, exc)
             return None
         return True
+
+    def listed_models(self) -> list[str] | None:
+        try:
+            client = make_client(self.settings, timeout_ms=CHECK_TIMEOUT_MS)
+        except AgentError:
+            return None
+        try:
+            # Named "models/gemini-3.8-flash" in the list, and sent without the prefix.
+            return [str(model.name).removeprefix("models/") for model in client.models.list()]
+        except Exception as exc:  # unreachable, unauthorised: not an answer about the models
+            log.info("could not ask Gemini for its models: %s", exc)
+            return None
 
     def check_key(self) -> KeyCheck:
         try:
@@ -390,6 +414,8 @@ def _failure(exc: Exception) -> AgentError:
             return AgentError(f"API error {status}: {exc}", retryable=False, trouble="key")
         if status == 429 and ("billing" in said or "credit" in said or "prepay" in said):
             return AgentError(f"out of credit: {exc}", retryable=False, trouble="credit")
+        if status == 404:
+            return AgentError(f"API error 404: {exc}", retryable=False, trouble="model")
         return AgentError(f"API error {status or '?'}: {exc}", retryable=status in RETRYABLE_STATUS)
     if isinstance(exc, genai_errors.APIError):
         return AgentError(f"Gemini error: {exc}", retryable=_status(exc) in RETRYABLE_STATUS)

@@ -151,6 +151,40 @@ def recent_llm_calls(conn: sqlite3.Connection, limit: int = 5) -> list[dict[str,
     return [dict(row) for row in rows]
 
 
+# How a call ended badly, for the week's comparison (usage_watch.py).
+ENDED_BADLY = ("refusal", "max_tokens", "error")
+
+
+def figures_between(
+    conn: sqlite3.Connection, *, since: str, until: str
+) -> dict[str, dict[str, Any]]:
+    """What each kind of call came to between two moments: calls, answers (a message or a
+    turn), dollars, tokens read (the cache included) and written back, time, calls that ended
+    badly, and the model most of them went to."""
+    marks = ", ".join("?" for _ in ENDED_BADLY)
+    rows = conn.execute(
+        "SELECT kind, count(*) AS calls, "
+        "count(DISTINCT coalesce('m' || message_id, 't' || turn, 'c' || id)) AS asks, "
+        "coalesce(sum(cost_usd), 0) AS cost, "
+        "coalesce(sum(coalesce(input_tokens, 0) + coalesce(cache_read_input_tokens, 0) "
+        "+ coalesce(cache_creation_input_tokens, 0)), 0) AS sent, "
+        "coalesce(sum(output_tokens), 0) AS back, coalesce(avg(duration_ms), 0) AS ms, "
+        f"sum(CASE WHEN stop_reason IN ({marks}) THEN 1 ELSE 0 END) AS bad "
+        "FROM llm_calls WHERE kind IS NOT NULL AND created_at >= ? AND created_at < ? "
+        "GROUP BY kind",
+        (*ENDED_BADLY, since, until),
+    ).fetchall()
+    found = {row["kind"]: dict(row) for row in rows}
+    for row in conn.execute(
+        "SELECT kind, coalesce(served_model, model) AS model, count(*) AS n FROM llm_calls "
+        "WHERE kind IS NOT NULL AND created_at >= ? AND created_at < ? "
+        "GROUP BY kind, 2 ORDER BY n DESC",
+        (since, until),
+    ):
+        found.get(row["kind"], {}).setdefault("model", row["model"])
+    return found
+
+
 def activity_since(conn: sqlite3.Connection, *, since: str, limit: int) -> list[dict[str, Any]]:
     """What the models were asked lately, newest first: one row for each message answered (its
     calls, a lookup it started included) and one for each turn with no message (a lookup)."""

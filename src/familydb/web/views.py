@@ -817,7 +817,14 @@ ALERT_TITLES = {
     "key": "{company} refused its key",
     "limit": "The day's spending limit was used up",
     "calendar": "Google Calendar stopped letting the bot in",
+    "model": "A model in use is going, or has gone",
+    "price": "The price of a model in use changed",
+    "prices": "The price lists need a look",
+    "new": "New models to choose from",
+    "shift": "What the calls cost or do moved",
 }
+# Kinds whose subject is not a company: what the notice says is the detail, shown with it.
+SAID_IN_DETAIL = frozenset({"model", "price", "prices", "new", "shift"})
 COMPANY_WORDS = {"openai": "OpenAI", "anthropic": "Anthropic", "gemini": "Google Gemini"}
 
 
@@ -837,7 +844,46 @@ def alert_row(alert: Any, tz: ZoneInfo, *, telling: bool, admins: int) -> dict[s
         told = "no admin has a Telegram id to be told on"
     else:
         told = "admins are told on Telegram within a minute"
-    return {"label": title, "detail": f"{seen}; {told}.", "on": False}
+    detail = f"{seen}; {told}."
+    if alert.kind in SAID_IN_DETAIL and alert.detail:
+        detail = f"{alert.detail}. {detail[:1].upper()}{detail[1:]}"
+    return {"label": title, "detail": detail, "on": False}
+
+
+SOURCE_WORDS = {
+    "litellm": "LiteLLM's price list",
+    "openrouter": "OpenRouter's price list",
+}
+CHANGE_WORDS = {
+    "new": "new, {after}",
+    "gone": "no longer offered to the key",
+    "back": "offered to the key again",
+    "price": "{before} → {after} a million tokens",
+    "retiring": "goes on {after}",
+}
+
+
+def source_row(source: Any, tz: ZoneInfo) -> dict[str, Any]:
+    """Where the daily check of models and prices reads, as a light: when, and how it went."""
+    company = COMPANY_WORDS.get(source.source)
+    label = SOURCE_WORDS.get(source.source) or f"{company or source.source}'s list for the key"
+    when = local_moment(source.checked_at, tz)
+    if source.ok:
+        return {"label": label, "detail": f"Read {when}: {source.note}.", "on": True}
+    running = f", {source.failures} checks running" if source.failures > 1 else ""
+    detail = f"Could not be read {when}{running}: {source.note}."
+    return {"label": label, "detail": detail, "on": False}
+
+
+def model_change_row(change: Any, tz: ZoneInfo) -> dict[str, str]:
+    """One thing the daily check found changed, for the status page's table."""
+    what = CHANGE_WORDS.get(change.what, change.what)
+    return {
+        "when": local_moment(change.at, tz),
+        "company": COMPANY_WORDS.get(change.provider, change.provider),
+        "model": change.model,
+        "what": what.format(before=change.before or "?", after=change.after or "?"),
+    }
 
 
 # Each kind of message she sends of her own accord, as the Messages page lists them: the group
@@ -983,11 +1029,11 @@ def price_text(price: prices.Price | None) -> str | None:
 
 def model_offer(provider: str, name: str) -> str:
     """A model name as a box offers it: what it is called, where it stands in its company's
-    lineup, and what it costs. Only the price, for one the lineup does not list."""
+    lineup, what it costs, and whether it is new or going (the daily check's word on it)."""
     known = catalog.known(provider, name)
     said = f"{known.label}, {known.level}" if known else ""
     cost = price_text(prices.price(provider, name))
-    return " · ".join(part for part in (said, cost) if part)
+    return " · ".join(part for part in (said, cost, prices.note(provider, name)) if part)
 
 
 def level_choice(level: str, provider: str, name: str) -> str:

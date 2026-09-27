@@ -5,7 +5,14 @@ Four kinds of trouble:
 - credit: a company says its account is out of credit or over its quota (about: the company);
 - key: a company refused its key (about: the company);
 - limit: the day's spending limit is used up (about: the family's date);
-- calendar: Google no longer lets the bot in, so plans are not reaching the calendar.
+- calendar: Google no longer lets the bot in, so plans are not reaching the calendar;
+- model: a model the family uses is gone, or going on a date (about: company and model);
+- price: the price of a model they use moved (told once for each new price);
+- prices: a price list could not be read, or the lists disagree about a model in use;
+- new: new models to choose from (once a day at most, for each company);
+- shift: what a kind of call costs or does moved a long way in a week (usage_watch.py).
+
+The last five come from the daily check of models and prices (model_watch.py).
 
 Each is noted where it is seen, in a short write of its own: a refusal read by the provider
 module (`AgentError.trouble`) in the loop and the gateway, the limit in `spending.admit`, Google
@@ -34,7 +41,7 @@ from familydb.store.db import transaction
 
 log = logging.getLogger(__name__)
 
-KINDS = ("credit", "key", "limit", "calendar")
+KINDS = ("credit", "key", "limit", "calendar", "model", "price", "prices", "new", "shift")
 # About a company: the ones a company's own answer clears.
 COMPANY_KINDS = ("credit", "key")
 TELL_AGAIN = timedelta(hours=12)
@@ -43,8 +50,17 @@ TELEGRAM = "telegram"
 COMPANY_NAMES = {"openai": "OpenAI", "anthropic": "Anthropic", "gemini": "Google Gemini"}
 
 
-def note(conn: sqlite3.Connection, kind: str, about: str, detail: str, now: datetime) -> None:
-    """Record a trouble. Never raises: the failure being handled matters more than this note."""
+def note(
+    conn: sqlite3.Connection,
+    kind: str,
+    about: str,
+    detail: str,
+    now: datetime,
+    *,
+    once: bool = False,
+) -> None:
+    """Record a trouble, or with `once` a piece of news told once. Never raises: the failure
+    being handled matters more than this note."""
     try:
         with transaction(conn):
             alert_store.note(
@@ -54,6 +70,7 @@ def note(conn: sqlite3.Connection, kind: str, about: str, detail: str, now: date
                 detail,
                 now=utc_iso(now),
                 keep_after=utc_iso(now - KEEP),
+                once=once,
             )
     except sqlite3.Error as exc:
         log.warning("could not note a %s trouble: %s", kind, exc)
@@ -61,18 +78,36 @@ def note(conn: sqlite3.Connection, kind: str, about: str, detail: str, now: date
         log.warning("noted for an admin: %s %s (%s)", kind, about, detail)
 
 
-def noticed(conn: sqlite3.Connection, exc: AgentError, *, provider: str, now: datetime) -> None:
+def noticed(
+    conn: sqlite3.Connection,
+    exc: AgentError,
+    *,
+    provider: str,
+    now: datetime,
+    model: str | None = None,
+) -> None:
     """A model call failed: note it when it is something only an admin can fix."""
     if exc.trouble in COMPANY_KINDS:
         note(conn, exc.trouble, provider, str(exc), now)
+    elif exc.trouble == "model" and model:
+        note(
+            conn,
+            "model",
+            f"{provider}:{model.lower()}",
+            f"{COMPANY_NAMES.get(provider, provider)} says it has no model called {model}, so "
+            "everything asked of it fails until another is chosen",
+            now,
+        )
 
 
-def answered(conn: sqlite3.Connection, provider: str) -> None:
+def answered(conn: sqlite3.Connection, provider: str, model: str | None = None) -> None:
     """A company answered. Call inside the transaction that records the call: one small delete,
     and only when there was something to forget."""
     if alert_store.any_for(conn, COMPANY_KINDS, provider):
         for kind in COMPANY_KINDS:
             alert_store.clear(conn, kind, provider)
+    if model and alert_store.any_for(conn, ("model",), f"{provider}:{model.lower()}"):
+        alert_store.clear(conn, "model", f"{provider}:{model.lower()}")
 
 
 def working(conn: sqlite3.Connection, kind: str, about: str = "") -> None:
@@ -92,6 +127,7 @@ def wording(settings: Any, alert: alert_store.Alert) -> str:
         f"alert_{alert.kind}",
         company=company,
         limit=f"{settings.daily_spend_limit:.2f}",
+        detail=alert.detail,
     )
 
 

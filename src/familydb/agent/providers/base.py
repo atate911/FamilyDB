@@ -172,6 +172,12 @@ class Provider(Protocol):
         network), which must never be taken as a no. Costs no tokens."""
         ...
 
+    def listed_models(self) -> list[str] | None:
+        """Every model name the vendor lists for this key, as the names are sent. None when it
+        cannot be asked (no key, no network), which must never be taken as "none". Costs no
+        tokens: it is how the daily check (model_watch.py) learns what is there."""
+        ...
+
     def check_key(self) -> KeyCheck:
         """Whether the vendor takes this key, found by looking the chat model up: the same free
         question as `model_exists`, read for what it says about the key instead. For the

@@ -58,6 +58,7 @@ BEHAVIOUR = (
     "follow_up_hour",
     "task_nudges",
     "admin_alerts",
+    "model_watch",
     "plan_checks",
     "plan_check_hour",
     "retry_interval_minutes",

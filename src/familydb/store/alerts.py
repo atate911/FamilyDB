@@ -23,14 +23,28 @@ class Alert(BaseModel):
 
 
 def note(
-    conn: sqlite3.Connection, kind: str, subject: str, detail: str, *, now: str, keep_after: str
+    conn: sqlite3.Connection,
+    kind: str,
+    subject: str,
+    detail: str,
+    *,
+    now: str,
+    keep_after: str,
+    once: bool = False,
 ) -> None:
-    """Record that a trouble happened (again). Rows not seen since `keep_after` are dropped."""
+    """Record that a trouble happened (again). Rows not seen since `keep_after` are dropped.
+
+    `once` is for news rather than a trouble (a price moved, a date set): kept as it was when
+    it is there already, so it is told once and not again while it lasts."""
     conn.execute("DELETE FROM alerts WHERE last_at < ?", (keep_after,))
+    again = (
+        "DO NOTHING"
+        if once
+        else "DO UPDATE SET detail = excluded.detail, last_at = excluded.last_at, times = times + 1"
+    )
     conn.execute(
         "INSERT INTO alerts (kind, subject, detail, first_at, last_at) VALUES (?, ?, ?, ?, ?) "
-        "ON CONFLICT (kind, subject) DO UPDATE SET detail = excluded.detail, "
-        "last_at = excluded.last_at, times = times + 1",
+        f"ON CONFLICT (kind, subject) {again}",
         (kind, subject, detail[:MAX_DETAIL], now, now),
     )
 

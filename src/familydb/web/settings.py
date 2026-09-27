@@ -57,6 +57,7 @@ from pydantic import ValidationError
 
 from familydb import passwords, personas, voice
 from familydb.agent import gateway, providers
+from familydb.agent.providers import prices
 from familydb.agent.spending import spent_today
 from familydb.app import App
 from familydb.availability import enrichment_available, web_is_public
@@ -231,7 +232,11 @@ def suggested(one: fields.Field) -> list[tuple[str, str]]:
     """The names a box suggests as it is typed in, each with a word on what it is: a model's
     place in its company's lineup, and its price."""
     company = MODEL_BOXES.get(one.key, ("", ""))[0]
-    return [(name, views.model_offer(company, name)) for name in one.suggested]
+    # A company's models as the daily check last found them (prices.suggestions), except the
+    # hearing models, which it does not follow.
+    live = company and one.key not in fields.FIXED_OFFERS
+    names = prices.suggestions(company) if live else one.suggested
+    return [(name, views.model_offer(company, name)) for name in names]
 
 
 def level_labels(key: str, live: Settings) -> dict[str, str]:
@@ -1029,7 +1034,17 @@ LINE_GROUPS = (
     (
         "Telling an admin what needs fixing",
         True,
-        ("alert_credit", "alert_key", "alert_limit", "alert_calendar"),
+        (
+            "alert_credit",
+            "alert_key",
+            "alert_limit",
+            "alert_calendar",
+            "alert_model",
+            "alert_price",
+            "alert_prices",
+            "alert_new",
+            "alert_shift",
+        ),
     ),
 )
 

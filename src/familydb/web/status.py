@@ -26,12 +26,14 @@ from familydb.availability import (
 from familydb.dates import utc_iso
 from familydb.store import alerts as alert_store
 from familydb.store import calls, ideas, members, messages
+from familydb.store import model_watch as model_store
 from familydb.store import settings as settings_store
 from familydb.store.settings import SECRETS
 from familydb.web import views
 from familydb.web.auth import own_passwords, password_chosen, password_in_use
 
 DAYS = 30
+CHANGES_DAYS = 30  # what the daily check of models found changed, shown this far back
 TROUBLE_LIMIT = 6
 WAITING_LIMIT = 5
 LOOKUP_STATES = {
@@ -298,9 +300,14 @@ def activity(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
 
 
 def attention(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
-    """What only an admin can fix, while it lasts (familydb/alerts.py)."""
+    """What only an admin can fix, while it lasts (familydb/alerts.py). New models to choose
+    from are news rather than a trouble: they are under Models and prices instead."""
     now = app.clock.now()
-    found = alert_store.current(conn, since=utc_iso(now - alerts.KEEP))
+    found = [
+        one
+        for one in alert_store.current(conn, since=utc_iso(now - alerts.KEEP))
+        if one.kind != "new"
+    ]
     if not found:
         return []
     admins = len(alerts.admins_on_telegram(conn))
@@ -308,6 +315,20 @@ def attention(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
         views.alert_row(one, app.settings.tzinfo, telling=app.settings.admin_alerts, admins=admins)
         for one in found
     ]
+
+
+def model_watch(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
+    """How the daily check of models and prices went, and what it found changed lately."""
+    tz = app.settings.tzinfo
+    since = utc_iso(app.clock.now() - timedelta(days=CHANGES_DAYS))
+    return {
+        "on": app.settings.model_watch,
+        "sources": [views.source_row(one, tz) for one in model_store.sources(conn)],
+        "changes": [
+            views.model_change_row(one, tz) for one in model_store.changes_since(conn, since=since)
+        ],
+        "days": CHANGES_DAYS,
+    }
 
 
 def status(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
@@ -329,6 +350,7 @@ def status(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
         },
         "troubles": troubles(conn, since, tz),
         "attention": attention(app, conn),
+        "model_watch": model_watch(app, conn),
         "activity": activity(app, conn),
         "activity_days": ACTIVITY_DAYS,
     }

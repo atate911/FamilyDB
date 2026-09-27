@@ -24,7 +24,8 @@ class AgentError(FamilyDBError):
 
     `trouble` names a failure only an admin can fix, as the provider module read it: "credit",
     the company's account is out of credit or over its quota; "key", the company refused the
-    key. They are worth asking the other company instead, and worth telling an admin (alerts.py).
+    key; "model", the company does not have the model asked for (retired, or mistyped). They are
+    worth asking the other company instead, and worth telling an admin (alerts.py).
     """
 
     def __init__(

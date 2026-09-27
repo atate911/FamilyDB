@@ -254,6 +254,42 @@ EVENTS: dict[str, Event] = {
         "connected again on the settings page, under Connections.",
         (),
     ),
+    "alert_model": Event(
+        "Telling an admin: a model in use is going, or gone",
+        "A model I use is going away: {detail}. Another can be chosen on the settings page, "
+        "under AI model.",
+        ("detail",),
+        {"detail": "OpenAI retires gpt-6-luna on 2026-12-01, in 30 days"},
+    ),
+    "alert_price": Event(
+        "Telling an admin: a price changed",
+        "A price changed: {detail}. The spending limit counts the new one from now on.",
+        ("detail",),
+        {
+            "detail": "gpt-6-luna (OpenAI) now costs $0.12 in, $0.6 out a million tokens, was "
+            "$0.1 in, $0.5 out"
+        },
+    ),
+    "alert_prices": Event(
+        "Telling an admin: prices could not be checked",
+        "I couldn't check prices properly: {detail}. Costs are counted from the last good "
+        "prices meanwhile.",
+        ("detail",),
+        {"detail": "OpenRouter's price list could not be read for 3 days running"},
+    ),
+    "alert_new": Event(
+        "Telling an admin: new models to choose from",
+        "New models to choose from, {detail}. They're on the settings page, under AI model.",
+        ("detail",),
+        {"detail": "OpenAI: gpt-6-nova ($0.2 in, $1 out)"},
+    ),
+    "alert_shift": Event(
+        "Telling an admin: what the calls cost or do moved",
+        "Something changed in how I'm running this week: {detail}. The status page has the "
+        "figures.",
+        ("detail",),
+        {"detail": "answering the family costs 62% more a message ($0.004, was $0.0025)"},
+    ),
     "kid_limit": Event(
         "A kid's messages for the day used up",
         "That's {limit} messages today, which is all for today. Ask me again tomorrow, or ask a "

@@ -96,6 +96,37 @@ def test_an_empty_account_is_noted_even_when_the_other_company_answers(
     assert _found(ctx.conn) == set()
 
 
+def test_a_model_the_company_has_no_more_is_noted_and_forgotten_once_it_answers(
+    settings, registry, ctx
+) -> None:
+    """A 404 for the model is not the company being down: every call to it will fail the same
+    way until an admin chooses another, so it is noted by name, and the other company answers."""
+    import anthropic
+
+    paired = _both(settings)
+    missing = anthropic.NotFoundError(
+        "model: claude-opus-5", response=fakes._response(404), body=None
+    )
+    primary = build("anthropic", paired, api=fakes.FakeMessagesAPI(missing))
+    spare = build(
+        "openai", paired, api=fakes.FakeResponsesAPI(fakes.oa_response([fakes.oa_text("Hi")]))
+    )
+    assert _turn(paired, registry, ctx, primary, spare).text == "Hi"
+    asked = primary.model_for("chat")
+    assert _found(ctx.conn) == {("model", f"anthropic:{asked}")}
+    detail = ctx.conn.execute("SELECT detail FROM alerts").fetchone()[0]
+    assert f"no model called {asked}" in detail
+
+    # Answered by that name again (a served snapshot may carry a date): the notice is forgotten.
+    back = build(
+        "anthropic",
+        paired,
+        api=fakes.FakeMessagesAPI(fakes.message([fakes.text("ok")], model=f"{asked}-20261001")),
+    )
+    assert _turn(paired, registry, ctx, back, None).text == "ok"
+    assert _found(ctx.conn) == set()
+
+
 def test_the_day_s_limit_is_noted_and_forgotten_once_a_call_is_let_through(conn, settings) -> None:
     now = datetime(2026, 9, 20, 14, 3, tzinfo=TZ)
     tight = settings.model_copy(update={"daily_spend_limit": 0.01})

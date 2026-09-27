@@ -163,6 +163,39 @@
     {% endif %}
   </section>
 
+  {# The daily check of what each company offers and what it costs (familydb/model_watch.py):
+     where it read, and what it found changed. No model is asked for any of it. #}
+  <section class="panel" id="models">
+    <h2>{{ icon('list') }}Models and prices</h2>
+    {% if not model_watch.on %}
+      <p class="muted">The daily check is switched off: prices are the ones this version was
+        released with, and nobody is told when a model goes.
+        {% if visitor().may('manage') %}<a href="{{ url_for('settings.section', name='model', _anchor='watch') }}">Switch it on</a>{% endif %}</p>
+    {% elif not model_watch.sources %}
+      <p class="muted">Checked once a day, early in the morning: nothing has been read yet.</p>
+    {% else %}
+      {{ lines(model_watch.sources) }}
+    {% endif %}
+    {% if model_watch.changes %}
+      <div class="scroll">
+        <table class="data">
+          <caption>Changed in the last {{ model_watch.days }} days</caption>
+          <tr><th scope="col">when</th><th scope="col">company</th><th scope="col">model</th><th scope="col">what</th></tr>
+          {% for change in model_watch.changes %}
+            <tr>
+              <td>{{ change.when }}</td>
+              <td>{{ change.company }}</td>
+              <td><code>{{ change.model }}</code></td>
+              <td>{{ change.what }}</td>
+            </tr>
+          {% endfor %}
+        </table>
+      </div>
+    {% elif model_watch.sources %}
+      <p class="muted small">Nothing has changed in the last {{ model_watch.days }} days.</p>
+    {% endif %}
+  </section>
+
   {# Admins only: the words here come from every chat. Each line opens its history in full. #}
   {% if visitor().may('manage') %}
     <section class="panel" id="activity">

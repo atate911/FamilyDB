@@ -325,6 +325,19 @@ class OpenAIProvider:
             client.close()
         return True
 
+    def listed_models(self) -> list[str] | None:
+        try:
+            client = make_client(self.settings)
+        except AgentError:
+            return None
+        try:
+            return [model.id for model in client.with_options(timeout=20.0).models.list()]
+        except Exception as exc:  # unreachable, unauthorised: not an answer about the models
+            log.info("could not ask OpenAI for its models: %s", exc)
+            return None
+        finally:
+            client.close()
+
     def check_key(self) -> KeyCheck:
         try:
             client = make_client(self.settings)
@@ -448,7 +461,7 @@ def _failure(exc: openai.OpenAIError) -> AgentError:
             f"API error {status}: {exc}",
             retryable=status >= 500,
             request_id=getattr(exc, "request_id", None),
-            trouble="key" if status in (401, 403) else None,
+            trouble="key" if status in (401, 403) else ("model" if status == 404 else None),
         )
     return AgentError(f"OpenAI error: {exc}", retryable=False)
 

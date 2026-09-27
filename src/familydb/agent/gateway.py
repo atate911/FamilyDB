@@ -379,7 +379,7 @@ def _written_down(
             written = request(provider)
         except AgentError as exc:
             _let_go(conn, held, clock.now())
-            alerts.noticed(conn, exc, provider=provider.name, now=clock.now())
+            alerts.noticed(conn, exc, provider=provider.name, now=clock.now(), model=model)
             if not worth_switching(exc):
                 raise
             log.warning("%s could not %s (%s)", provider.name, doing, exc)
@@ -408,7 +408,7 @@ def _written_down(
                 turn=uuid.uuid4().hex[:16],
             )
             spending.settle(conn, held, clock.now())
-            alerts.answered(conn, provider.name)
+            alerts.answered(conn, provider.name, model)
         if written.stop == "refusal":
             raise AgentError(f"{provider.name} would not {doing}", retryable=False)
         if written.stop == "max_tokens":

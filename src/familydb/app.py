@@ -19,6 +19,8 @@ from familydb.tools import ToolRegistry, build_registry
 from familydb.voice import Holds
 
 log = logging.getLogger(__name__)
+# The mark App.refresh keeps while the daily check of models is switched off.
+MODELS_OFF = "off"
 
 
 class App:
@@ -36,6 +38,8 @@ class App:
         self.settings = settings
         self._base = settings  # what the environment said, before anything stored on top
         self._overrides_stamp: str | None = None
+        # When the daily check of models and prices last ran, as loaded into this process.
+        self._models_stamp: str | None = None
         self._reload = threading.Lock()
         self._calendar = calendar
         self._weather = weather
@@ -154,9 +158,6 @@ class App:
         job and the next page view without a restart. Callers already holding a connection
         should pass it rather than paying for a second one.
         """
-        from familydb.config import apply_overrides
-        from familydb.store import settings as settings_store
-
         if conn is None:
             try:
                 own = self.connect()
@@ -167,28 +168,62 @@ class App:
                 return self.refresh(own)
         with self._reload:
             try:
-                stamp = settings_store.stamp(conn)
-                if stamp == self._overrides_stamp:
-                    return False
-                values = settings_store.overrides(conn)
-            except sqlite3.Error as exc:
-                log.warning("could not read the stored settings: %s", exc)
+                return self._reload_settings(conn)
+            finally:
+                # After the settings, so switching the daily check off takes its prices with it.
+                self._keep_up_with_models(conn)
+
+    def _reload_settings(self, conn: sqlite3.Connection) -> bool:
+        """Rebuild the settings when the stored values have moved; True when they did."""
+        from familydb.config import apply_overrides
+        from familydb.store import settings as settings_store
+
+        try:
+            stamp = settings_store.stamp(conn)
+            if stamp == self._overrides_stamp:
                 return False
-            try:
-                fresh = apply_overrides(self._base, values)
-            except Exception as exc:
-                log.error(
-                    "stored settings are not usable, keeping the ones in the environment: %s", exc
-                )
-                self._overrides_stamp = stamp
-                return False
+            values = settings_store.overrides(conn)
+        except sqlite3.Error as exc:
+            log.warning("could not read the stored settings: %s", exc)
+            return False
+        try:
+            fresh = apply_overrides(self._base, values)
+        except Exception as exc:
+            log.error(
+                "stored settings are not usable, keeping the ones in the environment: %s", exc
+            )
             self._overrides_stamp = stamp
-            if fresh == self.settings:
-                return False  # a log line moved, the values did not
-            self.settings = fresh
-            self._forget_built()
-            log.info("settings reloaded (%d stored)", len(values))
-            return True
+            return False
+        self._overrides_stamp = stamp
+        if fresh == self.settings:
+            return False  # a log line moved, the values did not
+        self.settings = fresh
+        self._forget_built()
+        log.info("settings reloaded (%d stored)", len(values))
+        return True
+
+    def _keep_up_with_models(self, conn: sqlite3.Connection) -> None:
+        """Put in force what the daily check of models and prices found, when it has run since
+        this process last looked (model_watch.py), or the built-in prices while the family has
+        it switched off. One small query otherwise."""
+        from familydb import model_watch
+        from familydb.agent.providers import prices
+        from familydb.store import model_watch as watch_store
+
+        if not self.settings.model_watch:
+            if self._models_stamp != MODELS_OFF:
+                prices.use({}, {})
+                self._models_stamp = MODELS_OFF
+            return
+        try:
+            stamp = watch_store.stamp(conn)
+            if stamp == self._models_stamp:
+                return
+            model_watch.load(conn, today=self.clock.today())
+        except sqlite3.Error as exc:
+            log.warning("could not load the models and prices last found: %s", exc)
+            return
+        self._models_stamp = stamp
 
     def forget_calendar(self) -> None:
         """A new Google token was saved: build the calendar client again from it."""

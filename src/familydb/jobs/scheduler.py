@@ -31,6 +31,7 @@ from familydb.jobs.plan_checks import run_plan_checks
 from familydb.jobs.reminders import run_reminders
 from familydb.jobs.retry_failed import run_retries
 from familydb.jobs.weekend_digest import run_digest
+from familydb.model_watch import run_model_watch
 from familydb.whereabouts import forget_old
 
 log = logging.getLogger(__name__)
@@ -113,6 +114,14 @@ def job_specs(app: App) -> list[JobSpec]:
             CronTrigger(hour=settings.plan_check_hour, timezone=zone),
             wanted=settings.plan_checks,
             misfire_grace_time=3600,
+        ),
+        JobSpec(
+            "model_watch",
+            "check models and prices",
+            run_model_watch,
+            CronTrigger(hour=5, minute=17, timezone=zone),
+            wanted=settings.model_watch,
+            misfire_grace_time=6 * 3600,
         ),
         JobSpec(
             "nudges",

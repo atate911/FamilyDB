@@ -229,6 +229,8 @@ EFFORT = (
 )
 
 
+# Boxes whose list is fixed rather than what the daily check of models found: the hearing model.
+FIXED_OFFERS = frozenset({"openai_transcribe_model"})
 # Each company's two models: the one that answers in the chat, and the one that looks things up.
 MODEL_KEYS = {
     "openai": ("openai_model", "openai_worker_model"),
@@ -414,6 +416,23 @@ GROUPS: tuple[Group, ...] = (
             *_models("openai", "OpenAI"),
             *_models("anthropic", "Claude"),
             *_models("gemini", "Gemini"),
+        ),
+    ),
+    Group(
+        "model",
+        "watch",
+        "Keeping up with the companies",
+        "Once a day it asks each company you have a key for which models the key can use, and "
+        "reads two public price lists, LiteLLM's and OpenRouter's, taking a price when they "
+        "agree. New models then appear here and new prices are counted, and admins are told on "
+        "Telegram when a model you use is going or its price moves. No model call, and nothing "
+        "about the family is sent.",
+        (
+            field(
+                "model_watch",
+                "Check models and prices daily",
+                "Off, the prices built into this version are used, and nobody is told.",
+            ),
         ),
     ),
     Group(
