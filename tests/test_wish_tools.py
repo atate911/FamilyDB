@@ -237,7 +237,7 @@ def test_a_kid_s_own_conversation_on_the_page_is_private(conn, family) -> None:
     assert "everyone who signs in" in render_audience_line("web", "web", everyone)
 
 
-# -- her share of the day, and her lookups ----------------------------------------------------------
+# -- her share of the day, and her lookups ---------------------------------------------------------
 
 
 def test_a_kid_past_her_share_is_told_by_code_and_nothing_is_asked(

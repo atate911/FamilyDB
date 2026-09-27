@@ -133,11 +133,13 @@ days; so the nudges thin out as she improves. "I want" earns a warm word at most
 days. The prompt keeps it to one kind line at her age, never a lecture, and never when "we"
 really is the family.
 
-### Her conversation (built), her limit and the two messages to parents (planned)
+### Her conversation and her limit (built), the two messages to parents (planned)
 
 A kid's chat is `member:<id>`: private, read by parents at `/chat?with=<id>`. Her calls are
-summed per day against `kid_daily_spend`; past it, a line from `voice.say` and no call. Ideas her
-messages make are looked up in one daily pass at `kid_lookup_hour`. A parent's answer is a line in
+summed per day against `kid_daily_spend` (default $0.25, on the spending settings), checked before
+each of her messages, so one may cross it; past it, `voice.EVENTS` `kid_limit` and no call. Ideas
+her messages make wait for one pass a day in the hour `kid_lookup_hour` (default 19): the lookup
+job holds them back at any other hour. A parent's answer is a line in
 her chat, worded by `voice.say`.
 
 Telegram goes to the parents for two things only: an inappropriate request, and an Ask-a-parent
