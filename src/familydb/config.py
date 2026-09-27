@@ -241,6 +241,10 @@ class Settings(BaseSettings):
     # each at once.
     gather_seconds: int = Field(default=4, ge=0, le=30)
     telegram_require_mention: bool = False
+    # What is only for one person (their own task's reminder, a note on the idea they added, how
+    # their plan went) goes to their own chat with her rather than the group it began in, when
+    # they have one (routing.py). Anything for everyone stays in the group.
+    private_when_personal: bool = True
     # Voice notes sent on Telegram are heard by a speech model, then answered as if typed
     # (agent/gateway.listen). Claude hears nothing, so a family on Claude alone needs an OpenAI
     # or Gemini key for them.
@@ -305,6 +309,11 @@ class Settings(BaseSettings):
     web_allow_no_password: bool = False
     web_trust_proxy: bool = False
     web_title: str = "FamilyDB"
+    # A mic beside every box on the page that takes words: speaking fills the box, through the
+    # browser's own speech recognition (static/dictate.js). The sound goes from the browser to
+    # its maker (Apple for Safari, Google for Chrome), never through FamilyDB, and costs nothing.
+    # What leaves the house is the family's decision (docs/DESIGN.md section 16).
+    web_dictation: bool = True
 
     # Console and logging
     console_member: str | None = None

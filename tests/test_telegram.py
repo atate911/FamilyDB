@@ -4,6 +4,7 @@ from typing import Any
 
 import pytest
 from telegram import Bot, Update, User
+from telegram.error import BadRequest
 from telegram.ext import Application, Updater
 
 from familydb.channels.base import OutgoingMessage
@@ -724,3 +725,83 @@ def test_a_tap_keeps_the_message_s_own_formatting(settings, clock, conn, family)
     update.callback_query.message.text_html = "Reminder: <b>bins</b> out &amp; back"
     asyncio.run(channel.on_tap(update, None))
     assert seen["text"] == "Reminder: <b>bins</b> out &amp; back\n\nTicked off ✓ (Sam)."
+
+
+def _saved_in(settings, clock, chat_type: str, *, refuse: bool = False):
+    """A channel whose turn replies with these words, and a message to it in this kind of chat:
+    what was reacted, what was sent, and whether each went without a sound."""
+    from familydb.app import App
+
+    channel = TelegramChannel(App(settings, clock), token=TOKEN)
+    update, replies = _update("@familybot add oat milk", chat_type=chat_type, chat_id=-100)
+    reactions: list[str] = []
+    quiet: list[bool] = []
+
+    async def set_reaction(emoji):
+        if refuse:
+            raise BadRequest("Reaction_invalid")
+        reactions.append(emoji)
+
+    async def reply_text(value, **extra):
+        replies.append(value)
+        quiet.append(bool(extra.get("disable_notification")))
+
+    update.effective_message.set_reaction = set_reaction
+    update.effective_message.reply_text = reply_text
+    context, _ = _context()
+    asyncio.run(channel.on_message(update, context))
+    return reactions, replies, quiet
+
+
+def _replying(monkeypatch, words: str) -> None:
+    monkeypatch.setattr(
+        "familydb.channels.telegram.handle_incoming",
+        lambda application, msg: OutgoingMessage(msg.chat_id, words, "ok"),
+    )
+
+
+def test_a_plain_saved_in_a_group_is_a_reaction_not_a_message(settings, clock, monkeypatch):
+    """In the family group, a reply that only says it was done buzzes nobody: a 👌 on the
+    message it answers. Anywhere else it is her ✓ as ever."""
+    _replying(monkeypatch, "✓")
+    assert _saved_in(settings, clock, "group") == (["👌"], [], [])
+    assert _saved_in(settings, clock, "private") == ([], ["✓"], [False])
+
+
+def test_where_a_group_allows_no_reactions_the_saved_goes_quietly(settings, clock, monkeypatch):
+    _replying(monkeypatch, "✓")
+    assert _saved_in(settings, clock, "supergroup", refuse=True) == ([], ["✓"], [True])
+
+
+def test_a_reply_with_more_to_say_is_a_message_in_a_group(settings, clock, monkeypatch):
+    _replying(monkeypatch, "✓ Saturday clashes with swim.")
+    said = _saved_in(settings, clock, "group")
+    assert said == ([], ["✓ Saturday clashes with swim."], [False])
+
+
+def test_a_saved_sent_late_to_a_group_goes_without_a_sound(settings, clock) -> None:
+    """The retry job cannot react to a message any more; it sends the ✓, quietly in a group."""
+    import threading
+
+    from familydb.app import App
+
+    channel = TelegramChannel(App(settings, clock), token=TOKEN)
+    sent: list[tuple[int, str, dict[str, Any]]] = []
+
+    async def send_message(chat_id, text, **extra):
+        sent.append((chat_id, text, extra))
+
+    channel.application = SimpleNamespace(bot=SimpleNamespace(send_message=send_message))
+    loop = asyncio.new_event_loop()
+    running = threading.Thread(target=loop.run_forever, daemon=True)
+    running.start()
+    channel._loop = loop
+    try:
+        channel.send_text_threadsafe("-100", "✓")
+        channel.send_text_threadsafe("42", "✓")
+        channel.send_text_threadsafe("-100", "Tomorrow: the zoo at 10.")
+    finally:
+        loop.call_soon_threadsafe(loop.stop)
+        running.join(timeout=5)
+    quiet = [extra.get("disable_notification", False) for _, _, extra in sent]
+    assert quiet == [True, False, False]

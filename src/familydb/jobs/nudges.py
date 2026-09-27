@@ -17,7 +17,7 @@ from contextlib import closing
 from datetime import datetime, time, timedelta
 from typing import Any
 
-from familydb import buttons, voice
+from familydb import buttons, routing, voice
 from familydb.app import App
 from familydb.dates import utc_iso
 from familydb.store import messages, tasks
@@ -95,7 +95,11 @@ def run_nudges(app: App) -> int:
         if free is not None and free < FREE_MINUTES:
             return 0
         nudged = 0
-        for (channel, chat_id), (task, when) in chosen.items():
+        for (began_in, began_chat), (task, when) in chosen.items():
+            # The owner's own task is brought up to them, not to the whole group (routing.py).
+            channel, chat_id = routing.for_person(
+                conn, app.settings, began_in, began_chat, task.owner_id
+            )
             with transaction(conn):
                 # Asked again under the write lock: a run by hand can race the scheduler, and a
                 # tap or a reply can finish the task in between.

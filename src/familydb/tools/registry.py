@@ -53,6 +53,9 @@ class ToolContext:
     # idea looked up, the weekend searched), for the status page's history of each.
     turn: str | None = None
     about: str | None = None
+    # Somebody who reads the chat may not see how the bot works (audience.plain): a kid. What
+    # code says there of the workings, a limit stopping a turn say, it says plainly.
+    plain: bool = False
 
     def now_iso(self) -> str:
         return utc_iso(self.clock.now())

@@ -57,6 +57,7 @@ ICONS = {
     "link": "external-link",
     "list": "list",
     "locate": "locate-fixed",
+    "mic": "mic",
     "outing": "trees",
     "person_plus": "user-plus",
     "pin": "map-pin",

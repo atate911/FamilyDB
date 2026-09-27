@@ -81,6 +81,9 @@ RETRYING = (
     "within a few minutes, and the answer will appear here."
 )
 LOST = "That message was not answered. Send it again if it still matters."
+# The same, for somebody who does not see how the bot works (a kid, roles.py `browse`): no
+# restarts, no retry job, only that an answer is coming.
+RETRYING_PLAIN = "{name} will answer that soon. The answer will show here when it arrives."
 # What the empty box says, on Home and in the chat alike: who it goes to, and while an answer
 # is on its way, why it is closed.
 PROMPT = "Message {name}"
@@ -93,6 +96,7 @@ AT_HOME = {
     "retrying": "A message was interrupted by a restart. It will be tried again shortly.",
     "lost": "The last message was not answered. It is back in the chat, ready to send again.",
 }
+AT_HOME_PLAIN = {**AT_HOME, "retrying": "{name} will answer your message soon."}
 # What she said last stays on Home for this long; after that it is only in the chat.
 RECENT = timedelta(hours=24)
 # Enough of the log to know how its newest message stands and to find her last line.
@@ -223,7 +227,9 @@ def glance(app: App, conn: Any) -> dict[str, Any]:
                 waiting=False,
                 assistant=personas.active(app.settings).name,
             )
-    return {"state": state, "note": AT_HOME.get(state or ""), "line": line}
+    notes = AT_HOME if auth.visitor().may("browse") else AT_HOME_PLAIN
+    name = personas.active(app.settings).name
+    return {"state": state, "note": notes.get(state or "", "").format(name=name), "line": line}
 
 
 def page(
@@ -275,7 +281,13 @@ def page(
     refresh = None
     if not held:
         refresh = {"thinking": REFRESH_SECONDS, "retrying": RETRY_REFRESH_SECONDS}.get(state or "")
-    pending = {"thinking": HELD if held else THINKING, "retrying": RETRYING, "lost": LOST}
+    retrying = RETRYING if auth.visitor().may("browse") else RETRYING_PLAIN
+    name = personas.active(app.settings).name
+    pending = {
+        "thinking": HELD if held else THINKING,
+        "retrying": retrying.format(name=name),
+        "lost": LOST,
+    }
     return (
         render_template(
             "chat.html",

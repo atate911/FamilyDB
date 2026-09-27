@@ -123,6 +123,16 @@ def exists_update(conn: sqlite3.Connection, channel: str, channel_update_id: str
     return row is not None
 
 
+def has_written(conn: sqlite3.Connection, channel: str, chat_id: str) -> bool:
+    """Whether anybody has written in this chat: for a Telegram chat with one person, that the
+    bot may write to them there, which it may not before they have."""
+    row = conn.execute(
+        "SELECT 1 FROM messages WHERE channel = ? AND chat_id = ? AND direction = 'in' LIMIT 1",
+        (channel, chat_id),
+    ).fetchone()
+    return row is not None
+
+
 def insert_in(
     conn: sqlite3.Connection,
     *,

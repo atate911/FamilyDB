@@ -382,6 +382,21 @@ EVENTS: dict[str, Event] = {
         ("limit",),
         {"limit": 20},
     ),
+    "kid_later": Event(
+        "Can't answer now, where a kid reads it",
+        "I can't answer that just now. Ask me again in a little while!",
+        (),
+    ),
+    "kid_tomorrow": Event(
+        "Can't answer until tomorrow, where a kid reads it",
+        "That's all I can do today. Ask me again tomorrow!",
+        (),
+    ),
+    "kid_type_it": Event(
+        "Can't hear a voice note, where a kid reads it",
+        "I couldn't hear that one. Could you type it for me?",
+        (),
+    ),
     "limit_partial": Event(
         "The limit reached halfway through",
         "That much is saved, but today's spending limit stopped me before I finished. "
@@ -511,6 +526,21 @@ EVENTS: dict[str, Event] = {
     ),
 }
 
+# A line that speaks of how the bot works (a key, a model, a limit in dollars, an admin, the
+# settings page), and the one said instead where somebody reads who may not see that: a kid
+# (audience.plain). The grown-ups who can mend it are told the cause another way (alerts.py).
+PLAIN: dict[str, str] = {
+    "cannot_reach": "kid_later",
+    "no_key": "kid_later",
+    "retry_later": "kid_later",
+    "gave_up": "kid_later",
+    "gave_up_partly": "kid_later",
+    "limit_partial": "kid_later",
+    "limit_reached": "kid_tomorrow",
+    "voice_no_ears": "kid_type_it",
+    "reminder_late": "reminder",
+}
+
 # Messages the bot sends unasked, which a conversation under way can carry instead.
 FOLDABLE = frozenset(
     {"reminder", "reminder_late", "nudge", "follow_up", "plan_rain", "plan_closed", "lookup_done"}
@@ -550,13 +580,16 @@ def usable(event: str) -> tuple[str, ...]:
     return HERS + EVENTS[event].fields
 
 
-def say(settings: Any, event: str, *, seed: Any = None, **facts: Any) -> str:
+def say(settings: Any, event: str, *, seed: Any = None, plain: bool = False, **facts: Any) -> str:
     """The words for one event: one wording of the line in force, filled in.
 
     Which wording is chosen from the event and the seed, a message's own id when the caller has
     one, or with no seed from the facts, so the same inputs always say the same words. A wording
     that cannot be filled in falls back to the plain line. A {name} is always hers: the persona
-    in force gives it, not the caller."""
+    in force gives it, not the caller. `plain` is for a chat somebody reads who may not see how
+    the bot works (audience.plain): a line about the workings says its `PLAIN` one instead."""
+    if plain:
+        event = PLAIN.get(event, event)
     persona = personas.active(settings)
     said = _wordings_of(persona, event)
     return _filled(event, said[_turn(event, seed, facts) % len(said)], persona.name, facts)

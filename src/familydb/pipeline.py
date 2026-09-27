@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from familydb import (
+    audience,
     family,
     memory,
     personas,
@@ -560,7 +561,9 @@ def _not_heard(
         messages.give_up(conn, inbound_id)
     # Seeded by the message, as every other notice here is, so a line with several wordings
     # may read another way for another voice note, and the same way if this one is sent again.
-    notice = voice.say(app.settings, event, seed=inbound_id, **facts)
+    sender = members.resolve(conn, msg.channel, msg.channel_user_id)
+    plain = audience.plain(conn, msg.channel, msg.chat_id, sender)
+    notice = voice.say(app.settings, event, seed=inbound_id, plain=plain, **facts)
     return _fail(app, conn, msg, inbound_id, f"{what}: {error}", notice)
 
 
@@ -628,6 +631,8 @@ def _answer(
     `gathered` are the earlier messages of a burst, folded into this one (`_run`): answered by
     its reply, and retried with it."""
     gathered = gathered or []
+    # A kid reads this chat: what is said here of the workings is said plainly (audience.py).
+    plain = audience.plain(conn, msg.channel, msg.chat_id, member)
     if not app.can_ask("chat", api=api):
         # A fresh install before its key is typed in: say so plainly, and do not keep retrying.
         log.warning("message %s saved, but there is no model key to answer it with", inbound_id)
@@ -639,7 +644,7 @@ def _answer(
             msg,
             inbound_id,
             "no model key",
-            voice.say(app.settings, "no_key", seed=inbound_id) if notify else None,
+            voice.say(app.settings, "no_key", seed=inbound_id, plain=plain) if notify else None,
         )
     kid = roles.may(member.role, "wish") and not roles.may(member.role, "decide")
     if kid and spending.kid_used_up(conn, app.settings, app.clock.now(), member.id):
@@ -661,6 +666,7 @@ def _answer(
             kind=kind,
             taken=taken,
             gathered=gathered,
+            plain=plain,
         )
     except AgentError as exc:
         log.error("agent error on message %s: %s (retryable=%s)", inbound_id, exc, exc.retryable)
@@ -669,11 +675,18 @@ def _answer(
                 messages.give_up(conn, inbound_id)
         if isinstance(exc, SpendingLimitReached):
             reply = voice.say(
-                app.settings, "limit_reached", seed=inbound_id, limit=f"{exc.limit:.2f}"
+                app.settings,
+                "limit_reached",
+                seed=inbound_id,
+                plain=plain,
+                limit=f"{exc.limit:.2f}",
             )
         else:
             reply = voice.say(
-                app.settings, "retry_later" if exc.retryable else "cannot_reach", seed=inbound_id
+                app.settings,
+                "retry_later" if exc.retryable else "cannot_reach",
+                seed=inbound_id,
+                plain=plain,
             )
         return _fail(app, conn, msg, inbound_id, str(exc), reply if notify else None)
     except Exception as exc:
@@ -685,7 +698,9 @@ def _answer(
             msg,
             inbound_id,
             error,
-            voice.say(app.settings, "retry_later", seed=inbound_id) if notify else None,
+            voice.say(app.settings, "retry_later", seed=inbound_id, plain=plain)
+            if notify
+            else None,
         )
 
     if result.status == "failed" and result.error == "max_iterations":
@@ -694,7 +709,7 @@ def _answer(
         log.error("turn on message %s ran out of steps; not retrying it", inbound_id)
         with transaction(conn):
             messages.give_up(conn, inbound_id)
-        notice = _gave_up_reply(app, result, inbound_id) if kind != "digest" else None
+        notice = _gave_up_reply(app, result, inbound_id, plain) if kind != "digest" else None
         return _fail(app, conn, msg, inbound_id, "max_iterations", notice, result.actions)
     if result.status == "failed":
         log.error("turn failed on message %s: %s", inbound_id, result.error)
@@ -704,7 +719,9 @@ def _answer(
             msg,
             inbound_id,
             result.error or "failed",
-            voice.say(app.settings, "retry_later", seed=inbound_id) if notify else None,
+            voice.say(app.settings, "retry_later", seed=inbound_id, plain=plain)
+            if notify
+            else None,
             result.actions,
         )
 
@@ -809,6 +826,7 @@ def _think(
     kind: str = "chat",
     taken: list[voice.Held] | None = None,
     gathered: list[int] | None = None,
+    plain: bool = False,
 ) -> TurnResult:
     app.refresh(conn)  # a model or a limit changed on the settings page applies from here on
     settings = app.settings
@@ -875,6 +893,7 @@ def _think(
         geocoder=app.geocoder,
         api=api,  # a stand-in for the discovery worker inside `suggest`, when a test injects one
         discover_cache=app.discover_cache,
+        plain=plain,
     )
     return gateway.ask(
         kind,
@@ -903,13 +922,13 @@ def _kid_line(
     )
 
 
-def _gave_up_reply(app: App, result: TurnResult, inbound_id: int) -> str:
+def _gave_up_reply(app: App, result: TurnResult, inbound_id: int, plain: bool = False) -> str:
     """What to tell the family when a turn ran out of steps, worded by code, not by a model."""
     written = {spec.name for spec in app.registry.specs() if spec.writes}
     completed = [a for a in result.actions if a.get("ok") and a.get("tool") in written]
     if not completed:
-        return voice.say(app.settings, "gave_up", seed=inbound_id)
-    partly = voice.say(app.settings, "gave_up_partly", seed=inbound_id)
+        return voice.say(app.settings, "gave_up", seed=inbound_id, plain=plain)
+    partly = voice.say(app.settings, "gave_up_partly", seed=inbound_id, plain=plain)
     return spending.done_lines(completed) + " " + partly
 
 
