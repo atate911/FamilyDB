@@ -65,7 +65,7 @@ built yet is marked *planned*.
 `auth.NEEDS` gates by blueprint and `auth.NEEDS_HERE` by page. Templates hide what a visitor may
 not use; the gate refuses it anyway.
 
-### Gifts stay private (planned)
+### Gifts stay private (built)
 
 For a visitor without `decide`, the ideas and plans pages leave out ideas of kind `gift` and plans
 made from them. Gift ideas also leave the idea list in the cached prompt prefix for everyone: they

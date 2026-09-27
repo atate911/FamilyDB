@@ -11,7 +11,7 @@ from typer.testing import CliRunner
 from familydb import family as rules
 from familydb import passwords, roles
 from familydb.app import App
-from familydb.store import db, ideas, logins, members, messages, tasks
+from familydb.store import db, ideas, logins, members, messages, plans, tasks
 from familydb.store import settings as settings_store
 from familydb.web import check_configuration, create_app, fields
 from familydb.web.auth import DEVICE_COOKIE, GLOBAL_ATTEMPTS, MAX_ATTEMPTS
@@ -531,3 +531,28 @@ def test_home_offers_only_what_a_role_may_do(app, sam, family, monkeypatch) -> N
     assert girls.post(f"/task/{towels}/done", data=tick).status_code == 403
     with closing(app.connect()) as conn:
         assert tasks.get(conn, towels).status == "open"
+
+
+def test_a_kid_is_never_shown_a_present_or_its_plan(app, sam, family) -> None:
+    """Presents are kept from anybody who may not decide what the kids are given (WISHES.md)."""
+    girls = _as(app, "the girls", _start(sam, family["girls"].id))
+    girls.post("/you", data={**_tokens(girls, "/you"), "new": KIDS, "again": KIDS})
+    with closing(app.connect()) as conn, db.transaction(conn):
+        gift = ideas.insert(conn, title="Roller skates", kind="gift", now=NOW_ISO)
+        ideas.insert(conn, title="Zoo lights", kind="outing", now=NOW_ISO)
+        plans.insert(
+            conn,
+            title="Pick up the skates",
+            start="2026-09-28T10:00:00Z",
+            end=None,
+            all_day=False,
+            idea_id=gift.id,
+        )
+    for path in ("/", "/ideas", "/ideas?kind=gift", "/plans", "/plans/month"):
+        page = girls.get(path).text
+        assert "Roller skates" not in page and "Pick up the skates" not in page, path
+    assert "Zoo lights" in girls.get("/ideas").text
+    assert girls.get(f"/idea/{gift.id}").status_code == 404
+    assert "Roller skates" in sam.get("/ideas").text
+    assert "Pick up the skates" in sam.get("/plans").text
+    assert sam.get(f"/idea/{gift.id}").status_code == 200

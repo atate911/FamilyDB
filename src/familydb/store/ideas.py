@@ -195,8 +195,15 @@ def get(conn: sqlite3.Connection, idea_id: int) -> Idea | None:
 
 
 def list_for_prompt(conn: sqlite3.Connection) -> list[Idea]:
-    """Every idea the model should know about, oldest first. Dropped ideas are left out."""
-    return list_all(conn, include_dropped=False)
+    """Every idea the model should know about, oldest first. Dropped ideas are left out, and so
+    are presents: the prefix is the same for every chat, a kid's included, and a present is a
+    surprise (docs/WISHES.md). A grown-up's chat finds one with search_ideas."""
+    return [idea for idea in list_all(conn, include_dropped=False) if not is_gift(idea)]
+
+
+def is_gift(idea: Idea) -> bool:
+    """Whether this idea is a present, kept from the kids."""
+    return idea.kind.strip().lower() == GIFT
 
 
 def pending_enrichment(conn: sqlite3.Connection, *, limit: int) -> list[Idea]:
@@ -278,10 +285,15 @@ def search(
     exclude_done_within_days: int | None = None,
     today: date | None = None,
     limit: int = 50,
+    without_gifts: bool = False,
 ) -> list[Idea]:
-    """Filtered ideas. No filters returns everything that isn't dropped."""
+    """Filtered ideas. No filters returns everything that isn't dropped. `without_gifts` leaves
+    out the presents, for somebody they are kept from."""
     where: list[str] = []
     params: list[Any] = []
+    if without_gifts:
+        where.append("lower(trim(i.kind)) != ?")
+        params.append(GIFT)
     if kind:
         where.append("i.kind = ?")
         params.append(kind.strip().lower())

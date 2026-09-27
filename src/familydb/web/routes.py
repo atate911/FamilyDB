@@ -150,12 +150,15 @@ def home() -> Response | str:
         if manages and not status_page.ready_to_answer(progress):
             return redirect(url_for("setup.overview"))
         seen = agenda.read(app, conn, today, today + timedelta(days=HOME_AHEAD_DAYS))
+        on = _no_gifts(conn, seen.entries)
         everything = idea_store.list_all(conn)
+        if _gifts_hidden():
+            everything = [idea for idea in everything if not idea_store.is_gift(idea)]
         unfinished = status_page.setup_steps(app, conn) if manages else []
         family = [member.display_name for member in member_store.list_all(conn)]
         todo = task_store.list_all(conn, status="open", owner_id=_own_only())
         talk = chat.glance(app, conn) if talks else None
-    coming = [entry for entry in seen.entries if entry.days()[-1] >= today][:HOME_PLANS]
+    coming = [entry for entry in on if entry.days()[-1] >= today][:HOME_PLANS]
     newest = sorted(everything, key=lambda idea: idea.created_at, reverse=True)[:HOME_IDEAS]
     return render_template(
         "home.html",
@@ -194,8 +197,12 @@ def ideas() -> str:
             status=status if status in STATUSES else None,
             participant=who or None,
             limit=LIST_LIMIT,
+            without_gifts=_gifts_hidden(),
         )
-        kinds, people = _choices(idea_store.list_all(conn, include_dropped=True))
+        listed = idea_store.list_all(conn, include_dropped=True)
+        if _gifts_hidden():
+            listed = [idea for idea in listed if not idea_store.is_gift(idea)]
+        kinds, people = _choices(listed)
         capture_people = member_store.list_all(conn)
         # Where each listed idea is from home, for its card and the radar of the list.
         away = {
@@ -230,7 +237,7 @@ def idea(idea_id: int) -> str:
     today = app.clock.today()
     with closing(app.connect()) as conn:
         record = idea_store.get(conn, idea_id)
-        if record is None:
+        if record is None or (_gifts_hidden() and idea_store.is_gift(record)):
             abort(404)
         original = (
             message_store.get(conn, record.source_message_id) if record.source_message_id else None
@@ -354,11 +361,12 @@ def plans() -> str:
             today - timedelta(days=PLANS_BEHIND_DAYS),
             today + timedelta(days=PLANS_AHEAD_DAYS),
         )
+        on = _no_gifts(conn, seen.entries)
         titles = {row.id: row.title for row in idea_store.list_all(conn, include_dropped=True)}
         asking = _who(conn)
     # Something that ends today or later is still to come, or going on now.
-    upcoming = [entry for entry in seen.entries if entry.days()[-1] >= today]
-    recent = [entry for entry in seen.entries if entry.days()[-1] < today]
+    upcoming = [entry for entry in on if entry.days()[-1] >= today]
+    recent = [entry for entry in on if entry.days()[-1] < today]
     return render_template(
         "plans.html",
         upcoming=[views.entry_row(entry, today) for entry in upcoming],
@@ -384,9 +392,10 @@ def plans_month() -> str:
     weeks_last = last_day + timedelta(days=6 - last_day.weekday())
     with closing(app.connect()) as conn:
         seen = agenda.read(app, conn, weeks_first, weeks_last)
+        on = _no_gifts(conn, seen.entries)
     previous = (first - timedelta(days=1)).replace(day=1)
     following = last_day + timedelta(days=1)
-    weeks = views.month_weeks(seen.entries, first, today)
+    weeks = views.month_weeks(on, first, today)
     return render_template(
         "plans_month.html",
         month=f"{first:%B %Y}",
@@ -398,6 +407,20 @@ def plans_month() -> str:
         source=seen.source,
         source_note=views.AGENDA_NOTES[seen.source],
     )
+
+
+def _gifts_hidden() -> bool:
+    """Whether presents are kept from this visitor: from anybody who may not decide what the kids
+    are given, so a present stays a surprise (docs/WISHES.md)."""
+    return not auth.visitor().may("decide")
+
+
+def _no_gifts(conn: Any, entries: list[agenda.Entry]) -> list[agenda.Entry]:
+    """What is on, without the plans made from a present, for a visitor presents are kept from."""
+    if not _gifts_hidden():
+        return entries
+    gifts = {i.id for i in idea_store.list_all(conn, include_dropped=True) if idea_store.is_gift(i)}
+    return [entry for entry in entries if entry.idea_id not in gifts]
 
 
 def _own_only() -> int | None:
