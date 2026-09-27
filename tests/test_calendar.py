@@ -1,5 +1,8 @@
 import json
 from datetime import date, datetime, timedelta
+from types import SimpleNamespace
+
+import pytest
 
 from familydb.integrations.google_calendar import CalendarEvent, event_body, parse_event
 from familydb.store import ideas, messages, plans
@@ -496,3 +499,58 @@ def test_reading_the_calendar_rewrites_nothing_that_did_not_change(env):
     call(env, "search_plans", query="")  # the full sync
     for plan_id, plan in before.items():
         assert plans.get(env.conn, plan_id) == plan  # updated_at included
+
+
+def test_the_page_asks_google_at_most_once_a_minute_and_sees_the_bot_s_writes_at_once(env):
+    from familydb.errors import ToolError
+    from familydb.integrations.google_calendar import PAGE_READ_SECONDS, GoogleCalendar
+
+    client = GoogleCalendar(env.settings)
+    now = [1000.0]
+    client._now = lambda: now[0]
+    asked = []
+    answer = [["first"]]
+
+    def list_events(start, end):
+        asked.append((start, end))
+        return list(answer[0])
+
+    client.list_events = list_events
+    start, end = datetime(2026, 9, 26, tzinfo=TZ), datetime(2026, 9, 27, tzinfo=TZ)
+    assert client.recent_events(start, end) == ["first"]
+    now[0] += PAGE_READ_SECONDS - 1
+    assert client.recent_events(start, end) == ["first"] and len(asked) == 1
+    now[0] += 2  # a minute on: Google is asked again
+    answer[0] = ["second"]
+    assert client.recent_events(start, end) == ["second"] and len(asked) == 2
+
+    # A write the bot makes, even one Google refuses, is seen on the next view.
+    client._execute = lambda request, ignore=(): (_ for _ in ()).throw(ToolError("403"))
+    client._events = lambda: SimpleNamespace(delete=lambda **_kwargs: "delete")
+    with pytest.raises(ToolError):
+        client.delete_event("evt1")
+    answer[0] = ["third"]
+    assert client.recent_events(start, end) == ["third"] and len(asked) == 3
+
+    # A failure is never kept.
+    def down(start, end):
+        raise ToolError("Google Calendar error 503")
+
+    client.list_events = down
+    now[0] += PAGE_READ_SECONDS + 1
+    with pytest.raises(ToolError):
+        client.recent_events(start, end)
+    client.list_events = list_events
+    assert client.recent_events(start, end) == ["third"]
+
+    # An answer a write overtook is not kept: it may be from before the write.
+    now[0] += PAGE_READ_SECONDS + 1
+
+    def overtaken(start, end):
+        client._wrote()
+        return ["stale"]
+
+    client.list_events = overtaken
+    assert client.recent_events(start, end) == ["stale"]
+    client.list_events = list_events
+    assert client.recent_events(start, end) == ["third"]

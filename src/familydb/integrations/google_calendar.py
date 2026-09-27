@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import threading
+import time
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
@@ -23,6 +24,11 @@ SCOPES = [
     "https://www.googleapis.com/auth/calendar.readonly",
 ]
 REAUTH = "Google credentials are expired or revoked; run `familydb google auth` again"
+# How long the page may show what Google said rather than ask again. Asking took a few hundred
+# milliseconds of every Home and Plans view. A plan the bot makes, moves or cancels shows at once,
+# since its own writes forget what was read; an event added on a phone may take this long to
+# show, which the family chose, as this calendar is kept for the bot.
+PAGE_READ_SECONDS = 60.0
 
 
 @dataclass(frozen=True)
@@ -61,6 +67,10 @@ class CalendarAPI(Protocol):
     """What the tools need from a calendar. `GoogleCalendar` implements it; tests fake it."""
 
     def list_events(self, start: datetime, end: datetime) -> list[CalendarEvent]: ...
+
+    def recent_events(self, start: datetime, end: datetime) -> list[CalendarEvent]:
+        """What the page shows: `list_events`, or a recent enough answer to the same question."""
+        ...
 
     def get_event(self, event_id: str) -> CalendarEvent | None: ...
 
@@ -290,6 +300,11 @@ class GoogleCalendar:
         self._service: Any = None
         # The underlying HTTP client is not thread-safe; the bot and the scheduler share this.
         self._lock = threading.Lock()
+        # What the page was last told for each span of days, and when (see PAGE_READ_SECONDS).
+        self._read: dict[tuple[str, str], tuple[float, int, list[CalendarEvent]]] = {}
+        self._read_lock = threading.Lock()
+        self._writes = 0
+        self._now = time.monotonic
 
     def _events(self) -> Any:
         with self._lock:
@@ -333,6 +348,28 @@ class GoogleCalendar:
                 break
         return [parse_event(i, self.tz) for i in items if i.get("status") != "cancelled"]
 
+    def recent_events(self, start: datetime, end: datetime) -> list[CalendarEvent]:
+        """The page's read: what Google said about these days within the last minute, unless
+        something has been written since. A failure is never kept, so the next view asks again."""
+        key = (start.isoformat(), end.isoformat())
+        with self._read_lock:
+            kept = self._read.get(key)
+            writes = self._writes
+        if kept is not None and kept[1] == writes and self._now() - kept[0] < PAGE_READ_SECONDS:
+            return list(kept[2])
+        asked = self._now()
+        events = self.list_events(start, end)
+        with self._read_lock:
+            # A write while Google was being asked may have come after its answer: keep nothing.
+            if self._writes == writes:
+                self._read[key] = (asked, writes, events)
+        return list(events)
+
+    def _wrote(self) -> None:
+        with self._read_lock:
+            self._writes += 1
+            self._read.clear()
+
     def get_event(self, event_id: str) -> CalendarEvent | None:
         item = self._execute(
             self._events().get(calendarId=self.calendar_id, eventId=event_id), ignore=(404, 410)
@@ -363,9 +400,12 @@ class GoogleCalendar:
         )
         if event_id:
             body["id"] = event_id
-        item = self._execute(
-            self._events().insert(calendarId=self.calendar_id, body=body), ignore=(409,)
-        )
+        try:
+            item = self._execute(
+                self._events().insert(calendarId=self.calendar_id, body=body), ignore=(409,)
+            )
+        finally:
+            self._wrote()
         if item is None and event_id:
             existing = self.get_event(event_id)
             if existing is not None:
@@ -377,14 +417,20 @@ class GoogleCalendar:
 
     def patch_event(self, event_id: str, **changes: Any) -> CalendarEvent:
         body = event_body(tz=self.tz, clear_other_time_key=True, **changes)
-        item = self._execute(
-            self._events().patch(calendarId=self.calendar_id, eventId=event_id, body=body)
-        )
+        try:
+            item = self._execute(
+                self._events().patch(calendarId=self.calendar_id, eventId=event_id, body=body)
+            )
+        finally:
+            self._wrote()
         return parse_event(item, self.tz)
 
     def delete_event(self, event_id: str) -> None:
         """Delete an event. One already deleted by hand (404 or 410) counts as done."""
-        self._execute(
-            self._events().delete(calendarId=self.calendar_id, eventId=event_id),
-            ignore=(404, 410),
-        )
+        try:
+            self._execute(
+                self._events().delete(calendarId=self.calendar_id, eventId=event_id),
+                ignore=(404, 410),
+            )
+        finally:
+            self._wrote()
