@@ -646,3 +646,29 @@ def test_a_zone_reads_as_its_place_and_its_offset_that_day() -> None:
     groups = dict(zone_groups(["Europe/Paris", "UTC", "America/Toronto", "America/Denver"], winter))
     assert list(groups) == ["Americas", "Europe", "Other"]
     assert [zone for zone, _ in groups["Americas"]] == ["America/Denver", "America/Toronto"]
+
+
+def test_the_general_page_says_where_the_page_is_served_and_how_to_move_it(page) -> None:
+    """Both ports, and the commands that move them on the server: shown, never a form."""
+    general = page.get("/settings/general").text
+    served = general[general.index('id="served"') :]
+    assert "<code>http://localhost/</code>, on port 80" in served
+    assert "<code>127.0.0.1:8080</code>: only this machine can reach it." in served
+    assert "scripts/maintain.sh port 9090</code> moves FamilyDB itself off\n      8080" in served
+    assert "https --port" not in served  # nothing is in front of it to move
+    assert 'name="web_port"' not in general and "web_port" not in fields.BY_KEY
+
+
+def test_behind_caddy_it_says_how_to_move_the_address_people_open(settings, clock, conn, family):
+    app = App(
+        settings.model_copy(update={"web_password": PASSWORD, "web_trust_proxy": True}), clock
+    )
+    client = create_app(app).test_client()
+    # Signed in where the page is, since behind a proxy the sign-in cookie is sent on HTTPS only.
+    opened = "https://203.0.113.7:24613"
+    client.post("/login", data={"password": PASSWORD}, base_url=opened)
+    served = client.get("/settings/general", base_url=opened).text
+    assert "<code>https://203.0.113.7:24613/</code>, on port 24613" in served
+    assert "and the page is passed on to it by Caddy" in served
+    assert "https --port random</code> serves the page on a port" in served
+    assert "The address people open stays as it is." in served

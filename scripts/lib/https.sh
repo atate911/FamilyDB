@@ -129,6 +129,43 @@ choose_public_port() { # choose_public_port WANTED APP_PORT - a port to serve on
   printf '%s' "$wanted"
 }
 
+choose_app_port() { # choose_app_port WANTED PUBLIC_PORT NOW - a port for FamilyDB itself, or why not
+  local wanted="$1" public="$2" now="$3"
+  case "$wanted" in
+    random) random_public_port || { printf 'no free port turned up at random; name one' >&2; return 1; }; return 0 ;;
+    ''|*[!0-9]*) printf '%s is not a port number' "$wanted" >&2; return 1 ;;
+  esac
+  # FamilyDB runs unprivileged, with no capabilities, so it cannot bind a port below 1025.
+  [ "${#wanted}" -le 5 ] || { printf 'a port for FamilyDB itself is one from 1025 to 65535' >&2; return 1; }
+  wanted=$((10#$wanted))
+  if [ "$wanted" -lt 1025 ] || [ "$wanted" -gt 65535 ]; then
+    printf 'a port for FamilyDB itself is one from 1025 to 65535' >&2
+    return 1
+  fi
+  if [ "$wanted" = "$public" ]; then
+    printf 'port %s is where Caddy serves the page; choose another' "$wanted" >&2
+    return 1
+  fi
+  if [ "$wanted" != "$now" ] && port_listening "$wanted"; then
+    printf 'something on this machine already listens on port %s; choose another' "$wanted" >&2
+    return 1
+  fi
+  printf '%s' "$wanted"
+}
+
+caddy_follows() { # caddy_follows OLD NEW - point the Caddyfile this wrote at FamilyDB's new port
+  # 0 when Caddy follows, 1 when it would not load the change (and has the old file back), and 2
+  # when no Caddyfile here passes the page on to the old port, so there was nothing to change.
+  local old="$1" new="$2" before
+  as_root grep -qE "reverse_proxy 127\.0\.0\.1:${old}\$" "$CADDYFILE" 2>/dev/null || return 2
+  before="$(as_root cat "$CADDYFILE")"
+  as_root sed -i "s|reverse_proxy 127\.0\.0\.1:${old}\$|reverse_proxy 127.0.0.1:${new}|" "$CADDYFILE"
+  caddy_reload && return 0
+  printf '%s\n' "$before" | as_root tee "$CADDYFILE" >/dev/null
+  caddy_reload || true
+  return 1
+}
+
 open_web_ports() { # in ufw, the one firewall this knows; say_how_to_open speaks of a provider's own
   local rule
   rule="$(web_ports_rule)"

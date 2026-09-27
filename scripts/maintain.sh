@@ -49,6 +49,11 @@ Commands
                        or to move from an SSH tunnel to a link anyone can open. --port serves the
                        page on another port instead of 443, one the scans that sweep the
                        internet rarely try (random picks one), and --port 443 moves it back.
+                       With Docker, only --port: it moves the Caddy container's port.
+  port N|random        Move FamilyDB's own port (8080 unless moved), when something else needs
+                       it: in .env, in Caddy's configuration and in Docker's, then restart. Behind
+                       Caddy the address people open stays as it was; with nothing in front, it
+                       is the port people open. A number from 1025 to 65535, or random.
   backup               Take a backup now, using SQLite's online backup, safe while it runs.
   restore FILE         Stop the bot, put that backup in place, start it again. The database
                        being replaced is itself backed up first.
@@ -76,6 +81,7 @@ Examples
   sudo scripts/maintain.sh restore /mnt/backups/familydb-2026-09-14.sqlite3
   sudo scripts/maintain.sh upgrade
   sudo scripts/maintain.sh https --port random
+  sudo scripts/maintain.sh port 9090
 USAGE
 }
 
@@ -85,9 +91,11 @@ RESTORE_FILE=""
 LOG_LINES=50
 HTTPS_SITE=""
 HTTPS_PORT=""
+APP_PORT=""
 PASSWORD_FOR=""
 case "$COMMAND" in
   https) case "${1:-}" in ''|-*) ;; *) HTTPS_SITE="$1"; shift ;; esac ;;
+  port) case "${1:-}" in ''|-*) ;; *) APP_PORT="$1"; shift ;; esac ;;
   password) case "${1:-}" in ''|-*) ;; *) PASSWORD_FOR="$1"; shift ;; esac ;;
   restore) RESTORE_FILE="${1:-}"; [ -n "$RESTORE_FILE" ] && shift ;;
   logs) case "${1:-}" in ''|-*) ;; *) LOG_LINES="$1"; shift ;; esac ;;
@@ -300,9 +308,11 @@ env_file_set() { # env_file_set KEY VALUE - in place, keeping the file's owner a
 
 cmd_https() {
   head2 "HTTPS for the page"
-  [ "$DOCKER_MODE" = 0 ] || die "this is for the virtualenv install" \
-    "With Docker, set WEB_DOMAIN, WEB_TRUST_PROXY=true and COMPOSE_PROFILES=tls in ${TARGET}/.env, then: docker compose up -d"
   as_root test -f "${TARGET}/.env" || die "there is no ${TARGET}/.env" "Run the installer first."
+  if [ "$DOCKER_MODE" = 1 ]; then
+    https_port_in_docker
+    return 0
+  fi
   local site port previous chosen
   site="${HTTPS_SITE#https://}"; site="${site#http://}"; site="${site%%/*}"; site="${site%:*}"
   [ -n "$site" ] || site="$(env_file_value WEB_DOMAIN)"
@@ -331,6 +341,104 @@ cmd_https() {
     note "the old address finds nothing."
   fi
   say_how_to_open
+}
+
+# With Docker, Caddy is the compose file's tls profile, set up by the installer from .env; what is
+# left to move is the port of this machine it is published on.
+https_port_in_docker() {
+  local site port previous chosen
+  site="$(env_file_value WEB_DOMAIN)"
+  if [ -z "$site" ] || [ -z "$HTTPS_PORT" ]; then
+    die "with Docker, this only moves the port of a page already on HTTPS" \
+      "For HTTPS, set WEB_DOMAIN, WEB_TRUST_PROXY=true and COMPOSE_PROFILES=tls in ${TARGET}/.env, then: docker compose up -d" \
+      "Then, to move it off 443: sudo ${0} https --port random"
+  fi
+  port="$(env_file_value WEB_PORT)"; port="${port:-8080}"
+  previous="$(env_file_value WEB_PUBLIC_PORT)"; previous="${previous:-443}"
+  chosen="$(choose_public_port "$HTTPS_PORT" "$port")" \
+    || die "that port will not do" "Give --port a number from 1024 to 65535, or random, or 443."
+  PUBLIC_PORT="$chosen"
+  if [ "$chosen" = "$previous" ]; then
+    ok "The page is already served on port ${chosen}. Nothing to do."
+  else
+    system_change "Serve the page on port ${chosen} instead of ${previous}" \
+      "WEB_PUBLIC_PORT in ${TARGET}/.env, then the containers are started again with it"
+    if [ "$DRY_RUN" = 0 ]; then
+      env_file_set WEB_PUBLIC_PORT "$chosen"
+      step "Starting the containers again" as_root docker compose --project-directory "$TARGET" up -d
+    fi
+  fi
+  say ""
+  say "The page: ${B}$(public_url "$site")${OFF}"
+  if [ "$chosen" != "$previous" ]; then
+    note "It moved from port ${previous}: open it at the address above from now on. A bookmark to"
+    note "the old address finds nothing."
+  fi
+  say_how_to_open
+}
+
+# ------------------------------------------------------------------ port ----
+cmd_port() {
+  head2 "FamilyDB's own port"
+  [ -n "$APP_PORT" ] || die "which port?" "Usage: ${0} port N, with N from 1025 to 65535, or random"
+  as_root test -f "${TARGET}/.env" || die "there is no ${TARGET}/.env" "Run the installer first."
+  local now public chosen followed=0 site host
+  now="$(env_file_value WEB_PORT)"; now="${now:-8080}"
+  public="$(env_file_value WEB_PUBLIC_PORT)"; public="${public:-443}"
+  chosen="$(choose_app_port "$APP_PORT" "$public" "$now")" \
+    || die "that port will not do" "Give it a number from 1025 to 65535, or random."
+  if [ "$chosen" = "$now" ]; then
+    ok "FamilyDB already listens on port ${now}. Nothing to do."
+    return 0
+  fi
+  if [ "$DOCKER_MODE" = 1 ]; then
+    system_change "Move FamilyDB from port ${now} to port ${chosen}" \
+      "WEB_PORT in ${TARGET}/.env, which the compose file publishes and Caddy passes the page on to"
+  else
+    system_change "Move FamilyDB from port ${now} to port ${chosen}" \
+      "WEB_PORT in ${TARGET}/.env, and Caddy's configuration where it passes the page on to ${now}"
+  fi
+  if [ "$DRY_RUN" = 1 ]; then
+    note "[dry run] nothing was changed"
+    return 0
+  fi
+  env_file_set WEB_PORT "$chosen"
+  if [ "$DOCKER_MODE" = 1 ]; then
+    step "Starting the containers again on port ${chosen}" \
+      as_root docker compose --project-directory "$TARGET" up -d
+  else
+    caddy_follows "$now" "$chosen" || followed=$?
+    if [ "$followed" = 1 ]; then
+      env_file_set WEB_PORT "$now"
+      die "Caddy would not load the change, so nothing was moved" \
+        "Its configuration is as it was. What it said: sudo journalctl -u caddy -n 30"
+    fi
+    [ "$followed" = 0 ] && ok "Caddy passes the page on to port ${chosen} now."
+    if service_installed; then
+      step "Restarting FamilyDB on port ${chosen}" as_root systemctl restart familydb
+    else
+      note "No service here to restart: start FamilyDB again yourself, and it listens on ${chosen}."
+    fi
+  fi
+  say ""
+  site="$(env_file_value WEB_DOMAIN)"
+  host="$(env_file_value WEB_HOST)"; host="${host:-127.0.0.1}"
+  if [ -n "$site" ]; then
+    PUBLIC_PORT="$public"
+    say "The page is still at ${B}$(public_url "$site")${OFF}: only the port behind Caddy moved."
+    if [ "$followed" = 2 ] && [ "$DOCKER_MODE" = 0 ]; then
+      warn "No Caddyfile here passed the page on to port ${now}, so none was changed."
+      note "Point whatever serves ${site} at 127.0.0.1:${chosen} instead."
+    fi
+  elif [ "$DOCKER_MODE" = 1 ] || [ "$host" = 127.0.0.1 ] || [ "$host" = localhost ] || [ "$host" = ::1 ]; then
+    say "It is on this machine alone. From your own computer, open a tunnel to it:"
+    say "  ssh -L ${chosen}:127.0.0.1:${chosen} ${SUDO_USER:-$(id -un)}@$(this_address)"
+    say "  and, while it is connected, open ${B}http://127.0.0.1:${chosen}/${OFF} on that computer."
+  else
+    say "The page: ${B}http://$(this_address):${chosen}/${OFF}. A bookmark to port ${now} finds nothing."
+    note "If a firewall let port ${now} in, let ${chosen} in instead, and close ${now}:"
+    note "  sudo ufw allow ${chosen}/tcp && sudo ufw delete allow ${now}/tcp"
+  fi
 }
 
 # ---------------------------------------------------------------- backup ----
@@ -589,6 +697,7 @@ case "$COMMAND" in
   check)            cmd_check ;;
   password)         cmd_password ;;
   https)            cmd_https ;;
+  port)             cmd_port ;;
   backup)           cmd_backup ;;
   restore)          cmd_restore ;;
   upgrade)          cmd_upgrade ;;

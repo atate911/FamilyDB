@@ -429,10 +429,26 @@ either way. `sudo /opt/familydb/scripts/maintain.sh https` sets this up on an in
 without it, and is the thing to run again once a provider's firewall lets 80 and 443 through.
 
 **At home, on the local network.** To reach the page from other devices without a domain, set
-`WEB_HOST=0.0.0.0` in `.env`, and with Docker change the compose `ports` line to `"8080:8080"`.
-The page then answers at `http://<server>:8080/`. A page that faces the network needs passwords
-of at least twelve characters, because a password is all that guards it and there is no second
-factor. `WEB_PORT` moves it off 8080, a port scanners try early, onto any other above 1024.
+`WEB_HOST=0.0.0.0` in `.env`, and with Docker drop the `127.0.0.1:` from the start of the
+compose `ports` line. The page then answers at `http://<server>:8080/`. A page that faces the
+network needs passwords of at least twelve characters, because a password is all that guards it
+and there is no second factor. `sudo /opt/familydb/scripts/maintain.sh port 9090` (any free port
+from 1025 to 65535, or `random`) moves it off 8080, a port scanners try early.
+
+**FamilyDB's own port.** FamilyDB listens on 8080 unless `WEB_PORT` says otherwise. When
+something else on the server needs 8080, or the installer said the port was taken, move it:
+
+```bash
+sudo /opt/familydb/scripts/maintain.sh port 9090    # or port random
+```
+
+It writes `WEB_PORT` in `.env`, points Caddy at the new port where the installer's Caddyfile
+passed the page on to the old one (and puts the old Caddyfile back if Caddy will not load the
+change), and restarts FamilyDB; with Docker, the compose file publishes whichever port `WEB_PORT`
+names, and Caddy's container follows it, so it starts the containers again. Behind Caddy the
+address people open does not change; with nothing in front, the new port is the one to open. The
+General settings page shows both ports and these commands. Neither port can be changed from the
+page: how it is reached stays in `.env`, out of every form's reach.
 
 **A port scans rarely try.** What a scan of a server finds is what listens on its public
 addresses. The page's own port, 8080, is not among them: it listens on `127.0.0.1`, or in Docker
@@ -452,9 +468,10 @@ HTTPS on that port only, and asks for certificates only by the check a certifica
 makes on port 80 (the other kind needs 443); it listens on 80 just while it is being checked, and
 sends nobody who tries it anywhere, so 80 gives nothing away. `ufw` is opened for 80 and the new
 port, and the rule for 443 is closed if the installer opened it. Allow the new port in a
-provider's own firewall too, if it has one. With Docker, put `WEB_PUBLIC_PORT=PORT` in `.env` and
-run `docker compose up -d`: the Caddy container still listens on 443, and the host publishes it
-on that port. At install time, `WEB_PUBLIC_PORT=random` in front of the installer does the same.
+provider's own firewall too, if it has one. With Docker the same command writes
+`WEB_PUBLIC_PORT` in `.env` and starts the containers again: the Caddy container still listens on
+443, and the host publishes it on that port. At install time, `WEB_PUBLIC_PORT=random` in front of
+the installer does the same.
 
 Be clear about what this buys. It takes the page out of the sweeps that try the usual ports, which
 is most of them, and so out of the log noise and the opportunistic guessing that follow; the

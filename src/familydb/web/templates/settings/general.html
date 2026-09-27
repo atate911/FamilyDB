@@ -1,2 +1,31 @@
 {% from "_settings.html" import form %}
 {{ form('general', groups.values()) }}
+
+{# How the page is reached is shown here and changed on the server, never from a form, so a
+   sign-in in the wrong hands cannot move the page or open it wider (DESIGN.md, section 13). #}
+<section class="panel" id="served">
+  <h2>Where this page is served</h2>
+  <dl class="facts">
+    <dt>Opened at</dt>
+    <dd><code>{{ served.opened }}</code>, on port {{ served.port }}</dd>
+    <dt>FamilyDB listens on</dt>
+    <dd><code>{{ served.own }}</code>
+      {%- if served.proxied %}, and the page is passed on to it by Caddy{% endif %}
+      {%- if served.local %}: only this machine can reach it{% endif %}.</dd>
+  </dl>
+  <p class="muted">Ports are moved on the server rather than here, so nobody signed in to the page
+    can move it or open it wider. As whoever looks after the server:</p>
+  <ul class="tips">
+    {% if served.proxied %}
+      <li><code>sudo {{ served.script }} https --port random</code> serves the page on a port the
+        scans that sweep the internet rarely try, instead of {{ served.port }}; a number chooses
+        it, and <code>--port 443</code> moves it back. Bookmarks to the old address stop
+        working.</li>
+    {% endif %}
+    <li><code>sudo {{ served.script }} port 9090</code> moves FamilyDB itself off
+      {{ served.own_port }}, when something else on the server needs that port: any free one from
+      1025 to 65535, or <code>random</code>.
+      {%- if served.proxied %} The address people open stays as it is.
+      {%- else %} It is the port people open, so bookmarks need the new one.{% endif %}</li>
+  </ul>
+</section>
