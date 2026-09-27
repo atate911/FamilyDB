@@ -83,14 +83,14 @@ mention them keeps them. Code works out an age (`family.age_on`) and the next bi
 each age. Only the age reaches the model, with male or female for a kid, in her turn line
 (*planned*); never the date.
 
-### Wishes (planned)
+### Wishes (built: the table and the rules)
 
 One table, `wishes`: whose (`member_id`), `occasion` (none for everyday, `christmas`,
 `birthday`), `title`, `notes`, `category`, `topic` (a short key similar asks share: pet, phone),
 `rank`, `status` (`open`, `granted`, `declined`, `withdrawn`, `turned_away`), for a turned-away
 one its `concern` (`rule`, `sibling`, `inappropriate`, `too_many`), the answer, the lockout
 (`locked_until`, `refusal_rung`), `parent_review` (`none`, `offered`, `asked`), and links to an
-idea and the message it came from.
+idea and the message it came from. `wish_days` counts each kid's everyday asks and moves per day.
 
 `familydb/wish_service.py` holds the rules, in code:
 
