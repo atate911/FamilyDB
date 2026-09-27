@@ -77,8 +77,8 @@ older than what is installed. It gets a date when it is released.
   on Telegram is read by the model that looks things up, which writes down
   what it is and every name, date, time, place, price and link in it; that is
   answered as if it had been typed, with the caption after it. The words are
-  kept, marked as a photo; the picture is not. In a group only a photo sent to
-  the bot is read. About a tenth of a cent a photo, within the daily limit, and
+  kept, marked as a photo; the picture is not. An album is one question, up to
+  four of its photos read. In a group only a photo sent to the bot is read. About a tenth of a cent a photo, within the daily limit, and
   it can be turned off on the settings page.
 - **Feels at home on Telegram.** "typing…" stays up for as long as an answer
   takes, not five seconds. Bold, italics, code and links in a reply are drawn

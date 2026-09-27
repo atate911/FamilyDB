@@ -422,10 +422,12 @@ class OpenAIProvider:
         except openai.OpenAIError as exc:
             raise _failure(exc) from exc
         reply = self.reply(response)
-        if reply.stop == "refusal":
-            raise AgentError(f"OpenAI would not describe it ({reply.refusal})", retryable=False)
         return Seen(
-            text=reply.text, usage=reply.usage, model=reply.model, request_id=reply.request_id
+            text=reply.text,
+            usage=reply.usage,
+            model=reply.model,
+            request_id=reply.request_id,
+            stop=reply.stop,
         )
 
 

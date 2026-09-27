@@ -333,14 +333,23 @@ def test_gemini_hears_the_recording_sent_with_one_line(settings) -> None:
     assert "tools" not in sent["config"] and "system_instruction" not in sent["config"]
 
 
-def test_gemini_refusing_to_hear_is_not_retried(settings) -> None:
+def test_gemini_refusing_to_hear_is_paid_for_and_not_retried(settings, clock, conn) -> None:
+    """A refusal is billed like any answer, so it is recorded against the day's limit before it
+    becomes a failure not worth trying again."""
     refused = fakes.gm_response([], finish_reason="SAFETY")
-    provider = build(
-        "gemini", _keys(settings, gemini_api_key="g"), api=fakes.FakeGeminiAPI(refused)
-    )
+    on_gemini = _keys(settings, gemini_api_key="g", transcribe_provider="gemini")
+    provider = build("gemini", on_gemini, api=fakes.FakeGeminiAPI(refused))
+    assert provider.transcribe(Audio(OGG, "audio/ogg", 10), "").stop == "refusal"
     with pytest.raises(AgentError) as failed:
-        provider.transcribe(Audio(OGG, "audio/ogg", 10), "")
+        gateway.listen(
+            settings=on_gemini,
+            conn=conn,
+            clock=clock,
+            audio=Audio(OGG, "audio/ogg", 10),
+            api=fakes.FakeGeminiAPI(fakes.gm_response([], finish_reason="SAFETY")),
+        )
     assert not failed.value.retryable
+    assert [row["stop_reason"] for row in conn.execute("SELECT * FROM llm_calls")] == ["refusal"]
 
 
 def test_claude_hears_nothing(settings) -> None:

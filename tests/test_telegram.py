@@ -95,6 +95,10 @@ def test_addressed_to_bot_and_strip_mention() -> None:
         strip_mention("@FamilyBot what should we do? @familybot", "familybot")
         == "what should we do?"
     )
+    # A list written to her in a group keeps its lines.
+    assert strip_mention("@familybot two things:\n- the zoo\n-  the park", "familybot") == (
+        "two things:\n- the zoo\n- the park"
+    )
     update, _ = _update("sounds good", chat_type="group", reply_from=999)
     assert addressed_to_bot(update, "familybot", 999)
     update, _ = _update("sounds good", chat_type="group", reply_from=5)

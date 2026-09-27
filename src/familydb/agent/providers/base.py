@@ -102,6 +102,9 @@ class Heard:
     usage: dict[str, int | None] = field(default_factory=dict)
     model: str | None = None
     request_id: str | None = None
+    # How it ended, as a reply's `stop` does: a refusal or an answer cut short is still billed,
+    # so it comes back to be recorded, and the gateway decides what it means.
+    stop: Stop = "end"
 
 
 # What a model saw in a picture, written down: the same shape as what it heard.
@@ -186,7 +189,8 @@ class Provider(Protocol):
 
     def transcribe(self, audio: Audio, hints: str) -> Heard:
         """The words in a recording. `hints` names people and places it may mention, so they
-        are spelled as the family spells them. Raises AgentError, with `retryable` set."""
+        are spelled as the family spells them. Raises AgentError, with `retryable` set, for a
+        request that failed; one the model declined comes back with its `stop` saying so."""
         ...
 
     def viewer(self) -> str | None:
@@ -196,5 +200,6 @@ class Provider(Protocol):
 
     def describe(self, picture: Picture, ask: str) -> Seen:
         """What a picture shows, written down as `ask` asks, in one request. Raises AgentError,
-        with `retryable` set."""
+        with `retryable` set, for a request that failed; one the model declined comes back with
+        its `stop` saying so."""
         ...

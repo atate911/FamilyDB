@@ -364,7 +364,10 @@ def _written_down(
 ) -> Heard:
     """One request that writes something down (a recording's words, what a picture shows), to
     the first candidate that takes it: its estimated cost held against the limit before it is
-    sent, handed on to the next when it is busy or out of reach, and recorded under `kind`."""
+    sent, handed on to the next when it is busy or out of reach, and recorded under `kind`.
+
+    A model that declined is recorded first, since it was paid for, and then raised as a failure
+    not worth trying again; words cut short are kept, and said to be in the log."""
     failure: AgentError | None = None
     for provider in candidates:
         model = model_of(provider)
@@ -391,7 +394,7 @@ def _written_down(
                 model=model or provider.name,
                 served_model=written.model,
                 request_id=written.request_id,
-                stop_reason="end",
+                stop_reason=written.stop,
                 usage=written.usage,
                 duration_ms=int((time.monotonic() - started) * 1000),
                 now=utc_iso(clock.now()),
@@ -401,6 +404,10 @@ def _written_down(
                 kind=kind,
             )
             spending.settle(conn, held, clock.now())
+        if written.stop == "refusal":
+            raise AgentError(f"{provider.name} would not {doing}", retryable=False)
+        if written.stop == "max_tokens":
+            log.warning("%s ran out of room to %s; keeping what came", provider.name, doing)
         return written
     assert failure is not None
     raise failure

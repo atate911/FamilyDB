@@ -35,7 +35,7 @@ def _photo(update_id="p1", *, user_id="1001", caption="", fetched=None, size=Non
         return data
 
     note = PhotoNote(mime="image/jpeg", fetch=fetch, size=size)
-    return IncomingMessage("telegram", update_id, "chat-1", user_id, caption, photo=note)
+    return IncomingMessage("telegram", update_id, "chat-1", user_id, caption, photos=(note,))
 
 
 def _kinds(conn) -> list[str]:
@@ -230,13 +230,40 @@ def test_gemini_is_sent_the_photo_itself(settings) -> None:
     assert sent["config"]["max_output_tokens"] == LOOK_TOKENS
 
 
-def test_a_vendor_that_will_not_describe_it_is_not_taken_at_its_word(settings) -> None:
+def test_a_vendor_that_will_not_describe_it_is_paid_for_and_not_taken_at_its_word(
+    settings, clock, conn
+) -> None:
+    """A refusal is billed like any answer, so it counts against the day's limit before it is
+    turned into a failure not worth trying again."""
     from familydb.errors import AgentError
 
     refused = fakes.FakeResponsesAPI(fakes.oa_response([fakes.oa_refusal()]))
-    provider = build("openai", settings.model_copy(update={"openai_api_key": "k"}), api=refused)
-    with pytest.raises(AgentError, match="would not describe it"):
-        provider.describe(Picture(data=JPEG, mime="image/jpeg"), "Write it down.")
+    on_openai = settings.model_copy(update={"openai_api_key": "k", "provider": "openai"})
+    provider = build("openai", on_openai, api=refused)
+    seen = provider.describe(Picture(data=JPEG, mime="image/jpeg"), "Write it down.")
+    assert seen.stop == "refusal"
+    refused = fakes.FakeResponsesAPI(fakes.oa_response([fakes.oa_refusal()]))
+    with pytest.raises(AgentError, match="would not look at a photo") as failed:
+        gateway.look(
+            settings=on_openai,
+            conn=conn,
+            clock=clock,
+            picture=Picture(JPEG, "image/jpeg"),
+            api=refused,
+        )
+    assert not failed.value.retryable
+    recorded = conn.execute("SELECT kind, stop_reason, cost_usd FROM llm_calls").fetchall()
+    assert [(row["kind"], row["stop_reason"]) for row in recorded] == [("look", "refusal")]
+    assert recorded[0]["cost_usd"] > 0
+
+
+def test_a_description_cut_short_says_so(settings, clock, conn, family) -> None:
+    eyes = fakes.FakeMessagesAPI(
+        fakes.message([fakes.text("A poster for the Night")], stop_reason="max_tokens")
+    )
+    api = fakes.FakeMessagesAPI(fakes.message([fakes.text("Which night?")]))
+    reply = handle_incoming(App(settings, clock), _photo(), api=api, conn=conn, seeing=eyes)
+    assert messages.get(conn, reply.in_message_id).text == "(photo) A poster for the Night …"
 
 
 # -- on Telegram ---------------------------------------------------------------------------------
@@ -311,8 +338,8 @@ def test_on_telegram_a_photo_is_handed_over_with_a_way_to_fetch_it(
     update, replies = _sent_photo("we should go")
     asyncio.run(channel.on_photo(update, _context()[0]))
     assert replies == ["Saved."]
-    assert seen[0].text == "we should go" and seen[0].photo.mime == "image/jpeg"
-    assert seen[0].photo.size == 800 * 600 // 10
+    assert seen[0].text == "we should go" and seen[0].photos[0].mime == "image/jpeg"
+    assert seen[0].photos[0].size == 800 * 600 // 10
     # In a group, only a photo sent to her is looked at: each one is paid for.
     update, replies = _sent_photo("the kids at the beach", chat_type="group", chat_id=-100)
     asyncio.run(channel.on_photo(update, _context()[0]))
@@ -343,3 +370,94 @@ def test_telegram_asks_for_a_photo_the_way_it_is_sent(settings, clock) -> None:
     )
     chosen, kind, _ = picture(update.effective_message)
     assert (chosen.file_id, kind) == ("m", "image/jpeg")
+
+
+# -- albums --------------------------------------------------------------------------------------
+
+
+def _album(count: int, *, caption="can we go here Sat?", fetched=None):
+    def fetch_for(number: int):
+        def fetch() -> bytes:
+            if fetched is not None:
+                fetched.append(number)
+            return JPEG
+
+        return fetch
+
+    notes = tuple(PhotoNote(mime="image/jpeg", fetch=fetch_for(n)) for n in range(1, count + 1))
+    return IncomingMessage("telegram", "a1", "chat-1", "1001", caption, photos=notes)
+
+
+def test_an_album_is_one_message_each_photo_looked_at(settings, clock, conn, family) -> None:
+    """A menu sent as three pages is one question: one chat turn and one reply, each page read."""
+    eyes = fakes.FakeMessagesAPI(
+        *(fakes.message([fakes.text(f"Menu, page {n}.")]) for n in (1, 2, 3))
+    )
+    api = fakes.FakeMessagesAPI(fakes.message([fakes.text("Saved #1 Ramen Ichiban.")]))
+    reply = handle_incoming(App(settings, clock), _album(3), api=api, conn=conn, seeing=eyes)
+    assert reply.text == "Saved #1 Ramen Ichiban." and len(api.requests) == 1
+    assert messages.get(conn, reply.in_message_id).text == (
+        "(photo 1 of 3) Menu, page 1.\n\n(photo 2 of 3) Menu, page 2.\n\n"
+        "(photo 3 of 3) Menu, page 3.\n\ncan we go here Sat?"
+    )
+    assert _kinds(conn) == ["look", "look", "look", "chat"]
+
+
+def test_a_long_album_is_looked_at_in_part_and_the_rest_counted(
+    settings, clock, conn, family
+) -> None:
+    fetched: list[int] = []
+    eyes = fakes.FakeMessagesAPI(
+        fakes.message([fakes.text("Page one.")]),
+        fakes.bad_request_error(),
+        *(fakes.message([fakes.text(f"Page {n}.")]) for n in (3, 4)),
+    )
+    api = fakes.FakeMessagesAPI(fakes.message([fakes.text("Noted.")]))
+    reply = handle_incoming(
+        App(settings, clock), _album(6, fetched=fetched), api=api, conn=conn, seeing=eyes
+    )
+    assert fetched == [1, 2, 3, 4]  # never more than MAX_PHOTOS, each paid for
+    assert messages.get(conn, reply.in_message_id).text == (
+        "(photo 1 of 6) Page one.\n\n(photo 2 of 6, not seen)\n\n(photo 3 of 6) Page 3.\n\n"
+        "(photo 4 of 6) Page 4.\n\n(photos 5 to 6, not looked at)\n\ncan we go here Sat?"
+    )
+
+
+def test_an_album_stopped_before_it_was_looked_at_is_known_as_one(settings) -> None:
+    assert messages.is_unlooked(messages.unlooked(3)) and messages.is_unlooked(messages.UNLOOKED)
+    assert not messages.is_unlooked("(3 photos, not looked at) and more")
+
+
+def _album_update(update_id: int, caption=None, *, chat_type="private", chat_id=42):
+    update, replies = _sent_photo(caption, chat_type=chat_type, chat_id=chat_id)
+    update.update_id = update_id
+    update.effective_message.media_group_id = "album-1"
+    return update, replies
+
+
+def test_on_telegram_an_album_s_photos_are_gathered_into_one_message(
+    settings, clock, monkeypatch
+) -> None:
+    from familydb.channels import telegram
+
+    monkeypatch.setattr(telegram, "ALBUM_SECONDS", 0.05)
+    channel = TelegramChannel(App(settings, clock), token=TOKEN)
+    seen: list[IncomingMessage] = []
+    monkeypatch.setattr(
+        "familydb.channels.telegram.handle_incoming",
+        lambda application, msg: seen.append(msg) or OutgoingMessage(msg.chat_id, "Saved.", "ok"),
+    )
+    first, replies = _album_update(80)
+    second, _ = _album_update(81, "can we go here\non Saturday?")
+    third, _ = _album_update(82)
+
+    async def arrive() -> None:
+        for update in (first, second, third):
+            await channel.on_photo(update, _context()[0])
+        await asyncio.sleep(0.3)
+
+    asyncio.run(arrive())
+    assert len(seen) == 1 and len(seen[0].photos) == 3
+    # The caption keeps its line breaks, whichever photo it was written under.
+    assert seen[0].text == "can we go here\non Saturday?" and seen[0].channel_update_id == "80"
+    assert replies == ["Saved."]

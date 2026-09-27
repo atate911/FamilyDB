@@ -46,8 +46,9 @@ class IncomingMessage:
     # A voice note, for the pipeline to hear before anything is answered. `text` is then any
     # caption that came with it.
     voice: VoiceNote | None = None
-    # A photo, likewise, for the pipeline to look at first; `text` is any caption with it.
-    photo: PhotoNote | None = None
+    # A photo, or an album's photos, likewise, for the pipeline to look at first; `text` is any
+    # caption that came with them.
+    photos: tuple[PhotoNote, ...] = ()
 
 
 @dataclass(frozen=True)

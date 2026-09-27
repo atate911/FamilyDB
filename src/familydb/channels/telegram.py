@@ -84,6 +84,9 @@ TYPING_AT_MOST = 180.0
 # with its size. An image sent as a file is looked at when it is of a kind every vendor reads.
 LONGEST = 1600
 PICTURE_KINDS = ("image/jpeg", "image/png", "image/webp")
+# An album arrives as one message per photo, a moment apart, sharing a media group id: its photos
+# are gathered for this long after the first, then handed over as one message.
+ALBUM_SECONDS = 1.5
 PICTURES = filters.PHOTO | filters.Document.MimeType(PICTURE_KINDS[0])
 for _kind in PICTURE_KINDS[1:]:
     PICTURES = PICTURES | filters.Document.MimeType(_kind)
@@ -191,29 +194,6 @@ def picture(message: Any) -> tuple[Any, str, int | None] | None:
 
 def _area(size: Any) -> int:
     return int(size.width) * int(size.height)
-
-
-def incoming_photo(
-    update: Any, fetch: Any, bot_username: str | None = None
-) -> IncomingMessage | None:
-    """A photo as the pipeline takes it: its kind, how to fetch it, and its caption as the text,
-    less any mention of the bot."""
-    message = update.effective_message
-    user = update.effective_user
-    chat = update.effective_chat
-    found = picture(message)
-    if found is None or user is None or chat is None:
-        return None
-    _, kind, size = found
-    return IncomingMessage(
-        channel=CHANNEL,
-        channel_update_id=str(update.update_id),
-        chat_id=str(chat.id),
-        channel_user_id=str(user.id),
-        text=strip_mention(getattr(message, "caption", None) or "", bot_username),
-        sender_name=sender_name(user),
-        photo=PhotoNote(mime=kind, fetch=fetch, size=size),
-    )
 
 
 def family_knows(app: App, channel_user_id: str) -> bool:
@@ -328,6 +308,8 @@ def addressed_to_bot(update: Any, bot_username: str | None, bot_id: int | None) 
 
 
 def strip_mention(text: str, bot_username: str | None) -> str:
+    """The words with every @mention of the bot taken out, the spaces it leaves tidied and the
+    line breaks kept."""
     if not bot_username:
         return text.strip()
     needle = f"@{bot_username}"
@@ -335,7 +317,7 @@ def strip_mention(text: str, bot_username: str | None) -> str:
     while needle.lower() in cleaned.lower():
         index = cleaned.lower().index(needle.lower())
         cleaned = cleaned[:index] + cleaned[index + len(needle) :]
-    return " ".join(cleaned.split())
+    return "\n".join(" ".join(line.split()) for line in cleaned.splitlines()).strip()
 
 
 async def formatted(
@@ -420,6 +402,10 @@ class TelegramChannel:
             raise RuntimeError("TELEGRAM_BOT_TOKEN is not set")
         self._loop: asyncio.AbstractEventLoop | None = None
         self.username: str | None = None
+        # An album's photos as they arrive, by media group, until they are handed over; and the
+        # tasks that will hand them over, kept so that they are not dropped half way.
+        self._albums: dict[str, list[Any]] = {}
+        self._gathering: set[asyncio.Task[None]] = set()
         self.application: Application = (
             ApplicationBuilder().token(token).post_init(self._post_init).build()
         )
@@ -581,29 +567,75 @@ class TelegramChannel:
         await self._answer(update, bot, msg, quiet=in_group and not addressed)
 
     async def on_photo(self, update: Any, context: Any) -> None:
-        """A photo: handed over with a way to fetch it, looked at and answered like words. In a
-        group only when it is sent to her, by a mention in its caption or a reply: a family group
-        shares photos among themselves all day, and each one looked at is paid for."""
+        """A photo, or one of an album's, which are gathered and handed over together
+        (`_photos`)."""
         await asyncio.to_thread(self.app.refresh)
-        chat = update.effective_chat
-        bot = context.bot
-        in_group = chat is not None and chat.type in GROUP_TYPES
-        if in_group and not addressed_to_bot(update, bot.username, bot.id):
+        group = getattr(update.effective_message, "media_group_id", None)
+        if group is None:
+            await self._photos([update], context.bot)
             return
-        found = picture(update.effective_message)
-        if found is None:
+        album = self._albums.setdefault(str(group), [])
+        album.append(update)
+        if len(album) == 1:
+            # Handed over from a task of its own, since the rest of the album arrives as
+            # updates of its own, after this one has been answered.
+            task = asyncio.get_running_loop().create_task(self._album(str(group), context.bot))
+            self._gathering.add(task)
+            task.add_done_callback(self._gathering.discard)
+
+    async def _album(self, group: str, bot: Any) -> None:
+        await asyncio.sleep(ALBUM_SECONDS)
+        try:
+            await self._photos(self._albums.pop(group, []), bot)
+        except Exception:
+            log.exception("telegram: an album could not be answered")
+
+    async def _photos(self, updates: list[Any], bot: Any) -> None:
+        """A photo, or an album's photos, handed over as one message with a way to fetch each,
+        looked at and answered like words. In a group only when it is sent to her, by a mention
+        in its caption or a reply: a family group shares photos among themselves all day, and
+        each one looked at is paid for."""
+        if not updates:
             return
-        file = found[0]
+        first = updates[0]
+        chat, user = first.effective_chat, first.effective_user
+        if chat is None or user is None:
+            return
+        in_group = chat.type in GROUP_TYPES
+        if in_group and not any(addressed_to_bot(u, bot.username, bot.id) for u in updates):
+            return
         loop = asyncio.get_running_loop()
 
-        def fetch() -> bytes:
-            # Called from the pipeline's thread; the download runs on this loop.
-            future = asyncio.run_coroutine_threadsafe(download(file), loop)
-            return future.result(timeout=FETCH_SECONDS)
+        def fetcher(file: Any) -> Callable[[], bytes]:
+            def fetch() -> bytes:
+                # Called from the pipeline's thread; the download runs on this loop.
+                future = asyncio.run_coroutine_threadsafe(download(file), loop)
+                return future.result(timeout=FETCH_SECONDS)
 
-        msg = incoming_photo(update, fetch, bot.username)
-        if msg is not None:
-            await self._answer(update, bot, msg)
+            return fetch
+
+        notes: list[PhotoNote] = []
+        caption = ""
+        for one in updates:
+            found = picture(one.effective_message)
+            if found is None:
+                continue
+            file, kind, size = found
+            notes.append(PhotoNote(mime=kind, fetch=fetcher(file), size=size))
+            # An album's caption is on one of its photos, whichever the family wrote it under.
+            caption = caption or (getattr(one.effective_message, "caption", None) or "").strip()
+        if not notes:
+            return
+        msg = IncomingMessage(
+            channel=CHANNEL,
+            channel_update_id=str(first.update_id),
+            chat_id=str(chat.id),
+            channel_user_id=str(user.id),
+            text=strip_mention(caption, bot.username if in_group else None),
+            sender_name=sender_name(user),
+            photos=tuple(notes),
+        )
+        await self._answer(first, bot, msg)
 
     async def on_unread(self, update: Any, context: Any) -> None:
         """A sticker, a file or a video. Its words are answered as a message would be, marked as
@@ -614,7 +646,7 @@ class TelegramChannel:
         bot = context.bot
         in_group = chat is not None and chat.type in GROUP_TYPES
         addressed = in_group and addressed_to_bot(update, bot.username, bot.id)
-        msg = incoming_unread(update, bot.username)
+        msg = incoming_unread(update, bot.username if in_group else None)
         if msg is None or (in_group and not addressed and not msg.text):
             return
         if not msg.text:

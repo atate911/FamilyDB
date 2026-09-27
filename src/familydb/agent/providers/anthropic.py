@@ -354,10 +354,12 @@ class AnthropicProvider:
 
     def describe(self, picture: Picture, ask: str) -> Seen:
         reply = self.reply(self._create(self.seeing(picture, ask)))
-        if reply.stop == "refusal":
-            raise AgentError(f"Claude would not describe it ({reply.refusal})", retryable=False)
         return Seen(
-            text=reply.text, usage=reply.usage, model=reply.model, request_id=reply.request_id
+            text=reply.text,
+            usage=reply.usage,
+            model=reply.model,
+            request_id=reply.request_id,
+            stop=reply.stop,
         )
 
     def _create(self, payload: dict[str, Any]) -> Any:

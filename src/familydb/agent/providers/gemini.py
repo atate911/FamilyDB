@@ -323,10 +323,6 @@ class GeminiProvider:
         except (genai_errors.APIError, httpx.TransportError) as exc:
             raise _failure(exc) from exc
         reply = self.reply(response)
-        if reply.stop == "refusal":
-            raise AgentError(f"Gemini would not transcribe it ({reply.refusal})", retryable=False)
-        if reply.stop == "max_tokens":
-            log.warning("a voice note was longer than its words were allowed; keeping what came")
         return Heard(
             text=reply.text,
             usage={
@@ -335,6 +331,7 @@ class GeminiProvider:
             },
             model=reply.model or self.listener(),
             request_id=reply.request_id,
+            stop=reply.stop,
         )
 
     # -- looking --------------------------------------------------------------------------
@@ -368,8 +365,6 @@ class GeminiProvider:
         except (genai_errors.APIError, httpx.TransportError) as exc:
             raise _failure(exc) from exc
         reply = self.reply(response)
-        if reply.stop == "refusal":
-            raise AgentError(f"Gemini would not describe it ({reply.refusal})", retryable=False)
         return Seen(
             text=reply.text,
             usage={
@@ -378,6 +373,7 @@ class GeminiProvider:
             },
             model=reply.model or self.viewer(),
             request_id=reply.request_id,
+            stop=reply.stop,
         )
 
 
