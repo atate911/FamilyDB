@@ -503,6 +503,13 @@ GROUPS: tuple[Group, ...] = (
                 "a model until midnight, and whoever writes is told why. 0 means no limit. Set a "
                 "limit with the company too.",
             ),
+            field(
+                "kid_daily_messages",
+                "Messages a kid may send a day",
+                "For each kid on the family list, counting only messages a model answered: "
+                "/today and the buttons under a reminder cost nothing and are not counted. Past "
+                "it, she says so and answers again tomorrow. 0 means no limit.",
+            ),
         ),
     ),
     Group(

@@ -101,6 +101,19 @@ def spent_since(conn: sqlite3.Connection, *, since: str) -> float:
     return float(row["spent"])
 
 
+def answered_for(
+    conn: sqlite3.Connection, member_id: int, *, since: str, other_than: int | None = None
+) -> int:
+    """How many of a member's messages since a UTC timestamp went to a model. A command or a
+    tap on a button, which ask none, is not among them; `other_than` is the one being asked."""
+    row = conn.execute(
+        "SELECT count(DISTINCT m.id) AS n FROM messages m JOIN llm_calls c ON c.message_id = m.id "
+        "WHERE m.member_id = ? AND m.direction = 'in' AND m.received_at >= ? AND m.id != ?",
+        (member_id, since, other_than or 0),
+    ).fetchone()
+    return int(row["n"])
+
+
 def held_since(conn: sqlite3.Connection, *, since: str, other_than: int | None = None) -> float:
     """Estimated dollars set aside by calls still in flight, counting holds made since then."""
     row = conn.execute(

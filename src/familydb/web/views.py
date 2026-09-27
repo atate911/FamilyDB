@@ -63,7 +63,8 @@ ROLE_WORDS = {
     "admin": "looks after it: the settings, setup, and who is on the family list. There is "
     "always at least one.",
     "parent": "uses all the rest: chat, ideas, plans and things to do.",
-    "kid": "is in the plans; for now, with a password, may do whatever a parent may.",
+    "kid": "is in the plans; with a password, may do whatever a parent may, within the number of "
+    "messages a day set under Spending.",
 }
 # What somebody is told when their role may not go somewhere, by the permission it needs. The
 # conversation is hers, so it goes by her name: {name} is the persona in force.

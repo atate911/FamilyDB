@@ -32,8 +32,10 @@ from flask import (
 
 from familydb import family as rules
 from familydb import passwords, roles
+from familydb.agent import spending
 from familydb.app import App
 from familydb.dates import utc_iso
+from familydb.store import calls
 from familydb.store import knocks as knock_store
 from familydb.store import logins as login_store
 from familydb.store import members as member_store
@@ -97,9 +99,19 @@ def show() -> str:
         strangers = knock_store.recent(conn, channel=rules.TELEGRAM)
         passwords_by_member = login_store.by_member(conn)
         personal = auth.own_passwords(conn)
+        # How many messages each kid has had answered today, when the family set a number.
+        limit = app.settings.kid_daily_messages
+        since = spending.day_start(app.settings, app.clock.now())
+        today = {
+            person.id: calls.answered_for(conn, person.id, since=since)
+            for person in everyone
+            if limit and roles.daily_limited(person.role)
+        }
     return render_template(
         "family.html",
         people=[_person(person, passwords_by_member.get(person.id)) for person in everyone],
+        today=today,
+        daily_limit=limit,
         roles=member_store.ROLES,
         role_words=views.ROLE_WORDS,
         knocks=[views.knock_row(knock, app.settings.tzinfo) for knock in strangers],

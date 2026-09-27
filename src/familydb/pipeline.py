@@ -9,7 +9,7 @@ from contextlib import closing
 from datetime import datetime
 from typing import Any
 
-from familydb import memory, personas, voice, whereabouts
+from familydb import memory, personas, roles, voice, whereabouts
 from familydb.agent import gateway, spending
 from familydb.agent.history import load_history
 from familydb.agent.loop import MessagesAPI, TurnResult
@@ -211,6 +211,14 @@ def _run(
                 messages.give_up(conn, inbound_id)
             return None
         member = current_member
+        if kind == "chat" and _over_daily_number(app, conn, member, inbound_id):
+            # Kept, like every message, but not answered, not heard and not retried: said so
+            # in her words, with no model call.
+            with transaction(conn):
+                messages.give_up(conn, inbound_id)
+            limit = app.settings.kid_daily_messages
+            reply = voice.say(app.settings, "kid_limit", seed=inbound_id, limit=limit)
+            return _fail(app, conn, msg, inbound_id, "kid_daily_limit", reply)
         if msg.voice is not None:
             heard = _hear(app, msg, inbound_id, conn, hearing)
             if isinstance(heard, OutgoingMessage):
@@ -246,6 +254,16 @@ def _run(
         return _run_owned(
             app, msg, member, inbound_id, api, conn, notify=notify, retry=retry, kind=kind
         )
+
+
+def _over_daily_number(app: App, conn: sqlite3.Connection, member: Member, inbound_id: int) -> bool:
+    """Whether a kid (roles.DAILY_LIMITED) has had as many messages answered today as the family
+    allows, counting only those a model answered."""
+    limit = app.settings.kid_daily_messages
+    if not limit or not roles.daily_limited(member.role):
+        return False
+    since = spending.day_start(app.settings, app.clock.now())
+    return calls.answered_for(conn, member.id, since=since, other_than=inbound_id) >= limit
 
 
 def _hear(

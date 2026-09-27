@@ -172,6 +172,9 @@ class Settings(BaseSettings):
     # Dollars a day across every model call, estimated from agent/providers/prices.py and checked
     # before each call. Days are the family's. 0 turns the limit off.
     daily_spend_limit: float = Field(default=2.0, ge=0, le=500)
+    # Messages each kid may have answered by a model in a day, the family's day (roles.py says who
+    # is limited). Commands and buttons, which ask no model, do not count. 0 is no limit.
+    kid_daily_messages: int = Field(default=0, ge=0, le=500)
     anthropic_fallbacks: bool = True
     # An hour, because a family writes in bursts with long gaps: a five-minute cache would be
     # cold almost every time and the whole prefix would be paid for again.
