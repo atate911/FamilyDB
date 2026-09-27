@@ -5,8 +5,7 @@ a film, a game. They say "we should…" when they mean "I want". Each girl keeps
 ranked by her, and a parent answers when they choose, so "put it on your list" is an answer. Vera
 also guides how she asks and how often, kindly and at her age.
 
-This file is what the family decided and how it is built. It is being built in steps; what is not
-built yet is marked *planned*.
+This file is what the family decided and how it is built.
 
 ## What the family decided
 
@@ -80,8 +79,8 @@ smaller. A kid's wish to give a sister something is a wish on her own list, cate
 Family page through `familydb/family.py` (the family list is never a tool). A change that does not
 mention them keeps them. Code works out an age (`family.age_on`) and the next birthday
 (`family.next_birthday`; born on 29 February, it is 1 March in other years). The Family list shows
-each age. Only the age reaches the model, with male or female for a kid, in her turn line
-(*planned*); never the date.
+each age. Only the age reaches the model, with male or female for a kid, in her turn line;
+never the date.
 
 ### Wishes (built: the table and the rules)
 
