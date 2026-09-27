@@ -1,3 +1,4 @@
+{% from "_settings.html" import grouped_options %}
 <p class="why">
   Where the family lives decides the weather forecast, how far away things are, and what is on
   nearby. The town is enough; no street address.
@@ -15,10 +16,13 @@
   </div>
   <div class="field">
     <label for="home-tz">Time zone</label>
-    <input id="home-tz" name="family_tz" value="{{ home.tz }}" list="zones" autocomplete="off" />
-    <datalist id="zones">{% for zone in zones %}<option value="{{ zone }}">{% endfor %}</datalist>
-    <p class="muted hint">Taken from the server. Change it only if it is wrong: it decides what
-      “tonight” and “this weekend” mean.</p>
+    <select id="home-tz" name="family_tz" aria-describedby="home-tz-hint">
+      {% if not home.tz_listed %}<option value="{{ home.tz }}" selected>{{ home.tz }}</option>{% endif %}
+      {{ grouped_options(zones, home.tz) }}
+    </select>
+    <p id="home-tz-hint" class="muted hint">Taken from the server. Change it only if it is wrong:
+      it decides what “tonight” and “this weekend” mean. Choose the nearest city in the same
+      zone.</p>
   </div>
   <div class="field">
     <label for="home-units">Units</label>

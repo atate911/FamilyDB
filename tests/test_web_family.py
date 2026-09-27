@@ -149,3 +149,27 @@ def test_a_stranger_who_messaged_the_bot_can_be_added_from_the_page(
     assert sent.status_code == 302
     assert members.find_by_name(conn, "Robin").channel_user_id == "5555"
     assert "Asked to talk to the bot" not in page.get("/family").text  # gone once added
+
+
+def test_a_link_is_made_for_somebody_and_shown_once(page, conn, family) -> None:
+    from familydb.store import invites
+
+    app = page.application.config["FAMILYDB_APP"]
+    alex = family["alex"]
+    unconnected = page.get(f"/family/{alex.id}").text
+    assert "Once the Telegram bot is connected" in unconnected
+    refused = page.post(
+        f"/family/{alex.id}/invite", data={"csrf": _token(page)}, follow_redirects=True
+    )
+    assert "Connect the Telegram bot first" in refused.text  # the link would name no bot
+    assert conn.execute("SELECT count(*) FROM telegram_invites").fetchone()[0] == 0
+    app.channel_states["telegram"] = "connected as @tate_family_bot"
+    offered = page.get(f"/family/{alex.id}").text
+    assert "Make a link for Alex" in offered
+    made = page.post(f"/family/{alex.id}/invite", data={"csrf": _token(page)})
+    assert made.status_code == 302 and made.headers["Location"] == f"/family/{alex.id}"
+    shown = page.get(f"/family/{alex.id}").text
+    link = re.search(r"https://t\.me/tate_family_bot\?start=([A-Za-z0-9_-]+)", shown)
+    assert link is not None and "Shown this once" in shown
+    assert invites.find(conn, invites.digest(link.group(1))).member_id == alex.id
+    assert "t.me/tate_family_bot?start=" not in page.get(f"/family/{alex.id}").text  # once

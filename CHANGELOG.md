@@ -73,6 +73,23 @@ older than what is installed. It gets a date when it is released.
   and logs every verdict. An outdoor idea is held to the daylight: one that
   only fits after dark is offered as possible, with the reason, and asked about
   today, the reply is told when dark comes.
+- **Reads photos.** A poster, a menu, a ticket or a screenshot sent to the bot
+  on Telegram is read by the model that looks things up, which writes down
+  what it is and every name, date, time, place, price and link in it; that is
+  answered as if it had been typed, with the caption after it. The words are
+  kept, marked as a photo; the picture is not. An album is one question, up to
+  four of its photos read. In a group only a photo sent to the bot is read. About a tenth of a cent a photo, within the daily limit, and
+  it can be turned off on the settings page.
+- **Feels at home on Telegram.** "typing…" stays up for as long as an answer
+  takes, not five seconds. Bold, italics, code and links in a reply are drawn
+  as formatting instead of showing as asterisks, and a command's answer has its
+  heading in bold. A sticker, a file or a video is answered with the words sent
+  with it, or a plain line saying it cannot be read, rather than silence.
+  Somebody in the family group who is not on the list is answered only when they
+  address the bot, not on every message. Added to a family group, she says hello
+  and how to talk to her there. "Answer only when mentioned" is on the settings
+  page, which also says whether Telegram lets the bot read a whole group, and
+  what to change in BotFather when it does not.
 - **Knows where the family is when a phone says so.** A location shared on
   Telegram, or the position the web page's chat sends with a message (only
   while "Send where I am" is ticked), is used for three hours: travel is measured from there
@@ -148,10 +165,14 @@ older than what is installed. It gets a date when it is released.
 - **Set up from that page.** The keys, the models, Telegram (taken up within
   seconds, no restart), Google Calendar (connected from the page, with no laptop
   needed), where home is (found on the map), the timezone and the spending
-  limit. The page can also sign everyone out on every device. Somebody new who
-  messages the bot on Telegram is listed on the Family page with a button to
-  add them, and the digest chat is chosen from the chats the bot has seen, so
-  nobody copies an id by hand.
+  limit. The time zone is chosen from a list of the standard zones, each by its
+  city and its offset that day. The page can also sign everyone out on every
+  device. Somebody new who messages the bot on Telegram, or only presses Start
+  on its link, is listed on the Family page with a button to add them, and the
+  digest chat is chosen from the chats the bot has seen, so nobody copies an id
+  by hand. For somebody already on the list, an admin can make a link instead:
+  opened on their phone, pressing Start links their Telegram to them. It works
+  once, for a day, and whoever opens it first is taken for that person.
 - **Settings in parts.** `/settings` is a card to each part, saying how it
   stands and marking what needs a look: General, AI model, Spending, Messages,
   Lookups, Personality and family, Connections, Sign-in and security, and what
@@ -213,6 +234,13 @@ unit that will never start.
   certificate authority's check, with no redirect to give the port away, and
   the firewall rule follows the port. It keeps the page out of the sweeps of the
   usual ports; it is not a lock, and the RUNBOOK says so.
+- **FamilyDB's own port moves with one command.** `maintain.sh port 9090` (or
+  `random`) moves the port FamilyDB listens on, 8080 unless moved, when
+  something else needs it: in `.env`, in Caddy's configuration where it passes
+  the page on, and in Docker's mapping, then restarts. With Docker,
+  `maintain.sh https --port` moves the Caddy container's port as well. The
+  General settings page shows both ports and the commands; neither is a form,
+  so a sign-in in the wrong hands cannot move the page.
 - `scripts/uninstall.sh` removes the service and the installed files but keeps
   `.env`, `data/` and the backups, which is what a reinstall wants. `--purge`
   removes those too, after taking a backup and asking you to type a

@@ -122,10 +122,17 @@
   <details class="more">
     <summary>A family group chat, as well</summary>
     <div class="inner">
+      {% if reads_groups %}
+        <p class="state done">✓ Its privacy setting is off, so it can read a group’s messages.</p>
+      {% endif %}
       <ol class="steps">
-        <li>In BotFather, send <code>/setprivacy</code>, choose @{{ bot }}, then <em>Disable</em>,
-          so the bot can read the group’s messages.</li>
-        <li>Add @{{ bot }} to your family group, the way you would add a person.</li>
+        {% if not reads_groups %}
+          <li>In BotFather, send <code>/setprivacy</code>, choose @{{ bot }}, then <em>Disable</em>,
+            so the bot can read the group’s messages. If it is in the group already, take it out
+            and add it back afterwards: that is when Telegram applies the change.</li>
+        {% endif %}
+        <li>Add @{{ bot }} to your family group, the way you would add a person. It says hello
+          there, and how to talk to it.</li>
         <li>Everyone in the group who should be answered needs to be on the family list: the
           next step adds them.</li>
       </ol>

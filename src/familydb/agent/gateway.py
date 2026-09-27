@@ -14,6 +14,8 @@ starts a turn.
 Hearing a voice note (`listen`) comes through here too. It is not a turn: a recording goes in and
 its words come out, with no prompt file, no tools and one request. But it is paid for like any
 other call, so the spending limit is checked first and the call is recorded under its own kind.
+Looking at a photo (`look`) is the same kind of thing: a picture in, what it shows written down,
+asked of the lookup model with `prompts/look.md`, and recorded under its own kind.
 """
 
 from __future__ import annotations
@@ -21,7 +23,7 @@ from __future__ import annotations
 import logging
 import sqlite3
 import time
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Literal
@@ -30,14 +32,18 @@ from familydb.agent import compose, spending
 from familydb.agent.compose import Composed
 from familydb.agent.history import HistoryTurn
 from familydb.agent.loop import MessagesAPI, TurnResult, run_turn, worth_switching
+from familydb.agent.prompt import load_prompt
 from familydb.agent.providers import (
     Audio,
     Heard,
+    Picture,
     Provider,
+    Seen,
     Surface,
     fallback_for,
     for_surface,
     hearers,
+    lookers,
     model_at,
     prices,
     ready,
@@ -121,9 +127,12 @@ KINDS: dict[str, CallSpec] = {
 }
 
 
-# The one kind of call that is not a turn: hearing a voice note, recorded under this kind.
+# The kinds of call that are not a turn: hearing a voice note, and looking at a photo, each
+# recorded under its own kind.
 LISTEN = "transcribe"
 LISTEN_PURPOSE = "listening to voice notes"
+LOOK = "look"
+LOOK_PURPOSE = "reading photos"
 
 
 def spec(kind: str) -> CallSpec:
@@ -139,6 +148,8 @@ def purpose(kind: str | None) -> str:
         return "not recorded (older calls)"
     if kind == LISTEN:
         return LISTEN_PURPOSE
+    if kind == LOOK:
+        return LOOK_PURPOSE
     return KINDS[kind].purpose if kind in KINDS else kind
 
 
@@ -281,48 +292,123 @@ def listen(
     candidates = hearers(settings, audio=api)
     if not candidates:
         raise AgentError("no model that can hear voice notes has a key", retryable=False)
+    return _written_down(
+        candidates,
+        settings=settings,
+        conn=conn,
+        clock=clock,
+        message_id=message_id,
+        kind=LISTEN,
+        doing="hear a voice note",
+        model_of=lambda provider: provider.listener(),
+        estimate=lambda provider, model: spending.estimate_hearing(
+            provider.name, model, audio.seconds
+        ),
+        request=lambda provider: provider.transcribe(audio, hints),
+    )
+
+
+def can_look(settings: Settings, api: Any = None) -> bool:
+    """Whether any model can look at a photo: one with a key, which all three can."""
+    return bool(lookers(settings, api=api))
+
+
+def look(
+    *,
+    settings: Settings,
+    conn: sqlite3.Connection,
+    clock: Clock,
+    picture: Picture,
+    hints: str = "",
+    message_id: int | None = None,
+    api: Any = None,
+) -> Seen:
+    """Look at one photo: what it shows, written down (`prompts/look.md`), the call checked
+    against the limit and recorded first.
+
+    Asked of whoever `providers.lookers` puts first, the company that looks things up, with its
+    lookup model; one that is busy, unreachable or has lost its key hands over to the next, if
+    there is one. What the words mean is the caller's, as with `listen`. An injected `api` (a
+    test's stand-in) is whoever would be asked.
+    """
+    candidates = lookers(settings, api=api)
+    if not candidates:
+        raise AgentError("no model that can look at photos has a key", retryable=False)
+    ask = " ".join(part for part in (load_prompt("look").strip(), hints) if part)
+    return _written_down(
+        candidates,
+        settings=settings,
+        conn=conn,
+        clock=clock,
+        message_id=message_id,
+        kind=LOOK,
+        doing="look at a photo",
+        model_of=lambda provider: provider.viewer(),
+        estimate=lambda provider, model: spending.estimate_looking(provider.name, model),
+        request=lambda provider: provider.describe(picture, ask),
+    )
+
+
+def _written_down(
+    candidates: list[Provider],
+    *,
+    settings: Settings,
+    conn: sqlite3.Connection,
+    clock: Clock,
+    message_id: int | None,
+    kind: str,
+    doing: str,
+    model_of: Callable[[Provider], str | None],
+    estimate: Callable[[Provider, str | None], float],
+    request: Callable[[Provider], Heard],
+) -> Heard:
+    """One request that writes something down (a recording's words, what a picture shows), to
+    the first candidate that takes it: its estimated cost held against the limit before it is
+    sent, handed on to the next when it is busy or out of reach, and recorded under `kind`.
+
+    A model that declined is recorded first, since it was paid for, and then raised as a failure
+    not worth trying again; words cut short are kept, and said to be in the log."""
     failure: AgentError | None = None
     for provider in candidates:
-        model = provider.listener()
-        held = spending.admit(
-            conn,
-            settings,
-            clock.now(),
-            spending.estimate_hearing(provider.name, model, audio.seconds),
-        )
+        model = model_of(provider)
+        held = spending.admit(conn, settings, clock.now(), estimate(provider, model))
         started = time.monotonic()
         try:
-            heard = provider.transcribe(audio, hints)
+            written = request(provider)
         except AgentError as exc:
             _let_go(conn, held, clock.now())
             if not worth_switching(exc):
                 raise
-            log.warning("%s could not hear a voice note (%s)", provider.name, exc)
+            log.warning("%s could not %s (%s)", provider.name, doing, exc)
             failure = exc
             continue
         except BaseException:
             _let_go(conn, held, clock.now())
             raise
-        dollars, listed = prices.cost(provider.name, heard.model or model, heard.usage)
+        dollars, listed = prices.cost(provider.name, written.model or model, written.usage)
         with transaction(conn):
             calls.log_llm_call(
                 conn,
                 message_id=message_id,
                 iteration=1,
                 model=model or provider.name,
-                served_model=heard.model,
-                request_id=heard.request_id,
-                stop_reason="end",
-                usage=heard.usage,
+                served_model=written.model,
+                request_id=written.request_id,
+                stop_reason=written.stop,
+                usage=written.usage,
                 duration_ms=int((time.monotonic() - started) * 1000),
                 now=utc_iso(clock.now()),
                 provider=provider.name,
                 cost_usd=dollars,
                 cost_estimated=not listed,
-                kind=LISTEN,
+                kind=kind,
             )
             spending.settle(conn, held, clock.now())
-        return heard
+        if written.stop == "refusal":
+            raise AgentError(f"{provider.name} would not {doing}", retryable=False)
+        if written.stop == "max_tokens":
+            log.warning("%s ran out of room to %s; keeping what came", provider.name, doing)
+        return written
     assert failure is not None
     raise failure
 

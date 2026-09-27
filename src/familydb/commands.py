@@ -1,4 +1,5 @@
-"""Telegram's commands, answered by code with no model call: /today, /week, /tasks and /now.
+"""Telegram's commands, answered by code with no model call: /today, /week, /tasks and /now,
+and /start; and a message with nothing in it to read.
 
 What is on, what is left to do and what could start right now are asked often, and code knows
 the answers exactly: the calendar (agenda.py), the task list, and the suggestion engine run for
@@ -11,6 +12,15 @@ Only the family may ask: anyone else gets the stranger's line and a knock, as wi
 The heading of each answer is one of her lines (`voice.EVENTS` `cmd_*`), one line so that the
 family can rewrite it on the Personality page; the facts under it are worded here. A chat sees
 only the tasks asked for in it, as only it gets their reminders.
+
+/start is her introduction to the family, and to anyone else the stranger's line with a knock,
+so that pressing Start on the bot's link shows on the Family and setup pages as any message
+would. Started from a link an admin made for somebody (familydb/family.py `invite`), it links
+the sender's Telegram to them first. A sticker, a file or a video sent with no words is
+answered with one of her lines (`cannot_read`), since there is nothing in it a model could act
+on; neither is kept. Added to a group by somebody on the family list, she introduces herself
+there (`joined_group`), saying how to talk to her in it; that is kept, like anything she says
+unasked.
 """
 
 from __future__ import annotations
@@ -21,7 +31,7 @@ from collections.abc import Callable
 from contextlib import closing
 from datetime import date, datetime, timedelta
 
-from familydb import agenda, task_service, voice
+from familydb import agenda, family, task_service, voice
 from familydb.agenda import Agenda, Entry
 from familydb.app import App
 from familydb.channels.base import IncomingMessage, OutgoingMessage
@@ -70,6 +80,112 @@ def answer(app: App, msg: IncomingMessage) -> OutgoingMessage | None:
         return _answer(app, conn, msg)
 
 
+def start(app: App, msg: IncomingMessage) -> OutgoingMessage:
+    """/start: her introduction, or to a stranger their line, with a knock. Not kept.
+
+    With a link's code (t.me/<bot>?start=<code>, made on the Family page), in a private chat, it
+    first links the sender's Telegram to whoever the link was made for, and welcomes them.
+    """
+    words = msg.text.split()
+    private = msg.chat_id == msg.channel_user_id
+    if private and len(words) == 2:
+        linked = _linked_by(app, msg, words[1])
+        if linked is not None:
+            return linked
+    return _said_by_code(app, msg, "start")
+
+
+def _linked_by(app: App, msg: IncomingMessage, code: str) -> OutgoingMessage | None:
+    """What a link's Start says: welcome, now linked; or why the link did nothing. None for
+    somebody already on the list whose link is spent (opened a second time, say): they are
+    greeted as anybody on the list would be."""
+    seed = msg.channel_update_id
+    with closing(app.connect()) as conn:
+        app.refresh(conn)
+        try:
+            person = family.accept_invite(
+                conn, code, telegram_id=msg.channel_user_id, now=app.clock.now()
+            )
+        except family.InviteRefused as refused:
+            if refused.why == "taken":
+                owner = refused.owner or "somebody else"  # linked in the same moment
+                said = voice.say(app.settings, "invite_taken", seed=seed, who=owner)
+                return OutgoingMessage(msg.chat_id, said, "ok")
+            if members.resolve(conn, msg.channel, msg.channel_user_id) is not None:
+                return None
+            # Knocked all the same, so they can still be let in from the Family page.
+            _stranger(app, conn, msg)
+            said = voice.say(app.settings, "invite_stale", seed=seed)
+            return OutgoingMessage(msg.chat_id, said, "unknown_sender")
+    log.warning("Telegram %s linked to member %s by a link", msg.channel_user_id, person.id)
+    said = voice.say(app.settings, "invite_linked", seed=seed, who=person.display_name)
+    return OutgoingMessage(msg.chat_id, said, "ok")
+
+
+def cannot_read(app: App, msg: IncomingMessage) -> OutgoingMessage:
+    """A sticker, a file or a video with no words: her line saying so, or a stranger's. Not
+    kept, as there is nothing in it to keep."""
+    return _said_by_code(app, msg, "cannot_read")
+
+
+def joined_group(
+    app: App,
+    *,
+    channel: str,
+    chat_id: str,
+    added_by: str,
+    mentioned: bool,
+    bot: str | None,
+) -> int | None:
+    """Her introduction to a group somebody on the family list added her to, stored to be sent.
+
+    Returns the stored message's id; None when whoever added her is not family, as she has
+    nothing to say in a stranger's group. `mentioned` says whether she has to be mentioned
+    there (the setting, or Telegram's privacy mode), which changes what she tells them.
+    """
+    with closing(app.connect()) as conn:
+        app.refresh(conn)
+        if members.resolve(conn, channel, added_by) is None:
+            log.info("added to %s by %s, who is not family; saying nothing", chat_id, added_by)
+            return None
+        settings = app.settings
+        if mentioned and bot:
+            said = voice.say(settings, "joined_group_mentioned", seed=chat_id, bot=f"@{bot}")
+        else:
+            said = voice.say(settings, "joined_group", seed=chat_id)
+        with transaction(conn):
+            out = messages.insert_out(
+                conn, channel=channel, chat_id=chat_id, text=said, now=utc_iso(app.clock.now())
+            )
+        return out.id
+
+
+def _said_by_code(app: App, msg: IncomingMessage, event: str) -> OutgoingMessage:
+    with closing(app.connect()) as conn:
+        app.refresh(conn)
+        if members.resolve(conn, msg.channel, msg.channel_user_id) is None:
+            return _stranger(app, conn, msg)
+    said = voice.say(app.settings, event, seed=msg.channel_update_id)
+    return OutgoingMessage(msg.chat_id, said, "ok")
+
+
+def _stranger(app: App, conn: sqlite3.Connection, msg: IncomingMessage) -> OutgoingMessage:
+    """Somebody not on the family list: a knock for the Family page, and their line."""
+    with transaction(conn):
+        knocks.record(
+            conn,
+            channel=msg.channel,
+            channel_user_id=msg.channel_user_id,
+            name=msg.sender_name,
+            chat_id=msg.chat_id,
+            now=app.clock.now(),
+        )
+    stranger = voice.say(
+        app.settings, "stranger", seed=msg.channel_update_id, id=msg.channel_user_id
+    )
+    return OutgoingMessage(msg.chat_id, stranger, "unknown_sender")
+
+
 def _answer(app: App, conn: sqlite3.Connection, msg: IncomingMessage) -> OutgoingMessage | None:
     name = name_of(msg.text)
     if name is None:
@@ -79,19 +195,7 @@ def _answer(app: App, conn: sqlite3.Connection, msg: IncomingMessage) -> Outgoin
     app.refresh(conn)
     member = members.resolve(conn, msg.channel, msg.channel_user_id)
     if member is None:
-        with transaction(conn):
-            knocks.record(
-                conn,
-                channel=msg.channel,
-                channel_user_id=msg.channel_user_id,
-                name=msg.sender_name,
-                chat_id=msg.chat_id,
-                now=app.clock.now(),
-            )
-        stranger = voice.say(
-            app.settings, "stranger", seed=msg.channel_update_id, id=msg.channel_user_id
-        )
-        return OutgoingMessage(msg.chat_id, stranger, "unknown_sender")
+        return _stranger(app, conn, msg)
     now = utc_iso(app.clock.now())
     try:
         with transaction(conn):

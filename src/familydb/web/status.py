@@ -425,6 +425,12 @@ def telegram_name(app: App) -> str | None:
     return state[len(prefix) :] if state.startswith(prefix) else None
 
 
+def telegram_reads_groups(app: App) -> bool | None:
+    """Whether the bot reads every message in a group (BotFather's privacy setting off), as
+    Telegram last said while it was connected; None when that is not known."""
+    return app.channel_facts.get("telegram", {}).get("reads_groups")
+
+
 def _lookups(app: App) -> tuple[bool | None, str]:
     if not enrichment_available(app.settings):
         return False, "off: no idea is filled in and nothing new is discovered"

@@ -121,3 +121,77 @@ def test_switching_somebody_off_gives_up_what_they_left_unanswered(conn, family_
 @pytest.fixture
 def family_members(family):
     return family
+
+
+# -- linking Telegram by a link -----------------------------------------------------------------
+
+
+def _at(hours: float = 0):
+    from datetime import UTC, datetime, timedelta
+
+    return datetime(2026, 9, 20, 21, 3, tzinfo=UTC) + timedelta(hours=hours)
+
+
+def test_a_link_links_whoever_opens_it_to_its_person_once(conn, family_members) -> None:
+    from familydb.store import invites
+
+    jo = family.add(conn, "Jo", "parent", telegram_id=None, now=NOW)
+    code = family.invite(conn, jo.id, by=family_members["sam"].id, now=_at())
+    assert family.is_invite_code(code) and len(code) <= 64  # Telegram's start parameter
+    kept = conn.execute("SELECT code_hash FROM telegram_invites WHERE member_id = ?", (jo.id,))
+    assert kept.fetchone()["code_hash"] == invites.digest(code) != code  # only a hash is kept
+    linked = family.accept_invite(conn, code, telegram_id="1003", now=_at(1))
+    assert (linked.id, linked.channel, linked.channel_user_id) == (jo.id, "telegram", "1003")
+    assert members.resolve(conn, "telegram", "1003") == linked  # the bot answers them now
+    with pytest.raises(family.InviteRefused) as spent:
+        family.accept_invite(conn, code, telegram_id="1004", now=_at(2))
+    assert spent.value.why == "stale"  # used once, and gone
+
+
+def test_a_link_past_its_day_or_replaced_opens_nothing(conn, family_members) -> None:
+    jo = family.add(conn, "Jo", "parent", telegram_id=None, now=NOW)
+    old = family.invite(conn, jo.id, by=None, now=_at())
+    new = family.invite(conn, jo.id, by=None, now=_at())
+    with pytest.raises(family.InviteRefused):
+        family.accept_invite(conn, old, telegram_id="1003", now=_at(1))  # replaced by the new
+    with pytest.raises(family.InviteRefused):
+        family.accept_invite(conn, new, telegram_id="1003", now=_at(family.INVITE_HOURS))
+    assert members.resolve(conn, "telegram", "1003") is None
+    for nonsense in ("", "short", "x" * 65, "has spaces in it, plenty", "../../etc/passwd-ok"):
+        with pytest.raises(family.InviteRefused):
+            family.accept_invite(conn, nonsense, telegram_id="1003", now=_at())
+
+
+def test_a_link_opened_by_a_telegram_already_on_the_list_is_left_for_its_person(
+    conn, family_members
+) -> None:
+    """An admin trying the link on their own phone must not move their Telegram to somebody
+    else, nor use the link up."""
+    jo = family.add(conn, "Jo", "parent", telegram_id=None, now=NOW)
+    code = family.invite(conn, jo.id, by=None, now=_at())
+    with pytest.raises(family.InviteRefused) as taken:
+        family.accept_invite(conn, code, telegram_id="1001", now=_at())  # Sam's
+    assert (taken.value.why, taken.value.owner) == ("taken", "Sam")
+    assert members.resolve(conn, "telegram", "1001").display_name == "Sam"
+    assert family.accept_invite(conn, code, telegram_id="1003", now=_at()).id == jo.id
+
+
+def test_no_link_for_somebody_switched_off_or_not_there(conn, family_members) -> None:
+    jo = family.add(conn, "Jo", "parent", telegram_id=None, now=NOW)
+    code = family.invite(conn, jo.id, by=None, now=_at())
+    _change(conn, jo, active=False)
+    with pytest.raises(family.InviteRefused):
+        family.accept_invite(conn, code, telegram_id="1003", now=_at())
+    with pytest.raises(family.FamilyError, match="switched off"):
+        family.invite(conn, jo.id, by=None, now=_at())
+    with pytest.raises(family.FamilyError, match="nobody by that number"):
+        family.invite(conn, 999, by=None, now=_at())
+
+
+def test_links_past_their_day_are_forgotten_whatever_is_opened(conn, family_members) -> None:
+    """A refusal undoes its own transaction, so forgetting expired links has one of its own."""
+    jo = family.add(conn, "Jo", "parent", telegram_id=None, now=NOW)
+    family.invite(conn, jo.id, by=None, now=_at())
+    with pytest.raises(family.InviteRefused):
+        family.accept_invite(conn, "x" * 32, telegram_id="1003", now=_at(family.INVITE_HOURS))
+    assert conn.execute("SELECT count(*) FROM telegram_invites").fetchone()[0] == 0

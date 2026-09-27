@@ -96,12 +96,32 @@ class Audio:
 
 @dataclass(frozen=True)
 class Heard:
-    """The words a model heard in a recording, and what hearing them cost."""
+    """The words a model heard in a recording, or saw in a picture, and what that cost."""
 
     text: str
     usage: dict[str, int | None] = field(default_factory=dict)
     model: str | None = None
     request_id: str | None = None
+    # How it ended, as a reply's `stop` does: a refusal or an answer cut short is still billed,
+    # so it comes back to be recorded, and the gateway decides what it means.
+    stop: Stop = "end"
+
+
+# What a model saw in a picture, written down: the same shape as what it heard.
+Seen = Heard
+
+
+@dataclass(frozen=True)
+class Picture:
+    """A photo to be looked at, as its channel handed it over."""
+
+    data: bytes
+    mime: str  # image/jpeg, image/png or image/webp, which every vendor here reads
+
+
+# Room for what a picture says: a hundred and twenty words asked for, and the thinking a lookup
+# model may do before it writes them.
+LOOK_TOKENS = 1024
 
 
 @dataclass
@@ -169,5 +189,17 @@ class Provider(Protocol):
 
     def transcribe(self, audio: Audio, hints: str) -> Heard:
         """The words in a recording. `hints` names people and places it may mention, so they
-        are spelled as the family spells them. Raises AgentError, with `retryable` set."""
+        are spelled as the family spells them. Raises AgentError, with `retryable` set, for a
+        request that failed; one the model declined comes back with its `stop` saying so."""
+        ...
+
+    def viewer(self) -> str | None:
+        """The model this vendor looks at pictures with, or None when it cannot see at all: its
+        lookup model, since writing down what a picture says is extraction, not judgement."""
+        ...
+
+    def describe(self, picture: Picture, ask: str) -> Seen:
+        """What a picture shows, written down as `ask` asks, in one request. Raises AgentError,
+        with `retryable` set, for a request that failed; one the model declined comes back with
+        its `stop` saying so."""
         ...

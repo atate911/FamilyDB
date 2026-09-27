@@ -160,15 +160,19 @@ def _model(app: App, conn: Any) -> dict[str, Any]:
 
 def _home(app: App, conn: Any) -> dict[str, Any]:
     live = app.settings
+    offered = fields.zones()
     return {
         "home": {
             "area": live.home_area,
             "lat": live.home_lat,
             "lon": live.home_lon,
             "tz": live.tzinfo.key,
+            # The server's own zone may be one the list does not offer (Etc/UTC, say): it is
+            # then offered too, chosen, so saving home as it stands keeps it.
+            "tz_listed": live.tzinfo.key in offered,
             "units": live.weather_units,
         },
-        "zones": fields.zones(),
+        "zones": views.zone_groups(offered, app.clock.now()),
     }
 
 
@@ -215,6 +219,7 @@ def _telegram(app: App, conn: Any) -> dict[str, Any]:
         "gave_up": waiting and refresh is None,
         "digest_here": live.digest_chat_id == "web",
         "digest_day": views.DAY_NAMES[live.digest_day],
+        "reads_groups": status_page.telegram_reads_groups(app),
     }
 
 

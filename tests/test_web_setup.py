@@ -131,7 +131,11 @@ def test_the_whole_way_through(fresh, monkeypatch, conn) -> None:
     # It can answer now, so the home page is the home page again.
     assert fresh.get("/").status_code == 200
 
-    # 4. Home: found on the map, and said so.
+    # 4. Home: found on the map, and said so. The time zone is chosen from a list, the server's
+    # own chosen to start with.
+    step = fresh.get("/setup/home").text
+    assert '<select id="home-tz" name="family_tz"' in step
+    assert '<option value="America/Vancouver" selected>Vancouver · UTC-07:00</option>' in step
     _post(fresh, "home", "/settings", home_area="Vancouver, WA", weather_units="imperial")
     page = fresh.get("/setup/home").text
     assert "Found Vancouver, Washington" in page and "✓ Vancouver, WA" in page
@@ -139,6 +143,20 @@ def test_the_whole_way_through(fresh, monkeypatch, conn) -> None:
 
     done = fresh.get("/setup/done").text
     assert "You\u2019re set up" in done and "What should we do this weekend?" in done
+
+
+def test_a_server_zone_the_list_does_not_offer_is_offered_as_well(settings, clock, conn) -> None:
+    """A server set to Etc/UTC, as many are, still finds its zone chosen on the home step."""
+    from familydb.config import apply_overrides
+
+    # Validated afresh, since the zone in force is worked out when settings are made.
+    server = apply_overrides(settings, {"web_password": INSTALLERS, "family_tz": "Etc/UTC"})
+    app = App(server, clock)
+    client = create_app(app).test_client()
+    client.post("/login", data={"password": INSTALLERS})
+    step = client.get("/setup/home").text
+    assert '<option value="Etc/UTC" selected>Etc/UTC</option>' in step
+    assert step.count(" selected>") == 2  # the zone, and the units
 
 
 def test_a_key_the_company_refuses_is_not_kept(fresh, monkeypatch) -> None:
@@ -221,6 +239,14 @@ def test_telegram_from_a_token_to_a_linked_phone(fresh, monkeypatch, conn) -> No
     # And the weekend ideas can follow them there.
     _post(fresh, "telegram", "/settings", digest_chat_id="555")
     assert app.settings.digest_chat_id == "555"
+
+    # The group's steps say whether BotFather's privacy setting still needs turning off.
+    app.channel_facts["telegram"] = {"reads_groups": False}
+    group = " ".join(fresh.get("/setup/telegram").text.split())
+    assert "send <code>/setprivacy</code>" in group and "take it out and add it back" in group
+    app.channel_facts["telegram"] = {"reads_groups": True}
+    group = " ".join(fresh.get("/setup/telegram").text.split())
+    assert "✓ Its privacy setting is off" in group and "/setprivacy" not in group
 
 
 def test_the_weekend_ideas_are_offered_by_the_day_they_come(fresh, conn) -> None:

@@ -24,15 +24,24 @@ password if their role may sign in (familydb/roles.py), which for now every role
   person chooses their own the first time they sign in with it.
 - Once people sign in as themselves there is always an admin who can, so the page never falls
   back to a shared password nobody meant to bring back, and somebody can always put it right.
+
+Somebody's Telegram can also be linked by a link an admin makes for them (`invite`): opened on
+their phone, pressing Start links their Telegram to them (`accept_invite`), with no id to type
+and no knock to let in. The family chose that, knowing what it means: whoever opens the link
+first is taken for that person. So it works once, for a day, is made only for somebody on the
+list and switched on, and a Telegram already somebody else's is never moved by it.
 """
 
 from __future__ import annotations
 
 import hashlib
+import secrets
 import sqlite3
+from datetime import datetime, timedelta
 
 from familydb import passwords, roles
-from familydb.store import logins, members, messages
+from familydb.dates import utc_iso
+from familydb.store import invites, logins, members, messages
 from familydb.store.db import transaction
 from familydb.store.members import Member, Role
 
@@ -91,14 +100,24 @@ def _name_taken(conn: sqlite3.Connection, name: str, *, besides: int | None = No
             )
 
 
-def _telegram_taken(conn: sqlite3.Connection, telegram: str, *, besides: int | None) -> None:
+def _telegram_owner(
+    conn: sqlite3.Connection, telegram: str, *, besides: int | None
+) -> Member | None:
+    """Whoever on the list, switched off or not, already has this Telegram id."""
     for person in members.list_all(conn, active_only=False):
         if (
             person.id != besides
             and person.channel == TELEGRAM
             and person.channel_user_id == telegram
         ):
-            raise FamilyError(f"That Telegram id is already {person.display_name}'s.")
+            return person
+    return None
+
+
+def _telegram_taken(conn: sqlite3.Connection, telegram: str, *, besides: int | None) -> None:
+    owner = _telegram_owner(conn, telegram, besides=besides)
+    if owner is not None:
+        raise FamilyError(f"That Telegram id is already {owner.display_name}'s.")
 
 
 def add(
@@ -297,3 +316,89 @@ def remove_login(conn: sqlite3.Connection, member_id: int) -> Member:
             raise FamilyError(LAST_TO_SIGN_IN.format(name=person.display_name))
         logins.remove(conn, member_id)
     return person
+
+
+# -- linking Telegram by a link ------------------------------------------------------------------
+
+# How long a link works, and how long its code is: long and random enough that it cannot be
+# guessed, short enough for Telegram's start parameter, which takes 64 of A-Z, a-z, 0-9, _ and -.
+INVITE_HOURS = 24
+INVITE_BYTES = 24
+INVITE_CODE = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-")
+
+
+class InviteRefused(FamilyError):
+    """A link that did nothing, and why: `stale` (unknown, used, past its time, or for somebody
+    switched off) or `taken` (this Telegram is already `owner`'s)."""
+
+    def __init__(self, why: str, owner: str | None = None) -> None:
+        super().__init__(why)
+        self.why = why
+        self.owner = owner
+
+
+def invite(conn: sqlite3.Connection, member_id: int, *, by: int | None, now: datetime) -> str:
+    """Make the code of a link that links whoever opens it to this person's Telegram, and return
+    it, to be shown once. It replaces any link made for them before."""
+    code = secrets.token_urlsafe(INVITE_BYTES)
+    with transaction(conn):
+        person = _someone(conn, member_id)
+        if not person.active:
+            raise FamilyError(SWITCHED_OFF.format(name=person.display_name))
+        invites.forget_expired(conn, utc_iso(now))
+        invites.put(
+            conn,
+            member_id,
+            invites.digest(code),
+            made_by=by,
+            now=utc_iso(now),
+            expires=utc_iso(now + timedelta(hours=INVITE_HOURS)),
+        )
+    return code
+
+
+def is_invite_code(text: str) -> bool:
+    """Whether Telegram could have carried this as a link's start parameter."""
+    return 16 <= len(text) <= 64 and set(text) <= INVITE_CODE
+
+
+def accept_invite(
+    conn: sqlite3.Connection, code: str, *, telegram_id: str, now: datetime
+) -> Member:
+    """Link this Telegram to whoever the link was made for, and use the link up.
+
+    Raises InviteRefused when it does nothing. A link opened by a Telegram already somebody
+    else's (an admin trying it on their own phone, say) is left as it was, for its person.
+    """
+    telegram = clean_telegram_id(telegram_id)
+    if telegram is None or not is_invite_code(code):
+        raise InviteRefused("stale")
+    stamp = utc_iso(now)
+    # On their own, as a refusal below undoes whatever its transaction did.
+    with transaction(conn):
+        invites.forget_expired(conn, stamp)
+    try:
+        with transaction(conn):
+            found = invites.find(conn, invites.digest(code))
+            if found is None:
+                raise InviteRefused("stale")
+            person = members.get(conn, found.member_id)
+            if person is None or not person.active:
+                raise InviteRefused("stale")
+            owner = _telegram_owner(conn, telegram, besides=person.id)
+            if owner is not None:
+                raise InviteRefused("taken", owner.display_name)
+            linked = members.update_profile(
+                conn,
+                person.id,
+                display_name=person.display_name,
+                role=person.role,
+                active=person.active,
+                channel=TELEGRAM,
+                channel_user_id=telegram,
+            )
+            invites.remove(conn, found.code_hash)
+    except sqlite3.IntegrityError as exc:  # linked to somebody else a moment ago
+        raise InviteRefused("taken") from exc
+    assert linked is not None
+    return linked

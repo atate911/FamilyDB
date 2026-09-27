@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import sqlite3
 from typing import Any, Literal
 
@@ -20,6 +21,17 @@ UNHEARD = "(voice note, {length}, not heard)"
 # A button tapped is kept as a message from whoever tapped it, after this mark, so the history
 # says it was a tap and what it was on (familydb/buttons.py).
 TAP_PREFIX = "(tapped) "
+# Words that came with something nobody could look at (a video, a file) are kept after this mark,
+# so the model, the history and the page all say what came with them and that it was not seen.
+UNSEEN = "(with {what}, not seen) "
+# A photo is kept as what a model saw in it, written down, after this mark, so everything after
+# the pipeline's first step treats it as said and knows it was read from a picture; the picture
+# is not kept. Until it has been looked at it is only the mark saying so. An album's photos are
+# each kept under their number.
+PHOTO_PREFIX = "(photo) "
+UNLOOKED = "(photo, not looked at)"
+UNLOOKED_ALBUM = "({count} photos, not looked at)"
+UNLOOKED_FORM = re.compile(r"\((?:photo|\d+ photos), not looked at\)")
 
 
 def as_said(text: str) -> str:
@@ -27,10 +39,42 @@ def as_said(text: str) -> str:
     return text.removeprefix(CAPTURE_PREFIX)
 
 
+def unseen(what: str, words: str) -> str:
+    """Words that came with something not looked at, as they are kept: "(with a video, not
+    seen) we should do this hike"."""
+    return UNSEEN.format(what=what) + words
+
+
 def unheard(seconds: int) -> str:
     """What a voice note is stored as until its words are known."""
     minutes, rest = divmod(max(int(seconds), 0), 60)
     return UNHEARD.format(length=f"{minutes}:{rest:02d}")
+
+
+def unlooked(count: int) -> str:
+    """What a photo, or an album of them, is stored as until it is looked at."""
+    return UNLOOKED if count == 1 else UNLOOKED_ALBUM.format(count=count)
+
+
+def is_unlooked(text: str) -> bool:
+    """Whether a stored message is a photo, or an album, nobody ever looked at."""
+    return UNLOOKED_FORM.fullmatch(text) is not None
+
+
+def seen_in_photos(seen: list[str | None], total: int) -> str:
+    """What was seen in a photo, or in an album, as it is kept: "(photo) …" for one; for several,
+    each under its number, one not seen said to be, and any not looked at counted."""
+    if total == 1 and seen and seen[0]:
+        return PHOTO_PREFIX + seen[0]
+    parts = [
+        f"(photo {number} of {total}) {words}"
+        if words
+        else f"(photo {number} of {total}, not seen)"
+        for number, words in enumerate(seen, start=1)
+    ]
+    if total > len(seen):
+        parts.append(f"(photos {len(seen) + 1} to {total}, not looked at)")
+    return "\n\n".join(parts)
 
 
 def is_unheard(text: str) -> bool:
