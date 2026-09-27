@@ -146,3 +146,31 @@ def test_at_the_end_of_an_install_the_pages_first_steps_are_not_faults(
     assert doctor.verdict(report).startswith("It is running. The rest is set up on the web page")
     family = next(check for check in report.checks if check.name == "family")
     assert family.fix == "next, on the web page: Add yourself"
+
+
+def test_a_link_that_is_gone_or_has_moved_is_said(settings) -> None:
+    """The consoles move now and then: `doctor --online` asks each page the setup steps link
+    to, and says which to change in web/links.py."""
+    from familydb import doctor
+    from familydb.web.links import LINKS
+
+    def fetch(url):
+        if url == LINKS["anthropic_keys"]:
+            return 200, "https://platform.claude.com/settings/keys"
+        if url == LINKS["google_clients"]:
+            return 404, url
+        if url == LINKS["openai_keys"]:
+            return 403, url  # behind a sign-in: still there
+        return 200, url
+
+    report = doctor.Report()
+    doctor.check_links(report, fetch)
+    (check,) = report.checks
+    assert check.verdict == doctor.WARN
+    assert "no answer from google_clients (404)" in check.detail
+    assert "anthropic_keys now at https://platform.claude.com/settings/keys" in check.detail
+    assert "openai_keys" not in check.detail
+
+    fine = doctor.Report()
+    doctor.check_links(fine, lambda url: (200, url))
+    assert fine.checks[0].verdict == doctor.OK

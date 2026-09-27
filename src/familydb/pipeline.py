@@ -5,11 +5,13 @@ from __future__ import annotations
 import dataclasses
 import logging
 import sqlite3
-from contextlib import closing
-from datetime import datetime
+import threading
+from collections.abc import Iterator
+from contextlib import closing, contextmanager
+from datetime import datetime, timedelta
 from typing import Any
 
-from familydb import memory, personas, voice, whereabouts
+from familydb import memory, personas, roles, voice, whereabouts
 from familydb.agent import gateway, spending
 from familydb.agent.history import load_history
 from familydb.agent.loop import MessagesAPI, TurnResult
@@ -27,7 +29,7 @@ from familydb.app import App
 from familydb.channels.base import IncomingMessage, OutgoingMessage, PhotoNote
 from familydb.clock import FixedClock
 from familydb.dates import utc_iso
-from familydb.delivery import deliver, lease
+from familydb.delivery import claim_also, deliver, hold_for_gathering, lease
 from familydb.errors import AgentError
 from familydb.store import calls, knocks, members, messages, suggestions
 from familydb.store.db import transaction
@@ -103,6 +105,111 @@ def handle_synthetic(
     return _run(app, msg, member, inbound_id, api, conn, notify=False, kind="digest")
 
 
+# How long past its pause a message waiting to be answered with the ones after it is kept from
+# the retry job, in case the process that was to answer it stops; after that it is the retry
+# job's, and answered on its own. As long as a claim, since it may wait for a turn to finish.
+GATHER_HOLD_SECONDS = 300
+
+# Turns in one chat, one at a time in this process. A turn that started while another was running
+# would read the other's message as not yet answered, and might do what it asked a second time.
+_chat_locks: dict[tuple[str, str], threading.RLock] = {}
+_chat_locks_guard = threading.Lock()
+
+
+@contextmanager
+def _one_at_a_time(channel: str, chat_id: str) -> Iterator[None]:
+    with _chat_locks_guard:
+        lock = _chat_locks.setdefault((channel, chat_id), threading.RLock())
+    with lock:
+        yield
+
+
+def receive(
+    app: App, msg: IncomingMessage, *, conn: sqlite3.Connection | None = None
+) -> int | OutgoingMessage | None:
+    """Keep a message to be answered after a pause (`answer_gathered`), so that several sent one
+    after another are answered together, in one turn and one reply.
+
+    The first half of `handle_incoming`: None for an update already seen, a stranger's answer at
+    once, or the stored message's id, held from the retry job meanwhile (delivery.GATHER).
+    """
+    if conn is None:
+        with closing(app.connect()) as own:
+            return receive(app, msg, conn=own)
+    if _seen(conn, msg):
+        return None
+    member = members.resolve(conn, msg.channel, msg.channel_user_id)
+    if member is None:
+        return _stranger(app, conn, msg)
+    inbound_id = _store_inbound(app, conn, msg, member)
+    if inbound_id is None:
+        return None
+    pause = app.settings.gather_seconds + GATHER_HOLD_SECONDS
+    with transaction(conn):
+        hold_for_gathering(
+            conn, inbound_id, until=utc_iso(app.clock.now() + timedelta(seconds=pause))
+        )
+    return inbound_id
+
+
+def answer_gathered(
+    app: App,
+    msg: IncomingMessage,
+    inbound_id: int,
+    *,
+    api: MessagesAPI | None = None,
+    conn: sqlite3.Connection | None = None,
+) -> OutgoingMessage | None:
+    """Answer a kept message once its pause is over: with every earlier one from the same person
+    in the same chat still waiting, in one turn and one reply; or not at all when a newer one is
+    waiting too, since that one answers this one with its own."""
+    if conn is None:
+        with closing(app.connect()) as own:
+            return answer_gathered(app, msg, inbound_id, api=api, conn=own)
+    # After any turn already running in this chat, so that what it answered is answered.
+    with _one_at_a_time(msg.channel, msg.chat_id):
+        row = messages.get(conn, inbound_id)
+        if row is None or row.status == "processed" or row.give_up or row.member_id is None:
+            return None
+        now = utc_iso(app.clock.now())
+        if messages.gathering(conn, row.chat_id, row.member_id, after=inbound_id, now=now):
+            return None
+        member = members.get(conn, row.member_id)
+        if member is None:
+            return None
+        earlier = messages.gathering(conn, row.chat_id, row.member_id, before=inbound_id, now=now)
+        return _run(
+            app,
+            msg,
+            member,
+            inbound_id,
+            api,
+            conn,
+            notify=True,
+            gathered=[one.id for one in earlier],
+        )
+
+
+def _stranger(app: App, conn: sqlite3.Connection, msg: IncomingMessage) -> OutgoingMessage:
+    log.warning("unknown sender %s on %s", msg.channel_user_id, msg.channel)
+    with transaction(conn):
+        knocks.record(
+            conn,
+            channel=msg.channel,
+            channel_user_id=msg.channel_user_id,
+            name=msg.sender_name,
+            chat_id=msg.chat_id,
+            now=app.clock.now(),
+        )
+    # Their message is not stored, so the update itself chooses the words: the same knock
+    # sent again reads the same, and the next one may not.
+    return OutgoingMessage(
+        msg.chat_id,
+        voice.say(app.settings, "stranger", seed=msg.channel_update_id, id=msg.channel_user_id),
+        "unknown_sender",
+    )
+
+
 def _handle(
     app: App,
     msg: IncomingMessage,
@@ -116,23 +223,7 @@ def _handle(
 
     member = members.resolve(conn, msg.channel, msg.channel_user_id)
     if member is None:
-        log.warning("unknown sender %s on %s", msg.channel_user_id, msg.channel)
-        with transaction(conn):
-            knocks.record(
-                conn,
-                channel=msg.channel,
-                channel_user_id=msg.channel_user_id,
-                name=msg.sender_name,
-                chat_id=msg.chat_id,
-                now=app.clock.now(),
-            )
-        # Their message is not stored, so the update itself chooses the words: the same knock
-        # sent again reads the same, and the next one may not.
-        return OutgoingMessage(
-            msg.chat_id,
-            voice.say(app.settings, "stranger", seed=msg.channel_update_id, id=msg.channel_user_id),
-            "unknown_sender",
-        )
+        return _stranger(app, conn, msg)
 
     inbound_id = _store_inbound(app, conn, msg, member)
     if inbound_id is None:
@@ -195,13 +286,22 @@ def _run(
     kind: str = "chat",
     hearing: Any = None,
     seeing: Any = None,
+    gathered: list[int] | None = None,
 ) -> OutgoingMessage | None:
-    with lease(app, conn, inbound_id) as owned:
+    with _one_at_a_time(msg.channel, msg.chat_id), lease(app, conn, inbound_id) as owned:
         if not owned:
             return None
         row = messages.get(conn, inbound_id)
         if row is None or row.status == "processed" or row.give_up:
             return None
+        # The earlier messages of a burst, taken under this claim and folded into this one at
+        # once, so that however this turn ends (answered, refused, failed and retried) they go
+        # with it: a retry answers the whole burst, knowing what its first try already did.
+        taken = claim_also(app, conn, owned, gathered) if gathered else []
+        if taken:
+            with transaction(conn):
+                messages.fold_into(conn, taken, inbound_id, now=utc_iso(app.clock.now()))
+        folded = messages.folded_into(conn, inbound_id)
         current_member = members.get(conn, member.id)
         if current_member is None or not current_member.active:
             with transaction(conn):
@@ -211,6 +311,14 @@ def _run(
                 messages.give_up(conn, inbound_id)
             return None
         member = current_member
+        if kind != "digest" and _over_daily_number(app, conn, member, inbound_id):
+            # Kept, like every message, but not answered, not heard and not retried: said so
+            # in her words, with no model call.
+            with transaction(conn):
+                messages.give_up(conn, inbound_id)
+            limit = app.settings.kid_daily_messages
+            reply = voice.say(app.settings, "kid_limit", seed=inbound_id, limit=limit)
+            return _fail(app, conn, msg, inbound_id, "kid_daily_limit", reply)
         if msg.voice is not None:
             heard = _hear(app, msg, inbound_id, conn, hearing)
             if isinstance(heard, OutgoingMessage):
@@ -243,9 +351,30 @@ def _run(
                 conn.execute(
                     "UPDATE messages SET retries = retries + 1 WHERE id = ?", (inbound_id,)
                 )
+        if folded:
+            msg = dataclasses.replace(msg, text="\n".join([*(f.text for f in folded), msg.text]))
         return _run_owned(
-            app, msg, member, inbound_id, api, conn, notify=notify, retry=retry, kind=kind
+            app,
+            msg,
+            member,
+            inbound_id,
+            api,
+            conn,
+            notify=notify,
+            retry=retry,
+            kind=kind,
+            gathered=[one.id for one in folded],
         )
+
+
+def _over_daily_number(app: App, conn: sqlite3.Connection, member: Member, inbound_id: int) -> bool:
+    """Whether a kid (roles.DAILY_LIMITED) has had as many messages answered today as the family
+    allows, counting only those a model answered."""
+    limit = app.settings.kid_daily_messages
+    if not limit or not roles.daily_limited(member.role):
+        return False
+    since = spending.day_start(app.settings, app.clock.now())
+    return calls.answered_for(conn, member.id, since=since, other_than=inbound_id) >= limit
 
 
 def _hear(
@@ -447,6 +576,7 @@ def _run_owned(
     notify: bool,
     retry: bool = False,
     kind: str = "chat",
+    gathered: list[int] | None = None,
 ) -> OutgoingMessage:
     """Think and persist the outcome, carrying anything held for this conversation (voice.py)."""
     taken = app.held.take((msg.channel, msg.chat_id), app.clock.now())
@@ -462,6 +592,7 @@ def _run_owned(
             retry=retry,
             kind=kind,
             taken=taken,
+            gathered=gathered or [],
         )
     finally:
         # Whatever the reply did not carry goes as written: at once, not after the wait.
@@ -480,8 +611,13 @@ def _answer(
     retry: bool = False,
     kind: str = "chat",
     taken: list[voice.Held],
+    gathered: list[int] | None = None,
 ) -> OutgoingMessage:
-    """Think and persist the outcome. With notify off (a retry, the digest) failures stay silent."""
+    """Think and persist the outcome. With notify off (a retry, the digest) failures stay silent.
+
+    `gathered` are the earlier messages of a burst, folded into this one (`_run`): answered by
+    its reply, and retried with it."""
+    gathered = gathered or []
     if not app.can_ask("chat", api=api):
         # A fresh install before its key is typed in: say so plainly, and do not keep retrying.
         log.warning("message %s saved, but there is no model key to answer it with", inbound_id)
@@ -497,7 +633,16 @@ def _answer(
         )
     try:
         result = _think(
-            app, msg, member, inbound_id, api, conn, retry=retry, kind=kind, taken=taken
+            app,
+            msg,
+            member,
+            inbound_id,
+            api,
+            conn,
+            retry=retry,
+            kind=kind,
+            taken=taken,
+            gathered=gathered,
         )
     except AgentError as exc:
         log.error("agent error on message %s: %s (retryable=%s)", inbound_id, exc, exc.retryable)
@@ -570,6 +715,8 @@ def _answer(
             reply_to=inbound_id,
             now=now,
             buttons=reply_buttons,
+            # The weekend ideas are hers unasked, however they came to be written.
+            sent_as="digest" if kind == "digest" else None,
         )
         messages.mark_processed(conn, inbound_id, result.actions, now=now)
         for action in result.actions:
@@ -639,6 +786,7 @@ def _think(
     retry: bool = False,
     kind: str = "chat",
     taken: list[voice.Held] | None = None,
+    gathered: list[int] | None = None,
 ) -> TurnResult:
     app.refresh(conn)  # a model or a limit changed on the settings page applies from here on
     settings = app.settings
@@ -650,6 +798,8 @@ def _think(
         since_hours=settings.history_hours,
         exclude_message_id=inbound_id,
         exclude_replies_to=inbound_id if retry else None,
+        also_exclude=gathered or (),
+        before_id=None if retry else inbound_id,
     )
     origin = messages.get(conn, inbound_id)
     received_clock = (

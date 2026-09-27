@@ -3,8 +3,9 @@
 - admin: looks after FamilyDB. Whatever a parent may, and the settings, setup, and the family
   list, which is who the bot talks to and who signs in. There is always at least one.
 - parent: uses all the rest: chat, ideas, plans, things to do, how things went.
-- kid: for now, whatever a parent may. Kids hardly use the page yet; when they do, what they may
-  not do is decided in `PERMISSIONS` below, and nowhere else.
+- kid: whatever a parent may, within a number of messages a day the family sets
+  (`kid_daily_messages`, for every role in `DAILY_LIMITED`). What else they may not do, when the
+  family wants more, is decided in `PERMISSIONS` below, and nowhere else.
 
 The page asks about a permission (`may`), never about a role, so giving kids limits of their
 own, or adding a role, is a change to this table alone. The gate in web/auth.py says which part
@@ -32,6 +33,15 @@ PERMISSIONS: dict[str, frozenset[Permission]] = {
     # A stand-in: a kid may do what a parent may until kids have limits of their own.
     "kid": PARENT,
 }
+
+
+# Whose messages count against the day's number the family sets (`kid_daily_messages`).
+DAILY_LIMITED: frozenset[str] = frozenset({"kid"})
+
+
+def daily_limited(role: str) -> bool:
+    """Whether somebody in this role has a number of messages a day."""
+    return role in DAILY_LIMITED
 
 
 def may(role: str, permission: Permission) -> bool:

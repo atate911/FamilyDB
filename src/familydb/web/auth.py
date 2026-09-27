@@ -111,6 +111,8 @@ NEEDS: dict[str, roles.Permission] = {
     "settings": "manage",
     "setup": "manage",
     "family": "manage",
+    # Every model call and tool call behind a message or a lookup: private words from any chat.
+    "activity": "manage",
 }
 # Pages in those parts that are anybody's own, and need no more than signing in.
 EVERYBODY_S_OWN = CHOOSING

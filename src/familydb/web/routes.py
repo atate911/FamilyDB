@@ -21,7 +21,8 @@ from flask import (
 
 from familydb import agenda
 from familydb.app import App
-from familydb.availability import calendar_available
+from familydb.availability import calendar_available, enrichment_available
+from familydb.store import calls
 from familydb.store import ideas as idea_store
 from familydb.store import members as member_store
 from familydb.store import memories as memory_store
@@ -239,6 +240,8 @@ def idea(idea_id: int) -> str:
         outcomes = outcome_store.list_for_idea(conn, idea_id)
         plans = plan_store.for_idea(conn, idea_id)
         asking = _who(conn)
+        # How it was last looked up, in full, for an admin (web/activity.py).
+        looked_up = calls.last_lookup_turn(conn, idea_id) if auth.visitor().may("manage") else None
     return render_template(
         "idea.html",
         idea=record,
@@ -246,6 +249,9 @@ def idea(idea_id: int) -> str:
         today=today.isoformat(),
         ratings=RATINGS,
         can_schedule=calendar_available(settings),
+        can_look_up=enrichment_available(settings) and record.status != "dropped",
+        looked_up=looked_up,
+        lookups=views.lookups_when(settings),
         **asking,
         row=views.idea_row(record, settings.tzinfo),
         setting=views.SETTINGS.get(record.setting, record.setting),

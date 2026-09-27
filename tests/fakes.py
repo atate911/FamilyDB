@@ -122,6 +122,9 @@ class FakeCalendar:
         ]
         return sorted(found, key=lambda e: self._as_datetime(e.start))
 
+    def recent_events(self, start: datetime, end: datetime) -> list[CalendarEvent]:
+        return self.list_events(start, end)
+
     def get_event(self, event_id: str) -> CalendarEvent | None:
         return self.events.get(event_id)
 

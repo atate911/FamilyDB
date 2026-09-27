@@ -57,6 +57,17 @@
         <dt>{{ icon('search') }}Lookup</dt>
         <dd>
           {{ row.details }}{% if idea.enrichment_note %} ({{ idea.enrichment_note }}){% endif %}
+          {% if looked_up %}<a class="small" href="{{ url_for('activity.show', key='t' ~ looked_up) }}">How it was looked up</a>{% endif %}
+          {% if idea.enrichment == 'pending' and can_look_up %}
+            <span class="muted">{% if idea.lookup_wanted_at %}Asked for now: within a few minutes.{% else %}Looked up {{ lookups }}.{% endif %}</span>
+          {% endif %}
+          {% if can_look_up and visitor().may('change') and not idea.lookup_wanted_at %}
+            <form class="inline" method="post" action="{{ url_for('edits.look_up', idea_id=idea.id) }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+              <input type="hidden" name="once" value="{{ once_token() }}" />
+              <button class="quiet small" type="submit">{{ icon('search') }}{{ 'Look it up now' if idea.enrichment == 'pending' else 'Look it up again' }}</button>
+            </form>
+          {% endif %}
         </dd>
         {% if row.url %}
           <dt>{{ icon('link') }}Link</dt>

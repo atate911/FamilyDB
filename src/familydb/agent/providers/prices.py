@@ -1,9 +1,12 @@
 """What each model costs, and so which models the settings page suggests.
 
 No SDK is imported here, so the page and the spending limit can read it without loading one.
-Prices are US dollars per million tokens as the vendors published them in September 2026, plus
-the price of one hosted web search. They are an estimate for the daily limit and the status
-page, not a bill: check them against the vendor's own figures now and then.
+What the daily check found (familydb/model_watch.py: each company's own list of models for the
+family's key, and two public price lists read against each other) is laid over the built-in
+table below by `use`, so a new model and a new price arrive without a new release. The built-in
+table, US dollars per million tokens as the vendors published them in September 2026, is where a
+new install starts and what stands for anything the check has not found. Either is an estimate
+for the daily limit and the status page, not a bill.
 
 A model that is not listed is counted at `UNLISTED`, which is dearer than anything listed, so
 a new or mistyped name makes the daily limit stop early rather than late.
@@ -80,10 +83,46 @@ HEARING: dict[str, dict[str, Price]] = {
 }
 
 
+# One hosted web search, by company, for a price the lists gave without one.
+SEARCH = {"anthropic": 0.01, "openai": 0.01, "gemini": 0.014}
+
+# What the daily check found, laid over PRICES: each company's priced models, and the ones worth
+# offering (listed for the family's key, able to use tools, not retiring), cheapest first. Set
+# whole by `use`, from the store, by whichever process reads it (App.refresh).
+_LIVE: dict[str, dict[str, Price]] = {}
+_OFFERED: dict[str, tuple[str, ...]] = {}
+_NOTES: dict[tuple[str, str], str] = {}
+_SWAPS: dict[tuple[str, str], str] = {}
+
+
+def use(
+    live: dict[str, dict[str, Price]],
+    offered: dict[str, tuple[str, ...]],
+    notes: dict[tuple[str, str], str] | None = None,
+    swaps: dict[tuple[str, str], str] | None = None,
+) -> None:
+    """Put what the daily check found in force, in place of what it found before."""
+    global _LIVE, _OFFERED, _NOTES, _SWAPS
+    _LIVE, _OFFERED, _NOTES, _SWAPS = live, offered, notes or {}, swaps or {}
+
+
+def swapped(provider: str, model: str) -> str:
+    """The model to ask in this one's place: itself, unless the daily check found it gone or
+    past its day, when the one it chose to take its place (model_watch.replacement)."""
+    return _SWAPS.get((provider, model.lower()), model)
+
+
+def note(provider: str, model: str) -> str | None:
+    """What the daily check says of a model worth knowing when choosing it: new lately, or the
+    day it goes."""
+    return _NOTES.get((provider, model.lower()))
+
+
 def price(provider: str | None, model: str | None) -> Price | None:
-    """The listed price for this model, or None when it is not listed."""
+    """The price for this model, as the daily check found it or else as built in; None when
+    neither knows it."""
     named = (model or "").lower()
-    for tables in (PRICES, HEARING):
+    for tables in (_LIVE, PRICES, HEARING):
         table = tables.get(provider or "", {})
         for prefix in sorted(table, key=len, reverse=True):
             if named == prefix or named.startswith(prefix + "-"):
@@ -92,7 +131,10 @@ def price(provider: str | None, model: str | None) -> Price | None:
 
 
 def suggestions(provider: str) -> tuple[str, ...]:
-    """Models worth offering on the settings page for this provider, cheapest first."""
+    """Models worth offering on the settings page for this provider, cheapest first: what the
+    daily check found, or before it has run, the built-in table."""
+    if _OFFERED.get(provider):
+        return _OFFERED[provider]
     table = PRICES.get(provider, {})
     return tuple(sorted(table, key=lambda name: (table[name].output, name)))
 

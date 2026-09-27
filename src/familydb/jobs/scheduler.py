@@ -20,6 +20,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
+from familydb.alerts import run_alerts
 from familydb.app import App
 from familydb.availability import digest_configured, enrichment_available
 from familydb.jobs.catch_up import run_catch_up
@@ -30,6 +31,8 @@ from familydb.jobs.plan_checks import run_plan_checks
 from familydb.jobs.reminders import run_reminders
 from familydb.jobs.retry_failed import run_retries
 from familydb.jobs.weekend_digest import run_digest
+from familydb.judgement import run_judgements
+from familydb.model_watch import run_model_watch
 from familydb.whereabouts import forget_old
 
 log = logging.getLogger(__name__)
@@ -64,6 +67,13 @@ def job_specs(app: App) -> list[JobSpec]:
     return [
         JobSpec("reminders", "deliver task reminders", run_reminders, IntervalTrigger(minutes=1)),
         JobSpec(
+            "alerts",
+            "tell admins what needs fixing",
+            run_alerts,
+            IntervalTrigger(minutes=1),
+            wanted=settings.admin_alerts,
+        ),
+        JobSpec(
             "forget_locations",
             "delete shared locations after a day",
             forget_old,
@@ -95,6 +105,7 @@ def job_specs(app: App) -> list[JobSpec]:
             "ask how plans went",
             run_follow_ups,
             CronTrigger(hour=settings.follow_up_hour, timezone=zone),
+            wanted=settings.follow_ups,
             misfire_grace_time=3600,
         ),
         JobSpec(
@@ -104,6 +115,21 @@ def job_specs(app: App) -> list[JobSpec]:
             CronTrigger(hour=settings.plan_check_hour, timezone=zone),
             wanted=settings.plan_checks,
             misfire_grace_time=3600,
+        ),
+        JobSpec(
+            "model_watch",
+            "check models and prices",
+            run_model_watch,
+            CronTrigger(hour=5, minute=17, timezone=zone),
+            wanted=settings.model_watch,
+            misfire_grace_time=6 * 3600,
+        ),
+        JobSpec(
+            "judgements",
+            "weigh changes in the models",
+            run_judgements,
+            IntervalTrigger(minutes=15),
+            wanted=settings.judgements,
         ),
         JobSpec(
             "nudges",

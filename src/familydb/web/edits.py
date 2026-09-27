@@ -51,6 +51,8 @@ SCHEDULED = "On the calendar: {title}."
 MOVED = "Moved to {when}."
 CANCELLED = "Cancelled."
 TICKED = "Done: #{id} {title}."
+LOOKING = "Looking {what} up now: within a few minutes."
+NOTHING_WAITING = "Nothing is waiting to be looked up."
 REMEMBERED = {"saved": "Remembered: {fact}.", "already remembered": "Already remembered: {fact}."}
 FORGOTTEN = "Forgotten: {fact}. It will not come back from what was said before."
 NEEDS_FACT = "Say what to remember."
@@ -257,6 +259,36 @@ def set_status(idea_id: int) -> Response:
     else:
         _say(CHANGED_IDEA.format(id=result["id"], title=result["title"]))
     return _back("web.idea", idea_id=idea_id)
+
+
+@bp.post("/idea/<int:idea_id>/lookup")
+@once
+def look_up(idea_id: int) -> Response:
+    """Look one idea up now, or again, rather than with the evening's lookups."""
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+        return _back("web.idea", idea_id=idea_id)
+    result, complaint = run("look_up_now", {"idea_ids": [idea_id]})
+    _say(LOOKING.format(what="it") if result is not None else complaint or "")
+    return _back("web.idea", idea_id=idea_id)
+
+
+@bp.post("/lookups/now")
+@once
+def look_up_waiting() -> Response:
+    """Every idea waiting, looked up now rather than with the evening's lookups."""
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+        return _back("web.status")
+    result, complaint = run("look_up_now", {})
+    if result is None:
+        _say(complaint or "")
+    elif not result["asked"]:
+        _say(NOTHING_WAITING)
+    else:
+        count = len(result["asked"])
+        _say(LOOKING.format(what="1 idea" if count == 1 else f"{count} ideas"))
+    return _back("web.status")
 
 
 @bp.post("/idea/<int:idea_id>/outcome")

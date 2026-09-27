@@ -159,8 +159,9 @@ def test_her_lines_carry_her_name_whatever_they_say(settings, clock, conn, famil
     assert page.count('class="said-bot"') == 1 and "FamilyDB</strong>" not in page
     assert '<span class="label">Vera</span>' in page  # the place in the bar goes by her name
     # She is never drawn: beside her lines is her screen, and the smiling mark is only the
-    # page's own, in the bar and at the foot.
-    assert 'class="avatar presence v' in page and page.count("#i-mark") == 2
+    # page's own, in the bar and at the foot (and the AI model's page in the settings menu).
+    outside_menu = re.sub(r'<details class="menu.*?</details>', "", page, flags=re.S)
+    assert 'class="avatar presence v' in page and outside_menu.count("#i-mark") == 2
     assert '<span class="presence-glass"></span>' in page  # her screen, its glyphs the stylesheet's
 
     nameless = _client(settings.model_copy(update={"persona": "none"}), clock).get("/chat").text

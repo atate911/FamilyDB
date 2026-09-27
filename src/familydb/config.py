@@ -30,6 +30,7 @@ Effort = Literal["low", "medium", "high", "xhigh", "max"]
 Level = Literal["everyday", "better", "best"]
 ProviderName = Literal["anthropic", "openai", "gemini"]
 CacheTTL = Literal["5m", "1h"]
+LookupsWhen = Literal["evening", "asap"]
 Weekday = Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 Latitude = Annotated[float, Field(ge=-90, le=90)]
 Longitude = Annotated[float, Field(ge=-180, le=180)]
@@ -122,6 +123,26 @@ class Settings(BaseSettings):
     chat_level: Level = "everyday"  # answering the family, and answering again after a failure
     digest_level: Level = "everyday"  # the weekend digest: once a week, so a stronger one is cheap
     lookup_level: Level = "everyday"  # looking ideas up, and searching for what is on
+    # A company's better and best models, in place of the lineup's (catalog.py): empty uses the
+    # lineup's. A judgement call may suggest new ones as the companies release them.
+    openai_better_model: str = ""
+    openai_best_model: str = ""
+    anthropic_better_model: str = ""
+    anthropic_best_model: str = ""
+    gemini_better_model: str = ""
+    gemini_best_model: str = ""
+    # Judgement calls (familydb/judgement.py): when a change needs weighing (which model should
+    # take a going one's place, what an unreadable refusal means, which new models belong at
+    # which level, what a disputed price really is), a stronger model is asked, rarely, and what
+    # it says is checked by code and shown to admins. Off until the family turns it on; at most
+    # `judgement_budget` US$ a month, within the daily limit.
+    judgements: bool = False
+    judgement_level: Level = "best"
+    # What a judgement may do by itself: `within_cost` puts in a model it chose when it costs no
+    # more than the one it takes over from (judgement.SAME_COST), told to admins with a way to
+    # put it back; anything dearer, and everything under `suggest`, waits for an admin's press.
+    judgement_acts: Literal["within_cost", "suggest"] = "within_cost"
+    judgement_budget: float = Field(default=1.0, ge=0, le=50)
 
     # Each company's everyday models: its cheapest, for chat and for the lookups.
     gemini_api_key: str | None = None
@@ -172,6 +193,17 @@ class Settings(BaseSettings):
     # Dollars a day across every model call, estimated from agent/providers/prices.py and checked
     # before each call. Days are the family's. 0 turns the limit off.
     daily_spend_limit: float = Field(default=2.0, ge=0, le=500)
+    # Messages each kid may have answered by a model in a day, the family's day (roles.py says who
+    # is limited). Commands and buttons, which ask no model, do not count. 0 is no limit.
+    kid_daily_messages: int = Field(default=0, ge=0, le=500)
+    # Tell every admin with a Telegram id when something only an admin can fix goes wrong: a
+    # company out of credit or refusing its key, the day's limit used up, Google shutting the
+    # bot out (alerts.py). No model call.
+    admin_alerts: bool = True
+    # Once a day, ask each company which models the family's key can use and read two public
+    # price lists, so new models and new prices arrive without a new release, and admins hear
+    # what changed (model_watch.py, usage_watch.py). No model call.
+    model_watch: bool = True
     anthropic_fallbacks: bool = True
     # An hour, because a family writes in bursts with long gaps: a five-minute cache would be
     # cold almost every time and the whole prefix would be paid for again.
@@ -197,6 +229,10 @@ class Settings(BaseSettings):
     web_tools_enabled: bool = False
     telegram_bot_token: str | None = None
     # In groups, only answer messages that mention the bot or reply to it.
+    # Seconds to wait before answering a message on Telegram, so that several sent one after
+    # another are answered together, in one turn and one reply (pipeline.receive). 0 answers
+    # each at once.
+    gather_seconds: int = Field(default=4, ge=0, le=30)
     telegram_require_mention: bool = False
     # Voice notes sent on Telegram are heard by a speech model, then answered as if typed
     # (agent/gateway.listen). Claude hears nothing, so a family on Claude alone needs an OpenAI
@@ -218,6 +254,11 @@ class Settings(BaseSettings):
 
     # Enrichment, suggestions and scheduled prompts
     enrich_interval_minutes: int = Field(default=2, ge=1, le=1440)
+    # When ideas are looked up on the web: together each evening at lookup_hour, the family's
+    # time, with one note in each chat for what was found, or each as soon as it is added. Asked
+    # for now (look_up_now), one is looked up within enrich_interval_minutes either way.
+    lookups_when: LookupsWhen = "evening"
+    lookup_hour: int = Field(default=21, ge=0, le=23)
     enrich_batch: int = Field(default=3, ge=1, le=20)
     place_stale_days: int = Field(default=30, ge=1, le=3650)
     worker_max_iterations: int = Field(default=12, ge=1, le=30)
@@ -234,6 +275,8 @@ class Settings(BaseSettings):
     follow_up_hour: int = Field(default=10, ge=0, le=23)
     # Bring up a task kept for "some Saturday morning" when one comes round free (jobs/nudges.py).
     task_nudges: bool = True
+    # Ask, the day after a plan, how it went (jobs/follow_ups.py), at follow_up_hour.
+    follow_ups: bool = True
     # The evening before a plan, check its weather and hours (jobs/plan_checks.py), at this hour.
     plan_checks: bool = True
     plan_check_hour: int = Field(default=19, ge=0, le=23)
@@ -259,6 +302,10 @@ class Settings(BaseSettings):
     # Console and logging
     console_member: str | None = None
     log_level: str = "INFO"
+    # How OpenStreetMap's geocoder may reach whoever runs this install, sent with each lookup as
+    # its usage policy asks (an email address or a web page). Empty, none is sent: it is the
+    # operator's to give, since it leaves the house with every lookup.
+    geocoder_contact: str = ""
 
     @model_validator(mode="before")
     @classmethod

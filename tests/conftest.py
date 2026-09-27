@@ -19,6 +19,7 @@ from familydb.clock import FixedClock
 from familydb.config import Settings
 from familydb.integrations.geocode import Geocoder
 from familydb.integrations.open_meteo import OpenMeteo
+from familydb.integrations.price_lists import PriceLists
 from familydb.store import db, members
 from familydb.store.members import Member
 from familydb.tools import ToolContext, ToolRegistry, ToolResult, build_registry
@@ -27,6 +28,26 @@ from tests.fakes import FakeCalendar
 TZ = ZoneInfo("America/Vancouver")
 NOW = datetime(2026, 9, 20, 14, 3)  # a Sunday afternoon, PDT
 NOW_ISO = "2026-09-20T21:03:00Z"
+
+
+@pytest.fixture(autouse=True)
+def built_in_prices() -> Iterator[None]:
+    """Prices and models as built in, whatever a test's check of them found (model_watch.py)."""
+    from familydb.agent.providers import prices
+
+    prices.use({}, {})
+    yield
+    prices.use({}, {})
+
+
+@pytest.fixture(autouse=True)
+def nothing_left_out() -> Iterator[None]:
+    """Every request whole, whatever a test taught a provider to leave out (providers/parts.py)."""
+    from familydb.agent.providers import parts
+
+    parts.forget()
+    yield
+    parts.forget()
 
 
 @pytest.fixture(autouse=True)
@@ -52,6 +73,9 @@ def settings(tmp_path: Path) -> Settings:
         # Relative by default, which would be the checkout's own data/ folder.
         google_token_path=tmp_path / "google_token.json",
         family_tz="America/Vancouver",
+        # The daily check of models and prices reads the internet; its own tests switch it on
+        # with stand-ins for what it reads (test_model_watch.py).
+        model_watch=False,
     )
 
 
@@ -126,6 +150,7 @@ def no_network(monkeypatch: pytest.MonkeyPatch, request) -> None:
         monkeypatch.setattr(socket.socket, "connect", local_only)
     monkeypatch.setattr(Geocoder, "_fetch", staticmethod(_boom))
     monkeypatch.setattr(OpenMeteo, "_fetch", staticmethod(_boom))
+    monkeypatch.setattr(PriceLists, "_fetch", staticmethod(_boom))
 
 
 @pytest.fixture

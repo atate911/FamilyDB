@@ -173,3 +173,45 @@ def test_a_link_is_made_for_somebody_and_shown_once(page, conn, family) -> None:
     assert link is not None and "Shown this once" in shown
     assert invites.find(conn, invites.digest(link.group(1))).member_id == alex.id
     assert "t.me/tate_family_bot?start=" not in page.get(f"/family/{alex.id}").text  # once
+
+
+def test_the_list_says_how_many_messages_each_kid_has_had_today(settings, clock, conn, family):
+    from familydb.store import db
+    from tests import fakes
+    from tests.conftest import NOW_ISO
+
+    with db.transaction(conn):
+        members.add(conn, "Mia", "kid", channel="telegram", channel_user_id="1003", now=NOW_ISO)
+    app = App(settings.model_copy(update={"web_password": PASSWORD}), clock)
+    api = fakes.FakeMessagesAPI(fakes.message([fakes.text("ok")]))
+    handle_incoming(app, IncomingMessage("telegram", "u1", "c", "1003", "hi"), api=api, conn=conn)
+    client = create_app(app).test_client()
+    client.post("/login", data={"password": PASSWORD})
+    assert "messages today" not in client.get("/family").text  # no number set, nothing counted
+
+    with db.transaction(conn):
+        from familydb.store import settings as settings_store
+
+        settings_store.set_many(conn, {"kid_daily_messages": 10})
+    text = client.get("/family").text
+    assert "1 of 10 messages today" in text
+    assert text.count("messages today") == 2  # Mia, and the girls; never a grown-up
+
+
+def test_somebody_can_be_taken_off_for_good_once_the_box_is_ticked(page, conn, family) -> None:
+    alex = family["alex"]
+    drawn = page.get(f"/family/{alex.id}").text
+    assert f'action="/family/{alex.id}/remove"' in drawn and 'name="sure"' in drawn
+    form = {"csrf": _token(page), "revision": _revision(page, alex.id)}
+    unsure = page.post(f"/family/{alex.id}/remove", data=form)
+    assert unsure.headers["Location"] == f"/family/{alex.id}"
+    assert "Tick the box" in _said(page.get(f"/family/{alex.id}"))
+    assert members.get(conn, alex.id) is not None
+
+    sure = page.post(f"/family/{alex.id}/remove", data={**form, "sure": "yes"})
+    assert sure.headers["Location"] == "/family"
+    assert "Alex is off the family list for good" in _said(page.get("/family"))
+    assert members.get(conn, alex.id) is None
+    listed = re.search(r'<ul class="panel plain people">.*?</ul>', page.get("/family").text, re.S)
+    assert "Alex" not in listed.group(0) and "Sam" in listed.group(0)
+    assert page.get(f"/family/{alex.id}").status_code == 404

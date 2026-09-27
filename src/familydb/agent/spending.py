@@ -23,6 +23,7 @@ from familydb.agent.providers import LOOK_TOKENS, prices
 from familydb.config import Settings
 from familydb.dates import utc_iso
 from familydb.errors import AgentError
+from familydb.store import alerts as alert_store
 from familydb.store import calls
 from familydb.store.db import transaction
 
@@ -130,10 +131,22 @@ def estimate_looking(provider: str, model: str | None) -> float:
 
 
 def admit(conn: sqlite3.Connection, settings: Settings, now: datetime, cost: float) -> int:
-    """Check the limit and hold this call's estimated cost; raise when the day is used up."""
-    with transaction(conn):
-        _check(conn, settings, now, other_than=None)
-        return calls.hold(conn, cost_usd=cost, now=utc_iso(now))
+    """Check the limit and hold this call's estimated cost; raise when the day is used up.
+
+    Used up, it is noted for an admin (alerts.py), under the family's date, once the check's own
+    transaction is over; let through, a note of it for today, if any, is forgotten."""
+    today = now.astimezone(settings.tzinfo).date().isoformat()
+    try:
+        with transaction(conn):
+            _check(conn, settings, now, other_than=None)
+            if alert_store.any_for(conn, ("limit",), today):
+                alert_store.clear(conn, "limit", today)
+            return calls.hold(conn, cost_usd=cost, now=utc_iso(now))
+    except SpendingLimitReached as exc:
+        from familydb import alerts
+
+        alerts.note(conn, "limit", today, str(exc), now)
+        raise
 
 
 def adjust(

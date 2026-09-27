@@ -73,6 +73,17 @@ def test_effort_becomes_a_thinking_budget(settings) -> None:
         }
 
 
+def test_a_model_released_later_is_sent_the_current_shape(settings) -> None:
+    """The daily check offers models as they come: one this version has never heard of is taken
+    as current, like the Gemini 3 it follows, not as the older generations it is not."""
+    tool = ToolDef(name="save_place", description="save", schema={"type": "object"})
+    for model in ("gemini-4-flash", "gemini-flash-latest", "gemini-3.8-flash"):
+        request = TurnRequest(system=[], messages=[], tools=[tool], web=WebAccess(), model=model)
+        config = _provider(settings).payload(request)["config"]
+        assert config["thinking_config"] == {"thinking_level": "HIGH"}, model
+        assert "google_search" in config["tools"][1], model
+
+
 def test_search_rides_alongside_our_own_tools(settings) -> None:
     tool = ToolDef(name="save_place", description="save", schema={"type": "object"})
     request = TurnRequest(

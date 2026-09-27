@@ -78,7 +78,8 @@ def test_every_icon_a_phone_is_pointed_at_is_there(settings, clock) -> None:
     assert all(icon["type"] == "image/png" for icon in listed)
     assert any(icon.get("purpose") == "maskable" for icon in listed)  # for Android's round masks
     wanted = [(icon["src"], icon["sizes"]) for icon in listed]
-    wanted.append(("/static/apple-touch-icon.png", "180x180"))  # the one an iPhone asks for
+    touch = re.search(r'rel="apple-touch-icon" href="([^"]+)"', client.get("/login").text)
+    wanted.append((touch.group(1), "180x180"))  # the one an iPhone asks for
     for src, sizes in wanted:
         response = client.get(src)  # before signing in, as a phone asks
         assert response.status_code == 200 and response.mimetype == "image/png"
@@ -96,7 +97,9 @@ def test_every_page_points_a_phone_at_the_manifest_and_the_icon(
     ideas = client.get("/ideas").text
     for page in (login, ideas):
         assert '<link rel="manifest" href="/manifest.webmanifest" />' in page
-        assert '<link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />' in page
+        assert re.search(
+            r'<link rel="apple-touch-icon" href="/static/apple-touch-icon.png\?v=\w+" />', page
+        )
         assert '<meta name="apple-mobile-web-app-title" content="The Tates" />' in page
         assert '<meta name="apple-mobile-web-app-capable" content="yes" />' in page
 

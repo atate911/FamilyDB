@@ -16,7 +16,8 @@ in phosphor, sometimes a radar (see "Green screens").
 
 Everything here is carried by one stylesheet (`src/familydb/web/static/style.css`), a handful of
 templates, three open-licensed typefaces and one icon sprite. None of it needs a script: the
-page's one script (`static/ask.js`) is the box's, and the look does not depend on it.
+page's two scripts are the box's (`static/ask.js`) and the bar menu's (`static/menu.js`), and the
+look depends on neither.
 
 This document is a record of the look as it stands and why, not a fence around it. The design,
 the feel and the structure of the pages are meant to evolve with the app, and whoever is working
@@ -374,8 +375,13 @@ looked at (see "Two layers").
 
 - **The bar.** On a phone the five everyday places (Home, Vera, Ideas, Plans, To do) are a tab
   bar along the bottom, the current one marked by a pill in its colour; Memory, Family, Status and
-  Settings, the name of whoever is signed in (their own password) and signing out are icons at
-  the top; Family and Settings are shown only to an admin, who alone may change them. From 52rem
+  a last tile are icons at the top; Family is shown only to an admin, who alone may change it.
+  The last tile opens a menu (a `<details>`, so it works with scripts off; `menu.js` closes it on
+  a click elsewhere or Escape): for an admin it is the Settings gear, and lists every page of
+  settings, then who is signed in, Your password and Sign out; anybody else sees their own name
+  on it and only those last three. Gathered there, they keep the bar to four icons however many
+  pages of settings there are, and puts the things about you beside the things about the page,
+  which is where people look for them. From 52rem
   everything is one bar that stays at the top while the page scrolls. The conversation's place
   goes by her name, with the conversation's icon; with no persona it is Chat. It is shown only to
   a role that may talk to her. Kept on a phone's home screen, the page opens full-screen, without
@@ -404,11 +410,22 @@ looked at (see "Two layers").
 - **Settings.** A card to each part, saying how it stands and marking in amber what needs a
   look; each part is a short page of its own, the others listed down the side where there is room
   (on a phone the way back is Settings, above the title), with one Save in a bar that stays in
-  reach while its form is on screen (one row above the tabs on a phone).
+  reach while its form is on screen (one row above the tabs on a phone). A box that offers a
+  list (each company's models, with their place in its lineup and their price; the chats the
+  weekend ideas can go to) is a real dropdown, since a phone barely shows a typed box's
+  suggestions, ending in "Another…", which opens a box under it to type one the list does not
+  have. The stylesheet shows that box only while "Another" is chosen (`:has()`); a browser
+  without it shows the box always, and it is read only when "Another" is chosen.
+  The General page ends with where the page is served and a guide to giving it a name, in
+  numbered steps with the commands to copy; typing the name fills it into them, and saves
+  nothing, since how the page is reached is the server's to change.
+  The Messages page opens with what she sends unasked: each kind as a light (on or off), when
+  it goes, what it costs and how often it went in the last month, with the way to its switch,
+  then the latest ones, each folded to one line that opens to the words she sent.
 - **Things to do** (an open task is ticked off where it stands), **Family**, **What she
   remembers** (each memory under whom it is about, with where it came from and a way to forget
   it; adding one, and what was forgotten, folded away below),
-  **Status** (three monitors, then the day's spend on a green screen beside the same in words),
+  **Status** (what needs an admin first, when anything does, edged in red, a model going or gone with a secondary button beside it to put the suggested one in, which posts the settings page's own form; then three monitors, then the day's spend on a green screen beside the same in words; Models and prices, a light for each list the daily check read, a table of what changed in the last thirty days, and the judgements, each with what it said and why and a secondary button to put in what waits or put back what it changed; for an admin, the week's activity, each line a link to that message's or lookup's history: what was said, every call as a row of figures, each tool folded to one line that opens to what it was given and gave back),
   **Sign in** (the mark's face on a green screen, then who you are and your password, or the one
   question while the family still shares a password), **For an admin** (the 404's console with
   403 on its face, for a page only an admin changes), **Not found** (a radar
@@ -435,10 +452,12 @@ looked at (see "Two layers").
 - Words on a green screen are at least 1.2rem; dim green phosphor is 5.8:1 at the tube's
   brightest, normal and bright more.
 - Reading, every form and sending a message work with scripts off; scripts add to that. Today
-  the one script is `static/ask.js`, the box's: it keeps what is being written, fills the box
+  there are two. `static/ask.js` is the box's: it keeps what is being written, fills the box
   from the ways to start, sends where the phone is, and looks again for an answer only while
   nobody is writing. Without it the ways to start are links, "Send where I am" is not shown,
   nothing typed is kept across a change of page, and the page looks again with a meta refresh.
+  `static/menu.js` closes the bar's menu on a click elsewhere or Escape; without it the menu
+  closes from its own button.
 
 ## What does not move
 

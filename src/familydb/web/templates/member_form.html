@@ -117,4 +117,24 @@
       {% endif %}
     {% endif %}
   </section>
+  {# For good, and so folded away, in red, behind a box to tick. Never yourself: another admin
+     takes you off, so nobody locks themselves out by a slip. #}
+  {% if not mine %}
+    <details class="panel fold danger-zone" id="remove">
+      <summary><span class="h2">Take {{ person.name }} off the list for good</span></summary>
+      <p class="muted">Their name, how they sign in, their Telegram link, where they last were and
+        what {{ assistant if has_persona else 'the bot' }} remembers about them are deleted. What
+        they said stays in the chat without their name, so conversations still read, and the
+        ideas, plans and things to do they added stay, as the family's. This cannot be undone:
+        to stop the bot answering them for now, switch them off above instead.</p>
+      <form method="post" action="{{ url_for('family.remove', member_id=person.id) }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+        <input type="hidden" name="once" value="{{ once_token() }}" />
+        <input type="hidden" name="revision" value="{{ person.revision }}" />
+        <label class="check"><input type="checkbox" name="sure" value="yes" required />I am sure: take
+          {{ person.name }} off for good</label>
+        <div class="actions"><button class="danger" type="submit">{{ icon('x') }}Take {{ person.name }} off</button></div>
+      </form>
+    </details>
+  {% endif %}
 {% endblock %}

@@ -186,6 +186,32 @@ EVENTS: dict[str, Event] = {
             "details": "Indoor play · hours saved for sat, sun · about 20 min away (estimate)",
         },
     ),
+    "lookups_done": Event(
+        "The evening's lookups, together",
+        "Looked up {count} ideas this evening:\n{found}",
+        ("count", "found"),
+        {
+            "count": 2,
+            "found": "• #31 Hopscotch: Indoor play · hours saved for sat, sun\n"
+            "• #32 Ramen Ryoma: Noodle bar · closed mon",
+        },
+    ),
+    "lookups_asked": Event(
+        "Answering /lookup",
+        "Looking up {count} now; I'll say here what I find.",
+        ("count",),
+        {"count": "3 ideas"},
+    ),
+    "lookups_none": Event(
+        "Answering /lookup with nothing waiting",
+        "Nothing is waiting to be looked up.",
+        (),
+    ),
+    "lookups_off": Event(
+        "Answering /lookup with lookups switched off",
+        "Looking ideas up on the web is switched off, on the settings page under Lookups.",
+        (),
+    ),
     "location_shared": Event(
         "A location shared on Telegram",
         'Got your location{where}. For the next 3 hours, "what\'s near here?" and "open now" '
@@ -199,6 +225,103 @@ EVENTS: dict[str, Event] = {
         "Ask again then, or raise the limit on the settings page.",
         ("limit",),
         {"limit": "2.00"},
+    ),
+    "alert_credit": Event(
+        "Telling an admin: a company is out of credit",
+        "{company} says the account is out of credit, so I can't ask it anything until it is "
+        "topped up with {company}. Another company's key on the settings page would let me carry "
+        "on meanwhile.",
+        ("company",),
+        {"company": "OpenAI"},
+    ),
+    "alert_key": Event(
+        "Telling an admin: a company refused the key",
+        "{company} refused my key, so I can't ask it anything. A new one can be pasted on the "
+        "settings page, under AI model.",
+        ("company",),
+        {"company": "OpenAI"},
+    ),
+    "alert_limit": Event(
+        "Telling an admin: the day's limit is used up",
+        "Today's spending limit (${limit}) is used up, so I'm not answering anyone until "
+        "tomorrow. It can be raised on the settings page, under Spending.",
+        ("limit",),
+        {"limit": "2.00"},
+    ),
+    "alert_calendar": Event(
+        "Telling an admin: Google shut me out",
+        "Google Calendar stopped letting me in, so plans aren't reaching the calendar. It can be "
+        "connected again on the settings page, under Connections.",
+        (),
+    ),
+    "alert_model": Event(
+        "Telling an admin: a model in use is going, or gone",
+        "A model I use is going away: {detail}. Another can be chosen on the settings page, "
+        "under AI model.",
+        ("detail",),
+        {"detail": "OpenAI retires gpt-6-luna on 2026-12-01, in 30 days"},
+    ),
+    "alert_price": Event(
+        "Telling an admin: a price changed",
+        "A price changed: {detail}. The spending limit counts the new one from now on.",
+        ("detail",),
+        {
+            "detail": "gpt-6-luna (OpenAI) now costs $0.12 in, $0.6 out a million tokens, was "
+            "$0.1 in, $0.5 out"
+        },
+    ),
+    "alert_prices": Event(
+        "Telling an admin: prices could not be checked",
+        "I couldn't check prices properly: {detail}. Costs are counted from the last good "
+        "prices meanwhile.",
+        ("detail",),
+        {"detail": "OpenRouter's price list could not be read for 3 days running"},
+    ),
+    "alert_new": Event(
+        "Telling an admin: new models to choose from",
+        "New models to choose from, {detail}. They're on the settings page, under AI model.",
+        ("detail",),
+        {"detail": "OpenAI: gpt-6-nova ($0.2 in, $1 out)"},
+    ),
+    "alert_shift": Event(
+        "Telling an admin: what the calls cost or do moved",
+        "Something changed in how I'm running this week: {detail}. The status page has the "
+        "figures.",
+        ("detail",),
+        {"detail": "answering the family costs 62% more a message ($0.004, was $0.0025)"},
+    ),
+    "alert_api": Event(
+        "Telling an admin: a company stopped taking part of a request",
+        "Heads up: {detail}. Everything still works; the status page has it.",
+        ("detail",),
+        {
+            "detail": "Anthropic no longer takes the refusal fallback for claude-opus-5, so it is "
+            "now left out and the rest works without it"
+        },
+    ),
+    "alert_refused": Event(
+        "Telling an admin: a company keeps refusing requests",
+        "{company} keeps refusing what I send it, for a reason I can't read: {detail}. "
+        "The status page has it; another model, or a newer FamilyDB, may be needed.",
+        ("company", "detail"),
+        {"company": "OpenAI", "detail": "API error 400: Unsupported parameter"},
+    ),
+    "alert_advice": Event(
+        "Telling an admin: what a judgement on the models said",
+        "I weighed a change in the models: {detail}. The status page has it, with a way to "
+        "put it back or put it in.",
+        ("detail",),
+        {
+            "detail": "claude-sonnet-5 put in place of claude-haiku-4-5, at the same cost or "
+            "less (Anthropic): the nearest in price that handles tools well"
+        },
+    ),
+    "kid_limit": Event(
+        "A kid's messages for the day used up",
+        "That's {limit} messages today, which is all for today. Ask me again tomorrow, or ask a "
+        "grown-up.",
+        ("limit",),
+        {"limit": 20},
     ),
     "limit_partial": Event(
         "The limit reached halfway through",
@@ -516,7 +639,11 @@ def hand_over(
     `FOLDABLE`, or a chat nobody is talking in, is delivered at once.
     """
     from familydb.delivery import deliver
+    from familydb.store.db import transaction
 
+    # Kept with the message, so the Messages page can say what went out unasked, and how often.
+    with transaction(conn):
+        messages.mark_sent_as(conn, message_id, event)
     now = app.clock.now()
     if event in FOLDABLE and _talking(conn, channel, chat_id, now):
         stored = messages.get(conn, message_id)

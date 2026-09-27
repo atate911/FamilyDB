@@ -302,3 +302,46 @@ def test_a_retried_group_message_is_still_told_who_reads_it(settings, clock, con
         "This is the family's group chat: everyone in it reads your reply, kids among them.",
         "[Sam] hi all",
     ]
+
+
+def test_a_kid_has_as_many_answers_a_day_as_the_family_allows(settings, clock, conn, family):
+    """Counted per kid, per family day, only for messages a model answered; past the number she
+    says so in her own words, with no model call, and the message is not retried."""
+    from datetime import timedelta
+
+    from familydb.clock import FixedClock
+    from familydb.store import db, members
+    from tests.conftest import NOW_ISO
+
+    with db.transaction(conn):
+        members.add(conn, "Mia", "kid", channel="telegram", channel_user_id="1003", now=NOW_ISO)
+    limited = settings.model_copy(update={"kid_daily_messages": 2})
+    app = _app(limited, clock)
+    api = fakes.FakeMessagesAPI(*(fakes.message([fakes.text(f"answer {n}")]) for n in range(5)))
+    kid = [
+        handle_incoming(app, _telegram(f"q{n}", f"k{n}", "1003"), api=api, conn=conn)
+        for n in (1, 2)
+    ]
+    assert [reply.text for reply in kid] == ["answer 0", "answer 1"]
+
+    over = handle_incoming(app, _telegram("q3", "k3", "1003"), api=api, conn=conn)
+    assert over.status == "failed"
+    assert over.text == voice.say(limited, "kid_limit", seed=over.in_message_id, limit=2)
+    assert len(api.requests) == 2  # nothing asked of a model
+    stored = messages.get(conn, over.in_message_id)
+    assert stored.text == "q3" and stored.give_up and stored.error == "kid_daily_limit"
+
+    # A grown-up is not counted, and the next day the kid starts again.
+    assert (
+        handle_incoming(app, _telegram("hi", "p1", "1002"), api=api, conn=conn).text == "answer 2"
+    )
+    tomorrow = _app(
+        limited, FixedClock(clock.now().replace(tzinfo=None) + timedelta(days=1), clock.tz)
+    )
+    again = handle_incoming(tomorrow, _telegram("q4", "k4", "1003"), api=api, conn=conn)
+    assert again.text == "answer 3"
+    # No number, no limit.
+    free = _app(
+        settings, FixedClock(clock.now().replace(tzinfo=None) + timedelta(days=1), clock.tz)
+    )
+    assert handle_incoming(free, _telegram("q5", "k5", "1003"), api=api, conn=conn).status == "ok"

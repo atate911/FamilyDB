@@ -7,8 +7,10 @@ once shortly after start costs nothing when they already ran.
 from __future__ import annotations
 
 import logging
+from contextlib import closing
 from typing import Any
 
+from familydb import model_watch
 from familydb.agent.loop import MessagesAPI
 from familydb.app import App
 from familydb.availability import digest_configured
@@ -52,5 +54,14 @@ def run_catch_up(app: App, *, api: MessagesAPI | None = None) -> dict[str, Any]:
     if digest_due(app):
         reply = run_digest(app, api=api)
         result["digest"] = "skipped" if reply is None else reply.status
+    # Models and prices, when a day has passed since the last check (or there never was one).
+    if app.settings.model_watch:
+        with closing(app.connect()) as conn:
+            watch_due = model_watch.due(conn, app.clock.now())
+        if watch_due:
+            try:
+                result["models"] = model_watch.check(app)
+            except Exception:
+                log.exception("the check of models and prices failed on start")
     log.info("catch-up on start: %s", result)
     return result

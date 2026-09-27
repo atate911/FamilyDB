@@ -19,7 +19,7 @@ from typing import Any
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
-from familydb import windows
+from familydb import alerts, windows
 from familydb.agenda import Entry
 from familydb.agent.providers import catalog, prices
 from familydb.config import Settings
@@ -63,7 +63,8 @@ ROLE_WORDS = {
     "admin": "looks after it: the settings, setup, and who is on the family list. There is "
     "always at least one.",
     "parent": "uses all the rest: chat, ideas, plans and things to do.",
-    "kid": "is in the plans; for now, with a password, may do whatever a parent may.",
+    "kid": "is in the plans; with a password, may do whatever a parent may, within the number of "
+    "messages a day set under Spending.",
 }
 # What somebody is told when their role may not go somewhere, by the permission it needs. The
 # conversation is hers, so it goes by her name: {name} is the persona in force.
@@ -810,6 +811,227 @@ def tools_used(actions: Any) -> list[str]:
     return seen
 
 
+# What needs an admin, by kind (familydb/alerts.py), as the status page heads it.
+ALERT_TITLES = {
+    "credit": "{company} is out of credit",
+    "key": "{company} refused its key",
+    "limit": "The day's spending limit was used up",
+    "calendar": "Google Calendar stopped letting the bot in",
+    "model": "A model in use is going, or has gone",
+    "price": "The price of a model in use changed",
+    "prices": "The price lists need a look",
+    "new": "New models to choose from",
+    "shift": "What the calls cost or do moved",
+    "api": "A company stopped taking part of a request",
+    "refused": "{company} is refusing requests",
+    "advice": "A judgement on the models",
+}
+# Kinds whose detail says what happened: shown with the row.
+SAID_IN_DETAIL = frozenset({"model", "price", "prices", "new", "shift", "api", "refused", "advice"})
+COMPANY_WORDS = {"openai": "OpenAI", "anthropic": "Anthropic", "gemini": "Google Gemini"}
+
+
+def alert_row(alert: Any, tz: ZoneInfo, *, telling: bool, admins: int) -> dict[str, Any]:
+    """One trouble as a light on the status page: what it is, since when, and who was told."""
+    title = ALERT_TITLES.get(alert.kind, alert.kind).format(
+        company=COMPANY_WORDS.get(alert.subject, alert.subject)
+    )
+    seen = f"since {local_moment(alert.first_at, tz)}"
+    if alert.times > 1:
+        seen += f", {alert.times} times, last {local_moment(alert.last_at, tz)}"
+    if alert.told_at:
+        told = f"admins told on Telegram {local_moment(alert.told_at, tz)}"
+    elif not telling:
+        told = "telling admins is switched off (Settings, Messages)"
+    elif not admins:
+        told = "no admin has a Telegram id to be told on"
+    else:
+        told = "admins are told on Telegram within a minute"
+    detail = f"{seen}; {told}."
+    if alert.kind in SAID_IN_DETAIL and alert.detail:
+        detail = f"{alert.detail}. {detail[:1].upper()}{detail[1:]}"
+    return {"label": title, "detail": detail, "on": False}
+
+
+SOURCE_WORDS = {
+    "litellm": "LiteLLM's price list",
+    "openrouter": "OpenRouter's price list",
+}
+CHANGE_WORDS = {
+    "new": "new, {after}",
+    "gone": "no longer offered to the key",
+    "back": "offered to the key again",
+    "price": "{before} → {after} a million tokens",
+    "retiring": "goes on {after}",
+}
+
+
+def source_row(source: Any, tz: ZoneInfo) -> dict[str, Any]:
+    """Where the daily check of models and prices reads, as a light: when, and how it went."""
+    company = COMPANY_WORDS.get(source.source)
+    label = SOURCE_WORDS.get(source.source) or f"{company or source.source}'s list for the key"
+    when = local_moment(source.checked_at, tz)
+    if source.ok:
+        return {"label": label, "detail": f"Read {when}: {source.note}.", "on": True}
+    running = f", {source.failures} checks running" if source.failures > 1 else ""
+    detail = f"Could not be read {when}{running}: {source.note}."
+    return {"label": label, "detail": detail, "on": False}
+
+
+JUDGEMENT_TITLES = {
+    "replacement": "Which model should take {model}'s place",
+    "refused": "What {company}'s refusal means",
+    "lineup": "Which {company} models belong at each level",
+    "price": "What {model} really costs",
+}
+
+
+def judgement_row(question: Any, tz: ZoneInfo, live: Any) -> dict[str, Any]:
+    """One question a judgement was asked, as the Status page lists it: what, when, what it
+    said and what came of it, and the settings its buttons would save: what waits for an admin,
+    while it is not in force, and what it changed, while that still is."""
+    facts = question.facts
+    title = JUDGEMENT_TITLES.get(question.kind, question.kind).format(
+        model=facts.get("model", ""),
+        company=COMPANY_WORDS.get(facts.get("company", ""), facts.get("company", "")),
+    )
+    if question.answered_at is None:
+        when = "asked with the evening's lookups" if not question.urgent else "being asked"
+        return {"label": title, "detail": f"Filed {local_moment(question.asked_at, tz)}; {when}."}
+    answer = question.answer or {}
+
+    def in_force(values: dict[str, str]) -> bool:
+        return all(str(getattr(live, key, "") or "") == value for key, value in values.items())
+
+    waiting = answer.get("waiting") or {}
+    undo = answer.get("undo") or {}
+    put_in = {key: getattr(live, key, "") for key in undo}
+    said = f"{question.outcome}." + (f" Why: {question.reason}" if question.reason else "")
+    return {
+        "label": title,
+        "detail": f"{local_moment(question.answered_at, tz)}: {said}",
+        "on": True,
+        "waiting": waiting if waiting and not in_force(waiting) else {},
+        # Put back only while what it put in is still what is in force.
+        "undo": undo if undo and all(put_in.values()) and in_force(put_in) else {},
+    }
+
+
+def model_change_row(change: Any, tz: ZoneInfo) -> dict[str, str]:
+    """One thing the daily check found changed, for the status page's table."""
+    what = CHANGE_WORDS.get(change.what, change.what)
+    return {
+        "when": local_moment(change.at, tz),
+        "company": COMPANY_WORDS.get(change.provider, change.provider),
+        "model": change.model,
+        "what": what.format(before=change.before or "?", after=change.after or "?"),
+    }
+
+
+# Each kind of message she sends of her own accord, as the Messages page lists them: the group
+# on that page where it is switched (none for reminders, which somebody asked for), what sending
+# it costs, and which of her lines (voice.EVENTS, or "digest") are its messages.
+AUTOMATIC = (
+    ("weekend", "weekend", "Weekend ideas", "one model call a week", ("digest",)),
+    ("reminders", "", "Reminders", "free", ("reminder", "reminder_late")),
+    ("follow_ups", "others", "How did it go?", "free", ("follow_up",)),
+    (
+        "checks",
+        "others",
+        "Tomorrow's plans, checked",
+        "free",
+        ("plan_rain", "plan_closed", "plan_backup"),
+    ),
+    ("nudges", "others", "A task brought up", "free", ("nudge",)),
+    (
+        "lookups",
+        "others",
+        "What a lookup found",
+        "free to send; each lookup is a small model call",
+        ("lookup_done", "lookups_done"),
+    ),
+    (
+        "alerts",
+        "admins",
+        "What needs fixing, to admins",
+        "free",
+        tuple(f"alert_{kind}" for kind in alerts.KINDS),
+    ),
+)
+AUTOMATIC_BY_EVENT = {event: title for _, _, title, _, events in AUTOMATIC for event in events}
+
+
+def chat_words(conn_chat: str, member_name: str | None) -> str:
+    """Which chat a message went to, as the page says it."""
+    if conn_chat == "web":
+        return "the chat on this page"
+    if conn_chat.startswith("-"):
+        return "a Telegram group"
+    return f"Telegram, {member_name}" if member_name else "Telegram"
+
+
+# A tool's input or answer is cut here on the history page; the log keeps it whole.
+MAX_SHOWN = 4000
+ASKED_WORDS = 90
+
+
+def pretty_json(text: str | None) -> str:
+    """A tool's input or answer, laid out to be read."""
+    if not text:
+        return ""
+    try:
+        shown = json.dumps(json.loads(text), indent=2, ensure_ascii=False, sort_keys=True)
+    except ValueError:
+        shown = text
+    return shown if len(shown) <= MAX_SHOWN else shown[:MAX_SHOWN] + "\n…"
+
+
+def asked_line(text: str, who: str) -> str:
+    """A message as a line of the status page's history: who, and the start of what they said."""
+    words = " ".join(as_said(text).split())
+    if len(words) > ASKED_WORDS:
+        words = words[: ASKED_WORDS - 1].rstrip() + "…"
+    return f"{who}: {words}"
+
+
+def found_by_lookup(tool: dict[str, Any]) -> dict[str, Any] | None:
+    """What a lookup saved (save_place) or why it gave up (skip_place), as the page shows it."""
+    try:
+        given = json.loads(tool.get("input") or "{}")
+    except ValueError:
+        return None
+    if tool.get("tool_name") == "skip_place":
+        return {"idea_id": given.get("idea_id"), "skipped": given.get("reason") or "no reason"}
+    if tool.get("tool_name") != "save_place":
+        return None
+    hours = [
+        f"{row.get('day')} {row.get('open')}-{row.get('close')}"
+        for row in given.get("hours") or []
+        if isinstance(row, dict)
+    ]
+    return {
+        "idea_id": given.get("idea_id"),
+        "name": given.get("name"),
+        "summary": given.get("summary"),
+        "address": given.get("address"),
+        "website": clean_url(given.get("website")),
+        "booking_url": clean_url(given.get("booking_url")),
+        "phone": given.get("phone"),
+        "hours": hours,
+        "closed": given.get("closed_days") or [],
+        "price_note": given.get("price_note"),
+        "sources": [url for url in (clean_url(s) for s in given.get("source_urls") or []) if url],
+        "saved": not tool.get("is_error"),
+    }
+
+
+def lookups_when(settings: Any) -> str:
+    """When ideas waiting are looked up, as the page says it."""
+    if settings.lookups_when == "asap":
+        return "as soon as each is added"
+    return f"together at {settings.lookup_hour:02d}:00 each evening"
+
+
 def local_moment(value: str, tz: ZoneInfo) -> str:
     """A stored UTC instant as the day and time it was where the family lives."""
     try:
@@ -849,11 +1071,11 @@ def price_text(price: prices.Price | None) -> str | None:
 
 def model_offer(provider: str, name: str) -> str:
     """A model name as a box offers it: what it is called, where it stands in its company's
-    lineup, and what it costs. Only the price, for one the lineup does not list."""
+    lineup, what it costs, and whether it is new or going (the daily check's word on it)."""
     known = catalog.known(provider, name)
     said = f"{known.label}, {known.level}" if known else ""
     cost = price_text(prices.price(provider, name))
-    return " · ".join(part for part in (said, cost) if part)
+    return " · ".join(part for part in (said, cost, prices.note(provider, name)) if part)
 
 
 def level_choice(level: str, provider: str, name: str) -> str:

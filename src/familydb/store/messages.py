@@ -103,6 +103,9 @@ class Message(BaseModel):
     delivered_at: str | None = None
     cancelled_at: str | None = None
     buttons: list[dict[str, str]] | None = None
+    # Which kind of message she sent of her own accord (a voice event, or "digest"); None for
+    # a reply or a message in.
+    sent_as: str | None = None
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> Message:
@@ -149,6 +152,7 @@ def insert_out(
     reply_to: int | None = None,
     now: str | None = None,
     buttons: list[dict[str, str]] | None = None,
+    sent_as: str | None = None,
 ) -> Message:
     stamp = now or utcnow_iso()
     row = {
@@ -163,6 +167,8 @@ def insert_out(
     }
     if buttons:  # named only when there are some, so a database before 0021 can still be written
         row["buttons"] = to_json(buttons)
+    if sent_as:  # the same, for 0029
+        row["sent_as"] = sent_as
     cur = conn.execute(
         f"INSERT INTO messages ({', '.join(row)}) VALUES ({', '.join('?' * len(row))})",
         tuple(row.values()),
@@ -230,6 +236,94 @@ def last_inbound_at(conn: sqlite3.Connection, channel: str, chat_id: str) -> str
         (channel, chat_id),
     ).fetchone()
     return row["at"] if row else None
+
+
+def replies_to(conn: sqlite3.Connection, message_id: int) -> list[Message]:
+    """What was said back to a message, in order."""
+    rows = conn.execute(
+        "SELECT * FROM messages WHERE reply_to = ? AND direction = 'out' ORDER BY id", (message_id,)
+    ).fetchall()
+    return [Message.from_row(row) for row in rows]
+
+
+def gathering(
+    conn: sqlite3.Connection,
+    chat_id: str,
+    member_id: int,
+    *,
+    now: str,
+    after: int | None = None,
+    before: int | None = None,
+) -> list[Message]:
+    """Messages from one person in one chat waiting to be answered together (pipeline.receive),
+    newer or older than one of them, oldest first. One whose hold has lapsed is the retry
+    job's, not part of a burst any more."""
+    sql = (
+        "SELECT * FROM messages WHERE direction = 'in' AND chat_id = ? AND member_id = ? "
+        "AND status = 'received' AND give_up = 0 AND claim_token = 'gather' AND claim_until > ?"
+    )
+    params: list[Any] = [chat_id, member_id, now]
+    if after is not None:
+        sql += " AND id > ?"
+        params.append(after)
+    if before is not None:
+        sql += " AND id < ?"
+        params.append(before)
+    rows = conn.execute(sql + " ORDER BY id", params).fetchall()
+    return [Message.from_row(row) for row in rows]
+
+
+def fold_into(conn: sqlite3.Connection, message_ids: list[int], into: int, *, now: str) -> None:
+    """The earlier messages of a burst, answered as part of a later one: done with as themselves,
+    and pointing at it (reply_to), so that its reply, or a retry of it, answers them too. Call
+    inside a transaction."""
+    conn.executemany(
+        "UPDATE messages SET status = 'processed', processed_at = ?, reply_to = ? WHERE id = ?",
+        [(now, into, message_id) for message_id in message_ids],
+    )
+
+
+def folded_into(conn: sqlite3.Connection, message_id: int) -> list[Message]:
+    """The earlier messages of a burst folded into this one, oldest first."""
+    rows = conn.execute(
+        "SELECT * FROM messages WHERE direction = 'in' AND reply_to = ? ORDER BY id",
+        (message_id,),
+    ).fetchall()
+    return [Message.from_row(row) for row in rows]
+
+
+def cancel_unsent(conn: sqlite3.Connection, channel: str, chat_id: str, *, now: str) -> int:
+    """Stop everything stored for a chat and not sent yet from going. Call inside a transaction."""
+    return conn.execute(
+        "UPDATE messages SET cancelled_at = ? WHERE direction = 'out' AND channel = ? "
+        "AND chat_id = ? AND delivered_at IS NULL AND cancelled_at IS NULL",
+        (now, channel, chat_id),
+    ).rowcount
+
+
+def mark_sent_as(conn: sqlite3.Connection, message_id: int, kind: str) -> None:
+    """Say which kind of message she sent of her own accord (voice.hand_over)."""
+    conn.execute("UPDATE messages SET sent_as = ? WHERE id = ?", (kind, message_id))
+
+
+def sent_on_their_own(conn: sqlite3.Connection, *, since: str, limit: int) -> list[Message]:
+    """What she sent of her own accord since a moment, newest first."""
+    rows = conn.execute(
+        "SELECT * FROM messages WHERE sent_as IS NOT NULL AND received_at >= ? "
+        "ORDER BY received_at DESC, id DESC LIMIT ?",
+        (since, limit),
+    ).fetchall()
+    return [Message.from_row(row) for row in rows]
+
+
+def sent_on_their_own_counts(conn: sqlite3.Connection, *, since: str) -> dict[str, tuple[int, str]]:
+    """How many of each kind she sent of her own accord since a moment, and the last one's time."""
+    rows = conn.execute(
+        "SELECT sent_as, count(*) AS n, max(received_at) AS last FROM messages "
+        "WHERE sent_as IS NOT NULL AND received_at >= ? GROUP BY sent_as",
+        (since,),
+    ).fetchall()
+    return {row["sent_as"]: (int(row["n"]), row["last"]) for row in rows}
 
 
 def mark_delivered(conn: sqlite3.Connection, message_ids: list[int], *, now: str) -> None:
