@@ -839,6 +839,16 @@ other way round: Caddy is reached, and FamilyDB behind it is not serving.
 
 ### Google will not connect from the page
 
+The page names the usual causes as it meets them:
+
+- *"tick every box"*: Google's page lists each permission with a box beside it, and may show
+  them unticked. Start again and tick them all, or Select all.
+- *"no secret in it"*: the client's JSON was downloaded from the list of clients after it was
+  made. Google shows the secret only in the box that opens when a client is made, so make
+  another client of type Desktop app and press Download JSON in that box.
+- It worked for a week, then stopped: the sign-in screen is still in Testing. Publish it
+  (Google Auth Platform, Audience, Publish app) and connect again.
+
 Connecting Google Calendar from the page has not yet been tried against a live Google account. If
 it will not connect, do the sign-in on a computer with a browser instead, from a copy of the
 code, and copy the token it writes to the server: RUNBOOK section 5 has the commands. Check it

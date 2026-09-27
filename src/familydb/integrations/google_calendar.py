@@ -216,12 +216,26 @@ def run_auth_flow(client_secrets: Path, token_path: Path) -> Any:
 CONSENT_RETURN = "http://127.0.0.1:53682/"
 NOT_JSON = "That is not the file Google gave you: it should be JSON, starting with {."
 WEB_CLIENT = (
-    "That client is of type Web application. Create one of type Desktop app in Google Cloud "
-    "(Credentials, Create credentials, OAuth client ID) and paste that one instead."
+    "That client is of type Web application. In Google Cloud, under Google Auth Platform, "
+    "Clients, make one of type Desktop app and paste that one instead."
 )
 NO_CLIENT = (
-    "That JSON has no OAuth client in it. Download it from the client's page in Google Cloud."
+    "That JSON has no OAuth client in it. Paste the file Google offered when the client was made."
 )
+# Google shows a client's secret once, in the box that opens when the client is made; a JSON
+# downloaded later from the list of clients has none, and the token cannot be had without it.
+NO_SECRET = (
+    "That file has no secret in it: Google shows a client's secret only in the box that opens "
+    "when the client is made. Make another client of type Desktop app and press Download JSON "
+    "in that box."
+)
+# Google's page lets each permission be ticked on its own, and may show them unticked: both are
+# needed, one to put plans on the calendar and one to list the calendars.
+PARTLY = (
+    "Google was given only part of what is needed. On Google's page, tick every box (or Select "
+    "all) before pressing Continue. Start again."
+)
+REFUSED = "Access was not allowed on Google's page. Start again and allow it."
 NO_CODE = "There is no code in that. Paste the whole address the browser was sent to."
 MIXED_UP = "That address belongs to an earlier try. Start again and use the newest link."
 
@@ -240,6 +254,9 @@ def client_config(text: str) -> dict[str, Any]:
         raise GoogleSetupError(NOT_JSON)
     if "installed" not in config:
         raise GoogleSetupError(WEB_CLIENT if "web" in config else NO_CLIENT)
+    installed = config["installed"]
+    if not isinstance(installed, dict) or not installed.get("client_secret"):
+        raise GoogleSetupError(NO_SECRET)
     return config
 
 
@@ -261,7 +278,10 @@ def finish_consent(flow: Any, pasted: str, token_path: Path, *, state: str | Non
     if pasted.startswith(("http://", "https://")):
         query = parse_qs(urlsplit(pasted).query)
         if "error" in query:
-            raise GoogleSetupError(f"Google said: {query['error'][0]}. Start again.")
+            said = query["error"][0]
+            raise GoogleSetupError(
+                REFUSED if said == "access_denied" else f"Google said: {said}. Start again."
+            )
         if state and query.get("state", [state])[0] != state:
             raise GoogleSetupError(MIXED_UP)
         code = (query.get("code") or [""])[0]
@@ -269,6 +289,11 @@ def finish_consent(flow: Any, pasted: str, token_path: Path, *, state: str | Non
         raise GoogleSetupError(NO_CODE)
     try:
         flow.fetch_token(code=code)
+    except Warning as exc:
+        # oauthlib's way of saying Google granted fewer scopes than were asked for.
+        if getattr(exc, "new_scope", None) is not None:
+            raise GoogleSetupError(PARTLY) from exc
+        raise GoogleSetupError(f"Google would not take that code ({exc}). Start again.") from exc
     except Exception as exc:  # oauthlib raises a family of its own; each means the same here
         raise GoogleSetupError(f"Google would not take that code ({exc}). Start again.") from exc
     creds = flow.credentials

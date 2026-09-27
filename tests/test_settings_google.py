@@ -118,8 +118,34 @@ def test_an_address_from_an_earlier_try_is_refused(tmp_path) -> None:
 
 
 def test_google_saying_no_is_passed_on(tmp_path) -> None:
-    with pytest.raises(google.GoogleSetupError, match="access_denied"):
+    with pytest.raises(google.GoogleSetupError, match="not allowed on Google's page"):
         google.finish_consent(Flow(), "http://127.0.0.1:53682/?error=access_denied", tmp_path)
+    with pytest.raises(google.GoogleSetupError, match="Google said: server_error"):
+        google.finish_consent(Flow(), "http://127.0.0.1:53682/?error=server_error", tmp_path)
+
+
+def test_a_permission_left_unticked_says_to_tick_them_all(tmp_path) -> None:
+    """Google's page lets each permission be ticked on its own; oauthlib says a grant came back
+    smaller than asked with a Warning, which is put in the family's words."""
+
+    class Partly(Flow):
+        def fetch_token(self, *, code: str) -> None:
+            granted = Warning('Scope has changed from "a b" to "a".')
+            granted.old_scope, granted.new_scope = ["a", "b"], ["a"]
+            raise granted
+
+    with pytest.raises(google.GoogleSetupError, match="tick every box"):
+        google.finish_consent(Partly(), "http://127.0.0.1:53682/?code=c", tmp_path / "t.json")
+    assert not (tmp_path / "t.json").exists()
+
+
+def test_a_client_with_no_secret_is_explained(page) -> None:
+    """Google shows a client's secret only when it is made; a JSON downloaded later has none."""
+    later = json.dumps({"installed": {"client_id": "123.apps.googleusercontent.com"}})
+    response = page.post("/settings/google/start", data={"csrf": _token(page), "client": later})
+    assert response.status_code == 400 and "Download JSON" in response.text
+    with pytest.raises(google.GoogleSetupError, match="no secret"):
+        google.client_config(later)
 
 
 def test_a_code_google_rejects_saves_nothing(tmp_path) -> None:
