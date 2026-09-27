@@ -386,10 +386,10 @@ cmd_port() {
   head2 "FamilyDB's own port"
   [ -n "$APP_PORT" ] || die "which port?" "Usage: ${0} port N, with N from 1025 to 65535, or random"
   as_root test -f "${TARGET}/.env" || die "there is no ${TARGET}/.env" "Run the installer first."
-  local now public chosen followed=0 site host
+  local now served chosen followed=0 site host
   now="$(env_file_value WEB_PORT)"; now="${now:-8080}"
-  public="$(env_file_value WEB_PUBLIC_PORT)"; public="${public:-443}"
-  chosen="$(choose_app_port "$APP_PORT" "$public" "$now")" \
+  served="$(env_file_value WEB_PUBLIC_PORT)"; served="${served:-443}"
+  chosen="$(choose_app_port "$APP_PORT" "$served" "$now")" \
     || die "that port will not do" "Give it a number from 1025 to 65535, or random."
   if [ "$chosen" = "$now" ]; then
     ok "FamilyDB already listens on port ${now}. Nothing to do."
@@ -428,7 +428,7 @@ cmd_port() {
   site="$(env_file_value WEB_DOMAIN)"
   host="$(env_file_value WEB_HOST)"; host="${host:-127.0.0.1}"
   if [ -n "$site" ]; then
-    PUBLIC_PORT="$public"
+    PUBLIC_PORT="$served"
     say "The page is still at ${B}$(public_url "$site")${OFF}: only the port behind Caddy moved."
     if [ "$followed" = 2 ] && [ "$DOCKER_MODE" = 0 ]; then
       warn "No Caddyfile here passed the page on to port ${now}, so none was changed."

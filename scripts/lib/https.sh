@@ -130,7 +130,8 @@ choose_public_port() { # choose_public_port WANTED APP_PORT - a port to serve on
 }
 
 choose_app_port() { # choose_app_port WANTED PUBLIC_PORT NOW - a port for FamilyDB itself, or why not
-  local wanted="$1" public="$2" now="$3"
+  # Not "public": shellcheck would read the word public-ip elsewhere here as sums on it (SC2100).
+  local wanted="$1" served="$2" now="$3"
   case "$wanted" in
     random) random_public_port || { printf 'no free port turned up at random; name one' >&2; return 1; }; return 0 ;;
     ''|*[!0-9]*) printf '%s is not a port number' "$wanted" >&2; return 1 ;;
@@ -142,7 +143,7 @@ choose_app_port() { # choose_app_port WANTED PUBLIC_PORT NOW - a port for Family
     printf 'a port for FamilyDB itself is one from 1025 to 65535' >&2
     return 1
   fi
-  if [ "$wanted" = "$public" ]; then
+  if [ "$wanted" = "$served" ]; then
     printf 'port %s is where Caddy serves the page; choose another' "$wanted" >&2
     return 1
   fi
