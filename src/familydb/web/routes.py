@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from contextlib import closing
 from datetime import date, timedelta
 from typing import Any
@@ -52,6 +53,8 @@ HOME_IDEAS = 4
 HOME_TASKS = 4
 PLANS_AHEAD_DAYS = 90
 PLANS_BEHIND_DAYS = 30
+# The page's charcoal: `--bg` in style.css and the theme colour in base.html.
+CHARCOAL = "#0b0e0d"
 
 
 def _app() -> App:
@@ -77,6 +80,39 @@ def _choices(rows: list[Any]) -> tuple[list[str], list[str]]:
 def healthz() -> Response:
     """A plain-text liveness check for a monitor or a reverse proxy. No password needed."""
     return Response("ok\n", mimetype="text/plain")
+
+
+@bp.get("/manifest.webmanifest")
+def manifest() -> Response:
+    """What a phone needs to keep the page on its home screen as an app: its name, that it opens
+    without the browser's bars, where it starts, its colours and its icons.
+
+    No password needed: a phone asks for it without the page's cookie, as it does the icons, and
+    it says nothing the sign-in page does not.
+    """
+    title = _app().settings.web_title
+    small, large = (
+        url_for("static", filename="icon-192.png"),
+        url_for("static", filename="icon-512.png"),
+    )
+    icons = [
+        {"src": small, "sizes": "192x192"},
+        {"src": large, "sizes": "512x512"},
+        # The same picture for round masks, which leave its margin alone.
+        {"src": large, "sizes": "512x512", "purpose": "maskable"},
+    ]
+    body = {
+        "name": title,
+        "short_name": title,
+        "id": "/",
+        "start_url": "/",
+        "scope": "/",
+        "display": "standalone",
+        "background_color": CHARCOAL,
+        "theme_color": CHARCOAL,
+        "icons": [{**icon, "type": "image/png"} for icon in icons],
+    }
+    return Response(json.dumps(body, sort_keys=True), mimetype="application/manifest+json")
 
 
 @bp.get("/status")
