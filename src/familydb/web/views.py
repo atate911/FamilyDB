@@ -882,6 +882,61 @@ def chat_words(conn_chat: str, member_name: str | None) -> str:
     return f"Telegram, {member_name}" if member_name else "Telegram"
 
 
+# A tool's input or answer is cut here on the history page; the log keeps it whole.
+MAX_SHOWN = 4000
+ASKED_WORDS = 90
+
+
+def pretty_json(text: str | None) -> str:
+    """A tool's input or answer, laid out to be read."""
+    if not text:
+        return ""
+    try:
+        shown = json.dumps(json.loads(text), indent=2, ensure_ascii=False, sort_keys=True)
+    except ValueError:
+        shown = text
+    return shown if len(shown) <= MAX_SHOWN else shown[:MAX_SHOWN] + "\n…"
+
+
+def asked_line(text: str, who: str) -> str:
+    """A message as a line of the status page's history: who, and the start of what they said."""
+    words = " ".join(as_said(text).split())
+    if len(words) > ASKED_WORDS:
+        words = words[: ASKED_WORDS - 1].rstrip() + "…"
+    return f"{who}: {words}"
+
+
+def found_by_lookup(tool: dict[str, Any]) -> dict[str, Any] | None:
+    """What a lookup saved (save_place) or why it gave up (skip_place), as the page shows it."""
+    try:
+        given = json.loads(tool.get("input") or "{}")
+    except ValueError:
+        return None
+    if tool.get("tool_name") == "skip_place":
+        return {"idea_id": given.get("idea_id"), "skipped": given.get("reason") or "no reason"}
+    if tool.get("tool_name") != "save_place":
+        return None
+    hours = [
+        f"{row.get('day')} {row.get('open')}-{row.get('close')}"
+        for row in given.get("hours") or []
+        if isinstance(row, dict)
+    ]
+    return {
+        "idea_id": given.get("idea_id"),
+        "name": given.get("name"),
+        "summary": given.get("summary"),
+        "address": given.get("address"),
+        "website": clean_url(given.get("website")),
+        "booking_url": clean_url(given.get("booking_url")),
+        "phone": given.get("phone"),
+        "hours": hours,
+        "closed": given.get("closed_days") or [],
+        "price_note": given.get("price_note"),
+        "sources": [url for url in (clean_url(s) for s in given.get("source_urls") or []) if url],
+        "saved": not tool.get("is_error"),
+    }
+
+
 def lookups_when(settings: Any) -> str:
     """When ideas waiting are looked up, as the page says it."""
     if settings.lookups_when == "asap":

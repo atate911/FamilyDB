@@ -259,6 +259,44 @@ def troubles(conn: sqlite3.Connection, since: str, tz: Any) -> dict[str, Any]:
     }
 
 
+ACTIVITY_DAYS = 7
+ACTIVITY_SHOWN = 25
+
+
+def activity(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    """What the models were asked lately, newest first, each line opening its history in full
+    (web/activity.py): a message answered, with what a lookup it started cost, or a lookup."""
+    tz = app.settings.tzinfo
+    since = utc_iso(app.clock.now() - timedelta(days=ACTIVITY_DAYS))
+    names = {person.id: person.display_name for person in members.list_all(conn, active_only=False)}
+    rows = []
+    for row in calls.activity_since(conn, since=since, limit=ACTIVITY_SHOWN):
+        kinds = [kind for kind in (row["kinds"] or "").split(",") if kind]
+        what = ", ".join(dict.fromkeys(gateway.purpose(kind) for kind in kinds))
+        asked = messages.get(conn, row["message_id"]) if row["message_id"] is not None else None
+        if "digest" in kinds:
+            title = "Weekend ideas"
+        elif asked is not None:
+            title = views.asked_line(asked.text, names.get(asked.member_id or -1, "someone"))
+        elif "enrich" in kinds and row["about"]:
+            title = f"Looking up {row['about']}"
+        else:
+            title = row["about"] or what or "a model call"
+        rows.append(
+            {
+                "key": row["key"],
+                "when": views.local_moment(row["started"], tz),
+                "title": title,
+                "what": what,
+                "calls": row["calls"],
+                "tokens": row["sent"] + row["back"],
+                "searches": row["searches"],
+                "cost": row["cost_usd"],
+            }
+        )
+    return rows
+
+
 def attention(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
     """What only an admin can fix, while it lasts (familydb/alerts.py)."""
     now = app.clock.now()
@@ -291,6 +329,8 @@ def status(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
         },
         "troubles": troubles(conn, since, tz),
         "attention": attention(app, conn),
+        "activity": activity(app, conn),
+        "activity_days": ACTIVITY_DAYS,
     }
 
 

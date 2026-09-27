@@ -27,10 +27,11 @@ def log_tool_call(
     is_error: bool,
     duration_ms: int | None,
     now: str | None = None,
+    turn: str | None = None,
 ) -> int:
     cur = conn.execute(
         "INSERT INTO tool_calls (message_id, iteration, tool_use_id, tool_name, input, output, "
-        "is_error, duration_ms, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "is_error, duration_ms, created_at, turn) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             message_id,
             iteration,
@@ -41,6 +42,7 @@ def log_tool_call(
             int(is_error),
             duration_ms,
             now or utcnow_iso(),
+            turn,
         ),
     )
     return int(cur.lastrowid or 0)
@@ -63,14 +65,16 @@ def log_llm_call(
     cost_estimated: bool = False,
     kind: str | None = None,
     sections: dict[str, int] | None = None,
+    turn: str | None = None,
+    about: str | None = None,
 ) -> int:
     usage = usage or {}
     cur = conn.execute(
         "INSERT INTO llm_calls (message_id, iteration, model, served_model, request_id, "
         "stop_reason, input_tokens, cache_creation_input_tokens, cache_read_input_tokens, "
         "output_tokens, duration_ms, created_at, provider, web_searches, cost_usd, "
-        "cost_estimated, kind, sections) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "cost_estimated, kind, sections, turn, about) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             message_id,
             iteration,
@@ -87,6 +91,8 @@ def log_llm_call(
             int(cost_estimated),
             kind,
             to_json(sections) if sections is not None else None,
+            turn,
+            about,
         ),
     )
     return int(cur.lastrowid or 0)
@@ -143,6 +149,57 @@ def release(conn: sqlite3.Connection, hold_id: int, *, stale_before: str) -> Non
 def recent_llm_calls(conn: sqlite3.Connection, limit: int = 5) -> list[dict[str, Any]]:
     rows = conn.execute("SELECT * FROM llm_calls ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
     return [dict(row) for row in rows]
+
+
+def activity_since(conn: sqlite3.Connection, *, since: str, limit: int) -> list[dict[str, Any]]:
+    """What the models were asked lately, newest first: one row for each message answered (its
+    calls, a lookup it started included) and one for each turn with no message (a lookup)."""
+    rows = conn.execute(
+        "SELECT CASE WHEN message_id IS NOT NULL THEN 'm' || message_id ELSE 't' || turn END "
+        "AS key, min(created_at) AS started, max(id) AS last_id, "
+        "group_concat(DISTINCT kind) AS kinds, count(*) AS calls, "
+        "coalesce(sum(cost_usd), 0) AS cost_usd, "
+        "coalesce(sum(input_tokens), 0) + coalesce(sum(cache_read_input_tokens), 0) "
+        "+ coalesce(sum(cache_creation_input_tokens), 0) AS sent, "
+        "coalesce(sum(output_tokens), 0) AS back, coalesce(sum(web_searches), 0) AS searches, "
+        "max(message_id) AS message_id, max(about) AS about "
+        "FROM llm_calls WHERE created_at >= ? AND (message_id IS NOT NULL OR turn IS NOT NULL) "
+        "GROUP BY 1 ORDER BY last_id DESC LIMIT ?",
+        (since, limit),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def calls_in(
+    conn: sqlite3.Connection, *, message_id: int | None = None, turn: str | None = None
+) -> list[dict[str, Any]]:
+    """Every model call for a message, or for a turn, in the order they were made."""
+    column, value = ("message_id", message_id) if message_id is not None else ("turn", turn)
+    rows = conn.execute(
+        f"SELECT * FROM llm_calls WHERE {column} = ? ORDER BY id", (value,)
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def tools_in(
+    conn: sqlite3.Connection, *, message_id: int | None = None, turn: str | None = None
+) -> list[dict[str, Any]]:
+    """Every tool call for a message, or for a turn, in the order they were made."""
+    column, value = ("message_id", message_id) if message_id is not None else ("turn", turn)
+    rows = conn.execute(
+        f"SELECT * FROM tool_calls WHERE {column} = ? ORDER BY id", (value,)
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def last_lookup_turn(conn: sqlite3.Connection, idea_id: int) -> str | None:
+    """The turn that last looked an idea up and saved or skipped it, for its history."""
+    row = conn.execute(
+        "SELECT turn FROM tool_calls WHERE tool_name IN ('save_place', 'skip_place') "
+        "AND turn IS NOT NULL AND json_extract(input, '$.idea_id') = ? ORDER BY id DESC LIMIT 1",
+        (idea_id,),
+    ).fetchone()
+    return row["turn"] if row else None
 
 
 def tool_calls_for_message(conn: sqlite3.Connection, message_id: int) -> list[dict[str, Any]]:

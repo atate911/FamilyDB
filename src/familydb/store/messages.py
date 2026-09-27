@@ -238,6 +238,14 @@ def last_inbound_at(conn: sqlite3.Connection, channel: str, chat_id: str) -> str
     return row["at"] if row else None
 
 
+def replies_to(conn: sqlite3.Connection, message_id: int) -> list[Message]:
+    """What was said back to a message, in order."""
+    rows = conn.execute(
+        "SELECT * FROM messages WHERE reply_to = ? AND direction = 'out' ORDER BY id", (message_id,)
+    ).fetchall()
+    return [Message.from_row(row) for row in rows]
+
+
 def mark_sent_as(conn: sqlite3.Connection, message_id: int, kind: str) -> None:
     """Say which kind of message she sent of her own accord (voice.hand_over)."""
     conn.execute("UPDATE messages SET sent_as = ? WHERE id = ?", (kind, message_id))

@@ -57,6 +57,7 @@
         <dt>{{ icon('search') }}Lookup</dt>
         <dd>
           {{ row.details }}{% if idea.enrichment_note %} ({{ idea.enrichment_note }}){% endif %}
+          {% if looked_up %}<a class="small" href="{{ url_for('activity.show', key='t' ~ looked_up) }}">How it was looked up</a>{% endif %}
           {% if idea.enrichment == 'pending' and can_look_up %}
             <span class="muted">{% if idea.lookup_wanted_at %}Asked for now: within a few minutes.{% else %}Looked up {{ lookups }}.{% endif %}</span>
           {% endif %}

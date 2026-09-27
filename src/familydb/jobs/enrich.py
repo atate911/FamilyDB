@@ -221,6 +221,7 @@ def enrich_idea(
         turn: WorkerTurn = run_worker_turn(
             kind="enrich",
             idea_id=idea.id,
+            about=f"#{idea.id} {idea.title}",
             api=api,
             settings=app.settings,
             clock=app.clock,

@@ -23,6 +23,7 @@ from __future__ import annotations
 import logging
 import sqlite3
 import time
+import uuid
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
@@ -404,6 +405,7 @@ def _written_down(
                 cost_usd=dollars,
                 cost_estimated=not listed,
                 kind=kind,
+                turn=uuid.uuid4().hex[:16],
             )
             spending.settle(conn, held, clock.now())
             alerts.answered(conn, provider.name)

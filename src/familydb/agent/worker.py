@@ -63,6 +63,7 @@ def run_worker_turn(
     provider: Provider | None = None,
     fallback: Provider | None = None,
     idea_id: int | None = None,
+    about: str | None = None,
 ) -> WorkerTurn:
     """One worker turn. `message_id` ties the audit rows to a chat message when there is one."""
     ctx = ToolContext(
@@ -73,6 +74,7 @@ def run_worker_turn(
         message_id=message_id,
         geocoder=geocoder,
         worker_idea_id=idea_id,
+        about=about,
     )
     result = gateway.ask(
         kind,

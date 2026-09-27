@@ -30,7 +30,7 @@ from familydb.availability import web_is_public, web_password_required
 from familydb.channels.web import WebChat
 from familydb.config import Settings
 from familydb.errors import ConfigError
-from familydb.web import auth, chat, edits, family, fields, once, routes, setup, views
+from familydb.web import activity, auth, chat, edits, family, fields, once, routes, setup, views
 from familydb.web import settings as settings_page
 from familydb.web.auth import MIN_PASSWORD
 from familydb.web.keys import session_secret
@@ -209,6 +209,7 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     web.context_processor(every_page)
     web.register_blueprint(auth.bp)
     web.register_blueprint(routes.bp)
+    web.register_blueprint(activity.bp)
     web.register_blueprint(chat.bp)
     web.register_blueprint(edits.bp)
     web.register_blueprint(family.bp)

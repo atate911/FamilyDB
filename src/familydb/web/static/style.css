@@ -1733,6 +1733,14 @@ table.month td.today time { color: var(--on-bright); background: var(--amber); b
   .settings-nav { display: block; position: sticky; top: 5.25rem; }
 }
 
+/* The status page's recent activity: each line a link to its history, whole-row to tap. */
+.activity li + li { border-top: 1px solid var(--line); }
+.activity a { display: grid; gap: 0.2rem; padding: 0.65rem 0.2rem; color: var(--ink); text-decoration: none; border-radius: var(--r-sm); }
+.activity a:hover { background: var(--surface-2); }
+.activity-title { font-weight: 550; overflow-wrap: anywhere; }
+pre.json { max-height: 24rem; overflow: auto; padding: 0.75rem; font: 0.8rem/1.45 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; background: var(--field); border: 1px solid var(--line); border-radius: var(--r-sm); }
+.tool-calls li + li { margin-top: 0.4rem; }
+
 /* What needs an admin, first on the status page: edged in red, which is kept for what went wrong. */
 .attention { margin-bottom: 1.25rem; border-color: color-mix(in srgb, var(--red) 45%, var(--line)); }
 .attention h2 .icon { color: var(--red); }

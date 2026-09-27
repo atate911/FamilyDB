@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+import uuid
 from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol
 
@@ -116,6 +117,8 @@ def run_turn(
     )
     limit = max_iterations or settings.agent_max_iterations
     ctx.allowed_tools = frozenset(tool.name for tool in request.tools)
+    if ctx.turn is None:
+        ctx.turn = uuid.uuid4().hex[:16]
     actions: list[dict[str, Any]] = []
     totals: dict[str, int] = dict.fromkeys(USAGE_KEYS, 0)
 
@@ -205,6 +208,8 @@ def run_turn(
                 cost_estimated=not listed,
                 kind=kind,
                 sections=_sizes(sections, request),
+                turn=ctx.turn,
+                about=ctx.about,
             )
             spending.settle(ctx.conn, held, ctx.clock.now())
             alerts.answered(ctx.conn, active.name)
@@ -247,6 +252,7 @@ def run_turn(
                     is_error=result.is_error,
                     duration_ms=int((time.monotonic() - tool_started) * 1000),
                     now=ctx.now_iso(),
+                    turn=ctx.turn,
                 )
             actions.append(result.summary)
             exchange.outcomes.append(
