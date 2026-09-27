@@ -30,7 +30,19 @@ from familydb.availability import web_is_public, web_password_required
 from familydb.channels.web import WebChat
 from familydb.config import Settings
 from familydb.errors import ConfigError
-from familydb.web import activity, auth, chat, edits, family, fields, once, routes, setup, views
+from familydb.web import (
+    activity,
+    auth,
+    chat,
+    edits,
+    family,
+    fields,
+    links,
+    once,
+    routes,
+    setup,
+    views,
+)
 from familydb.web import settings as settings_page
 from familydb.web.auth import MIN_PASSWORD
 from familydb.web.keys import session_secret
@@ -191,6 +203,8 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     web.jinja_env.globals["visitor"] = auth.visitor
     web.jinja_env.globals["csrf_token"] = auth.csrf_token
     web.jinja_env.globals["once_token"] = once.once_token
+    # Every page outside FamilyDB it links to (web/links.py).
+    web.jinja_env.globals["links"] = links.LINKS
     # Every page of settings, for the menu in the bar.
     web.jinja_env.globals["settings_sections"] = fields.SECTIONS
 

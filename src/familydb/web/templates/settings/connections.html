@@ -132,7 +132,7 @@
       <summary>{{ icon('plug') }}{% if google.connected %}Connect again{% else %}Connect Google Calendar{% endif %}</summary>
       <div class="inner">
         <p class="muted">
-          Once, in <a href="https://console.cloud.google.com/" target="_blank"
+          Once, in <a href="{{ links.google_cloud }}" target="_blank"
           rel="noopener noreferrer">Google Cloud</a>: make a project, turn on the Google Calendar
           API, set the OAuth consent screen to External and <strong>In production</strong> (left
           in Testing, the connection stops working after a week), and create an OAuth client of

@@ -1,0 +1,31 @@
+"""Every page outside FamilyDB the page links to, in one place.
+
+The companies move their consoles now and then, and a dead link in a setup step is found by the
+person who needed it. Written once here, each is one line to change, and `familydb doctor
+--online` asks each one whether it still answers (doctor.check_links), from the server, which
+reaches them when a developer's machine may not.
+"""
+
+from __future__ import annotations
+
+LINKS: dict[str, str] = {
+    "openai_signup": "https://platform.openai.com/signup",
+    "openai_billing": "https://platform.openai.com/settings/organization/billing/overview",
+    "openai_limits": "https://platform.openai.com/settings/organization/limits",
+    "openai_keys": "https://platform.openai.com/api-keys",
+    "anthropic_console": "https://console.anthropic.com/",
+    "anthropic_billing": "https://console.anthropic.com/settings/billing",
+    "anthropic_limits": "https://console.anthropic.com/settings/limits",
+    "anthropic_keys": "https://console.anthropic.com/settings/keys",
+    "gemini_keys": "https://aistudio.google.com/apikey",
+    "google_cloud": "https://console.cloud.google.com/",
+    "google_project": "https://console.cloud.google.com/projectcreate",
+    "google_calendar_api": (
+        "https://console.cloud.google.com/apis/library/calendar-json.googleapis.com"
+    ),
+    "google_consent": "https://console.cloud.google.com/auth/overview",
+    "google_audience": "https://console.cloud.google.com/auth/audience",
+    "google_clients": "https://console.cloud.google.com/auth/clients",
+    "telegram": "https://telegram.org/",
+    "botfather": "https://t.me/BotFather",
+}

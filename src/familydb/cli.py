@@ -636,7 +636,9 @@ def repl(
 @app.command()
 def doctor(
     online: bool = typer.Option(
-        False, "--online", help="Also ask the model API and Telegram whether the keys work."
+        False,
+        "--online",
+        help="Also ask the model API and Telegram whether the keys work, and the links answer.",
     ),
     fix: bool = typer.Option(
         False, "--fix", help="Put right the few things that can be, such as file permissions."
