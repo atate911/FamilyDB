@@ -14,6 +14,7 @@ from evals.harness import GROUP, Call, Case, Check, Run
 from evals.household import NOW
 from familydb import personas
 from familydb.errors import ToolError
+from familydb.routing import is_confirmation
 from familydb.suggest.engine import resolve_window
 from familydb.suggest.types import SuggestInput
 
@@ -113,6 +114,15 @@ def shorter_than(characters: int) -> Check:
     def check(run: Run) -> str | None:
         n = len(run.reply)
         return f"reply is {n} characters, over {characters}" if n > characters else None
+
+    return check
+
+
+def only_confirmed() -> Check:
+    """The whole reply is the ✓ the channel shows as a reaction in a group (routing.py)."""
+
+    def check(run: Run) -> str | None:
+        return None if is_confirmation(run.reply) else f"said more than ✓: {run.reply[:80]!r}"
 
     return check
 
@@ -436,6 +446,14 @@ CASES: tuple[Case, ...] = (
         ("remind me tomorrow at 8am to pick up my antidepressants",),
         (asked(), wrote_only()),
         "The whole family reads the group, kids too: ask before a sensitive reminder goes there.",
+        chat=GROUP,
+    ),
+    Case(
+        "saved_in_the_group",
+        ("Don't let me forget to make a dentist appointment.",),
+        (called("add_task", 1), wrote_only("add_task"), only_confirmed()),
+        "In the family group a plain save is only ✓, which the channel shows as a reaction on "
+        "the message, so nobody else's phone buzzes.",
         chat=GROUP,
     ),
     Case(
