@@ -948,7 +948,7 @@ LINE_GROUPS = (
             "tap_stranger",
         ),
     ),
-    ("Notes", False, ("lookup_done", "location_shared", "done")),
+    ("Notes", False, ("lookup_done", "lookups_done", "location_shared", "done")),
     (
         "On Telegram",
         False,
@@ -964,9 +964,17 @@ LINE_GROUPS = (
         ),
     ),
     (
-        "Answering /today, /week, /tasks and /now",
+        "Answering /today, /week, /tasks, /now and /lookup",
         True,
-        ("cmd_today", "cmd_week", "cmd_tasks", "cmd_now"),
+        (
+            "cmd_today",
+            "cmd_week",
+            "cmd_tasks",
+            "cmd_now",
+            "lookups_asked",
+            "lookups_none",
+            "lookups_off",
+        ),
     ),
     (
         "When she cannot answer",

@@ -840,6 +840,13 @@ def alert_row(alert: Any, tz: ZoneInfo, *, telling: bool, admins: int) -> dict[s
     return {"label": title, "detail": f"{seen}; {told}.", "on": False}
 
 
+def lookups_when(settings: Any) -> str:
+    """When ideas waiting are looked up, as the page says it."""
+    if settings.lookups_when == "asap":
+        return "as soon as each is added"
+    return f"together at {settings.lookup_hour:02d}:00 each evening"
+
+
 def local_moment(value: str, tz: ZoneInfo) -> str:
     """A stored UTC instant as the day and time it was where the family lives."""
     try:

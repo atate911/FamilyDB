@@ -30,6 +30,7 @@ Effort = Literal["low", "medium", "high", "xhigh", "max"]
 Level = Literal["everyday", "better", "best"]
 ProviderName = Literal["anthropic", "openai", "gemini"]
 CacheTTL = Literal["5m", "1h"]
+LookupsWhen = Literal["evening", "asap"]
 Weekday = Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 Latitude = Annotated[float, Field(ge=-90, le=90)]
 Longitude = Annotated[float, Field(ge=-180, le=180)]
@@ -225,6 +226,11 @@ class Settings(BaseSettings):
 
     # Enrichment, suggestions and scheduled prompts
     enrich_interval_minutes: int = Field(default=2, ge=1, le=1440)
+    # When ideas are looked up on the web: together each evening at lookup_hour, the family's
+    # time, with one note in each chat for what was found, or each as soon as it is added. Asked
+    # for now (look_up_now), one is looked up within enrich_interval_minutes either way.
+    lookups_when: LookupsWhen = "evening"
+    lookup_hour: int = Field(default=21, ge=0, le=23)
     enrich_batch: int = Field(default=3, ge=1, le=20)
     place_stale_days: int = Field(default=30, ge=1, le=3650)
     worker_max_iterations: int = Field(default=12, ge=1, le=30)

@@ -36,6 +36,8 @@ BEHAVIOUR = (
     "worker_max_iterations",
     "web_tools_enabled",
     "enrich_interval_minutes",
+    "lookups_when",
+    "lookup_hour",
     "enrich_batch",
     "enrichment_notes",
     "place_stale_days",

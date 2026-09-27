@@ -654,6 +654,9 @@ input[type="checkbox"], input[type="radio"] {
 .form .muted { display: block; font-size: 0.85rem; margin-top: 0.35rem; }
 .form > p { margin: 0; }
 .form .more .inner { margin-top: 0.75rem; }
+/* A button that sits at the end of a line of words, such as "Look it up now" on an idea. */
+form.inline { display: inline; margin: 0 0 0 0.35rem; }
+button.small { min-height: 0; padding: 0.3rem 0.7rem; font-size: 0.85rem; }
 label.check, label.inline {
   display: inline-flex;
   align-items: center;

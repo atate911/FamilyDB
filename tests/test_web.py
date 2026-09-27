@@ -783,6 +783,7 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
         "update_event",
         "delete_event",
         "remember",  # what the family types on the memory page, and forgetting
+        "look_up_now",  # the buttons that look an idea, or every one waiting, up now
     }
     # And it runs them the one way: through the registry, which validates and owns the
     # transaction. Constructing a store call or a connection of its own would not be that.

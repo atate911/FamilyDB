@@ -186,6 +186,32 @@ EVENTS: dict[str, Event] = {
             "details": "Indoor play · hours saved for sat, sun · about 20 min away (estimate)",
         },
     ),
+    "lookups_done": Event(
+        "The evening's lookups, together",
+        "Looked up {count} ideas this evening:\n{found}",
+        ("count", "found"),
+        {
+            "count": 2,
+            "found": "• #31 Hopscotch: Indoor play · hours saved for sat, sun\n"
+            "• #32 Ramen Ryoma: Noodle bar · closed mon",
+        },
+    ),
+    "lookups_asked": Event(
+        "Answering /lookup",
+        "Looking up {count} now; I'll say here what I find.",
+        ("count",),
+        {"count": "3 ideas"},
+    ),
+    "lookups_none": Event(
+        "Answering /lookup with nothing waiting",
+        "Nothing is waiting to be looked up.",
+        (),
+    ),
+    "lookups_off": Event(
+        "Answering /lookup with lookups switched off",
+        "Looking ideas up on the web is switched off, on the settings page under Lookups.",
+        (),
+    ),
     "location_shared": Event(
         "A location shared on Telegram",
         'Got your location{where}. For the next 3 hours, "what\'s near here?" and "open now" '

@@ -1,12 +1,17 @@
+import json
+from datetime import datetime
+
 import pytest
 
 from familydb.app import App
 from familydb.channels.console import one_shot
+from familydb.clock import FixedClock
 from familydb.jobs.retry_failed import run_retries
 from familydb.jobs.scheduler import build_scheduler
 from familydb.pipeline import retry_message
 from familydb.store import calls, ideas, messages
 from tests import fakes
+from tests.conftest import TZ
 
 
 def _failed_message(app: App, conn, api_error):
@@ -170,7 +175,13 @@ POINT = GeoPoint(45.5, -122.6, "Hopscotch", "nominatim")
 
 def _web_app(settings, clock, **extra) -> App:
     configured = settings.model_copy(
-        update={"web_tools_enabled": True, "home_lat": 45.63, "home_lon": -122.67, **extra}
+        update={
+            "web_tools_enabled": True,
+            "lookups_when": "asap",
+            "home_lat": 45.63,
+            "home_lon": -122.67,
+            **extra,
+        }
     )
     return App(configured, clock, geocoder=fakes.FakeGeocoder(default=POINT))
 
@@ -360,6 +371,7 @@ def _openai_app(settings, clock, **extra):
     configured = settings.model_copy(
         update={
             "web_tools_enabled": True,
+            "lookups_when": "asap",
             "home_lat": 45.63,
             "home_lon": -122.67,
             "provider": "openai",
@@ -433,7 +445,9 @@ def test_lookups_work_on_gemini_too(settings, clock, conn, family) -> None:
 
 def test_scheduler_registers_enrichment_only_with_web_tools(settings, clock) -> None:
     assert build_scheduler(App(settings, clock)).get_job("enrich") is None
-    on = settings.model_copy(update={"web_tools_enabled": True, "enrich_interval_minutes": 4})
+    on = settings.model_copy(
+        update={"web_tools_enabled": True, "lookups_when": "asap", "enrich_interval_minutes": 4}
+    )
     job = build_scheduler(App(on, clock)).get_job("enrich")
     assert job is not None and job.trigger.interval.total_seconds() == 4 * 60
 
@@ -739,3 +753,111 @@ def test_a_schedule_on_another_clock_is_a_different_schedule() -> None:
     there = CronTrigger(hour=18, timezone=ZoneInfo("Europe/London"))
     assert same_schedule(here, again)
     assert not same_schedule(here, there)
+
+
+# --- the evening's lookups, and asking for one now ---------------------------------------------
+
+
+def _evening(app, hour=21, minute=5) -> App:
+    """The same app a little after the evening's lookup hour, the same Sunday."""
+    later = App(
+        app.settings,
+        FixedClock(datetime(2026, 9, 20, hour, minute), TZ),
+        geocoder=fakes.FakeGeocoder(default=POINT),
+    )
+    later.senders.update(app.senders)
+    return later
+
+
+def test_lookups_wait_for_the_evening_hour_in_the_family_s_time(settings) -> None:
+    from familydb.jobs.enrich import lookups_due_before
+
+    evening = settings.model_copy(update={"lookups_when": "evening", "lookup_hour": 21})
+    afternoon = datetime(2026, 9, 20, 14, 3, tzinfo=TZ)
+    assert lookups_due_before(evening, afternoon) == "2026-09-20T04:00:00Z"  # last night's, PDT
+    assert lookups_due_before(evening, afternoon.replace(hour=21, minute=1)) == (
+        "2026-09-21T04:00:00Z"
+    )
+    assert (
+        lookups_due_before(evening.model_copy(update={"lookups_when": "asap"}), afternoon) is None
+    )
+
+
+def test_the_evening_s_lookups_run_together_with_one_note_in_each_chat(
+    settings, clock, conn, family
+) -> None:
+    app = _web_app(settings, clock, lookups_when="evening")
+    hopscotch, _ = _captured_idea(conn, family, title="Hopscotch, Portland")
+    ramen, _ = _captured_idea(conn, family, title="Ramen Ryoma")
+    delivered: list[tuple[str, str]] = []
+    app.senders["telegram"] = lambda chat_id, text: delivered.append((chat_id, text))
+    # The afternoon they were added: nothing is looked up, nothing asked of a model.
+    assert run_enrichment(app, api=fakes.FakeMessagesAPI())["done"] == 0
+
+    api = fakes.FakeMessagesAPI(
+        *fakes.enrich_script({"idea_id": hopscotch.id, "name": "Hopscotch", "summary": "Art."}),
+        *fakes.enrich_script({"idea_id": ramen.id, "name": "Ramen Ryoma", "closed_days": ["mon"]}),
+    )
+    assert run_enrichment(_evening(app), api=api)["done"] == 2
+    assert len(delivered) == 1 and delivered[0][0] == "-100"
+    note = delivered[0][1]
+    assert note.startswith("Looked up 2 ideas this evening:")
+    assert "• #1 Hopscotch: Art" in note and "• #2 Ramen Ryoma:" in note and "closed mon" in note
+
+    # One added after the hour waits for tomorrow evening's.
+    late, _ = _captured_idea(conn, family, title="Late idea")
+    with db.transaction(conn):
+        conn.execute(
+            "UPDATE ideas SET updated_at = '2026-09-21T04:30:00Z' WHERE id = ?", (late.id,)
+        )
+    assert run_enrichment(_evening(app, 21, 40), api=fakes.FakeMessagesAPI())["done"] == 0
+
+
+def test_an_idea_asked_for_now_is_looked_up_on_the_next_run_with_a_note_of_its_own(
+    settings, clock, conn, family
+) -> None:
+    from familydb.tools import ToolContext
+
+    app = _web_app(settings, clock, lookups_when="evening")
+    idea, _ = _captured_idea(conn, family)
+    other, _ = _captured_idea(conn, family, title="Another")
+    delivered: list[tuple[str, str]] = []
+    app.senders["telegram"] = lambda chat_id, text: delivered.append((chat_id, text))
+    ctx = ToolContext(conn=conn, settings=app.settings, clock=clock, member=family["sam"])
+    asked = app.registry.dispatch("look_up_now", {"idea_ids": [idea.id]}, ctx)
+    assert json.loads(asked.content)["asked"] == [idea.id]
+
+    api = fakes.FakeMessagesAPI(
+        *fakes.enrich_script({"idea_id": idea.id, "name": "Hopscotch", "summary": "Art."})
+    )
+    assert run_enrichment(app, api=api)["done"] == 1  # the afternoon, before the evening
+    assert [text for _, text in delivered] == [delivered[0][1]]
+    assert delivered[0][1].startswith("Looked up #1 Hopscotch:")
+    assert ideas.get(conn, idea.id).lookup_wanted_at is None
+    assert ideas.get(conn, other.id).enrichment == "pending"  # the rest still wait
+
+
+def test_look_up_now_takes_every_idea_waiting_or_those_named(settings, clock, conn, family):
+    from familydb.tools import ToolContext
+
+    app = _web_app(settings, clock)
+    waiting, _ = _captured_idea(conn, family, title="Waiting")
+    done, _ = _captured_idea(conn, family, title="Done already")
+    dropped, _ = _captured_idea(conn, family, title="Dropped")
+    with db.transaction(conn):
+        ideas.update(conn, done.id, {"enrichment": "done"})
+        ideas.update(conn, dropped.id, {"status": "dropped"})
+    ctx = ToolContext(conn=conn, settings=app.settings, clock=clock, member=family["sam"])
+
+    every = json.loads(app.registry.dispatch("look_up_now", {}, ctx).content)
+    assert every["asked"] == [waiting.id]
+    again = json.loads(
+        app.registry.dispatch("look_up_now", {"idea_ids": [done.id, 99]}, ctx).content
+    )
+    assert again == {"asked": [done.id], "unknown": [99], "within_minutes": 2}
+    assert ideas.get(conn, done.id).enrichment == "pending"
+    off = _web_app(settings, clock, web_tools_enabled=False)
+    ctx_off = ToolContext(conn=conn, settings=off.settings, clock=clock, member=family["sam"])
+    assert (
+        json.loads(off.registry.dispatch("look_up_now", {}, ctx_off).content)["available"] is False
+    )

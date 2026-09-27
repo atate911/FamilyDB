@@ -283,7 +283,11 @@ def status(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
         "services": services(app, conn),
         "spending": spending(conn, since, app.settings, app.clock.now()),
         "last": last_call(conn, tz),
-        "waiting": waiting(conn, tz),
+        "waiting": {
+            **waiting(conn, tz),
+            "when": views.lookups_when(app.settings),
+            "can_look_up": enrichment_available(app.settings),
+        },
         "troubles": troubles(conn, since, tz),
         "attention": attention(app, conn),
     }

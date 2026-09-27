@@ -61,6 +61,13 @@ class SavePlaceInput(BaseModel):
     source_urls: list[str] = Field(default_factory=list, description="Pages the facts came from.")
 
 
+class LookUpNowInput(BaseModel):
+    idea_ids: list[int] = Field(
+        default_factory=list,
+        description="Ideas to look up now, again if they were already. Empty: every idea waiting.",
+    )
+
+
 class SkipPlaceInput(BaseModel):
     idea_id: int
     status: Literal["skipped", "failed"] = Field(
@@ -170,6 +177,26 @@ def lookup_place(ctx: ToolContext, args: LookupPlaceInput) -> dict[str, Any]:
             "note": idea.enrichment_note if idea else None,
         }
     return {"found": True, "idea_id": idea.id if idea else None, "place": place_summary(place, ctx)}
+
+
+@tool(
+    name="look_up_now",
+    description=(
+        "Look ideas up on the web within minutes instead of with the evening's lookups. Only "
+        "when someone asks for it now."
+    ),
+    available=enrichment_available,
+    unavailable_reason="looking ideas up on the web is switched off",
+    writes=True,
+)
+def look_up_now(ctx: ToolContext, args: LookUpNowInput) -> dict[str, Any]:
+    with transaction(ctx.conn):
+        asked = ideas.want_lookup(ctx.conn, args.idea_ids or None, now=ctx.now_iso())
+    return {
+        "asked": asked,
+        "unknown": [idea_id for idea_id in args.idea_ids if idea_id not in asked],
+        "within_minutes": ctx.settings.enrich_interval_minutes,
+    }
 
 
 @tool(

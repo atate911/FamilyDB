@@ -683,16 +683,44 @@ GROUPS: tuple[Group, ...] = (
     ),
     Group(
         "lookups",
+        "when",
+        "When",
+        "Filling an idea in rarely changes what you do next, so by default it waits for the "
+        "evening and every idea waiting is looked up together, with one note in each chat for "
+        "what was found. Asked for now, by asking her, by the button on the status page or an "
+        "idea's page, or by /lookup on Telegram, one is looked up within a few minutes.",
+        (
+            field(
+                "lookups_when",
+                "Look ideas up",
+                words=(("evening", "together, each evening"), ("asap", "as soon as each is added")),
+            ),
+            field(
+                "lookup_hour",
+                "Time for the evening's lookups",
+                "In the family's time zone.",
+                choices=HOURS,
+                words=HOUR_WORDS,
+            ),
+        ),
+    ),
+    Group(
+        "lookups",
         "pace",
         "How often",
         "",
         (
             field(
                 "enrich_interval_minutes",
-                "Minutes between lookups",
-                "How often it checks for ideas waiting to be looked up.",
+                "Minutes between checks",
+                "How often it checks for ideas due to be looked up: how soon one asked for now is.",
             ),
-            field("enrich_batch", "Ideas looked up at a time"),
+            field(
+                "enrich_batch",
+                "Ideas looked up at a time",
+                "When each is looked up as it is added. The evening's lookups take every idea "
+                "waiting.",
+            ),
         ),
         folded=True,
     ),

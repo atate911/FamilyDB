@@ -21,7 +21,7 @@ from flask import (
 
 from familydb import agenda
 from familydb.app import App
-from familydb.availability import calendar_available
+from familydb.availability import calendar_available, enrichment_available
 from familydb.store import ideas as idea_store
 from familydb.store import members as member_store
 from familydb.store import memories as memory_store
@@ -246,6 +246,8 @@ def idea(idea_id: int) -> str:
         today=today.isoformat(),
         ratings=RATINGS,
         can_schedule=calendar_available(settings),
+        can_look_up=enrichment_available(settings) and record.status != "dropped",
+        lookups=views.lookups_when(settings),
         **asking,
         row=views.idea_row(record, settings.tzinfo),
         setting=views.SETTINGS.get(record.setting, record.setting),
