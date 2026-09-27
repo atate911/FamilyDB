@@ -52,6 +52,10 @@ MAX_ID = 2**63 - 1
 NOTICE = "edit"  # the same stream as the other edit forms, drawn by the base template
 ADDED = "{name} is on the family list."
 CHANGED = "Saved {name}."
+REMOVED = (
+    "{name} is off the family list for good. What they said stays in the chat, without their name."
+)
+NOT_SURE = "Tick the box to say you are sure first: taking somebody off cannot be undone."
 LINKED = "Linked. The bot knows {name} on Telegram now, and will answer them."
 NOBODY = "There is nobody by that number any more."
 PASSWORD_SAVED = (
@@ -192,6 +196,34 @@ def change(member_id: int) -> Response:
     log.info("family member %s changed from the page by %s", member_id, auth.client_address())
     return _answer(
         setup, said=CHANGED.format(name=person.display_name), fallback=url_for("family.show")
+    )
+
+
+@bp.post(f"/family/<int(max={MAX_ID}):member_id>/remove")
+@once
+def remove(member_id: int) -> Response:
+    """Take somebody off the list for good, once the form's box saying so is ticked."""
+    here = url_for("family.edit", member_id=member_id)
+    if (complaint := auth.refused()) is not None:
+        return _answer(None, problem=complaint, fallback=here)
+    if request.form.get("sure") != "yes":
+        return _answer(None, problem=NOT_SURE, fallback=here)
+    app = _app()
+    visiting = auth.visitor()
+    try:
+        with closing(app.connect()) as conn:
+            person = rules.remove(
+                conn,
+                member_id,
+                by=visiting.member.id if visiting.member else None,
+                seen=request.form.get("revision", ""),
+                now=utc_iso(app.clock.now()),
+            )
+    except rules.FamilyError as exc:
+        return _answer(None, problem=str(exc), fallback=here)
+    log.info("family member %s removed from the page by %s", member_id, auth.client_address())
+    return _answer(
+        None, said=REMOVED.format(name=person.display_name), fallback=url_for("family.show")
     )
 
 

@@ -195,3 +195,90 @@ def test_links_past_their_day_are_forgotten_whatever_is_opened(conn, family_memb
     with pytest.raises(family.InviteRefused):
         family.accept_invite(conn, "x" * 32, telegram_id="1003", now=_at(family.INVITE_HOURS))
     assert conn.execute("SELECT count(*) FROM telegram_invites").fetchone()[0] == 0
+
+
+# -- taking somebody off for good ------------------------------------------------------------------
+
+
+def test_every_column_that_points_at_a_member_is_named_for_taking_somebody_off(conn) -> None:
+    """A table added later that points at a member must say what happens to it, or taking
+    somebody off would stop on it."""
+    pointing = {
+        (table, fk["from"])
+        for (table,) in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
+        for fk in conn.execute(f"PRAGMA foreign_key_list({table})")
+        if fk["table"] == "members"
+    }
+    assert pointing == set(members.POINTING_AT)
+
+
+def test_somebody_taken_off_leaves_what_they_said_unnamed_and_takes_what_was_theirs(
+    conn, family_members
+) -> None:
+    from familydb.store import ideas, locations, logins, memories
+
+    alex, sam = family_members["alex"], family_members["sam"]
+    with db.transaction(conn):
+        said = messages.insert_in(
+            conn,
+            channel="telegram",
+            channel_update_id="9",
+            chat_id="c",
+            member_id=alex.id,
+            text="we should try the ramen place",
+            now=NOW,
+        )
+        idea = ideas.insert(conn, title="Ramen", kind="restaurant", suggested_by=alex.id, now=NOW)
+        about = memories.insert(
+            conn,
+            member_id=alex.id,
+            category="food",
+            fact="Alex is vegetarian",
+            firm=True,
+            inferred=False,
+            until=None,
+            source_message_id=said.id,
+            said_by=alex.id,
+            now=NOW,
+        )
+        told = memories.insert(
+            conn,
+            member_id=None,
+            category="food",
+            fact="The family likes ramen",
+            firm=False,
+            inferred=True,
+            until=None,
+            source_message_id=said.id,
+            said_by=alex.id,
+            now=NOW,
+        )
+        conn.execute("UPDATE memories SET replaced_by = ? WHERE id = ?", (about.id, told.id))
+        locations.record(conn, alex.id, lat=1.0, lon=2.0, live=False, now=NOW)
+    family.give_starting_password(conn, alex.id, by=sam.id, now=NOW)
+    family.invite(conn, alex.id, by=sam.id, now=_at())
+
+    gone = family.remove(conn, alex.id, by=sam.id, seen=family.revision(alex), now=NOW)
+    assert gone.display_name == "Alex" and members.get(conn, alex.id) is None
+    kept = messages.get(conn, said.id)
+    assert kept.text == "we should try the ramen place" and kept.member_id is None
+    assert ideas.get(conn, idea.id).suggested_by is None
+    # What she knew about Alex went; what Alex told her about the family stays, unnamed.
+    assert [row["id"] for row in conn.execute("SELECT id FROM memories")] == [told.id]
+    assert conn.execute("SELECT said_by, replaced_by FROM memories").fetchone()[:] == (None, None)
+    assert logins.get(conn, alex.id) is None
+    for table in ("member_locations", "telegram_invites"):
+        assert conn.execute(f"SELECT count(*) FROM {table}").fetchone()[0] == 0, table
+    # The name is free again, for somebody new.
+    family.add(conn, "Alex", "parent", telegram_id="1002", now=NOW)
+
+
+def test_nobody_takes_themselves_or_the_last_admin_off(conn, family_members) -> None:
+    sam, alex = family_members["sam"], family_members["alex"]
+    with pytest.raises(family.FamilyError, match="yourself"):
+        family.remove(conn, alex.id, by=alex.id, seen=family.revision(alex), now=NOW)
+    with pytest.raises(family.FamilyError, match="only admin"):
+        family.remove(conn, sam.id, by=alex.id, seen=family.revision(sam), now=NOW)
+    with pytest.raises(family.FamilyError, match="changed since"):
+        family.remove(conn, alex.id, by=sam.id, seen="stale", now=NOW)
+    assert members.get(conn, sam.id) and members.get(conn, alex.id)

@@ -35,6 +35,7 @@ list and switched on, and a Telegram already somebody else's is never moved by i
 from __future__ import annotations
 
 import hashlib
+import logging
 import secrets
 import sqlite3
 from datetime import datetime, timedelta
@@ -44,6 +45,8 @@ from familydb.dates import utc_iso
 from familydb.store import invites, logins, members, messages
 from familydb.store.db import transaction
 from familydb.store.members import Member, Role
+
+log = logging.getLogger(__name__)
 
 TELEGRAM = "telegram"
 MAX_NAME = 80
@@ -206,6 +209,48 @@ def change(
         raise FamilyError("That name or Telegram id was taken a moment ago. Try again.") from exc
     assert changed is not None
     return changed
+
+
+def remove(
+    conn: sqlite3.Connection, member_id: int, *, by: int | None, seen: str, now: str
+) -> Member:
+    """Take somebody off the list for good (store/members.py `POINTING_AT` says what goes with
+    them and what stays, unnamed). Raises FamilyError.
+
+    Never the last admin, nor the last admin who can sign in, as switching off would not be;
+    never whoever is asking, so nobody locks themselves out by a slip; never while the bot is
+    answering them, nor on a form drawn before somebody else changed them.
+    """
+    with transaction(conn):
+        current = members.get(conn, member_id)
+        if current is None:
+            raise FamilyError(NOBODY)
+        if revision(current) != seen:
+            raise FamilyError(
+                f"{current.display_name} was changed since you opened this. Here they are "
+                "as they are now; decide again."
+            )
+        if by is not None and by == member_id:
+            raise FamilyError(NOT_YOURSELF)
+        everyone = members.list_all(conn, active_only=False)
+        if current.role == "admin" and current.active:
+            if not any(p.id != member_id and p.active and p.role == "admin" for p in everyone):
+                raise FamilyError(
+                    f"{current.display_name} is the only admin. Make somebody else one first."
+                )
+            if _last_admin_signing_in(conn, current):
+                raise FamilyError(LAST_TO_SIGN_IN.format(name=current.display_name))
+        if messages.member_is_being_answered(conn, member_id, now=now):
+            raise FamilyError(
+                f"The bot is answering {current.display_name} right now. Try again in a moment."
+            )
+        messages.give_up_for_member(conn, member_id, now=now)
+        touched = members.erase(conn, member_id)
+    log.info("member %s taken off the list for good: %s", member_id, touched)
+    return current
+
+
+NOT_YOURSELF = "You cannot take yourself off the list. Another admin can."
 
 
 # -- signing in to the web page -----------------------------------------------------------------

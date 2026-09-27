@@ -196,3 +196,22 @@ def test_the_list_says_how_many_messages_each_kid_has_had_today(settings, clock,
     text = client.get("/family").text
     assert "1 of 10 messages today" in text
     assert text.count("messages today") == 2  # Mia, and the girls; never a grown-up
+
+
+def test_somebody_can_be_taken_off_for_good_once_the_box_is_ticked(page, conn, family) -> None:
+    alex = family["alex"]
+    drawn = page.get(f"/family/{alex.id}").text
+    assert f'action="/family/{alex.id}/remove"' in drawn and 'name="sure"' in drawn
+    form = {"csrf": _token(page), "revision": _revision(page, alex.id)}
+    unsure = page.post(f"/family/{alex.id}/remove", data=form)
+    assert unsure.headers["Location"] == f"/family/{alex.id}"
+    assert "Tick the box" in _said(page.get(f"/family/{alex.id}"))
+    assert members.get(conn, alex.id) is not None
+
+    sure = page.post(f"/family/{alex.id}/remove", data={**form, "sure": "yes"})
+    assert sure.headers["Location"] == "/family"
+    assert "Alex is off the family list for good" in _said(page.get("/family"))
+    assert members.get(conn, alex.id) is None
+    listed = re.search(r'<ul class="panel plain people">.*?</ul>', page.get("/family").text, re.S)
+    assert "Alex" not in listed.group(0) and "Sam" in listed.group(0)
+    assert page.get(f"/family/{alex.id}").status_code == 404
