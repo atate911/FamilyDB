@@ -309,6 +309,11 @@ class Settings(BaseSettings):
     web_allow_no_password: bool = False
     web_trust_proxy: bool = False
     web_title: str = "FamilyDB"
+    # A mic beside every box on the page that takes words: speaking fills the box, through the
+    # browser's own speech recognition (static/dictate.js). The sound goes from the browser to
+    # its maker (Apple for Safari, Google for Chrome), never through FamilyDB, and costs nothing.
+    # What leaves the house is the family's decision (docs/DESIGN.md section 16).
+    web_dictation: bool = True
 
     # Console and logging
     console_member: str | None = None

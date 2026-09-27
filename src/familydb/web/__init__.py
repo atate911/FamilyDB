@@ -219,6 +219,7 @@ def create_app(app: App, *, api: Any = None) -> Flask:
         return {
             "site_title": app.settings.web_title,
             "footer": views.footer(__version__, plain=plain),
+            "dictation": app.settings.web_dictation,
             "assistant": her.name,
             "has_persona": her is not personas.PLAIN,
         }

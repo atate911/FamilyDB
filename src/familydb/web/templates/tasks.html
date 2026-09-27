@@ -3,9 +3,9 @@
 {% block title %}Things to do · {{ site_title }}{% endblock %}
 {% macro fields(p, task=none, due_input='', row=none) %}
   <div class="field wide"><label for="{{ p }}-title">What needs doing</label>
-    <input id="{{ p }}-title" name="title" required maxlength="200" value="{{ task.title if task else '' }}"></div>
+    <input id="{{ p }}-title" name="title" required maxlength="200" value="{{ task.title if task else '' }}" data-dictate></div>
   <div class="field wide"><label for="{{ p }}-notes">Notes</label>
-    <textarea id="{{ p }}-notes" name="notes" rows="2" maxlength="4000">{{ task.notes if task else '' }}</textarea></div>
+    <textarea id="{{ p }}-notes" name="notes" rows="2" maxlength="4000" data-dictate>{{ task.notes if task else '' }}</textarea></div>
   <div class="field"><label for="{{ p }}-owner">For</label>
     <select id="{{ p }}-owner" name="owner"><option value="">{{ 'Keep current owner' if task else 'Current person, or household' }}</option>{% for person in people %}<option value="{{ person.display_name }}" {% if task and task.owner_id == person.id %}selected{% endif %}>{{ person.display_name }}</option>{% endfor %}</select></div>
   <div class="field"><label for="{{ p }}-due">Deadline <span class="optional">optional</span></label>

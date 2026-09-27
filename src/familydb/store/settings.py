@@ -88,6 +88,7 @@ BEHAVIOUR = (
     "openai_transcribe_model",
     "gemini_transcribe_model",
     "web_title",
+    "web_dictation",
     "web_session_days",
     "google_calendar_id",
     "log_level",

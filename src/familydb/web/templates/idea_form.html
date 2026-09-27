@@ -20,7 +20,7 @@
 
     <div class="field wide">
       <label for="title">Title</label>
-      <input id="title" name="title" required maxlength="200"
+      <input id="title" name="title" required maxlength="200" data-dictate
              value="{{ idea.title if editing else '' }}" placeholder="Ramen place on Main St" />
     </div>
 
@@ -57,7 +57,7 @@
 
     <div class="field wide">
       <label for="description">Description</label>
-      <textarea id="description" name="description" rows="3">{{ idea.description or '' if editing else '' }}</textarea>
+      <textarea id="description" name="description" rows="3" data-dictate>{{ idea.description or '' if editing else '' }}</textarea>
     </div>
 
     <details class="more wide" {{ 'open' if editing }}>

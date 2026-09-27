@@ -18,7 +18,7 @@
   {% else %}
     <label class="sr" for="text">Message to {{ assistant }}</label>
   {% endif %}
-  <textarea id="text" name="text" rows="{{ 2 if question else 3 }}" required placeholder="{{ placeholder }}"
+  <textarea id="text" name="text" data-dictate="ask-mic" rows="{{ 2 if question else 3 }}" required placeholder="{{ placeholder }}"
             {%- if locked %} disabled{% endif %}>{{ typed or '' }}</textarea>
   <div class="ask-bar">
     <div class="who">
@@ -42,6 +42,8 @@
         {{ icon('locate') }}Send where I am
       </label>
     </div>
+    {# Where dictate.js puts the mic, beside Send; empty without it. #}
+    <span class="mic-slot" id="ask-mic"></span>
     <button class="send" type="submit" {{ 'disabled' if locked or not family }}>{{ icon('send') }}<span class="label">Send</span></button>
   </div>
   <p id="where" class="muted"></p>

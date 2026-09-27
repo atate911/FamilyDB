@@ -16,8 +16,9 @@ in phosphor, sometimes a radar (see "Green screens").
 
 Everything here is carried by one stylesheet (`src/familydb/web/static/style.css`), a handful of
 templates, three open-licensed typefaces and one icon sprite. None of it needs a script: the
-page's three scripts are the box's (`static/ask.js`), the bar menu's (`static/menu.js`) and the
-wish lists' (`static/wishes.js`, dragging a wish into place), and the look depends on none.
+page's four scripts are the box's (`static/ask.js`), the bar menu's (`static/menu.js`), the
+wish lists' (`static/wishes.js`, dragging a wish into place) and the mic's (`static/dictate.js`,
+speaking instead of typing), and the look depends on none.
 
 This document is a record of the look as it stands and why, not a fence around it. The design,
 the feel and the structure of the pages are meant to evolve with the app, and whoever is working
@@ -452,7 +453,11 @@ looked at (see "Two layers").
 - Words on a green screen are at least 1.2rem; dim green phosphor is 5.8:1 at the tube's
   brightest, normal and bright more.
 - Reading, every form and sending a message work with scripts off; scripts add to that. Today
-  there are three. `static/wishes.js`, only on the wish lists, makes the number on a wish a handle
+  there are four. `static/dictate.js`, while the family has it on, puts a round mic beside each
+  box that takes words (inside its right-hand end, and beside Send in the message box); pressed,
+  it turns phosphor green and its ring breathes (still, under reduced motion) while the browser
+  writes down what is said into the box. Without it, or in a browser that cannot, there is no
+  mic, and a phone keyboard's own still works. `static/wishes.js`, only on the wish lists, makes the number on a wish a handle
   to drag it into place, and sends the card's own Move form with its new place; without it the
   Top, Up and Down buttons do the same. `static/ask.js` is the box's: it keeps what is being written, fills the box
   from the ways to start, sends where the phone is, and looks again for an answer only while

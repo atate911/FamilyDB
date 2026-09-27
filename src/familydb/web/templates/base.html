@@ -11,6 +11,9 @@
     <link rel="preload" href="{{ url_for('static', filename='fonts/dm-sans.woff2') }}" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
     <script src="{{ url_for('static', filename='menu.js') }}" defer></script>
+    {# A mic beside each box that takes words, where the browser can write down speech and the
+       family has not turned it off (web_dictation). #}
+    {% if dictation %}<script src="{{ url_for('static', filename='dictate.js') }}" data-icons="{{ url_for('static', filename='icons.svg') }}" defer></script>{% endif %}
     <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml" />
     {# Kept on a phone's home screen, the page opens as an app: full-screen, with the mark for its
        icon and the page's own name under it. #}

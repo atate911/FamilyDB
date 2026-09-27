@@ -345,6 +345,13 @@ GROUPS: tuple[Group, ...] = (
                 "In the bar, on the sign-in page and in the browser's tab. Your family's name "
                 "works well.",
             ),
+            field(
+                "web_dictation",
+                "A mic to speak instead of typing",
+                "Beside each box that takes words. The browser writes down what is said: Safari "
+                "sends the sound to Apple, Chrome to Google, as a phone keyboard's mic does. It "
+                "never passes through FamilyDB and costs nothing. Firefox has no mic.",
+            ),
         ),
     ),
     Group(
