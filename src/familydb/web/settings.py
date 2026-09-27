@@ -36,6 +36,7 @@ import time
 from contextlib import closing
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from flask import (
     Blueprint,
@@ -56,7 +57,7 @@ from familydb import passwords, personas, voice
 from familydb.agent import gateway, providers
 from familydb.agent.spending import spent_today
 from familydb.app import App
-from familydb.availability import enrichment_available
+from familydb.availability import enrichment_available, web_is_public
 from familydb.config import PersonaRewrite, Settings, apply_overrides
 from familydb.integrations import google_calendar as google
 from familydb.store import settings as settings_store
@@ -302,15 +303,21 @@ def _box(
     typed: dict[str, str],
     offers: dict[str, list[tuple[str, str]]],
     live: Settings,
+    grouped: dict[str, views.ZoneGroups] | None = None,
 ) -> dict[str, Any]:
+    # A dropdown drawn in groups (the time zones) says its default in the words it offers it in.
+    headed = (grouped or {}).get(one.key)
+    reads = {value: words for _, rows in headed or () for value, words in rows}
+    fallback = fields.fallback(one, base)
     return {
         "field": one,
         "value": typed.get(one.key, fields.shown(one, overrides.get(one.key))),
-        "placeholder": fields.placeholder(one, fields.fallback(one, base)),
+        "placeholder": reads.get(fallback) or fields.placeholder(one, fallback),
         "problem": problems.get(one.key),
         "stored": one.key in overrides,
         "offers": offers.get(one.key) or suggested(one),
         "labels": level_labels(one.key, live),
+        "grouped": headed,
     }
 
 
@@ -373,11 +380,14 @@ def page(
         overrides = settings_store.overrides(conn)
         extra = PAGES[section](app, conn)
     offers = extra.pop("offers", {})
+    grouped = extra.pop("grouped", {})
     groups = {
         group.name: _group(
             group,
             [
-                _box(one, overrides, app.base_settings, problems, typed or {}, offers, live)
+                _box(
+                    one, overrides, app.base_settings, problems, typed or {}, offers, live, grouped
+                )
                 for one in group.fields
             ],
         )
@@ -402,7 +412,38 @@ def page(
 
 
 def _general(app: App, conn: Any) -> dict[str, Any]:
-    return {"offers": {"family_tz": [(zone, "") for zone in fields.zones()]}}
+    return {
+        "grouped": {"family_tz": views.zone_groups(fields.zones(), app.clock.now())},
+        "served": served(app),
+    }
+
+
+# Where the scripts are: beside the code on a virtualenv install. An image holds only the code,
+# so there the installer's own folder stands in.
+CHECKOUT = Path(__file__).resolve().parents[3]
+INSTALLED = Path("/opt/familydb")
+
+
+def served(app: App) -> dict[str, Any]:
+    """Where the page is served: the address this browser opened it at, the port FamilyDB itself
+    listens on, and what moves either on the server.
+
+    Shown, never set here. How the page is reached is the server's to change (`maintain.sh port`
+    and `https --port`), out of every form's reach, so a sign-in that falls into the wrong hands
+    cannot move the page or open it wider.
+    """
+    live = app.settings
+    opened = urlsplit(request.host_url)
+    script = CHECKOUT / "scripts" / "maintain.sh"
+    return {
+        "opened": request.host_url,
+        "port": opened.port or (443 if opened.scheme == "https" else 80),
+        "own": f"{live.web_host}:{live.web_port}",
+        "own_port": live.web_port,
+        "proxied": live.web_trust_proxy,
+        "local": not web_is_public(live),
+        "script": script if script.exists() else INSTALLED / "scripts" / "maintain.sh",
+    }
 
 
 def _model(app: App, conn: Any) -> dict[str, Any]:
@@ -436,6 +477,7 @@ def _connections(app: App, conn: Any) -> dict[str, Any]:
         "google": google_panel(app.settings),
         "bot": status_page.telegram_name(app),
         "telegram": app.channel_states.get("telegram", ""),
+        "reads_groups": status_page.telegram_reads_groups(app),
     }
 
 
@@ -905,7 +947,20 @@ LINE_GROUPS = (
         ),
     ),
     ("Notes", False, ("lookup_done", "location_shared", "done")),
-    ("On Telegram", False, ("start", "stranger")),
+    (
+        "On Telegram",
+        False,
+        (
+            "start",
+            "stranger",
+            "cannot_read",
+            "invite_linked",
+            "invite_stale",
+            "invite_taken",
+            "joined_group",
+            "joined_group_mentioned",
+        ),
+    ),
     (
         "Answering /today, /week, /tasks and /now",
         True,
@@ -926,6 +981,9 @@ LINE_GROUPS = (
             "voice_no_ears",
             "voice_too_long",
             "voice_unheard",
+            "photo_off",
+            "photo_too_large",
+            "photo_unseen",
         ),
     ),
 )

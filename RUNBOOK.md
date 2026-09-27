@@ -190,16 +190,22 @@ one at a time:
    with no restart. `/status` then says "connected as @yourbot", "the token was refused by
    Telegram" or "cannot reach Telegram; trying again". A token put in `TELEGRAM_BOT_TOKEN` in
    `.env` instead is read when `familydb run` starts.
-2. Each family member sends the bot a direct message. It does not answer strangers, but it
-   notes who asked (id, Telegram name, when; never what they said, and only for a month), and
-   the Family page lists them under "Asked to talk to the bot" with a button to add each one.
-   The reply also tells them their id, for an admin to type into their Telegram id on the Family
-   page instead, or to use with `familydb members add NAME --channel telegram --channel-user-id
-   12345`. Their next message gets a real answer.
-3. For a family group, send BotFather `/setprivacy` and choose Disable so the bot sees every message, then add the bot to the group. A dedicated "Ideas & Plans" group works best. In a busier group set `TELEGRAM_REQUIRE_MENTION=true` so it only answers when @mentioned or replied to.
+2. Each family member opens the bot's link (t.me/yourbot) and presses Start, or sends it any
+   message. It does not answer strangers, but it notes who asked (id, Telegram name, when; never
+   what they said, and only for a month), and the Family page lists them under "Asked to talk to
+   the bot" with a button to add each one. The reply also tells them their id, for an admin to
+   type into their Telegram id on the Family page instead, or to use with `familydb members add
+   NAME --channel telegram --channel-user-id 12345`. Their next message gets a real answer. For
+   somebody already on the list there is a shorter way: open them on the Family page and make
+   them a link. Opened on their phone, pressing Start links their Telegram to them and the bot
+   welcomes them. The link works once, for a day, and is shown once; whoever opens it first is
+   taken for that person, so send it to them alone.
+3. For a family group, send BotFather `/setprivacy` and choose Disable so the bot sees every message, then add the bot to the group (a bot already in the group has to be taken out and added back for the change to apply). The settings page, under Connections, says whether it reads every message in a group or only those that mention it, as Telegram last said. A dedicated "Ideas & Plans" group works best. In a busier group, turn on "Answer only when mentioned" on the same page (or `TELEGRAM_REQUIRE_MENTION=true` in `.env`) so it only answers when @mentioned or replied to. Added to a group by somebody on the family list, it says hello there and how to talk to it; added by anyone else, it says nothing. Somebody in the group who is not on the family list is answered only when they @mention the bot or reply to it; otherwise the bot stays quiet, and notes them on the Family page as above. Stickers, files and videos shared in the group are left alone unless sent to the bot.
 4. To get suggestions measured from where someone is rather than from home, they share their location with the bot (the paperclip, then Location; a live location keeps itself current for as long as they choose). On the web page, ticking "Send where I am" (beside Send, with scripts on) asks the browser for the location and sends it with each message until the box is unticked; it stays as it was left for that browser, is off to begin with, and needs the page on HTTPS (or opened on the server itself). The bot uses the latest position for three hours for "near here" and "open now" questions, keeps only the latest one per person, deletes it after a day (within ten minutes of that, while the service runs, whether or not anyone shares again), and sends the place's name and coordinates to the model provider with the message. Nothing is sent unless someone shares it or ticks the box.
 5. Long polling means nothing is exposed; if the server is off, Telegram keeps updates for a day and the bot catches up on restart without double-processing.
-6. Voice notes work like typed messages, as long and rambling as anyone likes: a speech model writes the words down and the bot answers them, doing everything they ask for (an idea, a plan, a change to one, something to remember). The words are kept as the message, marked "(voice note)"; the recording itself is not kept. Claude cannot hear, so voice notes need an OpenAI or Gemini key even when the chat runs on Claude; with neither, the bot says so and asks for the message typed. On the settings page, AI model, under "Voice notes": turn them off, cap their length (5 minutes unless changed; a longer one is not heard at all), and choose who hears them and with which model. Hearing is a model call like any other: it counts against the daily limit and shows on `/status` as "listening to voice notes", about $0.003 a minute on OpenAI's gpt-4o-mini-transcribe. A voice note that could not be heard (the service down, no words in it) is not retried, since the recording is gone; the bot asks for it again.
+6. While an answer is on its way the chat shows the bot typing, for as long as it takes. A sticker, a file or a video sent to the bot is not opened: the words sent with it are answered like any message, kept marked "(with a video, not seen)", and with no words the bot says, with no model call, that it cannot read that kind of message.
+7. Voice notes work like typed messages, as long and rambling as anyone likes: a speech model writes the words down and the bot answers them, doing everything they ask for (an idea, a plan, a change to one, something to remember). The words are kept as the message, marked "(voice note)"; the recording itself is not kept. Claude cannot hear, so voice notes need an OpenAI or Gemini key even when the chat runs on Claude; with neither, the bot says so and asks for the message typed. On the settings page, AI model, under "Voice notes": turn them off, cap their length (5 minutes unless changed; a longer one is not heard at all), and choose who hears them and with which model. Hearing is a model call like any other: it counts against the daily limit and shows on `/status` as "listening to voice notes", about $0.003 a minute on OpenAI's gpt-4o-mini-transcribe. A voice note that could not be heard (the service down, no words in it) is not retried, since the recording is gone; the bot asks for it again.
+8. Photos work the same way: a poster, a menu, a ticket or a screenshot sent to the bot (or an image sent as a file, JPEG, PNG or WebP) is read by the model that looks things up, which writes down what it is and every name, date, time, place, price and link in it, and that is answered as if it had been typed, with the caption after it. The words are kept, marked "(photo)"; the picture is not. In a group, only a photo sent to the bot (a mention in its caption, or a reply) is looked at, since the family shares photos among themselves and each is paid for. On the settings page, AI model, under "Photos", turn it off. It counts against the daily limit and shows on `/status` as "reading photos": about a tenth of a cent a photo on GPT-6 Luna. An album is answered once: up to four of its photos are read, each under its number, and the rest are counted. A photo that could not be looked at (too large, over 3.9 MB, which a picture sent as a file can be; the service down) is not retried, since the picture is gone; the bot asks for it again.
 
 ## 5. Google Calendar
 
@@ -429,10 +435,26 @@ either way. `sudo /opt/familydb/scripts/maintain.sh https` sets this up on an in
 without it, and is the thing to run again once a provider's firewall lets 80 and 443 through.
 
 **At home, on the local network.** To reach the page from other devices without a domain, set
-`WEB_HOST=0.0.0.0` in `.env`, and with Docker change the compose `ports` line to `"8080:8080"`.
-The page then answers at `http://<server>:8080/`. A page that faces the network needs passwords
-of at least twelve characters, because a password is all that guards it and there is no second
-factor. `WEB_PORT` moves it off 8080, a port scanners try early, onto any other above 1024.
+`WEB_HOST=0.0.0.0` in `.env`, and with Docker drop the `127.0.0.1:` from the start of the
+compose `ports` line. The page then answers at `http://<server>:8080/`. A page that faces the
+network needs passwords of at least twelve characters, because a password is all that guards it
+and there is no second factor. `sudo /opt/familydb/scripts/maintain.sh port 9090` (any free port
+from 1025 to 65535, or `random`) moves it off 8080, a port scanners try early.
+
+**FamilyDB's own port.** FamilyDB listens on 8080 unless `WEB_PORT` says otherwise. When
+something else on the server needs 8080, or the installer said the port was taken, move it:
+
+```bash
+sudo /opt/familydb/scripts/maintain.sh port 9090    # or port random
+```
+
+It writes `WEB_PORT` in `.env`, points Caddy at the new port where the installer's Caddyfile
+passed the page on to the old one (and puts the old Caddyfile back if Caddy will not load the
+change), and restarts FamilyDB; with Docker, the compose file publishes whichever port `WEB_PORT`
+names, and Caddy's container follows it, so it starts the containers again. Behind Caddy the
+address people open does not change; with nothing in front, the new port is the one to open. The
+General settings page shows both ports and these commands. Neither port can be changed from the
+page: how it is reached stays in `.env`, out of every form's reach.
 
 **A port scans rarely try.** What a scan of a server finds is what listens on its public
 addresses. The page's own port, 8080, is not among them: it listens on `127.0.0.1`, or in Docker
@@ -452,9 +474,10 @@ HTTPS on that port only, and asks for certificates only by the check a certifica
 makes on port 80 (the other kind needs 443); it listens on 80 just while it is being checked, and
 sends nobody who tries it anywhere, so 80 gives nothing away. `ufw` is opened for 80 and the new
 port, and the rule for 443 is closed if the installer opened it. Allow the new port in a
-provider's own firewall too, if it has one. With Docker, put `WEB_PUBLIC_PORT=PORT` in `.env` and
-run `docker compose up -d`: the Caddy container still listens on 443, and the host publishes it
-on that port. At install time, `WEB_PUBLIC_PORT=random` in front of the installer does the same.
+provider's own firewall too, if it has one. With Docker the same command writes
+`WEB_PUBLIC_PORT` in `.env` and starts the containers again: the Caddy container still listens on
+443, and the host publishes it on that port. At install time, `WEB_PUBLIC_PORT=random` in front of
+the installer does the same.
 
 Be clear about what this buys. It takes the page out of the sweeps that try the usual ports, which
 is most of them, and so out of the log noise and the opportunistic guessing that follow; the

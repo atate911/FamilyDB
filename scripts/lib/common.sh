@@ -414,7 +414,7 @@ diagnose() { # diagnose "<the command's output>"
     *"address already in use"*|*"Address already in use"*)
       _explain "The port is taken by something else already running." \
         "sudo ss -ltnp | grep ':<port>'    # what is on it" \
-        "Stop that, or set WEB_PORT in .env to a free port above 1024." ;;
+        "Stop that, or move FamilyDB to a free port: sudo scripts/maintain.sh port random" ;;
     *"Killed"*|*"MemoryError"*|*"Cannot allocate memory"*|*"out of memory"*)
       _explain "The machine ran out of memory and the kernel stopped the command." \
         "free -m                 # how much there is" \

@@ -15,6 +15,7 @@ from __future__ import annotations
 import types
 import typing
 from dataclasses import dataclass
+from functools import cache
 from typing import Any, Literal
 from zoneinfo import available_timezones
 
@@ -29,9 +30,11 @@ TOO_LONG = "That is longer than a setting should be."
 MAX_LENGTH = 400
 # The three companies by the names the page gives them everywhere, setup included.
 COMPANIES = {"openai": "OpenAI", "anthropic": "Anthropic", "gemini": "Google"}
-# The zones worth offering: places, not the legacy aliases and offsets.
+# The zones worth offering: places, not the legacy aliases and offsets, and UTC itself, which
+# many a server keeps.
 ZONE_PREFIXES = ("Africa/", "America/", "Antarctica/", "Asia/", "Atlantic/", "Australia/")
 ZONE_PREFIXES += ("Europe/", "Indian/", "Pacific/")
+ZONE_ALSO = frozenset({"UTC"})
 
 
 @dataclass(frozen=True)
@@ -196,9 +199,17 @@ def _keyboard(key: str, kind: str) -> str:
     return "numeric" if kind == "int" else "decimal"
 
 
-def zones() -> list[str]:
-    """Every time zone worth offering, by the place it is named for."""
-    return sorted(zone for zone in available_timezones() if zone.startswith(ZONE_PREFIXES))
+@cache
+def zones() -> tuple[str, ...]:
+    """Every time zone worth offering, by the place it is named for, and UTC. Read once: the
+    list does not change while the process runs, and reading it walks the zone files."""
+    return tuple(
+        sorted(
+            zone
+            for zone in available_timezones()
+            if zone.startswith(ZONE_PREFIXES) or zone in ZONE_ALSO
+        )
+    )
 
 
 YES_NO = (("true", "yes"), ("false", "no"))
@@ -281,7 +292,9 @@ GROUPS: tuple[Group, ...] = (
                 "family_tz",
                 "Time zone",
                 "It decides what “tonight” and “this weekend” mean, and when the messages that "
-                "go out on their own are sent.",
+                "go out on their own are sent. Choose the nearest city in the same zone.",
+                # Drawn under the region each is named for, with its offset now (views.py).
+                choices=zones(),
             ),
             field(
                 "weather_units",
@@ -453,6 +466,22 @@ GROUPS: tuple[Group, ...] = (
                 suggested=suggestions("gemini"),
                 unset="Gemini's lookup model",
                 company="gemini",
+            ),
+        ),
+    ),
+    Group(
+        "model",
+        "photos",
+        "Photos",
+        "A photo sent on Telegram (a poster, a menu, a ticket) is read by the model that looks "
+        "things up, which writes down what it shows; that is answered as if it had been typed. "
+        "The photo goes to that company, costs about a tenth of a cent, and is not kept.",
+        (
+            field(
+                "photos",
+                "Look at photos",
+                "Off asks for it in words. In a group, a photo is looked at only when it is sent "
+                "to the bot, by a mention in its caption or a reply.",
             ),
         ),
     ),
@@ -638,6 +667,21 @@ GROUPS: tuple[Group, ...] = (
             field("enrich_batch", "Ideas looked up at a time"),
         ),
         folded=True,
+    ),
+    Group(
+        "connections",
+        "telegram-groups",
+        "In a Telegram group",
+        "",
+        (
+            field(
+                "telegram_require_mention",
+                "Answer only when mentioned",
+                "Yes: only a message that @mentions the bot or replies to it. Suits a busy group "
+                "the family uses for other things too. No suits a group kept for planning, where "
+                "everything said is for her.",
+            ),
+        ),
     ),
     Group(
         "connections",

@@ -197,7 +197,7 @@ def test_telegram_sends_the_answer_as_a_reply(settings, clock, conn, family) -> 
     channel = TelegramChannel(App(settings, FixedClock(FRIDAY, TZ)), token=TOKEN)
     replies: list[str] = []
 
-    async def reply_text(value: str) -> None:
+    async def reply_text(value: str, **_: object) -> None:
         replies.append(value)
 
     async def send_chat_action(**_: object) -> None:
@@ -211,10 +211,13 @@ def test_telegram_sends_the_answer_as_a_reply(settings, clock, conn, family) -> 
     )
     context = SimpleNamespace(bot=SimpleNamespace(send_chat_action=send_chat_action))
     asyncio.run(channel.on_command(update, context))
+    # Drawn with its heading in bold; kept as it was written, for the page and the history.
     assert replies == [
-        "Here's today, Fri 25 Sep:\nNothing on.\n"
+        "<b>Here's today, Fri 25 Sep:</b>\nNothing on.\n"
         "Google Calendar isn't connected, so these are the saved plans only."
     ]
+    kept = conn.execute("SELECT text FROM messages WHERE direction='out'").fetchone()["text"]
+    assert kept.startswith("Here's today, Fri 25 Sep:\n")
     sent = conn.execute("SELECT delivered_at FROM messages WHERE direction='out'").fetchone()
     assert sent["delivered_at"] is not None  # stored first, marked delivered once it went
 
@@ -243,3 +246,43 @@ def test_the_menu_is_set_only_when_it_differs(settings, clock) -> None:
             raise RuntimeError("Telegram is down")
 
     asyncio.run(channel.offer_commands(Broken([])))  # logged, not raised
+
+
+# -- a link that links somebody's Telegram -------------------------------------------------------
+
+
+def _started(app, text, *, user="1003", chat=None, update="30"):
+    msg = IncomingMessage("telegram", update, chat or user, user, text, sender_name="Jo Smith")
+    return commands.start(app, msg)
+
+
+def test_starting_from_a_link_links_and_welcomes_them(settings, conn, family) -> None:
+    from familydb import family as rules
+    from familydb.store import members
+
+    app = _app(settings)
+    jo = rules.add(conn, "Jo", "parent", telegram_id=None, now=utc_iso(FRIDAY))
+    code = rules.invite(conn, jo.id, by=None, now=FRIDAY)
+    said = _started(app, f"/start {code}")
+    assert said.status == "ok" and said.text.startswith("Welcome, Jo! Your Telegram is linked")
+    assert members.resolve(conn, "telegram", "1003").id == jo.id
+    # Opened again, the link is spent, and Jo is simply greeted as family.
+    again = _started(app, f"/start {code}", update="31")
+    assert again.text.startswith("Hi, I'm Vera.")
+
+
+def test_a_link_that_does_nothing_says_why(settings, conn, family) -> None:
+    from familydb import family as rules
+
+    app = _app(settings)
+    jo = rules.add(conn, "Jo", "parent", telegram_id=None, now=utc_iso(FRIDAY))
+    code = rules.invite(conn, jo.id, by=None, now=FRIDAY)
+    stale = _started(app, "/start AAAAAAAAAAAAAAAAAAAAAAAA", user="4242")
+    assert stale.status == "unknown_sender" and "doesn't work any more" in stale.text
+    assert "4242" in [k.channel_user_id for k in knocks.recent(conn, channel="telegram")]
+    taken = _started(app, f"/start {code}", user="1001")  # Sam trying it on their own phone
+    assert taken.text.startswith("This Telegram is already Sam's")
+    # Only in a private chat: a group's Start is never a link.
+    grouped = _started(app, f"/start {code}", chat="-100")
+    assert grouped.text.startswith("Sorry, I only talk to the family")
+    assert _started(app, f"/start {code}", update="32").text.startswith("Welcome, Jo!")

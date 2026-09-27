@@ -206,6 +206,9 @@ class Settings(BaseSettings):
     voice_max_minutes: int = Field(default=5, ge=1, le=30)
     # Who hears them. Empty: the chat company when it can, else another that can and has a key.
     transcribe_provider: Literal["", "openai", "gemini"] = ""
+    # Photos sent on Telegram are looked at by the lookup model, which writes down what they show
+    # (agent/gateway.look), and that is answered as if typed. The picture is not kept.
+    photos: bool = True
     openai_transcribe_model: str = "gpt-4o-mini-transcribe"
     # Empty hears with Gemini's lookup model.
     gemini_transcribe_model: str = ""

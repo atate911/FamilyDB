@@ -903,8 +903,15 @@ the foreground, or a second copy of the bot.
 sudo ss -ltnp | grep ':8080'
 ```
 
-*How to fix:* stop whatever holds it, or set `WEB_PORT` in `.env` to a free port. It must stay
-above 1024: the service runs unprivileged in both Docker and systemd and cannot bind a low one.
+*How to fix:* stop whatever holds it, or move FamilyDB to a free port, which also points Caddy
+(or Docker) at it and restarts it:
+
+```bash
+sudo /opt/familydb/scripts/maintain.sh port 9090    # or port random
+```
+
+It must stay above 1024: the service runs unprivileged in both Docker and systemd and cannot bind
+a low one.
 A related symptom, `database is locked`, is the same mistake one layer down — two processes
 writing at once. Only one `familydb run` may exist at a time; the CLI alongside it is fine.
 

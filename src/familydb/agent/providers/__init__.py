@@ -8,13 +8,16 @@ from typing import Any
 
 from familydb.agent.providers import catalog, prices
 from familydb.agent.providers.base import (
+    LOOK_TOKENS,
     Audio,
     Exchange,
     Heard,
     KeyCheck,
     Message,
     ModelReply,
+    Picture,
     Provider,
+    Seen,
     Stop,
     Surface,
     SystemBlock,
@@ -141,6 +144,24 @@ def hearers(settings: Settings, audio: Any = None) -> list[Provider]:
     return able if settings.provider_fallback else able[:1]
 
 
+def lookers(settings: Settings, api: Any = None) -> list[Provider]:
+    """Who may look at a photo, in the order to ask them: none when nobody has a key.
+
+    The company that looks things up, as writing down what a picture says is a lookup's kind of
+    work; if that one has no key, any other that has one. With the fallback on, the rest come
+    after, as spares. An injected `api` (a test's stand-in) answers for the first, alone.
+    """
+    first = chosen(settings, "worker")
+    if api is not None:
+        return [build(first, settings, api=api)]
+    able = [
+        provider
+        for provider in (build(name, settings) for name in [first, *others(first)])
+        if provider.viewer() and provider.configured()
+    ]
+    return able if settings.provider_fallback else able[:1]
+
+
 def ready(settings: Settings, surface: Surface, api: Any = None) -> bool:
     """Whether any model can be asked on this surface: the chosen one has a key, or another does
     and the fallback is on. False is the ordinary state of a fresh install, before a key is typed
@@ -151,6 +172,7 @@ def ready(settings: Settings, surface: Surface, api: Any = None) -> bool:
 
 
 __all__ = [
+    "LOOK_TOKENS",
     "NAMES",
     "Audio",
     "Exchange",
@@ -158,7 +180,9 @@ __all__ = [
     "KeyCheck",
     "Message",
     "ModelReply",
+    "Picture",
     "Provider",
+    "Seen",
     "Stop",
     "Surface",
     "SystemBlock",
@@ -173,6 +197,7 @@ __all__ = [
     "fallback_for",
     "for_surface",
     "hearers",
+    "lookers",
     "model_at",
     "others",
     "owner",

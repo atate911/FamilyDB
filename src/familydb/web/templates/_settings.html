@@ -3,6 +3,16 @@
    empty (in the box, or as the dropdown's first choice), and whether it was changed here. #}
 {% from "_ui.html" import icon %}
 
+{# A dropdown's choices under their headings, as `(heading, [(value, words)])`, with `value`
+   chosen: the time zones, here and on setup's home step. #}
+{% macro grouped_options(groups, value) -%}
+  {% for heading, rows in groups %}
+    <optgroup label="{{ heading }}">
+      {%- for one, words in rows %}<option value="{{ one }}"{% if one == value %} selected{% endif %}>{{ words }}</option>{% endfor -%}
+    </optgroup>
+  {% endfor %}
+{%- endmacro %}
+
 {% macro box(entry) -%}
   {% set one = entry.field %}
   {% set told = 'h-' ~ one.key %}
@@ -15,9 +25,18 @@
       <select id="f-{{ one.key }}" name="{{ one.key }}"
         {%- if entry.problem or one.note %} aria-describedby="{{ told }}"{% endif %}>
         <option value="">Default ({{ entry.placeholder }})</option>
-        {% for choice in one.choices %}
-          <option value="{{ choice }}" {% if entry.value == choice %}selected{% endif %}>{{ entry.labels.get(choice) or one.word(choice) }}</option>
-        {% endfor %}
+        {# A value stored that the list does not offer (a zone an older page took typed) is kept
+           as a choice of its own, so saving the page never quietly loses it. #}
+        {% if entry.value and entry.value not in one.choices %}
+          <option value="{{ entry.value }}" selected>{{ entry.value }}</option>
+        {% endif %}
+        {% if entry.grouped %}
+          {{ grouped_options(entry.grouped, entry.value) }}
+        {% else %}
+          {% for choice in one.choices %}
+            <option value="{{ choice }}" {% if entry.value == choice %}selected{% endif %}>{{ entry.labels.get(choice) or one.word(choice) }}</option>
+          {% endfor %}
+        {% endif %}
       </select>
     {% else %}
       <input

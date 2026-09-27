@@ -13,7 +13,7 @@ from familydb import memory, personas, voice, whereabouts
 from familydb.agent import gateway, spending
 from familydb.agent.history import load_history
 from familydb.agent.loop import MessagesAPI, TurnResult
-from familydb.agent.providers import Audio
+from familydb.agent.providers import Audio, Picture
 from familydb.agent.render import (
     render_audience_line,
     render_folded_line,
@@ -24,7 +24,7 @@ from familydb.agent.render import (
 )
 from familydb.agent.spending import SpendingLimitReached
 from familydb.app import App
-from familydb.channels.base import IncomingMessage, OutgoingMessage
+from familydb.channels.base import IncomingMessage, OutgoingMessage, PhotoNote
 from familydb.clock import FixedClock
 from familydb.dates import utc_iso
 from familydb.delivery import deliver, lease
@@ -38,6 +38,22 @@ log = logging.getLogger(__name__)
 
 # The most a voice note may weigh: what Telegram lets a bot download.
 MAX_AUDIO_BYTES = 20 * 1024 * 1024
+# The most a photo may weigh: what every vendor here takes, Claude counting its five megabytes on
+# the base64 it is sent as, a third larger than the picture.
+MAX_PHOTO_BYTES = 3_900_000
+# The most of an album looked at, each a call of its own; the rest are said to be there.
+MAX_PHOTOS = 4
+
+
+class _Unseen(Exception):
+    """A photo that was not looked at, and the line that says why."""
+
+    def __init__(self, error: str, event: str = "photo_unseen") -> None:
+        super().__init__(error)
+        self.error = error
+        self.event = event
+
+
 # What the weekend digest's question is stored under, followed by the day, so the retry job can
 # tell a digest from a message somebody wrote.
 DIGEST_UPDATE = "digest:"
@@ -50,15 +66,17 @@ def handle_incoming(
     api: MessagesAPI | None = None,
     conn: sqlite3.Connection | None = None,
     hearing: Any = None,
+    seeing: Any = None,
 ) -> OutgoingMessage | None:
     """Process one message. Returns None for an update already seen (a restart, a retry).
 
-    A voice note is heard first (`hearing` stands in for the speech endpoint in tests).
+    A voice note is heard first, and a photo looked at (`hearing` and `seeing` stand in for the
+    models that do those in tests).
     """
     if conn is not None:
-        return _handle(app, msg, api, conn, hearing)
+        return _handle(app, msg, api, conn, hearing, seeing)
     with closing(app.connect()) as own:
-        return _handle(app, msg, api, own, hearing)
+        return _handle(app, msg, api, own, hearing, seeing)
 
 
 def handle_synthetic(
@@ -91,6 +109,7 @@ def _handle(
     api: MessagesAPI | None,
     conn: sqlite3.Connection,
     hearing: Any = None,
+    seeing: Any = None,
 ) -> OutgoingMessage | None:
     if _seen(conn, msg):
         return None
@@ -118,7 +137,9 @@ def _handle(
     inbound_id = _store_inbound(app, conn, msg, member)
     if inbound_id is None:
         return None
-    return _run(app, msg, member, inbound_id, api, conn, notify=True, hearing=hearing)
+    return _run(
+        app, msg, member, inbound_id, api, conn, notify=True, hearing=hearing, seeing=seeing
+    )
 
 
 def _seen(conn: sqlite3.Connection, msg: IncomingMessage) -> bool:
@@ -134,8 +155,14 @@ def _store_inbound(
     """Store the inbound message; None when the same update landed at the same moment.
 
     A voice note is stored as a mark saying how long it was, before a byte of it is fetched:
-    its words replace the mark once they are heard.
+    its words replace the mark once they are heard. A photo likewise, until it is looked at.
     """
+    if msg.voice:
+        text = messages.unheard(msg.voice.seconds)
+    elif msg.photos:
+        text = messages.unlooked(len(msg.photos))
+    else:
+        text = msg.text
     try:
         with transaction(conn):
             inbound = messages.insert_in(
@@ -144,7 +171,7 @@ def _store_inbound(
                 channel_update_id=msg.channel_update_id,
                 chat_id=msg.chat_id,
                 member_id=member.id,
-                text=messages.unheard(msg.voice.seconds) if msg.voice else msg.text,
+                text=text,
                 now=utc_iso(app.clock.now()),
             )
     except sqlite3.IntegrityError:
@@ -167,6 +194,7 @@ def _run(
     retry: bool = False,
     kind: str = "chat",
     hearing: Any = None,
+    seeing: Any = None,
 ) -> OutgoingMessage | None:
     with lease(app, conn, inbound_id) as owned:
         if not owned:
@@ -188,10 +216,26 @@ def _run(
             if isinstance(heard, OutgoingMessage):
                 return heard
             msg = heard
+        elif msg.photos:
+            seen = _look(app, msg, inbound_id, conn, seeing)
+            if isinstance(seen, OutgoingMessage):
+                return seen
+            msg = seen
         elif messages.is_unheard(row.text):
             # Stored, and then the process stopped before it was heard. The recording is not
             # kept, so there is nothing to answer: say so, even on a retry, since it is final.
             return _not_heard(app, conn, msg, inbound_id, "stopped before it was heard")
+        elif messages.is_unlooked(row.text):
+            # The same for a photo: it is not kept either.
+            return _not_heard(
+                app,
+                conn,
+                msg,
+                inbound_id,
+                "stopped before it was looked at",
+                "photo_unseen",
+                what="photo",
+            )
         if retry:
             if row.retries >= app.settings.retry_max_attempts:
                 return None
@@ -253,10 +297,110 @@ def _hear(
         return _not_heard(app, conn, msg, inbound_id, "no words in it")
     caption = msg.text.strip()
     text = messages.VOICE_PREFIX + words + (f"\n\n{caption}" if caption else "")
+    log.info("heard voice note %s: %s s, %s characters", inbound_id, note.seconds, len(words))
+    return _heard_as(conn, msg, inbound_id, text)
+
+
+def _look(
+    app: App, msg: IncomingMessage, inbound_id: int, conn: sqlite3.Connection, seeing: Any
+) -> IncomingMessage | OutgoingMessage:
+    """What a photo shows, or each of an album's, as a model wrote it down, stored in place of
+    its mark and handed on as the message's text, with its caption after it.
+
+    Or the notice saying why nothing was looked at, worded by code: turned off (a caption is
+    answered all the same, marked as having come with photos nobody saw), nobody with a key,
+    too large, not fetched, not looked at, or the day's limit spent. Of an album, what could be
+    seen is kept and the rest said not to be, the first `MAX_PHOTOS` looked at. The pictures are
+    not kept, so a photo that was not looked at is given up rather than retried.
+    """
+    notes = msg.photos
+    settings = app.settings
+    caption = msg.text.strip()
+    if not settings.photos:
+        if not caption:
+            return _not_heard(
+                app, conn, msg, inbound_id, "photos are off", "photo_off", what="photo"
+            )
+        what = "a photo" if len(notes) == 1 else f"{len(notes)} photos"
+        return _heard_as(conn, msg, inbound_id, messages.unseen(what, caption))
+    if not gateway.can_look(settings, api=seeing):
+        return _not_heard(
+            app, conn, msg, inbound_id, "nobody can look", "photo_unseen", what="photo"
+        )
+    hints = _hints(app, conn)
+    seen: list[str | None] = []
+    failed: _Unseen | None = None
+    for note in notes[:MAX_PHOTOS]:
+        try:
+            seen.append(_look_at(app, conn, note, inbound_id, hints, seeing))
+        except SpendingLimitReached as exc:
+            return _not_heard(
+                app,
+                conn,
+                msg,
+                inbound_id,
+                str(exc),
+                "limit_reached",
+                what="photo",
+                limit=f"{exc.limit:.2f}",
+            )
+        except _Unseen as why:
+            log.warning("photo in message %s not looked at: %s", inbound_id, why.error)
+            seen.append(None)
+            failed = failed or why
+    if not any(seen):
+        why = failed or _Unseen("nothing written down")
+        return _not_heard(app, conn, msg, inbound_id, why.error, why.event, what="photo")
+    written = messages.seen_in_photos(seen, len(notes))
+    log.info("looked at %s photo(s) in message %s", len(seen), inbound_id)
+    return _heard_as(conn, msg, inbound_id, written + (f"\n\n{caption}" if caption else ""))
+
+
+def _look_at(
+    app: App,
+    conn: sqlite3.Connection,
+    note: PhotoNote,
+    inbound_id: int,
+    hints: str,
+    seeing: Any,
+) -> str:
+    """What one photo shows, written down; raises _Unseen with why it was not looked at."""
+    if (note.size or 0) > MAX_PHOTO_BYTES:
+        raise _Unseen("too large", "photo_too_large")
+    try:
+        data = note.fetch()
+    except Exception as exc:
+        raise _Unseen(f"not fetched: {type(exc).__name__}") from exc
+    if len(data) > MAX_PHOTO_BYTES:
+        raise _Unseen("too large", "photo_too_large")
+    try:
+        seen = gateway.look(
+            settings=app.settings,
+            conn=conn,
+            clock=app.clock,
+            picture=Picture(data=data, mime=note.mime),
+            hints=hints,
+            message_id=inbound_id,
+            api=seeing,
+        )
+    except SpendingLimitReached:
+        raise
+    except AgentError as exc:
+        raise _Unseen(str(exc)) from exc
+    words = seen.text.strip()
+    if not words:
+        raise _Unseen("nothing written down")
+    # Cut short: said so, rather than passed on as the whole of it.
+    return words + " …" if seen.stop == "max_tokens" else words
+
+
+def _heard_as(
+    conn: sqlite3.Connection, msg: IncomingMessage, inbound_id: int, text: str
+) -> IncomingMessage:
+    """The message as it will be answered, stored in place of the mark it was kept under."""
     with transaction(conn):
         messages.set_text(conn, inbound_id, text)
-    log.info("heard voice note %s: %s s, %s characters", inbound_id, note.seconds, len(words))
-    return dataclasses.replace(msg, text=text, voice=None)
+    return dataclasses.replace(msg, text=text, voice=None, photos=())
 
 
 def _not_heard(
@@ -266,15 +410,19 @@ def _not_heard(
     inbound_id: int,
     error: str,
     event: str = "voice_unheard",
+    *,
+    what: str = "voice note",
     **facts: Any,
 ) -> OutgoingMessage:
-    log.warning("voice note %s not heard: %s", inbound_id, error)
+    """A voice note not heard, or a photo not looked at (`what`): given up, with her notice
+    saying so, and the failure recorded as whichever it was."""
+    log.warning("%s in message %s not taken in: %s", what, inbound_id, error)
     with transaction(conn):
         messages.give_up(conn, inbound_id)
     # Seeded by the message, as every other notice here is, so a line with several wordings
     # may read another way for another voice note, and the same way if this one is sent again.
     notice = voice.say(app.settings, event, seed=inbound_id, **facts)
-    return _fail(app, conn, msg, inbound_id, f"voice note: {error}", notice)
+    return _fail(app, conn, msg, inbound_id, f"{what}: {error}", notice)
 
 
 def _hints(app: App, conn: sqlite3.Connection) -> str:

@@ -406,6 +406,81 @@ def test_the_timezone_is_set_on_the_page(page) -> None:
     assert refused.status_code == 400 and page.app.settings.tz == "Europe/London"
 
 
+def test_the_timezone_is_chosen_from_a_list_by_region(page) -> None:
+    """A dropdown of the standard zones, under the region each is named for, each read as its
+    place and its offset at the moment the page is drawn (the test clock's September)."""
+    general = page.get("/settings/general").text
+    assert '<select id="f-family_tz" name="family_tz"' in general
+    assert 'name="family_tz" type="text"' not in general  # nothing to type, or to mistype
+    headings = re.findall(r'<optgroup label="([^"]+)">', general)
+    assert headings[:3] == ["Africa", "Americas", "Antarctica"] and headings[-1] == "Other"
+    assert (
+        '<option value="America/Argentina/Buenos_Aires">Buenos Aires, Argentina · UTC-03:00'
+        "</option>" in general
+    )
+    assert '<option value="Asia/Kolkata">Kolkata · UTC+05:30</option>' in general
+    assert '<option value="UTC">UTC</option>' in general
+    # With nothing stored, the first choice says what the server's own zone gives, in those words.
+    assert '<option value="">Default (Vancouver · UTC-07:00)</option>' in general
+    page.post("/settings", data=_whole_form(page, family_tz="Europe/London"))
+    chosen = page.get("/settings/general").text
+    assert '<option value="Europe/London" selected>London · UTC+01:00</option>' in chosen
+
+
+def test_a_zone_the_list_does_not_offer_is_kept_by_a_save(page, conn) -> None:
+    """A zone stored before the list, or typed into an older page, stays chosen, so saving the
+    page as it is drawn never quietly puts the default back."""
+    with db.transaction(conn):
+        settings_store.set_many(conn, {"family_tz": "US/Pacific"}, source="test")
+    page.app.refresh()
+    general = page.get("/settings/general").text
+    assert '<option value="US/Pacific" selected>US/Pacific</option>' in general
+    saved = page.post("/settings", data=_as_drawn(general))
+    assert saved.status_code == 302
+    assert settings_store.overrides(conn)["family_tz"] == "US/Pacific"
+    assert page.app.settings.tz == "US/Pacific"
+
+
+def _as_drawn(text: str) -> dict[str, str]:
+    """What a browser sends for the settings form on a page, untouched: each box's value, and
+    each dropdown's chosen option, or its first when none is chosen."""
+    from html.parser import HTMLParser
+
+    class Form(HTMLParser):
+        def __init__(self) -> None:
+            super().__init__()
+            self.sent: dict[str, str] = {}
+            self.inside = False
+            self.select: str | None = None
+
+        def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+            found = {key: value or "" for key, value in attrs}
+            if tag == "form":
+                self.inside = found.get("action") == "/settings"
+            elif not self.inside:
+                return
+            elif tag == "input" and found.get("type") != "checkbox" and "name" in found:
+                self.sent[found["name"]] = found.get("value", "")
+            elif tag == "select":
+                self.select = found["name"]
+            elif (
+                tag == "option"
+                and self.select is not None
+                and (self.select not in self.sent or "selected" in found)
+            ):
+                self.sent[self.select] = found.get("value", "")
+
+        def handle_endtag(self, tag: str) -> None:
+            if tag == "select":
+                self.select = None
+            elif tag == "form":
+                self.inside = False
+
+    form = Form()
+    form.feed(text)
+    return form.sent
+
+
 def test_a_home_area_typed_on_the_page_is_found_on_the_map(settings, clock, conn, family) -> None:
     from familydb.integrations.geocode import GeoPoint
     from tests.fakes import FakeGeocoder
@@ -553,3 +628,68 @@ def test_nothing_floats_beside_the_key_box_that_would_not_save_it(page) -> None:
     text = page.get("/settings/model").text
     assert 'class="save-bar still"' in text and 'class="save-bar"' not in text
     assert "Save models" in text and "Save and check the key" in text
+
+
+def test_a_zone_reads_as_its_place_and_its_offset_that_day() -> None:
+    from datetime import UTC, datetime
+
+    from familydb.web.views import utc_offset, zone_groups, zone_label
+
+    summer = datetime(2026, 7, 1, 12, tzinfo=UTC)
+    winter = datetime(2026, 1, 15, 12, tzinfo=UTC)
+    assert zone_label("America/Vancouver", summer) == "Vancouver · UTC-07:00"
+    assert zone_label("America/Vancouver", winter) == "Vancouver · UTC-08:00"
+    assert zone_label("America/Indiana/Indianapolis", winter) == "Indianapolis, Indiana · UTC-05:00"
+    assert utc_offset("Asia/Kathmandu", winter) == "UTC+05:45"
+    assert utc_offset("Europe/London", winter) == "UTC+00:00"
+    assert zone_label("UTC", winter) == "UTC"
+    groups = dict(zone_groups(["Europe/Paris", "UTC", "America/Toronto", "America/Denver"], winter))
+    assert list(groups) == ["Americas", "Europe", "Other"]
+    assert [zone for zone, _ in groups["Americas"]] == ["America/Denver", "America/Toronto"]
+
+
+def test_the_general_page_says_where_the_page_is_served_and_how_to_move_it(page) -> None:
+    """Both ports, and the commands that move them on the server: shown, never a form."""
+    general = page.get("/settings/general").text
+    served = general[general.index('id="served"') :]
+    assert "<code>http://localhost/</code>, on port 80" in served
+    assert "<code>127.0.0.1:8080</code>: only this machine can reach it." in served
+    assert "scripts/maintain.sh port 9090</code> moves FamilyDB itself off\n      8080" in served
+    assert "https --port" not in served  # nothing is in front of it to move
+    assert 'name="web_port"' not in general and "web_port" not in fields.BY_KEY
+
+
+def test_behind_caddy_it_says_how_to_move_the_address_people_open(settings, clock, conn, family):
+    app = App(
+        settings.model_copy(update={"web_password": PASSWORD, "web_trust_proxy": True}), clock
+    )
+    client = create_app(app).test_client()
+    # Signed in where the page is, since behind a proxy the sign-in cookie is sent on HTTPS only.
+    opened = "https://203.0.113.7:24613"
+    client.post("/login", data={"password": PASSWORD}, base_url=opened)
+    served = client.get("/settings/general", base_url=opened).text
+    assert "<code>https://203.0.113.7:24613/</code>, on port 24613" in served
+    assert "and the page is passed on to it by Caddy" in served
+    assert "https --port random</code> serves the page on a port" in served
+    assert "The address people open stays as it is." in served
+
+
+def test_the_connections_page_says_what_the_bot_can_read_in_a_group(page) -> None:
+    app = page.app
+    unknown = page.get("/settings/connections").text
+    assert "Answer only when mentioned" in unknown and "privacy setting" not in unknown
+    app.channel_states["telegram"] = "connected as @tate_family_bot"
+    app.channel_facts["telegram"] = {"reads_groups": False}
+    shy = " ".join(page.get("/settings/connections").text.split())
+    assert "In a group it sees only a message that mentions it or replies to it" in shy
+    assert "choose @tate_family_bot, then <em>Disable</em>" in shy
+    app.channel_facts["telegram"] = {"reads_groups": True}
+    reads = page.get("/settings/connections").text
+    assert "It reads every message in the groups it is in." in reads
+    saved = page.post(
+        "/settings",
+        data={"csrf": _token(page), "section": "connections", "telegram_require_mention": "true"},
+    )
+    assert saved.headers["Location"] == "/settings/connections"
+    assert app.settings.telegram_require_mention is True
+    assert app.settings.google_calendar_id is None  # the other form's box, left alone

@@ -258,12 +258,66 @@ EVENTS: dict[str, Event] = {
         "Sorry, I couldn't make out that voice note. Could you send it again, or type it?",
         (),
     ),
+    "cannot_read": Event(
+        "A sticker, file or video sent with no words",
+        "I can't open that kind of message. Could you tell me in words?",
+        (),
+    ),
+    "photo_off": Event(
+        "A photo while they are turned off",
+        "I don't look at photos here, so I didn't see that one. Could you tell me in words?",
+        (),
+    ),
+    "photo_too_large": Event(
+        "A photo too large to look at",
+        "That picture is too large for me to look at. Could you send it as a photo rather than "
+        "a file, or tell me in words?",
+        (),
+    ),
+    "photo_unseen": Event(
+        "A photo that could not be looked at",
+        "Sorry, I couldn't look at that photo. Could you send it again, or tell me in words?",
+        (),
+    ),
     "done": Event("Nothing to add after doing it", "Done.", ()),
     "stranger": Event(
         "Someone not in the family",
         "Sorry, I only talk to the family. Ask one of them to add you; your id here is {id}.",
         ("id",),
         {"id": "123456789"},
+    ),
+    "invite_linked": Event(
+        "Somebody's Telegram linked by the link made for them",
+        "Welcome, {who}! This Telegram is linked to you now, so I'll know it's you. Tell me "
+        "ideas and plans, or ask what to do this weekend.",
+        ("who",),
+        {"who": "Alex"},
+    ),
+    "invite_stale": Event(
+        "A link that no longer works",
+        "That link no longer works: it was used already, or it's more than a day old. Ask "
+        "whoever sent it for a new one.",
+        (),
+    ),
+    "invite_taken": Event(
+        "A link opened by a Telegram already on the list",
+        "This Telegram is already {who}'s on the family list, so I left the link for whoever it "
+        "was made for.",
+        ("who",),
+        {"who": "Sam"},
+    ),
+    "joined_group": Event(
+        "Added to a family group where she reads every message",
+        "Hi all, I'm {name}, the family's planning assistant. Tell me ideas and plans as they come "
+        "up here, or ask what to do this weekend.",
+        (),
+    ),
+    "joined_group_mentioned": Event(
+        "Added to a family group where she has to be mentioned",
+        "Hi all, I'm {name}, the family's planning assistant. Mention {bot} or reply to me when "
+        "something's for me: an idea, a plan, or what to do this weekend.",
+        ("bot",),
+        {"bot": "@tate_family_bot"},
     ),
     "start": Event(
         "Telegram's /start, and the bot's description there",

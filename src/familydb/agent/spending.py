@@ -19,7 +19,7 @@ import sqlite3
 from datetime import datetime, time, timedelta
 from typing import Any
 
-from familydb.agent.providers import prices
+from familydb.agent.providers import LOOK_TOKENS, prices
 from familydb.config import Settings
 from familydb.dates import utc_iso
 from familydb.errors import AgentError
@@ -114,6 +114,18 @@ def estimate_hearing(provider: str, model: str | None, seconds: int) -> float:
         "output_tokens": seconds * WORDS_TOKENS_PER_SECOND + 400,
         "audio_seconds": seconds,
     }
+    return prices.cost(provider, model, usage)[0]
+
+
+# Only to size the hold on looking at a photo; the call records what was billed. A large picture,
+# as the vendors count one, the words asking for it, and every token the answer may use.
+PICTURE_TOKENS = 2500
+ASK_TOKENS = 300
+
+
+def estimate_looking(provider: str, model: str | None) -> float:
+    """The most looking at one photo could cost."""
+    usage = {"input_tokens": PICTURE_TOKENS + ASK_TOKENS, "output_tokens": LOOK_TOKENS}
     return prices.cost(provider, model, usage)[0]
 
 
