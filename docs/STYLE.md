@@ -16,7 +16,8 @@ in phosphor, sometimes a radar (see "Green screens").
 
 Everything here is carried by one stylesheet (`src/familydb/web/static/style.css`), a handful of
 templates, three open-licensed typefaces and one icon sprite. None of it needs a script: the
-page's one script (`static/ask.js`) is the box's, and the look does not depend on it.
+page's two scripts are the box's (`static/ask.js`) and the bar menu's (`static/menu.js`), and the
+look depends on neither.
 
 This document is a record of the look as it stands and why, not a fence around it. The design,
 the feel and the structure of the pages are meant to evolve with the app, and whoever is working
@@ -374,8 +375,13 @@ looked at (see "Two layers").
 
 - **The bar.** On a phone the five everyday places (Home, Vera, Ideas, Plans, To do) are a tab
   bar along the bottom, the current one marked by a pill in its colour; Memory, Family, Status and
-  Settings, the name of whoever is signed in (their own password) and signing out are icons at
-  the top; Family and Settings are shown only to an admin, who alone may change them. From 52rem
+  a last tile are icons at the top; Family is shown only to an admin, who alone may change it.
+  The last tile opens a menu (a `<details>`, so it works with scripts off; `menu.js` closes it on
+  a click elsewhere or Escape): for an admin it is the Settings gear, and lists every page of
+  settings, then who is signed in, Your password and Sign out; anybody else sees their own name
+  on it and only those last three. Gathered there, they keep the bar to four icons however many
+  pages of settings there are, and puts the things about you beside the things about the page,
+  which is where people look for them. From 52rem
   everything is one bar that stays at the top while the page scrolls. The conversation's place
   goes by her name, with the conversation's icon; with no persona it is Chat. It is shown only to
   a role that may talk to her. Kept on a phone's home screen, the page opens full-screen, without
@@ -435,10 +441,12 @@ looked at (see "Two layers").
 - Words on a green screen are at least 1.2rem; dim green phosphor is 5.8:1 at the tube's
   brightest, normal and bright more.
 - Reading, every form and sending a message work with scripts off; scripts add to that. Today
-  the one script is `static/ask.js`, the box's: it keeps what is being written, fills the box
+  there are two. `static/ask.js` is the box's: it keeps what is being written, fills the box
   from the ways to start, sends where the phone is, and looks again for an answer only while
   nobody is writing. Without it the ways to start are links, "Send where I am" is not shown,
   nothing typed is kept across a change of page, and the page looks again with a meta refresh.
+  `static/menu.js` closes the bar's menu on a click elsewhere or Escape; without it the menu
+  closes from its own button.
 
 ## What does not move
 

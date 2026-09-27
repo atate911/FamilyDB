@@ -1,4 +1,4 @@
-{% from "_ui.html" import icon %}
+{% from "_ui.html" import icon, presence %}
 <!doctype html>
 <html lang="en">
   <head>
@@ -10,6 +10,7 @@
     {# The reading face is on every screen; fetch it with the page. #}
     <link rel="preload" href="{{ url_for('static', filename='fonts/dm-sans.woff2') }}" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <script src="{{ url_for('static', filename='menu.js') }}" defer></script>
     <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml" />
     {# Kept on a phone's home screen, the page opens as an app: full-screen, with the mark for its
        icon and the page's own name under it. #}
@@ -63,18 +64,47 @@
          that may go there (familydb/roles.py): Family and Settings to an admin. What she
          remembers of the family is everybody's to see. #}
       {% set visiting = visitor() %}
+      {% set managing = visiting.may('manage') %}
       <nav class="tools" aria-label="Household">
         {{ item('Memory', url_for('web.memory'), 'memory', 'heart') }}
-        {% if visiting.may('manage') %}{{ item('Family', url_for('family.show'), 'family', 'family') }}{% endif %}
+        {% if managing %}{{ item('Family', url_for('family.show'), 'family', 'family') }}{% endif %}
         {{ item('Status', url_for('web.status'), 'status', 'status') }}
-        {% if visiting.may('manage') %}{{ item('Settings', url_for('settings.show'), 'settings', 'settings') }}{% endif %}
-        {% if visiting.member %}{{ item(visiting.name, url_for('family.you'), 'you', 'user') }}{% endif %}
+        {# The last tile opens a menu: every page of settings for an admin, then whoever is
+           signed in, their password and signing out. Anybody else sees their own name on it,
+           and only the last three. A <details>, so it opens with scripts off too; menu.js
+           closes it again on a click elsewhere or Escape. #}
+        {% if managing or visiting.member or visiting.signed_in %}
+          <details class="menu{% if ns.section in ('settings', 'you') %} here{% endif %}">
+            <summary>
+              {%- if managing %}{{ icon('settings') }}<span class="label">Settings</span>
+              {%- else %}{{ icon('user') }}<span class="label">{{ visiting.name or 'You' }}</span>{% endif -%}
+            </summary>
+            <div class="menu-list">
+              {% if managing %}
+                <a class="menu-all" href="{{ url_for('settings.show') }}"{% if here == 'settings.show' %} aria-current="page"{% endif %}>{{ icon('settings') }}All settings</a>
+                {% for one in settings_sections %}
+                  {% set target = url_for('settings.section', name=one.name) %}
+                  <a href="{{ target }}"{% if request.path == target %} aria-current="page"{% endif %}>
+                    {%- if one.icon == 'presence' %}{{ presence('glyph') }}{% else %}{{ icon(one.icon) }}{% endif %}{{ one.title }}</a>
+                {% endfor %}
+              {% endif %}
+              {% if visiting.member or visiting.signed_in %}
+                <div class="menu-you">
+                  {% if visiting.member %}
+                    <p class="menu-who">Signed in as <strong>{{ visiting.name }}</strong></p>
+                    <a href="{{ url_for('family.you') }}"{% if ns.section == 'you' %} aria-current="page"{% endif %}>{{ icon('key') }}Your password</a>
+                  {% endif %}
+                  {% if visiting.signed_in %}
+                    <form class="signout" method="post" action="{{ url_for('auth.logout') }}">
+                      <button class="quiet" type="submit">{{ icon('signout') }}Sign out</button>
+                    </form>
+                  {% endif %}
+                </div>
+              {% endif %}
+            </div>
+          </details>
+        {% endif %}
       </nav>
-      {% if visiting.signed_in %}
-        <form class="signout" method="post" action="{{ url_for('auth.logout') }}">
-          <button class="quiet" type="submit">{{ icon('signout') }}<span class="label">Sign out</span></button>
-        </form>
-      {% endif %}
     </header>
     <main id="content">
       {# What the last form said, handed over by the redirect that followed it. The settings
