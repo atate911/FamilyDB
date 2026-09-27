@@ -270,6 +270,19 @@ EVENTS: dict[str, Event] = {
         ("id",),
         {"id": "123456789"},
     ),
+    "joined_group": Event(
+        "Added to a family group where she reads every message",
+        "Hi all, I'm {name}, the family's planning assistant. Tell me ideas and plans as they come "
+        "up here, or ask what to do this weekend.",
+        (),
+    ),
+    "joined_group_mentioned": Event(
+        "Added to a family group where she has to be mentioned",
+        "Hi all, I'm {name}, the family's planning assistant. Mention {bot} or reply to me when "
+        "something's for me: an idea, a plan, or what to do this weekend.",
+        ("bot",),
+        {"bot": "@tate_family_bot"},
+    ),
     "start": Event(
         "Telegram's /start, and the bot's description there",
         "Hi! I'm {name}, the family's planning assistant. Tell me ideas (\"we should try that "

@@ -649,6 +649,21 @@ GROUPS: tuple[Group, ...] = (
     ),
     Group(
         "connections",
+        "telegram-groups",
+        "In a Telegram group",
+        "",
+        (
+            field(
+                "telegram_require_mention",
+                "Answer only when mentioned",
+                "Yes: only a message that @mentions the bot or replies to it. Suits a busy group "
+                "the family uses for other things too. No suits a group kept for planning, where "
+                "everything said is for her.",
+            ),
+        ),
+    ),
+    Group(
+        "connections",
         "calendar",
         "Google calendar id",
         "",

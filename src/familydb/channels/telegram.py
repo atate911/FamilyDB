@@ -31,6 +31,7 @@ from telegram.constants import (
     BotDescriptionLimit,
     BotNameLimit,
     ChatAction,
+    ChatMemberStatus,
     ChatType,
     MessageLimit,
 )
@@ -39,6 +40,7 @@ from telegram.ext import (
     Application,
     ApplicationBuilder,
     CallbackQueryHandler,
+    ChatMemberHandler,
     CommandHandler,
     ContextTypes,
     MessageHandler,
@@ -58,9 +60,12 @@ log = logging.getLogger(__name__)
 CHANNEL = "telegram"
 GROUP_TYPES = {ChatType.GROUP, ChatType.SUPERGROUP}
 # What the bot asks Telegram for. A live location moving along arrives as edits to the message
-# that shared it, a button tapped as a callback query, and Telegram sends a bot only the kinds of
-# update it asks for.
-UPDATES = [Update.MESSAGE, Update.EDITED_MESSAGE, Update.CALLBACK_QUERY]
+# that shared it, a button tapped as a callback query, being added to a group as a change to its
+# own membership, and Telegram sends a bot only the kinds of update it asks for.
+UPDATES = [Update.MESSAGE, Update.EDITED_MESSAGE, Update.CALLBACK_QUERY, Update.MY_CHAT_MEMBER]
+# Out of a chat, and in one, as Telegram says of the bot's own membership.
+OUTSIDE = frozenset({ChatMemberStatus.LEFT, ChatMemberStatus.BANNED})
+INSIDE = frozenset({ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR})
 # Everything but a location answers new messages only, so an edited question is not answered
 # a second time.
 NEW = filters.UpdateType.MESSAGE
@@ -358,6 +363,10 @@ class TelegramChannel:
         self.application.add_handler(MessageHandler(filters.LOCATION, self.on_location))
         # A button under one of her messages.
         self.application.add_handler(CallbackQueryHandler(self.on_tap))
+        # Added to a group, or taken out of one.
+        self.application.add_handler(
+            ChatMemberHandler(self.on_membership, ChatMemberHandler.MY_CHAT_MEMBER)
+        )
 
     async def _post_init(self, application: Application) -> None:
         self._loop = asyncio.get_running_loop()
@@ -377,6 +386,40 @@ class TelegramChannel:
                 await bot.set_my_commands(wanted)
         except Exception:
             log.warning("telegram: the command menu could not be set", exc_info=True)
+
+    async def facts(self) -> dict[str, Any]:
+        """What Telegram says of the bot now: whether it reads every message in a group, as
+        BotFather's privacy setting decides, or only those that mention it or reply to it."""
+        me = await self.application.bot.get_me()
+        return {"reads_groups": bool(me.can_read_all_group_messages)}
+
+    async def on_membership(self, update: Any, context: Any) -> None:
+        """Added to a group: she introduces herself there, saying how to talk to her in it, when
+        whoever added her is on the family list (commands.joined_group). No model call."""
+        changed = getattr(update, "my_chat_member", None)
+        if changed is None or changed.chat.type not in GROUP_TYPES:
+            return
+        joined = (
+            changed.old_chat_member.status in OUTSIDE and changed.new_chat_member.status in INSIDE
+        )
+        if not joined or changed.from_user is None:
+            return
+        await asyncio.to_thread(self.app.refresh)
+        me = await context.bot.get_me()
+        needs = self.app.settings.telegram_require_mention or not me.can_read_all_group_messages
+        stored = await asyncio.to_thread(
+            commands.joined_group,
+            self.app,
+            channel=CHANNEL,
+            chat_id=str(changed.chat.id),
+            added_by=str(changed.from_user.id),
+            mentioned=needs,
+            bot=me.username,
+        )
+        if stored is not None:
+            # Stored first, as everything she says: one that does not go now goes with the next
+            # delivery job.
+            await asyncio.to_thread(deliver, self.app, stored)
 
     async def on_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """/start: her introduction to the family, or the stranger's line and a knock, so that
@@ -654,6 +697,9 @@ class TelegramSupervisor:
 
     CHECK_SECONDS = 5.0
     RETRY_SECONDS = 30.0
+    # How often what Telegram says of the bot is asked again while connected: a privacy change
+    # in BotFather reaches the bot in no update.
+    FACTS_SECONDS = 300.0
 
     def __init__(
         self,
@@ -673,6 +719,8 @@ class TelegramSupervisor:
         self._introduced: tuple[str, str] | None = None
         self._seen: Settings | None = None
         self._introduce_at = 0.0
+        # When what Telegram says of the bot is next asked (`_learn`).
+        self._learn_at = 0.0
 
     def start(self) -> None:
         self._thread = threading.Thread(target=self._run, name="familydb-telegram", daemon=True)
@@ -692,6 +740,8 @@ class TelegramSupervisor:
     def _set(self, state: str) -> None:
         self.state = state
         self.app.channel_states[CHANNEL] = state
+        if not state.startswith("connected"):
+            self.app.channel_facts.pop(CHANNEL, None)  # true of a bot no longer connected
 
     async def _watch(self) -> None:
         running: Any = None
@@ -715,6 +765,7 @@ class TelegramSupervisor:
                     retry_at = time.monotonic() + self.RETRY_SECONDS
             if running is not None:
                 await self._introduce(running)
+                await self._learn(running)
             await asyncio.to_thread(self._stop.wait, self.check_seconds)
         if running is not None:
             await running.stop()
@@ -737,9 +788,23 @@ class TelegramSupervisor:
             return None, False
         name = getattr(channel, "username", None)
         self._set(f"connected as @{name}" if name else "connected")
-        # A new connection introduces her afresh, whatever the last one said.
+        # A new connection introduces her afresh, whatever the last one said, and asks again what
+        # Telegram says of the bot.
         self._introduced = self._seen = None
+        self._learn_at = 0.0
         return channel, False
+
+    async def _learn(self, channel: Any) -> None:
+        """What Telegram says of the bot (`TelegramChannel.facts`), for the pages: after each
+        connect, and again every `FACTS_SECONDS`. A failure is tried again then; nothing here
+        stops or reconnects the channel."""
+        if time.monotonic() < self._learn_at:
+            return
+        self._learn_at = time.monotonic() + self.FACTS_SECONDS
+        try:
+            self.app.channel_facts[CHANNEL] = await channel.facts()
+        except Exception as exc:
+            log.info("telegram: could not ask Telegram about the bot (%s)", exc)
 
     async def _introduce(self, channel: Any) -> None:
         """Make the contact say who is speaking, after a connect or a change.

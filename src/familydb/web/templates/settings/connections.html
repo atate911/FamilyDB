@@ -33,6 +33,23 @@
     </div>
     <button type="submit">{{ icon('check') }}Save the token</button>
   </form>
+
+  {% set in_groups = groups['telegram-groups'] %}
+  <h3 id="{{ in_groups.group.name }}">{{ in_groups.group.title }}</h3>
+  {% if reads_groups %}
+    <p class="state-line">It reads every message in the groups it is in.</p>
+  {% elif reads_groups is not none %}
+    <p class="state-line"><span class="warn">In a group it sees only a message that mentions it
+      or replies to it</span>: Telegram's privacy setting for bots is on. To let it read the family
+      group, send BotFather <code>/setprivacy</code>, choose @{{ bot }}, then <em>Disable</em>;
+      then take the bot out of the group and add it back, which is when Telegram applies it.</p>
+  {% endif %}
+  <form method="post" action="{{ url_for('settings.save') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    <input type="hidden" name="section" value="connections" />
+    <div class="grid">{% for one in in_groups.boxes %}{{ box(one) }}{% endfor %}</div>
+    <button type="submit">{{ icon('check') }}Save</button>
+  </form>
   <p class="muted small">Making a bot, linking your phone to it and adding the family's group chat
     are in <a href="{{ url_for('setup.step', name='telegram') }}">the Telegram step of setup</a>,
     one step at a time.</p>

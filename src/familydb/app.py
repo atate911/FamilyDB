@@ -62,6 +62,9 @@ class App:
         self.button_senders: dict[str, Callable[[str, str, list[dict[str, str]]], None]] = {}
         # What each long-running channel last said about itself, for the status page.
         self.channel_states: dict[str, str] = {}
+        # What a connected channel learnt about itself, for the pages: whether the Telegram bot
+        # reads every message in a group or only those for it ("reads_groups").
+        self.channel_facts: dict[str, dict[str, Any]] = {}
         # Web discovery results per window, kept for a while (see suggest/discover.py).
         self.discover_cache: dict[str, Any] = {}
         # Proactive messages waiting for the conversation under way to carry them (voice.py).

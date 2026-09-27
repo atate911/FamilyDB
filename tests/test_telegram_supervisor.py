@@ -26,6 +26,9 @@ class Channel:
     introduced: ClassVar[list[tuple[str, str, str]]] = []
     asked_at: ClassVar[list[float]] = []
     refusals: ClassVar[list[Exception]] = []
+    # What Telegram says of the bot when asked, and how often it was asked.
+    reads_groups: ClassVar[bool] = False
+    asked_facts: ClassVar[int] = 0
 
     def __init__(self, app: App, token: str) -> None:
         self.token = token
@@ -40,6 +43,10 @@ class Channel:
 
     async def stop(self) -> None:
         Channel.events.append(f"stop {self.token}")
+
+    async def facts(self) -> dict[str, bool]:
+        Channel.asked_facts += 1
+        return {"reads_groups": Channel.reads_groups}
 
     async def introduce(self, name: str, about: str) -> None:
         Channel.introduced.append((self.token, name, about))
@@ -68,6 +75,7 @@ def _store(conn, **values) -> None:
 @pytest.fixture
 def watched(settings, clock, conn):
     Channel.events, Channel.introduced, Channel.asked_at, Channel.refusals = [], [], [], []
+    Channel.reads_groups, Channel.asked_facts = False, 0
     app = App(settings, clock)
     supervisor = TelegramSupervisor(app, make_channel=Channel, check_seconds=0.02)
     supervisor.start()
@@ -250,3 +258,24 @@ def test_introducing_sets_only_what_differs_trimmed_to_telegram_limits(settings,
     # Telegram already has the trimmed words, so the same long ones set nothing again.
     asyncio.run(channel.introduce("J" * 70, "Hi. " + "x" * 600))
     assert len(bot.set) == 3
+
+
+def test_what_telegram_says_of_the_bot_is_learnt_and_kept_current(watched, conn, monkeypatch):
+    """Whether it reads a whole group is BotFather's privacy setting, which reaches the bot in no
+    update: asked after each connect and every few minutes, and forgotten once disconnected."""
+    app, supervisor = watched
+    monkeypatch.setattr(supervisor, "FACTS_SECONDS", 0.1)
+    _token(conn, "only")
+    _until(lambda: app.channel_facts.get("telegram") == {"reads_groups": False})
+    Channel.reads_groups = True  # privacy turned off in BotFather
+    _until(lambda: app.channel_facts.get("telegram") == {"reads_groups": True})
+    _token(conn, None)
+    _until(lambda: "telegram" not in app.channel_facts)
+
+
+def test_what_telegram_says_is_not_asked_on_every_check(watched, conn) -> None:
+    app, _ = watched
+    _token(conn, "only")
+    _until(lambda: "telegram" in app.channel_facts)
+    time.sleep(0.2)  # ten more checks
+    assert Channel.asked_facts == 1

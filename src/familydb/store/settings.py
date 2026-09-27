@@ -57,6 +57,7 @@ BEHAVIOUR = (
     "plan_check_hour",
     "retry_interval_minutes",
     "retry_max_attempts",
+    "telegram_require_mention",
     "voice_notes",
     "voice_max_minutes",
     "transcribe_provider",

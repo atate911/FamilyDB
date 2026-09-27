@@ -672,3 +672,24 @@ def test_behind_caddy_it_says_how_to_move_the_address_people_open(settings, cloc
     assert "and the page is passed on to it by Caddy" in served
     assert "https --port random</code> serves the page on a port" in served
     assert "The address people open stays as it is." in served
+
+
+def test_the_connections_page_says_what_the_bot_can_read_in_a_group(page) -> None:
+    app = page.app
+    unknown = page.get("/settings/connections").text
+    assert "Answer only when mentioned" in unknown and "privacy setting" not in unknown
+    app.channel_states["telegram"] = "connected as @tate_family_bot"
+    app.channel_facts["telegram"] = {"reads_groups": False}
+    shy = " ".join(page.get("/settings/connections").text.split())
+    assert "In a group it sees only a message that mentions it or replies to it" in shy
+    assert "choose @tate_family_bot, then <em>Disable</em>" in shy
+    app.channel_facts["telegram"] = {"reads_groups": True}
+    reads = page.get("/settings/connections").text
+    assert "It reads every message in the groups it is in." in reads
+    saved = page.post(
+        "/settings",
+        data={"csrf": _token(page), "section": "connections", "telegram_require_mention": "true"},
+    )
+    assert saved.headers["Location"] == "/settings/connections"
+    assert app.settings.telegram_require_mention is True
+    assert app.settings.google_calendar_id is None  # the other form's box, left alone

@@ -240,6 +240,14 @@ def test_telegram_from_a_token_to_a_linked_phone(fresh, monkeypatch, conn) -> No
     _post(fresh, "telegram", "/settings", digest_chat_id="555")
     assert app.settings.digest_chat_id == "555"
 
+    # The group's steps say whether BotFather's privacy setting still needs turning off.
+    app.channel_facts["telegram"] = {"reads_groups": False}
+    group = " ".join(fresh.get("/setup/telegram").text.split())
+    assert "send <code>/setprivacy</code>" in group and "take it out and add it back" in group
+    app.channel_facts["telegram"] = {"reads_groups": True}
+    group = " ".join(fresh.get("/setup/telegram").text.split())
+    assert "✓ Its privacy setting is off" in group and "/setprivacy" not in group
+
 
 def test_the_weekend_ideas_are_offered_by_the_day_they_come(fresh, conn) -> None:
     with db.transaction(conn):

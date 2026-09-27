@@ -40,5 +40,7 @@ voice_no_ears = "I can't hear voice notes yet: I need an OpenAI or Gemini key fo
 voice_too_long = "That one runs past the {minutes} minutes I listen to. Could you send it in shorter pieces, or type it?"
 voice_unheard = "Sorry, I couldn't make that voice note out. Could you send it again, or type it?"
 cannot_read = "I can't open that kind of message, I'm afraid. Could you tell me in words?"
+joined_group = "Hi all, I'm {name}. Tell me ideas and plans as they come up here, or ask what we should do this weekend."
+joined_group_mentioned = "Hi all, I'm {name}. Mention {bot} or reply to me when something's for me: an idea, a plan, or what we should do this weekend."
 stranger = "Sorry, I only talk to the family. Ask one of them to add you; your id here is {id}."
 start = "Hi, I'm {name}. Tell me ideas (\"we should try that ramen place\"), plans (\"we're going to the symphony next Saturday\"), or ask what we should do this weekend. Type it or send a voice note; rambling is fine."

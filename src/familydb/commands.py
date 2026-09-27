@@ -16,7 +16,9 @@ only the tasks asked for in it, as only it gets their reminders.
 /start is her introduction to the family, and to anyone else the stranger's line with a knock,
 so that pressing Start on the bot's link shows on the Family and setup pages as any message
 would. A sticker, a file or a video sent with no words is answered with one of her lines
-(`cannot_read`), since there is nothing in it a model could act on; neither is kept.
+(`cannot_read`), since there is nothing in it a model could act on; neither is kept. Added to a
+group by somebody on the family list, she introduces herself there (`joined_group`), saying how
+to talk to her in it; that is kept, like anything she says unasked.
 """
 
 from __future__ import annotations
@@ -85,6 +87,38 @@ def cannot_read(app: App, msg: IncomingMessage) -> OutgoingMessage:
     """A sticker, a file or a video with no words: her line saying so, or a stranger's. Not
     kept, as there is nothing in it to keep."""
     return _said_by_code(app, msg, "cannot_read")
+
+
+def joined_group(
+    app: App,
+    *,
+    channel: str,
+    chat_id: str,
+    added_by: str,
+    mentioned: bool,
+    bot: str | None,
+) -> int | None:
+    """Her introduction to a group somebody on the family list added her to, stored to be sent.
+
+    Returns the stored message's id; None when whoever added her is not family, as she has
+    nothing to say in a stranger's group. `mentioned` says whether she has to be mentioned
+    there (the setting, or Telegram's privacy mode), which changes what she tells them.
+    """
+    with closing(app.connect()) as conn:
+        app.refresh(conn)
+        if members.resolve(conn, channel, added_by) is None:
+            log.info("added to %s by %s, who is not family; saying nothing", chat_id, added_by)
+            return None
+        settings = app.settings
+        if mentioned and bot:
+            said = voice.say(settings, "joined_group_mentioned", seed=chat_id, bot=f"@{bot}")
+        else:
+            said = voice.say(settings, "joined_group", seed=chat_id)
+        with transaction(conn):
+            out = messages.insert_out(
+                conn, channel=channel, chat_id=chat_id, text=said, now=utc_iso(app.clock.now())
+            )
+        return out.id
 
 
 def _said_by_code(app: App, msg: IncomingMessage, event: str) -> OutgoingMessage:

@@ -232,6 +232,7 @@ def test_polling_asks_for_the_edits_a_live_location_moves_by(settings, clock, mo
     assert [a["allowed_updates"] for a in asked] == [UPDATES, UPDATES]
     assert Update.MESSAGE in UPDATES and Update.EDITED_MESSAGE in UPDATES
     assert Update.CALLBACK_QUERY in UPDATES  # a button tapped
+    assert Update.MY_CHAT_MEMBER in UPDATES  # added to a group
 
 
 def test_an_edit_is_taken_only_as_a_live_location_moving(settings, clock) -> None:
@@ -567,3 +568,102 @@ def test_the_words_with_a_video_are_answered_marked_as_not_seen(
     update, replies = _sent("video", caption="@familybot", chat_type="group", chat_id=-100)
     asyncio.run(channel.on_unread(update, _context()[0]))
     assert len(seen) == 3 and replies[0].startswith("I can't open that kind of message")
+
+
+# -- in a group ------------------------------------------------------------------------------------
+
+
+def _added(by: int, *, was="left", now="member", chat_type="group"):
+    """The bot's own membership changing, as Telegram tells it: added to a group by `by`."""
+    return Update.de_json(
+        {
+            "update_id": 21,
+            "my_chat_member": {
+                "chat": {"id": -100, "type": chat_type, "title": "Tates"},
+                "from": {"id": by, "is_bot": False, "first_name": "Sam"},
+                "date": 1790000000,
+                "old_chat_member": {
+                    "user": {"id": 999, "is_bot": True, "first_name": "V"},
+                    "status": was,
+                },
+                "new_chat_member": {
+                    "user": {"id": 999, "is_bot": True, "first_name": "V"},
+                    "status": now,
+                },
+            },
+        },
+        Bot(TOKEN),
+    )
+
+
+def _me(reads: bool):
+    async def get_me():
+        return SimpleNamespace(username="familybot", can_read_all_group_messages=reads)
+
+    return SimpleNamespace(bot=SimpleNamespace(get_me=get_me))
+
+
+def test_being_added_to_a_group_is_routed_to_her(settings, clock) -> None:
+    from familydb.app import App
+
+    channel = TelegramChannel(App(settings, clock), token=TOKEN)
+    assert _takers(channel, _added(1001)) == ["on_membership"]
+
+
+def test_added_by_the_family_she_says_hello_and_how_to_talk_to_her(
+    settings, clock, conn, family
+) -> None:
+    from familydb.app import App
+
+    app = App(settings, clock)
+    sent: list[tuple[str, str]] = []
+    app.senders["telegram"] = lambda chat, text: sent.append((chat, text))
+    channel = TelegramChannel(app, token=TOKEN)
+    asyncio.run(channel.on_membership(_added(1001), _me(reads=True)))
+    assert sent == [
+        (
+            "-100",
+            "Hi all, I'm Vera. Tell me ideas and plans as they come up here, or ask what we should "
+            "do this weekend.",
+        )
+    ]
+    # Kept, as everything she says unasked, and marked as sent.
+    kept = conn.execute("SELECT * FROM messages WHERE chat_id = '-100'").fetchone()
+    assert kept["direction"] == "out" and kept["delivered_at"] is not None
+    # Where Telegram's privacy setting means she sees only what mentions her, she says so.
+    asyncio.run(channel.on_membership(_added(1001), _me(reads=False)))
+    assert "Mention @familybot or reply to me" in sent[-1][1]
+
+
+def test_added_by_a_stranger_or_taken_out_she_says_nothing(settings, clock, conn, family) -> None:
+    from familydb.app import App
+
+    app = App(settings, clock)
+    sent: list[tuple[str, str]] = []
+    app.senders["telegram"] = lambda chat, text: sent.append((chat, text))
+    channel = TelegramChannel(app, token=TOKEN)
+    asyncio.run(channel.on_membership(_added(4242), _me(reads=True)))
+    asyncio.run(channel.on_membership(_added(1001, was="member", now="left"), _me(reads=True)))
+    asyncio.run(channel.on_membership(_added(1001, chat_type="private"), _me(reads=True)))
+    assert sent == []
+    assert conn.execute("SELECT count(*) FROM messages").fetchone()[0] == 0
+
+
+def test_answer_only_when_mentioned_is_set_on_the_page(settings, clock, conn, family, monkeypatch):
+    """A setting the family would change: from the Connections page, taken up at once."""
+    from familydb.app import App
+    from familydb.store import settings as settings_store
+    from familydb.store.db import transaction
+
+    app = App(settings, clock)
+    channel = TelegramChannel(app, token=TOKEN)
+    seen = []
+    monkeypatch.setattr(
+        "familydb.channels.telegram.handle_incoming",
+        lambda application, msg: seen.append(msg) or OutgoingMessage(msg.chat_id, "ok", "ok"),
+    )
+    with transaction(conn):
+        settings_store.set_many(conn, {"telegram_require_mention": True}, source="test")
+    update, replies = _update("just chatting", chat_type="group", chat_id=-100)
+    asyncio.run(channel.on_message(update, _context()[0]))
+    assert seen == [] and replies == [] and app.settings.telegram_require_mention

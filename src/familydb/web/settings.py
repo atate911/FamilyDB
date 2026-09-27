@@ -478,6 +478,7 @@ def _connections(app: App, conn: Any) -> dict[str, Any]:
         "google": google_panel(app.settings),
         "bot": status_page.telegram_name(app),
         "telegram": app.channel_states.get("telegram", ""),
+        "reads_groups": status_page.telegram_reads_groups(app),
     }
 
 
@@ -947,7 +948,11 @@ LINE_GROUPS = (
         ),
     ),
     ("Notes", False, ("lookup_done", "location_shared", "done")),
-    ("On Telegram", False, ("start", "stranger", "cannot_read")),
+    (
+        "On Telegram",
+        False,
+        ("start", "stranger", "cannot_read", "joined_group", "joined_group_mentioned"),
+    ),
     (
         "Answering /today, /week, /tasks and /now",
         True,
