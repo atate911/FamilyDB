@@ -129,6 +129,10 @@
     <footer class="foot">
       <span class="foot-mark">{{ icon('mark') }}{{ site_title }}</span>
       <span>A little less planning. A little more together.</span>
+      <nav class="foot-links" aria-label="About this page">
+        <a href="{{ url_for('web.privacy') }}">Privacy</a>
+        <a href="{{ url_for('web.terms') }}">Terms</a>
+      </nav>
       <p class="legal">{{ footer }}</p>
     </footer>
   </body>

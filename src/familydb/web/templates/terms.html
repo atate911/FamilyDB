@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "_ui.html" import page_head %}
+{% block title %}Terms · {{ site_title }}{% endblock %}
+{# Open before sign-in (auth.OPEN_ENDPOINTS), like the privacy policy, and for the same reason:
+   Google's sign-in screen asks for a link. A document, so its words live here. #}
+{% block body_class %}{{ 'page-signin' if not visitor().signed_in }} page-legal{% endblock %}
+{% block content %}
+{{ page_head('Terms of use', 'The few rules for using ' ~ site_title ~ ', a private planning assistant for one family.') }}
+
+<article class="panel legal-doc">
+  <p class="muted">Last changed 28 September 2026.</p>
+
+  <h2>Who may use it</h2>
+  <p>{{ site_title }} is run by a family for itself, on a computer the family controls. Only
+    people the family's admin has added may use it, on this page or through its Telegram bot. The
+    admin may change what someone may do, or take them off the list, at any time. Keep your
+    password to yourself.</p>
+
+  <h2>What it is for</h2>
+  <p>Keeping the family's ideas, plans, things to do and wish lists, suggesting what to do, and
+    putting plans on the family calendar. Please use it for that, and not to store other people's
+    private information without their knowing, or for anything unlawful.</p>
+
+  <h2>Its answers can be wrong</h2>
+  <p>Its answers are written by an AI model, and what it looks up on the web can be out of date.
+    Opening hours, prices, bookings, the weather and times can all be wrong. Check anything that
+    matters before you rely on it, and before you travel or pay.</p>
+
+  <h2>Other services</h2>
+  <p>It uses outside services to work: an AI company (OpenAI, Anthropic or Google), Google
+    Calendar if connected, Telegram, and public weather and map services. Each has its own terms,
+    which apply when you use them through {{ site_title }}. The
+    <a href="{{ url_for('web.privacy') }}">privacy policy</a> says what each of them receives.</p>
+
+  <h2>No guarantee</h2>
+  <p>{{ site_title }} is provided as it is, for the family's own use, without any warranty. It
+    may stop working, lose a message or miss a reminder. Nobody who runs it or wrote it is
+    responsible for what happens because of something it said, did or failed to do, as far as the
+    law allows.</p>
+
+  <h2>Costs</h2>
+  <p>The family pays the AI company for each answer, within a daily limit the admin sets. Using
+    {{ site_title }} costs you nothing else.</p>
+
+  <h2>Changes</h2>
+  <p>These terms may change; this page always has the current ones. Questions go to the family's
+    admin.</p>
+</article>
+{% endblock %}

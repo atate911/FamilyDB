@@ -1081,3 +1081,21 @@ def test_the_added_date_is_the_family_s_date(settings, clock, conn, family) -> N
         )
     page = _client(settings, clock).get(f"/idea/{idea.id}")
     assert "added 2026-09-20" in page.text
+
+
+def test_the_privacy_policy_and_terms_are_open_to_anyone(settings, clock, conn, family) -> None:
+    """Google's sign-in screen links to them, and its reviewers have no password: both pages
+    open before sign-in, say nothing about the family, and are linked from every page."""
+    from familydb.app import App
+    from familydb.web import create_app
+
+    locked = settings.model_copy(update={"web_password": "open sesame please"})
+    client = create_app(App(locked, clock)).test_client()
+    privacy = client.get("/privacy")
+    assert privacy.status_code == 200
+    assert "Limited Use" in privacy.text and "calendar.events" in privacy.text
+    assert "Sam" not in privacy.text  # nothing about the family itself
+    terms = client.get("/terms")
+    assert terms.status_code == 200 and "Its answers can be wrong" in terms.text
+    login = client.get("/login").text
+    assert 'href="/privacy"' in login and 'href="/terms"' in login

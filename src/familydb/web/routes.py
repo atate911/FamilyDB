@@ -34,7 +34,7 @@ from familydb.store import plans as plan_store
 from familydb.store import tasks as task_store
 from familydb.store import wishes as wish_store
 from familydb.store.ideas import KIND_SUGGESTIONS
-from familydb.web import auth, chat, views
+from familydb.web import auth, chat, fields, views
 from familydb.web import status as status_page
 from familydb.web.chat import WHO_KEY
 
@@ -83,6 +83,25 @@ def _choices(rows: list[Any]) -> tuple[list[str], list[str]]:
 def healthz() -> Response:
     """A plain-text liveness check for a monitor or a reverse proxy. No password needed."""
     return Response("ok\n", mimetype="text/plain")
+
+
+@bp.get("/privacy")
+def privacy() -> str:
+    """What the bot keeps and where it goes, for the family and for Google's sign-in screen,
+    which asks for a link. Open before sign-in, as Google's reviewers and a new member have no
+    password; it says what this install does from its settings, and nothing about the family."""
+    settings = _app().settings
+    return render_template(
+        "privacy.html",
+        company=fields.COMPANIES.get(settings.provider, settings.provider),
+        dictation=settings.web_dictation,
+    )
+
+
+@bp.get("/terms")
+def terms() -> str:
+    """The terms of use, for the family and for Google's sign-in screen. Open before sign-in."""
+    return render_template("terms.html")
 
 
 @bp.get("/manifest.webmanifest")

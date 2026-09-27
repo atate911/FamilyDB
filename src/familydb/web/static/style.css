@@ -2259,3 +2259,14 @@ button.mic.listening {
 .tools > a.lit-warn .light { background: var(--amber); }
 .tools > a.lit-bad .icon { color: var(--red); }
 .tools > a.lit-bad .light { background: var(--red); }
+
+/* The privacy policy and the terms (privacy.html, terms.html): a document to read, so a
+   comfortable measure and room between its parts. */
+.legal-doc { max-width: 46rem; }
+.legal-doc h2 { margin: 1.6rem 0 0.5rem; font-size: 1.1rem; }
+.legal-doc h2:first-of-type { margin-top: 0.75rem; }
+.legal-doc p, .legal-doc li { line-height: 1.6; color: var(--ink-2); }
+.legal-doc ul { padding-left: 1.2rem; display: grid; gap: 0.45rem; }
+.legal-doc strong { color: var(--ink); }
+.foot-links { display: flex; gap: 1rem; }
+.foot-links a { color: var(--dim); }

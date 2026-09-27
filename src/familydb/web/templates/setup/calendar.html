@@ -78,7 +78,10 @@
       <li><a href="{{ links.google_consent }}" target="_blank" rel="noopener noreferrer">Set
         up the sign-in screen</a>: press <em>Get started</em>. App name: {{ site_title }}; support
         email: yours. Audience: <em>External</em>. Contact email: yours. Agree, and
-        <em>Create</em>.</li>
+        <em>Create</em>. Its <em>Branding</em> page may be left as it is; if you fill in the links,
+        the privacy policy is <code>{{ url_for('web.privacy', _external=True) }}</code> and the
+        terms <code>{{ url_for('web.terms', _external=True) }}</code>, which Google takes only
+        from a domain name, not a bare address.</li>
       <li><a href="{{ links.google_audience }}" target="_blank" rel="noopener noreferrer">Publish
         it</a>: press <em>Publish app</em> and confirm. <strong>Do not skip this</strong>: left in
         “Testing”, Google cuts the connection off after seven days.</li>

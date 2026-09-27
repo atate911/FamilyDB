@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% from "_ui.html" import page_head %}
+{% block title %}Privacy · {{ site_title }}{% endblock %}
+{# Open before sign-in (auth.OPEN_ENDPOINTS), so the bars are hidden for somebody not signed in.
+   A document rather than a page's few lines, so its words live here rather than in views.py.
+   What it says is what the code does: keep it true when that changes. #}
+{% block body_class %}{{ 'page-signin' if not visitor().signed_in }} page-legal{% endblock %}
+{% block content %}
+{{ page_head('Privacy policy', site_title ~ ' is a private planning assistant for one family. This says what it keeps, where it goes, and how to have it removed.') }}
+
+<article class="panel legal-doc">
+  <p class="muted">Last changed 28 September 2026.</p>
+
+  <h2>Who runs it</h2>
+  <p>This is a private copy of FamilyDB, run by a family for itself on a computer the family
+    controls. There is no company behind this copy, no advertising, and nothing is sold.
+    Only people the family's admin has added can use it. Questions about your information go to
+    that admin, who can see and remove it.</p>
+
+  <h2>What it keeps</h2>
+  <p>Everything is kept in one database on the family's own computer, and in its backups:</p>
+  <ul>
+    <li><strong>The family list:</strong> each person's name, their role (admin, parent or kid),
+      their Telegram id if they use Telegram, and, if an admin adds them, a birthday and, for a
+      kid, whether she is a girl or a boy. A password is kept only as a one-way hash.</li>
+    <li><strong>The conversation:</strong> messages sent to it and its replies, on Telegram and on
+      this page, and a record of each step it took to answer (which tool it used, with what, and
+      what came back).</li>
+    <li><strong>What the family saves:</strong> ideas, plans, things to do and their reminders,
+      how outings went, the kids' wish lists, and short notes it remembers about the family.</li>
+    <li><strong>Where someone is, only when they share it:</strong> a position shared on Telegram,
+      or sent from this page with "Send where I am" ticked, is used for three hours and deleted
+      after a day.</li>
+    <li><strong>Voice notes and photos:</strong> the words written down from them are kept; the
+      recording and the picture are not.</li>
+    <li><strong>Costs:</strong> how much each request to an AI company was estimated to cost.</li>
+    <li><strong>Someone not on the list</strong> who writes to its Telegram bot: their Telegram
+      name and id, for 30 days, so an admin can choose to add them.</li>
+  </ul>
+  <p>Signing in to this page sets two cookies: one keeps you signed in, and one remembers that
+    this browser has signed in before, so that guessing at passwords elsewhere does not lock you
+    out. An unsent message may be kept in your browser's storage while the tab is open. There is
+    no analytics and no tracking.</p>
+
+  <h2>Where it goes</h2>
+  <p>To answer, {{ site_title }} uses a few outside services. Each gets only what it needs:</p>
+  <ul>
+    <li><strong>An AI company</strong> (today {{ company }}; the family may choose OpenAI,
+      Anthropic or Google, and another it has a key for may answer when the first cannot)
+      receives each message with what is needed to answer it: the family's names and roles, the
+      saved ideas, the notes it remembers, the recent conversation, a kid's age, a shared
+      position, and calendar events it looked up. Voice notes and photos go to it to be written
+      down. Looking an idea up on the web goes through the AI company's web search. The family
+      pays for this directly under that company's terms for its API.</li>
+    <li><strong>Google Calendar</strong>, if the family connects it (see below).</li>
+    <li><strong>Telegram</strong> carries the messages of anyone who talks to the bot there, under
+      Telegram's own terms.</li>
+    <li><strong>Open-Meteo</strong> receives the home area's position for the weather forecast,
+      and <strong>OpenStreetMap's Nominatim</strong> receives place names to find, and a shared
+      position to name.</li>
+    {% if dictation %}
+    <li><strong>Your browser's maker</strong>, if you press the microphone to speak instead of
+      typing: your browser sends the sound to Apple (Safari) or Google (Chrome) to write it down.
+      It never passes through {{ site_title }}.</li>
+    {% endif %}
+  </ul>
+  <p>Nothing is shared with anyone else, sold, or used for advertising.</p>
+
+  <h2>Google Calendar</h2>
+  <p>If the family connects a Google account, {{ site_title }} asks Google for two permissions:
+    to see and change events (<code>calendar.events</code>), and to see the list of calendars
+    (<code>calendar.readonly</code>). It uses them only to:</p>
+  <ul>
+    <li>read what is on the family calendar, so it does not suggest something when the family is
+      busy, and to show what is coming up on this page;</li>
+    <li>add, move and cancel the family's plans on the calendar the family chose, when they ask;</li>
+    <li>list the account's calendars once, so the family can choose which one to use.</li>
+  </ul>
+  <p>Calendar events it reads may be sent to the AI company above only to answer the family's
+    own question, such as "are we free on Saturday?". They are not used to train AI models, not
+    sold, not used for advertising, and not shared for any other purpose. The access Google
+    grants is stored on the family's computer and can be taken back at any time from the Google
+    account's <em>Third-party apps and services</em> page.</p>
+  <p>{{ site_title }}'s use and transfer of information received from Google APIs adheres to the
+    <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API
+    Services User Data Policy</a>, including the Limited Use requirements.</p>
+
+  <h2>Kids</h2>
+  <p>A kid's account is made by a parent or admin, who can read her conversation with
+    {{ site_title }} and her wish lists. Of her details, only her age and whether she is a girl or
+    a boy reach the AI company, never her birthday.</p>
+
+  <h2>How long, and how to remove it</h2>
+  <p>What is kept stays until it is removed, apart from shared positions (a day) and a
+    stranger's name and id (30 days). To have something removed, ask the admin. A note it
+    remembers can be forgotten on the <em>What she remembers</em> page. Taking a person off the
+    family list removes what was theirs alone (their name, sign-in, Telegram link, where they
+    last were, and what it remembered about them) and keeps what they said with no name on it.
+    The admin can delete anything else from the database on the family's computer, and taking
+    {{ site_title }} off that computer removes everything.</p>
+
+  <h2>Changes</h2>
+  <p>If what {{ site_title }} does with information changes, this page changes with it.</p>
+</article>
+{% endblock %}

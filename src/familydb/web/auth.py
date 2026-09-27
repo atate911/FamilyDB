@@ -99,7 +99,16 @@ MAX_ADDRESS = 64
 # Endpoints reachable without signing in. "static" covers the stylesheet on the login page and
 # the home-screen icons, which a phone fetches without the cookie, as it does the manifest.
 OPEN_ENDPOINTS = frozenset(
-    {"auth.login", "auth.sign_in", "auth.logout", "web.healthz", "web.manifest", "static"}
+    {
+        "auth.login",
+        "auth.sign_in",
+        "auth.logout",
+        "web.healthz",
+        "web.manifest",
+        "web.privacy",
+        "web.terms",
+        "static",
+    }
 )
 # Where somebody signed in with a starting password may go before they have chosen their own.
 CHOOSING = frozenset({"family.you", "family.choose"})
