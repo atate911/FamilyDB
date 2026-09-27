@@ -72,6 +72,51 @@
     </section>
   {% endif %}
 
+  {# The kids' wish lists (docs/WISHES.md): a kid's own, first thing on her Home; for a parent,
+     a card with each kid's and what waits on them. Read from the database, asked of nobody. #}
+  {% if wishes and not wishes.parent %}
+    {% set mine = wishes.mine %}
+    <section class="panel home-wishes" aria-labelledby="home-wishes">
+      <div class="section-head">
+        <h2 id="home-wishes">{{ icon('gift') }}My wishes</h2>
+        <a href="{{ url_for('web.wishes') }}">{{ 'All ' ~ mine.open if mine.open else 'Add one' }}{{ icon('right') }}</a>
+      </div>
+      {% if mine.answered %}
+        <p class="said">{% for row in mine.answered[:2] %}{% if row.status == 'granted' %}Yes to {{ row.title }}! {% else %}Not this time: {{ row.title }}. {% endif %}{% endfor %}</p>
+      {% endif %}
+      <div class="wish-lists">
+        {% for list in mine.lists %}
+          <div class="wish-list">
+            <h3>{{ list.name }}{% if list.countdown %} <span class="tag">{{ list.countdown }}</span>{% endif %}</h3>
+            <ol class="plain wish-top">
+              {% for row in list.rows[:wishes.top] %}<li>{{ row.title }}</li>{% else %}<li class="muted">Nothing yet.</li>{% endfor %}
+            </ol>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  {% elif wishes %}
+    <section class="panel home-wishes" aria-labelledby="home-kids">
+      <div class="section-head">
+        <h2 id="home-kids">{{ icon('gift') }}The kids' wishes</h2>
+        <a href="{{ url_for('web.wishes') }}">All{{ icon('right') }}</a>
+      </div>
+      {% if wishes.waiting %}
+        <p class="warn">{{ icon('warning') }}Waiting on you:
+          {% for row in wishes.waiting %}<a href="{{ url_for('web.wishes', who=row.id) }}">{{ row.kid }}: {{ row.title }}</a>{{ ', ' if not loop.last }}{% endfor %}</p>
+      {% endif %}
+      <ul class="plain">
+        {% for kid in wishes.kids %}
+          <li><a href="{{ url_for('web.wishes', who=kid.id) }}"><strong>{{ kid.name }}</strong></a>
+            <span class="muted">{{ kid.open }} open</span>
+            {% set top = kid.lists[0].rows[:wishes.top] %}
+            {% if top %}<span>· {{ top | map(attribute='title') | join(', ') }}</span>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
   <div class="dashboard">
     <div class="dashboard-column">
       <section class="coming" id="coming">
@@ -133,7 +178,7 @@
       <div class="section-head">
         <h2>Lately added</h2>
         <span class="section-links">
-          <a href="{{ url_for('web.new_idea') }}">{{ icon('plus') }}Add an idea</a>
+          {% if visitor().may('change') %}<a href="{{ url_for('web.new_idea') }}">{{ icon('plus') }}Add an idea</a>{% endif %}
           <a href="{{ url_for('web.ideas') }}">All {{ idea_count }}{{ icon('right') }}</a>
         </span>
       </div>

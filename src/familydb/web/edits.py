@@ -2,11 +2,11 @@
 
 The page does not know how to save anything. Every form here turns into one call to a tool in
 `familydb.tools` — `add_idea`, `update_idea`, `record_outcome`, `create_event`, `update_event`,
-`delete_event`, the task tools and `remember` — the code the model calls when somebody asks for
-the same thing. So a title typed into a box is checked the way a title said in chat is checked,
-a duplicate is caught the same way, the transaction is the tool's own, and a calendar that is
-not connected says so instead of half-writing a plan. Nothing in this module reaches a table by
-itself.
+`delete_event`, the task tools, `remember` and the wish tools — the code the model calls when
+somebody asks for the same thing. So a title typed into a box is checked the way a title said
+in chat is checked, a duplicate is caught the same way, the transaction is the tool's own, and a
+calendar that is not connected says so instead of half-writing a plan. Nothing in this module
+reaches a table by itself.
 
 What the forms cannot do is what the tools cannot do: a number that has been set (a cost level, a
 duration) can be changed but not unset, because `update_idea` reads a missing field as "leave
@@ -480,3 +480,112 @@ def forget_memory(memory_id: int) -> Response:
         complaint = FORGOTTEN.format(fact=result["remembered"][0]["fact"])
     _say(complaint or "")
     return _back("web.memory")
+
+
+# -- the kids' wish lists (docs/WISHES.md) --------------------------------------------------------
+
+LISTS = {"everyday", "christmas", "birthday"}
+
+
+def _to_wishes() -> Response:
+    """Back to the lists the form came from: one kid's for a parent who was looking at hers."""
+    kid = request.form.get("kid", "")
+    return _back("web.wishes", **({"who": kid} if kid.isdigit() else {}))
+
+
+def _wish_id(value: Any) -> int | None:
+    text = str(value or "")
+    return int(text) if text.isdigit() and len(text) < 18 else None
+
+
+@bp.post("/wishes")
+@once
+def add_wish() -> Response:
+    """A wish typed into her list, through the tool her chat with the bot uses, so the page is
+    held to the same rules: the lockouts, the daily count, the same thing twice."""
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+        return _to_wishes()
+    title = request.form.get("title", "").strip()
+    chosen = request.form.get("list", "everyday")
+    values: dict[str, Any] = {
+        "title": title,
+        "topic": title,
+        "list": chosen if chosen in LISTS else "everyday",
+    }
+    for_whom = request.form.get("for_whom", "").strip()
+    if for_whom:
+        values["for_whom"] = for_whom
+    result, complaint = run("add_wish", values)
+    if complaint:
+        _say(complaint)
+    else:
+        wish = result.get("wish") or {}
+        again = views.day_words(result.get("locked_until"), _app().clock.today())
+        _say(views.WISH_SAID[result["result"]].format(title=wish.get("title", title), again=again))
+    return _to_wishes()
+
+
+@bp.post("/wish/<int(max=9223372036854775807):wish_id>/move")
+@once
+def move_wish(wish_id: int) -> Response:
+    """Up, down, to the top, or to another of her lists: free, and never a lockout."""
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+        return _to_wishes()
+    values: dict[str, Any] = {"wish_id": wish_id}
+    position = _wish_id(request.form.get("position"))
+    if position is not None:
+        values["position"] = max(1, position)
+    chosen = request.form.get("list", "")
+    if chosen in LISTS:
+        values["list"] = chosen
+    _, complaint = run("update_wish", values)
+    _say(complaint or views.WISH_MOVED)
+    return _to_wishes()
+
+
+@bp.post("/wish/<int(max=9223372036854775807):wish_id>/withdraw")
+@once
+def withdraw_wish(wish_id: int) -> Response:
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+        return _to_wishes()
+    _, complaint = run("update_wish", {"wish_id": wish_id, "status": "withdrawn"})
+    _say(complaint or views.WISH_WITHDRAWN)
+    return _to_wishes()
+
+
+@bp.post("/wish/<int(max=9223372036854775807):wish_id>/answer")
+@once
+def answer_wish(wish_id: int) -> Response:
+    """A parent's yes, or not this time, with a note for her if they like."""
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+        return _to_wishes()
+    status = request.form.get("status", "")
+    if status not in ("granted", "declined"):
+        _say("Choose yes or not this time.")
+        return _to_wishes()
+    values: dict[str, Any] = {"wish_id": wish_id, "status": status}
+    note = request.form.get("note", "").strip()
+    if note:
+        values["answer_note"] = note
+    result, complaint = run("update_wish", values)
+    if complaint:
+        _say(complaint)
+    else:
+        _say(views.WISH_ANSWERED[status].format(title=result["wish"]["title"]))
+    return _to_wishes()
+
+
+@bp.post("/wish/<int(max=9223372036854775807):wish_id>/ask")
+@once
+def ask_parent(wish_id: int) -> Response:
+    """Her Ask a parent, where it was offered: the parents get it on their phones."""
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+        return _to_wishes()
+    _, complaint = run("update_wish", {"wish_id": wish_id, "ask_parent": True})
+    _say(complaint or views.ASKED_A_PARENT)
+    return _to_wishes()

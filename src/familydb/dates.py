@@ -67,3 +67,27 @@ def weekend_window(today: date) -> tuple[date, date]:
         return today, today
     saturday = today + timedelta(days=5 - weekday)
     return saturday, saturday + timedelta(days=1)
+
+
+def age_on(birth_date: str | None, today: date) -> int | None:
+    """How old somebody born on this day is today, in whole years; None with no birthday."""
+    if not birth_date:
+        return None
+    born = date.fromisoformat(birth_date)
+    return today.year - born.year - ((today.month, today.day) < (born.month, born.day))
+
+
+def next_birthday(birth_date: str | None, today: date) -> date | None:
+    """The next birthday on or after today. Born on 29 February, it falls on 1 March in a year
+    without one."""
+    if not birth_date:
+        return None
+    born = date.fromisoformat(birth_date)
+    for year in (today.year, today.year + 1):
+        try:
+            day = born.replace(year=year)
+        except ValueError:
+            day = date(year, 3, 1)
+        if day >= today:
+            return day
+    raise AssertionError("a birthday comes round within a year")

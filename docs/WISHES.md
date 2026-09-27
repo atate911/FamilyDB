@@ -151,7 +151,7 @@ only says it waits on the Kids card. A kid who taps is told only a parent can an
 answer comes from (a tap, the chat, the page), she is told in her own conversation, worded by
 `wish_granted` or `wish_declined` with the day she may ask again.
 
-### Screens (planned)
+### Screens (built)
 
 A kid's Home: her conversation with Vera, her wishes (the top of the everyday list, the Christmas
 and birthday lists with their countdowns, new answers), what is coming up (no gifts), and her own
@@ -159,7 +159,7 @@ things to do. Her bar: Home, Vera, Wishes, Ideas, Plans, To do. A parent's Home 
 each girl's open wishes, anything flagged, requests waiting. `/wishes` is the lists, reordered by
 buttons, and by dragging where scripts run (`static/wishes.js`).
 
-## Settings (planned)
+## Settings (built for the kid's share and lookups; the rest planned)
 
 `kid_daily_spend`, `wish_daily_count`, `occasion_list_size`, `wish_moves_per_day`,
 `parent_asks_per_week`, `kid_lookup_hour`, `wording_daily_after`, on a Kids group of the

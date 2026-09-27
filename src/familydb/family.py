@@ -41,6 +41,8 @@ from datetime import date, datetime, timedelta
 from typing import Any
 
 from familydb import passwords, roles
+from familydb.dates import age_on as age_on
+from familydb.dates import next_birthday as next_birthday
 from familydb.dates import utc_iso
 from familydb.store import invites, logins, members, messages
 from familydb.store.db import transaction
@@ -95,30 +97,6 @@ def clean_gender(value: str | None) -> Gender | None:
     if value not in members.GENDERS:
         raise FamilyError("Choose male or female, or leave it unsaid.")
     return value  # type: ignore[return-value]
-
-
-def age_on(birth_date: str | None, today: date) -> int | None:
-    """How old somebody born on this day is today, in whole years; None with no birthday."""
-    if not birth_date:
-        return None
-    born = date.fromisoformat(birth_date)
-    return today.year - born.year - ((today.month, today.day) < (born.month, born.day))
-
-
-def next_birthday(birth_date: str | None, today: date) -> date | None:
-    """The next birthday on or after today. Born on 29 February, it falls on 1 March in a year
-    without one."""
-    if not birth_date:
-        return None
-    born = date.fromisoformat(birth_date)
-    for year in (today.year, today.year + 1):
-        try:
-            day = born.replace(year=year)
-        except ValueError:
-            day = date(year, 3, 1)
-        if day >= today:
-            return day
-    raise AssertionError("a birthday comes round within a year")
 
 
 def clean_name(name: str) -> str:

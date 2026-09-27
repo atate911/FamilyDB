@@ -16,7 +16,8 @@ in phosphor, sometimes a radar (see "Green screens").
 
 Everything here is carried by one stylesheet (`src/familydb/web/static/style.css`), a handful of
 templates, three open-licensed typefaces and one icon sprite. None of it needs a script: the
-page's one script (`static/ask.js`) is the box's, and the look does not depend on it.
+page's scripts (`static/ask.js`, the box's, and `static/wishes.js`, dragging a wish into place)
+add to it, and the look does not depend on them.
 
 This document is a record of the look as it stands and why, not a fence around it. The design,
 the feel and the structure of the pages are meant to evolve with the app, and whoever is working
@@ -372,8 +373,8 @@ looked at (see "Two layers").
 
 ## Page by page
 
-- **The bar.** On a phone the five everyday places (Home, Vera, Ideas, Plans, To do) are a tab
-  bar along the bottom, the current one marked by a pill in its colour; Memory, Family, Status and
+- **The bar.** On a phone the everyday places (Home, Vera, Ideas, Plans, To do, and Wishes, or
+  My wishes for a kid) are a tab bar along the bottom, one column each, the current one marked by a pill in its colour; Memory, Family, Status and
   Settings, the name of whoever is signed in (their own password) and signing out are icons at
   the top; Family and Settings are shown only to an admin, who alone may change them. From 52rem
   everything is one bar that stays at the top while the page scrolls. The conversation's place
@@ -435,7 +436,9 @@ looked at (see "Two layers").
 - Words on a green screen are at least 1.2rem; dim green phosphor is 5.8:1 at the tube's
   brightest, normal and bright more.
 - Reading, every form and sending a message work with scripts off; scripts add to that. Today
-  the one script is `static/ask.js`, the box's: it keeps what is being written, fills the box
+  there are two. `static/wishes.js`, only on the wish lists, makes the number on a wish a handle
+  to drag it into place, and sends the card's own Move form with its new place; without it the
+  Top, Up and Down buttons do the same. `static/ask.js` is the box's: it keeps what is being written, fills the box
   from the ways to start, sends where the phone is, and looks again for an answer only while
   nobody is writing. Without it the ways to start are links, "Send where I am" is not shown,
   nothing typed is kept across a change of page, and the page looks again with a meta refresh.
@@ -485,3 +488,13 @@ it, and say why here.
   look: the same green on white is 1.3:1, and nothing glows on white. A daylight version would be
   a language of its own, designed as one rather than this one with the lights on, and a line on
   the settings page, like everything else the family can change.
+
+## A kid's screen
+
+A kid signs in to the same page, in the same Phosphor look: nothing is drawn differently for her,
+there is only less of it. Her bar has no Memory, Status, Family or Settings; her Home opens with
+her own conversation with Vera and, under it, her wish lists at a glance (My wishes, in pink, the
+kids' colour since the Family page first gave it to their faces), then what is coming up and her
+own things to do. The wish lists (`/wishes`, `wishes.html`) lead each card with its number in
+her order, and every button that moves a wish is at least 44px, for a finger on an iPad. A parent
+sees the same lists with Yes! and Not this time under each, and a card on Home with each kid's.

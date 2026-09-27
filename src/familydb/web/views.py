@@ -1003,3 +1003,67 @@ def knock_row(knock: Any, tz: Any) -> dict[str, Any]:
 def footer(version: str) -> str:
     """The copyright and version line at the foot of every page."""
     return FOOTER.format(version=version)
+
+
+# -- the kids' wish lists (docs/WISHES.md) --------------------------------------------------------
+
+WISH_LISTS = (
+    (None, "Every day", "What you'd like any time."),
+    ("christmas", "Christmas", "For Christmas: no daily limit."),
+    ("birthday", "Birthday", "For your birthday: no daily limit."),
+)
+LIST_WORDS = {None: "every day", "christmas": "Christmas", "birthday": "birthday"}
+CONCERN_WORDS = {
+    "rule": "a house rule",
+    "sibling": "about a sister or brother",
+    "inappropriate": "not OK",
+    "too_many": "too many in one day",
+}
+# What asking for a wish on the page came to, by wish_service's result.
+WISH_SAID = {
+    "added": "On your list: {title}.",
+    "duplicate": "Already on your list: {title}.",
+    "locked": "Not yet: {title} was a not this time. You can ask again after {again}, or put it "
+    "on your Christmas or birthday list.",
+    "too_many": "That's a lot of wishes for one day. Let's keep some for tomorrow.",
+    "list_full": "That list is full. Take something off it first.",
+}
+WISH_MOVED = "Moved."
+WISH_WITHDRAWN = "Taken off your list."
+WISH_ANSWERED = {
+    "granted": "Yes to {title}. She has been told.",
+    "declined": "Not this time: {title}. She has been told, kindly.",
+}
+ASKED_A_PARENT = "Sent to a parent."
+
+
+def day_words(iso: str | None, today: date) -> str:
+    """A day as the kids read it: "4 October", with the year only when it is not this one."""
+    if not iso:
+        return ""
+    day = date.fromisoformat(iso[:10])
+    return f"{day.day} {day:%B}" + (f" {day.year}" if day.year != today.year else "")
+
+
+def wish_row(wish: Any, today: date) -> dict[str, Any]:
+    """One wish for the page: what it is, where it stands, and when it may be asked again."""
+    return {
+        "id": wish.id,
+        "title": wish.title,
+        "notes": wish.notes,
+        "rank": wish.rank,
+        "occasion": wish.occasion,
+        "status": wish.status,
+        "note": wish.answer_note,
+        "again": day_words(wish.locked_until, today) if wish.status == "declined" else "",
+        "concern": CONCERN_WORDS.get(wish.concern or ""),
+        "review": wish.parent_review,
+    }
+
+
+def countdown(days: int | None) -> str | None:
+    if days is None:
+        return None
+    if days == 0:
+        return "Today!"
+    return "Tomorrow!" if days == 1 else f"In {days} days"

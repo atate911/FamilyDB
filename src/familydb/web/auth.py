@@ -118,6 +118,12 @@ NEEDS_HERE: dict[str, roles.Permission] = {
     "web.edit_idea": "change",
     "web.memory": "browse",
     "web.status": "browse",
+    "web.wishes": "wish",
+    "edits.add_wish": "wish",
+    "edits.move_wish": "wish",
+    "edits.withdraw_wish": "wish",
+    "edits.ask_parent": "wish",
+    "edits.answer_wish": "decide",
 }
 # Pages in those parts that are anybody's own, and need no more than signing in.
 EVERYBODY_S_OWN = CHOOSING
