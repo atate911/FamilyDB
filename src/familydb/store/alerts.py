@@ -56,6 +56,14 @@ def clear(conn: sqlite3.Connection, kind: str, subject: str = "") -> int:
     ).rowcount
 
 
+def times(conn: sqlite3.Connection, kind: str, subject: str) -> int:
+    """How often a trouble has been seen while it lasts; 0 when it is not noted."""
+    row = conn.execute(
+        "SELECT times FROM alerts WHERE kind = ? AND subject = ?", (kind, subject)
+    ).fetchone()
+    return int(row["times"]) if row else 0
+
+
 def any_for(conn: sqlite3.Connection, kinds: tuple[str, ...], subject: str) -> bool:
     marks = ", ".join("?" for _ in kinds)
     row = conn.execute(

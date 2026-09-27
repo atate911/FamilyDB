@@ -31,10 +31,11 @@ from typing import Any
 
 from familydb import alerts
 from familydb.agent import gateway, providers
-from familydb.agent.providers import catalog, prices
+from familydb.agent.providers import catalog, parts, prices
 from familydb.agent.providers.prices import Price
 from familydb.dates import utc_iso
 from familydb.integrations.price_lists import Listed, PriceLists, PriceListsAPI, Prices
+from familydb.store import judgements as judgement_store
 from familydb.store import model_watch as store
 from familydb.store.db import transaction
 from familydb.store.model_watch import Seen
@@ -120,7 +121,10 @@ def check(
                                 conn, company, name, what, before=was, after=now_is, at=at
                             )
                             changes.append((company, name, what, was, now_is))
-        _tell(conn, settings, store.all_seen(conn), changes, doubts, in_use, now)
+        judged = judged_replacements(conn)
+        after = store.all_seen(conn)
+        _tell(conn, settings, after, changes, doubts, in_use, now, judged)
+        _file_questions(conn, settings, after, read, changes, doubts, in_use, now, judged)
         load(conn, today=now.date())
         counts = {"models": len(store.all_seen(conn)), "changes": len(changes)}
     from familydb import usage_watch
@@ -365,6 +369,7 @@ def _tell(
     doubts: dict[tuple[str, str], str],
     in_use: set[tuple[str, str]],
     now: datetime,
+    judged: dict[str, str] | None = None,
 ) -> None:
     """Note for admins what matters to the family (alerts.py tells them): about the models in
     use, whatever changed; about the rest, only that there are new ones to choose from."""
@@ -373,7 +378,7 @@ def _tell(
         model = seen.get((company, name))
         subject = f"{company}:{name}"
         company_name = alerts.COMPANY_NAMES.get(company, company)
-        instead = replacement(seen, company, name, today)
+        instead = replacement(seen, company, name, today, judged)
         if model is not None and model.listed is False:
             if instead and swaps_for(model, instead):
                 in_place = (
@@ -487,11 +492,28 @@ def swaps_for(old: Seen | None, instead: Seen) -> bool:
 
 
 def replacement(
-    seen: dict[tuple[str, str], Seen], company: str, name: str, today: date
+    seen: dict[tuple[str, str], Seen],
+    company: str,
+    name: str,
+    today: date,
+    judged: dict[str, str] | None = None,
 ) -> Seen | None:
-    """The model to suggest in this one's place: one of the same company's on offer, not going
-    within `RETIRING_DAYS` itself, at about its price (no more than `DEARER` times it when
-    any is), the nearest in price among those. None when there is nothing to offer."""
+    """The model to suggest in this one's place: the one a judgement chose (judgement.py) while
+    it is still on offer, else the nearest in price of the shortlist. None when there is none."""
+    options = shortlist(seen, company, name, today)
+    chosen = (judged or {}).get(f"{company}:{name.lower()}")
+    for model in options:
+        if model.model == chosen:
+            return model
+    return options[0] if options else None
+
+
+def shortlist(
+    seen: dict[tuple[str, str], Seen], company: str, name: str, today: date, most: int = 5
+) -> list[Seen]:
+    """The models that could take this one's place, best first by the rule: the same company's
+    on offer, not going within `RETIRING_DAYS` themselves, at about its price (no more than
+    `DEARER` times it when any is), nearest in price first."""
     old = seen.get((company, name.lower()))
     horizon = (today + timedelta(days=RETIRING_DAYS)).isoformat()
     choices = [
@@ -504,8 +526,6 @@ def replacement(
     ]
     names = {model.model for model in choices}
     choices = [model for model in choices if not _snapshot_of(model.model, names)]
-    if not choices:
-        return None
     target = old.output if old is not None and old.output else None
 
     def nearness(model: Seen) -> tuple[bool, float, float]:
@@ -514,12 +534,73 @@ def replacement(
             return (False, 0.0, cost)
         return (cost > DEARER * target, abs(math.log(cost / target)), cost)
 
-    return min(choices, key=lambda model: (nearness(model), model.model))
+    return sorted(choices, key=lambda model: (nearness(model), model.model))[:most]
 
 
 def replacement_for(conn: sqlite3.Connection, company: str, name: str, today: date) -> Seen | None:
     """As `replacement`, from what the last check kept: for the status page."""
-    return replacement(store.all_seen(conn), company, name, today)
+    return replacement(store.all_seen(conn), company, name, today, judged_replacements(conn))
+
+
+def judged_replacements(conn: sqlite3.Connection) -> dict[str, str]:
+    """What the judgement calls chose to take each going model's place, by company:model."""
+    return {
+        subject: str((answer.answer or {}).get("choice") or "")
+        for subject, answer in judgement_store.choices(conn, "replacement").items()
+    }
+
+
+def uses_of(settings: Any, company: str, name: str) -> list[str]:
+    """What the family's calls use this model for, in words: for a judgement to weigh."""
+    uses: list[str] = []
+    provider = providers.build(company, settings)
+    for kind in gateway.KINDS:
+        call = gateway.spec(kind)
+        if providers.model_at(provider, call.surface, getattr(settings, call.level)) == name:
+            uses.append(call.purpose)
+    for hearer in providers.hearers(settings):
+        if hearer.name == company and str(hearer.listener()).lower() == name:
+            uses.append(gateway.LISTEN_PURPOSE)
+    for looker in providers.lookers(settings):
+        if looker.name == company and str(looker.viewer()).lower() == name:
+            uses.append(gateway.LOOK_PURPOSE)
+    return sorted(set(uses))
+
+
+def _file_questions(
+    conn: sqlite3.Connection,
+    settings: Any,
+    seen: dict[tuple[str, str], Seen],
+    read: dict[str, Prices],
+    changes: list[tuple[str, str, str, str | None, str | None]],
+    doubts: dict[tuple[str, str], str],
+    in_use: set[tuple[str, str]],
+    now: datetime,
+    judged: dict[str, str],
+) -> None:
+    """File for a judgement what a rule cannot settle well (familydb/judgement.py): a model in
+    use going with more than one to take its place, new models for a company in use, a price
+    of one in use the lists disagree on. Filed once each, and only while judgements are on."""
+    from familydb import judgement
+
+    if not settings.judgements:
+        return
+    today = now.date()
+    at = utc_iso(now)
+    horizon = (today + timedelta(days=RETIRING_DAYS)).isoformat()
+    for company, name in sorted(in_use):
+        model = seen.get((company, name))
+        if model is None:
+            continue
+        going = model.listed is False or bool(model.retires_on and model.retires_on <= horizon)
+        options = shortlist(seen, company, name, today)
+        if going and len(options) > 1 and f"{company}:{name}" not in judged:
+            judgement.file_replacement(conn, model, options, uses_of(settings, company, name), at)
+        if (company, name) in doubts:
+            judgement.file_price(conn, model, read, at)
+    for company in sorted({company for company, _ in in_use}):
+        if any(owner == company and what in ("new", "back") for owner, _, what, _, _ in changes):
+            judgement.file_lineup(conn, settings, company, seen, today, at)
 
 
 def load(conn: sqlite3.Connection, *, today: date | None = None) -> None:
@@ -532,6 +613,7 @@ def load(conn: sqlite3.Connection, *, today: date | None = None) -> None:
     offered: dict[str, list[Seen]] = {}
     notes: dict[tuple[str, str], str] = {}
     swaps: dict[tuple[str, str], str] = {}
+    judged = judged_replacements(conn)
     # Everything kept on the first check is as old as the first check: only what came after is new.
     first = min((model.first_seen for model in seen.values()), default="")[:10]
     lately = (today - NEW_FOR).isoformat()
@@ -540,7 +622,7 @@ def load(conn: sqlite3.Connection, *, today: date | None = None) -> None:
             notes[(company, name)] = f"goes {model.retires_on}"
         elif model.first_seen[:10] > max(first, lately):
             notes[(company, name)] = "new"
-        instead = replacement(seen, company, name, today) if gone(model, today) else None
+        instead = replacement(seen, company, name, today, judged) if gone(model, today) else None
         if instead is not None and swaps_for(model, instead):
             swaps[(company, name)] = instead.model
         if model.input is None or model.output is None:
@@ -560,6 +642,11 @@ def load(conn: sqlite3.Connection, *, today: date | None = None) -> None:
         keep.sort(key=lambda m: (m.output or 0, m.model))
         shown[company] = tuple(m.model for m in keep)
     prices.use(live, shown, notes, swaps)
+    # What a judgement found a company no longer takes, for every process (providers/parts.py).
+    for question in judgement_store.choices(conn, "refused").values():
+        choice = str((question.answer or {}).get("choice") or "")
+        if choice.startswith("part:") and question.facts.get("model"):
+            parts.leave_out(question.facts["company"], question.facts["model"], choice[5:])
 
 
 def _snapshot_of(name: str, names: set[str]) -> bool:

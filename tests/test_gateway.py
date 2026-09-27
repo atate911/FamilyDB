@@ -79,10 +79,12 @@ def test_each_kind_is_declared_whole(kind, registry, settings) -> None:
         assert all(not specs[t.name].worker_only for t in compose.tool_defs(call, registry))
         # A tool that may close a chat turn is one of the chat's own, and writes something.
         assert all(specs[name].writes and not specs[name].worker_only for name in call.closes)
-    else:  # a worker: its own tools, its hand-back among them, and a cap on the web
+    else:  # a worker: its own tools, its hand-back among them, and a cap on any web it has
         assert set(call.tools) <= set(specs) and set(call.hand_back) <= set(call.tools)
         assert all(specs[name].worker_only for name in call.tools)
-        assert call.web_searches and call.surface == "worker"
+        assert call.surface == "worker" and call.hand_back
+        # The judge weighs facts it is given and has no web; a worker that searches is capped.
+        assert call.web_searches is None or call.web_searches > 0
 
 
 def _kinds(conn) -> list[str]:

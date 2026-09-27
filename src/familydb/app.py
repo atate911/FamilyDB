@@ -215,8 +215,12 @@ class App:
                 prices.use({}, {})
                 self._models_stamp = MODELS_OFF
             return
+        from familydb.store import judgements as judgement_store
+
         try:
-            stamp = watch_store.stamp(conn)
+            # The daily check, or a judgement answered since (a replacement chosen, a part left
+            # out), each moves what is in force.
+            stamp = f"{watch_store.stamp(conn)}|{judgement_store.last_answered(conn)}"
             if stamp == self._models_stamp:
                 return
             model_watch.load(conn, today=self.clock.today())

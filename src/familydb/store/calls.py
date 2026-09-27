@@ -98,6 +98,17 @@ def log_llm_call(
     return int(cur.lastrowid or 0)
 
 
+def spent_on(conn: sqlite3.Connection, kinds: tuple[str, ...], *, since: str) -> float:
+    """Estimated dollars spent on these kinds of call since a UTC timestamp."""
+    marks = ", ".join("?" for _ in kinds)
+    row = conn.execute(
+        f"SELECT coalesce(sum(cost_usd), 0) AS spent FROM llm_calls "
+        f"WHERE kind IN ({marks}) AND created_at >= ?",
+        (*kinds, since),
+    ).fetchone()
+    return float(row["spent"])
+
+
 def spent_since(conn: sqlite3.Connection, *, since: str) -> float:
     """Estimated dollars spent on model calls since a UTC timestamp."""
     row = conn.execute(

@@ -123,6 +123,26 @@ class Settings(BaseSettings):
     chat_level: Level = "everyday"  # answering the family, and answering again after a failure
     digest_level: Level = "everyday"  # the weekend digest: once a week, so a stronger one is cheap
     lookup_level: Level = "everyday"  # looking ideas up, and searching for what is on
+    # A company's better and best models, in place of the lineup's (catalog.py): empty uses the
+    # lineup's. A judgement call may suggest new ones as the companies release them.
+    openai_better_model: str = ""
+    openai_best_model: str = ""
+    anthropic_better_model: str = ""
+    anthropic_best_model: str = ""
+    gemini_better_model: str = ""
+    gemini_best_model: str = ""
+    # Judgement calls (familydb/judgement.py): when a change needs weighing (which model should
+    # take a going one's place, what an unreadable refusal means, which new models belong at
+    # which level, what a disputed price really is), a stronger model is asked, rarely, and what
+    # it says is checked by code and shown to admins. Off until the family turns it on; at most
+    # `judgement_budget` US$ a month, within the daily limit.
+    judgements: bool = False
+    judgement_level: Level = "best"
+    # What a judgement may do by itself: `within_cost` puts in a model it chose when it costs no
+    # more than the one it takes over from (judgement.SAME_COST), told to admins with a way to
+    # put it back; anything dearer, and everything under `suggest`, waits for an admin's press.
+    judgement_acts: Literal["within_cost", "suggest"] = "within_cost"
+    judgement_budget: float = Field(default=1.0, ge=0, le=50)
 
     # Each company's everyday models: its cheapest, for chat and for the lookups.
     gemini_api_key: str | None = None

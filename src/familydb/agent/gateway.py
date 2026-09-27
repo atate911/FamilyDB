@@ -60,7 +60,7 @@ from familydb.tools import ToolContext, ToolRegistry
 
 log = logging.getLogger(__name__)
 
-Kind = Literal["chat", "digest", "retry", "enrich", "discover"]
+Kind = Literal["chat", "digest", "retry", "enrich", "discover", "judge", "price_check"]
 
 
 @dataclass(frozen=True)
@@ -123,6 +123,28 @@ KINDS: dict[str, CallSpec] = {
             tools=("report_finds",),
             hand_back=("report_finds",),
             web_searches=4,
+            **_WORKER,
+        ),
+        # Weighing a change the code has narrowed to a few options (familydb/judgement.py): a
+        # stronger model, at the level the family chose for it, and no web. The day's questions
+        # go in one call; its only output is one hand-back.
+        CallSpec(
+            "judge",
+            "weighing a change in the models",
+            prompt="judge",
+            tools=("give_judgement",),
+            hand_back=("give_judgement",),
+            **{**_WORKER, "level": "judgement_level", "effort": None},
+        ),
+        # Reading a company's own pricing page for a price the lists disagree on: extraction,
+        # not judgement, so the lookup model at the lookup level, with a few searches.
+        CallSpec(
+            "price_check",
+            "checking a disputed price",
+            prompt="price_check",
+            tools=("report_price",),
+            hand_back=("report_price",),
+            web_searches=3,
             **_WORKER,
         ),
     )

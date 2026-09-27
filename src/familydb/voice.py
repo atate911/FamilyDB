@@ -306,6 +306,16 @@ EVENTS: dict[str, Event] = {
         ("company", "detail"),
         {"company": "OpenAI", "detail": "API error 400: Unsupported parameter"},
     ),
+    "alert_advice": Event(
+        "Telling an admin: what a judgement on the models said",
+        "I weighed a change in the models: {detail}. The status page has it, with a way to "
+        "put it back or put it in.",
+        ("detail",),
+        {
+            "detail": "claude-sonnet-5 put in place of claude-haiku-4-5, at the same cost or "
+            "less (Anthropic): the nearest in price that handles tools well"
+        },
+    ),
     "kid_limit": Event(
         "A kid's messages for the day used up",
         "That's {limit} messages today, which is all for today. Ask me again tomorrow, or ask a "

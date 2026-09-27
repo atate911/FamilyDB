@@ -27,6 +27,7 @@ from familydb.availability import (
 from familydb.dates import utc_iso
 from familydb.store import alerts as alert_store
 from familydb.store import calls, ideas, members, messages
+from familydb.store import judgements as judgement_store
 from familydb.store import model_watch as model_store
 from familydb.store import settings as settings_store
 from familydb.store.settings import SECRETS
@@ -307,7 +308,7 @@ def attention(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
     found = [
         one
         for one in alert_store.current(conn, since=utc_iso(now - alerts.KEEP))
-        if one.kind != "new"
+        if one.kind not in ("new", "advice")
     ]
     if not found:
         return []
@@ -352,6 +353,11 @@ def model_watch(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
             views.model_change_row(one, tz) for one in model_store.changes_since(conn, since=since)
         ],
         "days": CHANGES_DAYS,
+        "judgements": [
+            views.judgement_row(one, tz, app.settings)
+            for one in judgement_store.recent(conn, since=since)
+        ],
+        "judging": app.settings.judgements,
     }
 
 

@@ -14,7 +14,9 @@ Four kinds of trouble:
 - api: a company refused a part of a request (a dated beta, a tool version, a setting) for a
   model, which is now sent without it (agent/providers/parts.py; about: company, model, part);
 - refused: a company refused requests for a reason FamilyDB cannot read (about: the company),
-  told once it has happened twice without an answer between, since one odd request is not news.
+  told once it has happened twice without an answer between, since one odd request is not news;
+  then a judgement is asked what it most likely is (judgement.py);
+- advice: what a judgement call answered and what came of it (about: its kind and subject).
 
 Five come from the daily check of models and prices (model_watch.py).
 
@@ -57,6 +59,7 @@ KINDS = (
     "shift",
     "api",
     "refused",
+    "advice",
 )
 # About a company: the ones a company's own answer clears.
 COMPANY_KINDS = ("credit", "key", "refused")
@@ -107,6 +110,12 @@ def noticed(
     """A model call failed: note it when it is something only an admin can fix."""
     if exc.trouble in COMPANY_KINDS:
         note(conn, exc.trouble, provider, str(exc), now)
+        if exc.trouble == "refused" and alert_store.times(conn, "refused", provider) >= 2:
+            # Twice with no answer between: a stronger model may read what the code cannot.
+            from familydb import judgement
+            from familydb.agent.providers import refusable_parts
+
+            judgement.file_refused(conn, provider, model, str(exc), refusable_parts(provider), now)
     elif exc.trouble == "model" and model:
         note(
             conn,

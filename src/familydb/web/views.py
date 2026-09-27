@@ -824,9 +824,10 @@ ALERT_TITLES = {
     "shift": "What the calls cost or do moved",
     "api": "A company stopped taking part of a request",
     "refused": "{company} is refusing requests",
+    "advice": "A judgement on the models",
 }
 # Kinds whose detail says what happened: shown with the row.
-SAID_IN_DETAIL = frozenset({"model", "price", "prices", "new", "shift", "api", "refused"})
+SAID_IN_DETAIL = frozenset({"model", "price", "prices", "new", "shift", "api", "refused", "advice"})
 COMPANY_WORDS = {"openai": "OpenAI", "anthropic": "Anthropic", "gemini": "Google Gemini"}
 
 
@@ -875,6 +876,45 @@ def source_row(source: Any, tz: ZoneInfo) -> dict[str, Any]:
     running = f", {source.failures} checks running" if source.failures > 1 else ""
     detail = f"Could not be read {when}{running}: {source.note}."
     return {"label": label, "detail": detail, "on": False}
+
+
+JUDGEMENT_TITLES = {
+    "replacement": "Which model should take {model}'s place",
+    "refused": "What {company}'s refusal means",
+    "lineup": "Which {company} models belong at each level",
+    "price": "What {model} really costs",
+}
+
+
+def judgement_row(question: Any, tz: ZoneInfo, live: Any) -> dict[str, Any]:
+    """One question a judgement was asked, as the Status page lists it: what, when, what it
+    said and what came of it, and the settings its buttons would save: what waits for an admin,
+    while it is not in force, and what it changed, while that still is."""
+    facts = question.facts
+    title = JUDGEMENT_TITLES.get(question.kind, question.kind).format(
+        model=facts.get("model", ""),
+        company=COMPANY_WORDS.get(facts.get("company", ""), facts.get("company", "")),
+    )
+    if question.answered_at is None:
+        when = "asked with the evening's lookups" if not question.urgent else "being asked"
+        return {"label": title, "detail": f"Filed {local_moment(question.asked_at, tz)}; {when}."}
+    answer = question.answer or {}
+
+    def in_force(values: dict[str, str]) -> bool:
+        return all(str(getattr(live, key, "") or "") == value for key, value in values.items())
+
+    waiting = answer.get("waiting") or {}
+    undo = answer.get("undo") or {}
+    put_in = {key: getattr(live, key, "") for key in undo}
+    said = f"{question.outcome}." + (f" Why: {question.reason}" if question.reason else "")
+    return {
+        "label": title,
+        "detail": f"{local_moment(question.answered_at, tz)}: {said}",
+        "on": True,
+        "waiting": waiting if waiting and not in_force(waiting) else {},
+        # Put back only while what it put in is still what is in force.
+        "undo": undo if undo and all(put_in.values()) and in_force(put_in) else {},
+    }
 
 
 def model_change_row(change: Any, tz: ZoneInfo) -> dict[str, str]:

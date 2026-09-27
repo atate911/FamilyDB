@@ -1046,6 +1046,7 @@ LINE_GROUPS = (
             "alert_shift",
             "alert_api",
             "alert_refused",
+            "alert_advice",
         ),
     ),
 )

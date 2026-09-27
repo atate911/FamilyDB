@@ -437,6 +437,68 @@ GROUPS: tuple[Group, ...] = (
     ),
     Group(
         "model",
+        "judgement",
+        "Asking a stronger model to weigh a change",
+        "Some changes need judgement rather than a rule: which model should take the place of one "
+        "that is going, what a refusal nobody can read means, which new models belong at which "
+        "level, and what a price the lists disagree on really is. With this on, the questions "
+        "that come up are asked together once a day, with the evening's lookups, in one call; "
+        "only a refusal is asked at once. The answer is checked, told to admins, and never "
+        "changes a setting by itself. It is sent model names, prices and error messages, never "
+        "the family's messages.",
+        (
+            field(
+                "judgements",
+                "Ask a stronger model when a change needs judgement",
+                "A few cents each time, and nothing on a day with no question.",
+            ),
+            field(
+                "judgement_level",
+                "How strong a model weighs it",
+                "Best by default: rare questions, where a better answer is worth a cent more.",
+            ),
+            field(
+                "judgement_acts",
+                "What it may do by itself",
+                "A better model at the same cost or less can be put in by itself, and admins are "
+                "told, with a way to put it back; anything dearer waits for an admin.",
+                words=(
+                    ("within_cost", "Put in a model at the same cost or less"),
+                    ("suggest", "Only suggest"),
+                ),
+            ),
+            field(
+                "judgement_budget",
+                "Most to spend on it in a month (US$)",
+                "Counted within the daily limit as well. 0 asks nothing.",
+            ),
+        ),
+    ),
+    Group(
+        "model",
+        "stronger",
+        "Better and best models",
+        "The models a company answers with at the better and best levels. Empty uses the ones "
+        "this version knows (shown as the default); a judgement may suggest newer ones.",
+        tuple(
+            field(
+                f"{company}_{level}_model",
+                f"{label} {level} model",
+                suggested=suggestions(company),
+                unset="this version's",
+                company=company,
+            )
+            for company, label in (
+                ("openai", "OpenAI"),
+                ("anthropic", "Claude"),
+                ("gemini", "Gemini"),
+            )
+            for level in ("better", "best")
+        ),
+        folded=True,
+    ),
+    Group(
+        "model",
         "second",
         "A second company",
         "With a key for another company as well, it can do the lookups, or stand in when the "
