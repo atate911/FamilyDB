@@ -30,11 +30,9 @@ from familydb.store.wishes import Concern, Occasion, Wish
 # Days a "not this time" locks an everyday wish, by how many times that thing has been declined:
 # two weeks the first time, then a month, three months, four, and a year each time after.
 LOCKOUT_DAYS = (14, 30, 90, 120, 365)
-# Until these are on the settings page (docs/WISHES.md, "Settings").
-WISH_DAILY_COUNT = 5
-OCCASION_LIST_SIZE = 25
+# Moving is free; this only stops a day of excess. The family's own limits (a day's wishes, the
+# length of an occasion list, Ask a parent) are settings (config.py, the Spending page).
 WISH_MOVES_PER_DAY = 300
-PARENT_ASKS_PER_WEEK = 2
 # How alike two titles must be to count as one ask when no topic says so.
 SAME_TITLE = 0.9
 MAX_TITLE = 120
@@ -281,7 +279,7 @@ def add(
         if counted:
             asked = _asked_today(conn, owner, today) + 1
             wishes.count_day(conn, owner.id, today.isoformat(), asks=1)
-            if asked > WISH_DAILY_COUNT:
+            if asked > settings.wish_daily_count:
                 kept = wishes.insert(
                     conn,
                     member_id=owner.id,
@@ -297,7 +295,7 @@ def add(
                 return Added("too_many", kept, asked_today=asked)
         else:
             asked = 0
-            if occasion is not None and len(listed) >= OCCASION_LIST_SIZE:
+            if occasion is not None and len(listed) >= settings.occasion_list_size:
                 return Added("list_full")
         wish = wishes.insert(
             conn,
@@ -346,11 +344,11 @@ def move(
             # Onto the everyday list is asking for it every day: held to those rules.
             if _lock_on(conn, owner, None, wish.topic, wish.title_norm, utc_iso(now)):
                 raise ToolError("that one is locked on your everyday list for now")
-            if _asked_today(conn, owner, _today(settings, now)) >= WISH_DAILY_COUNT:
+            if _asked_today(conn, owner, _today(settings, now)) >= settings.wish_daily_count:
                 raise ToolError("that is enough everyday wishes for today; try tomorrow")
         if target != wish.occasion:
             if target is not None and len(wishes.open_list(conn, owner.id, target)) >= (
-                OCCASION_LIST_SIZE
+                settings.occasion_list_size
             ):
                 raise ToolError("that list is full; take something off it first")
             old = [w.id for w in wishes.open_list(conn, owner.id, wish.occasion) if w.id != wish_id]
@@ -507,7 +505,9 @@ def turn_away(
             "AND updated_at >= ?",
             (owner.id, week_ago),
         ).fetchone()[0]
-        offered = reviewable and concern != "inappropriate" and asked < PARENT_ASKS_PER_WEEK
+        offered = (
+            reviewable and concern != "inappropriate" and asked < settings.parent_asks_per_week
+        )
         wish = wishes.insert(
             conn,
             member_id=owner.id,

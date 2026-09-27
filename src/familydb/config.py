@@ -176,6 +176,11 @@ class Settings(BaseSettings):
     kid_daily_spend: float = Field(default=0.25, ge=0, le=50)
     # The hour, at home, when what a kid's messages gave to look up is looked up, all at once.
     kid_lookup_hour: int = Field(default=19, ge=0, le=23)
+    # The kids' wish lists (docs/WISHES.md, wish_service.py, wording.py).
+    wish_daily_count: int = Field(default=5, ge=1, le=50)
+    occasion_list_size: int = Field(default=25, ge=1, le=100)
+    parent_asks_per_week: int = Field(default=2, ge=0, le=14)
+    wording_daily_after: int = Field(default=3, ge=1, le=20)
     anthropic_fallbacks: bool = True
     # An hour, because a family writes in bursts with long gaps: a five-minute cache would be
     # cold almost every time and the whole prefix would be paid for again.

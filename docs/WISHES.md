@@ -159,8 +159,9 @@ things to do. Her bar: Home, Vera, Wishes, Ideas, Plans, To do. A parent's Home 
 each girl's open wishes, anything flagged, requests waiting. `/wishes` is the lists, reordered by
 buttons, and by dragging where scripts run (`static/wishes.js`).
 
-## Settings (built for the kid's share and lookups; the rest planned)
+## Settings (built)
 
-`kid_daily_spend`, `wish_daily_count`, `occasion_list_size`, `wish_moves_per_day`,
-`parent_asks_per_week`, `kid_lookup_hour`, `wording_daily_after`, on a Kids group of the
-settings.
+On the Spending page: `daily_spend_limit` and each kid's share of it, `kid_daily_spend`; the hour
+her lookups run, `kid_lookup_hour`; and a group for the wish lists: `wish_daily_count`,
+`occasion_list_size`, `parent_asks_per_week` and `wording_daily_after`. The cap on moves in a day
+(`wish_service.WISH_MOVES_PER_DAY`, 300) stays in code: it only stops excess.

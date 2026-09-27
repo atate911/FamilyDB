@@ -104,7 +104,7 @@ def test_an_occasion_no_lasts_until_the_occasion_has_passed(conn, settings, kids
 
 def test_a_few_everyday_wishes_a_day_then_restraint(conn, settings, kids) -> None:
     things = ["Slime", "Lego", "Kite", "Paints", "Roller skates", "Headphones"]
-    for thing in things[: ws.WISH_DAILY_COUNT]:
+    for thing in things[: settings.wish_daily_count]:
         assert _add(conn, settings, kids["mia"], thing).result == "added"
     sixth = _add(conn, settings, kids["mia"], things[5])
     assert sixth.result == "too_many" and sixth.compact()["asked_today"] == 6
@@ -145,7 +145,7 @@ def test_moving_onto_the_everyday_list_is_held_to_its_rules(conn, settings, kids
     # And not a way round the daily count.
     parked = [
         _add(conn, settings, kids["mia"], f"x{n}", topic=f"x{n}", occasion="birthday").wish.id
-        for n in range(ws.WISH_DAILY_COUNT + 1)
+        for n in range(settings.wish_daily_count + 1)
     ]
     for wish_id in parked[:4]:  # the declined cat was one ask today already
         ws.move(conn, settings, by=kids["mia"], wish_id=wish_id, occasion=None, now=NOW)

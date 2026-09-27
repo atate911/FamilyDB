@@ -31,9 +31,8 @@ WE_SHOULD = re.compile(
 I_WANT = re.compile(
     r"\bI(?:\s+(?:really\s+)?(?:want|would\s+like|wish)|['\u2019]d\s+like)\b", re.IGNORECASE
 )
-# Said this often in a week, and she is nudged on the first "we should" of any day; less often,
-# no more than every few days.
-DAILY_AFTER = 3
+# Said often in a week (settings.wording_daily_after), she is nudged on the first "we should" of
+# any day; less often, no more than every few days.
 EVERY_FEW_DAYS = 3
 PRAISE_EVERY = 3
 
@@ -64,7 +63,7 @@ def choose(
         if last == 0:
             return None
         week = messages.said_by_since(conn, member_id, utc_iso(now - timedelta(days=7)))
-        often = sum(1 for said in week if says_we_should(said)) >= DAILY_AFTER
+        often = sum(1 for said in week if says_we_should(said)) >= settings.wording_daily_after
         if often or last is None or last >= EVERY_FEW_DAYS:
             return _noted(conn, member_id, today, "nudge")
         return None
