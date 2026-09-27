@@ -343,9 +343,12 @@ backup; section 11 says when to keep the keys in `.env` instead.
 sudo /opt/familydb/scripts/maintain.sh upgrade
 ```
 
-It takes a backup, fetches, moves to the newer code, reinstalls the locked dependencies (or
-rebuilds the Docker image), applies any new migrations and restarts, then prints the command to
-go back if it went badly. Do not `git pull` in the checkout instead: after an upgrade it is on
+It fetches first and says what the new version brings (how many changes and the newest of
+them, whether the database gains migrations, whether the libraries move) before asking. Then it
+takes a backup, moves to the newer code, reinstalls the locked dependencies (or rebuilds the
+Docker image), applies any new migrations and restarts, waits for the page to answer, and prints
+the command to go back if it went badly. With nothing newer it says so and takes no backup;
+`--dry-run` stops once it has said what it would do. Do not `git pull` in the checkout instead: after an upgrade it is on
 a detached commit, where that fails, and it would skip the backup and the dependencies. On a
 private repository the fetch needs a credential; docs/INSTALL.md, under Day to day, says how.
 
@@ -741,7 +744,9 @@ company, for free, whichever company it is.
 ## 12. Looking after the server
 
 `scripts/maintain.sh` does most of what follows, and says what it is about to change before it
-changes it: `status` (is it running, how big is the database, when was the last backup), `check`
+changes it: `status` (is it running and does the page answer, where the page is and whether
+HTTPS stands, the database and the disk, how old the newest backup is and whether they are
+scheduled, whether a newer version has been fetched, and at the end what wants a look), `check`
 (the full `familydb doctor` report), `backup`, `restore FILE`, `upgrade`, `logs`, `restart`,
 `schedule-backups`, `https` (section 10) and `password` (a starting password for somebody who
 forgot theirs). `--help` says more. The rest of this section is what it does, and how to do it
