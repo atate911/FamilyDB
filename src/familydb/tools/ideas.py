@@ -7,6 +7,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from familydb import roles
 from familydb.agent.render import render_idea_line
 from familydb.dates import parse_date, parse_datetime
 from familydb.errors import ToolError
@@ -188,6 +189,16 @@ def _resolve_member_name(ctx: ToolContext, name: str | None) -> int | None:
     return member.id
 
 
+def _gifts_kept_from(ctx: ToolContext) -> bool:
+    """Whether the person asking is somebody presents are kept from: a kid, who may not see what
+    the grown-ups decide (roles.py). A job or the page with no one signed in sees everything."""
+    return ctx.member is not None and not roles.may(ctx.member.role, "decide")
+
+
+def _kept_from(ctx: ToolContext, idea: ideas.Idea | None) -> bool:
+    return idea is not None and ideas.is_gift(idea) and _gifts_kept_from(ctx)
+
+
 @tool(
     name="add_idea",
     description=(
@@ -199,6 +210,8 @@ def _resolve_member_name(ctx: ToolContext, name: str | None) -> int | None:
 )
 def add_idea(ctx: ToolContext, args: AddIdeaInput) -> dict[str, Any]:
     existing = ideas.find_similar_title(ctx.conn, args.title)
+    if _kept_from(ctx, existing):
+        raise ToolError("that is already on the grown-ups' list; nothing was added")
     if existing is not None:
         return {
             "duplicate_of": existing.id,
@@ -243,7 +256,7 @@ def update_idea(ctx: ToolContext, args: UpdateIdeaInput) -> dict[str, Any]:
                 f"#{args.id} was changed since you opened it, so nothing was saved. "
                 "Here it is as it is now; make your change again."
             )
-        if current is None:
+        if current is None or _kept_from(ctx, current):
             raise ToolError(f"no idea #{args.id}")
         changes |= _dated(ctx, args.happens_from, args.happens_until, current)
         idea = ideas.update(ctx.conn, args.id, changes, now=ctx.now_iso())
@@ -261,7 +274,7 @@ def update_idea(ctx: ToolContext, args: UpdateIdeaInput) -> dict[str, Any]:
 )
 def describe_idea(ctx: ToolContext, args: DescribeIdeaInput) -> dict[str, Any]:
     idea = ideas.get(ctx.conn, args.id)
-    if idea is None:
+    if idea is None or _kept_from(ctx, idea):
         raise ToolError(f"no idea #{args.id}")
     place = places.get(ctx.conn, idea.place_id) if idea.place_id else None
     original = messages.get(ctx.conn, idea.source_message_id) if idea.source_message_id else None
@@ -295,5 +308,6 @@ def search_ideas(ctx: ToolContext, args: SearchIdeasInput) -> dict[str, Any]:
         exclude_done_within_days=args.exclude_done_within_days,
         today=ctx.clock.today(),
         limit=limit,
+        without_gifts=_gifts_kept_from(ctx),
     )
     return {"count": len(found), "ideas": [render_idea_line(idea) for idea in found]}

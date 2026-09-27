@@ -14,7 +14,13 @@ from familydb.app import App
 from familydb.dates import utc_iso
 from familydb.store import messages, tasks
 from familydb.store.db import transaction
-from familydb.task_service import gifts_for, late_note, reminder_text, schedule_next
+from familydb.task_service import (
+    birthday_wishes,
+    gifts_for,
+    late_note,
+    reminder_text,
+    schedule_next,
+)
 
 
 def run_reminders(app: App) -> int:
@@ -34,7 +40,11 @@ def run_reminders(app: App) -> int:
                     channel=task.channel,
                     chat_id=task.chat_id,
                     text=reminder_text(
-                        task, app.settings, due_when=due_when, gifts=gifts_for(conn, task)
+                        task,
+                        app.settings,
+                        due_when=due_when,
+                        gifts=gifts_for(conn, task),
+                        wished=birthday_wishes(conn, task),
                     ),
                     now=now,
                     buttons=buttons.for_reminder(task.id),

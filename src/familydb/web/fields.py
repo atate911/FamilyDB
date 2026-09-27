@@ -591,6 +591,46 @@ GROUPS: tuple[Group, ...] = (
                 "/today and the buttons under a reminder cost nothing and are not counted. Past "
                 "it, she says so and answers again tomorrow. 0 means no limit.",
             ),
+            field(
+                "kid_daily_spend",
+                "Each kid's daily share (US$)",
+                "What each kid's own messages may spend in a day, within the limit above. When "
+                "it is used up she is told, kindly, to come back tomorrow; her wish list still "
+                "works. 0 means no share of her own.",
+            ),
+        ),
+    ),
+    Group(
+        "spending",
+        "wishes",
+        "The kids' wish lists",
+        "How much the kids may ask for, and how the bot guides how they ask.",
+        (
+            field(
+                "wish_daily_count",
+                "Everyday wishes a day",
+                "How many things a kid may add to her everyday list in a day. The next is kindly "
+                "turned away, and shows on the Kids card. Christmas and birthday lists have no "
+                "daily count.",
+            ),
+            field(
+                "occasion_list_size",
+                "Longest Christmas or birthday list",
+                "How many wishes each of her Christmas and birthday lists may hold at once.",
+            ),
+            field(
+                "parent_asks_per_week",
+                "Ask a parent, times a week",
+                "How often a kid may send you something the bot said no to, when it offers. 0 "
+                "means never.",
+            ),
+            field(
+                "wording_daily_after",
+                'Nudge "we should" every day after',
+                'Once a kid has said "we should" for a want of her own this many times in a '
+                'week, the bot reflects "I want" back to her once a day; less often, every '
+                "few days.",
+            ),
         ),
     ),
     Group(

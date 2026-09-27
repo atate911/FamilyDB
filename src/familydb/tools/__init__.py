@@ -17,6 +17,7 @@ def build_registry() -> ToolRegistry:
         suggest,
         tasks,
         weather,
+        wishes,
     )
 
     return REGISTRY

@@ -21,6 +21,25 @@
       </select>
     </div>
     <div class="field">
+      <label for="birth_date">Birthday <span class="optional">optional</span></label>
+      <input id="birth_date" name="birth_date" type="date" max="{{ today }}"
+             value="{{ person.birth_date or '' }}" />
+      <span class="muted">{% if person.age is not none %}{{ person.age }} today. {% endif %}Only the age goes to {{ assistant }}, never the date.</span>
+    </div>
+    {# Kids only: it shapes her screen and how {{ assistant }} speaks to her (docs/WISHES.md).
+       Anybody else's form sends nothing, so what is stored stays. #}
+    {% if person.role == 'kid' %}
+      <div class="field">
+        <label for="gender">Male or female</label>
+        <select id="gender" name="gender">
+          <option value="" {{ 'selected' if not person.gender }}>Not said</option>
+          {% for value, words in genders.items() %}
+            <option value="{{ value }}" {{ 'selected' if value == person.gender }}>{{ words }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    {% endif %}
+    <div class="field">
       <label for="telegram_id">Telegram id</label>
       <input id="telegram_id" name="telegram_id" inputmode="numeric"
              value="{{ person.telegram_id or '' }}" placeholder="none" />

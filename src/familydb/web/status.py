@@ -603,6 +603,12 @@ def automatic(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
             settings.admin_alerts,
             "when something only an admin can fix goes wrong, to each admin with a Telegram id",
         ),
+        "kids_asks": (
+            True,
+            "when a kid asks for something that isn't OK, or asks for a parent, to each parent "
+            "with a Telegram id",
+        ),
+        "kids_answers": (True, "when a parent answers a wish, in the kid's own chat"),
     }
     kinds = []
     for key, group, title, cost, events in views.AUTOMATIC:

@@ -22,6 +22,7 @@
         <div class="person">
           <strong>{{ person.name }}</strong>
           <span class="tag">{{ person.role }}</span>
+          {% if person.age is not none %}<span class="tag">{{ person.age }}</span>{% endif %}
           {% if not person.active %}<span class="tag warn">switched off</span>{% endif %}
           {% if person.sign_in == 'own' %}<span class="tag">signs in</span>
           {% elif person.sign_in == 'starting' %}<span class="tag">starting password</span>{% endif %}

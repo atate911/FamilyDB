@@ -77,6 +77,7 @@
       {% if idea.tags %}
         <p class="tags">{% for tag in idea.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</p>
       {% endif %}
+      {% if visitor().may('change') %}
       <div class="actions">
         <a class="button secondary" href="{{ url_for('web.edit_idea', idea_id=idea.id) }}">{{ icon('edit') }}Edit</a>
         <form method="post" action="{{ url_for('edits.set_status', idea_id=idea.id) }}">
@@ -88,6 +89,7 @@
           </button>
         </form>
       </div>
+      {% endif %}
     </article>
 
     <aside class="idea-side">
@@ -112,6 +114,7 @@
         </section>
       {% endif %}
 
+      {% if visitor().may('change') %}
       <section class="panel">
         <details class="more">
           <summary><span class="h2">{{ icon('plans') }}Plan it</span></summary>
@@ -138,7 +141,7 @@
           </form>
         {% else %}
           <p class="muted">Google Calendar is not connected, so nothing here can be scheduled.
-            See the <a href="{{ url_for('web.status') }}">status page</a>.</p>
+            {% if visitor().may('browse') %}See the <a href="{{ url_for('web.status') }}">status page</a>.{% endif %}</p>
         {% endif %}
         </details>
       </section>
@@ -179,6 +182,7 @@
         </form>
         </details>
       </section>
+      {% endif %}
 
       {% if outcomes %}
         <section class="panel">

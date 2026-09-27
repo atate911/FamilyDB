@@ -420,3 +420,13 @@ def chats(conn: sqlite3.Connection, channel: str) -> list[dict[str, str]]:
         (channel,),
     ).fetchall()
     return [{"chat_id": row["chat_id"], "last_at": row["last_at"]} for row in rows]
+
+
+def said_by_since(conn: sqlite3.Connection, member_id: int, since: str) -> list[str]:
+    """What somebody said since then, oldest first: their words, for code that reads them."""
+    rows = conn.execute(
+        "SELECT text FROM messages WHERE member_id = ? AND direction = 'in' AND received_at >= ? "
+        "ORDER BY id",
+        (member_id, since),
+    )
+    return [row[0] for row in rows]

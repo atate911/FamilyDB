@@ -62,10 +62,14 @@ FOOTER = "FamilyDB © 2026 by Andrew Tate. Version v{version}. All rights reserv
 ROLE_WORDS = {
     "admin": "looks after it: the settings, setup, and who is on the family list. There is "
     "always at least one.",
-    "parent": "uses all the rest: chat, ideas, plans and things to do.",
-    "kid": "is in the plans; with a password, may do whatever a parent may, within the number of "
-    "messages a day set under Spending.",
+    "parent": "uses all the rest: chat, ideas, plans and things to do, and answers the kids' "
+    "wishes.",
+    "kid": "is in the plans; with a password, reads the ideas and plans, talks to the bot and "
+    "keeps her own wish lists, sees only her own things to do, within the number of messages a "
+    "day set under Spending.",
 }
+# The choice on a kid's Family page, as the page words it; stored as the key.
+GENDER_WORDS = {"female": "Female", "male": "Male"}
 # What somebody is told when their role may not go somewhere, by the permission it needs. The
 # conversation is hers, so it goes by her name: {name} is the persona in force.
 REFUSALS = {
@@ -75,6 +79,9 @@ REFUSALS = {
         "something here needs to change.",
     ),
     "chat": ("Not yet", "Talking to {name} here is not part of your role yet. Ask an admin."),
+    "browse": ("For a parent", "This page is for the grown-ups. Ask a parent if you need it."),
+    "wish": ("Not yet", "Keeping a wish list is not part of your role. Ask an admin."),
+    "decide": ("For a parent", "Answering wishes is a parent's job."),
     "change": (
         "Not yet",
         "Changing ideas, plans and things to do is not part of your role yet. Ask an admin.",
@@ -957,6 +964,8 @@ AUTOMATIC = (
         "free",
         tuple(f"alert_{kind}" for kind in alerts.KINDS),
     ),
+    ("kids_asks", "", "A kid's ask, to the parents", "free", ("kid_flagged", "kid_asks_parent")),
+    ("kids_answers", "", "A parent's answer, to a kid", "free", ("wish_granted", "wish_declined")),
 )
 AUTOMATIC_BY_EVENT = {event: title for _, _, title, _, events in AUTOMATIC for event in events}
 
@@ -1218,3 +1227,67 @@ def knock_row(knock: Any, tz: Any) -> dict[str, Any]:
 def footer(version: str) -> str:
     """The copyright and version line at the foot of every page."""
     return FOOTER.format(version=version)
+
+
+# -- the kids' wish lists (docs/WISHES.md) --------------------------------------------------------
+
+WISH_LISTS = (
+    (None, "Every day", "What you'd like any time."),
+    ("christmas", "Christmas", "For Christmas: no daily limit."),
+    ("birthday", "Birthday", "For your birthday: no daily limit."),
+)
+LIST_WORDS = {None: "every day", "christmas": "Christmas", "birthday": "birthday"}
+CONCERN_WORDS = {
+    "rule": "a house rule",
+    "sibling": "about a sister or brother",
+    "inappropriate": "not OK",
+    "too_many": "too many in one day",
+}
+# What asking for a wish on the page came to, by wish_service's result.
+WISH_SAID = {
+    "added": "On your list: {title}.",
+    "duplicate": "Already on your list: {title}.",
+    "locked": "Not yet: {title} was a not this time. You can ask again after {again}, or put it "
+    "on your Christmas or birthday list.",
+    "too_many": "That's a lot of wishes for one day. Let's keep some for tomorrow.",
+    "list_full": "That list is full. Take something off it first.",
+}
+WISH_MOVED = "Moved."
+WISH_WITHDRAWN = "Taken off your list."
+WISH_ANSWERED = {
+    "granted": "Yes to {title}. She has been told.",
+    "declined": "Not this time: {title}. She has been told, kindly.",
+}
+ASKED_A_PARENT = "Sent to a parent."
+
+
+def day_words(iso: str | None, today: date) -> str:
+    """A day as the kids read it: "4 October", with the year only when it is not this one."""
+    if not iso:
+        return ""
+    day = date.fromisoformat(iso[:10])
+    return f"{day.day} {day:%B}" + (f" {day.year}" if day.year != today.year else "")
+
+
+def wish_row(wish: Any, today: date) -> dict[str, Any]:
+    """One wish for the page: what it is, where it stands, and when it may be asked again."""
+    return {
+        "id": wish.id,
+        "title": wish.title,
+        "notes": wish.notes,
+        "rank": wish.rank,
+        "occasion": wish.occasion,
+        "status": wish.status,
+        "note": wish.answer_note,
+        "again": day_words(wish.locked_until, today) if wish.status == "declined" else "",
+        "concern": CONCERN_WORDS.get(wish.concern or ""),
+        "review": wish.parent_review,
+    }
+
+
+def countdown(days: int | None) -> str | None:
+    if days is None:
+        return None
+    if days == 0:
+        return "Today!"
+    return "Tomorrow!" if days == 1 else f"In {days} days"

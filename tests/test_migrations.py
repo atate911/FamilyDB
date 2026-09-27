@@ -120,9 +120,13 @@ def test_a_database_that_ran_the_retired_0007_still_gets_what_follows(tmp_path):
         conn.execute("DROP TABLE judgements")
         for table in ("models", "model_changes", "model_sources"):
             conn.execute(f"DROP TABLE {table}")
+        conn.execute("ALTER TABLE members DROP COLUMN birth_date")
+        conn.execute("ALTER TABLE members DROP COLUMN gender")
+        conn.execute("DROP TABLE wishes")
+        conn.execute("DROP TABLE wish_days")
         # tasks, dropped above, comes back with 0012 and takes 0022's repeats, 0023's gift_for
         # and 0024's nudged_at on again.
-        assert db.migrate(conn) == list(range(8, 34))
+        assert db.migrate(conn) == list(range(8, 37))
         columns = {row["name"] for row in conn.execute("PRAGMA table_info(llm_calls)")}
         assert {"provider", "web_searches", "cost_usd", "cost_estimated"} <= columns
 

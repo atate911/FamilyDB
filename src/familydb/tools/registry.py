@@ -216,7 +216,7 @@ class ToolRegistry:
             for key in ("id", "duplicate_of"):
                 if key in result:
                     summary[key] = result[key]
-            for key in ("plan", "idea", "outcome", "place", "suggestion", "task"):
+            for key in ("plan", "idea", "outcome", "place", "suggestion", "task", "wish"):
                 nested = result.get(key)
                 if isinstance(nested, dict) and "id" in nested:
                     summary[f"{key}_id"] = nested["id"]

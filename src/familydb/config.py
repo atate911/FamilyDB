@@ -193,6 +193,13 @@ class Settings(BaseSettings):
     # Dollars a day across every model call, estimated from agent/providers/prices.py and checked
     # before each call. Days are the family's. 0 turns the limit off.
     daily_spend_limit: float = Field(default=2.0, ge=0, le=500)
+    # Each kid's own share of the day, checked before each of her messages (docs/WISHES.md).
+    kid_daily_spend: float = Field(default=0.25, ge=0, le=50)
+    # The kids' wish lists (docs/WISHES.md, wish_service.py, wording.py).
+    wish_daily_count: int = Field(default=5, ge=1, le=50)
+    occasion_list_size: int = Field(default=25, ge=1, le=100)
+    parent_asks_per_week: int = Field(default=2, ge=0, le=14)
+    wording_daily_after: int = Field(default=3, ge=1, le=20)
     # Messages each kid may have answered by a model in a day, the family's day (roles.py says who
     # is limited). Commands and buttons, which ask no model, do not count. 0 is no limit.
     kid_daily_messages: int = Field(default=0, ge=0, le=500)

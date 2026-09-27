@@ -161,6 +161,8 @@ def edit(member_id: int) -> str:
         "member_form.html",
         person=_person(person, login),
         roles=member_store.ROLES,
+        genders=views.GENDER_WORDS,
+        today=_app().clock.today().isoformat(),
         personal=personal,
         mine=me is not None and me.id == member_id,
         made=_take_made(member_id),
@@ -190,6 +192,8 @@ def change(member_id: int) -> Response:
                 telegram_id=form.get("telegram_id"),
                 seen=form.get("revision", ""),
                 now=utc_iso(app.clock.now()),
+                birth_date=form.get("birth_date", rules.KEEP),
+                gender=form.get("gender", rules.KEEP),
             )
     except rules.FamilyError as exc:
         return _answer(setup, problem=str(exc), fallback=here)
@@ -467,10 +471,14 @@ def _person(person: member_store.Member, login: Login | None = None) -> dict[str
     sign_in = None
     if login is not None and may_sign_in:
         sign_in = "starting" if login.temporary else "own"
+    today = _app().clock.today()
     return {
         "id": person.id,
         "name": person.display_name,
         "role": person.role,
+        "birth_date": person.birth_date,
+        "age": rules.age_on(person.birth_date, today),
+        "gender": person.gender,
         "active": person.active,
         "telegram_id": telegram,
         # Somebody the bot knows on a channel this page does not edit, such as the console.

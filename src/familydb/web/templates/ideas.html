@@ -3,10 +3,11 @@
 {% block title %}Ideas · {{ site_title }}{% endblock %}
 {% block content %}
   {% call page_head('Ideas', 'Places to go, things to try, and everything the family has mentioned.', 'idea') %}
-    <a class="button" href="{{ url_for('web.new_idea') }}">{{ icon('plus') }}Add an idea</a>
+    {% if visitor().may('change') %}<a class="button" href="{{ url_for('web.new_idea') }}">{{ icon('plus') }}Add an idea</a>{% endif %}
   {% endcall %}
 
   {# Folded until wanted, so the list is on the first screen; the summary says what it is. #}
+  {% if visitor().may('change') %}
   <details class="panel capture">
     <summary>{{ icon('sparkles') }}Save a thought for later</summary>
     <p class="muted">A restaurant, food cart pod, neighborhood, passport stop, kids' outing, special occasion,
@@ -35,6 +36,7 @@
         you can also use Add an idea to save directly without AI.</p>
     </form>
   </details>
+  {% endif %}
 
   <nav class="tabs" aria-label="Which ideas">
     <a href="{{ url_for('web.ideas') }}"{% if request.endpoint == 'web.ideas' %} aria-current="page"{% endif %}>{{ icon('idea') }}All ideas</a>
@@ -108,8 +110,8 @@
 
   {% if not rows %}
     <p class="panel muted empty">{{ icon('idea') }}<span>
-      Nothing here yet. <a href="{{ url_for('web.new_idea') }}">Add one</a>, or tell the bot in the
-      chat.</span>
+      Nothing here yet.{% if visitor().may('change') %} <a href="{{ url_for('web.new_idea') }}">Add one</a>, or tell the bot in the
+      chat.{% endif %}</span>
     </p>
   {% endif %}
 

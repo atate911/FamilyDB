@@ -43,6 +43,9 @@ DONE = {
     "update_idea": ("Updated idea", "idea_id"),
     "record_outcome": ("Recorded outcome", "outcome_id"),
     "remember": ("Noted what you told me", "memory_id"),
+    "add_wish": ("Put it on the wish list", "wish_id"),
+    "update_wish": ("Updated wish", "wish_id"),
+    "turn_away": ("Noted the request", "wish_id"),
     "save_place": ("Saved place details", "idea_id"),
     "skip_place": ("Marked lookup skipped", "idea_id"),
 }
@@ -193,6 +196,16 @@ def day_start(settings: Settings, now: datetime) -> str:
 
 def spent_today(conn: sqlite3.Connection, settings: Settings, now: datetime) -> float:
     return calls.spent_since(conn, since=day_start(settings, now))
+
+
+def kid_used_up(
+    conn: sqlite3.Connection, settings: Settings, now: datetime, member_id: int
+) -> bool:
+    """Whether a kid's own share of the day is spent (docs/WISHES.md). Checked before each of
+    her messages, so one message may cross it; the family's limit still holds every call."""
+    share = settings.kid_daily_spend
+    spent = calls.spent_since_by(conn, since=day_start(settings, now), member_id=member_id)
+    return bool(share) and spent >= share
 
 
 def used_up(conn: sqlite3.Connection, settings: Settings, now: datetime) -> bool:

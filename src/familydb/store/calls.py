@@ -118,6 +118,16 @@ def spent_since(conn: sqlite3.Connection, *, since: str) -> float:
     return float(row["spent"])
 
 
+def spent_since_by(conn: sqlite3.Connection, *, since: str, member_id: int) -> float:
+    """Estimated dollars spent since then on calls made for somebody's own messages."""
+    row = conn.execute(
+        "SELECT coalesce(sum(c.cost_usd), 0) AS spent FROM llm_calls c "
+        "JOIN messages m ON m.id = c.message_id WHERE c.created_at >= ? AND m.member_id = ?",
+        (since, member_id),
+    ).fetchone()
+    return float(row["spent"])
+
+
 def answered_for(
     conn: sqlite3.Connection, member_id: int, *, since: str, other_than: int | None = None
 ) -> int:

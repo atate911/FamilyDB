@@ -249,7 +249,7 @@ def run_case(case: Case, base: Settings, *, api: Any = None, limit: float = 1.0)
                                 not row["is_error"],
                             )
                         )
-            for table in ("ideas", "plans", "tasks"):
+            for table in ("ideas", "plans", "tasks", "wishes"):
                 run.counts[table] = conn.execute(f"SELECT count(*) FROM {table}").fetchone()[0]
                 run.ids |= {r[0] for r in conn.execute(f"SELECT id FROM {table}")}
             run.statuses = {r[0]: r[1] for r in conn.execute("SELECT id, status FROM ideas")}

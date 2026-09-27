@@ -25,6 +25,7 @@
 {{ page_head('Things to do', 'Errands, appointments to arrange, and things you mean to get done.', 'todo') }}
 <p class="muted small">Times use {{ zone }}. A deadline or preferred window does not set a reminder or book your calendar.</p>
 
+{% if visitor().may('change') %}
 <details class="panel" {% if not rows %}open{% endif %}>
   <summary><span class="h2">{{ icon('plus') }}Add something to do</span></summary>
   <form class="form" method="post" action="{{ url_for('edits.add_task') }}">
@@ -34,6 +35,7 @@
     <div class="field wide actions"><button type="submit">{{ icon('check') }}Save task</button></div>
   </form>
 </details>
+{% endif %}
 
 <form class="panel filters" method="get" role="search">
   <div class="field"><label for="show">Show</label>
@@ -63,6 +65,7 @@
     {%- elif row.nudge %} · not a day or part of the day {{ assistant }} can read, so it comes up only when asked about{% endif %}</p>{% endif %}
   {% if row.repeats %}<p class="muted">{{ row.repeats }}</p>{% endif %}
   {% if task.reminder %}<p class="reminder">{{ icon('bell') }}Reminder: {{ row.reminder_time }} · {{ 'Delivered' if task.reminder.delivered_at else ('Waiting for delivery' if task.reminder.message_id else 'Scheduled') }} · {{ 'App Chat' if task.channel=='web' else 'Original Telegram chat' }}</p>{% else %}<p class="muted small">No active reminder.</p>{% endif %}
+  {% if visitor().may('change') %}
   <details class="more"><summary>{{ icon('edit') }}Edit, complete, or snooze</summary>
     <form class="form" method="post" action="{{ url_for('edits.edit_task',task_id=task.id) }}">
       <input type="hidden" name="csrf" value="{{ csrf_token() }}"><input type="hidden" name="once" value="{{ once_token() }}"><input type="hidden" name="revision" value="{{ task.revision }}">
@@ -75,7 +78,8 @@
       <div class="field wide actions"><button type="submit">{{ icon('check') }}Save changes</button></div>
     </form>
   </details>
+  {% endif %}
 </li>
-{% else %}<li class="panel muted empty">{{ icon('todo') }}<span>No tasks match. Add something above, or ask {{ assistant }}.</span></li>{% endfor %}
+{% else %}<li class="panel muted empty">{{ icon('todo') }}<span>No tasks match.{% if visitor().may('change') %} Add something above, or ask {{ assistant }}.{% endif %}</span></li>{% endfor %}
 </ul>
 {% endblock %}

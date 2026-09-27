@@ -19,9 +19,10 @@ from flask import (
     url_for,
 )
 
-from familydb import agenda
+from familydb import agenda, roles
 from familydb.app import App
 from familydb.availability import calendar_available, enrichment_available
+from familydb.dates import next_birthday
 from familydb.store import calls
 from familydb.store import ideas as idea_store
 from familydb.store import members as member_store
@@ -31,6 +32,7 @@ from familydb.store import outcomes as outcome_store
 from familydb.store import places as place_store
 from familydb.store import plans as plan_store
 from familydb.store import tasks as task_store
+from familydb.store import wishes as wish_store
 from familydb.store.ideas import KIND_SUGGESTIONS
 from familydb.web import auth, chat, views
 from familydb.web import status as status_page
@@ -151,12 +153,16 @@ def home() -> Response | str:
         if manages and not status_page.ready_to_answer(progress):
             return redirect(url_for("setup.overview"))
         seen = agenda.read(app, conn, today, today + timedelta(days=HOME_AHEAD_DAYS))
+        on = _no_gifts(conn, seen.entries)
         everything = idea_store.list_all(conn)
+        if _gifts_hidden():
+            everything = [idea for idea in everything if not idea_store.is_gift(idea)]
         unfinished = status_page.setup_steps(app, conn) if manages else []
         family = [member.display_name for member in member_store.list_all(conn)]
-        todo = task_store.list_all(conn, status="open")
+        todo = task_store.list_all(conn, status="open", owner_id=_own_only())
         talk = chat.glance(app, conn) if talks else None
-    coming = [entry for entry in seen.entries if entry.days()[-1] >= today][:HOME_PLANS]
+        wished = wish_glance(conn, today)
+    coming = [entry for entry in on if entry.days()[-1] >= today][:HOME_PLANS]
     newest = sorted(everything, key=lambda idea: idea.created_at, reverse=True)[:HOME_IDEAS]
     return render_template(
         "home.html",
@@ -172,6 +178,7 @@ def home() -> Response | str:
         task_count=len(todo),
         setup=unfinished,
         talk=talk,
+        wishes=wished,
         **chat.box(family, prompt=chat.HOME_PROMPT),
         question=True,  # the box's label is her question, and the page's heading
         typed=chat.asked(),  # a way to start, followed with scripts off
@@ -195,8 +202,12 @@ def ideas() -> str:
             status=status if status in STATUSES else None,
             participant=who or None,
             limit=LIST_LIMIT,
+            without_gifts=_gifts_hidden(),
         )
-        kinds, people = _choices(idea_store.list_all(conn, include_dropped=True))
+        listed = idea_store.list_all(conn, include_dropped=True)
+        if _gifts_hidden():
+            listed = [idea for idea in listed if not idea_store.is_gift(idea)]
+        kinds, people = _choices(listed)
         capture_people = member_store.list_all(conn)
         # Where each listed idea is from home, for its card and the radar of the list.
         away = {
@@ -231,7 +242,7 @@ def idea(idea_id: int) -> str:
     today = app.clock.today()
     with closing(app.connect()) as conn:
         record = idea_store.get(conn, idea_id)
-        if record is None:
+        if record is None or (_gifts_hidden() and idea_store.is_gift(record)):
             abort(404)
         original = (
             message_store.get(conn, record.source_message_id) if record.source_message_id else None
@@ -360,11 +371,12 @@ def plans() -> str:
             today - timedelta(days=PLANS_BEHIND_DAYS),
             today + timedelta(days=PLANS_AHEAD_DAYS),
         )
+        on = _no_gifts(conn, seen.entries)
         titles = {row.id: row.title for row in idea_store.list_all(conn, include_dropped=True)}
         asking = _who(conn)
     # Something that ends today or later is still to come, or going on now.
-    upcoming = [entry for entry in seen.entries if entry.days()[-1] >= today]
-    recent = [entry for entry in seen.entries if entry.days()[-1] < today]
+    upcoming = [entry for entry in on if entry.days()[-1] >= today]
+    recent = [entry for entry in on if entry.days()[-1] < today]
     return render_template(
         "plans.html",
         upcoming=[views.entry_row(entry, today) for entry in upcoming],
@@ -390,9 +402,10 @@ def plans_month() -> str:
     weeks_last = last_day + timedelta(days=6 - last_day.weekday())
     with closing(app.connect()) as conn:
         seen = agenda.read(app, conn, weeks_first, weeks_last)
+        on = _no_gifts(conn, seen.entries)
     previous = (first - timedelta(days=1)).replace(day=1)
     following = last_day + timedelta(days=1)
-    weeks = views.month_weeks(seen.entries, first, today)
+    weeks = views.month_weeks(on, first, today)
     return render_template(
         "plans_month.html",
         month=f"{first:%B %Y}",
@@ -406,6 +419,28 @@ def plans_month() -> str:
     )
 
 
+def _gifts_hidden() -> bool:
+    """Whether presents are kept from this visitor: from anybody who may not decide what the kids
+    are given, so a present stays a surprise (docs/WISHES.md)."""
+    return not auth.visitor().may("decide")
+
+
+def _no_gifts(conn: Any, entries: list[agenda.Entry]) -> list[agenda.Entry]:
+    """What is on, without the plans made from a present, for a visitor presents are kept from."""
+    if not _gifts_hidden():
+        return entries
+    gifts = {i.id for i in idea_store.list_all(conn, include_dropped=True) if idea_store.is_gift(i)}
+    return [entry for entry in entries if entry.idea_id not in gifts]
+
+
+def _own_only() -> int | None:
+    """Whose things to do this visitor sees: their own, unless they may see the household's."""
+    visitor = auth.visitor()
+    if visitor.may("browse") or visitor.member is None:
+        return None
+    return visitor.member.id
+
+
 @bp.get("/tasks")
 def tasks() -> str:
     app = _app()
@@ -413,7 +448,9 @@ def tasks() -> str:
     if status not in {"open", "done", "cancelled", "all"}:
         abort(400)
     with closing(app.connect()) as conn:
-        rows = task_store.list_all(conn, status=status, query=request.args.get("q", ""))
+        rows = task_store.list_all(
+            conn, status=status, query=request.args.get("q", ""), owner_id=_own_only()
+        )
         people = member_store.list_all(conn)
     return render_template(
         "tasks.html",
@@ -426,4 +463,114 @@ def tasks() -> str:
         status=status,
         zone=app.settings.tz,
         query=request.args.get("q", ""),
+    )
+
+
+# -- the kids' wish lists (docs/WISHES.md) --------------------------------------------------------
+
+# Answers shown under her lists for this long, then only on the full list.
+ANSWERED_DAYS = 30
+TOP_WISHES = 3
+
+
+def _is_kid(member: member_store.Member) -> bool:
+    """Somebody who keeps a wish list and does not decide on anybody's: a kid, by roles.py."""
+    return roles.may(member.role, "wish") and not roles.may(member.role, "decide")
+
+
+def _lists(conn: Any, kid: member_store.Member, today: date) -> dict[str, Any]:
+    """Her three lists in her order, what was answered lately, and how far off each occasion is."""
+    christmas = date(today.year, 12, 25)
+    if christmas < today:
+        christmas = date(today.year + 1, 12, 25)
+    birthday = next_birthday(kid.birth_date, today)
+    days = {
+        "christmas": (christmas - today).days,
+        "birthday": (birthday - today).days if birthday else None,
+    }
+    lists = [
+        {
+            "occasion": occasion,
+            "value": occasion or "everyday",
+            "name": name,
+            "lede": lede,
+            "countdown": views.countdown(days.get(occasion)) if occasion else None,
+            "rows": [
+                views.wish_row(wish, today) for wish in wish_store.open_list(conn, kid.id, occasion)
+            ],
+        }
+        for occasion, name, lede in views.WISH_LISTS
+    ]
+    since = (today - timedelta(days=ANSWERED_DAYS)).isoformat()
+    everything = wish_store.for_member(conn, kid.id)
+    answered = [
+        views.wish_row(wish, today)
+        for wish in everything
+        if wish.status in ("granted", "declined") and (wish.answered_at or "") >= since
+    ]
+    turned = [
+        views.wish_row(wish, today)
+        for wish in everything
+        if wish.status == "turned_away" and wish.created_at >= since
+    ]
+    return {
+        "id": kid.id,
+        "name": kid.display_name,
+        "lists": lists,
+        "answered": answered,
+        "turned": turned,
+        "open": sum(len(each["rows"]) for each in lists),
+    }
+
+
+def _kids(conn: Any) -> list[member_store.Member]:
+    return [m for m in member_store.list_all(conn) if _is_kid(m)]
+
+
+def wish_glance(conn: Any, today: date) -> dict[str, Any] | None:
+    """For Home: a kid's own lists at a glance, or for a parent, each kid's and what waits on
+    them. None for anybody else. Read from the database, asked of nobody."""
+    visitor = auth.visitor()
+    if visitor.may("decide"):
+        kids = [_lists(conn, kid, today) for kid in _kids(conn)]
+        if not kids:
+            return None
+        waiting = [
+            {"kid": kid["name"], "id": kid["id"], **row}
+            for kid in kids
+            for row in kid["turned"]
+            if row["review"] == "asked" or row["concern"] == views.CONCERN_WORDS["inappropriate"]
+        ]
+        return {"parent": True, "kids": kids, "waiting": waiting, "top": TOP_WISHES}
+    if visitor.member is not None and visitor.may("wish"):
+        return {"parent": False, "mine": _lists(conn, visitor.member, today), "top": TOP_WISHES}
+    return None
+
+
+@bp.get("/wishes")
+def wishes() -> str:
+    """A kid's own wish lists; for a parent, every kid's, or one kid's with ?who=."""
+    app = _app()
+    today = app.clock.today()
+    visitor = auth.visitor()
+    wanted = request.args.get("who", "")
+    with closing(app.connect()) as conn:
+        if visitor.may("decide"):
+            kids = _kids(conn)
+            if wanted:
+                chosen = next((k for k in kids if str(k.id) == wanted), None)
+                if chosen is None:
+                    abort(404)
+                kids = [chosen]
+            shown = [_lists(conn, kid, today) for kid in kids]
+        elif visitor.member is not None:
+            shown = [_lists(conn, visitor.member, today)]
+        else:
+            abort(404)
+    return render_template(
+        "wishes.html",
+        kids=shown,
+        parent=visitor.may("decide"),
+        one=bool(wanted) or not visitor.may("decide"),
+        choices=[(value or "everyday", name) for value, name, _ in views.WISH_LISTS],
     )

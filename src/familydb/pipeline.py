@@ -11,7 +11,16 @@ from contextlib import closing, contextmanager
 from datetime import datetime, timedelta
 from typing import Any
 
-from familydb import memory, personas, roles, voice, whereabouts
+from familydb import (
+    family,
+    memory,
+    personas,
+    roles,
+    voice,
+    whereabouts,
+    wish_service,
+    wording,
+)
 from familydb.agent import gateway, spending
 from familydb.agent.history import load_history
 from familydb.agent.loop import MessagesAPI, TurnResult
@@ -19,6 +28,7 @@ from familydb.agent.providers import Audio, Picture
 from familydb.agent.render import (
     render_audience_line,
     render_folded_line,
+    render_kid_line,
     render_location_line,
     render_memories,
     render_retry_note,
@@ -31,7 +41,7 @@ from familydb.clock import FixedClock
 from familydb.dates import utc_iso
 from familydb.delivery import claim_also, deliver, hold_for_gathering, lease
 from familydb.errors import AgentError
-from familydb.store import calls, knocks, members, messages, suggestions
+from familydb.store import calls, knocks, members, messages, suggestions, wishes
 from familydb.store.db import transaction
 from familydb.store.members import Member
 from familydb.tools import ToolContext
@@ -631,6 +641,14 @@ def _answer(
             "no model key",
             voice.say(app.settings, "no_key", seed=inbound_id) if notify else None,
         )
+    kid = roles.may(member.role, "wish") and not roles.may(member.role, "decide")
+    if kid and spending.kid_used_up(conn, app.settings, app.clock.now(), member.id):
+        # Her own share of the day is spent: said by code, with no call, and not tried again.
+        log.info("message %s: %s's share of the day is used up", inbound_id, member.id)
+        with transaction(conn):
+            messages.give_up(conn, inbound_id)
+        notice = voice.say(app.settings, "kid_share", seed=inbound_id, kid=member.display_name)
+        return _fail(app, conn, msg, inbound_id, "kid share used up", notice if notify else None)
     try:
         result = _think(
             app,
@@ -723,6 +741,10 @@ def _answer(
             if action.get("tool") == "suggest" and action.get("suggestion_id"):
                 suggestions.set_reply(conn, int(action["suggestion_id"]), outbound.id)
     app.held.done(taken)
+    if any(action.get("tool") in ("turn_away", "update_wish") for action in result.actions):
+        # A kid's ask the parents are to hear of goes now, not on the retry job's next round.
+        for waiting in wish_service.waiting_for_parents(conn):
+            deliver(app, waiting)
     return OutgoingMessage(
         msg.chat_id,
         reply_text,
@@ -823,6 +845,8 @@ def _think(
                 whereabouts.minutes_ago(shared, app.clock.now()),
             )
         )
+    if roles.may(member.role, "wish") and not roles.may(member.role, "decide"):
+        current.append(_kid_line(app, conn, member, msg.text, private=audience is None))
     remembered = render_memories(
         memory.choose(conn, msg.text, sender_id=member.id, today=app.clock.today())
     )
@@ -860,6 +884,22 @@ def _think(
         current=current,
         history=history,
         api=api,
+    )
+
+
+def _kid_line(
+    app: App, conn: sqlite3.Connection, member: Member, text: str, *, private: bool
+) -> str:
+    """A kid's age, and, in a chat nobody else reads, her wish topics; and whether to nudge or
+    praise her wording (docs/WISHES.md). All of it chosen by code."""
+    now = app.clock.now()
+    today = now.astimezone(app.settings.tzinfo).date()
+    return render_kid_line(
+        member.display_name,
+        family.age_on(member.birth_date, today),
+        member.gender,
+        wishes.topics(conn, member.id, utc_iso(now)) if private else None,
+        wording.choose(conn, app.settings, member.id, text, now),
     )
 
 

@@ -784,6 +784,9 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
         "delete_event",
         "remember",  # what the family types on the memory page, and forgetting
         "look_up_now",  # the buttons that look an idea, or every one waiting, up now
+        # A kid's wish lists and a parent's answers (docs/WISHES.md).
+        "add_wish",
+        "update_wish",
     }
     # And it runs them the one way: through the registry, which validates and owns the
     # transaction. Constructing a store call or a connection of its own would not be that.
@@ -812,9 +815,11 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
     signing_in = {"choose_password", "claim", "give_starting_password", "remove_login"}
     # A link that links somebody's Telegram to them (the family chose it; DESIGN.md section 16).
     linking = {"invite"}
+    # How old somebody is, worked out from their birthday: a reading, not a write.
+    reading = {"revision", "age_on"}
     # Taking somebody off the list for good (the family asked for it; DESIGN.md section 16).
     removing = {"remove"}
-    assert ruled <= {"add", "change", "revision"} | signing_in | linking | removing, ruled
+    assert ruled <= {"add", "change"} | reading | signing_in | linking | removing, ruled
     assert {"add", "change"} | signing_in | linking | removing <= ruled
 
     # And the doors are shut to everything else. Not whole packages: `views.py` reads opening

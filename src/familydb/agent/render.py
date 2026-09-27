@@ -111,12 +111,12 @@ def render_family_context(family: list[Member], settings: Settings) -> str:
 def render_audience_line(channel: str, chat_id: str, family: list[Member]) -> str | None:
     """Who reads the reply besides the sender, for the current turn only: it depends on the chat.
 
-    None for a private chat (the console, a Telegram chat with one person), which is what no line
-    means to the model. A Telegram group's chat id is negative; the page's chat is one
-    conversation the whole family shares. Whether kids are among them is read from the family
-    list, since code cannot see who is in a group.
+    None for a private chat (the console, a Telegram chat with one person, a kid's own
+    conversation on the page), which is what no line means to the model. A Telegram group's chat
+    id is negative; the page's "web" chat is one conversation the whole family shares. Whether
+    kids are among them is read from the family list, since code cannot see who is in a group.
     """
-    if channel == "web":
+    if channel == "web" and chat_id == "web":
         line = "This is the family's conversation on the page: everyone who signs in reads it"
     elif channel == "telegram" and chat_id.startswith("-"):
         line = "This is the family's group chat: everyone in it reads your reply"
@@ -139,6 +139,34 @@ def render_user_turn(
     if audience:
         parts.append(audience)
     return [*parts, f"[{sender}] {text}"]
+
+
+# At most this many of a kid's wish topics go with her message: the locked ones first.
+KID_TOPICS = 12
+PRONOUN = {"female": "Her", "male": "His"}
+
+
+def render_kid_line(
+    name: str,
+    age: int | None,
+    gender: str | None,
+    topics: list[tuple[str, str | None]] | None,
+    wording: str | None,
+) -> str:
+    """Who a kid is and where her wishes stand, for the current turn only: code chose each part
+    (docs/WISHES.md), and it changes with her birthday and her lists, so never in the prefix.
+    Her topics are left out (None) where anybody else reads the reply."""
+    who = {"female": "a girl", "male": "a boy"}.get(gender or "", "a kid")
+    line = f"{name} is {who}" + (f", {age}" if age is not None else "") + "."
+    if topics:
+        shown = [
+            f"{topic} (locked to {until[:10]})" if until else topic
+            for topic, until in topics[:KID_TOPICS]
+        ]
+        line += f" {PRONOUN.get(gender or '', 'Their')} wish topics: {', '.join(shown)}."
+    if wording:
+        line += f" Wording: {wording}."
+    return line
 
 
 def render_location_line(

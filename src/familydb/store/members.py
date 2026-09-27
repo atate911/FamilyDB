@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -17,6 +18,9 @@ from familydb.store.db import utcnow_iso
 # member by display name instead of a channel user id.
 BY_NAME = frozenset({"console", "web"})
 
+Gender = Literal["male", "female"]
+GENDERS: tuple[Gender, ...] = ("male", "female")
+
 
 class Member(BaseModel):
     id: int
@@ -26,6 +30,8 @@ class Member(BaseModel):
     channel_user_id: str | None = None
     active: bool = True
     created_at: str
+    birth_date: str | None = None  # YYYY-MM-DD; only the age it gives reaches the model
+    gender: Gender | None = None
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> Member:
@@ -93,12 +99,23 @@ def update_profile(
     active: bool,
     channel: str | None,
     channel_user_id: str | None,
+    birth_date: str | None = None,
+    gender: Gender | None = None,
 ) -> Member | None:
     """Change who somebody is to the bot, keeping their id and so everything they ever said."""
     conn.execute(
         "UPDATE members SET display_name = ?, role = ?, active = ?, channel = ?, "
-        "channel_user_id = ? WHERE id = ?",
-        (display_name.strip(), role, int(active), channel, channel_user_id, member_id),
+        "channel_user_id = ?, birth_date = ?, gender = ? WHERE id = ?",
+        (
+            display_name.strip(),
+            role,
+            int(active),
+            channel,
+            channel_user_id,
+            birth_date,
+            gender,
+            member_id,
+        ),
     )
     return get(conn, member_id)
 
@@ -126,6 +143,10 @@ POINTING_AT = {
     ("tasks", "owner_id"): "unname",
     ("telegram_invites", "made_by"): "unname",
     ("telegram_invites", "member_id"): "delete",
+    # A kid's wish lists go with her; a parent's answer stays on the others', unnamed.
+    ("wish_days", "member_id"): "delete",
+    ("wishes", "answered_by"): "unname",
+    ("wishes", "member_id"): "delete",
 }
 
 
