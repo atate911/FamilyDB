@@ -1730,6 +1730,13 @@ table.month td.today time { color: var(--on-bright); background: var(--amber); b
   .settings-nav { display: block; position: sticky; top: 5.25rem; }
 }
 
+/* A list to choose from, with a box under it for another, shown only while "Another" is chosen.
+   A browser without :has() drops the rule and shows the box always, which still works. */
+.pick { display: grid; gap: 0.55rem; }
+.pick .another { display: grid; gap: 0.35rem; }
+.pick .another label { color: var(--dim); font-size: 0.85rem; font-weight: 500; }
+.pick:not(:has(option[value="another"]:checked)) .another { display: none; }
+
 /* Boxes two or three to a row where they fit, wide enough for "Default (the company that
    answers)": squeezed narrower, the part in brackets, the part worth reading, would be cut off. */
 .grid { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); }

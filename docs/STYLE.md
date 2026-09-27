@@ -410,7 +410,12 @@ looked at (see "Two layers").
 - **Settings.** A card to each part, saying how it stands and marking in amber what needs a
   look; each part is a short page of its own, the others listed down the side where there is room
   (on a phone the way back is Settings, above the title), with one Save in a bar that stays in
-  reach while its form is on screen (one row above the tabs on a phone).
+  reach while its form is on screen (one row above the tabs on a phone). A box that offers a
+  list (each company's models, with their place in its lineup and their price; the chats the
+  weekend ideas can go to) is a real dropdown, since a phone barely shows a typed box's
+  suggestions, ending in "Another…", which opens a box under it to type one the list does not
+  have. The stylesheet shows that box only while "Another" is chosen (`:has()`); a browser
+  without it shows the box always, and it is read only when "Another" is chosen.
 - **Things to do** (an open task is ticked off where it stands), **Family**, **What she
   remembers** (each memory under whom it is about, with where it came from and a way to forget
   it; adding one, and what was forgotten, folded away below),

@@ -56,7 +56,7 @@ def test_a_box_left_empty_says_what_it_falls_back_to(page) -> None:
     spending = page.get("/settings/spending").text
     assert "Default (Medium)" in spending  # a dropdown, in the page's words rather than "medium"
     assert "Between 1 and 20." in spending  # read off the setting, not written out twice
-    assert 'placeholder="claude-opus-5"' in page.get("/settings/model").text
+    assert "Default (claude-opus-5)" in page.get("/settings/model").text
     messages = page.get("/settings/messages").text
     assert "Default (18:00)" in messages and "Default (Thursday)" in messages
     assert "Default (yes)" in messages  # a yes or no, never true or false
@@ -253,13 +253,31 @@ def test_a_page_with_no_password_shows_a_key_to_whoever_can_reach_it(settings, c
     assert shown.status_code == 200 and "sk-home" in shown.text
 
 
-def test_a_model_box_suggests_models_without_limiting_them(page) -> None:
+def test_a_model_box_offers_models_without_limiting_them(page) -> None:
+    """A dropdown of the company's models, each with what it is, and "Another model" opening a
+    box to type one the list does not have: a model released next week has to fit."""
     text = page.get("/settings/model").text
-    assert 'list="s-openai_model"' in text
-    assert '<datalist id="s-openai_model">' in text and '<option value="gpt-6-luna">' in text
-    # Anything typed is still taken: a model released next week has to fit.
+    assert _choices(text, "openai_model")[0] == "Default (gpt-6-luna)"
+    assert "gpt-6-luna · GPT-6 Luna, everyday · $0.10 in, $0.50 out" in _choices(
+        text, "openai_model"
+    )
+    assert _choices(text, "openai_model")[-1] == "Another model…"
+    assert '<input id="a-openai_model" name="openai_model_another"' in text
     page.post("/settings", data=_whole_form(page, openai_model="gpt-6-sol"))
     assert page.app.settings.openai_model == "gpt-6-sol"
+    assert '<option value="gpt-6-sol" selected>' in page.get("/settings/model").text
+
+    # Another, typed: taken, and shown again as typed, with "Another" chosen.
+    typed = _whole_form(page, openai_model="another", openai_model_another="gpt-7-nova")
+    page.post("/settings", data=typed)
+    assert page.app.settings.openai_model == "gpt-7-nova"
+    text = page.get("/settings/model").text
+    assert '<option value="another" selected>Another model…</option>' in text
+    assert 'name="openai_model_another" type="text" autocomplete="off"' in text
+    assert 'value="gpt-7-nova"' in text
+    # What was typed under a list that did not say "Another" is not read.
+    page.post("/settings", data=_whole_form(page, openai_model="", openai_model_another="x"))
+    assert page.app.settings.openai_model == "gpt-6-luna"
 
 
 def _choices(text: str, key: str) -> list[str]:
@@ -286,8 +304,8 @@ def test_each_level_says_which_model_it_means_and_what_it_costs(page) -> None:
     ]
     assert '<option value="best" selected>best: GPT-6 Astra' in text
     # A model box says where each name stands, and what it costs.
-    assert '<option value="gpt-6-sol">GPT-6 Sol, better · $2.00 in, $10.00 out</option>' in text
-    assert '<option value="gpt-5">$1.25 in, $10.00 out</option>' in text
+    assert "gpt-6-sol · GPT-6 Sol, better · $2.00 in, $10.00 out" in _choices(text, "openai_model")
+    assert "gpt-5 · $1.25 in, $10.00 out" in _choices(text, "openai_model")
 
 
 def test_the_daily_limit_is_on_the_page(page) -> None:
@@ -337,8 +355,9 @@ def test_a_hearing_model_is_offered_and_checked_like_the_other_models(page, monk
     """Each with what it costs, by the minute for one billed so, and a name its company does not
     have is refused, as every voice note would otherwise go unheard."""
     text = page.get("/settings/model").text
-    assert '<option value="whisper-1">$0.006 a minute</option>' in text
-    assert '<option value="gpt-4o-mini-transcribe">$1.25 in, $5.00 out</option>' in text
+    offered = _choices(text, "openai_transcribe_model")
+    assert "whisper-1 · $0.006 a minute" in offered
+    assert "gpt-4o-mini-transcribe · $1.25 in, $5.00 out" in offered
     _ask(monkeypatch, _Company({"gpt-4o-mini-transcribe"}))
     typo = _whole_form(page, openai_transcribe_model="gpt-4o-mini-transcrib")
     response = page.post("/settings", data=typo)
@@ -528,7 +547,7 @@ def test_the_digest_chat_is_offered_from_the_chats_it_has_seen(page, conn) -> No
                 now="2026-09-20T10:00:00Z",
             )
     offers = re.search(
-        r'<datalist id="s-digest_chat_id">(.*?)</datalist>',
+        r'<select id="f-digest_chat_id"[^>]*>(.*?)</select>',
         page.get("/settings/messages").text,
         re.S,
     )

@@ -56,6 +56,9 @@ class Field:
     company: str = ""
     # The keyboard a phone offers for it: digits, digits and a point, or all of it.
     keyboard: str = ""
+    # For a box offering a list (the models, the chats), the words for the last choice, which
+    # opens a box to type any other in: "Another model". Empty for every other box.
+    another: str = ""
 
     def word(self, value: str) -> str:
         """A value as the page says it."""
@@ -171,6 +174,7 @@ def field(
     words: tuple[tuple[str, str], ...] = (),
     unset: str = "",
     company: str = "",
+    another: str = "",
 ) -> Field:
     kind, derived = _shape(Settings.model_fields[key].annotation)
     if kind == "toggle" and not words:
@@ -187,6 +191,7 @@ def field(
         unset=unset,
         company=company,
         keyboard=_keyboard(key, kind),
+        another=another or ("Another model" if suggested else ""),
     )
 
 
@@ -404,7 +409,7 @@ GROUPS: tuple[Group, ...] = (
         "models",
         "Models",
         "What everyday means for each company: its cheapest unless you choose another. Pick one, "
-        "or type any model the company offers; the least expensive are listed first.",
+        "least expensive first, or choose Another model to type any the company offers.",
         (
             *_models("openai", "OpenAI"),
             *_models("anthropic", "Claude"),
@@ -569,9 +574,10 @@ GROUPS: tuple[Group, ...] = (
             field(
                 "digest_chat_id",
                 "Weekend ideas go to",
-                "Choose a chat it has seen, or type a Telegram chat id. A group is offered once "
-                "somebody on the family list has written in it. Empty sends none.",
+                "Choose a chat it has seen, or another Telegram chat by its id. A group is "
+                "offered once somebody on the family list has written in it. Default sends none.",
                 unset="nowhere",
+                another="Another Telegram chat",
             ),
             field("digest_day", "Weekend ideas day", words=tuple(DAY_NAMES.items())),
             field(
@@ -742,6 +748,18 @@ def parse(one: Field, given: str) -> Any:
     return text
 
 
+# The value of the last choice in a list box, which means "the one typed under it".
+ANOTHER = "another"
+
+
+def given(one: Field, form: Any) -> str:
+    """What one box sent: the choice, or, when the choice was "Another", what was typed for it."""
+    chosen = form[one.key]
+    if one.another and chosen == ANOTHER:
+        return form.get(f"{one.key}_{ANOTHER}", "")
+    return chosen
+
+
 def read_form(form: Any) -> tuple[dict[str, Any], dict[str, str]]:
     """Every box the form carried, as values and as complaints. Absent boxes are left alone."""
     values: dict[str, Any] = {}
@@ -750,7 +768,7 @@ def read_form(form: Any) -> tuple[dict[str, Any], dict[str, str]]:
         if one.key not in form:
             continue
         try:
-            values[one.key] = parse(one, form[one.key])
+            values[one.key] = parse(one, given(one, form))
         except ValueError as exc:
             problems[one.key] = str(exc)
     return values, problems
@@ -777,6 +795,7 @@ def placeholder(one: Field, value: Any) -> str:
 
 
 __all__ = [
+    "ANOTHER",
     "BEHAVIOUR",
     "BY_KEY",
     "COMPANIES",
@@ -788,6 +807,7 @@ __all__ = [
     "Group",
     "Section",
     "fallback",
+    "given",
     "groups_in",
     "parse",
     "placeholder",

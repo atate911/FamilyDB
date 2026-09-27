@@ -635,7 +635,9 @@ def save() -> Response | tuple[str, int]:
     if (complaint := auth.refused()) is not None:
         return _answer(back, here, error=complaint)
     values, problems = fields.read_form(request.form)
-    typed = {one.key: request.form[one.key] for one in fields.FIELDS if one.key in request.form}
+    typed = {
+        one.key: fields.given(one, request.form) for one in fields.FIELDS if one.key in request.form
+    }
     if not problems:
         stored = _stored()
         proposed = {**stored, **values}
