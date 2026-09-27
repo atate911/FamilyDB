@@ -5,7 +5,9 @@ from __future__ import annotations
 import dataclasses
 import logging
 import sqlite3
-from contextlib import closing
+import threading
+from collections.abc import Iterator
+from contextlib import closing, contextmanager
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -105,8 +107,21 @@ def handle_synthetic(
 
 # How long past its pause a message waiting to be answered with the ones after it is kept from
 # the retry job, in case the process that was to answer it stops; after that it is the retry
-# job's, and answered on its own.
-GATHER_HOLD_SECONDS = 120
+# job's, and answered on its own. As long as a claim, since it may wait for a turn to finish.
+GATHER_HOLD_SECONDS = 300
+
+# Turns in one chat, one at a time in this process. A turn that started while another was running
+# would read the other's message as not yet answered, and might do what it asked a second time.
+_chat_locks: dict[tuple[str, str], threading.RLock] = {}
+_chat_locks_guard = threading.Lock()
+
+
+@contextmanager
+def _one_at_a_time(channel: str, chat_id: str) -> Iterator[None]:
+    with _chat_locks_guard:
+        lock = _chat_locks.setdefault((channel, chat_id), threading.RLock())
+    with lock:
+        yield
 
 
 def receive(
@@ -151,18 +166,28 @@ def answer_gathered(
     if conn is None:
         with closing(app.connect()) as own:
             return answer_gathered(app, msg, inbound_id, api=api, conn=own)
-    row = messages.get(conn, inbound_id)
-    if row is None or row.status == "processed" or row.give_up or row.member_id is None:
-        return None
-    if messages.gathering(conn, row.chat_id, row.member_id, after=inbound_id):
-        return None
-    member = members.get(conn, row.member_id)
-    if member is None:
-        return None
-    earlier = [
-        m.id for m in messages.gathering(conn, row.chat_id, row.member_id, before=inbound_id)
-    ]
-    return _run(app, msg, member, inbound_id, api, conn, notify=True, gathered=earlier)
+    # After any turn already running in this chat, so that what it answered is answered.
+    with _one_at_a_time(msg.channel, msg.chat_id):
+        row = messages.get(conn, inbound_id)
+        if row is None or row.status == "processed" or row.give_up or row.member_id is None:
+            return None
+        now = utc_iso(app.clock.now())
+        if messages.gathering(conn, row.chat_id, row.member_id, after=inbound_id, now=now):
+            return None
+        member = members.get(conn, row.member_id)
+        if member is None:
+            return None
+        earlier = messages.gathering(conn, row.chat_id, row.member_id, before=inbound_id, now=now)
+        return _run(
+            app,
+            msg,
+            member,
+            inbound_id,
+            api,
+            conn,
+            notify=True,
+            gathered=[one.id for one in earlier],
+        )
 
 
 def _stranger(app: App, conn: sqlite3.Connection, msg: IncomingMessage) -> OutgoingMessage:
@@ -263,15 +288,20 @@ def _run(
     seeing: Any = None,
     gathered: list[int] | None = None,
 ) -> OutgoingMessage | None:
-    with lease(app, conn, inbound_id) as owned:
+    with _one_at_a_time(msg.channel, msg.chat_id), lease(app, conn, inbound_id) as owned:
         if not owned:
             return None
-        # The earlier messages of a burst, taken under this claim: another turn may have taken
-        # some, and those it did not answer stay for the retry job.
-        taken = claim_also(app, conn, owned, gathered) if gathered else []
         row = messages.get(conn, inbound_id)
         if row is None or row.status == "processed" or row.give_up:
             return None
+        # The earlier messages of a burst, taken under this claim and folded into this one at
+        # once, so that however this turn ends (answered, refused, failed and retried) they go
+        # with it: a retry answers the whole burst, knowing what its first try already did.
+        taken = claim_also(app, conn, owned, gathered) if gathered else []
+        if taken:
+            with transaction(conn):
+                messages.fold_into(conn, taken, inbound_id, now=utc_iso(app.clock.now()))
+        folded = messages.folded_into(conn, inbound_id)
         current_member = members.get(conn, member.id)
         if current_member is None or not current_member.active:
             with transaction(conn):
@@ -281,7 +311,7 @@ def _run(
                 messages.give_up(conn, inbound_id)
             return None
         member = current_member
-        if kind == "chat" and _over_daily_number(app, conn, member, inbound_id):
+        if kind != "digest" and _over_daily_number(app, conn, member, inbound_id):
             # Kept, like every message, but not answered, not heard and not retried: said so
             # in her words, with no model call.
             with transaction(conn):
@@ -321,11 +351,8 @@ def _run(
                 conn.execute(
                     "UPDATE messages SET retries = retries + 1 WHERE id = ?", (inbound_id,)
                 )
-        if taken:
-            said = [
-                said_row.text for said_row in (messages.get(conn, i) for i in taken) if said_row
-            ]
-            msg = dataclasses.replace(msg, text="\n".join([*said, msg.text]))
+        if folded:
+            msg = dataclasses.replace(msg, text="\n".join([*(f.text for f in folded), msg.text]))
         return _run_owned(
             app,
             msg,
@@ -336,7 +363,7 @@ def _run(
             notify=notify,
             retry=retry,
             kind=kind,
-            gathered=taken,
+            gathered=[one.id for one in folded],
         )
 
 
@@ -588,8 +615,8 @@ def _answer(
 ) -> OutgoingMessage:
     """Think and persist the outcome. With notify off (a retry, the digest) failures stay silent.
 
-    `gathered` are the earlier messages of a burst, answered by this one's reply; on a failure
-    they are let go with the claim, for the retry job."""
+    `gathered` are the earlier messages of a burst, folded into this one (`_run`): answered by
+    its reply, and retried with it."""
     gathered = gathered or []
     if not app.can_ask("chat", api=api):
         # A fresh install before its key is typed in: say so plainly, and do not keep retrying.
@@ -692,8 +719,6 @@ def _answer(
             sent_as="digest" if kind == "digest" else None,
         )
         messages.mark_processed(conn, inbound_id, result.actions, now=now)
-        for earlier in gathered:
-            messages.mark_processed(conn, earlier, [], now=now)
         for action in result.actions:
             if action.get("tool") == "suggest" and action.get("suggestion_id"):
                 suggestions.set_reply(conn, int(action["suggestion_id"]), outbound.id)

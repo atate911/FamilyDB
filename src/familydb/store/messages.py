@@ -251,16 +251,18 @@ def gathering(
     chat_id: str,
     member_id: int,
     *,
+    now: str,
     after: int | None = None,
     before: int | None = None,
 ) -> list[Message]:
     """Messages from one person in one chat waiting to be answered together (pipeline.receive),
-    newer or older than one of them, oldest first."""
+    newer or older than one of them, oldest first. One whose hold has lapsed is the retry
+    job's, not part of a burst any more."""
     sql = (
         "SELECT * FROM messages WHERE direction = 'in' AND chat_id = ? AND member_id = ? "
-        "AND status = 'received' AND give_up = 0 AND claim_token = 'gather'"
+        "AND status = 'received' AND give_up = 0 AND claim_token = 'gather' AND claim_until > ?"
     )
-    params: list[Any] = [chat_id, member_id]
+    params: list[Any] = [chat_id, member_id, now]
     if after is not None:
         sql += " AND id > ?"
         params.append(after)
@@ -269,6 +271,34 @@ def gathering(
         params.append(before)
     rows = conn.execute(sql + " ORDER BY id", params).fetchall()
     return [Message.from_row(row) for row in rows]
+
+
+def fold_into(conn: sqlite3.Connection, message_ids: list[int], into: int, *, now: str) -> None:
+    """The earlier messages of a burst, answered as part of a later one: done with as themselves,
+    and pointing at it (reply_to), so that its reply, or a retry of it, answers them too. Call
+    inside a transaction."""
+    conn.executemany(
+        "UPDATE messages SET status = 'processed', processed_at = ?, reply_to = ? WHERE id = ?",
+        [(now, into, message_id) for message_id in message_ids],
+    )
+
+
+def folded_into(conn: sqlite3.Connection, message_id: int) -> list[Message]:
+    """The earlier messages of a burst folded into this one, oldest first."""
+    rows = conn.execute(
+        "SELECT * FROM messages WHERE direction = 'in' AND reply_to = ? ORDER BY id",
+        (message_id,),
+    ).fetchall()
+    return [Message.from_row(row) for row in rows]
+
+
+def cancel_unsent(conn: sqlite3.Connection, channel: str, chat_id: str, *, now: str) -> int:
+    """Stop everything stored for a chat and not sent yet from going. Call inside a transaction."""
+    return conn.execute(
+        "UPDATE messages SET cancelled_at = ? WHERE direction = 'out' AND channel = ? "
+        "AND chat_id = ? AND delivered_at IS NULL AND cancelled_at IS NULL",
+        (now, channel, chat_id),
+    ).rowcount
 
 
 def mark_sent_as(conn: sqlite3.Connection, message_id: int, kind: str) -> None:

@@ -71,20 +71,123 @@ def test_a_message_waiting_is_kept_from_the_retry_job_until_its_hold_lapses(
     assert retry_message(later, kept, api=api, conn=conn).text == "Hello!"
 
 
-def test_when_the_turn_fails_the_earlier_ones_are_left_for_the_retry_job(
+def test_a_burst_that_fails_is_retried_whole_knowing_what_it_already_did(
+    settings, clock, conn, family
+) -> None:
+    """Folded into the last message as its turn takes them, the earlier ones go with it: one
+    retry answers the whole burst, told what its first try already saved."""
+    app = App(settings, clock)
+    first = receive(app, _said("we should try the ramen place", "1"), conn=conn)
+    second = receive(app, _said("the one on Alberta", "2"), conn=conn)
+    saved_then_busy = fakes.FakeMessagesAPI(
+        fakes.message(
+            [
+                fakes.tool_use(
+                    "tu_1", "add_idea", {"title": "Ramen on Alberta", "kind": "restaurant"}
+                )
+            ],
+            stop_reason="tool_use",
+        ),
+        fakes.rate_limit_error(),
+    )
+    failed = answer_gathered(
+        app, _said("the one on Alberta", "2"), second, api=saved_then_busy, conn=conn
+    )
+    assert failed.status == "failed"
+    folded = messages.get(conn, first)
+    assert folded.status == "processed" and folded.reply_to == second
+    pending = messages.pending(conn, max_retries=3, now=utc_iso(clock.now()))
+    assert [m.id for m in pending] == [second]  # one message to retry, not two
+
+    app.senders["telegram"] = lambda chat, text: None
+    api = fakes.FakeMessagesAPI(fakes.message([fakes.text("Saved #1 Ramen on Alberta.")]))
+    assert retry_message(app, second, api=api, conn=conn).text == "Saved #1 Ramen on Alberta."
+    sent = api.requests[0]["messages"][-1]["content"]
+    said = " ".join(block.get("text", "") for block in sent)
+    assert "we should try the ramen place\nthe one on Alberta" in said
+    assert "add_idea" in said  # what the first try already did
+
+
+def test_turns_in_one_chat_wait_for_each_other(settings, clock, conn, family) -> None:
+    """A burst answered while the one before it is still being answered would read that one as
+    not yet answered, and might do it again: it waits, and reads the reply instead."""
+    import threading
+
+    app = App(settings, clock)
+    started, go_on = threading.Event(), threading.Event()
+    asked: list[str] = []
+
+    class Slow:
+        def create(self, **kwargs):
+            asked.append(" ".join(b.get("text", "") for b in kwargs["messages"][-1]["content"]))
+            if len(asked) == 1:
+                started.set()
+                assert go_on.wait(10)
+                return fakes.message([fakes.text("Booked Luigi's for Friday at 7.")])
+            return fakes.message([fakes.text("Told Alex.")])
+
+    api = Slow()
+    first = receive(app, _said("book Luigi's Friday 7pm", "1"), conn=conn)
+    answering = threading.Thread(
+        target=answer_gathered,
+        args=(app, _said("book Luigi's Friday 7pm", "1"), first),
+        kwargs={"api": api},
+    )
+    answering.start()
+    assert started.wait(10)
+    second = receive(app, _said("and tell Alex", "2"), conn=conn)
+    later = threading.Thread(
+        target=answer_gathered, args=(app, _said("and tell Alex", "2"), second), kwargs={"api": api}
+    )
+    later.start()
+    later.join(timeout=0.5)
+    assert later.is_alive() and len(asked) == 1  # waiting for the first turn to finish
+    go_on.set()
+    answering.join(timeout=10)
+    later.join(timeout=10)
+    assert len(asked) == 2 and "and tell Alex" in asked[1]
+    assert messages.get(conn, second).status == "processed"
+
+
+def test_a_kid_s_burst_past_the_limit_is_not_answered_by_the_retry_job(
+    settings, clock, conn, family
+) -> None:
+    from familydb.store import db, members
+    from tests.conftest import NOW_ISO
+
+    with db.transaction(conn):
+        members.add(conn, "Mia", "kid", channel="telegram", channel_user_id="1003", now=NOW_ISO)
+    app = App(settings.model_copy(update={"kid_daily_messages": 1}), clock)
+    api = fakes.FakeMessagesAPI(fakes.message([fakes.text("Sure.")]))
+    one = receive(app, _said("q1", "1", user="1003"), conn=conn)
+    assert (
+        answer_gathered(app, _said("q1", "1", user="1003"), one, api=api, conn=conn).text == "Sure."
+    )
+    two = receive(app, _said("q2", "2", user="1003"), conn=conn)
+    three = receive(app, _said("q3", "3", user="1003"), conn=conn)
+    refused = answer_gathered(app, _said("q3", "3", user="1003"), three, api=api, conn=conn)
+    assert refused.status == "failed" and len(api.requests) == 1
+    assert messages.get(conn, two).status == "processed"  # folded, with the refusal
+    assert messages.pending(conn, max_retries=3, now=utc_iso(clock.now())) == []
+
+
+def test_a_message_whose_hold_lapsed_is_not_swept_into_a_later_burst(
     settings, clock, conn, family
 ) -> None:
     app = App(settings, clock)
-    first = receive(app, _said("one", "1"), conn=conn)
-    second = receive(app, _said("two", "2"), conn=conn)
-    api = fakes.FakeMessagesAPI(fakes.rate_limit_error())
-    assert answer_gathered(app, _said("two", "2"), second, api=api, conn=conn).status == "failed"
-    waiting = messages.get(conn, first)
-    assert waiting.status == "received" and waiting.claim_token is None  # the retry job's now
-    assert {m.id for m in messages.pending(conn, max_retries=3, now=utc_iso(clock.now()))} == {
-        first,
-        second,
-    }
+    old = receive(app, _said("from this morning", "1"), conn=conn)
+    from familydb.store import db
+
+    with db.transaction(conn):
+        conn.execute(
+            "UPDATE messages SET claim_until = '2000-01-01T00:00:00Z' WHERE id = ?", (old,)
+        )
+    new = receive(app, _said("hello", "2"), conn=conn)
+    api = fakes.FakeMessagesAPI(fakes.message([fakes.text("Hi.")]))
+    answer_gathered(app, _said("hello", "2"), new, api=api, conn=conn)
+    sent = " ".join(b.get("text", "") for b in api.requests[0]["messages"][-1]["content"])
+    assert "from this morning\nhello" not in sent  # not part of this burst
+    assert messages.get(conn, old).status == "received"  # the retry job's
 
 
 def test_telegram_keeps_each_message_at_once_and_answers_after_the_pause(
