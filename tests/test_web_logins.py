@@ -102,7 +102,7 @@ def test_a_password_is_kept_hashed_and_apart_from_the_member(conn, family) -> No
 
 
 def test_nobody_switched_off_is_given_one_and_kids_are_for_now(conn, family) -> None:
-    # A kid may do what a parent may, for now (roles.py), and that includes signing in.
+    # A kid signs in as herself (roles.py), so she is given a password as anybody is.
     made = rules.give_starting_password(conn, family["girls"].id, by=None, now=NOW_ISO)
     assert passwords.hash_matches(logins.get(conn, family["girls"].id).password_hash, made)
     members.set_active(conn, family["alex"].id, False)
@@ -282,11 +282,11 @@ def test_switching_somebody_off_signs_them_out(app, sam, alex, family) -> None:
     assert refused.status_code == 401
 
 
-def test_a_parent_made_a_kid_stays_signed_in_while_kids_stand_in_for_parents(
+def test_a_parent_made_a_kid_stays_signed_in_and_reads_the_ideas(
     app, sam, alex, family, monkeypatch
 ) -> None:
     _rewrite(app, family["alex"].id, role="kid")
-    assert alex.get("/ideas").status_code == 200  # a kid may do what a parent may, for now
+    assert alex.get("/ideas").status_code == 200  # a kid reads the ideas
     # Were kids ever to lose signing in, the table in roles.py is all it would take.
     monkeypatch.setitem(roles.PERMISSIONS, "kid", frozenset())
     assert alex.get("/ideas").headers["Location"].startswith("/login")
@@ -433,23 +433,31 @@ def test_familydb_password_for_a_member_waits_for_an_admin(settings, conn, famil
 # -- the three roles ------------------------------------------------------------------------------
 
 
-def test_three_roles_and_kids_stand_in_for_parents_for_now() -> None:
+def test_three_roles_and_what_a_kid_may_do() -> None:
     assert roles.ROLES == ("admin", "parent", "kid")
-    assert roles.PERMISSIONS["admin"] > roles.PERMISSIONS["parent"]
+    assert roles.PERMISSIONS["admin"] > roles.PERMISSIONS["parent"] > roles.PERMISSIONS["kid"]
     assert roles.PERMISSIONS["admin"] - roles.PERMISSIONS["parent"] == {"manage"}
-    assert roles.PERMISSIONS["kid"] == roles.PERMISSIONS["parent"]  # the stand-in
+    # A kid reads, talks to the bot and keeps her own wishes; she changes nothing else, sees
+    # none of the household's pages, and answers nobody's wishes.
+    assert roles.PERMISSIONS["kid"] == {"sign_in", "chat", "wish"}
     assert roles.may("parent", "chat") and not roles.may("parent", "manage")
     assert not roles.may("member", "sign_in")  # a role that is not one of the three may do nothing
 
 
-def test_a_kid_signs_in_and_uses_the_page_as_a_parent_does(app, sam, family) -> None:
+def test_a_kid_signs_in_reads_and_talks_but_changes_nothing(app, sam, family) -> None:
     girls = _as(app, "the girls", _start(sam, family["girls"].id))
     form = {**_tokens(girls, "/you"), "new": KIDS, "again": KIDS}
     assert girls.post("/you", data=form).headers["Location"] == "/"
-    for path in ("/", "/chat", "/ideas", "/ideas/new", "/plans", "/tasks", "/status"):
+    for path in ("/", "/chat", "/ideas", "/plans", "/tasks"):
         assert girls.get(path).status_code == 200, path
+    for path in ("/ideas/new", "/status", "/memory"):
+        assert girls.get(path).status_code == 403, path
+    assert "For a parent" in girls.get("/status").text
     refused = girls.get("/settings")
     assert refused.status_code == 403 and "For an admin" in refused.text
+    nav = girls.get("/").text
+    assert 'href="/status"' not in nav and 'href="/memory"' not in nav
+    assert "Add an idea" not in girls.get("/ideas").text
     assert '<span class="tag">signs in</span>' in sam.get("/family").text
 
 
@@ -463,7 +471,7 @@ def test_a_permission_taken_from_kids_is_kept_everywhere(app, sam, family, monke
     chat = girls.get("/chat")
     assert chat.status_code == 403 and "Not yet" in chat.text
     assert "Talking to Vera here" in chat.text  # her place goes by her name, as its tab does
-    idea = {**_tokens(girls, "/ideas/new"), "title": "Ramen place", "kind": "restaurant"}
+    idea = {**_tokens(girls, "/you"), "title": "Ramen place", "kind": "restaurant"}
     assert girls.post("/ideas/new", data=idea).status_code == 403
     assert girls.get("/ideas").status_code == 200  # reading needs nothing more than signing in
     with closing(app.connect()) as conn:
@@ -498,7 +506,7 @@ def test_home_offers_only_what_a_role_may_do(app, sam, family, monkeypatch) -> N
             conn,
             title="Buy paper towels",
             notes="",
-            owner_id=family["sam"].id,
+            owner_id=family["girls"].id,
             due_at=None,
             preferred_window="",
             operation_key="test-towels",
@@ -506,9 +514,9 @@ def test_home_offers_only_what_a_role_may_do(app, sam, family, monkeypatch) -> N
             chat_id="web",
             now=NOW_ISO,
         )
-    home = girls.get("/").text  # a kid may do what a parent may, for now
+    home = girls.get("/").text  # a kid talks to the bot but changes nothing
     assert 'action="/chat"' in home and "The park is free." in home
-    assert f'action="/task/{towels}/done"' in home
+    assert "Buy paper towels" in home and f'action="/task/{towels}/done"' not in home
 
     monkeypatch.setitem(roles.PERMISSIONS, "kid", frozenset({"sign_in"}))
     home = girls.get("/")
@@ -519,7 +527,7 @@ def test_home_offers_only_what_a_role_may_do(app, sam, family, monkeypatch) -> N
     assert "Buy paper towels" in home.text and "/done" not in home.text
     listed = girls.get("/tasks").text
     assert "Buy paper towels" in listed and f"/task/{towels}/done" not in listed
-    tick = {**_tokens(girls, "/tasks"), "revision": "1"}
+    tick = {**_tokens(girls, "/you"), "revision": "1"}
     assert girls.post(f"/task/{towels}/done", data=tick).status_code == 403
     with closing(app.connect()) as conn:
         assert tasks.get(conn, towels).status == "open"

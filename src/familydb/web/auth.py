@@ -104,13 +104,20 @@ OPEN_ENDPOINTS = frozenset(
 # Where somebody signed in with a starting password may go before they have chosen their own.
 CHOOSING = frozenset({"family.you", "family.choose"})
 # The permission each part of the page needs beyond signing in, by blueprint (roles.py says who
-# has which). Reading needs nothing more: every page routes.py draws.
+# has which). Reading the ideas and the plans needs nothing more.
 NEEDS: dict[str, roles.Permission] = {
     "chat": "chat",
     "edits": "change",
     "settings": "manage",
     "setup": "manage",
     "family": "manage",
+}
+# A page that needs something other than its blueprint's, asked before the blueprint is.
+NEEDS_HERE: dict[str, roles.Permission] = {
+    "web.new_idea": "change",
+    "web.edit_idea": "change",
+    "web.memory": "browse",
+    "web.status": "browse",
 }
 # Pages in those parts that are anybody's own, and need no more than signing in.
 EVERYBODY_S_OWN = CHOOSING
@@ -546,7 +553,7 @@ def _within_reach(who: Visitor) -> Response | tuple[str, int] | None:
         if request.method in SAFE_METHODS:
             return redirect(url_for("family.you"))
         return Response(CHOOSE_FIRST, status=403, mimetype="text/plain")
-    needed = NEEDS.get(request.blueprint or "")
+    needed = NEEDS_HERE.get(request.endpoint or "") or NEEDS.get(request.blueprint or "")
     if needed and request.endpoint not in EVERYBODY_S_OWN and not who.may(needed):
         title, why = views.REFUSALS[needed]
         why = why.format(name=personas.active(_app().settings).name)

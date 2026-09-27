@@ -153,7 +153,7 @@ def home() -> Response | str:
         everything = idea_store.list_all(conn)
         unfinished = status_page.setup_steps(app, conn) if manages else []
         family = [member.display_name for member in member_store.list_all(conn)]
-        todo = task_store.list_all(conn, status="open")
+        todo = task_store.list_all(conn, status="open", owner_id=_own_only())
         talk = chat.glance(app, conn) if talks else None
     coming = [entry for entry in seen.entries if entry.days()[-1] >= today][:HOME_PLANS]
     newest = sorted(everything, key=lambda idea: idea.created_at, reverse=True)[:HOME_IDEAS]
@@ -400,6 +400,14 @@ def plans_month() -> str:
     )
 
 
+def _own_only() -> int | None:
+    """Whose things to do this visitor sees: their own, unless they may see the household's."""
+    visitor = auth.visitor()
+    if visitor.may("browse") or visitor.member is None:
+        return None
+    return visitor.member.id
+
+
 @bp.get("/tasks")
 def tasks() -> str:
     app = _app()
@@ -407,7 +415,9 @@ def tasks() -> str:
     if status not in {"open", "done", "cancelled", "all"}:
         abort(400)
     with closing(app.connect()) as conn:
-        rows = task_store.list_all(conn, status=status, query=request.args.get("q", ""))
+        rows = task_store.list_all(
+            conn, status=status, query=request.args.get("q", ""), owner_id=_own_only()
+        )
         people = member_store.list_all(conn)
     return render_template(
         "tasks.html",

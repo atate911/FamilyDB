@@ -20,7 +20,7 @@
       </div>
       {% if plan.location %}<div class="where">{{ icon('pin') }}{{ plan.location }}</div>{% endif %}
       {% if plan.notes %}<div class="note">{{ plan.notes }}</div>{% endif %}
-      {% if cancellable and plan.id and plan.status != 'cancelled' %}
+      {% if cancellable and plan.id and plan.status != 'cancelled' and visitor().may('change') %}
         <div class="actions row">
           <details class="more">
             <summary>Move it</summary>
@@ -72,6 +72,7 @@
     {% endif %}
   </section>
 
+  {% if visitor().may('change') %}
   <section class="panel" id="add">
     <details class="more" {{ 'open' if not upcoming }}>
       <summary><span class="h2">{{ icon('plus') }}Put something on the calendar</span></summary>
@@ -115,10 +116,11 @@
         the plan is then linked to the idea.</p>
     {% else %}
       <p class="muted">Google Calendar is not connected, so nothing can be added here.
-        See the <a href="{{ url_for('web.status') }}">status page</a>.</p>
+        {% if visitor().may('browse') %}See the <a href="{{ url_for('web.status') }}">status page</a>.{% endif %}</p>
     {% endif %}
     </details>
   </section>
+  {% endif %}
 
   {% if recent %}
     <section class="panel past">

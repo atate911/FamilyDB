@@ -62,8 +62,10 @@ FOOTER = "FamilyDB © 2026 by Andrew Tate. Version v{version}. All rights reserv
 ROLE_WORDS = {
     "admin": "looks after it: the settings, setup, and who is on the family list. There is "
     "always at least one.",
-    "parent": "uses all the rest: chat, ideas, plans and things to do.",
-    "kid": "is in the plans; for now, with a password, may do whatever a parent may.",
+    "parent": "uses all the rest: chat, ideas, plans and things to do, and answers the kids' "
+    "wishes.",
+    "kid": "is in the plans; with a password, reads the ideas and plans, talks to the bot, "
+    "and sees only her own things to do.",
 }
 # What somebody is told when their role may not go somewhere, by the permission it needs. The
 # conversation is hers, so it goes by her name: {name} is the persona in force.
@@ -74,6 +76,9 @@ REFUSALS = {
         "something here needs to change.",
     ),
     "chat": ("Not yet", "Talking to {name} here is not part of your role yet. Ask an admin."),
+    "browse": ("For a parent", "This page is for the grown-ups. Ask a parent if you need it."),
+    "wish": ("Not yet", "Keeping a wish list is not part of your role. Ask an admin."),
+    "decide": ("For a parent", "Answering wishes is a parent's job."),
     "change": (
         "Not yet",
         "Changing ideas, plans and things to do is not part of your role yet. Ask an admin.",
