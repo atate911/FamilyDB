@@ -23,6 +23,18 @@ class VoiceNote:
 
 
 @dataclass(frozen=True)
+class PhotoNote:
+    """A photo somebody sent, not yet looked at: what kind of picture, and how to fetch it.
+
+    `fetch` downloads it, and is only called once the sender is known to be family.
+    """
+
+    mime: str  # image/jpeg, image/png or image/webp
+    fetch: Callable[[], bytes]
+    size: int | None = None  # in bytes, when the channel says
+
+
+@dataclass(frozen=True)
 class IncomingMessage:
     channel: str
     channel_update_id: str | None
@@ -34,6 +46,8 @@ class IncomingMessage:
     # A voice note, for the pipeline to hear before anything is answered. `text` is then any
     # caption that came with it.
     voice: VoiceNote | None = None
+    # A photo, likewise, for the pipeline to look at first; `text` is any caption with it.
+    photo: PhotoNote | None = None
 
 
 @dataclass(frozen=True)

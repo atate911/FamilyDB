@@ -1,11 +1,11 @@
 """The Telegram channel: long polling, the pipeline in a worker thread, one lane per bot.
 
-Text and voice notes both reach the pipeline. A voice note arrives as a way to fetch it, which
-the pipeline calls only once the sender is known to be family; the download itself runs on the
-bot's own event loop, like every send. A button under one of her messages (a reminder's Done) is
-done by code, never the pipeline (buttons.py). So are /start and a sticker, file or video with
-no words (commands.py); the words that come with one are answered as a message, marked as having
-come with something not seen.
+Text, voice notes and photos all reach the pipeline. A voice note or a photo arrives as a way
+to fetch it, which the pipeline calls only once the sender is known to be family; the download
+itself runs on the bot's own event loop, like every send. A button under one of her messages (a
+reminder's Done) is done by code, never the pipeline (buttons.py). So are /start and a sticker,
+file or video with no words (commands.py); the words that come with one are answered as a
+message, marked as having come with something not seen.
 
 "typing…" stays up while an answer is on its way, as Telegram shows it for five seconds only. In
 a group, a stranger is answered only when they address the bot: a family group is full of people
@@ -53,7 +53,7 @@ from telegram.ext import (
 from familydb import buttons, commands, personas, voice, whereabouts
 from familydb.app import App
 from familydb.channels import markup
-from familydb.channels.base import IncomingMessage, OutgoingMessage, VoiceNote
+from familydb.channels.base import IncomingMessage, OutgoingMessage, PhotoNote, VoiceNote
 from familydb.config import Settings
 from familydb.delivery import deliver
 from familydb.pipeline import handle_incoming
@@ -79,6 +79,14 @@ FETCH_SECONDS = 60
 # this often while an answer is on its way, and for no longer than a turn could take.
 TYPING_EVERY = 4.5
 TYPING_AT_MOST = 180.0
+# A photo is fetched at the largest size Telegram made of it that is no longer than this on its
+# long side: plenty for the words on a poster, while what a vendor counts for a picture grows
+# with its size. An image sent as a file is looked at when it is of a kind every vendor reads.
+LONGEST = 1600
+PICTURE_KINDS = ("image/jpeg", "image/png", "image/webp")
+PICTURES = filters.PHOTO | filters.Document.MimeType(PICTURE_KINDS[0])
+for _kind in PICTURE_KINDS[1:]:
+    PICTURES = PICTURES | filters.Document.MimeType(_kind)
 # What a message may carry that nobody reads, in the words its caption is kept under, the first
 # found naming it: an animation carries a document too, and is a GIF.
 UNREAD = (
@@ -163,6 +171,51 @@ def incoming_unread(update: Any, bot_username: str | None = None) -> IncomingMes
     )
 
 
+def picture(message: Any) -> tuple[Any, str, int | None] | None:
+    """The photo a message carries, as (what to fetch, its kind, its size in bytes): the largest
+    size Telegram made of it no longer than `LONGEST` on its long side, or an image sent as a
+    file, of a kind a model reads. None for anything else."""
+    if message is None:
+        return None
+    sizes = list(getattr(message, "photo", None) or [])
+    if sizes:
+        fitting = [size for size in sizes if max(size.width, size.height) <= LONGEST]
+        chosen = max(fitting or [min(sizes, key=_area)], key=_area)
+        return chosen, "image/jpeg", getattr(chosen, "file_size", None)
+    document = getattr(message, "document", None)
+    kind = (getattr(document, "mime_type", None) or "").lower()
+    if document is not None and kind in PICTURE_KINDS:
+        return document, kind, getattr(document, "file_size", None)
+    return None
+
+
+def _area(size: Any) -> int:
+    return int(size.width) * int(size.height)
+
+
+def incoming_photo(
+    update: Any, fetch: Any, bot_username: str | None = None
+) -> IncomingMessage | None:
+    """A photo as the pipeline takes it: its kind, how to fetch it, and its caption as the text,
+    less any mention of the bot."""
+    message = update.effective_message
+    user = update.effective_user
+    chat = update.effective_chat
+    found = picture(message)
+    if found is None or user is None or chat is None:
+        return None
+    _, kind, size = found
+    return IncomingMessage(
+        channel=CHANNEL,
+        channel_update_id=str(update.update_id),
+        chat_id=str(chat.id),
+        channel_user_id=str(user.id),
+        text=strip_mention(getattr(message, "caption", None) or "", bot_username),
+        sender_name=sender_name(user),
+        photo=PhotoNote(mime=kind, fetch=fetch, size=size),
+    )
+
+
 def family_knows(app: App, channel_user_id: str) -> bool:
     """Whether this Telegram account is somebody on the family list."""
     with closing(app.connect()) as conn:
@@ -203,7 +256,7 @@ def incoming_voice(update: Any, fetch: Any) -> IncomingMessage | None:
 
 
 async def download(note: Any) -> bytes:
-    """A voice note's bytes, from Telegram."""
+    """A voice note's or a photo's bytes, from Telegram."""
     file = await note.get_file()
     return bytes(await file.download_as_bytearray())
 
@@ -383,6 +436,9 @@ class TelegramChannel:
         self.application.add_handler(
             MessageHandler((filters.VOICE | filters.AUDIO) & NEW, self.on_voice)
         )
+        # A photo, or an image sent as a file: looked at, then answered as words. Before what
+        # cannot be read, which takes every other file.
+        self.application.add_handler(MessageHandler(PICTURES & NEW, self.on_photo))
         # A sticker, a file, a video: its words answered, or with none, her line saying so.
         self.application.add_handler(MessageHandler(UNREADABLE & NEW, self.on_unread))
         # A shared location, and a live one as it moves (those arrive as edits).
@@ -519,6 +575,31 @@ class TelegramChannel:
         if in_group and msg.text:
             msg = dataclasses.replace(msg, text=strip_mention(msg.text, bot.username))
         await self._answer(update, bot, msg, quiet=in_group and not addressed)
+
+    async def on_photo(self, update: Any, context: Any) -> None:
+        """A photo: handed over with a way to fetch it, looked at and answered like words. In a
+        group only when it is sent to her, by a mention in its caption or a reply: a family group
+        shares photos among themselves all day, and each one looked at is paid for."""
+        await asyncio.to_thread(self.app.refresh)
+        chat = update.effective_chat
+        bot = context.bot
+        in_group = chat is not None and chat.type in GROUP_TYPES
+        if in_group and not addressed_to_bot(update, bot.username, bot.id):
+            return
+        found = picture(update.effective_message)
+        if found is None:
+            return
+        file = found[0]
+        loop = asyncio.get_running_loop()
+
+        def fetch() -> bytes:
+            # Called from the pipeline's thread; the download runs on this loop.
+            future = asyncio.run_coroutine_threadsafe(download(file), loop)
+            return future.result(timeout=FETCH_SECONDS)
+
+        msg = incoming_photo(update, fetch, bot.username)
+        if msg is not None:
+            await self._answer(update, bot, msg)
 
     async def on_unread(self, update: Any, context: Any) -> None:
         """A sticker, a file or a video. Its words are answered as a message would be, marked as

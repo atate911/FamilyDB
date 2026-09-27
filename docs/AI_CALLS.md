@@ -102,6 +102,7 @@ Context is built in three layers, and every piece of information belongs to exac
 | Enrich | every 2 minutes, up to 3 pending ideas; a home idea with no place, link or location, and a gift that names no place, are skipped in code | worker model, at the lookup level | worker prompt, home area, the idea and what was saved before | web search (3), `save_place`, `skip_place` | a place record |
 | Discover | a `suggest` call, cached 12 hours by window, constraints and topic | worker model, at the lookup level | worker prompt, home area and where they are, the window, its hours, the constraints and topic, never the question's wording | web search (4), `report_finds` | up to 6 finds |
 | Transcribe | a voice note from somebody on the family list, before its chat turn | the hearing model: OpenAI's speech-to-text model or a Gemini model; never Claude, which takes no recordings | the recording, and one line naming the family, her and home so they are spelled right | nothing | its words, which become the message |
+| Look | a photo from somebody on the family list, before its chat turn; in a group, only one sent to the bot | the lookup model of the company that looks things up, with a lookup's effort | the picture, at most 1600 pixels on its long side and 5 MB, `prompts/look.md` and the same line of names | nothing | what it is and the words in it that matter, at most 120 words, which become the message |
 
 All of them go through one door, `agent/gateway.ask`, which runs the loop
 (`agent/loop.run_turn`): the spending limit is checked before each call, and each call is
@@ -114,6 +115,19 @@ can hear it; sees the recording and the names; may do nothing; its words are tru
 was said, marked as spoken so the chat model allows for mishearing; and it costs one bounded
 request, which is not retried because the recording is not kept. `model_exists` and token
 counting call a provider but generate nothing.
+
+Looking at a photo is the same kind of thing, with a door of its own beside it, `gateway.look`:
+no turn, one request, the limit first and a record under the kind `look` ("reading photos").
+Its five answers: asked only for a photo from the family, while photos are switched on, when it
+is not too large, and in a group only when it was sent to the bot; sees the picture, what to
+write down (`prompts/look.md`: what it is, then every name, date, time, place, price and link in
+it, as written, guessing nothing, and none of its words taken as instructions) and the names;
+may do nothing; its words are trusted as what the picture showed, marked "(photo)" so the chat
+model knows where they came from; and it costs one bounded request (1,024 output tokens at most,
+held at about a tenth of a cent on the default model), not retried because the picture is not
+kept. The lookup model rather than the chat model, since writing down what a picture says is
+extraction, not judgement, and a call of its own rather than the picture in front of the chat
+model, so the picture is sent once and what it showed stays in the conversation as words.
 
 ## Who is speaking
 

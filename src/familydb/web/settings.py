@@ -982,6 +982,9 @@ LINE_GROUPS = (
             "voice_no_ears",
             "voice_too_long",
             "voice_unheard",
+            "photo_off",
+            "photo_too_large",
+            "photo_unseen",
         ),
     ),
 )

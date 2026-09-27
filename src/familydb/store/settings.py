@@ -60,6 +60,7 @@ BEHAVIOUR = (
     "telegram_require_mention",
     "voice_notes",
     "voice_max_minutes",
+    "photos",
     "transcribe_provider",
     "openai_transcribe_model",
     "gemini_transcribe_model",

@@ -39,12 +39,21 @@ def _calls_named(tree: ast.AST, name: str, *, methods_only: bool = False) -> lis
 
 def test_nothing_but_the_gateway_starts_a_turn() -> None:
     """A model call made anywhere else would escape the declarations, and the kind records."""
-    starts, sends, hears = [], [], []
+    starts, sends, hears, looks = [], [], [], []
     for path in sorted(PACKAGE.rglob("*.py")):
         where = path.relative_to(PACKAGE).as_posix()
         tree = ast.parse(path.read_text("utf-8"))
         starts += [f"{where}:{line}" for line in _calls_named(tree, "run_turn")]
         hears += [f"{where}:{line}" for line in _calls_named(tree, "transcribe", methods_only=True)]
+        # provider.describe(picture, ask); the clock's own describe() takes nothing
+        looks += [
+            f"{where}:{node.lineno}"
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "describe"
+            and node.args
+        ]
         if where != "agent/loop.py" and not where.startswith("agent/providers/"):
             # provider.send(request); a channel's `send(chat_id, text)` is a plain function
             sends += [f"{where}:{line}" for line in _calls_named(tree, "send", methods_only=True)]
@@ -52,6 +61,8 @@ def test_nothing_but_the_gateway_starts_a_turn() -> None:
     assert sends == [], "only the loop sends a request to a provider"
     # Hearing a voice note is paid for too: it goes through the gateway's `listen`, and only there.
     assert [h.split(":")[0] for h in hears] == ["agent/gateway.py"], hears
+    # And so is looking at a photo, through `look`.
+    assert [h.split(":")[0] for h in looks] == ["agent/gateway.py"], looks
 
 
 @pytest.mark.parametrize("kind", sorted(gateway.KINDS))

@@ -23,6 +23,11 @@ TAP_PREFIX = "(tapped) "
 # Words that came with something nobody could look at (a video, a file) are kept after this mark,
 # so the model, the history and the page all say what came with them and that it was not seen.
 UNSEEN = "(with {what}, not seen) "
+# A photo is kept as what a model saw in it, written down, after this mark, so everything after
+# the pipeline's first step treats it as said and knows it was read from a picture; the picture
+# is not kept. Until it has been looked at it is only the mark saying so.
+PHOTO_PREFIX = "(photo) "
+UNLOOKED = "(photo, not looked at)"
 
 
 def as_said(text: str) -> str:
@@ -40,6 +45,11 @@ def unheard(seconds: int) -> str:
     """What a voice note is stored as until its words are known."""
     minutes, rest = divmod(max(int(seconds), 0), 60)
     return UNHEARD.format(length=f"{minutes}:{rest:02d}")
+
+
+def is_unlooked(text: str) -> bool:
+    """Whether a stored message is a photo nobody ever looked at."""
+    return text == UNLOOKED
 
 
 def is_unheard(text: str) -> bool:

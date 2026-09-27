@@ -8,16 +8,20 @@ carried on the reply as `raw` rather than normalised away.
 
 from __future__ import annotations
 
+import base64
 import logging
 from typing import Any
 
 import anthropic
 
 from familydb.agent.providers.base import (
+    LOOK_TOKENS,
     Audio,
     Heard,
     KeyCheck,
     ModelReply,
+    Picture,
+    Seen,
     Stop,
     Surface,
     ToolCall,
@@ -320,8 +324,46 @@ class AnthropicProvider:
         return int(self.api.count_tokens(**payload).input_tokens)
 
     def send(self, request: TurnRequest) -> ModelReply:
+        return self.reply(self._create(self.payload(request)))
+
+    # -- looking --------------------------------------------------------------------------
+    def viewer(self) -> str | None:
+        return self.model_for("worker")
+
+    def seeing(self, picture: Picture, ask: str) -> dict[str, Any]:
+        """The request for one picture: the picture, then what to write down about it, to the
+        lookup model with a lookup's effort."""
+        shape = TurnRequest(
+            system=[], messages=[], model=self.viewer(), effort="low", max_tokens=LOOK_TOKENS
+        )
+        payload = {key: value for key, value in self.payload(shape).items() if value != []}
+        image = base64.b64encode(picture.data).decode("ascii")
+        payload["messages"] = [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {"type": "base64", "media_type": picture.mime, "data": image},
+                    },
+                    {"type": "text", "text": ask},
+                ],
+            }
+        ]
+        return payload
+
+    def describe(self, picture: Picture, ask: str) -> Seen:
+        reply = self.reply(self._create(self.seeing(picture, ask)))
+        if reply.stop == "refusal":
+            raise AgentError(f"Claude would not describe it ({reply.refusal})", retryable=False)
+        return Seen(
+            text=reply.text, usage=reply.usage, model=reply.model, request_id=reply.request_id
+        )
+
+    def _create(self, payload: dict[str, Any]) -> Any:
+        """One request, its failures as the loop understands them."""
         try:
-            response = self.api.create(**self.payload(request))
+            return self.api.create(**payload)
         except anthropic.RateLimitError as exc:
             raise AgentError(
                 f"rate limited: {exc}", retryable=True, request_id=_request_id(exc)
@@ -339,4 +381,3 @@ class AnthropicProvider:
             if "authentication" not in str(exc).lower():
                 raise
             raise AgentError(f"no API credentials configured: {exc}", retryable=False) from exc
-        return self.reply(response)

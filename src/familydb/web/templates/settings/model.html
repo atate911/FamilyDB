@@ -68,15 +68,17 @@
   </div>
 </form>
 
-{# Who hears a voice note, if anyone does, with a Save of its own, still for the same reason:
-   floating, it would sit beside the models above, which it does not save. #}
+{# Who hears a voice note, if anyone does, and whether photos are looked at, with a Save of their
+   own, still for the same reason: floating, it would sit beside the models above, which it does
+   not save. #}
 <form method="post" action="{{ url_for('settings.save') }}">
   <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
   <input type="hidden" name="section" value="model" />
   {{ group(groups.voice) }}
+  {{ group(groups.photos) }}
   <div class="save-bar still">
     <p class="muted">An empty box uses the default it shows.</p>
-    <button type="submit">{{ icon('check') }}Save voice notes</button>
+    <button type="submit">{{ icon('check') }}Save voice notes and photos</button>
   </div>
 </form>
 

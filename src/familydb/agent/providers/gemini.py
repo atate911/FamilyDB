@@ -5,7 +5,8 @@ The third provider behind the same protocol. What differs here: the system promp
 is a Tool of its own alongside them; a tool call's arguments arrive already parsed; caching is
 implicit for a long enough prefix, so the cacheable flag steers nothing; and thinking is a level
 (low or high) on Gemini 3 and a token budget before it, rather than a named effort. A voice note
-is heard by the same endpoint, sent the recording itself with a line asking for its words.
+is heard by the same endpoint, sent the recording itself with a line asking for its words, and a
+photo is looked at the same way.
 """
 
 from __future__ import annotations
@@ -19,10 +20,13 @@ from google.genai import errors as genai_errors
 from google.genai import types as genai_types
 
 from familydb.agent.providers.base import (
+    LOOK_TOKENS,
     Audio,
     Heard,
     KeyCheck,
     ModelReply,
+    Picture,
+    Seen,
     Stop,
     Surface,
     SystemBlock,
@@ -330,6 +334,49 @@ class GeminiProvider:
                 for key in ("input_tokens", "cache_read_input_tokens", "output_tokens")
             },
             model=reply.model or self.listener(),
+            request_id=reply.request_id,
+        )
+
+    # -- looking --------------------------------------------------------------------------
+    def viewer(self) -> str | None:
+        return self.model_for("worker")
+
+    def seeing(self, picture: Picture, ask: str) -> dict[str, Any]:
+        """The request for one picture: the picture, then what to write down about it, to the
+        lookup model with a lookup's thinking."""
+        model = self.viewer() or self.settings.gemini_model
+        shape = TurnRequest(
+            system=[], messages=[], model=model, effort="low", max_tokens=LOOK_TOKENS
+        )
+        return {
+            "model": model,
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [
+                        {"inline_data": {"mime_type": picture.mime, "data": picture.data}},
+                        {"text": ask},
+                    ],
+                }
+            ],
+            "config": self.config(shape),
+        }
+
+    def describe(self, picture: Picture, ask: str) -> Seen:
+        try:
+            response = self.api.generate_content(**self.seeing(picture, ask))
+        except (genai_errors.APIError, httpx.TransportError) as exc:
+            raise _failure(exc) from exc
+        reply = self.reply(response)
+        if reply.stop == "refusal":
+            raise AgentError(f"Gemini would not describe it ({reply.refusal})", retryable=False)
+        return Seen(
+            text=reply.text,
+            usage={
+                key: reply.usage.get(key)
+                for key in ("input_tokens", "cache_read_input_tokens", "output_tokens")
+            },
+            model=reply.model or self.viewer(),
             request_id=reply.request_id,
         )
 

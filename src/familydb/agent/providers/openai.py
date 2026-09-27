@@ -6,11 +6,12 @@ caching happens automatically on a long prefix instead of being marked, so `cach
 only to key the cache; strict function calling wants every property listed as required, with the
 optional ones nullable; and a hosted search is capped by the number of tool calls a turn may make
 rather than by a per-tool limit. Voice notes go to a separate speech-to-text endpoint, which takes
-the recording as a file.
+the recording as a file; a photo goes to the same endpoint as a message, as a data URL.
 """
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import logging
@@ -19,10 +20,13 @@ from typing import Any
 import openai
 
 from familydb.agent.providers.base import (
+    LOOK_TOKENS,
     Audio,
     Heard,
     KeyCheck,
     ModelReply,
+    Picture,
+    Seen,
     Stop,
     Surface,
     SystemBlock,
@@ -385,6 +389,43 @@ class OpenAIProvider:
             usage=heard,
             model=model,
             request_id=getattr(result, "_request_id", None),
+        )
+
+    # -- looking --------------------------------------------------------------------------
+    def viewer(self) -> str | None:
+        return self.model_for("worker")
+
+    def seeing(self, picture: Picture, ask: str) -> dict[str, Any]:
+        """The request for one picture: the picture, then what to write down about it, to the
+        lookup model with a lookup's effort."""
+        shape = TurnRequest(
+            system=[], messages=[], model=self.viewer(), effort="low", max_tokens=LOOK_TOKENS
+        )
+        payload = {
+            key: value for key, value in self.payload(shape).items() if value not in ("", [])
+        }
+        image = base64.b64encode(picture.data).decode("ascii")
+        payload["input"] = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "input_image", "image_url": f"data:{picture.mime};base64,{image}"},
+                    {"type": "input_text", "text": ask},
+                ],
+            }
+        ]
+        return payload
+
+    def describe(self, picture: Picture, ask: str) -> Seen:
+        try:
+            response = self.api.create(**self.seeing(picture, ask))
+        except openai.OpenAIError as exc:
+            raise _failure(exc) from exc
+        reply = self.reply(response)
+        if reply.stop == "refusal":
+            raise AgentError(f"OpenAI would not describe it ({reply.refusal})", retryable=False)
+        return Seen(
+            text=reply.text, usage=reply.usage, model=reply.model, request_id=reply.request_id
         )
 
 

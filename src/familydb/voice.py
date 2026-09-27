@@ -263,6 +263,22 @@ EVENTS: dict[str, Event] = {
         "I can't open that kind of message. Could you tell me in words?",
         (),
     ),
+    "photo_off": Event(
+        "A photo while they are turned off",
+        "I don't look at photos here, so I didn't see that one. Could you tell me in words?",
+        (),
+    ),
+    "photo_too_large": Event(
+        "A photo too large to look at",
+        "That picture is too large for me to look at. Could you send it as a photo rather than "
+        "a file, or tell me in words?",
+        (),
+    ),
+    "photo_unseen": Event(
+        "A photo that could not be looked at",
+        "Sorry, I couldn't look at that photo. Could you send it again, or tell me in words?",
+        (),
+    ),
     "done": Event("Nothing to add after doing it", "Done.", ()),
     "stranger": Event(
         "Someone not in the family",

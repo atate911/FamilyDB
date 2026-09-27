@@ -465,6 +465,22 @@ GROUPS: tuple[Group, ...] = (
         ),
     ),
     Group(
+        "model",
+        "photos",
+        "Photos",
+        "A photo sent on Telegram (a poster, a menu, a ticket) is read by the model that looks "
+        "things up, which writes down what it shows; that is answered as if it had been typed. "
+        "The photo goes to that company, costs about a tenth of a cent, and is not kept.",
+        (
+            field(
+                "photos",
+                "Look at photos",
+                "Off asks for it in words. In a group, a photo is looked at only when it is sent "
+                "to the bot, by a mention in its caption or a reply.",
+            ),
+        ),
+    ),
+    Group(
         "spending",
         "limit",
         "The daily limit",
