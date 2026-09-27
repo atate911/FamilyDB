@@ -200,6 +200,13 @@ EVENTS: dict[str, Event] = {
         ("limit",),
         {"limit": "2.00"},
     ),
+    "kid_limit": Event(
+        "A kid's own share of the day used up",
+        "That's all our chatting for today, {kid}. Come back tomorrow! Your wish list is still "
+        "there, and you can move things around on it.",
+        ("kid",),
+        {"kid": "Mia"},
+    ),
     "limit_partial": Event(
         "The limit reached halfway through",
         "That much is saved, but today's spending limit stopped me before I finished. "

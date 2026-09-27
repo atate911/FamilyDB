@@ -235,3 +235,53 @@ def test_a_kid_s_own_conversation_on_the_page_is_private(conn, family) -> None:
     everyone = members.list_all(conn)
     assert render_audience_line("web", f"member:{family['girls'].id}", everyone) is None
     assert "everyone who signs in" in render_audience_line("web", "web", everyone)
+
+
+# -- her share of the day, and her lookups ----------------------------------------------------------
+
+
+def test_a_kid_past_her_share_is_told_by_code_and_nothing_is_asked(
+    settings, clock, conn, family, mia
+) -> None:
+    app = App(settings.model_copy(update={"kid_daily_spend": 0.10}), clock)
+    with db.transaction(conn):
+        earlier = conn.execute(
+            "INSERT INTO messages (channel, chat_id, member_id, direction, text, received_at) "
+            "VALUES ('telegram', '1003', ?, 'in', 'hi', ?)",
+            (mia.id, NOW_ISO),
+        ).lastrowid
+        conn.execute(
+            "INSERT INTO llm_calls (message_id, iteration, model, created_at, cost_usd) "
+            "VALUES (?, 0, 'm', ?, 0.12)",
+            (earlier, NOW_ISO),
+        )
+    api = fakes.FakeMessagesAPI(fakes.message([fakes.text("never sent")]))
+    reply = handle_incoming(
+        app, IncomingMessage("telegram", "k9", "1003", "1003", "I want slime"), api=api, conn=conn
+    )
+    assert api.requests == []
+    assert "That's all our chatting for today, Mia" in reply.text
+    # A grown-up's messages are held only by the family's limit.
+    api = fakes.FakeMessagesAPI(fakes.message([fakes.text("Sure.")]))
+    handle_incoming(
+        app, IncomingMessage("telegram", "s9", "1001", "1001", "hello"), api=api, conn=conn
+    )
+    assert len(api.requests) == 1
+
+
+def test_a_kid_s_lookups_wait_for_the_hour_and_go_together(settings, conn, family, mia) -> None:
+    from familydb.clock import FixedClock
+    from familydb.jobs.enrich import _held_back
+    from familydb.store import ideas
+
+    with db.transaction(conn):
+        hers = ideas.insert(conn, title="Thai place", kind="restaurant", suggested_by=mia.id)
+        ours = ideas.insert(conn, title="Ramen", kind="restaurant", suggested_by=family["sam"].id)
+    daytime = App(settings, FixedClock(datetime(2026, 9, 20, 14, 3), TZ))
+    held = _held_back(daytime, conn)
+    assert mia.id in held and family["sam"].id not in held
+    waiting = ideas.pending_enrichment(conn, limit=10, holding=held)
+    assert [i.id for i in waiting] == [ours.id]
+    evening = App(settings, FixedClock(datetime(2026, 9, 20, settings.kid_lookup_hour, 5), TZ))
+    assert _held_back(evening, conn) == ()
+    assert {i.id for i in ideas.pending_enrichment(conn, limit=10)} == {hers.id, ours.id}

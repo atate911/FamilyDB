@@ -498,6 +498,19 @@ GROUPS: tuple[Group, ...] = (
                 "a model until midnight, and whoever writes is told why. 0 means no limit. Set a "
                 "limit with the company too.",
             ),
+            field(
+                "kid_daily_spend",
+                "Each kid's daily share (US$)",
+                "What each kid's own messages may spend in a day, within the limit above. When "
+                "it is used up she is told, kindly, to come back tomorrow; her wish list still "
+                "works. 0 means no share of her own.",
+            ),
+            field(
+                "kid_lookup_hour",
+                "When the kids' lookups run",
+                "Places a kid's messages gave to look up wait for this hour of the day (0 to "
+                "23), and are all looked up then, rather than each as it comes.",
+            ),
         ),
     ),
     Group(

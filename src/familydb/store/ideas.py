@@ -206,11 +206,16 @@ def is_gift(idea: Idea) -> bool:
     return idea.kind.strip().lower() == GIFT
 
 
-def pending_enrichment(conn: sqlite3.Connection, *, limit: int) -> list[Idea]:
-    """Ideas waiting for a place lookup, oldest first."""
+def pending_enrichment(
+    conn: sqlite3.Connection, *, limit: int, holding: tuple[int, ...] = ()
+) -> list[Idea]:
+    """Ideas waiting for a place lookup, oldest first, less those suggested by `holding`."""
+    marks = ", ".join("?" for _ in holding)
+    held = f" AND (i.suggested_by IS NULL OR i.suggested_by NOT IN ({marks}))" if holding else ""
     rows = conn.execute(
-        f"{_SELECT} WHERE i.enrichment = 'pending' AND i.status != 'dropped' ORDER BY i.id LIMIT ?",
-        (limit,),
+        f"{_SELECT} WHERE i.enrichment = 'pending' AND i.status != 'dropped'{held} "
+        "ORDER BY i.id LIMIT ?",
+        (*holding, limit),
     )
     return [Idea.from_row(row) for row in rows]
 

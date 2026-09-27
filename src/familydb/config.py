@@ -172,6 +172,10 @@ class Settings(BaseSettings):
     # Dollars a day across every model call, estimated from agent/providers/prices.py and checked
     # before each call. Days are the family's. 0 turns the limit off.
     daily_spend_limit: float = Field(default=2.0, ge=0, le=500)
+    # Each kid's own share of the day, checked before each of her messages (docs/WISHES.md).
+    kid_daily_spend: float = Field(default=0.25, ge=0, le=50)
+    # The hour, at home, when what a kid's messages gave to look up is looked up, all at once.
+    kid_lookup_hour: int = Field(default=19, ge=0, le=23)
     anthropic_fallbacks: bool = True
     # An hour, because a family writes in bursts with long gaps: a five-minute cache would be
     # cold almost every time and the whole prefix would be paid for again.

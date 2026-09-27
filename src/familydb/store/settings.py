@@ -30,6 +30,8 @@ BEHAVIOUR = (
     "worker_effort",
     "max_output_tokens",
     "daily_spend_limit",
+    "kid_daily_spend",
+    "kid_lookup_hour",
     "anthropic_cache_ttl",
     "agent_max_iterations",
     "worker_max_iterations",

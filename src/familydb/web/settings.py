@@ -971,6 +971,7 @@ LINE_GROUPS = (
         True,
         (
             "limit_reached",
+            "kid_limit",
             "limit_partial",
             "gave_up",
             "gave_up_partly",

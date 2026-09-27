@@ -7,7 +7,7 @@ import logging
 from contextlib import closing
 from typing import Any
 
-from familydb import voice
+from familydb import roles, voice
 from familydb.agent import spending
 from familydb.agent.loop import MessagesAPI
 from familydb.agent.spending import SpendingLimitReached
@@ -17,7 +17,7 @@ from familydb.availability import enrichment_available
 from familydb.config import Settings
 from familydb.dates import utc_iso
 from familydb.errors import AgentError
-from familydb.store import ideas, messages, places
+from familydb.store import ideas, members, messages, places
 from familydb.store.db import transaction
 from familydb.store.ideas import GIFT, Idea
 from familydb.store.places import Place
@@ -191,6 +191,20 @@ def enrich_idea(app: App, conn: Any, idea: Idea, *, api: MessagesAPI | None = No
     return "failed"
 
 
+def _held_back(app: App, conn: Any) -> tuple[int, ...]:
+    """Whose ideas wait for the kids' lookup hour: the kids', batched into one pass a day
+    (docs/WISHES.md), outside that hour; nobody's within it."""
+    local = app.clock.now().astimezone(app.settings.tzinfo)
+    if local.hour == app.settings.kid_lookup_hour:
+        return ()
+    kids = [
+        m.id
+        for m in members.list_all(conn, active_only=False)
+        if roles.may(m.role, "wish") and not roles.may(m.role, "decide")
+    ]
+    return tuple(kids)
+
+
 def run_enrichment(
     app: App,
     *,
@@ -213,7 +227,9 @@ def run_enrichment(
             idea = ideas.get(conn, idea_id)
             batch = [idea] if idea is not None else []
         else:
-            batch = ideas.pending_enrichment(conn, limit=limit or app.settings.enrich_batch)
+            batch = ideas.pending_enrichment(
+                conn, limit=limit or app.settings.enrich_batch, holding=_held_back(app, conn)
+            )
         if not batch:
             return counts
         if spending.used_up(conn, app.settings, app.clock.now()):

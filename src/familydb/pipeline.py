@@ -496,6 +496,14 @@ def _answer(
             "no model key",
             voice.say(app.settings, "no_key", seed=inbound_id) if notify else None,
         )
+    kid = roles.may(member.role, "wish") and not roles.may(member.role, "decide")
+    if kid and spending.kid_used_up(conn, app.settings, app.clock.now(), member.id):
+        # Her own share of the day is spent: said by code, with no call, and not tried again.
+        log.info("message %s: %s's share of the day is used up", inbound_id, member.id)
+        with transaction(conn):
+            messages.give_up(conn, inbound_id)
+        notice = voice.say(app.settings, "kid_limit", seed=inbound_id, kid=member.display_name)
+        return _fail(app, conn, msg, inbound_id, "kid share used up", notice if notify else None)
     try:
         result = _think(
             app, msg, member, inbound_id, api, conn, retry=retry, kind=kind, taken=taken

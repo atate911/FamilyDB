@@ -185,6 +185,16 @@ def spent_today(conn: sqlite3.Connection, settings: Settings, now: datetime) -> 
     return calls.spent_since(conn, since=day_start(settings, now))
 
 
+def kid_used_up(
+    conn: sqlite3.Connection, settings: Settings, now: datetime, member_id: int
+) -> bool:
+    """Whether a kid's own share of the day is spent (docs/WISHES.md). Checked before each of
+    her messages, so one message may cross it; the family's limit still holds every call."""
+    share = settings.kid_daily_spend
+    spent = calls.spent_since_by(conn, since=day_start(settings, now), member_id=member_id)
+    return bool(share) and spent >= share
+
+
 def used_up(conn: sqlite3.Connection, settings: Settings, now: datetime) -> bool:
     limit = settings.daily_spend_limit
     return bool(limit) and spent_today(conn, settings, now) >= limit
