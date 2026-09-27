@@ -16,7 +16,7 @@ from calendar import monthrange
 from datetime import UTC, date, datetime, timedelta, tzinfo
 from typing import Any
 
-from familydb import voice
+from familydb import audience, voice
 from familydb.dates import utc_iso
 from familydb.errors import ToolError
 from familydb.store import ideas, members, messages, tasks, wishes
@@ -179,13 +179,12 @@ def update(
                 message = messages.get(conn, reminder.message_id)
                 if message:
                     due_when = late_note(reminder.remind_at, message.received_at, settings.tzinfo)
-            gifts = gifts_for(conn, latest)
-            words = reminder_text(
-                latest,
-                settings,
-                due_when=due_when,
-                gifts=gifts,
-                wished=birthday_wishes(conn, latest),
+            queued = messages.get(conn, reminder.message_id) if reminder else None
+            channel, chat_id = (
+                (queued.channel, queued.chat_id) if queued else (latest.channel, latest.chat_id)
+            )
+            words = reminder_for(
+                conn, latest, settings, channel=channel, chat_id=chat_id, due_when=due_when
             )
             tasks.reword_queued(conn, task_id, words)
         return latest
@@ -316,6 +315,28 @@ def gifts_for(conn: sqlite3.Connection, task: Task) -> list[Idea]:
     return ideas.gifts_for(conn, task.gift_for) if task.gift_for else []
 
 
+def reminder_for(
+    conn: sqlite3.Connection,
+    task: Task,
+    settings: Any,
+    *,
+    channel: str,
+    chat_id: str,
+    due_when: str | None = None,
+) -> str:
+    """The reminder as it reads in the chat it goes to (`reminder_text`), which decides whether
+    it speaks plainly and whether the gifts go with it."""
+    return reminder_text(
+        task,
+        settings,
+        due_when=due_when,
+        gifts=gifts_for(conn, task),
+        wished=birthday_wishes(conn, task),
+        plain=audience.plain(conn, channel, chat_id),
+        presents=audience.everyone_may(conn, channel, chat_id, "decide"),
+    )
+
+
 def reminder_text(
     task: Task,
     settings: Any,
@@ -323,20 +344,26 @@ def reminder_text(
     due_when: str | None = None,
     gifts: list[Idea] | None = None,
     wished: list[str] | None = None,
+    plain: bool = False,
+    presents: bool = True,
 ) -> str:
     """The reminder as sent, in the assistant's voice. `due_when` marks one sent late; a
     birthday's (`gift_for`) goes with the gift ideas saved for them, or says there are none,
-    and with what is on their own birthday wish list, when there is anything."""
+    and with what is on their own birthday wish list, when there is anything.
+
+    Where it goes decides the rest (audience.py): `plain` where a kid reads, so a late one does
+    not say the bot was off; and without `presents`, where somebody reads who may not see the
+    gifts, a birthday's goes as the reminder alone."""
     who = f" ({task.owner})" if task.owner else ""
     facts = {"title": task.title, "who": who, "task": task.id}
     # Each time it is due is its own message, by the reminder in force: a snoozed reminder may
     # take another of her wordings, and the same one worded again (a changed title) the same.
     seed = f"{task.id}:{task.reminder.id if task.reminder else ''}"
     if due_when:
-        words = voice.say(settings, "reminder_late", seed=seed, due=due_when, **facts)
+        words = voice.say(settings, "reminder_late", seed=seed, plain=plain, due=due_when, **facts)
     else:
         words = voice.say(settings, "reminder", seed=seed, **facts)
-    if not task.gift_for:
+    if not task.gift_for or not presents:
         return words
     listed = ", ".join(f"#{idea.id} {idea.title}" for idea in gifts or [])
     event = "gift_ideas" if listed else "gift_ideas_none"

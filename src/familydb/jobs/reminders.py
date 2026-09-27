@@ -14,13 +14,7 @@ from familydb.app import App
 from familydb.dates import utc_iso
 from familydb.store import messages, tasks
 from familydb.store.db import transaction
-from familydb.task_service import (
-    birthday_wishes,
-    gifts_for,
-    late_note,
-    reminder_text,
-    schedule_next,
-)
+from familydb.task_service import late_note, reminder_for, schedule_next
 
 
 def run_reminders(app: App) -> int:
@@ -35,16 +29,13 @@ def run_reminders(app: App) -> int:
                 if task is None:
                     continue
                 due_when = late_note(reminder.remind_at, now, app.clock.tz)
+                channel, chat = task.channel, task.chat_id
                 out = messages.insert_out(
                     conn,
-                    channel=task.channel,
-                    chat_id=task.chat_id,
-                    text=reminder_text(
-                        task,
-                        app.settings,
-                        due_when=due_when,
-                        gifts=gifts_for(conn, task),
-                        wished=birthday_wishes(conn, task),
+                    channel=channel,
+                    chat_id=chat,
+                    text=reminder_for(
+                        conn, task, app.settings, channel=channel, chat_id=chat, due_when=due_when
                     ),
                     now=now,
                     buttons=buttons.for_reminder(task.id),
@@ -54,7 +45,7 @@ def run_reminders(app: App) -> int:
                 due = datetime.fromisoformat(reminder.remind_at)
                 schedule_next(conn, task, after=max(moment, due), zone=app.clock.tz)
                 event = "reminder_late" if due_when else "reminder"
-                queued.append((out.id, event, task.channel, task.chat_id, task.title))
+                queued.append((out.id, event, channel, chat, task.title))
         # Committed first: sending marks the message delivered from a connection of its own.
         sent = sum(
             voice.hand_over(

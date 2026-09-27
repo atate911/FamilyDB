@@ -124,7 +124,7 @@
           <h2>Coming up</h2>
           <a href="{{ url_for('web.plans') }}">All plans{{ icon('right') }}</a>
         </div>
-        {% if source != 'google' %}<p class="muted source source-{{ source }}">{{ source_note }}</p>{% endif %}
+        {% if source != 'google' and visitor().may('browse') %}<p class="muted source source-{{ source }}">{{ source_note }}</p>{% endif %}
         <ol class="panel plain agenda">
           {% for entry in coming[1:] %}
             <li class="{{ 'is-today' if entry.on_today }}">

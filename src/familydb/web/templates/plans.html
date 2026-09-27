@@ -62,7 +62,7 @@
     <a href="{{ url_for('web.plans') }}" aria-current="page">{{ icon('list') }}List</a>
     <a href="{{ url_for('web.plans_month') }}">{{ icon('grid') }}Month</a>
   </nav>
-  <p class="muted source source-{{ source }}">{{ source_note }}</p>
+  {% if visitor().may('browse') %}<p class="muted source source-{{ source }}">{{ source_note }}</p>{% endif %}
   <section class="panel">
     <h2>Coming up</h2>
     {% if upcoming %}

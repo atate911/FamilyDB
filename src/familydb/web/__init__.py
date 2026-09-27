@@ -213,9 +213,12 @@ def create_app(app: App, *, api: Any = None) -> Flask:
         # there is a her at all, both from the persona in force. With no persona the bot is
         # FamilyDB and the place is "Chat".
         her = personas.active(app.settings)
+        # A kid sees nothing of how it works, its version included (roles.py `browse`).
+        who = auth.visitor()
+        plain = who.member is not None and not who.may("browse")
         return {
             "site_title": app.settings.web_title,
-            "footer": views.footer(__version__),
+            "footer": views.footer(__version__, plain=plain),
             "assistant": her.name,
             "has_persona": her is not personas.PLAIN,
         }

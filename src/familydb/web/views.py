@@ -57,6 +57,8 @@ DETAILS = {
 # The last line of every page. The product's name, not the page's title, which the family may
 # change: the copyright is in the software, not in what they call it.
 FOOTER = "FamilyDB © 2026 by Andrew Tate. Version v{version}. All rights reserved."
+# The same without the version, for somebody signed in who does not see how it works (a kid).
+FOOTER_PLAIN = "FamilyDB © 2026 by Andrew Tate. All rights reserved."
 # Each role in the page's words, for the Family page and setup. What each may do is decided in
 # familydb/roles.py; this is only how the page says it.
 ROLE_WORDS = {
@@ -1224,9 +1226,10 @@ def knock_row(knock: Any, tz: Any) -> dict[str, Any]:
     }
 
 
-def footer(version: str) -> str:
-    """The copyright and version line at the foot of every page."""
-    return FOOTER.format(version=version)
+def footer(version: str, *, plain: bool = False) -> str:
+    """The copyright and version line at the foot of every page; `plain` leaves the version
+    out, for somebody who does not see how the bot works (roles.py `browse`)."""
+    return FOOTER_PLAIN if plain else FOOTER.format(version=version)
 
 
 # -- the kids' wish lists (docs/WISHES.md) --------------------------------------------------------

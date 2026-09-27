@@ -23,7 +23,7 @@
 {% endmacro %}
 {% block content %}
 {{ page_head('Things to do', 'Errands, appointments to arrange, and things you mean to get done.', 'todo') }}
-<p class="muted small">Times use {{ zone }}. A deadline or preferred window does not set a reminder or book your calendar.</p>
+{% if visitor().may('browse') %}<p class="muted small">Times use {{ zone }}. A deadline or preferred window does not set a reminder or book your calendar.</p>{% endif %}
 
 {% if visitor().may('change') %}
 <details class="panel" {% if not rows %}open{% endif %}>
@@ -52,7 +52,7 @@
   <div class="task-head">
     {% if task.status == 'open' %}{{ tick(task.id, task.revision, task.title, 'tasks') }}
     {%- else %}<span class="task-box" aria-hidden="true">{% if task.status == 'done' %}{{ icon('check') }}{% elif task.status == 'cancelled' %}{{ icon('x') }}{% endif %}</span>{% endif %}
-    <h2><span class="muted">#{{ task.id }} ·</span> {{ task.title }}</h2>
+    <h2>{% if visitor().may('browse') %}<span class="muted">#{{ task.id }} ·</span> {% endif %}{{ task.title }}</h2>
   </div>
   <p class="meta muted">
     <span>{{ icon('user') }}{{ task.owner or 'Household' }}</span>
@@ -64,7 +64,9 @@
     {%- if row.nudge and row.nudge.on %} · {{ assistant }} brings it up on {{ row.nudge.on }}{% if row.nudge.last %}, last on {{ row.nudge.last }}{% endif %}
     {%- elif row.nudge %} · not a day or part of the day {{ assistant }} can read, so it comes up only when asked about{% endif %}</p>{% endif %}
   {% if row.repeats %}<p class="muted">{{ row.repeats }}</p>{% endif %}
-  {% if task.reminder %}<p class="reminder">{{ icon('bell') }}Reminder: {{ row.reminder_time }} · {{ 'Delivered' if task.reminder.delivered_at else ('Waiting for delivery' if task.reminder.message_id else 'Scheduled') }} · {{ 'App Chat' if task.channel=='web' else 'Original Telegram chat' }}</p>{% else %}<p class="muted small">No active reminder.</p>{% endif %}
+  {# How a reminder is getting there is the workings: a kid sees only when it is. #}
+  {% if task.reminder and not visitor().may('browse') %}<p class="reminder">{{ icon('bell') }}Reminder: {{ row.reminder_time }}</p>
+  {% elif task.reminder %}<p class="reminder">{{ icon('bell') }}Reminder: {{ row.reminder_time }} · {{ 'Delivered' if task.reminder.delivered_at else ('Waiting for delivery' if task.reminder.message_id else 'Scheduled') }} · {{ 'App Chat' if task.channel=='web' else 'Telegram' }}</p>{% else %}<p class="muted small">No active reminder.</p>{% endif %}
   {% if visitor().may('change') %}
   <details class="more"><summary>{{ icon('edit') }}Edit, complete, or snooze</summary>
     <form class="form" method="post" action="{{ url_for('edits.edit_task',task_id=task.id) }}">

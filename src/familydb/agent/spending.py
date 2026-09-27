@@ -64,13 +64,19 @@ def done_lines(actions: list[dict[str, Any]]) -> str:
 
 
 def completed_reply(
-    actions: list[dict[str, Any]], settings: Settings, message_id: int | None = None
+    actions: list[dict[str, Any]],
+    settings: Settings,
+    message_id: int | None = None,
+    *,
+    plain: bool = False,
 ) -> str:
     """Explain durable progress without spending another model call to acknowledge it. The
-    message being answered, when there is one, chooses the wording (`voice.say`)."""
+    message being answered, when there is one, chooses the wording (`voice.say`); `plain` is for
+    a chat a kid reads (audience.py)."""
     from familydb import voice
 
-    return done_lines(actions) + " " + voice.say(settings, "limit_partial", seed=message_id)
+    said = voice.say(settings, "limit_partial", seed=message_id, plain=plain)
+    return done_lines(actions) + " " + said
 
 
 class SpendingLimitReached(AgentError):
