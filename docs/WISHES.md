@@ -15,7 +15,8 @@ This file is what the family decided and how it is built.
   conversation with Vera that the parents can read. Everything goes through tools, so another
   home app can be connected later.
 - **What a kid may do** (`roles.py`): sign in, read the ideas and the plans (not gifts), talk to
-  Vera, keep her own wishes, and see her own things to do. Nothing else changes from her screen.
+  Vera, keep her own wishes, and see and tick off her own things to do (the family decided she
+  checks off her own). Nothing else changes from her screen.
 - **Everyday wishes** have daily rules. **Christmas and birthday wishes** are flagged
   (`occasion`), kept apart, and have looser rules.
 - **"Not this time" locks an everyday wish** for 14 days, then 30, then 90, then 120, then a year,
@@ -57,6 +58,7 @@ This file is what the family decided and how it is built.
 | `chat` | talk to Vera | yes | yes | yes |
 | `wish` | keep your own wish lists | yes | yes | yes |
 | `change` | the forms that change ideas, plans, things to do | yes | yes | no |
+| `own_tasks` | tick off, or change, your own things to do (page and chat) | yes | yes | yes |
 | `browse` | memory, status, everybody's things to do | yes | yes | no |
 | `decide` | see every kid's wishes and answer them | yes | yes | no |
 | `manage` | settings, setup, the family list | yes | no | no |
@@ -153,11 +155,17 @@ answer comes from (a tap, the chat, the page), she is told in her own conversati
 
 ### Screens (built)
 
-A kid's Home: her conversation with Vera, her wishes (the top of the everyday list, the Christmas
+The page says "list" and "I’d like" rather than "wish", which the family found too aspirational
+(`docs/STYLE.md`, "A kid's screen"); here, in the code and to the model each is still a wish.
+
+A kid's Home: her conversation with Vera, her list (the top of the everyday list, the Christmas
 and birthday lists with their countdowns, new answers), what is coming up (no gifts), and her own
-things to do. Her bar: Home, Vera, Wishes, Ideas, Plans, To do. A parent's Home gains a Kids card:
-each girl's open wishes, anything flagged, requests waiting. `/wishes` is the lists, reordered by
-buttons, and by dragging where scripts run (`static/wishes.js`).
+things to do. Her bar: Home, Vera, Ideas, Plans, To do, My list. A parent's Home gains a card, the
+kids' lists: each girl's open wishes, anything flagged, requests waiting. `/wishes` opens, for a
+kid, on one big box to tell Vera anything, her conversation, where Vera sorts what she says (no
+separate form to add to the list: each addition is a chat message, within her daily count), then
+the lists, one line to a wish, reordered by buttons, and by dragging where scripts run
+(`static/wishes.js`).
 
 ## Settings (built)
 

@@ -2,6 +2,27 @@
 {% from "_ui.html" import icon, kind_label, page_head, crt, radar %}
 {% block title %}Ideas · {{ site_title }}{% endblock %}
 {% block content %}
+  {# Somebody who does not browse the household (a kid) sees the ideas as plain cards, what and
+     where, and nothing to search, filter or count, nor how they are looked up (docs/STYLE.md,
+     "A kid's screen"). #}
+  {% set browsing = visitor().may('browse') %}
+  {% if not browsing %}
+    {{ page_head('Ideas', 'Places to go and things to try together. Tell ' ~ assistant ~ ' if you have one.', 'idea') }}
+    <ul class="cards">
+      {% for row in rows %}
+        <li class="panel card">
+          <p class="card-kind">{{ kind_label(row.kind) }}</p>
+          <h2><a href="{{ url_for('web.idea', idea_id=row.id) }}">{{ row.title }}</a></h2>
+          {% if row.where or row.on %}<p class="muted meta">
+            {% if row.where %}<span>{{ icon('pin') }}{{ row.where }}</span>{% endif %}
+            {% if row.on %}<span>{{ icon('plans') }}{{ row.on }}</span>{% endif %}
+          </p>{% endif %}
+        </li>
+      {% else %}
+        <li class="panel muted empty">{{ icon('idea') }}<span>No ideas yet. Tell {{ assistant }} one.</span></li>
+      {% endfor %}
+    </ul>
+  {% else %}
   {% call page_head('Ideas', 'Places to go, things to try, and everything the family has mentioned.', 'idea') %}
     {% if visitor().may('change') %}<a class="button" href="{{ url_for('web.new_idea') }}">{{ icon('plus') }}Add an idea</a>{% endif %}
   {% endcall %}
@@ -140,4 +161,5 @@
       </li>
     {% endfor %}
   </ul>
+  {% endif %}
 {% endblock %}

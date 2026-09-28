@@ -9,7 +9,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from familydb import task_service, windows
+from familydb import roles, task_service, windows
 from familydb.dates import parse_datetime, utc_iso
 from familydb.errors import ToolError
 from familydb.store import members, messages, tasks
@@ -160,6 +160,7 @@ def add_task(ctx: ToolContext, args: AddTaskInput) -> dict[str, Any]:
     writes=True,
 )
 def update_task(ctx: ToolContext, args: UpdateTaskInput) -> dict[str, Any]:
+    _may_update(ctx, args.task_id)
     values = {
         k: v
         for k, v in args.model_dump(
@@ -201,6 +202,20 @@ def update_task(ctx: ToolContext, args: UpdateTaskInput) -> dict[str, Any]:
         stop_repeating=args.stop_repeating,
     )
     return _with_nudges(ctx, task, {"task": task.model_dump(mode="json")})
+
+
+def _may_update(ctx: ToolContext, task_id: int) -> None:
+    """Whoever may change things may change any task; somebody who may only change their own
+    (a kid, roles.py `own_tasks`) only a task that is theirs. A job, with nobody asking, any."""
+    if ctx.member is None or roles.may(ctx.member.role, "change"):
+        return
+    task = tasks.get(ctx.conn, task_id)
+    if (
+        not roles.may(ctx.member.role, "own_tasks")
+        or task is None
+        or task.owner_id != ctx.member.id
+    ):
+        raise ToolError("only your own things to do can be changed; ask a parent about this one")
 
 
 def _repeat(args: AddTaskInput | UpdateTaskInput) -> dict[str, Any] | None:

@@ -101,8 +101,10 @@
 {# The tick beside an open task: marks it done where it stands, through `update_task` at the
    revision it was drawn at, and comes back to `back` (home or tasks). Ticking is a change, so a
    role that may not change things (familydb/roles.py) is shown the empty box instead. #}
+{# Anybody's for whoever may change things; for a kid, who sees only her own, hers
+   (roles.py `own_tasks`, which update_task holds to her own). #}
 {% macro tick(task_id, revision, title, back) -%}
-  {% if visitor().may('change') -%}
+  {% if visitor().may('change') or visitor().may('own_tasks') -%}
   <form class="tick-form" method="post" action="{{ url_for('edits.finish_task', task_id=task_id) }}">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
     <input type="hidden" name="once" value="{{ once_token() }}" />
@@ -113,6 +115,30 @@
   {%- else -%}
   <span class="task-box" aria-hidden="true"></span>
   {%- endif %}
+{%- endmacro %}
+
+{# Open tasks as a checklist, soonest first, each ticked off where it stands (`tick`), with its
+   owner when `owners` and when it is due, in words (views.task_brief). The caller's block is
+   what an empty list says. On Home, and on Things to do for somebody who sees only their own. #}
+{% macro checklist(tasks, back, owners=true) -%}
+  <ul class="panel plain checklist">
+    {% for task in tasks %}
+      <li>
+        {{ tick(task.id, task.revision, task.title, back) }}
+        <div class="checklist-body">
+          <div class="what">{{ task.title }}</div>
+          <div class="when">
+            {%- if owners and task.owner %}<span>{{ task.owner }}</span>{% endif -%}
+            {%- if task.due %}<span class="{{ 'warn' if task.late }}">{{ task.due }}</span>
+            {%- elif task.window %}<span>{{ task.window }}</span>{% endif -%}
+            {%- if task.reminder %}<span class="reminder">{{ icon('bell') }}{{ task.reminder }}</span>{% endif -%}
+          </div>
+        </div>
+      </li>
+    {% else %}
+      <li class="muted empty">{{ icon('todo') }}<span>{{ caller() }}</span></li>
+    {% endfor %}
+  </ul>
 {%- endmacro %}
 
 {# A plan's day as a small calendar leaf: month, day, weekday. #}

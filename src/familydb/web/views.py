@@ -88,11 +88,18 @@ REFUSALS = {
     ),
     "chat": ("Not yet", "Talking to {name} here is not part of your role yet. Ask an admin."),
     "browse": ("For a parent", "This page is for the grown-ups. Ask a parent if you need it."),
-    "wish": ("Not yet", "Keeping a wish list is not part of your role. Ask an admin."),
-    "decide": ("For a parent", "Answering wishes is a parent's job."),
+    "wish": (
+        "Not yet",
+        "Keeping a list is not part of your role. Ask an admin.",
+    ),
+    "decide": ("For a parent", "Answering the kids' lists is a parent's job."),
     "change": (
         "Not yet",
         "Changing ideas, plans and things to do is not part of your role yet. Ask an admin.",
+    ),
+    "own_tasks": (
+        "Not yet",
+        "Ticking off your things to do is not part of your role yet. Ask an admin.",
     ),
 }
 MAP_URL = "https://www.openstreetmap.org/?mlat={lat}&mlon={lon}#map=17/{lat}/{lon}"
@@ -303,8 +310,12 @@ TODAY_QUESTION = "What should we do today?"
 STARTERS = ("Remind me to ", "We should try ")
 
 
-def starters(today: date) -> list[dict[str, str]]:
-    """The suggestions under the box: what each puts in it, and how it reads as a link."""
+def starters(today: date, *, kid: bool = False) -> list[dict[str, str]]:
+    """The suggestions under the box: what each puts in it, and how it reads as a link. None for
+    a kid, whose box is the one natural place to say anything (docs/STYLE.md, "A kid's screen"),
+    and whose ways to start would only be words for her to say instead of her own."""
+    if kid:
+        return []
     question = TODAY_QUESTION if today.weekday() >= 5 else WEEKEND_QUESTION
     return [
         {"say": text, "label": text.rstrip() + ("…" if text.endswith(" ") else "")}
@@ -1252,13 +1263,20 @@ CONCERN_WORDS = {
     "inappropriate": "not OK",
     "too_many": "too many in one day",
 }
+# The same, as the kid it happened to reads it: what to do next, kindly, rather than a verdict.
+KID_CONCERN_WORDS = {
+    "rule": "a house rule: ask a parent",
+    "sibling": "about a sister or brother",
+    "inappropriate": "not one for your list",
+    "too_many": "one for another day",
+}
 # What asking for a wish on the page came to, by wish_service's result.
 WISH_SAID = {
     "added": "On your list: {title}.",
     "duplicate": "Already on your list: {title}.",
     "locked": "Not yet: {title} was a not this time. You can ask again after {again}, or put it "
     "on your Christmas or birthday list.",
-    "too_many": "That's a lot of wishes for one day. Let's keep some for tomorrow.",
+    "too_many": "That's a lot to ask for in one day. Let's keep some for tomorrow.",
     "list_full": "That list is full. Take something off it first.",
 }
 WISH_MOVED = "Moved."
@@ -1290,6 +1308,7 @@ def wish_row(wish: Any, today: date) -> dict[str, Any]:
         "note": wish.answer_note,
         "again": day_words(wish.locked_until, today) if wish.status == "declined" else "",
         "concern": CONCERN_WORDS.get(wish.concern or ""),
+        "concern_kid": KID_CONCERN_WORDS.get(wish.concern or ""),
         "review": wish.parent_review,
     }
 

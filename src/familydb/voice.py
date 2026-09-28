@@ -280,7 +280,7 @@ EVENTS: dict[str, Event] = {
     ),
     "kid_share": Event(
         "A kid's own share of the day used up",
-        "That's all our chatting for today, {kid}. Come back tomorrow! Your wish list is still "
+        "That's all our chatting for today, {kid}. Come back tomorrow! Your list is still "
         "there, and you can move things around on it.",
         ("kid",),
         {"kid": "Mia"},

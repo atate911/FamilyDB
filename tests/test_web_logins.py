@@ -460,9 +460,10 @@ def test_three_roles_and_what_a_kid_may_do() -> None:
     assert roles.ROLES == ("admin", "parent", "kid")
     assert roles.PERMISSIONS["admin"] > roles.PERMISSIONS["parent"] > roles.PERMISSIONS["kid"]
     assert roles.PERMISSIONS["admin"] - roles.PERMISSIONS["parent"] == {"manage"}
-    # A kid reads, talks to the bot and keeps her own wishes; she changes nothing else, sees
+    # A kid reads, talks to the bot, keeps her own wishes and ticks off her own things to do;
+    # she changes nothing else, sees
     # none of the household's pages, and answers nobody's wishes.
-    assert roles.PERMISSIONS["kid"] == {"sign_in", "chat", "wish"}
+    assert roles.PERMISSIONS["kid"] == {"sign_in", "chat", "wish", "own_tasks"}
     assert roles.may("parent", "chat") and not roles.may("parent", "manage")
     assert not roles.may("member", "sign_in")  # a role that is not one of the three may do nothing
 
@@ -561,7 +562,8 @@ def test_home_offers_only_what_a_role_may_do(app, sam, family, monkeypatch) -> N
         )
     home = girls.get("/").text
     assert "The swings are waiting." in home and "The park is free." not in home
-    assert "Buy paper towels" in home and f'action="/task/{towels}/done"' not in home
+    # Her own things to do she ticks off herself (roles.py `own_tasks`).
+    assert "Buy paper towels" in home and f'action="/task/{towels}/done"' in home
 
     monkeypatch.setitem(roles.PERMISSIONS, "kid", frozenset({"sign_in"}))
     home = girls.get("/")

@@ -57,14 +57,19 @@
   </li>
 {% endmacro %}
 {% block content %}
-  {{ page_head('Plans', none, 'plans') }}
+  {# Somebody who does not browse the household (a kid) gets the one list, what is coming up, with
+     no way of showing it to choose (docs/STYLE.md, "A kid's screen"). #}
+  {% set browsing = visitor().may('browse') %}
+  {{ page_head('Plans', none if browsing else 'What the family is doing next.', 'plans') }}
+  {% if browsing %}
   <nav class="tabs" aria-label="How to show the plans">
     <a href="{{ url_for('web.plans') }}" aria-current="page">{{ icon('list') }}List</a>
     <a href="{{ url_for('web.plans_month') }}">{{ icon('grid') }}Month</a>
   </nav>
-  {% if visitor().may('browse') %}<p class="muted source source-{{ source }}">{{ source_note }}</p>{% endif %}
+  <p class="muted source source-{{ source }}">{{ source_note }}</p>
+  {% endif %}
   <section class="panel">
-    <h2>Coming up</h2>
+    {% if browsing %}<h2>Coming up</h2>{% endif %}
     {% if upcoming %}
       <ul class="plain agenda">{% for plan in upcoming %}{{ plan_line(plan, can_schedule) }}{% endfor %}</ul>
     {% else %}

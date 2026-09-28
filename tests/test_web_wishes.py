@@ -8,7 +8,7 @@ from contextlib import closing
 
 import pytest
 
-from familydb.store import db, members, wishes
+from familydb.store import db, members, tasks, wishes
 from tests.test_web_logins import KIDS, _as, _start, _tokens, app, sam  # noqa: F401
 
 CHLOES = "chloe chooses hers too"
@@ -48,13 +48,16 @@ def _open(served, member_id, occasion=None):
 def test_a_kid_keeps_her_own_list_on_the_page(app, family, girls) -> None:  # noqa: F811
     kid = girls["mine"]
     page = kid.get("/wishes")
-    assert page.status_code == 200 and "My wishes" in page.text
+    assert page.status_code == 200 and "My list" in page.text
     assert 'href="/wishes"' in kid.get("/").text  # in her bar, and on her Home
     assert "On your list: Lego." in _said(_add(kid, "Lego"))
     _add(kid, "Kite")
     _add(kid, "Roller skates", "birthday")
     mine = _open(app, family["girls"].id)
     assert [w.title for w in mine] == ["Lego", "Kite"]
+    # One line to a wish, which opens to its buttons, with a grip to drag it by.
+    listed = kid.get("/wishes").text
+    assert listed.count('<details class="wish-open">') == 3 and 'class="wish-grip"' in listed
     # Kite to the top, with the button's form.
     kite = mine[1]
     kid.post(f"/wish/{kite.id}/move", data={**_form(kid, "/wishes"), "position": "1"})
@@ -66,7 +69,8 @@ def test_a_kid_keeps_her_own_list_on_the_page(app, family, girls) -> None:  # no
     kid.post(f"/wish/{kite.id}/withdraw", data=_form(kid, "/wishes"))
     assert _open(app, family["girls"].id) == []
     home = kid.get("/").text
-    assert "My wishes" in home and "Roller skates" in home
+    # Home shows her everyday top three, and how far off the occasions are.
+    assert "My list" in home and "Christmas in" in home
 
 
 def test_a_sister_sees_none_of_it_and_cannot_touch_it(app, family, girls) -> None:  # noqa: F811
@@ -92,9 +96,9 @@ def test_a_parent_sees_every_kid_and_answers(app, family, sam, girls) -> None:  
     _add(girls["mine"], "A cat")
     _add(girls["sister"], "Slime")
     overview = sam.get("/wishes").text
-    assert "A cat" in overview and "Slime" in overview and "Wishes" in overview
+    assert "A cat" in overview and "Slime" in overview and "The kids\u2019 lists" in overview
     home = sam.get("/").text
-    assert "The kids' wishes" in home and "A cat" in home
+    assert "The kids\u2019 lists" in home and "A cat" in home
     cat = _open(app, family["girls"].id)[0]
     hers = sam.get(f"/wishes?who={family['girls'].id}").text
     assert "A cat" in hers and "Slime" not in hers
@@ -138,8 +142,89 @@ def test_ask_a_parent_is_a_button_where_it_was_offered(app, family, girls) -> No
         )
     page = girls["mine"].get("/wishes").text
     assert "more internet time" in page and "Ask a parent" in page
+    # Said to her as what to do next, not as the grown-ups' word for it.
+    assert "a house rule: ask a parent" in page
     asked = girls["mine"].post(
         f"/wish/{turned.wish.id}/ask", data=_form(girls["mine"], "/wishes"), follow_redirects=True
     )
     assert "Sent to a parent." in _said(asked)
     assert "Ask a parent</button>" not in girls["mine"].get("/wishes").text  # once
+
+
+def test_a_kid_home_speaks_to_her_and_offers_only_what_she_may(app, family, sam, girls) -> None:  # noqa: F811
+    """Her box is the one natural place to say anything, with no ways to start put in her mouth
+    (least of all the "we should" Vera nudges her away from), and no
+    empty list sends her to a form she would be refused (docs/STYLE.md, "A kid's screen")."""
+    from familydb.web.chat import KID_HOME_PROMPT
+
+    home = girls["mine"].get("/").text
+    assert 'class="starters"' not in home and "We should try" not in home
+    assert f'placeholder="{KID_HOME_PROMPT}"' in home
+    assert 'href="/ideas/new"' not in home and "plan an idea" not in home
+    assert "Tell Vera anything" not in home and 'href="/wishes"' in home
+    assert girls["mine"].get("/ideas/new").status_code == 403
+    # A grown-up's Home is as it was.
+    assert "We should try…" in sam.get("/").text and 'href="/ideas/new"' in sam.get("/").text
+
+
+def test_her_list_opens_on_one_box_for_anything(app, family, sam, girls) -> None:  # noqa: F811
+    """Where she lands on her list: one box, the chat's own, posting to her conversation, where
+    Vera sorts what she says; no second form to choose between. A parent's view of her list has
+    the add form and no chat box."""
+    page = girls["mine"].get("/wishes").text
+    assert 'action="/chat"' in page and "Tell Vera anything" in page
+    assert 'id="wish-add"' not in page and "Add to my list" not in page
+    parent = sam.get(f"/wishes?who={family['girls'].id}").text
+    assert 'action="/chat"' not in parent and "Tell Vera anything" not in parent
+    assert 'id="wish-add"' in parent
+
+
+def test_a_kid_sees_the_pages_simply(app, family, girls) -> None:  # noqa: F811
+    """Things to do, Plans and Ideas for a kid: what is hers or the family's, with nothing to
+    filter, count or choose between, and no workings (docs/STYLE.md, "A kid's screen")."""
+    kid = girls["mine"]
+    todo = kid.get("/tasks").text
+    assert "My things to do" in todo and 'role="search"' not in todo and "shown (up to" not in todo
+    plans = kid.get("/plans").text
+    assert (
+        "What the family is doing next." in plans and "plans/month" not in plans.split("<main")[-1]
+    )
+    ideas = kid.get("/ideas").text
+    assert 'role="search"' not in ideas and "details not looked up" not in ideas
+    home = kid.get("/").text
+    assert "Lately added" not in home
+
+
+def test_a_kid_ticks_off_her_own_things_to_do_and_nobody_else_s(app, family, girls) -> None:  # noqa: F811
+    """The family decided the girls tick off their own (roles.py `own_tasks`): the tick is hers,
+    and update_task, which the page and the chat both go through, refuses anybody else's."""
+    kid = girls["mine"]
+    with closing(app.connect()) as conn, db.transaction(conn):
+
+        def task(title, owner):
+            return tasks.insert(
+                conn,
+                title=title,
+                notes="",
+                owner_id=owner,
+                due_at=None,
+                preferred_window="",
+                operation_key=f"test-{title}",
+                channel="web",
+                chat_id="web",
+                now="2026-09-20T00:00:00Z",
+            )
+
+        swim = task("Pack swim bag", family["girls"].id)
+        car = task("Renew car registration", family["sam"].id)
+    page = kid.get("/tasks").text
+    assert f'action="/task/{swim}/done"' in page and "Renew car registration" not in page
+    tick = {**_tokens(kid, "/you"), "revision": "1"}
+    ticked = kid.post(f"/task/{swim}/done", data=tick, follow_redirects=True)
+    assert "Done: Pack swim bag!" in ticked.text  # no number: that is the workings
+    tick = {**_tokens(kid, "/you"), "revision": "1"}
+    refused = kid.post(f"/task/{car}/done", data=tick, follow_redirects=True)
+    assert "only your own things to do" in refused.text
+    with closing(app.connect()) as conn:
+        assert tasks.get(conn, swim).status == "done"
+        assert tasks.get(conn, car).status == "open"

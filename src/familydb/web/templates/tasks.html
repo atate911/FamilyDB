@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% from "_ui.html" import icon, page_head, tick %}
+{% from "_ui.html" import icon, page_head, tick, checklist %}
 {% block title %}Things to do · {{ site_title }}{% endblock %}
 {% macro fields(p, task=none, due_input='', row=none) %}
   <div class="field wide"><label for="{{ p }}-title">What needs doing</label>
@@ -22,6 +22,12 @@
   <p id="{{ p }}-repeat-help" class="wide muted hint">A repeat starts from the reminder: every week from Sunday 19:00, say. Counted from when it's done, it comes round that long after each time it is ticked off.</p>
 {% endmacro %}
 {% block content %}
+{# Somebody who sees only their own (a kid): what is left for her, as Home lists it, and nothing
+   else, no filters, no counts, no workings (docs/STYLE.md, "A kid's screen"). #}
+{% if simple %}
+{{ page_head('My things to do', 'What’s left for you, soonest first. Tell ' ~ assistant ~ ' to add one or to remind you.', 'todo') }}
+{% call checklist(briefs, 'tasks', owners=false) %}Nothing to do right now.{% endcall %}
+{% else %}
 {{ page_head('Things to do', 'Errands, appointments to arrange, and things you mean to get done.', 'todo') }}
 {% if visitor().may('browse') %}<p class="muted small">Times use {{ zone }}. A deadline or preferred window does not set a reminder or book your calendar.</p>{% endif %}
 
@@ -84,4 +90,5 @@
 </li>
 {% else %}<li class="panel muted empty">{{ icon('todo') }}<span>No tasks match.{% if visitor().may('change') %} Add something above, or ask {{ assistant }}.{% endif %}</span></li>{% endfor %}
 </ul>
+{% endif %}
 {% endblock %}

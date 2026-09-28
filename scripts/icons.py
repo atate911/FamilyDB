@@ -48,6 +48,7 @@ ICONS = {
     "family": "users",
     "gift": "gift",
     "grid": "calendar",
+    "grip": "menu",
     "heart": "heart",
     "home": "house",
     "hourglass": "hourglass",

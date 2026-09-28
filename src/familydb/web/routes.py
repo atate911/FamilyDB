@@ -19,7 +19,7 @@ from flask import (
     url_for,
 )
 
-from familydb import agenda, roles
+from familydb import agenda, personas, roles
 from familydb.app import App
 from familydb.availability import calendar_available, enrichment_available
 from familydb.dates import next_birthday
@@ -148,6 +148,7 @@ def home() -> Response | str:
     # The box and how the conversation stands are the chat's, so only for a role that may talk
     # to her (familydb/roles.py): nobody is shown a way into a page that would refuse them.
     talks = visitor.may("chat")
+    kid = chat.is_kid()
     with closing(app.connect()) as conn:
         progress = status_page.setup_progress(app, conn)
         if manages and not status_page.ready_to_answer(progress):
@@ -179,10 +180,10 @@ def home() -> Response | str:
         setup=unfinished,
         talk=talk,
         wishes=wished,
-        **chat.box(family, prompt=chat.HOME_PROMPT),
+        **chat.box(family, prompt=chat.KID_HOME_PROMPT if kid else chat.HOME_PROMPT),
         question=True,  # the box's label is her question, and the page's heading
         typed=chat.asked(),  # a way to start, followed with scripts off
-        starters=views.starters(today),
+        starters=views.starters(today, kid=kid),
     )
 
 
@@ -447,13 +448,26 @@ def tasks() -> str:
     status = request.args.get("status", "open")
     if status not in {"open", "done", "cancelled", "all"}:
         abort(400)
+    # Somebody who sees only their own (a kid) gets their open ones as a plain checklist, as
+    # Home lists them: no filters, no workings (docs/STYLE.md, "A kid's screen").
+    simple = not auth.visitor().may("browse")
+    if simple:
+        status = "open"
     with closing(app.connect()) as conn:
         rows = task_store.list_all(
-            conn, status=status, query=request.args.get("q", ""), owner_id=_own_only()
+            conn,
+            status=status,
+            query="" if simple else request.args.get("q", ""),
+            owner_id=_own_only(),
         )
         people = member_store.list_all(conn)
+    today = app.clock.today()
     return render_template(
         "tasks.html",
+        simple=simple,
+        briefs=[views.task_brief(task, app.settings.tzinfo, today) for task in rows]
+        if simple
+        else [],
         rows=[
             views.task_row(task, app.settings.tzinfo, nudging=app.settings.task_nudges)
             for task in rows
@@ -567,8 +581,18 @@ def wishes() -> str:
             shown = [_lists(conn, visitor.member, today)]
         else:
             abort(404)
+        family = [member.display_name for member in member_store.list_all(conn)]
+    # A kid lands on a box for anything at all, the chat's own, only if she may talk to her.
+    talk = (
+        {}
+        if visitor.may("decide") or not visitor.may("chat")
+        else chat.box(family, prompt=chat.KID_LIST_PROMPT)
+    )
     return render_template(
         "wishes.html",
+        talk=bool(talk),
+        ask_label=chat.KID_LIST_LABEL.format(name=personas.active(app.settings).name),
+        **talk,
         kids=shown,
         parent=visitor.may("decide"),
         one=bool(wanted) or not visitor.may("decide"),
