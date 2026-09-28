@@ -257,7 +257,9 @@ unit that will never start.
   Telegram included, go on as before. It lets in whoever is on SSH, undoes
   itself unless a second SSH session is shown to get in, fetches its lists
   again each week, and `countries allow ADDR` and `countries off` are there
-  for travel. `status` shows it, and when the certificate runs out.
+  for travel. Certificates look after themselves: port 80 alone opens to
+  everyone while one is missing or its renewal overdue, and shuts once it is
+  served. `status` shows it, and when the certificate runs out.
 - `scripts/uninstall.sh` removes the service and the installed files but keeps
   `.env`, `data/` and the backups, which is what a reinstall wants. `--purge`
   removes those too, after taking a backup and asking you to type a

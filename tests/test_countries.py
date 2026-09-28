@@ -125,6 +125,61 @@ def test_the_rules_load_and_load_again_in_place(tmp_path) -> None:
     assert loaded.stdout.split() == ["table", "inet", "familydb_countries"]
 
 
+def test_port_80_opens_for_everyone_only_while_the_certificate_window_is(tmp_path) -> None:
+    shut = _filter(tmp_path, "3.0.0.0/8\n").read_text()
+    assert "dport 80" not in shut
+    (tmp_path / "certificate-window").write_text("opened 2026-09-28T05:00:00Z\n")
+    opened = _filter(tmp_path, "3.0.0.0/8\n").read_text()
+    gate = opened.split("chain gate {")[1]
+    assert gate.index("tcp dport 80 accept") < gate.index("counter drop")
+    assert "tcp dport 443" not in opened  # only the port the certificate authority checks
+
+
+@pytest.mark.skipif(not shutil.which("openssl"), reason="needs openssl")
+def test_the_certificate_is_read_as_good_due_overdue_or_none(tmp_path) -> None:
+    """A real certificate, served by openssl, read at four moments of its life, and by a wrong
+    name and an untrusted authority, which a browser would not take either."""
+
+    make = (
+        "openssl req -x509 -newkey rsa:2048 -nodes -keyout ca.key -out ca.pem -days 30 "
+        "-subj '/CN=Test CA' && "
+        "openssl req -newkey rsa:2048 -nodes -keyout leaf.key -out leaf.csr "
+        "-subj '/CN=db.example.com' && "
+        "printf 'subjectAltName=DNS:db.example.com\\n' > ext && "
+        "openssl x509 -req -in leaf.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out leaf.pem "
+        "-days 90 -extfile ext"
+    )
+    subprocess.run([BASH, "-c", make], cwd=tmp_path, check=True, capture_output=True)
+    import socket
+
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    serve = f"exec openssl s_server -quiet -accept 127.0.0.1:{port} -cert leaf.pem -key leaf.key"
+    server = subprocess.Popen(
+        [BASH, "-c", serve], cwd=tmp_path, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
+    try:
+        import time
+
+        time.sleep(1)
+        day = 86400
+        now = int(time.time())
+        ca = str(tmp_path / "ca.pem")
+
+        def state(site: str, when: int, **env: str) -> str:
+            done = _shell(f"certificate_state {site} {port}", CERT_NOW=str(when), **env)
+            return done.stdout.split()[0]
+
+        assert state("db.example.com", now, CERT_CAFILE=ca) == "good"
+        assert state("db.example.com", now + 60 * day + 5 * 3600, CERT_CAFILE=ca) == "due"
+        assert state("db.example.com", now + 62 * day, CERT_CAFILE=ca) == "overdue"
+        assert state("other.example.com", now, CERT_CAFILE=ca) == "none"
+        assert state("db.example.com", now) == "none"  # an authority nobody trusts
+    finally:
+        server.kill()
+
+
 def test_whoever_is_on_ssh_is_found(tmp_path) -> None:
     stubs = (
         "who() { echo 'atate pts/0 2026-09-28 06:40 (23.234.83.83)'; }\n"

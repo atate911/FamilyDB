@@ -12,6 +12,14 @@
 # The address lists are ipdeny.com's, one per country, built from the regional registries. They
 # are fetched again each week; a download that fails, or that has shrunk by more than half, is
 # not used, and the last good list stays in force.
+#
+# One opening it makes by itself: port 80, to everyone, while the page's certificate is missing
+# or its renewal is overdue. Let's Encrypt checks a domain from more than one place before it
+# issues a certificate, and they need not all be in the countries let in. Caddy renews once a
+# third of a certificate's life is left, so one still unrenewed half a day into that stretch is
+# being turned away; the window opens then, and shuts again as soon as a fresh certificate is
+# served. Port 80 answers nothing but that check and a redirect. The hourly check does this, and
+# `maintain.sh countries` and `maintain.sh https` open it themselves when they need a certificate.
 
 [ -n "${FAMILYDB_COUNTRIES_SOURCED:-}" ] && return 0
 FAMILYDB_COUNTRIES_SOURCED=1
@@ -23,6 +31,10 @@ COUNTRIES_REFRESH=/etc/systemd/system/familydb-countries-refresh.service
 COUNTRIES_TIMER=/etc/systemd/system/familydb-countries-refresh.timer
 # shellcheck disable=SC2034  # read by maintain.sh
 COUNTRIES_UNDO=familydb-countries-undo
+# Present while port 80 is open to everyone for the certificate (above).
+COUNTRIES_WINDOW="${COUNTRIES_DIR}/certificate-window"
+# shellcheck disable=SC2034  # read by maintain.sh
+LIST_MAX_AGE=604800  # a week: the hourly check fetches the lists again when they are older
 # Never dropped, whatever the country: private, shared (CGNAT, Tailscale) and link-local ranges.
 ALWAYS_ALLOWED4="10.0.0.0/8 100.64.0.0/10 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16"
 ALWAYS_ALLOWED6="fc00::/7 fe80::/10"
@@ -100,6 +112,10 @@ countries_rules() { # countries_rules - the whole table, from the lists and the 
       if is_v6 "$addr"; then v6+=("$addr"); else v4+=("$addr"); fi
     done < "${COUNTRIES_DIR}/allow"
   fi
+  local window=""
+  if [ -e "$COUNTRIES_WINDOW" ]; then
+    window='    tcp dport 80 accept comment "the certificate window: open while a certificate is due"'
+  fi
   cat <<EOF
 # FamilyDB's country filter, written by maintain.sh countries. Do not edit it: change the
 # countries or ${COUNTRIES_DIR}/allow and run maintain.sh countries again.
@@ -123,6 +139,7 @@ $(_elements "${v6[@]}")    }
     udp sport 67 udp dport 68 accept
     udp sport 547 udp dport 546 accept
     icmpv6 type { nd-neighbor-solicit, nd-neighbor-advert, nd-router-advert, nd-router-solicit } accept
+${window}
     ip saddr @allowed4 accept
     ip6 saddr @allowed6 accept
     counter drop
@@ -138,6 +155,25 @@ $(_elements "${v6[@]}")    }
   }
 }
 EOF
+}
+
+certificate_state() { # certificate_state SITE PORT - none, good, due or overdue, then the days left
+  local site="$1" port="$2" dates start end now left third
+  have openssl || { echo "unknown 0"; return 0; }
+  # Only a certificate a browser would take counts: a trusted one, for this name.
+  dates="$(printf '' | timeout 8 openssl s_client -connect "127.0.0.1:${port}" -servername "$site" \
+      -verify_hostname "$site" -verify_return_error ${CERT_CAFILE:+-CAfile "$CERT_CAFILE"} 2>/dev/null \
+    | openssl x509 -noout -startdate -enddate 2>/dev/null)" || dates=""
+  if [ -z "$dates" ]; then echo "none 0"; return 0; fi
+  start="$(date -d "$(printf '%s\n' "$dates" | sed -n 's/^notBefore=//p')" +%s)"
+  end="$(date -d "$(printf '%s\n' "$dates" | sed -n 's/^notAfter=//p')" +%s)"
+  now="${CERT_NOW:-$(date +%s)}"
+  left=$(( (end - now) / 86400 ))
+  third=$(( (end - start) / 3 ))
+  if [ $((end - now)) -gt "$third" ]; then echo "good $left"
+  elif [ $((end - now)) -gt $((third - 43200)) ]; then echo "due $left"
+  else echo "overdue $left"
+  fi
 }
 
 countries_turned_away() { # how many connections the filter has dropped since it was loaded
@@ -171,22 +207,22 @@ EOF
   as_root tee "$COUNTRIES_REFRESH" >/dev/null <<EOF
 # FamilyDB's country filter: fetches the address lists again. A failed fetch keeps the last ones.
 [Unit]
-Description=FamilyDB: fetch the country address lists again
+Description=FamilyDB: keep the country filter's lists fresh, and let a certificate renew
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash ${maintain} countries refresh --yes
+ExecStart=/bin/bash ${maintain} countries tend --yes
 EOF
   noting_new "$COUNTRIES_TIMER"
   as_root tee "$COUNTRIES_TIMER" >/dev/null <<EOF
 [Unit]
-Description=FamilyDB: fetch the country address lists again each week
+Description=FamilyDB: look after the country filter each hour
 
 [Timer]
-OnCalendar=weekly
-RandomizedDelaySec=6h
+OnCalendar=hourly
+RandomizedDelaySec=10m
 Persistent=true
 
 [Install]

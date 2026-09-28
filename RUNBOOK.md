@@ -786,8 +786,9 @@ Telegram included), the provider's DHCP, private, shared and link-local ranges (
 network, Docker's, a VPN such as Tailscale), and the addresses in
 `/etc/familydb-countries/allow`, which starts with whoever was on SSH when it was turned on.
 Docker's published ports are filtered too. The lists are ipdeny.com's, per country, from the
-regional registries; `familydb-countries-refresh.timer` fetches them weekly and loads only a list
-that parses and has not shrunk by half, so a bad download keeps last week's. The boot unit
+regional registries; `familydb-countries-refresh.timer` runs `countries tend` each hour, which
+fetches them again once they are a week old and loads only a list that parses and has not shrunk
+by half, so a bad download keeps last week's. The boot unit
 `familydb-countries.service` loads `/etc/familydb-countries/rules.nft` before the network
 comes up.
 
@@ -798,11 +799,18 @@ If you are ever shut out anyway, your provider's web console gets in, and
 (`countries off` for good). Before travelling, `countries allow ADDR` lets an address in from
 anywhere; to take one off, delete its line in the allow file and run `countries refresh`.
 
-Two things it costs. The family abroad cannot open the page (Telegram still works). And Let's
-Encrypt validates a domain from more than one vantage point before issuing or renewing, and not
-all of them may be in your countries: `maintain.sh status` shows the certificate's end date,
-amber once it is under three weeks away, which is when a renewal should already have happened.
-If it comes to that, the choices are to let port 80 in from anywhere or to validate through DNS.
+The certificate looks after itself. Let's Encrypt validates a domain from more than one vantage
+point before issuing or renewing, and not all of them need be in your countries, so the filter
+opens one door by itself: port 80, to everyone, while the page has no certificate a browser
+would take, or its renewal is overdue. Caddy renews once a third of a certificate's life is
+left; one still unrenewed half a day into that stretch is being turned away, and `countries tend`
+opens the window then (a line saying so in `journalctl -u familydb-countries-refresh`), and shuts
+it the hour a fresh certificate is served. `countries US` opens it when there is no certificate
+yet, and `maintain.sh https` opens it while it gets one, so the two can be run in either order.
+Port 80 answers only the certificate check and a redirect. `/etc/familydb-countries/certificate-window`
+is there while it is open, and `status` shows it, with the certificate's end date.
+
+What it costs: the family abroad cannot open the page (Telegram still works).
 `uninstall.sh` removes the filter along with FamilyDB.
 
 **Keeping the machine patched.** Unattended security updates are the one piece of maintenance

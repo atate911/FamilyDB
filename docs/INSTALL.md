@@ -999,10 +999,12 @@ keeps the filter: without a yes within three minutes it takes itself off. Replie
 server asks for (Telegram, the AI companies, updates) are not touched, so the bot works as
 before; the page will not open for the family abroad, though Telegram will. Before travelling,
 `countries allow ADDR` lets one address in from anywhere, and `countries off` undoes it all. The
-address lists come from ipdeny.com and are fetched again each week. `maintain.sh status` shows
-it, how many it has turned away, and when the page's certificate runs out: Let's Encrypt checks
-the server from more than one place before renewing, so if a renewal is turned away, that is
-where it shows, weeks ahead. RUNBOOK section 12 has the details.
+address lists come from ipdeny.com and are fetched again each week. Certificates look after
+themselves: Let's Encrypt checks from more than one place, not all of them in the US, so while
+the page has no certificate, or its renewal is overdue, port 80 alone is open to everyone, and it
+shuts again as soon as the certificate is served. It can be turned on before or after `https`, in
+either order. `maintain.sh status` shows it, how many it has turned away, and when the
+certificate runs out. RUNBOOK section 12 has the details.
 
 **Unattended security updates.** This is the piece of maintenance that matters most:
 

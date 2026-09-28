@@ -485,6 +485,10 @@ status_countries() {
       row "Lists" "fetched $(ago "$age"), again each week" good
     fi
   fi
+  if as_root test -e "$COUNTRIES_WINDOW"; then
+    row "Port 80" "open to everyone since $(as_root sed -n 's/^opened //p' "$COUNTRIES_WINDOW" | head -1), for the certificate" poor
+    more "it shuts itself once the certificate is served; the hourly check sees to it"
+  fi
   turned="$(countries_turned_away)"
   [ -n "$turned" ] && row "Turned away" "$(printf "%'d" "$turned" 2>/dev/null || echo "$turned") packets since it was loaded"
   return 0
@@ -608,6 +612,14 @@ cmd_https() {
   chosen="$(choose_public_port "${HTTPS_PORT:-$previous}" "$port")" \
     || die "that port will not do" "Give --port a number from 1024 to 65535, or random, or 443."
   PUBLIC_PORT="$chosen"
+  # With the country filter on, a certificate authority checking from abroad would be turned away:
+  # let port 80 in from anywhere while the certificate is got. The hourly check shuts it after.
+  local window_opened=0
+  if countries_on_now && ! printf '%s' "$site" | grep -Eq '^[0-9.]+$' && countries_window open; then
+    window_opened=1
+    note "The country filter is on: port 80 is open to everyone while the certificate is got."
+    countries_load
+  fi
   setup_https "$site" "$port" || die "the page could not be put on HTTPS" "What went wrong is above."
   # The page has to believe Caddy about who is visiting, and listen for nobody but Caddy.
   env_file_set WEB_DOMAIN "$site"
@@ -615,6 +627,16 @@ cmd_https() {
   env_file_set WEB_HOST 127.0.0.1
   env_file_set WEB_PUBLIC_PORT "$PUBLIC_PORT"
   close_old_web_ports "$previous"
+  if [ "$window_opened" = 1 ]; then
+    local state
+    read -r state _ <<<"$(certificate_state "$site" "$PUBLIC_PORT")"
+    if [ "$state" = good ] && countries_window shut; then
+      countries_load
+      ok "The certificate is in, so port 80 is filtered like everything else again."
+    else
+      note "Port 80 stays open until the certificate is served; the hourly check shuts it then."
+    fi
+  fi
   if service_installed; then
     step "Restarting FamilyDB so the page knows it is behind HTTPS" as_root systemctl restart familydb
   fi
@@ -1104,9 +1126,38 @@ cmd_countries() {
     "")      countries_show ;;
     off)     countries_off ;;
     refresh) countries_refresh ;;
+    tend)    countries_tend ;;
     allow)   countries_allow "${COUNTRY_ARGS[1]:-}" ;;
     *)       countries_on "${COUNTRY_ARGS[@]}" ;;
   esac
+}
+
+countries_site() { # the page's domain, when it has one Let's Encrypt certifies; else nothing
+  local site
+  site="$(env_file_value WEB_DOMAIN)"
+  printf '%s' "$site" | grep -Eq '^[0-9.]+$' && return 0
+  printf '%s' "$site"
+}
+
+countries_public_port() { local p; p="$(env_file_value WEB_PUBLIC_PORT)"; printf '%s' "${p:-443}"; }
+
+countries_window_wanted() { # succeeds when port 80 should be open to everyone for the certificate
+  local site state
+  site="$(countries_site)"
+  [ -n "$site" ] || return 1
+  read -r state _ <<<"$(certificate_state "$site" "$(countries_public_port)")"
+  [ "$state" = none ] || [ "$state" = overdue ]
+}
+
+countries_window() { # countries_window open|shut - sets the mark; succeeds when it changed
+  if [ "$1" = open ]; then
+    as_root test -e "$COUNTRIES_WINDOW" && return 1
+    printf 'opened %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" | as_root tee "$COUNTRIES_WINDOW" >/dev/null
+  else
+    as_root test -e "$COUNTRIES_WINDOW" || return 1
+    as_root rm -f "$COUNTRIES_WINDOW"
+  fi
+  return 0
 }
 
 countries_need_nft() {
@@ -1169,8 +1220,8 @@ countries_on() { # countries_on CC...
     plan_item "Let in $(printf '%s' "$peers" | paste -sd, - | sed 's/,/, /g') from anywhere" \
       "connected over SSH now, so a list that has them in the wrong country cannot shut you out"
   fi
-  plan_item "Load it at every boot, and fetch the lists again weekly" \
-    "familydb-countries.service and familydb-countries-refresh.timer"
+  plan_item "Load it at every boot, and look after it each hour" \
+    "the lists fetched again weekly; port 80 opened to everyone only while the page's certificate is missing or overdue, and shut again once it is served"
   plan_untouched "replies to what this machine asks for (Telegram, the AI companies, updates)"
   plan_untouched "private and link-local networks, and the provider's DHCP"
   show_plan "What this changes"
@@ -1179,11 +1230,6 @@ countries_on() { # countries_on CC...
   warn "Anyone outside ${codes[*]} is turned away, the family abroad included: the page will not"
   note "  open for them, though Telegram still works, since the bot fetches its messages. SSH from"
   note "  abroad needs '${0} countries allow ADDR' first, or your provider's console."
-  if [ -n "$site" ] && ! printf '%s' "$site" | grep -Eq '^[0-9.]+$'; then
-    warn "Let's Encrypt checks ${site} from more than one place before it renews the certificate,"
-    note "  and not all of them may be in ${codes[*]}. If a renewal is turned away, '${0} status'"
-    note "  shows the certificate running out weeks ahead: then let port 80 in, or ask about DNS checks."
-  fi
   say ""
   approve "Turn the filter on?" || { say "Nothing was changed."; exit 0; }
   [ "$DRY_RUN" = 1 ] && { note "[dry run] nothing was changed"; return 0; }
@@ -1202,6 +1248,15 @@ countries_on() { # countries_on CC...
   done
   countries_fetch "${codes[@]}" || die "could not fetch the address lists, so nothing was turned on" \
     "Check that this machine can reach www.ipdeny.com:  curl -sI https://www.ipdeny.com/"
+  site="$(countries_site)"
+  if countries_window_wanted; then
+    countries_window open || true
+    note "${site} has no certificate a browser would take yet, so port 80 stays open to everyone"
+    note "until it has; the hourly check shuts it then."
+  else
+    countries_window shut || true
+    [ -n "$site" ] && ok "${site} has its certificate, so port 80 is filtered like everything else"
+  fi
   countries_load
 
   # A way back that needs nobody: unless a new connection is shown to get in, it undoes itself.
@@ -1231,7 +1286,7 @@ countries_on() { # countries_on CC...
   countries_write_units "${TARGET}/scripts/maintain.sh"
   try_step "Reloading systemd" as_root systemctl daemon-reload
   step "Loading it at every boot" as_root systemctl enable familydb-countries.service
-  step "Fetching the lists again each week" as_root systemctl enable --now familydb-countries-refresh.timer
+  step "Looking after it each hour" as_root systemctl enable --now familydb-countries-refresh.timer
   say ""
   ok "Only ${codes[*]}$([ -n "$peers" ] && echo ", and the addresses in ${COUNTRIES_DIR}/allow,") can connect to this machine now."
   note "How it stands, and how many it has turned away:  ${0} countries"
@@ -1246,6 +1301,35 @@ countries_refresh() { # the weekly timer's: fetch again, and load only what is s
   head2 "Fetching the lists for ${codes[*]} again"
   countries_fetch "${codes[@]}" || true
   countries_load
+}
+
+countries_tend() { # the hourly timer's: lists a week old fetched again, the certificate window kept
+  countries_need_nft
+  as_root test -s "${COUNTRIES_DIR}/countries" || return 0
+  local codes changed=0 oldest site state left
+  read -ra codes <<<"$(as_root cat "${COUNTRIES_DIR}/countries" | tr '\n' ' ')"
+  oldest="$(as_root find "${COUNTRIES_DIR}/lists" -name '*.v4' -printf '%T@\n' 2>/dev/null | sort -n | head -1 | cut -d. -f1)"
+  if [ -z "$oldest" ] || [ $(( $(date +%s) - oldest )) -gt "$LIST_MAX_AGE" ]; then
+    head2 "Fetching the lists for ${codes[*]} again"
+    countries_fetch "${codes[@]}" && changed=1
+  fi
+  site="$(countries_site)"
+  if [ -n "$site" ]; then
+    read -r state left <<<"$(certificate_state "$site" "$(countries_public_port)")"
+    if [ "$state" = none ] || [ "$state" = overdue ]; then
+      if countries_window open; then
+        changed=1
+        warn "${site}: $([ "$state" = none ] && echo "no certificate yet" || echo "renewal overdue, ${left} days left"); opening port 80 to everyone until it renews"
+      fi
+    elif countries_window shut; then
+      changed=1
+      ok "${site}: certificate good for ${left} days; port 80 is filtered again"
+    fi
+  fi
+  if [ "$changed" = 1 ] || ! countries_on_now; then
+    countries_load
+  fi
+  return 0
 }
 
 countries_allow() { # countries_allow ADDR
@@ -1392,7 +1476,8 @@ esac
 case "$COMMAND" in
   https|port|backup|restore|restart|schedule-backups|countries)
     [ "$DRY_RUN" = 1 ] && exit 0
-    [ "$COMMAND" = countries ] && [ ${#COUNTRY_ARGS[@]} -eq 0 ] && exit 0
+    # How it stands changes nothing, and the hourly check writes to the journal, not a person.
+    [ "$COMMAND" = countries ] && { [ ${#COUNTRY_ARGS[@]} -eq 0 ] || [ "${COUNTRY_ARGS[0]}" = tend ]; } && exit 0
     say ""
     if [ "$WARNINGS" -gt 0 ]; then
       note "Finished in $(took "$SECONDS"), with ${WARNINGS} warning$([ "$WARNINGS" = 1 ] || echo s) above.${LOG_FILE:+ Every step is in ${LOG_FILE}.}"
