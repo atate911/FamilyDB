@@ -90,6 +90,8 @@ PROMPT = "Message {name}"
 LOCKED = "You can write again once {name} has answered."
 # On Home, under her question, what the box is for: what she takes on, without saying what she is.
 HOME_PROMPT = "Plans for the weekend, an idea to keep, a reminder, the calendar…"
+# The same for a kid: what she brings to her, in her words.
+KID_HOME_PROMPT = "A wish, a question, something fun to do…"
 # The same states as Home puts them, more briefly: the conversation is one tap away.
 AT_HOME = {
     "thinking": "Answering a message now.",
@@ -118,6 +120,12 @@ PRIVATE = "member:{id}"
 
 def private_chat(member_id: int) -> str:
     return PRIVATE.format(id=member_id)
+
+
+def is_kid() -> bool:
+    """Somebody who keeps a wish list and does not decide on anybody's: a kid, by roles.py."""
+    visitor = auth.visitor()
+    return visitor.member is not None and visitor.may("wish") and not visitor.may("decide")
 
 
 def my_chat() -> str:
@@ -297,7 +305,7 @@ def page(
             pending=pending.get(state or ""),
             # A message nobody will answer now comes back to the box, to send again.
             typed=typed or (last.text if state == "lost" and last else None),
-            starters=[] if lines else views.starters(app.clock.today()),
+            starters=[] if lines else views.starters(app.clock.today(), kid=is_kid()),
             error=error or (NO_FAMILY if not family else None),
             refresh=refresh,
             # With the box open, the script looks again instead, and never while somebody is

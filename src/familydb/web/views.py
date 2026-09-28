@@ -301,14 +301,17 @@ def task_brief(task: Task, tz: ZoneInfo, today: date) -> dict[str, Any]:
 WEEKEND_QUESTION = "What should we do this weekend?"
 TODAY_QUESTION = "What should we do today?"
 STARTERS = ("Remind me to ", "We should try ")
+# A kid's: her wish first, said the way Vera would have her say it ("I wish", never "we should",
+# docs/WISHES.md), so the box never starts her on the words Vera then nudges her away from.
+KID_STARTERS = ("I wish for ", "Remind me to ")
 
 
-def starters(today: date) -> list[dict[str, str]]:
+def starters(today: date, *, kid: bool = False) -> list[dict[str, str]]:
     """The suggestions under the box: what each puts in it, and how it reads as a link."""
     question = TODAY_QUESTION if today.weekday() >= 5 else WEEKEND_QUESTION
     return [
         {"say": text, "label": text.rstrip() + ("…" if text.endswith(" ") else "")}
-        for text in (question, *STARTERS)
+        for text in (question, *(KID_STARTERS if kid else STARTERS))
     ]
 
 
@@ -1252,6 +1255,13 @@ CONCERN_WORDS = {
     "inappropriate": "not OK",
     "too_many": "too many in one day",
 }
+# The same, as the kid it happened to reads it: what to do next, kindly, rather than a verdict.
+KID_CONCERN_WORDS = {
+    "rule": "a house rule: ask a parent",
+    "sibling": "about a sister or brother",
+    "inappropriate": "not one for a wish list",
+    "too_many": "one for another day",
+}
 # What asking for a wish on the page came to, by wish_service's result.
 WISH_SAID = {
     "added": "On your list: {title}.",
@@ -1290,6 +1300,7 @@ def wish_row(wish: Any, today: date) -> dict[str, Any]:
         "note": wish.answer_note,
         "again": day_words(wish.locked_until, today) if wish.status == "declined" else "",
         "concern": CONCERN_WORDS.get(wish.concern or ""),
+        "concern_kid": KID_CONCERN_WORDS.get(wish.concern or ""),
         "review": wish.parent_review,
     }
 

@@ -138,8 +138,25 @@ def test_ask_a_parent_is_a_button_where_it_was_offered(app, family, girls) -> No
         )
     page = girls["mine"].get("/wishes").text
     assert "more internet time" in page and "Ask a parent" in page
+    # Said to her as what to do next, not as the grown-ups' word for it.
+    assert "a house rule: ask a parent" in page
     asked = girls["mine"].post(
         f"/wish/{turned.wish.id}/ask", data=_form(girls["mine"], "/wishes"), follow_redirects=True
     )
     assert "Sent to a parent." in _said(asked)
     assert "Ask a parent</button>" not in girls["mine"].get("/wishes").text  # once
+
+
+def test_a_kid_home_speaks_to_her_and_offers_only_what_she_may(app, family, sam, girls) -> None:  # noqa: F811
+    """Her ways to start say "I wish", never the "we should" Vera nudges her away from, and no
+    empty list sends her to a form she would be refused (docs/STYLE.md, "A kid's screen")."""
+    from familydb.web.chat import KID_HOME_PROMPT
+
+    home = girls["mine"].get("/").text
+    assert "I wish for…" in home and "We should try" not in home
+    assert f'placeholder="{KID_HOME_PROMPT}"' in home
+    assert 'href="/ideas/new"' not in home and "plan an idea" not in home
+    assert "Add a wish" in home
+    assert girls["mine"].get("/ideas/new").status_code == 403
+    # A grown-up's Home is as it was.
+    assert "We should try…" in sam.get("/").text and 'href="/ideas/new"' in sam.get("/").text

@@ -148,6 +148,7 @@ def home() -> Response | str:
     # The box and how the conversation stands are the chat's, so only for a role that may talk
     # to her (familydb/roles.py): nobody is shown a way into a page that would refuse them.
     talks = visitor.may("chat")
+    kid = chat.is_kid()
     with closing(app.connect()) as conn:
         progress = status_page.setup_progress(app, conn)
         if manages and not status_page.ready_to_answer(progress):
@@ -179,10 +180,10 @@ def home() -> Response | str:
         setup=unfinished,
         talk=talk,
         wishes=wished,
-        **chat.box(family, prompt=chat.HOME_PROMPT),
+        **chat.box(family, prompt=chat.KID_HOME_PROMPT if kid else chat.HOME_PROMPT),
         question=True,  # the box's label is her question, and the page's heading
         typed=chat.asked(),  # a way to start, followed with scripts off
-        starters=views.starters(today),
+        starters=views.starters(today, kid=kid),
     )
 
 

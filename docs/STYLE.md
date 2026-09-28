@@ -518,10 +518,22 @@ it, and say why here.
 
 ## A kid's screen
 
-A kid signs in to the same page, in the same Phosphor look: nothing is drawn differently for her,
-there is only less of it. Her bar has no Memory, Status, Family or Settings; her Home opens with
-her own conversation with Vera and, under it, her wish lists at a glance (My wishes, in pink, the
-kids' colour since the Family page first gave it to their faces), then what is coming up and her
-own things to do. The wish lists (`/wishes`, `wishes.html`) lead each card with its number in
-her order, and every button that moves a wish is at least 44px, for a finger on an iPad. A parent
-sees the same lists with Yes! and Not this time under each, and a card on Home with each kid's.
+A kid signs in to the same page, in the same Phosphor look (the family asked for limited changes,
+`docs/WISHES.md`): there is less of it, and what is there is worded and laid out for her. Her bar
+has no Memory, Status, Family or Settings; her Home opens with her own conversation with Vera,
+its box saying what she brings ("A wish, a question, something fun to do…") and its ways to start
+"I wish for…" where a grown-up's say "We should try…", since "I wish", never "we should", is
+how Vera would have her ask. Under it, her wish lists at a glance (My wishes, in pink, the kids'
+colour since the Family page first gave it to their faces): a parent's latest yes lit in green
+with sparkles, a no quiet beside a heart, each list's top three numbered, and Add a wish always
+there. Then what is coming up and her own things to do. Nothing on her screen offers what she
+may not do: the empty lists ask her to tell Vera, never to add an idea or plan one.
+
+The wish lists (`/wishes`, `wishes.html`) lead each card with its number in a round pink badge,
+the one she wants most filled in, and the wish in larger type. Up and Down (and Top, from third
+place down) sit beside the wish, since ordering is what she does most; putting it on another list
+and taking it off are folded under More, a native `<details>`, so a card is one row, not three.
+Every button is at least 44px, for a finger on an iPad. What was turned away is headed "Not on
+your list" and says what to do next ("a house rule: ask a parent"), not the grown-ups' word for
+it. A parent sees the same lists with Yes! and Not this time under each, the grown-ups' words,
+and a card on Home with each kid's.

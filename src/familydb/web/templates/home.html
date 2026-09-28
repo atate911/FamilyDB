@@ -53,7 +53,7 @@
             <span class="crt-cursor" aria-hidden="true"></span></p>
         {% else %}
           <p class="next-title bright">Nothing on the radar yet.</p>
-          <p class="next-where dim">Ask what fits this weekend, or plan an idea.</p>
+          <p class="next-where dim">Ask what fits this weekend{{ ', or plan an idea' if visitor().may('change') }}.</p>
           <p class="next-more"><span class="dim" aria-hidden="true">&gt;</span><span class="crt-cursor" aria-hidden="true"></span></p>
         {% endif %}
       </div>
@@ -79,17 +79,27 @@
     <section class="panel home-wishes" aria-labelledby="home-wishes">
       <div class="section-head">
         <h2 id="home-wishes">{{ icon('gift') }}My wishes</h2>
-        <a href="{{ url_for('web.wishes') }}">{{ 'All ' ~ mine.open if mine.open else 'Add one' }}{{ icon('right') }}</a>
+        <span class="section-links">
+          <a href="{{ url_for('web.wishes', _anchor='wish-add') }}">{{ icon('plus') }}Add a wish</a>
+          {% if mine.open %}<a href="{{ url_for('web.wishes') }}">All {{ mine.open }}{{ icon('right') }}</a>{% endif %}
+        </span>
       </div>
       {% if mine.answered %}
-        <p class="said">{% for row in mine.answered[:2] %}{% if row.status == 'granted' %}Yes to {{ row.title }}! {% else %}Not this time: {{ row.title }}. {% endif %}{% endfor %}</p>
+        {# What a parent said lately, a yes first and lit, since it is the news she opens the page for. #}
+        <ul class="plain wish-news">
+          {% for row in (mine.answered | sort(attribute='status', reverse=true))[:2] %}
+            {% if row.status == 'granted' %}<li class="wish-yes">{{ icon('sparkles') }}<span><strong>Yes</strong> to {{ row.title }}!</span></li>
+            {% else %}<li class="muted">{{ icon('heart') }}<span>Not this time: {{ row.title }}.</span></li>{% endif %}
+          {% endfor %}
+        </ul>
       {% endif %}
       <div class="wish-lists">
         {% for list in mine.lists %}
           <div class="wish-list">
-            <h3>{{ list.name }}{% if list.countdown %} <span class="tag">{{ list.countdown }}</span>{% endif %}</h3>
+            <h3>{{ icon('gift' if list.occasion else 'star') }}{{ list.name }}{% if list.countdown %} <span class="tag countdown">{{ list.countdown }}</span>{% endif %}</h3>
             <ol class="plain wish-top">
-              {% for row in list.rows[:wishes.top] %}<li>{{ row.title }}</li>{% else %}<li class="muted">Nothing yet.</li>{% endfor %}
+              {% for row in list.rows[:wishes.top] %}<li><span class="wish-rank{{ ' first' if row.rank == 1 }}" aria-hidden="true">{{ row.rank }}</span>{{ row.title }}</li>
+              {% else %}<li class="muted">Nothing yet.</li>{% endfor %}
             </ol>
           </div>
         {% endfor %}
@@ -140,8 +150,11 @@
             </li>
           {% else %}
             <li class="muted empty">{{ icon('plans') }}<span>
-              {%- if first %}Nothing else on the calendar yet.{% else %}Nothing on the calendar yet. Pick an idea and put it there, or ask
-              {{ assistant }} what fits this weekend.{% endif %}</span></li>
+              {%- if first %}Nothing else on the calendar yet.
+              {%- elif visitor().may('change') %}Nothing on the calendar yet. Pick an idea and put it there, or ask
+              {{ assistant }} what fits this weekend.
+              {%- elif talk %}Nothing on the calendar yet. Ask {{ assistant }} what fits this weekend.
+              {%- else %}Nothing on the calendar yet.{% endif %}</span></li>
           {% endfor %}
         </ol>
       </section>
@@ -191,8 +204,10 @@
           </a>
         {% else %}
           <p class="panel muted empty">{{ icon('idea') }}<span>No ideas yet.
-            {%- if talk %} Tell {{ assistant }} one above, or <a href="{{ url_for('web.new_idea') }}">add it here</a>.
-            {%- else %} <a href="{{ url_for('web.new_idea') }}">Add one here</a>.{% endif %}</span></p>
+            {#- Adding one here is a form only a role that may change things is let into. #}
+            {%- if talk and visitor().may('change') %} Tell {{ assistant }} one above, or <a href="{{ url_for('web.new_idea') }}">add it here</a>.
+            {%- elif talk %} Tell {{ assistant }} one above.
+            {%- elif visitor().may('change') %} <a href="{{ url_for('web.new_idea') }}">Add one here</a>.{% endif %}</span></p>
         {% endfor %}
       </div>
       {% if restaurant_count %}

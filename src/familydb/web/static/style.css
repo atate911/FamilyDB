@@ -2173,25 +2173,53 @@ pre.json { max-height: 24rem; overflow: auto; padding: 0.75rem; font: 0.8rem/1.4
 }
 
 /* The kids' wish lists (docs/WISHES.md). Her order is the point, so each card leads with its
-   number; the buttons that move it are big enough for a finger on an iPad. */
+   number, a round pink badge, the top one filled; Up and Down sit beside the wish, and what is
+   done now and then (another list, taking it off) is folded under More. Everything she presses
+   is 44px at least, for a finger on an iPad. */
 .wish-lists { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); }
 .wish-list h3 { display: flex; align-items: center; gap: 0.4rem; margin: 0; }
 .wishes { list-style: none; margin: 0.5rem 0 0; padding: 0; display: grid; gap: 0.6rem; }
-.wish-line { display: flex; align-items: baseline; gap: 0.6rem; }
-.wish-rank { color: var(--accent); font-weight: 700; min-width: 1.5rem; }
-.wish-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.5rem; }
-.wish-actions form, .wish-inline { display: inline-flex; align-items: center; gap: 0.35rem; margin: 0; }
-.wish-actions button, .wish-inline button, .wish-actions select { min-height: 44px; }
+.wish-line { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.wish-what { flex: 1 1 8rem; min-width: 0; }
+.wish-what p { margin: 0.15rem 0 0; }
+.wish-title { font-size: 1.15rem; line-height: 1.35; overflow-wrap: anywhere; }
+.wish-rank {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  min-width: 2.25rem; height: 2.25rem; padding: 0 0.4rem; border-radius: 999px;
+  color: var(--accent); border: 2px solid var(--accent); font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.wish-rank.first { color: var(--on-bright); background: var(--accent); }
+.wish-order { display: flex; gap: 0.35rem; margin-left: auto; }
+.wish-order form, .wish-actions form, .wish-inline { display: inline-flex; align-items: center; gap: 0.35rem; margin: 0; }
+.wish-order button, .wish-actions button, .wish-inline button, .wish-actions select { min-height: 44px; }
+.wish-more { margin-top: 0.5rem; }
+.wish-more summary { display: inline-flex; align-items: center; min-height: 44px; cursor: pointer; color: var(--dim); }
+.wish-more summary:hover { color: var(--ink); }
+.wish-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; margin-top: 0.25rem; }
+.wish-actions label { color: var(--dim); }
 .wish-answer { margin-top: 0.6rem; }
-.wish-add { margin-bottom: 1rem; }
+.wish-add { margin-bottom: 1rem; scroll-margin-top: 5rem; }
 .wish-kid + .wish-kid { margin-top: 2rem; }
 .wish-top { margin: 0.4rem 0 0; }
+.wish-top li { display: flex; align-items: center; gap: 0.6rem; }
+.wish-top .wish-rank { min-width: 1.75rem; height: 1.75rem; font-size: 0.9rem; border-width: 1.5px; }
+.tag.countdown { color: var(--accent); background: rgb(255 159 208 / 0.1); }
+/* A parent's answer as she reads it: a yes lit in the green of things done, a no quiet. */
+.wish-news { display: grid; gap: 0.35rem; margin: 0 0 0.75rem; }
+.wish-news li, .wish-answers li { display: flex; align-items: baseline; gap: 0.45rem; flex-wrap: wrap; }
+.wish-news .icon, .wish-answers .icon { align-self: center; flex: none; }
+.wish-yes, .wish-answer-granted strong { color: var(--green); }
+.wish-yes .icon, .wish-answer-granted .icon { color: var(--green); }
 /* With wishes.js running, the number is a handle to drag the card by; only the handle stops
    the page from scrolling under a finger. */
-.can-drag .wish-rank { cursor: grab; touch-action: none; min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+.can-drag .wish-rank { cursor: grab; touch-action: none; min-width: 44px; height: 44px; }
 .wish.dragging { opacity: 0.6; outline: 2px dashed var(--accent); }
 .home-wishes { --accent: var(--pink); margin-bottom: 1.25rem; }
 .home-wishes h3 { font-size: 1rem; margin: 0.25rem 0; }
+@media (forced-colors: active) {
+  .wish-rank { border-color: CanvasText; }
+  .wish-rank.first { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+}
 
 /* Speaking instead of typing (dictate.js): a round mic beside each box that takes words, drawn
    only where the browser can write speech down. Listening, it lights up green and its ring

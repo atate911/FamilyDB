@@ -17,41 +17,54 @@
 {% macro wish_card(kid, row, list, count) %}
   <li class="panel card wish" data-wish="{{ row.id }}" data-rank="{{ row.rank }}">
     <div class="wish-line">
-      <span class="wish-rank" aria-hidden="true">{{ row.rank }}</span>
-      <strong class="wish-title">{{ row.title }}</strong>
+      {# The one she wants most is lit: the top of her list is the point of keeping one. #}
+      <span class="wish-rank{{ ' first' if row.rank == 1 }}" aria-hidden="true">{{ row.rank }}</span>
+      <div class="wish-what">
+        <strong class="wish-title">{{ row.title }}</strong>
+        {% if row.notes %}<p class="muted">{{ row.notes }}</p>{% endif %}
+      </div>
+      {# Her order, what she does most, beside the wish: one form per move, so each works with
+         scripts off. #}
+      <div class="wish-order">
+        {% if row.rank > 2 %}
+          <form method="post" action="{{ url_for('edits.move_wish', wish_id=row.id) }}">
+            {{ hidden(kid) }}<input type="hidden" name="position" value="1" />
+            <button class="quiet" type="submit" title="To the top">{{ icon('to_top') }}<span class="label">Top</span></button>
+          </form>
+        {% endif %}
+        {% if row.rank > 1 %}
+          <form method="post" action="{{ url_for('edits.move_wish', wish_id=row.id) }}">
+            {{ hidden(kid) }}<input type="hidden" name="position" value="{{ row.rank - 1 }}" />
+            <button class="quiet" type="submit" title="Up one">{{ icon('up') }}<span class="label">Up</span></button>
+          </form>
+        {% endif %}
+        {% if row.rank < count %}
+          <form method="post" action="{{ url_for('edits.move_wish', wish_id=row.id) }}" class="move-down">
+            {{ hidden(kid) }}<input type="hidden" name="position" value="{{ row.rank + 1 }}" />
+            <button class="quiet" type="submit" title="Down one">{{ icon('down') }}<span class="label">Down</span></button>
+          </form>
+        {% endif %}
+      </div>
     </div>
-    {% if row.notes %}<p class="muted">{{ row.notes }}</p>{% endif %}
-    <div class="wish-actions">
-      {# Her order: one form per move, so each works with scripts off. #}
-      {% if row.rank > 1 %}
-        <form method="post" action="{{ url_for('edits.move_wish', wish_id=row.id) }}">
-          {{ hidden(kid) }}<input type="hidden" name="position" value="1" />
-          <button class="quiet" type="submit" title="To the top">{{ icon('to_top') }}<span class="label">Top</span></button>
+    {# Done now and then, so folded away (a native <details>, working with scripts off). The
+       Move form stays in the card either way: wishes.js sends it after a drag. #}
+    <details class="wish-more">
+      <summary>More</summary>
+      <div class="wish-actions">
+        <form method="post" action="{{ url_for('edits.move_wish', wish_id=row.id) }}" class="wish-list-move">
+          {{ hidden(kid) }}
+          <label for="list-{{ row.id }}">Put it on</label>
+          <select id="list-{{ row.id }}" name="list">
+            {% for value, name in choices %}<option value="{{ value }}" {{ 'selected' if value == list.value }}>{{ name }}</option>{% endfor %}
+          </select>
+          <button class="quiet" type="submit">Move</button>
         </form>
-        <form method="post" action="{{ url_for('edits.move_wish', wish_id=row.id) }}">
-          {{ hidden(kid) }}<input type="hidden" name="position" value="{{ row.rank - 1 }}" />
-          <button class="quiet" type="submit" title="Up one">{{ icon('up') }}<span class="label">Up</span></button>
+        <form method="post" action="{{ url_for('edits.withdraw_wish', wish_id=row.id) }}">
+          {{ hidden(kid) }}
+          <button class="quiet" type="submit">{{ icon('x') }}<span class="label">Take off</span></button>
         </form>
-      {% endif %}
-      {% if row.rank < count %}
-        <form method="post" action="{{ url_for('edits.move_wish', wish_id=row.id) }}" class="move-down">
-          {{ hidden(kid) }}<input type="hidden" name="position" value="{{ row.rank + 1 }}" />
-          <button class="quiet" type="submit" title="Down one">{{ icon('down') }}<span class="label">Down</span></button>
-        </form>
-      {% endif %}
-      <form method="post" action="{{ url_for('edits.move_wish', wish_id=row.id) }}" class="wish-list-move">
-        {{ hidden(kid) }}
-        <label class="sr" for="list-{{ row.id }}">Which list</label>
-        <select id="list-{{ row.id }}" name="list">
-          {% for value, name in choices %}<option value="{{ value }}" {{ 'selected' if value == list.value }}>{{ name }}</option>{% endfor %}
-        </select>
-        <button class="quiet" type="submit">Move</button>
-      </form>
-      <form method="post" action="{{ url_for('edits.withdraw_wish', wish_id=row.id) }}">
-        {{ hidden(kid) }}
-        <button class="quiet" type="submit">{{ icon('x') }}<span class="label">Take off</span></button>
-      </form>
-    </div>
+      </div>
+    </details>
     {% if parent %}
       <form class="form wish-answer" method="post" action="{{ url_for('edits.answer_wish', wish_id=row.id) }}">
         {{ hidden(kid) }}
@@ -74,7 +87,7 @@
   {% elif parent %}
     {{ page_head(kids[0].name ~ "'s wishes", 'In her own order. Your answer reaches her in her conversation.', 'gift', [('Wishes', url_for('web.wishes'))]) }}
   {% else %}
-    {{ page_head('My wishes', "What you'd like, in your order. Put the one you want most at the top.", 'gift') }}
+    {{ page_head('My wishes', "Everything you're wishing for, in your order. Put the one you want most at the top.", 'gift') }}
   {% endif %}
 
   {% for kid in kids %}
@@ -89,7 +102,7 @@
       {% endif %}
 
       {% if not parent or one %}
-        <form class="panel form wish-add" method="post" action="{{ url_for('edits.add_wish') }}">
+        <form class="panel form wish-add" id="wish-add" method="post" action="{{ url_for('edits.add_wish') }}">
           {{ hidden(kid) }}
           {% if parent %}<input type="hidden" name="for_whom" value="{{ kid.name }}" />{% endif %}
           <div class="field wide">
@@ -97,7 +110,7 @@
             <input id="wish-title-{{ kid.id }}" name="title" required maxlength="120" data-dictate />
           </div>
           <div class="field">
-            <label for="wish-list-{{ kid.id }}">On</label>
+            <label for="wish-list-{{ kid.id }}">Which list</label>
             <select id="wish-list-{{ kid.id }}" name="list">
               {% for value, name in choices %}<option value="{{ value }}">{{ name }}</option>{% endfor %}
             </select>
@@ -114,7 +127,7 @@
           <ul class="plain">
             {% for row in kid.answered %}
               <li class="wish-answer-{{ row.status }}">
-                {% if row.status == 'granted' %}<strong>Yes!</strong>{% else %}<strong>Not this time.</strong>{% endif %}
+                {% if row.status == 'granted' %}{{ icon('sparkles') }}<strong>Yes!</strong>{% else %}{{ icon('heart') }}<strong>Not this time.</strong>{% endif %}
                 {{ row.title }}{% if row.note %}: <em>{{ row.note }}</em>{% endif %}
                 {% if row.again %}<span class="muted">Ask again after {{ row.again }}.</span>{% endif %}
               </li>
@@ -125,11 +138,11 @@
 
       {% if kid.turned %}
         <section class="panel wish-turned">
-          <h3>{{ icon('warning') }}{{ 'Flagged' if parent else 'Said no to' }}</h3>
+          <h3>{{ icon('warning') }}{{ 'Flagged' if parent else 'Not on your list' }}</h3>
           <ul class="plain">
             {% for row in kid.turned %}
               <li>
-                {{ row.title }} <span class="tag">{{ row.concern }}</span>
+                {{ row.title }} <span class="tag">{{ row.concern if parent else row.concern_kid }}</span>
                 {% if row.review == 'asked' %}<span class="tag">asked a parent</span>{% endif %}
                 {% if not parent and row.review == 'offered' %}
                   <form class="wish-inline" method="post" action="{{ url_for('edits.ask_parent', wish_id=row.id) }}">
@@ -155,7 +168,7 @@
           <section class="wish-list" aria-labelledby="list-{{ kid.id }}-{{ list.value }}">
             <div class="section-head">
               <h3 id="list-{{ kid.id }}-{{ list.value }}">{{ icon('gift' if list.occasion else 'star') }}{{ list.name }}</h3>
-              {% if list.countdown %}<span class="tag">{{ list.countdown }}</span>{% endif %}
+              {% if list.countdown %}<span class="tag countdown">{{ list.countdown }}</span>{% endif %}
             </div>
             {% if parent and not one %}
               <ol class="plain wish-top">
