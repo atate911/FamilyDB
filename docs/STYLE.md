@@ -461,9 +461,9 @@ looked at (see "Two layers").
   box that takes words (inside its right-hand end, and beside Send in the message box); pressed,
   it turns phosphor green and its ring breathes (still, under reduced motion) while the browser
   writes down what is said into the box. Without it, or in a browser that cannot, there is no
-  mic, and a phone keyboard's own still works. `static/wishes.js`, only on the wish lists, makes the number on a wish a handle
-  to drag it into place, and sends the card's own Move form with its new place; without it the
-  Top, Up and Down buttons do the same. `static/ask.js` is the box's: it keeps what is being written, fills the box
+  mic, and a phone keyboard's own still works. `static/wishes.js`, only on the wish lists, shows a grip (three lines) at the left of each wish
+  and makes it a handle to drag the wish into place, sending the wish's own Move form with its
+  new place; without it there is no grip, and the Top, Up and Down buttons inside each wish do the same. `static/ask.js` is the box's: it keeps what is being written, fills the box
   from the ways to start, sends where the phone is, and looks again for an answer only while
   nobody is writing. Without it the ways to start are links, "Send where I am" is not shown,
   nothing typed is kept across a change of page, and the page looks again with a meta refresh.
@@ -529,11 +529,13 @@ with sparkles, a no quiet beside a heart, each list's top three numbered, and Ad
 there. Then what is coming up and her own things to do. Nothing on her screen offers what she
 may not do: the empty lists ask her to tell Vera, never to add an idea or plan one.
 
-The wish lists (`/wishes`, `wishes.html`) lead each card with its number in a round pink badge,
-the one she wants most filled in, and the wish in larger type. Up and Down (and Top, from third
-place down) sit beside the wish, since ordering is what she does most; putting it on another list
-and taking it off are folded under More, a native `<details>`, so a card is one row, not three.
-Every button is at least 44px, for a finger on an iPad. What was turned away is headed "Not on
-your list" and says what to do next ("a house rule: ask a parent"), not the grown-ups' word for
-it. A parent sees the same lists with Yes! and Not this time under each, the grown-ups' words,
+The wish lists (`/wishes`, `wishes.html`) are one line to a wish, since a wish is a few words and
+a line of buttons under each made the list hard to read: the grip to drag it by on the left
+(drawn only while `wishes.js` runs, and outside the line's summary so a drag never opens it), its
+number in a round pink badge, the one she wants most filled in, the wish, a small pencil when it
+has a note, and a chevron at the end. Tapped, the line opens (a native `<details>`) to the rest:
+the note, Top (from third place down), Up and Down, putting it on another list, taking it off,
+and for a parent the answer. Every line and button is at least 44px, for a finger on an iPad.
+What was turned away is headed "Not on your list" and says what to do next ("a house rule: ask a
+parent"), not the grown-ups' word for it. A parent sees the same lists with Yes! and Not this time inside each, the grown-ups' words,
 and a card on Home with each kid's.

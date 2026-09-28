@@ -1,7 +1,8 @@
 // Dragging a wish into place on her list (docs/WISHES.md). The page works without this: each
-// card has Top, Up and Down buttons, forms of their own. With it, the number on a card is a
-// handle: press it, drag the card up or down, and let go; the card's own Move form is sent with
-// its new place, so the move goes through the same form, token and tool as a button's.
+// wish opens to Top, Up and Down buttons, forms of their own. With it, the grip at the left of
+// each line is shown and is a handle: press it, drag the line up or down, and let go; the wish's
+// own Move form is sent with its new place, so the move goes through the same form, token and
+// tool as a button's. The grip sits outside the line's <summary>, so a drag never opens it.
 (function () {
   "use strict";
 
@@ -11,7 +12,7 @@
   }
 
   function start(event) {
-    const handle = event.target.closest(".wish-rank");
+    const handle = event.target.closest(".wish-grip");
     if (!handle) return;
     const card = handle.closest(".wish");
     const list = card && card.parentElement;

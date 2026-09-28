@@ -55,6 +55,9 @@ def test_a_kid_keeps_her_own_list_on_the_page(app, family, girls) -> None:  # no
     _add(kid, "Roller skates", "birthday")
     mine = _open(app, family["girls"].id)
     assert [w.title for w in mine] == ["Lego", "Kite"]
+    # One line to a wish, which opens to its buttons, with a grip to drag it by.
+    listed = kid.get("/wishes").text
+    assert listed.count('<details class="wish-open">') == 3 and 'class="wish-grip"' in listed
     # Kite to the top, with the button's form.
     kite = mine[1]
     kid.post(f"/wish/{kite.id}/move", data={**_form(kid, "/wishes"), "position": "1"})

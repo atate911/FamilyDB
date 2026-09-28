@@ -15,69 +15,69 @@
 {%- endmacro %}
 
 {% macro wish_card(kid, row, list, count) %}
-  <li class="panel card wish" data-wish="{{ row.id }}" data-rank="{{ row.rank }}">
-    <div class="wish-line">
-      {# The one she wants most is lit: the top of her list is the point of keeping one. #}
-      <span class="wish-rank{{ ' first' if row.rank == 1 }}" aria-hidden="true">{{ row.rank }}</span>
-      <div class="wish-what">
+  {# One line to a wish: the grip to drag it by (wishes.js; hidden without it), her number and
+     the wish. Tapped, it opens (a native <details>, so it works with scripts off) to the rest:
+     notes, Top, Up and Down, another list, taking it off, and for a parent the answer. #}
+  <li class="wish" data-wish="{{ row.id }}" data-rank="{{ row.rank }}">
+    <span class="wish-grip" title="Drag to move" aria-hidden="true">{{ icon('grip') }}</span>
+    <details class="wish-open">
+      <summary>
+        <span class="wish-rank{{ ' first' if row.rank == 1 }}" aria-hidden="true">{{ row.rank }}</span>
         <strong class="wish-title">{{ row.title }}</strong>
+        {% if row.notes %}<span class="wish-has-notes">{{ icon('edit', label='Has a note') }}</span>{% endif %}
+      </summary>
+      <div class="wish-body">
         {% if row.notes %}<p class="muted">{{ row.notes }}</p>{% endif %}
-      </div>
-      {# Her order, what she does most, beside the wish: one form per move, so each works with
-         scripts off. #}
-      <div class="wish-order">
-        {% if row.rank > 2 %}
-          <form method="post" action="{{ url_for('edits.move_wish', wish_id=row.id) }}">
-            {{ hidden(kid) }}<input type="hidden" name="position" value="1" />
-            <button class="quiet" type="submit" title="To the top">{{ icon('to_top') }}<span class="label">Top</span></button>
+        <div class="wish-actions">
+          {% if row.rank > 2 %}
+            <form method="post" action="{{ url_for('edits.move_wish', wish_id=row.id) }}">
+              {{ hidden(kid) }}<input type="hidden" name="position" value="1" />
+              <button class="quiet" type="submit" title="To the top">{{ icon('to_top') }}<span class="label">Top</span></button>
+            </form>
+          {% endif %}
+          {% if row.rank > 1 %}
+            <form method="post" action="{{ url_for('edits.move_wish', wish_id=row.id) }}">
+              {{ hidden(kid) }}<input type="hidden" name="position" value="{{ row.rank - 1 }}" />
+              <button class="quiet" type="submit" title="Up one">{{ icon('up') }}<span class="label">Up</span></button>
+            </form>
+          {% endif %}
+          {% if row.rank < count %}
+            <form method="post" action="{{ url_for('edits.move_wish', wish_id=row.id) }}" class="move-down">
+              {{ hidden(kid) }}<input type="hidden" name="position" value="{{ row.rank + 1 }}" />
+              <button class="quiet" type="submit" title="Down one">{{ icon('down') }}<span class="label">Down</span></button>
+            </form>
+          {% endif %}
+        </div>
+        <div class="wish-actions">
+          {# wishes.js sends this form, with the new place, after a drag. #}
+          <form method="post" action="{{ url_for('edits.move_wish', wish_id=row.id) }}" class="wish-list-move">
+            {{ hidden(kid) }}
+            <label for="list-{{ row.id }}">Put it on</label>
+            <select id="list-{{ row.id }}" name="list">
+              {% for value, name in choices %}<option value="{{ value }}" {{ 'selected' if value == list.value }}>{{ name }}</option>{% endfor %}
+            </select>
+            <button class="quiet" type="submit">Move</button>
+          </form>
+          <form method="post" action="{{ url_for('edits.withdraw_wish', wish_id=row.id) }}">
+            {{ hidden(kid) }}
+            <button class="quiet" type="submit">{{ icon('x') }}<span class="label">Take off</span></button>
+          </form>
+        </div>
+        {% if parent %}
+          <form class="form wish-answer" method="post" action="{{ url_for('edits.answer_wish', wish_id=row.id) }}">
+            {{ hidden(kid) }}
+            <div class="field wide">
+              <label for="note-{{ row.id }}">A note for {{ kid.name }} <span class="optional">optional</span></label>
+              <input id="note-{{ row.id }}" name="note" maxlength="500" data-dictate />
+            </div>
+            <div class="field wide actions">
+              <button type="submit" name="status" value="granted">{{ icon('check') }}Yes!</button>
+              <button class="secondary" type="submit" name="status" value="declined">Not this time</button>
+            </div>
           </form>
         {% endif %}
-        {% if row.rank > 1 %}
-          <form method="post" action="{{ url_for('edits.move_wish', wish_id=row.id) }}">
-            {{ hidden(kid) }}<input type="hidden" name="position" value="{{ row.rank - 1 }}" />
-            <button class="quiet" type="submit" title="Up one">{{ icon('up') }}<span class="label">Up</span></button>
-          </form>
-        {% endif %}
-        {% if row.rank < count %}
-          <form method="post" action="{{ url_for('edits.move_wish', wish_id=row.id) }}" class="move-down">
-            {{ hidden(kid) }}<input type="hidden" name="position" value="{{ row.rank + 1 }}" />
-            <button class="quiet" type="submit" title="Down one">{{ icon('down') }}<span class="label">Down</span></button>
-          </form>
-        {% endif %}
-      </div>
-    </div>
-    {# Done now and then, so folded away (a native <details>, working with scripts off). The
-       Move form stays in the card either way: wishes.js sends it after a drag. #}
-    <details class="wish-more">
-      <summary>More</summary>
-      <div class="wish-actions">
-        <form method="post" action="{{ url_for('edits.move_wish', wish_id=row.id) }}" class="wish-list-move">
-          {{ hidden(kid) }}
-          <label for="list-{{ row.id }}">Put it on</label>
-          <select id="list-{{ row.id }}" name="list">
-            {% for value, name in choices %}<option value="{{ value }}" {{ 'selected' if value == list.value }}>{{ name }}</option>{% endfor %}
-          </select>
-          <button class="quiet" type="submit">Move</button>
-        </form>
-        <form method="post" action="{{ url_for('edits.withdraw_wish', wish_id=row.id) }}">
-          {{ hidden(kid) }}
-          <button class="quiet" type="submit">{{ icon('x') }}<span class="label">Take off</span></button>
-        </form>
       </div>
     </details>
-    {% if parent %}
-      <form class="form wish-answer" method="post" action="{{ url_for('edits.answer_wish', wish_id=row.id) }}">
-        {{ hidden(kid) }}
-        <div class="field wide">
-          <label for="note-{{ row.id }}">A note for {{ kid.name }} <span class="optional">optional</span></label>
-          <input id="note-{{ row.id }}" name="note" maxlength="500" data-dictate />
-        </div>
-        <div class="field wide actions">
-          <button type="submit" name="status" value="granted">{{ icon('check') }}Yes!</button>
-          <button class="secondary" type="submit" name="status" value="declined">Not this time</button>
-        </div>
-      </form>
-    {% endif %}
   </li>
 {% endmacro %}
 
@@ -175,11 +175,11 @@
                 {% for row in list.rows[:3] %}<li>{{ row.title }}</li>{% else %}<li class="muted">Nothing yet.</li>{% endfor %}
               </ol>
             {% else %}
-              <ol class="cards wishes" data-list="{{ list.value }}">
+              <ol class="panel wishes" data-list="{{ list.value }}">
                 {% for row in list.rows %}
                   {{ wish_card(kid, row, list, list.rows | length) }}
                 {% else %}
-                  <li class="panel muted empty">{{ icon('gift') }}<span>{{ list.lede }} Nothing on it yet.</span></li>
+                  <li class="muted empty">{{ icon('gift') }}<span>{{ list.lede }} Nothing on it yet.</span></li>
                 {% endfor %}
               </ol>
             {% endif %}
