@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_ui.html" import icon, kind_label, chip, crt, radar, chat_line, waiting_line, tick, presence %}
+{% from "_ui.html" import icon, kind_label, chip, crt, radar, chat_line, waiting_line, checklist, presence %}
 {% block title %}{{ site_title }}{% endblock %}
 {% block body_class %}page-home{% endblock %}
 {% macro plan_where(entry) -%}
@@ -92,17 +92,14 @@
           {% endfor %}
         </ul>
       {% endif %}
-      <div class="wish-lists">
-        {% for list in mine.lists %}
-          <div class="wish-list">
-            <h3>{{ icon('gift' if list.occasion else 'star') }}{{ list.name }}{% if list.countdown %} <span class="tag countdown">{{ list.countdown }}</span>{% endif %}</h3>
-            <ol class="plain wish-top">
-              {% for row in list.rows[:wishes.top] %}<li><span class="wish-rank{{ ' first' if row.rank == 1 }}" aria-hidden="true">{{ row.rank }}</span>{{ row.title }}</li>
-              {% else %}<li class="muted">Nothing yet.</li>{% endfor %}
-            </ol>
-          </div>
-        {% endfor %}
-      </div>
+      {# Her top three, from the everyday list, and how far off Christmas and her birthday are:
+         the rest is a tap away on her list. #}
+      <ol class="plain wish-top">
+        {% for row in mine.lists[0].rows[:wishes.top] %}<li><span class="wish-rank{{ ' first' if row.rank == 1 }}" aria-hidden="true">{{ row.rank }}</span>{{ row.title }}</li>
+        {% else %}<li class="muted">Nothing on it yet. Tell {{ assistant }} what you’d like.</li>{% endfor %}
+      </ol>
+      {% set soon = mine.lists | selectattr('countdown') | list %}
+      {% if soon %}<p class="list-soon">{% for list in soon %}<span class="tag countdown">{{ icon('gift') }}{{ list.name }} {{ list.countdown | lower }}</span>{% endfor %}</p>{% endif %}
     </section>
   {% elif wishes %}
     <section class="panel home-wishes" aria-labelledby="home-kids">
@@ -126,7 +123,10 @@
     </section>
   {% endif %}
 
-  <div class="dashboard">
+  {# For somebody who does not browse the household (a kid), only what is hers: coming up and her
+     things to do, side by side, and nothing added lately (docs/STYLE.md, "A kid's screen"). #}
+  {% set browsing = visitor().may('browse') %}
+  <div class="dashboard{{ '' if browsing else ' simple' }}">
     <div class="dashboard-column">
       <section class="coming" id="coming">
         <div class="section-head">
@@ -165,27 +165,11 @@
           <h2>To do</h2>
           <a href="{{ url_for('web.tasks') }}">{{ 'All ' ~ task_count if task_count else 'Things to do' }}{{ icon('right') }}</a>
         </div>
-        <ul class="panel plain checklist">
-          {% for task in tasks %}
-            <li>
-              {{ tick(task.id, task.revision, task.title, 'home') }}
-              <div class="checklist-body">
-                <div class="what">{{ task.title }}</div>
-                <div class="when">
-                  {%- if task.owner %}<span>{{ task.owner }}</span>{% endif -%}
-                  {%- if task.due %}<span class="{{ 'warn' if task.late }}">{{ task.due }}</span>
-                  {%- elif task.window %}<span>{{ task.window }}</span>{% endif -%}
-                  {%- if task.reminder %}<span class="reminder">{{ icon('bell') }}{{ task.reminder }}</span>{% endif -%}
-                </div>
-              </div>
-            </li>
-          {% else %}
-            <li class="muted empty">{{ icon('todo') }}<span>Nothing to do. Ask {{ assistant }} to remind you of something and it lands here.</span></li>
-          {% endfor %}
-        </ul>
+        {% call checklist(tasks, 'home', owners=browsing) %}Nothing to do. Ask {{ assistant }} to remind you of something and it lands here.{% endcall %}
       </section>
     </div>
 
+    {% if browsing %}
     <section class="lately">
       <div class="section-head">
         <h2>Lately added</h2>
@@ -220,5 +204,6 @@
         </a>
       {% endif %}
     </section>
+    {% endif %}
   </div>
 {% endblock %}

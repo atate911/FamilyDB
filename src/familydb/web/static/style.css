@@ -989,6 +989,10 @@ details.panel[open] > summary { margin-bottom: 1.1rem; }
 
 .dashboard { display: grid; gap: 1rem 2rem; }
 .dashboard-column { min-width: 0; }
+/* A kid's Home: coming up and her things to do are the whole dashboard, side by side. */
+.dashboard.simple .dashboard-column { display: contents; }
+.list-soon { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.75rem 0 0; }
+.list-soon .tag { display: inline-flex; align-items: center; gap: 0.3rem; }
 .source { margin: -0.35rem 0 0.9rem; font-size: 0.875rem; }
 .source-unavailable { color: var(--amber); }
 /* A section head with two ways on: add one, or see them all. */

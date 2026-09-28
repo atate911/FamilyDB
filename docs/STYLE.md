@@ -519,15 +519,29 @@ it, and say why here.
 ## A kid's screen
 
 A kid signs in to the same page, in the same Phosphor look (the family asked for limited changes,
-`docs/WISHES.md`): there is less of it, and what is there is worded and laid out for her. Her bar
-has no Memory, Status, Family or Settings; her Home opens with her own conversation with Vera,
-its box saying what she brings ("Something you’d like, a question, something fun to do…") and its
-ways to start "I’d like…" where a grown-up's say "We should try…", since asking politely, never
-"we should", is how Vera would have her ask. Under it, her list at a glance (My list, in pink, the
-kids' colour since the Family page first gave it to their faces): a parent's latest yes lit in
-green with sparkles, a no quiet beside a heart, each list's top three numbered, and the way to
-the whole list. Then what is coming up and her own things to do. Nothing on her screen offers what
-she may not do: the empty lists ask her to tell Vera, never to add an idea or plan one.
+`docs/WISHES.md`): there is less of it, and what is there is worded and laid out for her. The
+rule is one natural place to say anything, and each page showing only what is hers or the
+family's, with nothing to filter, count or choose between. Vera sorts what she says, so the page
+never asks her which box a thing belongs in. Every simpler page is drawn for whoever may not
+`browse` (`familydb/roles.py`), never by asking about a role.
+
+- **Her bar** has no Memory, Status, Family or Settings.
+- **Home** is her box with Vera, its label her question and its placeholder what she brings
+  ("Something you’d like, a question, something fun to do…"), with no ways to start under it:
+  they would be words for her to say instead of her own. Then Next up on its green screen, and
+  My list (in pink, the kids' colour since the Family page first gave it to their faces): a
+  parent's latest yes lit in green with sparkles, a no quiet beside a heart, the top three of her
+  everyday list, and how far off Christmas and her birthday are. Under that, coming up and her
+  things to do side by side, and nothing else: no ideas added lately, no restaurants.
+- **Things to do** is "My things to do", her open ones as a checklist drawn as Home draws it
+  (`checklist` in `_ui.html`): what, and when in words. No search, no status to choose, no count,
+  no reminder's workings.
+- **Plans** is one list of what is coming, with no List and Month to choose between.
+- **Ideas** is plain cards, the kind, the title and where, each a link: no search or filters, no
+  count, no radar, no ids and nothing about how an idea is looked up.
+
+Nothing on her screen offers what she may not do: the empty lists ask her to tell Vera, never to
+add an idea or plan one.
 
 **The word.** The page says "list" and "I’d like", not "wish": the family found "wish" too
 aspirational, a thing hoped for rather than asked for. The code, the tools and `docs/WISHES.md`

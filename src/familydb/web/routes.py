@@ -448,13 +448,26 @@ def tasks() -> str:
     status = request.args.get("status", "open")
     if status not in {"open", "done", "cancelled", "all"}:
         abort(400)
+    # Somebody who sees only their own (a kid) gets their open ones as a plain checklist, as
+    # Home lists them: no filters, no workings (docs/STYLE.md, "A kid's screen").
+    simple = not auth.visitor().may("browse")
+    if simple:
+        status = "open"
     with closing(app.connect()) as conn:
         rows = task_store.list_all(
-            conn, status=status, query=request.args.get("q", ""), owner_id=_own_only()
+            conn,
+            status=status,
+            query="" if simple else request.args.get("q", ""),
+            owner_id=_own_only(),
         )
         people = member_store.list_all(conn)
+    today = app.clock.today()
     return render_template(
         "tasks.html",
+        simple=simple,
+        briefs=[views.task_brief(task, app.settings.tzinfo, today) for task in rows]
+        if simple
+        else [],
         rows=[
             views.task_row(task, app.settings.tzinfo, nudging=app.settings.task_nudges)
             for task in rows

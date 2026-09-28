@@ -115,6 +115,30 @@
   {%- endif %}
 {%- endmacro %}
 
+{# Open tasks as a checklist, soonest first, each ticked off where it stands (`tick`), with its
+   owner when `owners` and when it is due, in words (views.task_brief). The caller's block is
+   what an empty list says. On Home, and on Things to do for somebody who sees only their own. #}
+{% macro checklist(tasks, back, owners=true) -%}
+  <ul class="panel plain checklist">
+    {% for task in tasks %}
+      <li>
+        {{ tick(task.id, task.revision, task.title, back) }}
+        <div class="checklist-body">
+          <div class="what">{{ task.title }}</div>
+          <div class="when">
+            {%- if owners and task.owner %}<span>{{ task.owner }}</span>{% endif -%}
+            {%- if task.due %}<span class="{{ 'warn' if task.late }}">{{ task.due }}</span>
+            {%- elif task.window %}<span>{{ task.window }}</span>{% endif -%}
+            {%- if task.reminder %}<span class="reminder">{{ icon('bell') }}{{ task.reminder }}</span>{% endif -%}
+          </div>
+        </div>
+      </li>
+    {% else %}
+      <li class="muted empty">{{ icon('todo') }}<span>{{ caller() }}</span></li>
+    {% endfor %}
+  </ul>
+{%- endmacro %}
+
 {# A plan's day as a small calendar leaf: month, day, weekday. #}
 {% macro chip(parts, today=false) -%}
   {% if parts %}

@@ -304,17 +304,18 @@ def task_brief(task: Task, tz: ZoneInfo, today: date) -> dict[str, Any]:
 WEEKEND_QUESTION = "What should we do this weekend?"
 TODAY_QUESTION = "What should we do today?"
 STARTERS = ("Remind me to ", "We should try ")
-# A kid's: what she would like first, said the way Vera would have her say it (politely, and
-# never "we should", docs/WISHES.md), so the box never starts her on words Vera nudges her from.
-KID_STARTERS = ("I\u2019d like ", "Remind me to ")
 
 
 def starters(today: date, *, kid: bool = False) -> list[dict[str, str]]:
-    """The suggestions under the box: what each puts in it, and how it reads as a link."""
+    """The suggestions under the box: what each puts in it, and how it reads as a link. None for
+    a kid, whose box is the one natural place to say anything (docs/STYLE.md, "A kid's screen"),
+    and whose ways to start would only be words for her to say instead of her own."""
+    if kid:
+        return []
     question = TODAY_QUESTION if today.weekday() >= 5 else WEEKEND_QUESTION
     return [
         {"say": text, "label": text.rstrip() + ("…" if text.endswith(" ") else "")}
-        for text in (question, *(KID_STARTERS if kid else STARTERS))
+        for text in (question, *STARTERS)
     ]
 
 

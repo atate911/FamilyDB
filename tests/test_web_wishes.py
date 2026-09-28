@@ -69,7 +69,8 @@ def test_a_kid_keeps_her_own_list_on_the_page(app, family, girls) -> None:  # no
     kid.post(f"/wish/{kite.id}/withdraw", data=_form(kid, "/wishes"))
     assert _open(app, family["girls"].id) == []
     home = kid.get("/").text
-    assert "My list" in home and "Roller skates" in home
+    # Home shows her everyday top three, and how far off the occasions are.
+    assert "My list" in home and "Christmas in" in home
 
 
 def test_a_sister_sees_none_of_it_and_cannot_touch_it(app, family, girls) -> None:  # noqa: F811
@@ -151,12 +152,13 @@ def test_ask_a_parent_is_a_button_where_it_was_offered(app, family, girls) -> No
 
 
 def test_a_kid_home_speaks_to_her_and_offers_only_what_she_may(app, family, sam, girls) -> None:  # noqa: F811
-    """Her ways to start say "I'd like", never the "we should" Vera nudges her away from, and no
+    """Her box is the one natural place to say anything, with no ways to start put in her mouth
+    (least of all the "we should" Vera nudges her away from), and no
     empty list sends her to a form she would be refused (docs/STYLE.md, "A kid's screen")."""
     from familydb.web.chat import KID_HOME_PROMPT
 
     home = girls["mine"].get("/").text
-    assert "I\u2019d like…" in home and "We should try" not in home
+    assert 'class="starters"' not in home and "We should try" not in home
     assert f'placeholder="{KID_HOME_PROMPT}"' in home
     assert 'href="/ideas/new"' not in home and "plan an idea" not in home
     assert "Tell Vera anything" not in home and 'href="/wishes"' in home
@@ -175,3 +177,19 @@ def test_her_list_opens_on_one_box_for_anything(app, family, sam, girls) -> None
     parent = sam.get(f"/wishes?who={family['girls'].id}").text
     assert 'action="/chat"' not in parent and "Tell Vera anything" not in parent
     assert 'id="wish-add"' in parent
+
+
+def test_a_kid_sees_the_pages_simply(app, family, girls) -> None:  # noqa: F811
+    """Things to do, Plans and Ideas for a kid: what is hers or the family's, with nothing to
+    filter, count or choose between, and no workings (docs/STYLE.md, "A kid's screen")."""
+    kid = girls["mine"]
+    todo = kid.get("/tasks").text
+    assert "My things to do" in todo and 'role="search"' not in todo and "shown (up to" not in todo
+    plans = kid.get("/plans").text
+    assert (
+        "What the family is doing next." in plans and "plans/month" not in plans.split("<main")[-1]
+    )
+    ideas = kid.get("/ideas").text
+    assert 'role="search"' not in ideas and "details not looked up" not in ideas
+    home = kid.get("/").text
+    assert "Lately added" not in home
