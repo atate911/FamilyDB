@@ -987,6 +987,23 @@ sudo ufw status
 `allow OpenSSH` is not already in place when you enable it, your session dies and you cannot
 open another; the only way back in is your provider's console. Do not leave that line out.
 
+**Only the countries the family is in.** If nobody outside the US should ever connect, this
+drops every new connection to the server, on every port, from anywhere else:
+
+```bash
+sudo /opt/familydb/scripts/maintain.sh countries US
+```
+
+It lets in whoever is on SSH as you run it, and asks you to open a second SSH session before it
+keeps the filter: without a yes within three minutes it takes itself off. Replies to what the
+server asks for (Telegram, the AI companies, updates) are not touched, so the bot works as
+before; the page will not open for the family abroad, though Telegram will. Before travelling,
+`countries allow ADDR` lets one address in from anywhere, and `countries off` undoes it all. The
+address lists come from ipdeny.com and are fetched again each week. `maintain.sh status` shows
+it, how many it has turned away, and when the page's certificate runs out: Let's Encrypt checks
+the server from more than one place before renewing, so if a renewal is turned away, that is
+where it shows, weeks ahead. RUNBOOK section 12 has the details.
+
 **Unattended security updates.** This is the piece of maintenance that matters most:
 
 ```bash

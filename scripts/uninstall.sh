@@ -591,6 +591,23 @@ else
   note "No systemd unit here."
 fi
 
+# The country filter (maintain.sh countries) is refreshed by the scripts being removed, so it goes
+# too, rather than staying with a list nothing fetches again.
+if [ -f /etc/systemd/system/familydb-countries.service ] || [ -d /etc/familydb-countries ] \
+   || { have nft && as_root nft list table inet familydb_countries >/dev/null 2>&1; }; then
+  system_change "Take off the country filter, so anyone may connect again" \
+    "its lists are fetched by the scripts this removes, and would only grow stale"
+  if [ "$DRY_RUN" = 0 ]; then
+    as_root systemctl disable --now familydb-countries-refresh.timer >/dev/null 2>&1 || true
+    as_root systemctl disable familydb-countries.service >/dev/null 2>&1 || true
+    have nft && as_root nft delete table inet familydb_countries 2>/dev/null || true
+    as_root rm -f /etc/systemd/system/familydb-countries.service \
+      /etc/systemd/system/familydb-countries-refresh.service /etc/systemd/system/familydb-countries-refresh.timer
+    as_root rm -rf /etc/familydb-countries
+    try_step "Reloading systemd" as_root systemctl daemon-reload
+  fi
+fi
+
 if have docker && [ -f "${TARGET}/docker-compose.yml" ]; then
   if docker compose --project-directory "$TARGET" ps >/dev/null 2>&1; then
     system_change "Stop and remove the containers" "so nothing restarts them"

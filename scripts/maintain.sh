@@ -10,13 +10,15 @@ set -euo pipefail
 # shellcheck disable=SC2034  # read by lib/common.sh when it opens the transcript.
 SCRIPT_ARGS="$*"
 HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
-if [ -r "${HERE}/lib/common.sh" ] && [ -r "${HERE}/lib/https.sh" ]; then
+if [ -r "${HERE}/lib/common.sh" ] && [ -r "${HERE}/lib/https.sh" ] && [ -r "${HERE}/lib/countries.sh" ]; then
   # shellcheck source=lib/common.sh
   . "${HERE}/lib/common.sh"
   # shellcheck source=lib/https.sh
   . "${HERE}/lib/https.sh"
+  # shellcheck source=lib/countries.sh
+  . "${HERE}/lib/countries.sh"
 else
-  printf 'This script needs scripts/lib/common.sh and scripts/lib/https.sh beside it.\n' >&2
+  printf 'This script needs scripts/lib/common.sh, https.sh and countries.sh beside it.\n' >&2
   exit 1
 fi
 
@@ -67,6 +69,13 @@ Commands
   logs [N]             Follow the log, starting with the last N lines (default 50).
   restart              Restart it, and say whether it came back.
   schedule-backups     Add a nightly backup to cron, and prune ones older than --keep-days.
+  countries CC [CC...] Let in only connections from those countries (US, or US CA), on every
+                       port: everything new from anywhere else is dropped. Replies to what this
+                       machine asks for, and whoever is on SSH now, still get through. The
+                       address lists are fetched again each week.
+  countries allow ADDR Let one address or range in from anywhere, such as yours while abroad.
+  countries off        Let everyone in again.
+  countries            Say how it stands.
 
 Options
   --target DIR         Which install. Default: the checkout this script lives in.
@@ -85,6 +94,7 @@ Examples
   sudo scripts/maintain.sh upgrade
   sudo scripts/maintain.sh https --port random
   sudo scripts/maintain.sh port 9090
+  sudo scripts/maintain.sh countries US
 USAGE
 }
 
@@ -96,7 +106,9 @@ HTTPS_SITE=""
 HTTPS_PORT=""
 APP_PORT=""
 PASSWORD_FOR=""
+COUNTRY_ARGS=()
 case "$COMMAND" in
+  countries) while [ $# -gt 0 ]; do case "$1" in -*) break ;; *) COUNTRY_ARGS+=("$1"); shift ;; esac; done ;;
   https) case "${1:-}" in ''|-*) ;; *) HTTPS_SITE="$1"; shift ;; esac ;;
   port) case "${1:-}" in ''|-*) ;; *) APP_PORT="$1"; shift ;; esac ;;
   password) case "${1:-}" in ''|-*) ;; *) PASSWORD_FOR="$1"; shift ;; esac ;;
@@ -313,6 +325,7 @@ cmd_status() {
   status_version
   status_running
   status_page
+  status_countries_section
   status_data
   status_backups
   say ""
@@ -430,6 +443,7 @@ status_page() {
     fi
     if [ "$caddy" = active ]; then
       row "HTTPS" "Caddy on port ${PUBLIC_PORT}, passing the page on to ${port}" good
+      printf '%s' "$site" | grep -Eq '^[0-9.]+$' || status_certificate "$site"
     else
       row "HTTPS" "Caddy is ${caddy:-not found}, so the address above finds nothing" bad
       more "put it back:  sudo ${0} https"
@@ -441,6 +455,62 @@ status_page() {
     row "Address" "http://$(this_address):${port}/, without HTTPS" poor
     more "passwords cross the network readable; put it on HTTPS:  sudo ${0} https"
   fi
+}
+
+status_countries_section() { section "Who may connect"; status_countries; }
+
+status_countries() {
+  if ! as_root test -s "${COUNTRIES_DIR}/countries"; then
+    row "Countries" "anyone, from anywhere"
+    more "to let in only the US:  sudo ${0} countries US"
+    return 0
+  fi
+  local codes allowed newest age turned
+  codes="$(as_root cat "${COUNTRIES_DIR}/countries" | paste -sd' ' -)"
+  if ! countries_on_now; then
+    row "Countries" "set to ${codes}, but the filter is not in force" bad
+    more "put it back:  sudo ${0} countries ${codes}"
+    return 0
+  fi
+  row "Countries" "only ${codes}; everything new from elsewhere is dropped" good
+  allowed="$(as_root grep -cvE '^[[:space:]]*(#|$)' "${COUNTRIES_DIR}/allow" 2>/dev/null || true)"
+  [ "${allowed:-0}" -gt 0 ] && more "and ${allowed} address$([ "$allowed" = 1 ] || echo es) from anywhere, in ${COUNTRIES_DIR}/allow"
+  newest="$(as_root find "${COUNTRIES_DIR}/lists" -name '*.v4' -printf '%T@\n' 2>/dev/null | sort -n | head -1 | cut -d. -f1)"
+  if [ -n "$newest" ]; then
+    age=$(( $(date +%s) - newest ))
+    if [ "$age" -gt 1814400 ]; then  # three weeks: the weekly fetch has failed twice
+      row "Lists" "fetched $(ago "$age"); the weekly fetch is failing" poor
+      more "why:  sudo journalctl -u familydb-countries-refresh -n 30"
+    else
+      row "Lists" "fetched $(ago "$age"), again each week" good
+    fi
+  fi
+  turned="$(countries_turned_away)"
+  [ -n "$turned" ] && row "Turned away" "$(printf "%'d" "$turned" 2>/dev/null || echo "$turned") packets since it was loaded"
+  return 0
+}
+
+status_certificate() { # status_certificate SITE - when the page's certificate runs out
+  have openssl || return 0
+  local ends left
+  ends="$(printf '' | timeout 5 openssl s_client -connect "127.0.0.1:${PUBLIC_PORT}" -servername "$1" 2>/dev/null \
+    | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2)"
+  if [ -z "$ends" ]; then
+    row "Certificate" "none for ${1} yet" bad
+    more "why:  sudo journalctl -u caddy -n 50 --no-pager | grep -i ${1}"
+    return 0
+  fi
+  left=$(( ($(date -d "$ends" +%s) - $(date +%s)) / 86400 ))
+  # Caddy renews a month or so before the end, so under three weeks means renewals are failing.
+  if [ "$left" -lt 7 ]; then
+    row "Certificate" "runs out in ${left} days, $(date -d "$ends" '+%-d %b')" bad
+  elif [ "$left" -lt 21 ]; then
+    row "Certificate" "runs out in ${left} days, $(date -d "$ends" '+%-d %b'); it should have renewed by now" poor
+  else
+    row "Certificate" "good until $(date -d "$ends" '+%-d %b %Y'), ${left} days" good
+    return 0
+  fi
+  more "why it has not renewed:  sudo journalctl -u caddy -n 50 --no-pager | grep -iE 'renew|challenge|error'"
 }
 
 status_data() {
@@ -1027,6 +1097,202 @@ upgrade_summary() { # upgrade_summary CURRENT NAME BACKUP CHECK_STATUS
   printf '%s╰%s%s\n' "$colour" "$(rule 59)" "$OFF"
 }
 
+# ------------------------------------------------------------- countries ----
+cmd_countries() {
+  local first="${COUNTRY_ARGS[0]:-}"
+  case "$first" in
+    "")      countries_show ;;
+    off)     countries_off ;;
+    refresh) countries_refresh ;;
+    allow)   countries_allow "${COUNTRY_ARGS[1]:-}" ;;
+    *)       countries_on "${COUNTRY_ARGS[@]}" ;;
+  esac
+}
+
+countries_need_nft() {
+  have nft || die "nftables is not installed, and the country filter is built on it" \
+    "Install it, then run this again:  sudo apt-get install -y nftables"
+}
+
+countries_fetch() { # countries_fetch CC... - each country's lists into place; fails if any IPv4 list cannot be had
+  local cc family tmp missing=0
+  as_root mkdir -p "${COUNTRIES_DIR}/lists"
+  for cc in "$@"; do
+    for family in v4 v6; do
+      tmp="$(mktemp)"
+      if curl -fsS -m 60 --retry 2 -o "$tmp" "$(countries_url "$cc" "$family")" 2>>"${LOG_FILE:-/dev/null}" \
+        && list_is_sound "$family" "$tmp" "${COUNTRIES_DIR}/lists/${cc}.${family}"; then
+        as_root install -m 644 "$tmp" "${COUNTRIES_DIR}/lists/${cc}.${family}"
+        ok "${cc}: $(grep -c . "$tmp") ${family/v/IPv} ranges"
+      elif as_root test -s "${COUNTRIES_DIR}/lists/${cc}.${family}"; then
+        warn "${cc}: could not fetch a sound ${family/v/IPv} list; keeping the one from $(ago $(( $(date +%s) - $(as_root stat -c %Y "${COUNTRIES_DIR}/lists/${cc}.${family}") )))"
+      elif [ "$family" = v4 ]; then
+        warn "${cc}: could not fetch its IPv4 list, and there is none from before"
+        missing=1
+      else
+        note "${cc}: no IPv6 list to be had, so no IPv6 connection gets in from ${cc}"
+      fi
+      rm -f "$tmp"
+    done
+  done
+  [ "$missing" = 0 ]
+}
+
+countries_load() { # write the rules from what is in COUNTRIES_DIR, check them, and put them in force
+  local tmp
+  tmp="$(mktemp)"
+  countries_rules >"$tmp"
+  if ! as_root nft -c -f "$tmp" 2>>"${LOG_FILE:-/dev/null}"; then
+    rm -f "$tmp"
+    die "nftables would not take the rules, so nothing was changed" \
+      "What it said is in ${LOG_FILE:-the transcript}."
+  fi
+  as_root install -m 600 "$tmp" "${COUNTRIES_DIR}/rules.nft"
+  rm -f "$tmp"
+  step "Putting the filter in force" as_root nft -f "${COUNTRIES_DIR}/rules.nft"
+}
+
+countries_on() { # countries_on CC...
+  countries_need_nft
+  local cc codes=() peers peer
+  for cc in "$@"; do
+    is_country_code "$cc" || die "${cc} is not a country code" "Two letters, as in: ${0} countries US"
+    codes+=("$(printf '%s' "$cc" | tr '[:lower:]' '[:upper:]')")
+  done
+  peers="$(ssh_peers)"
+  head2 "Only letting in ${codes[*]}"
+  plan_item "Fetch the address lists for ${codes[*]}" \
+    "from ipdeny.com, which builds them from the regional registries; again each week after this"
+  plan_item "Drop every new connection, on every port, from anywhere else" \
+    "an nftables table of its own, ${COUNTRIES_TABLE}; nothing else in the firewall is touched"
+  if [ -n "$peers" ]; then
+    plan_item "Let in $(printf '%s' "$peers" | paste -sd, - | sed 's/,/, /g') from anywhere" \
+      "connected over SSH now, so a list that has them in the wrong country cannot shut you out"
+  fi
+  plan_item "Load it at every boot, and fetch the lists again weekly" \
+    "familydb-countries.service and familydb-countries-refresh.timer"
+  plan_untouched "replies to what this machine asks for (Telegram, the AI companies, updates)"
+  plan_untouched "private and link-local networks, and the provider's DHCP"
+  show_plan "What this changes"
+  local site
+  site="$(env_file_value WEB_DOMAIN)"
+  warn "Anyone outside ${codes[*]} is turned away, the family abroad included: the page will not"
+  note "  open for them, though Telegram still works, since the bot fetches its messages. SSH from"
+  note "  abroad needs '${0} countries allow ADDR' first, or your provider's console."
+  if [ -n "$site" ] && ! printf '%s' "$site" | grep -Eq '^[0-9.]+$'; then
+    warn "Let's Encrypt checks ${site} from more than one place before it renews the certificate,"
+    note "  and not all of them may be in ${codes[*]}. If a renewal is turned away, '${0} status'"
+    note "  shows the certificate running out weeks ahead: then let port 80 in, or ask about DNS checks."
+  fi
+  say ""
+  approve "Turn the filter on?" || { say "Nothing was changed."; exit 0; }
+  [ "$DRY_RUN" = 1 ] && { note "[dry run] nothing was changed"; return 0; }
+
+  noting_new "$COUNTRIES_DIR" dir
+  as_root mkdir -p "$COUNTRIES_DIR"
+  printf '%s\n' "${codes[@]}" | as_root tee "${COUNTRIES_DIR}/countries" >/dev/null
+  if ! as_root test -f "${COUNTRIES_DIR}/allow"; then
+    printf '# Addresses let in from anywhere, one a line: an address or a range, then anything.\n' \
+      | as_root tee "${COUNTRIES_DIR}/allow" >/dev/null
+  fi
+  for peer in $peers; do
+    as_root grep -qE "^${peer//./\\.}( |\$)" "${COUNTRIES_DIR}/allow" \
+      || printf '%s on SSH when the filter was turned on, %s\n' "$peer" "$(date '+%Y-%m-%d')" \
+        | as_root tee -a "${COUNTRIES_DIR}/allow" >/dev/null
+  done
+  countries_fetch "${codes[@]}" || die "could not fetch the address lists, so nothing was turned on" \
+    "Check that this machine can reach www.ipdeny.com:  curl -sI https://www.ipdeny.com/"
+  countries_load
+
+  # A way back that needs nobody: unless a new connection is shown to get in, it undoes itself.
+  if [ "${ASSUME_YES:-0}" != 1 ] && [ -t 0 ] && have systemd-run; then
+    as_root systemctl stop "${COUNTRIES_UNDO}.timer" >/dev/null 2>&1 || true
+    as_root systemd-run --quiet --unit "$COUNTRIES_UNDO" --on-active=180 \
+      "$(command -v nft)" delete table inet "$COUNTRIES_TABLE" >/dev/null 2>&1 || true
+    say ""
+    printf '%s  Now open a NEW SSH session to this server, from where you usually connect.%s\n' "$B" "$OFF"
+    note "  This one stays connected whatever happens. Unless you answer yes within three minutes,"
+    note "  the filter takes itself off again."
+    local reply=""
+    read -r -t 170 -p "  Did the new session get in? [y/N]: " reply || reply=""
+    case "$reply" in
+      [Yy]*) as_root systemctl stop "${COUNTRIES_UNDO}.timer" >/dev/null 2>&1 || true ;;
+      *) as_root systemctl stop "${COUNTRIES_UNDO}.timer" >/dev/null 2>&1 || true
+         as_root nft delete table inet "$COUNTRIES_TABLE" 2>/dev/null || true
+         as_root rm -f "${COUNTRIES_DIR}/rules.nft"
+         die "the filter is off again, and will not come back at boot" \
+           "Nothing else was changed. The addresses let in are in ${COUNTRIES_DIR}/allow;" \
+           "add the one you connect from (${0} countries allow ADDR) and try again." ;;
+    esac
+  else
+    note "No terminal to ask whether a new SSH session gets in, so the filter stays as it is."
+  fi
+
+  countries_write_units "${TARGET}/scripts/maintain.sh"
+  try_step "Reloading systemd" as_root systemctl daemon-reload
+  step "Loading it at every boot" as_root systemctl enable familydb-countries.service
+  step "Fetching the lists again each week" as_root systemctl enable --now familydb-countries-refresh.timer
+  say ""
+  ok "Only ${codes[*]}$([ -n "$peers" ] && echo ", and the addresses in ${COUNTRIES_DIR}/allow,") can connect to this machine now."
+  note "How it stands, and how many it has turned away:  ${0} countries"
+  note "Let everyone in again:                          sudo ${0} countries off"
+}
+
+countries_refresh() { # the weekly timer's: fetch again, and load only what is sound
+  countries_need_nft
+  as_root test -s "${COUNTRIES_DIR}/countries" || die "the filter is not on, so there is nothing to refresh"
+  local codes
+  read -ra codes <<<"$(as_root cat "${COUNTRIES_DIR}/countries" | tr '\n' ' ')"
+  head2 "Fetching the lists for ${codes[*]} again"
+  countries_fetch "${codes[@]}" || true
+  countries_load
+}
+
+countries_allow() { # countries_allow ADDR
+  local addr="$1"
+  is_address "$addr" || die "which address?" "An address or a range:  sudo ${0} countries allow 203.0.113.7"
+  as_root test -s "${COUNTRIES_DIR}/countries" || die "the filter is not on, so everyone is let in already"
+  head2 "Letting ${addr} in from anywhere"
+  if as_root grep -qE "^${addr//./\\.}( |\$)" "${COUNTRIES_DIR}/allow"; then
+    ok "${addr} is let in already."
+    return 0
+  fi
+  [ "$DRY_RUN" = 1 ] && { note "[dry run] nothing was changed"; return 0; }
+  printf '%s added %s\n' "$addr" "$(date '+%Y-%m-%d')" | as_root tee -a "${COUNTRIES_DIR}/allow" >/dev/null
+  countries_load
+  note "To take it off again, delete its line in ${COUNTRIES_DIR}/allow and run: sudo ${0} countries refresh"
+}
+
+countries_off() {
+  head2 "Letting everyone in again"
+  if ! countries_on_now && ! as_root test -e "$COUNTRIES_UNIT" && ! as_root test -d "$COUNTRIES_DIR"; then
+    ok "The filter is not on. Nothing to do."
+    return 0
+  fi
+  plan_item "Take the country filter off, and stop loading it at boot and fetching its lists" \
+    "${COUNTRIES_TABLE}, its units and ${COUNTRIES_DIR}"
+  show_plan "What this changes"
+  approve "Let everyone in again?" || { say "Nothing was changed."; exit 0; }
+  [ "$DRY_RUN" = 1 ] && { note "[dry run] nothing was changed"; return 0; }
+  countries_remove
+  ok "Anyone may connect again, as before the filter."
+}
+
+countries_remove() { # everything the filter put on this machine, gone
+  try_step "Stopping the weekly fetch" as_root systemctl disable --now familydb-countries-refresh.timer
+  try_step "No longer loading it at boot" as_root systemctl disable familydb-countries.service
+  as_root nft delete table inet "$COUNTRIES_TABLE" 2>/dev/null || true
+  as_root rm -f "$COUNTRIES_UNIT" "$COUNTRIES_REFRESH" "$COUNTRIES_TIMER"
+  as_root rm -rf "${COUNTRIES_DIR:?}"
+  try_step "Reloading systemd" as_root systemctl daemon-reload
+}
+
+countries_show() {
+  head2 "Who may connect"
+  status_countries
+  say ""
+}
+
 # ------------------------------------------------------------------ logs ----
 cmd_logs() {
   if [ "$DOCKER_MODE" = 1 ]; then
@@ -1116,6 +1382,7 @@ case "$COMMAND" in
   logs)             cmd_logs ;;
   restart)          cmd_restart ;;
   schedule-backups) cmd_schedule_backups ;;
+  countries)        cmd_countries ;;
   -h|--help|help)   usage ;;
   *) usage >&2; die "unknown command: ${COMMAND}" ;;
 esac
@@ -1123,8 +1390,9 @@ esac
 # The foot of anything that changed the machine: how long it took, whether anything wanted a look
 # on the way, and where the whole run is written down.
 case "$COMMAND" in
-  https|port|backup|restore|restart|schedule-backups)
+  https|port|backup|restore|restart|schedule-backups|countries)
     [ "$DRY_RUN" = 1 ] && exit 0
+    [ "$COMMAND" = countries ] && [ ${#COUNTRY_ARGS[@]} -eq 0 ] && exit 0
     say ""
     if [ "$WARNINGS" -gt 0 ]; then
       note "Finished in $(took "$SECONDS"), with ${WARNINGS} warning$([ "$WARNINGS" = 1 ] || echo s) above.${LOG_FILE:+ Every step is in ${LOG_FILE}.}"

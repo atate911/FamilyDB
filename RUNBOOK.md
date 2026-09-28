@@ -754,8 +754,8 @@ changes it: `status` (is it running and does the page answer, where the page is 
 HTTPS stands, the database and the disk, how old the newest backup is and whether they are
 scheduled, whether a newer version has been fetched, and at the end what wants a look), `check`
 (the full `familydb doctor` report), `backup`, `restore FILE`, `upgrade`, `logs`, `restart`,
-`schedule-backups`, `https` (section 10) and `password` (a starting password for somebody who
-forgot theirs). `--help` says more. The rest of this section is what it does, and how to do it
+`schedule-backups`, `https` (section 10), `countries` (below) and `password` (a starting
+password for somebody who forgot theirs). `--help` says more. The rest of this section is what it does, and how to do it
 by hand.
 
 Everything above gets the bot running. This is what a machine on the internet needs around it.
@@ -777,6 +777,33 @@ and 443 (or 80 and the page's own port, section 10), and SSH, and nothing else. 
 under "Looking after the server itself", has the `ufw` commands in the order that does not lock
 you out. Do not open 8080. The page listens on `127.0.0.1` so that the proxy, and only the
 proxy, can reach it; the firewall is the second lock on the same door.
+
+**Only the countries the family is in.** `sudo scripts/maintain.sh countries US` (or `US CA`,
+any two-letter codes) adds an nftables table of its own, `familydb_countries`, that drops every
+new inbound connection, on every port and protocol, from outside those countries. What still
+gets in: this machine talking to itself, replies to connections it made (the bot only calls out,
+Telegram included), the provider's DHCP, private, shared and link-local ranges (the provider's
+network, Docker's, a VPN such as Tailscale), and the addresses in
+`/etc/familydb-countries/allow`, which starts with whoever was on SSH when it was turned on.
+Docker's published ports are filtered too. The lists are ipdeny.com's, per country, from the
+regional registries; `familydb-countries-refresh.timer` fetches them weekly and loads only a list
+that parses and has not shrunk by half, so a bad download keeps last week's. The boot unit
+`familydb-countries.service` loads `/etc/familydb-countries/rules.nft` before the network
+comes up.
+
+Turning it on from a terminal arms a three-minute timer that takes it off again, and asks you to
+open a second SSH session first: answer yes and it stays, anything else and it comes off at once.
+If you are ever shut out anyway, your provider's web console gets in, and
+`sudo nft delete table inet familydb_countries` opens everything until the next boot
+(`countries off` for good). Before travelling, `countries allow ADDR` lets an address in from
+anywhere; to take one off, delete its line in the allow file and run `countries refresh`.
+
+Two things it costs. The family abroad cannot open the page (Telegram still works). And Let's
+Encrypt validates a domain from more than one vantage point before issuing or renewing, and not
+all of them may be in your countries: `maintain.sh status` shows the certificate's end date,
+amber once it is under three weeks away, which is when a renewal should already have happened.
+If it comes to that, the choices are to let port 80 in from anywhere or to validate through DNS.
+`uninstall.sh` removes the filter along with FamilyDB.
 
 **Keeping the machine patched.** Unattended security updates are the one piece of maintenance
 that matters more than anything in this file; the same part of docs/INSTALL.md has the two

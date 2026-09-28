@@ -251,6 +251,13 @@ unit that will never start.
   `maintain.sh https --port` moves the Caddy container's port as well. The
   General settings page shows both ports and the commands; neither is a form,
   so a sign-in in the wrong hands cannot move the page.
+- **Only the countries the family is in.** `maintain.sh countries US` drops
+  every new connection to the server, on every port, from outside the US (or
+  whichever countries are named), while replies to what the server asks for,
+  Telegram included, go on as before. It lets in whoever is on SSH, undoes
+  itself unless a second SSH session is shown to get in, fetches its lists
+  again each week, and `countries allow ADDR` and `countries off` are there
+  for travel. `status` shows it, and when the certificate runs out.
 - `scripts/uninstall.sh` removes the service and the installed files but keeps
   `.env`, `data/` and the backups, which is what a reinstall wants. `--purge`
   removes those too, after taking a backup and asking you to type a
