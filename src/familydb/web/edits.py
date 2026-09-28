@@ -51,6 +51,8 @@ SCHEDULED = "On the calendar: {title}."
 MOVED = "Moved to {when}."
 CANCELLED = "Cancelled."
 TICKED = "Done: #{id} {title}."
+# The same for somebody who sees only their own (a kid): no numbers, which are the workings.
+TICKED_PLAIN = "Done: {title}!"
 LOOKING = "Looking {what} up now: within a few minutes."
 NOTHING_WAITING = "Nothing is waiting to be looked up."
 REMEMBERED = {"saved": "Remembered: {fact}.", "already remembered": "Already remembered: {fact}."}
@@ -468,7 +470,8 @@ def finish_task(task_id: int) -> Response:
         _say("Reload this task before ticking it off.")
     else:
         result, complaint = run("update_task", {"task_id": task_id, "status": "done"})
-        _say(complaint or TICKED.format(id=task_id, title=result["task"]["title"]))
+        said = TICKED if auth.visitor().may("browse") else TICKED_PLAIN
+        _say(complaint or said.format(id=task_id, title=result["task"]["title"]))
     return _back(TICK_PAGES.get(request.form.get("back", ""), "web.tasks"))
 
 

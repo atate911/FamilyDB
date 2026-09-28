@@ -101,8 +101,10 @@
 {# The tick beside an open task: marks it done where it stands, through `update_task` at the
    revision it was drawn at, and comes back to `back` (home or tasks). Ticking is a change, so a
    role that may not change things (familydb/roles.py) is shown the empty box instead. #}
+{# Anybody's for whoever may change things; for a kid, who sees only her own, hers
+   (roles.py `own_tasks`, which update_task holds to her own). #}
 {% macro tick(task_id, revision, title, back) -%}
-  {% if visitor().may('change') -%}
+  {% if visitor().may('change') or visitor().may('own_tasks') -%}
   <form class="tick-form" method="post" action="{{ url_for('edits.finish_task', task_id=task_id) }}">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
     <input type="hidden" name="once" value="{{ once_token() }}" />

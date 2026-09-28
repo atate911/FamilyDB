@@ -97,6 +97,10 @@ REFUSALS = {
         "Not yet",
         "Changing ideas, plans and things to do is not part of your role yet. Ask an admin.",
     ),
+    "own_tasks": (
+        "Not yet",
+        "Ticking off your things to do is not part of your role yet. Ask an admin.",
+    ),
 }
 MAP_URL = "https://www.openstreetmap.org/?mlat={lat}&mlon={lon}#map=17/{lat}/{lon}"
 MAP_SEARCH = "https://www.openstreetmap.org/search?query={query}"

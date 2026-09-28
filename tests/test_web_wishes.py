@@ -8,7 +8,7 @@ from contextlib import closing
 
 import pytest
 
-from familydb.store import db, members, wishes
+from familydb.store import db, members, tasks, wishes
 from tests.test_web_logins import KIDS, _as, _start, _tokens, app, sam  # noqa: F401
 
 CHLOES = "chloe chooses hers too"
@@ -193,3 +193,38 @@ def test_a_kid_sees_the_pages_simply(app, family, girls) -> None:  # noqa: F811
     assert 'role="search"' not in ideas and "details not looked up" not in ideas
     home = kid.get("/").text
     assert "Lately added" not in home
+
+
+def test_a_kid_ticks_off_her_own_things_to_do_and_nobody_else_s(app, family, girls) -> None:  # noqa: F811
+    """The family decided the girls tick off their own (roles.py `own_tasks`): the tick is hers,
+    and update_task, which the page and the chat both go through, refuses anybody else's."""
+    kid = girls["mine"]
+    with closing(app.connect()) as conn, db.transaction(conn):
+
+        def task(title, owner):
+            return tasks.insert(
+                conn,
+                title=title,
+                notes="",
+                owner_id=owner,
+                due_at=None,
+                preferred_window="",
+                operation_key=f"test-{title}",
+                channel="web",
+                chat_id="web",
+                now="2026-09-20T00:00:00Z",
+            )
+
+        swim = task("Pack swim bag", family["girls"].id)
+        car = task("Renew car registration", family["sam"].id)
+    page = kid.get("/tasks").text
+    assert f'action="/task/{swim}/done"' in page and "Renew car registration" not in page
+    tick = {**_tokens(kid, "/you"), "revision": "1"}
+    ticked = kid.post(f"/task/{swim}/done", data=tick, follow_redirects=True)
+    assert "Done: Pack swim bag!" in ticked.text  # no number: that is the workings
+    tick = {**_tokens(kid, "/you"), "revision": "1"}
+    refused = kid.post(f"/task/{car}/done", data=tick, follow_redirects=True)
+    assert "only your own things to do" in refused.text
+    with closing(app.connect()) as conn:
+        assert tasks.get(conn, swim).status == "done"
+        assert tasks.get(conn, car).status == "open"

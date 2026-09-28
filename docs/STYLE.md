@@ -534,7 +534,8 @@ never asks her which box a thing belongs in. Every simpler page is drawn for who
   everyday list, and how far off Christmas and her birthday are. Under that, coming up and her
   things to do side by side, and nothing else: no ideas added lately, no restaurants.
 - **Things to do** is "My things to do", her open ones as a checklist drawn as Home draws it
-  (`checklist` in `_ui.html`): what, and when in words. No search, no status to choose, no count,
+  (`checklist` in `_ui.html`): what, and when in words. She ticks each off herself, here and on
+  Home (`own_tasks`), and is told "Done: Pack swim bag!" with no number. No search, no status to choose, no count,
   no reminder's workings.
 - **Plans** is one list of what is coming, with no List and Month to choose between.
 - **Ideas** is plain cards, the kind, the title and where, each a link: no search or filters, no

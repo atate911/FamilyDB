@@ -15,7 +15,8 @@ This file is what the family decided and how it is built.
   conversation with Vera that the parents can read. Everything goes through tools, so another
   home app can be connected later.
 - **What a kid may do** (`roles.py`): sign in, read the ideas and the plans (not gifts), talk to
-  Vera, keep her own wishes, and see her own things to do. Nothing else changes from her screen.
+  Vera, keep her own wishes, and see and tick off her own things to do (the family decided she
+  checks off her own). Nothing else changes from her screen.
 - **Everyday wishes** have daily rules. **Christmas and birthday wishes** are flagged
   (`occasion`), kept apart, and have looser rules.
 - **"Not this time" locks an everyday wish** for 14 days, then 30, then 90, then 120, then a year,
@@ -57,6 +58,7 @@ This file is what the family decided and how it is built.
 | `chat` | talk to Vera | yes | yes | yes |
 | `wish` | keep your own wish lists | yes | yes | yes |
 | `change` | the forms that change ideas, plans, things to do | yes | yes | no |
+| `own_tasks` | tick off, or change, your own things to do (page and chat) | yes | yes | yes |
 | `browse` | memory, status, everybody's things to do | yes | yes | no |
 | `decide` | see every kid's wishes and answer them | yes | yes | no |
 | `manage` | settings, setup, the family list | yes | no | no |
