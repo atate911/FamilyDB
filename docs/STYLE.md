@@ -525,8 +525,8 @@ its box saying what she brings ("Something you’d like, a question, something f
 ways to start "I’d like…" where a grown-up's say "We should try…", since asking politely, never
 "we should", is how Vera would have her ask. Under it, her list at a glance (My list, in pink, the
 kids' colour since the Family page first gave it to their faces): a parent's latest yes lit in
-green with sparkles, a no quiet beside a heart, each list's top three numbered, and Add something
-always there. Then what is coming up and her own things to do. Nothing on her screen offers what
+green with sparkles, a no quiet beside a heart, each list's top three numbered, and the way to
+the whole list. Then what is coming up and her own things to do. Nothing on her screen offers what
 she may not do: the empty lists ask her to tell Vera, never to add an idea or plan one.
 
 **The word.** The page says "list" and "I’d like", not "wish": the family found "wish" too
@@ -534,13 +534,15 @@ aspirational, a thing hoped for rather than asked for. The code, the tools and `
 still call each one a wish, since that is what the model is told and renaming it would change
 every request; only the words on the page moved.
 
-**Her list** (`/wishes`, `wishes.html`) opens on two boxes side by side (one above the other on a
-phone), each headed in the size of Home's question. On the left, "Tell Vera anything": a big box
-for whatever is on her mind, the chat's own box (`_ask.html`), which posts to her conversation.
-On the right, "I’d like…": one line and which list, which adds to her list. Only a kid who may
-talk to Vera gets the first; a parent's view of her list has the add box alone.
+**Her list** (`/wishes`, `wishes.html`) opens on one big box, "Tell Vera anything", the full
+width of the page and headed in the size of Home's question: the chat's own box (`_ask.html`),
+posting to her conversation. There is no second form for adding to her list. She says it her way
+("can I get a kite", "let's go to the zoo", "what's for dinner") and Vera sorts it, onto the list,
+into an idea or a reminder, or just an answer, so she never has to decide which box a thing
+belongs in. A parent's view of her list has the add form instead, and a kid who may not talk to
+Vera keeps it too, as the one way left to add.
 
-Under them, one line to each thing on her list, since each is a few words and a line of buttons
+Under it, one line to each thing on her list, since each is a few words and a line of buttons
 under each made the list hard to read: the grip to drag it by on the left (drawn only while
 `wishes.js` runs, and outside the line's summary so a drag never opens it), its number in a round
 pink badge, the one she wants most filled in, what it is, a small pencil when it has a note, and

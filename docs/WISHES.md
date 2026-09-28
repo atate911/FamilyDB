@@ -160,8 +160,9 @@ A kid's Home: her conversation with Vera, her list (the top of the everyday list
 and birthday lists with their countdowns, new answers), what is coming up (no gifts), and her own
 things to do. Her bar: Home, Vera, Ideas, Plans, To do, My list. A parent's Home gains a card, the
 kids' lists: each girl's open wishes, anything flagged, requests waiting. `/wishes` opens, for a
-kid, on a big box to tell Vera anything (her conversation) and an "I’d like…" box for her list,
-then the lists, one line to a wish, reordered by buttons, and by dragging where scripts run
+kid, on one big box to tell Vera anything, her conversation, where Vera sorts what she says (no
+separate form to add to the list: each addition is a chat message, within her daily count), then
+the lists, one line to a wish, reordered by buttons, and by dragging where scripts run
 (`static/wishes.js`).
 
 ## Settings (built)

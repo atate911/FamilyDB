@@ -159,17 +159,19 @@ def test_a_kid_home_speaks_to_her_and_offers_only_what_she_may(app, family, sam,
     assert "I\u2019d like…" in home and "We should try" not in home
     assert f'placeholder="{KID_HOME_PROMPT}"' in home
     assert 'href="/ideas/new"' not in home and "plan an idea" not in home
-    assert "Add something" in home
+    assert "Tell Vera anything" not in home and 'href="/wishes"' in home
     assert girls["mine"].get("/ideas/new").status_code == 403
     # A grown-up's Home is as it was.
     assert "We should try…" in sam.get("/").text and 'href="/ideas/new"' in sam.get("/").text
 
 
-def test_her_list_opens_on_a_box_for_anything_and_one_for_her_list(app, family, sam, girls) -> None:  # noqa: F811
-    """Where she lands on her list: the chat's own box, posting to her conversation, and the
-    "I'd like" box, posting to her list. A parent's page has neither the chat box nor its label."""
+def test_her_list_opens_on_one_box_for_anything(app, family, sam, girls) -> None:  # noqa: F811
+    """Where she lands on her list: one box, the chat's own, posting to her conversation, where
+    Vera sorts what she says; no second form to choose between. A parent's view of her list has
+    the add form and no chat box."""
     page = girls["mine"].get("/wishes").text
     assert 'action="/chat"' in page and "Tell Vera anything" in page
-    assert 'id="wish-add"' in page and "I\u2019d like…" in page and "Add to my list" in page
+    assert 'id="wish-add"' not in page and "Add to my list" not in page
     parent = sam.get(f"/wishes?who={family['girls'].id}").text
     assert 'action="/chat"' not in parent and "Tell Vera anything" not in parent
+    assert 'id="wish-add"' in parent

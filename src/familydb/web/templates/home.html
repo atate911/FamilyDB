@@ -80,8 +80,7 @@
       <div class="section-head">
         <h2 id="home-wishes">{{ icon('gift') }}My list</h2>
         <span class="section-links">
-          <a href="{{ url_for('web.wishes', _anchor='wish-add') }}">{{ icon('plus') }}Add something</a>
-          {% if mine.open %}<a href="{{ url_for('web.wishes') }}">All {{ mine.open }}{{ icon('right') }}</a>{% endif %}
+          <a href="{{ url_for('web.wishes') }}">{{ 'All ' ~ mine.open if mine.open else 'My list' }}{{ icon('right') }}</a>
         </span>
       </div>
       {% if mine.answered %}

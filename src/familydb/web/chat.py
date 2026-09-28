@@ -92,8 +92,9 @@ LOCKED = "You can write again once {name} has answered."
 HOME_PROMPT = "Plans for the weekend, an idea to keep, a reminder, the calendar…"
 # The same for a kid: what she brings to her, in her words.
 KID_HOME_PROMPT = "Something you\u2019d like, a question, something fun to do…"
-# Atop her list: anything at all, which goes to her conversation, beside the box for her list.
-KID_LIST_PROMPT = "Anything you want to tell {name} or ask her"
+# Atop her list: anything at all, in her own words, which goes to her conversation, where she
+# sorts it (onto the list, an idea, a reminder, or an answer).
+KID_LIST_PROMPT = "Something you\u2019d like, a question, an idea… {name} will sort it out"
 KID_LIST_LABEL = "Tell {name} anything"
 # The same states as Home puts them, more briefly: the conversation is one tap away.
 AT_HOME = {

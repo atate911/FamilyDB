@@ -102,28 +102,10 @@
       {% endif %}
 
       {% if not parent and talk %}
-        {# Where she lands: a big box for anything at all, which goes to her conversation with
-           {{ assistant }} (the chat's own box), and beside it the one for her list. #}
-        <div class="list-landing">
-          <div class="list-talk">{% include "_ask.html" %}</div>
-          <form class="panel form wish-add list-add" id="wish-add" method="post" action="{{ url_for('edits.add_wish') }}">
-            {{ hidden(kid) }}
-            <h2 class="ask-question"><label for="wish-title-{{ kid.id }}">I’d like…</label></h2>
-            <div class="field wide">
-              <input id="wish-title-{{ kid.id }}" name="title" required maxlength="120" data-dictate
-                     placeholder="Something for your list" />
-            </div>
-            <div class="field">
-              <label for="wish-list-{{ kid.id }}">Which list</label>
-              <select id="wish-list-{{ kid.id }}" name="list">
-                {% for value, name in choices %}<option value="{{ value }}">{{ name }}</option>{% endfor %}
-              </select>
-            </div>
-            <div class="field actions end">
-              <button type="submit">{{ icon('plus') }}Add to my list</button>
-            </div>
-          </form>
-        </div>
+        {# Where she lands: one big box for anything at all, the chat's own, posting to her
+           conversation. She says it her way and {{ assistant }} sorts it: onto her list, into an
+           idea, a reminder, or just an answer. A kid who may not talk to her gets the form below. #}
+        <div class="list-talk">{% include "_ask.html" %}</div>
       {% elif not parent or one %}
         <form class="panel form wish-add" id="wish-add" method="post" action="{{ url_for('edits.add_wish') }}">
           {{ hidden(kid) }}
