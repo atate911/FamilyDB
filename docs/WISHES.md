@@ -153,11 +153,16 @@ answer comes from (a tap, the chat, the page), she is told in her own conversati
 
 ### Screens (built)
 
-A kid's Home: her conversation with Vera, her wishes (the top of the everyday list, the Christmas
+The page says "list" and "I’d like" rather than "wish", which the family found too aspirational
+(`docs/STYLE.md`, "A kid's screen"); here, in the code and to the model each is still a wish.
+
+A kid's Home: her conversation with Vera, her list (the top of the everyday list, the Christmas
 and birthday lists with their countdowns, new answers), what is coming up (no gifts), and her own
-things to do. Her bar: Home, Vera, Wishes, Ideas, Plans, To do. A parent's Home gains a Kids card:
-each girl's open wishes, anything flagged, requests waiting. `/wishes` is the lists, reordered by
-buttons, and by dragging where scripts run (`static/wishes.js`).
+things to do. Her bar: Home, Vera, Ideas, Plans, To do, My list. A parent's Home gains a card, the
+kids' lists: each girl's open wishes, anything flagged, requests waiting. `/wishes` opens, for a
+kid, on a big box to tell Vera anything (her conversation) and an "I’d like…" box for her list,
+then the lists, one line to a wish, reordered by buttons, and by dragging where scripts run
+(`static/wishes.js`).
 
 ## Settings (built)
 

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_ui.html" import icon, page_head %}
-{% block title %}{{ 'Wishes' if parent else 'My wishes' }} · {{ site_title }}{% endblock %}
+{% block title %}{{ "The kids’ lists" if parent else 'My list' }} · {{ site_title }}{% endblock %}
 {% block body_class %}page-wishes{% endblock %}
 {% block head %}
   <script src="{{ url_for('static', filename='wishes.js') }}" defer></script>
@@ -83,11 +83,11 @@
 
 {% block content %}
   {% if parent and not one %}
-    {{ page_head('Wishes', 'What each kid would like, in her own order. Answer when you choose; only her Ask a parent, or something not OK, comes to your phone.', 'gift') }}
+    {{ page_head("The kids’ lists", 'What each kid would like, in her own order. Answer when you choose; only her Ask a parent, or something not OK, comes to your phone.', 'gift') }}
   {% elif parent %}
-    {{ page_head(kids[0].name ~ "'s wishes", 'In her own order. Your answer reaches her in her conversation.', 'gift', [('Wishes', url_for('web.wishes'))]) }}
+    {{ page_head(kids[0].name ~ "'s list", 'In her own order. Your answer reaches her in her conversation.', 'gift', [("Kids’ lists", url_for('web.wishes'))]) }}
   {% else %}
-    {{ page_head('My wishes', "Everything you're wishing for, in your order. Put the one you want most at the top.", 'gift') }}
+    {{ page_head('My list', "The things you'd like, in your order. Put the one you'd like most at the top.", 'gift') }}
   {% endif %}
 
   {% for kid in kids %}
@@ -101,12 +101,35 @@
         <h2 id="kid-{{ kid.id }}" class="sr">{{ kid.name }}</h2>
       {% endif %}
 
-      {% if not parent or one %}
+      {% if not parent and talk %}
+        {# Where she lands: a big box for anything at all, which goes to her conversation with
+           {{ assistant }} (the chat's own box), and beside it the one for her list. #}
+        <div class="list-landing">
+          <div class="list-talk">{% include "_ask.html" %}</div>
+          <form class="panel form wish-add list-add" id="wish-add" method="post" action="{{ url_for('edits.add_wish') }}">
+            {{ hidden(kid) }}
+            <h2 class="ask-question"><label for="wish-title-{{ kid.id }}">I’d like…</label></h2>
+            <div class="field wide">
+              <input id="wish-title-{{ kid.id }}" name="title" required maxlength="120" data-dictate
+                     placeholder="Something for your list" />
+            </div>
+            <div class="field">
+              <label for="wish-list-{{ kid.id }}">Which list</label>
+              <select id="wish-list-{{ kid.id }}" name="list">
+                {% for value, name in choices %}<option value="{{ value }}">{{ name }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="field actions end">
+              <button type="submit">{{ icon('plus') }}Add to my list</button>
+            </div>
+          </form>
+        </div>
+      {% elif not parent or one %}
         <form class="panel form wish-add" id="wish-add" method="post" action="{{ url_for('edits.add_wish') }}">
           {{ hidden(kid) }}
           {% if parent %}<input type="hidden" name="for_whom" value="{{ kid.name }}" />{% endif %}
           <div class="field wide">
-            <label for="wish-title-{{ kid.id }}">{{ 'Add a wish for ' ~ kid.name if parent else 'I wish for…' }}</label>
+            <label for="wish-title-{{ kid.id }}">{{ 'Add something for ' ~ kid.name if parent else 'I’d like…' }}</label>
             <input id="wish-title-{{ kid.id }}" name="title" required maxlength="120" data-dictate />
           </div>
           <div class="field">

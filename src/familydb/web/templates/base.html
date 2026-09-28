@@ -63,8 +63,8 @@
         {{ item('Ideas', url_for('web.ideas'), 'ideas', 'idea') }}
         {{ item('Plans', url_for('web.plans'), 'plans', 'plans') }}
         {{ item('To do', url_for('web.tasks'), 'todo', 'todo') }}
-        {% if visitor().may('decide') %}{{ item('Wishes', url_for('web.wishes'), 'wishes', 'gift') }}
-        {% elif visitor().may('wish') and visitor().member %}{{ item('My wishes', url_for('web.wishes'), 'wishes', 'gift') }}{% endif %}
+        {% if visitor().may('decide') %}{{ item('Kids’ lists', url_for('web.wishes'), 'wishes', 'gift') }}
+        {% elif visitor().may('wish') and visitor().member %}{{ item('My list', url_for('web.wishes'), 'wishes', 'gift') }}{% endif %}
       </nav>
       {# And the ones for looking after it, kept to one side. Each is shown only to a role
          that may go there (familydb/roles.py): Family and Settings to an admin, what she

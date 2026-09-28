@@ -2219,6 +2219,17 @@ pre.json { max-height: 24rem; overflow: auto; padding: 0.75rem; font: 0.8rem/1.4
 .wish-actions select { min-width: 9rem; }
 .wish-answer { margin-top: 0.6rem; }
 .wish-add { margin-bottom: 1rem; scroll-margin-top: 5rem; }
+/* Where a kid lands on her list: a big box for anything (the chat's own), and beside it the one
+   for her list, each headed in the size of Home's question. Side by side on an iPad, one above
+   the other on a phone. */
+.list-landing { display: grid; gap: 1rem; margin-bottom: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); align-items: stretch; }
+.list-talk { display: flex; }
+.list-talk .ask { flex: 1; display: flex; flex-direction: column; margin: 0; }
+.list-talk .ask textarea { flex: 1; }
+.list-talk .ask textarea { min-height: 7rem; }
+.list-add { margin: 0; align-content: start; }
+.list-add .ask-question { padding: 0; }
+.list-add input { font-size: 1.1rem; min-height: 3rem; }
 .wish-kid + .wish-kid { margin-top: 2rem; }
 .wish-top { margin: 0.4rem 0 0; }
 .wish-top li { display: flex; align-items: center; gap: 0.6rem; }

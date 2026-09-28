@@ -88,8 +88,11 @@ REFUSALS = {
     ),
     "chat": ("Not yet", "Talking to {name} here is not part of your role yet. Ask an admin."),
     "browse": ("For a parent", "This page is for the grown-ups. Ask a parent if you need it."),
-    "wish": ("Not yet", "Keeping a wish list is not part of your role. Ask an admin."),
-    "decide": ("For a parent", "Answering wishes is a parent's job."),
+    "wish": (
+        "Not yet",
+        "Keeping a list is not part of your role. Ask an admin.",
+    ),
+    "decide": ("For a parent", "Answering the kids' lists is a parent's job."),
     "change": (
         "Not yet",
         "Changing ideas, plans and things to do is not part of your role yet. Ask an admin.",
@@ -301,9 +304,9 @@ def task_brief(task: Task, tz: ZoneInfo, today: date) -> dict[str, Any]:
 WEEKEND_QUESTION = "What should we do this weekend?"
 TODAY_QUESTION = "What should we do today?"
 STARTERS = ("Remind me to ", "We should try ")
-# A kid's: her wish first, said the way Vera would have her say it ("I wish", never "we should",
-# docs/WISHES.md), so the box never starts her on the words Vera then nudges her away from.
-KID_STARTERS = ("I wish for ", "Remind me to ")
+# A kid's: what she would like first, said the way Vera would have her say it (politely, and
+# never "we should", docs/WISHES.md), so the box never starts her on words Vera nudges her from.
+KID_STARTERS = ("I\u2019d like ", "Remind me to ")
 
 
 def starters(today: date, *, kid: bool = False) -> list[dict[str, str]]:
@@ -1259,7 +1262,7 @@ CONCERN_WORDS = {
 KID_CONCERN_WORDS = {
     "rule": "a house rule: ask a parent",
     "sibling": "about a sister or brother",
-    "inappropriate": "not one for a wish list",
+    "inappropriate": "not one for your list",
     "too_many": "one for another day",
 }
 # What asking for a wish on the page came to, by wish_service's result.
@@ -1268,7 +1271,7 @@ WISH_SAID = {
     "duplicate": "Already on your list: {title}.",
     "locked": "Not yet: {title} was a not this time. You can ask again after {again}, or put it "
     "on your Christmas or birthday list.",
-    "too_many": "That's a lot of wishes for one day. Let's keep some for tomorrow.",
+    "too_many": "That's a lot to ask for in one day. Let's keep some for tomorrow.",
     "list_full": "That list is full. Take something off it first.",
 }
 WISH_MOVED = "Moved."

@@ -78,9 +78,9 @@
     {% set mine = wishes.mine %}
     <section class="panel home-wishes" aria-labelledby="home-wishes">
       <div class="section-head">
-        <h2 id="home-wishes">{{ icon('gift') }}My wishes</h2>
+        <h2 id="home-wishes">{{ icon('gift') }}My list</h2>
         <span class="section-links">
-          <a href="{{ url_for('web.wishes', _anchor='wish-add') }}">{{ icon('plus') }}Add a wish</a>
+          <a href="{{ url_for('web.wishes', _anchor='wish-add') }}">{{ icon('plus') }}Add something</a>
           {% if mine.open %}<a href="{{ url_for('web.wishes') }}">All {{ mine.open }}{{ icon('right') }}</a>{% endif %}
         </span>
       </div>
@@ -108,7 +108,7 @@
   {% elif wishes %}
     <section class="panel home-wishes" aria-labelledby="home-kids">
       <div class="section-head">
-        <h2 id="home-kids">{{ icon('gift') }}The kids' wishes</h2>
+        <h2 id="home-kids">{{ icon('gift') }}The kids’ lists</h2>
         <a href="{{ url_for('web.wishes') }}">All{{ icon('right') }}</a>
       </div>
       {% if wishes.waiting %}

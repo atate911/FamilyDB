@@ -19,7 +19,7 @@ from flask import (
     url_for,
 )
 
-from familydb import agenda, roles
+from familydb import agenda, personas, roles
 from familydb.app import App
 from familydb.availability import calendar_available, enrichment_available
 from familydb.dates import next_birthday
@@ -568,8 +568,18 @@ def wishes() -> str:
             shown = [_lists(conn, visitor.member, today)]
         else:
             abort(404)
+        family = [member.display_name for member in member_store.list_all(conn)]
+    # A kid lands on a box for anything at all, the chat's own, only if she may talk to her.
+    talk = (
+        {}
+        if visitor.may("decide") or not visitor.may("chat")
+        else chat.box(family, prompt=chat.KID_LIST_PROMPT)
+    )
     return render_template(
         "wishes.html",
+        talk=bool(talk),
+        ask_label=chat.KID_LIST_LABEL.format(name=personas.active(app.settings).name),
+        **talk,
         kids=shown,
         parent=visitor.may("decide"),
         one=bool(wanted) or not visitor.may("decide"),

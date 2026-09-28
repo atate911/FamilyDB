@@ -374,8 +374,8 @@ looked at (see "Two layers").
 
 ## Page by page
 
-- **The bar.** On a phone the everyday places (Home, Vera, Ideas, Plans, To do, and Wishes, or
-  My wishes for a kid) are a tab bar along the bottom, one column each, the current one marked by a pill in its colour; Memory, Family, Status and
+- **The bar.** On a phone the everyday places (Home, Vera, Ideas, Plans, To do, and Kids’ lists,
+  or My list for a kid) are a tab bar along the bottom, one column each, the current one marked by a pill in its colour; Memory, Family, Status and
   a last tile are icons at the top (Memory and Status not for a kid); Family is shown only to an admin, who alone may change it.
   For an admin the Status icon carries a light while something only an admin can fix goes on
   (`web/status.light`, one read of the troubles the status page lists): the pulse turns amber
@@ -521,21 +521,32 @@ it, and say why here.
 A kid signs in to the same page, in the same Phosphor look (the family asked for limited changes,
 `docs/WISHES.md`): there is less of it, and what is there is worded and laid out for her. Her bar
 has no Memory, Status, Family or Settings; her Home opens with her own conversation with Vera,
-its box saying what she brings ("A wish, a question, something fun to do…") and its ways to start
-"I wish for…" where a grown-up's say "We should try…", since "I wish", never "we should", is
-how Vera would have her ask. Under it, her wish lists at a glance (My wishes, in pink, the kids'
-colour since the Family page first gave it to their faces): a parent's latest yes lit in green
-with sparkles, a no quiet beside a heart, each list's top three numbered, and Add a wish always
-there. Then what is coming up and her own things to do. Nothing on her screen offers what she
-may not do: the empty lists ask her to tell Vera, never to add an idea or plan one.
+its box saying what she brings ("Something you’d like, a question, something fun to do…") and its
+ways to start "I’d like…" where a grown-up's say "We should try…", since asking politely, never
+"we should", is how Vera would have her ask. Under it, her list at a glance (My list, in pink, the
+kids' colour since the Family page first gave it to their faces): a parent's latest yes lit in
+green with sparkles, a no quiet beside a heart, each list's top three numbered, and Add something
+always there. Then what is coming up and her own things to do. Nothing on her screen offers what
+she may not do: the empty lists ask her to tell Vera, never to add an idea or plan one.
 
-The wish lists (`/wishes`, `wishes.html`) are one line to a wish, since a wish is a few words and
-a line of buttons under each made the list hard to read: the grip to drag it by on the left
-(drawn only while `wishes.js` runs, and outside the line's summary so a drag never opens it), its
-number in a round pink badge, the one she wants most filled in, the wish, a small pencil when it
-has a note, and a chevron at the end. Tapped, the line opens (a native `<details>`) to the rest:
-the note, Top (from third place down), Up and Down, putting it on another list, taking it off,
-and for a parent the answer. Every line and button is at least 44px, for a finger on an iPad.
-What was turned away is headed "Not on your list" and says what to do next ("a house rule: ask a
-parent"), not the grown-ups' word for it. A parent sees the same lists with Yes! and Not this time inside each, the grown-ups' words,
-and a card on Home with each kid's.
+**The word.** The page says "list" and "I’d like", not "wish": the family found "wish" too
+aspirational, a thing hoped for rather than asked for. The code, the tools and `docs/WISHES.md`
+still call each one a wish, since that is what the model is told and renaming it would change
+every request; only the words on the page moved.
+
+**Her list** (`/wishes`, `wishes.html`) opens on two boxes side by side (one above the other on a
+phone), each headed in the size of Home's question. On the left, "Tell Vera anything": a big box
+for whatever is on her mind, the chat's own box (`_ask.html`), which posts to her conversation.
+On the right, "I’d like…": one line and which list, which adds to her list. Only a kid who may
+talk to Vera gets the first; a parent's view of her list has the add box alone.
+
+Under them, one line to each thing on her list, since each is a few words and a line of buttons
+under each made the list hard to read: the grip to drag it by on the left (drawn only while
+`wishes.js` runs, and outside the line's summary so a drag never opens it), its number in a round
+pink badge, the one she wants most filled in, what it is, a small pencil when it has a note, and
+a chevron at the end. Tapped, the line opens (a native `<details>`) to the rest: the note, Top
+(from third place down), Up and Down, putting it on another list, taking it off, and for a parent
+the answer. Every line and button is at least 44px, for a finger on an iPad. What was turned away
+is headed "Not on your list" and says what to do next ("a house rule: ask a parent"), not the
+grown-ups' word for it. A parent sees the same lists, as the Kids’ lists, with Yes! and Not this
+time inside each, the grown-ups' words, and a card on Home with each kid's.

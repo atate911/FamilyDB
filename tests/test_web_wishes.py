@@ -48,7 +48,7 @@ def _open(served, member_id, occasion=None):
 def test_a_kid_keeps_her_own_list_on_the_page(app, family, girls) -> None:  # noqa: F811
     kid = girls["mine"]
     page = kid.get("/wishes")
-    assert page.status_code == 200 and "My wishes" in page.text
+    assert page.status_code == 200 and "My list" in page.text
     assert 'href="/wishes"' in kid.get("/").text  # in her bar, and on her Home
     assert "On your list: Lego." in _said(_add(kid, "Lego"))
     _add(kid, "Kite")
@@ -69,7 +69,7 @@ def test_a_kid_keeps_her_own_list_on_the_page(app, family, girls) -> None:  # no
     kid.post(f"/wish/{kite.id}/withdraw", data=_form(kid, "/wishes"))
     assert _open(app, family["girls"].id) == []
     home = kid.get("/").text
-    assert "My wishes" in home and "Roller skates" in home
+    assert "My list" in home and "Roller skates" in home
 
 
 def test_a_sister_sees_none_of_it_and_cannot_touch_it(app, family, girls) -> None:  # noqa: F811
@@ -95,9 +95,9 @@ def test_a_parent_sees_every_kid_and_answers(app, family, sam, girls) -> None:  
     _add(girls["mine"], "A cat")
     _add(girls["sister"], "Slime")
     overview = sam.get("/wishes").text
-    assert "A cat" in overview and "Slime" in overview and "Wishes" in overview
+    assert "A cat" in overview and "Slime" in overview and "The kids\u2019 lists" in overview
     home = sam.get("/").text
-    assert "The kids' wishes" in home and "A cat" in home
+    assert "The kids\u2019 lists" in home and "A cat" in home
     cat = _open(app, family["girls"].id)[0]
     hers = sam.get(f"/wishes?who={family['girls'].id}").text
     assert "A cat" in hers and "Slime" not in hers
@@ -151,15 +151,25 @@ def test_ask_a_parent_is_a_button_where_it_was_offered(app, family, girls) -> No
 
 
 def test_a_kid_home_speaks_to_her_and_offers_only_what_she_may(app, family, sam, girls) -> None:  # noqa: F811
-    """Her ways to start say "I wish", never the "we should" Vera nudges her away from, and no
+    """Her ways to start say "I'd like", never the "we should" Vera nudges her away from, and no
     empty list sends her to a form she would be refused (docs/STYLE.md, "A kid's screen")."""
     from familydb.web.chat import KID_HOME_PROMPT
 
     home = girls["mine"].get("/").text
-    assert "I wish for…" in home and "We should try" not in home
+    assert "I\u2019d like…" in home and "We should try" not in home
     assert f'placeholder="{KID_HOME_PROMPT}"' in home
     assert 'href="/ideas/new"' not in home and "plan an idea" not in home
-    assert "Add a wish" in home
+    assert "Add something" in home
     assert girls["mine"].get("/ideas/new").status_code == 403
     # A grown-up's Home is as it was.
     assert "We should try…" in sam.get("/").text and 'href="/ideas/new"' in sam.get("/").text
+
+
+def test_her_list_opens_on_a_box_for_anything_and_one_for_her_list(app, family, sam, girls) -> None:  # noqa: F811
+    """Where she lands on her list: the chat's own box, posting to her conversation, and the
+    "I'd like" box, posting to her list. A parent's page has neither the chat box nor its label."""
+    page = girls["mine"].get("/wishes").text
+    assert 'action="/chat"' in page and "Tell Vera anything" in page
+    assert 'id="wish-add"' in page and "I\u2019d like…" in page and "Add to my list" in page
+    parent = sam.get(f"/wishes?who={family['girls'].id}").text
+    assert 'action="/chat"' not in parent and "Tell Vera anything" not in parent

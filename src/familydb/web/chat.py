@@ -91,7 +91,10 @@ LOCKED = "You can write again once {name} has answered."
 # On Home, under her question, what the box is for: what she takes on, without saying what she is.
 HOME_PROMPT = "Plans for the weekend, an idea to keep, a reminder, the calendar…"
 # The same for a kid: what she brings to her, in her words.
-KID_HOME_PROMPT = "A wish, a question, something fun to do…"
+KID_HOME_PROMPT = "Something you\u2019d like, a question, something fun to do…"
+# Atop her list: anything at all, which goes to her conversation, beside the box for her list.
+KID_LIST_PROMPT = "Anything you want to tell {name} or ask her"
+KID_LIST_LABEL = "Tell {name} anything"
 # The same states as Home puts them, more briefly: the conversation is one tap away.
 AT_HOME = {
     "thinking": "Answering a message now.",
