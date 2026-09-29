@@ -136,7 +136,7 @@ def choose(rnd, protected_random=False):
 
 
 def open_(rnd, nxt, nxt_no, *, random_n=0, wildcards=0, informed=2, point=0, cross=1, type_n=1, graphics=1,
-          wild_n=3, wild_carried=2, wild_mutants=1, mode="refine"):
+          wild_n=3, wild_carried=2, wild_mutants=1, phosphor=1, mode="refine"):
     result, chosen, why, passed, fam, wild = choose(rnd)
     wild = wild[:wild_carried]
     prev_dir = HERE / "rounds" / rnd
@@ -192,6 +192,10 @@ def open_(rnd, nxt, nxt_no, *, random_n=0, wildcards=0, informed=2, point=0, cro
     # breed into the main line.
     muts = dice.mutants([parent(r) for r in chosen], point + cross, protected, type_n, graphics,
                         n_cross=cross, cross_pool=[parent(r) for r in chosen + wild])
+    # Phosphor mutants go last, on the carried that the soul judge found kept least of the original's
+    # light (its lowest scores first), so the light comes back where it was lost.
+    by_soul = sorted(chosen, key=lambda r: (r.get("byLens", {}).get("soul", 10), -r["mean"]))
+    muts += dice.phosphor_mutants([parent(r) for r in by_soul], phosphor)
     past = {}
     for f in (HERE / "rounds").glob("*/args.json"):
         for w in json.loads(f.read_text()).get("wild", []):
@@ -239,10 +243,11 @@ if __name__ == "__main__":
         ap = argparse.ArgumentParser(prog="advance.py open")
         ap.add_argument("cmd"), ap.add_argument("rnd"), ap.add_argument("nxt"), ap.add_argument("nxt_no")
         for flag, default in (("random", 0), ("wildcards", 0), ("informed", 2), ("point", 0), ("cross", 1),
-                              ("type", 1), ("graphics", 1), ("wild", 3), ("wild-carried", 2), ("wild-mutants", 1)):
+                              ("type", 1), ("graphics", 1), ("wild", 3), ("wild-carried", 2), ("wild-mutants", 1),
+                              ("phosphor", 1)):
             ap.add_argument(f"--{flag}", type=int, default=default)
         ap.add_argument("--mode", default="refine")
         o = ap.parse_args()
         open_(o.rnd, o.nxt, o.nxt_no, random_n=o.random, wildcards=o.wildcards, informed=o.informed, point=o.point,
               cross=o.cross, type_n=o.type, graphics=o.graphics, wild_n=o.wild, wild_carried=o.wild_carried,
-              wild_mutants=o.wild_mutants, mode=o.mode)
+              wild_mutants=o.wild_mutants, phosphor=o.phosphor, mode=o.mode)

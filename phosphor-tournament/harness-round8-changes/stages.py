@@ -76,7 +76,7 @@ def split(rnd, resume_file=None):
     for i, s in enumerate(a["seeds"], 1):
         chains.append((3, "seed", {**s, "slot": i}, f"{r}-rand-{i}"))
     for i, m in enumerate(a["mutants"], 1):
-        chains.append((3 if m.get("kind") == "crossover" else 1, "mut", i, f"{r}-mut-{i}"))
+        chains.append((3 if m.get("kind") in ("crossover", "phosphor") else 1, "mut", i, f"{r}-mut-{i}"))
     for w in a.get("wild", []):
         chains.append((3, "wild", w, f"{r}-wild-{w['slot']}"))
     for m in a.get("wildMutants", []):
@@ -220,7 +220,8 @@ def tally(rnd, *outs):
             return "random"
         if pid.startswith(f"{r}-mut"):
             m = a["mutants"][int(pid.split("-")[-1]) - 1]
-            return {"crossover": "crossover", "type": "type mutant", "graphics": "graphics mutant"}.get(m.get("kind"), "mutant")
+            return {"crossover": "crossover", "type": "type mutant", "graphics": "graphics mutant",
+                    "phosphor": "phosphor mutant"}.get(m.get("kind"), "mutant")
         if pid.startswith(f"{r}-wild"):
             return "wild"
         if pid.startswith(f"{r}-wmut"):

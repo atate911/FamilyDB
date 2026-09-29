@@ -206,6 +206,28 @@ can use in css: `var(--brand)`, `var(--lit)`, `var(--screen)`, `var(--outing)`, 
 - Keep them small and purposeful: a refinement is a mutation that survives only if the judges
   find the page more appealing. Winners carry theirs on to the next round.
 
+## The phosphor's light (the owner wants it back)
+
+The owner, after round 9: "I'm concerned that in the goal of great interface design we've gained a
+lot but also lost a little of the unique effect of the original phosphor interface. I'd suggest
+bringing some of that back." The unique effect is the original page's light, the way a green-screen
+tube drew: lit words and marks with a layered halo, the green screens' VT323 with blur, bloom and
+scanlines, glowing dots on the black, highlights and afterglow.
+
+`/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/phosphor_kit.md`
+catalogues every one of those effects with its exact CSS from the original stylesheet, where it was used, and how a design
+re-creates it, in its `css` or its own sheet. A main-lane palette renders over the original
+stylesheet, so its effects are there unless the palette turns them down or overrides them; a clean
+sheet has none of them until it draws its own.
+
+Bring the light back where the phosphor is (the monitors and screens, the lit states, the
+machine's words, the live dots and lamps, the mark and the primary actions), in your design's own
+terms, and keep what the tournament gained: grounded colour elsewhere, a calmer page, a better
+structure. A halo too faint to see at 100% is lost; glare across the page, or text blurred past
+easy reading, is a fault. Each effect's reduced-motion and more-contrast behaviour stays as the kit
+gives it. From round 10 each round also has a phosphor mutant: a carried winner with the original
+light brought back and nothing else changed.
+
 ## Typesetting (the owner enjoys it)
 
 The owner: "I enjoy typesetting/pagination in general and will appreciate even minor optimization of typography." Any palette may carry typographic refinements in `css`,

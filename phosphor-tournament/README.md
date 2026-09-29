@@ -227,12 +227,28 @@ table ... extreme ideas tried and voted either up or down". So the harness chang
 
 | Round | Main lane | Wild lane | `open` options |
 |---|---|---|---|
-| 10 | 4 carried, type, graphics and crossover mutants, 3 informed (the last the blind improved Signal Box) | 2 carried, 4 new, 1 mutant | `--informed 3 --wild 4` |
-| 11 to 13 | 4 carried, the 3 mutants, 2 informed | 2 carried, 4 new, 1 mutant | `--informed 2 --wild 4` |
-| 14 to 16 | 4 carried, the 3 mutants, 3 informed | 2 carried, 2 new, 1 mutant | `--informed 3 --wild 2` |
+| 10 | 4 carried, type, graphics and crossover mutants, 2 phosphor mutants, 3 informed (the last the blind improved Signal Box) | 2 carried, 4 new, 1 mutant | `--informed 3 --wild 4`, with the phosphor mutants added after |
+| 11 to 13 | 4 carried, the 4 mutants, 2 informed | 2 carried, 4 new, 1 mutant | `--informed 2 --wild 4` |
+| 14 to 16 | 4 carried, the 4 mutants, 3 informed | 2 carried, 2 new, 1 mutant | `--informed 3 --wild 2` |
 
 The full command is `python3 advance.py open rN rM M --informed I --wild W` with the defaults
-`--point 0 --cross 1 --type 1 --graphics 1 --wild-carried 2 --wild-mutants 1 --mode refine`.
+`--point 0 --cross 1 --type 1 --graphics 1 --phosphor 1 --wild-carried 2 --wild-mutants 1 --mode refine`.
+
+**Bringing the original's light back.** During round 10 the owner said: "in the goal of great
+interface design we've gained a lot but also lost a little of the unique effect of the original
+phosphor interface. I'd suggest bringing some of that back." So:
+- `phosphor_kit.md` catalogues the original page's CRT effects, each with its exact CSS and how a
+  design re-creates it: the layered halo on lit words and marks, the green screens' blur, bloom
+  and scanlines, the glowing live dots, the highlights and the afterglow. A second agent checked
+  it against the original stylesheet.
+- `phosphor_audit.md` records what each of the six designs carried into round 10 kept and lost of
+  those effects.
+- The owner's words are now in the brief every designer and judge reads, and the designers'
+  README has a section on the light.
+- Each round has a **phosphor mutant**: a carried winner with the original's light brought back
+  and nothing else changed. It goes to the carried design with the lowest soul score, and the dice
+  choose two effects for it to push furthest. It gets a crit and a revision. Round 10 has two,
+  added while it was designing, on the two the owner singled out: Flight Deck and Signal Legend.
 
 The finale's championship includes the wild lane's best.
 

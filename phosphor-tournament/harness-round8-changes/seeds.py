@@ -456,6 +456,43 @@ def wild_mutants(parents, n):
     return out
 
 
+# The phosphor mutant: a carried winner with the original page's CRT light brought back (the owner,
+# after round 9: "we've gained a lot but also lost a little of the unique effect of the original
+# phosphor interface. I'd suggest bringing some of that back"). Every one restores the kit's
+# effects that fit its design; the dice pick two to push furthest, so rounds learn which matter.
+PHOSPHOR_BASE = ("bring back the original Phosphor page's light wherever this design shows phosphor: every "
+                 "effect in phosphor_kit.md that fits it, in this design's own terms")
+PHOSPHOR_EMPHASES = [
+    "the lit words and marks: the tube's layered halo (a tight one and a wide faint one) on the mark, the key "
+    "word, the primary button and every lit state, clearly visible at 100%",
+    "the green screens as real tubes again: VT323 at three strengths, a third of a pixel of blur, bloom, "
+    "scanlines, and the curved glass falling into shadow at its corners",
+    "glowing dots on the black: the live lamps and status lights as small green points that glow and breathe, "
+    "and a faint field of phosphor dots where the machine speaks",
+    "the page's own light: the green afterglow at the top of the page with faint scanlines through it, and "
+    "highlights along the top edges of the machine's surfaces",
+    "light that behaves as a tube's did: what lights up (hover, focus, the box being typed in, a new message) "
+    "does so at once and fades over a second, leaving an afterglow",
+    "the radar and her screen at full strength: the sweep's afterglow, glowing blips, and her glyph screen's "
+    "bloom and scanlines",
+    "the primary actions lit from within: a green ring and light pooled under the primary button and Send",
+    "the machine's voice as lit phosphor: Vera's words, times and live readouts with a soft halo, while the "
+    "family's words stay grounded and sharp",
+]
+
+
+def phosphor_mutants(parents, n):
+    """n phosphor mutants, one per parent in the order given (the caller puts first the ones that
+    kept least of the original's light). No two share an emphasis while the list lasts."""
+    parents = parents[:n]
+    deck = random.sample(PHOSPHOR_EMPHASES, len(PHOSPHOR_EMPHASES))
+    out = []
+    for i, p in enumerate(parents):
+        pair = deck[2 * i:2 * i + 2] if 2 * i + 2 <= len(deck) else random.sample(PHOSPHOR_EMPHASES, 2)
+        out.append({"kind": "phosphor", "parent": p["id"], "parentName": p["name"], "changes": [PHOSPHOR_BASE] + pair})
+    return out
+
+
 def usage():
     """What the hall of fame has tried: companion hues (30-degree bins), page roles and mutations."""
     from pathlib import Path
