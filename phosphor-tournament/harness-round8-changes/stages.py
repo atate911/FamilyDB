@@ -180,9 +180,13 @@ def prepare(rnd, *outs):
                                capture_output=True, text=True).stdout
     (stage_dir / "table.md").write_text(table)
 
-    notes = [f"### {c['id']} {c['name']} (carried)\n{c['summary']}" for c in a["carried"] + a.get("wildCarried", [])]
+    def removed(pid):  # what a design took off the page (lint_variant.py lists it), for the judges
+        f = d / "variants" / pid / "removed.txt"
+        text = f.read_text().strip() if f.exists() else ""
+        return f"\nRemoved from the page (weigh what the family loses against what the page gains): {text}" if text else ""
+    notes = [f"### {c['id']} {c['name']} (carried)\n{c['summary']}{removed(c['id'])}" for c in a["carried"] + a.get("wildCarried", [])]
     notes += [f"### {x['id']} {x['name']}\n{x['tagline']}\nConcept: {x['concept']}\nCompanions: {x['companions']}\n"
-              f"Designer's own weaknesses: {' | '.join(x['weaknesses'])}" for x in ds]
+              f"Designer's own weaknesses: {' | '.join(x['weaknesses'])}{removed(x['id'])}" for x in ds]
     (stage_dir / "candidates.md").write_text("\n\n".join(notes) + "\n")
 
     for old in stage_dir.glob("judge-*.json"):

@@ -105,8 +105,8 @@ Compare with `out/00-current/shots/` (today).
 Nothing about the look is off the table: the owner wants extreme ideas tried and voted up or
 down, not ruled out. So ./check.sh now REFUSES (`FAIL`) only what would break the page or make it
 unsafe:
-- a form, field, form action, link endpoint, csrf or once token that no longer works (your own
-  markup must keep them: "A palette's own markup");
+- a form you keep that has lost its csrf or once token (remove a form entirely, or keep its
+  protection);
 - anything loaded from outside the page, a script (inline, in a stylesheet or in an SVG),
   unescaped output (`|safe`, `Markup`) and inline style or event attributes (the page's policy
   runs none of them);
@@ -239,17 +239,23 @@ file names as /home/user/FamilyDB/src/familydb/web/templates/, e.g. `home.html`,
 `_ui.html`; copy the real one and change it) and any pictures or icons in
 `variants/<id>/static/` (e.g. your own `icons.svg`, keeping every icon it had; new svg, png or
 webp pictures). ./check.sh then serves your page from its own server for your render only;
-nothing touches the repository. Hard checks on a variant:
-- every form field, form action, link endpoint, csrf and once token an overridden template had
-  must still be there (in it, or in another of your templates);
-- no new scripts, inline style attributes, inline event handlers, unescaped output (|safe,
+nothing touches the repository.
+
+The arrangement, size, position and even the existence of every element are yours. Move,
+resize, merge, hide or remove anything, forms, fields, links and whole sections included. What
+your templates remove (fields, form actions, links, icons) is written to
+`variants/<id>/removed.txt` and shown to the judges beside your design, to weigh what the family
+would lose against what the page gains. Say in your notes why you removed it. Refused on a
+variant:
+- a form you keep that has lost its csrf token;
+- new scripts, inline style attributes, inline event handlers, unescaped output (|safe,
   Markup) or outside addresses (the page's security policy).
 
 The page's words are MEASURED, not refused. Each page's words are compared with today's and the
 share that differs is reported to the judges. Moving, regrouping and restyling cost nothing;
 rewording headings and labels, or dropping or adding words, shows in that share. Do it when your
 idea is better for it, and say what you changed and why, because the family's wording would
-follow a winner. Keep every function the words point to.
+follow a winner.
 Layout, element types, grouping, order, headers and footers, icons and pictures are yours.
 
 ## A clean sheet
@@ -313,7 +319,8 @@ The rules:
 How the pages are shot: about 1.8s after each page loads, with motion on. An arrival must finish
 within about 1.5s and start from a dim colour or a low opacity, never 0 (an element at opacity 0
 counts as missing and its words as dropped). The details strip finds its elements by class, so
-keep these on whatever you draw, adding your own classes beside them: `.idea-card` on each
+keep these on whatever you draw, adding your own classes beside them (an element you remove
+leaves its cell in the strip empty, which the judges will see): `.idea-card` on each
 idea's card or row, `.next-up` on the Next up monitor, `#title` and `.field.wide` on the new-idea
 form's title field, `label.check` on its checkboxes, and `details.menu > summary` on the bar's
 menu.

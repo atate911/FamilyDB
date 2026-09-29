@@ -1,6 +1,8 @@
-"""Check a palette's own markup before it is served: its templates (taken with the real ones it
-does not override) must keep everything the page does, and add nothing the page's security
-policy forbids. Its static files may add pictures and icons, never scripts, and keep every icon.
+"""Check a palette's own markup before it is served. Arrangement, size, position and even the
+existence of every element are the design's to change: what it removes (fields, forms, links,
+icons) is listed in variants/<id>/removed.txt for the judges to weigh, never refused. What is
+refused is only what the page's security policy forbids, and a form kept without its security
+token. Its static files may add pictures and icons, never scripts, and keep every icon.
 
 Usage: python3 lint_variant.py VARIANT_DIR      (VARIANT_DIR holds templates/ and/or static/)
 Exit status 1, with the reasons, when it refuses.
@@ -41,7 +43,7 @@ def facts(files: dict[str, str]) -> dict[str, set | int]:
 
 def main() -> None:
     root = Path(sys.argv[1])
-    problems = []
+    problems, removed = [], []
     t_over = root / "templates"
     if t_over.exists():
         for p in t_over.rglob("*"):
@@ -58,10 +60,18 @@ def main() -> None:
             before = facts({name: (ORIG_T / name).read_text()})
             after = facts({name: text})
             partials = facts({k: v for k, v in mine.items() if k != name})
-            for key in ("field names", "form actions", "endpoints", "csrf and once tokens"):
+            for key in ("field names", "form actions", "endpoints"):
                 gone = before[key] - after[key] - partials[key]
                 if gone:
-                    problems.append(f"{name}: {key} missing: {sorted(gone)[:8]} (every form, field and link must still work)")
+                    removed.append(f"{name}: {key} removed: {', '.join(sorted(gone))}")
+            # A form that stays keeps its protection: no more forms that post without a csrf token
+            # than the real template has (the sign-in form is guarded another way).
+            def unguarded(t):
+                return sum("csrf_token" not in f for f in
+                           re.findall(r"<form\b[^>]*\bmethod\s*=\s*[\"']post[\"'][^>]*>.*?</form>", t, re.S | re.I))
+            if unguarded(text) > unguarded((ORIG_T / name).read_text()):
+                problems.append(f"{name}: a form that posts has lost its csrf token (a form that stays keeps its "
+                                "security tokens; remove the form entirely, or keep them)")
         for key, why in (("scripts", "no new scripts"), ("safe", "no new unescaped output (|safe, Markup)"),
                          ("inline style", "no inline style attributes (the page's policy allows none)"),
                          ("handlers", "no inline event handlers")):
@@ -85,7 +95,10 @@ def main() -> None:
             before = set(re.findall(r'<symbol[^>]*\bid="([^"]+)"', (ORIG_S / "icons.svg").read_text()))
             after = set(re.findall(r'<symbol[^>]*\bid="([^"]+)"', sprite.read_text()))
             if before - after:
-                problems.append(f"icons.svg must keep every icon: missing {sorted(before - after)[:8]}")
+                removed.append(f"icons.svg: icons removed: {', '.join(sorted(before - after))}")
+    (root / "removed.txt").write_text("\n".join(removed) + ("\n" if removed else ""))
+    if removed:
+        print("removed (listed for the judges):\n  - " + "\n  - ".join(removed))
     if problems:
         print("variant refused:\n  - " + "\n  - ".join(problems))
         sys.exit(1)
