@@ -1,0 +1,135 @@
+{
+ "round": "r13",
+ "roundNo": 13,
+ "mode": "refine",
+ "carried": [
+  {
+   "id": "r12-idea-2",
+   "name": "Desk Terminal",
+   "summary": "Round 12: #1 by score (mean 8.34, in 8 judges' top fours); carried as the best score of the round (clearly different here means 5.83 or more apart; the round's median is 9.72). Family: docked terminal column. Born in round 12 (informed). One real terminal stands at the left of the family's desk on every page, the only lit, cased and rounded thing there: the machine states how the page stands and holds its controls; the matte desk beside it holds only the family's rows. On every page one real terminal stands at the left of the family's desk. It is a graphite body holding the page's one lit tube, its console deck and, where a page has three bands or more, a numbered Contents plate, and it ends in a foot that says how the machine stands. The machine states, the desk holds: the square, matte slate desk carries only the family's one-line rows, so the tube's light (bloom, blur, scanlines, a warm-up from a bright line, glowing lamps) is back at full strength where attention belongs, and the rest of the page is the calmest yet."
+  },
+  {
+   "id": "r12-idea-1",
+   "name": "Evening Listing, Traced",
+   "summary": "Round 12: #2 by score (mean 8.09, in 7 judges' top fours); carried as new family, not a near-duplicate: programme listing; nearest carried Desk Terminal at 9.17. Family: programme listing. Born in round 12 (informed). Evening Listing, Relit with its light put to work: the tube traces the coming weeks, the rails are lit from now, and every band head says one figure. This refines Evening Listing, Relit. The programme listing on slate stays whole, and the phosphor light now draws data instead of only glowing. Next up's spare glass becomes a four-week trace of the plans. Coming up, To do and Status's Who answers each carry a rail that is lit from now, or between live lamps. A row you point at lights and fades like phosphor. The page stays calm and grounded, with the light where the family's time is."
+  },
+  {
+   "id": "r11-idea-2",
+   "name": "Long Persistence",
+   "summary": "Round 12: #4 by score (mean 7.5, in 2 judges' top fours); carried as new family, not a near-duplicate: long-persistence instrument; nearest carried Evening Listing, Traced at 7.98. Family: long-persistence instrument. Round 11: #2 by score (mean 7.88, in 7 judges' top fours); carried as new family, not a near-duplicate: long-persistence instrument; nearest carried Evening Listing, Relit at 7.83. Family: long-persistence instrument. Born in round 11 (informed). The phosphor draws, the page prints: each page has one lit instrument that traces the family's own weeks, due dates or places with full bloom and afterglow, and every row of the graphite legend under it lights its mark. The light is the data. Each page with something in time or space gets one 4:3 P1 tube in a thin graphite case, and the tube draws that page's own data with the original's full effect: bloom, a 0.35px blur, scanlines, sheen, falloff, an 80px spill, a sweep beam with a wake of afterglow, and glowing marks that flare as the beam passes and never go out. Everything else is print: legend tables on graphite in bone ink with no glow. Pointing at a row lights its mark on the tube in 0.12s, and it fades over 1.2s. The page feels calmer and more grounded, and the green-screen tube is back, now doing a job: light only where attention belongs."
+  },
+  {
+   "id": "r11-mut-4",
+   "name": "Track Diagram Relit",
+   "summary": "Round 12: #7 by score (mean 7.05, in 1 judges' top fours); carried as new family, not a near-duplicate: mimic-line track; nearest carried Long Persistence at 7.01. Family: mimic-line track. Round 11: #3 by score (mean 7.52, in 4 judges' top fours); carried as new family, not a near-duplicate: mimic-line track; nearest carried Long Persistence at 7.01. Family: mimic-line track. Born in round 11 (phosphor mutant). Track Diagram with the tube switched back on: the same steel lines on slate boards, and everything the diagram marks as live (the now lamp, the status lamps, her screens, the monitors, the ring where it is your turn) glowing and breathing like phosphor again. This is Track Diagram with its tube switched back on. The signal box's diagram is kept whole: steel lines on green-black slate boards, a lamp at every stop, and times in a timetable margin. Everything it marks as the machine's, or as live, gives off light again the way the original green screen did. The monitors bloom and spill onto the page, her screens glow and pool light into her bubbles, and live lamps are white-hot points in a breathing phosphor halo. One rule carries the light through every page: the lamp where you are now is lit, and the section of track it stands on is lit from it, fading toward the next stop. The slate, the steel and the family's plates stay matte, so the page is calm and the light falls only where something is live."
+  }
+ ],
+ "wildCarried": [
+  {
+   "id": "r12-wmut-1",
+   "name": "Videotex Switchboard",
+   "summary": "Round 12: #8 by score (mean 7.01, in 2 judges' top fours); carried as the wild lane, for the ideas the judges most want developed (7 promise votes, #8 by score, today 4.84): videotex service. Family: videotex service. Born in round 12 (wild mutant). The family's videotex service as a control panel: Home is the map of every page in equal cells, every page is the same rack of cells with its own green screen under its plate, and only the machine gives off green light. Home is the service's sommaire, laid out as a graphite switchboard. Every page is a cell, and each cell's head is a contents line: lamp, page number, name, dotted leader, count. The line is the key into the page, and the cell below it holds what the page contains now. Every other page opens the same four-column rack. Column 1 holds the plate, then the page's own green screen (the machine's summary of the page), then its tools. The three columns beside it hold one thing to a cell. Because both sides share the same rows, seams meet as modules do in a rack. It should feel like a calm, solid panel where the only light comes from the machine: the tubes, the lamps, the mark and the primary keys."
+  },
+  {
+   "id": "r12-wild-4",
+   "name": "Single Quote",
+   "summary": "Round 12: #11 by score (mean 6.59, in 2 judges' top fours); carried as the wild lane, for the ideas the judges most want developed (6 promise votes, #11 by score, today 4.84): single quote. Family: single quote. Born in round 12 (wild). A trading terminal that quotes one thing at a time: the thing that matters now, set large, with every other screen a numbered key away. FamilyDB as a calm trading terminal. Each screen quotes one thing large, the way a quote screen shows one security: a condensed title, its figure in the section's colour, and under the unit a change line saying what moved or what comes next. Under each quote runs a short tape of the next few items, and everything else sits one numbered key away. A command line (FamilyDB > SETTINGS > GENERAL\u258c) and a function-key legend frame every page. Only live things give off phosphor light, and that light has the original tube's bloom, blur, scanlines and afterglow. The feel is exact and quiet, with a hint of the trading floor: a figure that has just arrived flashes, then settles."
+  }
+ ],
+ "seeds": [],
+ "mutants": [
+  {
+   "kind": "type",
+   "parent": "r11-mut-4",
+   "parentName": "Track Diagram Relit",
+   "changes": [
+    "a monospaced setting for the family's data (lists, tables, forms) and a proportional face only for titles and chat",
+    "a slashed or dotted zero in the monospaced face, where it has one (font-feature-settings \"zero\")",
+    "the tubes' text re-set: size, leading and letter-spacing tuned so VT323 (or its replacement) reads as a real terminal line"
+   ]
+  },
+  {
+   "kind": "graphics",
+   "parent": "r12-idea-2",
+   "parentName": "Desk Terminal",
+   "changes": [
+    "a mapped page: the radar, the plans and the ideas drawn as a plotted chart or map with the family's places marked",
+    "the status lamps redrawn as one family of small signals (ring, dot, bar, lamp), one meaning each"
+   ]
+  },
+  {
+   "kind": "crossover",
+   "parent": "r12-wild-4",
+   "parentName": "Single Quote",
+   "colourParent": "r12-idea-1",
+   "colourParentName": "Evening Listing, Traced",
+   "changes": [
+    "the structure of Single Quote (its markup, layout, type, controls, spacing and non-colour css) with the colours of Evening Listing, Traced (its tokens, glow numbers and colour roles)"
+   ]
+  },
+  {
+   "kind": "phosphor",
+   "parent": "r11-mut-4",
+   "parentName": "Track Diagram Relit",
+   "changes": [
+    "bring back the original Phosphor page's light wherever this design shows phosphor: every effect in phosphor_kit.md that fits it, in this design's own terms",
+    "the lit words and marks: the tube's layered halo (a tight one and a wide faint one) on the mark, the key word, the primary button and every lit state, clearly visible at 100%",
+    "the page's own light: the green afterglow at the top of the page with faint scanlines through it, and highlights along the top edges of the machine's surfaces"
+   ]
+  }
+ ],
+ "wild": [
+  {
+   "language": "an architectural blueprint: a cyanotype grid, dimension lines, title blocks, stamped labels",
+   "twist": "one type size for everything: hierarchy by weight, colour, case and space alone",
+   "companion_hue_deg": 309,
+   "slot": 1
+  },
+  {
+   "language": "a library card catalogue: drawers, index cards with typed headings, call numbers",
+   "twist": "sound made visible: level meters, waveforms and signal lines as the page's ornament",
+   "companion_hue_deg": 74,
+   "slot": 2
+  },
+  {
+   "language": "Bauhaus: primary geometry (circles, squares, bars), bold type, the phosphor green as the one primary",
+   "twist": "big type: the greeting and each page title as a poster",
+   "companion_hue_deg": 259,
+   "slot": 3
+  },
+  {
+   "language": "Tron and the neon grid: glowing outlines, a dark grid floor, light trails as the lines",
+   "twist": "a grid of equal cells, like a control panel, on every page",
+   "companion_hue_deg": 202,
+   "slot": 4
+  }
+ ],
+ "wildMutants": [
+  {
+   "kind": "wild",
+   "parent": "r12-wmut-1",
+   "parentName": "Videotex Switchboard",
+   "changes": [
+    "replace the display face: page titles and section heads in a library face with character (condensed, wide or serif), body unchanged",
+    "big numerals and glyphs as the graphics: dates, counts and initials set large as the page's pictures"
+   ],
+   "slot": 1
+  }
+ ],
+ "nInformed": 2,
+ "history": [
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/round1/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/final.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r2/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r3/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r4/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r5/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r6/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r7/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r8/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r9/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r10/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r11/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r12/results.json"
+ ]
+}

@@ -1,0 +1,49 @@
+{
+ "chosen": [
+  {
+   "id": "r12-idea-2",
+   "name": "Desk Terminal",
+   "mean": 8.34,
+   "why": "the best score of the round (clearly different here means 5.83 or more apart; the round's median is 9.72)"
+  },
+  {
+   "id": "r12-idea-1",
+   "name": "Evening Listing, Traced",
+   "mean": 8.09,
+   "why": "new family, not a near-duplicate: programme listing; nearest carried Desk Terminal at 9.17"
+  },
+  {
+   "id": "r11-idea-2",
+   "name": "Long Persistence",
+   "mean": 7.5,
+   "why": "new family, not a near-duplicate: long-persistence instrument; nearest carried Evening Listing, Traced at 7.98"
+  },
+  {
+   "id": "r11-mut-4",
+   "name": "Track Diagram Relit",
+   "mean": 7.05,
+   "why": "new family, not a near-duplicate: mimic-line track; nearest carried Long Persistence at 7.01"
+  }
+ ],
+ "wild": [
+  {
+   "id": "r12-wmut-1",
+   "name": "Videotex Switchboard",
+   "mean": 7.01,
+   "promise": 7,
+   "why": "the wild lane, for the ideas the judges most want developed (7 promise votes, #8 by score, today 4.84): videotex service"
+  },
+  {
+   "id": "r12-wild-4",
+   "name": "Single Quote",
+   "mean": 6.59,
+   "promise": 6,
+   "why": "the wild lane, for the ideas the judges most want developed (6 promise votes, #11 by score, today 4.84): single quote"
+  }
+ ],
+ "passed_over": [
+  "Evening Listing, Relit (7.52, programme listing): 4.48 from Evening Listing, Traced, same family",
+  "Long Persistence, Metered (7.49, long-persistence instrument): 2.04 from Long Persistence, same family",
+  "Evening Listing, Afterglow (7.38, programme listing): 5.3 from Evening Listing, Traced, same family"
+ ]
+}

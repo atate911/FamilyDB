@@ -436,9 +436,12 @@ WILD_TWISTS = [
 
 
 def wild_seeds(n, past=None):
-    """n wild rolls: a design language and a twist, distinct, leaning to the least used."""
+    """n wild rolls: a design language and a twist, distinct. Languages never tried come first
+    while there are enough of them; after that the dice lean to the least used."""
     past = past or {}
-    langs = pick_weighted(WILD_LANGUAGES, lambda o: past.get(o, 0), n)
+    fresh = [o for o in WILD_LANGUAGES if not past.get(o)]
+    langs = (random.sample(fresh, n) if len(fresh) >= n
+             else fresh + pick_weighted([o for o in WILD_LANGUAGES if o not in fresh], lambda o: past.get(o, 0), n - len(fresh)))
     twists = random.sample(WILD_TWISTS, min(n, len(WILD_TWISTS)))
     return [{"language": lang, "twist": tw, "companion_hue_deg": random.randrange(0, 360)}
             for lang, tw in zip(langs, twists)]

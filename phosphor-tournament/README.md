@@ -28,6 +28,7 @@ lane, chosen for score *and* variety, so the field does not narrow into one idea
 | 9 | Programme Guide | 8.11 | 4.00 | 4.11 |
 | 10 | Evening Listing | 7.90 | 4.29 | 3.61 |
 | 11 | Evening Listing, Relit | 8.04 | 4.71 | 3.33 |
+| 12 | Desk Terminal | 8.34 | 4.84 | 3.50 |
 
 Before round 4, today's page was not scored alongside the entrants. "Lead over today" is the
 winner's score minus today's page's score. Each round has its own panel and field, so a score
@@ -77,6 +78,35 @@ Round 8 has 3 random entrants: an old radio (wildcard), a tidepool, and an arcad
 (wildcard). It has 3 mutants: Indigo Bindery with hanging section heads, Signal Box with Home
 rearranged, and a crossover of Radar Room's structure with Galley Rack's colours. It also has 2
 informed entrants.
+
+## Carried into round 13
+
+Round 12 was restarted once. The container restarted during its design stage, before any design
+had finished. The partly written files were moved aside and the six design workflows ran again
+from the start.
+
+**Desk Terminal** (8.34) won, in all eight judges' top fours, with 7 promise votes. The judges
+called it the first entrant that is a page template rather than a palette. One cased, lit
+graphite terminal stands at the left of every page. It holds the tube, the question typed on the
+glass under a cursor, a deck of one-tap latched filter keys and a lit "Ready" foot. A square
+matte slate desk beside it holds only the family's rows. It won both the owner's judge (8.6) and
+usability (9.0). **Evening Listing, Traced** (8.09) was second. It is the leader with its light
+put to work: a trace of the coming weeks on Next up, rails lit from now, and a figure in every
+head column.
+
+The phosphor mutant, Evening Listing, Afterglow (7.38), scored below its parent for the first
+time. Its scanlined afterglow over each page head read as "a wash in the corner". So round 12
+refined round 11's "light as data": a lit thing has to do a job on every page, and page-scale
+haze does not register.
+
+Main lane: **Desk Terminal**, **Evening Listing, Traced**, **Long Persistence** (7.50) and
+**Track Diagram Relit** (7.05). Wild lane: **Videotex Switchboard** (7 promise votes), which
+makes Home a sommaire of equal page cells with counts, and **Single Quote** (6 votes), which sets
+each title with its figure in the section's colour.
+
+Round 13, the last exploratory round, has four wild languages never tried before: an
+architectural blueprint, a library card catalogue, Bauhaus, and Tron's neon grid. The wild dice
+now choose untried languages first.
 
 ## Carried into round 12
 
