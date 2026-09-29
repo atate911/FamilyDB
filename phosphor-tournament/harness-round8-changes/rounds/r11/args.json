@@ -1,0 +1,133 @@
+{
+ "round": "r11",
+ "roundNo": 11,
+ "mode": "refine",
+ "carried": [
+  {
+   "id": "r10-idea-1",
+   "name": "Evening Listing",
+   "summary": "Round 10: #1 by score (mean 7.9, in 6 judges' top fours); carried as the best score of the round (clearly different here means 5.82 or more apart; the round's median is 9.7). Family: programme listing. Born in round 10 (informed). The programme guide finished: heads that hold one line, links that read as links, a steel block for where you are, facts in true columns, one pewter line to each band, and #6dff9c lit only where the machine is live. Programme Guide, finished rather than redrawn. It keeps the TV-listing structure that won every lens: slate bands with the head column inside, one-line rows read along a dotted leader to the facts, condensed Instrument Sans heads, Plex Mono figures, the tuning scale and the thin grooved case. What changes is the finish the judges asked for: every head holds one line, links look like links, \"here\" is a steel reverse block that survives the squint, the facts sit in fixed tabular columns, and each band gets one quiet pewter line. The feel is an evening TV listing lit by one green tube, calm and easy to scan, where the bright phosphor means live."
+  },
+  {
+   "id": "r10-idea-3",
+   "name": "Track Diagram",
+   "summary": "Round 10: #2 by score (mean 7.57, in 6 judges' top fours); carried as new family, not a near-duplicate: mimic-line track; nearest carried Evening Listing at 7.68. Family: mimic-line track. Born in round 10 (informed). The family's week drawn as a signal box's illuminated diagram: steel-cyan lines painted on green-black slate boards, a lamp at every stop, times hung in a timetable margin, and #6dff9c lit only for now and live. The family's week is drawn as a signal box's illuminated track diagram. Steel-cyan lines are painted on green-black slate boards, each stop has a lamp, and the times hang in a timetable margin beside the line. A line is drawn only where there is an order: the fortnight runs across Home from a lit now lamp to its last stop, the setup steps run across, To do and the plans hang down a timetable, the newest ideas and Status's chain of who answers drop from the ring at their head, and Vera's conversation hangs from her screen to a lit ring at the message box, where it is your turn. Sets with no order keep their lamps but have no rail. The page should feel exact, calm and easy to read: the lamps show how things stand at a glance, slate carries every page, and #6dff9c is lit only for what is happening now or live."
+  },
+  {
+   "id": "r10-mut-5",
+   "name": "Signal Legend Relit",
+   "summary": "Round 10: #3 by score (mean 7.48, in 4 judges' top fours); carried as new family, not a near-duplicate: ruled composing room; nearest carried Track Diagram at 6.15. Family: ruled composing room. Born in round 10 (phosphor mutant). Signal Legend with the tube switched back on: a layered halo on the mark, the key word, Send and every lit state, the monitors at full bloom with their green spill, and light that comes on at once and fades over a second. Signal Legend's system is kept whole: slate trays with their heads set into the rails, steel reverse video for \"this one\", square family surfaces and round machine glass. Its phosphor now gives off light the way a green-screen tube did, as a tight bloom inside a wide faint halo. It lights at once and fades over 1.2s. The lamp legend now reaches every page: #6dff9c means now or live, and each lamp is named. So Plans, Status, Home and the Settings card each have one glowing dot or small lit screen where their \"now\" is, and the rest of the page stays grounded, solid and quiet."
+  },
+  {
+   "id": "r10-mut-4",
+   "name": "Flight Deck, Lit",
+   "summary": "Round 10: #4 by score (mean 7.47, in 4 judges' top fours); carried as new family, not a near-duplicate: glass cockpit; nearest carried Track Diagram at 6.37. Family: glass cockpit. Born in round 10 (phosphor mutant). Flight Deck with its tubes switched back on: the same 1980s glass cockpit and EFIS colour code, the display units blooming, blurring and scanning like real phosphor, the lamps glowing on dark slots, and everything the family chose or keeps left matte, so the light falls only where the machine is live. Flight Deck's matte slate cockpit (square screwed faceplates, demarcation lines, the EFIS colour code) with the original tube light back, and only where the code already says the machine is live. The monitors, the scope, her glyph screen, the mark, the status lamps, today's box, Send and the box being typed in get the original's full bloom, blur, scanlines and afterglow. Everything the family chose or keeps (plates, rows, legends, bubbles, title tiles, the current place) stays matte, so the contrast between lit and unlit is the identity. It should feel like a calm cockpit at night where only the instruments glow."
+  }
+ ],
+ "wildCarried": [
+  {
+   "id": "r10-idea-2",
+   "name": "Docked Terminal",
+   "summary": "Round 10: #7 by score (mean 6.85, in 2 judges' top fours); carried as the wild lane, for the ideas the judges most want developed (7 promise votes, #7 by score, today 4.29): docked terminal column. Family: docked terminal column. Born in round 10 (informed). The machine gets one lit glass column of its own, docked beside a grounded slate desk mat where the family's things are worked with real indigo keys. The owner asked for bright green where the motif needs it and grounded colour elsewhere, and this design makes that the page's layout. On every page where the machine has something to show, it gets one rounded column of green-black glass at the left (Vera's screen and question, the ask box, Next up, the radar, the spend tube, the sign-in face, the 404 scope), lit by a green pool rising from its foot and a cobalt wash in its top corner. The family's things lie beside it on one square slate mat and are worked with real keys: raised indigo keys to press, sunk wells to type in, and a latched, lit indigo key for \"here\". It should feel like a calm terminal docked on a desk at night. The green lives in the glass, and the desk is slate, bone ink and the family's indigo hand."
+  },
+  {
+   "id": "r10-wild-4",
+   "name": "Figure Ground",
+   "summary": "Round 10: #13 by score (mean 6.41, in 2 judges' top fours); carried as the wild lane, for the ideas the judges most want developed (5 promise votes, #13 by score, today 4.29): blueprint operator manual. Family: blueprint operator manual. Born in round 10 (wild). The family's operator manual: every part a numbered plate led by its own figure, drawn in blueprint blue on green-black, with the phosphor lit only where the machine is live. Brutalism read as an operator's manual. Every page is a numbered chapter that matches its cell in the ruled bar. Every part of a page is a numbered plate: a ruled row with a figure drawn from the page's own data on the left, the words on the right, and a hairline running down the page between them. The feel is a calm, well-set technical manual lit by one green tube: square, ruled and plain, with underlined blue links. #6dff9c appears only where the machine is live, and now the figure also lights whatever you point at or type in."
+  }
+ ],
+ "seeds": [],
+ "mutants": [
+  {
+   "kind": "type",
+   "parent": "r10-idea-3",
+   "parentName": "Track Diagram",
+   "changes": [
+    "a larger, more generous setting (17-18px body, 1.6 leading) with fewer, clearer heading steps",
+    "labels and small text one step larger and one step less tracked, for legibility",
+    "a slashed or dotted zero in the monospaced face, where it has one (font-feature-settings \"zero\")"
+   ]
+  },
+  {
+   "kind": "graphics",
+   "parent": "r10-mut-5",
+   "parentName": "Signal Legend Relit",
+   "changes": [
+    "no icons at all: words, numerals and coloured marks carry everything, and the space goes to type",
+    "the section heads on Home (Coming up, To do, the kids' wishes) and the setup steps given a small line drawing each"
+   ]
+  },
+  {
+   "kind": "crossover",
+   "parent": "r10-idea-2",
+   "parentName": "Docked Terminal",
+   "colourParent": "r10-wild-4",
+   "colourParentName": "Figure Ground",
+   "changes": [
+    "the structure of Docked Terminal (its markup, layout, type, controls, spacing and non-colour css) with the colours of Figure Ground (its tokens, glow numbers and colour roles)"
+   ]
+  },
+  {
+   "kind": "phosphor",
+   "parent": "r10-idea-3",
+   "parentName": "Track Diagram",
+   "changes": [
+    "bring back the original Phosphor page's light wherever this design shows phosphor: every effect in phosphor_kit.md that fits it, in this design's own terms",
+    "the radar and her screen at full strength: the sweep's afterglow, glowing blips, and her glyph screen's bloom and scanlines",
+    "glowing dots on the black: the live lamps and status lights as small green points that glow and breathe, and a faint field of phosphor dots where the machine speaks"
+   ]
+  }
+ ],
+ "wild": [
+  {
+   "language": "a handheld console (Game Boy): a four-green palette, pixel sprites, chunky boxes",
+   "twist": "a timeline as the spine of every page",
+   "companion_hue_deg": 12,
+   "slot": 1
+  },
+  {
+   "language": "a museum exhibition: large type, generous space, object labels and captions",
+   "twist": "one type size for everything: hierarchy by weight, colour, case and space alone",
+   "companion_hue_deg": 110,
+   "slot": 2
+  },
+  {
+   "language": "mission control, 1969: consoles of monospaced status readouts and rows of indicator lamps",
+   "twist": "pictures first: every section led by a drawing or a diagram",
+   "companion_hue_deg": 305,
+   "slot": 3
+  },
+  {
+   "language": "Minitel and videotex: chunky mosaic graphics and a service-menu page structure",
+   "twist": "radical sparsity: one thing at a time, large, with everything else a step away",
+   "companion_hue_deg": 92,
+   "slot": 4
+  }
+ ],
+ "wildMutants": [
+  {
+   "kind": "wild",
+   "parent": "r10-idea-2",
+   "parentName": "Docked Terminal",
+   "changes": [
+    "a new type scale: a different ratio (1.2, 1.25 or 1.333) and fewer steps, every size on it",
+    "put the Ideas filters in a side panel beside the list instead of above it"
+   ],
+   "slot": 1
+  }
+ ],
+ "nInformed": 2,
+ "history": [
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/round1/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/final.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r2/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r3/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r4/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r5/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r6/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r7/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r8/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r9/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r10/results.json"
+ ]
+}

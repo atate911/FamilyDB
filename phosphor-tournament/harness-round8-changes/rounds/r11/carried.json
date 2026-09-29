@@ -1,0 +1,45 @@
+{
+ "chosen": [
+  {
+   "id": "r10-idea-1",
+   "name": "Evening Listing",
+   "mean": 7.9,
+   "why": "the best score of the round (clearly different here means 5.82 or more apart; the round's median is 9.7)"
+  },
+  {
+   "id": "r10-idea-3",
+   "name": "Track Diagram",
+   "mean": 7.57,
+   "why": "new family, not a near-duplicate: mimic-line track; nearest carried Evening Listing at 7.68"
+  },
+  {
+   "id": "r10-mut-5",
+   "name": "Signal Legend Relit",
+   "mean": 7.48,
+   "why": "new family, not a near-duplicate: ruled composing room; nearest carried Track Diagram at 6.15"
+  },
+  {
+   "id": "r10-mut-4",
+   "name": "Flight Deck, Lit",
+   "mean": 7.47,
+   "why": "new family, not a near-duplicate: glass cockpit; nearest carried Track Diagram at 6.37"
+  }
+ ],
+ "wild": [
+  {
+   "id": "r10-idea-2",
+   "name": "Docked Terminal",
+   "mean": 6.85,
+   "promise": 7,
+   "why": "the wild lane, for the ideas the judges most want developed (7 promise votes, #7 by score, today 4.29): docked terminal column"
+  },
+  {
+   "id": "r10-wild-4",
+   "name": "Figure Ground",
+   "mean": 6.41,
+   "promise": 5,
+   "why": "the wild lane, for the ideas the judges most want developed (5 promise votes, #13 by score, today 4.29): blueprint operator manual"
+  }
+ ],
+ "passed_over": []
+}

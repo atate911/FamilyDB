@@ -26,6 +26,7 @@ lane, chosen for score *and* variety, so the field does not narrow into one idea
 | 7 | Galley Rack | 8.23 | 3.90 | 4.33 |
 | 8 | Signal Galley | 7.87 | 3.61 | 4.26 |
 | 9 | Programme Guide | 8.11 | 4.00 | 4.11 |
+| 10 | Evening Listing | 7.90 | 4.29 | 3.61 |
 
 Before round 4, today's page was not scored alongside the entrants. "Lead over today" is the
 winner's score minus today's page's score. Each round has its own panel and field, so a score
@@ -76,7 +77,40 @@ Round 8 has 3 random entrants: an old radio (wildcard), a tidepool, and an arcad
 rearranged, and a crossover of Radar Room's structure with Galley Rack's colours. It also has 2
 informed entrants.
 
-## Carried into round 10
+## Carried into round 11
+
+Round 10 was scored with the soul judge counting 1.5 times. The informed entrants took first and
+second place, and the two phosphor mutants took third and fourth, each above its parent. Relit
+scored 7.48 against Signal Legend's 7.04, and Lit 7.47 against Flight Deck's 6.76. The soul judge
+and the owner's judge ranked those two top. The blind Signal Box, Track Diagram, won the owner's
+judge outright (9.1). Round 10's lessons turn the owner's latest word into a candidate principle:
+"Light is a list, not a level." What is live glows at full strength and everything else is
+matte, so calm comes from how short the list is, never from dimming the tube.
+
+Main lane:
+
+- **Evening Listing** (7.90, programme listing). Programme Guide finished: heads on one line,
+  steel reverse video for "here", underlined links, facts in true columns, a breathing now lamp.
+- **Track Diagram** (7.57, mimic-line track). The improved Signal Box, entered blind: steel-cyan
+  lines on slate boards with a lamp at each stop, drawn only where there is an order.
+- **Signal Legend Relit** (7.48, ruled composing room). Signal Legend with the tube light back.
+- **Flight Deck, Lit** (7.47, glass cockpit). Flight Deck with its instruments lit and
+  everything else matte.
+
+Wild lane, by promise votes:
+
+- **Docked Terminal** (6.85, 7 votes, the most of the round). The machine docked in one lit glass
+  column beside a slate desk. It was an informed entrant; the wild lane now takes any idea the
+  judges most want developed whose family is not already carried.
+- **Figure Ground** (6.41, 5 votes). An operator's manual in which every section is a numbered
+  plate led by a figure drawn from its own data.
+
+Round 11 has a type mutant and a phosphor mutant of Track Diagram (the lowest soul score of the
+four), a graphics mutant of Relit with no icons at all, and a crossover of Docked Terminal's
+structure with Figure Ground's colours. The four wild designs are a Game Boy handheld, a museum
+exhibition, 1969 mission control and a Minitel service.
+
+## Carried into round 10 (from round 9)
 
 Main lane:
 

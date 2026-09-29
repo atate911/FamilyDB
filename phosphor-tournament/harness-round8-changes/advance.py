@@ -116,13 +116,17 @@ def choose(rnd, protected_random=False):
         near = min(chosen, key=lambda x: d(c["id"], x["id"]))
         passed.append(f"{c['name']} ({c['mean']}, {fam(c['id'])}): {d(c['id'], near['id'])} from {near['name']}"
                       + (", same family" if fam(c["id"]) == fam(near["id"]) else ""))
-    # The wild lane: two more places, for the ideas the judges most want developed. Wild, random
-    # and wild-carried entrants not already carried above are ranked by the judges' "promise"
-    # votes, then by score; one goes on when it has a promise vote or beat today's page, and the
-    # second from a different family where there is one.
+    # The wild lane: two more places, for the ideas the judges most want developed. Entrants not
+    # already carried above are ranked by the judges' "promise" votes, then by score. A wild,
+    # random or wild-carried one goes on when it has a promise vote or beat today's page; any other
+    # (an informed entrant or a mutant) when it has promise votes and its family is not already
+    # carried in the main lane, so an idea the judges want developed is not lost for its score.
+    # The second comes from a different family where there is one.
     wild = []
-    pool = [c for c in ranking if c.get("origin") in WILD_ORIGINS and c not in chosen
-            and (c.get("promise", 0) > 0 or today is None or c["mean"] > today)]
+    main_fams = {fam(x["id"]) for x in chosen}
+    pool = [c for c in ranking if c not in chosen
+            and (c.get("promise", 0) > 0 or (c.get("origin") in WILD_ORIGINS and (today is None or c["mean"] > today)))
+            and (c.get("origin") in WILD_ORIGINS or fam(c["id"]) not in main_fams)]
     pool.sort(key=lambda c: (-c.get("promise", 0), -c["mean"]))
     for c in pool:
         if len(wild) == 2:
