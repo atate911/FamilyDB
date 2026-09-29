@@ -100,22 +100,25 @@ Screenshots land in `out/NN-slug/shots/`: `login`, `home` (full page, desktop 12
 (open the PNGs with the Read tool): numbers do not tell you whether a palette is beautiful.
 Compare with `out/00-current/shots/` (today).
 
-## The checks: hard, and guidelines
+## The checks: what is refused, and what is only measured
 
-./check.sh prints each check as `ok`, `WARN` (a guideline missed: allowed, reported to the
-judges) or `FAIL` (a hard check: the palette is refused). The HARD checks guard only the
-owner's own asks, the page's integrity and plain legibility:
-- the signature: brand a bright green phosphor, the monitors green, bg a green-black (below);
-- body and secondary text (ink, ink-2) 4.5:1 on bg, surface, surface-3 and the chat bubbles;
-  the Send button's label (on-bright on brand) 4.5:1; ink on the bar 4.5:1;
-- everything else that is text at least 3:1 (the guideline is 4.5:1), edges at least 1.8:1
-  (guideline 3:1), the monitors' words at least 4.5:1 (guideline 7:1);
-- no sideways scroll on any page; no words smaller than 10px (guideline: today's 11.5px);
-- two kinds or two places not the same colour for typical sight (CIEDE2000 at least 5; the
-  guideline is 12, and 5 for colour-blind sight: they always carry an icon and a name too);
-- the page still a dark page (surface L <= 0.36; the guideline is a tint at most, L <= 0.28).
-Everything below that says "floor" is the GUIDELINE level.
+Nothing about the look is off the table: the owner wants extreme ideas tried and voted up or
+down, not ruled out. So ./check.sh now REFUSES (`FAIL`) only what would break the page or make it
+unsafe:
+- a form, field, form action, link endpoint, csrf or once token that no longer works (your own
+  markup must keep them: "A palette's own markup");
+- anything loaded from outside the page, a script (inline, in a stylesheet or in an SVG),
+  unescaped output (`|safe`, `Markup`) and inline style or event attributes (the page's policy
+  runs none of them);
+- a sprite that drops an icon the page uses;
+- a render that fails.
 
+Everything else is MEASURED and reported to the judges as a guideline (`WARN`), and the panel
+weighs it on the design's merits. That covers the signature, the contrast of every text, text
+size, sideways scroll, colours that stay apart, and the page's words. A value below the level
+that used to be refused is marked "below the old floor", so the judges can see how far a design
+went. The owner's wishes are below. Follow them, or break one when your idea is better for it,
+and say why.
 
 - The signature stays: `brand` a bright green phosphor (OKLCH L >= 0.82, C >= 0.15, hue
   140-165; today #6dff9c is 0.897 / 0.186 / 151.4), the monitors' `screen` green (L >= 0.78,
@@ -193,12 +196,11 @@ can use in css: `var(--brand)`, `var(--lit)`, `var(--screen)`, `var(--outing)`, 
   `font-feature-settings` (ss01, cv.., zero, tnum, onum), `font-variant-*`, `font-kerning`,
   `font-synthesis: none`, `text-rendering`, `text-wrap`, `hanging-punctuation`,
   `text-box: trim-both cap alphabetic`, and underline thickness, offset and skip-ink.
-- Budget: up to 25000 characters of css (a wildcard's full restyle with its own layout fits; most
-  palettes need far less). Decorative pseudo-elements may be switched off with `content: none`.
-- Refused by the check: `@import`, `url(`, `@font-face` (the library's are added for you), `display: none`, `visibility:
-  hidden`, and `content:` with anything but an empty string or `none` (no words, brackets or
-  symbols: put such marks in your own markup instead, "A palette's own markup" below).
-  `justify-content`, `align-content` and `place-content` are ordinary layout and pass.
+- Budget: up to 60000 characters of css appended to today's stylesheet, or a clean sheet of
+  your own ("A clean sheet" below). Decorative pseudo-elements may be switched off with `content: none`.
+- Refused by the check: `@import`, `expression(`, `javascript:` and any `url(` to an outside
+  address. Everything else is yours, `display: none` and `content:` included; the words the
+  page shows are measured and reported, not refused.
 - Floors, measured on the rendered pages: nothing may scroll sideways on any page, desktop or
   phone, and no words a person reads may be smaller than today's smallest (11.5px).
 - Keep them small and purposeful: a refinement is a mutation that survives only if the judges
@@ -237,14 +239,37 @@ nothing touches the repository. Hard checks on a variant:
 - every form field, form action, link endpoint, csrf and once token an overridden template had
   must still be there (in it, or in another of your templates);
 - no new scripts, inline style attributes, inline event handlers, unescaped output (|safe,
-  Markup) or outside addresses (the page's security policy);
-- the page's WORDS unchanged: the words a person can read on each page must match today's (a
-  variant may move, group, restyle and re-order them; it may not drop, rewrite, add or repeat
-  them). Each page's words are compared with today's, allowing about 4% (one word on Sign in, two
-  on the 404, three on Plans), so a masthead, rail or status strip must not repeat a title or
-  add a label on those pages. Marks that are not letters or digits (brackets, rules, bullets)
-  are free. If you think a word should change, say so in your notes.
+  Markup) or outside addresses (the page's security policy).
+
+The page's words are MEASURED, not refused. Each page's words are compared with today's and the
+share that differs is reported to the judges. Moving, regrouping and restyling cost nothing;
+rewording headings and labels, or dropping or adding words, shows in that share. Do it when your
+idea is better for it, and say what you changed and why, because the family's wording would
+follow a winner. Keep every function the words point to.
 Layout, element types, grouping, order, headers and footers, icons and pictures are yours.
+
+## A clean sheet
+
+A design may start from nothing instead of from today's stylesheet. Write your own complete
+stylesheet in `variants/<id>/sheet.css` and set `"sheet": "variants/<id>/sheet.css"` in the
+palette file. The check then serves your sheet INSTEAD of today's 104 KB stylesheet, with only
+two things added:
+- your tokens, as custom properties (`--bg`, `--surface`, `--ink`, `--green` or `--brand`,
+  `--screen`, `--accent`, the section colours and any page-wide role you set);
+- the `@font-face` rules of the library faces your sheet names.
+
+Nothing of today's look is inherited: layout, type, spacing, cards, the bar, the monitors,
+controls, focus rings and motion are all yours to draw. Read today's stylesheet
+(/home/user/FamilyDB/src/familydb/web/static/style.css) for the page's structure and its
+functional rules, and keep what the page needs to work:
+- `[hidden] { display: none }`;
+- visually hidden text, if you keep it hidden (it is still read out);
+- the bar's menu (a `details`) and the ask box's states;
+- `prefers-reduced-motion`;
+- a visible focus ring.
+
+The budget is 200,000 characters. `url(` may name the page's own files (a relative path or
+`/static/...`, for your pictures), never an outside address. `@import` is refused.
 
 ## Graphics, pictures and icons
 

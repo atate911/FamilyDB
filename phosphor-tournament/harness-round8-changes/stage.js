@@ -30,7 +30,12 @@ const MODE = args.mode || 'explore'
 const NP = args.nPlanned ?? NI
 const NREF = MODE === 'refine' ? Math.floor(NP / 2) : 0
 const NUM = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen']
-const NT = CARRIED.length + NR + NM + NI
+// The wild lane: its carried designs, its new clean-sheet designs and its mutants.
+const WILDC = args.wildCarried || []
+const NW = args.nWild ?? (args.wild || []).length
+const NWM = args.nWildMutants ?? (args.wildMutants || []).length
+const NC = CARRIED.length + WILDC.length
+const NT = NC + NR + NW + NM + NWM + NI
 const NTW = NUM[NT] || String(NT)
 // Work an earlier run already finished, by id: {final} skips it; {draft} skips the design; {crit} the crit.
 const RESUME = args.resume || {}
@@ -85,8 +90,16 @@ const HOW = (id, o = {}) => `How to work:
 3. ${o.start || `Write ${D}/palettes/${id}.json (start from a copy of palettes/00-current.json; set "id": "${id}" and your own "name" and "tagline").`}${o.only ? ` ${ONLY}` : ''} Iterate with ./check.sh run from ${D} (pages as you need while iterating), fix every FAIL, and LOOK at the screenshots with the Read tool at least twice: home.png (the greeting and its corner: sample it), home-phone.png (the Home pill), chat.png, status.png, ideas.png. The family must be able to see the difference from today at a glance ACROSS THE PAGE (Home below the fold, Chat, Ideas, Status), not only in the greeting's corner: use the page-wide roles in the README (heading, label, card-edge, secondary with quietFilter, bubble and bubble-them, bezel, bar, ambient, a tinted surface) with taste, so the companion and the calmer tones carry through the whole page while the #6dff9c on green-black stays the signature. The owner enjoys typesetting and appreciates even minor typographic improvement: whatever your roll, consider small typographic refinements in the palette's "css" (README: "Typesetting"), and make them only where they truly improve the page.
 4. Finish with a full render (./check.sh palettes/${id}.json, no page list) that passes every floor.
 
-Rules: work only in ${D} (and read ${H}/lessons.md where step 1 says to); write only ${D}/palettes/${id}.json and, for your own markup, ${D}/variants/${id}/; never edit /home/user/FamilyDB, another palette or anything in ${H} outside ${D}; do not start or stop the server on port 8099. Keep the brand exactly #6dff9c. Be honest in the weaknesses.`
+Rules: work only in ${D} (and read ${H}/lessons.md where step 1 says to); write only ${D}/palettes/${id}.json and, for your own markup, ${D}/variants/${id}/; never edit /home/user/FamilyDB, another palette or anything in ${H} outside ${D}; do not start or stop the server on port 8099. The owner's signature is the exact #6dff9c on a green-black ground: keep it unless your idea is better without it, and then say why. Be honest in the weaknesses.`
 
+
+const HOW_WILD = (id, start, parent) => `How to work:
+1. Read ${D}/README.md (the palette format, "A clean sheet", "Graphics, pictures and icons", ./check.sh and what it still refuses). Do not read lessons.md and do not look at any other design in this tournament${parent ? ` but your parent, ${parent}` : ''}.
+2. Look at today's page (${D}/out/00-current/shots/) for what the app contains, not for how yours should look.
+3. ${start} Iterate with ./check.sh run from ${D} (pages as you need while iterating), fix every FAIL, and LOOK at the screenshots with the Read tool on every page, at least three times.
+4. Finish with a full render (./check.sh palettes/${id}.json, no page list).
+
+Rules: work only in ${D}; write only ${D}/palettes/${id}.json and ${D}/variants/${id}/; never edit /home/user/FamilyDB or anything in ${H} outside ${D}; do not start or stop the server on port 8099. Be honest in the weaknesses.`
 
 // ---- Plan: the informed briefs, from all the feedback so far ---------------------------------
 const runPlan = () => agent(
@@ -104,7 +117,7 @@ Read, in full:
 
 The tournament must not narrow into one idea or iterate into an average. ${MODE === 'refine' ? `This is a REFINING round: the first ${NUM[NREF]} of your briefs are refinements of the carried winners (one each, the strongest first): keep the winner's idea and apply the judges' concrete fixes and small improvements, so good ideas get better. The rest are new offspring, and at least one of those must be a NOVELTY brief.` : 'At least one of your briefs must be a NOVELTY brief.'} A novelty brief opens a motif family that is not among the carried four: either one the hall of fame has never tried, or a family that did well once and dropped out, bred from DISTANT parents rather than neighbours of the leader; it must look clearly different (look-distance 1.5 or more) from every carried palette. Mark it in the hypothesis.
 
-Then write ${NUM[NP]} briefs, each a distinct hypothesis about what would beat the carried four, for example: a hybrid that takes the element each judge praised in two palettes and drops what they criticised; a fix for a promising palette that fell short for one clear reason; an idea the judges asked for that no palette has tried yet; a bolder or calmer take on the leader. Each must keep the owner's asks and the harness's hard checks (the #6dff9c signature on a green-black ground; plain legibility; the page's integrity) and may break any written guideline when the page is better for it, must be clearly different from the carried four and from each other, and must be something a designer can build with the palette roles in ${D}/README.md (bg and neutrals, ink, brand, lit, halo, accent, wash, top-glow, screen, the section colours, outing, glow numbers). Briefs may change the page's markup too (layout, grouping, the kinds of elements, headers and footers, icons and pictures: README "A palette's own markup"), as long as every word, form and link stays. Briefs may also include small visual refinements beyond colour (size, spacing, type, corners, labels, icons: the palette's "css" field, README "Refinements beyond colour"), bred from the carried winners' refinements or new. Name the palettes whose elements it borrows and the criticisms it answers.`,
+Then write ${NUM[NP]} briefs, each a distinct hypothesis about what would beat the carried four, for example: a hybrid that takes the element each judge praised in two palettes and drops what they criticised; a fix for a promising palette that fell short for one clear reason; an idea the judges asked for that no palette has tried yet; a bolder or calmer take on the leader. Each must keep the owner's asks and the harness's hard checks (the #6dff9c signature on a green-black ground; plain legibility; the page's integrity) and may break any written guideline when the page is better for it, must be clearly different from the carried four and from each other, and must be something a designer can build with the palette roles in ${D}/README.md (bg and neutrals, ink, brand, lit, halo, accent, wash, top-glow, screen, the section colours, outing, glow numbers). Briefs may change the page's markup too (layout, grouping, the kinds of elements, headers and footers, icons and pictures: README "A palette's own markup"), as long as every word, form and link stays. Briefs may also include small visual refinements beyond colour (size, spacing, type, corners, labels, icons: the palette's "css" field, README "Refinements beyond colour"), bred from the carried winners' refinements or new. Name the palettes whose elements it borrows and the criticisms it answers. New ideas are what this tournament rewards: read each ranking's "promise" votes (the ideas the judges most want developed, whatever their score) and the FAILED REACHES in lessons.md, and let at least one brief develop a promising idea from a low-scoring, random or wild entrant rather than the leaders.`,
   {
     label: `plan:${R}`, phase: 'Plan',
     schema: {
@@ -143,6 +156,8 @@ A designer has just made a first draft of ${id} (${draft.name}), ${what}. ${resu
 
 Your job is to make THIS idea as good as it can be before the panel judges it beside winners refined over several rounds. ${kind === 'crossover'
     ? `Keep it true to both parents: judge how well the structure parent's system and the colour parent's colours have been reconciled into one page; do not pull it towards the other carried winners or towards today's page.`
+    : kind === 'wild'
+    ? `Keep it wild: judge how far and how well it carries its own design language and its twist, and what would make that work better. Do not pull it towards the other designs, towards today's page or towards any taste but its own; name what works, what fails and how to make it work.`
     : kind === 'brief'
     ? `Keep it true to its brief: judge how fully and how well the brief is carried out on every page, and what would make it better; do not pull it towards the other carried winners or towards today's page.`
     : `Do not pull it towards the carried winners (${CARRIED_LIST}) or towards today's page, and do not ask it to be safer: keep its idea, its structure and its mood, and judge the execution. Its roll was ${lessons === 'none' ? 'only a spark, which a wildcard may keep any part of or none' : 'a starting point, which it may bend or drop where the page is better for it'}: judge what the designer made, not how closely it follows the roll.`}
@@ -168,7 +183,7 @@ ${crit.notes.map(k => `- ${k}`).join('\n')}`}
 
 Make one revision. Keep the idea; act on the notes that make the page better (you may decline a note that would betray the idea, and say why); look at the pages again before you finish.
 
-${HOW(id, { lessons, start: `Revise ${D}/palettes/${id}.json (and ${D}/variants/${id}/, if it has markup) in place, keeping its id.` })}
+${kind === 'wild' ? HOW_WILD(id, `Revise ${D}/palettes/${id}.json and ${D}/variants/${id}/ in place, keeping its id.`) : HOW(id, { lessons, start: `Revise ${D}/palettes/${id}.json (and ${D}/variants/${id}/, if it has markup) in place, keeping its id.` })}
 
 Return the whole design as it now stands, with "revisions" saying what you changed and which notes you declined.`,
     { label: `revise:${id}`, phase: 'Second draft', schema: REVISED_SCHEMA })
@@ -239,6 +254,58 @@ ${body}
 
 ${HOW(id, { start: `Make ${D}/palettes/${id}.json as above.`, only: m.kind !== 'crossover' })}`, { label: `design:${id}`, phase: 'Design', schema: DESIGN_SCHEMA })
 }
+// ---- The wild lane ------------------------------------------------------------------------------
+const WILD_MANDATE = `Nothing is off the table if your idea wants it: the layout, the kinds of elements, the type, the colour, the pictures and icons, the density, the wording of headings and labels, even the owner's green signature. The panel judges every design on its own merits, rewards what works and says constructively what does not; a bold idea that falls short is worth more to this tournament than a safe one. What the check still refuses is only what would break the page or make it unsafe (a form, field or link that no longer works, anything loaded from outside).`
+
+const designWild = (w, slot) => {
+  const id = `${R}-wild-${slot}`
+  return agent(`You are a designer in round ${args.roundNo} of a tournament for FamilyDB's web interface.
+
+${OWNER}
+
+Your design is WILD: this round's licence for an extreme idea, in a lane of its own where new ideas are what is rewarded. ${WILD_MANDATE}
+
+Your starting point is a design language the dice rolled: ${w.language}. With this twist: ${w.twist}. If you want a companion for the green, one at OKLCH hue ${w.companion_hue_deg} is yours to use or ignore. Take the language as far as it goes, on every page: Home, Chat, Ideas, Plans, To do, Status, Settings, the new-idea form, Sign in, and the phone.
+
+Start from a CLEAN SHEET (README "A clean sheet"): write your own stylesheet from nothing in ${D}/variants/${id}/sheet.css and set "sheet": "variants/${id}/sheet.css" in your palette file, so nothing of today's look is inherited. Write your own templates in ${D}/variants/${id}/templates/ wherever the idea needs its own markup, and your own pictures and icons (README "Graphics, pictures and icons"). Rebuild each page from its content, not from today's layout.
+
+Your file: ${D}/palettes/${id}.json (id "${id}", your own "name" of two or three words and a "tagline"). Its "tokens" still name your colours (bg, surface, ink, brand and the rest, README "A palette"): your sheet uses them as custom properties (var(--bg), var(--ink), var(--brand) and so on), and the measures read them.
+
+${HOW_WILD(id, `Write ${D}/palettes/${id}.json and ${D}/variants/${id}/sheet.css.`)}`, { label: `design:${id}`, phase: 'Design', schema: DESIGN_SCHEMA })
+}
+const wildChain = (w) => {
+  const id = `${R}-wild-${w.slot}`
+  const r = RESUME[id] || {}
+  if (r.final) return Promise.resolve(r.final)
+  const known = r.draft || (r.file ? { id, name: r.name } : null)
+  return (known ? Promise.resolve(known) : designWild(w, w.slot)).then(draft =>
+    secondDraft(id, `a WILD design on this design language: ${w.language}, with this twist: ${w.twist}`, 'none', 'wild', r)(draft))
+}
+const designWildMutant = (m, slot) => {
+  const id = `${R}-wmut-${slot}`
+  return agent(`You are a designer in round ${args.roundNo} of a tournament for FamilyDB's web interface.
+
+${OWNER}
+
+Your page is a WILD MUTANT: one of the wild lane's carried designs, ${m.parent} (${m.parentName}), with two big changes rolled by the dice, the way evolution tries a large leap from something that showed promise. ${WILD_MANDATE}
+
+The changes the dice rolled:
+${m.changes.map(c => `- ${c}`).join('\n')}
+
+First copy ${D}/palettes/${m.parent}.json to ${D}/palettes/${id}.json (set "id": "${id}") and, when ${m.parent} has its own markup or sheet (${D}/variants/${m.parent}/), copy that whole folder to ${D}/variants/${id}/; if the palette names a "sheet", point it at your copy (variants/${id}/sheet.css). Give it a "name" of two or three words and a "tagline". Then make both changes fully and boldly, carried through every page they reach. Keep what made the parent promising, and say what you kept and what you changed.
+
+${HOW_WILD(id, `Make ${D}/palettes/${id}.json as above.`, m.parent)}`, { label: `design:${id}`, phase: 'Design', schema: DESIGN_SCHEMA })
+}
+const wildMutantChain = (slot) => {
+  const m = (args.wildMutants || [])[slot - 1]
+  const id = `${R}-wmut-${slot}`
+  const r = RESUME[id] || {}
+  if (r.final) return Promise.resolve(r.final)
+  const known = r.draft || (r.file ? { id, name: r.name } : null)
+  return (known ? Promise.resolve(known) : designWildMutant(m, slot)).then(draft =>
+    secondDraft(id, `a WILD mutant of ${m.parentName} (${m.parent}) with two big changes: ${m.changes.join('; ')}`, 'none', 'wild', r)(draft))
+}
+
 const mutantChain = (slot) => {
   const m = MUTANTS[slot - 1]
   const id = `${R}-mut-${slot}`
@@ -298,13 +365,14 @@ const JUDGE_SCHEMA = {
       items: { type: 'object', properties: { id: { type: 'string' }, score: { type: 'number', description: '0-10' }, why: { type: 'string' } }, required: ['id', 'score', 'why'] },
     },
     top4: { type: 'array', items: { type: 'string' }, description: 'ids, best first' },
+    promise: { type: 'array', items: { type: 'string' }, maxItems: 3, description: 'up to three ids whose idea is most worth developing further, new ideas above all, whatever their score now' },
     fixes: {
       type: 'array',
       items: { type: 'object', properties: { id: { type: 'string' }, suggestion: { type: 'string' } }, required: ['id', 'suggestion'] },
     },
     notes: { type: 'string' },
   },
-  required: ['lens', 'scores', 'top4', 'fixes', 'notes'],
+  required: ['lens', 'scores', 'top4', 'promise', 'fixes', 'notes'],
 }
 
 // ---- The stages -----------------------------------------------------------------------------
@@ -314,6 +382,8 @@ if (STAGE === 'design') {
     ...(args.seeds || []).map(s => () => randomChain(s)),
     ...(args.mutantSlots || []).map(k => () => mutantChain(k)),
     ...(args.briefs || []).map(x => () => briefChain(x)),
+    ...(args.wildHere || []).map(w => () => wildChain(w)),
+    ...(args.wildMutantSlots || []).map(k => () => wildMutantChain(k)),
   ]
   const planGroup = args.plan
     ? runPlan().then(plan => !(plan && plan.briefs)
@@ -343,7 +413,9 @@ The owner's latest word is the test that weighs most: "Those look nearly identic
 
 Small visual refinements beyond colour (sizes, spacing, type, corners, labels, icons) are welcome when they make the page more appealing and cost nothing in readability; they are optional, so judge the whole page, not whether it has them.
 
-There are ${NTW} candidates: four carried from the last round, ${NUM[NR]} from random starting points, ${NM ? `${NUM[NM]} mutants (a carried winner with a few random changes${MUTANTS.some(m => m.kind === 'crossover') ? ', one of them a crossover of two carried winners' : ''}), ` : ''}${NUM[NI]} informed by earlier feedback. The random entrants${MUTANTS.some(m => m.kind === 'crossover') ? ' and the crossover' : ''} have had one studio crit and one revision. Judge each on its merits alone, wherever it came from; a bold new structure that is well made should not lose to a familiar one for being unfamiliar.
+There are ${NTW} candidates: ${NUM[NC]} carried from the last round, ${NUM[NR + NW]} from random starting points${NW ? ` (${NUM[NW]} of them wild, built from a clean sheet on a design language of their own)` : ''}, ${NM + NWM ? `${NUM[NM + NWM]} mutants (a carried winner with a few random changes${MUTANTS.some(m => m.kind === 'crossover') ? ', one of them a crossover of two carried winners' : ''}), ` : ''}${NUM[NI]} informed by earlier feedback. The random entrants${MUTANTS.some(m => m.kind === 'crossover') ? ' and the crossover' : ''} have had one studio crit and one revision. Judge each on its merits alone, wherever it came from; a bold new structure that is well made should not lose to a familiar one for being unfamiliar.
+
+Big changes are welcome, and this panel rewards new ideas. Judge each candidate on what it sets out to do and how well it does it. Reward what works, however far it strays from today's page, from the leading designs' style or from your own habits; never mark a design down for being unfamiliar, and never reward one for being familiar. Where a bold idea falls short, criticise it constructively: say exactly what fails, what in it works or is worth keeping, and how it could be made to work, so the next round learns from the reach instead of abandoning it.
 
 ALSO score 00-current (today's page) through your lens, on the same scale, as a fixed yardstick: it is not a candidate, but its score lets the rounds be compared (how far the best has come from today).
 
@@ -360,7 +432,7 @@ Typographic refinements count, even small ones: the owner enjoys typesetting.
 
 The candidates: read ${D}/stage/candidates.md (each one's id, name, idea, companions and, for the newcomers, its designer's own weaknesses).
 
-Score every candidate AND 00-current 0-10 through your lens with one or two sentences why, then your top 4, best first, concrete token-level fixes for the ones you rate highly, and notes.`,
+Score every candidate AND 00-current 0-10 through your lens with one or two sentences why, then your top 4, best first, then up to three PROMISING ideas (the candidates whose idea is most worth developing further, new ideas above all, whatever their score now), concrete fixes (for the ones you rate highly, and for the bold ones that fell short: what to keep and what to fix), and notes.`,
     { label: `judge:${R}:${l.key}`, phase: 'Judge', schema: JUDGE_SCHEMA }
   ).then(r => r && { ...r, lens: l.key })))).filter(Boolean)
   log(`judged by ${judges.map(j => j.lens).join(', ')}`)
@@ -375,7 +447,7 @@ if (STAGE === 'finish') {
     () => agent(
   `Round ${args.roundNo} of the palette tournament for FamilyDB's Phosphor look has been judged. Append a short section to ${H}/lessons.md (and change nothing else in that file, nor any other file) headed "## Round ${args.roundNo}", with:
 - one line naming the top four BY SCORE, with their mean scores (the four carried on are chosen afterwards, for score and variety, with a protected slot for the best random entrant; that choice is appended to this file then): ${args.ranking.slice(0, 4).map(r => `${r.id} ${r.name} ${r.mean}`).join('; ')}
-- then at most eight bullets of NEW, concrete, reusable lessons from this round's judging, including one on TRAITS: which rolls and changes (each palette's "css" field and its own markup in ${D}/variants/<id>/; each random seed's structure (layout, type_system, controls, icons, graphics, motion, pacing), its "type_details" and "refinements" in ${D}/seeds.json; each mutant's changes and the crossover in ${D}/args.json) showed up in the winners and which in the losers, so good traits spread and poor ones fade. Say how the random entrants, the mutants, the type mutant, the graphics mutant and the crossover fared against the informed ones, and why; for the typographic and graphic changes, say which faces, scales, settings, icons and pictures the panel rewarded and which it did not. Also add, at most three, CANDIDATE PRINCIPLES for the Phosphor Interface standard that this round's evidence supports (a rule the winners share and the losers break). Also: what made winners win and losers lose, colours or roles that worked or failed on the page (with pixel samples or token values where the judges gave them), and any open problem. Do not repeat lessons already in the file; say where this round overturned or refined an earlier lesson.
+- then at most eight bullets of NEW, concrete, reusable lessons from this round's judging, including one on FAILED REACHES (the boldest ideas that fell short this round: what exactly failed, what in each worked or is worth keeping, and how it could be tried again; use the judges' fixes and their "promise" votes; a failed reach is information about how to do it, never a rule against its direction), and one on TRAITS: which rolls and changes (each palette's "css" field and its own markup in ${D}/variants/<id>/; each random seed's structure (layout, type_system, controls, icons, graphics, motion, pacing), its "type_details" and "refinements" in ${D}/seeds.json; each mutant's changes, the crossover, and each wild design's language, twist and wild mutant's changes in ${D}/args.json) showed up in the winners and which in the losers, so good traits spread and poor ones fade. Say how the random entrants, the mutants, the type mutant, the graphics mutant and the crossover fared against the informed ones, and why; for the typographic and graphic changes, say which faces, scales, settings, icons and pictures the panel rewarded and which it did not. Also add, at most three, CANDIDATE PRINCIPLES for the Phosphor Interface standard that this round's evidence supports (a rule the winners share and the losers break). Also: what made winners win and losers lose, colours or roles that worked or failed on the page (with pixel samples or token values where the judges gave them), and any open problem. Do not repeat lessons already in the file; say where this round overturned or refined an earlier lesson.
 
 The judges' full output is in ${D}/stage/judges.json (each judge's lens, notes, top four, scores with reasons, and fixes): read it all.
 

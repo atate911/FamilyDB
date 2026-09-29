@@ -283,33 +283,48 @@ class Theme:
             return ""
         return "\n\n/* ---- Palette roles that reach more of the page (harness) ---- */\n" + "\n".join(rules) + "\n"
 
+    @staticmethod
+    def refused(text: str, what: str, budget: int) -> None:
+        """Nothing is off the table for a design except what would make the page unsafe: loading
+        from outside, scripts in a stylesheet. Everything else is the panel's to vote on."""
+        problems = []
+        if len(text) > budget:
+            problems.append(f"{what} is {len(text)} characters; keep it under {budget}")
+        lowered = re.sub(r"\s+", " ", text.lower())
+        for bad, why in [("@import", "no imports: everything comes from the page itself"),
+                         ("expression(", "no expressions"), ("javascript:", "no scripts in a stylesheet")]:
+            if bad in lowered:
+                problems.append(f"'{bad}': {why}")
+        for m in re.finditer(r"url\(\s*['\"]?([^'\")]*)", lowered):
+            target = m.group(1).strip()
+            if re.match(r"^(?:[a-z][a-z0-9+.-]*:|//)", target):
+                problems.append(f"url({target[:40]}): only the page's own files (a relative path or /static/...)")
+        if problems:
+            raise SystemExit(f"{what} refused: " + "; ".join(problems))
+
     def refinements(self) -> str:
-        """The palette's own small visual refinements (`css`): sizes, spacing, type, corners,
-        borders, icon sizes. Checked for the few things a refinement may never do."""
+        """The palette's own css, appended after everything else so it wins."""
         extra = self.p.get("css", "")
         if isinstance(extra, list):
             extra = "\n".join(extra)
         if not extra.strip():
             return ""
-        problems = []
-        if len(extra) > 25000:
-            problems.append(f"css is {len(extra)} characters; keep it under 25000")
-        lowered = re.sub(r"\s+", " ", extra.lower())
-        for bad, why in [
-            ("@import", "no imports"), ("url(", "no url(): fonts and pictures come from the page itself"),
-            ("expression(", "no expressions"), ("javascript:", "no scripts"),
-            ("display: none", "never hide content"), ("display:none", "never hide content"),
-            ("visibility: hidden", "never hide content"), ("visibility:hidden", "never hide content"),
-            ("@font-face", "no new fonts: DM Sans, DM Mono and VT323 are the faces served"),
-        ]:
-            if bad in lowered:
-                problems.append(f"'{bad}': {why}")
-        for m in re.finditer(r"(?<![\w-])content\s*:\s*([^;}]*)", lowered):
-            if m.group(1).strip() not in ('""', "''", "none", "normal"):
-                problems.append("content: may only be empty (never change the page's words)")
-        if problems:
-            raise SystemExit("css refinement refused: " + "; ".join(problems))
+        self.refused(extra, "css", 60000)
         return self.font_faces(extra) + "\n\n/* ---- The palette's own refinements (harness) ---- */\n" + extra.strip() + "\n"
+
+    def root_tokens(self) -> str:
+        """Every token as a custom property, for a design that brings its own stylesheet."""
+        t = self.t
+        lines = [f"  {var}: {t[key]};" for key, var in TOKEN_VARS.items() if key in t]
+        lines += [f"  --screen: {t['screen']};", f"  --outing: {t['outing']};", f"  --lit: {self.lit};",
+                  "  --brand: var(--green);", "  --brand-hover: var(--green-hover);", "  --ideas: var(--lilac);",
+                  "  --plans: var(--cyan);", "  --todo: var(--lemon);", "  --people: var(--amber);",
+                  "  --shows: var(--pink);", "  --seasons: var(--orange);", "  --danger: var(--red);",
+                  f"  --accent: {self.accent or 'var(--green)'};"]
+        for role in ("heading", "label", "card-edge", "secondary", "bubble", "bubble-them", "bezel", "bar", "halo", "wash"):
+            if role in t:
+                lines.append(f"  --{role}: {t[role]};")
+        return ":root {\n" + "\n".join(lines) + "\n}\n"
 
     @staticmethod
     def font_faces(extra: str) -> str:
@@ -328,6 +343,12 @@ class Theme:
         return "\n\n/* ---- Library faces this palette uses (harness) ---- */\n" + "\n".join(keep)
 
     def render(self, css: str) -> str:
+        sheet = self.p.get("sheet")
+        if sheet:  # a clean sheet: the design's own stylesheet replaces today's entirely
+            own = Path(sheet).read_text()
+            self.refused(own, f"the stylesheet {sheet}", 200000)
+            return (self.font_faces(own + str(self.p.get("css", ""))) + "\n/* ---- The design's tokens (harness) ---- */\n"
+                    + self.root_tokens() + "\n/* ---- The design's own stylesheet ---- */\n" + own + "\n" + self.refinements())
         lines = css.split("\n")
         out = []
         for i, text in enumerate(lines, start=1):

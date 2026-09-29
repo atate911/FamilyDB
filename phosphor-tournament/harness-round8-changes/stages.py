@@ -44,7 +44,19 @@ def rdir(rnd):
 def common(a):
     return {"round": a["round"], "roundNo": a["roundNo"], "mode": a["mode"],
             "carried": [{"id": c["id"], "name": c["name"]} for c in a["carried"]],
-            "mutants": a["mutants"], "nRandom": len(a["seeds"]), "nInformed": a["nInformed"]}
+            "wildCarried": [{"id": c["id"], "name": c["name"]} for c in a.get("wildCarried", [])],
+            "mutants": a["mutants"], "wildMutants": a.get("wildMutants", []), "nWild": len(a.get("wild", [])),
+            "nRandom": len(a["seeds"]), "nInformed": a["nInformed"]}
+
+
+def entrant_ids(a):
+    """Every new entrant of a round, in a fixed order."""
+    r = a["round"]
+    return ([f"{r}-rand-{i}" for i in range(1, len(a["seeds"]) + 1)]
+            + [f"{r}-mut-{i}" for i in range(1, len(a["mutants"]) + 1)]
+            + [f"{r}-wild-{w['slot']}" for w in a.get("wild", [])]
+            + [f"{r}-wmut-{m['slot']}" for m in a.get("wildMutants", [])]
+            + [f"{r}-idea-{i}" for i in range(1, a["nInformed"] + 1)])
 
 
 def slim(d):
@@ -61,6 +73,10 @@ def split(rnd, resume_file=None):
         chains.append((3, "seed", {**s, "slot": i}, f"{r}-rand-{i}"))
     for i, m in enumerate(a["mutants"], 1):
         chains.append((3 if m.get("kind") == "crossover" else 1, "mut", i, f"{r}-mut-{i}"))
+    for w in a.get("wild", []):
+        chains.append((3, "wild", w, f"{r}-wild-{w['slot']}"))
+    for m in a.get("wildMutants", []):
+        chains.append((3, "wmut", m["slot"], f"{r}-wmut-{m['slot']}"))
     chains = [c for c in chains if not (resume.get(c[3]) or {}).get("final")]
     chains.sort(key=lambda c: -c[0])
     stage_dir = rdir(rnd) / "stage"
@@ -81,6 +97,8 @@ def split(rnd, resume_file=None):
         args = {**common(a), "stage": "design",
                 "seeds": [c[2] for c in g if c[1] == "seed"],
                 "mutantSlots": [c[2] for c in g if c[1] == "mut"],
+                "wildHere": [c[2] for c in g if c[1] == "wild"],
+                "wildMutantSlots": [c[2] for c in g if c[1] == "wmut"],
                 "plan": False,
                 "resume": {i: by_file(i, resume[i]) for i in ids if i in resume}}
         files.append(stage_dir / f"design-{k}.json")
@@ -135,9 +153,7 @@ def prepare(rnd, *outs):
     for pid, v in resumed.items():  # a crit passed by file comes back without its notes
         if pid in designs and not designs[pid].get("crit") and v.get("crit"):
             designs[pid]["crit"] = v["crit"]["notes"]
-    order = [f"{a['round']}-rand-{i}" for i in range(1, len(a["seeds"]) + 1)] + \
-            [f"{a['round']}-mut-{i}" for i in range(1, len(a["mutants"]) + 1)] + \
-            [f"{a['round']}-idea-{i}" for i in range(1, a["nInformed"] + 1)]
+    order = entrant_ids(a)
     missing = [i for i in order if i not in designs]
     if missing:
         print("NO DESIGN RECORD FOR", ", ".join(missing), "(judged from its files if it has them)")
@@ -164,7 +180,7 @@ def prepare(rnd, *outs):
                                capture_output=True, text=True).stdout
     (stage_dir / "table.md").write_text(table)
 
-    notes = [f"### {c['id']} {c['name']} (carried)\n{c['summary']}" for c in a["carried"]]
+    notes = [f"### {c['id']} {c['name']} (carried)\n{c['summary']}" for c in a["carried"] + a.get("wildCarried", [])]
     notes += [f"### {x['id']} {x['name']}\n{x['tagline']}\nConcept: {x['concept']}\nCompanions: {x['companions']}\n"
               f"Designer's own weaknesses: {' | '.join(x['weaknesses'])}" for x in ds]
     (stage_dir / "candidates.md").write_text("\n\n".join(notes) + "\n")
@@ -188,7 +204,8 @@ def tally(rnd, *outs):
         for j in result_of(o).get("judges", []):
             judges[j["lens"]] = j
     judges = list(judges.values())
-    names = {c["id"]: c["name"] for c in a["carried"]} | {x["id"]: x["name"] for x in ds}
+    names = {c["id"]: c["name"] for c in a["carried"] + a.get("wildCarried", [])} | {x["id"]: x["name"] for x in ds}
+    wild_carried = {c["id"] for c in a.get("wildCarried", [])}
 
     def origin(pid):
         if pid.startswith(f"{r}-rand"):
@@ -196,9 +213,15 @@ def tally(rnd, *outs):
         if pid.startswith(f"{r}-mut"):
             m = a["mutants"][int(pid.split("-")[-1]) - 1]
             return {"crossover": "crossover", "type": "type mutant", "graphics": "graphics mutant"}.get(m.get("kind"), "mutant")
+        if pid.startswith(f"{r}-wild"):
+            return "wild"
+        if pid.startswith(f"{r}-wmut"):
+            return "wild mutant"
+        if pid in wild_carried:
+            return "wild carried"
         return "informed" if pid.startswith(f"{r}-idea") else "carried"
 
-    t = {pid: {"id": pid, "name": n, "total": 0, "n": 0, "top4": 0, "byLens": {}, "origin": origin(pid)}
+    t = {pid: {"id": pid, "name": n, "total": 0, "n": 0, "top4": 0, "promise": 0, "byLens": {}, "origin": origin(pid)}
          for pid, n in names.items()}
     today = [s["score"] for j in judges for s in j["scores"] if s["id"] == "00-current"]
     today_mean = round(sum(today) / len(today), 2) if today else None
@@ -211,18 +234,21 @@ def tally(rnd, *outs):
         for pid in j["top4"]:
             if pid in t:
                 t[pid]["top4"] += 1
+        for pid in j.get("promise", []):
+            if pid in t:
+                t[pid]["promise"] += 1
     ranking = [{**x, "mean": round(x["total"] / x["n"], 2) if x["n"] else 0} for x in t.values()]
     ranking.sort(key=lambda x: (-x["mean"], -x["top4"], -x["byLens"].get("skeptic", 0)))
     margin = round(ranking[0]["mean"] - today_mean, 2) if today_mean is not None else None
     thin = [f"{x['id']} ({x['n']})" for x in ranking if x["n"] < len(judges)]
     (stage_dir / "judges.json").write_text(json.dumps(
-        [{"lens": j["lens"], "notes": j["notes"], "top4": j["top4"], "scores": j["scores"], "fixes": j["fixes"]}
+        [{"lens": j["lens"], "notes": j["notes"], "top4": j["top4"], "promise": j.get("promise", []), "scores": j["scores"], "fixes": j["fixes"]}
          for j in judges]))
     (stage_dir / "ranking.json").write_text(json.dumps(
         {"ranking": ranking, "todayMean": today_mean, "margin": margin, "judges": judges}))
     (stage_dir / "finish.json").write_text(json.dumps({
         **common(a), "stage": "finish",
-        "ranking": [{"id": x["id"], "name": x["name"], "origin": x["origin"], "mean": x["mean"], "top4": x["top4"]}
+        "ranking": [{"id": x["id"], "name": x["name"], "origin": x["origin"], "mean": x["mean"], "top4": x["top4"], "promise": x["promise"]}
                     for x in ranking],
         "newPalettes": [f"{x['id']} ({x['name']})" for x in ds]}))
     print(f"judges: {', '.join(j['lens'] for j in judges)} ({len(judges)} of 7)")
@@ -230,7 +256,7 @@ def tally(rnd, *outs):
         print("scored by fewer judges:", ", ".join(thin))
     print(f"today {today_mean}, best {ranking[0]['mean']} (margin {margin})")
     for x in ranking:
-        print(f"  {x['id']:12} {x['name']:24} {x['mean']:5} top4 {x['top4']} {x['origin']}")
+        print(f"  {x['id']:12} {x['name']:24} {x['mean']:5} top4 {x['top4']} promise {x['promise']} {x['origin']}")
     print(stage_dir / "finish.json")
 
 

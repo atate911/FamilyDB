@@ -328,14 +328,16 @@ def colour_distance(x, y):
     return 100 * sum(math.dist(rgb_to_oklab(hex_to_rgb(x[k])), rgb_to_oklab(hex_to_rgb(y[k]))) for k in common) / len(common)
 
 
-def mutants(parents, n, protected=None, n_type=0, n_graphics=0):
+def mutants(parents, n, protected=None, n_type=0, n_graphics=0, n_cross=None, cross_pool=None):
     """n mutants over the parents ({id, name, family}). Each point mutant has two or three changes,
     one of colour and one of structure, and half the time a refinement too. From three on, the last
     is a crossover: one parent's structure (markup, layout, type, controls) with another's colours,
     from two different families. A carried random entrant (protected) gets the first point mutant,
     so a random idea's line has room to grow."""
     out = []
-    n_cross = 1 if n >= 3 and len(parents) >= 2 else 0
+    if n_cross is None:
+        n_cross = 1 if n >= 3 and len(parents) >= 2 else 0
+    n = n if n >= n_cross else n_cross
     first = [p for p in parents if p["id"] == protected]
     rest = [p for p in parents if p["id"] != protected]
     order = first + random.sample(rest, len(rest))
@@ -364,7 +366,8 @@ def mutants(parents, n, protected=None, n_type=0, n_graphics=0):
         # colours changes nothing), then preferring those no point mutant used, so the round's
         # variation spreads over all four carried. The direction is left to chance.
         used = {m["parent"] for m in out}
-        pairs = [(a, b) for a in parents for b in parents if a["id"] != b["id"]]
+        pool = cross_pool or parents
+        pairs = [(a, b) for a in pool for b in pool if a["id"] != b["id"]]
         far = {(a["id"], b["id"]): colour_distance(a.get("colours"), b.get("colours")) for a, b in pairs}
         top = max(far.values()) or 1
 
@@ -377,6 +380,79 @@ def mutants(parents, n, protected=None, n_type=0, n_graphics=0):
                     "colourParent": b["id"], "colourParentName": b["name"],
                     "changes": [f"the structure of {a['name']} (its markup, layout, type, controls, spacing and non-colour css) "
                                 f"with the colours of {b['name']} (its tokens, glow numbers and colour roles)"]})
+    return out
+
+
+# The wild lane: designs built from a clean sheet on a radically different design language, in a
+# lane of their own so a new idea has time to mature. Nothing is off the table for them.
+WILD_LANGUAGES = [
+    "Teletext and Ceefax: blocky mosaic graphics, a strict 40-column grid, double-height headlines, page numbers",
+    "Swiss International Style: a strict grid, flush-left grotesque type, huge numerals, asymmetric dark space",
+    "Bauhaus: primary geometry (circles, squares, bars), bold type, the phosphor green as the one primary",
+    "brutalist web: raw structure shown proudly, rules and system type, underlined links, no decoration",
+    "a vector-arcade display (Vectrex, Asteroids): everything drawn in glowing outlines on black, no fills",
+    "an oscilloscope and lab instrument front: graticules, traces, knobs and engraved legends",
+    "mission control, 1969: consoles of monospaced status readouts and rows of indicator lamps",
+    "Dieter Rams and Braun: quiet grey hardware, one coloured control, perfect grids, small lowercase type",
+    "a trading terminal: dense multi-panel data, function-key bars, tiny type, everything visible at once",
+    "the first graphical desktops (Mac System 1, GEM): 1-bit windows, striped title bars, pixel icons",
+    "ANSI and BBS art: box-drawing characters, block shading, 80-column text-mode screens",
+    "Minitel and videotex: chunky mosaic graphics and a service-menu page structure",
+    "an e-ink reader: calm, typographic, book-like pages, nothing glows but the signature",
+    "railway signage and timetables: numbered lines, line colours, stop lists, big legible type",
+    "an architectural blueprint: a cyanotype grid, dimension lines, title blocks, stamped labels",
+    "a newspaper broadsheet: masthead, columns, rules, headlines and datelines",
+    "a modular synthesiser: panels, patch points, knobs, engraved labels, cables as lines",
+    "a 1980s cockpit or dashboard: backlit gauges, segmented displays, warning lamps",
+    "line-printer and punched-card era: green-bar paper, perforations, fixed-width columns",
+    "a split-flap departures board: flap characters, rows, times, the clatter of change",
+    "a handheld console (Game Boy): a four-green palette, pixel sprites, chunky boxes",
+    "LCD calculators and digital watches: seven-segment digits, grey-green panels, tiny legends",
+    "a museum exhibition: large type, generous space, object labels and captions",
+    "a field notebook under a green work lamp: ruled pages, stamps, clips and hand-set labels",
+    "a library card catalogue: drawers, index cards with typed headings, call numbers",
+    "Tron and the neon grid: glowing outlines, a dark grid floor, light trails as the lines",
+    "a zine: collage, torn paper, tape and stickers, kept legible",
+    "a star chart and planetarium desk: arcs, rings, coordinates, a dark dome",
+    "a hand-drawn sketch: pen lines, loose boxes, annotations, kept legible",
+    "a poster: the greeting as one huge typographic statement, everything else small",
+]
+WILD_TWISTS = [
+    "no cards and no boxes at all: space, type and lines only",
+    "the whole of Home on one screen, nothing below the fold on desktop",
+    "one long scrolling ribbon: every section a full-width chapter",
+    "a navigation that is the page: a large index or map of the app is the home",
+    "one type size for everything: hierarchy by weight, colour, case and space alone",
+    "big type: the greeting and each page title as a poster",
+    "a grid of equal cells, like a control panel, on every page",
+    "a timeline as the spine of every page",
+    "conversation first: Vera's thread at the centre, everything else around it",
+    "radical density: every page shows everything at once, like an instrument",
+    "radical sparsity: one thing at a time, large, with everything else a step away",
+    "the phone first: design the phone, and let the desktop be the phone widened",
+    "pictures first: every section led by a drawing or a diagram",
+    "sound made visible: level meters, waveforms and signal lines as the page's ornament",
+]
+
+
+def wild_seeds(n, past=None):
+    """n wild rolls: a design language and a twist, distinct, leaning to the least used."""
+    past = past or {}
+    langs = pick_weighted(WILD_LANGUAGES, lambda o: past.get(o, 0), n)
+    twists = random.sample(WILD_TWISTS, min(n, len(WILD_TWISTS)))
+    return [{"language": lang, "twist": tw, "companion_hue_deg": random.randrange(0, 360)}
+            for lang, tw in zip(langs, twists)]
+
+
+def wild_mutants(parents, n):
+    """Big leaps on the wild lane's carried designs: two large changes each."""
+    pool = STRUCTURE_MUTATIONS + TYPE_MAJOR + GRAPHICS_MAJOR + WILD_TWISTS
+    out = []
+    order = random.sample(parents, len(parents)) if parents else []
+    for i in range(n if order else 0):
+        parent = order[i % len(order)]
+        out.append({"kind": "wild", "parent": parent["id"], "parentName": parent["name"],
+                    "changes": random.sample(pool, 2)})
     return out
 
 

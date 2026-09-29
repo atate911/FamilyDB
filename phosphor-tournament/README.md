@@ -174,15 +174,34 @@ before round 8: `./check.sh palettes/00-current.json`.
 The owner's schedule from here: nine rounds with mutants, 8 to 16, then the finale. The owner
 extended the exploratory rounds by three, from 9-10 to 9-13, ahead of the three refine rounds.
 
-| Round | Carried | Random (wildcards) | Mutants (one a crossover) | Informed | `open` arguments |
-|---|---|---|---|---|---|
-| 8 | 4, one protected | 3 (2) | 3 | 2 | `r7 r8 8 3 2 3 explore 2` |
-| 9 to 13 | 4 | 2 (2) | 3 | 3 | `r8 r9 9 2 3 3 refine 2` |
-| 14, 15, 16 | 4 | 1 (1) | 3 | 4 | `r13 r14 14 1 4 3 refine 1` |
+From round 10 the owner asked for more entropy in the design system: "nothing should be off the
+table ... extreme ideas tried and voted either up or down". So the harness changed:
+- **Only integrity and safety are refused.** Every form, field and link must still work, nothing
+  may load from outside, and the render must succeed. Contrast, text size, the green signature,
+  the page's words and sideways scroll are measured and shown to the judges, not refused.
+- **A wild lane beside the main one.** Each round has four new designs built from a clean sheet
+  on a radical design language rolled by the dice (Teletext, a Swiss grid, Bauhaus, a
+  vector-arcade display, mission control, a split-flap board and so on). They start from their
+  own stylesheet with none of today's, and do not see the other designs or `lessons.md`. The
+  two designs the judges most want developed carry on in their own lane, and one wild mutant
+  makes two big leaps from them.
+- **Judges reward new ideas.** They judge each design on its own merits, give constructive fixes
+  for bold ideas that fall short, and cast up to three "promise" votes for the ideas most worth
+  developing. The wild lane is chosen by those votes. `lessons.md` records failed reaches as
+  information, not rules.
+- **Type and graphics mutants.** Each round has a type-only and a graphics-only mutant, and the
+  crossover may cross the two lanes. There are no point mutants.
 
-Round 9 has a fourth informed entrant, "Signal Lines", briefed at the owner's request
-(`extraBriefs` in its `args.json`): Signal Galley with all of Signal Box's line art, on every
-page. The judges are not told it was requested.
+| Round | Main lane | Wild lane | `open` options |
+|---|---|---|---|
+| 10 | 4 carried, type, graphics and crossover mutants, 3 informed (the last the blind improved Signal Box) | 2 carried, 4 new, 1 mutant | `--informed 3 --wild 4` |
+| 11 to 13 | 4 carried, the 3 mutants, 2 informed | 2 carried, 4 new, 1 mutant | `--informed 2 --wild 4` |
+| 14 to 16 | 4 carried, the 3 mutants, 3 informed | 2 carried, 2 new, 1 mutant | `--informed 3 --wild 2` |
+
+The full command is `python3 advance.py open rN rM M --informed I --wild W` with the defaults
+`--point 0 --cross 1 --type 1 --graphics 1 --wild-carried 2 --wild-mutants 1 --mode refine`.
+
+The finale's championship includes the wild lane's best.
 
 - **Finale**:
   1. A championship across the hall of fame: the best of each family, plus each round's

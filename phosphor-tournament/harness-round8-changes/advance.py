@@ -3,7 +3,8 @@
   python3 advance.py close OUTPUT rN
       Save round N's results from the workflow's output file, then rebuild the hall of fame
       (archive.py) and the look-distances between every palette (diversity.py archive).
-  python3 advance.py open rN rM M N_RANDOM N_INFORMED [N_MUTANTS MODE N_WILDCARDS N_TYPE N_GRAPHICS]
+  python3 advance.py open rN rM M [--informed 2 --point 0 --cross 1 --type 1 --graphics 1
+                                 --wild 3 --wild-carried 2 --wild-mutants 1 --random 0 --wildcards 0 --mode refine]
       Choose the four carried from round N for score AND variety, draw their mockup sheet, set up
       round M with them, draw its random seeds (steered toward what the hall of fame has tried
       least), its mutants (from three on, the last a crossover), N_TYPE type mutants (default 1:
@@ -40,7 +41,10 @@ def close(out_file, rnd):
     print("closed", rnd, "top by score:", [(r["id"], r["mean"]) for r in result["ranking"][:6]])
 
 
-def choose(rnd):
+WILD_ORIGINS = {"wild", "wild mutant", "wild carried", "random"}
+
+
+def choose(rnd, protected_random=False):
     result = json.loads((HERE / "rounds" / rnd / "results.json").read_text())
     arc = json.loads((HERE / "archive.json").read_text())["palettes"]
     dist = json.loads((HERE / "archive_distances.json").read_text())
@@ -75,7 +79,7 @@ def choose(rnd):
     # lives long enough to be refined instead of meeting polished winners on its first draft.
     floors = {x["id"]: x.get("floorsFailed", 0) for x in result.get("designs", [])}
     today = result.get("todayMean")
-    if ranking[0].get("origin") != "random":
+    if protected_random and ranking[0].get("origin") != "random":
         for c in ranking:
             if (c.get("origin") == "random" and floors.get(c["id"], 0) == 0
                     and (today is None or c["mean"] > today)
@@ -112,14 +116,32 @@ def choose(rnd):
         near = min(chosen, key=lambda x: d(c["id"], x["id"]))
         passed.append(f"{c['name']} ({c['mean']}, {fam(c['id'])}): {d(c['id'], near['id'])} from {near['name']}"
                       + (", same family" if fam(c["id"]) == fam(near["id"]) else ""))
-    return result, chosen, why, passed, fam
+    # The wild lane: two more places, for the ideas the judges most want developed. Wild, random
+    # and wild-carried entrants not already carried above are ranked by the judges' "promise"
+    # votes, then by score; one goes on when it has a promise vote or beat today's page, and the
+    # second from a different family where there is one.
+    wild = []
+    pool = [c for c in ranking if c.get("origin") in WILD_ORIGINS and c not in chosen
+            and (c.get("promise", 0) > 0 or today is None or c["mean"] > today)]
+    pool.sort(key=lambda c: (-c.get("promise", 0), -c["mean"]))
+    for c in pool:
+        if len(wild) == 2:
+            break
+        if wild and fam(c["id"]) == fam(wild[0]["id"]) and any(fam(x["id"]) != fam(wild[0]["id"]) for x in pool[pool.index(c):]):
+            continue
+        wild.append(c)
+        why[c["id"]] = (f"the wild lane, for the ideas the judges most want developed ({c.get('promise', 0)} promise "
+                        f"votes, #{ranking.index(c) + 1} by score, today {today}): {fam(c['id'])}")
+    return result, chosen, why, passed, fam, wild
 
 
-def open_(rnd, nxt, nxt_no, n_random, n_informed, n_mutants="0", mode="explore", n_wild=None, n_type="1", n_graphics="1"):
-    result, chosen, why, passed, fam = choose(rnd)
+def open_(rnd, nxt, nxt_no, *, random_n=0, wildcards=0, informed=2, point=0, cross=1, type_n=1, graphics=1,
+          wild_n=3, wild_carried=2, wild_mutants=1, mode="refine"):
+    result, chosen, why, passed, fam, wild = choose(rnd)
+    wild = wild[:wild_carried]
     prev_dir = HERE / "rounds" / rnd
     prev_args = json.loads((prev_dir / "args.json").read_text())
-    carried_summary = {c["id"]: c["summary"] for c in prev_args["carried"]}
+    carried_summary = {c["id"]: c["summary"] for c in prev_args["carried"] + prev_args.get("wildCarried", [])}
     designs = {x["id"]: x for x in result["designs"]}
     prev_no = prev_args["roundNo"]
 
@@ -135,7 +157,12 @@ def open_(rnd, nxt, nxt_no, n_random, n_informed, n_mutants="0", mode="explore",
     sheet = HERE.parent / "mockups" / f"round-{prev_no}-winners.png"
     subprocess.run([PY, str(HERE / "winners.py"), str(prev_dir), str(sheet),
                     f"Round {prev_no}: the four carried into round {nxt_no} (score and variety)", *labels], check=True)
-    subprocess.run(["python3", str(HERE / "setup_round.py"), nxt, f"rounds/{rnd}", *[r["id"] for r in chosen]],
+    if wild:
+        subprocess.run([PY, str(HERE / "winners.py"), str(prev_dir), str(sheet.with_name(f"round-{prev_no}-wild.png")),
+                        f"Round {prev_no}: the wild lane carried into round {nxt_no} (the ideas the judges most want developed)",
+                        *[f"{r['id']}|{r['name']}|{r['mean']}|{r.get('promise', 0)} promise votes · {fam(r['id'])}" for r in wild]],
+                       check=True)
+    subprocess.run(["python3", str(HERE / "setup_round.py"), nxt, f"rounds/{rnd}", *[r["id"] for r in chosen + wild]],
                    check=True, cwd=HERE)
     # Re-render the carried four with this round's harness, so every page, check and frame is
     # made the same way as the newcomers'.
@@ -145,11 +172,10 @@ def open_(rnd, nxt, nxt_no, n_random, n_informed, n_mutants="0", mode="explore",
         return r["id"], (run.stdout.strip().splitlines() or ["?"])[-1]
     from concurrent.futures import ThreadPoolExecutor
     with ThreadPoolExecutor(max_workers=4) as pool:  # one render per core
-        for pid, last in pool.map(rerender, chosen):
+        for pid, last in pool.map(rerender, chosen + wild):
             print("RERENDERED", pid, last)
-    wild = str(n_wild) if n_wild is not None else ("2" if mode == "explore" and int(n_random) >= 4 else "0")
-    seeds =json.loads(subprocess.run(["python3", str(HERE / "seeds.py"), n_random, "--steer", "--wildcards", wild], check=True,
-                                      capture_output=True, text=True, cwd=HERE).stdout)
+    seeds = json.loads(subprocess.run(["python3", str(HERE / "seeds.py"), str(random_n), "--steer", "--wildcards", str(wildcards)],
+                                      check=True, capture_output=True, text=True, cwd=HERE).stdout) if random_n else []
     history = [str(HERE / "round1" / "results.json"), str(HERE / "final.json")]
     history += [str(p / "results.json") for p in sorted((HERE / "rounds").iterdir(), key=lambda p: int(p.name[1:]))
                 if (p / "results.json").exists()]
@@ -160,24 +186,39 @@ def open_(rnd, nxt, nxt_no, n_random, n_informed, n_mutants="0", mode="explore",
     def colours(pid):
         t = json.loads((HERE / "rounds" / nxt / "palettes" / f"{pid}.json").read_text())["tokens"]
         return {k: t[k] for k in dice.COLOUR_ROLES if k in t}
-    muts = dice.mutants([{"id": r["id"], "name": r["name"], "family": fam(r["id"]), "colours": colours(r["id"])}
-                         for r in chosen], int(n_mutants), protected,
-                         int(n_type) if int(n_mutants) else 0, int(n_graphics) if int(n_mutants) else 0)
+    def parent(r):
+        return {"id": r["id"], "name": r["name"], "family": fam(r["id"]), "colours": colours(r["id"])}
+    # The main lane's mutants; the crossover may take a parent from either lane, so wild traits can
+    # breed into the main line.
+    muts = dice.mutants([parent(r) for r in chosen], point + cross, protected, type_n, graphics,
+                        n_cross=cross, cross_pool=[parent(r) for r in chosen + wild])
+    past = {}
+    for f in (HERE / "rounds").glob("*/args.json"):
+        for w in json.loads(f.read_text()).get("wild", []):
+            past[w["language"]] = past.get(w["language"], 0) + 1
+    wild_new = [{**w, "slot": i} for i, w in enumerate(dice.wild_seeds(wild_n, past), 1)]
+    wild_muts = [{**m, "slot": i} for i, m in enumerate(dice.wild_mutants([parent(r) for r in wild], wild_mutants), 1)]
     args = {"round": nxt, "roundNo": int(nxt_no), "mode": mode,
             "carried": [{"id": r["id"], "name": r["name"], "summary": summary(r, i)} for i, r in enumerate(chosen)],
-            "seeds": seeds, "mutants": muts, "nInformed": int(n_informed), "history": history}
+            "wildCarried": [{"id": r["id"], "name": r["name"], "summary": summary(r, i)} for i, r in enumerate(wild)],
+            "seeds": seeds, "mutants": muts, "wild": wild_new, "wildMutants": wild_muts,
+            "nInformed": int(informed), "history": history}
     (HERE / "rounds" / nxt / "seeds.json").write_text(json.dumps(seeds, indent=1))
     (HERE / "rounds" / nxt / "args.json").write_text(json.dumps(args, indent=1))
     (HERE / "rounds" / nxt / "carried.json").write_text(json.dumps(
         {"chosen": [{"id": r["id"], "name": r["name"], "mean": r["mean"], "why": why[r["id"]]} for r in chosen],
+         "wild": [{"id": r["id"], "name": r["name"], "mean": r["mean"], "promise": r.get("promise", 0), "why": why[r["id"]]} for r in wild],
          "passed_over": passed}, indent=1))
     # lessons.md names the round's top four by score; record the four actually carried on.
     with open(HERE / "lessons.md", "a") as f:
         f.write(f"\nCarried into round {nxt_no} (chosen by advance.py for score and variety): "
-                + "; ".join(f"{r['id']} {r['name']} {r['mean']} ({why[r['id']].split(':')[0].split(' (')[0]})" for r in chosen) + ".\n")
+                + "; ".join(f"{r['id']} {r['name']} {r['mean']} ({why[r['id']].split(':')[0].split(' (')[0]})" for r in chosen) + "."
+                + (" Carried in the wild lane: " + "; ".join(f"{r['id']} {r['name']} {r['mean']}" for r in wild) + "." if wild else "") + "\n")
     print("SHEET", sheet)
     for r in chosen:
         print("CARRIED", r["id"], r["name"], r["mean"], "|", why[r["id"]])
+    for r in wild:
+        print("WILD", r["id"], r["name"], r["mean"], "|", why[r["id"]])
     for p in passed:
         print("PASSED", p)
 
@@ -186,10 +227,22 @@ if __name__ == "__main__":
     if sys.argv[1] == "close":
         close(sys.argv[2], sys.argv[3])
     elif sys.argv[1] == "choose":
-        _, chosen, why, passed, _ = choose(sys.argv[2])
+        _, chosen, why, passed, _, wild = choose(sys.argv[2])
         for r in chosen:
             print("CARRIED", r["id"], r["name"], r["mean"], "|", why[r["id"]])
+        for r in wild:
+            print("WILD", r["id"], r["name"], r["mean"], "|", why[r["id"]])
         for p in passed:
             print("PASSED", p)
     else:
-        open_(*sys.argv[2:])
+        import argparse
+        ap = argparse.ArgumentParser(prog="advance.py open")
+        ap.add_argument("cmd"), ap.add_argument("rnd"), ap.add_argument("nxt"), ap.add_argument("nxt_no")
+        for flag, default in (("random", 0), ("wildcards", 0), ("informed", 2), ("point", 0), ("cross", 1),
+                              ("type", 1), ("graphics", 1), ("wild", 3), ("wild-carried", 2), ("wild-mutants", 1)):
+            ap.add_argument(f"--{flag}", type=int, default=default)
+        ap.add_argument("--mode", default="refine")
+        o = ap.parse_args()
+        open_(o.rnd, o.nxt, o.nxt_no, random_n=o.random, wildcards=o.wildcards, informed=o.informed, point=o.point,
+              cross=o.cross, type_n=o.type, graphics=o.graphics, wild_n=o.wild, wild_carried=o.wild_carried,
+              wild_mutants=o.wild_mutants, mode=o.mode)
