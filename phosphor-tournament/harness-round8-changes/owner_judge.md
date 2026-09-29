@@ -168,3 +168,16 @@ it as heavily as the line art: a design that is clean and modern but has lost th
 what the owner wants, and one that keeps a real CRT glow where the phosphor is, with the rest
 grounded, is. Too much of it is still a fault: glare across the whole page, halos on everything
 or a halo that blurs the text past easy reading.
+
+And on what that DNA is: "In the original design there were glowing dots on black background,
+highlights, scan lines, etc that gave it a real unique feel."
+
+For calibration: these are the original page's own marks of a lit tube, and the owner counts
+them as what made it unique. They are the glowing green dots on the black (the live lamps that
+breathe, the status lights, the radar's blips and its sweep's afterglow), the highlights (a
+faint light along a surface's top edge, the bloom round a bright word, light pooled under the
+primary button), and the scanlines across the green screens (and the home page's glow). The
+"Why the green jumps" section of docs/STYLE.md describes how the original drew them. A design
+that keeps them, or finds its own equally convincing marks of a lit phosphor screen, keeps the
+unique feel; one that polishes them away for a clean surface loses it. The same limits as above
+apply: kept where the phosphor is, not spread across the whole page.

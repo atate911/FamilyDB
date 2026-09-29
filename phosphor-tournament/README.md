@@ -218,6 +218,12 @@ table ... extreme ideas tried and voted either up or down". So the harness chang
   information, not rules.
 - **Type and graphics mutants.** Each round has a type-only and a graphics-only mutant, and the
   crossover may cross the two lanes. There are no point mutants.
+- **The phosphor soul counts a little more.** The owner asked for the soul judge (the CRT's glow,
+  halos, scanlines and glowing dots) to weigh slightly more than the others, so from round 10 it
+  counts 1.5 times in each entrant's mean (`LENS_WEIGHTS` in `stages.py`), today's page included.
+  That mean ranks and carries. Each result also keeps `plainMean`, with every judge counted once,
+  and `lensWeights`. Replayed on round 9, it moves no entrant's place and no mean by more than
+  0.05. The finale uses the same weights.
 
 | Round | Main lane | Wild lane | `open` options |
 |---|---|---|---|

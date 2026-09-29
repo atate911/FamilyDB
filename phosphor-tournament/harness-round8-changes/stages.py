@@ -27,6 +27,10 @@ HERE = Path(__file__).parent
 SHOTS = ["home", "ideas", "lost", "login", "chat", "status", "home-phone", "plans", "todo", "settings",
          "form", "general", "controls-field"]
 LENS_GROUPS = [["feedback", "soul"], ["style", "system"], ["interaction", "type"], ["skeptic", "usability"]]
+# How much each judge counts in an entrant's mean; a lens not named counts 1. From round 10 the
+# owner asked for the phosphor soul (the CRT's glow, halos, scanlines and live dots) to weigh
+# slightly more than the others.
+LENS_WEIGHTS = {"soul": 1.5}
 # The fields a later stage needs from a finished design; its tokens stay in its palette file.
 KEEP = ["id", "name", "tagline", "concept", "companions", "decisions", "floorsFailed", "measures",
         "strengths", "weaknesses", "revisions", "crit", "firstDraft", "secondDraft"]
@@ -225,23 +229,32 @@ def tally(rnd, *outs):
             return "wild carried"
         return "informed" if pid.startswith(f"{r}-idea") else "carried"
 
-    t = {pid: {"id": pid, "name": n, "total": 0, "n": 0, "top4": 0, "promise": 0, "byLens": {}, "origin": origin(pid)}
+    def weight(lens):
+        return LENS_WEIGHTS.get(lens, 1)
+
+    t = {pid: {"id": pid, "name": n, "total": 0, "weights": 0, "plain": 0, "n": 0, "top4": 0, "promise": 0,
+               "byLens": {}, "origin": origin(pid)}
          for pid, n in names.items()}
-    today = [s["score"] for j in judges for s in j["scores"] if s["id"] == "00-current"]
-    today_mean = round(sum(today) / len(today), 2) if today else None
+    today = [(s["score"], weight(j["lens"])) for j in judges for s in j["scores"] if s["id"] == "00-current"]
+    today_mean = round(sum(s * w for s, w in today) / sum(w for _, w in today), 2) if today else None
     for j in judges:
         for s in j["scores"]:
             if s["id"] in t:
-                t[s["id"]]["total"] += s["score"]
-                t[s["id"]]["n"] += 1
-                t[s["id"]]["byLens"][j["lens"]] = s["score"]
+                x = t[s["id"]]
+                x["total"] += s["score"] * weight(j["lens"])
+                x["weights"] += weight(j["lens"])
+                x["plain"] += s["score"]
+                x["n"] += 1
+                x["byLens"][j["lens"]] = s["score"]
         for pid in j["top4"]:
             if pid in t:
                 t[pid]["top4"] += 1
         for pid in j.get("promise", []):
             if pid in t:
                 t[pid]["promise"] += 1
-    ranking = [{**x, "mean": round(x["total"] / x["n"], 2) if x["n"] else 0} for x in t.values()]
+    # "mean" is weighted by LENS_WEIGHTS and is what ranks and carries; "plainMean" counts every judge once.
+    ranking = [{**x, "mean": round(x["total"] / x["weights"], 2) if x["n"] else 0,
+                "plainMean": round(x["plain"] / x["n"], 2) if x["n"] else 0} for x in t.values()]
     ranking.sort(key=lambda x: (-x["mean"], -x["top4"], -x["byLens"].get("skeptic", 0)))
     margin = round(ranking[0]["mean"] - today_mean, 2) if today_mean is not None else None
     thin = [f"{x['id']} ({x['n']})" for x in ranking if x["n"] < len(judges)]
@@ -249,18 +262,20 @@ def tally(rnd, *outs):
         [{"lens": j["lens"], "notes": j["notes"], "top4": j["top4"], "promise": j.get("promise", []), "scores": j["scores"], "fixes": j["fixes"]}
          for j in judges]))
     (stage_dir / "ranking.json").write_text(json.dumps(
-        {"ranking": ranking, "todayMean": today_mean, "margin": margin, "judges": judges}))
+        {"ranking": ranking, "todayMean": today_mean, "margin": margin, "judges": judges,
+         "lensWeights": {j["lens"]: weight(j["lens"]) for j in judges}}))
     (stage_dir / "finish.json").write_text(json.dumps({
         **common(a), "stage": "finish",
         "ranking": [{"id": x["id"], "name": x["name"], "origin": x["origin"], "mean": x["mean"], "top4": x["top4"], "promise": x["promise"]}
                     for x in ranking],
         "newPalettes": [f"{x['id']} ({x['name']})" for x in ds]}))
-    print(f"judges: {', '.join(j['lens'] for j in judges)} ({len(judges)} of {sum(len(g) for g in LENS_GROUPS)})")
+    lenses = [j["lens"] if weight(j["lens"]) == 1 else f"{j['lens']} x{weight(j['lens'])}" for j in judges]
+    print(f"judges: {', '.join(lenses)} ({len(judges)} of {sum(len(g) for g in LENS_GROUPS)})")
     if thin:
         print("scored by fewer judges:", ", ".join(thin))
     print(f"today {today_mean}, best {ranking[0]['mean']} (margin {margin})")
     for x in ranking:
-        print(f"  {x['id']:12} {x['name']:24} {x['mean']:5} top4 {x['top4']} promise {x['promise']} {x['origin']}")
+        print(f"  {x['id']:12} {x['name']:24} {x['mean']:5} (plain {x['plainMean']}) top4 {x['top4']} promise {x['promise']} {x['origin']}")
     print(stage_dir / "finish.json")
 
 
@@ -272,6 +287,7 @@ def assemble(rnd, out):
     rk = json.loads((stage_dir / "ranking.json").read_text())
     result = {"round": a["round"], "mode": a["mode"], "ranking": rk["ranking"],
               "top4": [x["id"] for x in rk["ranking"][:4]], "todayMean": rk["todayMean"], "margin": rk["margin"],
+              "lensWeights": rk.get("lensWeights"),
               "judges": rk["judges"], "designs": json.loads((stage_dir / "designs.json").read_text()),
               "plan": json.loads((stage_dir / "plan.json").read_text()),
               "table": (stage_dir / "table.md").read_text(),
