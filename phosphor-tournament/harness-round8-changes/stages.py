@@ -195,7 +195,7 @@ def tally(rnd, *outs):
             return "random"
         if pid.startswith(f"{r}-mut"):
             m = a["mutants"][int(pid.split("-")[-1]) - 1]
-            return "crossover" if m.get("kind") == "crossover" else "mutant"
+            return {"crossover": "crossover", "type": "type mutant", "graphics": "graphics mutant"}.get(m.get("kind"), "mutant")
         return "informed" if pid.startswith(f"{r}-idea") else "carried"
 
     t = {pid: {"id": pid, "name": n, "total": 0, "n": 0, "top4": 0, "byLens": {}, "origin": origin(pid)}

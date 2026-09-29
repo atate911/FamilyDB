@@ -172,12 +172,27 @@ can use in css: `var(--brand)`, `var(--lit)`, `var(--screen)`, `var(--outing)`, 
 - Faces: the page's own three, DM Sans (variable: weight 100-1000, optical size 9-40, e.g.
   `font-variation-settings: "opsz" 32`), DM Mono 400 and 500 and VT323 (`var(--sans)`,
   `var(--mono)`, `var(--terminal)`), AND a library of open-licence faces that would ship in
-  static/fonts if chosen: IBM Plex Mono, IBM Plex Sans, JetBrains Mono, Recursive, Martian Mono, Space Mono, Share Tech Mono, Chivo Mono, Silkscreen, Atkinson Hyperlegible, Nunito, Manrope, Figtree, Outfit, Lexend, Instrument Sans, Fraunces, Newsreader. Just name
+  static/fonts if chosen:
+  - sans: IBM Plex Sans, Inter, Geist, Space Grotesk, Hanken Grotesk, Red Hat Text, Atkinson
+    Hyperlegible, Nunito, Manrope, Figtree, Outfit, Lexend, Instrument Sans;
+  - condensed and wide: IBM Plex Sans Condensed, Barlow Condensed, Archivo (width 62-125),
+    Bricolage Grotesque (optical size and width);
+  - serif: Source Serif 4, Literata, IBM Plex Serif, Fraunces, Newsreader;
+  - mono: IBM Plex Mono, Geist Mono, JetBrains Mono, Red Hat Mono, Spline Sans Mono, Azeret Mono,
+    Fira Code, Victor Mono, Martian Mono, Space Mono, Share Tech Mono, Chivo Mono, Recursive;
+  - CRT and pixel: Workbench and Sixtyfour (their BLED axis draws phosphor bleed, SCAN draws
+    scanlines: heavy above about 30, so keep them to the tubes and use them lightly), Doto (a
+    dot-matrix, ROND rounds its dots), Pixelify Sans, Silkscreen.
+  Just name
   one in `font-family` (e.g. `font-family: "IBM Plex Mono", var(--mono);`) and the check adds
   its @font-face rules. Variable axes where the face has them: Recursive (wght, slnt, CASL, CRSV,
-  MONO), Fraunces (opsz, wght, SOFT, WONK), Newsreader (opsz, wght), Martian Mono and Instrument
-  Sans (wdth, wght), and wght for JetBrains Mono, Chivo Mono, Nunito, Manrope, Figtree, Outfit
-  and Lexend.
+  MONO), Fraunces (opsz, wght, SOFT, WONK), Newsreader, Source Serif 4, Literata and Inter (opsz,
+  wght), Bricolage Grotesque (opsz, wdth, wght), Archivo, Martian Mono and Instrument Sans (wdth,
+  wght), Workbench and Sixtyfour (BLED, SCAN), Doto (wght, ROND), and wght for most of the rest.
+  Text rendering is yours too: `font-optical-sizing`, `font-variation-settings`,
+  `font-feature-settings` (ss01, cv.., zero, tnum, onum), `font-variant-*`, `font-kerning`,
+  `font-synthesis: none`, `text-rendering`, `text-wrap`, `hanging-punctuation`,
+  `text-box: trim-both cap alphabetic`, and underline thickness, offset and skip-ink.
 - Budget: up to 25000 characters of css (a wildcard's full restyle with its own layout fits; most
   palettes need far less). Decorative pseudo-elements may be switched off with `content: none`.
 - Refused by the check: `@import`, `url(`, `@font-face` (the library's are added for you), `display: none`, `visibility:
@@ -230,6 +245,30 @@ nothing touches the repository. Hard checks on a variant:
   add a label on those pages. Marks that are not letters or digits (brackets, rules, bullets)
   are free. If you think a word should change, say so in your notes.
 Layout, element types, grouping, order, headers and footers, icons and pictures are yours.
+
+## Graphics, pictures and icons
+
+Graphics are as open as colour and type, and big changes are welcome where they make the page
+better. There are two routes.
+- Icons. The page draws every icon from one sprite, `static/icons.svg`, through the `icon`
+  macro in `_ui.html` (`<use href="…icons.svg#i-NAME">`). To redraw them, copy
+  /home/user/FamilyDB/src/familydb/web/static/icons.svg to `variants/<id>/static/icons.svg` and
+  redraw the symbols inside it. Every `<symbol id="i-…">` it had must stay (the check refuses a
+  sprite that drops one), and you may add your own. Draw to its 24-unit grid, in
+  `currentColor`, so CSS still colours them.
+- Pictures. Put SVG, PNG or WebP files in `variants/<id>/static/` and place them through your
+  templates: `<img src="{{ url_for('static', filename='name.svg') }}" alt="">` (decorative:
+  empty alt), or inline `<svg>` in a template, or a new `<symbol>` in your sprite used through the
+  `icon` macro. CSS may not load a picture, because `url(` is refused.
+
+The rules:
+- Pictures add no words. Use an empty alt, no `<title>` or `<text>` inside an inline SVG, and no
+  lettering, because the words check counts them.
+- There are no scripts inside an SVG, and nothing loads from outside.
+- A picture must earn its place: light enough to read over, and drawn in one style with the
+  type and the lines.
+- The render shows your pictures on every page they reach, in the full-size shots and the
+  strips.
 
 ## What the judges see beyond the pages
 

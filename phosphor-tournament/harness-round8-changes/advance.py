@@ -3,10 +3,12 @@
   python3 advance.py close OUTPUT rN
       Save round N's results from the workflow's output file, then rebuild the hall of fame
       (archive.py) and the look-distances between every palette (diversity.py archive).
-  python3 advance.py open rN rM M N_RANDOM N_INFORMED [N_MUTANTS MODE N_WILDCARDS]
+  python3 advance.py open rN rM M N_RANDOM N_INFORMED [N_MUTANTS MODE N_WILDCARDS N_TYPE N_GRAPHICS]
       Choose the four carried from round N for score AND variety, draw their mockup sheet, set up
       round M with them, draw its random seeds (steered toward what the hall of fame has tried
-      least), its mutants (from three on, the last a crossover) and write its args.
+      least), its mutants (from three on, the last a crossover), N_TYPE type mutants (default 1:
+      a carried winner with typographic changes only), N_GRAPHICS graphics mutants (default 1: its
+      pictures and icons changed only) and write its args.
 
 How the four are chosen: the best-scoring palette carries on. The next place is protected for
 the best of the round's random entrants, when it passed its floors, beat today's page and is
@@ -113,7 +115,7 @@ def choose(rnd):
     return result, chosen, why, passed, fam
 
 
-def open_(rnd, nxt, nxt_no, n_random, n_informed, n_mutants="0", mode="explore", n_wild=None):
+def open_(rnd, nxt, nxt_no, n_random, n_informed, n_mutants="0", mode="explore", n_wild=None, n_type="1", n_graphics="1"):
     result, chosen, why, passed, fam = choose(rnd)
     prev_dir = HERE / "rounds" / rnd
     prev_args = json.loads((prev_dir / "args.json").read_text())
@@ -159,7 +161,8 @@ def open_(rnd, nxt, nxt_no, n_random, n_informed, n_mutants="0", mode="explore",
         t = json.loads((HERE / "rounds" / nxt / "palettes" / f"{pid}.json").read_text())["tokens"]
         return {k: t[k] for k in dice.COLOUR_ROLES if k in t}
     muts = dice.mutants([{"id": r["id"], "name": r["name"], "family": fam(r["id"]), "colours": colours(r["id"])}
-                         for r in chosen], int(n_mutants), protected)
+                         for r in chosen], int(n_mutants), protected,
+                         int(n_type) if int(n_mutants) else 0, int(n_graphics) if int(n_mutants) else 0)
     args = {"round": nxt, "roundNo": int(nxt_no), "mode": mode,
             "carried": [{"id": r["id"], "name": r["name"], "summary": summary(r, i)} for i, r in enumerate(chosen)],
             "seeds": seeds, "mutants": muts, "nInformed": int(n_informed), "history": history}

@@ -134,6 +134,11 @@ TYPE_SYSTEMS = [
     "the terminal face (VT323) for the machine's words only, a quiet sans for the family's",
     "Recursive for everything, its axes doing the jobs (casual for Vera, MONO for figures)",
     "a wide or condensed face for titles (Martian Mono or Instrument Sans on its width axis), a neutral text face",
+    "a condensed system: titles and labels in IBM Plex Sans Condensed or Barlow Condensed, a text face below",
+    "a serif for the family's words (Source Serif 4 or Literata), a sans for labels and controls, a mono for the machine",
+    "one superfamily for every role (IBM Plex Sans, Serif and Mono, or Red Hat Text and Mono)",
+    "a CRT face on the tubes only (Workbench, Sixtyfour or Doto, their bleed and scanline axes kept light), a quiet sans for the family",
+    "one variable sans for everything (Inter, Geist or Bricolage Grotesque), hierarchy by weight, size and width alone",
 ]
 CONTROLS = [
     "keycaps: buttons as keys with a little depth, fields as recessed wells",
@@ -151,6 +156,19 @@ ICONS = [
     "icons set in small lit squares, like indicator lamps on a panel",
     "icons drawn as the monitor would draw them: pixel-like, in the phosphor",
     "larger icons leading each card or row, like a catalogue",
+    "a new icon family drawn for this design (your own icons.svg, every icon kept): pixel, engraved line, filled pictogram or lamp-panel symbols",
+    "a drawn picture for each kind and section, in one style, used as its mark everywhere",
+]
+GRAPHICS = [
+    "no pictures: type, rules and colour carry everything",
+    "small line drawings for each section's head and each empty state, in one style",
+    "an instrument panel: dials, gauges and meters wherever the page shows state or cost",
+    "a plotted chart or map wherever the page shows places or time",
+    "a drawn period terminal or scope around every monitor",
+    "a faint pattern on one surface only (scanlines, a grid, halftone)",
+    "big numerals and glyphs as the page's pictures",
+    "pixel-art sprites for the kinds and sections",
+    "technical drawings: thin schematic line art with dimension lines and callouts",
 ]
 MOTION = [
     "still: nothing moves but focus and the afterglow",
@@ -168,7 +186,57 @@ PACING = [
     "grouped: tight inside a group, wide between groups, so the groups read at a glance",
 ]
 STRUCTURE = {"layout": LAYOUTS, "type_system": TYPE_SYSTEMS, "controls": CONTROLS, "icons": ICONS,
-             "motion": MOTION, "pacing": PACING}
+             "graphics": GRAPHICS, "motion": MOTION, "pacing": PACING}
+
+# Typesetting dice. Minor: a careful typesetter's adjustment. Major: a new type system or face.
+TYPE_MINOR = [
+    "tracking tuned per size: display titles tighter (about -0.02em), small labels and caps looser (+0.04 to +0.08em)",
+    "leading tuned per size: about 1.1 for titles, 1.5-1.6 for body, 1.3 for labels",
+    "tabular lining figures wherever numbers line up (lists, times, dates, counts), proportional in running text",
+    "a slashed or dotted zero in the monospaced face, where it has one (font-feature-settings \"zero\")",
+    "a stylistic set or character variant of the face (ss01-ss08, cv..), where it has one, for a more distinctive texture",
+    "true small caps (font-variant-caps: all-small-caps) for labels and eyebrows instead of uppercase",
+    "text-wrap: balance on every heading and pretty on paragraphs, so no line ends on a lonely word",
+    "a narrower reading measure: 55-65 characters for paragraphs, chat lines and help text",
+    "optical sizing on or tuned per size, where the face has an opsz axis",
+    "heading weights one step lighter, with size and colour carrying the hierarchy",
+    "heading weights one step heavier with tighter tracking, for a denser, punchier head",
+    "body text one step larger (for example 16px to 17px) with the measure kept",
+    "labels and small text one step larger and one step less tracked, for legibility",
+    "hanging punctuation, so quotes and bullets sit outside the text edge",
+    "underlines refined: 1px, offset about .22em, skip-ink on, in a quieter colour than the text",
+    "font-synthesis off everywhere, so no faux bold or italic ever appears",
+    "one more step between section heads and card titles, so the two never look alike",
+    "a monospace for every machine-written string (times, counts, ids, the tubes), a proportional face for everything the family wrote",
+    "headings trimmed to their caps (text-box: trim-both cap alphabetic), so titles sit exactly on the rule or edge above",
+    "italic for one job only (hints, or Vera's asides), never elsewhere",
+    "light text on the dark ground eased half a weight or grade, so it does not bloom",
+    "all capitals limited to one role (tiny labels), each with about +0.06em tracking",
+    "oldstyle figures in running text and headings, lining figures in data",
+    "the tubes' text re-set: size, leading and letter-spacing tuned so VT323 (or its replacement) reads as a real terminal line",
+]
+TYPE_MAJOR = [
+    "replace the page's sans with a different one from the library (a grotesque, a humanist or a geometric), every face keeping one job",
+    "replace the display face: page titles and section heads in a library face with character (condensed, wide or serif), body unchanged",
+    "set the family's text in a serif from the library (Source Serif 4, Literata, Newsreader or IBM Plex Serif), with a sans or mono for labels and controls",
+    "a condensed system: titles and labels in a condensed face (IBM Plex Sans Condensed, Barlow Condensed, or Archivo narrow), body in a text face",
+    "width as hierarchy: one variable face (Archivo or Bricolage Grotesque) with wide or narrow titles and normal text",
+    "one superfamily for everything (IBM Plex Sans, Serif and Mono, or Red Hat Text and Mono), every role a member",
+    "a new type scale: a different ratio (1.2, 1.25 or 1.333) and fewer steps, every size on it",
+    "a CRT face for the machine's words on the tubes (Workbench, Sixtyfour or Doto, bleed and scanlines light), the family's words in a quiet sans",
+    "a monospaced setting for the family's data (lists, tables, forms) and a proportional face only for titles and chat",
+    "a new mono for the machine and the figures (Geist Mono, Red Hat Mono, Azeret Mono, Fira Code, Spline Sans Mono or Victor Mono)",
+    "a larger, more generous setting (17-18px body, 1.6 leading) with fewer, clearer heading steps",
+    "headings in sentence case at a light weight and a large size, labels in small caps: a magazine's hierarchy",
+    "a denser, smaller setting (15px body, 1.4 leading, compact heads), like an information display",
+    "one variable sans for the whole page (Inter, Geist, Hanken Grotesk or Recursive), hierarchy by weight and size alone",
+]
+
+
+def type_change():
+    """One typographic change: a major one a third of the time, otherwise a minor one."""
+    return random.choice(TYPE_MAJOR) if random.random() < 1 / 3 else random.choice(TYPE_MINOR)
+
 
 # Structural changes for a mutant: bigger than a refinement, each may need the markup.
 STRUCTURE_MUTATIONS = [
@@ -190,6 +258,39 @@ STRUCTURE_MUTATIONS = [
     "change the page's grid: a wider or narrower measure, or the content aligned to a left edge instead of centred",
     "change the icon family: no icons, lamp squares, pixel icons, or solid icons in the section colours",
     "give Status its own instrument panel: each part a lamp or gauge tile",
+    "draw a new icon family for the whole app (your own icons.svg, every icon kept), in the design's own line and colour",
+    "give each section's head and each empty state a small drawn picture, all in one style",
+    "redraw the monitors as detailed period terminals or scopes, drawn in SVG around the green glass",
+]
+
+# Graphics, pictures and iconography dice, for a graphics mutant. Pictures are placed through the
+# markup (css may not load pictures), and a picture must earn its place.
+GRAPHICS_MINOR = [
+    "icons at a new stroke weight and size, matched to the cap height and weight of the words beside them",
+    "icons in containers: each section's icon on a small tile, lamp or key in its section colour",
+    "icons out of their containers: bare glyphs, one size, one stroke",
+    "the kind icons redrawn as small badges in each kind's colour",
+    "the page-title icons enlarged into a drawn emblem for each section",
+    "a drawn divider or ornament between sections (a rule with a small mark, a bracket, a leader)",
+    "the empty states (no plans, nothing to do, no wishes) given a small line drawing",
+    "the radar and scopes redrawn: finer rings, tick marks, a bearing scale and a legend",
+    "the FamilyDB mark in the bar redrawn in the design's line and colour, keeping its idea (a smiling monitor)",
+    "the phone's tab-bar icons redrawn for the design, with a clear current state",
+    "the status lamps redrawn as one family of small signals (ring, dot, bar, lamp), one meaning each",
+    "arrows, chevrons and carets redrawn as one family (weight, angle, size) across links, selects and folds",
+    "a faint texture on one surface only (scanlines on the glass, a grid on the trays, halftone on the greeting)",
+]
+GRAPHICS_MAJOR = [
+    "a new icon family drawn for the app (your own icons.svg, every icon kept): pixel icons, engraved line icons, filled pictograms or lamp-panel symbols",
+    "pictures: a small drawn illustration for each section's head or empty state, in one style (line art, pixel art or technical drawing)",
+    "an instrument panel: Status and the cost readout drawn as dials, gauges, meters or a bar chart in SVG",
+    "the monitors redrawn as illustrations: a detailed period terminal or scope, drawn in SVG, around the green glass",
+    "a greeting picture: a drawn scene or emblem beside or behind the question (a skyline, a radar sweep, a switchboard), light enough to read over",
+    "no icons at all: words, numerals and coloured marks carry everything, and the space goes to type",
+    "big numerals and glyphs as the graphics: dates, counts and initials set large as the page's pictures",
+    "a mapped page: the radar, the plans and the ideas drawn as a plotted chart or map with the family's places marked",
+    "a pictorial kind system: each kind (restaurant, activity, outing, trip, show, seasonal, event) gets a drawn picture used as its mark everywhere",
+    "a schematic language: thin technical line drawings, dimension lines and callouts for heads, empty states and the setup steps",
 ]
 
 # Small random changes to a winner, for its mutants: one colour change, sometimes a refinement too.
@@ -227,7 +328,7 @@ def colour_distance(x, y):
     return 100 * sum(math.dist(rgb_to_oklab(hex_to_rgb(x[k])), rgb_to_oklab(hex_to_rgb(y[k]))) for k in common) / len(common)
 
 
-def mutants(parents, n, protected=None):
+def mutants(parents, n, protected=None, n_type=0, n_graphics=0):
     """n mutants over the parents ({id, name, family}). Each point mutant has two or three changes,
     one of colour and one of structure, and half the time a refinement too. From three on, the last
     is a crossover: one parent's structure (markup, layout, type, controls) with another's colours,
@@ -240,10 +341,24 @@ def mutants(parents, n, protected=None):
     order = first + random.sample(rest, len(rest))
     for i in range(n - n_cross):
         parent = order[i % len(order)]
-        changes = [random.choice(COLOUR_MUTATIONS), random.choice(STRUCTURE_MUTATIONS)]
-        if random.random() < 0.5:
-            changes.append(random.choice(MUTATIONS))
+        changes = [random.choice(COLOUR_MUTATIONS), random.choice(STRUCTURE_MUTATIONS), type_change()]
         out.append({"kind": "point", "parent": parent["id"], "parentName": parent["name"], "changes": changes})
+    # A type mutant: a carried winner with typographic changes only (one major, two minor), so
+    # the panel sees what the typesetting alone does. It prefers a parent no point mutant used.
+    for _ in range(n_type):
+        used = {m["parent"] for m in out}
+        pool = [p for p in parents if p["id"] not in used] or parents
+        parent = random.choice(pool)
+        out.append({"kind": "type", "parent": parent["id"], "parentName": parent["name"],
+                    "changes": [random.choice(TYPE_MAJOR), *random.sample(TYPE_MINOR, 2)]})
+    # A graphics mutant: a carried winner with its pictures and iconography changed only (one
+    # major change, one or two minor), so the panel sees what graphics alone can do.
+    for _ in range(n_graphics):
+        used = {m["parent"] for m in out}
+        pool = [p for p in parents if p["id"] not in used] or parents
+        parent = random.choice(pool)
+        out.append({"kind": "graphics", "parent": parent["id"], "parentName": parent["name"],
+                    "changes": [random.choice(GRAPHICS_MAJOR), *random.sample(GRAPHICS_MINOR, random.choice([1, 2]))]})
     if n_cross:
         # Two parents from different families whose colours are far apart (swapping near-identical
         # colours changes nothing), then preferring those no point mutant used, so the round's
@@ -342,6 +457,7 @@ def seed():
         "glow": round(random.uniform(0.4, 1.0), 2),
         "screenGlow": round(random.uniform(0.6, 1.0), 2),
         **{axis: random.choice(options) for axis, options in STRUCTURE.items()},
+        "type_details": random.sample(TYPE_MINOR, random.choice([1, 2, 2, 3])),
         "refinements": (pick_weighted(MUTATIONS, lambda m: STEER[2].get(m, 0), random.choice([0, 0, 1, 1, 2]))
                         if STEER else random.choice([[], [], random.sample(MUTATIONS, 1), random.sample(MUTATIONS, 2),
                                                      random.sample(MUTATIONS, 1)])),

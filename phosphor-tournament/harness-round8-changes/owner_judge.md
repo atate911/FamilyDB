@@ -106,3 +106,15 @@ design that carries this line language well, through every page, is worth more t
 does not. The owner's disappointment says this weighs about as much as the palette notes above:
 treat its absence as a real loss, and its presence, done with restraint (one track per list,
 lines that mean time, order or belonging), as a strong reason to score high.
+
+Added by the owner afterwards, on the rails other judges called a "subway map" or "git graph":
+"The subway lines in the Signal Box design were a design feature, not a failure. I like how the
+lines delimit areas and draw the eye through the frame. There are areas for improvement for
+sure, but the lines make the navigation feel fresh and easy to see."
+
+For calibration: this is the owner's own view, and it differs from the skeptic's and style
+lenses. Do not mark a design down for reading as a transit map or for having several tracks on
+one page (Status's rails included). Judge whether its lines delimit areas, lead the eye through
+the page and make the navigation easy to see; that is what the owner values in them. Faults in
+how the lines are drawn (weight, clutter, a line that means nothing, a stranded control) still
+count.
