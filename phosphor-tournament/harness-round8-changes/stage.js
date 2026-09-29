@@ -412,6 +412,24 @@ if (STAGE === 'design') {
 
 if (STAGE === 'judge') {
   phase('Judge')
+  // Every candidate and today's page must carry a score from every lens: a judge that skips one
+  // is asked, once, for just the ones it missed, on the scale it already used.
+  const ALL_IDS = ['00-current', ...CARRIED.map(c => c.id), ...(args.wildCarried || []).map(c => c.id),
+    ...Array.from({ length: NR }, (_, i) => `${R}-rand-${i + 1}`), ...Array.from({ length: NM }, (_, i) => `${R}-mut-${i + 1}`),
+    ...Array.from({ length: NW }, (_, i) => `${R}-wild-${i + 1}`), ...(args.wildMutants || []).map(m => `${R}-wmut-${m.slot}`),
+    ...Array.from({ length: NI }, (_, i) => `${R}-idea-${i + 1}`)]
+  const SCORES_SCHEMA = { type: 'object', properties: { scores: JUDGE_SCHEMA.properties.scores }, required: ['scores'] }
+  const cover = async (l, r) => {
+    const missing = ALL_IDS.filter(id => !r.scores.some(s => s.id === id))
+    if (!missing.length) return r
+    log(`${l.key} left out ${missing.join(', ')}; asking for them`)
+    const more = await agent(`You are the ${l.title} judge on the panel of round ${args.roundNo} of a palette tournament for FamilyDB's Phosphor look, and you have scored the round, but you left out ${missing.join(', ')}. ${l.prompt}
+
+Your scores so far, to keep the same scale: ${r.scores.map(s => `${s.id} ${s.score}`).join('; ')}. The candidates are described in ${D}/stage/candidates.md and the measures in ${D}/stage/table.md; each one's strip is ${D}/strips/<id>.png (and <id>-details.png, <id>-squint.png) and its full-size shots ${D}/out/<id>/shots/. Look at the ones you missed, beside two or three you already scored, and score only ${missing.join(', ')} 0-10 through your lens, with one or two sentences why.`,
+      { label: `judge:${R}:${l.key}:missed`, phase: 'Judge', schema: SCORES_SCHEMA })
+    const got = ((more && more.scores) || []).filter(s => missing.includes(s.id))
+    return { ...r, scores: [...r.scores, ...got] }
+  }
   const mine = LENSES.filter(l => args.lenses.includes(l.key))
   const judges = (await parallel(mine.map(l => () => agent(
   `You are one judge on the panel of round ${args.roundNo} of a palette tournament for FamilyDB's Phosphor look. Your lens: **${l.title}**.
@@ -445,7 +463,7 @@ The candidates: read ${D}/stage/candidates.md (each one's id, name, idea, compan
 
 Score every candidate AND 00-current 0-10 through your lens with one or two sentences why, then your top 4, best first, then up to three PROMISING ideas (the candidates whose idea is most worth developing further, new ideas above all, whatever their score now), concrete fixes (for the ones you rate highly, and for the bold ones that fell short: what to keep and what to fix), and notes.`,
     { label: `judge:${R}:${l.key}`, phase: 'Judge', schema: JUDGE_SCHEMA }
-  ).then(r => r && { ...r, lens: l.key })))).filter(Boolean)
+  ).then(r => r && { ...r, lens: l.key }).then(r => r && cover(l, r))))).filter(Boolean)
   log(`judged by ${judges.map(j => j.lens).join(', ')}`)
   return { stage: 'judge', judges }
 }
