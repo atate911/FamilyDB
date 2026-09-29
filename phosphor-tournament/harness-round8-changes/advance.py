@@ -137,10 +137,14 @@ def open_(rnd, nxt, nxt_no, n_random, n_informed, n_mutants="0", mode="explore",
                    check=True, cwd=HERE)
     # Re-render the carried four with this round's harness, so every page, check and frame is
     # made the same way as the newcomers'.
-    for r in chosen:
+    def rerender(r):
         run = subprocess.run(["./check.sh", f"palettes/{r['id']}.json"], cwd=HERE / "rounds" / nxt,
                              capture_output=True, text=True)
-        print("RERENDERED", r["id"], (run.stdout.strip().splitlines() or ["?"])[-1])
+        return r["id"], (run.stdout.strip().splitlines() or ["?"])[-1]
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=4) as pool:  # one render per core
+        for pid, last in pool.map(rerender, chosen):
+            print("RERENDERED", pid, last)
     wild = str(n_wild) if n_wild is not None else ("2" if mode == "explore" and int(n_random) >= 4 else "0")
     seeds =json.loads(subprocess.run(["python3", str(HERE / "seeds.py"), n_random, "--steer", "--wildcards", wild], check=True,
                                       capture_output=True, text=True, cwd=HERE).stdout)

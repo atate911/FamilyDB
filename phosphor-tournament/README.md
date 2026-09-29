@@ -91,7 +91,8 @@ Inside the harness, the files that carry the thinking are:
 - `rounds/rN/results.json`: each round's full result.
 - `README.md`: the designers' brief.
 
-The scripts are `round.js` (one round, run as a workflow), `advance.py` (between rounds),
+The scripts are `stage.js` and `stages.py` (a round run as stage workflows side by side),
+`round.js` (a round as one workflow, as rounds 2-7 ran), `advance.py` (between rounds),
 `seeds.py`, `check.sh`, `render.js`, `metrics.py`, `diversity.py`, `winners.py` and
 `contact.py`.
 
@@ -139,10 +140,27 @@ before round 8: `./check.sh palettes/00-current.json`.
 
 1. Start the demo page that the renders use:
    `"$S/harness/serve.sh"`, left running on port 8099.
-2. Launch round 8: run the workflow `"$S/harness/round.js"` with the contents of
-   `"$S/harness/rounds/r8/args.json"` as its arguments, passed verbatim.
+2. Run the round in stages, several workflows side by side. A workflow runs only two agents
+   at once (the machine's cores less two), so one workflow per round left the cores idle.
+   From `"$S/harness"`:
+   - `python3 stages.py split rN` writes `rounds/rN/stage/design-K.json`. Launch the
+     workflow `stage.js` once per file, all at once, each with that file's contents as its
+     arguments.
+   - When every design stage is done, run
+     `python3 stages.py prepare rN <each design workflow's output file>`. It renders what is
+     missing or stale (four at a time), draws the sheets and writes `judge-K.json`. Launch
+     `stage.js` once per judge file, all at once.
+   - When every judge is done, run `python3 stages.py tally rN <each judge output file>`,
+     then launch `stage.js` with `finish.json`.
+   - When that is done, run `python3 stages.py assemble rN <its output file>`. This writes
+     `rounds/rN/stage/output.json`.
+
+   To hand over a round that `round.js` (the older single workflow) was running, stop that
+   workflow, then run `python3 takeover.py rN <its journal.jsonl>` and
+   `python3 stages.py split rN rounds/rN/stage/resume.json`. Its finished agents are not run
+   again. Round 8 was handed over this way.
 3. After each round, from `"$S/harness"`:
-   - `python3 advance.py close <the workflow's output file> rN`
+   - `python3 advance.py close rounds/rN/stage/output.json rN`
    - Check that `families.json` did not lump distinct looks into one family. Members should
      be within about 3.5 of each other.
    - `python3 archive.py`
