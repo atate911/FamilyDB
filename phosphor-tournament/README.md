@@ -29,6 +29,7 @@ lane, chosen for score *and* variety, so the field does not narrow into one idea
 | 10 | Evening Listing | 7.90 | 4.29 | 3.61 |
 | 11 | Evening Listing, Relit | 8.04 | 4.71 | 3.33 |
 | 12 | Desk Terminal | 8.34 | 4.84 | 3.50 |
+| 13 | Desk Terminal, Joined | 8.33 | 4.72 | 3.61 |
 
 Before round 4, today's page was not scored alongside the entrants. "Lead over today" is the
 winner's score minus today's page's score. Each round has its own panel and field, so a score
@@ -78,6 +79,28 @@ Round 8 has 3 random entrants: an old radio (wildcard), a tidepool, and an arcad
 (wildcard). It has 3 mutants: Indigo Bindery with hanging section heads, Signal Box with Home
 rearranged, and a crossover of Radar Room's structure with Galley Rack's colours. It also has 2
 informed entrants.
+
+## Carried into round 14
+
+Round 13 was the last exploratory round. **Desk Terminal, Joined** (8.33, in seven top fours)
+won. It is the leader made whole: a head row on every inner page, and the message box on Home
+inside the tube, under the question typed on the glass. The terminal folds to one "Ready" line
+where nothing is live. The owner's judge ranked the phosphor mutant, **Track Diagram Aglow**,
+first (8.9), but every other lens called it a near-duplicate of its parent, and it came 7th.
+So the Signal Box line (the mimic-line track) leaves the main lane. It stays in the hall of fame
+for the finale. Round 13's lessons: a mutation has to change a structure the family reads. The
+four one-meaning signals (lit lamp on, steel dot waiting, pewter ring off, amber bar needs a
+look) and Quote Board's title-with-figure head are wanted in the standard.
+
+Main lane: **Desk Terminal, Joined** (8.33), **Backlit Plate** (7.80, 5 promise votes; light
+shows only through cuts in a matte plate), **Quote Board at Evening** (7.76; each title carries
+its figure) and **Evening Listing, Traced** (7.62). Wild lane: **Dessau Phosphor** (4 promise
+votes; Bauhaus posters with a round phosphor screen for each page's live figure) and **Folio
+Switchboard** (large serif figures on the switchboard).
+
+Rounds 14 to 16 refine: 4 carried, type, graphics, crossover and phosphor mutants, 3 informed,
+and a wild lane of 2 carried, 2 new and 1 mutant. Round 14's wild designs are a hand-drawn
+sketch and a 1980s cockpit dashboard.
 
 ## Carried into round 13
 

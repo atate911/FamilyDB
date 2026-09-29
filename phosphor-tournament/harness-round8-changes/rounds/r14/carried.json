@@ -1,0 +1,48 @@
+{
+ "chosen": [
+  {
+   "id": "r13-idea-1",
+   "name": "Desk Terminal, Joined",
+   "mean": 8.33,
+   "why": "the best score of the round (clearly different here means 5.9 or more apart; the round's median is 9.83)"
+  },
+  {
+   "id": "r13-idea-2",
+   "name": "Backlit Plate",
+   "mean": 7.8,
+   "why": "new family, not a near-duplicate: long-persistence instrument; nearest carried Desk Terminal, Joined at 8.97"
+  },
+  {
+   "id": "r13-mut-3",
+   "name": "Quote Board at Evening",
+   "mean": 7.76,
+   "why": "new family, not a near-duplicate: count board; nearest carried Backlit Plate at 8.6"
+  },
+  {
+   "id": "r12-idea-1",
+   "name": "Evening Listing, Traced",
+   "mean": 7.62,
+   "why": "new family, not a near-duplicate: programme listing; nearest carried Backlit Plate at 8.07"
+  }
+ ],
+ "wild": [
+  {
+   "id": "r13-wild-3",
+   "name": "Dessau Phosphor",
+   "mean": 6.47,
+   "promise": 4,
+   "why": "the wild lane, for the ideas the judges most want developed (4 promise votes, #12 by score, today 4.72): bauhaus display type"
+  },
+  {
+   "id": "r13-wmut-1",
+   "name": "Folio Switchboard",
+   "mean": 6.88,
+   "promise": 2,
+   "why": "the wild lane, for the ideas the judges most want developed (2 promise votes, #9 by score, today 4.72): videotex service"
+  }
+ ],
+ "passed_over": [
+  "Desk Terminal (7.85, docked terminal column): 6.49 from Desk Terminal, Joined, same family",
+  "Desk Terminal, Mapped (7.78, docked terminal column): 6.79 from Desk Terminal, Joined, same family"
+ ]
+}

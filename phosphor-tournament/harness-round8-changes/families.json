@@ -1,520 +1,568 @@
 {
- "families": {
-  "tonal green, corner only": "Today's room and ink kept, links green or a neutral stone; the only change is in the green's own strengths and halos, the section hues, or a faint wash in the greeting's corner. Looks like today.",
-  "warm companion, today's room": "A warm second colour (honey amber, coral or rose) on the links, the greeting's corner and the top afterglow, over a room that is still today's green-black with cool-neutral words.",
-  "blue light, today's room": "Sky, azure or dusk-blue light in the greeting's corner and the top afterglow, with cyan-to-blue links, over today's (or a slightly calmer) green-black room; the blue lives in light, not in the solids.",
-  "violet light, today's room": "Lilac or violet light in the greeting's corner and afterglow, with lilac or periwinkle links, over today's green-black room (at most a lavender breath in the lines and words).",
-  "warm room, warm fittings": "The whole room warmed: moss or olive-black cards, ivory or linen words, and a warm companion (brass, sand, a lamp-amber corner) for the links, so the mood changes all the way down the page.",
-  "warm room, cool links": "The same moss-warm room with ivory or linen words, but its links and corner light are cool (sky, cobalt or orchid-violet): warmth in the solids, cool colour in the light.",
-  "blue room": "Blue carried in the page's solids: navy selected fills and the family's chat bubbles, steel-blue hairlines and field borders, cool moonlit words, over a near-black ground; the page reads blue at a glance.",
-  "teal-tinted ground": "The ground and cards themselves tinted a deep teal or petrol, so every page turns one blue-green colour family, with steel or cream words on it.",
-  "lifted grey ground": "The black lifted a clear step to a grey-green slate, with warm soft words and no companion colour.",
-  "lantern haze, re-dyed sections": "A warm lantern haze hanging over the top of every page, the sections re-dyed in festival colours (persimmon outings, teal seasons), jade links and cool moonlit words on a warm-grey room.",
-  "wood-panelled room": "The cards themselves turned warm wood (walnut or crate-brown) edged in bronze or russet, with gilt or apricot headings and bronze or putty monitor cases over today's black: the page reads as furniture, whatever colour the links are.",
-  "sand trim on night slate": "Cool night-slate cards (a faint blue-green) trimmed in warm pale sand: sand-gold headings, sand card edges and putty monitor cases, with turquoise links and little coloured light; a cool room with warm lettering.",
-  "wine-dark room": "Plum, claret or rose carried in the solids (card fills, the family's bubbles, tiles and the monitors' cases) with orchid or rose lettering on the headings, over today's black; the page reads wine-dark at a glance.",
-  "slate console, pewter cases": "Cool blue-grey slate cards and fields (plain, indigo-dyed or sea-fog), grey pewter, iron or lichen-clay monitor cases and edges, cream, linen or neutral words, over today's green-black; the exact phosphor is the one light and any companion (periwinkle, steel-blue, a madder dot) is a quiet accent, not a colour wash.",
-  "ruled composing room": "A type-led page set like print: the panels opened into ruled sections (a rule over each heading instead of a boxed card), a phosphor cursor after every page title and mono bylines, in slate-console colours (black paper, newsprint words, pewter rules, blue-pencil marks); the setting, not the colour, is the idea.",
-  "indigo cloth, green glass": "Two materials: the family's things (the bar, the cards, their bubbles and chips) in a violet-indigo cloth, the machine's on green-black glass, with cream words and spaced mono capitals over the sections; the page reads indigo-and-green at a glance, not navy.",
-  "zinc trays, lichen marks": "Galvanised zinc-grey cards a clear step lighter than the ground, each panel headed by its own darker strip like a tray, cool white words, lichen-green small capitals and leaf marks, an underline for the page you are on; the machine's screens stay dark glass.",
-  "moss formica, blue-black ink": "A kitchen's moss-green formica cards with olive legends and edges, typewritten headings, and blue-black ink in the fields and the family's bubbles, over today's black: the cool colour is in the solids the family writes in, not in the light.",
-  "black glass in a grey console": "Depth turned inward: the ground lifted to a green-grey console and the cards sunk darker than it, black glass set into the panel, with scope-green labels and blue-black logbook ink for what the family writes and presses.",
-  "warm stoneware room": "Cards and fields in warm umber, almond or oxblood-brown stoneware (not wood grain, not wine), ecru or washi words, iron monitor cases and a lacquer-red or linen accent, over today's green-black with the phosphor the one light.",
-  "silk-screened front panel": "The page as an instrument's front panel: sections silk-screened on black metal with legends set into their rules, graphite modules, blue-grey keys and small lamps; the panel hardware, not a colour wash, is the idea.",
-  "frosted pewter, glacier links": "Frosted pewter panes for the family's things with timber bands above and below, cork-brown dates, glacier-blue links and snow-white condensed words over today's green-black; a cold lodge, not a blue room.",
-  "dusk-violet paper on moss": "The family's things on muted violet-dusk paper (heather clay, iris dusk) over green-black moss, pale paper-white words, graphite wells and little other colour: a soft purple-grey room, not wine.",
-  "flight-strip bays": "Every row a slate strip racked in its own bay with black between, scopes set flush into the console; the rack-and-bay structure, not the colour, is the idea.",
-  "sage greenbar ledger": "Cards and rows banded in muted sage-leaf green-grey like green-bar paper, apple-cream words and misty blue-grey accents over today's green-black: a soft green-grey room, not formica, not teal.",
-  "mimic-line track": "Structure as the idea: every sequence hung from one pewter-blue track line with lamp stops and a timetable margin of times, slate plates on it; the control-room mimic line, not a colour wash.",
-  "bakelite wireless set": "A thirties radio set: Bakelite claret-brown case plates, porcelain-white type, old-rose labels and a tuning-scale rule, with the green of its magic-eye tube the only light; the set, not a wine wash, is the idea.",
-  "felt rock pool": "Soft cut felt at night: sea-slate felt for the family's things, coral and shell felt for their marks and dates, a soft serif to read, black water between, the phosphor as the pool's one light.",
-  "arcade after hours": "An arcade after closing: oat-coloured tiles racked like cabinets, printed ruled forms, pixel sprites on every mark and VT323 labels, with only the screens running in bright green.",
-  "text-mode windows": "The page drawn as green-screen software: flat steel windows with names set into their frames, double-framed dialogs to act in, unboxed rows, a fading highlight bar and reverse video for where you are.",
-  "programme listing": "Structure as the idea: every part a band with its heading in a column inside it, every list one-line rows read across dotted leaders to a column of facts, like a printed TV or radio listing on slate.",
-  "glass cockpit": "A night cockpit: the family's things on matte instrument plates grouped by fine demarcation lines with legends in the breaks, the machine on flush display units in screwed faceplates, each colour holding one fixed meaning.",
-  "porcelain star atlas": "A star atlas set as a book: one centred serif column on a green-black dome, porcelain words and cobalt hairlines, each part of the site a disc in its own star colour.",
-  "bakelite text-mode windows": "Text-mode windows, double-framed dialogs and reverse-video selection cut from claret-oxblood Bakelite with porcelain type; the software grammar in the wireless set's materials.",
-  "braun faceplate": "Quiet warm-grey hardware in the manner of a Braun appliance: every page a faceplate, measures as dials, one green key, phosphor only on the displays.",
-  "bench oscilloscope": "A bench scope's instrument-grey panel with engraved one-size type, ivory legends and oxblood knobs, the phosphor only where the beam traces.",
-  "night station timetable": "A station at night: the conversation on a concourse, every part a numbered line in enamel colour on petrol-dark, phosphor only on departure boards.",
-  "blueprint operator manual": "An operator's manual: every part a numbered plate led by its own figure drawn in blueprint blue on green-black, phosphor only where live.",
-  "docked terminal column": "Two zones side by side: one lit glass column for the machine docked beside a grounded slate desk mat with indigo keys for the family's things.",
-  "handheld timeline": "A four-green pocket handheld: chunky pixel boxes and sprites, every page strung along one timeline with NOW lit on it.",
-  "night gallery": "The page hung as an exhibition after hours: one size of type, a wall label for everything, the green screens as the lit exhibits.",
-  "violet flight console": "A 1969 flight console: a violet flight-plan drawing leads every section, rows of lamps for status, phosphor only on what is live.",
-  "videotex service": "A videotex terminal service: one thing at a time under a mosaic band, numbered contents, a row of keys along the foot of every screen.",
-  "long-persistence instrument": "One lit phosphor instrument per page tracing the family's weeks in bloom and afterglow, over a printed graphite legend whose rows light its marks.",
-  "glow-ink zine": "A photocopied zine lit up: cut-and-paste blocks, glowing ink and hand-set headings, the page as a self-published pamphlet rather than a machine.",
-  "ceefax evening": "Broadcast teletext: blocky double-height headings, flat saturated teletext colours on black and numbered pages, one screen of text at a time.",
-  "zenith desk": "A mid-century console set into a desk: a warm cabinet with the machine's screen set in it, the family's things laid on the desk surface around it.",
-  "single quote": "One large quotation or line per page, set big and alone, everything else pushed quiet beneath it: the page as a single statement."
- },
- "10-lilac": {
-  "family": "violet light, today's room",
-  "motif": "Soft lilac links and a lilac corner and afterglow, a softer mint for lit things, lavender-tinted lines and words."
- },
- "07-ambercompanion": {
-  "family": "warm companion, today's room",
-  "motif": "Honey-amber links, title tiles and afterglow on today's room; the corner reads bronze."
- },
- "05-moss": {
-  "family": "warm room, warm fittings",
-  "motif": "Moss-black walls, ivory words, brass links and an amber lamp glow in the corner."
- },
- "09-aurora": {
-  "family": "blue light, today's room",
-  "motif": "The green's halos drift to teal, with teal-cyan links and a cyan corner, on a slightly teal-leaning dark."
- },
- "12-nightshift": {
-  "family": "blue light, today's room",
-  "motif": "A calmer, slightly lifted green-black with lower glows and gentler words, links still green, a slate-blue dusk at the top and in the corner."
- },
- "11-coral": {
-  "family": "warm companion, today's room",
-  "motif": "Dusty coral links, corner and afterglow beside a minter phosphor on a near-today green-black."
- },
- "08-colourmonitor": {
-  "family": "tonal green, corner only",
-  "motif": "Today's page with richer section colours, green links kept, and a faint violet wash in the corner."
- },
- "02-tonalladder": {
-  "family": "tonal green, corner only",
-  "motif": "Today's page with the green in three strengths (calmer lit green, deep halo), pale stone links and a sand whisper in the corner."
- },
- "04-lightinscreens": {
-  "family": "warm room, warm fittings",
-  "motif": "A calm, slightly warm room with very low page glow, sand links and a pale sand corner; only the monitors keep full bloom."
- },
- "06-bottleglass": {
-  "family": "teal-tinted ground",
-  "motif": "The whole page on dark blue-green bottle glass, steel-white words, green links and a steel-blue light from above."
- },
- "03-emeraldaura": {
-  "family": "tonal green, corner only",
-  "motif": "Today's page with a deeper emerald bloom round the green and a faint sea-glass light in the corner; nearly indistinguishable from today."
- },
- "01-softground": {
-  "family": "lifted grey ground",
-  "motif": "The ground lifted to a grey-green slate with warm soft white words; today's green otherwise."
- },
- "p1:09-aurora": {
-  "family": "blue light, today's room",
-  "motif": "Aurora polished: sky-cyan links and a clear azure light in the corner and afterglow over a teal-leaning dark."
- },
- "p1:10-lilac": {
-  "family": "violet light, today's room",
-  "motif": "Mint and Lilac polished: dusky lilac links, a stronger orchid corner and afterglow, on today's room."
- },
- "p1:05-moss": {
-  "family": "warm room, warm fittings",
-  "motif": "Moss and Brass polished: the same moss room and ivory words, gold-brass links, a stronger orange desk-lamp corner."
- },
- "p1:12-nightshift": {
-  "family": "blue light, today's room",
-  "motif": "Night Shift polished: calm low glows and soft words, with dusk-blue links and a blue evening sky in the corner."
- },
- "p1:07-ambercompanion": {
-  "family": "warm companion, today's room",
-  "motif": "The amber companion polished: peach-honey links, a lamp-warm corner and a calmer mint for lit things, on today's room."
- },
- "r2-idea-3": {
-  "family": "warm room, cool links",
-  "motif": "Moss-warm room and ivory words with orchid links and a violet evening light in the corner."
- },
- "r2-rand-2": {
-  "family": "blue room",
-  "motif": "Midnight-blue chat bubbles, navy selected fills and fields, steel-blue lines and moonlit words over near-black, an indigo spotlight in the corner; links stay green."
- },
- "r2-idea-4": {
-  "family": "warm room, cool links",
-  "motif": "Moss-warm room with calmer linen words, cobalt-blue links and a deep cobalt corner; softer monitors."
- },
- "r2-idea-1": {
-  "family": "warm room, cool links",
-  "motif": "Moss-warm room and ivory words with sky-cyan links and an azure night-sky window in the corner."
- },
- "r2-idea-2": {
-  "family": "violet light, today's room",
-  "motif": "Periwinkle-violet links and a violet flash in the corner and afterglow on today's cool-neutral dark, softer words."
- },
- "r2-rand-1": {
-  "family": "warm companion, today's room",
-  "motif": "Rose-pink links, a wine-rose alpenglow in the corner and over every page, and a blush in the words, on a pine-black near today's."
- },
- "r2-rand-3": {
-  "family": "teal-tinted ground",
-  "motif": "A petrol-teal ground and cards, flour-cream words, sea-glass links and monitors, an orchid blush in the corner."
- },
- "r2-rand-4": {
-  "family": "lantern haze, re-dyed sections",
-  "motif": "A rust-warm haze across the top of every page, persimmon outings and re-dyed sections, jade links, moonlit blue-white words and an indigo corner on a warm-grey room."
- },
- "r3-rand-1": {
-  "family": "wood-panelled room",
-  "motif": "Walnut cards edged in bronze with a thin cobalt headband, gilt headings, bronze monitor cases, cobalt links and a cobalt dusk at the top of every page."
- },
- "r3-rand-2": {
-  "family": "blue room",
-  "motif": "Cream words on blue-black cards racked with cobalt edges, sleeve-blue headings and links, blue monitor cases and a blue ambient light; the family's bubbles brown paper."
- },
- "r3-rand-3": {
-  "family": "wine-dark room",
-  "motif": "Mauve-rose cards and bubbles, each card glowing rose along its lower edge, peach-rose headings, a magenta light at the top, mint links."
- },
- "r3-rand-4": {
-  "family": "sand trim on night slate",
-  "motif": "Night-slate cards with sand-gold headings and sand edges, pale putty monitor cases, turquoise links, rounder corners and no coloured light at the top."
- },
- "r3-rand-5": {
-  "family": "wood-panelled room",
-  "motif": "Crate-brown cards boxed in thick russet edges, apricot headings, putty monitor cases, leaf-green links, and no coloured light."
- },
- "r3-rand-6": {
-  "family": "wine-dark room",
-  "motif": "Claret board cards, claret bubbles, ways to start and monitor cases, rose headings, pink outings and mint links, with no coloured light."
- },
- "r3-idea-1": {
-  "family": "blue room",
-  "motif": "Navy card fills, bar and monitor cases, navy card edges, cream words and headings, periwinkle labels and links, a cobalt dusk at the top."
- },
- "r3-idea-2": {
-  "family": "wine-dark room",
-  "motif": "Aubergine cards, plum tiles, bubbles and monitor cases, orchid-ivory headings with a section-coloured tick, mauve dates, orchid links and violet light at the top."
- },
- "r4-rand-1": {
-  "family": "slate console, pewter cases",
-  "motif": "Indigo-slate cards and bubbles, linen words, iron-grey monitor cases with a madder power light, phosphor the one bright thing."
- },
- "r4-rand-2": {
-  "family": "slate console, pewter cases",
-  "motif": "Sea-fog slate cards, lichen-clay labels and cases, steel-blue for links, pale phosphor afterglow on lit things."
- },
- "r4-rand-3": {
-  "family": "moss formica, blue-black ink",
-  "motif": "Moss formica cards with olive labels and edges, blue-black ink for the family's words and fields, phosphor the one glow."
- },
- "r4-rand-4": {
-  "family": "black glass in a grey console",
-  "motif": "The ground lifted to a green-grey console with darker black-glass cards set in it, scope-green labels and blue-black ink for what the family presses."
- },
- "r4-rand-5": {
-  "family": "zinc trays, lichen marks",
-  "motif": "Galvanised zinc-grey cards with cool white words, dark glass for the machine's screens, lichen and leaf small marks."
- },
- "r4-rand-6": {
-  "family": "indigo cloth, green glass",
-  "motif": "Indigo-cloth cards and bubbles for the family, green-black glass for the machine, cream words, phosphor the one light."
- },
- "r4-idea-1": {
-  "family": "slate console, pewter cases",
-  "motif": "Slate cards, pewter monitor cases, cream words, a phosphor cursor at plain headings, periwinkle only where you press."
- },
- "r4-idea-2": {
-  "family": "ruled composing room",
-  "motif": "Slate Console's colours set as print: slate-black paper, newsprint words, pewter rules in place of boxed cards, blue-pencil marks and a phosphor cursor after each title, the green screen the one thing lit."
- },
- "r5-rand-1": {
-  "family": "slate console, pewter cases",
-  "motif": "Heathered mauve-grey wool cards with section-coloured stitched tops, a plum-tinted slate console."
- },
- "r5-rand-2": {
-  "family": "warm stoneware room",
-  "motif": "Oxblood lacquer rims and bubbles on warm brown cards, washi words, iron cases."
- },
- "r5-rand-3": {
-  "family": "warm stoneware room",
-  "motif": "Linen and almond cards with a cookbook serif, warm and quiet around the phosphor."
- },
- "r5-rand-4": {
-  "family": "warm stoneware room",
-  "motif": "Madder-brown denim cards with red selvedge stitching, ecru timetable words, iron cases."
- },
- "r5-rand-5": {
-  "family": "teal-tinted ground",
-  "motif": "Deep petrol-glaze cards and iron fittings with shoji-lattice grids."
- },
- "r5-rand-6": {
-  "family": "teal-tinted ground",
-  "motif": "Spruce-teal cards with lichen-grey labels, firelit cream words and dotted leaders."
- },
- "r5-idea-1": {
-  "family": "ruled composing room",
-  "motif": "Galley-proof setting: Oxford rules in each section's colour, slate boxes only for what you act in."
- },
- "r5-idea-2": {
-  "family": "silk-screened front panel",
-  "motif": "Bench-instrument panel: silk-screened groups, graphite modules, blue-grey keys, lamps."
- },
- "r6-rand-1": {
-  "family": "frosted pewter, glacier links",
-  "motif": "Ski lodge: frosted pewter panes, cork dates, glacier-blue links."
- },
- "r6-rand-2": {
-  "family": "dusk-violet paper on moss",
-  "motif": "Botanist's sketchbook: heather-clay tiles, graphite wells, sage leaf."
- },
- "r6-rand-3": {
-  "family": "warm room, cool links",
-  "motif": "Orchard shed: warm iron and aged brass fittings with washed-denim links."
- },
- "r6-rand-4": {
-  "family": "dusk-violet paper on moss",
-  "motif": "Lantern night: iris-dusk paper over moss, dates as hanging lanterns."
- },
- "r6-rand-5": {
-  "family": "warm room, cool links",
-  "motif": "Harbour fog: oiled olive leather solids, fog-grey links, sailcloth cream words."
- },
- "r6-rand-6": {
-  "family": "sand trim on night slate",
-  "motif": "Tea house: sumi-stone cards with tatami-straw plaques and straw lettering."
- },
- "r6-idea-1": {
-  "family": "ruled composing room",
-  "motif": "Galley proof: slate trays topped by an Oxford rule, raised slate boxes."
- },
- "r6-idea-2": {
-  "family": "flight-strip bays",
-  "motif": "Radar room: slate flight strips racked in bays, scopes flush in the console."
- },
- "r7-rand-1": {
-  "family": "warm stoneware room",
-  "motif": "Fired terracotta clay for the family's things, lacquer frames, phosphor the one lantern."
- },
- "r7-rand-2": {
-  "family": "wood-panelled room",
-  "motif": "Bark-brown sketchbook cards with paper and graphite words and serif heads over green-black glass."
- },
- "r7-rand-3": {
-  "family": "wood-panelled room",
-  "motif": "Mulberry-stained walnut cards and a walnut monitor case, heather marks, phosphor the one lamp."
- },
- "r7-rand-4": {
-  "family": "slate console, pewter cases",
-  "motif": "Warm pewter instrument cards with almanac titles and graduated-scale rules over green-black."
- },
- "r7-rand-5": {
-  "family": "indigo cloth, green glass",
-  "motif": "Indigo bookcloth cards with ivory serif type, debossed edges, machine on green-black glass."
- },
- "r7-rand-6": {
-  "family": "sage greenbar ledger",
-  "motif": "Sage-leaf banded ledger rows, apple-cream words, autumn-mist accents over green-black."
- },
- "r7-idea-1": {
-  "family": "ruled composing room",
-  "motif": "Slate galley trays under Oxford rules, lists as flat strips with designator and tabular facts column."
- },
- "r7-idea-2": {
-  "family": "mimic-line track",
-  "motif": "The week hung from one blue-pewter track, each stop a slate plate with a lamp and timetable time."
- },
- "r8-rand-1": {
-  "family": "bakelite wireless set",
-  "motif": "Thirties wireless: claret Bakelite plates, porcelain type, old-rose labels, magic-eye green the one glow."
- },
- "r8-rand-2": {
-  "family": "felt rock pool",
-  "motif": "Night rock pool in felt: sea-slate felt cards, coral marks and dates, soft serif, phosphor as pool light."
- },
- "r8-rand-3": {
-  "family": "arcade after hours",
-  "motif": "Closed arcade: oat tiles and printed forms, pixel sprites on marks, screens looping in bright green."
- },
- "r8-mut-1": {
-  "family": "indigo cloth, green glass",
-  "motif": "Parent's indigo bookcloth and green glass kept, glow nudged and section heads hung in the left margin."
- },
- "r8-mut-2": {
-  "family": "mimic-line track",
-  "motif": "Parent's mimic-line track with the companion hue turned ~30 degrees and Home's columns rearranged."
- },
- "r8-mut-3": {
-  "family": "flight-strip bays",
-  "motif": "Racked flight-strip bays in the composing room's slate-and-newsprint colours."
- },
- "r8-idea-1": {
-  "family": "ruled composing room",
-  "motif": "Galley proofs under rules: ruled sections, slate galley trays and mono slugs, close to r7-idea-1."
- },
- "r8-idea-2": {
-  "family": "text-mode windows",
-  "motif": "Green-screen software grammar: steel framed windows, double-framed dialogs, highlight bar, reverse video."
- },
- "r9-rand-1": {
-  "family": "teal-tinted ground",
-  "motif": "Arcade after hours in graphite-teal: cabinets stacked as ruled teal-grey bands, sunk wells, a teal night light, green only on running screens."
- },
- "r9-rand-2": {
-  "family": "porcelain star atlas",
-  "motif": "Star atlas as a book: centred Newsreader column, porcelain ink, cobalt hairlines, star-coloured discs for each part."
- },
- "r9-mut-1": {
-  "family": "bakelite wireless set",
-  "motif": "Magic Eye with softer text and magazine page heads (warm serif title, rule and action on one line); still the claret Bakelite set."
- },
- "r9-mut-2": {
-  "family": "flight-strip bays",
-  "motif": "The racked flight-strip bays with sharper text and Home's columns rearranged; same slate-and-newsprint strips."
- },
- "r9-mut-3": {
-  "family": "bakelite text-mode windows",
-  "motif": "Reverse Video's windows and dialogs in oxblood Bakelite and porcelain type; 8+ from both parents, so its own family."
- },
- "r9-idea-1": {
-  "family": "ruled composing room",
-  "motif": "Signal Galley's slate trays with each head set into its rail and reverse video for this one; close to r8-idea-1."
- },
- "r9-idea-2": {
-  "family": "programme listing",
-  "motif": "A programme guide on slate: banded parts with head columns, one-line rows across dotted leaders, a denim needle for here."
- },
- "r9-idea-3": {
-  "family": "glass cockpit",
-  "motif": "1980s glass cockpit: matte instrument plates in demarcation lines, flush display units in screwed faceplates, EFIS colour code."
- },
- "r9-idea-4": {
-  "family": "ruled composing room",
-  "motif": "Ruled galley sections with signal lines; a near sibling of r8-idea-1."
- },
- "r10-mut-1": {
-  "family": "text-mode windows",
-  "motif": "Reverse Video with a tighter type scale, stylistic set and slashed zero; 2.5 from its parent, same windows."
- },
- "r10-mut-2": {
-  "family": "programme listing",
-  "motif": "The programme guide with schematic line drawings and drawn dividers; 0.9 from its parent."
- },
- "r10-mut-3": {
-  "family": "porcelain star atlas",
-  "motif": "Star-atlas book structure dyed in the graphite-teal arcade colours; the atlas column stays the idea."
- },
- "r10-mut-4": {
-  "family": "glass cockpit",
-  "motif": "The glass cockpit with full CRT light on radar and her screen; 2.5 from its parent."
- },
- "r10-mut-5": {
-  "family": "ruled composing room",
-  "motif": "Signal Legend's ruled galley with tube halos and afterglow on lit states; 1.3 from its parent."
- },
- "r10-wild-1": {
-  "family": "braun faceplate",
-  "motif": "Warm-grey Braun-style faceplates, dials and one green key; 9+ from everything."
- },
- "r10-wild-2": {
-  "family": "bench oscilloscope",
-  "motif": "Instrument-grey scope panel, engraved ivory legends, oxblood knobs, phosphor beam; 8.9 from Braun Signal."
- },
- "r10-wild-3": {
-  "family": "night station timetable",
-  "motif": "Night concourse with enamel-coloured numbered lines and lit departure boards; 9+ from everything."
- },
- "r10-wild-4": {
-  "family": "blueprint operator manual",
-  "motif": "Numbered manual plates each led by a blueprint-blue figure on green-black; 8.7+ from everything."
- },
- "r10-wmut-1": {
-  "family": "porcelain star atlas",
-  "motif": "The star atlas with a round chart in the margin of every row and Fraunces names; 5.1 from its parent, still the atlas."
- },
- "r10-idea-1": {
-  "family": "programme listing",
-  "motif": "Programme guide finished: one-line heads, steel here-block, true fact columns; 4.6 from r9-idea-2."
- },
- "r10-idea-2": {
-  "family": "docked terminal column",
-  "motif": "A lit glass machine column docked beside a slate desk mat with indigo keys; 8.6+ from everything."
- },
- "r10-idea-3": {
-  "family": "mimic-line track",
-  "motif": "Signal box track diagram: steel-cyan lines on slate boards, lamp stops, timetable margin."
- },
- "r11-mut-1": {
-  "family": "mimic-line track",
-  "motif": "Track diagram in a larger, calmer type setting; 3.2 from its parent."
- },
- "r11-mut-2": {
-  "family": "ruled composing room",
-  "motif": "Signal Legend's ruled galley with small line drawings on section heads; 1.6 from its parent."
- },
- "r11-mut-3": {
-  "family": "docked terminal column",
-  "motif": "Docked machine column and desk mat dyed in blueprint-manual colours; 5.5 from its structure parent, the dock stays the idea."
- },
- "r11-mut-4": {
-  "family": "mimic-line track",
-  "motif": "Track diagram with the CRT light brought back; 0.9 from its parent."
- },
- "r11-wild-1": {
-  "family": "handheld timeline",
-  "motif": "Four-green handheld with pixel sprites along one NOW timeline; 11+ from everything."
- },
- "r11-wild-2": {
-  "family": "night gallery",
-  "motif": "After-hours exhibition with wall labels and lit screens as exhibits; 8.9+ from everything."
- },
- "r11-wild-3": {
-  "family": "violet flight console",
-  "motif": "1969 flight console with violet flight-plan drawings and lamp rows; 7.4+ from everything."
- },
- "r11-wild-4": {
-  "family": "videotex service",
-  "motif": "Videotex sommaire: mosaic band, numbered contents, key row at the foot; 11+ from everything."
- },
- "r11-wmut-1": {
-  "family": "docked terminal column",
-  "motif": "The docked terminal column with a tuning dock; 5.0 from its parent, same two-zone idea."
- },
- "r11-idea-1": {
-  "family": "programme listing",
-  "motif": "The evening programme listing relit; 4.7 from r10-idea-1."
- },
- "r11-idea-2": {
-  "family": "long-persistence instrument",
-  "motif": "One lit instrument per page over a graphite legend; 6.9+ from everything."
- },
- "r12-mut-1": {
-  "family": "ruled composing room",
-  "motif": "Signal Legend's ruled galley with width as hierarchy re-typed; 2.3 from its parent."
- },
- "r12-mut-2": {
-  "family": "long-persistence instrument",
-  "motif": "The lit instrument page with metered dials and ornaments redrawn; 2.05 from its parent."
- },
- "r12-mut-3": {
-  "family": "violet flight console",
-  "motif": "The flight-console structure in the programme listing's slate colours; 7.7 from r11-wild-3 but still reads as the console."
- },
- "r12-mut-4": {
-  "family": "programme listing",
-  "motif": "The evening listing with the original CRT afterglow brought back; 1.36 from its parent."
- },
- "r12-idea-1": {
-  "family": "programme listing",
-  "motif": "The evening listing traced over; 4.5 from r11-idea-1, 5.3 from r12-mut-4."
- },
- "r12-idea-2": {
-  "family": "docked terminal column",
-  "motif": "A lit terminal column docked beside a slate desk of ruled sections; 9+ in pixels but the same two-zone idea."
- },
- "r12-wmut-1": {
-  "family": "videotex service",
-  "motif": "The videotex service recast as a switchboard; a wild mutant, 11.7 from its parent yet still the videotex keyed-screen idea."
- },
- "r12-wild-1": {
-  "family": "glow-ink zine",
-  "motif": "A glowing-ink zine; 10.9+ from everything."
- },
- "r12-wild-2": {
-  "family": "ceefax evening",
-  "motif": "Teletext evening pages; 11.2+ from everything."
- },
- "r12-wild-3": {
-  "family": "zenith desk",
-  "motif": "Planetarium control desk: Vera at the zenith of a charted dome, the plans as stars; 8.9+ from everything."
- },
- "r12-wild-4": {
-  "family": "single quote",
-  "motif": "One statement per page; 9.1+ from everything."
- }
+  "families": {
+    "tonal green, corner only": "Today's room and ink kept, links green or a neutral stone; the only change is in the green's own strengths and halos, the section hues, or a faint wash in the greeting's corner. Looks like today.",
+    "warm companion, today's room": "A warm second colour (honey amber, coral or rose) on the links, the greeting's corner and the top afterglow, over a room that is still today's green-black with cool-neutral words.",
+    "blue light, today's room": "Sky, azure or dusk-blue light in the greeting's corner and the top afterglow, with cyan-to-blue links, over today's (or a slightly calmer) green-black room; the blue lives in light, not in the solids.",
+    "violet light, today's room": "Lilac or violet light in the greeting's corner and afterglow, with lilac or periwinkle links, over today's green-black room (at most a lavender breath in the lines and words).",
+    "warm room, warm fittings": "The whole room warmed: moss or olive-black cards, ivory or linen words, and a warm companion (brass, sand, a lamp-amber corner) for the links, so the mood changes all the way down the page.",
+    "warm room, cool links": "The same moss-warm room with ivory or linen words, but its links and corner light are cool (sky, cobalt or orchid-violet): warmth in the solids, cool colour in the light.",
+    "blue room": "Blue carried in the page's solids: navy selected fills and the family's chat bubbles, steel-blue hairlines and field borders, cool moonlit words, over a near-black ground; the page reads blue at a glance.",
+    "teal-tinted ground": "The ground and cards themselves tinted a deep teal or petrol, so every page turns one blue-green colour family, with steel or cream words on it.",
+    "lifted grey ground": "The black lifted a clear step to a grey-green slate, with warm soft words and no companion colour.",
+    "lantern haze, re-dyed sections": "A warm lantern haze hanging over the top of every page, the sections re-dyed in festival colours (persimmon outings, teal seasons), jade links and cool moonlit words on a warm-grey room.",
+    "wood-panelled room": "The cards themselves turned warm wood (walnut or crate-brown) edged in bronze or russet, with gilt or apricot headings and bronze or putty monitor cases over today's black: the page reads as furniture, whatever colour the links are.",
+    "sand trim on night slate": "Cool night-slate cards (a faint blue-green) trimmed in warm pale sand: sand-gold headings, sand card edges and putty monitor cases, with turquoise links and little coloured light; a cool room with warm lettering.",
+    "wine-dark room": "Plum, claret or rose carried in the solids (card fills, the family's bubbles, tiles and the monitors' cases) with orchid or rose lettering on the headings, over today's black; the page reads wine-dark at a glance.",
+    "slate console, pewter cases": "Cool blue-grey slate cards and fields (plain, indigo-dyed or sea-fog), grey pewter, iron or lichen-clay monitor cases and edges, cream, linen or neutral words, over today's green-black; the exact phosphor is the one light and any companion (periwinkle, steel-blue, a madder dot) is a quiet accent, not a colour wash.",
+    "ruled composing room": "A type-led page set like print: the panels opened into ruled sections (a rule over each heading instead of a boxed card), a phosphor cursor after every page title and mono bylines, in slate-console colours (black paper, newsprint words, pewter rules, blue-pencil marks); the setting, not the colour, is the idea.",
+    "indigo cloth, green glass": "Two materials: the family's things (the bar, the cards, their bubbles and chips) in a violet-indigo cloth, the machine's on green-black glass, with cream words and spaced mono capitals over the sections; the page reads indigo-and-green at a glance, not navy.",
+    "zinc trays, lichen marks": "Galvanised zinc-grey cards a clear step lighter than the ground, each panel headed by its own darker strip like a tray, cool white words, lichen-green small capitals and leaf marks, an underline for the page you are on; the machine's screens stay dark glass.",
+    "moss formica, blue-black ink": "A kitchen's moss-green formica cards with olive legends and edges, typewritten headings, and blue-black ink in the fields and the family's bubbles, over today's black: the cool colour is in the solids the family writes in, not in the light.",
+    "black glass in a grey console": "Depth turned inward: the ground lifted to a green-grey console and the cards sunk darker than it, black glass set into the panel, with scope-green labels and blue-black logbook ink for what the family writes and presses.",
+    "warm stoneware room": "Cards and fields in warm umber, almond or oxblood-brown stoneware (not wood grain, not wine), ecru or washi words, iron monitor cases and a lacquer-red or linen accent, over today's green-black with the phosphor the one light.",
+    "silk-screened front panel": "The page as an instrument's front panel: sections silk-screened on black metal with legends set into their rules, graphite modules, blue-grey keys and small lamps; the panel hardware, not a colour wash, is the idea.",
+    "frosted pewter, glacier links": "Frosted pewter panes for the family's things with timber bands above and below, cork-brown dates, glacier-blue links and snow-white condensed words over today's green-black; a cold lodge, not a blue room.",
+    "dusk-violet paper on moss": "The family's things on muted violet-dusk paper (heather clay, iris dusk) over green-black moss, pale paper-white words, graphite wells and little other colour: a soft purple-grey room, not wine.",
+    "flight-strip bays": "Every row a slate strip racked in its own bay with black between, scopes set flush into the console; the rack-and-bay structure, not the colour, is the idea.",
+    "sage greenbar ledger": "Cards and rows banded in muted sage-leaf green-grey like green-bar paper, apple-cream words and misty blue-grey accents over today's green-black: a soft green-grey room, not formica, not teal.",
+    "mimic-line track": "Structure as the idea: every sequence hung from one pewter-blue track line with lamp stops and a timetable margin of times, slate plates on it; the control-room mimic line, not a colour wash.",
+    "bakelite wireless set": "A thirties radio set: Bakelite claret-brown case plates, porcelain-white type, old-rose labels and a tuning-scale rule, with the green of its magic-eye tube the only light; the set, not a wine wash, is the idea.",
+    "felt rock pool": "Soft cut felt at night: sea-slate felt for the family's things, coral and shell felt for their marks and dates, a soft serif to read, black water between, the phosphor as the pool's one light.",
+    "arcade after hours": "An arcade after closing: oat-coloured tiles racked like cabinets, printed ruled forms, pixel sprites on every mark and VT323 labels, with only the screens running in bright green.",
+    "text-mode windows": "The page drawn as green-screen software: flat steel windows with names set into their frames, double-framed dialogs to act in, unboxed rows, a fading highlight bar and reverse video for where you are.",
+    "programme listing": "Structure as the idea: every part a band with its heading in a column inside it, every list one-line rows read across dotted leaders to a column of facts, like a printed TV or radio listing on slate.",
+    "glass cockpit": "A night cockpit: the family's things on matte instrument plates grouped by fine demarcation lines with legends in the breaks, the machine on flush display units in screwed faceplates, each colour holding one fixed meaning.",
+    "porcelain star atlas": "A star atlas set as a book: one centred serif column on a green-black dome, porcelain words and cobalt hairlines, each part of the site a disc in its own star colour.",
+    "bakelite text-mode windows": "Text-mode windows, double-framed dialogs and reverse-video selection cut from claret-oxblood Bakelite with porcelain type; the software grammar in the wireless set's materials.",
+    "braun faceplate": "Quiet warm-grey hardware in the manner of a Braun appliance: every page a faceplate, measures as dials, one green key, phosphor only on the displays.",
+    "bench oscilloscope": "A bench scope's instrument-grey panel with engraved one-size type, ivory legends and oxblood knobs, the phosphor only where the beam traces.",
+    "night station timetable": "A station at night: the conversation on a concourse, every part a numbered line in enamel colour on petrol-dark, phosphor only on departure boards.",
+    "blueprint operator manual": "An operator's manual: every part a numbered plate led by its own figure drawn in blueprint blue on green-black, phosphor only where live.",
+    "docked terminal column": "Two zones side by side: one lit glass column for the machine docked beside a grounded slate desk mat with indigo keys for the family's things.",
+    "handheld timeline": "A four-green pocket handheld: chunky pixel boxes and sprites, every page strung along one timeline with NOW lit on it.",
+    "night gallery": "The page hung as an exhibition after hours: one size of type, a wall label for everything, the green screens as the lit exhibits.",
+    "violet flight console": "A 1969 flight console: a violet flight-plan drawing leads every section, rows of lamps for status, phosphor only on what is live.",
+    "videotex service": "A videotex terminal service: one thing at a time under a mosaic band, numbered contents, a row of keys along the foot of every screen.",
+    "long-persistence instrument": "One lit phosphor instrument per page tracing the family's weeks in bloom and afterglow, over a printed graphite legend whose rows light its marks.",
+    "glow-ink zine": "A photocopied zine lit up: cut-and-paste blocks, glowing ink and hand-set headings, the page as a self-published pamphlet rather than a machine.",
+    "ceefax evening": "Broadcast teletext: blocky double-height headings, flat saturated teletext colours on black and numbered pages, one screen of text at a time.",
+    "zenith desk": "A mid-century console set into a desk: a warm cabinet with the machine's screen set in it, the family's things laid on the desk surface around it.",
+    "single quote": "One large quotation or line per page, set big and alone, everything else pushed quiet beneath it: the page as a single statement.",
+    "count board": "Every page title followed by a big coloured count with small mono notes beside it, dense ruled tables and numbered keyboard shortcuts in the bar: the page as a board of tallies.",
+    "brass-tag catalogue": "A warm brown-black catalogue: brass label plates on every title, tagged index cards with catalogue numbers, squiggle-rule dividers and a heartbeat trace on the monitor.",
+    "bauhaus display type": "Huge lowercase geometric display headings with a coloured square icon, primary-colour rules over each column and round dial badges: a Dessau poster set on the dark page.",
+    "neon grid console": "A glowing perspective floor grid under the page, sections hung on a lit rail with node dots, every item a boxed tile in a row of four, wide spaced capitals."
+  },
+  "10-lilac": {
+    "family": "violet light, today's room",
+    "motif": "Soft lilac links and a lilac corner and afterglow, a softer mint for lit things, lavender-tinted lines and words."
+  },
+  "07-ambercompanion": {
+    "family": "warm companion, today's room",
+    "motif": "Honey-amber links, title tiles and afterglow on today's room; the corner reads bronze."
+  },
+  "05-moss": {
+    "family": "warm room, warm fittings",
+    "motif": "Moss-black walls, ivory words, brass links and an amber lamp glow in the corner."
+  },
+  "09-aurora": {
+    "family": "blue light, today's room",
+    "motif": "The green's halos drift to teal, with teal-cyan links and a cyan corner, on a slightly teal-leaning dark."
+  },
+  "12-nightshift": {
+    "family": "blue light, today's room",
+    "motif": "A calmer, slightly lifted green-black with lower glows and gentler words, links still green, a slate-blue dusk at the top and in the corner."
+  },
+  "11-coral": {
+    "family": "warm companion, today's room",
+    "motif": "Dusty coral links, corner and afterglow beside a minter phosphor on a near-today green-black."
+  },
+  "08-colourmonitor": {
+    "family": "tonal green, corner only",
+    "motif": "Today's page with richer section colours, green links kept, and a faint violet wash in the corner."
+  },
+  "02-tonalladder": {
+    "family": "tonal green, corner only",
+    "motif": "Today's page with the green in three strengths (calmer lit green, deep halo), pale stone links and a sand whisper in the corner."
+  },
+  "04-lightinscreens": {
+    "family": "warm room, warm fittings",
+    "motif": "A calm, slightly warm room with very low page glow, sand links and a pale sand corner; only the monitors keep full bloom."
+  },
+  "06-bottleglass": {
+    "family": "teal-tinted ground",
+    "motif": "The whole page on dark blue-green bottle glass, steel-white words, green links and a steel-blue light from above."
+  },
+  "03-emeraldaura": {
+    "family": "tonal green, corner only",
+    "motif": "Today's page with a deeper emerald bloom round the green and a faint sea-glass light in the corner; nearly indistinguishable from today."
+  },
+  "01-softground": {
+    "family": "lifted grey ground",
+    "motif": "The ground lifted to a grey-green slate with warm soft white words; today's green otherwise."
+  },
+  "p1:09-aurora": {
+    "family": "blue light, today's room",
+    "motif": "Aurora polished: sky-cyan links and a clear azure light in the corner and afterglow over a teal-leaning dark."
+  },
+  "p1:10-lilac": {
+    "family": "violet light, today's room",
+    "motif": "Mint and Lilac polished: dusky lilac links, a stronger orchid corner and afterglow, on today's room."
+  },
+  "p1:05-moss": {
+    "family": "warm room, warm fittings",
+    "motif": "Moss and Brass polished: the same moss room and ivory words, gold-brass links, a stronger orange desk-lamp corner."
+  },
+  "p1:12-nightshift": {
+    "family": "blue light, today's room",
+    "motif": "Night Shift polished: calm low glows and soft words, with dusk-blue links and a blue evening sky in the corner."
+  },
+  "p1:07-ambercompanion": {
+    "family": "warm companion, today's room",
+    "motif": "The amber companion polished: peach-honey links, a lamp-warm corner and a calmer mint for lit things, on today's room."
+  },
+  "r2-idea-3": {
+    "family": "warm room, cool links",
+    "motif": "Moss-warm room and ivory words with orchid links and a violet evening light in the corner."
+  },
+  "r2-rand-2": {
+    "family": "blue room",
+    "motif": "Midnight-blue chat bubbles, navy selected fills and fields, steel-blue lines and moonlit words over near-black, an indigo spotlight in the corner; links stay green."
+  },
+  "r2-idea-4": {
+    "family": "warm room, cool links",
+    "motif": "Moss-warm room with calmer linen words, cobalt-blue links and a deep cobalt corner; softer monitors."
+  },
+  "r2-idea-1": {
+    "family": "warm room, cool links",
+    "motif": "Moss-warm room and ivory words with sky-cyan links and an azure night-sky window in the corner."
+  },
+  "r2-idea-2": {
+    "family": "violet light, today's room",
+    "motif": "Periwinkle-violet links and a violet flash in the corner and afterglow on today's cool-neutral dark, softer words."
+  },
+  "r2-rand-1": {
+    "family": "warm companion, today's room",
+    "motif": "Rose-pink links, a wine-rose alpenglow in the corner and over every page, and a blush in the words, on a pine-black near today's."
+  },
+  "r2-rand-3": {
+    "family": "teal-tinted ground",
+    "motif": "A petrol-teal ground and cards, flour-cream words, sea-glass links and monitors, an orchid blush in the corner."
+  },
+  "r2-rand-4": {
+    "family": "lantern haze, re-dyed sections",
+    "motif": "A rust-warm haze across the top of every page, persimmon outings and re-dyed sections, jade links, moonlit blue-white words and an indigo corner on a warm-grey room."
+  },
+  "r3-rand-1": {
+    "family": "wood-panelled room",
+    "motif": "Walnut cards edged in bronze with a thin cobalt headband, gilt headings, bronze monitor cases, cobalt links and a cobalt dusk at the top of every page."
+  },
+  "r3-rand-2": {
+    "family": "blue room",
+    "motif": "Cream words on blue-black cards racked with cobalt edges, sleeve-blue headings and links, blue monitor cases and a blue ambient light; the family's bubbles brown paper."
+  },
+  "r3-rand-3": {
+    "family": "wine-dark room",
+    "motif": "Mauve-rose cards and bubbles, each card glowing rose along its lower edge, peach-rose headings, a magenta light at the top, mint links."
+  },
+  "r3-rand-4": {
+    "family": "sand trim on night slate",
+    "motif": "Night-slate cards with sand-gold headings and sand edges, pale putty monitor cases, turquoise links, rounder corners and no coloured light at the top."
+  },
+  "r3-rand-5": {
+    "family": "wood-panelled room",
+    "motif": "Crate-brown cards boxed in thick russet edges, apricot headings, putty monitor cases, leaf-green links, and no coloured light."
+  },
+  "r3-rand-6": {
+    "family": "wine-dark room",
+    "motif": "Claret board cards, claret bubbles, ways to start and monitor cases, rose headings, pink outings and mint links, with no coloured light."
+  },
+  "r3-idea-1": {
+    "family": "blue room",
+    "motif": "Navy card fills, bar and monitor cases, navy card edges, cream words and headings, periwinkle labels and links, a cobalt dusk at the top."
+  },
+  "r3-idea-2": {
+    "family": "wine-dark room",
+    "motif": "Aubergine cards, plum tiles, bubbles and monitor cases, orchid-ivory headings with a section-coloured tick, mauve dates, orchid links and violet light at the top."
+  },
+  "r4-rand-1": {
+    "family": "slate console, pewter cases",
+    "motif": "Indigo-slate cards and bubbles, linen words, iron-grey monitor cases with a madder power light, phosphor the one bright thing."
+  },
+  "r4-rand-2": {
+    "family": "slate console, pewter cases",
+    "motif": "Sea-fog slate cards, lichen-clay labels and cases, steel-blue for links, pale phosphor afterglow on lit things."
+  },
+  "r4-rand-3": {
+    "family": "moss formica, blue-black ink",
+    "motif": "Moss formica cards with olive labels and edges, blue-black ink for the family's words and fields, phosphor the one glow."
+  },
+  "r4-rand-4": {
+    "family": "black glass in a grey console",
+    "motif": "The ground lifted to a green-grey console with darker black-glass cards set in it, scope-green labels and blue-black ink for what the family presses."
+  },
+  "r4-rand-5": {
+    "family": "zinc trays, lichen marks",
+    "motif": "Galvanised zinc-grey cards with cool white words, dark glass for the machine's screens, lichen and leaf small marks."
+  },
+  "r4-rand-6": {
+    "family": "indigo cloth, green glass",
+    "motif": "Indigo-cloth cards and bubbles for the family, green-black glass for the machine, cream words, phosphor the one light."
+  },
+  "r4-idea-1": {
+    "family": "slate console, pewter cases",
+    "motif": "Slate cards, pewter monitor cases, cream words, a phosphor cursor at plain headings, periwinkle only where you press."
+  },
+  "r4-idea-2": {
+    "family": "ruled composing room",
+    "motif": "Slate Console's colours set as print: slate-black paper, newsprint words, pewter rules in place of boxed cards, blue-pencil marks and a phosphor cursor after each title, the green screen the one thing lit."
+  },
+  "r5-rand-1": {
+    "family": "slate console, pewter cases",
+    "motif": "Heathered mauve-grey wool cards with section-coloured stitched tops, a plum-tinted slate console."
+  },
+  "r5-rand-2": {
+    "family": "warm stoneware room",
+    "motif": "Oxblood lacquer rims and bubbles on warm brown cards, washi words, iron cases."
+  },
+  "r5-rand-3": {
+    "family": "warm stoneware room",
+    "motif": "Linen and almond cards with a cookbook serif, warm and quiet around the phosphor."
+  },
+  "r5-rand-4": {
+    "family": "warm stoneware room",
+    "motif": "Madder-brown denim cards with red selvedge stitching, ecru timetable words, iron cases."
+  },
+  "r5-rand-5": {
+    "family": "teal-tinted ground",
+    "motif": "Deep petrol-glaze cards and iron fittings with shoji-lattice grids."
+  },
+  "r5-rand-6": {
+    "family": "teal-tinted ground",
+    "motif": "Spruce-teal cards with lichen-grey labels, firelit cream words and dotted leaders."
+  },
+  "r5-idea-1": {
+    "family": "ruled composing room",
+    "motif": "Galley-proof setting: Oxford rules in each section's colour, slate boxes only for what you act in."
+  },
+  "r5-idea-2": {
+    "family": "silk-screened front panel",
+    "motif": "Bench-instrument panel: silk-screened groups, graphite modules, blue-grey keys, lamps."
+  },
+  "r6-rand-1": {
+    "family": "frosted pewter, glacier links",
+    "motif": "Ski lodge: frosted pewter panes, cork dates, glacier-blue links."
+  },
+  "r6-rand-2": {
+    "family": "dusk-violet paper on moss",
+    "motif": "Botanist's sketchbook: heather-clay tiles, graphite wells, sage leaf."
+  },
+  "r6-rand-3": {
+    "family": "warm room, cool links",
+    "motif": "Orchard shed: warm iron and aged brass fittings with washed-denim links."
+  },
+  "r6-rand-4": {
+    "family": "dusk-violet paper on moss",
+    "motif": "Lantern night: iris-dusk paper over moss, dates as hanging lanterns."
+  },
+  "r6-rand-5": {
+    "family": "warm room, cool links",
+    "motif": "Harbour fog: oiled olive leather solids, fog-grey links, sailcloth cream words."
+  },
+  "r6-rand-6": {
+    "family": "sand trim on night slate",
+    "motif": "Tea house: sumi-stone cards with tatami-straw plaques and straw lettering."
+  },
+  "r6-idea-1": {
+    "family": "ruled composing room",
+    "motif": "Galley proof: slate trays topped by an Oxford rule, raised slate boxes."
+  },
+  "r6-idea-2": {
+    "family": "flight-strip bays",
+    "motif": "Radar room: slate flight strips racked in bays, scopes flush in the console."
+  },
+  "r7-rand-1": {
+    "family": "warm stoneware room",
+    "motif": "Fired terracotta clay for the family's things, lacquer frames, phosphor the one lantern."
+  },
+  "r7-rand-2": {
+    "family": "wood-panelled room",
+    "motif": "Bark-brown sketchbook cards with paper and graphite words and serif heads over green-black glass."
+  },
+  "r7-rand-3": {
+    "family": "wood-panelled room",
+    "motif": "Mulberry-stained walnut cards and a walnut monitor case, heather marks, phosphor the one lamp."
+  },
+  "r7-rand-4": {
+    "family": "slate console, pewter cases",
+    "motif": "Warm pewter instrument cards with almanac titles and graduated-scale rules over green-black."
+  },
+  "r7-rand-5": {
+    "family": "indigo cloth, green glass",
+    "motif": "Indigo bookcloth cards with ivory serif type, debossed edges, machine on green-black glass."
+  },
+  "r7-rand-6": {
+    "family": "sage greenbar ledger",
+    "motif": "Sage-leaf banded ledger rows, apple-cream words, autumn-mist accents over green-black."
+  },
+  "r7-idea-1": {
+    "family": "ruled composing room",
+    "motif": "Slate galley trays under Oxford rules, lists as flat strips with designator and tabular facts column."
+  },
+  "r7-idea-2": {
+    "family": "mimic-line track",
+    "motif": "The week hung from one blue-pewter track, each stop a slate plate with a lamp and timetable time."
+  },
+  "r8-rand-1": {
+    "family": "bakelite wireless set",
+    "motif": "Thirties wireless: claret Bakelite plates, porcelain type, old-rose labels, magic-eye green the one glow."
+  },
+  "r8-rand-2": {
+    "family": "felt rock pool",
+    "motif": "Night rock pool in felt: sea-slate felt cards, coral marks and dates, soft serif, phosphor as pool light."
+  },
+  "r8-rand-3": {
+    "family": "arcade after hours",
+    "motif": "Closed arcade: oat tiles and printed forms, pixel sprites on marks, screens looping in bright green."
+  },
+  "r8-mut-1": {
+    "family": "indigo cloth, green glass",
+    "motif": "Parent's indigo bookcloth and green glass kept, glow nudged and section heads hung in the left margin."
+  },
+  "r8-mut-2": {
+    "family": "mimic-line track",
+    "motif": "Parent's mimic-line track with the companion hue turned ~30 degrees and Home's columns rearranged."
+  },
+  "r8-mut-3": {
+    "family": "flight-strip bays",
+    "motif": "Racked flight-strip bays in the composing room's slate-and-newsprint colours."
+  },
+  "r8-idea-1": {
+    "family": "ruled composing room",
+    "motif": "Galley proofs under rules: ruled sections, slate galley trays and mono slugs, close to r7-idea-1."
+  },
+  "r8-idea-2": {
+    "family": "text-mode windows",
+    "motif": "Green-screen software grammar: steel framed windows, double-framed dialogs, highlight bar, reverse video."
+  },
+  "r9-rand-1": {
+    "family": "teal-tinted ground",
+    "motif": "Arcade after hours in graphite-teal: cabinets stacked as ruled teal-grey bands, sunk wells, a teal night light, green only on running screens."
+  },
+  "r9-rand-2": {
+    "family": "porcelain star atlas",
+    "motif": "Star atlas as a book: centred Newsreader column, porcelain ink, cobalt hairlines, star-coloured discs for each part."
+  },
+  "r9-mut-1": {
+    "family": "bakelite wireless set",
+    "motif": "Magic Eye with softer text and magazine page heads (warm serif title, rule and action on one line); still the claret Bakelite set."
+  },
+  "r9-mut-2": {
+    "family": "flight-strip bays",
+    "motif": "The racked flight-strip bays with sharper text and Home's columns rearranged; same slate-and-newsprint strips."
+  },
+  "r9-mut-3": {
+    "family": "bakelite text-mode windows",
+    "motif": "Reverse Video's windows and dialogs in oxblood Bakelite and porcelain type; 8+ from both parents, so its own family."
+  },
+  "r9-idea-1": {
+    "family": "ruled composing room",
+    "motif": "Signal Galley's slate trays with each head set into its rail and reverse video for this one; close to r8-idea-1."
+  },
+  "r9-idea-2": {
+    "family": "programme listing",
+    "motif": "A programme guide on slate: banded parts with head columns, one-line rows across dotted leaders, a denim needle for here."
+  },
+  "r9-idea-3": {
+    "family": "glass cockpit",
+    "motif": "1980s glass cockpit: matte instrument plates in demarcation lines, flush display units in screwed faceplates, EFIS colour code."
+  },
+  "r9-idea-4": {
+    "family": "ruled composing room",
+    "motif": "Ruled galley sections with signal lines; a near sibling of r8-idea-1."
+  },
+  "r10-mut-1": {
+    "family": "text-mode windows",
+    "motif": "Reverse Video with a tighter type scale, stylistic set and slashed zero; 2.5 from its parent, same windows."
+  },
+  "r10-mut-2": {
+    "family": "programme listing",
+    "motif": "The programme guide with schematic line drawings and drawn dividers; 0.9 from its parent."
+  },
+  "r10-mut-3": {
+    "family": "porcelain star atlas",
+    "motif": "Star-atlas book structure dyed in the graphite-teal arcade colours; the atlas column stays the idea."
+  },
+  "r10-mut-4": {
+    "family": "glass cockpit",
+    "motif": "The glass cockpit with full CRT light on radar and her screen; 2.5 from its parent."
+  },
+  "r10-mut-5": {
+    "family": "ruled composing room",
+    "motif": "Signal Legend's ruled galley with tube halos and afterglow on lit states; 1.3 from its parent."
+  },
+  "r10-wild-1": {
+    "family": "braun faceplate",
+    "motif": "Warm-grey Braun-style faceplates, dials and one green key; 9+ from everything."
+  },
+  "r10-wild-2": {
+    "family": "bench oscilloscope",
+    "motif": "Instrument-grey scope panel, engraved ivory legends, oxblood knobs, phosphor beam; 8.9 from Braun Signal."
+  },
+  "r10-wild-3": {
+    "family": "night station timetable",
+    "motif": "Night concourse with enamel-coloured numbered lines and lit departure boards; 9+ from everything."
+  },
+  "r10-wild-4": {
+    "family": "blueprint operator manual",
+    "motif": "Numbered manual plates each led by a blueprint-blue figure on green-black; 8.7+ from everything."
+  },
+  "r10-wmut-1": {
+    "family": "porcelain star atlas",
+    "motif": "The star atlas with a round chart in the margin of every row and Fraunces names; 5.1 from its parent, still the atlas."
+  },
+  "r10-idea-1": {
+    "family": "programme listing",
+    "motif": "Programme guide finished: one-line heads, steel here-block, true fact columns; 4.6 from r9-idea-2."
+  },
+  "r10-idea-2": {
+    "family": "docked terminal column",
+    "motif": "A lit glass machine column docked beside a slate desk mat with indigo keys; 8.6+ from everything."
+  },
+  "r10-idea-3": {
+    "family": "mimic-line track",
+    "motif": "Signal box track diagram: steel-cyan lines on slate boards, lamp stops, timetable margin."
+  },
+  "r11-mut-1": {
+    "family": "mimic-line track",
+    "motif": "Track diagram in a larger, calmer type setting; 3.2 from its parent."
+  },
+  "r11-mut-2": {
+    "family": "ruled composing room",
+    "motif": "Signal Legend's ruled galley with small line drawings on section heads; 1.6 from its parent."
+  },
+  "r11-mut-3": {
+    "family": "docked terminal column",
+    "motif": "Docked machine column and desk mat dyed in blueprint-manual colours; 5.5 from its structure parent, the dock stays the idea."
+  },
+  "r11-mut-4": {
+    "family": "mimic-line track",
+    "motif": "Track diagram with the CRT light brought back; 0.9 from its parent."
+  },
+  "r11-wild-1": {
+    "family": "handheld timeline",
+    "motif": "Four-green handheld with pixel sprites along one NOW timeline; 11+ from everything."
+  },
+  "r11-wild-2": {
+    "family": "night gallery",
+    "motif": "After-hours exhibition with wall labels and lit screens as exhibits; 8.9+ from everything."
+  },
+  "r11-wild-3": {
+    "family": "violet flight console",
+    "motif": "1969 flight console with violet flight-plan drawings and lamp rows; 7.4+ from everything."
+  },
+  "r11-wild-4": {
+    "family": "videotex service",
+    "motif": "Videotex sommaire: mosaic band, numbered contents, key row at the foot; 11+ from everything."
+  },
+  "r11-wmut-1": {
+    "family": "docked terminal column",
+    "motif": "The docked terminal column with a tuning dock; 5.0 from its parent, same two-zone idea."
+  },
+  "r11-idea-1": {
+    "family": "programme listing",
+    "motif": "The evening programme listing relit; 4.7 from r10-idea-1."
+  },
+  "r11-idea-2": {
+    "family": "long-persistence instrument",
+    "motif": "One lit instrument per page over a graphite legend; 6.9+ from everything."
+  },
+  "r12-mut-1": {
+    "family": "ruled composing room",
+    "motif": "Signal Legend's ruled galley with width as hierarchy re-typed; 2.3 from its parent."
+  },
+  "r12-mut-2": {
+    "family": "long-persistence instrument",
+    "motif": "The lit instrument page with metered dials and ornaments redrawn; 2.05 from its parent."
+  },
+  "r12-mut-3": {
+    "family": "violet flight console",
+    "motif": "The flight-console structure in the programme listing's slate colours; 7.7 from r11-wild-3 but still reads as the console."
+  },
+  "r12-mut-4": {
+    "family": "programme listing",
+    "motif": "The evening listing with the original CRT afterglow brought back; 1.36 from its parent."
+  },
+  "r12-idea-1": {
+    "family": "programme listing",
+    "motif": "The evening listing traced over; 4.5 from r11-idea-1, 5.3 from r12-mut-4."
+  },
+  "r12-idea-2": {
+    "family": "docked terminal column",
+    "motif": "A lit terminal column docked beside a slate desk of ruled sections; 9+ in pixels but the same two-zone idea."
+  },
+  "r12-wmut-1": {
+    "family": "videotex service",
+    "motif": "The videotex service recast as a switchboard; a wild mutant, 11.7 from its parent yet still the videotex keyed-screen idea."
+  },
+  "r12-wild-1": {
+    "family": "glow-ink zine",
+    "motif": "A glowing-ink zine; 10.9+ from everything."
+  },
+  "r12-wild-2": {
+    "family": "ceefax evening",
+    "motif": "Teletext evening pages; 11.2+ from everything."
+  },
+  "r12-wild-3": {
+    "family": "zenith desk",
+    "motif": "Planetarium control desk: Vera at the zenith of a charted dome, the plans as stars; 8.9+ from everything."
+  },
+  "r12-wild-4": {
+    "family": "single quote",
+    "motif": "One statement per page; 9.1+ from everything."
+  },
+  "r13-mut-1": {
+    "family": "mimic-line track",
+    "motif": "Track diagram re-set in monospace; 2.5 from its parent."
+  },
+  "r13-mut-2": {
+    "family": "docked terminal column",
+    "motif": "Mapped desk terminal with redrawn signals; 3.2 from its parent."
+  },
+  "r13-mut-3": {
+    "family": "count board",
+    "motif": "Crossover: the quote page's big titles turned to titles with big coloured counts over ruled tables; 8.2+ from everything, no single statement left."
+  },
+  "r13-mut-4": {
+    "family": "mimic-line track",
+    "motif": "Track diagram with the CRT light back; 0.65 from its parent."
+  },
+  "r13-wild-1": {
+    "family": "blueprint operator manual",
+    "motif": "Drafting-grid sheets with title blocks and sheet numbers in phosphor green; the numbered-plate manual idea."
+  },
+  "r13-wild-2": {
+    "family": "brass-tag catalogue",
+    "motif": "Brass label plates and tagged catalogue cards on warm brown-black; 8.5+ from everything."
+  },
+  "r13-wild-3": {
+    "family": "bauhaus display type",
+    "motif": "Huge lowercase geometric headings and primary-colour column rules; 10.4+ from everything."
+  },
+  "r13-wild-4": {
+    "family": "neon grid console",
+    "motif": "Perspective floor grid, a lit section rail and rows of four tiles; 8.4+ from everything."
+  },
+  "r13-wmut-1": {
+    "family": "videotex service",
+    "motif": "Folio switchboard; 1.6 from its parent."
+  },
+  "r13-idea-1": {
+    "family": "docked terminal column",
+    "motif": "Desk terminal joined; 6.5 from r12-idea-2 but the same docked-column idea."
+  },
+  "r13-idea-2": {
+    "family": "long-persistence instrument",
+    "motif": "A backlit timeline scope heading each page over ruled graphite rows."
+  }
 }
