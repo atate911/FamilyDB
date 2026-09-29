@@ -151,5 +151,20 @@ What this adds for calibration:
   the two monitors. A beautiful design whose CRT lives only in the Next up and radar screens,
   with the rest a generic modern dark interface, is drifting from what the owner wants. A
   design that is both beautiful and modern and unmistakably a phosphor CRT interface on every
-  page is what the owner is after. Do not reward a return to the old glare or monochrome: the
-  earlier notes on grounded, supporting colour still hold.
+  page is what the owner is after. The earlier notes on grounded, supporting colour still
+  hold for everything that is not phosphor.
+
+Added by the owner afterwards: "The original intent of the phosphor interface was the bright,
+glowing, and slightly haloed look of a green screen CRT monitor. Let's not lose that DNA in an
+effort to make a clean hyper modern design interface."
+
+For calibration: the glow is the DNA. The owner's first ask, to calm the page, was about where
+the green goes (bright green where it needs to be, grounded colour elsewhere), not about taking
+the light out of it. Where a design shows phosphor (the monitors, the lit states, the machine's
+words, the signature marks), it should look like a green-screen CRT: bright, glowing, with a
+slight halo bleeding past the glyphs and lines. Flat, crisp, unlit green that could be any
+modern accent colour is a loss of that DNA, and so is a halo so faint it no longer reads. Weigh
+it as heavily as the line art: a design that is clean and modern but has lost the glow is not
+what the owner wants, and one that keeps a real CRT glow where the phosphor is, with the rest
+grounded, is. Too much of it is still a fault: glare across the whole page, halos on everything
+or a halo that blurs the text past easy reading.
