@@ -1,0 +1,49 @@
+{
+ "chosen": [
+  {
+   "id": "r11-idea-1",
+   "name": "Evening Listing, Relit",
+   "mean": 8.04,
+   "why": "the best score of the round (clearly different here means 5.67 or more apart; the round's median is 9.45)"
+  },
+  {
+   "id": "r11-idea-2",
+   "name": "Long Persistence",
+   "mean": 7.88,
+   "why": "new family, not a near-duplicate: long-persistence instrument; nearest carried Evening Listing, Relit at 7.83"
+  },
+  {
+   "id": "r11-mut-4",
+   "name": "Track Diagram Relit",
+   "mean": 7.52,
+   "why": "new family, not a near-duplicate: mimic-line track; nearest carried Long Persistence at 7.01"
+  },
+  {
+   "id": "r10-mut-5",
+   "name": "Signal Legend Relit",
+   "mean": 6.91,
+   "why": "new family, not a near-duplicate: ruled composing room; nearest carried Track Diagram Relit at 6.16"
+  }
+ ],
+ "wild": [
+  {
+   "id": "r11-wild-3",
+   "name": "Flight Console",
+   "mean": 6.67,
+   "promise": 7,
+   "why": "the wild lane, for the ideas the judges most want developed (7 promise votes, #12 by score, today 4.71): violet flight console"
+  },
+  {
+   "id": "r11-wild-4",
+   "name": "Videotex Sommaire",
+   "mean": 5.98,
+   "promise": 5,
+   "why": "the wild lane, for the ideas the judges most want developed (5 promise votes, #14 by score, today 4.71): videotex service"
+  }
+ ],
+ "passed_over": [
+  "Evening Listing (7.12, programme listing): 4.68 from Evening Listing, Relit, same family",
+  "Track Diagram, Large Setting (7.11, mimic-line track): 3.66 from Track Diagram Relit, same family",
+  "Track Diagram (7.0, mimic-line track): 0.85 from Track Diagram Relit, same family"
+ ]
+}

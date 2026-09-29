@@ -27,6 +27,7 @@ lane, chosen for score *and* variety, so the field does not narrow into one idea
 | 8 | Signal Galley | 7.87 | 3.61 | 4.26 |
 | 9 | Programme Guide | 8.11 | 4.00 | 4.11 |
 | 10 | Evening Listing | 7.90 | 4.29 | 3.61 |
+| 11 | Evening Listing, Relit | 8.04 | 4.71 | 3.33 |
 
 Before round 4, today's page was not scored alongside the entrants. "Lead over today" is the
 winner's score minus today's page's score. Each round has its own panel and field, so a score
@@ -76,6 +77,28 @@ Round 8 has 3 random entrants: an old radio (wildcard), a tidepool, and an arcad
 (wildcard). It has 3 mutants: Indigo Bindery with hanging section heads, Signal Box with Home
 rearranged, and a crossover of Radar Room's structure with Galley Rack's colours. It also has 2
 informed entrants.
+
+## Carried into round 12
+
+In round 11 every relit design beat its unlit parent. Evening Listing, Relit was in all eight
+judges' top fours. It keeps the programme listing, and each head column now does a job: counts
+and "late", the kind filter, Open/Done. The tube's light is back on the short list of live
+things. Long Persistence was second, with the joint-most promise votes: each page has one lit
+instrument that draws the family's own weeks, due dates or spending, over quiet graphite tables.
+Round 11's lessons add "light as data": the judges prefer a tube that draws something to one
+that only glows brighter.
+
+Main lane: **Evening Listing, Relit** (8.04), **Long Persistence** (7.88), **Track Diagram
+Relit** (7.52; it won the owner's judge, 8.8, and the soul judge, 8.2) and **Signal Legend
+Relit** (6.91). Wild lane: **Flight Console** (7 promise votes), a 1969 flight console with
+violet flight-plan drawings and rows of lamps, and **Videotex Sommaire** (5 votes), which types
+the question on the glass and opens on a numbered contents page.
+
+Round 12 has a phosphor mutant of the leader pushing the tubes and the page's own light further,
+a type mutant of Signal Legend Relit (width as hierarchy), a graphics mutant of Long Persistence
+(Status as an instrument panel), and a crossover of Flight Console's structure with the leader's
+colours. The wild designs are a zine, Teletext, a planetarium desk and a trading terminal (a
+repeated Minitel roll was re-drawn to a language not yet tried).
 
 ## Carried into round 11
 
