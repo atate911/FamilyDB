@@ -171,13 +171,18 @@ before round 8: `./check.sh palettes/00-current.json`.
    - Send the owner the two new sheets from `mockups/`.
    - Launch the next round.
 
-The owner's schedule from here: six rounds with mutants, 8 to 13, then the finale.
+The owner's schedule from here: nine rounds with mutants, 8 to 16, then the finale. The owner
+extended the exploratory rounds by three, from 9-10 to 9-13, ahead of the three refine rounds.
 
 | Round | Carried | Random (wildcards) | Mutants (one a crossover) | Informed | `open` arguments |
 |---|---|---|---|---|---|
 | 8 | 4, one protected | 3 (2) | 3 | 2 | `r7 r8 8 3 2 3 explore 2` |
-| 9, 10 | 4 | 2 (2) | 3 | 3 | `r8 r9 9 2 3 3 refine 2` |
-| 11, 12, 13 | 4 | 1 (1) | 3 | 4 | `r10 r11 11 1 4 3 refine 1` |
+| 9 to 13 | 4 | 2 (2) | 3 | 3 | `r8 r9 9 2 3 3 refine 2` |
+| 14, 15, 16 | 4 | 1 (1) | 3 | 4 | `r13 r14 14 1 4 3 refine 1` |
+
+Round 9 has a fourth informed entrant, "Signal Lines", briefed at the owner's request
+(`extraBriefs` in its `args.json`): Signal Galley with all of Signal Box's line art, on every
+page. The judges are not told it was requested.
 
 - **Finale**:
   1. A championship across the hall of fame: the best of each family, plus each round's

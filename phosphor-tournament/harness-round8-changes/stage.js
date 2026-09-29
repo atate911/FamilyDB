@@ -26,7 +26,9 @@ const NR = args.nRandom
 const NM = MUTANTS.length
 const NI = args.nInformed
 const MODE = args.mode || 'explore'
-const NREF = MODE === 'refine' ? Math.floor(NI / 2) : 0
+// The planner's share of the informed entrants (the rest were briefed at the owner's request).
+const NP = args.nPlanned ?? NI
+const NREF = MODE === 'refine' ? Math.floor(NP / 2) : 0
 const NUM = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen']
 const NT = CARRIED.length + NR + NM + NI
 const NTW = NUM[NT] || String(NT)
@@ -92,7 +94,7 @@ const runPlan = () => agent(
 
 ${OWNER}
 
-This round has ${NTW} palettes: the four carried from the last round (${CARRIED_LIST}), ${NUM[NR]} drawn from random starting points (colour and structure), ${NM ? `${NUM[NM]} mutants (carried winners with a few random changes, one of colour and one of structure${MUTANTS.some(m => m.kind === 'crossover') ? ', and a crossover of two carried winners' : ''}: ${MUTANTS.map(m => m.kind === 'crossover' ? `${m.parentName}'s structure with ${m.colourParentName}'s colours` : `${m.parentName}: ${m.changes.join('; ')}`).join(' | ')}), ` : ''}and ${NUM[NI]} that YOU brief now, informed by everything the judges have said about every palette so far. Yours must be real attempts to beat the carried four.
+This round has ${NTW} palettes: the four carried from the last round (${CARRIED_LIST}), ${NUM[NR]} drawn from random starting points (colour and structure), ${NM ? `${NUM[NM]} mutants (carried winners with a few random changes, one of colour and one of structure${MUTANTS.some(m => m.kind === 'crossover') ? ', and a crossover of two carried winners' : ''}: ${MUTANTS.map(m => m.kind === 'crossover' ? `${m.parentName}'s structure with ${m.colourParentName}'s colours` : `${m.parentName}: ${m.changes.join('; ')}`).join(' | ')}), ` : ''}and ${NUM[NI]} informed, ${NUM[NP]} of which YOU brief now, informed by everything the judges have said about every palette so far. Yours must be real attempts to beat the carried four.
 
 Read, in full:
 - ${H}/lessons.md (the accumulated lessons)
@@ -102,14 +104,14 @@ Read, in full:
 
 The tournament must not narrow into one idea or iterate into an average. ${MODE === 'refine' ? `This is a REFINING round: the first ${NUM[NREF]} of your briefs are refinements of the carried winners (one each, the strongest first): keep the winner's idea and apply the judges' concrete fixes and small improvements, so good ideas get better. The rest are new offspring, and at least one of those must be a NOVELTY brief.` : 'At least one of your briefs must be a NOVELTY brief.'} A novelty brief opens a motif family that is not among the carried four: either one the hall of fame has never tried, or a family that did well once and dropped out, bred from DISTANT parents rather than neighbours of the leader; it must look clearly different (look-distance 1.5 or more) from every carried palette. Mark it in the hypothesis.
 
-Then write ${NUM[NI]} briefs, each a distinct hypothesis about what would beat the carried four, for example: a hybrid that takes the element each judge praised in two palettes and drops what they criticised; a fix for a promising palette that fell short for one clear reason; an idea the judges asked for that no palette has tried yet; a bolder or calmer take on the leader. Each must keep the owner's asks and the harness's hard checks (the #6dff9c signature on a green-black ground; plain legibility; the page's integrity) and may break any written guideline when the page is better for it, must be clearly different from the carried four and from each other, and must be something a designer can build with the palette roles in ${D}/README.md (bg and neutrals, ink, brand, lit, halo, accent, wash, top-glow, screen, the section colours, outing, glow numbers). Briefs may change the page's markup too (layout, grouping, the kinds of elements, headers and footers, icons and pictures: README "A palette's own markup"), as long as every word, form and link stays. Briefs may also include small visual refinements beyond colour (size, spacing, type, corners, labels, icons: the palette's "css" field, README "Refinements beyond colour"), bred from the carried winners' refinements or new. Name the palettes whose elements it borrows and the criticisms it answers.`,
+Then write ${NUM[NP]} briefs, each a distinct hypothesis about what would beat the carried four, for example: a hybrid that takes the element each judge praised in two palettes and drops what they criticised; a fix for a promising palette that fell short for one clear reason; an idea the judges asked for that no palette has tried yet; a bolder or calmer take on the leader. Each must keep the owner's asks and the harness's hard checks (the #6dff9c signature on a green-black ground; plain legibility; the page's integrity) and may break any written guideline when the page is better for it, must be clearly different from the carried four and from each other, and must be something a designer can build with the palette roles in ${D}/README.md (bg and neutrals, ink, brand, lit, halo, accent, wash, top-glow, screen, the section colours, outing, glow numbers). Briefs may change the page's markup too (layout, grouping, the kinds of elements, headers and footers, icons and pictures: README "A palette's own markup"), as long as every word, form and link stays. Briefs may also include small visual refinements beyond colour (size, spacing, type, corners, labels, icons: the palette's "css" field, README "Refinements beyond colour"), bred from the carried winners' refinements or new. Name the palettes whose elements it borrows and the criticisms it answers.`,
   {
     label: `plan:${R}`, phase: 'Plan',
     schema: {
       type: 'object',
       properties: {
         briefs: {
-          type: 'array', minItems: NI, maxItems: NI,
+          type: 'array', minItems: NP, maxItems: NP,
           items: {
             type: 'object',
             properties: {
@@ -141,6 +143,8 @@ A designer has just made a first draft of ${id} (${draft.name}), ${what}. ${resu
 
 Your job is to make THIS idea as good as it can be before the panel judges it beside winners refined over several rounds. ${kind === 'crossover'
     ? `Keep it true to both parents: judge how well the structure parent's system and the colour parent's colours have been reconciled into one page; do not pull it towards the other carried winners or towards today's page.`
+    : kind === 'brief'
+    ? `Keep it true to its brief: judge how fully and how well the brief is carried out on every page, and what would make it better; do not pull it towards the other carried winners or towards today's page.`
     : `Do not pull it towards the carried winners (${CARRIED_LIST}) or towards today's page, and do not ask it to be safer: keep its idea, its structure and its mood, and judge the execution. Its roll was ${lessons === 'none' ? 'only a spark, which a wildcard may keep any part of or none' : 'a starting point, which it may bend or drop where the page is better for it'}: judge what the designer made, not how closely it follows the roll.`}
 
 Look at its full-size shots, ${D}/out/${id}/shots/ (home, home-phone, chat, ideas, status, plans, todo, settings, form and general, and the controls and focus shots), beside today's (${D}/out/00-current/shots/). Its tokens are ${D}/palettes/${id}.json and its markup, if it has any, ${D}/variants/${id}/. The floors and the palette roles are in ${D}/README.md; ${lessons === 'none'
@@ -237,6 +241,16 @@ const mutantChain = (slot) => {
     : first
 }
 
+const briefChain = (x) => {
+  const id = `${R}-idea-${x.slot}`
+  const r = RESUME[id] || {}
+  if (r.final) return Promise.resolve(r.final)
+  const first = r.draft ? Promise.resolve(r.draft) : designInformed(x.brief, x.slot)
+  return x.secondDraft
+    ? first.then(draft => secondDraft(id, `an informed entrant built from this brief. ${x.brief.name}: ${x.brief.hypothesis} Brief: ${x.brief.brief}`, 'follow', 'brief', r)(draft))
+    : first
+}
+
 const designInformed = (b, slot) => {
   const id = `${R}-idea-${slot}`
   return agent(`You are a colour designer in round ${args.roundNo} of a palette tournament for FamilyDB's Phosphor look.
@@ -289,6 +303,7 @@ if (STAGE === 'design') {
   const chains = [
     ...(args.seeds || []).map(s => () => randomChain(s)),
     ...(args.mutantSlots || []).map(k => () => mutantChain(k)),
+    ...(args.briefs || []).map(x => () => briefChain(x)),
   ]
   const planGroup = args.plan
     ? runPlan().then(plan => !(plan && plan.briefs)

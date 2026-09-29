@@ -91,3 +91,18 @@ that draws the page's structure (tracks, stops, ticks, rings, margins) is "high 
 the system's feel. The owner wants it echoed in other designs. Reward entrants that carry this
 kind of line language, in their own way and with their own colour, and reward it more when it is
 carried through every page rather than one.
+
+## On round 8's four carried (carried into round 9)
+
+The owner, after seeing that Signal Box was not carried into round 9: "disappointed none of the
+designs with the lines from Signal Box made it through, really liked that design concept, would
+like to see that implemented."
+
+For calibration: Signal Galley (r8-idea-1) kept only one of Signal Box's lines, the Coming up
+track on Home. It lost the rest: the dot under the current page in the bar, the line that rings
+the page icon and brackets the page head's controls (Ideas), the vertical To do track with its
+lamps and timetable margin, and the Chat thread that hangs from Vera's mark. For the owner, a
+design that carries this line language well, through every page, is worth more than one that
+does not. The owner's disappointment says this weighs about as much as the palette notes above:
+treat its absence as a real loss, and its presence, done with restraint (one track per list,
+lines that mean time, order or belonging), as a strong reason to score high.

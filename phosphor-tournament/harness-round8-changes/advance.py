@@ -155,8 +155,11 @@ def open_(rnd, nxt, nxt_no, n_random, n_informed, n_mutants="0", mode="explore",
     import seeds as dice
     # A random entrant carried on (in the protected slot, or as the leader) gets the first mutant.
     protected = next((r["id"] for r in chosen if r.get("origin") == "random"), None)
-    muts = dice.mutants([{"id": r["id"], "name": r["name"], "family": fam(r["id"])} for r in chosen],
-                        int(n_mutants), protected)
+    def colours(pid):
+        t = json.loads((HERE / "rounds" / nxt / "palettes" / f"{pid}.json").read_text())["tokens"]
+        return {k: t[k] for k in dice.COLOUR_ROLES if k in t}
+    muts = dice.mutants([{"id": r["id"], "name": r["name"], "family": fam(r["id"]), "colours": colours(r["id"])}
+                         for r in chosen], int(n_mutants), protected)
     args = {"round": nxt, "roundNo": int(nxt_no), "mode": mode,
             "carried": [{"id": r["id"], "name": r["name"], "summary": summary(r, i)} for i, r in enumerate(chosen)],
             "seeds": seeds, "mutants": muts, "nInformed": int(n_informed), "history": history}

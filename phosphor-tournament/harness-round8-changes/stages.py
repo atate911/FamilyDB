@@ -85,8 +85,17 @@ def split(rnd, resume_file=None):
                 "resume": {i: by_file(i, resume[i]) for i in ids if i in resume}}
         files.append(stage_dir / f"design-{k}.json")
         files[-1].write_text(json.dumps(args))
-    if a["nInformed"] and not informed_done:
-        args = {**common(a), "stage": "design", "seeds": [], "mutantSlots": [], "plan": True,
+    extra = [x for x in a.get("extraBriefs", []) if not (resume.get(f"{r}-idea-{x['slot']}") or {}).get("final")]
+    if extra:  # entrants briefed at the owner's request, beside the planner's
+        args = {**common(a), "stage": "design", "seeds": [], "mutantSlots": [], "plan": False,
+                "briefs": [{k: x[k] for k in ("slot", "secondDraft", "brief")} for x in extra],
+                "resume": {i: by_file(i, resume[i]) for i in (f"{r}-idea-{x['slot']}" for x in extra) if i in resume}}
+        files.append(stage_dir / f"design-{len(files) + 1}.json")
+        files[-1].write_text(json.dumps(args))
+    planned = a["nInformed"] - len(a.get("extraBriefs", []))
+    informed_done = all((resume.get(f"{r}-idea-{i}") or {}).get("final") for i in range(1, planned + 1))
+    if planned and not informed_done:
+        args = {**common(a), "stage": "design", "seeds": [], "mutantSlots": [], "plan": True, "nPlanned": planned,
                 "history": a["history"],
                 "resume": {i: v for i, v in resume.items() if "-idea-" in i}}
         files.append(stage_dir / f"design-{len(files) + 1}.json")

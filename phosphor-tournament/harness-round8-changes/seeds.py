@@ -211,6 +211,22 @@ COLOUR_MUTATIONS = [
 ]
 
 
+COLOUR_ROLES = ["bg", "surface", "accent", "label", "card-edge", "bubble-them", "bezel", "heading", "lit"]
+
+
+def colour_distance(x, y):
+    """Mean OKLab distance (x100) between two palettes' shared colour roles; 0 when unknown."""
+    if not x or not y:
+        return 0.0
+    import math
+    sys.path.insert(0, str(Path(__file__).parent))
+    from colorlib import hex_to_rgb, rgb_to_oklab
+    common = [k for k in COLOUR_ROLES if k in x and k in y]
+    if not common:
+        return 0.0
+    return 100 * sum(math.dist(rgb_to_oklab(hex_to_rgb(x[k])), rgb_to_oklab(hex_to_rgb(y[k]))) for k in common) / len(common)
+
+
 def mutants(parents, n, protected=None):
     """n mutants over the parents ({id, name, family}). Each point mutant has two or three changes,
     one of colour and one of structure, and half the time a refinement too. From three on, the last
@@ -229,14 +245,19 @@ def mutants(parents, n, protected=None):
             changes.append(random.choice(MUTATIONS))
         out.append({"kind": "point", "parent": parent["id"], "parentName": parent["name"], "changes": changes})
     if n_cross:
-        # Two parents from different families, preferring those no point mutant used, so the
-        # round's variation spreads over all four carried.
+        # Two parents from different families whose colours are far apart (swapping near-identical
+        # colours changes nothing), then preferring those no point mutant used, so the round's
+        # variation spreads over all four carried. The direction is left to chance.
         used = {m["parent"] for m in out}
         pairs = [(a, b) for a in parents for b in parents if a["id"] != b["id"]]
-        best = max(2 * (a.get("family") != b.get("family")) + (a["id"] not in used) + (b["id"] not in used)
-                   for a, b in pairs)
-        a, b = random.choice([(a, b) for a, b in pairs
-                              if 2 * (a.get("family") != b.get("family")) + (a["id"] not in used) + (b["id"] not in used) == best])
+        far = {(a["id"], b["id"]): colour_distance(a.get("colours"), b.get("colours")) for a, b in pairs}
+        top = max(far.values()) or 1
+
+        def worth(a, b):
+            return (2 * (a.get("family") != b.get("family")) + 3 * far[(a["id"], b["id"])] / top
+                    + 0.5 * ((a["id"] not in used) + (b["id"] not in used)))
+        best = max(worth(a, b) for a, b in pairs)
+        a, b = random.choice([(a, b) for a, b in pairs if worth(a, b) >= best - 0.25])
         out.append({"kind": "crossover", "parent": a["id"], "parentName": a["name"],
                     "colourParent": b["id"], "colourParentName": b["name"],
                     "changes": [f"the structure of {a['name']} (its markup, layout, type, controls, spacing and non-colour css) "

@@ -1,0 +1,151 @@
+{
+ "round": "r9",
+ "roundNo": 9,
+ "mode": "refine",
+ "carried": [
+  {
+   "id": "r8-idea-1",
+   "name": "Signal Galley",
+   "summary": "Round 8: #1 by score (mean 7.87, in 7 judges' top fours); carried as the best score of the round (clearly different here means 5.02 or more apart; the round's median is 8.37). Family: ruled composing room. Born in round 8 (informed). Galley Rack's trays and strips moved onto a green-black slate, with the family's fortnight hung from one line of lamps, times hung in a timetable margin, and #6dff9c lit only for now and live. This is the consensus breed from round 7: Galley Rack's frame (masthead, Oxford rails, slate trays, one strip component, chinned case, desks) with the three parts of Signal Box that every lens named. Home's Coming up becomes a full-width line: a breathing #6dff9c \"now\" lamp, cyan ring stations and slate day tiles hung on short drops over their plates. To do and Chat read as timetables, with times hung in a margin or gutter. The slate moves half a step off GitHub Dark toward green-black, so the page feels like a quiet signal box at night: grounded slate everywhere, and the phosphor only where something is live."
+  },
+  {
+   "id": "r8-rand-1",
+   "name": "Magic Eye",
+   "summary": "Round 8: #8 by score (mean 5.61, in 2 judges' top fours); carried as the protected random slot, the best of round 8's random entrants (#8 by score, today 3.61): bakelite wireless set; 10.9 from Signal Galley. Family: bakelite wireless set. Born in round 8 (random). A wireless set of the thirties: Bakelite plates, porcelain type, old-rose labels and a tuning scale, with the green of its magic-eye tube the one light that glows. Old valve radios had one green light, the magic-eye tuning tube, and this page treats #6dff9c as that tube. Around it is a 1930s set: wine Bakelite plates, porcelain type, old-rose printed labels, oxblood cases round the monitors, and a tuning scale along the bar with a rose needle standing on the station you are on. It is laid out like a programme guide, with heads hanging in a wide left margin and dense zebra timetable rows to the right. The whole set should feel warm, calm and exact, not neon."
+  },
+  {
+   "id": "r8-idea-2",
+   "name": "Reverse Video",
+   "summary": "Round 8: #2 by score (mean 7.86, in 7 judges' top fours); carried as new family, not a near-duplicate: text-mode windows; nearest carried Signal Galley at 6.69. Family: text-mode windows. Born in round 8 (informed). The page drawn in the grammar of the software that ran on green screens: flat steel windows with their names set into the frame, double-framed dialogs for what you act in, unboxed rows, a highlight bar that fades like a tube, and reverse video for where you are. The CRT is carried by the grammar of every frame, not by pictures or more green. Everything the family owns is a square steel window with its name knocked into an inset frame line, or a double-framed dialog when you act in it. Lists are unboxed rows that a steel highlight bar walks down and then fades from like phosphor, and 'this one' is always a reverse-video block. Rounded green-black glass stays for the machine alone: her greeting, her lines and the tubes. The bright #6dff9c appears only on the mark, Send and the primary buttons, the key word, focus rings, live lamps and the monitors, so the page feels like a calm old program running on a modern screen."
+  },
+  {
+   "id": "r8-mut-3",
+   "name": "Plotting Room",
+   "summary": "Round 8: #4 by score (mean 6.51, in 4 judges' top fours); carried as new family, not a near-duplicate: flight-strip bays; nearest carried Signal Galley at 6.1. Family: flight-strip bays. Born in round 8 (crossover). Radar Room's flight strips racked on slate boards in bays of switched-off black, cut from Galley Rack's slate: each designator breathes its kind's colour, periwinkle marks where you are and what you can press, sage marks today and done, a cobalt light rises in the greeting, and the exact phosphor is the one lit thing. An operations plotting room at night. Radar Room gives the layout: every list the family owns is a rack of flight strips (designator, body, tabular mono facts column) set on a slate board behind a pewter rail, in bays with the heads and the gaps between bays left on switched-off black. Galley Rack gives the materials: its tray is now each rack's board, the strips are cut from its slate, periwinkle marks where you are and what you can press, a cobalt light rises in the greeting, and the scopes sit in pewter cases. It should feel calm, orderly and grounded, with #6dff9c only on the mark, Send, \"mind\", focus, the live lamps and the monitors."
+  }
+ ],
+ "seeds": [
+  {
+   "mood": "an arcade after hours",
+   "material": "graphite",
+   "companion_hue_deg": 194,
+   "companion_note": "a companion colour at this OKLCH hue",
+   "companion_roles": [
+    "accent (links, title tiles, Home's pill)",
+    "lit (the everyday lit things: a calmer tone)",
+    "the section colours (a refreshed set)",
+    "surface (cards tinted by the companion)",
+    "bubble and bubble-them (the chat bubbles)",
+    "label (small labels and dates)",
+    "ambient (a soft second light across the page)",
+    "card-edge (every card's and panel's border)"
+   ],
+   "second_companion_hue_deg": null,
+   "ground_hue_deg": 169,
+   "ground_step": "a step lighter",
+   "ink": "cool",
+   "text_contrast_target": 11.0,
+   "glow": 0.49,
+   "screenGlow": 0.82,
+   "layout": "stacked full-width bands, each section its own band edge to edge, ruled apart",
+   "type_system": "a humanist sans for reading (Atkinson Hyperlegible, Figtree or Lexend) with a technical mono for data",
+   "controls": "keycaps: buttons as keys with a little depth, fields as recessed wells",
+   "icons": "fine line icons (a 1.25-1.5 stroke) at the cap height of the words they sit with",
+   "motion": "a scan: one faint line passes over a monitor when it switches on",
+   "pacing": "rhythmic: every gap on one 8px unit, sections apart by one large step",
+   "refinements": [
+    "leading and tracking tuned per size: tighter large titles, looser small labels"
+   ],
+   "ambition": "wildcard"
+  },
+  {
+   "mood": "a planetarium",
+   "material": "porcelain",
+   "companion_hue_deg": 252,
+   "companion_note": "a companion colour at this OKLCH hue",
+   "companion_roles": [
+    "the section colours (a refreshed set)",
+    "a breath in the neutrals (ink, lines)",
+    "lit (the everyday lit things: a calmer tone)",
+    "bubble and bubble-them (the chat bubbles)",
+    "surface (cards tinted by the companion)",
+    "label (small labels and dates)",
+    "bar (the top bar)"
+   ],
+   "second_companion_hue_deg": 108,
+   "ground_hue_deg": 169,
+   "ground_step": "a step lighter",
+   "ink": "cool",
+   "text_contrast_target": 13.5,
+   "glow": 0.84,
+   "screenGlow": 0.92,
+   "layout": "a single centred reading column, like a book page, with generous margins",
+   "type_system": "a serif for titles and reading, a sans for labels and controls (Newsreader or Fraunces with a sans)",
+   "controls": "flat technical: square corners, one hairline outline, a fill only on press",
+   "icons": "no icons beside words: the words and a small coloured mark do the work",
+   "motion": "still: nothing moves but focus and the afterglow",
+   "pacing": "airy: generous darkspace between sections, few things per screen",
+   "refinements": [
+    "numbers and times in DM Mono everywhere they appear in lists"
+   ],
+   "ambition": "wildcard"
+  }
+ ],
+ "mutants": [
+  {
+   "kind": "point",
+   "parent": "r8-rand-1",
+   "parentName": "Magic Eye",
+   "changes": [
+    "soften the text contrast by about one step (for example 13:1 to 12:1)",
+    "redraw every page head: the title, a rule and the page's one action on one line of sight",
+    "page titles in a warm serif from the library (Fraunces with its SOFT axis, or Newsreader), magazine-like"
+   ]
+  },
+  {
+   "kind": "point",
+   "parent": "r8-mut-3",
+   "parentName": "Plotting Room",
+   "changes": [
+    "sharpen the text contrast by about one step (for example 12:1 to 13:1)",
+    "rearrange Home: a different column structure or order (for example the monitor full width above the lists, or the lists side by side)"
+   ]
+  },
+  {
+   "kind": "crossover",
+   "parent": "r8-idea-2",
+   "parentName": "Reverse Video",
+   "colourParent": "r8-rand-1",
+   "colourParentName": "Magic Eye",
+   "changes": [
+    "the structure of Reverse Video (its markup, layout, type, controls, spacing and non-colour css) with the colours of Magic Eye (its tokens, glow numbers and colour roles)"
+   ]
+  }
+ ],
+ "nInformed": 4,
+ "history": [
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/round1/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/final.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r2/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r3/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r4/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r5/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r6/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r7/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r8/results.json"
+ ],
+ "extraBriefs": [
+  {
+   "slot": 4,
+   "secondDraft": true,
+   "brief": {
+    "name": "Signal Lines",
+    "hypothesis": "Signal Box's line art was the most admired element of any design so far (thin tracks, ringed stops, ticks, a timetable margin and rounded turns that draw how the page is organised), but its children kept only one piece of it: Signal Galley kept the Coming up track on Home and dropped the rest. Carrying the whole line language through every page, on Signal Galley's proven materials, should keep what made both win and give the Phosphor Interface a signature no other entrant has.",
+    "brief": "START FROM Signal Galley: /tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r9/palettes/r8-idea-1.json and /tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r9/variants/r8-idea-1/ (copy both to your id). Keep its colours, slate trays, strips, type, masthead, targets and everything else, so the line language is the one change. STUDY Signal Box, the source of the lines, read-only: its palette /tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r8/palettes/r7-idea-2.json (the css draws the tracks with ::before and ::after), its templates /tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r8/variants/r7-idea-2/templates/ (home, tasks, chat, ideas, status, _ui and others) and its shots /tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r8/out/r7-idea-2/shots/ (home.png, ideas.png, chat.png, todo.png, status.png). RESTORE AND CARRY THROUGH, as one system: (1) The bar: its bottom rule carries a small dot under the current page (Signal Box's bar). (2) Every page head gets Signal Box's Ideas bracket: a thin line rings the page's icon, drops down the left side and turns a rounded corner under the head to hold the page's controls (on Ideas, the segmented All ideas and Restaurants switch and the actions sit inside it). Draw it on Ideas, Plans, To do, the Wishes, Status, Settings, Family and Chat heads, holding whatever controls that head has. (3) Home's Coming up: keep Signal Galley's horizontal fortnight track (the lit now lamp at its start, a hollow ring at each stop, day tiles hung below, the tick at All plans). (4) To do, on Home and on the To do page: a vertical track with a lamp at each item (an amber ring when overdue, hollow otherwise), the due times right-aligned in a timetable margin to its left, a short tick joining each lamp to its plate, and a foot where the track ends at its All link. (5) Chat: the conversation hangs from one vertical track under Vera's mark; each speaker's mark is a stop, the times sit in the margin, and the track ends in a green ring at the message box. Keep mine on one side and hers on the other, as Signal Galley does, so the track reads as time and not as a one-sided log. (6) Extend the same grammar where there is an order to draw: the Plans list as a track down its days; the setup steps as numbered stops on a track; Status's parts as lamps on one track per panel. Never more than one track per list, never a line that means nothing: a line always shows time, order or belonging. RULES of the line language: one weight for tracks (1.5-2px) and one for ticks and brackets (1px); tracks in a quiet steel or pewter, stops as hollow rings, filled only when done, amber only for 'needs a look', and the exact #6dff9c only for now and live; every turn rounded at one radius (about 12px); the lines sit behind content and never reduce a target below 44px or change the Tab order; words unchanged. AVOID what the judges criticised in Signal Box: several parallel rails on one page (Status's three rails read as a subway map or a git graph), a one-sided chat log, 'Add an idea' stranded on a track's elbow instead of in the head, and thin plates floating on bare black (keep Signal Galley's trays behind the tracks).",
+    "borrows": "Signal Galley (r8-idea-1): everything but the lines. Signal Box (r7-idea-2): the whole line language (bar dot, head brackets, the Coming up and To do tracks with lamps and a timetable margin, the chat thread track).",
+    "avoids": "Signal Box's subway-map rails, one-sided chat and stranded Add button; Signal Galley's loss of the line art beyond Home's Coming up."
+   },
+   "note": "bred at the owner's request: Signal Box's line language through every page"
+  }
+ ]
+}
