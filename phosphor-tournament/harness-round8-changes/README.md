@@ -228,6 +228,16 @@ easy reading, is a fault. Each effect's reduced-motion and more-contrast behavio
 gives it. From round 10 each round also has a phosphor mutant: a carried winner with the original
 light brought back and nothing else changed.
 
+`phosphor_audit.md` records what the six designs carried into round 10 kept and lost of it. Two
+pitfalls it found are worth knowing, because they take light away without anyone meaning to:
+- `--shadow: none` makes every base rule written `box-shadow: var(--shadow), <glow>` invalid, so
+  the browser drops the whole declaration: Home's box glowing at rest, the cards' hover glow, the
+  chat box's focus glow and the landing glow all go. To take the shadow away and keep the glows,
+  set `--shadow: 0 0 #0000`.
+- A `screen` a little off the brand green with `screenGlow` below 1 cuts the tubes' bloom by about
+  a quarter and her screen's halo by nearly half. Keep `screenGlow` at 1 unless the tube still
+  reads as lit without it.
+
 ## Typesetting (the owner enjoys it)
 
 The owner: "I enjoy typesetting/pagination in general and will appreciate even minor optimization of typography." Any palette may carry typographic refinements in `css`,
