@@ -80,6 +80,15 @@ Round 8 has 3 random entrants: an old radio (wildcard), a tidepool, and an arcad
 rearranged, and a crossover of Radar Room's structure with Galley Rack's colours. It also has 2
 informed entrants.
 
+## Paused for the owner's review before the refine rounds
+
+The owner asked to pause and review before the refine rounds. Round 14 had been set up and its
+design stage launched; the design workflows were stopped and their half-written files moved
+aside, so nothing of round 14 is judged or kept. Its setup (`rounds/r14/args.json`) is saved and
+can be launched as it is or changed after the review. Review sheets for the six designs going
+into the refine rounds, and for the Signal Box line that left the main lane, are in
+`mockups/review-before-refine/`.
+
 ## Carried into round 14
 
 Round 13 was the last exploratory round. **Desk Terminal, Joined** (8.33, in seven top fours)
