@@ -1,0 +1,47 @@
+{
+ "chosen": [
+  {
+   "id": "r9-idea-2",
+   "name": "Programme Guide",
+   "mean": 8.11,
+   "why": "the best score of the round (clearly different here means 6.0 or more apart; the round's median is 10.0)"
+  },
+  {
+   "id": "r9-idea-1",
+   "name": "Signal Legend",
+   "mean": 7.51,
+   "why": "new family, not a near-duplicate: ruled composing room; nearest carried Programme Guide at 7.59"
+  },
+  {
+   "id": "r9-idea-3",
+   "name": "Flight Deck",
+   "mean": 7.44,
+   "why": "new family, not a near-duplicate: glass cockpit; nearest carried Signal Legend at 6.66"
+  },
+  {
+   "id": "r8-idea-2",
+   "name": "Reverse Video",
+   "mean": 7.09,
+   "why": "new family, not a near-duplicate: text-mode windows; nearest carried Signal Legend at 6.34"
+  }
+ ],
+ "wild": [
+  {
+   "id": "r9-rand-1",
+   "name": "Attract Mode",
+   "mean": 5.04,
+   "promise": 3,
+   "why": "the wild lane, for the ideas the judges most want developed (3 promise votes, #10 by score, today 4.0): teal-tinted ground"
+  },
+  {
+   "id": "r9-rand-2",
+   "name": "Porcelain Atlas",
+   "mean": 5.0,
+   "promise": 3,
+   "why": "the wild lane, for the ideas the judges most want developed (3 promise votes, #11 by score, today 4.0): porcelain star atlas"
+  }
+ ],
+ "passed_over": [
+  "Signal Galley (7.1, ruled composing room): 4.54 from Signal Legend, same family"
+ ]
+}

@@ -6,10 +6,12 @@ for the web page. The owner asked to calm today's bright, monochrome green-on-bl
 phosphor `#6dff9c` on green-black as the signature, light it only where it means something, and
 give everything else a grounded colour that supports the green.
 
-Each round has twelve entrants: the four carried from the round before, six random entrants drawn
-from steered dice, and two built from the judges' notes. Seven judges score each entrant, each
-through its own lens: the owner's judge, soul, style, system, interaction, type and a skeptic.
-Four go on, chosen for score *and* variety, so the field does not narrow into one idea.
+Each round has a main lane and, from round 10, a wild lane. The main lane has the four carried
+from the round before, mutants of them, and entrants built from the judges' notes. The wild lane
+has new designs made from a clean sheet on a radical design language, plus the two the judges
+most want developed. Eight judges score each entrant, each through its own lens: the owner's
+judge, soul, style, system, interaction, type, usability and a skeptic. Four go on in the main
+lane, chosen for score *and* variety, so the field does not narrow into one idea.
 
 ## Where it stands
 
@@ -22,6 +24,8 @@ Four go on, chosen for score *and* variety, so the field does not narrow into on
 | 5 | Slate Galley | 7.67 | 3.81 | 3.86 |
 | 6 | Slate Proof | 7.84 | 3.76 | 4.08 |
 | 7 | Galley Rack | 8.23 | 3.90 | 4.33 |
+| 8 | Signal Galley | 7.87 | 3.61 | 4.26 |
+| 9 | Programme Guide | 8.11 | 4.00 | 4.11 |
 
 Before round 4, today's page was not scored alongside the entrants. "Lead over today" is the
 winner's score minus today's page's score. Each round has its own panel and field, so a score
@@ -71,6 +75,29 @@ Round 8 has 3 random entrants: an old radio (wildcard), a tidepool, and an arcad
 (wildcard). It has 3 mutants: Indigo Bindery with hanging section heads, Signal Box with Home
 rearranged, and a crossover of Radar Room's structure with Galley Rack's colours. It also has 2
 informed entrants.
+
+## Carried into round 10
+
+Main lane:
+
+- **Programme Guide** (8.11, programme listing). A TV programme guide on slate: banded parts
+  with head columns, one-line rows across dotted leaders, and a denim needle for "here".
+- **Signal Legend** (7.51, ruled composing room). Signal Galley's slate trays, each head set into
+  its rail, with reverse video for the current item.
+- **Flight Deck** (7.44, glass cockpit). A 1980s glass cockpit: matte instrument plates inside
+  demarcation lines, and flush display units in screwed faceplates.
+- **Reverse Video** (7.09, text-mode windows). Green-screen software grammar: steel-framed
+  windows, double-framed dialogs, a highlight bar.
+
+Wild lane, chosen by the judges' promise votes (3 each):
+
+- **Attract Mode** (5.04, teal-tinted ground). An arcade after hours in graphite-teal.
+- **Porcelain Atlas** (5.00, porcelain star atlas). A star atlas as a book: a centred serif
+  column, porcelain ink, cobalt hairlines.
+
+Signal Galley (7.10) sat out as Signal Legend's same-family parent. The sheets are
+`mockups/round-9-winners.png`, `round-9-type.png`, `round-9-wild.png` and `round-9-wild-type.png`.
+Round 10's third informed entrant was briefed at the owner's request and is judged blind.
 
 ## What is here
 
