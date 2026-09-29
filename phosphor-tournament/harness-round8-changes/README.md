@@ -194,15 +194,15 @@ can use in css: `var(--brand)`, `var(--lit)`, `var(--screen)`, `var(--outing)`, 
   wght), Workbench and Sixtyfour (BLED, SCAN), Doto (wght, ROND), and wght for most of the rest.
   Text rendering is yours too: `font-optical-sizing`, `font-variation-settings`,
   `font-feature-settings` (ss01, cv.., zero, tnum, onum), `font-variant-*`, `font-kerning`,
-  `font-synthesis: none`, `text-rendering`, `text-wrap`, `hanging-punctuation`,
+  `font-synthesis: none`, `text-rendering`, `text-wrap`,
   `text-box: trim-both cap alphabetic`, and underline thickness, offset and skip-ink.
 - Budget: up to 60000 characters of css appended to today's stylesheet, or a clean sheet of
   your own ("A clean sheet" below). Decorative pseudo-elements may be switched off with `content: none`.
 - Refused by the check: `@import`, `expression(`, `javascript:` and any `url(` to an outside
   address. Everything else is yours, `display: none` and `content:` included; the words the
   page shows are measured and reported, not refused.
-- Floors, measured on the rendered pages: nothing may scroll sideways on any page, desktop or
-  phone, and no words a person reads may be smaller than today's smallest (11.5px).
+- Measured on the rendered pages and reported to the judges: sideways scroll on any page,
+  desktop or phone, and the smallest words a person reads (today's smallest is 11.5px).
 - Keep them small and purposeful: a refinement is a mutation that survives only if the judges
   find the page more appealing. Winners carry theirs on to the next round.
 
@@ -220,7 +220,11 @@ whatever its roll. CSS reaches most of what a typesetter would tune here:
   9-40, Fraunces 9-144, Newsreader 6-72)
 - measure: `max-width` in `ch` on `.said-text`, `p`
 - rhythm: margins and gaps on one unit (`main`, `.panel`, `.section-head`, `.thread`)
-Hard check: no words under 10px (guideline 11.5px).
+Measured, not refused: the smallest words (today's are 11.5px). Hanging punctuation is not
+supported by this Chromium, so hang quotes and bullets by hand (a negative indent, or the list
+pulled into the margin). The library faces carry their full OpenType features and true italics:
+`tnum`, `onum`, `smcp`, `zero`, stylistic sets and character variants work where the face has
+them. Arrows, box-drawing, block and geometric glyphs are included too.
 
 ## A palette's own markup (variants)
 
@@ -278,17 +282,26 @@ better. There are two routes.
 - Icons. The page draws every icon from one sprite, `static/icons.svg`, through the `icon`
   macro in `_ui.html` (`<use href="…icons.svg#i-NAME">`). To redraw them, copy
   /home/user/FamilyDB/src/familydb/web/static/icons.svg to `variants/<id>/static/icons.svg` and
-  redraw the symbols inside it. Every `<symbol id="i-…">` it had must stay (the check refuses a
-  sprite that drops one), and you may add your own. Draw to its 24-unit grid, in
+  redraw the symbols inside it (a mutant starts from its parent's sprite when it has one).
+  Every `<symbol id="i-…">` it had must stay (the check refuses a sprite that drops one), and you
+  may add your own. Draw to its 24-unit grid, in
   `currentColor`, so CSS still colours them.
 - Pictures. Put SVG, PNG or WebP files in `variants/<id>/static/` and place them through your
   templates: `<img src="{{ url_for('static', filename='name.svg') }}" alt="">` (decorative:
   empty alt), or inline `<svg>` in a template, or a new `<symbol>` in your sprite used through the
-  `icon` macro. CSS may not load a picture, because `url(` is refused.
+  `icon` macro. CSS may load your pictures too: `url(name.svg)` is resolved relative to
+  `/static/`, so `variants/<id>/static/name.svg` is `url(name.svg)` or `url(/static/name.svg)`.
+  Small `data:image/` URIs are allowed as well.
 
 The rules:
-- Pictures add no words. Use an empty alt, no `<title>` or `<text>` inside an inline SVG, and no
-  lettering, because the words check counts them.
+- Words in a picture are counted and measured as the page's words. Mark a decorative drawing
+  `aria-hidden="true"` (as the radar is) and give an `<img>` an empty alt, so its lettering is
+  neither counted nor read as the smallest text.
+- In an inline `<svg>` use presentation attributes (`fill`, `stroke`, `stroke-width`,
+  `opacity`) or classes styled from your css. A `<style>` element is refused, because the
+  page's policy would block it. An inline `<svg>` needs no `xmlns`.
+- In the sprite, a filled icon sets `fill="currentColor" stroke="none"` on its own shapes, or
+  your css changes `.icon`. Attributes on the sprite's root never reach a `<use>`.
 - There are no scripts inside an SVG, and nothing loads from outside.
 - A picture must earn its place: light enough to read over, and drawn in one style with the
   type and the lines.

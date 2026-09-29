@@ -297,7 +297,7 @@ class Theme:
                 problems.append(f"'{bad}': {why}")
         for m in re.finditer(r"url\(\s*['\"]?([^'\")]*)", lowered):
             target = m.group(1).strip()
-            if re.match(r"^(?:[a-z][a-z0-9+.-]*:|//)", target):
+            if re.match(r"^(?!data:image/)(?:[a-z][a-z0-9+.-]*:|//)", target):
                 problems.append(f"url({target[:40]}): only the page's own files (a relative path or /static/...)")
         if problems:
             raise SystemExit(f"{what} refused: " + "; ".join(problems))
@@ -347,8 +347,14 @@ class Theme:
         if sheet:  # a clean sheet: the design's own stylesheet replaces today's entirely
             own = Path(sheet).read_text()
             self.refused(own, f"the stylesheet {sheet}", 200000)
-            return (self.font_faces(own + str(self.p.get("css", ""))) + "\n/* ---- The design's tokens (harness) ---- */\n"
-                    + self.root_tokens() + "\n/* ---- The design's own stylesheet ---- */\n" + own + "\n" + self.refinements())
+            # The page's own faces (DM Sans, DM Mono, VT323) and their variables come with it, and
+            # their full-featured library copies, so var(--sans), --mono and --terminal work.
+            page_faces = "\n".join(re.findall(r"@font-face \{.*?\}", css.split("/* ---- Tokens")[0], re.S))
+            page_vars = "\n".join(re.findall(r"^\s*--(?:sans|mono|terminal):.*$", css, re.M))
+            library = self.font_faces(own + str(self.p.get("css", "")) + " DM Sans DM Mono VT323")
+            return (page_faces + "\n" + library + "\n/* ---- The design's tokens (harness) ---- */\n"
+                    + self.root_tokens().replace(":root {\n", ":root {\n" + page_vars + "\n", 1)
+                    + "\n/* ---- The design's own stylesheet ---- */\n" + own + "\n" + self.refinements())
         lines = css.split("\n")
         out = []
         for i, text in enumerate(lines, start=1):

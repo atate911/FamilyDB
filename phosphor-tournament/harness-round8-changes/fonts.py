@@ -1,4 +1,5 @@
-"""A library of open-licence faces a palette may use, served the way static/fonts would serve
+"""THE FAMILY LIST for the library (fonts_full.py builds the files; this API fetcher is kept only as
+the fallback it was). A library of open-licence faces a palette may use, served the way static/fonts would serve
 them (the page's policy lets fonts come from the site itself, so any face shipped there works).
 
 Downloads the Latin subset of each family from Google Fonts into fonts/extra/ and writes

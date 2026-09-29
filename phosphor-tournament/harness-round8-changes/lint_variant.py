@@ -27,13 +27,15 @@ def facts(files: dict[str, str]) -> dict[str, set | int]:
     return {
         "field names": set(re.findall(r'\bname="([^"]+)"', text)),
         "form actions": set(re.findall(r'\baction="([^"]+)"', text)),
-        "endpoints": set(re.findall(r"url_for\(\s*['\"]([^'\"]+)", text)),
+        # A static asset is not a link the family follows: a design without icons may drop it.
+        "endpoints": set(re.findall(r"url_for\(\s*['\"]([^'\"]+)", text)) - {"static"},
         "csrf and once tokens": set(re.findall(r"(csrf_token|once_token)", text)),
         "scripts": len(re.findall(r"<script\b", text)),
         "safe": len(re.findall(r"\|\s*safe\b", text)) + len(re.findall(r"Markup\(", text)),
-        "inline style": len(re.findall(r"\sstyle\s*=", text)),
+        "inline style": len(re.findall(r"\sstyle\s*=", text)) + len(re.findall(r"<style\b", text)),
         "handlers": len(re.findall(r"\son[a-z]+\s*=", text)),
-        "external": set(re.findall(r"(https?://[^\s\"'<>]+)", text)),
+        # An SVG's namespace (xmlns="http://www.w3.org/2000/svg") names no address to load.
+        "external": set(re.findall(r"(https?://(?!www\.w3\.org/)[^\s\"'<>]+)", text)),
     }
 
 

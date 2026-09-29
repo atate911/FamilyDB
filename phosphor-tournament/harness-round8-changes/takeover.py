@@ -23,7 +23,9 @@ r = a["round"]
 if f"plan:{r}" in result:
     (stage / "plan.json").write_text(json.dumps(result[f"plan:{r}"], indent=1))
 second = {f"{r}-rand-{i}" for i in range(1, len(a["seeds"]) + 1)} | \
-         {f"{r}-mut-{i}" for i, m in enumerate(a["mutants"], 1) if m.get("kind") == "crossover"}
+         {f"{r}-mut-{i}" for i, m in enumerate(a["mutants"], 1) if m.get("kind") == "crossover"} | \
+         {f"{r}-idea-{x['slot']}" for x in a.get("extraBriefs", []) if x.get("secondDraft")} | \
+         {f"{r}-wild-{w['slot']}" for w in a.get("wild", [])} | {f"{r}-wmut-{m['slot']}" for m in a.get("wildMutants", [])}
 ids = sorted(second | {f"{r}-mut-{i}" for i in range(1, len(a["mutants"]) + 1)} |
              {f"{r}-idea-{i}" for i in range(1, a["nInformed"] + 1)})
 resume = {}

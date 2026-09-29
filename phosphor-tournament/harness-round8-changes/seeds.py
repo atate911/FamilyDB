@@ -161,7 +161,7 @@ ICONS = [
 ]
 GRAPHICS = [
     "no pictures: type, rules and colour carry everything",
-    "small line drawings for each section's head and each empty state, in one style",
+    "small line drawings for each section's head (Coming up, To do, the kids' wishes, Next up, the setup steps, Status's panels), in one style",
     "an instrument panel: dials, gauges and meters wherever the page shows state or cost",
     "a plotted chart or map wherever the page shows places or time",
     "a drawn period terminal or scope around every monitor",
@@ -203,7 +203,7 @@ TYPE_MINOR = [
     "heading weights one step heavier with tighter tracking, for a denser, punchier head",
     "body text one step larger (for example 16px to 17px) with the measure kept",
     "labels and small text one step larger and one step less tracked, for legibility",
-    "hanging punctuation, so quotes and bullets sit outside the text edge",
+    "quotes and bullets hung by hand outside the text edge (a negative indent, or the list pulled into the margin)",
     "underlines refined: 1px, offset about .22em, skip-ink on, in a quieter colour than the text",
     "font-synthesis off everywhere, so no faux bold or italic ever appears",
     "one more step between section heads and card titles, so the two never look alike",
@@ -259,12 +259,12 @@ STRUCTURE_MUTATIONS = [
     "change the icon family: no icons, lamp squares, pixel icons, or solid icons in the section colours",
     "give Status its own instrument panel: each part a lamp or gauge tile",
     "draw a new icon family for the whole app (your own icons.svg, every icon kept), in the design's own line and colour",
-    "give each section's head and each empty state a small drawn picture, all in one style",
+    "give each section's head a small drawn picture (Home's Coming up, To do and the kids' wishes, Next up, the setup steps, Status's panels), all in one style",
     "redraw the monitors as detailed period terminals or scopes, drawn in SVG around the green glass",
 ]
 
 # Graphics, pictures and iconography dice, for a graphics mutant. Pictures are placed through the
-# markup (css may not load pictures), and a picture must earn its place.
+# markup or loaded by css from the design's own static folder, and a picture must earn its place.
 GRAPHICS_MINOR = [
     "icons at a new stroke weight and size, matched to the cap height and weight of the words beside them",
     "icons in containers: each section's icon on a small tile, lamp or key in its section colour",
@@ -272,9 +272,9 @@ GRAPHICS_MINOR = [
     "the kind icons redrawn as small badges in each kind's colour",
     "the page-title icons enlarged into a drawn emblem for each section",
     "a drawn divider or ornament between sections (a rule with a small mark, a bracket, a leader)",
-    "the empty states (no plans, nothing to do, no wishes) given a small line drawing",
+    "the section heads on Home (Coming up, To do, the kids' wishes) and the setup steps given a small line drawing each",
     "the radar and scopes redrawn: finer rings, tick marks, a bearing scale and a legend",
-    "the FamilyDB mark in the bar redrawn in the design's line and colour, keeping its idea (a smiling monitor)",
+    "the FamilyDB mark in the bar redrawn in the design's line, keeping its idea (a smiling monitor) and its #6dff9c",
     "the phone's tab-bar icons redrawn for the design, with a clear current state",
     "the status lamps redrawn as one family of small signals (ring, dot, bar, lamp), one meaning each",
     "arrows, chevrons and carets redrawn as one family (weight, angle, size) across links, selects and folds",
@@ -282,7 +282,7 @@ GRAPHICS_MINOR = [
 ]
 GRAPHICS_MAJOR = [
     "a new icon family drawn for the app (your own icons.svg, every icon kept): pixel icons, engraved line icons, filled pictograms or lamp-panel symbols",
-    "pictures: a small drawn illustration for each section's head or empty state, in one style (line art, pixel art or technical drawing)",
+    "pictures: a small drawn illustration for each section's head on every page, in one style (line art, pixel art or technical drawing)",
     "an instrument panel: Status and the cost readout drawn as dials, gauges, meters or a bar chart in SVG",
     "the monitors redrawn as illustrations: a detailed period terminal or scope, drawn in SVG, around the green glass",
     "a greeting picture: a drawn scene or emblem beside or behind the question (a skyline, a radar sweep, a switchboard), light enough to read over",
@@ -290,7 +290,7 @@ GRAPHICS_MAJOR = [
     "big numerals and glyphs as the graphics: dates, counts and initials set large as the page's pictures",
     "a mapped page: the radar, the plans and the ideas drawn as a plotted chart or map with the family's places marked",
     "a pictorial kind system: each kind (restaurant, activity, outing, trip, show, seasonal, event) gets a drawn picture used as its mark everywhere",
-    "a schematic language: thin technical line drawings, dimension lines and callouts for heads, empty states and the setup steps",
+    "a schematic language: thin technical line drawings, dimension lines and callouts for the heads, the monitors and the setup steps",
 ]
 
 # Small random changes to a winner, for its mutants: one colour change, sometimes a refinement too.
@@ -329,8 +329,8 @@ def colour_distance(x, y):
 
 
 def mutants(parents, n, protected=None, n_type=0, n_graphics=0, n_cross=None, cross_pool=None):
-    """n mutants over the parents ({id, name, family}). Each point mutant has two or three changes,
-    one of colour and one of structure, and half the time a refinement too. From three on, the last
+    """n mutants over the parents ({id, name, family}). Each point mutant has three changes: one of
+    colour, one of structure and one of type. From three on, the last
     is a crossover: one parent's structure (markup, layout, type, controls) with another's colours,
     from two different families. A carried random entrant (protected) gets the first point mutant,
     so a random idea's line has room to grow."""
