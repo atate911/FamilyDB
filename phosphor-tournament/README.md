@@ -247,6 +247,25 @@ dropped. The demo server's session key, `web_secret`, is made again on first sta
 agents' own transcripts lived outside the harness and are not kept; each round's
 `results.json` holds everything the round returned.
 
+## The design files for rounds 8 to 14
+
+`harness.tar.gz.part-NN` holds the harness as it was after round 7. Every palette, page template
+and stylesheet made since then (rounds 8 to 13, and round 14's setup) is in
+`harness-rounds-8-13/harness-rounds-8-13.tar.gz` (30 MB, checksum in its `SHA256SUMS`). It also
+holds the scripts as they are now, each round's results, args, judges' records and design
+records, the hall of fame, `lessons.md`, `owner_judge.md`, the phosphor kit and audit, the font
+library and the demo household's database. It leaves out three things you can make again: the
+virtual environment (from `harness-venv-requirements.txt`), the screenshots and contact sheets
+(run `./check.sh palettes/<id>.json` on a palette, or `python3 stages.py prepare rN ...`), and the
+demo config `demo.env` (copy `demo.env.example` and choose a password). `serve.sh` still carries
+the demo login, `palette-demo-pass`, and a fake API key, `sk-fake`; both are made-up values for a
+local server with fake data.
+
+To put it back, restore the older tar as below, then extract the newer one over it at the same
+path: `tar -xzf harness-rounds-8-13/harness-rounds-8-13.tar.gz -C "$S/harness"`. The older
+`harness-round8-changes/` folder is now only a history of what changed; the newer archive
+supersedes it.
+
 ## Restoring it
 
 The scripts and each round's arguments name the harness's absolute path, so put it back at
