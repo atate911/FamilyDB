@@ -1,0 +1,571 @@
+<title>Phosphor Screenshots</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  color-scheme: dark;
+  --gutter: clamp(16px, 3vw, 32px);
+  --zoom: 1;
+  --bg: #0b0e0c;
+  --surface: #121714;
+  --raised: #1a221d;
+  --line: #26312a;
+  --line2: #3b4c41;
+  --fg: #e5eae6;
+  --dim: #9aa59f;
+  --faint: #7f8b84;
+  --accent: #6dff9c;
+  --accent-ink: #04150a;
+  --glow: rgba(109, 255, 156, .38);
+  --amber: #f2b95f;
+  --blue: #8db4ff;
+  --bar: rgba(11, 14, 12, .94);
+  --scrim: #060807;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --cond: "IBM Plex Sans Condensed", "IBM Plex Sans", "Arial Narrow", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html.locked, html.locked body { overflow: hidden; }
+html { scroll-padding-top: 9rem; }
+body {
+  margin: 0;
+  padding-inline: var(--gutter);
+  padding-block: 0 4rem;
+  background: var(--bg);
+  color: var(--fg);
+  font: 400 15px/1.55 var(--sans);
+  -webkit-text-size-adjust: 100%;
+}
+button, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* opening block */
+.top { padding-block: 2rem 1.4rem; max-width: 68rem; }
+.eyebrow { margin: 0 0 .5rem; font: 500 .74rem/1.3 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+h1 { margin: 0 0 .7rem; font: 600 clamp(1.7rem, 4.4vw, 2.6rem)/1.08 var(--cond); letter-spacing: .01em; text-wrap: balance; }
+.lede { margin: 0 0 1rem; max-width: 65ch; color: var(--dim); }
+.legendbox summary { width: max-content; margin-bottom: .6rem; color: var(--dim); font-size: .82rem; cursor: pointer; }
+.legendbox summary:hover { color: var(--fg); }
+.legend { display: flex; flex-wrap: wrap; gap: .5rem 1.4rem; margin: 0; padding: 0; list-style: none; font-size: .82rem; color: var(--dim); }
+.legend li { display: flex; align-items: baseline; gap: .5rem; min-width: 0; }
+
+/* lane chips */
+.chip { flex: none; font: 500 .66rem/1 var(--mono); text-transform: uppercase; letter-spacing: .07em; padding: .22rem .4rem; border: 1px solid currentColor; border-radius: .25rem; white-space: nowrap; }
+.l-today { color: var(--fg); }
+.l-main { color: var(--accent); }
+.l-wild { color: var(--amber); }
+.l-left { color: var(--blue); }
+.l-other { color: var(--faint); border-style: dashed; }
+
+/* sticky controls */
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  display: grid; gap: .55rem;
+  margin-inline: calc(var(--gutter) * -1);
+  padding: .6rem var(--gutter);
+  background: var(--bar);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  border-block: 1px solid var(--line);
+}
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem 1rem; min-width: 0; }
+.seg { display: inline-flex; border: 1px solid var(--line2); border-radius: .45rem; overflow: hidden; }
+.seg button { margin: 0; padding: .4rem .85rem; min-height: 2.25rem; border: 0; border-radius: 0; background: transparent; color: var(--dim); font-weight: 500; font-size: .86rem; }
+.seg button + button { border-left: 1px solid var(--line2); }
+.seg button:hover { color: var(--fg); background: var(--raised); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.seg button:focus-visible { outline-offset: -3px; outline-color: var(--fg); }
+.pick { display: inline-flex; align-items: center; gap: .5rem; min-width: 0; font-size: .82rem; color: var(--dim); }
+select { min-width: 0; max-width: 100%; min-height: 2.25rem; padding: .35rem 1.6rem .35rem .65rem; border: 1px solid var(--line2); border-radius: .45rem; background-color: var(--surface); color: var(--fg); font-size: .86rem; }
+.icon-btn { display: inline-grid; place-items: center; width: 2.25rem; height: 2.25rem; padding: 0; border: 1px solid var(--line2); border-radius: .45rem; background: var(--surface); color: var(--fg); }
+.icon-btn:hover:not(:disabled) { background: var(--raised); border-color: var(--dim); }
+.icon-btn:disabled { color: var(--faint); opacity: .45; cursor: default; }
+.icon-btn svg { width: 1.1rem; height: 1.1rem; }
+.picker { flex-wrap: nowrap; }
+.picker select { flex: 1 1 auto; max-width: 34rem; }
+.tabs { position: relative; flex-wrap: nowrap; gap: .3rem; overflow-x: auto; scrollbar-width: thin; scrollbar-color: var(--line2) transparent; padding-bottom: .3rem; }
+.tabs.more { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 2.5rem), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 2.5rem), transparent); }
+.tabs button { flex: none; padding: .3rem .8rem; min-height: 2rem; border: 1px solid transparent; border-radius: 999px; background: transparent; color: var(--dim); font-size: .86rem; white-space: nowrap; }
+.tabs button:hover { color: var(--fg); background: var(--raised); }
+.tabs button[aria-current="page"] { color: var(--fg); background: var(--raised); border-color: var(--accent); box-shadow: 0 0 .9rem -.2rem var(--glow); }
+.tabs .sep { flex: none; align-self: center; width: 1px; height: 1.2rem; margin-inline: .35rem; background: var(--line2); }
+
+/* views */
+main { padding-block: 1.6rem 1rem; }
+main:focus { outline: none; }
+.phead, .dsec > h3, .dsec > .note { margin: 0; }
+.phead h2, .dhead h2 { margin: 0 0 .3rem; font: 600 clamp(1.4rem, 3vw, 1.9rem)/1.15 var(--cond); letter-spacing: .01em; text-wrap: balance; }
+.note { margin: 0; max-width: 65ch; color: var(--dim); font-size: .9rem; }
+.phead { display: grid; gap: .2rem; margin-bottom: 1.3rem; }
+.dhead { display: grid; gap: .6rem; margin-bottom: 2rem; max-width: 70rem; }
+.dhead .eyebrow { margin: 0; }
+.dhead h2 { display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem 1rem; margin: 0; }
+.big { font: 500 1.05rem var(--mono); color: var(--accent); font-variant-numeric: tabular-nums; }
+.tagline { margin: 0; max-width: 65ch; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .8rem 1.4rem; margin: .4rem 0 0; padding-top: .9rem; border-top: 1px solid var(--line); }
+.facts div { min-width: 0; }
+.facts dt { margin: 0 0 .15rem; font: 500 .68rem/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+.facts dd { margin: 0; font-size: .9rem; overflow-wrap: anywhere; }
+.facts .n { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.dsec { display: grid; gap: .3rem; margin-bottom: 2.6rem; }
+.dsec > h3 { font: 600 1.15rem/1.2 var(--cond); letter-spacing: .02em; }
+.dsec > .grid { margin-top: 1rem; }
+
+.grid { display: grid; gap: 1.5rem 1.1rem; align-items: start; grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--min)), 1fr)); }
+.grid.desk { --min: calc(21rem * var(--zoom)); }
+.grid.phone { --min: calc(10rem * var(--zoom)); }
+.grid.sheet { --min: calc(24rem * var(--zoom)); }
+@media (min-width: 40rem) { .dsec .grid.phone { --min: calc(15rem * var(--zoom)); } }
+
+.card { display: grid; gap: .55rem; min-width: 0; }
+.shot { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: .4rem; background: var(--surface); transition: border-color .15s; }
+.shot:hover { border-color: var(--line2); }
+.shot img { display: block; width: 100%; height: auto; }
+.shot.desk { aspect-ratio: 1280 / 900; }
+.shot.tall::after { content: ""; position: absolute; inset: auto 0 0 0; height: 24%; background: linear-gradient(transparent, var(--bg)); pointer-events: none; }
+.hit { position: absolute; inset: 0; z-index: 2; margin: 0; padding: 0; border: 0; background: transparent; cursor: zoom-in; }
+.hit:focus-visible { outline-offset: -3px; }
+.shot:has(.hit:hover) { border-color: var(--accent); box-shadow: 0 0 1.1rem -.4rem var(--glow); }
+.badge { position: absolute; right: .5rem; bottom: .5rem; z-index: 1; padding: .18rem .45rem; border: 1px solid var(--line2); border-radius: .25rem; background: var(--bar); color: var(--fg); font: 500 .68rem/1.2 var(--mono); pointer-events: none; }
+.shot.missing { display: grid; place-items: center; aspect-ratio: 1280 / 900; color: var(--faint); font-size: .85rem; }
+.cap { display: grid; gap: .15rem; padding-inline: .1rem; min-width: 0; }
+.nm { font: 600 .98rem/1.25 var(--cond); letter-spacing: .01em; overflow-wrap: anywhere; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; font: 400 .78rem/1.3 var(--mono); color: var(--dim); font-variant-numeric: tabular-nums; }
+.sub { margin: 0; font-size: .8rem; color: var(--dim); }
+
+.foot { display: grid; gap: .4rem; max-width: 68ch; margin-top: 2rem; padding-top: 1.2rem; border-top: 1px solid var(--line); color: var(--dim); font-size: .85rem; }
+.foot p { margin: 0; }
+
+/* the large view */
+.lb { position: fixed; inset: 0; z-index: 100; display: grid; grid-template-rows: auto minmax(0, 1fr); background: var(--scrim); }
+.lb-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; padding: calc(.7rem + env(safe-area-inset-top, 0px)) var(--gutter) .7rem; border-bottom: 1px solid var(--line); }
+.lb-meta { flex: 1 1 14rem; min-width: 0; }
+.lb-close { order: 3; }
+.lb-title { margin: 0; font: 600 1.05rem/1.25 var(--cond); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-sub { margin: 0; font: 400 .78rem/1.3 var(--mono); color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-tools { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .7rem; }
+.lb-count { min-width: 4.4rem; text-align: center; font: 400 .82rem var(--mono); color: var(--dim); font-variant-numeric: tabular-nums; }
+.lb-jump { min-height: 2.25rem; padding: .35rem .75rem; border: 1px solid var(--line2); border-radius: .45rem; background: var(--surface); font-size: .82rem; color: var(--fg); }
+.lb-jump:hover { background: var(--raised); border-color: var(--dim); }
+.lb-stage { display: flex; overflow: auto; overscroll-behavior: contain; padding: 1rem var(--gutter) calc(1rem + env(safe-area-inset-bottom, 0px)); touch-action: pan-x pan-y pinch-zoom; }
+.lb-stage:focus-visible { outline-offset: -4px; }
+.lb-stage img { flex: none; display: block; margin: auto; max-width: none; border: 1px solid var(--line); border-radius: .3rem; background: var(--surface); user-select: none; -webkit-user-drag: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .lb:not([hidden]) { animation: lbin .14s ease-out; }
+  @keyframes lbin { from { opacity: 0; } to { opacity: 1; } }
+}
+@media (pointer: coarse) {
+  .seg button, select, .lb-jump { min-height: 2.75rem; }
+  .icon-btn { width: 2.75rem; height: 2.75rem; }
+  .tabs button { min-height: 2.5rem; }
+}
+@media (max-width: 34rem) {
+  .top { padding-block: 1.4rem 1rem; }
+  .bar { padding-block: .5rem; gap: .4rem; }
+  #size, .pick > span { display: none; }
+  select { font-size: .82rem; }
+  .picker .icon-btn { width: 2.4rem; }
+  .pick { flex: 1 1 8rem; }
+  .pick select { width: 100%; }
+  .lb-top { gap: .4rem .6rem; }
+  .lb-meta { flex-basis: 0; }
+  .lb-tools { order: 4; flex-basis: 100%; justify-content: space-between; gap: .4rem; }
+  .lb-count { min-width: 3.4rem; }
+  .lb-tools .seg button { padding-inline: .6rem; }
+  .lb-jump { display: none; }
+}
+</style>
+
+<div id="page">
+  <header class="top">
+    <p class="eyebrow" id="eyebrow"></p>
+    <h1>Phosphor screenshots</h1>
+    <p class="lede" id="lede"></p>
+    <details class="legendbox" id="legendbox" open>
+      <summary>What the tags mean</summary>
+      <ul class="legend" id="legend"></ul>
+    </details>
+  </header>
+
+  <div class="bar" id="bar">
+    <div class="row">
+      <div class="seg" role="group" aria-label="How to look">
+        <button type="button" data-view="page" aria-pressed="true">By page</button>
+        <button type="button" data-view="design" aria-pressed="false">By design</button>
+      </div>
+      <label class="pick" id="set-wrap"><span>Show</span><select id="set" aria-label="Which designs to show"></select></label>
+      <div class="seg" id="size" role="group" aria-label="Picture size">
+        <button type="button" data-size="s" aria-pressed="false" aria-label="Small pictures">S</button>
+        <button type="button" data-size="m" aria-pressed="true" aria-label="Medium pictures">M</button>
+        <button type="button" data-size="l" aria-pressed="false" aria-label="Large pictures">L</button>
+      </div>
+    </div>
+    <nav class="row tabs" id="tabs" aria-label="Pages"></nav>
+    <div class="row picker" id="picker">
+      <button type="button" class="icon-btn" id="d-prev" aria-label="Previous design"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <select id="design" aria-label="Design"></select>
+      <button type="button" class="icon-btn" id="d-next" aria-label="Next design"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+    </div>
+  </div>
+
+  <main id="main" tabindex="-1"></main>
+  <p class="sr-only" id="live" role="status" aria-live="polite"></p>
+
+  <footer class="foot">
+    <p>Each design is its own stylesheet over the same demo family and the same pages of FamilyDB. Desktop pictures are 1280 px wide (Home is captured as a whole page); phone pictures are 390 × 844 at twice the pixels. The detail sheets join the small close-ups taken of each design.</p>
+    <p>Scores are out of 10: the mean of the judges' marks, with the phosphor-soul judge counted heavier.</p>
+  </footer>
+</div>
+
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-labelledby="lb-title" hidden>
+  <div class="lb-top">
+    <div class="lb-meta">
+      <p class="lb-title" id="lb-title"></p>
+      <p class="lb-sub" id="lb-sub"></p>
+    </div>
+    <div class="lb-tools">
+      <button type="button" class="icon-btn" id="lb-prev" aria-label="Previous picture"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <span class="lb-count" id="lb-count" aria-live="polite"></span>
+      <button type="button" class="icon-btn" id="lb-next" aria-label="Next picture"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+      <div class="seg" role="group" aria-label="Zoom">
+        <button type="button" data-zoom="fit" aria-pressed="false" title="Fit the whole picture on screen">Fit</button>
+        <button type="button" data-zoom="width" aria-pressed="false" title="Fit the width, scroll down">Width</button>
+        <button type="button" data-zoom="full" aria-pressed="false" title="Actual size">1:1</button>
+      </div>
+      <button type="button" class="lb-jump" id="lb-jump"></button>
+    </div>
+    <button type="button" class="icon-btn lb-close" id="lb-close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+  <div class="lb-stage" id="lb-stage" tabindex="0" role="region" aria-label="Picture, arrow keys move between pictures"><img id="lb-img" alt=""></div>
+</div>
+
+<script>
+"use strict";
+const D = "__DATA__";
+(function () {
+  if (typeof D !== "object") { document.body.textContent = "This page is built by build_gallery.py; open the built index.html."; return; }
+
+  const $ = (s, r) => (r || document).querySelector(s);
+  function h(tag, props) {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(props || {})) {
+      if (v == null || v === false) continue;
+      if (k === "class") el.className = v;
+      else if (k === "text") el.textContent = v;
+      else el.setAttribute(k, v === true ? "" : v);
+    }
+    for (const kid of Array.prototype.slice.call(arguments, 2).flat()) {
+      if (kid == null || kid === false) continue;
+      el.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+    }
+    return el;
+  }
+
+  const KEY = "phosphor-gallery";
+  const store = {
+    get() { try { return JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { return {}; } },
+    set(o) { try { localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) { /* private window: fine */ } },
+  };
+
+  const designs = D.designs;
+  const byId = Object.fromEntries(designs.map(d => [d.id, d]));
+  const ALL = [
+    ...D.pages,
+    ...D.details.map(p => ({ key: p.key, label: p.label, kind: "sheet", note: p.note })),
+  ];
+  const byKey = Object.fromEntries(ALL.map(p => [p.key, p]));
+  const LANE = { today: "Yardstick", main: "Main lane", wild: "Wild lane", left: "Left", other: "" };
+  const LANE_TEXT = {
+    today: "today's page, marked the same way; every design is measured against it",
+    main: "going on to round " + (D.round + 1) + " as the leaders",
+    wild: "going on to round " + (D.round + 1) + " for range: a different idea kept alive",
+    left: "scored well but was not carried on",
+    other: "not carried on",
+  };
+  const SETS = [
+    { key: "all", label: "All", test: () => true },
+    { key: "going", label: "Going on", test: d => d.lane === "today" || d.lane === "main" || d.lane === "wild" },
+    { key: "top8", label: "Top eight", test: d => d.rank <= 8 },
+  ];
+  const SIZES = { s: 0.7, m: 1, l: 1.5 };
+  const firstRanked = designs.find(d => d.rank > 0) || designs[0];
+
+  const saved = store.get();
+  const state = {
+    view: saved.view === "design" ? "design" : "page",
+    page: "home",
+    design: firstRanked.id,
+    set: SETS.some(s => s.key === saved.set) ? saved.set : "all",
+    size: SIZES[saved.size] ? saved.size : "m",
+    zoom: null, // the large view: null lets each picture choose
+  };
+
+  function readHash() {
+    const m = location.hash.slice(1).match(/^(page|design)-(.+)$/);
+    if (!m) return null;
+    if (m[1] === "page" && byKey[m[2]]) return { view: "page", page: m[2] };
+    if (m[1] === "design" && byId[m[2]]) return { view: "design", design: m[2] };
+    return null;
+  }
+  const hashNow = () => state.view === "page" ? "page-" + state.page : "design-" + state.design;
+  function writeHash() {
+    const t = "#" + hashNow();
+    if (location.hash === t) return;
+    try { history.replaceState(null, "", t); } catch (e) { try { location.hash = t; } catch (e2) { /* nowhere to write it */ } }
+  }
+  Object.assign(state, readHash() || {});
+
+  const page = $("#page"), main = $("#main"), tabs = $("#tabs"), live = $("#live");
+  const setSel = $("#set"), designSel = $("#design");
+  const dPrev = $("#d-prev"), dNext = $("#d-next");
+  const fmt = n => (typeof n === "number" ? n.toFixed(2) : "");
+  const dims = s => s.w.toLocaleString("en") + " × " + s.h.toLocaleString("en") + " px";
+
+  /* ---- opening block ---- */
+  $("#eyebrow").textContent = "Round " + D.round + " · " + D.count + " designs and today's page";
+  $("#lede").textContent = "Every design in round " + D.round + " on the same " + D.pages.length +
+    " pages and " + D.details.length + " close-up sheets. Choose a page to compare every design on it, or a design to see all of it. " +
+    "Click a picture to see it large; the arrow keys move between pictures and Esc closes.";
+  const lanes = [];
+  designs.forEach(d => { if (!lanes.includes(d.lane)) lanes.push(d.lane); });
+  const legend = $("#legend");
+  if (window.matchMedia && matchMedia("(max-width: 34rem)").matches) $("#legendbox").open = false;
+  ["today", "main", "wild", "left", "other"].filter(l => lanes.includes(l)).forEach(l => {
+    legend.append(h("li", null, h("span", { class: "chip l-" + l, text: LANE[l] || "No tag" }), h("span", { text: LANE_TEXT[l] })));
+  });
+
+  /* ---- controls ---- */
+  SETS.forEach(s => setSel.append(h("option", { value: s.key, text: s.label + " (" + designs.filter(s.test).length + ")" })));
+  designs.forEach(d => designSel.append(h("option", { value: d.id, text: (d.rank ? d.rank + ". " : "") + d.name + " · " + fmt(d.score) })));
+  D.pages.forEach(p => tabs.append(h("button", { type: "button", "data-page": p.key, text: p.label })));
+  tabs.append(h("span", { class: "sep", "aria-hidden": "true" }));
+  D.details.forEach(p => tabs.append(h("button", { type: "button", "data-page": p.key, text: p.label })));
+
+  function syncTabsEdge() {
+    tabs.classList.toggle("more", tabs.scrollLeft + tabs.clientWidth < tabs.scrollWidth - 4);
+  }
+  function sync() {
+    document.querySelectorAll("[data-view]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.view === state.view)));
+    document.querySelectorAll("[data-size]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.size === state.size)));
+    document.documentElement.style.setProperty("--zoom", SIZES[state.size]);
+    $("#set-wrap").hidden = state.view !== "page";
+    tabs.hidden = state.view !== "page";
+    $("#picker").hidden = state.view !== "design";
+    setSel.value = state.set;
+    designSel.value = state.design;
+    const at = designs.findIndex(d => d.id === state.design);
+    dPrev.disabled = at <= 0;
+    dNext.disabled = at >= designs.length - 1;
+    tabs.querySelectorAll("button").forEach(b => {
+      if (b.dataset.page === state.page) {
+        b.setAttribute("aria-current", "page");
+        if (!tabs.hidden) tabs.scrollLeft = Math.max(0, b.offsetLeft - (tabs.clientWidth - b.offsetWidth) / 2);
+      } else b.removeAttribute("aria-current");
+    });
+    syncTabsEdge();
+  }
+
+  /* ---- cards ---- */
+  let gallery = [];
+  function chip(d) { return LANE[d.lane] ? h("span", { class: "chip l-" + d.lane, text: LANE[d.lane] }) : null; }
+  function card(d, p, mode, list) {
+    const s = (p.kind === "sheet" ? d.details : d.shots)[p.key];
+    const cap = mode === "page"
+      ? h("div", { class: "cap" },
+          h("span", { class: "nm", text: d.name }),
+          h("span", { class: "meta" }, d.rank ? h("span", { text: "#" + d.rank }) : null, h("span", { text: fmt(d.score) }), chip(d)))
+      : h("div", { class: "cap" },
+          h("span", { class: "nm", text: p.label }),
+          p.kind === "sheet" ? h("p", { class: "sub", text: p.note }) : null);
+    if (!s) return h("article", { class: "card" }, h("div", { class: "shot missing", text: "No picture for this page" }), cap);
+    const src = "img/" + d.id + "/" + p.key + ".webp";
+    const at = list.length;
+    list.push({ d, p, s, src });
+    const tall = p.kind === "desk" && s.h > 1000;
+    const img = h("img", { src, alt: "", width: s.w, height: s.h, loading: "lazy", decoding: "async" });
+    const hit = h("button", { type: "button", class: "hit", "aria-label": "Enlarge " + p.label + ", " + d.name });
+    const shot = h("div", { class: "shot " + p.kind + (tall ? " tall" : "") }, img, tall ? h("span", { class: "badge", text: "Full page · " + s.h.toLocaleString("en") + " px" }) : null, hit);
+    hit.addEventListener("click", () => openLb(at, hit));
+    img.addEventListener("error", () => { shot.className = "shot missing"; shot.replaceChildren("This picture would not load"); });
+    return h("article", { class: "card" }, shot, cap);
+  }
+
+  function pageNote(p, ds) {
+    if (p.kind === "sheet") return p.note;
+    if (p.kind === "phone") return "A phone, 390 × 844 at twice the pixels.";
+    const tall = ds.some(d => (d.shots[p.key] || { h: 0 }).h > 1000);
+    return "A desktop, 1280 px wide." + (tall ? " Each picture shows the top of the page; a Full page tag means it runs longer, and the large view shows all of it." : "");
+  }
+  function pageView(list) {
+    const p = byKey[state.page];
+    const ds = designs.filter(SETS.find(s => s.key === state.set).test);
+    live.textContent = p.label + ": " + ds.length + " designs";
+    return h("div", null,
+      h("div", { class: "phead" }, h("h2", { text: p.label }), h("p", { class: "note", text: pageNote(p, ds) })),
+      h("div", { class: "grid " + p.kind }, ds.map(d => card(d, p, "page", list))));
+  }
+  function fact(label, value, cls) {
+    return value == null || value === "" ? null : h("div", null, h("dt", { text: label }), h("dd", { class: cls || "" }, value));
+  }
+  function designHead(d) {
+    return h("header", { class: "dhead" },
+      h("p", { class: "eyebrow", text: d.rank ? "Rank " + d.rank + " of " + (D.count) : "The yardstick" }),
+      h("h2", null, d.name, h("span", { class: "big", text: fmt(d.score) })),
+      d.tagline ? h("p", { class: "tagline", text: d.tagline }) : null,
+      h("dl", { class: "facts" },
+        fact("Status", h("span", { class: "chip l-" + d.lane, text: LANE[d.lane] || "Not carried on" })),
+        fact("Style family", d.family),
+        d.top4 != null ? fact("In judges' top fours", d.top4 + " of " + D.judges, "n") : null,
+        d.promise != null ? fact("Votes to develop", String(d.promise), "n") : null));
+  }
+  function designView(list) {
+    const d = byId[state.design];
+    const box = h("div", null, designHead(d));
+    [["On a desktop", "desk"], ["On a phone", "phone"], ["Close-ups", "sheet"]].forEach(([title, kind]) => {
+      box.append(h("section", { class: "dsec" },
+        h("h3", { text: title }),
+        h("div", { class: "grid " + kind }, ALL.filter(p => p.kind === kind).map(p => card(d, p, "design", list)))));
+    });
+    live.textContent = d.name + ": " + list.length + " pictures";
+    return box;
+  }
+
+  function render(keepScroll) {
+    sync();
+    const list = [];
+    main.replaceChildren(state.view === "page" ? pageView(list) : designView(list));
+    gallery = list;
+    writeHash();
+    store.set({ view: state.view, set: state.set, size: state.size });
+    if (!keepScroll) {
+      const top = $(".top").offsetHeight;
+      if (window.scrollY > top) window.scrollTo(0, top);
+    }
+  }
+
+  /* ---- the large view ---- */
+  const lb = $("#lb"), stage = $("#lb-stage"), big = $("#lb-img");
+  let at = 0, opener = null, isOpen = false;
+  const autoZoom = it => it.p.kind === "desk" && it.s.h > 1000 ? "width" : "fit";
+
+  function layoutLb() {
+    const it = gallery[at];
+    if (!it) return;
+    const cs = getComputedStyle(stage);
+    const aw = stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 2;
+    const ah = stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - 2;
+    const mode = state.zoom || autoZoom(it);
+    let w;
+    if (mode === "fit") w = it.s.w * Math.min(1, aw / it.s.w, ah / it.s.h);
+    else if (mode === "width") w = Math.min(it.s.w, aw);
+    else w = it.s.w / (it.p.kind === "phone" ? 2 : 1);
+    w = Math.max(40, Math.round(w));
+    big.style.width = w + "px";
+    big.style.height = Math.round(w * it.s.h / it.s.w) + "px";
+    lb.querySelectorAll("[data-zoom]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.zoom === mode)));
+  }
+  function showLb() {
+    const it = gallery[at];
+    big.src = it.src;
+    big.alt = it.p.label + ", " + it.d.name;
+    $("#lb-title").textContent = it.d.name + (it.d.rank ? " · #" + it.d.rank : "");
+    $("#lb-sub").textContent = it.p.label + " · " + dims(it.s) + " · " + fmt(it.d.score);
+    $("#lb-count").textContent = (at + 1) + " / " + gallery.length;
+    $("#lb-prev").disabled = at === 0;
+    $("#lb-next").disabled = at === gallery.length - 1;
+    $("#lb-jump").textContent = state.view === "page" ? "All of this design" : "This page, every design";
+    stage.scrollTop = 0; stage.scrollLeft = 0;
+    layoutLb();
+    [at - 1, at + 1].forEach(i => { if (gallery[i]) new Image().src = gallery[i].src; });
+  }
+  function openLb(i, from) {
+    at = i; opener = from; isOpen = true;
+    lb.hidden = false;
+    page.inert = true;
+    document.documentElement.classList.add("locked");
+    showLb();
+    stage.focus({ preventScroll: true });
+  }
+  function closeLb() {
+    if (!isOpen) return;
+    isOpen = false;
+    lb.hidden = true;
+    page.inert = false;
+    document.documentElement.classList.remove("locked");
+    const back = opener && opener.isConnected ? opener : main;
+    back.focus({ preventScroll: true });
+  }
+  function step(n) {
+    const to = at + n;
+    if (to < 0 || to >= gallery.length) return;
+    at = to;
+    showLb();
+  }
+  function go(next) {
+    closeLb();
+    Object.assign(state, next);
+    render();
+  }
+
+  $("#lb-close").addEventListener("click", closeLb);
+  $("#lb-prev").addEventListener("click", () => step(-1));
+  $("#lb-next").addEventListener("click", () => step(1));
+  $("#lb-jump").addEventListener("click", () => {
+    const it = gallery[at];
+    go(state.view === "page" ? { view: "design", design: it.d.id } : { view: "page", page: it.p.key });
+  });
+  lb.querySelectorAll("[data-zoom]").forEach(b => b.addEventListener("click", () => { state.zoom = b.dataset.zoom; layoutLb(); stage.scrollTop = 0; stage.scrollLeft = 0; }));
+  lb.addEventListener("click", e => { if (e.target === stage) closeLb(); });
+
+  document.addEventListener("keydown", e => {
+    if (!isOpen) return;
+    if (e.key === "Escape") { e.preventDefault(); closeLb(); }
+    else if (e.key === "ArrowLeft") { e.preventDefault(); step(-1); }
+    else if (e.key === "ArrowRight") { e.preventDefault(); step(1); }
+    else if (e.key === "Tab") {
+      const f = [...lb.querySelectorAll("button:not([disabled]), [tabindex='0']")].filter(x => x.offsetParent !== null);
+      if (!f.length) return;
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
+  let down = null;
+  stage.addEventListener("pointerdown", e => { down = e.pointerType === "touch" ? { x: e.clientX, y: e.clientY } : null; });
+  stage.addEventListener("pointerup", e => {
+    if (!down) return;
+    const dx = e.clientX - down.x, dy = e.clientY - down.y;
+    down = null;
+    const it = gallery[at];
+    const mode = state.zoom || (it && autoZoom(it));
+    if (mode === "fit" && Math.abs(dx) > 60 && Math.abs(dy) < 50) step(dx < 0 ? 1 : -1);
+  });
+  stage.addEventListener("pointercancel", () => { down = null; });
+  window.addEventListener("resize", () => { if (isOpen) layoutLb(); syncTabsEdge(); });
+  tabs.addEventListener("scroll", syncTabsEdge, { passive: true });
+
+  /* ---- page controls ---- */
+  document.querySelectorAll("[data-view]").forEach(b => b.addEventListener("click", () => { state.view = b.dataset.view; render(); }));
+  document.querySelectorAll("[data-size]").forEach(b => b.addEventListener("click", () => { state.size = b.dataset.size; render(true); }));
+  tabs.addEventListener("click", e => {
+    const b = e.target.closest("button[data-page]");
+    if (b) { state.page = b.dataset.page; render(); }
+  });
+  setSel.addEventListener("change", () => { state.set = setSel.value; render(true); });
+  designSel.addEventListener("change", () => { state.design = designSel.value; render(); });
+  dPrev.addEventListener("click", () => { const i = designs.findIndex(d => d.id === state.design); if (i > 0) { state.design = designs[i - 1].id; render(); } });
+  dNext.addEventListener("click", () => { const i = designs.findIndex(d => d.id === state.design); if (i < designs.length - 1) { state.design = designs[i + 1].id; render(); } });
+  window.addEventListener("hashchange", () => {
+    const want = readHash();
+    if (!want) return;
+    const same = want.view === state.view && (want.view === "page" ? want.page === state.page : want.design === state.design);
+    if (!same) go(want);
+  });
+
+  render(true);
+})();
+</script>
