@@ -4,7 +4,7 @@ The Google Fonts CSS API serves files stripped of their stylistic features (tabu
 figures, small caps, slashed zero, stylistic sets) and of glyphs outside a language subset
 (arrows, box drawing, blocks). This fetches each family's TTFs from the google/fonts repository,
 italics included, subsets them locally with every layout feature kept and those glyph ranges
-added, and writes fonts/full/*.woff2 with fonts/extra-full.css and fonts/index-full.json.
+added, and writes fonts/extra/*.woff2 (beside the API files, under their own names) with fonts/extra-full.css and fonts/index-full.json.
 `--swap` then makes them the library (fonts/extra.css, fonts/index.json), keeping the old ones
 as *-api.* beside them.
 
@@ -24,7 +24,7 @@ from fontTools import subset
 from fontTools.ttLib import TTFont
 
 HERE = Path(__file__).parent
-OUT = HERE / "fonts" / "full"
+OUT = HERE / "fonts" / "extra"  # render.js serves library fonts from here
 RAW = "https://raw.githubusercontent.com/google/fonts/main"
 # Latin with its extensions, punctuation, currency, and the marks designs draw with: arrows,
 # box drawing, block elements and shades, geometric shapes, the check mark.
@@ -90,7 +90,7 @@ def build(family):
                      f"  font-weight: {weight};\n"
                      + (f"  font-stretch: {stretch};\n" if stretch else "")
                      + "  font-display: swap;\n"
-                     f"  src: url(fonts/full/{out.name}) format('woff2');\n"
+                     f"  src: url(fonts/extra/{out.name}) format('woff2');\n"
                      "}")
     return family, rules, f"{len(files)} file(s)"
 

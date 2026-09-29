@@ -1,95 +1,137 @@
 @font-face {
   font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 100;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexmono-thin.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: italic;
+  font-weight: 100;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexmono-thinitalic.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 200;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexmono-extralight.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: italic;
+  font-weight: 200;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexmono-extralightitalic.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexmono-light.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: italic;
+  font-weight: 300;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexmono-lightitalic.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexmono-regular.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
   font-style: italic;
   font-weight: 400;
   font-display: swap;
-  src: url(fonts/extra/ibm-plex-mono-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: 'IBM Plex Mono';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url(fonts/extra/ibm-plex-mono-2.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/ibmplexmono-italic.woff2) format('woff2');
 }
 @font-face {
   font-family: 'IBM Plex Mono';
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url(fonts/extra/ibm-plex-mono-3.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/ibmplexmono-medium.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexmono-mediumitalic.woff2) format('woff2');
 }
 @font-face {
   font-family: 'IBM Plex Mono';
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url(fonts/extra/ibm-plex-mono-4.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/ibmplexmono-semibold.woff2) format('woff2');
 }
 @font-face {
-  font-family: 'IBM Plex Sans';
-  font-style: normal;
-  font-weight: 300;
-  font-stretch: 100%;
-  font-display: swap;
-  src: url(fonts/extra/ibm-plex-sans-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: 'IBM Plex Sans';
-  font-style: normal;
-  font-weight: 400;
-  font-stretch: 100%;
-  font-display: swap;
-  src: url(fonts/extra/ibm-plex-sans-2.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: 'IBM Plex Sans';
-  font-style: normal;
-  font-weight: 500;
-  font-stretch: 100%;
-  font-display: swap;
-  src: url(fonts/extra/ibm-plex-sans-3.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: 'IBM Plex Sans';
-  font-style: normal;
+  font-family: 'IBM Plex Mono';
+  font-style: italic;
   font-weight: 600;
-  font-stretch: 100%;
   font-display: swap;
-  src: url(fonts/extra/ibm-plex-sans-4.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/ibmplexmono-semibolditalic.woff2) format('woff2');
 }
 @font-face {
-  font-family: 'IBM Plex Sans';
+  font-family: 'IBM Plex Mono';
   font-style: normal;
   font-weight: 700;
-  font-stretch: 100%;
   font-display: swap;
-  src: url(fonts/extra/ibm-plex-sans-5.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/ibmplexmono-bold.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexmono-bolditalic.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 100 700;
+  font-stretch: 75% 100%;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexsans-wdth-wght.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: italic;
+  font-weight: 100 700;
+  font-stretch: 75% 100%;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexsans-italic-wdth-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'JetBrains Mono';
   font-style: normal;
   font-weight: 100 800;
   font-display: swap;
-  src: url(fonts/extra/jetbrains-mono-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/jetbrainsmono-wght.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: italic;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url(fonts/extra/jetbrainsmono-italic-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Recursive';
-  font-style: oblique 0deg 15deg;
+  font-style: normal;
   font-weight: 300 1000;
   font-display: swap;
-  src: url(fonts/extra/recursive-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/recursive-casl-crsv-mono-slnt-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Martian Mono';
@@ -97,112 +139,147 @@
   font-weight: 100 800;
   font-stretch: 75% 112.5%;
   font-display: swap;
-  src: url(fonts/extra/martian-mono-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/martianmono-wdth-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Space Mono';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url(fonts/extra/space-mono-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/spacemono-regular.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Space Mono';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/extra/spacemono-italic.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Space Mono';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url(fonts/extra/space-mono-2.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/spacemono-bold.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Space Mono';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url(fonts/extra/spacemono-bolditalic.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Share Tech Mono';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url(fonts/extra/share-tech-mono-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/sharetechmono-regular.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Chivo Mono';
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url(fonts/extra/chivo-mono-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/chivomono-wght.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Chivo Mono';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url(fonts/extra/chivomono-italic-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Silkscreen';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url(fonts/extra/silkscreen-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/silkscreen-regular.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Silkscreen';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url(fonts/extra/silkscreen-2.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/silkscreen-bold.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Atkinson Hyperlegible';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url(fonts/extra/atkinson-hyperlegible-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/atkinsonhyperlegible-regular.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Atkinson Hyperlegible';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/extra/atkinsonhyperlegible-italic.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Atkinson Hyperlegible';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url(fonts/extra/atkinson-hyperlegible-2.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/atkinsonhyperlegible-bold.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Atkinson Hyperlegible';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url(fonts/extra/atkinsonhyperlegible-bolditalic.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Nunito';
   font-style: normal;
   font-weight: 200 1000;
   font-display: swap;
-  src: url(fonts/extra/nunito-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/nunito-wght.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Nunito';
+  font-style: italic;
+  font-weight: 200 1000;
+  font-display: swap;
+  src: url(fonts/extra/nunito-italic-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Manrope';
   font-style: normal;
   font-weight: 200 800;
   font-display: swap;
-  src: url(fonts/extra/manrope-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/manrope-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Figtree';
   font-style: normal;
   font-weight: 300 900;
   font-display: swap;
-  src: url(fonts/extra/figtree-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/figtree-wght.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Figtree';
+  font-style: italic;
+  font-weight: 300 900;
+  font-display: swap;
+  src: url(fonts/extra/figtree-italic-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Outfit';
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url(fonts/extra/outfit-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/outfit-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Lexend';
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url(fonts/extra/lexend-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/lexend-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Instrument Sans';
@@ -210,64 +287,106 @@
   font-weight: 400 700;
   font-stretch: 75% 100%;
   font-display: swap;
-  src: url(fonts/extra/instrument-sans-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/instrumentsans-wdth-wght.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Instrument Sans';
+  font-style: italic;
+  font-weight: 400 700;
+  font-stretch: 75% 100%;
+  font-display: swap;
+  src: url(fonts/extra/instrumentsans-italic-wdth-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Fraunces';
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url(fonts/extra/fraunces-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/fraunces-soft-wonk-opsz-wght.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Fraunces';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url(fonts/extra/fraunces-italic-soft-wonk-opsz-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Newsreader';
   font-style: normal;
   font-weight: 200 800;
   font-display: swap;
-  src: url(fonts/extra/newsreader-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/newsreader-opsz-wght.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Newsreader';
+  font-style: italic;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url(fonts/extra/newsreader-italic-opsz-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Inter';
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url(fonts/extra/inter-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/inter-opsz-wght.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url(fonts/extra/inter-italic-opsz-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Geist';
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url(fonts/extra/geist-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/geist-wght.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Geist';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url(fonts/extra/geist-italic-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Space Grotesk';
   font-style: normal;
   font-weight: 300 700;
   font-display: swap;
-  src: url(fonts/extra/space-grotesk-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/spacegrotesk-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Hanken Grotesk';
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url(fonts/extra/hanken-grotesk-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/hankengrotesk-wght.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url(fonts/extra/hankengrotesk-italic-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Red Hat Text';
   font-style: normal;
   font-weight: 300 700;
   font-display: swap;
-  src: url(fonts/extra/red-hat-text-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/redhattext-wght.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Red Hat Text';
+  font-style: italic;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url(fonts/extra/redhattext-italic-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Archivo';
@@ -275,8 +394,15 @@
   font-weight: 100 900;
   font-stretch: 62% 125%;
   font-display: swap;
-  src: url(fonts/extra/archivo-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/archivo-wdth-wght.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Archivo';
+  font-style: italic;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  font-display: swap;
+  src: url(fonts/extra/archivo-italic-wdth-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Bricolage Grotesque';
@@ -284,222 +410,523 @@
   font-weight: 200 800;
   font-stretch: 75% 100%;
   font-display: swap;
-  src: url(fonts/extra/bricolage-grotesque-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/bricolagegrotesque-opsz-wdth-wght.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans Condensed';
+  font-style: normal;
+  font-weight: 100;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexsanscondensed-thin.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans Condensed';
+  font-style: italic;
+  font-weight: 100;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexsanscondensed-thinitalic.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans Condensed';
+  font-style: normal;
+  font-weight: 200;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexsanscondensed-extralight.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans Condensed';
+  font-style: italic;
+  font-weight: 200;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexsanscondensed-extralightitalic.woff2) format('woff2');
 }
 @font-face {
   font-family: 'IBM Plex Sans Condensed';
   font-style: normal;
   font-weight: 300;
   font-display: swap;
-  src: url(fonts/extra/ibm-plex-sans-condensed-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/ibmplexsanscondensed-light.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans Condensed';
+  font-style: italic;
+  font-weight: 300;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexsanscondensed-lightitalic.woff2) format('woff2');
 }
 @font-face {
   font-family: 'IBM Plex Sans Condensed';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url(fonts/extra/ibm-plex-sans-condensed-2.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/ibmplexsanscondensed-regular.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans Condensed';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexsanscondensed-italic.woff2) format('woff2');
 }
 @font-face {
   font-family: 'IBM Plex Sans Condensed';
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url(fonts/extra/ibm-plex-sans-condensed-3.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/ibmplexsanscondensed-medium.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans Condensed';
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexsanscondensed-mediumitalic.woff2) format('woff2');
 }
 @font-face {
   font-family: 'IBM Plex Sans Condensed';
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url(fonts/extra/ibm-plex-sans-condensed-4.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/ibmplexsanscondensed-semibold.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans Condensed';
+  font-style: italic;
+  font-weight: 600;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexsanscondensed-semibolditalic.woff2) format('woff2');
 }
 @font-face {
   font-family: 'IBM Plex Sans Condensed';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url(fonts/extra/ibm-plex-sans-condensed-5.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/ibmplexsanscondensed-bold.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans Condensed';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexsanscondensed-bolditalic.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: normal;
+  font-weight: 250;
+  font-display: swap;
+  src: url(fonts/extra/barlowcondensed-thin.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: italic;
+  font-weight: 250;
+  font-display: swap;
+  src: url(fonts/extra/barlowcondensed-thinitalic.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: normal;
+  font-weight: 275;
+  font-display: swap;
+  src: url(fonts/extra/barlowcondensed-extralight.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: italic;
+  font-weight: 275;
+  font-display: swap;
+  src: url(fonts/extra/barlowcondensed-extralightitalic.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Barlow Condensed';
   font-style: normal;
   font-weight: 300;
   font-display: swap;
-  src: url(fonts/extra/barlow-condensed-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/barlowcondensed-light.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: italic;
+  font-weight: 300;
+  font-display: swap;
+  src: url(fonts/extra/barlowcondensed-lightitalic.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Barlow Condensed';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url(fonts/extra/barlow-condensed-2.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/barlowcondensed-regular.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/extra/barlowcondensed-italic.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Barlow Condensed';
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url(fonts/extra/barlow-condensed-3.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/barlowcondensed-medium.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+  src: url(fonts/extra/barlowcondensed-mediumitalic.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Barlow Condensed';
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url(fonts/extra/barlow-condensed-4.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/barlowcondensed-semibold.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: italic;
+  font-weight: 600;
+  font-display: swap;
+  src: url(fonts/extra/barlowcondensed-semibolditalic.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Barlow Condensed';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url(fonts/extra/barlow-condensed-5.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/barlowcondensed-bold.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url(fonts/extra/barlowcondensed-bolditalic.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url(fonts/extra/barlowcondensed-extrabold.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: italic;
+  font-weight: 800;
+  font-display: swap;
+  src: url(fonts/extra/barlowcondensed-extrabolditalic.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url(fonts/extra/barlowcondensed-black.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: italic;
+  font-weight: 900;
+  font-display: swap;
+  src: url(fonts/extra/barlowcondensed-blackitalic.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Source Serif 4';
   font-style: normal;
   font-weight: 200 900;
   font-display: swap;
-  src: url(fonts/extra/source-serif-4-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/sourceserif4-opsz-wght.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Source Serif 4';
+  font-style: italic;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url(fonts/extra/sourceserif4-italic-opsz-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Literata';
   font-style: normal;
   font-weight: 200 900;
   font-display: swap;
-  src: url(fonts/extra/literata-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/literata-opsz-wght.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Literata';
+  font-style: italic;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url(fonts/extra/literata-italic-opsz-wght.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Serif';
+  font-style: normal;
+  font-weight: 100;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexserif-thin.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Serif';
+  font-style: italic;
+  font-weight: 100;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexserif-thinitalic.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Serif';
+  font-style: normal;
+  font-weight: 200;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexserif-extralight.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Serif';
+  font-style: italic;
+  font-weight: 200;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexserif-extralightitalic.woff2) format('woff2');
 }
 @font-face {
   font-family: 'IBM Plex Serif';
   font-style: normal;
   font-weight: 300;
   font-display: swap;
-  src: url(fonts/extra/ibm-plex-serif-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/ibmplexserif-light.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Serif';
+  font-style: italic;
+  font-weight: 300;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexserif-lightitalic.woff2) format('woff2');
 }
 @font-face {
   font-family: 'IBM Plex Serif';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url(fonts/extra/ibm-plex-serif-2.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/ibmplexserif-regular.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Serif';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexserif-italic.woff2) format('woff2');
 }
 @font-face {
   font-family: 'IBM Plex Serif';
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url(fonts/extra/ibm-plex-serif-3.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/ibmplexserif-medium.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Serif';
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexserif-mediumitalic.woff2) format('woff2');
 }
 @font-face {
   font-family: 'IBM Plex Serif';
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url(fonts/extra/ibm-plex-serif-4.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/ibmplexserif-semibold.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Serif';
+  font-style: italic;
+  font-weight: 600;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexserif-semibolditalic.woff2) format('woff2');
 }
 @font-face {
   font-family: 'IBM Plex Serif';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url(fonts/extra/ibm-plex-serif-5.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/ibmplexserif-bold.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Serif';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url(fonts/extra/ibmplexserif-bolditalic.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Geist Mono';
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url(fonts/extra/geist-mono-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/geistmono-wght.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url(fonts/extra/geistmono-italic-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Red Hat Mono';
   font-style: normal;
   font-weight: 300 700;
   font-display: swap;
-  src: url(fonts/extra/red-hat-mono-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/redhatmono-wght.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Red Hat Mono';
+  font-style: italic;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url(fonts/extra/redhatmono-italic-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Spline Sans Mono';
   font-style: normal;
   font-weight: 300 700;
   font-display: swap;
-  src: url(fonts/extra/spline-sans-mono-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/splinesansmono-wght.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Spline Sans Mono';
+  font-style: italic;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url(fonts/extra/splinesansmono-italic-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Azeret Mono';
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url(fonts/extra/azeret-mono-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/azeretmono-wght.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Azeret Mono';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url(fonts/extra/azeretmono-italic-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Fira Code';
   font-style: normal;
   font-weight: 300 700;
   font-display: swap;
-  src: url(fonts/extra/fira-code-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/firacode-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Victor Mono';
   font-style: normal;
   font-weight: 100 700;
   font-display: swap;
-  src: url(fonts/extra/victor-mono-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/victormono-wght.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Victor Mono';
+  font-style: italic;
+  font-weight: 100 700;
+  font-display: swap;
+  src: url(fonts/extra/victormono-italic-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Workbench';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url(fonts/extra/workbench-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/workbench-bled-scan.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Sixtyfour';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url(fonts/extra/sixtyfour-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/sixtyfour-bled-scan.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Doto';
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url(fonts/extra/doto-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/doto-rond-wght.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Pixelify Sans';
   font-style: normal;
   font-weight: 400 700;
   font-display: swap;
-  src: url(fonts/extra/pixelify-sans-1.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(fonts/extra/pixelifysans-wght.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 100 1000;
+  font-display: swap;
+  src: url(fonts/extra/dmsans-opsz-wght.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'DM Sans';
+  font-style: italic;
+  font-weight: 100 1000;
+  font-display: swap;
+  src: url(fonts/extra/dmsans-italic-opsz-wght.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'DM Mono';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url(fonts/extra/dmmono-light.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'DM Mono';
+  font-style: italic;
+  font-weight: 300;
+  font-display: swap;
+  src: url(fonts/extra/dmmono-lightitalic.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'DM Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/extra/dmmono-regular.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'DM Mono';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/extra/dmmono-italic.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'DM Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(fonts/extra/dmmono-medium.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'DM Mono';
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+  src: url(fonts/extra/dmmono-mediumitalic.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'VT323';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/extra/vt323-regular.woff2) format('woff2');
 }

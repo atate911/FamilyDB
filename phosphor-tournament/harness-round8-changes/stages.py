@@ -26,7 +26,7 @@ from pathlib import Path
 HERE = Path(__file__).parent
 SHOTS = ["home", "ideas", "lost", "login", "chat", "status", "home-phone", "plans", "todo", "settings",
          "form", "general", "controls-field"]
-LENS_GROUPS = [["feedback", "soul"], ["style", "system"], ["interaction", "type"], ["skeptic"]]
+LENS_GROUPS = [["feedback", "soul"], ["style", "system"], ["interaction", "type"], ["skeptic", "usability"]]
 # The fields a later stage needs from a finished design; its tokens stay in its palette file.
 KEEP = ["id", "name", "tagline", "concept", "companions", "decisions", "floorsFailed", "measures",
         "strengths", "weaknesses", "revisions", "crit", "firstDraft", "secondDraft"]
@@ -255,7 +255,7 @@ def tally(rnd, *outs):
         "ranking": [{"id": x["id"], "name": x["name"], "origin": x["origin"], "mean": x["mean"], "top4": x["top4"], "promise": x["promise"]}
                     for x in ranking],
         "newPalettes": [f"{x['id']} ({x['name']})" for x in ds]}))
-    print(f"judges: {', '.join(j['lens'] for j in judges)} ({len(judges)} of 7)")
+    print(f"judges: {', '.join(j['lens'] for j in judges)} ({len(judges)} of {sum(len(g) for g in LENS_GROUPS)})")
     if thin:
         print("scored by fewer judges:", ", ".join(thin))
     print(f"today {today_mean}, best {ranking[0]['mean']} (margin {margin})")
