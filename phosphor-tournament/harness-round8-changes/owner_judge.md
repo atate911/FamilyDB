@@ -118,3 +118,38 @@ one page (Status's rails included). Judge whether its lines delimit areas, lead 
 the page and make the navigation easy to see; that is what the owner values in them. Faults in
 how the lines are drawn (weight, clutter, a line that means nothing, a stranded control) still
 count.
+
+## On round 9's four carried (carried into round 10)
+
+The sheet showed, in order: #1 Programme Guide (r9-idea-2), #2 Signal Legend (r9-idea-1), #3
+Flight Deck (r9-idea-3), #4 Reverse Video (r8-idea-2). The wild lane's sheet showed Attract Mode
+(r9-rand-1) and Porcelain Atlas (r9-rand-2).
+
+In the owner's words: "I especially like Flight Deck and Signal Legend. These are beautiful,
+modern interfaces. Let's not lose the CRT theme and soul of the original phosphor design."
+
+The two the owner singled out:
+- Signal Legend: green-black slate trays with every section head set into its rail, reverse
+  video for the current item, square family surfaces against round machine glass, a thin
+  monitor case, and #6dff9c lit only for now and live.
+- Flight Deck: a 1980s glass cockpit at night. The family's things sit on matte instrument
+  plates grouped by fine demarcation lines, with their legends set in the breaks. The machine
+  speaks on flush display units in thin screwed faceplates, and each colour holds one meaning,
+  as in a cockpit's colour code.
+
+What this adds for calibration:
+- The owner likes where the leaders have gone: grounded, well-made, modern surfaces, with fine
+  lines that group and delimit (Flight Deck's demarcation lines and Signal Legend's rails are
+  both kin to the line art praised in round 7). Beauty and modern craft count in a design's
+  favour.
+- They must not cost the CRT soul. The page began as a CRT phosphor terminal, and it should
+  still feel like one: a machine's green glass that the family talks to, phosphor light where
+  it means something, terminal and machine type where the machine speaks, the sense of a
+  screen and its instruments. That soul is not the brightness or the all-green monochrome the
+  owner asked to calm at the start; it is the character.
+- So weigh how much of the CRT phosphor character runs through the whole page, not only inside
+  the two monitors. A beautiful design whose CRT lives only in the Next up and radar screens,
+  with the rest a generic modern dark interface, is drifting from what the owner wants. A
+  design that is both beautiful and modern and unmistakably a phosphor CRT interface on every
+  page is what the owner is after. Do not reward a return to the old glare or monochrome: the
+  earlier notes on grounded, supporting colour still hold.
