@@ -1,0 +1,90 @@
+[
+ {
+  "mood": "an old radio",
+  "material": "porcelain",
+  "companion_hue_deg": 341,
+  "companion_note": "a companion colour at this OKLCH hue",
+  "companion_roles": [
+   "lit (the everyday lit things: a calmer tone)",
+   "label (small labels and dates)",
+   "bubble and bubble-them (the chat bubbles)",
+   "surface (cards tinted by the companion)"
+  ],
+  "second_companion_hue_deg": 356,
+  "ground_hue_deg": 133,
+  "ground_step": "a half step lighter",
+  "ink": "faintly tinted by the companion",
+  "text_contrast_target": 14.7,
+  "glow": 0.67,
+  "screenGlow": 0.78,
+  "layout": "an asymmetric editorial page: a wide left margin with hanging section heads, text to the right",
+  "type_system": "a grotesque with tight large titles and small-caps labels (Instrument Sans or Manrope)",
+  "controls": "terminal commands: buttons set like [ Send ] on the glass, fields as a prompt line",
+  "icons": "icons set in small lit squares, like indicator lamps on a panel",
+  "motion": "crisp: hover and press answer at once, no easing",
+  "pacing": "dense, like a timetable: small gaps, many rows in view",
+  "refinements": [],
+  "ambition": "wildcard"
+ },
+ {
+  "mood": "a tidepool",
+  "material": "felt",
+  "companion_hue_deg": 25,
+  "companion_note": "a companion colour at this OKLCH hue",
+  "companion_roles": [
+   "outing (the outing kind's own colour)",
+   "top-glow (the afterglow at the top of every page)",
+   "wash (the greeting's second light)",
+   "label (small labels and dates)",
+   "surface (cards tinted by the companion)",
+   "bubble and bubble-them (the chat bubbles)",
+   "ambient (a soft second light across the page)"
+  ],
+  "second_companion_hue_deg": 240,
+  "ground_hue_deg": 188,
+  "ground_step": "as dark as today",
+  "ink": "neutral",
+  "text_contrast_target": 13.2,
+  "glow": 0.64,
+  "screenGlow": 0.65,
+  "layout": "a left navigation rail on desktop instead of the top bar (the phone keeps its tab bar)",
+  "type_system": "a serif for titles and reading, a sans for labels and controls (Newsreader or Fraunces with a sans)",
+  "controls": "soft pills: rounded fields and buttons, gentle fills, no hard outlines",
+  "icons": "no icons beside words: the words and a small coloured mark do the work",
+  "motion": "a phosphor warm-up: things arrive from a dim green, as a tube warms (reduced motion kept)",
+  "pacing": "comfortable: today's pacing, made consistent",
+  "refinements": []
+ },
+ {
+  "mood": "an arcade after hours",
+  "material": "oat",
+  "companion_hue_deg": 57,
+  "companion_note": "a companion colour at this OKLCH hue",
+  "companion_roles": [
+   "lit (the everyday lit things: a calmer tone)",
+   "outing (the outing kind's own colour)",
+   "surface (cards tinted by the companion)",
+   "card-edge (every card's and panel's border)",
+   "bubble and bubble-them (the chat bubbles)",
+   "secondary (the ways to start and secondary buttons; quietFilter)",
+   "label (small labels and dates)"
+  ],
+  "second_companion_hue_deg": null,
+  "ground_hue_deg": 160,
+  "ground_step": "a step lighter",
+  "ink": "faintly tinted by the companion",
+  "text_contrast_target": 14.4,
+  "glow": 0.67,
+  "screenGlow": 0.74,
+  "layout": "tiles in a grid, each item a square-ish tile with its lead mark on top",
+  "type_system": "one sans at few sizes and weights, every figure in a mono (DM Sans with DM Mono)",
+  "controls": "a printed form: fields as ruled lines, selects as ruled lines with a caret, buttons as boxed labels",
+  "icons": "icons drawn as the monitor would draw them: pixel-like, in the phosphor",
+  "motion": "a slow, quiet cursor blink wherever the machine is waiting",
+  "pacing": "airy: generous darkspace between sections, few things per screen",
+  "refinements": [
+   "eyebrow labels and dates in VT323 at a larger size"
+  ],
+  "ambition": "wildcard"
+ }
+]

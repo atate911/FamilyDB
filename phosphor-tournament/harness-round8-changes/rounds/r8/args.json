@@ -1,0 +1,158 @@
+{
+ "round": "r8",
+ "roundNo": 8,
+ "mode": "explore",
+ "carried": [
+  {
+   "id": "r7-idea-1",
+   "name": "Galley Rack",
+   "summary": "Round 7: #1 by score (mean 8.23, in 7 judges' top fours); carried as the best score of the round (clearly different here means 4.08 or more apart; the round's median is 6.8). Family: ruled composing room. Born in round 7 (informed). A composing room's galley rack at night: what you read is set in slate trays under Oxford rules, every list in them a rack of flat strips with a designator, a body and a tabular facts column; what you act in is a raised box; the machine speaks on green-black glass in a pewter case, and the exact phosphor is the one light. This is the child that every round-6 lens named. It takes Slate Proof's page frame (masthead, galley trays under Oxford rails, raised act boxes, a chinned pewter case, the type steps, focus and targets) and uses Radar Room's flight strip as the one list component inside the trays. The strip is a single `strip()` macro with fixed slots: designator, body, and a tabular facts column. It feels like a quiet, orderly typesetting room at night. Grey slate trays hold the family's lists. Each row is a flat strip whose designator carries a small breath of its kind's colour. The only glowing things are the #6dff9c mark, Send, the key word \"mind\", focus rings, live lamps and the monitors."
+  },
+  {
+   "id": "r7-rand-5",
+   "name": "Indigo Bindery",
+   "summary": "Round 7: #6 by score (mean 5.7, in 1 judges' top fours); carried as the protected random slot, the best of round 7's random entrants (#6 by score, today 3.9): indigo cloth, green glass; 6.89 from Galley Rack. Family: indigo cloth, green glass. Born in round 7 (random). A print shop after hours: the family's things bound in indigo cloth and set in ivory type, the machine on green-black glass, and the phosphor the one light on the press. A bindery at the back of a print shop, where a phototypesetter's green terminal still glows. Everything the family keeps is bound in dark indigo cloth: debossed boards hold lists and forms, plain cloth cards are things you open. Titles are set in a book face (Newsreader) in ivory, the machine's small print is stamped in mono caps, and a ribbon bookmark marks where you are. The machine keeps its green-black glass, its dark-cased tubes and the exact #6dff9c. It should feel quiet, tactile and made by hand, like a well-bound book read beside a green screen, not a neon dashboard."
+  },
+  {
+   "id": "r6-idea-2",
+   "name": "Radar Room",
+   "summary": "Round 7: #3 by score (mean 7.01, in 6 judges' top fours); carried as new family, not a near-duplicate: flight-strip bays; nearest carried Galley Rack at 5.76. Family: flight-strip bays. Round 6: #2 by score (mean 7.59, in 7 judges' top fours); carried as new family, not a near-duplicate: flight-strip bays; nearest carried Slate Proof at 6.1. Family: flight-strip bays. Born in round 6 (informed). The operations room where green scopes lived: every row a slate flight strip racked in a bay with black between, the machine on green-black glass, its scopes set flush into the console, and the exact phosphor the one lit thing. An air-traffic or ship's-plot operations room, where P7 green scopes sat beside racks of flight-progress strips. The page's own language (\"On the radar\", \"4 more on the radar\") becomes its grammar. Every row the family owns is a solid slate strip with ruled cells: a designator block, the body, and a fixed facts column. Strips are racked against a 2px pewter rail in bays, with switched-off black between them. Only the machine speaking sits on green-black glass, and the scopes are dark rings set flush into the console. It should feel calm, material and orderly, like a quiet control room at night, with #6dff9c as the one lit thing."
+  },
+  {
+   "id": "r7-idea-2",
+   "name": "Signal Box",
+   "summary": "Round 7: #4 by score (mean 6.99, in 6 judges' top fours); carried as new family, not a near-duplicate: mimic-line track; nearest carried Galley Rack at 5.16. Family: mimic-line track. Born in round 7 (informed). The control room's mimic line: every sequence in the family's week hangs from one blue-pewter track, each stop a slate plate with its lamp and its time in a timetable margin, and the phosphor is the lamp that means now. A signal box or power-station desk, where green VDUs sat beside a mimic panel. Everything FamilyDB shows in time (the next plans, what is due, the conversation, setup, activity) hangs from one 2px blue-pewter track. Each stop is a flat slate plate with a lamp on the track, and its time hangs in a right-aligned timetable margin. The page's own Status lamps become one legend for the whole app: hollow ring for to come, lit sage for done, amber for needs a look, red for off, accent for you are here, and #6dff9c only for now and live. It should feel calm, legible and mechanical, like a desk that tells you at a glance what is running and what comes next, with the phosphor as the one lamp that is on."
+  }
+ ],
+ "seeds": [
+  {
+   "mood": "an old radio",
+   "material": "porcelain",
+   "companion_hue_deg": 341,
+   "companion_note": "a companion colour at this OKLCH hue",
+   "companion_roles": [
+    "lit (the everyday lit things: a calmer tone)",
+    "label (small labels and dates)",
+    "bubble and bubble-them (the chat bubbles)",
+    "surface (cards tinted by the companion)"
+   ],
+   "second_companion_hue_deg": 356,
+   "ground_hue_deg": 133,
+   "ground_step": "a half step lighter",
+   "ink": "faintly tinted by the companion",
+   "text_contrast_target": 14.7,
+   "glow": 0.67,
+   "screenGlow": 0.78,
+   "layout": "an asymmetric editorial page: a wide left margin with hanging section heads, text to the right",
+   "type_system": "a grotesque with tight large titles and small-caps labels (Instrument Sans or Manrope)",
+   "controls": "terminal commands: buttons set like [ Send ] on the glass, fields as a prompt line",
+   "icons": "icons set in small lit squares, like indicator lamps on a panel",
+   "motion": "crisp: hover and press answer at once, no easing",
+   "pacing": "dense, like a timetable: small gaps, many rows in view",
+   "refinements": [],
+   "ambition": "wildcard"
+  },
+  {
+   "mood": "a tidepool",
+   "material": "felt",
+   "companion_hue_deg": 25,
+   "companion_note": "a companion colour at this OKLCH hue",
+   "companion_roles": [
+    "outing (the outing kind's own colour)",
+    "top-glow (the afterglow at the top of every page)",
+    "wash (the greeting's second light)",
+    "label (small labels and dates)",
+    "surface (cards tinted by the companion)",
+    "bubble and bubble-them (the chat bubbles)",
+    "ambient (a soft second light across the page)"
+   ],
+   "second_companion_hue_deg": 240,
+   "ground_hue_deg": 188,
+   "ground_step": "as dark as today",
+   "ink": "neutral",
+   "text_contrast_target": 13.2,
+   "glow": 0.64,
+   "screenGlow": 0.65,
+   "layout": "a left navigation rail on desktop instead of the top bar (the phone keeps its tab bar)",
+   "type_system": "a serif for titles and reading, a sans for labels and controls (Newsreader or Fraunces with a sans)",
+   "controls": "soft pills: rounded fields and buttons, gentle fills, no hard outlines",
+   "icons": "no icons beside words: the words and a small coloured mark do the work",
+   "motion": "a phosphor warm-up: things arrive from a dim green, as a tube warms (reduced motion kept)",
+   "pacing": "comfortable: today's pacing, made consistent",
+   "refinements": []
+  },
+  {
+   "mood": "an arcade after hours",
+   "material": "oat",
+   "companion_hue_deg": 57,
+   "companion_note": "a companion colour at this OKLCH hue",
+   "companion_roles": [
+    "lit (the everyday lit things: a calmer tone)",
+    "outing (the outing kind's own colour)",
+    "surface (cards tinted by the companion)",
+    "card-edge (every card's and panel's border)",
+    "bubble and bubble-them (the chat bubbles)",
+    "secondary (the ways to start and secondary buttons; quietFilter)",
+    "label (small labels and dates)"
+   ],
+   "second_companion_hue_deg": null,
+   "ground_hue_deg": 160,
+   "ground_step": "a step lighter",
+   "ink": "faintly tinted by the companion",
+   "text_contrast_target": 14.4,
+   "glow": 0.67,
+   "screenGlow": 0.74,
+   "layout": "tiles in a grid, each item a square-ish tile with its lead mark on top",
+   "type_system": "one sans at few sizes and weights, every figure in a mono (DM Sans with DM Mono)",
+   "controls": "a printed form: fields as ruled lines, selects as ruled lines with a caret, buttons as boxed labels",
+   "icons": "icons drawn as the monitor would draw them: pixel-like, in the phosphor",
+   "motion": "a slow, quiet cursor blink wherever the machine is waiting",
+   "pacing": "airy: generous darkspace between sections, few things per screen",
+   "refinements": [
+    "eyebrow labels and dates in VT323 at a larger size"
+   ],
+   "ambition": "wildcard"
+  }
+ ],
+ "mutants": [
+  {
+   "kind": "point",
+   "parent": "r7-rand-5",
+   "parentName": "Indigo Bindery",
+   "changes": [
+    "raise the page's glow a small step (about +0.1), or lower it a small step if it is already high",
+    "hang the section heads in the left margin on desktop, the content to their right"
+   ]
+  },
+  {
+   "kind": "point",
+   "parent": "r7-idea-2",
+   "parentName": "Signal Box",
+   "changes": [
+    "turn the companion colour's hue by about +30 degrees, keeping its roles and lightness",
+    "rearrange Home: a different column structure or order (for example the monitor full width above the lists, or the lists side by side)"
+   ]
+  },
+  {
+   "kind": "crossover",
+   "parent": "r6-idea-2",
+   "parentName": "Radar Room",
+   "colourParent": "r7-idea-1",
+   "colourParentName": "Galley Rack",
+   "changes": [
+    "the structure of Radar Room (its markup, layout, type, controls, spacing and non-colour css) with the colours of Galley Rack (its tokens, glow numbers and colour roles)"
+   ]
+  }
+ ],
+ "nInformed": 2,
+ "history": [
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/round1/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/final.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r2/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r3/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r4/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r5/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r6/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r7/results.json"
+ ]
+}

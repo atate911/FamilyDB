@@ -1,4 +1,4 @@
-# The Phosphor Interface tournament, paused after round 7
+# The Phosphor Interface tournament, from round 8 with more variation
 
 This folder saves an experiment, not a change to FamilyDB. Nothing under `src/` is touched. It
 holds the palette-and-layout tournament that is choosing the "Phosphor Interface" design standard
@@ -28,25 +28,49 @@ winner's score minus today's page's score. Each round has its own panel and fiel
 compares best within its round. From round 4 on, the lead over today is the steadier measure
 across rounds.
 
-Carried into round 8, which is **set up but not launched**:
+## What changed from round 8
+
+Random entrants had advanced only about 13% of the time from round 3 on, against about 100% for
+informed ones. Every round winner was informed. So the owner asked for more room for random
+ideas and a higher mutation rate:
+
+- **A protected slot.** The best random entrant of each round is carried on when it passed its
+  floors, beat today's page and is more than a near-duplicate of the leader.
+- **A second draft.** Each random entrant and each crossover gets a studio crit and one
+  revision before judging.
+- **Wildcards.** They do not read `lessons.md`, and the roll is only a spark.
+- **Structure dice.** Every random seed also rolls a layout, a type system, controls, icons,
+  motion and pacing.
+- **Markup.** Every entrant may change the markup.
+- **Mutants.** Each mutant makes two or three changes, one of them structural. From three
+  mutants on, one is a crossover: one winner's structure with another's colours.
+- **The css budget** is 25,000 characters, and `justify-content` and `align-content` now pass
+  the check.
+
+The changed scripts and round 8's setup are in `harness-round8-changes/`. The tar parts still
+hold the harness as it was after round 7.
+
+Carried into round 8:
 
 - **Galley Rack** (8.23, ruled composing room). What you read sits in slate trays under Oxford
   rules. Every list in them is a rack of flat strips, each with a designator, a body and a
   tabular facts column. What you act in is a raised box. The machine speaks on green-black glass
   in a pewter case.
+- **Indigo Bindery** (5.70, indigo cloth and green glass), in the protected random slot. The
+  family's things are bound in indigo cloth and set in ivory Newsreader, beside a green
+  phototypesetter's screen.
 - **Radar Room** (7.01, flight-strip bays). Every row is a slate flight strip racked in a bay,
   with the scopes set flush into the console.
 - **Signal Box** (6.99, mimic-line track). The week hangs from one blue-pewter track, each stop a
   slate plate with a lamp and a timetable time.
-- **Front Panel** (6.09, silk-screened front panel). A 1980s bench instrument: legends set into
-  the line, graphite modules, blue-grey keys.
 
-Slate Proof (7.46) sat out round 8 because Galley Rack is its descendant and in the same family.
-It stays in the hall of fame for the finale.
+Slate Proof (7.46) sat out as Galley Rack's same-family sibling. Front Panel (6.09) stepped out
+for the protected slot. Both stay in the hall of fame for the finale.
 
-Round 8's six random seeds are a planetarium, a forest after rain, a jazz club, a mountain hut,
-a desert night and an arcade after hours. The last two are wildcards, free to change the
-markup.
+Round 8 has 3 random entrants: an old radio (wildcard), a tidepool, and an arcade after hours
+(wildcard). It has 3 mutants: Indigo Bindery with hanging section heads, Signal Box with Home
+rearranged, and a crossover of Radar Room's structure with Galley Rack's colours. It also has 2
+informed entrants.
 
 ## What is here
 
@@ -90,7 +114,18 @@ cat harness.tar.gz.part-* | tar -xzf - -C "$S"
 python3 -m venv "$S/harness/venv"
 "$S/harness/venv/bin/pip" install -r harness-venv-requirements.txt
 cd .. && uv sync            # the demo and variant servers run FamilyDB from its .venv
+# The round-8 changes, over the harness as it was after round 7:
+H="$S/harness"
+cp phosphor-tournament/harness-round8-changes/*.py phosphor-tournament/harness-round8-changes/*.js \
+   phosphor-tournament/harness-round8-changes/*.md "$H/"
+mv "$H/rounds/r8" "$S/r8-first-setup"   # round 8 as first set up, before the changes
+( cd "$H" && python3 advance.py open r7 r8 8 3 2 3 explore 2 )
+cp phosphor-tournament/harness-round8-changes/rounds/r8/*.json "$H/rounds/r8/"
 ```
+
+The last two lines set round 8 up again and then put back its recorded seeds and mutants.
+`open` also appends a "Carried into round 8" line to `lessons.md`. The copied `lessons.md`
+already has that line, so delete the duplicate.
 
 It also needs Node 22 with `playwright` installed globally (`render.js` finds it through
 `npm root -g`) and Chromium. A Claude Code cloud container has both already.
@@ -112,18 +147,20 @@ before round 8: `./check.sh palettes/00-current.json`.
      be within about 3.5 of each other.
    - `python3 archive.py`
    - `python3 advance.py choose rN`, as a dry run.
-   - `python3 advance.py open rN rN+1 N+1 6 2 0 explore`. This draws the sheets, sets up
-     the next round and writes its `args.json`.
+   - `python3 advance.py open rN rN+1 N+1 N_RANDOM N_INFORMED N_MUTANTS MODE N_WILDCARDS`
+     (see the schedule below). This draws the sheets, sets up the next round and writes its
+     `args.json`.
    - Send the owner the two new sheets from `mockups/`.
    - Launch the next round.
 
-The owner's schedule from here:
+The owner's schedule from here: six rounds with mutants, 8 to 13, then the finale.
 
-- **Round 8**: explore, as above.
-- **Rounds 9 and 10**: refine, with 4 carried, 1 random, 1 mutant and 6 informed:
-  `python3 advance.py open r8 r9 9 1 6 1 refine`, and the same from r9 to r10.
-- **Up to three more refine rounds** while the lead over today keeps growing by at least 0.2 a
-  round. Stop early if it is flat for two rounds.
+| Round | Carried | Random (wildcards) | Mutants (one a crossover) | Informed | `open` arguments |
+|---|---|---|---|---|---|
+| 8 | 4, one protected | 3 (2) | 3 | 2 | `r7 r8 8 3 2 3 explore 2` |
+| 9, 10 | 4 | 2 (2) | 3 | 3 | `r8 r9 9 2 3 3 refine 2` |
+| 11, 12, 13 | 4 | 1 (1) | 3 | 4 | `r10 r11 11 1 4 3 refine 1` |
+
 - **Finale**:
   1. A championship across the hall of fame: the best of each family, plus each round's
      carried.

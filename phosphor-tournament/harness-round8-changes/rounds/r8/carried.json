@@ -1,0 +1,32 @@
+{
+ "chosen": [
+  {
+   "id": "r7-idea-1",
+   "name": "Galley Rack",
+   "mean": 8.23,
+   "why": "the best score of the round (clearly different here means 4.08 or more apart; the round's median is 6.8)"
+  },
+  {
+   "id": "r7-rand-5",
+   "name": "Indigo Bindery",
+   "mean": 5.7,
+   "why": "the protected random slot, the best of round 7's random entrants (#6 by score, today 3.9): indigo cloth, green glass; 6.89 from Galley Rack"
+  },
+  {
+   "id": "r6-idea-2",
+   "name": "Radar Room",
+   "mean": 7.01,
+   "why": "new family, not a near-duplicate: flight-strip bays; nearest carried Galley Rack at 5.76"
+  },
+  {
+   "id": "r7-idea-2",
+   "name": "Signal Box",
+   "mean": 6.99,
+   "why": "new family, not a near-duplicate: mimic-line track; nearest carried Galley Rack at 5.16"
+  }
+ ],
+ "passed_over": [
+  "Slate Proof (7.46, ruled composing room): 4.28 from Galley Rack, same family",
+  "Front Panel (6.09, silk-screened front panel): 6.53 from Signal Box"
+ ]
+}
