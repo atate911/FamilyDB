@@ -215,10 +215,14 @@ button.linkish:hover { color: var(--accent); text-decoration: underline; text-un
   #size, .pick > span { display: none; }
   .bar > .row > .seg[aria-label="How to look"] { width: 100%; }
   .bar > .row > .seg[aria-label="How to look"] button { flex: 1 1 auto; padding-inline: .3rem; font-size: .8rem; }
-  .cmpbar { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: end; gap: .5rem; }
-  .cmpbar label { flex-direction: column; align-items: stretch; gap: .15rem; }
+  .cmpbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .5rem; }
+  .cmpbar label { display: grid; grid-template-columns: 1.2rem minmax(0, 1fr); align-items: center; gap: .4rem; }
+  .cmpbar > label:nth-of-type(1) { grid-row: 1; }
+  .cmpbar > label:nth-of-type(2) { grid-row: 2; }
+  .cmpbar > .icon-btn { grid-column: 2; grid-row: 1 / span 2; height: 100%; }
   .cmpbar select { max-width: none; width: 100%; }
-  .cmpbar .check { grid-column: 1 / -1; flex-direction: row; align-items: center; }
+  .cmpbar .check { grid-column: 1 / -1; grid-row: 3; display: flex; }
+  .pane { min-height: 0; }
   .pane { max-height: calc(100vh - 12rem); }
   .picker .icon-btn { width: 2.4rem; }
   .pick { flex: 1 1 8rem; }
@@ -363,7 +367,7 @@ const D = "__DATA__";
     sync: saved.sync !== false,
     page: "home",
     design: null,
-    set: SETS.some(s => s.key === saved.set) ? saved.set : "all",
+    set: SETS.some(s => s.key === saved[GENS ? "set_gens" : "set"]) ? saved[GENS ? "set_gens" : "set"] : "all",
     size: SIZES[saved.size] ? saved.size : "m",
     zoom: null, // the large view: null lets each picture choose
   };
@@ -512,7 +516,7 @@ const D = "__DATA__";
     const p = byKey[state.page];
     const has = d => (p.kind === "sheet" ? d.details : d.shots)[p.key];
     const ds = designs.filter(SETS.find(s => s.key === state.set).test).filter(has);
-    live.textContent = "Round " + R.n + ", " + p.label + ": " + ds.length + (ds.length === 1 ? " design" : " designs");
+    live.textContent = (GENS ? "Across the rounds" : "Round " + R.n) + ", " + p.label + ": " + ds.length + (ds.length === 1 ? " design" : " designs");
     return h("div", null,
       h("div", { class: "phead" }, h("h2", { text: p.label }), h("p", { class: "note", text: pageNote(p, ds) + (GENS ? " Today's page comes first, then each round in turn." : " Today's page comes first, as the yardstick. A name opens what the judges said.") + " Compare ⇄ puts a design beside another." })),
       h("div", { class: "grid " + p.kind }, ds.map(d => card(d, p, "page", list))));
@@ -608,9 +612,8 @@ const D = "__DATA__";
     const pick = side => h("select", { id: "cmp-" + side, "aria-label": "Design " + side.toUpperCase() },
       opts.map(d => h("option", { value: d.id, text: optionText(d) })));
     const sa = pick("a"), sb = pick("b");
-    if (!byId[state.cmp.a] || !has(byId[state.cmp.a])) state.cmp.a = opts[0].id;
-    if (!byId[state.cmp.b] || !has(byId[state.cmp.b])) state.cmp.b = (opts[1] || opts[0]).id;
-    sa.value = state.cmp.a; sb.value = state.cmp.b;
+    const shown = { a: has(byId[state.cmp.a]) ? state.cmp.a : opts[0].id, b: has(byId[state.cmp.b]) ? state.cmp.b : (opts[1] || opts[0]).id };
+    sa.value = shown.a; sb.value = shown.b;
     const check = h("input", { type: "checkbox", id: "cmp-sync" });
     check.checked = state.sync;
     const bar = h("div", { class: "cmpbar" },
@@ -618,7 +621,7 @@ const D = "__DATA__";
       h("label", null, "B", sb), h("label", { class: "check" }, check, "Scroll together"));
     const panes = [];
     const cols = ["a", "b"].map(side => {
-      const d = byId[state.cmp[side]], s = (p.kind === "sheet" ? d.details : d.shots)[p.key];
+      const d = byId[shown[side]], s = (p.kind === "sheet" ? d.details : d.shots)[p.key];
       const src = "img/" + d.id + "/" + p.key + ".webp";
       const at = list.length;
       list.push({ d, p, s, src, hit: null });
@@ -645,9 +648,9 @@ const D = "__DATA__";
     const again = id => { state.cmp.a = sa.value; state.cmp.b = sb.value; render(true); const e = $("#" + id); if (e) e.focus({ preventScroll: true }); };
     sa.addEventListener("change", () => again("cmp-a"));
     sb.addEventListener("change", () => again("cmp-b"));
-    bar.querySelector("#cmp-swap").addEventListener("click", () => { [state.cmp.a, state.cmp.b] = [state.cmp.b, state.cmp.a]; render(true); $("#cmp-swap").focus({ preventScroll: true }); });
-    check.addEventListener("change", () => { state.sync = check.checked; store.set({ view: state.view, set: state.set, size: state.size, sync: state.sync }); });
-    live.textContent = p.label + ": " + byId[state.cmp.a].name + " beside " + byId[state.cmp.b].name;
+    bar.querySelector("#cmp-swap").addEventListener("click", () => { [state.cmp.a, state.cmp.b] = [shown.b, shown.a]; render(true); $("#cmp-swap").focus({ preventScroll: true }); });
+    check.addEventListener("change", () => { state.sync = check.checked; store.set(Object.assign(store.get(), { view: state.view, [GENS ? "set_gens" : "set"]: state.set, size: state.size, sync: state.sync })); });
+    live.textContent = p.label + ": " + byId[shown.a].name + " beside " + byId[shown.b].name;
     return h("div", null,
       h("div", { class: "phead" }, h("h2", { text: p.label }),
         h("p", { class: "note", text: "Two designs on the same page. Use the page tabs above to look at the same pair on another page; Enlarge opens A, and the arrow keys then move to B." })),
@@ -659,7 +662,7 @@ const D = "__DATA__";
     const list = [];
     main.replaceChildren(state.view === "page" ? pageView(list) : state.view === "compare" ? compareView(list) : state.view === "design" ? designView(list) : notesView());
     gallery = list;
-    store.set({ view: state.view, set: state.set, size: state.size, sync: state.sync });
+    store.set(Object.assign(store.get(), { view: state.view, [GENS ? "set_gens" : "set"]: state.set, size: state.size, sync: state.sync }));
     if (!keepScroll) {
       const top = $(".top").offsetHeight;
       if (window.scrollY > top) window.scrollTo(0, top);
@@ -694,7 +697,7 @@ const D = "__DATA__";
     big.onload = big.onerror = () => { big.style.visibility = ""; };
     big.src = it.src;
     big.alt = it.p.label + ", " + it.d.name;
-    $("#lb-title").textContent = it.d.name + (it.d.rank ? " · #" + it.d.rank : "") + " · round " + R.n;
+    $("#lb-title").textContent = GENS ? it.d.name + (it.d.roundNo ? " · round " + it.d.roundNo : "") : it.d.name + (it.d.rank ? " · #" + it.d.rank : "") + " · round " + R.n;
     $("#lb-sub").textContent = it.p.label + " · " + dims(it.s) + " · " + fmt(it.d.score);
     $("#lb-count").textContent = (at + 1) + " / " + gallery.length;
     setDisabled($("#lb-prev"), at === 0, stage);
