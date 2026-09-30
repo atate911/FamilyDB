@@ -50,6 +50,9 @@ h1 { margin: 0 0 .7rem; font: 600 clamp(1.9rem, 5vw, 3rem)/1.05 var(--cond); let
 .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
 .seg button:focus-visible { outline-offset: -3px; outline-color: var(--fg); }
 
+.gens { margin: 1.4rem 0 0; padding: 1rem 1.2rem; max-width: 46rem; border: 1px solid var(--line2); border-radius: .5rem; background: var(--surface); }
+.gens a { color: var(--accent); font: 600 1.1rem var(--cond); text-underline-offset: .2em; }
+.gens span { display: block; margin-top: .2rem; color: var(--dim); font-size: .88rem; }
 .grid { display: grid; gap: 1.6rem 1.3rem; margin-block: 1.8rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); align-items: start; }
 .rcard { display: grid; gap: .75rem; min-width: 0; color: inherit; text-decoration: none; }
 .thumb { position: relative; overflow: hidden; aspect-ratio: 1280 / 900; border: 1px solid var(--line); border-radius: .4rem; background: var(--surface); transition: border-color .15s, box-shadow .15s; }
@@ -91,6 +94,7 @@ h1 { margin: 0 0 .7rem; font: 600 clamp(1.9rem, 5vw, 3rem)/1.05 var(--cond); let
     <button type="button" data-order="old" aria-pressed="false">Oldest first</button>
   </div>
 </div>
+<p class="gens" id="gens" hidden></p>
 <main id="main" class="grid"></main>
 <footer class="foot">
   <p>Each round is its own page, with every design's screenshots (by page, or by design), the large view, and what each judge said, including their suggested fixes. The round notes tell what the round taught.</p>
@@ -126,6 +130,11 @@ const D = "__DATA__";
   $("#lede").textContent = "The screenshots of every design the tournament tried for FamilyDB's page, round by round, with what the judges said about each. Choose a round.";
   $("#count").textContent = D.rounds.length + " rounds · " + D.unique + " designs";
 
+  if (D.gens && !D.gens.startsWith("@")) {
+    $("#gens").append(h("a", { href: D.gens, target: "_blank", rel: "noopener", text: "Compare across the rounds ↗" }),
+      h("span", { text: "Each round's winner and runner-up on the same page, beside today's, with a two-panel view to put any pair side by side." }));
+    $("#gens").hidden = false;
+  }
   function bar(label, score, cls) {
     return h("div", { class: "score" }, h("span", { text: label }),
       h("span", { class: "track" }, h("span", { class: "fill " + (cls || ""), style: "width:" + Math.max(0, Math.min(100, (score || 0) * 10)) + "%" })),

@@ -20,7 +20,7 @@ for f in sorted(out.glob("*/index.html")):
     for name, url in links.items():
         text = text.replace(f"@{name}@", url)
     f.write_text(text, encoding="utf-8")
-    missing = sorted(set(re.findall(r"@(?:INDEX|ROUND\d+)@", text)))
+    missing = sorted(set(re.findall(r"@(?:INDEX|GENS|ROUND\d+)@", text)))
     left += len(missing)
     print(f.parent.name, "still to link:", missing or "none")
 sys.exit(1 if left else 0)

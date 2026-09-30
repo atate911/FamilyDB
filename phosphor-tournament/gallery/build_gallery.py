@@ -4,7 +4,7 @@
     python3 build_gallery.py HARNESS OUT [--rounds 1-13]
 
 HARNESS is the tournament harness folder and OUT is a folder to build into (an earlier build is
-cleared; anything else is refused). An artifact can hold only 511 files, so each round is its own
+cleared; anything else is refused; --reuse takes the pictures of an earlier build). An artifact can hold only 511 files, so each round is its own
 page: OUT/round-N/ holds index.html (built from round.template.html) and img/<design>/<page>.webp
 for the designs judged that round, and OUT/index/ holds the index page (index.template.html) with
 a picture of each round's winner. Publish each folder as its own artifact, then replace the
@@ -161,6 +161,7 @@ def main():
     ap.add_argument("harness", type=Path)
     ap.add_argument("out", type=Path)
     ap.add_argument("--rounds", default="1-13")
+    ap.add_argument("--reuse", type=Path, help="an earlier build whose pictures are copied instead of made again")
     opts = ap.parse_args()
     harness, out = opts.harness, opts.out
     lo, hi = map(int, opts.rounds.split("-"))
@@ -184,7 +185,7 @@ def main():
         return {}
 
     if out.exists():
-        extra = {p.name for p in out.iterdir() if p.name != "index" and not p.name.startswith("round-")}
+        extra = {p.name for p in out.iterdir() if p.name not in ("index", "gens") and not p.name.startswith("round-")}
         if extra:
             sys.exit(f"{out} holds files a build does not make ({', '.join(sorted(extra)[:3])}); give an empty folder or an earlier build")
     new = out.with_name(out.name + ".new")
@@ -246,8 +247,21 @@ def main():
             if (rd["n"], e["id"]) not in have and e["id"] in fallback:
                 jobs.append((rd["n"], e["id"], str(fallback[e["id"]]), str(new / f"round-{rd['n']}" / "img" / e["id"])))
 
+    made, todo = {}, []
+    for job in jobs:
+        n, pid = job[0], job[1]
+        old = opts.reuse / f"round-{n}" / "img" / pid if opts.reuse else None
+        if old and old.is_dir():
+            dest = Path(job[3])
+            shutil.copytree(old, dest)
+            size = lambda k: dict(zip("wh", Image.open(dest / f"{k}.webp").size))
+            made[(n, pid)] = ({k: size(k) for k, _l, _t in PAGES if (dest / f"{k}.webp").exists()},
+                              {k: size(k) for k, _l, _n in DETAILS if (dest / f"{k}.webp").exists()})
+        else:
+            todo.append(job)
     with Pool() as pool:
-        made = {(n, pid): (sizes, det) for n, pid, sizes, det in pool.imap_unordered(convert, jobs)}
+        for n, pid, sizes, det in pool.imap_unordered(convert, todo):
+            made[(n, pid)] = (sizes, det)
 
     # who was judged where, for the "also judged in" links (a yardstick score of None is not shown)
     seen = {}
@@ -255,7 +269,7 @@ def main():
         for e in rd["entries"]:
             if e["score"] is not None:
                 seen.setdefault(e["id"], []).append([rd["n"], e["score"], f"@ROUND{rd['n']}@"])
-    nav = {"index": "@INDEX@", "rounds": [{"n": rd["n"], "url": f"@ROUND{rd['n']}@"} for rd in rounds]}
+    nav = {"index": "@INDEX@", "gens": "@GENS@", "rounds": [{"n": rd["n"], "url": f"@ROUND{rd['n']}@"} for rd in rounds]}
     unique = len({e["id"] for rd in rounds for e in rd["entries"] if e["id"] != "00-current"})
 
     template = (HERE / "round.template.html").read_text(encoding="utf-8")
@@ -286,6 +300,40 @@ def main():
         files = [p for p in page.rglob("*") if p.is_file()]
         print(f"round {rd['n']}: {len(files)} files, {round(sum(p.stat().st_size for p in files) / 1e6, 1)} MB")
 
+    # across the rounds: each round's winner and runner-up, and today's page, for comparing generations
+    gens = new / "gens"
+    entries, gdesigns = [], {}
+
+    def add(rd, e, lane):
+        gid = ("today" if e["id"] == "00-current" else f"R{rd['n']:02d}-{e['id']}")
+        src = new / f"round-{rd['n']}" / "img" / e["id"]
+        if not src.is_dir():
+            return
+        shutil.copytree(src, gens / "img" / gid)
+        entries.append({"id": gid, "name": e["name"], "rank": e["rank"] and (1 if lane == "winner" else 2), "score": e["score"],
+                        "lane": lane, "roundNo": rd["n"] if e["id"] != "00-current" else 0, "judges": []})
+        gdesigns[gid] = {"tagline": "", "family": "", "shots": made[(rd["n"], e["id"])][0], "details": made[(rd["n"], e["id"])][1]}
+
+    add(rounds[-1], rounds[-1]["entries"][0], "today")
+    for rd in rounds:
+        for lane, rank in (("winner", 1), ("second", 2)):
+            e = next((x for x in rd["entries"] if x["rank"] == rank), None)
+            if e:
+                add(rd, e, lane)
+    gdata = {
+        "pages": [{"key": k_, "label": l, "kind": kind} for k_, l, kind in PAGES],
+        "details": [{"key": k_, "label": l, "note": n_} for k_, l, n_ in DETAILS],
+        "lenses": LENSES,
+        "round": {"n": 0, "gens": True, "mode": "", "judges": 0, "weights": None, "margin": None, "today": None,
+                  "winners": [], "lessons": "", "notes": [], "entries": entries},
+        "designs": gdesigns, "nav": nav, "seen": {},
+    }
+    payload = json.dumps(gdata, separators=(",", ":")).replace("</", "<\\/")
+    html = template.replace("<title>Phosphor Screenshots</title>", "<title>Phosphor Across the Rounds</title>", 1)
+    (gens / "index.html").write_text(html.replace('"__DATA__"', payload), encoding="utf-8")
+    gfiles = [p for p in gens.rglob("*") if p.is_file()]
+    print(f"across the rounds: {len(gfiles)} files, {round(sum(p.stat().st_size for p in gfiles) / 1e6, 1)} MB")
+
     # the index page: a picture of each round's winner on Home
     final = read(harness / "final.json") if (harness / "final.json").exists() else None
     idx = new / "index"
@@ -308,7 +356,7 @@ def main():
             card["note"] = f"First panel, of twelve directions. The five polished finalists went to a final panel, which {best['name']} won ({best['mean']})."
         cards.append(card)
     template = (HERE / "index.template.html").read_text(encoding="utf-8")
-    payload = json.dumps({"rounds": cards, "unique": unique}, separators=(",", ":")).replace("</", "<\\/")
+    payload = json.dumps({"rounds": cards, "unique": unique, "gens": "@GENS@"}, separators=(",", ":")).replace("</", "<\\/")
     (idx / "index.html").write_text(template.replace('"__DATA__"', payload), encoding="utf-8")
     print("index page:", len([p for p in idx.rglob("*") if p.is_file()]), "files")
 

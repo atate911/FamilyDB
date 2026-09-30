@@ -162,6 +162,24 @@ button.linkish:hover { color: var(--accent); text-decoration: underline; text-un
 .winners { display: grid; gap: .5rem; margin: .6rem 0 0; padding-left: 1.4rem; }
 .winners li { padding-left: .3rem; }
 .winners li > * { margin-right: .5rem; }
+.cmpbar { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; margin-bottom: 1rem; }
+.cmpbar label { display: inline-flex; align-items: center; gap: .5rem; min-width: 0; color: var(--dim); font-size: .82rem; }
+.cmpbar select { max-width: min(100%, 22rem); }
+.cmpbar .check { cursor: pointer; }
+.cmpbar input { accent-color: var(--accent); width: 1.05rem; height: 1.05rem; }
+.cmp { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem clamp(.5rem, 1.6vw, 1.2rem); align-items: start; }
+.pane-wrap { display: grid; gap: .5rem; min-width: 0; }
+.pane-head { display: flex; flex-wrap: wrap; align-items: center; gap: .2rem .6rem; min-width: 0; }
+.pane-head .nm { flex: 1 1 8rem; }
+.pane-head .linkish { color: var(--accent); font-size: .8rem; text-decoration: underline; text-underline-offset: .2em; }
+.pane { max-height: calc(100vh - 14rem); min-height: 12rem; overflow: auto; overscroll-behavior: contain; border: 1px solid var(--line); border-radius: .4rem; background: var(--surface); scrollbar-width: thin; scrollbar-color: var(--line2) transparent; }
+.pane img { display: block; width: 100%; height: auto; cursor: zoom-in; }
+.pane.phone img { max-width: 24rem; margin-inline: auto; }
+.pane:focus-visible { outline-offset: 2px; }
+.cmpbtn { margin: 0; padding: 0; border: 0; background: none; font: 500 .74rem var(--mono); color: var(--accent); text-decoration: underline; text-underline-offset: .2em; }
+.cmpbtn:hover { color: var(--fg); }
+.l-winner { color: var(--accent); }
+.l-second { color: var(--amber); }
 .foot { display: grid; gap: .4rem; max-width: 68ch; margin-top: 2rem; padding-top: 1.2rem; border-top: 1px solid var(--line); color: var(--dim); font-size: .85rem; }
 .foot p { margin: 0; }
 
@@ -195,6 +213,13 @@ button.linkish:hover { color: var(--accent); text-decoration: underline; text-un
   .top { padding-block: 1.4rem 1rem; }
   .bar { padding-block: .5rem; gap: .4rem; }
   #size, .pick > span { display: none; }
+  .bar > .row > .seg[aria-label="How to look"] { width: 100%; }
+  .bar > .row > .seg[aria-label="How to look"] button { flex: 1 1 auto; padding-inline: .3rem; font-size: .8rem; }
+  .cmpbar { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: end; gap: .5rem; }
+  .cmpbar label { flex-direction: column; align-items: stretch; gap: .15rem; }
+  .cmpbar select { max-width: none; width: 100%; }
+  .cmpbar .check { grid-column: 1 / -1; flex-direction: row; align-items: center; }
+  .pane { max-height: calc(100vh - 12rem); }
   .picker .icon-btn { width: 2.4rem; }
   .pick { flex: 1 1 8rem; }
   .pick select { width: 100%; }
@@ -227,6 +252,7 @@ button.linkish:hover { color: var(--accent); text-decoration: underline; text-un
     <div class="row">
       <div class="seg" role="group" aria-label="How to look">
         <button type="button" data-view="page" aria-pressed="true">By page</button>
+        <button type="button" data-view="compare" aria-pressed="false">Compare two</button>
         <button type="button" data-view="design" aria-pressed="false">By design</button>
         <button type="button" data-view="notes" aria-pressed="false">Round notes</button>
       </div>
@@ -308,14 +334,21 @@ const D = "__DATA__";
     ...D.details.map(p => ({ key: p.key, label: p.label, kind: "sheet", note: p.note })),
   ];
   const byKey = Object.fromEntries(ALL.map(p => [p.key, p]));
-  const LANE = { today: "Yardstick", main: "Main lane", wild: "Wild lane", other: "" };
+  const LANE = { today: "Yardstick", main: "Main lane", wild: "Wild lane", winner: "Winner", second: "Runner-up", other: "" };
   const laneText = (l, r) => ({
+    winner: "the round's top-scoring design",
+    second: "the round's second-placed design",
     today: r.today == null ? "today's page, shown for comparison; the judges did not score it this round" : "today's page, judged the same way; every design is measured against it",
     main: "carried on to the next round as a leader",
     wild: "carried on to the next round for range: a different idea kept alive",
     other: "not carried on",
   })[l];
-  const SETS = [
+  const GENS = !!D.round.gens;
+  const SETS = GENS ? [
+    { key: "all", label: "All", test: () => true },
+    { key: "going", label: "Winners", test: d => d.lane === "today" || d.lane === "winner" },
+    { key: "top8", label: "Runners-up", test: d => d.lane === "today" || d.lane === "second" },
+  ] : [
     { key: "all", label: "All", test: () => true },
     { key: "going", label: "Going on", test: d => d.lane === "today" || d.lane === "main" || d.lane === "wild" },
     { key: "top8", label: "Top eight", test: d => d.rank <= 8 },
@@ -325,7 +358,9 @@ const D = "__DATA__";
 
   const saved = store.get();
   const state = {
-    view: ["design", "notes"].includes(saved.view) ? saved.view : "page",
+    view: (GENS ? ["compare"] : ["design", "notes", "compare"]).includes(saved.view) ? saved.view : "page",
+    cmp: { a: null, b: null },
+    sync: saved.sync !== false,
     page: "home",
     design: null,
     set: SETS.some(s => s.key === saved.set) ? saved.set : "all",
@@ -343,21 +378,23 @@ const D = "__DATA__";
     pages = ALL.filter(p => judged.filter(d => (p.kind === "sheet" ? d.details : d.shots)[p.key]).length * 2 >= judged.length);
     if (!pages.some(p => p.key === state.page)) state.page = pages[0] ? pages[0].key : "home";
     if (!byId[state.design]) state.design = (designs.find(d => d.rank > 0) || designs[0]).id;
+    const ranked = designs.filter(d => d.rank > 0);
+    const first = GENS ? designs[0] : ranked[0], second = GENS ? ranked[ranked.length - 1] : (ranked[1] || designs[0]);
+    if (!byId[state.cmp.a]) state.cmp.a = first.id;
+    if (!byId[state.cmp.b] || state.cmp.b === state.cmp.a) state.cmp.b = second.id === state.cmp.a ? designs[0].id : second.id;
   }
+  const optionText = d => GENS ? (d.rank ? "Round " + d.roundNo + " " + d.name + " (" + LANE[d.lane].toLowerCase() + ")" : d.name)
+    : (d.rank ? d.rank + ". " : "") + d.name + " · " + fmt(d.score);
 
+  /* a link may name a view; the page never writes one, so Back leaves it as it always does */
   function readHash() {
-    const m = location.hash.slice(1).match(/^(page|design|notes)(?:\.(.+))?$/);
+    const m = location.hash.slice(1).match(/^(page|design|notes|compare)(?:\.(.+))?$/);
     if (!m) return null;
-    if (m[1] === "notes") return { view: "notes" };
+    if (m[1] === "notes" && !GENS) return { view: "notes" };
+    if (m[1] === "compare") return { view: "compare" };
     if (m[1] === "page" && pages.some(p => p.key === m[2])) return { view: "page", page: m[2] };
-    if (m[1] === "design" && R.entries.some(e => e.id === m[2])) return { view: "design", design: m[2] };
+    if (m[1] === "design" && !GENS && R.entries.some(e => e.id === m[2])) return { view: "design", design: m[2] };
     return null;
-  }
-  const hashNow = () => state.view === "notes" ? "notes" : state.view === "page" ? "page." + state.page : "design." + state.design;
-  function writeHash() {
-    const t = "#" + hashNow();
-    if (location.hash === t) return;
-    try { history.replaceState(null, "", t); } catch (e) { try { location.hash = t; } catch (e2) { /* nowhere to write it */ } }
   }
   useRound();
   const fromHash = readHash();
@@ -374,15 +411,18 @@ const D = "__DATA__";
   const dims = s => s.w.toLocaleString("en") + " × " + s.h.toLocaleString("en") + " px";
 
   /* ---- fixed parts ---- */
-  document.title = "Phosphor Screenshots, Round " + R.n;
-  $("#title").textContent = "Round " + R.n;
-  $("#eyebrow").textContent = (R.mode ? R.mode + " round · " : "") + (designs.length - 1) + " designs · " + R.judges + " judges";
+  document.title = GENS ? "Phosphor Across the Rounds" : "Phosphor Screenshots, Round " + R.n;
+  $("#title").textContent = GENS ? "Across the rounds" : "Round " + R.n;
+  $("#eyebrow").textContent = GENS ? "each round's winner and runner-up, beside today's page" : (R.mode ? R.mode + " round · " : "") + (designs.length - 1) + " designs · " + R.judges + " judges";
+  if (GENS) document.querySelectorAll('[data-view="design"], [data-view="notes"]').forEach(b => { b.hidden = true; });
   $("#lede").textContent = "Every design in this round, with what the judges said about each. Look by page to compare the designs, by design to read the judges beside its pictures, or read the round's notes. Click a picture to see it large.";
-  const idx = D.nav.rounds.findIndex(r => r.n === R.n);
-  const before = D.nav.rounds[idx - 1], after = D.nav.rounds[idx + 1];
+  if (GENS) $("#lede").textContent = "Pick a page and see how it changed from round to round: each round's winner and runner-up, with today's page first. Use Compare two to put any pair side by side, from any rounds, and flip through the pages with the same pair.";
+  const idx = GENS ? -1 : D.nav.rounds.findIndex(r => r.n === R.n);
+  const before = D.nav.rounds[idx - 1], after = idx >= 0 ? D.nav.rounds[idx + 1] : null;
   const link = (href, text) => href.startsWith("@") ? null : h("a", { href, target: "_blank", rel: "noopener", text });
   $("#crumbs").replaceChildren(...[
     link(D.nav.index, "← All rounds"),
+    GENS ? null : link(D.nav.gens, "Compare across the rounds ↗"),
     h("span", { class: "gap" }),
     before && link(before.url, "‹ Round " + before.n),
     after && link(after.url, "Round " + after.n + " ›")].filter(Boolean));
@@ -390,7 +430,7 @@ const D = "__DATA__";
   function buildLegend() {
     const lanes = [];
     designs.forEach(d => { if (!lanes.includes(d.lane)) lanes.push(d.lane); });
-    $("#legend").replaceChildren(...["today", "main", "wild", "other"].filter(l => lanes.includes(l)).map(l =>
+    $("#legend").replaceChildren(...["today", "main", "wild", "winner", "second", "other"].filter(l => lanes.includes(l)).map(l =>
       h("li", null, h("span", { class: "chip l-" + l, text: LANE[l] || "No tag" }), h("span", { text: laneText(l, R) }))));
   }
   if (window.matchMedia && matchMedia("(max-width: 34rem)").matches) $("#legendbox").open = false;
@@ -401,7 +441,7 @@ const D = "__DATA__";
       .filter(([s, n]) => s.key !== "going" || n > 0)
       .map(([s, n]) => h("option", { value: s.key, text: s.label + " (" + n + ")" })));
     if (!SETS.some(s => s.key === state.set) || (state.set === "going" && !designs.some(d => d.lane === "main" || d.lane === "wild"))) state.set = "all";
-    designSel.replaceChildren(...designs.map(d => h("option", { value: d.id, text: (d.rank ? d.rank + ". " : "") + d.name + " · " + fmt(d.score) })));
+    designSel.replaceChildren(...designs.map(d => h("option", { value: d.id, text: optionText(d) })));
     tabs.replaceChildren(...pages.filter(p => p.kind !== "sheet").map(p => h("button", { type: "button", "data-page": p.key, text: p.label })),
       ...(pages.some(p => p.kind === "sheet") ? [h("span", { class: "sep", "aria-hidden": "true" })] : []),
       ...pages.filter(p => p.kind === "sheet").map(p => h("button", { type: "button", "data-page": p.key, text: p.label })));
@@ -415,8 +455,8 @@ const D = "__DATA__";
     document.querySelectorAll("[data-size]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.size === state.size)));
     document.documentElement.style.setProperty("--zoom", SIZES[state.size]);
     $("#set-wrap").hidden = state.view !== "page";
-    $("#size").hidden = state.view === "notes";
-    tabs.hidden = state.view !== "page";
+    $("#size").hidden = state.view === "notes" || state.view === "compare";
+    tabs.hidden = state.view !== "page" && state.view !== "compare";
     $("#picker").hidden = state.view !== "design";
     setSel.value = state.set;
     designSel.value = state.design;
@@ -439,8 +479,10 @@ const D = "__DATA__";
     const s = (p.kind === "sheet" ? d.details : d.shots)[p.key];
     const cap = mode === "page"
       ? h("div", { class: "cap" },
-          h("button", { type: "button", class: "nm linkish", "data-design": d.id, title: "Read what the judges said", text: d.name }),
-          h("span", { class: "meta" }, d.rank ? h("span", { text: "#" + d.rank }) : null, h("span", { text: fmt(d.score) }), chip(d)))
+          GENS ? h("span", { class: "nm", text: d.name })
+               : h("button", { type: "button", class: "nm linkish", "data-design": d.id, title: "Read what the judges said", text: d.name }),
+          h("span", { class: "meta" }, d.roundNo ? h("span", { text: "R" + d.roundNo }) : d.rank ? h("span", { text: "#" + d.rank }) : null, h("span", { text: fmt(d.score) }), chip(d),
+            h("button", { type: "button", class: "cmpbtn", "data-cmp": d.id, title: "Show this beside another design", text: "Compare ⇄" })))
       : h("div", { class: "cap" },
           h("span", { class: "nm", text: p.label }),
           p.kind === "sheet" ? h("p", { class: "sub", text: p.note }) : null);
@@ -472,7 +514,7 @@ const D = "__DATA__";
     const ds = designs.filter(SETS.find(s => s.key === state.set).test).filter(has);
     live.textContent = "Round " + R.n + ", " + p.label + ": " + ds.length + (ds.length === 1 ? " design" : " designs");
     return h("div", null,
-      h("div", { class: "phead" }, h("h2", { text: p.label }), h("p", { class: "note", text: pageNote(p, ds) + " Today's page comes first, as the yardstick. A name opens what the judges said." })),
+      h("div", { class: "phead" }, h("h2", { text: p.label }), h("p", { class: "note", text: pageNote(p, ds) + (GENS ? " Today's page comes first, then each round in turn." : " Today's page comes first, as the yardstick. A name opens what the judges said.") + " Compare ⇄ puts a design beside another." })),
       h("div", { class: "grid " + p.kind }, ds.map(d => card(d, p, "page", list))));
   }
 
@@ -558,13 +600,66 @@ const D = "__DATA__";
           h("p", { class: "jwhy", text: n.t }))))) : null);
   }
 
+  /* two panels side by side: the same page of two designs, scrolling together */
+  function compareView(list) {
+    const p = byKey[state.page];
+    const has = d => (p.kind === "sheet" ? d.details : d.shots)[p.key];
+    const opts = designs.filter(has);
+    const pick = side => h("select", { id: "cmp-" + side, "aria-label": "Design " + side.toUpperCase() },
+      opts.map(d => h("option", { value: d.id, text: optionText(d) })));
+    const sa = pick("a"), sb = pick("b");
+    if (!byId[state.cmp.a] || !has(byId[state.cmp.a])) state.cmp.a = opts[0].id;
+    if (!byId[state.cmp.b] || !has(byId[state.cmp.b])) state.cmp.b = (opts[1] || opts[0]).id;
+    sa.value = state.cmp.a; sb.value = state.cmp.b;
+    const check = h("input", { type: "checkbox", id: "cmp-sync" });
+    check.checked = state.sync;
+    const bar = h("div", { class: "cmpbar" },
+      h("label", null, "A", sa), h("button", { type: "button", class: "icon-btn", id: "cmp-swap", "aria-label": "Swap A and B", title: "Swap A and B" }, "⇄"),
+      h("label", null, "B", sb), h("label", { class: "check" }, check, "Scroll together"));
+    const panes = [];
+    const cols = ["a", "b"].map(side => {
+      const d = byId[state.cmp[side]], s = (p.kind === "sheet" ? d.details : d.shots)[p.key];
+      const src = "img/" + d.id + "/" + p.key + ".webp";
+      const at = list.length;
+      list.push({ d, p, s, src, hit: null });
+      const img = h("img", { src, alt: p.label + ", " + d.name, width: s.w, height: s.h, decoding: "async" });
+      img.addEventListener("click", () => openLb(at));
+      const pane = h("div", { class: "pane " + p.kind, tabindex: "0", role: "region", "aria-label": p.label + ", " + d.name }, img);
+      panes.push(pane);
+      const open = h("button", { type: "button", class: "linkish", text: "Enlarge" });
+      open.addEventListener("click", () => openLb(at));
+      list[at].hit = open;
+      return h("section", { class: "pane-wrap" },
+        h("div", { class: "pane-head" }, h("span", { class: "nm", text: (side === "a" ? "A · " : "B · ") + d.name }),
+          h("span", { class: "meta" }, d.roundNo ? h("span", { text: "R" + d.roundNo }) : d.rank ? h("span", { text: "#" + d.rank }) : null, h("span", { text: fmt(d.score) }), chip(d)), open),
+        pane);
+    });
+    let lock = false;
+    panes.forEach((el, i) => el.addEventListener("scroll", () => {
+      if (!state.sync || lock) return;
+      const o = panes[1 - i], max = el.scrollHeight - el.clientHeight;
+      lock = true;
+      o.scrollTop = max > 0 ? (el.scrollTop / max) * (o.scrollHeight - o.clientHeight) : 0;
+      requestAnimationFrame(() => { lock = false; });
+    }, { passive: true }));
+    const again = id => { state.cmp.a = sa.value; state.cmp.b = sb.value; render(true); const e = $("#" + id); if (e) e.focus({ preventScroll: true }); };
+    sa.addEventListener("change", () => again("cmp-a"));
+    sb.addEventListener("change", () => again("cmp-b"));
+    bar.querySelector("#cmp-swap").addEventListener("click", () => { [state.cmp.a, state.cmp.b] = [state.cmp.b, state.cmp.a]; render(true); $("#cmp-swap").focus({ preventScroll: true }); });
+    check.addEventListener("change", () => { state.sync = check.checked; store.set({ view: state.view, set: state.set, size: state.size, sync: state.sync }); });
+    live.textContent = p.label + ": " + byId[state.cmp.a].name + " beside " + byId[state.cmp.b].name;
+    return h("div", null,
+      h("div", { class: "phead" }, h("h2", { text: p.label }),
+        h("p", { class: "note", text: "Two designs on the same page. Use the page tabs above to look at the same pair on another page; Enlarge opens A, and the arrow keys then move to B." })),
+      bar, h("div", { class: "cmp" }, cols));
+  }
+
   function render(keepScroll) {
     sync();
     const list = [];
-    main.replaceChildren(state.view === "page" ? pageView(list) : state.view === "design" ? designView(list) : notesView());
+    main.replaceChildren(state.view === "page" ? pageView(list) : state.view === "compare" ? compareView(list) : state.view === "design" ? designView(list) : notesView());
     gallery = list;
-    writeHash();
-    store.set({ view: state.view, set: state.set, size: state.size });
+    store.set({ view: state.view, set: state.set, size: state.size, sync: state.sync });
     if (!keepScroll) {
       const top = $(".top").offsetHeight;
       if (window.scrollY > top) window.scrollTo(0, top);
@@ -604,7 +699,8 @@ const D = "__DATA__";
     $("#lb-count").textContent = (at + 1) + " / " + gallery.length;
     setDisabled($("#lb-prev"), at === 0, stage);
     setDisabled($("#lb-next"), at === gallery.length - 1, stage);
-    $("#lb-jump").textContent = state.view === "page" ? "What the judges said" : "This page, every design";
+    $("#lb-jump").hidden = GENS;
+    $("#lb-jump").textContent = state.view === "design" ? "This page, every design" : "What the judges said";
     stage.scrollTop = 0; stage.scrollLeft = 0;
     layoutLb();
     [at - 1, at + 1].forEach(i => { if (gallery[i]) new Image().src = gallery[i].src; });
@@ -644,7 +740,7 @@ const D = "__DATA__";
   $("#lb-next").addEventListener("click", () => step(1));
   $("#lb-jump").addEventListener("click", () => {
     const it = gallery[at];
-    go(state.view === "page" ? { view: "design", design: it.d.id } : { view: "page", page: it.p.key, set: "all" });
+    go(state.view === "design" ? { view: "page", page: it.p.key, set: "all" } : { view: "design", design: it.d.id });
   });
   lb.querySelectorAll("[data-zoom]").forEach(b => b.addEventListener("click", () => { state.zoom = b.dataset.zoom; layoutLb(); stage.scrollTop = 0; stage.scrollLeft = 0; }));
   lb.addEventListener("click", e => { if (e.target === stage) closeLb(); });
@@ -685,6 +781,15 @@ const D = "__DATA__";
     if (b) { state.page = b.dataset.page; render(); }
   });
   main.addEventListener("click", e => {
+    const c = e.target.closest("button[data-cmp]");
+    if (c) {
+      const id = c.dataset.cmp;
+      if (state.cmp.a === id) state.cmp.a = state.cmp.b;
+      state.cmp.b = id;
+      if (state.cmp.a === id) state.cmp.a = designs.find(x => x.id !== id).id;
+      state.view = "compare"; render(); main.focus({ preventScroll: true });
+      return;
+    }
     const d = e.target.closest("button[data-design]");
     if (d) { state.view = "design"; state.design = d.dataset.design; render(); main.focus({ preventScroll: true }); return; }
   });
@@ -692,17 +797,6 @@ const D = "__DATA__";
   designSel.addEventListener("change", () => { state.design = designSel.value; render(); });
   dPrev.addEventListener("click", () => { const i = designs.findIndex(d => d.id === state.design); if (i > 0) { state.design = designs[i - 1].id; render(); } });
   dNext.addEventListener("click", () => { const i = designs.findIndex(d => d.id === state.design); if (i < designs.length - 1) { state.design = designs[i + 1].id; render(); } });
-  window.addEventListener("hashchange", () => {
-    const want = readHash();
-    if (!want) return;
-    const same = want.view === state.view &&
-      (want.view === "page" ? want.page === state.page : want.view === "design" ? want.design === state.design : true);
-    if (same) return;
-    closeLb();
-    Object.assign(state, want);
-    render();
-  });
-
   buildLegend();
   buildControls();
   render(true);
