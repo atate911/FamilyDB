@@ -151,14 +151,15 @@ main:focus { outline: none; }
 .lb-count { min-width: 4.4rem; text-align: center; font: 400 .82rem var(--mono); color: var(--dim); font-variant-numeric: tabular-nums; }
 .lb-jump { min-height: 2.25rem; padding: .35rem .75rem; border: 1px solid var(--line2); border-radius: .45rem; background: var(--surface); font-size: .82rem; color: var(--fg); }
 .lb-jump:hover { background: var(--raised); border-color: var(--dim); }
-.lb-stage { display: flex; overflow: auto; overscroll-behavior: contain; padding: 1rem var(--gutter) calc(1rem + env(safe-area-inset-bottom, 0px)); touch-action: pan-x pan-y pinch-zoom; }
+.lb-stage { display: flex; overflow: auto; scrollbar-gutter: stable both-edges; overscroll-behavior: contain; padding: 1rem var(--gutter) calc(1rem + env(safe-area-inset-bottom, 0px)); touch-action: pan-x pan-y pinch-zoom; }
 .lb-stage:focus-visible { outline-offset: -4px; }
-.lb-stage img { flex: none; display: block; margin: auto; max-width: none; border: 1px solid var(--line); border-radius: .3rem; background: var(--surface); user-select: none; -webkit-user-drag: none; }
+.lb-stage img { flex: none; display: block; margin: auto; box-sizing: content-box; max-width: none; border: 1px solid var(--line); border-radius: .3rem; background: var(--surface); user-select: none; -webkit-user-drag: none; }
 @media (prefers-reduced-motion: no-preference) {
   .lb:not([hidden]) { animation: lbin .14s ease-out; }
   @keyframes lbin { from { opacity: 0; } to { opacity: 1; } }
 }
 @media (pointer: coarse) {
+  select { font-size: 16px; }
   .seg button, select, .lb-jump { min-height: 2.75rem; }
   .icon-btn { width: 2.75rem; height: 2.75rem; }
   .tabs button { min-height: 2.5rem; }
@@ -167,7 +168,6 @@ main:focus { outline: none; }
   .top { padding-block: 1.4rem 1rem; }
   .bar { padding-block: .5rem; gap: .4rem; }
   #size, .pick > span { display: none; }
-  select { font-size: .82rem; }
   .picker .icon-btn { width: 2.4rem; }
   .pick { flex: 1 1 8rem; }
   .pick select { width: 100%; }
@@ -322,6 +322,10 @@ const D = "__DATA__";
   const page = $("#page"), main = $("#main"), tabs = $("#tabs"), live = $("#live");
   const setSel = $("#set"), designSel = $("#design");
   const dPrev = $("#d-prev"), dNext = $("#d-next");
+  function setDisabled(btn, off, fallback) {
+    if (off && document.activeElement === btn) fallback.focus({ preventScroll: true });
+    btn.disabled = off;
+  }
   const fmt = n => (typeof n === "number" ? n.toFixed(2) : "");
   const dims = s => s.w.toLocaleString("en") + " × " + s.h.toLocaleString("en") + " px";
 
@@ -339,7 +343,7 @@ const D = "__DATA__";
   });
 
   /* ---- controls ---- */
-  SETS.forEach(s => setSel.append(h("option", { value: s.key, text: s.label + " (" + designs.filter(s.test).length + ")" })));
+  SETS.forEach(s => setSel.append(h("option", { value: s.key, text: s.label + " (" + designs.filter(d => d.lane !== "today" && s.test(d)).length + ")" })));
   designs.forEach(d => designSel.append(h("option", { value: d.id, text: (d.rank ? d.rank + ". " : "") + d.name + " · " + fmt(d.score) })));
   D.pages.forEach(p => tabs.append(h("button", { type: "button", "data-page": p.key, text: p.label })));
   tabs.append(h("span", { class: "sep", "aria-hidden": "true" }));
@@ -358,8 +362,8 @@ const D = "__DATA__";
     setSel.value = state.set;
     designSel.value = state.design;
     const at = designs.findIndex(d => d.id === state.design);
-    dPrev.disabled = at <= 0;
-    dNext.disabled = at >= designs.length - 1;
+    setDisabled(dPrev, at <= 0, designSel);
+    setDisabled(dNext, at >= designs.length - 1, designSel);
     tabs.querySelectorAll("button").forEach(b => {
       if (b.dataset.page === state.page) {
         b.setAttribute("aria-current", "page");
@@ -405,7 +409,7 @@ const D = "__DATA__";
     const ds = designs.filter(SETS.find(s => s.key === state.set).test);
     live.textContent = p.label + ": " + ds.length + " designs";
     return h("div", null,
-      h("div", { class: "phead" }, h("h2", { text: p.label }), h("p", { class: "note", text: pageNote(p, ds) })),
+      h("div", { class: "phead" }, h("h2", { text: p.label }), h("p", { class: "note", text: pageNote(p, ds) + " Today's page comes first, as the yardstick." })),
       h("div", { class: "grid " + p.kind }, ds.map(d => card(d, p, "page", list))));
   }
   function fact(label, value, cls) {
@@ -466,17 +470,21 @@ const D = "__DATA__";
     w = Math.max(40, Math.round(w));
     big.style.width = w + "px";
     big.style.height = Math.round(w * it.s.h / it.s.w) + "px";
+    stage.style.touchAction = mode === "fit" ? "pan-y pinch-zoom" : "pan-x pan-y pinch-zoom";
     lb.querySelectorAll("[data-zoom]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.zoom === mode)));
   }
   function showLb() {
     const it = gallery[at];
+    const same = big.getAttribute("src") === it.src && big.complete;
+    big.style.visibility = same ? "" : "hidden";
+    big.onload = big.onerror = () => { big.style.visibility = ""; };
     big.src = it.src;
     big.alt = it.p.label + ", " + it.d.name;
     $("#lb-title").textContent = it.d.name + (it.d.rank ? " · #" + it.d.rank : "");
     $("#lb-sub").textContent = it.p.label + " · " + dims(it.s) + " · " + fmt(it.d.score);
     $("#lb-count").textContent = (at + 1) + " / " + gallery.length;
-    $("#lb-prev").disabled = at === 0;
-    $("#lb-next").disabled = at === gallery.length - 1;
+    setDisabled($("#lb-prev"), at === 0, stage);
+    setDisabled($("#lb-next"), at === gallery.length - 1, stage);
     $("#lb-jump").textContent = state.view === "page" ? "All of this design" : "This page, every design";
     stage.scrollTop = 0; stage.scrollLeft = 0;
     layoutLb();
@@ -509,6 +517,7 @@ const D = "__DATA__";
     closeLb();
     Object.assign(state, next);
     render();
+    main.focus({ preventScroll: true });
   }
 
   $("#lb-close").addEventListener("click", closeLb);
@@ -522,7 +531,7 @@ const D = "__DATA__";
   lb.addEventListener("click", e => { if (e.target === stage) closeLb(); });
 
   document.addEventListener("keydown", e => {
-    if (!isOpen) return;
+    if (!isOpen || e.altKey || e.ctrlKey || e.metaKey) return;
     if (e.key === "Escape") { e.preventDefault(); closeLb(); }
     else if (e.key === "ArrowLeft") { e.preventDefault(); step(-1); }
     else if (e.key === "ArrowRight") { e.preventDefault(); step(1); }

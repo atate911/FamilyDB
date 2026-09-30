@@ -112,20 +112,29 @@ def main():
     harness, rnd, out = Path(args[0]), args[1], Path(args[2])
     nxt = f"r{int(rnd[1:]) + 1}"
     rdir = harness / "rounds" / rnd
-    result = json.loads((rdir / "results.json").read_text())
-    fams = json.loads((harness / "families.json").read_text())
+    result = json.loads((rdir / "results.json").read_text(encoding="utf-8"))
+    fams = json.loads((harness / "families.json").read_text(encoding="utf-8"))
     fams = fams.get("palettes", fams)
-    args_next = json.loads((harness / "rounds" / nxt / "args.json").read_text())
+    next_args = harness / "rounds" / nxt / "args.json"
+    if next_args.exists():
+        args_next = json.loads(next_args.read_text(encoding="utf-8"))
+    else:
+        print(f"no {nxt} setup yet: nothing is marked as going on")
+        args_next = {"carried": []}
     main_lane = {c["id"] for c in args_next["carried"]}
     wild_lane = {c["id"] for c in args_next.get("wildCarried", [])}
 
     def palette(pid):
         for f in [rdir / "palettes" / f"{pid}.json", *sorted((harness / "rounds").glob(f"*/palettes/{pid}.json"))]:
             if f.exists():
-                return json.loads(f.read_text())
+                return json.loads(f.read_text(encoding="utf-8"))
         return {}
 
-    shutil.rmtree(out, ignore_errors=True)
+    if out.exists():
+        extra = {p.name for p in out.iterdir()} - {"index.html", "img", "t.html"}
+        if extra:
+            sys.exit(f"{out} holds files a build does not make ({', '.join(sorted(extra)[:3])}); give an empty folder or an earlier build")
+        shutil.rmtree(out)
     (out / "img").mkdir(parents=True)
     ranked = [{**r, "rank": i} for i, r in enumerate(result["ranking"], 1)]
     designs = []
@@ -169,9 +178,9 @@ def main():
         "details": [{"key": k, "label": l, "note": n} for k, l, n in DETAILS],
         "designs": designs,
     }
-    template = (HERE / "index.template.html").read_text()
+    template = (HERE / "index.template.html").read_text(encoding="utf-8")
     payload = json.dumps(data, separators=(",", ":")).replace("</", "<\\/")
-    (out / "index.html").write_text(template.replace('"__DATA__"', payload))
+    (out / "index.html").write_text(template.replace('"__DATA__"', payload), encoding="utf-8")
     files = [p for p in out.rglob("*") if p.is_file()]
     print(len(files), "files,", round(sum(p.stat().st_size for p in files) / 1e6, 1), "MB")
 
