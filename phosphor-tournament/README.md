@@ -227,11 +227,14 @@ Round 10's third informed entrant was briefed at the owner's request and is judg
   screenshots, plus the scripts.
 - `harness-venv-requirements.txt`: the harness's own Python packages.
 - `SHA256SUMS`: a checksum for each part.
-- `gallery/`: builds a browsable web page of one round's screenshots, every design on every page
-  (by page or by design, with a large view). `python3 gallery/build_gallery.py HARNESS r13 OUT
-  --left ID` needs Pillow (the harness venv has it); OUT then holds `index.html` and
-  `img/<design>/<page>.webp`, about 14 MB for round 13. The round 13 field was published as a
-  private artifact from it.
+- `gallery/`: builds the screenshot gallery, one page per round plus an index page. Each round page
+  has every design's screenshots (by page or by design, with a large view), what each judge said
+  (with their suggested fixes) and the round's notes. `python3 gallery/build_gallery.py HARNESS OUT`
+  needs Pillow (the harness venv has it); OUT then holds `index/` and `round-1/` .. `round-13/`, each
+  an `index.html` with its `img/` (an artifact holds at most 511 files, which is why a round is a
+  page). Publish each folder as its own artifact, then `gallery/relink.py OUT links.json` puts the
+  published links in place of the `@INDEX@` and `@ROUND<n>@` placeholders, and the pages are
+  published again. All 13 rounds and the index were published this way as private artifacts.
 
 Inside the harness, the files that carry the thinking are:
 
