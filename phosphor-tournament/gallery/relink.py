@@ -11,10 +11,16 @@ import json
 import sys
 from pathlib import Path
 
+import re
+
 out, links = Path(sys.argv[1]), json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+left = 0
 for f in sorted(out.glob("*/index.html")):
     text = f.read_text(encoding="utf-8")
     for name, url in links.items():
         text = text.replace(f"@{name}@", url)
     f.write_text(text, encoding="utf-8")
-    print(f.parent.name, "left:", sorted(set(__import__("re").findall(r"@(?:INDEX|ROUND\d+)@", text))))
+    missing = sorted(set(re.findall(r"@(?:INDEX|ROUND\d+)@", text)))
+    left += len(missing)
+    print(f.parent.name, "still to link:", missing or "none")
+sys.exit(1 if left else 0)

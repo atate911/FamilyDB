@@ -12,13 +12,14 @@ placeholders @INDEX@ and @ROUND1@, @ROUND2@ ... in every index.html with the pub
 (relink.py does it) so the pages can point to one another.
 
 Round 1 is read from HARNESS/results.json and HARNESS/round1/out; round N from
-HARNESS/rounds/rN/. A design carried into later rounds keeps its id, so its pictures are made once
-(from the run that captured the most pages) and shown in every round it was judged in. The designs
-going on from a round are read from the next round's args.json. The small detail shots (controls,
+HARNESS/rounds/rN/. Each round shows the pictures captured in that round, so a design changed
+between rounds is shown as it was judged. The designs going on from a round are read from the next
+round's args.json. Rounds whose results carry no lessons take them from HARNESS/lessons.md. The small detail shots (controls,
 keyboard focus, the afterglow's frames, the screen switching on) are joined into one labelled sheet
-each so the page stays at a few thousand files.
+each so a round stays a few hundred files.
 """
 
+import argparse
 import json
 import re
 import shutil
@@ -88,7 +89,9 @@ def sheet(parts, cols, path, pad=18, gap=18, label_h=26):
     if not cells:
         return None
     rows = [cells[i:i + cols] for i in range(0, len(cells), cols)]
-    col_w = [max((r[c][1].width for r in rows if c < len(r)), default=0) for c in range(cols)]
+    ruler = ImageDraw.Draw(Image.new("RGB", (1, 1)))
+    col_w = [max((max(r[c][1].width, int(ruler.textlength(r[c][0], font=small)) + 1) for r in rows if c < len(r)), default=0)
+             for c in range(cols)]
     row_h = [max(im.height for _, im in r) + label_h for r in rows]
     canvas = Image.new("RGB", (pad * 2 + sum(col_w) + gap * (cols - 1), pad * 2 + sum(row_h) + gap * (len(rows) - 1)), GROUND)
     draw = ImageDraw.Draw(canvas)
@@ -119,7 +122,7 @@ def details(shots, out):
 
 def convert(job):
     """Turn one design's screenshots into webp files; return its picture sizes."""
-    pid, shots, base = job
+    n, pid, shots, base = job
     shots, base = Path(shots), Path(base)
     sizes = {}
     for key, _label, _kind in PAGES:
@@ -127,19 +130,40 @@ def convert(job):
         if f.exists():
             w, h = webp(Image.open(f), base / f"{key}.webp")
             sizes[key] = {"w": w, "h": h}
-    return pid, sizes, details(shots, base)
+    return n, pid, sizes, details(shots, base)
 
 
 def read(path):
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
+def clean(text):
+    """Drop sentences that point at the judges' scratch files, and markdown marks the page does not draw."""
+    keep = []
+    for line in str(text or "").split("\n"):
+        parts = re.split(r"(?<=[.!?])\s+", line)
+        keep.append(" ".join(p for p in parts if "/tmp/" not in p))
+    return "\n".join(keep).replace("`", "").replace("**", "").strip()
+
+
+def lessons_from(harness, n):
+    """A round's section(s) of lessons.md, for rounds whose results hold none."""
+    path = harness / "lessons.md"
+    if not path.exists():
+        return ""
+    sections = re.split(r"^## ", path.read_text(encoding="utf-8"), flags=re.M)[1:]
+    mine = [sec.split("\n", 1)[1] if "\n" in sec else "" for sec in sections if re.match(rf"Round {n}(\s|$)", sec)]
+    return "\n\n".join(m.strip() for m in mine)
+
+
 def main():
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    harness, out = Path(args[0]), Path(args[1])
-    lo, hi = 1, 13
-    if "--rounds" in sys.argv:
-        lo, hi = map(int, sys.argv[sys.argv.index("--rounds") + 1].split("-"))
+    ap = argparse.ArgumentParser()
+    ap.add_argument("harness", type=Path)
+    ap.add_argument("out", type=Path)
+    ap.add_argument("--rounds", default="1-13")
+    opts = ap.parse_args()
+    harness, out = opts.harness, opts.out
+    lo, hi = map(int, opts.rounds.split("-"))
     fams = read(harness / "families.json")
 
     def round_dir(n):
@@ -151,21 +175,23 @@ def main():
     def out_dir(n):
         return harness / "round1" / "out" if n == 1 else round_dir(n) / "out"
 
-    def palette(pid):
-        for f in [harness / "round1" / "palettes" / f"{pid}.json", harness / "palettes" / f"{pid}.json",
+    def palette(n, pid):
+        own = harness / "round1" / "palettes" if n == 1 else round_dir(n) / "palettes"
+        for f in [own / f"{pid}.json", harness / "palettes" / f"{pid}.json",
                   *sorted((harness / "rounds").glob(f"*/palettes/{pid}.json"))]:
             if f.exists():
                 return read(f)
         return {}
 
     if out.exists():
-        extra = {p.name for p in out.iterdir() if p.name != "img" and p.name != "index" and not p.name.startswith("round-")}
+        extra = {p.name for p in out.iterdir() if p.name != "index" and not p.name.startswith("round-")}
         if extra:
             sys.exit(f"{out} holds files a build does not make ({', '.join(sorted(extra)[:3])}); give an empty folder or an earlier build")
-        shutil.rmtree(out)
-    (out / "img").mkdir(parents=True)
+    new = out.with_name(out.name + ".new")
+    shutil.rmtree(new, ignore_errors=True)
+    new.mkdir(parents=True)
 
-    rounds, best = [], {}
+    rounds, jobs, fallback = [], [], {}
     order = {k: i for i, k in enumerate(LENSES)}
     for n in range(lo, hi + 1):
         if not results_path(n).exists():
@@ -185,8 +211,9 @@ def main():
                 mine = [s for s in j["scores"] if s["id"] == pid]
                 if not mine:
                     continue
-                fix = next((f.get("suggestion", "") for f in (j.get("fixes") or []) if f.get("id") == pid), "")
-                rows.append({"l": j["lens"], "s": mine[0]["score"], "w": mine[0].get("why", ""), "f": fix, "t": pid in top4[j["lens"]]})
+                fixes = [f.get("suggestion", "") for f in (j.get("fixes") or []) if f.get("id") == pid]
+                rows.append({"l": j["lens"], "s": mine[0]["score"], "w": clean(mine[0].get("why", "")),
+                             "f": clean("\n\n".join(x for x in fixes if x)), "t": pid in top4[j["lens"]]})
             return rows
 
         today = res.get("todayMean")
@@ -201,87 +228,92 @@ def main():
             entries.append({"id": pid, "name": r["name"], "rank": i, "score": r["mean"], "lane": lane,
                             "origin": r.get("origin", ""), "top4": r.get("top4"), "promise": r.get("promise"),
                             "judges": comments(pid)})
-        notes = [{"l": j["lens"], "t": j.get("notes", "")} for j in judges if j.get("notes")]
+        notes = [{"l": j["lens"], "t": clean(j.get("notes", ""))} for j in judges if j.get("notes")]
+        winners = res.get("top4") or [e["id"] for e in entries if e["lane"] == "main"][:4]
         rounds.append({"n": n, "mode": res.get("mode", ""), "judges": len(judges), "weights": res.get("lensWeights"),
-                       "margin": res.get("margin"), "today": today, "winners": res.get("top4") or [],
-                       "lessons": res.get("lessons", ""), "notes": notes, "entries": entries})
-        # the run that captured the most pages of a design is the one shown
+                       "margin": res.get("margin"), "today": today, "winners": winners,
+                       "lessons": clean(res.get("lessons") or lessons_from(harness, n)), "notes": notes, "entries": entries})
         for e in entries:
             shots = out_dir(n) / e["id"] / "shots"
             if shots.exists():
-                count = len(list(shots.glob("*.png")))
-                if count >= best.get(e["id"], (0, None))[0]:
-                    best[e["id"]] = (count, shots)
+                fallback[e["id"]] = shots
+                jobs.append((n, e["id"], str(shots), str(new / f"round-{n}" / "img" / e["id"])))
         print(f"round {n}: {len(entries) - 1} designs")
-
-    jobs = [(pid, str(shots), str(out / "img" / pid)) for pid, (_c, shots) in best.items()]
-    with Pool() as pool:
-        made = {pid: (sizes, det) for pid, sizes, det in pool.imap_unordered(convert, jobs)}
-
-    designs = {}
+    # a design listed without pictures in its round is shown as last captured
+    have = {(n, pid) for n, pid, _s, _b in jobs}
     for rd in rounds:
         for e in rd["entries"]:
-            pid = e["id"]
-            if pid in designs or pid not in made:
-                continue
-            p = palette(pid)
-            designs[pid] = {"tagline": re.sub(r"\s+", " ", p.get("tagline", "")).strip(),
-                            "family": (fams.get(pid) or {}).get("family", ""),
-                            "shots": made[pid][0], "details": made[pid][1]}
-    # who was judged where, for the "also judged in" links
+            if (rd["n"], e["id"]) not in have and e["id"] in fallback:
+                jobs.append((rd["n"], e["id"], str(fallback[e["id"]]), str(new / f"round-{rd['n']}" / "img" / e["id"])))
+
+    with Pool() as pool:
+        made = {(n, pid): (sizes, det) for n, pid, sizes, det in pool.imap_unordered(convert, jobs)}
+
+    # who was judged where, for the "also judged in" links (a yardstick score of None is not shown)
     seen = {}
     for rd in rounds:
         for e in rd["entries"]:
-            seen.setdefault(e["id"], []).append([rd["n"], e["score"], f"@ROUND{rd['n']}@"])
-    nav = {"index": "@INDEX@", "rounds": [
-        {"n": rd["n"], "url": f"@ROUND{rd['n']}@"} for rd in rounds]}
+            if e["score"] is not None:
+                seen.setdefault(e["id"], []).append([rd["n"], e["score"], f"@ROUND{rd['n']}@"])
+    nav = {"index": "@INDEX@", "rounds": [{"n": rd["n"], "url": f"@ROUND{rd['n']}@"} for rd in rounds]}
     unique = len({e["id"] for rd in rounds for e in rd["entries"] if e["id"] != "00-current"})
 
     template = (HERE / "round.template.html").read_text(encoding="utf-8")
+    taglines = {}
     for rd in rounds:
-        page = out / f"round-{rd['n']}"
-        ids = {e["id"] for e in rd["entries"] if e["id"] in made}
-        for pid in sorted(ids):
-            for f in (out / "img" / pid).glob("*.webp"):
-                dest = page / "img" / pid / f.name
-                dest.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(f, dest)
+        page = new / f"round-{rd['n']}"
+        designs = {}
+        for e in rd["entries"]:
+            if (rd["n"], e["id"]) not in made:
+                continue
+            p = palette(rd["n"], e["id"])
+            designs[e["id"]] = {"tagline": re.sub(r"\s+", " ", p.get("tagline", "")).strip(),
+                                "family": (fams.get(e["id"]) or {}).get("family", ""),
+                                "shots": made[(rd["n"], e["id"])][0], "details": made[(rd["n"], e["id"])][1]}
+        taglines[rd["n"]] = designs
         data = {
             "pages": [{"key": k_, "label": l, "kind": kind} for k_, l, kind in PAGES],
-            "details": [{"key": k_, "label": l, "note": n} for k_, l, n in DETAILS],
+            "details": [{"key": k_, "label": l, "note": n_} for k_, l, n_ in DETAILS],
             "lenses": LENSES,
             "round": rd,
-            "designs": {pid: d for pid, d in designs.items() if pid in ids},
+            "designs": designs,
             "nav": nav,
-            "seen": {pid: seen[pid] for pid in ids if pid in seen},
+            "seen": {pid: seen[pid] for pid in designs if pid in seen},
         }
         payload = json.dumps(data, separators=(",", ":")).replace("</", "<\\/")
-        (page / "index.html").write_text(template.replace('"__DATA__"', payload), encoding="utf-8")
+        html = template.replace("<title>Phosphor Screenshots</title>", f"<title>Phosphor Round {rd['n']}</title>", 1)
+        (page / "index.html").write_text(html.replace('"__DATA__"', payload), encoding="utf-8")
         files = [p for p in page.rglob("*") if p.is_file()]
         print(f"round {rd['n']}: {len(files)} files, {round(sum(p.stat().st_size for p in files) / 1e6, 1)} MB")
 
     # the index page: a picture of each round's winner on Home
-    idx = out / "index"
+    final = read(harness / "final.json") if (harness / "final.json").exists() else None
+    idx = new / "index"
     cards = []
     for rd in rounds:
         winner = next(e for e in rd["entries"] if e["rank"] == 1)
-        top = [e for e in rd["entries"] if e["id"] in rd["winners"]]
-        top.sort(key=lambda e: e["rank"])
-        src = out / "img" / winner["id"] / "home.webp"
-        thumb = idx / "img" / f"r{rd['n']}.webp"
+        top = sorted((e for e in rd["entries"] if e["id"] in rd["winners"]), key=lambda e: e["rank"])
+        src = new / f"round-{rd['n']}" / "img" / winner["id"] / "home.webp"
         im = Image.open(src).convert("RGB")
-        im = im.crop((0, 0, im.width, min(im.height, round(im.width * 900 / 1280)))).resize((720, round(720 * min(im.height, round(im.width * 900 / 1280)) / im.width)), Image.LANCZOS)
-        w, h = webp(im, thumb, 80)
-        cards.append({"n": rd["n"], "mode": rd["mode"], "judges": rd["judges"], "count": len(rd["entries"]) - 1,
-                      "today": rd["today"], "url": f"@ROUND{rd['n']}@", "img": f"img/r{rd['n']}.webp", "w": w, "h": h,
-                      "winner": {"name": winner["name"], "score": winner["score"],
-                                 "tagline": designs.get(winner["id"], {}).get("tagline", "")},
-                      "top": [{"name": e["name"], "score": e["score"]} for e in top]})
+        keep = min(im.height, round(im.width * 900 / 1280))
+        im = im.crop((0, 0, im.width, keep)).resize((720, round(720 * keep / im.width)), Image.LANCZOS)
+        w, h = webp(im, idx / "img" / f"r{rd['n']}.webp", 80)
+        card = {"n": rd["n"], "mode": rd["mode"], "judges": rd["judges"], "count": len(rd["entries"]) - 1,
+                "today": rd["today"], "url": f"@ROUND{rd['n']}@", "img": f"img/r{rd['n']}.webp", "w": w, "h": h,
+                "winner": {"name": winner["name"], "score": winner["score"],
+                           "tagline": taglines[rd["n"]].get(winner["id"], {}).get("tagline", "")},
+                "top": [{"name": e["name"], "score": e["score"]} for e in top]}
+        if rd["n"] == 1 and final:
+            best = final["ranking"][0]
+            card["note"] = f"First panel, of twelve directions. The five polished finalists went to a final panel, which {best['name']} won ({best['mean']})."
+        cards.append(card)
     template = (HERE / "index.template.html").read_text(encoding="utf-8")
     payload = json.dumps({"rounds": cards, "unique": unique}, separators=(",", ":")).replace("</", "<\\/")
     (idx / "index.html").write_text(template.replace('"__DATA__"', payload), encoding="utf-8")
-    print("index page:", len(list(idx.rglob("*"))) - 1, "files")
-    shutil.rmtree(out / "img")
+    print("index page:", len([p for p in idx.rglob("*") if p.is_file()]), "files")
+
+    shutil.rmtree(out, ignore_errors=True)
+    new.rename(out)
 
 
 if __name__ == "__main__":

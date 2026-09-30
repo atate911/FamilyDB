@@ -140,6 +140,7 @@ const D = "__DATA__";
         h("div", { class: "head" }, h("h2", { text: "Round " + r.n }), r.mode ? h("span", { class: "mode", text: r.mode }) : null),
         h("p", { class: "winner" }, h("b", { text: r.winner.name }), h("span", { class: "sc", text: fmt(r.winner.score) })),
         r.winner.tagline ? h("p", { class: "tag", text: r.winner.tagline }) : null,
+        r.note ? h("p", { class: "facts", text: r.note }) : null,
         h("div", { class: "scores" }, bar("winner", r.winner.score), bar("today", r.today, "today")),
         r.top.length > 1 ? h("ul", { class: "top4", "aria-label": "Top four" }, r.top.map(t => h("li", { text: t.name + " " + fmt(t.score) }))) : null,
         h("p", { class: "facts", text: r.count + " designs · " + r.judges + " judges" })));

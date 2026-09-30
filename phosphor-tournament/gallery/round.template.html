@@ -19,7 +19,6 @@
   --accent-ink: #04150a;
   --glow: rgba(109, 255, 156, .38);
   --amber: #f2b95f;
-  --blue: #8db4ff;
   --bar: rgba(11, 14, 12, .94);
   --scrim: #060807;
   --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -59,7 +58,6 @@ h1 { margin: 0 0 .7rem; font: 600 clamp(1.7rem, 4.4vw, 2.6rem)/1.08 var(--cond);
 .l-today { color: var(--fg); }
 .l-main { color: var(--accent); }
 .l-wild { color: var(--amber); }
-.l-left { color: var(--blue); }
 .l-other { color: var(--faint); border-style: dashed; }
 
 /* sticky controls */
@@ -162,12 +160,13 @@ button.linkish:hover { color: var(--accent); text-decoration: underline; text-un
 .prose p, .prose-list { margin: 0; color: var(--fg); font-size: .92rem; overflow-wrap: anywhere; }
 .prose-list { padding-left: 1.2rem; display: grid; gap: .6rem; }
 .winners { display: grid; gap: .5rem; margin: .6rem 0 0; padding-left: 1.4rem; }
-.winners li { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; }
+.winners li { padding-left: .3rem; }
+.winners li > * { margin-right: .5rem; }
 .foot { display: grid; gap: .4rem; max-width: 68ch; margin-top: 2rem; padding-top: 1.2rem; border-top: 1px solid var(--line); color: var(--dim); font-size: .85rem; }
 .foot p { margin: 0; }
 
 /* the large view */
-.lb { position: fixed; inset: 0; z-index: 100; display: grid; grid-template-rows: auto minmax(0, 1fr); background: var(--scrim); }
+.lb { position: fixed; inset: 0; z-index: 100; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); background: var(--scrim); }
 .lb-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; padding: calc(.7rem + env(safe-area-inset-top, 0px)) var(--gutter) .7rem; border-bottom: 1px solid var(--line); }
 .lb-meta { flex: 1 1 14rem; min-width: 0; }
 .lb-close { order: 3; }
@@ -251,7 +250,7 @@ button.linkish:hover { color: var(--accent); text-decoration: underline; text-un
 
   <footer class="foot">
     <p>Each design is its own stylesheet over the same demo family and the same pages of FamilyDB. Desktop pictures are 1280 px wide (Home is captured as a whole page); phone pictures are 390 × 844 at twice the pixels. The first rounds captured fewer pages, and the detail sheets join the small close-ups taken of each design.</p>
-    <p>Scores are out of 10: the mean of the judges' marks for that round. A design carried into a later round is shown in each round it was judged in, with that round's marks and comments, and the same pictures. The yardstick's own score changes between rounds because the judges and the bar moved.</p>
+    <p>Scores are out of 10: the mean of the judges' marks that round. A design carried into another round is shown there too, as it was in that round, with that round's marks and comments. The yardstick's own score changes between rounds because the judges and the bar moved.</p>
   </footer>
 </div>
 
@@ -311,9 +310,9 @@ const D = "__DATA__";
   const byKey = Object.fromEntries(ALL.map(p => [p.key, p]));
   const LANE = { today: "Yardstick", main: "Main lane", wild: "Wild lane", other: "" };
   const laneText = (l, r) => ({
-    today: "today's page, judged the same way; every design is measured against it",
-    main: "went on to round " + (r.n + 1) + " as a leader",
-    wild: "went on to round " + (r.n + 1) + " for range: a different idea kept alive",
+    today: r.today == null ? "today's page, shown for comparison; the judges did not score it this round" : "today's page, judged the same way; every design is measured against it",
+    main: "carried on to the next round as a leader",
+    wild: "carried on to the next round for range: a different idea kept alive",
     other: "not carried on",
   })[l];
   const SETS = [
@@ -350,7 +349,7 @@ const D = "__DATA__";
     const m = location.hash.slice(1).match(/^(page|design|notes)(?:\.(.+))?$/);
     if (!m) return null;
     if (m[1] === "notes") return { view: "notes" };
-    if (m[1] === "page" && byKey[m[2]]) return { view: "page", page: m[2] };
+    if (m[1] === "page" && pages.some(p => p.key === m[2])) return { view: "page", page: m[2] };
     if (m[1] === "design" && R.entries.some(e => e.id === m[2])) return { view: "design", design: m[2] };
     return null;
   }
@@ -381,11 +380,12 @@ const D = "__DATA__";
   $("#lede").textContent = "Every design in this round, with what the judges said about each. Look by page to compare the designs, by design to read the judges beside its pictures, or read the round's notes. Click a picture to see it large.";
   const idx = D.nav.rounds.findIndex(r => r.n === R.n);
   const before = D.nav.rounds[idx - 1], after = D.nav.rounds[idx + 1];
-  $("#crumbs").replaceChildren(
-    h("a", { href: D.nav.index, target: "_blank", rel: "noopener", text: "← All rounds" }),
+  const link = (href, text) => href.startsWith("@") ? null : h("a", { href, target: "_blank", rel: "noopener", text });
+  $("#crumbs").replaceChildren(...[
+    link(D.nav.index, "← All rounds"),
     h("span", { class: "gap" }),
-    before ? h("a", { href: before.url, target: "_blank", rel: "noopener", text: "‹ Round " + before.n }) : null,
-    after ? h("a", { href: after.url, target: "_blank", rel: "noopener", text: "Round " + after.n + " ›" }) : null);
+    before && link(before.url, "‹ Round " + before.n),
+    after && link(after.url, "Round " + after.n + " ›")].filter(Boolean));
 
   function buildLegend() {
     const lanes = [];
@@ -470,7 +470,7 @@ const D = "__DATA__";
     const p = byKey[state.page];
     const has = d => (p.kind === "sheet" ? d.details : d.shots)[p.key];
     const ds = designs.filter(SETS.find(s => s.key === state.set).test).filter(has);
-    live.textContent = "Round " + R.n + ", " + p.label + ": " + ds.length + " designs";
+    live.textContent = "Round " + R.n + ", " + p.label + ": " + ds.length + (ds.length === 1 ? " design" : " designs");
     return h("div", null,
       h("div", { class: "phead" }, h("h2", { text: p.label }), h("p", { class: "note", text: pageNote(p, ds) + " Today's page comes first, as the yardstick. A name opens what the judges said." })),
       h("div", { class: "grid " + p.kind }, ds.map(d => card(d, p, "page", list))));
@@ -509,7 +509,7 @@ const D = "__DATA__";
           h("div", { class: "jhead" },
             h("span", { class: "jlens", text: lens(j.l) }),
             j.t ? h("span", { class: "chip l-main", text: "Top four" }) : null,
-            h("span", { class: "jscore", text: String(j.s) })),
+            h("span", { class: "jscore", text: Number(j.s).toFixed(1) })),
           h("p", { class: "jwhy", text: j.w }),
           j.f ? h("details", { class: "jfix" }, h("summary", { text: "Suggested fix" }), h("p", { text: j.f })) : null))));
   }
@@ -644,7 +644,7 @@ const D = "__DATA__";
   $("#lb-next").addEventListener("click", () => step(1));
   $("#lb-jump").addEventListener("click", () => {
     const it = gallery[at];
-    go(state.view === "page" ? { view: "design", design: it.d.id } : { view: "page", page: it.p.key });
+    go(state.view === "page" ? { view: "design", design: it.d.id } : { view: "page", page: it.p.key, set: "all" });
   });
   lb.querySelectorAll("[data-zoom]").forEach(b => b.addEventListener("click", () => { state.zoom = b.dataset.zoom; layoutLb(); stage.scrollTop = 0; stage.scrollLeft = 0; }));
   lb.addEventListener("click", e => { if (e.target === stage) closeLb(); });
@@ -652,8 +652,9 @@ const D = "__DATA__";
   document.addEventListener("keydown", e => {
     if (!isOpen || e.altKey || e.ctrlKey || e.metaKey) return;
     if (e.key === "Escape") { e.preventDefault(); closeLb(); }
-    else if (e.key === "ArrowLeft") { e.preventDefault(); step(-1); }
-    else if (e.key === "ArrowRight") { e.preventDefault(); step(1); }
+    else if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && stage.scrollWidth <= stage.clientWidth + 1) {
+      e.preventDefault(); step(e.key === "ArrowLeft" ? -1 : 1);
+    }
     else if (e.key === "Tab") {
       const f = [...lb.querySelectorAll("button:not([disabled]), [tabindex='0']")].filter(x => x.offsetParent !== null);
       if (!f.length) return;
