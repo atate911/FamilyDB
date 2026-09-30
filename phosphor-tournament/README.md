@@ -227,6 +227,11 @@ Round 10's third informed entrant was briefed at the owner's request and is judg
   screenshots, plus the scripts.
 - `harness-venv-requirements.txt`: the harness's own Python packages.
 - `SHA256SUMS`: a checksum for each part.
+- `gallery/`: builds a browsable web page of one round's screenshots, every design on every page
+  (by page or by design, with a large view). `python3 gallery/build_gallery.py HARNESS r13 OUT
+  --left ID` needs Pillow (the harness venv has it); OUT then holds `index.html` and
+  `img/<design>/<page>.webp`, about 14 MB for round 13. The round 13 field was published as a
+  private artifact from it.
 
 Inside the harness, the files that carry the thinking are:
 
