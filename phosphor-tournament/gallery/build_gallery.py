@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """Build a browsable web page of every round's screenshots and the judges' comments.
 
-    python3 build_gallery.py HARNESS OUT [--rounds 1-13] [--cap 500]
+    python3 build_gallery.py HARNESS OUT [--rounds 1-13]
 
 HARNESS is the tournament harness folder and OUT is a folder to build into (an earlier build is
-cleared; anything else is refused). An artifact can hold only 511 files, so the pictures are
-split over several sites, each a run of rounds with at most --cap files: OUT/site-K/ holds
-index.html (built from index.template.html; every site carries all the text, the judges'
-comments included) and img/<design>/<page>.webp for the rounds it hosts. Publish each folder as
-its own artifact, then replace the placeholders @SITE1@, @SITE2@ ... in every index.html with the
-published links (relink.py does it), so each page can point to the others.
+cleared; anything else is refused). An artifact can hold only 511 files, so each round is its own
+page: OUT/round-N/ holds index.html (built from round.template.html) and img/<design>/<page>.webp
+for the designs judged that round, and OUT/index/ holds the index page (index.template.html) with
+a picture of each round's winner. Publish each folder as its own artifact, then replace the
+placeholders @INDEX@ and @ROUND1@, @ROUND2@ ... in every index.html with the published links
+(relink.py does it) so the pages can point to one another.
 
 Round 1 is read from HARNESS/results.json and HARNESS/round1/out; round N from
 HARNESS/rounds/rN/. A design carried into later rounds keeps its id, so its pictures are made once
@@ -137,9 +137,7 @@ def read(path):
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     harness, out = Path(args[0]), Path(args[1])
-    lo, hi, cap = 1, 13, 500
-    if "--cap" in sys.argv:
-        cap = int(sys.argv[sys.argv.index("--cap") + 1])
+    lo, hi = 1, 13
     if "--rounds" in sys.argv:
         lo, hi = map(int, sys.argv[sys.argv.index("--rounds") + 1].split("-"))
     fams = read(harness / "families.json")
@@ -161,7 +159,7 @@ def main():
         return {}
 
     if out.exists():
-        extra = {p.name for p in out.iterdir() if p.name != "img" and not p.name.startswith("site-")}
+        extra = {p.name for p in out.iterdir() if p.name != "img" and p.name != "index" and not p.name.startswith("round-")}
         if extra:
             sys.exit(f"{out} holds files a build does not make ({', '.join(sorted(extra)[:3])}); give an empty folder or an earlier build")
         shutil.rmtree(out)
@@ -230,44 +228,59 @@ def main():
             designs[pid] = {"tagline": re.sub(r"\s+", " ", p.get("tagline", "")).strip(),
                             "family": (fams.get(pid) or {}).get("family", ""),
                             "shots": made[pid][0], "details": made[pid][1]}
-    # split the rounds into runs whose pictures fit one artifact
-    def cost(ids):
-        return sum(len(list((out / "img" / i).glob("*.webp"))) for i in ids) + 1
-
-    groups, cur, first = [], set(), None
+    # who was judged where, for the "also judged in" links
+    seen = {}
     for rd in rounds:
-        ids = {e["id"] for e in rd["entries"] if e["id"] in made}
-        if cur and cost(cur | ids) > cap:
-            groups.append((first, last, cur))
-            cur, first = set(), None
-        if first is None:
-            first = rd["n"]
-        cur |= ids
-        last = rd["n"]
-    groups.append((first, last, cur))
-    sites = [{"lo": a, "hi": b, "url": f"@SITE{k}@"} for k, (a, b, _ids) in enumerate(groups, 1)]
+        for e in rd["entries"]:
+            seen.setdefault(e["id"], []).append([rd["n"], e["score"], f"@ROUND{rd['n']}@"])
+    nav = {"index": "@INDEX@", "rounds": [
+        {"n": rd["n"], "url": f"@ROUND{rd['n']}@"} for rd in rounds]}
+    unique = len({e["id"] for rd in rounds for e in rd["entries"] if e["id"] != "00-current"})
 
-    template = (HERE / "index.template.html").read_text(encoding="utf-8")
-    for k, (a, b, ids) in enumerate(groups, 1):
-        site = out / f"site-{k}"
+    template = (HERE / "round.template.html").read_text(encoding="utf-8")
+    for rd in rounds:
+        page = out / f"round-{rd['n']}"
+        ids = {e["id"] for e in rd["entries"] if e["id"] in made}
         for pid in sorted(ids):
             for f in (out / "img" / pid).glob("*.webp"):
-                dest = site / "img" / pid / f.name
+                dest = page / "img" / pid / f.name
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(f, dest)
         data = {
             "pages": [{"key": k_, "label": l, "kind": kind} for k_, l, kind in PAGES],
             "details": [{"key": k_, "label": l, "note": n} for k_, l, n in DETAILS],
             "lenses": LENSES,
-            "rounds": rounds,
+            "round": rd,
             "designs": {pid: d for pid, d in designs.items() if pid in ids},
-            "site": k,
-            "sites": sites,
+            "nav": nav,
+            "seen": {pid: seen[pid] for pid in ids if pid in seen},
         }
         payload = json.dumps(data, separators=(",", ":")).replace("</", "<\\/")
-        (site / "index.html").write_text(template.replace('"__DATA__"', payload), encoding="utf-8")
-        files = [p for p in site.rglob("*") if p.is_file()]
-        print(f"site {k}: rounds {a}-{b}, {len(files)} files, {round(sum(p.stat().st_size for p in files) / 1e6, 1)} MB")
+        (page / "index.html").write_text(template.replace('"__DATA__"', payload), encoding="utf-8")
+        files = [p for p in page.rglob("*") if p.is_file()]
+        print(f"round {rd['n']}: {len(files)} files, {round(sum(p.stat().st_size for p in files) / 1e6, 1)} MB")
+
+    # the index page: a picture of each round's winner on Home
+    idx = out / "index"
+    cards = []
+    for rd in rounds:
+        winner = next(e for e in rd["entries"] if e["rank"] == 1)
+        top = [e for e in rd["entries"] if e["id"] in rd["winners"]]
+        top.sort(key=lambda e: e["rank"])
+        src = out / "img" / winner["id"] / "home.webp"
+        thumb = idx / "img" / f"r{rd['n']}.webp"
+        im = Image.open(src).convert("RGB")
+        im = im.crop((0, 0, im.width, min(im.height, round(im.width * 900 / 1280)))).resize((720, round(720 * min(im.height, round(im.width * 900 / 1280)) / im.width)), Image.LANCZOS)
+        w, h = webp(im, thumb, 80)
+        cards.append({"n": rd["n"], "mode": rd["mode"], "judges": rd["judges"], "count": len(rd["entries"]) - 1,
+                      "today": rd["today"], "url": f"@ROUND{rd['n']}@", "img": f"img/r{rd['n']}.webp", "w": w, "h": h,
+                      "winner": {"name": winner["name"], "score": winner["score"],
+                                 "tagline": designs.get(winner["id"], {}).get("tagline", "")},
+                      "top": [{"name": e["name"], "score": e["score"]} for e in top]})
+    template = (HERE / "index.template.html").read_text(encoding="utf-8")
+    payload = json.dumps({"rounds": cards, "unique": unique}, separators=(",", ":")).replace("</", "<\\/")
+    (idx / "index.html").write_text(template.replace('"__DATA__"', payload), encoding="utf-8")
+    print("index page:", len(list(idx.rglob("*"))) - 1, "files")
     shutil.rmtree(out / "img")
 
 
