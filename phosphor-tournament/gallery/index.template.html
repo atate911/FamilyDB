@@ -139,6 +139,33 @@ main:focus { outline: none; }
 .meta { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; font: 400 .78rem/1.3 var(--mono); color: var(--dim); font-variant-numeric: tabular-nums; }
 .sub { margin: 0; font-size: .8rem; color: var(--dim); }
 
+.sites { display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem .9rem; margin: 0 0 1rem; font-size: .82rem; color: var(--dim); }
+.sites a, .banner a { color: var(--accent); text-underline-offset: .2em; }
+.sites .here { color: var(--fg); font-weight: 600; }
+.banner { margin: 0 0 1.4rem; padding: .8rem 1rem; max-width: 65ch; border: 1px dashed var(--line2); border-radius: .4rem; color: var(--dim); font-size: .9rem; }
+.linkish { margin: 0; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+button.nm.linkish { font: 600 .98rem/1.25 var(--cond); letter-spacing: .01em; }
+button.linkish:hover { color: var(--accent); text-decoration: underline; text-underline-offset: .2em; }
+.also { display: inline-flex; flex-wrap: wrap; gap: .3rem .9rem; }
+.also .linkish { color: var(--accent); font-family: var(--mono); font-size: .85rem; text-decoration: underline; text-underline-offset: .2em; }
+.judges > .note { margin-bottom: .9rem; }
+.jgrid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); align-items: start; }
+.jcard { display: grid; gap: .5rem; min-width: 0; padding: .9rem 1rem; border: 1px solid var(--line); border-radius: .4rem; background: var(--surface); }
+.jhead { display: flex; align-items: center; gap: .6rem; }
+.jlens { flex: 1; min-width: 0; font: 600 .95rem/1.25 var(--cond); letter-spacing: .02em; }
+.jscore { font: 500 1rem var(--mono); color: var(--accent); font-variant-numeric: tabular-nums; }
+.jwhy { margin: 0; font-size: .9rem; color: var(--fg); overflow-wrap: anywhere; }
+.jfix summary { cursor: pointer; color: var(--dim); font-size: .82rem; }
+.jfix summary:hover { color: var(--fg); }
+.jfix p { margin: .5rem 0 0; font-size: .85rem; color: var(--dim); white-space: pre-line; overflow-wrap: anywhere; }
+.notes .dsec { max-width: 72rem; }
+.prose { display: grid; gap: .8rem; max-width: 70ch; }
+.prose p, .prose-list { margin: 0; color: var(--fg); font-size: .92rem; overflow-wrap: anywhere; }
+.prose-list { padding-left: 1.2rem; display: grid; gap: .6rem; }
+.winners { display: grid; gap: .5rem; margin: .6rem 0 0; padding-left: 1.4rem; }
+.winners li { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; }
+.rounds { flex-wrap: nowrap; }
+.rounds select { flex: 1 1 auto; max-width: 24rem; }
 .foot { display: grid; gap: .4rem; max-width: 68ch; margin-top: 2rem; padding-top: 1.2rem; border-top: 1px solid var(--line); color: var(--dim); font-size: .85rem; }
 .foot p { margin: 0; }
 
@@ -173,6 +200,8 @@ main:focus { outline: none; }
   .bar { padding-block: .5rem; gap: .4rem; }
   #size, .pick > span { display: none; }
   .picker .icon-btn { width: 2.4rem; }
+  .rounds { flex: 1 1 100%; }
+  .rounds select { max-width: none; }
   .pick { flex: 1 1 8rem; }
   .pick select { width: 100%; }
 }
@@ -193,6 +222,7 @@ main:focus { outline: none; }
     <p class="eyebrow" id="eyebrow"></p>
     <h1>Phosphor screenshots</h1>
     <p class="lede" id="lede"></p>
+    <p class="sites" id="sites"></p>
     <details class="legendbox" id="legendbox" open>
       <summary>What the tags mean</summary>
       <ul class="legend" id="legend"></ul>
@@ -201,9 +231,15 @@ main:focus { outline: none; }
 
   <div class="bar" id="bar">
     <div class="row">
+      <div class="row picker rounds" id="rounds">
+        <button type="button" class="icon-btn" id="r-prev" aria-label="Previous round"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <select id="round" aria-label="Round"></select>
+        <button type="button" class="icon-btn" id="r-next" aria-label="Next round"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+      </div>
       <div class="seg" role="group" aria-label="How to look">
         <button type="button" data-view="page" aria-pressed="true">By page</button>
         <button type="button" data-view="design" aria-pressed="false">By design</button>
+        <button type="button" data-view="notes" aria-pressed="false">Round notes</button>
       </div>
       <label class="pick" id="set-wrap"><span>Show</span><select id="set" aria-label="Which designs to show"></select></label>
       <div class="seg" id="size" role="group" aria-label="Picture size">
@@ -224,8 +260,8 @@ main:focus { outline: none; }
   <p class="sr-only" id="live" role="status" aria-live="polite"></p>
 
   <footer class="foot">
-    <p>Each design is its own stylesheet over the same demo family and the same pages of FamilyDB. Desktop pictures are 1280 px wide (Home is captured as a whole page); phone pictures are 390 × 844 at twice the pixels. The detail sheets join the small close-ups taken of each design.</p>
-    <p>Scores are out of 10: the mean of the judges' marks, with the phosphor-soul judge counted heavier.</p>
+    <p>Each design is its own stylesheet over the same demo family and the same pages of FamilyDB. Desktop pictures are 1280 px wide (Home is captured as a whole page); phone pictures are 390 × 844 at twice the pixels. The first rounds captured fewer pages, and the detail sheets join the small close-ups taken of each design.</p>
+    <p>Scores are out of 10: the mean of the judges' marks for that round. A design carried into a later round is shown in each round it was judged in, with that round's marks and comments, and the same pictures. The yardstick's own score changes between rounds because the judges and the bar moved.</p>
   </footer>
 </div>
 
@@ -278,83 +314,126 @@ const D = "__DATA__";
     set(o) { try { localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) { /* private window: fine */ } },
   };
 
-  const designs = D.designs;
-  const byId = Object.fromEntries(designs.map(d => [d.id, d]));
   const ALL = [
     ...D.pages,
     ...D.details.map(p => ({ key: p.key, label: p.label, kind: "sheet", note: p.note })),
   ];
   const byKey = Object.fromEntries(ALL.map(p => [p.key, p]));
-  const LANE = { today: "Yardstick", main: "Main lane", wild: "Wild lane", left: "Left", other: "" };
-  const LANE_TEXT = {
-    today: "today's page, marked the same way; every design is measured against it",
-    main: "going on to round " + (D.round + 1) + " as the leaders",
-    wild: "going on to round " + (D.round + 1) + " for range: a different idea kept alive",
-    left: "scored well but was not carried on",
+  const rounds = D.rounds;
+  const mine = D.sites[D.site - 1];
+  const hosted = n => n >= mine.lo && n <= mine.hi;
+  const siteOf = n => D.sites.find(s => n >= s.lo && n <= s.hi);
+  const latest = mine.hi;
+  const roundOf = n => rounds.find(r => r.n === n) || rounds[rounds.length - 1];
+  const LANE = { today: "Yardstick", main: "Main lane", wild: "Wild lane", other: "" };
+  const laneText = (l, r) => ({
+    today: "today's page, judged the same way; every design is measured against it",
+    main: "went on to round " + (r.n + 1) + " as a leader",
+    wild: "went on to round " + (r.n + 1) + " for range: a different idea kept alive",
     other: "not carried on",
-  };
+  })[l];
   const SETS = [
     { key: "all", label: "All", test: () => true },
     { key: "going", label: "Going on", test: d => d.lane === "today" || d.lane === "main" || d.lane === "wild" },
     { key: "top8", label: "Top eight", test: d => d.rank <= 8 },
   ];
   const SIZES = { s: 0.7, m: 1, l: 1.5 };
-  const firstRanked = designs.find(d => d.rank > 0) || designs[0];
+  const lens = k => D.lenses[k] || (k.charAt(0).toUpperCase() + k.slice(1));
 
   const saved = store.get();
   const state = {
-    view: saved.view === "design" ? "design" : "page",
+    round: latest,
+    view: ["design", "notes"].includes(saved.view) ? saved.view : "page",
     page: "home",
-    design: firstRanked.id,
+    design: null,
     set: SETS.some(s => s.key === saved.set) ? saved.set : "all",
     size: SIZES[saved.size] ? saved.size : "m",
     zoom: null, // the large view: null lets each picture choose
   };
 
+  /* the round being shown */
+  let R, designs, byId, pages;
+  function useRound(n) {
+    R = roundOf(n);
+    state.round = R.n;
+    designs = R.entries.map(e => Object.assign({ shots: {}, details: {}, tagline: "", family: "" }, D.designs[e.id], e));
+    byId = Object.fromEntries(designs.map(d => [d.id, d]));
+    const judged = designs.filter(d => d.rank > 0);
+    pages = ALL.filter(p => judged.filter(d => (p.kind === "sheet" ? d.details : d.shots)[p.key]).length * 2 >= judged.length);
+    if (!pages.some(p => p.key === state.page)) state.page = pages[0] ? pages[0].key : "home";
+    if (!byId[state.design]) state.design = (designs.find(d => d.rank > 0) || designs[0]).id;
+  }
+
   function readHash() {
-    const m = location.hash.slice(1).match(/^(page|design)-(.+)$/);
-    if (!m) return null;
-    if (m[1] === "page" && byKey[m[2]]) return { view: "page", page: m[2] };
-    if (m[1] === "design" && byId[m[2]]) return { view: "design", design: m[2] };
+    const m = location.hash.slice(1).match(/^(\d+)\.(page|design|notes)(?:\.(.+))?$/);
+    if (!m || !rounds.some(r => r.n === +m[1])) return null;
+    const r = roundOf(+m[1]);
+    if (m[2] === "notes") return { round: r.n, view: "notes" };
+    if (m[2] === "page" && byKey[m[3]]) return { round: r.n, view: "page", page: m[3] };
+    if (m[2] === "design" && r.entries.some(e => e.id === m[3])) return { round: r.n, view: "design", design: m[3] };
     return null;
   }
-  const hashNow = () => state.view === "page" ? "page-" + state.page : "design-" + state.design;
+  const hashNow = () => state.round + "." + (state.view === "notes" ? "notes" : state.view === "page" ? "page." + state.page : "design." + state.design);
   function writeHash() {
     const t = "#" + hashNow();
     if (location.hash === t) return;
     try { history.replaceState(null, "", t); } catch (e) { try { location.hash = t; } catch (e2) { /* nowhere to write it */ } }
   }
-  Object.assign(state, readHash() || {});
+  const fromHash = readHash();
+  if (fromHash) Object.assign(state, fromHash);
+  else if (!hosted(state.round)) state.round = latest;
+  useRound(state.round);
 
   const page = $("#page"), main = $("#main"), tabs = $("#tabs"), live = $("#live");
-  const setSel = $("#set"), designSel = $("#design");
-  const dPrev = $("#d-prev"), dNext = $("#d-next");
+  const setSel = $("#set"), designSel = $("#design"), roundSel = $("#round");
+  const dPrev = $("#d-prev"), dNext = $("#d-next"), rPrev = $("#r-prev"), rNext = $("#r-next");
   function setDisabled(btn, off, fallback) {
     if (off && document.activeElement === btn) fallback.focus({ preventScroll: true });
     btn.disabled = off;
   }
-  const fmt = n => (typeof n === "number" ? n.toFixed(2) : "");
+  const fmt = n => (typeof n === "number" ? n.toFixed(2) : "–");
   const dims = s => s.w.toLocaleString("en") + " × " + s.h.toLocaleString("en") + " px";
 
-  /* ---- opening block ---- */
-  $("#eyebrow").textContent = "Round " + D.round + " · " + D.count + " designs and today's page";
-  $("#lede").textContent = "Every design in round " + D.round + " on the same " + D.pages.length +
-    " pages and " + D.details.length + " close-up sheets. Choose a page to compare every design on it, or a design to see all of it. " +
-    "Click a picture to see it large; the arrow keys move between pictures and Esc closes.";
-  const lanes = [];
-  designs.forEach(d => { if (!lanes.includes(d.lane)) lanes.push(d.lane); });
-  const legend = $("#legend");
+  /* ---- fixed parts ---- */
+  const total = new Set(rounds.flatMap(r => r.entries.map(e => e.id))).size - 1;
+  $("#eyebrow").textContent = rounds.length + " rounds · " + total + " designs";
+  $("#lede").textContent = "Every round of the Phosphor tournament, with what the judges said about each design. Pick a round, then look by page to compare its designs, by design to read the judges beside its pictures, or read the round's notes. Click a picture to see it large.";
+  roundSel.replaceChildren(...rounds.map(r => {
+    const w = r.entries.find(e => e.rank === 1);
+    return h("option", { value: String(r.n), text: "Round " + r.n + (w ? " · " + w.name + " " + fmt(w.score) : "") + (hosted(r.n) ? "" : " ↗") });
+  }));
+
+  const siteName = s => s.lo === s.hi ? "Round " + s.lo : "Rounds " + s.lo + "–" + s.hi;
+  $("#sites").replaceChildren("Pictures are split over " + D.sites.length + " pages:",
+    ...D.sites.map((s, i) => i + 1 === D.site
+      ? h("span", { class: "here", text: siteName(s) + " (this page)" })
+      : h("a", { href: s.url, target: "_blank", rel: "noopener", text: siteName(s) + " ↗" })));
+  function banner() {
+    if (hosted(R.n)) return null;
+    const s = siteOf(R.n);
+    return h("p", { class: "banner" }, "The pictures for round " + R.n + " are on another page: ",
+      h("a", { href: s.url + "#" + hashNow(), target: "_blank", rel: "noopener", text: siteName(s) + " ↗" }),
+      ". The judges' comments and notes are all here.");
+  }
+  function buildLegend() {
+    const lanes = [];
+    designs.forEach(d => { if (!lanes.includes(d.lane)) lanes.push(d.lane); });
+    $("#legend").replaceChildren(...["today", "main", "wild", "other"].filter(l => lanes.includes(l)).map(l =>
+      h("li", null, h("span", { class: "chip l-" + l, text: LANE[l] || "No tag" }), h("span", { text: laneText(l, R) }))));
+  }
   if (window.matchMedia && matchMedia("(max-width: 34rem)").matches) $("#legendbox").open = false;
-  ["today", "main", "wild", "left", "other"].filter(l => lanes.includes(l)).forEach(l => {
-    legend.append(h("li", null, h("span", { class: "chip l-" + l, text: LANE[l] || "No tag" }), h("span", { text: LANE_TEXT[l] })));
-  });
 
   /* ---- controls ---- */
-  SETS.forEach(s => setSel.append(h("option", { value: s.key, text: s.label + " (" + designs.filter(d => d.lane !== "today" && s.test(d)).length + ")" })));
-  designs.forEach(d => designSel.append(h("option", { value: d.id, text: (d.rank ? d.rank + ". " : "") + d.name + " · " + fmt(d.score) })));
-  D.pages.forEach(p => tabs.append(h("button", { type: "button", "data-page": p.key, text: p.label })));
-  tabs.append(h("span", { class: "sep", "aria-hidden": "true" }));
-  D.details.forEach(p => tabs.append(h("button", { type: "button", "data-page": p.key, text: p.label })));
+  function buildControls() {
+    setSel.replaceChildren(...SETS.map(s => [s, designs.filter(d => d.lane !== "today" && s.test(d)).length])
+      .filter(([s, n]) => s.key !== "going" || n > 0)
+      .map(([s, n]) => h("option", { value: s.key, text: s.label + " (" + n + ")" })));
+    if (!SETS.some(s => s.key === state.set) || (state.set === "going" && !designs.some(d => d.lane === "main" || d.lane === "wild"))) state.set = "all";
+    designSel.replaceChildren(...designs.map(d => h("option", { value: d.id, text: (d.rank ? d.rank + ". " : "") + d.name + " · " + fmt(d.score) })));
+    tabs.replaceChildren(...pages.filter(p => p.kind !== "sheet").map(p => h("button", { type: "button", "data-page": p.key, text: p.label })),
+      ...(pages.some(p => p.kind === "sheet") ? [h("span", { class: "sep", "aria-hidden": "true" })] : []),
+      ...pages.filter(p => p.kind === "sheet").map(p => h("button", { type: "button", "data-page": p.key, text: p.label })));
+  }
 
   function syncTabsEdge() {
     tabs.classList.toggle("more", tabs.scrollLeft + tabs.clientWidth < tabs.scrollWidth - 4);
@@ -364,8 +443,13 @@ const D = "__DATA__";
     document.querySelectorAll("[data-size]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.size === state.size)));
     document.documentElement.style.setProperty("--zoom", SIZES[state.size]);
     $("#set-wrap").hidden = state.view !== "page";
+    $("#size").hidden = state.view === "notes";
     tabs.hidden = state.view !== "page";
     $("#picker").hidden = state.view !== "design";
+    roundSel.value = String(state.round);
+    const ri = rounds.findIndex(r => r.n === state.round);
+    setDisabled(rPrev, ri <= 0, roundSel);
+    setDisabled(rNext, ri >= rounds.length - 1, roundSel);
     setSel.value = state.set;
     designSel.value = state.design;
     const at = designs.findIndex(d => d.id === state.design);
@@ -387,7 +471,7 @@ const D = "__DATA__";
     const s = (p.kind === "sheet" ? d.details : d.shots)[p.key];
     const cap = mode === "page"
       ? h("div", { class: "cap" },
-          h("span", { class: "nm", text: d.name }),
+          h("button", { type: "button", class: "nm linkish", "data-design": d.id, title: "Read what the judges said", text: d.name }),
           h("span", { class: "meta" }, d.rank ? h("span", { text: "#" + d.rank }) : null, h("span", { text: fmt(d.score) }), chip(d)))
       : h("div", { class: "cap" },
           h("span", { class: "nm", text: p.label }),
@@ -416,42 +500,100 @@ const D = "__DATA__";
   }
   function pageView(list) {
     const p = byKey[state.page];
-    const ds = designs.filter(SETS.find(s => s.key === state.set).test);
-    live.textContent = p.label + ": " + ds.length + " designs";
-    return h("div", null,
-      h("div", { class: "phead" }, h("h2", { text: p.label }), h("p", { class: "note", text: pageNote(p, ds) + " Today's page comes first, as the yardstick." })),
+    const has = d => (p.kind === "sheet" ? d.details : d.shots)[p.key];
+    const ds = designs.filter(SETS.find(s => s.key === state.set).test).filter(has);
+    live.textContent = "Round " + R.n + ", " + p.label + ": " + ds.length + " designs";
+    return h("div", null, banner(),
+      h("div", { class: "phead" }, h("h2", { text: p.label }), h("p", { class: "note", text: pageNote(p, ds) + " Today's page comes first, as the yardstick. A name opens what the judges said." })),
       h("div", { class: "grid " + p.kind }, ds.map(d => card(d, p, "page", list))));
   }
+
   function fact(label, value, cls) {
     return value == null || value === "" ? null : h("div", null, h("dt", { text: label }), h("dd", { class: cls || "" }, value));
   }
+  function alsoIn(d) {
+    const others = rounds.filter(r => r.n !== R.n).map(r => [r, r.entries.find(e => e.id === d.id)]).filter(([, e]) => e);
+    if (!others.length) return null;
+    return h("span", { class: "also" }, others.map(([r, e]) =>
+      h("button", { type: "button", class: "linkish", "data-goto": r.n + "|" + d.id, text: "R" + r.n + " " + fmt(e.score) })));
+  }
   function designHead(d) {
+    const ofN = designs.length - 1;
     return h("header", { class: "dhead" },
-      h("p", { class: "eyebrow", text: d.rank ? "Rank " + d.rank + " of " + (D.count) : "The yardstick" }),
+      h("p", { class: "eyebrow", text: "Round " + R.n + (d.rank ? " · rank " + d.rank + " of " + ofN : " · the yardstick") }),
       h("h2", null, d.name, h("span", { class: "big", text: fmt(d.score) })),
       d.tagline ? h("p", { class: "tagline", text: d.tagline }) : null,
       h("dl", { class: "facts" },
-        fact("Status", h("span", { class: "chip l-" + d.lane, text: LANE[d.lane] || "Not carried on" })),
+        fact("Result", h("span", { class: "chip l-" + d.lane, text: LANE[d.lane] || "Not carried on" })),
+        fact("How it was made", d.origin),
         fact("Style family", d.family),
-        d.top4 != null ? fact("In judges' top fours", d.top4 + " of " + D.judges, "n") : null,
-        d.promise != null ? fact("Votes to develop", String(d.promise), "n") : null));
+        d.top4 != null ? fact("In judges' top fours", d.top4 + " of " + R.judges, "n") : null,
+        d.promise ? fact("Votes to develop", String(d.promise), "n") : null,
+        fact("Also judged in", alsoIn(d))));
+  }
+  function judgesPanel(d) {
+    if (!d.judges.length) return null;
+    return h("section", { class: "dsec judges" },
+      h("h3", { text: "What the judges said" }),
+      h("p", { class: "note", text: "Marks are out of 10. " + (R.weights && R.weights.soul > 1 ? "The phosphor-soul judge counts " + R.weights.soul + " times in the average. " : "") + "A suggested fix is what that judge would change next." }),
+      h("div", { class: "jgrid" }, d.judges.map(j =>
+        h("article", { class: "jcard" },
+          h("div", { class: "jhead" },
+            h("span", { class: "jlens", text: lens(j.l) }),
+            j.t ? h("span", { class: "chip l-main", text: "Top four" }) : null,
+            h("span", { class: "jscore", text: String(j.s) })),
+          h("p", { class: "jwhy", text: j.w }),
+          j.f ? h("details", { class: "jfix" }, h("summary", { text: "Suggested fix" }), h("p", { text: j.f })) : null))));
   }
   function designView(list) {
     const d = byId[state.design];
-    const box = h("div", null, designHead(d));
+    const box = h("div", null, banner(), designHead(d), judgesPanel(d));
     [["On a desktop", "desk"], ["On a phone", "phone"], ["Close-ups", "sheet"]].forEach(([title, kind]) => {
+      const ps = pages.filter(p => p.kind === kind && (kind === "sheet" ? d.details : d.shots)[p.key]);
+      if (!ps.length) return;
       box.append(h("section", { class: "dsec" },
         h("h3", { text: title }),
-        h("div", { class: "grid " + kind }, ALL.filter(p => p.kind === kind).map(p => card(d, p, "design", list)))));
+        h("div", { class: "grid " + kind }, ps.map(p => card(d, p, "design", list)))));
     });
-    live.textContent = d.name + ": " + list.length + " pictures";
+    live.textContent = "Round " + R.n + ", " + d.name + ": " + list.length + " pictures";
     return box;
+  }
+
+  /* the round's own notes: what was learned, and each judge's overall word */
+  function prose(text) {
+    const out = [];
+    let ul = null;
+    String(text || "").split("\n").forEach(line => {
+      const t = line.trim();
+      if (!t) { ul = null; return; }
+      if (t.startsWith("## ")) { ul = null; return; }
+      if (t.startsWith("- ")) {
+        if (!ul) { ul = h("ul", { class: "prose-list" }); out.push(ul); }
+        ul.append(h("li", { text: t.slice(2) }));
+      } else { ul = null; out.push(h("p", { text: t })); }
+    });
+    return out;
+  }
+  function notesView() {
+    const win = R.entries.filter(e => R.winners.includes(e.id)).sort((a, b) => a.rank - b.rank);
+    live.textContent = "Round " + R.n + " notes";
+    return h("div", { class: "notes" }, banner(),
+      h("div", { class: "phead" },
+        h("h2", { text: "Round " + R.n }),
+        h("p", { class: "note", text: (R.mode ? R.mode.charAt(0).toUpperCase() + R.mode.slice(1) + " round. " : "") + R.judges + " judges. " + (R.today != null ? "Today's page scored " + fmt(R.today) + (R.margin != null ? "; the winner led it by " + R.margin.toFixed(2) + "." : ".") : "") })),
+      win.length ? h("section", { class: "dsec" }, h("h3", { text: "Top four" }),
+        h("ol", { class: "winners" }, win.map(e => h("li", null, h("button", { type: "button", class: "linkish", "data-design": e.id, text: e.name }), " ", h("span", { class: "meta", text: fmt(e.score) }), " ", chip(e))))) : null,
+      R.lessons ? h("section", { class: "dsec" }, h("h3", { text: "What the round showed" }), h("div", { class: "prose" }, prose(R.lessons))) : null,
+      R.notes.length ? h("section", { class: "dsec" }, h("h3", { text: "The judges' overall notes" }),
+        h("div", { class: "jgrid" }, R.notes.map(n => h("article", { class: "jcard" },
+          h("div", { class: "jhead" }, h("span", { class: "jlens", text: lens(n.l) })),
+          h("p", { class: "jwhy", text: n.t }))))) : null);
   }
 
   function render(keepScroll) {
     sync();
     const list = [];
-    main.replaceChildren(state.view === "page" ? pageView(list) : designView(list));
+    main.replaceChildren(state.view === "page" ? pageView(list) : state.view === "design" ? designView(list) : notesView());
     gallery = list;
     writeHash();
     store.set({ view: state.view, set: state.set, size: state.size });
@@ -459,6 +601,14 @@ const D = "__DATA__";
       const top = $(".top").offsetHeight;
       if (window.scrollY > top) window.scrollTo(0, top);
     }
+  }
+  function changeRound(n, extra) {
+    state.round = n;
+    Object.assign(state, extra || {});
+    useRound(n);
+    buildLegend();
+    buildControls();
+    render();
   }
 
   /* ---- the large view ---- */
@@ -490,12 +640,12 @@ const D = "__DATA__";
     big.onload = big.onerror = () => { big.style.visibility = ""; };
     big.src = it.src;
     big.alt = it.p.label + ", " + it.d.name;
-    $("#lb-title").textContent = it.d.name + (it.d.rank ? " · #" + it.d.rank : "");
+    $("#lb-title").textContent = it.d.name + (it.d.rank ? " · #" + it.d.rank : "") + " · round " + R.n;
     $("#lb-sub").textContent = it.p.label + " · " + dims(it.s) + " · " + fmt(it.d.score);
     $("#lb-count").textContent = (at + 1) + " / " + gallery.length;
     setDisabled($("#lb-prev"), at === 0, stage);
     setDisabled($("#lb-next"), at === gallery.length - 1, stage);
-    $("#lb-jump").textContent = state.view === "page" ? "All of this design" : "This page, every design";
+    $("#lb-jump").textContent = state.view === "page" ? "What the judges said" : "This page, every design";
     stage.scrollTop = 0; stage.scrollLeft = 0;
     layoutLb();
     [at - 1, at + 1].forEach(i => { if (gallery[i]) new Image().src = gallery[i].src; });
@@ -574,6 +724,15 @@ const D = "__DATA__";
     const b = e.target.closest("button[data-page]");
     if (b) { state.page = b.dataset.page; render(); }
   });
+  main.addEventListener("click", e => {
+    const d = e.target.closest("button[data-design]");
+    if (d) { state.view = "design"; state.design = d.dataset.design; render(); main.focus({ preventScroll: true }); return; }
+    const g = e.target.closest("button[data-goto]");
+    if (g) { const [n, id] = g.dataset.goto.split("|"); changeRound(+n, { view: "design", design: id }); main.focus({ preventScroll: true }); }
+  });
+  roundSel.addEventListener("change", () => changeRound(+roundSel.value));
+  rPrev.addEventListener("click", () => { const i = rounds.findIndex(r => r.n === state.round); if (i > 0) changeRound(rounds[i - 1].n); });
+  rNext.addEventListener("click", () => { const i = rounds.findIndex(r => r.n === state.round); if (i < rounds.length - 1) changeRound(rounds[i + 1].n); });
   setSel.addEventListener("change", () => { state.set = setSel.value; render(true); });
   designSel.addEventListener("change", () => { state.design = designSel.value; render(); });
   dPrev.addEventListener("click", () => { const i = designs.findIndex(d => d.id === state.design); if (i > 0) { state.design = designs[i - 1].id; render(); } });
@@ -581,10 +740,15 @@ const D = "__DATA__";
   window.addEventListener("hashchange", () => {
     const want = readHash();
     if (!want) return;
-    const same = want.view === state.view && (want.view === "page" ? want.page === state.page : want.design === state.design);
-    if (!same) go(want);
+    const same = want.round === state.round && want.view === state.view &&
+      (want.view === "page" ? want.page === state.page : want.view === "design" ? want.design === state.design : true);
+    if (same) return;
+    closeLb();
+    changeRound(want.round, want);
   });
 
+  buildLegend();
+  buildControls();
   render(true);
 })();
 </script>
