@@ -29,7 +29,7 @@
 *, *::before, *::after { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html.locked, html.locked body { overflow: hidden; }
-html { scroll-padding-top: 9rem; }
+html { scroll-padding-top: 11rem; }
 body {
   margin: 0;
   padding-inline: var(--gutter);
@@ -87,7 +87,7 @@ select { min-width: 0; max-width: 100%; min-height: 2.25rem; padding: .35rem 1.6
 .icon-btn svg { width: 1.1rem; height: 1.1rem; }
 .picker { flex-wrap: nowrap; }
 .picker select { flex: 1 1 auto; max-width: 34rem; }
-.tabs { position: relative; flex-wrap: nowrap; gap: .3rem; overflow-x: auto; scrollbar-width: thin; scrollbar-color: var(--line2) transparent; padding-bottom: .3rem; }
+.tabs { position: relative; flex-wrap: nowrap; gap: .3rem; overflow-x: auto; scrollbar-width: thin; scrollbar-color: var(--line2) transparent; padding-block: .25rem .3rem; }
 .tabs.more { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 2.5rem), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 2.5rem), transparent); }
 .tabs button { flex: none; padding: .3rem .8rem; min-height: 2rem; border: 1px solid transparent; border-radius: 999px; background: transparent; color: var(--dim); font-size: .86rem; white-space: nowrap; }
 .tabs button:hover { color: var(--fg); background: var(--raised); }
@@ -126,6 +126,8 @@ main:focus { outline: none; }
 .shot:hover { border-color: var(--line2); }
 .shot img { display: block; width: 100%; height: auto; }
 .shot.desk { aspect-ratio: 1280 / 900; }
+.shot.sheet { width: fit-content; max-width: 100%; }
+.shot.sheet img { max-width: 100%; }
 .shot.tall::after { content: ""; position: absolute; inset: auto 0 0 0; height: 24%; background: linear-gradient(transparent, var(--bg)); pointer-events: none; }
 .hit { position: absolute; inset: 0; z-index: 2; margin: 0; padding: 0; border: 0; background: transparent; cursor: zoom-in; }
 .hit:focus-visible { outline-offset: -3px; }
@@ -146,11 +148,11 @@ main:focus { outline: none; }
 .lb-meta { flex: 1 1 14rem; min-width: 0; }
 .lb-close { order: 3; }
 .lb-title { margin: 0; font: 600 1.05rem/1.25 var(--cond); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lb-sub { margin: 0; font: 400 .78rem/1.3 var(--mono); color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-sub { margin: 0; font: 400 .78rem/1.5 var(--mono); color: var(--dim); }
 .lb-tools { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .7rem; }
 .lb-count { min-width: 4.4rem; text-align: center; font: 400 .82rem var(--mono); color: var(--dim); font-variant-numeric: tabular-nums; }
-.lb-jump { min-height: 2.25rem; padding: .35rem .75rem; border: 1px solid var(--line2); border-radius: .45rem; background: var(--surface); font-size: .82rem; color: var(--fg); }
-.lb-jump:hover { background: var(--raised); border-color: var(--dim); }
+.lb-jump { margin: 0; padding: .25rem .1rem; border: 0; background: none; font: inherit; color: var(--accent); text-decoration: underline; text-underline-offset: .2em; }
+.lb-jump:hover { color: var(--fg); }
 .lb-stage { display: flex; overflow: auto; scrollbar-gutter: stable both-edges; overscroll-behavior: contain; padding: 1rem var(--gutter) calc(1rem + env(safe-area-inset-bottom, 0px)); touch-action: pan-x pan-y pinch-zoom; }
 .lb-stage:focus-visible { outline-offset: -4px; }
 .lb-stage img { flex: none; display: block; margin: auto; box-sizing: content-box; max-width: none; border: 1px solid var(--line); border-radius: .3rem; background: var(--surface); user-select: none; -webkit-user-drag: none; }
@@ -160,10 +162,12 @@ main:focus { outline: none; }
 }
 @media (pointer: coarse) {
   select { font-size: 16px; }
-  .seg button, select, .lb-jump { min-height: 2.75rem; }
+  .seg button, select { min-height: 2.75rem; }
+  .lb-jump { padding-block: .6rem; }
   .icon-btn { width: 2.75rem; height: 2.75rem; }
   .tabs button { min-height: 2.5rem; }
 }
+.tabs button:focus-visible { outline-offset: -2px; }
 @media (max-width: 34rem) {
   .top { padding-block: 1.4rem 1rem; }
   .bar { padding-block: .5rem; gap: .4rem; }
@@ -171,12 +175,16 @@ main:focus { outline: none; }
   .picker .icon-btn { width: 2.4rem; }
   .pick { flex: 1 1 8rem; }
   .pick select { width: 100%; }
+}
+@media (max-width: 42rem) {
   .lb-top { gap: .4rem .6rem; }
   .lb-meta { flex-basis: 0; }
   .lb-tools { order: 4; flex-basis: 100%; justify-content: space-between; gap: .4rem; }
   .lb-count { min-width: 3.4rem; }
   .lb-tools .seg button { padding-inline: .6rem; }
-  .lb-jump { display: none; }
+}
+@media (max-height: 30rem) {
+  .bar { position: static; }
 }
 </style>
 
@@ -225,7 +233,7 @@ main:focus { outline: none; }
   <div class="lb-top">
     <div class="lb-meta">
       <p class="lb-title" id="lb-title"></p>
-      <p class="lb-sub" id="lb-sub"></p>
+      <p class="lb-sub"><span id="lb-sub"></span> <button type="button" class="lb-jump" id="lb-jump"></button></p>
     </div>
     <div class="lb-tools">
       <button type="button" class="icon-btn" id="lb-prev" aria-label="Previous picture"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
@@ -234,9 +242,8 @@ main:focus { outline: none; }
       <div class="seg" role="group" aria-label="Zoom">
         <button type="button" data-zoom="fit" aria-pressed="false" title="Fit the whole picture on screen">Fit</button>
         <button type="button" data-zoom="width" aria-pressed="false" title="Fit the width, scroll down">Width</button>
-        <button type="button" data-zoom="full" aria-pressed="false" title="Actual size">1:1</button>
+        <button type="button" data-zoom="full" aria-pressed="false" title="One picture pixel per screen pixel">1:1</button>
       </div>
-      <button type="button" class="lb-jump" id="lb-jump"></button>
     </div>
     <button type="button" class="icon-btn lb-close" id="lb-close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   </div>
@@ -388,12 +395,15 @@ const D = "__DATA__";
     if (!s) return h("article", { class: "card" }, h("div", { class: "shot missing", text: "No picture for this page" }), cap);
     const src = "img/" + d.id + "/" + p.key + ".webp";
     const at = list.length;
-    list.push({ d, p, s, src });
+    const item = { d, p, s, src, hit: null };
+    list.push(item);
     const tall = p.kind === "desk" && s.h > 1000;
     const img = h("img", { src, alt: "", width: s.w, height: s.h, loading: "lazy", decoding: "async" });
+    if (p.kind === "sheet") img.style.width = s.w + "px";
     const hit = h("button", { type: "button", class: "hit", "aria-label": "Enlarge " + p.label + ", " + d.name });
     const shot = h("div", { class: "shot " + p.kind + (tall ? " tall" : "") }, img, tall ? h("span", { class: "badge", text: "Full page · " + s.h.toLocaleString("en") + " px" }) : null, hit);
-    hit.addEventListener("click", () => openLb(at, hit));
+    item.hit = hit;
+    hit.addEventListener("click", () => openLb(at));
     img.addEventListener("error", () => { shot.className = "shot missing"; shot.replaceChildren("This picture would not load"); });
     return h("article", { class: "card" }, shot, cap);
   }
@@ -453,7 +463,7 @@ const D = "__DATA__";
 
   /* ---- the large view ---- */
   const lb = $("#lb"), stage = $("#lb-stage"), big = $("#lb-img");
-  let at = 0, opener = null, isOpen = false;
+  let at = 0, isOpen = false;
   const autoZoom = it => it.p.kind === "desk" && it.s.h > 1000 ? "width" : "fit";
 
   function layoutLb() {
@@ -466,7 +476,7 @@ const D = "__DATA__";
     let w;
     if (mode === "fit") w = it.s.w * Math.min(1, aw / it.s.w, ah / it.s.h);
     else if (mode === "width") w = Math.min(it.s.w, aw);
-    else w = it.s.w / (it.p.kind === "phone" ? 2 : 1);
+    else w = it.s.w / (window.devicePixelRatio || 1);
     w = Math.max(40, Math.round(w));
     big.style.width = w + "px";
     big.style.height = Math.round(w * it.s.h / it.s.w) + "px";
@@ -490,8 +500,8 @@ const D = "__DATA__";
     layoutLb();
     [at - 1, at + 1].forEach(i => { if (gallery[i]) new Image().src = gallery[i].src; });
   }
-  function openLb(i, from) {
-    at = i; opener = from; isOpen = true;
+  function openLb(i) {
+    at = i; isOpen = true;
     lb.hidden = false;
     page.inert = true;
     document.documentElement.classList.add("locked");
@@ -504,8 +514,8 @@ const D = "__DATA__";
     lb.hidden = true;
     page.inert = false;
     document.documentElement.classList.remove("locked");
-    const back = opener && opener.isConnected ? opener : main;
-    back.focus({ preventScroll: true });
+    const back = gallery[at] && gallery[at].hit && gallery[at].hit.isConnected ? gallery[at].hit : main;
+    back.focus();
   }
   function step(n) {
     const to = at + n;
