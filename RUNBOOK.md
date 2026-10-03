@@ -210,8 +210,7 @@ one at a time:
 ## 5. Google Calendar
 
 FamilyDB reaches the calendar through a **service account**: a robot account with an address of
-its own, which the family calendar is shared with. Nobody signs in, so there is no consent
-screen to publish and nothing that expires. The Google Cloud side is done once, in a browser:
+its own, which the family calendar is shared with. Nobody signs in and nothing expires. The Google Cloud side is done once, in a browser:
 
 1. Create a Google Cloud project and enable the Google Calendar API.
 2. Under IAM & Admin, Service accounts, create a service account (name it FamilyDB; it needs no
