@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, crt %}
+{% block title %}{{ month }} · {{ site_title }}{% endblock %}
+{% macro event(entry) %}
+  <div class="event{{ ' from-google' if entry.from_google }}">
+    {% if entry.idea_id %}
+      <a href="{{ url_for('web.idea', idea_id=entry.idea_id) }}">{{ entry.title }}</a>
+    {% else %}
+      {{ entry.title }}
+    {% endif %}
+    {% if entry.time %}<small>{{ entry.time }}</small>{% endif %}
+  </div>
+{% endmacro %}
+{% block content %}
+  {# The panel: the plate, and a cell to turn the month with, down the first column; the month
+     itself across the other three, a grid of equal cells of its own, a day to a cell. #}
+  {% set count = busy_days | map(attribute='entries') | map('length') | sum %}
+  {% set on_today = busy_days | selectattr('today') | list %}
+  <div class="side">
+  {% call page_head('Plans', 'The month, a day to a cell, and what is on each day.', 'plans') %}
+    {% if visitor().may('manage') and source != 'google' %}<a class="button secondary" href="{{ url_for('setup.step', name='calendar') }}">{{ icon('plug') }}Connect the calendar</a>
+    {% elif visitor().may('change') %}<a class="button" href="{{ url_for('web.plans', _anchor='add') }}">{{ icon('plus') }}Put something on the calendar</a>{% endif %}
+  {% endcall %}
+  {# The month as the green screen sums it up: how many plans, on how many days, and what is on
+     today. Everything on it is in the month beside it. #}
+  <section class="cell screen-cell" aria-hidden="true">
+  {% call crt('readout page-readout month-readout') %}
+    <p class="readout-label"><span class="inverse caps">{{ month }}</span></p>
+    <p class="readout-title bright">{{ count }} plan{{ '' if count == 1 else 's' }}</p>
+    <p class="readout-when dim">on {{ busy_days | length }} day{{ '' if busy_days | length == 1 else 's' }}</p>
+    {% if on_today %}
+      <ul class="readout-lines">
+        {% for entry in on_today[0].entries[:2] %}<li><span class="dim">Today{% if entry.time %} {{ entry.time }}{% endif %}</span><span class="bright">{{ entry.title }}</span></li>{% endfor %}
+      </ul>
+    {% endif %}
+    <p class="readout-foot dim">{{ 'This month' if this_month else 'Another month' }}<span class="crt-cursor"></span></p>
+  {% endcall %}
+  </section>
+  <section class="cell half month-cell" aria-label="How to show the plans">
+    <nav class="tabs" aria-label="How to show the plans">
+      <a href="{{ url_for('web.plans') }}">{{ icon('list') }}List</a>
+      <a href="{{ url_for('web.plans_month') }}" aria-current="page">{{ icon('grid') }}Month</a>
+    </nav>
+    {% if visitor().may('browse') %}<p class="muted source source-{{ source }}">{{ source_note }}</p>{% endif %}
+  </section>
+  </div>
+
+  <div class="main">
+  <div class="month-module span-5">
+  {# The month's name over its days, and the keys that turn it, as a wall calendar has them. #}
+  <div class="month-bar">
+    <h2>{{ month }}</h2>
+    <p class="month-nav">
+      <a class="button ghost" href="{{ url_for('web.plans_month', month=previous) }}">{{ icon('left') }}Earlier</a>
+      {% if not this_month %}<a class="button ghost" href="{{ url_for('web.plans_month') }}">This month</a>{% endif %}
+      <a class="button ghost" href="{{ url_for('web.plans_month', month=following) }}">Later{{ icon('right') }}</a>
+    </p>
+  </div>
+  {# Two drawings of the same days, and the stylesheet shows one: seven columns where there is
+     room for them, and on a phone just the days that have something on, as a list. #}
+  <table class="cell month">
+    <thead>
+      <tr>{% for name in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}<th scope="col">{{ name }}</th>{% endfor %}</tr>
+    </thead>
+    <tbody>
+      {% for week in weeks %}
+        <tr>
+          {% for day in week %}
+            <td class="{{ 'outside' if not day.current }}{{ ' today' if day.today }}">
+              <time datetime="{{ day.date.isoformat() }}">{{ day.day }}</time>
+              {% for entry in day.entries %}{{ event(entry) }}{% endfor %}
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <ol class="cell plain month-list">
+    {% for day in busy_days %}
+      <li class="{{ 'today' if day.today }}">
+        <strong>{{ day.name }}</strong>{% if day.today %} <span class="tag">today</span>{% endif %}
+        {% for entry in day.entries %}{{ event(entry) }}{% endfor %}
+      </li>
+    {% else %}
+      <li class="muted">Nothing on in {{ month }}.</li>
+    {% endfor %}
+  </ol>
+  </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% from "_settings.html" import form %}
+{% from "_ui.html" import icon, spend_meter %}
+{% call form('spending', groups.values()) %}
+  {# The day's spend on the meter Status shows it on, with the limit it counts towards. #}
+  <div class="panel notice spent spent-meter">
+    {% if limit %}
+      <div class="crt readout meter-readout mini{{ ' near' if today / limit >= 0.75 }}{{ ' over' if today >= limit }}" aria-hidden="true">
+        <div class="crt-tube">{{ spend_meter(today, limit) }}</div>
+      </div>
+    {% endif %}
+    <p>{{ icon('coin') }}<span>About <strong>${{ '%.2f' | format(today) }}</strong>
+      spent today{% if limit %}, of the ${{ '%.2f' | format(limit) }} limit{% endif %}.
+      <a href="{{ url_for('web.status') }}">What it cost, call by call</a></span></p>
+  </div>
+{% endcall %}

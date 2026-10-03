@@ -1,0 +1,294 @@
+{
+ "round": "t2",
+ "roundNo": 2,
+ "lineages": {
+  "track": {
+   "name": "the track series (Track Diagram)",
+   "idea": "the family's week drawn as a signal box's illuminated track diagram: steel lines on slate boards with a lamp at each stop, drawn only where there is an order (Coming up, To do, the setup steps, the chat); the series began as Signal Box (round 7) and its mimic-line language",
+   "heat": "a",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/tour/t2-a",
+   "carried": [
+    {
+     "id": "t1-track-graft",
+     "name": "Track Diagram, Branch Lines"
+    },
+    {
+     "id": "t1-track-revival",
+     "name": "Signal Box Relaid"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "refine",
+     "parent": "t1-track-graft",
+     "parentName": "Track Diagram, Branch Lines"
+    },
+    {
+     "slot": "refine2",
+     "parent": "t1-track-revival",
+     "parentName": "Signal Box Relaid"
+    },
+    {
+     "slot": "graft",
+     "parent": "t1-track-graft",
+     "parentName": "Track Diagram, Branch Lines"
+    }
+   ],
+   "mutant": {
+    "kind": "type",
+    "parent": "t1-track-graft",
+    "parentName": "Track Diagram, Branch Lines",
+    "changes": [
+     "a condensed system: titles and labels in a condensed face (IBM Plex Sans Condensed, Barlow Condensed, or Archivo narrow), body in a text face",
+     "quotes and bullets hung by hand outside the text edge (a negative indent, or the list pulled into the margin)",
+     "a stylistic set or character variant of the face (ss01-ss08, cv..), where it has one, for a more distinctive texture"
+    ],
+    "id": "t2-track-mut"
+   },
+   "entrants": [
+    "t2-track-refine",
+    "t2-track-refine2",
+    "t2-track-graft",
+    "t2-track-mut"
+   ]
+  },
+  "timetable": {
+   "name": "Night Timetable",
+   "idea": "a station at night: Vera's conversation is the line the page hangs from (the question the first stop, the ways to start stops, 'Continue with Vera' the terminus), the chat a timetable with times in the margin, the Next up screen a dot-matrix departure board",
+   "heat": "a",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/tour/t2-a",
+   "carried": [
+    {
+     "id": "t1-timetable-graft",
+     "name": "Night Departures"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "refine",
+     "parent": "t1-timetable-graft",
+     "parentName": "Night Departures"
+    },
+    {
+     "slot": "graft",
+     "parent": "t1-timetable-graft",
+     "parentName": "Night Departures"
+    }
+   ],
+   "mutant": {
+    "kind": "graphics",
+    "parent": "t1-timetable-graft",
+    "parentName": "Night Departures",
+    "changes": [
+     "a schematic language: thin technical line drawings, dimension lines and callouts for the heads, the monitors and the setup steps",
+     "the kind icons redrawn as small badges in each kind's colour",
+     "the page-title icons enlarged into a drawn emblem for each section"
+    ],
+    "id": "t2-timetable-mut"
+   },
+   "entrants": [
+    "t2-timetable-refine",
+    "t2-timetable-graft",
+    "t2-timetable-mut"
+   ]
+  },
+  "pocket": {
+   "name": "Pocket Timeline",
+   "idea": "Home ordered as time on one spine: NOW (the question), then NEXT (the tube), then Coming up, then LATER, with the lists beside it; every page strung along a timeline",
+   "heat": "a",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/tour/t2-a",
+   "carried": [
+    {
+     "id": "t1-pocket-graft",
+     "name": "Pocket Timeline, Traced"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "refine",
+     "parent": "t1-pocket-graft",
+     "parentName": "Pocket Timeline, Traced"
+    },
+    {
+     "slot": "graft",
+     "parent": "t1-pocket-graft",
+     "parentName": "Pocket Timeline, Traced"
+    }
+   ],
+   "mutant": {
+    "kind": "point",
+    "parent": "t1-pocket-graft",
+    "parentName": "Pocket Timeline, Traced",
+    "changes": [
+     "carry the companion into one more page-wide role it does not have yet (heading, label, card-edge, secondary, bubble-them, bar or ambient: pick the one that suits it)",
+     "rearrange Home: a different column structure or order (for example the monitor full width above the lists, or the lists side by side)",
+     "light text on the dark ground eased half a weight or grade, so it does not bloom"
+    ],
+    "id": "t2-pocket-mut"
+   },
+   "entrants": [
+    "t2-pocket-refine",
+    "t2-pocket-graft",
+    "t2-pocket-mut"
+   ]
+  },
+  "figure": {
+   "name": "Figure Ground",
+   "idea": "the family's operator manual: every section led by a figure drawn from its own data (Status as the wiring of keys and connections with lit ports, the chat as a sequence diagram, To do's due dates on a line with NOW, Home's family tree to Vera to its counts)",
+   "heat": "b",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/tour/t2-b",
+   "carried": [
+    {
+     "id": "t1-figure-refine",
+     "name": "Lit Manual"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "refine",
+     "parent": "t1-figure-refine",
+     "parentName": "Lit Manual"
+    },
+    {
+     "slot": "graft",
+     "parent": "t1-figure-refine",
+     "parentName": "Lit Manual"
+    }
+   ],
+   "mutant": {
+    "kind": "phosphor",
+    "parent": "t1-figure-refine",
+    "parentName": "Lit Manual",
+    "changes": [
+     "bring back the original Phosphor page's light wherever this design shows phosphor: every effect in phosphor_kit.md that fits it, in this design's own terms",
+     "the green screens as real tubes again: VT323 at three strengths, a third of a pixel of blur, bloom, scanlines, and the curved glass falling into shadow at its corners",
+     "the primary actions lit from within: a green ring and light pooled under the primary button and Send"
+    ],
+    "id": "t2-figure-mut"
+   },
+   "entrants": [
+    "t2-figure-refine",
+    "t2-figure-graft",
+    "t2-figure-mut"
+   ]
+  },
+  "console": {
+   "name": "Flight Console",
+   "idea": "a 1969 flight console: a readout strip across the top (TODAY, PLANS, TO DO, LATE, IDEAS), the coming weeks drawn as a flight plan of hops between stops, an annunciator of lit lamps on Status, a crew board of lamps on To do, a T-minus countdown for setup, a flight-log chat",
+   "heat": "b",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/tour/t2-b",
+   "carried": [
+    {
+     "id": "t1-console-graft",
+     "name": "Lamps and Ladders"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "refine",
+     "parent": "t1-console-graft",
+     "parentName": "Lamps and Ladders"
+    },
+    {
+     "slot": "graft",
+     "parent": "t1-console-graft",
+     "parentName": "Lamps and Ladders"
+    }
+   ],
+   "mutant": {
+    "kind": "type",
+    "parent": "t1-console-graft",
+    "parentName": "Lamps and Ladders",
+    "changes": [
+     "a new mono for the machine and the figures (Geist Mono, Red Hat Mono, Azeret Mono, Fira Code, Spline Sans Mono or Victor Mono)",
+     "quotes and bullets hung by hand outside the text edge (a negative indent, or the list pulled into the margin)",
+     "true small caps (font-variant-caps: all-small-caps) for labels and eyebrows instead of uppercase"
+    ],
+    "id": "t2-console-mut"
+   },
+   "entrants": [
+    "t2-console-refine",
+    "t2-console-graft",
+    "t2-console-mut"
+   ]
+  },
+  "switchboard": {
+   "name": "Videotex Switchboard",
+   "idea": "Home as the map of the whole service: every page a cell with its number, a lamp and a count (a videotex sommaire), the question typed on the glass under a cursor, each page opening on the same rack with its own green summary screen",
+   "heat": "b",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/tour/t2-b",
+   "carried": [
+    {
+     "id": "t1-switchboard-refine",
+     "name": "Switchboard, Trued"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "refine",
+     "parent": "t1-switchboard-refine",
+     "parentName": "Switchboard, Trued"
+    },
+    {
+     "slot": "graft",
+     "parent": "t1-switchboard-refine",
+     "parentName": "Switchboard, Trued"
+    }
+   ],
+   "mutant": {
+    "kind": "graphics",
+    "parent": "t1-switchboard-refine",
+    "parentName": "Switchboard, Trued",
+    "changes": [
+     "an instrument panel: Status and the cost readout drawn as dials, gauges, meters or a bar chart in SVG",
+     "the phone's tab-bar icons redrawn for the design, with a clear current state",
+     "the FamilyDB mark in the bar redrawn in the design's line, keeping its idea (a smiling monitor) and its #6dff9c"
+    ],
+    "id": "t2-switchboard-mut"
+   },
+   "entrants": [
+    "t2-switchboard-refine",
+    "t2-switchboard-graft",
+    "t2-switchboard-mut"
+   ]
+  }
+ },
+ "heats": {
+  "a": {
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/tour/t2-a",
+   "lineages": [
+    "track",
+    "timetable",
+    "pocket"
+   ]
+  },
+  "b": {
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/tour/t2-b",
+   "lineages": [
+    "figure",
+    "console",
+    "switchboard"
+   ]
+  }
+ },
+ "yardsticks": {
+  "00-current": "today's page",
+  "r13-idea-1": "Desk Terminal, Joined, the main tournament's leader after round 13"
+ },
+ "donors": {
+  "r7-idea-2": "Signal Box: the mimic-line track (the chat hung from Vera's mark, the ring round the page icon, To do's timetable margin, the dot under the current page)",
+  "r9-idea-4": "Signal Lines: Signal Box's rings and tracks on every page, and a page head that holds its title, tabs and actions in one bracket",
+  "r7-idea-1": "Galley Rack: the Coming up strips the owner said look far better than any other (a date designator block, the title and time, a tabular 'in 3 days' facts column)",
+  "r10-mut-4": "Flight Deck, Lit: a glass cockpit's colour code (cyan entered, bone data, amber caution, green on), thin screwed faceplates, legends set into the breaks of fine demarcation lines",
+  "r10-wild-2": "Bench Scope: the coming weeks drawn as glowing pulses on a scope, Ideas in XY mode",
+  "r12-wild-4": "Single Quote: a title set with its figure in the section's colour and a stacked mono legend, a command path with a blinking cursor, an LED on the current key",
+  "r12-mut-2": "Long Persistence, Metered: today's spend as a phosphor moving-coil needle meter",
+  "r13-wild-1": "Phosphor Blueprint: the footer as a drawing's title block, dimension lines for 'in 2 days', a 24px baseline grid",
+  "r13-wild-3": "Dessau Phosphor: a round phosphor screen holding each page's one live figure, four shapes with four jobs and their legend in the footer, a huge scanlined glowing 'mind'",
+  "r13-wild-4": "Grid Console: a lit spine down the gutter with a node at each section, section-coloured trails, the only afterglow the judges could see",
+  "r13-wild-2": "Signal Catalogue: a scope pulse per plan and LED countdown meters",
+  "r9-rand-1": "Attract Mode: the power-on roll bar (the best tube behaviour of its round), keys and wells with the clearest affordance",
+  "r11-wild-2": "Night Gallery: a picture light hung over each monitor, wall labels"
+ },
+ "tour": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/tour"
+}

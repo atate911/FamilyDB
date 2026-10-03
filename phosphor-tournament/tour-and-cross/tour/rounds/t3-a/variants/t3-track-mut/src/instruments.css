@@ -1,0 +1,220 @@
+/* ==== Instrument Panel: the graphics mutant of Lit Sill Line ======================================
+   Three changes, rolled by the dice, and nothing else of the parent's colour, type or layout:
+   1. Status's first read becomes an instrument panel: one faceplate with two windows in the
+      page's own question order, the named lamp board ("is it working") and a moving-coil spend
+      meter drawn in SVG ("what is it costing"), the legend under the case; and the cost tables
+      further down read as printed bar charts beside their figures.
+   2. The status lamps are one family of small signals, drawn on one 16-unit grid
+      (static/sig-*.svg), each with one meaning wherever it stands: a lit lamp working, a dot
+      waiting for its time, a ring off, a dashed ring (an empty socket) not set up, an upright
+      amber bar needs a look, a red block stopped. Only the lamp gives off light.
+   3. One surface carries a texture: the greeting, whose airglow off the lit run is now a
+      phosphor halftone (static/halftone-*.svg), in place of the whisper of scanlines. */
+
+:root { --sig-size: 14px; }
+
+/* ---- 2. The signals -------------------------------------------------------------------------- */
+.light:is(.on, .off, .wait, .unset, .part, .look, .stopped),
+.gl:is(.on, .off, .wait, .unset, .part, .look, .stopped) {
+  display: inline-block; flex: none; box-sizing: border-box;
+  width: var(--sig-size); height: var(--sig-size); margin: 0;
+  border: 0; border-radius: 0; box-shadow: none; animation: none;
+}
+.light:is(.off, .wait, .unset, .part, .look, .stopped),
+.gl:is(.off, .wait, .unset, .part, .look, .stopped) {
+  background: var(--sig-c, var(--pewter));
+  -webkit-mask: var(--sig) 50% 50% / 100% 100% no-repeat;
+  mask: var(--sig) 50% 50% / 100% 100% no-repeat;
+}
+:is(.light, .gl).wait { --sig: url(sig-dot.svg); --sig-c: var(--steel); }
+:is(.light, .gl).off { --sig: url(sig-ring.svg); --sig-c: var(--pewter); }
+:is(.light, .gl).unset { --sig: url(sig-socket.svg); --sig-c: var(--pewter); }
+:is(.light, .gl):is(.part, .look) { --sig: url(sig-bar.svg); --sig-c: var(--amber); }
+:is(.light, .gl).stopped { --sig: url(sig-block.svg); --sig-c: var(--red); }
+/* The lamp: a jewelled lens, white-hot at its core, in the tube's two-layer halo, which follows
+   the lens itself (a drop-shadow, not a box). */
+:is(.light, .gl).on {
+  background: url(sig-lamp.svg) 50% 50% / 100% 100% no-repeat;
+  filter: drop-shadow(0 0 2.5px var(--brand)) drop-shadow(0 0 7px color-mix(in srgb, var(--brand) 55%, transparent));
+}
+/* What only an admin can fix has stopped something: every signal in that panel is the red block. */
+.attention .light:not(.on) { --sig: url(sig-block.svg); --sig-c: var(--red); }
+/* The Status key in the bar carries the same two signals while trouble lasts. */
+.tools > a.lit .light {
+  top: 0.15rem; right: -0.05rem; width: 0.55rem; height: 0.95rem; font-size: 0; color: transparent;
+  border: 0; border-radius: 0; box-sizing: border-box;
+  -webkit-mask: url(sig-bar.svg) 50% 50% / 100% 100% no-repeat; mask: url(sig-bar.svg) 50% 50% / 100% 100% no-repeat;
+}
+.tools > a.lit-bad .light { width: 0.8rem; height: 0.8rem; -webkit-mask-image: url(sig-block.svg); mask-image: url(sig-block.svg); }
+
+/* The same family on the timetables: a late thing to do needs a look (the amber bar on the
+   rail), one with a time to come waits for it (a steel dot), one with no time is idle (a ring),
+   and the lit tick is now. */
+:is(.task-line, .checklist) > li.timed::before {
+  width: 8px; height: 8px;
+  left: calc(var(--rx) - var(--px) - 4px); top: calc(var(--ly) - 4px);
+  background: var(--steel); border: 0; box-shadow: 0 0 0 3px var(--tray);
+}
+:is(.task-line, .checklist) > li.late::before {
+  width: 7px; height: 16px; border-radius: 3.5px;
+  left: calc(var(--rx) - var(--px) - 3.5px); top: calc(var(--ly) - 8px);
+  background: var(--amber); border: 0; box-shadow: 0 0 0 3px var(--tray);
+}
+:is(.task-line, .checklist) > li:not(.timed):not(.late)::before { border-color: var(--pewter); }
+.task-line > li.task-done::before { width: var(--lamp); height: var(--lamp); left: calc(var(--rx) - var(--px) - var(--lamp) / 2); top: calc(var(--ly) - var(--lamp) / 2); border-radius: 50%; background: var(--lit); border-color: var(--lit); }
+
+/* ---- 1. Status: the instrument panel ---------------------------------------------------------- */
+.page-status .instrument {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "case case" "legend note";
+  gap: 0.9rem 2rem; align-items: start; margin: 0 0 2.25rem;
+}
+.panel-case {
+  grid-area: case; display: grid; grid-template-columns: minmax(0, 1fr) 22.5rem; gap: 5px;
+  margin: 0; padding: 3px 3px 1.05rem;
+}
+.panel-case > .crt-tube { margin: 0; }
+
+/* The lamp window: three strings, each a group's name, its signals named under them, its count. */
+.lamp-glass { display: grid; align-content: center; padding: 0.85rem 1.1rem; }
+.lamp-glass .lamp-strings { display: grid; gap: 0.15rem; margin: 0 -0.5rem; }
+.crt .lamp-glass .lamp-string {
+  grid-template-columns: 9.5rem minmax(0, 1fr) auto; column-gap: 1rem;
+  min-height: 5.1rem; padding: 0.3rem 0.5rem; font-size: 1.3rem;
+}
+.lamp-glass .lamp-string + .lamp-string { border-top: 1px solid color-mix(in srgb, var(--phosphor) 22%, transparent); }
+.lamp-glass .ls-lamps { display: flex; flex-wrap: wrap; align-items: start; gap: 0.3rem 1.35rem; }
+.ls-lamp { display: grid; justify-items: center; gap: 0.4rem; min-width: 2.2rem; }
+.ls-lamp .gl { --sig-size: 20px; }
+.ls-lamp-name { font-size: 1.2rem; letter-spacing: 0.02em; text-transform: none; line-height: 1; white-space: nowrap; }
+/* On the glass the signals take the tube's strengths; the bar stays amber and the block red,
+   and the names of what is not working are set at the dim strength. */
+.crt .gl:is(.wait, .off, .unset) { --sig-c: var(--phosphor-dim); }
+.crt .gl:is(.part, .look) { --sig-c: #ffb850; }
+.ls-lamp:not(.on) .ls-lamp-name { color: var(--phosphor-dim); text-shadow: 0 0 6px color-mix(in srgb, var(--phosphor) 25%, transparent); }
+.ls-lamp.look .ls-lamp-name { color: #ffc978; text-shadow: 0 0 6px rgb(255 184 80 / 0.35); }
+.lamp-string:is(:hover, :focus-visible) .gl { --sig-c: #04100a; filter: none; }
+.lamp-string:is(:hover, :focus-visible) .gl.on { background: radial-gradient(circle, #04100a 0 36%, transparent 39%); }
+.lamp-string:is(:hover, :focus-visible) .ls-lamp-name { color: #04100a; text-shadow: none; }
+
+/* The meter window: its scale, the needle, the figure under the pivot. */
+.dial-glass { display: grid; justify-items: center; align-content: start; padding: 0.8rem 1rem 0.7rem; text-align: center; }
+.panel-case .dial-glass .readout-label { justify-self: stretch; text-align: left; font-size: 1.3rem; letter-spacing: 0.08em; }
+.dial { display: block; width: 100%; max-width: 20.25rem; height: auto; margin: 0.15rem 0 -0.35rem; overflow: visible; }
+.dial path, .dial circle { vector-effect: non-scaling-stroke; }
+.dial-scale { fill: none; stroke: var(--phosphor-dim); stroke-width: 2; }
+.dial-hatch { fill: none; stroke: var(--phosphor-dim); stroke-width: 1.25; }
+.dial-minor { fill: none; stroke: var(--phosphor-dim); stroke-width: 1.5; }
+.dial-major { fill: none; stroke: var(--phosphor); stroke-width: 2.25; stroke-linecap: square; }
+.dial-buffer { fill: none; stroke: var(--phosphor-bright); stroke-width: 3; }
+.dial-terminus { fill: #040906; stroke: var(--phosphor); stroke-width: 2; }
+.dial-label { fill: var(--phosphor); font: 400 21px/1 var(--terminal); text-anchor: middle; filter: drop-shadow(0 0 3px color-mix(in srgb, var(--phosphor) 55%, transparent)); }
+.dial-run { fill: none; stroke: var(--phosphor); stroke-width: 3.5; filter: drop-shadow(0 0 2px var(--phosphor)) drop-shadow(0 0 6px color-mix(in srgb, var(--phosphor) 50%, transparent)); }
+.dial-bug path { fill: var(--phosphor-dim); }
+.dial-needle { filter: drop-shadow(0 0 1.5px var(--phosphor)) drop-shadow(0 0 7px color-mix(in srgb, var(--phosphor) 55%, transparent)); }
+.dial-needle .needle { fill: none; stroke: var(--phosphor); stroke-width: 3; stroke-linecap: round; }
+.dial-needle .needle-core { fill: none; stroke: color-mix(in srgb, var(--phosphor) 30%, #fff); stroke-width: 1; stroke-linecap: round; }
+.dial-needle .needle-tail { fill: none; stroke: var(--phosphor-dim); stroke-width: 5; stroke-linecap: round; }
+.dial-pivot { fill: #0a120d; stroke: var(--phosphor); stroke-width: 2; }
+.panel-case .dial-glass .readout-figure { margin: 0; font-size: 3.4rem; line-height: 0.95; }
+.panel-case .dial-glass .readout-of { margin: 0.2rem 0 0; font-size: 1.2rem; letter-spacing: 0.06em; }
+.readout-usual { display: inline-flex; align-items: center; gap: 0.45rem; margin: 0.35rem 0 0; font-size: 1.2rem; }
+.bug-key { width: 0.62rem; height: 0.55rem; background: var(--phosphor-dim); clip-path: polygon(0 0, 100% 0, 50% 100%); }
+/* Near the limit the meter's window re-lights amber, past it red, the lamp window staying as it is. */
+.dial-glass.near, .dial-glass.over {
+  --phosphor-bright: color-mix(in srgb, var(--phosphor) 45%, #fff);
+  --phosphor-dim: color-mix(in srgb, var(--phosphor) 64%, #07120c);
+  --phosphor-glass: color-mix(in srgb, var(--phosphor) 9%, #060a08);
+  color: var(--phosphor);
+  background: radial-gradient(125% 115% at 50% 40%, var(--phosphor-glass), #07100b 55%, #030705);
+}
+
+/* Under the case: the legend, every signal on the page counted once, each figure beside its
+   signal; a signal the page shows none of is set quietly. */
+.page-status .legend-strip {
+  grid-area: legend; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 1.9rem;
+  margin: 0; padding: 0.15rem 0 0; list-style: none;
+}
+.page-status .legend-strip > li {
+  display: inline-flex; align-items: baseline; gap: 0.5rem; min-height: 0; padding: 0; border: 0;
+  font-size: 1rem; color: var(--ink-2); white-space: nowrap;
+}
+.page-status .legend-strip .light { align-self: center; margin-right: 0.1rem; }
+.page-status .legend-strip .figure { padding: 0; font: 500 2.25rem/1 var(--fig); font-stretch: 75%; text-align: left; color: var(--heading); }
+.page-status .legend-strip > li.zero { color: var(--dim); }
+.page-status .legend-strip > li.zero .figure { color: var(--dim); font-weight: 400; }
+.page-status .instrument > .tube-note { grid-area: note; align-self: center; margin: 0; }
+
+/* Further down, the cost tables read as printed bar charts: steel bars on a dark well, ruled
+   at the quarters, each beside its figure (matte: past spending is print, not light). */
+.page-status .meter { display: block; width: 8rem; height: 0.8rem; flex: none; overflow: visible; }
+.page-status .meter-track { fill: #0b1013; stroke: #2e343b; stroke-width: 1; }
+.page-status .meter-fill { fill: var(--steel); }
+.page-status .meter-rule { stroke: #56708c; stroke-width: 1; }
+.page-status .share-cell { display: inline-flex; align-items: center; gap: 0.7rem; }
+.page-status .data .bar-head { padding-left: 0.2rem; }
+.page-status .data td.bar-cell { width: 12rem; padding-left: 0.2rem; }
+/* What went oddly is worth a look: the amber bar on the rail. */
+.line.rows.oddly > li::before {
+  width: 7px; height: 16px; border-radius: 3.5px;
+  left: calc(var(--rx) - var(--px) - 3.5px); top: calc(var(--ly) - 8px);
+  background: var(--amber); border: 0; box-shadow: 0 0 0 3px var(--tray);
+}
+
+/* ---- 3. The greeting's texture: the airglow as a phosphor halftone ---------------------------- */
+.welcome.sill-board::before {
+  background:
+    url(halftone-sill.svg) 0 100% / auto no-repeat,
+    linear-gradient(to top, color-mix(in srgb, var(--brand) 9%, transparent), transparent);
+  -webkit-mask-image: radial-gradient(55% 100% at 22% 100%, #000 40%, transparent 92%);
+  mask-image: radial-gradient(55% 100% at 22% 100%, #000 40%, transparent 92%);
+}
+@media (max-width: 63.99rem) {
+  .welcome.sill-board::before {
+    height: 22rem;
+    background: url(halftone-gutter.svg) 0 100% / auto no-repeat, linear-gradient(to top, color-mix(in srgb, var(--brand) 9%, transparent), transparent 60%);
+    -webkit-mask-image: linear-gradient(to top, #000 55%, transparent);
+    mask-image: linear-gradient(to top, #000 55%, transparent);
+  }
+}
+
+/* ---- Status below 60rem: the windows stack, the meter first under the lamps ------------------- */
+@media (max-width: 60rem) {
+  .page-status .instrument { grid-template-columns: minmax(0, 1fr); grid-template-areas: "case" "legend" "note"; }
+  .panel-case { grid-template-columns: minmax(0, 1fr); gap: 5px; }
+  .crt .lamp-glass .lamp-string { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "n c" "l l"; row-gap: 0.6rem; min-height: 0; padding: 0.55rem 0.5rem 0.65rem; }
+  .lamp-glass .ls-name { grid-area: n; }
+  .lamp-glass .ls-count { grid-area: c; }
+  .lamp-glass .ls-lamps { grid-area: l; gap: 0.5rem 0.8rem; }
+  .ls-lamp { min-width: 0; }
+  .ls-lamp-name { font-size: 1.05rem; letter-spacing: 0; }
+  .page-status .legend-strip { gap: 0.3rem 1.4rem; }
+}
+
+/* ---- Access -------------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .panel-case .crt-tube > .roll { display: none; }
+}
+@media (prefers-contrast: more) {
+  :is(.light, .gl).on, .dial-run, .dial-needle, .dial-label { filter: none; }
+  .ls-lamp-name { text-shadow: none; }
+}
+@media (forced-colors: active) {
+  .light:is(.on, .off, .wait, .unset, .part, .look, .stopped), .gl:is(.on, .off, .wait, .unset, .part, .look, .stopped) {
+    forced-color-adjust: none; border: 0; filter: none;
+  }
+  .light:is(.off, .wait, .unset, .part, .look, .stopped), .gl:is(.off, .wait, .unset, .part, .look, .stopped) { background: CanvasText; }
+  :is(.light, .gl).on { background: CanvasText; border-radius: 50%; }
+  .dial * { stroke: CanvasText; fill: none; filter: none; }
+  .dial-label, .dial-bug path { fill: CanvasText; stroke: none; }
+  .welcome.sill-board::before { display: none; }
+}
+@media print {
+  .dial * { filter: none; }
+}
+
+/* The spending settings: the same meter in a small window beside the words. */
+.spent-meter { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.5rem; margin: 0 0 1.25rem; }
+.spent-meter .notice.spent { flex: 1 1 18rem; margin: 0; }
+.crt.spend-mini { flex: none; width: 15rem; margin: 0; }
+.spend-mini .crt-tube { display: block; padding: 0.7rem 0.8rem 0.45rem; }
+.spend-mini .dial { max-width: none; margin: 0; }

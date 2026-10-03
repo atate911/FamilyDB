@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, presence %}
+{% block title %}Settings · {{ site_title }}{% endblock %}
+{% block body_class %}page-settings{% endblock %}
+{% block content %}
+  {{ page_head('Settings', 'Each part, how it stands now, and the way in to change it.', 'settings') }}
+  {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+  {# A directory, as a station's board lists its facilities: one line to a page of settings, its
+     pictogram in a steel ring, its name, a leader across to how it stands in words, and the way
+     in at the end. A part that needs a look carries the same amber window the Status page draws. #}
+  <ul class="plain directory">
+    {% for entry in sections %}
+      {% set one = entry.section %}
+      <li>
+        <a class="dir-row{% if entry.look %} look{% endif %}" href="{{ url_for('settings.section', name=one.name) }}">
+          {% if one.icon == 'presence' %}<span class="dir-ring">{{ presence('glyph') }}</span>
+          {%- else %}<span class="dir-ring" aria-hidden="true">{{ icon(one.icon) }}</span>{% endif %}
+          <span class="dir-name"><strong>{{ one.title }}</strong><span class="leader" aria-hidden="true"></span></span>
+          <span class="dir-state">{% for line in entry.lines %}{{ line }}{% if not loop.last %}{{ ' ' if line.endswith('.') else ' · ' }}{% endif %}{% endfor %}</span>
+          {% if entry.look %}<span class="state-window look"><span class="state-lamp" aria-hidden="true"></span>Needs a look</span>{% endif %}
+          {{ icon('right', cls='go') }}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+  <p class="muted small">
+    Setting up for the first time, or starting again? <a href="{{ url_for('setup.overview') }}">Setup</a>
+    goes through what matters most, one step at a time.
+  </p>
+{% endblock %}

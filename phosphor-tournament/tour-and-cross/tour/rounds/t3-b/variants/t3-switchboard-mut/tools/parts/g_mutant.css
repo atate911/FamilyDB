@@ -1,0 +1,88 @@
+
+/* ==========================================================================================
+   SQUARED: three changes the dice rolled, and nothing else
+     1. Colour: the companion leaves the wiring, where it was weakest. The frames, the rules
+        between rows and the dotted leaders go back to the panel's own quiet graphite; the
+        circuit's colour stays where it reads, in the figures, the icons and the links.
+     2. Structure: everything square. The videotex page is built of square character cells, so
+        the square is the one shape: every lamp an indicator square, every power light and "here"
+        LED a square, every window of glass cut square in the plate (the tube's curve is drawn by
+        its own light falling off into the corners, not by a radius), the radar's blips lit
+        pixels, and every icon's line ends and joins cut square. The scope keeps its circle: that
+        is its scale (the rings are distances), not a corner.
+     3. Type: font-synthesis off everywhere, so nothing faux is ever drawn, and every cut the page
+        asks for is a cut the type designer drew. The parent asked for condensed and
+        semi-condensed IBM Plex Sans in 32 places; IBM Plex Sans has no such width, so those heads
+        and figures were silently set wide. They are now set in the true cut, IBM Plex Sans
+        Condensed.
+   ========================================================================================== */
+
+/* ---- 3. Type: nothing synthesised, anywhere -------------------------------------------------- */
+:root, *, *::before, *::after, ::placeholder, ::marker, ::file-selector-button { font-synthesis: none; }
+input, textarea, select, button, option, optgroup, svg text { font-synthesis: none; }
+
+/* ---- 1. Colour: the wiring back to quiet graphite --------------------------------------------- */
+:root, .cell, .page-head, .main, .side, .screen-cell, .household, .panel {
+  --wire: var(--card-edge);
+  --wire-2: var(--line-2);
+}
+
+/* ---- 2. Everything square --------------------------------------------------------------------- */
+/* The glass: cut square in the plate. The corners fall into the tube's shadow, so the curve of the
+   faceplate is still there, drawn by light. */
+.crt, .crt-tube, .crt-tube::after, .terminal-screen .crt-tube, .ask-screen .crt-tube,
+.minitel .crt, .head-screen, .head-screen .crt-tube { border-radius: 0; }
+.crt-tube {
+  box-shadow: inset 0 0 0 1.5px #020403, inset 0 0 40px 8px rgb(0 0 0 / 0.74);
+}
+.crt-tube::after {
+  background:
+    radial-gradient(85% 50% at 26% 4%, rgb(255 255 255 / 0.075), transparent 62%),
+    radial-gradient(130% 120% at 50% 45%, transparent 52%, rgb(0 0 0 / 0.66));
+}
+
+/* The lamps: indicator squares. On, a lit square with a white-hot centre in two halos. Waiting, a
+   small steel square. Off, a hollow pewter square. Needs a look, the amber bar, square-ended. */
+.lamp.on, .light.on {
+  width: 10px;
+  height: 10px;
+  border-radius: 0;
+  background: radial-gradient(farthest-corner, #f4fff8 0 16%, color-mix(in srgb, var(--brand) 45%, #fff) 38%, var(--brand) 70%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand) 30%, transparent), 0 0 7px var(--brand), 0 0 16px color-mix(in srgb, var(--brand) 45%, transparent);
+}
+.lamp.wait { width: 7px; height: 7px; margin: 1.5px; border-radius: 0; }
+.lamp.off, .light.off { width: 10px; height: 10px; border-radius: 0; }
+.lamp.look, .light.part, .lamp.bad { border-radius: 0; }
+/* "Here": the LED on the key you are on, and on the menu's, a lit square. */
+.bar .key[aria-current="page"]::after, .menu.here > summary::before, .keys .key[aria-current]::after {
+  border-radius: 0;
+  background: radial-gradient(farthest-corner, #f4fff8 0 22%, var(--brand) 72%);
+}
+/* The power lights in the monitors' chins, and the next plan's lamp by its day. */
+.power, .crt::after, .main > .screen-cell > .crt::after { border-radius: 0; }
+.plan-rows .is-next .dc::before, .plan-rows .is-today .dc::before, .plan-index .is-next .dc::before, .plan-index .is-today .dc::before {
+  border-radius: 0;
+  background: radial-gradient(farthest-corner, #f4fff8 0 18%, var(--brand) 70%);
+}
+.error::before, .choice.chosen::after { border-radius: 0; }
+
+/* The radar's hub and blips: lit pixels (the markup draws them as squares). */
+.radar-hub { shape-rendering: crispEdges; }
+
+/* The icons: every line end and joint cut square, as the type's are. */
+.icon { stroke-linecap: square; stroke-linejoin: miter; stroke-miterlimit: 4; }
+.crt-face path { stroke-linecap: square; }
+input[type="checkbox"]:checked {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230a130d' stroke-width='3' stroke-linecap='square' stroke-linejoin='miter'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 1rem 1rem no-repeat,
+    linear-gradient(var(--lit), var(--lit)) center / 1.4rem 1.4rem no-repeat,
+    radial-gradient(circle, color-mix(in srgb, var(--brand) 40%, transparent) 0 0.7rem, transparent 1.3rem);
+}
+/* The picker of a select, its mark for the chosen one, the bullets of a list, and the focus
+   ring: square like everything else. */
+@supports (appearance: base-select) {
+  ::picker(select) { border-radius: 0; }
+  option::checkmark { content: "\25A0"; font-size: 0.6rem; }
+}
+:where(ul) { list-style-type: square; }
+:focus-visible { border-radius: 0; }

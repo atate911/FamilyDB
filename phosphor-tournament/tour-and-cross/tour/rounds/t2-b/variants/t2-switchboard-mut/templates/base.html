@@ -1,0 +1,121 @@
+{% from "_ui.html" import icon, presence, brand_mark %}
+{% from "_ui.html" import keyrow with context %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0a0d0c" />
+    <title>{% block title %}{{ site_title }}{% endblock %}</title>
+    <link rel="preload" href="{{ url_for('static', filename='fonts/dm-sans.woff2') }}" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <script src="{{ url_for('static', filename='menu.js') }}" defer></script>
+    {# The box everyone writes to her in keeps its draft with this (ask.js), where the box is. #}
+    {% if request.endpoint in ('web.home', 'chat.show') %}<script src="{{ url_for('static', filename='ask.js') }}" defer></script>{% endif %}
+    {% if dictation %}<script src="{{ url_for('static', filename='dictate.js') }}" data-icons="{{ url_for('static', filename='icons.svg') }}" defer></script>{% endif %}
+    <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml" />
+    <link rel="manifest" href="{{ url_for('web.manifest') }}" />
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}" />
+    <meta name="apple-mobile-web-app-title" content="{{ site_title }}" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    {% block head %}{% endblock %}
+  </head>
+  {# Videotex, set out as a control panel. The service is a set of numbered pages, and every page
+     is one panel of equal cells: the first cell names the page, the others hold what it is about.
+     Home is the whole panel at once, the map of the service, every page a cell with what is in it
+     now; everywhere else the map folds into the row of keys under row zero. Which page this is,
+     by the view that drew it, gives it its number (the stylesheet writes it) and its colour, and
+     lights its key. #}
+  {% set here = request.endpoint or '' %}
+  {% set SECTIONS = {
+    'home': ['web.home'],
+    'chat': ['chat.show'],
+    'ideas': ['web.ideas', 'web.idea', 'web.new_idea', 'web.edit_idea', 'web.restaurants'],
+    'plans': ['web.plans', 'web.plans_month'],
+    'todo': ['web.tasks'],
+    'wishes': ['web.wishes'],
+    'family': ['family.show', 'family.edit'],
+    'you': ['family.you'],
+    'memory': ['web.memory'],
+    'status': ['web.status'],
+    'settings': ['settings.show', 'settings.section', 'settings.personality'],
+  } %}
+  {% set ns = namespace(section='none') %}
+  {% for name, owns in SECTIONS.items() %}{% if here in owns %}{% set ns.section = name %}{% endif %}{% endfor %}
+  <body class="in-{{ ns.section }} {% block body_class %}{% endblock %}">
+    <a class="skip" href="#content">Skip to the page</a>
+    {% macro item(label, target, section, glyph) %}
+      <a class="key to-{{ section }}" href="{{ target }}"{% if section == ns.section %} aria-current="page"{% endif %}>
+        {{- icon(glyph) }}<span class="label">{{ label }}</span></a>
+    {% endmacro %}
+    {# Row zero, the one row of keys on every page, Home included: the mark and the name, the six
+       places a day is spent (the one you are on a steel cell with its lamp lit and its page
+       number), then, past a hairline, the household's own tools in words. On a phone the six
+       places go to the foot of the screen, under the thumb, and the tools keep only their icons. #}
+    <header class="bar">
+      <a class="brand" href="{{ url_for('web.home') }}">
+        <span class="brand-mark">{{ brand_mark('bar') }}</span>
+        <span class="brand-name">{{ site_title }}</span><span class="caret" aria-hidden="true"></span>
+      </a>
+      {{ keyrow(ns.section, 'bar-places') }}
+      {% set visiting = visitor() %}
+      {% set managing = visiting.may('manage') %}
+      <nav class="tools" aria-label="Household">
+        {% if visiting.may('browse') %}{{ item('Memory', url_for('web.memory'), 'memory', 'heart') }}{% endif %}
+        {% if managing %}{{ item('Family', url_for('family.show'), 'family', 'family') }}{% endif %}
+        {% if visiting.may('browse') %}
+          <a class="key to-status{{ ' lit lit-' ~ status_light if status_light }}" href="{{ url_for('web.status') }}"{% if ns.section == 'status' %} aria-current="page"{% endif %}>
+            {{- icon('status') }}<span class="label">Status{% if status_words %}: {{ status_words[1] }}{% endif %}</span>
+            {%- if status_words %}<span class="light" aria-hidden="true">{{ status_words[0] }}</span>{% endif %}</a>
+        {% endif %}
+        {% if managing or visiting.member or visiting.signed_in %}
+          <details class="menu{% if ns.section in ('settings', 'you') %} here{% endif %}">
+            <summary>
+              {%- if managing %}{{ icon('settings') }}<span class="label">Settings</span>
+              {%- else %}{{ icon('user') }}<span class="label">{{ visiting.name or 'You' }}</span>{% endif -%}
+            </summary>
+            <div class="menu-list">
+              {% if managing %}
+                <a class="menu-all" href="{{ url_for('settings.show') }}"{% if here == 'settings.show' %} aria-current="page"{% endif %}>{{ icon('settings') }}All settings</a>
+                {% for one in settings_sections %}
+                  {% set target = url_for('settings.section', name=one.name) %}
+                  <a href="{{ target }}"{% if request.path == target %} aria-current="page"{% endif %}>
+                    {%- if one.icon == 'presence' %}{{ presence('glyph') }}{% else %}{{ icon(one.icon) }}{% endif %}{{ one.title }}</a>
+                {% endfor %}
+              {% endif %}
+              {% if visiting.member or visiting.signed_in %}
+                <div class="menu-you">
+                  {% if visiting.member %}
+                    <p class="menu-who">Signed in as <strong>{{ visiting.name }}</strong></p>
+                    <a href="{{ url_for('family.you') }}"{% if ns.section == 'you' %} aria-current="page"{% endif %}>{{ icon('key') }}Your password</a>
+                  {% endif %}
+                  {% if visiting.signed_in %}
+                    <form class="signout" method="post" action="{{ url_for('auth.logout') }}">
+                      <button class="quiet" type="submit">{{ icon('signout') }}Sign out</button>
+                    </form>
+                  {% endif %}
+                </div>
+              {% endif %}
+            </div>
+          </details>
+        {% endif %}
+      </nav>
+    </header>
+    <main id="content">
+      <div class="board">
+        {% for said in get_flashed_messages(category_filter=['edit']) %}
+          <p class="said" role="status">{{ said }}</p>
+        {% endfor %}
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+    <footer class="foot">
+      <span class="foot-mark">{{ brand_mark('foot') }}{{ site_title }}</span>
+      <span class="foot-line">A little less planning. A little more together.</span>
+      <p class="legal">{{ footer }}</p>
+    </footer>
+  </body>
+</html>

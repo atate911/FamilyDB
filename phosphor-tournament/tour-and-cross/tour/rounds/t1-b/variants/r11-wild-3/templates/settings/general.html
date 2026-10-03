@@ -1,0 +1,90 @@
+{% from "_settings.html" import form %}
+{% from "_ui.html" import icon, tile %}
+{{ form('general', groups.values()) }}
+
+{# How the page is reached is shown here and changed on the server, never from a form, so a
+   sign-in in the wrong hands cannot move the page or open it wider (DESIGN.md, section 13). #}
+<section class="panel tiled" id="served">
+  {{ tile('plug') }}
+  <h2>Where this page is served</h2>
+  <dl class="facts">
+    <dt>Opened at</dt>
+    <dd><code>{{ served.opened }}</code>, on port {{ served.port }}</dd>
+    <dt>FamilyDB listens on</dt>
+    <dd><code>{{ served.own }}</code>
+      {%- if served.proxied %}, and the page is passed on to it by Caddy{% endif %}
+      {%- if served.local %}: only this machine can reach it{% endif %}.</dd>
+  </dl>
+  <p class="muted">Ports are moved on the server rather than here, so nobody signed in to the page
+    can move it or open it wider. As whoever looks after the server:</p>
+  <ul class="tips">
+    {% if served.proxied %}
+      <li><code>sudo {{ served.script }} https --port random</code> serves the page on a port the
+        scans that sweep the internet rarely try, instead of {{ served.port }}; a number chooses
+        it, and <code>--port 443</code> moves it back. Bookmarks to the old address stop
+        working.</li>
+    {% endif %}
+    <li><code>sudo {{ served.script }} port 9090</code> moves FamilyDB itself off
+      {{ served.own_port }}, when something else on the server needs that port: any free one from
+      1025 to 65535, or <code>random</code>.
+      {%- if served.proxied %} The address people open stays as it is.
+      {%- else %} It is the port people open, so bookmarks need the new one.{% endif %}</li>
+  </ul>
+</section>
+
+{# Giving the page a name: shown, as the ports are, and done on the server. Typing a name here
+   only fills it into the steps; nothing is saved and nothing is changed. #}
+{% set name = served.domain or 'family.example.com' %}
+<section class="panel tiled" id="domain">
+  {{ tile('link') }}
+  <h2>A name for the page</h2>
+  {% if served.reached_by == 'name' %}
+    <p>This page has a name: <code>{{ served.host }}</code>. To move it to another, point the new
+      name at this server and switch to it, as below.</p>
+  {% elif served.reached_by == 'local' %}
+    <p class="muted">This page was opened on the server itself, or through a tunnel to it, so it
+      cannot tell which address the rest of the internet reaches it at. The steps are the same.</p>
+  {% else %}
+    <p>This page is reached by its address, <code>{{ served.host }}</code>. A name, such as
+      <code>family.example.com</code>, is easier to remember and gets rid of the certificate
+      warning for good.</p>
+  {% endif %}
+  <form class="form" method="get" action="{{ url_for('settings.section', name='general', _anchor='domain') }}">
+    <div class="field">
+      <label for="domain-name">The name you want</label>
+      <input id="domain-name" name="domain" value="{{ served.domain }}" placeholder="family.example.com"
+             autocomplete="off" spellcheck="false" inputmode="url" />
+      {% if served.domain_refused %}<p class="error" role="alert">That is not a name that can be pointed at a server: letters, digits and hyphens, with a dot, such as family.example.com.</p>{% endif %}
+    </div>
+    <div class="field actions"><button class="secondary" type="submit">Fill it in below</button></div>
+  </form>
+  <ol class="steps">
+    <li><strong>Get the name.</strong> Any registrar sells one, usually for $10 to $20 a year, or
+      use a part of one you already have, such as <code>family.yourname.com</code>.</li>
+    <li><strong>Point it here.</strong> Where the name was bought, add an <em>A record</em> for
+      <code>{{ name }}</code> pointing at
+      {% if served.reached_by == 'public' %}<code>{{ served.host }}</code>, this server's address.
+      {% elif served.reached_by == 'private' %}this network's address on the internet (your router's;
+        <code>{{ served.host }}</code> is only this server's address at home), and have the router
+        pass ports 80 and 443 on to this server.
+      {% else %}this server's address on the internet, the one your provider shows.{% endif %}</li>
+    <li><strong>Wait for it to take.</strong> On the server, <code>dig +short {{ name }}</code>
+      prints that address once it has: usually minutes, sometimes an hour.</li>
+    <li><strong>Switch to it.</strong> On the server, as whoever looks after it:
+      <pre class="command"><code>sudo {{ served.script }} https {{ name }}</code></pre>
+      That gets the certificate and restarts FamilyDB to match. The page is then at
+      <code>https://{{ name }}/</code>, and the old address finds nothing, so open the new one
+      and keep it on phones' home screens again.
+      <details class="more">
+        <summary>Installed with Docker</summary>
+        <div class="inner">
+          <p>In the <code>.env</code> file beside <code>docker-compose.yml</code>, set these, then
+            run <code>docker compose up -d</code>, which starts Caddy for the certificate:</p>
+          <pre class="command"><code>WEB_DOMAIN={{ name }}
+WEB_TRUST_PROXY=true
+COMPOSE_PROFILES=tls</code></pre>
+        </div>
+      </details>
+    </li>
+  </ol>
+</section>

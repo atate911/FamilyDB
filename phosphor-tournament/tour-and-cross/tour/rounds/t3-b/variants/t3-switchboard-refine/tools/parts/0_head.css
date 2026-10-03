@@ -1,0 +1,53 @@
+/* ==========================================================================================
+   SWITCHBOARD, SETTLED LIGHT: the family's videotex service, set out as a control panel.
+
+   Home is the map of the whole service: every page a cell headed by its line of the contents
+   (a lamp, its name, a leader, how many). Every other page opens the same rack: the plate, its one
+   primary and the page's own small green screen down the first column, the register across the
+   rest. The phosphor is where the machine is, at the original's full strength, on a smaller area.
+
+   Three faces, three jobs:
+     IBM Plex Sans   the family: everything read, every name, every control, in sentence case
+     IBM Plex Mono   times and tabular figures, and nothing else
+     VT323           the tube: only on the glass
+
+   GLOBAL RULES (they hold on every page, the ones not shot included)
+   1. No page numbers anywhere. contents_line() keeps its `no` argument but draws nothing for it;
+      the speaker bezel, the plates, the Settings rows and the bar's keys carry none.
+   2. Leaders only on contents lines: Home's cell heads, the household lines and the Settings
+      rows. No leader in a register row (Plans, To do, Ideas): there the columns carry the eye. A
+      leader is a 1px dotted rule in --dim at 70% over --line-2, never longer than --leader-max.
+   3. No coloured frames. A cell is a matte graphite panel (--surface on --bg), with one hairline
+      (--line) only where two panels touch. Home's page cells alone carry a 2px top cap in their
+      section's ink at 70%. Inner plates and registers have no cap.
+   4. Flat keys. A key is a flat --key fill with a 1px --key-edge; the one you are on is the steel
+      latch (--here) with its lit 5px LED. No bevel, no gradient, no thick foot: a field and a
+      select are drawn the same way. Every control is 44px or more, in sentence case, never in
+      tracked capitals.
+   5. One type scale. --t-title (32px condensed 600) on every plate, Settings included. --t-cell
+      (23px) for a Home cell's name, Plans and To do one step up (26px), so a squint finds two
+      tiers. --t-item (19px) for a thing named. Column heads and labels 13px semibold, sentence
+      case. Plex Mono only for times and tabular figures.
+   6. Light where it is live (the phosphor kit): the top haze under a bar at 88% (E6); the mark
+      and its blinking caret (E2); a ring and a pool only on Send and each page's one primary,
+      where the page has one (Plans and Settings have none, and none is invented for them) (E3); a field's glow on focus (E4); every tube in full, case spill, power light, scanlines,
+      sheen and a 0.35px blur (E12-E14); the radar complete, blip halos, hub, sweep and ping
+      (E17); lamps that breathe only where something is live (E20); afterglow on every lit edge
+      (E9); an anchored cell lands (E10). On a tube, labels and secondary lines sit at the dim
+      strength and exactly one figure runs bright. A link on the glass is underlined only while
+      pointed at: the glass is read, not clicked through.
+   7. A row's afterglow the eye can see: pointing at or focusing a register row lights a 2px
+      phosphor edge on its left at once, fading over 1.2s on a long-persistence curve. Where a
+      tube draws the rows (Home's scope, the Ideas radar) the row's mark lights with it, and the
+      mark carries the row's own number.
+   8. A figure on the right, a word on the left. Times and counts in a column are tabular, the
+      figure at weight 600 and its unit light; a compass point or a unit never touches a figure
+      of the next column.
+   9. One truth for every lamp. A lamp takes its state from the same check as the words beside
+      it: Status's "This page", still on the installer's password, is the amber look bar, as
+      Settings' Sign-in needs a look.
+
+   Colour, with a job each: the phosphor #6dff9c on green-black for what is lit; two cool section
+   inks (Plans sky #93bfe0, To do sea #86c6bd); bone for everything else that is the household's;
+   pewter for the event and other kinds; amber only for late and needs a look; steel for here.
+   ========================================================================================== */

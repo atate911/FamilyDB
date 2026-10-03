@@ -1,0 +1,51 @@
+{
+ "stage": "design",
+ "round": "t3",
+ "roundNo": 3,
+ "key": "track",
+ "lin": {
+  "name": "the track series (Track Diagram)",
+  "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/tour/t3-a",
+  "carried": [
+   {
+    "id": "t2-track-graft",
+    "name": "Lit Sill Line"
+   },
+   {
+    "id": "t2-track-refine",
+    "name": "Branch Lines, Trued"
+   }
+  ],
+  "briefs": [
+   {
+    "slot": "refine",
+    "parent": "t2-track-graft",
+    "parentName": "Lit Sill Line"
+   },
+   {
+    "slot": "refine2",
+    "parent": "t2-track-refine",
+    "parentName": "Branch Lines, Trued"
+   },
+   {
+    "slot": "graft",
+    "parent": "t2-track-graft",
+    "parentName": "Lit Sill Line"
+   }
+  ],
+  "mutant": {
+   "kind": "graphics",
+   "parent": "t2-track-graft",
+   "parentName": "Lit Sill Line",
+   "changes": [
+    "an instrument panel: Status and the cost readout drawn as dials, gauges, meters or a bar chart in SVG",
+    "the status lamps redrawn as one family of small signals (ring, dot, bar, lamp), one meaning each",
+    "a faint texture on one surface only (scanlines on the glass, a grid on the trays, halftone on the greeting)"
+   ],
+   "id": "t3-track-mut"
+  },
+  "idea": "the family's week drawn as a signal box's illuminated track diagram: steel lines on slate boards with a lamp at each stop, drawn only where there is an order (Coming up, To do, the setup steps, the chat); the series began as Signal Box (round 7) and its mimic-line language"
+ },
+ "plan": true,
+ "mutant": false
+}

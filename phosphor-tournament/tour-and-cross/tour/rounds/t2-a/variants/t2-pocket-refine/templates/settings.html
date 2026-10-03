@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, presence %}
+{% block title %}Settings · {{ site_title }}{% endblock %}
+{% block body_class %}page-settings{% endblock %}
+{% block content %}
+  {{ page_head('Settings', 'Each part, how it stands now, and the way in to change it.', 'settings') }}
+  {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+  {# Pocket Timeline, Trimmed: each page of settings is a stop on the line, and its node is its
+     lamp: amber, half, while it needs a look (and those come first), filled steel when it is
+     settled. Each says how things stand in a line, so this is the place to look first as well as
+     the way in. Past the last, the line stops at a buffer. #}
+  <ol class="plain stops">
+    {% for entry in sections | sort(attribute='look', reverse=true) %}
+      {% set one = entry.section %}
+      <li class="stop-row{% if entry.look %} look{% endif %}">
+        <a class="part-link" href="{{ url_for('settings.section', name=one.name) }}">
+          {% if one.icon == 'presence' %}{{ presence('ring') }}
+          {%- else %}<span class="ring" aria-hidden="true">{{ icon(one.icon) }}</span>{% endif %}
+          <span class="part-name"><strong>{{ one.title }}</strong>
+            {%- if entry.look %}<span class="look-word">{{ icon('warning') }}Needs a look</span>{% endif %}</span>
+          <span class="part-state">{% for line in entry.lines %}<span class="section-state">{{ line }}</span>{% endfor %}</span>
+          {{ icon('right', cls='go') }}
+        </a>
+      </li>
+    {% endfor %}
+  </ol>
+  <span class="line-end" aria-hidden="true"></span>
+  <p class="muted small setup-note">
+    Setting up for the first time, or starting again? <a href="{{ url_for('setup.overview') }}">Setup</a>
+    goes through what matters most, one step at a time.
+  </p>
+{% endblock %}

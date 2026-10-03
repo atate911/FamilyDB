@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, chat_line, waiting_line, strip %}
+{% block title %}{{ assistant if has_persona else 'Chat' }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-chat{% endblock %}
+{# While an answer is on its way the browser fetches the page again by itself, landing back on
+   the newest line: a meta refresh, which every browser does, scripts or not. It is only set when
+   something really is being thought about, so the page goes quiet as soon as the reply is in the
+   log, and never on a page holding words somebody typed, which it would take with it. While a
+   turn runs the box is closed, so there is nothing to lose. Waiting on the retry job the box
+   stays open, so with scripts on ask.js does the looking again instead, and never while somebody
+   is writing. #}
+{% block head %}
+  {% if refresh and locked %}
+    <meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" />
+  {% elif refresh %}
+    <noscript><meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" /></noscript>
+  {% endif %}
+{% endblock %}
+{% block content %}
+  {# Hers: her name at the top, as on the tab that leads here, beside her screen. #}
+  {% if reading %}
+    {{ page_head(reading ~ ' and ' ~ (assistant if has_persona else 'the bot'), 'Her own conversation, for you to read. Only she writes in it.', 'presence' if has_persona else 'chat', [(assistant if has_persona else 'Chat', url_for('chat.show'))]) }}
+  {% elif private %}
+    {{ page_head(assistant if has_persona else 'Chat', 'Just you and ' ~ assistant ~ '. Tell her what you wish for, or ask about the plans.', 'presence' if has_persona else 'chat') }}
+  {% else %}
+    {{ page_head(assistant if has_persona else 'Chat', 'Weekends, ideas, to-dos and the calendar: anything you would ask in Telegram works here too.', 'presence' if has_persona else 'chat') }}
+  {% endif %}
+
+  {# The conversation hangs from one line under her mark: when each line was said hangs in the
+     margin, her screen is her stop on the track, and each of the family's lines has a ring on it
+     with a leader across to their words on the other side. #}
+  {% if lines %}
+    <ol class="thread">
+      {% for line in lines %}
+        {{ chat_line(line, latest if loop.last) }}
+      {% endfor %}
+      {% if pending %}{{ waiting_line(assistant, state, pending) }}{% endif %}
+    </ol>
+  {% else %}
+    <p class="muted empty">{{ icon('chat') }}<span>Nothing said here yet. Ask {{ assistant }} what to do this weekend, save an idea, or set a reminder.</span></p>
+  {% endif %}
+
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+  {# The line ends here, at a lit ring beside the box: the next stop is yours. #}
+  {% if not reading %}<div class="your-turn">{% include "_ask.html" %}</div>{% endif %}
+
+  {% if kids and not reading %}
+    <nav class="panel set" aria-label="The kids' conversations">
+      <h2>{{ icon('user') }}The kids' conversations</h2>
+      <p class="muted">Each kid talks to {{ assistant }} on her own. You can read along.</p>
+      <ul class="rack">
+        {% for kid in kids %}{% call strip(icon('chat')) %}<a href="{{ url_for('chat.show', with=kid.id, _anchor=latest) }}">{{ kid.name }}</a>{% endcall %}{% endfor %}
+      </ul>
+    </nav>
+  {% endif %}
+{% endblock %}

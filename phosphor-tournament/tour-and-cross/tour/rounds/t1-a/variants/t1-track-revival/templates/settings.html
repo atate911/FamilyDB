@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, presence %}
+{% block title %}Settings · {{ site_title }}{% endblock %}
+{% block body_class %}page-settings{% endblock %}
+{% block content %}
+  {{ page_head('Settings', 'Each part, how it stands now, and the way in to change it.', 'settings') }}
+  {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+  {# One card to a page of settings, each saying how things stand in a line or two, so this is
+     the place to look first as well as the way in. Something missing is marked, in words. #}
+  {# Signal Box, relaid: the parts of settings are a set, so rows on a slate board and no line,
+     each with its lamp from the one legend before the way in: filled amber when it needs a look
+     (and it says so), a pewter ring when everything it says is off or not set up, filled sage
+     when it is set. The change log has no state, so no lamp. #}
+  <ul class="section-cards rows">
+    {% for entry in sections %}
+      {% set one = entry.section %}
+      <li>
+        <a class="panel section-card{% if entry.look %} look{% endif %}" href="{{ url_for('settings.section', name=one.name) }}">
+          {% if one.icon == 'presence' %}{{ presence('section-icon') }}
+          {%- else %}<span class="section-icon" aria-hidden="true">{{ icon(one.icon) }}</span>{% endif %}
+          <span class="section-what">
+            <strong>{{ one.title }}</strong>
+            {% for line in entry.lines %}<span class="section-state">{{ line }}</span>{% endfor %}
+            {% if entry.look %}<span class="look-words">Needs a look</span>{% endif %}
+          </span>
+          {% set st = namespace(off=0) %}
+          {% for line in entry.lines %}{% if line.startswith('Off') or line.startswith('No ') or 'Not set up' in line or 'Not connected' in line or 'not set yet' in line %}{% set st.off = st.off + 1 %}{% endif %}{% endfor %}
+          {% if one.name != 'history' %}<span class="stop {{ 'late' if entry.look else ('off' if st.off == entry.lines | length else 'done') }}" aria-hidden="true"></span>{% endif %}
+          {{ icon('right', cls='go') }}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+  <p class="muted small">
+    Setting up for the first time, or starting again? <a href="{{ url_for('setup.overview') }}">Setup</a>
+    goes through what matters most, one step at a time.
+  </p>
+{% endblock %}

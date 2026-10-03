@@ -1,0 +1,33 @@
+{# An idea taken apart, as a drawing: each part in the order the form asks for it, solid when it
+   is needed (a new idea) or known (`known`, an idea already saved), dashed when it is not, and
+   the kind's own square in its box when there is one. Each part carries the id of its box on
+   the form (d-f-title, ...), so the stylesheet can light the one being typed in. #}
+{% macro anatomy(known=none, kind_key=none) -%}
+  {% set parts = [
+    ('title', 'Title', 16, 16, 224, 30),
+    ('kind', 'Kind', 16, 54, 108, 26),
+    ('who', 'Suggested by', 132, 54, 108, 26),
+    ('description', 'Description', 16, 88, 224, 40),
+    ('location_name', 'Where', 16, 144, 108, 24),
+    ('happens_from', 'On from', 132, 144, 108, 24),
+    ('happens_until', 'Until', 16, 176, 108, 24),
+    ('url', 'Link', 132, 176, 108, 24),
+    ('participants', 'Who for', 16, 208, 108, 24),
+    ('tags', 'Tags', 132, 208, 108, 24),
+  ] %}
+  <svg viewBox="0 0 256 276" focusable="false" class="drawing">
+    <rect class="d-box" x="4" y="4" width="248" height="268"/>
+    {% for key, label, x, y, w, h in parts %}
+      {% set solid = (key in ('title', 'kind')) if known is none else (key in known) %}
+      <g class="d-fld d-f-{{ key }}{{ ' solid' if solid }}">
+        <rect class="{{ 'd-need' if solid else 'd-empty' }}" x="{{ x }}" y="{{ y }}" width="{{ w }}" height="{{ h }}"/>
+        <text class="{{ 'd-label need' if solid else 'd-key' }}" x="{{ x + 9 }}" y="{{ y + (20 if h >= 30 else 16) }}">{{ label }}</text>
+        {% if key == 'kind' and kind_key %}{% set kx = x + w - 22 %}{% set ky = y + 7 %}<g class="kind-pencil k-{{ kind_key }}"><rect x="{{ kx }}" y="{{ ky }}" width="12" height="12"/><path d="M{{ kx }} {{ ky + 4 }}L{{ kx + 4 }} {{ ky }}M{{ kx }} {{ ky + 8 }}L{{ kx + 8 }} {{ ky }}M{{ kx }} {{ ky + 12 }}L{{ kx + 12 }} {{ ky }}M{{ kx + 4 }} {{ ky + 12 }}L{{ kx + 12 }} {{ ky + 4 }}M{{ kx + 8 }} {{ ky + 12 }}L{{ kx + 12 }} {{ ky + 8 }}"/></g>{% endif %}
+      </g>
+    {% endfor %}
+    <g class="d-fld d-f-more{{ ' solid' if known and 'more' in known }}">
+      <text class="d-key" x="16" y="250">+ Indoor, weather, cost,</text>
+      <text class="d-key" x="16" y="264">times, seasons</text>
+    </g>
+  </svg>
+{%- endmacro %}

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, chat_line, waiting_line, tile, presence %}
+{% block title %}{{ assistant if has_persona else 'Chat' }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-chat{% endblock %}
+{% block head %}
+  {% if refresh and locked %}
+    <meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" />
+  {% elif refresh %}
+    <noscript><meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" /></noscript>
+  {% endif %}
+{% endblock %}
+{% block content %}
+  {% if reading %}
+    {{ page_head(reading ~ ' and ' ~ (assistant if has_persona else 'the bot'), 'Her own conversation, for you to read. Only she writes in it.', 'presence' if has_persona else 'chat', [(assistant if has_persona else 'Chat', url_for('chat.show'))]) }}
+  {% elif private %}
+    {{ page_head(assistant if has_persona else 'Chat', 'Just you and ' ~ assistant ~ '. Tell her what you wish for, or ask about the plans.', 'presence' if has_persona else 'chat') }}
+  {% else %}
+    {{ page_head(assistant if has_persona else 'Chat', 'Weekends, ideas, to-dos and the calendar: anything you would ask in Telegram works here too.', 'presence' if has_persona else 'chat') }}
+  {% endif %}
+
+  {# The loop, as the tile that leads the conversation: her lit screen at the top, and wired
+     to it whoever has spoken here, by their initial. The transcript beside it is printed as the
+     air-to-ground one was, call sign and time over the words. #}
+  {% set speakers = [] %}
+  {% for line in lines if not line.from_bot %}{% if line.who not in speakers %}{% set _ = speakers.append(line.who) %}{% endif %}{% endfor %}
+  {% set shown = speakers[:4] %}
+  {% set n = shown | length %}
+  <section class="bay slim loop-bay">
+    {% call tile(cls='tile-loop') %}
+      <span class="loop-stack">
+      {%- if has_persona %}{{ presence('loop-her', 3) }}{% endif %}
+      <svg viewBox="0 0 56 {{ 64 + [n, 1] | max * 40 }}" focusable="false">
+        <rect class="her-case" x="10" y="4" width="36" height="28" rx="4"/>
+        <path class="her" d="M17 12h12M17 18h20M17 24h8"/>
+        <path class="wire" d="M28 32V46"/>
+        <circle class="node" cx="28" cy="48" r="3"/>
+        {% if n %}<path class="wire" d="M28 51V{{ 78 + (n - 1) * 40 }}"/>{% endif %}
+        {% for who in shown %}
+          {% set y = 78 + loop.index0 * 40 %}
+          <circle class="node node-them" cx="28" cy="{{ y }}" r="12"/>
+          <text class="who-n" x="28" y="{{ y + 4 }}" text-anchor="middle">{{ who[:1] | upper }}</text>
+        {% else %}
+          <path class="wire-2" d="M28 51V66"/>
+          <circle class="node" cx="28" cy="78" r="12"/>
+        {% endfor %}
+      </svg>
+      </span>
+    {% endcall %}
+    <div class="bay-body">
+      {% if lines %}
+        <ol class="thread">
+          {% for line in lines %}
+            {{ chat_line(line, latest if loop.last) }}
+          {% endfor %}
+          {% if pending %}{{ waiting_line(assistant, state, pending) }}{% endif %}
+        </ol>
+      {% else %}
+        <p class="muted empty">{{ icon('chat') }}<span>Nothing said here yet. Ask {{ assistant }} what to do this weekend, save an idea, or set a reminder.</span></p>
+      {% endif %}
+
+      {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+      {% if not reading %}{% include "_ask.html" %}{% endif %}
+    </div>
+  </section>
+
+  {% if kids and not reading %}
+    <nav class="panel tiled kids-loops" aria-label="The kids' conversations">
+      {{ tile('family') }}
+      <h2>The kids' conversations</h2>
+      <p class="muted">Each kid talks to {{ assistant }} on her own. You can read along.</p>
+      <ul class="plain">
+        {% for kid in kids %}<li><a href="{{ url_for('chat.show', with=kid.id, _anchor=latest) }}"><span class="lamp" aria-hidden="true"></span>{{ kid.name }}</a></li>{% endfor %}
+      </ul>
+    </nav>
+  {% endif %}
+{% endblock %}

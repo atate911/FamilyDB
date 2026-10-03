@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, crt %}
+{% block title %}{{ month }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-month{% endblock %}
+{% macro event(entry) %}
+  <div class="event{{ ' from-google' if entry.from_google }}">
+    {% if entry.idea_id %}
+      <a href="{{ url_for('web.idea', idea_id=entry.idea_id) }}">{{ entry.title }}</a>
+    {% else %}
+      <span class="event-title">{{ entry.title }}</span>
+    {% endif %}
+    {% if entry.time %}<small>{{ entry.time }}</small>{% endif %}
+  </div>
+{% endmacro %}
+{#
+  Pocket Timeline, Traced: the month as the line of time, a week at a time. Each day with something
+  on sits on the line at its date leaf, today's leaf and node lit; weeks with nothing on fold into
+  one line with their dates. Beside it the same month on the pocket tube, where a plan is the same
+  small square pulse as on Home's trace, and each busy day is a link to its row on the line.
+#}
+{% block content %}
+  {% call page_head('Plans', none, 'plans') %}
+    <nav class="tabs" aria-label="How to show the plans">
+      <a href="{{ url_for('web.plans') }}">{{ icon('list') }}List</a>
+      <a href="{{ url_for('web.plans_month') }}" aria-current="page">{{ icon('grid') }}Month</a>
+    </nav>
+  {% endcall %}
+  {% if visitor().may('browse') %}<p class="muted source source-{{ source }}">{{ source_note }}</p>{% endif %}
+
+  <div class="month-head{{ ' month-now' if this_month }}">
+    <h2>{{ month }}</h2>
+    <p class="month-nav">
+      <a class="button ghost" href="{{ url_for('web.plans_month', month=previous) }}">{{ icon('left') }}Earlier</a>
+      {% if not this_month %}<a class="button ghost" href="{{ url_for('web.plans_month') }}">This month</a>{% endif %}
+      <a class="button ghost" href="{{ url_for('web.plans_month', month=following) }}">Later{{ icon('right') }}</a>
+    </p>
+  </div>
+
+  <div class="month-wrap">
+    <ol class="plain month-line">
+      {% set seen = namespace(today=false, quiet_from=none) %}
+      {% for week in weeks %}
+        {% set shown = week | selectattr('entries') | list %}
+        {% set quiet = not shown and not (week | selectattr('today') | list) %}
+        {% set after = loop.nextitem if loop.nextitem is defined else none %}
+        {% set next_quiet = after is not none and not (after | selectattr('entries') | list) and not (after | selectattr('today') | list) %}
+        {# Weeks with nothing on run together into one line, however many there are. #}
+        {% if quiet and seen.quiet_from is none %}{% set seen.quiet_from = week[0].date %}{% endif %}
+        {% if not (quiet and next_quiet) %}
+        <li class="week{{ ' quiet' if quiet }}">
+          <p class="week-label"><span class="fig">{{ (seen.quiet_from if quiet else week[0].date).strftime('%-d %b') }} – {{ week[-1].date.strftime('%-d %b') }}</span>{% if quiet %} <span class="nothing">Nothing on.</span>{% endif %}</p>
+          {% if quiet %}{% set seen.quiet_from = none %}{% endif %}
+          {% if not quiet %}
+          <ol class="plain days">
+            {% for day in week %}
+              {% if day.today %}{% set seen.today = true %}{% endif %}
+              {% if day.entries or day.today %}
+                <li class="day{{ ' today' if day.today }}{{ ' past' if not seen.today }}{{ ' outside' if not day.current }}" id="d-{{ day.date.isoformat() }}">
+                  <span class="day-tile" aria-hidden="true">
+                    <span class="chip-mon">{{ day.date.strftime('%b') }}</span>
+                    <span class="chip-day">{{ day.day }}</span>
+                    <span class="chip-dow">{{ day.date.strftime('%a') }}</span>
+                  </span>
+                  <div class="day-body">
+                    <p class="day-name"><time datetime="{{ day.date.isoformat() }}">{{ day.date.strftime('%A %-d %B') }}</time>{% if day.today %} <span class="plate">Today</span>{% endif %}</p>
+                    {% for entry in day.entries %}{{ event(entry) }}{% else %}<p class="muted">Nothing on today.</p>{% endfor %}
+                  </div>
+                </li>
+              {% endif %}
+            {% endfor %}
+          </ol>
+          {% endif %}
+        </li>
+        {% endif %}
+      {% endfor %}
+    </ol>
+
+    {% call crt('month-screen', hidden=false) %}
+      <p class="month-screen-title"><span class="inverse caps">{{ month }}</span></p>
+      {% set tk = namespace(n=none, seen=false, next=none) %}
+      {# The next plan from today, intensified as the next pulse is on Home's trace. #}
+      {% for week in weeks %}{% for day in week %}
+        {% if day.today %}{% set tk.seen = true %}{% endif %}
+        {% if tk.seen and day.entries and tk.next is none %}{% set tk.next = day.date %}{% endif %}
+      {% endfor %}{% endfor %}
+      <table class="month">
+        <thead>
+          <tr>{% for name, full in [('Mo', 'Monday'), ('Tu', 'Tuesday'), ('We', 'Wednesday'), ('Th', 'Thursday'), ('Fr', 'Friday'), ('Sa', 'Saturday'), ('Su', 'Sunday')] %}<th scope="col" abbr="{{ full }}">{{ name }}</th>{% endfor %}</tr>
+        </thead>
+        <tbody>
+          {% for week in weeks %}
+            <tr>
+              {% for day in week %}
+                {% if day.today %}{% set tk.n = day.day %}{% endif %}
+                <td class="{{ 'outside' if not day.current }}{{ ' today' if day.today }}{{ ' busy' if day.entries }}{{ ' next' if day.date == tk.next }}">
+                  {%- if day.entries -%}
+                    <a href="#d-{{ day.date.isoformat() }}"><time datetime="{{ day.date.isoformat() }}">{{ day.day }}</time></a>
+                  {%- else -%}
+                    <time datetime="{{ day.date.isoformat() }}">{{ day.day }}</time>
+                  {%- endif -%}
+                </td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="month-screen-key dim"><span aria-hidden="true">&gt; </span><span class="pulse-key" aria-hidden="true"></span> a plan{% if tk.n %} · <span class="today-key">{{ tk.n }}</span> today{% endif %}<span class="crt-cursor" aria-hidden="true"></span></p>
+    {% endcall %}
+  </div>
+{% endblock %}

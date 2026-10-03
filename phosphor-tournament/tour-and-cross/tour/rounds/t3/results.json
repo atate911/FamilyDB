@@ -1,0 +1,2982 @@
+{
+ "round": "t3",
+ "heats": {
+  "a": {
+   "ranking": [
+    {
+     "id": "t3-track-refine2",
+     "name": "Trued, Relit",
+     "total": 65.9,
+     "weights": 8.5,
+     "plain": 62.4,
+     "n": 8,
+     "top4": 7,
+     "promise": 5,
+     "byLens": {
+      "feedback": 8.9,
+      "soul": 7,
+      "style": 8,
+      "system": 8,
+      "interaction": 8,
+      "type": 7.5,
+      "usability": 8,
+      "skeptic": 7
+     },
+     "mean": 7.75,
+     "plainMean": 7.8,
+     "lineage": "track"
+    },
+    {
+     "id": "t3-track-graft",
+     "name": "Sill Line, Ticked",
+     "total": 63.95,
+     "weights": 8.5,
+     "plain": 59.7,
+     "n": 8,
+     "top4": 5,
+     "promise": 1,
+     "byLens": {
+      "feedback": 8.7,
+      "soul": 8.5,
+      "style": 8.5,
+      "system": 7,
+      "interaction": 7,
+      "type": 7,
+      "usability": 6.5,
+      "skeptic": 6.5
+     },
+     "mean": 7.52,
+     "plainMean": 7.46,
+     "lineage": "track"
+    },
+    {
+     "id": "t3-timetable-refine",
+     "name": "Departures, Platformed",
+     "total": 62.6,
+     "weights": 8.5,
+     "plain": 59.1,
+     "n": 8,
+     "top4": 4,
+     "promise": 2,
+     "byLens": {
+      "feedback": 7.6,
+      "soul": 7,
+      "style": 7,
+      "system": 8,
+      "interaction": 8,
+      "type": 6.5,
+      "usability": 8,
+      "skeptic": 7
+     },
+     "mean": 7.36,
+     "plainMean": 7.39,
+     "lineage": "timetable"
+    },
+    {
+     "id": "t3-pocket-refine",
+     "name": "Pocket Diary, Kept",
+     "total": 62.1,
+     "weights": 8.5,
+     "plain": 58.6,
+     "n": 8,
+     "top4": 5,
+     "promise": 0,
+     "byLens": {
+      "feedback": 7.6,
+      "soul": 7,
+      "style": 7,
+      "system": 7.5,
+      "interaction": 7,
+      "type": 8,
+      "usability": 7.5,
+      "skeptic": 7
+     },
+     "mean": 7.31,
+     "plainMean": 7.33,
+     "lineage": "pocket"
+    },
+    {
+     "id": "t3-timetable-graft",
+     "name": "Departures, Printed",
+     "total": 61.3,
+     "weights": 8.5,
+     "plain": 57.3,
+     "n": 8,
+     "top4": 4,
+     "promise": 4,
+     "byLens": {
+      "feedback": 7.8,
+      "soul": 8,
+      "style": 7.5,
+      "system": 6,
+      "interaction": 7,
+      "type": 6.5,
+      "usability": 7.5,
+      "skeptic": 7
+     },
+     "mean": 7.21,
+     "plainMean": 7.16,
+     "lineage": "timetable"
+    },
+    {
+     "id": "t3-pocket-mut",
+     "name": "Pocket Diary, Lit",
+     "total": 59.8,
+     "weights": 8.5,
+     "plain": 55.8,
+     "n": 8,
+     "top4": 2,
+     "promise": 4,
+     "byLens": {
+      "feedback": 7.8,
+      "soul": 8,
+      "style": 7.5,
+      "system": 6,
+      "interaction": 6,
+      "type": 7,
+      "usability": 7,
+      "skeptic": 6.5
+     },
+     "mean": 7.04,
+     "plainMean": 6.97,
+     "lineage": "pocket"
+    },
+    {
+     "id": "t3-track-refine",
+     "name": "Sill Line, Trued",
+     "total": 59.85,
+     "weights": 8.5,
+     "plain": 56.1,
+     "n": 8,
+     "top4": 2,
+     "promise": 0,
+     "byLens": {
+      "feedback": 8.6,
+      "soul": 7.5,
+      "style": 6.5,
+      "system": 7,
+      "interaction": 6.5,
+      "type": 7,
+      "usability": 7,
+      "skeptic": 6
+     },
+     "mean": 7.04,
+     "plainMean": 7.01,
+     "lineage": "track"
+    },
+    {
+     "id": "t2-track-graft",
+     "name": "Lit Sill Line",
+     "total": 59.0,
+     "weights": 8.5,
+     "plain": 55.0,
+     "n": 8,
+     "top4": 1,
+     "promise": 0,
+     "byLens": {
+      "feedback": 8,
+      "soul": 8,
+      "style": 7,
+      "system": 6.5,
+      "interaction": 6.5,
+      "type": 6.5,
+      "usability": 6.5,
+      "skeptic": 6
+     },
+     "mean": 6.94,
+     "plainMean": 6.88,
+     "lineage": "track"
+    },
+    {
+     "id": "t3-track-mut",
+     "name": "Sill Line, Instrumented",
+     "total": 58.5,
+     "weights": 8.5,
+     "plain": 54.5,
+     "n": 8,
+     "top4": 1,
+     "promise": 4,
+     "byLens": {
+      "feedback": 8,
+      "soul": 8,
+      "style": 7,
+      "system": 6.5,
+      "interaction": 6.5,
+      "type": 6,
+      "usability": 6.5,
+      "skeptic": 6
+     },
+     "mean": 6.88,
+     "plainMean": 6.81,
+     "lineage": "track"
+    },
+    {
+     "id": "r13-idea-1",
+     "name": "Desk Terminal, Joined",
+     "total": 57.75,
+     "weights": 8.5,
+     "plain": 54.0,
+     "n": 8,
+     "top4": 0,
+     "promise": 0,
+     "byLens": {
+      "feedback": 6.5,
+      "soul": 7.5,
+      "style": 6,
+      "system": 7,
+      "interaction": 7,
+      "type": 6.5,
+      "usability": 7,
+      "skeptic": 6.5
+     },
+     "mean": 6.79,
+     "plainMean": 6.75,
+     "lineage": "yardstick"
+    },
+    {
+     "id": "t3-pocket-graft",
+     "name": "Diary in Ink",
+     "total": 57.45,
+     "weights": 8.5,
+     "plain": 54.2,
+     "n": 8,
+     "top4": 0,
+     "promise": 2,
+     "byLens": {
+      "feedback": 7.7,
+      "soul": 6.5,
+      "style": 7.5,
+      "system": 6.5,
+      "interaction": 6.5,
+      "type": 7,
+      "usability": 7,
+      "skeptic": 5.5
+     },
+     "mean": 6.76,
+     "plainMean": 6.78,
+     "lineage": "pocket"
+    },
+    {
+     "id": "t2-pocket-graft",
+     "name": "Pocket Diary",
+     "total": 57.3,
+     "weights": 8.5,
+     "plain": 53.8,
+     "n": 8,
+     "top4": 0,
+     "promise": 0,
+     "byLens": {
+      "feedback": 7.3,
+      "soul": 7,
+      "style": 6.5,
+      "system": 6.5,
+      "interaction": 6.5,
+      "type": 7,
+      "usability": 7,
+      "skeptic": 6
+     },
+     "mean": 6.74,
+     "plainMean": 6.72,
+     "lineage": "pocket"
+    },
+    {
+     "id": "t2-track-refine",
+     "name": "Branch Lines, Trued",
+     "total": 55.85,
+     "weights": 8.5,
+     "plain": 52.6,
+     "n": 8,
+     "top4": 0,
+     "promise": 0,
+     "byLens": {
+      "feedback": 7.6,
+      "soul": 6.5,
+      "style": 6.5,
+      "system": 6.5,
+      "interaction": 7,
+      "type": 6.5,
+      "usability": 6.5,
+      "skeptic": 5.5
+     },
+     "mean": 6.57,
+     "plainMean": 6.58,
+     "lineage": "track"
+    },
+    {
+     "id": "t3-timetable-mut",
+     "name": "Departures, Hung",
+     "total": 54.65,
+     "weights": 8.5,
+     "plain": 51.4,
+     "n": 8,
+     "top4": 1,
+     "promise": 2,
+     "byLens": {
+      "feedback": 6.9,
+      "soul": 6.5,
+      "style": 6.5,
+      "system": 6,
+      "interaction": 6,
+      "type": 8,
+      "usability": 6.5,
+      "skeptic": 5
+     },
+     "mean": 6.43,
+     "plainMean": 6.42,
+     "lineage": "timetable"
+    },
+    {
+     "id": "t2-timetable-refine",
+     "name": "Departures, Posted",
+     "total": 54.55,
+     "weights": 8.5,
+     "plain": 51.3,
+     "n": 8,
+     "top4": 0,
+     "promise": 0,
+     "byLens": {
+      "feedback": 6.8,
+      "soul": 6.5,
+      "style": 6.5,
+      "system": 6,
+      "interaction": 6.5,
+      "type": 6.5,
+      "usability": 7,
+      "skeptic": 5.5
+     },
+     "mean": 6.42,
+     "plainMean": 6.41,
+     "lineage": "timetable"
+    },
+    {
+     "id": "00-current",
+     "name": "Phosphor (today)",
+     "total": 38.75,
+     "weights": 8.5,
+     "plain": 35.5,
+     "n": 8,
+     "top4": 0,
+     "promise": 0,
+     "byLens": {
+      "feedback": 3,
+      "soul": 6.5,
+      "style": 4,
+      "system": 4,
+      "interaction": 4.5,
+      "type": 5,
+      "usability": 5,
+      "skeptic": 3.5
+     },
+     "mean": 4.56,
+     "plainMean": 4.44,
+     "lineage": "yardstick"
+    }
+   ],
+   "judges": [
+    "feedback",
+    "soul",
+    "style",
+    "system",
+    "interaction",
+    "type",
+    "usability",
+    "skeptic"
+   ],
+   "today": 4.56,
+   "leader": 6.79
+  },
+  "b": {
+   "ranking": [
+    {
+     "id": "t3-figure-refine",
+     "name": "Lit Manual, Relit Rails",
+     "total": 64.3,
+     "weights": 8.5,
+     "plain": 60.8,
+     "n": 8,
+     "top4": 7,
+     "promise": 2,
+     "byLens": {
+      "feedback": 7.8,
+      "soul": 7,
+      "style": 7.5,
+      "system": 8.5,
+      "interaction": 7.5,
+      "type": 7.5,
+      "usability": 8,
+      "skeptic": 7
+     },
+     "mean": 7.56,
+     "plainMean": 7.6,
+     "lineage": "figure"
+    },
+    {
+     "id": "t3-console-graft",
+     "name": "Waypoint Lamps",
+     "total": 62.9,
+     "weights": 8.5,
+     "plain": 59.4,
+     "n": 8,
+     "top4": 6,
+     "promise": 8,
+     "byLens": {
+      "feedback": 8.4,
+      "soul": 7,
+      "style": 7.5,
+      "system": 7.5,
+      "interaction": 8,
+      "type": 7.5,
+      "usability": 6.5,
+      "skeptic": 7
+     },
+     "mean": 7.4,
+     "plainMean": 7.42,
+     "lineage": "console"
+    },
+    {
+     "id": "t3-figure-graft",
+     "name": "Wired Household",
+     "total": 62.25,
+     "weights": 8.5,
+     "plain": 58.5,
+     "n": 8,
+     "top4": 5,
+     "promise": 6,
+     "byLens": {
+      "feedback": 8.5,
+      "soul": 7.5,
+      "style": 8.5,
+      "system": 7.5,
+      "interaction": 6.5,
+      "type": 7,
+      "usability": 6.5,
+      "skeptic": 6.5
+     },
+     "mean": 7.32,
+     "plainMean": 7.31,
+     "lineage": "figure"
+    },
+    {
+     "id": "t3-switchboard-refine",
+     "name": "Switchboard, Settled Light",
+     "total": 61.4,
+     "weights": 8.5,
+     "plain": 57.4,
+     "n": 8,
+     "top4": 3,
+     "promise": 3,
+     "byLens": {
+      "feedback": 7.4,
+      "soul": 8,
+      "style": 7,
+      "system": 7,
+      "interaction": 7.5,
+      "type": 7,
+      "usability": 7.5,
+      "skeptic": 6
+     },
+     "mean": 7.22,
+     "plainMean": 7.17,
+     "lineage": "switchboard"
+    },
+    {
+     "id": "t3-console-refine",
+     "name": "Caution, Cleared",
+     "total": 60.4,
+     "weights": 8.5,
+     "plain": 56.9,
+     "n": 8,
+     "top4": 5,
+     "promise": 0,
+     "byLens": {
+      "feedback": 7.9,
+      "soul": 7,
+      "style": 7,
+      "system": 7,
+      "interaction": 7,
+      "type": 7,
+      "usability": 7.5,
+      "skeptic": 6.5
+     },
+     "mean": 7.11,
+     "plainMean": 7.11,
+     "lineage": "console"
+    },
+    {
+     "id": "t3-switchboard-graft",
+     "name": "Switchboard, Patched Through",
+     "total": 57.25,
+     "weights": 8.5,
+     "plain": 53.5,
+     "n": 8,
+     "top4": 3,
+     "promise": 4,
+     "byLens": {
+      "feedback": 7,
+      "soul": 7.5,
+      "style": 7.5,
+      "system": 6.5,
+      "interaction": 7,
+      "type": 6.5,
+      "usability": 6.5,
+      "skeptic": 5
+     },
+     "mean": 6.74,
+     "plainMean": 6.69,
+     "lineage": "switchboard"
+    },
+    {
+     "id": "t2-figure-refine",
+     "name": "Lit Manual, Railed",
+     "total": 56.8,
+     "weights": 8.5,
+     "plain": 53.8,
+     "n": 8,
+     "top4": 1,
+     "promise": 0,
+     "byLens": {
+      "feedback": 7.3,
+      "soul": 6,
+      "style": 6.5,
+      "system": 7,
+      "interaction": 7,
+      "type": 7,
+      "usability": 7,
+      "skeptic": 6
+     },
+     "mean": 6.68,
+     "plainMean": 6.72,
+     "lineage": "figure"
+    },
+    {
+     "id": "t3-figure-mut",
+     "name": "Lit Manual, Magazine",
+     "total": 56.65,
+     "weights": 8.5,
+     "plain": 53.9,
+     "n": 8,
+     "top4": 2,
+     "promise": 1,
+     "byLens": {
+      "feedback": 7.4,
+      "soul": 5.5,
+      "style": 7,
+      "system": 7,
+      "interaction": 6.5,
+      "type": 8.5,
+      "usability": 6.5,
+      "skeptic": 5.5
+     },
+     "mean": 6.66,
+     "plainMean": 6.74,
+     "lineage": "figure"
+    },
+    {
+     "id": "r13-idea-1",
+     "name": "Desk Terminal, Joined",
+     "total": 56.5,
+     "weights": 8.5,
+     "plain": 53.0,
+     "n": 8,
+     "top4": 0,
+     "promise": 0,
+     "byLens": {
+      "feedback": 6.5,
+      "soul": 7,
+      "style": 6,
+      "system": 7,
+      "interaction": 7,
+      "type": 6.5,
+      "usability": 7,
+      "skeptic": 6
+     },
+     "mean": 6.65,
+     "plainMean": 6.62,
+     "lineage": "yardstick"
+    },
+    {
+     "id": "t2-console-graft",
+     "name": "Master Caution",
+     "total": 55.85,
+     "weights": 8.5,
+     "plain": 52.6,
+     "n": 8,
+     "top4": 0,
+     "promise": 0,
+     "byLens": {
+      "feedback": 7.6,
+      "soul": 6.5,
+      "style": 6,
+      "system": 6.5,
+      "interaction": 7,
+      "type": 6.5,
+      "usability": 6.5,
+      "skeptic": 6
+     },
+     "mean": 6.57,
+     "plainMean": 6.58,
+     "lineage": "console"
+    },
+    {
+     "id": "t2-switchboard-graft",
+     "name": "Switchboard, Patched",
+     "total": 53.8,
+     "weights": 8.5,
+     "plain": 50.3,
+     "n": 8,
+     "top4": 0,
+     "promise": 0,
+     "byLens": {
+      "feedback": 6.8,
+      "soul": 7,
+      "style": 6,
+      "system": 6,
+      "interaction": 6.5,
+      "type": 6.5,
+      "usability": 6.5,
+      "skeptic": 5
+     },
+     "mean": 6.33,
+     "plainMean": 6.29,
+     "lineage": "switchboard"
+    },
+    {
+     "id": "t3-switchboard-mut",
+     "name": "Switchboard, Squared",
+     "total": 49.65,
+     "weights": 8.5,
+     "plain": 46.4,
+     "n": 8,
+     "top4": 0,
+     "promise": 0,
+     "byLens": {
+      "feedback": 6.4,
+      "soul": 6.5,
+      "style": 5.5,
+      "system": 5.5,
+      "interaction": 6,
+      "type": 6.5,
+      "usability": 6,
+      "skeptic": 4
+     },
+     "mean": 5.84,
+     "plainMean": 5.8,
+     "lineage": "switchboard"
+    },
+    {
+     "id": "t3-console-mut",
+     "name": "Master Caution, Drawn",
+     "total": 48.1,
+     "weights": 8.5,
+     "plain": 45.6,
+     "n": 8,
+     "top4": 0,
+     "promise": 0,
+     "byLens": {
+      "feedback": 6.6,
+      "soul": 5,
+      "style": 6.5,
+      "system": 5,
+      "interaction": 6,
+      "type": 6,
+      "usability": 6,
+      "skeptic": 4.5
+     },
+     "mean": 5.66,
+     "plainMean": 5.7,
+     "lineage": "console"
+    },
+    {
+     "id": "00-current",
+     "name": "Phosphor (today)",
+     "total": 36.5,
+     "weights": 8.5,
+     "plain": 33.5,
+     "n": 8,
+     "top4": 0,
+     "promise": 0,
+     "byLens": {
+      "feedback": 3,
+      "soul": 6,
+      "style": 4,
+      "system": 3.5,
+      "interaction": 4,
+      "type": 5,
+      "usability": 5,
+      "skeptic": 3
+     },
+     "mean": 4.29,
+     "plainMean": 4.19,
+     "lineage": "yardstick"
+    }
+   ],
+   "judges": [
+    "feedback",
+    "soul",
+    "style",
+    "system",
+    "interaction",
+    "type",
+    "usability",
+    "skeptic"
+   ],
+   "today": 4.29,
+   "leader": 6.65
+  }
+ },
+ "lineages": {
+  "track": {
+   "carried": [
+    {
+     "id": "t3-track-refine2",
+     "name": "Trued, Relit",
+     "mean": 7.75
+    },
+    {
+     "id": "t3-track-graft",
+     "name": "Sill Line, Ticked",
+     "mean": 7.52
+    }
+   ],
+   "ranking": [
+    {
+     "id": "t3-track-refine2",
+     "name": "Trued, Relit",
+     "mean": 7.75,
+     "top4": 7,
+     "promise": 5
+    },
+    {
+     "id": "t3-track-graft",
+     "name": "Sill Line, Ticked",
+     "mean": 7.52,
+     "top4": 5,
+     "promise": 1
+    },
+    {
+     "id": "t3-track-refine",
+     "name": "Sill Line, Trued",
+     "mean": 7.04,
+     "top4": 2,
+     "promise": 0
+    },
+    {
+     "id": "t2-track-graft",
+     "name": "Lit Sill Line",
+     "mean": 6.94,
+     "top4": 1,
+     "promise": 0
+    },
+    {
+     "id": "t3-track-mut",
+     "name": "Sill Line, Instrumented",
+     "mean": 6.88,
+     "top4": 1,
+     "promise": 4
+    },
+    {
+     "id": "t2-track-refine",
+     "name": "Branch Lines, Trued",
+     "mean": 6.57,
+     "top4": 0,
+     "promise": 0
+    }
+   ],
+   "best": 7.75,
+   "today": 4.56,
+   "leader": 6.79
+  },
+  "timetable": {
+   "carried": [
+    {
+     "id": "t3-timetable-refine",
+     "name": "Departures, Platformed",
+     "mean": 7.36
+    }
+   ],
+   "ranking": [
+    {
+     "id": "t3-timetable-refine",
+     "name": "Departures, Platformed",
+     "mean": 7.36,
+     "top4": 4,
+     "promise": 2
+    },
+    {
+     "id": "t3-timetable-graft",
+     "name": "Departures, Printed",
+     "mean": 7.21,
+     "top4": 4,
+     "promise": 4
+    },
+    {
+     "id": "t3-timetable-mut",
+     "name": "Departures, Hung",
+     "mean": 6.43,
+     "top4": 1,
+     "promise": 2
+    },
+    {
+     "id": "t2-timetable-refine",
+     "name": "Departures, Posted",
+     "mean": 6.42,
+     "top4": 0,
+     "promise": 0
+    }
+   ],
+   "best": 7.36,
+   "today": 4.56,
+   "leader": 6.79
+  },
+  "pocket": {
+   "carried": [
+    {
+     "id": "t3-pocket-refine",
+     "name": "Pocket Diary, Kept",
+     "mean": 7.31
+    }
+   ],
+   "ranking": [
+    {
+     "id": "t3-pocket-refine",
+     "name": "Pocket Diary, Kept",
+     "mean": 7.31,
+     "top4": 5,
+     "promise": 0
+    },
+    {
+     "id": "t3-pocket-mut",
+     "name": "Pocket Diary, Lit",
+     "mean": 7.04,
+     "top4": 2,
+     "promise": 4
+    },
+    {
+     "id": "t3-pocket-graft",
+     "name": "Diary in Ink",
+     "mean": 6.76,
+     "top4": 0,
+     "promise": 2
+    },
+    {
+     "id": "t2-pocket-graft",
+     "name": "Pocket Diary",
+     "mean": 6.74,
+     "top4": 0,
+     "promise": 0
+    }
+   ],
+   "best": 7.31,
+   "today": 4.56,
+   "leader": 6.79
+  },
+  "figure": {
+   "carried": [
+    {
+     "id": "t3-figure-refine",
+     "name": "Lit Manual, Relit Rails",
+     "mean": 7.56
+    }
+   ],
+   "ranking": [
+    {
+     "id": "t3-figure-refine",
+     "name": "Lit Manual, Relit Rails",
+     "mean": 7.56,
+     "top4": 7,
+     "promise": 2
+    },
+    {
+     "id": "t3-figure-graft",
+     "name": "Wired Household",
+     "mean": 7.32,
+     "top4": 5,
+     "promise": 6
+    },
+    {
+     "id": "t2-figure-refine",
+     "name": "Lit Manual, Railed",
+     "mean": 6.68,
+     "top4": 1,
+     "promise": 0
+    },
+    {
+     "id": "t3-figure-mut",
+     "name": "Lit Manual, Magazine",
+     "mean": 6.66,
+     "top4": 2,
+     "promise": 1
+    }
+   ],
+   "best": 7.56,
+   "today": 4.29,
+   "leader": 6.65
+  },
+  "console": {
+   "carried": [
+    {
+     "id": "t3-console-graft",
+     "name": "Waypoint Lamps",
+     "mean": 7.4
+    }
+   ],
+   "ranking": [
+    {
+     "id": "t3-console-graft",
+     "name": "Waypoint Lamps",
+     "mean": 7.4,
+     "top4": 6,
+     "promise": 8
+    },
+    {
+     "id": "t3-console-refine",
+     "name": "Caution, Cleared",
+     "mean": 7.11,
+     "top4": 5,
+     "promise": 0
+    },
+    {
+     "id": "t2-console-graft",
+     "name": "Master Caution",
+     "mean": 6.57,
+     "top4": 0,
+     "promise": 0
+    },
+    {
+     "id": "t3-console-mut",
+     "name": "Master Caution, Drawn",
+     "mean": 5.66,
+     "top4": 0,
+     "promise": 0
+    }
+   ],
+   "best": 7.4,
+   "today": 4.29,
+   "leader": 6.65
+  },
+  "switchboard": {
+   "carried": [
+    {
+     "id": "t3-switchboard-refine",
+     "name": "Switchboard, Settled Light",
+     "mean": 7.22
+    }
+   ],
+   "ranking": [
+    {
+     "id": "t3-switchboard-refine",
+     "name": "Switchboard, Settled Light",
+     "mean": 7.22,
+     "top4": 3,
+     "promise": 3
+    },
+    {
+     "id": "t3-switchboard-graft",
+     "name": "Switchboard, Patched Through",
+     "mean": 6.74,
+     "top4": 3,
+     "promise": 4
+    },
+    {
+     "id": "t2-switchboard-graft",
+     "name": "Switchboard, Patched",
+     "mean": 6.33,
+     "top4": 0,
+     "promise": 0
+    },
+    {
+     "id": "t3-switchboard-mut",
+     "name": "Switchboard, Squared",
+     "mean": 5.84,
+     "top4": 0,
+     "promise": 0
+    }
+   ],
+   "best": 7.22,
+   "today": 4.29,
+   "leader": 6.65
+  }
+ },
+ "judges": {
+  "a": [
+   {
+    "lens": "feedback",
+    "notes": "The track series is far ahead for the owner. It is the line language the owner called \"high style\" (stops, rings, buffers, timetable margins), it now runs through Home, To do, Chat, Plans, setup and Status, and its ink plates put grounded, material colour into the content, not into a corner wash. Trued, Relit is the best: the starters branching off the greeting box on a steel line is the kind of line art the owner wants echoed, and the tube as stop one with tube-height plates gives Coming up real presence. Grafts that worked: Ticked's one-line setup strip and its tick-on-the-line for To do; Chat's left track with times in the margin; Printed's lit wire feeding the board and its sunk date windows; Diary in Ink's ink tags; Pocket Diary, Lit's lit voice for the machine (strong DNA return). Grafts that did not: Diary in Ink's amber italic-mono 'pencil' looks like a costume, and Hung's three-column Home crowds the box. Instrumented's spend meter is worth taking into whichever track design wins, but as a mutant it changes too little elsewhere. The timetable line has the best grounded solids (enamel keys), but its lines are too faint away from Home; the pocket line has the best glass (the mini-month), but a dim spine. Glow check: Relit and Trued put the halo back on the greeting, the tube and the lamps without glare; Ticked runs slightly hot at the top.",
+    "top4": [
+     "t3-track-refine2",
+     "t3-track-graft",
+     "t3-track-refine",
+     "t2-track-graft"
+    ],
+    "promise": [
+     "t3-track-refine2",
+     "t3-pocket-mut",
+     "t3-timetable-graft"
+    ],
+    "scores": [
+     {
+      "id": "00-current",
+      "score": 3,
+      "why": "The original glow DNA, but it is the Matrix wash the owner asked to calm: about 83% green, no grounded companion, and the boxes are generic. It is still titled 'What's on your mind?'."
+     },
+     {
+      "id": "r13-idea-1",
+      "score": 6.5,
+      "why": "Calm and well built, with good grounded slate. But its line art is thin, the phosphor lives mostly in the glass, and it keeps the old title. It is a fair yardstick, and this heat's track designs pass it."
+     },
+     {
+      "id": "t2-track-graft",
+      "score": 8,
+      "why": "Lit Sill Line still has real soul: the now lamp and lit run feed the tube, the To do lamps sit in a timetable margin, the Ideas 'line from home' scope glows, and the ink plates are grounded. Its loose placement (the Coming up label stranded under the rail, the 'All plans' link floating) is now beaten by its own children."
+     },
+     {
+      "id": "t2-track-refine",
+      "score": 7.6,
+      "why": "Trued's system is clean and the setup track is lovely. Home's greeting is the weakest of the series, though: a plain box with starters floating to its right, and an empty Coming up stub before the tube."
+     },
+     {
+      "id": "t3-track-refine",
+      "score": 8.6,
+      "why": "The rail now leaves the now lamp and runs under the tube to the plates, all in reading order. Status's lamp board with its named rows reads as an instrument. The Ideas scope keeps the line language on a list page. The long lit run and the empty glass above Coming up are the faults, and the board's lower left glares a little."
+     },
+     {
+      "id": "t3-track-refine2",
+      "score": 8.9,
+      "why": "This is the closest yet to what the owner praised in Signal Box. The greeting's steel branch of starters with ring stops is high-style line art. The tube is stop one on the rail, and the ink plates the tube's height carry grounded blue-black and a cyan cap in the page content. The Status strip joins glass and lamps, and the glow is back on the greeting and its tube. It loses a little on the plain Ideas table (the scope is gone) and on the month's per-week rails, which run heavy."
+     },
+     {
+      "id": "t3-track-graft",
+      "score": 8.7,
+      "why": "The grafts do work. The one-line setup strip frees Home, the To do ring is the tick you press, Chat hangs from a left track with times in the margin and a lit 'your turn' ring, and the dashed quiet week on Plans is a nice touch. Home is still green-led (about 69%), and the big lit 'planning' with the tube's halo makes the top heavy with light."
+     },
+     {
+      "id": "t3-track-mut",
+      "score": 8,
+      "why": "The moving-coil spend meter on Status is a real instrument and suits the CRT, and the six-signal lamp family is tidy. Outside Status it is its parent, nearly pixel for pixel. That is the 'nearly identical' the owner warned about."
+     },
+     {
+      "id": "t2-timetable-refine",
+      "score": 6.8,
+      "why": "Vera's line from the box is a good idea, but the page is about 89% green and the grounded colour lives only in hairlines. The departure board is lovely, though."
+     },
+     {
+      "id": "t3-timetable-refine",
+      "score": 7.6,
+      "why": "The enamel interchange keys (denim, teal and plum plates labelled 'usually Plans' and so on) are exactly the grounded, solid colour with a job the owner asked for, and they sit in the page content. The board beside the box is calm. The plum leans off-period, and To do, Status and Settings get only thin rails, so the line language is faint away from Home."
+     },
+     {
+      "id": "t3-timetable-graft",
+      "score": 7.8,
+      "why": "Home reads best of the timetable line. Her line runs from the box through the starters to a departure board fed at its head by a lit wire. On To do, the sunk readout windows with amber rings for late are a smart timetable margin. The kids' wishes sit off the rail, Plans and Status are generic, and 'Tell Vera our plans.' with its full stop is awkward."
+     },
+     {
+      "id": "t3-timetable-mut",
+      "score": 6.9,
+      "why": "The hung margin and the condensed sign face are good typesetting ideas. But the three-column Home crowds the box, the chat loses its one non-green line, and at a glance it reads as the parent with narrower type."
+     },
+     {
+      "id": "t2-pocket-graft",
+      "score": 7.3,
+      "why": "The Now/Next/Later spine and the glass mini-month on Plans have real CRT charm. Status and Ideas, though, are plain lists hanging from a dim line, and the grounded colour is sparse."
+     },
+     {
+      "id": "t3-pocket-refine",
+      "score": 7.6,
+      "why": "A tidier diary. The kind index on Ideas, the key on Status and the unboxed groups all help, and the glass month is still the best calendar glass in the heat. The spine is too faint to lead the eye the way the track lines do, and the setup list still takes a whole column."
+     },
+     {
+      "id": "t3-pocket-graft",
+      "score": 7.7,
+      "why": "The blue-black ink who-tags and wells are a grounded material colour placed in the content. The one-line setup stop frees the shelf so To do stands by the box. The amber monospace-italic 'pencil' for 'was due\u2026' looks like a costume rather than handwriting, and four voices plus VT323 is a lot of faces."
+     },
+     {
+      "id": "t3-pocket-mut",
+      "score": 7.8,
+      "why": "It brings back exactly the DNA the owner asked for: Vera's lines as small lit screens, the prompt glowing, and Send lit from within, while the family's words stay matte. It is a clear and convincing rule. It nudges the green back up, and the '6 worth a look' amber alarm on Status still shouts."
+     }
+    ],
+    "fixes": [
+     {
+      "id": "t3-track-refine2",
+      "suggestion": "Keep the greeting board with its steel branch of starters, the tube hung as stop one with tube-height ink plates (blue-black with a cyan cap and sunk time wells), the joined Status strip (glass, lamp board and tally), and the setup track. Fixes: (1) bring back the Ideas 'line from home' scope from Sill Line over the table, because Ideas is now the one page without line art or phosphor; (2) on the month, draw the week rails only on weeks that hold a plan and fade the empty ones to a hairline, because five full rails through the grid read heavy; (3) balance the plate names by words, not length, so proper names do not break ('Mount St. / Helens'); (4) on the phone, give the chevron in 'who is asking?' its room and shorten the Google note to one line; (5) move the worked-out values into views.py. Title: keep 'What's the plan?' or switch to 'What's our plan?'."
+     },
+     {
+      "id": "t3-track-graft",
+      "suggestion": "Keep the one-line setup strip with its three rings, To do's ring-you-press on the line, Chat's left track with its time margin and lit 'your turn' ring, the dashed quiet weeks on Plans, and the Status lamp board. Fixes: halve the halo on the large 'planning' and the tube's airglow, so the light sits on the key word and the tube, not across the top third. Shorten the title to 'What's our plan?' so the lit word is short. Show the ways-to-start keys on a phone as a stacked steel branch (as Trued, Relit does), not a sideways scroll. Give Lately added the same ink plate material as Coming up, so Home's lower half carries some grounded colour."
+     },
+     {
+      "id": "t3-track-refine",
+      "suggestion": "Keep the rail that runs from the now lamp under the tube to the plates, the Status lamp board with its tally beside it, and the Ideas scope. Fixes: shorten the lit run so it stops at the tube's stop and the later stretch is steel. Close the roughly 100px of empty glass above Coming up by hanging the starters under the box. Make the plates the tube's height, as Relit does, so the plans read as solid grounded things and not thin labels."
+     },
+     {
+      "id": "t3-timetable-graft",
+      "suggestion": "Keep the board fed at its head by a lit wire from Vera's line, and the sunk readout windows with amber rings on To do. Fixes: put the kids' wishes on the line as a stop, or move them to the right column. Carry the enamel interchange keys from Platformed (denim, teal, steel; drop the plum) onto the ways to start, so Home has solid grounded colour. Give Status and Plans a line of their own (lamps as stops, week rails). Retitle to 'What's our plan?', which drops the glowing full stop."
+     },
+     {
+      "id": "t3-pocket-mut",
+      "suggestion": "Keep the rule that the machine's words glow and the family's stay matte, with Vera's lines as small lit screens and the primary key lit from within. Graft in Diary in Ink's blue-black who-tags and the one-line setup stop, so the green has a grounded partner. Make the Now/Next/Later spine steel and slightly heavier so it leads the eye, and give it lamps at its stops. Turn the Status '6 worth a look' to plain words with one amber half-lamp."
+     },
+     {
+      "id": "t3-timetable-refine",
+      "suggestion": "Keep the enamel interchange keys with their 'usually Plans' and 'usually To do' notes: grounded colour with a job, in the content. Swap the plum for a period-correct steel-cyan or a muted CGA blue. Draw To do and the Status lamps as ring stops on a visible steel line, so the line language holds beyond Home."
+     }
+    ],
+    "titles": "\"What's our plan?\" (t3-track-refine, t3-timetable-refine, t3-timetable-mut, t3-pocket-refine) and \"What's the plan?\" (t3-track-refine2) say the job best: they are short, in the family's voice, ask to be told something, fit one line on a phone, and light the job word with a short glow. Of the two I prefer \"What's our plan?\" for its 'our'. \"What needs planning?\" (t3-track-graft) is a good invitation and cannot be answered no, but the long lit word makes the glow heavy. \"What should we plan?\" (t3-pocket-graft) is fine but softer. \"What are we planning?\" (t2-track-graft, t3-track-mut) reads as a status check. \"Anything to plan?\" (t3-pocket-mut, t2-pocket-graft) is casual and can be answered 'no'. \"Tell Vera our plans.\" (t3-timetable-graft) names her but is an order, not an invitation, and the full stop beside the glow is awkward."
+   },
+   {
+    "lens": "soul",
+    "notes": "Through the phosphor lens, the strongest move in this heat is light that does a job: the tube's power wire feeding a lit run (track), a lit wire feeding a dot-matrix board (timetable), and light that marks who is speaking (pocket-mut). Grafts that worked: the rail name in the line's break and the one-strip setup (track-graft), the wire feeding NEXT UP and the leader-dot board rows (timetable-graft), and the setup collapsing to one amber spine node (pocket-graft). Grafts that worked less well: the graphite italic pencil and the blue who-tags (pocket-graft), which drift off the tube's world, and the amber date pills on timetable-graft's To do, which compete with the light. Shrinking the tube (t2-track-refine, t3-track-refine2) costs the most soul: the monitor should stay the page's one real green screen. t3-timetable-mut adds fine typesetting but takes the light down and leaves Chat monochrome. Dice graphics on Status (t3-track-mut's meter) are a phosphor win worth spreading across lineages.",
+    "top4": [
+     "t3-track-graft",
+     "t3-timetable-graft",
+     "t3-pocket-mut",
+     "t3-track-mut"
+    ],
+    "promise": [
+     "t3-pocket-mut",
+     "t3-track-mut",
+     "t3-timetable-graft"
+    ],
+    "scores": [
+     {
+      "id": "00-current",
+      "score": 6.5,
+      "why": "All the original light is here (bloom on the tube, glowing dots, halo on 'mind'), but it is lit everywhere at once. The Matrix wash spends the glow on every surface, so none of it means anything."
+     },
+     {
+      "id": "r13-idea-1",
+      "score": 7.5,
+      "why": "A real green screen at the desk, with grounded colour around it and the glow kept for the terminal and its readouts. It is calm and alive, though the light is spread thinly over a lot of small mono text."
+     },
+     {
+      "id": "t2-track-graft",
+      "score": 8,
+      "why": "The tube's power wire drops into a breathing NOW lamp, and the lit run glows across the sill with airglow under it. It reads as a signal box at night, with the light only on what is live."
+     },
+     {
+      "id": "t2-track-refine",
+      "score": 6.5,
+      "why": "The tube is shrunk into a card among the plates and the lit run is short. The light is correct but timid: the board is mostly steel and the phosphor soul is thin."
+     },
+     {
+      "id": "t3-track-refine",
+      "score": 7.5,
+      "why": "The full-width haloed box with 'plan' in two layers is a strong lit greeting, and the long lit run into the tube's stop glows well. But the tube is now smaller than the box, the run's glare pools at the lower left, and the box's halo competes with the tube for first light."
+     },
+     {
+      "id": "t3-track-refine2",
+      "score": 7,
+      "why": "The greeting is its own lit board (pool, raster, a box that turns green while typing, a hot core on 'plan'), and the tube powers on beautifully. But the tube is shrunk to a plate's height, so the monitor is no longer a hero, and the lit run is only one stop long."
+     },
+     {
+      "id": "t3-track-graft",
+      "score": 8.5,
+      "why": "This heat's best balance of light. The big 'planning' headline glows over the box, the tube's power wire feeds the lit run with airglow, the 'Coming up' plate sits in a break of the lit line, and below the sill everything is matte slate and steel. One luminous zone, then calm."
+     },
+     {
+      "id": "t3-track-mut",
+      "score": 8,
+      "why": "Home is the parent's light. Status gains a real phosphor instrument: scanlined glass, a moving-coil meter glowing in green, haloed lamps where something works and dark sockets where it does not. That is the green screen's soul in its most fitting place, though the needle sits idle at zero."
+     },
+     {
+      "id": "t2-timetable-refine",
+      "score": 6.5,
+      "why": "The dot-matrix board and the lit spine are good phosphor ideas. But the page is about 89% green, so the glow is everywhere and the board is small beside a busy three-column layout."
+     },
+     {
+      "id": "t3-timetable-refine",
+      "score": 7,
+      "why": "The departures board is a true dot-matrix tube with leader dots, and Vera's spine is lit to her terminus. But the enamel keys and the board compete beside the box, and the light feels distributed rather than led."
+     },
+     {
+      "id": "t3-timetable-graft",
+      "score": 8,
+      "why": "The lit wire leaves the spine at NEXT UP and feeds a big departure board: a radar, mono rows with leader dots and a scanline footer. It is the most convincing 1980s screen in the heat, and the phosphor stops where the board ends. The amber date pills on To do are a little loud."
+     },
+     {
+      "id": "t3-timetable-mut",
+      "score": 6.5,
+      "why": "The type pairing is handsome and the hung margin is a typographer's pleasure, but it adds no light. Chat goes back to near-monochrome green (97%), and the three columns dilute the board."
+     },
+     {
+      "id": "t2-pocket-graft",
+      "score": 7,
+      "why": "NOW and NEXT are lit tabs on a glowing spine, and the tube carries a radar plus a waveform of the coming weeks: genuine instrument light. The rest is quiet slate."
+     },
+     {
+      "id": "t3-pocket-refine",
+      "score": 7,
+      "why": "Light sits only on NOW, the box's lit floor and the tube, with grounded rows below. It is honest and calm, but it changes little from its parent in phosphor terms."
+     },
+     {
+      "id": "t3-pocket-graft",
+      "score": 6.5,
+      "why": "The ink and pencil hands are an original idea, but the Victor Mono italic 'pencil' and the many blue tags pull away from the tube's world, and the amber scrawls compete with the light. The phosphor survives only in the top half."
+     },
+     {
+      "id": "t3-pocket-mut",
+      "score": 8,
+      "why": "It is the only design that gives the glow a rule: what the machine says is lit (Vera's chat screens with a rim and bloom, her times, the cursor prompt, a lit NOW plate) and what the family writes stays matte. That is the CRT's soul as meaning, not decoration. The dim-lit placeholder risks reading as typed text."
+     }
+    ],
+    "fixes": [
+     {
+      "id": "t3-track-graft",
+      "suggestion": "Keep the glowing headline over the box, the tube's power wire into the lit run, and the 'Coming up' plate in the line's break; give the run its sweep-on again (only its head moves now). Fixes: drop the headline's halo by one layer, because at this size 'planning' outshines the tube. Graft t3-track-mut's Status instrument (the meter beside the lamp board) in place of today's glass. Let the To do 'now' rule carry a faint afterglow so the lower page has one live light. Give Chat's lit ring at the box E4's halo."
+     },
+     {
+      "id": "t3-track-mut",
+      "suggestion": "Keep the moving-coil meter and the named lamp board, and bring back E20 breathing on the working lamps, at least on Status. Show the needle off zero (a usual-day bug that is visible, an amber zone that is drawn). Carry the six-signal family to Home with a key, and make the halftone band visible or drop it."
+     },
+     {
+      "id": "t3-timetable-graft",
+      "suggestion": "Keep the lit wire feeding NEXT UP and the dot-matrix board with leader dots and the radar. That is this heat's best tube. Turn To do's amber date pills into sunk dark windows with only an amber ring, so the warm colour does not fight the board. Thin the spine's glow below the box to a hairline, keeping the lit stops, so the line reads lit only from now to next. Light the chat's newest timestamp window in phosphor."
+     },
+     {
+      "id": "t3-pocket-mut",
+      "suggestion": "Keep the rule 'the machine speaks in light, the family writes matte', and Vera's chat screens with their rim and bloom. Let the prompt glow only once the box has focus, so it is not mistaken for typed text. Soften the older Vera bubbles to rim-only and keep the bloom for the newest. Drop the footer key and replace the '6 worth a look' amber alarm with a half lamp."
+     },
+     {
+      "id": "t3-timetable-refine",
+      "suggestion": "Make the board the one lit object in the right column (put Lately added under it in matte), and let the ways-to-start enamel keys go matte slate with only the stub coloured, so the box and board own the light."
+     },
+     {
+      "id": "t3-track-refine2",
+      "suggestion": "Give the tube its height back (the monitor must be the hero, not a plate), and let the lit run go at least to the second stop. Keep the greeting board's raster pool and the box turning green while someone types."
+     },
+     {
+      "id": "t3-pocket-graft",
+      "suggestion": "Set the pencil in an upright quiet face, not a script italic, and cut the who-tags to bone text without the blue fills. Keep the setup stop collapsing to one amber node on the spine: that grafted feature worked."
+     }
+    ],
+    "titles": "The best is 'What's our plan?' (t3-track-refine, the timetable refine and mutant, t3-pocket-refine): the family's own voice, the job in one word, a short lit word that glows cleanly. 'Tell Vera our plans.' (t3-timetable-graft) is a strong second. It names who hears you and is an imperative invitation, which suits a timetable whose line is Vera's, though the full stop is a little stiff. 'What needs planning?' works and the lit word ends the line, but 'planning' is a heavy glow at headline size. 'What should we plan?' is fine but soft. 'What's the plan?' reads as a status check, less as an invitation. 'Anything to plan?' fails because it can be answered 'no'. 'What are we planning?' reads as a status question."
+   },
+   {
+    "lens": "style",
+    "notes": "Through this lens the track series leads the heat: it is the one lineage whose Home looks like nothing else, while its grounded steel, slate and ink plates keep the green to the lit run and the tube. What worked among the grafts: in Ticked, the question promoted to the board's headline, the rail's name set in a break of the run, and setup shrunk to a three-ring strip. In Printed, the lit wire feeding the departure board at its head. In Diary in Ink, the ink who-tags. Platformed's enamel interchange keys are the best grounded colour in the heat and should travel. What did not work: Diary in Ink's stacked pencil italics read as costume, and Hung's condensed face plus hung quotes is a type swap that cramps the box without reshaping the page. On the owner's 'bring back the phosphor': the most persuasive answers give the light a meaning. Those are Pocket Diary, Lit's lit machine voice in Chat, Relit's pooled greeting board and Printed's lit rail, rather than more glow everywhere. The single best object in the heat is Instrumented's Status faceplate with its moving-coil spend meter. Whichever track design wins should adopt it, because a family would say 'oh, that's lovely' at it.",
+    "top4": [
+     "t3-track-graft",
+     "t3-track-refine2",
+     "t3-timetable-graft",
+     "t3-pocket-mut"
+    ],
+    "promise": [
+     "t3-track-mut",
+     "t3-pocket-mut",
+     "t3-track-refine2"
+    ],
+    "scores": [
+     {
+      "id": "00-current",
+      "score": 4,
+      "why": "It has the original tube's charm, with real bloom and a lit word, but every surface is the same green-on-black card, so it reads as Matrix costume rather than an identity."
+     },
+     {
+      "id": "r13-idea-1",
+      "score": 6,
+      "why": "A calm, competent desk terminal with good grounding. It is the safe reference: tasteful, but no single image a family would remember."
+     },
+     {
+      "id": "t2-track-graft",
+      "score": 7,
+      "why": "The lit run from the now lamp to the tube's wire, with the plates hanging off the rail, is a real signature. The box beside the tube splits the eye, and the setup board is a second, weaker diagram."
+     },
+     {
+      "id": "t2-track-refine",
+      "score": 6.5,
+      "why": "The tube hung as stop one of the rail is a clever idea, but the board is busy: the starters float right of the box and the lit run is short, so the light never takes the page."
+     },
+     {
+      "id": "t3-track-refine",
+      "score": 6.5,
+      "why": "The full-width box is handsome and the long lit run glows well. The tube now floats under the box with no rail of its own, there is a big dead patch of glass, and the plates have shrunk to labels, so the board reads less like one diagram than its parent."
+     },
+     {
+      "id": "t3-track-refine2",
+      "score": 8,
+      "why": "The most material board in the heat. The tube is the first plate on the line, ink plates carry kind rings, a sunk time well and who it is for, and a steel branch of starters leaves the box like a siding. The greeting board's pool and raster bring the phosphor back exactly where it belongs. It feels like a real signal box at night."
+     },
+     {
+      "id": "t3-track-graft",
+      "score": 8.5,
+      "why": "The boldest composition: the question as the board's headline, the tube's wire dropping onto the lit Coming up rail, the rail's name set in a break of the line, and setup shrunk to a tiny three-ring track in an amber-edged strip. To do's dated margin with rings you press makes the line do work. It is memorable, coherent across pages, and lit only where it is live."
+     },
+     {
+      "id": "t3-track-mut",
+      "score": 7,
+      "why": "Status's instrument panel (a named lamp board beside a moving-coil spend meter with a lit needle and $0.00 in VT323) is the single most delightful object in the heat. Elsewhere it is its parent untouched, so the page as a whole moves little."
+     },
+     {
+      "id": "t2-timetable-refine",
+      "score": 6.5,
+      "why": "The station line down the box, with the dot-matrix board beside it, is a clear idea. The three columns feel like a dashboard and the line is thin, so the timetable mood is only hinted at."
+     },
+     {
+      "id": "t3-timetable-refine",
+      "score": 7,
+      "why": "The enamel interchange keys (denim, teal and plum faces with 'usually Plans / To do / Ideas') are the heat's best grounded colour with a job, and the terminus ring is lovely. The board and the right column are plain, so the station mood stops at the left column."
+     },
+     {
+      "id": "t3-timetable-graft",
+      "score": 7.5,
+      "why": "The lit rail running down the left, feeding the departure board at its head, is the strongest use of phosphor as wayfinding in this lineage. The amber date windows on To do are crisp. The right column of banded rows is generic, and 'Tell Vera our plans.' gives the page a confident voice."
+     },
+     {
+      "id": "t3-timetable-mut",
+      "score": 6.5,
+      "why": "Barlow Condensed signs and hung quote marks give real typographic personality, a station sign-painter's hand. The three narrow columns cramp the box, Chat goes almost wholly green, and the hang is barely visible, so the style reads as a font swap more than a system."
+     },
+     {
+      "id": "t2-pocket-graft",
+      "score": 6.5,
+      "why": "NOW, NEXT and LATER tabs on one spine is a clear, original structure, and the tube with its four-week trace is charming. The tracked label tabs feel a little costume, and the right column floats."
+     },
+     {
+      "id": "t3-pocket-refine",
+      "score": 7,
+      "why": "A tidy diary: square nodes, unboxed groups, and Vera's tab sitting on the box like a page divider. It is calm and coherent, but the tidying has taken some of the personality out with it."
+     },
+     {
+      "id": "t3-pocket-graft",
+      "score": 7.5,
+      "why": "Two hands is a genuinely new idea: graphite pencil italic for how far off things are, blue-black ink tags for who they are for. It feels like a diary someone keeps. The pencil face edges toward costume and there are five faces in all, but the material story is the most original in the lineage."
+     },
+     {
+      "id": "t3-pocket-mut",
+      "score": 7.5,
+      "why": "One clear rule, 'what the machine says gives off light', turns Vera's chat lines into small lit screens beside the family's matte slips. This is the most persuasive answer in the heat to 'bring back the phosphor', because the light now carries a meaning. Home and Settings change little."
+     }
+    ],
+    "fixes": [
+     {
+      "id": "t3-track-graft",
+      "suggestion": "Keep: the question as the board's headline, the tube's wire dropping onto the lit rail, 'Coming up \u00b7 4 coming' set in a break of the run, the three-ring setup strip, and To do's dated margin with press-rings. Fix Home: the plates are small and identical. Take refine2's plate anatomy (kind ring, a sunk time well, who it is for) so the plans carry grounded colour and are worth looking at. The starter keys sit loose between the box and the rail; hang them as a short steel siding off the box, as refine2 does. Lately added's right-aligned kind words read as a column of grey; drop them, or set them in small caps beside the name. Graft track-mut's Status instrument panel in place of the current glass."
+     },
+     {
+      "id": "t3-track-refine2",
+      "suggestion": "Keep: the tube as stop one's plate, the ink plates with sunk time wells, the steel starter branch with its 'Or start with' head, and the lit greeting board with its pool and raster. Fix: the greeting box is wide but short, and 'What's the plan?' at its size leaves the board's lower half empty, so give the title more scale (about 3rem) or let the box run to the board's right edge on desktop. Coming up's four columns break 'Mount St. Helens' badly; balance by words, not length. The setup board's three rings on a long steel line are bland; take track-graft's compact strip. Bring the Status meter from track-mut."
+     },
+     {
+      "id": "t3-track-mut",
+      "suggestion": "Keep the Status faceplate exactly as it is: the named lamp board and the moving-coil spend meter are a standard-setting graphic. Fix: show the meter's scale on a log or usual-day basis so $0.04 is not pinned at zero, and carry the six-signal family onto Settings and To do with a one-line key. It belongs in whichever track design wins, not as a design of its own."
+     },
+     {
+      "id": "t3-timetable-graft",
+      "suggestion": "Keep: the lit rail down the left that feeds the departure board at its head, the board's printed rows with dot leaders, and the amber date windows on To do. Fix: the right column (Finish setting up, To do, Lately added) is a stack of generic banded cards with no station language. Give To do the same rail and stop rings, so the timetable continues across the page. Bring in Platformed's enamel interchange keys for the ways to start. They are the lineage's best grounded colour. The kids' wishes, sitting off the rail on the left, should either join it as a stop or move right."
+     },
+     {
+      "id": "t3-timetable-refine",
+      "suggestion": "Keep the enamel keys with their 'usually Plans' notes and the terminus ring. Fix: Home's right column is plain, so make Coming up's board taller and the column's heads match the left's station type. Lately added's dotted leaders to grey kind words look like a table of contents; tie each to its kind's enamel colour."
+     },
+     {
+      "id": "t3-pocket-mut",
+      "suggestion": "Keep the rule that the machine's voice is lit: Vera's chat screens with rims and halos, the lit NOW tab on the box, and the prompt cursor. Fix: on Home, Vera's tab and the tube are the only machine voices, so light Coming up's relative times ('in 7 days') as dim readouts and leave the family's titles matte. Take Diary in Ink's ink who-tags for the family's side, so both hands appear on one page. Replace 'Anything to plan?' with 'What's our plan?'. The amber '6 worth a look' on Status should become a quiet count."
+     },
+     {
+      "id": "t3-pocket-graft",
+      "suggestion": "Keep: the ink who-tags, the setup collapsed to one amber stop on the spine, and To do beside the box. Fix: the Victor Mono pencil italic ('in 7 days') is charming once but stacked amber pencil notes on To do look like a font demo. Keep pencil for Coming up's distances only, and set late words in the voice face in amber. Cut to three faces. Graft Pocket Diary, Lit's lit Vera screens in Chat."
+     }
+    ],
+    "titles": "The best are 'What's our plan?' (Kept, Platformed, Hung and Trued) and 'What needs planning?' (Ticked). 'What's our plan?' is the family's own kitchen-table question: warm, short, in the 'us' voice, and its lit word is the app's job. 'What needs planning?' is the strongest invitation of the set, because it cannot be answered 'no' and it pulls in reminders and wishes as well as weekends. Its lit word ends the line and sits well as a board headline. 'What's the plan?' (Relit) is close behind, breezier and more colloquial, but a little less the family's own. 'Tell Vera our plans.' (Printed) has character and names who listens, which suits a timetable, but as an imperative with a full stop it reads more as an instruction than an invitation. 'What should we plan?' (Diary in Ink) is fine but flat. The ones that fail: 'Anything to plan?' (Lit), which invites 'no, thanks', and 'What are we planning?' (Instrumented), which reads as a status check on plans already made and lights a heavy 8-letter word."
+   },
+   {
+    "lens": "system",
+    "notes": "The heat's two strongest systems arrive at the brief from opposite directions. Trued, Relit makes the rail and the plate the structure, and its grounded solids (ink plates, sunk wells, slate keys) each have one job. Platformed puts its grounded colour in the enamel keys, which carry information ('usually Plans'). Both bring the light back only to the box, the tube and the lamps, which is what the owner asked for.\n\nGrafts that worked:\n- track-graft's one-line setup strip (better than any boxed setup notice in the heat).\n- the kind labels moved to the left of their rings.\n- timetable-graft's wire feeding the board at its head.\n- pocket-graft's ink who-tags.\n\nGrafts that did not work:\n- timetable-graft's amber date pills, which read as warnings.\n- the fully lit rails (timetable-graft, track-refine), which bring back glare.\n- pocket-graft's mono-italic pencil, which costs readability and adds a fifth face.\n\nDice mutants:\n- track-mut's instrument panel is the best single element here and should be grafted into the track and timetable Status pages.\n- timetable-mut's hung punctuation is genuine typesetting, but it lost the enamel.\n\nAcross the lineages, line-heaviness is the shared risk. Rails earn their place where there is an order (Coming up, To do, setup, chat) and cost clarity on the month grid.",
+    "top4": [
+     "t3-track-refine2",
+     "t3-timetable-refine",
+     "t3-pocket-refine",
+     "t3-track-graft"
+    ],
+    "promise": [
+     "t3-track-mut",
+     "t3-timetable-refine",
+     "t3-timetable-mut"
+    ],
+    "scores": [
+     {
+      "id": "00-current",
+      "score": 4,
+      "why": "A coherent kit, but monochrome glare: every card has the same green-edged box, nothing has its own job, and Home is a stack of equal tiles with no reading order."
+     },
+     {
+      "id": "r13-idea-1",
+      "score": 7,
+      "why": "A disciplined desk: ink and slate do the work and the terminal glows where it should. Home is a dense set of panels, though, and its tracked mono labels and boxed sections give it less hierarchy than the best of this heat."
+     },
+     {
+      "id": "t2-track-graft",
+      "score": 6.5,
+      "why": "Has the soul (the now lamp, the lit run, the tube's wire), but the parts are out of reading order: the question sits beside the tube and the sill zone is half empty."
+     },
+     {
+      "id": "t2-track-refine",
+      "score": 6.5,
+      "why": "Branch lines are a clean system on To do and the setup steps, but Home's box floats over a separate Coming up board and the light is thin."
+     },
+     {
+      "id": "t3-track-refine",
+      "score": 7,
+      "why": "The order is right: full-width box, then one rail from the now lamp through the tube to the plates, with an amber-edged setup board below. But the box is wide and empty, about 100px of dead glass sits under the starters, and the 24rem lit run is the brightest thing below the fold."
+     },
+     {
+      "id": "t3-track-refine2",
+      "score": 8,
+      "why": "The most complete system in the heat. The question board has its starters on a steel branch, and Coming up is one rail with the tube as stop one and plates of the same height, each with a sunk time well. Setup is one stepped line, the wells and plates recur on the month, and Status opens on a glass strip of lamps over a tally. The weak spots are the month's per-week rails, which are heavy, and Home To do's crowded left margin of times."
+     },
+     {
+      "id": "t3-track-graft",
+      "score": 7,
+      "why": "Two grafts earn their place: setup folded into one compact amber strip ('Next: choose your own password'), and kind labels set left of their rings in Lately added. But the headline floats top right, cut off from Vera's name and the tube, and the long lit rail through the board's lower edge is glare."
+     },
+     {
+      "id": "t3-track-mut",
+      "score": 6.5,
+      "why": "Status's instrument panel is the best single element in the heat: a named lamp board, a moving-coil spend meter and one family of six signals. Every other page is pixel-identical to its parent."
+     },
+     {
+      "id": "t2-timetable-refine",
+      "score": 6,
+      "why": "A tidy three-column station, but 89% green, with the departures board out-glowing the box."
+     },
+     {
+      "id": "t3-timetable-refine",
+      "score": 8,
+      "why": "The brief's 'grounded colour in solid things with a job', done literally. The enamel interchange keys (denim, teal, plum) each name where the answer usually goes, and Vera's line runs from her screen through the box to a lit terminus. The dot-leader departure board prints row by row as it powers on, and the same rail with ring stops carries on through To do, Status and Settings. Status is the flattest page, and the board's VT323 rows are small."
+     },
+     {
+      "id": "t3-timetable-graft",
+      "score": 6,
+      "why": "The board fed by a lit wire is a nice idea. But the rail is lit green along its whole length (glare), and the amber-edged date pills on To do read as warning badges on every row; it is 83% green again."
+     },
+     {
+      "id": "t3-timetable-mut",
+      "score": 6,
+      "why": "The hung margin is real typesetting: markers outside one text edge, and a condensed sign face paired with a humanist voice. But the quote marks on the starters suggest the quotes are sent, the enamel is gone (Chat is 97% green), and the three columns squeeze the box."
+     },
+     {
+      "id": "t2-pocket-graft",
+      "score": 6.5,
+      "why": "A clear Now/Next/Later spine with diary dates, but boxed groups on Settings and Status, and the amber is used for things that are not late."
+     },
+     {
+      "id": "t3-pocket-refine",
+      "score": 7.5,
+      "why": "The spine is a rule that holds on every page (Home, Plans' weeks, To do, Status, Ideas), with diary-set dates, unboxed hairline groups and Status's headline tally. The right column empties below To do, Settings' index is still tiles, and the outlined amber checkboxes on late tasks lean toward warning."
+     },
+     {
+      "id": "t3-pocket-graft",
+      "score": 6.5,
+      "why": "The blue-black ink who-tags are good grounded solids with a job. The graphite-italic mono pencil ('was due 5 days ago') is hard to read, and four text faces plus VT323 is too wide a type system."
+     },
+     {
+      "id": "t3-pocket-mut",
+      "score": 6,
+      "why": "Lighting the machine's voice is a principled rule, but the glowing prompt reads as words already typed, and the lit times add green without adding hierarchy."
+     }
+    ],
+    "fixes": [
+     {
+      "id": "t3-track-refine2",
+      "suggestion": "Keep: the greeting board with the starters on a steel branch, Coming up as one rail with the tube as stop one and plates of equal height with sunk time wells, the one-line setup steps, and Status's glass lamp strip with its tally. Fix: (1) Plans month: drop the per-week rails and keep only today's lit segment plus a ring on each plan's day, because a rail under every week turns the grid into a subway map. (2) Home To do: move the 'Sun 27 Sep 19:56' margin to a quieter --ink-3 date only, with the time in tabular figures, and widen the gutter so 'now' does not crowd the lamps. (3) Graft t3-track-mut's moving-coil spend meter into the glass strip in place of the $0.00 block, so Status leads with an instrument. (4) The ink plates' empty middle (between the name and 'anyone'): tighten to the content, or put the plate's kind ring there. (5) Make the 'Or start with' label the branch's terminus so the branch reads as starting at the question."
+     },
+     {
+      "id": "t3-timetable-refine",
+      "suggestion": "Keep: the enamel interchange keys with 'usually Plans / To do / Ideas', Vera's line ending at the lit 'Continue with Vera' terminus, the dot-leader departure board that prints row by row, and the margin times on To do. Fix: (1) Status: give it a board of its own (the departures board form, or track-mut's lamp board) instead of three flat cards. (2) Raise the board rows to 0.95rem or more, with the date column right-aligned in tabular figures. (3) Carry the enamel stubs to the page roundels on Plans, To do and Ideas, so each section's colour has the same job everywhere. (4) The setup notice: make it a stop on Vera's line (an amber ring) instead of a boxed callout under the terminus. (5) Ideas: the radar tube's caption is orphaned; bind it to the board's frame."
+     },
+     {
+      "id": "t3-pocket-refine",
+      "suggestion": "Keep: the Now/Next/Later spine with square nodes on every page, diary-set dates, unboxed hairline groups, and Status's headline tally with its key. Fix: (1) Late checkboxes: keep the box neutral and put the amber on the node and the words only. (2) The right column below the kids' wishes: put Lately added there and end the left spine at Coming up, so Later sits beside Next instead of trailing alone. (3) Settings index: unbox the tiles into spine rows like the section pages. (4) Graft timetable-refine's enamel keys or pocket-graft's ink who-tags as the one grounded solid, because the page is still mostly hairlines."
+     },
+     {
+      "id": "t3-track-graft",
+      "suggestion": "Keep: the setup strip (three rings, 'Next: choose your own password', one line), the kind label set left of its ring, and the To do stop as the tick you press. Fix: put the headline over the box with Vera's name above it, the refine2 order, not floating top right of the tube. Shorten the lit run to the now-to-next segment only."
+     },
+     {
+      "id": "t3-track-mut",
+      "suggestion": "Keep the instrument panel, the lamp board and the meter, and make it the lineage's Status standard. Fix: make the meter's scale read for a near-zero day (a log scale, or a 'usual day' arc zone), and draw the six-signal legend once on the panel's footer."
+     },
+     {
+      "id": "t3-timetable-mut",
+      "suggestion": "Keep the hung margin and the condensed-sign/humanist-voice pairing; graft them into Platformed. Drop the quote marks on the starters and restore the denim edge on the family's chat bubbles."
+     },
+     {
+      "id": "t3-timetable-graft",
+      "suggestion": "Keep the board fed at its head by a wire. Fix: light only the run from the box to the board, not the whole rail; make the To do dates sunk steel windows, not amber-edged pills (amber only on a late ring)."
+     }
+    ],
+    "titles": "The best is \"What's our plan?\" (t3-track-refine, t3-timetable-refine, t3-timetable-mut, t3-pocket-refine). It says the job in one word, 'our' makes it the family's own question, it fits one line on a phone, and 'plan' is a short lit word that sits well at display size. \"What's the plan?\" (t3-track-refine2) comes a close second: more colloquial, but without the ownership. \"What needs planning?\" (t3-track-graft) is a fair invitation, but the 8-letter lit word is heavy at that size and the -ing form drags. \"Tell Vera our plans.\" (t3-timetable-graft) names who listens, but as an imperative statement it reads less as the box's question, and the period needs its own span to dodge the glow. Three fail: \"Anything to plan?\" invites 'no'; \"What should we plan?\" reads as asking Vera for suggestions rather than telling her; \"What are we planning?\" reads as a status check."
+   },
+   {
+    "lens": "interaction",
+    "notes": "Every design except timetable-graft (one target under 44px) clears the 44px target floor, and every Home Tab order goes box, then select, then Send, then starters. So the differences through this lens are in sight lines and in what the eye meets first.\n\nThe two designs that put the question first and widest and then answered it in one band beneath (track-refine2, timetable-refine) read best. Those that let the tube or To do sit beside or before the question (track-graft, track-refine, timetable-mut, the t2 timetable) lose the title-first order.\n\nGrafts that worked:\n- track-graft's one-line setup strip with 'Next: ...', and pocket-graft's equivalent line: both much faster to scan than a setup card.\n- timetable-graft's board fed from the rail.\n- track-refine2's tube as stop one in a row of equal plates.\n- timetable-refine's 'usually Plans/To do/Ideas' hints on the starters, the single best comprehension addition in the heat.\n\nGrafts that did not work:\n- pocket-graft's bordered who-tags and timetable-graft's outlined date windows: both make readouts look like buttons.\n- Ring-as-checkbox on track-graft's To do: elegant, but the affordance is weak.\n- pocket-mut's lit placeholder: it can be mistaken for typed text.\n- track-mut's tiny six-signal family: hard to tell apart.\n\nAll three lineages beat today's page on the owner's 'reflect the page content' test. The track and timetable leaders now match or pass the Desk Terminal yardstick on how quickly a family member finds the next plan and the one thing to press.",
+    "top4": [
+     "t3-track-refine2",
+     "t3-timetable-refine",
+     "t3-track-graft",
+     "t3-pocket-refine"
+    ],
+    "promise": [
+     "t3-timetable-refine",
+     "t3-track-refine2",
+     "t3-track-graft"
+    ],
+    "scores": [
+     {
+      "id": "00-current",
+      "score": 4.5,
+      "why": "Yardstick. The question is clear, but Home is a stack of boxed cards with equal weight, To do shows ISO dates, and 42 of its 55 targets are under 44px. Squinted, the hierarchy flattens into green slabs."
+     },
+     {
+      "id": "r13-idea-1",
+      "score": 7,
+      "why": "Yardstick. Every target is 44px or more and it has a clear desk layout, but the question sits inside the monitor's glass and the tube leads the Tab order (Oaks Park and '3 plans' come before the box), so the eye and the keyboard both meet Next up before the one action."
+     },
+     {
+      "id": "t2-track-graft",
+      "score": 6.5,
+      "why": "Carried. The tube is first on the left and the title sits to its right, so the sight line lands on the monitor before the question. The lit run is legible, but Coming up's label and plates are spread across the board's lower half."
+     },
+     {
+      "id": "t2-track-refine",
+      "score": 7,
+      "why": "Carried. The question comes first and is clear, and the starters sit in a column beside it. The tube as stop one on Coming up's rail reads well, but the plates are small and the starters' column floats without a link to the box."
+     },
+     {
+      "id": "t3-track-refine",
+      "score": 6.5,
+      "why": "The full-width question box is read first, which is good. Below it the tube sits low on the left, the starters float in the middle and 'Coming up' is set mid-board over small plates, with about 100px of dead glass: the eye zig-zags after the box."
+     },
+     {
+      "id": "t3-track-refine2",
+      "score": 8,
+      "why": "The clearest reading order in the heat: question, then a steel branch of starters (each a full-width key with an arrow saying it goes somewhere), then one Coming up row. On that row the tube is stop one and each plan is an equal plate with its kind, who it is for and its time in a sunk well. Setup is three numbered rings, and To do carries full date and time in the margin. On the phone the starters stack at full width. Squinted, it still reads as three bands."
+     },
+     {
+      "id": "t3-track-graft",
+      "score": 7,
+      "why": "The large headline question is read first, and the setup strip (1-2-3 rings plus 'Next: choose your own password \u2192') is the best one-glance setup in the heat. But the tube still sits beside the title and competes with it. On To do the ring-as-tick has no checkbox look, so a press is not obvious and an amber ring reads 'late' rather than 'press'. On the phone the starters scroll sideways, hidden."
+     },
+     {
+      "id": "t3-track-mut",
+      "score": 6.5,
+      "why": "Status's lamp board puts every lamp's name beside it, and the spend meter is a quick glance answer. But the six signals are 14px and close in shape, the key is only on Status, and the meter crowds zero. Outside Status nothing changes for the user."
+     },
+     {
+      "id": "t2-timetable-refine",
+      "score": 6.5,
+      "why": "Carried. The three columns put To do first on the left, so the eye starts on a list rather than the question, and the box is squeezed into a narrow middle column."
+     },
+     {
+      "id": "t3-timetable-refine",
+      "score": 8,
+      "why": "The box is first, largest and widest. Each starter carries 'usually Plans / To do / Ideas', which tells a newcomer where things go: the best comprehension aid in the heat. 'Continue with Vera' is a clear terminus. The departure board lists every plan at a glance, setup is one compact amber notice, and To do's Now line splits late from upcoming. Squinted, the two columns and the lit box hold."
+     },
+     {
+      "id": "t3-timetable-graft",
+      "score": 7,
+      "why": "It has a strong order: question, starters, a board fed from the rail, Continue. The slim setup bar at the top right ('Choose your own password \u203a 2 more') is efficient. But To do's amber-outlined date windows look like buttons, the wishes hang off the rail out of Tab sense, and one Home target is under 44px."
+     },
+     {
+      "id": "t3-timetable-mut",
+      "score": 6,
+      "why": "To do in the left column is read before the question. The quoted starters suggest the quotes are sent, and the box is narrow and wraps its placeholder. The condensed sign face is quick to scan but light at label sizes."
+     },
+     {
+      "id": "t2-pocket-graft",
+      "score": 6.5,
+      "why": "Carried. The Now/Next/Later spine explains the order at a glance, but 'Anything to plan?' invites a 'no', setup takes the whole right column, and the tube pushes Coming up below the fold."
+     },
+     {
+      "id": "t3-pocket-refine",
+      "score": 7,
+      "why": "Now, Next and Later tags make the time order readable without instructions. Coming up rows are the most legible dates in the heat (large day, month, time, title, how far). Setup is a numbered list and To do sits beside the box. The tube still costs a screen of height before Coming up, and the setup list's long link text runs to two lines each."
+     },
+     {
+      "id": "t3-pocket-graft",
+      "score": 6.5,
+      "why": "The one-line setup ('3 steps \u00b7 Next: Choose your own password \u00b7 See all 3') and To do beside the box are both good for finding things. But the ink who-tags are bordered chips that look like buttons, the pencil Victor Mono italic is slow to read, and four faces is a lot to learn."
+     },
+     {
+      "id": "t3-pocket-mut",
+      "score": 6,
+      "why": "The glowing prompt in the box can be read as text already typed. Lighting the family's own plan times blurs the rule that 'lit means live or press here', and the amber '6 worth a look' alarm stays."
+     }
+    ],
+    "fixes": [
+     {
+      "id": "t3-track-refine2",
+      "suggestion": "Keep: the greeting board with the steel branch of starters (full-width keys with arrows), the one Coming up row with the tube as stop one and equal plates (kind, who, time well), the numbered setup rings with 'Next step', and To do's date-and-time margin. Fix: (1) Home is long. Fold the setup band into track-graft's one-line strip ('1-2-3 \u00b7 Next: choose your own password \u2192') so To do and Lately added rise above the fold. (2) Balance the plates' names by words, not length, so 'Mount St. / Helens day trip' does not break inside a proper name. (3) Borrow timetable-refine's 'usually Plans / To do / Ideas' hint as a quiet second line on each starter key. (4) On the phone, give the select's chevron room from 'who is asking?' and keep the Google note to one line. (5) Move the lamp states and absolute dates into views.py."
+     },
+     {
+      "id": "t3-timetable-refine",
+      "suggestion": "Keep: the box first and widest on the left, the starters' 'usually X' hints, the 'Continue with Vera' terminus, the departure board listing all plans, the compact setup notice and To do's Now split. Fix: (1) The enamel starter faces are close in value. Make the hint's destination word match its page icon (calendar, checklist, bulb) so it reads without colour. (2) The departure board is the only place plans appear on Home: make each row a 44px link to its plan, not just 'All plans'. (3) Raise Status's 'This page' half lamp above the fold. (4) Make the Kind field on the new-idea form look like a text field with suggestions, not an unset select."
+     },
+     {
+      "id": "t3-track-graft",
+      "suggestion": "Keep: the headline question as the board's title, the rail's name in a break of the lit run, and the one-line setup strip, which is worth copying across lineages. Fix: (1) Move the tube below or right of the question so the title is read first, not shared with the monitor. (2) Give the To do ring-tick a visible affordance: a hover and focus fill, a check that previews on hover, and an aria-label 'Mark done'. Keep amber for the 'late' margin words, not the ring you press. (3) On the phone, stack the starters instead of scrolling them sideways behind a fade. (4) Show the setup step's clause on hover or as a second line on desktop."
+     },
+     {
+      "id": "t3-pocket-refine",
+      "suggestion": "Keep: the Now/Next/Later tags on the spine, the large-date Coming up rows, and To do beside the box. Fix: (1) Make the tube shorter (drop the weeks strip on Home or fold it into the tube's footer) so Coming up rises above the fold. (2) Shorten the setup links to their verb phrase ('Choose your own password'), with the clause as quiet text, as track-graft does. (3) Explain the filled steel node in Status's key. (4) On the phone, stack the ways to start rather than hiding them behind a fade."
+     },
+     {
+      "id": "t3-timetable-graft",
+      "suggestion": "Keep the board fed by the lit wire at NEXT UP and the slim top setup bar. Fix: make To do's date windows plain inset readouts with no button-like border, and keep amber for the words only. Put the kids' wishes on the rail as a stop, or in the right column, so visual and Tab order agree. Bring the sub-44px Home target up to size."
+     },
+     {
+      "id": "t3-pocket-graft",
+      "suggestion": "Keep the one-line setup and To do beside the box. Fix: drop the bordered who-tags for a plain ink name with a person glyph, so they stop looking like buttons. Set the pencil 'how far off' in the voice face italic rather than Victor Mono, cutting the faces to three."
+     },
+     {
+      "id": "t3-track-mut",
+      "suggestion": "If the instrument panel is kept, give the spend meter a scale that shows a usual day mid-arc (a log or day-limit scale), and put the six-signal key wherever the signals appear (Settings, To do), or cut them to three easily told shapes."
+     }
+    ],
+    "titles": "Best: 'What's our plan?' (t3-track-refine, t3-timetable-refine, t3-timetable-mut, t3-pocket-refine). It is short, in the family's own voice, invites them to tell Vera something, fits one line on the phone, and lights the job word. 'What's the plan?' (t3-track-refine2) is a near-equal, more casual and kitchen-table, and it reads well over the starters branch. 'Tell Vera our plans.' (t3-timetable-graft) is the clearest for a newcomer, because it names who hears you. But it is an instruction, not an invitation, and the full stop needs special handling. 'What needs planning?' (t3-track-graft) is a good invitation that cannot be answered no, but the long lit word is heavy. 'What should we plan?' (t3-pocket-graft) is fine but sounds unsure. Weaker ones: 'Anything to plan?' (t3-pocket-mut) invites 'no', and 'What are we planning?' (t3-track-mut) reads as a status check."
+   },
+   {
+    "lens": "type",
+    "notes": "Typographically the heat splits in two. Pocket Diary, Kept and Departures, Hung each have a type system a typesetter would sign off: dates set one way everywhere, numbers tabular and in columns, markers hung outside the text edge, a heading face with a clear job. The track series has the best plates (Trued, Relit) but no settled date convention: '9 Oct Fri', 'Sun 27 Sep 19:56' and 'Sun 27 Sep' with 'was due' under it all appear in the same lineage. Grafts that worked: hung kind labels in Lately added (Ticked); dotted leaders (Hung, Printed, Platformed, and the boards); column heads on To do (Relit). Grafts that did not work: the Victor Mono cursive pencil (right idea, wrong face); the amber date pills (Printed), which are cramped; the separate full-stop span. Every lineage shows invented '19:56' due times, which are noise and should go. The phosphor returns typographically best when it lights a few words (the key word, the board, Vera's newest line) rather than haloing body text.",
+    "top4": [
+     "t3-pocket-refine",
+     "t3-timetable-mut",
+     "t3-track-refine2",
+     "t3-track-refine"
+    ],
+    "promise": [
+     "t3-timetable-mut",
+     "t3-track-refine2",
+     "t3-pocket-graft"
+    ],
+    "scores": [
+     {
+      "id": "00-current",
+      "score": 5,
+      "why": "DM Sans and DM Mono with a flat hierarchy. To do shows ISO dates ('Due 2026-09-27 19:56') in cards, the title is barely larger than the section heads, and the figures don't line up in columns."
+     },
+     {
+      "id": "r13-idea-1",
+      "score": 6.5,
+      "why": "Plex Sans and Plex Mono form a tidy desk-terminal system. Times and costs are tabular in right-hand columns. But the mono labels are small and tracked, and the head scale is shallow."
+     },
+     {
+      "id": "t2-pocket-graft",
+      "score": 7,
+      "why": "The diary dates are set well: a large figure with the month and day stacked beside it, times in a tabular mono column, and Instrument Sans heads. The tracked LATER/SOMEDAY plates and the footer key are noise."
+     },
+     {
+      "id": "t2-timetable-refine",
+      "score": 6.5,
+      "why": "The wide Archivo title at 2.75rem has presence, and the departure board's leaders are good. The body type and labels sit too close in size, and the counts are set loosely."
+     },
+     {
+      "id": "t2-track-graft",
+      "score": 6.5,
+      "why": "Archivo condensed heads over DM Sans give a clear title. The plates' readouts (09:00 in a mono well) are good, but the To do date column and the small plate text crowd together."
+     },
+     {
+      "id": "t3-track-refine",
+      "score": 7,
+      "why": "Same faces as its parent, set more carefully. A full-width condensed title, plates with name, mono time and relative time on one baseline, and a tidy right-aligned date column on To do. About 100px of empty glass breaks the rhythm under the starters."
+     },
+     {
+      "id": "t3-track-refine2",
+      "score": 7.5,
+      "why": "Best typesetting in its lineage. Plate titles at a real heading size, kind labels over them, times in sunk mono wells, numbered setup steps, and a To do table with Due/Who/When heads. Minus: the noisy '19:56' times, 'Mount St. / Helens' broken inside a name, and a mixed date stack ('4 Oct Sun')."
+     },
+     {
+      "id": "t3-track-graft",
+      "score": 7,
+      "why": "The largest, boldest headline in the heat, 'What needs planning?', reads first and well. Lately added hangs its kind words in a right-aligned margin column, a good typesetter's move. On To do, each date carries a second amber 'was due' line, which crowds the margin."
+     },
+     {
+      "id": "t3-track-mut",
+      "score": 6,
+      "why": "The parent's type is unchanged. The new meter and lamp labels are tiny tracked mono capitals, which is a step back in legibility on Status."
+     },
+     {
+      "id": "t3-timetable-refine",
+      "score": 6.5,
+      "why": "Clear one-column reading order. The dotted leaders in Lately added and the wishes are a nice touch. The Archivo title is heavy beside light body text, 'usually Plans' is set in a weak grey, and there are many sizes with no clear steps."
+     },
+     {
+      "id": "t3-timetable-graft",
+      "score": 6.5,
+      "why": "The departure board's leader dots and the banded rows read like printed timetable paper. The condensed amber date pills on To do are cramped. The title's full stop sits in its own span and gives an odd space. Archivo body and heads are unchanged."
+     },
+     {
+      "id": "t3-timetable-mut",
+      "score": 8,
+      "why": "The only real new type system in the heat: Barlow Condensed for signs and figures, Red Hat Text for the voice, and every marker and number hung outside one text edge. On To do, hung '#4' numbers with leader dots run to the late words. Bold condensed amber at 13px is heavy, and the footer quote hangs past the right margin."
+     },
+     {
+      "id": "t3-pocket-refine",
+      "score": 8,
+      "why": "The most consistent typesetting. Every date is set the diary's way (a big tabular figure with month and day stacked in mono), times sit in their own column, condensed Instrument Sans heads hang from one spine, the measure is sensible, the setup steps are numbered in boxes, and To do lines up in a clean table. Small faults: the tracked mono 'Someday' plate, and names that no longer line up."
+     },
+     {
+      "id": "t3-pocket-graft",
+      "score": 7,
+      "why": "Victor Mono italic as 'pencil' for how far off a thing is ('in 7 days', 'was due 5 days ago') is a real typographic idea with a job. But its cursive 'y' and 'g' sit awkwardly beside Plex, four faces is too many, and the ink who-tags weigh more than the titles they label."
+     },
+     {
+      "id": "t3-pocket-mut",
+      "score": 7,
+      "why": "Keeps Pocket Diary's good date setting. The halo on Vera's chat words and on the lit times brings the tube back in the right voice, but the glow softens body text at 16px, and the prompt cursor in the box reads as typed text."
+     },
+     {
+      "id": "t2-track-refine",
+      "score": 6.5,
+      "why": "The base typesetting is sound: a condensed head over a clean grotesk body, mono kept for times, dates in the day stacks and the month's figures, and drive times in the Ideas table set right-aligned and tabular. Against t3-track-refine2, though, Coming up's plate names are set small and in body weight, the counts are stacked in tiny type ('4 coming / next...') that breaks the heading's baseline, and To do's 'N days ago' in mono sits awkwardly against the sans rows. That makes it a modest step up from today's, about level with t2-track-graft."
+     }
+    ],
+    "fixes": [
+     {
+      "id": "t3-pocket-refine",
+      "suggestion": "Keep the date setting (big tabular figure, stacked month and day, separate time column) as the app-wide date standard, and the spine with condensed Instrument Sans heads. Fix: set the Later/Someday/Now plates in sentence case without tracking (or Instrument Sans 600) so they match the heads. On To do, put the 'who' back in its own fixed column, about 120px, so names line up. Drop the meaningless '19:56' times when a due date has no real time. On Home, the 'Each one is a short page' note in the setup list needs a step more space above it."
+     },
+     {
+      "id": "t3-timetable-mut",
+      "suggestion": "Keep the Barlow Condensed signs / Red Hat Text voice pairing and the hung markers on one text edge: this is the strongest type system in the heat. Fix: set the amber late words in Red Hat Text 500, not condensed bold, because the condensed face at 13-15px looks weak and too heavy at once. Raise condensed labels to 600 at 15px or more. Keep the footer quote's hang inside the page margin. Ship Barlow as two weights only (500, 600) to cut the 18 files. Give Home's middle column 26px back so long titles don't wrap. Bring the denim spine back to the family's chat plates."
+     },
+     {
+      "id": "t3-track-refine2",
+      "suggestion": "Keep the plates with a kind label, a heading-size title, and the time in a sunk mono well; the numbered setup stops; the To do table with Due/Who/When heads. Fix: break plate titles with balance but no-break inside proper names (nbsp in 'St.&nbsp;Helens'). Set the date stack as figure then 'Oct' over 'Sun', both in DM Mono at one size, as on To do. Drop the clock times on To do unless they were set. Tighten the gap between the 'Coming up' count and the Google note to one leading step."
+     },
+     {
+      "id": "t3-track-refine",
+      "suggestion": "Keep the full-width box title and the one-baseline plates (name / 09:00 / in 7 days). Fix: close the empty glass under the starters by pulling Coming up up to the tube's top. Put To do's 'was due\u2026' under the title instead of in the date margin, so the margin carries only the dates."
+     },
+     {
+      "id": "t3-track-graft",
+      "suggestion": "Keep the big headline over the box and the hung kind words in Lately added's margin. Fix: To do's two-line amber margin (date plus 'was due') is too dense: keep the date alone in the margin and put 'was due' after the title in ink-2. The setup strip's 'All 3 steps' link is set smaller than its row, so match the sizes."
+     },
+     {
+      "id": "t3-pocket-graft",
+      "suggestion": "The pencil idea is worth keeping, but in a calmer italic: use Plex Mono italic or Instrument Sans italic in graphite rather than Victor Mono's cursive. Cut the faces to three. Make the who-tags plain text with a person glyph, so the titles carry more weight than their tags."
+     },
+     {
+      "id": "t3-pocket-mut",
+      "suggestion": "Keep the halo on Vera's words, but weaker: a 0 0 6px glow at about 25% for body text, so 16px text stays crisp. Keep the lit times. Drop the false caret before the placeholder."
+     },
+     {
+      "id": "t3-timetable-graft",
+      "suggestion": "Keep the board's leaders and the banded rows. Widen the amber date pills, or set them without a box as amber tabular text. Join the full stop to the title, or drop it."
+     }
+    ],
+    "titles": "Best: \"What's our plan?\" (t3-track-refine, t3-timetable-refine, t3-timetable-mut, t3-pocket-refine). It is short, in the family's own 'our', sits on one line at display size, and lights one 4-letter word that is the job, so the halo stays compact. Second: \"What's the plan?\" (t3-track-refine2). It sets as well, but is a touch less the family's own. \"What needs planning?\" (t3-track-graft) invites well, but the 8-letter lit word is heavy at that size and the line is long on a phone. \"Tell Vera our plans.\" (t3-timetable-graft) names Vera and the job, but the imperative with a full stop reads like an instruction, and the stray period hurts the setting. \"What should we plan?\" (t3-pocket-graft) is fine but a little hesitant. \"Anything to plan?\" (t3-pocket-mut) can be answered 'no'. \"What are we planning?\" (t3-track-mut) reads as asking how things stand, not as an invitation to tell Vera something."
+   },
+   {
+    "lens": "usability",
+    "notes": "Grafts that worked for usability: the one-line setup with its next step named (timetable-graft, pocket-graft), which frees space for To do near the box; To do beside the box (pocket-graft); and destination hints on the starters (timetable-refine). Grafts that did not: the stop as the tick on track-graft (its hidden affordance, and the same shape means 'status' elsewhere); the boxed ink who-tags (they look clickable); the cursive pencil face (hard to read); amber-outlined date windows (they look like buttons); and the dimmed late words. No design here has small targets (all 0 under 44px except timetable-graft's 1) or overflow. Text minimums are 12-13px, but the pocket designs drop to 11.5px on the phone. Recurring phone fault: the sideways-scrolling starters (track-refine, track-graft, pocket-refine and pocket-graft) hide two of three ways to start. Stacking them, as track-refine2 and the timetable designs do, is better. Line-heavy month grids (track-refine2's rail per week) cost the 'find a date' task. A rail is best only where there is an order (To do, setup, chat).",
+    "top4": [
+     "t3-track-refine2",
+     "t3-timetable-refine",
+     "t3-pocket-refine",
+     "t3-timetable-graft"
+    ],
+    "promise": [
+     "t3-track-refine2",
+     "t3-timetable-graft",
+     "t3-pocket-graft"
+    ],
+    "scores": [
+     {
+      "id": "00-current",
+      "score": 5,
+      "why": "Every task is findable, but text bottoms out at 11.5px, 42 targets on Home are under 44px, the green glare tires eyes at night, and To do's cards with 'Edit, complete, or snooze' folds make ticking off a slow two-step job."
+     },
+     {
+      "id": "r13-idea-1",
+      "score": 7,
+      "why": "Calm, consistent and every target is 44px or more; the tracked capitals and the dense side panel still make Home slower to scan than the best of this heat."
+     },
+     {
+      "id": "t2-track-graft",
+      "score": 6.5,
+      "why": "Clear lamps and a readable To do, but on desktop the question sits right of the tube, so the eye lands on NEXT UP before the box. Plan plates are small, and the Plans month rail is extra ink for the job of finding a date."
+     },
+     {
+      "id": "t2-track-refine",
+      "score": 6.5,
+      "why": "The box comes first and setup has a 'Next step'; Coming up spends a lot of height on a rail with small plates, and the phone shows only the top of Coming up before the fold."
+     },
+     {
+      "id": "t3-track-refine",
+      "score": 7,
+      "why": "The full-width box under 'What's our plan?' is now clearly where you start, the setup steps say 'Next step', and To do has real checkboxes with dates. About 100px of empty glass separates the starters from Coming up, the plates are small, and on the phone the ways to start scroll sideways and hide two of them."
+     },
+     {
+      "id": "t3-track-refine2",
+      "score": 8,
+      "why": "The most self-explaining Home in the heat: 'Or start with' rows with arrows, plates big enough to read with kind, who and a time well, setup with a lit Next step, To do with checkboxes, full dates and late words, and the kids' wishes at the foot. On the phone the starters stack. Costs: the Plans month runs a rail through every week row, which is clutter when you only want a date, and Coming up pushes To do below the fold on a laptop."
+     },
+     {
+      "id": "t3-track-graft",
+      "score": 6.5,
+      "why": "The compact setup strip and 'Next: choose your own password' are quick to act on. But on To do the ring on the rail IS the tick, and a first-timer reads an amber ring as a status lamp, not a button (it is a button for screen readers, but nothing on sight says 'press'). The setup strip hides what each step is for, and the phone starters scroll sideways."
+     },
+     {
+      "id": "t3-track-mut",
+      "score": 6.5,
+      "why": "The parent's usable Home, unchanged. The new Status meter crowds the zero end and reads as empty at a glance, its 14px signals are hard to tell apart (dashed socket against ring), and the legend lives only on Status."
+     },
+     {
+      "id": "t2-timetable-refine",
+      "score": 7,
+      "why": "Box and starters first, a clear setup card with 'See all', compact lists; its steel line and denim plates were quieter, and its kind rings carry no words on Home."
+     },
+     {
+      "id": "t3-timetable-refine",
+      "score": 8,
+      "why": "Very easy to start: a big 'What's our plan?' over the box, three stacked starters that each say where they lead ('usually To do'), a lit 'Continue with Vera', explicit checkboxes with who and late words, and '9 parts \u00b7 1 needs a look' heading Settings. Weaknesses: the NEXT UP board's dot-matrix rows are small mono text to read at night, and on Settings and the Status rows each value sits at the far right, a long sight line from its label."
+     },
+     {
+      "id": "t3-timetable-graft",
+      "score": 7.5,
+      "why": "Setup shrinks to one line with 'Choose your own password' and '2 more', which puts To do near the top. Its date windows ('Sun 27 Sep') are amber-outlined boxes that look like buttons, the late words were dimmed to grey so 'late' rests on the ring alone, and the kids' wishes sit off the line in an odd Tab position."
+     },
+     {
+      "id": "t3-timetable-mut",
+      "score": 6.5,
+      "why": "One clean text edge helps scanning lists, but condensed Barlow labels at 15-16px read light, Chat's family and Vera bubbles are now told apart mainly by side, and the hang narrows Home's middle column for typing."
+     },
+     {
+      "id": "t2-pocket-graft",
+      "score": 7,
+      "why": "Legible diary rows, real checkboxes, Now and Later make order obvious; the setup card is long and pushes things down, and the footer key repeats on every page."
+     },
+     {
+      "id": "t3-pocket-refine",
+      "score": 7.5,
+      "why": "Calm and plain to use: the box first, numbered setup steps you can click, a To do column with checkboxes and late words, and diary dates easy to read. The phone box is tall, so Next starts at the fold. On Plans the glowing mini month is small for picking a date, and the starters still scroll sideways on a phone."
+     },
+     {
+      "id": "t3-pocket-graft",
+      "score": 7,
+      "why": "To do beside the box and setup as one 'Next: Choose your own password' line are real wins for getting things done. But the ink who-tags are boxed like buttons and invite useless clicks, the late notes in Victor Mono cursive italic are the hardest text on Home to read for tired eyes, and four faces is a lot to learn."
+     },
+     {
+      "id": "t3-pocket-mut",
+      "score": 7,
+      "why": "Lighting Vera's words and the one key to press does help find Send and tell the speakers apart in Chat. The lit cursor bar in the empty box looks like text already typed, and the green readout columns on Ideas compete with the content."
+     }
+    ],
+    "fixes": [
+     {
+      "id": "t3-track-refine2",
+      "suggestion": "Keep: the 'Or start with' branch of arrowed rows, the plates with kind, who and a sunk time well, the setup row with a lit Next step, and To do's full date and time column. Fix: on Plans, take the rail out of every week row of the month and keep only the current week's now run, so finding a date is a grid again. Plate titles should break at a word boundary, not inside 'Mount St. / Helens'. Let To do sit beside Coming up on wide screens (or fold setup to one line once step 1 is done) so the overdue items show without scrolling. Give the phone's 'who is asking?' select room for its chevron."
+     },
+     {
+      "id": "t3-timetable-refine",
+      "suggestion": "Keep: the stacked starters with 'usually Plans / To do / Ideas', the lit 'Continue with Vera' terminus, the explicit checkboxes and the 'N parts \u00b7 1 needs a look' summary heads. Fix: set the departure board's rows at about 15px proportional, or in VT323 at 1.2rem, so they read at night. On Settings and Status, pull each value next to its label (a fixed 14rem label column) rather than flush right. Put the Kind field's chosen state visibly apart from its placeholder (a real select, or an ink value)."
+     },
+     {
+      "id": "t3-timetable-graft",
+      "suggestion": "Keep: the one-line setup bar ('Finish setting up: Choose your own password \u00b7 2 more') and To do raised beside the box. Fix: make the date windows flat text with an amber ring dot, not outlined boxes that look clickable, and bring back the amber late words beside them. Put the kids' wishes on the right under Lately added, so the Tab order matches what you see."
+     },
+     {
+      "id": "t3-pocket-refine",
+      "suggestion": "Keep the structure as it is. Fix: on the phone, shorten the box (a two-line placeholder, From and Send on one row) so Next shows above the fold, and stack the three starters instead of scrolling them sideways. On Plans, make the mini month's days 32px or larger, or make the agenda's day headers the jump targets. Explain the filled steel node in Status's key."
+     },
+     {
+      "id": "t3-pocket-graft",
+      "suggestion": "Keep To do beside the box and the one-line setup stop. Fix: unbox the who-tags (an icon and plain ink text, no fill or edge) so they stop reading as buttons. Set the 'how far off' notes in the body face in italic, not Victor Mono cursive, so they can be read at a glance. Drop to three faces."
+     },
+     {
+      "id": "t3-track-graft",
+      "suggestion": "The idea of a lamp that is also a switch is good, but it needs an affordance: draw an empty checkbox-sized ring (24px or more) with a faint tick on hover and focus, put a 'Tick when done' hint in the column head, and keep the amber late colour for the words rather than the ring that is pressed. Restore each setup step's 'so the family can\u2026' clause under its ring on hover or at desktop width. On desktop, put the question above Vera's tube so the box is read first."
+     },
+     {
+      "id": "t3-track-mut",
+      "suggestion": "If the meter stays, use a log or 'usual day' scaled dial so a $0.04 day reads, and put the six-signal key on Settings and To do too, or drop the dashed socket in favour of words."
+     },
+     {
+      "id": "t3-pocket-mut",
+      "suggestion": "Keep Vera's lit words in Chat and the lit primary key. Remove the lit cursor block from the empty box's placeholder, so it cannot be taken for typed text."
+     }
+    ],
+    "titles": "The best is \"What's our plan?\" (t3-track-refine, t3-timetable-refine, t3-timetable-mut, t3-pocket-refine). It is short, fits one line on any phone, invites you to tell Vera something, says the job in one word, and 'our' is the family's voice. A close second is \"What's the plan?\" (t3-track-refine2): just as clear and short, a little less warm. \"What should we plan?\" (t3-pocket-graft) works and is explicit, though slightly longer. \"Tell Vera our plans.\" (t3-timetable-graft) is the clearest about who hears you and what the box does, and it is good for a first-time user. But as an imperative with a full stop, it reads less like a box's label, and the separately spanned period is read with a gap by extractors. \"What needs planning?\" (t3-track-graft) is fine in meaning, but its 8-letter lit word is heavy and it reads like a to-do audit. \"What are we planning?\" (t3-track-mut) reads as a status check. \"Anything to plan?\" (t3-pocket-mut) invites a yes or no rather than a message. All are better than \"What's on your mind?\", which never says what the box is for."
+   },
+   {
+    "lens": "skeptic",
+    "notes": "Skeptic's summary:\n- Nearly every design still risks the subway map. Rails appear on Home, To do, Chat, Status and Settings in all three lineages, so the lines must earn their place by marking an order (time, steps).\n- Amber is still over-used as box outlines and chips in t3-track-refine, t3-track-graft and t3-timetable-graft, which makes the pages read as warnings.\n- The navy/ink plates in the track series are the main costume risk: solid blue slabs beside green.\n- Grafts that worked: the lit wire feeding the departure board (timetable-graft), To do's tick-as-stop (track-graft), the compressed setup line (pocket-graft), the steel starter branch (track-refine2).\n- Grafts that failed: Victor Mono pencil cursive (pocket-graft), amber date chips (timetable-graft), quotes on the starters (timetable-mut).\n- Two mutants carry ideas worth keeping that their lineages should absorb, though by themselves they change too little of the page (the owner's 'nearly identical' test): track-mut's instrument Status and pocket-mut's glow on the machine's voice.\n- Yardsticks: today's page is still the Matrix. Desk Terminal is coherent but tool-like. The heat's best now match or beat it on structure and fall short only in finish.",
+    "top4": [
+     "t3-track-refine2",
+     "t3-timetable-refine",
+     "t3-pocket-refine",
+     "t3-timetable-graft"
+    ],
+    "promise": [
+     "t3-track-mut",
+     "t3-pocket-mut",
+     "t3-timetable-graft"
+    ],
+    "scores": [
+     {
+      "id": "00-current",
+      "score": 3.5,
+      "why": "Still the Matrix: green everything, ~83% green share, flat cards, the greeting is a corner box. Has the original glow, and nothing else."
+     },
+     {
+      "id": "r13-idea-1",
+      "score": 6.5,
+      "why": "Coherent and calm, but the mono-heavy desk terminal leans toward an editor theme. The tracked caps and tiny labels make it read like a tool more than a family page."
+     },
+     {
+      "id": "t2-track-graft",
+      "score": 6,
+      "why": "The lit sill line has soul, but the now lamp spills past the board's edge. The amber-boxed setup panel reads as a warning, and the tube and question compete side by side."
+     },
+     {
+      "id": "t2-track-refine",
+      "score": 5.5,
+      "why": "The tube hangs below a rail with a big empty slab of glass beside it, and the starters float in an empty right column. A lot of line for little order."
+     },
+     {
+      "id": "t3-track-refine",
+      "score": 6,
+      "why": "The full-width question box is right. But the now lamp's lit run stabs out of the board's left edge, there is ~100px of dead glass right of the tube under the starters, and the whole setup card is outlined in amber, which reads as an alarm."
+     },
+     {
+      "id": "t3-track-refine2",
+      "score": 7,
+      "why": "The cleanest track design: the steel branch of starters off the box is the best use of the line language, the setup steps read as a route, and the lit word glows. But the navy plates are big solid slabs that drift toward 'navy UI kit', the lit run is a stub, and the tube is crammed into the plate row."
+     },
+     {
+      "id": "t3-track-graft",
+      "score": 6.5,
+      "why": "The one-strip setup and the To do ticks as stops are real gains, and the headline is big and lit. Faults: the board splits into tube-left / question-right, so the question is not first; amber setup rings read as warnings; right-aligned kind labels sit oddly left of the icons in Lately added."
+     },
+     {
+      "id": "t3-track-mut",
+      "score": 6,
+      "why": "Status is the best in the heat: a named lamp board and a moving-coil meter in real phosphor. But Home, Chat, Ideas and Plans are pixel-identical to the parent, so it fails the owner's 'nearly identical' test everywhere but one page."
+     },
+     {
+      "id": "t2-timetable-refine",
+      "score": 5.5,
+      "why": "The three columns squeeze the box into a narrow middle. Green share near 89% is back toward the Matrix, and the board out-glows the question."
+     },
+     {
+      "id": "t3-timetable-refine",
+      "score": 7,
+      "why": "A strong reorder: Vera's line on the left with a large lit question, the departure board beside it, quiet dotted leaders. The skeptic's knocks: the enamel keys are fragile and the plum one reads muddy-purple, the amber left bar on setup is warning-ish, and the grounded colour is mostly hairlines."
+     },
+     {
+      "id": "t3-timetable-graft",
+      "score": 7,
+      "why": "Feeding the board on a lit wire from the rail is the heat's best single graft, and the banded rows and departure list read as one station. But three amber-outlined date chips on To do shout alarm at the top right, and the long lit vertical rail is close to glare."
+     },
+     {
+      "id": "t3-timetable-mut",
+      "score": 5,
+      "why": "The condensed sign face gives real typographic character. But quote marks round the starters look as if they get sent, the box column is cramped between two side columns, and Chat goes 97% green: the Matrix again."
+     },
+     {
+      "id": "t2-pocket-graft",
+      "score": 6,
+      "why": "The time spine is a genuine structure, but the parent still carries tracked caps and the amber '6 worth a look' alarm."
+     },
+     {
+      "id": "t3-pocket-refine",
+      "score": 7,
+      "why": "Now/Next/Later on one spine is the clearest page structure in the heat. The Coming up rows with big day figures are a typesetting win, and amber is confined to late. Weak points: the tracked Now/Next/Later pills still feel costume-mono, and the setup list in the right column is heavy for a one-time thing."
+     },
+     {
+      "id": "t3-pocket-graft",
+      "score": 5.5,
+      "why": "Pencilled Victor Mono cursive italic for 'in 7 days' and 'was due yesterday' is a costume, and the navy who-tag chips clutter every row. The compressed setup line and To do beside the box are good."
+     },
+     {
+      "id": "t3-pocket-mut",
+      "score": 6.5,
+      "why": "It answers the owner's 'bring the glow back' best: Vera's chat lines are lit screens and the family's stay matte, a real rule. Elsewhere it is the parent unchanged, and it keeps the amber alarm on Status."
+     }
+    ],
+    "fixes": [
+     {
+      "id": "t3-track-refine2",
+      "suggestion": "Keep the steel starter branch off the box, the numbered setup route and the plates. Fix: tone the navy plates down to slate with only the cyan cap, so solid navy stops dominating Coming up. Give the tube room: let it stand as stop one's plate at the same height as the others, or move it beside the box. Lengthen the lit run from now to the tube so the motif reads. Graft t3-track-mut's instrument Status. Keep 'What's our plan?' over 'What's the plan?'."
+     },
+     {
+      "id": "t3-track-refine",
+      "suggestion": "Keep the full-width question box. Stop the now lamp's run at the board's inner edge, not outside the card. Fill or close the dead glass right of the tube by putting the starters under the box. Swap the amber card outline on Finish setting up for a slate card with one amber ring at the step that needs doing."
+     },
+     {
+      "id": "t3-track-graft",
+      "suggestion": "Keep the one-strip setup and the To do ring-as-tick. Put the question above the tube so it is read first. Make setup ring 1 the only coloured ring and make 2 and 3 steel, not amber. Put Lately added's kind labels after the name, not right-aligned before the icon."
+     },
+     {
+      "id": "t3-track-mut",
+      "suggestion": "Carry its Status faceplate (the named lamp board and the moving-coil meter) into the lineage's best. Set the meter's scale so a usual day sits mid-dial and the needle is not pinned at zero. Put the six-signal legend on Settings and To do too."
+     },
+     {
+      "id": "t3-timetable-refine",
+      "suggestion": "Keep Vera's line on the left, the big lit question and the board beside it. Replace the plum enamel key with a calmer slate-plum, or drop the tinted faces and keep only the coloured stub. Swap the amber left bar on setup for an amber ring stop on the line. Take t3-timetable-graft's wire feeding the board and its banded green-bar rows on To do and Plans."
+     },
+     {
+      "id": "t3-timetable-graft",
+      "suggestion": "Keep the lit wire into the board, the banded rows and the moon almanac. Fix: To do's date windows should be steel-ringed, with amber only as a small ring or dot, not three amber boxes. Dim the vertical rail to steel above and below the lit stretch from box to board. Consider giving the title a question form (see titles)."
+     },
+     {
+      "id": "t3-pocket-refine",
+      "suggestion": "Keep the Now/Next/Later spine and the big-figure Coming up rows. Set the Now/Next/Later plates in the text face rather than tracked mono pills. Collapse Finish setting up to t3-pocket-graft's one-line '3 steps \u00b7 Next: \u2026' so To do rises to the top right. Graft t3-pocket-mut's rule that Vera's words glow and the family's stay matte, in Chat."
+     },
+     {
+      "id": "t3-pocket-mut",
+      "suggestion": "Its machine-voice glow (Vera's chat bubbles lit, the family's matte) is the most faithful return of the original light. Carry it to the lineage's best rather than as a standalone, and fix the inherited amber '6 worth a look' alarm on Status."
+     },
+     {
+      "id": "t3-pocket-graft",
+      "suggestion": "Drop the Victor Mono cursive pencil, which reads as a costume, and the navy who-tag chips. Keep the one-line setup stop and To do beside the box."
+     }
+    ],
+    "titles": "Best: \"What's our plan?\" (t3-track-refine, t3-timetable-refine, t3-pocket-refine, t3-timetable-mut). It is short, a question in the family's own 'our', its lit word is the job, and it fits any phone. Close second: \"Tell Vera our plans.\" (t3-timetable-graft). It names who hears you and the job, but it is an imperative with a full stop, so it reads as an instruction rather than an invitation, and 'plans' assumes they already exist. \"What's the plan?\" (refine2) works but loses the family's voice. \"What needs planning?\" (track-graft) is good wording, but the 8-letter lit word is heavy and its glow block dominates. \"What should we plan?\" sounds hesitant. \"Anything to plan?\" can be answered 'no' and is too casual. \"What are we planning?\" reads as a status check, not an invitation to tell her something."
+   }
+  ],
+  "b": [
+   {
+    "lens": "feedback",
+    "notes": "This heat answers the owner's 'nearly identical' complaint well. Figure and console now differ from today down the whole page, not in a corner. Grafted features that worked: Fig. 0's wired household (the owner's line language plus real phosphor plus the family's data; the best graft in the heat). Console-graft's day numeral carried from route ring to row to month cell (one mark threaded through every page). Its placards and pilot-lamp ticks. Switchboard-graft's radar set behind the question on the glass. Grafts that did not work: switchboard-graft's green Row 0 service lines on every inner page, which push the page back toward monochrome; console-mut's landscape picture, decoration that pretends to be data; switchboard-mut's squaring, which cannot be seen. On the light: figure-refine/graft and console-graft bring the halo back on the tubes, the lit ring and NOW, and the glow stays off the rest of the page, which is what the owner asked. On colour: bone, sky, slate-cyan, clay and amber-for-late all support the green rather than compete with it. Console-graft's bone route is the only one near the tan the owner dislikes. The switchboard lineage stays the greenest (58-73%) and has the least line art, so it most needs the rail and patch-cord lines.",
+    "top4": [
+     "t3-figure-graft",
+     "t3-console-graft",
+     "t3-console-refine",
+     "t3-figure-refine"
+    ],
+    "promise": [
+     "t3-figure-graft",
+     "t3-console-graft",
+     "t3-switchboard-refine"
+    ],
+    "scores": [
+     {
+      "id": "00-current",
+      "score": 3,
+      "why": "Matrix-green everywhere (83% green share), every box glows the same, no grounded companion and no structure-drawing line. 'What's on your mind?' is the title the owner rejected."
+     },
+     {
+      "id": "r13-idea-1",
+      "score": 6.5,
+      "why": "Calm and well built, with a real tube on Home. But the page is a grid of near-identical slate cards with little line art, and it keeps 'What's on your mind?'."
+     },
+     {
+      "id": "t2-figure-refine",
+      "score": 7.3,
+      "why": "The railed manual already works: the Coming up rail with its lit NOW, bone ink, blueprint figures. But the Next up tube repeats the rail, and the tube light is thinner than the original's."
+     },
+     {
+      "id": "t3-figure-refine",
+      "score": 7.8,
+      "why": "The rails are now held on every page: a lit NOW on Home, To do and the Plans weeks. The tubes are relit (countdown, round gauges) and amber is kept to late, all on calm green-black and bone. The 'Next in 2 days' tube still says what the rail beside it says, and the chat's sequence figure is a thin grey strip."
+     },
+     {
+      "id": "t3-figure-graft",
+      "score": 8.5,
+      "why": "Fig. 0 is the best new element in the heat. The household is wired to Vera's blooming screen, the speaker's wire is lit, and terminals run out to 4 plans, 4 to do, 3 late, 12 ideas, wishes. It is the owner's line art, real CRT glow and the family's own data in one figure. It replaces the duplicate tube, and the rest stays grounded in bone, sky and clay, so the page reads very differently from today across its whole height."
+     },
+     {
+      "id": "t3-figure-mut",
+      "score": 7.4,
+      "why": "The magazine setting is a real typographic gain: light display heads closing up as they grow, and small-cap datelines. The owner enjoys exactly this kind of work. But the light heads lose mass against the semibold rows, and the 12px caps labels ('VERA FRIDAY 2 OCTOBER', the column heads) feel faint."
+     },
+     {
+      "id": "t2-console-graft",
+      "score": 7.6,
+      "why": "The flight plan arcs, the readout rail with its dotted leaders and the master caution give Home a real instrument structure and grounded slate. The violet route reads off-period, and the caution is crowded on one line."
+     },
+     {
+      "id": "t3-console-refine",
+      "score": 7.9,
+      "why": "The box now leads, the caution reads in two clean lines, and the route is a calm slate-cyan with 'in 2 days' callouts. Every page gets one tube (the To do tube is new), and Status's annunciator lamps read well. The rows are numbered 1-3 with the next plan only in the tube, which loses the day as the key fact."
+     },
+     {
+      "id": "t3-console-graft",
+      "score": 8.4,
+      "why": "Waypoint lamps tie the page together. The day numeral sits in each route ring (the next one lit green and haloed), leads each Coming up row in light Plex, and heads each month cell. Pilot-lamp ticks run on To do, crew filters, and placards say how to read each tube. Bone grease-pencil route on slate, amber only for late, and the phosphor only on what is live: this is the owner's brief carried page by page."
+     },
+     {
+      "id": "t3-console-mut",
+      "score": 6.6,
+      "why": "A landscape drawn behind the question is literal decoration. It is fixed to one region, its violet legs look like data that disagrees with the real route, and text runs over it. The colour badges for kinds are a small win, and the one arrow family is tidy but invisible at page scale."
+     },
+     {
+      "id": "t2-switchboard-graft",
+      "score": 6.8,
+      "why": "The sommaire map of the whole service is a strong idea, and the terminal glass has real phosphor. But the page is green-heavy (71%), and the green-on-green question plus the 3-digit page numbers keep it close to today's Matrix feel."
+     },
+     {
+      "id": "t3-switchboard-refine",
+      "score": 7.4,
+      "why": "The most settled switchboard. Matte graphite racks, sky-numbered Plans with a small scope beside them, sea To do, a bone household foot, and the green pulled back to 58%. Each inner page opens on its own small tube (the To do bars, the Plans weekend) on a consistent rack. It has little line art, and the panels are boxy and similar."
+     },
+     {
+      "id": "t3-switchboard-graft",
+      "score": 7,
+      "why": "The radar behind 'What's the plan?' on the glass is real phosphor, and the patch keys ('\u2192 Plans', '\u2192 To do') are a clever circuit idea. But green Row 0 banners on every inner page push green share back to 68%, the dashed caps add noise, and the household rack is ragged."
+     },
+     {
+      "id": "t3-switchboard-mut",
+      "score": 6.4,
+      "why": "Squaring the lamps and glass is barely visible. The wiring went back to graphite, so green share rose to 73% and the leaders are faint. It is a near-duplicate of its parent at page scale."
+     }
+    ],
+    "fixes": [
+     {
+      "id": "t3-figure-graft",
+      "suggestion": "Keep Fig. 0, the household wired to Vera with the lit speaker's wire, and keep the lit-NOW rails on Coming up, To do and the Plans weeks, the bone/sky/clay inks and amber-only-for-late. Fix Fig. 0: let it grow with the data (fluid geometry, not fixed pixels) and make each terminal a real link that lands on its section; give its scanlines and bloom a touch more of the original strength so it reads as THE tube. Home: the Caution strip floats with a large empty left cell; set it into the rail's margin column or make it a two-line plate like console-refine's. Kids' wishes with '0 open' rows is dead weight; collapse it to one line when empty. Chat: the sequence figure is thin and grey, so give it the same lit newest arrow at full glow and let its lanes align with the message rows. Status: move the spend gauge into the wiring figure's tube so the page has one screen. Drop '#n' ids on Ideas to match Home."
+     },
+     {
+      "id": "t3-console-graft",
+      "suggestion": "Keep the day numerals carried from the route rings to the rows to the month cells, the lit next-ring with halo, the pilot-lamp ticks, the readout rail with its dotted leaders, the placards, and Status's annunciator. Fix: the bone route reads a touch warm/tan against the owner's dislike of tan. Cool it toward pewter-bone or console-refine's slate-cyan while keeping the dotted flown trail. Home: fill the empty ground right of Coming up's relative column (the calendar note is lonely there); move it under the rows and widen the titles. Unify the ring numerals with the row numerals (one face). The To do pilot lamps for late rows should glow amber, not sit as grey discs with a bar. Ideas: the readout tiles (Ideas 12, Places to eat 2) are small; fold them into the radar tube's placard. Plans: the month's route line across each week row is lovely; give the lit leg the full halo."
+     },
+     {
+      "id": "t3-console-refine",
+      "suggestion": "Keep the box-first Home, the two-line caution, the To do tube and slate-cyan route. Restore the day numeral in the Coming up rows (lead with 'Sun 4 Oct' including the next plan) instead of bare 1-2-3 counters; take console-graft's lit day ring on the route."
+     },
+     {
+      "id": "t3-figure-refine",
+      "suggestion": "Keep the rails on every page and the relit round gauges on Plans and Status. Replace Home's duplicate 'Next in 2 days' tube with figure-graft's Fig. 0. To do's Fig. 1 tally dots are good; keep them. Close Plans' ~90px empty band under the gauge."
+     },
+     {
+      "id": "t3-figure-mut",
+      "suggestion": "Graft its type into the lineage winner selectively: tightened display tracking and the light large page titles (Ideas, Plans, Status, Things to do) work beautifully. But keep section heads on Home at 500-600 weight so they carry mass, and raise the small-cap labels to 12.5-13px."
+     },
+     {
+      "id": "t3-switchboard-refine",
+      "suggestion": "Keep the sommaire map, sky Plans / sea To do / bone household section inks, the small scope beside the plan rows, and the per-page rack with its own tube. Add line art: run a thin patch-cord track from each map cell's lamp to its count, and give the Plans rows a vertical timetable rail with a lit NOW (borrow the figure lineage's rail). Reduce the green on the question glass: set 'What's the' in bone, light only 'plan'. Lose the boxed empty month cells' heaviness (hairlines only)."
+     },
+     {
+      "id": "t3-switchboard-graft",
+      "suggestion": "Keep the radar on the question's glass and the patch keys naming their destination page. Drop the green Row 0 banner on inner pages, or set it in bone with one lit figure, so green share falls back under 55%."
+     }
+    ],
+    "titles": "The two best are 'Tell Vera what to plan.' (figure-refine and figure-mut) and 'Tell Vera our plans.' (figure-graft). Each names who hears you and the job, invites the family to tell her something, and lights the job word at the end where the eye stops. 'Our plans' adds the family's voice and echoes the placeholder. 'Tell Vera our plan.' (console-graft) is close, but the singular reads slightly stiff. 'What's our plan?' (console-refine) has the family voice, but as a question it can read as 'show me the plan', and 'What are we planning?' (console-mut) reads the same way. Both are acceptable. 'What's the plan?' (switchboard-refine and switchboard-graft) is casual and kitchen-table, but it reads most like asking to be shown something rather than telling Vera. 'Anything to plan?' (switchboard-mut) fails: it invites a yes/no. All of them beat 'What's on your mind?'."
+   },
+   {
+    "lens": "soul",
+    "notes": "Through the soul lens, this round brought back real tubes in all three lineages. The switchboard brings back the most of the original light (glass, VT323, a cursor, a tube per page) and now keeps it to the tubes, so Settled Light leads. Figure Ground's Fig. 0 is the best new idea: phosphor that shows who spoke last. Grafts that worked: Fig. 0's wired household (from the switchboard and presence ideas); the switchboard's patch keys lighting a jack, and its Row 0 teletext line (good, but wrapping and too green); the console's waypoint numerals and pilot-lamp ticks (good, lamps where hands go). Grafts that did not work: Row 0 as a green banner on every page, and the console mutant's engraved landscape behind the question, which is decoration without light. Measures are consistent with what the screenshots show: switchboard green share is still high (57\u201372%), while figure and console sit near 40\u201347% with low neon in their other colours. The mutants (magazine type, square glass, drawn landscape) all lowered the soul. Light display type thins the halo, square glass loses the tube's silhouette, and the line art fights the glass.",
+    "top4": [
+     "t3-switchboard-refine",
+     "t3-figure-graft",
+     "t3-switchboard-graft",
+     "t3-console-refine"
+    ],
+    "promise": [
+     "t3-figure-graft",
+     "t3-switchboard-graft",
+     "t3-console-graft"
+    ],
+    "scores": [
+     {
+      "id": "00-current",
+      "score": 6,
+      "why": "This is the original light at full strength: halo on every word, bloom on every panel. The soul is all there, but it is spent everywhere, so it reads as glare and Matrix rather than as light that means something."
+     },
+     {
+      "id": "r13-idea-1",
+      "score": 7,
+      "why": "The greeting is a real terminal: lit VT323 words on glass, the cursor and the Next up tube inside one case. Away from the glass it goes rather quiet and flat, so the light lives on Home's top left and not much further."
+     },
+     {
+      "id": "t2-figure-refine",
+      "score": 6,
+      "why": "A calm, well-set manual with lit rails and a small Next up tube. The light is correct but thin. The tubes are small, and the phosphor reads as an accent more than as a monitor."
+     },
+     {
+      "id": "t3-figure-refine",
+      "score": 7,
+      "why": "The tubes are switched back on. Home's countdown tube, the round Plans and Status gauges with bloom, the radar, and lit NOW rails on every list in time. Bone heads with a single haloed 'plan' make a lovely restrained key word. The light lands only where the machine is live."
+     },
+     {
+      "id": "t3-figure-graft",
+      "score": 7.5,
+      "why": "Fig. 0 is the most alive thing in the heat: the household wired to Vera's blooming glyph screen on green glass, with the wire of whoever spoke last lit. That is phosphor carrying meaning, not decoration. On the phone, S A M T over her glowing screen is the original's soul in a new form. The round spend tube and the lit NOW rails hold it on the inner pages."
+     },
+     {
+      "id": "t3-figure-mut",
+      "score": 5.5,
+      "why": "Light display heads and small caps turn the manual into a magazine. 'plan' at 64px light still glows, but the halo is weaker on thin strokes, and the page reads editorial rather than as a lit instrument. The tubes are unchanged from the parent."
+     },
+     {
+      "id": "t2-console-graft",
+      "score": 6.5,
+      "why": "A strong console grammar: the Next up tube, the readout strip and a lit live leg. But the box sits second behind the tube, and the violet-ish route and boxed panels dilute the lamp feeling."
+     },
+     {
+      "id": "t3-console-refine",
+      "score": 7,
+      "why": "Her box leads, with only 'plan' lit. The Next up tube beside it, the glowing Today readout, a lit leg and Now needle on the route, a real meter tube on Status and one tube on every page, To do's 'nothing dated ahead' included. The flight-log chat lights only the newest stop. Calm night-shift console, light where live."
+     },
+     {
+      "id": "t3-console-graft",
+      "score": 7,
+      "why": "Waypoint rings that carry the day numeral, with the next plan's numeral and its leg lit. Pilot-lamp ticks, amber for late, are lamps people actually press, which is phosphor where the hands go. The Status meter is the best instrument in this lineage. Weaknesses: the Plans head tube is small, and the bone route is a little faint."
+     },
+     {
+      "id": "t3-console-mut",
+      "score": 5,
+      "why": "The steel line-drawn landscape behind the question is an engraving, not a tube: it fights the text and has no light of its own beyond one green window. Its violet legs read as false data. The rest is the parent unchanged."
+     },
+     {
+      "id": "t2-switchboard-graft",
+      "score": 7,
+      "why": "The question is typed on the glass in VT323, with a cursor and a radar inside one terminal case, which is pure original soul. But green share stays high (71%), and the household rack leans on green, so it is closer to the old glare."
+     },
+     {
+      "id": "t3-switchboard-refine",
+      "score": 8,
+      "why": "The best recovery of the original light in this heat. 'What's the plan?' is lit on the glass over a recessed box with a '>' prompt, and every inner page opens on its own summary tube: To do's block tally, Plans' 'This weekend' screen, Ideas' radar '10 of 12', Status's spend screen. Halo, scanlines and breathing lamps are back at full strength, but only in those tubes, with matte graphite and bone everywhere else."
+     },
+     {
+      "id": "t3-switchboard-graft",
+      "score": 7.5,
+      "why": "'What's the' dim and 'plan' white-hot under a three-layer halo, beside the radar on the glass, is a beautiful key word. The Row 0 videotex service lines are authentically teletext and make every page head a lit screen. The patch keys lighting a jack on the map are a lovely idea of light as connection. Weaknesses: Row 0 wraps on Ideas and To do and turns into a glowing bar across the top of every page, which drifts toward green everywhere (68% share)."
+     },
+     {
+      "id": "t3-switchboard-mut",
+      "score": 6.5,
+      "why": "A near duplicate of Patched. The square glass and lamps are faithful to videotex cells but cost the tubes their curved silhouette, and the faint leaders and higher green share make the glow less meaningful, not more."
+     }
+    ],
+    "fixes": [
+     {
+      "id": "t3-switchboard-refine",
+      "suggestion": "Keep the lit VT323 question on glass, the per-page summary tube in the 22rem column, and the matte graphite and bone everywhere else. That is the right split of light. Fix: (1) Home's household foot (Wishes, Memory, Family, Status, Settings) is the dimmest strip on the page. Give each cell a small breathing lamp, and light only the one that needs a look (Settings in amber, already partly there) so the sommaire is lit as a map. (2) The chat page has no tube. Light the newest Vera slip's edge with the afterglow, or put a small presence screen in the left column, so the chat keeps the light. (3) Cut green share: the textarea's inner glow and Vera's glyph screens are the biggest green areas. Keep the halo on the question text and the caret, and take the box's interior glow down by half. (4) To do's tube says 'Nothing dated after the late ones'. When something is due next, name it in white-hot. When nothing is, light the Late row's blocks amber-on-green so the tube still carries the news. (5) Restore the starters on the phone. They are the way in."
+     },
+     {
+      "id": "t3-figure-graft",
+      "suggestion": "Keep Fig. 0 (the household wired to Vera's blooming screen, the speaker's wire lit) as the lineage's signature, along with the bone heads, the single haloed 'plans', and the lit NOW rails on Home, Plans and To do. Fix: (1) Let Fig. 0's lit wire breathe slowly (2\u20133s) and give her glyph screen faint scanlines, so it reads as a live tube, not a diagram on green. (2) Make Fig. 0 data-driven in width so that six members or 'next in 2 weeks' never clip. (3) The Plans countdown ring and the Status spend ring are good tubes. Give the Ideas radar the same bezel and power-on, so all three inner tubes are one family. (4) The chat sequence diagram should light the newest arrow and its sender's monogram node with the same halo as Fig. 0's wire, linking Home and Chat. (5) The Caution line on Home floats. Put a small amber lamp in its ring that breathes, and keep the rest matte."
+     },
+     {
+      "id": "t3-figure-refine",
+      "suggestion": "Keep the 'Next in 2 days' tube, the round gauges, and one lit NOW per list. Fix the visible gap in the month's NOW trace across Mon to Thu: carry it as a dim afterglow line to today's outline. Make the To do Fig. 1 counters tiny lamps (amber for late) with the halo, so the figure is lit as well as drawn."
+     },
+     {
+      "id": "t3-switchboard-graft",
+      "suggestion": "Keep the dim-plus-white-hot question, the radar on the glass, and the patch keys that light a jack. Those are light-as-meaning. Fix: (1) Row 0 must never wrap. Shorten it to one line per page (e.g. 'Late 3 \u00b7 next: Call the dentist'), or let it truncate with an ellipsis. (2) Make Row 0 a dark glass strip with only its one figure white-hot, not a green-tinted bar, so each page head is a tube and not a green banner. (3) Fill the empty dotted cell in the household rack, or remove it. (4) Bring back Refine's per-page summary tubes on Plans and To do instead of the Row 0 alone, or make Row 0 the tube's top line."
+     },
+     {
+      "id": "t3-console-refine",
+      "suggestion": "Keep the box first, the Next up tube beside it, the readout strip with a lit Today, and the meter tube on Status. Fix: (1) The route on Home is faint slate-cyan. Light the flown-to-next leg with a real halo and let the Next ring breathe, so the flight plan has one lamp. (2) The To do 'nothing dated ahead' tube is two lines on a big glass. Add a lit late count or a crew-board row of lamps. (3) Lately added's tiny swatches feel flat. Keep them, but give the newest item a fading afterglow edge."
+     },
+     {
+      "id": "t3-console-graft",
+      "suggestion": "Keep the waypoint rings carrying the day numeral (the next one lit), the pilot-lamp ticks and the big Status meter. Fix: make the bone route a little stronger and the flown trail clearly dotted. Grow the Plans head tube so it matches Status's. Unify the ring numerals with the row numerals (one face)."
+     },
+     {
+      "id": "t3-console-mut",
+      "suggestion": "Drop the line-drawn landscape behind the text. If a picture is wanted, draw it as a phosphor vector on the Next up tube (hills in dim green scanline, the home window lit), not as steel engraving inside the box. Keep the unified solid arrowheads only if they are lit green on the primary links."
+     }
+    ],
+    "titles": "The best are 'Tell Vera what to plan.' (figure refine and mutant) and 'Tell Vera our plans.' (figure graft). Both name who hears you, say the job as an invitation to tell her something, end on the lit word where the eye stops, and fit one phone line. 'What's the plan?' (switchboard) is the strongest on the glass: short, the family's own breakfast question, and it suits a VT323 prompt with 'plan' white-hot. But it reads as 'show me the plan' rather than 'tell her', so it is better as the terminal's prompt than as an invitation. 'What's our plan?' (console refine) has the same weakness with a warmer 'our'. 'Tell Vera our plan.' (console graft) is fine but singular, so it presumes one plan. 'What are we planning?' (console mutant) is warm, but the long lit word carries less halo. 'Anything to plan?' (switchboard mutant) fails: it is a yes/no question you can answer 'no' to, and it is the least inviting."
+   },
+   {
+    "lens": "style",
+    "notes": "Grafts that worked: Fig. 0 in Wired Household. It is a feature built in the lineage's own terms, and it answers the owner's 'reflect the page content' with a picture of the household itself. The day-numeral system and placards in Waypoint Lamps worked too. In Patched Through, Row 0 and the patch keys suit videotex perfectly. Grafts that did not: Waypoint's ring numerals in mono beside sans rows, and Patched Through's household rack, which loses alignment. The phosphor returns most convincingly in the switchboard glass (VT323, radar, bloom) and in figure-graft's Fig. 0. The figure lineage keeps the best balance between grounded colour and light. Mutants: Magazine's display type is the one worth harvesting. Drawn's landscape has charm but needs to be made generic. Squared is a near-duplicate. Across lineages, the strongest synthesis would be the figure-graft Home with switchboard's Row 0 headers on inner pages and the console's day-numeral rows.",
+    "top4": [
+     "t3-figure-graft",
+     "t3-console-graft",
+     "t3-switchboard-graft",
+     "t3-figure-refine"
+    ],
+    "promise": [
+     "t3-figure-graft",
+     "t3-switchboard-graft",
+     "t3-console-graft"
+    ],
+    "scores": [
+     {
+      "id": "t3-figure-graft",
+      "score": 8.5,
+      "why": "Fig. 0, the household wired to Vera's blooming glyph screen with the last speaker's wire lit, is the most memorable new picture in the heat. It is the manual's promise kept on Home, and the rule that every mark in a figure links to its row turns the conceit into a system. Bone condensed heads on green-black read as a well-printed manual lit by one tube."
+     },
+     {
+      "id": "t3-figure-refine",
+      "score": 7.5,
+      "why": "The calmest, best-set version of the manual: one rule on every page (a figure touches its rows, a lit NOW per list), with real tubes on the Plans and Status gauges. The Home tube ('Next in 2 days') is less distinctive than the graft's Fig. 0, so its identity rests on the rails."
+     },
+     {
+      "id": "t3-console-graft",
+      "score": 7.5,
+      "why": "The day numeral used as one mark across Coming up rows, waypoint rings and month cells is a real typographic idea, and the flight-plan arcs with a lit leg, the pilot-lamp ticks and the placards make the 1969 console read as a coherent instrument panel rather than a costume."
+     },
+     {
+      "id": "t3-switchboard-graft",
+      "score": 7.5,
+      "why": "The page most like the original tube: VT323 'What's the plan?' on glass, with the radar inside the greeting. The Row 0 videotex service line heading each inner page is the freshest header idea in the heat. The patch keys under the box (\u2192 Plans, \u2192 To do) say where a message goes. The green share is still high, and the glass is underfilled around the title."
+     },
+     {
+      "id": "t3-switchboard-refine",
+      "score": 7,
+      "why": "The sommaire map is the clearest 'whole service on one screen' idea, and putting a small scope beside the plan rows it numbers is lovely. The household rack across the foot works. The inner pages' side tubes (the spend meter, To do's ASCII bar) have charm. Graphite plates make it read a little like a dashboard."
+     },
+     {
+      "id": "t3-figure-mut",
+      "score": 7,
+      "why": "Light sentence-case display heads and small-cap labels give the manual an editorial elegance, and 'Things to do' and 'Plans' at display size feel like a magazine spread. The light heads lose mass on the squint, though, and the green key and the semibold rows now outrank them."
+     },
+     {
+      "id": "t3-console-refine",
+      "score": 7,
+      "why": "Clean and well paced, with the readout rail, the two-line caution and the slate-cyan route. Dropping the next plan from the numbered list (rings 1, 2, 3 after an unnumbered Next) makes the plot harder to read, and the page is quieter than the graft without being more distinctive."
+     },
+     {
+      "id": "t3-console-mut",
+      "score": 6.5,
+      "why": "The drawn night country under the question, with home's one lit window, is the most charming single picture here and could get an 'oh, that's lovely'. But it is regional and hard-coded, its violet legs read as false data, and it sits behind the words people type."
+     },
+     {
+      "id": "t2-figure-refine",
+      "score": 6.5,
+      "why": "A solid railed manual, now surpassed by its refinement and its graft on the light and on the Home figure."
+     },
+     {
+      "id": "t2-console-graft",
+      "score": 6,
+      "why": "The base console idea, with faults its children clear: the violet route and a muddled caution line."
+     },
+     {
+      "id": "t2-switchboard-graft",
+      "score": 6,
+      "why": "A strong map structure, but very green (71% of the colour) and boxy, with tracked VT323 'Anything to plan?' and small leaders."
+     },
+     {
+      "id": "t3-switchboard-mut",
+      "score": 5.5,
+      "why": "Squaring the lamps and blips is a coherent videotex thought, but it is a near-duplicate at page scale, and it brings the parent's green back up."
+     },
+     {
+      "id": "00-current",
+      "score": 4,
+      "why": "The original glow has charm, but the page is a monochrome wash with no structure of its own: 'the Matrix'."
+     },
+     {
+      "id": "r13-idea-1",
+      "score": 6,
+      "why": "A well-made desk terminal with good grounded colour, but its identity is a refined terminal card rather than a memorable idea drawn from the family's data."
+     }
+    ],
+    "fixes": [
+     {
+      "id": "t3-figure-graft",
+      "suggestion": "Keep Fig. 0, the lit last-speaker wire, the rule that a mark links to its row, the bone condensed heads and the title. Fix the following. In Fig. 0, draw '3 late' as an amber lamp, not a green-highlighted cell, since amber means late everywhere else; draw member monograms larger, with the grown-up/kid bone/heather split visible, and make Fig. 0 lay out by data (members N, terminal widths) rather than fixed pixels. The Caution row sits in an empty left column with a lot of black: give it the same figure column as the rows below, or fold it into the glass's foot. Bring the refine's real Plans gauge (with the halo) to Status' spend tube as well, so the tubes share one grammar. Lately added is the only section with no figure: a small kind tally or a dot strip would keep the rule true on every section."
+     },
+     {
+      "id": "t3-figure-refine",
+      "suggestion": "Graft Fig. 0 from Wired Household onto Home in place of the 'Next in 2 days' tube, which repeats Coming up. Keep the Plans and Status round gauges with their halo, the To do NOW rail and the amber counters. On Plans Month, close the ~90px gap by moving the Next line under the gauge's caption. The month NOW trace that breaks across Mon to Thu should run through to today's outline."
+     },
+     {
+      "id": "t3-figure-mut",
+      "suggestion": "Its display heads are worth carrying into the winner as page titles only ('Plans', 'Things to do', 'Status' at light 300 with tight tracking). Keep the section heads (Coming up, To do) semibold condensed so the squint keeps its hierarchy, and drop the hand-scaled small caps under 12px."
+     },
+     {
+      "id": "t3-console-graft",
+      "suggestion": "Keep the day numeral as one mark (rows, waypoint rings, month cells), the lit leg, pilot-lamp ticks and placards. Fix the following. Set the ring numerals in the same Plex Sans 300 as the rows, so one mark has one face. Fill the empty ground right of Coming up's relative column: move the 'not connected' note there as a placard, or widen the titles. On Plans Month, the arc lines between cells are thin and read as noise: thicken the route ahead and make the dotted flown trail fainter. The chat's flight-log spine with a lit last stop is good; give Vera's lit box less green fill. On To do, make the crew line read as lamps rather than a link row."
+     },
+     {
+      "id": "t3-console-refine",
+      "suggestion": "Number the next plan too (or drop the numbers), so the arcs and rows agree. Take the graft's day-numeral rows instead of the mono date column."
+     },
+     {
+      "id": "t3-console-mut",
+      "suggestion": "The drawn horizon is worth keeping as an optional, data-free emblem: make it generic (low hills, a road and a lit home window), drop the violet legs that mimic data, put it in the glass's lower-right corner clear of the typing area, and draw it in the palette's tokens (inline SVG with currentColor) so it themes."
+     },
+     {
+      "id": "t3-switchboard-graft",
+      "suggestion": "Keep the VT323 title on glass with the radar, the Row 0 service lines on inner pages (the best inner-page header in the heat) and the patch keys with their destinations. Fix the following. Lower the green share by setting the glass's dim words, Vera's chat slips and the leaders in bone or steel, so that green stays on 'plan', the lamps and the figures. Fill the glass's empty space by putting the date and the next plan's one line under the title. Row 0 wrapping to two lines on Ideas and To do: shorten it to one line (count \u00b7 nearest \u00b7 furthest) with no orphan separator. The household rack in the right column aligns to nothing: give its cells the same column edges as the Plans and To do rows above."
+     },
+     {
+      "id": "t3-switchboard-refine",
+      "suggestion": "Keep the two-tier sommaire, the small scope beside the plan rows, the household rack across the foot and the inner rack of plate, primary and tube. Graft in the Row 0 service line from Patched Through as each inner page's header. Raise the dotted leaders one step in contrast. Show 'Continue with Vera' and one starter on the phone. The To do cell's 80px empty foot should shrink to its content."
+     }
+    ],
+    "titles": "The best is 'Tell Vera what to plan.' (figure-refine and figure-mut). It names who hears you and the whole job in one verb, invites a message, and lands its lit word at the full stop. 'Tell Vera our plans.' (figure-graft) is a close second: warm and in the family's own 'our', matching Fig. 0's household, though the plural reads a little like a report. 'What's the plan?' (switchboard) is the family's own kitchen-table voice, but it reads as 'show me the plan' rather than 'tell her'. 'What's our plan?' and 'Tell Vera our plan.' (console) are good but flatter versions of the above. 'What are we planning?' (console-mut) is pleasant but generic. 'Anything to plan?' (switchboard-mut) fails: it is a yes/no question that invites 'no'."
+   },
+   {
+    "lens": "system",
+    "notes": "The Figure Ground lineage now has the strongest system in the heat. Its single rule, a figure that touches its rows and a rail with one lit NOW, holds on Home, To do, Plans, Status and Settings, so it would define a standard for any page.\n\nGrafts that worked:\n- Fig. 0's wired household: real data, and the page's personality.\n- The console's single day numeral across rows, rings and month.\n- The switchboard's starters keyed to their destination pages.\n- The Row 0 service line as a compact head.\n\nGrafts that did not work:\n- The console-mut landscape: decoration that misstates data, under typed text.\n- The switchboard-mut squaring: invisible, and it made the page greener.\n- The dashed separated-block caps: noise.\n\nThe console lineage's main system fault is boxes in boxes. The switchboard's is the narrow inner-page rack and the high green share. Bringing back the phosphor light is done best by figure-refine's round tubes and lamps: light where the machine is live, bone and slate elsewhere.",
+    "top4": [
+     "t3-figure-refine",
+     "t3-figure-graft",
+     "t3-console-graft",
+     "t3-figure-mut"
+    ],
+    "promise": [
+     "t3-figure-refine",
+     "t3-figure-graft",
+     "t3-console-graft"
+    ],
+    "scores": [
+     {
+      "id": "00-current",
+      "score": 3.5,
+      "why": "One rounded green card style and one green ink for everything. There is no hierarchy of surfaces and no colour with a job. The page reads as the Matrix and gives a system little to build on."
+     },
+     {
+      "id": "r13-idea-1",
+      "score": 7,
+      "why": "A disciplined desk-terminal system: steel caps, one contents rail, small tubes. It is coherent on every page but quieter and more uniform than the best of this heat. Its figures say less about the page's content."
+     },
+     {
+      "id": "t2-figure-refine",
+      "score": 7,
+      "why": "The manual grammar is already strong: a figure column, rails, a bone ink and a blueprint ink with jobs. The light is thin, and Status's figure floats free of its rows."
+     },
+     {
+      "id": "t3-figure-refine",
+      "score": 8.5,
+      "why": "The most complete system in the heat. Every page opens with a figure in the left column that touches its rows. Every time list hangs from a rail with one lit NOW (Home, To do, Plans weeks). The round countdown and spend gauges are real tubes again, and amber, sky and bone each keep to one job. It reads the same on Plans, To do, Status and Settings, and the greeting is clean and calm."
+     },
+     {
+      "id": "t3-figure-graft",
+      "score": 7.5,
+      "why": "Fig. 0, the household wired to Vera's screen, is the best new Home idea in the heat and draws real data. But its pixel-fixed geometry, the S/A/M/T letters set at display size and the narrowed box make the greeting busier. The kid heather and the one rail-date ink are good system rules. Status's lamp words in faint grey beside the lamps are an improvement."
+     },
+     {
+      "id": "t3-figure-mut",
+      "score": 7,
+      "why": "The magazine typesetting is genuinely nicer to read: 300-weight sentence-case display heads with tightened tracking, small-cap datelines and legends. But light heads lose their mass on the squint, so the semibold rows and the green outrank the section heads. It changes how the system reads more than what it shows."
+     },
+     {
+      "id": "t2-console-graft",
+      "score": 6.5,
+      "why": "A strong readout rail and an arcing flight plan. The bays are heavy, the caution is crowded into one line, and the violet route reads as a costume colour."
+     },
+     {
+      "id": "t3-console-graft",
+      "score": 7.5,
+      "why": "One day numeral used everywhere (Coming up rows, waypoint rings, month cells) is a real system rule, and the warm bone route on slate is grounded. The pilot-lamp ticks and placards also hold across pages. But every block is a bay inside a bay, so the page is box-heavy. Status's amber 'Needs a look' readout and the big meter crowd the head."
+     },
+     {
+      "id": "t3-console-refine",
+      "score": 7,
+      "why": "Execution is cleaner: the box leads, a two-line caution and a slate-cyan route. But taking the next plan out of the Coming up list (the rows start at \u2460) is confusing. The slim flight-plan arcs are faint, and the To do tube saying 'nothing dated ahead' spends a tube on nothing."
+     },
+     {
+      "id": "t3-console-mut",
+      "score": 5,
+      "why": "The hard-coded volcano-and-fir landscape behind the question is decoration that draws a route which isn't the data. It also sits under the words the family types. The badge kinds and the unified arrowheads are fine, but small at page scale."
+     },
+     {
+      "id": "t2-switchboard-graft",
+      "score": 6,
+      "why": "The sommaire map is a clear Home structure. But it is very green (71%), the inner pages are cramped into a narrow left rack, and the VT323 'Anything to plan?' reads as a yes/no."
+     },
+     {
+      "id": "t3-switchboard-refine",
+      "score": 7,
+      "why": "A settled two-tier map. Plans and To do are a step larger, a scope sits beside the plan rows it numbers, and the household strip has counts. Each inner page has one rack plus a small tube with a job, such as To do's late/this week/later meter. Typographic rhythm and the leaders are good. The tube glass on Home is smaller, so the phosphor feels reduced to the inset prompt. The 22rem rack leaves Plans' month and To do's list floating short."
+     },
+     {
+      "id": "t3-switchboard-graft",
+      "score": 6.5,
+      "why": "Keying each starter to the page it lands on ('\u2192 Plans', '\u2192 To do') is a clever circuit idea. The one-line Row 0 service bar on inner pages is compact and informative. But the dashed separated-block caps everywhere add noise, the green share is still high, and Row 0 wraps. The Home household block also aligns to nothing."
+     },
+     {
+      "id": "t3-switchboard-mut",
+      "score": 5.5,
+      "why": "Squaring the lamps and blips is near-invisible at page scale. Returning the wiring to graphite made the page greener and the leaders fainter, a step back on the owner's grounded-colour test."
+     }
+    ],
+    "fixes": [
+     {
+      "id": "t3-figure-refine",
+      "suggestion": "Keep: the figure-left/rows-right rack on every page, the one lit NOW per rail, the round tubes on Plans and Status, and the amber/sky/bone job rules. Fix:\n- Plans Month: close the 90px dead band by putting the Next line beside the gauge and starting the grid under it. Carry the month's NOW trace through today's cell rather than stopping at the grid edge.\n- Home: put Coming up's NOW and To do's Now tick at one height, or make To do's an unlabelled tick, so the two rails don't compete.\n- Status: move 'Working/Off' words into the lamp colour's dim ink, not in a separate right-aligned column.\n- Take Fig. 0's wired-household idea from the graft as a small figure on the Family page, not on Home."
+     },
+     {
+      "id": "t3-figure-graft",
+      "suggestion": "Keep Fig. 0 (it draws real data and says who Vera serves), the heather kid ink and the one-ink-for-rail-dates rule. Fix:\n- Set the S/A/M/T monograms at text size in bone, not 22px letters at the glass edge.\n- Make the wire geometry an SVG with viewBox so it scales past five members.\n- Give the box back its width: put Fig. 0 below the box on narrower widths, or limit it to 360px.\n- Ideas: drop the '#n' ids from the Nearest/Furthest lines to match Home."
+     },
+     {
+      "id": "t3-figure-mut",
+      "suggestion": "Keep the tracking per size and the small-cap legends; they are worth folding into the refine. Fix:\n- Raise the section heads to 400 weight (light only for the page h1), so section heads keep their mass on the squint.\n- Keep 13px as the smallest desktop text."
+     },
+     {
+      "id": "t3-console-graft",
+      "suggestion": "Keep the one day numeral across rows, rings and month cells, the bone route and the pilot-lamp ticks. Fix:\n- Remove one level of bay: lists that are only read (To do, Lately added) should sit on the ground under a rule, not in boxes.\n- Use one face for the numeral in the ring and in the row.\n- Status: put the working/off/needs-a-look readout in one row beside the h1, and move the meter under it so the head isn't stacked.\n- Fill the empty right side of the Coming up rows with the relative date, or narrow the bay."
+     },
+     {
+      "id": "t3-console-refine",
+      "suggestion": "Keep the two-line caution and the readout rail. Put the next plan back as row 1 in Coming up (lit), so the list and the route agree. Make the route arcs 1.5px with the flown part dotted. Drop the To do tube when nothing is dated ahead."
+     },
+     {
+      "id": "t3-switchboard-refine",
+      "suggestion": "Keep the two-tier sommaire and the household counts strip, which is the best Home map. Fix:\n- Make the Home glass larger, with the scope inside it, so the phosphor has a real screen on Home.\n- Widen the inner-page rack's list column, or put the tube above the list on Plans and To do so short lists don't float.\n- Graft the graft's '\u2192 Plans / \u2192 To do' patch keys onto the starters, and its Row 0 as an optional single line, not wrapping."
+     },
+     {
+      "id": "t3-switchboard-graft",
+      "suggestion": "Keep the patch keys and Row 0. Remove the dashed separated-block caps (one solid 2px cap is enough), and cut Row 0 to one line at 1280. Bring back grounded section inks in the frames to lower the green share."
+     }
+    ],
+    "titles": "The best title is \"Tell Vera what to plan.\" (figure refine and mutant). It names who hears you and gives the job as one verb at the end of the line, where the glow lands, and it is an imperative invitation that fits a phone. Close behind is \"Tell Vera our plan(s).\" (console graft, figure graft): 'our' is warm, but \"our plans\" reads slightly like a report rather than an invitation. \"What's our plan?\" and \"What are we planning?\" work as kitchen-table questions but are narrower, and they could be read as asking the app to show a plan. \"What's the plan?\" (switchboard) reads most like 'show me the plan', the opposite of telling her. \"Anything to plan?\" fails: it invites a yes/no and doesn't say Vera does the planning."
+   },
+   {
+    "lens": "interaction",
+    "notes": "Across the heat the basics are solved: every candidate has zero targets under 44px except Settled Light (one, on Home and on the phone), and the Tab order is identical to today's (skip, bar, box, select, mic, Send). So the lens comes down to sight lines and how much a figure helps rather than repeats. What worked: Waypoint Lamps' shared day numeral (from the main tournament's date-led rows) is the strongest graft, because it ties figure to list with no legend. Patched Through's destination tags on the starters are the best wording-level comprehension gain. Wired Household's one-line Caution strip beats every two-panel setup block. What did not work: Wired Household's S/A/M/T wiring figure is a cryptic decoration in the first screen. Waypoint Lamps' round checkboxes trade a clear control for a motif. Drawn's landscape behind the input and its decorative legs mislead. Squared's square lamps blur into square checkboxes. Figure Ground's chat sequence-diagram panel and Fig. 1 date grid still duplicate the list beside them, which costs width without adding information. The yardsticks: today's page is far behind on targets and title, and Desk Terminal, Joined, sits about level with the best of this heat; Waypoint Lamps edges past it on comprehension.",
+    "top4": [
+     "t3-console-graft",
+     "t3-figure-refine",
+     "t3-switchboard-refine",
+     "t3-switchboard-graft"
+    ],
+    "promise": [
+     "t3-console-graft",
+     "t3-switchboard-graft",
+     "t3-figure-graft"
+    ],
+    "scores": [
+     {
+      "id": "00-current",
+      "score": 4,
+      "why": "Clear enough to read, but 42 targets on Home are under 44px, the starters are small pills, and the title 'What's on your mind?' doesn't say what the box is for. On the squint the Next up tube outweighs the box."
+     },
+     {
+      "id": "r13-idea-1",
+      "score": 7,
+      "why": "No small targets, and it reads tube, then box, then a dense right column. The tube sits above the question, so the eye lands on the next plan before the action, and the right column is dense at a glance."
+     },
+     {
+      "id": "t2-figure-refine",
+      "score": 7,
+      "why": "The eye goes title, box, Send. The rail with its lit NOW reads at once, and the phone's keys ('3 more plans / 4 to do / 3 late') are good. The Fig. 1 grid repeats dates the rows already show."
+     },
+     {
+      "id": "t3-figure-refine",
+      "score": 7.5,
+      "why": "The best sight line in its lineage: a big imperative title, one box, a lit Send, then Coming up and To do hung from the same lit NOW. To do's NOW tick under the late rows shows at once what is overdue. The left grid still spends 300px repeating the dates, the chat's sequence-diagram panel is a small duplicate of the thread, and the next plan appears twice (in the tube and in row 1)."
+     },
+     {
+      "id": "t3-figure-graft",
+      "score": 6.5,
+      "why": "The one-line Caution strip and the single-column Lately added are the clearest in the heat. But Fig. 0 is hard to read: the single letters S/A/M/T and 'Alex Sun 19:52' need the caption to decode. On the phone the figure takes the first screen's second half where the next plan used to be."
+     },
+     {
+      "id": "t3-figure-mut",
+      "score": 6.5,
+      "why": "The interaction is the parent's. The light sentence-case heads lose mass on the squint, so the semibold rows and the green key pull harder than the section heads, and the page is taller for it."
+     },
+     {
+      "id": "t2-console-graft",
+      "score": 7,
+      "why": "The readout rail is excellent: Today, Plans, To do, Late and Ideas read in one glance. Icon-only Send on the phone, and on desktop the tube to the left of the question pulls the eye before the box."
+     },
+     {
+      "id": "t3-console-refine",
+      "score": 7,
+      "why": "The box now leads, the leader readout rail is clear, and the two-line caution names the next step as a link. But the next plan has been taken out of the list: the rows are numbered 1-3 from Mount St. Helens while the route's 'Next' stop has no row, so the numbering and the route disagree. The flight plan also leaves a large empty strip beside the list."
+     },
+     {
+      "id": "t3-console-graft",
+      "score": 8,
+      "why": "The best comprehension device in the heat: one light day numeral (4, 9, 17, 24) sits in the route's ring and leads the row, so the figure and the list read as one thing without a legend. The placard under the tube says how to read it, the readout rail and the one-line caution are clean, and the lit Next row stands out. Its fault is the controls: every checkbox is a round 'pilot lamp', so ticked reads like a radio, and late rows show an amber minus in a circle that reads like 'remove' or 'disabled'."
+     },
+     {
+      "id": "t3-console-mut",
+      "score": 6,
+      "why": "The landscape sits behind the text you type. Its violet legs read as data that doesn't match the real flight plan below. Send is icon-only on the phone. The kind badges help scanning on Ideas, but the rest is the parent."
+     },
+     {
+      "id": "t2-switchboard-graft",
+      "score": 6.5,
+      "why": "Home as a map of the pages is quick to scan. The VT323 'Anything to plan?' reads as yes/no, the phone puts the radar into the first screen, and most inner pages leave a large empty field below a short table."
+     },
+     {
+      "id": "t3-switchboard-refine",
+      "score": 7.5,
+      "why": "The most findable Home: every page is a cell with its count, and Plans and To do are a step larger. On the phone the starters are full-width, with setup and Plans on the first screen. The tube on To do says 'Nothing dated after the late ones', which tells you little. Plans has no visible month name in the main area. One target on Home is still under 44px."
+     },
+     {
+      "id": "t3-switchboard-graft",
+      "score": 7,
+      "why": "Each starter is labelled with where it lands (What should we do this weekend? \u2192 Plans; Remind me to\u2026 \u2192 To do; We should try\u2026 \u2192 Ideas), the clearest 'what will this do' signal anywhere in the tour. But the radar inflates the glass, which pushes the starters below a big tube on the phone, and the household rack ends in a hatched empty cell that reads as a broken control. Row 0 wraps with a dangling separator."
+     },
+     {
+      "id": "t3-switchboard-mut",
+      "score": 6,
+      "why": "Interaction is the parent's, with fainter leaders, which are harder to follow on a dim screen. Square lamps and LEDs are less distinct from the square checkboxes, so state reads a little less clearly."
+     }
+    ],
+    "fixes": [
+     {
+      "id": "t3-console-graft",
+      "suggestion": "Keep the day numeral as the shared key between ring and row (Home, Plans month), the placard under each tube, the readout rail and the one-line caution. Fix the controls: go back to a square checkbox well (a lamp may glow inside it when ticked) so a tick never reads as a radio. Draw late rows' boxes as an empty square with the amber 3px row edge, not an amber minus in a circle, which reads as 'remove'. Make the afterglow visible (it barely shows in the details strip). On the phone, bring the readout rail up into the first screen, for example by folding the tube's placard there."
+     },
+     {
+      "id": "t3-console-refine",
+      "suggestion": "Keep the box-first greeting with the label inside the frame and the two-line caution. Put the next plan back into the Coming up list as row 'Next' (lit) and number the route's rings to match the rows, so the figure and the list agree. Use the empty right of the flight plan for the Google note at row height rather than a floating column."
+     },
+     {
+      "id": "t3-figure-refine",
+      "suggestion": "Keep the imperative title, the single rail with one lit NOW across Coming up and To do, the lamp grammar and the phone's key row. Give the 300px Fig. 1 grid a job the rows don't already do (a week density or free-weekend gaps), or narrow it to the rail itself so the list gets the width. Drop the duplicate next-plan line (tube or row 1, not both). In the chat, fold the sequence-diagram panel into the thread's own gutter rather than a separate mini-copy."
+     },
+     {
+      "id": "t3-figure-graft",
+      "suggestion": "Keep the one-line Caution strip and the mark-links-to-its-row-and-lands-lit rule. Replace Fig. 0's single letters with names (or monogram plus name) and label the lit wire 'last spoke: Alex, 19:52'. On the phone, put the figure below Coming up rather than in the first screen."
+     },
+     {
+      "id": "t3-switchboard-refine",
+      "suggestion": "Keep the sommaire Home (cells with counts, Plans and To do larger) and the full-width phone starters. Graft in Patched Through's destination tags on the starters (\u2192 Plans / \u2192 To do / \u2192 Ideas). Show the month name in Plans' main area. Make To do's tube name the next task or the oldest late one rather than 'Nothing dated after the late ones'. Find and fix the last sub-44px target on Home."
+     },
+     {
+      "id": "t3-switchboard-graft",
+      "suggestion": "Keep the starters' destination tags and the jack lighting on hover. Take the radar off the greeting glass (or shrink it to a lamp) so the title and box lead and the phone's first screen reaches the starters. Remove the hatched empty cell in the household rack. Keep Row 0 to one line at 1280, cutting the trailing separator."
+     }
+    ],
+    "titles": "The best is 'Tell Vera what to plan.' (Figure Ground refine and mutant). It is an imperative invitation that names who hears you and the job in one verb, and the lit word falls where the eye stops. It reads as an instruction to type, which is what a box label should be. 'Tell Vera our plan.' and 'Tell Vera our plans.' come next: warm and the family's own voice, but they presume a plan already exists, and 'our plans' reads a little like 'report our plans'. 'What's our plan?' and 'What's the plan?' fail as labels: they ask the machine to show you the plan, which is the opposite of the box's job, and in the switchboard's VT323 the dim 'What's the' leaves only 'plan?' readable at a glance. 'What are we planning?' invites an answer and fits the job but is longer on a phone. 'Anything to plan?' reads as yes/no. Best one or two: 'Tell Vera what to plan.', then 'Tell Vera our plan.'"
+   },
+   {
+    "lens": "type",
+    "notes": "Through the type lens, the Magazine mutant is the clearest advance. It changes the page's character everywhere (Home, Status, To do, Plans) with no change of colour, which answers the owner's 'reflect more of the page content'. It also shows that the Figure Ground lineage's manual idea wants a real type system, not more figures. Grafts that worked: console-graft's day numeral (a typographic feature carried across the route, the rows and the month), switchboard-graft's destination subscripts under the patch keys, and figure-graft's one-line Caution sentence. Grafts that did not: figure-graft's Fig. 0, whose spaced monograms and crowded VT323 compete with the title; and the switchboard's 3-digit page numbers, kept in two variants, which add noise before every head. VT323 titles in the switchboard line still mishandle the apostrophe. Across all three lineages, leaders with right-aligned tabular figures are now a shared and successful convention, worth adopting as a standard.",
+    "top4": [
+     "t3-figure-mut",
+     "t3-figure-refine",
+     "t3-console-graft",
+     "t3-console-refine"
+    ],
+    "promise": [
+     "t3-figure-mut",
+     "t3-console-graft",
+     "t3-switchboard-refine"
+    ],
+    "scores": [
+     {
+      "id": "00-current",
+      "score": 5,
+      "why": "Small mono-heavy body, tracked capitals on the date and the NEXT UP label, ISO dates in To do, a timid 15px question. Legible, but it has no type scale to speak of."
+     },
+     {
+      "id": "r13-idea-1",
+      "score": 6.5,
+      "why": "A consistent terminal type system with tabular mono columns that line up, but mono and tracked caps everywhere make it dense and samey. The greeting question is small, so there is little hierarchy between the title, the heads and the rows."
+     },
+     {
+      "id": "t2-figure-refine",
+      "score": 7,
+      "why": "Condensed semibold heads over Plex rows, mono rail dates that align, a 52px title with its lit word. Solid, but the section heads and row titles sit close in weight."
+     },
+     {
+      "id": "t3-figure-refine",
+      "score": 7.5,
+      "why": "A clear scale: a 52px condensed title, 22px condensed heads, 15px semibold rows. Rail dates are split as a dim weekday and a mono date, so the figures line up across Coming up. Fig. captions are set like a manual's, and the footer has a proper measure. The tube's VT323 'Next in 2 days' pairs well with the rest."
+     },
+     {
+      "id": "t3-figure-graft",
+      "score": 7,
+      "why": "Keeps Relit Rails' type system and adds a good one-line Caution line with a sensible measure. Fig. 0's large spaced S A M T monograms and its crowded VT323 terminals fight the calm manual, and one long Lately added column loses the two-column rhythm."
+     },
+     {
+      "id": "t3-figure-mut",
+      "score": 8.5,
+      "why": "The best typesetting in the heat. Light sentence-case display heads ('Status', 'What is working', 'Coming up') close up as they grow, small-cap labels (VERA \u00b7 FRIDAY 2 OCTOBER, WHO ANSWERS, FIG. 1) are the only capitals, and the Status tallies are set as figure-plus-small-unit ('3 of 4', '$0.00 of $2.00'), which is genuinely magazine-grade. The hierarchy changes the look of every page, not a corner. Risks: light 30px heads are thin on 1x screens, and the jump from a 36px head to 15px rows is steep."
+     },
+     {
+      "id": "t2-console-graft",
+      "score": 6.5,
+      "why": "A good readout strip of tabular figures, but the title is buried mid-box and the label sizes are many and close together."
+     },
+     {
+      "id": "t3-console-refine",
+      "score": 7,
+      "why": "The readout rail is the best-set figure strip here: label, dotted leader, right-aligned tabular numeral. The box title is 36px condensed and the rail dates are mono columns. Lately added's inline small kind words beside bold titles make a ragged baseline, and the italic tagline in the footer is a nice touch."
+     },
+     {
+      "id": "t3-console-graft",
+      "score": 7.5,
+      "why": "The day numeral as one light figure (a large '4' with 'Oct/Sun' stacked small) is real calendar typesetting, and it repeats on the route, the rows and the month. The leaders and the two-line Lately added stacks keep good rhythm, and To do's figures are aligned. Minus: the ring numerals are mono 500 while the row numerals are sans 300, two faces for one mark."
+     },
+     {
+      "id": "t3-console-mut",
+      "score": 6,
+      "why": "Type is the parent's; the drawn hills sit under the field, so typed words run over a picture, and the 22px kind badges push up the card line-height against 13px labels."
+     },
+     {
+      "id": "t2-switchboard-graft",
+      "score": 6.5,
+      "why": "A contents-page set of leaders and figures, but the VT323 'Anything to plan?' is small for a title, and the 3-digit page numbers add clutter in front of every head."
+     },
+     {
+      "id": "t3-switchboard-refine",
+      "score": 7,
+      "why": "The household rack reads like a book's contents: head, dotted leader, a large light figure with its unit word in small ('4 coming', '12 saved'). The day numerals stack weekday and month cleanly. Minus: VT323 gives the apostrophe in 'What's' a whole cell, the title sits small on the glass, and To do leaves dead space."
+     },
+     {
+      "id": "t3-switchboard-graft",
+      "score": 6.5,
+      "why": "Patch keys with a small destination line under each ('\u2192 Plans') are a neat typographic idea, but 'What's the' is set dim in VT323 at low contrast, the apostrophe still gaps, Ideas has about 75px of empty column, and the copyright is set in tiny mono."
+     },
+     {
+      "id": "t3-switchboard-mut",
+      "score": 6.5,
+      "why": "Swapping in the true Plex Sans Condensed cut where the parent faked width is a real if invisible improvement, and VT323 sets 'Anything to plan?' cleanly. Faint leaders and the 3-digit page numbers keep it busy."
+     }
+    ],
+    "fixes": [
+     {
+      "id": "t3-figure-mut",
+      "suggestion": "Keep the light sentence-case display heads, the small caps as the only capitals, and the figure-plus-small-unit tallies on Status; make that the lineage's type system. Fix: bring the section heads down one step (Coming up and To do 36px down to about 30px, with settings sub-heads at 300 \u2192 350/400 weight) so the drop to the 15px rows is a scale, not a cliff. Raise the 12px small-cap labels to 12.5\u201313px, or draw them from Plex's real small-cap-like 500 weight, so they hold on 1x screens. Give the light heads a touch more mass on the squint with 400 below 32px. Carry the '3 of 4' tally treatment into Home's To do head ('4 \u00b7 3 late') and Plans' week counts."
+     },
+     {
+      "id": "t3-figure-refine",
+      "suggestion": "Keep the 52px condensed title with 'plan' lit at the line's end, the weekday/date split on the rails and the Fig. captions. Graft the mutant's small caps for NOW, FIG. and the eyebrow labels in place of the mixed 'Now'/'NOW' settings. Make To do's NOW label match Coming up's (the same size and case). Put the Plans week ranges on the same mono tabular figures as Home's rail."
+     },
+     {
+      "id": "t3-figure-graft",
+      "suggestion": "Keep the one-line Caution sentence and the 'Fig. 0' caption. Redraw Fig. 0's monograms at row-label size rather than 28px spaced capitals, and give the terminals one line each with consistent VT323 sizes. Bring Lately added back to two columns so its measure and rhythm match the sections above."
+     },
+     {
+      "id": "t3-console-graft",
+      "suggestion": "Keep the light day numeral with stacked month and weekday everywhere: it is the best date setting in the heat. Set the ring numerals in the same Plex Sans (tabular, 500) so one mark has one face. Right-align the 'in N days' column to a tab stop near the titles to close the gap after short titles. Keep the readout leaders."
+     },
+     {
+      "id": "t3-console-refine",
+      "suggestion": "Keep the readout rail (label, leader, tabular figure) and the in-box 36px title. In Lately added, put the kind word on a second line or in a fixed column, so the bold title and the 13px kind do not share a ragged baseline. Adopt the graft's day-numeral setting for the Coming up rows instead of the mono 'Fri 9 Oct' string."
+     },
+     {
+      "id": "t3-switchboard-refine",
+      "suggestion": "Keep the contents-page leaders with large light figures and small unit words, and the stacked day numerals. Set the apostrophe in 'What's' in Plex, or use a VT323-safe title, and set the glass title at least 40px so it leads the page. Close To do's empty foot by letting the cell end with its rows. Darken the leaders a step so they read on a phone."
+     },
+     {
+      "id": "t3-switchboard-graft",
+      "suggestion": "Keep the patch keys with their small destination lines. Set the whole title at full ink, with only 'plan' lit and 'What's the' not dimmed below body contrast. Fix the Row 0 wrap by shortening it or letting it break at a phrase rather than leaving a separator dot at the end of the first line. Set the copyright in the body sans, not tiny mono."
+     }
+    ],
+    "titles": "The best is 'Tell Vera what to plan.' (figure refine and mutant). It is an imperative sentence that names who hears you and gives the job in one verb, the lit word lands at the end where the eye stops, and it sets well both as a 52px condensed semibold title and as a 64px light one. Next is 'What's our plan?' (console refine): short, the family's own 'our', one phone line, and the lit word last. 'What are we planning?' (console mut) is warm but longer, and 'planning' is a heavier word to glow. 'Tell Vera our plan.' and 'Tell Vera our plans.' read slightly off ('tell her our plans' presumes a plan already exists). 'What's the plan?' reads as a request to be shown the plan rather than an invitation to tell her, and in VT323 its apostrophe takes a whole cell. 'Anything to plan?' is a yes/no question and the weakest invitation."
+   },
+   {
+    "lens": "usability",
+    "notes": "Through the usability lens the heat splits on whether the signature graphic carries a task. Where it does, the page is easier than today's. Figure Refine's NOW rail on To do turns 'what is overdue' into one glance. Console's readout strip answers 'how are we doing' in one row. Switchboard's Home reaches every page with its count. Where the graphic is only a picture, it costs space or clarity: Fig. 0's S A M T letters, the console mutant's hills behind the text, and the arcs band above Coming up. Every candidate clears the 44px target floor except one stray target on switchboard-refine's Home (today's page has 42 small ones), and every candidate is at 12px or more, with the figure lineage at 13-14px. Grafts that worked: switchboard-graft's starter keys that say where they land; console-graft's leading day numeral, shared by the row, the ring and the month cell; figure-graft's two-line Caution strip, which is clearer than a banner. Grafts that did not: console-graft's pilot-lamp checkboxes, which break one-control-one-look; the To do ticks and the form's 'Needs booking' read as radio buttons or status lights. Also figure-graft's Fig. 0, which uses the phone's whole second screen to show initials, and switchboard-graft's dim 'What's the'. Removals: switchboard-refine hides two starters on the phone, a small real loss for a family that uses 'Remind me to\u2026' from Home. Console-refine leaves the next plan out of Coming up's list, which keeps it only in the tube. Figure-refine's Late tab works only once the route supports it.",
+    "top4": [
+     "t3-figure-refine",
+     "t3-console-refine",
+     "t3-switchboard-refine",
+     "t2-figure-refine"
+    ],
+    "promise": [
+     "t3-figure-refine",
+     "t3-switchboard-refine",
+     "t3-console-graft"
+    ],
+    "scores": [
+     {
+      "id": "00-current",
+      "score": 5,
+      "why": "Everything is there, but 42 targets on Home are under 44px, text goes down to 11.5px, To do is a grid of cards where 'overdue' is an ISO date in small grey type, and Home's order (setup, then wishes, then plans low down) hides the week."
+     },
+     {
+      "id": "r13-idea-1",
+      "score": 7,
+      "why": "No small targets, 12px floor, a clear desk layout with the box first and To do as Who/Due rows. Its narrow left console makes the chat's kids' conversations and To do's filters cramped, and the mono titles are harder to read on a phone."
+     },
+     {
+      "id": "t2-figure-refine",
+      "score": 7,
+      "why": "Railed lists are easy to read (date, title, time, 'in 2 days'), late is amber with words, and text is 13px or larger. The Next tube on Home repeats the first rail row, and the figure column takes width on every page."
+     },
+     {
+      "id": "t3-figure-refine",
+      "score": 8,
+      "why": "The easiest walk-through in the heat. 'Tell Vera what to plan.' sits over a wide box, and Coming up and To do each hang from one rail with a lit NOW, so overdue is simply 'above the line, amber, says Late'. To do gains a Late 3 tab, setup is a numbered checklist, settings list their state, and the text floor is the heat's highest (13-14px). The only costs are the figure gutter's width and the Late tab, which the route still ignores."
+     },
+     {
+      "id": "t3-figure-graft",
+      "score": 6.5,
+      "why": "It keeps the railed lists and adds a two-line Caution strip. But Fig. 0's S A M T letters make no sense to a first-timer, take the whole first phone screen after the box, and duplicate counts that are said again below."
+     },
+     {
+      "id": "t3-figure-mut",
+      "score": 6.5,
+      "why": "Same tasks and controls as its parent, but light headings lose their pull on a dim phone. The small-cap labels at 12px (KIND, DRIVE, ABOUT) are harder to scan than the parent's, and the taller heads push the lists down."
+     },
+     {
+      "id": "t2-console-graft",
+      "score": 6.5,
+      "why": "The readout strip gives the counts at a glance, but its labels are small, the flight-plan arcs are decoration a family must learn, and the caution banner is a single dense line."
+     },
+     {
+      "id": "t3-console-refine",
+      "score": 7.5,
+      "why": "The box comes first and the readout strip (Today, Plans 4, To do 4, Late 3, Ideas 12) answers 'how are we doing' at once. The caution now reads in two plain lines with the next step as a link, and To do keeps plain square checkboxes. The weakness: Coming up's list starts at the second plan, so the next plan lives only in the tube, and the arcs above the rows take space without adding a task."
+     },
+     {
+      "id": "t3-console-graft",
+      "score": 6.5,
+      "why": "Leading each Coming up row with a big day numeral is the clearest date treatment in the heat. But the ticks became round 'pilot lamps': To do's checkboxes and the form's 'Needs booking' box look like radio buttons or status lights, and late ones show a dash. A first-timer will not know they can tick them, which breaks one control, one look."
+     },
+     {
+      "id": "t3-console-mut",
+      "score": 6,
+      "why": "The parent's usability is unchanged on most pages, but the box now has hills drawn behind what you type. On the phone the box is taller and Send is icon-only, and the decorative violet legs over the box can be misread as plans."
+     },
+     {
+      "id": "t2-switchboard-graft",
+      "score": 6.5,
+      "why": "Home as a map of every page with counts is a fast way in, but the green-on-glass VT323 question and box are lower contrast than plain type, and the side rack crowds the inner pages."
+     },
+     {
+      "id": "t3-switchboard-refine",
+      "score": 7.5,
+      "why": "Home is a real map: Plans with day numerals and 'in 2 days', To do as Who/Due rows, Ideas with Restaurants \u00b7 2 to try, and a household row reaching Wishes, Memory, Family, Status and Settings, each with its count. Settings sorts 'Needs a look' to the top. The weaknesses: the VT323 'What's the plan?' reads less easily than plain type, the phone hides two of the three starters, and To do leaves empty graphite."
+     },
+     {
+      "id": "t3-switchboard-graft",
+      "score": 6.5,
+      "why": "Starter keys that say where each lands (\u2192 Plans, \u2192 To do) teach the app. But 'What's the' is dim on the glass, an unexplained hatched empty box sits beside Status, and Row 0 on Ideas and To do wraps and ends a line on a separator."
+     },
+     {
+      "id": "t3-switchboard-mut",
+      "score": 6,
+      "why": "Same tasks as its parent, but the leaders are back at near-invisible graphite and the square lamps read more like checkboxes than status lights. It is a near-duplicate with a small legibility loss."
+     }
+    ],
+    "fixes": [
+     {
+      "id": "t3-figure-refine",
+      "suggestion": "KEEP the one-rail-with-NOW rule on Home's Coming up, Home's To do and the To do page (it is what makes overdue obvious), the Late 3 tab, the numbered setup list and the 13-14px text floor. FIX: ship the Late filter for real (add a 'late' status to routes.tasks), or the tab will not work. On Home, drop or shrink the 'Next in 2 days' tube to one line, since the rail's lit stop 1 already says it, and give the width back to the box. On To do and Ideas at 1280, narrow the figure gutter (Fig. 1 legend plus counters) to about 220px, or move it above the list on the phone, so the list's Edit buttons are not pushed to the edge. On Plans Month, close the 90px gap beside the gauge."
+     },
+     {
+      "id": "t3-console-refine",
+      "suggestion": "KEEP the readout strip, the box-first greeting, the two-line caution with its link, and the plain square checkboxes. FIX: make each readout cell a link (Plans 4 to /plans, Late 3 to To do filtered late, Ideas 12 to /ideas) with a 44px target. Put the next plan back as row 1 of Coming up's list (marked 'Next'), so the list is complete without the tube. Shorten the arcs band to about 60px, or label each stop with the plan's name on hover and focus, so it is a way in and not only decoration. On the phone, keep the readout cells on the first screen."
+     },
+     {
+      "id": "t3-switchboard-refine",
+      "suggestion": "KEEP Home as the map (each page a panel with a count and a link), To do's Who/Due columns, Settings' 'Needs a look' first, and the household row. FIX: set the question in Plex at full bone or white with only 'plan' in VT323 green, since VT323 at 2.8rem is harder to read than plain type for tired eyes. On the phone, show all three starters as a wrapping row instead of hiding two. Let To do's panel shrink to its rows, or fill the gap with 'Next due', so no empty graphite reads as 'nothing loaded'. Find and fix the one target under 44px on Home."
+     },
+     {
+      "id": "t3-console-graft",
+      "suggestion": "KEEP the big day numeral that leads each Coming up row and matches the waypoint ring and the month cell: it is the best date scan in the heat. Keep the crew filter on To do. FIX: put back square checkboxes for ticking. A round pilot lamp may sit beside a row as state, but the thing you press to mark done must look like a box, here and on the form's 'Needs booking' and 'Send where I am'. Make the crew filter a real owner parameter, so the counts follow it."
+     },
+     {
+      "id": "t3-figure-graft",
+      "suggestion": "KEEP the two-line Caution strip, and the rule that every figure mark links to its row, which lands lit. FIX Fig. 0: write the full names (Sam, Alex, Maya, Theo), not single letters, and on the phone collapse it to one line ('Alex spoke last \u00b7 4 plans \u00b7 3 late'), so the box and the lists are not pushed below a picture. Make sure its terminals ('4 to do \u00b7 3 late') are 44px links. Return the title to 'Tell Vera what to plan.'"
+     },
+     {
+      "id": "t3-switchboard-graft",
+      "suggestion": "KEEP the starter keys that name where they land (\u2192 Plans, \u2192 To do, \u2192 Ideas): they teach the app's map at the point of use, so carry them into the refine. FIX: raise 'What's the' to full-contrast ink, remove the hatched empty box beside Status, and keep Row 0 to one line or break it without a trailing separator."
+     }
+    ],
+    "titles": "Best: 'Tell Vera what to plan.' (figure refine and mutant). It is an imperative a first-timer can act on: it names who hears you and the job, and it reads as an instruction for the box beneath it, with the lit word last. Second: 'What's our plan?' (console refine). It is warm, in the family's 'our', and short on a phone, but as a question it can read as 'show me our plan', which makes it slightly less clear that you are meant to type. 'Tell Vera our plan.' (console graft) is clear but a little stiff. 'Tell Vera our plans.' (figure graft) presumes the plans already exist and suits ideas and reminders less well. 'What are we planning?' (console mutant) is fine but longer, and asks rather than invites. 'What's the plan?' (switchboard refine and graft) is the weakest for a box you write into: it reads as a request for information, the skeptic's 'show me the plan', and in dim VT323 it is also the hardest to read. 'Anything to plan?' (switchboard mutant) is a yes/no question, which invites 'no'."
+   },
+   {
+    "lens": "skeptic",
+    "notes": "Grafts that worked: the waypoint day numeral in Waypoint Lamps unifies Home, the route and the month, and is the best system move in the heat. Fig. 0 in Wired Household finally draws the household and gives Home a figure from its own data. The patch keys in Patched Through tie each starter to its page. Grafts that failed: Waypoint Lamps' tick lamps (an amber minus reads as delete or warning), the placards (decoding text where the design should be self-evident), Patched Through's dashed block caps and dead hatched cell, and Wired Household's green '3 late' chip, which contradicts its own colour rule. Every lineage still reaches for inverted-green chips (Today, Working, 3 late): glare and an editor-theme tic that should go everywhere. Switchboard's graphite panels keep a greyed ground, and its green share stays high (58\u201373%). Its inner pages waste the rack, the chat worst. The dice mutants of this round are near-duplicates (Squared, Magazine) or clip art (Drawn). Relighting the tubes worked best in figure refine and console graft, where the light sits on the monitors and the next item, not across the page.",
+    "top4": [
+     "t3-console-graft",
+     "t3-figure-refine",
+     "t3-figure-graft",
+     "t3-console-refine"
+    ],
+    "promise": [
+     "t3-figure-graft",
+     "t3-console-graft",
+     "t3-switchboard-graft"
+    ],
+    "scores": [
+     {
+      "id": "00-current",
+      "score": 3,
+      "why": "Green on black everywhere, a green-tinted ground and green chips on everything; it is the Matrix the family named, with no grounded colour to rest the eye."
+     },
+     {
+      "id": "r13-idea-1",
+      "score": 6,
+      "why": "A calm, coherent desk with a real tube, but its Home is cramped panels of small mono type, and Plans and To do are flat tables, so it reads as an editor theme more than a page."
+     },
+     {
+      "id": "t2-figure-refine",
+      "score": 6,
+      "why": "The rails and the bone-on-green-black type are sound. The tube is a duplicate Next up, and the figure panels leave dead grid space beside their rows."
+     },
+     {
+      "id": "t3-figure-refine",
+      "score": 7,
+      "why": "The best-set page in the heat: bone display heads, a lit NOW rail that touches its rows, real tubes on Home, Plans and Status, and amber kept to late. Faults: Fig. 1's grid box is half empty above the rail, To do's 'Now' sits at a different height from Coming up's, and on Plans the gauge and the Next line say the same thing twice."
+     },
+     {
+      "id": "t3-figure-graft",
+      "score": 6.5,
+      "why": "Fig. 0 is the boldest new picture here and it carries real data, but its bare S/A/M/T initials are cryptic. '3 late' is lit as an inverted green chip, which breaks the lineage's own amber-means-late rule. The amber 'Caution' ring reads as a warning costume over a routine setup step."
+     },
+     {
+      "id": "t3-figure-mut",
+      "score": 5.5,
+      "why": "The light sentence-case heads look elegant on the sheet, but they lose mass on the squint, and the semibold rows and green key now outweigh the heads. Beyond type it is a near-duplicate of its parent, so it gives little that the owner's 'reflect the page content' test can see."
+     },
+     {
+      "id": "t2-console-graft",
+      "score": 6,
+      "why": "The flight plan and the readout strip are a real structure, but the route reads violet and decorative, and the box competes with the tube for the lead."
+     },
+     {
+      "id": "t3-console-refine",
+      "score": 6.5,
+      "why": "The leader readout rail is clear and the slate-cyan route is calm. The list skips the next plan (rows 1\u20133 start at the 9th, while the Next ring has no number), which is a mismatch a reader will trip on. The inverted-green 'Fri 2 Oct' chip is glare, and the amber setup slab is louder than it needs to be."
+     },
+     {
+      "id": "t3-console-graft",
+      "score": 7,
+      "why": "The most coherent system in the heat. One day numeral runs through the row, the waypoint ring and the month cell. The route is bone on slate, and every page has one tube with a placard. Faults: the tick lamps show an amber minus that reads as 'remove' or a warning rather than a checkbox. Status's inverted-green 'Working' tags are an editor-theme tic. The placards over-explain, and the light day numerals beside mono ring numerals make two faces for one mark."
+     },
+     {
+      "id": "t3-console-mut",
+      "score": 4.5,
+      "why": "Clip art: a hard-coded Pacific Northwest landscape behind the words of the box, and violet decoy legs that look like data but match nothing. The other pages are near-duplicates of the parent."
+     },
+     {
+      "id": "t2-switchboard-graft",
+      "score": 5,
+      "why": "The videotex map is a real idea, but the panels are grey graphite (a greyed ground), the dim VT323 is muddy, and green is 71% of the colour."
+     },
+     {
+      "id": "t3-switchboard-refine",
+      "score": 6,
+      "why": "Home is the tidiest map in the lineage: Plans gets its own radar, To do's rows are clean, and the household strip at the foot is good. The inner pages waste the rack: the chat is a narrow column in a huge empty pane, and To do's list fills only a quarter of the screen. The graphite panels still tint the ground grey, and amber outlines on the late checkboxes shout."
+     },
+     {
+      "id": "t3-switchboard-graft",
+      "score": 5,
+      "why": "Keying each starter to the page it lands on is a good idea. But 'What's the' is set in dim green VT323 that smears, there is a hatched dead cell in the household rack, the dashed separated-block caps add noise everywhere, and Ideas leaves an empty well."
+     },
+     {
+      "id": "t3-switchboard-mut",
+      "score": 4,
+      "why": "A near-duplicate of Switchboard, Patched: squared lamps are invisible at page scale, it is greener than its parent (73%), and its leaders are faint again."
+     }
+    ],
+    "fixes": [
+     {
+      "id": "t3-console-graft",
+      "suggestion": "Keep the one day numeral (row, waypoint ring, month cell), the bone route on slate, the one-tube-per-page grammar and the amber 3px late edge. Fix To do and Home's ticks: draw an empty square or ring that fills on done, with lateness carried by the row edge and the words, never by an amber minus inside the tick. On Status, replace the inverted-green 'Working' and 'off' tags with a lamp and plain dim words. Cut each placard to one short line, or fold it into the tube's caption. Set the ring numerals in the same face as the row numerals. Fill the empty ground right of Coming up's relative column, or narrow the bay."
+     },
+     {
+      "id": "t3-figure-refine",
+      "suggestion": "Keep the bone display heads, 'Tell Vera what to plan.', the lit NOW rail touching its rows, and the round tubes. Fix Fig. 1 on Home: crop the grid box to the rows, since its empty upper third reads as a blank panel. Put To do's 'Now' at the same height as Coming up's NOW, or drop one of them. On Plans, either drop the 'Next' line or make the gauge name the plan, and close the ~90px gap beside the gauge. Join the month's NOW across Mon\u2013Thu so it does not read as a broken trace."
+     },
+     {
+      "id": "t3-figure-graft",
+      "suggestion": "Keep Fig. 0 (the household wired to Vera, the lit wire of whoever spoke last, terminals with live counts); it is the lineage's best new picture. Write the members' names, or monogram plus name, instead of bare S/A/M/T. Make '3 late' amber, not inverted green: green is live, amber is late. Replace the amber 'Caution' ring on the setup line with the refine's numbered steps, since a routine step should not look like an alarm. Keep one NOW per screen."
+     },
+     {
+      "id": "t3-console-refine",
+      "suggestion": "Keep the leader readout rail and the slate-cyan route. Number the next plan as 1 and list it in the rows as well as in the tube (or drop the tube's duplicate), so the rings and the rows agree. Make 'Today' plain bone with a lit dot, not an inverted green chip. Make the setup bay a thin amber edge, not a slab with a lamp block."
+     },
+     {
+      "id": "t3-switchboard-refine",
+      "suggestion": "Keep the Home map (Plans with its own radar, the household strip, the clean To do table). Take the graphite panel fill down to the green-black ground with a 1px rule. Give the inner pages' lists the full width, and let the chat use its pane: the thread is a narrow column beside a large empty field. On late checkboxes use a neutral outline, with amber only on the edge and the words."
+     },
+     {
+      "id": "t3-switchboard-graft",
+      "suggestion": "Keep the patch keys (each starter shows the page it lands on), a strong and usable idea worth grafting into other lineages. Set the title in Plex with only 'plan' lit, or set the whole VT323 title bright, never a dim smear. Remove the hatched dead cell. Replace the dashed block caps with one solid 2px cap. Close Ideas' empty well."
+     },
+     {
+      "id": "t3-console-mut",
+      "suggestion": "Drop the landscape and the violet decoy legs. If a picture stays, draw it from data (the real flight plan) and keep it out from under the text. The single-family arrowheads and the kind badges could be kept as small refinements."
+     }
+    ],
+    "titles": "The best is 'Tell Vera what to plan.' (figure refine and mutant). It names who hears you and the whole job in one imperative verb, reads as an invitation to tell her something, and lights the job word at the end of the line. Second is 'Tell Vera our plan.' (console graft): it is close, but 'our plan' slightly presumes a plan exists. 'Tell Vera our plans.' (figure graft) is the same with a plural that sits a little awkwardly. Weaker: 'What's our plan?' and 'What's the plan?' read as asking the app to SHOW the plan, a query rather than an invitation to tell, and Switchboard Patched Through sets 'What's the' in a dim smear. 'What are we planning?' (console mutant) is fine but generic. 'Anything to plan?' (switchboard mutant) is a yes/no question that invites 'no'. The best is 'Tell Vera what to plan.'; the runner-up is 'Tell Vera our plan.'"
+   }
+  ]
+ }
+}

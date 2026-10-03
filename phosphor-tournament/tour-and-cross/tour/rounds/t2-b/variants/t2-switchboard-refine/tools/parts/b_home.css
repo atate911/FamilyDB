@@ -1,0 +1,431 @@
+
+/* ---- Signals: four, each with one meaning, told apart by shape -------------------------------- */
+/* On: a lit disc, a white-hot core in two halos, breathing (E20). Waiting: a small steel dot.
+   Off, or not set up: a pewter ring. Needs a look, or late: an amber bar. Red is the bar again,
+   and only when something has stopped. */
+.lamp, .light { display: inline-block; flex: none; vertical-align: middle; box-sizing: border-box; }
+.lamp.on, .light.on {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #f4fff8 0 22%, color-mix(in srgb, var(--brand) 45%, #fff) 40%, var(--brand) 62%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand) 30%, transparent), 0 0 8px var(--brand), 0 0 18px color-mix(in srgb, var(--brand) 45%, transparent);
+  animation: breathe 3.2s ease-in-out infinite;
+}
+.lamp.wait { width: 7px; height: 7px; margin: 1.5px; border-radius: 50%; background: var(--steel); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25); }
+.lamp.off, .light.off { width: 10px; height: 10px; border-radius: 50%; background: none; border: 0; box-shadow: inset 0 0 0 2px var(--pewter); }
+.lamp.look, .light.part { width: 12px; height: 5px; border-radius: 1.5px; background: var(--people); border: 0; box-shadow: 0 0 5px color-mix(in srgb, var(--people) 30%, transparent); }
+.lamp.bad { width: 12px; height: 5px; border-radius: 1.5px; background: var(--danger); box-shadow: 0 0 5px color-mix(in srgb, var(--danger) 35%, transparent); }
+/* In a list, only the first light that is on breathes: one pulse to a list, never a chorus. */
+.lights > li ~ li .light.on, .signals > li ~ li .lamp.on, .rows > .row ~ .row .lamp.on { animation: none; }
+.lamp-key { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 1.1rem; margin: 0; font: 400 var(--t-small)/1.3 var(--sans); color: var(--dim); }
+.lamp-key > span { display: inline-flex; align-items: center; gap: 0.45rem; white-space: nowrap; }
+.lamp-key .lamp { animation: none; }
+
+/* ==========================================================================================
+   HOME, P100: the sommaire, the map of the service, in two tiers
+   ========================================================================================== */
+/* One column on a phone and a tablet, in the order of the page: the terminal, setting up, Plans,
+   To do, Ideas, the rest of the service. From 64rem two columns, seven parts to five, each cell
+   ending where what it holds ends, and each column's cells following on one another without a
+   hole (the rows are only where the two columns' cells begin). While there are steps to set up
+   (a cell on the right), the left runs the terminal, To do and the rest of the service, the right
+   setting up, Plans and Ideas, so the two columns end together; once set up, Ideas moves under To
+   do and the service under Plans. The source order is the phone's order and the Tab order. */
+.map { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gap); align-items: start; }
+@media (min-width: 64rem) {
+  .map {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    grid-template-areas:
+      "term setup"
+      "term plans"
+      "todo plans"
+      "service plans"
+      "service ideas";
+    grid-auto-rows: min-content;
+  }
+  .map:not(.has-setup) { grid-template-areas: "term plans" "todo plans" "todo service" "ideas service"; }
+  .map > .term { grid-area: term; }
+  /* The terminal sits over the cell under it, so the pool of light it spills (E7) falls on that
+     cell's lip, as a lit screen lights the desk in front of it. */
+  .map > .term { position: relative; z-index: 2; }
+  .map > .setup { grid-area: setup; }
+  .map > .to-plans { grid-area: plans; }
+  .map > .to-todo { grid-area: todo; }
+  .map > .to-ideas { grid-area: ideas; }
+  .map > .service { grid-area: service; }
+}
+.map .cell { padding: 0.15rem var(--pad) var(--pad); }
+
+/* Every cell carries a hairline of bone along its top edge; the three lists the family keeps
+   carry their colour's 2px cap instead, setting up an amber one. */
+.cell::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  top: -1px;
+  height: 1px;
+  background: color-mix(in srgb, var(--bone) 35%, transparent);
+  pointer-events: none;
+}
+.map .list-cell::before { height: 2px; background: var(--sec); }
+.map .setup::before { height: 2px; background: var(--people); }
+
+/* ---- The line of the contents: the head of every cell, and the key to its page ------------------ */
+.cell > .cell-head, .svc > .cell-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  column-gap: 0.45rem;
+  margin: 0 0 0.35rem;
+  padding: 0 0 0.2rem;
+  font: inherit;
+  border-bottom: 1px solid var(--line);
+}
+.cell-head .head-key, .cell-head .line {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2.75rem;
+  color: var(--heading);
+  text-decoration: none;
+}
+.cell-head .slot { display: grid; place-items: center; flex: none; width: 0.75rem; }
+/* The page's number: the map's index, quiet, in the machine's figures. */
+.cell-head .no { flex: none; width: 1.75rem; font: 500 var(--t-fig-s)/1 var(--machine); letter-spacing: 0.02em; color: var(--label); padding-top: 0.2rem; }
+/* The three lists carry their page's icon before the name, in their colour, as their plates do. */
+.cell-head .head-icon { flex: none; width: 1.35rem; height: 1.35rem; margin-right: -0.05rem; color: var(--sec); stroke-width: 1.85; }
+.cell-head .what {
+  min-width: 0;
+  font: semi-condensed 600 var(--t-item)/1.1 var(--sans);
+  letter-spacing: -0.004em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  transition: text-decoration-color 0.15s;
+}
+.cell-head.tier-1 .what { font-size: var(--t-cell-1); letter-spacing: -0.01em; }
+/* The three lists' leaders are drawn in their own colour, a step into the grey: the line from the
+   name to the count is the list's, as its cap and its numeral are. */
+.cell-head.tier-1 .dots { border-bottom-color: color-mix(in srgb, var(--sec) 42%, var(--line-2)); }
+.cell-head .dots { flex: 1 1 0.75rem; align-self: flex-end; min-width: 0.75rem; max-width: var(--leader-max); margin-bottom: 0.85rem; border-bottom: 2px dotted var(--line-2); }
+/* One count pattern everywhere: a condensed numeral in the section's colour, then its word at the
+   small step, dim; a note (late, needs a look) in amber words, its numeral the same size. */
+.cell-head .count { flex: none; display: inline-flex; align-items: baseline; gap: 0.35rem; font: 400 var(--t-small)/1 var(--sans); color: var(--dim); }
+.count .count-sep { align-self: baseline; }
+.count .count-note { font-weight: 600; }
+/* A note that is only more of the count ("2 off") reads as the count's word does: regular, dim. */
+.count-note:not(.warn), .count .count-note:not(.warn) { font-weight: 400; color: var(--dim); }
+.cell-head .count .n, .count-note .n { font: condensed 500 var(--t-count)/1 var(--sans); letter-spacing: -0.01em; font-variant-numeric: tabular-nums lining-nums; color: var(--sec); }
+.cell-head .unit { color: var(--dim); }
+.count-sep { flex: none; color: var(--faint); font-size: var(--t-small); }
+.count-note { flex: none; display: inline-flex; align-items: baseline; gap: 0.3rem; font: 600 var(--t-small)/1 var(--sans); color: var(--ink-2); }
+.count-note .n { color: inherit; }
+.count-note.warn, .count-note.warn .n { color: var(--people); }
+.svc .count-note:not(.warn) .n { color: var(--bone); }
+a.count-note { align-items: center; justify-content: center; min-width: 2.75rem; min-height: 2.75rem; padding: 0 0.15rem; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; text-decoration-color: color-mix(in srgb, currentColor 55%, transparent); }
+a.count-note:hover { text-decoration-color: currentColor; }
+.cell-head .go { flex: none; width: 1.05rem; height: 1.05rem; color: var(--label); transition: transform 0.15s, color 0.15s; }
+.cell-head a:hover .what { text-decoration-color: color-mix(in srgb, var(--sec) 70%, transparent); }
+.cell-head a:hover .go { transform: translateX(3px); color: var(--sec); }
+.cell-head a:focus-visible { outline-offset: 2px; }
+
+/* A label over a run of lines inside a cell: the label step, never the size of what it names. */
+.cell-label { margin: 0.75rem 0 0.2rem; font: 600 var(--t-label)/1.3 var(--sans); letter-spacing: 0; color: var(--label); }
+.cell-note { margin: 0.2rem 0 0.4rem; font-size: var(--t-small); line-height: 1.45; color: var(--ink-2); }
+.cell-foot { margin: 0; padding-top: 0.55rem; font-size: var(--t-small); line-height: 1.45; color: var(--dim); }
+.cell-link { min-height: 2.75rem; font: 600 var(--t-small)/1.2 var(--sans); color: var(--heading); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--sec) 55%, transparent); }
+.cell-link .icon { color: var(--sec); }
+.cell-key { width: 100%; justify-content: center; min-height: 2.75rem; padding: 0 0.9rem; font: 600 var(--t-small)/1 var(--sans); text-decoration: none; }
+.cell-key .icon { color: var(--sec); }
+.map .empty { display: flex; align-items: center; gap: 0.6rem; margin: 0; padding: 0.55rem 0; font-size: var(--t-small); }
+.map .empty .icon { width: 1.3rem; height: 1.3rem; color: var(--sec); }
+
+/* ---- Setting up: plain numbered steps, each a line and a way in --------------------------------- */
+.steps-rows { grid-template-columns: 1.25rem minmax(0, 1fr); column-gap: 0.7rem; }
+.steps-rows .row > a { padding: 0.35rem 0; }
+.steps-rows .step-no { justify-self: end; font: 500 var(--t-small)/1 var(--machine); color: var(--people); font-variant-numeric: tabular-nums; }
+.steps-rows .what { font-weight: 500; font-size: var(--t-small); line-height: 1.35; white-space: normal; text-decoration: underline; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, var(--people) 45%, transparent); text-underline-offset: 0.22em; }
+.steps-rows .row > a:hover .what { text-decoration-color: var(--people); }
+.setup .cell-foot { padding-top: 0.35rem; }
+
+/* ---- Plans: Next up on its own green screen, then the lines after it ------------------------------ */
+.list-cell .next-up { margin: 0.5rem 0 0.2rem; }
+.next-up .crt-tube { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.85rem 0.95rem 0.85rem 1.15rem; }
+.next-text { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 0.3rem; }
+.next-label { margin: 0 0 0.15rem !important; }
+.crt .inverse.caps { padding: 0 1ch; }
+.next-label::before {
+  content: "";
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-right: 0.6rem;
+  vertical-align: 0.15em;
+  background: var(--phosphor);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--phosphor);
+  animation: breathe 2.6s ease-in-out infinite;
+}
+.next-title { font-size: var(--t-tube-m); line-height: 1; }
+.next-title a { display: inline-flex; align-items: center; min-height: 2.75rem; margin: -0.4rem 0; text-decoration-thickness: 2px; text-underline-offset: 0.14em; }
+.next-when { font-size: var(--t-tube-s); line-height: 1.12; }
+.next-where { font-size: var(--t-tube-s); line-height: 1.12; }
+.next-up .radar { width: 9.5rem; flex: none; }
+.crt .rel { white-space: nowrap; }
+.rel { color: var(--phosphor-bright, var(--ink)); text-transform: uppercase; }
+.crt .rel::before { content: "["; }
+.crt .rel::after { content: "]"; }
+/* After Next up: the day set on its digit, the name, a leader, the time, how far off. */
+.plan-rows { grid-template-columns: 5.4rem minmax(0, 1fr) max-content max-content; column-gap: 0.7rem; }
+.plan-rows .date { white-space: nowrap; }
+/* The weekday and the month in the Plans cell's own sky, a step down; the day's figure in ink. */
+.plan-rows .date .dw, .plan-rows .date .dm, .plan-index .date .dw, .plan-index .date .dm { color: color-mix(in srgb, var(--plans) 70%, var(--dim)); }
+.plan-rows .rel-words { min-width: 4.75rem; text-align: right; color: var(--plans); }
+.plan-rows .fact.time { color: var(--ink); }
+.plan-rows .is-today .date { color: var(--heading); }
+.to-plans .cell-foot.source { padding-top: 0.45rem; }
+/* Where the spans leave Plans a little taller than what it holds (while setting up, beside To do and
+   the service), its foot note goes to the foot, so the room is a pause before the note, not a hole
+   between cells. */
+@media (min-width: 64rem) {
+  .map.has-setup > .to-plans { align-self: stretch; }
+  .map.has-setup > .to-plans > .cell-foot.source { margin-top: auto; padding-top: 0.6rem; border-top: 1px solid var(--line); }
+}
+
+/* ---- To do: a box to tick, the name, a leader, who, and due in words (amber once passed) -------- */
+.home-todo .colheads .ch-who { grid-column: 3; }
+.home-todo .colheads .ch-due { grid-column: 4; text-align: right; }
+.task-rows { grid-template-columns: 2.75rem minmax(0, 1fr) max-content max-content; column-gap: 0.65rem; }
+.task-rows .d { margin-left: -0.45rem; }
+.task-rows .fact.due { text-align: right; justify-self: end; white-space: normal; }
+.task-rows .row.late .fact.due { color: var(--people); font-weight: 600; }
+
+/* ---- Ideas lately added: the kind's icon, the name, a leader, for whom, the kind in its colour -- */
+.idea-rows { grid-template-columns: 1.1rem minmax(0, 1fr) max-content max-content; column-gap: 0.7rem; }
+.idea-rows .fact.kind-word { min-width: 4.75rem; }
+.links-line { display: flex; flex-wrap: wrap; gap: 0 1.4rem; align-items: center; padding-top: 0.3rem; }
+.links-line a { display: inline-flex; align-items: center; gap: 0.45rem; min-height: 2.75rem; font-weight: 600; color: var(--heading); text-decoration-color: color-mix(in srgb, var(--sec) 55%, transparent); }
+.links-line .icon { color: var(--sec); }
+.links-line .food .icon { color: var(--clay); }
+
+/* ---- The rest of the service: a line of the contents to each page, one line under it ------------ */
+.service { padding-top: 0.15rem; }
+.svc + .svc { border-top: 1px solid var(--line); }
+.svc > .cell-head { margin: 0; padding: 0; border: 0; }
+.svc > .cell-head .dots { margin-bottom: 0.75rem; }
+.svc > .cell-head .count .n { color: var(--bone); }
+.svc > .cell-head .count .count-note.warn .n { color: var(--people); }
+.svc-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.15rem 0.9rem;
+  min-height: 1.6rem;
+  margin: -0.4rem 0 0 3.6rem;
+  padding: 0 0 0.55rem;
+  list-style: none;
+  font: 400 var(--t-small)/1.3 var(--sans);
+  color: var(--ink-2);
+}
+.svc-sub a { display: inline-flex; align-items: center; gap: 0.4rem; min-height: 2.75rem; margin: -0.6rem 0; color: var(--ink); text-decoration-color: color-mix(in srgb, var(--bone) 45%, transparent); }
+.svc-sub a .icon { color: var(--bone); }
+.svc-sub .n { font: 500 var(--t-small)/1 var(--machine); color: var(--dim); }
+.svc-sub .sep { color: var(--faint); }
+.svc-sub.kids a { gap: 0.35rem; }
+.svc-sub .look-link { color: var(--people); text-decoration-color: color-mix(in srgb, var(--people) 50%, transparent); }
+.svc-sub .look-link .lamp { margin-right: 0.15rem; }
+.signals > li { display: inline-flex; align-items: center; gap: 0.45rem; white-space: nowrap; }
+.signals .lamp { flex: none; }
+/* A person as a lettered tile in bone, outlined, square as the family's things are. */
+.initial {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 1.6rem;
+  height: 1.6rem;
+  font: 500 var(--t-fig-s)/1 var(--machine);
+  color: var(--bone);
+  background: none;
+  border: 1px solid color-mix(in srgb, var(--bone) 42%, var(--line-2));
+}
+.roster { gap: 0.35rem 1rem; }
+.roster li { display: inline-flex; align-items: center; gap: 0.45rem; font: 500 var(--t-small)/1.2 var(--sans); color: var(--ink); }
+/* Every line of the service keeps one hanging indent, under the name, and one pitch. The rule has
+   to outrank the plain list's own margin (ol.plain, ul.plain), or a list sub-line hangs flush left. */
+.service .svc-sub { margin: -0.4rem 0 0 3.6rem; padding: 0 0 0.7rem; }
+/* The map's legend: the last line of its last cell, under a bone hairline. */
+.svc-key { margin: 0.1rem 0 0; padding: 0.7rem 0 0; border-top: 1px solid color-mix(in srgb, var(--bone) 35%, transparent); }
+.svc-key .lamp-key { font-size: var(--t-small); gap: 0.35rem 1.2rem; }
+
+/* ---- The terminal, page 200 --------------------------------------------------------------------- */
+/* A graphite case, the glass set in it behind a thin ring, the keys under the glass on the glass's
+   own base bezel (no tray, no rule between), and the ways to start on the case below. The glass
+   lights the lip under it through its scanlines, and the whole case spills a pool of light onto
+   the page below it (E7, E12). */
+.minitel {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0 0.75rem 0.75rem;
+  background: linear-gradient(180deg, var(--bezel-hi) 0, var(--bezel) 1.25rem, var(--bezel) 70%, var(--bezel-lo));
+  border: 1px solid color-mix(in srgb, var(--bezel) 55%, #000);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.08),
+    inset 0 -2px 3px rgb(0 0 0 / 0.35),
+    0 28px 50px -34px rgb(0 0 0 / 0.95),
+    0 40px 70px -40px color-mix(in srgb, var(--brand) 26%, transparent);
+}
+/* Her line along the top of the case: her screen, her page's number, her name, the day, and the
+   power light. Her name is the case's label, not a link, so the box is the first stop. */
+.speaker { display: flex; align-items: center; gap: 0.6rem; min-height: 3.1rem; margin: 0; padding: 0.1rem 0.25rem 0.05rem; color: var(--ink); }
+.speaker .glyph.presence { width: 1.45rem; height: 1.45rem; }
+.speaker .no { font: 500 var(--t-fig-s)/1 var(--machine); letter-spacing: 0.02em; color: var(--label); padding-top: 0.2rem; }
+.speaker-name { font: semi-condensed 600 var(--t-cell-1)/1 var(--sans); letter-spacing: -0.01em; color: var(--heading); }
+.speaker-day { padding-top: 0.2rem; font: 400 var(--t-small)/1 var(--sans); color: var(--dim); }
+.power {
+  margin-left: auto;
+  margin-right: 0.35rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--screen);
+  box-shadow: 0 0 6px var(--screen), 0 0 14px color-mix(in srgb, var(--screen) 50%, transparent);
+}
+.minitel .glass { padding: 0; background: none; border: 0; border-radius: 0.95rem / 1.05rem; box-shadow: 0 0 0 3px #0a0d0c, 0 0 0 4px rgb(255 255 255 / 0.06), 0 0 60px -28px color-mix(in srgb, var(--screen) 55%, transparent); }
+.minitel .glass::after { display: none; }
+.glass .crt-tube { display: flex; flex-direction: column; gap: 0.35rem; border-radius: 0.95rem / 1.05rem; padding: 1rem 1.35rem 1.15rem; }
+/* Her last word, one line, dim, when there is one. */
+.last-line { margin: 0 !important; font-size: var(--t-tube-s); line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.last-line .who { text-transform: uppercase; letter-spacing: 0.04em; }
+/* The question: the largest thing on Home, typed on the glass. "What’s the" at the tube's dim
+   strength with one tight halo; "plan" alone at the hot core, in E1's two-layer halo; a block
+   cursor after it, waiting until somebody writes. */
+.ask-question { font: 400 var(--t-tube-q)/1 var(--tube); color: var(--phosphor); margin: 0 0 0.55rem; letter-spacing: 0.01em; }
+.ask-question label { font: inherit; color: inherit; letter-spacing: inherit; text-transform: none; margin: 0; cursor: text; }
+.crt .ask-question .q-soft { color: var(--phosphor-dim); text-shadow: 0 0 4px color-mix(in srgb, var(--phosphor) 35%, transparent); }
+.crt .ask-question .glow {
+  color: color-mix(in srgb, var(--phosphor) 58%, #fff);
+  text-shadow:
+    0 0 1px var(--phosphor),
+    0 0 0.45em color-mix(in srgb, var(--phosphor) 62%, transparent),
+    0 0 1.3em color-mix(in srgb, var(--phosphor) 34%, transparent);
+}
+/* VT323 has only a tall tick for an apostrophe: this one is Plex Mono's curl, in the tube's light. */
+.ask-question .apos { font: 400 0.82em/1 var(--machine); margin: 0 -0.2em 0 -0.08em; position: relative; top: -0.02em; }
+.ask-question .q-cursor { color: var(--phosphor); width: 0.42em; height: 0.66em; margin-left: 0.25em; vertical-align: -0.02em; animation-delay: 1.3s; }
+.prompt:has(textarea:focus) .q-cursor, .prompt:has(textarea:not(:placeholder-shown)) .q-cursor { visibility: hidden; }
+/* The well: a bounded glass field with a lit edge, the tube's prompt before it with its bloom, the
+   family's words in their own face in bone, and a lit caret. It glows a little at rest and fully
+   as it is typed in, and fades once left (E4). */
+.prompt { position: relative; }
+.prompt-line {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.45rem 0.8rem 0.5rem 0.75rem;
+  background: #07110b;
+  border: 1px solid color-mix(in srgb, var(--phosphor) 30%, transparent);
+  box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.6), 0 0 24px -14px color-mix(in srgb, var(--brand) 60%, transparent);
+  transition: border-color var(--afterglow), box-shadow var(--afterglow);
+}
+.prompt-line:focus-within {
+  border-color: var(--brand);
+  box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.6), 0 0 0 3px color-mix(in srgb, var(--brand) 16%, transparent), 0 0 28px -6px color-mix(in srgb, var(--brand) 55%, transparent);
+  transition-duration: var(--glow-in);
+}
+.prompt-mark { display: inline-flex; align-items: center; min-height: 1.6rem; font: 400 var(--t-tube)/1 var(--tube); color: var(--phosphor); text-shadow: 0 0 1px var(--phosphor), 0 0 8px color-mix(in srgb, var(--brand) 60%, transparent); }
+.crt .prompt-line textarea {
+  flex: 1;
+  min-height: 3em;
+  padding: 0.05rem 0 0;
+  font: 400 var(--t-body)/1.5 var(--sans);
+  color: var(--bone);
+  caret-color: var(--brand);
+  background: none;
+  border: 0;
+  box-shadow: none;
+  resize: none;
+  text-shadow: none;
+  filter: none;
+  field-sizing: content;
+  max-height: 7.5em;
+}
+.glass .prompt-line textarea { min-height: 3em; }
+.crt .prompt-line textarea::placeholder { color: color-mix(in srgb, var(--bone) 62%, #0c1a12); opacity: 1; }
+.crt textarea:focus { outline: none; box-shadow: none; }
+
+/* The keys under the glass, on its base bezel: who is asking, send where I am, the mic, Send. The
+   glass above lights the lip through its scanlines. */
+.deck {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 -0.75rem;
+  padding: 0.75rem 0.75rem 0.55rem;
+  background: radial-gradient(55% 90% at 50% 0%, color-mix(in srgb, var(--brand) 9%, transparent), transparent 78%);
+}
+.deck::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom, rgb(255 255 255 / 0.03) 0 1px, transparent 1px 4px);
+  -webkit-mask-image: radial-gradient(55% 90% at 50% 0%, #000, transparent 78%);
+  mask-image: radial-gradient(55% 90% at 50% 0%, #000, transparent 78%);
+}
+.deck .who { display: flex; align-items: center; gap: 0.55rem; }
+.deck label, .deck .from { margin: 0; color: var(--label); }
+.deck .from strong { color: var(--heading); font: 600 1rem var(--sans); }
+.deck select { width: auto; min-width: 9.5rem; white-space: nowrap; }
+.deck .locate label { display: inline-flex; align-items: center; gap: 0.55rem; min-height: 2.75rem; padding-right: 0.3rem; margin-left: 0.4rem; font: 400 var(--t-small)/1 var(--sans); color: var(--ink); cursor: pointer; }
+.deck .locate .icon { color: var(--bone); }
+.mic-slot { display: contents; }
+.deck .mic-slot button.mic { margin-left: auto; }
+.deck .send { margin-left: auto; min-width: 6.5rem; padding: 0 1.15rem; font-size: 1rem; }
+.deck .mic-slot:not(:empty) + .send { margin-left: 0; }
+#where { margin: 0.4rem 0 0; font-size: var(--t-small); }
+#where:empty { display: none; }
+
+/* The ways to start: keys on the case, a bone arrow before the words, each filling the well. */
+.starters { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.starters li { display: flex; flex: 1 1 auto; }
+.starters a {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2.75rem;
+  padding: 0.3rem 0.9rem 0.3rem 0.8rem;
+  font: 500 var(--t-small)/1.2 var(--sans);
+  color: var(--secondary);
+  text-decoration: none;
+  background: linear-gradient(180deg, var(--key-hi), var(--key));
+  border: 1px solid var(--key-edge);
+  border-bottom-width: 2px;
+  transition: color 0.15s, border-color var(--afterglow), box-shadow var(--afterglow);
+}
+.starters a:hover { color: var(--heading); border-color: color-mix(in srgb, var(--bone) 40%, var(--key-edge)); box-shadow: 0 0 18px -8px color-mix(in srgb, var(--bone) 45%, transparent); transition-duration: 0.15s, 0.15s, var(--glow-in); }
+.starters .arrow { flex: none; font: 500 1rem/1 var(--sans); color: var(--bone); transition: transform 0.15s; }
+.starters a:hover .arrow { transform: translateX(2px); }
+.key-words { min-width: 0; }
+.minitel .starters { margin: 0.35rem 0 0; }
+.minitel .starters li { flex: 1 1 0; }
+.minitel .starters li:first-child { flex-basis: 100%; }
+.case-foot { margin: 0.4rem 0 -0.3rem; }
+.case-foot a { display: inline-flex; align-items: center; min-height: 2.75rem; font: 600 var(--t-small)/1.2 var(--sans); color: var(--heading); text-decoration-color: color-mix(in srgb, var(--bone) 50%, transparent); }

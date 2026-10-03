@@ -1,0 +1,42 @@
+{
+ "stage": "design",
+ "round": "t3",
+ "roundNo": 3,
+ "key": "figure",
+ "lin": {
+  "name": "Figure Ground",
+  "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/tour/t3-b",
+  "carried": [
+   {
+    "id": "t2-figure-refine",
+    "name": "Lit Manual, Railed"
+   }
+  ],
+  "briefs": [
+   {
+    "slot": "refine",
+    "parent": "t2-figure-refine",
+    "parentName": "Lit Manual, Railed"
+   },
+   {
+    "slot": "graft",
+    "parent": "t2-figure-refine",
+    "parentName": "Lit Manual, Railed"
+   }
+  ],
+  "mutant": {
+   "kind": "type",
+   "parent": "t2-figure-refine",
+   "parentName": "Lit Manual, Railed",
+   "changes": [
+    "headings in sentence case at a light weight and a large size, labels in small caps: a magazine's hierarchy",
+    "all capitals limited to one role (tiny labels), each with about +0.06em tracking",
+    "tracking tuned per size: display titles tighter (about -0.02em), small labels and caps looser (+0.04 to +0.08em)"
+   ],
+   "id": "t3-figure-mut"
+  },
+  "idea": "the family's operator manual: every section led by a figure drawn from its own data (Status as the wiring of keys and connections with lit ports, the chat as a sequence diagram, To do's due dates on a line with NOW, Home's family tree to Vera to its counts)"
+ },
+ "plan": true,
+ "mutant": false
+}

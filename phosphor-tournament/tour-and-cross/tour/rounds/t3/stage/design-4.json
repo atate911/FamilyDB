@@ -1,0 +1,42 @@
+{
+ "stage": "design",
+ "round": "t3",
+ "roundNo": 3,
+ "key": "timetable",
+ "lin": {
+  "name": "Night Timetable",
+  "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/tour/t3-a",
+  "carried": [
+   {
+    "id": "t2-timetable-refine",
+    "name": "Departures, Posted"
+   }
+  ],
+  "briefs": [
+   {
+    "slot": "refine",
+    "parent": "t2-timetable-refine",
+    "parentName": "Departures, Posted"
+   },
+   {
+    "slot": "graft",
+    "parent": "t2-timetable-refine",
+    "parentName": "Departures, Posted"
+   }
+  ],
+  "mutant": {
+   "kind": "point",
+   "parent": "t2-timetable-refine",
+   "parentName": "Departures, Posted",
+   "changes": [
+    "take the companion out of one role where it is weakest, and put that role back to its quiet default",
+    "give the page a new type system: a new pairing from the library, each face with one job",
+    "quotes and bullets hung by hand outside the text edge (a negative indent, or the list pulled into the margin)"
+   ],
+   "id": "t3-timetable-mut"
+  },
+  "idea": "a station at night: Vera's conversation is the line the page hangs from (the question the first stop, the ways to start stops, 'Continue with Vera' the terminus), the chat a timetable with times in the margin, the Next up screen a dot-matrix departure board"
+ },
+ "plan": false,
+ "mutant": true
+}

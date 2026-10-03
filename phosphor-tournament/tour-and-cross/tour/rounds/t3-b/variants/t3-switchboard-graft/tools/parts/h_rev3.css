@@ -1,0 +1,143 @@
+/* ==========================================================================================
+   REVISION AFTER THE CRIT: Row 0 set to read, the title on one line, flat keys everywhere, a
+   jack that is a socket, caps on every panel and a plain hairline under the bar.
+   ========================================================================================== */
+
+/* ---- Keys: flat graphite with a hairline edge; only Send and the page primary stand up ------ */
+:root { --key: var(--surface-2); --key-hi: var(--surface-2); --key-edge: var(--line-2); }
+button.secondary, .button.secondary, .button.ghost, button.ghost, .filters button, .month-nav .button,
+.inline-action button, .clear, .cell-key, .keys .key, button.mic, .tabs a, .svc-all, .starters a,
+.row > details.edit > summary, .kids-cell li a, .setup-progress a, .bar-places .key {
+  border-bottom-width: 1px !important;
+  box-shadow: none;
+}
+@supports (appearance: base-select) {
+  select { background: var(--surface-2); border: 1px solid var(--line-2); border-bottom-width: 1px; }
+  select:hover { background: var(--surface-3); }
+}
+button.mic:hover, .keys .key:not([aria-current]):hover, .row > details.edit > summary:hover { background: var(--surface-3); }
+
+/* ---- The bar's foot: a plain hairline, so separated blocks mean only "a panel begins" ------- */
+.bar::after { height: 1px; background: var(--line-2); }
+
+/* ---- Caps on every panel, at one strength with the key tabs --------------------------------- */
+.map .cell, .household, .main > .cell, .main > .cells > .cell, .main > .cells > li > .cell, .side, .board > .page-head, .main > .panel, .idea-form, .settings-body .panel {
+  --cap: color-mix(in srgb, var(--sec) 60%, var(--surface));
+}
+.settings-body .panel { position: relative; --sec: var(--bone); }
+.settings-body .panel::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: repeating-linear-gradient(90deg, var(--cap) 0 8px, transparent 8px 11px);
+  pointer-events: none;
+}
+.idea-form { --sec: var(--ideas); }
+/* The patch key's tab is the cap's own ink at the cap's own strength: the colour match is the
+   circuit, at rest and on a phone with nothing to point with. */
+.patch-keys li { --tab: color-mix(in srgb, var(--sec) 60%, var(--surface)); }
+
+/* ---- The jack: a socket, not a lamp -------------------------------------------------------- */
+/* A metal sleeve in the section's ink round a black mouth, with a bevel: something to plug into.
+   An off lamp is a thin hollow ring; this is a solid collar with a hole in it. Patched, it is
+   the lit lamp, as before. */
+.map .cell > .cell-head .slot:empty::before {
+  width: 12px;
+  height: 12px;
+  background:
+    radial-gradient(circle, #000 0 2px, #000 2.2px, transparent 2.6px),
+    radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--sec) 85%, #fff) 0, color-mix(in srgb, var(--sec) 60%, var(--surface)) 55%, color-mix(in srgb, var(--sec) 35%, #000) 100%);
+  box-shadow: 0 0 0 1px #050706, inset 0 -1px 1px rgb(0 0 0 / 0.55), 0 1px 0 rgb(255 255 255 / 0.07);
+}
+
+/* ---- Home's glass: the question on one line, the radar beside it, the line under both -------- */
+.glass-q { align-self: end; padding: 0 0 0.35rem; }
+.terminal-screen .ask-question { white-space: nowrap; font-size: 2.6rem; letter-spacing: 0; }
+/* VT323 gives an apostrophe a whole cell ("What ’s"); Plex's sits close. */
+.ask-question .apos { font-family: var(--sans); font-size: 0.8em; font-weight: 500; margin: 0 0.02em 0 -0.06em; }
+.terminal-screen .glass-said { margin-top: 0.6rem !important; }
+/* The range words leave the keyed radar: under 12px they were noise, and the rings speak. */
+.radar.keyed .radar-label { display: none; }
+.radar.keyed .blip-day { stroke-width: 4.5px; stroke-opacity: 1; }
+
+/* ---- The deck: the select keeps its chevron, the place word sits close --------------------- */
+@media (min-width: 48rem) {
+  .map .deck select { width: auto; min-width: 11rem; flex: 0 1 11.5rem; }
+  .map .deck .locate label { gap: 0.3rem; }
+  .map .deck .locate { margin-left: 0.15rem; }
+}
+
+/* ---- The household rack under what is due: two slots to a row, its open slot plated --------- */
+@media (min-width: 48rem) {
+  .map-right > .household { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 2.25rem; padding: 0.35rem var(--pad) 0.5rem 2.4rem !important; }
+  .map-right > .household > .hh { border-bottom: 0 !important; padding: 0.2rem 0 0.55rem; }
+  .map-right > .household > .hh:nth-child(n+3) { border-top: 1px solid var(--line) !important; padding-top: 0.3rem; }
+  .map-right > .household::after { content: none; }
+  .map-right > .household:has(> .hh:last-child:nth-child(odd))::after { content: ""; margin: 0.45rem 0 0.5rem; min-height: 0; }
+}
+
+/* ---- Row 0: set to be read ----------------------------------------------------------------- */
+/* 1.5rem VT323, normal word spacing; the labels at seventy per cent of the phosphor, one figure
+   white-hot; a line that will not fit breaks between its clauses, never inside one. */
+.r0 { word-spacing: normal; white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.2; color: color-mix(in srgb, var(--phosphor) 72%, #07120c); }
+.r0 .dim, .r0 .sep { color: color-mix(in srgb, var(--phosphor) 72%, #07120c); }
+.r0 .sep { opacity: 1; }
+.r0-clause { white-space: nowrap; }
+.row0-tube .crt-tube { font-size: 1.5rem; min-height: 3.1rem; padding: 0.35rem 1.1rem; letter-spacing: 0.01em; }
+.r0 a { color: var(--phosphor); }
+.r0 a.quiet, .tally-line .r0 a:not(.inverse) { color: color-mix(in srgb, var(--phosphor) 72%, #07120c); text-decoration-color: color-mix(in srgb, var(--phosphor) 55%, transparent); text-shadow: none; }
+.r0 a.quiet:hover, .r0 a.quiet:focus-visible, .tally-line .r0 a:not(.inverse):is(:hover, :focus-visible) { color: #04100a; }
+
+/* ---- Ideas: the radar beside the plate's name and count, above the fold --------------------- */
+@media (min-width: 64rem) {
+  .page-ideas .board > .side { display: grid; grid-template-columns: minmax(0, 1fr) 9rem; align-content: start; }
+  .page-ideas .board > .side > .plate { display: contents; }
+  .page-ideas .side > .plate > .plate-title { grid-column: 1; grid-row: 1; padding: 0.8rem 0 0 0.95rem; align-self: end; }
+  .page-ideas .side > .plate > .plate-fig { grid-column: 1; grid-row: 2; padding: 0 0 0 0.95rem; align-self: start; }
+  .page-ideas .side > .plate > .lede { grid-column: 1 / -1; grid-row: 3; padding: 0.45rem 0.95rem 0; }
+  .page-ideas .side > .plate > .page-actions { grid-column: 1 / -1; grid-row: 4; padding: 0 0.95rem 0.85rem; }
+  .page-ideas .board > .side > .radar-cell { grid-column: 2; grid-row: 1 / span 2; padding: 0.7rem 0.7rem 0 0; border-top: 0; }
+  .page-ideas .board > .side > .tools-cell { grid-column: 1 / -1; }
+  .page-ideas .radar-cell .crt.radar-tube { padding: 0.3rem 0.3rem 0.85rem; }
+  .page-ideas .radar-cell .crt.radar-tube::after { bottom: 0.3rem; }
+  .page-ideas .radar-cell .crt-tube { padding: 0.35rem; }
+  .page-ideas .radar-cell .radar { width: 100%; }
+  .page-ideas .radar-cell .tube-note { display: none; }
+}
+
+/* ---- Status: the tables take the column's width --------------------------------------------- */
+.page-status .tables { grid-template-columns: minmax(0, 1fr); }
+.page-status .tables td { white-space: nowrap; }
+
+/* ---- The form: each mic level with its field's top ------------------------------------------ */
+.idea-form .field.can-dictate > textarea + button.mic { align-self: start; }
+
+/* ---- Second pass ---------------------------------------------------------------------------- */
+/* The patch key keeps its tab through the flat-key rule. */
+.patch-keys li > a { box-shadow: inset 3px 0 0 var(--tab); }
+.patch-keys li > a:is(:hover, :focus-visible) { box-shadow: inset 3px 0 0 var(--sec), -6px 0 16px -10px color-mix(in srgb, var(--sec) 80%, transparent); }
+/* The deck fits its case: the place keeps its words and loses its icon, which the box beside it
+   already says. */
+@media (min-width: 48rem) {
+  .map .deck .locate .icon { display: none; }
+  .map .deck select { min-width: 10.5rem; flex: 0 1 11rem; }
+  .map .deck .send { min-width: 0; padding: 0 0.9rem; }
+}
+/* The question set a little larger, on the radar's middle line. */
+.glass-q { align-self: center; padding: 0; }
+.terminal-screen .ask-question { font-size: 2.85rem; }
+/* The two columns end level: Ideas takes what is left and its foot sits on the floor. */
+@media (min-width: 64rem) {
+  .map { align-items: stretch; }
+  .map-left > .lately { flex: 1 1 auto; display: flex; flex-direction: column; }
+  .map-left > .lately > .cell-foot { margin-top: auto; }
+}
+.household .hh-sub.roster { gap: 0 0.6rem; }
+@media (max-width: 47.99rem) { .terminal-screen .ask-question { font-size: 2.3rem; } }
+@media (min-width: 48rem) { .map-right > .household { column-gap: 1.75rem; padding-left: 2.15rem !important; } .map-right > .household .hh-sub.roster { gap: 0 0.5rem; } .map-right > .household .person { gap: 0.3rem; } .map-right > .household .initial { width: 1.3rem; height: 1.3rem; font-size: 0.75rem; } }
+/* Late on the glass is a 44px target whose inverse band is only the line's height. */
+.r0 a.inverse { display: inline-flex; align-items: center; min-height: 2.75rem; margin: -0.55rem 0; background: linear-gradient(color-mix(in srgb, var(--phosphor) 82%, #fff), color-mix(in srgb, var(--phosphor) 82%, #fff)) center / 100% 1.2em no-repeat; box-shadow: none; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--phosphor) 45%, transparent)); }
+.r0 a.inverse:hover, .r0 a.inverse:focus-visible { background: linear-gradient(#fff, #fff) center / 100% 1.2em no-repeat; }

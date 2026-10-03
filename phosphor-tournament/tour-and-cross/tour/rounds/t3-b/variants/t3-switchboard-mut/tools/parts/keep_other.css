@@ -1,0 +1,103 @@
+/* ==========================================================================================
+   The other pages, on the same panel: one idea, the family, what she remembers, the wishes
+   ========================================================================================== */
+/* Two columns of the three, for a cell that holds more than one thing's worth. */
+@media (min-width: 1061px) { .main > .cells > .wide-2 { grid-column: span 2; } }
+.plate .card-kind { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 0.5rem; margin: 0.15rem 0 0.5rem; }
+.plate-meta { display: flex; flex-wrap: wrap; gap: 0.2rem 0.9rem; margin: 0 0 0.9rem; font-size: var(--t-small); color: var(--dim); }
+.plate-meta time { font: 500 0.875rem/1.2 var(--machine); font-variant-numeric: tabular-nums; }
+.due time, .plan .when > span:first-child { font: 500 0.875rem/1.3 var(--machine); letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.plate .page-actions form { margin: 0; }
+.plate .page-actions form button { width: 100%; }
+.plate-code.own { font-variant-numeric: tabular-nums; }
+.plate-code.own::before { content: none; }
+/* One idea: what is known of it, the calendar, the place and the two things to do with it. */
+.facts-cell .description { margin: 0 0 1rem; max-width: var(--measure); font-size: var(--t-body); line-height: 1.5; color: var(--ink-2); }
+.facts-cell dl.facts { margin: 0; }
+.facts-cell details.original { margin: 0 0 0.8rem; }
+.cal-cell .agenda > li { display: grid; grid-template-columns: 3rem minmax(0, 1fr); gap: 0.8rem; align-items: center; padding: 0.45rem 0; }
+.cal-cell .agenda .when { font-size: var(--t-small); }
+.cal-cell .cell-art { display: none; }
+.idea-place .eyebrow { display: block; margin: 0 0 0.3rem; }
+.idea-place > h2 { font-size: var(--t-cell); }
+.place-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem 1.5rem; }
+.place-grid > dl.facts:not(:has(dt)) { display: none; }
+table.hours { border-collapse: collapse; font-size: var(--t-small); }
+table.hours th { text-align: left; padding: 0.2rem 1rem 0.2rem 0; font: 500 var(--t-label)/1.5 var(--machine); letter-spacing: var(--track); text-transform: uppercase; color: var(--label); }
+table.hours td { padding: 0.2rem 0; font-variant-numeric: tabular-nums; }
+.do-cell { justify-content: center; }
+.do-cell details.more { margin: 0; }
+.do-cell details.more > summary { font: 600 var(--t-item)/1.2 var(--cond); color: var(--heading); }
+.do-cell details.more > summary .icon { display: none; }
+.do-cell .form { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem; }
+.do-cell:has(details[open]) { grid-column: 1 / -1; justify-content: flex-start; }
+details.more > summary .h2 { font: inherit; color: inherit; margin: 0; }
+details.more > summary .h2 .icon { display: none; }
+.outcomes > li { display: grid; grid-template-columns: auto 1fr auto; gap: 0.5rem 1.1rem; align-items: center; padding: 0.8rem 0; }
+.outcomes > li + li { border-top: 1px solid var(--line); }
+/* The family: a person to a cell, her lettered tile in her role's colour, her name, her tags, how
+   she reaches Vera, and Change at the cell's foot. */
+.person-head { display: flex; align-items: center; gap: 0.8rem; margin: 0 0 0.7rem; padding: 0 0 0.75rem; border-bottom: 1px solid var(--line); }
+.person-head h2 { font: 600 var(--t-cell)/1.1 var(--cond); }
+.person-cell .avatar, .people .avatar, .people-index .avatar { font: 500 1rem/1 var(--machine); color: var(--steel); background: color-mix(in srgb, var(--steel) 8%, var(--field)); border: 1px solid color-mix(in srgb, var(--steel) 40%, var(--line-2)); }
+.avatar.role-kid { color: var(--shows); background: color-mix(in srgb, var(--shows) 9%, var(--field)); border-color: color-mix(in srgb, var(--shows) 45%, var(--line-2)); }
+.avatar.role-admin { color: var(--accent); background: color-mix(in srgb, var(--accent) 9%, var(--field)); border-color: color-mix(in srgb, var(--accent) 45%, var(--line-2)); }
+.person-tags { margin: 0 0 0.7rem; }
+.tag.role { color: var(--heading); }
+.role-admin .tag.role { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--line-2)); }
+.role-parent .tag.role { color: var(--steel); border-color: color-mix(in srgb, var(--steel) 40%, var(--line-2)); }
+.role-kid .tag.role { color: var(--shows); border-color: color-mix(in srgb, var(--shows) 40%, var(--line-2)); }
+.reach { display: flex; align-items: flex-start; gap: 0.55rem; margin: 0 0 0.35rem; font-size: var(--t-small); line-height: 1.35; color: var(--ink-2); }
+.reach .icon { margin-top: 0.1rem; color: var(--label); }
+.person-cell.off { opacity: 0.6; }
+.who-cell p.small { font-size: var(--t-small); line-height: 1.5; color: var(--ink-2); }
+.look-line { display: flex; gap: 0.7rem; align-items: baseline; padding-top: 0.8rem; border-top: 1px solid var(--line); }
+.look-line .lamp { transform: translateY(-0.1rem); }
+.add-person .form { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem 1.1rem; }
+@media (min-width: 1061px) { .main > .add-person { grid-column: span 2; } }
+.role-cell .role-name { margin: 0 0 0.5rem; }
+.role-cell p.small { margin: 0; font-size: var(--t-small); line-height: 1.45; color: var(--ink-2); }
+.role-cell::before { background: color-mix(in srgb, var(--line-2) 90%, transparent); }
+.role-admin.role-cell::before { background: color-mix(in srgb, var(--accent) 70%, transparent); }
+.role-parent.role-cell::before { background: color-mix(in srgb, var(--steel) 70%, transparent); }
+.role-kid.role-cell::before { background: color-mix(in srgb, var(--shows) 70%, transparent); }
+.knocks > li { padding: 0.8rem 0; }
+.knocks > li + li { border-top: 1px solid var(--line); }
+/* What she remembers: a strip naming whom, then a thing to a cell. */
+.memory-strip { display: flex; align-items: center; gap: 0.5rem; }
+.memory-strip .icon { color: var(--sec); }
+.memory .memory-fact { margin: 0 0 0.6rem; font: 600 var(--t-item)/1.2 var(--cond); color: var(--heading); }
+.memory .tags { margin: 0 0 0.6rem; }
+.memory .memory-source { font-size: var(--t-small); }
+.memory.firm::before { background: color-mix(in srgb, var(--bone) 85%, transparent); }
+.memory .cell-foot button { width: 100%; }
+.memory-empty { flex-direction: row; align-items: center; gap: 1.4rem; min-height: var(--half); }
+.memory-empty .empty-art { width: 4rem; height: 4rem; color: color-mix(in srgb, var(--sec) 80%, var(--surface)); }
+.memory-empty p { margin: 0; max-width: var(--measure); }
+.tell-cell .form { grid-template-columns: minmax(0, 1fr); gap: 0.9rem; }
+.tell-cell.module .form { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.gone .memory-fact { text-decoration: line-through; text-decoration-color: var(--dim); }
+/* The wishes: a line of the contents to each kid, then her three lists, a cell each. */
+.kid-line { justify-content: center; padding-top: 0.2rem; padding-bottom: 0.2rem; min-height: 0; }
+.wish-list.half .section-head { margin-bottom: 0.5rem; padding-bottom: 0.5rem; }
+.wish-list.half .wish-top li { padding: 0.25rem 0; }
+.kid-line::before { background: color-mix(in srgb, var(--shows) 70%, transparent); }
+.cell.kid-line > .cell-head { margin: 0; padding: 0; border: 0; }
+.cell-head .unit { font-size: var(--t-small); color: var(--dim); }
+.wish-list .section-head { align-items: center; margin-bottom: 0.7rem; padding-bottom: 0.65rem; border-bottom: 1px solid var(--line); }
+.wish-list h3 { display: flex; align-items: center; gap: 0.5rem; margin: 0; font: 600 var(--t-item)/1.2 var(--cond); color: var(--heading); }
+.wish-list h3 .icon { color: var(--shows); }
+.wish-list .wish-top li.muted { color: var(--dim); font-weight: 400; }
+.wish-rank { display: inline-grid; place-items: center; flex: none; width: 2rem; height: 2rem; font: 500 0.875rem/1 var(--machine); color: var(--shows); border: 1px solid var(--shows); }
+.wish-line { display: flex; align-items: center; gap: 0.8rem; }
+.wish-title { font: 600 var(--t-item)/1.25 var(--cond); color: var(--heading); }
+.wishes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--gap); }
+.wishes > .panel { padding: 0.8rem 0.9rem; background: var(--surface-2); }
+.wishes > .panel::before { display: none; }
+.wish-actions { display: flex; flex-wrap: wrap; gap: 0.2rem 0.4rem; margin-top: 0.5rem; }
+.wish-actions form { margin: 0; display: inline-flex; gap: 0.3rem; }
+.wish-add .form, form.wish-add { grid-template-columns: minmax(0, 1fr); gap: 0.9rem; }
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.section-links { display: inline-flex; flex-wrap: wrap; gap: 1rem; }
+.section-links a { font: 500 var(--t-label)/1 var(--machine); letter-spacing: var(--track); text-transform: uppercase; color: var(--sec); text-decoration: none; }
+

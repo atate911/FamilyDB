@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, presence %}
+{% block title %}Settings · {{ site_title }}{% endblock %}
+{% block body_class %}page-settings{% endblock %}
+{% block content %}
+  {# The head says how the parts stand, once: how many, and how many need a look. #}
+  {% set looks = sections | selectattr('look') | list | length %}
+  {% set lede = [((sections | length) ~ ' parts', 'figure')] %}
+  {% if looks %}{% set lede = lede + [(' · ', 'sep'), (looks ~ (' needs' if looks == 1 else ' need') ~ ' a look', 'late')] %}{% endif %}
+  {{ page_head('Settings', lede, 'settings') }}
+  {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+  {# A station directory: one plate, and on it one line to each page of settings, read across as a
+     departure is: its pictogram in a steel ring, its name, a leader, how it stands now in a line,
+     and the way in. Something missing is marked, in amber words and an amber ring. #}
+  <ul class="plain directory">
+    {% for entry in sections %}
+      {% set one = entry.section %}
+      {% set state = entry.lines | join(' · ') %}
+      <li>
+        <a class="section-card{% if entry.look %} look{% endif %}" href="{{ url_for('settings.section', name=one.name) }}">
+          {% if one.icon == 'presence' %}{{ presence('section-icon') }}
+          {%- else %}<span class="section-icon roundel sm" aria-hidden="true">{{ icon(one.icon) }}</span>{% endif %}
+          <strong class="section-name">{{ one.title }}</strong>
+          <span class="leader" aria-hidden="true"></span>
+          <span class="section-state" title="{{ state }}">{% if entry.look %}<span class="look-words">{{ icon('warning') }}Needs a look</span> {% endif %}{{ state }}</span>
+          {{ icon('right', cls='go') }}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+  <p class="muted small">
+    Setting up for the first time, or starting again? <a href="{{ url_for('setup.overview') }}">Setup</a>
+    goes through what matters most, one step at a time.
+  </p>
+{% endblock %}

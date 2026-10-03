@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, presence, fig, dial_fig %}
+{% from "_machine.html" import machine %}
+{% block title %}Settings · {{ site_title }}{% endblock %}
+{% block body_class %}page-settings{% endblock %}
+{% block content %}
+  {# The chapter's round screen: how many parts need a look, amber while any do. #}
+  {% set looks = sections | selectattr('look') | list | length %}
+  {% set head_fig = dial_fig(
+      {'top': 'Parts', 'big': looks if looks else sections | length, 'small': ('needs a look' if looks == 1 else 'need a look') if looks else 'all set', 'tone': 'late' if looks else none},
+      ((looks ~ (' part needs' if looks == 1 else ' parts need') ~ ' a look.') if looks else 'Every part is set.')) %}
+  {{ page_head('Settings', 'Each part, how it stands now, and the way in to change it.', 'settings', figure=head_fig) }}
+  {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+  {# The machine taken apart, as a parts diagram: each part it can be told about is numbered,
+     and the list beside it is the key. Pointing at a part lights its callout. #}
+  <section class="plate parts" aria-labelledby="h-parts">
+    {% call fig('fig-machine', 'The machine taken apart. Each part is numbered as in the list.') %}
+      {{ machine() }}
+    {% endcall %}
+    <div class="plate-body">
+      <div class="section-head"><h2 id="h-parts">The parts</h2></div>
+      <ol class="plain section-cards">
+        {% for entry in sections %}
+          {% set one = entry.section %}
+          <li class="k{{ loop.index }}">
+            <a class="section-card{% if entry.look %} look{% endif %}" href="{{ url_for('settings.section', name=one.name) }}">
+              <span class="part-no" aria-hidden="true">{{ loop.index }}</span>
+              <span class="section-what">
+                <strong>{{ one.title }}</strong>
+                {% for line in entry.lines %}<span class="section-state">{{ line }}</span>{% endfor %}
+              </span>
+              {% if entry.look %}<span class="tag warn">{{ icon('warning') }}Needs a look</span>{% endif %}
+            </a>
+          </li>
+        {% endfor %}
+      </ol>
+      <p class="muted small setup-note">
+        Setting up for the first time, or starting again? <a href="{{ url_for('setup.overview') }}">Setup</a>
+        goes through what matters most, one step at a time.
+      </p>
+    </div>
+  </section>
+{% endblock %}

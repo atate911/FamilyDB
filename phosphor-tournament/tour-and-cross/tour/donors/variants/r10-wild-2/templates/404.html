@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, crt, radar %}
+{% block title %}Not found · {{ site_title }}{% endblock %}
+{% block body_class %}page-lost{% endblock %}
+{% block content %}
+  <section class="lost">
+    {% call crt('power-on') %}
+      {# No signal: the beam runs flat across an empty screen, with one flicker where the page
+         should have been. #}
+      <svg class="flat" viewBox="0 0 320 120" preserveAspectRatio="none" focusable="false">
+        <path class="flat-trace" d="M0 60H140L146 52L150 70L154 44L158 64L162 60H320"/>
+      </svg>
+      <div class="lost-readout caps">
+        <p><span class="dim">Time/div</span> 1 wk</p>
+        <p><span class="dim">Trig</span> none</p>
+        <p class="bright gap">?Not found</p>
+        <p>Ready.<span class="crt-cursor"></span></p>
+      </div>
+    {% endcall %}
+    <p class="eyebrow">Nothing on the trace</p>
+    <h1>Not found</h1>
+    <p class="muted">There is nothing at that address.</p>
+    <p><a class="button" href="{{ url_for('web.home') }}">{{ icon('home') }}Back to the start</a></p>
+  </section>
+{% endblock %}

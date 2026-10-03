@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, kind_icon, kind_key, crt, radar, chat_line, waiting_line, tick, presence, roundel %}
+{% block title %}{{ site_title }}{% endblock %}
+{% block body_class %}page-home{% endblock %}
+{% macro plan_where(entry, cut=false) -%}
+  {% if entry.idea_id %}
+    <a href="{{ url_for('web.idea', idea_id=entry.idea_id) }}"{% if cut %} title="{{ entry.title }}"{% endif %}>{{ entry.title }}</a>
+  {% else %}
+    <span{% if cut %} title="{{ entry.title }}"{% endif %}>{{ entry.title }}</span>
+  {% endif %}
+{%- endmacro %}
+{% macro board(first, wired=false) %}
+  {# Coming up, on the station's departures board, the stop after the box on her line: the next
+     departure large with the radar in its own corner, then the three after it, one line each as a
+     board prints a departure (the time, where to on a dotted leader, the day it leaves). It is fed
+     at its head: a lit wire leaves her line level with NEXT UP and runs into the power lamp on the
+     case's edge, and the stretch of rail from the box down to that wire is lit, now to next. #}
+  <section class="coming board-stop{{ ' wired' if wired }}" id="coming" aria-labelledby="coming-head">
+    <div class="board-sign">
+      <h2 id="coming-head">Coming up</h2>
+      <a href="{{ url_for('web.plans') }}">All plans</a>
+    </div>
+    {% call crt('next-up departures', hidden=false) %}
+      <span class="board-sweep" aria-hidden="true"></span>
+      <div class="next-row">
+        <div class="next-text">
+          <p class="next-label"><span class="inverse caps">Next up</span></p>
+          {% if first %}
+            <p class="next-title bright">{{ plan_where(first) }}</p>
+            <p class="next-when">
+              {%- if first.time %}<span class="next-time bright">{{ first.time }}</span> {% endif -%}
+              <span class="next-day">{% if first.chip %}{{ first.chip.weekday }} {{ first.chip.day }} {{ first.chip.month }}{% else %}{{ first.when }}{% endif %}</span>
+              {%- if first.relative %} <span class="rel">{{ first.relative }}</span>{% endif %}</p>
+            {% if first.location %}<p class="next-where dim">{{ first.location }}</p>{% endif %}
+          {% else %}
+            <p class="next-title bright">Nothing on the radar yet.</p>
+            <p class="next-where dim">Ask what fits this weekend, or plan an idea.</p>
+          {% endif %}
+        </div>
+        {{ radar(blips) }}
+      </div>
+      {% if coming | length > 1 %}
+        <ol class="plain board-rows">
+          {% for entry in coming[1:4] %}
+            <li>
+              <span class="dep-time">{{ entry.time or '' }}</span>
+              <span class="dep-dest">{{ plan_where(entry, cut=true) }}</span>
+              <span class="dep-day dim">{% if entry.chip %}{{ entry.chip.weekday }} {{ entry.chip.day }} {{ entry.chip.month }}{% endif %}</span>
+            </li>
+          {% endfor %}
+        </ol>
+      {% endif %}
+      <p class="next-more"><span class="dim" aria-hidden="true">&rsaquo;</span>
+        {%- if coming | length > 4 %} <a href="{{ url_for('web.plans') }}">{{ coming | length - 4 }} more</a>
+        {%- elif first %} <a href="{{ url_for('web.plans') }}">All plans</a>{% endif -%}
+        <span class="crt-cursor" aria-hidden="true"></span></p>
+    {% endcall %}
+    {% if wired %}<span class="wire" aria-hidden="true"></span><span class="stop-next" aria-hidden="true"></span>{% endif %}
+  </section>
+{% endmacro %}
+{% macro source_line() %}{% if source != 'google' and visitor().may('browse') %}<p class="source source-{{ source }}">{{ source_note }}</p>{% endif %}{% endmacro %}
+{% block content %}
+  {% set first = coming[0] if coming else none %}
+  {% set t0 = config.FAMILYDB_APP.clock.today() %}
+  {# Home is the concourse. Her line runs down the left, where the eye lands and where Tab starts:
+     her screen and the day, the box you write to her in (the stop you are at), the ways to start
+     on one stop, the departures board hung from the line as the next stop, her last line and the
+     terminus. What waits on the family stands to the right: the notice, what is to do, what is
+     new, the kids' wishes. On a phone it is the same order, top to bottom. #}
+  <div class="concourse">
+    <div class="line-col">
+      <section class="welcome">
+        <div class="welcome-words">
+          {% if talk %}
+            <p class="speaker">
+              <span class="her-screen" role="img" aria-label="{{ assistant }}">{{ presence(variant=2) }}</span>
+              <span class="today">{{ today }}</span>
+            </p>
+            <div class="live-run">
+              {% include "_ask.html" %}
+              {{ board(first, wired=true) }}
+            </div>
+            {{ source_line() }}
+            {% if talk.state %}
+              <ol class="thread brief">
+                {% call waiting_line(assistant, talk.state, talk.note) %}<a href="{{ url_for('chat.show', _anchor='latest') }}">Open the conversation</a>{% endcall %}
+              </ol>
+            {% else %}
+              {% if talk.line %}<ol class="thread brief">{{ chat_line(talk.line, brief=true) }}</ol>{% endif %}
+              <p class="brief-more"><a href="{{ url_for('chat.show', _anchor='latest') }}">Continue with {{ assistant }}{{ icon('right') }}</a></p>
+            {% endif %}
+          {% else %}
+            <p class="today">{{ today }}</p>
+            <h1>{{ site_title }}</h1>
+            {{ board(first) }}
+            {{ source_line() }}
+          {% endif %}
+        </div>
+      </section>
+    </div>
+
+    <div class="side-col">
+    {% if setup %}
+      {# A service notice on one line: what it is, the first step as a link (its reason said in
+         the full list), how many are left, and the rest a press away. #}
+      {% set left = setup | length %}
+      <section class="setup service-notice" aria-labelledby="setup-head">
+        <h2 id="setup-head">{{ icon('warning') }}<span>Finish setting up:</span></h2>
+        <a class="notice-one" href="{{ setup[0].link }}">{{ setup[0].text.split(',')[0] | trim('.') }}</a>
+        {% if left > 1 %}
+        <details class="rest">
+          <summary>{{ left - 1 }} more</summary>
+          <ol>
+            {% for step in setup %}
+              <li><a href="{{ step.link }}">{{ step.text }}</a></li>
+            {% endfor %}
+          </ol>
+          <p class="muted">Each one is a short page that says what to do. <a href="{{ url_for('setup.overview') }}">All the setup steps</a></p>
+        </details>
+        {% endif %}
+      </section>
+    {% endif %}
+
+    {# What is left to do, soonest first, on banded rows: the tick, the title, whose it is, and its
+       deadline in a sunk window at the margin (an amber ring once it has passed, the words beside
+       it). The lit Now rule stands between what is late and what is still to come. (The date is
+       read back from the view's words here; shipped, task_brief hands it over.) #}
+    <section class="home-todo" aria-labelledby="home-todo">
+      <div class="section-head">
+        <h2 id="home-todo">{{ roundel('todo') }}To do</h2>
+        <a href="{{ url_for('web.tasks') }}">{{ 'All ' ~ task_count ~ ' to do' if task_count else 'Things to do' }}</a>
+      </div>
+      {% set seen = namespace(late=false, now=false) %}
+      <ul class="plain checklist banded">
+        {% for task in tasks %}
+          {% if seen.late and not task.late and not seen.now %}
+            <li class="now-rule" aria-hidden="true"><span class="now-word">Now</span><span class="now-lamp"></span></li>
+            {% set seen.now = true %}
+          {% endif %}
+          {% if task.late %}{% set seen.late = true %}{% endif %}
+          {% set win = namespace(day=none, hm='', words=none) %}
+          {% if task.due %}
+            {% set said = task.due.replace('was due ', '').replace('due ', '') %}
+            {% set rel = said.split(', ')[0] %}
+            {% set win.hm = said.split(', ')[1] if ', ' in said else '' %}
+            {% set bits = rel.split(' ') %}
+            {% set n = 0 if rel == 'today' else (1 if rel == 'tomorrow' else (-1 if rel == 'yesterday' else (bits[1] | int if bits[0] == 'in' and bits[2] == 'days' else (-(bits[0] | int) if bits[1:] == ['days', 'ago'] else none)))) %}
+            {% if n is not none %}{% set win.day = t0.fromordinal(t0.toordinal() + n) %}{% else %}{% set win.words = rel %}{% endif %}
+          {% endif %}
+          <li class="{{ 'late' if task.late }}">
+            {{ tick(task.id, task.revision, task.title, 'home') }}
+            <div class="checklist-body">
+              <div class="what">{{ task.title }}</div>
+              {% if task.owner or task.late or task.window or task.reminder %}
+              <div class="when">
+                {%- if task.owner %}<span class="who">{{ icon('user') }}{{ task.owner }}</span>{% endif -%}
+                {%- if task.late %}<span class="late-words">{{ task.due }}</span>
+                {%- elif task.window and not task.due %}<span>{{ task.window }}</span>{% endif -%}
+                {%- if task.reminder %}<span class="reminder">{{ icon('bell') }}{{ task.reminder }}</span>{% endif -%}
+              </div>
+              {% endif %}
+            </div>
+            {% if task.due %}
+              <span class="win{{ ' is-late' if task.late }}{{ ' is-today' if win.day and win.day == t0 }}">
+                {%- if task.late %}<span class="sr">Was due </span>{% else %}<span class="sr">Due </span>{% endif -%}
+                {%- if win.day %}<time datetime="{{ win.day.isoformat() }}">{{ win.day.strftime('%a') }} {{ win.day.day }} {{ win.day.strftime('%b') }}</time>{% else %}{{ win.words }}{% endif -%}
+                {%- if win.hm %} <span class="hm">{{ win.hm }}</span>{% endif -%}
+              </span>
+            {% endif %}
+          </li>
+        {% else %}
+          <li class="muted empty">{{ icon('todo') }}<span>Nothing to do. Ask {{ assistant }} to remind you of something and it lands here.</span></li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section class="lately" aria-labelledby="home-lately">
+      <div class="section-head">
+        <h2 id="home-lately">{{ roundel('idea') }}Lately added</h2>
+        <a href="{{ url_for('web.ideas') }}">All {{ idea_count }} ideas</a>
+      </div>
+      {# One band an idea, printed as a timetable prints a stop: the kind's pictogram in a small
+         ring of the kind's colour, the name, and the kind beside it in the label's ink. No
+         leader: the band carries the eye. Something to eat is the tray's last band. #}
+      <div class="idea-cards banded-rows">
+        {% for idea in ideas %}
+          <a class="idea-card kind-{{ kind_key(idea.kind) }}" href="{{ url_for('web.idea', idea_id=idea.id) }}">
+            <span class="kind-ico" aria-hidden="true">{{ kind_icon(idea.kind) }}</span>
+            <strong>{{ idea.title }}</strong>
+            <span class="kind-word">{{ idea.kind | capitalize }}</span>
+          </a>
+        {% else %}
+          <p class="muted empty">{{ icon('idea') }}<span>No ideas yet.
+            {%- if talk %} Tell {{ assistant }} one above, or <a href="{{ url_for('web.new_idea') }}">add it here</a>.
+            {%- else %} <a href="{{ url_for('web.new_idea') }}">Add one here</a>.{% endif %}</span></p>
+        {% endfor %}
+        {% if restaurant_count %}
+          <a class="idea-card restaurants-link" href="{{ url_for('web.restaurants') }}">
+            <span class="kind-ico" aria-hidden="true">{{ icon('restaurant') }}</span>
+            <strong>Something to eat</strong>
+            <span class="eat-count">{{ restaurant_count }} to try</span>
+            {{ icon('right', cls='go') }}
+          </a>
+        {% endif %}
+        {% if ideas and visitor().may('change') %}
+          <a class="idea-card add-row" href="{{ url_for('web.new_idea') }}"><span class="kind-ico" aria-hidden="true">{{ icon('plus') }}</span><span>Add an idea</span></a>
+        {% endif %}
+      </div>
+    </section>
+
+    {# The kids' wish lists (docs/WISHES.md): a kid's own, or for a parent each kid's and what
+       waits on them. Read from the database, asked of nobody. #}
+    {% if wishes and not wishes.parent %}
+      {% set mine = wishes.mine %}
+      <section class="home-wishes" aria-labelledby="home-wishes">
+        <div class="section-head">
+          <h2 id="home-wishes">{{ roundel('gift') }}My wishes</h2>
+          <a href="{{ url_for('web.wishes') }}">{{ 'All ' ~ mine.open ~ ' wishes' if mine.open else 'Add one' }}</a>
+        </div>
+        {% if mine.answered %}
+          <p class="said">{% for row in mine.answered[:2] %}{% if row.status == 'granted' %}Yes to {{ row.title }}! {% else %}Not this time: {{ row.title }}. {% endif %}{% endfor %}</p>
+        {% endif %}
+        <div class="wish-lists">
+          {% for list in mine.lists %}
+            <div class="wish-list">
+              <h3>{{ list.name }}{% if list.countdown %} <span class="tag">{{ list.countdown }}</span>{% endif %}</h3>
+              <ol class="plain wish-top">
+                {% for row in list.rows[:wishes.top] %}<li>{{ row.title }}</li>{% else %}<li class="muted">Nothing yet.</li>{% endfor %}
+              </ol>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+    {% elif wishes %}
+      <section class="home-wishes" aria-labelledby="home-kids">
+        <div class="section-head">
+          <h2 id="home-kids">{{ roundel('gift') }}The kids' wishes</h2>
+          <a href="{{ url_for('web.wishes') }}">All wishes</a>
+        </div>
+        {% if wishes.waiting %}
+          <p class="warn">{{ icon('warning') }}Waiting on you:
+            {% for row in wishes.waiting %}<a href="{{ url_for('web.wishes', who=row.id) }}">{{ row.kid }}: {{ row.title }}</a>{{ ', ' if not loop.last }}{% endfor %}</p>
+        {% endif %}
+        {# Each kid is a band to follow: the name, how many wishes are open beside it, a chevron. #}
+        <ul class="plain kid-lines banded">
+          {% for kid in wishes.kids %}
+            {% set top = kid.lists[0].rows[:wishes.top] if kid.lists else [] %}
+            <li><a class="kid-row" href="{{ url_for('web.wishes', who=kid.id) }}">
+              <span class="kid-name">{{ kid.name }}</span>
+              <span class="kid-count">{{ kid.open }} open</span>
+              {{ icon('right', cls='go') }}</a>
+              {% if top %}<p class="kid-top">{{ top | map(attribute='title') | join(', ') }}</p>{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+    {% endif %}
+    </div>
+  </div>
+{% endblock %}

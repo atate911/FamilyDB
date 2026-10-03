@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, presence %}
+{% block title %}Settings · {{ site_title }}{% endblock %}
+{% block body_class %}page-settings{% endblock %}
+{% block content %}
+  {{ page_head('Settings', 'Each part, how it stands now, and the way in to change it.', 'settings') }}
+  {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+  {# One key to a page of settings, each led by its drawing on the plotting board and saying how
+     things stand in a line or two. Something missing is marked in words, and its lamp is amber. #}
+  <ul class="section-cards">
+    {% for entry in sections %}
+      {% set one = entry.section %}
+      <li>
+        <a class="panel section-card{% if entry.look %} look{% endif %}" href="{{ url_for('settings.section', name=one.name) }}">
+          {% if one.icon == 'presence' %}<span class="section-icon section-her" aria-hidden="true">{{ presence('glyph her-screen') }}</span>
+          {%- else %}<span class="section-icon" aria-hidden="true">{{ icon(one.icon) }}</span>{% endif %}
+          <span class="section-what">
+            <strong>{{ one.title }}</strong>
+            {% for line in entry.lines %}<span class="section-state">
+              {#- What has been spent is a figure the machine reports: its sum on readout glass. -#}
+              {%- if 'spent' in line and '$' in line %}{% set a = line.split('$', 1) %}{% set b = a[1].split(' ', 1) %}{{ a[0] }}<span class="readout-glass dim">${{ b[0] }}</span> {{ b[1] if b | length > 1 }}
+              {%- else %}{{ line }}{% endif -%}
+            </span>{% endfor %}
+            {% if entry.look %}<span class="tag warn">{{ icon('warning') }}Needs a look</span>{% endif %}
+          </span>
+          {{ icon('right', cls='go') }}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+  <p class="muted small">
+    Setting up for the first time, or starting again? <a href="{{ url_for('setup.overview') }}">Setup</a>
+    goes through what matters most, one step at a time.
+  </p>
+{% endblock %}

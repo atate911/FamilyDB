@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, chat_line, waiting_line, lamp, presence %}
+{% block title %}{{ assistant if has_persona else 'Chat' }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-chat{% endblock %}
+{% block head %}
+  {% if refresh and locked %}
+    <meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" />
+  {% elif refresh %}
+    <noscript><meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" /></noscript>
+  {% endif %}
+{% endblock %}
+{% block content %}
+  {% set name = assistant if has_persona else 'Chat' %}
+  {% if reading %}
+    {% set lede = 'Her own conversation, for you to read. Only she writes in it.' %}
+  {% elif private %}
+    {% set lede = 'Just you and ' ~ assistant ~ '. Tell her what you wish for, or ask about the plans.' %}
+  {% else %}
+    {% set lede = 'Weekends, ideas, to-dos and the calendar: anything you would ask in Telegram works here too.' %}
+  {% endif %}
+
+  {# The head hangs from her screen: the glyph tile, her name, what the page is for, and her pilot
+     lamp, read from the page's own state, never asked of a model: lit and steady while she is
+     ready; breathing, and saying so, while a turn runs. The log's wire drops from the tile. #}
+  <header class="page-head chat-head">
+    {% if reading %}
+      <nav class="crumbs" aria-label="Breadcrumb"><a href="{{ url_for('chat.show') }}">{{ name }}</a><span aria-hidden="true">/</span></nav>
+    {% endif %}
+    <div class="title-row">
+      {% if has_persona %}{{ presence('title-icon') }}{% endif %}
+      <h1>{{ reading ~ ' and ' ~ (assistant if has_persona else 'the bot') if reading else name }}</h1>
+    </div>
+    <p class="lede">{{ lede }}</p>
+    <p class="ready-line{{ ' working' if pending }}" role="status">{{ lamp('on', 'live' if pending else '') }}<span>{% if pending %}Working{% else %}Ready{% endif %}</span></p>
+  </header>
+
+  {# The log, two-sided, as a transcript of two stations: hers on the left, the family's on the
+     right, every line hung from one wire that drops from her screen down the whole log to the box.
+     Her lines stop on it at a small sage ring, her newest at the lit jewel; the family's at a steel
+     ring holding their initial, with a tick across to their bubble. The wire ends at the box, in a
+     ring lit while it is the family's turn, steel while she works. #}
+  {% set her = namespace(last=-1) %}
+  {% for line in lines %}{% if line.from_bot %}{% set her.last = loop.index0 %}{% endif %}{% endfor %}
+  <section class="bay loop-bay{{ ' is-working' if pending }}" aria-label="The conversation">
+    <div class="bay-body">
+      {% if lines %}
+        <ol class="thread wired">
+          {# The day once, on a rule across the log where it changes; each line then carries only
+             its time, beside its speaker's name. #}
+          {% set day = namespace(last='') %}
+          {% for line in lines %}
+            {% set parts = (line.when or '').split(', ') %}
+            {% set newest = loop.index0 == her.last and not pending %}
+            {% if parts | length == 2 %}
+              {% if parts[0] != day.last %}<li class="day-rule"><span>{{ parts[0] }}</span></li>{% set day.last = parts[0] %}{% endif %}
+              {{ chat_line(line, latest if loop.last, parts[1], wire=true, newest=newest) }}
+            {% else %}
+              {{ chat_line(line, latest if loop.last, wire=true, newest=newest) }}
+            {% endif %}
+          {% endfor %}
+          {% if pending %}{{ waiting_line(assistant, state, pending, wire=true) }}{% endif %}
+        </ol>
+      {% else %}
+        <p class="muted empty">{{ icon('chat') }}<span>Nothing said here yet. Ask {{ assistant }} what to do this weekend, save an idea, or set a reminder.</span></p>
+      {% endif %}
+
+      {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+      {% if not reading %}<div class="composer">{% include "_ask.html" %}</div>{% endif %}
+    </div>
+  </section>
+
+  {% if kids and not reading %}
+    <nav class="panel tiled kids-loops" aria-label="The kids' conversations">
+      <span class="tile" aria-hidden="true">{{ icon('family') }}</span>
+      <h2>The kids’ conversations</h2>
+      <p class="muted">Each kid talks to {{ assistant }} on her own. You can read along.</p>
+      <ul class="plain">
+        {% for kid in kids %}<li><a href="{{ url_for('chat.show', with=kid.id, _anchor=latest) }}">{{ lamp() }}{{ kid.name }}</a></li>{% endfor %}
+      </ul>
+    </nav>
+  {% endif %}
+{% endblock %}

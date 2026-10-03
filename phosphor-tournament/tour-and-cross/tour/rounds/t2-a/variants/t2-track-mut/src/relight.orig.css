@@ -1,0 +1,90 @@
+/* ==== Aglow: the tube's own light, back where the phosphor is ==================================
+   Track Diagram Relit is kept whole (its lines, slate, steel, plates, type and markup). What this
+   adds is the original page's light, on the short list of live things and nowhere else:
+   - every lit word and mark (the mark and its cursor, "mind", the primary key, the box you
+     write in, the lit track and its lamps, a ticked box) in the tube's layered halo: a tight
+     bloom inside a wide faint one, strong enough to read at 100%;
+   - highlights along the top edges of the machine's surfaces (the greeting's glass, the case,
+     the keys, her bubbles, the lit screens), never the family's plates;
+   - the page's own afterglow as the original had it: one faint green breath under the bar,
+     gone before the page title, with no raster (scanlines stay on the tubes and her screens). */
+:root {
+  --ph-tight: color-mix(in srgb, var(--brand) 80%, transparent);
+  --ph-wide: color-mix(in srgb, var(--brand) 42%, transparent);
+  /* E3: a 50% ring, a tight bloom and the original's pool, 8px under the key. */
+  --glow: inset 0 1px 0 rgb(255 255 255 / 0.25), 0 0 0 1px color-mix(in srgb, var(--brand) 50%, transparent), 0 0 12px -3px var(--ph-tight), 0 8px 28px -10px color-mix(in srgb, var(--brand) 70%, transparent);
+}
+
+/* ---- E6: the afterglow at the top of the page: a breath under the bar, gone by the title ---- */
+@media screen {
+  html {
+    background: radial-gradient(60% 135px at 50% 0, color-mix(in srgb, var(--brand) 10.5%, transparent), transparent 85%), var(--bg);
+    background-repeat: no-repeat;
+  }
+}
+
+/* ---- E2: the mark and its cursor: the one light in the bar ------------------------------------ */
+.brand-mark {
+  border-color: color-mix(in srgb, var(--brand) 36%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--brand) 30%, transparent), 0 0 8px -2px color-mix(in srgb, var(--brand) 60%, transparent), 0 0 30px -4px var(--ph-wide);
+}
+.brand-mark .icon, .foot-mark .icon { filter: drop-shadow(0 0 1px var(--brand)) drop-shadow(0 0 5px color-mix(in srgb, var(--brand) 60%, transparent)); }
+.caret { box-shadow: 0 0 4px var(--brand), 0 0 12px color-mix(in srgb, var(--brand) 65%, transparent), 0 0 26px color-mix(in srgb, var(--brand) 28%, transparent); }
+
+/* ---- E1: the key word ----------------------------------------------------------------------- */
+.glow { text-shadow: 0 0 2px color-mix(in srgb, var(--brand) 70%, transparent), 0 0 0.4em color-mix(in srgb, var(--brand) 62%, transparent), 0 0 1.2em color-mix(in srgb, var(--brand) 36%, transparent); }
+
+/* ---- E3: the primary key, lit from inside; pointed at, it brightens, then fades back --------- */
+button:hover, .button:hover {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.3), 0 0 0 1px color-mix(in srgb, var(--brand) 65%, transparent), 0 0 16px -2px var(--ph-tight), 0 10px 34px -10px color-mix(in srgb, var(--brand) 85%, transparent);
+}
+
+/* ---- E4 and E8: the box you write in, and the greeting's glass catching the light ------------ */
+.welcome { box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05), var(--shadow); }
+.welcome::after {
+  content: ""; position: absolute; top: 0; left: 6%; right: 6%; height: 26px; pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent, color-mix(in srgb, var(--brand) 30%, transparent) 50%, transparent) top / 100% 1px no-repeat,
+    radial-gradient(50% 100% at 50% 0, color-mix(in srgb, var(--brand) 8%, transparent), transparent);
+}
+@media (max-width: 40rem) { .welcome::after { height: 12px; } }
+/* Home's box glows at rest, as the original's did; the chat's keeps its plate edge and lights
+   only when written in (the lit ring at the end of the line already says it is your turn). */
+.welcome .ask {
+  border-color: color-mix(in srgb, var(--brand) 48%, var(--line-2));
+  box-shadow: var(--lift), inset 0 1px 0 color-mix(in srgb, var(--brand) 16%, transparent), 0 0 20px -8px color-mix(in srgb, var(--brand) 55%, transparent), 0 0 50px -16px color-mix(in srgb, var(--brand) 62%, transparent);
+}
+.ask:focus-within, .welcome .ask:focus-within {
+  border-color: var(--lit);
+  box-shadow: var(--lift), 0 0 0 3px color-mix(in srgb, var(--lit) 16%, transparent), 0 0 12px -4px color-mix(in srgb, var(--lit) 60%, transparent), 0 0 34px -8px color-mix(in srgb, var(--lit) 50%, transparent);
+}
+
+/* ---- E8, E11, E12, E19: the machine's surfaces catch a highlight along the top edge ---------- */
+.crt { box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.17), inset 0 2px 2px -1px rgb(255 255 255 / 0.05), inset 0 -1px 0 rgb(0 0 0 / 0.45), 0 1px 0 rgb(0 0 0 / 0.6), 0 26px 40px -30px #000, 0 0 90px -30px color-mix(in srgb, var(--phosphor) 55%, transparent); }
+.said-bot:not(.pending) .bubble { box-shadow: inset 0 1px 0 color-mix(in srgb, var(--screen) 20%, transparent); }
+.title-icon:not(.presence) { box-shadow: inset 0 1px 0 color-mix(in srgb, var(--accent) 34%, transparent), 0 0 6px -2px color-mix(in srgb, var(--accent) 55%, transparent), 0 0 28px -6px color-mix(in srgb, var(--accent) 58%, transparent); }
+:is(.in-ideas, .in-plans, .in-todo, .in-wishes, .in-family, .in-memory) .title-icon:not(.presence) {
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--accent) 30%, transparent), 0 0 5px -2px color-mix(in srgb, var(--accent) var(--halo-at, 50%), transparent), 0 0 22px -7px color-mix(in srgb, var(--accent) var(--halo-at, 50%), transparent);
+}
+.title-icon.presence { box-shadow: inset 0 1px 0 color-mix(in srgb, var(--screen) 30%, transparent), 0 0 6px -1px color-mix(in srgb, var(--screen) 50%, transparent), 0 0 26px -5px color-mix(in srgb, var(--screen) 55%, transparent); }
+
+/* ---- E20, E21: lamps and lit states in two layers -------------------------------------------- */
+.task-done .task-box { box-shadow: 0 0 4px -1px var(--lit), 0 0 14px -3px color-mix(in srgb, var(--lit) 60%, transparent); }
+input[type=checkbox]:checked { filter: drop-shadow(0 0 1.5px color-mix(in srgb, var(--lit) 80%, transparent)) drop-shadow(0 0 6px color-mix(in srgb, var(--lit) 45%, transparent)); }
+.now-stop::before { text-shadow: 0 0 1px var(--ph-tight), 0 0 8px color-mix(in srgb, var(--brand) 55%, transparent), 0 0 18px color-mix(in srgb, var(--brand) 25%, transparent); }
+
+/* ---- The family's cases that need a look: slate trays like the rest, amber in the edge and the
+   rings only (a warm fill over the green-black read olive-grey). ------------------------------ */
+.setup.setup, .restaurants-link.panel, .trouble.panel { background: var(--tray); }
+
+/* ---- Access ----------------------------------------------------------------------------------- */
+@media (prefers-contrast: more) {
+  .welcome::after { display: none; }
+  .brand-mark, .title-icon:not(.presence), .title-icon.presence, .task-done .task-box { box-shadow: none; }
+  .brand-mark .icon, .foot-mark .icon, input[type=checkbox]:checked { filter: none; }
+  .glow, .now-stop::before { text-shadow: none; }
+  .welcome .ask { box-shadow: var(--lift); }
+}
+@media (forced-colors: active) {
+  .welcome::after { display: none; }
+}

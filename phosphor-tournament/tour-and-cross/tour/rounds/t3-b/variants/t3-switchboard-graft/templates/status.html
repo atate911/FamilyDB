@@ -1,0 +1,382 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, crt, presence, lamp_key, spend_meter %}
+{% block title %}Status · {{ site_title }}{% endblock %}
+{% block body_class %}page-status{% endblock %}
+{# A light says its state three ways: its colour, its shape (a lit dot, a hollow ring, a half
+   one) and the words beside it, so nobody needs to tell green from amber to read it. #}
+{% macro lines(rows, nb=false) %}
+  <ul class="plain lights">
+    {% for row in rows %}
+      {% set state = 'on' if row.on else ('off' if row.on is sameas false else 'part') %}
+      {# A light never says less than the words: the page still on the installer's password needs a look. #}
+      {% if 'installer' in (row.detail or '') %}{% set state = 'look' %}{% endif %}
+      <li class="light-row {{ state }}">
+        <span class="light {{ state }}" aria-hidden="true"></span>
+        <div>
+          <strong>{{ row.label }}</strong>
+          <div class="muted">{{ row.detail | replace('-', '‑') if nb else row.detail }}</div>
+          {# A model going or gone, and one to put in its place: a press saves the boxes that
+             name it now, through the settings page's own form. #}
+          {% if row.switch and visitor().may('manage') %}
+            <form method="post" action="{{ url_for('settings.save') }}" class="inline-action">
+              <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+              <input type="hidden" name="section" value="model" />
+              {% for box in row.switch.boxes %}
+                <input type="hidden" name="{{ box }}" value="{{ row.switch.to }}" />
+              {% endfor %}
+              <button class="secondary" type="submit">Use {{ row.switch.to }} instead</button>
+              <span class="muted small">{{ row.switch.words }}</span>
+            </form>
+          {% endif %}
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+{% endmacro %}
+{# A cell's head as a line of the contents: its mark, its name, a leader, and how many of its
+   lights are on, out of how many. #}
+{% macro head_line(title, rows, word, glyph=none) -%}
+  {% set lit = rows | selectattr('on') | list | length %}
+  <h2 class="cell-head"><span class="line">
+    <span class="slot" aria-hidden="true">{% if glyph == 'presence' %}{{ presence('glyph') }}{% elif glyph %}{{ icon(glyph) }}{% endif %}</span>
+    <span class="what">{{ title }}</span>
+    <span class="dots" aria-hidden="true"></span>
+    <span class="count">{{ lit }}<span class="unit"> of {{ rows | length }} {{ word }}</span></span>
+  </span></h2>
+{%- endmacro %}
+{# A panel's head as a line of the contents too: its mark, its name, a leader and its figure
+   (`warn` in amber, as late and "needs a look" are). #}
+{% macro panel_line(title, glyph, figure=none, unit=none, warn=false) -%}
+  <h2 class="cell-head"><span class="line">
+    <span class="slot" aria-hidden="true">{{ icon(glyph) }}</span>
+    <span class="what">{{ title }}</span>
+    <span class="dots" aria-hidden="true"></span>
+    {%- if figure is not none %}<span class="count{{ ' warn' if warn }}">{{ figure }}{% if unit %}<span class="unit"> {{ unit }}</span>{% endif %}</span>{% endif %}
+  </span></h2>
+{%- endmacro %}
+{# A bar filled to `share` out of 100. Drawn in SVG, whose widths are attributes, because the
+   content policy allows no inline style. The figure is always written beside it. #}
+{% macro bar(share) -%}
+  {% set filled = [[(share or 0), 100] | min, 0] | max -%}
+  <svg class="meter" aria-hidden="true" focusable="false"><rect class="meter-track" width="100%" height="100%" rx="3"/>
+    {%- if filled > 0 %}<rect class="meter-fill" width="{{ '%.1f' | format([filled, 2] | max) }}%" height="100%" rx="3"/>{% endif %}</svg>
+{%- endmacro %}
+{% block content %}
+  {# The rack: down the first column one module, the plate, the day's spend on its green counter,
+     and the key to the lights. Across the other three, the register: the lights (who answers, the
+     keys, what it is connected to) as three cells sized to their lines, what is waiting, then
+     what it has cost, the models and prices and what the models were asked. #}
+  <div class="side">
+  {{ page_head('Status', 'Is it working, and what is it costing?', 'status',
+      figure='$' ~ ('%.2f' | format(spending.dollars if spending.rows else 0)), legend=('in ' ~ days ~ ' days'),
+      note=(('{:,}'.format(spending.calls) ~ ' call' ~ ('' if spending.calls == 1 else 's')) if spending.rows else 'no calls')) }}
+  {# The day's spend on its meter: the needle at today, a ghost at an average day of the last
+     thirty, the limit a lit amber index. The same is written under it. #}
+  {% set used = (spending.today / spending.limit * 100) if spending.limit else none %}
+  {% set average = (spending.dollars / days) if spending.rows and days else none %}
+  <section class="meter-cell" aria-label="Spending today">
+    <div class="crt meter-tube{{ ' near' if used is not none and used >= 75 }}{{ ' over' if used is not none and used >= 100 }}">
+      <div class="crt-tube">
+        <p class="m-label dim">Spent today, about</p>
+        {% if spending.limit %}{{ spend_meter(spending.today, spending.limit, average) }}{% endif %}
+        <p class="readout-figure bright">${{ "%.2f"|format(spending.today) }}</p>
+        {% if used is not none %}
+          <p class="m-of dim">{% if used >= 100 %}<span class="inverse">Limit reached</span>{% else %}{{ used | round | int }}% of the ${{ "%.2f"|format(spending.limit) }} limit{% endif %}</p>
+        {% endif %}
+        {% if average is not none %}<p class="m-avg dim"><span class="ghost-key" aria-hidden="true"></span>An average day ${{ "%.2f"|format(average) }}</p>{% endif %}
+      </div>
+      <p class="chin">US$ a day · the low end drawn wide</p>
+    </div>
+  </section>
+  {# What the tube does not say: the limit resets at midnight, and the way to change it. #}
+  <section class="spend-cell" aria-label="The daily limit">
+    <p class="spend-words">
+      {% if spending.limit %}
+        {% if spending.today >= spending.limit %}
+          <strong class="warn">{{ icon('warning') }}The limit is reached: nothing more is asked of a model until midnight.</strong>
+        {% else %}
+          The limit starts again at midnight.
+        {% endif %}
+      {% else %}
+        No daily limit is set.
+      {% endif %}
+      {% if visitor().may('manage') %}
+        <a href="{{ url_for('settings.section', name='spending') }}">Change the limit</a>
+      {% endif %}
+    </p>
+  </section>
+
+  <section class="key-cell-module" aria-label="What the lights mean">
+    <p class="keys-name">The lights</p>
+    {{ lamp_key() }}
+  </section>
+  </div>
+
+  <div class="main">
+  {% if attention %}
+    {# What only an admin can fix, first: each admin with a Telegram id is told as well. #}
+    <section class="cell module attention" id="attention">
+      <h2>{{ icon('warning') }}Needs attention</h2>
+      {{ lines(attention) }}
+    </section>
+  {% endif %}
+
+  <div class="monitors cells">
+    <section class="cell lamp-cell">
+      {{ head_line('Who answers', models, 'on', 'presence') }}
+      {{ lines(models, true) }}
+    </section>
+
+    <section class="cell lamp-cell">
+      {{ head_line('Keys', keys, 'set', 'key') }}
+      {{ lines(keys) }}
+      {% if visitor().may('manage') %}
+        <p class="muted small">
+          <a href="{{ url_for('settings.section', name='model', _anchor='keys') }}">Change a key</a>
+        </p>
+      {% endif %}
+    </section>
+
+    <section class="cell lamp-cell">
+      {{ head_line('Connected to', services, 'on', 'plug') }}
+      {{ lines(services) }}
+    </section>
+  </div>
+
+
+  <section class="cell module spend">
+    {{ panel_line('What it has cost', 'coin', ('$' ~ ('%.2f' | format(spending.dollars))) if spending.rows else none, ('in ' ~ days ~ ' days') if spending.rows else none) }}
+    {% if spending.rows %}
+      <p>
+        {{ "{:,}".format(spending.calls) }} model call{{ "" if spending.calls == 1 else "s" }} in
+        the last {{ days }} days, about ${{ "%.2f"|format(spending.dollars) }}.
+        {{ spending.cache_share }}% of what was sent came back from the cache, at a tenth of the
+        price.
+        {% if spending.estimated %}
+          Some calls were to a model without a listed price and are counted high.
+        {% endif %}
+      </p>
+      <div class="tables">
+        <div class="scroll">
+          <table class="data">
+            <caption>By kind of call</caption>
+            <tr><th scope="col">what for</th><th scope="col" class="num">calls</th><th scope="col" class="num">US$</th></tr>
+            {% for row in spending.kinds %}
+              <tr>
+                <td>{{ row.purpose }}</td>
+                <td class="num">{{ "{:,}".format(row.calls) }}</td>
+                <td class="num">{{ "%.2f"|format(row.cost_usd) }}</td>
+              </tr>
+            {% endfor %}
+          </table>
+        </div>
+        {% for kind in spending.where %}
+          <div class="scroll">
+            <table class="data">
+              <caption>Where the input of {{ kind.purpose }} went</caption>
+              <tr><th scope="col">part</th><th scope="col" class="num">tokens</th><th scope="col">share</th></tr>
+              {% for part in kind.parts %}
+                <tr>
+                  <td>{{ part.label }}</td>
+                  <td class="num">{{ "{:,}".format(part.tokens) }}</td>
+                  <td class="share"><span class="share-cell">{{ bar(part.share) }}<span>{{ part.share }}%</span></span></td>
+                </tr>
+              {% endfor %}
+            </table>
+            <p class="muted small">Per call: the real total
+              over {{ "{:,}".format(kind.parts[0].calls) }} call{{ "" if kind.parts[0].calls == 1 else "s" }},
+              shared out by the size of each part.</p>
+          </div>
+        {% endfor %}
+      </div>
+      <div class="scroll">
+        <table class="data">
+          <caption>By model</caption>
+          <tr>
+            <th scope="col">model</th><th scope="col" class="num">calls</th><th scope="col" class="num">sent</th>
+            <th scope="col" class="num">cached</th><th scope="col" class="num">written</th><th scope="col" class="num">back</th>
+            <th scope="col" class="num">US$</th>
+          </tr>
+          {% for row in spending.rows %}
+            <tr>
+              <td>{{ row.model }}</td>
+              <td class="num">{{ "{:,}".format(row.calls) }}</td>
+              <td class="num">{{ "{:,}".format(row.input_tokens) }}</td>
+              <td class="num">{{ "{:,}".format(row.cache_read) }}</td>
+              <td class="num">{{ "{:,}".format(row.cache_write) }}</td>
+              <td class="num">{{ "{:,}".format(row.output_tokens) }}</td>
+              <td class="num">{{ "%.2f"|format(row.cost_usd) }}{% if row.cost_estimated %}*{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </table>
+      </div>
+    {% else %}
+      <p class="muted">Nothing has been asked of a model in the last {{ days }} days.</p>
+    {% endif %}
+    {% if last %}
+      <p class="muted small">
+        Last call {{ last.when }}: {{ last.model }} ({{ last.provider }}), ended
+        “{{ last.stop }}”, took {{ last.seconds }}s.
+      </p>
+    {% endif %}
+  </section>
+
+  <section class="cell module waiting-cell">
+    {{ panel_line('Waiting', 'hourglass', waiting.pending_total or 0, 'to look up') }}
+    {% if waiting.lookups %}
+      <p class="meta">
+        {% for row in waiting.lookups %}<span class="tag">{{ row.count }} {{ row.state }}</span>{% endfor %}
+      </p>
+    {% else %}
+      <p class="muted">No ideas yet.</p>
+    {% endif %}
+    {% if waiting.pending_total %}
+      <p class="muted">Ideas are looked up {{ waiting.when }}.</p>
+      {% if waiting.can_look_up and visitor().may('change') %}
+        <form method="post" action="{{ url_for('edits.look_up_waiting') }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+          <input type="hidden" name="once" value="{{ once_token() }}" />
+          <button class="secondary" type="submit">{{ icon('search') }}Look them up now</button>
+        </form>
+      {% endif %}
+    {% endif %}
+    {% if waiting.pending %}
+      <h3>Next to be looked up</h3>
+      <ul class="plain">
+        {% for row in waiting.pending %}
+          <li><a href="{{ url_for('web.idea', idea_id=row.id) }}">#{{ row.id }} {{ row.title }}</a></li>
+        {% endfor %}
+      </ul>
+      {% if waiting.pending_total > waiting.pending | length %}
+        <p class="muted">and {{ waiting.pending_total - (waiting.pending | length) }} more.</p>
+      {% endif %}
+    {% endif %}
+    {% if waiting.messages %}
+      <h3>Messages that did not go through</h3>
+      <ul class="plain">
+        {% for row in waiting.messages %}
+          <li>
+            {{ row.text }}
+            <div class="muted">
+              {{ row.when }} · {{ row.error }} ·
+              {% if row.given_up %}given up on{% else %}{{ row.tries }} tr{{ "y" if row.tries == 1 else "ies" }}, will try again{% endif %}
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </section>
+
+  {# The daily check of what each company offers and what it costs (familydb/model_watch.py):
+     where it read, and what it found changed. No model is asked for any of it. #}
+  <section class="cell module" id="models">
+    {{ panel_line('Models and prices', 'list', (model_watch.sources | length) if model_watch.on else 'Off', ('read' if model_watch.on else none)) }}
+    {% if not model_watch.on %}
+      <p class="muted">The daily check is switched off: prices are the ones this version was
+        released with, and nobody is told when a model goes.
+        {% if visitor().may('manage') %}<a href="{{ url_for('settings.section', name='model', _anchor='watch') }}">Switch it on</a>{% endif %}</p>
+    {% elif not model_watch.sources %}
+      <p class="muted">Checked once a day, early in the morning: nothing has been read yet.</p>
+    {% else %}
+      {{ lines(model_watch.sources) }}
+    {% endif %}
+    {% if model_watch.changes %}
+      <div class="scroll">
+        <table class="data">
+          <caption>Changed in the last {{ model_watch.days }} days</caption>
+          <tr><th scope="col">when</th><th scope="col">company</th><th scope="col">model</th><th scope="col">what</th></tr>
+          {% for change in model_watch.changes %}
+            <tr>
+              <td>{{ change.when }}</td>
+              <td>{{ change.company }}</td>
+              <td><code>{{ change.model }}</code></td>
+              <td>{{ change.what }}</td>
+            </tr>
+          {% endfor %}
+        </table>
+      </div>
+    {% elif model_watch.sources %}
+      <p class="muted small">Nothing has changed in the last {{ model_watch.days }} days.</p>
+    {% endif %}
+    {% if model_watch.judgements %}
+      {# What a stronger model was asked to weigh, and what came of it. A change it made can be
+         put back, and one waiting for an admin put in, each through the settings form. #}
+      <h3>Judgements</h3>
+      <ul class="plain lights">
+        {% for row in model_watch.judgements %}
+          {% set state = 'on' if row.on else 'part' %}
+          <li class="light-row {{ state }}">
+            <span class="light {{ state }}" aria-hidden="true"></span>
+            <div>
+              <strong>{{ row.label }}</strong>
+              <div class="muted">{{ row.detail }}</div>
+              {% if visitor().may('manage') %}
+                {% for values, words in ((row.waiting, 'Put these in'), (row.undo, 'Put back')) if values %}
+                  <form method="post" action="{{ url_for('settings.save') }}" class="inline-action">
+                    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+                    <input type="hidden" name="section" value="model" />
+                    {% for key, value in values.items() %}
+                      <input type="hidden" name="{{ key }}" value="{{ value }}" />
+                    {% endfor %}
+                    <button class="secondary" type="submit">{{ words }}</button>
+                  </form>
+                {% endfor %}
+              {% endif %}
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% elif model_watch.judging %}
+      <p class="muted small">Judgements are on: nothing has needed one lately.</p>
+    {% endif %}
+  </section>
+
+  {# Admins only: the words here come from every chat. Each line opens its history in full. #}
+  {% if visitor().may('manage') %}
+    <section class="cell module" id="activity">
+      {{ panel_line('Recent activity', 'list', activity | length, ('in ' ~ activity_days ~ ' days')) }}
+      {% if activity %}
+        <p class="muted">What the models were asked in the last {{ activity_days }} days, newest
+          first. Open one for every call and tool it used, what each cost, and what a lookup found.</p>
+        <ul class="plain activity">
+          {% for row in activity %}
+            <li>
+              <a href="{{ url_for('activity.show', key=row.key) }}">
+                <span class="activity-title">{{ row.title }}</span>
+                <span class="muted small">{{ row.when }} · {{ row.what }} · {{ row.calls }} call{{ '' if row.calls == 1 else 's' }}, {{ "{:,}".format(row.tokens) }} tokens{% if row.searches %}, {{ row.searches }} search{{ '' if row.searches == 1 else 'es' }}{% endif %} · ${{ "%.4f"|format(row.cost) }}</span>
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted">Nothing was asked of a model in the last {{ activity_days }} days.</p>
+      {% endif %}
+    </section>
+  {% endif %}
+
+  {% if troubles.calls or troubles.lookups %}
+    <section class="cell module trouble">
+      {{ panel_line('Worth a look', 'warning', (troubles.calls | length) + (troubles.lookups | length), none, true) }}
+      {% if troubles.calls %}
+        <h3>Calls that ended oddly</h3>
+        <ul class="plain">
+          {% for row in troubles.calls %}
+            <li>{{ row.model }} — {{ row.stop }}<div class="muted">{{ row.when }}</div></li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+      {% if troubles.lookups %}
+        <h3>Lookups that failed</h3>
+        <ul class="plain">
+          {% for row in troubles.lookups %}
+            <li>
+              <a href="{{ url_for('web.idea', idea_id=row.id) }}">#{{ row.id }} {{ row.title }}</a>
+              <div class="muted">{{ row.note }}{% if row.when %} · {{ row.when }}{% endif %}</div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </section>
+  {% endif %}
+  </div>
+{% endblock %}

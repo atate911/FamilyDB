@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, chip, fig, picto, day_no, day_of_month %}
+{% block title %}Plans · {{ site_title }}{% endblock %}
+{% macro plan_line(plan, cancellable) %}
+  <li class="{{ 'is-today' if plan.on_today }}">
+    {{ chip(plan.chip, plan.on_today) }}
+    <div class="agenda-body">
+      <div class="what">
+        {% if plan.idea_id and plan.idea_id in titles %}
+          <a href="{{ url_for('web.idea', idea_id=plan.idea_id) }}">{{ plan.title }}</a>
+        {% else %}
+          {{ plan.title }}
+        {% endif %}
+      </div>
+      <div class="when">
+        <span>{{ plan.when }}</span>
+        {% if plan.relative %}<span class="rel">{{ plan.relative }}</span>{% endif %}
+        {% if plan.status != 'confirmed' %}<span class="tag">{{ plan.status }}</span>{% endif %}
+        {% if plan.from_google %}<span class="tag">added in Google</span>{% endif %}
+      </div>
+      {% if plan.location %}<div class="where">{{ icon('pin') }}{{ plan.location }}</div>{% endif %}
+      {% if plan.notes %}<div class="note">{{ plan.notes }}</div>{% endif %}
+      {% if cancellable and plan.id and plan.status != 'cancelled' and visitor().may('change') %}
+        <div class="actions row">
+          <details class="more">
+            <summary>Move it</summary>
+            <form class="form" method="post" action="{{ url_for('edits.move_plan', plan_id=plan.id) }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+              <input type="hidden" name="once" value="{{ once_token() }}" />
+              <div class="field">
+                <label for="start-{{ plan.id }}">New time</label>
+                <input id="start-{{ plan.id }}" name="start" type="datetime-local" required
+                       value="{{ plan.start_value }}" />
+                <label class="check">
+                  <input type="checkbox" name="all_day" value="yes" {{ 'checked' if plan.all_day }} />
+                  All day
+                </label>
+              </div>
+
+              <div class="field actions end"><button type="submit">Move it</button></div>
+            </form>
+          </details>
+          {# Taking a plan off the calendar really removes the Google event, and without a script
+             there is no dialogue to ask twice, so the button asks for itself. #}
+          <details class="more danger-zone">
+            <summary>Cancel it</summary>
+            <form method="post" action="{{ url_for('edits.cancel_plan', plan_id=plan.id) }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+              <input type="hidden" name="once" value="{{ once_token() }}" />
+              <p class="muted">This takes it off the family calendar for everyone.</p>
+              <button class="danger" type="submit">Yes, cancel it</button>
+            </form>
+          </details>
+        </div>
+      {% endif %}
+    </div>
+  </li>
+{% endmacro %}
+{% block content %}
+  {# Coming up is led by the next five weeks as a small month: today ringed, a bar under
+     each day with something on, the weekends banded. The list beside it says what. #}
+  {% set t0 = day_no(today) | int %}
+  {% set first = t0 - (t0 + 3) % 7 %}
+  {% set planned = namespace(days=[]) %}
+  {% for plan in upcoming %}{% set planned.days = planned.days + [day_no(plan.start_value[:10]) | int] %}{% endfor %}
+  {% set MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'] %}
+  {% set head_fig %}
+    {% call fig('fig-weeks') %}
+      <svg viewBox="0 0 256 190" focusable="false" class="drawing">
+        {% for name in ['M', 'T', 'W', 'T', 'F', 'S', 'S'] %}
+          <text class="d-key" x="{{ 4 + loop.index0 * 35.4 + 17 }}" y="13" text-anchor="middle">{{ name }}</text>
+        {% endfor %}
+        {% for w in range(5) %}
+          {% for d in range(7) %}
+            {% set n = first + w * 7 + d %}
+            {% set x = 4 + d * 35.4 %}
+            {% set y = 22 + w * 33 %}
+            {% set dom = day_of_month(n) | int %}
+            <rect class="w-cell{{ ' weekend' if d >= 5 }}{{ ' past' if n < t0 }}" x="{{ x }}" y="{{ y }}" width="33" height="31"/>
+            {% if n == t0 %}<rect class="w-today" x="{{ x + 1 }}" y="{{ y + 1 }}" width="31" height="29"/>{% endif %}
+            <text class="w-no{{ ' past' if n < t0 }}{{ ' first' if dom == 1 }}" x="{{ x + 4 }}" y="{{ y + 13 }}">{{ dom }}</text>
+            {% set on = planned.days | select('equalto', n) | list | length %}
+            {% for i in range([on, 3] | min) %}<rect class="w-plan" x="{{ x + 4 + i * 9 }}" y="{{ y + 20 }}" width="7" height="6"/>{% endfor %}
+          {% endfor %}
+        {% endfor %}
+      </svg>
+    {% endcall %}
+  {% endset %}
+  {% call page_head('Plans', none, 'plans') %}
+    <nav class="tabs" aria-label="How to show the plans">
+      <a href="{{ url_for('web.plans') }}" aria-current="page">{{ icon('list') }}List</a>
+      <a href="{{ url_for('web.plans_month') }}">{{ icon('grid') }}Month</a>
+    </nav>
+    {% if visitor().may('browse') %}<p class="muted source source-{{ source }}">{{ source_note }}</p>{% endif %}
+  {% endcall %}
+  <section class="plate" aria-labelledby="h-upcoming">
+    {{ head_fig }}
+    <div class="plate-body">
+      <div class="section-head"><h2 id="h-upcoming">Coming up</h2></div>
+    {% if upcoming %}
+      <ul class="plain agenda">{% for plan in upcoming %}{{ plan_line(plan, can_schedule) }}{% endfor %}</ul>
+    {% else %}
+      <p class="muted empty">{{ icon('plans') }}<span>Nothing on the calendar for the next {{ ahead }} days.</span></p>
+    {% endif %}
+    </div>
+  </section>
+
+  {% if visitor().may('change') %}
+  <section class="plate" id="add">
+    {{ picto('plus') }}
+    <div class="plate-body">
+    <details class="fold" {{ 'open' if not upcoming }}>
+      <summary><span class="h2">{{ icon('plus') }}Put something on the calendar</span></summary>
+    {% if can_schedule %}
+      <form class="form" method="post" action="{{ url_for('edits.add_plan') }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+        <input type="hidden" name="once" value="{{ once_token() }}" />
+        <div class="field wide">
+          <label for="title">What</label>
+          <input id="title" name="title" required maxlength="200" placeholder="Dinner at the ramen place" data-dictate />
+        </div>
+        <div class="field">
+          <label for="start">When</label>
+          <input id="start" name="start" type="datetime-local" required />
+          <label class="check"><input type="checkbox" name="all_day" value="yes" /> All day</label>
+        </div>
+        <div class="field">
+          <label for="location">Where</label>
+          <input id="location" name="location" />
+        </div>
+        {% if not visitor().member %}
+          <div class="field">
+            <label for="who">Who</label>
+            <select id="who" name="who">
+              <option value="">nobody in particular</option>
+              {% for name in family %}
+                <option value="{{ name }}" {{ 'selected' if name == who }}>{{ name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        {% endif %}
+        <div class="field wide">
+          <label for="notes">Notes</label>
+          <textarea id="notes" name="notes" rows="2" data-dictate></textarea>
+        </div>
+        <div class="field wide actions">
+          <button type="submit">{{ icon('plans') }}Put it on the calendar</button>
+        </div>
+      </form>
+      <p class="muted hint">To plan an idea already on the list, open it and use the form there:
+        the plan is then linked to the idea.</p>
+    {% else %}
+      <p class="muted">Google Calendar is not connected, so nothing can be added here.
+        {% if visitor().may('browse') %}See the <a href="{{ url_for('web.status') }}">status page</a>.{% endif %}</p>
+    {% endif %}
+    </details>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if recent %}
+    <section class="plate past" aria-labelledby="h-recent">
+      {{ picto('clock') }}
+      <div class="plate-body">
+        <div class="section-head"><h2 id="h-recent">Recently</h2></div>
+        <ul class="plain agenda">{% for plan in recent %}{{ plan_line(plan, false) }}{% endfor %}</ul>
+      </div>
+    </section>
+  {% endif %}
+{% endblock %}

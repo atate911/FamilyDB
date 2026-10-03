@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, presence, lamp, lamp_key, caution %}
+{% block title %}Settings · {{ site_title }}{% endblock %}
+{% block body_class %}page-settings{% endblock %}
+{% block content %}
+  {{ page_head('Settings', 'Each part, how it stands now, and the way in to change it.', 'settings') }}
+  {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+  {# How each part stands, read from what it says of itself: every line saying it is not there
+     is off; some of them, partly set up (the dot: the rest is waiting). What has changed is a
+     log, not a part to set up, so it has no lamp. #}
+  {% set states = {} %}
+  {% for entry in sections %}
+    {% set neg = namespace(n=0) %}
+    {% for line in entry.lines %}{% if line.startswith('Off') or line.startswith('No ') or 'Not set up' in line or 'Not connected' in line or 'not connected' in line or 'waiting for a key' in line %}{% set neg.n = neg.n + 1 %}{% endif %}{% endfor %}
+    {% set off = entry.lines and neg.n == entry.lines | length %}
+    {% set _ = states.update({entry.section.name: ('log' if entry.section.name == 'history' else ('amber' if entry.look else ('off' if off else ('' if neg.n else 'on'))))}) %}
+  {% endfor %}
+  {% set looks = sections | selectattr('look') | list %}
+  {# No rail here: each card's state word says how each part stands, and the master caution
+     says what waits; a count of the cards would only say it again. #}
+
+  {# The master caution, while a part needs a look: the same amber line as Home's. #}
+  {% if looks %}
+    {% set lk = looks[0] %}
+    {% set line0 = (lk.lines[0] if lk.lines else '') %}
+    {% if 'installer' in line0 %}
+      {{ caution('look-h', 'Needs a look', looks | length,
+          {'label': 'Choose your own password', 'href': '/setup/password', 'note': ': ' ~ lk.section.title ~ ' is still on the one the installer made up.'},
+          (lk.section.title, url_for('settings.section', name=lk.section.name))) }}
+    {% else %}
+      {{ caution('look-h', 'Needs a look', looks | length,
+          {'label': lk.section.title, 'href': url_for('settings.section', name=lk.section.name), 'note': ': ' ~ (line0[:1] | lower) ~ line0[1:]}) }}
+    {% endif %}
+  {% endif %}
+
+  {# One key to each page of settings. Its gutter holds the part's pictogram over its lamp, in the
+     one code: the jewel when it is set up, the pewter ring when it is off, the amber bar when it
+     needs a look; the state is said in words under what the part says of itself. #}
+  <ul class="section-cards" id="parts">
+    {% for entry in sections %}
+      {% set one = entry.section %}
+      {% set log = one.name == 'history' %}
+      {% set state = states[one.name] %}
+      {% set off = state == 'off' %}
+      {% set partly = state == '' %}
+      <li>
+        <a class="section-card{% if entry.look %} look{% elif off %} off{% endif %}" href="{{ url_for('settings.section', name=one.name) }}">
+          <span class="section-gutter" aria-hidden="true">
+            {% if one.icon == 'presence' %}{{ presence('glyph her-screen') }}{% else %}{{ icon(one.icon) }}{% endif %}
+            {% if not log %}{{ lamp(state) }}{% endif %}
+          </span>
+          <span class="section-what">
+            <strong>{{ one.title }}</strong>
+            {% for line in entry.lines %}<span class="section-state">{{ line }}</span>{% endfor %}
+            {% if not log %}<span class="state-word {{ state or 'partly' }}">{% if entry.look %}Needs a look{% elif off %}Off{% elif partly %}Partly set up{% else %}Set up{% endif %}</span>{% endif %}
+          </span>
+          {{ icon('right', cls='go') }}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+  <div class="settings-foot">
+    <p class="muted small">
+      Setting up for the first time, or starting again? <a href="{{ url_for('setup.overview') }}">Setup</a>
+      goes through what matters most, one step at a time.
+    </p>
+  </div>
+{% endblock %}

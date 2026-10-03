@@ -1,0 +1,51 @@
+{
+ "stage": "design",
+ "round": "t2",
+ "roundNo": 2,
+ "key": "track",
+ "lin": {
+  "name": "the track series (Track Diagram)",
+  "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/tour/t2-a",
+  "carried": [
+   {
+    "id": "t1-track-graft",
+    "name": "Track Diagram, Branch Lines"
+   },
+   {
+    "id": "t1-track-revival",
+    "name": "Signal Box Relaid"
+   }
+  ],
+  "briefs": [
+   {
+    "slot": "refine",
+    "parent": "t1-track-graft",
+    "parentName": "Track Diagram, Branch Lines"
+   },
+   {
+    "slot": "refine2",
+    "parent": "t1-track-revival",
+    "parentName": "Signal Box Relaid"
+   },
+   {
+    "slot": "graft",
+    "parent": "t1-track-graft",
+    "parentName": "Track Diagram, Branch Lines"
+   }
+  ],
+  "mutant": {
+   "kind": "type",
+   "parent": "t1-track-graft",
+   "parentName": "Track Diagram, Branch Lines",
+   "changes": [
+    "a condensed system: titles and labels in a condensed face (IBM Plex Sans Condensed, Barlow Condensed, or Archivo narrow), body in a text face",
+    "quotes and bullets hung by hand outside the text edge (a negative indent, or the list pulled into the margin)",
+    "a stylistic set or character variant of the face (ss01-ss08, cv..), where it has one, for a more distinctive texture"
+   ],
+   "id": "t2-track-mut"
+  },
+  "idea": "the family's week drawn as a signal box's illuminated track diagram: steel lines on slate boards with a lamp at each stop, drawn only where there is an order (Coming up, To do, the setup steps, the chat); the series began as Signal Box (round 7) and its mimic-line language"
+ },
+ "plan": false,
+ "mutant": true
+}

@@ -1,0 +1,55 @@
+/* ==========================================================================================
+   Sign in and the lost page: the terminal alone, in the middle of the panel
+   ========================================================================================== */
+.page-signin .board, .page-lost .board { min-height: calc(100svh - var(--bar-h) - 12rem); align-content: center; justify-items: center; }
+.signin {
+  width: min(30rem, 100%);
+  min-height: 0;
+  padding: 0.75rem 0.75rem 1.4rem;
+  background: linear-gradient(180deg, var(--bezel-hi) 0, var(--bezel) 1.25rem, var(--bezel) 60%, var(--bezel-lo));
+  border: 1px solid color-mix(in srgb, var(--bezel) 55%, #000);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 30px 60px -34px rgb(0 0 0 / 0.95), 0 0 90px -36px color-mix(in srgb, var(--screen) 45%, transparent);
+}
+.signin::before { display: none; }
+.signin .crt { padding: 0; background: none; border: 0; box-shadow: none; margin-bottom: 1.2rem; }
+.signin .crt::after { display: none; }
+.signin .crt-tube { display: grid; justify-items: center; gap: 0.6rem; padding: 2.2rem 1.4rem 1.4rem; }
+.crt .crt-face { width: 8.5rem; overflow: visible; filter: blur(0.35px) drop-shadow(0 0 5px color-mix(in srgb, var(--phosphor) 60%, transparent)); }
+.crt-face path { fill: none; stroke: var(--phosphor); stroke-width: 3.2; stroke-linecap: round; }
+.crt-face .eye { transform-box: fill-box; transform-origin: center; animation: eyes 7s ease-in-out infinite; }
+.signin-ready { justify-self: start; font-size: var(--t-tube); }
+.signin h1 { margin: 0 0.4rem 1.1rem; font: condensed 600 2.4rem/1 var(--sans); color: var(--heading); }
+.signin form { display: grid; gap: 0.4rem; padding: 0 0.4rem; }
+.signin input { margin-bottom: 0.8rem; }
+.signin button { width: 100%; min-height: 3rem; font-size: 0.875rem; }
+.signin .hint { margin: 1rem 0.4rem 0; }
+.lost { display: grid; justify-items: center; text-align: center; gap: 0.4rem; }
+.lost .crt { width: min(36rem, 100%); margin-bottom: 1.5rem; }
+.lost .crt-tube { display: flex; align-items: center; gap: 2rem; padding: 1.4rem 2rem; }
+.lost .radar { width: 14rem; }
+.lost-readout { text-align: left; font-size: var(--t-tube); }
+.lost-readout .gap { margin-top: 0.8rem !important; }
+.lost h1 { font: condensed 600 3.25rem/1 var(--sans); margin-bottom: 0.4rem; }
+.lost .eyebrow { margin: 0; }
+
+/* ==========================================================================================
+   Motion: the light behaves like phosphor
+   ========================================================================================== */
+@keyframes blink { 50% { opacity: 0; } }
+@keyframes breathe { 50% { opacity: 0.55; } }
+@keyframes sweep { to { transform: rotate(1turn); } }
+@keyframes blip { 0% { opacity: 1; } 62%, 100% { opacity: var(--rest, 0.3); } }
+@keyframes ping { 0% { opacity: 0.9; transform: scale(1); } 32%, 100% { opacity: 0; transform: scale(3.6); } }
+@keyframes flicker { 0%, 91%, 94%, 100% { opacity: 1; } 92% { opacity: 0.55; } 93% { opacity: 0.9; } }
+@keyframes fall { from { transform: translateY(-13.6em); } to { transform: none; } }
+@keyframes eyes { 0%, 92%, 100% { transform: none; } 94%, 96% { transform: scaleY(0.12); } }
+@keyframes power-on {
+  0% { opacity: 0.05; transform: scale(1, 0.01); filter: brightness(3); }
+  30% { opacity: 1; transform: scale(1, 0.01); }
+  65% { transform: scale(1, 1.03); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes landed {
+  from { box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand) 65%, transparent), 0 0 40px -6px color-mix(in srgb, var(--brand) 55%, transparent); }
+}
+@keyframes listening { 50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--brand) 8%, transparent), 0 0 22px -4px color-mix(in srgb, var(--brand) 70%, transparent); } }

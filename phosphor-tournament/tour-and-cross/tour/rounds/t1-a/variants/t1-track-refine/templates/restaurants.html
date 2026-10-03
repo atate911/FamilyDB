@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, kind_lamp, page_head %}
+{% block title %}Restaurants · {{ site_title }}{% endblock %}
+{% block body_class %}page-restaurants{% endblock %}
+{% block content %}
+  {# Track Diagram, Trued: the Restaurants key's own page is drawn as the Ideas list is, the same
+     head and latched keys, then a listing on a slate board: a row to each place, its ring the lamp
+     (amber, as every restaurant's is), its name and today's hours, then where, how far, for whom
+     and its rating in dim, with the ways out at the right. The kind's word is left off each row:
+     the latched key above already says it. #}
+  {% call page_head('Ideas', 'Places to go, things to try, and everything the family has mentioned.', 'idea') %}
+    <a class="button" href="{{ url_for('web.new_idea') }}">{{ icon('plus') }}Add an idea</a>
+  {% endcall %}
+  <div class="idea-tools">
+    <nav class="keys" aria-label="Which ideas">
+      <a class="key" href="{{ url_for('web.ideas') }}">{{ icon('idea') }}All ideas</a>
+      <a class="key" href="{{ url_for('web.restaurants') }}" aria-current="true">{{ icon('restaurant') }}Restaurants</a>
+    </nav>
+    <p class="count">
+      {{ cards | length }} place{{ '' if cards | length == 1 else 's' }} the family has talked about.
+    </p>
+  </div>
+
+  {% if not cards %}
+    <p class="panel muted empty">{{ icon('restaurant') }}<span>No restaurants yet. Tell the bot about one and it will appear here.</span></p>
+  {% else %}
+  <section class="idea-list tray" aria-label="Restaurants">
+  <ul class="rows plain">
+    {% for card in cards %}
+      <li class="row place-row">
+        {{ kind_lamp('restaurant') }}
+        <div class="row-name">
+          <h2><a href="{{ url_for('web.idea', idea_id=card.id) }}">{{ card.title }}</a></h2>
+          {% if card.cost %}<span class="tag">{{ card.cost }}</span>{% endif %}
+          {% if card.today %}<span class="today-hours">{{ icon('clock') }}{{ card.today }}</span>{% endif %}
+          {% if card.summary %}<p class="summary">{{ card.summary }}</p>{% endif %}
+          <p class="muted meta">
+            {% if card.where %}<span>{{ icon('pin') }}{{ card.where }}</span>{% endif %}
+            {% if card.travel %}<span>{{ icon('day_trip') }}{{ card.travel }}</span>{% endif %}
+            <span>{{ icon('user') }}for {{ card.who }}</span>
+            {% if card.rating %}<span>{{ icon('star') }}{{ card.rating }}</span>{% endif %}
+            {% if card.pending %}<span>{{ icon('hourglass') }}{{ card.details }}</span>{% endif %}
+            {% if card.stale %}<span class="warn">{{ icon('warning') }}details may be out of date</span>{% endif %}
+          </p>
+          {% if card.tags %}
+            <p class="tags">{% for tag in card.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</p>
+          {% endif %}
+        </div>
+        <p class="links">
+          <a href="{{ url_for('web.idea', idea_id=card.id) }}">{{ icon('idea') }}Everything we know</a>
+          {% if card.website %}
+            <a href="{{ card.website }}" rel="noopener noreferrer">{{ icon('link') }}Their site</a>
+          {% endif %}
+          {% if card.booking_url %}
+            <a href="{{ card.booking_url }}" rel="noopener noreferrer">{{ icon('bell') }}Book a table</a>
+          {% endif %}
+          {% if card.map_url %}
+            <a href="{{ card.map_url }}" rel="noopener noreferrer">{{ icon('pin') }}Map</a>
+          {% endif %}
+        </p>
+      </li>
+    {% endfor %}
+  </ul>
+  </section>
+  {% endif %}
+{% endblock %}

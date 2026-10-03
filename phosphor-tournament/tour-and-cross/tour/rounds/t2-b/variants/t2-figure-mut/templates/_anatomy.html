@@ -1,0 +1,45 @@
+{# An idea taken apart, as a drawing: each part in the order the form asks for it, solid when it
+   is needed (a new idea) or known (`known`, an idea already saved), dashed when it is not, and
+   the kind's own square in its box when there is one. Each part carries the id of its box on
+   the form (d-f-title, ...), so the stylesheet can light the one being typed in: that part
+   becomes a small green screen, its name typed on the glass under a block cursor, as the field
+   beside it is being filled. #}
+{% macro anatomy(known=none, kind_key=none) -%}
+  {% set parts = [
+    ('title', 'TITLE', 16, 16, 224, 30),
+    ('kind', 'KIND', 16, 54, 108, 26),
+    ('who', 'SUGGESTED BY', 132, 54, 108, 26),
+    ('description', 'DESCRIPTION', 16, 88, 224, 40),
+    ('location_name', 'WHERE', 16, 144, 108, 24),
+    ('happens_from', 'ON FROM', 132, 144, 108, 24),
+    ('happens_until', 'UNTIL', 16, 176, 108, 24),
+    ('url', 'LINK', 132, 176, 108, 24),
+    ('participants', 'WHO FOR', 16, 208, 108, 24),
+    ('tags', 'TAGS', 132, 208, 108, 24),
+  ] %}
+  <svg viewBox="0 0 256 276" focusable="false" class="drawing anatomy">
+    <defs>
+      <radialGradient id="glass-anat" cx="50%" cy="45%" r="70%"><stop class="g-core hot" offset="0"/><stop class="g-mid hot" offset="0.6"/><stop class="g-edge" offset="1"/></radialGradient>
+      <pattern id="scan-anat" width="4" height="3" patternUnits="userSpaceOnUse"><rect width="4" height="1" fill="#020503" fill-opacity="0.32"/></pattern>
+      <radialGradient id="fall-anat" cx="50%" cy="45%" r="72%"><stop offset="0.55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.6"/></radialGradient>
+    </defs>
+    <rect class="d-box" x="4" y="4" width="248" height="268"/>
+    {% for key, label, x, y, w, h in parts %}
+      {% set solid = (key in ('title', 'kind')) if known is none else (key in known) %}
+      <g class="d-fld d-f-{{ key }}{{ ' solid' if solid }}">
+        {% set ty = y + (20 if h >= 30 else 16) %}
+        <rect class="{{ 'd-need' if solid else 'd-empty' }}" x="{{ x }}" y="{{ y }}" width="{{ w }}" height="{{ h }}"/>
+        <rect class="d-an d-tube-glass" x="{{ x }}" y="{{ y }}" width="{{ w }}" height="{{ h }}" fill="url(#glass-anat)"/>
+        <text class="{{ 'd-label need' if solid else 'd-key' }}" x="{{ x + 9 }}" y="{{ ty }}">{{ label }}</text>
+        <rect class="d-an d-an-cur" x="{{ x + 13 + (label | length) * 7.2 }}" y="{{ ty - 11 }}" width="8" height="11"/>
+        <rect class="d-an d-scan" x="{{ x }}" y="{{ y }}" width="{{ w }}" height="{{ h }}" fill="url(#scan-anat)"/>
+        <rect class="d-an d-fall" x="{{ x }}" y="{{ y }}" width="{{ w }}" height="{{ h }}" fill="url(#fall-anat)"/>
+        {% if key == 'kind' and kind_key %}<rect class="kind-fill k-{{ kind_key }}" x="{{ x + w - 20 }}" y="{{ y + 8 }}" width="10" height="10"/>{% endif %}
+      </g>
+    {% endfor %}
+    <g class="d-fld d-f-more{{ ' solid' if known and 'more' in known }}">
+      <text class="d-key" x="16" y="250">+ INDOOR, WEATHER, COST,</text>
+      <text class="d-key" x="16" y="264">TIMES, SEASONS</text>
+    </g>
+  </svg>
+{%- endmacro %}

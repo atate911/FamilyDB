@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, presence, lamp, readout %}
+{% block title %}Settings · {{ site_title }}{% endblock %}
+{% block body_class %}page-settings{% endblock %}
+{% block content %}
+  {{ page_head('Settings', 'Each part, how it stands now, and the way in to change it.', 'settings') }}
+  {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+  {# How each part stands, read from its own lines as its lamp is: set up (lit), off or not set (a
+     ring), or needing a look (amber). The same three words as Status: working, off, a look. #}
+  {% set tally = namespace(on=0, off=0, look=0) %}
+  {% for entry in sections %}
+    {% set said = entry.lines | join(' ') | lower %}
+    {% set first = ((entry.lines or [''])[0] or '') | lower %}
+    {% if entry.look %}{% set tally.look = tally.look + 1 %}
+    {% elif first.startswith('off') or first.startswith('no ') or 'not set up' in said or 'not connected' in said %}{% set tally.off = tally.off + 1 %}
+    {% else %}{% set tally.on = tally.on + 1 %}{% endif %}
+  {% endfor %}
+  <nav class="rail" aria-label="At a glance">
+    {{ readout('Set up', '%02d' | format(tally.on), '#parts', '', '%02d' | format(sections | length)) }}
+    {{ readout('Off or not set', '%02d' | format(tally.off), '#parts') }}
+    {{ readout('Needs a look', '%02d' | format(tally.look), '#parts', 'look' if tally.look else '') }}
+  </nav>
+
+  {# One card to each page of settings: its pictogram in the gutter with the part's lamp under it
+     (lit when it is set up, a ring when it is off or not set, amber when it needs a look), what
+     it is called, and how it stands in a line or two. The whole card is the way in. #}
+  <ul class="section-cards" id="parts">
+    {% for entry in sections %}
+      {% set one = entry.section %}
+      {% set said = entry.lines | join(' ') | lower %}
+      {% set first = ((entry.lines or [''])[0] or '') | lower %}
+      {% set unset = first.startswith('off') or first.startswith('no ') or 'not set up' in said or 'not connected' in said %}
+      <li>
+        <a class="panel section-card{% if entry.look %} look{% endif %}" href="{{ url_for('settings.section', name=one.name) }}">
+          <span class="section-icon{% if one.icon == 'presence' %} section-her{% endif %}" aria-hidden="true">
+            {%- if one.icon == 'presence' %}{{ presence('glyph her-screen') }}{% else %}{{ icon(one.icon) }}{% endif -%}
+            {{ lamp('amber' if entry.look else ('off' if unset else 'on')) }}
+          </span>
+          <span class="section-what">
+            <strong>{{ one.title }}</strong>
+            {% for line in entry.lines %}<span class="section-state">{{ line }}</span>{% endfor %}
+            {% if entry.look %}<span class="section-look">{{ lamp('amber') }}Needs a look</span>{% endif %}
+          </span>
+          {{ icon('right', cls='go') }}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+  <p class="settings-more">
+    Setting up for the first time, or starting again? <a href="{{ url_for('setup.overview') }}">Setup</a>
+    goes through what matters most, one step at a time.
+  </p>
+{% endblock %}

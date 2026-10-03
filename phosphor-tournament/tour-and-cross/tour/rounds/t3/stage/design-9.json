@@ -1,0 +1,42 @@
+{
+ "stage": "design",
+ "round": "t3",
+ "roundNo": 3,
+ "key": "console",
+ "lin": {
+  "name": "Flight Console",
+  "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/tour/t3-b",
+  "carried": [
+   {
+    "id": "t2-console-graft",
+    "name": "Master Caution"
+   }
+  ],
+  "briefs": [
+   {
+    "slot": "refine",
+    "parent": "t2-console-graft",
+    "parentName": "Master Caution"
+   },
+   {
+    "slot": "graft",
+    "parent": "t2-console-graft",
+    "parentName": "Master Caution"
+   }
+  ],
+  "mutant": {
+   "kind": "graphics",
+   "parent": "t2-console-graft",
+   "parentName": "Master Caution",
+   "changes": [
+    "a greeting picture: a drawn scene or emblem beside or behind the question (a skyline, a radar sweep, a switchboard), light enough to read over",
+    "arrows, chevrons and carets redrawn as one family (weight, angle, size) across links, selects and folds",
+    "the kind icons redrawn as small badges in each kind's colour"
+   ],
+   "id": "t3-console-mut"
+  },
+  "idea": "a 1969 flight console: a readout strip across the top (TODAY, PLANS, TO DO, LATE, IDEAS), the coming weeks drawn as a flight plan of hops between stops, an annunciator of lit lamps on Status, a crew board of lamps on To do, a T-minus countdown for setup, a flight-log chat"
+ },
+ "plan": true,
+ "mutant": false
+}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, presence, lamp, lamp_key, rail %}
+{% block title %}Settings · {{ site_title }}{% endblock %}
+{% block body_class %}page-settings{% endblock %}
+{% block content %}
+  {{ page_head('Settings', 'Each part, how it stands now, and the way in to change it.', 'settings') }}
+  {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+  {% set looks = sections | selectattr('look') | list %}
+  {% set cells = [{'label': 'Parts', 'value': '%02d' | format(sections | length), 'href': '#parts'}] %}
+  {% set _ = cells.append({'label': 'Needs a look', 'value': '%02d' | format(looks | length), 'href': (url_for('settings.section', name=looks[0].section.name) if looks else '#parts'), 'tone': 'amber' if looks else ''}) %}
+  {{ rail(cells, 'Settings at a glance') }}
+
+  {# One key to each page of settings. Its gutter holds the part's pictogram over its lamp, in the
+     one code: the jewel when it is set up, the pewter ring when it is off, the amber bar when it
+     needs a look; the state is said in words under what the part says of itself. #}
+  <ul class="section-cards" id="parts">
+    {% for entry in sections %}
+      {% set one = entry.section %}
+      {# How the part stands, read from what it says of itself: every line saying it is not
+         there is off; some of them, partly set up (the dot: the rest is waiting). What has
+         changed is a log, not a part to set up, so it has no lamp. #}
+      {% set neg = namespace(n=0) %}
+      {% for line in entry.lines %}{% if line.startswith('Off') or line.startswith('No ') or 'Not set up' in line or 'Not connected' in line or 'not connected' in line or 'waiting for a key' in line %}{% set neg.n = neg.n + 1 %}{% endif %}{% endfor %}
+      {% set log = one.name == 'history' %}
+      {% set off = entry.lines and neg.n == entry.lines | length %}
+      {% set partly = neg.n and not off %}
+      {% set state = 'amber' if entry.look else ('off' if off else ('' if partly else 'on')) %}
+      <li>
+        <a class="section-card{% if entry.look %} look{% elif off %} off{% endif %}" href="{{ url_for('settings.section', name=one.name) }}">
+          <span class="section-gutter" aria-hidden="true">
+            {% if one.icon == 'presence' %}{{ presence('glyph her-screen') }}{% else %}{{ icon(one.icon) }}{% endif %}
+            {% if not log %}{{ lamp(state) }}{% endif %}
+          </span>
+          <span class="section-what">
+            <strong>{{ one.title }}</strong>
+            {% for line in entry.lines %}<span class="section-state">{{ line }}</span>{% endfor %}
+            {% if not log %}<span class="state-word {{ state or 'partly' }}">{% if entry.look %}{{ lamp('amber') }}Needs a look{% elif off %}Off{% elif partly %}Partly set up{% else %}Set up{% endif %}</span>{% endif %}
+          </span>
+          {{ icon('right', cls='go') }}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+  <div class="settings-foot">
+    {{ lamp_key() }}
+    <p class="muted small">
+      Setting up for the first time, or starting again? <a href="{{ url_for('setup.overview') }}">Setup</a>
+      goes through what matters most, one step at a time.
+    </p>
+  </div>
+{% endblock %}

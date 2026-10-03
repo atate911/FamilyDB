@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, crt, scope %}
+{% block title %}Not found · {{ site_title }}{% endblock %}
+{% block body_class %}page-lost{% endblock %}
+{% block content %}
+  <section class="lost">
+    {# No signal: the scope's trace lies flat, and the number is all it shows. #}
+    {% call crt('power-on') %}
+      {% call scope([]) %}404{% endcall %}
+      <div class="lost-readout caps">
+        <p><span class="dim">Range</span> 4 wk</p>
+        <p><span class="dim">Contacts</span> 0</p>
+        <p class="bright gap">?Not found</p>
+        <p>Ready.<span class="crt-cursor"></span></p>
+      </div>
+    {% endcall %}
+    <p class="eyebrow">Nothing on the radar</p>
+    <h1>Not found</h1>
+    <p class="muted">There is nothing at that address.</p>
+    <p><a class="button" href="{{ url_for('web.home') }}">{{ icon('home') }}Back to the start</a></p>
+  </section>
+{% endblock %}

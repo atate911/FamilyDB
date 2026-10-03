@@ -1,0 +1,42 @@
+{
+ "stage": "design",
+ "round": "t3",
+ "roundNo": 3,
+ "key": "switchboard",
+ "lin": {
+  "name": "Videotex Switchboard",
+  "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/tour/t3-b",
+  "carried": [
+   {
+    "id": "t2-switchboard-graft",
+    "name": "Switchboard, Patched"
+   }
+  ],
+  "briefs": [
+   {
+    "slot": "refine",
+    "parent": "t2-switchboard-graft",
+    "parentName": "Switchboard, Patched"
+   },
+   {
+    "slot": "graft",
+    "parent": "t2-switchboard-graft",
+    "parentName": "Switchboard, Patched"
+   }
+  ],
+  "mutant": {
+   "kind": "point",
+   "parent": "t2-switchboard-graft",
+   "parentName": "Switchboard, Patched",
+   "changes": [
+    "take the companion out of one role where it is weakest, and put that role back to its quiet default",
+    "change the rounding across the system: everything square, or everything round",
+    "font-synthesis off everywhere, so no faux bold or italic ever appears"
+   ],
+   "id": "t3-switchboard-mut"
+  },
+  "idea": "Home as the map of the whole service: every page a cell with its number, a lamp and a count (a videotex sommaire), the question typed on the glass under a cursor, each page opening on the same rack with its own green summary screen"
+ },
+ "plan": false,
+ "mutant": true
+}

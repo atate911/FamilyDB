@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, presence, fig %}
+{% from "_machine.html" import machine %}
+{% block title %}{{ section.title }} · Settings · {{ site_title }}{% endblock %}
+{% block body_class %}page-settings{% endblock %}
+{% block content %}
+  {% set here = namespace(n=0) %}
+  {% for one in sections %}{% if one.name == section.name %}{% set here.n = loop.index %}{% endif %}{% endfor %}
+  {# One plate for the whole page. Down the left, in one stack that stays in view: the machine
+     with the part this page changes lit, and under it the parts, numbered as the drawing numbers
+     them, this one in steel. On the right: where this is, its title, what it is for, and then
+     the settings themselves, so the first box is on the first screen. On a phone the way to the
+     others is Settings, above the title. #}
+  <div class="plate settings-plate">
+    <div class="fig-stack">
+      {% call fig('fig-machine', name='The machine with part ' ~ here.n ~ ', this page, lit; the parts under it lead to the others.', summary='Part ' ~ here.n ~ ' of ' ~ (sections | length) ~ ': ' ~ section.title) %}{{ machine(here.n) }}{% endcall %}
+      <nav class="settings-nav" aria-label="Settings">
+        <p class="eyebrow">Parts</p>
+        <ol>
+          {% for one in sections %}
+            <li><a href="{{ url_for('settings.section', name=one.name) }}"{% if one.name == section.name %} aria-current="page"{% endif %}>
+              <span class="part-no" aria-hidden="true">{{ loop.index }}</span>{{ one.title }}</a></li>
+          {% endfor %}
+        </ol>
+      </nav>
+    </div>
+    <div class="plate-body">
+      <header class="page-title">
+        <nav class="crumbs" aria-label="Breadcrumb"><a href="{{ url_for('settings.show') }}">Settings</a><span aria-hidden="true">/</span></nav>
+        <div class="title-row"><h1>{{ section.title }}</h1></div>
+        {% if section.blurb %}<p class="lede">{{ section.blurb }}</p>{% endif %}
+      </header>
+      {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+      {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+      <div class="settings-body">
+        {% include "settings/" ~ section.name ~ ".html" %}
+      </div>
+    </div>
+  </div>
+{% endblock %}

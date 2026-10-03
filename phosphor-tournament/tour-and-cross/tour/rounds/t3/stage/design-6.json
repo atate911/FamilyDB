@@ -1,0 +1,42 @@
+{
+ "stage": "design",
+ "round": "t3",
+ "roundNo": 3,
+ "key": "pocket",
+ "lin": {
+  "name": "Pocket Timeline",
+  "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/tour/t3-a",
+  "carried": [
+   {
+    "id": "t2-pocket-graft",
+    "name": "Pocket Diary"
+   }
+  ],
+  "briefs": [
+   {
+    "slot": "refine",
+    "parent": "t2-pocket-graft",
+    "parentName": "Pocket Diary"
+   },
+   {
+    "slot": "graft",
+    "parent": "t2-pocket-graft",
+    "parentName": "Pocket Diary"
+   }
+  ],
+  "mutant": {
+   "kind": "phosphor",
+   "parent": "t2-pocket-graft",
+   "parentName": "Pocket Diary",
+   "changes": [
+    "bring back the original Phosphor page's light wherever this design shows phosphor: every effect in phosphor_kit.md that fits it, in this design's own terms",
+    "the machine's voice as lit phosphor: Vera's words, times and live readouts with a soft halo, while the family's words stay grounded and sharp",
+    "the primary actions lit from within: a green ring and light pooled under the primary button and Send"
+   ],
+   "id": "t3-pocket-mut"
+  },
+  "idea": "Home ordered as time on one spine: NOW (the question), then NEXT (the tube), then Coming up, then LATER, with the lists beside it; every page strung along a timeline"
+ },
+ "plan": false,
+ "mutant": true
+}

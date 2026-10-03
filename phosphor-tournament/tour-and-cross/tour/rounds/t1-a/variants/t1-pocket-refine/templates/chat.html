@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, waiting_line %}
+{% block title %}{{ assistant if has_persona else 'Chat' }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-chat{% endblock %}
+{# While an answer is on its way the browser fetches the page again by itself, landing back on
+   the newest line: a meta refresh, which every browser does, scripts or not. It is only set when
+   something really is being thought about, so the page goes quiet as soon as the reply is in the
+   log, and never on a page holding words somebody typed, which it would take with it. While a
+   turn runs the box is closed, so there is nothing to lose. Waiting on the retry job the box
+   stays open, so with scripts on ask.js does the looking again instead, and never while somebody
+   is writing. #}
+{% block head %}
+  {% if refresh and locked %}
+    <meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" />
+  {% elif refresh %}
+    <noscript><meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" /></noscript>
+  {% endif %}
+{% endblock %}
+{#
+  Pocket Timeline, Relit: the conversation as a timetable on the line. The day is said once, as a
+  steel stop; each message has its own square on the spine and its time hung in the margin to
+  the left of it, read straight down. Hers hang from the spine on her glass; the family's sit at
+  the far side of the column with their initial, so side and mark tell them apart, not colour
+  alone. The line ends at the lit NOW stop beside the box to answer in.
+#}
+{% set MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] %}
+{% set t0 = config.FAMILYDB_APP.clock.today() %}
+{% macro day_words(day) -%}
+  {#- "27 Sep" as the family's clock says a day on the line: "Sun 27 Sep". -#}
+  {%- set bits = day.split(' ') -%}
+  {%- if bits | length == 2 and bits[1] in MONTHS and bits[0].isdigit() -%}
+    {%- set m = MONTHS.index(bits[1]) + 1 -%}
+    {%- set y = t0.year - 1 if m > t0.month else t0.year -%}
+    {{ t0.replace(year=y, month=m, day=bits[0] | int).strftime('%a') }} {{ day }}
+  {%- else -%}{{ day }}{%- endif -%}
+{%- endmacro %}
+{% macro line_of(line, anchor=none) -%}
+  {%- set parts = line.when.rsplit(', ', 1) -%}
+  <li class="{{ 'said-bot' if line.from_bot else 'said-them' }}"{% if anchor %} id="{{ anchor }}"{% endif %}>
+    <span class="node" aria-hidden="true"></span>
+    <div class="bubble">
+      <div class="said-by">
+        <strong>{{ line.who }}</strong>
+        <span class="said-at"><time>{{ parts[-1] }}</time></span>
+        {% if line.trouble %}<span class="tag warn">{{ line.trouble }}</span>{% endif %}
+      </div>
+      <div class="said-text">{{ line.text }}</div>
+      {% if line.did %}
+        <div class="did">used {{ line.did | join(', ') }}</div>
+      {% endif %}
+    </div>
+    {% if not line.from_bot %}<span class="avatar" aria-hidden="true">{{ line.who[:1] | upper }}</span>{% endif %}
+  </li>
+{%- endmacro %}
+{% block content %}
+  {# Hers: her name at the top, as on the tab that leads here, beside her screen. #}
+  {% if reading %}
+    {{ page_head(reading ~ ' and ' ~ (assistant if has_persona else 'the bot'), 'Her own conversation, for you to read. Only she writes in it.', 'presence' if has_persona else 'chat', [(assistant if has_persona else 'Chat', url_for('chat.show'))]) }}
+  {% elif private %}
+    {{ page_head(assistant if has_persona else 'Chat', 'Just you and ' ~ assistant ~ '. Tell her what you wish for, or ask about the plans.', 'presence' if has_persona else 'chat') }}
+  {% else %}
+    {{ page_head(assistant if has_persona else 'Chat', 'Weekends, ideas, to-dos and the calendar: anything you would ask in Telegram works here too.', 'presence' if has_persona else 'chat') }}
+  {% endif %}
+
+  {% if lines %}
+    <ol class="thread">
+      {% set seen = namespace(day='') %}
+      {% for line in lines %}
+        {% set day = line.when.rsplit(', ', 1)[0] if ', ' in line.when else '' %}
+        {% if day and day != seen.day %}
+          {% set seen.day = day %}
+          <li class="day-stop"><span class="node" aria-hidden="true"></span><time class="day-word">{{ day_words(day) }}</time></li>
+        {% endif %}
+        {{ line_of(line, latest if loop.last) }}
+      {% endfor %}
+      {% if pending %}{{ waiting_line(assistant, state, pending) }}{% endif %}
+    </ol>
+  {% else %}
+    <p class="muted empty">{{ icon('chat') }}<span>Nothing said here yet. Ask {{ assistant }} what to do this weekend, save an idea, or set a reminder.</span></p>
+  {% endif %}
+
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+  {% if not reading %}
+    <p class="stop-label now-label chat-now" aria-hidden="true"><span class="node node-now"></span><span class="stop-word">Now</span></p>
+    {% include "_ask.html" %}
+  {% endif %}
+
+  {% if kids and not reading %}
+    <nav class="panel kids-talk" aria-label="The kids' conversations">
+      <h2>{{ icon('user') }}The kids' conversations</h2>
+      <p class="muted">Each kid talks to {{ assistant }} on her own. You can read along.</p>
+      <ul class="plain">
+        {% for kid in kids %}<li><a href="{{ url_for('chat.show', with=kid.id, _anchor=latest) }}">{{ kid.name }}</a></li>{% endfor %}
+      </ul>
+    </nav>
+  {% endif %}
+{% endblock %}

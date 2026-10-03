@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, presence, edge %}
+{% block title %}Settings · {{ site_title }}{% endblock %}
+{% block body_class %}page-settings{% endblock %}
+{% block content %}
+  {{ page_head('Settings', 'Each part, how it stands now, and the way in to change it.', 'settings') }}
+  {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+  {# One card to a page of settings, each saying how things stand in a line or two, so this is
+     the place to look first as well as the way in. Something missing is marked, in words. #}
+  <div class="legend t-settings">
+  <div class="thead" aria-hidden="true"><span></span><span>Part</span><span>How it stands</span><span></span></div>
+  <ul class="section-cards tbody">
+    {% for entry in sections %}
+      {% set one = entry.section %}
+      <li>
+        <a class="panel section-card{% if entry.look %} look{% endif %}" href="{{ url_for('settings.section', name=one.name) }}">
+          {% if one.icon == 'presence' %}{{ presence('section-icon') }}
+          {%- else %}<span class="section-icon" aria-hidden="true">{{ icon(one.icon) }}</span>{% endif %}
+          <span class="section-what">
+            <strong>{{ one.title }}</strong>
+            {% for line in entry.lines %}<span class="section-state">{{ line }}</span>{% endfor %}
+            {# The day's spend on the same scale as the Status page's meter: nothing to a quarter
+               past the limit, the stretch past it hatched. A picture of the line above it. #}
+            {% if one.name == 'spending' %}
+              {% set limit = config.FAMILYDB_APP.settings.daily_spend_limit %}
+              {% for said in entry.lines if limit and '$' in said and 'spent today' in said %}
+                {% set spent = said.split('$')[1].split(' ')[0] | float %}
+                <span class="row-meter">{{ edge(spent / (limit * 1.25), ('0', '%.2f' | format(limit / 4), '%.2f' | format(limit / 2), '%.2f' | format(limit * 3 / 4), '%.2f' | format(limit), ''), zone=0.8) }}</span>
+              {% endfor %}
+            {% endif %}
+            {% if entry.look %}<span class="tag warn">{{ icon('warning') }}Needs a look</span>{% endif %}
+          </span>
+          {{ icon('right', cls='go') }}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+  </div>
+  <p class="muted small">
+    Setting up for the first time, or starting again? <a href="{{ url_for('setup.overview') }}">Setup</a>
+    goes through what matters most, one step at a time.
+  </p>
+{% endblock %}

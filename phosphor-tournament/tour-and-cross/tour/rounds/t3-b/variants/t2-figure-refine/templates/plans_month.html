@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, today_iso, day_state, rail_mark, now_rule, rail_day %}
+{% block title %}{{ month }} · {{ site_title }}{% endblock %}
+{% macro event(entry) %}
+  <div class="event{{ ' from-google' if entry.from_google }}">
+    {% if entry.idea_id %}
+      <a href="{{ url_for('web.idea', idea_id=entry.idea_id) }}">{{ entry.title }}</a>
+    {% else %}
+      {{ entry.title }}
+    {% endif %}
+    {% if entry.time %}<small>{{ entry.time }}</small>{% endif %}
+  </div>
+{% endmacro %}
+{% block content %}
+  {% set today = today_iso() | trim %}
+  {# The title plate spans: the title, the way to the list, and where the plans come from. #}
+  {% call page_head('Plans', 'Outings, trips and dates the family has put on the calendar.') %}
+    <nav class="tabs latch" aria-label="How to show the plans">
+      <a href="{{ url_for('web.plans') }}">{{ icon('list') }}List</a>
+      <a href="{{ url_for('web.plans_month') }}" aria-current="page">{{ icon('grid') }}Month</a>
+    </nav>
+    {% if visitor().may('browse') %}<p class="muted source source-{{ source }}">{{ source_note }}</p>{% endif %}
+  {% endcall %}
+
+  {# The month, led by its figure, THE WEEK RAIL, built into the table as its first column so a
+     week's mark cannot miss its row: on the drawing sheet, each week's stop sits on one blueprint
+     line at the week's first edge, its days written beside it, and under them how many plans it
+     holds and a square for Saturday and for Sunday, shaded when that day holds a plan, open when it
+     is free. In this week the stop is the lit lamp, and NOW leaves it along the week's top edge,
+     over the hairline, to today. #}
+  <section class="plate span month-plate" aria-labelledby="h-month">
+    <div class="plate-body">
+      <div class="section-head month-head">
+        <h2 id="h-month">{{ month }}</h2>
+        <p class="month-nav">
+          <a class="button secondary" href="{{ url_for('web.plans_month', month=previous) }}">{{ icon('left') }}Earlier</a>
+          {% if not this_month %}<a class="button secondary" href="{{ url_for('web.plans_month') }}">This month</a>{% endif %}
+          <a class="button secondary" href="{{ url_for('web.plans_month', month=following) }}">Later{{ icon('right') }}</a>
+        </p>
+      </div>
+      <div class="month-frame">
+        <table class="month">
+          <colgroup><col class="c-week" /><col span="7" /></colgroup>
+          <thead>
+            <tr><th scope="col" class="week-head">Week</th>{% for name in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}<th scope="col">{{ name }}</th>{% endfor %}</tr>
+          </thead>
+          <tbody>
+            {% for week in weeks %}
+              {% set first_day, last_day = week[0].date, week[-1].date %}
+              {% set held = namespace(n=0) %}
+              {% for day in week %}{% set held.n = held.n + (day.entries | length) %}{% endfor %}
+              {% set this_week = (week | selectattr('today') | list | length) > 0 %}
+              {% set gone = (day_state(last_day.isoformat(), today) | trim) == 'past' %}
+              <tr class="{{ 'this-week' if this_week }}">
+                <th scope="row" class="week-mark{{ ' past' if gone }}{{ ' now' if this_week }}{{ ' busy' if held.n }}">
+                  <span class="wk-range">{{ first_day.day }} {{ first_day.strftime('%b') }} – {{ last_day.day }} {{ last_day.strftime('%b') }}</span>
+                  <span class="wk-stop" aria-hidden="true"></span>
+                  <span class="wk-sum">{% if held.n %}<span class="wk-count">{{ held.n }} plan{{ '' if held.n == 1 else 's' }}</span>{% endif %}<span class="wk-end" aria-hidden="true"><i class="{{ 'on' if week[5].entries }}"></i><i class="{{ 'on' if week[6].entries }}"></i></span></span>
+                  {% if this_week %}<span class="now-run" aria-hidden="true"></span><span class="wk-now" aria-hidden="true">NOW</span>{% endif %}
+                </th>
+                {% for day in week %}
+                  {% set gone_day = (day_state(day.date.isoformat(), today) | trim) == 'past' %}
+                  <td class="{{ 'outside' if not day.current }}{{ ' today' if day.today }}{{ ' weekend' if loop.index0 >= 5 }}{{ ' past' if gone_day }}{{ ' lit-edge' if this_week and gone_day }}">
+                    <time datetime="{{ day.date.isoformat() }}">{{ day.day }}</time>{% if day.today %}<span class="today-lamp" aria-hidden="true"></span><span class="sr">today</span>{% endif %}
+                    {% for entry in day.entries %}{{ event(entry) }}{% endfor %}
+                  </td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="fig-cap numbered month-cap"><span class="fig-no" aria-hidden="true"></span>The weeks on the rail: a filled stop holds plans, an open square is a free weekend day; the lit line is now.</p>
+
+      {# On a phone the month is its busy days down the rail, NOW between those gone and those to
+         come. #}
+      {% set lit = namespace(done=false) %}
+      <ol class="plain railed plan-rows month-list">
+        {% for week in weeks %}{% for day in week if day.entries %}{% for entry in day.entries %}
+          {% set gone_day = (day_state(day.date.isoformat(), today) | trim) == 'past' %}
+          {% if not gone_day and not lit.done %}{% set lit.done = true %}{{ now_rule() }}{% endif %}
+          <li class="plan-row{{ ' is-today' if day.today }}">
+            {% call rail_mark(state='past' if gone_day else '') %}<span class="dow">{{ day.date.strftime('%a') }}</span> {{ day.day }} {{ day.date.strftime('%b') }}{% endcall %}
+            <div class="p-words">
+              <span class="p-title">{% if entry.idea_id %}<a href="{{ url_for('web.idea', idea_id=entry.idea_id) }}">{{ entry.title }}</a>{% else %}{{ entry.title }}{% endif %}</span>
+              <span class="p-time">{{ entry.time or 'all day' }}</span>
+              <span class="p-rel">{{ entry.relative or '' }}</span>
+            </div>
+          </li>
+        {% endfor %}{% endfor %}{% endfor %}
+        {% if not lit.done %}{{ now_rule() }}{% endif %}
+      </ol>
+    </div>
+  </section>
+{% endblock %}

@@ -1,0 +1,210 @@
+{# The page's small parts, shared by every template: `{% from "_ui.html" import icon %}`.
+   Flight Console: the page is a 1969 flight console. Its parts are of three materials, and each
+   keeps to its job: the console (grey panels, engraved legends), the flight plan (violet drawings
+   printed on a faint plotting grid, one leading every section) and the phosphor (the tubes and the
+   lamps, lit only for what is live). Icons are Lucide's, with the page's own mark, gathered into
+   one sprite (static/icons.svg); they take the colour of the words they sit in. #}
+
+{% set KIND_ICONS = {
+  'restaurant': 'restaurant',
+  'activity': 'activity',
+  'outing': 'outing',
+  'day_trip': 'day_trip',
+  'trip': 'trip',
+  'show': 'show',
+  'event': 'event',
+  'seasonal': 'seasonal',
+} %}
+
+{% macro icon(name, label=none, cls='') -%}
+  <svg class="icon{{ ' ' ~ cls if cls }}" focusable="false"
+    {%- if label %} role="img" aria-label="{{ label }}"{% else %} aria-hidden="true"{% endif %}>
+    <use href="{{ url_for('static', filename='icons.svg') }}#i-{{ name }}"></use></svg>
+{%- endmacro %}
+
+{# The kind of an idea: the icon, or a spark for one the family made up. #}
+{% macro kind_icon(kind) -%}
+  {{ icon(KIND_ICONS.get((kind or '') | lower | replace(' ', '_'), 'spark')) }}
+{%- endmacro %}
+
+{# The kind of an idea as a lamp lens in its own colour, and its name engraved beside it. #}
+{% macro kind_label(kind) -%}
+  {% set key = (kind or '') | lower | replace(' ', '_') %}
+  <span class="kind kind-{{ key if key in KIND_ICONS else 'other' }}"><span class="lens" aria-hidden="true"></span>{{ kind | capitalize }}</span>
+{%- endmacro %}
+
+{# A lamp on the console, one language on every page, always beside words that say the same:
+   `on` lit phosphor (live, working, done), `amber` lit (now, or needs a look), `off` a dark
+   hollow ring (switched off, called off), `red` lit red (failed, refused: the only red), and
+   unlit (waiting, open). `cyan` and `pink` are the plans' and the wishes' own lenses, lit. #}
+{% macro lamp(state='', cls='') -%}
+  <span class="lamp{{ ' ' ~ state if state }}{{ ' ' ~ cls if cls }}" aria-hidden="true"></span>
+{%- endmacro %}
+
+{# A task's lamp, the same on Home and on To do: amber while it is late or due today, unlit
+   while it is open, lit when it is done, a dark ring when it was called off. #}
+{% macro task_lamp(status='open', pressing=false) -%}
+  {{ lamp('on' if status == 'done' else ('off' if status == 'cancelled' else ('amber' if pressing else ''))) }}
+{%- endmacro %}
+
+{# The crew board's key, printed once and the same wherever a board is. #}
+{% macro task_legend() -%}
+  <p class="legend"><span>{{ lamp('amber') }}Late or due today</span><span>{{ lamp() }}Open</span><span>{{ lamp('on') }}Done</span><span>{{ lamp('off') }}Called off</span></p>
+{%- endmacro %}
+
+{# The small size of the page's pictures: a pictogram on a tile of the plotting board, leading
+   a section that has nothing a drawing could add to its words (the full drawings are kept for
+   the track, the scopes, the crew board, the annunciator and the spend tube). Whatever is in a
+   `call` block is drawn on it, or else the icon. #}
+{% macro tile(name='', cls='') -%}
+  <span class="tile{{ ' ' ~ cls if cls }}" aria-hidden="true">{% if caller is defined %}{{ caller() }}{% else %}{{ icon(name) }}{% endif %}</span>
+{%- endmacro %}
+
+{# A figure's caption, printed under its drawing as a flight plan's annex would print it. #}
+{# Figures are numbered by the stylesheet, in the order they lead the page's sections, so a
+   section that is not shown leaves no gap. `n` is kept for the templates' own reading. #}
+{% macro figcap(n, words) -%}
+  <figcaption><span class="fig-n"></span>{{ words }}</figcaption>
+{%- endmacro %}
+
+{# The top of a page: its console's name plate (drawn by the stylesheet from the part of the
+   site the page is in), where it sits for a page inside another, the title, a line on what it is
+   for, and the one or two things to do here on the right. `crumbs` is a list of (label, href).
+   The icon tile is gone: the plate's lens says the part of the site; only her screen stays, as
+   the chat's title is hers. #}
+{% macro page_head(title, lede=none, glyph=none, crumbs=none) -%}
+  <header class="page-head">
+    <div class="page-title">
+      {# The plate and, for a page inside another, the way back on the same line, in its
+         right-hand slot: two levels over the title, not three. #}
+      <div class="plate-row">
+        <p class="plate" aria-hidden="true"><span class="lens"></span></p>
+        {% if crumbs %}
+          <nav class="crumbs" aria-label="Breadcrumb">
+            {% for label, href in crumbs %}<a href="{{ href }}">{{ label }}</a><span aria-hidden="true">/</span>{% endfor %}
+          </nav>
+        {% endif %}
+      </div>
+      <div class="title-row">
+        {% if glyph == 'presence' %}{{ presence('title-icon') }}{% endif %}
+        <h1>{{ title }}</h1>
+      </div>
+      {% if lede %}<p class="lede">{{ lede }}</p>{% endif %}
+    </div>
+    {%- if caller is defined %}
+      <div class="page-actions">{{ caller() }}</div>
+    {%- endif %}
+  </header>
+{%- endmacro %}
+
+{# Where she is on the page: never a face or a figure, only her screen, small and full of words
+   nobody can read, as if busy. `variant` (0 to 3) shows another part of the same screen. #}
+{% macro presence(cls='avatar', variant=0) -%}
+  <span class="{{ cls }} presence v{{ variant }}" aria-hidden="true"><span class="presence-glass"></span></span>
+{%- endmacro %}
+
+{# One line of the conversation, as the air-to-ground transcript printed it: the speaker's call
+   sign and the time on the line above, the words under them. Hers are marked by her screen, the
+   family's by their initial on an amber key, so the mark and the name tell them apart, not colour
+   alone. `anchor` is the id the newest line carries. Goes in an <ol class="thread">. #}
+{% macro chat_line(line, anchor=none) -%}
+  <li class="{{ 'said-bot' if line.from_bot else 'said-them' }}"{% if anchor %} id="{{ anchor }}"{% endif %}>
+    {% if line.from_bot %}{{ presence(variant=(line.id or 0) % 4) }}{% else %}<span class="avatar" aria-hidden="true">{{ line.who[:1] | upper }}</span>{% endif %}
+    <div class="bubble">
+      <div class="said-by">
+        <strong>{{ line.who }}</strong>
+        <span>{{ line.when }}</span>
+        {% if line.trouble %}<span class="tag warn">{{ line.trouble }}</span>{% endif %}
+      </div>
+      <div class="said-text">{{ line.text }}</div>
+      {% if line.did %}
+        <div class="did">used {{ line.did | join(', ') }}</div>
+      {% endif %}
+    </div>
+  </li>
+{%- endmacro %}
+
+{# The last line of the thread while the newest message waits: her screen and name, and a line
+   in the page's own words. While she is thinking the glyphs on her screen fall. #}
+{% macro waiting_line(name, state, text) -%}
+  <li class="said-bot pending is-{{ state }}">
+    {{ presence(variant=1) }}
+    <div class="bubble" role="status">
+      <div class="said-by">
+        <strong>{{ name }}</strong>
+      </div>
+      <div class="said-text">{{ text }}{% if caller is defined %} {{ caller() }}{% endif %}</div>
+    </div>
+  </li>
+{%- endmacro %}
+
+{# The tick beside an open task: marks it done where it stands, through `update_task` at the
+   revision it was drawn at, and comes back to `back` (home or tasks). A role that may not change
+   things is shown the empty key instead. #}
+{% macro tick(task_id, revision, title, back) -%}
+  {% if visitor().may('change') -%}
+  <form class="tick-form" method="post" action="{{ url_for('edits.finish_task', task_id=task_id) }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    <input type="hidden" name="once" value="{{ once_token() }}" />
+    <input type="hidden" name="revision" value="{{ revision }}" />
+    <input type="hidden" name="back" value="{{ back }}" />
+    <button class="tick" type="submit">{{ icon('check') }}<span class="sr">Done: {{ title }}</span></button>
+  </form>
+  {%- else -%}
+  <span class="task-box" aria-hidden="true"></span>
+  {%- endif %}
+{%- endmacro %}
+
+{# A plan's day as a flight plan's day block: month, day, weekday. #}
+{% macro chip(parts, today=false) -%}
+  {% if parts %}
+    <span class="chip{{ ' is-today' if today }}" aria-hidden="true">
+      <span class="chip-mon">{{ parts.month }}</span>
+      <span class="chip-day">{{ parts.day }}</span>
+      <span class="chip-dow">{{ parts.weekday }}</span>
+    </span>
+  {% endif %}
+{%- endmacro %}
+
+{# A console monitor, the page's one kind of lit picture: whatever is in the `call` block is drawn
+   on its tube, in phosphor. A screen that is only a picture is hidden from screen readers; one
+   whose words are the page's own, like Next up, passes `hidden=false`. #}
+{% macro crt(cls='', hidden=true) -%}
+  <div class="crt{{ ' ' ~ cls if cls }}"{% if hidden %} aria-hidden="true"{% endif %}>
+    <div class="crt-tube">{{ caller() }}</div>
+  </div>
+{%- endmacro %}
+
+{# A radar, a program the green screen runs: range rings at a week, two weeks and four, "now" at
+   the middle, and a sweep that leaves an afterglow as a long-persistence phosphor did. #}
+{% macro radar(blips=[], rings=('1w', '2w', '4w')) -%}
+  <div class="radar" aria-hidden="true">
+    <svg viewBox="0 0 200 200" focusable="false">
+      <circle class="radar-rim" cx="100" cy="100" r="98"/>
+      <circle class="radar-ring" cx="100" cy="100" r="92"/>
+      <circle class="radar-ring" cx="100" cy="100" r="66"/>
+      <circle class="radar-ring" cx="100" cy="100" r="33"/>
+      <path class="radar-cross" d="M100 4V196M4 100H196"/>
+      <path class="radar-ticks" d="M100.0 7.5L100.0 2.0M116.5 6.4L117.0 3.5M132.5 10.7L133.5 7.9M146.2 19.9L149.0 15.1M161.1 27.2L163.0 24.9M172.8 38.9L175.1 37.0M180.1 53.7L184.9 51.0M189.3 67.5L192.1 66.5M193.6 83.5L196.5 83.0M192.5 100.0L198.0 100.0M193.6 116.5L196.5 117.0M189.3 132.5L192.1 133.5M180.1 146.2L184.9 149.0M172.8 161.1L175.1 163.0M161.1 172.8L163.0 175.1M146.2 180.1L149.0 184.9M132.5 189.3L133.5 192.1M116.5 193.6L117.0 196.5M100.0 192.5L100.0 198.0M83.5 193.6L83.0 196.5M67.5 189.3L66.5 192.1M53.7 180.1L51.0 184.9M38.9 172.8L37.0 175.1M27.2 161.1L24.9 163.0M19.9 146.3L15.1 149.0M10.7 132.5L7.9 133.5M6.4 116.5L3.5 117.0M7.5 100.0L2.0 100.0M6.4 83.5L3.5 83.0M10.7 67.5L7.9 66.5M19.9 53.7L15.1 51.0M27.2 38.9L24.9 37.0M38.9 27.2L37.0 24.9M53.7 19.9L51.0 15.1M67.5 10.7L66.5 7.9M83.5 6.4L83.0 3.5"/>
+      <text class="radar-label" x="69.5" y="97">{{ rings[0] }}</text>
+      <text class="radar-label" x="36.5" y="97">{{ rings[1] }}</text>
+      <text class="radar-label" x="10.5" y="97">{{ rings[2] }}</text>
+      <circle class="radar-hub" cx="100" cy="100" r="2.2"/>
+      {% for b in blips %}
+        <g class="blip b{{ b.bearing }}{{ ' next' if b.next }}">
+          {% if b.next %}<circle class="blip-ping" cx="{{ b.x }}" cy="{{ b.y }}" r="5"/>{% endif %}
+          <circle class="blip-halo" cx="{{ b.x }}" cy="{{ b.y }}" r="8"/>
+          <circle class="blip-core" cx="{{ b.x }}" cy="{{ b.y }}" r="3"/>
+        </g>
+      {% endfor %}
+    </svg>
+    <span class="radar-sweep"></span>
+    {%- if caller is defined %}<span class="radar-say">{{ caller() }}</span>{% endif %}
+  </div>
+{%- endmacro %}
+
+{# A figure the machine reports, as a small window of lit glass (the page's readout glass):
+   zero-padded on the glass as the console's readouts are, and read out as the plain number. #}
+{% macro readout(n, cls='dim') -%}
+<span class="readout-glass {{ cls }}" aria-hidden="true">{{ '%02d' | format(n) }}</span><span class="visually-hidden">{{ n }}</span>
+{%- endmacro %}

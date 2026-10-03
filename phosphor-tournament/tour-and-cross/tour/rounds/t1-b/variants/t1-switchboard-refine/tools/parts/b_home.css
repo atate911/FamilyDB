@@ -1,0 +1,369 @@
+
+/* ---- Signals: four, each with one meaning, told apart by shape -------------------------------- */
+/* On: a lit disc, a white-hot core in two halos, breathing (E20). Waiting: a small steel dot.
+   Off, or not set up: a pewter ring. Needs a look, or late: an amber bar. Red is the bar again,
+   and only when something has stopped. */
+.lamp, .light { display: inline-block; flex: none; vertical-align: middle; box-sizing: border-box; }
+.lamp.on, .light.on {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #f4fff8 0 22%, color-mix(in srgb, var(--brand) 45%, #fff) 40%, var(--brand) 62%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand) 30%, transparent), 0 0 8px var(--brand), 0 0 18px color-mix(in srgb, var(--brand) 45%, transparent);
+  animation: breathe 3.2s ease-in-out infinite;
+}
+.lamp.wait { width: 7px; height: 7px; margin: 1.5px; border-radius: 50%; background: var(--steel); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25); }
+.lamp.off, .light.off { width: 10px; height: 10px; border-radius: 50%; background: none; border: 0; box-shadow: inset 0 0 0 2px var(--pewter); }
+.lamp.look, .light.part { width: 12px; height: 5px; border-radius: 1.5px; background: var(--people); border: 0; box-shadow: 0 0 5px color-mix(in srgb, var(--people) 30%, transparent); }
+.lamp.bad { width: 12px; height: 5px; border-radius: 1.5px; background: var(--danger); box-shadow: 0 0 5px color-mix(in srgb, var(--danger) 35%, transparent); }
+/* In a list, only the first light that is on breathes: one pulse to a list, never a chorus. */
+.lights > li ~ li .light.on, .signals > li ~ li .lamp.on, .rows > .row ~ .row .lamp.on { animation: none; }
+.lamp-key { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 1.1rem; margin: 0; font: 400 var(--t-small)/1.3 var(--sans); color: var(--dim); }
+.lamp-key > span { display: inline-flex; align-items: center; gap: 0.45rem; white-space: nowrap; }
+.lamp-key .lamp { animation: none; }
+
+/* ==========================================================================================
+   HOME, P100: the sommaire, the map of the service
+   ========================================================================================== */
+/* Four columns, cells sized to what they hold. The machine and the family's things are laid out
+   apart across the top: down the left the terminal and the status of what it is connected to;
+   down the right setting up (while it has steps left, the first and widest slot), then what is
+   coming and what is due. Under them Ideas beside the household's own pages, and Settings along
+   the foot as a contents of its own. */
+.map {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-areas:
+    "machine machine family family"
+    "ideas ideas wish mem"
+    "ideas ideas fam fam"
+    "set set set set";
+  gap: var(--gap);
+}
+.map-col { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
+.map-machine { grid-area: machine; }
+.map-family { grid-area: family; }
+.map-col > :last-child { flex: 1; }
+.map .welcome { display: flex; flex-direction: column; min-width: 0; }
+.map > .lately { grid-area: ideas; }
+.map > .to-wishes { grid-area: wish; }
+.map > .to-memory { grid-area: mem; }
+.map > .to-family { grid-area: fam; }
+.map > .settings-cell { grid-area: set; }
+.map > .map-foot { grid-area: key; padding: 0.4rem 0.1rem 0; }
+.map .cell { padding: 0.3rem var(--pad) var(--pad); }
+.map .cell::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  top: -1px;
+  height: 2px;
+  background: color-mix(in srgb, var(--sec) 75%, transparent);
+  pointer-events: none;
+}
+
+/* The head of a cell is its line of the contents, and the whole line is the key to its page. */
+.cell > .cell-head { display: block; margin: 0 0 0.35rem; padding: 0 0 0.3rem; border-bottom: 1px solid var(--line); font: inherit; }
+.cell-head a, .cell-head .line { display: flex; align-items: center; gap: 0.55rem; min-height: 2.75rem; color: var(--heading); text-decoration: none; }
+.cell-head .slot { display: grid; place-items: center; flex: none; width: 0.75rem; }
+.cell-head .no { flex: none; font: 500 var(--t-label)/1 var(--machine); letter-spacing: 0.02em; color: var(--label); padding-top: 0.2rem; }
+.cell-head .what { min-width: 0; font: semi-condensed 600 var(--t-cell)/1.08 var(--sans); letter-spacing: -0.004em; text-decoration: underline; text-decoration-color: transparent; text-decoration-thickness: 1px; text-underline-offset: 0.2em; transition: text-decoration-color 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cell-head .dots { flex: 1 1 0.75rem; align-self: flex-end; min-width: 0.75rem; max-width: var(--leader-max); margin-bottom: 0.8rem; border-bottom: 2px dotted var(--line-2); }
+/* A count is a figure: condensed Plex Sans in its section's colour, as the plate's figure is, a
+   step smaller. The machine's face is kept for times, dates, drives and page numbers. */
+.cell-head .count { flex: none; font: condensed 500 1.5rem/1 var(--sans); letter-spacing: -0.01em; font-variant-numeric: tabular-nums lining-nums; color: var(--sec); }
+.cell-head .unit { font: 400 var(--t-small)/1 var(--sans); color: var(--dim); }
+.cell-head .count-note { font: 600 var(--t-small)/1 var(--sans); color: var(--people); }
+.cell-head .go { flex: none; width: 1.05rem; height: 1.05rem; color: var(--label); transition: transform 0.15s, color 0.15s; }
+.cell-head a:hover .what { text-decoration-color: color-mix(in srgb, var(--sec) 70%, transparent); }
+.cell-head a:hover .go { transform: translateX(3px); color: var(--sec); }
+.cell-head a:focus-visible { outline-offset: 2px; }
+.cell-label { margin: 0.3rem 0 0.1rem; font: 500 var(--t-label)/1.3 var(--machine); letter-spacing: var(--track); text-transform: uppercase; color: var(--label); }
+.cell-note { margin: 0.2rem 0 0.4rem; font-size: var(--t-small); line-height: 1.45; color: var(--ink-2); }
+.cell-foot { margin: auto 0 0; padding-top: 0.6rem; font-size: var(--t-small); color: var(--dim); }
+.cell-foot.source { padding-top: 0.5rem; }
+.cell-link { min-height: 2.75rem; font: 600 var(--t-small)/1.2 var(--sans); color: var(--heading); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--sec) 55%, transparent); }
+.cell-link .icon { color: var(--sec); }
+.cell-key { width: 100%; justify-content: center; min-height: 2.75rem; padding: 0 0.9rem; font: 600 var(--t-small)/1 var(--sans); text-decoration: none; }
+.cell-key .icon { color: var(--sec); }
+.map .empty { padding: 0.5rem 0; font-size: var(--t-small); }
+.map .empty .icon { width: 1.3rem; height: 1.3rem; color: var(--sec); }
+
+/* Setting up: its steps, one line and one key each. */
+.steps-rows { grid-template-columns: 0.75rem 1.5rem minmax(0, 1fr); column-gap: 0.55rem; }
+.steps-rows .no { display: grid; place-items: center; width: 1.5rem; height: 1.5rem; font: 500 var(--t-small)/1 var(--machine); color: var(--people); border: 1px solid color-mix(in srgb, var(--people) 55%, var(--line-2)); }
+.steps-rows .what { font-weight: 500; font-size: var(--t-small); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--people) 45%, transparent); text-underline-offset: 0.22em; white-space: normal; }
+.steps-rows .row > a:hover .what { text-decoration-color: var(--people); }
+/* Plans after Next up: day, name, leader, time, how far off. */
+.plan-rows { grid-template-columns: 0.75rem 5.6rem minmax(0, 1fr) max-content max-content; column-gap: 0.6rem; }
+.plan-rows .rel-words { min-width: 5.5rem; text-align: right; color: var(--plans); }
+.plan-rows .fact.time { color: var(--ink); }
+.plan-rows .is-today .date { color: var(--heading); }
+/* To do: the box to tick, the name, leader, who and due, late in amber words. */
+.home-todo .colheads .ch-who { grid-column: 3; }
+.home-todo .colheads .ch-due { grid-column: 4; text-align: right; }
+.task-rows { grid-template-columns: 2.75rem minmax(0, 1fr) max-content max-content; column-gap: 0.6rem; }
+.task-rows .fact.due { text-align: right; justify-self: end; white-space: normal; }
+.task-rows .row.late .fact.due { color: var(--people); font-weight: 600; }
+/* Ideas lately added: the kind's icon, the name, a leader, for whom, and the kind in words. */
+.idea-rows { grid-template-columns: 1.1rem minmax(0, 1fr) max-content max-content; column-gap: 0.7rem; }
+.links-line { display: flex; flex-wrap: wrap; gap: 0 1.4rem; align-items: center; }
+.links-line a { display: inline-flex; align-items: center; gap: 0.45rem; min-height: 2.75rem; font-weight: 600; color: var(--heading); text-decoration-color: color-mix(in srgb, var(--sec) 55%, transparent); }
+.links-line .icon { color: var(--sec); }
+.links-line .food .icon { color: var(--clay); }
+/* The kids' wishes: a line each. */
+.kid-rows { grid-template-columns: 2rem minmax(0, 1fr) max-content; column-gap: 0.6rem; }
+.kid-rows .what { font-size: var(--t-body); }
+/* A person as a lettered tile in bone, square as the family's things are. */
+.initial {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  font: 500 var(--t-small)/1 var(--machine);
+  color: var(--sec);
+  background: color-mix(in srgb, var(--sec) 7%, var(--field));
+  border: 1px solid color-mix(in srgb, var(--sec) 38%, var(--line-2));
+}
+.roster { display: flex; flex-wrap: wrap; gap: 0.5rem 1.1rem; padding-top: 0.45rem; }
+.roster li { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.25rem; font: 600 var(--t-body)/1.2 var(--sans); color: var(--heading); }
+/* The status on the map: a signal to each thing the page already knows. */
+.signals > li { display: grid; grid-template-columns: 0.75rem minmax(0, 1fr) auto; column-gap: 0.6rem; align-items: center; min-height: 2.25rem; }
+.signals > li + li { border-top: 1px solid var(--line); }
+.signals .lamp { justify-self: center; }
+.signals .what { font-weight: 600; color: var(--heading); }
+.signals .fact { font-size: var(--t-small); color: var(--dim); text-align: right; }
+/* Settings on the map: a contents of its own, the part that wants a look first. */
+/* Its head runs the width of the map, so its leader runs to the count at the right edge. */
+.settings-cell .cell-head .dots { max-width: none; }
+.settings-cell .parts { grid-template-columns: repeat(3, [slot] 0.75rem [no] 2.2rem [what] minmax(0, 1fr)); column-gap: 0.6rem; }
+.settings-cell .parts > .row { grid-column: span 3; border-top: 0; border-bottom: 1px solid var(--line); }
+.settings-cell .parts .what { font-weight: 500; }
+.settings-cell .parts .look .what { font-weight: 600; }
+.settings-cell .parts .look .no { color: var(--people); }
+
+/* ---- The terminal, page 200 --------------------------------------------------------------------- */
+/* A case of graphite plastic lit from above, its screen, and the keys under it on the case. The
+   screen lights the panel round it, and pools on the case's lower edge through its scanlines (E7,
+   E12). */
+.minitel {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0 0.75rem 0.75rem;
+  background:
+    radial-gradient(70% 55% at 0% 100%, color-mix(in srgb, var(--screen) 13%, transparent), transparent 62%),
+    linear-gradient(180deg, var(--bezel-hi) 0, var(--bezel) 1.25rem, var(--bezel) 60%, var(--bezel-lo));
+  border: 1px solid color-mix(in srgb, var(--bezel) 55%, #000);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.08),
+    inset 0 -2px 3px rgb(0 0 0 / 0.35),
+    0 28px 50px -34px rgb(0 0 0 / 0.95),
+    0 0 80px -30px color-mix(in srgb, var(--screen) 50%, transparent);
+}
+.minitel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom, rgb(255 255 255 / 0.028) 0 1px, transparent 1px 4px);
+  -webkit-mask-image: radial-gradient(55% 45% at 0% 100%, #000, transparent 75%);
+  mask-image: radial-gradient(55% 45% at 0% 100%, #000, transparent 75%);
+}
+/* Her line of the contents along the top of the case: her screen, 200, her name, the day, and
+   the power light. */
+.speaker { display: flex; align-items: center; gap: 0.6rem; min-height: 3rem; margin: 0; padding: 0.15rem 0.3rem 0.1rem; color: var(--ink); }
+.speaker .glyph.presence { width: 1.4rem; height: 1.4rem; }
+.speaker .no { font: 500 var(--t-label)/1 var(--machine); letter-spacing: 0.02em; color: var(--label); padding-top: 0.15rem; }
+.speaker-name { display: inline-flex; align-items: center; min-width: 2.75rem; min-height: 2.75rem; font: semi-condensed 600 var(--t-cell)/1 var(--sans); color: var(--heading); text-decoration: none; }
+a.speaker-name:hover { text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--bone) 60%, transparent); }
+.speaker-day { font: 400 var(--t-small)/1 var(--sans); color: var(--label); }
+.power {
+  margin-left: auto;
+  margin-right: 0.35rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--screen);
+  box-shadow: 0 0 6px var(--screen), 0 0 14px color-mix(in srgb, var(--screen) 50%, transparent);
+}
+.minitel .crt { padding: 0; background: none; border: 0; border-radius: 0; box-shadow: none; }
+.minitel .crt::after { display: none; }
+.minitel .crt-tube { display: flex; flex-direction: column; border-radius: 0.9rem / 1rem; padding: 1.25rem 1.5rem 1.4rem; }
+.next-block { display: flex; gap: 1.25rem; align-items: flex-start; justify-content: space-between; }
+.next-text { min-width: 0; }
+.next-label { margin-bottom: 0.55rem !important; }
+.next-label::before {
+  content: "";
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-right: 0.6rem;
+  vertical-align: 0.15em;
+  background: var(--phosphor);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--phosphor);
+  animation: breathe 2.6s ease-in-out infinite;
+}
+.next-title { font-size: var(--t-tube-m); line-height: 1; margin-bottom: 0.45rem !important; }
+.next-title a { display: inline-flex; align-items: center; min-height: 2.75rem; margin: -0.35rem 0; text-decoration-thickness: 2px; }
+.next-when { font-size: var(--t-tube); line-height: 1.1; }
+.next-where { font-size: var(--t-tube-s); }
+.next-more { margin-top: 0.6rem !important; font-size: var(--t-tube); }
+.next-more a { display: inline-flex; align-items: center; min-height: 2.75rem; }
+.next-up .radar { width: 12.5rem; }
+.welcome .next-up .radar { width: clamp(10rem, 18vw, 14rem); margin: -0.2rem -0.4rem 0 0; }
+.crt .rel { white-space: nowrap; }
+.rel { color: var(--phosphor-bright, var(--ink)); text-transform: uppercase; }
+.crt .rel::before { content: "["; }
+.crt .rel::after { content: "]"; }
+.crt .thread.brief { margin: 0.9rem 0 0; padding: 0.85rem 0 0; border-top: 2px dashed color-mix(in srgb, var(--phosphor) 30%, transparent); list-style: none; }
+.crt .thread.brief > li { display: grid; grid-template-columns: auto 1fr; gap: 0.3rem 0.8rem; align-items: start; max-width: none; }
+.crt .thread.brief .presence { width: 1.5rem; height: 1.5rem; margin-top: 0.1rem; }
+.crt .thread.brief .bubble { padding: 0; background: none; border: 0; }
+.crt .thread.brief .said-by { display: flex; gap: 0.7rem; margin: 0 0 0.1rem; font: inherit; font-size: var(--t-tube-s); letter-spacing: 0.02em; color: var(--phosphor-dim); text-transform: uppercase; }
+.crt .thread.brief .said-by strong { font-weight: 400; color: var(--phosphor-dim); }
+/* Her last line, two lines at most: a long answer never pushes the question off the screen. */
+.crt .thread.brief .said-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  max-width: 60ch;
+  font-size: var(--t-tube);
+  line-height: 1.15;
+  white-space: pre-wrap;
+}
+.crt .brief-more { margin: 0.2rem 0 0 2.3rem; font-size: var(--t-tube-s); }
+.crt .brief-more a { display: inline-flex; align-items: center; min-height: 2.75rem; }
+/* The question, then the well to type in, at the foot of what the glass shows. The question is
+   the page's largest head; its one lit word glows as the tube draws it. */
+.crt .prompt { margin-top: 0.5rem; padding-top: 0.9rem; border-top: 2px dashed color-mix(in srgb, var(--phosphor) 30%, transparent); }
+.minitel .crt-tube > .next-block { margin-bottom: 0.2rem; }
+.ask-question { font: 400 var(--t-tube-q)/1 var(--tube); color: var(--phosphor); margin: 0 0 0.7rem; letter-spacing: 0.01em; }
+.ask-question label { font: inherit; color: inherit; letter-spacing: 0.01em; text-transform: none; margin: 0; cursor: text; }
+/* VT323 has only a tall tick for an apostrophe: this one is Plex Mono's curl, in the tube's light. */
+.ask-question .apos { font: 400 0.82em/1 var(--machine); margin: 0 -0.2em 0 -0.08em; position: relative; top: -0.02em; }
+.crt .ask-question .glow {
+  color: color-mix(in srgb, var(--phosphor) 17%, #fff);
+  text-shadow: 0 0 2px var(--phosphor), 0 0 0.3em var(--phosphor), 0 0 0.6em color-mix(in srgb, var(--phosphor) 70%, transparent), 0 0 1.4em color-mix(in srgb, var(--phosphor) 45%, transparent);
+}
+/* The well: a glass-tinted field with a lit edge, the tube's prompt first, the family's words in
+   their own face, and a lit caret. It lights as it is typed in, and fades once left (E4). */
+.prompt-line {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.5rem 0.8rem 0.55rem 0.7rem;
+  background: #07110b;
+  border: 1px solid color-mix(in srgb, var(--phosphor) 30%, transparent);
+  box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.6), 0 0 24px -14px color-mix(in srgb, var(--brand) 60%, transparent);
+  transition: border-color var(--afterglow), box-shadow var(--afterglow);
+}
+.prompt-line:focus-within {
+  border-color: var(--brand);
+  box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.6), 0 0 0 3px color-mix(in srgb, var(--brand) 16%, transparent), 0 0 22px -6px color-mix(in srgb, var(--brand) 55%, transparent);
+  transition-duration: var(--glow-in);
+}
+.prompt-mark { display: inline-flex; align-items: center; min-height: 1.6rem; font: 400 var(--t-tube)/1 var(--tube); color: var(--phosphor); text-shadow: 0 0 1px var(--phosphor), 0 0 9px color-mix(in srgb, var(--phosphor) 45%, transparent); }
+/* While the well is empty and nobody is in it, the tube's block cursor waits after the prompt,
+   blinking ten times, to say "type here". */
+.prompt-line:has(textarea:placeholder-shown):not(:focus-within) .prompt-mark::after {
+  content: "";
+  display: inline-block;
+  width: 0.45em;
+  height: 0.62em;
+  margin-left: 0.3em;
+  background: var(--phosphor);
+  box-shadow: 0 0 8px var(--phosphor);
+  animation: blink 1.06s steps(1) 10;
+}
+.crt .prompt-line textarea {
+  flex: 1;
+  min-height: 3.1em;
+  padding: 0.05rem 0 0;
+  font: 400 var(--t-body)/1.5 var(--sans);
+  color: var(--bone);
+  caret-color: var(--brand);
+  background: none;
+  border: 0;
+  box-shadow: none;
+  resize: none;
+  text-shadow: none;
+  filter: none;
+  field-sizing: content;
+  max-height: 12em;
+}
+.crt .prompt-line textarea::placeholder { color: #86a894; opacity: 1; }
+.crt textarea:focus { outline: none; box-shadow: none; }
+
+/* The keys under the screen, on the case: who is asking, send where I am, the mic, and Send. */
+.deck {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem -0.75rem 0;
+  padding: 0.7rem 0.8rem 0.3rem;
+  background: none;
+  border-top: 1px solid color-mix(in srgb, var(--bezel) 45%, #000);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
+}
+.deck .who { display: flex; align-items: center; gap: 0.5rem; }
+.deck label, .deck .from { margin: 0; color: var(--label); }
+.deck .from strong { color: var(--heading); font: 600 1rem var(--sans); text-transform: none; letter-spacing: 0; }
+.deck select { width: auto; min-width: 9rem; white-space: nowrap; }
+.deck .locate label { display: inline-flex; align-items: center; gap: 0.55rem; min-height: 2.75rem; padding-right: 0.3rem; font: 400 var(--t-small)/1 var(--sans); letter-spacing: 0; text-transform: none; color: var(--ink); cursor: pointer; }
+.deck .locate .icon { color: var(--bone); }
+.mic-slot { display: contents; }
+.deck .mic-slot button.mic { margin-left: auto; }
+.deck .send { margin-left: auto; min-width: 6.25rem; padding: 0 1.1rem; font-size: 1rem; }
+.deck .mic-slot:not(:empty) + .send { margin-left: 0; }
+#where { margin: 0.4rem 0 0; font-size: var(--t-small); }
+#where:empty { display: none; }
+
+/* The ways to start: three numbered graphite keys on the case, each filling the well. */
+.starters { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--gap); }
+.starters li { display: flex; }
+.starters a {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 2.75rem;
+  padding: 0.3rem 0.7rem 0.3rem 0.4rem;
+  font: 500 var(--t-small)/1.2 var(--sans);
+  color: var(--secondary);
+  text-decoration: none;
+  background: linear-gradient(180deg, var(--key-hi), var(--key));
+  border: 1px solid var(--key-edge);
+  border-bottom-width: 3px;
+  transition: color 0.15s, border-color var(--afterglow), box-shadow var(--afterglow);
+}
+.starters a:hover { color: var(--heading); border-color: color-mix(in srgb, var(--bone) 40%, var(--key-edge)); background: linear-gradient(180deg, color-mix(in srgb, var(--bone) 8%, var(--key-hi)), var(--key)); transition-duration: 0.15s, 0.15s, 0.15s; }
+.starters .key-no {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 1.7rem;
+  height: 1.7rem;
+  font: 500 var(--t-small)/1 var(--machine);
+  color: var(--bone);
+  background: color-mix(in srgb, var(--bg) 70%, #000);
+  border: 1px solid color-mix(in srgb, var(--bone) 30%, var(--key-edge));
+  box-shadow: inset 0 2px 3px rgb(0 0 0 / 0.7);
+}
+.key-words { min-width: 0; }
+.minitel .starters { margin: 0.55rem 0 0; }
+.minitel .starters li { flex: 1 1 0; }
+.minitel .starters li:first-child { flex-basis: 100%; }
+.minitel .starters a { flex: 1; }
+.lamp-foot { padding-top: 0.9rem; }
+.lamp-foot .lamp-key { padding-top: 0.6rem; border-top: 1px solid var(--line); }

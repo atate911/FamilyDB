@@ -1,0 +1,264 @@
+/* A cell reached by its anchor flashes, then fades (E10): the contents line to Plans or To do. */
+.cell:target, .panel:target, :target > .panel { animation: landed 1.8s cubic-bezier(0.2, 0.7, 0.3, 1); }
+/* The panel switches on as the page opens: the cells come up in reading order, 50ms apart. */
+.map > *, .main > *, .board > .side { animation: cell-on 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+.map > :nth-child(2), .main > :nth-child(1) { animation-delay: 0.05s; }
+.map > :nth-child(3), .main > :nth-child(2) { animation-delay: 0.1s; }
+.map > :nth-child(4), .main > :nth-child(3) { animation-delay: 0.15s; }
+.map > :nth-child(5), .main > :nth-child(4) { animation-delay: 0.2s; }
+.map > :nth-child(6), .main > :nth-child(5) { animation-delay: 0.25s; }
+.map > :nth-child(7), .main > :nth-child(n+6) { animation-delay: 0.3s; }
+.map > :nth-child(8) { animation-delay: 0.35s; }
+.map > :nth-child(9) { animation-delay: 0.4s; }
+.map > :nth-child(n+10) { animation-delay: 0.45s; }
+@keyframes cell-on { from { opacity: 0.2; transform: translateY(4px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .blip { opacity: 0.9; }
+  .blip.next { opacity: 1; }
+}
+@media (prefers-contrast: more) {
+  :root { --line: #4f5752; --card-edge: #56605a; --edge: #9aa39e; --dim: #c6cdc9; --label: #d0d8d4; --here: #3f5061; }
+  .crt-tube::before, .crt-tube::after, .radar::after, .minitel::before { display: none; }
+  .glow, .radar-say, .crt-tube, .crt .dim, .prompt-mark, .bars .bar-late { text-shadow: none; }
+  button, .button, .brand-mark, .chip, .task-done .task-box::before, .presence, .title-icon.presence, .section-icon.presence, .prompt-line { box-shadow: none; }
+  .presence-glass { -webkit-mask-image: none; mask-image: none; }
+  .presence-glass::before, .presence-glass::after { filter: none; text-shadow: none; }
+  .icon, .mosaic, .brand-mark .icon, .foot-mark .icon, .radar svg, .radar-say, .crt-tube > *, .crt .crt-face,
+  .crt-tube > :not(.radar), .crt .ask-question, .glass-said, .glass-legend { filter: none; }
+  .crt .ask-question .glow, .crt .ask-question .q-dim, .dc .dd, table.month td.today time, .bars .bar-name { text-shadow: none; }
+  .dc::before, .terminal::after { box-shadow: none; }
+}
+@media (forced-colors: active) {
+  .light, .lamp, .task-box::before, button.tick::before, .chip, .presence, .cell::before, .side::before { forced-color-adjust: none; border: 1px solid CanvasText; background: Canvas; color: CanvasText; }
+  .caret { background: CanvasText; }
+  .crt-tube::before, .crt-tube::after, .radar, .crt::after, .power, .minitel::before { display: none; }
+  .cell, .panel, .side { border: 1px solid CanvasText; }
+  .bar .key[aria-current="page"], .keys .key[aria-current] { outline: 2px solid CanvasText; }
+  .household, .service-line { border: 1px solid CanvasText; }
+  .service-line { border-left-width: 3px; }
+  .dc::before { forced-color-adjust: none; background: CanvasText; box-shadow: none; }
+  .terminal::after { display: none; }
+  table.month td.today { outline: 2px solid CanvasText; }
+}
+
+/* ==========================================================================================
+   Narrower: the same rack with fewer columns
+   ========================================================================================== */
+@media (max-width: 75rem) {
+  .tools .label, .menu > summary .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .tools .key, .menu > summary { min-width: 2.75rem; justify-content: center; padding: 0 0.55rem; }
+  .bar-places .key { padding: 0 0.6rem; }
+}
+@media (max-width: 1060px) {
+  .board > .side, .board > .main, .board:has(> .page-head) > :not(.page-head), .board > .page-head { grid-column: 1 / -1; grid-row: auto; }
+  .side, .board > .page-head { position: static; }
+  .side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .side > .plate { grid-column: 1 / -1; }
+  .side > * + * { border-top: 1px solid var(--line); }
+  .cells, .tables, .grid, .idea-form, .idea-form .inner, .wish-lists, .setup-list, .choices, .edit-body .form, .add-task .form, details.add .form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .brand-name { display: none; }
+  .grid > .setting:nth-child(n) { padding-left: 1.1rem; padding-right: 1.1rem; border-left: 1px solid var(--line); }
+  .grid > .setting:nth-child(2n + 1) { padding-left: 0; border-left: 0; }
+  .grid > .setting:nth-child(2n) { padding-right: 0; }
+}
+@media (max-width: 47.99rem) {
+  :root { --t-cell: 1.3rem; --t-item: 1.0625rem; --pad: 1rem; --bar-h: 3.25rem; }
+  main { padding: 0.75rem 0.75rem 2.5rem; }
+  body { padding-bottom: calc(var(--keys-h) + env(safe-area-inset-bottom)); }
+  /* The bar is solid on a phone, so the foot row of keys is fixed to the screen, not to it. */
+  .bar { padding: 0 0.6rem; gap: 0.3rem; backdrop-filter: none; background: var(--bar); }
+  .brand { margin-right: auto; }
+  .brand-name { display: inline; }
+  .tools { padding-left: 0.3rem; border-left: 0; }
+  .tools .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .tools .key, .menu > summary { min-width: 2.75rem; min-height: 2.75rem; justify-content: center; padding: 0 0.45rem; }
+  .menu > summary::after { display: none; }
+  /* The six places are the Fastext row along the foot of the screen, under the thumb: the one
+     you are on a steel cell with its lamp lit. */
+  .bar-places {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.25rem;
+    height: calc(var(--keys-h) + env(safe-area-inset-bottom));
+    padding: 0.4rem 0.4rem calc(0.4rem + env(safe-area-inset-bottom));
+    background: var(--bar);
+    border-top: 1px solid var(--key-edge);
+    box-shadow: 0 -14px 28px -18px rgb(0 0 0 / 0.9);
+  }
+  .bar-places .key {
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.28rem;
+    min-width: 0;
+    min-height: 0;
+    padding: 0.3rem 0.1rem 0.25rem;
+    font-size: 0.8125rem;
+    background: linear-gradient(180deg, var(--key-hi), var(--key));
+    border: 1px solid var(--key-edge);
+  }
+  .bar-places .key .icon { width: 1.35rem; height: 1.35rem; }
+  .bar-places .key .label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-places .key .no { display: none; }
+  .bar-places .key[aria-current="page"] { background: var(--here); border-color: color-mix(in srgb, var(--here) 70%, #000); }
+  .side { grid-template-columns: minmax(0, 1fr); }
+  .cells, .tables, .grid, .idea-form, .idea-form .inner, .wish-lists, .setup-list, .choices, .edit-body .form, .add-task .form, details.add .form, .capture .form, .edit-forms .form { grid-template-columns: minmax(0, 1fr); }
+  .setup-progress ol { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .setup-progress .label { display: none; }
+  .grid > .setting:nth-child(n) { padding-left: 0; padding-right: 0; border-left: 0; }
+  .cell, .panel { min-height: 0; }
+  h1 { font-size: 1.75rem; }
+  /* The plate on a phone: its icon and number beside its name, then what it is for and its key. */
+  .plate { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 0.7rem; align-items: center; }
+  .plate > * { grid-column: 1 / -1; }
+  .plate > .crumbs { grid-row: 1; margin: 0.2rem 0 0.4rem; }
+  .plate > .plate-line { grid-column: 1; grid-row: 2; margin: 0; }
+  .plate > .plate-title { grid-column: 2; grid-row: 2; margin: 0; }
+  .plate h1 { font-size: 1.75rem; }
+  .plate-fig .fig { font-size: 1.75rem; }
+  .plate > .lede { grid-row: 3; margin-top: 0.5rem; }
+  .plate > .page-actions { grid-row: 4; }
+  .plate > :not(.crumbs, .plate-line, .plate-title, .lede, .page-actions) { grid-row: auto; }
+  /* The rack on a phone: the plate and its tools, then the register, the list the page is for,
+     then the green screen that sums it up, so the list is on the first screen. */
+  .board > .side { display: contents; }
+  .board > .side::before { display: none; }
+  .board > .side > * { grid-column: 1 / -1; order: 1; min-width: 0; margin: 0; background: var(--surface); border: 1px solid var(--card-edge); box-shadow: var(--shadow); }
+  .board > .side > .plate { order: 0; position: relative; }
+  .board > .side > .plate + * { margin-top: calc(-1 * var(--gap)); border-top-color: var(--line); }
+  .board > .main { order: 2; }
+  .board > .side > :is(.screen-cell, .radar-cell, .key-cell-module) { order: 3; }
+  .board > .side > .key-cell-module { margin-top: calc(-1 * var(--gap)); border-top-color: var(--line); }
+  .page-chat .board > .side { display: contents; }
+  .page-chat .board > .side::before { display: none; }
+  .page-chat .board > .side > .plate { order: 0; border: 1px solid var(--card-edge); background: var(--surface); padding: 0.7rem 0.9rem; }
+  .page-chat .board > .main { order: 1; }
+  .page-chat .board > .side > .kids-cell { order: 2; border: 1px solid var(--card-edge); background: var(--surface); }
+  .page-chat .plate .lede { display: none; }
+  /* Home on a phone: the terminal, the service line, then the plans, what is due, the ideas,
+     and the household; the six places at the foot. */
+  .map-col { display: contents; }
+  .map > * { grid-column: 1 / -1; }
+  .map .terminal { order: 1; }
+  .map .service-line { order: 2; }
+  .map .plans-cell { order: 3; }
+  .map .home-todo { order: 4; }
+  .map .lately { order: 5; }
+  .map .household { order: 6; }
+  .minitel { padding: 0 0.5rem 0.2rem; }
+  .speaker-day { display: none; }
+  /* The glass on a phone: the radar small at the top right, the question across the glass on
+     one line under it, and the well three rows deep. */
+  .terminal-screen .crt-tube { grid-template-columns: minmax(0, 1fr) 7rem; gap: 0.6rem 0.8rem; padding: 0.85rem 0.9rem 0.95rem; }
+  .terminal-screen .radar { grid-column: 2; grid-row: 1; width: 7rem; justify-self: end; }
+  .terminal-screen .radar .radar-label { display: none; }
+  .terminal-screen .glass-words { display: contents; }
+  .terminal-screen .glass-said { grid-column: 1; grid-row: 1; align-self: center; margin: 0 !important; }
+  .terminal-screen .glass-legend { display: block; grid-column: 1; grid-row: 1; align-self: center; margin: 0; font-size: var(--t-tube-s); line-height: 1.1; filter: blur(0.3px); }
+  .terminal-screen .glass-legend .day { display: block; margin-bottom: 0.3rem; font-size: 1.45rem; line-height: 1; }
+  .terminal-screen .crt-tube:has(.glass-said) .glass-legend { display: none; }
+  .terminal-screen .prompt { grid-column: 1 / -1; grid-row: 2; }
+  .ask-question { font-size: 2.1rem; margin-bottom: 0.6rem; }
+  .crt .prompt-line textarea { min-height: 4.6em; }
+  .deck { margin: 0 -0.5rem; padding: 0.55rem 0.5rem 0.5rem; gap: 0.5rem; }
+  /* The keys on the case in one row (who, the mic, Send), and "Send where I am" under them. */
+  .deck .who { flex: 1 1 0; min-width: 0; }
+  .deck .who label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .deck .locate { flex: 1 1 100%; order: 5; }
+  .deck select { flex: 1; min-width: 0; padding-left: 0.6rem; padding-right: 0.6rem; font-size: var(--t-small); }
+  .deck .send { min-width: 0; flex: none; margin-left: 0; padding: 0 0.95rem; }
+  .deck .mic-slot button.mic { margin-left: 0; }
+  .minitel .starters { flex-direction: column; flex-wrap: nowrap; }
+  .minitel .starters li { flex: none; width: 100%; }
+  .minitel .starters a { width: 100%; }
+  .service-line { grid-template-columns: minmax(0, 1fr); }
+  .svc-all { grid-column: 1; grid-row: 3; justify-self: start; margin-top: 0.2rem; }
+  .svc-next { padding-left: 0; }
+  /* The registers on a phone: the name over its facts, the facts in a line under it. */
+  .rows > .row, .rows > .row > a { grid-template-columns: subgrid; }
+  .idea-index { grid-template-columns: 1.6rem minmax(0, 1fr) max-content 2ch; column-gap: 0.6rem; }
+  .idea-index .row > a { grid-template-rows: auto auto; padding: 0.35rem 0; }
+  .idea-index .no { grid-column: 1; grid-row: 1 / span 2; align-self: start; padding-top: 0.3rem; }
+  .idea-index .what { grid-column: 2 / -1; grid-row: 1; }
+  .idea-index .dots { display: none; }
+  .idea-index .kind-word { grid-column: 2; grid-row: 2; }
+  .idea-index .who { display: none; }
+  .idea-index .road { grid-column: 3; grid-row: 2; }
+  .idea-index .bearing { grid-column: 4; grid-row: 2; margin-left: -0.25rem; }
+  .idea-index .colheads { display: none; }
+  .task-index { grid-template-columns: 2.75rem minmax(0, 1fr) max-content; column-gap: 0.5rem; }
+  .task-index .colheads, .task-index .no, .task-index .dots, .task-index .edit-slot { display: none; }
+  .task-index .row { grid-template-rows: auto auto auto; padding: 0.2rem 0; }
+  .task-index .d { grid-column: 1; grid-row: 1 / span 2; }
+  .task-index .what { grid-column: 2 / -1; grid-row: 1; padding-right: 3.2rem; }
+  .task-index .who { grid-column: 2; grid-row: 2; }
+  .task-index .due { grid-column: 3; grid-row: 2; }
+  .row > details.edit { grid-row: 3; }
+  .edit-body { padding-left: 0; }
+  .sommaire { grid-template-columns: 0.75rem 1.4rem minmax(0, 1fr) 1.1rem; }
+  .sommaire .no, .sommaire .dots, .sommaire .colheads { display: none; }
+  .sommaire .row > a { grid-template-rows: auto auto; padding: 0.4rem 0; }
+  .sommaire .slot { grid-row: 1 / span 2; }
+  .sommaire .picon { grid-column: 2; grid-row: 1; }
+  .sommaire .what { grid-column: 3; grid-row: 1; }
+  .sommaire .state { grid-column: 3; grid-row: 2; padding: 0; }
+  .sommaire .go { grid-column: 4; grid-row: 1 / span 2; }
+  .home-todo .colheads { display: none; }
+  .task-rows { grid-template-columns: 2.75rem minmax(0, 1fr) max-content; }
+  .task-rows .row { grid-template-rows: auto auto; padding: 0.2rem 0; }
+  .task-rows .d { grid-column: 1; grid-row: 1 / span 2; }
+  .task-rows .what { grid-column: 2 / -1; grid-row: 1; }
+  .task-rows .dots { display: none; }
+  .task-rows .who { grid-column: 2; grid-row: 2; }
+  .task-rows .due { grid-column: 3; grid-row: 2; }
+  .idea-rows .who { display: none; }
+  .idea-rows { grid-template-columns: 1.1rem minmax(0, 1fr) max-content; }
+  /* A plan on a phone: its day, then its name over its time and how far off. */
+  .plan-rows { grid-template-columns: 3.9rem minmax(0, 1fr) max-content; column-gap: 0.7rem; }
+  .plan-rows .row > a { grid-template-rows: auto auto; padding: 0.45rem 0; }
+  .plan-rows .dc { grid-row: 1 / span 2; }
+  .plan-rows .what { grid-column: 2 / -1; grid-row: 1; white-space: normal; }
+  .plan-rows .what > .t { white-space: normal; }
+  .plan-rows .dots { display: none; }
+  .plan-rows .fact.time { grid-column: 2; grid-row: 2; }
+  .plan-rows .rel-words { grid-column: 3; grid-row: 2; min-width: 0; }
+  .monitors { grid-template-columns: minmax(0, 1fr); }
+  /* The chat on a phone: the thread first, the glass line and Send docked above the keys, the
+     rest of the deck when the line is in use. */
+  .conversation { min-height: 0; padding: 1rem 0.9rem 0; }
+  .conversation .ask { bottom: calc(var(--keys-h) + env(safe-area-inset-bottom)); margin: auto -0.9rem 0; }
+  /* The composer on a phone: the glass line and Send; the lip (who, where, the mic) opens
+     while the line is in use. */
+  .page-chat .ask.minitel { padding-bottom: 0.7rem; }
+  .page-chat .ask.minitel:not(:focus-within) > .deck.lip { display: none; }
+  .compose-row > .send { min-width: 0; padding: 0 0.9rem; }
+  .page-chat .deck .who label, .page-chat .deck .locate-words { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .page-chat .deck { flex-wrap: nowrap; gap: 0.4rem; }
+  .page-chat .deck .locate { order: 0; flex: none; }
+  .page-chat .deck .locate label { gap: 0.3rem; min-width: 2.75rem; padding: 0 0.2rem; }
+  .page-chat .deck .send { padding: 0 0.85rem; }
+  .thread > li { max-width: 100%; }
+  table.month { display: none; }
+  .month-list { display: block; }
+  .month-list li { padding: 0.8rem 0; }
+  .month-list li + li { border-top: 1px solid var(--line); }
+  .people > li { grid-template-columns: 2.5rem minmax(0, 1fr); }
+  .lost .crt-tube { flex-direction: column; }
+  .page-signin .board { min-height: 0; align-content: start; padding-top: 0.5rem; }
+  .save-bar { bottom: calc(var(--keys-h) + env(safe-area-inset-bottom)); }
+  dl.facts { grid-template-columns: minmax(0, 1fr); gap: 0.2rem; }
+  dl.facts dd { margin-bottom: 0.7rem; }
+  .foot { padding: 1rem 0.75rem 1.5rem; }
+}
+
+@media print {
+  .bar, .bar-places, .foot, .ask, form, .page-actions, .tabs, .month-nav, .tools-cell { display: none !important; }
+  html, body { background: #fff; color: #000; }
+  .cell, .panel, .side { border-color: #999; box-shadow: none; }
+}

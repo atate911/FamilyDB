@@ -1,0 +1,78 @@
+{% from "_ui.html" import icon, crt %}
+{# The box everyone writes to her in, on Home and at the foot of the chat: the message on top, who
+   is sending, the mic and Send along one row, "Send where I am" under it, and the ways to start. It
+   posts to the chat wherever it is drawn, so what is started on Home lands in the conversation it
+   joins. Closed (`locked`) while an answer is on its way. The page's one script (ask.js) keeps what
+   is being written until it has been sent; without it the box still does everything it must.
+   Desk Terminal, Joined: on Home (`glass`, the picture home.html draws) the box is the terminal
+   itself. The tube's scrollback is the top of the glass, her question is its prompt and the label
+   of the box, and the box is the tube's last rows, a glass-tinted well under the prompt, typed in
+   the family's own face; under the glass the keyboard ledge holds who is asking, the mic, Send and
+   the ways to start. Elsewhere the label is for screen readers.
+   Needs: family, who, send_where, typed, locked, placeholder, assistant, and `glass` on Home. #}
+{% set field %}
+  <textarea id="text" name="text" data-dictate="ask-mic" rows="{{ 3 if glass else 2 }}" required placeholder="{{ placeholder }}"
+            {%- if locked %} disabled{% endif %}>{{ typed or '' }}</textarea>
+{% endset %}
+<form class="ask{{ ' ask-glass' if glass }}" id="ask" method="post" action="{{ url_for('chat.send') }}"
+      {%- if look_again %} data-refresh="{{ look_again }}"{% endif %}>
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+  <input type="hidden" name="once" value="{{ once_token() }}" />
+  <input type="hidden" name="lat" value="" />
+  <input type="hidden" name="lon" value="" />
+  {% if glass %}
+    {% set well %}<div class="well">{{ field }}</div>{% endset %}
+    {% call crt('next-up tube-home', hidden=false, below=well) %}{{ glass }}{% endcall %}
+  {% else %}
+    <label class="sr" for="text">Message to {{ assistant }}</label>
+    {{ field }}
+  {% endif %}
+  <div class="{{ 'ledge' if glass else 'ask-foot' }}">
+    <div class="ask-bar">
+      <div class="who">
+        {% if visitor().member %}
+          {# Signed in as themselves, so there is nobody else they could be asking as. #}
+          <span class="from">From <strong>{{ who }}</strong></span>
+        {% else %}
+          <label for="who">From</label>
+          <select id="who" name="who" required>
+            {% if not who %}<option value="">who is asking?</option>{% endif %}
+            {% for name in family %}
+              <option value="{{ name }}" {{ 'selected' if name == who }}>{{ name }}</option>
+            {% endfor %}
+          </select>
+        {% endif %}
+      </div>
+      {# Where dictate.js puts the mic, beside Send; empty without it. #}
+      <span class="mic-slot" id="ask-mic"></span>
+      <button class="send" type="submit" {{ 'disabled' if locked or not family }}>{{ icon('send') }}<span class="label">Send</span></button>
+    </div>
+    {# Under the row, in the order it is read. Shown by ask.js; with scripts off there is no position to send, so no box. #}
+    <div class="locate" id="locate" hidden>
+      <label>
+        <input type="checkbox" name="send_where" value="1" {{ 'checked' if send_where }} />
+        {{ icon('locate') }}Send where I am
+      </label>
+    </div>
+    <p id="where" class="muted"></p>
+    {% if starters and glass %}
+      {# Ways to start, as a row of keys on the ledge. With the script each fills the box, and they
+         step aside once something is written, so a tap never replaces a draft; without it each is a
+         link that brings the page back with its words waiting in the box. Nothing is sent until
+         somebody presses Send. #}
+      <ul class="starters" aria-label="Ways to start">
+        {% for starter in starters %}
+          <li><a href="{{ url_for(request.endpoint, ask=starter.say, _anchor='ask') }}" data-say="{{ starter.say }}">{{ starter.label }}</a></li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+</form>
+{% if starters and not glass %}
+  <ul class="starters" aria-label="Ways to start">
+    {% for starter in starters %}
+      <li><a href="{{ url_for(request.endpoint, ask=starter.say, _anchor='ask') }}" data-say="{{ starter.say }}">{{ starter.label }}</a></li>
+    {% endfor %}
+  </ul>
+{% endif %}
+<script src="{{ url_for('static', filename='ask.js') }}" defer></script>

@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% from "_ui.html" import icon, page_head, crt, figure_mosaic %}
+{% block title %}What {{ assistant }} remembers · {{ site_title }}{% endblock %}
+{% block body_class %}page-memory{% endblock %}
+{# What the family has told her about itself, as she is given it: a must is weighed as a rule, a
+   guess only leans. Forgetting keeps the words, marked, so they are never saved again from what
+   was said before; the forms are edits.py's, through the `remember` tool. #}
+{% block content %}
+{% macro tell_cell(cls) %}
+{% if visitor().may('change') %}
+  <details class="cell {{ cls }}" id="remember" {{ 'open' if not groups }}>
+    <summary><span class="h2">{{ icon('plus') }}Tell {{ assistant }} something to remember</span></summary>
+    <form class="form" method="post" action="{{ url_for('edits.add_memory') }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+      <input type="hidden" name="once" value="{{ once_token() }}" />
+      <div class="field wide">
+        <label for="fact">What to remember</label>
+        <input id="fact" name="fact" required maxlength="200" placeholder="vegetarian" />
+      </div>
+      <div class="field">
+        <label for="about">About</label>
+        <select id="about" name="about">
+          <option value="family">The whole family</option>
+          {% for person in people %}<option value="{{ person.display_name }}">{{ person.display_name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="category">Kind</label>
+        <select id="category" name="category">
+          {% for key, label in kinds.items() %}<option value="{{ key }}" {{ 'selected' if key == 'other' }}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="until">Until <span class="optional">optional</span></label>
+        <input id="until" name="until" type="date" />
+      </div>
+      <div class="field wide">
+        <label class="check"><input type="checkbox" name="firm" value="yes" /> A must or a never (an allergy, a rule), not only a taste</label>
+      </div>
+      <div class="field wide actions"><button type="submit">{{ icon('check') }}Remember it</button></div>
+    </form>
+  </details>
+{% endif %}
+{% endmacro %}
+{% set kept = groups | map(attribute='rows') | map('length') | sum %}
+{% set musts = [] %}{% for group in groups %}{% for row in group.rows if row.firm %}{% set _ = musts.append(row) %}{% endfor %}{% endfor %}
+{# The panel: down the first column the plate, the green screen's count of what she keeps, and
+   the cell to tell her something; across the other three a thing remembered to a cell, under a
+   strip naming whom it is about, and what was forgotten folded at the foot. #}
+<div class="side">
+{# A block to a thing remembered, firm ones in the page's colour; nothing remembered, no picture. #}
+{% set mem_fig = [] %}
+{% for group in groups %}{% for row in group.rows %}{% if mem_fig | length < 24 %}{% set _ = mem_fig.append('d' if row.firm else 'm') %}{% endif %}{% endfor %}{% endfor %}
+{% for _i in range((6 - mem_fig | length % 6) % 6 if mem_fig else 0) %}{% set _ = mem_fig.append('') %}{% endfor %}
+{{ page_head('What %s remembers'|format(assistant),
+             'What the family has told %s about itself, weighed whenever it bears on a question. Forget something here and it does not come back from what was said before.'|format(assistant),
+             'heart', art=figure_mosaic(6, mem_fig, pitch=9) if mem_fig else none) }}
+{# The green screen lights only when there is something kept to count: no glass is lit empty. #}
+{% if kept or forgotten %}
+<section class="cell screen-cell" aria-hidden="true">
+{% call crt('readout page-readout') %}
+  <p class="readout-label"><span class="inverse caps">Remembered</span></p>
+  <p class="readout-title bright">{{ kept }} thing{{ '' if kept == 1 else 's' }}</p>
+  <ul class="readout-lines">
+    <li><span><span class="bright">{{ musts | length }}</span> <span class="dim">a must or a never</span></span></li>
+    <li><span><span class="bright">{{ forgotten | length }}</span> <span class="dim">forgotten</span></span></li>
+  </ul>
+  <p class="readout-foot dim">{{ 'Nothing yet' if not kept else 'Kept here' }}<span class="crt-cursor"></span></p>
+{% endcall %}
+</section>
+{% endif %}
+
+{% if groups %}{{ tell_cell('tell-cell') }}{% endif %}
+</div>
+
+<div class="main">
+{% for group in groups %}
+  <h2 class="strip memory-strip">{{ icon('family' if group.family else 'user') }}{{ group.who }}</h2>
+  <ul class="cells memories-cells">
+    {% for row in group.rows %}
+      <li class="cell memory{{ ' firm' if row.firm }}{{ ' ended' if row.ended }}">
+        <p class="memory-fact"><strong>{{ row.fact }}</strong></p>
+        <p class="tags">
+          {% if row.firm %}<span class="tag warn">must</span>{% endif %}
+          {% if row.guess %}<span class="tag">a guess</span>{% endif %}
+          {% if row.until %}<span class="tag">{{ 'ended' if row.ended else 'until' }} {{ row.until }}</span>{% endif %}
+          <span class="tag">{{ row.kind }}</span>
+        </p>
+        <p class="muted small memory-source">
+          {{ row.source }}{% if row.said %}: <q>{{ row.said }}</q>{% endif %}
+        </p>
+        {% if visitor().may('change') %}
+          <form class="cell-foot" method="post" action="{{ url_for('edits.forget_memory', memory_id=row.id) }}">
+            <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+            <input type="hidden" name="once" value="{{ once_token() }}" />
+            <button class="secondary" type="submit">{{ icon('x') }}Forget<span class="sr"> {{ row.fact }}</span></button>
+          </form>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <div class="cell module memory-empty">
+    <p class="muted">Nothing yet. Tell {{ assistant }} something that matters, like "the girls are vegetarian now"
+      or "Sam can't do long drives", and it is kept here.</p>
+  </div>
+  {{ tell_cell('module tell-cell') }}
+{% endfor %}
+
+{% if forgotten %}
+  <details class="cell module">
+    <summary><span class="h2">{{ icon('undo') }}Forgotten</span></summary>
+    <p class="muted small">Not saved again from anything said before it was forgotten. To have one remembered after all, add it again above.</p>
+    <ul class="plain memories">
+      {% for row in forgotten %}
+        <li class="memory gone">
+          <p class="memory-fact"><span>{{ row.fact }}</span></p>
+          <p class="muted small">{{ row.about }} · {{ row.gone }}</p>
+        </li>
+      {% endfor %}
+    </ul>
+  </details>
+{% endif %}
+</div>
+{% endblock %}

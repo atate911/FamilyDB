@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, crt, figure_mosaic %}
+{% block title %}Family · {{ site_title }}{% endblock %}
+{% block body_class %}page-family{% endblock %}
+{% block content %}
+  {# The panel: down the first column the plate with its key, the green screen's count of who is
+     on the list, and who can get in; across the other three a person to a cell, then the cell to
+     add somebody, and the three roles as three cells under it, the legend of its Role box. #}
+  <div class="side">
+  {# The list as a picture, as Home draws it: a figure of blocks to each person (a head, a gap, a
+     body three blocks tall, a kid's two, so a kid stands a head shorter), an admin in the page's
+     colour, everybody else in bone. #}
+  {% set shown = people[:6] %}
+  {% set figs = [] %}
+  {% for r in range(5) %}{% for person in shown %}
+    {% set head = 1 if person.role == 'kid' else 0 %}
+    {% set _ = figs.append(('d' if person.role == 'admin' else 'n') if (r == head or r > head + 1) else '-') %}
+    {% if not loop.last %}{% set _ = figs.append('-') %}{% endif %}
+  {% endfor %}{% endfor %}
+  {% call page_head('Family', 'Who the bot talks to.', 'family', art=figure_mosaic(shown | length * 2 - 1, figs, 'fig-family', pitch=9) if shown else none) %}
+    <a class="button" href="#add">{{ icon('person_plus') }}Add somebody</a>
+  {% endcall %}
+  {# The list as the green screen counts it. Every word on it is in the cells beside it. #}
+  <section class="cell screen-cell" aria-hidden="true">
+  {% call crt('readout page-readout') %}
+    <p class="readout-label"><span class="inverse caps">On the list</span></p>
+    <p class="readout-title bright">{{ people | length }} {{ 'person' if people | length == 1 else 'people' }}</p>
+    <ul class="readout-lines">
+      {% for role in roles %}{% set n = people | selectattr('role', 'equalto', role) | list | length %}
+        <li><span class="{{ 'bright' if n else 'dim' }}">{{ n }} {{ role }}{{ '' if n == 1 else 's' }}</span></li>
+      {% endfor %}
+    </ul>
+    {% set phones = people | selectattr('telegram_id') | list | length %}
+    <p class="readout-foot"><span class="bright">{{ phones }}</span> <span class="dim">on Telegram</span><span class="crt-cursor"></span></p>
+  {% endcall %}
+  </section>
+  <section class="cell who-cell" aria-labelledby="who-h">
+    <h2 id="who-h">{{ icon('key') }}Who can get in</h2>
+    <p class="small">On Telegram the bot knows people by their Telegram id, so add it here to
+      let somebody message it from their phone. Anybody not on this list who writes is told their
+      id and turned away. On this page each person signs in as themselves, with a password of their
+      own: open somebody to give them a starting password.</p>
+    {% if not personal %}
+      <p class="small look-line"><span class="lamp look" aria-hidden="true"></span><span>Everybody signs in with the family password for now, so this page
+        cannot tell who is who. <a href="{{ url_for('family.you') }}">Choose your own password</a>,
+        as an admin, then give everybody else a starting password here.</span></p>
+    {% endif %}
+  </section>
+  </div>
+
+  <div class="main">
+  <ul class="cells people-cells" aria-label="The family">
+    {% for person in people %}
+      <li class="cell person-cell role-{{ person.role }}{{ '' if person.active else ' off' }}">
+        <div class="person-head">
+          <span class="avatar role-{{ person.role }}" aria-hidden="true">{{ person.name[:1] | upper }}</span>
+          <h2>{{ person.name }}</h2>
+        </div>
+        <p class="tags person-tags">
+          <span class="tag role">{{ person.role }}</span>
+          {% if person.age is not none %}<span class="tag">{{ person.age }}</span>{% endif %}
+          {% if not person.active %}<span class="tag warn">switched off</span>{% endif %}
+          {% if person.sign_in == 'own' %}<span class="tag">signs in</span>
+          {% elif person.sign_in == 'starting' %}<span class="tag">starting password</span>{% endif %}
+        </p>
+        <p class="reach">
+          {% if person.telegram_id %}{{ icon('chat') }}<span>Telegram <span class="num">{{ person.telegram_id }}</span></span>
+          {% elif person.elsewhere %}{{ icon('chat') }}<span>known on {{ person.elsewhere }}</span>
+          {% elif person.role == 'kid' and not person.sign_in %}{{ icon('idea') }}<span>named in ideas and plans</span>
+          {% else %}{{ icon('home') }}<span>web page and console only</span>{% endif %}
+        </p>
+        {% if person.id in today %}
+          <p class="reach">{{ icon('send') }}<span><span class="num">{{ today[person.id] }}</span> of <span class="num">{{ daily_limit }}</span> messages today</span></p>
+        {% endif %}
+        <p class="cell-foot"><a class="cell-key" href="{{ url_for('family.edit', member_id=person.id) }}">{{ icon('edit') }}Change<span class="sr"> {{ person.name }}</span></a></p>
+      </li>
+    {% else %}
+      <li class="cell muted empty">{{ icon('family') }}<span>Nobody yet. Add yourself first, as an admin.</span></li>
+    {% endfor %}
+  </ul>
+
+  <section class="cell add-person" id="add">
+    <h2>{{ icon('person_plus') }}Add somebody</h2>
+    <form class="form" method="post" action="{{ url_for('family.add') }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+      <input type="hidden" name="once" value="{{ once_token() }}" />
+      <div class="field">
+        <label for="name">Name</label>
+        <input id="name" name="name" required maxlength="80" placeholder="Alex" />
+      </div>
+      <div class="field">
+        <label for="role">Role</label>
+        <select id="role" name="role" aria-describedby="roles-legend">
+          {% for role in roles %}
+            <option value="{{ role }}" {{ 'selected' if role == ('admin' if not people else 'parent') }}>{{ role }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="telegram_id">Telegram id</label>
+        <input id="telegram_id" name="telegram_id" inputmode="numeric" placeholder="optional" />
+      </div>
+      <div class="field actions end">
+        <button type="submit">{{ icon('plus') }}Add</button>
+      </div>
+    </form>
+  </section>
+
+  {% if knocks %}
+    <section class="cell module" id="knocking">
+      <h2>{{ icon('bell') }}Asked to talk to the bot</h2>
+      <p class="muted">People who messaged it on Telegram and were turned away, newest first. Add
+        the ones you know; ignore the rest, and they drop off this list after a month.</p>
+      <ul class="plain knocks">
+        {% for knock in knocks %}
+          <li>
+            <form class="form" method="post" action="{{ url_for('family.add') }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+              <input type="hidden" name="once" value="{{ once_token() }}" />
+              <input type="hidden" name="telegram_id" value="{{ knock.telegram_id }}" />
+              <div class="field">
+                <label for="knock-name-{{ loop.index }}">Name</label>
+                <input id="knock-name-{{ loop.index }}" name="name" required maxlength="80"
+                       value="{{ knock.name }}" placeholder="Alex" />
+                <p class="muted hint">
+                  {% if knock.handle %}{{ knock.handle }} · {% endif %}Telegram {{ knock.telegram_id }}
+                  · {{ knock.where }}, {{ knock.when }}{% if knock.times > 1 %} ({{ knock.times }} times){% endif %}
+                </p>
+              </div>
+              <div class="field">
+                <label for="knock-role-{{ loop.index }}">Role</label>
+                <select id="knock-role-{{ loop.index }}" name="role">
+                  {% for role in roles %}
+                    <option value="{{ role }}" {{ 'selected' if role == 'parent' }}>{{ role }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="field actions end"><button type="submit">{{ icon('plus') }}Add</button></div>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+
+  {# The three roles, a cell each, under the box that chooses one. #}
+  <ul class="cells roles-cells" id="roles-legend" aria-label="What each role may do">
+    {% for role in roles %}
+      <li class="cell half role-cell role-{{ role }}">
+        <p class="role-name"><span class="tag role">{{ role }}</span></p>
+        <p class="small">{{ role_words[role] }}</p>
+      </li>
+    {% endfor %}
+  </ul>
+  </div>
+{% endblock %}

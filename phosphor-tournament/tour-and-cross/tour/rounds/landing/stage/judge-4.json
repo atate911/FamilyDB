@@ -1,0 +1,45 @@
+{
+ "stage": "landing",
+ "lenses": [
+  "usability",
+  "skeptic"
+ ],
+ "finals": [
+  "t3-track-refine2",
+  "t3-track-graft",
+  "t3-timetable-refine",
+  "t3-pocket-refine",
+  "t3-figure-refine",
+  "t3-console-graft",
+  "t3-switchboard-refine"
+ ],
+ "origins": [
+  "r10-idea-3",
+  "r13-mut-4",
+  "r10-wild-3",
+  "r11-wild-1",
+  "r10-wild-4",
+  "r11-wild-3",
+  "r12-wmut-1"
+ ],
+ "ids": [
+  "00-current",
+  "r13-idea-1",
+  "t3-track-refine2",
+  "t3-track-graft",
+  "t3-timetable-refine",
+  "t3-pocket-refine",
+  "t3-figure-refine",
+  "t3-console-graft",
+  "t3-switchboard-refine",
+  "r10-idea-3",
+  "r13-mut-4",
+  "r10-wild-3",
+  "r11-wild-1",
+  "r10-wild-4",
+  "r11-wild-3",
+  "r12-wmut-1"
+ ],
+ "n": 16,
+ "lineages": "the track series (Track Diagram): final t3-track-refine2, t3-track-graft, origin r10-idea-3, r13-mut-4; Night Timetable: final t3-timetable-refine, origin r10-wild-3; Pocket Timeline: final t3-pocket-refine, origin r11-wild-1; Figure Ground: final t3-figure-refine, origin r10-wild-4; Flight Console: final t3-console-graft, origin r11-wild-3; Videotex Switchboard: final t3-switchboard-refine, origin r12-wmut-1"
+}

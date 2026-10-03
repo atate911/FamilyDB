@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, presence, contents_line, crt, lamp_strip, lamp_tally %}
+{% block title %}Settings · {{ site_title }}{% endblock %}
+{% block body_class %}page-settings{% endblock %}
+{% block content %}
+  {# The rack: the module down the first column (the page's name, a lamp to each part with its
+     tally, the way into setup, and the green screen's word on how it stands); across the other
+     three the sommaire, a numbered line to each part, read along a leader to how it stands.
+     Something missing is marked in words and with its lamp. #}
+  {% set by = {} %}{% for entry in sections %}{% set _ = by.update({entry.section.name: entry}) %}{% endfor %}
+  {% set wanting = sections | selectattr('look') | list | length %}
+  {% set parts = [] %}
+  {% for entry in sections %}
+    {% set _ = parts.append({'state': 'part' if entry.look else 'set', 'label': (990 + loop.index) ~ ' ' ~ entry.section.title, 'word': 'needs a look' if entry.look else 'set', 'href': '#part-' ~ entry.section.name}) %}
+  {% endfor %}
+  <div class="side">
+  {{ page_head('Settings', 'Each part, how it stands now, and the way in to change it.', 'settings') }}
+  <section class="lamps-cell" aria-label="How the parts stand">
+    {{ lamp_strip([parts], 'parts-strip') }}
+    {{ lamp_tally([('set', sections | length - wanting, 'set'), ('part', wanting, 'needs a look' if wanting == 1 else 'need a look')]) }}
+  </section>
+  {# The way into setup, as a line of the contents, its lamp lit while a part wants a look. #}
+  <section class="setup-cell" aria-labelledby="setup-h">
+    {{ contents_line(none, 'Setup', url_for('setup.overview'), 'setup-h', lamp='look' if wanting else none) }}
+    <p class="small">Setting up for the first time, or starting again? Setup goes through what matters
+      most, one step at a time.</p>
+  </section>
+  {# How it stands, as the green screen sums it up from the parts beside it. #}
+  <section class="screen-cell" aria-hidden="true">
+  {% call crt('readout page-readout') %}
+    <p class="readout-label"><span class="inverse caps">How it stands</span></p>
+    <p class="readout-count bright">{{ wanting }} to look at</p>
+    <ul class="readout-lines">
+      {% for name in ('model', 'spending', 'general') if by[name] %}<li><span class="dim">{{ by[name].lines[0] }}</span></li>{% endfor %}
+    </ul>
+    <p class="readout-foot dim">&gt; {{ sections | length }} parts<span class="crt-cursor"></span></p>
+  {% endcall %}
+  </section>
+  </div>
+
+  <div class="main">
+  {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  <section class="register-cell" aria-labelledby="reg-h">
+    <div class="reg-title">
+      <h2 id="reg-h">{{ sections | length }} parts{% if wanting %} · <span class="warn">{{ wanting }} {{ 'needs' if wanting == 1 else 'need' }} a look</span>{% endif %}</h2>
+    </div>
+    <ol class="plain sommaire">
+      {% for entry in sections %}
+        {% set one = entry.section %}
+        <li class="{{ 'look' if entry.look }}" id="part-{{ one.name }}">
+          <a href="{{ url_for('settings.section', name=one.name) }}">
+            <span class="no" aria-hidden="true">{{ 990 + loop.index }}</span>
+            {% if one.icon == 'presence' %}{{ presence('glyph') }}{% else %}{{ icon(one.icon) }}{% endif %}
+            <span class="what">{{ one.title }}</span>
+            <span class="dots" aria-hidden="true"></span>
+            <span class="state">{% if entry.look %}<span class="light part" aria-hidden="true"></span>Needs a look{% else %}{{ entry.lines[0] if entry.lines else '' }}{% endif %}</span>
+          </a>
+          {% if entry.lines | length > 1 or (entry.look and entry.lines) %}
+            <p class="more-state">{% for line in (entry.lines if entry.look else entry.lines[1:]) %}<span>{{ line }}</span>{% endfor %}</p>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ol>
+  </section>
+  </div>
+{% endblock %}

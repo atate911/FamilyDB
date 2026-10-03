@@ -1,0 +1,61 @@
+{% from "_ui.html" import icon, ask_title %}
+{# The box everyone writes to her in, at the foot of the chat (Home draws its own, on the
+   terminal's screen), docked in one case: a line of green glass to type on, the tube's prompt lit
+   before it, with Send on the same row; and on the case's lip under it who is sending, "Send where
+   I am" and the mic. Send is last in the Tab order, after the lip, so who is sending is chosen
+   before it. It posts to the chat. Closed (`locked`) while an answer is on its way. The box's
+   script (ask.js, loaded by the page) keeps what is being written until it has been sent; without
+   it the box still does everything it must. The question, where it is asked, is the one Home
+   asks (`ask_title`). Needs: family, who, send_where, typed, locked, placeholder, assistant. #}
+<form class="ask minitel composer" id="ask" method="post" action="{{ url_for('chat.send') }}"
+      {%- if look_again %} data-refresh="{{ look_again }}"{% endif %}>
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+  <input type="hidden" name="once" value="{{ once_token() }}" />
+  <input type="hidden" name="lat" value="" />
+  <input type="hidden" name="lon" value="" />
+  <div class="crt ask-screen">
+    <div class="crt-tube">
+      {% if question %}
+        <h1 class="ask-question"><label for="text">{{ ask_title() }}</label></h1>
+      {% else %}
+        <label class="sr" for="text">Message to {{ assistant }}</label>
+      {% endif %}
+      <div class="prompt-line">
+        <span class="prompt-mark" aria-hidden="true">&gt;</span>
+        <textarea id="text" name="text" data-dictate="ask-mic" rows="{{ 2 if question else 1 }}" required placeholder="{{ placeholder }}"
+                  {%- if locked %} disabled{% endif %}>{{ typed or '' }}</textarea>
+      </div>
+    </div>
+  </div>
+  <div class="deck ask-bar lip">
+    <div class="who">
+      {% if visitor().member %}
+        <span class="from">From <strong>{{ who }}</strong></span>
+      {% else %}
+        <label for="who">From</label>
+        <select id="who" name="who" required>
+          {% if not who %}<option value="">who is asking?</option>{% endif %}
+          {% for name in family %}
+            <option value="{{ name }}" {{ 'selected' if name == who }}>{{ name }}</option>
+          {% endfor %}
+        </select>
+      {% endif %}
+    </div>
+    <div class="locate" id="locate" hidden>
+      <label>
+        <input type="checkbox" name="send_where" value="1" {{ 'checked' if send_where }} />
+        {{ icon('locate') }}<span class="locate-words">Send where I am</span>
+      </label>
+    </div>
+    <span class="mic-slot" id="ask-mic"></span>
+  </div>
+  <button class="send" type="submit" {{ 'disabled' if locked or not family }}>{{ icon('send') }}<span class="label">Send</span></button>
+  <p id="where" class="muted"></p>
+</form>
+{% if starters %}
+  <ul class="starters" aria-label="Ways to start">
+    {% for starter in starters %}
+      <li><a href="{{ url_for(request.endpoint, ask=starter.say, _anchor='ask') }}" data-say="{{ starter.say }}"><span class="arrow" aria-hidden="true">→</span><span class="key-words">{{ starter.label }}</span></a></li>
+    {% endfor %}
+  </ul>
+{% endif %}

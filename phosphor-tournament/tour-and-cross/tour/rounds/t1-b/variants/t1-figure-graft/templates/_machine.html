@@ -1,0 +1,45 @@
+{% from "_ui.html" import mark %}
+{# The machine taken apart, as a parts diagram: each part it can be told about numbered as the
+   settings pages are, the one being looked at (`current`) lit. Drawn in the page's own inks. #}
+{% macro machine(current=0) -%}
+      <svg viewBox="0 0 256 232" focusable="false" class="drawing" aria-hidden="true">
+        {# the case and its glass #}
+        <rect class="d-box" x="64" y="44" width="124" height="96"/>
+        <rect class="d-glass" x="75" y="54" width="102" height="70"/>
+        <text class="d-glyphs" x="84" y="75">&gt; :HJ 6 1 4</text>
+        <text class="d-glyphs dim" x="84" y="91">D 40 9 50 *</text>
+        <text class="d-glyphs" x="84" y="107">J1 3 *&gt;&gt;D</text>
+        <path class="d-line" d="M75 132H112M160 132h14"/>
+        {# the stand and the base, and home under it #}
+        <path class="d-line" d="M112 140L106 160H146L140 140M92 160H160V172H92Z"/>
+        <path class="d-dash" d="M126 172V190"/>
+        <path class="d-line" d="M108 214V200L126 188L144 200V214ZM121 214V205H131V214"/>
+        {# the coin slot, and a coin taken out #}
+        <path class="d-line" d="M188 70H196V96H188"/>
+        <path class="d-line" d="M191 76V90"/>
+        <path class="d-dash" d="M198 83H212"/>
+        <circle class="d-line" cx="224" cy="83" r="11"/><path class="d-line" d="M224 77V89"/>
+        {# the bell #}
+        <path class="d-dash" d="M64 96H44"/>
+        <path class="d-line" d="M22 104H42C38 100 38 96 38 88C38 82 34 78 32 78C30 78 26 82 26 88C26 96 26 100 22 104ZM29 108H35"/>
+        {# the lookup glass, on its antenna #}
+        <path class="d-line" d="M160 44L178 22"/>
+        <circle class="d-line" cx="186" cy="14" r="9"/><path class="d-line" d="M192 20L199 27"/>
+        {# the tape of what has changed #}
+        <path class="d-line" d="M82 44V10H112V44M86 18H106M86 24H104M86 30H100"/>
+        {# the key #}
+        <path class="d-dash" d="M64 60H48"/>
+        <circle class="d-line" cx="30" cy="52" r="8"/><path class="d-line" d="M30 60V76M30 70H36M30 75H35"/>
+        {# the cable and its plug #}
+        <path class="d-line" d="M160 166C190 166 190 196 212 196"/>
+        <path class="d-line" d="M212 189H224V203H212ZM224 192H232M224 200H232"/>
+        {# the callouts, numbered as the list is #}
+        {% for n, x, y in [(1, 100, 222), (2, 196, 128), (3, 244, 64), (4, 14, 124), (5, 214, 12), (6, 60, 72), (7, 244, 214), (8, 14, 40), (9, 60, 14)] %}
+          {% call(lit) mark('k' ~ n, 'here' if n == current else '') %}
+            {% if lit %}<circle class="lit-halo" cx="{{ x }}" cy="{{ y }}" r="11"/><circle class="lit-node" cx="{{ x }}" cy="{{ y }}" r="8.5"/><text class="lit-calln" x="{{ x }}" y="{{ y + 4 }}" text-anchor="middle">{{ n }}</text>
+            {% else %}<circle class="d-call" cx="{{ x }}" cy="{{ y }}" r="8.5"/><text class="d-calln" x="{{ x }}" y="{{ y + 4 }}" text-anchor="middle">{{ n }}</text>{% endif %}
+          {% endcall %}
+        {% endfor %}
+        <path class="d-dash" d="M108 208L100 214M188 110L196 120M235 83L240 72M22 110L16 116M195 14H206M75 76L66 74M232 196L240 206M24 46L18 42M82 14H68"/>
+      </svg>
+{%- endmacro %}

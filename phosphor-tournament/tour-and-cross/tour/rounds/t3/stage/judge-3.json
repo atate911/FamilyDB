@@ -1,0 +1,114 @@
+{
+ "stage": "judge",
+ "round": "t3",
+ "roundNo": 3,
+ "lens": "style",
+ "heats": {
+  "a": {
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/tour/t3-a",
+   "lineages": [
+    {
+     "name": "the track series (Track Diagram)",
+     "idea": "the family's week drawn as a signal box's illuminated track diagram: steel lines on slate boards with a lamp at each stop, drawn only where there is an order (Coming up, To do, the setup steps, the chat); the series began as Signal Box (round 7) and its mimic-line language",
+     "ids": [
+      "t2-track-graft",
+      "t2-track-refine",
+      "t3-track-refine",
+      "t3-track-refine2",
+      "t3-track-graft",
+      "t3-track-mut"
+     ]
+    },
+    {
+     "name": "Night Timetable",
+     "idea": "a station at night: Vera's conversation is the line the page hangs from (the question the first stop, the ways to start stops, 'Continue with Vera' the terminus), the chat a timetable with times in the margin, the Next up screen a dot-matrix departure board",
+     "ids": [
+      "t2-timetable-refine",
+      "t3-timetable-refine",
+      "t3-timetable-graft",
+      "t3-timetable-mut"
+     ]
+    },
+    {
+     "name": "Pocket Timeline",
+     "idea": "Home ordered as time on one spine: NOW (the question), then NEXT (the tube), then Coming up, then LATER, with the lists beside it; every page strung along a timeline",
+     "ids": [
+      "t2-pocket-graft",
+      "t3-pocket-refine",
+      "t3-pocket-graft",
+      "t3-pocket-mut"
+     ]
+    }
+   ],
+   "ids": [
+    "00-current",
+    "r13-idea-1",
+    "t2-track-graft",
+    "t2-track-refine",
+    "t3-track-refine",
+    "t3-track-refine2",
+    "t3-track-graft",
+    "t3-track-mut",
+    "t2-timetable-refine",
+    "t3-timetable-refine",
+    "t3-timetable-graft",
+    "t3-timetable-mut",
+    "t2-pocket-graft",
+    "t3-pocket-refine",
+    "t3-pocket-graft",
+    "t3-pocket-mut"
+   ]
+  },
+  "b": {
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/tour/t3-b",
+   "lineages": [
+    {
+     "name": "Figure Ground",
+     "idea": "the family's operator manual: every section led by a figure drawn from its own data (Status as the wiring of keys and connections with lit ports, the chat as a sequence diagram, To do's due dates on a line with NOW, Home's family tree to Vera to its counts)",
+     "ids": [
+      "t2-figure-refine",
+      "t3-figure-refine",
+      "t3-figure-graft",
+      "t3-figure-mut"
+     ]
+    },
+    {
+     "name": "Flight Console",
+     "idea": "a 1969 flight console: a readout strip across the top (TODAY, PLANS, TO DO, LATE, IDEAS), the coming weeks drawn as a flight plan of hops between stops, an annunciator of lit lamps on Status, a crew board of lamps on To do, a T-minus countdown for setup, a flight-log chat",
+     "ids": [
+      "t2-console-graft",
+      "t3-console-refine",
+      "t3-console-graft",
+      "t3-console-mut"
+     ]
+    },
+    {
+     "name": "Videotex Switchboard",
+     "idea": "Home as the map of the whole service: every page a cell with its number, a lamp and a count (a videotex sommaire), the question typed on the glass under a cursor, each page opening on the same rack with its own green summary screen",
+     "ids": [
+      "t2-switchboard-graft",
+      "t3-switchboard-refine",
+      "t3-switchboard-graft",
+      "t3-switchboard-mut"
+     ]
+    }
+   ],
+   "ids": [
+    "00-current",
+    "r13-idea-1",
+    "t2-figure-refine",
+    "t3-figure-refine",
+    "t3-figure-graft",
+    "t3-figure-mut",
+    "t2-console-graft",
+    "t3-console-refine",
+    "t3-console-graft",
+    "t3-console-mut",
+    "t2-switchboard-graft",
+    "t3-switchboard-refine",
+    "t3-switchboard-graft",
+    "t3-switchboard-mut"
+   ]
+  }
+ }
+}

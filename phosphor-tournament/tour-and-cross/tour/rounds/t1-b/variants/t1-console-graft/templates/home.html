@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, kind_label, crt, radar, chat_line, waiting_line, tick, presence, lamp, task_lamp, ladder, nearness, rail %}
+{% block title %}{{ site_title }}{% endblock %}
+{% block body_class %}page-home{% endblock %}
+{% macro plan_where(entry) -%}
+  {% if entry.idea_id %}
+    <a href="{{ url_for('web.idea', idea_id=entry.idea_id) }}">{{ entry.title }}</a>
+  {% else %}
+    {{ entry.title }}
+  {% endif %}
+{%- endmacro %}
+{#- Days from now, read back off the radar: a blip's distance from the middle is the plan's days
+    away along the rings (views.RADAR_RINGS), so the flight plan, the ladders and the radar agree. -#}
+{% macro days_of(b) -%}
+  {%- set d = ((b.x - 100) ** 2 + (b.y - 100) ** 2) ** 0.5 -%}
+  {%- if d <= 33 %}{{ ((d - 12) / 21 * 7) | round | int }}{% elif d <= 66 %}{{ (7 + (d - 33) / 33 * 7) | round | int }}{% else %}{{ (14 + (d - 66) / 26 * 14) | round | int }}{% endif -%}
+{%- endmacro %}
+{% block content %}
+  {% set first = coming[0] if coming else none %}
+  {% set late = tasks | selectattr('late') | list | length %}
+  {% set parts = (today or '').split(' ') %}
+
+  {# The readout rail: the day, and what Home holds, counted, each a key to where it counts. #}
+  {% set cells = [] %}
+  {% if parts | length >= 3 %}{% set _ = cells.append({'label': 'Today', 'value': parts[0][:3] ~ ' ' ~ parts[1] ~ ' ' ~ parts[2][:3], 'href': url_for('web.plans_month'), 'tone': 'steel'}) %}{% endif %}
+  {% set _ = cells.append({'label': 'Plans', 'value': '%02d' | format(coming | length), 'href': url_for('web.plans')}) %}
+  {% set _ = cells.append({'label': 'To do', 'value': '%02d' | format(task_count or 0), 'href': url_for('web.tasks')}) %}
+  {% set _ = cells.append({'label': 'Late', 'value': '%02d' | format(late), 'href': url_for('web.tasks', status='open'), 'tone': 'amber' if late else ''}) %}
+  {% set _ = cells.append({'label': 'Ideas', 'value': '%02d' | format(idea_count or 0), 'href': url_for('web.ideas')}) %}
+  {% if setup %}{% set _ = cells.append({'label': 'Setup', 'value': '%02d' | format(setup | length), 'href': url_for('setup.overview'), 'tone': 'amber'}) %}{% endif %}
+  {{ rail(cells, 'Home at a glance') }}
+
+  {# The flight director's console: Next up's monitor on the left, sized to what it shows; the
+     loop to her on the right, lit from below as the tube lights a desk. The loop comes first in
+     the page's order, so a keyboard reaches the box before the monitor's links. #}
+  <section class="welcome console" aria-label="Talk to {{ assistant }}">
+    <div class="welcome-words">
+      {% if talk %}
+        <p class="speaker">
+          {{ presence(variant=2) }}
+          <strong>{{ assistant }}</strong>
+        </p>
+        {% include "_ask.html" %}
+        {% if talk.state %}
+          <ol class="thread brief">
+            {% call waiting_line(assistant, talk.state, talk.note) %}<a href="{{ url_for('chat.show', _anchor='latest') }}">Open the conversation</a>{% endcall %}
+          </ol>
+        {% elif talk.line %}
+          <ol class="thread brief">{{ chat_line(talk.line) }}</ol>
+          <p class="brief-more"><a href="{{ url_for('chat.show', _anchor='latest') }}">Continue with {{ assistant }}{{ icon('right') }}</a></p>
+        {% endif %}
+      {% else %}
+        <p class="eyebrow">{{ today }}</p>
+        <h1>{{ site_title }}</h1>
+      {% endif %}
+    </div>
+    <div class="welcome-screen">
+      {% set d0 = (days_of(blips[0]) | int) if first and blips else 0 %}
+      {% call crt('next-up', hidden=false, level=(6 if first and first.on_today else (nearness(d0) | int if first else 0))) %}
+        {{ radar(blips) }}
+        <div class="next-text">
+          <p class="next-label"><span class="inverse caps">Next up</span></p>
+          {% if first %}
+            <p class="next-title bright">{{ plan_where(first) }}</p>
+            <p class="next-when">{{ first.when }}{% if first.relative %} <span class="rel">{{ first.relative }}</span>{% endif %}</p>
+            {% if first.location %}<p class="next-where dim">{{ first.location }}</p>{% endif %}
+            <p class="next-more"><span class="dim" aria-hidden="true">&gt;</span>
+              {%- if coming | length > 1 %} <a href="#coming">{{ coming | length - 1 }} more on the radar</a>{% endif -%}
+              <span class="crt-cursor" aria-hidden="true"></span></p>
+          {% else %}
+            <p class="next-title bright">Nothing on the radar yet.</p>
+            <p class="next-where dim">Ask what fits this weekend, or plan an idea.</p>
+            <p class="next-more"><span class="dim" aria-hidden="true">&gt;</span><span class="crt-cursor" aria-hidden="true"></span></p>
+          {% endif %}
+        </div>
+      {% endcall %}
+    </div>
+  </section>
+
+  {% if setup %}
+    {# The countdown held: a ladder in the gutter whose segments are the rows' own, an amber one
+       level with each step still to do, and under them a dark one level with Ready, which
+       lights when all are done. The rows say each in words. #}
+    <section class="bay slim setup" aria-labelledby="setup-h">
+      <div class="gutter hold-gutter" aria-hidden="true"></div>
+      <div class="bay-body">
+        <div class="section-head">
+          <h2 id="setup-h">Finish setting up</h2>
+          <span class="head-fig warn-fig">{{ lamp('amber') }}{{ setup | length }} to go</span>
+          <a class="head-link" href="{{ url_for('setup.overview') }}">All the setup steps{{ icon('right') }}</a>
+        </div>
+        <div class="countdown">
+          <ol class="plain steps-rows">
+            {% for step in setup %}
+              <li><span class="step-n" aria-hidden="true">{{ loop.index }}</span><a href="{{ step.link }}">{{ step.text }}</a></li>
+            {% endfor %}
+          </ol>
+          <p class="steps-ready">Ready</p>
+        </div>
+      </div>
+    </section>
+  {% endif %}
+
+  {# The flight plan: the next four weeks as a track from now. Next up is the lit jewel, and the
+     live leg to it is lit too; every later plan is a numbered ring, and the numbers are the
+     rows' numbers. Weekends are hatched in steel. The rows say when, and a lamp ladder beside
+     each counts down to it. #}
+  <section class="bay coming" id="coming" aria-labelledby="coming-h">
+    <div class="bay-body">
+      <div class="section-head">
+        <h2 id="coming-h">Coming up</h2>
+        {% if coming | length > 1 %}<span class="head-fig"><b>{{ coming | length - 1 }}</b> after Next up</span>{% endif %}
+        <a class="head-link" href="{{ url_for('web.plans') }}">All plans{{ icon('right') }}</a>
+      </div>
+      <figure class="track-fig" aria-hidden="true">
+        {% set DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] %}
+        {% set word = (today or '').split(' ')[0] %}
+        {% set wd = DAYS.index(word) if word in DAYS else 0 %}
+        {% set s0 = (5 - wd) % 7 %}
+        {% set base_y = 66 %}
+        <svg class="track" width="100%" height="88" focusable="false">
+          <defs>
+            <clipPath id="above"><rect x="0" y="0" width="100%" height="{{ base_y }}"/></clipPath>
+            <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line class="hatch-line" x1="0" y1="0" x2="0" y2="6"/></pattern>
+            <linearGradient id="live-leg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" class="leg-lit"/><stop offset="0.62" class="leg-lit"/><stop offset="1" class="leg-violet"/></linearGradient>
+            <radialGradient id="jewel" cx="0.38" cy="0.34" r="0.66"><stop offset="0.14" class="jewel-hot"/><stop offset="0.44" class="jewel-mid"/><stop offset="1" class="jewel-deep"/></radialGradient>
+          </defs>
+          {% for k in [s0 - 7, s0, s0 + 7, s0 + 14, s0 + 21, s0 + 28] %}
+            {% set a = [k, 0] | max %}{% set z = [k + 2, 28] | min %}
+            {% if z > a %}<rect class="weekend" x="{{ '%.2f' | format(3 + a * 94 / 28) }}%" y="20" width="{{ '%.2f' | format((z - a) * 94 / 28) }}%" height="{{ base_y - 20 }}"/>{% endif %}
+          {% endfor %}
+          {% for w in range(5) %}
+            {% set x = '%.2f' | format(3 + w * 7 * 94 / 28) %}
+            <line class="grid" x1="{{ x }}%" y1="20" x2="{{ x }}%" y2="{{ base_y }}"/>
+            <text class="scale{{ ' now-label' if w == 0 }}" x="{{ x }}%" y="12" text-anchor="{{ 'start' if w == 0 else ('end' if w == 4 else 'middle') }}">{{ 'Now' if w == 0 else '+' ~ w ~ ' wk' }}</text>
+          {% endfor %}
+          {% for k in range(29) %}
+            {% set x = '%.2f' | format(3 + k * 94 / 28) %}
+            <line class="tick{{ ' wk' if k % 7 == 0 }}" x1="{{ x }}%" y1="{{ base_y }}" x2="{{ x }}%" y2="{{ base_y + (7 if k % 7 == 0 else 4) }}"/>
+          {% endfor %}
+          <line class="axis" x1="3%" y1="{{ base_y }}" x2="97%" y2="{{ base_y }}"/>
+          <line class="now" x1="3%" y1="20" x2="3%" y2="{{ base_y }}"/>
+          {% set t = namespace(x=3.0, stack=0) %}
+          {% for entry in coming %}
+            {% set b = blips[loop.index0] if blips | length > loop.index0 else none %}
+            {% set days = (days_of(b) | int) if b else 0 %}
+            {% set x = 3 + ([days, 27] | min + 0.5) * 94 / 28 %}
+            {% set gap = x - t.x %}
+            {% if gap > 1.6 %}
+              {% set t.stack = 0 %}
+              <ellipse class="path{{ ' live' if loop.first }}" clip-path="url(#above)" cx="{{ '%.2f' | format((t.x + x) / 2) }}%" cy="{{ base_y }}" rx="{{ '%.2f' | format(gap / 2) }}%" ry="{{ [12 + gap * 1.6, 40] | min | round(1) }}"/>
+            {% else %}
+              {% set t.stack = t.stack + 1 %}
+            {% endif %}
+            {% set y = base_y - t.stack * 22 %}
+            {% if loop.first %}
+              <g class="stop next">
+                <circle class="jewel-halo" cx="{{ '%.2f' | format(x) }}%" cy="{{ y }}" r="11"/>
+                <circle class="jewel-bezel" cx="{{ '%.2f' | format(x) }}%" cy="{{ y }}" r="8.5"/>
+                <circle class="jewel" cx="{{ '%.2f' | format(x) }}%" cy="{{ y }}" r="7"/>
+                <text class="next-tag" x="{{ '%.2f' | format(x) }}%" y="{{ base_y + 20 }}" text-anchor="middle">Next</text>
+              </g>
+            {% else %}
+              <g class="stop">
+                <circle cx="{{ '%.2f' | format(x) }}%" cy="{{ y }}" r="9"/>
+                <text class="stop-n" x="{{ '%.2f' | format(x) }}%" y="{{ y + 4 }}" text-anchor="middle">{{ loop.index0 }}</text>
+              </g>
+            {% endif %}
+            {% set t.x = x %}
+          {% endfor %}
+        </svg>
+      </figure>
+      {% if source != 'google' and visitor().may('browse') %}<p class="muted source source-{{ source }}">{{ icon('plug') }}{{ source_note }}</p>{% endif %}
+      <ol class="plain hops">
+        {% for entry in coming[1:] %}
+          {% set b = blips[loop.index] if blips | length > loop.index else none %}
+          {% set days = (days_of(b) | int) if b else 28 %}
+          <li class="hop{{ ' is-today' if entry.on_today }}">
+            <span class="ring" aria-hidden="true">{{ loop.index }}</span>
+            <span class="hop-date">{% if entry.chip %}{{ entry.chip.weekday }} {{ (" " ~ entry.chip.day) if entry.chip.day < 10 else entry.chip.day }} {{ entry.chip.month }}{% endif %}</span>
+            <span class="hop-time">{{ entry.time or 'All day' }}</span>
+            <span class="hop-what">{{ plan_where(entry) }}</span>
+            {{ ladder(6 if entry.on_today else nearness(days) | int) }}
+            <span class="hop-rel">{{ entry.relative or '' }}</span>
+          </li>
+        {% else %}
+          <li class="muted empty">{{ icon('plans') }}<span>
+            {%- if first %}Nothing else on the calendar yet.{% else %}Nothing on the calendar yet. Pick an idea and put it there, or ask
+            {{ assistant }} what fits this weekend.{% endif %}</span></li>
+        {% endfor %}
+      </ol>
+    </div>
+  </section>
+
+  <div class="desk">
+    {# To do, led by the crew board: a row for each of the family, their marks in the one lamp
+       code, and the same in words. The list under it can be ticked off where it stands. #}
+    <section class="bay home-todo" aria-labelledby="todo-h">
+      <div class="bay-body">
+        <div class="section-head">
+          <h2 id="todo-h">To do</h2>
+          <span class="head-fig"><b>{{ task_count or 0 }}</b> open{% if late %} · <span class="late-words">{{ late }} late</span>{% endif %}</span>
+          <a class="head-link" href="{{ url_for('web.tasks') }}">Things to do{{ icon('right') }}</a>
+        </div>
+        {% set owners = [] %}
+        {% for task in tasks %}{% if (task.owner or 'Household') not in owners %}{% set _ = owners.append(task.owner or 'Household') %}{% endif %}{% endfor %}
+        {% if owners %}
+          <ul class="plain crew">
+            {% for owner in owners %}
+              {% if owner == 'Household' %}{% set mine = tasks | rejectattr('owner') | list %}{% else %}{% set mine = tasks | selectattr('owner', 'equalto', owner) | list %}{% endif %}
+              {% set n_late = mine | selectattr('late') | list | length %}
+              <li>
+                <span class="crew-who">{{ owner }}</span>
+                <span class="crew-marks" aria-hidden="true">{% for task in mine %}{{ task_lamp('open', task.late) }}{% endfor %}</span>
+                <span class="crew-words">{% if n_late %}<span class="late-words">{{ n_late }} late</span>{% if mine | length > n_late %}, {% endif %}{% endif %}{% if mine | length > n_late %}{{ mine | length - n_late }} open{% endif %}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+        <ul class="plain checklist">
+          {% for task in tasks %}
+            <li class="{{ 'is-late' if task.late }}">
+              {{ tick(task.id, task.revision, task.title, 'home') }}
+              <div class="checklist-body">
+                <div class="what">{{ task.title }}</div>
+                <div class="when">
+                  {%- if task.owner %}<span class="who">{{ task.owner }}</span>{% endif -%}
+                  {%- if task.due %}<span class="due{{ ' warn' if task.late }}">{% if task.late %}{{ lamp('amber') }}{% endif %}{{ task.due }}</span>
+                  {%- elif task.window %}<span>{{ task.window }}</span>{% endif -%}
+                  {%- if task.reminder %}<span class="reminder">{{ icon('bell') }}{{ task.reminder }}</span>{% endif -%}
+                </div>
+              </div>
+            </li>
+          {% else %}
+            <li class="muted empty">{{ icon('todo') }}<span>Nothing to do. Ask {{ assistant }} to remind you of something and it lands here.</span></li>
+          {% endfor %}
+        </ul>
+      </div>
+    </section>
+
+    <div class="desk-side">
+      {# Lately added: the newest ideas as punched cards, the title first, then its kind's swatch
+         and name and who it is for, on one line. #}
+      <section class="bay lately" aria-labelledby="lately-h">
+        <div class="bay-body">
+          <div class="section-head">
+            <h2 id="lately-h">Lately added</h2>
+            <span class="head-fig"><b>{{ idea_count }}</b> ideas</span>
+            <span class="section-links">
+              {% if visitor().may('change') %}<a class="head-link" href="{{ url_for('web.new_idea') }}">{{ icon('plus') }}Add an idea</a>{% endif %}
+              <a class="head-link" href="{{ url_for('web.ideas') }}">All ideas{{ icon('right') }}</a>
+            </span>
+          </div>
+          <div class="idea-cards">
+            {% for idea in ideas %}
+              <a class="idea-card" href="{{ url_for('web.idea', idea_id=idea.id) }}">
+                <strong>{{ idea.title }}</strong>
+                <span class="card-line">{{ kind_label(idea.kind) }}<span class="muted">{{ idea.where or ('for ' ~ idea.who) }}</span></span>
+              </a>
+            {% else %}
+              <p class="muted empty">{{ icon('idea') }}<span>No ideas yet.
+                {%- if talk %} Tell {{ assistant }} one above, or <a href="{{ url_for('web.new_idea') }}">add it here</a>.
+                {%- else %} <a href="{{ url_for('web.new_idea') }}">Add one here</a>.{% endif %}</span></p>
+            {% endfor %}
+          </div>
+          {% if restaurant_count %}
+            <a class="restaurants-link" href="{{ url_for('web.restaurants') }}">
+              <span class="restaurants-icon">{{ icon('restaurant') }}</span>
+              <span>
+                <span class="eyebrow">Something to eat</span>
+                <strong>{{ restaurant_count }} restaurant{{ '' if restaurant_count == 1 else 's' }} to try</strong>
+              </span>
+              {{ icon('right', cls='go') }}
+            </a>
+          {% endif %}
+        </div>
+      </section>
+
+      {# The kids' wish lists (docs/WISHES.md). #}
+      {% if wishes and not wishes.parent %}
+        {% set mine = wishes.mine %}
+        <section class="bay home-wishes" aria-labelledby="home-wishes">
+          <div class="bay-body">
+            <div class="section-head">
+              <h2 id="home-wishes">My wishes</h2>
+              <a class="head-link" href="{{ url_for('web.wishes') }}">{{ 'All ' ~ mine.open if mine.open else 'Add one' }}{{ icon('right') }}</a>
+            </div>
+            {% if mine.answered %}
+              <p class="said">{% for row in mine.answered[:2] %}{% if row.status == 'granted' %}Yes to {{ row.title }}! {% else %}Not this time: {{ row.title }}. {% endif %}{% endfor %}</p>
+            {% endif %}
+            <div class="wish-lists">
+              {% for list in mine.lists %}
+                <div class="wish-list">
+                  <h3>{{ list.name }}{% if list.countdown %} <span class="tag">{{ list.countdown }}</span>{% endif %}</h3>
+                  <ol class="plain wish-top">
+                    {% for row in list.rows[:wishes.top] %}<li>{{ row.title }}</li>{% else %}<li class="muted">Nothing yet.</li>{% endfor %}
+                  </ol>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        </section>
+      {% elif wishes %}
+        <section class="bay home-wishes" aria-labelledby="home-kids">
+          <div class="bay-body">
+            <div class="section-head">
+              <h2 id="home-kids">The kids’ wishes</h2>
+              <a class="head-link" href="{{ url_for('web.wishes') }}">All wishes{{ icon('right') }}</a>
+            </div>
+            {% if wishes.waiting %}
+              <p class="warn">{{ lamp('amber') }}Waiting on you:
+                {% for row in wishes.waiting %}<a href="{{ url_for('web.wishes', who=row.id) }}">{{ row.kid }}: {{ row.title }}</a>{{ ', ' if not loop.last }}{% endfor %}</p>
+            {% endif %}
+            <ul class="plain kids">
+              {% for kid in wishes.kids %}
+                <li><a href="{{ url_for('web.wishes', who=kid.id) }}">{{ kid.name }}</a>
+                  {% set top = kid.lists[0].rows[:wishes.top] %}
+                  <span class="kid-top">{% if top %}{{ top | map(attribute='title') | join(', ') }}{% endif %}</span>
+                  <span class="kid-open"><b>{{ kid.open }}</b> open</span>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </section>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

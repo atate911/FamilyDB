@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, chat_line, waiting_line, fig, mark, round_screen, presence %}
+{% block title %}{{ assistant if has_persona else 'Chat' }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-chat{% endblock %}
+{# While an answer is on its way the browser fetches the page again by itself, landing back on
+   the newest line: a meta refresh, only while something really is being thought about, and never
+   on a page holding words somebody typed. #}
+{% block head %}
+  {% if refresh and locked %}
+    <meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" />
+  {% elif refresh %}
+    <noscript><meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" /></noscript>
+  {% endif %}
+{% endblock %}
+{% block content %}
+  {% set her = assistant if has_persona else 'Chat' %}
+  {# The chapter's round screen is hers: her glass at full size, the glyphs nobody can read, and
+     whether she is ready or working on an answer. #}
+  {% set working = pending and state == 'thinking' %}
+  {% set head_fig %}
+    <figure class="fig fig-dial">
+      <div class="fig-frame dial-sheet">
+        {% call round_screen({'foot': 'WORKING' if working else 'READY'}, 'her-dial' ~ (' is-working' if working else '')) %}<span class="dial-glyphs presence v2"><span class="presence-glass"></span></span>{% endcall %}
+      </div>
+      <figcaption class="cap live"><span class="cap-no" aria-hidden="true"></span><span class="cap-words">{{ assistant }}’s screen. {{ 'She is working on an answer.' if working else 'She is ready.' }}</span></figcaption>
+    </figure>
+  {% endset %}
+  {% if reading %}
+    {{ page_head(reading ~ ' and ' ~ (assistant if has_persona else 'the bot'), 'Her own conversation, for you to read. Only she writes in it.', 'presence' if has_persona else 'chat', [(her, url_for('chat.show'))], figure=head_fig) }}
+  {% elif private %}
+    {{ page_head(her, 'Just you and ' ~ assistant ~ '. Tell her what you wish for, or ask about the plans.', 'presence' if has_persona else 'chat', figure=head_fig) }}
+  {% else %}
+    {{ page_head(her, 'Weekends, ideas, to-dos and the calendar: anything you would ask in Telegram works here too.', 'presence' if has_persona else 'chat', figure=head_fig) }}
+  {% endif %}
+
+  {# The conversation, as a timetable, beside its sequence diagram: her lifeline and each of the
+     family's, an arrow for every line, numbered as the lines are. The newest arrow is lit, and
+     pointing at a line lights its arrow. #}
+  {% set shown = lines[-12:] if lines else [] %}
+  {% set first = (lines | length) - (shown | length) %}
+  <section class="plate conversation" aria-label="The conversation">
+    {% call fig('fig-sequence', 'Each arrow is a message, numbered as in the thread.', live=true) %}
+      {% set folks = namespace(names=[]) %}
+      {% for line in shown %}{% if not line.from_bot and line.who not in folks.names %}{% set folks.names = folks.names + [line.who] %}{% endif %}{% endfor %}
+      {% set cols = folks.names[:3] %}
+      {% set step = 72 if cols | length < 3 else 64 %}
+      {% set tall = 48 + ([shown | length, 1] | max) * 48 %}
+      <svg viewBox="0 0 256 {{ tall }}" focusable="false" class="drawing" aria-hidden="true">
+        <rect class="d-glass" x="4" y="0" width="64" height="24"/>
+        <text class="d-glyphs" x="36" y="17" text-anchor="middle">{{ (assistant if has_persona else 'BOT')[:7] | upper }}</text>
+        <path class="d-dash" d="M36 24V{{ tall }}"/>
+        {% for who in cols %}
+          {% set x = 36 + loop.index * step %}
+          <rect class="d-box" x="{{ x - 30 }}" y="0" width="60" height="24"/>
+          <text class="d-name" x="{{ x }}" y="16" text-anchor="middle">{{ who[:7] }}</text>
+          <path class="d-dash" d="M{{ x }} 24V{{ tall }}"/>
+        {% endfor %}
+        {% set last = namespace(x=36 + step) %}
+        {% for line in shown %}
+          {% set y = 60 + loop.index0 * 48 %}
+          {% if line.from_bot %}
+            {% set fx, tx = 36, last.x %}
+          {% else %}
+            {% set fx = 36 + (cols.index(line.who) + 1) * step if line.who in cols else 36 + step %}
+            {% set tx = 36 %}
+            {% set last.x = fx %}
+          {% endif %}
+          {% set head = ('M%d %dL%d %dL%d %d' | format(tx - 7, y - 4, tx, y, tx - 7, y + 4)) if tx > fx else ('M%d %dL%d %dL%d %d' | format(tx + 7, y - 4, tx, y, tx + 7, y + 4)) %}
+          {% set newest = loop.last %}
+          {% call(lit) mark('k' ~ loop.index, 'newest' if newest else '') %}
+            {% if lit %}<path class="lit-halo" d="M{{ fx }} {{ y }}H{{ tx }}"/><path class="lit-line" d="M{{ fx }} {{ y }}H{{ tx }}{{ head }}"/>
+            {% else %}<path class="{{ 'd-wire-on' if newest else 'd-line' }}" d="M{{ fx }} {{ y }}H{{ tx }}"/><path class="{{ 'd-arrow d-wire-on' if newest else 'd-arrow' }}" d="{{ head }}"/>{% endif %}
+          {% endcall %}
+          <text class="d-key{{ ' now' if newest }}" x="{{ (fx + tx) / 2 }}" y="{{ y - 8 }}" text-anchor="middle">{{ '%02d' | format(first + loop.index) }}</text>
+        {% endfor %}
+      </svg>
+    {% endcall %}
+    <div class="plate-body">
+      {% if lines %}
+        <ol class="thread">
+          {% set day = namespace(was='') %}
+          {% for line in lines %}
+            {% set on = line.when.split(', ')[0] if line.when and ', ' in line.when else '' %}
+            {% if on and on != day.was %}<li class="said-day"><span>{{ on }}</span></li>{% set day.was = on %}{% endif %}
+            {% set i = loop.index %}
+            {{ chat_line(line, latest if loop.last, i, ('k' ~ (i - first)) if i > first else '') }}
+          {% endfor %}
+          {% if pending %}{{ waiting_line(assistant, state, pending) }}{% endif %}
+        </ol>
+      {% else %}
+        <p class="muted empty">{{ icon('chat') }}<span>Nothing said here yet. Ask {{ assistant }} what to do this weekend, save an idea, or set a reminder.</span></p>
+      {% endif %}
+
+      {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+      {% if not reading %}{% include "_ask.html" %}{% endif %}
+    </div>
+  </section>
+
+  {% if kids and not reading %}
+    <section class="plate kids-talk">
+      {% call fig('fig-lines', 'Each kid has her own line to ' ~ assistant ~ '.') %}
+        <svg viewBox="0 0 256 {{ (kids[:5] | length) * 48 }}" focusable="false" class="drawing" aria-hidden="true">
+          {% for kid in kids[:5] %}
+            {% set y = 12 + loop.index0 * 48 %}
+            <rect class="d-glass" x="4" y="{{ y }}" width="64" height="24"/>
+            <text class="d-glyphs" x="36" y="{{ y + 17 }}" text-anchor="middle">{{ (assistant if has_persona else 'BOT')[:7] | upper }}</text>
+            <path class="d-line" d="M68 {{ y + 12 }}H176"/>
+            <path class="d-arrow" d="M169 {{ y + 8 }}L176 {{ y + 12 }}L169 {{ y + 16 }}M75 {{ y + 8 }}L68 {{ y + 12 }}L75 {{ y + 16 }}"/>
+            <rect class="d-box" x="176" y="{{ y }}" width="76" height="24"/>
+            <text class="d-name" x="214" y="{{ y + 16 }}" text-anchor="middle">{{ kid.name[:8] }}</text>
+          {% endfor %}
+        </svg>
+      {% endcall %}
+      <nav class="plate-body" aria-label="The kids’ conversations">
+        <div class="section-head"><h2>The kids’ conversations</h2></div>
+        <p class="muted">Each kid talks to {{ assistant }} on her own. You can read along.</p>
+        <ul class="plain rows">
+          {% for kid in kids %}<li class="row"><a class="r-what" href="{{ url_for('chat.show', with=kid.id, _anchor=latest) }}">{{ kid.name }}</a></li>{% endfor %}
+        </ul>
+      </nav>
+    </section>
+  {% endif %}
+{% endblock %}

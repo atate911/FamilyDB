@@ -1,0 +1,16 @@
+{% from "_settings.html" import form %}
+{% from "_ui.html" import icon, spend_dial %}
+{% call form('spending', groups.values()) %}
+  {# Instrument Panel: the day's spend on the same meter as Status's, in a small window of its
+     own, so the limit set on this page is the buffer at the end of its scale. #}
+  <div class="spent-meter">
+    {% if limit %}
+      <div class="crt readout spend-mini{{ ' near' if today >= limit * 0.75 }}{{ ' over' if today >= limit }}" aria-hidden="true">
+        <div class="crt-tube">{{ spend_dial(today, limit) }}</div>
+      </div>
+    {% endif %}
+    <p class="panel notice spent">{{ icon('coin') }}<span>About <strong>${{ '%.2f' | format(today) }}</strong>
+      spent today{% if limit %}, of the ${{ '%.2f' | format(limit) }} limit{% endif %}.
+      <a href="{{ url_for('web.status') }}">What it cost, call by call</a></span></p>
+  </div>
+{% endcall %}

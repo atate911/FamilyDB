@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, presence %}
+{% block title %}{{ section.title }} · Settings · {{ site_title }}{% endblock %}
+{% block body_class %}page-settings{% endblock %}
+{# Desk Terminal: the settings' console. Every page of settings as one bank of keys down the
+   deck, the one open latched with its LED lit: the way round the settings. The desk holds only the
+   page open. No tube: nothing here is live. #}
+{% block deck %}
+  <details class="deck deck-fold">
+    <summary>{{ icon('settings') }}Pages of settings</summary>
+    <nav class="deck-body keys" aria-label="Settings">
+      <p class="keys-name" aria-hidden="true">Settings</p>
+      <ol class="key-row key-column">
+        <li><a class="key" href="{{ url_for('settings.show') }}">{{ icon('settings') }}<span>All settings</span></a></li>
+        {% for one in sections %}
+          <li><a class="key" href="{{ url_for('settings.section', name=one.name) }}"{% if one.name == section.name %} aria-current="page"{% endif %}>
+            {%- if one.icon == 'presence' %}{{ presence('glyph') }}{% else %}{{ icon(one.icon) }}{% endif %}<span>{{ one.title }}</span></a></li>
+        {% endfor %}
+      </ol>
+    </nav>
+  </details>
+{% endblock %}
+{% block content %}
+  {{ page_head(section.title, section.blurb, section.icon, [('Settings', url_for('settings.show'))]) }}
+  {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+  <div class="settings-layout">
+    <div class="settings-body">
+      {% include "settings/" ~ section.name ~ ".html" %}
+    </div>
+  </div>
+{% endblock %}

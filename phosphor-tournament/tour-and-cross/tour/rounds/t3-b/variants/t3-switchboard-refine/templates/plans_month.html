@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, crt %}
+{% block title %}{{ month }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-plans page-month{% endblock %}
+{% macro event(entry) %}
+  {% if entry.idea_id %}
+    <a class="event{{ ' from-google' if entry.from_google }}" href="{{ url_for('web.idea', idea_id=entry.idea_id) }}">{{ entry.title }}{% if entry.time %}<small>{{ entry.time }}</small>{% endif %}</a>
+  {% else %}
+    <div class="event{{ ' from-google' if entry.from_google }}">{{ entry.title }}{% if entry.time %}<small>{{ entry.time }}</small>{% endif %}</div>
+  {% endif %}
+{% endmacro %}
+{% block content %}
+  {# The rack: down the first column one module, the plate with its key, the way to show the
+     plans (a list or the month, two latched keys) and the green screen, which draws each week of
+     the month as a bar of what is on in it and names the next weekend with nothing on. Across the
+     other three, the month: its name, the keys that turn it, and a day to a leaf. #}
+  {% set t0 = config.FAMILYDB_APP.clock.today() %}
+  {% set MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] %}
+  {# The month's own figure: how many plans its days hold. The list counts what is to come;
+     the month counts itself, so the two never say one count two ways. #}
+  {% set month_name = month.split(' ')[0] %}
+  {% set tc = namespace(n=0) %}
+  {% for week in weeks %}{% for day in week %}{% if day.current %}{% set tc.n = tc.n + day.entries | length %}{% endif %}{% endfor %}{% endfor %}
+  <div class="side">
+  {% call page_head('Plans', 'The month, a day to a leaf, and what is on each day.', 'plans',
+      figure=tc.n, legend=('in ' ~ month_name)) %}
+    {% if visitor().may('manage') and source != 'google' %}<a class="button secondary" href="{{ url_for('setup.step', name='calendar') }}">{{ icon('plug') }}Connect the calendar</a>
+    {% elif visitor().may('change') %}<a class="button" href="{{ url_for('web.plans', _anchor='add') }}">{{ icon('plus') }}Put something on the calendar</a>{% endif %}
+  {% endcall %}
+  <section class="tools-cell" aria-label="How to show the plans">
+    <nav class="keys view-keys" aria-labelledby="keys-view">
+      <p class="keys-name" id="keys-view">Show</p>
+      <div class="key-bank">
+        <a class="key" href="{{ url_for('web.plans') }}">{{ icon('list') }}<span>List</span></a>
+        <a class="key" href="{{ url_for('web.plans_month') }}" aria-current="true">{{ icon('grid') }}<span>Month</span></a>
+      </div>
+    </nav>
+    <nav class="keys turn-keys" aria-labelledby="keys-turn">
+      <p class="keys-name" id="keys-turn">Turn the month</p>
+      <div class="key-bank">
+        <a class="key" href="{{ url_for('web.plans_month', month=previous) }}">{{ icon('left') }}<span>Earlier</span></a>
+        <a class="key" href="{{ url_for('web.plans_month', month=following) }}"><span>Later</span>{{ icon('right') }}</a>
+        {% if not this_month %}<a class="key wide-key" href="{{ url_for('web.plans_month') }}">{{ icon('plans') }}<span>This month</span></a>{% endif %}
+      </div>
+    </nav>
+    {% if visitor().may('browse') %}<p class="tools-note source source-{{ source }}">{{ source_note }}</p>{% endif %}
+  </section>
+  {% set free = namespace(sat=none, next=none) %}
+  {% for week in weeks %}
+    {% if free.next is none and week[5].date >= t0 %}{% set free.next = week %}{% endif %}
+    {% if free.sat is none and week[5].date >= t0 and not week[5].entries and not week[6].entries %}{% set free.sat = week[5].date %}{% endif %}
+  {% endfor %}
+  </div>
+
+  <div class="main">
+  {# The register's head: the month's name, and what the leaves do not say at a glance: the
+     coming weekend and what is on it, and, where these weeks give it, the next one with nothing
+     on. In words. #}
+  <section class="cell register month-module" aria-labelledby="month-h">
+  {# The month's name over its days, and the keys that turn it, as a wall calendar has them. #}
+  <h2 id="month-h" class="sr">{{ month }}</h2>
+  {# Two drawings of the same days, and the stylesheet shows one: seven columns where there is
+     room for them, and on a phone just the days that have something on, as a list. #}
+  <table class="month">
+    <thead>
+      <tr>{% for name in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}<th scope="col"{% if loop.index > 5 %} class="weekend"{% endif %}>{{ name }}</th>{% endfor %}</tr>
+    </thead>
+    <tbody>
+      {% for week in weeks %}
+        <tr>
+          {% for day in week %}
+            <td class="{{ 'outside' if not day.current }}{{ ' today' if day.today }}{{ ' past' if day.date < t0 }}{{ ' weekend' if loop.index > 5 }}{{ ' has-plan' if day.entries }}">
+              <time datetime="{{ day.date.isoformat() }}">{% if day.today %}<span class="lamp on" aria-hidden="true"></span>{% endif %}{{ day.day }}</time>
+              {% for entry in day.entries %}{{ event(entry) }}{% endfor %}
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <ol class="plain month-list">
+    {% for day in busy_days %}
+      <li class="{{ 'today' if day.today }}">
+        <strong>{{ day.name }}</strong>{% if day.today %} <span class="tag">today</span>{% endif %}
+        {% for entry in day.entries %}{{ event(entry) }}{% endfor %}
+      </li>
+    {% else %}
+      <li class="muted">Nothing on in {{ month }}.</li>
+    {% endfor %}
+  </ol>
+  </section>
+  </div>
+  {# The page's own small screen, under the plate on a wide screen: the coming weekend and what is
+     on it, and, where these weeks give one, the next weekend with nothing on. In words. #}
+  {% macro span(sat, sun) -%}{{ sat.day }}{% if sun.month != sat.month %} {{ MONTHS[sat.month - 1] }}{% endif %}–{{ sun.day }} {{ MONTHS[sun.month - 1] }}{%- endmacro %}
+  <section class="screen-cell tube-cell" aria-hidden="true">
+  {% call crt('readout head-screen weeks-screen power-on') %}
+    {% if free.next %}{% set sat = free.next[5].date %}{% set sun = free.next[6].date %}{% set on = free.next[5].entries + free.next[6].entries %}
+      <p class="hs-small dim">{{ 'This' if (sat.toordinal() - t0.toordinal()) < 7 else 'Next' }} weekend, {{ span(sat, sun) }}</p>
+      <p class="hs-line bright">{{ on | map(attribute='title') | join(', ') if on else 'Nothing on yet' }}{% if not (free.sat and free.sat != sat) %}<span class="crt-cursor"></span>{% endif %}</p>
+    {% endif %}
+    {% if free.sat and (not free.next or free.sat != free.next[5].date) %}{% set sun = free.sat.fromordinal(free.sat.toordinal() + 1) %}
+      <p class="hs-small"><span class="dim">Next free weekend</span> {{ span(free.sat, sun) }}<span class="crt-cursor"></span></p>
+    {% endif %}
+    {% if not free.next %}<p class="hs-line dim">The weekends of {{ month_name }} are gone.<span class="crt-cursor"></span></p>{% endif %}
+  {% endcall %}
+  </section>
+{% endblock %}

@@ -1,0 +1,3 @@
+variant serving /tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r13/variants/r13-wild-1/templates on 48741
+2026-09-29 18:17:34,860 INFO waitress: Serving on http://127.0.0.1:48741
+2026-09-29 18:17:35,978 INFO familydb.web.auth: web login with the family password from 127.0.0.1

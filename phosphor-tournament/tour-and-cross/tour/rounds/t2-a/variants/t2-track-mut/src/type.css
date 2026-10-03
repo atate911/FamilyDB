@@ -1,0 +1,36 @@
+/* ==== The condensed system (t2-track-mut) ===========================================================
+   One superfamily, its width as the hierarchy. What the panel is engraved with (titles, heads,
+   labels, stamps, counts, the names on the keys and in the bar) is IBM Plex Sans Condensed; what
+   the family keeps and says (rows, words, fields, the ways to start) is IBM Plex Sans; the machine
+   prints its own name and small print in Plex Mono, and its tubes stay VT323. Figures are Plex's
+   own tabular lining figures, and zero is drawn one way, dotted, in all three. */
+
+/* The base sheet's controls and labels, which the lineage never re-set. */
+nav a, .menu > summary, .menu-list a, .signout button.quiet, .settings-nav a, summary, .crumbs, label, .tag, .data th,
+dt, .speaker strong, .steps li::marker, .data .num, .hours td, .share-cell, .meta .cost, .card-id, .did, .task h2 .muted { font-family: var(--head); }
+.places a { font-size: 0.8125rem; letter-spacing: 0.01em; }
+@media (min-width: 52rem) { .places a, .tools > a, .menu > summary { font-size: 1rem; } }
+.menu-list a, .signout button.quiet, .settings-nav a { font-size: 1rem; }
+button, .button { font: 600 1rem/1.1 var(--head); letter-spacing: 0.01em; }
+label { letter-spacing: 0.01em; }
+label.check, label.inline { font-size: 0.9375rem; font-weight: 500; }
+.crumbs { font-size: 0.9375rem; }
+.tag { font-size: 0.8125rem; }
+.data th { font-size: 0.875rem; }
+/* Zero is dotted, as Plex Mono draws it: ss04 in the Sans and the Condensed. Every `font`
+   shorthand resets the features, so the set is held with !important; the mono keeps its own. */
+*, ::before, ::after { font-feature-settings: "ss04" !important; }
+.brand-name, .foot-mark, .legal, code, pre, textarea.script { font-feature-settings: normal !important; }
+.foot .legal { font-size: 0.75rem; }
+.lede { font-size: 1.0625rem; }
+
+/* On the glass every word is the tube's own. */
+.crt .rel { font: inherit; letter-spacing: inherit; }
+
+/* ---- Hung by hand: markers and prompts sit outside the text edge -------------------------------- */
+/* The tube's prompt hangs in the glass's margin, so what follows it stands on the title's edge. */
+.next-up .next-more > .dim:first-child { margin: 0 -0.3ch 0 -1.7ch; }
+/* A note under a head starts on the head's words, its icon hanging to the left. */
+.coming .source { margin-left: 2.65rem; }
+/* Numbered steps: the numerals hang left of the paragraph's edge. */
+.steps, ol.steps, ol.steps li, ul.tips { padding-left: 0; }

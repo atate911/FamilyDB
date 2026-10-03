@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, presence, fig %}
+{% from "_machine.html" import machine %}
+{% block title %}{{ section.title }} · Settings · {{ site_title }}{% endblock %}
+{% block body_class %}page-settings{% endblock %}
+{% block content %}
+  {% set here = namespace(n=0) %}
+  {% for one in sections %}{% if one.name == section.name %}{% set here.n = loop.index %}{% endif %}{% endfor %}
+  {{ page_head(section.title, section.blurb, section.icon, [('Settings', url_for('settings.show'))]) }}
+  {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+  <div class="settings-layout">
+    {# The machine again, the part this page changes lit, and every part down the side under it,
+       numbered as the figure numbers them; on a phone the way to the others is Settings, above
+       the title. Pointing at a part lights its callout. #}
+    <div class="settings-side">
+      {% call fig('fig-machine', 'The machine taken apart. The lit callout is this page.', fold=false) %}{{ machine(here.n) }}{% endcall %}
+      <nav class="settings-nav" aria-label="Settings">
+        <ol>
+          {% for one in sections %}
+            <li class="k{{ loop.index }}"><a href="{{ url_for('settings.section', name=one.name) }}"{% if one.name == section.name %} aria-current="page"{% endif %}>
+              <span class="part-no" aria-hidden="true">{{ loop.index }}</span>{{ one.title }}</a></li>
+          {% endfor %}
+        </ol>
+      </nav>
+    </div>
+    <div class="settings-body">
+      {% include "settings/" ~ section.name ~ ".html" %}
+    </div>
+  </div>
+{% endblock %}

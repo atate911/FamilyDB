@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, chat_line, waiting_line, chip %}
+{% block title %}{{ assistant if has_persona else 'Chat' }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-chat{% endblock %}
+{# While an answer is on its way the browser fetches the page again by itself, landing back on
+   the newest line: a meta refresh, which every browser does, scripts or not. It is only set when
+   something really is being thought about, so the page goes quiet as soon as the reply is in the
+   log, and never on a page holding words somebody typed, which it would take with it. While a
+   turn runs the box is closed, so there is nothing to lose. Waiting on the retry job the box
+   stays open, so with scripts on ask.js does the looking again instead, and never while somebody
+   is writing. #}
+{% block head %}
+  {% if refresh and locked %}
+    <meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" />
+  {% elif refresh %}
+    <noscript><meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" /></noscript>
+  {% endif %}
+{% endblock %}
+{% block content %}
+  {# Hers: her name at the top, as on the tab that leads here, beside her screen. #}
+  {% if reading %}
+    {{ page_head(reading ~ ' and ' ~ (assistant if has_persona else 'the bot'), 'Her own conversation, for you to read. Only she writes in it.', 'presence' if has_persona else 'chat', [(assistant if has_persona else 'Chat', url_for('chat.show'))]) }}
+  {% elif private %}
+    {{ page_head(assistant if has_persona else 'Chat', 'Just you and ' ~ assistant ~ '. Tell her what you wish for, or ask about the plans.', 'presence' if has_persona else 'chat') }}
+  {% else %}
+    {{ page_head(assistant if has_persona else 'Chat', 'Weekends, ideas, to-dos and the calendar: anything you would ask in Telegram works here too.', 'presence' if has_persona else 'chat') }}
+  {% endif %}
+
+  {# Pocket Diary: the conversation is its own line of time, down the middle of the thread. It
+     starts at the first day's figure, printed on the line as a diary prints a day; her lines hang
+     to its left, the family's to its right, each speaker's mark on it, each time facing it from the
+     other side; each day is said once, as its figure on the line, and the line ends at a lit NOW,
+     the box's tab. On a phone it runs down the left edge. #}
+  {% if lines %}
+    {% set clock_today = config.FAMILYDB_APP.clock.today() %}
+    {% set MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] %}
+    {% set d = namespace(last='') %}
+    <ol class="thread">
+      {% for line in lines %}
+        {% set day = (line.when or '').split(', ')[0] %}
+        {% if day != d.last %}
+          {% set d.last = day %}
+          {% set bits = day.split(' ') %}
+          {% if bits | length == 2 and bits[1] in MON and not (bits[1] == 'Feb' and bits[0] == '29') %}
+            {% set on = clock_today.replace(day=1).replace(month=MON.index(bits[1]) + 1, day=bits[0] | int) %}
+            {% if on > clock_today %}{% set on = on.replace(year=on.year - 1) %}{% endif %}
+            <li class="day-stop"><span class="sr">{{ on.strftime('%A %-d %B') }}</span>{{ chip({'day': on.day, 'month': on.strftime('%b'), 'weekday': on.strftime('%a')}, on == clock_today) }}</li>
+          {% else %}
+            <li class="day-stop"><span>{{ day }}</span></li>
+          {% endif %}
+        {% endif %}
+        {{ chat_line(line, latest if loop.last) }}
+      {% endfor %}
+      {% if pending %}{{ waiting_line(assistant, state, pending) }}{% endif %}
+      {% if not reading %}<li class="now-stop" aria-hidden="true"><span class="plate">Now</span></li>{% endif %}
+    </ol>
+  {% else %}
+    <p class="muted empty">{{ icon('chat') }}<span>Nothing said here yet. Ask {{ assistant }} what to do this weekend, save an idea, or set a reminder.</span></p>
+  {% endif %}
+
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+  {% if not reading %}{% include "_ask.html" %}{% endif %}
+
+  {% if kids and not reading %}
+    <nav class="panel" aria-label="The kids' conversations">
+      <h2>{{ icon('user') }}The kids' conversations</h2>
+      <p class="muted">Each kid talks to {{ assistant }} on her own. You can read along.</p>
+      <ul class="plain">
+        {% for kid in kids %}<li><a href="{{ url_for('chat.show', with=kid.id, _anchor=latest) }}">{{ kid.name }}</a></li>{% endfor %}
+      </ul>
+    </nav>
+  {% endif %}
+{% endblock %}

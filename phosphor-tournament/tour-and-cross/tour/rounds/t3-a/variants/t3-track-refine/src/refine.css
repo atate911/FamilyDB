@@ -1,0 +1,571 @@
+/* ==== Sill Line, Trued: the refinement =========================================================
+   Lit Sill Line is kept whole: the lit run, the wire, the airglow, the breathing lamp, the
+   scanlined Status glass and 'planning' in E1. What changes is placement and finish:
+   - Home reads question first: the box runs the board's width, and the sill zone stands under it,
+     the tube as stop one over its own stop, the station's name plate above the later stops, the
+     buffer named 'All plans' on the rail's own line.
+   - Ink is warmed to a blue-black and kept for plans, each plan plate capped in the plans' cyan;
+     the family's chat plates are slate with a pale bar.
+   - The row afterglow is a phosphor edge with a green inner wash, on in .12s, fading over 1.2s.
+   - Status names its lamps on the glass and pulls the tally into the same bezel.
+   - The month opens on today's week, the past folded to one strip, and says one count. */
+:root {
+  --ink-plate: #1a2230;
+  --ink-edge: #2a3646;
+  --plan-cap: #70dcf4;
+  --ink-hover: #1f2939;
+  --sp: 2rem;
+  --lead: 3rem;
+  --tube-w: 22rem;
+  --endw: 7.25rem;
+  --lampx: 1.15rem;
+  --stand: 0.85rem;
+  --face: #101611;
+}
+
+/* ==== A. Home: the question first, the week on the sill under it ================================ */
+.welcome.sill-board {
+  position: relative; overflow: visible;
+  display: grid; gap: 0; align-items: start;
+  margin: 0 0 2.75rem; padding: 0;
+  background: none; border: 0; border-radius: 0; box-shadow: none;
+}
+.welcome.sill-board::before, .welcome.sill-board::after { content: none; }
+/* The board's face: lit glass over every row above the sill. Its foot is the rail, drawn from the
+   board's left edge to the buffer; past the buffer only the board's hairline. */
+.board-face {
+  position: relative; z-index: 0; grid-row: 1 / 5; grid-column: 1 / -1; align-self: stretch;
+  border: 1px solid #1c241f; border-bottom: 0; border-radius: 14px 14px 0 0;
+  background:
+    linear-gradient(var(--rail), var(--rail)) 0 100% / calc(100% - var(--sp) - var(--endw) + 1px) 2px no-repeat,
+    linear-gradient(#1c241f, #1c241f) 0 100% / 100% 1px no-repeat,
+    radial-gradient(60% 55% at 0% 100%, color-mix(in srgb, var(--brand) 10%, transparent), transparent 70%),
+    var(--face);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 24px 40px -30px color-mix(in srgb, var(--brand) 30%, transparent);
+}
+/* The glass catching the light along its top edge (E8). */
+.board-face::after {
+  content: ""; position: absolute; top: 0; left: 6%; right: 6%; height: 22px; pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent, color-mix(in srgb, var(--brand) 26%, transparent) 50%, transparent) top / 100% 1px no-repeat,
+    radial-gradient(50% 100% at 50% 0, color-mix(in srgb, var(--brand) 6%, transparent), transparent);
+}
+/* The airglow: the board's green light rises off the lit run, brightest over it and gone before
+   the question; the whisper of scanlines lies only inside it. */
+.board-face::before {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 15rem; pointer-events: none;
+  background:
+    repeating-linear-gradient(to bottom, rgb(255 255 255 / 0.03) 0 1px, transparent 1px 4px),
+    linear-gradient(to top, color-mix(in srgb, var(--brand) 16%, transparent), transparent);
+  -webkit-mask-image: radial-gradient(22% 100% at 4% 100%, #000, transparent 88%);
+  mask-image: radial-gradient(22% 100% at 4% 100%, #000, transparent 88%);
+  animation: airglow 0.7s ease-out 0.95s both;
+}
+@keyframes airglow { from { opacity: 0.12; } }
+.welcome.sill-board > :not(.board-face) { position: relative; z-index: 1; }
+.welcome.sill-board .speaker { grid-area: speak; margin: 1.6rem 0 0.95rem; }
+/* The box's own parts are the board's: the box across the top, the ways to start in the glass
+   beside the tube, the conversation's last line (when there is one) under the box. */
+.welcome.sill-board .welcome-words { display: contents; }
+.welcome.sill-board .ask { grid-area: words; position: relative; z-index: 1; }
+.welcome.sill-board .thread.brief, .welcome.sill-board .brief-more { grid-area: brief; position: relative; z-index: 1; }
+.welcome.sill-board .brief-more { justify-self: end; align-self: end; }
+
+/* The question: the page's largest words, inside the box's frame as its label, the one lit word
+   in the tube's two layers (E1). */
+.ask-question { padding: 0.95rem 1.1rem 0; font: 700 2.5rem/1.05 var(--head); font-stretch: 80%; letter-spacing: -0.012em; color: var(--heading); text-wrap: balance; }
+.ask-question .glow { font-weight: 700; }
+.welcome .ask .ask-question + textarea { min-height: 2.6rem; padding: 0.4rem 1.1rem 0.2rem; }
+/* The ways to start: one row of three keys under the box, slate, with a lit edge on top. */
+.page-home .starters { grid-row: glass; grid-column: glass-start / buf-end; align-self: start; position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1.6rem 0 0; }
+.page-home .starters a {
+  min-height: 2.75rem !important; padding: 0.45rem 1rem; border: 0; border-radius: 6px;
+  font: 500 0.94rem/1.25 var(--sans); color: var(--ink);
+  background: #1b242b; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07), 0 1px 0 #070a0b;
+  transition: background-color var(--afterglow), box-shadow var(--afterglow), color var(--afterglow);
+}
+.page-home .starters a:hover, .page-home .starters a:focus-visible { color: var(--heading); background: #222d35; box-shadow: inset 0 1px 0 color-mix(in srgb, var(--brand) 45%, transparent), 0 1px 0 #070a0b; transition-duration: var(--glow-in); }
+
+/* The station's name plate: the line's name and its one count on a shared baseline. */
+.station-plate { grid-area: glass; align-self: end; margin-bottom: 3.7rem !important; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.9rem; margin: 0; padding: 0.35rem 0 0; }
+.station-plate h2 { margin: 0; font: 600 1.25rem/1.2 var(--head); font-stretch: 90%; letter-spacing: -0.005em; color: var(--heading); }
+.station-count { margin: 0; font-size: 0.875rem; line-height: 1.2; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.station-count .sep { color: var(--rail-hi); }
+.station-count .t { font-family: var(--sans); color: var(--ink); }
+
+/* Stop one: the tube stands on the sill over its own stop; its power lamp is at the chin's left,
+   above the stop, and drops its lit wire to the rail. */
+.welcome .next-up { grid-area: tube; align-self: end; z-index: 1; margin: 1.6rem 0 var(--stand); }
+.welcome .next-up::after { left: calc(var(--lampx) - 0.16rem); right: auto; }
+.welcome .next-up::before { left: auto; right: 0.7rem; }
+.welcome .next-up .crt-tube {
+  display: grid; grid-template-columns: minmax(0, 1fr) 6rem; gap: 0 0.75rem; padding: 0.9rem 1.15rem 0.85rem;
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
+  grid-template-areas: "label label" "title title" "when radar" "where radar" "more radar";
+  align-items: start;
+}
+.welcome .next-up .next-text { display: contents; }
+.welcome .next-up .next-text > * { position: relative; filter: blur(0.35px); }
+.welcome .next-up .next-label { grid-area: label; margin-bottom: 0.35rem; }
+.welcome .next-up .next-title { grid-area: title; font-size: 2rem; }
+.welcome .next-up .next-when { grid-area: when; margin-top: 0.3rem; font-size: 1.35rem; line-height: 1.15; }
+.welcome .next-up .next-where { grid-area: where; }
+.welcome .next-up .next-more { grid-area: more; margin-top: 0.45rem; font-size: 1.35rem; }
+.welcome .next-up .radar { grid-area: radar; align-self: end; justify-self: end; width: 6rem; margin: 0 -0.2rem 0 0; float: none; shape-outside: none; }
+
+/* The sill's own marks. */
+.sill-start { grid-area: lead; align-self: stretch; pointer-events: none; }
+.sill-now { position: absolute; left: 0.85rem; bottom: 0.8rem; font: 500 0.8125rem/1 var(--mono); letter-spacing: 0.02em; color: var(--sage); text-shadow: 0 0 6px color-mix(in srgb, var(--sage) 45%, transparent); }
+.now-lamp {
+  position: absolute; z-index: 3; left: -7px; bottom: -8px; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--lamp-core); box-shadow: var(--lamp-glow);
+  animation: lamp 3.2s ease-in-out infinite;
+}
+/* The occupied section: from now to stop one, the phosphor with a white-hot core, set on opening. */
+.sill-run {
+  position: absolute; z-index: 2; left: 0; right: calc(-1 * var(--lampx)); bottom: 0; height: 2px;
+  background: linear-gradient(var(--hot), var(--hot)) 0 50% / 100% 1px no-repeat, var(--brand);
+  filter: var(--run-bloom);
+  animation: lay-run 0.7s cubic-bezier(0.35, 0.1, 0.35, 1) 0.2s both;
+}
+@keyframes lay-run { from { clip-path: inset(-20px 100% 100% -20px); } to { clip-path: inset(-20px); } }
+.sill-head {
+  position: absolute; z-index: 4; left: 0; bottom: -2px; width: 16px; height: 6px; margin-left: -12px; border-radius: 3px;
+  background: radial-gradient(50% 50% at 75% 50%, var(--hot-core), color-mix(in srgb, var(--brand) 70%, transparent) 60%, transparent);
+  box-shadow: 0 0 14px 3px color-mix(in srgb, var(--brand) 55%, transparent);
+  opacity: 0;
+  animation: set-head 0.7s cubic-bezier(0.35, 0.1, 0.35, 1) 0.2s both;
+}
+@keyframes set-head { from { left: 0; opacity: 1; } 85% { opacity: 1; } to { left: calc(100% + var(--lampx)); opacity: 0; } }
+.wire {
+  grid-area: tube; align-self: end; justify-self: start; z-index: 2;
+  width: 2px; height: calc(var(--stand) + 0.5rem); margin: 0 0 1px calc(var(--lampx) - 1px);
+  background: linear-gradient(var(--hot), var(--hot)) 50% 0 / 1px 100% no-repeat, var(--brand);
+  filter: var(--run-bloom);
+}
+.stop-one {
+  grid-area: tube; align-self: end; justify-self: start; z-index: 3;
+  width: 12px; height: 12px; box-sizing: border-box; margin: 0 0 -5px calc(var(--lampx) - 6px); border-radius: 50%;
+  background: var(--bg); border: 2px solid var(--brand);
+  box-shadow: 0 0 6px var(--brand), 0 0 16px color-mix(in srgb, var(--brand) 45%, transparent);
+}
+
+/* The later stops, along the rest of the rail: the day stands in the glass above the rail, the
+   plate hangs below on a 1px drop, each an equal share of the rail. */
+.stops { grid-area: stops; --lc: var(--cyan); --rk: var(--cyan); display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 0 0.75rem; margin: 0; padding: 0; list-style: none; }
+.stop { position: relative; display: flex; flex-direction: column; padding-top: 1.05rem; }
+.stops > li.empty { display: flex; gap: 0.6rem; align-items: center; padding-top: 1rem; color: var(--dim); }
+.stop-ring {
+  position: absolute; z-index: 3; left: calc(0.95rem - 6px); top: -7px; width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%;
+  background: var(--face); border: 2px solid var(--cyan);
+  transition: box-shadow var(--afterglow), border-color var(--afterglow);
+}
+.stop-day { position: absolute; left: 0.35rem; bottom: calc(100% + 0.95rem); display: flex; align-items: center; gap: 0.45rem; white-space: nowrap; }
+.sd-n { font: 300 1.875rem/0.9 var(--fig); font-stretch: 84%; font-variant-numeric: tabular-nums lining-nums; letter-spacing: -0.01em; color: var(--heading); }
+.sd-mw { display: grid; font: 500 0.8125rem/1.1 var(--sans); letter-spacing: 0.01em; }
+.sd-m { color: var(--cyan); }
+.sd-w { color: var(--label); }
+.stop.is-today .sd-n { color: var(--brand); }
+.stop > .agenda-body { flex: 1 1 auto; display: flex; flex-direction: column; padding: 0.55rem 0.8rem 0.6rem; }
+.stop > .agenda-body::before { content: ""; position: absolute; left: calc(0.95rem - 0.5px - 1px); top: calc(-1.05rem + 4px); height: calc(1.05rem - 6px); width: 1px; background: var(--rail-hi); }
+.stop .what { font: 600 0.9375rem/1.28 var(--head); font-stretch: 92%; letter-spacing: 0; color: var(--heading); text-wrap: pretty; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.stop .what a { display: inline; margin: 0; padding: 0; color: var(--heading); text-decoration: none; }
+.stop .what a::after { content: ""; position: absolute; inset: 0; }
+/* The foot line pinned to the plate's bottom: the time in the mono, how far off in the sans. */
+.stop .when { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.55rem; margin-top: auto; padding-top: 0.35rem; }
+.stop .when .t { font: 500 0.8125rem/1.3 var(--mono); font-variant-numeric: tabular-nums; color: var(--ink); }
+.stop .when .rel { font: 400 0.8125rem/1.3 var(--sans); color: var(--label); }
+.stop:hover .stop-ring, .stop:focus-within .stop-ring { box-shadow: 0 0 10px -2px var(--cyan); transition-duration: var(--glow-in); }
+
+/* The end of the line: a T buffer across the rail at the board's inner edge, its name beside it
+   on the rail's own line. */
+.sill-end { grid-area: buf; align-self: end; position: relative; display: flex; align-items: flex-end; margin: 0 0 3px; padding: 0 0 0 0.75rem; }
+.sill-end .buffer { position: absolute; z-index: 3; left: -1px; bottom: -9px; width: 2px; height: 14px; background: var(--rail-hi); }
+.sill-end a { min-height: 2.75rem; align-items: flex-end; padding: 0 0 0.05rem; line-height: 1.2; }
+.welcome .source { grid-area: note; margin: 0.8rem 0 0; font-size: 0.875rem; line-height: 1.45; color: var(--faint); max-width: 60ch; }
+
+@media (min-width: 64rem) {
+  .welcome.sill-board {
+    grid-template-columns: var(--sp) var(--lead) var(--tube-w) 2.25rem minmax(0, 1fr) var(--endw) var(--sp);
+    grid-template-areas:
+      ". speak speak speak speak speak ."
+      ". words words words words words ."
+      ". brief brief brief brief brief ."
+      "lead lead tube . glass buf ."
+      ". . . . stops . ."
+      ". . . . note note .";
+  }
+}
+
+/* ---- Home below 64rem: the line runs down the left gutter, the tube its first stop ------------ */
+@media (max-width: 63.99rem) {
+  .welcome.sill-board {
+    --sp: clamp(1rem, 4vw, 1.5rem); --gx: 0.55rem; --gut: 1.7rem;
+    grid-template-columns: var(--sp) var(--gut) minmax(0, 1fr) var(--sp);
+    grid-template-areas:
+      ". speak speak ."
+      ". words words ."
+      ". brief brief ."
+      ". start start ."
+      ". station station ."
+      "lead lead tube ."
+      ". rail stops ."
+      ". rail buf ."
+      ". . note .";
+  }
+  .page-home .starters { grid-area: start; margin-top: 0.85rem; }
+  .board-face { grid-row: 1 / 7; background: radial-gradient(70% 40% at 0% 100%, color-mix(in srgb, var(--brand) 9%, transparent), transparent 70%), var(--face); border-bottom: 1px solid #1c241f; }
+  .board-face::before { -webkit-mask-image: radial-gradient(30% 100% at 6% 100%, #000, transparent 88%); mask-image: radial-gradient(30% 100% at 6% 100%, #000, transparent 88%); }
+  .welcome.sill-board .speaker { margin-top: 1.2rem; }
+  /* The station's plate over the line, then the tube, its first stop. */
+  .station-plate { grid-area: station; align-self: start; margin: 1.6rem 0 0 !important; padding: 0; }
+  .welcome .next-up { margin: 1.5rem 0 1.25rem; }
+  .welcome .next-up::after { left: auto; right: 0.7rem; }
+  .welcome .next-up::before { right: auto; left: 0.7rem; }
+  /* The rail, down the gutter from the now lamp and out through the board's foot to the buffer. */
+  .sill-start { grid-area: lead; align-self: stretch; margin: 1.5rem 0 0; }
+  .sill-start::before { content: ""; position: absolute; left: calc(var(--sp) + var(--gx) - 1px); top: 0.45rem; bottom: 0; width: 2px; background: var(--rail); }
+  .sill-now { left: calc(var(--sp) + var(--gx) + 0.75rem); top: -1.35rem; bottom: auto; }
+  .now-lamp { left: calc(var(--sp) + var(--gx) - 7px); top: 0; bottom: auto; }
+  .sill-run { left: calc(var(--sp) + var(--gx) - 1px); right: auto; top: 0.45rem; bottom: auto; width: 2px; height: calc(100% - 0.45rem - 1.25rem - 0.52rem); background: linear-gradient(var(--hot), var(--hot)) 50% 0 / 1px 100% no-repeat, var(--brand); }
+  .sill-head { display: none; }
+  .wire { grid-area: tube; align-self: end; justify-self: start; height: 2px; margin: 0 0 calc(1.25rem + 0.52rem - 1px) calc(-1 * var(--gut) + var(--gx) + 5px); width: calc(var(--gut) - var(--gx) - 5px + 0.66rem); background: linear-gradient(var(--hot), var(--hot)) 0 50% / 100% 1px no-repeat, var(--brand); }
+  .stop-one { grid-area: tube; margin: 0 0 calc(1.25rem + 0.52rem - 6px) calc(-1 * var(--gut) + var(--gx) - 6px); }
+  .welcome .next-up::after { left: 0.5rem; right: auto; bottom: 0.36rem; }
+  .welcome .next-up::before { left: auto; right: 0.7rem; }
+  .welcome .next-up .crt-tube { grid-template-columns: minmax(0, 1fr) 4.5rem; grid-template-rows: auto auto auto auto auto; grid-template-areas: "label label" "title title" "when radar" "where radar" "more radar"; padding: 0.85rem 1rem 0.8rem; }
+  .welcome .next-up .radar { grid-area: radar; width: 4.5rem; align-self: center; margin: 0; }
+  .welcome .next-up .next-title { font-size: 1.6rem; line-height: 1.05; }
+  .welcome .next-up .next-when, .welcome .next-up .next-more { font-size: 1.25rem; }
+  .welcome .next-up .next-more { margin-top: 0.3rem; }
+  .ask-question { font-size: clamp(1.8rem, 7.6vw, 2.5rem); padding: 0.8rem 0.85rem 0; }
+  .welcome .ask .ask-question + textarea { padding-inline: 0.85rem; }
+  .ask .who select { white-space: nowrap; padding-left: 0.6rem; padding-right: 1.6rem; font-size: 0.9rem; background-position: right 0.45rem center; }
+  .ask-bar { gap: 0.5rem; }
+  /* The rail carries on past the board's foot, down the gutter beside the plates. */
+  .stops { grid-column: 2 / 4; grid-auto-flow: row; grid-auto-columns: auto; gap: 0.55rem; padding: 0.9rem 0 0 var(--gut); background: linear-gradient(var(--rail), var(--rail)) calc(var(--gx) - 1px) 0 / 2px 100% no-repeat; }
+  .stops > .stop { display: grid; grid-template-columns: 4.6rem minmax(0, 1fr); column-gap: 0.6rem; align-items: start; padding: 0; }
+  .stop-ring { left: calc(-1 * var(--gut) + var(--gx) - 6px); top: calc(0.95rem - 6px); background: var(--bg); }
+  .stop-day { position: static; grid-column: 1; grid-row: 1; padding-top: 0.45rem; justify-content: flex-end; gap: 0.35rem; }
+  .sd-n { font-size: 1.6rem; }
+  .stop > .agenda-body { grid-column: 2; grid-row: 1; }
+  .stop > .agenda-body::before { content: none; }
+  .stop .what { -webkit-line-clamp: 3; }
+  .sill-end { grid-column: 2 / 4; grid-row: buf; align-self: start; margin: 0; padding: 0.35rem 0 0 var(--gut); background: linear-gradient(var(--rail), var(--rail)) calc(var(--gx) - 1px) 0 / 2px 50% no-repeat; }
+  .sill-end a { align-items: center; }
+  .sill-end .buffer { left: calc(var(--gx) - 7px); bottom: auto; top: calc(50% + 0.175rem - 1px); width: 14px; height: 2px; }
+  .welcome .source { grid-column: 3; }
+  /* Send says its word on a phone too. */
+  .ask .send { width: auto; padding: 0 0.8rem; gap: 0.35rem; }
+  .ask .send .label { position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
+}
+
+/* ---- Lately added: an idea already on the line says when, by a small cyan ring (from Trued) ---- */
+.lately-rows > li { min-height: 3.05rem; grid-template-columns: 1.9rem minmax(0, 1fr) auto minmax(0, max-content); column-gap: 0.7rem; }
+.lately-rows .t { text-overflow: clip; }
+.lately-rows .on-line { display: inline-flex; align-items: center; gap: 0.4rem; font: 400 0.8125rem/1.2 var(--sans); font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; }
+.lately-rows .on-line:not(:empty)::before { content: ""; flex: none; box-sizing: border-box; width: 9px; height: 9px; border: 1.5px solid var(--cyan); border-radius: 50%; box-shadow: 0 0 6px -1px color-mix(in srgb, var(--cyan) 70%, transparent); }
+.lately-rows .more-row .go { grid-column: 4; justify-self: end; }
+@media (max-width: 40rem) {
+  .lately-rows > li:not(.more-row) { grid-template-columns: 1.9rem auto minmax(0, 1fr); grid-template-areas: "k t t" "k o f"; row-gap: 0.1rem; padding-block: 0.45rem; }
+  .lately-rows > li:not(.more-row) > .kind-ring { grid-area: k; }
+  .lately-rows > li:not(.more-row) > .t { grid-area: t; }
+  .lately-rows > li:not(.more-row) > .on-line { grid-area: o; }
+  .lately-rows > li:not(.more-row) > .for { grid-area: f; justify-self: start; }
+  .lately-rows .on-line:not(:empty) { margin-right: 0.6rem; }
+  .lately-rows .more-row { grid-template-columns: 1.9rem minmax(0, 1fr) auto; }
+  .lately-rows .more-row .go { grid-column: 3; }
+  .lately-rows > li:not(.more-row):has(> .on-line:empty) > .for { grid-area: o; }
+  .lately-rows .more-row .t { white-space: normal; }
+}
+
+/* ---- Setup: only the action is the link; 'Next step' in the sans at the label step ------------ */
+.setup li a { display: inline; padding: 0; font-weight: 650; color: var(--heading); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--steel) 55%, transparent); text-underline-offset: 0.22em; text-decoration-thickness: 1px; }
+.setup li a::after { content: ""; position: absolute; inset: 0 0 auto; height: 100%; }
+.setup .line > li { position: relative; }
+.setup li a:hover { color: var(--brand-hover, #92ffb8); text-decoration-color: currentColor; }
+.setup li .clause { color: var(--ink-2); }
+.setup li { line-height: 1.55; font-size: 0.97rem; }
+.next-word { font: 600 0.8125rem/1 var(--sans); letter-spacing: 0.01em; color: var(--sage); text-shadow: 0 0 6px color-mix(in srgb, var(--sage) 40%, transparent); }
+.setup .line-end a { font-weight: 500; color: var(--steel); }
+
+/* ---- To do (Home and its page): NOW is a lit rule across the whole row, 'now' in sage on the rail -- */
+.checklist { --nowgap: 1.9rem; }
+.checklist > li.after-now { margin-top: var(--nowgap); }
+:is(.checklist, .task-line) .now-stop {
+  right: 0; width: auto; height: 2px; border-radius: 1px; top: calc(var(--nowgap) / -2 - 1px);
+  background: linear-gradient(90deg, var(--hot) 0 26px, transparent 60px) 0 50% / 100% 1px no-repeat, linear-gradient(90deg, var(--brand), color-mix(in srgb, var(--brand) 55%, transparent) 40%, color-mix(in srgb, var(--brand) 16%, transparent));
+  filter: none; box-shadow: 0 0 3px color-mix(in srgb, var(--brand) 70%, transparent), 0 0 10px -1px color-mix(in srgb, var(--brand) 35%, transparent);
+}
+:is(.checklist, .task-line) .now-stop::after, :is(.checklist, .task-line) .now-stop > .now-run { left: 8px; top: 2px; height: calc(var(--nowgap) / 2 + var(--ly) - var(--lamp) / 2 + 1px); }
+:is(.checklist, .task-line) .now-stop > .now-run { filter: none; }
+:is(.checklist, .task-line) .now-stop::before { color: var(--sage); font: 600 0.8125rem/1 var(--sans); letter-spacing: 0.01em; text-shadow: 0 0 6px color-mix(in srgb, var(--sage) 50%, transparent); }
+.task-line { --nowgap: 1.9rem; }
+.task-line > li.task.after-now { margin-top: var(--nowgap); }
+/* The margin's stamps are words, in the sans, figures tabular; late is amber words. */
+.hang .stamp, .checklist .hang .stamp { font: 500 0.8125rem/1.3 var(--sans); font-variant-numeric: tabular-nums; letter-spacing: 0.005em; }
+.hang .stamp .t { font: 500 0.8125rem/1.3 var(--mono); color: var(--ink); }
+
+/* ==== C. Status: one instrument in one bezel ====================================================== */
+.instrument { display: block; margin: 0 0 2.25rem; }
+.instrument .crt.one-case {
+  display: grid; grid-template-columns: minmax(0, 37rem) minmax(0, 1fr); align-items: stretch;
+  max-width: 60rem; margin: 0; padding: 4px 4px 1.15rem;
+}
+.one-case > .crt-tube { margin: 0; }
+.instrument .readout .crt-tube { padding: 1rem 1.3rem 0.7rem; }
+/* The case's own label plate: a recessed panel in the bezel, the tally stacked on it in bone. */
+.one-case > .tally-side {
+  align-self: stretch; display: flex; flex-direction: column; justify-content: center; max-width: none;
+  margin: 0.5rem 0.4rem 0 0.9rem; padding: 0.6rem 1.1rem 0.4rem;
+  background: linear-gradient(180deg, #121719, #161c1f); border: 1px solid #0a0d0e; border-radius: 3px;
+  box-shadow: inset 0 1px 3px #000a, 0 1px 0 rgb(255 255 255 / 0.06);
+}
+.tally-rows > li { grid-template-columns: 1.4rem 3rem minmax(0, 1fr); min-height: 2.7rem; padding-top: 0.25rem; border-top-color: #22292d; }
+.tally-rows .figure { font: 400 2.25rem/1 var(--fig); font-stretch: 78%; font-variant-numeric: tabular-nums lining-nums; color: var(--heading); }
+.tally-rows > li.look { color: var(--amber); }
+.tally-rows > li.look .figure { color: var(--amber); }
+.one-case .tube-note { margin: 0.5rem 0 0; padding-top: 0.25rem; border-top: 1px solid #22292d; font-size: 0.92rem; }
+.one-case .tube-note a { color: var(--steel); }
+.one-case::after { right: 0.7rem; }
+/* Each lamp named under it on the glass, at the tube's dim strength. */
+.crt .lamp-string { grid-template-columns: 8rem auto minmax(0, 1fr); min-height: 3.6rem; padding: 0.15rem 0.45rem; }
+.ls-lamps { gap: 0.15rem; }
+.gl-cell { display: inline-grid; justify-items: center; row-gap: 0.25rem; min-width: 3.4rem; }
+.gl-name { font: 400 0.9rem/1 var(--terminal); letter-spacing: 0.04em; text-transform: none; color: var(--phosphor-dim); text-shadow: 0 0 4px color-mix(in srgb, var(--phosphor) 30%, transparent); white-space: nowrap; }
+.lamp-string:is(:hover, :focus-visible) .gl-name { color: #04100a; text-shadow: none; }
+/* A part that needs a look is an amber half lamp, on the glass as on the boards. */
+.gl.look { background: linear-gradient(90deg, var(--amber) 50%, transparent 50%); border: 2px solid var(--amber); box-shadow: 0 0 6px -1px var(--amber); }
+.lamp-string:is(:hover, :focus-visible) .gl.look { border-color: #04100a; background: linear-gradient(90deg, #04100a 50%, transparent 50%); box-shadow: none; }
+.light.look { background: linear-gradient(90deg, var(--amber) 50%, transparent 50%); border: 2px solid var(--amber); box-shadow: 0 0 6px -1px color-mix(in srgb, var(--amber) 70%, transparent); }
+.light.part { background: linear-gradient(90deg, var(--sage) 50%, transparent 50%); border: 2px solid var(--sage); }
+.light-row.look .detail { color: var(--amber); }
+@media (max-width: 52rem) {
+  .instrument .crt.one-case { grid-template-columns: minmax(0, 1fr); }
+  .one-case > .tally-side { margin: 0.6rem 0.35rem 0; }
+  .crt .lamp-string { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "n c" "l l"; row-gap: 0.4rem; padding-block: 0.4rem; }
+  .crt .lamp-string .ls-name { grid-area: n; }
+  .crt .lamp-string .ls-count { grid-area: c; }
+  .crt .lamp-string .ls-lamps { grid-area: l; flex-wrap: wrap; }
+  .gl-cell { min-width: 3.1rem; }
+}
+
+.crt .ls-count { white-space: nowrap; }
+
+/* ==== Chat: the family's words on slate with a pale bar; only her newest stop is lit ============== */
+/* No navy in Chat: ink is for plans. The head is tighter, so the box and Send are on the first
+   screen at 1280 by 900. */
+.in-chat .page-head h1 { font-size: 3rem; }
+.in-chat .lede { max-width: none; white-space: nowrap; margin-top: 0.6rem !important; font-size: 1rem; }
+@media (max-width: 64rem) { .in-chat .lede { white-space: normal; } }
+.in-chat .page-head { margin-bottom: 0.75rem !important; }
+.thread:not(.brief) { gap: 0.55rem; padding-bottom: 0.9rem; }
+.thread .bubble { padding: 0.55rem 0.85rem 0.6rem; }
+.thread .said-text { line-height: 1.5; max-width: 60ch; text-wrap: pretty; }
+.thread:not(.brief) > li.day-mark { margin-bottom: 0.15rem; }
+/* Her older stops matte; the newest lit: screen halo, its time in sage with a soft bloom, the
+   bubble's edge in the phosphor. */
+.thread:not(.brief) > .said-bot:not(:last-child) .bubble { border-color: #26332b; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03); }
+.thread:not(.brief) > li:last-child .tape-time { color: var(--sage); text-shadow: 0 0 6px color-mix(in srgb, var(--sage) 55%, transparent), 0 0 14px color-mix(in srgb, var(--brand) 22%, transparent); }
+.thread:not(.brief) > .said-bot:last-child .bubble { border-color: color-mix(in srgb, var(--brand) 55%, var(--line)); }
+.said-them .said-by strong, .said-them .said-by { color: var(--ink-bar); }
+
+/* ==== Ideas: the drive in figures and units, the way in its own column, 'No.' with bare numbers === */
+.idea-board .colheads, .idea-rows > li { grid-template-columns: 1.9rem minmax(0, 1fr) minmax(7rem, 11rem) 6.4rem 2rem 2.2rem; }
+.idea-row .drive { display: block; font: 400 0.92rem/1.2 var(--sans); font-variant-numeric: tabular-nums lining-nums; text-align: right; white-space: nowrap; color: var(--ink-2); }
+.idea-row .drive b { font-weight: 650; color: var(--heading); }
+.idea-row .drive .u { font-weight: 400; font-size: 0.8125rem; color: var(--label); }
+.idea-row .drive.pending { font: italic 400 0.84rem var(--sans); color: var(--dim); white-space: normal; }
+.idea-row .way { font: 500 0.8125rem/1.2 var(--sans); letter-spacing: 0.02em; color: var(--label); }
+.idea-row .n { font: 400 0.875rem/1.2 var(--sans); font-variant-numeric: tabular-nums; color: var(--label); }
+.colheads .ch-way { text-align: left; }
+@media (max-width: 48rem) {
+  .idea-rows > li { grid-template-columns: 1.9rem auto minmax(0, 1fr) auto auto; grid-template-areas: "k t t t n" "k w d y n" "k g g g n"; }
+  .idea-rows .drive { grid-area: d; display: block; text-align: right; }
+  .idea-rows .way { grid-area: y; }
+}
+
+/* ==== Plans: the month opens on today's week; what has gone by folds to one 32px strip ============ */
+table.month tr.folded td { height: 2rem; padding: 0 0.75rem; border-top: 0; background: none; }
+table.month tr.folded td > .fold-words { position: relative; z-index: 1; padding-right: 0.6rem; background: var(--tray); font: 500 0.8125rem/2rem var(--sans); color: var(--dim); }
+table.month tr.folded td > .fold-words a { color: var(--steel); }
+table.month tr.folded td > .fold-run { position: absolute; left: 0.75rem; right: 0.55rem; top: 50%; height: 0; border-top: 2px dashed var(--rail); }
+table.month tr.folded + tr td { border-top-color: var(--line-2); }
+/* The month's plates: the plan's name on the warm ink, under the plans' cyan cap. */
+.event { padding: 0.32rem 0.5rem 0.38rem 1.3rem; }
+.event a, .event { font: 500 0.8125rem/1.3 var(--sans); }
+.event small { display: block; font: 500 0.8125rem/1.3 var(--mono); font-variant-numeric: tabular-nums; color: var(--ink-2); }
+
+/* ==== The row afterglow: a phosphor edge and a green inner wash, on in .12s, fading over 1.2s (E9) == */
+.idea-row, .lately-rows > li, .kid-rows > li, .checklist > li, .task-line > li.task, .line.rows > li, .light-row, .section-card.panel, .stop > .agenda-body {
+  transition: background-color 1.2s cubic-bezier(0.45, 0, 0.75, 0.55), box-shadow 1.2s cubic-bezier(0.45, 0, 0.75, 0.55), border-color 1.2s cubic-bezier(0.45, 0, 0.75, 0.55);
+}
+:is(.idea-row, .lately-rows > li, .kid-rows > li:has(a), .checklist > li, .task-line > li.task, .line.rows > li, .light-row, .section-card.panel):is(:hover, :focus-within) {
+  background: color-mix(in srgb, var(--brand) 10%, transparent);
+  box-shadow: inset 2px 0 0 var(--brand), inset 26px 0 22px -18px color-mix(in srgb, var(--brand) 32%, transparent), -3px 0 12px -5px color-mix(in srgb, var(--brand) 75%, transparent);
+  transition-duration: 0.12s;
+}
+.stop:is(:hover, :focus-within) > .agenda-body { box-shadow: inset 2px 0 0 var(--brand), inset 0 0 0 999px color-mix(in srgb, var(--brand) 6%, transparent), -3px 0 12px -5px color-mix(in srgb, var(--brand) 75%, transparent); transition-duration: 0.12s; }
+@media (prefers-contrast: more) {
+  :is(.idea-row, .lately-rows > li, .checklist > li, .task-line > li.task, .line.rows > li, .light-row, .section-card.panel):is(:hover, :focus-within) { background: none; box-shadow: inset 3px 0 0 var(--brand); }
+}
+
+/* ==== To do: 'Edit' is quiet text with a 44px hit area, no box =================================== */
+.task-line details.more > summary {
+  min-height: 2.75rem; min-width: 2.75rem; padding: 0 0.5rem; justify-content: center;
+  background: none !important; border: 0 !important; box-shadow: none !important;
+  font: 500 0.9rem/1 var(--sans); color: var(--steel); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--steel) 40%, transparent); text-underline-offset: 0.22em;
+}
+.task-line details.more > summary .icon { display: none; }
+.task-line details.more > summary:hover { color: var(--heading); text-decoration-color: currentColor; }
+.task-line details.more[open] > summary { color: var(--heading); }
+
+/* ==== The New idea form: a line, labels in the margin, a stop at each field ======================== */
+.idea-form { --m: 8.5rem; --rl: calc(var(--m) + 1.15rem); --fx: calc(var(--m) + 2.3rem); position: relative; grid-template-columns: minmax(0, 1fr); gap: 0.9rem 0; padding: 1.4rem 1.6rem 1.4rem 1.1rem; }
+.idea-form::before { content: ""; position: absolute; z-index: 1; left: calc(1.1rem + var(--rl) - 1px); top: 1.4rem; bottom: calc(1.4rem + 1.375rem); width: 2px; background: var(--rail); }
+.idea-form .field { position: relative; display: grid; grid-template-columns: var(--m) minmax(0, 1fr); column-gap: 2.3rem; align-items: baseline; }
+.idea-form .field > label:not(.check) { grid-column: 1; grid-row: 1; margin: 0; padding-top: 0; text-align: right; font: 500 0.875rem/1.3 var(--sans); color: var(--label); }
+.idea-form .field > :not(label):not(.f-stop):not(legend), .idea-form .field > label.check { grid-column: 2; }
+.idea-form .field > .muted { margin-top: 0.3rem; font-size: 0.875rem; }
+.idea-form .field:not(.wide) > :is(input, select) { max-width: 26rem; }
+.idea-form .needed { display: block; margin-top: 0.1rem; font: 500 0.8125rem/1.2 var(--sans); color: var(--amber); }
+.idea-form .field:has(:required:valid) .needed { color: var(--sage); }
+/* Each field's stop on the line: a steel ring; the field being written in lights it in the
+   phosphor with its small halo (E21); a filled needed field is a sage dot. */
+.f-stop { position: absolute; z-index: 2; left: calc(var(--rl) - 6px); top: calc(1.375rem - 6px); box-sizing: border-box; width: 12px; height: 12px; background: var(--surface); border: 2px solid var(--rail-hi); border-radius: 50%; box-shadow: 0 0 0 3px var(--surface); transition: background-color var(--afterglow), border-color var(--afterglow), box-shadow var(--afterglow); }
+.idea-form .field:has(:required) > .f-stop { border-color: var(--amber); }
+.idea-form .field:has(:required:valid) > .f-stop { background: var(--sage); border-color: var(--sage); }
+.idea-form .field:focus-within > .f-stop { background: var(--bg); border-color: var(--brand); box-shadow: 0 0 0 3px var(--surface), 0 0 6px var(--brand), 0 0 14px color-mix(in srgb, var(--brand) 50%, transparent); transition-duration: var(--glow-in); }
+.idea-form fieldset.field { display: block; padding: 0 0 0 var(--fx); border: 0; }
+.idea-form fieldset.field > legend { float: left; margin-left: calc(-1 * var(--fx)); width: var(--m); padding: 0.78rem 0 0; text-align: right; font: 500 0.875rem/1.3 var(--sans); color: var(--label); }
+.idea-form fieldset.field > label.check { display: inline-flex; margin: 0 1rem 0 0; }
+.idea-form .field.wide:has(> label.check) { display: block; padding-left: var(--fx); }
+.idea-form details.more { position: relative; }
+.idea-form details.more > summary { margin-left: var(--fx); min-height: 2.75rem; }
+/* 'Everything else' is a stop of its own. */
+.idea-form details.more > summary::after { content: ""; position: absolute; z-index: 2; left: calc(var(--rl) - 6px); top: calc(1.375rem - 6px); box-sizing: border-box; width: 12px; height: 12px; background: var(--surface); border: 2px solid var(--rail-hi); border-radius: 50%; box-shadow: 0 0 0 3px var(--surface); }
+.idea-form details.more > summary:focus-visible::after, .idea-form details.more[open] > summary::after { border-color: var(--brand); box-shadow: 0 0 0 3px var(--surface), 0 0 6px var(--brand); }
+.idea-form .more .inner { gap: 0.9rem 0; grid-template-columns: minmax(0, 1fr); padding: 0; }
+.idea-form .field.actions { display: flex; align-items: center; gap: 0.75rem; padding-left: var(--fx); }
+.idea-form .actions .buffer { position: absolute; left: calc(var(--rl) - 7px); top: calc(50% - 7px); width: 14px; height: 2px; background: var(--rail-hi); }
+/* Selects take the same 2px phosphor focus ring as the fields. */
+select:focus-visible, .idea-form select:focus { outline: 2px solid var(--brand); outline-offset: 1px; border-color: var(--brand); }
+@media (max-width: 40rem) {
+  .idea-form { --m: 5.4rem; padding-inline: 0.8rem 1rem; --fx: calc(var(--m) + 1.7rem); --rl: calc(var(--m) + 0.85rem); }
+  .idea-form::before { left: calc(0.8rem + var(--rl) - 1px); }
+  .idea-form .field { column-gap: 1.7rem; }
+}
+
+/* ---- Targets: inline links carry a 44px box without moving a line ---------------------------- */
+.setup li a, .stop .what a { padding-block: 0.85rem; }
+.setup li a { -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+
+/* ==== Revision: the sill joined into one diagram ==================================================
+   The tube stands over its own stop at its power lamp, at the tube's right foot, and the lit run
+   goes all the way from the now lamp to it; the next stop starts just past the tube; the later
+   plates share the rest of the rail equally to a T buffer at the board's inner right edge, whose
+   own name stands on the rail beside it. */
+.when-short { display: none; }
+@media (min-width: 64rem) {
+  .welcome.sill-board {
+    --lampx: calc(var(--tube-w) - 1.45rem);
+    grid-template-columns: var(--sp) var(--lead) var(--tube-w) 1.1rem minmax(0, 1fr) var(--sp);
+    grid-template-areas:
+      ". speak speak speak speak ."
+      ". words words words words ."
+      ". brief brief brief brief ."
+      "lead lead tube . glass ."
+      ". . . . stops ."
+      ". . . . note .";
+  }
+  .board-face {
+    background:
+      linear-gradient(var(--rail), var(--rail)) 0 100% / calc(100% - var(--sp) + 1px) 2px no-repeat,
+      linear-gradient(#1c241f, #1c241f) 0 100% / 100% 1px no-repeat,
+      radial-gradient(60% 55% at 0% 100%, color-mix(in srgb, var(--brand) 10%, transparent), transparent 70%),
+      var(--face);
+  }
+  /* The airglow follows the longer run: brightest over it, gone before the question. */
+  .board-face::before {
+    -webkit-mask-image: radial-gradient(30% 100% at 15% 100%, #000, transparent 88%);
+    mask-image: radial-gradient(30% 100% at 15% 100%, #000, transparent 88%);
+  }
+  .welcome .next-up::before { left: 0.7rem; right: auto; }
+  .welcome .next-up::after { left: calc(var(--lampx) - 0.16rem); right: auto; }
+  .page-home .starters { grid-column: glass-start / glass-end; }
+  .stops { gap: 0 0.85rem; }
+  /* The buffer's own name, standing on the rail at the board's inner right edge. */
+  .sill-end { grid-area: glass; justify-self: end; align-self: end; margin: 0; padding: 0 0.8rem 0.15rem 0; }
+  .sill-end .buffer { left: auto; right: -1px; bottom: -7px; }
+  .sill-end a { color: var(--steel); }
+}
+
+/* The tube's date on a phone, short, so it holds one line beside the scope. */
+@media (max-width: 63.99rem) {
+  .when-long { display: none; }
+  .when-short { display: inline; }
+  .welcome .next-up { margin-top: 2.15rem; }
+  .sill-start { margin-top: 0.55rem; }
+  /* 'now' on the rail's own line, beside its lamp. */
+  .sill-now { left: calc(var(--sp) + var(--gx) + 0.95rem); top: 0.05rem; bottom: auto; line-height: 14px; }
+  /* The ways to start: one row of compact keys that runs on sideways. */
+  .page-home .starters { flex-wrap: nowrap; overflow-x: auto; margin-inline: calc(-1 * var(--sp)); padding: 0.1rem var(--sp) 0.2rem; scrollbar-width: none; scroll-padding-inline: var(--sp); }
+  .page-home .starters::-webkit-scrollbar { display: none; }
+  .page-home .starters li { flex: none; }
+  .page-home .starters a { white-space: nowrap; padding-inline: 0.85rem; }
+  .ask .locate label { min-height: 2.75rem; display: inline-flex; align-items: center; }
+}
+
+/* The question: the lineage's best title, 'plan' its one lit word. */
+.ask-question { letter-spacing: -0.015em; }
+
+/* ---- To do on Home: the margin is the day as the calendar names it, late in amber words beside -- */
+.checklist .hang .stamp.abs { color: var(--ink-2); font-variant-numeric: tabular-nums lining-nums; }
+.checklist .hang .stamp.abs .t { color: var(--ink-2); }
+.checklist .checklist-body .when { display: flex; flex-wrap: wrap; gap: 0 0.7rem; margin-top: 0.1rem; }
+.checklist .due-rel { font: 500 0.8125rem/1.3 var(--sans); color: var(--ink-2); }
+.checklist .due-rel.warn { color: var(--amber); }
+
+/* ---- To do page: the date right-aligned in tabular figures, the amber words beside it ---------- */
+.task-line > li.task { grid-template-columns: 2.75rem minmax(0, 1fr) 7rem 15rem 5.6rem; }
+.task-line .due { display: flex; justify-content: flex-end; align-items: baseline; gap: 0.8rem; }
+.task-line .due .due-rel { font-size: 0.875rem; }
+.task-line .due:not(.warn) .due-rel { color: var(--ink-2); }
+.task-line .due .due-abs { min-width: 5.4rem; text-align: right; font: 500 0.9rem/1.3 var(--sans); font-variant-numeric: tabular-nums lining-nums; color: var(--ink); }
+@media (max-width: 48rem) { .task-line .due { justify-content: flex-start; flex-direction: row-reverse; } .task-line .due .due-abs { min-width: 0; text-align: left; } }
+
+/* ---- Status: the bezel fills the column; waiting is the steel ring it is everywhere else ------- */
+.instrument .crt.one-case { grid-template-columns: minmax(0, 1fr) 19rem; max-width: none; }
+.tally-rows .light.wait, .tally-more .light.wait { box-sizing: border-box; background: radial-gradient(circle, var(--steel) 0 2px, transparent 2.5px); border: 2px solid var(--steel); box-shadow: none; }
+@media (max-width: 52rem) { .instrument .crt.one-case { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---- Chat: her older bubbles edged in plain steel; only the newest is lit ---------------------- */
+.thread:not(.brief) > .said-bot:not(:last-child) .bubble { border-color: #2b3339; }
+
+/* ---- Plans, month: the weekend's shading fills the cell; a plate sits inside its padding ------- */
+/* Home's .stop rule was reaching the month's stop cell and making it a flex box, which is why its
+   shading stopped short of the row: the cell is a table cell again. */
+table.month td.stop { display: table-cell; }
+
+/* ---- The row afterglow also answers a keyboard: :focus-visible inside a row lights it --------- */
+:is(.idea-row, .lately-rows > li, .checklist > li, .task-line > li.task, .line.rows > li, .light-row, .section-card.panel):has(:focus-visible) {
+  background: color-mix(in srgb, var(--brand) 10%, transparent);
+  box-shadow: inset 2px 0 0 var(--brand), inset 26px 0 22px -18px color-mix(in srgb, var(--brand) 32%, transparent), -3px 0 12px -5px color-mix(in srgb, var(--brand) 75%, transparent);
+  transition-duration: 0.12s;
+}
+@media (max-width: 63.99rem) {
+  /* The short date runs the tube's full width, the scope beside the line count under it. */
+  .welcome .next-up .crt-tube { grid-template-areas: "label label" "title title" "when when" "where radar" "more radar"; }
+  .welcome .next-up .next-when { white-space: nowrap; }
+  .welcome .next-up .radar { align-self: end; }
+}
+/* The plates' names are 44px targets without moving a line (their content box is short). */
+.stop .what a { padding-block: 0.95rem; }
+/* With the glass at the column's width, the lamps spread along their string rather than bunching. */
+@media (min-width: 52.01rem) {
+  .crt .lamp-string { grid-template-columns: 9rem minmax(0, 1fr) 5.5rem; }
+  .crt .ls-lamps { gap: 0.2rem 1.35rem; }
+  .crt .gl-cell { min-width: 4rem; }
+}
+/* 'now' is a word, not a clock time: the sans at the label step, in sage, as on To do's rule. */
+.sill-now, table.month tr.now-row td.today > time::after { font: 600 0.8125rem/1 var(--sans); letter-spacing: 0.01em; }

@@ -1,0 +1,95 @@
+/* A page of settings: every page down the first column, this page's boxes in cells beside it. */
+.settings-nav { min-height: 0; padding: 0.5rem; }
+.settings-nav ol { list-style: none; margin: 0; padding: 0; counter-reset: part 990; }
+.settings-nav li { counter-increment: part; }
+.settings-nav li + li { border-top: 1px solid var(--line); }
+.settings-nav a { display: grid; grid-template-columns: 2.1rem 1.2rem minmax(0, 1fr); gap: 0.6rem; align-items: center; min-height: 2.75rem; padding: 0.25rem 0.5rem; font-size: var(--t-small); color: var(--ink-2); text-decoration: none; }
+.settings-nav a::before { content: counter(part); font: 500 var(--t-label)/1 var(--machine); color: var(--label); }
+.settings-nav a .icon { color: var(--label); }
+.settings-nav a:hover { color: var(--heading); background: var(--surface-2); }
+.settings-nav a[aria-current="page"] { color: var(--here-ink); font-weight: 600; background: var(--here); box-shadow: inset 2px 0 0 var(--here-cap); }
+.settings-nav a[aria-current="page"]::before, .settings-nav a[aria-current="page"] .icon { color: var(--here-ink); }
+.settings-body > form { display: flex; flex-direction: column; gap: var(--gap); }
+.settings-body .panel { min-height: 0; }
+.settings-body .panel > h2, .settings-body details.fold > summary { font-size: var(--t-cell); }
+/* Each box a cell: its label, the box, what it does. */
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--line); }
+/* Each box is one column of its group, as the new idea's boxes are cells of its form: no box
+   round a box, only a hairline between the columns and under each row. */
+.setting { display: flex; flex-direction: column; padding: 0.95rem 1.1rem 1.05rem; background: none; border: 0; border-bottom: 1px solid var(--line); }
+.grid > .setting:nth-child(3n + 1) { padding-left: 0; }
+.grid > .setting:nth-child(3n) { padding-right: 0; }
+.grid > .setting:not(:nth-child(3n + 1)) { border-left: 1px solid var(--line); }
+.setting-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; }
+.setting .hint { margin: 0.55rem 0 0; font-size: 0.875rem; line-height: 1.45; }
+.setting.bad { box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--danger) 55%, transparent); }
+.changed { font: 500 var(--t-label)/1 var(--machine); letter-spacing: 0.05em; text-transform: uppercase; color: var(--lit); padding: 0.2rem 0.35rem; border: 1px solid color-mix(in srgb, var(--lit) 40%, transparent); }
+.pick .another { margin-top: 0.6rem; }
+.pick:has(option[value="another"]:checked) .another { display: block; }
+.pick .another { display: none; }
+/* Save docks at the foot of the screen, a strip of the panel's keys, while the form is on it. */
+.save-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 0.7rem 0.6rem 1.1rem;
+  background: linear-gradient(180deg, var(--key-hi), var(--key));
+  border: 1px solid var(--key-edge);
+  box-shadow: 0 -16px 30px -16px rgb(0 0 0 / 0.95);
+}
+.save-bar p { margin: 0; color: var(--label); font-size: var(--t-small); }
+.choice.chosen { border-color: var(--lit); box-shadow: 0 0 0 1px var(--lit), 0 0 30px -12px color-mix(in srgb, var(--brand) 60%, transparent); }
+.setup-progress a[aria-current="step"] { border-color: color-mix(in srgb, var(--lit) 55%, transparent); box-shadow: 0 0 22px -10px color-mix(in srgb, var(--brand) 70%, transparent); }
+.settings-body .panel#served, .settings-body .panel#domain { min-height: 0; }
+
+/* The AI companies, as equal cells to choose between; the chosen one is lit. */
+.choices { display: grid; gap: var(--gap); grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0 0 1.2rem; }
+.choice {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-height: 8.5rem;
+  padding: 0.9rem 1rem 1rem;
+  color: var(--ink);
+  text-decoration: none;
+  background: var(--plate);
+  border: 1px solid var(--line-2);
+  transition: border-color var(--afterglow), box-shadow var(--afterglow);
+}
+.choice:hover { border-color: color-mix(in srgb, var(--lit) 45%, var(--line-2)); transition-duration: var(--glow-in); }
+.choice strong { display: flex; flex-wrap: wrap; align-items: center; gap: 0.45rem; font: 600 var(--t-item)/1.2 var(--cond); color: var(--heading); }
+.choice .muted { font-size: var(--t-small); line-height: 1.4; }
+.choice.chosen::after { content: ""; position: absolute; top: 0.95rem; right: 0.95rem; width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--brand); box-shadow: 0 0 6px var(--brand), 0 0 16px color-mix(in srgb, var(--brand) 45%, transparent); }
+/* Setting up: the steps as a panel of equal cells, a number that turns to a tick in each. */
+.step-head { grid-column: 1 / -1; margin: 0.4rem 0 0.2rem; }
+.step-head .eyebrow { display: block; margin-bottom: 0.45rem; color: var(--accent); }
+.step-head h1 { margin: 0; }
+.lead { max-width: var(--measure); color: var(--ink-2); }
+.setup-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap); list-style: none; margin: 0.4rem 0 1rem; padding: 0; }
+.setup-list > li.panel { display: flex; margin: 0; padding: 0; min-height: 11rem; }
+.setup-list a { flex: 1; display: flex; flex-direction: column; gap: 0.7rem; padding: 1rem 1.05rem 1.1rem; color: var(--ink); text-decoration: none; transition: background-color 0.2s; }
+.setup-list a:hover { background: var(--surface-2); }
+.setup-list .number { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; font: 500 0.9rem/1 var(--machine); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 50%, var(--line-2)); }
+.setup-list .done .number { color: var(--on-bright); background: var(--lit); border-color: var(--lit); box-shadow: 0 0 12px -3px color-mix(in srgb, var(--brand) 70%, transparent); }
+.setup-list .what { display: flex; flex-direction: column; gap: 0.25rem; }
+.setup-list strong { font: 600 var(--t-item)/1.2 var(--cond); color: var(--heading); }
+.setup-list .what .muted { font-size: var(--t-small); line-height: 1.4; }
+.setup-list .tag { align-self: flex-start; margin-top: auto; }
+.tag.need-needed { color: var(--people); border-color: color-mix(in srgb, var(--people) 45%, transparent); }
+.tag.need-done { color: var(--lit); border-color: color-mix(in srgb, var(--lit) 40%, transparent); }
+.setup-progress ol { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: var(--gap); list-style: none; margin: 0 0 1.25rem; padding: 0; }
+.setup-progress a { display: flex; align-items: center; gap: 0.55rem; min-height: 2.75rem; padding: 0 0.7rem; font: 600 var(--t-small)/1.1 var(--cond); color: var(--secondary); text-decoration: none; background: linear-gradient(180deg, var(--key-hi), var(--key)); border: 1px solid var(--key-edge); border-bottom-width: 3px; transition: border-color var(--afterglow), box-shadow var(--afterglow); }
+.setup-progress a > span[aria-hidden] { display: grid; place-items: center; flex: none; width: 1.5rem; height: 1.5rem; color: var(--accent); border: 1px solid var(--line-2); }
+.setup-progress .done a > span[aria-hidden] { color: var(--lit); border-color: color-mix(in srgb, var(--lit) 40%, transparent); }
+.setup-progress a[aria-current="step"] { color: var(--heading); border-bottom-color: var(--lit); }
+.setup-progress a[aria-current="step"] > span[aria-hidden] { color: var(--on-bright); background: var(--lit); border-color: var(--lit); box-shadow: 0 0 10px color-mix(in srgb, var(--brand) 50%, transparent); }
+.step-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin: 1.25rem 0 0; }
+.step-skip-note { max-width: 60ch; font-size: var(--t-small); }
+.state.done { color: var(--lit); }
+.board > .actions { margin-top: 0.4rem; }
+

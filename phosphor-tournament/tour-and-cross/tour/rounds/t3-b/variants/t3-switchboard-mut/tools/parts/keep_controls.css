@@ -1,0 +1,309 @@
+/* ---- Keys to press ----------------------------------------------------------------------------- */
+button, .button {
+  position: relative;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0 1.1rem;
+  font: 600 var(--t-small)/1 var(--sans);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--on-bright);
+  text-decoration: none;
+  background: var(--brand);
+  border: 1px solid var(--brand);
+  border-radius: 0;
+  box-shadow: var(--glow);
+  cursor: pointer;
+  transition: background-color 0.15s, box-shadow var(--afterglow), border-color 0.15s, color 0.15s, transform 0.08s;
+}
+button .icon, .button .icon { width: 1.1rem; height: 1.1rem; }
+button:hover, .button:hover {
+  background: var(--brand-hover);
+  text-decoration: none;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand) 50%, transparent), 0 10px 34px -10px color-mix(in srgb, var(--brand) 85%, transparent);
+  transition-duration: 0.15s, var(--glow-in), 0.15s, 0.15s, 0.08s;
+}
+button:active, .button:active { transform: translateY(1px); }
+button:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+/* Every other key is the panel's own: graphite plastic, a label, no light until pointed at. */
+button.secondary, .button.secondary, .button.ghost, button.ghost, .filters button, .month-nav .button,
+.inline-action button, .clear, .cell-key, .keys .key {
+  color: var(--secondary);
+  background: linear-gradient(180deg, var(--key-hi), var(--key));
+  border: 1px solid var(--key-edge);
+  border-bottom-width: 3px;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
+}
+button.secondary:hover, .button.secondary:hover, .button.ghost:hover, button.ghost:hover, .filters button:hover,
+.month-nav .button:hover, .inline-action button:hover, .clear:hover, .cell-key:hover, .keys .key:hover {
+  color: var(--heading);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--sec) 12%, var(--key-hi)), var(--key));
+  border-color: color-mix(in srgb, var(--sec) 50%, var(--key-edge));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 0 22px -10px color-mix(in srgb, var(--sec) 60%, transparent);
+}
+button.quiet, .button.quiet { color: var(--ink-2); background: none; border: 0; box-shadow: none; text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); text-underline-offset: 0.2em; }
+button.quiet:hover, .button.quiet:hover { color: var(--heading); background: none; box-shadow: none; }
+button.danger { color: var(--on-bright); background: var(--danger); border-color: var(--danger); box-shadow: none; }
+
+/* ---- Boxes to write in ------------------------------------------------------------------------- */
+label { display: block; font: 500 var(--t-label)/1.3 var(--machine); letter-spacing: var(--track); text-transform: uppercase; color: var(--label); margin-bottom: 0.45rem; }
+input[type="text"], input[type="password"], input[type="search"], input[type="url"], input[type="email"],
+input[type="date"], input[type="time"], input[type="datetime-local"], input[type="number"], input:not([type]), textarea, select {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.8rem 0.55rem;
+  font: 400 var(--t-body)/1.35 var(--sans);
+  color: var(--ink);
+  caret-color: var(--lit);
+  background: var(--field);
+  border: 1px solid var(--edge);
+  border-bottom-width: 2px;
+  border-radius: 0;
+  transition: border-color var(--afterglow), box-shadow var(--afterglow);
+}
+input[type="date"], input[type="time"], input[type="datetime-local"] { font-family: var(--machine); font-size: var(--t-small); color-scheme: dark; }
+textarea { min-height: 5rem; resize: vertical; line-height: 1.5; }
+::placeholder { color: var(--faint); opacity: 1; }
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--lit);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 16%, transparent), 0 0 22px -6px color-mix(in srgb, var(--brand) 55%, transparent);
+  transition-duration: var(--glow-in);
+}
+select { cursor: pointer; }
+select:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+/* A dropdown drawn by the page: a column of choices under the box. */
+@supports (appearance: base-select) {
+  select, ::picker(select) { appearance: base-select; }
+  select {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    background: linear-gradient(180deg, var(--key-hi), var(--key));
+    border-color: var(--key-edge);
+    border-bottom-width: 3px;
+  }
+  select:hover { border-color: color-mix(in srgb, var(--sec) 40%, var(--key-edge)); }
+  select::picker-icon { content: "▾"; font: 400 1rem/1 var(--machine); color: var(--label); transition: rotate 0.2s; }
+  select:open::picker-icon { rotate: 180deg; }
+  ::picker(select) {
+    margin-top: 4px;
+    padding: 0.35rem;
+    background: var(--surface-2);
+    border: 1px solid var(--edge);
+    box-shadow: 0 24px 40px -18px rgb(0 0 0 / 0.95);
+  }
+  option { padding: 0.5rem 0.7rem; font: 400 var(--t-body)/1.2 var(--sans); color: var(--ink); }
+  option:hover, option:focus-visible { background: var(--surface-3); color: var(--heading); outline: none; }
+  option:checked { color: var(--heading); background: color-mix(in srgb, var(--sec) 12%, var(--surface-2)); box-shadow: inset 3px 0 0 var(--sec); }
+  option::checkmark { content: "●"; font: 400 0.7rem/1 var(--machine); color: var(--lit); }
+}
+/* Ticks: a square that fills with a check, drawn in the middle of a 44px target. */
+input[type="checkbox"], input[type="radio"] {
+  appearance: none;
+  flex: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: -0.675rem;
+  vertical-align: middle;
+  background:
+    linear-gradient(var(--field), var(--field)) center / calc(1.4rem - 4px) calc(1.4rem - 4px) no-repeat,
+    linear-gradient(var(--edge), var(--edge)) center / 1.4rem 1.4rem no-repeat;
+  border: 0;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+input[type="radio"] {
+  background: radial-gradient(circle, var(--field) 0 0.5rem, var(--edge) calc(0.5rem + 0.5px) 0.7rem, transparent calc(0.7rem + 0.5px));
+}
+input[type="checkbox"]:checked {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230a130d' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 1rem 1rem no-repeat,
+    linear-gradient(var(--lit), var(--lit)) center / 1.4rem 1.4rem no-repeat,
+    radial-gradient(circle, color-mix(in srgb, var(--brand) 40%, transparent) 0 0.7rem, transparent 1.3rem);
+}
+input[type="radio"]:checked { background: radial-gradient(circle, var(--lit) 0 0.3rem, var(--field) calc(0.3rem + 0.5px) 0.5rem, var(--lit) calc(0.5rem + 0.5px) 0.7rem, transparent calc(0.7rem + 0.5px)); }
+input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { outline-offset: -0.55rem; }
+label.check { display: inline-flex; align-items: center; gap: 0.7rem; margin: 0 1.4rem 0 0.675rem; min-height: 2.75rem; font: 400 var(--t-body)/1.3 var(--sans); letter-spacing: 0; text-transform: none; color: var(--ink); cursor: pointer; }
+fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+legend { padding: 0; margin-bottom: 0.5rem; font: 500 var(--t-label)/1.3 var(--machine); letter-spacing: var(--track); text-transform: uppercase; color: var(--label); }
+
+/* The mic beside a box that takes words (dictate.js). */
+button.mic {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  min-height: 0;
+  padding: 0;
+  color: var(--secondary);
+  background: linear-gradient(180deg, var(--key-hi), var(--key));
+  border: 1px solid var(--key-edge);
+  border-bottom-width: 3px;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
+}
+button.mic .icon { width: 1.15rem; height: 1.15rem; }
+button.mic:hover { color: var(--heading); background: var(--key-hi); }
+button.mic.listening {
+  color: var(--on-bright);
+  background: var(--brand);
+  border-color: var(--brand);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 18%, transparent), 0 0 22px -4px color-mix(in srgb, var(--brand) 70%, transparent);
+  animation: listening 1.4s ease-in-out infinite;
+}
+/* A box of one line takes its mic as a key beside it; a box of several, in its corner. */
+.field.can-dictate:has(> textarea) { position: relative; }
+.field.can-dictate:has(> input) { display: grid; grid-template-columns: minmax(0, 1fr) 2.75rem; column-gap: 6px; align-items: center; }
+.field.can-dictate:has(> input) > :not(input, button.mic) { grid-column: 1 / -1; }
+.field.can-dictate > textarea + button.mic { position: absolute; right: 0.35rem; bottom: 0.35rem; }
+
+/* ---- Forms: a panel of boxes, each box a cell of its own ------------------------------------------ */
+.form { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 1.2rem 1.25rem; }
+.form .wide, .form > details, .form > fieldset.wide, .form > .hint { grid-column: 1 / -1; }
+.field { min-width: 0; }
+.field > .muted, .field > span.muted { display: block; margin-top: 0.4rem; font-size: var(--t-small); }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+.actions.end { align-self: end; }
+
+/* ---- Folds, tabs, tags ------------------------------------------------------------------------- */
+details > summary { list-style: none; cursor: pointer; }
+details > summary::-webkit-details-marker { display: none; }
+details.panel > summary, details.fold > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  margin: -0.3rem 0;
+  font: 600 var(--t-item)/1.2 var(--cond);
+  color: var(--heading);
+}
+details.panel > summary::before, details.fold > summary::before, details.more > summary::before, details.cell > summary::before {
+  content: "+";
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  font: 500 1.05rem/1 var(--machine);
+  color: var(--sec);
+  border: 1px solid color-mix(in srgb, var(--sec) 55%, var(--line-2));
+  transition: background-color 0.15s, color 0.15s;
+}
+details:is(.panel, .fold, .more, .cell)[open] > summary::before { content: "–"; }
+details.panel:not([open]), details.fold:not([open]) { min-height: 0; }
+details.panel[open] > summary, details.fold[open] > summary { margin-bottom: 1.1rem; }
+details.panel > summary .h2 .icon { display: none; }
+details.more { margin-top: 0.7rem; }
+.cell > details.more:first-child, .panel > details.more:first-child { margin-top: 0; }
+/* A fold inside a cell opens on a quiet key: the words only, in the label's colour, so it never
+   outweighs the cell it belongs to. */
+details.more > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 2.75rem;
+  padding: 0 0.6rem 0 0;
+  font: 400 var(--t-small)/1 var(--sans);
+  color: var(--label);
+  transition: color 0.15s;
+}
+details.more > summary .icon { display: none; }
+details.more > summary:hover { color: var(--heading); }
+details.more > summary:hover::before { color: var(--on-bright); background: var(--sec); }
+details.more[open] > summary { color: var(--heading); margin-bottom: 1rem; }
+details.more.danger-zone > summary::before { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 55%, var(--line-2)); }
+details.more > .inner, details.more > .form { padding-top: 0.2rem; }
+/* A fold that is a cell's whole content opens on its name, as a cell's head. */
+details.more > summary:has(> .h2) { font: 600 var(--t-item)/1.2 var(--cond); color: var(--heading); }
+.h2 { display: inline-flex; align-items: center; gap: 0.55rem; }
+.tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: var(--gap); margin: 0 0 1rem; }
+.tabs a {
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 2.75rem;
+  padding: 0 0.7rem;
+  font: 600 var(--t-small)/1 var(--cond);
+  color: var(--secondary);
+  text-decoration: none;
+  background: linear-gradient(180deg, var(--key-hi), var(--key));
+  border: 1px solid var(--key-edge);
+  border-bottom-width: 3px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.tabs a .icon { color: var(--sec); }
+.tabs a:hover { color: var(--heading); border-color: color-mix(in srgb, var(--sec) 45%, var(--key-edge)); }
+.tabs a[aria-current="page"] {
+  color: var(--heading);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--sec) 14%, var(--key-hi)), var(--key));
+  border-color: color-mix(in srgb, var(--sec) 40%, var(--key-edge));
+  border-bottom-color: var(--sec);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
+}
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  padding: 0.28rem 0.42rem 0.24rem;
+  white-space: nowrap;
+  font: 500 0.75rem/1 var(--machine);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--secondary);
+  background: var(--surface-3);
+  border: 1px solid var(--line-2);
+}
+.tag.warn { color: var(--people); border-color: color-mix(in srgb, var(--people) 40%, transparent); background: color-mix(in srgb, var(--people) 9%, transparent); }
+.tag.status-planned { color: var(--plans); border-color: color-mix(in srgb, var(--plans) 40%, transparent); background: color-mix(in srgb, var(--plans) 8%, transparent); }
+.tag.status-open { color: var(--todo); border-color: color-mix(in srgb, var(--todo) 40%, transparent); background: color-mix(in srgb, var(--todo) 8%, transparent); }
+.tag.status-done, .tag.status-visited { color: var(--lit); border-color: color-mix(in srgb, var(--lit) 40%, transparent); background: color-mix(in srgb, var(--lit) 8%, transparent); }
+.tag.status-dropped, .tag.status-cancelled { color: var(--dim); }
+.tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.6rem 0 0; }
+.said, .error {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.7rem 1rem;
+  margin: 0 0 var(--gap);
+  background: var(--surface);
+  border: 1px solid var(--card-edge);
+}
+.said::before {
+  content: "OK";
+  flex: none;
+  padding: 0.28rem 0.4rem 0.24rem;
+  font: 600 var(--t-label)/1 var(--machine);
+  color: var(--on-bright);
+  background: var(--lit);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--brand) 45%, transparent);
+}
+.error { color: var(--ink); border-color: color-mix(in srgb, var(--danger) 45%, var(--card-edge)); }
+.error::before { content: ""; flex: none; width: 0.6rem; height: 0.6rem; background: var(--danger); border-radius: 50%; box-shadow: 0 0 8px var(--danger); }
+.setting .error, .field .error { padding: 0.4rem 0.6rem; margin: 0.5rem 0 0; font-size: var(--t-small); }
+.empty { display: flex; align-items: center; gap: 0.7rem; color: var(--dim); }
+.empty .icon { color: var(--sec); width: 1.5rem; height: 1.5rem; }
+.count { margin: 0; font-variant-numeric: tabular-nums; }
+.source { font-size: var(--t-small); }
+.scroll { overflow-x: auto; }
+hr { border: 0; height: 1px; margin: 2rem 0; background: var(--line-2); }
+
+/* Tables: the machine's figures in its own face, on ruled lines. */
+table.data { width: 100%; border-collapse: collapse; font-size: var(--t-small); margin-bottom: 1rem; }
+table.data caption { text-align: left; padding-bottom: 0.6rem; font: 500 var(--t-label)/1.3 var(--machine); letter-spacing: var(--track); text-transform: uppercase; color: var(--label); }
+table.data th { text-align: left; padding: 0.5rem 0.6rem; font: 500 var(--t-label)/1.2 var(--machine); letter-spacing: var(--track); text-transform: uppercase; color: var(--label); border-bottom: 1px solid var(--line-2); }
+table.data td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--line); }
+table.data .num { text-align: right; font-family: var(--machine); font-size: 0.85rem; }
+.meter { width: 6rem; height: 0.6rem; vertical-align: middle; }
+.meter-track { fill: var(--surface-3); }
+.meter-fill { fill: var(--lit); }
+.share-cell { display: inline-flex; align-items: center; gap: 0.6rem; font-family: var(--machine); font-size: 0.85rem; }
+dl.facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0.6rem 1.5rem; margin: 0 0 1.25rem; }
+dl.facts dt { display: flex; align-items: center; gap: 0.45rem; font: 500 var(--t-label)/1.7 var(--machine); letter-spacing: var(--track); text-transform: uppercase; color: var(--label); }
+dl.facts dd { margin: 0; }
+ul.tips, ol.steps { margin: 0 0 1rem; padding-left: 1.4rem; }
+ul.tips li, ol.steps li { margin-bottom: 0.7rem; max-width: var(--measure); }
+ol.steps li::marker { font: 500 var(--t-small) var(--machine); color: var(--sec); }
+pre.command { overflow-x: auto; padding: 0.8rem 1rem; margin: 0.6rem 0; color: var(--lit); background: #070a09; border: 1px solid var(--line); }
+pre.command code { background: none; color: inherit; padding: 0; }
+

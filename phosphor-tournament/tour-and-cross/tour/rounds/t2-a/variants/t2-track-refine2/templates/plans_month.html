@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head %}
+{% block title %}{{ month }} · {{ site_title }}{% endblock %}
+{% macro event(entry) %}
+  <div class="event{{ ' from-google' if entry.from_google }}">
+    {% if entry.idea_id %}
+      <a href="{{ url_for('web.idea', idea_id=entry.idea_id) }}">{{ entry.title }}</a>
+    {% else %}
+      {{ entry.title }}
+    {% endif %}
+    {% if entry.time %}<small>{{ entry.time }}</small>{% endif %}
+  </div>
+{% endmacro %}
+{% block content %}
+  {# Relaid, finished: the head's bracket holds the two ways of looking at the plans; where the
+     plans come from is the head's lede. The page's own count ('5 coming') stands at the buffer
+     on the list; pressing Month changes the view, not the count, so the buffer here would carry
+     the same figure once routes.plans_month passes it (it is given only these five weeks, and
+     this copy does not guess). What the grid itself shows still to come is its own figure, on
+     the month's head row beside its name, with the keys that turn it. The days ahead sit on the
+     plate, the lighter band; past weeks fold to one line, a step darker; today is the latched
+     cell with the steel cap and the lamp that means now. Each plan is a cyan ring to come, sage
+     once past. #}
+  {% set keys_html %}
+    <nav class="keys" aria-label="How to show the plans">
+      <a class="key" href="{{ url_for('web.plans') }}">{{ icon('list') }}List</a>
+      <a class="key" href="{{ url_for('web.plans_month') }}" aria-current="true">{{ icon('grid') }}Month</a>
+    </nav>
+  {% endset %}
+  {% set t0 = config.FAMILYDB_APP.clock.today() %}
+  {% set shown = namespace(coming=0, ahead=false) %}
+  {% for week in weeks %}{% for day in week if day.date >= t0 %}{% set shown.ahead = true %}{% set shown.coming = shown.coming + day.entries | length %}{% endfor %}{% endfor %}
+  {{ page_head('Plans', source_note if visitor().may('browse') else none, 'plans', keys=keys_html) }}
+
+  <section class="month-board tray">
+    <div class="month-head">
+      <h2>{{ month }}</h2>
+      {% if shown.ahead %}<p class="head-figure month-figure"><span class="n">{{ shown.coming }}</span> <span class="u">still to come in these weeks</span></p>{% endif %}
+      <p class="keys month-nav">
+        <a class="key" href="{{ url_for('web.plans_month', month=previous) }}">{{ icon('left') }}Earlier</a>
+        {% if not this_month %}<a class="key" href="{{ url_for('web.plans_month') }}">This month</a>{% endif %}
+        <a class="key" href="{{ url_for('web.plans_month', month=following) }}">Later{{ icon('right') }}</a>
+      </p>
+    </div>
+
+    {# Two drawings of the same days, and the stylesheet shows one: seven columns where there is
+       room for them, and on a phone just the days that have something on, as a list. #}
+    <table class="panel month">
+      <thead>
+        <tr>{% for name in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}<th scope="col">{{ name }}</th>{% endfor %}</tr>
+      </thead>
+      <tbody>
+        {% for week in weeks %}
+          <tr>
+            {% for day in week %}
+              <td class="{{ 'outside' if not day.current }}{{ ' today' if day.today }}">
+                <time datetime="{{ day.date.isoformat() }}">{{ day.day }}</time>{% if day.today %}<span class="now-lamp" aria-hidden="true"></span>{% endif %}
+                {% for entry in day.entries %}{{ event(entry) }}{% endfor %}
+              </td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <ol class="panel plain month-list">
+    {% for day in busy_days %}
+      <li class="{{ 'today' if day.today }}">
+        <strong>{{ day.name }}</strong>{% if day.today %} <span class="tag">today</span>{% endif %}
+        {% for entry in day.entries %}{{ event(entry) }}{% endfor %}
+      </li>
+    {% else %}
+      <li class="muted">Nothing on in {{ month }}.</li>
+    {% endfor %}
+  </ol>
+{% endblock %}

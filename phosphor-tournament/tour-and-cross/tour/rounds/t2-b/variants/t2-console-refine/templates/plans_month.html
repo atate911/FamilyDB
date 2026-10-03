@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, lamp, rail, leg %}
+{% block title %}{{ month }} · {{ site_title }}{% endblock %}
+{#- A plan on the calendar, marked as its stop is on the track: a pewter ring for one already
+    flown, the lit jewel for the next, and a numbered ring for each after it, counted from the
+    next, as on Home. `mark` is 'past', 'next', a number, or '' where no Now is in view. -#}
+{% macro event(entry, mark='') %}
+  <div class="event{{ ' from-google' if entry.from_google }}{{ ' is-past' if mark == 'past' }}{{ ' e' ~ mark if mark is number }}">
+    {% if mark == 'next' %}<span class="ring lit" aria-hidden="true"></span>
+    {%- elif mark == 'past' %}<span class="ring past" aria-hidden="true"></span>
+    {%- else %}<span class="ring" aria-hidden="true">{{ mark }}</span>{% endif %}
+    <span class="event-what">
+    {% if entry.idea_id %}
+      <a href="{{ url_for('web.idea', idea_id=entry.idea_id) }}">{{ entry.title }}</a>
+    {% else %}
+      {{ entry.title }}
+    {% endif %}
+    {% if entry.time or mark == 'next' %}<small>{% if mark == 'next' %}<span class="next-word">Next</span>{{ ' · ' if entry.time }}{% endif %}{{ entry.time or '' }}</small>{% endif %}
+    </span>
+  </div>
+{% endmacro %}
+{% block content %}
+  {% call page_head('Plans', none, 'plans') %}
+    <nav class="latch" aria-label="How to show the plans">
+      <a href="{{ url_for('web.plans') }}">{{ icon('list') }}List</a>
+      <a href="{{ url_for('web.plans_month') }}" aria-current="page">{{ icon('grid') }}Month</a>
+    </nav>
+  {% endcall %}
+
+  {# The flight plan leads the month, in Home's language, and starts at Now: a tick a day from
+     today to the grid's last day, or a week on when that is sooner, weekends hatched, the Now
+     needle lit, the live leg lit to the next plan's jewel, and each plan after it a steel-cyan
+     ring numbered from the next, as on Home, with each leg's length over its arc. Days past the
+     grid run on as a dashed axis, each day named by its own date, ending in an arrowhead: the
+     month's own Later key, under it, goes on. The page reads only the grid's weeks, so the dashed
+     days carry no plans and say so by being dashed. Plans already flown stay off the strip: they
+     are pewter rings in the grid. On a month without today the strip is the grid's. #}
+  {% set days = [] %}
+  {% for week in weeks %}{% for day in week %}{% set _ = days.append(day) %}{% endfor %}{% endfor %}
+  {% set ti = namespace(v=-1) %}
+  {% for day in days %}{% if day.today %}{% set ti.v = loop.index0 %}{% endif %}{% endfor %}
+  {% set stops = [] %}
+  {% for day in days %}{% set i = loop.index0 %}{% for entry in day.entries %}{% set _ = stops.append({'i': i, 'day': day, 'entry': entry, 'n': stops | length + 1}) %}{% endfor %}{% endfor %}
+  {% set nx = namespace(n=0, day=none, entry=none) %}
+  {% if ti.v >= 0 %}{% for s in stops if s.i >= ti.v and not nx.n %}{% set nx.n = s.n %}{% set nx.day = s.day %}{% set nx.entry = s.entry %}{% endfor %}{% endif %}
+  {% set marks = {} %}
+  {% for s in stops %}
+    {% set _ = marks.update({s.n: ('past' if ti.v >= 0 and s.i < ti.v else ('next' if s.n == nx.n else ((s.n - nx.n) if nx.n else s.n)))}) %}
+  {% endfor %}
+  {% set today_day = (days | selectattr('today') | first) if ti.v >= 0 else none %}
+  {% set cells = [] %}
+  {% if today_day %}{% set _ = cells.append({'label': 'Today', 'value': today_day.date.strftime('%a %d %b').replace(' 0', ' '), 'href': '#today', 'tone': 'clock'}) %}{% endif %}
+  {% if nx.entry %}{% set _ = cells.append({'label': 'Next up', 'value': nx.entry.title ~ (', ' ~ nx.entry.relative if nx.entry.relative else ''), 'href': '#month', 'words': true}) %}{% endif %}
+  {% set _ = cells.append({'label': 'On this page', 'value': stops | length, 'unit': 'plan' if stops | length == 1 else 'plans', 'href': '#month'}) %}
+  {{ rail(cells, 'Plans at a glance', 'plans-rail') }}
+
+  {# The strip's days: from today (or the grid's first day) to the end. #}
+  {% set d0 = ti.v if ti.v >= 0 else 0 %}
+  {% set grid_last = days | length - 1 %}
+  {% set span = ([grid_last - d0, 6] | max) + 1 if ti.v >= 0 else days | length %}
+  {% set W = 94 / span %}
+  {% set base_y = 66 %}
+  <section class="bay month-bay" id="month" aria-label="{{ month }}">
+    <figure class="track-fig month-fig">
+      <svg class="track month-track" width="100%" height="96" focusable="false" aria-hidden="true">
+        <defs><clipPath id="above-m"><rect x="0" y="0" width="100%" height="{{ base_y }}"/></clipPath>
+          <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line class="hatch-line" x1="0" y1="0" x2="0" y2="6"/></pattern>
+          <linearGradient id="live-leg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" class="leg-lit"/><stop offset="1" class="leg-lit-2"/></linearGradient>
+          <radialGradient id="jewel" cx="0.38" cy="0.34" r="0.66"><stop offset="0.14" class="jewel-hot"/><stop offset="0.44" class="jewel-mid"/><stop offset="1" class="jewel-deep"/></radialGradient>
+        </defs>
+        {% for k in range(span) %}
+          {% set i = d0 + k %}
+          {% set x = 2 + k * W %}
+          {% set date = days[i].date if i <= grid_last else none %}
+          {% set wd = date.weekday() if date else (days[grid_last].date.weekday() + (i - grid_last)) % 7 %}
+          {% if wd >= 5 %}<rect class="weekend" x="{{ '%.3f' | format(x) }}%" y="12" width="{{ '%.3f' | format(W) }}%" height="{{ base_y - 12 }}"/>{% endif %}
+          {% if wd == 0 and k > 0 %}<line class="grid" x1="{{ '%.3f' | format(x) }}%" y1="12" x2="{{ '%.3f' | format(x) }}%" y2="{{ base_y }}"/>{% endif %}
+        {% endfor %}
+        {% set in_grid = [grid_last - d0 + 1, span] | min %}
+        <line class="axis" x1="2%" y1="{{ base_y }}" x2="{{ '%.3f' | format(2 + in_grid * W) }}%" y2="{{ base_y }}"/>
+        {% if in_grid < span %}<line class="axis beyond" x1="{{ '%.3f' | format(2 + in_grid * W) }}%" y1="{{ base_y }}" x2="96%" y2="{{ base_y }}"/>
+          <svg class="axis-end" x="96%" y="{{ base_y - 5 }}" width="10" height="10" overflow="visible"><path d="M0 0L8 5L0 10"/></svg>{% endif %}
+        {% for k in range(span + 1) %}
+          {% set x = '%.3f' | format(2 + k * W) %}
+          <line class="tick{{ ' beyond' if k > in_grid }}" x1="{{ x }}%" y1="{{ base_y }}" x2="{{ x }}%" y2="{{ base_y + 5 }}"/>
+        {% endfor %}
+        {% for k in range(span) %}
+          {% set i = d0 + k %}
+          {% set cx = '%.3f' | format(2 + (k + 0.5) * W) %}
+          {% if i <= grid_last %}
+            {% set day = days[i] %}
+            {% if day.today %}<rect class="dnum-key" x="{{ cx }}%" y="{{ base_y + 9 }}" width="54" height="19" rx="2" transform="translate(-27 0)"/>{% endif %}
+            <text class="dnum{{ ' out' if not day.current }}{{ ' today' if day.today }}" x="{{ cx }}%" y="{{ base_y + 22 }}" text-anchor="middle">{{ day.date.strftime('%a') }} {{ day.day }}</text>
+          {% else %}
+            {% set last = days[grid_last].date %}
+            {% set on = last.fromordinal(last.toordinal() + i - grid_last) %}
+            <text class="dnum out" x="{{ cx }}%" y="{{ base_y + 22 }}" text-anchor="middle">{{ on.strftime('%a') }} {{ on.day }}</text>
+          {% endif %}
+        {% endfor %}
+        {% if ti.v >= 0 %}<line class="now" x1="2%" y1="8" x2="2%" y2="{{ base_y + 1 }}"/>
+          <text class="scale now-label" x="2%" y="{{ base_y + 22 }}" dx="-2" text-anchor="end">Now</text>{% endif %}
+        {% set t = namespace(x=2.0, i=d0, stack=0, first=true) %}
+        {% set legs = [] %}
+        {% for s in stops if s.i >= d0 %}
+          {% set k = s.i - d0 %}
+          {% set x = 2 + (k + 0.5) * W %}
+          {% set mark = marks[s.n] %}
+          {% if s.i != t.i or t.first %}
+            {% set t.stack = 0 %}
+            {% set gap = x - t.x %}
+            {% if mark == 'next' %}
+              {% if gap > 0.4 %}<ellipse class="path live" clip-path="url(#above-m)" cx="{{ '%.3f' | format((t.x + x) / 2) }}%" cy="{{ base_y }}" rx="{{ '%.3f' | format(gap / 2) }}%" ry="{{ [8 + gap * 0.8, 24] | min | round(1) }}"/>{% endif %}
+            {% elif not t.first %}
+              {% set ry = [12 + gap * 1.4, 42] | min %}
+              <ellipse class="path" clip-path="url(#above-m)" cx="{{ '%.3f' | format((t.x + x) / 2) }}%" cy="{{ base_y }}" rx="{{ '%.3f' | format(gap / 2) }}%" ry="{{ ry | round(1) }}"/>
+              {% set _ = legs.append({'x': (t.x + x) / 2, 'y': base_y - ry - 6, 'n': s.i - t.i}) %}
+            {% endif %}
+          {% else %}
+            {% set t.stack = t.stack + 1 %}
+          {% endif %}
+          {% set y = base_y - t.stack * 24 %}
+          {% if mark == 'next' %}
+            <g class="stop next">
+              <circle class="jewel-halo" cx="{{ '%.3f' | format(x) }}%" cy="{{ y }}" r="12"/>
+              <circle class="jewel-bezel" cx="{{ '%.3f' | format(x) }}%" cy="{{ y }}" r="8.5"/>
+              <circle class="jewel" cx="{{ '%.3f' | format(x) }}%" cy="{{ y }}" r="7"/>
+              <text class="next-tag" x="{{ '%.3f' | format(x) }}%" y="{{ y - 18 }}" text-anchor="middle">Next</text>
+            </g>
+          {% else %}
+            <g class="stop{{ ' s' ~ mark if mark is number }}">
+              <circle cx="{{ '%.3f' | format(x) }}%" cy="{{ y }}" r="10.5"/>
+              <text class="stop-n" x="{{ '%.3f' | format(x) }}%" y="{{ y + 4.2 }}" text-anchor="middle">{{ mark }}</text>
+            </g>
+          {% endif %}
+          {% set t.x = x %}{% set t.i = s.i %}{% set t.first = false %}
+        {% endfor %}
+        {% for m in legs %}
+          <text class="leg" x="{{ '%.3f' | format(m.x) }}%" y="{{ m.y }}" text-anchor="middle">{{ leg(m.n) }}</text>
+        {% endfor %}
+      </svg>
+    </figure>
+    <div class="bay-body">
+      <div class="month-head">
+        <h2>{{ month }}</h2>
+        <p class="month-nav">
+          <a class="button secondary" href="{{ url_for('web.plans_month', month=previous) }}">{{ icon('left') }}Earlier</a>
+          {% if not this_month %}<a class="button secondary" href="{{ url_for('web.plans_month') }}">This month</a>{% endif %}
+          <a class="button secondary" href="{{ url_for('web.plans_month', month=following) }}">Later{{ icon('right') }}</a>
+        </p>
+      </div>
+      {% if visitor().may('browse') %}<p class="muted source source-{{ source }}">{{ icon('plug') }}{{ source_note }}</p>{% endif %}
+
+      <table class="month">
+        <thead>
+          <tr>{% for name in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}<th scope="col">{{ name }}</th>{% endfor %}</tr>
+        </thead>
+        <tbody>
+          {% for week in weeks %}
+            <tr>
+              {% for day in week %}
+                <td class="{{ 'outside' if not day.current }}{{ ' past' if today_day and day.date < today_day.date }}{{ ' today' if day.today }}"{% if day.today %} id="today"{% endif %}>
+                  <time datetime="{{ day.date.isoformat() }}">{{ day.day }}</time>
+                  {% for entry in day.entries %}{{ event(entry, marks[stops | selectattr('entry', 'equalto', entry) | map(attribute='n') | first]) }}{% endfor %}
+                </td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <ol class="plain month-list">
+        {% for day in busy_days %}
+          <li class="{{ 'today' if day.today }}">
+            <strong>{{ day.name }}</strong>{% if day.today %} <span class="tag">today</span>{% endif %}
+            {% for entry in day.entries %}{{ event(entry, marks[stops | selectattr('entry', 'equalto', entry) | map(attribute='n') | first]) }}{% endfor %}
+          </li>
+        {% else %}
+          <li class="muted">Nothing on in {{ month }}.</li>
+        {% endfor %}
+      </ol>
+    </div>
+  </section>
+{% endblock %}

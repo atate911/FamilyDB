@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head %}
+{% block title %}{{ month }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-month{% endblock %}
+{# A plan in a day's cell, set as a timetable sets a departure: its time first, in the condensed
+   figures of every time column, then where to on one line, cut short with its whole name in its
+   title. The whole of it is the way to the idea, at least 44px tall. #}
+{% macro event(entry) %}
+  <div class="event{{ ' from-google' if entry.from_google }}">
+    {%- if entry.idea_id %}<a class="event-go" href="{{ url_for('web.idea', idea_id=entry.idea_id) }}" title="{{ entry.title }}">
+    {%- else %}<span class="event-go" title="{{ entry.title }}">{% endif -%}
+      {%- if entry.time %}<span class="event-at">{{ entry.time }}</span>{% endif -%}
+      <span class="event-what">{{ entry.title }}</span>
+    {%- if entry.idea_id %}</a>{% else %}</span>{% endif -%}
+  </div>
+{% endmacro %}
+{% block content %}
+  {# The head counts what the grid shows, where it falls (the days of the month, and the days of
+     the months either side that complete its weeks), and when the next one leaves. A plan over
+     several days counts once. Counted here from the grid the view draws. #}
+  {% set t0 = config.FAMILYDB_APP.clock.today() %}
+  {% set tally = namespace(before=0, now=0, after=0, next=none, day=none, seen=[]) %}
+  {% set first_day = weeks[0][0].date %}
+  {% for week in weeks %}{% for day in week %}
+    {% for entry in day.entries %}
+      {% set key = (entry.id or entry.title) ~ '@' ~ entry.start_value %}
+      {% if key not in tally.seen %}
+        {% set tally.seen = tally.seen + [key] %}
+        {% if day.current %}{% set tally.now = tally.now + 1 %}
+        {% elif day.date < weeks[1][0].date %}{% set tally.before = tally.before + 1 %}
+        {% else %}{% set tally.after = tally.after + 1 %}{% endif %}
+      {% endif %}
+    {% endfor %}
+    {% if day.entries and tally.next is none and day.date >= t0 %}{% set tally.next = day.entries[0] %}{% set tally.day = day.date %}{% endif %}
+  {% endfor %}{% endfor %}
+  {% set parts = [] %}
+  {% if tally.before %}{% set parts = parts + [tally.before ~ ' in late ' ~ first_day.strftime('%B')] %}{% endif %}
+  {% set parts = parts + [tally.now ~ ' in ' ~ month.split(' ')[0]] %}
+  {% if tally.after %}{% set parts = parts + [tally.after ~ ' in early ' ~ weeks[-1][-1].date.strftime('%B')] %}{% endif %}
+  {% set lede = parts | join(', ') %}
+  {% if tally.next %}
+    {% set away = tally.day.toordinal() - t0.toordinal() %}
+    {% set on = 'today' if away == 0 else ('tomorrow' if away == 1 else tally.day.strftime('%a') ~ ' ' ~ tally.day.day ~ ' ' ~ tally.day.strftime('%b')) %}
+    {% set lede = lede ~ ' · next up ' ~ on ~ (' at ' ~ tally.next.time if tally.next.time else '') %}
+  {% endif %}
+  {{ page_head('Plans', lede, 'plans') }}
+  {% if visitor().may('browse') %}<p class="source source-{{ source }}">{{ source_note }}</p>{% endif %}
+
+  {# One row of controls: how to show them on the left; which month, and the way to the one before
+     and after, on the right, the month named between its arrows as a pager names its page. #}
+  <div class="plan-controls">
+    <nav class="tabs" aria-label="How to show the plans">
+      <a href="{{ url_for('web.plans') }}">{{ icon('list') }}List</a>
+      <a href="{{ url_for('web.plans_month') }}" aria-current="page">{{ icon('grid') }}Month</a>
+    </nav>
+    <div class="month-head">
+      <a class="button ghost" href="{{ url_for('web.plans_month', month=previous) }}">{{ icon('left') }}Earlier</a>
+      <h2>{{ month }}</h2>
+      <a class="button ghost" href="{{ url_for('web.plans_month', month=following) }}">Later{{ icon('right') }}</a>
+      {% if not this_month %}<a class="button ghost" href="{{ url_for('web.plans_month') }}">This month</a>{% endif %}
+    </div>
+  </div>
+
+  {# Two drawings of the same days, and the stylesheet shows one: seven columns where there is
+     room for them, and on a phone just the days that have something on, as a list. A week that
+     has gone by is a departed service: it folds to a strip on the dark, its plans a line each,
+     and gives its height to the weeks still to come. This week never folds. #}
+  {# How many weeks are still to come: when fewer than three, they take the height the departed
+     strips gave up. The month is named where it changes ("1 Oct"), and the table ends on the way
+     forward, not on the dark. #}
+  {% set ahead = namespace(n=0) %}
+  {% for week in weeks %}{% if week[-1].date >= t0 %}{% set ahead.n = ahead.n + 1 %}{% endif %}{% endfor %}
+  {% set last = weeks[-1][-1] %}
+  <table class="panel month{{ ' few-ahead' if ahead.n < 3 }}">
+    <thead>
+      <tr>{% for name in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}<th scope="col">{{ name }}</th>{% endfor %}</tr>
+    </thead>
+    <tbody>
+      {% for week in weeks %}
+        {% set departed = week[-1].date < t0 %}
+        <tr class="{{ 'departed' if departed else 'ahead' }}">
+          {% for day in week %}
+            <td class="{{ 'outside' if not day.current }}{{ ' today' if day.today }}{{ ' gone' if day.date < t0 }}">
+              <time datetime="{{ day.date.isoformat() }}">{{ day.day }}{% if not day.current and day.day == 1 %} <span class="month-turn">{{ day.date.strftime('%b') }}</span>{% endif %}</time>
+              {%- if day.today %}<span class="today-word">Today</span>{% endif %}
+              {% for entry in day.entries %}{{ event(entry) }}{% endfor %}
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr><td colspan="7"><a class="month-on" href="{{ url_for('web.plans_month', month=following) }}"><span>{{ (last.date.strftime('%B') ~ ' continues') if not last.current else 'The next month' }}</span><span class="month-on-go">Later{{ icon('right') }}</span></a></td></tr>
+    </tfoot>
+  </table>
+
+  {# On a phone, the busy days of every week the grid shows (so tomorrow's plan in the next month's
+     first days is not left out), the departed ones dimmed. #}
+  {% set listed = namespace(n=0) %}
+  <ol class="panel plain month-list">
+    {% for week in weeks %}{% for day in week %}{% if day.entries %}
+      {% set listed.n = listed.n + 1 %}
+      <li class="{{ 'today' if day.today }}{{ ' departed' if day.date < t0 }}">
+        <strong>{{ day.date.strftime('%A') }} {{ day.date.day }} {{ day.date.strftime('%B') }}</strong>{% if day.today %} <span class="tag">today</span>{% endif %}
+        {% for entry in day.entries %}{{ event(entry) }}{% endfor %}
+      </li>
+    {% endif %}{% endfor %}{% endfor %}
+    {% if not listed.n %}<li class="muted">Nothing on in {{ month }}.</li>{% endif %}
+  </ol>
+{% endblock %}

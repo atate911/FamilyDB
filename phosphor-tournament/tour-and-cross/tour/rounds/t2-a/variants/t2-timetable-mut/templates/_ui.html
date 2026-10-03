@@ -1,0 +1,367 @@
+{# The page's small parts, shared by every template: `{% from "_ui.html" import icon %}`.
+   Icons are Lucide's, with the page's own mark, gathered into one sprite (static/icons.svg) by
+   scripts/icons.py; they take the colour of the words they sit in. An icon beside words is
+   decoration and hidden from a screen reader; an icon on its own gets a label. #}
+
+{% set KIND_ICONS = {
+  'restaurant': 'restaurant',
+  'activity': 'activity',
+  'outing': 'outing',
+  'day_trip': 'day_trip',
+  'trip': 'trip',
+  'show': 'show',
+  'event': 'event',
+  'seasonal': 'seasonal',
+} %}
+
+{% macro icon(name, label=none, cls='') -%}
+  <svg class="icon{{ ' ' ~ cls if cls }}" focusable="false"
+    {%- if label %} role="img" aria-label="{{ label }}"{% else %} aria-hidden="true"{% endif %}>
+    <use href="{{ url_for('static', filename='icons.svg') }}#i-{{ name }}"></use></svg>
+{%- endmacro %}
+
+{# The badge for a kind of idea: its pictogram redrawn inside a small ring, ring, tint and
+   drawing all in the kind's own colour (the page sets it). One the family made up gets a spark. #}
+{% macro kind_icon(kind) -%}
+  {{ icon('kb-' ~ KIND_ICONS.get((kind or '') | lower | replace(' ', '_'), 'spark'), cls='kind-badge') }}
+{%- endmacro %}
+
+{# The kind of an idea: its pictogram and its name, both in the kind's own colour, as a line
+   printed on a timetable names a service. No tile: the colour is in the drawing, not a fill. #}
+{% macro kind_key(kind) -%}
+  {%- set key = (kind or '') | lower | replace(' ', '_') -%}{{ key if key in KIND_ICONS else 'other' }}
+{%- endmacro %}
+{% macro kind_label(kind) -%}
+  <span class="kind kind-{{ kind_key(kind) }}"><span class="kind-tile">{{ kind_icon(kind) }}</span>{{ kind | capitalize }}</span>
+{%- endmacro %}
+
+{# The numbered lines: each place a day is spent keeps one number, on its badge in the bar. A page
+   outside them (Status, Settings, the family's) is a facility. #}
+{% set LINES = {'chat.show': 1, 'web.ideas': 2, 'web.idea': 2, 'web.new_idea': 2, 'web.edit_idea': 2,
+                'web.restaurants': 2, 'web.plans': 3, 'web.plans_month': 3, 'web.tasks': 4, 'web.wishes': 5} %}
+
+{# The survey's emblems: each section of the house drawn as an engineer draws a part, inside the
+   ring of a detail circle, in its own colour (a line's enamel, a facility's steel), with its
+   axis, one dimension or one callout in the draughtsman's steel. A glyph without a drawing of its
+   own is set inside the same ring. Pictures only; the title beside it says the same in words. #}
+{% set EMBLEMS = ['idea', 'plans', 'todo', 'gift', 'heart', 'family', 'status', 'settings', 'home',
+                  'mark', 'coin', 'bell', 'search', 'plug', 'key', 'clock', 'user', 'chat'] %}
+{% macro emblem(glyph, cls='', mark=none) -%}
+  <span class="emblem{{ ' ' ~ cls if cls }}{{ ' drawn' if glyph in EMBLEMS else ' framed' }}" aria-hidden="true">
+    {%- if glyph in EMBLEMS -%}
+      <svg class="emblem-art" focusable="false"><use href="{{ url_for('static', filename='icons.svg') }}#i-em-{{ glyph }}"></use></svg>
+    {%- else -%}
+      <svg class="emblem-art" focusable="false"><use href="{{ url_for('static', filename='icons.svg') }}#i-em-frame"></use></svg>
+      {%- if glyph == 'presence' %}{{ presence('emblem-screen') }}{% else %}{{ icon(glyph) }}{% endif -%}
+    {%- endif -%}
+    {%- if mark %}<span class="emblem-mark">{{ icon(mark) }}</span>{% endif -%}
+  </span>
+{%- endmacro %}
+{# A page on a line whose own glyph has no drawing (a new idea, an edit) wears its line's emblem
+   with the glyph in a small balloon on its ring, as a drawing marks a revision. #}
+{% set LINE_EMBLEMS = {1: 'chat', 2: 'idea', 3: 'plans', 4: 'todo', 5: 'gift'} %}
+
+{# The top of a page, set on the page rather than on a plate: its emblem on the left, hung on the
+   head's rule by a leader as a detail is called out on a drawing; where it sits (for a page inside
+   another), the title, a line on what it is for, and the one thing to do here on the right, on the
+   title's baseline. One enamel rule over a steel hairline closes it, its ends ticked as a
+   dimension's are. `crumbs` is a list of (label, href). #}
+{% macro page_head(title, lede=none, glyph=none, crumbs=none) -%}
+  {% set num = LINES.get(request.endpoint) %}
+  <header class="page-head{{ ' on-line' if num else ' facility' }}{{ ' has-emblem' if glyph }}">
+    <div class="page-title">
+      {% if glyph and num and glyph not in EMBLEMS and glyph != 'presence' %}{{ emblem(LINE_EMBLEMS[num], 'title-emblem', glyph) }}
+      {%- elif glyph %}{{ emblem(glyph, 'title-emblem') }}{% endif %}
+      <div class="page-words">
+        {% if crumbs %}
+          <nav class="crumbs" aria-label="Breadcrumb">
+            {% for label, href in crumbs %}<a href="{{ href }}">{{ label }}</a><span aria-hidden="true">/</span>{% endfor %}
+          </nav>
+        {% endif %}
+        <div class="title-row"><h1>{{ title }}</h1></div>
+        {% if lede %}<p class="lede">{{ lede }}</p>{% endif %}
+      </div>
+    </div>
+    {%- if caller is defined %}
+      <div class="page-actions">{{ caller() }}</div>
+    {%- endif %}
+    <span class="head-dim" aria-hidden="true"></span>
+  </header>
+{%- endmacro %}
+
+{# A section's balloon, before its sign: the section's pictogram in a small ring, as a drawing
+   numbers a part, here by its picture rather than a number. #}
+{% macro balloon(glyph) -%}
+  <span class="balloon" aria-hidden="true">{{ icon(glyph) }}</span>
+{%- endmacro %}
+
+{# The scale under a green screen: what the screen shows as a picture, measured out along a steel
+   line as a surveyor draws a line's chainage. Three of them, one drawing: days (Home's departures
+   and the dead end's empty scope), minutes by road (the Ideas map) and dollars (the day's spend).
+   Pictures of what the page says in words elsewhere, so hidden from a screen reader. #}
+
+{# Four weeks from today, weekends hatched, each coming plan a stop at its day (the next one
+   filled), and one dimension: how far the coming plans run. `entries` are the agenda's rows. #}
+{% macro weeks_scale(entries, today, fig='weeks', empty='nothing in the next four weeks') -%}
+  {% set span = 28 %}
+  {% set dow = today.weekday() %}
+  {% set ns = namespace(last=-9, row=0, far=0, count=0, later=0) %}
+  <figure class="scale scale-weeks" aria-hidden="true">
+    <svg class="scale-art" width="100%" height="80" focusable="false">
+      <defs>
+        <pattern id="{{ fig }}-hatch" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <path class="scale-hatch" d="M0 0V4"/>
+        </pattern>
+        <marker id="{{ fig }}-arrow" viewBox="0 0 9 9" refX="8.4" refY="4.5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+          <path class="scale-arrow" d="M1.2 1.4 8.4 4.5 1.2 7.6"/>
+        </marker>
+      </defs>
+      {% for i in range(span + 1) %}{% if (dow + i) % 7 >= 5 %}
+        {% set lo = [i - 0.5, 0] | max %}{% set hi = [i + 0.5, span] | min %}
+        <rect class="scale-weekend" x="{{ '%.3f' | format(lo / span * 100) }}%" y="25" width="{{ '%.3f' | format((hi - lo) / span * 100) }}%" height="18" fill="url(#{{ fig }}-hatch)"/>
+      {% endif %}{% endfor %}
+      <line class="scale-axis" x1="0%" y1="34" x2="100%" y2="34"/>
+      {% for i in range(1, span + 1) %}
+        {% set x = '%.3f' | format(i / span * 100) %}
+        {% if i % 7 == 0 %}
+          <line class="scale-tick major" x1="{{ x }}%" y1="34" x2="{{ x }}%" y2="42"/>
+          <text class="scale-num" x="{{ x }}%" y="55" text-anchor="{{ 'end' if i == span else 'middle' }}">{{ i // 7 }} wk</text>
+        {% else %}
+          <line class="scale-tick" x1="{{ x }}%" y1="34" x2="{{ x }}%" y2="37.5"/>
+        {% endif %}
+      {% endfor %}
+      {% for entry in entries %}
+        {% set d = today.fromisoformat((entry.start_value or '')[:10]) if entry.start_value else today %}
+        {% set away = [d.toordinal() - today.toordinal(), 0] | max %}
+        {% set ns.count = ns.count + 1 %}
+        {% if away > span %}{% set ns.later = ns.later + 1 %}{% set away = span %}{% endif %}
+        {% set ns.far = [ns.far, away] | max %}
+        {% set x = '%.3f' | format(away / span * 100) %}
+        {% if away - ns.last < 4 %}{% set ns.row = 1 - ns.row %}{% else %}{% set ns.row = 0 %}{% endif %}
+        {% set ns.last = away %}
+        <g class="scale-stop{{ ' next' if loop.first }}">
+          {% if ns.row %}<line class="scale-leader" x1="{{ x }}%" y1="28" x2="{{ x }}%" y2="12"/>{% endif %}
+          <text class="scale-day" x="{{ x }}%" y="{{ 9 if ns.row else 23 }}" text-anchor="middle">{{ d.strftime('%a') }} {{ d.day }}</text>
+          <circle class="scale-mark" cx="{{ x }}%" cy="34" r="{{ 5 if loop.first else 4 }}"/>
+        </g>
+      {% endfor %}
+      <circle class="scale-now" cx="0%" cy="34" r="4"/>
+      <text class="scale-num now" x="0%" y="55" text-anchor="middle">now</text>
+      {% if ns.count %}
+        {% set x2 = '%.3f' | format(ns.far / span * 100) %}
+        <g class="scale-dim">
+          <line x1="0%" y1="60" x2="0%" y2="74"/><line x1="{{ x2 }}%" y1="41" x2="{{ x2 }}%" y2="74"/>
+          <line class="dim-line" x1="0%" y1="70" x2="{{ x2 }}%" y2="70" marker-start="url(#{{ fig }}-arrow)" marker-end="url(#{{ fig }}-arrow)"/>
+        </g>
+        <text class="scale-dim-text" x="{{ '%.3f' | format(ns.far / span * 50) }}%" y="74" text-anchor="middle">{{ ns.count }} plan{{ '' if ns.count == 1 else 's' }} in {{ ns.far }} day{{ '' if ns.far == 1 else 's' }}{{ ' and later' if ns.later }}</text>
+      {% else %}
+        <text class="scale-dim-text" x="50%" y="74" text-anchor="middle">{{ empty }}</text>
+      {% endif %}
+    </svg>
+  </figure>
+{%- endmacro %}
+
+{# The Ideas map's scale: from home out to the two-hour ring, spaced as the map spaces its rings
+   (a quarter of an hour, three quarters, two hours), then broken, as a drawing breaks a line too
+   long to show, for anything further. Each listed place is a tick at its drive, the nearest a
+   filled stop; one dimension, how far out they reach. `scope` is views.places_radar's. #}
+{% macro places_scale(scope, fig='places') -%}
+  {% set rings = [(15, 33.0), (30, 49.5), (45, 66.0), (60, 71.2), (90, 81.6), (120, 92.0)] %}
+  {% set ns = namespace(far=0) %}
+  <figure class="scale scale-places" aria-hidden="true">
+    <svg class="scale-art" width="100%" height="76" focusable="false">
+      <defs>
+        <marker id="{{ fig }}-arrow" viewBox="0 0 9 9" refX="8.4" refY="4.5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+          <path class="scale-arrow" d="M1.2 1.4 8.4 4.5 1.2 7.6"/>
+        </marker>
+      </defs>
+      <line class="scale-axis" x1="0%" y1="32" x2="90.5%" y2="32"/>
+      <line class="scale-axis" x1="92.5%" y1="32" x2="100%" y2="32"/>
+      <svg x="90.5%" y="0" overflow="visible"><path class="scale-break" d="M-2.5 38 2.5 26"/></svg>
+      <svg x="92.5%" y="0" overflow="visible"><path class="scale-break" d="M-2.5 38 2.5 26"/></svg>
+      {% for minutes, r in rings %}
+        {% set x = '%.3f' | format((r - 8) / 84 * 88) %}
+        {% if minutes in (15, 45, 120) %}
+          <line class="scale-tick major" x1="{{ x }}%" y1="32" x2="{{ x }}%" y2="40"/>
+          <text class="scale-num" x="{{ x }}%" y="53" text-anchor="middle">{{ '2 h' if minutes == 120 else minutes ~ ' min' }}</text>
+        {% else %}
+          <line class="scale-tick" x1="{{ x }}%" y1="32" x2="{{ x }}%" y2="36"/>
+        {% endif %}
+      {% endfor %}
+      {% for b in scope.blips | reverse %}
+        {% set r = ((b.x - 100) ** 2 + (b.y - 100) ** 2) ** 0.5 %}
+        {% set p = (0.96 if r > 91.8 else [(r - 8) / 84, 0] | max * 0.88) %}
+        {% set ns.far = [ns.far, p] | max %}
+        <line class="scale-rug" x1="{{ '%.3f' | format(p * 100) }}%" y1="21" x2="{{ '%.3f' | format(p * 100) }}%" y2="32"/>
+        {% if b.next %}<circle class="scale-mark next" cx="{{ '%.3f' | format(p * 100) }}%" cy="32" r="4.5"/>{% endif %}
+      {% endfor %}
+      <circle class="scale-home" cx="0%" cy="32" r="3.5"/>
+      <text class="scale-num" x="0%" y="53" text-anchor="middle">home</text>
+      {% set far = scope.furthest.away if scope.furthest else scope.nearest.away %}
+      {% set bits = far.rsplit(' ', 1) %}
+      {% if bits | length == 2 and bits[1] in ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] %}{% set far = bits[0] %}{% endif %}
+      {% set x2 = '%.3f' | format(ns.far * 100) %}
+      <g class="scale-dim">
+        <line x1="0%" y1="58" x2="0%" y2="72"/><line x1="{{ x2 }}%" y1="{{ 58 if ns.far > 0.93 else 38 }}" x2="{{ x2 }}%" y2="72"/>
+        <line class="dim-line" x1="0%" y1="68" x2="{{ x2 }}%" y2="68" marker-start="url(#{{ fig }}-arrow)" marker-end="url(#{{ fig }}-arrow)"/>
+      </g>
+      <text class="scale-dim-text" x="{{ '%.3f' | format(ns.far * 50) }}%" y="72" text-anchor="middle">{{ 'all ' ~ scope.count ~ ' within ' if scope.count > 1 else '' }}{{ far }} by road</text>
+    </svg>
+  </figure>
+{%- endmacro %}
+
+{# The day's spend measured against its limit: a steel line from nothing to the limit, the amber
+   mark where the screen turns amber, today's spend a pointer, and one dimension: what is left
+   today. #}
+{% macro spend_scale(spent, limit, fig='spend') -%}
+  {% set at = [[spent / limit, 0] | max, 1] | min %}
+  <figure class="scale scale-spend" aria-hidden="true">
+    <svg class="scale-art" width="100%" height="78" focusable="false">
+      <defs>
+        <marker id="{{ fig }}-arrow" viewBox="0 0 9 9" refX="8.4" refY="4.5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+          <path class="scale-arrow" d="M1.2 1.4 8.4 4.5 1.2 7.6"/>
+        </marker>
+      </defs>
+      <line class="scale-axis" x1="0%" y1="34" x2="100%" y2="34"/>
+      {% for q in range(1, 20) %}
+        {% set x = '%.3f' | format(q * 5) %}
+        <line class="scale-tick{{ ' major' if q % 10 == 0 }}" x1="{{ x }}%" y1="34" x2="{{ x }}%" y2="{{ 42 if q % 10 == 0 else 37.5 }}"/>
+      {% endfor %}
+      <line class="scale-tick major" x1="100%" y1="26" x2="100%" y2="42"/>
+      <line class="scale-tick near" x1="75%" y1="28" x2="75%" y2="40"/>
+      <text class="scale-num" x="0%" y="55" text-anchor="middle">$0</text>
+      <text class="scale-num" x="50%" y="55" text-anchor="middle">${{ '%.2f' | format(limit / 2) }}</text>
+      <text class="scale-num" x="100%" y="55" text-anchor="end">${{ '%.2f' | format(limit) }} limit</text>
+      <svg x="{{ '%.3f' | format(at * 100) }}%" y="0" overflow="visible">
+        <path class="scale-pointer" d="M-5.5 21h11L0 31z"/>
+        <text class="scale-day" x="0" y="14" text-anchor="{{ 'start' if at < 0.15 else ('end' if at > 0.85 else 'middle') }}" dx="{{ -6 if at < 0.15 else 0 }}">today ${{ '%.2f' | format(spent) }}</text>
+      </svg>
+      {% set x1 = '%.3f' | format(at * 100) %}
+      <g class="scale-dim">
+        <line x1="{{ x1 }}%" y1="{{ 60 if at < 0.15 else 38 }}" x2="{{ x1 }}%" y2="74"/><line x1="100%" y1="60" x2="100%" y2="74"/>
+        {% if at < 1 %}<line class="dim-line" x1="{{ x1 }}%" y1="70" x2="100%" y2="70" marker-start="url(#{{ fig }}-arrow)" marker-end="url(#{{ fig }}-arrow)"/>{% endif %}
+      </g>
+      <text class="scale-dim-text" x="{{ '%.3f' | format((at + 1) * 50) }}%" y="74" text-anchor="middle">{% if at < 1 %}${{ '%.2f' | format([limit - spent, 0] | max) }} left today{% else %}nothing left today{% endif %}</text>
+    </svg>
+  </figure>
+{%- endmacro %}
+
+{# Where she is on the page: never a face or a figure, only her screen, small and full of words
+   nobody can read, as if busy. The glyphs are the stylesheet's and mean nothing. `variant` (0 to
+   3) shows another part of the same screen, so her lines down a thread do not all look alike. #}
+{% macro presence(cls='avatar', variant=0) -%}
+  <span class="{{ cls }} presence v{{ variant }}" aria-hidden="true"><span class="presence-glass"></span></span>
+{%- endmacro %}
+
+{# One line of the conversation, wherever it is shown, as a stop on her line. The line runs down
+   the middle of the chat: each stop's mark sits on it (her screen, or the family member's
+   initial on a copper ring), her words hang on its left and the family's on its right, and the
+   time is printed on the other side of the line, facing it, so time, mark and words read across
+   as one line of a timetable. The day is given once, above the stops, where it changes (the
+   chat page prints it); `brief` (Home) prints the day with the time instead. Mark, side, name
+   and edge tell hers from the family's, never colour alone. `anchor` is the id the newest line
+   carries. Goes in an <ol class="thread">. #}
+{% macro chat_line(line, anchor=none, brief=false) -%}
+  {% set parts = (line.when or '').split(', ', 1) %}
+  <li class="stop {{ 'said-bot' if line.from_bot else 'said-them' }}"{% if anchor %} id="{{ anchor }}"{% endif %}>
+    {% if line.from_bot %}{{ presence(variant=(line.id or 0) % 4) }}{% else %}<span class="avatar" aria-hidden="true">{{ line.who[:1] | upper }}</span>{% endif %}
+    <div class="bubble">
+      <div class="said-by">
+        <strong>{{ line.who }}</strong>
+        {% if line.trouble %}<span class="tag warn">{{ line.trouble }}</span>{% endif %}
+      </div>
+      <div class="said-text">{{ line.text }}</div>
+      {% if line.did %}
+        <div class="did">used {{ line.did | join(', ') }}</div>
+      {% endif %}
+    </div>
+    {% if line.when %}<p class="said-at">
+      {%- if brief or parts | length != 2 %}<time>{{ line.when }}</time>
+      {%- else %}<span class="sr">{{ parts[0] }}, </span><time>{{ parts[1] }}</time>{% endif %}</p>{% endif %}
+  </li>
+{%- endmacro %}
+
+{# The last line of the thread while the newest message waits: her screen and name, and a line
+   in the page's own words (nobody is asked to write it). While she is thinking the glyphs on her
+   screen fall; nobody is shown typing. A `call` block adds a way on, as Home's link to the chat. #}
+{% macro waiting_line(name, state, text) -%}
+  <li class="stop said-bot pending is-{{ state }}">
+    {{ presence(variant=1) }}
+    <div class="bubble" role="status">
+      <div class="said-by">
+        <strong>{{ name }}</strong>
+      </div>
+      <div class="said-text">{{ text }}{% if caller is defined %} {{ caller() }}{% endif %}</div>
+    </div>
+  </li>
+{%- endmacro %}
+
+{# The tick beside an open task: marks it done where it stands, through `update_task` at the
+   revision it was drawn at, and comes back to `back` (home or tasks). Ticking is a change, so a
+   role that may not change things (familydb/roles.py) is shown the empty box instead. #}
+{% macro tick(task_id, revision, title, back) -%}
+  {% if visitor().may('change') -%}
+  <form class="tick-form" method="post" action="{{ url_for('edits.finish_task', task_id=task_id) }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    <input type="hidden" name="once" value="{{ once_token() }}" />
+    <input type="hidden" name="revision" value="{{ revision }}" />
+    <input type="hidden" name="back" value="{{ back }}" />
+    <button class="tick" type="submit">{{ icon('check') }}<span class="sr">Done: {{ title }}</span></button>
+  </form>
+  {%- else -%}
+  <span class="task-box" aria-hidden="true"></span>
+  {%- endif %}
+{%- endmacro %}
+
+{# A plan's day as a small calendar leaf: month, day, weekday. #}
+{% macro chip(parts, today=false) -%}
+  {% if parts %}
+    <span class="chip{{ ' is-today' if today }}" aria-hidden="true">
+      <span class="chip-mon">{{ parts.month }}</span>
+      <span class="chip-day">{{ parts.day }}</span>
+      <span class="chip-dow">{{ parts.weekday }}</span>
+    </span>
+  {% endif %}
+{%- endmacro %}
+
+{# An old green-screen monitor, the page's one kind of picture: whatever is in the `call` block
+   is drawn on its tube, in phosphor. `cls` says where it is (and `power-on` to switch it on as the
+   page opens). A screen that is only a picture is hidden from screen readers; one whose words
+   are the page's own, like Next up, passes `hidden=false`. One to a page at most. #}
+{% macro crt(cls='', hidden=true) -%}
+  <div class="crt{{ ' ' ~ cls if cls }}"{% if hidden %} aria-hidden="true"{% endif %}>
+    <div class="crt-tube">{{ caller() }}</div>
+  </div>
+{%- endmacro %}
+
+{# A radar, a program the green screen runs: range rings at a week, two weeks and four, "now" at
+   the middle, and a sweep that leaves an afterglow as a long-persistence phosphor did. `blips`
+   come from `views.radar_blips`: each flares as the sweep passes its bearing. The Ideas page's
+   is a map instead (`views.places_radar`), home at the middle, north at the top, and gives the
+   rings its own `rings` labels. Anything in a `call` block is drawn on the scope. Decoration
+   only; what it shows is always written out elsewhere on the page. #}
+{% macro radar(blips=[], rings=('1w', '2w', '4w')) -%}
+  <div class="radar" aria-hidden="true">
+    <svg viewBox="0 0 200 200" focusable="false">
+      <circle class="radar-rim" cx="100" cy="100" r="98"/>
+      <circle class="radar-ring" cx="100" cy="100" r="92"/>
+      <circle class="radar-ring" cx="100" cy="100" r="66"/>
+      <circle class="radar-ring" cx="100" cy="100" r="33"/>
+      <path class="radar-cross" d="M100 4V196M4 100H196"/>
+      <path class="radar-ticks" d="M100.0 7.5L100.0 2.0M116.5 6.4L117.0 3.5M132.5 10.7L133.5 7.9M146.2 19.9L149.0 15.1M161.1 27.2L163.0 24.9M172.8 38.9L175.1 37.0M180.1 53.7L184.9 51.0M189.3 67.5L192.1 66.5M193.6 83.5L196.5 83.0M192.5 100.0L198.0 100.0M193.6 116.5L196.5 117.0M189.3 132.5L192.1 133.5M180.1 146.2L184.9 149.0M172.8 161.1L175.1 163.0M161.1 172.8L163.0 175.1M146.2 180.1L149.0 184.9M132.5 189.3L133.5 192.1M116.5 193.6L117.0 196.5M100.0 192.5L100.0 198.0M83.5 193.6L83.0 196.5M67.5 189.3L66.5 192.1M53.7 180.1L51.0 184.9M38.9 172.8L37.0 175.1M27.2 161.1L24.9 163.0M19.9 146.3L15.1 149.0M10.7 132.5L7.9 133.5M6.4 116.5L3.5 117.0M7.5 100.0L2.0 100.0M6.4 83.5L3.5 83.0M10.7 67.5L7.9 66.5M19.9 53.7L15.1 51.0M27.2 38.9L24.9 37.0M38.9 27.2L37.0 24.9M53.7 19.9L51.0 15.1M67.5 10.7L66.5 7.9M83.5 6.4L83.0 3.5"/>
+      <text class="radar-label" x="69.5" y="97">{{ rings[0] }}</text>
+      <text class="radar-label" x="36.5" y="97">{{ rings[1] }}</text>
+      <text class="radar-label" x="10.5" y="97">{{ rings[2] }}</text>
+      <circle class="radar-hub" cx="100" cy="100" r="2.2"/>
+      {% for b in blips %}
+        <g class="blip b{{ b.bearing }}{{ ' next' if b.next }}">
+          {% if b.next %}<circle class="blip-ping" cx="{{ b.x }}" cy="{{ b.y }}" r="5"/>{% endif %}
+          <circle class="blip-halo" cx="{{ b.x }}" cy="{{ b.y }}" r="8"/>
+          <circle class="blip-core" cx="{{ b.x }}" cy="{{ b.y }}" r="3"/>
+        </g>
+      {% endfor %}
+    </svg>
+    <span class="radar-sweep"></span>
+    {%- if caller is defined %}<span class="radar-say">{{ caller() }}</span>{% endif %}
+  </div>
+{%- endmacro %}

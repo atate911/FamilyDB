@@ -1,0 +1,255 @@
+/* ==== Tube Lit: Track Diagram above, unchanged; this layer turns the tube's light back on.
+   One rule: the machine lights, the family is matte. Lit: the lamps (white-hot points), the
+   tubes (full bloom and spill), her name, and what the machine reads out or works out (her
+   times, the clock at the now stop, the relative days). Soft-lit: her words, mint-cream in a
+   faint halo. Matte: the family's words, the plates, the steel. Amber: late, or needs a look. */
+
+:root {
+  --hot: color-mix(in srgb, var(--brand) 22%, #fff);
+  --voice: color-mix(in srgb, var(--brand) 35%, var(--heading));
+  --voice-dim: color-mix(in srgb, var(--brand) 72%, var(--label));
+  --phos-dim: color-mix(in srgb, var(--brand) 64%, #07120c);
+  --halo-1: color-mix(in srgb, var(--brand) 80%, transparent);
+  --halo-2: color-mix(in srgb, var(--brand) 50%, transparent);
+  --halo-3: color-mix(in srgb, var(--brand) 26%, transparent);
+  /* A lit readout under 0.8rem keeps a core and a tight bloom only, so its letters stay sharp. */
+  --readout: 0 0 1px color-mix(in srgb, var(--brand) 60%, transparent), 0 0 4px color-mix(in srgb, var(--brand) 25%, transparent);
+  /* E1, the lit word: a tight bloom in a wide faint one, for 1.2rem and up. */
+  --lit-word: 0 0 0.45em color-mix(in srgb, var(--brand) 45%, transparent), 0 0 1.3em color-mix(in srgb, var(--brand) 22%, transparent);
+  --lamp-face: radial-gradient(circle at 50% 50%, var(--hot) 0 18%, var(--brand) 52%);
+  --amber-face: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--amber) 35%, #fff) 0 18%, var(--amber) 55%);
+  --amber-light: 0 0 5px color-mix(in srgb, var(--amber) 70%, transparent), 0 0 14px 1px color-mix(in srgb, var(--amber) 28%, transparent);
+  --run: linear-gradient(var(--hot), var(--brand) 18%, color-mix(in srgb, var(--brand) 45%, var(--rail)) 62%, var(--rail));
+  /* E8: the top-edge highlight is back. */
+  --shadow: inset 0 1px 0 rgb(255 255 255 / 0.035), 0 1px 0 rgb(0 0 0 / 0.5);
+}
+.skip { display: inline-flex; align-items: center; min-height: 2.75rem; }
+
+/* ---- The monitors: bloom and spill at full strength (E12, E13) ----------------------------- */
+.crt {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.13), inset 0 -1px 0 rgb(0 0 0 / 0.45), 0 1px 0 rgb(0 0 0 / 0.6),
+    0 26px 40px -30px #000, 0 0 90px -34px color-mix(in srgb, var(--phosphor) 50%, transparent);
+}
+.crt::after {
+  background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--phosphor) 22%, #fff) 0 22%, var(--phosphor) 60%);
+  box-shadow: 0 0 0 1.5px #22262a, 0 0 4px 1px color-mix(in srgb, var(--phosphor) 85%, transparent),
+    0 0 12px 2px color-mix(in srgb, var(--phosphor) 45%, transparent);
+}
+
+/* ---- The glowing dots on the line (E20) ---------------------------------------------------- */
+/* A live lamp breathes: the wide halo swells and the core dims a little, every 3.2s. One lamp
+   breathes to a view; a lamp that marks a state (today, late, the now of a second line) is lit
+   and steady. */
+@property --breath { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@keyframes lamp-breathe { 50% { --breath: 7px; filter: brightness(0.85); } }
+/* Declared on each lamp, so its own --breath is read. */
+.across::before, .lights .light.on, .your-turn::after, .now-lamp, .line-form::before, .is-today .rel::before, .line > li.is-today::before, .line > li.now-stop::before {
+  --lamp-light: 0 0 5px 1px var(--halo-1), 0 0 12px 3px var(--halo-2), 0 0 calc(24px + var(--breath)) calc(4px + var(--breath) / 2) var(--halo-3);
+}
+.across::before, .lights .light.on, .your-turn::after, .now-lamp, .line-form::before, .task-line > .now-stop::before {
+  animation: lamp-breathe 3.2s ease-in-out infinite;
+}
+.across::before, .lights .light.on, .now-lamp, .is-today .rel::before, .line > li.is-today::before, .line > li.now-stop::before {
+  background: var(--lamp-face);
+  border: 0;
+  box-shadow: var(--lamp-light);
+}
+/* Now, at the head of the fortnight, with its readout: the one live thing on Home says so. */
+.now-board { position: relative; z-index: 3; height: 0; margin: 0; }
+.now-board > span { position: absolute; left: 0; display: block; font: 500 0.72rem/1.15 var(--mono); white-space: nowrap; }
+.now-word { top: 0.1rem; color: var(--brand); text-shadow: var(--readout); }
+.now-time { top: 1.05rem; color: var(--voice-dim); text-shadow: var(--readout); }
+@media (min-width: 40rem) {
+  .across { padding-left: 4.9rem; }
+  /* The run from now to the first stop is lit, its light falling off into the steel. */
+  .across::after {
+    width: calc(4.9rem + 0.95rem - 7px);
+    background: linear-gradient(90deg, var(--hot), var(--brand) 18%, color-mix(in srgb, var(--brand) 50%, var(--rail)) 66%, var(--rail));
+    box-shadow: 0 0 7px color-mix(in srgb, var(--brand) 45%, transparent);
+  }
+  .across > li:first-child::before { border-color: color-mix(in srgb, var(--brand) 55%, var(--cyan)); box-shadow: 0 0 8px -1px var(--halo-2); }
+}
+@media (max-width: 39.99rem) {
+  .across::after { background: var(--run); box-shadow: 0 0 7px color-mix(in srgb, var(--brand) 45%, transparent); }
+  /* On the phone the readout is one line in the margin, level with the lamp. */
+  .now-board { display: flex; justify-content: flex-end; gap: 0.4rem; width: 3.9rem; top: -1.3rem; }
+  .now-board > span { position: static; font-size: 0.7rem; line-height: 1.2; }
+  .now-day { display: none; }
+  .timetable-head { flex-wrap: wrap; }
+  .timetable-head .lamp-legend { flex-basis: 100%; margin: 0.45rem 0 0; }
+  .task-line .hang .stamp > span.rel-word { display: inline; }
+}
+/* A second timetable's now (To do): a lit stop between what is late and what is to come, with
+   its run lit down to the next stop. Steady on Home, breathing on the To do page. */
+.line > li.now-stop { --ly: 0.8rem; --lamp: 14px; display: block; min-height: 1.6rem; margin: 0; padding: 0; background: none; border: 0; box-shadow: none; }
+.task-line > li.now-stop { min-height: 2.3rem; }
+.line > li.now-stop .hang { display: block; }
+.line > li.now-stop:not(:last-child)::after { background: var(--run); box-shadow: 0 0 6px color-mix(in srgb, var(--brand) 45%, transparent); }
+.now-stop .stamp { color: var(--brand); text-shadow: var(--readout); }
+.now-stop .stamp .rel-word { color: var(--brand); }
+.now-stop .stamp .abs, .now-stop .stamp .t { color: var(--voice-dim); }
+/* Status: live lights breathe out of step; the chain is lit from lamp to lamp while both are on. */
+.lights > li:nth-child(2) > .light.on { animation-delay: -0.9s; }
+.lights > li:nth-child(3) > .light.on { animation-delay: -1.7s; }
+.lights > li:nth-child(4) > .light.on { animation-delay: -2.4s; }
+.lights > li:nth-child(5) > .light.on { animation-delay: -0.4s; }
+.monitors > .tray:first-child .lights.line > li:has(> .light.on):has(+ li > .light.on)::after {
+  background: linear-gradient(var(--brand), color-mix(in srgb, var(--brand) 70%, var(--rail)));
+  box-shadow: 0 0 6px color-mix(in srgb, var(--brand) 50%, transparent);
+}
+/* Chat: the lamp at the box, where it is your turn, is lit and breathing. */
+.your-turn::after {
+  border-color: var(--brand);
+  background: radial-gradient(circle at 50% 50%, var(--hot) 0 2px, var(--brand) 3.5px, color-mix(in srgb, var(--brand) 25%, var(--bg)) 4.5px);
+  box-shadow: 0 0 0 3px var(--bg), var(--lamp-light);
+}
+/* Today on the month: one lamp, by the date. A plan today keeps a steady lit point. */
+table.month td.today .event::before, .month-list li.today .event::before {
+  background: var(--lamp-face); border: 0; box-shadow: 0 0 5px 1px var(--halo-1); animation: none;
+}
+.setup-list > .now::before { box-shadow: 0 0 5px 1px var(--halo-2), 0 0 16px 2px var(--halo-3); }
+/* Sign in: the stop where it is your turn is lit, as the chat's is. */
+.line-form::before {
+  background: radial-gradient(circle at 50% 50%, var(--hot) 0 1.5px, var(--brand) 3px, color-mix(in srgb, var(--brand) 25%, var(--bg)) 4px);
+  box-shadow: 0 0 0 3px var(--bg), var(--lamp-light);
+}
+
+/* ---- Amber: late, or needs a look, as a steady amber point ---------------------------------- */
+.checklist > li.late::before, .task-line > li.task.late::before {
+  background: var(--amber-face); border: 0;
+  box-shadow: 0 0 0 3px var(--tray), var(--amber-light);
+}
+/* What is still to come is a hollow steel ring, never the lemon that read as late. */
+.home-todo { --lc: var(--steel); }
+.checklist > li.timed:not(.late)::before, .task-line > li.timed:not(.late)::before { border-color: var(--steel); }
+.section-card.look .section-icon { position: relative; }
+.section-card.look .section-icon::after {
+  content: ""; position: absolute; right: -0.3rem; top: -0.2rem; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--amber-face); box-shadow: 0 0 0 2px var(--plate), var(--amber-light);
+}
+/* A done task's box keeps its small halo (E21), in the calmer lit green. */
+.task-done .task-box { box-shadow: 0 0 14px -4px color-mix(in srgb, var(--lit) 80%, transparent); }
+
+/* ---- The lamp legend: one meaning to each lamp, said once where lamps mean something ------- */
+.monitors .lights .light.off { border-color: var(--rail-hi); }
+.lamp-legend { display: flex; flex-wrap: wrap; gap: 0.3rem 1.1rem; margin: -0.6rem 0 1.6rem 0.2rem; font: 500 0.75rem/1.3 var(--mono); color: var(--label); }
+.timetable-head .lamp-legend { margin: 0 0 0 auto; }
+.lamp-legend .key { display: inline-flex; align-items: center; gap: 0.45rem; }
+.lamp-legend .key::before { content: ""; width: 10px; height: 10px; box-sizing: border-box; border: 2px solid var(--rail-hi); border-radius: 50%; }
+.lamp-legend :is(.on, .now)::before { border: 0; background: var(--lamp-face); box-shadow: 0 0 5px 1px var(--halo-2); }
+.lamp-legend .late::before { border: 0; background: var(--amber-face); box-shadow: 0 0 5px color-mix(in srgb, var(--amber) 60%, transparent); }
+.lamp-legend .part::before { border-color: var(--amber); background: linear-gradient(90deg, var(--amber) 50%, transparent 50%); }
+.lamp-legend .to-come::before { border-color: var(--steel); }
+
+/* ---- The timetable's stamps: what the machine works out, over what the family set ----------- */
+.rel-word { color: var(--phos-dim); text-shadow: var(--readout); }
+.stamp.warn .rel-word { color: var(--amber); text-shadow: none; }
+.task-line .hang .stamp > :is(.rel-word, .abs) { display: block; }
+.task-line .hang .abs { color: var(--label); }
+.task-line .hang .stamp { line-height: 1.35; }
+
+/* ---- Plates are matte: a kind's colour lives in its ring lamp and its word ------------------ */
+.lately .idea-card, .cards > .card { background: var(--plate); }
+/* Boards are slate, never olive: what needs a look keeps an amber edge and amber rings only, and
+   the restaurants' way in is a plate like the rest, its kind in its icon. */
+.setup.setup, .trouble.panel { background: var(--tray); border-color: color-mix(in srgb, var(--amber) 42%, var(--tray-edge)); }
+.restaurants-link.panel { background: var(--plate); border-color: var(--plate-edge); }
+.restaurants-link.panel:hover { border-color: color-mix(in srgb, var(--lit) 58%, var(--plate-edge)); }
+/* Next up's words keep their line beside a slightly smaller scope. */
+@media (min-width: 40rem) {
+  .next-up .crt-tube { gap: 0.9rem; }
+  .next-up .radar { width: 8.2rem; }
+}
+.next-up .next-title { text-wrap: balance; }
+
+/* ---- Afterglow (E9): a pointed plate lights sage at once and lets it go over 1.2s ---------- */
+:is(.checklist > li:not(.now-stop), .lately .idea-card, .kid-plates > li:has(a), .task-line > li.task, .cards > .card:has(h2 a)):hover,
+.across > li:hover .agenda-body, .plan-line .line > li:hover {
+  background-color: color-mix(in srgb, var(--lit) 9%, var(--surface-2));
+  border-color: color-mix(in srgb, var(--lit) 58%, var(--plate-edge));
+  box-shadow: var(--shadow), 0 0 0 1px color-mix(in srgb, var(--lit) 18%, transparent), 0 0 30px -10px color-mix(in srgb, var(--lit) 55%, transparent);
+}
+.cards > .card:has(h2 a) { transition: background-color var(--afterglow), border-color var(--afterglow), box-shadow var(--afterglow); }
+.cards > .card:has(h2 a):hover { transition-duration: var(--glow-in); }
+.line:not(.thread) > li:not(.late, .is-today, .now-stop):hover::before { border-color: var(--lit); box-shadow: 0 0 9px -1px color-mix(in srgb, var(--lit) 85%, transparent); }
+
+/* ---- Her screen glows again wherever it is shown (E19) ------------------------------------- */
+.title-icon.presence {
+  background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--brand) 18%, transparent), #06110b 72%);
+  border-color: color-mix(in srgb, var(--brand) 55%, var(--rail));
+  box-shadow: 0 0 0 4px var(--bg), 0 0 22px 1px color-mix(in srgb, var(--brand) 38%, transparent);
+}
+.thread.line .said-bot > .avatar.presence { box-shadow: 0 0 0 4px var(--bg), 0 0 20px 0 color-mix(in srgb, var(--brand) 42%, transparent); }
+.section-icon.presence { box-shadow: 0 0 14px -4px color-mix(in srgb, var(--brand) 65%, transparent); }
+
+/* ---- The machine's voice ------------------------------------------------------------------- */
+/* Her lines are a patch of the tube: green-black glass, a phosphor rim, a bloom, and the
+   greeting's scanlines only in the corner by her screen. */
+.said-bot:not(.pending) .bubble {
+  position: relative;
+  isolation: isolate;
+  background: radial-gradient(130% 150% at 0% 0%, color-mix(in srgb, var(--brand) 8%, transparent), transparent 62%), var(--bubble);
+  border-color: color-mix(in srgb, var(--brand) 36%, var(--line));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--brand) 18%, transparent), 0 0 30px -14px color-mix(in srgb, var(--brand) 55%, transparent);
+}
+.said-bot:not(.pending) .bubble::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom, rgb(255 255 255 / 0.028) 0 1px, transparent 1px 4px);
+  -webkit-mask-image: radial-gradient(circle 64px at 0 0, #000 30%, transparent);
+  mask-image: radial-gradient(circle 64px at 0 0, #000 30%, transparent);
+}
+/* Her words: a lit mint-cream, soft enough to read line after line. */
+.said-bot:not(.pending) .said-text { color: var(--voice); text-shadow: 0 0 0.7em color-mix(in srgb, var(--brand) 16%, transparent); }
+/* Her name is lit wherever it is written: as the chat's title in the tube's bright strength
+   (E15) with E1's two layers, so a headline glows without a slab of neon; in the greeting and
+   the stamps in full phosphor with a core and a tight bloom. */
+.in-chat .page-title h1 { color: color-mix(in srgb, var(--brand) 45%, #fff); text-shadow: var(--lit-word); }
+.speaker strong { color: var(--brand); text-shadow: 0 0 1px color-mix(in srgb, var(--brand) 55%, transparent), 0 0 0.6em color-mix(in srgb, var(--brand) 30%, transparent); }
+.said-bot .said-by strong, .said-bot > .hang .stamp { color: var(--brand); text-shadow: var(--readout); }
+.said-bot .said-when, .speaker .eyebrow { color: var(--voice-dim); text-shadow: var(--readout); }
+.said-bot .did { color: var(--voice-dim); }
+.across .rel { color: var(--phos-dim); text-shadow: var(--readout); }
+/* The day she reads out is set as it is said, not in tracked capitals. */
+.speaker .eyebrow { font-size: 0.78rem; letter-spacing: 0.02em; text-transform: none; font-variant-numeric: tabular-nums; }
+/* Her question is set in the page's heading ink, so 'mind' is the one lit word in it. */
+.ask-question label { color: var(--heading); }
+/* The family's words stay in their own hand: cream ink, sharp, on a matte steel-edged plate. */
+.said-them .said-text { color: var(--ink); text-shadow: none; }
+
+/* ---- Home's box keeps a faint phosphor at rest and lights fully while written in (E4) ------- */
+.welcome .ask { box-shadow: var(--lift), 0 0 38px -20px color-mix(in srgb, var(--brand) 60%, transparent); transition: border-color var(--afterglow), box-shadow var(--afterglow); }
+.ask:focus-within, .welcome .ask:focus-within {
+  border-color: var(--lit);
+  box-shadow: var(--lift), 0 0 0 3px color-mix(in srgb, var(--brand) 14%, transparent), 0 0 30px -8px color-mix(in srgb, var(--brand) 50%, transparent);
+  transition-duration: var(--glow-in);
+}
+/* A field: caret and edge in the calmer lit green, its ring and bloom in the phosphor (E4). */
+:is(input:not([type=checkbox], [type=radio]), textarea, select):focus {
+  border-color: var(--lit);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 16%, transparent), 0 0 22px -6px color-mix(in srgb, var(--brand) 55%, transparent);
+}
+
+/* ---- Other ways of seeing ------------------------------------------------------------------ */
+@media (prefers-contrast: more) {
+  .said-bot:not(.pending) .said-text, .in-chat .page-title h1, .said-bot .said-by strong, .speaker strong, .said-bot > .hang .stamp, .said-bot .said-when,
+  .speaker .eyebrow, .across .rel, .rel-word, .now-board > span, .now-stop .stamp { text-shadow: none; }
+  .said-bot:not(.pending) .bubble::before { display: none; }
+  .said-bot:not(.pending) .bubble { box-shadow: none; }
+  .title-icon.presence, .thread.line .said-bot > .avatar.presence { box-shadow: 0 0 0 4px var(--bg); }
+  .section-icon.presence, .task-done .task-box { box-shadow: none; }
+  .welcome .ask { box-shadow: var(--lift); }
+  .crt-tube > :not(.radar) { filter: none; }
+}
+@media (forced-colors: active) {
+  .across::before, .across::after, .your-turn::after, .line-form::before, .lights .light.on, .now-lamp, .line > li.now-stop::before,
+  .line > li.now-stop::after, .checklist > li.late::before, .task-line > li.task.late::before, .section-card.look .section-icon::after,
+  .lamp-legend :is(.on, .now, .late)::before {
+    forced-color-adjust: none; background: CanvasText; box-shadow: none;
+  }
+  .said-bot:not(.pending) .bubble::before { display: none; }
+}

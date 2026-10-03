@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, chat_line, waiting_line %}
+{% block title %}{{ assistant if has_persona else 'Chat' }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-chat{% endblock %}
+{# While an answer is on its way the browser fetches the page again by itself, landing back on
+   the newest line: a meta refresh, which every browser does, scripts or not. It is only set when
+   something really is being thought about, so the page goes quiet as soon as the reply is in the
+   log, and never on a page holding words somebody typed, which it would take with it. While a
+   turn runs the box is closed, so there is nothing to lose. Waiting on the retry job the box
+   stays open, so with scripts on ask.js does the looking again instead, and never while somebody
+   is writing. #}
+{% block head %}
+  {% if refresh and locked %}
+    <meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" />
+  {% elif refresh %}
+    <noscript><meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" /></noscript>
+  {% endif %}
+{% endblock %}
+{% block content %}
+  {# Hers: her name at the top, as on the tab that leads here, beside her screen. #}
+  {% if reading %}
+    {{ page_head(reading ~ ' and ' ~ (assistant if has_persona else 'the bot'), 'Her own conversation, for you to read. Only she writes in it.', 'presence' if has_persona else 'chat', [(assistant if has_persona else 'Chat', url_for('chat.show'))]) }}
+  {% elif private %}
+    {{ page_head(assistant if has_persona else 'Chat', 'Just you and ' ~ assistant ~ '. Tell her what you wish for, or ask about the plans.', 'presence' if has_persona else 'chat') }}
+  {% else %}
+    {{ page_head(assistant if has_persona else 'Chat', 'Weekends, ideas, to-dos and the calendar: anything you would ask in Telegram works here too.', 'presence' if has_persona else 'chat') }}
+  {% endif %}
+
+  {# Track Diagram, Branch Lines: the conversation is a double-track main line. The two rails
+     leave her screen in the terminus ring at the head and run down the middle of the page: her
+     stations on the left rail, the family's on the right, each message's time printed across
+     the rails beside it. Each day is named once, as a tie across both rails. At the box the
+     rails come together into one short run that ends in a lit ring: your turn. #}
+  {% set t0 = config.FAMILYDB_APP.clock.today() %}
+  {% set months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] %}
+  {% if lines %}
+    {% set days = namespace(last='') %}
+    <ol class="thread">
+      {% for line in lines %}
+        {% set day = line.when.split(', ')[0] if ', ' in line.when else '' %}
+        {% if day and day != days.last %}
+          {# The day, with its weekday worked out from the app's own clock (the view would hand
+             it over): this year's, or last year's if that date is still to come. #}
+          {% set bits = day.split(' ') %}
+          {% set named = day %}
+          {% if bits | length == 2 and bits[1] in months %}
+            {% set d = t0.replace(month=months.index(bits[1]) + 1, day=bits[0] | int) %}
+            {% if d > t0 %}{% set d = d.replace(year=t0.year - 1) %}{% endif %}
+            {% set named = ('Today' if d == t0 else d.strftime('%a') ~ ' ' ~ day) %}
+          {% endif %}
+          <li class="day-mark"><span class="tie"><time datetime="{{ d.isoformat() if d is defined else '' }}">{{ named }}</time></span></li>{% set days.last = day %}
+        {% endif %}
+        {{ chat_line(line, latest if loop.last) }}
+      {% endfor %}
+      {% if pending %}{{ waiting_line(assistant, state, pending) }}{% endif %}
+    </ol>
+  {% else %}
+    <p class="muted empty">{{ icon('chat') }}<span>Nothing said here yet. Ask {{ assistant }} what to do this weekend, save an idea, or set a reminder.</span></p>
+  {% endif %}
+
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+  {% if not reading %}
+    <div class="your-turn">
+      {# The two rails, 18px apart, turn through 45 degrees and meet; one short lit run goes on
+         to the ring seated on the box's top edge, where it is your turn. #}
+      <svg class="junction" width="24" height="46" aria-hidden="true" focusable="false">
+        <path class="junction-rails" d="M3 0V8L12 17M21 0V8L12 17" fill="none" stroke="#58697a" stroke-width="2"/>
+        <path class="junction-run" d="M12 17V40" fill="none" stroke="#6dff9c" stroke-width="2"/>
+        <circle class="junction-ring" cx="12" cy="46" r="6" fill="#0b0e0c" stroke="#6dff9c" stroke-width="2.5"/>
+      </svg>
+      <span class="turn-word" aria-hidden="true">your turn</span>
+      {% include "_ask.html" %}
+    </div>
+  {% endif %}
+
+  {% if kids and not reading %}
+    <nav class="panel kids-talk tray" aria-label="The kids' conversations">
+      <h2>{{ icon('user') }}The kids' conversations</h2>
+      <p class="muted">Each kid talks to {{ assistant }} on her own. You can read along.</p>
+      <ul class="plain">
+        {% for kid in kids %}<li><a href="{{ url_for('chat.show', with=kid.id, _anchor=latest) }}"><span class="avatar" aria-hidden="true">{{ kid.name[:1] | upper }}</span><span class="nm">{{ kid.name }}</span></a></li>{% endfor %}
+      </ul>
+    </nav>
+  {% endif %}
+{% endblock %}

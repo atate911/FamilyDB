@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, chat_line, waiting_line, fig, presence %}
+{% block title %}{{ assistant if has_persona else 'Chat' }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-chat{% endblock %}
+{# While an answer is on its way the browser fetches the page again by itself, landing back on
+   the newest line: a meta refresh, only while something really is being thought about, and never
+   on a page holding words somebody typed. #}
+{% block head %}
+  {% if refresh and locked %}
+    <meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" />
+  {% elif refresh %}
+    <noscript><meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" /></noscript>
+  {% endif %}
+{% endblock %}
+{# A line's day, from its "27 Sep, 19:47", said in full ("Sunday 27 September") with the year
+   the app's own clock puts it in; the view would hand the page the day itself. #}
+{% macro day_words(when, t0) -%}
+  {%- set MON = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6, 'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12} -%}
+  {%- set part = (when or '').split(', ')[0] -%}
+  {%- set bits = part.split(' ') -%}
+  {%- if bits | length == 2 and bits[1] in MON and bits[0].isdigit() -%}
+    {%- set m = MON[bits[1]] -%}
+    {%- set d = t0.replace(year=t0.year - (1 if m > t0.month else 0), month=m, day=bits[0] | int) -%}
+    {{- 'Today' if d == t0 else (d.strftime('%A') ~ ' ' ~ d.day ~ ' ' ~ d.strftime('%B')) -}}
+  {%- else -%}{{ part }}{%- endif -%}
+{%- endmacro %}
+{% block content %}
+  {% set her = assistant if has_persona else 'Chat' %}
+  {% set t0 = config.FAMILYDB_APP.clock.today() %}
+  {% if reading %}
+    {{ page_head(reading ~ ' and ' ~ (assistant if has_persona else 'the bot'), 'Her own conversation, for you to read. Only she writes in it.', none, [(her, url_for('chat.show'))]) }}
+  {% elif private %}
+    {{ page_head(her, 'Just you and ' ~ assistant ~ '. Tell her what you wish for, or ask about the plans.') }}
+  {% else %}
+    {{ page_head(her, 'Weekends, ideas, to-dos and the calendar: anything you would ask in Telegram works here too.') }}
+  {% endif %}
+
+  {# The conversation is the drawing: THE LIFELINES. The thread spans the figure column and the
+     words, one grid, so every line's arrow is drawn level with the line it stands for, from the
+     lane of whoever said it to the lane it answers: her screen heads the first lane, each of the
+     family who has spoken (up to three, in the order they first spoke) a lane of their own, their
+     initial in the same steel square as beside their words. A dotted leader runs on from each
+     arrow over the hairline to whoever said the line. Her words sit on the glass at the left,
+     theirs on steel slips at the right; the newest arrow is the live mark, and pointing at a
+     line lights its arrow and its leader. #}
+  {% set folks = namespace(names=[]) %}
+  {% for line in lines or [] %}{% if not line.from_bot and line.who not in folks.names %}{% set folks.names = folks.names + [line.who] %}{% endif %}{% endfor %}
+  {% set cols = folks.names[:3] %}
+  <section class="plate conversation lanes-{{ cols | length }}" aria-label="The conversation">
+    {% if lines %}
+      <ol class="thread seq-thread">
+        <li class="lanes">
+          <span class="seq" aria-hidden="true"></span>
+          <span class="lane l0" aria-hidden="true">{{ presence('lane-screen', variant=3) }}</span>
+          {% set kid_names = (kids or []) | map(attribute='name') | list %}
+          {% set spoke = namespace(last=none) %}
+          {% for line in lines if not line.from_bot %}{% set spoke.last = line.who %}{% endfor %}
+          {% for who in cols %}<span class="lane l{{ loop.index }}{{ ' kid' if who in kid_names }}{{ ' is-last' if who == spoke.last }}" aria-hidden="true"><span class="initial">{{ who[:1] | upper }}</span></span>{% endfor %}
+          {% if cols %}<span class="lane-bus" aria-hidden="true"></span>{% endif %}
+          {% set lit_lane = (cols.index(spoke.last) + 1) if spoke.last in cols else 0 %}
+          {% if lit_lane %}<span class="lane-lit to-l{{ lit_lane }}" aria-hidden="true"></span>{% endif %}
+          <span class="day-words">{{ day_words(lines[0].when, t0) }}</span>
+        </li>
+        {% set seen = namespace(day=(lines[0].when or '').split(', ')[0], lane=1) %}
+        {% for line in lines %}
+          {% set day = (line.when or '').split(', ')[0] %}
+          {% if day != seen.day %}
+            {% set seen.day = day %}
+            <li class="day-rule"><span class="seq" aria-hidden="true"></span><span class="day-words">{{ day_words(line.when, t0) }}</span></li>
+          {% endif %}
+          {% if line.from_bot %}
+            {% set seq = {'no': loop.index, 'fr': 0, 'to': seen.lane, 'live': loop.last and not pending} %}
+          {% else %}
+            {% set lane = (cols.index(line.who) + 1) if line.who in cols else 3 %}
+            {% set seen.lane = lane %}
+            {% set seq = {'no': loop.index, 'fr': lane, 'to': 0, 'live': loop.last and not pending} %}
+          {% endif %}
+          {{ chat_line(line, latest if loop.last, seq=seq) }}
+        {% endfor %}
+        {% if pending %}{{ waiting_line(assistant, state, pending, seq={'to': seen.lane}) }}{% endif %}
+      </ol>
+    {% endif %}
+    <div class="plate-body talk-body">
+      {% if not lines %}
+        <p class="muted empty">{{ icon('chat') }}<span>Nothing said here yet. Ask {{ assistant }} what to do this weekend, save an idea, or set a reminder.</span></p>
+      {% endif %}
+
+      {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+      {% if not reading %}<div class="composer">{% include "_ask.html" %}</div>{% endif %}
+    </div>
+    {% if lines %}<p class="fig-cap numbered seq-cap"><span class="fig-no" aria-hidden="true"></span>Who said what, down the page: an arrow for each line, from who said it to whom. The newest arrow is lit, and so is the wire to whoever spoke last.</p>{% endif %}
+  </section>
+
+  {% if kids and not reading %}
+    <section class="plate kids-talk">
+      <nav class="plate-body" aria-label="The kids’ conversations">
+        <h2>The kids’ conversations</h2>
+        <p class="muted">Each kid talks to {{ assistant }} on her own. You can read along.</p>
+        <ul class="plain kid-rows">
+          {% for kid in kids %}<li><a href="{{ url_for('chat.show', with=kid.id, _anchor=latest) }}">{{ kid.name }}</a></li>{% endfor %}
+        </ul>
+      </nav>
+      {% call fig('fig-lines', name='Each kid’s own line to her.', summary=(kids | length) ~ ' kids talk to ' ~ assistant ~ ' on their own') %}
+        <svg viewBox="0 0 240 {{ 8 + (kids[:5] | length) * 34 }}" focusable="false" class="drawing">
+          {% for kid in kids[:5] %}
+            {% set y = 4 + loop.index0 * 34 %}
+            <rect class="d-glass" x="2" y="{{ y }}" width="64" height="24"/>
+            <text class="d-glyphs" x="34" y="{{ y + 17 }}" text-anchor="middle">{{ (assistant if has_persona else 'BOT')[:7] | upper }}</text>
+            <path class="d-line" d="M66 {{ y + 12 }}H164"/>
+            <path class="d-arrow" d="M157 {{ y + 8 }}L164 {{ y + 12 }}L157 {{ y + 16 }}M73 {{ y + 8 }}L66 {{ y + 12 }}L73 {{ y + 16 }}"/>
+            <rect class="d-box" x="164" y="{{ y }}" width="74" height="24"/>
+            <text class="d-name" x="201" y="{{ y + 16 }}" text-anchor="middle">{{ kid.name[:8] }}</text>
+          {% endfor %}
+        </svg>
+      {% endcall %}
+    </section>
+  {% endif %}
+{% endblock %}

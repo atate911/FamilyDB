@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, lamp, figcap %}
+{% block title %}{{ month }} · {{ site_title }}{% endblock %}
+{% macro event(entry, n=none) %}
+  <div class="event{{ ' from-google' if entry.from_google }}">
+    {% if n %}<span class="stop-key" aria-hidden="true">{{ n }}</span>{% endif %}
+    <span class="event-what">
+    {% if entry.idea_id %}
+      <a href="{{ url_for('web.idea', idea_id=entry.idea_id) }}">{{ entry.title }}</a>
+    {% else %}
+      {{ entry.title }}
+    {% endif %}
+    {% if entry.time %}<small>{{ entry.time }}</small>{% endif %}
+    </span>
+  </div>
+{% endmacro %}
+{% block content %}
+  {% call page_head('Plans', none, 'plans') %}
+    <nav class="tabs" aria-label="How to show the plans">
+      <a href="{{ url_for('web.plans') }}">{{ icon('list') }}List</a>
+      <a href="{{ url_for('web.plans_month') }}" aria-current="page">{{ icon('grid') }}Month</a>
+    </nav>
+  {% endcall %}
+
+  {# The flight plan leads the month, the same drawing as Home's four weeks, laid over the days
+     this calendar shows: a tick a day, weekends hatched, NOW a lit line, each plan a numbered
+     stop joined to the next by its arc, the next one lit. Under the axis every day has its
+     number and its lamp: cyan with a plan on it, amber for today. The numbers are keyed to the
+     calendar under it. #}
+  {% set days = [] %}
+  {% for week in weeks %}{% for day in week %}{% set _ = days.append(day) %}{% endfor %}{% endfor %}
+  {% set N = [days | length, 1] | max %}
+  {% set ti = namespace(v=-1) %}
+  {% for day in days %}{% if day.today %}{% set ti.v = loop.index0 %}{% endif %}{% endfor %}
+  {% set stops = [] %}
+  {% for day in days %}{% set i = loop.index0 %}{% for entry in day.entries %}{% set _ = stops.append({'i': i, 'day': day, 'entry': entry, 'n': stops | length + 1}) %}{% endfor %}{% endfor %}
+  {% set nx = namespace(n=0) %}
+  {% if ti.v >= 0 %}{% for s in stops if s.i >= ti.v and not nx.n %}{% set nx.n = s.n %}{% endfor %}{% endif %}
+  {% set base_y = 80 %}
+  {% set W = 96 / N %}
+  <section class="bay bay-wide month-bay">
+    <figure class="fig fig-track" aria-hidden="true">
+      <svg class="track month-track" width="100%" height="124" focusable="false">
+        <defs><clipPath id="above-m"><rect x="0" y="0" width="100%" height="{{ base_y }}"/></clipPath>
+          <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line class="hatch-line" x1="0" y1="0" x2="0" y2="6"/></pattern></defs>
+        {% for day in days %}
+          {% set x = 2 + loop.index0 * W %}
+          {% if day.date.weekday() >= 5 %}<rect class="weekend" x="{{ '%.3f' | format(x) }}%" y="18" width="{{ '%.3f' | format(W) }}%" height="{{ base_y - 18 }}"/>{% endif %}
+          {% if day.date.weekday() == 0 and not loop.first %}<line class="grid" x1="{{ '%.3f' | format(x) }}%" y1="18" x2="{{ '%.3f' | format(x) }}%" y2="{{ base_y }}"/>{% endif %}
+          {% if day.day == 1 or (loop.first and day.day < 25) %}<text class="scale{{ ' out' if not day.current }}" x="{{ '%.3f' | format(x + 0.3) }}%" y="12">{{ day.date.strftime('%b') }}</text>{% endif %}
+        {% endfor %}
+        <line class="axis" x1="2%" y1="{{ base_y }}" x2="98%" y2="{{ base_y }}"/>
+        {% for k in range(N + 1) %}
+          {% set x = '%.3f' | format(2 + k * W) %}
+          <line class="tick{{ ' wk' if k % 7 == 0 }}" x1="{{ x }}%" y1="{{ base_y }}" x2="{{ x }}%" y2="{{ base_y + (6 if k % 7 == 0 else 3) }}"/>
+        {% endfor %}
+        {% for day in days %}
+          {% set cx = '%.3f' | format(2 + (loop.index0 + 0.5) * W) %}
+          <text class="dnum{{ ' out' if not day.current }}{{ ' today' if day.today }}" x="{{ cx }}%" y="{{ base_y + 19 }}" text-anchor="middle">{{ day.day }}</text>
+          <rect class="dlamp{{ ' amber' if day.today else (' cyan' if day.entries else '') }}" x="{{ cx }}%" y="{{ base_y + 27 }}" width="9" height="6" rx="1" transform="translate(-4.5 0)"/>
+        {% endfor %}
+        {% if ti.v >= 0 %}<line class="now" x1="{{ '%.3f' | format(2 + ti.v * W) }}%" y1="18" x2="{{ '%.3f' | format(2 + ti.v * W) }}%" y2="{{ base_y }}"/>
+          <text class="scale now-label" x="{{ '%.3f' | format(2 + ti.v * W) }}%" y="12" text-anchor="middle">Now</text>{% endif %}
+        {% set t = namespace(x=-1.0, i=-1, stack=0) %}
+        {% for s in stops %}
+          {% set x = 2 + (s.i + 0.5) * W %}
+          {% if s.i != t.i %}
+            {% set t.stack = 0 %}
+            {% if t.i >= 0 %}
+              {% set gap = x - t.x %}
+              <ellipse class="path{{ ' past' if ti.v >= 0 and s.i < ti.v }}" clip-path="url(#above-m)" cx="{{ '%.3f' | format((t.x + x) / 2) }}%" cy="{{ base_y }}" rx="{{ '%.3f' | format(gap / 2) }}%" ry="{{ [14 + gap * 2.2, 58] | min | round(1) }}"/>
+            {% endif %}
+          {% else %}
+            {% set t.stack = t.stack + 1 %}
+          {% endif %}
+          {% set y = base_y - t.stack * 24 %}
+          <g class="stop{{ ' next' if s.n == nx.n }}{{ ' past' if ti.v >= 0 and s.i < ti.v }}">
+            <circle cx="{{ '%.3f' | format(x) }}%" cy="{{ y }}" r="10"/>
+            <text class="stop-n" x="{{ '%.3f' | format(x) }}%" y="{{ y + 4 }}" text-anchor="middle">{{ s.n }}</text>
+          </g>
+          {% set t.x = x %}{% set t.i = s.i %}
+        {% endfor %}
+      </svg>
+      {{ figcap(1, 'The flight plan: a stop for each plan, keyed to the calendar; a cyan lamp for a day with one, amber for today') }}
+    </figure>
+    <div class="bay-body">
+      <div class="month-head">
+        <h2>{{ month }}</h2>
+        <p class="month-nav">
+          <a class="button ghost" href="{{ url_for('web.plans_month', month=previous) }}">{{ icon('left') }}Earlier</a>
+          {% if not this_month %}<a class="button ghost" href="{{ url_for('web.plans_month') }}">This month</a>{% endif %}
+          <a class="button ghost" href="{{ url_for('web.plans_month', month=following) }}">Later{{ icon('right') }}</a>
+        </p>
+      </div>
+      {% if visitor().may('browse') %}<p class="muted source source-{{ source }}">{{ source_note }}</p>{% endif %}
+
+      <table class="month">
+        <thead>
+          <tr>{% for name in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}<th scope="col">{{ name }}</th>{% endfor %}</tr>
+        </thead>
+        <tbody>
+          {% for week in weeks %}
+            <tr>
+              {% for day in week %}
+                <td class="{{ 'outside' if not day.current }}{{ ' today' if day.today }}">
+                  <time datetime="{{ day.date.isoformat() }}">{{ day.day }}</time>
+                  {% for entry in day.entries %}{{ event(entry, (stops | selectattr('entry', 'equalto', entry) | map(attribute='n') | first)) }}{% endfor %}
+                </td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <ol class="plain month-list">
+        {% for day in busy_days %}
+          <li class="{{ 'today' if day.today }}">
+            <strong>{{ day.name }}</strong>{% if day.today %} <span class="tag">today</span>{% endif %}
+            {% for entry in day.entries %}{{ event(entry, (stops | selectattr('entry', 'equalto', entry) | map(attribute='n') | first)) }}{% endfor %}
+          </li>
+        {% else %}
+          <li class="muted">Nothing on in {{ month }}.</li>
+        {% endfor %}
+      </ol>
+    </div>
+  </section>
+{% endblock %}

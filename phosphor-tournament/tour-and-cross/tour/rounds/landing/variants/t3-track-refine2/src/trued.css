@@ -1,0 +1,464 @@
+/* ==== Branch Lines, Trued: every branch finished ===============================================
+   Branch Lines drew each page from its own data; its judges' faults were all finishing faults.
+   This sheet finishes each drawing in the diagram's own language, and adds nothing that is not
+   one of them. The legend, one meaning to a signal, everywhere:
+   - #6dff9c lit, with a white-hot core and two halos: now and live (the mark, the one green key,
+     the box, the lit word, a working lamp, the run from a now lamp, the tubes, her newest screen).
+     Only a NOW lamp breathes.
+   - a steel dot: waiting. A pewter ring: off, by choice. A dashed pewter ring: not set up, or no
+     date. An amber half lamp: needs a look. Filled amber: late. Red: something has stopped.
+   - steel #9cc3dd is the family's hand and the wiring: links, their names and plates, the latched
+     cap where you are. Cyan rings are plans. A kind's colour lives in its ring alone, in grounded
+     hues: terracotta restaurants, moss outings, wheat for the seasons.
+   - a line starts at a terminus and ends at a T buffer beside the way on. */
+:root {
+  --steel: #9cc3dd;
+  --terra: #df987c;
+  --moss: #b5c87d;
+  --wheat: #c3a85d;
+  --latch: #26313a;
+  --buffer: #8a9aa8;
+  --bt: linear-gradient(var(--buffer), var(--buffer)) 50% 100% / 14px 2px no-repeat, linear-gradient(var(--buffer), var(--buffer)) 50% 0 / 2px 10px no-repeat;
+}
+.kind-restaurant { --kind: var(--terra); }
+.kind-outing { --kind: var(--moss); }
+.kind-seasonal { --kind: var(--wheat); }
+:is(.card, .idea-card, .idea-main):has(.kind-restaurant) { --accent: var(--terra); }
+:is(.card, .idea-card, .idea-main):has(.kind-outing) { --accent: var(--moss); }
+:is(.card, .idea-card, .idea-main):has(.kind-seasonal) { --accent: var(--wheat); }
+.kind-word { color: var(--ink-2); }
+/* Nothing a person reads under 12-13px. */
+.foot .legal { font-size: 0.8125rem; letter-spacing: 0; }
+
+/* ---- A buffer stop: a 14px bar across the end of the track on a 10px upright ------------------ */
+.buffer { display: inline-block; flex: none; width: 14px; height: 12px; background: var(--bt); }
+
+/* ---- Here, on every page: a latched cell, a steel cap on the edge that meets the line --------- */
+.bar { border-bottom: 1px solid #2e343b; }
+@media (min-width: 52rem) {
+  .places a[aria-current], .tools > a[aria-current], .menu.here > summary {
+    color: var(--heading);
+    background: var(--latch);
+    border-radius: 4px 4px 0 0;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 0.55rem 0 var(--latch);
+  }
+}
+:is(.places a, .tools > a)[aria-current] .icon, .menu.here > summary .icon { color: var(--steel); filter: drop-shadow(0 0 4px color-mix(in srgb, var(--steel) 45%, transparent)); }
+/* The cap rides the bar's rule, the width of the cell, with the small ring lamp at its middle. */
+:is(.places a, .tools > a)[aria-current]::before, .menu.here > summary::before {
+  left: 0; right: 0; width: auto; bottom: calc(-0.55rem - 6px); height: 11px;
+  background:
+    radial-gradient(circle at 50% 50%, var(--steel) 0 3px, #0f1418 3.1px 5px, transparent 5.1px),
+    linear-gradient(var(--steel), var(--steel)) 50% 50% / 100% 2px no-repeat;
+}
+@media (max-width: 51.99rem) {
+  .places { border-top: 1px solid #2e343b; }
+  .places a { font-size: 0.8125rem; }
+  .places a[aria-current] { color: var(--heading); background: var(--latch); border-radius: 0 0 4px 4px; box-shadow: inset 0 -1px 0 rgb(255 255 255 / 0.03), 0 -0.4rem 0 var(--latch); }
+  .places a[aria-current="page"] .icon { background: none; box-shadow: none; }
+  .places a[aria-current]::before { top: calc(-0.4rem - 6px); bottom: auto; }
+}
+/* A latched key, in a bank of keys or tabs: pressed in, the same cell, its cap along the foot. */
+.key[aria-current], .tabs a[aria-current="page"], details.more[open] > summary, .capture[open] > summary {
+  color: var(--heading);
+  background: var(--latch);
+  border-color: #4a5a68;
+  box-shadow: inset 0 -2px 0 var(--steel), inset 0 1px 0 rgb(255 255 255 / 0.05);
+}
+:is(.key, .tabs a)[aria-current] .icon, details.more[open] > summary .icon, .capture[open] > summary .icon { color: var(--steel); filter: none; }
+.settings-nav a[aria-current="page"] { color: var(--heading); background: var(--latch); border-color: transparent; box-shadow: inset 2px 0 0 var(--steel), inset 0 1px 0 rgb(255 255 255 / 0.05); }
+.settings-nav a[aria-current="page"] .icon { color: var(--steel); }
+
+/* ---- A head's figure: the numeral, its unit stacked beside it on the numeral's baseline -------- */
+.head-fig { display: flex; align-items: last baseline; gap: 0.45rem; margin: 0; }
+.fig-u { display: grid; font: 500 0.8125rem/1.2 var(--sans); color: var(--ink-2); }
+.section-head .head-fig { margin: 0 auto 0 0.85rem; }
+.section-head .fig-n { font: 500 1.75rem/1 var(--fig); font-stretch: 75%; font-variant-numeric: tabular-nums; color: var(--label); }
+.section-head h2 + .head-fig { align-self: last baseline; }
+.section-head { align-items: last baseline; }
+.fig-u .late-count { min-height: 0; margin-block: -0.9rem; padding-block: 0.9rem; }
+
+/* ---- Home: the question, Home's largest head, and 'plan' lit ---------------------------------- */
+.ask-question { margin: 0 0 0.55rem; font: 700 2.5rem/1 var(--head); font-stretch: 80%; letter-spacing: -0.012em; word-spacing: 0.04em; color: var(--heading); text-wrap: balance; }
+.ask-question .glow { color: var(--brand); text-shadow: 0 0 0.45em rgb(109 255 156 / 0.45), 0 0 1.3em rgb(109 255 156 / 0.22); }
+@media (max-width: 40rem) { .ask-question { font-size: clamp(1.9rem, 7vw, 2.5rem); } }
+/* E4 at rest: the box's edge a breath of the phosphor and a soft light round it. */
+.welcome .ask, .your-turn .ask { border-color: color-mix(in srgb, var(--brand) 30%, var(--edge)); box-shadow: var(--lift), 0 0 38px -20px rgb(109 255 156 / 0.6); }
+.welcome .ask:focus-within, .your-turn .ask:focus-within { border-color: var(--lit); box-shadow: var(--lift), 0 0 0 3px color-mix(in srgb, var(--lit) 16%, transparent), 0 0 12px -4px color-mix(in srgb, var(--lit) 60%, transparent), 0 0 34px -8px color-mix(in srgb, var(--lit) 50%, transparent); }
+
+/* ---- Setup: numbered amber rings on one line, the next step lit and named, a buffer at the end - */
+.setup.setup { background: var(--tray); border: 1px solid rgb(255 184 80 / 0.4); }
+.setup .steps { --stop: 24px; --top: 1.45rem; }
+.steps > li::before { content: none; }
+.steps .stop { position: absolute; z-index: 2; display: grid; place-items: center; box-sizing: border-box; width: var(--stop); height: var(--stop); font: 500 0.8125rem/1 var(--mono); color: var(--amber); background: var(--tray); border: 2px solid var(--amber); border-radius: 50%; }
+.steps .stop .icon { width: 0.8rem; height: 0.8rem; stroke-width: 3; }
+.steps .next .stop { color: var(--brand); border-color: var(--brand); box-shadow: 0 0 10px rgb(109 255 156 / 0.5), inset 0 0 4px rgb(109 255 156 / 0.35); text-shadow: 0 0 6px rgb(109 255 156 / 0.55); }
+.steps .done .stop { color: var(--on-bright); background: var(--sage); border-color: var(--sage); }
+/* The rail stays steel until a step is done; the stretch behind a done step turns sage. Nothing
+   on the line is lit: only the next ring's rim says where to start. */
+.setup ol.steps.line > li.done:not(.last-stop)::after { background: var(--sage); }
+.next-word { position: absolute; font: 500 0.8125rem/1.2 var(--sans); color: var(--sage); white-space: nowrap; }
+.steps li > a { display: block; color: var(--ink); text-decoration: none; font-size: 1rem; line-height: 1.45; text-wrap: balance; }
+.steps li > a b { font-weight: 600; color: var(--heading); text-decoration: underline; text-decoration-color: rgb(255 184 80 / 0.45); text-decoration-thickness: 1px; text-underline-offset: 0.22em; }
+.steps li > a:hover b { text-decoration-color: currentColor; }
+.steps .so { font-weight: 400; color: var(--ink-2); }
+.steps .line-end { position: absolute; z-index: 3; display: flex; align-items: center; gap: 0.55rem; }
+.steps .line-end a, .across .line-end a, .checklist > li.line-end a, .kids-all { display: inline-flex; align-items: center; gap: 0.25rem; min-height: 2.75rem; font-size: 0.9375rem; font-weight: 500; color: var(--steel); text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 35%, transparent); white-space: nowrap; }
+:is(.line-end, .kids-line) a .icon { width: 1rem; height: 1rem; }
+.setup-note { margin: 0.2rem 0 0; font-size: 0.875rem; }
+@media (min-width: 52rem) {
+  .setup .steps { display: flex; gap: 0; padding: 0; }
+  .setup .steps > li { position: relative; flex: 1 1 0; min-width: 0; padding: calc(var(--top) + var(--stop) + 0.6rem) 1.6rem 0.2rem 0; }
+  .setup .steps .stop { left: 0; top: var(--top); }
+  .setup .next-word { left: 0; top: 0; }
+  .setup ol.steps.line > li::after { content: ""; position: absolute; z-index: 1; left: var(--stop); top: calc(var(--top) + var(--stop) / 2 - 1px); width: calc(100% - var(--stop)); height: 2px; background: var(--rail); }
+  .setup ol.steps.line > li.last-stop::after { width: 16px; }
+  .setup .steps .line-end { left: calc(var(--stop) + 16px - 1px); top: calc(var(--top) + var(--stop) / 2 - 1.375rem); }
+  .setup .steps .line-end .buffer { rotate: -90deg; }
+}
+@media (max-width: 51.99rem) {
+  .setup .steps { --top: 0.6rem; display: grid; gap: 0.2rem; padding: 0 0 0 2.4rem; }
+  .setup .steps > li { position: relative; padding: 0.35rem 0; }
+  .setup .steps .stop { left: -2.4rem; top: var(--top); }
+  .setup .next-word { position: static; display: block; margin: 0 0 0.1rem; }
+  .setup ol.steps.line > li::after { content: ""; position: absolute; z-index: 1; left: calc(-2.4rem + var(--stop) / 2 - 1px); top: calc(var(--top) + var(--stop)); width: 2px; height: calc(100% - var(--stop) + 0.2rem); background: var(--rail); }
+  .setup .steps > li.last-stop { padding-bottom: 3rem; }
+  .setup ol.steps.line > li.last-stop::after { height: calc(100% - var(--stop) - var(--top) - 1.6rem); }
+  .setup .steps .line-end { left: calc(-2.4rem + var(--stop) / 2 - 7px); bottom: 0.1rem; }
+}
+
+/* The day numerals are light Archivo, as the head's figures are. */
+.chip-day { font-weight: 300; font-stretch: 80%; letter-spacing: -0.02em; }
+.section-head .fig-n { font-weight: 400; font-size: 1.9rem; }
+.lately-rows > li { min-height: 3.05rem; grid-template-columns: 1.9rem minmax(0, 1fr) auto minmax(0, max-content); }
+/* An idea already on the main line says when, by a cyan ring: the Lately list's one branch to it. */
+.lately-rows .on-line { display: inline-flex; align-items: center; gap: 0.4rem; font: 400 0.8125rem/1.2 var(--sans); font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; }
+.lately-rows .on-line:not(:empty)::before { content: ""; flex: none; box-sizing: border-box; width: 9px; height: 9px; border: 1.5px solid var(--cyan); border-radius: 50%; }
+.lately-rows .more-row .go { grid-column: 4; justify-self: end; }
+/* On a phone a row's day and whom it is for go under its name. */
+@media (max-width: 40rem) {
+  .lately-rows > li:not(.more-row) { grid-template-columns: 1.9rem auto minmax(0, 1fr); grid-template-areas: "k t t" "k o f"; row-gap: 0.1rem; padding-block: 0.45rem; }
+  .lately-rows > li:not(.more-row) > .kind-ring { grid-area: k; }
+  .lately-rows > li:not(.more-row) > .t { grid-area: t; }
+  .lately-rows > li:not(.more-row) > .on-line { grid-area: o; }
+  .lately-rows > li:not(.more-row) > .for { grid-area: f; justify-self: start; }
+  .lately-rows .on-line:not(:empty) { margin-right: 0.6rem; }
+  .lately-rows .more-row { grid-template-columns: 1.9rem minmax(0, 1fr) auto; }
+  .lately-rows .more-row .go { grid-column: 3; }
+  .lately-rows > li:not(.more-row):has(> .on-line:empty) > .for { grid-area: o; }
+  .lately-rows .more-row .t { white-space: normal; }
+}
+@media (min-width: 52rem) { .dashboard { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); } }
+.lately-rows > li { column-gap: 0.7rem; }
+.lately-rows .t { text-overflow: clip; }
+
+/* ---- Home: the greeting is the box; the tube is the main line's first lamp ------------------- */
+/* The greeting holds the question and its box, and beside it the ways to start, one under
+   another, like a short list of departures. The green screen has gone down to the line. */
+.starters-head { display: none; }
+@media (min-width: 64rem) {
+  .welcome { grid-template-columns: minmax(0, 1fr); }
+  .page-home .welcome-words { display: grid; grid-template-columns: minmax(0, 1fr) 18.5rem; grid-template-rows: auto auto 1fr; column-gap: 2.25rem; align-items: start; }
+  .page-home .welcome-words > * { grid-column: 1; }
+  .page-home .welcome-words > .speaker { grid-column: 1 / -1; }
+  .page-home .welcome .ask { grid-row: 2 / span 2; }
+  .page-home .starters-head { display: block; grid-column: 2; grid-row: 2; margin: 0.35rem 0 0.6rem; font: 500 0.8125rem/1.2 var(--sans); color: var(--label); }
+  .page-home .welcome .starters { grid-column: 2; grid-row: 3; display: grid; gap: 0.5rem; margin: 0; }
+  .page-home .welcome .starters a { display: flex; width: 100%; box-sizing: border-box; }
+}
+/* Coming up: every plan a stop. The run from now ends at the next one, whose plate is Next up's
+   screen, hung from its stop as the others hang their plates; the rest follow at a plate each,
+   two lines where a name needs them, and the rail ends at a buffer beside All plans. The time
+   and how far off it is share the plate's second line; the board above the rail is the day. */
+.across .agenda-body .what { font-size: 0.9375rem; font-weight: 600; line-height: 1.3; text-wrap: balance; }
+.across .when { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.5rem; }
+.across .when .rel { font: 400 0.8125rem/1.3 var(--sans); color: var(--ink-2); }
+.across .line-end { position: absolute; z-index: 3; display: flex; align-items: center; gap: 0.55rem; }
+.next-body.agenda-body { padding: 0; background: none; border: 0; box-shadow: none; }
+.across > li.next-stop:hover .agenda-body { background: none; border-color: transparent; box-shadow: none; }
+.next-body .crt.next-up { margin: 0; }
+/* The first lamp switches on as the page opens: the picture opens out of a bright line (E16). */
+.next-body .next-up .crt-tube > * { animation: tube-on 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) 0.1s backwards; }
+@keyframes tube-on { 0% { opacity: 0.05; transform: scale(1, 0.01); filter: brightness(2.2); } 30% { opacity: 1; transform: scale(1, 0.01); } 65% { transform: scale(1, 1.03); } 100% { opacity: 1; transform: none; filter: none; } }
+@media (prefers-reduced-motion: reduce) { .next-body .next-up .crt-tube > * { animation: none; } }
+.next-body .next-up .next-label { margin-bottom: 0.4rem; font-size: 1.15rem; }
+.next-body .next-up .next-title { font-size: 1.7rem; line-height: 1.02; }
+.next-body .next-up .next-when, .next-body .next-up .next-where, .next-body .next-up .next-more { margin-top: 0.35rem; font-size: 1.3rem; }
+.next-body .next-up .next-more { margin-top: 0.15rem; }
+@media (min-width: 40rem) {
+  .across { gap: 0.85rem; padding-left: 4.4rem; background-size: calc(4.4rem + 0.95rem - 7px) 2px; }
+  .across::after { width: calc(4.4rem + 0.95rem - 7px); }
+  .across > li { min-width: 0; max-width: none; row-gap: 1.6rem; }
+  .across > li.next-stop { flex: 0 0 24.5rem; }
+  .next-body .next-up .crt-tube { grid-template-columns: minmax(0, 1fr) auto; gap: 0.9rem; }
+  .next-body .next-up .radar { width: 7rem; }
+  .across .agenda-body::before { top: calc(var(--by) - 3.9rem + var(--lamp) / 2); height: calc(3.9rem - var(--by) - var(--lamp) / 2); }
+  .across > li.last-stop::after { content: ""; position: absolute; z-index: 1; left: 0.95rem; top: calc(var(--by) - 1px); width: 16px; height: 2px; background: var(--rail); }
+  .across .line-end { left: calc(0.95rem + 16px - 1px); top: calc(var(--by) - 1.375rem); }
+  .across .line-end .buffer { rotate: -90deg; }
+}
+@media (max-width: 39.99rem) {
+  .across > li.last-stop::after { content: ""; position: absolute; z-index: 1; left: calc(var(--rx) - var(--px) - 1px); top: var(--ly); width: 2px; height: calc(100% - var(--ly) - 1.375rem - 6px); background: var(--rail); }
+  .across > li.last-stop { padding-bottom: 2.9rem; }
+  .across .line-end { left: calc(var(--rx) - var(--px) - 7px); bottom: 0; }
+  .across > li.next-stop { margin-bottom: 0.35rem; }
+  .next-body .next-up .radar { width: 4.6rem; margin: 0.1rem 0 0.3rem 0.6rem; }
+  .next-body .next-up .next-title { font-size: 1.5rem; }
+  .next-body .next-up .next-when { font-size: 1.2rem; }
+}
+
+/* ---- To do on Home: steel rings for what is to come, a dashed ring for no date, a buffer ------- */
+/* No date: a dashed pewter ring, drawn as six dashes so it reads at 12px. */
+.checklist > li::before, .task-line > li:not(.timed)::before { border: 0; background: radial-gradient(circle, var(--tray) 0 3.9px, transparent 4.1px), repeating-conic-gradient(var(--pewter) 0 30deg, var(--tray) 30deg 60deg); }
+.checklist > li.timed::before, .task-line > li.timed::before { background: var(--tray); border: 2px solid var(--steel); }
+.checklist > li.late::before, .task-line > li.late::before { background: var(--amber); border: 2px solid var(--amber); box-shadow: 0 0 0 3px var(--tray); }
+.line > li.line-end::before { content: none; }
+.checklist > li.line-end { display: flex; align-items: center; gap: 0.55rem; min-height: 2.75rem; padding: 0; border-top-color: transparent; }
+.checklist > li.line-end .buffer { position: absolute; left: calc(var(--rx) - var(--px) - 7px); top: calc(var(--ly) - 12px); }
+.checklist > li.line-end a { margin-top: -0.4rem; }
+.home-todo.tray { padding-bottom: 0.75rem; }
+
+/* The kids' wishes: the To do tray's foot row, under a hairline. */
+.kids-line { display: flex; flex-wrap: wrap; align-items: center; gap: 0 1rem; min-height: 2.75rem; margin: 0.9rem 0 0; padding: 0.35rem 0 0; border-top: 1px solid var(--line-2); }
+.kids-line h3 { display: flex; align-items: center; gap: 0.7rem; margin: 0; font: 600 1rem/1.2 var(--sans); font-stretch: 100%; letter-spacing: 0; color: var(--heading); white-space: nowrap; }
+.kids-line .kid-list { flex: 1 1 auto; min-width: 0; margin: 0; font-size: 0.9375rem; color: var(--ink-2); }
+.kids-line .kid a { display: inline-flex; align-items: center; min-height: 2.75rem; padding-inline: 0.35rem; margin-inline: -0.35rem; font-weight: 600; color: var(--heading); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--steel) 40%, transparent); text-underline-offset: 0.2em; }
+.kids-line .kid-top { color: var(--ink); }
+.kids-line .count-open { font-variant-numeric: tabular-nums; }
+.kids-line .sep { color: var(--rail-hi); }
+.kids-line .kids-all { min-width: 2.75rem; justify-content: flex-end; margin: 0 0 0 auto; }
+.kids-line .kids-waiting { flex-basis: 100%; margin: 0 0 0.5rem; }
+
+/* ---- Chat: the page head as on every page; a calm double track; only the newest stop lit ------ */
+.in-chat .page-head { margin-bottom: 1.5rem; }
+.thread:not(.brief) .said-bot .bubble { background: var(--vera); border: 1px solid #2e3a33; box-shadow: none; }
+.said-them .bubble { background: #1b2531; }
+.said-them .said-by strong { color: var(--steel); }
+/* Her older screens keep their glyphs and lose their bloom; the newest is lit, as is its time. */
+.thread .said-bot .avatar.presence { box-shadow: 0 0 0 3px var(--bg); }
+.thread:not(.brief) > .said-bot:has(~ .said-bot) .avatar.presence { filter: brightness(0.72) saturate(0.8); border-color: rgb(109 255 156 / 0.18); }
+.thread > .said-bot:not(:has(~ .said-bot)) .avatar.presence { border-color: rgb(109 255 156 / 0.4); box-shadow: 0 0 0 3px var(--bg), 0 0 18px -6px rgb(109 255 156 / 0.6), 0 0 6px -2px rgb(109 255 156 / 0.7); }
+.thread:not(.brief) > .said-bot:not(:has(~ .said-bot)) .bubble { background: radial-gradient(75% 120% at 100% 0, color-mix(in srgb, var(--screen) 9%, transparent), transparent 65%), var(--vera); border-color: color-mix(in srgb, var(--screen) 32%, var(--line)); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--screen) 20%, transparent), 0 0 30px -14px color-mix(in srgb, var(--screen) 45%, transparent); }
+.thread > .said-bot:not(:has(~ .said-bot)) .tape-time { color: var(--sage); text-shadow: 0 0 6px rgb(134 217 166 / 0.5), 0 0 14px rgb(134 217 166 / 0.2); }
+.said-them .stop { display: block; box-sizing: border-box; width: 12px; height: 12px; background: var(--bg); border: 2px solid var(--steel); border-radius: 50%; box-shadow: 0 0 0 3px var(--bg); }
+.junction-box { position: relative; z-index: 2; display: block; width: 22px; margin: 0 auto; }
+.junction-box .junction { display: block; margin: 0; }
+.turn-word { position: absolute; left: calc(100% + 0.5rem); bottom: 0.4rem; font: 500 0.8125rem/1 var(--sans); color: var(--sage); white-space: nowrap; text-shadow: 0 0 8px rgb(134 217 166 / 0.35); }
+@media (min-width: 40.01rem) {
+  .thread:not(.brief) .said-bot > .station > .avatar { width: 22px; height: 22px; margin-left: calc(var(--st) / 2 - 21px); border-radius: 6px; }
+  .thread:not(.brief) .said-them > .station > .stop { margin-left: calc(var(--st) / 2 + 4px); }
+  .thread:not(.brief) > li > .station { padding-top: 0.55rem; row-gap: 6px; }
+  .thread:not(.brief) > .said-them > .station { padding-top: 0.85rem; }
+}
+@media (max-width: 40rem) {
+  .thread:not(.brief) .said-bot > .station > .avatar { width: 22px; height: 22px; border-radius: 6px; }
+  .thread:not(.brief) > li > .station { padding-top: 0.5rem; }
+  .thread:not(.brief) > .said-them > .station { padding-top: 0.85rem; }
+  .junction-box { margin-left: calc(0.95rem - 11px); }
+  .junction-run { d: path("M11 0V40"); }
+}
+
+/* ---- Ideas: the line from home, finished ------------------------------------------------------- */
+.from-home .crt-tube { padding: 0.5rem 1.1rem 0.1rem 0.85rem; }
+.from-home-text { margin: 0; line-height: 1.25; white-space: nowrap; overflow: hidden; }
+.from-home-text .sep { color: var(--phosphor-dim); }
+.hl-row { display: flex; align-items: flex-start; }
+.hl-stub { flex: none; overflow: visible; filter: drop-shadow(0 0 2px color-mix(in srgb, var(--phosphor) 55%, transparent)); }
+.home-line { flex: 1 1 auto; width: auto; min-width: 0; }
+.hl-run { filter: drop-shadow(0 0 2px var(--phosphor)) drop-shadow(0 0 6px color-mix(in srgb, var(--phosphor) 55%, transparent)); }
+/* A station: a tick on the rail. The nearest is lit where the run from home ends; pointing at a
+   row lights its station (a white-hot core in two halos) and names it over the rail, on in 0.12s,
+   fading over 1.2s. While one is pointed at, the furthest's name goes out, so the tier over the
+   rail only ever carries one name. */
+.st { --on: 0; --lift: 0; --show: var(--on); }
+.st.near { --on: 0.85; --show: 1; }
+.st.far { --show: 1; }
+.page-ideas:has(.idea-row:is(:hover, :focus-within)) .st.far { --show: var(--on); }
+.st-tick, .st-name { transition: all calc(1.2s - var(--on) * 1.08s) var(--fade); }
+.st-tick { stroke: color-mix(in srgb, #e4fff0 calc(var(--on) * 100%), color-mix(in srgb, var(--phosphor) 72%, transparent)); filter: drop-shadow(0 0 calc(var(--on) * 3px + 0.01px) var(--phosphor)) drop-shadow(0 0 calc(var(--on) * 10px + 0.01px) var(--phosphor)); }
+/* A name's own afterglow is shorter than its tick's, so a name going out never lies under the
+   next one for long; the furthest's name goes out at once when another is pointed at and comes
+   back only once the pointed one has faded. */
+.st .st-name { transition: opacity calc(0.5s - var(--on) * 0.38s) var(--fade), fill calc(0.5s - var(--on) * 0.38s) var(--fade), filter calc(1.2s - var(--on) * 1.08s) var(--fade); }
+.st.far .st-name { transition: opacity 0.35s var(--fade) 0.5s; }
+.page-ideas:has(.idea-row:is(:hover, :focus-within)) .st.far .st-name { transition: opacity 0.1s linear; }
+@media (max-width: 40rem) { .hl-mile.minor { display: none; } }
+.st-name { fill: color-mix(in srgb, #e4fff0 calc(var(--lift) * 55%), var(--phosphor)); opacity: var(--show); filter: drop-shadow(0 0 calc(var(--lift) * 2px + 0.01px) var(--phosphor)) drop-shadow(0 0 calc(var(--lift) * 7px + 0.01px) color-mix(in srgb, var(--phosphor) 50%, transparent)); }
+.crt .st-link { outline: none; text-decoration: none; }
+.st-link:hover .st-name, .st-link:focus-visible .st-name { text-decoration: underline; }
+.st-link:focus-visible .hit { stroke: var(--brand); stroke-width: 2; }
+.page-ideas .page-head { margin-bottom: 1.1rem; }
+@media (max-width: 40rem) { .from-home-text { white-space: normal; } .from-home .crt-tube { padding-inline: 0.7rem 0.8rem; } }
+
+/* The page's two views are latched keys; the filters one slate strip under them. */
+.idea-tools { display: grid; gap: 0.5rem; margin: 0 0 0.9rem; }
+.idea-tools .tabs { justify-self: start; }
+.idea-tools .filters { flex: none; padding: 0.55rem 0.9rem 0.7rem; background: var(--tray); border: 1px solid var(--tray-edge); border-radius: var(--sq); }
+.idea-tools .filters label { font: 500 0.8125rem/1.2 var(--sans); color: var(--label); }
+/* The table: number, idea (its kind's ring, name, kind), for whom, drive and way. */
+.idea-board .colheads, .idea-rows > li { grid-template-columns: 2.4rem 1.9rem minmax(0, 1fr) minmax(7rem, 11rem) 7.2rem 2.6rem; column-gap: 0.8rem; }
+.idea-board .colheads { padding-top: 0.55rem; }
+.idea-board .colheads > span { font: 500 0.8125rem/1.3 var(--sans); color: var(--label); }
+.idea-board .ch-n { grid-column: 1; text-align: right; }
+.idea-board .ch-count { grid-column: 2 / 4; }
+.idea-board .ch-drive { text-align: right; }
+.idea-row .n { grid-column: 1; font: 500 0.8125rem/1.2 var(--mono); text-align: right; color: var(--label); }
+.idea-row .drive { display: block; font: 400 0.9375rem/1.2 var(--sans); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; color: var(--ink-2); }
+.idea-row .drive b { font-weight: 650; color: var(--heading); }
+.idea-row .drive.pending { font: italic 400 0.875rem var(--sans); color: var(--dim); text-align: left; grid-column: 5 / 7; }
+.idea-row .way { font: 500 0.8125rem/1.2 var(--mono); color: var(--label); }
+@media (max-width: 48rem) {
+  .idea-rows > li { grid-template-columns: 1.9rem minmax(0, 1fr) auto auto; grid-template-areas: "k t t t" "k w d y" "k g g g"; }
+  .idea-rows .n { display: none; }
+  .idea-rows .drive { grid-area: d; font-size: 0.875rem; }
+  .idea-rows .way { grid-area: y; }
+}
+
+/* ---- Status: one lit instrument, composed ----------------------------------------------------- */
+/* The well holds the three banks, centred on the glass's height, and nothing else; the chin is
+   one line: the tally from the glass's own left edge, then, at the right before the power lamp,
+   the way to change the limit. */
+.console .well { display: flex; flex-direction: column; justify-content: center; padding: 0.7rem 1.1rem 0.75rem 0.35rem; }
+.console .bank .cell { min-height: 3.1rem; }
+.console .chin { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 1.5rem; min-height: 0; padding: 0.55rem 2.3rem 0.6rem calc(1.2rem + 1px); }
+.console .chin .tally { align-self: auto; justify-content: flex-start; padding: 0; }
+.console .chin > a { margin: -0.3rem 0 -0.3rem auto; font-weight: 500; text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 35%, transparent); }
+.console .chin > .warn { display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 500; }
+.tally .tc { display: inline-flex; align-items: baseline; gap: 0 0.4rem; white-space: nowrap; }
+.tally .tc > .light { align-self: center; margin: 0.35rem 0 0 0.05rem; }
+.console::before { display: none; }
+@media (max-width: 52rem) {
+  .console .chin { padding: 0.6rem 1rem 1.5rem; }
+  .console .chin > a { margin-left: 0; }
+  .console .chin .tally { display: grid; grid-template-columns: repeat(2, max-content); gap: 0.35rem 1.4rem; }
+  .console .chin .tally .sep { display: none; }
+  .console .chin .tally .figure { font-size: 32px; }
+}
+/* The cost tables: every column head in the label step, sentence case, over its own figures. */
+table.data th, table.data th.num { font: 500 0.8125rem/1.3 var(--sans); letter-spacing: 0; text-transform: none; color: var(--label); }
+table.data th.num { text-align: right; }
+
+/* ---- Status: the boards under the instrument ---------------------------------------------------- */
+.board-lists .section-head .fig-n { font-size: 1.5rem; }
+.board-lists .section-head .head-fig { margin-left: 0.7rem; }
+.turnout { position: relative; z-index: 2; justify-self: start; align-self: stretch; height: auto; min-height: 2.75rem; overflow: visible; }
+.lights.chain > li:last-child:has(.turnout) { min-height: 2.75rem; }
+
+/* ---- Plans: every week on its rail; today latched ---------------------------------------------- */
+/* A day's number is a figure, as the fortnight's are: light Archivo, tabular, ink-2; DM Mono is
+   kept for times and stamps. Today's is the latched cell with its steel cap. */
+table.month time { display: inline-block; min-width: 1.7rem; padding: 0.05rem 0.3rem 0.15rem; font: 300 1.0625rem/1.2 var(--fig); font-stretch: 80%; font-variant-numeric: tabular-nums; letter-spacing: 0; text-align: center; color: var(--ink-2); }
+table.month td.today time { font-weight: 500; color: var(--heading); background: var(--latch); border-radius: 3px 3px 0 0; box-shadow: inset 0 -2px 0 var(--steel), inset 0 1px 0 rgb(255 255 255 / 0.05); }
+table.month td { border-bottom: 0; }
+/* Weeks gone by with nothing on are one dimmed rail with their dates, so the eye lands on now. */
+table.month tr.folded td { height: 2.5rem; padding: 0.55rem 0.55rem 1.1rem; background: none; }
+.fold-words { font: 400 0.8125rem/1.2 var(--sans); color: var(--dim); }
+
+
+/* ---- To do: the keys without an orphan label; NOW a lit rule across the list ------------------- */
+.task-tools .keys { gap: 0.35rem; }
+/* On a phone the four keys are one bank of equal cells, words only, and the search its own row. */
+@media (max-width: 40rem) {
+  .task-tools { display: grid; gap: 0.6rem; }
+  .task-tools .keys { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.3rem; }
+  .task-tools .key { justify-content: center; padding: 0 0.3rem; }
+  .task-tools .key .icon { display: none; }
+  .task-search { display: flex; gap: 0.5rem; }
+  .task-search input[type="search"] { flex: 1 1 auto; min-width: 0; }
+}
+.task-line .now-stop { right: 0; width: auto; height: 2px; border-radius: 1px; top: calc(var(--nowgap) / -2 - 1px);
+  background: linear-gradient(90deg, var(--hot) 0 26px, transparent 60px) 0 50% / 100% 1px no-repeat, linear-gradient(90deg, var(--brand), color-mix(in srgb, var(--brand) 50%, transparent) 45%, color-mix(in srgb, var(--brand) 14%, transparent));
+  box-shadow: none; filter: drop-shadow(0 0 2px var(--brand)) drop-shadow(0 0 6px color-mix(in srgb, var(--brand) 45%, transparent)); }
+.task-line .now-stop::after, .task-line .now-stop > .now-run { left: 8px; top: 2px; height: calc(var(--nowgap) / 2 + var(--ly) - var(--lamp) / 2 + 1px); }
+.task-line .now-stop > .now-run { filter: none; }
+.task-line .due .reminder { display: block; margin-top: 0.1rem; font-size: 0.8125rem; color: var(--steel); }
+.task-line .due .reminder .icon { width: 0.85rem; height: 0.85rem; margin-right: 0.25rem; vertical-align: -0.1rem; }
+.task-line > li.timed::before { border-color: var(--steel); }
+.task-line { --nowgap: 1.9rem; }
+.task-line > li.task.after-now { margin-top: var(--nowgap); }
+
+/* ---- The New idea form: a timetable, labels in the margin, fields on the line ------------------- */
+.idea-form { --m: 8.5rem; --rl: calc(var(--m) + 1.15rem); --fx: calc(var(--m) + 2.3rem); position: relative; grid-template-columns: minmax(0, 1fr); gap: 0.85rem 0; padding: 1.3rem 1.6rem 1.4rem 1.1rem; }
+.idea-form::before { content: ""; position: absolute; z-index: 1; left: calc(1.1rem + var(--rl) - 1px); top: 1.3rem; bottom: calc(1.4rem + 1.375rem + 10px); width: 2px; background: var(--rail); }
+.idea-form .field { position: relative; display: grid; grid-template-columns: var(--m) minmax(0, 1fr); column-gap: 2.3rem; align-items: baseline; }
+/* A margin label stands on its field's first line of text, as a timetable's times stand on
+   their rows. */
+.idea-form .field > label:not(.check) { grid-column: 1; margin: 0; padding-top: 0; text-align: right; font: 500 0.8125rem/1.3 var(--sans); color: var(--label); }
+.idea-form .field > :not(label):not(.req-lamp), .idea-form .field > label.check { grid-column: 2; }
+.idea-form .field > .muted { margin-top: 0.3rem; font-size: 0.875rem; }
+.idea-form .field:not(.wide) > :is(input, select) { max-width: 26rem; }
+.req-lamp { position: absolute; z-index: 2; left: calc(var(--rl) - 6px); top: calc(1.375rem - 6px); box-sizing: border-box; width: 12px; height: 12px; background: var(--surface); border: 2px solid var(--amber); border-radius: 50%; box-shadow: 0 0 0 3px var(--surface); transition: background-color var(--afterglow), border-color var(--afterglow), box-shadow var(--afterglow); }
+.idea-form .field:has(:required:valid) .req-lamp { background: var(--sage); border-color: var(--sage); box-shadow: 0 0 0 3px var(--surface), 0 0 8px -1px var(--sage); transition-duration: var(--glow-in); }
+.idea-form fieldset.field { display: block; padding: 0 0 0 var(--fx); border: 0; }
+.idea-form fieldset.field > legend { position: absolute; left: 0; top: 0; width: var(--m); padding: 0.78rem 0 0; text-align: right; font: 500 0.8125rem/1.3 var(--sans); color: var(--label); }
+.idea-form fieldset.field > label.check { display: inline-flex; margin: 0 1rem 0 0; }
+.idea-form .field.wide:has(> label.check) { padding-left: 0; }
+.idea-form details.more > summary { margin-left: var(--fx); }
+.idea-form .more .inner { gap: 0.85rem 0; grid-template-columns: minmax(0, 1fr); }
+.idea-form .field.actions { display: flex; align-items: center; gap: 0.75rem; padding-left: var(--fx); }
+.idea-form .actions .buffer { position: absolute; left: calc(var(--rl) - 7px); top: calc(50% - 12px); }
+@media (max-width: 40rem) {
+  .idea-form { --m: 5.4rem; padding-inline: 0.8rem 1rem; }
+  .idea-form::before { left: calc(0.8rem + var(--rl) - 1px); }
+  .idea-form .field { column-gap: 1.7rem; }
+  .idea-form { --fx: calc(var(--m) + 1.7rem); --rl: calc(var(--m) + 0.85rem); }
+}
+
+/* ---- Settings: the section pages' side nav takes the same rows ----------------------------------- */
+.settings-nav a { padding-inline: 0.6rem; }
+
+/* ---- Nothing a person reads under 13px; every target 44px --------------------------------------- */
+.event small, .data th, code, kbd, .said-when, .rows .what .t, .rows .hang .t, .tag, .key-state { font-size: 0.8125rem; }
+code, pre { overflow-wrap: anywhere; }
+pre { max-width: 100%; white-space: pre-wrap; }
+.people > li > .button { min-height: 2.75rem; }
+.rows .what a { padding-block: 0.8rem; margin-block: -0.8rem; }
+.button.ghost { min-height: 2.75rem; }
+/* An inline link in a sentence is a 44px target without moving the words round it. Not a row's
+   own link (the side nav, a list of links), which is a 44px row of its own instead. */
+:is(.page-settings, .page-status) main p > a:not([class]), :is(.page-settings, .page-status) main li:not(.activity > li, .kids-talk li, .settings-nav li, .plain > li) > a:not([class]) { padding-block: 0.85rem; margin-block: -0.85rem; }
+.page-status .plain > li > a:not([class]) { display: inline-flex; align-items: center; min-height: 2.75rem; }
+.page-status .plain > li { margin: 0; padding: 0; }
+.page-status .plain > li + li { border-top: 1px solid var(--line); }
+@media (max-width: 48rem) { .task-line details.more > summary { width: auto; padding: 0 0.7rem; font-size: 0.8125rem; } }
+@media (max-width: 39.99rem) { .across .rel { font-size: 0.8125rem; } }
+
+/* ---- The head row: the page's keys stand on the title's baseline ------------------------------- */
+.page-head .page-title, .page-head .page-actions { align-self: last baseline; }
+.page-head .page-actions { align-items: last baseline; padding-bottom: 0; }
+/* The late row a head's '2 late' leads to lands with the tube's flash (E10). */
+.task-line > li:target { animation: landed 1.8s var(--ease); }
+
+/* ---- Access -------------------------------------------------------------------------------------- */
+@media (prefers-contrast: more) {
+  .ask-question .glow, .turn-word, .thread > .said-bot .tape-time { text-shadow: none; }
+  .st-tick, .st-name, .hl-run, .hl-stub, .task-line .now-stop { filter: none; }
+  .steps .next .stop { box-shadow: none; text-shadow: none; }
+  .thread > .said-bot .avatar.presence, .thread:not(.brief) > .said-bot .bubble { box-shadow: none; }
+  :is(.idea-row, .lately-rows > li, .checklist > li, .task-line > li.task, .line.rows > li, .light-row, .section-card.panel, .settings-nav a):is(:hover, :focus-within) { box-shadow: inset 3px 0 0 var(--sage); transition: none; }
+  .welcome .ask, .your-turn .ask { box-shadow: var(--lift); }
+}
+@media (forced-colors: active) {
+  .buffer, .light, .req-lamp, .steps .stop, .said-them .stop { forced-color-adjust: none; }
+  .buffer { background: linear-gradient(CanvasText, CanvasText) 50% 100% / 14px 2px no-repeat, linear-gradient(CanvasText, CanvasText) 50% 0 / 2px 10px no-repeat; }
+  .light, .req-lamp, .steps .stop, .said-them .stop { background: Canvas; border: 2px solid CanvasText; box-shadow: none; -webkit-mask: none; mask: none; color: CanvasText; }
+  .light.on, .idea-form .field:has(:required:valid) .req-lamp { background: CanvasText; }
+  .light.unset { border-style: dashed; }
+  .st-tick { stroke: CanvasText; }
+}
+/* The line starts at the first day's tie, not above it. */
+.thread:not(.brief):has(> li.day-mark:first-child)::before { top: 1.15rem; }
+/* The lost page's line ends at a buffer beside the way back, not a red lamp: nothing has stopped. */
+.lost-line .end::before { left: calc(-1.75rem - 7px); top: calc(50% - 11px); width: 14px; height: 12px; background: var(--bt); border: 0; border-radius: 0; }
+/* Wishes: each list's name and, for an occasion, how far off it is, on one baseline in the label
+   step, so the three lists' heads stand level. */
+.wish-list .section-head { display: flex; align-items: last baseline; justify-content: flex-start; gap: 0.6rem; min-height: 1.75rem; margin-bottom: 0.4rem; }
+.wish-list .section-head h3 { align-items: last baseline; }
+.wish-list .section-head h3 .icon { align-self: center; }
+.wish-list .countdown { font: 400 0.8125rem/1.3 var(--sans); font-variant-numeric: tabular-nums; color: var(--ink-2); }
+/* Each kid's lists on a slate board of their own, as every other page's lists are. */
+.page-wishes .wish-kid { margin: 0 0 1rem; padding: 0.85rem 1.1rem 1rem; background: var(--tray); border: 1px solid var(--tray-edge); border-radius: var(--sq); }
+.page-wishes .wish-kid > .section-head { margin-bottom: 0.6rem; }
+.page-wishes .wish-lists { gap: 1rem 1.75rem; }
+.page-wishes .wish-list + .wish-list { border-left: 1px solid var(--line); padding-left: 1.75rem; }
+@media (max-width: 52rem) { .page-wishes .wish-list + .wish-list { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 0.75rem; } }

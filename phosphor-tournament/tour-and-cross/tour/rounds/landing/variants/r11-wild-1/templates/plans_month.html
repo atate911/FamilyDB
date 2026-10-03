@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, crt %}
+{% block title %}{{ month }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-month{% endblock %}
+{% macro event(entry) %}
+  <div class="event{{ ' from-google' if entry.from_google }}">
+    {% if entry.idea_id %}
+      <a href="{{ url_for('web.idea', idea_id=entry.idea_id) }}">{{ entry.title }}</a>
+    {% else %}
+      {{ entry.title }}
+    {% endif %}
+    {% if entry.time %}<small>{{ entry.time }}</small>{% endif %}
+  </div>
+{% endmacro %}
+{#
+  Pocket Timeline: the month as a line, a week at a time, each day with something on sitting on
+  the spine at its date, today lit; and beside it the same month on the green screen, as a map of
+  where the plans fall. One drawing does for a phone and a desk alike.
+#}
+{% block content %}
+  {{ page_head('Plans', none, 'plans') }}
+  <nav class="tabs" aria-label="How to show the plans">
+    <a href="{{ url_for('web.plans') }}">{{ icon('list') }}List</a>
+    <a href="{{ url_for('web.plans_month') }}" aria-current="page">{{ icon('grid') }}Month</a>
+  </nav>
+  {% if visitor().may('browse') %}<p class="muted source source-{{ source }}">{{ source_note }}</p>{% endif %}
+
+  <div class="month-head">
+    <h2><span class="node" aria-hidden="true"></span>{{ month }}</h2>
+    <p class="month-nav">
+      <a class="button ghost" href="{{ url_for('web.plans_month', month=previous) }}">{{ icon('left') }}Earlier</a>
+      {% if not this_month %}<a class="button ghost" href="{{ url_for('web.plans_month') }}">This month</a>{% endif %}
+      <a class="button ghost" href="{{ url_for('web.plans_month', month=following) }}">Later{{ icon('right') }}</a>
+    </p>
+  </div>
+
+  <div class="month-wrap">
+    <ol class="plain month-line">
+      {% set seen = namespace(today=false, quiet_from=none) %}
+      {% for week in weeks %}
+        {% set shown = week | selectattr('entries') | list %}
+        {% set quiet = not shown and not (week | selectattr('today') | list) %}
+        {% set after = loop.nextitem if loop.nextitem is defined else none %}
+        {% set next_quiet = after is not none and not (after | selectattr('entries') | list) and not (after | selectattr('today') | list) %}
+        {# Weeks with nothing on run together into one line, however many there are. #}
+        {% if quiet and seen.quiet_from is none %}{% set seen.quiet_from = week[0].date %}{% endif %}
+        {% if not (quiet and next_quiet) %}
+        <li class="week{{ ' quiet' if quiet }}">
+          <p class="week-label">{{ (seen.quiet_from if quiet else week[0].date).strftime('%-d %b') }} – {{ week[-1].date.strftime('%-d %b') }}</p>
+          {% if quiet %}{% set seen.quiet_from = none %}{% endif %}
+          <ol class="plain days">
+            {% for day in week %}
+              {% if day.today %}{% set seen.today = true %}{% endif %}
+              {% if day.entries or day.today %}
+                <li class="day{{ ' today' if day.today }}{{ ' past' if not seen.today }}{{ ' outside' if not day.current }}">
+                  <span class="day-tile" aria-hidden="true">
+                    <span class="chip-mon">{{ day.date.strftime('%b') }}</span>
+                    <span class="chip-day">{{ day.day }}</span>
+                    <span class="chip-dow">{{ day.date.strftime('%a') }}</span>
+                  </span>
+                  <div class="day-body">
+                    <p class="day-name"><time datetime="{{ day.date.isoformat() }}">{{ day.date.strftime('%A %-d %B') }}</time>{% if day.today %} <span class="tag today-tag">today</span>{% endif %}</p>
+                    {% for entry in day.entries %}{{ event(entry) }}{% else %}<p class="muted">Nothing on today.</p>{% endfor %}
+                  </div>
+                </li>
+              {% endif %}
+            {% endfor %}
+          </ol>
+          {% if quiet %}<p class="muted nothing">Nothing on.</p>{% endif %}
+        </li>
+        {% endif %}
+      {% endfor %}
+    </ol>
+
+    {% call crt('month-screen', hidden=true) %}
+      <p class="month-screen-title"><span class="inverse caps">{{ month }}</span></p>
+      <table class="month">
+        <thead>
+          <tr>{% for name in ['M', 'T', 'W', 'T', 'F', 'S', 'S'] %}<th scope="col">{{ name }}</th>{% endfor %}</tr>
+        </thead>
+        <tbody>
+          {% for week in weeks %}
+            <tr>
+              {% for day in week %}
+                <td class="{{ 'outside' if not day.current }}{{ ' today' if day.today }}{{ ' busy' if day.entries }}">
+                  <time datetime="{{ day.date.isoformat() }}">{{ day.day }}</time>
+                </td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="month-screen-key dim">&gt; <span class="blip-key"></span> a plan · <span class="today-key">00</span> today<span class="crt-cursor"></span></p>
+    {% endcall %}
+  </div>
+{% endblock %}

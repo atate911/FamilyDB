@@ -1,0 +1,147 @@
+{# The settings pages' small parts: `{% from "_settings.html" import box, group, form %}`.
+   A box says what it is, what it does in a line under it, what it falls back to when left
+   empty (in the box, or as the dropdown's first choice), and whether it was changed here. #}
+{% from "_ui.html" import icon, tile %}
+
+{# Every panel of settings is led by its pictogram on a tile of the plotting board, as each card
+   on the Settings page is: the small size of the page's pictures. A group not named here takes
+   its page's own. #}
+{% set GROUP_ICONS = {
+  'home': 'home', 'position': 'pin', 'page': 'mark', 'log': 'list',
+  'who': 'user', 'levels': 'up', 'models': 'list', 'watch': 'status', 'judgement': 'sparkles',
+  'stronger': 'star', 'second': 'link', 'voice': 'mic', 'photos': 'sun',
+  'limit': 'coin', 'wishes': 'gift', 'thinking': 'idea', 'each': 'chat',
+  'weekend': 'plans', 'others': 'bell', 'admins': 'warning', 'retries': 'undo',
+  'web': 'search', 'when': 'clock', 'pace': 'hourglass',
+  'telegram-answering': 'chat', 'telegram-groups': 'family', 'calendar': 'plans',
+  'signing-in': 'key',
+} %}
+
+{# A dropdown's choices under their headings, as `(heading, [(value, words)])`, with `value`
+   chosen: the time zones, here and on setup's home step. #}
+{% macro grouped_options(groups, value) -%}
+  {% for heading, rows in groups %}
+    <optgroup label="{{ heading }}">
+      {%- for one, words in rows %}<option value="{{ one }}"{% if one == value %} selected{% endif %}>{{ words }}</option>{% endfor -%}
+    </optgroup>
+  {% endfor %}
+{%- endmacro %}
+
+{% macro box(entry) -%}
+  {% set one = entry.field %}
+  {% set told = 'h-' ~ one.key %}
+  <div class="setting{% if entry.problem %} bad{% endif %}">
+    <div class="setting-head">
+      <label for="f-{{ one.key }}">{{ one.label }}</label>
+      {% if entry.stored %}<span class="changed">changed</span>{% endif %}
+    </div>
+    {% if one.choices %}
+      <select id="f-{{ one.key }}" name="{{ one.key }}"
+        {%- if entry.problem or one.note %} aria-describedby="{{ told }}"{% endif %}>
+        <option value="">Default ({{ entry.placeholder }})</option>
+        {# A value stored that the list does not offer (a zone an older page took typed) is kept
+           as a choice of its own, so saving the page never quietly loses it. #}
+        {% if entry.value and entry.value not in one.choices %}
+          <option value="{{ entry.value }}" selected>{{ entry.value }}</option>
+        {% endif %}
+        {% if entry.grouped %}
+          {{ grouped_options(entry.grouped, entry.value) }}
+        {% else %}
+          {% for choice in one.choices %}
+            <option value="{{ choice }}" {% if entry.value == choice %}selected{% endif %}>{{ entry.labels.get(choice) or one.word(choice) }}</option>
+          {% endfor %}
+        {% endif %}
+      </select>
+    {% elif entry.offers and one.another %}
+      {# The list to choose from, each with what it is, then "Another", which opens a box to
+         type any other in: a model released next week still fits. The box shows only while
+         "Another" is chosen, by the stylesheet alone; a browser that cannot tell shows it
+         always, and it is read only when "Another" is chosen. #}
+      {% set listed = entry.offers | map('first') | list %}
+      {% set typed_in = entry.value and entry.value not in listed %}
+      <div class="pick">
+        <select id="f-{{ one.key }}" name="{{ one.key }}"
+          {%- if entry.problem or one.note %} aria-describedby="{{ told }}"{% endif %}>
+          <option value="">Default ({{ entry.placeholder }})</option>
+          {% for value, what in entry.offers %}
+            {# A model by its name, which is what the company calls it, then what it is; a chat
+               by what it is, as its id says nothing. #}
+            <option value="{{ value }}"{% if entry.value == value %} selected{% endif %}>
+              {%- if one.company %}{{ value }}{% if what %} · {{ what }}{% endif %}{% else %}{{ what or value }}{% endif -%}
+            </option>
+          {% endfor %}
+          <option value="another"{% if typed_in %} selected{% endif %}>{{ one.another }}…</option>
+        </select>
+        <div class="another">
+          <label for="a-{{ one.key }}">{{ one.another }}</label>
+          <input id="a-{{ one.key }}" name="{{ one.key }}_another" type="text" autocomplete="off"
+                 spellcheck="false" value="{{ entry.value if typed_in else '' }}"
+                 placeholder="{{ 'its name, as the company writes it' if one.company else 'its id, such as -1001234567890' }}"
+                 {% if one.keyboard %}inputmode="{{ one.keyboard }}"{% endif %} />
+        </div>
+      </div>
+    {% else %}
+      <input
+        id="f-{{ one.key }}"
+        name="{{ one.key }}"
+        type="text"
+        value="{{ entry.value }}"
+        placeholder="{{ entry.placeholder }}"
+        {% if one.keyboard %}inputmode="{{ one.keyboard }}"{% endif %}
+        {% if entry.offers %}list="s-{{ one.key }}" autocomplete="off"{% endif %}
+        {% if entry.problem or one.note %}aria-describedby="{{ told }}"{% endif %}
+      />
+      {% if entry.offers %}
+        <datalist id="s-{{ one.key }}">
+          {% for value, what in entry.offers %}<option value="{{ value }}">{{ what }}</option>{% endfor %}
+        </datalist>
+      {% endif %}
+    {% endif %}
+    {% if entry.problem %}
+      <p id="{{ told }}" class="error" role="alert">{{ entry.problem }}</p>
+    {% elif one.note %}
+      <p id="{{ told }}" class="muted hint">{{ one.note }}</p>
+    {% endif %}
+  </div>
+{%- endmacro %}
+
+{# A group of boxes under its heading. Fine-tuning is folded away, and opens by itself when one
+   of its boxes has a complaint; folded, it says how many of its boxes were changed here. #}
+{% macro group(entry) -%}
+  {% set g = entry.group %}
+  {% set glyph = GROUP_ICONS.get(g.name, 'settings') %}
+  {% if g.folded %}
+    <details class="panel fold tiled" id="{{ g.name }}"{% if entry.open %} open{% endif %}>
+      <summary>
+        {{ tile(glyph) }}
+        <span class="h2">{{ g.title }}</span>
+        {% if entry.changed %}<span class="changed">{{ entry.changed }} changed</span>{% endif %}
+      </summary>
+      {% if g.note %}<p class="muted">{{ g.note }}</p>{% endif %}
+      <div class="grid">{% for one in entry.boxes %}{{ box(one) }}{% endfor %}</div>
+    </details>
+  {% else %}
+    <section class="panel tiled" id="{{ g.name }}">
+      {{ tile(glyph) }}
+      <h2>{{ g.title }}</h2>
+      {% if g.note %}<p class="muted">{{ g.note }}</p>{% endif %}
+      <div class="grid">{% for one in entry.boxes %}{{ box(one) }}{% endfor %}</div>
+    </section>
+  {% endif %}
+{%- endmacro %}
+
+{# A page's boxes in one form with one Save, which stays in reach while the form is on screen.
+   Everything in the form is saved, and a box that was emptied goes back to its default; the
+   boxes of other pages are not in it, so they stay as they are. A `call` block goes first. #}
+{% macro form(section, groups=[]) -%}
+  <form method="post" action="{{ url_for('settings.save') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    <input type="hidden" name="section" value="{{ section }}" />
+    {% if caller is defined %}{{ caller() }}{% endif %}
+    {% for entry in groups %}{{ group(entry) }}{% endfor %}
+    <div class="save-bar">
+      <p class="muted">An empty box uses the default it shows.</p>
+      <button type="submit">{{ icon('check') }}Save</button>
+    </div>
+  </form>
+{%- endmacro %}

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, stamp %}
+{% block title %}{{ month }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-month{% endblock %}
+{% macro event(entry) %}
+  <div class="event{{ ' from-google' if entry.from_google }}">
+    {% if entry.time %}<small>{{ entry.time }}</small>{% endif %}
+    {% if entry.idea_id %}
+      <a href="{{ url_for('web.idea', idea_id=entry.idea_id) }}">{{ entry.title }}</a>
+    {% else %}
+      <span>{{ entry.title }}</span>
+    {% endif %}
+  </div>
+{% endmacro %}
+{% block content %}
+  {# The quote: in this month, the plans still ahead of today on the grid (the weeks it shows run
+     into the next month, and those count, since they are there to see), and the next one as the
+     change line. Another month quotes its own plans. A plan over several days counts once. #}
+  {% set cal = namespace(today=none, month_n=0, ahead=0, next=none, seen=[]) %}
+  {% for week in weeks %}{% for day in week %}{% if day.today %}{% set cal.today = day.date %}{% endif %}{% endfor %}{% endfor %}
+  {% for week in weeks %}{% for day in week %}{% for entry in day.entries %}
+    {% set key = (entry.id or entry.title) ~ '@' ~ entry.start_value %}
+    {% if key not in cal.seen %}
+      {% set cal.seen = cal.seen + [key] %}
+      {% if day.current %}{% set cal.month_n = cal.month_n + 1 %}{% endif %}
+      {% if cal.today and day.date >= cal.today %}
+        {% set cal.ahead = cal.ahead + 1 %}
+        {% if cal.next is none %}{% set cal.next = entry %}{% endif %}
+      {% endif %}
+    {% endif %}
+  {% endfor %}{% endfor %}{% endfor %}
+  {% if this_month and cal.today %}
+    {% set figure, unit = cal.ahead, 'ahead' %}
+    {% set change = ('next ' ~ stamp(cal.next.start_value, time=not cal.next.all_day)) if cal.next else 'nothing ahead' %}
+  {% else %}
+    {% set figure, unit, change = cal.month_n, ('plan' if cal.month_n == 1 else 'plans'), none %}
+  {% endif %}
+  {# The month is the one thing on this screen, so it is the title; Plans is where it sits. #}
+  {{ page_head(month, none, 'plans', [('Plans', url_for('web.plans'))], figure=figure, unit=unit, change=change) }}
+  <div class="fkeys">
+    <nav class="tabs" aria-label="How to show the plans">
+      <a href="{{ url_for('web.plans') }}">{{ icon('list') }}List</a>
+      <a href="{{ url_for('web.plans_month') }}" aria-current="page">{{ icon('grid') }}Month</a>
+    </nav>
+    <p class="month-nav">
+      <a class="button ghost" href="{{ url_for('web.plans_month', month=previous) }}">{{ icon('left') }}Earlier</a>
+      {% if not this_month %}<a class="button ghost" href="{{ url_for('web.plans_month') }}">This month</a>{% endif %}
+      <a class="button ghost" href="{{ url_for('web.plans_month', month=following) }}">Later{{ icon('right') }}</a>
+    </p>
+  </div>
+  {% if visitor().may('browse') %}<p class="source source-{{ source }}">{{ source_note }}</p>{% endif %}
+
+  {# Two drawings of the same days, and the stylesheet shows one: seven columns where there is
+     room for them, and on a phone just the days that have something on, as a list. #}
+  <table class="month">
+    <thead>
+      <tr>{% for name in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}<th scope="col">{{ name }}</th>{% endfor %}</tr>
+    </thead>
+    <tbody>
+      {% for week in weeks %}
+        <tr>
+          {% for day in week %}
+            <td class="{{ 'outside' if not day.current }}{{ ' today' if day.today }}{{ ' busy' if day.entries }}{{ ' past' if cal.today and day.date < cal.today }}{{ ' weekend' if loop.index > 5 }}">
+              <time datetime="{{ day.date.isoformat() }}">{{ day.day }}</time>
+              {% for entry in day.entries %}{{ event(entry) }}{% endfor %}
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <ol class="plain month-list">
+    {% for day in busy_days %}
+      <li class="{{ 'today' if day.today }}">
+        <strong>{{ day.name }}</strong>{% if day.today %} <span class="tag">today</span>{% endif %}
+        {% for entry in day.entries %}{{ event(entry) }}{% endfor %}
+      </li>
+    {% else %}
+      <li class="muted">Nothing on in {{ month }}.</li>
+    {% endfor %}
+  </ol>
+{% endblock %}

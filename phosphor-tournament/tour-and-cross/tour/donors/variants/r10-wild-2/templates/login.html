@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, crt %}
+{% block title %}Sign in · {{ site_title }}{% endblock %}
+{% block body_class %}page-signin{% endblock %}
+{% block content %}
+  <section class="panel narrow signin">
+    {# The mark's face, awake on the scope, the way an old machine greeted you. #}
+    {% call crt('power-on') %}
+      {# The mark's face as the beam draws it: a flat trace that lifts into two eyes and dips
+         into a smile, on the graticule, the way an old scope said it was warm. #}
+      <svg class="crt-face" viewBox="0 0 240 90" preserveAspectRatio="none" focusable="false">
+        <path class="face-trace" d="M0 58H62L66 58V22H74V58H104C112 58 114 78 120 78S128 58 136 58H166V22H174V58H240"/>
+      </svg>
+      <p class="signin-ready caps">Ready.<span class="crt-cursor"></span></p>
+    {% endcall %}
+    <h1>Sign in to {{ site_title }}</h1>
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+    <form method="post" action="{{ url_for('auth.sign_in') }}">
+      {% if next %}<input type="hidden" name="next" value="{{ next }}" />{% endif %}
+      {% if personal %}
+        {# Everybody signs in as themselves: the name is the one on the Family page. #}
+        <label for="name">Your name</label>
+        <input
+          id="name"
+          name="name"
+          autocomplete="username"
+          autocapitalize="words"
+          maxlength="80"
+          value="{{ name }}"
+          {{ '' if name else 'autofocus' }}
+          required
+        />
+        <label for="password">Your password</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          {{ 'autofocus' if name }}
+          required
+        />
+      {% else %}
+        <label for="password">Family password</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          autofocus
+          required
+        />
+      {% endif %}
+      <button type="submit">Sign in{{ icon('right') }}</button>
+    </form>
+    {% if personal %}
+      <p class="muted hint">Forgotten it? An admin can make you a new starting password on the
+        Family page.</p>
+    {% endif %}
+  </section>
+{% endblock %}

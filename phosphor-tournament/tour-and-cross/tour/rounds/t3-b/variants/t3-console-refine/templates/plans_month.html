@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, lamp, rail, leg, crt %}
+{% block title %}{{ month }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-month{% endblock %}
+{#- A plan on the calendar, marked as its stop is on the flight plan: a pewter ring for one
+    already flown, the lit jewel for the next, and a numbered ring for each after it, counted
+    from the next, as on Home. `mark` is 'past', 'next', a number, or '' where no Now is in view.
+    In a flown week a plan is one line: its ring and its title, no time. -#}
+{% macro event(entry, mark='') %}
+  <div class="event{{ ' from-google' if entry.from_google }}{{ ' is-past' if mark == 'past' }}">
+    {% if mark == 'next' %}<span class="ring lit" aria-hidden="true"></span>
+    {%- elif mark == 'past' %}<span class="ring past" aria-hidden="true"></span>
+    {%- else %}<span class="ring" aria-hidden="true">{{ mark }}</span>{% endif %}
+    <span class="event-what">
+    {% if entry.idea_id %}
+      <a href="{{ url_for('web.idea', idea_id=entry.idea_id) }}">{{ entry.title }}</a>
+    {% else %}
+      {{ entry.title }}
+    {% endif %}
+    {% if entry.time or mark == 'next' %}<small>{% if mark == 'next' %}<span class="next-word">Next</span>{{ ' · ' if entry.time }}{% endif %}{{ entry.time or '' }}</small>{% endif %}
+    </span>
+  </div>
+{% endmacro %}
+{#- A run of weeks already flown with nothing in them, folded to one strip: its dates, and that
+    nothing was planned. -#}
+{% macro folded(a, b) %}
+  <tr class="flown folded">
+    <td colspan="7"><span class="fold-dates">{{ a.day }}{% if a.month != b.month %} {{ a.strftime('%b') }}{% endif %} to {{ b.day }} {{ b.strftime('%b') }}</span><span class="fold-words"> · nothing planned</span></td>
+  </tr>
+{% endmacro %}
+{#- A day's numeral; where a month turns, its name beside it: "1 Oct". -#}
+{% macro numeral(day) -%}
+  <time datetime="{{ day.date.isoformat() }}">{{ day.day }}{% if day.day == 1 %} {{ day.date.strftime('%b') }}{% endif %}</time>
+{%- endmacro %}
+{% block content %}
+  {# The days this calendar shows, in order, where today is among them, and each plan once, as a
+     stop of the flight plan: numbered from the next, as on Home, so a plan has the same number
+     on every page. #}
+  {% set days = [] %}
+  {% for week in weeks %}{% for day in week %}{% set _ = days.append(day) %}{% endfor %}{% endfor %}
+  {% set ti = namespace(v=-1) %}
+  {% for day in days %}{% if day.today %}{% set ti.v = loop.index0 %}{% endif %}{% endfor %}
+  {% set stops = [] %}
+  {% set seen = [] %}
+  {% for day in days %}{% set i = loop.index0 %}{% for entry in day.entries %}{% if entry not in seen %}{% set _ = seen.append(entry) %}{% set _ = stops.append({'i': i, 'day': day, 'entry': entry, 'n': stops | length + 1}) %}{% endif %}{% endfor %}{% endfor %}
+  {% set nx = namespace(n=0, day=none, entry=none) %}
+  {% if ti.v >= 0 %}{% for s in stops if s.i >= ti.v and not nx.n %}{% set nx.n = s.n %}{% set nx.day = s.day %}{% set nx.entry = s.entry %}{% endfor %}{% endif %}
+  {% set marks = {} %}
+  {% for s in stops %}
+    {% set _ = marks.update({s.n: ('past' if ti.v >= 0 and s.i < ti.v else ('next' if s.n == nx.n else ((s.n - nx.n) if nx.n else s.n)))}) %}
+  {% endfor %}
+  {% macro mark_of(entry) -%}{{ marks[stops | selectattr('entry', 'equalto', entry) | map(attribute='n') | first] }}{%- endmacro %}
+
+  {# The head: the title and the List/Month keys, and under them the rail (the day in its lit
+     window, and how many plans are still to come this week, counted from today); on the right
+     the page's one tube, a small Next up glass, where the rail's words used to say it. #}
+  {% set today_day = (days | selectattr('today') | first) if ti.v >= 0 else none %}
+  {% set cells = [] %}
+  {% if today_day %}{% set _ = cells.append({'label': 'Today', 'value': today_day.date.strftime('%a %d %b').replace(' 0', ' '), 'href': none, 'tone': 'clock'}) %}{% endif %}
+  {% if ti.v >= 0 %}
+    {% set week_end = (ti.v // 7) * 7 + 6 %}
+    {% set _ = cells.append({'label': 'Still this week', 'value': stops | selectattr('i', 'ge', ti.v) | selectattr('i', 'le', week_end) | list | length, 'href': '#today'}) %}
+  {% else %}
+    {% set _ = cells.append({'label': 'This month', 'value': stops | selectattr('day.current') | list | length, 'href': '#month'}) %}
+  {% endif %}
+  <div class="month-top{{ ' has-tube' if nx.entry }}">
+    <div class="month-top-words">
+  {{ page_head('Plans', 'What is on, and what is still to fly.', 'plans') }}
+      <div class="rail-row">
+      {{ rail(cells, 'Plans at a glance', 'month-rail') }}
+      <nav class="latch" aria-label="How to show the plans">
+        <a href="{{ url_for('web.plans') }}">{{ icon('list') }}List</a>
+        <a href="{{ url_for('web.plans_month') }}" aria-current="page">{{ lamp('on', 'small led') }}{{ icon('grid') }}Month</a>
+      </nav>
+      </div>
+    </div>
+    {% if nx.entry %}
+      {% call crt('next-up small-tube', hidden=false) %}
+        <div class="next-text">
+          <p class="next-label"><span class="inverse caps">Next up</span></p>
+          <p class="next-title bright">{% if nx.entry.idea_id %}<a href="{{ url_for('web.idea', idea_id=nx.entry.idea_id) }}">{{ nx.entry.title }}</a>{% else %}{{ nx.entry.title }}{% endif %}</p>
+          <p class="next-when">{{ nx.day.date.strftime('%a %d %b').replace(' 0', ' ') }}{% if nx.entry.time %}, {{ nx.entry.time }}{% endif %}{% if nx.entry.relative %} <span class="rel">{{ nx.entry.relative }}</span>{% endif %}<span class="crt-cursor" aria-hidden="true"></span></p>
+        </div>
+      {% endcall %}
+    {% endif %}
+  </div>
+
+  <section class="bay month-bay" id="month" aria-label="{{ month }}">
+    <div class="bay-body">
+      {% set MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] %}
+      <div class="month-head">
+        <h2>{{ month }}</h2>
+        <p class="month-nav">
+          <a class="button secondary" href="{{ url_for('web.plans_month', month=previous) }}">{{ icon('left') }}Earlier</a>
+          {% if not this_month %}<a class="button secondary" href="{{ url_for('web.plans_month') }}">This month</a>{% endif %}
+          {# The Later key as a chart says it: the route goes on, dashed, to the next sheet. #}
+          <a class="continued" href="{{ url_for('web.plans_month', month=following) }}"><span class="continued-leg" aria-hidden="true"></span>Continued on the {{ MONTH_NAMES[(following[5:7] | int) - 1] }} sheet{{ icon('right') }}</a>
+        </p>
+      </div>
+      {% if visitor().may('browse') %}<p class="muted source source-{{ source }}">{{ icon('plug') }}{{ source_note }}</p>{% endif %}
+
+      {# The month. A week wholly flown folds to a strip: its dates in pewter and its plans on one
+         line each, and a run of flown weeks with nothing in them folds to one strip that says so,
+         so the height goes to the weeks still to fly. Over each of those runs a line of
+         the flight plan, drawn to the columns under it: the lit Now needle in today's column, the
+         live leg from it to the next plan's jewel, an arc in the route's slate-cyan for each leg after it, with its
+         a ring on each plan's day with the number its chip carries, and a leg flown in
+         the route's darker self. A leg that crosses a week's edge runs to the edge and goes on in the next
+         week's line. #}
+      {% set base_y = 22 %}
+      {# With two weeks or fewer still to fly, they take the height the month has to give. #}
+      {% set roomy = ti.v >= 0 and (weeks | length - ti.v // 7) <= 2 %}
+      <table class="month">
+        <thead>
+          <tr>{% for name in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}<th scope="col">{{ name }}</th>{% endfor %}</tr>
+        </thead>
+        <tbody>
+          {% set run = namespace(a=none, b=none) %}
+          {% for week in weeks %}
+            {% set w = loop.index0 %}
+            {% set flown = ti.v >= 0 and (w * 7 + 6) < ti.v %}
+            {% set empty = (week | map(attribute='entries') | map('length') | sum) == 0 %}
+            {% if flown and empty %}
+              {% if run.a is none %}{% set run.a = week[0].date %}{% endif %}
+              {% set run.b = week[-1].date %}
+            {% else %}
+            {% if run.a is not none %}{{ folded(run.a, run.b) }}{% set run.a = none %}{% endif %}
+            {# What of the flight plan crosses this week: its stops, and the legs that reach it. #}
+            {% set lo, hi = w * 7, w * 7 + 6 %}
+            {% set here = stops | selectattr('i', 'ge', lo) | selectattr('i', 'le', hi) | list %}
+            {% set legs = [] %}
+            {% set prev = namespace(i=-1, n=0) %}
+            {% for s in stops %}
+              {% if prev.i >= 0 and s.i != prev.i %}
+                {% set kind = 'past' if (ti.v >= 0 and s.i < ti.v) else ('next' if s.n == nx.n else 'later') %}
+                {% if kind == 'next' and ti.v >= 0 and prev.i < ti.v %}
+                  {% set _ = legs.append({'a': prev.i, 'b': ti.v, 'kind': 'past'}) %}
+                  {% set _ = legs.append({'a': ti.v, 'b': s.i, 'kind': 'next'}) %}
+                {% else %}
+                  {% set _ = legs.append({'a': prev.i, 'b': s.i, 'kind': kind}) %}
+                {% endif %}
+              {% elif prev.i < 0 and s.n == nx.n and ti.v >= 0 and s.i > ti.v %}
+                {% set _ = legs.append({'a': ti.v, 'b': s.i, 'kind': 'next'}) %}
+              {% endif %}
+              {% set prev.i = s.i %}{% set prev.n = s.n %}
+            {% endfor %}
+            {% set crossing = legs | selectattr('a', 'le', hi) | selectattr('b', 'ge', lo) | list %}
+            {% set has_now = ti.v >= lo and ti.v <= hi %}
+            {% set last_week = loop.last %}
+            {% set tail = last_week and not flown and stops | length > 0 %}
+            {% set tail_from = ((stops[-1].i - lo + 0.5) / 7 * 100) if (tail and stops[-1].i >= lo) else 0 %}
+            {% if not flown and (here or crossing or has_now or tail) %}
+              <tr class="legs" aria-hidden="true">
+                <td colspan="7">
+                  <svg class="legs-line" width="100%" height="30" focusable="false">
+                    <defs>
+                      <clipPath id="above-{{ w }}"><rect x="0" y="0" width="100%" height="{{ base_y }}"/></clipPath>
+                      <radialGradient id="jewel-{{ w }}" cx="0.38" cy="0.34" r="0.66"><stop offset="0.14" class="jewel-hot"/><stop offset="0.44" class="jewel-mid"/><stop offset="1" class="jewel-deep"/></radialGradient>
+                    </defs>
+                    {# The columns the week below has: days flown stepped back into the dark, and
+                       today's faint steel wash, so the drawing and the grid are one. #}
+                    {% if ti.v > lo %}<rect class="col-past" x="0" y="0" width="{{ '%.3f' | format([ti.v - lo, 7] | min / 7 * 100) }}%" height="100%"/>{% endif %}
+                    {% if has_now %}<rect class="col-today" x="{{ '%.3f' | format((ti.v - lo) / 7 * 100) }}%" y="0" width="{{ '%.3f' | format(100 / 7) }}%" height="100%"/>{% endif %}
+                    {% for l in crossing %}
+                      {% set xa = (l.a - lo + 0.5) / 7 * 100 %}{% set xb = (l.b - lo + 0.5) / 7 * 100 %}
+                      {% set n = l.b - l.a %}
+                      {% set ry = [7 + n * 2, 12] | min %}
+                      <ellipse class="path {{ l.kind }}" clip-path="url(#above-{{ w }})" cx="{{ '%.3f' | format((xa + xb) / 2) }}%" cy="{{ base_y }}" rx="{{ '%.3f' | format((xb - xa) / 2) }}%" ry="{{ ry }}"/>
+                    {% endfor %}
+                    {# The route runs on past Sunday's edge, dashed, to the next sheet. #}
+                    {% if tail %}<line class="path tail" x1="{{ '%.3f' | format(tail_from) }}%" y1="{{ base_y }}" x2="100%" y2="{{ base_y }}"/>{% endif %}
+                    {% if has_now %}
+                      {% set xn = '%.3f' | format((ti.v - lo + 0.5) / 7 * 100) %}
+                      <line class="now" x1="{{ xn }}%" y1="0" x2="{{ xn }}%" y2="30"/>
+                    {% endif %}
+                    {% set col = namespace(i=-1, k=0) %}
+                    {% for s in here %}
+                      {% if s.i == col.i %}{% set col.k = col.k + 1 %}{% else %}{% set col.k = 0 %}{% endif %}
+                      {% set col.i = s.i %}
+                      {% set x = '%.3f' | format((s.i - lo + 0.5) / 7 * 100) %}
+                      {% set m = marks[s.n] %}
+                      <g class="stop{{ ' next' if m == 'next' }}{{ ' past' if m == 'past' }}" transform="translate({{ col.k * 24 }} 0)">
+                        {% if m == 'next' %}
+                          <circle class="jewel-halo" cx="{{ x }}%" cy="{{ base_y }}" r="11"/>
+                          <circle class="jewel-bezel" cx="{{ x }}%" cy="{{ base_y }}" r="8.5"/>
+                          <circle class="jewel" cx="{{ x }}%" cy="{{ base_y }}" r="7" fill="url(#jewel-{{ w }})"/>
+                        {% elif m == 'past' %}
+                          <circle cx="{{ x }}%" cy="{{ base_y }}" r="5"/>
+                        {% else %}
+                          <circle cx="{{ x }}%" cy="{{ base_y }}" r="9"/>
+                          <text class="stop-n" x="{{ x }}%" y="{{ base_y + 4 }}" text-anchor="middle">{{ m }}</text>
+                        {% endif %}
+                      </g>
+                    {% endfor %}
+                  </svg>
+                </td>
+              </tr>
+            {% endif %}
+            <tr class="{{ 'flown' if flown else ('to-fly' if ti.v >= 0 else 'shown') }}{{ ' roomy' if roomy and not flown }}">
+              {% for day in week %}
+                {% set i = w * 7 + loop.index0 %}
+                <td class="{{ 'outside' if not day.current }}{{ ' today' if day.today }}{{ ' past' if ti.v >= 0 and i < ti.v }}"{% if day.today %} id="today"{% endif %}>
+                  {{ numeral(day) }}
+                  {% for entry in day.entries %}{{ event(entry, mark_of(entry)) }}{% endfor %}
+                </td>
+              {% endfor %}
+            </tr>
+            {% endif %}
+          {% endfor %}
+          {% if run.a is not none %}{{ folded(run.a, run.b) }}{% endif %}
+        </tbody>
+      </table>
+
+      <ol class="plain month-list">
+        {% for day in busy_days %}
+          <li class="{{ 'today' if day.today }}">
+            <strong>{{ day.name }}</strong>{% if day.today %} <span class="tag">today</span>{% endif %}
+            {% for entry in day.entries %}{{ event(entry, mark_of(entry)) }}{% endfor %}
+          </li>
+        {% else %}
+          <li class="muted">Nothing on in {{ month }}.</li>
+        {% endfor %}
+      </ol>
+    </div>
+  </section>
+{% endblock %}

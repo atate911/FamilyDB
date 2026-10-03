@@ -1,0 +1,372 @@
+/* ==== Sill Line, Ticked: the graft ==============================================================
+   Lit Sill Line kept whole, and four grafts that make the lines do work, each replacing a thing:
+   - the question heads the board, read first, the box's own label;
+   - the rail's name sits in a break of the line, 'All plans' is the buffer's label;
+   - setup is one strip: a short track of numbered rings to a buffer, and the next step as a link;
+   - the stop on To do is the tick you press (steel to come, amber late, dashed with no day, sage
+     done), the margin a timetable column, and the lit now rule crosses the list;
+   - quiet weeks fold to a dashed run between two hollow lamps, named;
+   - Chat is one track with branch ticks, ending in a lit ring at the box.
+   Row afterglow is a phosphor edge; Status names its lamps on the glass. */
+:root { --le: 6.4rem; --tm: 3.6rem; --tw: 2.5rem; --slate: #161c20; --key: #1b242b; }
+
+/* ---- Home: the headline ------------------------------------------------------------------------ */
+.headline { grid-area: speak; position: relative; z-index: 1; margin: 0 0 1.4rem; }
+.welcome.sill-board .headline .speaker { margin: 0; }
+.headline .ask-question { margin: 0; padding: 0; font: 700 2.75rem/1.02 var(--head); font-stretch: 86%; letter-spacing: -0.016em; color: var(--heading); text-wrap: balance; }
+.headline .ask-question label { cursor: text; }
+@media (min-width: 64rem) {
+  .headline { display: grid; grid-template-columns: var(--tube-w) minmax(0, 1fr); column-gap: var(--sill-gap); align-items: end; }
+  .welcome.sill-board .headline .speaker { grid-area: auto; grid-column: 1; align-self: end; padding-bottom: 0.45rem; }
+  .headline .ask-question { grid-column: 2; }
+  /* The rail draws only right of the first stop: left of it the lit run is the rail. It ends at
+     the buffer, whose label stands past it. */
+  .welcome.sill-board {
+    background:
+      linear-gradient(var(--rail), var(--rail)) calc(var(--sill-pad) + var(--tube-w) - 0.86rem) 100% / calc(100% - 2 * var(--sill-pad) - var(--tube-w) + 0.86rem - var(--le)) 2px no-repeat border-box,
+      linear-gradient(#1c241f, #1c241f) 0 100% / 100% 1px no-repeat border-box,
+      radial-gradient(70% 90% at 0% 100%, color-mix(in srgb, var(--brand) 10%, transparent), transparent 62%), #101611;
+  }
+}
+.welcome .ask .ask-question + textarea, .welcome .ask textarea { min-height: 4.6rem; padding-top: 0.85rem; }
+/* Ways to start: slate keys, no outline. */
+.page-home .starters { gap: 0.5rem; }
+.page-home .starters a { min-height: 2.75rem; padding: 0.45rem 1rem; color: var(--secondary); background: var(--key); border: 0; border-radius: 4px; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04); }
+.page-home .starters a:hover { color: var(--heading); background: #222d35; }
+
+/* ---- The sill: the run broken by the rail's name plate ------------------------------------------ */
+.sill-track { position: absolute; z-index: 2; left: 7px; right: calc(0.86rem - 1px); bottom: -1.2rem; height: 2.4rem; display: flex; align-items: center; }
+.sill-track .sill-run { position: relative; left: auto; right: auto; bottom: auto; height: 2px; animation: none; }
+.sill-track .run-a { flex: 0 0 1.35rem; }
+.sill-track .run-b { flex: 1 1 auto; }
+.sill-track:not(.lit) .sill-run { background: var(--rail); filter: none; animation: none; }
+.sill-plate {
+  position: relative; z-index: 3; flex: none; margin: 0 8px; padding: 0.42rem 0.7rem 0.4rem;
+  font: 600 1rem/1 var(--head); font-stretch: 92%; letter-spacing: 0.005em; color: var(--heading); white-space: nowrap;
+  background: #141b1f; border: 1px solid #36424c; border-radius: 3px;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 6px 14px -8px #000;
+}
+.plate-n { font: 500 0.875rem/1 var(--sans); font-variant-numeric: tabular-nums; color: var(--label); }
+.sill-head { z-index: 2; }
+/* The plates under the sill, in the right column, sharing the line to the buffer. */
+.coming.sill-foot { row-gap: 0; }
+.coming.sill-foot > .stops, .coming.sill-foot > .source { grid-column: 2; }
+.stops { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-right: var(--le); }
+.stops:has(> li:nth-child(4)) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.stop .what { font-size: 0.9375rem; }
+.stop .when .rel { font: 400 0.8125rem/1.3 var(--sans); }
+.coming.sill-foot > .source { max-width: none; margin: 0.8rem 0 0; font-size: 0.875rem; color: var(--dim); }
+.coming.sill-foot > .line-end { position: absolute; right: var(--sill-pad); top: calc(-1px - 1.375rem); width: var(--le); height: 2.75rem; margin: 0; display: flex; align-items: center; gap: 0.5rem; }
+.coming.sill-foot > .line-end .buffer { position: static; width: 2px; height: 14px; background: var(--rail-hi); }
+.coming.sill-foot > .line-end a { min-height: 2.75rem; }
+@media (min-width: 64rem) { .stop-ring { background: var(--bg); } }
+
+/* Lately added on To do's columns: the kind in the margin, right-aligned as the days are, the
+   kind's ring where To do has its stop, the title, whom it is for. The two heads say their links
+   the same way: the one thing to act on, a dot, then All N. */
+.lately-rows > li { grid-template-columns: 5.6rem 1.9rem minmax(0, 1fr) auto; column-gap: 0.7rem; padding-left: 0; }
+.lately-rows > li > .kind-word { grid-column: 1; margin: 0; text-align: right; font: 500 0.8125rem/1.3 var(--sans); color: var(--label); white-space: nowrap; }
+.lately-rows > li > .kind-ring { grid-column: 2; }
+.lately-rows > li > .t { grid-column: 3; }
+.lately-rows > li > :is(.for, .go) { grid-column: 4; }
+.section-links { gap: 0 0.55rem; }
+.home-todo .section-links { gap: 0 0.55rem; }
+.sl-sep { color: var(--rail-hi); }
+@media (max-width: 40rem) {
+  .lately-rows > li { grid-template-columns: 1.9rem minmax(0, 1fr) auto; grid-template-areas: "k t f" "k w f"; column-gap: 0.8rem; padding-left: 0.25rem; }
+  .lately-rows > li > .kind-word { grid-area: w; text-align: left; }
+  .lately-rows > li > .kind-ring { grid-area: k; }
+  .lately-rows > li > .t { grid-area: t; }
+  .lately-rows > li > :is(.for, .go) { grid-area: f; }
+}
+
+/* ---- Setup: one strip -------------------------------------------------------------------------- */
+.setup-strip {
+  --rk: var(--amber);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.15rem 1.6rem; min-height: 3.5rem;
+  margin: 0 0 1.75rem; padding: 0.2rem 1.2rem 0.2rem 1.1rem;
+  background: var(--slate); border: 1px solid #262e35; border-left: 1px solid var(--amber); border-radius: 4px;
+}
+.setup-strip h2 { display: flex; align-items: center; gap: 0.55rem; margin: 0; font: 600 1rem/1.2 var(--head); font-stretch: 92%; color: var(--heading); }
+.setup-strip h2 .icon { width: 1.15rem; height: 1.15rem; color: var(--amber); }
+.setup-run { display: flex; align-items: center; }
+.setup-track { display: flex; margin: 0; padding: 0; list-style: none; background: linear-gradient(var(--rail), var(--rail)) 50% 50% / calc(100% - 2.75rem) 2px no-repeat; }
+.setup-track a { position: relative; display: grid; place-items: center; width: 2.75rem; height: 2.75rem; text-decoration: none; font: 500 0.8125rem/1 var(--mono); color: var(--amber); }
+.setup-track a::before { content: ""; position: absolute; left: calc(50% - 0.75rem); top: calc(50% - 0.75rem); width: 1.5rem; height: 1.5rem; box-sizing: border-box; border: 2px solid var(--amber); border-radius: 50%; background: var(--slate); }
+.setup-track a > span[aria-hidden] { position: relative; }
+.setup-track .next-step a { color: var(--brand); text-shadow: 0 0 6px color-mix(in srgb, var(--brand) 60%, transparent); }
+.setup-track .next-step a::before { border-color: var(--brand); background: var(--bg); box-shadow: 0 0 6px var(--brand), 0 0 16px color-mix(in srgb, var(--brand) 45%, transparent); }
+.setup-track a:hover::before { background: #222a30; }
+.setup-run > .buffer { width: 1.4rem; margin-left: -0.6rem; }
+.all-steps { display: inline-flex; align-items: center; min-height: 2.75rem; margin-left: 0.5rem; font-size: 0.875rem; color: var(--steel); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--steel) 40%, transparent); text-underline-offset: 0.2em; }
+.setup-next { display: inline-flex; align-items: center; gap: 0.35rem; min-height: 2.75rem; margin-left: auto; font-weight: 600; color: var(--heading); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--amber) 55%, transparent); text-underline-offset: 0.22em; }
+.setup-next .icon { width: 1rem; height: 1rem; color: var(--amber); }
+.setup-next:hover { text-decoration-color: currentColor; }
+
+/* ---- The tick is the stop ------------------------------------------------------------------------ */
+.tick-line { --nowgap: 2.1rem; }
+.tick-line > li::before { content: none; }
+.tick-line > li > .tick-form, .tick-line > li > .d {
+  position: absolute; z-index: 3; margin: 0;
+  left: calc(var(--rx) - var(--px) - 1.375rem); top: calc(var(--ly) - 1.375rem);
+  width: 2.75rem; height: 2.75rem; display: grid; place-items: center;
+}
+.tick-line button.tick { position: relative; display: grid; place-items: center; width: 2.75rem; height: 2.75rem; margin: 0; padding: 0; background: none; border: 0; border-radius: 50%; box-shadow: none; color: var(--lit); }
+.tick-line button.tick::before, .tick-line .task-box {
+  content: ""; display: block; box-sizing: border-box; width: 1.15rem; height: 1.15rem; margin: 0;
+  background: var(--tray); border: 2px solid var(--rail-hi); border-radius: 50%; box-shadow: none;
+  transition: background-color var(--afterglow), border-color var(--afterglow), box-shadow var(--afterglow);
+}
+.tick-line button.tick .icon { position: absolute; width: 0.7rem; height: 0.7rem; opacity: 0; transition: opacity var(--afterglow); }
+.tick-line .late button.tick::before { border-color: var(--amber); }
+.tick-line .undated button.tick::before { border-style: dashed; border-color: var(--pewter); }
+.tick-line button.tick:hover::before { background: color-mix(in srgb, var(--lit) 18%, var(--tray)); border-style: solid; border-color: var(--lit); box-shadow: 0 0 10px -3px var(--lit); transition-duration: var(--glow-in); }
+.tick-line button.tick:hover .icon { opacity: 0.85; transition-duration: var(--glow-in); }
+.tick-line button.tick:active::before { background: var(--lit); border-color: var(--brand); box-shadow: 0 0 4px var(--brand), 0 0 12px color-mix(in srgb, var(--brand) 60%, transparent); transition-duration: 0s; }
+.tick-line button.tick:active .icon { opacity: 1; color: var(--on-bright); }
+.tick-line button.tick:focus-visible { outline: 2px solid var(--brand); outline-offset: -0.55rem; }
+.tick-line .task-done .task-box { position: relative; background: var(--sage); border-color: var(--sage); }
+.tick-line .task-done .task-box::after { content: ""; position: absolute; left: calc(50% - 0.14rem); top: calc(50% - 0.36rem); width: 0.28rem; height: 0.56rem; box-sizing: border-box; border: solid var(--on-bright); border-width: 0 2px 2px 0; rotate: 45deg; }
+.tick-line .task-cancelled .task-box { border-style: dashed; border-color: var(--pewter); }
+/* The margin: the day in tabular figures, how far off under it. */
+.tick-line .hang { top: calc(var(--ly) - 1lh); }
+.tick-line .hang .stamp { display: block; font-family: var(--sans); font-variant-numeric: tabular-nums; font-size: 0.8125rem; line-height: 1.3; }
+.tick-line .hang .abs { font-weight: 500; color: var(--ink); }
+.tick-line .hang .rel-words { font-weight: 400; color: var(--label); }
+.tick-line .hang .rel-words.warn { font-weight: 500; color: var(--amber); }
+.tick-line .hang .rel-words .t { color: inherit; }
+.tick-line > li:not(:has(.abs)) .hang { top: calc(var(--ly) - 0.5lh); }
+/* The now rule crosses the list at its place. */
+/* Lit where now is, then steel: the light stays at the stop and the rule carries on as rail. */
+.tick-line .now-stop { width: calc(100% + var(--px) - var(--rx) + 9px); height: 2px; top: calc(var(--nowgap) / -2 - 1px); border-radius: 1px;
+  background: linear-gradient(var(--hot), var(--hot)) 0 50% / 18px 2px no-repeat, linear-gradient(90deg, var(--brand), color-mix(in srgb, var(--brand) 70%, var(--rail)) 14%, color-mix(in srgb, var(--brand) 22%, var(--rail)) 30%, var(--rail) 42%);
+  box-shadow: none; }
+.tick-line .now-stop::after, .tick-line .now-stop > .now-run { left: 8px; top: 2px; }
+/* The figure's unit beside the numeral: one step under the body, never the page's smallest. */
+.fig-u { font-size: 0.875rem; line-height: 1.25; }
+/* To do's terminus is steel, so amber keeps its one job (late). */
+.in-todo .title-icon:not(.presence) { --accent: var(--rail-hi); border-color: var(--rail-hi); }
+/* Home's To do. */
+.checklist.tick-line { --m: 8.5rem; --rx: calc(var(--m) + 0.75rem); --px: calc(var(--rx) + 1.7rem); --ly: 1.45rem; }
+.checklist.tick-line > li { grid-template-columns: minmax(0, 1fr) auto; min-height: 2.9rem; }
+@media (max-width: 40rem) {
+  .checklist.tick-line { --m: 0rem; --rx: 1.4rem; --px: 2.9rem; --ly: 1.4rem; }
+  .checklist.tick-line > li { grid-template: "s f" auto "w f" auto / minmax(0, 1fr) auto; }
+  .checklist.tick-line > li:not(:has(.stamp)) { grid-template: "w f" auto / minmax(0, 1fr) auto; }
+  .checklist.tick-line .tick-form { grid-area: auto; }
+  .tick-line .hang:empty { display: none; }
+  .tick-line .hang .stamp { display: inline; margin-right: 0.45rem; }
+  .checklist.tick-line .now-stop::before { content: none; }
+}
+/* The To do page. */
+.task-board, .task-board .task-line { --m: 8.4rem; --rx: calc(var(--m) + 0.85rem); --px: calc(var(--rx) + 1.75rem); --ly: 1.45rem; }
+.task-line > li.task { grid-template-columns: minmax(0, 1fr) 7rem 5.6rem; min-height: 2.9rem; padding-block: 0.2rem; }
+.task-line details.more[open], .task-line .sub { grid-column: 1 / -1; }
+.tick-line.task-line > li.task.after-now { margin-top: calc(var(--nowgap) - var(--gap)); }
+/* The heads take the rows' own columns, so Due, Thing to do and Who share the rows' edges. */
+.task-board .colheads { position: relative; grid-template-columns: minmax(0, 1fr) 7rem 5.6rem; column-gap: 0.9rem; padding: 0.35rem 0.4rem 0.4rem var(--px); }
+.task-board .colheads .ch-due { position: absolute; left: 0; bottom: 0.4rem; width: calc(var(--m) - 0.2rem); text-align: right; }
+.task-board .colheads :is(.ch-t, .ch-who) { padding-left: 0; }
+.task-line details.more > summary { min-height: 2.75rem; padding: 0 0.6rem; gap: 0; font-size: 0.875rem; font-weight: 500; color: var(--steel); background: none; border: 0; box-shadow: none; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--steel) 40%, transparent); text-underline-offset: 0.2em; }
+.task-line details.more > summary .icon { display: none; }
+.task-line details.more > summary:hover { color: var(--heading); background: none; }
+@media (max-width: 47.99rem) {
+  .task-board, .task-board .task-line { --m: 0rem; --rx: 1.4rem; --px: 2.9rem; }
+  .task-line .hang { position: static; grid-area: u; width: auto; text-align: left; }
+  .task-line .hang .stamp { display: inline; margin-right: 0.5rem; }
+  .task-line > li.task { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "t e" "u e" "w e" "s s"; }
+  .task-line > li.task > .who { grid-area: w; }
+  .task-line details.more > summary { width: auto; font-size: 0.875rem; }
+  .task-line details.more > summary .label { display: inline; }
+}
+
+/* ---- Plans: quiet weeks as a dashed run; the weekend a slate step lighter ------------------------ */
+table.month :is(td, th):nth-child(n+6) { background-color: #141b20; }
+table.month td.today { background-color: var(--latch); }
+/* The week's line ends at the next plan's ring; the one buffer is the month's, under the grid. */
+table.month td.next-stop::after { content: none; }
+table.month td.on-line:last-child:not(.next-stop)::after { right: 0; top: var(--ry); height: 2px; background: var(--rail); }
+table.month tr.quiet-run td { height: 2rem; padding: 0 0.75rem; background: none; }
+.qr { display: flex; align-items: center; min-height: 2rem; }
+.qr-lamp { flex: none; width: 9px; height: 9px; box-sizing: border-box; border: 1.5px solid var(--rail-hi); border-radius: 50%; }
+.qr-dash { flex: 1 1 auto; height: 0; border-top: 2px dashed var(--rail); }
+.qr-label { flex: none; padding: 0 0.7rem; font: 400 0.875rem/1.2 var(--sans); font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; }
+.month-end { display: flex; justify-content: flex-end; align-items: center; margin: 0.15rem 0 0; padding: 0 0 0 0.75rem; }
+.me-rail { flex: 0 0 4rem; height: 2px; background: var(--rail); }
+.month-end .buffer { width: 2px; height: 14px; background: var(--rail-hi); }
+.month-end a { display: inline-flex; align-items: center; gap: 0.3rem; min-height: 2.75rem; padding-left: 0.6rem; font-size: 0.92rem; font-weight: 500; color: var(--steel); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--steel) 40%, transparent); text-underline-offset: 0.2em; }
+.month-end a .icon { width: 1rem; height: 1rem; }
+@media (max-width: 51.99rem) { .month-end { display: none; } }
+/* The Plans list: a week or more with nothing on is a dashed length of the line. */
+.plan-rows > li.quiet-run { min-height: 2rem; padding-block: 0.1rem; border-top-color: transparent; }
+.plan-rows > li.quiet-run::before { content: none; }
+.plan-rows > li.quiet-run::after { background: repeating-linear-gradient(to bottom, var(--rail) 0 5px, transparent 5px 9px); top: 0; height: calc(100% + var(--gap)); }
+.plan-rows > li.quiet-run + li { border-top-color: transparent; }
+.plan-rows > li:has(+ li.quiet-run)::after { height: calc(100% + var(--gap) - var(--ly)); }
+.plan-rows .quiet-run .qr-dash { display: none; }
+.plan-rows .quiet-run .qr-label { padding: 0; }
+
+/* ---- Chat: one track with branch ticks ----------------------------------------------------------- */
+@media (min-width: 40.01rem) {
+  .in-chat main { max-width: 54rem; }
+  .in-chat .page-head { margin: 0; padding-left: calc(var(--tm) + var(--tw) / 2 - 1.375rem); row-gap: 0; }
+  .in-chat .page-title { padding-bottom: 0.2rem; }
+  .in-chat .page-title h1 { font-size: 2.25rem; }
+  .in-chat .lede { margin: 0.1rem 0 0.4rem; font-size: 1rem; color: var(--ink-2); }
+  .in-chat .rail { grid-area: 2 / 1 / 4 / 2; }
+  .in-chat .rail::after { flex: 1; align-self: center; width: 2px; min-height: 0.5rem; margin: 0.3rem 0 0; border: 0; border-radius: 0; background: var(--rail); }
+  .thread:not(.brief) { --st: 0; position: relative; gap: 0.95rem; margin: 0; padding: 0.4rem 0 1rem; }
+  .thread:not(.brief)::before { left: calc(var(--tm) + var(--tw) / 2 - 1px); width: 2px; top: 0; bottom: 0; background: var(--rail); }
+  .thread:not(.brief) > li { grid-template-columns: var(--tm) var(--tw) minmax(0, 1fr); }
+  .thread:not(.brief) > li > .station { grid-column: 1 / 3; grid-row: 1; display: grid; grid-template-columns: var(--tm) var(--tw); align-items: start; row-gap: 0; }
+  .thread:not(.brief) > li > .station > :is(.avatar, .presence) { grid-column: 2; grid-row: 1; justify-self: center; margin: 0 !important; }
+  .thread:not(.brief) .tape-time { grid-column: 1; grid-row: 1; justify-self: end; padding: 0.4rem 0.6rem 0 0; background: none; }
+  .thread:not(.brief) > :is(.said-bot, .said-them) > .bubble { grid-column: 3; grid-row: 1; justify-self: start; margin-left: 0.4rem; }
+  .thread:not(.brief) > .said-them > .bubble { position: relative; margin-left: 2.4rem; }
+  .thread:not(.brief) > .said-them > .bubble::before { content: ""; position: absolute; left: calc(-2.4rem - var(--tw) / 2 + 6px - 3px); width: calc(2.4rem + var(--tw) / 2 - 6px); top: 0.95rem; height: 1px; background: var(--pewter); }
+  .thread:not(.brief) > .said-them > .station > .avatar { width: 12px; height: 12px; margin-top: 0.62rem !important; font-size: 0; color: transparent; background: var(--bg); box-shadow: inset 0 0 0 2px var(--rail-hi); }
+  .thread:not(.brief) > .said-them .tape-time { padding-top: 0.45rem; }
+  .thread:not(.brief) > li.day-mark { display: grid; justify-content: stretch; position: relative; }
+  /* The day is a station plate set in a break of the track, as Home's Coming up plate is. */
+  .thread:not(.brief) > li.day-mark .tie { position: relative; z-index: 1; grid-column: 1 / -1; justify-self: start; margin-left: calc(var(--tm) + var(--tw) / 2); translate: -50% 0; }
+  .tie::before, .tie::after { content: none; }
+  .thread:not(.brief) .tie time { box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 0 0 8px var(--bg); }
+  .your-turn { padding-left: calc(var(--tm) + var(--tw) + 0.4rem); }
+  .your-turn::before { content: ""; position: absolute; left: calc(var(--tm) + var(--tw) / 2 - 1px); top: -1rem; height: calc(1rem + 1.45rem); width: 2px; background: var(--rail); }
+  .turn-ring { position: absolute; z-index: 2; left: calc(var(--tm) + var(--tw) / 2 - 7px); top: calc(1.45rem - 7px); width: 14px; height: 14px; box-sizing: border-box; border: 2px solid var(--brand); border-radius: 50%; background: var(--bg); box-shadow: 0 0 6px var(--brand), 0 0 16px color-mix(in srgb, var(--brand) 45%, transparent); }
+  .turn-ring::after { content: ""; position: absolute; left: 12px; top: 4px; width: calc(var(--tw) / 2 + 0.4rem - 7px + 1px); height: 2px; background: var(--brand); box-shadow: 0 0 6px color-mix(in srgb, var(--brand) 60%, transparent); }
+  .turn-word { left: auto; right: calc(100% - var(--tm) - var(--tw) / 2 + 14px); width: auto; top: calc(1.45rem - 0.5em); text-align: right; text-shadow: 0 0 8px color-mix(in srgb, var(--sage) 45%, transparent); }
+}
+.tie time { padding: 0.32rem 0.6rem 0.3rem; font: 600 0.875rem/1 var(--head); font-stretch: 92%; letter-spacing: 0.01em; font-variant-numeric: tabular-nums; color: var(--steel); background: var(--slate); border: 1px solid #36424c; border-radius: 3px; }
+/* The box at the end of the line takes its light from the ring and the tick into it, so it keeps
+   a plain edge at rest and only the lit edge (no halo) while written in. */
+.your-turn .ask { border-color: var(--ink-well-edge); box-shadow: var(--lift); }
+.your-turn .ask:focus-within { border-color: var(--lit); box-shadow: var(--lift); }
+.thread:not(.brief) > .said-them .bubble { background: var(--slate); border: 1px solid #2a333b; border-left: 3px solid var(--ink-bar); border-radius: 3px; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03); }
+.thread:not(.brief) > .said-them .said-by strong { color: var(--steel); }
+.thread:not(.brief) > li:last-child .tape-time { text-shadow: 0 0 6px color-mix(in srgb, var(--sage) 55%, transparent); }
+.thread:not(.brief) > .said-bot:last-child .bubble { border-color: color-mix(in srgb, var(--screen) 55%, var(--line)); }
+.junction { display: none; }
+@media (max-width: 40rem) {
+  .thread:not(.brief)::before, .turn-ring, .turn-word { display: none; }
+  .thread:not(.brief) > li { grid-template-columns: minmax(0, 1fr); }
+  .thread:not(.brief) > li > .station { display: none; }
+  .thread:not(.brief) > .said-them > .bubble { justify-self: end; margin-left: 2.5rem; }
+  .thread:not(.brief) > li.day-mark { justify-content: center; }
+  .tie::before, .tie::after { content: none; }
+}
+
+/* ---- Settings: the lamps are stops on one line, ending in a buffer at the log ------------------ */
+.section-cards.on-line { --lx: 17.1rem; --ly: 1.27rem; }
+.section-cards.on-line > li { position: relative; }
+.section-cards.on-line > li::before { content: ""; position: absolute; z-index: 0; left: calc(var(--lx) - 1px); top: 0; bottom: -1px; width: 2px; background: var(--rail); pointer-events: none; }
+.section-cards.on-line > li:first-child::before { top: var(--ly); }
+.section-cards.on-line > li:last-child::before { bottom: auto; height: var(--ly); }
+.section-cards.on-line .section-what > .light { position: relative; z-index: 1; }
+.section-cards.on-line .light:is(.off, .unset) { background: var(--tray); }
+.section-cards.on-line .light.part { background: linear-gradient(90deg, var(--amber) 50%, var(--tray) 50%); box-shadow: 0 0 6px -1px color-mix(in srgb, var(--amber) 70%, transparent); }
+.section-cards.on-line .light.none { width: 14px; height: 2px; border-radius: 0; background: var(--rail-hi); justify-self: center; }
+@media (max-width: 40rem) { .section-cards.on-line > li::before, .section-cards.on-line .light.none { display: none; } }
+
+/* ---- Status: the lamps named on the glass, the tally beside it in one bezel ---------------------- */
+.instrument { grid-template-columns: minmax(0, 38.5rem) minmax(0, 1fr); gap: 0 2.25rem; align-items: center; padding: 1rem 2rem 1rem 1rem; background: linear-gradient(180deg, #1a2025, #13181c); border: 1px solid #2a3238; border-radius: 12px; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 18px 40px -26px #000; }
+.crt .lamp-string { grid-template-columns: 8.4rem auto minmax(0, 1fr); column-gap: 0.5rem; min-height: 3.4rem; }
+.ls-count { white-space: nowrap; }
+.ls-lamps { gap: 0; }
+.gl-cell { display: grid; justify-items: center; row-gap: 0.3rem; width: 4.05rem; }
+.gl-n { font: 400 1rem/1 var(--terminal); letter-spacing: 0.03em; text-transform: none; color: var(--phosphor-dim); text-decoration: none; }
+.lamp-string:is(:hover, :focus-visible) .gl-n { color: #04100a; }
+.gl.part { background: linear-gradient(90deg, var(--amber) 50%, transparent 50%); border-color: var(--amber); box-shadow: 0 0 8px -1px color-mix(in srgb, var(--amber) 70%, transparent); }
+.tally-side { max-width: none; }
+.tally-rows > li { min-height: 2.9rem; }
+.tally-rows .t-part { color: var(--amber); }
+.tally-rows .t-part .figure { color: var(--amber); }
+.instrument .tube-note { margin: 0.6rem 0 0 0.25rem; }
+@media (max-width: 52rem) { .instrument { padding: 0.75rem; } .gl-cell { width: 3.3rem; } }
+
+/* ---- Ideas: the drive with bold figures, the way its own column ---------------------------------- */
+.idea-board .colheads, .idea-rows > li { grid-template-columns: 1.9rem minmax(0, 1fr) minmax(7rem, 11rem) 6.4rem 2.4rem 2.6rem; }
+.colheads .ch-way { text-align: left; }
+.idea-row .drive { display: block; font: 400 0.875rem/1.2 var(--sans); font-variant-numeric: tabular-nums; text-align: right; color: var(--ink-2); }
+.idea-row .drive b { font-weight: 650; color: var(--heading); }
+.idea-row .drive .u { color: var(--label); }
+.idea-row .way { font: 500 0.8125rem/1.2 var(--sans); color: var(--label); }
+@media (max-width: 48rem) { .idea-rows .way { grid-area: d; margin-left: 4.6rem; } }
+
+/* ---- Afterglow everywhere: a phosphor edge and a 10% wash, gone over 1.2s ------------------------ */
+:is(.idea-row, .lately-rows > li, .kid-rows > li:has(a), .checklist > li, .task-line > li.task, .line.rows > li, .light-row, .section-card.panel, .settings-nav li):is(:hover, :focus-within) {
+  background: color-mix(in srgb, var(--brand) 10%, transparent);
+  box-shadow: inset 2px 0 0 var(--brand), inset 18px 0 16px -14px color-mix(in srgb, var(--brand) 32%, transparent), -3px 0 12px -5px color-mix(in srgb, var(--brand) 75%, transparent);
+  transition-duration: var(--glow-in);
+}
+.settings-nav li { transition: background-color 1.2s cubic-bezier(0.45, 0, 0.6, 1), box-shadow 1.2s cubic-bezier(0.45, 0, 0.6, 1); }
+.page-ideas .idea-row:active { background: color-mix(in srgb, var(--brand) 10%, transparent); }
+
+/* ---- The new-idea form: a label rail, its stop lit at the field being written in --------------- */
+@media (min-width: 40.01rem) {
+  .panel.idea-form { --fx: 1.45rem; padding-left: 3.3rem; background-image: linear-gradient(var(--rail), var(--rail)); background-repeat: no-repeat; background-size: 2px calc(100% - 5.3rem); background-position: calc(var(--fx) - 1px) 2rem; }
+  .idea-form > :is(.field.wide, .field.wide + .field:not(.wide)), .idea-form > details.more { position: relative; }
+  .idea-form > :is(.field.wide, .field.wide + .field:not(.wide))::before, .idea-form > details.more::before {
+    content: ""; position: absolute; z-index: 1; left: calc(var(--fx) - 3.3rem - 6px); top: calc(0.62rem - 6px); width: 12px; height: 12px; box-sizing: border-box;
+    border: 2px solid var(--rail-hi); border-radius: 50%; background: var(--surface); transition: border-color var(--afterglow), box-shadow var(--afterglow), background-color var(--afterglow);
+  }
+  .idea-form > details.more::before { top: calc(1.375rem - 6px); }
+  .idea-form > details.more:focus-within::before { border-color: var(--brand); }
+  .idea-form > :is(.field.wide, .field.wide + .field:not(.wide)):is(:focus-within, :has(+ .field:not(.wide):focus-within))::before {
+    border-color: var(--brand); background: var(--bg); box-shadow: 0 0 6px var(--brand), 0 0 16px color-mix(in srgb, var(--brand) 45%, transparent); transition-duration: var(--glow-in);
+  }
+}
+/* ---- Forms: selects take the 2px ring --------------------------------------------------------- */
+select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+/* ---- Phone ------------------------------------------------------------------------------------- */
+@media (max-width: 63.99rem) {
+  .welcome.sill-board .headline .speaker { margin-bottom: 0.6rem; }
+  .headline .ask-question { font-size: clamp(2rem, 8.4vw, 2.75rem); }
+  .sill-track { display: contents; }
+  .sill-track .run-a { position: absolute; left: calc(var(--gx) - 1px); top: 0.9rem; bottom: calc(1.5rem + 1px + 0.6rem); width: 2px; height: auto; background: linear-gradient(var(--hot), var(--hot)) 50% 0 / 1px 100% no-repeat, var(--brand); }
+  .sill-track:not(.lit) .run-a { background: var(--rail); }
+  .sill-track .run-b { display: none; }
+  .sill-plate { position: absolute; left: calc(var(--gx) + 1.15rem); top: calc(100% + 1rem); margin: 0; }
+  .coming.sill-foot { padding-top: 3.6rem; }
+  .coming.sill-foot > .line-end { position: relative; right: auto; top: auto; width: auto; height: auto; padding: 0.35rem 0 0 1.7rem; }
+  .coming.sill-foot > .line-end .buffer { position: absolute; left: calc(0.55rem - 7px); top: calc(50% + 0.175rem - 1px); width: 14px; height: 2px; }
+  .stops { margin-right: 0; grid-template-columns: minmax(0, 1fr); }
+  .stops:has(> li:nth-child(4)) { grid-template-columns: minmax(0, 1fr); }
+  .coming.sill-foot > .source { padding-left: 1.7rem; }
+  .welcome .next-up .crt-tube { grid-template-columns: minmax(0, 1fr) 4rem; }
+  .welcome .next-up .radar { width: 4rem; }
+  .ask .send { width: auto; padding: 0 0.65rem; gap: 0.35rem; }
+  .ask .ask-bar { column-gap: 0.5rem; padding-left: 0.35rem; }
+  .ask .who select { flex: 1 1 0; min-width: 9.4rem; width: auto; padding-left: 0.65rem; padding-right: 1.8rem; font-size: 0.95rem; background-position-x: calc(100% - 0.6rem); }
+  .ask .who select { white-space: nowrap; }
+  .ask .send .label { position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
+  .setup-next { margin-left: 0; }
+}
+@media (max-width: 40rem) {
+  /* Ways to start: one row of slate keys that scrolls sideways inside itself, faded at the edge. */
+  .page-home .starters { flex-wrap: nowrap; overflow-x: auto; margin-right: calc(-1 * var(--pp, 1rem)); padding-right: var(--pp, 1rem); scrollbar-width: none; overscroll-behavior-x: contain;
+    -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
+  .page-home .starters::-webkit-scrollbar { display: none; }
+  .page-home .starters > li { flex: none; }
+  .page-home .starters a { white-space: nowrap; }
+  /* The tube, trimmed: tighter glass, a smaller scope beside the way on, no dead foot. */
+  .welcome.sill-board .next-up { margin-top: 1.2rem; }
+  .sill-start { margin-top: 1.2rem; }
+  .welcome .next-up .crt-tube { padding: 0.75rem 0.9rem 0.7rem; grid-template-columns: minmax(0, 1fr) 3.4rem; }
+  .welcome .next-up .radar { width: 3.4rem; }
+  .welcome .next-up .next-label { margin-bottom: 0.25rem; }
+  .welcome .next-up .next-title { font-size: 1.45rem; }
+  .welcome .next-up .next-when, .welcome .next-up .next-more { font-size: 1.15rem; }
+  .welcome .next-up .next-more { margin-top: 0.2rem; }
+  .welcome .ask textarea { min-height: 3.6rem; }
+}
+@media (max-width: 40rem) { .setup-strip { column-gap: 0.75rem; } }
+
+/* ---- Access ------------------------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) { .sill-track .sill-run { animation: none; clip-path: none; } }
+@media (prefers-contrast: more) { .turn-ring, .setup-track .next-step a::before, .tick-line .now-stop { box-shadow: none; } }
+@media (forced-colors: active) {
+  .tick-line button.tick::before, .tick-line .task-box, .setup-track a::before, .turn-ring, .qr-lamp { forced-color-adjust: none; background: Canvas; border-color: CanvasText; box-shadow: none; }
+  .tick-line .now-stop, .turn-ring::after, .me-rail { forced-color-adjust: none; background: CanvasText; box-shadow: none; }
+}

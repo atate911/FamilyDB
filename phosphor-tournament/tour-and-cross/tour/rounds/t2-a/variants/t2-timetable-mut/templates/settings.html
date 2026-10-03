@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, presence, emblem %}
+{% block title %}Settings · {{ site_title }}{% endblock %}
+{% block body_class %}page-settings{% endblock %}
+{% block content %}
+  {{ page_head('Settings', 'Each part, how it stands now, and the way in to change it.', 'settings') }}
+  {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+  {# One card to a page of settings, each saying how things stand in a line or two, so this is
+     the place to look first as well as the way in. Something missing is marked, in words. #}
+  <ul class="section-cards">
+    {% for entry in sections %}
+      {% set one = entry.section %}
+      <li>
+        <a class="panel section-card{% if entry.look %} look{% endif %}" href="{{ url_for('settings.section', name=one.name) }}">
+          {# Each part of the settings wears the emblem at the head of its own page. #}
+          {{ emblem(one.icon, 'card-emblem') }}
+          <span class="section-what">
+            <strong>{{ one.title }}</strong>
+            {% for line in entry.lines %}<span class="section-state">{{ line }}</span>{% endfor %}
+            {% if entry.look %}<span class="tag warn">{{ icon('warning') }}Needs a look</span>{% endif %}
+          </span>
+          {{ icon('right', cls='go') }}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+  <p class="muted small">
+    Setting up for the first time, or starting again? <a href="{{ url_for('setup.overview') }}">Setup</a>
+    goes through what matters most, one step at a time.
+  </p>
+{% endblock %}

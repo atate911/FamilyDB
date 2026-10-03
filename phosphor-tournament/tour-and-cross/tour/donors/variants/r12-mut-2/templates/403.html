@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, crt, graticule %}
+{% block title %}{{ title }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-lost{% endblock %}
+{% block content %}
+  <section class="lost">
+    {% call crt('power-on scope lost-scope', legend='No signal') %}
+      <div class="xy">
+        <svg class="trace" viewBox="0 0 400 300" focusable="false">{{ graticule() }}<path class="axis flat" d="M20 250H380"/></svg>
+        <span class="radar-say">403</span>
+      </div>
+      <div class="lost-readout caps">
+        <p><span class="dim">Signed in</span> {{ visitor().name or '' }}</p>
+        <p><span class="dim">Role</span> {{ visitor().member.role if visitor().member else '' }}</p>
+        <p class="bright gap">?{{ title }}</p>
+        <p>Ready.<span class="crt-cursor"></span></p>
+      </div>
+    {% endcall %}
+    <p class="eyebrow">Not part of your role</p>
+    <h1>{{ title }}</h1>
+    <p class="muted">{{ why }}</p>
+    <p><a class="button" href="{{ url_for('web.home') }}">{{ icon('home') }}Back to the start</a></p>
+  </section>
+{% endblock %}

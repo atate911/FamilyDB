@@ -1,0 +1,536 @@
+
+/* ==========================================================================================
+   THE MODULE'S TOOLS: one bank of latched keys to a filter, the words to find
+   ========================================================================================== */
+.tools-cell { display: flex; flex-direction: column; gap: 1rem; }
+.tools-cell > * { margin: 0; }
+.keys-name { margin: 0 0 0.4rem; font: 600 var(--t-label)/1.3 var(--sans); letter-spacing: 0; text-transform: none; color: var(--label); }
+.key-bank { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.keys .key {
+  position: relative;
+  justify-content: flex-start;
+  gap: 0.55rem;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0 0.7rem;
+  font: 500 var(--t-small)/1.1 var(--sans);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 0.15s, border-color var(--afterglow), color 0.15s, box-shadow var(--afterglow);
+}
+.keys .key > span { overflow: hidden; text-overflow: ellipsis; }
+.keys .key .icon { width: 1.05rem; height: 1.05rem; color: var(--k, var(--sec)); }
+/* The one latched: a steel cell, lit edge on top, its lamp on. */
+.keys .key[aria-current] {
+  color: var(--here-ink);
+  background: var(--here);
+  border-color: color-mix(in srgb, var(--here) 70%, #000);
+  border-bottom-width: 1px;
+  box-shadow: inset 0 2px 0 var(--here-cap);
+}
+.keys .key[aria-current] .icon { color: var(--here-ink); }
+.keys .key[aria-current]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 0.6rem;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #f4fff8 0 25%, var(--brand) 70%);
+  box-shadow: 0 0 4px var(--brand), 0 0 10px color-mix(in srgb, var(--brand) 50%, transparent);
+}
+.search > label { margin-bottom: 0.45rem; }
+.search-row { display: flex; gap: 6px; }
+.search-row input { flex: 1; min-width: 0; }
+.search-row button { flex: none; width: 2.75rem; padding: 0; }
+.more-filters > summary, .tools-cell details.more > summary { min-height: 2.75rem; font: 500 var(--t-small)/1 var(--sans); color: var(--ink-2); }
+.more-filters[open] > summary { margin-bottom: 0.6rem; }
+.fold-on { margin-left: 0.4rem; padding: 0.15rem 0.4rem; font: 500 var(--t-fig-s)/1 var(--machine); color: var(--here-ink); background: var(--here); }
+.filters { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.8rem; }
+.filters .field.actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.tools-note { margin: 0; font-size: var(--t-small); line-height: 1.45; color: var(--dim); }
+
+/* ---- The register's green screen: at its head, wide and short, sized to what it says ------------ */
+/* Where a page has something live, its register opens on a short, wide tube that says what the
+   rows under it do not: the map of where the places are, how the open things stand and what is
+   due next, the weekends, the day's spend. VT323 at three strengths, blurred a third of a pixel,
+   behind scanlines, a sheen and a vignette, in a thin case with its power light (E12-E16). Pages
+   with nothing live (Settings, Wishes, Family, Memory, the forms) have none. */
+.head-screen { margin: 0; min-width: 0; }
+.head-tube .crt-tube {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem 2rem;
+  max-height: 9.5rem;
+  padding: 0.85rem 1.4rem 0.9rem;
+  font-size: var(--t-tube-s);
+  line-height: 1.15;
+}
+.head-tube .radar { width: 8.5rem; flex: none; margin: -0.35rem 0; }
+.head-words { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
+.head-col { min-width: 0; }
+.head-label { margin: 0 0 0.15rem !important; }
+.head-figure { font-size: var(--t-tube); line-height: 1.08; }
+.head-line { font-size: var(--t-tube-s); line-height: 1.15; }
+.head-line .away, .head-figure .away { white-space: nowrap; }
+.head-note { margin-top: 0.1rem !important; font-size: 1.1rem; }
+.head-words a { display: inline-block; padding: 0.65rem 0; margin: -0.65rem 0; }
+.head-figure.big { font-size: var(--t-tube-m); line-height: 1; margin: 0.1rem 0 0.15rem !important; }
+.on-radar .head-words:not(.head-far) { flex: 0 1 15.5rem; }
+.head-note { max-width: 17em; line-height: 1.12; }
+.head-far { flex: 1 1 18rem; padding-left: 1.8rem; border-left: 2px dashed color-mix(in srgb, var(--phosphor) 24%, transparent); gap: 0.6rem; }
+.head-far .head-line a { white-space: nowrap; }
+/* The month's second bank: Earlier at the left of its key, Later at the right, as a book's pages
+   turn; This month across both when the month shown is another. */
+.keys .key.key-end { justify-content: flex-end; }
+.keys .key.key-wide { grid-column: 1 / -1; }
+/* Bars drawn in characters on the glass, one column in the order of time (late, this week, later,
+   no date): a name, the bar, the figure, each bar a way to those alone. Each line is a 44px key,
+   the keys overlapping by a third so the four sit at the tube's own line pitch. */
+.bars { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: max-content; }
+.bars li { margin: -0.5rem 0; }
+.bars li:first-child { margin-top: -0.55rem; }
+.bars li:last-child { margin-bottom: -0.55rem; }
+.bars li > a, .bars li > .bar-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 5.2em 8ch 1.4em;
+  column-gap: 0.55em;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.3em;
+  color: inherit;
+  text-decoration: none;
+  background-clip: content-box;
+}
+.bars li:hover { position: relative; z-index: 1; }
+.bars .cells { white-space: nowrap; overflow: hidden; }
+.bars .n { text-align: right; }
+.bars .bar-name { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.18em; text-decoration-color: color-mix(in srgb, currentColor 50%, transparent); }
+.bars .bar-row .bar-name { text-decoration: none; }
+.bars li > a:hover { color: #04100a; background: var(--phosphor); }
+.bars .is-on > .bar-row { color: #04100a; background: var(--phosphor); background-clip: content-box; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--phosphor) 55%, transparent)); }
+/* Late, in amber on the glass: the one colour that means late. */
+.bars .bar-late { color: color-mix(in srgb, var(--people) 88%, #fff); text-shadow: 0 0 1px var(--people), 0 0 9px color-mix(in srgb, var(--people) 45%, transparent); }
+.bars .bar-late > a:hover { color: #1a0f02; background: var(--people); }
+.tally .head-words { flex: 1 1 14rem; padding-left: 1.8rem; border-left: 2px dashed color-mix(in srgb, var(--phosphor) 24%, transparent); }
+.tally .head-figure { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The day's spend on its counter. */
+.spend-cell .head-tube .crt-tube { gap: 0.5rem 2.4rem; }
+.spend-cell .head-col:first-child { flex: none; }
+.readout-figure { font-size: var(--t-tube-xl); line-height: 0.9; margin: 0.1rem 0 0 !important; }
+.readout-bar { font-size: var(--t-tube-s); white-space: nowrap; letter-spacing: -0.02em; }
+.crt.readout.near { --phosphor: var(--people); }
+.crt.readout.over { --phosphor: var(--danger); }
+.key-cell-module .keys-name { margin-bottom: 0.5rem; }
+.key-cell-module .lamp-key { display: grid; grid-template-columns: repeat(2, max-content); gap: 0.5rem 1.6rem; }
+table.data th.num { font: 600 var(--t-label)/1.2 var(--sans); text-align: right; }
+
+/* ==========================================================================================
+   THE REGISTERS, page by page: the one row drawing with each page's columns
+   ========================================================================================== */
+.rows > .colheads { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; border-top: 0; }
+.register-head { display: flex; align-items: baseline; gap: 0.6rem; margin: 0.35rem 0 0.5rem; font: semi-condensed 600 var(--t-cell)/1.1 var(--sans); }
+.register-head .count { font: condensed 500 1.5rem/1 var(--sans); font-variant-numeric: tabular-nums lining-nums; color: var(--sec); }
+.register .empty { padding: 0.8rem 0; }
+.register .empty .icon { width: 1.4rem; height: 1.4rem; color: var(--sec); }
+
+/* P300 Ideas: number, the kind's icon and the name, a leader, the kind, for whom, by road. */
+.idea-index { grid-template-columns: 2rem minmax(0, 1fr) max-content max-content minmax(5.5rem, max-content) 2ch; column-gap: 0.8rem; }
+.idea-index .ch-no { grid-column: 1; }
+.idea-index .ch-what { grid-column: 2; }
+.idea-index .ch-kind { grid-column: 3; }
+.idea-index .ch-who { grid-column: 4; }
+.idea-index .ch-road { grid-column: 5 / span 2; text-align: right; }
+.idea-index .no { text-align: right; justify-self: end; }
+.idea-index .what .kicon { display: inline-block; margin-right: 0.1rem; align-self: center; color: var(--k, var(--ideas)); }
+.idea-index .what .kicon .icon { width: 1.05rem; height: 1.05rem; vertical-align: top; }
+.idea-index .what .tag { align-self: center; }
+.idea-index .fact.road { justify-self: end; text-align: right; color: var(--ink); }
+.idea-index .fact.bearing { justify-self: start; margin-left: -0.45rem; color: var(--ink-2); }
+.idea-index .fact.who { color: var(--ink-2); }
+.capture > summary { display: flex; align-items: center; gap: 0.6rem; min-height: 2.75rem; margin: -0.35rem 0; font: 600 var(--t-body)/1.2 var(--sans); color: var(--heading); }
+.capture > summary .icon { color: var(--sec); }
+.capture[open] > summary { margin-bottom: 0.8rem; }
+.capture .form { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem 1rem; }
+
+/* P500 To do: the box, the number, the name, a leader, who, due in words, the way to edit. */
+.task-index { grid-template-columns: 2.75rem 1.6rem minmax(0, 1fr) max-content minmax(9.5rem, max-content) 4.75rem; column-gap: 0.7rem; }
+.task-index .ch-no { grid-column: 2; text-align: right; }
+.task-index .ch-what { grid-column: 3; }
+.task-index .ch-who { grid-column: 4; }
+.task-index .ch-due { grid-column: 5; text-align: right; }
+.task-index .row { grid-template-rows: auto auto; }
+.task-index .row > * { grid-row: 1; }
+.task-index .no { text-align: right; justify-self: end; }
+.task-index .fact.due { justify-self: end; text-align: right; }
+.task-index .late .fact.due { font-weight: 600; }
+.task-index .what .bell { display: inline-block; align-self: center; color: var(--todo); }
+.task-index .what .bell .icon { width: 0.95rem; height: 0.95rem; }
+.task-index .what .tag { align-self: center; }
+.task-done .what, .task-cancelled .what { color: var(--ink-2); }
+.task-cancelled .what > .t { text-decoration: line-through; text-decoration-color: var(--dim); }
+/* Edit opens across the whole line, under it. */
+.row > details.edit { grid-row: 2; grid-column: 1 / -1; }
+.row > details.edit > summary {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-width: 4.75rem;
+  height: var(--row);
+  padding: 0 0.7rem;
+  font: 500 var(--t-small)/1 var(--sans);
+  color: var(--secondary);
+  text-decoration: none;
+  background: none;
+  border: 1px solid transparent;
+  border-bottom-width: 2px;
+  transition: color 0.15s, background-color 0.15s, border-color var(--afterglow), box-shadow var(--afterglow);
+}
+/* At rest a ghost: the bone pencil and its word. The key face comes up on the line pointed at or
+   in use, so four Edit keys never stack into a column of boxes. */
+.row > details.edit > summary .icon { width: 0.95rem; height: 0.95rem; color: var(--bone); }
+.row:is(:hover, :focus-within) > details.edit > summary { color: var(--heading); background: linear-gradient(180deg, var(--key-hi), var(--key)); border-color: var(--key-edge); transition-duration: 0.15s, 0.15s, var(--glow-in), var(--glow-in); }
+.row > details.edit > summary:hover { border-color: color-mix(in srgb, var(--bone) 40%, var(--key-edge)); }
+.row > details.edit[open] > summary { color: var(--here-ink); background: var(--here); border-color: color-mix(in srgb, var(--here) 70%, #000); box-shadow: inset 0 2px 0 var(--here-cap); }
+.row > details.edit[open] > summary .icon { color: var(--here-ink); }
+.edit-body { padding: 0.4rem 0 1.1rem 3.35rem; border-top: 1px dashed var(--line-2); }
+.edit-body .form { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem 1rem; }
+.task-notes { margin: 0.4rem 0 0.9rem; max-width: var(--measure); font-size: var(--t-small); }
+.task-notes p { margin: 0 0 0.3rem; }
+/* The form to add one: shown when the plate's key asks for it, or when there is nothing yet. */
+.add-task:not(:target):not(.is-open) { display: none; }
+.add-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: -0.3rem 0 0.9rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--line); }
+.add-head h2 { margin: 0; padding: 0; border: 0; font: semi-condensed 600 var(--t-cell)/1.1 var(--sans); }
+.add-head .close { display: inline-flex; align-items: center; justify-content: center; min-width: 2.75rem; min-height: 2.75rem; font: 500 var(--t-small)/1 var(--sans); color: var(--ink-2); }
+.register > .foot-note { max-width: none; margin: 0.5rem 0 0; padding-top: 0.6rem; border-top: 1px solid var(--line); }
+.add-task > summary, details.add > summary { display: flex; align-items: center; gap: 0.6rem; min-height: 2.75rem; margin: -0.35rem 0; font: 600 var(--t-body)/1.2 var(--sans); color: var(--heading); }
+.add-task > summary .icon, details.add > summary .icon { display: none; }
+.add-task[open] > summary, details.add[open] > summary { margin-bottom: 0.9rem; }
+.add-task .form, details.add .form { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem 1rem; }
+.add-task:not([open]), details.add:not([open]) { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+/* The box to tick: a square well, ringed amber once the thing is late. */
+.tick-form { margin: 0; }
+button.tick, .task-box {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  min-height: 0;
+  padding: 0;
+  color: transparent;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+button.tick::before, .task-box::before {
+  content: "";
+  position: absolute;
+  inset: 0.6rem;
+  background: var(--field);
+  border: 2px solid var(--edge);
+  box-shadow: inset 0 2px 0 rgb(0 0 0 / 0.55), inset 0 -1px 0 rgb(255 255 255 / 0.04);
+  transition: background-color 0.15s, border-color 0.15s, box-shadow var(--afterglow);
+}
+button.tick .icon, .task-box .icon { position: relative; width: 1.05rem; height: 1.05rem; transition: color 0.15s; }
+/* An open box is edged in To do's own teal, a step into the grey: the list's colour carried into
+   the list. Late ones are amber; a done one is lit. */
+button.tick::before, .task-box::before { border-color: color-mix(in srgb, var(--todo) 45%, var(--line-2)); }
+button.tick:hover { background: none; box-shadow: none; color: color-mix(in srgb, var(--lit) 70%, transparent); }
+button.tick:hover::before {
+  background: color-mix(in srgb, var(--lit) 8%, var(--field));
+  border-color: var(--lit);
+  box-shadow: inset 0 2px 0 rgb(0 0 0 / 0.55), 0 0 16px -5px color-mix(in srgb, var(--brand) 60%, transparent);
+  transition-duration: 0.15s, 0.15s, var(--glow-in);
+}
+button.tick:active::before { background: color-mix(in srgb, var(--lit) 22%, var(--field)); }
+.late button.tick::before, .late .task-box::before { border-color: var(--people); box-shadow: inset 0 2px 0 rgb(0 0 0 / 0.55), 0 0 10px -4px color-mix(in srgb, var(--people) 70%, transparent); }
+.task-done .task-box { color: var(--on-bright); }
+.task-done .task-box::before { background: var(--lit); border-color: var(--lit); box-shadow: 0 0 14px -4px color-mix(in srgb, var(--brand) 80%, transparent); }
+.task-cancelled .task-box { color: var(--dim); }
+.reminder { color: var(--ink-2); }
+.reminder .icon { color: var(--todo); }
+.empty-row { display: block !important; }
+
+/* P400 Plans, the list: day, name, leader, time, how far off. */
+.plan-index { grid-template-columns: 0.75rem 5.6rem minmax(0, 1fr) max-content max-content 4.75rem; column-gap: 0.7rem; }
+.plan-index .ch-date { grid-column: 2; }
+.plan-index .ch-what { grid-column: 3; }
+.plan-index .ch-time { grid-column: 4; }
+.plan-index .ch-rel { grid-column: 5; text-align: right; }
+.plan-index .what .tag { align-self: center; }
+.plan-index .row { grid-template-rows: auto auto; }
+.plan-index .row > * { grid-row: 1; }
+.plan-index .rel-words { text-align: right; justify-self: end; color: var(--plans); }
+.plan-index .edit-body .where, .plan-index .edit-body .note { margin: 0.5rem 0; font-size: var(--t-small); color: var(--ink-2); }
+.edit-forms { display: grid; gap: 0.8rem; }
+.edit-forms .form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.past .row { opacity: 0.78; }
+
+/* P400 Plans, the month: its name in bone, the keys that turn it, a day to a leaf. */
+.month-module { padding-top: 0.4rem; }
+.month-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem 1rem; padding: 0.2rem 0 0.7rem; margin: 0 0 0.3rem; border-bottom: 1px solid var(--line); }
+.month-bar h2 { font: condensed 600 var(--t-cell)/1 var(--sans); letter-spacing: -0.01em; color: var(--heading); }
+.month-nav { display: flex; gap: var(--gap); margin: 0; }
+.month-nav .button { padding: 0 0.9rem; }
+table.month { width: 100%; margin: 0; border-collapse: collapse; table-layout: fixed; }
+table.month th { padding: 0.5rem 0.55rem 0.4rem; text-align: left; border-bottom: 1px solid var(--line-2); }
+table.month td { height: 5.5rem; padding: 0.4rem 0.45rem; vertical-align: top; background: transparent; border: 1px solid var(--line); }
+/* A week gone with nothing on it folds to the line of its dates, so the month's weeks to come get the
+   room and the grid is not a wall of empty leaves. */
+table.month tr.gone td { height: 2.4rem; padding-top: 0.3rem; padding-bottom: 0.3rem; }
+table.month tr > :first-child { border-left: 0; }
+table.month tr > :last-child { border-right: 0; }
+table.month tbody tr:last-child td { border-bottom: 0; }
+/* Saturday and Sunday shaded a step, the days gone stepped back. */
+table.month td.weekend, table.month th.weekend { background: color-mix(in srgb, var(--surface-3) 60%, transparent); }
+table.month td time { display: flex; align-items: center; gap: 0.4rem; min-height: 1.6rem; font: 500 var(--t-body)/1 var(--machine); color: var(--ink); font-variant-numeric: tabular-nums; }
+table.month td.past time { color: var(--faint); font-weight: 400; }
+table.month td.outside:not(.past) time { color: var(--ink-2); font-weight: 400; }
+/* Today: a steel cap and a steel ring round the leaf, its numeral in bone, its lamp lit. */
+table.month td.today { position: relative; background: color-mix(in srgb, var(--here-cap) 6%, transparent); box-shadow: inset 0 0 0 1px var(--here-cap), inset 0 2px 0 var(--here-cap); }
+table.month td.today time { color: var(--bone); font-weight: 600; }
+table.month td.today time .lamp.on { width: 8px; height: 8px; }
+/* A plan on its leaf: bone words on a 2px sky edge. */
+.event { margin-top: 0.3rem; padding: 0.2rem 0.35rem 0.25rem 0.45rem; font-size: 0.875rem; line-height: 1.25; color: var(--bone); background: color-mix(in srgb, var(--plans) 5%, transparent); border-left: 2px solid var(--plans); overflow-wrap: anywhere; }
+a.event { display: block; min-height: 2.75rem; color: var(--bone); text-decoration: none; font-weight: 600; }
+a.event:hover { background: color-mix(in srgb, var(--plans) 14%, transparent); }
+
+.event small { display: block; font: 400 var(--t-fig-s)/1.3 var(--machine); color: var(--ink-2); }
+.month-list { display: none; }
+
+/* P900 Status: the lights as three cells sized to their lines, then what it has cost. */
+.monitors { align-items: start; }
+.lamp-cell > .cell-head { margin-bottom: 0.5rem; }
+.lamp-cell .cell-head .slot { width: 1.35rem; color: var(--bone); }
+.lamp-cell .cell-head .slot .icon { width: 1.2rem; height: 1.2rem; }
+.lamp-cell .cell-head .what { font-size: var(--t-item); text-decoration: none; }
+.lamp-cell .cell-head .count { font-size: 1.375rem; color: var(--bone); }
+.monitors .cell { min-height: 0; align-self: start; }
+.panel h2 .presence.glyph, .cell h2 .presence.glyph { width: 1.35rem; height: 1.35rem; }
+.lights { list-style: none; margin: 0; padding: 0; }
+.light-row { display: grid; grid-template-columns: 0.75rem minmax(0, 1fr); gap: 0.7rem; padding: 0.5rem 0; }
+.light-row + .light-row { border-top: 1px solid var(--line); }
+.light-row:first-child { padding-top: 0; }
+.light-row > .light { justify-self: center; margin-top: 0.45rem; }
+.light-row strong { font: 600 var(--t-body)/1.3 var(--sans); color: var(--heading); }
+.light-row .muted { font-size: var(--t-small); line-height: 1.35; }
+.inline-action { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-top: 0.6rem; }
+.module.spend > p { max-width: var(--measure); font-size: var(--t-small); color: var(--ink-2); }
+/* The cost tables side by side where each has room to set its rows on one line, else stacked. */
+.tables { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); gap: var(--gap); margin-bottom: var(--gap); }
+.tables td:first-child { white-space: nowrap; }
+.tables > .scroll, .module > .scroll { padding: 0.9rem 1rem 0.4rem; background: var(--plate); border: 1px solid var(--line); }
+.module .scroll + .scroll, .tables + .scroll { margin-top: var(--gap); }
+.activity li + li { border-top: 1px solid var(--line); }
+.activity a { display: flex; flex-direction: column; gap: 0.15rem; min-height: 2.75rem; padding: 0.6rem 0; color: var(--ink); text-decoration: none; }
+.activity a:hover .activity-title { text-decoration: underline; }
+.activity-title { font-weight: 600; }
+.attention::before, .trouble::before { content: ""; position: absolute; left: -1px; right: -1px; top: -1px; height: 2px; }
+.attention::before { background: var(--people); }
+.trouble::before { background: var(--danger); }
+.waiting-cell .meta { display: flex; flex-direction: row; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.6rem; }
+.waiting-cell h3 { font: 600 var(--t-label)/1.3 var(--sans); letter-spacing: 0; text-transform: none; color: var(--label); }
+.waiting-cell ul a { display: inline-flex; align-items: center; min-height: 2.75rem; }
+
+/* P990 Settings: the sommaire, a part to a 56px line. */
+.sommaire { grid-template-columns: 0.75rem 1.4rem minmax(13rem, 0.8fr) minmax(0, 1.2fr) 1.1rem; column-gap: 0.75rem; }
+.sommaire .ch-what { grid-column: 3; }
+.sommaire .ch-state { grid-column: 4; }
+.sommaire .row, .sommaire .row > a { min-height: 3.5rem; }
+.sommaire .picon { display: grid; place-items: center; color: var(--bone); }
+.sommaire .picon .icon { width: 1.2rem; height: 1.2rem; }
+.sommaire .picon .glyph.presence { width: 1.25rem; height: 1.25rem; }
+.sommaire .what { font: semi-condensed 600 var(--t-item)/1.2 var(--sans); }
+/* Settings' lines are contents lines, so they keep the contents line's 2px leader. */
+.sommaire .what > .dots { border-bottom: 2px dotted var(--line-2); }
+.sommaire .fact.state { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; line-height: 1.35; margin: 0.35rem 0; padding: 0; text-wrap: pretty; }
+.sommaire .go { width: 1.05rem; height: 1.05rem; color: var(--label); transition: transform 0.15s, color 0.15s; }
+.sommaire .row > a:hover .go { transform: translateX(3px); color: var(--bone); }
+.sommaire .look .what { color: var(--heading); }
+
+/* ==========================================================================================
+   P200: the conversation, one long cell with the glass line docked at its foot
+   ========================================================================================== */
+.conversation { min-height: calc(100svh - var(--bar-h) - 2.5rem); padding: 1.25rem 1.4rem 0; }
+
+.thread { list-style: none; margin: 0 0 1.5rem; padding: 0; display: flex; flex-direction: column; gap: 1.1rem; }
+.thread > li { display: flex; gap: 0.8rem; align-items: flex-start; max-width: min(42rem, 100%); }
+.said-them { flex-direction: row-reverse; margin-left: auto; }
+.avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  font: 500 1rem/1 var(--machine);
+}
+.said-them .avatar { color: var(--bone); background: color-mix(in srgb, var(--bone) 7%, var(--field)); border: 1px solid color-mix(in srgb, var(--bone) 35%, var(--line-2)); }
+.said-bot .avatar.presence { width: 2.25rem; height: 2.25rem; }
+.bubble { min-width: 0; padding: 0.7rem 1rem 0.8rem; }
+/* Hers on green-black glass beside her screen; the family's on steel, its edge at the right. */
+.said-bot .bubble {
+  background: radial-gradient(90% 70% at 30% 115%, color-mix(in srgb, var(--screen) 11%, transparent), transparent 70%), color-mix(in srgb, var(--screen) 4%, #080d0a);
+  border: 1px solid color-mix(in srgb, var(--screen) 16%, var(--card-edge));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--screen) 10%, transparent), 0 0 30px -22px color-mix(in srgb, var(--screen) 60%, transparent);
+}
+.said-them .bubble { background: color-mix(in srgb, #9cc4dc 8%, var(--surface-2)); border: 1px solid color-mix(in srgb, #9cc4dc 16%, var(--card-edge)); border-right: 3px solid var(--steel); }
+.said-by { display: flex; flex-wrap: wrap; gap: 0.2rem 0.6rem; align-items: baseline; margin-bottom: 0.25rem; font: 400 var(--t-fig-s)/1.3 var(--machine); letter-spacing: 0; color: var(--label); }
+.said-by strong { font: 600 var(--t-small)/1.2 var(--sans); color: var(--heading); }
+.said-bot .said-by strong { color: color-mix(in srgb, var(--screen) 55%, var(--heading)); }
+.said-them .said-by { flex-direction: row-reverse; }
+.said-text { max-width: var(--measure); white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--t-body); line-height: 1.55; }
+.did { margin-top: 0.5rem; font: 400 var(--t-fig-s)/1.4 var(--machine); color: var(--faint); }
+.pending .bubble { background: transparent; border: 1px dashed var(--line-2); }
+.pending .said-text { color: var(--ink-2); }
+.pending.is-lost .bubble { border-color: color-mix(in srgb, var(--people) 45%, transparent); }
+/* The line to type on docks at the foot of the screen and stays there while the thread scrolls,
+   as the last row of a videotex screen was kept for what you typed. */
+.conversation .ask {
+  flex: none;
+  position: sticky;
+  bottom: 0;
+  z-index: 25;
+  margin: auto -1.4rem 0;
+  border-left: 0;
+  border-right: 0;
+  box-shadow: 0 -18px 36px -16px rgb(0 0 0 / 0.95), 0 0 70px -40px color-mix(in srgb, var(--screen) 45%, transparent);
+}
+.conversation .starters { flex-direction: row; flex-wrap: wrap; margin: 1rem 0 1.4rem; }
+.conversation > .empty { margin-bottom: 1rem; }
+.kids-cell > h2 { font: 600 var(--t-body)/1.2 var(--sans); margin-bottom: 0.4rem; padding: 0; border: 0; }
+.kids-cell > p { font-size: var(--t-small); }
+.kids-cell ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.kids-cell li a { display: flex; align-items: center; min-width: 2.75rem; min-height: 2.75rem; padding: 0 0.8rem; font: 600 var(--t-small) var(--sans); color: var(--secondary); text-decoration: none; background: linear-gradient(180deg, var(--key-hi), var(--key)); border: 1px solid var(--key-edge); border-bottom-width: 3px; }
+.kids-cell li a:hover { color: var(--heading); }
+/* The chat's box, docked in one case: a line of green glass (the tube's prompt lit, a block caret
+   waiting, the family's words in Plex) with Send on the same row, and on the case's lip under it
+   who is sending, "Send where I am" and the mic, lit from the glass above. */
+.ask.composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "screen send" "lip lip" "where where";
+  column-gap: 0.65rem;
+  align-items: center;
+  padding: 0.75rem 0.8rem 0;
+}
+.composer > .ask-screen { grid-area: screen; }
+.composer > .send { grid-area: send; align-self: stretch; min-width: 6.5rem; padding: 0 1.15rem; font-size: 1rem; }
+.composer > .lip { grid-area: lip; margin: 0 -0.8rem; padding: 0.55rem 0.8rem 0.5rem; }
+.composer > #where { grid-area: where; margin: 0 0 0.5rem; }
+.ask-screen { padding: 0; background: none; border: 0; box-shadow: 0 0 0 3px #0a0d0c, 0 0 0 4px rgb(255 255 255 / 0.06); border-radius: 0.6rem / 0.7rem; }
+.ask-screen::after { display: none; }
+.ask-screen .crt-tube { padding: 0.5rem 1rem; border-radius: 0.6rem / 0.7rem; transition: box-shadow var(--afterglow); }
+.ask-screen .prompt-line { align-items: center; padding: 0; background: none; border: 0; box-shadow: none; }
+.ask-screen .prompt-line:focus-within { box-shadow: none; }
+.ask-screen textarea { min-height: 2.75rem !important; padding-top: 0.6rem !important; }
+.ask-screen:focus-within .crt-tube {
+  box-shadow:
+    inset 0 0 0 1.5px #020403, inset 0 0 36px 6px rgb(0 0 0 / 0.72),
+    0 0 0 3px color-mix(in srgb, var(--brand) 22%, transparent),
+    0 0 26px -6px color-mix(in srgb, var(--brand) 55%, transparent);
+  transition-duration: var(--glow-in);
+}
+/* While the line is empty and nobody is in it, the tube's block cursor waits after the prompt. */
+.ask-screen .prompt-line:has(textarea:placeholder-shown):not(:focus-within) .prompt-mark::after {
+  content: "";
+  display: inline-block;
+  width: 0.45em;
+  height: 0.62em;
+  margin-left: 0.3em;
+  background: var(--phosphor);
+  box-shadow: 0 0 8px var(--phosphor);
+  animation: blink 1.06s steps(1) 10;
+}
+.composer .lip .mic-slot button.mic { margin-left: auto; }
+
+/* ---- The new idea: one cell of lines, a label column and its bounded field ------------------------ */
+/* The form is one register: each line a label in its column and the box beside it, help under
+   the box at the small step. The rest folds under "Everything else", in the same lines. */
+.idea-form { position: relative; display: block; padding: 0.3rem var(--pad) var(--pad); background: var(--surface); border: 1px solid var(--card-edge); box-shadow: var(--shadow); }
+.idea-form::before { content: ""; position: absolute; left: -1px; right: -1px; top: -1px; height: 1px; background: color-mix(in srgb, var(--bone) 35%, transparent); pointer-events: none; }
+.idea-form .field, .idea-form fieldset.field {
+  display: grid;
+  grid-template-columns: var(--label-col) minmax(0, var(--field-max)) 2.75rem minmax(0, 1fr);
+  column-gap: 6px;
+  row-gap: 0.3rem;
+  align-items: start;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--line);
+}
+.idea-form > .field:first-of-type { border-top: 0; }
+.idea-form .field > label:not(.check), .idea-form fieldset.field > legend { grid-column: 1; grid-row: 1 / span 2; margin: 0; padding: 0.8rem 1rem 0 0; }
+/* Every box in the field's column, the mic in a column of its own on every line, so every box
+   ends on one edge whether it takes words or not. */
+.idea-form .field > :not(label, legend, button.mic), .idea-form .field > label.check { grid-column: 2; }
+.idea-form .field.can-dictate:has(> input) { grid-template-columns: var(--label-col) minmax(0, var(--field-max)) 2.75rem minmax(0, 1fr); column-gap: 6px; align-items: start; }
+.idea-form .field.can-dictate:has(> input) > label { grid-column: 1; grid-row: 1 / span 2; }
+.idea-form .field.can-dictate:has(> :is(input, textarea)) > :is(input, textarea) { grid-column: 2; grid-row: 1; }
+.idea-form .field.can-dictate > button.mic { position: static; grid-column: 3; grid-row: 1; }
+.idea-form .field.can-dictate:has(> textarea) > button.mic { align-self: end; }
+.idea-form .field.can-dictate:has(> input) > :not(label, input, button.mic) { grid-column: 2; }
+.idea-form .field > .muted { margin: 0.1rem 0 0; font-size: var(--t-small); line-height: 1.4; color: var(--dim); }
+.idea-form fieldset.field { display: block; }
+.idea-form fieldset.field > legend { float: left; width: var(--label-col); margin-right: 6px; }
+.idea-form fieldset.field > label.check { margin-left: 0.675rem; }
+.idea-form #description { min-height: 5.5rem; }
+.idea-form > details.more { margin: 0; padding: 0.35rem 0; border-top: 1px solid var(--line); }
+.idea-form > details > summary { min-height: 2.75rem; font: 600 var(--t-body)/1.2 var(--sans); color: var(--heading); }
+.idea-form .inner { display: block; padding: 0; }
+.idea-form .inner > .field:first-child { border-top: 1px solid var(--line); }
+.idea-form > .field.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1.2rem; padding: 1rem 0 0; }
+.idea-form > .field.actions .button.quiet { min-height: 2.75rem; padding: 0 0.4rem; }
+
+/* A way on said inside a line of words is still a 44px key. */
+.spend-words a, .lamp-cell p a, #models p a, .waiting-cell p a { display: inline-flex; align-items: center; min-height: 2.75rem; }
+
+.plate .plate-no.own::before { content: none; }
+/* A fold that is a cell's whole content opens on its name, as a line: the words, a key to open. */
+details.cell > summary { display: flex; align-items: center; gap: 0.7rem; min-height: 2.75rem; margin: -0.35rem 0; font: 600 var(--t-body)/1.2 var(--sans); color: var(--heading); }
+details.cell[open] > summary { margin-bottom: 0.9rem; padding-bottom: 0.7rem; border-bottom: 1px solid var(--line); }
+details:is(.cell, .panel, .more, .add-task, .add) > summary .h2 > .icon { display: none; }
+details.cell .form { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem 1rem; }
+.memory-empty { flex-direction: row; align-items: center; gap: 1.1rem; }
+.memory-empty .empty-art { width: 2rem; height: 2rem; color: var(--sec); }
+.memory-empty p { margin: 0; max-width: var(--measure); }
+/* P800 the family: a person to a line. */
+.people-index { grid-template-columns: 2.25rem minmax(0, 1fr) max-content max-content 4.75rem; column-gap: 0.75rem; }
+.people-index .ch-who { grid-column: 2; }
+.people-index .ch-role { grid-column: 3; }
+.people-index .ch-reach { grid-column: 4; }
+.people-index .avatar { width: 2rem; height: 2rem; font-size: 0.9rem; }
+.people-index .what .tag { align-self: center; }
+.people-index .change { justify-self: end; display: inline-flex; align-items: center; justify-content: center; min-width: 2.75rem; min-height: 2.75rem; color: var(--ink-2); text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); }
+.people-index .off { opacity: 0.6; }
+/* P310 restaurants: a place to a line, its ways out at the end. */
+.food-index { grid-template-columns: minmax(0, 1fr) max-content max-content max-content max-content; column-gap: 0.8rem; }
+.food-index .ch-what { grid-column: 1; }
+.food-index .ch-today { grid-column: 2; }
+.food-index .ch-far { grid-column: 3; }
+.food-index .ch-who { grid-column: 4; }
+.food-index .ch-out { grid-column: 5; }
+.food-index .row { grid-template-rows: auto auto; }
+.food-index .row > * { grid-row: 1; }
+.food-index .row > .row-note { grid-row: 2; grid-column: 1 / -1; margin: -0.3rem 0 0.5rem 1.7rem; font-size: var(--t-small); line-height: 1.4; color: var(--dim); }
+.food-index .what .kicon { display: inline-block; align-self: center; color: var(--clay); }
+.food-index .what .kicon .icon { width: 1.05rem; height: 1.05rem; vertical-align: top; }
+.food-index .fact.out { display: flex; gap: 0.2rem; }
+.food-index .fact.out a { position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; min-width: 2.75rem; min-height: 2.75rem; padding: 0 0.3rem; color: var(--ink-2); }
+
+/* An idea's own page keeps its small screen in its module: when it is on, for whom, its lookup. */
+.side .page-readout { margin: 0; }
+.page-readout .crt-tube { display: flex; flex-direction: column; gap: 0.4rem; padding: 0.95rem 1.1rem 1rem; font-size: var(--t-tube-s); line-height: 1.12; }
+.page-readout .crt-tube > * { margin: 0; }
+.readout-title { font-size: var(--t-tube-m); line-height: 1; overflow-wrap: anywhere; }
+.readout-when { font-size: var(--t-tube); line-height: 1.05; }
+.readout-lines { list-style: none; margin: 0.1rem 0 0; padding: 0.4rem 0 0; display: grid; gap: 0.25rem; border-top: 2px dashed color-mix(in srgb, var(--phosphor) 26%, transparent); }
+.readout-lines li { display: grid; min-width: 0; }
+.readout-lines span { min-width: 0; overflow-wrap: anywhere; }
+.readout-foot { margin-top: 0.15rem !important; }

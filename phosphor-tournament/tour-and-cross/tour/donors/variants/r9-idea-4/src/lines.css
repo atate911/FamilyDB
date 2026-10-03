@@ -1,0 +1,197 @@
+/* SIGNAL LINES: the line language. Two tones: a track (time, order) is 2px steel; a bracket, a
+   tick or a buffer stop (belonging, ending) is pewter, 1px as a line. Every turn is one 12px
+   radius. A stop is a hollow ring, filled only when done, amber only for "needs a look", and
+   #6dff9c only for now and live. A line always shows time, order or belonging. */
+:root{--T:2.75rem;--nt:1.3rem;--M:7.4rem}
+
+/* One stop, wherever a line has one: a 12px ring, hollow unless it is done, here or now. */
+.in-chat .said-them::before,.your-turn::after,.settings-nav li::after,.stations>.strip>.strip-mark::after,.lost .desk-words::after{content:"";position:absolute;z-index:1;width:12px;height:12px;box-sizing:border-box;border:2px solid var(--pewter);border-radius:50%;background:var(--tray)}
+/* One buffer stop, wherever a line ends with nothing more to hold. */
+.masthead::after,.track>.terminus::after,.lost .desk-words>:last-child::before{content:"";position:absolute;width:14px;height:3px;border-radius:1px;background:var(--pewter)}
+/* A section's ring: the head's ring, smaller, round the section's own icon, in its colour. */
+:is(.set>h2,.section-head h2,.setup>h2)>:is(.icon,.presence){box-sizing:content-box;width:.95rem;height:.95rem;padding:.35rem;border:1px solid color-mix(in srgb,currentColor 70%,var(--bg));border-radius:50%}
+
+/* The bar: its rule carries a lamp under the page you are on, the one mark of "you are here". */
+.places a,.tools>a,.menu>summary{position:relative}
+:is(.places a,.tools>a)[aria-current]::after,.menu.here>summary::before{content:"";position:absolute;left:calc(50% - 3.5px);bottom:calc(-.55rem - 5px);width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px #0f1417}
+@media(max-width:51.99rem){
+  .places{background:#0f1417f5;border-top:3px double var(--rule-bar)}
+  .places a[aria-current=page] .icon{background:color-mix(in srgb,var(--accent) 20%,var(--surface-3));box-shadow:inset 0 2px var(--accent);border-radius:9px;filter:none}
+  .places a[aria-current]::after{bottom:auto;top:calc(-.4rem - 5px)}
+}
+
+/* The head: the page's icon in a ring; a thin line leaves it and drops. Holding controls, it
+   turns under them and runs the width of the head; holding nothing, it ends at a buffer stop;
+   where the page's own line carries on down (the chat, a page of settings) it is a track. */
+.masthead{--rw:2.6rem;position:relative;display:grid;grid:"c c c" auto "r t a" auto "r d a" auto "r k k" auto "r f f" 1.1rem/calc(var(--rw) + .9rem) minmax(0,1fr) auto;align-items:end;gap:0;margin:0 0 2rem}
+.masthead::after{left:calc(var(--rw)/2 - 7px);bottom:0}
+.masthead.has-actions::after{left:var(--rw);right:0;width:auto;height:1px;border-radius:0}
+.masthead .crumbs{grid-area:c;margin:0 0 .7rem}
+.masthead h1{grid-area:t;margin:0;font-size:clamp(2.2rem,4.6vw,3rem);font-weight:740;letter-spacing:-.018em;word-spacing:.05em;line-height:1.04;font-variation-settings:"opsz" 40}
+.masthead .lede{grid-area:d;margin:.55rem 0 0;max-width:44ch;text-wrap:balance}
+.masthead.long .lede{max-width:58ch}
+.masthead .page-actions{grid-area:a;align-items:center;margin-left:.9rem}
+.rail{grid-area:r;align-self:stretch;display:flex;flex-direction:column;align-items:center;margin-right:.9rem}
+.rail::after{content:"";flex:1;align-self:flex-end;width:calc(50% + .5px);min-height:.8rem;border-left:1px solid var(--pewter)}
+.has-actions>.rail::after{border-bottom:1px solid var(--pewter);border-bottom-left-radius:12px}
+.masthead .title-icon{width:var(--rw);height:var(--rw);margin-top:.35rem;color:var(--accent);background:color-mix(in srgb,currentColor 7%,var(--bg));border:1.5px solid color-mix(in srgb,currentColor 75%,var(--bg));border-radius:50%;box-shadow:0 0 22px -12px var(--accent)}
+.masthead .title-icon .icon{filter:none}
+.masthead:has(.tabs,.filters) .page-actions{grid-area:k;display:flex;flex-wrap:wrap;gap:.75rem;margin:1.1rem 0 0}
+.page-actions>.button{margin-left:auto}
+.page-actions>p{flex:1 1 16rem;margin:0}
+.page-actions>p:first-child{flex-basis:100%}
+.masthead .tabs{margin:0}
+.masthead :is(.capture,details,.filters){margin:0;padding:.55rem .95rem}
+.masthead [open]{flex-basis:100%;padding:1rem 1.1rem}
+.masthead .capture[open]{order:3}
+.page-actions summary .h2{font-size:1rem}
+.masthead .filters{flex:1 1 28rem;gap:.5rem .75rem}
+@media(min-width:72rem){
+  .masthead:not(.long){grid:"c c c c" auto "r t d a" auto "r k k k" auto "r f f f" 1.1rem/calc(var(--rw) + .9rem) auto minmax(0,1fr) auto;align-items:last baseline}
+  .masthead:not(.long) .lede{margin:0 0 0 .9rem;padding-bottom:.1rem}
+}
+
+/* A time hung in the margin: the day in small caps over the hour. */
+.strip-stamp,.in-chat .said-when{display:flex;flex-direction:column;align-items:flex-end;gap:.12rem;font:var(--cap);letter-spacing:.05em;text-transform:uppercase;color:var(--label);white-space:nowrap}
+:is(.strip-stamp,.said-when) .at{font-size:.8rem;letter-spacing:.02em;color:var(--ink-2)}
+.strip-stamp .warn{color:var(--amber)}
+
+/* Chat: the line hangs from her ring and runs down the thread. Her screen is her stop; each of
+   the family's lines is a ring on the track with a tick across to their words on the other
+   side; the line ends at a lit ring by the box, the next stop yours. */
+.in-chat main{max-width:62rem}
+.in-chat{--P:1.25rem;--M:3.9rem;--C:2.25rem;--G:.8rem;--o:calc(var(--G) + var(--C)/2);--tx:calc(var(--P) + var(--M) + .6rem + var(--C)/2)}
+.in-chat .masthead{margin-bottom:1.5rem;padding-left:calc(var(--tx) - var(--rw)/2)}
+.in-chat .masthead::after{content:none}
+.in-chat .rail{margin-bottom:-1.5rem}
+.in-chat .rail::after{width:calc(50% + 1px);border-left:2px solid var(--steel)}
+.in-chat .thread{position:relative;margin:0 0 2.25rem;padding:1.4rem var(--P) 1.4rem calc(var(--tx) + var(--o));background:var(--tray);border-radius:12px}
+.in-chat .thread::before,.your-turn::before{content:"";position:absolute;left:calc(var(--tx) - 1px);top:0;bottom:0;width:2px;background:var(--steel)}
+.in-chat .thread>li{position:relative;align-items:flex-start;max-width:none}
+.in-chat .said-bot>.avatar{position:absolute;z-index:1;left:calc(-1*var(--o) - 1.1rem);top:.15rem;border-radius:50%;box-shadow:0 0 0 4px var(--tray)}
+.in-chat .said-bot .bubble{max-width:40rem}
+.in-chat .said-them{width:100%}
+.in-chat .said-them .bubble{max-width:min(34rem,74%)}
+.in-chat .said-them::before{left:calc(-1*var(--o) - 6px);top:calc(1.05rem - 6px);border-color:var(--accent)}
+.in-chat .said-them::after{content:"";flex:1 0 .5rem;height:1px;margin:1.05rem -.7rem 0 calc(6px - var(--o));background:var(--pewter)}
+@media(min-width:40rem){
+  .in-chat .said-when{position:absolute;top:.8rem;left:calc(var(--P) - var(--tx) - var(--o));width:var(--M)}
+}
+.your-turn{position:relative;margin:0 0 2rem calc(var(--tx) + var(--o))}
+.your-turn::before{left:calc(-1*var(--o) - 1px);top:-2.25rem;bottom:auto;width:calc(var(--o) + 1px);height:3.8rem;background:linear-gradient(var(--steel),var(--steel)) 0 0/2px 3.7rem no-repeat,linear-gradient(var(--pewter),var(--pewter)) 7px calc(3.7rem - .5px)/100% 1px no-repeat}
+.your-turn::after{left:calc(-1*var(--o) - 6px);top:calc(1.45rem - 6px);border-color:var(--brand);background:var(--bg);box-shadow:0 0 8px #6dff9c8c}
+
+/* Lists with a time or an order: a steel track down the gutter at the list's left, each item's
+   stop on it, a 1px tick from the stop to its plate, and in a timetable the time hung in the
+   margin left of the track. The stop is the item's own mark where that is a tick or a lamp (To
+   do, Status); a date leaf keeps its place and a ring stands for it on the track (Plans). */
+.track{position:relative;padding-left:var(--T)}
+.track>li{position:relative}
+.track>li::before{content:"";position:absolute;left:calc(var(--T)/-2 - 1px);top:-6px;bottom:0;width:2px;background:var(--steel);pointer-events:none}
+.track>li:first-child::before{top:var(--nt)}
+.track>li:last-child::before{bottom:auto;height:calc(var(--nt) + 6px)}
+.track>li:only-child::before{content:none}
+.track>.terminus::after{left:calc(var(--T)/-2 - 7px);top:calc(var(--nt) - 1.5px)}
+.track>.strip::after{content:"";position:absolute;left:calc(var(--r,.65rem) - var(--T)/2);width:calc(var(--T)/2 - var(--r,.65rem));top:var(--nt);height:1px;background:var(--pewter)}
+.track:not(.stations)>.strip.strip{grid-template-columns:minmax(0,1fr) var(--facts,auto)}
+.track:not(.stations)>.strip>.strip-mark{position:absolute;z-index:1;left:calc(-1*var(--T));top:calc(var(--nt) - var(--T)/2);width:var(--T);height:var(--T);background:none}
+.track button.tick::before,.track :is(.task-box,.light:not(.on)){background-color:var(--tray)}
+.terminus a{display:inline-flex;align-items:center;gap:.35rem;min-height:2.75rem;font-weight:500;color:var(--accent);text-decoration:none}
+.terminus a .icon{width:1rem;height:1rem}
+.rack.timetable{padding-left:calc(var(--M) + var(--T))}
+.strip-stamp{position:absolute;right:calc(100% + var(--T));top:0;width:var(--M);padding:.8rem .55rem 0 0}
+/* Home's To do hangs its track from its ring. */
+.home-todo .section-head{padding-left:calc(var(--M) + var(--T)/2 - .875rem)}
+
+/* Stations: the plans along a line from today's lit lamp, a ring on the track for each day. */
+.stations{--T:1.75rem;--nt:50%;--r:6px;--y:1.375rem;padding-top:1.25rem}
+.stations::before{content:"";position:absolute;z-index:1;left:calc(var(--T)/2 - 6px);top:0;width:12px;height:12px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 3px #6dff9c29,0 0 12px #6dff9c99;animation:breathe 3.2s ease-in-out -1.4s infinite}
+.stations>li:first-child::before{top:calc(6px - 1.25rem)}
+.stations>.strip>.strip-mark::after{left:calc(var(--T)/-2 - 6px);top:calc(50% - 6px);border-color:var(--cyan)}
+.stations>.is-today>.strip-mark::after{border-color:var(--brand)}
+.stations .chip-day{font-size:1.6rem}
+@media(min-width:52rem){
+  .places a{min-height:2.75rem}
+  .desk.desk{display:grid;grid-template-columns:minmax(0,19rem) minmax(0,1fr);gap:1.25rem 2.75rem;align-items:center;max-width:54rem;margin:0 auto;padding:calc(2rem + 5px) 2.25rem 2rem}
+  .desk .crt{margin:0}
+  .lost .crt-tube{grid-template-columns:1fr;justify-items:center}
+  .lost .radar{width:11rem}
+  .lost .eyebrow{display:block}
+  .across{display:flex;gap:0;padding:0 0 0 1.25rem}
+  .across::before{left:0;top:calc(var(--y) - 6px)}
+  .across>li{flex:1 1 0;min-width:0;max-width:18rem}
+  .across.across>li::before{left:0;right:0;top:calc(var(--y) - 1px);bottom:auto;width:auto;height:2px}
+  .across.across>li:first-child::before{left:-1.25rem}
+  .rack.across>.strip.strip{grid-template-columns:3.5rem minmax(0,1fr);grid-template-rows:auto 1fr auto;padding:calc(var(--y) + 1.1rem) .9rem 0 0;background:none;border-radius:0}
+  .across>.strip>.strip-mark{grid-area:1/1;padding:.5rem 0 .45rem;border-radius:6px 6px 0 0}
+  .across>.strip>.strip-mark::after{left:calc(1.75rem - 6px);top:calc(var(--y) - 6px)}
+  .across>.strip::after{left:calc(1.75rem - .5px);top:calc(var(--y) + 6px);width:1px;height:calc(1.1rem - 6px)}
+  .across>.strip>.strip-body{grid-area:2/1/3/3;align-self:stretch;padding:.7rem .85rem .6rem;background:var(--strip);border-radius:0 6px 0 0}
+  .across>.strip>.strip-body:last-child{border-radius:0 6px 6px 6px}
+  .across>.strip>.strip-facts{grid-area:3/1/4/3;flex-direction:row;justify-content:flex-start;padding:.45rem .85rem .55rem;background:var(--strip);border:0;border-top:1px solid var(--cell);border-radius:0 0 6px 6px}
+  .across .strip-facts::before,.across .strip-facts::after{content:none}
+  .across .strip a:not(.button)::after{top:calc(var(--y) + 1.1rem);right:.9rem}
+  .across>.strip:hover>:is(.strip-body,.strip-facts){background:var(--surface-2);transition-duration:var(--glow-in)}
+  .across>.terminus{flex:none;max-width:none;align-self:flex-start;padding:0 0 0 1.5rem}
+  .across.across>.terminus::before{left:0;right:auto;width:1rem}
+  .across>.terminus::after{left:1rem;top:calc(var(--y) - 8px);width:3px;height:16px}
+}
+
+/* Status: lamps and ticks on every panel; a track only where the lights are a chain. */
+.lights{--T:1.75rem;--r:.45rem}
+.lights:not(.chain)>li::before{content:none}
+:is(.chain,.home-todo .track)>li:first-child::before{top:-.75rem}
+
+/* The steps to finish setting up: amber rings on one line from the head's ring, in their order. */
+.setup ol{position:relative;padding-left:.45rem}
+.setup li{position:relative}
+.setup ol::before,.setup li:not(:last-child)::after{content:"";position:absolute;left:calc(.875rem - 1px);width:2px;background:var(--steel)}
+.setup ol::before{top:-.75rem;height:1.75rem}
+.setup li:not(:last-child)::after{left:calc(.425rem - 1px);top:calc(50% + .45rem);height:calc(100% - .9rem)}
+/* The setup page: numbered stops on a line, filled when done, the lit ring on the step to take now. */
+.setup-list.track{--T:3.25rem;--nt:50%;gap:6px}
+.setup-list .number{position:absolute;z-index:1;left:calc(var(--T)/-2 - 1.05rem);top:calc(50% - 1.05rem);background:var(--bg);border:2px solid var(--pewter)}
+.setup-list.track a{grid-template-columns:minmax(0,1fr) auto}
+.setup-list .done .number{color:var(--on-bright);background:var(--lit);border-color:var(--lit)}
+.setup-list .now .number{color:var(--brand);border-color:var(--brand);box-shadow:0 0 10px -3px var(--brand)}
+.section-icon{border-radius:50%}
+
+/* A page of settings: the head's line carries on down as the track of its sections. */
+.settings-nav .track{--T:2.6rem;--nt:1.375rem;padding-left:var(--T)}
+.settings-nav li::after{left:calc(var(--T)/-2 - 6px);top:calc(var(--nt) - 6px);background:var(--bg)}
+.settings-nav li:has([aria-current])::after{background:var(--accent);border-color:var(--accent)}
+@media(min-width:62rem){
+  .settings-layout{grid-template-columns:16rem minmax(0,1fr)}
+  .masthead:has(+.settings-layout)::after{content:none}
+  .masthead:has(+.settings-layout)>.rail{margin-bottom:-2rem}
+  .masthead:has(+.settings-layout)>.rail::after{width:calc(50% + 1px);border-left:2px solid var(--steel)}
+  .settings-nav li:first-child::before{top:0}
+}
+
+/* Today is now: a hollow green ring, never an amber disc (amber means "needs a look"). */
+table.month td.today{background:none}
+table.month td.today time{color:var(--ink);background:none;box-shadow:inset 0 0 0 2px var(--brand)}
+.is-today .rel{color:var(--brand);background:none}
+.chip.is-today .chip-mon{color:inherit}
+.chip.is-today .chip-day{color:var(--heading)}
+/* On To do the hollow ring already says open; its pill says it quietly. */
+.task .tag.status-open{background:none;color:var(--label);box-shadow:inset 0 0 0 1px var(--rule-bar)}
+
+/* The 404: a short line from a ring to a buffer stop beside the way back, the end of the line. */
+.lost .desk-words{position:relative;padding-left:2rem}
+.lost .desk-words::before{content:"";position:absolute;left:calc(.375rem - 1px);top:.5rem;bottom:1.375rem;width:2px;background:var(--steel)}
+.lost .desk-words::after{left:calc(.375rem - 6px);top:calc(.5rem - 6px);border-color:var(--accent)}
+.lost .desk-words>:last-child{position:relative;margin-bottom:0}
+.lost .desk-words>:last-child::before{left:calc(-1.625rem - 7px);bottom:calc(1.375rem - 1.5px)}
+
+/* On a phone: the times sit in the row under each line, the head's ring a little smaller. */
+@media(max-width:39.99rem){
+  .masthead{--rw:2.25rem}
+  .in-chat{--P:.75rem;--M:0rem;--G:.6rem;--tx:calc(var(--P) + var(--C)/2)}
+  .in-chat .said-when{flex-direction:row;gap:.4rem}
+  .in-chat .said-them .bubble{max-width:none}
+  :root{--M:0rem}
+  .track:not(.stations)>.strip>.strip-body{grid-area:1/1/2/3}
+  .timetable .strip-stamp{grid-area:2/1;position:static;flex-direction:row;gap:.45rem;width:auto;padding:0 .9rem .6rem}
+  .timetable>.strip>.strip-facts{grid-area:2/2}
+}

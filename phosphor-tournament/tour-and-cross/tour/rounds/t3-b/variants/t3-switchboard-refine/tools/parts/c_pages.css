@@ -1,0 +1,454 @@
+
+/* ==========================================================================================
+   THE MODULE'S TOOLS: one bank of latched keys to a filter, the words to find
+   ========================================================================================== */
+.tools-cell { display: flex; flex-direction: column; gap: 1rem; }
+.tools-cell > * { margin: 0; }
+.keys-name { margin: 0 0 0.45rem; font: 500 var(--t-label)/1.3 var(--machine); letter-spacing: var(--track); text-transform: uppercase; color: var(--label); }
+.key-bank { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.keys .key {
+  position: relative;
+  justify-content: flex-start;
+  gap: 0.55rem;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0 0.7rem;
+  font: 500 var(--t-small)/1.1 var(--sans);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 0.15s, border-color var(--afterglow), color 0.15s, box-shadow var(--afterglow);
+}
+.keys .key > span { overflow: hidden; text-overflow: ellipsis; }
+.keys .key .icon { width: 1.05rem; height: 1.05rem; color: var(--k, var(--sec)); }
+/* The one latched: a steel cell, lit edge on top, its lamp on. */
+.keys .key[aria-current] {
+  color: var(--here-ink);
+  background: var(--here);
+  border-color: color-mix(in srgb, var(--here) 70%, #000);
+  border-bottom-width: 1px;
+  box-shadow: inset 0 2px 0 var(--here-cap);
+}
+.keys .key[aria-current] .icon { color: var(--here-ink); }
+.keys .key[aria-current]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 0.6rem;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #f4fff8 0 25%, var(--brand) 70%);
+  box-shadow: 0 0 4px var(--brand), 0 0 10px color-mix(in srgb, var(--brand) 50%, transparent);
+}
+.search > label { margin-bottom: 0.45rem; }
+.search-row { display: flex; gap: 6px; }
+.search-row input { flex: 1; min-width: 0; }
+.search-row button { flex: none; width: 2.75rem; padding: 0; }
+.more-filters > summary, .tools-cell details.more > summary { min-height: 2.75rem; font: 500 var(--t-small)/1 var(--sans); color: var(--ink-2); }
+.more-filters[open] > summary { margin-bottom: 0.6rem; }
+.fold-on { margin-left: 0.4rem; padding: 0.15rem 0.4rem; font: 500 var(--t-label)/1 var(--machine); color: var(--here-ink); background: var(--here); }
+.filters { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.8rem; }
+.filters .field.actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.tools-note { margin: 0; font-size: var(--t-small); line-height: 1.45; color: var(--dim); }
+
+/* ---- The green screen, set into the module and sized to what it says ---------------------------- */
+.side .crt { padding: 0.35rem 0.35rem 1.1rem; }
+.page-readout .crt-tube { display: flex; flex-direction: column; gap: 0.4rem; padding: 0.95rem 1.1rem 1rem; font-size: var(--t-tube-s); line-height: 1.12; }
+.page-readout .crt-tube > * { margin: 0; }
+.readout-title { font-size: var(--t-tube-m); line-height: 1; overflow-wrap: anywhere; }
+.readout-when { font-size: var(--t-tube); line-height: 1.05; }
+.readout-lines { list-style: none; margin: 0.1rem 0 0; padding: 0.4rem 0 0; display: grid; gap: 0.25rem; border-top: 2px dashed color-mix(in srgb, var(--phosphor) 26%, transparent); }
+.readout-lines li { display: grid; min-width: 0; }
+.readout-lines span { min-width: 0; overflow-wrap: anywhere; }
+.readout-foot { margin-top: 0.15rem !important; }
+.readout-foot .bright { font-size: var(--t-tube); }
+/* Bars drawn in characters on the glass: a name, the bar, the figure. */
+.tally-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; }
+.tally-head .bright { font-size: var(--t-tube); }
+.bars { list-style: none; margin: 0.15rem 0 0; padding: 0.35rem 0 0; border-top: 2px dashed color-mix(in srgb, var(--phosphor) 26%, transparent); }
+.bars li > a, .bars li > .bar-row, .week-bars li {
+  display: grid;
+  grid-template-columns: 4.6em minmax(0, 1fr) 1.2em;
+  column-gap: 0.5em;
+  align-items: center;
+  min-height: 2.75rem;
+  text-decoration: none;
+}
+.week-bars li { min-height: 1.7rem; grid-template-columns: 4.2em minmax(0, 1fr) 1.2em; }
+.week-bars .earlier .gone { grid-column: 2 / -1; }
+.weekend-line { margin-bottom: 0.1rem !important; }
+.bars .cells { white-space: nowrap; overflow: hidden; }
+.bars .n { text-align: right; }
+.bars .bar-name { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.18em; text-decoration-color: color-mix(in srgb, currentColor 50%, transparent); }
+.bars .bar-row .bar-name, .week-bars .bar-name { text-decoration: none; }
+.bars li > a:hover { color: #04100a; background: var(--phosphor); }
+.bars .is-on > .bar-row { color: #04100a; background: var(--phosphor); box-shadow: 0 0 14px color-mix(in srgb, var(--phosphor) 55%, transparent); padding: 0 0.3em; }
+/* Late, in amber on the glass: the one colour that means late. */
+.bars .bar-late { color: color-mix(in srgb, var(--people) 88%, #fff); text-shadow: 0 0 1px var(--people), 0 0 9px color-mix(in srgb, var(--people) 45%, transparent); }
+.bars .bar-late > a:hover { color: #1a0f02; background: var(--people); }
+.week-bars .is-now { color: var(--phosphor-bright); }
+.week-bars .is-past { color: var(--phosphor-dim); }
+.tally-next { font-size: var(--t-tube-s); line-height: 1.15; }
+.tally-next .dim { display: block; }
+.tally-more a { display: inline-flex; align-items: center; min-height: 2.75rem; }
+/* The radar of where the ideas are. */
+.on-radar .crt-tube { display: flex; flex-direction: column; gap: 0.55rem; padding: 1rem 1.1rem 1.05rem; }
+.on-radar .radar { width: min(12.5rem, 100%); align-self: center; }
+.on-radar-text > p { margin: 0; }
+.on-radar-count { font-size: var(--t-tube-m); line-height: 1.05; margin: 0.3rem 0 0.2rem !important; }
+.on-radar-line { font-size: var(--t-tube-s); line-height: 1.12; margin-top: 0.3rem !important; }
+.on-radar-line .dim { display: block; }
+.on-radar-line a { display: inline-block; min-height: 2.75rem; padding: 0.2rem 0; }
+.on-radar-more { margin-top: 0.4rem !important; font-size: var(--t-tube-s); line-height: 1.1; }
+/* The day's spend on its counter. */
+.spend-cell .spend-now { display: flex; flex-direction: column; gap: 0.8rem; }
+.spend-cell .spend-words { margin: 0 0.35rem; font-size: var(--t-small); line-height: 1.5; color: var(--ink-2); }
+.readout .crt-tube { padding: 1rem 1.15rem 1.1rem; }
+.readout-figure { font-size: var(--t-tube-xl); line-height: 0.9; margin: 0.2rem 0 0.35rem !important; }
+.readout-bar { font-size: var(--t-tube-s); white-space: nowrap; }
+.spend-cell .readout-bar { font-size: 1.05rem; letter-spacing: -0.02em; }
+.readout-label, .readout-of { font-size: var(--t-tube-s); }
+.crt.readout.near { --phosphor: var(--people); }
+.crt.readout.over { --phosphor: var(--danger); }
+.key-cell-module .lamp-key { flex-direction: column; align-items: flex-start; gap: 0.45rem; }
+
+/* ==========================================================================================
+   THE REGISTERS, page by page: the one row drawing with each page's columns
+   ========================================================================================== */
+.rows > .colheads { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; border-top: 0; }
+.register-head { display: flex; align-items: baseline; gap: 0.6rem; margin: 0.35rem 0 0.5rem; font: semi-condensed 600 var(--t-cell)/1.1 var(--sans); }
+.register-head .count { font: condensed 500 1.5rem/1 var(--sans); font-variant-numeric: tabular-nums lining-nums; color: var(--sec); }
+.register .empty { padding: 0.8rem 0; }
+.register .empty .icon { width: 1.4rem; height: 1.4rem; color: var(--sec); }
+
+/* P300 Ideas: number, the kind's icon and the name, a leader, the kind, for whom, by road. */
+.idea-index { grid-template-columns: 2rem minmax(0, 1fr) max-content max-content minmax(5.5rem, max-content) 2ch; column-gap: 0.8rem; }
+.idea-index .ch-no { grid-column: 1; }
+.idea-index .ch-what { grid-column: 2; }
+.idea-index .ch-kind { grid-column: 3; }
+.idea-index .ch-who { grid-column: 4; }
+.idea-index .ch-road { grid-column: 5 / span 2; text-align: right; }
+.idea-index .no { text-align: right; justify-self: end; }
+.idea-index .what .kicon { display: inline-block; margin-right: 0.1rem; align-self: center; color: var(--k, var(--ideas)); }
+.idea-index .what .kicon .icon { width: 1.05rem; height: 1.05rem; vertical-align: top; }
+.idea-index .what .tag { align-self: center; }
+.idea-index .fact.road { justify-self: end; text-align: right; color: var(--ink); }
+.idea-index .fact.bearing { justify-self: start; margin-left: -0.45rem; color: var(--ink-2); }
+.idea-index .fact.who { color: var(--ink-2); }
+.capture > summary { display: flex; align-items: center; gap: 0.6rem; min-height: 2.75rem; margin: -0.35rem 0; font: 600 var(--t-body)/1.2 var(--sans); color: var(--heading); }
+.capture > summary .icon { color: var(--sec); }
+.capture[open] > summary { margin-bottom: 0.8rem; }
+.capture .form { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem 1rem; }
+
+/* P500 To do: the box, the number, the name, a leader, who, due in words, the way to edit. */
+.task-index { grid-template-columns: 2.75rem 1.6rem minmax(0, 1fr) max-content minmax(9.5rem, max-content) 3.25rem; column-gap: 0.7rem; }
+.task-index .ch-no { grid-column: 2; text-align: right; }
+.task-index .ch-what { grid-column: 3; }
+.task-index .ch-who { grid-column: 4; }
+.task-index .ch-due { grid-column: 5; text-align: right; }
+.task-index .row { grid-template-rows: auto auto; }
+.task-index .row > * { grid-row: 1; }
+.task-index .no { text-align: right; justify-self: end; }
+.task-index .fact.due { justify-self: end; text-align: right; }
+.task-index .late .fact.due { font-weight: 600; }
+.task-index .what .bell { display: inline-block; align-self: center; color: var(--todo); }
+.task-index .what .bell .icon { width: 0.95rem; height: 0.95rem; }
+.task-index .what .tag { align-self: center; }
+.task-done .what, .task-cancelled .what { color: var(--ink-2); }
+.task-cancelled .what > .t { text-decoration: line-through; text-decoration-color: var(--dim); }
+/* Edit opens across the whole line, under it. */
+.row > details.edit { grid-row: 2; grid-column: 1 / -1; }
+.row > details.edit > summary {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.25rem;
+  height: var(--row);
+  padding: 0 0.5rem;
+  font: 500 var(--t-small)/1 var(--sans);
+  color: var(--ink-2);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+  text-underline-offset: 0.2em;
+}
+.row > details.edit > summary:hover { color: var(--heading); }
+.row > details.edit[open] > summary { color: var(--heading); background: var(--here); text-decoration: none; }
+.edit-body { padding: 0.4rem 0 1.1rem 3.35rem; border-top: 1px dashed var(--line-2); }
+.edit-body .form { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem 1rem; }
+.task-notes { margin: 0.4rem 0 0.9rem; max-width: var(--measure); font-size: var(--t-small); }
+.task-notes p { margin: 0 0 0.3rem; }
+/* The form to add one: shown when the plate's key asks for it, or when there is nothing yet. */
+.add-task:not(:target):not(.is-open) { display: none; }
+.add-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: -0.3rem 0 0.9rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--line); }
+.add-head h2 { margin: 0; padding: 0; border: 0; font: semi-condensed 600 var(--t-cell)/1.1 var(--sans); }
+.add-head .close { display: inline-flex; align-items: center; justify-content: center; min-width: 2.75rem; min-height: 2.75rem; font: 500 var(--t-small)/1 var(--sans); color: var(--ink-2); }
+.register > .foot-note { max-width: none; margin: 0.5rem 0 0; padding-top: 0.6rem; border-top: 1px solid var(--line); }
+.add-task > summary, details.add > summary { display: flex; align-items: center; gap: 0.6rem; min-height: 2.75rem; margin: -0.35rem 0; font: 600 var(--t-body)/1.2 var(--sans); color: var(--heading); }
+.add-task > summary .icon, details.add > summary .icon { display: none; }
+.add-task[open] > summary, details.add[open] > summary { margin-bottom: 0.9rem; }
+.add-task .form, details.add .form { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem 1rem; }
+.add-task:not([open]), details.add:not([open]) { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+/* The box to tick: a square well, ringed amber once the thing is late. */
+.tick-form { margin: 0; }
+button.tick, .task-box {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  min-height: 0;
+  padding: 0;
+  color: transparent;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+button.tick::before, .task-box::before {
+  content: "";
+  position: absolute;
+  inset: 0.6rem;
+  background: var(--field);
+  border: 2px solid var(--edge);
+  box-shadow: inset 0 2px 0 rgb(0 0 0 / 0.55), inset 0 -1px 0 rgb(255 255 255 / 0.04);
+  transition: background-color 0.15s, border-color 0.15s, box-shadow var(--afterglow);
+}
+button.tick .icon, .task-box .icon { position: relative; width: 1.05rem; height: 1.05rem; transition: color 0.15s; }
+button.tick:hover { background: none; box-shadow: none; color: color-mix(in srgb, var(--lit) 70%, transparent); }
+button.tick:hover::before {
+  background: color-mix(in srgb, var(--lit) 8%, var(--field));
+  border-color: var(--lit);
+  box-shadow: inset 0 2px 0 rgb(0 0 0 / 0.55), 0 0 16px -5px color-mix(in srgb, var(--brand) 60%, transparent);
+  transition-duration: 0.15s, 0.15s, var(--glow-in);
+}
+button.tick:active::before { background: color-mix(in srgb, var(--lit) 22%, var(--field)); }
+.late button.tick::before, .late .task-box::before { border-color: var(--people); box-shadow: inset 0 2px 0 rgb(0 0 0 / 0.55), 0 0 10px -4px color-mix(in srgb, var(--people) 70%, transparent); }
+.task-done .task-box { color: var(--on-bright); }
+.task-done .task-box::before { background: var(--lit); border-color: var(--lit); box-shadow: 0 0 14px -4px color-mix(in srgb, var(--brand) 80%, transparent); }
+.task-cancelled .task-box { color: var(--dim); }
+.reminder { color: var(--ink-2); }
+.reminder .icon { color: var(--todo); }
+.empty-row { display: block !important; }
+
+/* P400 Plans, the list: day, name, leader, time, how far off. */
+.plan-index { grid-template-columns: 0.75rem 5.6rem minmax(0, 1fr) max-content max-content 4rem; column-gap: 0.7rem; }
+.plan-index .ch-date { grid-column: 2; }
+.plan-index .ch-what { grid-column: 3; }
+.plan-index .ch-time { grid-column: 4; }
+.plan-index .ch-rel { grid-column: 5; text-align: right; }
+.plan-index .what .tag { align-self: center; }
+.plan-index .row { grid-template-rows: auto auto; }
+.plan-index .row > * { grid-row: 1; }
+.plan-index .rel-words { text-align: right; justify-self: end; color: var(--plans); }
+.plan-index .edit-body .where, .plan-index .edit-body .note { margin: 0.5rem 0; font-size: var(--t-small); color: var(--ink-2); }
+.edit-forms { display: grid; gap: 0.8rem; }
+.edit-forms .form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.past .row { opacity: 0.78; }
+
+/* P400 Plans, the month: its name in bone, the keys that turn it, a day to a leaf. */
+.month-module { padding-top: 0.4rem; }
+.month-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem 1rem; padding: 0.2rem 0 0.7rem; margin: 0 0 0.3rem; border-bottom: 1px solid var(--line); }
+.month-bar h2 { font: condensed 600 var(--t-title)/1 var(--sans); letter-spacing: -0.01em; color: var(--bone); }
+.month-nav { display: flex; gap: var(--gap); margin: 0; }
+.month-nav .button { padding: 0 0.9rem; }
+table.month { width: calc(100% + 8px); margin: 0 -4px; border-collapse: separate; border-spacing: 4px; table-layout: fixed; }
+table.month th { padding: 0.45rem 0.5rem 0.35rem; text-align: left; font: 500 var(--t-label)/1 var(--machine); letter-spacing: var(--track); text-transform: uppercase; color: var(--label); border-bottom: 2px solid color-mix(in srgb, var(--plans) 45%, var(--card-edge)); }
+table.month td { height: 5.5rem; padding: 0.4rem 0.45rem; vertical-align: top; background: color-mix(in srgb, var(--surface-3) 45%, var(--surface)); border: 1px solid var(--card-edge); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03); }
+/* Saturday and Sunday faintly shaded, the days gone stepped back. */
+table.month td.weekend { background: color-mix(in srgb, #9cc4dc 10%, color-mix(in srgb, var(--surface-3) 45%, var(--surface))); }
+table.month th.weekend { color: color-mix(in srgb, var(--label) 60%, var(--steel)); background: color-mix(in srgb, #9cc4dc 10%, transparent); }
+table.month td time { display: flex; align-items: center; gap: 0.4rem; min-height: 1.6rem; font: 500 var(--t-body)/1 var(--machine); color: var(--ink); font-variant-numeric: tabular-nums; }
+table.month td.past { background: color-mix(in srgb, var(--surface) 60%, var(--bg)); box-shadow: none; }
+table.month td.past time { color: var(--faint); font-weight: 400; }
+table.month td.outside.past { background: transparent; border-color: color-mix(in srgb, var(--card-edge) 55%, transparent); box-shadow: none; }
+table.month td.outside.past time { color: var(--faint); }
+/* A day of the next month still to come is a leaf like any other, its figure a step quieter. */
+table.month td.outside:not(.past) time { color: var(--ink-2); font-weight: 400; }
+/* Today: a steel leaf with its lamp on, never amber. */
+table.month td.today { background: var(--here); border-color: color-mix(in srgb, var(--here) 70%, #000); box-shadow: inset 0 2px 0 var(--here-cap); }
+table.month td.today time { color: var(--here-ink); font-weight: 600; }
+.event { margin-top: 0.3rem; padding: 0.25rem 0.4rem; font-size: 0.875rem; line-height: 1.25; color: var(--ink); background: color-mix(in srgb, var(--plans) 11%, var(--surface)); border-left: 2px solid var(--plans); overflow-wrap: anywhere; }
+.today .event { background: color-mix(in srgb, #000 22%, var(--here)); }
+a.event { display: block; min-height: 2.75rem; color: var(--heading); text-decoration: none; font-weight: 600; }
+a.event:hover { background: color-mix(in srgb, var(--plans) 20%, var(--surface)); }
+
+.event small { display: block; font: 400 var(--t-label)/1.3 var(--machine); color: var(--ink-2); }
+.month-list { display: none; }
+
+/* P900 Status: the lights as three cells sized to their lines, then what it has cost. */
+.monitors { align-items: stretch; }
+.lamp-cell > .cell-head { margin-bottom: 0.5rem; }
+.lamp-cell .cell-head .slot { width: 1.35rem; color: var(--bone); }
+.lamp-cell .cell-head .slot .icon { width: 1.2rem; height: 1.2rem; }
+.lamp-cell .cell-head .what { font-size: var(--t-item); text-decoration: none; }
+.lamp-cell .cell-head .count { font-size: 1.375rem; color: var(--bone); }
+.monitors .cell { min-height: 0; }
+.panel h2 .presence.glyph, .cell h2 .presence.glyph { width: 1.35rem; height: 1.35rem; }
+.lights { list-style: none; margin: 0; padding: 0; }
+.light-row { display: grid; grid-template-columns: 0.75rem minmax(0, 1fr); gap: 0.7rem; padding: 0.5rem 0; }
+.light-row + .light-row { border-top: 1px solid var(--line); }
+.light-row:first-child { padding-top: 0; }
+.light-row > .light { justify-self: center; margin-top: 0.45rem; }
+.light-row strong { font: 600 var(--t-body)/1.3 var(--sans); color: var(--heading); }
+.light-row .muted { font-size: var(--t-small); line-height: 1.35; }
+.inline-action { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-top: 0.6rem; }
+.module.spend > p { max-width: var(--measure); font-size: var(--t-small); color: var(--ink-2); }
+.tables { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap); margin-bottom: var(--gap); }
+.tables > .scroll, .module > .scroll { padding: 0.9rem 1rem 0.4rem; background: var(--plate); border: 1px solid var(--line); }
+.module .scroll + .scroll, .tables + .scroll { margin-top: var(--gap); }
+.activity li + li { border-top: 1px solid var(--line); }
+.activity a { display: flex; flex-direction: column; gap: 0.15rem; min-height: 2.75rem; padding: 0.6rem 0; color: var(--ink); text-decoration: none; }
+.activity a:hover .activity-title { text-decoration: underline; }
+.activity-title { font-weight: 600; }
+.attention::before, .trouble::before { content: ""; position: absolute; left: -1px; right: -1px; top: -1px; height: 2px; }
+.attention::before { background: var(--people); }
+.trouble::before { background: var(--danger); }
+.waiting-cell .meta { flex-direction: row; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.6rem; }
+.waiting-cell h3 { font: 500 var(--t-label)/1.3 var(--machine); letter-spacing: var(--track); text-transform: uppercase; color: var(--label); }
+.waiting-cell ul a { display: inline-flex; align-items: center; min-height: 2.75rem; }
+
+/* P990 Settings: the sommaire, a part to a 56px line. */
+.sommaire { grid-template-columns: 0.75rem 2.3rem 1.4rem minmax(12rem, 0.75fr) minmax(0, 1.25fr) 1.1rem; column-gap: 0.7rem; }
+.sommaire .ch-no { grid-column: 2; }
+.sommaire .ch-what { grid-column: 4; }
+.sommaire .ch-state { grid-column: 5; }
+.sommaire .row, .sommaire .row > a { min-height: 3.5rem; }
+.sommaire .picon { display: grid; place-items: center; color: var(--bone); }
+.sommaire .picon .icon { width: 1.2rem; height: 1.2rem; }
+.sommaire .picon .glyph.presence { width: 1.25rem; height: 1.25rem; }
+.sommaire .what { font: semi-condensed 600 var(--t-item)/1.2 var(--sans); }
+.sommaire .fact.state { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; line-height: 1.35; margin: 0.35rem 0; padding: 0; text-wrap: pretty; }
+.sommaire .go { width: 1.05rem; height: 1.05rem; color: var(--label); transition: transform 0.15s, color 0.15s; }
+.sommaire .row > a:hover .go { transform: translateX(3px); color: var(--bone); }
+.sommaire .look .no { color: var(--people); }
+.sommaire .to-setup .no { color: var(--people); }
+
+/* ==========================================================================================
+   P200: the conversation, one long cell with the glass line docked at its foot
+   ========================================================================================== */
+.conversation { min-height: calc(100svh - var(--bar-h) - 2.5rem); padding: 1.25rem 1.4rem 0; }
+.conversation::before { content: ""; position: absolute; left: -1px; right: -1px; top: -1px; height: 2px; background: color-mix(in srgb, var(--bone) 70%, transparent); }
+.thread { list-style: none; margin: 0 0 1.5rem; padding: 0; display: flex; flex-direction: column; gap: 1.1rem; }
+.thread > li { display: flex; gap: 0.8rem; align-items: flex-start; max-width: min(42rem, 100%); }
+.said-them { flex-direction: row-reverse; margin-left: auto; }
+.avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  font: 500 1rem/1 var(--machine);
+}
+.said-them .avatar { color: var(--bone); background: color-mix(in srgb, var(--bone) 7%, var(--field)); border: 1px solid color-mix(in srgb, var(--bone) 35%, var(--line-2)); }
+.said-bot .avatar.presence { width: 2.25rem; height: 2.25rem; }
+.bubble { min-width: 0; padding: 0.7rem 1rem 0.8rem; }
+/* Hers on green-black glass beside her screen; the family's on steel, its edge at the right. */
+.said-bot .bubble {
+  background: color-mix(in srgb, var(--screen) 4%, #080d0a);
+  border: 1px solid color-mix(in srgb, var(--screen) 16%, var(--card-edge));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--screen) 10%, transparent), 0 0 30px -22px color-mix(in srgb, var(--screen) 60%, transparent);
+}
+.said-them .bubble { background: color-mix(in srgb, #9cc4dc 8%, var(--surface-2)); border: 1px solid color-mix(in srgb, #9cc4dc 16%, var(--card-edge)); border-right: 3px solid var(--steel); }
+.said-by { display: flex; flex-wrap: wrap; gap: 0.2rem 0.6rem; align-items: baseline; margin-bottom: 0.25rem; font: 400 var(--t-label)/1.3 var(--machine); letter-spacing: 0; color: var(--label); }
+.said-by strong { font: 600 var(--t-small)/1.2 var(--sans); color: var(--heading); }
+.said-bot .said-by strong { color: color-mix(in srgb, var(--screen) 55%, var(--heading)); }
+.said-them .said-by { flex-direction: row-reverse; }
+.said-text { max-width: var(--measure); white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--t-body); line-height: 1.55; }
+.did { margin-top: 0.5rem; font: 400 var(--t-label)/1.4 var(--machine); color: var(--faint); }
+.pending .bubble { background: transparent; border: 1px dashed var(--line-2); }
+.pending .said-text { color: var(--ink-2); }
+.pending.is-lost .bubble { border-color: color-mix(in srgb, var(--people) 45%, transparent); }
+/* The line to type on docks at the foot of the screen and stays there while the thread scrolls,
+   as the last row of a videotex screen was kept for what you typed. */
+.conversation .ask {
+  flex: none;
+  position: sticky;
+  bottom: 0;
+  z-index: 25;
+  margin: auto -1.4rem 0;
+  border-left: 0;
+  border-right: 0;
+  box-shadow: 0 -18px 36px -16px rgb(0 0 0 / 0.95), 0 0 70px -40px color-mix(in srgb, var(--screen) 45%, transparent);
+}
+.conversation .starters { flex-direction: row; flex-wrap: wrap; margin: 1rem 0 1.4rem; }
+.conversation > .empty { margin-bottom: 1rem; }
+.kids-cell > h2 { font: 600 var(--t-body)/1.2 var(--sans); margin-bottom: 0.4rem; padding: 0; border: 0; }
+.kids-cell > p { font-size: var(--t-small); }
+.kids-cell ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.kids-cell li a { display: flex; align-items: center; min-width: 2.75rem; min-height: 2.75rem; padding: 0 0.8rem; font: 600 var(--t-small) var(--sans); color: var(--secondary); text-decoration: none; background: var(--key); border: 1px solid var(--key-edge); }
+.kids-cell li a:hover { color: var(--heading); }
+/* The chat's box: one line of green glass on the terminal's case, and its keys. */
+.ask.minitel:not(:has(.next-up)) { padding: 0.75rem 0.8rem 0; }
+.ask-screen { padding: 0; background: none; border: 0; box-shadow: none; }
+.ask-screen::after { display: none; }
+.ask-screen .crt-tube { padding: 0.55rem 1rem; border-radius: 0.6rem / 0.7rem; transition: box-shadow var(--afterglow); }
+.ask-screen .prompt-line { align-items: center; padding: 0; background: none; border: 0; box-shadow: none; }
+.ask-screen .prompt-line:focus-within { box-shadow: none; }
+.ask-screen textarea { min-height: 2.75rem !important; padding-top: 0.6rem !important; }
+.ask-screen:focus-within .crt-tube {
+  box-shadow:
+    inset 0 0 0 1.5px #020403, inset 0 0 36px 6px rgb(0 0 0 / 0.72),
+    0 0 0 3px color-mix(in srgb, var(--brand) 22%, transparent),
+    0 0 22px -6px color-mix(in srgb, var(--brand) 55%, transparent);
+  transition-duration: var(--glow-in);
+}
+.ask.minitel:not(:has(.next-up)) .deck { margin: 0.6rem -0.8rem 0; padding: 0.55rem 0.9rem 0.65rem; }
+
+/* ---- The new idea: the plate carries the crumbs; the boxes are cells of the form ------------------- */
+.idea-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap); align-items: stretch; }
+.idea-form > .field, .idea-form > fieldset, .idea-form > details, .idea-form .inner > .field, .idea-form .inner > fieldset {
+  padding: 0.9rem 1rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--card-edge);
+  box-shadow: var(--shadow);
+}
+.idea-form > .field.wide, .idea-form > details, .idea-form > .actions { grid-column: 1 / -1; }
+.idea-form:not(:has(#who, #status)) > .for-whom { grid-column: span 2; }
+.idea-form > .field.actions { flex-direction: row; background: none; border: 0; box-shadow: none; padding: 0.3rem 0; }
+.idea-form .inner { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap); padding-top: 0.3rem; }
+.idea-form .inner > .field, .idea-form .inner > fieldset { background: var(--plate); border-color: var(--line); box-shadow: none; }
+.idea-form .inner > .wide { grid-column: 1 / -1; }
+.idea-form > details.more { margin: 0; }
+.idea-form > details > summary { font: 600 var(--t-body)/1.2 var(--sans); color: var(--heading); }
+.idea-form #description { min-height: 6.5rem; }
+.idea-form .field.can-dictate > textarea + button.mic { right: 1.4rem; bottom: 1.4rem; }
+.idea-form .field > .muted { margin-top: 0.45rem; font-size: var(--t-small); }
+
+/* A way on said inside a line of words is still a 44px key. */
+.spend-words a, .lamp-cell p a, #models p a, .waiting-cell p a { display: inline-flex; align-items: center; min-height: 2.75rem; }
+
+.plate .plate-no.own::before { content: none; }
+/* A fold that is a cell's whole content opens on its name, as a line: the words, a key to open. */
+details.cell > summary { display: flex; align-items: center; gap: 0.7rem; min-height: 2.75rem; margin: -0.35rem 0; font: 600 var(--t-body)/1.2 var(--sans); color: var(--heading); }
+details.cell[open] > summary { margin-bottom: 0.9rem; padding-bottom: 0.7rem; border-bottom: 1px solid var(--line); }
+details:is(.cell, .panel, .more, .add-task, .add) > summary .h2 > .icon { display: none; }
+details.cell .form { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem 1rem; }
+.memory-empty { flex-direction: row; align-items: center; gap: 1.1rem; }
+.memory-empty .empty-art { width: 2rem; height: 2rem; color: var(--sec); }
+.memory-empty p { margin: 0; max-width: var(--measure); }
+/* P800 the family: a person to a line. */
+.people-index { grid-template-columns: 2.25rem minmax(0, 1fr) max-content max-content 4.75rem; column-gap: 0.75rem; }
+.people-index .ch-who { grid-column: 2; }
+.people-index .ch-role { grid-column: 3; }
+.people-index .ch-reach { grid-column: 4; }
+.people-index .avatar { width: 2rem; height: 2rem; font-size: 0.9rem; }
+.people-index .what .tag { align-self: center; }
+.people-index .change { justify-self: end; display: inline-flex; align-items: center; justify-content: center; min-width: 2.75rem; min-height: 2.75rem; color: var(--ink-2); text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); }
+.people-index .off { opacity: 0.6; }
+/* P310 restaurants: a place to a line, its ways out at the end. */
+.food-index { grid-template-columns: minmax(0, 1fr) max-content max-content max-content max-content; column-gap: 0.8rem; }
+.food-index .ch-what { grid-column: 1; }
+.food-index .ch-today { grid-column: 2; }
+.food-index .ch-far { grid-column: 3; }
+.food-index .ch-who { grid-column: 4; }
+.food-index .ch-out { grid-column: 5; }
+.food-index .row { grid-template-rows: auto auto; }
+.food-index .row > * { grid-row: 1; }
+.food-index .row > .row-note { grid-row: 2; grid-column: 1 / -1; margin: -0.3rem 0 0.5rem 1.7rem; font-size: var(--t-small); line-height: 1.4; color: var(--dim); }
+.food-index .what .kicon { display: inline-block; align-self: center; color: var(--clay); }
+.food-index .what .kicon .icon { width: 1.05rem; height: 1.05rem; vertical-align: top; }
+.food-index .fact.out { display: flex; gap: 0.2rem; }
+.food-index .fact.out a { position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; min-width: 2.75rem; min-height: 2.75rem; padding: 0 0.3rem; color: var(--ink-2); }
