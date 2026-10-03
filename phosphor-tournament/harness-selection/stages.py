@@ -327,7 +327,7 @@ def prepare(rnd, *outs):
     if os.environ.get("STAGES_DRY"):  # a dry run of the plumbing: no renders
         table = "| (dry run) |\n"
     else:
-        with ThreadPoolExecutor(max_workers=4) as pool:
+        with ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as pool:
             for pid, last in pool.map(render, todo):
                 print("RENDERED", pid, last)
         subprocess.run([str(d / "venv/bin/python"), "contact.py"], cwd=d, check=True, capture_output=True)
