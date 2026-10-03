@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, crt, radar, words %}
+{% block title %}{{ title }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-lost{% endblock %}
+{% block content %}
+  <section class="lost">
+    {# The poster's circle: the radar with nothing on it, and the number on the scope; the
+       square over its edge is what the machine says. A picture only: the words below say it. #}
+    <div class="crt power-on" aria-hidden="true">
+      <div class="crt-tube scope">
+        {% call radar([]) %}403{% endcall %}
+      </div>
+        <div class="crt-tube readout lost-readout caps">
+        <p><span class="dim">Signed in</span> {{ visitor().name or '' }}</p>
+        <p><span class="dim">Role</span> {{ visitor().member.role if visitor().member else '' }}</p>
+        <p class="bright gap">?{{ title }}</p>
+        <p>Ready.<span class="crt-cursor"></span></p>
+      </div>
+    </div>
+    <div class="lost-words">
+    <p class="eyebrow">Not part of your role</p>
+    <h1>{{ words(title) }}</h1>
+    <p class="muted">{{ why }}</p>
+    <p><a class="button" href="{{ url_for('web.home') }}">{{ icon('home') }}Back to the start</a></p>
+    </div>
+  </section>
+{% endblock %}

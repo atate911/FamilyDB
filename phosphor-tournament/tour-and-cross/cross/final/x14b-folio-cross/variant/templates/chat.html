@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, chat_line, waiting_line, crt, presence %}
+{% block title %}{{ assistant if has_persona else 'Chat' }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-chat{% endblock %}
+{# While an answer is on its way the browser fetches the page again by itself, landing back on
+   the newest line: a meta refresh, which every browser does, scripts or not. It is only set when
+   something really is being thought about, so the page goes quiet as soon as the reply is in the
+   log, and never on a page holding words somebody typed, which it would take with it. While a
+   turn runs the box is closed, so there is nothing to lose. Waiting on the retry job the box
+   stays open, so with scripts on ask.js does the looking again instead, and never while somebody
+   is writing. #}
+{% block head %}
+  {% if refresh and locked %}
+    <meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" />
+  {% elif refresh %}
+    <noscript><meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" /></noscript>
+  {% endif %}
+{% endblock %}
+{% block content %}
+  {# The panel: her plate (her screen, her name, what she is for) and the kids' conversations
+     down the first column; the conversation across the other three, one long cell with the line
+     to type on docked at its foot. #}
+  {# Hers: her name at the top, as on the tab that leads here, beside her screen. #}
+  {% if reading %}
+    {{ page_head(reading ~ ' and ' ~ (assistant if has_persona else 'the bot'), 'Her own conversation, for you to read. Only she writes in it.', 'presence' if has_persona else 'chat', [(assistant if has_persona else 'Chat', url_for('chat.show'))]) }}
+  {% elif private %}
+    {{ page_head(assistant if has_persona else 'Chat', 'Just you and ' ~ assistant ~ '. Tell her what you wish for, or ask about the plans.', 'presence' if has_persona else 'chat') }}
+  {% else %}
+    {{ page_head(assistant if has_persona else 'Chat', 'Weekends, ideas, to-dos and the calendar: anything you would ask in Telegram works here too.', 'presence' if has_persona else 'chat') }}
+  {% endif %}
+  <div class="side">
+  {# Her screen, as the tube down the side: the glyphs nobody can read, and how the conversation
+     stands, which the thread beside it does not say at a glance. #}
+  <section class="cell screen-cell" aria-hidden="true">
+  {% call crt('readout page-readout her-readout') %}
+    <p class="readout-label"><span class="inverse caps">{{ assistant }}</span></p>
+    <div class="her-glass">{{ presence('her-screen', variant=3) }}</div>
+    <p class="readout-foot"><span class="bright">{{ lines | length }}</span> <span class="dim">line{{ '' if lines | length == 1 else 's' }} in this conversation</span><span class="crt-cursor"></span></p>
+  {% endcall %}
+  </section>
+  {% if kids and not reading %}
+    <nav class="kids-cell" aria-label="The kids' conversations">
+      <h2 class="rule-head"><span class="what">The kids' conversations</span></h2>
+      <ul class="plain">
+        {% for kid in kids %}<li><a href="{{ url_for('chat.show', with=kid.id, _anchor=latest) }}"><span class="initial" aria-hidden="true">{{ kid.name[:1] | upper }}</span><span class="what">{{ kid.name }}</span><span class="dots" aria-hidden="true"></span><span class="aside" aria-hidden="true">→</span></a></li>{% endfor %}
+      </ul>
+      <p class="side-note">Each kid talks to {{ assistant }} on her own. You can read along.</p>
+    </nav>
+  {% endif %}
+  </div>
+
+  <div class="main">
+  <section class="cell conversation" aria-label="The conversation">
+  {% if lines %}
+    <ol class="thread">
+      {% for line in lines %}
+        {{ chat_line(line, latest if loop.last) }}
+      {% endfor %}
+      {% if pending %}{{ waiting_line(assistant, state, pending) }}{% endif %}
+    </ol>
+  {% else %}
+    <p class="muted empty">{{ icon('chat') }}<span>Nothing said here yet. Ask {{ assistant }} what to do this weekend, save an idea, or set a reminder.</span></p>
+  {% endif %}
+
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+  {% if not reading %}{% include "_ask.html" %}{% endif %}
+  </section>
+  </div>
+{% endblock %}

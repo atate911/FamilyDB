@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, presence %}
+{% block title %}{{ section.title }} · Settings · {{ site_title }}{% endblock %}
+{% block body_class %}page-settings{% endblock %}
+{% block content %}
+  {{ page_head(section.title, section.blurb, section.icon, [('Settings', url_for('settings.show'))]) }}
+  {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+  <div class="settings-layout">
+    {# Every page of settings down the side, where there is room; on a phone the way to the
+       others is Settings, above the title. #}
+    <nav class="settings-nav" aria-label="Settings">
+      <ol>
+        {% for one in sections %}
+          <li><a href="{{ url_for('settings.section', name=one.name) }}"{% if one.name == section.name %} aria-current="page"{% endif %}>
+            {%- if one.icon == 'presence' %}{{ presence('glyph') }}{% else %}{{ icon(one.icon) }}{% endif %}{{ one.title }}</a></li>
+        {% endfor %}
+      </ol>
+    </nav>
+    <div class="settings-body">
+      {% include "settings/" ~ section.name ~ ".html" %}
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, kind_label, kind_icon, chip, crt, radar, chat_line, waiting_line, tick, presence, stamp, hop, count_head %}
+{% block title %}{{ site_title }}{% endblock %}
+{% block body_class %}page-home{% endblock %}
+{% macro plan_where(entry) -%}
+  {% if entry.idea_id %}
+    <a href="{{ url_for('web.idea', idea_id=entry.idea_id) }}">{{ entry.title }}</a>
+  {% else %}
+    {{ entry.title }}
+  {% endif %}
+{%- endmacro %}
+{% macro plan_row(entry) -%}
+  <li class="{{ 'is-today' if entry.on_today }}">
+    {{ chip(entry.chip, entry.on_today) }}
+    <div class="agenda-body">
+      <div class="what">{{ plan_where(entry) }}</div>
+      {# The leaf beside it already says the day, so the line under says only the rest. #}
+      <div class="when">
+        {%- if entry.time %}<span class="stamp">{{ entry.time }}</span>{% endif -%}
+        {%- if entry.relative %}<span class="rel">{{ entry.relative }}</span>{% endif -%}
+      </div>
+      {% if entry.location %}<div class="where">{{ icon('pin') }}{{ entry.location }}</div>{% endif %}
+    </div>
+  </li>
+{%- endmacro %}
+{# A line of the tape, as a trading screen's time and sales runs under its quote: when, in the
+   data face, then what. #}
+{% macro plan_tape(entry) -%}
+  <li class="{{ 'is-today' if entry.on_today }}">
+    <span class="stamp">{{ stamp(entry.start_value, time=not entry.all_day) }}</span>
+    <span class="tape-what">{{ plan_where(entry) }}</span>
+  </li>
+{%- endmacro %}
+{# When a task is due, as short as the tape's column allows: "was due yesterday", "in 2 days",
+   and the hour only when it is today. Late says so in words, not by colour alone. #}
+{% macro due_short(task) -%}
+  {%- if task.due %}{% set words = task.due | replace('was due ', '') | replace('due ', '') %}
+    {%- if task.late %}was due {% endif -%}
+    {%- if words.startswith('today') %}{{ words | replace(',', '') }}{% else %}{{ words.split(',')[0] }}{% endif %}
+  {%- else %}—{% endif -%}
+{%- endmacro %}
+{% macro task_row(task) -%}
+  <li>
+    {{ tick(task.id, task.revision, task.title, 'home') }}
+    <div class="checklist-body">
+      <div class="what">{{ task.title }}</div>
+      <div class="when">
+        {%- if task.owner %}<span>{{ task.owner }}</span>{% endif -%}
+        {%- if task.due %}<span class="{{ 'warn' if task.late }}">{{ task.due }}</span>
+        {%- elif task.window %}<span>{{ task.window }}</span>{% endif -%}
+        {%- if task.reminder %}<span class="reminder">{{ icon('bell') }}{{ task.reminder }}</span>{% endif -%}
+      </div>
+    </div>
+  </li>
+{%- endmacro %}
+{% macro task_tape(task) -%}
+  <li class="{{ 'is-late' if task.late }}">
+    {{ tick(task.id, task.revision, task.title, 'home') }}
+    <span class="tape-what">{{ task.title }}{% if task.owner %} <span class="who">{{ task.owner }}</span>{% endif %}</span>
+    <span class="due{{ ' late' if task.late }}">{{ due_short(task) }}</span>
+  </li>
+{%- endmacro %}
+{% macro idea_tile(idea) -%}
+  <a class="idea-card" href="{{ url_for('web.idea', idea_id=idea.id) }}">
+    {{ kind_label(idea.kind) }}
+    <strong>{{ idea.title }}</strong>
+    <span class="muted">{{ idea.where or ('for ' ~ idea.who) }}</span>
+  </a>
+{%- endmacro %}
+{% macro idea_tape(idea) -%}
+  {% set key = (idea.kind or '') | lower | replace(' ', '_') %}
+  <li>
+    <span class="stamp kind kind-{{ key if key in ['restaurant','activity','outing','day_trip','trip','show','event','seasonal'] else 'other' }}" title="{{ idea.kind | capitalize }}">{{ kind_icon(idea.kind) }}<span class="sr">{{ idea.kind | capitalize }}: </span></span>
+    <span class="tape-what"><a href="{{ url_for('web.idea', idea_id=idea.id) }}">{{ idea.title }}</a>
+      {%- if idea.where %} <span class="who">{{ idea.where }}</span>{% elif idea.who and idea.who != 'anyone' %} <span class="who">for {{ idea.who }}</span>{% endif %}</span>
+  </li>
+{%- endmacro %}
+{% block content %}
+  {% set first = coming[0] if coming else none %}
+  {# The screen shows one thing, large: her question, and the box to answer it in. Beside it the
+     machine's own green screen quotes what is next. #}
+  <section class="welcome">
+    <div class="welcome-words">
+      {% if talk %}
+        <p class="speaker">
+          {{ presence(variant=2) }}
+          <strong>{{ assistant }}</strong>
+          <span class="eyebrow">{{ today }}</span>
+        </p>
+        {% include "_ask.html" %}
+        {% if talk.state %}
+          <ol class="thread brief">
+            {% call waiting_line(assistant, talk.state, talk.note) %}<a href="{{ url_for('chat.show', _anchor='latest') }}">Open the conversation</a>{% endcall %}
+          </ol>
+        {% elif talk.line %}
+          <ol class="thread brief">{{ chat_line(talk.line) }}</ol>
+          <p class="brief-more"><a href="{{ url_for('chat.show', _anchor='latest') }}">Continue with {{ assistant }}{{ icon('right') }}</a></p>
+        {% endif %}
+      {% else %}
+        <p class="eyebrow">{{ today }}</p>
+        <h1>{{ site_title }}</h1>
+      {% endif %}
+    </div>
+    {# The machine's own green screen is a QUOTE SCREEN: the next plan's name and day down the
+       left, its countdown quoted large at the right (the board's own idea, set in the glass),
+       and along its foot four weeks of tape, NOW to +4W, a tick on each plan's day, the next
+       one lit. It draws the page's own data; the plans themselves are written out in Coming up. #}
+    {% set t0 = config.FAMILYDB_APP.clock.today() %}
+    {% set z = t0.toordinal() %}
+    {% set marks = [] %}
+    {% for e in coming %}
+      {% set sv = e.start_value or '' %}
+      {% if sv | length >= 10 %}
+        {% set n = t0.replace(year=sv[0:4] | int, month=sv[5:7] | int, day=sv[8:10] | int).toordinal() - z %}
+        {% set n = 0 if e.on_today else ([n, 0] | max) %}
+        {% if n < 28 and n not in marks | map(attribute='at') | list %}{% set _ = marks.append({'at': n, 'day': t0.fromordinal(z + n).day, 'next': loop.first}) %}{% endif %}
+      {% endif %}
+    {% endfor %}
+    {% set away = marks[0].at if marks and marks[0].next else none %}
+    {% call crt('next-up quote-screen', hidden=false) %}
+      <div class="qs-head">
+        <div class="next-text">
+          <p class="next-label"><span class="inverse caps">Next up</span></p>
+          {% if first %}
+            <p class="next-title">{{ plan_where(first) }}</p>
+            <p class="next-when dim">{% if first.chip %}{{ first.chip.weekday }} {{ first.chip.day }} {{ first.chip.month }}{% else %}{{ first.when }}{% endif %}{% if first.time %} · {{ first.time }}{% endif %}</p>
+            {% if first.location %}<p class="next-where dim">{{ first.location }}</p>{% endif %}
+          {% else %}
+            <p class="next-title">Nothing planned yet.</p>
+            <p class="next-when dim">Ask what fits this weekend.</p>
+          {% endif %}
+        </div>
+        {% if away is not none %}
+          <p class="qs-quote">{% if away == 0 %}<span class="qs-fig">Today</span>{% else %}<span class="qs-fig">{{ away }}</span><span class="qs-unit dim caps">{{ 'day' if away == 1 else 'days' }}</span>{% endif %}</p>
+        {% endif %}
+      </div>
+      {# Then, as a quote screen runs the next symbol under the one it quotes: the plan after the
+         next, in a dim line, so the glass under the quote carries data, not empty raster. #}
+      {% set second = coming[1] if coming | length > 1 else none %}
+      {% if second %}
+        <p class="qs-then"><span class="qs-then-tag dim caps">Then</span> <span class="qs-then-when dim">{% if second.chip %}{{ second.chip.weekday }} {{ second.chip.day }}{% else %}{{ second.when }}{% endif %}</span> <span class="qs-then-what">{{ second.title }}</span></p>
+      {% endif %}
+      <div class="qs-tape" aria-hidden="true">
+        <span class="qs-axis"></span>
+        {%- for k in range(0, 5) %}<span class="qs-wk at-{{ 7 * k }}">{{ 'NOW' if k == 0 else '+' ~ k ~ 'W' }}</span>{% endfor -%}
+        {%- for m in marks %}<span class="qs-tk at-{{ m.at }}{{ ' is-next' if m.next }}"><span class="qs-tk-day">{{ m.day }}</span></span>{% endfor -%}
+      </div>
+      <p class="qs-go"><span class="dim" aria-hidden="true">&gt;</span> <a href="{{ url_for('web.plans') }}">All plans</a><span class="crt-cursor" aria-hidden="true"></span></p>
+    {% endcall %}
+  </section>
+
+  {# What waits on an admin, as a line along the screen: the warning, its figure, the steps as
+     small steel rings joined by a line (the current one holds an amber lamp), the way to them
+     all, and the next step named as the one bold link. #}
+  {% if setup %}
+    {% set nxt = setup[0].text.split(', ', 1)[0] %}
+    <section class="alert setup" aria-labelledby="setup-head">
+      <h2 id="setup-head" class="setup-name">Finish setting up</h2>
+      <p class="alert-figure" aria-hidden="true">{{ setup | length }}</p>
+      <ol class="plain setup-track">
+        {% for step in setup %}<li class="{{ 'next-step' if loop.first }}"><a href="{{ step.link }}"><span class="ring" aria-hidden="true">{% if loop.first %}<span class="ring-lamp"></span>{% else %}{{ loop.index }}{% endif %}</span><span class="sr">Step {{ loop.index }}{{ ', the next' if loop.first }}: {{ step.text }}</span></a></li>{% endfor %}
+      </ol>
+      <a class="all-steps" href="{{ url_for('setup.overview') }}">All {{ setup | length }} steps</a>
+      <a class="setup-next" href="{{ setup[0].link }}">Next: {{ nxt[:1] | lower }}{{ nxt[1:] }}{{ icon('right') }}</a>
+    </section>
+  {% endif %}
+
+  {# The board: three typeset columns, no boxes, each under a 2px cap in its section's ink and
+     headed as a line of the contents: its name, a dotted leader and its count on the name's
+     baseline. A count is printed in ink; the one live figure is the next stop's day, lit on its
+     tiny tube. Their ways on sit on one shared line at the foot. #}
+  {% set TAPE = 3 %}
+  {% set n_late = tasks | selectattr('late') | list | length %}
+  <div class="board">
+    <section class="tile coming" id="coming" aria-labelledby="coming-head">
+      <header class="tile-head">{{ count_head('Coming up', coming | length, ('plan' if coming | length == 1 else 'plans') if coming else none, id='coming-head') }}</header>
+      {% if coming %}
+        <ol class="plain hops">{% for entry in coming[:4] %}{{ hop(entry, loop.first, url_for('web.idea', idea_id=entry.idea_id) if entry.idea_id else none) }}{% endfor %}</ol>
+        {% if coming | length > 4 %}
+          <details class="rest">
+            <summary>{{ coming | length - 4 }} more</summary>
+            <ol class="plain hops">{% for entry in coming[4:] %}{{ hop(entry, false, url_for('web.idea', idea_id=entry.idea_id) if entry.idea_id else none) }}{% endfor %}</ol>
+          </details>
+        {% endif %}
+      {% else %}
+        <p class="muted empty">{{ icon('plans') }}<span>Nothing on the calendar yet. Pick an idea and put it there, or ask
+          {{ assistant }} what fits this weekend.</span></p>
+      {% endif %}
+      {% if source != 'google' and visitor().may('browse') %}<p class="source source-{{ source }}">{{ source_note }}</p>{% endif %}
+      <p class="tile-foot"><a class="tile-go" href="{{ url_for('web.plans') }}">All plans{{ icon('right') }}</a></p>
+    </section>
+
+    <section class="tile home-todo" aria-labelledby="todo-head">
+      {% set open_n = task_count or tasks | length %}
+      <header class="tile-head">{{ count_head('To do', open_n, 'open' if open_n else none, id='todo-head') }}</header>
+      {% if tasks %}
+        {# Late first, then a NOW line (the To do page's), then what has no deadline yet. #}
+        {% set shown = tasks[:TAPE + 1] %}
+        <ul class="plain tape tasks-tape">
+          {%- for task in shown %}
+            {%- if loop.index0 > 0 and shown[loop.index0 - 1].late and not task.late %}<li class="now-line" aria-hidden="true"><span class="now-lamp"></span><span class="now-word">Now</span></li>{% endif -%}
+            {{ task_tape(task) }}
+          {%- endfor %}
+        </ul>
+        {% if tasks | length > TAPE + 1 %}
+          <details class="rest">
+            <summary>{{ tasks | length - TAPE - 1 }} more</summary>
+            <ul class="plain tape tasks-tape">{% for task in tasks[TAPE + 1:] %}{{ task_tape(task) }}{% endfor %}</ul>
+          </details>
+        {% endif %}
+      {% else %}
+        <p class="muted empty">{{ icon('todo') }}<span>Nothing to do. Ask {{ assistant }} to remind you of something and it lands here.</span></p>
+      {% endif %}
+      {# How many are late, as a link to the late ones alone, beside the way to all of them. #}
+      <p class="tile-foot">
+        {%- if n_late %}<a class="tile-go is-late" href="{{ url_for('web.tasks', status='open', late=1) }}">{{ n_late }} late{{ icon('right') }}</a>{% endif -%}
+        <a class="tile-go" href="{{ url_for('web.tasks') }}">{{ 'All ' ~ task_count if task_count else 'Things to do' }}{{ icon('right') }}</a></p>
+    </section>
+
+    <section class="tile lately" aria-labelledby="lately-head">
+      <header class="tile-head">{{ count_head('Lately added', idea_count, 'ideas' if idea_count else none, id='lately-head') }}</header>
+      {% if ideas %}
+        <div class="idea-cards one">{{ idea_tile(ideas[0]) }}</div>
+        {% if ideas | length > 1 %}
+          <ol class="plain tape ideas-tape">{% for idea in ideas[1:TAPE + 1] %}{{ idea_tape(idea) }}{% endfor %}</ol>
+        {% endif %}
+        {% if ideas | length > TAPE + 1 %}
+          <details class="rest">
+            <summary>{{ ideas | length - TAPE - 1 }} more</summary>
+            <ol class="plain tape ideas-tape">{% for idea in ideas[TAPE + 1:] %}{{ idea_tape(idea) }}{% endfor %}</ol>
+          </details>
+        {% endif %}
+      {% else %}
+        <p class="muted empty">{{ icon('idea') }}<span>No ideas yet.
+          {%- if talk %} Tell {{ assistant }} one above, or <a href="{{ url_for('web.new_idea') }}">add it here</a>.
+          {%- else %} <a href="{{ url_for('web.new_idea') }}">Add one here</a>.{% endif %}</span></p>
+      {% endif %}
+      {% if restaurant_count %}
+        <p class="tile-eat"><a class="restaurants-link" href="{{ url_for('web.restaurants') }}">{{ icon('restaurant') }}<span>Something to eat:</span>
+          <strong>{{ restaurant_count }} restaurant{{ '' if restaurant_count == 1 else 's' }} to try</strong>{{ icon('right', cls='go') }}</a></p>
+      {% endif %}
+      <p class="tile-foot">
+        {%- if visitor().may('change') %}<a class="tile-add" href="{{ url_for('web.new_idea') }}">{{ icon('plus') }}Add an idea</a>{% endif -%}
+        <a class="tile-go" href="{{ url_for('web.ideas') }}">All {{ idea_count }}{{ icon('right') }}</a></p>
+    </section>
+  </div>
+
+  {# Along the foot, the household's own pages as a ticker tape: one unboxed line under a rule,
+     each segment a label and its figure in its owner's ink, parted by thin pipes, each a way in.
+     It is read by the page with no question asked of anybody. #}
+  <nav class="ticker" aria-label="The household">
+    {% if wishes and not wishes.parent %}
+      {% set mine = wishes.mine %}
+      <span class="seg to-wishes"><a class="seg-key" href="{{ url_for('web.wishes') }}"><span class="seg-name">My wishes</span> <span class="seg-fig">{{ mine.open or 0 }}</span> <span class="seg-unit">open</span></a></span>
+    {% elif wishes %}
+      <span class="seg to-wishes"><a class="seg-key" href="{{ url_for('web.wishes') }}"><span class="seg-name">Wishes</span></a>
+        {%- if wishes.waiting %} <a class="seg-key warn" href="{{ url_for('web.wishes') }}"><span class="seg-fig">{{ wishes.waiting | length }}</span> <span class="seg-unit">waiting on you</span></a>{% endif -%}
+        {%- for kid in wishes.kids %} <a class="seg-key kid" href="{{ url_for('web.wishes', who=kid.id) }}"><span class="seg-who">{{ kid.name }}</span> <span class="seg-fig">{{ kid.open }}</span></a>{% if not loop.last %}<span class="seg-dot" aria-hidden="true">·</span>{% endif %}{% endfor -%}
+      </span>
+    {% endif %}
+    {% if visitor().may('browse') %}
+      <span class="seg to-memory"><a class="seg-key" href="{{ url_for('web.memory') }}"><span class="seg-name">Memory</span> <span class="seg-fig is-none" aria-label="nothing counted">—</span></a></span>
+    {% endif %}
+    {% if visitor().may('manage') %}
+      <span class="seg to-family"><a class="seg-key" href="{{ url_for('family.show') }}"><span class="seg-name">Family</span> <span class="seg-fig">{{ family | length }}</span> <span class="seg-unit">{{ 'person' if family | length == 1 else 'people' }}</span></a></span>
+    {% endif %}
+    {% if visitor().may('browse') %}
+      {# What Home can know without asking: whether anything needs an admin, and which links
+         are off; the count of lamps is the Status page's own. #}
+      {% set steps = setup | map(attribute='link') | list %}
+      {% set offs = [] %}
+      {% if visitor().may('manage') and '/setup/telegram' in steps %}{% set _ = offs.append('Telegram') %}{% endif %}
+      {% if source != 'google' %}{% set _ = offs.append('Calendar') %}{% endif %}
+      <span class="seg to-status"><a class="seg-key" href="{{ url_for('web.status') }}"><span class="seg-name">Status</span>
+        {%- if status_words %} <span class="seg-say warn"><span class="lamp look" aria-hidden="true"></span>{{ status_words[1] | capitalize }}</span>
+        {%- else %} <span class="seg-say"><span class="lamp on" aria-hidden="true"></span>Answering</span>{% endif -%}
+        {%- if offs %} <span class="seg-unit">· {{ offs | join(', ') }} off</span>{% endif -%}
+      </a></span>
+    {% endif %}
+    {% if visitor().may('manage') %}
+      <span class="seg to-settings"><a class="seg-key{{ ' warn' if setup }}" href="{{ setup[0].link if setup else url_for('settings.show') }}"><span class="seg-name">Settings</span>
+        {%- if setup %} <span class="seg-fig">{{ setup | length }}</span> <span class="seg-unit">to finish</span>{% endif %}</a></span>
+    {% endif %}
+  </nav>
+{% endblock %}

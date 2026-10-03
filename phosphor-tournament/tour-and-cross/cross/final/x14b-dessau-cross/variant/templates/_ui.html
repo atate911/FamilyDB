@@ -1,0 +1,344 @@
+{# The page's small parts, shared by every template: `{% from "_ui.html" import icon %}`.
+   Icons are Lucide's, with the page's own mark, gathered into one sprite (static/icons.svg) by
+   scripts/icons.py; they take the colour of the words they sit in. An icon beside words is
+   decoration and hidden from a screen reader; an icon on its own gets a label. #}
+
+{% set KIND_ICONS = {
+  'restaurant': 'restaurant',
+  'activity': 'activity',
+  'outing': 'outing',
+  'day_trip': 'day_trip',
+  'trip': 'trip',
+  'show': 'show',
+  'event': 'event',
+  'seasonal': 'seasonal',
+} %}
+
+{# Kleinschreibung (Dessau Phosphor): the posters and the places (the bar, the tabs) are set
+   lowercase by the stylesheet, but a proper name in them keeps its capital. `words` marks each
+   name in a line so the stylesheet leaves it alone: a word with a capital after its first letter
+   (AI, OpenAI, FamilyDB), a capitalised word after the first (What Vera remembers), a
+   possessive first word (Maya's wishes), a company the page names, or the first word when the
+   caller says it is a name (`first_is_name`: Vera, a person's page). #}
+{% set NAMES = ['Google', 'Telegram', 'Claude', 'Gemini', 'OpenAI', 'Anthropic', 'Nominatim', 'OpenRouter', 'LiteLLM', 'Caddy'] %}
+{% macro words(text, first_is_name=false) -%}
+  {%- for w in ((text or '') | string).split(' ') -%}
+    {%- set bare = w.strip('.,:;!?()"“”‘') -%}
+    {%- set stem = bare.split("'")[0].split('’')[0] -%}
+    {%- if (loop.first and first_is_name) or stem in NAMES or (bare[1:] != bare[1:] | lower) or (not loop.first and bare[:1].isupper()) or (loop.first and (bare.endswith("'s") or bare.endswith('’s'))) -%}
+      <span class="name">{{ w }}</span>
+    {%- else -%}
+      {{ w }}
+    {%- endif -%}
+    {{- ' ' if not loop.last -}}
+  {%- endfor -%}
+{%- endmacro %}
+
+{% macro icon(name, label=none, cls='') -%}
+  <svg class="icon{{ ' ' ~ cls if cls }}" focusable="false"
+    {%- if label %} role="img" aria-label="{{ label }}"{% else %} aria-hidden="true"{% endif %}>
+    <use href="{{ url_for('static', filename='icons.svg') }}#i-{{ name }}"></use></svg>
+{%- endmacro %}
+
+{# The icon for a kind of idea; one the family made up gets a spark. #}
+{% macro kind_icon(kind) -%}
+  {{ icon(KIND_ICONS.get((kind or '') | lower | replace(' ', '_'), 'spark')) }}
+{%- endmacro %}
+
+{# The kind of an idea as a small label in its own colour. #}
+{% macro kind_label(kind) -%}
+  {% set key = (kind or '') | lower | replace(' ', '_') %}
+  <span class="kind kind-{{ key if key in KIND_ICONS else 'other' }}">{{ kind_icon(kind) }}{{ kind | capitalize }}</span>
+{%- endmacro %}
+
+{# The top of a page, drawn as a poster (Dessau Phosphor): the section's square of ink with its
+   icon cut out of it, the page's name set as large as the page allows, in lowercase, a line on
+   what it is for, and the one or two things to do here under it. `dial` is the poster's circle:
+   a round green screen showing the page's one figure, drawn beside the name. It is a picture
+   (aria-hidden): what it shows is always written out on the page as well. A dict: `top`, `big`,
+   `small`, and `tone` ('near' or 'over') to turn it amber or red; or the word 'presence' for her
+   screen, large. `crumbs` is a list of (label, href); a page under another (with crumbs) sets its
+   name a step smaller. `proper` says the title begins with a name (hers, a person's). #}
+{% macro page_head(title, lede=none, glyph=none, crumbs=none, dial=none, proper=false) -%}
+  <header class="page-head{{ ' has-dial' if dial }}{{ ' is-sub' if crumbs }}">
+    <div class="page-title">
+      {% if crumbs %}
+        <nav class="crumbs" aria-label="Breadcrumb">
+          {% for label, href in crumbs %}<a href="{{ href }}">{{ label }}</a><span aria-hidden="true">/</span>{% endfor %}
+        </nav>
+      {% endif %}
+      <div class="title-row">
+        {% if glyph == 'presence' %}<span class="title-icon" aria-hidden="true">{{ icon('chat') }}</span>
+        {%- elif glyph %}<span class="title-icon" aria-hidden="true">{{ icon(glyph) }}</span>{% endif %}
+        <h1>{{ title }}</h1>
+      </div>
+      {% if lede %}<p class="lede">{{ lede }}</p>{% endif %}
+      {%- if caller is defined %}
+        <div class="page-actions">{{ caller() }}</div>
+      {%- endif %}
+    </div>
+    {% if dial == 'presence' %}
+      <div class="dial dial-her" aria-hidden="true">{{ presence('dial-screen', 2) }}</div>
+    {% elif dial and 'plan' in dial %}
+      {{ leaf(dial.plan) }}
+    {% elif dial and 'meter' in dial %}
+      {{ meter(dial.meter) }}
+    {% elif dial and 'parts' in dial %}
+      {{ parts_ring(dial.parts) }}
+    {% elif dial %}
+      {{ round_screen(dial) }}
+    {% endif %}
+  </header>
+{%- endmacro %}
+
+{# A round green screen, the poster's circle: a figure in the phosphor with a word above and
+   under it, on dark glass behind scanlines, in a thin case with its power light. The figure is
+   set as large as its length lets it fill the glass (`len-N`).
+   {'plan': entry} shows how soon the next plan is, read from the entry's own relative words, so
+   Plans' list and month say the same: its time when it is today, "next in 2 days" after. #}
+{% macro round_screen(dial, cls='') -%}
+  {% set f = namespace(top=dial.top, big=dial.big, small=dial.small, tone=dial.tone) %}
+  {% if 'plan' in dial %}
+    {% set p = dial.plan %}
+    {% set f.top = 'Next plan' %}
+    {% if not p %}{% set f.big = 'none' %}{% set f.small = 'yet' %}
+    {% elif p.relative == 'now' %}{% set f.top = 'On' %}{% set f.big = 'now' %}{% set f.small = 'going on' %}
+    {% elif p.relative == 'today' %}{% set f.big = p.time or 'today' %}{% set f.small = 'today' if p.time else '' %}
+    {% elif p.relative == 'tomorrow' %}{% set f.top = 'Next in' %}{% set f.big = 1 %}{% set f.small = 'day' %}
+    {% elif p.relative and p.relative.startswith('in ') %}
+      {% set bits = p.relative.split(' ') %}{% set f.top = 'Next in' %}{% set f.big = bits[1] %}{% set f.small = bits[2:] | join(' ') %}
+    {% else %}{% set f.big = p.chip.day if p.chip else 'soon' %}{% set f.small = p.chip.month if p.chip else '' %}{% endif %}
+  {% endif %}
+  {% set n = [(f.big | string | length), 6] | min %}
+  <div class="crt dial{{ ' ' ~ f.tone if f.tone }}{{ ' ' ~ cls if cls }}" aria-hidden="true">
+    <div class="crt-tube">
+      {% if f.top %}<p class="dial-top dim caps">{{ f.top }}</p>{% endif %}
+      <p class="dial-big bright len-{{ n }}">{{ f.big }}</p>
+      {% if f.small %}<p class="dial-small caps{{ ' long' if (f.small | string | length) > 8 }}">{{ f.small }}</p>{% endif %}
+    </div>
+  </div>
+{%- endmacro %}
+
+{# Plans' circle is a leaf torn from a day-a-page calendar, still round: a matte band across its
+   top carries the month, and under it the glass holds the day, lit, and how soon. #}
+{% macro leaf(p) -%}
+  <div class="crt dial leaf" aria-hidden="true">
+    <div class="crt-tube">
+      {% if p and p.chip %}
+        <p class="leaf-band">{{ p.chip.month }}</p>
+        <p class="leaf-day bright">{{ p.chip.day }}</p>
+        <p class="leaf-when">{{ p.chip.weekday }}{% if p.relative %} · {{ p.relative }}{% endif %}</p>
+      {% else %}
+        <p class="leaf-band">Next</p>
+        <p class="leaf-day bright leaf-none">none</p>
+        <p class="leaf-when">yet</p>
+      {% endif %}
+    </div>
+  </div>
+{%- endmacro %}
+
+
+{# A point on a 200-unit round face, "x y": `deg` clockwise from twelve o'clock, `r` out from the
+   middle. The sine is a short series, close enough for a picture. #}
+{% macro rpt(deg, r) -%}
+  {%- set a = ((deg + 180) % 360 - 180) * 0.0174532925 -%}
+  {%- set s = a - a ** 3 / 6 + a ** 5 / 120 - a ** 7 / 5040 + a ** 9 / 362880 - a ** 11 / 39916800 + a ** 13 / 6227020800 -%}
+  {%- set b = ((deg + 270) % 360 - 180) * 0.0174532925 -%}
+  {%- set c = b - b ** 3 / 6 + b ** 5 / 120 - b ** 7 / 5040 + b ** 9 / 362880 - b ** 11 / 39916800 + b ** 13 / 6227020800 -%}
+  {{- '%.1f %.1f' | format(100 + r * s, 100 - r * c) -}}
+{%- endmacro %}
+
+{# Settings' circle: one segment of the rim to each part, in the order the list gives them,
+   from twelve o'clock round; a part in order is lit steel, one that wants a look is left dark.
+   The glass says how many are in order. #}
+{% macro parts_ring(parts) -%}
+  {% set n = parts | length %}
+  {% set ok = parts | rejectattr('look') | list | length %}
+  {% set step = 360 / (n if n else 1) %}
+  <div class="crt dial parts" aria-hidden="true">
+    <div class="crt-tube">
+      <svg class="parts-face" viewBox="0 0 200 200" focusable="false">
+        {% for entry in parts %}
+          {% set a0 = loop.index0 * step + 4 %}{% set a1 = (loop.index0 + 1) * step - 4 %}
+          <path class="pr-seg{{ ' is-gap' if entry.look else '' }}" d="M{{ rpt(a0, 84) }}A84 84 0 0 1 {{ rpt(a1, 84) }}"/>
+        {% endfor %}
+      </svg>
+      <p class="parts-fig bright">{{ ok }}<span class="parts-of"> of {{ n }}</span></p>
+      <p class="parts-unit">in order</p>
+    </div>
+  </div>
+{%- endmacro %}
+
+{# Status's circle is a moving-coil meter: today's spend on a square-root scale from nothing to
+   the day's limit, swept across the upper glass; a dashed amber tick at the limit; a ghost needle
+   resting on the average day; the live needle, its hub in the middle of the glass. `m` gives
+   `today`, `avg` and `limit` in dollars, and `ticks`. #}
+{% macro meter(m) -%}
+  {% set lim = m.limit if m.limit and m.limit > 0 else 2.0 %}
+  {% macro ang(v) -%}{{ -120 + 240 * (([[v, 0] | max, lim * 1.08] | min / lim) ** 0.5) }}{%- endmacro %}
+  <div class="crt dial coil" aria-hidden="true">
+    <div class="crt-tube">
+      <svg class="meter-face" viewBox="0 0 200 200" focusable="false">
+        <path class="mt-arc" d="M{{ 100 - 78 * 0.866 }} {{ 100 + 78 * 0.5 }}A78 78 0 1 1 {{ 100 + 78 * 0.866 }} {{ 100 + 78 * 0.5 }}"/>
+        <g class="mt-tick mt-zero" transform="rotate(-120 100 100)"><path d="M100 22V32"/></g>
+        <g transform="rotate(-129 100 100)"><text class="mt-num" x="100" y="11" text-anchor="middle" dominant-baseline="central" transform="rotate(129 100 11)">$0</text></g>
+        {% for t in m.ticks %}
+          <g class="mt-tick" transform="rotate({{ ang(t.v) }} 100 100)"><path d="M100 22V32"/></g>
+          <g transform="rotate({{ ang(t.v) }} 100 100)"><text class="mt-num" x="100" y="50" text-anchor="middle" dominant-baseline="central" transform="rotate({{ -(ang(t.v) | float) }} 100 50)">{{ t.label }}</text></g>
+        {% endfor %}
+        <g class="mt-limit" transform="rotate({{ ang(lim) }} 100 100)"><path d="M100 16V36"/></g>
+        <g class="mt-ghost" transform="rotate({{ ang(m.avg) }} 100 100)"><path d="M100 100V14"/></g>
+        <g class="mt-needle" transform="rotate({{ ang(m.today) }} 100 100)"><path class="mt-glow" d="M100 108V36"/><path class="mt-core" d="M100 108V36"/></g>
+        <circle class="mt-hub" cx="100" cy="100" r="6"/>
+      </svg>
+      <p class="meter-fig bright">{{ m.today_words }}</p>
+      <p class="meter-unit">today</p>
+    </div>
+  </div>
+{%- endmacro %}
+
+{# Where she is on the page: never a face or a figure, only her screen, small and full of words
+   nobody can read, as if busy. The glyphs are the stylesheet's and mean nothing. `variant` (0 to
+   3) shows another part of the same screen, so her lines down a thread do not all look alike. #}
+{% macro presence(cls='avatar', variant=0) -%}
+  <span class="{{ cls }} presence v{{ variant }}" aria-hidden="true"><span class="presence-glass"></span></span>
+{%- endmacro %}
+
+{# One line of the conversation, wherever it is shown: hers on the left beside her screen, the
+   family's on the right with their initial, so side and mark tell them apart, not colour alone.
+   Everything she says looks the same, a long answer, a reminder or a one-word "Done."; only the
+   words differ. `anchor` is the id the newest line carries. Goes in an <ol class="thread">. #}
+{% macro chat_line(line, anchor=none) -%}
+  <li class="{{ 'said-bot' if line.from_bot else 'said-them' }}"{% if anchor %} id="{{ anchor }}"{% endif %}>
+    {% if line.from_bot %}{{ presence(variant=(line.id or 0) % 4) }}{% else %}<span class="avatar" aria-hidden="true">{{ line.who[:1] | upper }}</span>{% endif %}
+    <div class="bubble">
+      <div class="said-by">
+        <strong>{{ line.who }}</strong>
+        <span>{{ line.when }}</span>
+        {% if line.trouble %}<span class="tag warn">{{ line.trouble }}</span>{% endif %}
+      </div>
+      <div class="said-text">{{ line.text }}</div>
+      {% if line.did %}
+        <div class="did">used {{ line.did | join(', ') }}</div>
+      {% endif %}
+    </div>
+  </li>
+{%- endmacro %}
+
+{# The last line of the thread while the newest message waits: her screen and name, and a line
+   in the page's own words (nobody is asked to write it). While she is thinking the glyphs on her
+   screen fall; nobody is shown typing. A `call` block adds a way on, as Home's link to the chat. #}
+{% macro waiting_line(name, state, text) -%}
+  <li class="said-bot pending is-{{ state }}">
+    {{ presence(variant=1) }}
+    <div class="bubble" role="status">
+      <div class="said-by">
+        <strong>{{ name }}</strong>
+      </div>
+      <div class="said-text">{{ text }}{% if caller is defined %} {{ caller() }}{% endif %}</div>
+    </div>
+  </li>
+{%- endmacro %}
+
+{# The tick beside an open task: marks it done where it stands, through `update_task` at the
+   revision it was drawn at, and comes back to `back` (home or tasks). Ticking is a change, so a
+   role that may not change things (familydb/roles.py) is shown the empty box instead. #}
+{% macro tick(task_id, revision, title, back) -%}
+  {% if visitor().may('change') -%}
+  <form class="tick-form" method="post" action="{{ url_for('edits.finish_task', task_id=task_id) }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    <input type="hidden" name="once" value="{{ once_token() }}" />
+    <input type="hidden" name="revision" value="{{ revision }}" />
+    <input type="hidden" name="back" value="{{ back }}" />
+    <button class="tick" type="submit">{{ icon('check') }}<span class="sr">Done: {{ title }}</span></button>
+  </form>
+  {%- else -%}
+  <span class="task-box" aria-hidden="true"></span>
+  {%- endif %}
+{%- endmacro %}
+
+{# A plan's day as a small calendar leaf: month, day, weekday. #}
+{% macro chip(parts, today=false) -%}
+  {% if parts %}
+    <span class="chip{{ ' is-today' if today }}" aria-hidden="true">
+      <span class="chip-mon">{{ parts.month }}</span>
+      <span class="chip-day">{{ parts.day }}</span>
+      <span class="chip-dow">{{ parts.weekday }}</span>
+    </span>
+  {% endif %}
+{%- endmacro %}
+
+{# An old green-screen monitor, the page's one kind of picture: whatever is in the `call` block
+   is drawn on its tube, in phosphor. `cls` says where it is (and `power-on` to switch it on as the
+   page opens). A screen that is only a picture is hidden from screen readers; one whose words
+   are the page's own, like Next up, passes `hidden=false`. One to a page at most. #}
+{% macro crt(cls='', hidden=true) -%}
+  <div class="crt{{ ' ' ~ cls if cls }}"{% if hidden %} aria-hidden="true"{% endif %}>
+    <div class="crt-tube">{{ caller() }}</div>
+  </div>
+{%- endmacro %}
+
+{# A radar, a program the green screen runs: range rings at a week, two weeks and four, "now" at
+   the middle, and a sweep that leaves an afterglow as a long-persistence phosphor did. `blips`
+   come from `views.radar_blips`: each flares as the sweep passes its bearing. The Ideas page's
+   is a map instead (`views.places_radar`), home at the middle, north at the top, and gives the
+   rings its own `rings` labels. Anything in a `call` block is drawn on the scope. Decoration
+   only; what it shows is always written out elsewhere on the page. #}
+{% macro radar(blips=[], rings=('1w', '2w', '4w'), marks=none) -%}
+  <div class="radar" aria-hidden="true">
+    <svg viewBox="0 0 200 200" focusable="false">
+      <circle class="radar-rim" cx="100" cy="100" r="98"/>
+      <circle class="radar-ring" cx="100" cy="100" r="92"/>
+      <circle class="radar-ring" cx="100" cy="100" r="66"/>
+      <circle class="radar-ring" cx="100" cy="100" r="33"/>
+      <path class="radar-cross" d="M100 4V196M4 100H196"/>
+      <path class="radar-ticks" d="M100.0 7.5L100.0 2.0M116.5 6.4L117.0 3.5M132.5 10.7L133.5 7.9M146.2 19.9L149.0 15.1M161.1 27.2L163.0 24.9M172.8 38.9L175.1 37.0M180.1 53.7L184.9 51.0M189.3 67.5L192.1 66.5M193.6 83.5L196.5 83.0M192.5 100.0L198.0 100.0M193.6 116.5L196.5 117.0M189.3 132.5L192.1 133.5M180.1 146.2L184.9 149.0M172.8 161.1L175.1 163.0M161.1 172.8L163.0 175.1M146.2 180.1L149.0 184.9M132.5 189.3L133.5 192.1M116.5 193.6L117.0 196.5M100.0 192.5L100.0 198.0M83.5 193.6L83.0 196.5M67.5 189.3L66.5 192.1M53.7 180.1L51.0 184.9M38.9 172.8L37.0 175.1M27.2 161.1L24.9 163.0M19.9 146.3L15.1 149.0M10.7 132.5L7.9 133.5M6.4 116.5L3.5 117.0M7.5 100.0L2.0 100.0M6.4 83.5L3.5 83.0M10.7 67.5L7.9 66.5M19.9 53.7L15.1 51.0M27.2 38.9L24.9 37.0M38.9 27.2L37.0 24.9M53.7 19.9L51.0 15.1M67.5 10.7L66.5 7.9M83.5 6.4L83.0 3.5"/>
+      <text class="radar-label" x="69.5" y="97">{{ rings[0] }}</text>
+      <text class="radar-label" x="36.5" y="97">{{ rings[1] }}</text>
+      <text class="radar-label" x="10.5" y="97">{{ rings[2] }}</text>
+      <circle class="radar-hub" cx="100" cy="100" r="2.2"/>
+      {% for b in blips %}
+        {% set mark = marks[loop.index0] if marks and loop.index0 < (marks | length) else none %}
+        {% if mark is not none %}
+        {# A waypoint: a ring carrying the plan's day, the same numeral that leads its row. #}
+        <g class="blip waypoint b{{ b.bearing }}{{ ' next' if b.next }}">
+          {% if b.next %}<circle class="blip-ping" cx="{{ b.x }}" cy="{{ b.y }}" r="8"/>{% endif %}
+          <circle class="wp-ring" cx="{{ b.x }}" cy="{{ b.y }}" r="8.6"/>
+          <text class="wp-day" x="{{ b.x }}" y="{{ b.y }}" text-anchor="middle" dominant-baseline="central">{{ mark }}</text>
+        </g>
+        {% else %}
+        <g class="blip b{{ b.bearing }}{{ ' next' if b.next }}">
+          {% if b.next %}<circle class="blip-ping" cx="{{ b.x }}" cy="{{ b.y }}" r="5"/>{% endif %}
+          <circle class="blip-halo" cx="{{ b.x }}" cy="{{ b.y }}" r="8"/>
+          <circle class="blip-core" cx="{{ b.x }}" cy="{{ b.y }}" r="3"/>
+        </g>
+        {% endif %}
+      {% endfor %}
+    </svg>
+    <span class="radar-sweep"></span>
+    {%- if caller is defined %}<span class="radar-say">{{ caller() }}</span>{% endif %}
+  </div>
+{%- endmacro %}
+
+{# THE BASE BAR's readout (Dessau, Wired Through): the poster stands on a bar, and under it a strip
+   of the page's figures, each a label, a dotted leader and the figure, and each a key to where it
+   counts. `cells` is a list of dicts: label, value, href, and `tone` ('late' for amber words led
+   by the small triangle). A cell without href is read, not pressed. #}
+{% macro strip(cells, label='At a glance', cls='') -%}
+  <nav class="strip{{ ' ' ~ cls if cls }}" aria-label="{{ label }}">
+    {% for c in cells %}
+      {% if c.href %}<a class="cell{{ ' ' ~ c.tone if c.tone }}" href="{{ c.href }}"{% if c.current %} aria-current="page"{% endif %}>
+      {%- else %}<span class="cell{{ ' ' ~ c.tone if c.tone }}">{% endif -%}
+        <span class="cell-label">{{ c.label }}</span><span class="leader" aria-hidden="true"></span><span class="cell-fig">{{ c.value }}</span>
+      {%- if c.href %}</a>{% else %}</span>{% endif %}
+    {% endfor %}
+    {%- if caller is defined %}{{ caller() }}{% endif %}
+  </nav>
+{%- endmacro %}
+
+{# A day as the date column sets it: weekday, day, month, in words ("Sun 27 Sep"). #}
+{% macro day_words(iso) -%}
+  {%- set t0 = config.FAMILYDB_APP.clock.today() -%}
+  {%- set d = t0.replace(day=1).replace(year=iso[0:4] | int, month=iso[5:7] | int).replace(day=iso[8:10] | int) -%}
+  {{ d.strftime('%a') }} {{ d.day }} {{ d.strftime('%b') }}
+{%- endmacro %}

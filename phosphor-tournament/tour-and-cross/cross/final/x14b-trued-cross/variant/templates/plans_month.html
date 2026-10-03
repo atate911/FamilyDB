@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, crt %}
+{% block title %}{{ month }} · {{ site_title }}{% endblock %}
+{%- macro nb(t) -%}
+    {#- A short abbreviation ('St.', 'Mt.', an initial) binds to the words either side, so a
+        name like 'Mount St. Helens' never breaks inside itself. -#}
+    {%- set ws = t.split(' ') -%}
+    {%- for w in ws -%}{{ w }}{%- if not loop.last -%}{%- set nx = ws[loop.index] -%}{{ ' ' if (w | length <= 3 and w.endswith('.')) or (nx | length <= 3 and nx.endswith('.')) or w | length == 1 else ' ' }}{%- endif -%}{%- endfor -%}
+  {%- endmacro %}
+{% macro event(entry) %}
+  <div class="event{{ ' from-google' if entry.from_google }}">
+    {% if entry.idea_id %}
+      <a href="{{ url_for('web.idea', idea_id=entry.idea_id) }}">{{ nb(entry.title) }}</a>
+    {% else %}
+      {{ nb(entry.title) }}
+    {% endif %}
+    {% if entry.time %}<small>{{ entry.time }}</small>{% endif %}
+  </div>
+{% endmacro %}
+{% block content %}
+  {# Track Diagram: the two ways of looking at the plans stand on the title's baseline, where
+     the page's action goes, and where the plans come from is the deck under the rule. The month
+     is a board with its name at the top; each plan is a stop with a lamp, a ring to come, lit
+     sage once past, and today carries the lamp that means now. #}
+  {# Trued, Relit: the head says what this grid holds, counted from the month's own days, so it
+     never disagrees with what is drawn: the plans still to come in the month, and when the next
+     one is. The List counts every plan ahead; the month counts its own. #}
+  {% set d0 = config.FAMILYDB_APP.clock.now().date() %}
+  {% set ahead = namespace(n=0, first=none, t=none) %}
+  {% for week in weeks %}{% for day in week %}{% if day.current and day.date >= d0 %}
+    {% for entry in day.entries %}{% set ahead.n = ahead.n + 1 %}{% if ahead.first is none %}{% set ahead.first = day.date %}{% set ahead.t = entry.time %}{% endif %}{% endfor %}
+  {% endif %}{% endfor %}{% endfor %}
+  {% set month_name = month.split(' ')[0] %}
+  {% if ahead.first %}
+    {% set gap = ahead.first.toordinal() - d0.toordinal() %}
+    {% set next_words = 'next ' ~ ('today' if gap <= 0 else ('tomorrow' if gap == 1 else ahead.first.strftime('%a ') ~ ahead.first.day ~ ahead.first.strftime(' %b'))) ~ ((' ' ~ ahead.t) if ahead.t else '') %}
+  {% endif %}
+  {% call page_head('Plans', source_note if visitor().may('browse') else none, 'plans',
+       figure={'n': ahead.n, 'unit': ('more in ' if this_month else 'in ') ~ month_name, 'more': next_words if ahead.first else none}) %}
+    <nav class="tabs" aria-label="How to show the plans">
+      <a href="{{ url_for('web.plans') }}">{{ icon('list') }}List</a>
+      <a href="{{ url_for('web.plans_month') }}" aria-current="page">{{ icon('grid') }}Month</a>
+    </nav>
+  {% endcall %}
+
+  <section class="month-board tray">
+    <div class="month-head rule-head">
+      <h2>{{ month }}</h2>
+      <p class="month-nav">
+        <a class="mn" href="{{ url_for('web.plans_month', month=previous) }}">{{ icon('left') }}Earlier</a>
+        {% if not this_month %}<a class="mn" href="{{ url_for('web.plans_month') }}">This month</a>{% endif %}
+        <a class="mn" href="{{ url_for('web.plans_month', month=following) }}">Later{{ icon('right') }}</a>
+      </p>
+    </div>
+
+    {# Trued, Headlamp: the month is a grid again. Above it, one strip of glass draws the month
+       as a single track: a tick for every day, the now lamp at today, a ring at each day with a
+       plan carrying that day's numeral (the same ring stands before the numeral in its cell, so
+       the mark joins the strip to the grid), and the run lit from today to the next plan only.
+       A plan gone by is a dim ring. Decoration: every fact on it is in the grid below. #}
+    {% set now = config.FAMILYDB_APP.clock.now() %}
+    {% set today = now.date() %}
+    {% set days = [] %}
+    {% for week in weeks %}{% for day in week %}{% if day.current %}{% set _ = days.append(day) %}{% endif %}{% endfor %}{% endfor %}
+    {% if days %}
+      {% set N = days | length %}
+      {% macro dx(i) %}{{ '%.2f' | format(2.2 + (i - 1) * 95.6 / ((N - 1) if N > 1 else 1)) }}{% endmacro %}
+      {% set nxt = namespace(d=none) %}
+      {% for day in days %}{% if day.entries and day.date >= today and nxt.d is none %}{% set nxt.d = day.day %}{% endif %}{% endfor %}
+      {% set tday = (days | selectattr('today') | first) %}
+      {% call crt('month-strip') %}
+        {# One lamp: today, with 'now' over it. The run is lit to the next plan only; the plans
+           ahead are dim rings, those gone by fainter still. Numerals on odd days, and always on
+           a plan day (inside its ring) and today. #}
+        <svg class="mstrip" height="72" focusable="false">
+          <line class="ms-rail" x1="1%" x2="99%" y1="34" y2="34"/>
+          {% if tday and nxt.d %}<line class="ms-run" x1="{{ dx(tday.day) }}%" x2="{{ dx(nxt.d) }}%" y1="34" y2="34"/><line class="ms-run-core" x1="{{ dx(tday.day) }}%" x2="{{ dx(nxt.d) }}%" y1="34" y2="34"/>{% endif %}
+          {% for day in days %}
+            {% set busy = day.entries | length > 0 %}
+            {% set gone = day.date < today %}
+            {% if busy %}
+              <circle class="ms-ring{{ ' gone' if gone }}{{ ' next' if day.day == nxt.d }}" cx="{{ dx(day.day) }}%" cy="34" r="11.5"/>
+              <text class="ms-ring-n{{ ' gone' if gone }}{{ ' next' if day.day == nxt.d }}" x="{{ dx(day.day) }}%" y="38.2" text-anchor="middle">{{ day.day }}</text>
+            {% elif day.today %}
+              <circle class="ms-halo" cx="{{ dx(day.day) }}%" cy="34" r="11"/>
+              <circle class="ms-now" cx="{{ dx(day.day) }}%" cy="34" r="6"/>
+              <circle class="ms-hot" cx="{{ dx(day.day) }}%" cy="34" r="2.4"/>
+              <text class="ms-now-word" x="{{ dx(day.day) }}%" y="13" text-anchor="middle">now</text>
+            {% else %}
+              <line class="ms-tick{{ ' wk' if day.date.weekday() == 0 }}" x1="{{ dx(day.day) }}%" x2="{{ dx(day.day) }}%" y1="{{ 28 if day.date.weekday() == 0 else 30 }}" y2="{{ 40 if day.date.weekday() == 0 else 38 }}"/>
+            {% endif %}
+            {% if day.today %}<text class="ms-n now" x="{{ dx(day.day) }}%" y="64" text-anchor="middle">{{ day.day }}</text>
+            {% elif not busy and day.day % 2 == 1 %}<text class="ms-n{{ ' gone' if gone }}" x="{{ dx(day.day) }}%" y="64" text-anchor="middle">{{ day.day }}</text>{% endif %}
+          {% endfor %}
+        </svg>
+      {% endcall %}
+    {% endif %}
+    <table class="panel month">
+      <thead>
+        <tr>{% for name in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}<th scope="col"{% if loop.index > 5 %} class="weekend"{% endif %}>{{ name }}</th>{% endfor %}</tr>
+      </thead>
+      <tbody>
+        {% for week in weeks %}
+          <tr>
+            {% for day in week %}
+              {% set gone = day.date < today %}
+              <td class="{{ 'outside' if not day.current }}{{ ' weekend' if loop.index > 5 }}{{ ' today' if day.today }}{{ ' busy' if day.entries }}{{ ' gone' if gone }}">
+                <p class="day-head">{% if day.entries %}<span class="plan-ring" aria-hidden="true"></span>{% endif %}<time datetime="{{ day.date.isoformat() }}">{{ day.day }}</time>{% if day.today %}<span class="now-tag">now</span>{% endif %}</p>
+                {% for entry in day.entries %}{{ event(entry) }}{% endfor %}
+              </td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {# On a phone the seven columns do not fit, so the month is a timetable: each day that has a
+       plan, and today, down one rail, the day in the margin, a cyan ring for a day to come, the
+       lit lamp at today, and days gone by dimmed with hollow pewter rings. #}
+    <ol class="line rows month-list">
+      {% for week in weeks %}{% for day in week %}{% if day.entries or day.today %}
+        <li class="{{ 'is-today' if day.today }}{{ ' gone' if day.date < now.date() }}">
+          {% if day.today %}<span class="now-run" aria-hidden="true"></span>{% endif %}
+          <span class="hang"><span class="stamp">{{ day.date.strftime('%a') }} {{ day.day }} {{ day.date.strftime('%b') }}</span></span>
+          {% for entry in day.entries %}
+            <span class="what">{% if entry.idea_id %}<a href="{{ url_for('web.idea', idea_id=entry.idea_id) }}">{{ entry.title }}</a>{% else %}{{ entry.title }}{% endif %}{% if entry.time %} <span class="t">{{ entry.time }}</span>{% endif %}</span>
+          {% else %}
+            <span class="muted">Today: nothing on.</span>
+          {% endfor %}
+        </li>
+      {% endif %}{% endfor %}{% endfor %}
+      {% if not busy_days %}<li class="muted empty">Nothing on in {{ month }}.</li>{% endif %}
+    </ol>
+  </section>
+
+{% endblock %}

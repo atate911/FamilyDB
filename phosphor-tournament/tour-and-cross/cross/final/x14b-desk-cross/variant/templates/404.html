@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, crt, radar %}
+{% block title %}Not found · {{ site_title }}{% endblock %}
+{% block body_class %}page-lost{% endblock %}
+{% block terminal_label %}Not found{% endblock %}
+{# Desk Terminal: nowhere, the terminal stands alone at the middle of an empty desk: its radar an
+   empty scope still sweeping, 404 flickering on its face as a tube losing its picture; the words
+   and the way home on its deck. #}
+{% block tube %}
+  {% call crt('power-on') %}
+    <div class="lost-scope">
+      {% call radar([]) %}404{% endcall %}
+      <div class="lost-readout caps">
+        <p><span class="dim">Range</span> 4 wk</p>
+        <p><span class="dim">Contacts</span> 0</p>
+        <p class="bright gap">?Not found</p>
+        <p>Ready.<span class="crt-cursor"></span></p>
+      </div>
+    </div>
+  {% endcall %}
+{% endblock %}
+{% block deck %}
+  <section class="deck lost">
+    <p class="eyebrow">Nothing on the radar</p>
+    <h1>Not found</h1>
+    <p class="muted">There is nothing at that address.</p>
+    <p><a class="button" href="{{ url_for('web.home') }}">{{ icon('home') }}Back to the start</a></p>
+  </section>
+{% endblock %}
+{% block content %}{% endblock %}

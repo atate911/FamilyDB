@@ -1,0 +1,375 @@
+/* ==== Branch Lines, Lit Sill: the graft ========================================================
+   Branch Lines is kept whole (its lines, slate, steel, lamps, type and its drawings of each
+   page's data). Four features come in, each rebuilt in the diagram's own steel on slate:
+   - The greeting stands on the Coming up line. Its foot is a steel sill, the rail itself: the
+     lamp that means now at its left end, the run from it lit as far as the first stop, which is
+     the Next up tube (its power lamp drops a lit wire to the rail), and the plans after it as
+     stops further along, their days in the glass, their plates hanging below. The green light
+     the greeting was always lit by rises off that lit run as an airglow.
+   - The family's hand is ink: what the family wrote or put on the calendar (their chat plates,
+     the plans' plates, every field they type in) is a midnight blue-black solid with a pale ink
+     bar, beside the machine's phosphor and the board's slate and steel.
+   - Status's lamps are typed on the spend tube's glass, as named, counted strings.
+   - The route sets on opening: a line of light rolls down each tube once, and a white-hot head
+     runs along the sill from now to the first stop, lighting the run behind it.
+   And the lineage's fixes: a latched cell for "here", the 40px question, the line from home
+   named at three stations, Chat's title flush left with only the newest stop lit, Plans
+   counting what is coming, grounded kind rings, a sage afterglow edge, nothing under 13px. */
+:root {
+  --ink-plate: #1a2230;
+  --ink-edge: #34404b;
+  --ink-bar: #a29d8f;
+  --ink-well: #0d141c;
+  --ink-well-edge: #56708c;
+  --latch: #26313a;
+  --terra: #df987c;
+  --moss: #b5c87d;
+  --wheat: #c3a85d;
+  --tube-w: 23rem;
+  --sill-gap: 2.5rem;
+  --sill-pad: 2rem;
+  --band: 4.4rem;
+  --hot-core: #e4fff0;
+}
+
+/* ---- Type: the smallest words a person reads are 13px ---------------------------------------- */
+.foot .legal { font-size: 0.8125rem; }
+
+/* ==== B. The family's hand is ink ================================================================ */
+/* One rule: the machine's words and marks are phosphor, the board and its rails slate and steel,
+   and what the family wrote, or put on the calendar, is ink. Never a board, a tray or a row,
+   and never a text colour: names stay ink, links stay steel and underlined. */
+.ink-plate {
+  position: relative;
+  background: var(--ink-plate);
+  border: 1px solid var(--ink-edge);
+  border-top: 2px solid var(--ink-bar);
+  border-radius: 3px;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03), 0 10px 22px -18px #000;
+  transition: background-color var(--afterglow), border-color var(--afterglow), box-shadow var(--afterglow);
+}
+
+/* The end of the line: a buffer across the rail, and the way to every plan beside it. */
+.buffer { position: relative; display: inline-block; flex: none; width: 12px; height: 14px; background: linear-gradient(var(--rail-hi), var(--rail-hi)) 100% 50% / 2px 14px no-repeat, linear-gradient(var(--rail-hi), var(--rail-hi)) 0 50% / 100% 2px no-repeat; }
+/* On Home the rail ends where the plates do, at the board's inner padding: a 2px bar across it,
+   14px tall, and the way to every plan under it, on the plates' right edge. */
+.line-end a { display: inline-flex; align-items: center; gap: 0.3rem; min-height: 2.75rem; font-size: 0.92rem; font-weight: 500; color: var(--steel); text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 35%, transparent); text-underline-offset: 0.2em; }
+.line-end a:hover { color: var(--heading); text-decoration-color: currentColor; }
+.line-end .icon { width: 1rem; height: 1rem; }
+
+/* ---- Setup: the line across, hollow amber stops, the next one rimmed in the phosphor ------------ */
+.setup.setup { margin-bottom: 1.75rem; }
+.setup .line > li::before { background: var(--tray); border-color: var(--amber); box-shadow: none; }
+.setup .line > li.next-step::before { border-color: var(--brand); background: var(--bg); box-shadow: 0 0 5px var(--brand), 0 0 14px color-mix(in srgb, var(--brand) 50%, transparent); }
+.setup li a strong { font-weight: 650; color: var(--heading); }
+.setup li a { color: var(--ink-2); text-decoration-color: color-mix(in srgb, var(--steel) 40%, transparent); }
+.setup li a:hover { color: var(--ink); }
+
+.setup > p.muted { margin: 0.75rem 0 0; font-size: 0.9rem; }
+.setup .line > li.line-end::before, .setup .line > li.line-end::after { content: none; }
+.setup .line-end { display: flex; align-items: center; gap: 0.5rem; }
+@media (min-width: 52rem) {
+  .setup .line { grid-template-columns: repeat(3, minmax(0, 1fr)) auto; column-gap: 1.5rem; }
+  .setup .line > li:first-child:not(:last-child)::after { background: linear-gradient(90deg, var(--brand), color-mix(in srgb, var(--brand) 40%, var(--rail)) 45%, var(--rail)); }
+  
+  .setup .line > li.line-end { padding-top: 0; margin-top: -1rem; align-self: start; }
+  .setup .line-end .buffer { margin-left: -1.5rem; width: 1.5rem; }
+}
+@media (max-width: 51.99rem) {
+  
+  .setup .line-end .buffer { rotate: 90deg; margin-left: calc(-1 * var(--px) + var(--rx) - 6px); }
+}
+
+/* ---- The kids' wishes: one line at the foot of To do -------------------------------------------- */
+.kids-line { display: flex; flex-wrap: wrap; align-items: center; gap: 0 0.55rem; min-height: 2.75rem; margin: 0.9rem 0 0; padding: 0.35rem 0 0 0.25rem; border-top: 1px solid var(--line-2); font-size: 0.92rem; color: var(--ink-2); }
+.kids-line .kind-ring { width: 1.7rem; height: 1.7rem; margin-right: 0.25rem; }
+.kl-name { font-weight: 600; color: var(--heading); }
+.kl-sep { color: var(--rail-hi); }
+.kl-kid, .kl-all { display: inline-flex; align-items: center; gap: 0.25rem; min-height: 2.75rem; font-weight: 600; color: var(--ink); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--steel) 45%, transparent); text-underline-offset: 0.2em; }
+.kl-all { font-weight: 500; color: var(--steel); }
+.kl-all .icon { width: 1rem; height: 1rem; }
+.kl-open { font-variant-numeric: tabular-nums; color: var(--label); }
+.kids-waiting { margin: 0.8rem 0 0; }
+
+/* ==== D. The route sets on opening ================================================================ */
+/* Once per load a line of light rolls down each tube's glass, white-hot in a bloom, with a faint
+   wake above it, as the picture came up on a tube switching on. Nothing loops. */
+.crt-tube > .roll {
+  position: absolute; z-index: 5; left: 0; right: 0; top: 0; height: 2px; pointer-events: none; filter: none;
+  background: linear-gradient(90deg, transparent, var(--hot-core) 10% 90%, transparent);
+  box-shadow: 0 0 14px 3px color-mix(in srgb, var(--phosphor) 50%, transparent), 0 -16px 22px -8px color-mix(in srgb, var(--phosphor) 16%, transparent);
+  opacity: 0;
+  animation: roll 1.25s cubic-bezier(0.45, 0, 0.55, 1) 0.15s 1 both;
+}
+@keyframes roll { 0% { top: 0; opacity: 0; } 8% { opacity: 1; } 80% { opacity: 0.75; } 100% { top: calc(100% - 2px); opacity: 0; } }
+
+/* ==== C. Status: the lamps typed on the glass ===================================================== */
+.instrument { display: grid; grid-template-columns: minmax(0, 30rem) minmax(0, 1fr); gap: 1.25rem 3rem; align-items: start; margin: 0 0 2rem; }
+.spend-now { display: block; margin: 0; }
+.instrument .crt { margin: 0; }
+.instrument .readout .crt-tube { padding: 1rem 1.3rem 0.55rem; }
+.instrument .readout-label, .instrument .readout-of { font-size: 1.3rem; letter-spacing: 0.08em; }
+
+
+.lamp-strings { display: grid; margin: 0 -0.45rem; }
+.crt .lamp-string {
+  display: grid; grid-template-columns: 9.25rem auto minmax(0, 1fr); align-items: center; column-gap: 1rem;
+  min-height: 2.75rem; margin: 0; padding: 0 0.45rem;
+  font-size: 1.35rem; line-height: 1; letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none;
+  color: var(--phosphor); border-radius: 2px;
+}
+.ls-name { text-decoration: underline 2px; text-decoration-color: color-mix(in srgb, var(--phosphor) 55%, transparent); text-underline-offset: 0.22em; }
+.ls-lamps { display: inline-flex; align-items: center; gap: 0.75rem; }
+.ls-count { justify-self: end; color: var(--phosphor-bright); }
+/* On the glass, in the tube's own strengths: working a white-hot core in a halo, waiting a dim
+   dot, off a dim ring, not set up a dim dashed ring. */
+.gl { display: inline-block; flex: none; box-sizing: border-box; width: 16px; height: 16px; border-radius: 50%; }
+.gl.on { background: radial-gradient(circle, #dcffe8 0 30%, #a9ffc7 45%, var(--phosphor) 70%); box-shadow: 0 0 4px var(--phosphor), 0 0 11px 1px color-mix(in srgb, var(--phosphor) 55%, transparent); }
+.gl.wait { width: 8px; height: 8px; margin: 4px; background: var(--phosphor-dim); }
+.gl.off { border: 2px solid var(--phosphor-dim); }
+.gl.unset { border: 2px dashed var(--phosphor-dim); }
+.gl.part { background: linear-gradient(90deg, var(--phosphor) 50%, transparent 50%); border: 2px solid var(--phosphor); }
+/* Pointed at or reached by the keyboard, a string goes to inverse video, its lamps drawn dark. */
+.crt .lamp-string:hover, .crt .lamp-string:focus-visible { color: #04100a; background: var(--phosphor); text-shadow: none; box-shadow: 0 0 14px color-mix(in srgb, var(--phosphor) 55%, transparent); }
+.lamp-string:is(:hover, :focus-visible) .ls-name { text-decoration-color: #04100a; }
+.lamp-string:is(:hover, :focus-visible) .ls-count { color: #04100a; }
+.lamp-string:is(:hover, :focus-visible) .gl.on { background: #04100a; box-shadow: none; }
+.lamp-string:is(:hover, :focus-visible) :is(.gl.wait) { background: #04100a; }
+.lamp-string:is(:hover, :focus-visible) :is(.gl.off, .gl.unset) { border-color: #04100a; }
+.crt .lamp-string:focus-visible { outline-offset: 2px; }
+.instrument .tube-note { grid-area: auto; margin: 0.75rem 0 0; font-size: 0.92rem; }
+.instrument .tube-note a { color: var(--steel); }
+/* Beside the instrument: the tally, every lamp counted once, each figure with its page lamp. */
+
+
+
+
+
+
+
+
+
+/* The page's lamps, one drawing each: lit working, a steel dot waiting, a pewter ring off, a
+   dashed pewter ring not set up, a half amber partly, red for what has stopped. */
+.light.wait { background: radial-gradient(circle, var(--steel) 0 3.5px, transparent 4px); border: 0; box-shadow: none; }
+.light.unset { background: none; border: 1.5px dashed var(--pewter); }
+.light.stopped { background: var(--red); border: 0; box-shadow: 0 0 6px -1px var(--red); }
+.h-count { margin-left: 0.15rem; font: 400 1.05rem/1 var(--fig); font-stretch: 84%; font-variant-numeric: tabular-nums; color: var(--label); }
+/* Who answers: lit lamp to lamp; the fallback that cannot take over turns off through 45 degrees
+   into a buffer. */
+.lights .turnout-mark { position: relative; z-index: 2; justify-self: center; align-self: stretch; height: auto; margin: -0.3rem 0; overflow: visible; }
+.lights.chain > li.on:has(+ li.turnout)::after { background: var(--rail); filter: none; height: calc(50% + 0.3rem); }
+.lights.chain > li.on:has(+ li.turnout) { overflow: visible; }
+@media (max-width: 52rem) {
+  .instrument { grid-template-columns: minmax(0, 1fr); }
+  .crt .lamp-string { grid-template-columns: 7.5rem auto minmax(0, 1fr); column-gap: 0.7rem; font-size: 1.2rem; }
+}
+
+/* ==== E. The latched "here": a dark cell with a steel cap, a ring lamp on the bar's rule ========== */
+.tools > a[aria-current], .menu.here > summary, .key[aria-current], .tabs a[aria-current="page"], .settings-nav a[aria-current="page"], details.more[open] > summary, .capture[open] > summary {
+  color: var(--heading); background: var(--latch); border-color: #4a5a68;
+  box-shadow: inset 0 -2px 0 var(--steel), inset 0 1px 2px #0006;
+}
+:is(.tools > a, .places a, .key, .tabs a, .settings-nav a)[aria-current] :is(.icon, .presence), .menu.here > summary .icon { color: var(--steel); filter: drop-shadow(0 0 4px color-mix(in srgb, var(--steel) 45%, transparent)); }
+@media (min-width: 52rem) {
+  :is(.places a, .tools > a)[aria-current], .menu.here > summary {
+    color: var(--heading); background: var(--latch); border-color: transparent;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 calc(0.55rem + 2px) 0 var(--latch);
+    border-radius: 4px 4px 0 0;
+  }
+  /* The cap: the occupied section of the bar's track, a 2px steel run on the rule, a ring lamp at
+     its middle. */
+  :is(.places a, .tools > a)[aria-current]::before, .menu.here > summary::before {
+    left: 0; right: 0; width: auto; bottom: calc(-0.55rem - 1px - 4.5px); height: 9px;
+    background:
+      radial-gradient(circle, var(--latch) 0 2.2px, var(--steel) 2.6px 4px, transparent 4.4px) 50% 50% / 9px 9px no-repeat,
+      linear-gradient(var(--steel), var(--steel)) 50% 50% / 100% 2px no-repeat;
+  }
+}
+.settings-nav li:has([aria-current])::before { background: var(--latch); border-color: var(--steel); }
+
+/* ==== B, continued: the family's fields are ink wells ============================================= */
+input:not([type=checkbox]):not([type=radio]):not([type=hidden]), textarea, select {
+  background-color: var(--ink-well); border-color: var(--ink-well-edge); box-shadow: inset 0 1px 2px #0008;
+}
+.welcome .ask textarea, .ask textarea { background-color: transparent; box-shadow: none; }
+input:not([type=checkbox]):not([type=radio]):not([type=hidden]):focus, textarea:focus, select:focus {
+  border-color: var(--lit); caret-color: var(--brand);
+  box-shadow: inset 0 1px 2px #0008, 0 0 0 3px color-mix(in srgb, var(--brand) 16%, transparent), 0 0 22px -6px color-mix(in srgb, var(--brand) 55%, transparent);
+  transition-duration: var(--glow-in);
+}
+.ask textarea:focus, .welcome .ask textarea:focus { border-color: transparent; box-shadow: none; }
+.ask { background: var(--ink-well); border-color: var(--ink-well-edge); }
+.welcome .ask { background: rgb(9 12 11 / 0.72); }
+button.tick::before { background: var(--ink-well); border-color: var(--ink-well-edge); }
+.task-line .task-box { background: var(--ink-well); border-color: var(--ink-well-edge); }
+input[type=checkbox] { --cb-fill: var(--ink-well); --cb-edge: var(--ink-well-edge); }
+@supports (appearance: base-select) {
+  select { background-color: var(--ink-well); border-color: var(--ink-well-edge); }
+  ::picker(select) { background: #111a24; border-color: var(--ink-edge); }
+  select option:hover, select option:focus-visible { background: #1a2636; }
+}
+
+/* ==== Chat: the title flush left, the family's hand in ink, only the newest stop lit ============== */
+@media (min-width: 40.01rem) {
+  .in-chat .page-head { grid-template-columns: 2.75rem minmax(0, 1fr) auto; grid-template-areas: "c c c" "r t a" ". l l"; column-gap: 1rem; align-items: end; margin: 0 0 1.25rem; }
+  .in-chat .page-head::before { content: ""; }
+  .in-chat .page-title { justify-self: start; padding: 0 0 0.8rem; text-align: left; }
+  .in-chat .lede { align-self: start; max-width: 56ch; margin: 0.8rem 0 0; padding: 0; font-size: 1.06rem; }
+  .in-chat .title-icon.presence { border: 2px solid color-mix(in srgb, var(--brand) 55%, var(--rail)); }
+  .in-chat .rail::after { flex: 1; align-self: flex-end; width: calc(50% + 1rem + 1px); min-height: 0.7rem; margin: 0.3rem -1rem 0 0; border: solid var(--rail); border-width: 0 0 2px 2px; border-bottom-left-radius: 10px; background: none; }
+  .thread:not(.brief) { --rails: linear-gradient(var(--rail), var(--rail)) 0 0 / 2px 100% no-repeat, linear-gradient(var(--rail), var(--rail)) 18px 0 / 2px 100% no-repeat; padding-top: 0; }
+  .thread:not(.brief)::before { left: calc(50% - 10px); width: 20px; top: 0.9rem; }
+  .thread:not(.brief) .said-bot > .station > .avatar { margin-left: calc(var(--st) / 2 - 23px); }
+  .thread:not(.brief) .said-them > .station > .avatar { margin-left: calc(var(--st) / 2 - 5px); }
+  .tie::before, .tie::after { width: 1.1rem; }
+}
+.said-them .bubble { background: var(--ink-plate); border: 1px solid var(--ink-edge); border-left: 3px solid var(--ink-bar); border-radius: 2px; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03), 0 10px 22px -18px #000; }
+.said-them .said-by strong { color: var(--ink-2); }
+:is(.said-them, .kids-talk) .avatar { color: var(--heading); background: var(--ink-plate); box-shadow: inset 0 0 0 2px var(--ink-bar); }
+/* Her older lines are matte glass; only the newest stop is lit, her screen and her words. */
+.thread:not(.brief) > .said-bot .bubble { background: var(--vera); border-color: #26332b; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03); }
+.thread:not(.brief) > .said-bot .avatar.presence { box-shadow: 0 0 0 3px var(--bg); filter: brightness(0.72) saturate(0.8); }
+.thread:not(.brief) > .said-bot:last-child .bubble { background: radial-gradient(75% 120% at 100% 0, color-mix(in srgb, var(--screen) 10%, transparent), transparent 65%), var(--vera); border-color: color-mix(in srgb, var(--screen) 34%, var(--line)); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--screen) 22%, transparent), 0 0 30px -12px color-mix(in srgb, var(--screen) 50%, transparent); }
+.thread:not(.brief) > .said-bot:last-child .avatar.presence { filter: none; box-shadow: 0 0 0 3px var(--bg), 0 0 18px -2px color-mix(in srgb, var(--screen) 60%, transparent); }
+.thread:not(.brief) > li:last-child .tape-time { color: var(--sage); }
+.thread:not(.brief) > .said-them:last-child .avatar { box-shadow: inset 0 0 0 2px var(--ink-bar), 0 0 12px -3px var(--ink-bar); }
+/* Your turn: the ring on the box, named. */
+.your-turn { position: relative; }
+.turn-word { position: absolute; right: calc(50% + 1.1rem); top: calc(46px - 0.5em - 1px); font: 500 0.8125rem/1 var(--mono); color: var(--sage); white-space: nowrap; }
+@media (max-width: 40rem) { .turn-word { right: auto; left: calc(0.95rem + 16px); } }
+
+/* ==== Kinds: a grounded ring for each ============================================================= */
+.kind-restaurant { --kind: var(--terra); }
+.kind-outing { --kind: var(--moss); }
+.kind-seasonal { --kind: var(--wheat); }
+.kind-word { color: var(--ink-2); }
+
+/* ==== The row afterglow: a sage edge in a short halo, on in 0.12s, gone over 1.2s ================ */
+.idea-row, .lately-rows > li, .checklist > li, .task-line > li.task, .line.rows > li, .light-row, .section-card.panel { transition: background-color 1.2s cubic-bezier(0.45, 0, 0.6, 1), box-shadow 1.2s cubic-bezier(0.45, 0, 0.6, 1); }
+
+
+/* ==== Ideas: the line from home, named at three stations ========================================= */
+.from-home .crt-tube { padding: 0.6rem 1.2rem 0.45rem; }
+.st-l { opacity: var(--on); fill: color-mix(in srgb, #e4fff0 calc(var(--on) * 100%), var(--phosphor)); transition: opacity calc(1.2s - var(--on) * 1.08s) var(--ease), fill calc(1.2s - var(--on) * 1.08s) var(--ease); }
+.st-l.named { opacity: 1; fill: color-mix(in srgb, var(--phosphor) 88%, transparent); }
+.st.near .st-l.named { fill: #c9ffda; }
+.st.near { --on: 0.7; }
+.page-ideas .st:not(.near) { --on: 0; }
+.page-ideas .st.far .st-tick { stroke: var(--phosphor); }
+/* A named station pointed at from its row keeps its name above and lights its tick. */
+
+@media (max-width: 48rem) {
+  
+  .st-l { font-size: 16px; }
+}
+
+/* ==== Plans: the month's plans are ink plates; today is the latched cell ========================== */
+table.month td { height: 5.4rem; padding: 0.4rem 0.45rem 0.55rem; border-top: 1px solid #1d252b; }
+table.month tbody tr:first-child td { border-top: 0; }
+/* A week gone by with nothing in it folds to a single line. */
+table.month tbody tr:not(:has(td.busy, td:not(.gone))) td { height: 2.5rem; padding-block: 0.3rem; }
+table.month tbody tr:not(:has(td.busy, td:not(.gone))) time { color: color-mix(in srgb, var(--faint) 80%, transparent); }
+table.month td.today { background: var(--latch); box-shadow: inset 0 2px 0 var(--steel), inset 0 1px 3px #0006; }
+table.month td.today time { color: var(--heading); background: none; box-shadow: none; }
+/* The week that holds today carries the line, as Home's sill does: a 2px rail under the days from
+   the lamp that means now (in today's cell, under its date, with "now" beside the date in sage)
+   to a buffer at Sunday's end; the run from the lamp is lit, a white-hot core in the phosphor, as
+   far as the next plan's ring, whose plate hangs below it on a drop. */
+table.month { --ry: 2.15rem; --rx: 1.15rem; }
+table.month tr.now-row td { padding-top: 0.4rem; }
+table.month tr.now-row td > time { display: block; box-sizing: border-box; width: max-content; height: 1.25rem; }
+table.month tr.now-row td.today > time { position: static; }
+table.month tr.now-row td.today > time::before {
+  content: ""; position: absolute; z-index: 3; left: calc(0.75rem - 6px); top: calc(var(--ry) - 5px); width: 12px; height: 12px; border-radius: 50%;
+  background: var(--lamp-core); box-shadow: var(--lamp-glow);
+}
+table.month tr.now-row td.today > time::after { content: "now"; margin-left: 0.55rem; font: 500 0.8125rem/1 var(--mono); color: var(--sage); }
+table.month td.on-line::after { content: ""; position: absolute; z-index: 1; left: -1px; right: 0; top: var(--ry); height: 2px; background: var(--rail); }
+table.month td.today.on-line::after { left: 0.75rem; }
+table.month td.on-line:last-child::after {
+  right: 0.55rem; top: calc(var(--ry) - 6px); height: 14px;
+  background: linear-gradient(var(--rail-hi), var(--rail-hi)) 100% 0 / 2px 100% no-repeat, linear-gradient(var(--rail), var(--rail)) 0 50% / 100% 2px no-repeat;
+}
+table.month tr.has-next td.today::before, table.month td.run::before, table.month td.next-stop::before {
+  content: ""; position: absolute; z-index: 2; left: -1px; right: 0; top: var(--ry); height: 2px;
+  background: linear-gradient(var(--hot), var(--hot)) 0 50% / 100% 1px no-repeat, var(--brand);
+  box-shadow: 0 0 5px color-mix(in srgb, var(--brand) 75%, transparent), 0 0 14px color-mix(in srgb, var(--brand) 30%, transparent);
+}
+table.month tr.has-next td.today::before { left: 0.75rem; }
+table.month td.next-stop::before { right: auto; width: calc(var(--rx) + 1px); }
+/* A plan on the line hangs from its ring on the rail, as Coming up's plates hang from the sill. */
+table.month tr.now-row td > .event:first-of-type { margin-top: calc(var(--ry) + 2px + 0.7rem - 1.65rem); }
+table.month tr.now-row td.stop > .event:first-of-type { padding-left: 0.55rem; }
+table.month tr.now-row td.stop > .event:first-of-type::after {
+  content: ""; position: absolute; z-index: 3; left: calc(var(--rx) - 0.45rem - 1px - 6px); top: calc(-0.7rem - 9px); width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%;
+  background: var(--tray); border: 2px solid var(--cyan);
+}
+table.month tr.now-row td.next-stop > .event:first-of-type::after { box-shadow: 0 0 9px -2px var(--cyan); }
+table.month tr.now-row td.stop > .event:first-of-type::before { left: calc(var(--rx) - 0.45rem - 1px - 0.5px); top: calc(-0.7rem + 3px); width: 1px; height: calc(0.7rem - 5px); background: var(--rail-hi); border: 0; border-radius: 0; }
+.month-list > li.is-today .stamp { color: var(--sage); }
+.event {
+  margin-top: 0.35rem; padding: 0.3rem 0.45rem 0.35rem 1.3rem;
+  background: var(--ink-plate); border: 1px solid var(--ink-edge); border-top: 2px solid var(--ink-bar); border-radius: 3px;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03), 0 8px 18px -16px #000;
+}
+.event::before { background: var(--ink-plate); }
+td.gone .event { background: #141b24; border-color: #243244; border-top-color: #56708c; }
+.event a, .event { font-size: 0.8125rem; color: var(--heading); }
+.event small { font-size: 0.8125rem; color: var(--ink-2); }
+td.gone .event a, td.gone .event { color: var(--dim); }
+:is(.month-list) > li > .what {
+  padding: 0.3rem 0.7rem 0.35rem; line-height: 1.3;
+  background: var(--ink-plate); border: 1px solid var(--ink-edge); border-top: 2px solid var(--ink-bar); border-radius: 3px;
+}
+.month-list > li.gone > .what { background: #141b24; border-color: #243244; border-top-color: #56708c; }
+.month-list { --ly: 1.8rem; }
+.month-list > li { padding-block: 0.4rem; }
+
+/* ==== Nothing a person reads is under 13px; every target is 44px ================================= */
+.eyebrow, .tag, .data caption, .data th, .said-by, .did, .task h2 .muted, pre.json, .changed, .keys-name, code, .idea-tools .filters label { font-size: 0.8125rem; }
+.rel { font-size: 0.8125rem; }
+@media (max-width: 51.99rem) { .places a { font-size: 0.8125rem; } }
+.keys-name { align-self: center; line-height: 2.75rem; }
+.kl-kid, .kl-all { min-width: 2.75rem; justify-content: center; }
+.instrument .tube-note a { display: inline-flex; align-items: center; min-height: 2.75rem; }
+/* "now" on every timetable is the sage word beside a lit lamp: the lit word on a page is the job. */
+.now-stop::before { color: var(--sage); text-shadow: none; }
+@media (max-width: 51.99rem) {
+  .places a[aria-current="page"] .icon { background: var(--latch); box-shadow: inset 0 -2px 0 var(--steel), inset 0 1px 2px #0006; }
+  .places a[aria-current]::before { background: radial-gradient(circle, var(--bar, #0f1519) 0 2.2px, var(--steel) 2.6px 4px, transparent 4.4px) 50% 50% / 9px 9px no-repeat, linear-gradient(var(--steel), var(--steel)) 50% 50% / 100% 2px no-repeat; }
+}
+
+/* ==== Access ====================================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  /* Everything shows lit at once: the run whole, no head running along it, no bar rolling down. */
+  .sill-run, .welcome.sill-board::before { animation: none; clip-path: none; opacity: 1; }
+   .crt-tube > .roll { display: none; }
+  .now-lamp { animation: none; }
+}
+@media (prefers-contrast: more) {
+  /* The light that only sets a mood goes: the airglow and the spill; the lit things stay lit. */
+  .welcome.sill-board::before { display: none; }
+  .welcome.sill-board { box-shadow: none; }
+  .sill-run, .wire { filter: none; }
+   .crt-tube > .roll { display: none; }
+  .stop-one, .now-lamp { box-shadow: none; }
+  .gl.on { box-shadow: none; }
+  .crt .lamp-string { text-shadow: none; }
+  :is(.idea-row, .lately-rows > li, .checklist > li, .task-line > li.task, .line.rows > li, .light-row, .section-card.panel):is(:hover, :focus-within) { box-shadow: inset 3px 0 0 var(--sage); }
+  .ink-plate, .said-them .bubble, .event { border-color: var(--ink-bar); }
+  table.month td.run::before, table.month td.next-stop::before, table.month tr.has-next td.today::before, table.month tr.now-row td.today > time::before { box-shadow: none; }
+}
+@media (forced-colors: active) {
+  .sill-run, .wire, .buffer{ forced-color-adjust: none; background: CanvasText; filter: none; box-shadow: none; }
+  .now-lamp, .stop-one, .stop-ring { forced-color-adjust: none; background: Canvas; border: 2px solid CanvasText; box-shadow: none; }
+  .now-lamp { background: CanvasText; }
+   .crt-tube > .roll, .welcome.sill-board::before { display: none; }
+  .gl { forced-color-adjust: none; box-shadow: none; }
+  .gl.on, .gl.wait { background: CanvasText; }
+  .gl.off, .gl.unset, .gl.part { background: none; border-color: CanvasText; }
+  .light.wait, .light.unset, .light.stopped { forced-color-adjust: none; border: 2px solid CanvasText; background: none; }
+  .ink-plate, .said-them .bubble, .event { border: 1px solid CanvasText; }
+  table.month td.on-line::after, table.month td.run::before, table.month td.next-stop::before, table.month tr.has-next td.today::before, table.month tr.now-row td.today > time::before { forced-color-adjust: none; background: CanvasText; box-shadow: none; }
+  table.month td.on-line:last-child::after { background: linear-gradient(CanvasText, CanvasText) 100% 0 / 2px 100% no-repeat, linear-gradient(CanvasText, CanvasText) 0 50% / 100% 2px no-repeat; }
+}
