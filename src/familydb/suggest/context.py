@@ -12,9 +12,9 @@ from datetime import date, timedelta
 
 from familydb.clock import season_for
 from familydb.errors import ToolError
+from familydb.free_time import events_by_day, free_spans
 from familydb.suggest.types import Context, DayBounds, DayContext
 from familydb.tools import ToolContext
-from familydb.tools.gcal import events_by_day, free_spans
 from familydb.tools.weather import forecast_days
 
 log = logging.getLogger(__name__)

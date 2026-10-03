@@ -2,6 +2,7 @@ import json
 from dataclasses import replace
 from datetime import date, datetime, timedelta
 
+from familydb.free_time import free_blocks
 from familydb.integrations.open_meteo import DayForecast
 from familydb.store import db, ideas, outcomes, places, suggestions
 from familydb.suggest.context import build_context
@@ -11,7 +12,6 @@ from familydb.suggest.evaluate import doable, in_daylight
 from familydb.suggest.shortlist import participants_match, shortlist
 from familydb.suggest.types import Constraints, SuggestInput
 from familydb.tools import ToolContext
-from familydb.tools.gcal import free_blocks
 from tests import fakes
 from tests.conftest import NOW_ISO, TZ, call
 from tests.fakes import FakeMessagesAPI, discover_script

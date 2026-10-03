@@ -4,10 +4,10 @@ from types import SimpleNamespace
 
 import pytest
 
+from familydb.free_time import free_blocks, on_day
 from familydb.integrations.google_calendar import CalendarEvent, event_body, parse_event
 from familydb.store import ideas, messages, plans
 from familydb.tools import ToolContext, ToolRegistry
-from familydb.tools.gcal import free_blocks, on_day
 from tests import fakes
 from tests.conftest import NOW_ISO, TZ, call
 
