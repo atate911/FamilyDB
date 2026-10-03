@@ -36,6 +36,27 @@ winner's score minus today's page's score. Each round has its own panel and fiel
 compares best within its round. From round 4 on, the lead over today is the steadier measure
 across rounds.
 
+### Rounds 14 to 21: natural selection, refinement and the finale
+
+From round 14 the unit of selection is the element, not the whole design (`harness-selection/README.md`).
+Rounds 14 to 18 selected, 19 and 20 refined the survivors, and round 21 was the championship.
+The top row of each round is the best design in that round's own field.
+
+| Round | Kind | Top of the field | Its score | Today's page | Lead |
+|------:|------|------------------|----------:|-------------:|-----:|
+| 14 | selection (screen) | Desk Terminal, Joined (the bar; best child Long Persistence Tallied, +0.69) | 7.98 | 5.0 | 2.98 |
+| 15 | selection (screen) | Grid Console Single Line | 7.69 | 4.68 | 3.01 |
+| 16 | selection (screen) | Lit Index (a wild newcomer) | 7.77 | 4.82 | 2.95 |
+| 17 | selection (screen) | Desk Terminal, Gauged Rows | 7.37 | 4.5 | 2.87 |
+| 18 | selection (8-lens final) | Desk Terminal, Vera Card | 7.65 | 5.29 | 2.36 |
+| 19 | refinement 1 (final) | Desk Terminal, Docked Track | 8.02 | 4.82 | 3.2 |
+| 20 | refinement 2 (final) | Lit Index, Ledger Rail | 7.92 | 4.98 | 2.94 |
+| 21 | **championship** (final) | **Grid Console, Keyed** | 7.84 | 5.12 | 2.72 |
+
+The four chosen for score and variety, the mockups of every page (desktop and phone) and the
+draft of the standard are in `finale/` (start at `finale/README.md`). The owner decides what
+happens next.
+
 ## What changed from round 8
 
 Random entrants had advanced only about 13% of the time from round 3 on, against about 100% for

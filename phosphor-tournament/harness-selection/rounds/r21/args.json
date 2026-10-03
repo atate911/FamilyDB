@@ -1,0 +1,56 @@
+{
+ "round": "r21",
+ "roundNo": 21,
+ "mode": "selection",
+ "carried": [
+  {
+   "id": "r20-mut-2",
+   "name": "Lit Index, Ledger Rail",
+   "summary": "Hall of fame: Lit Index."
+  },
+  {
+   "id": "r20-mut-3",
+   "name": "Grid Console Keyed",
+   "summary": "Hall of fame: Grid Console."
+  },
+  {
+   "id": "r20-mut-1",
+   "name": "Desk Terminal, Even Dock",
+   "summary": "Hall of fame: Desk Terminal."
+  },
+  {
+   "id": "r19-mut-2",
+   "name": "Track Diagram Rail Keys",
+   "summary": "Hall of fame: Track Diagram."
+  },
+  {
+   "id": "r18-mut-7",
+   "name": "Blueprint, Lit Scale",
+   "summary": "Hall of fame: Blueprint."
+  },
+  {
+   "id": "r18-wild-1",
+   "name": "Green Desk",
+   "summary": "Hall of fame: Green Desk (wild)."
+  },
+  {
+   "id": "r17-wild-1",
+   "name": "Patch Bay",
+   "summary": "Hall of fame: Patch Bay (wild)."
+  },
+  {
+   "id": "r13-idea-1",
+   "name": "Desk Terminal, Joined",
+   "summary": "Hall of fame: the bar."
+  }
+ ],
+ "wildCarried": [],
+ "seeds": [],
+ "mutants": [],
+ "wild": [],
+ "wildMutants": [],
+ "nInformed": 0,
+ "history": [],
+ "panel": "final",
+ "merges": []
+}

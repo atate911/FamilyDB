@@ -1,0 +1,8 @@
+{# A row's label with its first word set medium and the rest left regular: the eye lands on the
+   word that says what the row is about and reads on in the lighter weight. Autoescaped: both
+   halves are printed as text. One word only: it is all medium. #}
+{% macro lead(text) -%}
+  {%- set whole = (text | string) -%}
+  {%- set parts = whole.split(' ', 1) -%}
+  <span class="lead">{{ parts[0] }}</span>{% if parts | length > 1 %}{{ ' ' ~ parts[1] }}{% endif %}
+{%- endmacro %}

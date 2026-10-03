@@ -1,0 +1,989 @@
+{
+ "parts": {
+  "head": [
+   {
+    "id": "r20-mut-2",
+    "name": "Lit Index, Ledger Rail",
+    "points": 10.5,
+    "voters": [
+     "feedback",
+     "style",
+     "interaction",
+     "type"
+    ],
+    "what": [
+     "Large condensed numbered page title over a coloured ledger rule with a short running line",
+     "Huge lit condensed question or page name with a numbered index and the one action beside it",
+     "Numbered running head with a big condensed title and a thin rule, and the count beside it (Ideas 12)"
+    ],
+    "share": 0.412
+   },
+   {
+    "id": "r18-mut-7",
+    "name": "Blueprint, Lit Scale",
+    "points": 4.5,
+    "voters": [
+     "style",
+     "interaction"
+    ],
+    "what": [
+     "Blueprint title block: sheet, note, number, with the primary action built in"
+    ],
+    "share": 0.176
+   },
+   {
+    "id": "r19-mut-2",
+    "name": "Track Diagram Rail Keys",
+    "points": 3.0,
+    "voters": [
+     "feedback",
+     "usability"
+    ],
+    "what": [],
+    "share": 0.118
+   },
+   {
+    "id": "r20-mut-1",
+    "name": "Desk Terminal, Even Dock",
+    "points": 3.0,
+    "voters": [
+     "usability"
+    ],
+    "what": [
+     "Title with a primary action button top right (Add a task, Add a plan); counts next to the title (r19-mut-2)"
+    ],
+    "share": 0.118
+   },
+   {
+    "id": "r20-mut-3",
+    "name": "Grid Console Keyed",
+    "points": 1.5,
+    "voters": [
+     "type"
+    ],
+    "what": [],
+    "share": 0.059
+   }
+  ],
+  "glass": [
+   {
+    "id": "r20-mut-1",
+    "name": "Desk Terminal, Even Dock",
+    "points": 24.0,
+    "voters": [
+     "feedback",
+     "soul",
+     "system",
+     "interaction",
+     "type",
+     "usability",
+     "skeptic"
+    ],
+    "what": [
+     "The question typed on the glass with a cursor, a listening line and a bar-scope in the monitor",
+     "question typed as a lit line on a CRT with LISTENING status",
+     "Desk terminal with a Listening status strip and a typed question line on the glass",
+     "Glyph-lit question line with a LISTENING status strip on the tube",
+     "The question typed in pixel mono on the monitor with a listening status line",
+     "The typed 'What's on your mind?' screen with a Listening status line, kept separate from the real textarea below",
+     "typed headline on a lit glass with a listening line, plus a per-page gauge/scope dock"
+    ],
+    "share": 0.889
+   },
+   {
+    "id": "r13-idea-1",
+    "name": "Desk Terminal, Joined",
+    "points": 5.25,
+    "voters": [
+     "soul",
+     "interaction",
+     "type"
+    ],
+    "what": [],
+    "share": 0.194
+   },
+   {
+    "id": "r19-mut-2",
+    "name": "Track Diagram Rail Keys",
+    "points": 3.75,
+    "voters": [
+     "feedback",
+     "system"
+    ],
+    "what": [],
+    "share": 0.139
+   },
+   {
+    "id": "r20-mut-3",
+    "name": "Grid Console Keyed",
+    "points": 3.0,
+    "voters": [
+     "usability",
+     "skeptic"
+    ],
+    "what": [],
+    "share": 0.111
+   }
+  ],
+  "list": [
+   {
+    "id": "r19-mut-2",
+    "name": "Track Diagram Rail Keys",
+    "points": 11.25,
+    "voters": [
+     "feedback",
+     "system",
+     "usability",
+     "skeptic"
+    ],
+    "what": [
+     "To do on a lamp rail with the 'was due' margin and a NOW lamp",
+     "To do rows on a rail, with was-due labels beside amber dots, a checkbox and a quiet owner column",
+     "To do rows on a dated rail: 'was due 6 days ago' amber dots, a now marker, who on the right"
+    ],
+    "share": 0.441
+   },
+   {
+    "id": "r20-mut-1",
+    "name": "Desk Terminal, Even Dock",
+    "points": 9.0,
+    "voters": [
+     "style",
+     "interaction",
+     "skeptic"
+    ],
+    "what": [
+     "Ruled Ideas table with kind icon, drive time, who it's for and number columns",
+     "leader-dotted rows with amber late marks and a lit rail to NOW"
+    ],
+    "share": 0.353
+   },
+   {
+    "id": "r20-mut-2",
+    "name": "Lit Index, Ledger Rail",
+    "points": 7.5,
+    "voters": [
+     "style",
+     "interaction",
+     "type"
+    ],
+    "what": [
+     "Settings and Ideas rows as giant condensed names with small facts and hatched kind swatches",
+     "Ledger rows with numbered designator, condensed bold title, and a quiet facts column"
+    ],
+    "share": 0.294
+   },
+   {
+    "id": "r20-mut-3",
+    "name": "Grid Console Keyed",
+    "points": 4.5,
+    "voters": [
+     "feedback",
+     "system",
+     "usability"
+    ],
+    "what": [],
+    "share": 0.176
+   },
+   {
+    "id": "r13-idea-1",
+    "name": "Desk Terminal, Joined",
+    "points": 1.5,
+    "voters": [
+     "type"
+    ],
+    "what": [],
+    "share": 0.059
+   }
+  ],
+  "figure": [
+   {
+    "id": "r20-mut-3",
+    "name": "Grid Console Keyed",
+    "points": 6.0,
+    "voters": [
+     "type",
+     "skeptic"
+    ],
+    "what": [
+     "the spend gauge and counted figures beside titles"
+    ],
+    "share": 0.222
+   },
+   {
+    "id": "r19-mut-2",
+    "name": "Track Diagram Rail Keys",
+    "points": 5.25,
+    "voters": [
+     "type",
+     "skeptic"
+    ],
+    "what": [
+     "Large serif or condensed count figure beside the title with a small tracked unit label (12 IN ALL, 6 WORKING)"
+    ],
+    "share": 0.194
+   },
+   {
+    "id": "r20-mut-1",
+    "name": "Desk Terminal, Even Dock",
+    "points": 4.5,
+    "voters": [
+     "soul"
+    ],
+    "what": [
+     "glass gauge with limit flag, plotted bar scope, numbered radar plot"
+    ],
+    "share": 0.167
+   },
+   {
+    "id": "r13-idea-1",
+    "name": "Desk Terminal, Joined",
+    "points": 2.25,
+    "voters": [
+     "soul"
+    ],
+    "what": [],
+    "share": 0.083
+   }
+  ],
+  "rule": [
+   {
+    "id": "r20-mut-2",
+    "name": "Lit Index, Ledger Rail",
+    "points": 9.0,
+    "voters": [
+     "style",
+     "type",
+     "skeptic"
+    ],
+    "what": [
+     "Heavy double rules with coloured end caps per section, and a numbered ledger rail",
+     "ledger section bars in a colour per section with numbered index"
+    ],
+    "share": 0.333
+   },
+   {
+    "id": "r18-mut-7",
+    "name": "Blueprint, Lit Scale",
+    "points": 6.75,
+    "voters": [
+     "style",
+     "type",
+     "skeptic"
+    ],
+    "what": [
+     "Sheet title block with tracked SHEET and NOTE labels, and a fine rule with a coloured tab for each section"
+    ],
+    "share": 0.25
+   },
+   {
+    "id": "r20-mut-3",
+    "name": "Grid Console Keyed",
+    "points": 3.0,
+    "voters": [
+     "feedback"
+    ],
+    "what": [
+     "Thin keyed section rails that run down and join the headings, with tick ends"
+    ],
+    "share": 0.111
+   },
+   {
+    "id": "r19-mut-2",
+    "name": "Track Diagram Rail Keys",
+    "points": 1.5,
+    "voters": [
+     "feedback"
+    ],
+    "what": [],
+    "share": 0.056
+   }
+  ],
+  "signal": [
+   {
+    "id": "r19-mut-2",
+    "name": "Track Diagram Rail Keys",
+    "points": 13.5,
+    "voters": [
+     "style",
+     "system",
+     "interaction",
+     "usability",
+     "skeptic"
+    ],
+    "what": [
+     "Track-diagram rail with amber late dots running to a lit 'now' node on To do",
+     "Rail with dots for To do: was due, NOW marker and a lit node",
+     "Amber late labels and dots, a green now marker, and counts like '4 open, 3 late' and '9 parts, 1 needs a look'",
+     "track-diagram rail with a lit now-node and amber late dots"
+    ],
+    "share": 0.529
+   },
+   {
+    "id": "r20-mut-3",
+    "name": "Grid Console Keyed",
+    "points": 8.25,
+    "voters": [
+     "soul",
+     "style",
+     "system",
+     "interaction"
+    ],
+    "what": [
+     "Lit NOW node on a vertical rail with coloured due dots for late tasks"
+    ],
+    "share": 0.324
+   },
+   {
+    "id": "r18-mut-7",
+    "name": "Blueprint, Lit Scale",
+    "points": 4.5,
+    "voters": [
+     "soul"
+    ],
+    "what": [
+     "glowing NOW marker on a ticked line"
+    ],
+    "share": 0.176
+   },
+   {
+    "id": "r20-mut-1",
+    "name": "Desk Terminal, Even Dock",
+    "points": 3.0,
+    "voters": [
+     "usability",
+     "skeptic"
+    ],
+    "what": [],
+    "share": 0.118
+   }
+  ],
+  "type": [
+   {
+    "id": "r20-mut-2",
+    "name": "Lit Index, Ledger Rail",
+    "points": 22.5,
+    "voters": [
+     "feedback",
+     "soul",
+     "style",
+     "system",
+     "interaction",
+     "type",
+     "skeptic"
+    ],
+    "what": [
+     "Condensed grotesque headings with small mono keys and labels (serif counts in r19)",
+     "condensed grotesque titles with mono caps labels and keyed numerals",
+     "Condensed grotesque display heads at large scale, small-caps mono labels and numbered ledger index",
+     "Condensed display grotesque for page and section titles with mono index labels and small-caps tracking",
+     "Heavy condensed display names with tiny tracked caps labels and numbered index",
+     "Condensed grotesque display scale, tracked mono small caps labels, tabular numerals"
+    ],
+    "share": 0.833
+   },
+   {
+    "id": "r19-mut-2",
+    "name": "Track Diagram Rail Keys",
+    "points": 7.5,
+    "voters": [
+     "feedback",
+     "style",
+     "interaction",
+     "type"
+    ],
+    "what": [],
+    "share": 0.278
+   },
+   {
+    "id": "r20-mut-3",
+    "name": "Grid Console Keyed",
+    "points": 6.0,
+    "voters": [
+     "soul",
+     "system",
+     "skeptic"
+    ],
+    "what": [
+     "condensed display heads with coloured counted figures over small mono caps"
+    ],
+    "share": 0.222
+   }
+  ],
+  "colour": [
+   {
+    "id": "r18-wild-1",
+    "name": "Green Desk",
+    "points": 3.0,
+    "voters": [
+     "soul"
+    ],
+    "what": [
+     "beige monitor case and desk neutrals under the green"
+    ],
+    "share": 0.111
+   },
+   {
+    "id": "r17-wild-1",
+    "name": "Patch Bay",
+    "points": 1.5,
+    "voters": [
+     "soul"
+    ],
+    "what": [],
+    "share": 0.056
+   }
+  ],
+  "controls": [
+   {
+    "id": "r20-mut-1",
+    "name": "Desk Terminal, Even Dock",
+    "points": 10.5,
+    "voters": [
+     "system",
+     "interaction",
+     "usability"
+    ],
+    "what": [
+     "Full-width Send, 44px mic and chips, clear select with checked option and strong focus ring",
+     "Select with chevron and a check on the current choice; labelled pill filters with an on-dot; a big Send beside the mic"
+    ],
+    "share": 0.389
+   },
+   {
+    "id": "r18-mut-7",
+    "name": "Blueprint, Lit Scale",
+    "points": 4.5,
+    "voters": [
+     "interaction",
+     "usability"
+    ],
+    "what": [],
+    "share": 0.167
+   },
+   {
+    "id": "r19-mut-2",
+    "name": "Track Diagram Rail Keys",
+    "points": 3.0,
+    "voters": [
+     "system"
+    ],
+    "what": [
+     "Select with a styled open menu and tick, LED filter chips, and a clear double focus ring"
+    ],
+    "share": 0.111
+   }
+  ],
+  "chat": [],
+  "light": [
+   {
+    "id": "r20-mut-3",
+    "name": "Grid Console Keyed",
+    "points": 11.25,
+    "voters": [
+     "feedback",
+     "soul",
+     "style",
+     "system"
+    ],
+    "what": [
+     "Bloom on the lit key word, the monitor glow and the lamp at the foot, with the rest kept dark",
+     "Halo on the key word, bloom on the gauge, and a lit rail with glowing nodes, kept to places that matter",
+     "Halo on the one lit key word, the mark and the dial, with calm cards elsewhere"
+    ],
+    "share": 0.441
+   },
+   {
+    "id": "r19-mut-2",
+    "name": "Track Diagram Rail Keys",
+    "points": 7.5,
+    "voters": [
+     "feedback",
+     "soul",
+     "style"
+    ],
+    "what": [
+     "scan-lined haloed key word and lit rail node"
+    ],
+    "share": 0.294
+   },
+   {
+    "id": "r20-mut-1",
+    "name": "Desk Terminal, Even Dock",
+    "points": 1.5,
+    "voters": [
+     "system"
+    ],
+    "what": [],
+    "share": 0.059
+   }
+  ],
+  "foot": [
+   {
+    "id": "r20-mut-1",
+    "name": "Desk Terminal, Even Dock",
+    "points": 3.0,
+    "voters": [
+     "usability"
+    ],
+    "what": [
+     "Evenly docked bottom tabs with labels and a clear active underline; labelled desktop bar (Memory, Family, Status, Settings)"
+    ],
+    "share": 0.118
+   },
+   {
+    "id": "r20-mut-3",
+    "name": "Grid Console Keyed",
+    "points": 1.5,
+    "voters": [
+     "usability"
+    ],
+    "what": [],
+    "share": 0.059
+   }
+  ]
+ },
+ "verdicts": [],
+ "heirs": {},
+ "bin": {
+  "head": [
+   {
+    "id": "r20-mut-2",
+    "name": "Lit Index, Ledger Rail",
+    "share": 0.764,
+    "round": 21,
+    "what": [
+     "Large condensed numbered page title over a coloured ledger rule with a short running line",
+     "Huge lit condensed question or page name with a numbered index and the one action beside it",
+     "Numbered running head with a big condensed title and a thin rule, and the count beside it (Ideas 12)"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r18-mut-7",
+    "name": "Blueprint, Lit Scale",
+    "share": 0.176,
+    "round": 21,
+    "what": [
+     "Blueprint title block: sheet, note, number, with the primary action built in"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r19-mut-3",
+    "name": "Lit Index, Cool Rail",
+    "share": 0.134,
+    "round": 20,
+    "what": [
+     "Poster-scale condensed question with a bright scanlined lit key word and a numbered index title",
+     "Lit poster question with a bright gradient MIND over a small label and the single full-width Send",
+     "Poster question with a bright scanlined key word and a bone head; or the baseline-aligned title, count and deck line",
+     "Poster question with a bright scanlined MIND, a listening line and a ruled input",
+     "Poster question with a bright gradient MIND and a running head 'VERA  SATURDAY 3 OCTOBER'"
+    ],
+    "age": 1
+   }
+  ],
+  "glass": [
+   {
+    "id": "r20-mut-1",
+    "name": "Desk Terminal, Even Dock",
+    "share": 1.303,
+    "round": 21,
+    "what": [
+     "The question typed on the glass with a cursor, a listening line and a bar-scope in the monitor",
+     "question typed as a lit line on a CRT with LISTENING status",
+     "Desk terminal with a Listening status strip and a typed question line on the glass",
+     "Glyph-lit question line with a LISTENING status strip on the tube",
+     "The question typed in pixel mono on the monitor with a listening status line",
+     "The typed 'What's on your mind?' screen with a Listening status line, kept separate from the real textarea below",
+     "typed headline on a lit glass with a listening line, plus a per-page gauge/scope dock"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r19-mut-1",
+    "name": "Desk Terminal, Docked Track",
+    "share": 0.346,
+    "round": 20,
+    "what": [
+     "CRT tube with a scanned bar-chart scope and mono readout, docked beside the question",
+     "Vera's question typed in mono on a lit scanlined screen with a LISTENING status line",
+     "Terminal Vera card, with a bar-chart tube and an ON THIS PAGE contents plate docked under it",
+     "The Home tube and Vera card: typed question in a monitor with a listening lamp, and the docked monitor with chart and contents plate",
+     "Terminal question line with a LISTENING status bar and level ticks inside Vera's card",
+     "Tube with a status line, docked over an 'On this page' contents plate and a Ready readout",
+     "Terminal tube with a glowing typed question, a listening status line and the Contents plate docked beside it",
+     "Vera's question typed in glyph type with a block cursor on a tube, with a LISTENING status line, plus a docked Contents plate and status under the tube"
+    ],
+    "age": 1
+   },
+   {
+    "id": "r13-idea-1",
+    "name": "Desk Terminal, Joined",
+    "share": 0.194,
+    "round": 21,
+    "what": [],
+    "age": 0
+   }
+  ],
+  "list": [
+   {
+    "id": "r20-mut-2",
+    "name": "Lit Index, Ledger Rail",
+    "share": 0.712,
+    "round": 21,
+    "what": [
+     "Settings and Ideas rows as giant condensed names with small facts and hatched kind swatches",
+     "Ledger rows with numbered designator, condensed bold title, and a quiet facts column"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r19-mut-2",
+    "name": "Track Diagram Rail Keys",
+    "share": 0.441,
+    "round": 21,
+    "what": [
+     "To do on a lamp rail with the 'was due' margin and a NOW lamp",
+     "To do rows on a rail, with was-due labels beside amber dots, a checkbox and a quiet owner column",
+     "To do rows on a dated rail: 'was due 6 days ago' amber dots, a now marker, who on the right"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r20-mut-1",
+    "name": "Desk Terminal, Even Dock",
+    "share": 0.353,
+    "round": 21,
+    "what": [
+     "Ruled Ideas table with kind icon, drive time, who it's for and number columns",
+     "leader-dotted rows with amber late marks and a lit rail to NOW"
+    ],
+    "age": 0
+   }
+  ],
+  "figure": [
+   {
+    "id": "r20-mut-1",
+    "name": "Desk Terminal, Even Dock",
+    "share": 0.326,
+    "round": 21,
+    "what": [
+     "glass gauge with limit flag, plotted bar scope, numbered radar plot"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r20-mut-3",
+    "name": "Grid Console Keyed",
+    "share": 0.222,
+    "round": 21,
+    "what": [
+     "the spend gauge and counted figures beside titles"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r19-mut-2",
+    "name": "Track Diagram Rail Keys",
+    "share": 0.194,
+    "round": 21,
+    "what": [
+     "Large serif or condensed count figure beside the title with a small tracked unit label (12 IN ALL, 6 WORKING)"
+    ],
+    "age": 0
+   }
+  ],
+  "rule": [
+   {
+    "id": "r20-mut-2",
+    "name": "Lit Index, Ledger Rail",
+    "share": 0.392,
+    "round": 21,
+    "what": [
+     "Heavy double rules with coloured end caps per section, and a numbered ledger rail",
+     "ledger section bars in a colour per section with numbered index"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r18-mut-7",
+    "name": "Blueprint, Lit Scale",
+    "share": 0.25,
+    "round": 21,
+    "what": [
+     "Sheet title block with tracked SHEET and NOTE labels, and a fine rule with a coloured tab for each section"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r20-mut-3",
+    "name": "Grid Console Keyed",
+    "share": 0.189,
+    "round": 21,
+    "what": [
+     "Thin keyed section rails that run down and join the headings, with tick ends"
+    ],
+    "age": 0
+   }
+  ],
+  "signal": [
+   {
+    "id": "r19-mut-2",
+    "name": "Track Diagram Rail Keys",
+    "share": 0.529,
+    "round": 21,
+    "what": [
+     "Track-diagram rail with amber late dots running to a lit 'now' node on To do",
+     "Rail with dots for To do: was due, NOW marker and a lit node",
+     "Amber late labels and dots, a green now marker, and counts like '4 open, 3 late' and '9 parts, 1 needs a look'",
+     "track-diagram rail with a lit now-node and amber late dots"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r20-mut-3",
+    "name": "Grid Console Keyed",
+    "share": 0.492,
+    "round": 21,
+    "what": [
+     "Lit NOW node on a vertical rail with coloured due dots for late tasks"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r19-mut-4",
+    "name": "Grid Console Calmer",
+    "share": 0.271,
+    "round": 20,
+    "what": [
+     "The NOW chip with a lit line running to the due dots on the To do rail",
+     "Dated timeline with a glowing NOW node and lit line, and the On this page contents with lamp dots"
+    ],
+    "age": 1
+   }
+  ],
+  "type": [
+   {
+    "id": "r20-mut-2",
+    "name": "Lit Index, Ledger Rail",
+    "share": 1.192,
+    "round": 21,
+    "what": [
+     "Condensed grotesque headings with small mono keys and labels (serif counts in r19)",
+     "condensed grotesque titles with mono caps labels and keyed numerals",
+     "Condensed grotesque display heads at large scale, small-caps mono labels and numbered ledger index",
+     "Condensed display grotesque for page and section titles with mono index labels and small-caps tracking",
+     "Heavy condensed display names with tiny tracked caps labels and numbered index",
+     "Condensed grotesque display scale, tracked mono small caps labels, tabular numerals"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r19-mut-2",
+    "name": "Track Diagram Rail Keys",
+    "share": 0.278,
+    "round": 21,
+    "what": [],
+    "age": 0
+   },
+   {
+    "id": "r19-mut-3",
+    "name": "Lit Index, Cool Rail",
+    "share": 0.266,
+    "round": 20,
+    "what": [
+     "Heavy condensed display titles paired with a mono small-caps label and a clean sans body",
+     "Condensed display heads with numbered designators and mono small-cap labels, on a double rule",
+     "Condensed grotesque display, tracked mono-caps labels, plain sans body, numbered running heads",
+     "Condensed poster titles with mono caps labels and a scanlined key word",
+     "Condensed poster headings with a mono label scale and numbered running heads (runner-up: serif section heads with a lit numeral)",
+     "Tall condensed poster headings with a mono index and small caps labels; serif display as the alternative voice"
+    ],
+    "age": 1
+   }
+  ],
+  "colour": [
+   {
+    "id": "r19-mut-3",
+    "name": "Lit Index, Cool Rail",
+    "share": 0.114,
+    "round": 20,
+    "what": [
+     "Black ground with cool neutrals; each section gets its own grounded rule colour (green, violet, blue, amber) and hatched kind swatches"
+    ],
+    "age": 1
+   },
+   {
+    "id": "r20-mut-3",
+    "name": "Grid Console Keyed",
+    "share": 0.114,
+    "round": 20,
+    "what": [
+     "Lifted ink-2 and chroma-boosted kind labels in calm material neutrals",
+     "A different muted companion hue on each section rail (amber, lilac, rose, steel blue), with green kept for live and primary"
+    ],
+    "age": 1
+   },
+   {
+    "id": "r18-wild-1",
+    "name": "Green Desk",
+    "share": 0.111,
+    "round": 21,
+    "what": [
+     "beige monitor case and desk neutrals under the green"
+    ],
+    "age": 0
+   }
+  ],
+  "controls": [
+   {
+    "id": "r20-mut-3",
+    "name": "Grid Console Keyed",
+    "share": 0.453,
+    "round": 20,
+    "what": [
+     "Green Add key with latched pill filters; Desk Terminal's segmented chip filters are the runner-up",
+     "Green 'Add' key, latched 44px Show pills, and a taller composer with a full-width Send",
+     "Green Add key and latched 44px Show pills; taller composer with Send on the phone",
+     "Latched 44px Show pills, green Add key, labelled Send",
+     "Latched 44px Show pills and the green Add key",
+     "To do's Show as latched 44px pills, the green Add key and a labelled Send",
+     "Green Add key, latched Show pills, and taller composer with Send",
+     "Green Add key, latched 44px Show pills, full-width Send that says Send; check-marked dropdown list",
+     "Green primary key for Add, latched 44px Show pills, taller composer"
+    ],
+    "age": 1
+   },
+   {
+    "id": "r20-mut-1",
+    "name": "Desk Terminal, Even Dock",
+    "share": 0.389,
+    "round": 21,
+    "what": [
+     "Full-width Send, 44px mic and chips, clear select with checked option and strong focus ring",
+     "Select with chevron and a check on the current choice; labelled pill filters with an on-dot; a big Send beside the mic"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r18-mut-7",
+    "name": "Blueprint, Lit Scale",
+    "share": 0.167,
+    "round": 21,
+    "what": [],
+    "age": 0
+   }
+  ],
+  "chat": [
+   {
+    "id": "r19-mut-3",
+    "name": "Lit Index, Cool Rail",
+    "share": 0.179,
+    "round": 20,
+    "what": [
+     "Thread hung on a steel rail with margin times and lit ring at the composer",
+     "Thread hung on a steel rail with margin times and a lit ring where the composer begins",
+     "Thread hung on a steel rail from Vera's mark, times in the left margin, lit ring at the composer",
+     "Steel-rail thread with times set in the left margin and mono-caps speaker labels",
+     "Thread hung on a steel rail from Vera's mark, with times in the left margin and a lit ring at the composer",
+     "Thread hung on a steel rail from Vera's mark, times in the margin, a lit ring where the box begins"
+    ],
+    "age": 1
+   },
+   {
+    "id": "r20-mut-2",
+    "name": "Lit Index, Ledger Rail",
+    "share": 0.172,
+    "round": 20,
+    "what": [
+     "Thread with a lit node line and a stagger of Vera and family lines, her presence glyph beside the reply",
+     "Staggered thread on a rail with sender chips and times",
+     "Conversation hung from a thin rail with time stamps in the left margin, accent-edged message bubbles and a ring at the composer",
+     "Arrow-led ways-to-start chips under a poster question and an italic prompt composer"
+    ],
+    "age": 1
+   },
+   {
+    "id": "r20-mut-1",
+    "name": "Desk Terminal, Even Dock",
+    "share": 0.094,
+    "round": 20,
+    "what": [
+     "Phone composer with a From row, a mic, a wide labelled Send and starter chips"
+    ],
+    "age": 1
+   }
+  ],
+  "light": [
+   {
+    "id": "r20-mut-3",
+    "name": "Grid Console Keyed",
+    "share": 0.441,
+    "round": 21,
+    "what": [
+     "Bloom on the lit key word, the monitor glow and the lamp at the foot, with the rest kept dark",
+     "Halo on the key word, bloom on the gauge, and a lit rail with glowing nodes, kept to places that matter",
+     "Halo on the one lit key word, the mark and the dial, with calm cards elsewhere"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r20-mut-2",
+    "name": "Lit Index, Ledger Rail",
+    "share": 0.328,
+    "round": 20,
+    "what": [
+     "Scanline-barred lit MIND and question mark with layered halo; the glow kept to one word",
+     "Layered halo on the lit MIND and question mark, with the CRT inset kept to one place",
+     "Layered halo on the lit headline and question mark, with the tube bloom held to the glass",
+     "Layered halo and scanlines on the question words and lit mark, kept to the headline",
+     "Lit MIND and question mark with halo and scanlines, light kept to the key word and the tube",
+     "A haloed, scanlined lit MIND with a matching lit question mark, as the single piece of phosphor bloom on the page"
+    ],
+    "age": 1
+   },
+   {
+    "id": "r19-mut-2",
+    "name": "Track Diagram Rail Keys",
+    "share": 0.294,
+    "round": 21,
+    "what": [
+     "scan-lined haloed key word and lit rail node"
+    ],
+    "age": 0
+   }
+  ],
+  "foot": [
+   {
+    "id": "r20-mut-1",
+    "name": "Desk Terminal, Even Dock",
+    "share": 0.167,
+    "round": 21,
+    "what": [
+     "Evenly docked bottom tabs with labels and a clear active underline; labelled desktop bar (Memory, Family, Status, Settings)"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r20-mut-3",
+    "name": "Grid Console Keyed",
+    "share": 0.059,
+    "round": 21,
+    "what": [],
+    "age": 0
+   },
+   {
+    "id": "r20-mut-2",
+    "name": "Lit Index, Ledger Rail",
+    "share": 0.049,
+    "round": 20,
+    "what": [
+     "Uppercase mono tab bar with a lit top rail on the active tab, bigger kickers"
+    ],
+    "age": 1
+   }
+  ]
+ }
+}

@@ -1,0 +1,119 @@
+
+/* ==== r18-mut-1: three rolled changes on Desk Terminal, Gauged Rows ============================
+   GLASS  one Vera card (greeting, question on a strip of glass, status line, box, ways to start) beside a bezelled tube on a
+          grid floor, across the top of Home. Classes: .vera-row .vera-card .vera-top .vera-glass .vera-deck .vera-tube .tube-floor
+   SIGNAL the status line under the question made more of: .glass-status .gs-lamp .gs-words .gs-pips
+   TYPE   reading prose at 1.55 leading, never wider than 66 characters
+   ============================================================================================== */
+
+/* ---- GLASS: the row, and Home's grid with a row above the terminal and the desk ---------------- */
+.vera-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; min-width: 0; }
+@media (min-width: 64rem) {
+  .vera-row { grid-template-columns: minmax(0, 1.22fr) minmax(0, 1fr); gap: 1.5rem; align-items: stretch; }
+  .page-home main > .vera-row { grid-column: 1 / -1; grid-row: 1; }
+  .page-home main > .terminal, .page-home main > .desk { grid-row: 2; }
+}
+
+/* The card: the machine's graphite body, as the terminal was, with the corner that is lit. */
+.vera-card {
+  position: relative; isolation: isolate; display: flex; flex-direction: column; gap: 0.75rem; min-width: 0;
+  padding: 0.875rem 1rem 1rem; color: var(--ink);
+  background:
+    radial-gradient(70% 40% at 100% 0%, rgb(79 96 230 / 0.12), transparent 72%),
+    linear-gradient(180deg, #1a1f22, var(--body) 34%, var(--body-2));
+  border: 1px solid #2a3034; border-radius: 14px;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07), inset 0 0 0 1px rgb(0 0 0 / 0.3), 0 30px 50px -36px rgb(0 0 0 / 0.95), 0 0 46px -30px color-mix(in srgb, var(--brand) 50%, transparent);
+}
+.vera-card::before {
+  content: ""; position: absolute; top: -1px; left: -1px; width: 1.1rem; height: 1.1rem; pointer-events: none;
+  border-top: 2px solid var(--brand); border-left: 2px solid var(--brand); border-top-left-radius: 14px;
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--brand) 75%, transparent));
+}
+.vera-top { display: flex; align-items: center; gap: 0.6rem; margin: 0; padding: 0 0 0.6rem; border-bottom: 1px solid #2a3034; }
+.vera-top .presence { width: 1.75rem; height: 1.75rem; border-radius: 5px; }
+.vera-top .presence .presence-glass { font-size: 4.7px; }
+.vera-top .vera-who { font: 600 var(--fs-head)/1 var(--cond); letter-spacing: -0.005em; color: var(--heading); }
+.vera-top .vera-date { margin: 0 0 0 auto; }
+
+/* The strip of glass the question is typed on: the tube's own recess, in the card. */
+.vera-glass {
+  --phosphor: var(--screen);
+  --phosphor-bright: color-mix(in srgb, var(--phosphor) 45%, #fff);
+  --phosphor-dim: color-mix(in srgb, var(--phosphor) 64%, #07120c);
+  --phosphor-glass: color-mix(in srgb, var(--phosphor) 9%, #060a08);
+  position: relative; isolation: isolate; overflow: hidden; display: grid; gap: 0.3rem;
+  padding: 0.95rem 1.1rem 0; color: var(--phosphor); font: 400 var(--tube)/1.1 var(--terminal);
+  background: radial-gradient(125% 115% at 30% 40%, var(--phosphor-glass), #07100b 55%, #030705);
+  border-radius: 8px / 10px;
+  box-shadow: inset 0 0 0 1.5px #020403, 0 0 0 1px #1c2023, 0 1px 0 1px rgb(255 255 255 / 0.05), inset 0 0 36px 6px rgb(0 0 0 / 0.72);
+  text-shadow: 0 0 1px color-mix(in srgb, var(--phosphor) 80%, transparent), 0 0 9px color-mix(in srgb, var(--phosphor) 45%, transparent), 0 0 24px color-mix(in srgb, var(--phosphor) 20%, transparent);
+}
+.vera-glass > * { position: relative; z-index: 1; margin: 0; }
+.vera-glass > :not(.glass-status) { filter: blur(0.35px); }
+.vera-glass::before { content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none; background: repeating-linear-gradient(to bottom, rgb(2 5 3 / 0.4) 0 1px, transparent 1px 3px); }
+.vera-glass::after { content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none; border-radius: inherit; background: radial-gradient(85% 50% at 26% 4%, rgb(255 255 255 / 0.07), transparent 62%), radial-gradient(135% 125% at 50% 42%, transparent 55%, rgb(0 0 0 / 0.6)); }
+.vera-glass .ask-question { margin: 0.1rem 0 0; font-size: 2.75rem; line-height: 1; }
+.vera-glass .apos { font: 400 0.8em/1 var(--mono); margin: 0 0.04em 0 0.02em; }
+.vera-glass .tube-said { font-size: 1.25rem; line-height: 1.1; }
+.vera-glass .dim { color: var(--phosphor-dim); }
+.vera-glass a { color: inherit; text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 55%, transparent); text-decoration-thickness: 2px; text-underline-offset: 0.16em; }
+.vera-glass a:hover { color: #04100a; background: var(--phosphor); text-decoration: none; text-shadow: none; }
+.vera-glass a:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.vera-plain { margin: 0; font: 600 var(--fs-page)/1.05 var(--cond); color: var(--heading); }
+
+/* The box under the glass: the card's keyboard. */
+.vera-deck { display: flex; flex-direction: column; gap: 0.625rem; min-width: 0; }
+.vera-deck .ask textarea { min-height: 4rem; }
+
+/* ---- SIGNAL: the status line, made more of -----------------------------------------------------
+   A strip across the foot of the glass: a lamp with a ring that breathes out, "Listening" lit and
+   what she is watching dim after it, and one lit tick at the right for each plan she is watching. */
+.vera-glass .glass-status {
+  display: flex; flex-wrap: nowrap; align-items: center; gap: 0.75rem; margin: 0.6rem -1.1rem 0; padding: 0.55rem 1.1rem;
+  font: 400 1.35rem/1.1 var(--terminal); letter-spacing: 0.03em; color: var(--phosphor-dim);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--phosphor) 15%, transparent), color-mix(in srgb, var(--phosphor) 3%, transparent) 75%);
+  border-top: 1px solid color-mix(in srgb, var(--phosphor) 34%, transparent);
+  text-shadow: 0 0 6px color-mix(in srgb, var(--phosphor) 32%, transparent);
+}
+.vera-glass .glass-status::before { content: none; }
+.gs-lamp { position: relative; flex: none; width: 0.875rem; height: 0.875rem; border-radius: 50%; background: radial-gradient(circle at 50% 45%, #f4fff8 0 30%, var(--brand) 68%); box-shadow: 0 0 4px var(--brand), 0 0 11px var(--brand), 0 0 22px 2px color-mix(in srgb, var(--brand) 50%, transparent); animation: gs-breathe 3.6s ease-in-out infinite; }
+.gs-lamp::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--brand) 70%, transparent); opacity: 0; animation: gs-ring 3.6s ease-out infinite; }
+.gs-words { min-width: 0; }
+.gs-words b { font-weight: 400; text-transform: uppercase; letter-spacing: 0.1em; color: var(--phosphor-bright); text-shadow: 0 0 1px #a9ffc7, 0 0 8px color-mix(in srgb, var(--phosphor) 70%, transparent), 0 0 18px color-mix(in srgb, var(--phosphor) 35%, transparent); }
+.gs-pips { display: flex; align-items: flex-end; gap: 4px; margin-left: auto; padding-left: 0.5rem; }
+.gs-pips i { display: block; width: 5px; height: 0.9rem; background: var(--phosphor); box-shadow: 0 0 6px color-mix(in srgb, var(--phosphor) 80%, transparent); opacity: 0.55; }
+.gs-pips i:first-child { height: 1.15rem; opacity: 1; background: var(--phosphor-bright); }
+.vera-glass .glass-status[data-state=thinking] .gs-lamp { animation-duration: 1.3s; }
+.vera-glass .glass-status[data-state=thinking] .gs-lamp::after { animation-duration: 1.3s; }
+.vera-glass .glass-status:is([data-state=retrying], [data-state=lost]) { color: var(--people); text-shadow: none; background: linear-gradient(90deg, color-mix(in srgb, var(--people) 14%, transparent), transparent 75%); border-top-color: color-mix(in srgb, var(--people) 45%, transparent); }
+.vera-glass .glass-status:is([data-state=retrying], [data-state=lost]) .gs-lamp { background: var(--people); box-shadow: 0 0 6px color-mix(in srgb, var(--people) 60%, transparent); animation: none; }
+.vera-glass .glass-status:is([data-state=retrying], [data-state=lost]) .gs-lamp::after { display: none; }
+@keyframes gs-breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.62; } }
+@keyframes gs-ring { 0% { opacity: 0.7; transform: scale(0.8); } 70%, 100% { opacity: 0; transform: scale(2.1); } }
+@media (prefers-reduced-motion: reduce) { .gs-lamp, .gs-lamp::after { animation: none !important; } .gs-lamp::after { opacity: 0.35; transform: scale(1.5); } }
+@media (max-width: 40rem) { .vera-glass .ask-question { font-size: 2.25rem; } .gs-pips i { width: 4px; } .vera-glass .glass-status { font-size: 1.2rem; } }
+
+/* ---- GLASS: the tube beside the card, on its grid floor ---------------------------------------- */
+.vera-tube { display: flex; flex-direction: column; min-width: 0; }
+.vera-tube .crt-tube { flex: 1; display: flex; flex-direction: column; }
+.vera-tube .crt-tube > .pic { flex: 1; align-content: start; }
+.vera-tube .next-block { margin-top: 0; padding-top: 0; border-top: 0; align-content: start; }
+.vera-tube .next-up .next-title, .vera-tube .next-title { font-size: 2.1rem; }
+.vera-tube .when-plot { position: relative; z-index: 1; margin-top: 0.8rem; }
+.tube-floor {
+  position: absolute; z-index: 0; left: -30%; right: -30%; bottom: -2px; height: 58%; pointer-events: none;
+  background:
+    linear-gradient(to right, color-mix(in srgb, var(--phosphor) 38%, transparent) 1px, transparent 1px) 50% 0 / 34px 100%,
+    linear-gradient(to bottom, color-mix(in srgb, var(--phosphor) 38%, transparent) 1px, transparent 1px) 0 0 / 100% 26px;
+  transform: perspective(170px) rotateX(58deg); transform-origin: 50% 100%;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 60%); mask-image: linear-gradient(to bottom, transparent, #000 60%);
+  filter: blur(0.3px) drop-shadow(0 0 2px color-mix(in srgb, var(--phosphor) 50%, transparent)); opacity: 0.75;
+}
+.vera-tube .crt-tube > .pic { z-index: 1; }
+@media (prefers-contrast: more) { .tube-floor { opacity: 0.4; } }
+
+/* ---- TYPE: reading prose sets at 1.55 leading and never runs wider than 66 characters ---------- */
+main :is(p.muted, p.hint, .lede, p.lead, .why, .description, .said-text, p.step-skip-note, p.summary, p.memory-fact, p.state-line, .band-note, .section-state, .capture > p):not(.panel, .row, .error, .said, .warn) {
+  line-height: 1.55; max-width: 66ch;
+}
+.said-text { max-width: 66ch; line-height: 1.55; }

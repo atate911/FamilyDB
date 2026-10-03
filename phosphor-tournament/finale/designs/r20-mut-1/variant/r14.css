@@ -1,0 +1,32 @@
+
+/* ==== r14-mut-3: three rolled changes on Desk Terminal, Mapped (everything above is the parent's) ====
+   LIST   .rows: every other row on a faint ground band, so the eye keeps its line across the facts column.
+   HEAD   .page-head: the page's one primary action (.head-add) at the head's right end, the title a step up (40 to 48).
+   COLOUR :root tokens: the ground one step cooler (hue 156 to 172), the neutral words one step warmer (hue 86 to 79).
+   ====================================================================================================== */
+
+/* ---- COLOUR: the ground a step cooler, the neutral words a step warmer ----------------------------
+   The sheet writes its own :root, so the change is stated here, after it (the palette tokens say the same). */
+:root {
+  --bg: #0a0e0d;                                   /* hue 156 to 172: a breath cooler, still green-black */
+  --ink: #d8d0c2; --ink-2: #bab1a4; --dim: #a49c90; --faint: #978f83;   /* hue 86 to 79: a breath warmer */
+  --heading: #efe6d8;
+}
+
+/* ---- LIST: the band --------------------------------------------------------------------------- */
+.rows { --band: color-mix(in srgb, var(--steel-cap) 5%, transparent); }
+:where(.rows) > .row:nth-child(even),
+:where(.rows > .row-wrap:nth-child(even)) > .row { background-color: var(--band); }
+/* A state still wins over the band: pointed at, today and late keep their own grounds. */
+@media (forced-colors: active) { :where(.rows) > .row:nth-child(even) { background-color: transparent; } }
+
+/* ---- HEAD: title one step up, the action at the right end ------------------------------------------ */
+.page-head { align-items: flex-end; }
+.page-head h1 { font-size: 3rem; line-height: 1.02; letter-spacing: -0.02em; }
+.page-head .title-icon .icon { width: 2rem; height: 2rem; }
+.page-head .title-icon.presence { width: 3rem; height: 3rem; }
+.page-head .page-actions { flex: none; margin-left: auto; align-self: flex-start; padding-top: 0.25rem; }
+.page-head .head-add { flex: none; white-space: nowrap; }
+@media (max-width: 40rem) {
+  .page-head h1 { font-size: 2.75rem; }
+}

@@ -1,0 +1,66 @@
+/* ==== r20-mut-1: three rolled changes on Desk Terminal, Docked Track ==============================
+   GLASS  the dock row ends together (Coming up and the Contents plate stretch to one height, each with its foot
+          pinned), and the tube column on Settings, Status and Plans is 21rem instead of 26rem, so their lists
+          get the width. .dock-row .dock-coming .dock-terminal; body.page-status/-plans/-settings main
+   RULE   thinner chrome: a band is an open section under its rule (no plate) unless it holds the dock, a
+          warning or a capture form; Finish setting up is Home's first band, a strip of its steps side by side.
+          .band--open .setup-first
+   HEAD   Home's question one step bolder: 56px (up from 44px), heavier strokes and a hotter core so it wins
+          when squinted. .vera-glass .ask-question
+   ================================================================================================== */
+
+/* ---- HEAD ---------------------------------------------------------------------------------------- */
+.vera-glass .ask-question {
+  color: color-mix(in srgb, var(--phosphor) 92%, #fff);
+  -webkit-text-stroke: 1.1px currentColor; paint-order: stroke fill;
+  text-shadow:
+    0 0 1px color-mix(in srgb, var(--phosphor) 90%, transparent),
+    0 0 0.16em color-mix(in srgb, var(--phosphor) 60%, transparent),
+    0 0 0.5em color-mix(in srgb, var(--phosphor) 34%, transparent);
+}
+@media (min-width: 64rem) {
+  .vera-glass .ask-question { font-size: 3.5rem; line-height: 0.95; margin-top: 0.15rem; }
+}
+@media (min-width: 40.01rem) and (max-width: 63.99rem) {
+  .vera-glass .ask-question { font-size: 3rem; }
+}
+@media (max-width: 40rem) {
+  .vera-glass .ask-question { font-size: 2.5rem; -webkit-text-stroke-width: 0.8px; }
+}
+
+/* ---- GLASS: the dock ends together; a narrower tube column ------------------------------------- */
+@media (min-width: 64rem) {
+  .dock-row { align-items: stretch; }
+  .dock-coming { display: flex; flex-direction: column; }
+  .dock-coming > .band.coming { flex: 1 1 auto; display: flex; flex-direction: column; border-bottom: 1px solid color-mix(in srgb, var(--c) 40%, var(--rule)); }
+  .dock-coming > .band.coming > .rail { flex: 1 1 auto; display: flex; flex-direction: column; }
+  .dock-coming .rail > .dated { flex: 1 1 auto; display: grid; grid-auto-rows: minmax(2.75rem, 1fr); }
+  .dock-coming .rail > .dated > .row { align-items: center; }
+  .dock-coming > .band.coming > .band-note { margin-top: auto; padding-top: 0.6rem; }
+  .dock-terminal { align-self: stretch; }
+  .dock-terminal > .contents { flex: 1 1 auto; }
+  .dock-terminal > .status-foot { margin-top: auto; }
+
+  .page-status main, .page-plans main, .page-settings main { grid-template-columns: 21rem minmax(0, 1fr); column-gap: 1.5rem; }
+  .page-status .contents-list .c-t, .page-plans .contents-list .c-t { flex: none; white-space: nowrap; }
+  .page-status .contents-list .c-sig { gap: 3px; }
+  .page-status .contents-list .lead { flex-basis: 0.5rem; min-width: 0.5rem; }
+}
+
+/* ---- RULE: an open band, and the setup strip first --------------------------------------------- */
+.band:not(.coming, .setup, .trouble, .attention, .capture, .restaurants-link) { background: transparent; }
+.band:not(.coming, .setup, .trouble, .attention, .capture, .restaurants-link) .band-head .ring:not(.look) { background: var(--bg); }
+@media (min-width: 64rem) {
+  .band:not(.coming, .setup, .trouble, .attention, .capture, .restaurants-link) { padding-inline: 0.75rem; }
+  .page-home main > .vera-row { grid-row: auto; }
+  .page-home main > .setup-first, .page-home main > .dock-row, .page-home main > .desk, .page-home main > .lower { grid-column: 1 / -1; grid-row: auto; }
+}
+.setup-first { padding-top: 0.5rem; padding-bottom: 0.7rem; }
+.setup-first .band-head { min-height: 2.5rem; margin-bottom: 0.15rem; }
+.setup-first .band-note { margin: 0.2rem 0 0; }
+@media (min-width: 64rem) {
+  .setup-first { padding-inline: 1.25rem; }
+  .setup-first .steps { padding-left: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 1.75rem; row-gap: 0; }
+  .band.setup-first .steps > .row.step { align-items: start; border-bottom: 0; background: none; box-shadow: none; }
+  .page-home .setup-first .steps .t { padding-block: 0.4rem; font-size: 1.0625rem; }
+}

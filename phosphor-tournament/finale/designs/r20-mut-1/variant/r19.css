@@ -1,0 +1,108 @@
+
+/* ==== r19-mut-1: three rolled changes on Desk Terminal, Vera Card ==================================
+   GLASS     the dock row: Coming up under the question and the Contents plate (with the status line)
+             under the tube, on the same two columns as the Vera row, so Home's first screen is full
+             and the desk's left column no longer ends under the plate. .dock-row .dock-coming .dock-terminal
+   CONTROLS  phone: a big Send key with its word and a tall composer; Ideas: each bank of filter keys is one
+             compact row (a row that slides sideways on a phone, a flowing row on a desk). .keys .key-row
+   LIST      desktop: row text one size up, the amber "was due" kept, and a fine lit track threaded down
+             the To do rows through their ticks. .tracked
+   ================================================================================================== */
+
+/* ---- GLASS: the dock row ------------------------------------------------------------------------ */
+.page-home main > .terminal { display: none; }
+.dock-row, .dock-coming { display: contents; }
+.dock-terminal { align-self: start; }
+@media (min-width: 64rem) {
+  .dock-row { display: grid; grid-template-columns: minmax(0, 1.22fr) minmax(0, 1fr); gap: 1.5rem; align-items: start; min-width: 0; grid-column: 1 / -1; grid-row: 2; }
+  .dock-coming { display: block; min-width: 0; }
+  .dock-terminal { position: relative; }
+  /* the desk is the third row now, two columns on the same measure: To do, and Finish setting up beside it */
+  .page-home main > .desk { grid-column: 1 / -1; grid-row: 3; display: grid; grid-template-columns: minmax(0, 1.22fr) minmax(0, 1fr); gap: 1rem 1.5rem; align-items: start; }
+  .page-home .desk > .said, .page-home .desk > .error, .page-home .desk > .home-wishes { grid-column: 1 / -1; }
+  .page-home .desk > .home-todo { grid-column: 1; }
+  .page-home .desk > .setup { grid-column: 2; }
+  .page-home .desk:not(:has(> .setup)) > .home-todo { grid-column: 1 / -1; }
+  .page-home main > .lower { grid-row: 4; }
+  .home-todo .checklist > .row { grid-template-columns: 2.75rem minmax(0, max-content) minmax(0.75rem, 1fr) 3.5rem 11.5rem; }
+  .home-todo .colheads .ch-who { width: 3.5rem; } .home-todo .colheads .ch-due { width: 11.5rem; }
+  .page-home .setup .steps .t { white-space: normal; overflow: visible; line-height: 1.4; padding-block: 0.5rem; margin-block: 0; }
+}
+
+/* ---- CONTROLS: a big Send, a tall composer; one row of filter keys ------------------------------ */
+@media (max-width: 40rem) {
+  .ask textarea, .vera-deck .ask textarea { min-height: 7.25rem; padding: 0.8rem 0.9rem; font-size: 1.0625rem; line-height: 1.5; }
+  .ask-bar { gap: 0.6rem; margin-top: 0.65rem; }
+  .ask .who { flex: 1 1 100%; }
+  .ask .who select { min-height: 3.25rem; font-size: 1rem; }
+  .ask .mic-slot { margin-left: 0; }
+  .ask button.mic { width: 3.5rem; height: 3.5rem; min-height: 3.5rem; }
+  .ask .send {
+    flex: 1 1 8rem; width: auto; min-width: 8rem; min-height: 3.5rem; padding: 0 1.5rem; gap: 0.55rem;
+    font-size: 1.1875rem; font-weight: 700; letter-spacing: 0.01em;
+  }
+  .ask .send .label { position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
+  .ask .send .icon { width: 1.4rem; height: 1.4rem; }
+  .ask .locate label { min-height: 3rem; font-size: 1rem; }
+  /* the chat's box is pinned above the tabs: taller, still one row of keys */
+  .page-chat .composer { max-height: 15.5rem; }
+  .page-chat .composer .ask textarea { min-height: 4.5rem; height: 4.5rem; }
+  .page-chat .composer .ask .who { flex: 1 1 0; }
+  .page-chat .composer .ask-bar { gap: 0.5rem; margin-top: 0.5rem; }
+  .page-chat .composer .ask .send { flex: none; min-width: 6.75rem; min-height: 3.25rem; padding: 0 1.1rem; }
+  .page-chat .composer .ask button.mic { width: 3.25rem; height: 3.25rem; min-height: 3.25rem; }
+  .page-chat .composer .ask .who select { min-height: 3.25rem; white-space: nowrap; text-overflow: ellipsis; font-size: 0.9375rem; }
+  .page-chat .composer .ask .who label { font-size: 0.8125rem; }
+  .page-chat .thread-band { margin-bottom: 12rem; }
+}
+/* Ideas: every bank of keys is one row. On a phone it slides sideways under a fade; on a desk it flows
+   across the plate's width in compact keys instead of two columns of tall ones. */
+.page-ideas .deck-body .keys { grid-template-columns: 3.1rem minmax(0, 1fr); column-gap: 0.25rem; }
+.page-ideas .deck-body .key-row, .page-ideas .deck-body .kinds .key-row { display: flex; flex-wrap: wrap; gap: 0.3125rem; }
+.page-ideas .deck-body .key { flex: none; padding: 0 0.6rem; gap: 0.35rem; }
+.page-ideas .deck-body .key[aria-current] { padding-right: 1.2rem; }
+@media (max-width: 63.99rem) {
+  .page-ideas .deck-body .keys { grid-template-columns: minmax(0, 1fr); row-gap: 0.1rem; }
+  .page-ideas .deck-body .keys-name { padding: 0.4rem 0 0.2rem; }
+  .page-ideas .deck-body .key-row, .page-ideas .deck-body .kinds .key-row {
+    flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: none;
+    margin-inline: -0.25rem; padding: 4px 1.5rem 4px 0.25rem;
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 2rem), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 2rem), transparent);
+  }
+  .page-ideas .deck-body .key-row::-webkit-scrollbar { display: none; }
+  .page-ideas .deck-body .key { scroll-snap-align: start; scroll-margin-inline: 0.25rem; }
+}
+
+/* ---- LIST: row text one size up, a fine lit track through the To do ticks ---------------------- */
+@media (min-width: 64rem) {
+  .rows .t, .timetable .t, .checklist .t { font-size: 1.1875rem; }
+  .rows .sub { font-size: 1rem; }
+  .rows :is(.f, .who, .for, .day, .time, .rel), .checklist .who, .timetable .who, .timetable .f, .dated .day, .idea-card .for { font-size: 1rem; }
+  /* the wider type takes a little of the facts' room back: */
+  .idea-list > .row { grid-template-columns: 1.5rem minmax(0, max-content) auto minmax(0.75rem, 1fr) 8rem 6.5rem 2.5rem; }
+  .idea-band .colheads .ch-drive { width: 8rem; padding-right: 2.5rem; } .idea-band .colheads .ch-for { width: 6.5rem; }
+  .dated .day .dnum { font-size: 1rem; }
+  /* The track: a rail down the left of the list, lit, with a short branch to each tick; it runs from the first
+     tick to the last (the rows' own height is 2.75rem, so a tick sits 1.375rem down). */
+  .tracked > .row:not(.empty), .tracked > .row:not(.empty):not(.step):hover {
+    --track: var(--lit); --tx: 0.3125rem; --ty: 1.375rem;
+    background-image:
+      linear-gradient(var(--track), var(--track)),
+      linear-gradient(90deg, transparent, color-mix(in srgb, var(--track) 34%, transparent) 50%, transparent),
+      linear-gradient(var(--track), var(--track));
+    background-repeat: no-repeat;
+    background-size: 3px 100%, 20px 100%, 0.8rem 2px;
+    background-position: var(--tx) 0, calc(var(--tx) - 8.5px) 0, var(--tx) calc(var(--ty) - 1px);
+  }
+  .tracked > .row:not(.empty):first-child, .tracked > .row:not(.empty):first-child:not(.step):hover {
+    background-size: 3px calc(100% - var(--ty)), 20px calc(100% - var(--ty)), 0.8rem 2px;
+    background-position: var(--tx) var(--ty), calc(var(--tx) - 8.5px) var(--ty), var(--tx) calc(var(--ty) - 1px);
+  }
+  .tracked > .row:not(.empty):last-child, .tracked > .row:not(.empty):last-child:not(.step):hover {
+    background-size: 3px calc(var(--ty) + 1px), 20px calc(var(--ty) + 1px), 0.8rem 2px;
+  }
+  .tracked > .row:not(.empty):only-child, .tracked > .row:not(.empty):only-child:not(.step):hover { background-image: none; }
+}
+@media (prefers-contrast: more) {
+  .tracked > .row:not(.empty) { --track: var(--brand); }
+}

@@ -1,0 +1,6 @@
+{# NOW, where the time falls in a list: a lit tick on the list's rail (the page's light trail down
+   the gutter) with the time beside it. One row across the list's cells; the stylesheet draws the
+   tick, so a list that has no rail still gets the tick and the words. #}
+{% macro now_tick() -%}
+  <li class="now-tick" aria-label="Now, {{ config.FAMILYDB_APP.clock.now().strftime('%H:%M') }}"><span class="now-rail" aria-hidden="true"></span><span class="now-word" aria-hidden="true">Now</span><time class="now-time" aria-hidden="true">{{ config.FAMILYDB_APP.clock.now().strftime('%H:%M') }}</time></li>
+{%- endmacro %}

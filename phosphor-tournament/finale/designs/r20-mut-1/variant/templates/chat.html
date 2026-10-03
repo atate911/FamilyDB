@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, presence %}
+{% block title %}{{ assistant if has_persona else 'Chat' }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-chat{% endblock %}
+{% block terminal_label %}{{ assistant if has_persona else 'Chat' }}{% endblock %}
+{# While an answer is on its way the browser fetches the page again by itself, landing back on
+   the newest line: a meta refresh, which every browser does, scripts or not. It is only set when
+   something really is being thought about, so the page goes quiet as soon as the reply is in the
+   log, and never on a page holding words somebody typed, which it would take with it. While a
+   turn runs the box is closed, so there is nothing to lose. Waiting on the retry job the box
+   stays open, so with scripts on ask.js does the looking again instead, and never while somebody
+   is writing. #}
+{% block head %}
+  {% if refresh and locked %}
+    <meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" />
+  {% elif refresh %}
+    <noscript><meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" /></noscript>
+  {% endif %}
+{% endblock %}
+
+{# The terminal: her screen, large, with her name and what this conversation is for, and a lamp
+   that says how she stands; under it the kids' conversations, as links. The small words on her
+   screen are only a picture of how she stands. #}
+{% block tube %}
+  <div class="her">
+    {{ presence('her-screen', variant=1) }}
+    <div class="her-words">
+      {% if reading %}
+        <nav class="crumbs" aria-label="Breadcrumb"><a href="{{ url_for('chat.show') }}">{{ assistant if has_persona else 'Chat' }}</a><span aria-hidden="true">/</span></nav>
+        <h1>{{ reading }} and {{ assistant if has_persona else 'the bot' }}</h1>
+        <p class="lede">Her own conversation, for you to read. Only she writes in it.</p>
+      {% elif private %}
+        <h1>{{ assistant if has_persona else 'Chat' }}</h1>
+        <p class="lede">Just you and {{ assistant }}. Tell her what you wish for, or ask about the plans.</p>
+      {% else %}
+        <h1>{{ assistant if has_persona else 'Chat' }}</h1>
+        <p class="lede">Weekends, ideas, to-dos and the calendar: anything you would ask in Telegram works here too.</p>
+      {% endif %}
+    </div>
+    <p class="her-state state-{{ state or 'ready' }}" aria-hidden="true"><span class="lamp sig {{ 'sig-bar' if state in ('retrying', 'lost') else 'sig-lamp' }}"></span>{% if state == 'thinking' %}Working{% elif state == 'retrying' %}Trying again{% elif state == 'lost' %}No reply{% else %}Ready{% endif %}</p>
+  </div>
+{% endblock %}
+{% block deck %}
+  {% if kids and not reading %}
+    <nav class="deck kids-talk" aria-labelledby="kids-talk">
+      <p class="keys-name" id="kids-talk">The kids' conversations</p>
+      <p class="deck-note">Each kid talks to {{ assistant }} on her own. You can read along.</p>
+      <div class="key-row">
+        {% for kid in kids %}<a class="key" href="{{ url_for('chat.show', with=kid.id, _anchor=latest) }}">{{ icon('user') }}<span>{{ kid.name }}</span></a>{% endfor %}
+      </div>
+    </nav>
+  {% endif %}
+{% endblock %}
+
+{# The desk: the thread, hung from her mark on a steel track. The day is said once, where it
+   changes, and each time at its own bubble. Hers on the left on the machine's glass, the family's
+   on the right in slate under a steel cap. The track ends in a lit ring at the box to write in,
+   which sits at the thread's foot, where the eye lands after the last reply. #}
+{% block content %}
+  <section class="band thread-band" aria-label="The conversation">
+    {% if lines %}
+      {% set ns = namespace(day='') %}
+      <ol class="thread">
+        {% for line in lines %}
+          {% set parts = (line.when or '').split(', ') %}
+          {% set day = parts[0] if parts | length == 2 else '' %}
+          {% if day and day != ns.day %}
+            <li class="day-mark" aria-hidden="true"><span>{{ day }}</span></li>
+            {% set ns.day = day %}
+          {% endif %}
+          <li class="{{ 'said-bot' if line.from_bot else 'said-them' }}"{% if loop.last %} id="{{ latest }}"{% endif %}>
+            {% if line.from_bot %}{{ presence(variant=(line.id or 0) % 4) }}{% else %}<span class="avatar" aria-hidden="true">{{ line.who[:1] | upper }}</span>{% endif %}
+            <div class="bubble">
+              <div class="said-by">
+                <strong>{{ line.who }}</strong>
+                <span class="said-when"><span class="sr">{{ day }}, </span>{{ parts[1] if parts | length == 2 else line.when }}</span>
+                {% if line.trouble %}<span class="tag warn">{{ line.trouble }}</span>{% endif %}
+              </div>
+              <div class="said-text">{{ line.text }}</div>
+              {% if line.did %}<div class="did">used {{ line.did | join(', ') }}</div>{% endif %}
+            </div>
+          </li>
+        {% endfor %}
+        {% if pending %}
+          <li class="said-bot pending is-{{ state }}">
+            {{ presence(variant=1) }}
+            <div class="bubble" role="status">
+              <div class="said-by"><strong>{{ assistant }}</strong></div>
+              <div class="said-text">{{ pending }}</div>
+            </div>
+          </li>
+        {% endif %}
+      </ol>
+    {% else %}
+      <p class="band-note empty">Nothing said here yet. Ask {{ assistant }} what to do this weekend, save an idea, or set a reminder.</p>
+    {% endif %}
+
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+    {% if not reading %}
+      <div class="composer">
+        <span class="track-end" aria-hidden="true"></span>
+        {% include "_ask.html" %}
+      </div>
+    {% endif %}
+  </section>
+{% endblock %}
