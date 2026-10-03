@@ -1,0 +1,451 @@
+{
+ "round": "r14",
+ "roundNo": 14,
+ "mode": "selection",
+ "carried": [
+  {
+   "id": "r13-idea-1",
+   "name": "Desk Terminal, Joined",
+   "summary": "Round 13: 8.33 by score, 7 top-four votes, 1 promise votes. The round-13 winner, entered unchanged as the bar for the whole field."
+  },
+  {
+   "id": "r13-mut-2",
+   "name": "Desk Terminal, Mapped",
+   "summary": "Round 13: 7.78 by score, 4 top-four votes, 3 promise votes. Entered unchanged: the parent of three one-change steps, the bar they are measured against."
+  },
+  {
+   "id": "r13-mut-4",
+   "name": "Track Diagram Aglow",
+   "summary": "Round 13: 7.06 by score, 1 top-four votes, 0 promise votes. Entered unchanged: the parent of three one-change steps, the bar they are measured against."
+  },
+  {
+   "id": "r11-idea-2",
+   "name": "Long Persistence",
+   "summary": "Round 13: 7.02 by score, 0 top-four votes, 0 promise votes. Entered unchanged: the parent of three one-change steps, the bar they are measured against."
+  }
+ ],
+ "wildCarried": [
+  {
+   "id": "r13-wild-1",
+   "name": "Phosphor Blueprint",
+   "summary": "Round 13: 6.16 by score, 1 top-four votes, 2 promise votes. Entered unchanged: the parent of three one-change steps, the bar they are measured against."
+  },
+  {
+   "id": "r13-wild-4",
+   "name": "Grid Console",
+   "summary": "Round 13: 6.16 by score, 0 top-four votes, 1 promise votes. Entered unchanged: the parent of three one-change steps, the bar they are measured against."
+  },
+  {
+   "id": "r13-wild-2",
+   "name": "Signal Catalogue",
+   "summary": "Round 13: 5.71 by score, 0 top-four votes, 2 promise votes. Entered unchanged: the parent of three one-change steps, the bar they are measured against."
+  }
+ ],
+ "seeds": [],
+ "mutants": [
+  {
+   "kind": "step",
+   "parent": "r13-mut-2",
+   "parentName": "Desk Terminal, Mapped",
+   "parentMean": 7.78,
+   "changes": [
+    {
+     "slot": "signal",
+     "text": "ONE LIT LINE: a single lit line from the screen (the tube, the typed question) down into the list's 'now' marker, a real wire from the live thing to the next thing due.",
+     "donor": "x14b-manual-cross",
+     "donorName": "Lit Manual, Dialled"
+    },
+    {
+     "slot": "type",
+     "text": "set labels in small caps with +0.08em tracking"
+    },
+    {
+     "slot": "colour",
+     "text": "make the primary button's ground a grounded deep green and keep the bright green for its label and halo"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r13-mut-2",
+   "parentName": "Desk Terminal, Mapped",
+   "parentMean": 7.78,
+   "changes": [
+    {
+     "slot": "list",
+     "text": "LARGE DAY NUMBERS in the list rows, with the month and weekday stacked beside them.",
+     "donor": "x14b-desk-cross",
+     "donorName": "Desk Terminal, Wired"
+    },
+    {
+     "slot": "foot",
+     "text": "drop the footer's legend strip and leave the lamp and the page name"
+    },
+    {
+     "slot": "chat",
+     "text": "hang the thread from a thin rail with Vera's mark at the top and the family's lines on the other side"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r13-mut-2",
+   "parentName": "Desk Terminal, Mapped",
+   "parentMean": 7.78,
+   "changes": [
+    {
+     "slot": "list",
+     "text": "give every other row the faintest ground band"
+    },
+    {
+     "slot": "head",
+     "text": "move the page's one primary action to the head's right end and set the title at one step larger"
+    },
+    {
+     "slot": "colour",
+     "text": "shift the ground one step cooler and the neutrals one step warmer"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r13-mut-4",
+   "parentName": "Track Diagram Aglow",
+   "parentMean": 7.06,
+   "changes": [
+    {
+     "slot": "figure",
+     "text": "A ROUND DIAL THAT SHOWS REAL DAYS: this week's days at their true positions with today lit. Every mark must mean something (the skeptic faulted a dial whose later days sat at meaningless clock positions).",
+     "donor": "x14b-manual-cross",
+     "donorName": "Lit Manual, Dialled"
+    },
+    {
+     "slot": "rule",
+     "text": "end every section's rule with a small solid end mark"
+    },
+    {
+     "slot": "controls",
+     "text": "set the select menus as a plain button that opens a list, with a chevron"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r13-mut-4",
+   "parentName": "Track Diagram Aglow",
+   "parentMean": 7.06,
+   "changes": [
+    {
+     "slot": "type",
+     "text": "FOLIO'S TYPE PAIRING: serif headings, light serif figures and small-caps units.",
+     "donor": "x14b-folio-cross",
+     "donorName": "Folio, Fastext"
+    },
+    {
+     "slot": "chat",
+     "text": "put the question's own words as the thread's first line"
+    },
+    {
+     "slot": "figure",
+     "text": "draw a short trace (a sparkline of the last seven days) beside each count"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r13-mut-4",
+   "parentName": "Track Diagram Aglow",
+   "parentMean": 7.06,
+   "changes": [
+    {
+     "slot": "colour",
+     "text": "move one section colour (the one currently nearest the green) a step towards slate"
+    },
+    {
+     "slot": "type",
+     "text": "set labels in small caps with +0.08em tracking"
+    },
+    {
+     "slot": "chat",
+     "text": "show the ways to start as a column of keys beside the box on wide screens"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r11-idea-2",
+   "parentName": "Long Persistence",
+   "parentMean": 7.02,
+   "changes": [
+    {
+     "slot": "head",
+     "text": "A COUNT STRIP under the page head, 'Today \u00b7 Plans 4 \u00b7 To do 4 \u00b7 Late 3 \u00b7 Ideas 12', each count a link to its page.",
+     "donor": "x14b-waypoint-cross",
+     "donorName": "Waypoint, Patched"
+    },
+    {
+     "slot": "light",
+     "text": "light the mark and the current page's name with the original halo"
+    },
+    {
+     "slot": "chat",
+     "text": "put the question's own words as the thread's first line"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r11-idea-2",
+   "parentName": "Long Persistence",
+   "parentMean": 7.02,
+   "changes": [
+    {
+     "slot": "rule",
+     "text": "A SECTION-HEAD RULE WITH AN END MARK on every page.",
+     "donor": "x14b-trued-cross",
+     "donorName": "Trued, Yard Lit"
+    },
+    {
+     "slot": "signal",
+     "text": "make the NOW marker a lit tick on the list's rail with the time beside it"
+    },
+    {
+     "slot": "controls",
+     "text": "draw checkboxes as small lit squares, off as an empty frame"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r11-idea-2",
+   "parentName": "Long Persistence",
+   "parentMean": 7.02,
+   "changes": [
+    {
+     "slot": "figure",
+     "text": "draw a short trace (a sparkline of the last seven days) beside each count"
+    },
+    {
+     "slot": "foot",
+     "text": "drop the footer's legend strip and leave the lamp and the page name"
+    },
+    {
+     "slot": "rule",
+     "text": "round every box and panel one step less"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r13-wild-1",
+   "parentName": "Phosphor Blueprint",
+   "parentMean": 6.16,
+   "changes": [
+    {
+     "slot": "rule",
+     "text": "A SECTION-HEAD RULE WITH AN END MARK on every page.",
+     "donor": "x14b-trued-cross",
+     "donorName": "Trued, Yard Lit"
+    },
+    {
+     "slot": "glass",
+     "text": "add one line of status under the question in the machine's mono voice (what she is doing now)"
+    },
+    {
+     "slot": "light",
+     "text": "let the monitor's glass bloom 2px more and carry a faint scanline raster"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r13-wild-1",
+   "parentName": "Phosphor Blueprint",
+   "parentMean": 6.16,
+   "changes": [
+    {
+     "slot": "glass",
+     "text": "A STATUS LINE ON THE GLASS: '4 plans \u00b7 3 late \u00b7 Vera is listening', in the machine's words.",
+     "donor": "x14b-desk-cross",
+     "donorName": "Desk Terminal, Wired"
+    },
+    {
+     "slot": "rule",
+     "text": "end every section's rule with a small solid end mark"
+    },
+    {
+     "slot": "type",
+     "text": "set headings in a serif from the library and keep labels in the mono"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r13-wild-1",
+   "parentName": "Phosphor Blueprint",
+   "parentMean": 6.16,
+   "changes": [
+    {
+     "slot": "foot",
+     "text": "drop the footer's legend strip and leave the lamp and the page name"
+    },
+    {
+     "slot": "chat",
+     "text": "set the composer as a one-line tube docked at the foot"
+    },
+    {
+     "slot": "controls",
+     "text": "draw filters as latched keys with a lit lamp when on"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r13-wild-4",
+   "parentName": "Grid Console",
+   "parentMean": 6.16,
+   "changes": [
+    {
+     "slot": "signal",
+     "text": "ONE LIT LINE: a single lit line from the screen (the tube, the typed question) down into the list's 'now' marker, a real wire from the live thing to the next thing due.",
+     "donor": "x14b-manual-cross",
+     "donorName": "Lit Manual, Dialled"
+    },
+    {
+     "slot": "list",
+     "text": "make the first word of each row's label medium weight and the rest regular"
+    },
+    {
+     "slot": "glass",
+     "text": "type the question on the glass one size smaller and keep the cursor blinking only while focused"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r13-wild-4",
+   "parentName": "Grid Console",
+   "parentMean": 6.16,
+   "changes": [
+    {
+     "slot": "type",
+     "text": "FOLIO'S TYPE PAIRING: serif headings, light serif figures and small-caps units.",
+     "donor": "x14b-folio-cross",
+     "donorName": "Folio, Fastext"
+    },
+    {
+     "slot": "signal",
+     "text": "make the NOW marker a lit tick on the list's rail with the time beside it"
+    },
+    {
+     "slot": "glass",
+     "text": "put a thin bezel inset and a vent row on the case, nothing else"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r13-wild-4",
+   "parentName": "Grid Console",
+   "parentMean": 6.16,
+   "changes": [
+    {
+     "slot": "colour",
+     "text": "make the case material one step lighter so the glass reads deeper"
+    },
+    {
+     "slot": "rule",
+     "text": "replace boxes around sections by a single rule above, with the title sitting on it"
+    },
+    {
+     "slot": "type",
+     "text": "raise body leading to 1.55 and cap the measure at 66 characters"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r13-wild-2",
+   "parentName": "Signal Catalogue",
+   "parentMean": 5.71,
+   "changes": [
+    {
+     "slot": "list",
+     "text": "LARGE DAY NUMBERS in the list rows, with the month and weekday stacked beside them.",
+     "donor": "x14b-desk-cross",
+     "donorName": "Desk Terminal, Wired"
+    },
+    {
+     "slot": "head",
+     "text": "move the page's one primary action to the head's right end and set the title at one step larger"
+    },
+    {
+     "slot": "figure",
+     "text": "set the section's count as a large light numeral with its unit in small caps beside it"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r13-wild-2",
+   "parentName": "Signal Catalogue",
+   "parentMean": 5.71,
+   "changes": [
+    {
+     "slot": "figure",
+     "text": "ONE BIG FIGURE LEADING EACH SECTION (the section's count or its next date, set large).",
+     "donor": "x14b-quote-cross",
+     "donorName": "Quote Board, Lit"
+    },
+    {
+     "slot": "light",
+     "text": "let the monitor's glass bloom 2px more and carry a faint scanline raster"
+    },
+    {
+     "slot": "list",
+     "text": "make the first word of each row's label medium weight and the rest regular"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r13-wild-2",
+   "parentName": "Signal Catalogue",
+   "parentMean": 5.71,
+   "changes": [
+    {
+     "slot": "signal",
+     "text": "draw 'waiting' as a steel dot and 'off' as a pewter ring, nothing red"
+    },
+    {
+     "slot": "chat",
+     "text": "put the question's own words as the thread's first line"
+    },
+    {
+     "slot": "type",
+     "text": "set labels in small caps with +0.08em tracking"
+    }
+   ]
+  }
+ ],
+ "wild": [],
+ "wildMutants": [],
+ "nInformed": 0,
+ "history": [
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/round1/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/final.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r2/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r3/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r4/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r5/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r6/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r7/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r8/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r9/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r10/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r11/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r12/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r13/results.json"
+ ],
+ "panel": "screen"
+}

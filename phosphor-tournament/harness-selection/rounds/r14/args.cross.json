@@ -1,0 +1,241 @@
+{
+ "round": "r14",
+ "roundNo": 14,
+ "mode": "cross",
+ "carried": [
+  {
+   "id": "r13-idea-1",
+   "name": "Desk Terminal, Joined",
+   "summary": "Round 13: 8.33 by score, 7 top-four votes, 1 promise votes. Entered unchanged as the parent of a feature cross: the round-13 winner, the bar for everything here"
+  },
+  {
+   "id": "r13-mut-2",
+   "name": "Desk Terminal, Mapped",
+   "summary": "Round 13: 7.78 by score, 4 top-four votes, 3 promise votes. Entered unchanged as the parent of a feature cross: the cross is measured against it"
+  },
+  {
+   "id": "r13-mut-4",
+   "name": "Track Diagram Aglow",
+   "summary": "Round 13: 7.06 by score, 1 top-four votes, 0 promise votes. Entered unchanged as the parent of a feature cross: the cross is measured against it"
+  },
+  {
+   "id": "r11-idea-2",
+   "name": "Long Persistence",
+   "summary": "Round 13: 7.02 by score, 0 top-four votes, 0 promise votes. Entered unchanged as the parent of a feature cross: the cross is measured against it"
+  },
+  {
+   "id": "x14b-manual-cross",
+   "name": "Lit Manual, Dialled",
+   "summary": "Crossing rounds 14a/14b final heat: 8.05; the donor of the dial-to-now wire and the real-days dial. Not a round-13 entrant: a cross of the tour's and the main lines' best, entered as the bar the feature crosses are measured against."
+  },
+  {
+   "id": "x14b-waypoint-cross",
+   "name": "Waypoint, Patched",
+   "summary": "Crossing rounds 14a/14b final heat: 7.99; the donor of the count strip and the Whose filter. Not a round-13 entrant: a cross of the tour's and the main lines' best, entered as the bar the feature crosses are measured against."
+  },
+  {
+   "id": "x14b-trued-cross",
+   "name": "Trued, Yard Lit",
+   "summary": "Crossing rounds 14a/14b final heat: 7.96; the donor of the section-head rule with its end mark. Not a round-13 entrant: a cross of the tour's and the main lines' best, entered as the bar the feature crosses are measured against."
+  },
+  {
+   "id": "x14b-folio-cross",
+   "name": "Folio, Fastext",
+   "summary": "Crossing rounds 14a/14b final heat: 7.9; the donor of the type pairing: serif heads, light serif figures, small caps. Not a round-13 entrant: a cross of the tour's and the main lines' best, entered as the bar the feature crosses are measured against."
+  },
+  {
+   "id": "x14b-desk-cross",
+   "name": "Desk Terminal, Wired",
+   "summary": "Crossing rounds 14a/14b final heat: 7.89; the donor of the patch lead into now and the large day numbers. Not a round-13 entrant: a cross of the tour's and the main lines' best, entered as the bar the feature crosses are measured against."
+  },
+  {
+   "id": "x14b-dessau-cross",
+   "name": "Dessau, Dialled",
+   "summary": "Crossing rounds 14a/14b final heat: 7.86; the donor of the dial and the count strip on Bauhaus posters. Not a round-13 entrant: a cross of the tour's and the main lines' best, entered as the bar the feature crosses are measured against."
+  },
+  {
+   "id": "x14b-sill-cross",
+   "name": "Sill Line, Wired",
+   "summary": "Crossing rounds 14a/14b final heat: 7.75; the donor of a wired sill line (near-twin of Trued). Not a round-13 entrant: a cross of the tour's and the main lines' best, entered as the bar the feature crosses are measured against."
+  },
+  {
+   "id": "x14b-quote-cross",
+   "name": "Quote Board, Lit",
+   "summary": "Crossing rounds 14a/14b final heat: 7.58; the donor of titles with their figures, lit. Not a round-13 entrant: a cross of the tour's and the main lines' best, entered as the bar the feature crosses are measured against."
+  }
+ ],
+ "wildCarried": [
+  {
+   "id": "r13-wild-1",
+   "name": "Phosphor Blueprint",
+   "summary": "Round 13: 6.16 by score, 1 top-four votes, 2 promise votes. Entered unchanged as the parent of a feature cross: the cross is measured against it"
+  },
+  {
+   "id": "r13-wild-4",
+   "name": "Grid Console",
+   "summary": "Round 13: 6.16 by score, 0 top-four votes, 1 promise votes. Entered unchanged as the parent of a feature cross: the cross is measured against it"
+  },
+  {
+   "id": "r13-wild-2",
+   "name": "Signal Catalogue",
+   "summary": "Round 13: 5.71 by score, 0 top-four votes, 2 promise votes. Entered unchanged as the parent of a feature cross: the cross is measured against it"
+  }
+ ],
+ "seeds": [],
+ "mutants": [
+  {
+   "kind": "features",
+   "parent": "r13-mut-2",
+   "parentName": "Desk Terminal, Mapped",
+   "parentMean": 7.78,
+   "todayMean": 4.72,
+   "parentFixes": "the round-13 judges' fixes for it are in /tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r14/parent-fixes/r13-mut-2.md; read them. Fixes asked of many designs: keep one lamp lit in the page footer at rest; drop footer legend strips; bring every control up to 44px; give The kids' wishes real rows; put Desk's title above Next up; the page's title line may say 'Tell Vera what to plan.' (the judges' suggested fix); and every filter, sort or toggle you draw must really work.",
+   "donors": [
+    "x14b-desk-cross",
+    "x14b-manual-cross",
+    "x14b-trued-cross",
+    "x14b-waypoint-cross"
+   ],
+   "changes": [
+    "ONE LIT LINE: a single lit line from the screen (the tube, the typed question) down into the list's 'now' marker, a real wire from the live thing to the next thing due. The judges praised it most (Desk's patch lead; Lit Manual's dial-to-now wire was the best version). (donor: x14b-manual-cross, x14b-desk-cross; translate it, never copy its colours or its page)",
+    "A COUNT STRIP under the page head, 'Today \u00b7 Plans 4 \u00b7 To do 4 \u00b7 Late 3 \u00b7 Ideas 12', each count a link to its page (from Waypoint; Lit Manual, Dessau and Folio took it too). (donor: x14b-waypoint-cross; translate it, never copy its colours or its page)",
+    "LARGE DAY NUMBERS with the month and weekday stacked beside them, as in Desk's Coming up list (the type judge called it the best list typesetting in the field). (donor: x14b-desk-cross; translate it, never copy its colours or its page)",
+    "A SECTION-HEAD RULE WITH AN END MARK on every page, from Trued (the system judge's top pick). (donor: x14b-trued-cross; translate it, never copy its colours or its page)",
+    "A STATUS LINE ON THE GLASS: '4 plans \u00b7 3 late \u00b7 Vera is listening' (a line of facts, in the machine's words). (donor: x14b-desk-cross; translate it, never copy its colours or its page)"
+   ]
+  },
+  {
+   "kind": "features",
+   "parent": "r13-mut-4",
+   "parentName": "Track Diagram Aglow",
+   "parentMean": 7.06,
+   "todayMean": 4.72,
+   "parentFixes": "the round-13 judges' fixes for it are in /tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r14/parent-fixes/r13-mut-4.md; read them. Fixes asked of many designs: keep one lamp lit in the page footer at rest; drop footer legend strips; bring every control up to 44px; give The kids' wishes real rows; put Desk's title above Next up; the page's title line may say 'Tell Vera what to plan.' (the judges' suggested fix); and every filter, sort or toggle you draw must really work.",
+   "donors": [
+    "x14b-desk-cross",
+    "x14b-dessau-cross",
+    "x14b-folio-cross",
+    "x14b-manual-cross",
+    "x14b-quote-cross",
+    "x14b-waypoint-cross"
+   ],
+   "changes": [
+    "ONE LIT LINE: a single lit line from the screen (the tube, the typed question) down into the list's 'now' marker, a real wire from the live thing to the next thing due. The judges praised it most (Desk's patch lead; Lit Manual's dial-to-now wire was the best version). (donor: x14b-manual-cross, x14b-desk-cross; translate it, never copy its colours or its page)",
+    "A COUNT STRIP under the page head, 'Today \u00b7 Plans 4 \u00b7 To do 4 \u00b7 Late 3 \u00b7 Ideas 12', each count a link to its page (from Waypoint; Lit Manual, Dessau and Folio took it too). (donor: x14b-waypoint-cross; translate it, never copy its colours or its page)",
+    "A ROUND DIAL THAT SHOWS REAL DAYS: this week's days at their true positions with today lit (Lit Manual, Dessau). Trap: the skeptic found Lit Manual's dial set later days at clock positions that mean nothing; every mark must mean something. (donor: x14b-manual-cross, x14b-dessau-cross; translate it, never copy its colours or its page)",
+    "FOLIO'S TYPE PAIRING: serif headings, light serif figures and small-caps units (the type judge's top pick). (donor: x14b-folio-cross; translate it, never copy its colours or its page)",
+    "ONE BIG FIGURE LEADING EACH SECTION, from Listing (the skeptic: 'the standard to adopt'). (donor: x14b-quote-cross; translate it, never copy its colours or its page)"
+   ]
+  },
+  {
+   "kind": "features",
+   "parent": "r11-idea-2",
+   "parentName": "Long Persistence",
+   "parentMean": 7.02,
+   "todayMean": 4.72,
+   "parentFixes": "the round-13 judges' fixes for it are in /tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r14/parent-fixes/r11-idea-2.md; read them. Fixes asked of many designs: keep one lamp lit in the page footer at rest; drop footer legend strips; bring every control up to 44px; give The kids' wishes real rows; put Desk's title above Next up; the page's title line may say 'Tell Vera what to plan.' (the judges' suggested fix); and every filter, sort or toggle you draw must really work.",
+   "donors": [
+    "x14b-desk-cross",
+    "x14b-folio-cross",
+    "x14b-manual-cross",
+    "x14b-trued-cross",
+    "x14b-waypoint-cross"
+   ],
+   "changes": [
+    "ONE LIT LINE: a single lit line from the screen (the tube, the typed question) down into the list's 'now' marker, a real wire from the live thing to the next thing due. The judges praised it most (Desk's patch lead; Lit Manual's dial-to-now wire was the best version). (donor: x14b-manual-cross, x14b-desk-cross; translate it, never copy its colours or its page)",
+    "A COUNT STRIP under the page head, 'Today \u00b7 Plans 4 \u00b7 To do 4 \u00b7 Late 3 \u00b7 Ideas 12', each count a link to its page (from Waypoint; Lit Manual, Dessau and Folio took it too). (donor: x14b-waypoint-cross; translate it, never copy its colours or its page)",
+    "LARGE DAY NUMBERS with the month and weekday stacked beside them, as in Desk's Coming up list (the type judge called it the best list typesetting in the field). (donor: x14b-desk-cross; translate it, never copy its colours or its page)",
+    "FOLIO'S TYPE PAIRING: serif headings, light serif figures and small-caps units (the type judge's top pick). (donor: x14b-folio-cross; translate it, never copy its colours or its page)",
+    "A SECTION-HEAD RULE WITH AN END MARK on every page, from Trued (the system judge's top pick). (donor: x14b-trued-cross; translate it, never copy its colours or its page)"
+   ]
+  },
+  {
+   "kind": "features",
+   "parent": "r13-wild-1",
+   "parentName": "Phosphor Blueprint",
+   "parentMean": 6.16,
+   "todayMean": 4.72,
+   "parentFixes": "the round-13 judges' fixes for it are in /tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r14/parent-fixes/r13-wild-1.md; read them. Fixes asked of many designs: keep one lamp lit in the page footer at rest; drop footer legend strips; bring every control up to 44px; give The kids' wishes real rows; put Desk's title above Next up; the page's title line may say 'Tell Vera what to plan.' (the judges' suggested fix); and every filter, sort or toggle you draw must really work.",
+   "donors": [
+    "x14b-desk-cross",
+    "x14b-dessau-cross",
+    "x14b-folio-cross",
+    "x14b-manual-cross",
+    "x14b-trued-cross",
+    "x14b-waypoint-cross"
+   ],
+   "changes": [
+    "A COUNT STRIP under the page head, 'Today \u00b7 Plans 4 \u00b7 To do 4 \u00b7 Late 3 \u00b7 Ideas 12', each count a link to its page (from Waypoint; Lit Manual, Dessau and Folio took it too). (donor: x14b-waypoint-cross; translate it, never copy its colours or its page)",
+    "A ROUND DIAL THAT SHOWS REAL DAYS: this week's days at their true positions with today lit (Lit Manual, Dessau). Trap: the skeptic found Lit Manual's dial set later days at clock positions that mean nothing; every mark must mean something. (donor: x14b-manual-cross, x14b-dessau-cross; translate it, never copy its colours or its page)",
+    "FOLIO'S TYPE PAIRING: serif headings, light serif figures and small-caps units (the type judge's top pick). (donor: x14b-folio-cross; translate it, never copy its colours or its page)",
+    "A SECTION-HEAD RULE WITH AN END MARK on every page, from Trued (the system judge's top pick). (donor: x14b-trued-cross; translate it, never copy its colours or its page)",
+    "A STATUS LINE ON THE GLASS: '4 plans \u00b7 3 late \u00b7 Vera is listening' (a line of facts, in the machine's words). (donor: x14b-desk-cross; translate it, never copy its colours or its page)"
+   ]
+  },
+  {
+   "kind": "features",
+   "parent": "r13-wild-4",
+   "parentName": "Grid Console",
+   "parentMean": 6.16,
+   "todayMean": 4.72,
+   "parentFixes": "the round-13 judges' fixes for it are in /tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r14/parent-fixes/r13-wild-4.md; read them. Fixes asked of many designs: keep one lamp lit in the page footer at rest; drop footer legend strips; bring every control up to 44px; give The kids' wishes real rows; put Desk's title above Next up; the page's title line may say 'Tell Vera what to plan.' (the judges' suggested fix); and every filter, sort or toggle you draw must really work.",
+   "donors": [
+    "x14b-desk-cross",
+    "x14b-dessau-cross",
+    "x14b-folio-cross",
+    "x14b-manual-cross",
+    "x14b-trued-cross",
+    "x14b-waypoint-cross"
+   ],
+   "changes": [
+    "ONE LIT LINE: a single lit line from the screen (the tube, the typed question) down into the list's 'now' marker, a real wire from the live thing to the next thing due. The judges praised it most (Desk's patch lead; Lit Manual's dial-to-now wire was the best version). (donor: x14b-manual-cross, x14b-desk-cross; translate it, never copy its colours or its page)",
+    "A COUNT STRIP under the page head, 'Today \u00b7 Plans 4 \u00b7 To do 4 \u00b7 Late 3 \u00b7 Ideas 12', each count a link to its page (from Waypoint; Lit Manual, Dessau and Folio took it too). (donor: x14b-waypoint-cross; translate it, never copy its colours or its page)",
+    "A ROUND DIAL THAT SHOWS REAL DAYS: this week's days at their true positions with today lit (Lit Manual, Dessau). Trap: the skeptic found Lit Manual's dial set later days at clock positions that mean nothing; every mark must mean something. (donor: x14b-manual-cross, x14b-dessau-cross; translate it, never copy its colours or its page)",
+    "FOLIO'S TYPE PAIRING: serif headings, light serif figures and small-caps units (the type judge's top pick). (donor: x14b-folio-cross; translate it, never copy its colours or its page)",
+    "A SECTION-HEAD RULE WITH AN END MARK on every page, from Trued (the system judge's top pick). (donor: x14b-trued-cross; translate it, never copy its colours or its page)"
+   ]
+  },
+  {
+   "kind": "features",
+   "parent": "r13-wild-2",
+   "parentName": "Signal Catalogue",
+   "parentMean": 5.71,
+   "todayMean": 4.72,
+   "parentFixes": "the round-13 judges' fixes for it are in /tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r14/parent-fixes/r13-wild-2.md; read them. Fixes asked of many designs: keep one lamp lit in the page footer at rest; drop footer legend strips; bring every control up to 44px; give The kids' wishes real rows; put Desk's title above Next up; the page's title line may say 'Tell Vera what to plan.' (the judges' suggested fix); and every filter, sort or toggle you draw must really work.",
+   "donors": [
+    "x14b-desk-cross",
+    "x14b-folio-cross",
+    "x14b-quote-cross",
+    "x14b-trued-cross",
+    "x14b-waypoint-cross"
+   ],
+   "changes": [
+    "A COUNT STRIP under the page head, 'Today \u00b7 Plans 4 \u00b7 To do 4 \u00b7 Late 3 \u00b7 Ideas 12', each count a link to its page (from Waypoint; Lit Manual, Dessau and Folio took it too). (donor: x14b-waypoint-cross; translate it, never copy its colours or its page)",
+    "LARGE DAY NUMBERS with the month and weekday stacked beside them, as in Desk's Coming up list (the type judge called it the best list typesetting in the field). (donor: x14b-desk-cross; translate it, never copy its colours or its page)",
+    "FOLIO'S TYPE PAIRING: serif headings, light serif figures and small-caps units (the type judge's top pick). (donor: x14b-folio-cross; translate it, never copy its colours or its page)",
+    "A SECTION-HEAD RULE WITH AN END MARK on every page, from Trued (the system judge's top pick). (donor: x14b-trued-cross; translate it, never copy its colours or its page)",
+    "ONE BIG FIGURE LEADING EACH SECTION, from Listing (the skeptic: 'the standard to adopt'). (donor: x14b-quote-cross; translate it, never copy its colours or its page)"
+   ]
+  }
+ ],
+ "wild": [],
+ "wildMutants": [],
+ "nInformed": 0,
+ "history": [
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/round1/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/final.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r2/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r3/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r4/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r5/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r6/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r7/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r8/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r9/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r10/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r11/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r12/results.json",
+  "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/rounds/r13/results.json"
+ ],
+ "panel": "screen"
+}

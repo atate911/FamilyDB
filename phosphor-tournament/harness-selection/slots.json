@@ -1,0 +1,24 @@
+{
+ "slots": [
+  {"key": "head", "what": "the page head: title line, the page's one primary action, count or readout strip, running head", "experts": ["systemuse", "skeptic"]},
+  {"key": "glass", "what": "the machine: the tube or terminal, the typed question, Vera's presence, the status line on the glass", "experts": ["soul", "feedback"]},
+  {"key": "list", "what": "a list row or band: Coming up, To do, Lately added: designator, day numeral, body, facts column, row rhythm", "experts": ["skeptic"]},
+  {"key": "figure", "what": "figures that draw data: counts, the big figure leading a section, dials, scopes, meters, trend traces", "experts": ["skeptic", "soul"]},
+  {"key": "rule", "what": "structure: section heads, rules and delimiters, end marks, trays, plates, boxes, rounding", "experts": ["system", "skeptic"]},
+  {"key": "signal", "what": "state and signals: lamps, dots, the NOW marker and the lit line to it, late, done, off, needs a look", "experts": ["systemuse", "soul"]},
+  {"key": "type", "what": "the type system: faces and pairing, scale, tracking, leading, figures, small caps, running heads", "experts": ["style", "type"]},
+  {"key": "colour", "what": "colour and material: ground, neutrals, the companions to the green, case and plate materials", "experts": ["feedback", "style"]},
+  {"key": "controls", "what": "controls: buttons, filters and toggles, selects, fields, focus and hover, target size", "experts": ["systemuse", "interaction", "usability"]},
+  {"key": "chat", "what": "the conversation: thread, bubbles or log, the composer, the Home box, ways to start", "experts": ["feedback", "usability"]},
+  {"key": "light", "what": "the CRT light: halo, bloom, scanlines, afterglow, and where it is allowed to show", "experts": ["soul"]},
+  {"key": "foot", "what": "the frame: the bar and tabs, the phone's tab bar, the footer and its lamp", "experts": ["systemuse", "system"]}
+ ],
+ "visible": {
+  "feedback": ["head", "glass", "chat", "colour", "type", "rule"],
+  "style": ["type", "colour", "head", "rule", "glass"],
+  "soul": ["light", "glass", "head", "signal", "figure"],
+  "systemuse": ["controls", "foot", "signal", "chat", "head"],
+  "skeptic": ["list", "figure", "rule", "signal", "head"]
+ },
+ "points": {"best": 2, "runner": 1, "expert": 1.5, "final": 1.5}
+}
