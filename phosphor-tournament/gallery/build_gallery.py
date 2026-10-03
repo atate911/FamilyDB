@@ -66,6 +66,13 @@ LENSES = {
     "usability": "Usability",
     "product": "Product",
     "skeptic": "Skeptic",
+    "systemuse": "System and use",
+    # From round 14 a round is judged by a screen of five lenses, then a final of all eight.
+    "screen-feedback": "Screen: owner's judge",
+    "screen-soul": "Screen: phosphor soul",
+    "screen-style": "Screen: style",
+    "screen-systemuse": "Screen: system and use",
+    "screen-skeptic": "Screen: skeptic",
 }
 
 
