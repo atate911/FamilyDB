@@ -1,0 +1,31 @@
+# Round 15: elements
+
+## The best element in each slot (share of the votes the slot could earn; best 2 points, runner 1, expert lens x1.5, final x1.5)
+
+- **head**: r15-mut-4 (Track Diagram Counted) 65%: serif title with a typed count in the page colour standing on the masthead rule; wild-1 uses a huge thin section numeral; Serif title with a page-coloured typed count and unit beside it, standing on the masthead rule; r15-wild-1 (Swiss Thread) 60%: Huge thin numeral in the section colour with a flush-left bold title and grey lede; or the drafting title block with SHEET, NOTE, DO and NO. cells and the primary key in it; flush-left bold grotesque title leading the page with a grey lede and section-coloured numeral; count beside the title as runner; r15-mut-10 (Grid Console Single Line) 15%: 
+- **glass**: r15-head-3 (Grid Console, merged) 38%: Next up tube sitting on the rail with a faint scale below, plus a lit status line under the question; r13-idea-1 (Desk Terminal, Joined) 38%: one tube holding the VERA line, Next up, scope and the typed question in VT323; r15-mut-4 (Track Diagram Counted) 31%: 
+- **list**: r15-head-1 (Track Diagram Aglow, merged) 80%: To do as a dated spine with nodes and a lit NOW; faint alternate-row band as a runner; r15-head-3 (Grid Console, merged) 40%: Coming up as dated plates hanging from a lit NOW rail; To do as dotted rail with the due time in the margin; r15-mut-8 (Blueprint, Bone Bands) 30%: 
+- **figure**: r13-idea-1 (Desk Terminal, Joined) 50%: moving-coil spend dial in phosphor with a limit mark on the Status tube, with the $0.00 VT323 readout; r15-mut-9 (Grid Console Gauged) 50%: Moving-coil spend gauge on a tube, lit needle with a ghost average-day needle; r14-mut-3 (Desk Terminal, Banded) 25%: 
+- **rule**: r15-head-3 (Grid Console, merged) 60%: Section head as a serif title and icon on a thin rail in the section's colour; r15-mut-12 (Signal Catalogue, Ruled) 50%: ; r15-mut-7 (Blueprint, Pencilled Ends) 40%: Section rule ending in a solid coloured block, in the section's pencil; or a titled rule trailing a lit rail
+- **signal**: r15-head-1 (Track Diagram Aglow, merged) 38%: lit nodes strung on a vertical rail; the lamp status line under the question; r15-mut-4 (Track Diagram Counted) 38%: ; r15-mut-6 (Tallied Lamp Line) 38%: one mono lamp line under the question saying what Vera is doing and whether anything waits
+- **type**: r15-wild-1 (Swiss Thread) 60%: Inter with an optical size, huge thin section numerals, Geist Mono small caps at 0.72rem; or light Fraunces figures a size above their text; r15-mut-3 (Folio Dial, Ready Line) 40%: Fraunces display serif page titles at large optical size over mono labels and sans body; r15-mut-10 (Grid Console Single Line) 30%: 
+- **colour**: r15-mut-4 (Track Diagram Counted) 50%: Teal-black ground with warm cream ink, plus thin section-coloured lines and sage and cyan companions; r15-mut-7 (Blueprint, Pencilled Ends) 50%: Green-black glass in a steel-slate case, with each sheet's hairlines drawn in its own pencil colour (cyan, violet, pink, amber); r15-mut-2 (Desk Terminal, Rule-Marked) 25%: 
+- **controls**: r15-mut-1 (Desk Terminal, Serif Keys) 60%: raised graphite select key with a steel chevron that flips open onto a plain plate list, plus a brighter raised Send; r15-head-2 (Phosphor Blueprint, merged) 40%: Show filter as a row of lit-dot keys with a squared search field and Filter key; r15-mut-6 (Tallied Lamp Line) 30%: 
+- **chat**: r15-mut-3 (Folio Dial, Ready Line) 60%: Thread hanging from Vera's mark, opening on a headed question with 'mind' lit and times in the margin; r15-mut-10 (Grid Console Single Line) 40%: one panel with bold question and lit key word, a From bar with mic and Send, then compact outlined starters; r15-head-1 (Track Diagram Aglow, merged) 30%: 
+- **light**: r15-mut-10 (Grid Console Single Line) 60%: three-layer halo on the one lit word 'mind' in the Home panel, bright Send, halo kept for the live word only; r15-mut-7 (Blueprint, Pencilled Ends) 50%: ; r15-mut-9 (Grid Console Gauged) 40%: White-hot NOW lamp on a lit rail, a footer pilot lamp, and a halo only on the live words
+- **foot**: r15-mut-2 (Desk Terminal, Rule-Marked) 60%: phone tab bar with the current page marked by a short coloured rule under its label; keyed tab bar as runner; r15-mut-9 (Grid Console Gauged) 40%: A single pilot lamp lit on the footer horizon with a lit run either side; or a numbered top bar with a lit segment under the mark; r15-head-4 (Signal Catalogue, merged) 30%: 
+
+## Children against their parents (screen mean delta; per changed slot the element votes, child vs parent)
+
+- r15-mut-1 (Desk Terminal, Banded) delta -0.15: controls won (60% v 0%), list unseen (0% v 0%), type unseen (0% v 0%) -> survives
+- r15-mut-2 (Desk Terminal, Banded) delta -0.05: colour won (25% v 0%), figure lost (0% v 25%), foot won (60% v 0%) -> survives
+- r15-mut-3 (Track Diagram Aglow, merged) delta -0.06: type won (40% v 0%), chat won (60% v 30%), glass unseen (0% v 0%) -> survives
+- r15-mut-4 (Track Diagram Aglow, merged) delta 0.34: head won (65% v 0%), glass won (31% v 0%), colour won (50% v 0%) -> survives
+- r15-mut-5 (Long Persistence Tallied) delta 0.07: figure won (25% v 0%), head unseen (0% v 0%), glass unseen (0% v 0%) -> survives
+- r15-mut-6 (Long Persistence Tallied) delta -0.12: signal won (38% v 0%), figure unseen (0% v 0%), controls won (30% v 0%) -> survives
+- r15-mut-7 (Phosphor Blueprint, merged) delta 0.01: colour won (50% v 0%), rule won (40% v 0%), light won (50% v 0%) -> survives
+- r15-mut-8 (Phosphor Blueprint, merged) delta -0.17: colour unseen (0% v 0%), signal unseen (0% v 0%), list won (30% v 0%) -> survives
+- r15-mut-9 (Grid Console, merged) delta 0.01: figure won (50% v 0%), signal won (25% v 0%), foot won (40% v 0%) -> survives
+- r15-mut-10 (Grid Console, merged) delta 0.1: chat won (40% v 0%), head won (15% v 0%), type tied (30% v 20%) -> survives
+- r15-mut-11 (Signal Catalogue, merged) delta -0.06: figure unseen (0% v 0%), signal tied (12% v 0%), controls unseen (0% v 0%) -> culled
+- r15-mut-12 (Signal Catalogue, merged) delta 0.1: rule won (50% v 0%), foot lost (0% v 30%), list unseen (0% v 0%) -> survives

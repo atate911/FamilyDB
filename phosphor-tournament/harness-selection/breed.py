@@ -89,9 +89,23 @@ def open_round(prev_name, name):
     for v in P["verdicts"]:
         children_of.setdefault(v["parent"], []).append(v)
 
+    # 0. the weakest lineage, two rounds running, is retired (and gets no merge)
+    ranked = sorted(state["lineages"], key=lambda L: -mean.get(L["head"], 0))
+    for L in ranked[-2:]:
+        L["stale"] += 1
+    for L in ranked[:-2]:
+        L["stale"] = 0
+    retire = [L for L in ranked[-2:] if L["stale"] >= RETIRE_AFTER]
+    dead = retire[-1] if retire and len(ranked) >= 4 else None
+    leader = ranked[0]
+    for L in state["lineages"]:
+        L["prev_head"], L["prev_name"] = L["head"], L["name"]   # the design that existed this round; a merge's result does not yet
+
     # 1. what each lineage takes
     merges, heads = [], []
     for L in state["lineages"]:
+        if L is dead:
+            continue
         kids = children_of.get(L["head"], [])
         kept = [(v, s) for v in kids for s in v["slots"] if s["slot"] in v["kept"]]
         L["culled"] += [s["text"] for v in kids for s in v["slots"] if s["slot"] not in v["kept"]]
@@ -112,7 +126,7 @@ def open_round(prev_name, name):
                 mid = f"{name}-head-{len(merges) + 1}"
                 merges.append({"id": mid, "base": L["head"], "baseName": L["name"], "lifts": picked, "lineage": L["key"]})
                 L["kept"] = [{"slot": x["slot"], "text": x["text"]} for x in picked]
-                L["head"], L["name"] = mid, f"{L['name']}, merged"
+                L["head"], L["name"] = mid, (L["name"] if L["name"].endswith(", merged") else f"{L['name']}, merged")
         else:
             whole = [v for v in kids if v["survives"] and not any(x["verdict"] == "lost" for x in v["slots"])]
             if whole:  # nothing won a slot, but a child's whole page beat its parent's with nothing lost: it becomes the head
@@ -126,29 +140,28 @@ def open_round(prev_name, name):
         heads.append(L)
 
     wanted_allstar = []
-    # 2. the weakest lineage, two rounds running, is replaced by an all-star
-    ranked = sorted(state["lineages"], key=lambda L: -mean.get(L["head"], mean.get(L["key"], 0)))
-    for L in ranked[-2:]:
-        L["stale"] += 1
-    for L in ranked[:-2]:
-        L["stale"] = 0
-    retire = [L for L in ranked[-2:] if L["stale"] >= RETIRE_AFTER]
-    leader = ranked[0]
-    if retire and len(ranked) >= 4:
-        L = retire[-1]
-        bin_ = json.loads((HERE / "parts-bin.json").read_text())
-        lifts = []
-        for slot in SLOTS:
-            top = next((r for r in bin_.get(slot, []) if r["id"] not in (leader["head"], "00-current")), None)
-            if top and top["share"] >= TH["bin_share"]:
-                lifts.append((top["share"] * WEIGHT[slot], {"slot": slot, "child": top["id"], "childName": top["name"], "text": "; ".join(top.get("what", [])[:2]) or f"{slot} element of {top['name']}"}))
-        lifts = [x for _, x in sorted(lifts, key=lambda t: -t[0])[:3]]
-        for l in lifts:
-            wanted_allstar.append({"slot": l["slot"], "id": l["child"], "name": l["childName"], "what": [l["text"]]})
-        if lifts:
-            mid = f"{name}-head-{len(merges) + 1}"
-            merges.append({"id": mid, "base": leader["head"], "baseName": leader["name"], "lifts": lifts, "lineage": "allstar"})
-            L.update({"key": f"allstar-{no}", "head": mid, "name": f"{leader['name']}, all-star", "stale": 0, "culled": [], "kept": []})
+    # 2. the retired lineage is replaced: by last round's wild design if it placed in the top half of the field,
+    #    otherwise by an all-star (the leader with the parts bin's best elements merged in where it is weakest)
+    if dead is not None:
+        field = sorted(mean, key=lambda i: -mean[i])
+        wilds = [i for i in field if i.startswith(f"{prev_name}-wild-") and field.index(i) < len(field) / 2]
+        if wilds:
+            w = wilds[0]
+            dead.update({"key": f"wild-{no - 1}", "head": w, "name": nameof.get(w, w), "stale": 0, "culled": [], "kept": [], "won": {}, "prev_head": w, "prev_name": nameof.get(w, w)})
+        else:
+            bin_ = json.loads((HERE / "parts-bin.json").read_text())
+            lifts = []
+            for slot in SLOTS:
+                top = next((r for r in bin_.get(slot, []) if r["id"] not in (leader["prev_head"], "00-current")), None)
+                if top and top["share"] >= TH["bin_share"]:
+                    lifts.append((top["share"] * WEIGHT[slot], {"slot": slot, "child": top["id"], "childName": top["name"], "text": "; ".join(top.get("what", [])[:2]) or f"{slot} element of {top['name']}"}))
+            lifts = [x for _, x in sorted(lifts, key=lambda t: -t[0])[:3]]
+            for l in lifts:
+                wanted_allstar.append({"slot": l["slot"], "id": l["child"], "name": l["childName"], "what": [l["text"]]})
+            if lifts:
+                mid = f"{name}-head-{len(merges) + 1}"
+                merges.append({"id": mid, "base": leader["prev_head"], "baseName": leader["prev_name"], "lifts": lifts, "lineage": "allstar"})
+                dead.update({"key": f"allstar-{no}", "head": mid, "name": f"{leader['prev_name']}, all-star", "stale": 0, "culled": [], "kept": [], "won": {}})
 
     # 3. children
     bin_ = json.loads((HERE / "parts-bin.json").read_text())
@@ -178,7 +191,7 @@ def open_round(prev_name, name):
                 used.add(slot)
                 pool = [t for t in TWEAKS[slot] if t not in L["culled"]] or TWEAKS[slot]
                 changes.append({"slot": slot, "text": rng.choice(pool)})
-            mutants.append({"kind": "step", "parent": head, "parentName": L["name"], "parentMean": mean.get(head, mean.get(L["key"], 0)), "changes": changes})
+            mutants.append({"kind": "step", "parent": head, "parentName": L["name"], "parentMean": mean.get(L["prev_head"], 0), "changes": changes})
 
     # 4. the folder, with every design it needs
     if dst.exists():

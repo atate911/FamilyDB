@@ -1,0 +1,496 @@
+{
+ "round": "r16",
+ "roundNo": 16,
+ "mode": "selection",
+ "carried": [
+  {
+   "id": "r16-head-1",
+   "name": "Desk Terminal, Banded, merged",
+   "summary": "Lineage r13-mut-2: head of the line, entered as the bar its children are measured against. Last round it kept: colour, foot, controls."
+  },
+  {
+   "id": "r16-head-2",
+   "name": "Track Diagram Aglow, merged",
+   "summary": "Lineage r13-mut-4: head of the line, entered as the bar its children are measured against. Last round it kept: head, glass, colour, type, chat."
+  },
+  {
+   "id": "r16-head-3",
+   "name": "Long Persistence Tallied, merged",
+   "summary": "Lineage r11-idea-2: head of the line, entered as the bar its children are measured against. Last round it kept: figure, signal, controls."
+  },
+  {
+   "id": "r16-head-4",
+   "name": "Phosphor Blueprint, merged",
+   "summary": "Lineage r13-wild-1: head of the line, entered as the bar its children are measured against. Last round it kept: colour, rule, light, list."
+  },
+  {
+   "id": "r16-head-5",
+   "name": "Grid Console, merged",
+   "summary": "Lineage r13-wild-4: head of the line, entered as the bar its children are measured against. Last round it kept: chat, head, figure, signal, foot."
+  },
+  {
+   "id": "r15-wild-1",
+   "name": "Swiss Thread",
+   "summary": "Lineage wild-15: head of the line, entered as the bar its children are measured against."
+  },
+  {
+   "id": "r13-idea-1",
+   "name": "Desk Terminal, Joined",
+   "summary": "A reference from the early rounds, entered unchanged as a bar for the whole field; it has no children."
+  }
+ ],
+ "wildCarried": [],
+ "seeds": [],
+ "mutants": [
+  {
+   "kind": "step",
+   "parent": "r16-head-1",
+   "parentName": "Desk Terminal, Banded, merged",
+   "parentMean": 6.64,
+   "changes": [
+    {
+     "slot": "colour",
+     "text": "Teal-black ground with warm cream ink, plus thin section-coloured lines and sage and cyan companions",
+     "donor": "r15-mut-4",
+     "donorName": "Track Diagram Counted",
+     "spec": "{D}/parts/colour--r15-mut-4.md"
+    },
+    {
+     "slot": "glass",
+     "text": "let the glass fold to a single Ready line whenever nothing is live"
+    },
+    {
+     "slot": "type",
+     "text": "set numerals in a light weight one size above their text"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r16-head-1",
+   "parentName": "Desk Terminal, Banded, merged",
+   "parentMean": 6.64,
+   "changes": [
+    {
+     "slot": "figure",
+     "text": "moving-coil spend dial in phosphor with a limit mark on the Status tube, with the $0.00 VT323 readout",
+     "donor": "r13-idea-1",
+     "donorName": "Desk Terminal, Joined",
+     "spec": "{D}/parts/figure--r13-idea-1.md"
+    },
+    {
+     "slot": "list",
+     "text": "make the first word of each row's label medium weight and the rest regular"
+    },
+    {
+     "slot": "type",
+     "text": "set numerals in a light weight one size above their text"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r16-head-2",
+   "parentName": "Track Diagram Aglow, merged",
+   "parentMean": 7.0,
+   "changes": [
+    {
+     "slot": "list",
+     "text": "To do as a dated spine with nodes and a lit NOW; faint alternate-row band as a runner",
+     "donor": "r15-head-1",
+     "donorName": "Track Diagram Aglow, merged",
+     "spec": "{D}/parts/list--r15-head-1.md"
+    },
+    {
+     "slot": "colour",
+     "text": "push this one step further, as the same idea made more of: shift the ground one step cooler and the neutrals one step warmer"
+    },
+    {
+     "slot": "glass",
+     "text": "add one line of status under the question in the machine's mono voice (what she is doing now)"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r16-head-2",
+   "parentName": "Track Diagram Aglow, merged",
+   "parentMean": 7.0,
+   "changes": [
+    {
+     "slot": "colour",
+     "text": "Teal-black ground with warm cream ink, plus thin section-coloured lines and sage and cyan companions",
+     "donor": "r15-mut-4",
+     "donorName": "Track Diagram Counted",
+     "spec": "{D}/parts/colour--r15-mut-4.md"
+    },
+    {
+     "slot": "light",
+     "text": "give the primary action a short afterglow when it is pressed"
+    },
+    {
+     "slot": "rule",
+     "text": "round every box and panel one step less"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r16-head-3",
+   "parentName": "Long Persistence Tallied, merged",
+   "parentMean": 6.17,
+   "changes": [
+    {
+     "slot": "list",
+     "text": "To do as a dated spine with nodes and a lit NOW; faint alternate-row band as a runner",
+     "donor": "r15-head-1",
+     "donorName": "Track Diagram Aglow, merged",
+     "spec": "{D}/parts/list--r15-head-1.md"
+    },
+    {
+     "slot": "controls",
+     "text": "push this one step further, as the same idea made more of: set the select menus as a plain button that opens a list, with a chevron"
+    },
+    {
+     "slot": "type",
+     "text": "set labels in small caps with +0.08em tracking"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r16-head-3",
+   "parentName": "Long Persistence Tallied, merged",
+   "parentMean": 6.17,
+   "changes": [
+    {
+     "slot": "head",
+     "text": "serif title with a typed count in the page colour standing on the masthead rule; wild-1 uses a huge thin section numeral; Serif title with a page-coloured typed count and unit beside it, standing on the masthead rule",
+     "donor": "r15-mut-4",
+     "donorName": "Track Diagram Counted",
+     "spec": "{D}/parts/head--r15-mut-4.md"
+    },
+    {
+     "slot": "rule",
+     "text": "end every section's rule with a small solid end mark"
+    },
+    {
+     "slot": "figure",
+     "text": "draw the count as a row of small ticks instead of a number where the count is under ten"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r16-head-4",
+   "parentName": "Phosphor Blueprint, merged",
+   "parentMean": 7.28,
+   "changes": [
+    {
+     "slot": "colour",
+     "text": "Teal-black ground with warm cream ink, plus thin section-coloured lines and sage and cyan companions",
+     "donor": "r15-mut-4",
+     "donorName": "Track Diagram Counted",
+     "spec": "{D}/parts/colour--r15-mut-4.md"
+    },
+    {
+     "slot": "signal",
+     "text": "make the live lamp breathe slowly (a 4 second ease) only while she is answering"
+    },
+    {
+     "slot": "head",
+     "text": "add a running head (the page's name in small caps, tracked) above the title"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r16-head-4",
+   "parentName": "Phosphor Blueprint, merged",
+   "parentMean": 7.28,
+   "changes": [
+    {
+     "slot": "foot",
+     "text": "A single pilot lamp lit on the footer horizon with a lit run either side; or a numbered top bar with a lit segment under the mark",
+     "donor": "r15-mut-9",
+     "donorName": "Grid Console Gauged",
+     "spec": "{D}/parts/foot--r15-mut-9.md"
+    },
+    {
+     "slot": "signal",
+     "text": "make the live lamp breathe slowly (a 4 second ease) only while she is answering"
+    },
+    {
+     "slot": "head",
+     "text": "turn the head's secondary links into a quiet row under the title, separated by thin middle dots"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r16-head-5",
+   "parentName": "Grid Console, merged",
+   "parentMean": 7.59,
+   "changes": [
+    {
+     "slot": "head",
+     "text": "serif title with a typed count in the page colour standing on the masthead rule; wild-1 uses a huge thin section numeral; Serif title with a page-coloured typed count and unit beside it, standing on the masthead rule",
+     "donor": "r15-mut-4",
+     "donorName": "Track Diagram Counted",
+     "spec": "{D}/parts/head--r15-mut-4.md"
+    },
+    {
+     "slot": "foot",
+     "text": "push this one step further, as the same idea made more of: keep one lamp lit in the page footer at rest"
+    },
+    {
+     "slot": "signal",
+     "text": "draw 'waiting' as a steel dot and 'off' as a pewter ring, nothing red"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r16-head-5",
+   "parentName": "Grid Console, merged",
+   "parentMean": 7.59,
+   "changes": [
+    {
+     "slot": "figure",
+     "text": "moving-coil spend dial in phosphor with a limit mark on the Status tube, with the $0.00 VT323 readout",
+     "donor": "r13-idea-1",
+     "donorName": "Desk Terminal, Joined",
+     "spec": "{D}/parts/figure--r13-idea-1.md"
+    },
+    {
+     "slot": "light",
+     "text": "add the layered halo to the live list's lit words only, and nothing else"
+    },
+    {
+     "slot": "list",
+     "text": "set a thin dotted leader from each row's label to its facts"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r15-wild-1",
+   "parentName": "Swiss Thread",
+   "parentMean": 7.18,
+   "changes": [
+    {
+     "slot": "controls",
+     "text": "raised graphite select key with a steel chevron that flips open onto a plain plate list, plus a brighter raised Send",
+     "donor": "r15-mut-1",
+     "donorName": "Desk Terminal, Serif Keys",
+     "spec": "{D}/parts/controls--r15-mut-1.md"
+    },
+    {
+     "slot": "type",
+     "text": "set headings in a serif from the library and keep labels in the mono"
+    },
+    {
+     "slot": "foot",
+     "text": "mark the current page in the bar with a short rule under it instead of a pill"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r15-wild-1",
+   "parentName": "Swiss Thread",
+   "parentMean": 7.18,
+   "changes": [
+    {
+     "slot": "controls",
+     "text": "raised graphite select key with a steel chevron that flips open onto a plain plate list, plus a brighter raised Send",
+     "donor": "r15-mut-1",
+     "donorName": "Desk Terminal, Serif Keys",
+     "spec": "{D}/parts/controls--r15-mut-1.md"
+    },
+    {
+     "slot": "type",
+     "text": "set labels in small caps with +0.08em tracking"
+    },
+    {
+     "slot": "colour",
+     "text": "shift the ground one step cooler and the neutrals one step warmer"
+    }
+   ]
+  }
+ ],
+ "wild": [
+  {
+   "language": "a poster: the greeting as one huge typographic statement, everything else small",
+   "twist": "a navigation that is the page: a large index or map of the app is the home",
+   "companion_hue_deg": 93,
+   "slot": 1
+  }
+ ],
+ "wildMutants": [],
+ "nInformed": 0,
+ "history": [],
+ "panel": "screen",
+ "merges": [
+  {
+   "id": "r16-head-1",
+   "base": "r14-mut-3",
+   "baseName": "Desk Terminal, Banded",
+   "lifts": [
+    {
+     "slot": "colour",
+     "child": "r15-mut-2",
+     "childName": "Desk Terminal, Rule-Marked",
+     "text": "Green-black glass, steel-slate case and thin lines in amber and violet, with the least neon in the field"
+    },
+    {
+     "slot": "foot",
+     "child": "r15-mut-2",
+     "childName": "Desk Terminal, Rule-Marked",
+     "text": "mark the current page in the bar with a short rule under it instead of a pill"
+    },
+    {
+     "slot": "controls",
+     "child": "r15-mut-1",
+     "childName": "Desk Terminal, Serif Keys",
+     "text": "Select drawn as a raised button with a chevron that flips open; a clean list; bright Send key"
+    }
+   ],
+   "lineage": "r13-mut-2"
+  },
+  {
+   "id": "r16-head-2",
+   "base": "r15-head-1",
+   "baseName": "Track Diagram Aglow, merged",
+   "lifts": [
+    {
+     "slot": "head",
+     "child": "r15-mut-4",
+     "childName": "Track Diagram Counted",
+     "text": "large typed count figure beside the plate with brass unit and a pencilled line; or 48px title with the page's one action at the right end; Page title plate with a large typed count and unit beside it"
+    },
+    {
+     "slot": "glass",
+     "child": "r15-mut-4",
+     "childName": "Track Diagram Counted",
+     "text": "add one line of status under the question in the machine's mono voice (what she is doing now)"
+    },
+    {
+     "slot": "colour",
+     "child": "r15-mut-4",
+     "childName": "Track Diagram Counted",
+     "text": "shift the ground one step cooler and the neutrals one step warmer"
+    },
+    {
+     "slot": "type",
+     "child": "r15-mut-3",
+     "childName": "Folio Dial, Ready Line",
+     "text": "Fraunces titles and section heads, light lining figures, small-caps units; Fraunces heads with light lining figures and small-cap units; a larger page title with the action at its end"
+    },
+    {
+     "slot": "chat",
+     "child": "r15-mut-3",
+     "childName": "Folio Dial, Ready Line",
+     "text": "push this one step further, as the same idea made more of: put the question's own words as the thread's first line"
+    }
+   ],
+   "lineage": "r13-mut-4"
+  },
+  {
+   "id": "r16-head-3",
+   "base": "r14-mut-7",
+   "baseName": "Long Persistence Tallied",
+   "lifts": [
+    {
+     "slot": "figure",
+     "child": "r15-mut-5",
+     "childName": "Long Persistence Gauged",
+     "text": "Status gauge on the glass with tick scale, lit needle and a big mono readout; or an ECG scope trace"
+    },
+    {
+     "slot": "signal",
+     "child": "r15-mut-6",
+     "childName": "Tallied Lamp Line",
+     "text": "One mono lamp line saying what Vera is doing ('Ready, nothing waiting on Vera'); a steel dot for waiting in place of red"
+    },
+    {
+     "slot": "controls",
+     "child": "r15-mut-6",
+     "childName": "Tallied Lamp Line",
+     "text": "set the select menus as a plain button that opens a list, with a chevron"
+    }
+   ],
+   "lineage": "r11-idea-2"
+  },
+  {
+   "id": "r16-head-4",
+   "base": "r15-head-2",
+   "baseName": "Phosphor Blueprint, merged",
+   "lifts": [
+    {
+     "slot": "colour",
+     "child": "r15-mut-7",
+     "childName": "Blueprint, Pencilled Ends",
+     "text": "Green-black glass, steel-slate case and thin lines in amber and violet, with the least neon in the field"
+    },
+    {
+     "slot": "rule",
+     "child": "r15-mut-7",
+     "childName": "Blueprint, Pencilled Ends",
+     "text": "push this one step further, as the same idea made more of: end every section's rule with a small solid end mark"
+    },
+    {
+     "slot": "light",
+     "child": "r15-mut-7",
+     "childName": "Blueprint, Pencilled Ends",
+     "text": "add the layered halo to the live list's lit words only, and nothing else"
+    },
+    {
+     "slot": "list",
+     "child": "r15-mut-8",
+     "childName": "Blueprint, Bone Bands",
+     "text": "give every other row the faintest ground band"
+    }
+   ],
+   "lineage": "r13-wild-1"
+  },
+  {
+   "id": "r16-head-5",
+   "base": "r15-head-3",
+   "baseName": "Grid Console, merged",
+   "lifts": [
+    {
+     "slot": "chat",
+     "child": "r15-mut-10",
+     "childName": "Grid Console Single Line",
+     "text": "One panel: bold question with a lit key word, composer, From, mic, bright Send, then outlined ways to start"
+    },
+    {
+     "slot": "head",
+     "child": "r15-mut-10",
+     "childName": "Grid Console Single Line",
+     "text": "tighten the head to a single line on desktop, title and count together"
+    },
+    {
+     "slot": "figure",
+     "child": "r15-mut-9",
+     "childName": "Grid Console Gauged",
+     "text": "Status gauge on the glass with tick scale, lit needle and a big mono readout; or an ECG scope trace"
+    },
+    {
+     "slot": "signal",
+     "child": "r15-mut-9",
+     "childName": "Grid Console Gauged",
+     "text": "push this one step further, as the same idea made more of: make the NOW marker a lit tick on the list's rail with the time beside it"
+    },
+    {
+     "slot": "foot",
+     "child": "r15-mut-9",
+     "childName": "Grid Console Gauged",
+     "text": "keep one lamp lit in the page footer at rest"
+    }
+   ],
+   "lineage": "r13-wild-4"
+  }
+ ]
+}

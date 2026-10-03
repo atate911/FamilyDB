@@ -1,0 +1,646 @@
+[
+ {
+  "id": "r15-mut-1",
+  "name": "Desk Terminal, Serif Keys",
+  "tagline": "Desk Terminal, Banded with raised-key selects and a brighter Send, firmer bands that replace the row hairlines, and headings set in Source Serif 4 over mono labels.",
+  "concept": "Desk Terminal, Banded, with three small changes and nothing else touched. The page's pickers become raised graphite keys whose steel chevron flips open onto a plain plate list, and Send is a brighter, raised green key. The faint row band is pushed on: firmer, no hairlines between rows, and the Plans month's alternate weeks banded too. Headings (page titles and section heads) move into Source Serif 4 while the labels stay in Plex Mono caps, so the desk reads as a printed ledger with a lit terminal beside it.",
+  "companions": "Unchanged from the parent: steel and denim for here and links, graphite for the machine, slate for the desk, amber for late, sage for lit states. The new select and Send keys use the parent's own key graphite (#252d32 to --key), --key-edge, steel-cap for the chevron and sage (--lit) for the open chevron and the checkmark. The band is the steel-cap tint, now 9% over the row (was 5%), and 7.5% on the month's alternate weeks.",
+  "decisions": [
+   "CONTROLS: the donor's idea (raised select, chevron that flips on :open, clean list, bright Send) is drawn in the parent's materials, not the donor's: key graphite gradient with a lit top lip and the parent's --key-edge, steel-cap chevron, sage checkmark, a --surface-2 plate with 2.5rem option rows. All of it sits inside @supports (appearance: base-select), so a browser without it keeps the parent's native select and its data-URI chevron. Focus and open keep the 2px green ring and bloom, and I re-stated :focus/:open for .ask .who select because its higher specificity would otherwise have hidden the ring. Send gets an inset top lip, a bottom shade and a ring of its own light, with a stronger hover. It was already solid green, so the change is a raised bevel rather than a new colour.",
+   "LIST: the parent already banded every other row at 5%, so 'more of it' meant three things. The band goes to 9% so it shows on the half-size cards, the 1px hairlines between rows become transparent because the bands now separate rows, and row hover goes from 12% to 20% steel so it still reads against a banded row. I also extended the idea to the Plans month, where alternate weeks get a 7.5% steel band (the cells sampled (18,24,27) against (30,39,45)). This is firmer than 'faintest', which I traded for visibility on the cards.",
+   "TYPE: h1, the page-head h1, h2, .h2 and .band-head h2 are set in Source Serif 4 600 with optical sizing (opsz 60 on titles, 24 on section heads). Titles get tracking -0.018em and leading 1.04. Section heads go from 22px to 24px because the serif sets smaller than the condensed sans it replaces. Labels were already Plex Mono caps, so I only restated the mono for them and left them alone. The question on the glass, the Home h1.ask-question, stays VT323, and every h2/h3 inside .crt is excluded. h3, row titles and body stay in Plex Sans.",
+   "My first pass set labels to mono with a rule that also caught the <label> inside Home's glass question. It re-set the question in Plex Mono and wrapped it to two lines. I removed that selector and re-rendered, and the question is back on one line.",
+   "Everything else is the parent's: tokens, sheet, templates and the rest of its css are unchanged. The sheet path now points at the copied variants/r15-mut-1/sheet.css, and no template was edited."
+  ],
+  "floorsFailed": 0,
+  "measures": "The full render fails no hard check. The one WARN is 'page's words unchanged' (plans, 38% of words differ), the same cause as in the parent's Plans page; I changed no words. ink_on_bg 12.69, brand_on_bg 15.2, brand_neon_vs_today 1.0. Green share of colour per page: home 64.4%, ideas 50.6%, chat 68.7%, status 51.5%. Hue entropy: home 0.493, ideas 0.467, chat 0.46, status 0.467. CIEDE2000 minimums (typical/deutan/protan): kinds 13.6/5.5/7.4, sections 13.6/5.5/6.1. The greeting corners sample (29,35,37) top right and (21,26,29) bottom left. No sideways scroll. The smallest text is 12px.",
+  "strengths": [
+   "The three changes show on the cards: the serif heads on every page, the banding across Home, Ideas, Status, Settings and the Plans month, and the raised select and Send keys on Home, Chat and the use card (the open list with its sage checkmark is clearest there).",
+   "The band, serif and select rules each live in their own labelled block at the end of the palette css and use the parent's tokens, so each lifts out cleanly.",
+   "The serif/mono pairing gives the desk a ledger feel against the VT323 glass, and a clearer rank between title, section head and label than the parent's all-sans heads.",
+   "The select keeps its 2.75rem target and the 2px green focus ring, and falls back to the parent's native select where base-select is missing."
+  ],
+  "weaknesses": [
+   "The band is no longer the faintest. At 9%, with the hairlines gone, it reads as a firm stripe on Ideas and Status, and I traded that quietness for being visible on the half-size cards.",
+   "Serif headings have faded in six earlier rounds and may again. Source Serif sets wider than the condensed sans it replaces, so I raised section heads to 24px, which adds an off-scale step to the parent's written type scale.",
+   "The raised select, the raised steel keys and the latched steel 'here' keys now look alike. The digest warns that raised keys can make selection read backwards.",
+   "The select's closed state differs only slightly from the parent's at half size, because both are dark and bordered. The flipping chevron and the open list show mainly on the use card.",
+   "The month's alternate-week band overlaps the weekend shading and is skipped on today's and outside-month cells, so the pattern is a little uneven.",
+   "Send was already bright green, so that part of the controls change is a subtle bevel and a stronger hover that the cards barely show."
+  ],
+  "elements": [
+   {
+    "slot": "controls",
+    "what": "Palette css block 'CONTROLS', inside @supports (appearance: base-select): select and .ask .who select drawn as a raised graphite key with a steel-cap chevron (select::picker-icon, flipped by select:open::picker-icon), ::picker(select) as a plain --surface-2 plate with 2.5rem option rows and a sage checkmark; .ask .send as a raised bright green key with an inset lip, a ring and a stronger hover."
+   },
+   {
+    "slot": "list",
+    "what": "Palette css block 'LIST': .rows { --band } at 9% steel-cap on every even .row, which also covers .row-wrap > .row. It drops the row hairlines (.rows .row border-bottom transparent), sets a 20% steel hover, and bands the month's alternate weeks with table.month tbody tr:nth-child(even) > td."
+   },
+   {
+    "slot": "type",
+    "what": "Palette css block 'TYPE': --serif is Source Serif 4. h1 and .page-head h1 (not .ask-question, not inside .crt) use opsz 60, tracking -0.018em and leading 1.04. h2, .h2 and .band-head h2 use opsz 24 at 1.5rem. Labels (.eyebrow, .colheads, .said-by strong, table.month th, .band h3) stay in Plex Mono caps."
+   }
+  ]
+ },
+ {
+  "id": "r15-mut-2",
+  "name": "Desk Terminal, Rule-Marked",
+  "tagline": "Desk Terminal, Banded with green-black glass over a steel-slate case, thin section-coloured lines, each section's count set as a large light numeral, and the bar marking the current page with a short rule instead of a pill.",
+  "concept": "Desk Terminal, Banded with three small changes, nothing else touched. The ground goes a breath greener and the slate a breath towards steel-teal, and every band's top edge and the short cap under its head take the colour of what it holds (violet ideas, cyan plans, lemon to do, pink wishes, amber what needs a look), as thin lines, never fills. Each section's count becomes a large light numeral with its unit in small capitals beside it. The bar marks the current page with a short rule in that page's colour under its name instead of a steel pill. It should feel like the same quiet terminal desk, slightly more instrumented and less neon.",
+  "companions": "Unchanged from the parent: steel and denim for here and links, graphite for the machine, slate for the desk, amber for late. The new thin lines borrow the section colours (violet ideas, cyan plans, lemon to do, pink wishes, amber setup/attention/trouble) at about half strength over the rule grey, as a 2px band top edge, a 1px hairline under each band head and a 2.5rem cap on it. Accent stays the parent's steel #82a4b5 (the donor's teal accent would sit within the cyan plans colour).",
+  "decisions": [
+   "COLOUR (graft from Grid Console, Wired, drawn in the parent's own materials): bg #0a0e0d to #091110, surfaces and lines moved from blue-slate (h~210) to a steel-teal slate (h~190: surface #111a1c, surface-2 #172224, surface-3 #1d2a2d, line #1e2c2e, card-edge #27393c, edge #62797d, bar #0e1618, bezel #2a3639, bubble-them #1b2a2e). The brand, screen and bone words are untouched. I did not take the donor's teal accent, hexes, lattice floor or its page.",
+   "COLOUR thin lines: .band carries --c (its content's colour) used for a 2px top edge at 50% over the rule grey and a 2.5rem x 2px cap over a 1px hairline under .band-head. Setup and Worth a look keep the parent's amber-edge top (the olive-bronze pitfall), attention keeps red. Lines only: no tinted fills, in line with 'amber is an edge, never a fill'.",
+   "FIGURE: new .fig (numeral .fig-n at weight 200, 2.5rem, tabular lining figures, bone heading colour; unit .fig-u at 12px, 600, tracked 0.1em, uppercase, label colour). Carried out as reduced capitals rather than font small caps because Plex Sans has no reliable true small caps and synthetic ones were a pitfall. Bone under a section-coloured cap follows the lessons' 'figures in wheat or bone under a 2px section cap'. It lives in a band_head macro argument (count, unit) on Home's six bands, and as fig() on Status's bands, Plans' two, the Ideas count line and the To do count line.",
+   "FOOT: the bar's steel pill is replaced by a 3px x 2.25rem rule in the page's own colour (--accent of the link: violet Ideas, cyan Plans, lemon To do, steel elsewhere), drawn as a background gradient so it needs no pseudo-element and also serves the Settings menu summary and Status. On the phone's tab bar the icon pill is removed and a 4px x 2.25rem rule sits at the tab's foot. The current item's text goes to the heading colour and its icon to the accent.",
+   "Contents plate counts on Home and Status are left as they were, so the same count now appears twice (small in the index, large in the band). I judged the index worth keeping as is rather than touching a fourth thing."
+  ],
+  "floorsFailed": 0,
+  "measures": "Final full render passes every floor: 0 hard failed; one guideline WARN, the page-words share (worst Plans, 38.0% of words differ, from the added unit words and the template macros). ink_on_bg 12.48, brand_on_bg 14.95, brand_neon_vs_today 1.0, glow/screenGlow/topGlow 1.0. Green share of colour: home 51.9, ideas 50.5, chat 58.7, status 43.2; bright_green_px_permille home 3.9, ideas 8.0, chat 3.6, status 1.85; hue_entropy home 0.617, status 0.528. CIEDE2000 kinds 13.6/5.5/7.4 and sections 13.6/5.5/6.1 (typ/deu/pro, unchanged from the parent). Smallest text 12px. No sideways scroll. Greeting corner pixels: top right (1150,120) = (29,37,38), bottom left (100,640) = (21,31,33): a quiet teal-grey, no bronze.",
+  "strengths": [
+   "The foot rule is clearly seen on the half-size cards (Status, Plans, To do, Settings in the desktop bar and Home on the phone), costs no pseudo-element, takes the page's own colour and is the same on every page.",
+   "Figures give each band a scannable count at a glance, in light bone numerals with a clear unit, and sit in a macro so another design can lift them; Status gets its first counts on the desk (3 of 4 on, 1 of 4 set).",
+   "Thin section lines add real colour across the page body (Ideas violet, Plans cyan, To do lemon, pink wishes) without any fill or extra glow, and the green-teal slate reads a little more material than the blue-slate, all floors held and the phosphor untouched."
+  ],
+  "weaknesses": [
+   "The colour shift is subtle: ground and slate move only a few points of lightness and hue, and the new lines are 1-2px at half strength, so at half-size cards the difference from the parent is mostly the lines and the cooler-greener tint, not a bold change.",
+   "The numeral duplicates the Contents plate's count on Home and Status, and on the 12px unit I used uppercase reduced capitals, not true small caps (Plex Sans has none to rely on).",
+   "The 40px numeral is larger than the 22px band title it follows, which inverts the hierarchy slightly ('a head never ranks below its rows' is held, but title and count compete); on a phone it wraps with the links onto a second line.",
+   "The bar's current page now reads only by a 3px rule, heading colour and an accent icon; without the steel fill it is quieter to find than the parent's pill, and the rule sits close to the label like an underline on the phone tabs.",
+   "Adding unit words raises the page-words difference (Plans 38%), a measured WARN."
+  ],
+  "elements": [
+   {
+    "slot": "colour",
+    "what": "Steel-teal slate on green-black glass plus thin section-coloured lines: the :root token set in r15.css and the palette json, and .band { --c } with the 2px top edge and the .band-head cap-and-hairline gradient (variants/r15-mut-2/r15.css, COLOUR section). Markup-free."
+   },
+   {
+    "slot": "figure",
+    "what": "`.fig` / `.fig-n` / `.fig-u`: a count as a light 40px numeral with an uppercase 12px tracked unit beside it. Markup: `fig(n, unit)` macro and `band_head(..., count, unit)` in templates/_ui.html; used on Home's bands, Status's bands, Plans' bands, and the Ideas and To do `.band-note.count` lines."
+   },
+   {
+    "slot": "foot",
+    "what": "Current page marked by a short coloured rule: `.bar .places a[aria-current], .bar .tools > a[aria-current], .bar .menu.here > summary` drawn as a 3px x 2.25rem background gradient in var(--accent) (4px at the phone tab bar foot). CSS only, in r15.css FOOT section."
+   }
+  ]
+ },
+ {
+  "id": "r15-mut-3",
+  "name": "Folio Dial, Ready Line",
+  "tagline": "Track Diagram Folio Dial with display-size serif titles, the chat thread opening on a headed question, and any screen with nothing live folded to one lit Ready line.",
+  "concept": "The parent kept whole, with three changes. The Fraunces folio set goes one step further: bigger titles at the display optical size. The chat thread's first stop becomes a heading of its own, with 'Vera asks' above and the question in the serif with 'mind' lit. A monitor with nothing live to say folds to one slim case with a single lit 'Ready.' line, its power lamp on standby. The page stays calm: three changes, no new colour.",
+  "companions": "None added. The parent's steel-cyan, slate trays, cream headings and section colours are unchanged. The folded glass uses the same phosphor green for its one line and a dimmed screen colour for the standby lamp. The chat question's speaker label uses the lit sage that already marks Vera's name in her bubbles.",
+  "decisions": [
+   "Type: the parent already carried r14-mut-5's Fraunces heads, small-cap units and light lining figures, so grafting them again would change nothing. I made the nearest version that works and pushed the same set. Titles are clamp(2.4rem,4.8vw,3.4rem) at weight 560, letter-spacing -.022em and opsz 96, scoped to .page-head h1 as the digest advises (a global opsz faded before). Section heads are 1.5rem at opsz 30, and the month name 2rem at opsz 72. The action stays at the title's end.",
+   "Chat: the parent's .open-q (sans, 1.2rem) becomes the thread's heading. A mono 'Vera asks' label in the lit sage sits above it, as the speaker label does in her bubbles. The question is Fraunces 1.7rem with 'mind' glowing. The stop's ring is moved level with the question's first line, and with the lone line when there is no persona. This is the same idea made more of, not a new one.",
+   "Glass: a new macro, ready_line in _ui.html, and a class, .crt.folded. I used it where a screen would only say 'none': Status's spend readout while spending.today < 0.005, and Home's Next up when there is no plan. The case shrinks to a slim strip with no vents or chin, the lamp stands by dim, and the cursor waits. It keeps aria-hidden for the spend readout and not for Next up, as each had before. The Ideas radar is left alone: it is only drawn when there are places to show.",
+   "CSS budget: the parent's CSS was 59,049 of 60,000 characters. I removed about 1,700 characters of declarations overridden by a later rule with the identical selector, and dropped leading zeros. Re-rendered before my changes, Status, Chat, To do and Plans were pixel-identical to the parent. Home and Ideas differed only in the radar sweep and cursor frames. The additions are about 1,900 characters, now 59,350.",
+   "Markup: chat.html opening(), _ui.html ready_line, home.html and status.html each gain a conditional. Nothing was removed, and the csrf and once tokens are untouched."
+  ],
+  "floorsFailed": 0,
+  "measures": "Full render: 0 hard checks failed; one guideline missed, the page's words (worst page Plans, 17.7% differ, from the parent's week dial, not these changes). ink_on_bg 12.75, brand_on_bg 15.18, brand and screen exactly #6dff9c, glow numbers 1.0, brand_neon_vs_today 1.0. Green share: home 69.4%, ideas 61.5%, chat 74.2%, status 52.4%. Hue entropy: home .458, ideas .444, chat .393, status .440. Kinds dE 13.6/5.5/7.4 (typ/deu/pro), sections 12.8/5.5/5.3. Smallest text 11.52px, no sideways scroll. The greeting corner pixel was not re-sampled: wash and greeting are untouched and Home's shot matches the parent's outside the radar sweep.",
+  "strengths": [
+   "Titles are larger and sharper at the display optical size on every page (Ideas, Status, Plans, To do, Settings, Vera), so the Folio hierarchy of title over section head over row reads at a glance on the half-size cards.",
+   "Chat now opens on a real heading: 'Vera asks' over the question in the serif with 'mind' lit, at the head of the line. The question reads as a speaker's line and anchors the thread.",
+   "The folded glass is honest: no empty tube. Status's tall spend monitor with its $0.00 becomes a 40px case with one lit Ready line, and the same macro handles Home's empty Next up, checked by forcing the empty state.",
+   "Self-contained parts: .open-by and .open-q for the chat, ready_line and .crt.folded for the glass, and the title and section-head rules at the end of the CSS. All use the page's tokens and add no colour.",
+   "Floors clean: 0 hard checks failed, signature exact, no new colour, no removed forms or fields."
+  ],
+  "weaknesses": [
+   "The type roll was already in the parent, so the change is a push of scale and optical size rather than a new graft. At half size the difference from the parent is a bigger, higher-contrast title, not a new face.",
+   "In the demo household Home's Next up and the Ideas radar are live, so the fold shows only on Status, at the foot of its first screen. The Home fold was verified by forcing the empty state, not by a card.",
+   "The folded spend line drops the 20-cell bar and the 'of the daily limit' readout. The paragraph beside it still gives the limit, and the full tube returns as soon as anything is spent.",
+   "The chat label 'Vera asks' is a new phrase, so the page's words shift slightly. The ring is positioned with a fixed rem offset, which assumes the question stays on one line (it does down to a phone).",
+   "The CSS is at 59,350 of 60,000 characters even after pruning, and the file remains a stack of accumulated overrides that a later round will need to consolidate."
+  ],
+  "elements": [
+   {
+    "slot": "type",
+    "what": "Folio set one step further: .page-head h1 and .step-head h1 at clamp(2.4rem,4.8vw,3.4rem), weight 560, Fraunces opsz 96; .section-head h2 and .panel>h2 at 1.5rem, opsz 30; .month-head h2 at 2rem, opsz 72. These are the last rules in the palette css, over the parent's Fraunces/--fv base."
+   },
+   {
+    "slot": "chat",
+    "what": "The thread's first stop is a heading: templates/chat.html macro opening() renders li.thread-open > span.open-by ('Vera asks', mono, lit sage) plus span.open-q (Fraunces 1.7rem, 'mind' in .glow). CSS: .thread.line .thread-open and ::before (ring level with the first line), .open-by, .open-q."
+   },
+   {
+    "slot": "glass",
+    "what": "A screen with nothing live folds to one Ready line: macro ready_line(cls, note, hidden) in templates/_ui.html, rendering div.crt.folded > .crt-tube > p.ready-line (.ready-word 'Ready.', .ready-note, the cursor). CSS .crt.folded (slim case, no vents or chin, standby lamp). Used in status.html while spending.today < 0.005 and in home.html when there is no first plan."
+   }
+  ]
+ },
+ {
+  "id": "r15-mut-4",
+  "name": "Track Diagram Counted",
+  "tagline": "Track Diagram Folio Dial with a typed count beside every page title, a status line on the glass under Home's question, a cooler ground and warmer ink.",
+  "concept": "Track Diagram Folio Dial with three small changes. Each page head gets its own number, set beside the serif title in a typed face and in that page's colour, standing on the masthead's rule with its unit in the legend's caps and one pencilled line under it. Home's glass gets one mono line under the question, a lit lamp and what she is doing now. The ground goes one step cooler and the ink one step warmer, so the cream words sit on a ground that leans teal-black.",
+  "companions": "Unchanged from the parent: the steel-cyan accent, slate trays and plates, and the section colours in their lamps. Headings and ink are a touch warmer cream. The count takes each page's own accent: lilac on Ideas, cyan on Plans, lemon on To do, steel on Status and Settings. Its late or needs-a-look pencil line uses the amber that already means that. The glass status line is the screen's phosphor, and goes amber when a message is retrying or lost.",
+  "decisions": [
+   "head: I took the drawer count (figure, unit, pencilled change) from r14-mut-17 but not its manila plate, brass or rivets. The parent keeps its ring, drop and rule, and the count stands on the rule beside the serif title. Figure in IBM Plex Mono with slashed zero and tabular figures, 2px underline in the page's accent, matte with no glow. Unit in the label colour as legend caps (.72rem, .05em, inside the lessons' limits). Change line in dim sans. Counts: Ideas (rows, or matches when filtered), Plans (ahead, with the next one pencilled), Plans month (this month), To do (open or shown, late in amber), Status (working, with partly and off), Settings (parts, and how many need a look), Family (on the list), Chat (her replies, and the last time).",
+   "Why the larger-title-with-action option was not taken: the parent's head already has the page action at the right end of the rule, so that option would have changed almost nothing. The count is the new thing.",
+   "glass: one line under Home's question, 'Listening \u00b7 watching 4 plans', in DM Mono in the phosphor tint with a light bloom and a lit lamp (the parent's --lamp-core and --lamp-glow, so it is the same lamp as the page's other live lights). It is read from the log (talk.state and talk.note, already worded plainly for kids) and from the radar's plan count. No model call. While a message is being answered it shows the page's own words and the lamp breathes. Retrying or lost turns it amber with no glow. It lives in a copy of _ask.html and renders only where `question` is set (Home), so the chat box is untouched.",
+   "colour: bg #0b0e0c to #081111 (hue 156 to 196, chroma about doubled, still inside the green-black floor: hue 115-200). ink, ink-2, dim, faint and heading moved to a warmer hue (86 to 80, chroma about doubled) at the same lightness. All contrasts stay within a hair of the parent's: ink 12.57:1 on bg, faint 5.28:1 on surface. Slate surfaces, steel and the brand are untouched, so the greeting corner samples (24,34,46) against the parent's (24,34,47).",
+   "The parent was at 59,049 of 60,000 css characters, so I minified its css and dropped declarations that a later rule for the same selector in the same place overrides. Same-rule duplicates, which may be fallbacks, are kept. I checked this pixel-identical against the parent's shots on Home, Ideas, Status, Plans, To do and Settings; the only differences are animation frames. This freed room for the three changes (58,808 of 60,000).",
+   "Words: the head counts add words, so the page-words measure shows 19% on Plans. That is the measured guideline, and it is intended."
+  ],
+  "floorsFailed": 0,
+  "measures": "Full render: 0 hard checks failed, 1 guideline missed (page words unchanged: worst Plans, 19.0% differ, from the added head counts). ink_on_bg 12.57, brand_on_bg 14.96. Signature exact (brand and screen #6dff9c, L .897 C .186 h 151.4). Green share of colour: Home 71.1%, Ideas 60.3%, Chat 75.8%, Status 51.6%. Hue entropy: Home .45, Ideas .49, Chat .40, Status .46. Kinds dE typical/deutan/protan 13.6/5.5/7.4; sections 12.8/5.5/5.3 (the parent's numbers). Smallest text 11.52px. No sideways scroll. Greeting corner pixel (1150,120) = (24,34,46) against the parent's (24,34,47); (100,640) = (15,21,25), same as the parent. Ground at the page edge (8,17,17) against the parent's (11,14,12).",
+  "strengths": [
+   "Every page now opens on a number readable at a glance (Ideas 12 in all, Plans 5 this month, To do 4 open and 3 late, Status 6 working, Settings 9 parts). It is in that page's own colour, so the section colours reach the head as well as the lamps.",
+   "The head count is built from the parent's materials: matte, on the masthead's rule, in the label colour and dim. It does not borrow the donor's manila, brass or rivets, and it does not add light to the page.",
+   "The status line sits on the glass where the machine speaks, in its mono voice with the page's own lamp, and costs no model call. It changes with the conversation's state and stays audience-safe for kids.",
+   "The colour move is quiet and breaks no floor. Cream words on a teal-black ground is a cool and warm pair, and the contrasts are within a hair of the parent's.",
+   "Fitting the budget cleaned the parent's css by about 2,000 characters with no pixel change, so a following round has room."
+  ],
+  "weaknesses": [
+   "The ground move is small. The hue floor stops at 200 and lifted or tinted grounds have always lost, so it is (11,14,12) to (8,17,17), a few levels. At half size it may not be seen, and the warmer ink may carry more of the slot.",
+   "The count shares the head with the title, the lede and the page action. On Plans (tabs) and Ideas (button) the head is busier, and on the phone the count may drop under the title.",
+   "'Listening \u00b7 watching 4 plans' is mostly static. It only changes while a message is on its way, so on a quiet Home it is a single quiet line.",
+   "Counts are not all equally meaningful: Chat's is her replies in the thread, Plans' month count is plans (not days), and Settings' 9 parts is constant. The figure also repeats a summary line on To do ('4 shown').",
+   "The count uses IBM Plex Mono, a fourth face beside Fraunces, Archivo and DM Sans/Mono. The lessons warn against four or more faces, though it appears only on the figure.",
+   "I did not check the head on every phone page, only Home's phone shot, and the Chat head's rail grid is the most fragile place the count lands."
+  ],
+  "elements": [
+   {
+    "slot": "head",
+    "what": "Count beside the page title: `page_head(title, lede, glyph, crumbs, figure, unit, change, change_cls)` in variants/r15-mut-4/templates/_ui.html, markup `<p class=\"head-count\">` with `.hc-figure`, `.hc-unit` and `.hc-change`. Styled by the CSS in src/mut.css (the head block), which makes `.page-title` a flex row. Called with figures from ideas, plans, plans_month, tasks, status, settings, family and chat."
+   },
+   {
+    "slot": "glass",
+    "what": "Status line under Home's question: `<p class=\"glass-status\" data-state>` in variants/r15-mut-4/templates/_ask.html (only when `question` is set), styled by `.glass-status` and its `::before` lamp in src/mut.css (the glass block). The text comes from talk.state, talk.note and the radar's plan count."
+   },
+   {
+    "slot": "colour",
+    "what": "Tokens only: bg #081111 (cooler); ink #ddd0bb, ink-2 #bdb19d, dim #a89c88, faint #998d7a and heading #efe3cf (warmer). The heading literal in the css is replaced to match. No selectors."
+   }
+  ]
+ },
+ {
+  "id": "r15-mut-5",
+  "name": "Long Persistence Gauged",
+  "tagline": "Long Persistence Tallied with the count strip as a tray of big-figure tiles, the Home question a size smaller with a cursor that blinks only while focused, and Status's spend as a moving-coil gauge on the glass.",
+  "concept": "The parent unchanged except three self-contained parts. The ruled count strip becomes a slate tray of tiles (a small label with its section's mark above, a 30px mono figure below, a steel cap on the page you are on). The Home question steps down from 32px to 28px and gains a block cursor that sits steady at rest and blinks only while the box has focus. Status's day spend becomes a phosphor panel meter on the tube: tick scale, limit mark, dashed overrun zone, a hot-core needle that kicks and settles, a ghost needle for an average day, and a big VT323 readout. Calm and grounded as before, with light only where something is live.",
+  "companions": "Unchanged from the parent. Steel #7c96b0/#aec6dc caps the strip's current page and marks \"here\". Section colours (cyan plans, lemon to do, lilac ideas) appear only as the small icon in their strip tile. Amber stays for Late (its triangle and figure). The gauge uses the tube's phosphor, going amber from 75% of the limit and red past it.",
+  "decisions": [
+   "[head] Pushed the count strip further, as the same idea with more weight. It is a surface-filled tray with card-edge borders and equal tiles, Today wider. Each tile stacks a small tracked label (with its section's icon) over a 1.875rem Plex Mono figure; Today shows the date at 1.375rem with its live pip. It was a 20px figure inline with its label. The page's own tile gets a surface-3 fill and a steel cap on top instead of an underline. Late keeps the only amber and its triangle. Phone: Today takes a row, the four counts share the next row at 1.5rem, and the icons are dropped.",
+   "[head] Left the strip's data alone. It sits on Home, Ideas, Plans and To do, and a page that does not know a count still shows an arrow rather than a number it has not read. I did not add it to Chat, Status or Settings, because those pages' contexts hold no counts and the page may not query for them.",
+   "[glass] The question is 1.75rem on desktop and 1.5rem on the phone (parent 2rem and 1.75rem). A block cursor (.ask-cursor, aria-hidden, inside the label) follows 'mind?': steady at 55% at rest, blinking at 1.1s with steps only while .ask:focus-within, steady under prefers-reduced-motion. The parent had no cursor on this question, so I added one for the blink to apply to.",
+   "[figure] Lifted the donor's spend_meter macro and CSS in the parent's materials. It uses the parent's --screen/--phosphor, VT323 and amber/red states, and none of the donor's colours or page. The meter is wrapped in the parent's crt() glass. The tube's 4:3 aspect ratio is released so the gauge is not boxed in. The Status column widens from 17.5rem to 22rem so the ticks and numerals read at half size. With no daily limit set, the figure shows without a dial. The needle animation is renamed needle-swing and is off for reduced motion.",
+   "Everything else is the parent's, byte for byte. The mutant's CSS is appended after the parent's and is also kept readable in variants/r15-mut-5/mut5.css. The palette tokens are unchanged."
+  ],
+  "floorsFailed": 0,
+  "measures": "Full ./check.sh: 0 hard checks failed, 1 guideline missed (the page's words: worst page Plans, 20.3% of words differ, from the strip's icons and the new Status words 'today', 'of limit', 'Average day'; Home 11.8%). ink_on_bg 12.51, brand_on_bg 15.18, brand and screen exactly #6dff9c, glow 0.9, screenGlow 1.0, topGlow 1.0. Green share of colour: home 72.0%, ideas 81.2%, status 88.5%. Hue entropy: home 0.485, ideas 0.322, status 0.319. Bright green px permille: home 3.37, ideas 8.35, status 0.64. Kinds dE typ/deu/pro 13.6/5.5/7.4; sections dE typ/deu/pro 13.6/5.5/5.4. Smallest text 12px. Greeting corners sampled at (1150,120) = (26,36,47) and (100,640) = (20,25,28), unchanged from the parent's tokens (washGlow 2.2 as before).",
+  "strengths": [
+   "The strip is now a real element: its figures are 50% larger and stacked, with labels and icons, and it is visible at half size on Home, Ideas, Plans and To do.",
+   "The gauge fills Status's one empty-looking corner with a scale, a limit mark and a ghost needle. It still reads when spend is $0.00, which a bare needle would not.",
+   "The cursor and the smaller question are quiet: the question still leads Home, but the box and the Next up monitor now share the weight better.",
+   "No hard floors failed, no new small targets, and the tokens are unchanged, so any difference in score comes from these three parts."
+  ],
+  "weaknesses": [
+   "Strip tiles for counts the page does not know show a bare arrow (Plans, Ideas and To do show three arrows beside one figure). The tray looks half-empty there and is weaker than on Home, where all four counts show.",
+   "The strip is taller, about 76px against 44px, so Home's first screen pushes the 'Finish setting up' panel lower.",
+   "The cursor is only a green block next to a heading, close to the 'Matrix terminal' look, and the blink is invisible in stills, so at rest the judges see just a steady block.",
+   "The gauge's needle at $0.00 sits at the left edge and overlaps the ghost needle. The readout row is tight at 22rem: 'Average day' is nowrap and nearly touches the glass edge.",
+   "Plans' wording change is 20.3%, mostly from the new icons' neighbours and Status text, and the Status gauge is the only place the figure slot shows."
+  ],
+  "elements": [
+   {
+    "slot": "head",
+    "what": "Count strip as a tray of tiles under the page head: macro count_strip in variants/r15-mut-5/templates/_ui.html, classes .count-strip, .cs-cell, .cs-label, .cs-ico, .cs-fig, .cs-pip, .is-here, .is-late. Used by home, ideas, plans, plans_month and tasks. CSS in the [head] block of mut5.css."
+   },
+   {
+    "slot": "glass",
+    "what": "The Home question typed on the glass one size smaller, 1.75rem desktop and 1.5rem phone, with a block cursor that blinks only inside .ask:focus-within. Markup: .ask-question label > .ask-cursor in templates/_ask.html. CSS: .ask-question, .ask-cursor, @keyframes ask-blink."
+   },
+   {
+    "slot": "figure",
+    "what": "Spend gauge on the Status glass: macro spend_meter(used, typical, limit) in templates/_ui.html, used inside crt('readout spend-scope') in templates/status.html. Classes .dial, .dial-arc, .dial-ticks, .dial-limit, .dial-zone, .dial-num, .needle*, .readout-line, .readout-side, .ghost-key; keyframes needle-swing. Amber from 75% and red past the limit."
+   }
+  ]
+ },
+ {
+  "id": "r15-mut-6",
+  "name": "Tallied Lamp Line",
+  "tagline": "Long Persistence Tallied with a mono lamp line saying what Vera is doing, section counts set as large light numerals with small-caps units, and selects drawn as plain buttons with a chevron.",
+  "concept": "The parent's page unchanged, with three separate edits. A one-line mono status sits under Home's question and above the chat box and says what Vera is doing, so you can tell at a glance whether anything is waiting. Each section's count is set the way a printed table sets its total: a big light numeral with a small-caps unit beside it. Selects stop looking like text fields and look like quiet buttons that open a list.",
+  "companions": "None added or changed. The parent's slate neutrals, steel `--rev` and amber stay where they were. Steel is the only colour the lamp line adds: the idle ring, the waiting dot and the select chevron. Amber marks a message that was not answered. Red is no longer used for an unconfigured Status lamp.",
+  "decisions": [
+   "Signal: `lamp_line` replaces the parent's Ready/Thinking/Waiting lamp in the chat page head, and the same line now sits inside the Home box (under the question) and above the chat composer. It is read from the existing `talk.state` / `state`, so no model call. A ring means nothing is waiting, the lit phosphor dot means Vera is answering, a steel dot with a slow breathe means a message is waiting to be tried again, and a half-filled amber ring means the last message was not answered. For a visitor who may not browse (a kid), the retry line reads plainly as 'Vera will answer soon' instead of describing a retry, in keeping with the kids-see-no-workings rule. Where a parent reads a kid's chat, the line is drawn under the page head.",
+   "Signal, Status: `.light.off` was a red ring for 'no key' and 'not configured', which have not stopped anything. It is now a steel ring, so red is kept for what has failed. The `.attention` panel is still red.",
+   "Figure: a `tally` macro in `_ui.html` is used on Home (Coming up, To do, Lately added, My wishes), Ideas' The list, To do's The list and Plans' Coming up. The numeral is Archivo at weight 260 and 78% width, 2.5rem with tabular lining figures. The unit sits on the baseline in small caps with 0.09em tracking. The 'All 12' / 'All 4' links now read 'All', because the figure carries the number; that costs a few words in the words-differ measure. Archivo has no small-caps face and the body sets `font-synthesis: none`, so `.tally-u` re-enables `font-synthesis: small-caps`. Without that it rendered as lowercase.",
+   "Controls: every select becomes a raised plain button (fill #252d34, 1px edge, inset highlight and a 2px bottom shade) with a CSS-drawn chevron in steel as `::picker-icon`. The chevron turns over while the list is open. This reuses the parent's `appearance: base-select` list, so the open picker is unchanged and the 2px brand focus ring is kept. It is gated by `@supports (appearance: base-select)`.",
+   "Everything else is the parent's, byte for byte: the css is the parent's palette json css with `mine.css` appended (about 3.2k characters of the 60k budget used)."
+  ],
+  "floorsFailed": 0,
+  "measures": "The full ./check.sh passes with 0 hard failures. One guideline is missed: 'the page's words unchanged'. It compares against today's page, not the parent, and reports a worst page of Plans at 20.3% (Home 14.0% in the earlier partial render). My own edits change only the 'All N' link wording and the lamp line text. ink_on_bg 12.51, brand_on_bg 15.18, brand and screen exactly #6dff9c, glow 0.9, screenGlow 1.0, topGlow 1.0. Per page: Home green share 72.9%, hue entropy 0.483, bright-green permille 3.39; Ideas 78.4%, 0.352, 8.23; Chat 95.9%, 0.286, 0.44; Status 88.0%, 0.305, 0.57. Kinds and sections dE typical/deuteranopia/protanopia are 13.6/5.5/7.4 and 13.6/5.5/5.4, unchanged from the parent. The greeting corner pixels are (26,36,47) at (1150,120) and (11,14,12) at (100,640), the parent's wash and bg. No health.json was written to out/r15-mut-6 in this run, so the small-target count was not read.",
+  "strengths": [
+   "The lamp line shows on both Home and Chat and uses the page's existing state with no model call. Its four states are separated by shape as well as colour.",
+   "The Status page loses a block of red rings, so red now means only something that stopped.",
+   "The count figures are large enough to read on the half-size cards and turn plain 'All 12' links into a typographic figure. They stay on the baseline with a small-caps unit on every list that has a count.",
+   "The select buttons are clearly different from the dark text fields beside them in Ideas and To do. They keep the parent's list, the focus ring and the 44px target.",
+   "Self-contained: three classes (`.ask-status`, `.tally`, `select` under `@supports`) and two macros, `lamp_line` and `tally`, in `_ui.html`."
+  ],
+  "weaknesses": [
+   "The lamp line is small, 13px mono. Only the idle state shows in stills, so the thinking, retrying and lost states were never rendered.",
+   "I did not view the 100% close card; nothing I changed reaches the page corners or the heads, so I skipped it.",
+   "The tally unit is synthesized small caps, because Archivo ships none. It is legible but not typeset by a type designer.",
+   "The big light numeral sits a little higher than the h2 beside it, since I used centre alignment rather than a shared baseline. At weight 260 it is thin on the dark ground.",
+   "The tally repeats the count strip's PLANS 4 / TO DO 4 / IDEAS 12 just above it on Home.",
+   "The 'words unchanged' measure got worse: 'All 12' became 'All' plus a figure. Home's section heads now read 'All' beside a number.",
+   "The select styling depends on `appearance: base-select`. Without it the browser falls back to the base stylesheet's own select.",
+   "Replacing the chat head's lamp moved the status from beside the title to above the composer. A reader at the top of a long thread no longer sees it without scrolling."
+  ],
+  "elements": [
+   {
+    "slot": "signal",
+    "what": "`lamp_line` macro in variants/r15-mut-6/templates/_ui.html, called from `_ask.html` (Home under the question, Chat above the composer) and `chat.html` (reading mode). CSS: `.ask-status`, `.ask-lamp` and the `.is-thinking`, `.is-retrying`, `.is-lost` states in mine.css. Includes `.light.off` as a steel ring on Status."
+   },
+   {
+    "slot": "figure",
+    "what": "`tally(n, unit)` macro in `_ui.html`: `.tally`, `.tally-n` (large light Archivo numeral), `.tally-u` (small-caps unit), `.tally-line` and `.tally-note`. Used in the section heads of Home, Plans, Ideas and To do."
+   },
+   {
+    "slot": "controls",
+    "what": "`select` rules under `@supports (appearance: base-select)` in mine.css: a raised plain button with a drawn `select::picker-icon` chevron that turns when `select:open`, plus `.ask .who select`."
+   }
+  ]
+ },
+ {
+  "id": "r15-mut-7",
+  "name": "Blueprint, Pencilled Ends",
+  "tagline": "The Blueprint on a steel-slate case with each sheet's thin lines in its own pencil (violet, amber, cyan, pink), every section rule ending in a bolder solid block, and the live list's lit words glowing.",
+  "concept": "The Phosphor Blueprint keeps its green-black glass and its drafting grid, but the case turns steel-slate and each sheet's hairlines (frame, dimension marks, grid, section rules) are drawn in that part's pencil. Each rule ends in a real solid block, and the Coming up list's from-now words light like tube text. It should feel like a drawing set where only the live things give off light.",
+  "companions": "Violet (ideas #b49cea) draws Ideas' frame, grid, section rules and end blocks. Amber (people #e8a860) does the same for Family. Lemon (todo, unchanged #e6d17c) is To do's. Cyan (plans) is Plans' and Home's Coming up rule. Pink is wishes. Steel blue (label #97b7be) stays on Home, Vera, Status and Settings, which have no pencil. All of it is 1px apparatus and 28x8 end blocks; no fill and no glow. Surfaces and bezel moved a breath bluer: steel-slate.",
+  "decisions": [
+   "COLOUR graft, relations not hexes: kept the parent's #061111 ground (the lessons say a lifted ground loses) and moved surface, surface-2, surface-3, line, line-2, card-edge and bezel a breath bluer (steel-slate, for example surface #0d181b). Ink, ink-2 and dim were softened a step (ink_on_bg 15.7:1). Ideas went from periwinkle to true violet #b49cea and people to a rounder amber #e8a860.",
+   "The donor's thin amber and violet lines are applied systemically: on Ideas, Plans, To do, Wishes and Family sheets --frame, --frame-soft, the grid and --line-2 are redefined from the section pencil. Home's Coming up, To do, Lately added and Wishes rules also take their pencil.",
+   "Left the accent token green, because a teal accent close to plans #84c5e3 would fail the accent-apart-from-sections floor. Reverted todo to the parent's #e6d17c after #ecd682 dropped the deuteranopia home~todo distance to 4.8.",
+   "RULE: end marks grown from 12x6 to 28x8 on heavy rules and from 8x5 to 18x6 on panel hairlines, in the section's pencil at 90%, so they register on the half-size cards. The same block now also closes the column-head rule of lists (.keys: Date / Plan / From now, Done / Task / Who).",
+   "LIGHT: layered halo (0.45em tight and 1.3em wide, as the kit's .glow) on .agenda .rel only: the nearest row in full #6dff9c, the rest in the calmer lit green. No halo was added elsewhere. It is switched off for reduced motion and more contrast.",
+   "Because the lit words needed a colour to glow, from-now words in agenda lists went from label blue to lit green. That is a colour consequence of the light roll, kept inside the list."
+  ],
+  "floorsFailed": 0,
+  "measures": "Final ./check.sh: 0 hard failures; 1 guideline WARN, words differing from today (worst Plans, 13.9%), inherited from the parent. ink_on_bg 15.68, brand_on_bg 14.99. Green share of colour: Home 48.8%, Ideas 49.7%, Chat 39.2%, Status 19.8%. Hue entropy: Home 0.561, Ideas 0.519, Chat 0.505, Status 0.275. Kinds dE typ/deu/pro: 14.1/6.5/6.0. Sections dE typ/deu/pro: 15.8/5.4/6.9 (deuteranopia home~todo 5.4, against 5.0). Greeting corner pixels: top right (1150,120) = (14,28,26), bottom left (100,640) = (6,17,17).",
+  "strengths": [
+   "The pencil system is visible at half size and holds on any page: To do's frame is amber, Ideas' violet, Plans' cyan, and Home's section rules take their sheet's colour. Grounded, with no extra glow.",
+   "The grown end block reads on every card (Home sections, Status panels, To do columns, Plans' month strip) and is a small, liftable pseudo-element rule keyed to --accent.",
+   "The halo lights something that was previously flat: Coming up's from-now column now reads as live data, with the nearest plan brightest. Glow is confined to one list.",
+   "Brand, screens and bg are untouched, and every contrast and signature floor passes."
+  ],
+  "weaknesses": [
+   "The steel-slate shift in surfaces is only a few steps, so the case itself barely differs from the parent on the cards. Most of the colour change is in the hairlines.",
+   "The pencil frame lines are thin and dim: Ideas' violet and Plans' cyan are faint on the half-size cards, and Chat, Status and Settings are unchanged.",
+   "The end block on the column-head rule (.keys) sits slightly detached on To do, where the key row has no rule of its own under it.",
+   "Making the from-now words green changes colour as well as light: they now compete a little with the green Next up tube on Home. The three-row list lights every row, not just the soonest.",
+   "Deuteranopia distance home~todo is 5.4 against 5.0, so there is no headroom to move the todo colour. I did not use the donor's steel-teal accent, since it would collide with plans."
+  ],
+  "elements": [
+   {
+    "slot": "colour",
+    "what": "Steel-slate case tokens plus per-sheet pencil lines: the `.in-ideas/.in-plans/.in-todo/.in-wishes/.in-family` block redefining --frame, --frame-soft, --grid-minor, --grid-major and --line-2 from --accent, and `.in-home .coming/.home-todo/.lately/.home-wishes` section rules (end of variants/r15-mut-7/sheet.css, 'r15 [colour]'); tokens in palettes/r15-mut-7.json"
+   },
+   {
+    "slot": "rule",
+    "what": "Larger solid end blocks (28x8 on heavy rules, 18x6 on hairlines), in --accent, on `.section-head::before`, `.panel:not(.card) > h2::after`, `.month-strip::before`, `.wish-list .section-head::before`, plus `.keys::after` for list column-head rules (sheet.css 'r15 [rule]')"
+   },
+   {
+    "slot": "light",
+    "what": "Two-layer halo on the live list's lit words only: `.agenda .rel` in --lit, `.agenda > li:first-child .rel` in --brand, text-shadow 0.45em and 1.3em, off for reduced motion and more contrast (sheet.css 'r15 [light]')"
+   }
+  ]
+ },
+ {
+  "id": "r15-mut-8",
+  "name": "Blueprint, Bone Bands",
+  "tagline": "The Blueprint with a slightly cooler slate under warm bone words, every other schedule row on the faintest ground band, and lamps drawn as a lit dot, a steel dot for waiting and a pewter ring for off, nothing red.",
+  "concept": "Parent r15-head-2 (Blueprint, Lit Keys) with three single-slot changes. The cool slate (surfaces, lines, field, edge, bezel nudged from hue about 201 to about 214) carries warm bone words (ink, ink-2, dim, faint, heading at hue about 80), so text and ground sit as complements and the label steel stays the cool companion. Lists read as banded ledgers: rows 2, 4, 6 take a 7% steel band. The Status lamps become one shape per state with no red: lit dot, steel dot, pewter ring, taught by a one-line legend under the head.",
+  "companions": "Bone (#e0d6c4 ink, #f1e6d2 heading) for all words; steel #6f94ae with a pale rim #b4d0e2 for the waiting dot (Status legend and the Waiting panel's list); pewter #929d9b for the off ring; the parent's label steel #9cbbc1 also tints the row band (7% over the ground). Brand #6dff9c stays on the live lamp, the mark, Send, focus and the monitors. Red is kept only for the bar light and errors, never for an 'off' switch.",
+  "decisions": [
+   "Colour graft: the donor's two moves were a cooler ground and warmer bone words (hue 86 to 79, heading a step warmer). The parent's bg #061111 is already at OKLCH hue 195.7 and the signature floor tops out at 200, and no 8-bit green-black near L 0.167 sits between 198 and 200 with the right chroma. So bg stays exactly as the parent has it and the cooling goes into the surfaces, field, lines, edge and bezel (hue 201 to about 214, chroma unchanged). Ink moved to #e0d6c4 (13.3:1 on bg, calmer than the parent's 16:1, as the lessons ask), heading #f1e6d2. I made the bone a touch more chromatic than the donor's (C 0.027 against 0.021) after the first render read as plain white at half size.",
+   "The contrast-mode (prefers-contrast: more) greys in the sheet were also warmed to bone so they do not snap back to cool-white. Label, the section colours and the amber/steel jobs are untouched.",
+   "Signal: the sheet's .light has three states (on, part, off). Part, 'partly or unknown', is where waiting lives, so it becomes a solid steel dot with a pale rim and no animation; off becomes a hollow 2.5px pewter ring; on is unchanged. Lamps grow from 11px to 13px so the shapes read at half size.",
+   "None of the demo's Status rows is in the waiting state, so the steel dot would not show on the cards. I added a variant status.html with a one-line legend (Lamps: On, Waiting, Off) under the head, and drew the Waiting panel's 'Next to be looked up' list with the same steel dot, which is a real waiting list. This adds the words 'Lamps', 'On', 'Waiting', 'Off' to Status.",
+   "List: the band is --band (7% of the label steel over the ground). It is applied to even rows of .agenda, .checklist, .lights, the To do page's .cards.tasks rows and Settings' index. The index is two columns, so it bands by row (li 4n+3 and 4n+4 on desktop), not by cell. The band reaches 10px past the text on each side with a box-shadow so no column moves, and the hovered row keeps its own afterglow (:not(:hover)). The Home 'today' bar is kept by combining its inset shadow with the band.",
+   "Nothing else changed: the light, type, controls, markup of Home, Chat and Ideas, and the tokens for brand, screen, accent, halo and the section colours are the parent's."
+  ],
+  "floorsFailed": 0,
+  "measures": "The full render ./check.sh palettes/r15-mut-8.json has 0 hard failures and 1 WARN, the words-unchanged measure, worst page plans at 13.9% (Home 8.1%; the Status legend adds four words). ink_on_bg 13.31 (parent about 16), brand_on_bg 14.99, heading on bg 15.5, label on bg 9.39, edge 3.95 on surface and 4.31 on field, dim on bg 7.15. Green share of colour is 49.3% on Home and 28.7% on Status; hue entropy is 0.532 on Home and 0.313 on Status. Kinds dE typical 14.1, deutan 6.3, protan 6.0; sections typical 16.9, deutan 5.4, protan 6.9. Home greeting corners: (1150,120) = (14,28,26) and (100,640) = (6,17,17). Signature floors hold: bg hue 195.7 (inside 115-200), brand exactly #6dff9c, glow, screenGlow and topGlow all 1.0.",
+  "strengths": [
+   "The three changes touch different layers (words and ground, state drawings, row rhythm), so the panel can score each slot separately.",
+   "The band is clearly visible on the half-size cards (Home's Coming up and To do, Status, To do, Settings) and every row stays aligned, because it paints outside the text with a shadow and moves no column.",
+   "Waiting, off and on differ by shape as well as colour (lit dot, steel dot, ring), and the legend teaches them. Red no longer appears on Status for something that is only switched off.",
+   "Warm bone words on a cool slate are a complement pair that needs no new accent, and the brand green stays the only saturated green."
+  ],
+  "weaknesses": [
+   "The bone tint reads as nearly plain white at half-size cards, so the colour slot's difference is subtle; the warmth shows more at 100% than on the cards.",
+   "The ground itself did not get cooler, only the surfaces, lines and edge. The bg floor (hue 200) and the 8-bit grid leave no room, so 'slightly cooler ground' is only partly delivered.",
+   "No Status row in the demo is genuinely waiting, so the steel dot is seen only in the legend (and in the Waiting panel below the fold). A judge may see the legend as added furniture; it also adds four words to Status.",
+   "The band extends 10px past the text but the row hairlines stay text-width, so an even row's rule is slightly shorter than its band, a small ragged edge. Ideas rows and the Plans list were not banded in the half-size cards (Plans shows the month view, and Ideas cards are tiles). The Plans list view uses the same .agenda rule, but I did not look at it."
+  ],
+  "elements": [
+   {
+    "slot": "colour",
+    "what": "Cooler slate under warm bone words: palettes/r15-mut-8.json tokens surface, surface-2, surface-3, field, line, line-2, edge, card-edge, bezel (hue about 214) and ink, ink-2, dim, faint, heading (hue about 80). Also the two prefers-contrast :root blocks in variants/r15-mut-8/sheet.css. No markup."
+   },
+   {
+    "slot": "signal",
+    "what": "Three lamps, one drawing each, no red: .light.on / .light.part (steel dot with pale rim) / .light.off (pewter ring) with the --lamp-steel, --lamp-steel-rim and --lamp-pewter tokens, in sheet.css under 'SIGNAL'. The legend is .lamp-key / .lamp-key-item in templates/status.html, and the Waiting panel's list reuses the .lights markup."
+   },
+   {
+    "slot": "list",
+    "what": "Faintest ground band on every other row: --band plus the :nth-child(even):not(:hover) rules for .agenda > li, .checklist > li, .lights > li, .cards.tasks > .task and .section-cards > li (4n+3, 4n+4 on desktop), in sheet.css under 'LIST'. CSS only; the band reaches 10px past the text by box-shadow."
+   }
+  ]
+ },
+ {
+  "id": "r15-mut-9",
+  "name": "Grid Console Gauged",
+  "tagline": "Grid Console with the day's spend as a lit needle gauge in the Status head, NOW as a round lamp on a lit rail with the time on its own glass, and one pilot lamp lit on the footer horizon.",
+  "concept": "The parent, Grid Console Folio, Led, with three self-contained changes and nothing else touched. Status opens on a phosphor moving-coil gauge (the donor's figure) as the page head's figure; NOW becomes a round white-hot lamp on a briefly lit rail with the time on a small lit glass; and the footer's horizon gets one steady pilot lamp. The feeling is a console that is visibly powered: a needle you read, a clock you can find, a lamp that says the page is up.",
+  "companions": "Unchanged from the parent. Cyan #77ced5 stays the accent and the horizon's colour. The gauge turns amber (people #eeb46e) from 75% of the limit and red (danger) past it, through the existing .readout.near and .readout.over tokens. NOW and the lamp are brand green only, as live things.",
+  "decisions": [
+   "[figure] Grafted r13-idea-1's spend gauge into the Status page head as its figure (page-actions slot of page_head, principle 6). It was moved up from the spend section because on the half-size card Status shows only its top, and a gauge below the fold would not be seen. The old text readout tube in the spend section is removed so the figure is not drawn twice; the written sentence 'Today: about $x of the $y daily limit' stays, so the figure is still written out. Drawn in the parent's own materials: its crt() glass, --screen, --people for amber, --danger for red, its VT323 terminal face. The donor's colours were not copied. Needle halo 0.4 with a 1.5px blur and the arc strokes are a little heavier than the donor's so it reads at half size.",
+   "[figure] A needle at zero shows nothing, so the donor's fixes stay: limit tick, dashed overrun, a ghost needle on the average day and the figure in words beside it. The head row is centred on the gauge so the title is not left with a void above it.",
+   "[signal] The parent already had a lit tick for NOW, so this pushes it further rather than repeating it. The tick is now a round white-hot lamp with a three-layer halo and a 3px bar, the word NOW is heavier with a halo, the time sits on its own little lit glass (dark tube gradient, 1px phosphor border, bright mono figures), and the line of light runs on across the whole list. On wide screens a new .now-rail span lights the page's own rail for about 6rem around the tick, as a tube holds the trace it has just drawn. Same three call sites (Home Coming up, Home To do, To do) and same markup macro in _now.html.",
+   "[foot] Added an aria-hidden .foot-lamp as the footer's last child so the existing nth-child rules for the tagline still hold. It is a 12px steady lamp centred on the horizon line, with a white-hot core, a body in #6dff9c and a layered halo, and a short lit run of the horizon on either side. It is at rest, so it does not blink or breathe. It uses the same var(--horizon) as the foot, so it follows the phone's taller foot.",
+   "Left alone on purpose: palette tokens, glow numbers, the greeting, every other component, and all the words on the page. All CSS is appended to the parent's sheet.css under three headed blocks."
+  ],
+  "floorsFailed": 0,
+  "measures": "Full render passes with 0 hard failures; one guideline missed, the page words (plans 15.2% differ from today, inherited from the parent; Status gains no new words, only moved ones). ink_on_bg 14.95, brand_on_bg 14.95. Bright green permille: home 3.4, ideas 9.04, chat 4.52, status 0.39. Green share of colour: home 49.7%, ideas 52.0%, chat 35.9%, status 52.6%. Hue entropy: home 0.544, ideas 0.479, chat 0.509, status 0.422. Kinds dE typ/deu/pro 15.4/5.4/6.4; sections 15.4/5.4/8.2. Greeting corner pixels (1150,120) = (4,9,6) and (100,640) = (9,17,16), as the parent's (not changed by this entry; the greeting has no wash). Smallest text 11.52px. No sideways scroll.",
+  "strengths": [
+   "The gauge is a real graphic that draws live data, at 25rem wide, so it shows plainly on the half-size Status card and fills the head row's empty right side.",
+   "NOW is now easy to find on Home below the fold and on To do: the lamp, the lit rail and the glass time plate show on the cards.",
+   "The foot lamp shows on every page's card at the bottom edge, adding one place of light without glare.",
+   "Each change is self-contained, in its own classes and its own markup partial, so it can be lifted into another design.",
+   "Everything else is the parent's, so the panel can attribute any difference in score to these slots."
+  ],
+  "weaknesses": [
+   "Out of the box the gauge shows $0.00 and a needle at rest at the left stop, with a ghost needle almost under it (the demo's average day is $0.04). It reads as a gauge, but not as a measurement.",
+   "The gauge makes the Status head about twice as tall, with the title centred beside it. On a quiet page that is a lot of room for one figure.",
+   "The Status close crop at 100% shows only the title, so the judges' close card does not show the gauge.",
+   "The lit rail around NOW is only on screens 78rem and wider; on a narrower screen NOW keeps the lamp and glass time but has no rail.",
+   "The foot lamp is easy to miss: it is small, at the very bottom, and has no label, so it is decoration rather than a status light.",
+   "NOW's time is more eye-catching than the rows around it, and the To do list on Home now has two NOW rows beside each other. The glow competes a little with the Send button and the other live lights.",
+   "The spend section loses its text readout, so people reading it straight through now find the figure at the top of the page and not beside the numbers."
+  ],
+  "elements": [
+   {
+    "slot": "figure",
+    "what": "Spend gauge on a crt() tube: tick-scale dial, limit mark, dashed overrun, lit needle with hot core and halo, ghost needle for the average day, big VT323 figure, amber from 75% and red past the limit. Markup: macro spend_meter plus the .gauge.readout.spend-meter call inside page_head's caller in variants/r15-mut-9/templates/status.html. CSS: .gauge, .readout-line, .dial*, .needle*, @keyframes swing."
+   },
+   {
+    "slot": "signal",
+    "what": "NOW as a round white-hot lamp on the list's rail with the time on its own lit glass, a line of light across the list, and a lit stretch of the rail around the tick. Markup: macro now_tick in variants/r15-mut-9/templates/_now.html (adds span.now-rail). CSS: .now-tick, .now-word, .now-time, .now-rail."
+   },
+   {
+    "slot": "foot",
+    "what": "One pilot lamp lit at rest at the heart of the footer horizon, with a lit run of the horizon either side. Markup: span.foot-lamp as the last child of footer.foot in variants/r15-mut-9/templates/base.html. CSS: .foot-lamp and .foot-lamp::before."
+   }
+  ]
+ },
+ {
+  "id": "r15-mut-10",
+  "name": "Grid Console Single Line",
+  "tagline": "Grid Console Folio, Led with Home's question as one bold panel of outlined starters, a one-line page head, and light numerals a size above their text.",
+  "concept": "The parent, Grid Console Folio, Led, kept exactly, with three small edits that each show at half size. Home's box becomes one panel: a bold question with \"mind\" lit in a three-layer phosphor halo, a bar of sentence-case \"From\", position tick, mic and bright Send, then outlined ways to start that take the width of their words. Every desktop page head folds to one line, the title with its readout line on the baseline behind a hairline. Every numeral is drawn light and a size above its text.",
+  "companions": "Unchanged from the parent. Steel-cyan #77ced5 is the accent (links, title tiles, the wash). The section colours (lilac, cyan, lemon, amber, pink) stay on their own pages and kinds. Pewter #25393b is the card edge. All of it is the parent's. The three changes add no colour: the starters' outline is a mix of the secondary ink and line-2, and the only green added is the key word's halo and the box's glow, both brand.",
+  "decisions": [
+   "[chat] Graft from Track Diagram Aglow, drawn in the parent's materials. I did not copy its 8px radius, its sans or its colours. Changes: the question goes from Archivo 400 at 112% width to 650 at 104% width. The inner rule above the bar is dropped so the box reads as one panel. 'From' goes from mono caps to a sentence-case 0.9rem label with the name at 650. 'mind' gets the three-layer text-shadow (2px / 0.4em / 1.2em), scoped to .ask-question .glow. The Home box gains an inset top highlight and a second outer glow at rest. The focus state is unchanged. The ways to start leave the 2fr/1fr/1fr grid of filled keys with a lit chevron and become transparent outlined chips (flex, content width, 3px radius, outline = secondary mixed into line-2). They are not round pills, because only the machine is rounded in this design. The chevron went because outlined chips need no marker.",
+   "[head] The head has no count of its own. The counts ('12 ideas', 'Open 4 shown') already live in the section heads, and duplicating them would repeat the rows. So the nearest version that works: at 64rem and up, the title and the page's readout line (the lede) share one flex row. The lede is set on the title's baseline, behind a 1px line-2 hairline, and the page action stays at the right. The head's margin and padding tighten (1.75/1.35rem to 1.2/0.9rem). The Chat page's side column keeps its stacked head. A lede too long for the room wraps under the title, so Settings subpages and crumbs still work. The phone is untouched.",
+   "[type] One @font-face, 'Figures': Fraunces pinned to weight 300, unicode-range digits 0-9 only, size-adjust 116%. It is put first in --read, --display and --label-face, so every digit in Archivo text and Martian Mono labels is a light serif figure about one step above its text. This reaches dates, times, ids, counts, '6 days ago' and the month's days on every page, without touching markup. Serif heads, the existing Fraunces figures, the glass (VT323) and the radar keep their own digits. font-synthesis-weight is off so bold rows do not fake-bold the light digits. SOFT 30 is set on :root to match the heads, since a face descriptor cannot set it.",
+   "Nothing else changed: no tokens, no markup, no other rule in the sheet. The three blocks are appended at the end, each behind its own banner, so the slots stay separable. A blind roll, the head's 'count', is read as the readout line."
+  ],
+  "floorsFailed": 0,
+  "measures": "Full render: 0 hard failures; 1 guideline missed, the page-words share (worst Plans 15.2% of words differ), which is inherited from the parent's wording since I changed no words. ink_on_bg 14.95, brand_on_bg 14.95, brand exactly #6dff9c (L .897, C .186, h 151.4). Green share of colour 54.0% on Home and 51.2% on Ideas. Hue entropy 0.552 on Home and 0.477 on Ideas. Bright-green px 3.4 permille on Home and 8.9 on Ideas. Kinds dE 15.4 / 5.4 / 6.4 and sections 15.4 / 5.4 / 8.2 (typ/deu/pro), all unchanged from the parent. No sideways scroll anywhere. Smallest text 11.52px. The greeting corner pixels (1150,120) and (100,640) sample (4,9,6) and (9,17,16) in the shot, which are dark by design and not the old cyan wash, as in the parent.",
+  "strengths": [
+   "The chat panel reads as one object on Home, and its change is visible at half size. The question is bolder, 'mind' blooms more, the bar loses its rule, and the ways to start become light outlined chips instead of a grid of filled keys.",
+   "The one-line head recovers about 30px of height on every list page and gives the page a clear title, hairline, readout rhythm. Ideas, Status, To do and Settings all show it.",
+   "The Figures face is a single self-contained @font-face plus three variable overrides. It reaches every page's numerals with no markup change and could be lifted straight into another design.",
+   "Nothing outside the three slots changed, so the panel can attribute any difference to these edits."
+  ],
+  "weaknesses": [
+   "The head has no real count, since a count would repeat the section heads. 'Title and count together' is read as the title and its readout line, which is a looser reading of the roll.",
+   "Numerals at weight 300 are thin in dim 11-12px labels on the dark ground. They are +16% larger, which helps, but contrast of the stroke is lower than Archivo's. In mono labels such as '02:56' and '#4' a serif digit beside mono caps is a mixed-face seam. Tabular alignment in mono columns now depends on Fraunces's digits, which are lining and fairly even but not strictly monospaced.",
+   "The Home chat change is partly quiet. The panel's frame, radius and glow are close to the parent's, so the strongest differences are the question weight, the chips and the lowercase From.",
+   "In Chat's side-column and on the phone the one-line head does not apply by design. The head change is desktop-only, and the Status lede sits a pixel or two high of a perfect baseline at some widths."
+  ],
+  "elements": [
+   {
+    "slot": "chat",
+    "what": "Home/Chat composer panel. CSS block '[chat] ONE PANEL' at the end of variants/r15-mut-10/sheet.css: .ask-question (bold 650), .ask-question .glow (3-layer halo), .ask-bar (no rule), .ask .who .from (sentence-case), .welcome .ask (lit at rest), and .starters / .starters a (outlined flex chips). The markup is the unchanged _ask.html."
+   },
+   {
+    "slot": "head",
+    "what": "One-line desktop page head. CSS block '[head]' in the sheet: @media (min-width:64rem) .page-head:not(.comms-side .page-head) .page-title (flex row) and .lede (baseline, hairline border-left, tighter head margins). It uses the existing page_head macro markup."
+   },
+   {
+    "slot": "type",
+    "what": "Light numerals one size up. CSS block '[type]' in the sheet: @font-face 'Figures' (Fraunces, weight 300, unicode-range U+30-39, size-adjust 116%) plus :root --read/--display/--label-face with 'Figures' first, font-synthesis-weight none and body font-variant-numeric lining-nums."
+   }
+  ]
+ },
+ {
+  "id": "r15-mut-11",
+  "name": "Signal Catalogue, Gauged",
+  "tagline": "Signal Catalogue with a phosphor spend gauge in the Status head, bigger lamps (steel bead for waiting, hollow pewter ring for off) with a key, and selects drawn as keys that open a list.",
+  "concept": "The parent unchanged except three self-contained parts. The day's spend becomes a moving-coil gauge drawn in phosphor on the glass at the right of the Status head. The Status lamps are made larger and drawn so their shape alone says their state, with a one-line key. Every select is drawn as a raised key with its own chevron cell that opens a list. The feel is a catalogue desk that gained one live instrument and sturdier controls.",
+  "companions": "None added. The parent's companions stay as they were. Steel (#7792a6, bead edge #a9c0cf) marks waiting, pewter (#9a9d9f) marks off, and the manila tan marks the select chevron. The phosphor green stays on the gauge, the lit lamp and the focus ring. The gauge goes amber from 75% of the limit and danger red past it, because past the limit is a real stop.",
+  "decisions": [
+   "Figure: the donor's gauge, redrawn in this design's own materials. It uses the parent's .crt glass, the --phosphor tokens and the IBM Plex Mono / VT323 faces, all in new gauge-* classes.",
+   "The gauge sits in the Status page-head's actions slot (page_head's caller). The old readout in the 'What it has cost' panel is removed so the figure is not drawn twice. The panel was below the card's fold and the judges would not have seen a gauge there.",
+   "The readout is a grid: the figure with 'today' stacked under it, and the percent-of-limit and average-day lines right-aligned. My first render ran 'today' into the average-day text, so this fixed it. The head aligns to the centre (:has(.gauge)) so the plate does not sink to the gauge's bottom edge.",
+   "The ghost needle (an average day), the limit tick and the dotted overrun zone are kept. Without them a needle at $0.00 would show nothing.",
+   "Signal: the same idea made more of. Lamps grow from 0.62rem to 1.05rem. ON is a lit dot with a hot core and a ring. WAITING is a steel bead, lit from above and matte with no halo. OFF is a 3px hollow pewter ring. Nothing is red.",
+   "Signal: a key under the Status head names the three shapes once ('Lit green: working', 'Steel: waiting, or partly', 'Hollow ring: off'), following the digest's rule that state is coded by shape with a legend. The Chat 'pending' bubble's steel dot is made the same bead.",
+   "Controls: a closed select becomes a key rather than a recessed field. It has a lit-top face, a dark bottom edge, a semi-bold word and a separated chevron cell that flips and lights when the list is open. The parent's drawer-of-cards list is kept.",
+   "Controls: the base-select rules and the older fallback both carry the chevron cell. Hover, press (2px drop) and open/focus ring (the green 2px-style ring) are drawn, so the focus floor holds.",
+   "Digest tension: raised keys everywhere can make selection read backwards. This is limited to selects, which now look unlike the field boxes. The roll asked for it, and the Ideas filter selects are the test."
+  ],
+  "floorsFailed": 0,
+  "measures": "The tokens, glow numbers and the greeting's corner are the parent's, as every token is unchanged. ink_on_bg 14.89, brand_on_bg 15.02, brand and screen #6dff9c (L 0.897 / C 0.186 / h 151.4), glow, screenGlow and topGlow all 1.0. Green share of colour: home 38.1%, ideas 52.1%. Hue entropy: home 0.49, ideas 0.423, status 0.331. Kinds dE typ/deu/pro: 17.5 / 7.0 / 9.5. Sections dE typ/deu/pro: 18.6 / 7.0 / 6.7. The greeting corner pixels are (32,32,20) at (1150,120) and (28,24,19) at (100,640). The only WARN is the words-unchanged guideline (worst: plans, 13.9%, and home 7.0%). It is a measure, not a refusal. This design's own text changes are the added key line and the gauge's 'today / % of limit / Average day' words, on Status only.",
+  "strengths": [
+   "The gauge is the only data-drawing figure on Status, and it is on lit glass at the head, so it shows on the half-size Status card.",
+   "The three lamp shapes can be told apart by shape alone, even for colour-blind viewers. The key names them once, and the lamp grows large enough to read at half size.",
+   "Selects now read as pressable keys with a clear chevron cell on every page (Home, Chat, Ideas filters, To do). The open list is unchanged and still has the focus ring.",
+   "Everything is self-contained. The figure is one macro (spend_gauge in _ui.html) plus the gauge-* classes. The signal is the .lights .light and .lamp-key rules. The controls are the select block. Each can be lifted on its own.",
+   "The Status head becomes a real head row (title and lede left, figure right), in line with the digest's 'every page opens on one head row' principle."
+  ],
+  "weaknesses": [
+   "With $0.00 spent the needle rests at the far left of the scale, so it reads as a thick hatched stub beside the '0'. The ghost needle and the limit tick carry the meaning, but the gauge is not impressive at rest.",
+   "The gauge makes the Status head about 130px taller, which pushes the lamp panels down. The 'Who answers' lamps are still on the card, but less of the cost panel is.",
+   "The demo has no 'waiting' rows, so the steel bead appears only in the key on the card. The judges see waiting in one place.",
+   "The select change is subtle at half size. It is mostly the chevron cell and the dark bottom edge. It may read as only a small restyle of the parent's select, and raised keys risk the 'selection reads backwards' pitfall.",
+   "It adds words: the key line, and the gauge's 'today / % of limit / Average day' lines. Plans shows 13.9% of words differing and home 7.0%; most of that looks inherited from the parent's own markup, and I did not measure the parent to separate them.",
+   "The lamp-key sits in its own box, which adds one more bordered strip to the Status page. The donor's VT323 on the tube means the gauge text is small and blurred slightly by the glass's 0.35px filter."
+  ],
+  "elements": [
+   {
+    "slot": "figure",
+    "what": "Spend gauge on the glass: macro spend_gauge(used, typical, limit) in variants/r15-mut-11/templates/_ui.html, used by the {% call page_head %} in templates/status.html. CSS is the .gauge / .gauge-* block in sheet.css (an 80 degree arc, ticks, a limit mark, a dotted overrun zone, a ghost needle, a lit needle with a swing animation, amber from 75% and danger past the limit). It needs the .crt() glass and the --phosphor tokens, plus --hot."
+   },
+   {
+    "slot": "signal",
+    "what": "Larger lamps drawn by shape, in .lights .light and .lamp-key .light: .on is a lit dot with a hot core, .part is a steel bead, .off is a hollow 3px pewter ring. A key line (p.lamp-key in status.html) names the three, and the Chat .pending bubble's dot is the same bead. Nothing red."
+   },
+   {
+    "slot": "controls",
+    "what": "Select as a key that opens a list: the closed 'select' rules (raised face, dark bottom edge, chevron cell drawn with background gradients) and, in @supports (appearance: base-select), the select::picker-icon chevron, in the final block of sheet.css. The open list (::picker(select)) is the parent's."
+   }
+  ]
+ },
+ {
+  "id": "r15-mut-12",
+  "name": "Signal Catalogue, Ruled",
+  "tagline": "Signal Catalogue with each section head as a titled rule trailing a lit rail in the section's colour, a faint ground band on every other row, and a bare footer of lamp and name.",
+  "concept": "Signal Catalogue, Lit Lamps carried whole, with three small changes. The manila drawer-label cards and burst traces give way to a titled rule: a lamp icon and the title typed bare on the card stock, then a 2px rail lit in the section's colour that dies away to the card edge. Alternate rows lie on a faint band of ground. The footer is left as a lamp and the page's name. The page is calmer, and its structure now reads in colour as well as brass.",
+  "companions": "The parent's companions are unchanged: warm brass labels and manila plates, and the green-black ground. The new rails borrow the section colours the parent already uses for its kinds and nav. Plans and the month are cyan, To do is lemon, Lately added and Ideas are lilac, the kids' wishes are pink, setup and attention are amber, and trouble is danger. Every other head is brass. Rails sit only in head rows, never as fills. The band is the parent's surface with 10% ink-2 mixed in.",
+  "decisions": [
+   "[rule] Chose the trailing light rail over the solid end block. The rail is drawn in the parent's materials: its own --brass, section colours, card-edge and warm line, not the donor's colours. The donor's lamp-icon-and-caps head became the parent's key font with an icon tinted --c, and the spine node was left out because the parent has no spine.",
+   "[rule] The rail replaces the manila walnut label card (rivets, bevel, burst trace) on every section head: Home's three drawers and wish lists, the Plans month name, panel titles (Status, Plans list, forms) and the 'N ideas' count strip. That keeps one drawing for every head. The panels' first h2 keeps its sentence-case 1.12rem size so it does not rank below its rows, and swaps its brass underline for the rail, which sits inside the h2 itself.",
+   "[rule] I made the rail 2px (not the donor's 1px) with a lit lead and a 3px drop-shadow, because a 1px rail would fall to half a pixel on the panel's half-size cards. It animates in over 0.9s from opacity 0.3 and scaleX 0.35, never from 0, and reduced motion removes the animation as before.",
+   "[foot] The footer's legend strip is read as the burst-trace strip over the plinth plus the italic motto. Both are gone (.foot::before is removed and the motto span is removed from base.html), leaving the lamp, FamilyDB and the small print. I kept the copyright and version line because it is not a legend. It moves onto the same row, right-aligned. This is the nearest version that works, and it is less literal than lamp and name alone.",
+   "[list] The faint band is --band, 10% ink-2 into surface. It lies on every even row of the Home and Plans agenda cards, the To do checklist cards, Status's light rows and the kids' wish rows. I first used 7%, which sampled only 10 levels off and barely showed on the half-size card, so I raised it. I left the multi-column grids (Ideas cards, To do page cards, Settings cards) alone, because even-child banding there makes a checkerboard. Status rows and wish rows bleed 0.65rem past the text so the band reads as a band.",
+   "Everything else stays the parent's: tokens, glow numbers, bar, tubes, controls, type and faces. All new CSS is one block appended before the Motion keyframes in the variant sheet, and the print, contrast and forced-colours overrides after it still win."
+  ],
+  "floorsFailed": 0,
+  "measures": "Tokens are the parent's, so the colour measures match it. ink_on_bg 14.89, brand_on_bg 15.02, brand exactly #6dff9c. Green share of colour: home 40.6%, ideas 50.7%, chat 57.9%, status 31.0%. Hue entropy: home 0.49, ideas 0.40, chat 0.40, status 0.32. Bright green is 0.26 to 7.8 per mille of pixels. Kinds dE typ/deu/pro 17.5/7.0/9.5. Sections dE typ/deu/pro 18.6/7.0/6.7. The greeting corner pixels are (32,32,20) top right and (28,24,19) bottom left. Hard checks: 0 failed. One guideline missed: the page-words measure shows 27.6% of login's words differ from today. That is the parent's clean-sheet wording on a page this mutant did not touch, plus the dropped footer motto. No sideways scroll, and the smallest text is 11.52px.",
+  "strengths": [
+   "Heads now look the same on every page. The manila-card-plus-burst label, the brass underline and the count strip's burst were three different drawings. Each is now one lamp-and-title with a lit rail.",
+   "Section colour finally reaches the page body. Home's Coming up, To do, Lately added and the wishes each get a cyan, lemon, lilac or pink rail, and the heads no longer compete with the monitors.",
+   "The band is visible on the half-size cards (Home's Nutcracker and campsite cards, Status rows, the wish row), and it sits well with the parent's cards and the dark well behind them.",
+   "A calmer, shorter footer, with the lamp and name still lit.",
+   "Everything is self-contained in three named CSS blocks and one template line. The rule block uses --c, --rail and --brass, so it could be lifted into another design."
+  ],
+  "weaknesses": [
+   "The head label is 0.8rem caps, as small as before, now without a card around it. At half size the three Home drawer heads are quieter than the manila plates were, and may read as less of a head.",
+   "The rail is 2px with a glow. On the very dark Status panels it can look like the old brass underline, only longer, so the structural change may not read to a judge.",
+   "The band is deliberately faint and applies only to single-column lists. Ideas, To do page cards and Settings cards (grids) get none, so the slot's effect is partial. On the Plans list it may look like a hover state.",
+   "I read 'legend strip' loosely, as the trace strip plus the motto, and kept the copyright and version line. A judge expecting only lamp and name will see a little more than the roll asked for.",
+   "Panel titles stay 1.12rem sentence case while drawer heads are 0.8rem caps. Both are now rules, but the two sizes of head remain, as in the parent."
+  ],
+  "elements": [
+   {
+    "slot": "rule",
+    "what": "Titled rule with a trailing light rail: the '/* Rule */' block appended to variants/r15-mut-12/sheet.css. Selectors .section-head, .month-head, .count, .panel > h2, with --rail per section and the rail drawn on ::after. Needs only --brass, --card-edge and the section colours."
+   },
+   {
+    "slot": "list",
+    "what": "Faint ground band on every other row: --band (surface 90% with ink-2 10%) applied by :nth-child(even) to .agenda > li, .checklist > li, .light-row and .kid-rows li, in the '/* List */' block of the same sheet."
+   },
+   {
+    "slot": "foot",
+    "what": "Bare footer of lamp and page name. In templates/base.html the footer motto span is removed; in the sheet the .foot::before trace strip is off and the small print sits right-aligned on the lamp's row."
+   }
+  ]
+ },
+ {
+  "id": "r15-wild-1",
+  "name": "Swiss Thread",
+  "tagline": "A strict grid with Vera's thread at the middle: grotesque type, huge thin numerals, steel blue for time, and the phosphor lit only where the machine is.",
+  "concept": "A printed timetable with a terminal in it. Flush-left grotesque type, ruled rows instead of cards, huge thin numerals as the figure device, a heavy rule in each section's colour to open it, and square corners everywhere except the monitors, which are the only objects. Vera's question and thread are the loudest thing on the front page. The phosphor is lit only where the machine is: the mark, the Send button, the key word, focus, lamps and the tubes.",
+  "companions": "Steel blue #6ab4e3 means time: Coming up, the plan day numerals, the month rules, relative-day labels, the Plans page numeral, and the Connections settings rule. Lilac #9b77f0 is ideas. Lemon #e9d27a is to do and spending. Amber #f0a955 is people, today and anything that needs a look, and appears only as a rule, a kind label or a today marker, never as a filled box. Pink #ee9ec6 is wishes and messages. Sage #a9cf8e is outings and lookups. A pale neutral #d2dad3 is the accent for links and for Home, Status and Settings. Calm green #82cb9b is for ticks, empty setup squares, OK lamps, meters and the AI model rule. The monitor bezel is putty grey #2c312d.",
+  "decisions": [
+   "Conversation first on Home. In the markup the talk column comes first, so a phone reads it first. On wide screens it is the middle column. Under the box and the ways to start there is now a ruled 'The thread' section with a green heavy rule: her last line in the Chat page's own row style, or the waiting state, with an 'Open the thread' link. Home's data only supplies her last line while it is under 24 hours old, so with older chat it shows a quiet row from Vera saying nothing is new, with the link.",
+   "Only the bar's five places are numbered, 01 Vera to 05 Wishes, in the bar and again as the huge thin numeral in each page head. Family, Memory, Status, Settings and Your password carry a thin line glyph (a mask drawn from the page's own icons) in the numeral's place, in their page colour. This removes the 08 and 09 and the 'Settings 09' contradiction. The Settings index cards lose their 01 to 09 and show the part's own icon instead.",
+   "Settings cards take a 2px top rule in each part's colour: General neutral, AI model calm green, Spending lemon, Messages pink, Lookups sage, Personality lilac, Connections steel, Sign-in amber, History grey. The hover keeps the rule and only lifts the ground.",
+   "Finish setting up is a plain ruled block, not a box. One heavy amber top rule opens it, each step is a hairline row with an empty square in calm green, the text is ink, and the underline turns amber only on hover. Amber stays a rule colour.",
+   "One lit button per page. The filter submit on Ideas and To do is an outline (1px edge, ink text, no glow). The filter fields lose their surface plate and sit between two hairlines. Filled bright buttons stay for Send and Add an idea.",
+   "Ideas head is now a letterhead. The numeral, the title, the lede and the one 'Add an idea' button sit on the left, and the On the radar monitor is in the head's third column, top-aligned with the numeral. The list below runs full width. I wrote the head by hand in ideas.html with the same classes instead of calling the page_head macro.",
+   "Monitor titles are sized to their glass: .crt-tube is a size container and the Next up title uses clamp(18px, 11.6cqw, 27px) with text-wrap: balance, so 'Oaks Park roller rink' sits on one line. '3 more on the radar' became '+3 on radar' with nowrap.",
+   "Home's side columns were balanced. Lately added is capped at 3 rows by the template. The Kids' wishes section moved up directly under To do, with the kids on one line and a pink rule. The restaurants link lost its amber fill and is now a ruled row. Coming up rows got more air. The three columns now end within about 140px of each other, down from about 400px.",
+   "The Chat composer is sticky at every width, with a solid --bg backing and a hairline top. On a phone it sits above the tab bar via bottom: calc(var(--tab-h) + env(safe-area-inset-bottom)). Home's box stays un-sticky.",
+   "Type floor: tags, chips, the changed badge, the OK flag, the bar's numbers, event times, the meta and legal lines and the keys state are raised to 0.72rem (11.5px) in mono caps with .06em tracking. The faint grey on small words (the bar numbers, .did, .legal, .optional, crumbs) is replaced with --dim.",
+   "Plans month chips get a 3px steel left bar, a slightly stronger tint and a square corner."
+  ],
+  "floorsFailed": 0,
+  "measures": "Full render: 0 hard checks failed, 1 guideline missed. ink_on_bg 17.28, brand_on_bg 15.29, brand_neon_vs_today 1.0. Green share of colour: home 31.8%, ideas 62.1%, chat 37.2%, status 14.0%. Hue entropy: home 0.688, ideas 0.537, chat 0.612, status 0.621. Bright green px permille: home 5.5, ideas 6.66, chat 3.88, status 0.22. Kinds dE typical 15.4, deutan 6.3, protan 6.0. Sections dE typical 15.9, deutan 6.3, protan 7.0. The smallest text is no longer flagged: the earlier 10.88px status tag is now 11.5px. The one missed guideline is the page's words, 'plans' worst at 13.9% differing from today. Plans is an untouched template, so I believe this comes from the demo's dates, but I did not trace it. The greeting corner pixel was not sampled, because Swiss Thread has no corner wash.",
+  "strengths": [
+   "The front page is now three ruled columns whose heads are each in a section colour: steel for time, lemon for to do, pink for wishes, lilac for ideas, green for the thread, amber for setup. Every page is also a typeset sheet with the same numeral, title, lede and hairline head.",
+   "The numbering has one rule: five numbers for the five places in the bar, and a glyph for the tools. That removes the old contradiction.",
+   "The Home thread block gives the 'conversation first' twist a visible home, and the quiet row keeps it honest when nothing is recent.",
+   "The grounded palette holds: the bright green sits on the mark, Send, the key word, focus and the tubes, and everything else is neutral, steel, lemon, lilac, amber or pink rules and labels.",
+   "Controls and focus are strong: double-line focus rings, an outline filter button, and square fields and checkboxes.",
+   "The Ideas head with the scope in the third column puts the one object on the grid and gives the list the full width."
+  ],
+  "weaknesses": [
+   "Home can only show the last 24 hours of Vera's line because the route supplies nothing more, and I did not change Python. Her earlier line and the last member message cannot be shown as two or three rows. With older chat, the thread block is an empty-state row, which is the weakest moment of the twist.",
+   "The Home columns still end unevenly: left about 905px, centre about 990px, right about 1045px in the shot. The left column is the shortest because the Next up tube got smaller once its title fit on one line.",
+   "The Next up title now runs 18 to 27px VT323, which is smaller than before. It reads cleanly at 100% in the close card, but long titles will wrap to two balanced lines.",
+   "I could not check the Ideas head between 40 and 64rem, or Chat on a phone with the sticky composer, because those views are no longer shot. They rely on the CSS alone.",
+   "Connections takes the steel rule, which is a stretch of 'steel means time'. I accepted it because the section holds the calendar, but it dilutes the rule slightly.",
+   "The chosen glyph for Memory is the list icon, which is generic. The Settings Personality card still shows the presence screen as its icon, which is the one non-line icon among the cards.",
+   "The page's words changed a little: 'The thread', 'Open the thread', '+3 on radar', the empty-thread line, and the dropped 'Continue with Vera'. The 'plans' word-share guideline is also missed."
+  ],
+  "revisions": [
+   "Home, centre: added the 'The thread' section under the ways to start, with a green heavy rule, her last line or waiting state in the Chat row style, and an 'Open the thread' link in its head. It falls back to a quiet row from Vera when nothing is under 24 hours old.",
+   "Home, right: Lately added capped at 3 rows in the template. The Kids' wishes section moved directly under To do. The restaurants link became a ruled row, not an amber box. Finish setting up is now a ruled amber-top block with empty calm-green squares, ink links and an amber underline on hover only.",
+   "Numbering: only 01 to 05 remain. Family, Memory, Status, Settings and Your password carry a thin glyph in the numeral slot. The Settings cards lost 01 to 09 and show the part's icon.",
+   "Settings cards got a 2px top rule in each part's colour. Plans chips got a 3px steel left bar.",
+   "Filter buttons on Ideas and To do are outline buttons. The filter plate is replaced by a hairline above and below.",
+   "Ideas: the monitor moved into the page head's third column, top-aligned with the numeral. Next up and On the radar titles scale with their glass by container-query units. '3 more on the radar' became '+3 on radar', no-wrap.",
+   "The Chat composer is sticky at all widths, above the phone tab bar, on a solid --bg with a hairline top.",
+   "Small type: tags, chips, badges, bar numbers, event times and legal text are raised to 11.5px. The faint grey on small words is replaced with --dim.",
+   "Declined: the thread rows on Home do not show a member's last message, because the route does not supply it and I will not invent one. Also declined: the exact pixel recipe for the Next up title (18 to 24px at 7cqw), which would have rendered at the 18px floor on this glass. I used 11.6cqw with a 27px cap, which gives about 23.6px and keeps the title on one line."
+  ],
+  "crit": [
+   "Home, centre column: put Vera's thread there. Under the .ask chips, add her last line and the last member message as two or three hairline-ruled rows, in the Chat page's .chat_line style, with a 'Open the thread ->' link. The twist is 'conversation first', yet Home shows no conversation, only a box. This also fills the dead space under the centre column.",
+   "Home, right column: cap 'Lately added' at 3 rows and move the Kids' wishes row up beside the To do 'ALL 4' footer. Move 'Finish setting up' out of the box into rows. Then the three columns end within about 60px of each other and the below-the-fold screen stops being a single column of leftovers.",
+   "Numbering: right now the bar shows 01 to 05, Home has none, Status is 08, Settings is 09, and Settings' own cards are numbered 01 to 09. A new user cannot tell which numbers mean anything. Either number only the bar pages and give Status and Settings (tools, in the gear and heart group) a glyph or no numeral in .page-head__num, or number the bar to include Home as 00. Remove the 01 to 09 numerals from the Settings cards and use letters or the section's own icon, so 'Settings 09' no longer holds nine more numbers.",
+   "Home, 'Finish setting up': it is a filled amber box with three fully underlined amber links, which is the loudest, most boxy thing on the page and breaks 'rows, not boxes'. Make it a plain ruled block with a single 2px amber left or top rule. Use an empty checkbox in the lit green (#82cb9b) and set the link text in ink (#eef2ee) with an amber underline only on hover. The amber then stays a rule colour and a kind label rather than a paragraph colour.",
+   "One lit button per page: Ideas ('Add an idea' and 'Filter') and To do ('Filter') use the bright #6dff9c filled button with glow for a secondary filter. Change the filter submit to the outline style (1px --edge, ink text, no glow) and keep the filled bright button for the page's one primary action (Send, Add). Also drop the filled --surface panel behind the filter fields on Ideas and To do and use a hairline top and bottom with the field labels in the 11.5px mono.",
+   "The monitor and the narrow screen: on Ideas the radar monitor floats at the far right beside the filter, off the grid and 40px lower than the numeral. Pin it into the page head's third grid column, top-aligned to the numeral baseline. In .screen__title (VT323), use font-size: clamp(18px, 7cqw, 24px) with container-type: inline-size and text-wrap: balance, so 'Oaks Park roller rink' stops breaking at 2 lines. Set white-space: nowrap on '3 more on the radar' and shorten it to '+3 on radar'.",
+   "Phone: make the Chat composer (.ask on /chat) position: sticky; bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom)) at all widths, with a --bg backing and a hairline top. Today the box falls below a long thread under the tab bar. Keep the Home box un-sticky.",
+   "Smallest type and colour variation: raise status tags, form labels and meta lines to a 11.5px floor (font-size: 11.5px; letter-spacing: .06em, still mono caps). The faint #7f8c85 on the tag fills reads weakly there, so use --dim. To answer 'too sober', give the Settings cards a 2px top rule in each part's colour (Spending lemon, Messages pink, Connections steel, Personality lilac, Sign-in amber) and make Plans chips a steel left bar with a square corner. The only rounded things left will be the monitors."
+  ],
+  "firstDraft": {
+   "name": "Swiss Thread",
+   "concept": "Swiss International Style on a 3-column front page: Vera's question and the box are the loudest thing at the centre, what is coming is read on the left under the lit Next up tube, and what is to be done is on the right, divided by hairlines rather than boxes. Pages are numbered 01 to 09 in the bar and again as huge thin numerals in each page head, rows replace cards, corners are square (the monitors alone are objects), and the phosphor glow is kept for the mark, the one button, the key word, focus, lamps and the screens. It should feel like a printed timetable with a terminal in it."
+  },
+  "elements": [
+   {
+    "slot": "head",
+    "what": ".page-head with the huge thin numeral in the section colour (::before from the body's in-* class), a flush-left bold title and grey lede over a hairline. The tools variant swaps the numeral for a thin masked glyph (--glyph). .page-head--scope is the letterhead variant with the one button under the lede and a monitor in column three (templates/ideas.html)."
+   },
+   {
+    "slot": "glass",
+    "what": ".crt / .crt-tube Next up and On the radar monitors on a putty bezel. They are re-laid for narrow columns, with the scope top left and the label beside it. The title is sized by container query (.crt-tube { container-type: inline-size }, .next-title clamp with cqw). The 'The thread' row and presence screen of Vera sit beside the box."
+   },
+   {
+    "slot": "list",
+    "what": ".agenda rows with the thin steel day numeral (.chip-day), the month and weekday, the title and the relative-day label. .checklist rows with a square tick. .idea-card rows (kind label, title, whom for). All are hairline-ruled with an inset section-colour bar on hover."
+   },
+   {
+    "slot": "rule",
+    "what": ".section-head, a heavy 2px rule in the section's --accent with the name and the way on at the far end. .setup, a ruled amber-top block of rows. .panel.filters, a hairline above and below instead of a plate. .section-card, a 2px top rule in the part's colour with the part's icon."
+   },
+   {
+    "slot": "signal",
+    "what": "Calm-green .setup li::before empty squares and checkbox ticks, the breathing .light lamps, the amber .chip.is-today numeral and month column, and the steel .rel relative-day labels."
+   },
+   {
+    "slot": "type",
+    "what": "Inter with an optical size, plus Geist Mono for small caps at 0.72rem with .06em tracking. The scale is label, small, body, lead, row, and a headline up to 4.4rem at -0.055em. Thin tabular numerals at weights 200 to 250 are the figure device. VT323 is for the tubes only."
+   },
+   {
+    "slot": "colour",
+    "what": "The grounded palette with a warm-green charcoal ground, a pale neutral accent #d2dad3, calm green #82cb9b for the everyday lit things, and a putty bezel. Colour jobs: steel is time, lilac is ideas, lemon is to do, amber is people and attention, pink is wishes and messages."
+   },
+   {
+    "slot": "controls",
+    "what": "Square fields, selects and checkboxes with a double-line focus ring. The filled bright button is for the one action (Send, Add an idea). The .filters button is an outline with no glow. The tabs are underlined words."
+   },
+   {
+    "slot": "chat",
+    "what": ".thread rows as a transcript. Her lines are larger, start at the margin behind a lit rule, and have her screen beside them. The family's are smaller, indented one column, with an amber initial square. .in-chat .ask is a sticky composer with a solid --bg backing and a hairline top. The Home box has the question as its label, with the key word lit."
+   },
+   {
+    "slot": "light",
+    "what": "The phosphor kept for the mark and the bar segment, the primary button's ring and pool, the .glow key word, the focus ring and bloom on fields, the ask box's faint resting halo, the lamps, and the tubes' bloom, scanlines and afterglow. Nothing else glows."
+   },
+   {
+    "slot": "foot",
+    "what": "The numbered top bar (01 to 05 by CSS ::before, with a lit segment under the mark) and the phone tab bar with icons. The foot is a heavy-ruled mark and legal line."
+   }
+  ]
+ }
+]
