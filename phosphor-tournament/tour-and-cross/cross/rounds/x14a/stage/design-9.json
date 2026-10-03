@@ -1,0 +1,68 @@
+{
+ "stage": "design",
+ "round": "x14a",
+ "label": "14a",
+ "roundNo": 1,
+ "key": "departures",
+ "cross": true,
+ "lin": {
+  "name": "departures (Departures, Platformed)",
+  "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a",
+  "carried": [
+   {
+    "id": "t3-timetable-refine",
+    "name": "Departures, Platformed"
+   }
+  ],
+  "briefs": [
+   {
+    "slot": "cross",
+    "parent": "t3-timetable-refine",
+    "parentName": "Departures, Platformed"
+   }
+  ],
+  "idea": "a station at night: Vera's line down the left with the box as its first stop, a dot-matrix departures board beside it",
+  "camp": "tour",
+  "otherCamp": [
+   {
+    "key": "desk",
+    "id": "r13-idea-1",
+    "name": "Desk Terminal, Joined",
+    "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+   },
+   {
+    "key": "quote",
+    "id": "r13-mut-3",
+    "name": "Quote Board at Evening",
+    "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+   },
+   {
+    "key": "dessau",
+    "id": "r13-wild-3",
+    "name": "Dessau Phosphor",
+    "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+   },
+   {
+    "key": "plate",
+    "id": "r13-idea-2",
+    "name": "Backlit Plate",
+    "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+   },
+   {
+    "key": "listing",
+    "id": "r12-idea-1",
+    "name": "Evening Listing, Traced",
+    "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+   },
+   {
+    "key": "folio",
+    "id": "r13-wmut-1",
+    "name": "Folio Switchboard",
+    "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+   }
+  ],
+  "mutant": null
+ },
+ "plan": true,
+ "mutant": false
+}

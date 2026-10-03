@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, kind_label, kind_icon, KIND_ICONS, page_head, crt, where_map %}
+{% block title %}Ideas · {{ site_title }}{% endblock %}
+{% block body_class %}page-ideas{% endblock %}
+{% block terminal_label %}Ideas: what is listed, and which{% endblock %}
+
+{# The tube: where the listed places are, home at the middle, north at the top, the nearer by road
+   the nearer the middle, the nearest pinging; the nearest and the furthest named, and how many
+   are listed. The page's words, so read out. #}
+{% block tube %}
+  {% set shown = rows | length %}
+  {% if on_radar %}
+    {# How far each place is, read back from its words ("about 2 h 10 min south of home"), in the
+       order the page orders the blips: nearest first, then by number. #}
+    {% set pl = [] %}
+    {% for row in rows if row.away %}
+      {% set sw = row.away | replace('about ', '') %}
+      {% set w = sw.split(' ') %}
+      {% if sw.startswith('under') %}{% set m = 3 %}
+      {% elif w | length > 1 and w[1] == 'h' %}{% set m = (w[0] | int) * 60 + ((w[2] | int) if w | length > 3 and w[3] == 'min' else 0) %}
+      {% else %}{% set m = w[0] | int %}{% endif %}
+      {% set _ = pl.append({'id': row.id, 'm': m, 'title': row.title}) %}
+    {% endfor %}
+    {% set pl = pl | sort(attribute='m,id') %}
+    {# The time scale: minutes to units out from home (the rings sit at 36, 70 and 86). #}
+    {% set SC = [(0, 0.0), (15, 36.0), (30, 63.0), (60, 77.0), (120, 86.0), (240, 95.0)] %}
+    {% set marks = [] %}
+    {% for p in pl %}
+      {% set idx, first = loop.index0, loop.first %}
+      {% if idx < on_radar.blips | length %}
+        {% set b = on_radar.blips[idx] %}
+        {% set dx, dy = b.x - 100, b.y - 100 %}
+        {% set rr = [(dx * dx + dy * dy) ** 0.5, 0.01] | max %}
+        {% set sc = namespace(r=106.0, done=false) %}
+        {% for i in range(SC | length - 1) %}{% if not sc.done and p.m <= SC[i + 1][0] %}{% set sc.r = SC[i][1] + (SC[i + 1][1] - SC[i][1]) * (p.m - SC[i][0]) / (SC[i + 1][0] - SC[i][0]) %}{% set sc.done = true %}{% endif %}{% endfor %}
+        {% set _ = marks.append({'id': p.id, 'title': p.title, 'x': 100 + dx / rr * sc.r, 'y': 100 + dy / rr * sc.r, 'first': first}) %}
+      {% endif %}
+    {% endfor %}
+    {# Places closer than 9 units share a label. #}
+    {% set groups = [] %}
+    {% for mk in marks %}
+      {% set g = namespace(hit=none) %}
+      {% for c in groups if g.hit is none %}{% for o in c.members %}{% if ((o.x - mk.x) ** 2 + (o.y - mk.y) ** 2) ** 0.5 < 9 %}{% set g.hit = c %}{% endif %}{% endfor %}{% endfor %}
+      {% if g.hit is none %}{% set _ = groups.append({'members': [mk]}) %}{% else %}{% set _ = g.hit.members.append(mk) %}{% endif %}
+    {% endfor %}
+    {# Every label tries beside its dots first, then above or below, then further out on a
+       leader, and takes the first place that meets nothing: no other label, no dot, not home,
+       the compass, the rings' words or the edge. #}
+    {% set CH, LH = 8.6, 15.0 %}
+    {# The rings are labelled up the north line on whichever side has fewer places near it. #}
+    {% set SIDES = {'r': [(102, 49, 150, 64), (102, 0, 180, 14), (6, 2, 27, 40)],
+                    'l': [(50, 49, 98, 64), (20, 0, 98, 14), (173, 2, 194, 40)]} %}
+    {% set crowd = {'r': 0, 'l': 0} %}
+    {% for side, boxes in SIDES | dictsort %}{% for b in boxes[:2] %}{% for mk in marks %}
+      {% if mk.x + 6 > b[0] and mk.x - 6 < b[2] and mk.y + 6 > b[1] and mk.y - 6 < b[3] %}{% set _ = crowd.update({side: crowd[side] + 1}) %}{% endif %}
+    {% endfor %}{% endfor %}{% endfor %}
+    {% set side = 'l' if crowd['l'] < crowd['r'] else 'r' %}
+    {% set blocks = [{'x0': 88, 'y0': 89, 'x1': 112, 'y1': 124}] %}
+    {% for b in SIDES[side] %}{% set _ = blocks.append({'x0': b[0], 'y0': b[1], 'x1': b[2], 'y1': b[3]}) %}{% endfor %}
+    {% for mk in marks %}{% set _ = blocks.append({'x0': mk.x - 4, 'y0': mk.y - 4, 'x1': mk.x + 4, 'y1': mk.y + 4}) %}{% endfor %}
+    {% set CANDS = [(1, 0, 5, 0), (-1, 0, 5, 0), (0, -1, 0, 4), (0, 1, 0, 4), (1, -1, 3, 1), (-1, -1, 3, 1), (1, 1, 3, 1), (-1, 1, 3, 1),
+                    (1, 0, 16, 0), (-1, 0, 16, 0), (1, -1, 12, 8), (-1, -1, 12, 8), (1, 1, 12, 8), (-1, 1, 12, 8), (0, -1, 0, 16), (0, 1, 0, 16),
+                    (1, 0, 28, 0), (-1, 0, 28, 0), (1, -1, 22, 16), (-1, -1, 22, 16), (1, 1, 22, 16), (-1, 1, 22, 16)] %}
+    {% set labels = [] %}
+    {% for c in groups %}
+      {% set text = c.members | map(attribute='id') | sort | map('string') | join(' ') %}
+      {% set xs, ys = c.members | map(attribute='x') | list, c.members | map(attribute='y') | list %}
+      {% set bx0, bx1, by0, by1 = xs | min - 3, xs | max + 3, ys | min - 3, ys | max + 3 %}
+      {% set cx, cy = (bx0 + bx1) / 2, (by0 + by1) / 2 %}
+      {% set wd = text | length * CH %}
+      {% set lp = namespace(done=false) %}
+      {% for sx, sy, gx, gy in CANDS %}{% if not lp.done %}
+        {% set x0 = (bx1 + gx) if sx > 0 else ((bx0 - gx - wd) if sx < 0 else cx - wd / 2) %}
+        {% set y0 = (by1 + gy) if sy > 0 else ((by0 - gy - LH) if sy < 0 else cy - LH / 2) %}
+        {% set x1, y1 = x0 + wd, y0 + LH %}
+        {% set ok = namespace(v=(x0 >= 2 and x1 <= 198 and y0 >= 2 and y1 <= 198)) %}
+        {% for o in blocks if ok.v %}{% if not (x1 <= o.x0 or o.x1 <= x0 or y1 <= o.y0 or o.y1 <= y0) %}{% set ok.v = false %}{% endif %}{% endfor %}
+        {% if ok.v %}
+          {% set lead = gx >= 12 or gy >= 12 %}
+          {% set tx = (x0 - 1.5) if sx > 0 else ((x1 + 1.5) if sx < 0 else cx) %}
+          {% set ty = (y0 + LH / 2) if sy == 0 else ((y1 + 0.5) if sy < 0 else (y0 - 0.5)) %}
+          {% set vx, vy = tx - cx, ty - cy %}
+          {% set vl = [(vx * vx + vy * vy) ** 0.5, 0.01] | max %}
+          {% set _ = labels.append({'x': x0 if sx > 0 else (x1 if sx < 0 else cx), 'y': y1 - 1.5, 'anchor': 'start' if sx > 0 else ('end' if sx < 0 else 'middle'),
+                                    'text': text, 'lead': lead, 'fx': cx + vx / vl * 5, 'fy': cy + vy / vl * 5, 'tx': tx, 'ty': ty}) %}
+          {% set _ = blocks.append({'x0': x0, 'y0': y0, 'x1': x1, 'y1': y1}) %}
+          {% set lp.done = true %}
+        {% endif %}
+      {% endif %}{% endfor %}
+    {% endfor %}
+    {% call crt('on-radar mapped', hidden=false) %}
+      <div class="map-row">
+        <div class="plot where-plot">{{ where_map(marks, labels, side=side) }}</div>
+        <div class="map-words">
+          <p class="on-radar-label"><span class="inverse caps">On the radar</span></p>
+          <p class="on-radar-count bright">{{ on_radar.count }} place{{ '' if on_radar.count == 1 else 's' }} from home</p>
+          <p class="on-radar-listed dim">{{ shown }} {{ ('match' ~ ('' if shown == 1 else 'es')) if filtered else ('idea' ~ ('' if shown == 1 else 's')) }} listed</p>
+          {% for word, place in [('Nearest', on_radar.nearest), ('Furthest', on_radar.furthest)] if place %}
+            <p class="on-radar-end"><span class="dim">{{ word }}</span> <a href="#idea-{{ place.id }}">#{{ place.id }}<span class="sr"> {{ place.title }}</span></a>
+              <span class="rel dist">{{ place.away | replace('about ', '') | replace(' from home', '') | replace(' of home', '') }}</span></p>
+          {% endfor %}
+        </div>
+      </div>
+      <p class="unseen">North at the top. Rings at 15 minutes and 2 hours by road; each place is numbered as in the list.</p>
+    {% endcall %}
+  {% endif %}
+{% endblock %}
+
+{# The console deck: the words, with their own Search key (so it works with scripts off), then
+   the kind as the one bank always open (three up, each kind's icon in its colour: the bank is the
+   legend of the rows), then who it is for and its status folded behind one key that says the
+   filter in force. Every key is a link that keeps the other choices and applies at once; the one
+   in force is latched, steel with its LED lit. On a phone the deck folds behind one Filter key
+   under the tube. #}
+{% block deck %}
+  {% set here = {'q': selected.q or none, 'kind': selected.kind or none, 'status': selected.status or none, 'who': selected.who or none} %}
+  <details class="deck deck-fold">
+    <summary>{{ icon('search') }}Filter{% if filtered %}<span class="fold-on">on</span>{% endif %}</summary>
+    <div class="deck-body">
+      <form class="deck-search" method="get" action="{{ url_for('web.ideas') }}" role="search" aria-label="Which ideas to list">
+        {% if selected.kind %}<input type="hidden" name="kind" value="{{ selected.kind }}">{% endif %}
+        {% if selected.who %}<input type="hidden" name="who" value="{{ selected.who }}">{% endif %}
+        {% if selected.status %}<input type="hidden" name="status" value="{{ selected.status }}">{% endif %}
+        <label for="q">Search</label>
+        <div class="search-row">
+          <input id="q" name="q" type="search" value="{{ selected.q }}" placeholder="ramen, museum…" />
+          <button class="secondary" type="submit">{{ icon('search') }}Search</button>
+        </div>
+      </form>
+      <nav class="keys kinds" aria-labelledby="keys-kind">
+        <p class="keys-name" id="keys-kind">Kind</p>
+        <div class="key-row">
+          <a class="key" href="{{ url_for('web.ideas', **dict(here, kind=none)) }}"{% if not selected.kind %} aria-current="true"{% endif %}>{{ icon('idea') }}<span>Any</span></a>
+          {% for option in kinds %}
+            {% set key = (option or '') | lower | replace(' ', '_') %}
+            <a class="key kind-{{ key if key in KIND_ICONS else 'other' }}" href="{{ url_for('web.ideas', **dict(here, kind=option)) }}"{% if option == selected.kind %} aria-current="true"{% endif %}>{{ kind_icon(option) }}<span>{{ option | replace('_', ' ') | capitalize }}</span></a>
+          {% endfor %}
+        </div>
+      </nav>
+      {# Who it is for, as a row of short keys; how it stands folded behind one key whose words say
+         the filter in force, so the list stays on the first screen. Each key applies at once. #}
+      <nav class="keys who" aria-labelledby="keys-who">
+        <p class="keys-name" id="keys-who">For</p>
+        <div class="key-row short">
+          <a class="key" href="{{ url_for('web.ideas', **dict(here, who=none)) }}"{% if not selected.who %} aria-current="true"{% endif %}><span>Anyone</span></a>
+          {% for option in people %}
+            <a class="key" href="{{ url_for('web.ideas', **dict(here, who=option)) }}"{% if option == selected.who %} aria-current="true"{% endif %}><span>{{ option }}</span></a>
+          {% endfor %}
+        </div>
+      </nav>
+      {% set status_words_now = (selected.status | capitalize) if selected.status else 'Any but dropped' %}
+      <details class="fold-keys"{% if selected.status %} open{% endif %}>
+        <summary><span class="fold-say">Status: {{ status_words_now | lower }}</span>{% if selected.status %}<span class="fold-on">on</span>{% endif %}</summary>
+        <nav class="keys status" aria-label="Status">
+          <div class="key-row">
+            <a class="key" href="{{ url_for('web.ideas', **dict(here, status=none)) }}"{% if not selected.status %} aria-current="true"{% endif %}><span>Any but dropped</span></a>
+            {% for option in statuses %}
+              <a class="key" href="{{ url_for('web.ideas', **dict(here, status=option)) }}"{% if option == selected.status %} aria-current="true"{% endif %}><span>{{ option | capitalize }}</span></a>
+            {% endfor %}
+          </div>
+        </nav>
+      </details>
+      {% if filtered %}<p class="deck-clear"><a href="{{ url_for('web.ideas') }}">{{ icon('x') }}Clear the filter</a></p>{% endif %}
+    </div>
+  </details>
+{% endblock %}
+
+{% block content %}
+  {% set shown = rows | length %}
+  {% call page_head('Ideas', 'Places to go, things to try, and everything the family has mentioned.', 'idea') %}
+    {% if visitor().may('change') %}<a class="button" href="{{ url_for('web.new_idea') }}">{{ icon('plus') }}Add an idea</a>{% endif %}
+  {% endcall %}
+
+  {# Folded until wanted, so the list is on the first screen; the summary says what it is. #}
+  {% if visitor().may('change') %}
+  <details class="band capture">
+    <summary>{{ icon('sparkles') }}Save a thought for later</summary>
+    <p class="muted">A restaurant, food cart pod, neighborhood, passport stop, kids' outing, special occasion,
+      or just a direction to explore. Write naturally; {{ assistant }} will organize it and say in Chat what was saved.</p>
+    <form class="form" method="post" action="{{ url_for('chat.send') }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="once" value="{{ once_token() }}">
+      <input type="hidden" name="intent" value="save_idea">
+      <div class="field wide">
+        <label for="capture-text">Your thought</label>
+        <textarea id="capture-text" name="text" required maxlength="3800" rows="3" data-dictate
+          placeholder="Maybe explore food carts in Portland with the girls on a sunny afternoon..."></textarea>
+      </div>
+      {% if not visitor().member %}
+        <div class="field">
+          <label for="capture-who">From</label>
+          <select id="capture-who" name="who" required><option value="">Choose your name</option>
+            {% for person in capture_people %}<option>{{ person.display_name }}</option>{% endfor %}
+          </select>
+        </div>
+      {% endif %}
+      <div class="field actions end">
+        <button class="secondary" type="submit">{{ icon('sparkles') }}Organize in Chat</button>
+      </div>
+      <p class="wide muted hint">Uses your configured assistant. Check its confirmation in Chat;
+        you can also use Add an idea to save directly without AI.</p>
+    </form>
+  </details>
+  {% endif %}
+
+  {% set POINTS = {'north': 'N', 'north-east': 'NE', 'east': 'E', 'south-east': 'SE', 'south': 'S', 'south-west': 'SW', 'west': 'W', 'north-west': 'NW'} %}
+  <section class="band idea-band" aria-label="The ideas">
+    {% if not on_radar %}<p class="band-note count">{{ shown }} {{ ('match' ~ ('' if shown == 1 else 'es')) if filtered else ('idea' ~ ('' if shown == 1 else 's')) }}</p>{% endif %}
+    {% if shown == limit %}<p class="band-note">Showing the first {{ limit }}.</p>{% endif %}
+    {% if rows %}<p class="colheads" aria-hidden="true"><span class="ch-kind">Kind</span><span class="ch-drive">Drive</span><span class="ch-way">Way</span><span class="ch-for">For</span><span class="ch-id">#</span></p>{% endif %}
+    {% if not rows %}
+      <p class="band-note empty">Nothing here yet.{% if visitor().may('change') %} <a href="{{ url_for('web.new_idea') }}">Add one</a>, or tell the bot in the
+        chat.{% endif %}</p>
+    {% endif %}
+    <ul class="rows idea-list" id="idea-list" tabindex="-1">
+      {% for row in rows %}
+        {% set key = (row.kind or '') | lower | replace(' ', '_') %}
+        {% set key = key if key in KIND_ICONS else 'other' %}
+        {% set drive, way = '', '' %}
+        {% if row.away %}
+          {% set short = row.away | replace('about ', '') | replace(' (estimate)', '') | replace(' of home', '') | replace(' from home', '') | replace(' h 5 min', ' h 05 min') %}
+          {% set parts = short.rsplit(' ', 1) %}
+          {% if parts | length == 2 and parts[1] in POINTS %}{% set drive, way = parts[0], POINTS[parts[1]] %}{% else %}{% set drive = short %}{% endif %}
+        {% endif %}
+        <li class="row idea-card kind-{{ key }}" id="idea-{{ row.id }}">
+          <span class="d">{{ kind_icon(row.kind) }}</span>
+          <span class="t"><a href="{{ url_for('web.idea', idea_id=row.id) }}">{{ row.title }}</a></span>
+          <span class="k">{{ row.kind | replace('_', ' ') | capitalize }}{% if row.status != 'idea' %} <span class="tag status-{{ row.status }}">{{ row.status }}</span>{% endif %}</span>
+          <span class="lead" aria-hidden="true"></span>
+          <span class="drive">{% if row.away %}<span aria-hidden="true">{{ drive }}</span><span class="sr">{{ row.away }}</span>{% endif %}</span>
+          <span class="way" aria-hidden="true">{{ way }}</span>
+          <span class="for">{{ row.who }}</span>
+          <span class="f">#{{ row.id }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endblock %}

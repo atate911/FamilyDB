@@ -1,0 +1,86 @@
+{% from "_ui.html" import icon %}
+{# The box everyone writes to her in, on Home and at the foot of the chat: the message on top, who
+   is sending, "Send where I am" and Send along the bottom, in one frame that lights up while you
+   write. It posts to the chat wherever it is drawn, so what is started on Home lands in the
+   conversation it joins. Closed (`locked`) while an answer is on its way. On Home its label is
+   her question, printed in the frame above where you write, and the page's heading (`question`);
+   elsewhere the label is for screen readers. The page's one script (ask.js) keeps what is being
+   written until it has been sent; without it the box still does everything it must. Needs:
+   family, who, send_where, typed, locked, placeholder, assistant, and `question` on Home. #}
+<form class="ask" id="ask" method="post" action="{{ url_for('chat.send') }}"
+      {%- if look_again %} data-refresh="{{ look_again }}"{% endif %}>
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+  <input type="hidden" name="once" value="{{ once_token() }}" />
+  <input type="hidden" name="lat" value="" />
+  <input type="hidden" name="lon" value="" />
+  {% if question %}
+    {# Trued, Relit: the family's own kitchen-table question, and the planner's whole job
+       in its one lit word: weekends and outings, ideas worth keeping, the calendar, the things
+       to do and their reminders are all "the plan". The placeholder under it answers it. #}
+    {# Trued, Yard Lit: an instruction, not a question: the family tell her, and she plans.
+       One line, the lit word last with its full stop inside the light; on a phone it breaks
+       after her name, never inside "what to plan." #}
+    <h1 class="ask-question"><label for="text">Tell {{ assistant }} <span class="nw">what to <span class="glow">plan.</span></span></label></h1>
+  {% else %}
+    <label class="sr" for="text">Message to {{ assistant }}</label>
+  {% endif %}
+  <textarea id="text" name="text" data-dictate="ask-mic" rows="{{ 2 if question else 3 }}" required placeholder="{{ placeholder }}"
+            {%- if locked %} disabled{% endif %}>{{ typed or '' }}</textarea>
+  <div class="ask-bar">
+    <div class="who">
+      {% if visitor().member %}
+        {# Signed in as themselves, so there is nobody else they could be asking as. #}
+        <span class="from">From <strong>{{ who }}</strong></span>
+      {% else %}
+        <label for="who">From</label>
+        <select id="who" name="who" required>
+          {% if not who %}<option value="">who is asking?</option>{% endif %}
+          {% for name in family %}
+            <option value="{{ name }}" {{ 'selected' if name == who }}>{{ name }}</option>
+          {% endfor %}
+        </select>
+      {% endif %}
+    </div>
+    {# Shown by ask.js; with scripts off there is no position to send, so no box. #}
+    <div class="locate" id="locate" hidden>
+      <label>
+        <input type="checkbox" name="send_where" value="1" {{ 'checked' if send_where }} />
+        {{ icon('locate') }}Send where I am
+      </label>
+    </div>
+    {# Where dictate.js puts the mic, beside Send; empty without it. #}
+    <span class="mic-slot" id="ask-mic"></span>
+    <button class="send" type="submit" {{ 'disabled' if locked or not family }}>{{ icon('send') }}<span class="label">Send</span></button>
+  </div>
+  <p id="where" class="muted"></p>
+</form>
+{% if question and coming is defined and coming %}
+  {# Trued, Yard Lit: on a phone, the line's head comes up under the box as one strip of tube
+     glass, the next plan, its day and how far off, the whole strip a way to it; its power wire
+     drops from its left end into the starter branch's terminus. Hidden on a wider screen, where
+     the tube itself stands beside the box's board. #}
+  {% set nx = coming[0] %}
+  <a class="crt readout-line" href="{{ url_for('web.idea', idea_id=nx.idea_id) if nx.idea_id else url_for('web.plans') }}">
+    <span class="crt-tube"><span class="rl-label">Next</span> <span class="rl-name">{{ nx.title }}</span><span class="rl-sep" aria-hidden="true"> · </span><span class="rl-when">{{ nx.chip.weekday }}{% if nx.time %} {{ nx.time }}{% endif %}</span>{% if nx.relative %}<span class="rl-rel"><span class="rl-sep" aria-hidden="true"> · </span>{{ nx.relative }}</span>{% endif %}</span>
+  </a>
+{% endif %}
+{% if starters %}
+  {# Ways to start. With the script each fills the box, and they step aside once something is
+     written, so a tap never replaces a draft; without it each is a link that brings the page
+     back with its words waiting in the box. Nothing is sent until somebody presses Send.
+     Trued, Relit: on Home they are a short branch line off the box. The branch leaves the box's
+     edge at the question, turns down once at 45 degrees into its junction, the station named
+     'Or start with', whose ring lights while the box is being written in; three stops follow,
+     each a slate key on a spur, and the branch ends at a buffer level with Send. #}
+  {% if question %}<div class="branch">
+  <p class="starters-head junction" aria-hidden="true">Or start with</p>{% endif %}
+  <ul class="starters" aria-label="Ways to start">
+    {% for starter in starters %}
+      {% set say = (starter.say or starter.label) | lower %}{% set lands = 'To do' if 'remind' in say else ('Ideas' if 'try' in say else 'Plans') %}
+      <li><a href="{{ url_for(request.endpoint, ask=starter.say, _anchor='ask') }}" data-say="{{ starter.say }}">{% if question %}<span class="sk"><span class="sk-say">{{ starter.label }}</span><span class="sk-lands">{{ 'usually lands in ' if loop.first else 'in ' }}{{ lands }}</span></span>{{ icon('right', cls='go') }}{% else %}{{ starter.label }}{% endif %}</a></li>
+    {% endfor %}
+  </ul>
+  {% if question %}<span class="buffer branch-end" aria-hidden="true"></span>
+  </div>{% endif %}
+{% endif %}
+<script src="{{ url_for('static', filename='ask.js') }}" defer></script>

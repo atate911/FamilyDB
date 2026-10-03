@@ -1,0 +1,38 @@
+Plate, Engraved (x14a-plate-cross): what this design removes, and why. (removed.txt is written by
+the lint on every check and lists the mechanics; this says the reasons.) Everything Backlit Plate
+removed stays removed, for its reasons (monitor cases, the Ideas Kind select and tabs, the filter
+selects, the cards' secondary meta on the Ideas list, the cobalt wash).
+
+- The per-page READY chip in every page head: folded into one status foot engraved into the
+  plate's bottom edge on every page (pinhole, Ready, who answers, today's spend of the limit, and
+  the way to Status), so the machine's state is said once, in one place, with more in it.
+- The 4:3 aspect of the screen windows: each window is sized to its words.
+- The settings index's rounded icon tiles (section cards) and its "Needs a look" pill: each part
+  is an engraved row under a rule head (The family, The machine, Sign-in), and needing a look is
+  a half-amber pinhole with amber words.
+- Home's "Next up" window no longer carries the radar inside it: the radar is its own round
+  window cut over the screen's corner. Its words say "3 more on the slot" (the Coming up slot
+  shows them) instead of "on the radar".
+- Home's Coming up DAY / AT / IN column heads: each row now leads with its engraved day numeral,
+  so the column needs no head; the first plan is a row too (with a lit "Next"), so the count in
+  the head matches the rows.
+- The Plans list's DAY / AT / IN heads and its rule count: the count is the page head's figure.
+- The To do list's "4 shown" on the Open rule: the count is the page head's figure ("4 open ·
+  3 late"), said once.
+- Status's long lede about today's spend: the spend window says it; the lede is the question.
+- The month's today pinhole: today is a small lit window round its numeral instead.
+- base.html's DM Sans preload: the page sets no DM Sans.
+
+Plate, Channelled (x14b-plate-cross), the cross of Plate, Engraved, gives up further:
+- The stencil's leak cut under 'plan': it read as an underline or a typo to every judge. E1's
+  halo carries the word, and its light falls as an edgeless scanlined pool on the box's lip.
+- The placards 'Plans · rings 1·2·4 wk' and 'Plans · 1 wk/div': the radar's rings are labelled
+  on the glass ('1 wk', '2 wk', '4 wk') and the slot's axis already says 'Now', '1 wk' ...;
+  the others are now plain words ('Due dates, two weeks either side of today').
+- Status's bar meter and its two placards: the spend is a round dial (round = range), and one
+  plain line under the bevel says what the trace and the dashes show.
+- The violet, ochre and cyan starter notches: one steel edge; the destination is 'lands in ...'.
+- The cyan bar on the month's plan chips: a 2px edge in the plans ink mixed half toward steel.
+- The Ideas 'For anyone · Any but dropped' disclosure and its keys: For and Status are two
+  visible selects beside Search, applied by its Search key, so one control per filter.
+- Coming up's '4 plans' count: 'Next, then 3 more'.

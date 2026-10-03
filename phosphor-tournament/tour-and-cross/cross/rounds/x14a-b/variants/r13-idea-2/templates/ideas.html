@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, kind_label, kind_icon, KIND_ICONS, page_head, crt, radar, rule %}
+{% block title %}Ideas · {{ site_title }}{% endblock %}
+{% block body_class %}page-ideas{% endblock %}
+{% block content %}
+  {% set shown = rows | length %}
+  {% call page_head('Ideas', 'Places to go, things to try, and everything the family has mentioned.', 'idea') %}
+    {% if visitor().may('change') %}<a class="button" href="{{ url_for('web.new_idea') }}">{{ icon('plus') }}Add an idea</a>{% endif %}
+  {% endcall %}
+
+  {# One place for the controls, beside the round window. The words with their own Search key (so
+     it works with scripts off); the kinds as one bank of keys, each in its colour, the one in
+     force latched (Restaurant is one of them: there is no second way to the same list); who it
+     is for and its status folded under one key. Every key is a link that keeps the other choices
+     and applies at once. The round window is place: where the listed ideas are, home at the
+     middle, north at the top, the nearest pinging; the nearest and the furthest printed beside
+     it. #}
+  {% set here = {'q': selected.q or none, 'kind': selected.kind or none, 'status': selected.status or none, 'who': selected.who or none} %}
+  <div class="scope{{ ' has-radar' if on_radar }}">
+    <div class="search-line">
+      <form class="deck-search" method="get" action="{{ url_for('web.ideas') }}" role="search" aria-label="Which ideas to list">
+        {% if selected.kind %}<input type="hidden" name="kind" value="{{ selected.kind }}">{% endif %}
+        {% if selected.who %}<input type="hidden" name="who" value="{{ selected.who }}">{% endif %}
+        {% if selected.status %}<input type="hidden" name="status" value="{{ selected.status }}">{% endif %}
+        <label class="sr" for="q">Search</label>
+        <input id="q" name="q" type="search" value="{{ selected.q }}" placeholder="Search: ramen, museum…" />
+        <button class="secondary" type="submit">{{ icon('search') }}Search</button>
+      </form>
+      <details class="more-keys"{% if selected.who or selected.status %} open{% endif %}>
+        <summary class="key"><span>For {{ selected.who or 'anyone' }} · {{ selected.status | capitalize if selected.status else 'Any but dropped' }}</span></summary>
+        <div class="more-keys-body">
+          <nav class="keys who" aria-labelledby="keys-who">
+            <p class="legend" id="keys-who">For</p>
+            <a class="key" href="{{ url_for('web.ideas', **dict(here, who=none)) }}"{% if not selected.who %} aria-current="true"{% endif %}><span>Anyone</span></a>
+            {% for option in people %}
+              <a class="key" href="{{ url_for('web.ideas', **dict(here, who=option)) }}"{% if option == selected.who %} aria-current="true"{% endif %}><span>{{ option }}</span></a>
+            {% endfor %}
+          </nav>
+          <nav class="keys status" aria-labelledby="keys-status">
+            <p class="legend" id="keys-status">Status</p>
+            <a class="key" href="{{ url_for('web.ideas', **dict(here, status=none)) }}"{% if not selected.status %} aria-current="true"{% endif %}><span>Any but dropped</span></a>
+            {% for option in statuses %}
+              <a class="key" href="{{ url_for('web.ideas', **dict(here, status=option)) }}"{% if option == selected.status %} aria-current="true"{% endif %}><span>{{ option | capitalize }}</span></a>
+            {% endfor %}
+          </nav>
+        </div>
+      </details>
+      </div>
+    {% if on_radar %}
+      <div class="scope-radar">
+        {% call crt('win win-round on-radar') %}{{ radar(on_radar.blips, rings=on_radar.rings) }}{% endcall %}
+        <dl class="radar-read">
+          <div class="read-count"><dt>{{ on_radar.count }} place{{ '' if on_radar.count == 1 else 's' }}</dt><dd>from home, the nearest in the middle</dd></div>
+          <div><dt>Nearest</dt><dd><a href="{{ url_for('web.idea', idea_id=on_radar.nearest.id) }}">#{{ on_radar.nearest.id }} {{ on_radar.nearest.title }}</a> <span class="dist">{{ on_radar.nearest.away }}</span></dd></div>
+          {% if on_radar.furthest %}<div><dt>Furthest</dt><dd><a href="{{ url_for('web.idea', idea_id=on_radar.furthest.id) }}">#{{ on_radar.furthest.id }} {{ on_radar.furthest.title }}</a> <span class="dist">{{ on_radar.furthest.away }}</span></dd></div>{% endif %}
+        </dl>
+      </div>
+    {% endif %}
+      <nav class="keys kinds" aria-label="Kind">
+        <a class="key" href="{{ url_for('web.ideas', **dict(here, kind=none)) }}"{% if not selected.kind %} aria-current="true"{% endif %}>{{ icon('idea') }}<span>Any</span></a>
+        {% for option in kinds %}
+          {% set key = (option or '') | lower | replace(' ', '_') %}
+          <a class="key kind-{{ key if key in KIND_ICONS else 'other' }}" href="{{ url_for('web.ideas', **dict(here, kind=option)) }}"{% if option == selected.kind %} aria-current="true"{% endif %}>{{ kind_icon(option) }}<span>{{ option | replace('_', ' ') | capitalize }}</span></a>
+        {% endfor %}
+      </nav>
+      {% if filtered %}<p class="clear-line"><a class="clear" href="{{ url_for('web.ideas') }}">{{ icon('x') }}Clear the filter</a></p>{% endif %}
+  </div>
+
+  {% set POINTS = {'north': 'N', 'north-east': 'NE', 'east': 'E', 'south-east': 'SE', 'south': 'S', 'south-west': 'SW', 'west': 'W', 'north-west': 'NW'} %}
+  <section class="idea-band" aria-labelledby="ideas-h">
+    {{ rule('All ideas' if not filtered else 'Matching', 'ideas-h', shown ~ ' idea' ~ ('' if shown == 1 else 's') ~ (', the first ' ~ limit if shown == limit else '')) }}
+    {% if rows %}<p class="colheads cols-ideas" aria-hidden="true"><span class="ch-drive">Drive</span><span class="ch-way">Way</span><span class="ch-for">For</span><span class="ch-id">#</span></p>{% endif %}
+    {% if not rows %}
+      <p class="muted empty">{{ icon('idea') }}<span>Nothing here yet.{% if visitor().may('change') %} <a href="{{ url_for('web.new_idea') }}">Add one</a>, or tell the bot in the
+        chat.{% endif %}</span></p>
+    {% endif %}
+    <ul class="rows idea-list">
+      {% for row in rows %}
+        {% set key = (row.kind or '') | lower | replace(' ', '_') %}
+        {% set key = key if key in KIND_ICONS else 'other' %}
+        {% set drive, way = '', '' %}
+        {% if row.away %}
+          {% set short = row.away | replace('about ', '') | replace(' (estimate)', '') | replace(' of home', '') | replace(' from home', '') | replace(' h 5 min', ' h 05 min') %}
+          {% set parts = short.rsplit(' ', 1) %}
+          {% if parts | length == 2 and parts[1] in POINTS %}{% set drive, way = parts[0], POINTS[parts[1]] %}{% else %}{% set drive = short %}{% endif %}
+        {% endif %}
+        <li class="row idea-card kind-{{ key }}">
+          <span class="d">{{ kind_icon(row.kind) }}</span>
+          <span class="t"><a href="{{ url_for('web.idea', idea_id=row.id) }}">{{ row.title }}</a> <span class="k">{{ row.kind | replace('_', ' ') | capitalize }}</span>{% if row.status != 'idea' %} <span class="tag status-{{ row.status }}">{{ row.status }}</span>{% endif %}</span>
+          <span class="lead" aria-hidden="true"></span>
+          <span class="drive">{% if row.away %}<span aria-hidden="true">{{ drive }}</span><span class="sr">{{ row.away }}</span>{% endif %}</span>
+          <span class="way" aria-hidden="true">{{ way }}</span>
+          <span class="for">{{ row.who }}</span>
+          <span class="f">#{{ row.id }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  {# Folded until wanted, and after the list, so the list is on the first screen: the one primary
+     way in is Add an idea, at the head; this asks Vera to file a thought instead. #}
+  {% if visitor().may('change') %}
+  <details class="fold capture">
+    <summary>{{ icon('sparkles') }}Save a thought for later</summary>
+    <p class="muted">A restaurant, food cart pod, neighborhood, passport stop, kids' outing, special occasion,
+      or just a direction to explore. Write naturally; {{ assistant }} will organize it and say in Chat what was saved.</p>
+    <form class="form" method="post" action="{{ url_for('chat.send') }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="once" value="{{ once_token() }}">
+      <input type="hidden" name="intent" value="save_idea">
+      <div class="field wide">
+        <label for="capture-text">Your thought</label>
+        <textarea id="capture-text" name="text" required maxlength="3800" rows="3" data-dictate
+          placeholder="Maybe explore food carts in Portland with the girls on a sunny afternoon..."></textarea>
+      </div>
+      {% if not visitor().member %}
+        <div class="field">
+          <label for="capture-who">From</label>
+          <select id="capture-who" name="who" required><option value="">Choose your name</option>
+            {% for person in capture_people %}<option>{{ person.display_name }}</option>{% endfor %}
+          </select>
+        </div>
+      {% endif %}
+      <div class="field actions end">
+        <button class="secondary" type="submit">{{ icon('sparkles') }}Organize in Chat</button>
+      </div>
+      <p class="wide muted hint">Uses your configured assistant. Check its confirmation in Chat;
+        you can also use Add an idea to save directly without AI.</p>
+    </form>
+  </details>
+  {% endif %}
+
+{% endblock %}

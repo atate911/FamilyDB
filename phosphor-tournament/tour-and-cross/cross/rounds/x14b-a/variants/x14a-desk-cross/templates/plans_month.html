@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, crt, plan_dial %}
+{% block title %}{{ month }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-plans page-month{% endblock %}
+{% block terminal_label %}Plans: what is next, and which month{% endblock %}
+{% macro event(entry) %}
+  <div class="event{{ ' from-google' if entry.from_google }}">
+    {% if entry.idea_id %}
+      <a href="{{ url_for('web.idea', idea_id=entry.idea_id) }}">{{ entry.title }}</a>
+    {% else %}
+      {{ entry.title }}
+    {% endif %}
+    {% if entry.time %}<small>{{ entry.time }}</small>{% endif %}
+  </div>
+{% endmacro %}
+
+{# The tube: Lit Manual's countdown on this terminal's round glass, read from the days this page
+   draws from today on: how many days to the next plan, how many follow, and a lit tick on each of
+   the next 28 days that has one. Read from the days already drawn, so it is asked of nobody. #}
+{% block tube %}
+  {% set t0 = config.FAMILYDB_APP.clock.today() %}
+  {% set ns = namespace(count=0) %}
+  {% set offs = [] %}
+  {% for week in weeks %}{% for day in week %}
+    {% set k = day.date.toordinal() - t0.toordinal() %}
+    {% if day.entries and k >= 0 %}{% set ns.count = ns.count + day.entries | length %}{% set _ = offs.append(k) %}{% endif %}
+  {% endfor %}{% endfor %}
+  {{ plan_dial(t0, offs, ns.count) }}
+{% endblock %}
+
+{# The console deck: which drawing (a bank, the one down latched) and which month, by name, with
+   the keys that page back and on. On a phone it folds behind one key under the title. #}
+{% block deck %}
+  <details class="deck deck-fold">
+    <summary>{{ icon('grid') }}{{ month }}</summary>
+    <div class="deck-body">
+      <nav class="keys view" aria-labelledby="keys-view">
+        <p class="keys-name" id="keys-view">View</p>
+        <div class="key-row two">
+          <a class="key" href="{{ url_for('web.plans') }}">{{ icon('list') }}<span>List</span></a>
+          <a class="key" href="{{ url_for('web.plans_month') }}" aria-current="page">{{ icon('grid') }}<span>Month</span></a>
+        </div>
+      </nav>
+      <nav class="keys month-keys" aria-labelledby="keys-month">
+        <p class="keys-name" id="keys-month">Month</p>
+        <div class="key-row two">
+          <a class="key" href="{{ url_for('web.plans_month', month=previous) }}">{{ icon('left') }}<span>Earlier</span></a>
+          <a class="key step-on" href="{{ url_for('web.plans_month', month=following) }}"><span>Later</span>{{ icon('right') }}</a>
+          {% if not this_month %}<a class="key this" href="{{ url_for('web.plans_month') }}"><span>This month</span></a>{% endif %}
+        </div>
+      </nav>
+    </div>
+  </details>
+{% endblock %}
+
+{% block content %}
+  {% call page_head('Plans', 'Outings, trips and dates the family has put on the calendar.', 'plans') %}
+    {% if visitor().may('change') %}<a class="button" href="{{ url_for('web.plans', _anchor='add') }}">{{ icon('plus') }}Add a plan</a>{% endif %}
+  {% endcall %}
+  {# Two drawings of the same days, and the stylesheet shows one: seven columns where there is
+     room for them, and on a phone just the days that have something on, as a list. #}
+  <section class="band month-band" aria-labelledby="month-name">
+    <header class="band-head"><h2 id="month-name">{{ month }}</h2>
+      {% if visitor().may('browse') %}<p class="band-note source source-{{ source }}">{{ source_note }}</p>{% endif %}</header>
+    <table class="month" aria-labelledby="month-name">
+      <thead>
+        <tr>{% for name in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}<th scope="col">{{ name }}</th>{% endfor %}</tr>
+      </thead>
+      <tbody>
+        {% for week in weeks %}
+          <tr>
+            {% for day in week %}
+              <td class="{{ 'outside' if not day.current }}{{ ' today' if day.today }}{{ ' weekend' if loop.index > 5 }}">
+                <time datetime="{{ day.date.isoformat() }}">{{ day.day }}</time>
+                {% for entry in day.entries %}{{ event(entry) }}{% endfor %}
+              </td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <ol class="plain month-list">
+      {% for day in busy_days %}
+        <li class="{{ 'today' if day.today }}">
+          <strong>{{ day.name }}</strong>{% if day.today %} <span class="tag">today</span>{% endif %}
+          {% for entry in day.entries %}{{ event(entry) }}{% endfor %}
+        </li>
+      {% else %}
+        <li class="muted">Nothing on in {{ month }}.</li>
+      {% endfor %}
+    </ol>
+  </section>
+{% endblock %}

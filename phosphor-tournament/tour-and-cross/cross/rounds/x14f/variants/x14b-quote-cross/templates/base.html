@@ -1,0 +1,136 @@
+{% from "_ui.html" import icon, presence %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0b0e0c" />
+    <title>{% block title %}{{ site_title }}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <script src="{{ url_for('static', filename='menu.js') }}" defer></script>
+    {# A mic beside each box that takes words, where the browser can write down speech and the
+       family has not turned it off (web_dictation). #}
+    {% if dictation %}<script src="{{ url_for('static', filename='dictate.js') }}" data-icons="{{ url_for('static', filename='icons.svg') }}" defer></script>{% endif %}
+    <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml" />
+    <link rel="manifest" href="{{ url_for('web.manifest') }}" />
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}" />
+    <meta name="apple-mobile-web-app-title" content="{{ site_title }}" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    {% block head %}{% endblock %}
+  </head>
+  {% set here = request.endpoint or '' %}
+  {% set SECTIONS = {
+    'home': ['web.home'],
+    'chat': ['chat.show'],
+    'ideas': ['web.ideas', 'web.idea', 'web.new_idea', 'web.edit_idea', 'web.restaurants'],
+    'plans': ['web.plans', 'web.plans_month'],
+    'todo': ['web.tasks'],
+    'wishes': ['web.wishes'],
+    'family': ['family.show', 'family.edit'],
+    'you': ['family.you'],
+    'memory': ['web.memory'],
+    'status': ['web.status'],
+    'settings': ['settings.show', 'settings.section', 'settings.personality'],
+  } %}
+  {% set ns = namespace(section='none') %}
+  {% for name, owns in SECTIONS.items() %}{% if here in owns %}{% set ns.section = name %}{% endif %}{% endfor %}
+  <body class="in-{{ ns.section }} {% block body_class %}{% endblock %}">
+    <a class="skip" href="#content">Skip to the page</a>
+    {# A key: its icon and its name, reached too by the browser's access key (listed under the
+       foot). The key of the page you are on is steel reverse video with a lit lamp in its corner. #}
+    {% macro item(label, target, section, glyph, key) %}
+      <a class="key to-{{ section }}" href="{{ target }}" accesskey="{{ key }}" aria-label="{{ label }}"{% if section == ns.section %} aria-current="page"{% endif %}>
+        {{- icon(glyph) }}<span class="label">{{ label }}</span></a>
+    {% endmacro %}
+    {% set visiting = visitor() %}
+    {% set managing = visiting.may('manage') %}
+    {# One row: the mark with the terminal's cursor waiting beside it, the places a day is spent,
+       numbered 1 to 6, the household's own, 7 to 9, and the settings key, 0. Where you are is the
+       lit key; the page itself says the rest. On a phone the places go along the foot, where the
+       thumb is. #}
+    <header class="bar">
+      <a class="brand" href="{{ url_for('web.home') }}">
+        <span class="brand-mark">{{ icon('mark') }}</span>
+        <span class="brand-name">{{ site_title }}</span><span class="caret" aria-hidden="true"></span>
+      </a>
+      <nav class="places" aria-label="Main">
+        {{ item('Home', url_for('web.home'), 'home', 'home', 1) }}
+        {% if visiting.may('chat') %}{{ item(assistant if has_persona else 'Chat', url_for('chat.show', _anchor='latest'), 'chat', 'chat', 2) }}{% endif %}
+        {{ item('Ideas', url_for('web.ideas'), 'ideas', 'idea', 3) }}
+        {{ item('Plans', url_for('web.plans'), 'plans', 'plans', 4) }}
+        {{ item('To do', url_for('web.tasks'), 'todo', 'todo', 5) }}
+        {% if visiting.may('decide') %}{{ item('Wishes', url_for('web.wishes'), 'wishes', 'gift', 6) }}
+        {% elif visiting.may('wish') and visiting.member %}{{ item('My wishes', url_for('web.wishes'), 'wishes', 'gift', 6) }}{% endif %}
+      </nav>
+      <nav class="tools" aria-label="Household">
+        {% if visiting.may('browse') %}{{ item('Memory', url_for('web.memory'), 'memory', 'heart', 7) }}{% endif %}
+        {% if managing %}{{ item('Family', url_for('family.show'), 'family', 'family', 8) }}{% endif %}
+        {% if visiting.may('browse') %}
+          {% set status_label = 'Status' ~ ((': ' ~ status_words[1]) if status_words else '') %}
+          <a class="key to-status{{ ' lit lit-' ~ status_light if status_light }}" href="{{ url_for('web.status') }}" accesskey="9" aria-label="{{ status_label }}"{% if ns.section == 'status' %} aria-current="page"{% endif %}>
+            {{- icon('status') }}<span class="label">Status</span>
+            {%- if status_words %}<span class="light" aria-hidden="true">{{ status_words[0] }}</span>{% endif %}</a>
+        {% endif %}
+      </nav>
+      {% if managing or visiting.member or visiting.signed_in %}
+        <details class="menu{% if ns.section in ('settings', 'you') %} here{% endif %}">
+          <summary accesskey="0">
+            {%- if managing %}{{ icon('settings') }}<span class="label">Settings</span>
+            {%- else %}{{ icon('user') }}<span class="label">{{ visiting.name or 'You' }}</span>{% endif -%}
+            <span class="chev" aria-hidden="true"></span>
+          </summary>
+          <div class="menu-list">
+            {% if managing %}
+              <a class="menu-all" href="{{ url_for('settings.show') }}"{% if here == 'settings.show' %} aria-current="page"{% endif %}>{{ icon('settings') }}All settings</a>
+              {% for one in settings_sections %}
+                {% set target = url_for('settings.section', name=one.name) %}
+                <a href="{{ target }}"{% if request.path == target %} aria-current="page"{% endif %}>
+                  {%- if one.icon == 'presence' %}{{ presence('glyph') }}{% else %}{{ icon(one.icon) }}{% endif %}{{ one.title }}</a>
+              {% endfor %}
+            {% endif %}
+            {% if visiting.member or visiting.signed_in %}
+              <div class="menu-you">
+                {% if visiting.member %}
+                  <p class="menu-who">Signed in as <strong>{{ visiting.name }}</strong></p>
+                  <a href="{{ url_for('family.you') }}"{% if ns.section == 'you' %} aria-current="page"{% endif %}>{{ icon('key') }}Your password</a>
+                {% endif %}
+                {% if visiting.signed_in %}
+                  <form class="signout" method="post" action="{{ url_for('auth.logout') }}">
+                    <button class="quiet" type="submit">{{ icon('signout') }}Sign out</button>
+                  </form>
+                {% endif %}
+              </div>
+            {% endif %}
+          </div>
+        </details>
+      {% endif %}
+    </header>
+    <main id="content">
+      {% for said in get_flashed_messages(category_filter=['edit']) %}
+        <p class="said" role="status">{{ said }}</p>
+      {% endfor %}
+      {% block content %}{% endblock %}
+    </main>
+    <footer class="foot">
+      <span class="foot-mark">{{ icon('mark') }}{{ site_title }}</span>
+      <span class="foot-line">A little less planning. A little more together.</span>
+      {# The access keys, kept out of sight until somebody asks: a key under the foot that opens
+         a small slate card of them, and the modifier each browser wants. #}
+      <details class="keys-help">
+        <summary>{{ icon('keyboard') }}Keyboard</summary>
+        <div class="keys-card">
+          <p class="keys-how">Hold <kbd>Alt</kbd> and press a number. In Firefox, <kbd>Alt</kbd><kbd>⇧</kbd>; on a Mac, <kbd>⌃</kbd><kbd>⌥</kbd>.</p>
+          <ol class="plain keys-list">
+            <li><kbd>1</kbd>Home</li><li><kbd>2</kbd>{{ assistant if has_persona else 'Chat' }}</li><li><kbd>3</kbd>Ideas</li>
+            <li><kbd>4</kbd>Plans</li><li><kbd>5</kbd>To do</li><li><kbd>6</kbd>Wishes</li>
+            <li><kbd>7</kbd>Memory</li><li><kbd>8</kbd>Family</li><li><kbd>9</kbd>Status</li><li><kbd>0</kbd>Settings</li>
+          </ol>
+        </div>
+      </details>
+      <p class="legal">{{ footer }}</p>
+    </footer>
+  </body>
+</html>

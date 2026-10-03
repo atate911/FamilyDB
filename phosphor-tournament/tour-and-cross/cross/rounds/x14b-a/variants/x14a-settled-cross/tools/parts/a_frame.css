@@ -1,0 +1,530 @@
+/* ==========================================================================================
+   SWITCHBOARD, TRUED: the family's videotex service, set out as a control panel.
+
+   The idea. A videotex service (the Minitel, Prestel) was a set of numbered pages behind a
+   sommaire, its contents page. Here the sommaire is Home, and it is a panel: every page of the
+   service is a cell headed by its line of the contents (a lamp, its number, its name, a dotted
+   leader, how many), each cell sized to what it holds, the terminal among them as page 200. Every
+   other page opens the same rack:
+     - Row zero, the one row of keys: the mark, the six places (the one you are on a steel cell
+       with its lamp lit), and the household's tools in words. On a phone the places go to the
+       foot of the screen, under the thumb.
+     - The module, down the first column: the page's plate (its number, its name, what it is
+       for, its one green primary), its tools (one bank of latched keys to a filter), and its
+       green screen, where the machine says what the list beside it does not.
+     - The register across the other three: one wide cell of lines of the contents under column
+       heads. Every list in the app is that one row drawing.
+   The phosphor is where the machine is: the tubes, the radar, her screen, the mark and its
+   cursor, the one primary, the box being typed in, focus, and the lamps that are on. Everything
+   the family keeps is matte: graphite on a green-black plate, bone ink, steel for "here", amber
+   only for late or needs a look, and each section's own low-chroma colour as a cap and a number.
+
+   Three faces, three jobs:
+     IBM Plex Sans   the family: everything read, every name, and every control, in sentence case
+     IBM Plex Mono   figures, times, dates and the legends over them, set in fixed columns
+     VT323           the tube: only on the glass
+   ========================================================================================== */
+
+:root {
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --machine: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --tube: "VT323", "IBM Plex Mono", ui-monospace, monospace;
+
+  /* The written steps, seven of them, on a 17px body. */
+  --t-label: 0.75rem;     /* 12 Plex Mono caps, +.06em: legends and column heads only */
+  --t-small: 0.9375rem;   /* 15: what is said about a thing, the facts, the controls */
+  --t-body: 1.0625rem;    /* 17/1.55: everything read, and the words typed */
+  --t-item: 1.1875rem;    /* 19 semi-condensed 600: a thing named */
+  --t-cell: 1.4375rem;    /* 23 semi-condensed 600: a cell's name */
+  --t-figure: 2rem;       /* 32 condensed 500, tabular: a count said large */
+  --t-title: 2rem;        /* 32 condensed 600: a page's name on its plate */
+  --track: 0.06em;        /* legends' capitals, and nothing else */
+  /* The tube's steps (VT323 reads a size smaller than it is). */
+  --t-tube-xl: 4.5rem;
+  --t-tube-q: 2.9rem;     /* the question: the largest thing on the glass */
+  --t-tube-l: 2.6rem;
+  --t-tube-m: 2rem;
+  --t-tube: 1.625rem;
+  --t-tube-s: 1.3rem;
+
+  /* The panel: one unit of rhythm (8px), the seam between cells, a row. */
+  --u: 0.5rem;
+  --gap: 0.5rem;
+  --pad: 1.1rem;
+  --row: 2.75rem;
+  --bar-h: 3.5rem;
+  --keys-h: 4.25rem;
+  --page: 78rem;
+  --measure: 62ch;
+  --leader-max: 46rem;
+
+  --bone: var(--accent);
+  --sec: var(--accent);
+  --plate: color-mix(in srgb, var(--bg) 80%, #000);
+  --key: #1b1f1f;
+  --key-hi: #242929;
+  --key-edge: #363c3c;
+  --bezel-hi: color-mix(in srgb, var(--bezel) 70%, #8f9a98);
+  --bezel-lo: color-mix(in srgb, var(--bezel) 72%, #000);
+  /* "Here": a steel cell, its lit edge on top, bone words on it. */
+  --here: #56697b;
+  --here-cap: #a9c4d8;
+  --here-ink: #f3f1ea;
+  /* The signals' two quiet materials: steel for waiting, pewter for off. */
+  --steel: #93b4c8;
+  --pewter: #8794a2;
+  /* Clay: the restaurants' own colour, a grounded earth, so amber keeps its one job (late, needs
+     a look). OKLCH 0.68 0.03 46: 16 or more apart from amber, coral, olive and bone. */
+  --clay: #a99389;
+  /* A row pointed at: a steel wash that fades like phosphor. */
+  --row-wash: color-mix(in srgb, #9cc4dc 12%, transparent);
+
+  --glow: 0 0 0 1px color-mix(in srgb, var(--brand) 35%, transparent), 0 8px 28px -10px color-mix(in srgb, var(--brand) 70%, transparent);
+  --afterglow: 1.2s cubic-bezier(0.2, 0.7, 0.3, 1);
+  --glow-in: 0.12s;
+  --shadow: inset 0 1px 0 rgb(255 255 255 / 0.035), 0 12px 32px -22px rgb(0 0 0 / 0.9);
+  --phosphor: var(--screen);
+  --sweep: 8s;
+  color-scheme: dark;
+}
+
+/* Each part of the service in its own colour, as a cap, an icon and a number: bone for the
+   household's own pages, the section colours for the family's lists, amber for setting up. */
+.in-chat, .in-home, .in-status, .in-settings, .in-you, .in-family, .in-memory,
+.to-home, .to-chat, .to-status, .to-settings, .to-family, .to-memory { --sec: var(--bone); }
+.in-ideas, .to-ideas { --sec: var(--ideas); }
+.in-plans, .to-plans { --sec: var(--plans); }
+.in-todo, .to-todo { --sec: var(--todo); }
+.in-wishes, .to-wishes { --sec: var(--shows); }
+.to-setup { --sec: var(--people); }
+/* The kinds of idea, each in its own colour. */
+.kind-restaurant { --k: var(--clay); }
+.kind-activity { --k: var(--todo); }
+.kind-outing { --k: var(--outing); }
+.kind-trip, .kind-day_trip { --k: var(--plans); }
+.kind-show { --k: var(--shows); }
+.kind-seasonal { --k: var(--seasons); }
+.kind-event, .kind-other { --k: var(--ideas); }
+
+/* ---- The page ------------------------------------------------------------------------------ */
+*, *::before, *::after { box-sizing: border-box; }
+html {
+  /* The afterglow at the top of every screen, as if a tube had just gone off (E6). */
+  background: radial-gradient(60% 38% at 50% -10%, color-mix(in srgb, var(--brand) 7.5%, transparent), transparent 70%), var(--bg);
+  background-repeat: no-repeat;
+  scroll-padding-top: calc(var(--bar-h) + 1rem);
+  scrollbar-color: var(--line-2) var(--bg);
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: var(--ink);
+  background: transparent;
+  font: 400 var(--t-body)/1.55 var(--sans);
+  font-kerning: normal;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+::selection { color: var(--on-bright); background: var(--brand); }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: 0; }
+[hidden] { display: none !important; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+a { color: var(--sec); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; text-decoration-color: color-mix(in srgb, currentColor 45%, transparent); }
+a:hover { text-decoration-color: currentColor; }
+p { margin: 0 0 calc(var(--u) * 1.5); text-wrap: pretty; }
+h1, h2, h3 { margin: 0; color: var(--heading); text-wrap: balance; }
+h1 { font: condensed 600 var(--t-title)/1.02 var(--sans); letter-spacing: -0.01em; }
+h2 { font: semi-condensed 600 var(--t-cell)/1.12 var(--sans); letter-spacing: -0.004em; }
+h3 { font: 600 var(--t-body)/1.3 var(--sans); margin: calc(var(--u) * 2.5) 0 var(--u); }
+strong, b { font-weight: 600; }
+em { font-style: italic; }
+code, pre, kbd { font: 0.88em/1.5 var(--machine); }
+code { color: var(--secondary); background: var(--surface-2); padding: 0.1em 0.35em; overflow-wrap: anywhere; }
+ol.plain, ul.plain { list-style: none; margin: 0; padding: 0; }
+.muted { color: var(--dim); }
+.small { font-size: var(--t-small); }
+.warn { color: var(--people); }
+.lede { max-width: var(--measure); font-size: var(--t-small); line-height: 1.5; color: var(--ink-2); margin: 0; }
+.hint { font-size: var(--t-small); color: var(--dim); }
+.hint > .icon { margin-right: 0.45em; color: var(--label); }
+.optional { font: 400 var(--t-small)/1 var(--sans); color: var(--faint); text-transform: none; letter-spacing: 0; margin-left: 0.4em; }
+.eyebrow, .caps {
+  font: 500 var(--t-label)/1.3 var(--machine);
+  letter-spacing: var(--track);
+  text-transform: uppercase;
+  color: var(--label);
+}
+.num, .count, .card-id, time, .when, .meta, .event small, .chip, .said-by, table.data td, .no, .fact, .date { font-variant-numeric: tabular-nums; }
+
+/* The glow itself, for the one word that gets it (E1). */
+.glow {
+  color: var(--brand);
+  text-shadow: 0 0 0.45em color-mix(in srgb, var(--brand) 45%, transparent), 0 0 1.3em color-mix(in srgb, var(--brand) 22%, transparent);
+}
+
+/* ---- Icons: Lucide lines at the stroke of Plex's stems, drawn in the colour of their words ------ */
+.icon { width: 1.15em; height: 1.15em; flex: none; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; vertical-align: -0.18em; }
+.mosaic { width: 3rem; height: 3rem; flex: none; fill: currentColor; color: var(--sec); }
+button, .button, .eyebrow, .section-links a, .tabs a, .meta > span, summary, .clear, .reminder,
+strong.warn, .kind, .foot-mark, .next-where, .key, .menu-list a, .menu-list button, .cell-key, .cell-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+/* ---- Row zero: the one row of keys ------------------------------------------------------------- */
+.skip { position: absolute; left: -10000px; }
+.skip { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 0.9rem; }
+.skip:focus { left: 1rem; top: 0.4rem; z-index: 60; color: var(--on-bright); background: var(--brand); }
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  height: var(--bar-h);
+  padding: 0 max(1.5rem, calc((100% - var(--page)) / 2 + 1.5rem));
+  background: color-mix(in srgb, var(--bar) 88%, transparent);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(8px);
+}
+.brand { display: inline-flex; align-items: center; gap: 0.65rem; min-height: 2.75rem; margin-right: 1.1rem; color: var(--ink); text-decoration: none; min-width: 0; flex: none; }
+/* The mark, its strokes bleeding light, and a cursor that blinks eight times, then stays lit (E2). */
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  color: var(--brand);
+  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--brand) 16%, #0e1512), #0b120e 72%);
+  border: 1px solid color-mix(in srgb, var(--brand) 30%, transparent);
+  box-shadow: 0 0 22px -6px color-mix(in srgb, var(--brand) 55%, transparent);
+}
+.brand-mark .icon { width: 1.35rem; height: 1.35rem; filter: drop-shadow(0 0 3px color-mix(in srgb, var(--brand) 75%, transparent)); }
+.brand-name { font: 500 1.05rem/1 var(--machine); letter-spacing: 0.01em; color: var(--heading); white-space: nowrap; }
+.caret {
+  flex: none;
+  width: 0.55rem;
+  height: 1.1rem;
+  margin-left: -0.4rem;
+  background: var(--brand);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--brand) 80%, transparent);
+  animation: blink 1.2s steps(1) 8;
+}
+/* A key in row zero: its icon in its section's colour, its word in bone, sentence case, no box
+   until pointed at. The page you are on is a steel cell, its lit edge on top, its lamp on in the
+   corner and its page number after the word. */
+.bar .key, .menu > summary {
+  position: relative;
+  min-height: 2.75rem;
+  padding: 0 0.7rem;
+  font: 500 var(--t-small)/1 var(--sans);
+  color: var(--bone);
+  text-decoration: none;
+  white-space: nowrap;
+  border: 0;
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s, box-shadow var(--afterglow);
+}
+.bar .key .icon, .menu > summary .icon { width: 1.15rem; height: 1.15rem; color: var(--sec); }
+.bar .key:hover, .menu > summary:hover { color: var(--heading); background: var(--surface-2); }
+.bar .key[aria-current="page"], .menu.here > summary {
+  color: var(--here-ink);
+  background: var(--here);
+  box-shadow: inset 0 2px 0 var(--here-cap);
+}
+.bar .key[aria-current="page"] .icon, .menu.here > summary .icon { color: var(--here-ink); }
+.bar .key[aria-current="page"]::after, .menu.here > summary::before {
+  content: "";
+  position: absolute;
+  top: 0.4rem;
+  right: 0.3rem;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #f4fff8 0 25%, var(--brand) 70%);
+  box-shadow: 0 0 4px var(--brand), 0 0 10px color-mix(in srgb, var(--brand) 55%, transparent);
+}
+.bar .key .no { font: 500 var(--t-label)/1 var(--machine); letter-spacing: 0.02em; color: color-mix(in srgb, var(--here-ink) 72%, var(--here)); }
+.bar-places { display: flex; align-items: center; gap: 0.15rem; min-width: 0; }
+.bar-places .key { font-weight: 600; }
+.bar-places .key .label { font-weight: 600; }
+.tools { display: flex; align-items: center; gap: 0.15rem; margin-left: auto; padding-left: 0.6rem; border-left: 1px solid var(--line-2); }
+.tools .key { color: var(--ink-2); }
+.to-status.lit .light { position: static; margin-left: 0.2rem; }
+.lit-warn .light, .lit-bad .light { font-size: 0; }
+
+/* The menu at the end of row zero: a column of keys, dropped down. */
+.menu { position: relative; }
+.menu > summary { list-style: none; display: inline-flex; color: var(--ink-2); }
+.menu > summary::-webkit-details-marker { display: none; }
+.menu > summary::after { content: "▾"; font: 400 0.8rem/1 var(--sans); color: var(--label); }
+.menu-list {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.5rem);
+  z-index: 40;
+  width: 17.5rem;
+  padding: 0.4rem;
+  background: var(--surface-2);
+  border: 1px solid var(--edge);
+  box-shadow: 0 24px 48px -18px rgb(0 0 0 / 0.9);
+}
+.menu-list a, .menu-list button {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.35rem 0.6rem;
+  font: 400 var(--t-small)/1.2 var(--sans);
+  color: var(--ink);
+  text-decoration: none;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+.menu-list a:hover, .menu-list button:hover { background: var(--surface-3); color: var(--heading); }
+.menu-list a[aria-current="page"] { background: var(--here); color: var(--here-ink); box-shadow: inset 2px 0 0 var(--here-cap); }
+.menu-list .icon { color: var(--label); }
+.menu-list .glyph.presence { width: 1.15rem; height: 1.15rem; }
+.menu-all { font-weight: 600 !important; border-bottom: 1px solid var(--line-2) !important; margin-bottom: 0.3rem; }
+.menu-you { margin-top: 0.3rem; padding-top: 0.3rem; border-top: 1px solid var(--line-2); }
+.menu-who { margin: 0.2rem 0.6rem 0.3rem; font-size: var(--t-small); color: var(--dim); }
+.signout { margin: 0; }
+.page-signin .bar-places, .page-signin .tools { display: none; }
+
+/* ---- The frame --------------------------------------------------------------------------------- */
+main {
+  flex: 1;
+  width: 100%;
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 1rem 1.5rem calc(var(--u) * 8);
+}
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4rem 1.5rem;
+  width: 100%;
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem 2rem;
+  color: var(--dim);
+  font-size: var(--t-small);
+}
+.foot::before { content: ""; flex-basis: 100%; height: 1px; margin-bottom: 0.9rem; background: var(--line); }
+.foot-mark { font: 500 var(--t-small)/1 var(--machine); color: var(--ink-2); }
+.foot-mark .icon { color: var(--brand); filter: drop-shadow(0 0 3px color-mix(in srgb, var(--brand) 60%, transparent)); }
+.legal { flex-basis: 100%; margin: 0; font: 400 var(--t-label)/1.5 var(--machine); color: var(--faint); }
+
+/* ==========================================================================================
+   THE RACK: one module down the first column, the register across the other three
+   ========================================================================================== */
+.board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--gap);
+  align-items: start;
+}
+.board > * { grid-column: 1 / -1; min-width: 0; }
+@media (min-width: 1061px) { .board { grid-template-columns: 20.5rem repeat(3, minmax(0, 1fr)); } }
+.board > .said, .board > .error { margin: 0; }
+.board > .side { grid-column: 1; }
+.board > .main { grid-column: 2 / -1; display: flex; flex-direction: column; gap: var(--gap); }
+/* A page drawn with its plate straight on the board (setup, your password, an activity): the
+   plate is the module, beside everything else. */
+.board > .page-head { grid-column: 1; grid-row: 1 / span 24; padding: var(--pad); }
+.board:has(> .page-head) { row-gap: var(--gap); }
+.board:has(> .page-head) > :not(.page-head) { grid-column: 2 / -1; }
+
+/* The module: one graphite object with the page's cap, holding the plate, the one primary, the
+   page's tools and its green screen, a hairline between each. */
+.side, .board > .page-head {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--card-edge);
+  box-shadow: var(--shadow);
+}
+.side::before, .board > .page-head::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  top: -1px;
+  height: 2px;
+  background: var(--sec);
+  pointer-events: none;
+}
+.board > .side > * { margin: 0; padding: 0.8rem 0.95rem 0.85rem; min-height: 0; background: none; border: 0; box-shadow: none; }
+.board > .side > * + * { border-top: 1px solid var(--line); }
+.board > .side > .cell::before { display: none; }
+.board > .side > .screen-cell, .board > .side > .radar-cell { padding: 0.6rem 0.6rem 0.65rem; }
+/* The module stays under the bar as the register scrolls, where it fits. */
+@media (min-width: 1061px) and (min-height: 50rem) {
+  .board > .side:not(.tall), .board > .page-head { position: sticky; top: calc(var(--bar-h) + 0.75rem); }
+}
+
+/* The plate: the page's icon and number on one quiet line, its name, what it is for. */
+.plate { display: flex; flex-direction: column; }
+.plate-line { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.6rem; color: var(--sec); }
+.plate-line .icon { width: 1.2rem; height: 1.2rem; }
+.plate-line .glyph.presence { width: 1.3rem; height: 1.3rem; }
+.plate-no { font: 500 var(--t-label)/1 var(--machine); letter-spacing: 0.04em; color: var(--label); font-variant-numeric: tabular-nums; }
+.plate-no:not(.own)::before { content: "000"; }
+.in-home .plate-no::before { content: "100"; }
+.in-chat .plate-no::before { content: "200"; }
+.in-ideas .plate-no::before { content: "300"; }
+.page-restaurants .plate-no::before { content: "310"; }
+.in-plans .plate-no::before { content: "400"; }
+.in-todo .plate-no::before { content: "500"; }
+.in-wishes .plate-no::before { content: "600"; }
+.in-memory .plate-no::before { content: "700"; }
+.in-family .plate-no::before { content: "800"; }
+.in-status .plate-no::before { content: "900"; }
+.in-settings .plate-no::before { content: "990"; }
+.in-you .plate-no::before { content: "999"; }
+.plate-title { display: flex; align-items: last baseline; justify-content: space-between; gap: 0.4rem 0.9rem; margin: 0 0 0.45rem; }
+.plate h1 { min-width: 0; margin: 0; overflow-wrap: break-word; hyphens: manual; }
+/* The page's figure: its count, large, in the section's colour, with its legend over a note (late in
+   amber words, the way to those alone). */
+.plate-fig { display: flex; align-items: last baseline; gap: 0.45rem; flex: none; margin: 0; }
+.plate-fig .fig { font: condensed 500 var(--t-figure)/0.92 var(--sans); letter-spacing: -0.015em; font-variant-numeric: tabular-nums lining-nums; color: var(--sec); }
+.fig-legend { display: flex; flex-direction: column; align-items: flex-start; gap: 0.2rem; }
+.fig-unit { font: 500 var(--t-label)/1 var(--machine); letter-spacing: var(--track); text-transform: uppercase; color: var(--label); }
+.fig-note { font: 600 var(--t-small)/1.1 var(--sans); color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fig-note.warn { color: var(--people); }
+a.fig-note { display: inline-flex; align-items: center; min-width: 2.75rem; min-height: 2.75rem; margin: -0.85rem 0; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.18em; text-decoration-color: color-mix(in srgb, currentColor 55%, transparent); }
+a.fig-note:hover { text-decoration-color: currentColor; }
+.plate .lede { margin: 0; }
+.plate .page-actions { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; }
+.plate .page-actions .button, .plate .page-actions form button { justify-content: center; width: 100%; }
+.plate .page-actions form { margin: 0; }
+.plate .page-actions .zone { margin: 0; color: var(--dim); }
+.crumbs { display: flex; flex-wrap: wrap; gap: 0.45rem; margin: 0 0 0.35rem; font: 500 var(--t-small)/1.2 var(--sans); color: var(--label); }
+.crumbs a { display: inline-flex; align-items: center; justify-content: center; min-width: 2.75rem; min-height: 2.75rem; margin: -0.7rem 0; color: var(--label); }
+
+/* A cell: a module of graphite on the plate, its top edge catching the light (E8), one hairline
+   round it. On Home each also carries its section's cap. */
+.cell, .panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0;
+  padding: var(--pad);
+  background: var(--surface);
+  border: 1px solid var(--card-edge);
+  box-shadow: var(--shadow);
+}
+.panel { display: block; }
+.panel.form { display: grid; }
+.cell > h2, .panel > h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0 0 0.75rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--line);
+}
+.cell > h2 .icon, .panel > h2 .icon { width: 1.2rem; height: 1.2rem; color: var(--sec); }
+.cell > :last-child, .panel > :last-child { margin-bottom: 0; }
+.notice { display: flex; align-items: center; gap: 0.7rem; }
+.notice > .icon { color: var(--people); width: 1.3rem; height: 1.3rem; }
+p.cell:not(.empty) { display: block; }
+p.cell.empty, p.panel.empty, li.cell.empty { flex-direction: row; }
+.module { min-height: 0; }
+/* A strip: the name of a run of cells, engraved on the plate above them. */
+.strip { margin: 0.4rem 0 0; font: 500 var(--t-label)/1.3 var(--machine); letter-spacing: var(--track); text-transform: uppercase; color: var(--label); }
+h2.strip { padding: 0.9rem 0 0.2rem; border: 0; }
+.main > h2.strip:first-child { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+p.strip { padding: 0.2rem 0 0.1rem; }
+.cells { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap); margin: 0; padding: 0; list-style: none; }
+.cells > li:not(.cell) { display: flex; min-width: 0; }
+.cells > li > .cell { flex: 1; }
+@media (min-width: 1061px) { .main > .cells > .wide-2 { grid-column: span 2; } }
+
+/* The register: one wide cell of lines under column heads. */
+.register { padding-top: 0.5rem; }
+.register > .band-note { margin: 0.35rem 0 0.5rem; max-width: var(--measure); font-size: var(--t-small); line-height: 1.45; color: var(--dim); }
+.colheads {
+  display: grid;
+  align-items: end;
+  min-height: 1.9rem;
+  margin: 0;
+  padding: 0 0 0.35rem;
+  font: 500 var(--t-label)/1.2 var(--machine);
+  letter-spacing: var(--track);
+  text-transform: uppercase;
+  color: var(--label);
+  border-bottom: 1px solid var(--line-2);
+}
+
+/* ==========================================================================================
+   THE ONE ROW DRAWING: a line of the contents
+   ========================================================================================== */
+/* A lamp slot, a number or a date in the machine's figures, the name, a dotted leader only where
+   a fact follows, and the facts in fixed columns at the right. It is 44px at least, the whole
+   line is the way in, and it lights at once in steel when pointed at, the light fading as a
+   phosphor's does. */
+.rows { list-style: none; margin: 0; padding: 0; display: grid; }
+.rows > .row {
+  position: relative;
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+  min-height: var(--row);
+  border-top: 1px solid var(--line);
+  transition: background-color var(--afterglow), box-shadow var(--afterglow);
+}
+.rows > .row:first-child { border-top: 0; }
+.rows > .row > a:only-child {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+  min-height: var(--row);
+  color: var(--ink);
+  text-decoration: none;
+}
+.rows > .row > a:only-child:focus-visible { outline-offset: -2px; }
+.rows > .row:hover, .rows > .row:has(> a:focus-visible), .rows > .row:has(.what > a:focus-visible) {
+  background-color: var(--row-wash);
+  box-shadow: inset 2px 0 0 var(--k, var(--sec));
+  transition-duration: var(--glow-in);
+}
+.row .slot { display: grid; place-items: center; justify-self: center; width: 1rem; }
+.row .no { font: 500 var(--t-label)/1 var(--machine); letter-spacing: 0.02em; color: var(--label); }
+.row .date { font: 500 var(--t-small)/1 var(--machine); letter-spacing: -0.01em; color: var(--ink-2); white-space: nowrap; }
+/* A date set on its digit: the day number right-aligned in two figures, so the months line up. */
+.row .date .dd { display: inline-block; min-width: 2ch; text-align: right; color: var(--ink); }
+/* The name and its leader are one cell: the name (which gives way with an ellipsis), anything
+   that goes with it (a tag, a bell), then the dots, from the end of the name to the facts. */
+.row .what { display: flex; align-items: baseline; gap: 0.5rem; min-width: 0; font: semi-condensed 600 var(--t-body)/1.3 var(--sans); color: var(--heading); white-space: nowrap; }
+.row .what > .t { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.row .what > :not(.t, .dots) { flex: none; }
+.row .what a { color: var(--heading); text-decoration: none; }
+.row .what a::after { content: ""; position: absolute; inset: 0; }
+.row a:hover .what > .t, .row .what a:hover { text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--k, var(--sec)) 70%, transparent); text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
+.row .what > .dots { flex: 1 1 1rem; min-width: 0.75rem; max-width: var(--leader-max); height: 0.3em; margin-left: 0.15rem; border-bottom: 2px dotted var(--line-2); }
+.row .fact { font-size: var(--t-small); line-height: 1.3; color: var(--ink-2); white-space: nowrap; }
+/* Figures in the machine's face: a time, a drive, a compass point. A phrase ("in 4 days", "was due
+   2 days ago") is words, in the family's face, with tabular figures. */
+.row .fact.time, .row .fact.road, .row .fact.bearing { font: 400 var(--t-small)/1 var(--machine); letter-spacing: -0.01em; }
+.row .fact.rel-words { font: 400 var(--t-small)/1.3 var(--sans); font-variant-numeric: tabular-nums; }
+.row .fact.right { text-align: right; justify-self: end; }
+.row .warn, .row .fact.warn { color: var(--people); }
+.row .kicon { color: var(--k, var(--sec)); }
+.row .kicon .icon { width: 1.1rem; height: 1.1rem; }
+.row .kind-word { color: var(--k, var(--ideas)); font-weight: 500; }

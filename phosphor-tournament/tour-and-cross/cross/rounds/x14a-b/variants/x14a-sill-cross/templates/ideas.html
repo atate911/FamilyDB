@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, kind_label, kind_icon, page_head, crt %}
+{% block title %}Ideas · {{ site_title }}{% endblock %}
+{% block body_class %}page-ideas{% endblock %}
+{% set POINTS = {'north': 'N', 'north-east': 'NE', 'east': 'E', 'south-east': 'SE', 'south': 'S', 'south-west': 'SW', 'west': 'W', 'north-west': 'NW'} %}
+{# The drive and the way, read back from a row's own words ("about 2 h 10 min south of home
+   (estimate)"); in the repository views.idea_row would hand over the minutes and the point. #}
+{% macro drive(away) -%}
+  {%- set w = away.split(' ') -%}
+  {%- if w[0] == 'under' %}0|under 5 min{% else -%}
+    {%- if w[2] == 'h' -%}
+      {%- set m = (w[1] | int) * 60 + ((w[3] | int) if w[4] == 'min' else 0) -%}
+      {%- set way = w[5] if w[4] == 'min' else w[3] -%}
+      {{- m }}|{{ w[1] }} h{% if w[4] == 'min' %} {{ '%02d' | format(w[3] | int) }} min{% endif %} {{ POINTS.get(way, '') -}}
+    {%- else -%}
+      {{- w[1] | int }}|{{ w[1] }} min {{ POINTS.get(w[3], '') -}}
+    {%- endif -%}
+  {%- endif -%}
+{%- endmacro %}
+{% block content %}
+  {# Track Diagram, Branch Lines: the head's line rings the page's icon and runs under the title;
+     the page's one action, Add an idea, stands on the title's baseline at the right, and the way
+     to jot a thought down beside it. Under it the line from home: the listed places as stations
+     down one railway out of home, how far each is by road. Then the filters, one row, and the
+     list, a row for each idea keyed to its station by its number. #}
+  {% set n = rows | length %}
+  {% call page_head('Ideas', 'Places to go, things to try, and everything the family has mentioned.', 'idea',
+       figure={'n': n, 'unit': ('idea' if n == 1 else 'ideas') ~ (' match' ~ ('es' if n == 1 else '') if filtered else ''),
+               'more': ('the first ' ~ limit if n == limit else ((on_radar.count ~ ' on the line') if on_radar else ''))}) %}
+    {% if visitor().may('change') %}
+    {# Folded until wanted: a thought to keep, which Vera files. It opens under the head. #}
+    <details class="capture">
+      <summary class="button secondary">{{ icon('sparkles') }}Save a thought</summary>
+      <div class="capture-body panel">
+      <p class="muted">A restaurant, food cart pod, neighborhood, passport stop, kids' outing, special occasion,
+        or just a direction to explore. Write naturally; {{ assistant }} will organize it and say in Chat what was saved.</p>
+      <form class="form" method="post" action="{{ url_for('chat.send') }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+        <input type="hidden" name="once" value="{{ once_token() }}">
+        <input type="hidden" name="intent" value="save_idea">
+        <div class="field wide">
+          <label for="capture-text">Your thought</label>
+          <textarea id="capture-text" name="text" required maxlength="3800" rows="3" data-dictate
+            placeholder="Maybe explore food carts in Portland with the girls on a sunny afternoon..."></textarea>
+        </div>
+        {% if not visitor().member %}
+          <div class="field">
+            <label for="capture-who">From</label>
+            <select id="capture-who" name="who" required><option value="">Choose your name</option>
+              {% for person in capture_people %}<option>{{ person.display_name }}</option>{% endfor %}
+            </select>
+          </div>
+        {% endif %}
+        <div class="field actions end">
+          <button type="submit">{{ icon('sparkles') }}Organize in Chat</button>
+        </div>
+        <p class="wide muted hint">Uses your configured assistant. Check its confirmation in Chat;
+          you can also use Add an idea to save directly without AI.</p>
+      </form>
+      </div>
+    </details>
+    <a class="button" href="{{ url_for('web.new_idea') }}">{{ icon('plus') }}Add an idea</a>
+    {% endif %}
+  {% endcall %}
+
+  {# Each listed idea's drive, in the list's own order (its station on the line is the same
+     row's, so pointing at a row lights its station). #}
+  {% set places = [] %}
+  {% for row in rows %}
+    {% if row.away %}
+      {% set d = drive(row.away).split('|') %}
+      {% set t = d[1].rsplit(' ', 1) %}
+      {% set _ = places.append({'n': loop.index, 'id': row.id, 'm': d[0] | int, 'text': t[0] if t | length > 1 and t[1] in POINTS.values() else d[1]}) %}
+    {% endif %}
+  {% endfor %}
+
+  {# The line from home, on a green screen, the tube's width: one line of words across the top,
+     and under it the railway out of home. Home is lit at the left, the one live lamp; a short
+     stub, then one 45-degree jog says the first quarter of an hour is not to scale, and from 15
+     minutes the line runs on a log scale, mileposts at 15, 20 and 30 minutes and every hour, so
+     the places twenty minutes out stand apart. Each place is a station, a tick on the line; only
+     three are named in words: the nearest and the furthest above the line, and the one whose row
+     is pointed at below it (every row lights its own). The drawing is set in presentation
+     attributes; the sheet only lights it. Every row below says its own drive, so the drawing is
+     a picture of the list, never the only place a fact is. #}
+  {# Sill Line, Squared: the line calmed. A square-root scale from home (lit at the left), so the
+     places twenty minutes out stand apart without a jog; mileposts only at 15 min, 30 min and
+     1 h, and the line's end. At most six stations carry a number, spaced so none collide; the
+     nearest and the furthest are named; the rest are dots. Pointing at a row lights its station
+     and names it under the line. #}
+  {% if on_radar and places %}
+    {% set far = (places | map(attribute='m') | max) %}
+    {% set span = [180, ((far + 59) // 60) * 60] | max %}
+    {% set x0 = 1.5 %}
+    {% macro at(m) %}{{ '%.2f' | format(x0 + (100 - x0) * ((([m, span] | min) / span) ** 0.5)) }}{% endmacro %}
+    {% set marks = [(15, '15 min'), (30, '30 min'), (60, '1 h'), (span, (span // 60) ~ ' h')] %}
+    {# Labels by short name (the title before ' at ', cut short), nowrap, on two tiers above the
+       line: the near one on the lower tier, each next one on the lower tier if it clears the last
+       label there, else on the upper tier with a leader, else a dot. At most six. Dots closer
+       than about 6px are drawn as one tally dot with the count beside it. #}
+    {% set placed = {} %}
+    {% set titles = {} %}{% for row in rows %}{% set _ = titles.update({loop.index: row.title}) %}{% endfor %}
+    {% set sorted_places = places | sort(attribute='m') %}
+    {% set order = ([sorted_places | first, sorted_places | last] if sorted_places | length > 1 else [sorted_places | first]) + sorted_places[1:-1] %}
+    {% set t0 = [] %}{% set t1 = [] %}
+    {% set lab = namespace(n=0) %}
+    {% for p in order %}
+      {% set x = at(p.m) | float %}
+      {% set ws = titles[p.n].split(' at ')[0].split() %}
+      {% set short = (ws[:3] if ws | length > 2 and ws[1][-1:] == '.' else ws[:2]) | join(' ') %}
+      {% set words = short ~ ' · ' ~ p.text %}
+      {% set w = (words | length) * 0.8 %}
+      {% set is_near = p is sameas (sorted_places | first) %}{% set is_far = p is sameas (sorted_places | last) and not is_near %}
+      {% set anchor = 'start' if is_near else ('end' if is_far else 'middle') %}
+      {% set lo = x if anchor == 'start' else (x - w if anchor == 'end' else x - w / 2) %}
+      {% set hi = lo + w %}
+      {% set fit = namespace(a=true, b=true, under=false) %}
+      {% for iv in t0 %}{% if lo < iv[1] + 1.2 and hi > iv[0] - 1.2 %}{% set fit.a = false %}{% endif %}{% if x > iv[0] - 0.8 and x < iv[1] + 0.8 %}{% set fit.under = true %}{% endif %}{% endfor %}
+      {% for iv in t1 %}{% if lo < iv[1] + 1.2 and hi > iv[0] - 1.2 %}{% set fit.b = false %}{% endif %}{% endfor %}
+      {% set tier = namespace(t=none) %}
+      {% if lab.n < 6 %}
+        {% if fit.a %}{% set tier.t = 0 %}{% set _ = t0.append([lo, hi]) %}
+        {% elif fit.b and not fit.under %}{% set tier.t = 1 %}{% set _ = t1.append([lo, hi]) %}{% endif %}
+        {% if tier.t is not none %}{% set lab.n = lab.n + 1 %}{% endif %}
+      {% endif %}
+      {% set _ = placed.update({p.n: {'x': x, 'near': is_near, 'far': is_far, 'text': p.text, 'words': words, 'anchor': anchor, 'num': tier.t is not none, 'tier': tier.t}}) %}
+    {% endfor %}
+    {# The tally dots: unlabelled stations in runs closer than a hair's breadth. #}
+    {% set tallies = [] %}
+    {% set run = namespace(x0=-99.0, xs=[], ns=[]) %}
+    {% for p in sorted_places %}{% set s = placed[p.n] %}
+      {% if not s.num %}
+        {% if s.x - run.x0 <= 2.0 %}{% set run.xs = run.xs + [s.x] %}{% set run.ns = run.ns + [p.n] %}
+        {% else %}
+          {% if run.xs %}{% set _ = tallies.append({'x': (run.xs | sum) / (run.xs | length), 'ns': run.ns}) %}{% endif %}
+    {% set merged = [] %}{% for t in tallies if t.ns | length > 1 %}{% set _ = merged.extend(t.ns) %}{% endfor %}
+          {% set run.x0 = s.x %}{% set run.xs = [s.x] %}{% set run.ns = [p.n] %}
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+    {% if run.xs %}{% set _ = tallies.append({'x': (run.xs | sum) / (run.xs | length), 'ns': run.ns}) %}{% endif %}
+    {% set nearest = placed[(places | sort(attribute='m') | first).n] %}
+    {% call crt('from-home', hidden=false) %}
+      <p class="from-home-text"><span class="inverse caps">The line from home</span>
+        <span class="bright">{{ on_radar.count }} place{{ '' if on_radar.count == 1 else 's' }} by road</span><span class="sep"> · </span><span class="dim">point at an idea to light its stop</span><span class="crt-cursor" aria-hidden="true"></span></p>
+      <svg class="home-line" height="104" aria-hidden="true" focusable="false">
+        <svg x="0.8%" width="97.4%" height="104" overflow="visible" fill="#6dff9c" stroke="#6dff9c" font-family="VT323, monospace">
+          <line x1="0" x2="100%" y1="48" y2="48" stroke-opacity=".5" stroke-width="2"/>
+          <g class="hl-run" stroke="#c9ffda" stroke-width="2.5"><line x1="0" x2="{{ nearest.x }}%" y1="48" y2="48"/></g>
+          {% for m, label in marks %}
+            <line x1="{{ at(m) }}%" x2="{{ at(m) }}%" y1="84" y2="90" stroke-opacity=".45" stroke-width="1.5"/>
+            <text class="hl-mile" x="{{ at(m) }}%" y="103" text-anchor="{{ 'end' if m == span else 'middle' }}" stroke="none" fill-opacity=".66" font-size="16">{{ label }}</text>
+          {% endfor %}
+          <g class="stations" stroke="none">
+            {% for row in rows %}
+              {% set s = placed.get(loop.index) %}
+              {% if s %}
+                {% set right = s.x > 62 %}
+                <g class="st s{{ loop.index }}{{ ' near' if s.near }}{{ ' far' if s.far }}{{ ' num' if s.num }}{{ ' merged' if loop.index in merged }}">
+                  {% if s.num %}<line class="st-tick" x1="{{ s.x }}%" x2="{{ s.x }}%" y1="40" y2="56" stroke-width="3"/>
+                    {% if s.tier == 1 %}<line class="st-leader" x1="{{ s.x }}%" x2="{{ s.x }}%" y1="17" y2="38" stroke-width="1"/>{% endif %}
+                    <text class="st-num{{ ' named' if s.near }}" x="{{ s.x }}%" y="{{ 30 if s.tier == 0 else 12 }}" dx="{{ -4 if s.near else 0 }}" text-anchor="{{ s.anchor }}" font-size="18">{{ s.words }}</text>
+                  {% else %}<circle class="st-dot one" cx="{{ s.x }}%" cy="48" r="3.2"/>{% endif %}
+                  <text class="st-l" x="{{ s.x }}%" y="74" dx="{{ -2 if right else 2 }}" text-anchor="{{ 'end' if right else 'start' }}" font-size="18">{{ row.title | truncate(30, true, '…') }} · {{ s.text }}</text>
+                </g>
+              {% endif %}
+            {% endfor %}
+            {% for t in tallies if t.ns | length > 1 %}
+              <g class="tally">
+                <circle class="st-dot" cx="{{ '%.2f' | format(t.x) }}%" cy="48" r="3.6"/>
+                <text class="tally-n" x="{{ '%.2f' | format(t.x) }}%" y="68" text-anchor="middle" font-size="15">{{ t.ns | length }}</text>
+              </g>
+            {% endfor %}
+          </g>
+          <circle class="hl-home-halo" cx="0" cy="48" r="9" fill-opacity=".3" stroke="none"/>
+          <circle class="hl-home" cx="0" cy="48" r="4.5" fill="#e4fff0" stroke="none"/>
+          <text class="hl-mile" x="0" y="103" stroke="none" font-size="16">home</text>
+        </svg>
+      </svg>
+    {% endcall %}
+  {% endif %}
+
+  <div class="idea-tools">
+    <nav class="tabs" aria-label="Which ideas">
+      <a href="{{ url_for('web.ideas') }}"{% if request.endpoint == 'web.ideas' %} aria-current="page"{% endif %}>{{ icon('idea') }}All ideas</a>
+      <a href="{{ url_for('web.restaurants') }}"{% if request.endpoint == 'web.restaurants' %} aria-current="page"{% endif %}>{{ icon('restaurant') }}Restaurants</a>
+    </nav>
+    <form class="filters" method="get" action="{{ url_for('web.ideas') }}" role="search">
+      <div class="field wide">
+        <label for="q">Search</label>
+        <input id="q" name="q" type="search" value="{{ selected.q }}" placeholder="ramen, museum…" />
+      </div>
+      <div class="field">
+        <label for="kind">Kind</label>
+        <select id="kind" name="kind">
+          <option value="">any</option>
+          {% for option in kinds %}
+            <option value="{{ option }}" {{ 'selected' if option == selected.kind }}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="status">Status</label>
+        <select id="status" name="status">
+          <option value="">any but dropped</option>
+          {% for option in statuses %}
+            <option value="{{ option }}" {{ 'selected' if option == selected.status }}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="who">For</label>
+        <select id="who" name="who">
+          <option value="">anyone</option>
+          {% for option in people %}
+            <option value="{{ option }}" {{ 'selected' if option == selected.who }}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field actions">
+        <button class="secondary" type="submit">{{ icon('search') }}Filter</button>
+        {% if filtered %}<a class="clear" href="{{ url_for('web.ideas') }}">{{ icon('x') }}Clear</a>{% endif %}
+      </div>
+    </form>
+  </div>
+
+  {% if not rows %}
+    <p class="panel muted empty">{{ icon('idea') }}<span>
+      Nothing here yet.{% if visitor().may('change') %} <a href="{{ url_for('web.new_idea') }}">Add one</a>, or tell the bot in the
+      chat.{% endif %}</span>
+    </p>
+  {% else %}
+  {# The list: a row for each idea, read along one line: its kind's ring (the kind's colour
+     lives there and nowhere else), the title and the kind in words, whom it is for, the drive
+     from home and the way, and its number, which is its station's on the line above. #}
+  <section class="idea-board tray" aria-label="The ideas">
+    <p class="colheads" aria-hidden="true"><span class="ch-count">Idea</span><span class="ch-for">For</span><span class="ch-drive">Drive</span><span class="ch-way">Way</span><span class="ch-n"></span></p>
+    <ul class="idea-rows">
+      {% for row in rows %}
+        {% set key = (row.kind or '') | lower | replace(' ', '_') %}
+        {% set d = drive(row.away).split('|') if row.away else none %}
+        <li class="idea-card idea-row r{{ loop.index }} kind-{{ key }}" id="idea-{{ row.id }}">
+          <span class="kind-ring" aria-hidden="true">{{ kind_icon(row.kind) }}</span>
+          <span class="t"><a href="{{ url_for('web.idea', idea_id=row.id) }}">{{ row.title }}</a>
+            <span class="kind-word">{{ row.kind | capitalize }}</span>
+            {%- if row.status != 'idea' %} <span class="tag status-{{ row.status }}">{{ row.status }}</span>{% endif %}
+            {%- if row.on %} <span class="on">{{ row.on }}</span>{% endif %}</span>
+          <span class="for">{{ row.who }}</span>
+          {# Sill Line, Ticked: the drive right-aligned with its figures bold, so the hours and minutes
+             stack; the way from home in a column of its own. #}
+          {% set w = d[1].rsplit(' ', 1) if d else [] %}
+          {% set has_way = d and w | length > 1 and w[1] in POINTS.values() %}
+          <span class="drive{{ ' pending' if not d }}">{% if d %}{% for part in (w[0] if has_way else d[1]).split(' ') %}{% if part[:1].isdigit() %}<b>{{ part | int }}</b>{% else %}<span class="u">{{ part }}</span>{% endif %}{{ ' ' if not loop.last }}{% endfor %}{% elif row.pending %}not looked up yet{% elif row.where %}{{ row.where }}{% endif %}</span>
+          <span class="way">{{ w[1] if has_way else '' }}</span>
+          <span class="n">#{{ row.id }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+{% endblock %}

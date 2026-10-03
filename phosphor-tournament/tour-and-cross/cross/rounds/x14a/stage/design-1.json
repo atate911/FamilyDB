@@ -1,0 +1,74 @@
+{
+ "stage": "design",
+ "round": "x14a",
+ "label": "14a",
+ "roundNo": 1,
+ "key": "desk",
+ "cross": true,
+ "lin": {
+  "name": "desk (Desk Terminal, Joined)",
+  "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a",
+  "carried": [
+   {
+    "id": "r13-idea-1",
+    "name": "Desk Terminal, Joined"
+   }
+  ],
+  "briefs": [
+   {
+    "slot": "cross",
+    "parent": "r13-idea-1",
+    "parentName": "Desk Terminal, Joined"
+   }
+  ],
+  "idea": "a docked terminal column: one real cased terminal beside the family's desk, Home's question typed at the foot of its glass",
+  "camp": "main",
+  "otherCamp": [
+   {
+    "key": "trued",
+    "id": "t3-track-refine2",
+    "name": "Trued, Relit",
+    "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+   },
+   {
+    "key": "manual",
+    "id": "t3-figure-refine",
+    "name": "Lit Manual, Relit Rails",
+    "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+   },
+   {
+    "key": "departures",
+    "id": "t3-timetable-refine",
+    "name": "Departures, Platformed",
+    "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+   },
+   {
+    "key": "settled",
+    "id": "t3-switchboard-refine",
+    "name": "Switchboard, Settled Light",
+    "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+   },
+   {
+    "key": "sill",
+    "id": "t3-track-graft",
+    "name": "Sill Line, Ticked",
+    "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+   },
+   {
+    "key": "pocket",
+    "id": "t3-pocket-refine",
+    "name": "Pocket Diary, Kept",
+    "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+   },
+   {
+    "key": "waypoint",
+    "id": "t3-console-graft",
+    "name": "Waypoint Lamps",
+    "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+   }
+  ],
+  "mutant": null
+ },
+ "plan": true,
+ "mutant": false
+}

@@ -1,0 +1,161 @@
+
+/* ==========================================================================================
+   PATCHED, TRUED: one lit pair, one notice language, one contents line on every head
+   ========================================================================================== */
+
+/* The bar is the same on every page: the menu's gear in the bar's own bone, not the page's circuit. */
+.menu > summary { --sec: var(--accent); }
+
+/* The plate at every width: its name, then its figure under it, then what it is for. */
+.plate { display: flex; flex-direction: column; align-items: stretch; }
+
+/* ---- The key between the glass and the rows ------------------------------------------------ */
+/* On the keyed radar the scope and its blips bloom together (an SVG filter in the macro), the
+   days sit matte at the tube's middle strength with no halo, and only the next plan's day runs
+   at the hot core under the lit word's two halos. Its row's numeral is lit the same way, so the
+   glass's "1" and the list's "1" are the one lit pair on the page. */
+.radar.keyed svg { filter: blur(0.3px); }
+.radar.keyed .blip-day { font-size: 18px; fill: color-mix(in srgb, var(--screen) 60%, #0b1a10); stroke: #050d08; stroke-width: 2.5px; text-shadow: none; }
+.radar.keyed .mark.next .blip-day { font-size: 22px; fill: color-mix(in srgb, var(--screen) 58%, #fff); stroke: none; }
+.blip-day-halo { font: 400 22px/1 var(--tube); fill: var(--screen); stroke: var(--screen); stroke-width: 3.5px; opacity: 0.85; }
+.radar.keyed .radar-label { font-size: 13px; fill: color-mix(in srgb, var(--screen) 42%, transparent); }
+.radar.keyed .blip:not(.next) .blip-halo { fill: color-mix(in srgb, var(--screen) 16%, transparent); }
+.plan-rows .is-next .dd, .plan-rows .is-today .dd, .plan-index .is-next .dd, .plan-index .is-today .dd {
+  color: color-mix(in srgb, var(--screen) 58%, #fff);
+  text-shadow: 0 0 1px var(--screen), 0 0 0.28em color-mix(in srgb, var(--screen) 62%, transparent), 0 0 0.7em color-mix(in srgb, var(--screen) 40%, transparent), 0 0 1.5em color-mix(in srgb, var(--screen) 22%, transparent);
+}
+/* Its breathing lamp at the slot's top right, beside the weekday, not floating at the row's edge. */
+.plan-rows .is-next .dc::before, .plan-rows .is-today .dc::before, .plan-index .is-next .dc::before, .plan-index .is-today .dc::before {
+  left: auto; right: -0.6rem; top: 0.2rem; margin-top: 0;
+}
+/* The designator: the weekday at 13px over the month at 12px; the month is set on the first
+   line and where it changes, and only read out on the others. */
+.dc .dw { font-size: 0.8125rem; color: var(--ink-2); }
+.dc.same-month .dm { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.dc.same-month .dw { grid-row: 1 / span 2; align-self: center; padding-top: 0.2em; }
+
+/* ---- Line 0: the service line, its key at the end of its first line ------------------------- */
+/* The key follows the count on the head line, with the line's padding round it; the next step
+   and the ones after run the full width under them, so the notice keeps to two lines. */
+.service-line { grid-template-columns: minmax(0, 1fr) auto; column-gap: 1.1rem; padding: 0.5rem 0 0.55rem 1.05rem; }
+.svc-head { grid-column: 1; grid-row: 1; }
+.svc-all { grid-column: 2; grid-row: 1; align-self: center; margin-right: var(--pad); }
+.svc-next { grid-column: 1 / -1; grid-row: 2; padding-right: 0.8rem; text-wrap: wrap; }
+.then-one { white-space: nowrap; }
+
+/* ---- The cell heads hang their lamp slot in the margin: numbers and rows share one edge ------ */
+.map .cell > .cell-head a, .household .cell-head a { margin-left: -1.3rem; }
+.household .hh-sub { margin-left: 0; }
+.kid-line .cell-head .slot { display: none; }
+.map .cell { padding-left: 1.4rem; }
+
+/* ---- The household's strip: its pages in rows that fill, and the key to the lamps as its foot - */
+.household { display: flex; flex-wrap: wrap; column-gap: 2.75rem; padding-left: 1.4rem; }
+.task-rows { column-gap: 0.45rem; }
+.household > .hh { flex: 1 1 20rem; border-top: 0; border-bottom: 1px solid var(--wire); }
+.hh-foot { flex: 1 0 100%; display: flex; justify-content: flex-end; padding: 0.5rem 0 0.6rem; }
+.hh-foot .lamp-key { gap: 0.25rem 1.1rem; font-size: 0.8125rem; }
+.hh-sub a.kid { display: inline-block; line-height: 2.75rem; margin: -0.6rem 0; text-decoration-color: color-mix(in srgb, var(--sec) 55%, transparent); }
+.hh-sub a.kid .n { margin: 0; }
+
+/* ---- Every head a line of the contents: the registers, Status's panels, the wish lists ------- */
+.cell > .cell-head.register-line { margin-top: 0.1rem; }
+.register-line .what, .list-line .what { text-decoration: none; }
+.module > .cell-head .slot, .list-line .slot { width: 1.35rem; color: var(--sec); }
+.module > .cell-head .slot .icon, .list-line .slot .icon { width: 1.2rem; height: 1.2rem; }
+.cell-head .count.warn { color: var(--people); }
+.module > .cell-head { margin-bottom: 0.75rem; }
+/* One notice language: the service line's 3px amber edge on every panel that wants a look. */
+.attention::before, .trouble::before { content: none; display: none; }
+.cell.attention, .cell.trouble { border-left: 3px solid var(--people); }
+/* The wish lists: the list's mark, its name, a leader, how many, and for an occasion how far off. */
+.wish-list .list-line { margin: 0 0 0.5rem; padding-bottom: 0.25rem; border-bottom: 1px solid var(--wire); }
+.wish-list .list-line .what { font-size: var(--t-item); }
+.wish-list .list-line .count { font-size: 1.3125rem; }
+.wish-list .list-line .unit { white-space: nowrap; }
+.wish-list .icon, .wish-list h3 .icon { color: var(--sec); }
+
+/* The family's kids by the word and a steel tile, not the Show kind's mauve. */
+.avatar.role-kid { color: var(--steel); background: color-mix(in srgb, var(--steel) 8%, var(--field)); border-color: color-mix(in srgb, var(--steel) 40%, var(--line-2)); }
+.role-kid .tag.role, .role-parent .tag.role { color: var(--ink-2); border-color: var(--line-2); }
+.role-kid.role-cell::before { background: color-mix(in srgb, var(--steel) 60%, transparent); }
+
+/* To do's facts (who, when) are the row's own columns here, and one flowing line on a phone. */
+.facts { display: contents; }
+.task-index .row .fact.who { grid-row: 1; grid-column: 4; }
+.task-index .row .fact.due { grid-row: 1; grid-column: 5; }
+.task-index .row > .edit-slot { grid-column: 6; }
+
+/* ---- Plans: no empty column where no line has a key; one dim for the days of other months ---- */
+.plan-index:not(:has(details.edit)) { grid-template-columns: 4.1rem minmax(0, 1fr) max-content max-content; }
+table.month td.outside, table.month td.outside.weekend, table.month td.outside.past {
+  background: color-mix(in srgb, var(--surface) 55%, var(--bg));
+  border-color: color-mix(in srgb, var(--wire) 60%, transparent);
+  box-shadow: none;
+}
+table.month td.outside:not(.has-plan) time { color: var(--faint); }
+
+/* A long choice in a narrow column stays on one line, cut with an ellipsis. */
+/* The settings two to a row: a choice's words stay on one line in its box, and the help under
+   each runs to a readable measure (about 55 characters) instead of 35. */
+.grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid > .setting:nth-child(n) { padding-left: 1.1rem; padding-right: 1.1rem; border-left: 1px solid var(--line); }
+.grid > .setting:nth-child(2n + 1) { padding-left: 0; border-left: 0; }
+.grid > .setting:nth-child(2n) { padding-right: 0; }
+.grid > .setting select { white-space: nowrap; }
+/* Worth a look: a line to each, what it was and when, in the register's rhythm. */
+.trouble ul.plain > li { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 1rem; padding: 0.4rem 0; border-top: 1px solid var(--wire); font-size: var(--t-small); }
+.trouble ul.plain > li > .muted { font: 400 var(--t-small)/1.3 var(--machine); color: var(--dim); }
+
+/* ==========================================================================================
+   A phone: the name, then the list, then the machine's word on it
+   ========================================================================================== */
+@media (max-width: 47.99rem) {
+  .plate { display: flex; }
+  .plate > .plate-title { margin: 0 0 0.3rem; }
+  .plate > .plate-fig { margin: 0 0 0.45rem; }
+  /* The tools say less: the kinds in one row that scrolls sideways, the labels read out only. */
+  .tools-cell .search > label, .kind-keys .keys-name, .show-keys .keys-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .kind-keys .key-bank { display: flex; flex-wrap: nowrap; gap: 0.35rem; overflow-x: auto; scrollbar-width: thin; padding-bottom: 0.3rem; margin-top: 0.5rem; }
+  .kind-keys .key-bank > .key { flex: none; }
+  .show-keys .key-bank { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.3rem; }
+  .show-keys .key-bank .key { justify-content: center; padding: 0 0.3rem; }
+  .show-keys .key-bank .key .icon { display: none; }
+  /* The list, then the green screen that sums it up, on the pages whose screen sums a list. */
+  .page-ideas .main > .screen-cell, .page-todo .main > .screen-cell, .page-plans:not(.page-month) .main > .screen-cell { order: 5; }
+  /* Plans, the list: the day, then the name, then its time and how far off under it. */
+  .plan-index, .plan-index:not(:has(details.edit)) { grid-template-columns: 3.9rem minmax(0, 1fr) auto; }
+  .plan-index .colheads { display: none; }
+  .plan-index .row { grid-template-rows: auto auto auto; padding: 0.4rem 0; }
+  .plan-index .row > .dc { grid-column: 1; grid-row: 1 / span 2; }
+  .plan-index .row > .what { grid-column: 2 / -1; grid-row: 1; white-space: normal; }
+  .plan-index .what > .t { white-space: normal; }
+  .plan-index .what > .dots, .plan-index .edit-slot { display: none; }
+  .plan-index .row > .fact.time { grid-column: 2; grid-row: 2; }
+  .plan-index .row > .rel-words { grid-column: 3; grid-row: 2; }
+  .plan-index .row > details.edit { grid-row: 3; }
+  .plan-index .row:has(details.edit) > .what { padding-right: 3.6rem; }
+  /* To do: the tick, the name over whose it is and when, and Edit on both lines. */
+  .task-index { grid-template-columns: 2.75rem minmax(0, 1fr) 3.4rem; column-gap: 0.6rem; }
+  .task-index .row > .facts { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.6rem; grid-column: 2; grid-row: 2; min-width: 0; }
+  .task-index .facts > .fact { white-space: nowrap; }
+  .kind-keys .key-bank > .key[aria-current] { padding-right: 1.5rem; }
+  .find .kind-keys { margin-bottom: 0; }
+  .find .more-filters { margin-top: 0.25rem; }
+  .task-index .row { grid-template-rows: auto auto auto; padding: 0.35rem 0; }
+  .task-index .row > .d { grid-column: 1; grid-row: 1 / span 2; }
+  .task-index .row > .what { grid-column: 2; grid-row: 1; padding-right: 0; white-space: normal; }
+  .task-index .what > .t { white-space: normal; }
+  .task-index .row > details.edit { grid-column: 1 / -1; grid-row: 3; }
+  .task-index .row > details.edit > summary { top: 0.4rem; min-width: 3.4rem; }
+  /* Home: the service line's key under its lines; the radar's days large enough to read. */
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .grid > .setting:nth-child(n) { padding-left: 0; padding-right: 0; border-left: 0; }
+  .grid > .setting select { white-space: normal; }
+  .service-line { grid-template-columns: minmax(0, 1fr); padding-right: 0.9rem; }
+  .svc-all { grid-column: 1; grid-row: 3; justify-self: start; margin: 0.35rem 0 0.2rem; }
+  .radar.keyed .blip-day { font-size: 22px; }
+  .plan-rows, .plan-index, .plan-index:not(:has(details.edit)) { column-gap: 1rem; }
+  .radar.keyed .mark.next .blip-day, .blip-day-halo { font-size: 26px; }
+  .hh-foot { justify-content: flex-start; }
+}

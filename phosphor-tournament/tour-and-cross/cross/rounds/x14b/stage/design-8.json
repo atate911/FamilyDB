@@ -1,0 +1,68 @@
+{
+ "stage": "design",
+ "round": "x14b",
+ "label": "14b",
+ "roundNo": 2,
+ "key": "manual",
+ "cross": true,
+ "lin": {
+  "name": "manual (Lit Manual, Slotted)",
+  "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a",
+  "carried": [
+   {
+    "id": "x14a-manual-cross",
+    "name": "Lit Manual, Slotted"
+   }
+  ],
+  "briefs": [
+   {
+    "slot": "cross",
+    "parent": "x14a-manual-cross",
+    "parentName": "Lit Manual, Slotted"
+   }
+  ],
+  "idea": "the family's operator manual: every list in time hangs from a rail with one lit NOW, every section led by a figure drawn from its own data",
+  "camp": "tour",
+  "otherCamp": [
+   {
+    "key": "desk",
+    "id": "x14a-desk-cross",
+    "name": "Desk Terminal, Patched",
+    "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+   },
+   {
+    "key": "quote",
+    "id": "x14a-quote-cross",
+    "name": "Quote Board, Posted",
+    "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+   },
+   {
+    "key": "dessau",
+    "id": "x14a-dessau-cross",
+    "name": "Dessau, Wired Through",
+    "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+   },
+   {
+    "key": "plate",
+    "id": "x14a-plate-cross",
+    "name": "Plate, Engraved",
+    "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+   },
+   {
+    "key": "listing",
+    "id": "x14a-listing-cross",
+    "name": "Listing, Lit Through",
+    "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+   },
+   {
+    "key": "folio",
+    "id": "x14a-folio-cross",
+    "name": "Folio, Railed Contents",
+    "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+   }
+  ],
+  "mutant": null
+ },
+ "plan": true,
+ "mutant": false
+}

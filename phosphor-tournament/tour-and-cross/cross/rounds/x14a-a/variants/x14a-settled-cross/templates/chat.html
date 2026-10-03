@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, chat_line, waiting_line, presence %}
+{% block title %}{{ assistant if has_persona else 'Chat' }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-chat{% endblock %}
+{# While an answer is on its way the browser fetches the page again by itself, landing back on
+   the newest line: a meta refresh, which every browser does, scripts or not. It is only set when
+   something really is being thought about, so the page goes quiet as soon as the reply is in the
+   log, and never on a page holding words somebody typed, which it would take with it. While a
+   turn runs the box is closed, so there is nothing to lose. Waiting on the retry job the box
+   stays open, so with scripts on ask.js does the looking again instead, and never while somebody
+   is writing. #}
+{% block head %}
+  {% if refresh and locked %}
+    <meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" />
+  {% elif refresh %}
+    <noscript><meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" /></noscript>
+  {% endif %}
+{% endblock %}
+{% block content %}
+  {# The panel: her plate (her screen, her name, what she is for) and the kids' conversations
+     down the first column; the conversation across the other three, one long cell with the line
+     to type on docked at its foot. #}
+  <div class="side">
+  {# Hers: her name at the top, as on the tab that leads here, beside her screen. #}
+  {% if reading %}
+    {{ page_head(reading ~ ' and ' ~ (assistant if has_persona else 'the bot'), 'Her own conversation, for you to read. Only she writes in it.', 'presence' if has_persona else 'chat', [(assistant if has_persona else 'Chat', url_for('chat.show'))]) }}
+  {% elif private %}
+    {{ page_head(assistant if has_persona else 'Chat', 'Just you and ' ~ assistant ~ '. Tell her what you wish for, or ask about the plans.', 'presence' if has_persona else 'chat') }}
+  {% else %}
+    {% set said = lines | selectattr('from_bot') | list %}
+    {{ page_head(assistant if has_persona else 'Chat', 'Anything you would ask in Telegram works here too.', 'presence' if has_persona else 'chat',
+        figure=lines | length, legend=('message' if lines | length == 1 else 'messages'), note=('last ' ~ said[-1].when) if said else none) }}
+  {% endif %}
+
+  {% if kids and not reading %}
+    <nav class="cell kids-cell" aria-label="The kids' conversations">
+      <h2 class="keys-name">The kids' conversations</h2>
+      <ul class="plain">
+        {% for kid in kids %}<li><a class="key" href="{{ url_for('chat.show', with=kid.id, _anchor=latest) }}">{{ icon('user') }}<span>{{ kid.name }}</span></a></li>{% endfor %}
+      </ul>
+      <p class="muted">Each kid talks to {{ assistant }} on her own. You can read along.</p>
+    </nav>
+  {% endif %}
+  </div>
+
+  <div class="main">
+  <section class="cell conversation" aria-label="The conversation">
+  {% if lines %}
+    <ol class="thread">
+      {% for line in lines %}
+        {{ chat_line(line, latest if loop.last) }}
+      {% endfor %}
+      {% if pending %}{{ waiting_line(assistant, state, pending) }}{% endif %}
+    </ol>
+  {% else %}
+    <p class="muted empty">{{ icon('chat') }}<span>Nothing said here yet. Ask {{ assistant }} what to do this weekend, save an idea, or set a reminder.</span></p>
+  {% endif %}
+
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+  {% if not reading %}{% include "_ask.html" %}{% endif %}
+  </section>
+  </div>
+  {# Her small screen at the head of the rack: her glyphs and how she stands, one line, the lamp
+     breathing while a turn runs. #}
+  <section class="screen-cell tube-cell presence-tube" aria-label="How {{ assistant }} stands">
+    <div class="crt readout one-line{{ ' is-working' if pending }}">
+      <div class="crt-tube"><p>{{ presence('glyph', variant=3) }}<span class="tube-lamp" aria-hidden="true"></span><span class="bright">{{ 'Working' if pending else 'Ready' }}</span></p>
+        {% set said = lines | selectattr('from_bot') | list %}{% if said %}<p class="dim">Last said {{ said[-1].when }}</p>{% endif %}</div>
+    </div>
+  </section>
+{% endblock %}

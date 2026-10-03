@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, chip, departures %}
+{% block title %}Plans · {{ site_title }}{% endblock %}
+{% block body_class %}page-plans{% endblock %}
+{# A plan, printed as a timetable prints a departure, on one line: the day, the time, where to on
+   a dotted leader, how far off, and where it is, as a board names the platform. Moving it or
+   taking it off the calendar opens under the line. #}
+{% macro plan_line(plan, cancellable) %}
+  <li class="pt-row{{ ' is-today' if plan.on_today }}"{% if plan.id %} id="plan-{{ plan.id }}"{% endif %}>
+    <span class="pt-day">{% if plan.chip %}{{ plan.chip.weekday }} {{ plan.chip.day }} {{ plan.chip.month }}{% else %}{{ plan.when }}{% endif %}</span>
+    <span class="pt-time">{{ plan.time or 'All day' }}</span>
+    <span class="pt-dest">
+      {%- if plan.idea_id and plan.idea_id in titles %}<a href="{{ url_for('web.idea', idea_id=plan.idea_id) }}">{{ plan.title }}</a>
+      {%- else %}<span>{{ plan.title }}</span>{% endif -%}
+      {%- if plan.status != 'confirmed' %} <span class="tag">{{ plan.status }}</span>{% endif -%}
+      {%- if plan.from_google %} <span class="tag">added in Google</span>{% endif -%}
+    </span>
+    <span class="pt-rel">{{ plan.relative or '' }}</span>
+    <span class="pt-plat">{% if plan.location %}{{ icon('pin') }}{{ plan.location }}{% endif %}</span>
+    {% if plan.notes %}<p class="pt-note">{{ plan.notes }}</p>{% endif %}
+    {% if cancellable and plan.id and plan.status != 'cancelled' and visitor().may('change') %}
+      <div class="actions row pt-actions">
+        <details class="more">
+          <summary>Move it</summary>
+          <form class="form" method="post" action="{{ url_for('edits.move_plan', plan_id=plan.id) }}">
+            <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+            <input type="hidden" name="once" value="{{ once_token() }}" />
+            <div class="field">
+              <label for="start-{{ plan.id }}">New time</label>
+              <input id="start-{{ plan.id }}" name="start" type="datetime-local" required
+                     value="{{ plan.start_value }}" />
+              <label class="check">
+                <input type="checkbox" name="all_day" value="yes" {{ 'checked' if plan.all_day }} />
+                All day
+              </label>
+            </div>
+
+            <div class="field actions end"><button type="submit">Move it</button></div>
+          </form>
+        </details>
+        {# Taking a plan off the calendar really removes the Google event, and without a script
+           there is no dialogue to ask twice, so the button asks for itself. #}
+        <details class="more danger-zone">
+          <summary>Cancel it</summary>
+          <form method="post" action="{{ url_for('edits.cancel_plan', plan_id=plan.id) }}">
+            <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+            <input type="hidden" name="once" value="{{ once_token() }}" />
+            <p class="muted">This takes it off the family calendar for everyone.</p>
+            <button class="danger" type="submit">Yes, cancel it</button>
+          </form>
+        </details>
+      </div>
+    {% endif %}
+  </li>
+{% endmacro %}
+{% block content %}
+  {# The head carries the list's figure: how many are coming up, and when the next one leaves. #}
+  {% set lede = upcoming | length ~ (' plan' if upcoming | length == 1 else ' plans') ~ ' in the next ' ~ ahead ~ ' days' %}
+  {% if upcoming %}
+    {% set first = upcoming[0] %}
+    {% set lede = lede ~ ' · next up ' ~ ((first.chip.weekday ~ ' ' ~ first.chip.day ~ ' ' ~ first.chip.month) if first.chip else first.when) ~ (' at ' ~ first.time if first.time else '') %}
+  {% endif %}
+  {% set fig = {'n': upcoming | length, 'unit': 'ahead'} %}
+  {# The change says what the board does not: how soon the next one leaves. #}
+  {% if upcoming %}{% set _ = fig.update({'change': ('next ' ~ first.relative) if first.relative else ('next ' ~ ((first.chip.weekday ~ ' ' ~ first.chip.day) if first.chip else first.when))}) %}{% endif %}
+  {{ page_head('Plans', none, 'plans', figure=fig) }}
+  {# The page's board: the next departure large, the three after it, and the next four weeks as
+     a trace along its foot. The list under it is the whole timetable. #}
+  <section class="plans-board" aria-label="Next up">{{ departures(upcoming, more=0, wide=true) }}
+  {% if visitor().may('browse') %}<p class="source source-{{ source }}">{{ source_note }}</p>{% endif %}</section>
+  <div class="plan-controls">
+    <nav class="tabs" aria-label="How to show the plans">
+      <a href="{{ url_for('web.plans') }}" aria-current="page">{{ icon('list') }}List</a>
+      <a href="{{ url_for('web.plans_month') }}">{{ icon('grid') }}Month</a>
+    </nav>
+  </div>
+  <section class="panel">
+    <h2>Coming up</h2>
+    {% if upcoming %}
+      <ol class="plain printed-tt">{% for plan in upcoming %}{{ plan_line(plan, can_schedule) }}{% endfor %}</ol>
+    {% else %}
+      <p class="muted empty">{{ icon('plans') }}<span>Nothing on the calendar for the next {{ ahead }} days.</span></p>
+    {% endif %}
+  </section>
+
+  {% if visitor().may('change') %}
+  <section class="panel" id="add">
+    <details class="more" {{ 'open' if not upcoming }}>
+      <summary><span class="h2">{{ icon('plus') }}Put something on the calendar</span></summary>
+    {% if can_schedule %}
+      <form class="form" method="post" action="{{ url_for('edits.add_plan') }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+        <input type="hidden" name="once" value="{{ once_token() }}" />
+        <div class="field wide">
+          <label for="title">What</label>
+          <input id="title" name="title" required maxlength="200" placeholder="Dinner at the ramen place" data-dictate />
+        </div>
+        <div class="field">
+          <label for="start">When</label>
+          <input id="start" name="start" type="datetime-local" required />
+          <label class="check"><input type="checkbox" name="all_day" value="yes" /> All day</label>
+        </div>
+        <div class="field">
+          <label for="location">Where</label>
+          <input id="location" name="location" />
+        </div>
+        {% if not visitor().member %}
+          <div class="field">
+            <label for="who">Who</label>
+            <select id="who" name="who">
+              <option value="">nobody in particular</option>
+              {% for name in family %}
+                <option value="{{ name }}" {{ 'selected' if name == who }}>{{ name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        {% endif %}
+        <div class="field wide">
+          <label for="notes">Notes</label>
+          <textarea id="notes" name="notes" rows="2" data-dictate></textarea>
+        </div>
+        <div class="field wide actions">
+          <button type="submit">{{ icon('plans') }}Put it on the calendar</button>
+        </div>
+      </form>
+      <p class="muted hint">To plan an idea already on the list, open it and use the form there:
+        the plan is then linked to the idea.</p>
+    {% else %}
+      <p class="muted">Google Calendar is not connected, so nothing can be added here.
+        {% if visitor().may('browse') %}See the <a href="{{ url_for('web.status') }}">status page</a>.{% endif %}</p>
+    {% endif %}
+    </details>
+  </section>
+  {% endif %}
+
+  {% if recent %}
+    <section class="panel past">
+      <h2>Recently</h2>
+      <ol class="plain printed-tt">{% for plan in recent %}{{ plan_line(plan, false) }}{% endfor %}</ol>
+    </section>
+  {% endif %}
+{% endblock %}

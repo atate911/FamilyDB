@@ -1,0 +1,141 @@
+
+/* ==========================================================================================
+   SETTLED LIGHT, REVISED: the crit's fixes, over everything above
+   ========================================================================================== */
+
+/* ---- Rule 4, everywhere: a field and a select are flat as the keys are ------------------------- */
+select, input[type="text"], input[type="search"], input[type="date"], input[type="time"], input[type="number"],
+input[type="password"], input[type="email"], input[type="url"], textarea, .field select {
+  border-bottom-width: 1px;
+}
+.terminal .deck select { background-color: var(--key); border: 1px solid var(--key-edge); }
+
+/* ---- Home: the two columns end on one line --------------------------------------------------- */
+@media (min-width: 64rem) {
+  .map { align-items: stretch; }
+  .map-right > .home-todo { flex: 1 1 auto; display: flex; flex-direction: column; }
+  .map-right > .home-todo > .cell-foot { margin-top: auto; }
+}
+.home-todo > .cell-foot { padding-top: 0.5rem; }
+.home-todo > .cell-foot a, .lately > .cell-foot a { display: inline-flex; align-items: center; gap: 0.45rem; min-height: 2.75rem; font: 600 0.9375rem/1 var(--sans); color: var(--heading); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--sec) 50%, transparent); text-underline-offset: 0.22em; }
+.home-todo > .cell-foot .icon, .lately > .cell-foot .icon { width: 1.05rem; height: 1.05rem; color: var(--sec); }
+.lately > .cell-foot { display: flex; flex-wrap: wrap; gap: 0 1.5rem; margin-top: 0.15rem; padding-top: 0.3rem; }
+/* The base bezel closes up: Send where I am sits on the keys, not 40px above them. */
+.terminal .deck { padding-bottom: 0; }
+.terminal .deck .locate label { min-height: 2.75rem; }
+.minitel .starters { margin-top: 0.15rem; }
+.case-foot { margin-top: 0.2rem; }
+
+/* ---- Home: the household, one grammar in five columns ------------------------------------------ */
+/* Every column reads lamp, name, leader, figure, then one line; the lamp sits in the column's own
+   gutter, never in the neighbour's. */
+@media (min-width: 64rem) { .household { column-gap: 2.1rem; } }
+.household { padding-left: 0.35rem; }
+.household > .hh { padding-left: 1.15rem; }
+.household > .hh .cell-head a { position: relative; gap: 0.5rem; margin-left: 0; }
+.household > .hh .cell-head .slot { position: absolute; left: -1.15rem; top: 50%; width: 0.75rem; margin: 0; translate: 0 -50%; }
+.household > .hh .cell-head .go { width: 1.1rem; height: 1.1rem; color: var(--sec); }
+.hh-sub { min-height: 1.5rem; line-height: 1.5; color: var(--ink-2); }
+.hh-sub.roster { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hh-sub.signals { display: flex; flex-wrap: nowrap; align-items: center; gap: 0 0.75rem; white-space: nowrap; }
+.hh-sub.signals > span { gap: 0.4rem; }
+.hh-sub.signals .off-word { color: var(--dim); margin-left: -0.35rem; }
+.hh-sub > .lamp.look { margin: 0 0.45rem 0 0; }
+.hh .cell-head .count { color: var(--sec); }
+.to-status .cell-head .count { color: var(--ink); }
+.hh-sub .kid .n { margin-left: 0.15rem; }
+
+/* ---- Home, the scope: keyed numbers, one hot ---------------------------------------------------- */
+.scope figcaption { text-wrap: balance; }
+
+/* ---- Ideas: a shorter portrait, its marks numbered to the register ---------------------------- */
+.radar-screen.portrait .crt-tube { gap: 0.35rem; }
+.radar-screen.portrait .radar-top { display: grid; grid-template-columns: 156px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 0.8rem; align-items: center; margin-bottom: 0.25rem; }
+.radar-screen.portrait .radar-top > .radar { grid-row: 1 / span 2; width: 156px; margin: 0; align-self: center; }
+.radar-screen.portrait .radar-top > .hs-title { align-self: end; margin: 0; font-size: 1.85rem; line-height: 0.95; white-space: nowrap; }
+.radar-screen.portrait .radar-top > .hs-title .hs-on { display: block; margin-top: 0.15rem; font-size: 1.25rem; line-height: 1.05; color: var(--phosphor-dim); text-shadow: 0 0 5px color-mix(in srgb, var(--phosphor) 25%, transparent); }
+.radar-screen.portrait .radar-top > .hs-small { align-self: start; margin: 0.45rem 0 0; font-size: 1.1rem; line-height: 1.1; }
+.radar-screen .radar-label { display: none; }
+.radar-screen.portrait .hs-line { grid-template-columns: auto minmax(0, 1fr); font-size: 1.2rem; }
+.radar-screen.portrait .hs-line > .dim:first-child { grid-column: 1; grid-row: 1; }
+.radar-screen.portrait .hs-line > .rel { grid-column: 2; grid-row: 1; justify-self: end; }
+.radar-screen.portrait .hs-line > a { grid-column: 1 / -1; grid-row: 2; display: flex; align-items: center; min-height: 2.75rem; margin: -0.5rem 0 -0.2rem; padding: 0; color: var(--phosphor); text-decoration: none; }
+.radar-screen.portrait .hs-line > a:hover, .radar-screen.portrait .hs-line > a:focus-visible { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.15em; }
+/* The register's numbers on the marks: 18px on the page, cut from the glass by a dark halo; only
+   the nearest runs hot, as the words under it name it. */
+.radar-screen .radar.keyed .blip-day { font-size: 23px; fill: var(--phosphor-dim); stroke: #030805; stroke-width: 3px; text-shadow: 0 0 3px #000, 0 0 3px #000; }
+.radar-screen .radar.keyed .mark.next .blip-day { font-size: 23px; fill: color-mix(in srgb, var(--screen) 58%, #fff); stroke: #030805; stroke-width: 2px; }
+.radar-screen .blip-day-halo { font-size: 23px; }
+.board:has(.idea-index .k1:is(:hover,:focus-within)) .mark.k1 .lit, .board:has(.idea-index .k2:is(:hover,:focus-within)) .mark.k2 .lit,
+.board:has(.idea-index .k3:is(:hover,:focus-within)) .mark.k3 .lit, .board:has(.idea-index .k4:is(:hover,:focus-within)) .mark.k4 .lit,
+.board:has(.idea-index .k5:is(:hover,:focus-within)) .mark.k5 .lit, .board:has(.idea-index .k6:is(:hover,:focus-within)) .mark.k6 .lit,
+.board:has(.idea-index .k7:is(:hover,:focus-within)) .mark.k7 .lit, .board:has(.idea-index .k8:is(:hover,:focus-within)) .mark.k8 .lit,
+.board:has(.idea-index .k9:is(:hover,:focus-within)) .mark.k9 .lit, .board:has(.idea-index .k10:is(:hover,:focus-within)) .mark.k10 .lit,
+.board:has(.idea-index .k11:is(:hover,:focus-within)) .mark.k11 .lit, .board:has(.idea-index .k12:is(:hover,:focus-within)) .mark.k12 .lit { opacity: 1; transition-duration: var(--glow-in); }
+.board:has(.idea-index .k1:is(:hover,:focus-within)) .mark.k1 .blip-day, .board:has(.idea-index .k2:is(:hover,:focus-within)) .mark.k2 .blip-day,
+.board:has(.idea-index .k3:is(:hover,:focus-within)) .mark.k3 .blip-day, .board:has(.idea-index .k4:is(:hover,:focus-within)) .mark.k4 .blip-day,
+.board:has(.idea-index .k5:is(:hover,:focus-within)) .mark.k5 .blip-day, .board:has(.idea-index .k6:is(:hover,:focus-within)) .mark.k6 .blip-day,
+.board:has(.idea-index .k7:is(:hover,:focus-within)) .mark.k7 .blip-day, .board:has(.idea-index .k8:is(:hover,:focus-within)) .mark.k8 .blip-day,
+.board:has(.idea-index .k9:is(:hover,:focus-within)) .mark.k9 .blip-day, .board:has(.idea-index .k10:is(:hover,:focus-within)) .mark.k10 .blip-day,
+.board:has(.idea-index .k11:is(:hover,:focus-within)) .mark.k11 .blip-day, .board:has(.idea-index .k12:is(:hover,:focus-within)) .mark.k12 .blip-day { fill: #e4fff0; transition-duration: var(--glow-in); }
+
+/* ---- Ideas register: the drive time set as figures, the compass in its own column -------------- */
+.idea-index { grid-template-columns: 2rem minmax(0, 1fr) max-content max-content minmax(6.5rem, max-content) 2.5ch; }
+.idea-index .fact.road { justify-self: end; text-align: right; font: 400 0.9375rem/1 var(--sans); font-variant-numeric: tabular-nums lining-nums; color: var(--ink-2); white-space: nowrap; }
+.idea-index .fact.road b { font-weight: 600; color: var(--ink); }
+.idea-index .fact.road .unit { font-weight: 400; color: var(--ink-2); }
+.idea-index .fact.bearing { justify-self: end; margin-left: 0; text-align: right; font: 500 0.8125rem/1 var(--machine); color: var(--faint); }
+.idea-index .no { font-variant-numeric: tabular-nums; }
+
+/* ---- To do: the tube's names underlined only while pointed at ---------------------------------- */
+.tally-screen .bars .bar-name { text-decoration: none; }
+.tally-screen .bars a:is(:hover, :focus-visible) .bar-name { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.15em; }
+.tally-screen .bars .bar-late.has a:is(:hover, :focus-visible) .bar-name { text-decoration: none; }
+
+/* ---- Plans, the month: what is outside the month recedes; the weekend a real step up ----------- */
+table.month td.outside time, table.month td.outside:not(.past) time, table.month td.outside.has-plan:not(.past) time { color: var(--faint); font-weight: 400; }
+table.month td.outside .event { opacity: 0.6; }
+table.month td.weekend, table.month th.weekend { background: color-mix(in oklab, var(--surface) 91%, #c8d2cc); }
+table.month td.outside.weekend { background: color-mix(in oklab, var(--surface) 95%, #c8d2cc); }
+table.month td.today { background: color-mix(in srgb, var(--steel) 9%, var(--surface)); }
+
+/* ---- Settings: the look on the icon itself, the line two long ---------------------------------- */
+.sommaire { grid-template-columns: 1.4rem minmax(12rem, 15.5rem) minmax(0, 1fr) 1.1rem; column-gap: 0.85rem; }
+.sommaire .slot { display: none; }
+.sommaire .ch-what { grid-column: 2; }
+.sommaire .ch-state { grid-column: 3; }
+.sommaire .picon { position: relative; }
+.sommaire .look .picon { color: var(--people); }
+.sommaire .look .picon::after { content: ""; position: absolute; left: 50%; bottom: -0.55rem; width: 12px; height: 3px; margin-left: -6px; border-radius: 1.5px; background: var(--people); box-shadow: 0 0 5px color-mix(in srgb, var(--people) 30%, transparent); }
+.sommaire .fact.state { -webkit-line-clamp: 2; line-clamp: 2; }
+.sommaire .look .what .t { color: var(--heading); }
+@media (max-width: 47.99rem) {
+  .sommaire { grid-template-columns: 1.4rem minmax(0, 1fr) 1.1rem; }
+  .sommaire .picon { grid-column: 1; grid-row: 1; }
+  .sommaire .what { grid-column: 2; grid-row: 1; }
+  .sommaire .state { grid-column: 2; grid-row: 2; }
+  .sommaire .go { grid-column: 3; grid-row: 1 / span 2; }
+}
+
+/* ---- Chat: only her newest line is lit ---------------------------------------------------------- */
+.said-bot .bubble {
+  border-color: var(--line);
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--screen) 10%, transparent);
+}
+.thread > .said-bot .bubble { border-color: var(--line); }
+.thread > .said-bot:not(:has(~ .said-bot)) .bubble {
+  border-color: color-mix(in srgb, var(--screen) 34%, var(--line));
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--screen) 45%, transparent), 0 10px 30px -20px color-mix(in srgb, var(--screen) 70%, transparent);
+}
+
+/* ---- A phone: the first screen reaches the plans ----------------------------------------------- */
+@media (max-width: 47.99rem) {
+  .minitel { padding-bottom: 0.85rem; }
+  .terminal .deck { padding-bottom: 0; }
+  .minitel .starters { display: block; margin-top: 0.1rem; }
+  .minitel .starters li:not(:first-child) { display: none; }
+  .minitel .starters a { width: 100%; }
+  .case-foot { display: none; }
+  .household > .hh { padding-left: 1.15rem; }
+  .hh-sub.signals { flex-wrap: wrap; }
+}

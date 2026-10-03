@@ -1,0 +1,865 @@
+{
+ "round": "x14a",
+ "label": "14a",
+ "lines": {
+  "desk": {
+   "key": "desk",
+   "camp": "main",
+   "idea": "a docked terminal column: one real cased terminal beside the family's desk, Home's question typed at the foot of its glass",
+   "heat": "a",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a",
+   "carried": [
+    {
+     "id": "r13-idea-1",
+     "name": "Desk Terminal, Joined"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "cross",
+     "parent": "r13-idea-1",
+     "parentName": "Desk Terminal, Joined"
+    }
+   ],
+   "entrants": [
+    "x14a-desk-cross"
+   ],
+   "otherCamp": [
+    {
+     "key": "trued",
+     "id": "t3-track-refine2",
+     "name": "Trued, Relit",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "manual",
+     "id": "t3-figure-refine",
+     "name": "Lit Manual, Relit Rails",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "departures",
+     "id": "t3-timetable-refine",
+     "name": "Departures, Platformed",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "settled",
+     "id": "t3-switchboard-refine",
+     "name": "Switchboard, Settled Light",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "sill",
+     "id": "t3-track-graft",
+     "name": "Sill Line, Ticked",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    },
+    {
+     "key": "pocket",
+     "id": "t3-pocket-refine",
+     "name": "Pocket Diary, Kept",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    },
+    {
+     "key": "waypoint",
+     "id": "t3-console-graft",
+     "name": "Waypoint Lamps",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    }
+   ]
+  },
+  "quote": {
+   "key": "quote",
+   "camp": "main",
+   "idea": "a count board: each section led by one big quote or figure, read at a glance",
+   "heat": "a",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a",
+   "carried": [
+    {
+     "id": "r13-mut-3",
+     "name": "Quote Board at Evening"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "cross",
+     "parent": "r13-mut-3",
+     "parentName": "Quote Board at Evening"
+    }
+   ],
+   "entrants": [
+    "x14a-quote-cross"
+   ],
+   "otherCamp": [
+    {
+     "key": "trued",
+     "id": "t3-track-refine2",
+     "name": "Trued, Relit",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "manual",
+     "id": "t3-figure-refine",
+     "name": "Lit Manual, Relit Rails",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "departures",
+     "id": "t3-timetable-refine",
+     "name": "Departures, Platformed",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "settled",
+     "id": "t3-switchboard-refine",
+     "name": "Switchboard, Settled Light",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "sill",
+     "id": "t3-track-graft",
+     "name": "Sill Line, Ticked",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    },
+    {
+     "key": "pocket",
+     "id": "t3-pocket-refine",
+     "name": "Pocket Diary, Kept",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    },
+    {
+     "key": "waypoint",
+     "id": "t3-console-graft",
+     "name": "Waypoint Lamps",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    }
+   ]
+  },
+  "dessau": {
+   "key": "dessau",
+   "camp": "main",
+   "idea": "Bauhaus display type: a modernist poster's hierarchy and geometry around the green screens",
+   "heat": "a",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a",
+   "carried": [
+    {
+     "id": "r13-wild-3",
+     "name": "Dessau Phosphor"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "cross",
+     "parent": "r13-wild-3",
+     "parentName": "Dessau Phosphor"
+    }
+   ],
+   "entrants": [
+    "x14a-dessau-cross"
+   ],
+   "otherCamp": [
+    {
+     "key": "trued",
+     "id": "t3-track-refine2",
+     "name": "Trued, Relit",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "manual",
+     "id": "t3-figure-refine",
+     "name": "Lit Manual, Relit Rails",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "departures",
+     "id": "t3-timetable-refine",
+     "name": "Departures, Platformed",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "settled",
+     "id": "t3-switchboard-refine",
+     "name": "Switchboard, Settled Light",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "sill",
+     "id": "t3-track-graft",
+     "name": "Sill Line, Ticked",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    },
+    {
+     "key": "pocket",
+     "id": "t3-pocket-refine",
+     "name": "Pocket Diary, Kept",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    },
+    {
+     "key": "waypoint",
+     "id": "t3-console-graft",
+     "name": "Waypoint Lamps",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    }
+   ]
+  },
+  "plate": {
+   "key": "plate",
+   "camp": "main",
+   "idea": "a long-persistence instrument: a cut matte plate over one lit screen",
+   "heat": "b",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b",
+   "carried": [
+    {
+     "id": "r13-idea-2",
+     "name": "Backlit Plate"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "cross",
+     "parent": "r13-idea-2",
+     "parentName": "Backlit Plate"
+    }
+   ],
+   "entrants": [
+    "x14a-plate-cross"
+   ],
+   "otherCamp": [
+    {
+     "key": "trued",
+     "id": "t3-track-refine2",
+     "name": "Trued, Relit",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "manual",
+     "id": "t3-figure-refine",
+     "name": "Lit Manual, Relit Rails",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "departures",
+     "id": "t3-timetable-refine",
+     "name": "Departures, Platformed",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "settled",
+     "id": "t3-switchboard-refine",
+     "name": "Switchboard, Settled Light",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "sill",
+     "id": "t3-track-graft",
+     "name": "Sill Line, Ticked",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    },
+    {
+     "key": "pocket",
+     "id": "t3-pocket-refine",
+     "name": "Pocket Diary, Kept",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    },
+    {
+     "key": "waypoint",
+     "id": "t3-console-graft",
+     "name": "Waypoint Lamps",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    }
+   ]
+  },
+  "listing": {
+   "key": "listing",
+   "camp": "main",
+   "idea": "a programme listing: the family's evening set as a TV listings page, bands with a head column",
+   "heat": "b",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b",
+   "carried": [
+    {
+     "id": "r12-idea-1",
+     "name": "Evening Listing, Traced"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "cross",
+     "parent": "r12-idea-1",
+     "parentName": "Evening Listing, Traced"
+    }
+   ],
+   "entrants": [
+    "x14a-listing-cross"
+   ],
+   "otherCamp": [
+    {
+     "key": "trued",
+     "id": "t3-track-refine2",
+     "name": "Trued, Relit",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "manual",
+     "id": "t3-figure-refine",
+     "name": "Lit Manual, Relit Rails",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "departures",
+     "id": "t3-timetable-refine",
+     "name": "Departures, Platformed",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "settled",
+     "id": "t3-switchboard-refine",
+     "name": "Switchboard, Settled Light",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "sill",
+     "id": "t3-track-graft",
+     "name": "Sill Line, Ticked",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    },
+    {
+     "key": "pocket",
+     "id": "t3-pocket-refine",
+     "name": "Pocket Diary, Kept",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    },
+    {
+     "key": "waypoint",
+     "id": "t3-console-graft",
+     "name": "Waypoint Lamps",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    }
+   ]
+  },
+  "folio": {
+   "key": "folio",
+   "camp": "main",
+   "idea": "a videotex service as a folio: numbered pages of one service, read like a teletext magazine",
+   "heat": "b",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b",
+   "carried": [
+    {
+     "id": "r13-wmut-1",
+     "name": "Folio Switchboard"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "cross",
+     "parent": "r13-wmut-1",
+     "parentName": "Folio Switchboard"
+    }
+   ],
+   "entrants": [
+    "x14a-folio-cross"
+   ],
+   "otherCamp": [
+    {
+     "key": "trued",
+     "id": "t3-track-refine2",
+     "name": "Trued, Relit",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "manual",
+     "id": "t3-figure-refine",
+     "name": "Lit Manual, Relit Rails",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "departures",
+     "id": "t3-timetable-refine",
+     "name": "Departures, Platformed",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "settled",
+     "id": "t3-switchboard-refine",
+     "name": "Switchboard, Settled Light",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "sill",
+     "id": "t3-track-graft",
+     "name": "Sill Line, Ticked",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    },
+    {
+     "key": "pocket",
+     "id": "t3-pocket-refine",
+     "name": "Pocket Diary, Kept",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    },
+    {
+     "key": "waypoint",
+     "id": "t3-console-graft",
+     "name": "Waypoint Lamps",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    }
+   ]
+  },
+  "trued": {
+   "key": "trued",
+   "camp": "tour",
+   "idea": "the track series: the family's week as a signal box's lit track diagram; the greeting its own lit board with the ways to start on a steel branch, Next up as the line's first stop",
+   "heat": "a",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a",
+   "carried": [
+    {
+     "id": "t3-track-refine2",
+     "name": "Trued, Relit"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "cross",
+     "parent": "t3-track-refine2",
+     "parentName": "Trued, Relit"
+    }
+   ],
+   "entrants": [
+    "x14a-trued-cross"
+   ],
+   "otherCamp": [
+    {
+     "key": "desk",
+     "id": "r13-idea-1",
+     "name": "Desk Terminal, Joined",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "quote",
+     "id": "r13-mut-3",
+     "name": "Quote Board at Evening",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "dessau",
+     "id": "r13-wild-3",
+     "name": "Dessau Phosphor",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "plate",
+     "id": "r13-idea-2",
+     "name": "Backlit Plate",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    },
+    {
+     "key": "listing",
+     "id": "r12-idea-1",
+     "name": "Evening Listing, Traced",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    },
+    {
+     "key": "folio",
+     "id": "r13-wmut-1",
+     "name": "Folio Switchboard",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    }
+   ]
+  },
+  "manual": {
+   "key": "manual",
+   "camp": "tour",
+   "idea": "the family's operator manual: every list in time hangs from a rail with one lit NOW, every section led by a figure drawn from its own data",
+   "heat": "a",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a",
+   "carried": [
+    {
+     "id": "t3-figure-refine",
+     "name": "Lit Manual, Relit Rails"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "cross",
+     "parent": "t3-figure-refine",
+     "parentName": "Lit Manual, Relit Rails"
+    }
+   ],
+   "entrants": [
+    "x14a-manual-cross"
+   ],
+   "otherCamp": [
+    {
+     "key": "desk",
+     "id": "r13-idea-1",
+     "name": "Desk Terminal, Joined",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "quote",
+     "id": "r13-mut-3",
+     "name": "Quote Board at Evening",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "dessau",
+     "id": "r13-wild-3",
+     "name": "Dessau Phosphor",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "plate",
+     "id": "r13-idea-2",
+     "name": "Backlit Plate",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    },
+    {
+     "key": "listing",
+     "id": "r12-idea-1",
+     "name": "Evening Listing, Traced",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    },
+    {
+     "key": "folio",
+     "id": "r13-wmut-1",
+     "name": "Folio Switchboard",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    }
+   ]
+  },
+  "departures": {
+   "key": "departures",
+   "camp": "tour",
+   "idea": "a station at night: Vera's line down the left with the box as its first stop, a dot-matrix departures board beside it",
+   "heat": "a",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a",
+   "carried": [
+    {
+     "id": "t3-timetable-refine",
+     "name": "Departures, Platformed"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "cross",
+     "parent": "t3-timetable-refine",
+     "parentName": "Departures, Platformed"
+    }
+   ],
+   "entrants": [
+    "x14a-departures-cross"
+   ],
+   "otherCamp": [
+    {
+     "key": "desk",
+     "id": "r13-idea-1",
+     "name": "Desk Terminal, Joined",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "quote",
+     "id": "r13-mut-3",
+     "name": "Quote Board at Evening",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "dessau",
+     "id": "r13-wild-3",
+     "name": "Dessau Phosphor",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "plate",
+     "id": "r13-idea-2",
+     "name": "Backlit Plate",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    },
+    {
+     "key": "listing",
+     "id": "r12-idea-1",
+     "name": "Evening Listing, Traced",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    },
+    {
+     "key": "folio",
+     "id": "r13-wmut-1",
+     "name": "Folio Switchboard",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    }
+   ]
+  },
+  "settled": {
+   "key": "settled",
+   "camp": "tour",
+   "idea": "the videotex sommaire settled: Home as a two-tier map of the service, every inner page on one rack with its own sized tube",
+   "heat": "a",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a",
+   "carried": [
+    {
+     "id": "t3-switchboard-refine",
+     "name": "Switchboard, Settled Light"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "cross",
+     "parent": "t3-switchboard-refine",
+     "parentName": "Switchboard, Settled Light"
+    }
+   ],
+   "entrants": [
+    "x14a-settled-cross"
+   ],
+   "otherCamp": [
+    {
+     "key": "desk",
+     "id": "r13-idea-1",
+     "name": "Desk Terminal, Joined",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "quote",
+     "id": "r13-mut-3",
+     "name": "Quote Board at Evening",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "dessau",
+     "id": "r13-wild-3",
+     "name": "Dessau Phosphor",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "plate",
+     "id": "r13-idea-2",
+     "name": "Backlit Plate",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    },
+    {
+     "key": "listing",
+     "id": "r12-idea-1",
+     "name": "Evening Listing, Traced",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    },
+    {
+     "key": "folio",
+     "id": "r13-wmut-1",
+     "name": "Folio Switchboard",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    }
+   ]
+  },
+  "sill": {
+   "key": "sill",
+   "camp": "tour",
+   "idea": "the track series' bolder Home: the question as the board's headline, the tube's lit wire dropping onto the Coming up rail, To do's stops the ticks you press",
+   "heat": "b",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b",
+   "carried": [
+    {
+     "id": "t3-track-graft",
+     "name": "Sill Line, Ticked"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "cross",
+     "parent": "t3-track-graft",
+     "parentName": "Sill Line, Ticked"
+    }
+   ],
+   "entrants": [
+    "x14a-sill-cross"
+   ],
+   "otherCamp": [
+    {
+     "key": "desk",
+     "id": "r13-idea-1",
+     "name": "Desk Terminal, Joined",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "quote",
+     "id": "r13-mut-3",
+     "name": "Quote Board at Evening",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "dessau",
+     "id": "r13-wild-3",
+     "name": "Dessau Phosphor",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "plate",
+     "id": "r13-idea-2",
+     "name": "Backlit Plate",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    },
+    {
+     "key": "listing",
+     "id": "r12-idea-1",
+     "name": "Evening Listing, Traced",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    },
+    {
+     "key": "folio",
+     "id": "r13-wmut-1",
+     "name": "Folio Switchboard",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    }
+   ]
+  },
+  "pocket": {
+   "key": "pocket",
+   "camp": "tour",
+   "idea": "the family's pocket diary: one steel line of time from Now to Later, every date set as a diary sets a day",
+   "heat": "b",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b",
+   "carried": [
+    {
+     "id": "t3-pocket-refine",
+     "name": "Pocket Diary, Kept"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "cross",
+     "parent": "t3-pocket-refine",
+     "parentName": "Pocket Diary, Kept"
+    }
+   ],
+   "entrants": [
+    "x14a-pocket-cross"
+   ],
+   "otherCamp": [
+    {
+     "key": "desk",
+     "id": "r13-idea-1",
+     "name": "Desk Terminal, Joined",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "quote",
+     "id": "r13-mut-3",
+     "name": "Quote Board at Evening",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "dessau",
+     "id": "r13-wild-3",
+     "name": "Dessau Phosphor",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "plate",
+     "id": "r13-idea-2",
+     "name": "Backlit Plate",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    },
+    {
+     "key": "listing",
+     "id": "r12-idea-1",
+     "name": "Evening Listing, Traced",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    },
+    {
+     "key": "folio",
+     "id": "r13-wmut-1",
+     "name": "Folio Switchboard",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    }
+   ]
+  },
+  "waypoint": {
+   "key": "waypoint",
+   "camp": "tour",
+   "idea": "a 1969 flight console: a readout strip, the weeks as a flight plan whose waypoint rings carry the day numerals that lead the rows",
+   "heat": "b",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b",
+   "carried": [
+    {
+     "id": "t3-console-graft",
+     "name": "Waypoint Lamps"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "cross",
+     "parent": "t3-console-graft",
+     "parentName": "Waypoint Lamps"
+    }
+   ],
+   "entrants": [
+    "x14a-waypoint-cross"
+   ],
+   "otherCamp": [
+    {
+     "key": "desk",
+     "id": "r13-idea-1",
+     "name": "Desk Terminal, Joined",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "quote",
+     "id": "r13-mut-3",
+     "name": "Quote Board at Evening",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "dessau",
+     "id": "r13-wild-3",
+     "name": "Dessau Phosphor",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a"
+    },
+    {
+     "key": "plate",
+     "id": "r13-idea-2",
+     "name": "Backlit Plate",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    },
+    {
+     "key": "listing",
+     "id": "r12-idea-1",
+     "name": "Evening Listing, Traced",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    },
+    {
+     "key": "folio",
+     "id": "r13-wmut-1",
+     "name": "Folio Switchboard",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b"
+    }
+   ]
+  }
+ },
+ "anchors": {
+  "00-current": "today's page",
+  "r13-idea-1": "Desk Terminal, Joined (the main tournament's leader)",
+  "t3-track-refine2": "Trued, Relit (the side tour's winner)"
+ },
+ "heats": {
+  "a": {
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a",
+   "lines": [
+    "desk",
+    "quote",
+    "dessau",
+    "trued",
+    "manual",
+    "departures",
+    "settled"
+   ]
+  },
+  "b": {
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b",
+   "lines": [
+    "plate",
+    "listing",
+    "folio",
+    "sill",
+    "pocket",
+    "waypoint"
+   ]
+  }
+ }
+}

@@ -1,0 +1,159 @@
+.plate-fig
+.fig-legend
+.fig-unit
+.fig-note
+.fig-note.warn
+a.fig-note
+a.fig-note:hover
+.cell-note
+.cell-link
+.cell-link .icon
+.cell-key
+.cell-key .icon
+.service-line
+.svc-head
+.svc-head .slot
+.svc-head .what
+.svc-head .dots
+.svc-head .count
+.svc-head .unit
+.svc-all
+.svc-all:hover
+.svc-next
+.svc-word
+.svc-one
+.svc-one:hover
+.svc-then
+.svc-then a
+.svc-then a:hover
+.hh-key
+.hh-key .lamp-key
+.glass-legend
+.speaker-name
+.power
+.glass-words
+.glass-said
+.prompt-line
+.prompt-line:focus-within
+.crt .prompt-line textarea
+.crt .prompt-line textarea::placeholder
+.deck
+.deck .who
+.deck label, .deck .from
+.deck .from strong
+.deck select
+.deck .locate label
+.deck .locate .icon
+.deck .mic-slot button.mic
+.deck .send
+.deck .mic-slot:not(:empty) + .send
+.page-readout .crt-tube
+.page-readout .crt-tube > *
+.readout-title
+.readout-when
+.readout-lines
+.readout-lines li
+.readout-lines span
+.readout-foot
+.readout-foot .bright
+.week-bars li
+.week-bars .earlier .gone
+.weekend-line
+.week-bars .is-now
+.week-bars .is-past
+.register-head
+.register-head .count
+.month-bar
+.month-bar h2
+.ask-screen
+.ask-screen::after
+.ask-screen .crt-tube
+.ask-screen .prompt-line
+.ask-screen .prompt-line:focus-within
+.ask-screen:focus-within .crt-tube
+.ask.minitel:not(:has(.next-up)) .deck
+.plate-code.own
+.plate-code.own::before
+.cal-cell .cell-art
+.person-head
+.person-head h2
+.person-tags
+.person-cell.off
+.plate-title
+.plate-icon
+.plate-icon .icon
+.plate-icon .glyph.presence
+.plate-fig
+.plate-fig .fig
+.plate-fig .fig-unit
+.plate-fig .fig-sep
+.plate-fig .fig-note
+.plate-fig a.fig-note
+.tally-screen .hs-head
+.compose-row > .ask-screen
+.ask-screen .crt-tube
+.ask-screen textarea
+.ask.minitel:not(:has(.next-up)) .deck.lip
+.month-bar
+.service-line
+.plate > .plate-title
+.plate-fig .fig
+.map .service-line
+.terminal-screen .glass-words
+.terminal-screen .glass-said
+.terminal-screen .glass-legend
+.terminal-screen .glass-legend .day
+.terminal-screen .crt-tube:has(.glass-said) .glass-legend
+.crt .prompt-line textarea
+.deck
+.deck .who
+.deck .who label
+.deck .locate
+.deck select
+.deck .send
+.deck .mic-slot button.mic
+.svc-all
+.svc-next
+.page-chat .ask.minitel:not(:focus-within) > .deck.lip
+.page-chat .deck .who label, .page-chat .deck .locate-words
+.page-chat .deck
+.page-chat .deck .locate
+.page-chat .deck .locate label
+.page-chat .deck .send
+.service-line
+.svc-head
+.svc-all
+.svc-next
+.hh-foot
+.hh-foot .lamp-key
+.plate > .plate-title
+.plate > .plate-fig
+.service-line
+.svc-all
+.hh-foot
+.svc-head .dots
+.speaker-name
+.speaker-day
+.crt .ask-question .q-mid
+.crt .ask-question .q-dim
+.apos
+.crt-tube .prompt-line
+.crt .prompt-line textarea
+.terminal-screen .prompt-line
+.terminal .deck
+.terminal .deck .who
+.terminal .deck .who select
+.terminal .deck .mic-slot button.mic
+.terminal .deck .send
+.terminal .deck .locate
+.map .cell > .cell-head.split > .late-link
+.late-link
+.cell-head.split > .late-link
+.late-link:hover
+.speaker-day
+.terminal .deck
+.terminal .deck .who label
+.terminal .deck select
+.terminal .deck
+.terminal .deck .locate label
+.terminal .deck

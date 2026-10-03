@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, mosaic, kind_label, kind_icon, chip_figure, radar, chat_line, waiting_line, tick, presence, contents_line %}
+{% block title %}{{ site_title }}{% endblock %}
+{% block body_class %}page-home{% endblock %}
+{% macro plan_where(entry) -%}
+  {% if entry.idea_id %}
+    <a href="{{ url_for('web.idea', idea_id=entry.idea_id) }}">{{ entry.title }}</a>
+  {% else %}
+    {{ entry.title }}
+  {% endif %}
+{%- endmacro %}
+{# The head of a cell is a line of the service's contents (`contents_line` in _ui.html): a lamp
+   where something is live, the page's number, its name, a leader and how many things are in it.
+   The whole line is the key to that page. #}
+{% macro cell_head(no, title, href, id, count=none, lamp=none) -%}
+  {{ contents_line(no, title, href, id, count, lamp) }}
+{%- endmacro %}
+{% block content %}
+  {% set first = coming[0] if coming else none %}
+  {#
+    Page one of the service, P100: the map. Every place in it is a cell of the same size on one
+    panel, with what is in it now and the way in, so Home is where every page starts from and
+    nothing needs a second look to find. The terminal takes four cells at the top left: its screen
+    shows what is next (with the radar of everything coming), her last word and her question, and
+    writing here is typing on the green screen; what is written lands in the conversation.
+  #}
+  <div class="map">
+  <section class="welcome" aria-label="{{ site_title }}">
+    {% if talk %}
+    <form class="ask minitel" id="ask" method="post" action="{{ url_for('chat.send') }}"
+          {%- if look_again %} data-refresh="{{ look_again }}"{% endif %}>
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+      <input type="hidden" name="once" value="{{ once_token() }}" />
+      <input type="hidden" name="lat" value="" />
+      <input type="hidden" name="lon" value="" />
+    {% else %}
+    <div class="minitel">
+    {% endif %}
+      <p class="speaker">
+        {{ presence(variant=2) }}
+        <strong>{{ assistant }}</strong>
+        <span class="eyebrow">{{ today }}</span>
+      </p>
+      <div class="crt next-up power-on">
+        <div class="crt-tube">
+          <div class="next-block">
+            <div class="next-text">
+              <p class="next-label"><span class="inverse caps">Next up</span></p>
+              {% if first %}
+                <p class="next-title bright">{{ plan_where(first) }}</p>
+                <p class="next-when">{{ first.when }}{% if first.relative %} <span class="rel">{{ first.relative }}</span>{% endif %}</p>
+                {% if first.location %}<p class="next-where dim">{{ first.location }}</p>{% endif %}
+                <p class="next-more"><span class="dim" aria-hidden="true">&gt;</span>
+                  {%- if coming | length > 1 %} <a href="#coming-h">{{ coming | length - 1 }} more on the radar</a>{% endif -%}</p>
+              {% else %}
+                <p class="next-title bright">Nothing on the radar yet.</p>
+                <p class="next-where dim">Ask what fits this weekend, or plan an idea.</p>
+              {% endif %}
+            </div>
+            {{ radar(blips) }}
+          </div>
+          {% if talk %}
+            {% if talk.state %}
+              <ol class="thread brief">
+                {% call waiting_line(assistant, talk.state, talk.note) %}<a href="{{ url_for('chat.show', _anchor='latest') }}">Open the conversation</a>{% endcall %}
+              </ol>
+            {% elif talk.line %}
+              <ol class="thread brief">{{ chat_line(talk.line) }}</ol>
+              <p class="brief-more"><span class="dim" aria-hidden="true">&gt;</span> <a href="{{ url_for('chat.show', _anchor='latest') }}">Continue with {{ assistant }}</a></p>
+            {% endif %}
+            <div class="prompt">
+              <h1 class="ask-question"><label for="text">What’s on your <span class="glow">mind</span>?</label></h1>
+              <div class="prompt-line">
+                <span class="prompt-mark" aria-hidden="true">&gt;</span>
+                <textarea id="text" name="text" data-dictate="ask-mic" rows="2" required placeholder="{{ placeholder }}"
+                  {%- if locked %} disabled{% endif %}>{{ typed or '' }}</textarea>
+              </div>
+            </div>
+          {% else %}
+            <h1 class="ask-question">{{ site_title }}</h1>
+            <p class="next-more"><span class="crt-cursor" aria-hidden="true"></span></p>
+          {% endif %}
+        </div>
+      </div>
+    {% if talk %}
+      <div class="deck ask-bar">
+        <div class="who">
+          {% if visitor().member %}
+            <span class="from">From <strong>{{ who }}</strong></span>
+          {% else %}
+            <label for="who">From</label>
+            <select id="who" name="who" required>
+              {% if not who %}<option value="">who is asking?</option>{% endif %}
+              {% for name in family %}
+                <option value="{{ name }}" {{ 'selected' if name == who }}>{{ name }}</option>
+              {% endfor %}
+            </select>
+          {% endif %}
+        </div>
+        <div class="locate" id="locate" hidden>
+          <label>
+            <input type="checkbox" name="send_where" value="1" {{ 'checked' if send_where }} />
+            {{ icon('locate') }}Send where I am
+          </label>
+        </div>
+        <span class="mic-slot" id="ask-mic"></span>
+        <button class="send" type="submit" {{ 'disabled' if locked or not family }}>{{ icon('send') }}<span class="label">Send</span></button>
+      </div>
+      <p id="where" class="muted"></p>
+    </form>
+    {% else %}
+    </div>
+    {% endif %}
+  </section>
+
+  {# Page 200, hers: the ways to start, numbered as a videotex page numbered its choices. Each
+     fills the box on the screen beside it (ask.js), or without a script opens this page with the
+     question waiting in the box. While she is answering, how it stands. #}
+  {% if talk %}
+    <section class="cell to-chat her-cell" aria-labelledby="c-chat">
+      {{ cell_head(200, assistant if has_persona else 'Chat', url_for('chat.show', _anchor='latest'), 'c-chat', lamp='on' if talk.state == 'thinking' else none) }}
+      {% if talk.state %}<p class="cell-note">{{ talk.note }}</p>{% endif %}
+      {% if starters %}
+        <p class="cell-label">Ways to start</p>
+        <ul class="starters" aria-label="Ways to start">
+          {% for starter in starters %}
+            <li><a href="{{ url_for(request.endpoint, ask=starter.say, _anchor='ask') }}" data-say="{{ starter.say }}"><span class="key-no" aria-hidden="true">{{ loop.index }}</span><span class="key-words">{{ starter.label }}</span></a></li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </section>
+  {% endif %}
+
+  <section class="cell to-ideas lately" id="lately" aria-labelledby="c-ideas">
+    {{ cell_head(300, 'Ideas', url_for('web.ideas'), 'c-ideas', idea_count) }}
+    <p class="cell-label">Lately added</p>
+    <div class="idea-rows">
+      {% for idea in ideas[:3] %}
+        <a class="idea-card" href="{{ url_for('web.idea', idea_id=idea.id) }}">
+          {{ kind_label(idea.kind) }}
+          <strong>{{ idea.title }}</strong>
+          <span class="muted">{{ idea.where or ('for ' ~ idea.who) }}</span>
+        </a>
+      {% else %}
+        <p class="muted empty">{{ icon('idea') }}<span>No ideas yet.
+          {%- if talk %} Tell {{ assistant }} one on the screen.{% endif %}</span></p>
+      {% endfor %}
+    </div>
+    {% if visitor().may('change') %}
+      <p class="cell-foot"><a class="cell-key" href="{{ url_for('web.new_idea') }}">{{ icon('plus') }}Add an idea</a></p>
+    {% endif %}
+  </section>
+
+  {% if restaurant_count %}
+    <section class="cell to-food key-cell food-cell" aria-labelledby="c-food">
+      {{ cell_head(310, 'Restaurants', url_for('web.restaurants'), 'c-food', restaurant_count) }}
+      <p class="cell-label">Something to eat</p>
+      <p class="cell-foot"><a class="cell-key" href="{{ url_for('web.restaurants') }}">{{ icon('restaurant') }}{{ restaurant_count }} restaurant{{ '' if restaurant_count == 1 else 's' }} to try</a></p>
+    </section>
+  {% endif %}
+
+  <section class="cell to-plans" id="coming" aria-labelledby="coming-h">
+    {{ cell_head(400, 'Plans', url_for('web.plans'), 'coming-h', coming | length, lamp='on' if first and first.on_today else none) }}
+    <p class="cell-label">Coming up</p>
+    <ol class="plain agenda">
+      {% for entry in coming[1:4] %}
+        <li class="{{ 'is-today' if entry.on_today }}">
+          {{ chip_figure(entry.chip, 'agenda-leaf' ~ (' today' if entry.on_today else '')) }}
+          <div class="agenda-body">
+            <div class="what">{{ plan_where(entry) }}</div>
+            <div class="when">
+              {% if entry.relative %}<span class="rel">{{ entry.relative }}</span>{% endif %}
+              <span class="at">{{ entry.when }}</span>
+            </div>
+          </div>
+        </li>
+      {% else %}
+        <li class="muted empty">{{ icon('plans') }}<span>
+          {%- if first %}Nothing else on the calendar yet.{% else %}Nothing on the calendar yet. Pick an idea and put it there, or ask
+          {{ assistant }} what fits this weekend.{% endif %}</span></li>
+      {% endfor %}
+    </ol>
+  </section>
+
+  {% set late = tasks | selectattr('late') | list %}
+  <section class="cell to-todo home-todo" id="todo-list" aria-labelledby="todo-h">
+    {{ cell_head(500, 'To do', url_for('web.tasks'), 'todo-h', task_count, lamp='look' if late else none) }}
+    <ul class="plain checklist">
+      {% for task in tasks[:3] %}
+        <li>
+          {{ tick(task.id, task.revision, task.title, 'home') }}
+          <div class="checklist-body">
+            <div class="what">{{ task.title }}</div>
+            <div class="when">
+              {%- if task.owner %}<span>{{ task.owner }}</span>{% endif -%}
+              {%- if task.due %}<span class="{{ 'warn' if task.late }}">{{ task.due }}</span>
+              {%- elif task.window %}<span>{{ task.window }}</span>{% endif -%}
+              {%- if task.reminder %}<span class="reminder">{{ icon('bell') }}{{ task.reminder }}</span>{% endif -%}
+            </div>
+          </div>
+        </li>
+      {% else %}
+        <li class="muted empty">{{ icon('todo') }}<span>Nothing to do. Ask {{ assistant }} to remind you of something and it lands here.</span></li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  {% if wishes and not wishes.parent %}
+    {% set mine = wishes.mine %}
+    <section class="cell to-wishes home-wishes" id="wishes-page" aria-labelledby="home-wishes">
+      {{ cell_head(600, 'My wishes', url_for('web.wishes'), 'home-wishes', mine.open) }}
+      {% if mine.answered %}
+        <p class="said">{% for row in mine.answered[:2] %}{% if row.status == 'granted' %}Yes to {{ row.title }}! {% else %}Not this time: {{ row.title }}. {% endif %}{% endfor %}</p>
+      {% endif %}
+      {% for list in mine.lists[:1] %}
+        <ol class="plain wish-top">
+          {% for row in list.rows[:wishes.top] %}<li>{{ row.title }}</li>{% else %}<li class="muted">Nothing yet.</li>{% endfor %}
+        </ol>
+      {% endfor %}
+    </section>
+  {% elif wishes %}
+    <section class="cell to-wishes home-wishes" id="wishes-page" aria-labelledby="home-kids">
+      {{ cell_head(600, 'Wishes', url_for('web.wishes'), 'home-kids', wishes.kids | sum(attribute='open'), lamp='look' if wishes.waiting else none) }}
+      <p class="cell-label">The kids’ wishes</p>
+      {% if wishes.waiting %}
+        <p class="warn">{{ icon('warning') }}Waiting on you:
+          {% for row in wishes.waiting %}<a href="{{ url_for('web.wishes', who=row.id) }}">{{ row.kid }}: {{ row.title }}</a>{{ ', ' if not loop.last }}{% endfor %}</p>
+      {% endif %}
+      <ul class="plain kids">
+        {% for kid in wishes.kids %}
+          <li><a href="{{ url_for('web.wishes', who=kid.id) }}"><span class="initial" aria-hidden="true">{{ kid.name[:1] | upper }}</span><strong>{{ kid.name }}</strong><span class="kid-open">{{ kid.open }} open</span></a>
+            {% set top = kid.lists[0].rows[:wishes.top] %}
+            {% if top %}<span class="top">{{ top | map(attribute='title') | join(', ') }}</span>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  {% if setup %}
+    <section class="cell to-setup setup" id="setup-page" aria-labelledby="setup-h">
+      {{ cell_head(none, 'Finish setting up', url_for('setup.overview'), 'setup-h', setup | length, lamp='look') }}
+      <ol class="steps-list">
+        {% for step in setup %}
+          <li><a href="{{ step.link }}">{{ step.text }}</a></li>
+        {% endfor %}
+      </ol>
+      <p class="cell-foot muted">Each one is a short page that says what to do.</p>
+    </section>
+  {% endif %}
+
+  {# The household's own pages, a cell each, with what is in them now, read by the page with no
+     question asked of anybody. #}
+  {% if visitor().may('browse') %}
+    <section class="cell to-memory key-cell" aria-labelledby="c-memory">
+      {{ cell_head(700, 'Memory', url_for('web.memory'), 'c-memory') }}
+      <p class="cell-note">What {{ assistant }} remembers</p>
+      {% if visitor().may('change') %}
+        <p class="cell-foot"><a class="cell-key" href="{{ url_for('web.memory', _anchor='remember') }}">{{ icon('plus') }}Tell {{ assistant }} something</a></p>
+      {% endif %}
+    </section>
+  {% endif %}
+  {% if visitor().may('manage') %}
+    <section class="cell to-family key-cell" aria-labelledby="c-family">
+      {{ cell_head(800, 'Family', url_for('family.show'), 'c-family', family | length) }}
+      <ul class="plain roster">
+        {% for name in family[:6] %}<li><span class="initial" aria-hidden="true">{{ name[:1] | upper }}</span>{{ name }}</li>{% endfor %}
+      </ul>
+      {% if family | length > 6 %}<p class="cell-foot muted">and {{ family | length - 6 }} more</p>{% endif %}
+    </section>
+  {% endif %}
+  {% if visitor().may('browse') %}
+    {% set managing = visitor().may('manage') %}
+    {% set steps = setup | map(attribute='link') | list %}
+    <section class="cell to-status key-cell" aria-labelledby="c-status">
+      {{ cell_head(900, 'Status', url_for('web.status'), 'c-status', lamp=('look' if status_light == 'warn' else ('bad' if status_light == 'bad' else none))) }}
+      {# What the page already knows, a lamp to each: its shape says it as well as its colour. #}
+      <ul class="plain lights brief-lights">
+        {% if status_words %}
+          <li class="light-row part"><span class="light part" aria-hidden="true"></span><div><strong>Needs attention</strong><div class="muted">{{ status_words[1] | capitalize }}</div></div></li>
+        {% endif %}
+        {% if managing %}
+          <li class="light-row on"><span class="light on" aria-hidden="true"></span><div><strong>Answering</strong><div class="muted">a model is set up</div></div></li>
+          {% set tg = steps | select('equalto', '/setup/telegram') | list %}
+          <li class="light-row {{ 'off' if tg else 'on' }}"><span class="light {{ 'off' if tg else 'on' }}" aria-hidden="true"></span><div><strong>Telegram</strong><div class="muted">{{ 'not set up' if tg else 'set up' }}</div></div></li>
+        {% endif %}
+        {% set cal = 'on' if source == 'google' else ('part' if source == 'unavailable' else 'off') %}
+        <li class="light-row {{ cal }}"><span class="light {{ cal }}" aria-hidden="true"></span><div><strong>Calendar</strong><div class="muted">{{ 'Google Calendar' if source == 'google' else ('did not answer' if source == 'unavailable' else 'not connected') }}</div></div></li>
+      </ul>
+    </section>
+  {% endif %}
+  {% if visitor().may('manage') %}
+    {% set steps = setup | map(attribute='link') | list %}
+    {% set LOOKS = {'/setup/home': 'general', '/setup/model': 'model', '/setup/password': 'security'} %}
+    {% set looking = [] %}{% for link in steps %}{% if link in LOOKS %}{% set _ = looking.append(LOOKS[link]) %}{% endif %}{% endfor %}
+    <section class="cell to-settings key-cell" aria-labelledby="c-settings">
+      {{ cell_head(990, 'Settings', url_for('settings.show'), 'c-settings', settings_sections | length, lamp='look' if looking else none) }}
+      <ol class="plain parts">
+        {% for one in settings_sections %}
+          {% if one.name in looking %}
+            <li class="look"><a href="{{ url_for('settings.section', name=one.name) }}"><span class="lamp look" aria-hidden="true"></span><span class="no" aria-hidden="true">{{ 990 + loop.index }}</span>{{ one.title }}<span class="sr"> needs a look</span></a></li>
+          {% endif %}
+        {% endfor %}
+      </ol>
+      <p class="parts-rest">{% for one in settings_sections %}{% if one.name not in looking %}<span><span class="no" aria-hidden="true">{{ 990 + loop.index }}</span> {{ one.title }}</span>{% endif %}{% endfor %}</p>
+    </section>
+  {% endif %}
+  </div>
+{% endblock %}

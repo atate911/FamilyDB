@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+{% from "_ui.html" import icon, page_head, tick, crt %}
+{% block title %}Things to do · {{ site_title }}{% endblock %}
+{% block body_class %}page-todo{% endblock %}
+{% block terminal_label %}Things to do: how they stand, and which{% endblock %}
+{% macro fields(p, task=none, due_input='', row=none) %}
+  <div class="field wide"><label for="{{ p }}-title">What needs doing</label>
+    <input id="{{ p }}-title" name="title" required maxlength="200" value="{{ task.title if task else '' }}" data-dictate></div>
+  <div class="field wide"><label for="{{ p }}-notes">Notes</label>
+    <textarea id="{{ p }}-notes" name="notes" rows="2" maxlength="4000" data-dictate>{{ task.notes if task else '' }}</textarea></div>
+  <div class="field"><label for="{{ p }}-owner">For</label>
+    <select id="{{ p }}-owner" name="owner"><option value="">{{ 'Keep current owner' if task else 'Current person, or household' }}</option>{% for person in people %}<option value="{{ person.display_name }}" {% if task and task.owner_id == person.id %}selected{% endif %}>{{ person.display_name }}</option>{% endfor %}</select></div>
+  <div class="field"><label for="{{ p }}-due">Deadline <span class="optional">optional</span></label>
+    <input id="{{ p }}-due" type="datetime-local" name="due_at" value="{{ due_input }}"></div>
+  <div class="field"><label for="{{ p }}-window">Preferred window <span class="optional">optional</span></label>
+    <input id="{{ p }}-window" name="preferred_window" maxlength="4000" placeholder="Some Saturday morning" value="{{ task.preferred_window if task else '' }}"></div>
+  <div class="field"><label for="{{ p }}-remind">{% if task %}New reminder / snooze until{% else %}Remind me at <span class="optional">optional</span>{% endif %}</label>
+    <input id="{{ p }}-remind" type="datetime-local" name="remind_at"></div>
+  <div class="field"><label for="{{ p }}-repeat">Repeats</label>
+    <select id="{{ p }}-repeat" name="repeat" aria-describedby="{{ p }}-repeat-help">
+      {% for value, label in (row.repeat_options if row else repeat_options) %}<option value="{{ value }}" {% if row and value == row.repeat_choice %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select></div>
+  <div class="field"><label class="check"><input type="checkbox" name="repeat_after_done" {% if task and task.repeat_from == 'done' %}checked{% endif %}> Count from when it's done</label></div>
+  <p id="{{ p }}-repeat-help" class="wide muted hint">A repeat starts from the reminder: every week from Sunday 19:00, say. Counted from when it's done, it comes round that long after each time it is ticked off.</p>
+{% endmacro %}
+{# Late is a deadline on a day before today, as Home counts it: the view would hand the page
+   today's date; this copy reads it off the app's own clock, and words each deadline as Home does
+   (views.relative_text): "was due 2 days ago", "due in 2 days, 19:56". #}
+{% set MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] %}
+{% macro due_words(due, late, day0) -%}
+  {%- set n = day0.replace(year=due[0:4] | int, month=due[5:7] | int, day=due[8:10] | int).toordinal() - day0.toordinal() -%}
+  {%- set k = n if n > 0 else -n -%}
+  {%- set unit = (k ~ ' days') if k < 14 else ((k // 7) ~ ' weeks') -%}
+  {%- set rel = 'today' if n == 0 else ('tomorrow' if n == 1 else ('yesterday' if n == -1 else (('in ' ~ unit) if n > 0 else (unit ~ ' ago')))) -%}
+  {{- ('was due ' ~ rel) if late else ('due ' ~ rel ~ ', ' ~ due[11:16]) -}}
+{%- endmacro %}
+
+{# Which bucket an open task's deadline puts it in, by the app's own clock: late (a day before
+   today, as Home counts it), this week, later, or no date. The tube counts them and the list can
+   be filtered to one (`when`); the view would take `when` as a parameter and hand each row its
+   `late` flag (views.task_row), as Evening Listing, Traced drew it. #}
+{% macro bucket(row, t0) -%}
+  {%- set due = row.due_input -%}
+  {%- if not due %}none{% else -%}
+    {%- set d = t0.replace(year=due[0:4] | int, month=due[5:7] | int, day=due[8:10] | int).toordinal() - t0.toordinal() -%}
+    {{- 'late' if d < 0 else ('week' if d < 7 else 'later') -}}
+  {%- endif -%}
+{%- endmacro %}
+{% set WHEN = request.args.get('when', '') if status == 'open' else '' %}
+
+{# The tube: how the open things stand, as bars on one lit axis: late in amber (the one colour
+   that means late), due this week, later, and kept for no day, each with its count, and each a
+   link to those alone; the one shown is in inverse. The list beside it says each in full. #}
+{% block tube %}
+  {% set t0 = config.FAMILYDB_APP.clock.today() %}
+  {% set n = namespace(open=0, late=0, week=0, later=0, none=0) %}
+  {% for row in rows if row.task.status == 'open' %}
+    {% set n.open = n.open + 1 %}
+    {% set b = bucket(row, t0) | trim %}
+    {% if b == 'late' %}{% set n.late = n.late + 1 %}{% elif b == 'week' %}{% set n.week = n.week + 1 %}{% elif b == 'later' %}{% set n.later = n.later + 1 %}{% else %}{% set n.none = n.none + 1 %}{% endif %}
+  {% endfor %}
+  {% if n.open %}
+    {% set top = [n.late, n.week, n.later, n.none] | max %}
+    {% call crt('tally late-bars', hidden=false) %}
+      <p class="tally-head"><span class="inverse caps">To do</span> <span class="bright">{{ n.open }} open</span></p>
+      <ul class="bars">
+        {% for label, count, cls in [('Late', n.late, 'late'), ('This week', n.week, 'week'), ('Later', n.later, 'later'), ('No date', n.none, 'none')] %}
+          {% set cells = ((count / top) * 12) | round(0, 'ceil') | int if top else 0 %}
+          <li class="bar-{{ cls }}{{ ' is-on' if WHEN == cls }}">
+            {%- set inner %}<span class="bar-name">{{ label }}</span><span class="cells" aria-hidden="true">{{ '#' * cells }}{{ '.' * (12 - cells) }}</span><span class="n">{{ count }}</span>{% endset -%}
+            {% if count and WHEN != cls %}<a href="{{ url_for('web.tasks', status='open', when=cls, q=query or none) }}">{{ inner }}</a>{% else %}<span class="bar-row"{% if WHEN == cls %} aria-current="true"{% endif %}>{{ inner }}</span>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+      <p class="tally-more dim">{% if WHEN %}<a href="{{ url_for('web.tasks', status='open', q=query or none) }}">&gt; show all {{ n.open }}</a>{% else %}<span aria-hidden="true">&gt;</span> {{ rows | length }} shown{% endif %}<span class="crt-cursor" aria-hidden="true"></span></p>
+    {% endcall %}
+  {% endif %}
+{% endblock %}
+
+{# The console deck: which to show, a bank of four keys that apply at once, and the words, with
+   their own Search key. On a phone it folds behind one Filter key under the title. #}
+{% block deck %}
+  <details class="deck deck-fold">
+    <summary>{{ icon('search') }}Filter{% if status != 'open' or query %}<span class="fold-on">on</span>{% endif %}</summary>
+    <div class="deck-body">
+      <nav class="keys show" aria-labelledby="keys-show">
+        <p class="keys-name" id="keys-show">Show</p>
+        <div class="key-row">{% for value, glyph in [('open', 'todo'), ('done', 'check'), ('cancelled', 'x'), ('all', 'list')] %}<a class="key show-{{ value }}" href="{{ url_for('web.tasks', status=value, q=query or none) }}"{% if value == status %} aria-current="true"{% endif %}>{{ icon(glyph) }}<span>{{ value | capitalize }}</span></a>{% endfor %}</div>
+      </nav>
+      <form class="deck-search" method="get" role="search" aria-label="Which things to do to list">
+        <input type="hidden" name="status" value="{{ status }}">
+        <label for="task-q">Search</label>
+        <div class="search-row">
+          <input id="task-q" name="q" type="search" value="{{ query }}" placeholder="dentist, library…">
+          <button class="secondary" type="submit">{{ icon('search') }}Search</button>
+        </div>
+      </form>
+    </div>
+  </details>
+{% endblock %}
+
+{% block content %}
+{% set clock_today = config.FAMILYDB_APP.clock.today() %}
+{% set today_iso = clock_today.isoformat() %}
+{% call page_head('Things to do', 'Errands, appointments to arrange, and things you mean to get done.', 'todo') %}
+  {% if visitor().may('change') %}<a class="button" href="#add-task">{{ icon('plus') }}Add something to do</a>{% endif %}
+{% endcall %}
+
+{% if visitor().may('change') %}
+{# The form to add one, folded on the desk until the head row's key asks for it (it is the target
+   of that link, which shows it with scripts off too), or open when there is nothing yet. #}
+<details class="band add-task" id="add-task" {% if not rows %}open{% endif %}>
+  <summary><span class="h2">{{ icon('plus') }}Add something to do</span></summary>
+  <form class="form" method="post" action="{{ url_for('edits.add_task') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}"><input type="hidden" name="once" value="{{ once_token() }}">
+    {{ fields('new') }}
+    <p class="wide muted hint">{{ icon('bell') }}Browser reminders appear in Chat when the service is running. They are not phone push notifications. Telegram reminders return to the chat where you requested them.</p>
+    <div class="field wide actions"><button type="submit">{{ icon('check') }}Save task</button></div>
+  </form>
+</details>
+{% endif %}
+
+{# The tick line: a row for each, hung from a steel rail whose stop is the tick you press (amber
+   when late, dashed when it has no date); in the margin when it is due, the day and then how far
+   off in words, amber once it has passed; the title, whose it is, and at the end of the line, in
+   words, the way to edit it. A lit NOW run crosses between the late ones and the rest. #}
+{% set shown = [] %}
+{% for row in rows %}{% if not WHEN or bucket(row, clock_today) | trim == WHEN %}{% set _ = shown.append(row) %}{% endif %}{% endfor %}
+{% set n_late = namespace(n=0) %}
+{% for row in shown %}{% if row.task.status == 'open' and row.due_input and row.due_input[:10] < today_iso %}{% set n_late.n = n_late.n + 1 %}{% endif %}{% endfor %}
+{% set nowed = namespace(done=false) %}
+<section class="band todo-band" id="late" aria-label="The list">
+{% if WHEN %}<p class="band-note count">{{ shown | length }} {{ {'late': 'late', 'week': 'due this week', 'later': 'due later', 'none': 'with no date'}[WHEN] }} · <a href="{{ url_for('web.tasks', status='open', q=query or none) }}">Show all open</a></p>{% endif %}
+{% if shown %}<p class="colheads" aria-hidden="true"><span class="ch-due">Due</span><span class="ch-t">Thing to do</span><span class="ch-who">Who</span></p>{% endif %}
+<ul class="rows tick-line timetable" id="task-list" tabindex="-1">
+{% for row in shown %}{% set task = row.task %}{% set due = row.due_input %}
+{% set late = task.status == 'open' and due and due[:10] < today_iso %}
+{% if n_late.n and not late and not nowed.done and status == 'open' %}
+<li class="now-run-row" aria-hidden="true"><span class="hang"><span class="now-word">Now</span></span><span class="d"></span><span class="x"></span></li>
+{% set nowed.done = true %}
+{% endif %}
+<li class="row task task-{{ task.status }}{{ ' late' if late }}{{ ' undated' if not due }}">
+  <span class="hang">
+    {%- if due %}{% set dd = clock_today.replace(year=due[0:4] | int, month=due[5:7] | int, day=due[8:10] | int) %}<span class="abs">{{ dd.strftime('%a %-d %b') }}</span><span class="rel-words{{ ' warn' if late }}">{{ due_words(due, late, clock_today) if late else due_words(due, late, clock_today).replace('due ', '') }}</span>
+    {%- elif task.preferred_window %}<span class="rel-words">{{ task.preferred_window | truncate(28) }}</span>
+    {%- else %}<span class="rel-words quiet">No date</span>{% endif -%}
+  </span>
+  <span class="d"><span class="lamp" aria-hidden="true"></span></span>
+  <span class="x">{% if task.status == 'open' %}{{ tick(task.id, task.revision, task.title, 'tasks') }}
+    {%- else %}<span class="task-box is-{{ task.status }}" aria-hidden="true">{% if task.status == 'done' %}{{ icon('check') }}{% elif task.status == 'cancelled' %}{{ icon('x') }}{% endif %}</span>{% endif %}</span>
+  <span class="t">{{ task.title }}{% if status != 'open' %} <span class="tag status-{{ task.status }}">{{ task.status|capitalize }}</span>{% endif %}</span>
+  <span class="who">{{ task.owner or 'Household' }}</span>
+  {% if visitor().may('change') %}
+  <details class="more"><summary>Edit or snooze<span class="sr">: {{ task.title }}</span></summary>
+    <form class="form" method="post" action="{{ url_for('edits.edit_task',task_id=task.id) }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}"><input type="hidden" name="once" value="{{ once_token() }}"><input type="hidden" name="revision" value="{{ task.revision }}">
+      {{ fields('t' ~ task.id, task, row.due_input, row) }}
+      <input type="hidden" name="repeat_was" value="{{ row.repeat_was }}">
+      <div class="field"><label for="t{{ task.id }}-status">Status</label>
+        <select id="t{{ task.id }}-status" name="status">{% for value in ['open','done','cancelled'] %}<option value="{{ value }}" {% if value==task.status %}selected{% endif %}>{{ value|capitalize }}</option>{% endfor %}</select></div>
+      <div class="field wide"><label class="check"><input type="checkbox" name="clear_reminder"> Cancel pending reminder</label></div>
+      <p class="wide muted hint">Leave the new reminder blank to keep it. Completing or cancelling stops pending reminders; completing one that repeats records it and keeps it coming round. Reopening does not restore them.</p>
+      <div class="field wide actions"><button type="submit">{{ icon('check') }}Save changes</button></div>
+    </form>
+  </details>
+  {% endif %}
+  <div class="sub">
+  {% if task.notes %}<p>{{ task.notes }}</p>{% endif %}
+  {% if task.preferred_window %}<p class="muted">Preferred window: {{ task.preferred_window }}
+    {%- if row.nudge and row.nudge.on %} · {{ assistant }} brings it up on {{ row.nudge.on }}{% if row.nudge.last %}, last on {{ row.nudge.last }}{% endif %}
+    {%- elif row.nudge %} · not a day or part of the day {{ assistant }} can read, so it comes up only when asked about{% endif %}</p>{% endif %}
+  {% if row.repeats %}<p class="muted">{{ row.repeats }}</p>{% endif %}
+  {# How a reminder is getting there is the workings: a kid sees only when it is. #}
+  {% if task.reminder and not visitor().may('browse') %}<p class="reminder">{{ icon('bell') }}Reminder: {{ row.reminder_time }}</p>
+  {% elif task.reminder %}<p class="reminder">{{ icon('bell') }}Reminder: {{ row.reminder_time }} · {{ 'Delivered' if task.reminder.delivered_at else ('Waiting for delivery' if task.reminder.message_id else 'Scheduled') }} · {{ 'App Chat' if task.channel=='web' else 'Telegram' }}</p>{% endif %}
+  </div>
+</li>
+{% else %}<li class="row empty"><span class="hang"></span><span class="d"></span><span class="x">{{ icon('todo') }}</span><span class="t">No tasks match.{% if visitor().may('change') %} Add something above, or ask {{ assistant }}.{% endif %}</span></li>{% endfor %}
+</ul>
+{% if visitor().may('browse') %}<p class="band-note">Times use {{ zone }}. A deadline or preferred window does not set a reminder or book your calendar.</p>{% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, presence %}
+{% block title %}Settings · {{ site_title }}{% endblock %}
+{% block body_class %}page-settings{% endblock %}
+{% block content %}
+  {{ page_head('Settings', 'Each part, how it stands now, and the way in to change it.', 'settings') }}
+  {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+  {# One row to a page of settings, each saying how things stand in a line or two, so this is
+     the place to look first as well as the way in. Track Diagram, Branch Lines: each row carries
+     the Status page's lamp for how its part stands (lit working, a half amber partly, a hollow
+     pewter ring off, a dashed one not set up). Sill Line, Ticked: a part that needs a look takes
+     the same half amber lamp as Status's 'Page', and says so in amber words. The lamps are stops
+     on one line down their column, as every list in the app stands on its line, and the line ends
+     in a buffer at What has changed, the log, where nothing is lit. The view would hand the state
+     over; this copy reads it from the row's own words. #}
+  <ul class="section-cards on-line">
+    {% for entry in sections %}
+      {% set one = entry.section %}
+      {% set said_here = entry.lines | join(' | ') %}
+      {% set state = 'part look' if entry.look else ('none' if one.name == 'history' else
+           ('unset' if ('Not set up' in said_here or 'Not connected' in said_here) else ('off' if said_here.startswith('Off') else
+           ('part' if ('| No ' in said_here or said_here.startswith('No ')) else 'on')))) %}
+      <li>
+        <a class="panel section-card{% if entry.look %} look{% endif %}" href="{{ url_for('settings.section', name=one.name) }}">
+          {% if one.icon == 'presence' %}{{ presence('section-icon') }}
+          {%- else %}<span class="section-icon" aria-hidden="true">{{ icon(one.icon) }}</span>{% endif %}
+          <span class="section-what">
+            <strong>{{ one.title }}</strong>
+            <span class="light {{ state }}" aria-hidden="true"></span>
+            {% for line in entry.lines %}<span class="section-state">{{ line }}</span>{% endfor %}
+            {% if entry.look %}<span class="look-words">Needs a look</span>{% endif %}
+          </span>
+          {{ icon('right', cls='go') }}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+  <p class="muted small">
+    Setting up for the first time, or starting again? <a href="{{ url_for('setup.overview') }}">Setup</a>
+    goes through what matters most, one step at a time.
+  </p>
+{% endblock %}

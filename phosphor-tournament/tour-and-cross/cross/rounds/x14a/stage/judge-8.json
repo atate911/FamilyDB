@@ -1,0 +1,166 @@
+{
+ "stage": "judge",
+ "cross": true,
+ "round": "x14a",
+ "label": "14a",
+ "roundNo": 1,
+ "lens": "skeptic",
+ "heats": {
+  "a": {
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-a",
+   "lineages": [
+    {
+     "name": "desk: Desk Terminal, Joined (main camp)",
+     "idea": "a docked terminal column: one real cased terminal beside the family's desk, Home's question typed at the foot of its glass",
+     "ids": [
+      "r13-idea-1",
+      "x14a-desk-cross"
+     ]
+    },
+    {
+     "name": "quote: Quote Board at Evening (main camp)",
+     "idea": "a count board: each section led by one big quote or figure, read at a glance",
+     "ids": [
+      "r13-mut-3",
+      "x14a-quote-cross"
+     ]
+    },
+    {
+     "name": "dessau: Dessau Phosphor (main camp)",
+     "idea": "Bauhaus display type: a modernist poster's hierarchy and geometry around the green screens",
+     "ids": [
+      "r13-wild-3",
+      "x14a-dessau-cross"
+     ]
+    },
+    {
+     "name": "trued: Trued, Relit (tour camp)",
+     "idea": "the track series: the family's week as a signal box's lit track diagram; the greeting its own lit board with the ways to start on a steel branch, Next up as the line's first stop",
+     "ids": [
+      "t3-track-refine2",
+      "x14a-trued-cross"
+     ]
+    },
+    {
+     "name": "manual: Lit Manual, Relit Rails (tour camp)",
+     "idea": "the family's operator manual: every list in time hangs from a rail with one lit NOW, every section led by a figure drawn from its own data",
+     "ids": [
+      "t3-figure-refine",
+      "x14a-manual-cross"
+     ]
+    },
+    {
+     "name": "departures: Departures, Platformed (tour camp)",
+     "idea": "a station at night: Vera's line down the left with the box as its first stop, a dot-matrix departures board beside it",
+     "ids": [
+      "t3-timetable-refine",
+      "x14a-departures-cross"
+     ]
+    },
+    {
+     "name": "settled: Switchboard, Settled Light (tour camp)",
+     "idea": "the videotex sommaire settled: Home as a two-tier map of the service, every inner page on one rack with its own sized tube",
+     "ids": [
+      "t3-switchboard-refine",
+      "x14a-settled-cross"
+     ]
+    }
+   ],
+   "yardsticks": [
+    "00-current"
+   ],
+   "ids": [
+    "00-current",
+    "r13-idea-1",
+    "x14a-desk-cross",
+    "r13-mut-3",
+    "x14a-quote-cross",
+    "r13-wild-3",
+    "x14a-dessau-cross",
+    "t3-track-refine2",
+    "x14a-trued-cross",
+    "t3-figure-refine",
+    "x14a-manual-cross",
+    "t3-timetable-refine",
+    "x14a-departures-cross",
+    "t3-switchboard-refine",
+    "x14a-settled-cross"
+   ]
+  },
+  "b": {
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b",
+   "lineages": [
+    {
+     "name": "plate: Backlit Plate (main camp)",
+     "idea": "a long-persistence instrument: a cut matte plate over one lit screen",
+     "ids": [
+      "r13-idea-2",
+      "x14a-plate-cross"
+     ]
+    },
+    {
+     "name": "listing: Evening Listing, Traced (main camp)",
+     "idea": "a programme listing: the family's evening set as a TV listings page, bands with a head column",
+     "ids": [
+      "r12-idea-1",
+      "x14a-listing-cross"
+     ]
+    },
+    {
+     "name": "folio: Folio Switchboard (main camp)",
+     "idea": "a videotex service as a folio: numbered pages of one service, read like a teletext magazine",
+     "ids": [
+      "r13-wmut-1",
+      "x14a-folio-cross"
+     ]
+    },
+    {
+     "name": "sill: Sill Line, Ticked (tour camp)",
+     "idea": "the track series' bolder Home: the question as the board's headline, the tube's lit wire dropping onto the Coming up rail, To do's stops the ticks you press",
+     "ids": [
+      "t3-track-graft",
+      "x14a-sill-cross"
+     ]
+    },
+    {
+     "name": "pocket: Pocket Diary, Kept (tour camp)",
+     "idea": "the family's pocket diary: one steel line of time from Now to Later, every date set as a diary sets a day",
+     "ids": [
+      "t3-pocket-refine",
+      "x14a-pocket-cross"
+     ]
+    },
+    {
+     "name": "waypoint: Waypoint Lamps (tour camp)",
+     "idea": "a 1969 flight console: a readout strip, the weeks as a flight plan whose waypoint rings carry the day numerals that lead the rows",
+     "ids": [
+      "t3-console-graft",
+      "x14a-waypoint-cross"
+     ]
+    }
+   ],
+   "yardsticks": [
+    "00-current",
+    "r13-idea-1",
+    "t3-track-refine2"
+   ],
+   "ids": [
+    "00-current",
+    "r13-idea-1",
+    "t3-track-refine2",
+    "r13-idea-2",
+    "x14a-plate-cross",
+    "r12-idea-1",
+    "x14a-listing-cross",
+    "r13-wmut-1",
+    "x14a-folio-cross",
+    "t3-track-graft",
+    "x14a-sill-cross",
+    "t3-pocket-refine",
+    "x14a-pocket-cross",
+    "t3-console-graft",
+    "x14a-waypoint-cross"
+   ]
+  }
+ }
+}

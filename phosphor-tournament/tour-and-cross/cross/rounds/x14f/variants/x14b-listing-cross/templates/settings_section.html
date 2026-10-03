@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, presence %}
+{% block title %}{{ section.title }} · Settings · {{ site_title }}{% endblock %}
+{% block body_class %}page-settings{% endblock %}
+{% block content %}
+  {{ page_head(section.title, section.blurb, section.icon, [('Settings', url_for('settings.show'))]) }}
+  {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+  {# Listing, Dropped Through (after Lit Manual's parts rail): one band like every page. Its head
+     column holds the parts of Settings, numbered and threaded by one hairline rail, every part a
+     44px line and this one in the steel block that marks "here"; the body holds this part's
+     groups on page ground, each under a rule head. On a phone the way to the others is Settings,
+     above the title. #}
+  <div class="band settings-layout">
+    <nav class="band-head settings-nav parts-rail" aria-label="Settings">
+      <p class="key-label">Parts</p>
+      <ol>
+        {% for one in sections %}
+          <li><a href="{{ url_for('settings.section', name=one.name) }}"{% if one.name == section.name %} aria-current="page"{% endif %}>
+            <span class="part-no" aria-hidden="true">{{ loop.index }}</span><span class="part-name">{{ one.title }}</span></a></li>
+        {% endfor %}
+      </ol>
+    </nav>
+    <div class="band-body settings-body">
+      {% include "settings/" ~ section.name ~ ".html" %}
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% from "_settings.html" import form %}
+{% from "_ui.html" import icon, crt, panel_meter %}
+{# The page's spending opens on the same panel meter Status carries, reading today's spend
+   against the limit set below; the figure is written out beside it. #}
+{% call form('spending', groups.values()) %}
+  {% if limit %}
+    {% set used = today / limit * 100 %}
+    <div class="panel spend-gauge settings-gauge">
+      {% call crt('spend-meter' ~ (' near' if used >= 85) ~ (' over' if used >= 100), caption=('Spent today', 'the needle against the $' ~ ('%.2f' | format(limit)) ~ ' daily limit; amber near the limit.')) %}
+        <p class="meter-read bright meter-fig">${{ '%.2f' | format(today) }}</p>
+        {{ panel_meter(used, none, limit) }}
+      {% endcall %}
+      <div class="gauge-words">
+        <p>About <b>${{ '%.2f' | format(today) }}</b> spent today, of the <b>${{ '%.2f' | format(limit) }}</b> limit.</p>
+        <p class="gauge-link"><a href="{{ url_for('web.status') }}">What it cost, call by call</a></p>
+      </div>
+    </div>
+  {% else %}
+    <p class="panel notice spent">{{ icon('coin') }}<span>About <strong>${{ '%.2f' | format(today) }}</strong>
+      spent today. <a href="{{ url_for('web.status') }}">What it cost, call by call</a></span></p>
+  {% endif %}
+{% endcall %}

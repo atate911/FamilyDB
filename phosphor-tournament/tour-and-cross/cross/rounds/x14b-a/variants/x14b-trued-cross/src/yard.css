@@ -1,0 +1,355 @@
+/* STYLE NOTES, Trued, Yard Lit (added to Headlamp's; the rules this sheet holds on every page):
+   - Only the greeting board and the tubes keep a frame. Every other section sits on the page
+     ground, opened by a rule head and parted from the next by an engraved seam.
+   - A rule head is a siding: a 2x12px steel terminus bar, the name in Archivo 600 at the 24px
+     head step, the count in DM Sans, a 1px steel rule (#2e343b), the section's way on, and a T
+     buffer at the right edge. One per section, on any page.
+   - An engraved seam: 1px #20272b over a 1px rgb(255 255 255 / .03) highlight, full width, with
+     2.25rem of darkspace either side.
+   - The signal foot ends every page: one lamp (lit and breathing only while it works), who
+     answers, today's spend, Status at a T buffer, on steel leaders.
+   - Cyan #74e6f0 is a plan's companion: plan rings, and a plate's kind word at 80%.
+   - Dates in a margin are one line of 12px DM Mono, 'Sun 27 Sep'. 'Now' beside a lit tick is
+     13px DM Sans 600 in sage. */
+
+/* ==== Trued, Yard Lit ========================================================================= */
+:root {
+  --seam: #20272b;
+  --seam-hi: rgb(255 255 255 / 0.03);
+  --rule: #2e343b;
+  --term: rgb(156 195 221 / 0.6);
+  --dark: 2.25rem;
+}
+
+/* ---- Frames off: the page ground carries every section but the board and the tubes ---------- */
+.tray, .panel.tray, .page-status main > section.panel, .page-status .board-lists,
+.page-settings form > section.panel, .page-settings form > details.panel.fold, .page-settings .section-cards {
+  background: none !important; border: 0 !important; box-shadow: none !important; border-radius: 0 !important;
+}
+.tray, .panel.tray { padding-inline: 0 !important; }
+.page-home .coming, .page-home .home-todo, .page-home .lately { padding: 0 !important; margin: 0; }
+
+/* ---- The engraved seam ------------------------------------------------------------------------ */
+.page-home .coming, .page-home .dashboard,
+.page-status .board-lists > .band + .band, .page-status main > section.panel,
+.page-settings form > section.panel + section.panel, .page-settings form > details.panel.fold,
+.page-plans .plan-board .past-head {
+  border-top: 1px solid var(--seam) !important;
+  box-shadow: inset 0 1px 0 var(--seam-hi) !important;
+  padding-top: var(--dark) !important;
+  margin-top: var(--dark) !important;
+}
+.page-home .coming { margin-top: 1.6rem !important; padding-top: 1.6rem !important; }
+
+/* ---- The rule head: a siding ------------------------------------------------------------------ */
+.rule-head {
+  display: flex !important; flex-wrap: nowrap !important; align-items: center !important; justify-content: flex-start !important; gap: 0 0.75rem;
+  min-height: 2.75rem; margin: 0 0 1.1rem !important; padding: 0 1.15rem 0 0 !important;
+  background:
+    linear-gradient(var(--buffer), var(--buffer)) right center / 2px 12px no-repeat,
+    linear-gradient(var(--rule), var(--rule)) right 2px center / 1rem 1px no-repeat !important;
+  border: 0 !important; box-shadow: none !important;
+}
+.rule-head::before { content: ""; position: static; order: -3; flex: none; width: 0.7rem; height: 12px; margin: 0 -0.2rem 0 0; border: 0;
+  background: linear-gradient(var(--term), var(--term)) 0 0 / 2px 100% no-repeat, linear-gradient(var(--term), var(--term)) 0 50% / 100% 1px no-repeat; }
+.rule-head::after, .lately .rule-head::after { content: ""; position: static; order: 1; flex: 1 1 1.5rem; min-width: 1.5rem; height: 1px; background: var(--rule); border: 0; }
+.rule-head > h2, .rule-head > .h2 {
+  order: -2; display: block !important; margin: 0 !important;
+  font: 600 1.5rem/1.1 var(--head) !important; font-stretch: 94% !important; letter-spacing: -0.012em !important;
+  color: var(--heading) !important; white-space: nowrap;
+}
+.rule-head > h2 .ring, .rule-head > h2 > .icon { display: none !important; }
+.rule-head > h2 { padding: 0 !important; border: 0 !important; background: none !important; }
+.rule-head > h2::before, .rule-head > h2::after { content: none !important; }
+.rule-head > .head-fig { order: -1; display: block !important; margin: 0 !important; align-self: center !important; padding-top: 0.2rem; font: 400 0.9375rem/1.2 var(--sans); color: var(--ink-2); white-space: nowrap; }
+.rule-head > .head-fig .fig-n { display: inline; margin-right: 0.3em; font: 600 0.9375rem/1.2 var(--sans) !important; font-variant-numeric: tabular-nums; color: var(--heading); }
+.rule-head > .head-fig .fig-u { display: inline !important; font: 400 0.9375rem/1.2 var(--sans) !important; color: var(--ink-2); }
+.rule-head > .head-fig .fig-u > * { display: inline !important; margin: 0 !important; padding-block: 0 !important; min-height: 0 !important; }
+.rule-head > .head-fig .fig-u > .late-count { display: inline-block !important; min-width: 2.75rem; padding-block: 0.85rem !important; margin-block: -0.85rem !important; line-height: 1.2; }
+.rule-head > .head-fig .fig-u > * + *::before { content: "·"; display: inline-block; margin: 0 0.45em; color: var(--rail-hi); }
+.rule-head > a, .rule-head > .section-links, .rule-head > .month-nav, .rule-head > .head-go { order: 2; flex: none; }
+.rule-head > a, .rule-head > .section-links > a, .rule-head > .head-go {
+  display: inline-flex; align-items: center; gap: 0.25rem; min-height: 2.75rem; margin: 0 !important; padding: 0 0.1rem !important;
+  font: 500 0.9375rem/1 var(--sans) !important; color: var(--steel) !important; white-space: nowrap;
+  text-decoration: none; text-decoration-color: currentColor; text-underline-offset: 0.22em;
+}
+.rule-head > a:is(:hover, :focus-visible), .rule-head > .section-links > a:is(:hover, :focus-visible) { color: var(--heading) !important; text-decoration: underline; }
+.rule-head > a .icon, .rule-head .section-links a .icon { width: 1rem; height: 1rem; }
+.rule-head > .section-links { display: inline-flex; gap: 0 1.1rem; margin: 0 !important; }
+.rule-head .late-count { margin-left: 0.15em; color: var(--amber); text-decoration: underline; text-decoration-color: rgb(255 184 80 / 0.45); text-underline-offset: 0.2em; }
+/* A heading that is only an h2 (a settings group, a plans list) is its own siding. */
+.page-settings form > section.panel > h2, .page-settings form > details.panel.fold > summary {
+  display: flex !important; align-items: center; gap: 0 0.75rem; min-height: 2.75rem; margin: 0 0 0.9rem !important; padding: 0 1.15rem 0 0 !important;
+  font: 600 1.5rem/1.1 var(--head) !important; font-stretch: 94%; letter-spacing: -0.012em; color: var(--heading);
+  background:
+    linear-gradient(var(--buffer), var(--buffer)) right center / 2px 12px no-repeat,
+    linear-gradient(var(--rule), var(--rule)) right 2px center / 1rem 1px no-repeat;
+}
+.page-settings form > section.panel > h2::before, .page-settings form > details.panel.fold > summary::after {
+  content: ""; flex: none; order: -3; width: 0.7rem; height: 12px; border: 0; rotate: none; transform: none; margin: 0 -0.2rem 0 0; position: static;
+  background: linear-gradient(var(--term), var(--term)) 0 0 / 2px 100% no-repeat, linear-gradient(var(--term), var(--term)) 0 50% / 100% 1px no-repeat;
+}
+.page-settings form > section.panel > h2::after, .page-settings form > details.panel.fold > summary::before {
+  content: ""; order: 1; flex: 1 1 1.5rem; height: 1px; background: var(--rule); border: 0; position: static; rotate: none; transform: none; mask: none; width: auto;
+}
+.page-settings form > details.panel.fold > summary .h2 { order: -2; font: inherit; color: inherit; }
+.page-settings form > details.panel.fold > summary .changed { order: 2; }
+.page-settings form > details.panel.fold > summary .changed:empty { display: none; }
+.page-settings form > details.panel.fold > summary { list-style: none; cursor: pointer; }
+.page-settings form > details.panel.fold > summary::-webkit-details-marker { display: none; }
+.page-settings form > details.panel.fold > summary .h2::after { content: " +"; color: var(--steel); font-weight: 500; }
+.page-settings form > details.panel.fold[open] > summary .h2::after { content: " −"; }
+.page-settings form > section.panel, .page-settings form > details.panel.fold { padding-inline: 0 !important; padding-bottom: 0.5rem !important; }
+
+/* ---- The greeting: 'plan' hotter ------------------------------------------------------------- */
+.ask-question .glow {
+  color: var(--brand);
+  text-shadow: 0 0 2px #eafff1, 0 0 8px rgb(109 255 156 / 0.75), 0 0 22px rgb(109 255 156 / 0.38) !important;
+}
+@media (prefers-contrast: more) { .ask-question .glow { text-shadow: none !important; } }
+/* A starter's stop lights only when pointed at or focused, never by default. */
+@media (max-width: 39.99rem) {
+  /* A phone has no pointer to rest on a key: a starter lights when it is focused or pressed. */
+  .branch .starters > li:has(a:hover):not(:has(a:focus-visible, a:active))::before { border-color: var(--steel); background: #101611; box-shadow: 0 0 0 3px #101611; }
+  .branch .starters a:hover:not(:focus-visible):not(:active) { color: var(--ink); background: var(--key); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), var(--row-off), 0 1px 0 rgb(0 0 0 / 0.5); }
+}
+
+/* ---- Coming up: no band, the plates standing on their leaders --------------------------------- */
+.page-home .coming { background: none !important; border-left: 0 !important; border-right: 0 !important; border-bottom: 0 !important; border-radius: 0 !important; }
+.page-home .coming > .source { margin: -0.6rem 0 0 !important; font-size: 0.875rem; color: var(--ink-3); }
+@media (min-width: 40rem) {
+  .page-home .coming > .section-head { margin: 0 0 0.75rem !important; }
+}
+@media (min-width: 64rem) {
+  /* Each plate hangs under the head at its own height, and its leader runs down from it to its
+     stop on the rail, as long as the tube is tall: the spare height is track, not graphite. */
+  .headline > li.is-plate > * { grid-column: 1; }
+  .headline > li.is-plate > .hl-body { align-self: start !important; margin-top: 5.5rem !important; position: relative; z-index: 1; }
+  .headline > li.is-plate > .hl-stem { grid-row: 1 / 3 !important; align-self: stretch; justify-self: center; margin-top: 6rem; }
+}
+.headline .stop-plate { gap: 0.45rem; padding: 0.7rem 0.8rem 0.75rem; }
+.headline .plate-kind { display: flex; align-items: center; gap: 0.45rem; }
+.headline .plate-kind .kind-word { font: 500 0.8125rem/1.2 var(--sans); color: rgb(116 230 240 / 0.8); letter-spacing: 0.005em; }
+.headline .stop-plate .what { font: 700 1.1875rem/1.14 var(--head) !important; font-stretch: 88% !important; letter-spacing: -0.008em !important; text-wrap: balance; margin: 0.05rem 0 0.1rem !important; max-height: calc(2 * 1.14em); overflow: hidden; }
+.headline .plate-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 0.35rem 0.5rem; margin-top: 0.1rem !important; }
+.headline .plate-foot .for { order: 1; flex: 1 1 auto; }
+.headline .plate-foot .well { order: 0; }
+.headline .plate-foot .drive { order: 2; flex: none; display: inline-flex; align-items: baseline; gap: 0 0.28em; font: 400 0.8125rem/1.2 var(--mono); font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; }
+.headline .plate-foot .drive .n { font: 500 0.875rem/1.2 var(--mono); font-variant-numeric: tabular-nums; color: var(--heading); }
+.headline .plate-foot .drive .u { color: var(--ink-2); }
+.headline .plate-foot .drive .way { margin-left: 0.2em; color: var(--steel); letter-spacing: 0.02em; }
+/* The line's own route mark: the terminus bar turned on its side, a steel stub with its stop. */
+.headline .plate-foot .drive .route { flex: none; align-self: center; width: 10px; height: 8px; margin-right: 0.2rem;
+  background: linear-gradient(var(--steel), var(--steel)) 0 50% / 100% 1px no-repeat, linear-gradient(var(--steel), var(--steel)) 100% 0 / 2px 100% no-repeat; opacity: 0.85; }
+@media (min-width: 64rem) { .headline > li.is-plate.last > .hl-body { margin-right: calc(-0.5rem - 0.9rem - 6px) !important; } }
+
+/* A head with a way on ends at it: the link sits inside the buffer, with no stub between. */
+.rule-head:has(> a, > .section-links, > .month-nav, > .head-go) {
+  padding-right: 0.75rem !important;
+  background: linear-gradient(var(--buffer), var(--buffer)) right center / 2px 12px no-repeat !important;
+}
+@media (max-width: 39.99rem) {
+  /* On a phone the head is two rows: terminus, name, rule, way on and buffer on the first; the
+     count under the name, from its left edge. */
+  .rule-head {
+    display: grid !important; grid-template-columns: auto auto minmax(1rem, 1fr) auto; grid-template-rows: 2.75rem auto;
+    grid-template-areas: "t h r l" ". f f f"; align-items: center !important; column-gap: 0.6rem;
+    background-position: right 0 top calc(1.375rem - 6px), right 2px top calc(1.375rem - 0.5px) !important;
+  }
+  .rule-head:has(> a, > .section-links, > .month-nav, > .head-go) { background-position: right 0 top calc(1.375rem - 6px) !important; }
+  .rule-head::before { grid-area: t; }
+  .rule-head > h2, .rule-head > .h2 { grid-area: h; font-size: 1.375rem !important; }
+  .rule-head::after, .lately .rule-head::after { grid-area: r; min-width: 1rem; }
+  .rule-head > a, .rule-head > .section-links, .rule-head > .month-nav, .rule-head > .head-go { grid-area: l; }
+  .rule-head > .head-fig { grid-area: f; align-self: start !important; padding: 0 0 0.15rem; margin-top: -0.3rem !important; white-space: normal; }
+  .rule-head > .section-links { gap: 0 0.8rem; }
+  .rule-head > .section-links > a:first-child:not(:last-child) { display: none; }
+}
+
+/* ---- Phone: the next plan on one strip of glass under the box -------------------------------- */
+.readout-line { display: none; }
+@media (max-width: 39.99rem) {
+  .page-home .readout-line.crt {
+    position: relative; display: block; margin: 0.75rem 0 0.2rem; padding: 0; min-height: 2.75rem; text-decoration: none;
+    border-radius: 6px;
+  }
+  .page-home .readout-line .crt-tube {
+    display: flex; align-items: center; gap: 0 0.3rem; min-height: 2.75rem; box-sizing: border-box; padding: 0.3rem 0.6rem 0.25rem !important;
+    font: 400 1.125rem/1 var(--terminal); letter-spacing: 0; color: var(--phosphor-dim, var(--phosphor)); white-space: nowrap; overflow: hidden;
+  }
+  .page-home .readout-line .rl-label { flex: none; padding: 0.05rem 0.3rem 0; color: #06140b; background: var(--phosphor); text-transform: uppercase; font-size: 1.05rem; box-shadow: 0 0 8px rgb(109 255 156 / 0.5); }
+  .page-home .readout-line .rl-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--hot); text-shadow: 0 0 2px #eafff1, 0 0 8px rgb(109 255 156 / 0.7), 0 0 18px rgb(109 255 156 / 0.35); text-decoration: underline; text-decoration-color: rgb(109 255 156 / 0.45); text-underline-offset: 0.15em; }
+  .page-home .readout-line .rl-sep { opacity: 0.55; margin: 0 -0.1rem; }
+  .page-home .readout-line .rl-when, .page-home .readout-line .rl-rel { flex: none; }
+  .page-home .readout-line .rl-name { flex: 0 1 auto; }
+  /* Its power wire: a 2px lit stub from its left end down into the branch's terminus. */
+  .page-home .readout-line::after {
+    content: ""; position: absolute; z-index: 3; left: var(--wire-x, 6px); top: 100%; width: 2px; height: var(--wire-h, 1.2rem);
+    background: linear-gradient(#e4fff0, #e4fff0) 50% 0 / 1px 100% no-repeat, var(--brand);
+    box-shadow: 0 0 2px #e4fff0, 0 0 6px var(--brand), 0 0 14px rgb(109 255 156 / 0.5);
+  }
+  .page-home .readout-line:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  /* The month on the phone: a thin trace. */
+  .crt.month-strip { display: block !important; height: 4px; margin: 0 0 0.9rem; padding: 0; border: 0; overflow: hidden; }
+  .crt.month-strip .crt-tube { display: none; }
+  .crt.month-strip { background: linear-gradient(90deg, var(--brand) 0 9%, rgb(109 255 156 / 0.25) 9%) !important; box-shadow: 0 0 8px rgb(109 255 156 / 0.4) !important; border-radius: 2px; }
+}
+
+/* ---- Home's lower half: To do, Lately added and the yard -------------------------------------- */
+.page-home .dashboard { gap: 0 3rem; align-items: start; }
+.page-home .dashboard-column { display: flex; flex-direction: column; gap: 0; }
+.page-home .lately-rows { margin: 0; }
+.page-home .yard { margin-top: 2rem; }
+.page-home .yard { margin-top: var(--dark); }
+/* The yard: one steel siding across the page, each place a ring stop on it; under its ring its
+   icon, its name and how it stands on one baseline; the whole stop is the way there. The stops
+   sit at their own width a set pitch apart, and the line runs on to its T buffer. */
+.yard-line { position: relative; display: flex; align-items: stretch; gap: 0 2rem; list-style: none; margin: 0; padding: 0; }
+.yard-line::before { content: ""; position: absolute; left: 0.45rem; right: 0; top: 6px; height: 2px; background: var(--rail); }
+.yard-line > .ys { position: relative; flex: none; display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 0.55rem; min-height: 2.75rem; padding: 1.55rem 0.25rem 0.4rem 0; border-radius: 4px; box-shadow: var(--row-off); transition: box-shadow var(--afterglow); }
+.yard-line > .ys:is(:hover, :has(:focus-visible)) { box-shadow: var(--row-lit); transition-duration: var(--glow-in); }
+.yard-line .ys-go { display: inline-flex; align-items: baseline; gap: 0 0.5rem; min-height: 1.5rem; color: var(--heading); text-decoration: none; }
+/* The whole stop answers a press: the way there covers it, its inner links stand above. */
+.yard-line .ys-go::after { content: ""; position: absolute; inset: 0; border-radius: 4px; }
+.yard-line .ys-go:focus-visible { outline: none; }
+.yard-line .ys:has(.ys-go:focus-visible) { outline: 2px solid var(--brand); outline-offset: 3px; }
+.yard-line .ys-ring { position: absolute; left: 0; top: 0; box-sizing: border-box; width: 14px; height: 14px; border: 2px solid var(--steel); border-radius: 50%; background: var(--bg); box-shadow: 0 0 0 3px var(--bg); transition: border-color var(--afterglow), box-shadow var(--afterglow); }
+.yard-line .ys:is(:hover, :has(:focus-visible)) .ys-ring:not(.on) { border-color: var(--heading); transition-duration: var(--glow-in); }
+.yard-line .ys-ring.on { border-color: var(--brand); background: radial-gradient(circle, #eafff1 0 1.5px, var(--brand) 2.5px 3.5px, var(--bg) 4px); box-shadow: 0 0 0 3px var(--bg), 0 0 4px rgb(109 255 156 / 0.8), 0 0 12px rgb(109 255 156 / 0.4); }
+.yard-line .ys-ring.part { border-color: var(--amber); background: linear-gradient(90deg, var(--amber) 0 50%, var(--bg) 50%); }
+.yard-line .ys-icon { flex: none; align-self: center; width: 1.05rem; height: 1.05rem; color: var(--steel); }
+.yard-line .ys-name { font: 600 1.0625rem/1.25 var(--sans); color: var(--heading); text-decoration: none; text-underline-offset: 0.22em; text-decoration-color: rgb(156 195 221 / 0.6); }
+.yard-line .ys:hover .ys-name, .yard-line .ys-go:focus-visible .ys-name { text-decoration: underline; }
+.yard-line .ys-say { display: inline-flex; align-items: baseline; flex-wrap: wrap; gap: 0 0.4rem; font: 400 0.9375rem/1.25 var(--sans); color: var(--ink-2); }
+.yard-line .ys-say .fig { font: 400 0.875rem/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.yard-line .ys-say a { position: relative; z-index: 1; display: inline-block; padding-block: 0.85rem; margin-block: -0.85rem; color: var(--steel); text-decoration: none; text-underline-offset: 0.2em; }
+.yard-line .ys-say a:is(:hover, :focus-visible) { color: var(--heading); text-decoration: underline; }
+.yard-line .ys-say a .fig { color: var(--steel); }
+.yard-line .ys-say .sep { color: var(--rail-hi); }
+.yard-line .ys-wait { color: var(--amber); }
+.yard-line .ys-next { color: var(--ink) !important; }
+.yard-line > .ys-end { position: relative; flex: 1 1 0; min-width: 0.5rem; }
+.yard-line > .ys-end .buffer { position: absolute; right: -2px; top: 1px; rotate: -90deg; }
+@media (max-width: 74.99rem) { .yard-line > .ys { flex: 0 1 auto; } }
+@media (max-width: 47.99rem) {
+  .yard-line { flex-direction: column; padding-left: 1.6rem; }
+  .yard-line::before { left: calc(0.45rem + 1px); right: auto; top: 0.4rem; bottom: 0.8rem; width: 2px; height: auto; }
+  .yard-line > .ys { padding: 0.65rem 0 0.55rem; }
+  .yard-line .ys-ring { left: -1.6rem; top: 0.95rem; }
+  .yard-line > .ys-end { flex: none; height: 1rem; }
+  .yard-line > .ys-end .buffer { left: calc(-1.6rem + 0.45rem + 1px - 6px); right: auto; top: 0; rotate: 180deg; }
+}
+
+/* ---- To do: the margin is one line, 'now' in words -------------------------------------------- */
+.stamp.dline { font: 400 0.75rem/1.2 var(--mono) !important; font-variant-numeric: tabular-nums; letter-spacing: 0; color: var(--ink-3); white-space: nowrap; }
+.stamp.dline .t, .stamp.dline .hm { color: var(--ink-2); }
+.late .stamp.dline { color: var(--ink-2); }
+.now-stop::before {
+  content: "Now" !important; font: 600 0.8125rem/1 var(--sans) !important; letter-spacing: 0 !important; color: var(--sage) !important;
+  text-shadow: 0 0 6px rgb(134 217 166 / 0.35) !important; text-transform: none !important;
+}
+@media (min-width: 40.01rem) { .home-todo .checklist { --m: 5.2rem; } }
+@media (min-width: 48.01rem) { .task-line { --m: 5.6rem; } .task-board .colheads .ch-due { width: 5.5rem; } .task-board .colheads { padding-left: calc(5.6rem + 0.65rem + 1.25rem + 2.75rem + 0.9rem + 0.9rem); } }
+.keys .key-late { color: var(--amber); border-color: var(--rail) !important; background: none !important; }
+.keys .key-late .fig { font-family: var(--mono); font-variant-numeric: tabular-nums; margin-left: 0.3rem; }
+.keys .key-late:hover { color: #ffd08a; }
+
+/* ---- Status: the case as tall as the banks, the tally in the well ----------------------------- */
+.page-status .crt.console { grid-template-areas: "t w" !important; padding-bottom: 3px !important; }
+.page-status .console .chin { display: none; }
+.page-status .meter-tube { padding: 0.55rem 0.9rem 0.45rem !important; }
+.page-status .meter-tube .dial { margin: 0 0 0.2rem; max-height: 8rem; }
+.page-status .console .well { display: flex !important; flex-direction: column; justify-content: flex-start !important; gap: 0; padding: 0.9rem 1.2rem 0.9rem 1.1rem !important; }
+.page-status .well-head { display: flex; flex-direction: column; gap: 0.4rem; padding-bottom: 0.85rem; }
+.page-status .well-head .tally { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: flex-start !important; gap: 0.2rem 0.15rem; padding: 0 !important; font-size: 0.875rem; }
+.page-status .well-head .tally .figure { font-size: 24px !important; }
+.page-status .well-head .tally .sep { margin: 0 0.2rem; }
+.page-status .well-head .tally .tally-go { margin-left: auto; display: inline-flex; align-items: center; min-height: 2.75rem; margin-block: -0.6rem; font-weight: 500; color: var(--steel); text-decoration: underline; text-decoration-color: rgb(156 195 221 / 0.4); text-underline-offset: 0.22em; }
+.page-status .well-head .warn { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--amber); }
+.page-status .instrument .banks { margin-top: auto; border-top: 1px solid rgb(156 195 221 / 0.18) !important; padding-top: 0.9rem !important; }
+/* Working lamps breathe on the bank (E20). */
+.page-status .bank .light.on { animation: lamp 3.2s ease-in-out infinite; }
+.page-status .bank .cell:nth-child(2) .light.on { animation-delay: -0.8s; }
+.page-status .bank .cell:nth-child(3) .light.on { animation-delay: -1.6s; }
+@media (prefers-reduced-motion: reduce) { .page-status .bank .light.on { animation: none; } }
+@media (max-width: 40rem) {
+  .page-status .crt.console { grid-template-areas: "t" "w" !important; }
+}
+.page-status .board-lists > .band { padding-inline: 0 !important; }
+.page-status main > section.panel { padding-inline: 0 !important; }
+
+/* ---- The signal foot: the line's last signal on every page ------------------------------------ */
+/* Lamp, word, who answers and the day's spend sit at their own widths on short steel leaders;
+   one rule runs from there to Status at the T buffer. The lamp is lit and breathing only while
+   a turn is being answered; at rest it is a steel ring, and an amber half lamp while something
+   needs a look. */
+.signal-foot {
+  display: flex; align-items: center; gap: 0 0.7rem; min-height: 3rem; box-sizing: border-box;
+  margin: var(--dark) 0 0; padding: 0.4rem 0 0.4rem 0.15rem;
+  border-top: 1px solid var(--seam); box-shadow: inset 0 1px 0 var(--seam-hi);
+  font: 400 0.875rem/1.2 var(--sans); color: var(--ink-2);
+}
+.signal-foot .sf-lamp { flex: none; box-sizing: border-box; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--steel); }
+.signal-foot.sf-on .sf-lamp { border: 0; background: radial-gradient(circle, #eafff1 0 1px, var(--brand) 2px); box-shadow: 0 0 4px rgb(109 255 156 / 0.8), 0 0 12px rgb(109 255 156 / 0.35); animation: sf-breathe 2.4s ease-in-out infinite; }
+.signal-foot.sf-part .sf-lamp { border-color: var(--amber); background: linear-gradient(90deg, var(--amber) 0 50%, transparent 50%); }
+.signal-foot.sf-off .sf-lamp { border-color: var(--ink-3); border-style: dashed; }
+@keyframes sf-breathe { 0%, 100% { box-shadow: 0 0 4px rgb(109 255 156 / 0.8), 0 0 12px rgb(109 255 156 / 0.35); } 50% { box-shadow: 0 0 3px rgb(109 255 156 / 0.6), 0 0 7px rgb(109 255 156 / 0.18); } }
+@media (prefers-reduced-motion: reduce) { .signal-foot.sf-on .sf-lamp { animation: none; } }
+.signal-foot .sf-word { font: 600 0.875rem/1.2 var(--sans); color: var(--heading); }
+.signal-foot.sf-on .sf-word { color: var(--lit); }
+.signal-foot.sf-part .sf-word { color: var(--amber); }
+.signal-foot .sf-lead { flex: none; width: 2.5rem; height: 1px; background: var(--rule); }
+.signal-foot .sf-run { flex: 1 1 2rem; min-width: 2rem; height: 1px; margin-left: 0.6rem; background: var(--rule); }
+.signal-foot .sf-model { font: 400 0.8125rem/1 var(--mono); color: var(--label); }
+.signal-foot .sf-spend .fig { font: 400 0.8125rem/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--heading); }
+.signal-foot .sf-who, .signal-foot .sf-spend { white-space: nowrap; }
+.signal-foot .sf-go { display: inline-flex; align-items: center; gap: 0.25rem; min-height: 2.75rem; font: 500 0.875rem/1 var(--sans); color: var(--steel); text-decoration: none; text-underline-offset: 0.22em; white-space: nowrap; }
+.signal-foot .sf-go:is(:hover, :focus-visible) { color: var(--heading); text-decoration: underline; }
+.signal-foot .sf-go.here { color: var(--ink-3); }
+.signal-foot .sf-go .icon { width: 0.9rem; height: 0.9rem; }
+.signal-foot .sf-buffer { rotate: -90deg; margin-left: -0.2rem; }
+@media (max-width: 40rem) {
+  .signal-foot { flex-wrap: wrap; gap: 0 0.55rem; }
+  .signal-foot .sf-lead { display: none; }
+  .signal-foot .sf-run { order: 1; margin-left: 0.2rem; }
+  .signal-foot .sf-who { order: 3; flex-basis: 100%; padding-left: calc(8px + 0.55rem); }
+  .signal-foot .sf-spend { order: 4; padding-left: calc(8px + 0.55rem); }
+  .signal-foot .sf-go { order: 2; }
+  .signal-foot .sf-buffer { order: 2; }
+}
+@media (max-width: 26rem) { .page-home .readout-line .rl-rel { display: none; } }
+
+/* The box rests on a steel edge, and turns green while someone writes in it. */
+.page-home .welcome .ask:not(:focus-within) { border-color: rgb(156 195 221 / 0.42) !important; box-shadow: var(--lift), inset 0 1px 0 rgb(255 255 255 / 0.04) !important; }
+/* The stops on the line are plans: cyan rings, the companion of a plan everywhere. */
+.headline .hl-rail > .ring:not(.on) { border-color: var(--cyan); }
+
+
+/* The title: one line, broken on a phone after her name, never inside 'what to plan.' */
+.ask-question .nw { white-space: nowrap; }
+
+/* ---- Plans month: the ways to another month sit in the head row, before the buffer ----------- */
+.month-head .month-nav { display: inline-flex; align-items: center; gap: 0 1.1rem; margin: 0 !important; }
+.month-head .month-nav .mn { display: inline-flex; align-items: center; gap: 0.3rem; min-height: 2.75rem; padding: 0 0.1rem; font: 500 0.9375rem/1 var(--sans); color: var(--steel); text-decoration: none; text-underline-offset: 0.22em; white-space: nowrap; }
+.month-head .month-nav .mn:is(:hover, :focus-visible) { color: var(--heading); text-decoration: underline; }
+.month-head .month-nav .mn .icon { width: 1rem; height: 1rem; }
+
+/* ---- Ideas: the filters on the ground under a 'Find' head, a seam under them ----------------- */
+.idea-tools .filters { padding: 0 0 1.6rem !important; background: none !important; border: 0 !important; border-radius: 0 !important;
+  border-bottom: 1px solid var(--seam) !important; box-shadow: 0 1px 0 var(--seam-hi) !important; margin-bottom: 1.6rem; }
+.idea-tools .find-head { margin: 1.6rem 0 0.6rem !important; }
+.idea-tools { flex-wrap: wrap; }
+.idea-tools > .find-head, .idea-tools > .filters { flex-basis: 100%; }
+
+/* ---- The idea form: on the ground, the field rail its floor, a seam over its buttons ---------- */
+.panel.idea-form { background: none !important; border: 0 !important; box-shadow: none !important; border-radius: 0 !important; padding-right: 0 !important; }
+/* The seam over the buttons starts at the fields' edge, so the rail runs on to its buffer. */
+.idea-form .field.actions { margin-top: 0.6rem; padding-top: 1.4rem;
+  background: linear-gradient(var(--seam), var(--seam)) right 0 top 0 / calc(100% - var(--m) - 2.3rem) 1px no-repeat,
+              linear-gradient(var(--seam-hi), var(--seam-hi)) right 0 top 1px / calc(100% - var(--m) - 2.3rem) 1px no-repeat; }
+
+/* ---- Settings: the save bar a solid sill, nothing passing under it ---------------------------- */
+.page-settings .save-bar { background: var(--surface) !important; backdrop-filter: none !important;
+  border: 0 !important; border-top: 1px solid var(--seam) !important; border-radius: 0 0 4px 4px !important;
+  box-shadow: inset 0 1px 0 var(--seam-hi), 0 -14px 24px var(--bg), 0 -8px 30px rgb(0 0 0 / 0.45) !important; }
+.page-settings form > :is(section.panel, details.panel.fold):last-of-type { margin-bottom: 2.5rem !important; }

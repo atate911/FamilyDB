@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, presence, strip %}
+{% block title %}Settings · {{ site_title }}{% endblock %}
+{% block body_class %}page-settings{% endblock %}
+{% block content %}
+  {% set looks = sections | selectattr('look') | list | length %}
+  {# The poster's circle: how many parts need a look, or that none does. #}
+  {{ page_head('Settings', 'Each part, how it stands now, and the way in to change it.', 'settings', none,
+               {'top': 'A look', 'big': looks, 'small': 'needed'} if looks else {'top': 'All well', 'big': sections | length, 'small': 'parts'}) }}
+  {# The strip counts the parts; the tube says how many want a look, so the strip does not. #}
+  {% set first_look = sections | selectattr('look') | first %}
+  {% set cells = [{'label': 'Parts', 'value': sections | length, 'href': '#parts'},
+                  {'label': 'In order', 'value': (sections | length) - looks, 'href': '#parts'}] %}
+  {% if first_look %}{% set _ = cells.append({'label': first_look.section.title, 'value': '→', 'href': url_for('settings.section', name=first_look.section.name), 'tone': 'late'}) %}{% endif %}
+  {% set _ = cells.append({'label': 'Setup', 'value': '→', 'href': url_for('setup.overview')}) %}
+  {{ strip(cells, 'Settings at a glance') }}
+  {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+  {# One card to a page of settings, each saying how things stand in a line or two, so this is
+     the place to look first as well as the way in. Something missing is marked, in words. #}
+  <ul class="section-rows" id="parts">
+    {% for entry in sections %}
+      {% set one = entry.section %}
+      <li>
+        <a class="section-card section-row{% if entry.look %} look{% endif %}" href="{{ url_for('settings.section', name=one.name) }}">
+          {% if one.icon == 'presence' %}<span class="sq-out round" aria-hidden="true">{{ icon('chat') }}</span>
+          {%- else %}<span class="sq-out" aria-hidden="true">{{ icon(one.icon) }}</span>{% endif %}
+          <strong>{{ one.title }}</strong>
+          <span class="leader" aria-hidden="true"></span>
+          <span class="section-state">{% if entry.look %}<span class="tri" aria-hidden="true"></span>Needs a look · {% endif %}{{ entry.lines[0] if entry.lines else '' }}</span>
+          {{ icon('right', cls='go') }}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+  <p class="muted small">
+    Setting up for the first time, or starting again? <a href="{{ url_for('setup.overview') }}">Setup</a>
+    goes through what matters most, one step at a time.
+  </p>
+{% endblock %}

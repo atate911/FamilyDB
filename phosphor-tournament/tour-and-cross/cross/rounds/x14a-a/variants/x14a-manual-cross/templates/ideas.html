@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, kind_label, kind_key, page_head, crt, radar, head_figure %}
+{% block title %}Ideas · {{ site_title }}{% endblock %}
+{% macro short_away(text) -%}
+  {{- (text or '') | replace(' of home (estimate)', '') | replace(' from home (estimate)', '')
+      | replace('north-east', 'NE') | replace('north-west', 'NW') | replace('south-east', 'SE') | replace('south-west', 'SW')
+      | replace(' north', ' N') | replace(' south', ' S') | replace(' east', ' E') | replace(' west', ' W') -}}
+{%- endmacro %}
+{# How far a place is by road, split from which way it lies, so the drive can be set as a column
+   of figures: "about 2 h 10 min south of home (estimate)" is "2 h 10 min" and "S". #}
+{% macro drive_of(text) -%}
+  {%- set COMPASS = {'north': 'N', 'north-east': 'NE', 'east': 'E', 'south-east': 'SE', 'south': 'S', 'south-west': 'SW', 'west': 'W', 'north-west': 'NW'} -%}
+  {%- set t = (text or '') | replace(' of home (estimate)', '') | replace(' from home (estimate)', '') -%}
+  {%- set t = t[6:] if t.startswith('about ') else t -%}
+  {%- set w = t.split(' ') -%}
+  {{- (w[:-1] | join(' ')) if w[-1] in COMPASS else t -}}
+{%- endmacro %}
+{% macro way_of(text) -%}
+  {%- set COMPASS = {'north': 'N', 'north-east': 'NE', 'east': 'E', 'south-east': 'SE', 'south': 'S', 'south-west': 'SW', 'west': 'W', 'north-west': 'NW'} -%}
+  {%- set t = (text or '') | replace(' of home (estimate)', '') -%}
+  {{- COMPASS.get(t.split(' ')[-1], '') -}}
+{%- endmacro %}
+{% block content %}
+  {# The chapter's figure is where the listed places are, on a green screen: a radar that is a
+     map, home at the middle, north at the top, the nearer by road the nearer the middle, and the
+     nearest pinging. It follows the filters; the words under it say what it shows. #}
+  {# Slotted: no figure column. The head carries its count in the ideas' violet; under the lede
+     the radar, a 12rem tube in the same case as the other tubes, stands beside the map's two ends:
+     where the listed places are from home, north at the top, rings at 15 min, 45 min and 2 h. #}
+  {% call page_head('Ideas', 'Places to go, things to try, and everything the family has mentioned.', none, quote=head_figure(rows | length, 'kept' if not filtered else 'shown'), primary=(('Add an idea', url_for('web.new_idea'), 'plus') if visitor().may('change') else none)) %}
+      {% if on_radar %}
+        <div class="map-row">
+        {% call crt('on-radar map-tube power-on', hidden=true) %}
+          {{ radar(on_radar.blips, rings=on_radar.rings) }}
+        {% endcall %}
+        <div class="map-words">
+        <p class="map-say"><span class="map-n">{{ on_radar.count }}</span> place{{ '' if on_radar.count == 1 else 's' }} on the radar, from home</p>
+        <dl class="map-facts">
+          <dt>Nearest</dt>
+          <dd><a href="{{ url_for('web.idea', idea_id=on_radar.nearest.id) }}">{{ on_radar.nearest.title }}</a></dd>
+          <dd class="away">{{ on_radar.nearest.away }}</dd>
+          {% if on_radar.furthest %}
+            <dt>Furthest</dt>
+            <dd><a href="{{ url_for('web.idea', idea_id=on_radar.furthest.id) }}">{{ on_radar.furthest.title }}</a></dd>
+            <dd class="away">{{ on_radar.furthest.away }}</dd>
+          {% endif %}
+        </dl>
+        </div>
+        </div>
+      {% endif %}
+      <nav class="tabs latch" aria-label="Which ideas">
+          <a href="{{ url_for('web.ideas') }}"{% if request.endpoint == 'web.ideas' %} aria-current="page"{% endif %}>{{ icon('idea') }}All ideas</a>
+          <a href="{{ url_for('web.restaurants') }}"{% if request.endpoint == 'web.restaurants' %} aria-current="page"{% endif %}>{{ icon('restaurant') }}Restaurants</a>
+        </nav>
+      {% if visitor().may('change') %}
+      <details class="fold capture">
+        <summary>{{ icon('sparkles') }}Save a thought for later</summary>
+        <p class="muted">A restaurant, food cart pod, neighborhood, passport stop, kids’ outing, special occasion,
+          or just a direction to explore. Write naturally; {{ assistant }} will organize it and say in Chat what was saved.</p>
+        <form class="form" method="post" action="{{ url_for('chat.send') }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+          <input type="hidden" name="once" value="{{ once_token() }}">
+          <input type="hidden" name="intent" value="save_idea">
+          <div class="field wide">
+            <label for="capture-text">Your thought</label>
+            <textarea id="capture-text" name="text" required maxlength="3800" rows="3" data-dictate
+              placeholder="Maybe explore food carts in Portland with the girls on a sunny afternoon..."></textarea>
+          </div>
+          {% if not visitor().member %}
+            <div class="field">
+              <label for="capture-who">From</label>
+              <select id="capture-who" name="who" required><option value="">Choose your name</option>
+                {% for person in capture_people %}<option>{{ person.display_name }}</option>{% endfor %}
+              </select>
+            </div>
+          {% endif %}
+          <div class="field actions end">
+            <button class="primary" type="submit">{{ icon('sparkles') }}Organize in Chat</button>
+          </div>
+          <p class="wide muted hint">Uses your configured assistant. Check its confirmation in Chat;
+            you can also use Add an idea to save directly without AI.</p>
+        </form>
+      </details>
+      {% endif %}
+      <form class="filters" method="get" action="{{ url_for('web.ideas') }}" role="search">
+      {% if selected.kind %}<input type="hidden" name="kind" value="{{ selected.kind }}" />{% endif %}
+      <div class="field wide">
+        <label for="q">Search</label>
+        <input id="q" name="q" type="search" value="{{ selected.q }}" placeholder="ramen, museum…" />
+      </div>
+      <div class="field">
+        <label for="status">Status</label>
+        <select id="status" name="status">
+          <option value="">any but dropped</option>
+          {% for option in statuses %}
+            <option value="{{ option }}" {{ 'selected' if option == selected.status }}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="who">For</label>
+        <select id="who" name="who">
+          <option value="">anyone</option>
+          {% for option in people %}
+            <option value="{{ option }}" {{ 'selected' if option == selected.who }}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field actions">
+        <button class="secondary" type="submit">{{ icon('search') }}Filter</button>
+        {% if filtered %}<a class="clear" href="{{ url_for('web.ideas') }}">{{ icon('x') }}Clear</a>{% endif %}
+      </div>
+    </form>
+
+  {% endcall %}
+
+  {# The list, led by its figure: how many of each kind, drawn as bars in the sheet's ink, and each
+     bar the way to the list of that kind alone (the one shown in steel). It is the page's only
+     kind filter; the rest of the filters sit in the head, beside the map. #}
+  {% set groups = rows | groupby('kind') %}
+  {% set counts = namespace(by={}, most=1) %}
+  {% for row in rows %}{% set k = kind_key(row.kind) | trim %}{% set _ = counts.by.update({k: counts.by.get(k, 0) + 1}) %}{% endfor %}
+  {% for k, n in counts.by.items() %}{% if n > counts.most %}{% set counts.most = n %}{% endif %}{% endfor %}
+  {% set here_args = {'q': selected.q or none, 'status': selected.status or none, 'who': selected.who or none} %}
+  <section class="plate no-fig idea-list" aria-labelledby="h-list">
+    <div class="plate-body">
+      <div class="section-head">
+        <h2 id="h-list">The list</h2>
+        <p class="count">
+          {{ rows | length }} idea{{ '' if rows | length == 1 else 's' }}{% if filtered %} match{{ 'es' if rows | length == 1 else '' }}{% endif %}{% if rows | length == limit %}, showing the first {{ limit }}{% endif %}{% if selected.kind %} · {{ selected.kind | replace('_', ' ') }}{% endif %}
+        </p>
+      </div>
+
+      {# One kind at a time: a row of latched keys over the list, each with its count. #}
+      <nav class="kind-keys" aria-label="Show one kind">
+        <a class="kind-row all" href="{{ url_for('web.ideas', **here_args) }}"{% if not selected.kind %} aria-current="true"{% endif %}><span class="k-name">Every kind</span>{% if not selected.kind %}<span class="k-count">{{ rows | length }}</span>{% endif %}</a>
+        {% for k in kinds %}
+          {% set c = counts.by.get(kind_key(k) | trim, 0) %}
+          <a class="kind-row kind-{{ kind_key(k) }}" href="{{ url_for('web.ideas', kind=k, **here_args) }}"{% if k == selected.kind %} aria-current="true"{% endif %}><span class="swatch" aria-hidden="true"></span><span class="k-name">{{ k | replace('_', ' ') | capitalize }}</span><span class="k-count">{{ c }}</span></a>
+        {% endfor %}
+      </nav>
+      {% if not rows %}
+        <p class="muted empty">{{ icon('idea') }}<span>
+          Nothing here yet.{% if visitor().may('change') %} <a href="{{ url_for('web.new_idea') }}">Add one</a>, or tell the bot in the
+          chat.{% endif %}</span>
+        </p>
+      {% endif %}
+
+      {% if rows %}
+        <p class="idea-heads" aria-hidden="true"><span></span><span>Kind</span><span>Idea</span><span class="h-drive">Drive, about</span><span class="h-way">Way</span><span>For</span></p>
+      {% endif %}
+      <ul class="plain idea-table">
+        {% for row in rows %}
+          <li class="idea-card">
+            <span class="card-id">#{{ row.id }}</span>
+            <span class="card-kind">{{ kind_label(row.kind) }}</span>
+            <h2 class="card-title"><a href="{{ url_for('web.idea', idea_id=row.id) }}">{{ row.title | replace("'", "’") }}</a>
+              {%- if row.status != 'idea' %} <span class="tag status-{{ row.status }}">{{ row.status }}</span>{% endif %}
+              {%- for tag in row.tags[:2] %} <span class="tag">{{ tag }}</span>{% endfor %}</h2>
+            {% if row.away %}
+              <span class="card-away"><span class="sr">about </span>{{ drive_of(row.away) }}</span>
+              <span class="card-way">{% set w = way_of(row.away) | trim %}{% if w %}<span class="sr">, heading </span>{{ w }}{% endif %}</span>
+            {% else %}
+              <span class="card-place">{{ row.where or row.on or '' }}</span>
+            {% endif %}
+            <span class="card-for"><span class="for-word">for </span>{{ row.who }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </section>
+{% endblock %}

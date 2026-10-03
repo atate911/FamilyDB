@@ -1,0 +1,384 @@
+/* ==== Sill Line, Squared: the cross (round 14a) ================================================
+   Sill Line, Ticked kept whole in its idea (the greeting standing on its lit week, the tube's lit
+   wire, the breathing now lamp, the timetable To do whose stops are the ticks), and squared up
+   with the main camp's components, each rebuilt in steel, slate and ink:
+   - one type system, written once: display 3rem, title 2.25rem, head 1.5rem, all Archivo at 75%
+     width 650; body 1rem/1.55 DM Sans; small .875rem; label .75rem caps; DM Mono only for clock
+     times, day numerals and table figures; a count stands on its title's baseline;
+   - Home read top to bottom: the question, the box with its steel branch of ways to start, then
+     the sill, where the tube and the later plans' plates stand on one rail;
+   - To do's stop is a square tick on the rail (Desk Terminal's WHO/DUE heads and NOW tick);
+   - rule heads (Backlit Plate), a moving-coil spend needle (Desk Terminal), a lamp legend in
+     every page's foot (Dessau Phosphor's shape key). */
+:root {
+  --plate-cap: rgb(207 198 176 / 0.7);
+  --plate-fill: #1a2230;
+  --plate-side: #34404b;
+  --steel-rail: #56708c;
+  --tube-w: 26rem;
+  --sill-pad: 2rem;
+  --t-display: 3rem;
+  --t-title: 2.25rem;
+  --t-head: 1.5rem;
+  --t-small: 0.875rem;
+  --t-label: 0.75rem;
+  --sill-drop: 1.15rem;
+  --sill-out: 1rem;
+}
+
+/* ---- The type system ---------------------------------------------------------------------- */
+:is(.ask-question, .page-head h1, .page-title h1, .section-head h2, .rule-head h2, .station-board h2) {
+  font-family: var(--head); font-weight: 650; font-stretch: 75%; color: var(--heading);
+  font-variation-settings: "wdth" 75; letter-spacing: -0.005em;
+}
+.page-head h1, .page-title h1 { font-size: var(--t-title); line-height: 1.05; }
+.section-head h2, .rule-head h2, .station-board h2 { font-size: var(--t-head); line-height: 1.15; }
+body { font-size: 1rem; line-height: 1.55; }
+/* Column heads are sentence case, 12px Archivo 600 in label ink, untracked. */
+.colheads, .colheads > * { font: 600 var(--t-label)/1.2 var(--head); letter-spacing: 0; text-transform: none; color: var(--label); font-stretch: 100%; }
+/* Row titles are never underlined at rest; links in sentences are. */
+:is(.lately-rows, .idea-rows, .stops) .what a, .lately-rows .t a, .idea-row .t a { text-decoration: none; }
+:is(.lately-rows .t a, .idea-row .t a, .stops .what a):is(:hover, :focus-visible) { text-decoration: underline; text-underline-offset: 0.2em; text-decoration-color: color-mix(in srgb, currentColor 45%, transparent); }
+/* A count stands on its title's baseline, never stacked. */
+.head-fig { display: inline-flex; align-items: baseline; gap: 0.45rem; margin: 0 0 0 0.85rem; }
+.head-fig .fig-n { font: 600 1.125rem/1.2 var(--sans); font-stretch: 100%; font-variant-numeric: tabular-nums; color: var(--heading); }
+.head-fig .fig-u { display: inline; font: 400 1.125rem/1.2 var(--sans); color: var(--ink-2); }
+.head-fig .fig-u > * + *::before { content: "·"; display: inline-block; margin: 0 0.45rem; color: var(--rail-hi); }
+.head-fig .late-count { display: inline; min-width: 0; min-height: 0; margin: 0; padding: 0.8rem 0; font-weight: 600; color: var(--amber); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--amber) 45%, transparent); text-underline-offset: 0.2em; }
+.page-title { display: flex; flex-wrap: wrap; align-items: baseline; }
+
+/* ==== Home: one board, read top to bottom ===================================================== */
+.welcome.sill-board {
+  display: block; position: relative; overflow: visible;
+  margin: 0 0 4.4rem; padding: 1.6rem var(--sill-pad) 0;
+  background: #101611;
+  border: 1px solid var(--line-2); border-bottom: 0; border-radius: 14px 14px 0 0;
+  /* the frame is steel, with a 1px phosphor highlight on its top edge only; it has no foot of its
+     own: it stands on the sill, which runs on past both its sides */
+  box-shadow: none;
+}
+.welcome.sill-board::after { display: block; content: ""; position: absolute; z-index: 0; top: -1px; left: 14px; right: 14px; height: 1px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--brand) 25%, transparent) 20% 80%, transparent); }
+/* The airglow: rising off the lit run alone, scanlined, gone before the question. */
+.welcome.sill-board::before {
+  content: ""; position: absolute; z-index: 0; inset: auto 0 0; height: 10rem; pointer-events: none; border-radius: 0;
+  background:
+    repeating-linear-gradient(to bottom, rgb(255 255 255 / 0.028) 0 1px, transparent 1px 4px),
+    linear-gradient(to top, color-mix(in srgb, var(--brand) 8%, transparent), transparent);
+  -webkit-mask-image: radial-gradient(26% 100% at calc(var(--sill-pad) + var(--tube-w) / 2) 100%, #000, transparent 88%);
+  mask-image: radial-gradient(26% 100% at calc(var(--sill-pad) + var(--tube-w) / 2) 100%, #000, transparent 88%);
+  animation: airglow 0.7s ease-out 0.95s both;
+}
+@keyframes airglow { from { opacity: 0.12; } }
+.welcome.sill-board > * { position: relative; z-index: 1; }
+
+/* Row 1: the eyebrow line and the headline. */
+.headline { margin: 0 0 1.25rem; }
+.welcome.sill-board .speaker { display: flex; align-items: center; gap: 0.6rem; margin: 0 0 0.6rem; }
+.welcome.sill-board .speaker .presence { width: 2rem; height: 2rem; }
+.welcome.sill-board .speaker strong { font: 600 1rem/1.2 var(--sans); color: var(--heading); }
+.welcome.sill-board .speaker .eyebrow { font: 400 var(--t-small)/1.2 var(--mono); letter-spacing: 0; text-transform: none; color: var(--ink-2); }
+.headline .ask-question { margin: 0; padding: 0; font-size: var(--t-display); line-height: 1; letter-spacing: -0.012em; text-wrap: balance; }
+.headline .ask-question label { color: var(--heading); cursor: text; }
+/* E1, two layers, the outer spread cut by a third. */
+.ask-question .glow { color: var(--brand); font-weight: 700; text-shadow: 0 0 6px color-mix(in srgb, var(--brand) 55%, transparent), 0 0 22px color-mix(in srgb, var(--brand) 22%, transparent); }
+
+/* Row 2: the box, and the branch of ways to start. */
+.welcome.sill-board .welcome-words { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); column-gap: 2.5rem; align-items: start; }
+.welcome-words > .ask { grid-column: 1; grid-row: 1; }
+.welcome-words > .branch { grid-column: 2; grid-row: 1 / span 2; }
+.welcome-words > :is(.thread, .brief-more) { grid-column: 1; }
+/* Sill Line, Wired: the box is glass lit from beneath (L092): the field, a bottom-weighted inset
+   glow, a 1px phosphor highlight along its top faded at both ends; its resting halo stays cut. */
+.welcome .ask {
+  position: relative; border-color: var(--line-2);
+  background: linear-gradient(90deg, transparent, rgb(109 255 156 / 0.35) 18% 82%, transparent) 0 0 / 100% 1px no-repeat, var(--field);
+  box-shadow: var(--lift), inset 0 -18px 28px -18px rgb(109 255 156 / 0.16), 0 0 16px -8px color-mix(in srgb, var(--brand) 22%, transparent), 0 0 40px -18px color-mix(in srgb, var(--brand) 14%, transparent);
+}
+.welcome .ask textarea { min-height: 3.6rem; padding: 0.8rem 0.9rem 0.3rem 2.05rem; }
+
+.branch { --bx: 7px; --jy: 0.75rem; position: relative; padding: 0 0 1.1rem; }
+.branch .starters-head {
+  display: flex; align-items: center; position: relative; min-height: 1.5rem; margin: 0 0 0.55rem; padding: 0 0 0 1.6rem;
+  font: 600 var(--t-label)/1.2 var(--head); letter-spacing: 0.08em; text-transform: uppercase; color: var(--label);
+}
+/* The junction ring: steel at rest, the phosphor while the box has words in it. */
+.branch .starters-head::before {
+  content: ""; position: absolute; z-index: 3; left: calc(var(--bx) - 7px); top: calc(50% - 7px);
+  box-sizing: border-box; width: 14px; height: 14px; border: 2px solid var(--steel-rail); border-radius: 50%; background: #101611;
+  transition: background-color var(--afterglow), border-color var(--afterglow), box-shadow var(--afterglow);
+}
+/* The level run from the box's edge to the junction. */
+.branch .starters-head::after { content: ""; position: absolute; z-index: 1; left: -2.5rem; width: calc(2.5rem + var(--bx) - 7px); top: calc(50% - 1px); height: 2px; background: var(--steel-rail); transition: background-color var(--afterglow), filter var(--afterglow); }
+.welcome-words:has(textarea:not(:placeholder-shown)) .branch .starters-head::before { background: var(--brand); border-color: var(--brand); box-shadow: 0 0 6px var(--brand), 0 0 16px color-mix(in srgb, var(--brand) 45%, transparent); transition-duration: var(--glow-in); }
+.welcome-words:has(textarea:not(:placeholder-shown)) .branch .starters-head::after { background: var(--brand); filter: drop-shadow(0 0 3px color-mix(in srgb, var(--brand) 70%, transparent)); transition-duration: var(--glow-in); }
+.branch::before { content: ""; position: absolute; z-index: 1; left: calc(var(--bx) - 1px); top: 0.75rem; bottom: 7px; width: 2px; background: var(--steel-rail); }
+.branch > .branch-end { position: absolute; z-index: 2; left: calc(var(--bx) - 7px); bottom: 6px; width: 14px; height: 2px; background: var(--rail-hi); }
+.branch .starters { position: relative; display: grid; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+.branch .starters > li { position: relative; padding-left: 1.6rem; }
+.branch .starters > li::before {
+  content: ""; position: absolute; z-index: 2; left: calc(var(--bx) - 6px); top: calc(50% - 6px);
+  box-sizing: border-box; width: 12px; height: 12px; border: 2px solid var(--steel-rail); border-radius: 50%; background: #101611;
+  transition: border-color var(--afterglow), background-color var(--afterglow), box-shadow var(--afterglow);
+}
+.branch .starters > li::after { content: ""; position: absolute; z-index: 1; left: calc(var(--bx) + 6px); top: calc(50% - 1px); width: calc(1.6rem - var(--bx) - 6px); height: 2px; background: var(--steel-rail); }
+.page-home .welcome .branch .starters a {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; width: 100%; box-sizing: border-box;
+  min-height: 2.75rem; padding: 0.5rem 0.8rem 0.5rem 0.95rem; white-space: normal;
+  font: 500 0.9375rem/1.25 var(--sans); color: var(--ink); text-align: left; text-decoration: none;
+  background: var(--key); border: 0; border-radius: 4px;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 1px 0 rgb(0 0 0 / 0.5);
+  transition: box-shadow var(--afterglow), background-color var(--afterglow), color 0.15s;
+}
+.branch .starters a .go { flex: none; width: 1rem; height: 1rem; color: var(--rail-hi); transition: transform 0.15s; }
+.page-home .welcome .branch .starters a:is(:hover, :focus-visible) { color: var(--heading); background: #222d35; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07), inset 2px 0 0 var(--brand), 0 1px 0 rgb(0 0 0 / 0.5); transition-duration: var(--glow-in); }
+.branch .starters a:hover .go { transform: translateX(2px); color: var(--steel); }
+.branch .starters > li:has(a:hover, a:focus-visible)::before { border-color: var(--brand); background: var(--brand); box-shadow: 0 0 8px color-mix(in srgb, var(--brand) 60%, transparent); transition-duration: var(--glow-in); }
+.branch:has(.starters[hidden])::before, .branch:has(.starters[hidden]) > .branch-end { display: none; }
+
+/* ---- Rule heads (after Backlit Plate): the head, a 1px steel rule, the count and links at the right */
+.rule-head { display: flex; align-items: baseline; gap: 0 0.9rem; min-height: 2.75rem; margin: 0 0 0.6rem; }
+.rule-head h2 { flex: none; margin: 0; display: block; }
+.rule-head .groove { flex: 1 1 1.5rem; align-self: center; height: 1px; margin-top: 0.15rem; background: var(--line-2); }
+.rule-fig, .rule-end { flex: none; display: inline-flex; align-items: baseline; gap: 0 0.5rem; font: 400 0.9375rem/1.2 var(--sans); font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.rule-end a { display: inline-flex; align-items: baseline; justify-content: center; min-width: 2.75rem; gap: 0.25rem; padding: 0.9rem 0; margin: -0.9rem 0; font-weight: 500; color: var(--steel); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--steel) 40%, transparent); text-underline-offset: 0.2em; }
+.rule-end a .icon { width: 0.95rem; height: 0.95rem; align-self: center; }
+.rule-end a:hover { color: var(--heading); text-decoration-color: currentColor; }
+.rule-end .late-count { font-weight: 600; color: var(--amber); text-decoration-color: color-mix(in srgb, var(--amber) 50%, transparent); }
+.sl-sep { color: var(--rail-hi); }
+
+/* Every other section head is a rule head as well: the head, then the steel rule, then its links. */
+.section-head, .month-head { display: flex; align-items: center; gap: 0 0.9rem; }
+.month-head > h2 { flex: 1 1 auto; margin: 0; }
+.section-head > h2 { flex: 1 1 auto; display: flex; align-items: center; gap: 0 0.75rem; margin: 0; font-size: var(--t-head); }
+.section-head > h2::after { content: ""; flex: 1 1 1.5rem; height: 1px; margin-left: 0.15rem; background: var(--line-2); }
+
+/* ---- Setup: one slate strip, a 3px amber edge; only the next ring coloured --------------------- */
+.setup-strip { background: var(--slate); border: 1px solid #262e35; border-left: 3px solid var(--amber); border-radius: 4px; padding: 0.35rem 1.2rem 0.35rem 1.1rem; min-height: 3.75rem; }
+.setup-strip h2 { font: 650 1.125rem/1.2 var(--head); font-stretch: 75%; font-variation-settings: "wdth" 75; }
+.setup-track a { width: 2.75rem; height: 2.75rem; color: var(--ink-2); font: 500 0.875rem/1 var(--mono); }
+.setup-track a::before { border-color: var(--steel-rail); background: var(--slate); }
+.setup-track .next-step a { color: var(--amber); text-shadow: none; }
+.setup-track .next-step a::before { border-color: var(--amber); background: color-mix(in srgb, var(--amber) 14%, var(--slate)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--amber) 14%, transparent); }
+.all-steps { font-size: 0.9375rem; }
+.setup-next { display: inline-grid; gap: 0.05rem; justify-items: start; align-content: center; min-height: 2.75rem; text-decoration: none; }
+.setup-next .sn-main { display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600; color: var(--heading); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--amber) 55%, transparent); text-underline-offset: 0.22em; }
+.setup-next:hover .sn-main { text-decoration-color: currentColor; }
+.sn-clause { font: 400 var(--t-small)/1.3 var(--sans); color: var(--ink-2); }
+@media (max-width: 63.99rem) { .sn-clause { display: none; } .setup-next { margin-left: 0; } }
+
+/* ---- The tick: a square on the rail, the stop and the control in one ---------------------------- */
+.tick-line button.tick::before, .tick-line .task-box {
+  width: 1.375rem; height: 1.375rem; border: 2px solid var(--steel-rail); border-radius: 4px; background: var(--tray); border-style: solid;
+}
+.tick-line .late button.tick::before, .tick-line .undated button.tick::before { border-color: var(--steel-rail); border-style: solid; }
+.tick-line button.tick .icon { width: 0.85rem; height: 0.85rem; color: var(--brand); stroke-width: 2.5; }
+.tick-line button.tick:is(:hover, :focus-visible)::before { background: var(--surface-3); border-color: var(--rail-hi); border-style: solid; box-shadow: none; }
+.tick-line button.tick:is(:hover, :focus-visible) .icon { opacity: 0.45; }
+.tick-line button.tick:focus-visible { outline: 0; }
+.tick-line button.tick:focus-visible::before { box-shadow: 0 0 0 2px var(--tray), 0 0 0 4px var(--brand); }
+.tick-line button.tick:active::before { background: color-mix(in srgb, var(--brand) 22%, var(--surface-3)); border-color: var(--brand); box-shadow: 0 0 4px var(--brand), 0 0 12px color-mix(in srgb, var(--brand) 55%, transparent); }
+.tick-line button.tick:active .icon { opacity: 1; color: var(--brand); }
+.tick-line .task-done .task-box { background: color-mix(in srgb, var(--sage) 16%, var(--tray)); border-color: var(--sage); box-shadow: 0 0 10px -3px var(--sage); }
+.tick-line .task-done .task-box::after { border-color: var(--sage); }
+.tick-line .task-cancelled .task-box { border-style: solid; border-color: var(--pewter); background: repeating-linear-gradient(135deg, transparent 0 3px, color-mix(in srgb, var(--pewter) 40%, transparent) 3px 4px), var(--tray); }
+/* The now tick: a steady 1px phosphor line across the list, 'now' in the margin; on load it
+   comes up bright and settles over the kit's 1.2s afterglow. */
+.tick-line .now-stop {
+  left: calc(var(--rx) - var(--px) - 6px); width: calc(100% + var(--px) - var(--rx) + 6px); height: 1px; top: calc(var(--nowgap) / -2);
+  background: var(--brand); border-radius: 0;
+  box-shadow: 0 0 6px color-mix(in srgb, var(--brand) 50%, transparent);
+  animation: now-settle 1.2s cubic-bezier(0.45, 0, 0.6, 1) 0.3s both;
+}
+.tick-line .now-stop::after, .tick-line .now-stop > .now-run { content: none; display: none; }
+.tick-line .now-stop::before { content: "now"; right: calc(100% + 0.45rem); color: var(--brand); text-shadow: 0 0 6px color-mix(in srgb, var(--brand) 55%, transparent); }
+@keyframes now-settle { from { box-shadow: 0 0 4px var(--brand), 0 0 16px 2px color-mix(in srgb, var(--brand) 70%, transparent); filter: brightness(1.5); } }
+
+/* ---- Home's To do: margin day, square stop, task, who, due in words -------------------------- */
+.checklist.tick-line { --m: 5.4rem; --rx: calc(var(--m) + 1.4rem); --px: calc(var(--rx) + 1.6rem); --ly: 1.42rem; --nowgap: 1.4rem; }
+.checklist.tick-line > li { grid-template-columns: minmax(0, 1fr) 3.6rem 8.6rem; column-gap: 0.8rem; min-height: 2.9rem; }
+.checklist .hang .stamp.abs, .task-line .hang .stamp.abs { word-spacing: -0.3em; }
+.checklist .hang .stamp.abs { font: 400 0.8125rem/1.3 var(--mono); font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; }
+.checklist .hang { top: calc(var(--ly) - 0.5lh); }
+.checklist .who { font-size: var(--t-small); color: var(--ink-2); }
+.checklist .due, .task-line .due-w { font: 400 var(--t-small)/1.3 var(--sans); text-align: right; color: var(--ink-2); }
+.checklist .due.warn, .task-line .due-w.warn { font-weight: 500; color: var(--amber); }
+.home-todo .colheads { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 3.6rem 8.6rem; column-gap: 0.8rem; margin: 0 0 0.15rem; padding: 0 0.5rem 0.35rem var(--px); --m: 5.4rem; --px: calc(var(--m) + 2.5rem); }
+.colheads .ch-day { position: absolute; left: 0; bottom: 0.35rem; width: calc(var(--m) - 0.2rem); text-align: right; }
+.home-todo .colheads .ch-due { text-align: right; }
+
+/* ---- Lately added on the line: a steel rail whose stops are the kind rings --------------------- */
+.lately-rows { position: relative; }
+.lately-rows::before { content: ""; position: absolute; left: calc(0.25rem + 0.95rem - 1px); top: 1.45rem; bottom: 1.45rem; width: 2px; background: var(--steel-rail); }
+.lately-rows > li { grid-template-columns: 1.9rem minmax(0, 1fr) auto; column-gap: 0.85rem; padding-left: 0.25rem; background: none; }
+.lately-rows > li > .kind-ring { grid-column: 1; position: relative; z-index: 1; border-color: var(--kind, var(--lilac)); }
+.lately-rows > li > .t { grid-column: 2; }
+.lately-rows > li > :is(.for, .go) { grid-column: 3; text-align: right; }
+.lately-rows .kind-word { margin-left: 0.35rem; font: 500 0.8125rem/1.2 var(--sans); color: var(--kind, var(--ink-2)); }
+
+/* ---- The To do page: day, tick, task, who, due in words, Edit ---------------------------------- */
+.task-board, .task-board .task-line { --m: 6rem; --rx: calc(var(--m) + 1.1rem); --px: calc(var(--rx) + 1.75rem); --ly: 1.45rem; --nowgap: 1.6rem; }
+.task-line > li.task { grid-template-columns: minmax(0, 1fr) 6.5rem 10.5rem 4.5rem; column-gap: 0.9rem; }
+.task-line .hang .stamp.abs { font: 400 0.8125rem/1.3 var(--mono); font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; }
+.task-line .hang { top: calc(var(--ly) - 0.5lh); }
+.task-line .who { font-size: var(--t-small); }
+.task-line .due-w { white-space: nowrap; }
+.task-line details.more { justify-self: end; }
+.task-board .colheads { display: grid; grid-template-columns: minmax(0, 1fr) 6.5rem 10.5rem 4.5rem; column-gap: 0.9rem; padding: 0.5rem 0.4rem 0.45rem var(--px); }
+.task-board .colheads .ch-day { position: absolute; left: 0; bottom: 0.45rem; width: calc(var(--m) - 0.6rem); text-align: right; }
+/* 'Done' over the stops, centred on the rail, on the one header baseline. */
+.task-board .colheads .ch-due, .task-board .colheads .ch-edit { position: static; width: auto; text-align: right; }
+.task-board .colheads { position: relative; padding-top: 0.75rem; }
+@media (max-width: 47.99rem) {
+  .task-board, .task-board .task-line { --m: 0rem; --rx: 1.4rem; --px: 2.9rem; }
+  .task-line > li.task { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "t e" "u e" "w e" "s s"; }
+  .task-line .due-w { grid-area: u; text-align: left; }
+  .task-board .colheads { display: none; }
+}
+
+/* ---- Status: one graphite faceplate, two windows of glass, the tallies under it --------------- */
+.instrument.faceplate {
+  display: grid; grid-template-columns: minmax(0, 1fr) 23rem; gap: 0.75rem; align-items: stretch;
+  margin: 0 0 1rem; padding: 0.75rem;
+  background: linear-gradient(180deg, #1c2226, #14191c); border: 2px solid #2a3035; border-radius: 12px;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 18px 40px -26px #000, 0 0 70px -40px color-mix(in srgb, var(--phosphor, var(--brand)) 40%, transparent);
+}
+.faceplate .crt { display: flex; flex-direction: column; margin: 0; padding: 0; background: none; border: 0; border-radius: 4px; box-shadow: none; }
+.faceplate .crt::before, .faceplate .crt::after { display: none; }
+.faceplate .crt-tube { flex: 1 1 auto; border-radius: 3px / 4px; }
+.faceplate .spend-now { display: flex; flex-direction: column; margin: 0; min-width: 0; }
+.faceplate .spend-now > .crt { flex: 1 1 auto; width: 100%; max-width: none; }
+.faceplate .spend-meter .crt-tube { display: flex; flex-direction: column; justify-content: space-between; }
+.faceplate .lamp-board .crt-tube { padding: 0.65rem 1rem; display: flex; align-items: center; }
+.faceplate .lamp-strings { width: 100%; margin: 0; }
+.faceplate .crt .lamp-string { grid-template-columns: 8.4rem auto minmax(0, 1fr); min-height: 3.6rem; }
+.gl.on { animation: breathe-lamp 3.2s ease-in-out infinite; }
+@keyframes breathe-lamp { 50% { opacity: 0.6; box-shadow: 0 0 3px var(--phosphor), 0 0 7px color-mix(in srgb, var(--phosphor) 40%, transparent); } }
+.light.on { animation: breathe-lamp 3.2s ease-in-out infinite; }
+.spend-meter .crt-tube { padding: 0.75rem 1rem 0.35rem; }
+.readout-line { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
+.readout .readout-figure { margin: 0; font-size: 2.6rem; line-height: 0.9; }
+.readout-figure .readout-label { font-size: 1.15rem; letter-spacing: 0.08em; color: var(--phosphor-dim); }
+.readout-side { display: grid; justify-items: end; gap: 0.2rem; margin: 0.2rem 0 0 !important; font-size: 1.1rem; line-height: 1; letter-spacing: 0.06em; }
+.readout-pct { color: var(--phosphor-bright); }
+.readout-avg { display: flex; align-items: center; gap: 0.4rem; }
+.ghost-key { width: 1rem; height: 2px; background: var(--phosphor); opacity: 0.5; }
+.dial { display: block; width: 100%; height: auto; max-height: 13.5rem; margin: 0.1rem 0 0.15rem; overflow: visible; }
+.dial-arc { fill: none; stroke: var(--phosphor); stroke-width: 1.75; opacity: 0.85; }
+.dial-ticks { fill: none; stroke: var(--phosphor); stroke-width: 1.25; opacity: 0.7; }
+.dial-limit { fill: none; stroke: var(--phosphor-bright); stroke-width: 2.5; stroke-linecap: round; }
+.dial-zone { fill: none; stroke: var(--amber); stroke-width: 8; opacity: 0.55; }
+.dial-over { fill: none; stroke: var(--red); stroke-width: 8; stroke-dasharray: 1.5 2.5; opacity: 0.6; }
+.dial-num { font: 400 19px/1 var(--terminal); fill: var(--phosphor-dim); }
+.dial-num.at-limit { fill: var(--phosphor-bright); }
+.dial-unit { font: 400 16px/1 var(--terminal); letter-spacing: 0.12em; fill: var(--phosphor-dim); }
+.needle-core { fill: none; stroke: var(--hot); stroke-width: 1.75; }
+.needle-halo { fill: none; stroke: var(--phosphor); stroke-width: 8; opacity: 0.32; }
+.needle-tip { fill: none; stroke: #fff; stroke-width: 3; }
+.needle-ghost { fill: none; stroke: var(--phosphor); stroke-width: 2; opacity: 0.45; stroke-dasharray: 5 3; }
+.dial-ghost { font: 400 17px/1 var(--terminal); letter-spacing: 0.04em; fill: var(--phosphor-dim); }
+.dial-major { fill: none; stroke: var(--phosphor); stroke-width: 2; opacity: 0.9; }
+.pivot-cap { fill: #34404b; stroke: #56708c; stroke-width: 2; }
+.pivot-dot { fill: var(--brand); filter: drop-shadow(0 0 3px var(--brand)); }
+/* The row names on the glass are labels, not links in a sentence: VT323 at the dimmer phosphor, no
+   underline, so the lamps carry the light. The whole row is still the link. */
+.faceplate .ls-name { font: 500 0.8125rem/1.2 var(--mono); color: var(--phosphor-dim); text-decoration: none; text-shadow: 0 0 6px color-mix(in srgb, var(--phosphor) 30%, transparent); letter-spacing: 0.04em; text-transform: none; }
+.faceplate .lamp-string:is(:hover, :focus-visible) .ls-name { color: #04100a; }
+.needle { transform-box: view-box; transform-origin: 200px 185px; animation: swing 1.3s cubic-bezier(0.3, 0.7, 0.4, 1) 0.45s both; }
+@keyframes swing { 0% { rotate: 0deg; } 26% { rotate: 14deg; } 50% { rotate: 2deg; } 70% { rotate: 5deg; } 86% { rotate: 0.5deg; } 100% { rotate: 0deg; } }
+.instrument.faceplate .tube-note { display: block; align-self: flex-start; width: auto; margin: 0.45rem 0 -0.2rem 0.1rem; font-size: var(--t-small); text-align: left; }
+.faceplate .tube-note a { display: inline-flex; align-items: center; min-height: 2.75rem; margin-block: -0.6rem; }
+/* One line of big condensed tallies, each with its lamp. */
+.tally-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 1.6rem; margin: 0 0 2rem; padding: 0 0.25rem; list-style: none; font: 400 1rem/1.2 var(--sans); color: var(--ink-2); }
+.tally-line > li { display: inline-flex; align-items: baseline; gap: 0.45rem; }
+.tally-line .light { align-self: center; }
+.tally-line .figure { font: 650 2rem/1 var(--head); font-stretch: 75%; font-variation-settings: "wdth" 75; font-variant-numeric: tabular-nums; color: var(--heading); }
+.tally-line .t-part, .tally-line .t-part .figure { color: var(--amber); }
+/* Every other section head on these pages is a rule head too. */
+:is(.panel, .band, .plan-board) > h2, .month-head > h2 { display: flex; align-items: center; gap: 0 0.75rem; font: 650 var(--t-head)/1.15 var(--head); font-stretch: 75%; font-variation-settings: "wdth" 75; color: var(--heading); }
+:is(.panel, .band, .plan-board) > h2::after, .month-head > h2::after { content: ""; flex: 1 1 auto; height: 1px; background: var(--line-2); }
+@media (max-width: 52rem) { .instrument.faceplate { grid-template-columns: minmax(0, 1fr); } .gl-cell { width: 3.3rem; } }
+
+/* ---- Ideas: the line calmed; the kind word in its kind's colour after the name ---------------- */
+.st-dot { fill: color-mix(in srgb, var(--phosphor) 70%, transparent); transition: fill var(--afterglow); }
+.st-num { fill: color-mix(in srgb, var(--phosphor) 80%, transparent); }
+.page-ideas .st { --on: 0; }
+.page-ideas .st:is(.near, .far) .st-tick { stroke: var(--phosphor); }
+.st-dot { filter: drop-shadow(0 0 calc(var(--on) * 6px + 0.01px) var(--phosphor)); }
+.idea-row .kind-word { margin-left: 0.35rem; font: 500 0.8125rem/1.2 var(--sans); color: var(--kind, var(--ink-2)); }
+.idea-row .t a { font-weight: 600; }
+
+/* ---- Plans: quiet weeks are a 1px dashed length of the line, named on it ----------------------- */
+.qr-dash { border-top: 1px dashed var(--steel-rail); }
+.qr-label { padding: 0 0.6rem; font: 400 var(--t-small)/1.2 var(--sans); color: var(--dim); }
+td.gone .event { background: #161c24; border-color: #262e36; border-top-color: #4a5a6a; }
+
+/* ---- Chat: the family's lines are neutral plates with the plate-cap bar; your turn has E4's halo */
+.thread:not(.brief) > .said-them .bubble { background: var(--surface-2); border-color: #2a333b; border-left: 3px solid var(--plate-cap); }
+.turn-ring { box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 14%, transparent), 0 0 8px var(--brand), 0 0 24px -4px color-mix(in srgb, var(--brand) 55%, transparent); }
+
+/* ---- Home below 64rem: headline, box, the branch stacked, the tube, then the rail turned down -- */
+@media (max-width: 63.99rem) {
+  .welcome.sill-board { --pp: clamp(1rem, 4vw, 1.5rem); --gut: 1.75rem; --gx: 0.55rem; margin-bottom: 2rem; padding: 1.25rem var(--pp) 1.5rem; border-bottom: 1px solid var(--line-2); border-radius: 14px; }
+  .welcome.sill-board::before { height: 60%; -webkit-mask-image: radial-gradient(60% 70% at 0% 45%, #000, transparent 85%); mask-image: radial-gradient(60% 70% at 0% 45%, #000, transparent 85%); }
+  .headline .ask-question { font-size: clamp(2.25rem, 10vw, var(--t-display)); }
+  .welcome.sill-board .welcome-words { display: block; }
+  .ask .send { width: auto; padding: 0 0.75rem; gap: 0.35rem; }
+  .ask .ask-bar { column-gap: 0.5rem; padding-left: 0.35rem; }
+  .ask .who select { flex: 1 1 0; min-width: 9.4rem; width: auto; padding-left: 0.65rem; padding-right: 1.8rem; font-size: 0.95rem; white-space: nowrap; background-position-x: calc(100% - 0.6rem); }
+  .ask .send .label { position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
+  .welcome .ask textarea { min-height: 3.6rem; }
+  /* The branch drops from the box's foot, the keys stacked down its right. */
+  .branch { margin-top: 0.3rem; padding-top: 0.9rem; }
+  .branch .starters { gap: 0.35rem; }
+  .page-home .welcome .branch .starters a { min-height: 2.75rem; padding: 0.4rem 0.7rem 0.4rem 0.85rem; font-size: 0.9375rem; }
+  .branch .starters-head { margin-bottom: 0.4rem; }
+  .branch .starters-head::after { left: calc(var(--bx) - 1px); top: -1.5rem; width: 2px; height: calc(1.5rem + 50% - 7px); }
+  .branch::before { top: 1.6rem; }
+  .checklist.tick-line { --m: 0rem; --rx: 1.4rem; --px: 2.9rem; }
+  .checklist.tick-line > li { grid-template: "w o" auto "u u" auto / minmax(0, 1fr) auto; row-gap: 0.1rem; padding-block: 0.45rem; }
+  .checklist.tick-line .hang { display: none; }
+  .checklist.tick-line .checklist-body { grid-area: w; grid-row: auto; }
+  .checklist.tick-line .who { grid-area: o; }
+  .checklist.tick-line .due { grid-area: u; text-align: left; }
+  .checklist.tick-line .now-stop::before { content: none; }
+  .home-todo .colheads { display: none; }
+}
+
+@media (min-width: 52rem) { .dashboard { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); column-gap: 1.75rem; } }
+@media (max-width: 40rem) { .rule-head { flex-wrap: wrap; } .rule-head .groove { display: none; } .rule-head .rule-end, .rule-head .rule-fig { flex: 1 1 auto; justify-content: flex-end; } }
+
+/* ---- Round 14a revision ------------------------------------------------------------------------ */
+/* Ideas: stations named by short name, two tiers, tallies for dots that would touch. */
+.st-leader { stroke: var(--phosphor); stroke-opacity: 0.35; }
+.st.merged .st-dot.one { opacity: var(--on); }
+.tally .st-dot { fill: color-mix(in srgb, var(--phosphor) 70%, transparent); }
+.tally-n { fill: var(--phosphor-dim); font-family: var(--terminal); }
+
+/* Home: the starters light under a pointer only where there is one (a phone's last tap is not
+   a hover), and always for the keyboard. */
+@media (hover: none), (max-width: 40rem) {
+  .page-home .welcome .branch .starters a:hover:not(:focus-visible) { color: var(--ink); background: var(--key); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 1px 0 rgb(0 0 0 / 0.5); }
+  .branch .starters > li:has(a:hover):not(:has(a:focus-visible))::before { border-color: var(--steel-rail); background: #101611; box-shadow: none; }
+}
+
+/* The box on a phone: From over the picker, then mic and Send on the picker's line. */
+@media (max-width: 40rem) {
+  .ask .ask-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "who mic send" "where where where"; align-items: end; gap: 0.5rem; padding: 0.35rem 0.4rem 0 0.4rem; }
+  .ask .ask-bar > .who { grid-area: who; display: flex; flex-direction: column; align-items: stretch; gap: 0.3rem; min-width: 0; }
+  .welcome .ask .who > label, .ask .who > label { position: static; width: auto; height: auto; overflow: visible; clip-path: none; white-space: nowrap; font: 600 var(--t-label)/1.2 var(--head); letter-spacing: 0.08em; text-transform: uppercase; color: var(--label); }
+  .ask .ask-bar .who select { width: 100%; min-width: 0; flex: none; padding-left: 0.6rem; padding-right: 1.6rem; font-size: 0.9375rem; background-position-x: calc(100% - 0.5rem); }
+  .ask .ask-bar > .locate { grid-area: where; }
+  .ask .ask-bar > .mic-slot { grid-area: mic; margin: 0; }
+  .ask .ask-bar > .send { grid-area: send; margin: 0; }
+}
+.idea-row .kind-word, .lately-rows .kind-word { text-transform: lowercase; }
+
+/* The new-idea form says what the legend says: a needed field's stop is a filled steel stop, the
+   stop of the field being written in lights, and the line ends at Add it in the T buffer. */
+@media (min-width: 40.01rem) {
+  .idea-form > :is(.field.wide, .field.wide + .field:not(.wide)):has(:required)::before { background: var(--steel-rail); border-color: var(--steel-rail); }
+  .idea-form > :is(.field.wide, .field.wide + .field:not(.wide)):has(:required):is(:focus-within, :has(+ .field:not(.wide):focus-within))::before { background: var(--brand); border-color: var(--brand); }
+  .panel.idea-form > .field.wide.actions.actions.actions::before { left: calc(var(--fx) - 3.3rem - 7px); top: calc(50% - 1px); width: 14px; height: 2px; border: 0; border-radius: 0; background: var(--rail-hi); box-shadow: none; }
+  .panel.idea-form > .field.wide.actions.actions.actions:focus-within::before { background: var(--rail-hi); border: 0; box-shadow: none; }
+  .panel.idea-form { background-image: linear-gradient(var(--steel-rail), var(--steel-rail)); background-size: 2px calc(100% - 4.65rem); }
+}

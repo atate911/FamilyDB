@@ -1,0 +1,1554 @@
+{
+ "ranking": [
+  {
+   "id": "x14b-manual-cross",
+   "name": "Lit Manual, Dialled",
+   "total": 68.4,
+   "weights": 8.5,
+   "plain": 64.5,
+   "n": 8,
+   "top4": 6,
+   "promise": 5,
+   "byLens": {
+    "feedback": 8.4,
+    "soul": 7.8,
+    "style": 8.3,
+    "system": 7.9,
+    "interaction": 7.8,
+    "type": 8.1,
+    "usability": 8,
+    "skeptic": 8.2
+   },
+   "mean": 8.05,
+   "plainMean": 8.06
+  },
+  {
+   "id": "x14b-waypoint-cross",
+   "name": "Waypoint, Patched",
+   "total": 67.9,
+   "weights": 8.5,
+   "plain": 64.1,
+   "n": 8,
+   "top4": 6,
+   "promise": 3,
+   "byLens": {
+    "feedback": 8.1,
+    "soul": 7.6,
+    "style": 8.1,
+    "system": 8,
+    "interaction": 8.1,
+    "type": 7.9,
+    "usability": 8.3,
+    "skeptic": 8
+   },
+   "mean": 7.99,
+   "plainMean": 8.01
+  },
+  {
+   "id": "x14b-trued-cross",
+   "name": "Trued, Yard Lit",
+   "total": 67.7,
+   "weights": 8.5,
+   "plain": 63.80000000000001,
+   "n": 8,
+   "top4": 5,
+   "promise": 0,
+   "byLens": {
+    "feedback": 8.5,
+    "soul": 7.8,
+    "style": 7.9,
+    "system": 8.2,
+    "interaction": 8.2,
+    "type": 7.7,
+    "usability": 7.9,
+    "skeptic": 7.6
+   },
+   "mean": 7.96,
+   "plainMean": 7.98
+  },
+  {
+   "id": "x14b-folio-cross",
+   "name": "Folio, Fastext",
+   "total": 67.15,
+   "weights": 8.5,
+   "plain": 63.1,
+   "n": 8,
+   "top4": 4,
+   "promise": 5,
+   "byLens": {
+    "feedback": 7.7,
+    "soul": 8.1,
+    "style": 8,
+    "system": 7.9,
+    "interaction": 8,
+    "type": 8.3,
+    "usability": 8.1,
+    "skeptic": 7
+   },
+   "mean": 7.9,
+   "plainMean": 7.89
+  },
+  {
+   "id": "x14b-desk-cross",
+   "name": "Desk Terminal, Wired",
+   "total": 67.05,
+   "weights": 8.5,
+   "plain": 62.9,
+   "n": 8,
+   "top4": 4,
+   "promise": 0,
+   "byLens": {
+    "feedback": 7.9,
+    "soul": 8.3,
+    "style": 8.2,
+    "system": 8,
+    "interaction": 7.8,
+    "type": 8,
+    "usability": 7.4,
+    "skeptic": 7.3
+   },
+   "mean": 7.89,
+   "plainMean": 7.86
+  },
+  {
+   "id": "x14b-dessau-cross",
+   "name": "Dessau, Dialled",
+   "total": 66.8,
+   "weights": 8.5,
+   "plain": 62.8,
+   "n": 8,
+   "top4": 2,
+   "promise": 6,
+   "byLens": {
+    "feedback": 7.6,
+    "soul": 8,
+    "style": 8.6,
+    "system": 7.7,
+    "interaction": 7.9,
+    "type": 7.9,
+    "usability": 7.5,
+    "skeptic": 7.6
+   },
+   "mean": 7.86,
+   "plainMean": 7.85
+  },
+  {
+   "id": "x14b-sill-cross",
+   "name": "Sill Line, Wired",
+   "total": 65.85,
+   "weights": 8.5,
+   "plain": 62.0,
+   "n": 8,
+   "top4": 2,
+   "promise": 0,
+   "byLens": {
+    "feedback": 8.3,
+    "soul": 7.7,
+    "style": 7.8,
+    "system": 7.7,
+    "interaction": 7.9,
+    "type": 7.6,
+    "usability": 7.9,
+    "skeptic": 7.1
+   },
+   "mean": 7.75,
+   "plainMean": 7.75
+  },
+  {
+   "id": "x14b-quote-cross",
+   "name": "Quote Board, Lit",
+   "total": 64.45,
+   "weights": 8.5,
+   "plain": 60.699999999999996,
+   "n": 8,
+   "top4": 1,
+   "promise": 0,
+   "byLens": {
+    "feedback": 7.4,
+    "soul": 7.5,
+    "style": 7.8,
+    "system": 7.6,
+    "interaction": 7.6,
+    "type": 8.1,
+    "usability": 7.3,
+    "skeptic": 7.4
+   },
+   "mean": 7.58,
+   "plainMean": 7.59
+  },
+  {
+   "id": "x14b-departures-cross",
+   "name": "Departures, Terminus",
+   "total": 64.30000000000001,
+   "weights": 8.5,
+   "plain": 60.60000000000001,
+   "n": 8,
+   "top4": 0,
+   "promise": 0,
+   "byLens": {
+    "feedback": 7.7,
+    "soul": 7.4,
+    "style": 7.6,
+    "system": 7.6,
+    "interaction": 7.6,
+    "type": 7.7,
+    "usability": 7.5,
+    "skeptic": 7.5
+   },
+   "mean": 7.56,
+   "plainMean": 7.58
+  },
+  {
+   "id": "x14b-pocket-cross",
+   "name": "Pocket Diary, Bound",
+   "total": 64.05000000000001,
+   "weights": 8.5,
+   "plain": 60.4,
+   "n": 8,
+   "top4": 0,
+   "promise": 3,
+   "byLens": {
+    "feedback": 7.9,
+    "soul": 7.3,
+    "style": 7.5,
+    "system": 7.6,
+    "interaction": 7.4,
+    "type": 7.6,
+    "usability": 7.7,
+    "skeptic": 7.4
+   },
+   "mean": 7.54,
+   "plainMean": 7.55
+  },
+  {
+   "id": "x14b-listing-cross",
+   "name": "Listing, Dropped Through",
+   "total": 63.70000000000001,
+   "weights": 8.5,
+   "plain": 60.10000000000001,
+   "n": 8,
+   "top4": 1,
+   "promise": 2,
+   "byLens": {
+    "feedback": 7.4,
+    "soul": 7.2,
+    "style": 7.3,
+    "system": 7.7,
+    "interaction": 7.7,
+    "type": 7.7,
+    "usability": 7.2,
+    "skeptic": 7.9
+   },
+   "mean": 7.49,
+   "plainMean": 7.51
+  },
+  {
+   "id": "x14b-settled-cross",
+   "name": "Switchboard, Patched",
+   "total": 63.400000000000006,
+   "weights": 8.5,
+   "plain": 59.7,
+   "n": 8,
+   "top4": 1,
+   "promise": 0,
+   "byLens": {
+    "feedback": 7.3,
+    "soul": 7.4,
+    "style": 7.5,
+    "system": 7.6,
+    "interaction": 7.7,
+    "type": 7.6,
+    "usability": 8,
+    "skeptic": 6.6
+   },
+   "mean": 7.46,
+   "plainMean": 7.46
+  },
+  {
+   "id": "t3-track-refine2",
+   "name": "Trued, Relit",
+   "total": 62.65,
+   "weights": 8.5,
+   "plain": 59.0,
+   "n": 8,
+   "top4": 0,
+   "promise": 0,
+   "byLens": {
+    "feedback": 7.5,
+    "soul": 7.3,
+    "style": 7.4,
+    "system": 7.5,
+    "interaction": 7.5,
+    "type": 7.4,
+    "usability": 7.4,
+    "skeptic": 7
+   },
+   "mean": 7.37,
+   "plainMean": 7.38
+  },
+  {
+   "id": "x14b-plate-cross",
+   "name": "Plate, Channelled",
+   "total": 62.2,
+   "weights": 8.5,
+   "plain": 58.6,
+   "n": 8,
+   "top4": 0,
+   "promise": 0,
+   "byLens": {
+    "feedback": 7.5,
+    "soul": 7.2,
+    "style": 7.3,
+    "system": 7.5,
+    "interaction": 7.6,
+    "type": 7.7,
+    "usability": 6.9,
+    "skeptic": 6.9
+   },
+   "mean": 7.32,
+   "plainMean": 7.33
+  },
+  {
+   "id": "r13-idea-1",
+   "name": "Desk Terminal, Joined",
+   "total": 61.699999999999996,
+   "weights": 8.5,
+   "plain": 57.99999999999999,
+   "n": 8,
+   "top4": 0,
+   "promise": 0,
+   "byLens": {
+    "feedback": 7.4,
+    "soul": 7.4,
+    "style": 7.3,
+    "system": 7.4,
+    "interaction": 7.3,
+    "type": 7.3,
+    "usability": 7.1,
+    "skeptic": 6.8
+   },
+   "mean": 7.26,
+   "plainMean": 7.25
+  },
+  {
+   "id": "00-current",
+   "name": "Phosphor (today)",
+   "total": 41.7,
+   "weights": 8.5,
+   "plain": 39.0,
+   "n": 8,
+   "top4": 0,
+   "promise": 0,
+   "byLens": {
+    "feedback": 4.8,
+    "soul": 5.4,
+    "style": 5,
+    "system": 4.9,
+    "interaction": 5,
+    "type": 4.9,
+    "usability": 4.8,
+    "skeptic": 4.2
+   },
+   "mean": 4.91,
+   "plainMean": 4.88
+  }
+ ],
+ "judges": [
+  {
+   "lens": "feedback",
+   "scores": [
+    {
+     "id": "x14b-trued-cross",
+     "score": 8.5,
+     "why": "This is the most complete line language in the field. The lit now-rail runs from the Next up tube through every stop on Home, 'Around the house' is its own rail, Ideas has 'the line from home', Plans has a month line, To do a NOW rail and the chat ends in 'your turn': this is the Signal Box the owner asked for, carried to every page. The tube and meter keep a real glow, and the plates are now sized to their content. Colour stays mostly green and graphite, with thin icon tints."
+    },
+    {
+     "id": "x14b-manual-cross",
+     "score": 8.4,
+     "why": "The dial's lit wire drops onto the Coming up rail, Lately added hangs from a kind-labelled rail, and Status's 'FIG. 1 how it is wired' diagram is the finest line art in the heat. Its colour is the most varied while staying grounded (amber late, muted kind chips). The type is an editorial manual. The lower Home (Finish setting up, the kids' wishes) is still plain."
+    },
+    {
+     "id": "x14b-sill-cross",
+     "score": 8.3,
+     "why": "The tube's wire drops onto the Coming up rail, To do and Lately added hang from their own rails, the chat's spine ends in 'your turn', and Status's lamp board and meter faceplate is glowing phosphor where it belongs. The title is the best in the heat. Colour is a bit thin: green, graphite and one amber."
+    },
+    {
+     "id": "x14b-waypoint-cross",
+     "score": 8.1,
+     "why": "The flight-plan arcs over Coming up and Plans are fresh, beautiful line art. It has the lowest green share in the heat (39%), with big day and distance numerals, and the phone shows the next plan above the fold. But the glow is quieter than in the track lines, the Next up tube sits off to the side, and Status lost some soul."
+    },
+    {
+     "id": "x14b-pocket-cross",
+     "score": 7.9,
+     "why": "One line of time (Now, Next, Due, Later) runs down every page, with diary-set dates and a red bookmark ribbon under the nav, which is a lovely material touch of grounded colour. The month glass on Plans is charming. The Home right column is still a separate stack, and the line's labels are tiny."
+    },
+    {
+     "id": "x14b-desk-cross",
+     "score": 7.9,
+     "why": "It has the strongest CRT soul: a cased terminal with the title typed on its glass and a patch lead from its socket into the NOW lamp. Status's needle gauge and the To do glass are true phosphor. But the page around the case is nearly colourless (2% non-green neon, but little grounded colour either), so it still reads close to monochrome."
+    },
+    {
+     "id": "x14b-departures-cross",
+     "score": 7.7,
+     "why": "Vera's line down the left, with the box as its first stop and the setup and change-here stops, is real line art that leads the eye. The departures board, with its four-week trace, is well lit. The primary buttons became dark outlines in places, the page is greyer (69% green), and the right column is a little heavy."
+    },
+    {
+     "id": "x14b-folio-cross",
+     "score": 7.7,
+     "why": "It is a genuinely different system: serif heads, page numbers, a contents rail and NOW rails, at about 50% green with the most typographic variety. The Ideas radar column and the Plans countdown are well judged. The title fails as a label, and the page-number costume (P200 bars) still costs a little."
+    },
+    {
+     "id": "x14b-dessau-cross",
+     "score": 7.6,
+     "why": "The poster type and the head dials on every page are bold, and its colour comes back (violet, ochre and teal kind squares) without neon. Its line art is limited to underline rules and dotted leaders, the many dials begin to repeat, and the Home dial is large for what it says."
+    },
+    {
+     "id": "x14b-plate-cross",
+     "score": 7.5,
+     "why": "Oscilloscope traces head Coming up, Plans and To do (due dates around now), with good glow on the glass. The Status waveform panel is striking. But the page is still boxed slate panels at 69% green, and the trace strips on every page read as a repeated widget, not a system."
+    },
+    {
+     "id": "x14b-listing-cross",
+     "score": 7.4,
+     "why": "The head column of big counts and the stem dropping from the tube to NOW finally work as a straight drop. But the lists are plain, the colour is mostly green and grey, and the inner pages (Plans, To do) lost the listing feel."
+    },
+    {
+     "id": "x14b-quote-cross",
+     "score": 7.4,
+     "why": "The big figures read at a glance, and the tube's countdown on Home is nice. Its three equal columns on Home are cramped, it has little line art, and the glow stays inside one tube."
+    },
+    {
+     "id": "x14b-settled-cross",
+     "score": 7.3,
+     "why": "The household row and the Status three-column lamps are clear, and the radar beside Plans is well placed. But the page is mostly a tidy grid with little line art, and its lit marks are few."
+    },
+    {
+     "id": "r13-idea-1",
+     "score": 7.4,
+     "why": "Yardstick, Desk Terminal, Joined: a strong case and a meter, but boxed lists and nearly monochrome."
+    },
+    {
+     "id": "t3-track-refine2",
+     "score": 7.5,
+     "why": "Yardstick, Trued, Relit: the track language and glow are there, but the plates are stretched and the title is generic."
+    },
+    {
+     "id": "00-current",
+     "score": 4.8,
+     "why": "Yardstick, today's page: the glow DNA in full, but too bright and too contrasty, about 83% green, with no grounded colour and no line structure."
+    }
+   ],
+   "top4": [
+    "x14b-trued-cross",
+    "x14b-manual-cross",
+    "x14b-sill-cross",
+    "x14b-waypoint-cross"
+   ],
+   "promise": [
+    "x14b-manual-cross",
+    "x14b-waypoint-cross",
+    "x14b-pocket-cross"
+   ],
+   "fixes": [
+    {
+     "id": "x14b-trued-cross",
+     "suggestion": "Keep: the now-rail from the tube, 'Around the house', 'the line from home' on Ideas, the chat's 'your turn'. Fix: on the phone, put the Next up strip and the first stop above 'Or start with'. Give the Coming up plates one grounded companion (steel-cyan for the time, sage for 'anyone') rather than near-white on graphite. The page-head icon rings (violet Ideas, amber To do) drift: hold them to one muted family. Put a lamp on Lately added, which has no light of its own."
+    },
+    {
+     "id": "x14b-manual-cross",
+     "suggestion": "Keep: the dial wired to the Coming up rail, the kind-labelled Lately added rail and the Status FIG. 1 wiring diagram (carry that drawing to Settings as well). Fix: Home's lower left (Finish setting up, the kids' wishes) has no rail or lamp, so hang it from the same rail or give it one lit mark. On the phone the dial falls under the readout row, so move NEXT PLAN text up. The title 'Hand Vera anything' is generic: name the job."
+    },
+    {
+     "id": "x14b-sill-cross",
+     "suggestion": "Keep: the title, the tube's wire onto the Coming up rail, and the Status lamp board. Fix: add one grounded companion (steel-cyan on the plate times, wheat on the setup ring), since colour is near binary. Put the first Coming up stop above the fold on the phone. Hang Finish setting up, now a boxed amber band, from the rail as a stop."
+    },
+    {
+     "id": "x14b-waypoint-cross",
+     "suggestion": "Keep: the flight-plan arcs on Home and Plans, the big distance numerals on Ideas, and the Today readout strip. Fix: join the Next up tube to the arc (its wire stops at the first row). Bring back the glow on the arcs' lit stop and on the readout's date. Give Status a lit object beside the meter, such as rails for Who answers like Trued's."
+    },
+    {
+     "id": "x14b-pocket-cross",
+     "suggestion": "Keep: the single Now/Next/Due/Later line, the red bookmark ribbon and the month glass. Fix: set the right column (wishes, Something to eat) on the same line or a thin second line, not floating. Enlarge the line's labels to readable size. Remove the duplicate Next tube trace if it repeats Coming up."
+    },
+    {
+     "id": "x14b-desk-cross",
+     "suggestion": "Keep: the case, the title on the glass, and the patch lead into NOW. Fix: name grounded companions for the desk (steel-cyan dates, wheat for kids' wishes, muted kind colours in Lately added) so it stops reading monochrome. Thin the case bezel (the owner finds thick pewter slabs too dominant)."
+    },
+    {
+     "id": "x14b-departures-cross",
+     "suggestion": "Keep: Vera's line down the left with stops and the board's four-week trace. Fix: restore the bright primary on 'Add an idea' and 'Add something to do'. Replace the lost colour (69% green) with steel-cyan or sage on the board's times. Keep the right column's Change-here rail but lighten its rings."
+    },
+    {
+     "id": "x14b-folio-cross",
+     "suggestion": "Keep: the serif heads, the contents rail and the CRT title glass. Fix: change the words to an invitation that names the job, and drop the P-number bars from page tops (keep them in contents only)."
+    },
+    {
+     "id": "x14b-dessau-cross",
+     "suggestion": "Keep: the poster heads and the coloured kind squares. Fix: use one head dial per page at most where it carries data (To do's '3 late' is good, the Ideas radar is fine), and drop the Plans/Status repeats. Add one drawn line (a rail from NOW) to Coming up so it gains structure."
+    },
+    {
+     "id": "x14b-plate-cross",
+     "suggestion": "Keep: the oscilloscope traces and the Status waveform. Fix: unbox Home's sections onto rule heads, and make the traces line up with the rows beneath them (wire each spike to its row)."
+    }
+   ],
+   "titles": "Best: 'What needs a plan? Tell Vera.' (Sill) cannot be answered no, names the job and has a short lit word. 'Tell Vera what to plan.' (Trued) is plain and names who hears it. Both also sit well over their lit runs. 'Tell Vera. Let's plan.' (Dessau) has the most voice and works in sentence case. 'What should Vera plan?' (Plate, Quote) is fine but is a question for Vera, not the family. 'Send/Hand Vera anything to plan.' (Waypoint, Settled, Manual) is serviceable but generic. 'Jot it down for Vera to plan.' (Pocket) suits the diary but is long. Failing: 'Tell Vera what's on.' (Folio) reads as asking the page to show the calendar. 'Tell Vera where we're headed.' (Departures) fits the station but is vague about to-dos and ideas. 'Put it on Vera's list.' (Listing) sounds like to-do only.",
+   "notes": "The owner's strongest signals, fine line art that draws structure and glow kept where the phosphor is, are best met by the track lines (Trued, Sill), Lit Manual and Pocket: tour grammars given main-camp frames. The tour camp leads this panel through my lens, and the main camp's best (Desk) still wins on CRT soul but lags on colour and lines. Grafts that took: Manual's Status wiring figure (the best new line art), the stem/wire from each lit object onto its NOW rail (Sill, Trued, Manual, Listing's now-straight drop), Waypoint's arcs used on Plans too, and Desk's patch lead. Grafts that read as pasted: Plate's trace strip on every page, Dessau's dial on every head, Folio's page-number bars, Quote's three-column board. Colour is the common weakness. Most designs keep grounded colour to icon tints and amber late. Waypoint, Folio and Manual alone show a real second and third colour, and Desk and Sill are near binary. Next round, name steel-cyan, sage or wheat for times, owners and setup on every line. Convergence is visible: rails with NOW are everywhere. Each line should keep its own signature device (arcs, wiring figure, ribbon, case, board).",
+   "heat": "f"
+  },
+  {
+   "lens": "soul",
+   "scores": [
+    {
+     "id": "x14b-desk-cross",
+     "score": 8.3,
+     "why": "The most CRT-souled Home in the heat. The title sits on a real cased glass with a layered halo and a block cursor, and the patch lead runs from the case's socket into Coming up's NOW lamp. Every inner page opens on a working tube: the radar, the meter, a To do bargraph glass and a countdown dial. Wheat rules keep the rest grounded. The bottom band (Lately added) has only one small lamp, and the desk is nearly colourless."
+    },
+    {
+     "id": "x14b-folio-cross",
+     "score": 8.1,
+     "why": "A lit serif headline on a scanlined glass, and a P-number status line across every inner page head, make it read like a videotex magazine that is truly switched on. The radar with day marks, the bargraph and a NEXT TOMORROW glass with a countdown bar give each page one tube, and the Contents page is grounded and warm. The glowing words 'what's on.' still fail as the box's label."
+    },
+    {
+     "id": "x14b-dessau-cross",
+     "score": 8,
+     "why": "The poster headline puts bone type beside one blooming 'plan.', and the dial now carries real day numerals on week bearings, which closes last round's failed reach. Each inner page leads with a small glowing dial, and the coloured squares give grounded variety. The amber 'LATE 3' dial on To do puts a glow on something that is not phosphor's job, and the radar on Ideas floats loose beside the list."
+    },
+    {
+     "id": "x14b-trued-cross",
+     "score": 7.8,
+     "why": "The greeting is a lit board with a steel branch of starts, and the tube now heads the lit track. The line from home on Ideas and the month strip on Plans are genuine phosphor instruments drawn from data. The title has little halo, though, and To do and Lately added sit fairly dark."
+    },
+    {
+     "id": "x14b-manual-cross",
+     "score": 7.8,
+     "why": "The NEXT IN dial's power wire drops into Coming up's NOW, the most literal 'light wired to what it reports' in the field. The glowing title, the FIG.1 wiring diagram on Status and the colophon all fit the manual. The dial's ticks are crowded, the Ideas radar is a small dim box, and the lower half of Home is unlit."
+    },
+    {
+     "id": "x14b-sill-cross",
+     "score": 7.7,
+     "why": "The tube stands as the first stop, with its wire dropping onto the Coming up rail. The Status faceplate (lamp board and meter in one glass) is the best instrument in the heat. The headline's halo is modest, and To do and Lately added sit as dark tables under the sill."
+    },
+    {
+     "id": "x14b-waypoint-cross",
+     "score": 7.6,
+     "why": "The readout strip and the waypoint arcs carrying day numerals make Coming up a real flight plan, and the glowing title is strong. The tube on the right is wired into the Next row. Large parts (To do, Lately added, the kids' wishes) are plain ruled text with no lamp, and the readout box is grey rather than lit."
+    },
+    {
+     "id": "x14b-quote-cross",
+     "score": 7.5,
+     "why": "The big condensed head with a lit 'plan?' and a glass board holding a 'DAY 1' numeral and four-week pulses is a confident count board. The $0.00 glass on Status is fine phosphor. The lilac '12' and the pale-blue numerals on inner pages pull the glow off the motif, and the three columns below the hero are unlit."
+    },
+    {
+     "id": "x14b-departures-cross",
+     "score": 7.4,
+     "why": "Vera's line, its lit ring and the dot-matrix board with spikes for the coming weeks are still the most atmospheric station. The inner pages have lost the green primary button (Add an idea and Add something to do are grey outlines), which removes a key phosphor mark, and Home's left column is mostly dark text."
+    },
+    {
+     "id": "x14b-settled-cross",
+     "score": 7.4,
+     "why": "'Vera is listening' on a glass, the radar with day marks and the To do bargraph glass are good lit moments. The household row is grounded and pleasant. The inner pages are plain grid and table, so the 'switchboard' feel stays on Home."
+    },
+    {
+     "id": "x14b-pocket-cross",
+     "score": 7.3,
+     "why": "One line of time with lit Now and Next nodes, and a glass month on Plans with plans as pulses, is a charming lit diary. The amber 'Due' node and the dull slate cards dilute the glow, and the Next row's highlight bar reads as a selection, not light."
+    },
+    {
+     "id": "x14b-plate-cross",
+     "score": 7.2,
+     "why": "The scope traces are real phosphor: the 30-day spend trace and the To do due-date trace around Now. The slate-blue plates feel cold and flat rather than material, the hero monitor is a small dim corner, and a lot of the page is grey."
+    },
+    {
+     "id": "x14b-listing-cross",
+     "score": 7.2,
+     "why": "The equaliser board and the dropped stem to NOW have presence, and the head column is a nice listings device. Below the board the page goes dim and tabular, and the small Status dial is easy to miss."
+    },
+    {
+     "id": "00-current",
+     "score": 5.4,
+     "why": "It has the original soul in full (bloom, halos, scanlines), but everything glows, so nothing does. This is the Matrix look the family named."
+    },
+    {
+     "id": "r13-idea-1",
+     "score": 7.4,
+     "why": "The case with the typed prompt is still a strong soul. Beside the crosses its lower half is boxed and unlit, and it has no wire tying light to data."
+    },
+    {
+     "id": "t3-track-refine2",
+     "score": 7.3,
+     "why": "The lit track with the tube on it is good. Its greeting is a plain box with little halo, and Trued, Yard Lit has since surpassed it."
+    }
+   ],
+   "top4": [
+    "x14b-desk-cross",
+    "x14b-folio-cross",
+    "x14b-dessau-cross",
+    "x14b-trued-cross"
+   ],
+   "promise": [
+    "x14b-dessau-cross",
+    "x14b-folio-cross",
+    "x14b-manual-cross"
+   ],
+   "fixes": [
+    {
+     "id": "x14b-desk-cross",
+     "suggestion": "Keep: the title on the glass with its halo and cursor, the patch lead into NOW, and one tube per inner page. Fix: give Lately added one lamp, such as a short lit lead from the case foot to the newest row, or a small glass counting new ideas this week. Bring back one grounded companion on the desk case (a wheat or bone label plate) so the column is not colourless. On the phone, move the title above NEXT UP on the glass so the prompt reads first."
+    },
+    {
+     "id": "x14b-folio-cross",
+     "suggestion": "Keep: the scanlined glass headline, the P-number status line on every page head, and the Contents page with its grounded leaders. Fix: change the words to an invitation whose last word is lit, e.g. 'Tell Vera what to plan.' with only 'plan.' glowing. Give the Plans radar's day marks a short lead to the NOW rail. Cut the four stat tiles' coloured top ticks to one hue family (steel) so the glass stays the only light in the card."
+    },
+    {
+     "id": "x14b-dessau-cross",
+     "suggestion": "Keep: the bone poster type with one blooming 'plan.', the dial with real week bearings, the dial heads on inner pages, and the coloured square keys. Fix: the To do 'LATE 3' dial should be green phosphor with an amber numeral only, or a flat amber plate, never an amber glow. Join the Ideas radar to the list (number the blips to match the rows, and light the hovered one). Shrink the Home dial about 15% so the headline column breathes."
+    },
+    {
+     "id": "x14b-trued-cross",
+     "suggestion": "Keep: the lit board greeting, the tube heading the track, the line from home on Ideas and the month strip. Fix: give the title the layered halo on 'plan.' that Desk's has. Give To do's NOW a short lit tick that echoes the track's lamp, and give the 'Around the house' line one lit node (settings needing a look)."
+    },
+    {
+     "id": "x14b-manual-cross",
+     "suggestion": "Keep: the dial's power wire into NOW, the FIG.1 Status diagram and the colophon. Fix: thin the dial's tick ring and enlarge the 1 DAY numeral. Make the Ideas radar a proper glass at the list's head, not a small box. Give Finish setting up's first ring a soft glow, so the lower half has one lamp."
+    },
+    {
+     "id": "x14b-sill-cross",
+     "suggestion": "Keep: the tube as the first stop with its wire, and the Status faceplate. Fix: add a halo to 'plan?' in the headline. Unbox To do (let it hang from the rail with its NOW lamp, as Plans does). Drop the long legend line in the footer."
+    },
+    {
+     "id": "x14b-waypoint-cross",
+     "suggestion": "Keep: the waypoint arcs with day numerals and the wired tube. Fix: light the readout strip (green numerals on dark glass, not a grey box). Give To do and the kids' wishes each one lamp, and keep the big numerals bone, not white."
+    },
+    {
+     "id": "x14b-departures-cross",
+     "suggestion": "Keep: Vera's line, the ring wire and the dot-matrix board with its week spikes. Fix: restore the green primary button on every inner page (Add an idea, Add something to do). Light the kids' wishes or the Finish setting up node once, so the left column is not dark text."
+    },
+    {
+     "id": "x14b-quote-cross",
+     "suggestion": "Keep: the condensed head, the DAY 1 board and the $0.00 glass. Fix: move the lilac and pale-blue head numerals to bone or wheat, and keep any glow green only. Give each of the three columns one lamp (NOW on To do already works; add one to Coming up)."
+    },
+    {
+     "id": "x14b-plate-cross",
+     "suggestion": "Keep: the scope traces on Status and To do. Fix: warm the slate-blue plates toward graphite or bronze, and enlarge the hero monitor so it is not a dim corner."
+    },
+    {
+     "id": "x14b-listing-cross",
+     "suggestion": "Keep: the equaliser board and the stem dropping onto NOW. Fix: let the stem continue faintly to To do's NOW, and enlarge the Status dial into the head column as a proper glass."
+    },
+    {
+     "id": "x14b-pocket-cross",
+     "suggestion": "Keep: the line of time and the glass month on Plans. Fix: make the Next node a lit lamp instead of a highlight bar, turn the amber 'Due' node into an amber tick on the line, and warm the card fills."
+    },
+    {
+     "id": "x14b-settled-cross",
+     "suggestion": "Keep: 'Vera is listening' on the glass and the household row. Fix: carry a tube onto Ideas, Status and Plans at the size of the rack, so the switchboard feel goes past Home."
+    }
+   ],
+   "titles": "Best: Desk's 'Give Vera something to plan.' set on the glass with a halo and a block cursor. It names who hears you, 'something' covers reminders, ideas and wishes, and the lit word sits where phosphor belongs. Next: Sill's 'What needs a plan? Tell Vera.', which cannot be answered no, and Trued's 'Tell Vera what to plan.', clean but with too little halo. Dessau's 'Tell Vera. Let's plan.' works as a poster with one blooming word, but reads as a slogan. Pocket's 'Jot it down for Vera to plan.' has its diary voice, with the lit word last. Fails: Folio's 'Tell Vera what's on.' (the best-lit setting, but it reads as asking the page what is on), Listing's 'Put it on Vera's list.' (it sends people to To do and lights 'list', not the job), and Departures' 'where we're headed' (vague). Duplicates cost points: Settled and Waypoint share 'Send Vera anything to plan.', and Quote and Plate share 'What should Vera plan?'. Manual's 'Hand Vera anything to plan.' is acceptable but a third variant of the same line.",
+   "notes": "Through the soul lens the field has mostly brought the light back where it belongs: titles with a lit key word, one glass tube per page, and wires from tubes into NOW. The three leaders (Desk, Folio, Dessau) are the ones whose headline itself is set on or beside glowing glass, with a real halo and bloom from the phosphor kit, while the rest of the page stays grounded (wheat rules, bone type, steel). Grafts that worked: Desk's patch lead and its To do bargraph glass (taken from Settled), Dessau's dial now carrying real day numerals (closing last round's failed reach), Manual's power wire into NOW, Sill's Status faceplate, and Folio's countdown glass on Plans. Grafts that read as pasted: the stat tiles with coloured top ticks (Folio, and Quote's version), Pocket's highlighted Next bar, Departures' outlined primary buttons (which lose the motif's mark), Quote's lilac numerals, and the amber glowing dial on Dessau's To do. The camps have converged. The main camp (Desk, Folio, Dessau) now leads on soul because its frames give the glow a stage. The tour lines (Trued, Manual, Sill, Waypoint) bring the better grammars of wired light but leave their lower halves unlit. Common remaining fault: Home's lower band (Lately added, the kids' wishes, setup) has no lamp on most designs. Give each section one lamp.",
+   "heat": "f"
+  },
+  {
+   "lens": "style",
+   "scores": [
+    {
+     "id": "x14b-dessau-cross",
+     "score": 8.6,
+     "why": "The most memorable identity in the field. 'Tell Vera. / Let's plan.' is set as a poster headline, the dial carries real day numerals, and a readout strip with dotted leaders runs under it. Every inner page has its own instrument with a job: the radar on Ideas, now on real bearings, the cost meter on Status, the date dial on Plans and an amber LATE 3 on To do. The heads are muted violet, amber and tan, so colour came back, and the glow sits only on the screens and the key word. Held back by an empty band under Home's three columns and a footer legend nobody needs."
+    },
+    {
+     "id": "x14b-manual-cross",
+     "score": 8.3,
+     "why": "The dial's lit wire runs down through Coming up as one NOW spine, the heat's best 'light wired to what it reports'. The Status 'FIG. 1' wiring diagram has real manual charm, and the type is calm and well stepped. Its weakness is the lower half of Home, which goes flat and unlit (setup, wishes)."
+    },
+    {
+     "id": "x14b-desk-cross",
+     "score": 8.2,
+     "why": "The cased terminal column is a complete, consistent system on every page: radar on Ideas, VU meter on Status, LED bar screen on To do, dial on Plans. The patch cable into NOW reads well. Still the least colourful of the leaders: grey cases and grey type over almost no warm hue."
+    },
+    {
+     "id": "x14b-waypoint-cross",
+     "score": 8.1,
+     "why": "The flight-plan arcs over Coming up and the big drive-time numerals on Ideas are fresh and draw the content. The readout column and the row-to-tube wire hang together. Lowest green share, with confident restraint. Loses on a generic chat page and a title shared with Settled."
+    },
+    {
+     "id": "x14b-folio-cross",
+     "score": 8,
+     "why": "The serif display heads and the P200 teletext page bars give it a magazine mood no other design has. The Contents block, with page numbers and status lamps, is a lovely device. The serif and mono pairing is a touch eclectic, and the 'what's on.' glass title is soulful but weak as wording."
+    },
+    {
+     "id": "t3-track-refine2",
+     "score": 7.4,
+     "why": "Yardstick: a clean track grammar with a pleasant mood, but small type and modest drama next to this field."
+    },
+    {
+     "id": "x14b-trued-cross",
+     "score": 7.9,
+     "why": "The track diagram under Coming up with lit stops, the ways to start on a branch, the line-from-home strip on Ideas, the Status lamp rack and 'Around the house' as a rail together make a coherent railway world. The NEXT UP tube sits small and cramped beside the cards, and the cards bring back boxes."
+    },
+    {
+     "id": "x14b-sill-cross",
+     "score": 7.8,
+     "why": "The NEXT UP tube dropping its wire onto the Coming up rail, the line-from-home strip and the Status faceplate are confident. Home is boxier and greyer than its siblings, and the lit tube is small against the cards."
+    },
+    {
+     "id": "x14b-quote-cross",
+     "score": 7.8,
+     "why": "Condensed display type and big figures give it real punch ('What should Vera plan?', 4 / 4 / 12), and its use of colour is the liveliest in the heat (violet Ideas 12, amber late). Plans' grey cells and a generic To do weaken the system."
+    },
+    {
+     "id": "x14b-departures-cross",
+     "score": 7.6,
+     "why": "The dot-matrix departures board with its four-week bars is a strong, specific image, and Vera's line down the left is graceful. Grey-on-graphite elsewhere, a muted primary on inner pages, and a wordy Status page make it read quieter than its idea."
+    },
+    {
+     "id": "x14b-settled-cross",
+     "score": 7.5,
+     "why": "The bottom row of household cells (Wishes 0, Family 4, Status, Settings) is a smart sommaire and the type is tidy. But the page is flat: one small radar and few lit moments, and the identity reads as a good dark dashboard more than a videotex service."
+    },
+    {
+     "id": "x14b-pocket-cross",
+     "score": 7.5,
+     "why": "The diary spine (Now, Next, Due, Later) and the month set on a small glass on Plans are charming. Home still stacks main-camp boxes and repeated tube furniture, and the diary feel rarely reaches the type."
+    },
+    {
+     "id": "x14b-listing-cross",
+     "score": 7.3,
+     "why": "The head column with big counts is a real TV-listings device, and the stem from the tube to NOW finally drops straight. The bar-chart tube reads as a generic equaliser, and the inner pages turn into plain admin tables."
+    },
+    {
+     "id": "x14b-plate-cross",
+     "score": 7.3,
+     "why": "The 30-day trace beside the meter on Status and the timeline glass on To do are good ideas. The slate plates are heavy and grey, the condensed title is cramped, and Home is a stack of boxes."
+    },
+    {
+     "id": "r13-idea-1",
+     "score": 7.3,
+     "why": "Yardstick: the cased terminal and its prompt are memorable, but the field has moved past it in colour and wiring."
+    },
+    {
+     "id": "00-current",
+     "score": 5,
+     "why": "Yardstick: the original glow and green-on-black have charm, but it is monochrome and loud, with no structure that reads as a designed system."
+    }
+   ],
+   "top4": [
+    "x14b-dessau-cross",
+    "x14b-manual-cross",
+    "x14b-desk-cross",
+    "x14b-waypoint-cross"
+   ],
+   "promise": [
+    "x14b-dessau-cross",
+    "x14b-folio-cross",
+    "x14b-manual-cross"
+   ],
+   "fixes": [
+    {
+     "id": "x14b-dessau-cross",
+     "suggestion": "Keep the poster headline, the date dial with day numerals, the readout strip, the per-page instruments and the coloured section caps. Fix Home's empty band below the three columns: pull the footer up or bring in the household row. Cut the footer legend. Give the Status meter its 30-day trace. Make Plans' cell events lit stubs rather than plain text. Ease the outer dial ring's bloom so the readout strip leads."
+    },
+    {
+     "id": "x14b-manual-cross",
+     "suggestion": "Keep the dial-to-NOW spine, FIG. 1 and the head figure row. Home's lower half needs one lamp per section: a lit first-step ring on Finish setting up, a small figure on wishes. Plans: the small dial beside the month floats, so wire it into today's cell. Ideas: the radar tile is boxed and small, so let it lead the page head."
+    },
+    {
+     "id": "x14b-desk-cross",
+     "suggestion": "Keep the terminal column on every page and the patch cable. Name a warm companion for the case and the section rules (wheat or bone on the bezel, a sage label tier). Lately added: give each kind a muted hue. Status: the 'On this page' index is dense, so tighten its leading."
+    },
+    {
+     "id": "x14b-waypoint-cross",
+     "suggestion": "Keep the flight-plan arcs and the big drive numerals on Ideas. Give the Vera chat a waypoint touch (a ring per message) and give the Status meter the readout column's type. Change the title so it is not shared with Settled."
+    },
+    {
+     "id": "x14b-folio-cross",
+     "suggestion": "Keep the serif heads, the P-number bars and the Contents block. Swap the glass title's words for an invitation ('Tell Vera what to plan.') and keep the cursor. Pick one serif weight for all heads. Status's 'Waiting' column floats, so align it to the grid."
+    },
+    {
+     "id": "x14b-trued-cross",
+     "suggestion": "Make the NEXT UP tube the first car on the track at full height, and lighten the trip cards to open stops so the boxes do not come back."
+    },
+    {
+     "id": "x14b-quote-cross",
+     "suggestion": "Carry the big-figure heads into Plans and To do as a count row. Give Plans' cells a lit today and warmer event chips rather than grey slabs."
+    },
+    {
+     "id": "x14b-departures-cross",
+     "suggestion": "Restore the bright primary on inner pages (Add an idea is greyed out). Let the board carry Plans' figure, and trim the Status prose."
+    },
+    {
+     "id": "x14b-listing-cross",
+     "suggestion": "Replace the equaliser bars with a listing strip: time slots across a channel band. Bring the head column's figures to Ideas and To do in the same type."
+    }
+   ],
+   "titles": "Best: Dessau's \"Tell Vera. / Let's plan.\" It has voice, rhythm and a poster cadence, and the lit word lands last. Trued's \"Tell Vera what to plan.\" comes next: plain, complete and well set. Sill's \"What needs a plan? Tell Vera.\" is good, with the question answered by the box. Pocket's \"Jot it down for Vera to plan.\" carries the diary's voice nicely. Weaker: Listing's \"Put it on Vera's list.\" narrows the job to lists, and Departures' \"where we're headed\" is evocative but vague as a label. Folio's \"Tell Vera what's on.\" asks the wrong thing. Duplicated titles cost identity: \"Send Vera anything to plan.\" on Waypoint and Settled, and \"What should Vera plan?\" on Quote and Plate. \"Hand Vera anything to plan\" (Manual) is a little stiff.",
+   "notes": "The two camps have converged, and the best crosses join a main-camp frame (poster, case, count board) to a tour grammar (wired NOW, readout strip, day numerals). Grafts that read native: Dessau's readout strip and real-bearing radar, Manual's NOW spine dropped from the dial, Desk's patch cable, Waypoint's flight arcs feeding the tube, Trued's line-from-home strip on Ideas. Grafts that read pasted: Pocket's and Plate's boxed NEXT UP tubes repeated beside lists, Listing's equaliser tube, Departures' bar board reused on Plans, and the identical 'ON THE RADAR' tube cloned onto most Ideas pages, a monoculture worth breaking. Afterglow and power-on barely show in stills. Phosphor light is best returned on Dessau, Desk and Manual: concentrated on the instruments and the key word, with calm ground elsewhere. Settled, Plate and Departures lost too much light and read as stock dark dashboards. Colour: Quote, Dessau and Folio use muted companions best, and Desk is the most colourless.",
+   "heat": "f"
+  },
+  {
+   "lens": "system",
+   "scores": [
+    {
+     "id": "00-current",
+     "score": 4.9,
+     "why": "Every section the same dark rounded card with the same green; no type steps, no rule language, cards on To do with three lines of chrome each. The baseline the field has left far behind."
+    },
+    {
+     "id": "r13-idea-1",
+     "score": 7.4,
+     "why": "The cased terminal column is a real component and the rail lists are clean, but the right column is boxed panels throughout and the page reads nearly colourless; a good frame without enough grammar."
+    },
+    {
+     "id": "t3-track-refine2",
+     "score": 7.5,
+     "why": "Track rail with lit NOW and ring stops is a coherent grammar on Home, Plans and To do; still card-on-card at the top and plates that stretch to empty graphite."
+    },
+    {
+     "id": "x14b-trued-cross",
+     "score": 8.2,
+     "why": "The most complete system in the heat: one rule-head device (the tick-ended \u22a2 rule) on every section, the tube standing as the line's head with the lit run from now to the next stop, cards hung from the same track, 'Around the house' set as a track too, the status foot as a rule. Plans carries the track strip above the month, To do the same rail; type has clear steps (display title, section heads, mono figures)."
+    },
+    {
+     "id": "x14b-desk-cross",
+     "score": 8,
+     "why": "The case is the strongest single object in the field and the patch lead from its socket to Coming up's NOW is wiring with a job; the title on the glass above the field, with Next up above it, keeps the phosphor where attention belongs. Held back by the right column's three different boxes (top-ruled panel, amber-edged setup bar, panel), a nearly colourless desk, and Lately added in a second boxed slab."
+    },
+    {
+     "id": "x14b-waypoint-cross",
+     "score": 8,
+     "why": "The readout strip is a real count component, the waypoint arcs above Coming up put the days on a true time axis, and the monitor now fills the old empty right column, wired to the Next row. Rule heads with a lead dash are consistent across Home, Status and Settings. Faults: The kids' wishes heading with nothing under it, a legend strip in the footer, and steel 'Edit' buttons on To do that are heavier than the row."
+    },
+    {
+     "id": "x14b-manual-cross",
+     "score": 7.9,
+     "why": "The countdown dial dropping a lit wire straight onto Coming up's NOW is the best-executed 'light wired to what it reports' in the heat, and the kinds set as labels left of Lately added's rail is a genuinely new list form. The readout strip under the box is tidy. Weak: the setup list and kids' wishes are plain lists without a lamp, and the split footer is a heavy, empty block."
+    },
+    {
+     "id": "x14b-folio-cross",
+     "score": 7.9,
+     "why": "The only design with a true typesetting idea: a serif display face for heads and figures against a sans body, oldstyle-looking figures, small-cap units ('COMING', 'SAVED'), a Contents table with dotted leaders, and the page-header strip on inner pages. The radar beside the rail and the count tiles with grounded colour caps are well judged. Held back by the title, by page numbers (310, 700, 900) that mean nothing to a family, and by count tiles that repeat the section counts."
+    },
+    {
+     "id": "x14b-listing-cross",
+     "score": 7.7,
+     "why": "Head column with one big figure per band is a strong, repeatable rule (Coming up, To do, Lately added, Also on) and the stem now drops straight from the tube to NOW. The wide bar tube is the clearest 'week at a glance' graphic here. Lower half is long and flat; Also on is five identical icon rows; the title fails."
+    },
+    {
+     "id": "x14b-dessau-cross",
+     "score": 7.7,
+     "why": "The boldest typography in the field (poster display title, numbered section heads on Status, square colour keys per section) and the radar's day rings now sit on week distances with labels. Three equal columns with coloured top rules read as a modernist grid. Faults: the poster title is a slogan not a label, amber bars at the left of To do read as warnings, and a legend strip in the footer."
+    },
+    {
+     "id": "x14b-departures-cross",
+     "score": 7.6,
+     "why": "Vera's line down the left with the box as its first stop is a strong, original structure, and the board with its four-week trace is the best dot-matrix artefact. But colour has drained (69% green, greys), the ways to start are three heavy filled bars, and To do's rail is a different rail from the left line, so two line systems compete."
+    },
+    {
+     "id": "x14b-sill-cross",
+     "score": 7.7,
+     "why": "Coherent track system: tube on the rail with plan cards hanging from it, To do and Lately added each on their own rails with ring stops. The head plus 'Tell Vera.' kicker is a weak setting, the amber-edged setup bar reads as a warning, and the lower-left ground under To do is empty."
+    },
+    {
+     "id": "x14b-settled-cross",
+     "score": 7.6,
+     "why": "Case-with-title, plans rail with radar, and a five-cell household rack at the foot is a clear two-tier map; the rack is the best footer component in the heat. But the radar duplicates the rail, the setup line floats in amber at the bottom of To do, and the ways to start are boxed tiles in a different style from everything else."
+    },
+    {
+     "id": "x14b-pocket-cross",
+     "score": 7.6,
+     "why": "One spine (Now, Next, Due, Later) down the whole page is a true system and the inline 'What needs doing' add field on To do is a real usability gain; the Next tube's pulses wired to 'tomorrow' work. The page is very long, the right column is a different list style (icon tiles), and 'At the back' repeats Settled's rack with coloured caps."
+    },
+    {
+     "id": "x14b-plate-cross",
+     "score": 7.5,
+     "why": "Ways to start fused into the box as three labelled cells is a clever control; the slot glass above Coming up is cut to a sensible height. But the whole page sits on one plate so nothing has a frame of its own, the setup list is a large unlit block, and the right column's kids' wishes and 'Something to eat' are thin."
+    },
+    {
+     "id": "x14b-quote-cross",
+     "score": 7.6,
+     "why": "Three columns each led by one big figure with a coloured top rule is a clean board; the monitor with '1 DAY' is the most legible next-plan readout. The household row is a good one-line footer. Faults: To do's amber left bars, wrapped two-line rows in narrow columns, and a hero with much empty green wash."
+    }
+   ],
+   "top4": [
+    "x14b-trued-cross",
+    "x14b-desk-cross",
+    "x14b-waypoint-cross",
+    "x14b-manual-cross"
+   ],
+   "promise": [
+    "x14b-folio-cross",
+    "x14b-manual-cross",
+    "x14b-dessau-cross"
+   ],
+   "fixes": [
+    {
+     "id": "x14b-trued-cross",
+     "suggestion": "Keep: the \u22a2 rule head on every section, the tube standing on the track with the lit run to the next stop, cards hung from the track, 'Around the house' as a track, the status foot as a rule, the track strip on Plans. Fix: on the phone put a short track (now\u21924\u21929) directly under the box so the next plan is above the fold; on Home make Lately added and To do share one row height so their ruled rows align across the gutter; drop the arrow-ended 'Or start with' rail's bottom terminal (it ends in mid-air); give the three plan cards a 1px top rule in their kind colour instead of an icon pill, so the cards carry grounded colour without new boxes."
+    },
+    {
+     "id": "x14b-desk-cross",
+     "suggestion": "Keep: the case, the title on the glass with the block cursor, the patch lead from the socket into NOW, Coming up's rail. Fix: make the right column one system: drop the top-ruled panel backgrounds and set Coming up, setup and To do on the ground under the same rule head; change the setup bar's amber left edge to the steel rule (amber only on the late dates); bring Lately added onto the same rail grammar as Coming up instead of a two-column boxed slab; add one grounded companion (wheat for figures, steel-cyan for kinds) so the desk is not colourless."
+    },
+    {
+     "id": "x14b-waypoint-cross",
+     "suggestion": "Keep: the readout strip, the waypoint arcs on a true week axis, the monitor wired to the Next row, the lead-dash rule heads. Fix: give The kids' wishes content (each kid's line with an open count) or fold it into the readout; drop the footer legend; make To do's Edit a text link at rest, not a steel button; on the phone put the waypoint arcs under the readout so the flight plan is the first thing below the box."
+    },
+    {
+     "id": "x14b-manual-cross",
+     "suggestion": "Keep: the countdown dial with the wire dropping onto NOW, the readout strip under the box, kinds as labels left of the rail. Fix: give the setup list and kids' wishes one lamp each (the first step's ring lit, the kids' wishes a small open-count figure); replace the split footer with a single ruled status foot; let the dial's 'NEXT PLAN' text column align its baseline to the title's."
+    },
+    {
+     "id": "x14b-folio-cross",
+     "suggestion": "Keep: the serif display for heads and figures, small-cap units, the Contents table with leaders, the radar beside the rail, grounded count caps. Fix: drop page numbers from Contents and the nav (use the page's icon); remove the count tiles under the box (they repeat each section's figure); change the title to an invitation (e.g. 'Tell Vera what to plan.') while keeping the scanlined glass; carry the serif heads onto Settings and To do consistently (Settings rows still sans)."
+    },
+    {
+     "id": "x14b-dessau-cross",
+     "suggestion": "Keep: the poster display scale, numbered section heads on Status, square colour keys. Fix: set the title in sentence case as one line ('Tell Vera, she'll plan.'); replace the amber left bars on To do with amber only on the dates; drop the footer legend; label the radar rings in plain days ('in 6 days') so the figure reads as data."
+    },
+    {
+     "id": "x14b-listing-cross",
+     "suggestion": "Keep: the head column with one big figure per band, the wide bar tube, the stem dropping onto NOW. Fix: change the title; make Also on a two-column listing or a household rack instead of five identical rows; taper the stem after NOW and let it continue faintly to To do's NOW."
+    },
+    {
+     "id": "x14b-departures-cross",
+     "suggestion": "Keep: Vera's line down the left, the dot-matrix board with its trace. Fix: restore a grounded companion (wheat figures, sage kinds) to move off 69% green; make the ways to start plain rows on the line instead of filled bars; use the left line as To do's rail too, so there is one line system."
+    },
+    {
+     "id": "x14b-settled-cross",
+     "suggestion": "Keep: the household rack at the foot, the case with the title. Fix: drop the radar beside the plans rail (it repeats the rail) or make it the Plans page's device; set the ways to start as rows, not tiles; move setup up under the box."
+    },
+    {
+     "id": "x14b-pocket-cross",
+     "suggestion": "Keep: the single spine, the inline add field on To do, the Next tube wired to tomorrow. Fix: put the right column's wishes and Something to eat on the spine's row grammar (no icon tiles); shorten Lately added to three rows; replace 'At the back' coloured caps with the spine's own ring stops."
+    },
+    {
+     "id": "x14b-sill-cross",
+     "suggestion": "Keep: tube on the rail with cards hanging, rails on To do and Lately added. Fix: drop the 'Tell Vera.' kicker; change the setup bar's amber edge to steel; fill the empty ground under To do by moving the kids' wishes onto the left rail."
+    },
+    {
+     "id": "x14b-plate-cross",
+     "suggestion": "Keep: ways to start fused into the box as three cells. Fix: give sections their own ground (rule heads, no full plate); fold setup to one line; give the right column a figure."
+    },
+    {
+     "id": "x14b-quote-cross",
+     "suggestion": "Keep: one big figure per column, the household row, the '1 DAY' monitor. Fix: amber only on dates, not left bars; widen columns or drop the third so rows do not wrap; cut the hero's height."
+    }
+   ],
+   "titles": "Best: \"Tell Vera what to plan.\" (Trued) \u2014 names who hears, what she does, and sits as one line with the lit key word last; and \"Give Vera something to plan.\" (Desk), on the glass, where 'something' covers reminders, ideas and wishes. \"What needs a plan?\" (Sill) is a good question but the tacked-on \"Tell Vera.\" kicker breaks the setting. \"Send/Hand Vera anything to plan.\" (Settled, Waypoint, Manual) work but 'Send' echoes the button and two lines share it. Fail: \"Tell Vera what's on.\" (Folio) asks the family to report events, not hand over planning; \"Put it on Vera's list.\" (Listing) narrows to a to-do list; \"Jot it down for Vera to plan.\" (Pocket) is wordy; \"Tell Vera where we're headed.\" (Departures) is vague; \"What should Vera plan?\" (Plate, Quote) asks the family to decide for her; \"Tell Vera. Let's plan.\" (Dessau) is a slogan, not a label.",
+   "notes": "Grafts that read native: Manual's dial wire dropping onto NOW (Sill's stem rebuilt as a dial's lead); Desk's patch lead; Waypoint's monitor wired to the Next row, which also fixed the empty column; Trued's 'Around the house' as a track (Settled's rack made a track); Folio's radar beside the rail and grounded count caps; Listing's straight stem. Pasted: footer legends (Waypoint, Dessau, Pocket's caps), amber left bars on To do (Dessau, Quote) that read as warnings, Settled-style household racks repeated on three lines with coloured caps, Pocket's icon-tile right column. Camps: the field is now one family; the tour lines (Trued, Waypoint, Manual) win on drawn content (tracks, arcs, dials wired to rows), the main lines (Desk, Folio, Dessau) on frames and type. Every top design joins a frame to a grammar. Convergence remains: the NEXT UP tube with radar appears on nearly all sixteen; the next round should let each line's signature (case, dial, waypoint arcs, serif folio, poster) carry Next up in its own form. Phosphor light is back well on the tubes, the glass titles (Desk, Folio, Settled) and focus rings; Trued and Waypoint keep the bloom to the tube and primary, which is the right balance. For the design standard, Trued's rule head + track + status foot is the most transferable to Plans, To do and Settings; Folio's type pairing is the best typesetting to borrow into it.",
+   "heat": "f"
+  },
+  {
+   "lens": "interaction",
+   "scores": [
+    {
+     "id": "00-current",
+     "score": 5,
+     "why": "Title, box and Next up still read in order, but everything below is equal boxed cards with no lead. Squinted, the lower half is uniform grey. 381 targets under 44px across the pages."
+    },
+    {
+     "id": "r13-idea-1",
+     "score": 7.3,
+     "why": "The terminal column groups the box with its starters, and the lists on the right have rails. The question on the glass sits below Next up, so the eye reads the plan before the action, and the desk is nearly colourless, so sections are told apart by position only."
+    },
+    {
+     "id": "t3-track-refine2",
+     "score": 7.5,
+     "why": "The order holds: title, box, starters, line. The card plates stretched over the rail leave grey hollows, and on the phone the next plan sits low."
+    },
+    {
+     "id": "x14b-trued-cross",
+     "score": 8.2,
+     "why": "The cleanest sight line in the heat. The lit title is inside the box, the one green Send, the starters on a branch saying where each lands, then the tube wired to its stop on the line. On the phone a one-line NEXT strip sits above the fold, and 'Around the house' gathers the other pages on one rail. 8 targets under 44px and a thin legend rule at the foot cost a little."
+    },
+    {
+     "id": "x14b-waypoint-cross",
+     "score": 8.1,
+     "why": "The head is explicit. Title, box and starters sit on the left, and the readout board (Today, Plans, To do, Late, Ideas) answers 'how do we stand' at a glance. The Next row is joined by a wire to the tube, which says exactly which row it reports. The flight-plan arcs above the list repeat the list without adding much, the kids' wishes is a bare header with its content pushed to the right, and the legend in the footer is noise."
+    },
+    {
+     "id": "x14b-folio-cross",
+     "score": 8,
+     "why": "Very scannable. The numbered starters say where each lands, the count tiles sit under the box, Plans and To do hang from NOW rails, and the Contents with numbered pages is a real index of the service. The serif heads give a clear step. The radar beside Plans is decoration that needs a caption, and the title 'what's on' still invites the page to answer."
+    },
+    {
+     "id": "x14b-dessau-cross",
+     "score": 7.9,
+     "why": "The poster title is unmissable, and the count row (Today, Plans, To do, Late, Ideas) and the three equal columns read instantly when squinted. The rings now sit on week bearings (4 at top, then 1w, 2w, 3w), which fixes the bearings that meant nothing. The two-line slogan pushes the box down, and the coloured square starters read as legend chips rather than buttons."
+    },
+    {
+     "id": "x14b-sill-cross",
+     "score": 7.9,
+     "why": "The question is the headline, with a status line in the box ('4 plans \u00b7 3 late \u00b7 Vera is listening') and the starters on a branch. The tube drops onto the line and the setup bar is amber and clear. To do with Day/Done/Who/Due columns is a model table. The lower half is long with a lot of black, and the week falls near the phone's fold."
+    },
+    {
+     "id": "x14b-desk-cross",
+     "score": 7.8,
+     "why": "The patch cable from the case to the Coming up NOW lamp is understood instantly, and the list beside it is the cleanest dated list in the heat. The title is still on the glass below NEXT UP, so the action is read second, the 'Where I am' icon button is ambiguous, and there are 12 targets under 44px."
+    },
+    {
+     "id": "x14b-manual-cross",
+     "score": 7.8,
+     "why": "The countdown dial with a wire down to Coming up's NOW is a clear, true figure, and the count row in the head repeats the board idea well. The order puts To do left and Coming up right, under a dial that sits over the right column, so the eye crosses. Lately added is set with the kind on the left of the rail, which reads backwards."
+    },
+    {
+     "id": "x14b-settled-cross",
+     "score": 7.7,
+     "why": "Typing on the glass, with a status line in the box, and the household row across the foot is a good at-a-glance index. The Plans radar is again a decorative caption figure, and the title's break ('anything / to plan.') splits the phrase."
+    },
+    {
+     "id": "x14b-listing-cross",
+     "score": 7.7,
+     "why": "The head column (Coming up 4 PLANS, To do 4 OPEN, 3 late) is the clearest way in the heat to read a section's count before its rows. 'Also on' is an honest index. The page is very long, the equaliser tube is wide for little information, and the title 'list' undersells planning."
+    },
+    {
+     "id": "x14b-departures-cross",
+     "score": 7.6,
+     "why": "The station line down the left, joining box, starters, Continue and setup, reads as one route. The departures board is dense and readable, with a trace. To do leaves a large empty column bottom-left, and the board's list repeats Coming up."
+    },
+    {
+     "id": "x14b-quote-cross",
+     "score": 7.6,
+     "why": "Big figures lead each column (4 plans, 4 open, 12 ideas) and the setup bar is clear. 'What should Vera plan?' in two large lines takes height. Lately added mixes one featured item with a plain list, so its rows read inconsistently, and the two-line task names in To do wrap awkwardly."
+    },
+    {
+     "id": "x14b-plate-cross",
+     "score": 7.6,
+     "why": "The plate is calm and the To do with day numerals is clear. The starters attached under the textarea as tabs read like a segmented mode switch, not shortcuts. Finish setting up takes the second-largest band on Home, and the tube's slot repeats the list."
+    },
+    {
+     "id": "x14b-pocket-cross",
+     "score": 7.4,
+     "why": "The single line Now, Next, Due, Later down the left is an easy model, and the To do quick-add field is useful. The page is the longest, 11 targets are under 44px, 'At the back' is a weak label, and the second tube repeats Next up beside the list."
+    }
+   ],
+   "top4": [
+    "x14b-trued-cross",
+    "x14b-waypoint-cross",
+    "x14b-folio-cross",
+    "x14b-sill-cross"
+   ],
+   "promise": [
+    "x14b-waypoint-cross",
+    "x14b-dessau-cross",
+    "x14b-listing-cross"
+   ],
+   "fixes": [
+    {
+     "id": "x14b-trued-cross",
+     "suggestion": "Keep the title inside the box, the starters branch, the wired tube and 'Around the house'. Fix: bring the 8 under-44px targets to 44px (the rail-head links 'All 4', 'All 12' and the setup-step dots). Drop the empty legend rule at the foot of Home. Give To do's no-date row a label instead of a dotted stub. Add a small count board, Waypoint-style, to the greeting's right edge on wide screens so the state reads without scrolling."
+    },
+    {
+     "id": "x14b-waypoint-cross",
+     "suggestion": "Keep the readout board, the Next row wired to the tube and the day numerals. Fix: either drop the flight-plan arcs or make them the list's own rail (rings on the rows), not a second strip above it. Fill or remove the bare 'The kids' wishes' header: put the two names under it as rows. Cut the footer shape legend. Move the tube up beside Coming up's head so it does not float in the middle of the right column."
+    },
+    {
+     "id": "x14b-folio-cross",
+     "suggestion": "Keep the numbered starters with 'lands in', the count tiles, the NOW rails and Contents. Fix: change the title to an invitation (for example 'Give Vera something to plan.'). Replace the radar by Plans with the real week strip, or drop it, since it needs a caption to be read. Drop the page numbers (310, 700) from Contents, which look like counts."
+    },
+    {
+     "id": "x14b-sill-cross",
+     "suggestion": "Keep the headline question, the status line in the box and the To do table. Fix: tighten the vertical gaps under Coming up and setup so the week clears the phone's fold. Give Lately added's ring column a job or square it."
+    },
+    {
+     "id": "x14b-desk-cross",
+     "suggestion": "Keep the case, the patch cable and the dated list. Fix: move the title above NEXT UP on the glass (prompt first, data second). Label the 'Where I am' button with text. Bring the 12 small targets up to 44px. Give the desk one grounded tint so its sections separate."
+    },
+    {
+     "id": "x14b-dessau-cross",
+     "suggestion": "Keep the poster title, the count row and the week-bearing rings. Fix: shorten the slogan to one line on the phone so the box sits higher. Make the starters read as buttons (an arrow, no coloured square). Add a 'weeks' tick label so the rings' bearings are explicit."
+    },
+    {
+     "id": "x14b-manual-cross",
+     "suggestion": "Keep the countdown dial and its wire down to NOW. Fix: put Coming up in the left column under the box and To do on the right, so the eye does not cross. Set Lately added's kinds after the names."
+    },
+    {
+     "id": "x14b-listing-cross",
+     "suggestion": "Keep the head column with the figure and the stem to NOW. Fix: halve the equaliser's height, or print the plan names on the bars. Change the title from 'list' to a planning verb. Compress 'Also on' into one row."
+    },
+    {
+     "id": "x14b-departures-cross",
+     "suggestion": "Keep Vera's line and the board. Fix: let To do share its row with the kids' wishes, or move Lately added left, to fill the empty lower-left."
+    },
+    {
+     "id": "x14b-plate-cross",
+     "suggestion": "Take the starters out of the textarea's foot into a separate row of buttons. Shrink Finish setting up to one bar."
+    },
+    {
+     "id": "x14b-settled-cross",
+     "suggestion": "Swap the radar for the real week strip. Keep the household row."
+    },
+    {
+     "id": "x14b-quote-cross",
+     "suggestion": "Make Lately added uniform rows. Set the title on one line on desktop. Keep the head figures."
+    },
+    {
+     "id": "x14b-pocket-cross",
+     "suggestion": "Cut the second tube, rename 'At the back', and fix the 11 small targets. Keep the left line of time and the quick-add on To do."
+    }
+   ],
+   "titles": "\"Tell Vera what to plan.\" (Trued) says it best: it names who hears you and what she does, and it reads as the box's label. \"What needs a plan?\" (Sill) is a close second because it cannot be answered no, though the trailing 'Tell Vera.' is redundant. \"Send Vera anything to plan.\" (Waypoint, Settled) works as a label, but 'send' is mechanical, and the two lines share it. \"Give Vera something to plan.\" (Desk) is good wording but sits below the tube. \"What should Vera plan?\" (Quote, Plate) is duplicated and reads as a question to Vera rather than to us. \"Hand Vera anything to plan.\" and \"Jot it down for Vera to plan.\" are fine but wordier. \"Tell Vera what's on.\" (Folio) and \"Put it on Vera's list.\" (Listing) fail as labels: the first asks the page to show what is on, the second makes Vera a to-do list. \"Tell Vera where we're headed.\" is vague. \"Tell Vera. Let's plan.\" is a strong poster but a slogan, not an instruction for the box.",
+   "notes": "The top of this final panel is close; through this lens the deciding factor was the order the eye takes on Home (prompt, then box, then where the next plan is) and whether a lit object says which row it reports. Grafts that worked: Waypoint's readout board, taken as count rows by Dessau, Manual and Folio, and it reads instantly. The wire from tube or dial to the NOW row (Trued, Desk, Manual, Waypoint) is the clearest new state device. Listing's head column. Folio's numbered starters with 'lands in'. Grafts that read pasted: radars beside Plans with 'Each mark is a plan' captions (Folio, Settled), footer shape legends (Waypoint, Dessau, Sill), Plate's starters fused into the textarea, and Pocket's second tube. The two camps now differ little: the tour lines lead on drawn relations (lines, wires), and the main lines on heads and figures. The best (Trued, Waypoint, Folio) have both. Every candidate beats today by 2.4 or more, and 9 of 13 match or beat Joined.",
+   "heat": "f"
+  },
+  {
+   "lens": "type",
+   "scores": [
+    {
+     "id": "00-current",
+     "score": 4.9,
+     "why": "One sans and one mono with no real scale: the title, the card heads and the body sit within a few pixels of each other, numerals are not set as figures, and every block is padded the same, so nothing leads."
+    },
+    {
+     "id": "r13-idea-1",
+     "score": 7.3,
+     "why": "A real step scale and tabular mono figures in the ledgers, with the title typed on the glass. But Home is dense small text in boxes, and the day numerals are too small to lead their rows."
+    },
+    {
+     "id": "t3-track-refine2",
+     "score": 7.4,
+     "why": "Clean Plex hierarchy and light day figures on the line. The plate cards repeat small boxed mono times, and the 'What's the plan?' head is set too small for a page title."
+    },
+    {
+     "id": "x14b-desk-cross",
+     "score": 8,
+     "why": "The best-set lists in the heat: light 30px day figures with stacked tracked Oct/Sun, dotted leaders into right-aligned tabular mono times, and a glowing two-line title on the glass broken before 'to plan.' The left column's small grey 'usually Plans' labels and the very quiet lower half hold it back."
+    },
+    {
+     "id": "x14b-quote-cross",
+     "score": 8.1,
+     "why": "The strongest display setting on the page: the condensed 'What should / Vera plan?' in two lines, light quote figures (4 plans, 4 open, 12 ideas) hung on dotted leaders, and a big '1 DAY' numeral on the glass. Fault: the three-column band below is so narrow that the To do titles wrap onto two lines."
+    },
+    {
+     "id": "x14b-dessau-cross",
+     "score": 7.9,
+     "why": "A true poster hierarchy, with a geometric display face at about 80px, a tracked-caps readout strip with light figures and big section heads that hold on every page. The display and the heads are so heavy that the small 12px body under them looks faint, and the title reads as a slogan."
+    },
+    {
+     "id": "x14b-plate-cross",
+     "score": 7.7,
+     "why": "Condensed rule heads with a leading dash and engraved day figures set right on To do read like an instrument plate. 'Finish setting up' is set larger than the lists it introduces, and the glass's mono lines are widely spaced, with loose leading."
+    },
+    {
+     "id": "x14b-listing-cross",
+     "score": 7.7,
+     "why": "A listings page set as one: a head column with a big light '4 PLANS', tracked OCT/SUN mono caps under light day figures, and dotted leaders to 'in 6 days'. The title's lit word 'list.' is the weakest key word in the heat, and the head column leaves a tall gutter of empty dark."
+    },
+    {
+     "id": "x14b-folio-cross",
+     "score": 8.3,
+     "why": "The only design that truly pairs faces: IBM Plex Serif heads over Plex Sans and Mono, light serif figures with small-caps units ('4 COMING', '12 SAVED', '6 OF 13 ON'), dotted leaders and a mono running head ('P900 \u00b7 FamilyDB \u00b7 Status'). It reads like a well-set magazine on a terminal, and Status is beautifully typeset. Faults: the small caps look synthesized, and the serif title on the glass is let down by its wording."
+    },
+    {
+     "id": "x14b-manual-cross",
+     "score": 8.1,
+     "why": "Manual typesetting done right. Status has a 'FIG. 1' caption in tracked small caps, a 'WHAT A LAMP SAYS' legend, and a wiring figure set in mono. Home has a readout strip of tracked caps and light figures, and the To do day figures carry stacked SEP/SUN. The 'Hand Vera' title is set well but slightly clumsy."
+    },
+    {
+     "id": "x14b-departures-cross",
+     "score": 7.7,
+     "why": "Condensed heads paired with tracked mono counts ('4 COMING', '12 IDEAS') and a dot-matrix board with a big 13:00 make a good station voice. Holding it back: two mono voices (board and labels) compete, and the ways-to-start rows are set in the same weight as the title's box."
+    },
+    {
+     "id": "x14b-settled-cross",
+     "score": 7.6,
+     "why": "The two-line glowing title on the glass is now broken correctly ('Send Vera anything / to plan.'), and the Plans list has big light figures. But the Plans and To do heads, the big '4' and the '12 saved' are all at similar sizes, so the right column has three competing figure styles."
+    },
+    {
+     "id": "x14b-sill-cross",
+     "score": 7.6,
+     "why": "'What needs a plan?' in condensed bold, with 'Tell Vera.' trailing smaller and grey, is a lovely typographic aside. The four boxed plate cards each set the day figure, the stacked month and the mono time differently from the lists, and the type there is cramped."
+    },
+    {
+     "id": "x14b-pocket-cross",
+     "score": 7.6,
+     "why": "Diary dates are set as a diary sets them ('3 Oct Sat' stacked, in the margin labels Now, Next, Due), and the list figures are good. The title is long and wraps oddly on the phone, and the right column's small type is under-led."
+    },
+    {
+     "id": "x14b-trued-cross",
+     "score": 7.7,
+     "why": "'Tell Vera what to plan.' is set inside the box at a strong size, with the day figures under the line at a good scale. The plate cards repeat boxed mono times with tiny travel lines ('2 h 05 min NE') that are too small and too many."
+    },
+    {
+     "id": "x14b-waypoint-cross",
+     "score": 7.9,
+     "why": "The page titles are set superbly: 'Things to do 4' with 'open' and '\u25b23 late' stacked as superscripts, and a clean Plex scale. The right readout column ('Plans \u00b7\u00b7\u00b7\u00b7 4') is well tracked. The waypoint rings carry the day figures at a size too small to lead, and the title is shared with Settled."
+    }
+   ],
+   "top4": [
+    "x14b-folio-cross",
+    "x14b-quote-cross",
+    "x14b-manual-cross",
+    "x14b-desk-cross"
+   ],
+   "promise": [
+    "x14b-folio-cross",
+    "x14b-manual-cross",
+    "x14b-dessau-cross"
+   ],
+   "fixes": [
+    {
+     "id": "x14b-folio-cross",
+     "suggestion": "Keep the Plex Serif heads, the light serif figures with small-caps units, the dotted leaders and the mono running head: make them the standard. Fix: use real small caps (Plex Sans small caps or tracked caps at 0.72em with +0.06em tracking) in place of synthesized ones. Change the glass title's words: keep the serif on the scanlined glass with one lit word, but use 'Give Vera something to plan.' or 'Tell Vera what to plan.' in place of 'what's on.' On Home's numbered ways to start, set the italic 'lands in Plans' at the body size, not smaller. Check that the right column's serif heads (Plans, To do) and the left's Ideas sit on one baseline grid."
+    },
+    {
+     "id": "x14b-quote-cross",
+     "suggestion": "Keep the condensed two-line display title and the light quote figures on leaders. Fix the three-column band: make it two columns (Coming up, To do) with Lately added below, or let To do titles run to one line, because two-line wraps break the list rhythm. On the glass, set the 'THEN' line in the same mono size as the date. Give the section quote figures one colour (bone), not a different tint per column."
+    },
+    {
+     "id": "x14b-manual-cross",
+     "suggestion": "Keep the FIG. captions, the lamp legend, the readout strip and the stacked month/day caps. Fix: change the title to 'Tell Vera what to plan.' or keep 'Give\u2026', because 'Hand\u2026 anything' reads stiff. Align To do's day figures right in a fixed tabular column, as Coming up's are. The dial's small numerals (24, 9, 17) are below 11px: raise them, or drop them for the readout."
+    },
+    {
+     "id": "x14b-desk-cross",
+     "suggestion": "Keep the Coming up list setting, which is the best list typesetting in the field (light figures, stacked month/day, leaders, tabular mono times), and the title on the glass. Fix: set the lower half (Lately added, wishes) with the same day-figure and leader grammar, not small grey rows. Make 'usually Plans' labels 13px, not 11px. Put a rule head on Finish setting up so it does not float."
+    },
+    {
+     "id": "x14b-dessau-cross",
+     "suggestion": "Keep the geometric display face and the tracked-caps readout strip. Fix: raise the body and list text a step (15px to 16px) and the meta line weight, so the small text holds up against the 80px display. Set the title in sentence case as one sentence ('Tell Vera, she'll plan.') so it reads as an invitation. Use one heavy section-head size, not two."
+    },
+    {
+     "id": "x14b-waypoint-cross",
+     "suggestion": "Keep the 'Things to do 4' title with stacked superscript counts on every page head. Fix: give the waypoint rings day figures at 20px or more, or set the days as light figures leading the rows as Desk does. Give Home its own title so it no longer shares Settled's."
+    },
+    {
+     "id": "x14b-listing-cross",
+     "suggestion": "Keep the head column's big figure and the tracked OCT/SUN caps. Change the title to one whose lit word is 'plan', and narrow the head column (or put the section's next item in it) so it does not leave a tall empty gutter."
+    },
+    {
+     "id": "x14b-plate-cross",
+     "suggestion": "Keep the condensed rule heads and the engraved due figures set right. Fix: set the setup steps head one step smaller than the list heads, tighten the leading of the glass's mono lines to 1.35, and print the timeline's day figures at the lists' figure style."
+    },
+    {
+     "id": "x14b-sill-cross",
+     "suggestion": "Keep 'What needs a plan? Tell Vera.' as the title with its aside. Set the plate cards' date and time exactly as the lists' rows are set, or drop the cards for a row list on the rail."
+    },
+    {
+     "id": "x14b-departures-cross",
+     "suggestion": "Choose one mono for the board and for the tracked labels, and set the ways-to-start rows a step lighter than the box. 'headed' suggests travel: use 'plan' or 'on'."
+    },
+    {
+     "id": "x14b-trued-cross",
+     "suggestion": "Keep the title in the box. Cut the travel line on each plate card or set it at the body size, and drop the boxed mono times for plain tabular figures."
+    },
+    {
+     "id": "x14b-pocket-cross",
+     "suggestion": "Shorten the title ('Jot it down for Vera.' with 'plan' lit elsewhere, or 'Note it for Vera to plan.') so it sets on two clean lines on the phone. Lead the right column at 1.5."
+    },
+    {
+     "id": "x14b-settled-cross",
+     "suggestion": "Settle on one figure style for the right column: light figures for dates, a small-caps unit for counts. Make the Plans and To do heads a step bigger than the count figures."
+    }
+   ],
+   "titles": "The best is Desk's \"Give Vera something to plan.\", set on the glass in two lines broken before \"to plan.\" with a block cursor. It names who hears you, \"something\" takes in reminders, ideas and wishes, and it breaks cleanly. Trued's \"Tell Vera what to plan.\" comes next: short, one line, the lit word last. Sill's \"What needs a plan? Tell Vera.\" is typographically the most interesting (a head plus a smaller aside) and works. \"What should Vera plan?\" is good on Quote's two-line condensed setting but is on two lines (Quote, Plate). \"Send Vera anything to plan.\" is fine but also on two (Settled, Waypoint). Four fail. Folio's \"Tell Vera what's on.\" asks the page to show what is on and is not a label for the box. Listing's \"Put it on Vera's list.\" lights 'list', which suggests To do only. Dessau's \"Tell Vera. Let's plan.\" is a poster slogan of two sentences. Pocket's \"Jot it down for Vera to plan.\" is long and wraps badly on the phone. \"Hand Vera anything to plan.\" is stiff. \"Tell Vera where we're headed.\" suggests travel only.",
+   "notes": "Through a typographer's eye, the field has moved far from today's page. Every candidate has a written scale, light day figures leading dated rows, tracked month and day caps, and tabular mono times. That shared grammar is the tournament's main typographic gain and should be the standard: light 28-32px day figure, stacked tracked Oct/Sun, dotted leader, right-aligned tabular time.\n\nFolio is the one design with a true face pairing (Plex Serif heads, small-caps units, a mono running head). It reads as typeset rather than styled, and it is the strongest candidate for the standard's head style if its small caps are made real.\n\nGrafts that worked typographically:\n- Quote Board's head figures, taken into Manual's readout strip and Folio's counts.\n- Plate's engraved due figures.\n- Waypoint's superscript counts on page heads.\n\nGrafts that read as pasted:\n- The plate cards on Trued and Sill: they set the date three ways on one page.\n- Settled's mixed figure styles.\n\nThe two camps: the main camp brings display (Quote's condensed title, Dessau's poster, Desk's glowing title on the glass). The tour brings list and caption setting (Manual's FIG. captions, Pocket's diary dates). The best result would put Folio or Quote's head system over Desk's list setting and Manual's captions.\n\nGlow on type: the glowing titles on the glass (Desk, Settled, Folio) bring back the original phosphor well, without hurting legibility.",
+   "heat": "f"
+  },
+  {
+   "lens": "usability",
+   "scores": [
+    {
+     "id": "00-current",
+     "score": 4.8,
+     "why": "Every task is possible, but 42 of 55 Home targets are under 44px, 11.5px text is the smallest in the heat, and To do is a grid of cards whose state (late, done) you have to read line by line."
+    },
+    {
+     "id": "r13-idea-1",
+     "score": 7.1,
+     "why": "Clear desk with 0 small targets. The title sits under Next up on the glass, so a first-time user reads data before they find the box, and To do's filters are squeezed into the side terminal."
+    },
+    {
+     "id": "t3-track-refine2",
+     "score": 7.4,
+     "why": "The box comes first and each starter says where its answer lands. Coming up and To do read as rails with NOW. The setup ring strip and the empty plates cost some clarity."
+    },
+    {
+     "id": "x14b-waypoint-cross",
+     "score": 8.3,
+     "why": "The most usable page here. The head counts (Plans 4, To do 4, Late 3, Ideas 12) answer 'what state are we in' at a glance. Next is marked on the first Coming up row and wired to the tube. To do adds a Whose filter (Alex 2 late) that a family really uses, Edit is a real button, and Settings opens on a 'Needs a look' line. Faults: the lowest text contrast in the heat (4.64), a near-empty kids' wishes row, and one target under 44px on the phone and on To do."
+    },
+    {
+     "id": "x14b-folio-cross",
+     "score": 8.1,
+     "why": "Home works as a map of the whole service. The numbered starters each say 'lands in Plans/To do/Ideas', setup is one line ('Next: Choose your own password, then Telegram, then Google Calendar'), and Contents reaches every inner page with its state. Settings puts the one part that needs a look first. On the phone no plan shows above the fold, and the 310-990 page numbers are noise to a family."
+    },
+    {
+     "id": "x14b-settled-cross",
+     "score": 8,
+     "why": "The most compact Home: box, plans, To do, ideas and a household row with each page's state all fit on about one screen, with 'Every thing to do' and '1 with no date' as plain links. On the phone only counts sit above the fold, and the title breaks over two lines inside the glass."
+    },
+    {
+     "id": "x14b-manual-cross",
+     "score": 8,
+     "why": "Very legible. The head row counts, NEXT PLAN is spelled out with '10-11 Oct free' (useful when planning), To do shows dates on a rail with late in amber, and setup is a numbered list with one action per line. Lately added's kind labels on the left of a rail read backwards, and the dial repeats the right-hand text."
+    },
+    {
+     "id": "x14b-trued-cross",
+     "score": 7.9,
+     "why": "Clear order: box, starters that say where they land, Coming up on a lit rail, To do with dates, and 'Around the house' with each page's state. Home has 4 targets under 44px (the rail's links). The tube's 'NEXT UP' and the cards repeat each other."
+    },
+    {
+     "id": "x14b-sill-cross",
+     "score": 7.9,
+     "why": "The question is the headline and the starters sit on a branch. Coming up's cards on the rail are easy to scan, and wishes sit inline under To do. To do repeats the date in a Day column and again as 'was due', and one Home target is under 44px."
+    },
+    {
+     "id": "x14b-pocket-cross",
+     "score": 7.7,
+     "why": "The most capable Home: a to-do can be added from Home in one step, and each kid's wishes and the restaurants are listed there. But 'Where I am' is a round icon toggle with no visible on/off state, 3 Home targets are under 44px, the phone header loses the wordmark, and the page is long."
+    },
+    {
+     "id": "x14b-dessau-cross",
+     "score": 7.5,
+     "why": "The largest, most legible type in the heat and a clear counts row. The four-step setup bar is easy to follow. The dial duplicates the Coming up list, the phone puts the next plan below the fold behind the poster title, and the starters' coloured squares mean nothing."
+    },
+    {
+     "id": "x14b-departures-cross",
+     "score": 7.5,
+     "why": "The board is readable and holds the next three plans with their times. The starters say where they land. Setup sits halfway down the left rail between 'Continue with Vera' and To do, and To do's rail runs on past its last row into about 250px of empty ground."
+    },
+    {
+     "id": "x14b-desk-cross",
+     "score": 7.4,
+     "why": "The patch lead from the glass to NOW reads well. But on desktop and phone alike the title sits under the Next up data. 'Where I am' is an icon button whose state cannot be seen. On Ideas, 6 kind chips are under 44px (5 under 24)."
+    },
+    {
+     "id": "x14b-quote-cross",
+     "score": 7.3,
+     "why": "The count board reads at a glance and to-dos say 'was due Sun 27 Sep'. On To do, Search and Add are folded into disclosure chips, so the two most common actions take an extra click. The mic has no visible edge, and the first Lately added row is a different size from the rest."
+    },
+    {
+     "id": "x14b-listing-cross",
+     "score": 7.2,
+     "why": "The lists are clean, with clear head counts in the left column. The page is the longest in the heat. The equaliser's bars carry no plan names, and the head column costs width that the list rows need on smaller screens."
+    },
+    {
+     "id": "x14b-plate-cross",
+     "score": 6.9,
+     "why": "The starters are drawn inside the message field, which cuts the textarea off from From and Send, and their small 'lands in' label comes before the action. Setup is a full band that pushes Coming up below the fold on a laptop. Status opens on a big equaliser before the answers."
+    }
+   ],
+   "top4": [
+    "x14b-waypoint-cross",
+    "x14b-folio-cross",
+    "x14b-settled-cross",
+    "x14b-manual-cross"
+   ],
+   "promise": [
+    "x14b-pocket-cross",
+    "x14b-waypoint-cross",
+    "x14b-folio-cross"
+   ],
+   "fixes": [
+    {
+     "id": "x14b-waypoint-cross",
+     "suggestion": "Keep the head count panel, Next marked on the row and wired to the tube, the To do Whose filter and Settings' 'Needs a look' line. Fix: raise the muted text so the lowest contrast passes 5 (now 4.64). Make the to-do target 44px on the phone. Give The kids' wishes real rows (Maya, Theo, 'nothing on the list yet', a link to add) rather than a heading with two zeros. Drop the arc strip on Plans or label its arcs as weeks."
+    },
+    {
+     "id": "x14b-folio-cross",
+     "suggestion": "Keep the Contents map, the 'lands in' starters and the one-line setup. Fix: on the phone, put the next plan (one line: 4 Sun Oak Park roller rink 13:00) above the counts. Drop the 310-990 page numbers from Contents, or show them only in the glass header. Change 'Tell Vera what's on.', which can read as a question; for example 'Tell Vera what to plan.'"
+    },
+    {
+     "id": "x14b-settled-cross",
+     "suggestion": "Keep the one-screen Home and the household row with each page's state. Fix: on the phone, put the next plan on the glass under the title. Keep the title to one line at desktop width. Give the To do heading's lone amber dot a word ('3 late')."
+    },
+    {
+     "id": "x14b-manual-cross",
+     "suggestion": "Keep the NEXT PLAN text with its free days, the count row and the numbered setup. Fix: put Lately added's kind labels after the title, as every other list has them, rather than on the left of a rail. Shrink the dial or let it carry what the text does not (the free days) so the two do not repeat."
+    },
+    {
+     "id": "x14b-trued-cross",
+     "suggestion": "Keep the box-first head, the starters that say where they land and 'Around the house'. Fix: raise the 4 Home rail links to 44px. Let the tube carry only Next and the cards the rest, so the next plan is not printed twice."
+    },
+    {
+     "id": "x14b-sill-cross",
+     "suggestion": "Keep the headline question, the starter branch and the inline wishes. Fix: drop To do's Day column and keep 'was due 6 days ago', or keep the date and drop the repeat. Raise the one small Home target."
+    },
+    {
+     "id": "x14b-pocket-cross",
+     "suggestion": "Keep the add-a-to-do field on Home and the kids' wishes and restaurants lists. Fix: make 'Where I am' a real checkbox with a visible ticked state, as the other designs have. Restore the wordmark in the phone bar. Raise the 3 small Home targets. Shorten 'Jot it down for Vera to plan.'"
+    },
+    {
+     "id": "x14b-desk-cross",
+     "suggestion": "Keep the patch lead to NOW and the cased column. Fix: move the title above Next up on the glass, desktop and phone alike. Make 'Where I am' a checkbox. On Ideas, make the kind chips 44px tall, or a select on the phone."
+    },
+    {
+     "id": "x14b-departures-cross",
+     "suggestion": "Keep the board and the wire from the box. Fix: end To do's rail at its last row and move the Ready line up. Move setup to a line under the head (one next step) rather than mid-rail."
+    },
+    {
+     "id": "x14b-quote-cross",
+     "suggestion": "Keep the count board. Fix: on To do, show the search field and the Add button open, not folded into chips. Give the mic a visible edge. Draw the first Lately added row like the rest."
+    },
+    {
+     "id": "x14b-dessau-cross",
+     "suggestion": "Keep the type scale and the setup bar. Fix: on the phone, put the next plan under the title (the dial can go below). Replace the meaningless colour squares on the starters with their 'lands in' icons."
+    },
+    {
+     "id": "x14b-plate-cross",
+     "suggestion": "Move the starters out of the field to sit under the Send row, with the action first and 'lands in' second. Fold setup to one line with the next step."
+    },
+    {
+     "id": "x14b-listing-cross",
+     "suggestion": "Print the plan names or numerals on the equaliser bars, and narrow the head column on screens under 1100px so the rows keep their width."
+    }
+   ],
+   "titles": "Best: 'Tell Vera what to plan.' (Trued). It names who hears you and says what to type, and it cannot be misread. Its near equal is 'Send Vera anything to plan.' (Waypoint, and Settled again, which is a duplication to fix): 'anything' tells a first-time user that reminders and ideas belong here too. 'What needs a plan? Tell Vera.' (Sill) works because the instruction follows the question. 'Hand Vera anything to plan.' (Manual) and 'Give Vera something to plan.' (Desk) are fine. They fail as follows. 'Tell Vera what's on.' (Folio) can be read as asking what is on. 'Put it on Vera's list.' (Listing) suggests To do only. 'Tell Vera where we're headed.' (Departures) sounds like travel only. 'What should Vera plan?' (Plate) and 'What should Vera plan?' (Quote) hand the choice to Vera and can be answered 'I don't know'. 'Tell Vera. Let's plan.' (Dessau) is a slogan, not a label. 'Jot it down for Vera to plan.' (Pocket) is long and casual.",
+   "notes": "The camps have met. Grafts that helped usability: Waypoint's head count panel (from the main camp's head rows) and its Whose filter on To do. Folio's NOW rails and Contents (taken from the tour) give the clearest map of the service. Every starter that says 'lands in Plans/To do/Ideas' helps first-time users. Settled's household row now appears on several lines (Trued 'Around the house', Listing 'Also on', Quote, Pocket 'At the back'); that is good for usability, but it shows the field converging. Grafts that read as pasted or cost use: Plate's starters inside the field, Quote's folded Search, the icon-only 'Where I am' toggles on Desk and Pocket (a checkbox lost its visible state), and dials or equalisers that repeat the list beside them (Dessau, Manual, Listing). Every design but today's has close to 0 targets under 44px and text of 12px or more, so the remaining differences are in structure. Three tests separate the field: whether the next plan sits above the phone's fold (Folio, Settled and Dessau fail), whether state can be read at a glance (Waypoint, Manual and Folio lead), and whether Home lets you act without leaving it (Pocket's add-a-to-do field). The tour lines kept their grammar and gained the main camp's head counts; the main lines gained rails. The Folio cross (main camp) and Waypoint (tour) are the cleanest joins of the two.",
+   "heat": "f"
+  },
+  {
+   "lens": "skeptic",
+   "scores": [
+    {
+     "id": "00-current",
+     "score": 4.2,
+     "why": "The Matrix original: green on every word, boxed cards, a wash in the corner and a setup box shouting in amber. It is the yardstick for what the owner asked to leave behind."
+    },
+    {
+     "id": "r13-idea-1",
+     "score": 6.8,
+     "why": "Calm and structured, but nearly colourless, and the right column is a stack of grey boxes. The tube carries all the soul, and no line joins it to the plans it reports."
+    },
+    {
+     "id": "t3-track-refine2",
+     "score": 7,
+     "why": "The lit line is honest and the light sits where the data is. But 'What's the plan?' fails as a label, the plates are empty graphite, and Status and To do are plain grey tables."
+    },
+    {
+     "id": "x14b-manual-cross",
+     "score": 8.2,
+     "why": "The best case here of light wired to what it reports: the dial's lit wire drops straight onto Coming up's NOW, and Lately added hangs from a rail with its kinds set in a head column. Status's FIG. 1 wiring diagram is real content. Against it: the dial's 24, 9 and 17 sit at clock positions that mean nothing, the Plans calendar has hatched corners that read as dirt, and the footer's split column is mostly empty."
+    },
+    {
+     "id": "x14b-waypoint-cross",
+     "score": 8,
+     "why": "The flight-plan arcs over Coming up are real weeks, the tube now sits beside the list with a wire to the Next row (closing last round's empty column), and Ideas gained big minute figures. But The kids' wishes is a heading with nothing under it, and the title is shared word for word with Switchboard."
+    },
+    {
+     "id": "x14b-listing-cross",
+     "score": 7.9,
+     "why": "The most consistent system in the heat: a head column with one figure on every page, Plans, To do, Ideas and Status included, and the stem now drops straight from the tube to NOW. Its risk is a bar strip in the tube that is the same device as Departures', Pocket's and Quote's, and a Plans calendar left plain."
+    },
+    {
+     "id": "x14b-trued-cross",
+     "score": 7.6,
+     "why": "'Tell Vera what to plan.' is the right title, and the line under the cards is clear. But Sill Line is almost the same page beside it. 'Around the house' is a thin line of rings with little to say, and the grey card plates make it read as an editor theme."
+    },
+    {
+     "id": "x14b-dessau-cross",
+     "score": 7.6,
+     "why": "The only design you would tell apart at a squint: poster type, a counted readout strip, and Ideas' radar now on real bearings (north up, rings by road time). Against it: Home's dial still parks days at compass points, Vera's avatar on the chat is a ball of falling glyphs (the Matrix again), the footer keeps a legend strip, and the coloured section caps verge on a costume."
+    },
+    {
+     "id": "x14b-departures-cross",
+     "score": 7.5,
+     "why": "'Tell Vera where we're headed.' is the most native title, and the dot-matrix board with its four-week trace is real content. But the To do column runs a long empty line down to Ready, the colour-edged starter chips are grey slabs, and Coming up's right column is heavy with type."
+    },
+    {
+     "id": "x14b-quote-cross",
+     "score": 7.4,
+     "why": "The big figures read at a glance, and the household row works. But the title is the same as Plate's, the costume has crept back (the Keyboard footer, the boxed Settings button in the bar), the large starters on Home are oversized, and the To do item names are cramped by the dates beside them."
+    },
+    {
+     "id": "x14b-pocket-cross",
+     "score": 7.4,
+     "why": "The Now/Next/Due/Later diary line down the left is a real organising idea, and 'Jot it down for Vera to plan.' has a voice. But the #1-#4 serials on Lately added are noise, the four colour-capped cards of 'At the back' come from another design, and the page is very long."
+    },
+    {
+     "id": "x14b-desk-cross",
+     "score": 7.3,
+     "why": "The patch lead from the case to NOW still works. But the cased column is repeated on every page as a sidebar terminal, the colour is still nearly grey with wheat top rules, and the starters are still ring stops on a line, which read as radio buttons."
+    },
+    {
+     "id": "x14b-sill-cross",
+     "score": 7.1,
+     "why": "Well made, but it is a near-duplicate of Trued (same tube, same cards hung on a line, same rail). 'What needs a plan? Tell Vera.' carries two titles where one would do."
+    },
+    {
+     "id": "x14b-folio-cross",
+     "score": 7,
+     "why": "The serif display face is a genuine typographic difference, and the lit 'on.' on the glass has soul. But the contents page numbers (310, 700, 990) came back after judges asked for them to go, and the radar ('Each mark is a plan, by its day') is copied word for word on Switchboard."
+    },
+    {
+     "id": "x14b-plate-cross",
+     "score": 6.9,
+     "why": "Calm, but the setup list takes a whole band with the page's emptiest ground, the radar overlaps the tube's corner like a sticker, and the title duplicates Quote's. It has the least spark per square inch."
+    },
+    {
+     "id": "x14b-settled-cross",
+     "score": 6.6,
+     "why": "It now borrows from everybody: Desk's glass title box, Folio's radar with the same caption, and Waypoint's title. The two-tier household row at the foot is the only part that is still its own."
+    }
+   ],
+   "top4": [
+    "x14b-manual-cross",
+    "x14b-waypoint-cross",
+    "x14b-listing-cross",
+    "x14b-trued-cross"
+   ],
+   "promise": [
+    "x14b-dessau-cross",
+    "x14b-listing-cross",
+    "x14b-pocket-cross"
+   ],
+   "fixes": [
+    {
+     "id": "x14b-manual-cross",
+     "suggestion": "Keep the dial-to-NOW wire, the kinds head column on Lately added, and FIG. 1 on Status. Fix: put the dial's day numerals on a real scale (clockwise days from today, so 4 sits near the top and 24 three quarters round) or drop them; delete the hatched corners on the Plans calendar; shrink the split footer to one row; give The kids' wishes a lamp instead of '\u25cb\u25cb Maya, Theo nothing open'."
+    },
+    {
+     "id": "x14b-waypoint-cross",
+     "suggestion": "Keep the arcs over the weeks, the tube wired to the Next row, and Ideas' big minute figures. Fix: The kids' wishes needs rows under its heading, or should fold into the readout strip; change the title, since Settled has the same one (try 'Give Vera something to plan.'); and either use the footer shape legend or drop it."
+    },
+    {
+     "id": "x14b-listing-cross",
+     "suggestion": "Keep the head column with one figure per band on every page; it is the standard to adopt. Fix: give the tube a device of its own, since the bar strip is now on four designs (print each plan's day on its bar as programme slots); put one lit object on the Plans month (today's cell or the next plan); and taper the stem after NOW rather than running it on to To do."
+    },
+    {
+     "id": "x14b-trued-cross",
+     "suggestion": "Keep the title and the line under the cards. Fix: shrink the card plates to their content or set them as text stops on the line, and fill 'Around the house' with counts or remove it. Trued and Sill must split: Trued keeps the cards on the line, and Sill should drop them."
+    },
+    {
+     "id": "x14b-sill-cross",
+     "suggestion": "Differentiate it from Trued: make the question the board's headline and drop 'Tell Vera.'. Let Coming up be the rail of rows with the tube's wire dropping onto it, as its name promised, rather than Trued's cards."
+    },
+    {
+     "id": "x14b-dessau-cross",
+     "suggestion": "Keep the poster type, the readout strip and Ideas' honest radar. Fix: replace the Matrix-glyph avatar on the chat with the same mark Home uses; make Home's dial a month clock with labelled days, or a straight line; drop the footer legend; and tone the section caps' coloured squares to steel or sage."
+    },
+    {
+     "id": "x14b-departures-cross",
+     "suggestion": "Keep the title, Vera's line and the board with its trace. Fix: end Vera's line at the last To do row instead of running empty to Ready; make the starters lighter text stops without filled slabs; tighten the board's right column."
+    },
+    {
+     "id": "x14b-pocket-cross",
+     "suggestion": "Keep the Now/Next/Due/Later diary line and the title. Fix: drop the #n serials; set 'At the back' as diary entries on the line rather than colour-capped cards; shorten the page by putting Something to eat beside Lately added."
+    },
+    {
+     "id": "x14b-quote-cross",
+     "suggestion": "Keep the big figures and the household row. Fix: change the title (it is Plate's); remove the Keyboard footer and the boxed Settings button; give To do's names the width (dates under the name, not beside it)."
+    },
+    {
+     "id": "x14b-desk-cross",
+     "suggestion": "Keep the case and the patch lead on Home only. Fix: drop the sidebar terminal from inner pages, or make it carry each page's figure; replace the ring-stop starters with square chips; add one grounded companion (sage kinds, steel rules) in place of the wheat top rules."
+    },
+    {
+     "id": "x14b-folio-cross",
+     "suggestion": "Keep the serif display and the glass 'on.'. Fix: remove the page numbers from Contents; replace the radar with a dated contents line; change the words to an invitation ('Tell Vera what's on.' still asks the page to show what is on)."
+    },
+    {
+     "id": "x14b-settled-cross",
+     "suggestion": "Return to its own idea: the two-tier map of the service. Remove the borrowed glass title box and the copied radar, choose an unused title, and make the household rack the head of the page rather than its foot."
+    },
+    {
+     "id": "x14b-plate-cross",
+     "suggestion": "Collapse Finish setting up into one row; seat the radar inside the tube, not over its corner; give it its own title."
+    }
+   ],
+   "titles": "Best: Departures' 'Tell Vera where we're headed.': native to its station idea, it names who hears you, and the lit word lands last. Trued's 'Tell Vera what to plan.' is the clearest label. Strong voice: Pocket's 'Jot it down for Vera to plan.'. Manual's 'Hand Vera anything to plan.' is fine but awkward ('hand anything'). Weak or failing: 'Send Vera anything to plan.' on both Waypoint and Settled, and 'What should Vera plan?' on both Quote and Plate. Both are duplicates, and the question puts the planning on Vera rather than inviting input. Sill's 'What needs a plan? Tell Vera.' is two titles in one. Folio's 'Tell Vera what's on.' still reads as a promise that the page shows what's on. Listing's 'Put it on Vera's list.' is apt but makes Vera a to-do list. Dessau's 'Tell Vera. Let's plan.' is a slogan, not a label.",
+   "notes": "Through the skeptic's lens: convergence is the main fault again. Five designs carry a radar or dial with day numerals parked at meaningless positions (Manual, Dessau, Folio, Settled, Desk's Plans), and Folio and Settled share it with the same caption. Four put a bar strip in the tube (Listing, Departures, Pocket, Quote). Trued and Sill are near-twins. Two title pairs are duplicated. Grafts that worked: Manual's dial wire onto NOW (light wired to its data), Waypoint's tube wired to its Next row, and Listing's straight drop. Dessau's radar went onto real bearings, as last round asked. Grafts that read pasted: Settled's borrowed glass box and radar, Pocket's colour-capped cards at the back, Desk's sidebar terminal on every page, and Dessau's glyph avatar, which brings back the Matrix. On colour, none is muddy or bronze, and grounded companions are present everywhere except Desk (still near grey). Waypoint and Manual have the healthiest spread. The tour camp brings the grammars (lines, rails, diary) and the main camp the systems (Listing's head column, Quote's figures), and the best designs join both. Listing's head column is the strongest candidate for an app-wide standard.",
+   "heat": "f"
+  }
+ ]
+}

@@ -1,0 +1,24 @@
+/* ==========================================================================================
+   SWITCHBOARD, PATCHED (from Settled Light, crossing round 14b): the family's videotex service as a
+   map. Built by tools/build.py from tools/parts/ (later parts win; overridden declarations and
+   rules for classes no template draws are dropped, tools/dropped.txt).
+
+   Three faces, three jobs: IBM Plex Sans (and its condensed cut for heads) for everything read;
+   IBM Plex Mono for times and tabular figures; VT323 only on the glass.
+
+   RULES THAT HOLD ON EVERY PAGE
+   1. No boxes. A cell is bare ground with a 3rem tab in its section's ink over its head, and
+      cells are parted by engraved seams (a 2px groove over a warm 1px lip), never frames.
+   2. One head: icon, condensed title, a short dotted leader, the figure in its section's ink,
+      unit over change in sans, the one green primary at the right, a seam under it.
+   3. One drawn line on Home: the lead from the jack into the Plans rail's NOW lamp, both drawn
+      by the lamp, lit only from NOW to the first stop, steel after.
+   4. Light where it is live: the mark, the primary, the lit word, the lead and NOW lamps, live
+      lamps, focus, the tubes, and a row's afterglow (lit at once, let go over 1.5s).
+   5. Colour with a job: phosphor #6dff9c for what is lit; Plans sky #93bfe0, To do sea #86c6bd,
+      Ideas pewter #8794a2, bone #cdc6b5 for the household's figures; amber only for late and
+      needs a look (words, edges, small lamps); steel for the rail below the first stop.
+   6. Type steps: titles 2rem condensed, cell heads 1.625rem, row names 1.125rem, body 1.0625rem,
+      labels and meta 0.875rem and never smaller outside the glass. Every target 44px or more.
+   7. Only a page with a live tube keeps a rack; inner pages end on the status foot.
+   ========================================================================================== */

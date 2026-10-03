@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, presence, fig, head_figure %}
+{% from "_machine.html" import machine %}
+{% block title %}Settings · {{ site_title }}{% endblock %}
+{% block body_class %}page-settings{% endblock %}
+{% block content %}
+  {# The chapter's figure is the machine taken apart, as a parts diagram: each part it can be
+     told about is numbered, and the list beside it is the key. #}
+  {% set looks = namespace(n=[]) %}
+  {% for entry in sections %}{% if entry.look %}{% set looks.n = looks.n + [loop.index] %}{% endif %}{% endfor %}
+  {% set head_fig %}
+    {% call fig('fig-machine', name='The machine, each part numbered as the list beside it; a part ringed amber needs a look.', summary='The machine, keyed to the ' ~ (sections | length) ~ ' parts below' ~ ((' · ' ~ (looks.n | length) ~ ' needs a look') if looks.n else '')) %}
+      {{ machine(0, looks.n) }}
+    {% endcall %}
+  {% endset %}
+  {# The key to the figure, beside it: one row to a page of settings, each saying how things
+     stand, so this is the place to look first as well as the way in. Something missing is
+     marked, in words. #}
+  {# Slotted: the figure column folds away (the machine only keyed the rows beside it); each part's
+     own row says how it stands, and the head counts what needs a look. #}
+  <header class="page-head plate parts no-fig">
+    <div class="plate-body page-title">
+      <div class="title-row"><h1>Settings</h1>{{ head_figure(sections | length, 'parts', ((looks.n | length) ~ ' need' ~ ('s' if looks.n | length == 1 else '') ~ ' a look') if looks.n else none, change_cls='late') }}</div>
+      <p class="lede">Each part, how it stands now, and the way in to change it.</p>
+      {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+      {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+      {# Two lists, the parts split by order, so each row takes its own height. #}
+      {% set half = (sections | length + 1) // 2 %}
+      <div class="settings-cols">
+        {% for part in [sections[:half], sections[half:]] if part %}
+        {% set base = 0 if loop.first else half %}
+        <ol class="section-cards railed-parts" start="{{ base + 1 }}">
+          {% for entry in part %}
+            {% set one = entry.section %}
+            {% set no = base + loop.index %}
+            <li id="part-{{ no }}">
+              <a class="section-card{% if entry.look %} look{% endif %}" href="{{ url_for('settings.section', name=one.name) }}">
+                <span class="part-no" aria-hidden="true">{{ no }}</span>
+                <span class="section-what">
+                  <span class="sc-title"><strong>{{ one.title }}</strong>{% if entry.look %}<span class="tag warn">Needs a look</span>{% endif %}</span>
+                  {% for line in entry.lines %}<span class="section-state">{{ line | replace("'", "’") }}</span>{% endfor %}
+                </span>
+              </a>
+            </li>
+          {% endfor %}
+        </ol>
+        {% endfor %}
+      </div>
+      <p class="muted small setup-note">
+        Setting up for the first time, or starting again? <a href="{{ url_for('setup.overview') }}">Setup{{ icon('right') }}</a>
+        goes through what matters most, one step at a time.
+      </p>
+    </div>
+  </header>
+{% endblock %}

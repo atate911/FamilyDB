@@ -1,0 +1,74 @@
+{
+ "stage": "design",
+ "round": "x14b",
+ "label": "14b",
+ "roundNo": 2,
+ "key": "quote",
+ "cross": true,
+ "lin": {
+  "name": "quote (Quote Board, Posted)",
+  "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a",
+  "carried": [
+   {
+    "id": "x14a-quote-cross",
+    "name": "Quote Board, Posted"
+   }
+  ],
+  "briefs": [
+   {
+    "slot": "cross",
+    "parent": "x14a-quote-cross",
+    "parentName": "Quote Board, Posted"
+   }
+  ],
+  "idea": "a count board: each section led by one big quote or figure, read at a glance",
+  "camp": "main",
+  "otherCamp": [
+   {
+    "key": "trued",
+    "id": "x14a-trued-cross",
+    "name": "Trued, Headlamp",
+    "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+   },
+   {
+    "key": "manual",
+    "id": "x14a-manual-cross",
+    "name": "Lit Manual, Slotted",
+    "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+   },
+   {
+    "key": "departures",
+    "id": "x14a-departures-cross",
+    "name": "Departures, Signalled",
+    "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+   },
+   {
+    "key": "settled",
+    "id": "x14a-settled-cross",
+    "name": "Switchboard, Quoted",
+    "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+   },
+   {
+    "key": "sill",
+    "id": "x14a-sill-cross",
+    "name": "Sill Line, Squared",
+    "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+   },
+   {
+    "key": "pocket",
+    "id": "x14a-pocket-cross",
+    "name": "Pocket Diary, Lit",
+    "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+   },
+   {
+    "key": "waypoint",
+    "id": "x14a-waypoint-cross",
+    "name": "Waypoint, Ruled",
+    "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+   }
+  ],
+  "mutant": null
+ },
+ "plan": true,
+ "mutant": false
+}

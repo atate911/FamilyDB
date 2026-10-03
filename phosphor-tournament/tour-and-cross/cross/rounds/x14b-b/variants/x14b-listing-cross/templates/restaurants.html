@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, kind_icon, kind_label, page_head, head_figure %}
+{% block title %}Restaurants · {{ site_title }}{% endblock %}
+{% block body_class %}page-restaurants{% endblock %}
+{% block content %}
+  {% call page_head('Ideas', 'Places to go, things to try, and everything the family has mentioned.', 'idea') %}
+    <a class="button" href="{{ url_for('web.new_idea') }}">{{ icon('plus') }}Add an idea</a>
+  {% endcall %}
+  {# Evening Listing, Relit: the same page as All ideas, its count and switch in the head column; a row for each
+     place: the restaurant mark, the name, a leader, where and how far, then for whom and its price
+     in the facts; under it today's hours, what it is and the ways on. #}
+  <section class="band idea-band">
+    <div class="band-head list-head">
+      {{ head_figure(cards | length, 'restaurant' if cards | length == 1 else 'restaurants') }}
+      <nav class="kind-key" aria-label="Show one kind">
+        <a class="kind-all" href="{{ url_for('web.ideas') }}">{{ icon('idea') }}<span>All</span></a>
+        {% for option in ['activity', 'day_trip', 'event', 'other', 'outing', 'restaurant', 'seasonal', 'show', 'trip'] %}
+          {% if option == 'restaurant' %}<a class="kind-restaurant" href="{{ url_for('web.restaurants') }}" aria-current="true">{{ kind_icon(option) }}<span>Restaurant</span></a>
+          {% else %}<a class="kind-{{ option }}" href="{{ url_for('web.ideas', kind=option) }}">{{ kind_icon(option) }}<span>{{ option | replace("_", " ") | capitalize }}</span></a>{% endif %}
+        {% endfor %}
+      </nav>
+      <p class="note">Places the family has talked about.</p>
+    </div>
+    <div class="band-body">
+      {% if not cards %}
+        <p class="row empty">{{ icon('restaurant') }}<span>No restaurants yet. Tell the bot about one and it will appear here.</span></p>
+      {% endif %}
+      <ul class="rows ideas-rows">
+        {% if cards %}<li class="row cols" aria-hidden="true"><span class="d">Kind</span><span class="t"></span><span class="x"></span><span class="f"><span class="for">For</span><span class="cost">Cost</span></span></li>{% endif %}
+        {% for card in cards %}
+          <li class="row linked idea-card">
+            <span class="d kind kind-restaurant">{{ icon('restaurant') }}</span>
+            <h2 class="t"><a href="{{ url_for('web.idea', idea_id=card.id) }}">{{ card.title }}</a></h2>
+            <p class="x meta">
+              {% if card.where %}<span>{{ icon('pin') }}{{ card.where }}</span>{% endif %}
+              {% if card.travel %}<span>{{ icon('day_trip') }}{{ card.travel }}</span>{% endif %}
+              {% if card.rating %}<span>{{ icon('star') }}{{ card.rating }}</span>{% endif %}
+              {% if card.pending %}<span>{{ icon('hourglass') }}{{ card.details }}</span>{% endif %}
+              {% if card.stale %}<span class="warn">{{ icon('warning') }}details may be out of date</span>{% endif %}
+            </p>
+            <p class="f"><span class="for">for {{ card.who }}</span><span class="cost">{{ card.cost or '' }}</span><span class="sr">Restaurant</span></p>
+            <div class="sub">
+              {% if card.today %}<p class="today-hours">{{ icon('clock') }}{{ card.today }}</p>{% endif %}
+              {% if card.summary %}<p class="summary">{{ card.summary }}</p>{% endif %}
+              <p class="links">
+                <a href="{{ url_for('web.idea', idea_id=card.id) }}">{{ icon('idea') }}Everything we know</a>
+                {% if card.website %}
+                  <a href="{{ card.website }}" rel="noopener noreferrer">{{ icon('link') }}Their site</a>
+                {% endif %}
+                {% if card.booking_url %}
+                  <a href="{{ card.booking_url }}" rel="noopener noreferrer">{{ icon('bell') }}Book a table</a>
+                {% endif %}
+                {% if card.map_url %}
+                  <a href="{{ card.map_url }}" rel="noopener noreferrer">{{ icon('pin') }}Map</a>
+                {% endif %}
+              </p>
+              {% if card.tags %}
+                <p class="tags">{% for tag in card.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</p>
+              {% endif %}
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </section>
+{% endblock %}

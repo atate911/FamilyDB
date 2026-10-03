@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, chat_line, waiting_line, lamp, civil, status_foot with context %}
+{#- A day as the log prints it on its rule, "Sun 27 Sep": the weekday read off the calendar for
+    "27 Sep" in the year that puts it on or before the page's own clock (the moment this visitor
+    signed in); the words as they came when there is no clock. -#}
+{% macro day_words(text) -%}
+  {%- set MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] -%}
+  {%- set DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] -%}
+  {%- set bits = text.split(' ') -%}
+  {%- set at = session.get('at') -%}
+  {%- if at and bits | length == 2 and bits[1][:3] in MON and bits[0] | int > 0 -%}
+    {%- set now = (at | int) // 86400 -%}
+    {%- set y = 1970 + (now / 365.2425) | int -%}
+    {%- set iso = '%04d-%02d-%02d' | format(y, MON.index(bits[1][:3]) + 1, bits[0] | int) -%}
+    {%- set n = civil(iso) | int -%}
+    {%- if n > now + 1 -%}{%- set n = civil('%04d-%02d-%02d' | format(y - 1, MON.index(bits[1][:3]) + 1, bits[0] | int)) | int -%}{%- endif -%}
+    {{- DOW[(n + 3) % 7] }} {{ text -}}
+  {%- else -%}{{- text -}}{%- endif -%}
+{%- endmacro %}
+{% block title %}{{ assistant if has_persona else 'Chat' }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-chat{% endblock %}
+{% block head %}
+  {% if refresh and locked %}
+    <meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" />
+  {% elif refresh %}
+    <noscript><meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" /></noscript>
+  {% endif %}
+{% endblock %}
+{% block content %}
+  {% if reading %}
+    {{ page_head(reading ~ ' and ' ~ (assistant if has_persona else 'the bot'), 'Her own conversation, for you to read. Only she writes in it.', 'presence' if has_persona else 'chat', [(assistant if has_persona else 'Chat', url_for('chat.show'))]) }}
+  {% elif private %}
+    {{ page_head(assistant if has_persona else 'Chat', 'Just you and ' ~ assistant ~ '. Tell her what you wish for, or ask about the plans.', 'presence' if has_persona else 'chat') }}
+  {% else %}
+    {{ page_head(assistant if has_persona else 'Chat', 'Weekends, ideas, to-dos and the calendar: anything you would ask in Telegram works here too.', 'presence' if has_persona else 'chat') }}
+  {% endif %}
+
+  {# Her pilot lamp, read from the page's own state, never asked of a model: lit and steady while
+     she is ready; breathing, and saying so, while a turn runs. #}
+  {% if pending %}<p class="ready-line working" role="status">{{ lamp('on', 'live') }}<span>Working</span></p>
+  {% else %}<p class="ready-line" role="status">{{ lamp('on') }}<span>Ready</span></p>{% endif %}
+
+  {# The log hangs from her screen, at the head of the gutter, on one steel wire the length of the
+     thread: a stop at each line (hers sage, her newest lit; each of the family's a steel ring
+     with their initial, and a pewter tick from it to their words on the right), and at the foot
+     a ring at the box, lit while it is the family's turn to write. #}
+  {% set hers = namespace(last=-1) %}
+  {% for line in lines %}{% if line.from_bot %}{% set hers.last = loop.index0 %}{% endif %}{% endfor %}
+  <section class="bay slim loop-bay" aria-label="The conversation">
+    <div class="gutter tile-loop" aria-hidden="true">{{ presence('loop-her', 1) }}</div>
+    <div class="bay-body">
+      {% if lines %}
+        <ol class="thread wired">
+          {# The day once, on a rule across the log where it changes; each line then carries only
+             its time, set beside its name. #}
+          {% set day = namespace(last='') %}
+          {% for line in lines %}
+            {% set parts = (line.when or '').split(', ') %}
+            {% set mark = 'newest' if loop.index0 == hers.last and not pending else '' %}
+            {% if parts | length == 2 %}
+              {% if parts[0] != day.last %}<li class="day-rule"><span>{{ day_words(parts[0]) }}</span></li>{% set day.last = parts[0] %}{% endif %}
+              {{ chat_line(line, latest if loop.last, parts[1], mark) }}
+            {% else %}
+              {{ chat_line(line, latest if loop.last, none, mark) }}
+            {% endif %}
+          {% endfor %}
+          {% if pending %}{{ waiting_line(assistant, state, pending) }}{% endif %}
+        </ol>
+      {% else %}
+        <p class="muted empty">{{ icon('chat') }}<span>Nothing said here yet. Ask {{ assistant }} what to do this weekend, save an idea, or set a reminder.</span></p>
+      {% endif %}
+
+      {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+      {% if not reading %}{% include "_ask.html" %}{% endif %}
+    </div>
+  </section>
+
+  {% if kids and not reading %}
+    <nav class="panel tiled kids-loops" aria-label="The kids' conversations">
+      <span class="tile" aria-hidden="true">{{ icon('family') }}</span>
+      <h2>The kids’ conversations</h2>
+      <p class="muted">Each kid talks to {{ assistant }} on her own. You can read along.</p>
+      <ul class="plain">
+        {% for kid in kids %}<li><a href="{{ url_for('chat.show', with=kid.id, _anchor=latest) }}">{{ lamp() }}{{ kid.name }}</a></li>{% endfor %}
+      </ul>
+    </nav>
+  {% endif %}
+{% endblock %}

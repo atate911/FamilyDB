@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, presence, crt, lamp %}
+{% block title %}Settings · {{ site_title }}{% endblock %}
+{% block body_class %}page-settings{% endblock %}
+{% block content %}
+  {# The rack: down the first column the plate alone (nothing here is live, so no screen); across
+     the other three the register, a sommaire: the parts that want a look first, then the way into
+     setup, then the rest, each a line of the contents: its lamp (an amber bar where it wants a
+     look), its icon, its name, a leader and how it stands now. #}
+  {% set by = {} %}{% for entry in sections %}{% set _ = by.update({entry.section.name: entry}) %}{% endfor %}
+  {% set wanting = sections | selectattr('look') | list | length %}
+  <div class="side-head" hidden>
+  {# The plate's figure is Home's: how many parts, and how many want a look, said once here; the
+     parts that want one come first below, each with its amber bar. #}
+  {{ page_head('Settings', 'Each part, how it stands now, and the way in to change it.', 'settings',
+      figure=sections | length, legend='parts',
+      note=((wanting ~ (' needs' if wanting == 1 else ' need') ~ ' a look') if wanting else none), note_warn=true) }}
+  </div>
+
+  <div class="main">
+  {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  <section class="cell register settings-register" aria-label="The parts of the settings">
+    <ol class="plain rows sommaire">
+      <li class="colheads" aria-hidden="true"><span class="ch-what">Part</span><span class="ch-state">How it stands</span></li>
+      {# The parts that need a look first, then the way into setup, then the rest. #}
+      {% set group = sections | selectattr('look') | list %}
+      {% for entry in group %}
+        {% set pt = entry.section %}
+        <li class="row part{{ ' look' if entry.look }}">
+          <a href="{{ url_for('settings.section', name=pt.name) }}">
+            <span class="slot" aria-hidden="true">{% if entry.look %}{{ lamp('look') }}{% endif %}</span>
+            <span class="picon" aria-hidden="true">{% if pt.icon == 'presence' %}{{ presence('glyph') }}{% else %}{{ icon(pt.icon) }}{% endif %}</span>
+            <span class="what"><span class="t">{{ pt.title }}</span><span class="dots" aria-hidden="true"></span></span>
+            <span class="fact state">{% if entry.look %}<span class="warn">Needs a look</span> · {% endif %}{% set words = entry.lines | join(' · ') %}{{ words | replace('-', '‑') if pt.name in ('model', 'spending') else words }}</span>
+            {{ icon('right', cls='go') }}
+          </a>
+        </li>
+      {% endfor %}
+      <li class="row part to-setup">
+        <a href="{{ url_for('setup.overview') }}">
+          <span class="slot" aria-hidden="true"></span>
+          <span class="picon" aria-hidden="true">{{ icon('check') }}</span>
+          <span class="what"><span class="t">Setup</span><span class="dots" aria-hidden="true"></span></span>
+          <span class="fact state">What matters most, one step at a time</span>
+          {{ icon('right', cls='go') }}
+        </a>
+      </li>
+      {% set group = sections | rejectattr('look') | list %}
+      {% for entry in group %}
+        {% set pt = entry.section %}
+        <li class="row part{{ ' look' if entry.look }}">
+          <a href="{{ url_for('settings.section', name=pt.name) }}">
+            <span class="slot" aria-hidden="true">{% if entry.look %}{{ lamp('look') }}{% endif %}</span>
+            <span class="picon" aria-hidden="true">{% if pt.icon == 'presence' %}{{ presence('glyph') }}{% else %}{{ icon(pt.icon) }}{% endif %}</span>
+            <span class="what"><span class="t">{{ pt.title }}</span><span class="dots" aria-hidden="true"></span></span>
+            <span class="fact state">{% if entry.look %}<span class="warn">Needs a look</span> · {% endif %}{% set words = entry.lines | join(' · ') %}{{ words | replace('-', '‑') if pt.name in ('model', 'spending') else words }}</span>
+            {{ icon('right', cls='go') }}
+          </a>
+        </li>
+      {% endfor %}
+    </ol>
+  </section>
+  </div>
+{% endblock %}

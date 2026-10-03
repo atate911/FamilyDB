@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, presence, contents_line, crt %}
+{% block title %}Settings · {{ site_title }}{% endblock %}
+{% block body_class %}page-settings{% endblock %}
+{% block content %}
+  {# The panel: the plate and the way into setup down the first column; the parts of the
+     settings as nine equal cells across the other three, each with how it stands now. Something
+     missing is marked, in words and with its lamp. #}
+  {% set wanting = sections | selectattr('look') | list | length %}
+  {{ page_head('Settings', 'Each part, how it stands now, and the way in to change it.', 'settings',
+       figs=[(sections | length, 'parts', none, '')] + ([(wanting, 'needs a look' if wanting == 1 else 'need a look', none, 'late')] if wanting else [])) }}
+  <div class="side">
+  {# How it stands, as the green screen sums it up from the parts beside it: who answers, what it
+     may spend, where home is, and how many parts want a look. #}
+  {% set by = {} %}{% for entry in sections %}{% set _ = by.update({entry.section.name: entry}) %}{% endfor %}
+  <section class="cell screen-cell" aria-hidden="true">
+  {% call crt('readout page-readout') %}
+    <p class="readout-label"><span class="inverse caps">How it stands</span></p>
+    <p class="readout-title bright">{{ sections | length }} parts</p>
+    <ul class="readout-lines">
+      {% for name in ('model', 'spending', 'general') if by[name] %}<li><span class="dim">{{ by[name].lines[0] }}</span></li>{% endfor %}
+    </ul>
+    <p class="readout-foot"><span class="bright">{{ wanting }}</span> <span class="dim">{{ 'needs' if wanting == 1 else 'need' }} a look</span><span class="crt-cursor"></span></p>
+  {% endcall %}
+  </section>
+  {# The way into setup, as a line of the contents: its lamp lit while a part wants a look, and
+     under it the parts that do, by number, each the way into its own page. #}
+  {% set looks = [] %}{% for entry in sections %}{% if entry.look %}{% set _ = looks.append((loop.index, entry.section)) %}{% endif %}{% endfor %}
+  <section class="cell setup-cell" aria-labelledby="setup-h">
+    {{ contents_line(none, 'Setup', url_for('setup.overview'), 'setup-h', looks | length if looks else none, lamp='look' if looks else none) }}
+    <p class="small">Setting up for the first time, or starting again? Setup goes through what matters
+      most, one step at a time.</p>
+    {% if looks %}
+      <p class="cell-label">Needs a look</p>
+      <ol class="plain parts">
+        {% for index, one in looks %}
+          <li class="look"><a href="{{ url_for('settings.section', name=one.name) }}"><span class="lamp look" aria-hidden="true"></span><span class="no" aria-hidden="true">{{ 990 + index }}</span>{{ one.title }}</a></li>
+        {% endfor %}
+      </ol>
+    {% endif %}
+  </section>
+  </div>
+
+  <div class="main">
+  {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  {# The parts as the contents of the 990s: a lamp, the part's number, its name, a leader, and how
+     it stands at the end of the line. What needs a look comes first, amber at its lamp. #}
+  <ol class="plain section-cards contents-list">
+    {% for look_first in (true, false) %}
+    {% for entry in sections if (entry.look and look_first) or (not entry.look and not look_first) %}
+      {% set one = entry.section %}
+      {% set no = namespace(n=0) %}{% for e in sections %}{% if e.section.name == one.name %}{% set no.n = 990 + loop.index %}{% endif %}{% endfor %}
+      <li>
+        <a class="section-card{% if entry.look %} look{% endif %}" href="{{ url_for('settings.section', name=one.name) }}">
+          <span class="lamp {{ 'look' if entry.look else 'set' }}" aria-hidden="true"></span>
+          <span class="no" aria-hidden="true">{{ no.n }}</span>
+          <span class="section-what">
+            <strong>{{ one.title }}</strong>
+            <span class="section-state">{{ entry.lines | join(' · ') }}</span>
+          </span>
+          <span class="dots" aria-hidden="true"></span>
+          <span class="section-end">{% if entry.look %}<span class="warn">Needs a look</span>{% else %}{{ icon('right', cls='go') }}{% endif %}</span>
+        </a>
+      </li>
+    {% endfor %}
+    {% endfor %}
+  </ol>
+  </div>
+{% endblock %}

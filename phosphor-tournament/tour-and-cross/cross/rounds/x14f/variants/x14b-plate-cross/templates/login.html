@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, crt, vents %}
+{% block title %}Sign in · {{ site_title }}{% endblock %}
+{% block body_class %}page-signin{% endblock %}
+{% block content %}
+  <section class="signin">
+    {# The mark's face, awake on the screen proper: the one cut in a small plate, warming up from a
+       bright line the way an old machine greeted you, with the vents and power light under it. #}
+    {% call crt('win win-screen power-on') %}
+      <svg class="crt-face" viewBox="0 0 60 30" focusable="false">
+        <path class="eye" d="M18 4V10"/><path class="eye" d="M42 4V10"/>
+        <path d="M18 20C24.8 25.4 35.2 25.4 42 20"/>
+      </svg>
+      <p class="signin-ready caps">Ready.<span class="crt-cursor"></span></p>
+    {% endcall %}
+    {{ vents() }}
+    <h1>Sign in to {{ site_title }}</h1>
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+    <form method="post" action="{{ url_for('auth.sign_in') }}">
+      {% if next %}<input type="hidden" name="next" value="{{ next }}" />{% endif %}
+      {% if personal %}
+        {# Everybody signs in as themselves: the name is the one on the Family page. #}
+        <label for="name">Your name</label>
+        <input
+          id="name"
+          name="name"
+          autocomplete="username"
+          autocapitalize="words"
+          maxlength="80"
+          value="{{ name }}"
+          {{ '' if name else 'autofocus' }}
+          required
+        />
+        <label for="password">Your password</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          {{ 'autofocus' if name }}
+          required
+        />
+      {% else %}
+        <label for="password">Family password</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          autofocus
+          required
+        />
+      {% endif %}
+      <button type="submit">Sign in{{ icon('right') }}</button>
+    </form>
+    {% if personal %}
+      <p class="muted hint">Forgotten it? An admin can make you a new starting password on the
+        Family page.</p>
+    {% endif %}
+  </section>
+{% endblock %}

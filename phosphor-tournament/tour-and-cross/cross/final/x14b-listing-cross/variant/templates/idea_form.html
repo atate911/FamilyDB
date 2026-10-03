@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, kind_icon, KIND_ICONS %}
+{% set editing = idea is not none %}
+{% block title %}{{ 'Edit' if editing else 'New idea' }} · {{ site_title }}{% endblock %}
+{% block content %}
+  {% set crumbs = [('Ideas', url_for('web.ideas'))] %}
+  {% if editing %}{% set crumbs = crumbs + [(idea.title, url_for('web.idea', idea_id=idea.id))] %}{% endif %}
+  {# Listing, Lit Through: the form is a band like every other page. Its head column holds the
+     kind as the Ideas page's latched keys (radios, so it works with scripts off), the main column
+     the words on page ground, and the note on what is needed is the band's foot. A new kind can
+     still be typed under the keys: the first kind the form sends is the one kept. #}
+  {{ page_head('Edit #%d'|format(idea.id) if editing else 'New idea', none,
+               'edit' if editing else 'plus', crumbs) }}
+  <form class="idea-form band form-band"
+        method="post"
+        action="{{ url_for('edits.edit_idea', idea_id=idea.id) if editing else url_for('edits.add_idea') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    {% if editing %}
+      {# When this was drawn: a save on top of a change made since is refused, not merged. #}
+      <input type="hidden" name="revision" value="{{ revision }}" />
+    {% endif %}
+    <input type="hidden" name="once" value="{{ once_token() }}" />
+
+    {# Listing, Dropped Through: the title comes first in the markup, so it is the first stop for
+       Tab, and the kinds after it; the grid still sets the kinds in the head column. #}
+    <div class="form form-title">
+    <div class="field wide">
+      <label for="title">Title</label>
+      <input id="title" name="title" required maxlength="200" data-dictate
+             value="{{ idea.title if editing else '' }}" placeholder="Ramen place on Main St" />
+    </div>
+    </div>
+    <fieldset class="band-head kind-pick">
+      <legend class="key-label">Kind</legend>
+      {% set current = (idea.kind if editing else '') | lower %}
+      <div class="kind-key">
+        {# A kind with no icon of its own (one the family made up) is not a key of its own: it
+           falls into Other, and is shown in the box under the keys when editing. #}
+        {% for kind in kinds if ((kind or '') | lower | replace(' ', '_')) in KIND_ICONS %}
+          {% set key = (kind or '') | lower | replace(' ', '_') %}
+          <label class="kind-{{ key }}"><input type="radio" name="kind" value="{{ kind }}"{{ ' checked' if kind | lower == current }} />{{ kind_icon(kind) }}<span>{{ kind | replace("_", " ") | capitalize }}</span></label>
+        {% endfor %}
+        <label class="kind-other"><input type="radio" name="kind" value="other"{{ ' checked' if current == 'other' }} />{{ icon('spark') }}<span>Other</span></label>
+      </div>
+      <div class="field new-kind">
+        <label for="kind">Or a new kind</label>
+        <input id="kind" name="kind" placeholder="picnic" value="{{ idea.kind if editing and ((idea.kind or '') | lower | replace(' ', '_')) not in KIND_ICONS and (idea.kind | lower) != 'other' else '' }}" />
+      </div>
+    </fieldset>
+    <div class="band-body form form-body">
+
+    {% if editing %}
+      <div class="field">
+        <label for="status">Status</label>
+        <select id="status" name="status">
+          {% for option in statuses %}
+            <option value="{{ option }}" {{ 'selected' if option == idea.status }}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    {% elif not visitor().member %}
+      <div class="field">
+        <label for="who">Suggested by</label>
+        <select id="who" name="who">
+          <option value="">nobody in particular</option>
+          {% for name in family %}
+            <option value="{{ name }}" {{ 'selected' if name == who }}>{{ name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    {% endif %}
+
+    <div class="field wide">
+      <label for="description">Description</label>
+      <textarea id="description" name="description" rows="3" data-dictate>{{ idea.description or '' if editing else '' }}</textarea>
+    </div>
+
+    <details class="more wide" {{ 'open' if editing }}>
+      <summary>Everything else</summary>
+      <div class="form inner">
+
+    <div class="field">
+      <label for="location_name">Where</label>
+      <input id="location_name" name="location_name"
+             value="{{ idea.location_name or '' if editing else '' }}" placeholder="Portland" />
+    </div>
+
+    <div class="field">
+      <label for="happens_from">On from</label>
+      <input id="happens_from" name="happens_from" type="date"
+             value="{{ idea.happens_from[:10] if editing and idea.happens_from else '' }}" />
+      <span class="muted">Only for a thing tied to dates: a festival, a show's run.</span>
+    </div>
+
+    <div class="field">
+      <label for="happens_time">Starting at</label>
+      <input id="happens_time" name="happens_time" type="time"
+             value="{{ idea.happens_from[11:16] if editing and idea.happens_from and 'T' in idea.happens_from else '' }}" />
+    </div>
+
+    <div class="field">
+      <label for="happens_until">Until</label>
+      <input id="happens_until" name="happens_until" type="date"
+             value="{{ idea.happens_until or '' if editing else '' }}" />
+      <span class="muted">The last day; the same day for a one-day thing, empty for no end.</span>
+    </div>
+
+    <div class="field">
+      <label for="url">Link</label>
+      <input id="url" name="url" type="url" value="{{ idea.url or '' if editing else '' }}" />
+    </div>
+
+    <div class="field">
+      <label for="participants">Who it is for</label>
+      <input id="participants" name="participants" placeholder="whole family, the girls"
+             value="{{ idea.participants | join(', ') if editing else '' }}" />
+      <span class="muted">Commas between them.</span>
+    </div>
+
+    <div class="field">
+      <label for="tags">Tags</label>
+      <input id="tags" name="tags" placeholder="food, cheap, date night"
+             value="{{ idea.tags | join(', ') if editing else '' }}" />
+      <span class="muted">Commas between them.</span>
+    </div>
+
+    <div class="field">
+      <label for="setting">Indoor or out</label>
+      <select id="setting" name="setting">
+        {% for option in settings %}
+          <option value="{{ option }}" {{ 'selected' if editing and option == idea.setting }}>{{ option }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="weather">Weather it needs</label>
+      <select id="weather" name="weather">
+        {% for option in weathers %}
+          <option value="{{ option }}" {{ 'selected' if editing and option == idea.weather }}>{{ option }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="cost_level">Cost</label>
+      <select id="cost_level" name="cost_level">
+        <option value="">not known</option>
+        {% for level, label in costs %}
+          <option value="{{ level }}" {{ 'selected' if editing and idea.cost_level == level }}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="duration_min">Shortest (minutes)</label>
+      <input id="duration_min" name="duration_min" inputmode="numeric"
+             value="{{ idea.duration_min if editing and idea.duration_min is not none else '' }}" />
+    </div>
+
+    <div class="field">
+      <label for="duration_max">Longest (minutes)</label>
+      <input id="duration_max" name="duration_max" inputmode="numeric"
+             value="{{ idea.duration_max if editing and idea.duration_max is not none else '' }}" />
+    </div>
+
+    <div class="field">
+      <label for="lead_time_days">Book this far ahead (days)</label>
+      <input id="lead_time_days" name="lead_time_days" inputmode="numeric"
+             value="{{ idea.lead_time_days if editing and idea.lead_time_days is not none else '' }}" />
+    </div>
+
+    <fieldset class="field wide">
+      <legend>Only in these seasons</legend>
+      {% for season in seasons %}
+        <label class="check">
+          <input type="checkbox" name="seasons" value="{{ season }}"
+                 {{ 'checked' if editing and season in idea.seasons }} /> {{ season }}
+        </label>
+      {% endfor %}
+    </fieldset>
+
+    <div class="field wide">
+      <label class="check">
+        <input type="checkbox" name="needs_booking" value="yes"
+               {{ 'checked' if editing and idea.needs_booking }} /> Needs booking
+      </label>
+    </div>
+
+      </div>
+    </details>
+
+    <div class="field wide actions">
+      <button type="submit">{{ icon('check') }}{{ 'Save changes' if editing else 'Add it' }}</button>
+      <a class="button ghost"
+         href="{{ url_for('web.idea', idea_id=idea.id) if editing else url_for('web.ideas') }}">Cancel</a>
+    </div>
+    {% if not editing %}<p class="band-foot wide">Only a title and a kind are needed; the rest can wait.</p>{% endif %}
+    </div>
+  </form>
+{% endblock %}

@@ -1,0 +1,155 @@
+/* ==== Relit: the tube's light back on the phosphor, and only there ============================
+   Track Diagram is kept whole; what changes is light. Everything the diagram already marks as
+   the machine's or as live (the mark, the monitors and her screens, the now lamp, the live
+   lamps, the section of track that is occupied, the ring where it is your turn, Send) gives off
+   light again the way the original tube did: a white-hot core in a tight bloom inside a wide
+   faint halo, on at once, fading over 1.2s, breathing while it is live. The slate, the steel and
+   the plates stay matte.
+   The rule of the lit track, on every line: the lamp where you are now is lit, and the section
+   of track it stands on is lit from that lamp, fading toward the next stop; a chain that is
+   live end to end (Status's who answers) is lit between its lit lamps. Everything else is
+   steel. */
+:root {
+  /* E8: the plates catch a hair of light along their top edge, as raised plastic does. */
+  --shadow: inset 0 1px 0 rgb(255 255 255 / 0.035), 0 1px 0 rgb(0 0 0 / 0.5);
+  --hot: color-mix(in srgb, var(--brand) 42%, #fff);
+  /* A lamp that is lit: a white-hot centre in the phosphor, a tight bloom and a halo that
+     reaches 12-14px into the black (E20). */
+  --lamp-core: radial-gradient(circle at 50% 45%, var(--hot) 0 26%, var(--brand) 64%);
+  --lamp-glow: 0 0 4px var(--brand), 0 0 10px color-mix(in srgb, var(--brand) 65%, transparent), 0 0 18px 1px color-mix(in srgb, var(--brand) 48%, transparent);
+  /* A live lamp breathes out, in its wide halo only: core and tight bloom hold, and the halo
+     swells from that strength and back, so a live lamp is never caught dim. */
+  --lamp-swell: 0 0 4px var(--brand), 0 0 10px color-mix(in srgb, var(--brand) 65%, transparent), 0 0 22px 2px color-mix(in srgb, var(--brand) 56%, transparent);
+  /* An occupied section of track is a lit run laid over the steel rail: the phosphor, with a
+     white-hot core, held for 65% of the way, then fading out so the steel shows through; its
+     bloom falls off with it. */
+  --run-v: linear-gradient(var(--hot) 0 65%, transparent) 50% 0 / 1px 100% no-repeat, linear-gradient(var(--brand) 0 65%, transparent);
+  --run-h: linear-gradient(90deg, var(--hot) 0 65%, transparent) 0 50% / 100% 1px no-repeat, linear-gradient(90deg, var(--brand) 0 65%, transparent);
+  --run-bloom: drop-shadow(0 0 2px var(--brand)) drop-shadow(0 0 8px color-mix(in srgb, var(--brand) 45%, transparent));
+  --nowgap: 1.5rem;
+}
+
+/* ---- E11: the terminus ring is a small lit screen of its page's colour -------------------- */
+.title-icon:not(.presence) {
+  background:
+    repeating-linear-gradient(to bottom, rgb(0 0 0 / 0.24) 0 1px, transparent 1px 3px),
+    radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--accent) var(--glass, 20%), var(--bg)), color-mix(in srgb, var(--accent) var(--glass-edge, 8%), var(--bg)) 75%);
+  box-shadow: 0 0 24px -7px color-mix(in srgb, var(--accent) 62%, transparent);
+}
+/* On a section with its own colour, ring and glass are one screen, and its light stays tight. */
+:is(.in-ideas, .in-plans, .in-todo, .in-wishes, .in-family, .in-memory) .title-icon:not(.presence) {
+  border-color: color-mix(in srgb, var(--accent) var(--rim, 50%), var(--rail));
+  box-shadow: 0 0 18px -7px color-mix(in srgb, var(--accent) var(--halo-at, 50%), transparent);
+}
+/* A warm colour diluted over the black turns khaki or olive: the lemon, amber and pink screens
+   are dark glass inside a rim of their own colour, with a smaller light, so they stay a colour. */
+:is(.in-todo, .in-wishes, .in-family, .in-memory) { --glass: 6%; --glass-edge: 3%; --rim: 88%; --halo-at: 35%; }
+.title-icon .icon { filter: drop-shadow(0 0 3px color-mix(in srgb, var(--accent) 75%, transparent)); }
+:is(.places a, .tools > a)[aria-current] .icon, .menu.here > summary .icon { filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 70%, transparent)); }
+
+/* ---- E19: her screen at full strength wherever she appears -------------------------------- */
+.title-icon.presence { box-shadow: 0 0 22px -5px color-mix(in srgb, var(--screen) 62%, transparent); }
+.section-icon.presence { box-shadow: 0 0 16px -4px color-mix(in srgb, var(--screen) 55%, transparent); }
+.speaker .presence { box-shadow: 0 0 20px -4px color-mix(in srgb, var(--screen) 65%, transparent); }
+
+/* Where she speaks, her screen's light spills into her bubble from the corner she speaks from:
+   a pool, never a pattern under the words. */
+/* ---- E4: Home's box keeps the original's faint phosphor at rest; every box lights while you
+   write, so at rest Send and the monitor are the greeting's two lit things. */
+/* ---- E12: the case spills its tube's light; the power light is a lamp --------------------- */
+.crt::after { background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--phosphor) 40%, #fff) 0 30%, var(--phosphor) 66%); box-shadow: 0 0 0 1.5px #22262a, 0 0 6px var(--phosphor), 0 0 14px color-mix(in srgb, var(--phosphor) 55%, transparent); }
+
+/* ---- E17: the radar's blips are the purest glowing dots on the black ----------------------- */
+.blip-core { filter: drop-shadow(0 0 1.5px var(--phosphor)); }
+.radar-hub { filter: drop-shadow(0 0 2px var(--phosphor)); }
+
+/* On the radar: the tube keeps only what it shows, at the tube's own floor of 1.2rem; how to
+   read it is the figure's caption, under the case in the label face. */
+/* ---- E20: lamps that are live glow and breathe ---------------------------------------------- */
+.line > li.is-today::before {
+  background: var(--lamp-core);
+  border-color: transparent;
+  box-shadow: var(--lamp-glow);
+  animation: lamp 3.2s ease-in-out infinite;
+}
+.is-today .rel::before, .across::before { background: var(--lamp-core); box-shadow: var(--lamp-glow); animation: lamp 3.2s ease-in-out infinite; }
+@keyframes lamp { 50% { box-shadow: var(--lamp-swell); } }
+/* One "now" to a day on the month: a day with a plan lets the plan's lamp be it. */
+/* ---- The lit track -------------------------------------------------------------------------- */
+/* Every rail stays steel. Where a section is occupied, a lit run is laid over it: a second
+   element, so the bloom (a drop-shadow, which follows the run's own alpha) falls off with the
+   light and never glows along the steel. */
+.now-run {
+  content: ""; position: absolute; z-index: 1; width: 2px; border: 0; border-radius: 0; pointer-events: none;
+  background: var(--run-v); filter: var(--run-bloom);
+}
+/* Coming up: the section the now lamp stands on is occupied as far as the first stop, across on
+   a wide screen and down on the phone; the steel runs under it on the board. */
+@media (min-width: 40rem) {
+  .across { background: linear-gradient(var(--rail), var(--rail)) 7px calc(3.35rem - 1px) / calc(2.4rem + 0.95rem - 7px) 2px no-repeat; }
+  .across::after { background: var(--run-h); filter: var(--run-bloom); }
+}
+@media (max-width: 39.99rem) {
+  .across { background: linear-gradient(var(--rail), var(--rail)) calc(var(--rx) - 1px) 0 / 2px 1.25rem no-repeat; }
+  .across::after { z-index: 1; background: var(--run-v); filter: var(--run-bloom); }
+}
+/* The plans list: from today's stop to the next. */
+.line > li > .now-run { z-index: 2; left: calc(var(--rx) - var(--px) - 1px); top: var(--ly); height: calc(100% + var(--gap)); }
+.line > li.is-today::before { z-index: 3; }
+.line > li:last-child > .now-run { display: none; }
+/* The steps of setting up: from the step to take next (no separate steel there, so it fades into it). */
+.setup-list > .now:not(:last-child)::after { background: linear-gradient(var(--brand) 0 55%, var(--rail)); }
+/* Status, who answers: the chain that answers is live between its lit lamps, and fades toward
+   the first stop that cannot. */
+/* To do, on Home and on its own page: the timetable says where now falls. The late stops above
+   it are filled amber, as the legend says; the now lamp sits on the rail between them and the
+   first stop to come, and the section from it to that stop is lit. */
+.line > li.after-now { margin-top: calc(var(--nowgap) - var(--gap)); }
+.line > li.after-now:first-child { margin-top: calc(var(--nowgap) / 2 + 0.2rem); }
+.now-stop {
+  position: absolute; z-index: 3;
+  left: calc(var(--rx) - var(--px) - 9px);
+  top: calc(var(--nowgap) / -2 - 2px);
+  width: 18px; height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(var(--hot), var(--hot)) 0 50% / 100% 2px no-repeat, var(--brand);
+  box-shadow: var(--lamp-glow);
+  pointer-events: none;
+}
+.line > li > .now-stop { margin: 0 !important; }
+/* In the margin, the lamp's stamp is the one lit word of the timetable. */
+.now-stop::before {
+  content: "now"; position: absolute; right: calc(100% + 0.5rem); top: 50%; transform: translateY(-50%);
+  font: 500 0.8125rem/1 var(--mono); letter-spacing: 0.02em; color: var(--brand);
+  text-shadow: 0 0 1px color-mix(in srgb, var(--brand) 80%, transparent), 0 0 8px color-mix(in srgb, var(--brand) 45%, transparent);
+}
+@media (max-width: 40rem) { .now-stop::before { content: none; } }
+/* From the now lamp to the first stop to come: the steel, and the lit run over it. */
+.now-stop::after, .now-stop > .now-run {
+  content: ""; position: absolute; left: 8px; top: 4px;
+  width: 2px; height: calc(var(--nowgap) / 2 + var(--ly) - var(--lamp) / 2);
+}
+.now-stop::after { background: var(--rail); }
+.now-stop > .now-run { z-index: 1; }
+
+/* Rings where it is your turn, and the step to take next: hollow, lit in the phosphor. */
+.line-form::before, .setup-list > .now::before {
+  box-shadow: 0 0 6px var(--brand), 0 0 16px color-mix(in srgb, var(--brand) 45%, transparent), inset 0 0 4px color-mix(in srgb, var(--brand) 55%, transparent);
+}
+
+/* ---- E9: a plate the pointer rests on lights in its colour, and the light fades over 1.2s -- */
+.across > li:hover .agenda-body {
+  box-shadow: var(--shadow), 0 0 0 1px color-mix(in srgb, var(--lc, var(--steel)) 18%, transparent), 0 0 34px -10px color-mix(in srgb, var(--lc, var(--steel)) 60%, transparent);
+}
+/* ---- E21: lit states keep a tight halo ------------------------------------------------------ */
+/* ---- Access ---------------------------------------------------------------------------------- */
+@media (prefers-contrast: more) {
+  .title-icon:not(.presence) { background: color-mix(in srgb, var(--accent) 12%, var(--bg)); box-shadow: none; }
+  .title-icon .icon, :is(.places a, .tools > a)[aria-current] .icon, .menu.here > summary .icon, .blip-core, .radar-hub { filter: none; }
+  .title-icon.presence, .speaker .presence, .section-icon.presence { box-shadow: none; }
+  .crt-tube > :not(.radar) { filter: none; }
+  .now-stop::before { text-shadow: none; }
+}
+@media (forced-colors: active) {
+  .now-stop, .now-stop::after, .now-run { forced-color-adjust: none; background: CanvasText; box-shadow: none; filter: none; }
+}

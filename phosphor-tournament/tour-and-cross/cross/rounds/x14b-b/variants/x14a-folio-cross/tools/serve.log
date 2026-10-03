@@ -1,0 +1,3 @@
+variant serving /tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14a-b/variants/x14a-folio-cross/templates on 39889
+2026-10-03 05:10:58,474 INFO waitress: Serving on http://127.0.0.1:39889
+2026-10-03 05:10:59,726 INFO familydb.web.auth: web login with the family password from 127.0.0.1

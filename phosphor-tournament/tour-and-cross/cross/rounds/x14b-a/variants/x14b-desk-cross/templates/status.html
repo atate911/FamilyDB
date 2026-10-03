@@ -1,0 +1,405 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, crt, presence, ring, spend_meter %}
+{% from "_ui.html" import status_foot with context %}
+{% block title %}Status · {{ site_title }}{% endblock %}
+{% block body_class %}page-status{% endblock %}
+{# A light says its state three ways: its colour, its shape (a lit dot, a hollow ring, a half
+   one) and the words beside it, so nobody needs to tell green from amber to read it. #}
+{# Whether a row needs a look, from the same check the Settings page makes (setup's password step:
+   still the installer's password, or one the family shares, is not done), so Status never lights
+   green what Settings says needs a look. Shipped, web/status hands each row a `look` flag beside
+   `on`; this reads the row's own detail, which that check writes. #}
+{% macro needs_look(row) -%}
+  {{- 'look' if row.label == 'This page' and ((row.detail or '').startswith("the installer's") or (row.detail or '').startswith('one password')) else '' -}}
+{%- endmacro %}
+{# Four signals, one meaning each, by shape as well as colour: on, a lit lamp; waiting or in part,
+   a steel dot; off or not set, a pewter ring; needs a look, an amber bar. Red is kept for
+   something that has stopped. #}
+{% macro state_of(row) -%}
+  {{- needs_look(row) or ('on' if row.on else ('off' if row.on is sameas false else 'wait')) -}}
+{%- endmacro %}
+{% macro lines(rows) %}
+  {# Desk Terminal: one line to a light: its lamp before the name, a leader, and how it stands at
+     the right in the facts' column; a longer word is set under the name it explains. #}
+  <ul class="rows lights">
+    {% for row in rows %}
+      {% set state = state_of(row) | trim %}
+      {% set long = (row.detail or '') | length > 30 %}
+      <li class="row light-row {{ state }}{{ ' long' if long }}">
+        <span class="sig {{ state }}" aria-hidden="true"></span>
+        <strong class="t">{{ row.label }}</strong>
+        {% if not long %}<span class="lead" aria-hidden="true"></span>{% endif %}
+        <span class="f{{ ' said-line' if long }}">{{ row.detail }}</span>
+        {# A model going or gone, and one to put in its place: a press saves the boxes that
+           name it now, through the settings page's own form. #}
+        {% if row.switch and visitor().may('manage') %}
+          <form method="post" action="{{ url_for('settings.save') }}" class="inline-action">
+            <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+            <input type="hidden" name="section" value="model" />
+            {% for box in row.switch.boxes %}
+              <input type="hidden" name="{{ box }}" value="{{ row.switch.to }}" />
+            {% endfor %}
+            <button class="secondary" type="submit">Use {{ row.switch.to }} instead</button>
+            <span class="muted small">{{ row.switch.words }}</span>
+          </form>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% endmacro %}
+{# A bar filled to `share` out of 100. Drawn in SVG, whose widths are attributes, because the
+   content policy allows no inline style. The figure is always written beside it. #}
+{% macro bar(share) -%}
+  {% set filled = [[(share or 0), 100] | min, 0] | max -%}
+  <svg class="meter" aria-hidden="true" focusable="false"><rect class="meter-track" width="100%" height="100%" rx="3"/>
+    {%- if filled > 0 %}<rect class="meter-fill" width="{{ '%.1f' | format([filled, 2] | max) }}%" height="100%" rx="3"/>{% endif %}</svg>
+{%- endmacro %}
+{% macro numbered() -%}
+  {%- set n = namespace(i=0) -%}
+  {%- set N = {} -%}
+  {%- for key, on in [('attention', attention), ('models', true), ('keys', true), ('services', true), ('spend', true), ('watch', true), ('activity', visitor().may('manage')), ('waiting', true), ('trouble', troubles.calls or troubles.lookups)] -%}
+    {%- if on %}{% set n.i = n.i + 1 %}{% set _ = N.update({key: n.i}) %}{% endif -%}
+  {%- endfor -%}
+  {{- caller(N) -}}
+{%- endmacro %}
+{% macro shapes(rows) -%}
+  <span class="c-sigs" aria-hidden="true">{% for row in rows %}<span class="sig {{ state_of(row) | trim }}"></span>{% endfor %}</span>
+{%- endmacro %}
+{% macro lit(rows) -%}{{ rows | selectattr('on') | list | length }}{%- endmacro %}
+{# The tube: the day's spend on a phosphor panel meter (spend_meter), the figure on the glass above
+   its scale, and in dim words the average day it is set beside. The same is written out on the
+   desk and in the foot. Amber from three quarters of the limit, red past it. #}
+{% block tube %}
+  {% set used = (spending.today / spending.limit * 100) if spending.limit else none %}
+  {% set per_day = (spending.dollars / days) if (spending.rows and days) else 0 %}
+  {% call crt('readout spend-meter' ~ (' near' if used is not none and used >= 75) ~ (' over' if used is not none and used >= 100), hidden=false) %}
+    <div class="readout-line">
+      <p class="readout-figure bright">${{ "%.2f"|format(spending.today) }}</p>
+      <p class="readout-label caps">today</p>
+      <p class="readout-side caps">
+        {% if used is not none %}<span class="readout-pct">{% if used >= 100 %}<span class="inverse">Limit reached</span>{% else %}{{ used | round | int }}% of limit{% endif %}</span>{% endif %}
+        <span class="readout-avg dim"><span class="ghost-key" aria-hidden="true"></span>Average day ${{ "%.2f"|format(per_day) }}</span>
+      </p>
+    </div>
+    {% if used is not none %}
+      {{ spend_meter(used, (per_day / spending.limit * 100) if spending.limit else 0, spending.limit) }}
+    {% else %}
+      <p class="readout-of dim caps">No daily limit is set<span class="crt-cursor" aria-hidden="true"></span></p>
+    {% endif %}
+  {% endcall %}
+{% endblock %}
+{# The Contents plate: every band of this page, numbered, with how it stands. #}
+{% block contents %}
+  {% call(N) numbered() %}
+  <nav class="contents" aria-labelledby="contents-name">
+    <p class="plate-name" id="contents-name">On this page</p>
+    <p class="sig-key" aria-hidden="true"><span><span class="sig on"></span>On</span><span><span class="sig wait"></span>Waiting</span><span><span class="sig off"></span>Off</span><span><span class="sig look"></span>Needs a look</span></p>
+    <ol class="contents-list">
+      {% if 'attention' in N %}<li class="c-look"><a href="#attention">{{ ring(N.attention, 'look') }}<span class="c-t">Needs attention</span><span class="lead" aria-hidden="true"></span><span class="c-n">{{ attention | length }}</span></a></li>{% endif %}
+      <li><a href="#who">{{ ring(N.models) }}<span class="c-t">Who answers</span><span class="lead" aria-hidden="true"></span><span class="c-n">{{ lit(models) }} of {{ models | length }} on</span>{{ shapes(models) }}</a></li>
+      <li><a href="#keys">{{ ring(N['keys']) }}<span class="c-t">Keys</span><span class="lead" aria-hidden="true"></span><span class="c-n">{{ lit(keys) }} of {{ keys | length }} set</span>{{ shapes(keys) }}</a></li>
+      <li><a href="#connected">{{ ring(N.services) }}<span class="c-t">Connected to</span><span class="lead" aria-hidden="true"></span><span class="c-n">{{ lit(services) }} of {{ services | length }}</span>{{ shapes(services) }}</a></li>
+      <li><a href="#cost">{{ ring(N.spend) }}<span class="c-t">What it has cost</span><span class="lead" aria-hidden="true"></span><span class="c-n">${{ "%.2f"|format(spending.today) }} today</span></a></li>
+      <li><a href="#models">{{ ring(N.watch) }}<span class="c-t">Models and prices</span><span class="lead" aria-hidden="true"></span><span class="c-n">{{ 'on' if model_watch.on else 'off' }}</span></a></li>
+      {% if 'activity' in N %}<li><a href="#activity">{{ ring(N.activity) }}<span class="c-t">Recent activity</span><span class="lead" aria-hidden="true"></span><span class="c-n">{{ activity | length }}</span></a></li>{% endif %}
+      <li><a href="#waiting">{{ ring(N.waiting) }}<span class="c-t">Waiting</span><span class="lead" aria-hidden="true"></span><span class="c-n">{{ waiting.pending_total or 0 }}</span></a></li>
+      {% if 'trouble' in N %}<li class="c-look"><a href="#trouble">{{ ring(N.trouble, 'look') }}<span class="c-t">Worth a look</span><span class="lead" aria-hidden="true"></span><span class="c-n">{{ (troubles.calls | length) + (troubles.lookups | length) }}</span></a></li>{% endif %}
+    </ol>
+  </nav>
+  {% endcall %}
+{% endblock %}
+{# The foot says it in words, and does not link to the page it is on. #}
+{% block foot %}{{ status_foot(spending.today, here=true) }}{% endblock %}
+{% block content %}
+  {% call(N) numbered() %}
+  {% set on = namespace(n=0, look=0) %}
+  {% for row in models + keys + services %}{% if needs_look(row) %}{% set on.look = on.look + 1 %}{% elif row.on %}{% set on.n = on.n + 1 %}{% endif %}{% endfor %}
+  {% set lede %}{{ on.n }} working{% if on.look %} · <a class="warn" href="#connected">{{ on.look }} need{{ 's' if on.look == 1 }} a look</a>{% endif %} · ${{ "%.2f"|format(spending.today) }}{% if spending.limit %} of ${{ "%.2f"|format(spending.limit) }}{% endif %} today{% endset %}
+  {{ page_head('Status', lede, 'status') }}
+
+  {% if attention %}
+    {# What only an admin can fix, first: each admin with a Telegram id is told as well. #}
+    <section class="band attention" id="attention">
+      <header class="band-head">{{ ring(N.attention, 'look') }}<h2>{{ icon('warning') }}Needs attention</h2></header>
+      {{ lines(attention) }}
+    </section>
+  {% endif %}
+
+  <div class="monitors">
+    <section class="band" id="who">
+      <header class="band-head">{{ ring(N.models) }}<h2>{{ presence('glyph') }}Who answers</h2></header>
+      {{ lines(models) }}
+    </section>
+
+    <section class="band" id="keys">
+      <header class="band-head">{{ ring(N['keys']) }}<h2>{{ icon('key') }}Keys</h2></header>
+      {{ lines(keys) }}
+      {% if visitor().may('manage') %}
+        <p class="muted small">
+          <a href="{{ url_for('settings.section', name='model', _anchor='keys') }}">Change a key</a>
+        </p>
+      {% endif %}
+    </section>
+
+    <section class="band" id="connected">
+      <header class="band-head">{{ ring(N.services) }}<h2>{{ icon('plug') }}Connected to</h2></header>
+      {{ lines(services) }}
+    </section>
+  </div>
+
+  <section class="band spend" id="cost">
+    <header class="band-head">{{ ring(N.spend) }}<h2>{{ icon('coin') }}What it has cost</h2></header>
+    {% set used = (spending.today / spending.limit * 100) if spending.limit else none %}
+    <div class="spend-now words-only">
+      {# The day's spend as a green screen shows it, with a bar of twenty cells: amber from three
+         quarters of the limit, red past it. The same is written out beside it. #}
+      
+      <p>
+        Today: about ${{ "%.2f"|format(spending.today) }}
+        {% if spending.limit %}
+          of the ${{ "%.2f"|format(spending.limit) }} daily limit.
+          {% if spending.today >= spending.limit %}
+            <strong class="warn">{{ icon('warning') }}The limit is reached: nothing more is asked of a model until midnight.</strong>
+          {% endif %}
+        {% else %}
+          (no daily limit is set).
+        {% endif %}
+        {% if visitor().may('manage') %}
+          <a href="{{ url_for('settings.section', name='spending') }}">Change the limit</a>
+        {% endif %}
+      </p>
+    </div>
+    {% if spending.rows %}
+      <p>
+        {{ "{:,}".format(spending.calls) }} model call{{ "" if spending.calls == 1 else "s" }} in
+        the last {{ days }} days, about ${{ "%.2f"|format(spending.dollars) }}.
+        {{ spending.cache_share }}% of what was sent came back from the cache, at a tenth of the
+        price.
+        {% if spending.estimated %}
+          Some calls were to a model without a listed price and are counted high.
+        {% endif %}
+      </p>
+      <div class="tables">
+        <div class="scroll">
+          <table class="data">
+            <caption>By kind of call</caption>
+            <tr><th scope="col">what for</th><th scope="col" class="num">calls</th><th scope="col" class="num">US$</th></tr>
+            {% for row in spending.kinds %}
+              <tr>
+                <td>{{ row.purpose }}</td>
+                <td class="num">{{ "{:,}".format(row.calls) }}</td>
+                <td class="num">{{ "%.2f"|format(row.cost_usd) }}</td>
+              </tr>
+            {% endfor %}
+          </table>
+        </div>
+        {% for kind in spending.where %}
+          <div class="scroll">
+            <table class="data">
+              <caption>Where the input of {{ kind.purpose }} went</caption>
+              <tr><th scope="col">part</th><th scope="col" class="num">tokens</th><th scope="col">share</th></tr>
+              {% for part in kind.parts %}
+                <tr>
+                  <td>{{ part.label }}</td>
+                  <td class="num">{{ "{:,}".format(part.tokens) }}</td>
+                  <td class="share"><span class="share-cell">{{ bar(part.share) }}<span>{{ part.share }}%</span></span></td>
+                </tr>
+              {% endfor %}
+            </table>
+            <p class="muted small">Per call: the real total
+              over {{ "{:,}".format(kind.parts[0].calls) }} call{{ "" if kind.parts[0].calls == 1 else "s" }},
+              shared out by the size of each part.</p>
+          </div>
+        {% endfor %}
+      </div>
+      <div class="scroll">
+        <table class="data">
+          <caption>By model</caption>
+          <tr>
+            <th scope="col">model</th><th scope="col" class="num">calls</th><th scope="col" class="num">sent</th>
+            <th scope="col" class="num">cached</th><th scope="col" class="num">written</th><th scope="col" class="num">back</th>
+            <th scope="col" class="num">US$</th>
+          </tr>
+          {% for row in spending.rows %}
+            <tr>
+              <td>{{ row.model }}</td>
+              <td class="num">{{ "{:,}".format(row.calls) }}</td>
+              <td class="num">{{ "{:,}".format(row.input_tokens) }}</td>
+              <td class="num">{{ "{:,}".format(row.cache_read) }}</td>
+              <td class="num">{{ "{:,}".format(row.cache_write) }}</td>
+              <td class="num">{{ "{:,}".format(row.output_tokens) }}</td>
+              <td class="num">{{ "%.2f"|format(row.cost_usd) }}{% if row.cost_estimated %}*{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </table>
+      </div>
+    {% else %}
+      <p class="muted">Nothing has been asked of a model in the last {{ days }} days.</p>
+    {% endif %}
+    {% if last %}
+      <p class="muted small">
+        Last call {{ last.when }}: {{ last.model }} ({{ last.provider }}), ended
+        “{{ last.stop }}”, took {{ last.seconds }}s.
+      </p>
+    {% endif %}
+  </section>
+
+  {# The daily check of what each company offers and what it costs (familydb/model_watch.py):
+     where it read, and what it found changed. No model is asked for any of it. #}
+  <section class="band" id="models">
+    <header class="band-head">{{ ring(N.watch) }}<h2>{{ icon('list') }}Models and prices</h2></header>
+    {% if not model_watch.on %}
+      <p class="muted">The daily check is switched off: prices are the ones this version was
+        released with, and nobody is told when a model goes.
+        {% if visitor().may('manage') %}<a href="{{ url_for('settings.section', name='model', _anchor='watch') }}">Switch it on</a>{% endif %}</p>
+    {% elif not model_watch.sources %}
+      <p class="muted">Checked once a day, early in the morning: nothing has been read yet.</p>
+    {% else %}
+      {{ lines(model_watch.sources) }}
+    {% endif %}
+    {% if model_watch.changes %}
+      <div class="scroll">
+        <table class="data">
+          <caption>Changed in the last {{ model_watch.days }} days</caption>
+          <tr><th scope="col">when</th><th scope="col">company</th><th scope="col">model</th><th scope="col">what</th></tr>
+          {% for change in model_watch.changes %}
+            <tr>
+              <td>{{ change.when }}</td>
+              <td>{{ change.company }}</td>
+              <td><code>{{ change.model }}</code></td>
+              <td>{{ change.what }}</td>
+            </tr>
+          {% endfor %}
+        </table>
+      </div>
+    {% elif model_watch.sources %}
+      <p class="muted small">Nothing has changed in the last {{ model_watch.days }} days.</p>
+    {% endif %}
+    {% if model_watch.judgements %}
+      {# What a stronger model was asked to weigh, and what came of it. A change it made can be
+         put back, and one waiting for an admin put in, each through the settings form. #}
+      <h3>Judgements</h3>
+      <ul class="plain lights">
+        {% for row in model_watch.judgements %}
+          {% set state = 'on' if row.on else 'part' %}
+          <li class="light-row {{ state }}">
+            <span class="light {{ state }}" aria-hidden="true"></span>
+            <div>
+              <strong>{{ row.label }}</strong>
+              <div class="muted">{{ row.detail }}</div>
+              {% if visitor().may('manage') %}
+                {% for values, words in ((row.waiting, 'Put these in'), (row.undo, 'Put back')) if values %}
+                  <form method="post" action="{{ url_for('settings.save') }}" class="inline-action">
+                    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+                    <input type="hidden" name="section" value="model" />
+                    {% for key, value in values.items() %}
+                      <input type="hidden" name="{{ key }}" value="{{ value }}" />
+                    {% endfor %}
+                    <button class="secondary" type="submit">{{ words }}</button>
+                  </form>
+                {% endfor %}
+              {% endif %}
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% elif model_watch.judging %}
+      <p class="muted small">Judgements are on: nothing has needed one lately.</p>
+    {% endif %}
+  </section>
+
+  {# Admins only: the words here come from every chat. Each line opens its history in full. #}
+  {% if visitor().may('manage') %}
+    <section class="band" id="activity">
+      <header class="band-head">{{ ring(N.activity) }}<h2>{{ icon('list') }}Recent activity</h2></header>
+      {% if activity %}
+        <p class="muted">What the models were asked in the last {{ activity_days }} days, newest
+          first. Open one for every call and tool it used, what each cost, and what a lookup found.</p>
+        <ul class="plain activity">
+          {% for row in activity %}
+            <li>
+              <a href="{{ url_for('activity.show', key=row.key) }}">
+                <span class="activity-title">{{ row.title }}</span>
+                <span class="muted small">{{ row.when }} · {{ row.what }} · {{ row.calls }} call{{ '' if row.calls == 1 else 's' }}, {{ "{:,}".format(row.tokens) }} tokens{% if row.searches %}, {{ row.searches }} search{{ '' if row.searches == 1 else 'es' }}{% endif %} · ${{ "%.4f"|format(row.cost) }}</span>
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted">Nothing was asked of a model in the last {{ activity_days }} days.</p>
+      {% endif %}
+    </section>
+  {% endif %}
+
+  <section class="band" id="waiting">
+    <header class="band-head">{{ ring(N.waiting) }}<h2>{{ icon('hourglass') }}Waiting</h2></header>
+    {% if waiting.lookups %}
+      <p class="meta">
+        {% for row in waiting.lookups %}<span class="tag">{{ row.count }} {{ row.state }}</span>{% endfor %}
+      </p>
+    {% else %}
+      <p class="muted">No ideas yet.</p>
+    {% endif %}
+    {% if waiting.pending_total %}
+      <p class="muted">Ideas are looked up {{ waiting.when }}.</p>
+      {% if waiting.can_look_up and visitor().may('change') %}
+        <form method="post" action="{{ url_for('edits.look_up_waiting') }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+          <input type="hidden" name="once" value="{{ once_token() }}" />
+          <button class="secondary" type="submit">{{ icon('search') }}Look them up now</button>
+        </form>
+      {% endif %}
+    {% endif %}
+    {% if waiting.pending %}
+      <h3>Next to be looked up</h3>
+      <ul class="plain">
+        {% for row in waiting.pending %}
+          <li><a href="{{ url_for('web.idea', idea_id=row.id) }}">#{{ row.id }} {{ row.title }}</a></li>
+        {% endfor %}
+      </ul>
+      {% if waiting.pending_total > waiting.pending | length %}
+        <p class="muted">and {{ waiting.pending_total - (waiting.pending | length) }} more.</p>
+      {% endif %}
+    {% endif %}
+    {% if waiting.messages %}
+      <h3>Messages that did not go through</h3>
+      <ul class="plain">
+        {% for row in waiting.messages %}
+          <li>
+            {{ row.text }}
+            <div class="muted">
+              {{ row.when }} · {{ row.error }} ·
+              {% if row.given_up %}given up on{% else %}{{ row.tries }} tr{{ "y" if row.tries == 1 else "ies" }}, will try again{% endif %}
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </section>
+
+  {% if troubles.calls or troubles.lookups %}
+    <section class="band trouble" id="trouble">
+      <header class="band-head">{{ ring(N.trouble, 'look') }}<h2>{{ icon('warning') }}Worth a look</h2></header>
+      {% if troubles.calls %}
+        <h3>Calls that ended oddly</h3>
+        <ul class="plain">
+          {% for row in troubles.calls %}
+            <li>{{ row.model }} — {{ row.stop }}<div class="muted">{{ row.when }}</div></li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+      {% if troubles.lookups %}
+        <h3>Lookups that failed</h3>
+        <ul class="plain">
+          {% for row in troubles.lookups %}
+            <li>
+              <a href="{{ url_for('web.idea', idea_id=row.id) }}">#{{ row.id }} {{ row.title }}</a>
+              <div class="muted">{{ row.note }}{% if row.when %} · {{ row.when }}{% endif %}</div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </section>
+  {% endif %}
+  {% endcall %}
+{% endblock %}

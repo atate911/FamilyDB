@@ -1,0 +1,228 @@
+{# The page's small parts, shared by every template: `{% from "_ui.html" import icon %}`.
+   Icons are Lucide's, with the page's own mark, gathered into one sprite (static/icons.svg) by
+   scripts/icons.py; they take the colour of the words they sit in. An icon beside words is
+   decoration and hidden from a screen reader; an icon on its own gets a label. #}
+
+{% set KIND_ICONS = {
+  'restaurant': 'restaurant',
+  'activity': 'activity',
+  'outing': 'outing',
+  'day_trip': 'day_trip',
+  'trip': 'trip',
+  'show': 'show',
+  'event': 'event',
+  'seasonal': 'seasonal',
+} %}
+
+{% macro icon(name, label=none, cls='') -%}
+  <svg class="icon{{ ' ' ~ cls if cls }}" focusable="false"
+    {%- if label %} role="img" aria-label="{{ label }}"{% else %} aria-hidden="true"{% endif %}>
+    <use href="{{ url_for('static', filename='icons.svg') }}#i-{{ name }}"></use></svg>
+{%- endmacro %}
+
+{# The icon for a kind of idea; one the family made up gets a spark. #}
+{% macro kind_icon(kind) -%}
+  {{ icon(KIND_ICONS.get((kind or '') | lower | replace(' ', '_'), 'spark')) }}
+{%- endmacro %}
+
+{# The kind of an idea as a small label in its own colour. #}
+{% macro kind_label(kind) -%}
+  {% set key = (kind or '') | lower | replace(' ', '_') %}
+  <span class="kind kind-{{ key if key in KIND_ICONS else 'other' }}">{{ kind_icon(kind) }}{{ kind | capitalize }}</span>
+{%- endmacro %}
+
+{# The top of a page, as a trading screen quotes one thing: the command path over it (where it
+   sits, as the words the machine would take: > SETTINGS), the page's icon on a small key of its
+   section's colour, the title set large, and
+   when the page has one, its figure beside it, set larger still in tabular numbers: the one thing
+   to read first. The line on what it is for, and the one or two things to do here, follow.
+   `crumbs` is a list of (label, href); `figure` a number or short word, `unit` what it counts;
+   `change` the line a quote screen prints under the price, what moved or what is next ("2 late",
+   "next Thu 01 Oct 10:00"), `change_cls` its colour ("warn" when it wants a look), and
+   `change_href` where it leads when it is a way in (2 late, to the late ones alone). #}
+{% macro page_head(title, lede=none, glyph=none, crumbs=none, figure=none, unit=none, change=none, change_cls='', change_href=none, live=false) -%}
+  <header class="page-head{{ ' has-figure' if figure is not none }}">
+    <div class="page-title">
+      {% if crumbs %}
+        <nav class="crumbs" aria-label="Breadcrumb">
+          {% for label, href in crumbs %}<span class="cmd-sep" aria-hidden="true">‹</span><a href="{{ href }}">{{ label }}</a>{% endfor %}
+        </nav>
+      {% endif %}
+      <div class="title-row">
+        {% if glyph == 'presence' %}{{ presence('title-icon') }}
+        {%- elif glyph %}<span class="title-icon" aria-hidden="true">{{ icon(glyph) }}</span>{% endif %}
+        <h1>{{ title }}</h1>
+        {% if figure is not none %}<p class="quote-figure{{ ' is-zero' if figure == 0 }}{{ ' is-live' if live and figure != 0 }}"><span class="figure">{{ figure }}</span>
+          {%- if unit or change %}<span class="quote-meta">{% if unit %}<span class="unit">{{ unit }}</span>{% endif %}{% if change and change_href %}<a class="change{{ ' ' ~ change_cls if change_cls }}" href="{{ change_href }}">{{ change }}</a>{% elif change %}<span class="change{{ ' ' ~ change_cls if change_cls }}">{{ change }}</span>{% endif %}</span>{% endif %}</p>{% endif %}
+      </div>
+      {% if lede %}<p class="lede">{{ lede }}</p>{% endif %}
+    </div>
+    {%- if caller is defined %}
+      <div class="page-actions">{{ caller() }}</div>
+    {%- endif %}
+  </header>
+{%- endmacro %}
+
+{# Where she is on the page: never a face or a figure, only her screen, small and full of words
+   nobody can read, as if busy. The glyphs are the stylesheet's and mean nothing. `variant` (0 to
+   3) shows another part of the same screen, so her lines down a thread do not all look alike. #}
+{% macro presence(cls='avatar', variant=0) -%}
+  <span class="{{ cls }} presence v{{ variant }}" aria-hidden="true"><span class="presence-glass"></span></span>
+{%- endmacro %}
+
+{# One line of the conversation, wherever it is shown: hers on the left beside her screen, the
+   family's on the right with their initial, so side and mark tell them apart, not colour alone.
+   Everything she says looks the same, a long answer, a reminder or a one-word "Done."; only the
+   words differ. `anchor` is the id the newest line carries. Goes in an <ol class="thread">. #}
+{% macro chat_line(line, anchor=none) -%}
+  <li class="{{ 'said-bot' if line.from_bot else 'said-them' }}"{% if anchor %} id="{{ anchor }}"{% endif %}>
+    {% if line.from_bot %}{{ presence(variant=(line.id or 0) % 4) }}{% else %}<span class="avatar" aria-hidden="true">{{ line.who[:1] | upper }}</span>{% endif %}
+    <div class="bubble">
+      <div class="said-by">
+        {#- On a phone the mark goes into the line's own head, so the words run the measure. #}
+        {%- if line.from_bot %}{{ presence('glyph said-mark', variant=(line.id or 0) % 4) }}{% else %}<span class="said-key said-mark" aria-hidden="true">{{ line.who[:1] | upper }}</span>{% endif %}
+        <strong>{{ line.who }}</strong>
+        <span class="stamp">{{ line.when | replace(',', '') }}</span>
+        {% if line.trouble %}<span class="tag warn">{{ line.trouble }}</span>{% endif %}
+      </div>
+      <div class="said-text">{{ line.text }}</div>
+      {% if line.did %}
+        <div class="did">used {{ line.did | join(', ') }}</div>
+      {% endif %}
+    </div>
+  </li>
+{%- endmacro %}
+
+{# The last line of the thread while the newest message waits: her screen and name, and a line
+   in the page's own words (nobody is asked to write it). While she is thinking the glyphs on her
+   screen fall; nobody is shown typing. A `call` block adds a way on, as Home's link to the chat. #}
+{% macro waiting_line(name, state, text) -%}
+  <li class="said-bot pending is-{{ state }}">
+    {{ presence(variant=1) }}
+    <div class="bubble" role="status">
+      <div class="said-by">
+        <strong>{{ name }}</strong>
+      </div>
+      <div class="said-text">{{ text }}{% if caller is defined %} {{ caller() }}{% endif %}</div>
+    </div>
+  </li>
+{%- endmacro %}
+
+{# The tick beside an open task: marks it done where it stands, through `update_task` at the
+   revision it was drawn at, and comes back to `back` (home or tasks). Ticking is a change, so a
+   role that may not change things (familydb/roles.py) is shown the empty box instead. #}
+{% macro tick(task_id, revision, title, back) -%}
+  {% if visitor().may('change') -%}
+  <form class="tick-form" method="post" action="{{ url_for('edits.finish_task', task_id=task_id) }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
+    <input type="hidden" name="once" value="{{ once_token() }}" />
+    <input type="hidden" name="revision" value="{{ revision }}" />
+    <input type="hidden" name="back" value="{{ back }}" />
+    <button class="tick" type="submit">{{ icon('check') }}<span class="sr">Done: {{ title }}</span></button>
+  </form>
+  {%- else -%}
+  <span class="task-box" aria-hidden="true"></span>
+  {%- endif %}
+{%- endmacro %}
+
+{# The one way the data face writes a moment: "Sun 27 Sep 19:56" (set in capitals by the
+   stylesheet), from a stored "2026-09-27T19:56" or "2026-09-27". The weekday is worked out here
+   (Sakamoto's rule) so a page that was handed only the stored value can still say it; `time`
+   false leaves the clock off. #}
+{% macro stamp(iso, time=true) -%}
+  {%- if iso and iso | length >= 10 -%}
+    {%- set y = iso[0:4] | int %}{% set m = iso[5:7] | int %}{% set d = iso[8:10] | int -%}
+    {%- set yy = y - (1 if m < 3 else 0) -%}
+    {%- set dow = (yy + yy // 4 - yy // 100 + yy // 400 + [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4][m - 1] + d) % 7 -%}
+    {{ ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dow] }} {{ '%02d' | format(d) }} {{ ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][m - 1] }}
+    {%- if time and iso | length >= 16 %} {{ iso[11:16] }}{% endif -%}
+  {%- else -%}{{ iso }}{%- endif -%}
+{%- endmacro %}
+
+{# A plan as a row of the count board (Waypoint's hop, set in this line's faces): the day of the
+   month as a large light numeral, the month over the weekday beside it, the hour in the data face,
+   then what it is, and how far off at the end. The first one ahead is lit: its numeral and the word
+   "Next" take the phosphor, with a lamp. `body` (a call block) adds what a row of the Plans page
+   carries under the name: where, notes, and the keys to move or cancel it. #}
+{% macro hop(entry, next=false, href=none) -%}
+  <li class="hop{{ ' is-next' if next }}{{ ' is-today' if entry.on_today }}">
+    {% if entry.chip %}
+      <span class="hop-day" aria-hidden="true">{{ entry.chip.day }}</span>
+      <span class="hop-stack" aria-hidden="true"><span class="hop-mon">{{ entry.chip.month }}</span><span class="hop-dow">{{ entry.chip.weekday }}</span></span>
+      <span class="sr">{{ entry.chip.weekday }} {{ entry.chip.day }} {{ entry.chip.month }}</span>
+    {% else %}<span class="hop-day"></span><span class="hop-stack"></span>{% endif %}
+    <span class="hop-time">{{ entry.time or 'All day' }}</span>
+    <div class="hop-body">
+      <span class="hop-what">{% if href %}<a href="{{ href }}">{{ entry.title }}</a>{% else %}{{ entry.title }}{% endif %}</span>
+      {%- if caller is defined %}{{ caller() }}{% endif %}
+    </div>
+    <span class="hop-rel">{% if next %}<span class="next-word"><span class="lamp on" aria-hidden="true"></span>Next</span>{% endif %}{% if entry.relative %}<span class="rel-word">{{ entry.relative }}</span>{% endif %}</span>
+  </li>
+{%- endmacro %}
+
+{# A cell's head as a line of the contents: its name, a dotted leader, and its figure on the
+   same baseline in the section's ink. `href` makes the whole line the key to that page; `lamp`
+   puts a lamp before the name ('on', 'look', 'off'). #}
+{% macro count_head(title, figure=none, unit=none, href=none, id=none, lamp=none, cls='', tag='h2') -%}
+  <{{ tag }} class="count-head{{ ' ' ~ cls if cls }}"{% if id %} id="{{ id }}"{% endif %}>
+    {%- if href %}<a href="{{ href }}">{% endif -%}
+    {%- if lamp %}<span class="lamp {{ lamp }}" aria-hidden="true"></span>{% endif -%}
+    <span class="ch-name">{{ title }}</span>
+    <span class="ch-dots" aria-hidden="true"></span>
+    {%- if figure is not none %}<span class="ch-fig{{ ' is-zero' if figure == 0 }}">{{ figure }}</span>{% if unit %}<span class="ch-unit">{{ unit }}</span>{% endif %}{% elif href %}{{ icon('right', cls='go') }}{% endif -%}
+    {%- if href %}</a>{% endif -%}
+  </{{ tag }}>
+{%- endmacro %}
+
+{# A plan's day as a small calendar leaf: month, day, weekday. #}
+{% macro chip(parts, today=false) -%}
+  {% if parts %}
+    <span class="chip{{ ' is-today' if today }}" aria-hidden="true">
+      <span class="chip-mon">{{ parts.month }}</span>
+      <span class="chip-day">{{ parts.day }}</span>
+      <span class="chip-dow">{{ parts.weekday }}</span>
+    </span>
+  {% endif %}
+{%- endmacro %}
+
+{# An old green-screen monitor, the page's one kind of picture: whatever is in the `call` block
+   is drawn on its tube, in phosphor. `cls` says where it is (and `power-on` to switch it on as the
+   page opens). A screen that is only a picture is hidden from screen readers; one whose words
+   are the page's own, like Next up, passes `hidden=false`. One to a page at most. #}
+{% macro crt(cls='', hidden=true) -%}
+  <div class="crt{{ ' ' ~ cls if cls }}"{% if hidden %} aria-hidden="true"{% endif %}>
+    <div class="crt-tube">{{ caller() }}</div>
+  </div>
+{%- endmacro %}
+
+{# A radar, a program the green screen runs: range rings at a week, two weeks and four, "now" at
+   the middle, and a sweep that leaves an afterglow as a long-persistence phosphor did. `blips`
+   come from `views.radar_blips`: each flares as the sweep passes its bearing. The Ideas page's
+   is a map instead (`views.places_radar`), home at the middle, north at the top, and gives the
+   rings its own `rings` labels. Anything in a `call` block is drawn on the scope. Decoration
+   only; what it shows is always written out elsewhere on the page. #}
+{% macro radar(blips=[], rings=('1w', '2w', '4w')) -%}
+  <div class="radar" aria-hidden="true">
+    <svg viewBox="0 0 200 200" focusable="false">
+      <circle class="radar-rim" cx="100" cy="100" r="98"/>
+      <circle class="radar-ring" cx="100" cy="100" r="92"/>
+      <circle class="radar-ring" cx="100" cy="100" r="66"/>
+      <circle class="radar-ring" cx="100" cy="100" r="33"/>
+      <path class="radar-cross" d="M100 4V196M4 100H196"/>
+      <path class="radar-ticks" d="M100.0 7.5L100.0 2.0M116.5 6.4L117.0 3.5M132.5 10.7L133.5 7.9M146.2 19.9L149.0 15.1M161.1 27.2L163.0 24.9M172.8 38.9L175.1 37.0M180.1 53.7L184.9 51.0M189.3 67.5L192.1 66.5M193.6 83.5L196.5 83.0M192.5 100.0L198.0 100.0M193.6 116.5L196.5 117.0M189.3 132.5L192.1 133.5M180.1 146.2L184.9 149.0M172.8 161.1L175.1 163.0M161.1 172.8L163.0 175.1M146.2 180.1L149.0 184.9M132.5 189.3L133.5 192.1M116.5 193.6L117.0 196.5M100.0 192.5L100.0 198.0M83.5 193.6L83.0 196.5M67.5 189.3L66.5 192.1M53.7 180.1L51.0 184.9M38.9 172.8L37.0 175.1M27.2 161.1L24.9 163.0M19.9 146.3L15.1 149.0M10.7 132.5L7.9 133.5M6.4 116.5L3.5 117.0M7.5 100.0L2.0 100.0M6.4 83.5L3.5 83.0M10.7 67.5L7.9 66.5M19.9 53.7L15.1 51.0M27.2 38.9L24.9 37.0M38.9 27.2L37.0 24.9M53.7 19.9L51.0 15.1M67.5 10.7L66.5 7.9M83.5 6.4L83.0 3.5"/>
+      <text class="radar-label" x="69.5" y="97">{{ rings[0] }}</text>
+      <text class="radar-label" x="36.5" y="97">{{ rings[1] }}</text>
+      <text class="radar-label" x="10.5" y="97">{{ rings[2] }}</text>
+      <circle class="radar-hub" cx="100" cy="100" r="2.2"/>
+      {% for b in blips %}
+        <g class="blip b{{ b.bearing }}{{ ' next' if b.next }}">
+          {% if b.next %}<circle class="blip-ping" cx="{{ b.x }}" cy="{{ b.y }}" r="5"/>{% endif %}
+          <circle class="blip-halo" cx="{{ b.x }}" cy="{{ b.y }}" r="8"/>
+          <circle class="blip-core" cx="{{ b.x }}" cy="{{ b.y }}" r="3"/>
+        </g>
+      {% endfor %}
+    </svg>
+    <span class="radar-sweep"></span>
+    {%- if caller is defined %}<span class="radar-say">{{ caller() }}</span>{% endif %}
+  </div>
+{%- endmacro %}

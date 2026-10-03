@@ -1,0 +1,468 @@
+/* ==== Branch Lines: the diagram drawn from each page's own data ================================
+   Track Diagram's lines were praised where they drew the family's own order; the pages it left
+   as boxes are where it lost. Here each of them gets a branch line of the same diagram, drawn in
+   the lineage's own materials (steel rails on slate, lamps from its legend, phosphor only on the
+   glass and on what is live):
+   - Chat: a double-track main line, her up line and the family's down line, a station for each
+     message with its time printed across the rails; at the box the rails join and end in the
+     lit ring where it is your turn.
+   - Status: the signal box's block shelf, every lamp in one recessed well in three banks, each
+     lamp a way to its row, with the tally as a figure under it.
+   - Ideas: the line from home, a railway out of home on the tube, each listed place a station at
+     its drive on a square-root scale, keyed by number to one-line rows.
+   - Plans: the month as week tracks, a rail along each week, a lamp at each plan's hour, the now
+     lamp at this hour and the run from it to the next plan lit.
+   The legend, everywhere: #6dff9c lit for now and live; a cyan ring for a plan; a lemon ring for
+   a deadline to come; amber filled for late or a step that waits; lit sage for done; a hollow
+   pewter ring for off; red only for something that has stopped. */
+:root {
+  --vera: #111712;
+  --well: #080c0d;
+  --case: #2a3035;
+  --past: #2e343b;
+  --pewter: #7a8590;
+  --sage: #86d9a6;
+  --fig: "Archivo", var(--sans);
+  --row-glow: color-mix(in srgb, var(--steel) 12%, transparent);
+  --rails: linear-gradient(var(--rail), var(--rail)) 0 0 / 2px 100% no-repeat, linear-gradient(var(--rail), var(--rail)) 22px 0 / 2px 100% no-repeat;
+  --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+/* ---- The bar: every place in words -------------------------------------------------------- */
+@media (min-width: 72rem) {
+  .tools > a, .menu > summary { padding: 0.55rem 0.75rem; }
+  .tools .label { position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
+  .tools { gap: 0.1rem; }
+  .tools::before { content: ""; align-self: stretch; width: 1px; margin: 0.35rem 0.6rem 0.35rem 0; background: var(--line-2); }
+}
+
+/* ---- The monitors: a thin graphite case, a hairline lip, a vent chin and a power lamp ------- */
+.crt {
+  padding: 3px 3px 1.05rem;
+  background: linear-gradient(180deg, #313840, var(--case) 30%, #24292d);
+  border: 1px solid #3a4248;
+  border-radius: 6px;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.16), 0 0 0 1px #07090a, 0 22px 36px -28px #000, 0 0 90px -30px color-mix(in srgb, var(--phosphor) 55%, transparent);
+}
+.crt-tube { border-radius: 3px / 4px; box-shadow: 0 0 0 1px #0a0d0e, 0 1px 0 1px rgb(255 255 255 / 0.05), inset 0 0 0 1.5px #020403, inset 0 0 36px 6px rgb(0 0 0 / 0.72); }
+.crt::before { left: 0.7rem; bottom: 0.33rem; width: 2.7rem; height: 0.36rem; background: repeating-linear-gradient(90deg, #15191c 0 2px, transparent 2px 5px); }
+.crt::after { right: 0.7rem; bottom: 0.36rem; width: 0.32rem; height: 0.32rem; }
+
+/* ---- The key word: next ----------------------------------------------------------------------- */
+.ask-question { font-size: clamp(1.55rem, 3vw, 2rem); letter-spacing: -0.022em; }
+
+/* ---- Rows: every list that is not a line is a one-line row on its board -------------------- */
+/* A row answers the pointer with a steel wash and a sage edge, on in 0.12s and fading over 1.2s. */
+.idea-row, .lately-rows > li, .checklist > li, .task-line > li.task, .line.rows > li, .light-row, .section-card.panel {
+  position: relative;
+  transition: background-color 1.2s ease, box-shadow 1.2s ease;
+}
+
+.kind-ring {
+  display: grid; place-items: center; flex: none;
+  box-sizing: border-box; width: 1.9rem; height: 1.9rem;
+  color: var(--kind, var(--lilac)); background: var(--tray);
+  border: 1.5px solid color-mix(in srgb, var(--kind, var(--lilac)) 55%, var(--rail));
+  border-radius: 50%;
+  transition: border-color var(--afterglow), box-shadow var(--afterglow);
+}
+.kind-ring .icon { width: 0.95rem; height: 0.95rem; stroke-width: 2; }
+
+.kid-ring { --kind: var(--pink); }
+.colheads { display: grid; align-items: end; gap: 0 0.9rem; margin: 0; padding: 0.35rem 0.5rem 0.4rem; }
+
+/* ---- Home --------------------------------------------------------------------------------------- */
+.welcome { background: radial-gradient(70% 90% at 0% 100%, color-mix(in srgb, var(--brand) 13%, transparent), transparent 62%), #101611; }
+/* Setup: slate with an amber edge; the step to take next is lit, and the run from it too. */
+.setup.setup { background: var(--tray); border: 1px solid rgb(255 184 80 / 0.34); border-top: 2px solid rgb(255 184 80 / 0.7); border-radius: var(--sq); box-shadow: none; }
+.setup .line > li:first-child::before { border-color: var(--brand); background: var(--bg); box-shadow: 0 0 5px var(--brand), 0 0 14px color-mix(in srgb, var(--brand) 50%, transparent); }
+@media (min-width: 52rem) {
+  .setup .line > li:first-child:not(:last-child)::after { background: linear-gradient(90deg, var(--brand), color-mix(in srgb, var(--brand) 40%, var(--rail)) 45%, var(--rail)); filter: drop-shadow(0 0 3px color-mix(in srgb, var(--brand) 60%, transparent)); }
+}
+/* To do on Home: a timetable with an 8.5rem margin on one line, rows on the board, the late in
+   amber, and a steady lit tick for now (the fortnight's lamp is the one that breathes). */
+.home-todo, .checklist { --m: 8.5rem; }
+.checklist { --gap: 0rem; gap: 0; }
+.checklist > li { min-height: 2.75rem; padding: 0.15rem 0.5rem 0.15rem 0.25rem; background: none; border: 0; border-top: 1px solid var(--line); border-radius: 0; box-shadow: none; }
+.checklist > li:first-child, .checklist > li.after-now { border-top-color: transparent; }
+.checklist .hang .stamp, .hang .stamp { font-size: 0.8125rem; }
+.stamp .t { color: var(--ink-2); }
+.hang .warn, .stamp.warn { color: var(--amber); }
+.late-count { color: var(--amber) !important; text-decoration-color: rgb(255 184 80 / 0.45) !important; font-weight: 600 !important; }
+
+/* Lately added: newest first, one line each, no rail and no tint: the kind's ring holds its colour. */
+.lately-rows{ list-style: none; margin: 0 0 1rem; padding: 0; }
+.lately-rows > li{ display: grid; grid-template-columns: 1.9rem minmax(0, 1fr) auto; align-items: center; gap: 0 0.8rem; min-height: 2.9rem; padding: 0.2rem 0.5rem 0.2rem 0.25rem; border-top: 1px solid var(--line); }
+.lately-rows > li:first-child{ border-top: 0; }
+
+
+.lately-rows .t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lately-rows .t a{ font-weight: 600; color: var(--heading); text-decoration: none; }
+.lately-rows .t a::after, .idea-row .t a::after { content: ""; position: absolute; inset: 0; }
+.lately-rows .t a, .idea-row .t a { padding-block: 0.75rem; }
+
+.skip { display: inline-flex; align-items: center; min-height: 2.75rem; }
+.kids-talk li a { padding-inline: 0.5rem; }
+.kind-word { margin-left: 0.45rem; font-size: 0.82rem; font-weight: 500; color: var(--dim); }
+.lately-rows .for { max-width: 11rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.875rem; color: var(--ink-2); }
+.lately .section-head::after { content: none; }
+.lately .section-head .ring { background: none; border-color: transparent; }
+
+
+
+
+.lately-rows .go { width: 1.1rem; height: 1.1rem; color: var(--steel); }
+.more-row .t a { font-weight: 500; }
+
+/* ---- Chat: a double-track main line ------------------------------------------------------------ */
+.in-chat main { max-width: 62rem; }
+.thread { gap: 1.2rem; }
+.bubble { padding: 0.6rem 0.9rem 0.7rem; max-width: 46ch; }
+.said-bot .bubble { background: radial-gradient(75% 120% at 100% 0, color-mix(in srgb, var(--screen) 10%, transparent), transparent 65%), var(--vera); border: 1px solid color-mix(in srgb, var(--screen) 30%, var(--line)); border-radius: 14px 4px 14px 14px; box-shadow: inset 0 1px 0 color-mix(in srgb, var(--screen) 20%, transparent), 0 0 30px -14px color-mix(in srgb, var(--screen) 45%, transparent); }
+.said-them .bubble { background: var(--bubble-them); border: 1px solid var(--plate-edge); border-left: 3px solid var(--steel); border-radius: 2px; box-shadow: var(--shadow); }
+.pending .bubble { background: transparent; border: 1px dashed color-mix(in srgb, var(--screen) 30%, var(--line-2)); box-shadow: none; }
+.said-by { gap: 0.1rem 0.55rem; margin-bottom: 0.2rem; font-size: 0.8125rem; }
+.said-by strong { font-weight: 600; letter-spacing: 0.01em; }
+.said-bot .said-by strong { color: var(--lit); }
+.said-them .said-by strong { color: var(--steel); }
+.said-them .said-by { flex-direction: row; }
+.said-when { font: 500 0.8125rem/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--label); }
+.said-text { font-size: 1rem; line-height: 1.55; max-width: none; }
+.station { display: grid; justify-items: start; align-content: start; row-gap: 5px; }
+:is(.said-them, .kids-talk) .avatar { display: inline-grid; place-items: center; flex: none; border-radius: 50%; width: 28px; height: 28px; font: 600 0.8125rem/1 var(--sans); color: var(--heading); background: var(--bg); box-shadow: inset 0 0 0 2px var(--steel); }
+.said-bot .avatar.presence { width: 28px; height: 28px; border-radius: 7px; background-color: #06110b; box-shadow: 0 0 0 3px var(--bg), 0 0 18px -2px color-mix(in srgb, var(--screen) 55%, transparent); }
+.tape-time { justify-self: center; position: relative; z-index: 1; padding: 2px 4px; font: 500 13px/1.2 var(--mono); font-variant-numeric: tabular-nums; color: var(--label); background: var(--bg); }
+.thread.brief > li { display: flex; gap: 0.7rem; align-items: flex-start; }
+.thread.brief .tape-time { display: none; }
+.thread:not(.brief) > li.day-mark { display: flex; justify-content: center; }
+.tie { position: relative; display: inline-flex; align-items: center; gap: 0.6rem; font: 500 13px/1.2 var(--mono); color: var(--heading); }
+.tie::before, .tie::after { content: ""; width: 1.4rem; height: 2px; background: var(--rail-hi); }
+.tie time { padding: 3px 6px; background: var(--bg); border: 1px solid var(--rail); border-radius: 2px; }
+.junction { display: block; margin: 0 auto; overflow: visible; }
+
+
+
+.your-turn { position: relative; margin: 0; padding: 0; }
+.your-turn::before, .your-turn::after { content: none; }
+.your-turn .ask { margin-top: 0; }
+.kids-talk.tray { margin: 2rem 0 0; }
+.kids-talk h2 { font-size: 1.2rem; }
+.kids-talk li a { gap: 0.55rem; text-decoration: none; }
+.kids-talk .nm { text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--steel) 45%, transparent); }
+/* The box at the end of the line: its edge a breath of the phosphor, as on Home, and the lit ring
+   seated on its top edge. */
+.your-turn .ask { border-color: color-mix(in srgb, var(--brand) 30%, var(--line-2)); box-shadow: var(--lift), 0 0 26px -12px color-mix(in srgb, var(--brand) 50%, transparent); }
+.junction { position: relative; z-index: 2; }
+@media (min-width: 40.01rem) {
+  /* The head is a station board: her name on her side, her screen in the terminus ring on the
+     line, and what she is for on the family's side; the two rails leave the ring. */
+  .in-chat .page-head { grid-template-columns: minmax(0, 1fr) 4.5rem minmax(0, 1fr); grid-template-areas: "c c c" "t r l"; column-gap: 0; align-items: start; margin: 0; }
+  .in-chat .page-head::before { content: none; }
+  .in-chat .page-title { justify-self: end; padding: 0 1rem 0 0; text-align: right; }
+  .in-chat .lede { align-self: start; max-width: 32ch; margin: 0.15rem 0 0; padding: 0 0 1.6rem 1rem; font-size: 1rem; }
+  .in-chat .rail { align-self: stretch; }
+  .in-chat .title-icon.presence { border: 2px solid var(--steel); border-radius: 50%; }
+  .in-chat .rail::after { flex: 1; align-self: center; width: 24px; min-height: 1rem; margin: 0; border: 0; border-radius: 0; background: var(--rails); }
+  .thread:not(.brief) { --st: 4.5rem; position: relative; margin: 0; padding: 0.4rem 0 1.4rem; }
+  .thread:not(.brief)::before { content: ""; position: absolute; top: 0; bottom: 0; left: calc(50% - 12px); width: 24px; background: var(--rails); }
+  .thread:not(.brief) > li { display: grid; grid-template-columns: minmax(0, 1fr) var(--st) minmax(0, 1fr); align-items: start; width: 100%; max-width: none; margin: 0; }
+  .thread:not(.brief) > li > .station { grid-column: 2; grid-row: 1; position: relative; z-index: 1; }
+  .thread:not(.brief) > .said-bot > .bubble { grid-column: 1; grid-row: 1; justify-self: end; }
+  .thread:not(.brief) > .said-them > .bubble { grid-column: 3; grid-row: 1; justify-self: start; }
+  .thread:not(.brief) .said-bot > .station > .avatar { margin-left: calc(var(--st) / 2 - 25px); }
+  .thread:not(.brief) .said-them > .station > .avatar { margin-left: calc(var(--st) / 2 - 3px); }
+  .thread:not(.brief) .said-when { display: none; }
+}
+@media (max-width: 40rem) {
+  /* On a phone: one rail down the left, her screen and the family's rings on it, the family's
+     words a step further in, and each time back in its bubble's head. */
+  .thread:not(.brief) { position: relative; margin: 0; padding: 0.2rem 0 1.2rem; }
+  .thread:not(.brief)::before { content: ""; position: absolute; top: 0; bottom: 0; left: calc(0.95rem - 1px); width: 2px; background: var(--rail); }
+  .thread:not(.brief) > li { display: grid; grid-template-columns: 1.9rem minmax(0, 1fr); align-items: start; column-gap: 0.55rem; width: 100%; max-width: none; margin: 0; }
+  .thread:not(.brief) > li > .station { position: relative; z-index: 1; justify-items: center; }
+  .thread:not(.brief) .tape-time { display: none; }
+  .thread:not(.brief) > li > .bubble { justify-self: start; }
+  .thread:not(.brief) > .said-them > .bubble { margin-left: 1rem; }
+  .thread:not(.brief) > li.day-mark { justify-content: flex-start; }
+  .tie::before { width: 1.9rem; }
+  .tie::after { content: none; }
+  .junction { margin-left: calc(0.95rem - 12px); }
+  
+  
+}
+
+/* ---- Status ---------------------------------------------------------------------------------- */
+.tube-note { grid-area: n; margin: -0.3rem 0 0; font-size: 0.92rem; }
+.tally { grid-area: f; align-self: end; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.4rem; margin: 0 0 -0.35rem; font: 400 15px/1.2 var(--sans); color: var(--ink-2); }
+.tally .figure { font: 600 40px/1 var(--fig); font-stretch: 75%; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; color: var(--heading); }
+.tally .light { margin: 0 0 -2px 0.1rem; }
+.tally .sep { margin: 0 0.35rem 0 0.25rem; color: var(--rail-hi); }
+.tally.waits { margin: 0.2rem 0 0.8rem; }
+/* A lamp says its state by colour and by shape: lit working, half amber partly, filled amber
+   worth a look, a hollow pewter ring off, red only for something that has stopped. Working lamps
+   hold steady; the page's one breathing lamp is where now is. */
+.light { display: inline-block; flex: none; box-sizing: border-box; width: 12px; height: 12px; margin: 0; border-radius: 50%; }
+.light.on { background: var(--lamp-core); border: 0; box-shadow: var(--lamp-glow); }
+.light.off { background: none; border: 2px solid var(--pewter); }
+.light.part { background: linear-gradient(90deg, var(--amber) 50%, transparent 50%); border: 2px solid var(--amber); }
+.light.look { background: var(--amber); border: 0; box-shadow: 0 0 6px -1px var(--amber); }
+.attention .light.off { border-color: var(--red); }
+/* The lists the lamps stand for: one board, a band each, one line a row. */
+.board-lists.tray { padding: 0.3rem 1.1rem 0.7rem; }
+.board-lists .band + .band { margin-top: 0.4rem; border-top: 1px solid var(--line-2); }
+.board-lists .section-head { margin: 0.75rem 0 0.2rem; }
+.lights, .lights.line { --rx: 0.975rem; --px: 0rem; --ly: 1.4rem; --gap: 0rem; display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.lights.line > li::before, .lights.line > li::after { content: none; }
+.lights > .light-row { display: grid; grid-template-columns: 1.95rem minmax(0, 15rem) minmax(0, 1fr); align-items: center; gap: 0.1rem 1rem; min-height: 2.75rem; padding: 0.3rem 0.5rem 0.3rem 0; border-top: 1px solid var(--line); }
+.lights > li:first-child { border-top: 0; }
+.light-row > .light { position: relative; z-index: 2; justify-self: center; }
+.light-row strong { font-weight: 600; color: var(--heading); }
+.light-row .detail { font-size: 0.9rem; color: var(--ink-2); }
+.light-row .inline-action { grid-column: 2 / -1; }
+/* Who answers is a chain, primary to fallback: its rail runs lamp to lamp, lit between the ones
+   that answer. */
+.lights.chain > li:not(:last-child)::after { content: ""; position: absolute; z-index: 1; left: calc(0.975rem - 1px); top: 50%; width: 2px; height: 100%; background: var(--rail); }
+.lights.chain > li.on:has(+ li.on)::after { background: linear-gradient(var(--hot), var(--hot)) 50% 0 / 1px 100% no-repeat, var(--brand); filter: var(--run-bloom); }
+.lights.chain > li.on:has(+ li:not(.on))::after { background: var(--run-v); filter: var(--run-bloom); }
+.light-row:target { animation: landed 1.8s var(--ease); }
+@keyframes landed { from { background: color-mix(in srgb, var(--brand) 12%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand) 65%, transparent), 0 0 30px -6px color-mix(in srgb, var(--brand) 55%, transparent); } }
+.spend .ring { background: none; }
+.data td:first-child { white-space: nowrap; }
+.page-status main > section.panel { border-radius: var(--sq); }
+.readout .crt-tube { padding: 0.9rem 1.2rem 1rem; }
+/* What went oddly: a timetable like Recent activity, an amber lamp at each (worth a look). */
+.line.rows.oddly > li::before { background: var(--amber); border-color: var(--amber); box-shadow: 0 0 0 3px var(--tray); }
+@media (max-width: 52rem) {
+  .tally { margin: 0.9rem 0 0; }
+  .lights > .light-row { grid-template-columns: 1.95rem minmax(0, 1fr); }
+  .light-row .detail { grid-column: 2; }
+}
+
+/* ---- Ideas: the line from home ------------------------------------------------------------------ */
+.page-ideas .page-head { margin-bottom: 1rem; }
+.page-ideas .page-actions { align-items: center; flex-wrap: nowrap; }
+.capture { position: relative; }
+.capture > summary { list-style: none; cursor: pointer; }
+.capture-body.panel { position: absolute; z-index: 30; right: 0; top: calc(100% + 0.5rem); width: min(34rem, calc(100vw - 2rem)); margin: 0; padding: 1rem 1.1rem 1.1rem; text-align: left; background: var(--surface-2); border: 1px solid var(--plate-edge); border-radius: var(--sq); box-shadow: 0 24px 48px -18px #000; }
+.capture-body > p { margin: 0 0 0.8rem; font-size: 0.92rem; }
+.crt.from-home { margin: 0 0 0.9rem; }
+/* The tube is the column's width: one row of words across the top, wrapping where it must, and
+   the railway under it the whole width of the glass. The drawing's own attributes set its
+   strokes and faces; here it is only lit. */
+.from-home .crt-tube { padding: 0.55rem 1.2rem 0.4rem; font-size: 1.2rem; }
+.from-home-text { margin: 0 0 0.1rem; line-height: 1.3; }
+.from-home-text .sep { color: var(--phosphor-dim); }
+.from-home-text a { padding-block: 0.8rem; background-clip: content-box; }
+.from-home .rel { white-space: nowrap; }
+.home-line { display: block; width: 100%; overflow: visible; filter: blur(0.3px) drop-shadow(0 0 2px color-mix(in srgb, var(--phosphor) 55%, transparent)); }
+.hl-run { filter: drop-shadow(0 0 3px var(--phosphor)); }
+.hl-home { filter: drop-shadow(0 0 2px var(--phosphor)) drop-shadow(0 0 6px var(--phosphor)); }
+.hl-home-halo { animation: breathe 3.2s ease-in-out infinite; }
+/* A station: its tick and number in the phosphor, the nearest white-hot. Pointing at its row sets
+   --on, and it lights in 0.12s and fades back over 1.2s. */
+.st { --on: 0; }
+.st-tick, .st-n { transition: all calc(1.2s - var(--on) * 1.08s) var(--ease); filter: drop-shadow(0 0 calc(var(--on) * 3px + 0.01px) var(--phosphor)) drop-shadow(0 0 calc(var(--on) * 10px + 0.01px) var(--phosphor)); }
+.st-tick { stroke: color-mix(in srgb, #e4fff0 calc(var(--on) * 100%), color-mix(in srgb, var(--phosphor) 72%, transparent)); }
+.st-n { fill: color-mix(in srgb, #e4fff0 calc(var(--on) * 100%), color-mix(in srgb, var(--phosphor) 68%, transparent)); }
+.st.near { --on: 0.85; }
+.idea-tools { display: flex; flex-wrap: wrap; align-items: end; gap: 0.75rem 1.25rem; margin: 0 0 0.8rem; }
+.idea-tools select { white-space: nowrap; }
+.idea-tools .tabs { flex: none; }
+.idea-tools .filters { display: flex; flex: 1 1 34rem; flex-wrap: nowrap; align-items: end; gap: 0 0.7rem; margin: 0; padding: 0; background: none; border: 0; box-shadow: none; }
+.idea-tools .filters .field { flex: 1 1 8rem; min-width: 0; margin: 0; }
+.idea-tools .filters .field.wide { flex: 1.2 1 9rem; }
+.idea-tools .filters .field:has(#status) { flex-basis: 10.5rem; }
+.idea-tools .filters .field.actions { flex: none; }
+.idea-tools .filters label { display: block; margin: 0 0 0.3rem; font: 500 0.8125rem/1.2 var(--sans); color: var(--label); }
+.idea-board.tray { padding: 0.25rem 0.9rem 0.5rem; margin-bottom: 1.5rem; }
+.idea-board .colheads, .idea-rows > li { grid-template-columns: 1.9rem minmax(0, 1fr) minmax(7rem, 11rem) 7.5rem 2.6rem; }
+.idea-board .ch-count { grid-column: 2; }
+.idea-rows { list-style: none; margin: 0; padding: 0; }
+.idea-row { display: grid; align-items: center; gap: 0 0.9rem; min-height: 2.75rem; padding: 0.15rem 0.5rem 0.15rem 0.25rem; border-top: 1px solid var(--line); }
+.idea-row .t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.idea-row .t a { font-weight: 600; color: var(--heading); text-decoration: none; }
+.idea-row .on { margin-left: 0.4rem; font: 500 0.8125rem var(--mono); color: var(--cyan); }
+.idea-row .tag { margin-left: 0.35rem; }
+.idea-row .for { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9rem; color: var(--ink-2); }
+.idea-row .drive { display: grid; grid-template-columns: minmax(0, 1fr) 2.2ch; gap: 0.5ch; font: 500 0.84rem/1.2 var(--mono); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; color: var(--ink); }
+.drive .pt { text-align: left; color: var(--label); }
+.idea-row .drive.pending { display: block; font: italic 400 0.84rem var(--sans); color: var(--dim); }
+.idea-row .n { font: 500 0.8125rem/1.2 var(--mono); font-variant-numeric: tabular-nums; text-align: right; color: var(--label); }
+.colheads .ch-drive, .colheads .ch-n { text-align: right; }
+@media (max-width: 64rem) { .idea-tools .filters { flex-wrap: wrap; gap: 0.6rem 0.7rem; } }
+@media (max-width: 48rem) {
+  /* On a phone the numbers would touch: the nearest's, the furthest's and the one pointed at stay. */
+  .st-n { opacity: var(--on); }
+  .st.far { --on: 0.7; }
+  .hl-mile:nth-of-type(-n + 3), .st line + line{ display: none; }
+  .idea-board .colheads { display: none; }
+  /* A row in two lines: the title whole, then its kind and the drive. */
+  .idea-rows > li { grid-template-columns: 1.9rem auto minmax(0, 1fr) auto; grid-template-areas: "k t t n" "k w d n" "k g g n"; align-items: baseline; column-gap: 0.6rem; padding-block: 0.5rem; }
+  .idea-rows .t { display: contents; }
+  .idea-rows .t > a { grid-area: t; margin-block: -0.75rem; }
+  .idea-rows .t > :is(.tag, .on) { grid-area: g; justify-self: start; margin: 0.2rem 0 0; }
+  .idea-rows .kind-ring { grid-area: k; align-self: start; }
+  .idea-rows .kind-word { grid-area: w; margin: 0; }
+  .idea-rows .drive { grid-area: d; display: flex; gap: 0.5ch; font-size: 0.8125rem; color: var(--ink-2); }
+  .idea-rows .for { display: none; }
+  .idea-rows .n { grid-area: n; }
+  .capture-body.panel { position: static; width: auto; margin-top: 0.5rem; }
+  .page-ideas .page-actions { flex-wrap: wrap; }
+}
+
+/* ---- To do: latched keys and one search; a timetable of one-line rows --------------------------- */
+.task-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.75rem; margin: 0 0 1rem; }
+.keys { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; }
+.keys-name { margin-right: 0.35rem; font: 500 0.8125rem/1 var(--sans); color: var(--label); }
+.key, .tabs a, .task-line details.more > summary, button.secondary, .button.secondary {
+  display: inline-flex; align-items: center; gap: 0.45rem; min-height: 2.75rem; padding: 0 0.9rem;
+  font: 500 0.92rem/1 var(--sans); color: var(--ink-2); text-decoration: none; list-style: none; cursor: pointer;
+  background: linear-gradient(#1e262c, #182025); border: 1px solid #323c44; border-radius: 4px;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 1px 0 #000;
+}
+.key .icon, .tabs a .icon, .task-line details.more > summary .icon { width: 1.05rem; height: 1.05rem; }
+.key:hover, .tabs a:hover, button.secondary:hover, .button.secondary:hover { color: var(--heading); background: linear-gradient(#232c33, #1c242a); border-color: #45515b; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 1px 0 #000; }
+.tabs { display: inline-flex; gap: 0.35rem; padding: 0; background: none; border: 0; }
+.task-search { display: flex; flex: 1 1 18rem; align-items: center; gap: 0.5rem; max-width: 28rem; margin: 0; }
+.task-search button { margin: 0; }
+.task-search input { flex: 1 1 auto; min-width: 0; height: 2.75rem; padding-block: 0; }
+.page-head .page-actions .button { min-height: 2.75rem; }
+.add-task.panel { margin: 0 0 1rem; padding: 0.8rem 1.1rem 1.2rem; background: var(--tray); border: 1px solid var(--tray-edge); border-top: 2px solid var(--steel); box-shadow: none; }
+.add-task:not(:target):not(.always) { display: none; }
+.add-task:target { animation: landed 1.8s var(--ease); }
+.add-task-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 0 0 0.6rem; }
+.add-task-head h2 { display: flex; align-items: center; gap: 0.5rem; margin: 0; font-size: 1.2rem; }
+.add-close { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 0.3rem; color: var(--steel); }
+.task-board.tray { padding: 0.25rem 0.9rem 0.8rem; }
+.task-board .colheads { grid-template-columns: minmax(0, 1fr) 7rem 12.5rem 5.6rem; padding-left: 6.8rem; }
+.colheads .ch-due { text-align: right; }
+.task-line { --m: 2.4rem; --rx: 2.9rem; --px: 4rem; --ly: 1.45rem; --gap: 0rem; gap: 0; margin: 0; }
+.task-line > li.task { display: grid; grid-template-columns: 2.75rem minmax(0, 1fr) 7rem 12.5rem 5.6rem; align-items: center; gap: 0 0.9rem; min-height: 2.9rem; margin: 0; padding: 0.1rem 0.4rem 0.1rem 0; background: none; border: 0; border-top: 1px solid var(--line); border-radius: 0; box-shadow: none; }
+.task-line > li:first-child, .task-line > li.after-now { border-top-color: transparent; }
+.task-line .d { display: grid; place-items: center; }
+.task-line .d .tick { margin: 0; }
+.task-line .task-box { width: 1.15rem; height: 1.15rem; border: 1.5px solid #5d6873; border-radius: 3px; }
+.task-line .t { min-width: 0; font-weight: 600; color: var(--heading); overflow-wrap: anywhere; }
+.task-line .reminder { margin-left: 0.5rem; font-size: 0.82rem; font-weight: 400; color: var(--ink-2); }
+.task-line .reminder .icon { width: 0.9rem; height: 0.9rem; margin-right: 0.25rem; vertical-align: -0.1rem; }
+.task-line .who { font-size: 0.9rem; color: var(--ink-2); }
+.task-line .due { font-size: 0.9rem; font-variant-numeric: tabular-nums; text-align: right; color: var(--ink-2); white-space: nowrap; }
+.task-line .due.warn { color: var(--amber); font-weight: 500; }
+.task-line .window { white-space: normal; font-size: 0.85rem; }
+.task-line details.more { justify-self: end; }
+.task-line details.more > summary { padding: 0 0.75rem; font-size: 0.88rem; }
+.task-line details.more > summary::before { content: none; }
+details > summary::-webkit-details-marker { display: none; }
+.task-line details.more[open] { grid-column: 2 / -1; justify-self: stretch; padding: 0 0 0.9rem; }
+.task-line .sub { grid-column: 2 / -1; margin: -0.35rem 0 0.4rem; font-size: 0.85rem; }
+.task-line .sub p { margin: 0.1rem 0 0; }
+.task-line > li:not(.timed)::before { border-color: var(--rail-hi); }
+.task-line > li.timed::before { border-color: color-mix(in srgb, var(--lemon) 70%, var(--rail-hi)); }
+.task-line > li.late::before { background: var(--amber); border-color: var(--amber); box-shadow: 0 0 0 3px var(--tray); }
+.task-line > li.task-done::before { background: var(--lit); border-color: var(--lit); }
+.task-line > li.empty { display: flex; gap: 0.6rem; align-items: center; min-height: 2.9rem; }
+.task-line > li.empty::before, .task-line > li.empty::after { content: none; }
+.footnote { margin: 0.8rem 0 0 4rem; }
+@media (max-width: 48rem) {
+  .task-line { --m: 0rem; --rx: 0.5rem; --px: 1.6rem; }
+  .footnote { margin-left: 0; }
+  .task-board .colheads { display: none; }
+  /* A row in two lines: the title, then whose and when; the edit key is its icon alone. */
+  .task-line > li.task { grid-template-columns: 2.75rem auto minmax(0, 1fr) auto; grid-template-areas: "k t t e" "k w u e" "s s s s"; column-gap: 0.6rem; padding: 0.35rem 0; }
+  .task-line .d { grid-area: k; }
+  .task-line .t { grid-area: t; }
+  .task-line .who { grid-area: w; font-size: 0.85rem; }
+  .task-line .due { grid-area: u; text-align: left; font-size: 0.85rem; }
+  .task-line details.more { grid-area: e; }
+  .task-line details.more > summary { width: 2.75rem; padding: 0; justify-content: center; font-size: 0; }
+  .task-line details.more[open], .task-line .sub { grid-area: s; }
+}
+
+/* ---- Timetable rows: one line each, the stamp in the margin, the lamp on the rail ---------------- */
+/* The one row drawing for anything in time that is not the To do list: the plans, the month on a
+   phone, the calls that went oddly. */
+.line.rows { --m: 8.5rem; --rx: calc(var(--m) + 0.6rem); --px: calc(var(--rx) + 1.15rem); --ly: 1.3rem; --gap: 0rem; gap: 0; }
+.line.rows > li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.1rem 0.75rem; min-height: 2.75rem; padding: 0.55rem 0.4rem 0.5rem 0; border-top: 1px solid var(--line); }
+.line.rows > li:first-child, .line.rows > li.after-now { border-top-color: transparent; }
+.rows .what { font-weight: 600; color: var(--heading); }
+.rows .what a { color: inherit; text-decoration: none; }
+.rows .what a:hover { text-decoration: underline; text-decoration-color: var(--cyan); }
+.rows .what .t, .rows .hang .t { font: 500 0.8125rem var(--mono); color: var(--ink-2); }
+.rows .where { font-size: 0.9rem; color: var(--ink-2); }
+.rows .where .icon { width: 0.9rem; height: 0.9rem; margin-right: 0.25rem; vertical-align: -0.1rem; }
+.rows .sub { flex-basis: 100%; font-size: 0.875rem; color: var(--ink-2); }
+.plan-keys { display: flex; gap: 0.4rem; margin-left: auto; }
+.plan-keys details[open] { flex-basis: 100%; }
+
+/* ---- Plans: the list, a timetable from now --------------------------------------------------------- */
+.plan-board.tray { padding: 1rem 1.1rem 0.8rem; }
+.plan-board h2 { margin: 0 0 0.6rem; }
+.plan-board .past-head { margin-top: 1.4rem; }
+.plan-rows { --lc: var(--cyan); --nowgap: 2.6rem; }
+/* Past: the rail dimmed, the rings pewter, the words quieter. */
+.plan-rows.past { --lc: #56616b; }
+.plan-rows.past > li:not(:last-child)::after { background: var(--past); }
+.plan-rows.past :is(.what, .stamp, .rel) { color: var(--dim); }
+/* The now lamp at the head of the line, lit and breathing, the run from it to the first plan lit. */
+.now-stop.lamp { left: calc(var(--rx) - var(--px) - 7px); top: calc(var(--nowgap) / -2 - 7px); width: 14px; height: 14px; border-radius: 50%; background: var(--lamp-core); animation: lamp 3.2s ease-in-out infinite; }
+.now-stop.lamp::after, .now-stop.lamp > .now-run { left: 6px; top: 14px; height: calc(var(--nowgap) / 2 + var(--ly) - 13px); }
+
+/* ---- Plans: the month as week tracks ------------------------------------------------------------ */
+.month-board { padding: 0.9rem 1.1rem 0.6rem; }
+table.month.panel { margin: 0; padding: 0; overflow: visible; background: none; border: 0; box-shadow: none; }
+table.month th { padding: 0.45rem 0.55rem 0.5rem; border-bottom: 1px solid #1d252b; }
+/* Each week's rail is the line between it and the next: the cells draw no rule of their own. */
+table.month td { position: relative; height: 5.1rem; padding: 0.35rem 0.4rem 1.4rem; vertical-align: top; border-top: 0; border-color: #1d252b; }
+table.month td:nth-child(n + 6) { background: color-mix(in srgb, var(--surface-3) 55%, transparent); }
+table.month td.outside { background: rgb(0 0 0 / 0.18); }
+table.month td.outside:nth-child(n + 6) { background: color-mix(in srgb, var(--surface-3) 30%, transparent); }
+table.month time { width: auto; height: auto; padding: 0.1rem 0.3rem; font: 500 0.8125rem/1.2 var(--mono); border-radius: 3px; }
+table.month td.today { background: color-mix(in srgb, var(--steel) 7%, transparent); box-shadow: none; }
+table.month td.outside time, td.gone :is(time, .event, .event a) { color: var(--faint); }
+.event { position: relative; margin-top: 0.3rem; padding: 0.28rem 0.45rem 0.3rem 1.25rem; font-size: 0.8125rem; line-height: 1.25; background: var(--plate); border: 1px solid var(--plate-edge); border-radius: var(--sq); box-shadow: var(--shadow); }
+.event::before { content: ""; position: absolute; left: 0.42rem; top: calc(0.28rem + 0.625lh - 4px); width: 8px; height: 8px; box-sizing: border-box; background: var(--tray); border: 1.5px solid var(--cyan); border-radius: 50%; box-shadow: none; animation: none; }
+td.gone .event::before { border-color: #56616b; }
+.event a { color: var(--heading); text-decoration: none; }
+.event a:hover { text-decoration: underline; text-decoration-color: var(--cyan); }
+.event small { display: block; font: 500 0.8125rem/1.2 var(--mono); font-variant-numeric: tabular-nums; color: var(--label); }
+/* On a phone: the month's busy days as a timetable. */
+.month-list.line { --lc: var(--cyan); display: none; margin: 0 0 1rem; }
+.month-list > li.gone { --lc: #56616b; }
+.month-list > li.gone :is(.what, .stamp) { color: var(--dim); }
+.month-list > li.gone::after { background: var(--past); }
+.month-list > li.is-today .stamp { color: var(--brand); }
+@media (max-width: 40rem) {
+  .line.rows { --m: 5.6rem; }
+  .rows .hang .t { display: block; }
+  .month-list.line { display: grid; }
+}
+
+/* ---- Settings: rows on a tray, each with its part's lamp ------------------------------------------ */
+.section-cards { display: block; margin: 0 0 1.25rem; padding: 0.2rem 0.9rem; list-style: none; background: var(--tray); border: 1px solid var(--tray-edge); border-radius: var(--sq); }
+.section-cards > li + li { border-top: 1px solid var(--line); }
+.section-card.panel { display: grid; grid-template-columns: 1.6rem minmax(0, 1fr) auto; align-items: center; gap: 0 1rem; min-height: 3rem; margin: 0; padding: 0.55rem 0.5rem 0.55rem 0.35rem; color: var(--ink-2); text-decoration: none; background: none; border: 0; border-radius: 0; box-shadow: none; transform: none; }
+.section-card.panel:hover { transform: none; }
+.section-what { display: grid; grid-template-columns: 13rem 1.1rem minmax(0, 1fr); align-items: baseline; gap: 0.1rem 0.6rem; }
+.section-what strong { grid-row: 1 / span 4; font-size: 1rem; }
+.section-what > .light { grid-area: 1 / 2; align-self: center; }
+.section-what > :not(strong, .light) { grid-column: 3; font-size: 0.9rem; }
+.section-what .look-words { font-weight: 500; color: var(--amber); }
+.section-card .go { color: var(--steel); }
+.section-card > .section-icon, .section-card > .go { align-self: start; margin-top: 0.12rem; }
+@media (max-width: 40rem) { .section-what { grid-template-columns: minmax(0, 1fr) auto; } .section-what strong { grid-row: 1; } .section-what > .light { grid-area: 1 / 2; } .section-what > :not(strong, .light) { grid-column: 1 / -1; } }
+
+/* ---- The head's figure: the numeral after the title, its unit stacked beside it ------------------ */
+.page-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 1rem; }
+.head-fig { display: flex; align-items: flex-end; gap: 0.5rem; margin: 0; }
+.fig-n { font: 500 clamp(2.3rem, 4.4vw, 3.05rem)/0.84 var(--fig); font-stretch: 75%; font-variant-numeric: tabular-nums; color: var(--label); }
+.fig-u { display: grid; font: 500 0.8125rem/1.25 var(--sans); color: var(--ink-2); }
+.fig-u .late-count { display: inline-flex; align-items: center; justify-self: start; min-width: 2.75rem; min-height: 2.75rem; margin-block: -0.9rem; }
+
+/* ---- Access -------------------------------------------------------------------------------------- */
+@media (prefers-contrast: more) {
+  .home-line, .hl-home, .st.near .st-tick, .st.near .st-n{ filter: none; }
+  .said-bot .bubble { background: var(--vera); box-shadow: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hl-home-halo, .now-stop.lamp { animation: none; }
+}

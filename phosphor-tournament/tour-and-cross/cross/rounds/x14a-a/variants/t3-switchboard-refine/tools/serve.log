@@ -1,0 +1,3 @@
+variant serving /tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/tour/t3-b/variants/t3-switchboard-refine/templates on 53037
+2026-10-03 02:12:56,427 INFO waitress: Serving on http://127.0.0.1:53037
+2026-10-03 02:12:57,578 INFO familydb.web.auth: web login with the family password from 127.0.0.1

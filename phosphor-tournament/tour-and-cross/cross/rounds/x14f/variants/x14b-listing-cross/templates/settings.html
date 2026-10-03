@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, presence, head_figure, lamp %}
+{% block title %}Settings · {{ site_title }}{% endblock %}
+{% block body_class %}page-settings{% endblock %}
+{% block content %}
+  {{ page_head('Settings', 'Each part, how it stands now, and the way in to change it.', 'settings') }}
+  {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+  {# Each row holds one line: Connections says only how each stands (the reason is on its own
+     page). Programme Guide: one band; Listing, Dropped Through numbers the parts on a rail, as each part's own page does. The way in to setting up from the start is the band's note, in its
+     head column; to the right a row to each page of settings: its icon, its name, a leader, how it
+     stands, and a mark when it needs a look. The whole row is the way in. #}
+  <section class="band settings-band">
+    <div class="band-head">
+      {% set looks = sections | selectattr('look') | list | length %}
+      {% set first_look = sections | selectattr('look') | first %}
+      {{ head_figure(sections | length, 'parts', (looks ~ ' to look at') if looks else none, url_for('settings.section', name=first_look.section.name) if looks else none, true) }}
+
+    </div>
+    <div class="band-body">
+    <ul class="rows section-rows">
+      {% for entry in sections %}
+        {% set one = entry.section %}
+        <li>
+          <a class="row section-row{% if entry.look %} look{% endif %}" href="{{ url_for('settings.section', name=one.name) }}">
+            <span class="d"><span class="part-no" aria-hidden="true">{{ loop.index }}</span></span>
+            <strong class="t">{% if one.icon == 'presence' %}{{ presence('glyph') }}{% else %}{{ icon(one.icon) }}{% endif %}{{ one.title }}</strong>
+            <span class="x">{% for line in entry.lines %}{% if not loop.first %}<span class="sep" aria-hidden="true"> · </span>{% endif %}<span class="section-state">{{ line.split('; ')[0].split(', so ')[0].rstrip('.') if one.name == 'connections' else line }}</span>{% endfor %}</span>
+            <span class="f">{% if entry.look %}<span class="look-word">{{ lamp('look') }}Needs a look</span>{% endif %}{{ icon('right', cls='go') }}</span>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+    <p class="band-foot">
+        Setting up for the first time, or starting again? <a href="{{ url_for('setup.overview') }}">Setup</a>
+        goes through what matters most, one step at a time.
+      </p>
+    </div>
+  </section>
+{% endblock %}

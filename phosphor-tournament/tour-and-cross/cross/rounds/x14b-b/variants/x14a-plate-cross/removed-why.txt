@@ -1,0 +1,24 @@
+Plate, Engraved (x14a-plate-cross): what this design removes, and why. (removed.txt is written by
+the lint on every check and lists the mechanics; this says the reasons.) Everything Backlit Plate
+removed stays removed, for its reasons (monitor cases, the Ideas Kind select and tabs, the filter
+selects, the cards' secondary meta on the Ideas list, the cobalt wash).
+
+- The per-page READY chip in every page head: folded into one status foot engraved into the
+  plate's bottom edge on every page (pinhole, Ready, who answers, today's spend of the limit, and
+  the way to Status), so the machine's state is said once, in one place, with more in it.
+- The 4:3 aspect of the screen windows: each window is sized to its words.
+- The settings index's rounded icon tiles (section cards) and its "Needs a look" pill: each part
+  is an engraved row under a rule head (The family, The machine, Sign-in), and needing a look is
+  a half-amber pinhole with amber words.
+- Home's "Next up" window no longer carries the radar inside it: the radar is its own round
+  window cut over the screen's corner. Its words say "3 more on the slot" (the Coming up slot
+  shows them) instead of "on the radar".
+- Home's Coming up DAY / AT / IN column heads: each row now leads with its engraved day numeral,
+  so the column needs no head; the first plan is a row too (with a lit "Next"), so the count in
+  the head matches the rows.
+- The Plans list's DAY / AT / IN heads and its rule count: the count is the page head's figure.
+- The To do list's "4 shown" on the Open rule: the count is the page head's figure ("4 open ·
+  3 late"), said once.
+- Status's long lede about today's spend: the spend window says it; the lede is the question.
+- The month's today pinhole: today is a small lit window round its numeral instead.
+- base.html's DM Sans preload: the page sets no DM Sans.

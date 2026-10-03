@@ -1,0 +1,130 @@
+{
+ "stage": "judge",
+ "cross": true,
+ "final": true,
+ "round": "x14f",
+ "label": "14 (final panel)",
+ "roundNo": 3,
+ "lens": "interaction",
+ "heats": {
+  "f": {
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14f",
+   "lineages": [
+    {
+     "name": "desk: Desk Terminal, Wired (main camp)",
+     "idea": "a docked terminal column: one real cased terminal beside the family's desk, Home's question typed at the foot of its glass",
+     "ids": [
+      "x14b-desk-cross"
+     ]
+    },
+    {
+     "name": "quote: Quote Board, Lit (main camp)",
+     "idea": "a count board: each section led by one big quote or figure, read at a glance",
+     "ids": [
+      "x14b-quote-cross"
+     ]
+    },
+    {
+     "name": "dessau: Dessau, Dialled (main camp)",
+     "idea": "Bauhaus display type: a modernist poster's hierarchy and geometry around the green screens",
+     "ids": [
+      "x14b-dessau-cross"
+     ]
+    },
+    {
+     "name": "plate: Plate, Channelled (main camp)",
+     "idea": "a long-persistence instrument: a cut matte plate over one lit screen",
+     "ids": [
+      "x14b-plate-cross"
+     ]
+    },
+    {
+     "name": "listing: Listing, Dropped Through (main camp)",
+     "idea": "a programme listing: the family's evening set as a TV listings page, bands with a head column",
+     "ids": [
+      "x14b-listing-cross"
+     ]
+    },
+    {
+     "name": "folio: Folio, Fastext (main camp)",
+     "idea": "a videotex service as a folio: numbered pages of one service, read like a teletext magazine",
+     "ids": [
+      "x14b-folio-cross"
+     ]
+    },
+    {
+     "name": "trued: Trued, Yard Lit (tour camp)",
+     "idea": "the track series: the family's week as a signal box's lit track diagram; the greeting its own lit board with the ways to start on a steel branch, Next up as the line's first stop",
+     "ids": [
+      "x14b-trued-cross"
+     ]
+    },
+    {
+     "name": "manual: Lit Manual, Dialled (tour camp)",
+     "idea": "the family's operator manual: every list in time hangs from a rail with one lit NOW, every section led by a figure drawn from its own data",
+     "ids": [
+      "x14b-manual-cross"
+     ]
+    },
+    {
+     "name": "departures: Departures, Terminus (tour camp)",
+     "idea": "a station at night: Vera's line down the left with the box as its first stop, a dot-matrix departures board beside it",
+     "ids": [
+      "x14b-departures-cross"
+     ]
+    },
+    {
+     "name": "settled: Switchboard, Patched (tour camp)",
+     "idea": "the videotex sommaire settled: Home as a two-tier map of the service, every inner page on one rack with its own sized tube",
+     "ids": [
+      "x14b-settled-cross"
+     ]
+    },
+    {
+     "name": "sill: Sill Line, Wired (tour camp)",
+     "idea": "the track series' bolder Home: the question as the board's headline, the tube's lit wire dropping onto the Coming up rail, To do's stops the ticks you press",
+     "ids": [
+      "x14b-sill-cross"
+     ]
+    },
+    {
+     "name": "pocket: Pocket Diary, Bound (tour camp)",
+     "idea": "the family's pocket diary: one steel line of time from Now to Later, every date set as a diary sets a day",
+     "ids": [
+      "x14b-pocket-cross"
+     ]
+    },
+    {
+     "name": "waypoint: Waypoint, Patched (tour camp)",
+     "idea": "a 1969 flight console: a readout strip, the weeks as a flight plan whose waypoint rings carry the day numerals that lead the rows",
+     "ids": [
+      "x14b-waypoint-cross"
+     ]
+    }
+   ],
+   "yardsticks": [
+    "00-current",
+    "r13-idea-1",
+    "t3-track-refine2"
+   ],
+   "ids": [
+    "00-current",
+    "r13-idea-1",
+    "t3-track-refine2",
+    "x14b-desk-cross",
+    "x14b-quote-cross",
+    "x14b-dessau-cross",
+    "x14b-plate-cross",
+    "x14b-listing-cross",
+    "x14b-folio-cross",
+    "x14b-trued-cross",
+    "x14b-manual-cross",
+    "x14b-departures-cross",
+    "x14b-settled-cross",
+    "x14b-sill-cross",
+    "x14b-pocket-cross",
+    "x14b-waypoint-cross"
+   ]
+  }
+ }
+}

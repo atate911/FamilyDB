@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, crt %}
+{% block title %}{{ month }} · {{ site_title }}{% endblock %}
+{% macro event(entry) %}
+  <div class="event{{ ' from-google' if entry.from_google }}">
+    {% if entry.idea_id %}
+      <a href="{{ url_for('web.idea', idea_id=entry.idea_id) }}">{{ entry.title }}</a>
+    {% else %}
+      {{ entry.title }}
+    {% endif %}
+    {% if entry.time %}<small>{{ entry.time }}</small>{% endif %}
+  </div>
+{% endmacro %}
+{% block content %}
+  {# The panel: the plate, and a cell to turn the month with, down the first column; the month
+     itself across the other three, a grid of equal cells of its own, a day to a cell. #}
+  {% set count = busy_days | map(attribute='entries') | map('length') | sum %}
+  {# The next plan from today, found in the month's own days, and how far off it is. #}
+  {% set clock = config.FAMILYDB_APP.clock %}
+  {% set today = clock.today() %}
+  {% set nx = namespace(day=none, entry=none) %}
+  {% for week in weeks %}{% for day in week %}{% if nx.day is none and day.current and day.entries and day.date >= today %}{% set nx.day = day %}{% set nx.entry = day.entries[0] %}{% endif %}{% endfor %}{% endfor %}
+  {% set gap = (nx.day.date - today).days if nx.day else none %}
+  {% set rel = none if gap is none else ('today' if gap == 0 else ('tomorrow' if gap == 1 else 'in ' ~ gap ~ ' days')) %}
+  {% call page_head('Plans', 'The month, a day to a cell, and what is on each day.', 'plans',
+       figs=[(count, 'plan' if count == 1 else 'plans', none, '')] + ([(none, 'next ' ~ rel, none, 'words')] if rel else [])) %}
+    {% if visitor().may("manage") and source != "google" %}<a class="button" href="{{ url_for('setup.step', name='calendar') }}">{{ icon('plug') }}Connect the calendar</a>
+    {% elif visitor().may('change') %}<a class="button" href="{{ url_for('web.plans', _anchor='add') }}">{{ icon('plus') }}Put something on the calendar</a>{% endif %}
+  {% endcall %}
+  <div class="side">
+  {# The tube counts down to the next plan: what the grid beside it cannot say at a glance. #}
+  <section class="cell screen-cell" aria-hidden="true">
+  {% call crt('readout page-readout next-readout') %}
+    {% if nx.day %}
+      {% set hrs = (gap * 24 + ((nx.entry.time[:2] | int) if nx.entry.time else 0) - clock.now().hour) %}
+      {% set hrs = [hrs, 0] | max %}
+      <p class="readout-label"><span class="inverse caps">Next {{ rel }}</span></p>
+      <p class="readout-title bright">{{ nx.entry.title }}</p>
+      <p class="readout-when">{{ nx.day.date.strftime('%a') }} {{ nx.day.day }} {{ nx.day.date.strftime('%b') }}{% if nx.entry.time %} {{ nx.entry.time }}{% endif %}</p>
+      {% set lit = [[gap, 7] | min, 0] | max %}
+      <p class="readout-bar">[{{ '█' * lit }}{{ '░' * (7 - lit) }}] <span class="bright">{{ hrs // 24 }}d {{ hrs % 24 }}h</span></p>
+      <p class="readout-foot"><span class="bright">{{ count - 1 }}</span> <span class="dim">more in {{ month.split(' ')[0] }}</span><span class="crt-cursor"></span></p>
+    {% else %}
+      <p class="readout-label"><span class="inverse caps">{{ month }}</span></p>
+      <p class="readout-title bright">Nothing more this month.</p>
+      <p class="readout-foot dim">{{ count }} plan{{ '' if count == 1 else 's' }} in all<span class="crt-cursor"></span></p>
+    {% endif %}
+  {% endcall %}
+  </section>
+  <section class="month-cell" aria-label="How to show the plans">
+    <nav class="latch" aria-label="How to show the plans">
+      <a href="{{ url_for('web.plans') }}">{{ icon('list') }}List <span class="no">400</span></a>
+      <a href="{{ url_for('web.plans_month') }}" aria-current="true">{{ icon('grid') }}Month <span class="no">410</span></a>
+    </nav>
+    {% if visitor().may('browse') %}<p class="muted source source-{{ source }}">{{ source_note }}</p>{% endif %}
+  </section>
+  </div>
+
+  <div class="main">
+  <div class="month-module span-5">
+  {# The month's name over its days, and the keys that turn it, as a wall calendar has them. #}
+  <div class="month-bar">
+    <h2>{{ month }}</h2>
+    <p class="month-nav">
+      <a class="button ghost" href="{{ url_for('web.plans_month', month=previous) }}">{{ icon('left') }}Earlier</a>
+      {% if not this_month %}<a class="button ghost" href="{{ url_for('web.plans_month') }}">This month</a>{% endif %}
+      <a class="button ghost" href="{{ url_for('web.plans_month', month=following) }}">Later{{ icon('right') }}</a>
+    </p>
+  </div>
+  {# Two drawings of the same days, and the stylesheet shows one: seven columns where there is
+     room for them, and on a phone just the days that have something on, as a list. #}
+  <table class="cell month">
+    <thead>
+      <tr>{% for name in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}<th scope="col">{{ name }}</th>{% endfor %}</tr>
+    </thead>
+    <tbody>
+      {% for week in weeks %}
+        <tr>
+          {% for day in week %}
+            <td class="{{ 'outside' if not day.current }}{{ ' today' if day.today }}">
+              <time datetime="{{ day.date.isoformat() }}">{{ day.day }}</time>
+              {% for entry in day.entries %}{{ event(entry) }}{% endfor %}
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <ol class="cell plain month-list">
+    {% for day in busy_days %}
+      <li class="{{ 'today' if day.today }}">
+        <strong>{{ day.name }}</strong>{% if day.today %} <span class="tag">today</span>{% endif %}
+        {% for entry in day.entries %}{{ event(entry) }}{% endfor %}
+      </li>
+    {% else %}
+      <li class="muted">Nothing on in {{ month }}.</li>
+    {% endfor %}
+  </ol>
+  </div>
+  </div>
+{% endblock %}

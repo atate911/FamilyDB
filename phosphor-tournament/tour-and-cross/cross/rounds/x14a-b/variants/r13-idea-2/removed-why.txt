@@ -1,0 +1,24 @@
+Backlit Plate (r13-idea-2): what this design removes, and why. (removed.txt is written by the lint on
+every check and lists the mechanics; this says the reasons.)
+
+- Every monitor case (the rounded pewter slab, its bezel gradient, chin and chin power light),
+  on Next up, sign-in, 404/403, the spend screen and the Ideas radar. The plate is the terminal's
+  bezel, extended to the whole page: a screen is a window cut through it, with a lit bevel and the
+  tube's spill falling on the plate, as a VT100 or 3270 showed its tube. This answers the owner's
+  twice-named "too-dominant pewter slab". Under Home's Next up and the sign-in window only, a row
+  of engraved vents and a pinhole power light is all that is left of a case.
+- The Ideas page's Kind select and its "All ideas / Restaurants" tabs. The kinds are one bank of
+  keys (Restaurant is one of them), so there is one mechanism per filter and never a select beside
+  a list doing the same job. The Restaurants page itself stays, reached from Home's "Something to
+  eat" and by the Restaurant key.
+- The Ideas filter form's Status and For selects and its Filter button: For and Status are keys in
+  one fold on the search line, and Search has its own key, so every choice applies at once and
+  works with scripts off.
+- The To do page's "Show" select and Filter button: Open, Done, Cancelled and All are latched keys
+  beside Search.
+- The Ideas cards' secondary meta (where, on, duration, cost, rating, tags) on the list: each idea
+  is one printed row read to its facts (drive, way, for, #); the idea's own page keeps all of it.
+- The cobalt corner wash (washGlow 0): a coloured light in a corner would be light with no cut,
+  which the plate's rule forbids.
+- The "Save a thought for later" fold moved from above the Ideas list to below it (not removed),
+  so eight rows are above the fold; the one primary way in, Add an idea, is in the head.

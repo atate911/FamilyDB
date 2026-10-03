@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, departures %}
+{% block title %}{{ month }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-plans{% endblock %}
+{# A plan in a day's cell, set as a timetable sets a departure: its time first, in the condensed
+   figures of every time column, then where to, wrapping to a second line rather than cut. #}
+{% macro event(entry) %}
+  <div class="event{{ ' from-google' if entry.from_google }}">
+    {%- if entry.time %}<span class="event-at">{{ entry.time }}</span>{% endif -%}
+    {%- if entry.idea_id %}<a class="event-what" href="{{ url_for('web.idea', idea_id=entry.idea_id) }}"><span>{{ entry.title }}</span></a>
+    {%- else %}<span class="event-what"><span>{{ entry.title }}</span></span>{% endif -%}
+  </div>
+{% endmacro %}
+{% block content %}
+  {# The head carries the figure of what is shown: how many plans the grid holds in the month, and
+     in the days of the months either side that it also shows, then when the next one leaves.
+     Counted here from the grid the view draws. #}
+  {% set t0 = config.FAMILYDB_APP.clock.today() %}
+  {% set tally = namespace(count=0, before=0, after=0, before_month='', after_month='', next=none, day=none) %}
+  {% for week in weeks %}{% for day in week %}
+    {% if day.current %}{% set tally.count = tally.count + day.entries | length %}
+    {% elif day.date.day > 15 %}{% set tally.before = tally.before + day.entries | length %}{% set tally.before_month = day.date.strftime('%B') %}
+    {% else %}{% set tally.after = tally.after + day.entries | length %}{% set tally.after_month = day.date.strftime('%B') %}{% endif %}
+    {% if day.entries and tally.next is none and day.date >= t0 %}{% set tally.next = day.entries[0] %}{% set tally.day = day.date %}{% endif %}
+  {% endfor %}{% endfor %}
+  {# Said as a sentence: the first figure carries its noun ("1 plan"), the ones after it are
+     "more", and a month with none says so. (Counted here as a stand-in: shipped, the Plans view
+     hands the template these three figures and the next departure.) #}
+  {% set said = namespace(parts=[], noun=false) %}
+  {% for n, where in [(tally.before, 'late ' ~ tally.before_month), (tally.count, month.split(' ')[0]), (tally.after, 'early ' ~ tally.after_month)] %}
+    {% if n %}
+      {% set said.parts = said.parts + [n ~ ((' more' if said.noun else (' plan' if n == 1 else ' plans'))) ~ ' in ' ~ where] %}
+      {% set said.noun = true %}
+    {% elif loop.index == 2 %}
+      {% set said.parts = said.parts + [('none in ' if said.noun else 'No plans in ') ~ where] %}
+    {% endif %}
+  {% endfor %}
+  {% set lede = said.parts | join(', ') %}
+  {% if tally.next %}
+    {% set away = tally.day.toordinal() - t0.toordinal() %}
+    {% set on = 'today' if away == 0 else ('tomorrow' if away == 1 else tally.day.strftime('%a') ~ ' ' ~ tally.day.day ~ ' ' ~ tally.day.strftime('%b')) %}
+    {% set lede = lede ~ ' · next up ' ~ on ~ (' at ' ~ tally.next.time if tally.next.time else '') %}
+  {% endif %}
+  {# What is still to come in the days the grid shows, once each, soonest first: the board's rows. #}
+  {% set ahead = [] %}{% set keys = [] %}
+  {% for week in weeks %}{% for day in week %}{% if day.date >= t0 %}{% for entry in day.entries %}
+    {% set key = entry.title ~ (entry.start_value or '') %}
+    {% if key not in keys %}{% set _ = keys.append(key) %}{% set _ = ahead.append(entry) %}{% endif %}
+  {% endfor %}{% endif %}{% endfor %}{% endfor %}
+  {% set fig = {'n': ahead | length, 'unit': 'ahead'} %}
+  {# The change says what the board does not: the month's own count, the past days included. #}
+  {% set _ = fig.update({'change': (tally.count ~ ' in ' ~ month.split(' ')[0]) if tally.count else ('none in ' ~ month.split(' ')[0])}) %}
+  {{ page_head('Plans', none, 'plans', figure=fig) }}
+  {% if this_month %}
+  <section class="plans-board" aria-label="Next up">{{ departures(ahead, more=0, wide=true) }}
+  {% if visitor().may('browse') %}<p class="source source-{{ source }}">{{ source_note }}</p>{% endif %}</section>
+  {% elif visitor().may('browse') %}<p class="source source-{{ source }}">{{ source_note }}</p>{% endif %}
+
+  {# One row of controls: how to show them on the left; which month, and the way to the one before
+     and after, on the right, the month named between its arrows as a pager names its page. #}
+  <div class="plan-controls">
+    <nav class="tabs" aria-label="How to show the plans">
+      <a href="{{ url_for('web.plans') }}">{{ icon('list') }}List</a>
+      <a href="{{ url_for('web.plans_month') }}" aria-current="page">{{ icon('grid') }}Month</a>
+    </nav>
+    <div class="month-head">
+      <a class="button ghost" href="{{ url_for('web.plans_month', month=previous) }}">{{ icon('left') }}Earlier</a>
+      <h2>{{ month }}</h2>
+      <a class="button ghost" href="{{ url_for('web.plans_month', month=following) }}">Later{{ icon('right') }}</a>
+      {% if not this_month %}<a class="button ghost" href="{{ url_for('web.plans_month') }}">This month</a>{% endif %}
+    </div>
+  </div>
+
+  {# Two drawings of the same days, and the stylesheet shows one: seven columns where there is
+     room for them, and on a phone just the days that have something on, as a list. A week wholly
+     gone by is a departed service: it folds to a strip and gives its height to the weeks still to
+     come. Every other week is as tall as what it holds. The table ends on the way forward. #}
+  {% set last = weeks[-1][-1] %}
+  <table class="month">
+    <thead>
+      <tr>{% for name in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}<th scope="col">{{ name }}</th>{% endfor %}</tr>
+    </thead>
+    <tbody>
+      {% for week in weeks %}
+        {% set busy = namespace(v=false) %}
+        {% for day in week %}{% if day.entries or day.today %}{% set busy.v = true %}{% endif %}{% endfor %}
+        <tr class="{{ 'departed' if week[-1].date < t0 else ('busy' if busy.v else 'quiet') }}">
+          {% for day in week %}
+            <td class="{{ 'outside' if not day.current }}{{ ' today' if day.today }}{{ ' past' if day.date < t0 }}">
+              <time datetime="{{ day.date.isoformat() }}">{{ day.day }}{% if day.day == 1 and not day.current %} <span class="month-mark">{{ day.date.strftime('%b') }}</span>{% endif %}</time>{% if day.today %}<span class="today-word">Today</span>{% endif %}
+              {% for entry in day.entries %}{{ event(entry) }}{% endfor %}
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr><td colspan="7"><a class="month-on" href="{{ url_for('web.plans_month', month=following) }}"><span>{{ (last.date.strftime('%B') ~ ' continues') if not last.current else 'The next month' }}</span><span class="month-on-go" aria-hidden="true"> · </span><span class="month-on-go">Later{{ icon('right') }}</span></a></td></tr>
+    </tfoot>
+  </table>
+
+  <ol class="panel plain month-list">
+    {% for day in busy_days %}
+      <li class="{{ 'today' if day.today }}">
+        <strong>{{ day.name }}</strong>{% if day.today %} <span class="tag">today</span>{% endif %}
+        {% for entry in day.entries %}{{ event(entry) }}{% endfor %}
+      </li>
+    {% else %}
+      <li class="muted">Nothing on in {{ month }}.</li>
+    {% endfor %}
+  </ol>
+{% endblock %}

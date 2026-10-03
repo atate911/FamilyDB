@@ -1,0 +1,1719 @@
+/* LISTING, LIT THROUGH. Source of sheet.css (build.py themes today's stylesheet with the palette's
+   tokens, then appends this, comments stripped and whitespace folded). Evening Listing, Traced,
+   kept whole in its system (band and head column, leader rows to tabular facts, figure over label,
+   column heads, NOW, steel "here") and lit through: one stem from Next up's tube into Coming up,
+   round dials heading Plans and Status, and a last band of the household's other pages. */
+
+/* ---- Tokens: one job each ---------------------------------------------------------------- */
+html{scrollbar-color:#3a454c var(--bg)}
+:root{
+  --heading:#ebe6da;--label:#a4b0c2;--card-edge:#2e343b;
+  --sans:"Instrument Sans","DM Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --band:#10161a;--zebra:#161d22;--rule:#2d353b;--lead:#3a454c;
+  --needle:#84a0c4;            /* the accent: icons of the pages with no colour of their own */
+  --link:#9db6d6;              /* denim: every link that is words */
+  --rev:#6b8396;--rev-ink:#0b0e0c;--rev-cap:#9cc4dc;   /* steel reverse video: "you are here", one step quieter */
+  --steel:#58697a;             /* the one line, drawn only where there is an order */
+  --tab-cell:#26313a;
+  --hover:#182025;
+  --well:#1b2126;--well-edge:#5b6570;
+  --head:13rem;--hang:1.75rem;--gap:1.75rem;--pad:1.1rem;
+  /* The written scale, six steps, one larger for the family: 12 caps labels, 15 detail and facts,
+     17 body and rows, 21 band heads, 32 the question and the head figures, 44 mastheads. */
+  --t-cap:.8125rem;--t-detail:.9375rem;--t-body:.9375rem;--t-lede:1.0625rem;--t-head:1.375rem;--t-q:2.25rem;--t-mast:2.5rem;
+  /* LISTING, LIT THROUGH: the type system, eight steps, each with one job and used nowhere else.
+     display 44 (the greeting's title only), h1 40 (page titles), figure 36 (head-column numerals,
+     Plex Sans 300, tabular), band 22 (band heads, condensed 600), row 16 (row names, 600), fact 15
+     (Plex Mono, tabular), body 15, label 13 (the floor; caps labels +.06em, every control and link
+     in sentence case). */
+  --t-display:2.75rem;--t-h1:2.5rem;--t-figure:2.25rem;--t-band:1.375rem;--t-row:1rem;--t-fact:.9375rem;--t-label:.8125rem;
+  /* Three rule weights: a band's top, a row's leader, a column head's foot. */
+  --rule-band:1px solid var(--line-2);--rule-row:1px dotted var(--line-2);--rule-col:1px solid var(--line);
+  --t-tube:1.5rem;--t-tube-s:1.2rem;
+  /* Light: on in .12s, fading over 1.2s, as a tube's phosphor did. */
+  --afterglow:1.2s cubic-bezier(.2,.7,.3,1);--glow-in:.12s;
+  --linger:1.2s cubic-bezier(.45,0,.55,1);
+  --fade:1.4s cubic-bezier(.25,.45,.35,1);  /* a row's afterglow: on at once, decaying like phosphor */
+  --lamp:0 0 4px color-mix(in srgb,var(--brand) 80%,transparent),0 0 12px color-mix(in srgb,var(--brand) 35%,transparent);
+  /* E20: a live lamp, white-hot at its centre, an 8px glow and an 18px halo. */
+  --hot:color-mix(in srgb,var(--screen) 30%,#fff);
+  --lamp-core:radial-gradient(circle at 50% 45%,var(--hot) 0 30%,var(--brand) 72%);
+  --lamp-live:0 0 8px var(--brand),0 0 18px color-mix(in srgb,var(--brand) 45%,transparent);
+  /* A lit stretch of rail: the phosphor, with the two-layer halo, following the line's own alpha. */
+  --rail-glow:drop-shadow(0 0 2px color-mix(in srgb,var(--brand) 80%,transparent)) drop-shadow(0 0 6px color-mix(in srgb,var(--brand) 35%,transparent));
+  --row-wash:color-mix(in srgb,rgb(132 160 196) 12%,var(--surface));
+  --glow:0 0 0 1px color-mix(in srgb,var(--brand) 35%,transparent),0 8px 28px -10px color-mix(in srgb,var(--brand) 70%,transparent);
+  --r-lg:3px;--r:3px;--r-sm:3px;--ring:2px solid var(--brand);
+  --lift:0 1px 0 #0009,0 12px 24px -20px #000;--shadow:0 0 #0000}
+
+/* ---- Type: seven steps, three voices (condensed heads, text-width body, mono figures) ----- */
+body{font:400 var(--t-body)/1.55 var(--sans);font-kerning:normal;font-variant-numeric:lining-nums;font-synthesis:none}
+p,li,.lede{text-wrap:pretty}
+main{max-width:78rem;padding:clamp(1.25rem,3vw,2rem) clamp(1rem,3vw,2rem) 3.5rem}
+h1,.band-head h2,main>.panel>h2:first-child,.ask-question,.month-head h2,.speaker strong,.brand-name,.figure strong{font-family:var(--sans);font-weight:600;font-stretch:80%;letter-spacing:-.015em;word-spacing:.04em;line-height:1}
+h1{font-size:var(--t-mast)}
+h2{font-size:var(--t-lede);font-weight:600;line-height:1.2;letter-spacing:-.005em}
+h3{margin-block:1.25rem .5rem;font:600 var(--t-lede)/1.25 var(--sans);letter-spacing:-.005em;text-transform:none;color:var(--heading)}
+.home-wishes h3{font-size:var(--t-lede)}
+/* Labels: the machine's small caps over a field or a column, never a sentence, never a link. */
+.count,.data caption,.data th,.eyebrow,.form legend,label,table.month th,.key-label{font:500 var(--t-cap)/1.35 var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--label)}
+label .optional{font:400 var(--t-cap) var(--sans);letter-spacing:0;text-transform:none;color:var(--faint)}
+label.check,label.inline,.ask .locate label{font:400 var(--t-body)/1.3 var(--sans);letter-spacing:0;text-transform:none;color:var(--ink-2)}
+.ask-question label{font:inherit;letter-spacing:inherit;text-transform:none;color:var(--heading)}
+/* Figures in Plex Mono, tabular, with a slashed zero; sentences in the sans. */
+.meta,.card-id,.data td,time,.rel,.when,.x,.f,.sum,.figure,.hang,.dateline{font-variant-numeric:tabular-nums}
+:is(.f,.sum,.figure,.chip,.hang,.dateline,.count,.tag,.t .id,.eyebrow,label,table.month time,.event small,.readout,.crt .rel){font-feature-settings:"zero","tnum"}
+.lede{max-width:48ch;margin:.55rem 0 0;font-size:var(--t-lede);line-height:1.4;color:var(--ink-2);text-wrap:balance}
+.hint,.panel>p,main>p{max-width:68ch}
+.hint,.form .hint,.field span.muted,.small,.section-state,button.small,button.quiet,.button.ghost,.signout button.quiet{font-size:var(--t-detail)}
+.people strong{font-size:var(--t-body)}
+.did{font:400 var(--t-cap)/1.4 var(--mono)}
+.foot .legal,.legal{font:400 var(--t-cap)/1.4 var(--sans);letter-spacing:0;color:var(--faint)}
+
+/* Links look like links: denim words, underlined, an arrow where they lead on. */
+a{text-underline-offset:.2em;text-decoration-thickness:1px}
+.links a,.note a,.list-note a,main p a:not(.button,.crt *),.brief-more a,.crumbs a,.said-text a{color:var(--link);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.2em;text-decoration-color:color-mix(in srgb,var(--link) 55%,transparent)}
+.links a:hover,.note a:hover,main p a:not(.button,.crt *):hover,.brief-more a:hover,.crumbs a:hover{color:var(--heading);text-decoration-color:currentColor}
+.links{display:flex;flex-wrap:wrap;gap:0 1rem;margin:0}
+.links a{display:inline-flex;align-items:center;gap:.35em;min-height:2.75rem;min-width:2.75rem;font:500 var(--t-detail)/1.2 var(--sans);letter-spacing:0;text-transform:none}
+.links .icon{width:.9rem;height:.9rem;flex:none}
+.crumbs a{font:500 var(--t-detail) var(--sans);letter-spacing:0;text-transform:none}
+
+/* ---- The bar, its tuning scale, and "here" ---------------------------------------------- */
+.bar{min-height:3.6rem;padding-block:.4rem;border-bottom:0}
+.brand,.places a,.tools>a,.menu>summary,.signout button.quiet{min-height:2.75rem;min-width:2.75rem}
+.skip:not(:focus){padding-block:1rem}
+.bar::after{content:"";position:absolute;left:0;right:0;bottom:0;height:7px;pointer-events:none;background:linear-gradient(var(--rule),var(--rule)) left bottom/100% 1px no-repeat,repeating-linear-gradient(90deg,#47535b 0 1px,transparent 1px 40px) left bottom/100% 7px no-repeat,repeating-linear-gradient(90deg,var(--rule) 0 1px,transparent 1px 8px) left bottom/100% 4px no-repeat}
+/* The mark: lit, a halo round its tile, strokes bleeding light, the cursor blinking 8 times. */
+.brand-mark{border-radius:4px;border-color:color-mix(in srgb,var(--brand) 40%,transparent);box-shadow:0 0 22px -6px color-mix(in srgb,var(--brand) 55%,transparent)}
+.brand-mark .icon{filter:drop-shadow(0 0 3px color-mix(in srgb,var(--brand) 75%,transparent))}
+.caret{height:1.1rem;box-shadow:0 0 10px color-mix(in srgb,var(--brand) 80%,transparent)}
+.foot-mark .icon{filter:drop-shadow(0 0 3px color-mix(in srgb,var(--brand) 60%,transparent))}
+.brand-name{font-size:var(--t-head)}
+nav a,.menu>summary{font:500 var(--t-detail)/1 var(--sans);color:var(--dim)}
+nav a:hover,.menu>summary:hover,.menu[open]>summary{color:var(--heading);background:var(--hover)}
+nav a[aria-current="page"] .icon,.menu.here>summary .icon{filter:none}
+.places a,.tools>a,.menu>summary,.brand{position:relative}
+@media (min-width:52rem){
+  .places a{padding:.55rem .75rem;font-size:var(--t-detail)}
+  .places a,.tools>a,.menu>summary{border-radius:2px}
+  /* Here: the steel block with a lighter cap, and under it the tuning scale's short segment lit. */
+  .places a[aria-current="page"],.tools>a[aria-current="page"],.menu.here>summary{color:var(--rev-ink);background:var(--rev);box-shadow:inset 0 2px var(--rev-cap)}
+  .places a[aria-current="page"] .icon,.tools>a[aria-current="page"] .icon,.menu.here>summary .icon{color:var(--rev-ink)}
+  .places a[aria-current="page"]::after,.tools>a[aria-current="page"]::after,.menu.here>summary::before,.in-home .brand::after{content:"";position:absolute;left:0;right:0;bottom:-.4rem;width:auto;height:2px;margin:0;border:0;transform:none;background:var(--brand);box-shadow:0 0 6px color-mix(in srgb,var(--brand) 75%,transparent),0 0 2px var(--brand);pointer-events:none}
+  .in-home .brand::after{right:auto;width:2.2rem}
+}
+@media (min-width:75rem){
+  .tools>a,.menu>summary{padding:.55rem .65rem}
+  .tools .label{position:static;width:auto;height:auto;overflow:visible;clip-path:none}
+  .tools{gap:.1rem}
+}
+.places{border-top-color:var(--rule)}
+@media (max-width:51.99rem){
+  .places a{border-radius:3px}
+  .places a .label{font-size:var(--t-cap)}
+  .places a[aria-current="page"]{color:var(--rev-ink);background:var(--rev);box-shadow:inset 0 2px var(--rev-cap)}
+  .places a[aria-current="page"] .icon{color:var(--rev-ink);background:none}
+}
+.menu-list{background:var(--surface);border-color:var(--card-edge)}
+.menu-list a{border-radius:2px;min-height:2.75rem}
+.menu-list a:hover{background:var(--hover);color:var(--heading)}
+.menu-list a[aria-current="page"],.settings-nav a[aria-current="page"],.tabs a[aria-current="page"],.switch a[aria-current],.kind-key a[aria-current]{color:var(--rev-ink);background:var(--rev);border-color:transparent;box-shadow:inset 0 2px var(--rev-cap)}
+.menu-list a[aria-current="page"] .icon,.settings-nav a[aria-current="page"] .icon,.tabs a[aria-current="page"] .icon,.switch a[aria-current] .icon,.kind-key a[aria-current] .icon{color:var(--rev-ink);filter:none}
+.menu-list a[aria-current="page"] .presence,.settings-nav a[aria-current="page"] .presence{box-shadow:0 0 0 1px var(--rev-ink)}
+
+/* ---- The head of a page: its lit tile, the title and the lede, and its one action -------- */
+.page-head{margin:0 0 1.35rem;padding:0 0 1.1rem;border-bottom:1px solid var(--line)}
+/* The title's tile is a small lit screen in its section's colour: its raster and a small glow. */
+.title-icon{border-radius:4px;box-shadow:0 0 18px -6px color-mix(in srgb,var(--accent) 55%,transparent);transition:box-shadow var(--afterglow)}
+.title-icon .icon{filter:drop-shadow(0 0 3px color-mix(in srgb,var(--accent) 70%,transparent))}
+.page-tabs{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.5rem 1.25rem;flex:1 0 100%;margin-top:1rem}
+@media (min-width:72rem){
+  .page-head{display:grid;grid-template-columns:var(--head) minmax(0,1fr) auto;gap:0 var(--gap);align-items:end;padding-inline:var(--pad)}
+  .page-title,.title-row{display:contents}
+  .crumbs{grid-area:1/2;margin:0 0 .45rem}
+  .title-row>.title-icon{grid-area:2/1;justify-self:end;align-self:center;width:2.75rem;height:2.75rem}
+  .title-row>h1{grid-area:2/2}
+  .lede{grid-area:3/2}
+  .page-actions{grid-area:1/3/4/4;align-self:end}
+  .page-tabs{grid-area:4/2/5/4;margin:1.1rem 0 0}
+}
+
+/* ---- Bands: a head column inside, one rule on top, rows to the right --------------------- */
+.band,main>:is(section,nav).panel:has(>h2:first-child){position:relative;margin:0 0 1.1rem;padding:.95rem var(--pad) 1rem;background:var(--band);border:0;border-top:1px solid var(--rule);border-radius:0;box-shadow:none}
+.band{display:grid;gap:.7rem var(--gap);align-content:start}
+.band>*,.part>*{min-width:0}
+.band-head{display:flex;flex-wrap:wrap;align-items:center;gap:0 1.1rem}
+.band-head h2,main>.panel>h2:first-child{display:flex;align-items:center;gap:.55rem;margin:0;font-size:var(--t-head);color:var(--heading);white-space:nowrap;text-wrap:balance}
+.band-head h2 .icon,main>.panel>h2:first-child .icon{flex:none;width:1.2rem;height:1.2rem;color:var(--accent)}
+.band-head h2 .presence{flex:none;width:1.2rem;height:1.2rem}
+.coming{--accent:var(--plans)}
+.home-todo{--accent:var(--todo)}
+.lately{--accent:var(--ideas)}
+.home-wishes,.kids-talk{--accent:var(--shows)}
+.eat{--accent:var(--people)}
+.band-head .note{margin:.45rem 0 0;font-size:var(--t-detail);line-height:1.45;color:var(--dim)}
+.band-head .count{margin:.5rem 0 0}
+/* The head column always says something: a typeset summary of what the band holds. */
+.sum{display:flex;flex-direction:column;gap:.05rem;margin:.4rem 0 .15rem;font:400 var(--t-detail)/1.4 var(--mono);color:var(--ink-2)}
+.sum .warn{color:var(--people)}
+/* One rule for every band: one tabular figure at the 32px step over a 12px caps label, then at
+   most one state, and that state is a link to where it can be seen. */
+.figure{display:flex;flex-direction:column;gap:.3rem;margin:.7rem 0 0}
+.band-head.list-head>.figure:first-child{margin-top:.1rem}
+.figure strong{font:500 var(--t-q)/.9 var(--mono);font-stretch:100%;letter-spacing:-.04em;color:var(--heading);font-feature-settings:"zero","tnum"}
+.figure span{font:500 var(--t-cap)/1.3 var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--label)}
+.state{margin:.2rem 0 0}
+.state>*{display:inline-flex;align-items:center;gap:.3em;min-height:2.75rem;margin-block:-.35rem;font:500 var(--t-detail)/1.2 var(--sans);color:var(--ink-2)}
+.state a{color:var(--link);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.2em;text-decoration-color:color-mix(in srgb,currentColor 55%,transparent)}
+.state .warn{color:var(--people)}
+.state a:hover{text-decoration-color:currentColor}
+.state .icon{width:.9rem;height:.9rem}
+/* A switch between views (or what to show), and the key to the kinds: cells down the column. */
+.switch,.kind-key{display:flex;flex-direction:column;gap:2px;width:100%;margin:.9rem 0 0}
+.switch a,.kind-key a{display:flex;align-items:center;gap:.6rem;min-height:2.75rem;padding:0 .75rem;border-radius:2px;font:500 var(--t-detail)/1.2 var(--sans);color:var(--ink-2);text-decoration:none;transition:background-color var(--afterglow),color .15s}
+.switch a:not([aria-current]):hover,.kind-key a:not([aria-current]):hover{color:var(--heading);background:var(--hover);transition-duration:var(--glow-in),.15s}
+.switch .icon,.kind-key .icon{flex:none;width:1.1rem;height:1.1rem}
+/* The kind key is the one kind filter: two abreast in 44px cells, each icon in its kind's colour. */
+.kind-key{--kind:var(--ideas);display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-top:1.1rem}
+.kind-key a{gap:.45rem;padding:0 .5rem;font-weight:400;font-stretch:92%;white-space:nowrap;background:color-mix(in srgb,var(--zebra) 70%,transparent)}
+.kind-key a .icon{color:var(--kind)}
+.kind-key a.kind-all .icon{color:var(--label)}
+.key-label{margin:0 0 .35rem}
+main:has(.idea-band){--head:13.25rem}
+@media (min-width:72rem){
+  .band{grid-template-columns:var(--head) minmax(0,1fr)}
+  .band-head{flex-direction:column;align-items:flex-start;padding:.15rem 0 0 var(--hang)}
+  .band-head h2{margin-left:calc(-1*var(--hang))}
+  .band-head .links{flex-direction:column;margin-top:.1rem}
+  .band-head.list-head,.band-head:not(:has(>h2)){padding-left:0}
+  .band>.band-body:only-child,.band>.track:only-child{grid-column:1/-1}
+  main>:is(section,nav).panel:has(>h2:first-child){display:flow-root;padding-left:calc(var(--pad) + var(--head) + var(--gap))}
+  main>.panel>h2:first-child{float:left;width:var(--head);margin:0 0 .5rem calc(-1*(var(--head) + var(--gap)))}
+  .band.pair{grid-template-columns:minmax(0,1fr) 20rem}
+  .part{position:relative;display:grid;grid-template-columns:var(--head) minmax(0,1fr);gap:.7rem var(--gap);align-content:start}
+  .kids-talk{--head:15rem}
+}
+@media (max-width:71.99rem){
+  .switch{flex-direction:row;flex-wrap:wrap;width:auto;margin:.5rem 0 0}
+  .kind-key{grid-template-columns:repeat(auto-fill,minmax(8.5rem,1fr));flex:1 0 100%;width:100%;margin:.5rem 0 0}
+  .key-label{display:none}
+  .band-head.list-head{align-items:flex-end}
+}
+.pair>:only-child{grid-column:1/-1}
+.setup{border-top:2px solid #7a5d31}
+.setup li::before{content:none}
+.setup .band-head h2,.setup .band-head h2 .icon{color:var(--people)}
+
+/* ---- Rows: designator, title, leader, detail, facts in fixed columns --------------------- */
+.rows,.rows.rows{display:grid;gap:1px;max-width:62rem;margin:0;padding:0;list-style:none}
+.rows>li{margin:0;padding:0;border:0}
+.row.row{--d:3.25rem;position:relative;display:grid;grid-template-columns:var(--d) minmax(0,max-content) minmax(1.25rem,1fr) auto auto;gap:0 .9rem;align-items:baseline;align-content:center;min-height:2.75rem;margin:0;padding:.35rem .8rem .35rem 0;color:var(--ink);text-decoration:none;background:none;border:0;border-radius:2px;box-shadow:none;transform:none;transition:background-color var(--fade),box-shadow var(--fade)}
+.rows>.row:nth-child(odd of :where(.row:not(.cols))),.rows>:nth-child(odd)>.row{background:var(--zebra)}
+.row::after{content:"";grid-area:1/3;align-self:baseline;border-bottom:1px dotted var(--lead);transform:translateY(-.22em);transition:border-color var(--fade)}
+/* A leader only runs to something. */
+.row:not(:has(>.x:not(:empty))):not(:has(>.f:not(:empty)))::after{content:none}
+.row>.d{position:relative;grid-area:1/1/span 2;align-self:stretch;display:grid;place-items:center;margin:-.35rem 0;color:var(--label);border-radius:2px 0 0 2px;font-size:var(--t-body);box-shadow:inset 2px 0 transparent;transition:box-shadow var(--fade)}
+.row>.d>.icon{width:1.2rem;height:1.2rem}
+.row>.d.kind{--tint:14%;color:var(--kind);background:color-mix(in srgb,var(--kind) var(--tint),#1c2328)}
+.row>.d:is(.kind-restaurant,.kind-activity,.kind-seasonal,.kind-show){--tint:5%}
+.row>.t{grid-area:1/2;margin:0;font-size:var(--t-body);font-weight:600;line-height:1.35;color:var(--heading);text-wrap:pretty}
+.row>.t a,a.t{color:inherit;text-decoration:none}
+.row:hover .t a,.row:hover>a.t,a.row:hover>.t,.row .t a:focus-visible,a.t:focus-visible{text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 45%,transparent)}
+.linked .t a::after,.linked>a.t::after{content:"";position:absolute;inset:0;z-index:1}
+/* The kind named beside the title in its own colour, softened toward the ink so lemon and amber
+   stop reading as neon. */
+.t .kind{margin-left:.5rem;font:500 var(--t-detail)/1 var(--sans);letter-spacing:.01em;color:color-mix(in oklab,var(--kind) 72%,var(--ink));white-space:nowrap}
+.row .t a,.crt a,.note a,main p a,.plain li>a,.crumbs a{padding-block:.8rem}
+.note a,.crumbs a{padding:.95rem .35rem;margin-inline:-.35rem}
+.row>a.t{min-width:2.75rem;padding-block:.75rem;margin-block:-.75rem}
+.crt a{padding-block:.85rem;margin-block:-.85rem}
+.crt a:hover{background-clip:content-box}
+.event a{display:block;padding-block:.95rem;margin-block:-.95rem}
+summary{min-height:2.75rem}
+.field.can-dictate>button.mic{right:0;bottom:0;width:2.75rem;height:2.75rem;min-height:2.75rem}
+.row>.x{grid-area:1/4;min-width:0;font-size:var(--t-detail);line-height:1.4;color:var(--ink-2);text-align:right}
+.row>.x>span+span{margin-left:.8rem}
+.row>.f{grid-area:1/5;justify-self:end;display:grid;grid-auto-flow:column;column-gap:.85rem;align-items:baseline;margin:0;text-align:right;font:400 var(--t-detail)/1.4 var(--mono);letter-spacing:0;color:var(--label)}
+.f .rel{padding:0;font:inherit;color:inherit;background:none;text-align:left}
+.f .warn,.x .warn{color:var(--people)}
+.f .for{font:400 var(--t-detail)/1.4 var(--sans);color:var(--ink-2);text-align:left}
+.f .card-id{margin:0;font:inherit;color:var(--label)}
+.f .go{width:1rem;height:1rem;color:var(--link)}
+/* The fixed sub-columns, per list, in the facts' own ch. */
+.dated .row{--d:4.6rem}
+.dated .d{justify-items:start;padding-left:.9rem}
+.dated .f{grid-template-columns:2.85rem 5.65rem}
+.ideas-rows .f{grid-template-columns:6.2rem 1.7rem 9.5rem 2rem}
+.ideas-rows .f .way{text-align:left;color:var(--dim)}
+.ideas-rows .f .cost{text-align:right}
+.kids .f{grid-template-columns:3.4rem}
+.home-todo .f{grid-template-columns:11.25rem}
+.home-todo .x{width:5.5rem;min-width:0;text-align:left}
+.row>.sub{grid-area:2/2/3/-1;display:flex;flex-wrap:wrap;gap:.1rem .9rem;margin:.05rem 0 .1rem;font-size:var(--t-detail);color:var(--dim)}
+.sub>*{margin:0}
+.sub :is(a,button,summary){position:relative;z-index:2}
+.sub .icon{width:.95rem;height:.95rem;color:var(--faint)}
+/* The row's afterglow: pointed at or focused, it lights in .12s (a 12% steel wash, a 2px lit
+   sage edge, a faint halo, and its leader traced in sage) and fades over 1.2s, ease-out, as a
+   tube's phosphor does after the beam has gone. */
+.rows .row.row:is(a,:has(a,button)):hover,.rows .row.row:has(:focus-visible){background-color:var(--row-wash);box-shadow:inset 2px 0 var(--lit),0 0 18px -10px var(--lit);transition-duration:var(--glow-in)}
+.row:is(a,:has(a,button)):hover>.d,.row:has(:focus-visible)>.d{box-shadow:inset 2px 0 var(--lit);transition-duration:var(--glow-in)}
+.row:is(a,:has(a,button)):hover::after,.row:has(:focus-visible)::after{border-bottom-color:color-mix(in srgb,var(--lit) 70%,transparent);transition-duration:var(--glow-in)}
+.row.empty{display:flex;gap:.9rem;padding-left:.9rem;color:var(--dim);font-size:var(--t-body)}
+.row.empty::after{content:none}
+.row.empty .t{font-weight:400;color:var(--dim)}
+.row .tag,.tag{padding:.12rem .42rem;font:500 var(--t-cap)/1.3 var(--mono);letter-spacing:.05em;text-transform:uppercase;border-radius:2px}
+.t .tag{margin-left:.5rem;vertical-align:.1em}
+/* Amber keeps one job: a task's state is slate. */
+.tag.status-open{color:var(--label);background:#1d252b;box-shadow:inset 0 0 0 1px var(--card-edge)}
+
+/* ---- Lines, only where there is an order -------------------------------------------------- */
+/* Coming up: a steel line down the designator column, from the lamp lit for now, with a stop at
+   each day, ending at the last. */
+.track{--rx:.5rem;position:relative;min-width:0}
+.now-mark{position:relative;display:flex;align-items:center;height:1.75rem;margin:0;padding-left:.9rem;font:500 var(--t-cap)/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--lit)}
+.now-mark::after,.track .row::before,.steps .row::before{content:"";position:absolute;left:calc(var(--rx) - 1px);width:1px;height:auto;margin:0;border:0;border-radius:0;transform:none;pointer-events:none}
+.now-mark::after{top:50%;bottom:0;background:var(--steel)}
+.track .row::before{top:-1px;bottom:0;background:var(--steel)}
+.track .rows>li:last-child>.row::before,.track .rows>.row:last-child::before{bottom:50%}
+.track .row>.d::after{content:"";position:absolute;left:calc(var(--rx) - 4px);top:50%;width:7px;height:7px;margin-top:-3.5px;border-radius:50%;background:var(--steel)}
+.track .row.is-today>.d::after{background:var(--rev-cap)}
+.track .row.empty::before,.track .row.empty>.d::after{content:none}
+/* The one lamp lit below the fold: now. It glows and breathes, because it is live. */
+.now-lamp{position:absolute;left:calc(var(--rx) - 5px);top:50%;z-index:1;width:9px;height:9px;margin-top:-4.5px;border-radius:50%;background:var(--brand);box-shadow:var(--lamp);animation:breathe 3.2s ease-in-out infinite}
+/* Finish setting up: the steps numbered in amber rings, joined by one hairline. */
+.steps{--rx:calc(1.625rem + .5px)}
+.steps .row::before{top:-1px;bottom:0;background:color-mix(in srgb,var(--people) 55%,transparent)}
+.steps>.row:first-child::before{top:50%}
+.steps>.row:last-child::before{bottom:50%}
+.steps>.row:only-child::before{content:none}
+.step-no{position:relative;z-index:1;display:grid;place-items:center;width:1.75rem;height:1.75rem;box-sizing:border-box;border:1.5px solid var(--people);border-radius:50%;font:500 var(--t-detail)/1 var(--mono);font-feature-settings:"zero","tnum";color:var(--people);background:var(--band)}
+.steps .row::after{content:none}
+.steps .row>.t{grid-column:2/-1;font-weight:500;color:var(--heading);text-decoration:underline;text-decoration-thickness:1px;text-decoration-color:rgb(255 184 80/.45)}
+.rows.steps .row.row:is(a,:has(a,button)):hover,.rows.steps .row.row:has(:focus-visible){background-color:color-mix(in srgb,var(--people) 7%,var(--zebra));box-shadow:inset 2px 0 var(--people)}
+.steps .row:hover>.d{box-shadow:none}
+.steps .row>.t:hover{text-decoration-color:var(--people)}
+
+/* Coming up's day leaf. */
+.d .chip{display:grid;grid-template:"n m" auto "n w" auto/auto auto;column-gap:.3rem;align-items:center;width:auto;padding:0;background:none;border:0;border-radius:0;box-shadow:none}
+.d .chip-day{grid-area:n;min-width:2ch;margin:0;text-align:right;font:500 var(--t-head)/1 var(--mono);letter-spacing:-.04em;color:var(--heading)}
+.d .chip-mon,.d .chip-dow{font:500 var(--t-cap)/1 var(--mono);letter-spacing:.04em;text-transform:uppercase}
+.d .chip-mon{grid-area:m;color:var(--plans)}
+.d .chip-dow{grid-area:w;color:var(--label)}
+.d .is-today .chip-day,.is-today .f{color:var(--link)}
+.d .is-today .chip-mon{color:var(--plans)}
+.d .light{margin:0}
+.d .tick-form{display:grid}
+
+/* Ticks: a square well, filled with the lit green when done; edged amber when late. */
+button.tick{margin:0;width:2.75rem;height:2.75rem;border-radius:2px;box-shadow:none}
+button.tick::before,.task-box{width:1.2rem;height:1.2rem;border:1.5px solid var(--well-edge);border-radius:2px;background:var(--well);transition:border-color var(--afterglow),box-shadow var(--afterglow)}
+.late button.tick::before,.late .task-box{border-color:var(--people)}
+button.tick:hover::before{border-color:var(--lit);box-shadow:0 0 12px -4px color-mix(in srgb,var(--lit) 75%,transparent);transition-duration:var(--glow-in)}
+button.tick:hover{color:var(--lit)}
+.task-done .task-box{background:var(--lit);border-color:var(--lit);box-shadow:0 0 14px -4px color-mix(in srgb,var(--lit) 70%,transparent)}
+.task-done .t,.task-cancelled .t{color:var(--dim);text-decoration:line-through;text-decoration-color:var(--edge)}
+
+/* Status: lamps; where the states are short they stand two abreast, rows capped like any. */
+.lights .row{--d:2.75rem;grid-template-columns:var(--d) minmax(0,max-content) minmax(1.25rem,1fr) auto;min-height:2.4rem}
+.lights .row>.x{text-align:right;text-wrap:balance}
+@media (min-width:72rem){
+  .board .rows{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:.6rem;max-width:62rem}
+  .board .rows>.row:nth-child(odd of :where(.row:not(.cols))){background:none}
+  .board .rows>.row:is(:nth-child(4n+1 of :where(.row:not(.cols))),:nth-child(4n+2 of :where(.row:not(.cols)))){background:var(--zebra)}
+}
+/* A lamp that is on is a glowing dot; only what is live breathes. Off is a hollow red ring,
+   partly on a half-lit amber one, so the shape says it too. */
+.light.on{background:var(--brand);box-shadow:var(--lamp);animation:none}
+.live .light.on{animation:breathe 3.2s ease-in-out infinite}
+
+/* To do: the timetable. */
+.timetable .row{column-gap:.8rem;align-items:center;grid-template-columns:var(--d) minmax(0,max-content) minmax(1.25rem,1fr) auto auto auto}
+.timetable .row::after{align-self:center;transform:none}
+.timetable .row>.d{grid-row:1;align-self:center;margin:-.35rem 0}
+.timetable .f{grid-template-columns:11.8rem;grid-auto-flow:row;row-gap:.05rem;justify-items:end}
+.timetable .f .rem{display:inline-flex;align-items:center;gap:.35em;color:var(--dim)}
+.timetable .f .icon{width:.85rem;height:.85rem}
+.timetable .x{width:5.5rem;min-width:0;text-align:left}
+.timetable .more{width:4.5rem;justify-self:end}
+.timetable .more>summary{justify-content:flex-end}
+.timetable .more{grid-area:1/6;margin:0;align-self:center}
+.timetable .more>summary{display:flex;align-items:center;gap:.35rem;min-height:2.75rem;padding:0 .35rem;font:400 var(--t-detail)/1 var(--sans);color:var(--ink-2)}
+.timetable .more>summary::before{content:none}
+.timetable .more>summary:hover{color:var(--heading)}
+.timetable .more>summary .icon{width:.95rem;height:.95rem;color:var(--dim)}
+.timetable .more[open]{grid-area:3/1/4/-1;margin:.4rem 0 .5rem;padding:.8rem 1rem 1rem;background:var(--surface);border:1px solid var(--card-edge);border-radius:3px;box-shadow:var(--lift)}
+.timetable .sub:empty{display:none}
+.t .id{display:inline-block;min-width:2.1rem;font:500 var(--t-detail) var(--mono);color:var(--label)}
+.x .icon{width:.95rem;height:.95rem;margin-right:.3em;color:var(--faint);vertical-align:-.15em}
+.sub .reminder{color:var(--dim);font-weight:400}
+.ideas-rows .x{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.1rem 1rem}
+.todo-band .band-body,.idea-band .band-body{display:grid;gap:.8rem;align-content:start}
+.list-note{margin:0;font-size:var(--t-detail);color:var(--dim)}
+.list-note .count{margin-right:.35rem;font:inherit;letter-spacing:0;text-transform:none;color:var(--ink-2)}
+.task-filter.task-filter{display:flex;flex-wrap:nowrap;align-items:center;gap:.5rem 1.1rem;max-width:62rem;margin:0}
+.task-filter .field{display:flex;align-items:center;gap:.65rem;margin:0}
+.task-filter .field.wide{flex:1 1 14rem;min-width:0}
+.task-filter .field.wide input{min-width:0}
+@media (max-width:40rem){.task-filter.task-filter{flex-wrap:wrap}}
+.task-filter label{margin:0}
+.task-filter button{color:#b7c1d1;background:color-mix(in srgb,#b7c1d1 10%,var(--surface-2));border-color:color-mix(in srgb,#b7c1d1 55%,transparent);box-shadow:none}
+
+/* Settings, as one listing. */
+.section-row .x{color:var(--dim)}
+.section-row .sep{color:var(--faint)}
+.section-row .f{display:flex;align-items:center;gap:.6rem}
+.section-row .d{color:var(--accent)}
+.section-row .glyph{width:1.3rem;height:1.3rem}
+.kids .x{color:var(--dim)}
+@media (max-width:40rem){
+  .row.row,.lights .row,.timetable .row{grid-template-columns:var(--d) minmax(0,1fr) auto}
+  .row.row::after{content:none}
+  .row>.t{grid-column:2/4}
+  .row>.x,.lights .row>.x{grid-area:2/2;text-align:left}
+  .row>.f{grid-area:2/3}
+  .row>.sub{grid-area:3/2/4/4}
+  .timetable .more,.timetable .more[open]{grid-area:4/2/5/-1}
+  .row:has(>.x:empty)>.t{grid-column:2}
+  .row:has(>.x:empty)>.f{grid-area:1/3}
+  .ideas-rows .row>.x{grid-column:2/4}
+  .ideas-rows .row.row>.t.t{grid-column:2/4}
+  .ideas-rows .row.row>.f.f{grid-area:3/2/4/4;justify-self:start;display:flex;flex-wrap:wrap;gap:.1rem .8rem}
+}
+
+/* ---- The greeting: the set's front panel, lit from below Send ----------------------------- */
+/* The green pool rises from under Send, through the scanlines that lie only inside it; the
+   cobalt wash stays in the far corner. */
+.welcome{--send-x:calc(100% - var(--pad) - 21.5rem - var(--gap) - 3rem);gap:1.25rem var(--gap);align-items:start;margin:0 0 1.25rem;padding:2.1rem var(--pad) 1.6rem;background:radial-gradient(52% 95% at var(--send-x) 100%,color-mix(in srgb,var(--brand) 13%,transparent),transparent 68%),radial-gradient(60% 80% at 0% 100%,color-mix(in srgb,var(--brand) 5%,transparent),transparent 70%),radial-gradient(45% 70% at 100% 0%,rgb(79 96 230/.168),transparent 70%),#0f1513;border-color:var(--card-edge);border-radius:14px}
+.welcome::before{background:repeating-linear-gradient(to bottom,rgb(255 255 255/.028) 0 1px,transparent 1px 4px);-webkit-mask-image:radial-gradient(46% 90% at var(--send-x) 100%,#000,transparent 75%);mask-image:radial-gradient(46% 90% at var(--send-x) 100%,#000,transparent 75%)}
+.speaker{gap:.3rem .7rem;margin:0 0 1rem}
+.speaker strong{font-size:var(--t-head);color:var(--heading)}
+/* The greeting is glass, so its date is the machine's: VT323 at the dim strength, with its halo. */
+.speaker .eyebrow.date{font:400 1.25rem/1 var(--terminal);letter-spacing:.03em;text-transform:uppercase;white-space:nowrap;color:color-mix(in srgb,var(--screen) 64%,#07120c);text-shadow:0 0 1px color-mix(in srgb,var(--screen) 50%,transparent),0 0 6px color-mix(in srgb,var(--screen) 25%,transparent)}
+.ask-question{padding:.7rem .8rem .25rem;font-size:var(--t-q)}
+/* The key word, lit: a tight bloom inside a wide faint halo. */
+.glow{color:var(--brand);text-shadow:0 0 .45em color-mix(in srgb,var(--brand) 45%,transparent),0 0 1.3em color-mix(in srgb,var(--brand) 22%,transparent)}
+.ask{padding:.3rem .3rem .45rem;background:var(--field);border-color:var(--line-2);border-radius:4px}
+/* Home's box keeps a faint phosphor at rest, and lights fully while you write. */
+.welcome .ask{background:rgb(9 12 11/.72);border-color:color-mix(in srgb,var(--brand) 38%,var(--line-2));box-shadow:0 0 38px -20px color-mix(in srgb,var(--brand) 60%,transparent)}
+.ask:focus-within,.welcome .ask:focus-within{border-color:var(--lit);box-shadow:0 0 0 3px color-mix(in srgb,var(--lit) 14%,transparent),0 0 30px -8px color-mix(in srgb,var(--lit) 50%,transparent);transition-duration:var(--glow-in)}
+.prompt-line{display:flex;align-items:flex-start}
+.prompt{flex:none;padding:.52rem 0 0 .8rem;font:600 var(--t-lede)/1.4 var(--mono);color:var(--brand);text-shadow:0 0 .45em color-mix(in srgb,var(--brand) 45%,transparent)}
+.ask textarea,.ask textarea:focus{padding:.6rem .8rem .5rem .55rem;background:transparent;border:0;box-shadow:none;outline:none}
+.ask-bar{gap:.5rem;padding:.4rem 0 0 .6rem}
+.ask .who label,.ask .who .from{margin:0;font:500 var(--t-cap)/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--label)}
+.ask .who .from strong{font:600 var(--t-detail) var(--sans);letter-spacing:0;text-transform:none;color:var(--heading)}
+.ask .who select{min-height:2.75rem;font-size:var(--t-detail);background-color:var(--well);border-color:var(--well-edge)}
+.ask .locate .icon{color:var(--needle)}
+.ask .locate label{min-height:2.75rem}
+/* Send, the one primary: its ring and the light pooled under it, brighter when pointed at. */
+.ask .send:hover,.page-actions .button:hover,.field.actions button[type=submit]:not(.secondary,.quiet,.danger):hover{box-shadow:0 0 0 1px color-mix(in srgb,var(--brand) 50%,transparent),0 10px 34px -10px color-mix(in srgb,var(--brand) 85%,transparent)}
+.starters{gap:.4rem;margin:.75rem 0 0}
+.starters a{min-height:2.75rem;padding:.4rem .85rem;font-size:var(--t-detail);border-radius:2px}
+.brief-more{margin:.45rem 0 0;font-size:var(--t-detail)}
+@media (max-width:40rem){
+  .welcome{--send-x:70%;padding:1.1rem .75rem 1.25rem}
+  /* Send stays on the From row with the scroll bar showing: a little less air in the bar. */
+  .ask-bar{gap:.4rem;padding-left:.35rem}
+  .ask .who{gap:.4rem}
+  .ask .who select{padding-left:.6rem;padding-right:1.85rem;background-position:right .55rem center}
+}
+@media (min-width:40.01rem) and (max-width:63.99rem){
+  .welcome{--send-x:78%}
+}
+@media (min-width:64rem){
+  .welcome{grid-template-columns:var(--head) minmax(0,1fr) 21.5rem}
+  .speaker{display:grid;justify-items:start;margin:0;padding-top:.2rem}
+  .speaker .avatar{width:3.4rem;height:3.4rem;margin-bottom:.35rem;border-radius:6px}
+  .speaker .avatar .presence-glass{font-size:7.5px}
+  .next-up{align-self:start}
+  .next-up .next-more{display:flex;align-items:baseline;gap:.5ch;white-space:nowrap}
+}
+
+/* ---- The monitors: a thin grooved case, vents, an LED; the tube at full light ------------ */
+/* The tube lights the room: an 80px spill round the case; the power light glows in two layers. */
+/* A thinner case: a 6px graphite face at a 10px radius, an engraved rim under a 6% highlight, a
+   fine groove round the glass, and a 14px chin with its vents and the power light at full. */
+.crt{padding:6px 6px 14px;background:#2e3337;border:1px solid #1d2124;border-radius:10px;box-shadow:inset 0 0 0 1px #0009,inset 0 2px 0 #ffffff0f,inset 0 0 0 3px #2e3337,inset 0 0 0 4px #1f2326,inset 0 0 0 5px #3a4046,0 16px 30px -22px #000,0 0 80px -36px color-mix(in srgb,var(--phosphor) 45%,transparent)}
+.crt-tube{border-radius:6px/7px}
+.crt::before{content:"";position:absolute;left:.85rem;bottom:4px;width:2.8rem;height:6px;pointer-events:none;background:repeating-linear-gradient(90deg,#0009 0 1px,transparent 1px 4px)}
+.crt::after{right:.85rem;bottom:4px;width:6px;height:6px;background:var(--phosphor);box-shadow:0 0 0 1px #0005,0 0 4px var(--phosphor),0 0 11px color-mix(in srgb,var(--phosphor) 60%,transparent)}
+.crt .dist,.crt .rel{white-space:nowrap}
+/* VT323 on the tubes: 2 for the one title, 1.5 for what they say, 1.2 at the least. Next up's
+   words run round its scope, as on the phone, so they keep their size. */
+.next-up .next-label,.on-radar-label,.readout-label,.readout-of{font-size:var(--t-tube-s)}
+.next-up .next-title{font-size:var(--t-q);line-height:1}
+.next-up .next-when,.next-up .next-more,.next-up .next-where{margin-top:.3rem;font-size:var(--t-tube);line-height:1.1}
+.next-up .crt-tube{display:flow-root;padding:1rem 1.1rem 1.1rem}
+.next-up .radar{float:right;width:5.6rem;margin:0 0 .3rem .5rem;shape-outside:circle(50%) border-box;shape-margin:.4rem}
+/* Switching on: the picture opens out of a bright line, from a glimmer, never from nothing. */
+@keyframes power-on{0%{opacity:.05;transform:scale(1,.01)}30%{opacity:1;transform:scale(1,.01)}65%{transform:scale(1,1.03)}100%{opacity:1;transform:none}}
+
+/* ---- Ideas: the finder beside its scope, then the rows ----------------------------------- */
+.finder{display:grid;gap:.8rem;margin:0}
+.finder-act>*{margin:0}
+.on-radar{display:flex;flex-direction:column;margin:0}
+.on-radar .crt-tube{flex:1;align-items:center;padding:.8rem 1rem .9rem}
+.finder-act{display:grid;gap:.7rem;align-content:start}
+.on-radar-count{font-size:var(--t-tube)}
+.on-radar-line{margin-top:.25rem;font-size:var(--t-tube-s);line-height:1.15}
+.on-radar-more{margin-top:.4rem;font-size:var(--t-tube-s);line-height:1.1}
+@media (min-width:40rem){
+  .on-radar .crt-tube{gap:1rem}
+  .on-radar .radar{width:7.5rem}
+}
+@media (min-width:64rem){
+  .finder.has-scope{grid-template-columns:minmax(0,1fr) 23rem}
+}
+.panel{border-color:var(--card-edge);border-radius:3px;box-shadow:var(--lift)}
+.filters,details.panel,.capture{padding:.85rem 1rem;background:var(--surface)}
+.filters{gap:.7rem .9rem}
+.filters .field.wide{flex:1 0 100%}
+.filters .field:not(.wide){flex:1 1 auto}
+details.panel>summary{align-items:center}
+
+/* The old horizontal switch, where a page still has one. */
+.tabs{display:flex;gap:2px;width:fit-content;margin:0;padding:0;background:none;border:0;border-radius:0}
+.tabs a{display:inline-flex;align-items:center;gap:.45rem;min-height:2.75rem;padding:.4rem .8rem;border-radius:2px;font:500 var(--t-detail)/1 var(--sans);color:var(--ink-2)}
+.tabs a:hover{color:var(--heading);background:var(--hover)}
+
+/* ---- Controls ------------------------------------------------------------------------------ */
+button,.button{min-height:2.75rem;padding:.55rem 1rem;font:600 var(--t-detail)/1.1 var(--sans);letter-spacing:.01em;border-radius:3px}
+button:active,.button:active{transform:translateY(1px)}
+button.mic{border-radius:3px}
+select{padding-right:2.4rem;background-position:right .75rem center}
+/* A field being typed in: its edge lit, a 3px ring and a 22px bloom, fading once you leave. */
+input:is([type=text],[type=password],[type=search],[type=url],[type=date],[type=time],[type=datetime-local],[type=email],[type=number],:not([type])),textarea{transition:border-color var(--afterglow),box-shadow var(--afterglow)}
+input:not([type=checkbox],[type=radio]):focus,textarea:focus{border-color:var(--lit);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 16%,transparent),0 0 22px -6px color-mix(in srgb,var(--brand) 55%,transparent);transition-duration:var(--glow-in)}
+select:focus{border-color:var(--lit);box-shadow:none}
+:focus-visible,select:open,select:focus-visible{outline:var(--ring);outline-offset:2px;border-radius:2px}
+input:not([type=checkbox],[type=radio]):focus-visible,textarea:focus-visible,.row .t a:focus-visible{outline:0}
+.ask textarea:focus-visible{outline:0}
+input:is([type=checkbox],[type=radio]){appearance:none;display:inline-grid;place-items:center;box-sizing:border-box;flex:none;width:calc(1.15rem + 26px);height:calc(1.15rem + 26px);margin:-13px calc(.45rem - 13px) -13px -13px;background:var(--well) padding-box;border:13px solid transparent;border-radius:15px;box-shadow:inset 0 0 0 1.5px var(--well-edge);cursor:pointer;transition:box-shadow var(--afterglow),background-color .15s}
+input[type=radio]{border-radius:50%}
+input[type=checkbox]::after{content:"";width:.3rem;height:.58rem;margin-top:-.15rem;border:solid var(--on-bright);border-width:0 2px 2px 0;rotate:45deg;scale:0;transition:scale .1s}
+input:is([type=checkbox],[type=radio]):hover{box-shadow:inset 0 0 0 1.5px var(--lit);transition-duration:var(--glow-in)}
+input[type=checkbox]:checked{background-color:var(--lit);box-shadow:inset 0 0 0 1.5px var(--lit)}
+input[type=checkbox]:checked::after{scale:1}
+input[type=radio]:checked{box-shadow:inset 0 0 0 1.5px var(--lit),inset 0 0 0 4px var(--well),inset 0 0 0 1rem var(--lit)}
+input:is([type=checkbox],[type=radio]):focus-visible{outline:var(--ring);outline-offset:-11px}
+@supports (appearance:base-select){
+  select,::picker(select){appearance:base-select}
+  select{align-items:center;padding-block:0}
+  select::picker-icon{content:none}
+  ::picker(select){margin-top:.25rem;padding:.25rem;color:var(--ink);background:var(--surface);border:1px solid var(--card-edge);border-radius:3px;box-shadow:0 20px 40px -18px #000}
+  select option{min-height:2.5rem;padding:.4rem .7rem;border-radius:2px}
+  select option:hover,select option:focus-visible{background:var(--surface-3);box-shadow:inset 2px 0 var(--lit);outline:0}
+  select option::checkmark{color:var(--lit)}
+}
+
+/* ---- Chat: a timetable hung from her screen, ending in a lit ring at the box -------------- */
+.in-chat main{max-width:62rem}
+.in-chat .page-head{--head:6.75rem;margin-bottom:0;border-bottom:0}
+.thread{gap:.85rem}
+.bubble{max-width:40rem;padding:.55rem .9rem .7rem}
+.said-by{gap:.1rem .6rem;margin:0 0 .2rem;font:500 var(--t-cap)/1.3 var(--mono);color:var(--label)}
+.said-by strong{font:600 var(--t-cap)/1.3 var(--sans);letter-spacing:.02em;color:var(--label)}
+.said-bot .said-by strong{color:var(--lit)}
+.said-them .said-by{flex-direction:row}
+.said-text{max-width:62ch;font-size:var(--t-body)}
+/* Hers: rounded green-black glass on the line, a 30% phosphor edge, matte at rest. */
+.said-bot .bubble{background:var(--bubble,#111712);border:1px solid color-mix(in srgb,var(--brand) 30%,var(--card-edge));border-radius:3px 14px 14px 14px;box-shadow:none}
+/* The family's: square slate, capped in steel, their initial beside it in a steel square. */
+.said-them .bubble{background:#1f272e;border:0;border-radius:2px;box-shadow:inset 0 2px var(--rev-cap)}
+.said-them .avatar{color:var(--heading);background:#1f272e;border-radius:2px;box-shadow:inset 0 0 0 1.5px var(--rev),inset 0 2px var(--rev-cap);font:600 var(--t-detail)/1 var(--sans)}
+.pending .bubble{background:transparent;border:1px dashed var(--line-2)}
+.in-chat .thread,.in-chat .your-turn{--cm:3.5rem;--av:2.25rem;--cg:.75rem;--rx:calc(var(--pad) + var(--cm) + var(--cg) + var(--av)/2);position:relative;margin:0;background:var(--band)}
+.in-chat .thread{padding:1.1rem var(--pad) 1.1rem;border-top:1px solid var(--rule)}
+.in-chat .thread::before,.in-chat .your-turn::before{content:"";position:absolute;left:calc(var(--rx) - .5px);width:1px;background:var(--steel);pointer-events:none}
+.in-chat .thread::before{top:0;bottom:0}
+.thread.timetable-chat>li{position:relative;display:flex;align-items:flex-start;gap:var(--cg);max-width:none;margin:0}
+.timetable-chat .hang{flex:none;width:var(--cm);padding-top:.62rem;text-align:right;font:500 var(--t-cap)/1.3 var(--mono);color:var(--label);white-space:nowrap}
+.timetable-chat>.said-bot>.avatar{flex:none;width:var(--av);height:var(--av);margin-top:.15rem;border-radius:5px;box-shadow:0 0 0 3px var(--band),0 0 18px -6px color-mix(in srgb,var(--brand) 60%,transparent)}
+.timetable-chat>.said-bot>.bubble{margin-right:3.5rem}
+.timetable-chat>.said-them{flex-direction:row;margin-left:0;justify-content:flex-end;padding-left:calc(var(--cm) + var(--av) + 2*var(--cg) + 2.5rem)}
+.timetable-chat>.said-them>.hang{width:auto;order:0}
+.timetable-chat>.said-them>.bubble{order:1}
+.timetable-chat>.said-them>.avatar{order:2;flex:none;width:var(--av);height:var(--av);margin-top:.15rem}
+/* The day, set once, as a dateline crossing the line. */
+.timetable-chat>.dateline{display:flex;align-items:center;gap:var(--cg);height:1.3rem;margin:0 0 -.2rem}
+.dateline span{width:var(--cm);text-align:right;font:500 var(--t-cap)/1 var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--heading)}
+.dateline::after{content:"";position:absolute;left:calc(var(--cm) + var(--cg) + var(--av)/2 - 6px);top:50%;width:12px;height:1px;background:var(--rev)}
+/* Your turn: the line reaches the box and ends in a lit ring. */
+.in-chat .your-turn{padding:.3rem var(--pad) 1.25rem calc(var(--pad) + var(--cm) + 2*var(--cg) + var(--av))}
+.in-chat .your-turn::before{top:0;height:1.6rem}
+.in-chat .your-turn::after{content:"";position:absolute;left:calc(var(--rx) - 8px);top:1.6rem;width:16px;height:16px;box-sizing:border-box;border:2px solid var(--brand);border-radius:50%;background:var(--band);box-shadow:var(--lamp)}
+.in-chat .your-turn .ask{margin:0}
+.in-chat .kids-talk{margin-top:1.25rem}
+@media (min-width:72rem){
+  /* Her screen at the head of the page is where the line starts. */
+  .in-chat .page-head::after{content:"";grid-area:3/1/5/2;justify-self:end;width:1px;margin:.2rem calc(1.375rem - .5px) 0 0;background:var(--steel)}
+  .in-chat .page-head{padding-bottom:0}
+  .in-chat .lede{padding-bottom:1.35rem}
+}
+.brief .said-by{padding-top:0}
+@media (max-width:40rem){
+  .in-chat .thread,.in-chat .your-turn{--cm:0rem;--av:1.75rem;--cg:.5rem;--rx:calc(var(--pad) + var(--av)/2)}
+  .in-chat .thread{padding-inline:.75rem;--pad:.75rem}
+  .in-chat .your-turn{--pad:.75rem;padding:.3rem .75rem 1rem}
+  .in-chat .your-turn::before{height:.9rem}
+  .in-chat .your-turn::after{top:.4rem;left:calc(var(--rx) - 8px)}
+  .in-chat .your-turn .ask{margin-top:1.4rem}
+  .timetable-chat .hang{display:none}
+  .timetable-chat>.dateline span{width:auto;padding-left:calc(var(--av) + var(--cg))}
+  .dateline::after{left:calc(var(--av)/2 - 6px)}
+  .timetable-chat>.said-bot>.bubble{margin-right:1.5rem}
+  .timetable-chat>.said-them{padding-left:3rem}
+  .said-by .said-when.sr{position:static;width:auto;height:auto;overflow:visible;clip-path:none;white-space:nowrap}
+  .timetable-chat .said-day{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+}
+
+/* ---- Plans: the month on one screen, today in steel -------------------------------------- */
+.month-head{margin:0 0 .6rem}
+.month-head h2{font-size:var(--t-q)}
+.month-nav .button{min-height:2.75rem}
+table.month{border-collapse:collapse;padding:0;background:none;border:0;box-shadow:none}
+table.month th{padding:.2rem .45rem .45rem}
+table.month td{height:5rem;padding:.3rem .35rem;border:1px solid var(--rule)}
+table.month :is(td,th):nth-child(n+6){background:color-mix(in srgb,#1c2328 60%,transparent)}
+table.month td.outside{background:none}
+table.month time{width:1.75rem;height:1.75rem;font:500 var(--t-detail)/1 var(--mono);border-radius:2px}
+table.month td.today{background:color-mix(in srgb,var(--rev) 8%,transparent)}
+table.month td.today time{position:relative;color:var(--rev-ink);background:var(--rev);box-shadow:inset 0 2px var(--rev-cap);outline:0}
+/* Now, on the month: today keeps the steel block that marks "here", and beside it the one lamp,
+   lit and steady, where the family is in time. */
+table.month td.today time::after{content:"";position:absolute;left:calc(100% + .45rem);top:50%;width:8px;height:8px;margin-top:-4px;border-radius:50%;background:var(--lamp-core);box-shadow:var(--lamp)}
+.event{margin-top:.25rem;padding:.2rem .4rem;font-size:var(--t-detail);background:color-mix(in srgb,var(--plans) 12%,#1c2328);border-left:2px solid var(--plans);border-radius:2px}
+.event small{font:400 var(--t-cap)/1.3 var(--mono)}
+.month-list li.today strong{color:var(--link)}
+
+/* ---- Wishes: each kid a band, her name and how many are open in the head column -------- */
+.wish-kid{position:relative;margin:0 0 1.1rem;padding:.95rem var(--pad) 1rem;background:var(--band);border-top:1px solid var(--rule)}
+.wish-kid>.section-head h2{margin:0;font:600 var(--t-head)/1 var(--sans);font-stretch:80%;letter-spacing:-.015em;color:var(--heading)}
+.wish-kid .section-head a{font:500 var(--t-detail)/1.2 var(--sans);color:var(--link);text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--link) 55%,transparent);text-underline-offset:.2em}
+@media (min-width:72rem){
+  .wish-kid{display:grid;grid-template-columns:var(--head) minmax(0,1fr);gap:.7rem var(--gap);align-content:start}
+  .wish-kid>*{grid-column:2;min-width:0}
+  .wish-kid>.section-head{grid-column:1;grid-row:1/span 6;align-self:start;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:.4rem;margin:0}
+}
+
+/* ---- Status: the spend tube beside its words ---------------------------------------------- */
+.spend-now{margin:0 0 1rem}
+@media (min-width:52rem){
+  .spend-now{grid-template-columns:18rem minmax(0,1fr)}
+}
+.readout .crt-tube{padding:.8rem 1rem .9rem}
+.readout .readout-figure{font-size:var(--t-mast)}
+.readout-bar{font-size:var(--t-tube-s)}
+main>.panel.people{padding:.9rem var(--pad);background:var(--band);border:0;border-top:1px solid var(--rule);border-radius:0;box-shadow:none}
+.people>li{padding:.45rem .8rem;border:0;border-radius:2px}
+.people>li:nth-child(odd){background:var(--zebra)}
+
+/* ---- Settings: the pages down the head column --------------------------------------------- */
+@media (min-width:62rem){
+  .settings-layout{grid-template-columns:var(--head) minmax(0,1fr);gap:var(--gap);padding:1.05rem var(--pad);background:none;border-top:var(--rule-band)}
+}
+.settings-nav a{min-height:2.75rem;padding:.4rem .55rem;border-radius:2px;font-size:var(--t-detail)}
+.settings-nav a:hover{background:var(--hover);color:var(--heading)}
+.signin{background:var(--band);border-top:1px solid var(--rule)}
+.foot{max-width:78rem;border-top-color:var(--rule)}
+.foot-mark{font:600 var(--t-lede)/1 var(--sans);font-stretch:80%}
+
+/* ---- The phone: the head above its rows, less padding, a screen shorter ------------------- */
+@media (max-width:40rem){
+  h1{font-size:var(--t-q)}
+  .band{gap:.5rem;margin-bottom:.9rem;padding:.7rem .7rem .85rem}
+  .band-head{gap:0 .9rem}
+  .band-head .links a{min-height:2.75rem}
+  .band-head .note{flex:1 0 100%;margin:0}
+  .band-head .sum{flex-direction:row;gap:0 .9rem;margin:0}
+  .page-head{margin-bottom:1rem}
+  .dated .row{--d:3.9rem}
+  .dated .d{padding-left:.8rem}
+  .track{--rx:.42rem}
+  .now-mark{padding-left:.8rem}
+  .dated .row>.x{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .dated .row.row>.t{grid-column:2/4}
+  .dated .row.row>.f.f{grid-area:2/2/3/4;justify-self:start}
+  .row>.f:empty{display:none}
+  .lately .row.row>.f.f{grid-area:2/2/3/4;justify-self:start}
+  .lately .row.row>.t{grid-column:2/4}
+  .lately .row>.x:empty{display:none}
+  .next-up .radar{width:5rem;margin:.1rem 0 .3rem .6rem}
+  .next-up .next-title{font-size:var(--t-tube)}
+  .next-up .next-label{margin-bottom:.35rem}
+  .next-up .next-when,.next-up .next-where,.next-up .next-more{margin-top:.3rem}
+  .speaker{margin-bottom:.7rem}
+}
+
+
+/* ---- Evening Listing, Traced: light that draws data ---------------------------------------- */
+
+/* Column heads: one small-caps row per list whose facts would otherwise be unlabelled, set in
+   the list's own grid so each head stands over its column. */
+.rows .row.cols{min-height:1.6rem;padding-block:0 .3rem;align-items:end;background:none;box-shadow:none;border-bottom:1px solid var(--rule);border-radius:0}
+.rows .row.cols::after,.rows .row.cols::before{content:none}
+.rows .row.cols :is(.d,.t,.x,.f,.f>*,.more){min-height:0;margin:0;padding:0;background:none;box-shadow:none;font:500 var(--t-cap)/1.2 var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--label);white-space:nowrap}
+.rows .row.cols>.d{align-self:end;display:block;text-align:center}
+.rows .row.cols>.d::after{content:none}
+.board .rows>.cols{display:none}
+
+/* Dates in the listing read on the digit: weekday, day and month in fixed sub-columns. */
+.x.date-cols{display:grid;grid-template-columns:5.6rem 2ch 5.2rem;column-gap:.28rem;justify-content:end;text-align:left}
+.date-cols .wd{text-align:right}
+.date-cols .dn{text-align:right;font-variant-numeric:tabular-nums}
+
+/* Next up: the plot band under the words, Long Persistence's trace cut to a strip. */
+.next-up .plot{--sweep:8s;--lead:-1.6s;display:block;clear:both;grid-column:1/-1;width:100%;height:auto;margin:.7rem 0 0;overflow:visible;color:var(--phosphor);filter:blur(.3px) drop-shadow(0 0 2px color-mix(in srgb,var(--phosphor) 55%,transparent))}
+.plot *{vector-effect:non-scaling-stroke}
+.plot-grid{fill:none;stroke:color-mix(in srgb,var(--phosphor) 22%,transparent);stroke-width:1;stroke-dasharray:1 3}
+.plot-ticks{fill:none;stroke:color-mix(in srgb,var(--phosphor) 45%,transparent);stroke-width:1}
+.plot-axis{fill:none;stroke:var(--phosphor);stroke-width:1;opacity:.6}
+.pulse-mark{--rest:.64;opacity:var(--rest);animation:blip var(--sweep) cubic-bezier(.15,.7,.35,1) infinite calc(var(--at,0s) + var(--lead))}
+.pulse-mark.next{--rest:.9}
+.plot .pulse{fill:none;stroke:color-mix(in srgb,var(--screen) 58%,#fff);stroke-width:2;stroke-linejoin:round}
+.plot .pulse-halo{fill:none;stroke:var(--phosphor);stroke-width:7;opacity:.3;stroke-linejoin:round}
+.pulse-mark.next .pulse{stroke:color-mix(in srgb,var(--screen) 22%,#fff)}
+.pulse-mark.next .pulse-halo{opacity:.45}
+.p1{--at:calc(var(--sweep)*-.9)}.p2{--at:calc(var(--sweep)*-.8)}.p3{--at:calc(var(--sweep)*-.7)}.p4{--at:calc(var(--sweep)*-.6)}.p5{--at:calc(var(--sweep)*-.5)}.p6{--at:calc(var(--sweep)*-.4)}.p7{--at:calc(var(--sweep)*-.3)}.p8{--at:calc(var(--sweep)*-.2)}.p9{--at:calc(var(--sweep)*-.1)}
+.now-core{fill:none;stroke:color-mix(in srgb,var(--screen) 22%,#fff);stroke-width:2}
+.now-halo{fill:none;stroke:var(--phosphor);stroke-width:8;opacity:.35}
+.plot-label{font:400 17px/1 var(--terminal);fill:var(--phosphor-dim)}
+.plot-label.next{fill:var(--phosphor-bright);font-size:18px}
+.plot-label.now{fill:color-mix(in srgb,var(--screen) 22%,#fff);font-size:15px}
+.plot .beam{animation:plot-beam var(--sweep) linear infinite var(--lead)}
+.plot .beam-core{fill:none;stroke:color-mix(in srgb,var(--screen) 22%,#fff);stroke-width:1;opacity:.75}
+@keyframes plot-beam{from{transform:translateX(14px)}to{transform:translateX(290px)}}
+
+/* The rail's live light. Now is a white-hot lamp that breathes (the only one on Home); the rail is
+   lit from it, 2px with the two-layer halo, fading into the steel before the next stop. */
+.now-lamp{left:calc(var(--rx) - 6px);width:12px;height:12px;margin-top:-6px;background:var(--lamp-core);box-shadow:var(--lamp-live);animation:breathe 3.2s ease-in-out infinite}
+.now-mark{color:var(--brand);text-shadow:0 0 .45em color-mix(in srgb,var(--brand) 40%,transparent)}
+.now-mark::after{left:calc(var(--rx) - 1px);width:2px;background:var(--brand);filter:var(--rail-glow)}
+.track .rows>.row:first-child>.f::before,.todo-rows>.now-tick:not(.at-end)+.row>.f::before{content:"";position:absolute;left:calc(var(--rx) - 1px);top:-1px;width:2px;height:calc(50% - var(--stop,4px) + 1px);background:linear-gradient(var(--brand) 35%,color-mix(in srgb,var(--brand) 0%,transparent));filter:var(--rail-glow);pointer-events:none}
+
+/* To do: the timetable. A rail threads the tick wells of the tasks with a deadline, in the order
+   they fall due; the late wells are amber rings; a steady lit tick marks now between the late
+   ones and the rest, and the rail is lit from it to the next well. */
+.todo-rows{--rx:1.625rem;--stop:.6rem}
+.todo-rows>.row.on-rail::before{content:"";position:absolute;left:calc(var(--rx) - .5px);top:-1px;bottom:0;width:1px;background:var(--steel);pointer-events:none}
+.todo-rows>.row.rail-first::before{top:50%}
+.todo-rows>.now-tick.at-start+.row.rail-first::before{top:-1px}
+.todo-rows>.row.rail-last::before{bottom:50%}
+.todo-rows>.row.rail-last:has(+.now-tick)::before{bottom:0}
+.todo-rows .row>.d{z-index:1}
+.late button.tick::before,.late .task-box{border-color:var(--people);box-shadow:none}
+.now-tick{position:relative;display:grid;grid-template-columns:var(--d,3.25rem) minmax(0,1fr);gap:0 .9rem;align-items:center;height:1.6rem;margin:0;padding:0;list-style:none}
+.now-tick::before{content:"";position:absolute;left:calc(var(--rx) - .5px);top:-1px;bottom:0;width:1px;background:var(--steel)}
+.now-tick.at-start::before{top:50%}
+.now-tick.at-end::before{bottom:50%}
+.now-tick>.d{position:relative;align-self:stretch}
+.now-tick>.d::after{content:"";position:absolute;z-index:1;left:calc(var(--rx) - 8px);top:50%;width:16px;height:2px;margin-top:-1px;border-radius:1px;background:var(--hot);box-shadow:var(--lamp)}
+.now-tick:not(.at-end)>.d::before{content:"";position:absolute;left:calc(var(--rx) - 1px);top:50%;bottom:-1px;width:2px;background:var(--brand);filter:var(--rail-glow)}
+.now-tick>.t{font:500 var(--t-cap)/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--brand);text-shadow:0 0 .45em color-mix(in srgb,var(--brand) 40%,transparent)}
+.timetable .now-tick{--d:3.25rem}
+
+/* Status: who answers is a chain, a rail through its lamps, lit only between two that are on. */
+.chain{--rx:1.375rem}
+.chain>.row:not(.cols)::before{content:"";position:absolute;left:calc(var(--rx) - .5px);top:-1px;bottom:0;width:1px;background:var(--steel);pointer-events:none}
+.chain>.cols+.row::before{top:50%}
+.chain>.row:last-child::before{bottom:50%}
+.chain>.row.on+.row.on>.x::before,.chain>.row.on:has(+.row.on)>.x::after{content:"";position:absolute;left:calc(var(--rx) - 1px);width:2px;background:var(--brand);filter:var(--rail-glow);pointer-events:none}
+.chain>.row.on+.row.on>.x::before{top:-1px;height:calc(50% - 4px)}
+.chain>.row.on:has(+.row.on)>.x::after{top:calc(50% + 5px);bottom:0}
+.chain .row>.d{z-index:1}
+.light.on{background:var(--lamp-core);box-shadow:var(--lamp-live)}
+
+/* Measure: a state is never read far from its name. */
+.page-status .lights:not(.board .lights),.page-status .board .rows{max-width:44rem}
+.section-rows.section-rows{max-width:56rem}
+
+/* The head column's filters on To do: the words to look for under what to show. */
+.head-search{width:100%;margin:1.1rem 0 0}
+.head-search label{display:block;margin:0 0 .4rem}
+.search-line{display:flex;gap:2px}
+.search-line input{flex:1 1 auto;min-width:0;min-height:2.75rem;font-size:var(--t-detail)}
+.search-line button{flex:none;width:2.75rem;min-width:2.75rem;padding:0;display:grid;place-items:center;color:#b7c1d1;background:color-mix(in srgb,#b7c1d1 10%,var(--surface-2));border:1px solid color-mix(in srgb,#b7c1d1 45%,transparent);box-shadow:none}
+.search-line button .icon{width:1.05rem;height:1.05rem;margin:0}
+
+/* Ideas: Search, Status, For and Filter on one line; the kind is the head column's. */
+.filters.filters{display:grid;grid-template-columns:minmax(8rem,1fr) auto auto auto;align-items:end;gap:.6rem}
+.filters .field,.filters .field.wide,.filters .field:not(.wide){flex:none;margin:0;min-width:0}
+.filters .field.actions{display:flex;gap:.4rem;align-items:end}
+.filters select{white-space:nowrap}
+/* The Ideas scope is the list's legend of where: at the foot of the head column, the radar over
+   its words, as long as the kinds above it. */
+.band-head>.on-radar{flex:1 0 100%;width:100%;margin:.9rem 0 0}
+@media (min-width:72rem){
+  .band-head>.on-radar{flex:none;margin-top:1.4rem}
+  .band-head>.on-radar .crt-tube{display:block;padding:.7rem .75rem .8rem}
+  .band-head>.on-radar .radar{float:none;width:9rem;margin:.1rem auto .55rem}
+}
+@media (max-width:40rem){.filters.filters{grid-template-columns:1fr 1fr}.filters .field.wide{grid-column:1/-1}}
+
+/* Lately added and the ideas: the fixed facts, now with the idea's number. */
+.lately .f{grid-template-columns:9.5rem 2rem}
+.page-restaurants .ideas-rows .f{grid-template-columns:9.5rem 2.25rem}
+.rows .row.cols .f>:is(.for,.way){text-align:left}
+.f .card-id{text-align:right}
+.f .sr{font-family:var(--sans)}
+
+/* Head columns on narrower screens: the figure and its state sit inline beside the title. */
+@media (max-width:71.99rem){
+  .band-head .figure{flex-direction:row;align-items:baseline;gap:.4rem;margin:0}
+  .band-head .figure strong{font-size:var(--t-head)}
+  .band-head .state{margin:0}
+  .head-search{flex:1 0 100%}
+}
+/* On the phone the facts fold under the title, so only To do keeps its column heads. */
+@media (max-width:40rem){.rows .row.cols:not(.todo-rows>*){display:none}}
+
+/* ==== LISTING, LIT THROUGH ================================================================== */
+
+/* The stem's geometry, shared by the greeting and Coming up. */
+:root{--wpb:1.6rem;--wmb:1.9rem;--stem-x:2.45rem}
+/* ---- Type: the steps, applied once ----------------------------------------------------------- */
+body{font-size:var(--t-body)}
+h1,.page-head h1{font-size:var(--t-h1);line-height:1.02}
+.band-head h2,main>.panel>h2:first-child,.wish-kid>.section-head h2{font-size:var(--t-band)}
+.row>.t{font-size:var(--t-row);font-weight:600;letter-spacing:-.003em}
+.row>.f,.f .rel{font-size:var(--t-fact)}
+.lede{font-size:var(--t-lede)}
+/* Caps labels, the machine's: 13px, tracked .06em. */
+.count,.data caption,.data th,.eyebrow,.form legend,label,table.month th,.key-label,.figure span,.rows .row.cols :is(.d,.t,.x,.f,.f>*,.more),.now-mark,.now-tick>.t,.next-tag,.lamp-key-head{font-size:var(--t-label);letter-spacing:.06em}
+/* The head column's numeral: Plex Sans light, tabular, on the first row's baseline. */
+.figure strong{font:300 var(--t-figure)/.95 "IBM Plex Sans",var(--sans);font-stretch:100%;letter-spacing:-.02em;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum";color:var(--heading)}
+
+/* ---- The band: page ground under one rule; the family's things are the slate rows ---------- */
+.band,main>:is(section,nav).panel:has(>h2:first-child){background:none;border-top:var(--rule-band);padding:1.05rem var(--pad) 1.1rem;margin:0 0 1.5rem}
+.band-head{gap:0 1rem}
+.rows,.rows.rows{gap:3px;max-width:none}
+.rows.rows>.row:not(.cols):not(.empty),.rows.rows>li>.row.row{background-color:var(--surface)}
+.row.row{border-radius:2px}
+.row::after{border-bottom:var(--rule-row);border-bottom-color:var(--lead)}
+.rows .row.cols{border-bottom:var(--rule-col)}
+.band-foot{margin:.65rem 0 0;font-size:var(--t-label);line-height:1.4;color:var(--dim);text-wrap:pretty}
+.band-foot a{display:inline-block;min-width:2.75rem;padding:.85rem .3rem;margin:-.85rem -.3rem;text-align:center;color:var(--link)}
+@media (min-width:72rem){
+  .band{grid-template-columns:var(--head) minmax(0,1fr)}
+  .band-head{padding-top:.1rem}
+  .band-head>.figure{margin-top:.85rem}
+}
+.band>.band-body{min-width:0}
+
+/* ---- The greeting: a dateline, the title over the box, the tube alone at the right ---------- */
+.welcome{overflow:visible;margin:0 0 var(--wmb);padding:1.75rem var(--pad) var(--wpb)}
+.welcome-words{display:grid;grid-template-columns:minmax(0,1fr);align-content:start}
+.speaker{display:flex;flex-wrap:nowrap;align-items:center;gap:.6rem;margin:0 0 .85rem;white-space:nowrap}
+.speaker .avatar{flex:none;width:28px;height:28px;border-radius:4px;box-shadow:0 0 14px -4px color-mix(in srgb,var(--screen) 55%,transparent)}
+.speaker .avatar .presence-glass{font-size:4.5px}
+.speaker strong{font:600 var(--t-row)/1 var(--sans);font-stretch:100%;letter-spacing:0;color:var(--heading)}
+.speaker .date{font:400 var(--t-detail)/1 var(--sans);color:var(--dim)}
+/* The title is the box's label, set above the box at the display step, full ink. */
+.welcome .ask,.ask{padding:0;background:none;border:0;border-radius:0;box-shadow:none}
+.ask:focus-within,.welcome .ask:focus-within{border:0;box-shadow:none}
+.welcome .ask-question{margin:0 0 1rem;padding:0;font:600 var(--t-display)/1.05 var(--sans);font-stretch:80%;letter-spacing:-.018em;word-spacing:.04em;color:var(--heading);text-wrap:balance}
+.welcome .ask-question label{color:var(--heading)}
+/* "line up.": the kit's E1 halo with a white-hot core. */
+.welcome .glow,.glow{color:var(--brand);text-shadow:0 0 1px #eafff1,0 0 6px #6dff9c,0 0 18px rgb(109 255 156/.45)}
+/* The box: one field in a phosphor ring (E4) that turns full #6dff9c while somebody writes. */
+.ask-box{position:relative;padding:.3rem .3rem .45rem;background:var(--field);border:1px solid var(--line-2);border-radius:4px;transition:border-color var(--afterglow),box-shadow var(--afterglow)}
+.welcome .ask-box{background:rgb(9 12 11/.78);border-color:color-mix(in srgb,var(--brand) 38%,var(--line-2));box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 6%,transparent),0 0 38px -18px color-mix(in srgb,var(--brand) 60%,transparent)}
+.ask-box:focus-within,.welcome .ask-box:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 16%,transparent),0 0 30px -8px color-mix(in srgb,var(--brand) 55%,transparent);transition-duration:var(--glow-in)}
+.ask textarea{caret-color:var(--brand)}
+/* Ways to start: keys that say where they usually land, in quiet steel at the right. */
+.starters{display:flex;flex-wrap:wrap;gap:.5rem;margin:.75rem 0 0}
+.starters li{flex:1 1 auto;min-width:0}
+.starters a{display:flex;align-items:center;justify-content:space-between;gap:.9rem;width:100%;min-height:2.75rem;padding:.35rem .8rem;font:500 var(--t-detail)/1.2 var(--sans);color:var(--ink-2);background:color-mix(in srgb,#b7c1d1 5%,var(--surface));border:1px solid var(--card-edge);border-radius:2px;box-shadow:none;transition:background-color var(--fade),border-color var(--fade),box-shadow var(--fade)}
+.starters a:hover,.starters a:focus-visible{color:var(--heading);background:var(--row-wash);border-color:color-mix(in srgb,var(--accent) 45%,var(--card-edge));box-shadow:inset 2px 0 var(--lit);transition-duration:var(--glow-in)}
+.key-words{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.key-to{flex:none;font:400 var(--t-label)/1 var(--sans);color:var(--dim);white-space:nowrap}
+/* The pool rising from under Send. */
+.welcome{--send-x:calc(100% - var(--pad) - 23rem - var(--gap) - 3rem)}
+@media (min-width:64rem){
+  .welcome{grid-template-columns:minmax(0,1fr) 23rem;align-items:stretch}
+}
+.tube-col{display:flex;flex-direction:column;min-width:0}
+.next-up{flex:none;align-self:stretch}
+.next-up .crt-tube{padding:.9rem 1rem .75rem}
+.next-up .radar{width:5.2rem}
+.next-up .next-title{font-size:1.875rem}
+.next-up .next-when{font-size:1.375rem}
+.trace-key{margin:.5rem 0 0 var(--stem-x);padding-left:1rem;font:400 var(--t-label)/1.3 var(--sans);color:var(--dim)}
+
+/* Next up's trace: four weeks, tall pulses, weekends shaded, the next one named on the glass. */
+.next-up .trace{--sweep:8s;--lead:-1.6s;display:block;clear:both;width:100%;height:auto;margin:.5rem 0 0;overflow:visible;color:var(--phosphor);filter:blur(.3px) drop-shadow(0 0 2px color-mix(in srgb,var(--phosphor) 50%,transparent))}
+.trace *{vector-effect:non-scaling-stroke}
+.trace-weekend{fill:color-mix(in srgb,var(--phosphor) 9%,transparent)}
+.trace-grid{fill:none;stroke:color-mix(in srgb,var(--phosphor) 22%,transparent);stroke-width:1;stroke-dasharray:1 3}
+.trace-ticks{fill:none;stroke:color-mix(in srgb,var(--phosphor) 45%,transparent);stroke-width:1}
+.trace-axis{fill:none;stroke:var(--phosphor);stroke-width:1;opacity:.6}
+.trace .pulse-hit{fill:transparent}
+.trace .pulse{fill:color-mix(in srgb,var(--screen) 58%,#fff);stroke:none}
+.trace .pulse-halo{fill:none;stroke:var(--phosphor);stroke-width:5;opacity:.28;stroke-linejoin:round}
+.pulse-mark.next .pulse{fill:color-mix(in srgb,var(--screen) 22%,#fff)}
+.pulse-mark.next .pulse-halo{opacity:.5;stroke-width:7}
+.pulse-link:hover .pulse-halo,.pulse-link:focus-visible .pulse-halo{opacity:.7;stroke-width:9}
+.pulse-link:focus-visible{outline:2px solid var(--phosphor);outline-offset:1px}
+.trace-flag{fill:none;stroke:color-mix(in srgb,var(--phosphor) 55%,transparent);stroke-width:1;stroke-dasharray:2 2}
+.trace-label{font:400 15px/1 var(--terminal);fill:var(--phosphor-dim)}
+.trace-label.next{fill:var(--phosphor-bright);font-size:17px}
+.trace-label.now{fill:color-mix(in srgb,var(--screen) 22%,#fff);font-size:14px}
+.trace .beam{animation:trace-beam var(--sweep) linear infinite var(--lead)}
+.trace .beam-core{fill:none;stroke:color-mix(in srgb,var(--screen) 22%,#fff);stroke-width:1;opacity:.7}
+@keyframes trace-beam{from{transform:translateX(16px)}to{transform:translateX(292px)}}
+
+/* ---- The lit stem: from the tube's foot, through the gap, along Coming up's rule, to NOW ---- */
+.stem,.coming.stemmed::before,.coming.stemmed .track::before{--core:linear-gradient(90deg,var(--brand) 0 1px,var(--hot) 1px 2px,var(--brand) 2px 3px);filter:var(--rail-glow);pointer-events:none}
+.stem-drop{display:none}
+@media (min-width:72rem){
+  .stem-drop{display:block;flex:1 0 1rem;width:3px;margin:.35rem 0 calc(-1*(var(--wpb) + 1px + var(--wmb))) var(--stem-x);background:var(--core);transform-origin:top;animation:stem-on .26s cubic-bezier(.3,.6,.4,1) backwards}
+  .tube-col:has(.trace-key) .stem-drop{margin-top:-1.35rem}
+  .coming.stemmed::before{content:"";position:absolute;z-index:1;top:-1px;height:3px;left:calc(var(--pad) + var(--head) + var(--gap) + .5rem + 1px - 1px);right:calc(var(--pad) + 1px + 23rem - var(--stem-x) - 3px);background:linear-gradient(180deg,var(--brand) 0 1px,var(--hot) 1px 2px,var(--brand) 2px 3px)}
+  .coming.stemmed .track::before{content:"";position:absolute;z-index:1;left:calc(.5rem - 1px);top:calc(-1.05rem - 1px);height:calc(1.05rem + 1px + .875rem);width:3px;background:var(--core)}
+}
+/* On a phone the stem turns down the left gutter from beside the tube. */
+@media (max-width:63.99rem){
+  .stem-drop{display:block;flex:1 0 auto;height:calc(var(--wpb) + 1px + var(--wmb) + 2rem);width:3px;margin:-1.75rem 0 calc(-1*(var(--wpb) + 1px + var(--wmb))) calc(.7rem + .42rem - var(--pad) - 1px - 1px + 7px);background:var(--core);transform-origin:top;animation:stem-on .3s cubic-bezier(.3,.6,.4,1) backwards}
+  .welcome .tube-col{position:relative}
+  .trace-key{margin-left:1.6rem;padding-left:0}
+  .setup-all{margin-left:0}
+  .coming.stemmed{clip-path:inset(0 -2rem -2rem -2rem)}
+  .coming.stemmed .band-head{padding-left:1.15rem}
+  .coming.stemmed .track::before{content:"";position:absolute;z-index:1;left:calc(.42rem - 1px);bottom:calc(100% - .875rem);height:30rem;width:3px;background:var(--core)}
+}
+@keyframes stem-on{from{clip-path:inset(0 0 98% 0);opacity:.4}to{clip-path:inset(0 0 0 0)}}
+@keyframes stem-across{from{clip-path:inset(0 0 0 98%);opacity:.4}to{clip-path:inset(0 0 0 0)}}
+
+/* ---- Coming up: chip, name, leader, then time and relative; rings on the rail ---------------- */
+.coming .track{--rx:.5rem}
+.track .row>.d::after{left:calc(var(--rx) - 5px);width:10px;height:10px;margin-top:-5px;box-sizing:border-box;background:var(--surface);border:1.5px solid var(--steel)}
+.track .row.is-next>.d::after{border-color:var(--brand);background:var(--hot);box-shadow:var(--lamp-live)}
+.track .row.is-today>.d::after{background:var(--surface);border-color:var(--rev-cap)}
+.track .rows>.row:first-child>.f::before{height:calc(50% - 4px);background:var(--brand)}
+.dated .row{--d:4.75rem;min-height:3rem}
+.dated .d{padding-left:1.3rem}
+.dated .f{grid-template-columns:3rem 6rem}
+.next-tag{margin-left:.6rem;font:500 var(--t-label)/1 var(--mono);text-transform:uppercase;color:var(--lit);vertical-align:.08em}
+.dated .row>.x:empty{display:none}
+.dated .row.row{grid-template-columns:var(--d) minmax(0,max-content) minmax(1.25rem,1fr) auto}
+.dated .row>.f{grid-area:1/4}
+
+/* ---- Finish setting up: one line ------------------------------------------------------------- */
+.setup-strip{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem 1.4rem;min-height:3rem;margin:-.4rem 0 1.5rem;padding:.25rem var(--pad);background:var(--surface);border-radius:2px;box-shadow:inset 2px 0 var(--people)}
+.setup-strip h2{margin:0;font:600 var(--t-band)/1 var(--sans);font-stretch:80%;letter-spacing:-.015em;color:var(--heading);white-space:nowrap}
+.setup-left{margin:0;font:400 var(--t-detail)/1 var(--sans);color:var(--ink-2);white-space:nowrap}
+.setup-left strong{font:500 1.125rem/1 var(--mono);font-feature-settings:"tnum";color:var(--people)}
+.setup-run{position:relative;display:flex;gap:.75rem;margin:0;padding:0;list-style:none}
+.setup-run::before{content:"";position:absolute;left:14px;right:14px;top:50%;height:1px;background:var(--steel)}
+.setup-run li{position:relative;display:grid;place-items:center;width:28px;height:28px;box-sizing:border-box;margin:0;padding:0;border:1.5px solid var(--steel);border-radius:50%;font:500 var(--t-label)/1 var(--mono);color:var(--label);background:var(--surface)}
+.setup-run li::before{content:none}
+.setup-run li.is-next{border-color:var(--brand);color:var(--heading);box-shadow:0 0 8px -1px color-mix(in srgb,var(--brand) 70%,transparent),0 0 16px -4px color-mix(in srgb,var(--brand) 45%,transparent)}
+.setup-strip a{display:inline-flex;align-items:center;gap:.35em;min-height:2.75rem;font:500 var(--t-detail)/1.2 var(--sans);color:var(--link);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.2em;text-decoration-color:color-mix(in srgb,var(--link) 55%,transparent)}
+.setup-strip a:hover{color:var(--heading);text-decoration-color:currentColor}
+.setup-strip .icon{width:.9rem;height:.9rem}
+.setup-all{margin-left:auto}
+
+/* ---- To do: steel boxes for every row, late in words; NOW across the rows ------------------ */
+.late button.tick::before,.late .task-box{border-color:var(--well-edge)}
+.now-tick{grid-template-columns:var(--d,3.25rem) minmax(0,1fr)}
+.now-tick>.t{display:flex;align-items:center;gap:.7rem;padding-left:0}
+.now-tick>.t::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,color-mix(in srgb,var(--brand) 55%,transparent),transparent 70%)}
+.home-todo .x{width:6rem}
+
+/* ---- Lately added: something to eat is its last row --------------------------------------- */
+.lately .row.eat .f{grid-template-columns:auto}
+.row.eat>.x{color:var(--ink-2)}
+
+/* ---- Also on: the household's other pages, the listing's last band ------------------------- */
+.also-rows .row.row{min-height:3.5rem;align-content:stretch;align-items:center}
+.also-rows .row::after{align-self:center;transform:none}
+.also-rows .row>.x{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:0 .9rem;color:var(--dim)}
+.also-rows .x a{position:relative;z-index:2;display:inline-flex;align-items:center;min-height:2.75rem;min-width:2.75rem;justify-content:center;color:var(--link);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.2em;text-decoration-color:color-mix(in srgb,var(--link) 55%,transparent)}
+.also-rows .x .n{margin-left:.4em;font:400 var(--t-fact) var(--mono);color:var(--ink-2);text-decoration:none;display:inline-block}
+.also-rows .x .warn{color:var(--people)}
+.also-rows .f{grid-template-columns:auto;font-family:var(--mono);color:var(--ink-2)}
+.signals span{display:inline-flex;align-items:center;gap:.45rem}
+.signals .light{width:8px;height:8px;margin:0}
+.also-rows .row>.d.kind:is(.kind-memory,.kind-family,.kind-status,.kind-settings){--kind:#84a0c4;color:#84a0c4;background:color-mix(in srgb,#84a0c4 10%,#1c2328)}
+.also-on .band-head h2 .icon{color:var(--label)}
+
+/* ---- The row's afterglow, everywhere: a steel wash, a sage edge, a short halo, decaying ---- */
+.rows .row.row:is(a,:has(a,button)):hover,.rows .row.row:has(:focus-visible),.starters a:hover{background-color:var(--row-wash);box-shadow:inset 2px 0 0 var(--lit),0 0 18px -10px var(--lit);transition-duration:var(--glow-in)}
+
+/* ---- The lamp code: one meaning each, by shape and colour ------------------------------------ */
+.light{display:inline-block;flex:none;box-sizing:border-box;width:10px;height:10px;margin:0;border-radius:50%;border:0;background:none;box-shadow:none;animation:none}
+.light.on,.live .light.on{background:var(--lamp-core);box-shadow:0 0 6px var(--brand),0 0 16px color-mix(in srgb,var(--brand) 45%,transparent);animation:halo-breathe 3.2s ease-in-out infinite}
+.light.part{background:var(--accent)}
+.light.off{border:1.5px solid #66727a}
+.light.look{border:1.5px solid var(--people);background:radial-gradient(circle,var(--people) 0 2px,transparent 2.5px)}
+.light.bad{background:var(--danger)}
+@keyframes halo-breathe{50%{box-shadow:0 0 4px var(--brand),0 0 8px color-mix(in srgb,var(--brand) 25%,transparent)}}
+.lamp-key{margin:1.1rem 0 0;padding:.75rem 0 0;border-top:var(--rule-col)}
+.lamp-key-head{margin:0 0 .35rem;font:500 var(--t-label)/1.3 var(--mono);text-transform:uppercase;color:var(--label)}
+.lamp-key ul{display:grid;gap:.15rem;margin:0;padding:0;list-style:none}
+.lamp-key li{display:flex;align-items:center;gap:.6rem;margin:0;font:400 var(--t-label)/1.7 var(--sans);color:var(--ink-2)}
+
+/* ---- The round dials (after Lit Manual), in the listing's thin grooved bezel ---------------- */
+.dial{--phos:var(--screen);position:relative;width:11rem;max-width:100%;aspect-ratio:1;margin:.95rem 0 .2rem}
+.dial.tone-near{--phos:var(--people)}
+.dial.tone-over{--phos:var(--danger)}
+.dial-ring{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.dial-ring .ring{fill:none;stroke:var(--line-2);stroke-width:1}
+.ring-tick{fill:none;stroke:var(--steel);stroke-width:1.5}
+.ring-tick.wk{stroke:#8a98a6;stroke-width:1.75}
+.ring-plan{fill:none;stroke:var(--phos);stroke-width:2.5;filter:drop-shadow(0 0 2px var(--phos)) drop-shadow(0 0 6px color-mix(in srgb,var(--phos) 45%,transparent))}
+.ring-plan.next{stroke:var(--hot);stroke-width:3}
+.ring-plan.limit{stroke:#8a98a6;filter:none;stroke-dasharray:3 2}
+.ring-arc{fill:none;stroke:var(--phos);stroke-width:2;filter:drop-shadow(0 0 2px color-mix(in srgb,var(--phos) 80%,transparent)) drop-shadow(0 0 7px color-mix(in srgb,var(--phos) 40%,transparent))}
+.ring-arc-halo{fill:none;stroke:color-mix(in srgb,var(--phos) 14%,transparent);stroke-width:9}
+.ring-now{fill:var(--hot);filter:drop-shadow(0 0 2px var(--phos)) drop-shadow(0 0 6px color-mix(in srgb,var(--phos) 60%,transparent))}
+.ring-now-halo{fill:color-mix(in srgb,var(--phos) 26%,transparent);animation:breathe 3.2s ease-in-out infinite}
+.dial .dial-case.crt{--phosphor:var(--phos);position:absolute;inset:12%;padding:5px;border-radius:50%;box-shadow:inset 0 0 0 1px #0009,inset 0 2px 0 #ffffff0f,inset 0 0 0 2px #2e3337,inset 0 0 0 3px #1f2326,inset 0 0 0 4px #3a4046,0 10px 22px -16px #000,0 0 60px -22px color-mix(in srgb,var(--phosphor) 55%,transparent)}
+.dial .dial-case.crt::before{display:none}
+.dial .dial-case.crt::after{right:auto;left:calc(50% - 3px);bottom:-1.15rem;width:6px;height:6px;animation:breathe 3.2s ease-in-out infinite}
+.dial .crt-tube{display:grid;place-items:center;height:100%;padding:0;border-radius:50%}
+.dial .crt-tube::after{border-radius:50%}
+.dial-read{display:grid;justify-items:center;gap:.1rem;text-align:center}
+.dial-top{font-size:1.25rem;line-height:1;color:var(--phosphor)}
+.dial-big{font-size:3rem;line-height:.85}
+.dial-big.word{font-size:2.25rem}
+.dial-big.money{font-size:2.1rem;line-height:.95}
+.dial-unit{font-size:1.4rem}
+.dial-small{font-size:1.15rem;line-height:1.05;color:var(--phosphor)}
+.dial-small+.dial-small{margin-top:-.1rem}
+@media (max-width:71.99rem){.dial{width:9.5rem;margin:.6rem 0}}
+
+/* ---- Power on, once per load, for every tube: from a line, brightness 3, overshoot, settle -- */
+.crt.power-on .crt-tube>*,.next-up .crt-tube>*{animation:tube-on .45s cubic-bezier(.2,.7,.2,1) backwards}
+@keyframes tube-on{0%{opacity:.08;transform:scale(1,.01);filter:brightness(3)}45%{opacity:1;transform:scale(1,1.03);filter:brightness(1.6)}100%{transform:none;filter:none}}
+
+@media (max-width:40rem){
+  .welcome .ask-question{font-size:2.25rem}
+  .key-words{white-space:normal}
+  .starters a{padding-block:.5rem}
+}
+/* ---- Ideas: one head row, the scope a landscape tube with its words beside it -------------- */
+.head-act{margin:1rem 0 0}
+@media (min-width:72rem){
+  .ideas-head{grid-template-columns:var(--head) minmax(0,1fr) auto;align-items:center;padding-bottom:1.25rem}
+  .ideas-head .head-act{grid-area:4/2}
+  .ideas-head>.on-radar{grid-area:1/3/5/4;align-self:center}
+  .ideas-head .title-row>.title-icon{align-self:center}
+}
+.ideas-head>.on-radar{width:24rem;max-width:100%;margin:0}
+.ideas-head .on-radar .crt-tube{display:flex;align-items:center;gap:1rem;min-height:12rem;padding:.9rem 1rem}
+.ideas-head .on-radar .radar{flex:none;float:none;width:9.5rem;margin:0}
+.on-radar-text{min-width:0;flex:1}
+.ideas-head .on-radar-count{font-size:1.375rem;line-height:1.05;margin:.35rem 0 .2rem}
+.ideas-head .on-radar-line{font-size:1.125rem;line-height:1.1;margin-top:.3rem}
+.ideas-head .on-radar-line .dim{display:block}
+.ideas-head .on-radar-more{font-size:1.05rem;margin-top:.45rem}
+.ideas-head .on-radar-label{font-size:1.05rem}
+@media (max-width:71.99rem){.ideas-head>.on-radar{margin-top:1rem}}
+@media (max-width:40rem){.ideas-head .on-radar .radar{width:7rem}.ideas-head .on-radar .crt-tube{gap:.7rem}}
+/* Latched keys: two abreast, 44px, the chosen one in the steel block. */
+.band-head .key-label{display:block;margin:1.15rem 0 .35rem;color:var(--label)}
+.kind-key{margin-top:0}
+.plain-key a{justify-content:flex-start;padding-inline:.7rem;font-weight:500}
+.kind-key a.wide-key{grid-column:1/-1}
+.key-switch{display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-top:1rem}
+.key-switch a{background:color-mix(in srgb,var(--zebra) 70%,transparent)}
+.key-switch a:first-child:not(.two *){grid-column:1/-1}
+.key-switch.two a:first-child{grid-column:auto}
+@media (max-width:71.99rem){
+  .band-head .key-label{display:none}
+  .key-switch{grid-template-columns:repeat(auto-fill,minmax(7rem,1fr));flex:1 0 100%}
+  .key-switch a:first-child{grid-column:auto}
+}
+/* The words to look for: one field at the full measure and a worded button. */
+.find-line{display:flex;gap:.5rem;margin:0 0 .9rem}
+.find-line input{flex:1 1 auto;min-width:0;min-height:2.75rem}
+.find-line button{flex:none;display:inline-flex;align-items:center;gap:.45rem;color:#b7c1d1;background:color-mix(in srgb,#b7c1d1 8%,var(--surface-2));border:1px solid color-mix(in srgb,#b7c1d1 40%,transparent);box-shadow:none}
+.find-line button:hover{color:var(--heading);border-color:color-mix(in srgb,#b7c1d1 70%,transparent);background:var(--row-wash)}
+.find-line .icon{width:1rem;height:1rem}
+.idea-band .band-body,.todo-band .band-body{display:block}
+.idea-band .capture,.todo-band details.panel{margin:0 0 1rem}
+.timetable .more{width:auto}
+.timetable .more>summary{white-space:nowrap;font-weight:400}
+.todo-band .band-foot .count{font:inherit;letter-spacing:0;text-transform:none;color:var(--ink-2)}
+
+/* ---- Plans: the dial opens the head column ----------------------------------------------- */
+.plans-band .band-head .figure,.month-band .band-head .figure{margin-top:1rem}
+.plans-band .dated .row>.x:empty{display:none}
+.plans-band .dated .row.row{grid-template-columns:var(--d) minmax(0,max-content) minmax(1.25rem,1fr) auto}
+.plans-band .dated .row>.f{grid-area:1/4}
+.plans-band .track .row.is-next>.d::after{border-color:var(--brand);background:var(--hot);box-shadow:var(--lamp-live)}
+/* The month: today keeps the steel numeral and one lit outline; no lamp beside it. */
+table.month td.today{background:color-mix(in srgb,var(--rev) 6%,transparent);box-shadow:inset 0 0 0 1px var(--brand),inset 0 0 18px -8px color-mix(in srgb,var(--brand) 60%,transparent)}
+table.month td.today time::after{content:none}
+@media (min-width:72rem){.page-head:has(+.month-band),.page-head:has(+.plans-band){margin-bottom:.6rem}}
+
+/* ---- Status: full measure, two-up where rows are short ------------------------------------- */
+.page-status .lights:not(.board .lights),.page-status .board .rows{max-width:none}
+@media (min-width:72rem){
+  .connected .rows{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:.6rem}
+  .connected .rows>.cols{display:none}
+}
+.lights .row>.d{place-items:center}
+.cost-rows .row>.d{color:var(--label)}
+.cost-rows .row>.d .icon{width:1.05rem;height:1.05rem}
+.cost-rows .f{font-size:var(--t-fact);color:var(--heading)}
+.spend .tables{margin-top:1.1rem}
+.spend .dial{margin-top:1rem}
+.chain>.row.on+.row.on>.x::before,.chain>.row.on:has(+.row.on)>.x::after{width:2px}
+.look-word{display:inline-flex;align-items:center;gap:.45rem;font:500 var(--t-label)/1 var(--sans);color:var(--people);white-space:nowrap}
+.section-row .f{gap:.9rem}
+
+/* ---- Finish: one rule between a page's head and its first band, the band's own ---------- */
+.page-head{border-bottom:0;padding-bottom:.35rem;margin-bottom:1rem}
+.light.part{border:0;background:#84a0c4}
+.light.off{background:none}
+.find-line input{height:2.75rem;padding-block:0}
+.find-line{align-items:stretch}
+.timetable .row>.more{min-width:8.75rem}
+.timetable .more>summary{justify-content:flex-end}
+
+/* Chat: the timetable on page ground under one rule, like every band. */
+.in-chat .thread,.in-chat .your-turn{background:none}
+.in-chat .your-turn::after{background:var(--bg)}
+.timetable-chat>.said-bot>.avatar{box-shadow:0 0 0 3px var(--bg),0 0 18px -6px color-mix(in srgb,var(--brand) 60%,transparent)}
+.in-chat .thread{border-top:var(--rule-band)}
+
+/* ---- Motion and the other ways of seeing --------------------------------------------------- */
+@media (prefers-reduced-motion:reduce){
+  .row,.title-icon,button.tick::before{transition:none}
+  .now-lamp,.live .light.on,.light.on,.pulse-mark,.plot .beam,.trace .beam,.stem-drop,.coming.stemmed::before,.coming.stemmed .track::before,.crt.power-on .crt-tube>*,.next-up .crt-tube>*,.ring-now-halo,.dial .dial-case.crt::after{animation:none}
+  .pulse-mark{opacity:.9}
+  .plot .beam,.trace .beam{display:none}
+}
+@media (prefers-contrast:more){
+  .glow,.prompt{text-shadow:none}
+  .brand-mark,.title-icon,.welcome .ask,.task-done .task-box{box-shadow:none}
+  .timetable-chat>.said-bot>.avatar{box-shadow:0 0 0 3px var(--band)}
+  .brand-mark .icon,.title-icon .icon,.foot-mark .icon{filter:none}
+  .crt-tube>:not(.radar),.next-up .plot{filter:none}
+  .now-mark::after,.now-tick>.d::before,.track .rows>.row:first-child>.f::before,.todo-rows>.now-tick+.row>.f::before,.chain .x::before,.chain .x::after{filter:none}
+  .speaker .eyebrow.date,.now-mark,.now-tick>.t{text-shadow:none}
+  .title-icon{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+  .places a[aria-current="page"]::after,.tools>a[aria-current="page"]::after,.menu.here>summary::before,.in-home .brand::after{box-shadow:none}
+}
+
+/* ==== Revision 2: the standard carried to every page ======================================= */
+
+/* One left edge. A page's head sits on the band grid: its tile in the head column at the head
+   column's own x, its title and lede in the main column, on the rows' x. */
+@media (min-width:72rem){
+  .page-head{align-items:start;padding-inline:var(--pad)}
+  .title-row>.title-icon{justify-self:start;align-self:center;margin:0}
+  .crumbs{grid-area:1/2}
+  .ideas-head{align-items:start}
+  .ideas-head .title-row>.title-icon{align-self:center}
+  .ideas-head>.on-radar{grid-area:1/3/5/4;align-self:start}
+  .ideas-head>.page-title>.title-row>h1{padding-top:.35rem}
+}
+
+/* The head column's figure holds its mass at a squint: Plex at 400, the heading's ink. */
+.figure strong{font-weight:400;letter-spacing:-.03em}
+.month-head h2{display:flex;align-items:baseline;gap:.9rem}
+.month-count{font:500 var(--t-label)/1 var(--mono);font-stretch:100%;letter-spacing:.06em;text-transform:uppercase;color:var(--label)}
+
+/* Next up: the title on one line where it can, the next pulse named by its day only, every
+   pulse the same steady height and brightness, the weekends a low shade under them. */
+.next-up .next-title{font-size:1.5rem;line-height:1.1;text-wrap:balance}
+.next-up .next-when{font-size:1.25rem}
+.trace .pulse-mark,.trace .pulse-mark.next{animation:none;opacity:.92}
+.trace-weekend{fill:color-mix(in srgb,var(--phosphor) 11%,transparent)}
+.trace .pulse-halo{opacity:.32}
+
+/* The Ideas scope's words: one phrase a line, never wrapped. */
+.ideas-head .on-radar-text{flex:none;min-width:17ch}
+.ideas-head .on-radar-line,.ideas-head .on-radar-count{white-space:nowrap}
+.ideas-head .on-radar-line .dim{display:block;margin-bottom:.05rem}
+.ideas-head .on-radar .crt-tube{min-height:0;padding:1rem 1.15rem}
+.ideas-head>.on-radar{width:auto}
+
+/* Search: field and worded button on one control height, side by side. */
+:root{--control:2.75rem}
+.find-line{align-items:center}
+.find-line>*{margin:0}
+.find-line input,.find-line button{height:var(--control);min-height:var(--control);padding-block:0;box-sizing:border-box}
+/* The fold that adds sits at the row step on To do as on Ideas. */
+.page-tasks details.panel>summary .h2,details.panel>summary .h2{font:600 var(--t-row)/1.2 var(--sans);font-stretch:100%;letter-spacing:0}
+details.panel>summary .h2 .icon{width:1.1rem;height:1.1rem}
+
+/* Settings: one line a row, the arrow on the words' line, the look lamp a ring round a core. */
+.section-row{align-items:center}
+.section-row .x{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.section-row .f,.section-row .go{align-self:center}
+.section-row .go{display:block;margin-top:1px}
+.light.look{width:11px;height:11px;border:1.5px solid var(--people);background:radial-gradient(circle,var(--people) 0 1.6px,transparent 2.1px)}
+
+/* The form is a band: kind as the Ideas page's latched keys in the head column, the words on
+   page ground in the main column, its note at the foot. */
+.form-band{margin:0}
+.form-band>.band-head.kind-pick{margin:0;padding:0;border:0;min-width:0}
+.kind-pick>legend{display:flex;align-items:center;gap:.55rem;float:left;width:100%;margin:0 0 .9rem;padding:0;font:600 var(--t-band)/1 var(--sans);font-stretch:80%;letter-spacing:-.015em;text-transform:none;color:var(--heading)}
+.kind-pick>legend::before{content:"";flex:none;width:.6rem;height:.6rem;border-radius:1px;background:var(--ideas);box-shadow:0 0 8px -2px var(--ideas)}
+.kind-pick>.kind-key{clear:both;margin:0;width:100%}
+.kind-pick .kind-key label{position:relative;display:flex;align-items:center;gap:.45rem;min-height:2.75rem;padding:0 .5rem;border-radius:2px;font:400 var(--t-detail)/1.2 var(--sans);font-stretch:92%;letter-spacing:0;text-transform:none;white-space:nowrap;color:var(--ink-2);background:color-mix(in srgb,var(--zebra) 70%,transparent);cursor:pointer;transition:background-color var(--afterglow),color .15s}
+.kind-pick .kind-key label .icon{flex:none;width:1.1rem;height:1.1rem;color:var(--kind)}
+.kind-pick .kind-key input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.kind-pick .kind-key label:hover{color:var(--heading);background:var(--hover);transition-duration:var(--glow-in),.15s}
+.kind-pick .kind-key label:has(:checked){color:var(--rev-ink);background:var(--rev);box-shadow:inset 0 2px var(--rev-cap)}
+.kind-pick .kind-key label:has(:checked) .icon{color:var(--rev-ink)}
+.kind-pick .kind-key label:has(:focus-visible){outline:2px solid var(--brand);outline-offset:2px}
+.kind-pick .new-kind{margin:1rem 0 0}
+.kind-pick .new-kind input{width:100%}
+.form-band>.band-body.form{padding:0;background:none;border:0;box-shadow:none;align-content:start}
+.form-band .more>summary{font:600 var(--t-row)/1.2 var(--sans);color:var(--ink-2)}
+.form-band .band-foot{margin:.25rem 0 0}
+@media (min-width:72rem){
+  .form-band{grid-template-columns:var(--head) minmax(0,1fr)}
+  .page-head:has(+.form-band){margin-bottom:.6rem}
+}
+@media (max-width:71.99rem){
+  .kind-pick>.kind-key{grid-template-columns:repeat(auto-fill,minmax(8.5rem,1fr))}
+  .form-band .band-body{margin-top:1rem}
+}
+
+/* Home on the phone: the tube comes up under the box, before the ways to start, so the stem's
+   story starts on the first screen; the stem runs on down the gutter beside the keys; the NOW
+   lamp sits over it. */
+.now-lamp{z-index:3}
+@media (max-width:63.99rem){
+  .welcome{row-gap:0}
+  .welcome-words{display:contents}
+  .welcome .speaker{order:0}
+  .welcome .ask{order:1}
+  .welcome .tube-col{order:2;margin-top:1rem}
+  .welcome .starters{order:3;position:relative;margin-top:1rem}
+  .welcome .thread.brief,.welcome .brief-more{order:4}
+  .welcome .stem-drop{height:auto;flex:1 0 1rem;margin-bottom:-1rem}
+  .welcome .starters::before{content:"";position:absolute;z-index:1;top:-1rem;bottom:calc(-1*(var(--wpb) + 1px + var(--wmb)));left:calc(.7rem + .42rem - var(--pad) - 2px + 7px);width:3px;background:linear-gradient(90deg,var(--brand) 0 1px,var(--hot) 1px 2px,var(--brand) 2px 3px);filter:var(--rail-glow);pointer-events:none}
+}
+@media (max-width:40rem){
+  .next-up .next-title{font-size:1.3rem}
+  .next-up .next-when{font-size:1.05rem}
+  .next-up .radar{width:4.25rem}
+}
+@media (prefers-reduced-motion:reduce){.kind-pick .kind-key label{transition:none}}
+@media (min-width:72rem){.ideas-head{grid-template-rows:auto auto auto auto 1fr}.ideas-head>.on-radar{grid-area:1/3/6/4}}
+.ideas-head .on-radar .radar{width:8.75rem}
+.form-band .band-head.kind-pick>legend.key-label{display:flex;margin:0 0 .9rem;font:600 var(--t-band)/1 var(--sans);font-stretch:80%;letter-spacing:-.015em;text-transform:none;color:var(--heading)}
+.trace .beam-core{opacity:.5}
+@media (max-width:63.99rem){
+  .welcome .stem-drop{flex:none;height:2.75rem;margin-bottom:0}
+  .welcome .trace-key{position:relative;z-index:2}
+}
+@media (min-width:72rem){.in-chat .title-row>.title-icon{justify-self:end}}
+
+/* ==== Revision 3: LISTING, DROPPED THROUGH =================================================== */
+/* The tube moves into Coming up as the listing's featured programme; a 28px stem drops straight
+   from its power lamp onto NOW; rows leave their slate strips for page ground under hairlines;
+   one rail x (--rail-x) ties Coming up to To do. One superfamily: Plex Sans for words, Plex Sans
+   Condensed for heads and the head column's numerals, Plex Mono for times and figures. */
+
+:root{
+  --head:10rem;--head-col:10rem;--rail-x:14px;--gap:2rem;
+  --sans:"IBM Plex Sans","Instrument Sans",system-ui,sans-serif;
+  --cond:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --row-wash:color-mix(in srgb,#84a0c4 12%,transparent);
+  --hair:1px solid var(--line);
+  --late:#ffb850;
+  --stem-core:color-mix(in srgb,var(--screen) 25%,#fff);
+  --stem-halo:0 0 4px #6dff9c,0 0 14px color-mix(in srgb,#6dff9c 55%,transparent);
+  --body-x:var(--pad);
+}
+@media (min-width:72rem){:root{--body-x:calc(var(--pad) + var(--head-col) + 2rem)}}
+
+/* ---- Type: heads in Plex Sans Condensed, words in Plex Sans, figures in Plex Mono ----------- */
+body{font-family:var(--sans);font-kerning:normal;text-rendering:optimizeLegibility}
+h1,.page-head h1,.band-head h2,main>.panel>h2:first-child,.ask-question,.month-head h2,.brand-name,.setup-strip h2{font-family:var(--cond);font-stretch:100%;font-weight:600;letter-spacing:-.012em}
+.speaker strong{font-family:var(--sans);font-stretch:100%}
+.figure strong{font:300 var(--t-figure)/1 var(--cond);font-stretch:100%;letter-spacing:-.01em;font-variant-numeric:tabular-nums lining-nums;color:var(--heading)}
+.figure span{font:500 .75rem/1.2 var(--mono);letter-spacing:.08em}
+.row>.t{font-family:var(--sans);font-weight:600;letter-spacing:0}
+.lede{max-width:60ch;text-wrap:pretty}
+
+/* ---- The band: a 10rem head column, a 2rem gutter -------------------------------------------- */
+@media (min-width:72rem){
+  .band,.part,.form-band{grid-template-columns:var(--head-col) minmax(0,1fr);column-gap:2rem}
+  .band-head{padding-left:0}
+  .band-head h2{margin-left:0}
+  main>:is(section,nav).panel:has(>h2:first-child){padding-left:calc(var(--pad) + var(--head-col) + 2rem)}
+  main>.panel>h2:first-child{width:var(--head-col);margin-left:calc(-1*(var(--head-col) + 2rem))}
+}
+.band-head h2 .icon{width:1.25rem;height:1.25rem}
+
+/* ---- Page heads: the icon a 28px glyph hung before the title, one unit ----------------------- */
+.title-row{display:flex;align-items:center;gap:.65rem}
+.title-glyph{display:grid;place-items:center;flex:none;width:28px;height:28px;color:var(--accent);background:none;border:0;box-shadow:none}
+.title-glyph .icon{width:28px;height:28px;stroke-width:1.75;filter:none}
+.title-glyph.presence{border-radius:5px;width:28px;height:28px}
+.page-ideas .title-glyph,.ideas-head .title-glyph{color:var(--ideas)}
+@media (min-width:72rem){
+  .page-head{grid-template-columns:var(--head-col) minmax(0,1fr) auto;column-gap:2rem}
+  .page-head .title-row{display:flex;grid-area:2/2;margin-left:calc(-28px - .65rem)}
+  .page-head .lede{grid-area:3/2}
+  .page-head .title-row>h1{grid-area:auto}
+  .ideas-head .title-row{grid-area:1/2}
+  .ideas-head .lede{grid-area:2/2}
+  .ideas-head .head-act{grid-area:3/2}
+}
+
+/* ---- The greeting: the Vera line, the title and the box at the left; the starters at the right */
+main .welcome{display:block;--send-x:calc(100% - var(--pad) - 19rem - 2rem - 3rem);padding:1.6rem var(--pad) 1.5rem;margin-bottom:1.75rem}
+.welcome-words{display:grid;grid-template-columns:minmax(0,1fr);column-gap:2rem;align-items:start}
+@media (min-width:64rem){
+  .welcome-words{grid-template-columns:minmax(0,1fr) 19rem}
+  .welcome-words>.speaker{grid-area:1/1}
+  .welcome-words>.ask{grid-area:2/1}
+  .welcome-words>.starters-col{grid-area:1/2/4/3;align-self:end}
+  .welcome-words>.thread.brief,.welcome-words>.brief-more{grid-column:1}
+  .speaker{display:flex;flex-wrap:nowrap;align-items:center;gap:.6rem;margin:0 0 .9rem;padding:0}
+  .speaker .avatar{width:28px;height:28px;margin:0;border-radius:4px}
+  .speaker .avatar .presence-glass{font-size:4.5px}
+}
+.speaker strong{font:600 1.0625rem/1 var(--sans);color:var(--heading)}
+.speaker .date{font:400 .9375rem/1 var(--sans);color:var(--dim)}
+.welcome .ask-question{margin:0 0 .95rem;font:600 var(--t-display)/1.02 var(--cond);letter-spacing:-.018em;word-spacing:0;color:var(--heading)}
+.welcome .ask-question .glow{color:var(--brand);text-shadow:0 0 1px #eafff1,0 0 .45em color-mix(in srgb,#6dff9c 45%,transparent),0 0 1.3em color-mix(in srgb,#6dff9c 22%,transparent)}
+/* Ways to start: three 56px keys stacked under a sentence-case label, each saying where it lands. */
+.starters-col{min-width:0}
+.starters-head{margin:0 0 .55rem;font:500 .9375rem/1.2 var(--sans);color:var(--ink-2)}
+.welcome .starters{display:grid;grid-template-columns:minmax(0,1fr);gap:.5rem;margin:0}
+.welcome .starters li{display:block}
+.welcome .starters a{min-height:56px;padding:.4rem .9rem .4rem 1rem;background:color-mix(in srgb,#b7c1d1 3%,transparent);border:1px solid var(--line-2);border-radius:3px;font:500 .9375rem/1.25 var(--sans);color:var(--ink)}
+.welcome .starters a .key-to{font:500 .8125rem/1 var(--sans);color:#84a0c4}
+.starters a{transition:background-color 1s ease-out,border-color 1s ease-out,box-shadow 1s ease-out}
+.starters a:hover,.starters a:focus-visible{background:var(--row-wash);border-color:color-mix(in srgb,#84a0c4 45%,var(--line-2));box-shadow:inset 2px 0 0 var(--lit);transition-duration:0s}
+
+/* ---- Coming up: the head column, then the tube, the stem, NOW and the rows ------------------ */
+.coming{position:relative;row-gap:0}
+.coming .head-fig .links{display:flex;flex-direction:column;margin:.35rem 0 0}
+.coming .head-fig .figure{margin:0}
+@media (min-width:72rem){
+  .coming{grid-template-columns:var(--head-col) minmax(0,1fr);grid-template-areas:"head tube" ". now" "fig rows"}
+  .coming>.band-head{display:contents}
+  .coming>.band-head>h2{grid-area:head;align-self:start;margin:.35rem 0 0}
+  .coming>.band-head>.head-fig{grid-area:fig;align-self:baseline}
+  .coming>.feature{grid-area:tube}
+  .coming>.now-line{grid-area:now}
+  .coming>.listing{grid-area:rows;align-self:baseline}
+}
+@media (max-width:71.99rem){
+  .coming>.band-head{flex-wrap:wrap;align-items:baseline;gap:.2rem 1rem;margin-bottom:.8rem}
+  .coming .head-fig{display:flex;align-items:baseline;gap:.9rem}
+  .coming .head-fig .figure{flex-direction:row;align-items:baseline;gap:.4rem}
+  .coming .head-fig .figure strong{font-size:1.5rem}
+  .coming .head-fig .links{margin:0}
+}
+/* The tube: full body width, never taller than 11rem; words in the left 38%, the trace in the
+   rest; the power lamp moved to the chin's left, on the rail's x. */
+.coming .feature{position:relative;min-width:0}
+.coming .next-up{display:block;width:100%;margin:0;float:none}
+.coming .next-up .crt-tube{display:grid;grid-template-columns:38% minmax(0,1fr);align-items:center;column-gap:1.4rem;max-height:11rem;min-height:0;padding:.8rem 1.2rem .7rem 1.1rem;box-sizing:border-box}
+.coming .next-up .next-text{min-width:0}
+.coming .next-up .next-label{margin:0 0 .35rem}
+.coming .next-up .next-title{margin:0;font-size:1.75rem;line-height:1.02;text-wrap:balance}
+.coming .next-up .next-title a{padding-block:.3rem;margin-block:-.3rem}
+.coming .next-up .next-when{margin:.35rem 0 0;font-size:1.25rem;line-height:1.1}
+.coming .next-up .next-rel{margin:.2rem 0 0;font-size:1.25rem;line-height:1.1}
+.coming .next-up .trace{display:block;width:100%;height:auto;max-height:9.4rem;margin:0}
+.coming .next-up::after{right:auto;left:calc(var(--rail-x) - 3px);bottom:4px;width:6px;height:6px;background:radial-gradient(circle,#fff 0 30%,var(--screen) 70%);box-shadow:0 0 0 1px #0006,0 0 4px #6dff9c,0 0 12px color-mix(in srgb,#6dff9c 60%,transparent)}
+.coming .next-up::before{left:auto;right:.85rem}
+.trace-label{font-size:16px}
+.trace-label.next{font-size:18px}
+.trace .pulse-mark{opacity:.94}
+@keyframes trace-beam{from{transform:translateX(18px)}to{transform:translateX(508px)}}
+/* The stem: 28px straight down from the power lamp onto NOW. */
+.now-line{position:relative;display:flex;align-items:center;gap:.75rem;height:24px;margin:16px 0 .35rem;padding-left:calc(var(--rail-x) + 16px)}
+.now-line .stem-drop{display:block;position:absolute;left:calc(var(--rail-x) - 1px);top:-23px;height:35px;width:2px;margin:0;flex:none;background:var(--stem-core);box-shadow:var(--stem-halo);border-radius:1px;filter:none;transform-origin:top;animation:stem-on .3s cubic-bezier(.3,.6,.4,1) .35s backwards}
+.now-line .now-lamp{position:absolute;left:calc(var(--rail-x) - 6px);top:50%;z-index:2;width:12px;height:12px;margin-top:-6px;border-radius:50%;background:radial-gradient(circle,#fff 0 32%,var(--stem-core) 48%,var(--brand) 72%);box-shadow:0 0 0 1px color-mix(in srgb,#6dff9c 70%,transparent),0 0 6px #6dff9c,0 0 16px color-mix(in srgb,#6dff9c 50%,transparent);animation:now-breathe 3.2s ease-in-out infinite}
+@keyframes now-breathe{50%{box-shadow:0 0 0 1px color-mix(in srgb,#6dff9c 70%,transparent),0 0 3px #6dff9c,0 0 8px color-mix(in srgb,#6dff9c 30%,transparent)}}
+.now-line .now-lamp::after{content:"";position:absolute;left:5px;top:12px;width:2px;height:18px;background:var(--brand);box-shadow:0 0 3px color-mix(in srgb,#6dff9c 70%,transparent)}
+.now-word{font:500 .8125rem/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--brand);text-shadow:0 0 .45em color-mix(in srgb,#6dff9c 45%,transparent)}
+.now-line .trace-key{margin:0 0 0 auto;padding:0;font:400 .8125rem/1.2 var(--sans);color:var(--faint)}
+/* The rows: page ground, one hairline under each; the ring on the rail, the day, month over
+   weekday, the time in its own column, the title, a leader, how far off. */
+.listing{position:relative;min-width:0}
+.lrows{position:relative;z-index:1;display:grid;margin:0;padding:0;list-style:none}
+.lrow{position:relative;display:grid;grid-template-columns:28px 2.5rem 2.3rem 4.5rem minmax(0,max-content) minmax(1.5rem,1fr) auto;column-gap:.7rem;align-items:baseline;min-height:3.25rem;margin:0;padding:.55rem .8rem .55rem 0;box-sizing:border-box;border-bottom:var(--hair);background:transparent;transition:background-color 1s ease-out,box-shadow 1s ease-out}
+.lrow .ring{grid-column:1;align-self:center}
+.lrow .ring::before{content:"";position:absolute;z-index:2;left:calc(var(--rail-x) - 5px);top:50%;width:10px;height:10px;margin-top:-5px;box-sizing:border-box;border:1.5px solid var(--steel);border-radius:50%;background:var(--bg)}
+.lrow.is-next .ring::before{border-color:var(--brand);background:var(--stem-core);box-shadow:0 0 6px #6dff9c,0 0 14px color-mix(in srgb,#6dff9c 45%,transparent)}
+.lrow.is-today .ring::before{border-color:var(--rev-cap)}
+.lrow::before{content:"";position:absolute;z-index:1;left:calc(var(--rail-x) - 1px);top:-1px;bottom:-1px;width:2px;background:color-mix(in srgb,var(--lit) 45%,transparent);pointer-events:none}
+.lrow:first-child::before{top:0;background:linear-gradient(var(--brand) 0 50%,color-mix(in srgb,var(--lit) 45%,transparent));box-shadow:0 0 6px -1px color-mix(in srgb,#6dff9c 60%,transparent)}
+.lrow:last-child::before{bottom:50%;background:linear-gradient(color-mix(in srgb,var(--lit) 45%,transparent),color-mix(in srgb,var(--lit) 30%,transparent))}
+.lrow:only-child::before{background:var(--brand)}
+.lrow.empty::before,.lrow.empty .ring{display:none}
+.lday{grid-column:2;justify-self:end;font:300 2.25rem/1 var(--cond);letter-spacing:-.01em;font-variant-numeric:tabular-nums lining-nums;color:var(--ink)}
+.lstack{grid-column:3;align-self:last baseline;display:grid;gap:.12rem;font:500 .75rem/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--label)}
+.lstack>:first-child{color:color-mix(in oklab,var(--plans) 70%,var(--label))}
+.ltime{grid-column:4;font:500 .9375rem/1.2 var(--mono);font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.ltitle{grid-column:5;min-width:0;font:600 1rem/1.3 var(--sans);color:var(--heading)}
+.ltitle a{color:inherit;text-decoration:none}
+.lrow.linked .ltitle a::after{content:"";position:absolute;inset:0;z-index:3}
+.lrow .next-tag{margin-left:.65rem;font:500 .75rem/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--brand);text-shadow:0 0 .4em color-mix(in srgb,#6dff9c 35%,transparent)}
+.lead{grid-column:6;align-self:baseline;height:0;border-bottom:1px dotted var(--lead);transform:translateY(-.3em)}
+.lrel{grid-column:7;justify-self:end;font:400 .9375rem/1.2 var(--sans);font-variant-numeric:tabular-nums;color:var(--dim);white-space:nowrap}
+.lsub{grid-column:5/-1;display:flex;align-items:center;gap:.35rem;font:400 .875rem/1.3 var(--sans);color:var(--dim)}
+.lsub .icon{width:.9rem;height:.9rem;color:var(--faint)}
+.lrow.empty{display:block;padding-left:1rem;color:var(--dim)}
+.lrow.empty .ltitle{font-weight:400;color:var(--dim)}
+.lrow.linked:hover,.lrow:has(:focus-visible){background:var(--row-wash);box-shadow:inset 2px 0 0 var(--lit);transition-duration:0s}
+.lrow.linked:hover .ltitle a,.lrow .ltitle a:focus-visible{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.2em;text-decoration-color:color-mix(in srgb,currentColor 45%,transparent)}
+.lrow:hover .lead{border-bottom-color:color-mix(in srgb,var(--lit) 70%,transparent)}
+.coming .band-foot{margin:.6rem 0 0;padding-left:calc(var(--rail-x) + 16px)}
+/* Past the last row the rail runs on, faint and dashed, behind the setup strip, to To do's NOW. */
+@media (min-width:72rem){
+  .coming.stemmed .listing::after{content:"";position:absolute;z-index:0;left:calc(var(--rail-x) - .5px);top:0;bottom:calc(-1.1rem - 1.6rem);width:0;border-left:1px dashed var(--line-2);opacity:.35*1;pointer-events:none}
+  .coming.stemmed .listing::after{opacity:1;border-left-color:color-mix(in srgb,var(--line-2) 35%,transparent);border-left-color:rgb(150 165 175/.35)}
+  .setup-strip{position:relative}
+  main:has(.coming.stemmed) .setup-strip::after{content:"";position:absolute;left:calc(var(--body-x) + var(--rail-x) - .5px);top:100%;height:1.6rem;border-left:1px dashed rgb(150 165 175/.35);pointer-events:none}
+  main:has(.coming.stemmed) .home-todo::before{content:"";position:absolute;z-index:0;left:calc(var(--body-x) + var(--rail-x) - .5px);top:-1px;height:calc(1.05rem + 1px);border-left:1px dashed rgb(150 165 175/.35);pointer-events:none}
+  main:has(.coming.stemmed) .home-todo .todo-rows>.row.cols::before{content:"";position:absolute;left:calc(var(--rail-x) - .5px);top:0;bottom:-1px;border-left:1px dashed rgb(150 165 175/.35);pointer-events:none}
+  main:has(.coming.stemmed) .home-todo .todo-rows>.row.rail-first::before{top:-1px}
+}
+.coming{margin-bottom:1.6rem}
+
+/* ---- Finish setting up: a bone bar, the count in the heading's ink, steel rings, step one sage */
+.setup-strip{box-shadow:inset 3px 0 var(--ink-2)}
+.setup-left strong{color:var(--heading)}
+.setup-run li{border-color:var(--steel);color:var(--label)}
+.setup-run li.is-next{border-color:var(--lit);color:var(--lit);box-shadow:0 0 8px -2px color-mix(in srgb,var(--lit) 70%,transparent)}
+
+/* ---- Every list on page ground: no slate strips, one hairline under each row --------------- */
+.rows.rows>.row:not(.cols):not(.empty),.rows.rows>li>.row.row,.rows>.row:nth-child(odd of :where(.row:not(.cols))),.rows>:nth-child(odd)>.row{background-color:transparent}
+.rows.rows{gap:0}
+.rows .row.row:not(.cols){border-bottom:var(--hair);border-radius:0}
+.row.row{transition:background-color 1s ease-out,box-shadow 1s ease-out}
+.rows .row.row:is(a,:has(a,button)):hover,.rows .row.row:has(:focus-visible){background-color:var(--row-wash);box-shadow:inset 2px 0 0 var(--lit);transition-duration:0s}
+.row:is(a,:has(a,button)):hover>.d,.row:has(:focus-visible)>.d{box-shadow:none}
+/* Kind tiles lose their fills: the icon in its kind's hue on a 1px square; the word keeps its hue. */
+.row>.d.kind,.row>.d.kind:is(.kind-restaurant,.kind-activity,.kind-seasonal,.kind-show),.also-rows .row>.d.kind:is(.kind-memory,.kind-family,.kind-status,.kind-settings){background:none}
+.row>.d.kind>.icon{box-sizing:content-box;width:1.05rem;height:1.05rem;padding:.42rem;border:1px solid var(--line-2);border-radius:2px;color:var(--kind)}
+.also-rows .row>.d.kind>.icon{color:#84a0c4}
+.also-rows .row>.d.kind.kind-show>.icon{color:var(--shows)}
+
+/* ---- To do: page ground, the ticks centred on the rail's x, late in amber words with ▲ -------- */
+.home-todo{position:relative}
+.home-todo .todo-rows{--rx:var(--rail-x)}
+.home-todo .todo-rows .row,.home-todo .now-tick{--d:28px}
+.home-todo .todo-rows .row>.d{justify-items:center;overflow:visible}
+.home-todo .todo-rows button.tick{margin:0 -8px}
+.late button.tick::before,.late .task-box,.home-todo .late button.tick::before{border-color:var(--well-edge);box-shadow:none}
+.late-words{display:inline-flex;align-items:baseline;gap:.4em;font:500 .9375rem/1.3 var(--sans);letter-spacing:0;color:var(--late)}
+.tri{display:inline-block;flex:none;width:0;height:0;border-left:.3em solid transparent;border-right:.3em solid transparent;border-bottom:.55em solid currentColor;transform:translateY(-.02em)}
+.home-todo .now-tick>.d::before,.todo-band .now-tick>.d::before{content:"";position:absolute;left:calc(var(--rx) - 1px);top:calc(50% - 12px);bottom:auto;height:24px;width:2px;background:var(--stem-core);box-shadow:var(--stem-halo);filter:none}
+.home-todo .now-tick::before{background:var(--steel)}
+.todo-rows>.now-tick+.row>.f::before,.todo-rows>.now-tick:not(.at-end)+.row>.f::before{content:none}
+.now-tick>.d::after{z-index:2}
+
+/* ---- Lately added and Also on: on page ground too ------------------------------------------- */
+.also-rows .row.row{min-height:3.25rem}
+
+/* ---- Head-column figures on the first row's baseline ---------------------------------------- */
+@media (min-width:72rem){
+  .home-todo>.band-head>.figure,.lately>.band-head>.figure{margin-top:1.15rem}
+}
+
+/* ---- Segmented keys: one control per filter, 40px, the latched one in steel reverse -------- */
+.band-tools{display:grid;gap:.75rem;min-width:0}
+.seg-line{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .9rem}
+.seg-label{margin:0;min-width:6.5rem;font:500 .875rem/1.2 var(--sans);color:var(--ink-2)}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line-2);border-radius:3px;overflow:hidden}
+.seg a{display:inline-flex;align-items:center;gap:.4rem;min-height:40px;min-width:2.75rem;justify-content:center;padding:0 .9rem;font:500 .875rem/1 var(--sans);color:var(--ink-2);text-decoration:none;border-left:1px solid var(--line-2);transition:background-color 1s ease-out,color .15s}
+.seg a:first-child{border-left:0}
+.seg a .icon{width:1rem;height:1rem}
+.seg a:not([aria-current]):hover{background:var(--row-wash);color:var(--heading);transition-duration:0s}
+.seg a[aria-current]{color:var(--rev-ink);background:var(--rev);box-shadow:inset 0 2px var(--rev-cap)}
+.seg a[aria-current] .icon{color:var(--rev-ink)}
+.seg a:focus-visible{outline:2px solid var(--brand);outline-offset:-2px;border-radius:0}
+@media (min-width:72rem){
+  .idea-band,.todo-band{grid-template-areas:". tools" "head body"}
+  .idea-band>.band-tools,.todo-band>.band-tools{grid-area:tools;margin-bottom:.4rem}
+  .idea-band>.band-head,.todo-band>.band-head{grid-area:head}
+  .idea-band>.band-body,.todo-band>.band-body{grid-area:body}
+  .idea-band>.band-head>.figure,.todo-band>.band-head>.figure{margin-top:1.2rem}
+}
+.find-line{margin:0}
+.todo-band .add-link a,.coming .links a{display:inline-flex;align-items:center;gap:.35em;min-height:2.75rem;color:var(--link);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.2em;text-decoration-color:color-mix(in srgb,var(--link) 55%,transparent);font:500 .9375rem/1.2 var(--sans)}
+.todo-band .add-link{margin:.2rem 0 0}
+.todo-band .add-link .icon{width:.95rem;height:.95rem}
+.add-fold{margin-top:.6rem}
+
+/* ---- Ideas: the kinds as a listing's index ---------------------------------------------------- */
+.kind-index{display:grid;gap:0;margin:.25rem 0 0;width:100%}
+.kind-index a{display:grid;grid-template-columns:16px auto minmax(.75rem,1fr) auto;align-items:center;column-gap:.55rem;min-height:36px;padding:0 .45rem;border-radius:2px;font:400 .9375rem/1.2 var(--sans);color:var(--ink-2);text-decoration:none;transition:background-color 1s ease-out}
+.kind-index a>.icon{width:16px;height:16px;color:var(--kind,var(--label))}
+.kind-index a.kind-all>.icon{color:var(--label)}
+.ki-lead{align-self:end;height:0;margin-bottom:.62em;border-bottom:1px dotted var(--lead)}
+.ki-n{font:400 .875rem/1 var(--mono);font-variant-numeric:tabular-nums;color:var(--label)}
+.kind-index a:not([aria-current]):hover{background:var(--row-wash);color:var(--heading);transition-duration:0s}
+.kind-index a[aria-current]{color:var(--rev-ink);background:var(--rev);box-shadow:inset 0 2px var(--rev-cap)}
+.kind-index a[aria-current]>.icon,.kind-index a[aria-current] .ki-n{color:var(--rev-ink)}
+.kind-index a[aria-current] .ki-lead{border-bottom-color:color-mix(in srgb,var(--rev-ink) 45%,transparent)}
+.band-head .key-label{display:block;margin:1.1rem 0 .3rem;font:500 .75rem/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--label)}
+@media (max-width:71.99rem){
+  .band-head .key-label{display:block}
+  .kind-index{grid-template-columns:repeat(auto-fill,minmax(10rem,1fr));column-gap:1rem}
+}
+.idea-band .band-body{gap:0}
+
+/* ---- Plans: the figure, a line on the next, a segmented pair; chips on page ground ----------- */
+.next-line{display:flex;align-items:center;gap:.5rem;margin:.45rem 0 0;font:400 .9375rem/1.3 var(--sans);color:var(--ink-2)}
+.next-dot{flex:none;width:6px;height:6px;border-radius:50%;background:var(--brand);box-shadow:0 0 4px #6dff9c,0 0 10px color-mix(in srgb,#6dff9c 50%,transparent)}
+.seg-pair{margin-top:1rem;display:flex}
+.seg-pair a{flex:1}
+table.month .event{background:transparent;border:0;border-left:2px solid var(--plans);border-radius:0;box-shadow:none}
+table.month .event:hover{background:var(--row-wash)}
+@media (min-width:72rem){.month-band>.band-head>.figure,.plans-band>.band-head>.figure{margin-top:.15rem}}
+
+/* ---- Status: the spend meter in the head column ------------------------------------------- */
+.spend-meter{--phos:var(--screen);position:relative;width:10rem;max-width:100%;aspect-ratio:auto;margin:1rem 0 .4rem}
+.spend-meter.tone-near{--phos:var(--people)}
+.spend-meter.tone-over{--phos:var(--danger)}
+.spend-meter .dial-case.crt{--phosphor:var(--phos);position:relative;inset:auto;width:100%;aspect-ratio:1;padding:5px;box-sizing:border-box;border-radius:50%}
+.spend-meter .dial-case.crt::after{left:calc(50% - 3px);right:auto;bottom:-1rem}
+.spend-meter .crt-tube{display:block;height:100%;padding:0;border-radius:50%}
+.meter{display:block;width:100%;height:100%;overflow:visible;color:var(--phosphor)}
+.meter-arc{fill:none;stroke:color-mix(in srgb,var(--phosphor) 55%,transparent);stroke-width:1.2}
+.meter-tick{fill:none;stroke:color-mix(in srgb,var(--phosphor) 55%,transparent);stroke-width:1.2}
+.meter-tick.major{stroke:var(--phosphor);stroke-width:1.8}
+.meter-tick.limit{stroke-dasharray:3 2}
+.meter-num{font:400 17px/1 var(--terminal);fill:var(--phosphor);dominant-baseline:middle}
+.meter-unit{font:400 15px/1 var(--terminal);fill:color-mix(in srgb,var(--phosphor) 64%,#07120c)}
+.needle{fill:none;stroke:color-mix(in srgb,var(--phosphor) 25%,#fff);stroke-width:2.2;stroke-linecap:round}
+.needle-halo{fill:none;stroke:var(--phosphor);stroke-width:6;stroke-linecap:round;opacity:.35}
+.needle-ghost{fill:none;stroke:var(--phosphor);stroke-width:1.6;stroke-dasharray:5 4;opacity:.55}
+.meter-hub{fill:#0c1410;stroke:var(--phosphor);stroke-width:1.5}
+.meter-pin{fill:color-mix(in srgb,var(--phosphor) 25%,#fff)}
+.meter-words{margin:1.35rem 0 0;font:400 .9375rem/1.35 var(--sans);color:var(--ink-2)}
+.meter-words strong{font:500 1rem/1 var(--mono);font-variant-numeric:tabular-nums;color:var(--heading)}
+.meter-key{display:flex;align-items:center;gap:.45rem;margin:.25rem 0 0;font:400 .8125rem/1.3 var(--sans);color:var(--dim)}
+.ghost-key{flex:none;width:16px;height:0;border-top:1.5px dashed color-mix(in srgb,var(--screen) 70%,transparent)}
+.cost-rows .row{min-height:2.75rem}
+
+/* ---- Settings: page ground, rule heads, sentence-case labels; the parts on a numbered rail -- */
+.settings-body .panel,.settings-body details.panel{background:none;border:0;border-radius:0;box-shadow:none;padding:0;margin:0 0 2.1rem}
+.settings-body .panel>h2,.settings-body .panel>summary .h2,.settings-body .fold>summary .h2{display:flex;align-items:center;gap:.9rem;margin:0 0 .6rem;font:600 1.25rem/1.15 var(--cond);letter-spacing:-.005em;color:var(--heading)}
+.settings-body .panel>h2::after{content:"";flex:1;height:1px;background:var(--line)}
+.settings-body details.panel>summary{display:flex;align-items:center;gap:.6rem;padding:0;border-bottom:1px solid var(--line);min-height:2.75rem}
+.settings-body details.panel>summary .h2{margin:0}
+.settings-body .panel>.muted,.settings-body .hint,.settings-body .muted{max-width:60ch;font:400 .9375rem/1.5 var(--sans);color:var(--dim);text-wrap:pretty}
+.settings-body label,.settings-body .setting-head label,.settings-body legend{font:500 .9375rem/1.3 var(--sans);letter-spacing:0;text-transform:none;color:var(--ink)}
+.settings-body .changed{font:500 .75rem/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--label)}
+.settings-layout.band{display:grid;margin:0}
+.parts-rail{display:block}
+.parts-rail .key-label{margin:0 0 .5rem}
+.parts-rail ol{position:relative;display:grid;gap:0;margin:0;padding:0;list-style:none}
+.parts-rail ol::before{content:"";position:absolute;left:calc(.45rem + 11px - .5px);top:22px;bottom:22px;width:1px;background:var(--steel)}
+.parts-rail a{position:relative;display:flex;align-items:center;gap:.6rem;min-height:44px;padding:0 .45rem;border-radius:2px;font:500 .9375rem/1.2 var(--sans);color:var(--ink-2);text-decoration:none;background:none;border:0;transition:background-color 1s ease-out}
+.parts-rail .part-no{position:relative;z-index:1;display:grid;place-items:center;flex:none;width:22px;height:22px;box-sizing:border-box;border:1px solid var(--steel);border-radius:50%;background:var(--bg);font:500 .75rem/1 var(--mono);font-variant-numeric:tabular-nums;color:var(--label)}
+.parts-rail a:not([aria-current]):hover{background:var(--row-wash);color:var(--heading);transition-duration:0s}
+.parts-rail a[aria-current="page"]{color:var(--rev-ink);background:var(--rev);box-shadow:inset 0 2px var(--rev-cap)}
+.parts-rail a[aria-current="page"] .part-no{background:var(--rev-ink);border-color:var(--rev-ink);color:var(--rev-cap)}
+@media (min-width:72rem){
+  .settings-layout.band{grid-template-columns:var(--head-col) minmax(0,1fr);column-gap:2rem;padding:1.05rem var(--pad);border-top:var(--rule-band)}
+  .parts-rail{position:sticky;top:5.25rem;align-self:start}
+}
+@media (max-width:71.99rem){.parts-rail{display:none}}
+/* The overview: the same numbered rings down its rows. */
+.section-rows{position:relative}
+.section-row .part-no{position:relative;z-index:1;display:grid;place-items:center;width:22px;height:22px;box-sizing:border-box;border:1px solid var(--steel);border-radius:50%;background:var(--bg);font:500 .75rem/1 var(--mono);color:var(--label)}
+.section-rows::before{content:"";position:absolute;left:calc(var(--rail-x) - .5px);top:22px;bottom:22px;width:1px;background:var(--steel)}
+.section-rows .row.row{--d:28px}
+.section-row .t .icon{width:1.05rem;height:1.05rem;margin-right:.5rem;vertical-align:-.15em;color:#84a0c4}
+
+/* ---- The new-idea form: the title first, the kinds in the head column ----------------------- */
+@media (min-width:72rem){
+  .form-band{grid-template-areas:"kinds title" "kinds body"}
+  .form-band>.form-title{grid-area:title}
+  .form-band>.kind-pick{grid-area:kinds;align-self:start}
+  .form-band>.band-body{grid-area:body}
+}
+.form-band>.form-title{display:block;padding:0;background:none;border:0}
+.form-band>.form-title .field{margin:0 0 1rem}
+.form label:not(.check),.form legend,.field>label{font:500 .9375rem/1.3 var(--sans);letter-spacing:0;text-transform:none;color:var(--ink)}
+
+/* ---- The phone ---------------------------------------------------------------------------------- */
+@media (max-width:63.99rem){
+  .welcome-words{display:grid}
+  .welcome .starters-col{margin-top:1rem}
+  .welcome .starters a{min-height:48px}
+  .welcome .ask-question .q1{display:block}
+}
+@media (max-width:40rem){
+  .coming .next-up .crt-tube{grid-template-columns:minmax(0,1fr);row-gap:.5rem;max-height:15rem;padding:.75rem .85rem .6rem}
+  .coming .next-up .trace{max-height:7.5rem}
+  .coming .next-up .next-title{font-size:1.5rem}
+  .now-line .trace-key{display:none}
+  .lrow{grid-template-columns:28px 2.1rem 2rem minmax(0,1fr) auto;column-gap:.55rem;padding-right:.4rem}
+  .lday{font-size:1.75rem}
+  .ltime{grid-column:5;grid-row:1;justify-self:end;font-size:.875rem}
+  .ltitle{grid-column:4;grid-row:1}
+  .lead{display:none}
+  .lrel{grid-column:4/-1;grid-row:2;justify-self:start;font-size:.875rem}
+  .lsub{grid-column:4/-1}
+  .seg a{padding:0 .7rem}
+  .seg-label{min-width:0;flex:1 0 100%}
+}
+
+/* ---- Motion and the other ways of seeing --------------------------------------------------- */
+@media (prefers-reduced-motion:reduce){
+  .now-line .stem-drop,.now-line .now-lamp{animation:none}
+  .lrow,.row.row,.seg a,.kind-index a,.parts-rail a,.starters a{transition:none}
+}
+@media (prefers-contrast:more){
+  .now-line .stem-drop,.home-todo .now-tick>.d::before{box-shadow:none}
+  .now-line .now-lamp{box-shadow:0 0 0 1px var(--brand)}
+  .welcome .ask-question .glow,.now-word,.lrow .next-tag{text-shadow:none}
+  .needle-halo{display:none}
+}
+/* ---- Revision 3, pass 2 ---------------------------------------------------------------------- */
+.coming.stemmed::before,.coming.stemmed .track::before{content:none}
+.welcome .starters a{flex-direction:column;align-items:flex-start;justify-content:center;gap:.3rem}
+.welcome .starters .key-words{white-space:normal}
+.lrow{min-height:3rem;padding-block:.4rem}
+.also-rows .row.row{min-height:2.875rem}
+.home-todo .now-tick>.d::after{left:calc(var(--rx) - 4px);width:8px;height:8px;margin-top:-4px;border-radius:50%;background:radial-gradient(circle,#fff 0 30%,var(--stem-core) 50%,var(--brand) 75%);box-shadow:0 0 6px #6dff9c,0 0 14px color-mix(in srgb,#6dff9c 45%,transparent)}
+.home-todo .now-tick>.t{padding-left:.15rem}
+.band{margin-bottom:1.25rem}
+@media (max-width:63.99rem){
+  .welcome-words{display:flex!important;flex-direction:column}
+  .welcome .starters-col{order:3}
+  .welcome .starters::before{content:none}
+  .welcome .starters a{flex-direction:row;align-items:center;justify-content:space-between;min-height:46px;padding-block:.3rem}
+  .welcome .starters{gap:.4rem}
+  .starters-head{margin-bottom:.4rem}
+}
+@media (max-width:40rem){
+  main .welcome{padding:1rem .8rem 1rem;margin-bottom:1.1rem}
+  .welcome .speaker{margin-bottom:.6rem}
+  .welcome .ask-question{font-size:2.125rem;margin-bottom:.7rem}
+  .welcome .starters-col{margin-top:.8rem}
+  .coming{padding-top:.8rem}
+  .coming>.band-head{margin-bottom:.6rem}
+  .coming>.band-head h2{font-size:1.25rem}
+}
+@media (max-width:63.99rem){.coming.stemmed .band-head{padding-left:0}}
+.lday{line-height:.86}.lstack{gap:.08rem;line-height:.95}.lrow{padding-block:.3rem}
+.todo-band .todo-rows{--rx:var(--rail-x)}
+.todo-band .todo-rows .row,.todo-band .now-tick{--d:28px}
+.todo-band .todo-rows .row>.d{justify-items:center;overflow:visible}
+.todo-band .todo-rows button.tick{margin:0 -8px}
+.todo-band .now-tick>.d::after{left:calc(var(--rx) - 4px);width:8px;height:8px;margin-top:-4px;border-radius:50%;background:radial-gradient(circle,#fff 0 30%,var(--stem-core) 50%,var(--brand) 75%);box-shadow:0 0 6px #6dff9c,0 0 14px color-mix(in srgb,#6dff9c 45%,transparent)}
+.todo-band .add-link a{white-space:nowrap;font-size:.875rem}
+@media (min-width:72rem){.todo-band>.band-head>.figure{margin-top:2.6rem}}
+@media (min-width:72rem){
+  .todo-band>.band-head.list-head>.figure:first-child{margin-top:2.95rem}
+  .idea-band>.band-head.list-head>.figure:first-child{margin-top:2.75rem}
+}
+@media (min-width:72rem){.kind-pick>.kind-key{grid-template-columns:minmax(0,1fr);gap:2px}}
+.section-row .t .presence{display:inline-block;width:1.05rem;height:1.05rem;margin-right:.5rem;vertical-align:-.15em;border-radius:3px}
+.section-row .t .presence .presence-glass{font-size:3px}
+.seg a{min-height:44px}
+.kind-index a{min-height:44px}
+.lrow .ltitle a{display:inline-block;padding-block:.8rem;margin-block:-.8rem}
+.coming .next-up .next-title a{display:inline-block;padding-block:.55rem;margin-block:-.55rem}
+.coming .next-up .next-title a{padding-block:.7rem;margin-block:-.7rem}
+@media (min-width:72rem){
+  .home-todo>.band-head>.figure{margin-top:.05rem}
+  .lately>.band-head>.figure{margin-top:.5rem}
+}
+@media (min-width:72rem){
+  .todo-band>.band-head.list-head>.figure:first-child{margin-top:1.7rem}
+  .idea-band>.band-head.list-head>.figure:first-child{margin-top:1.3rem}
+  .home-todo>.band-head>.figure{margin-top:-.3rem}
+}
+@media (min-width:72rem){.form-band{grid-template-rows:auto 1fr}}
+details.panel.capture,details.panel.add-fold{background:none;border:0;border-top:var(--hair);border-bottom:var(--hair);border-radius:0;box-shadow:none;padding-inline:0}
+details.panel.capture>summary,details.panel.add-fold>summary{padding-inline:.4rem}
+
+/* ==== Revision 4: one head rule, a quieter trace, the thread through the strip ================= */
+html{scrollbar-gutter:stable}
+/* One rule for every band's head column: the h2, the figure .5rem under it, then its links. A head
+   with no h2 (a page's list) starts its figure level with the band's first line. */
+.band-head>.figure,.band-head>.head-fig>.figure{margin-top:.5rem!important}
+.band-head.list-head>.figure:first-child{margin-top:0!important}
+.band-head>.links,.band-head>.head-fig>.links{margin-top:.35rem}
+@media (min-width:72rem){
+  .band>.band-head{align-self:start}
+  .coming{grid-template-areas:"head tube" "head now" "head rows";grid-template-rows:auto auto 1fr}
+  .coming>.band-head{display:block;grid-area:head;align-self:start}
+  .coming>.band-head>h2{margin:.35rem 0 0}
+  .coming>.band-head>.head-fig{align-self:auto}
+  .coming>.listing{align-self:start}
+  .idea-band,.todo-band{grid-template-areas:"head tools" "head body";grid-template-rows:auto 1fr}
+  .idea-band>.band-head,.todo-band>.band-head{align-self:start;padding-top:.15rem}
+}
+/* Page heads: the icon in the flow before the title, both in the body column. */
+@media (min-width:72rem){
+  .page-head .title-row{margin-left:0;gap:.55rem}
+}
+.title-row .title-glyph{transform:translateY(.05em)}
+
+/* The tube: words in 42%, the trace from the left of the rest; one green pulse, the rest sage. */
+@media (min-width:40.01rem){.coming .next-up .crt-tube{grid-template-columns:minmax(15rem,max-content) minmax(0,1fr);column-gap:2rem}}
+.coming .next-up::before{content:none}
+.coming .next-up .next-title a{text-decoration:none}
+.coming .next-up .next-title a:hover,.coming .next-up .next-title a:focus-visible{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:.16em}
+.trace-weekend{fill:color-mix(in srgb,var(--accent) 10%,transparent)}
+.trace .pulse-mark:not(.next) .pulse{fill:color-mix(in srgb,var(--lit) 60%,transparent)}
+.trace .pulse-mark:not(.next) .pulse-halo{stroke:var(--lit);opacity:.08}
+.trace .pulse-mark:not(.next){opacity:1}
+.trace-label:not(.next):not(.now){fill:color-mix(in srgb,var(--lit) 72%,#0b0e0c)}
+.trace-grid{stroke:color-mix(in srgb,var(--accent) 30%,transparent)}
+.trace-ticks{stroke:color-mix(in srgb,var(--lit) 35%,transparent)}
+.trace-axis{stroke:color-mix(in srgb,var(--lit) 70%,transparent);opacity:1}
+
+/* To do: an open box, not a slate square; the past rail in line-2, only NOW lit. */
+button.tick::before,.late button.tick::before,.home-todo .late button.tick::before{background:transparent;border:1.5px solid var(--edge);border-radius:2px;box-shadow:none}
+button.tick:hover::before{border-color:var(--accent);background:var(--row-wash);transition-duration:0s}
+button.tick:focus-visible::before{border-color:var(--brand);box-shadow:0 0 0 1px var(--brand),0 0 8px color-mix(in srgb,#6dff9c 45%,transparent)}
+.todo-rows>.row.on-rail::before,.now-tick::before,.home-todo .now-tick::before{background:var(--line-2)}
+
+/* The form's kinds: Ideas' index, unfilled; the chosen one in steel reverse. */
+.kind-pick>legend::before{content:none}
+.kind-pick .kind-key label{min-height:44px;padding:0 .45rem;font:400 .9375rem/1.2 var(--sans);font-stretch:100%;color:var(--ink-2);background:none}
+.kind-pick .kind-key label .icon{width:16px;height:16px}
+.kind-pick .kind-key label:hover{background:var(--row-wash);color:var(--heading)}
+.kind-pick .kind-key label:has(:checked){color:var(--rev-ink);background:var(--rev);box-shadow:inset 0 0 0 1px var(--rev-cap)}
+
+/* Plans: today is the steel reverse number alone. */
+table.month td.today{box-shadow:none}
+
+/* The thread crosses the setup strip as a dashed notch at the rail's x; the strip's words start
+   past it, as a band's body does. */
+@media (min-width:72rem){
+  .setup-strip h2{flex:0 0 var(--head-col)}
+  .setup-left{margin-left:calc(.6rem + var(--rail-x) + 16px)}
+  main:has(.coming.stemmed) .setup-strip{background-image:repeating-linear-gradient(to bottom,rgb(150 165 175/.4) 0 3px,transparent 3px 6px);background-size:1px 100%;background-repeat:no-repeat;background-position:calc(var(--body-x) + var(--rail-x) - .5px) 0;background-origin:border-box}
+}
+
+/* The phone: the box shorter, the starters one line each, the brand its full word. */
+@media (max-width:40rem){
+  .bar .caret{display:none}
+  .brand-name{overflow:visible;text-overflow:clip}
+  .welcome .ask textarea{min-height:4.25rem}
+  .welcome .starters a{flex-direction:column;align-items:flex-start;justify-content:center;gap:.12rem;padding:.3rem .8rem;min-height:48px;width:100%;box-sizing:border-box}
+  .welcome .starters li{width:100%}
+  .welcome-words>.starters-col{align-self:stretch}
+  .coming>.band-head{margin-bottom:.4rem}
+  .welcome .starters .key-words{font:500 .9375rem/1.2 var(--sans)}
+  .welcome .starters a .key-to{font-size:.75rem;line-height:1.1}
+  .welcome .starters{gap:.35rem}
+  .welcome .ask-question{font-size:2rem}
+  main .welcome{padding-bottom:.8rem}
+  .coming .next-up .next-title{font-size:1.375rem}
+  .coming .next-up .next-label{margin-bottom:.2rem}
+  .starters-head{font-size:.875rem;margin-bottom:.3rem}
+  .welcome .starters-col{margin-top:.6rem}
+  main .welcome{margin-bottom:.8rem}
+  .coming{padding-top:.6rem}
+}

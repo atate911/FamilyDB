@@ -1,0 +1,14 @@
+{
+  "id": "00-current",
+  "name": "Phosphor (today)",
+  "tagline": "The page as it is now: phosphor green on green-tinted charcoal.",
+  "tokens": {
+    "bg": "#0b0e0d", "surface": "#121615", "surface-2": "#171c1a", "surface-3": "#1d2321",
+    "field": "#0e1211", "line": "#232a27", "line-2": "#2f3834", "edge": "#5c6862",
+    "ink": "#edf2ef", "ink-2": "#bac5bf", "dim": "#919e98", "faint": "#7d8a84",
+    "brand": "#6dff9c", "brand-hover": "#92ffb8", "screen": "#6dff9c", "outing": "#6dff9c",
+    "ideas": "#ae9bff", "plans": "#6cd4ff", "todo": "#f7dc78", "people": "#ffb850",
+    "shows": "#ff9fd0", "seasons": "#ff956c", "danger": "#ff6b6b", "on-bright": "#07130c"
+  },
+  "glow": 1.0, "screenGlow": 1.0, "topGlow": 1.0
+}

@@ -1,0 +1,158 @@
+/* ==========================================================================================
+   SWITCHBOARD, PATCHED: the revision. The lead is seated on the lamp, so the jack can never
+   drift from NOW; the tiers end with their rows; tabs sit only over heads; the type floor holds.
+   ========================================================================================== */
+
+/* ---- The jack seated on the NOW lamp: one element draws the jack and the lead, so a wrapped head
+   or a late font moves both together. The bezel's own jack span stands down. ----------------- */
+.greet .glass > .jack { display: none !important; }
+@media (min-width: 64rem) {
+  .page-home .plans-cell .now-lamp::after {
+    content: ""; position: absolute; z-index: 4; top: 50%;
+    right: calc(100% + var(--tier-gap) + 0.12rem + 3px - 6px);
+    width: 12px; height: 12px; margin-top: -6px; box-sizing: border-box; border-radius: 50%;
+    background: #0b120e; border: 2px solid var(--pewter);
+    box-shadow: 0 0 0 2px var(--bezel), 0 0 6px rgb(109 255 156 / 0.55), 0 0 30px 18px rgb(109 255 156 / 0.08);
+    pointer-events: none;
+  }
+}
+
+/* ---- The tiers end with their rows: no stretching, the seam as long as the right tier -------- */
+@media (min-width: 64rem) {
+  .page-home .map { align-items: start; }
+  .page-home .map-right { align-self: start; }
+}
+.page-home main, main:has(> .map) { padding-bottom: 1rem; }
+.page-home .foot, body.page-home > .foot { margin-top: 1.5rem; }
+
+/* ---- Setup at the foot of the right tier, under To do: its amber edge beside the late edges --- */
+.page-home .map-right > .setup-line { margin: 0.5rem 0 0; padding: 0.2rem 0 0.2rem 0.95rem; }
+.page-home .map-right > .setup-line .sl-head { font-size: 1rem; }
+
+/* To do's closing line: every thing, then the ones with no date, one line. */
+.page-home .home-todo .cell-foot.links-line { display: flex; flex-wrap: wrap; align-items: center; gap: 0 0.6rem; }
+.page-home .home-todo .cell-foot .cc-sep { color: var(--faint); }
+.page-home .home-todo .cell-foot a.undated { font-weight: 400; color: var(--ink-2); }
+.page-home .home-todo .cell-foot a.undated:hover { color: var(--heading); }
+
+/* ---- One left edge: the heads' lamps come inside the cell, after the word ------------------- */
+.page-home .cell-head.quote .q-go { margin-left: 0; }
+.page-home .cell-head.quote .q-go .slot { order: 2; width: auto; }
+.page-home .cell-head.quote .q-go .what { order: 1; }
+.page-home .cell-head .lamp.pin { display: none; }
+.page-home .household > .hh .cell-head .slot { position: static; translate: none; order: 2; width: auto; margin: 0 0 0 0.45rem; align-self: center; }
+.page-home .household > .hh .cell-head a { display: flex; align-items: center; }
+.page-home .household > .hh .cell-head .what { order: 1; }
+.page-home .household > .hh .cell-head .dots { order: 3; }
+.page-home .household > .hh .cell-head .count { order: 4; }
+.page-home .household > .hh .cell-head .go { order: 5; }
+
+/* ---- The keys under the glass: one even row, the first unbroken ----------------------------- */
+@media (min-width: 64rem) {
+  .greet .starters { display: flex; gap: 8px; }
+  .greet .starters li { flex: 1 1 0; min-width: 0; }
+  .greet .starters li:first-child { flex: 0 0 auto; }
+  .greet .starters li:first-child .key-words { white-space: nowrap; }
+  .greet .starters a { padding: 0.55rem 0.7rem 0.6rem; font-size: 0.9375rem; letter-spacing: -0.003em; }
+}
+.page-home #where:empty { display: none; }
+
+/* ---- Tabs only over a real head, in the section's own ink ------------------------------------ */
+.board .register::before, .board .main > .module::before, .board .main > .cell::before, .board .main > .panel::before { display: none; }
+.board .main > .module:has(> .cell-head)::before, .board .main > .cell:has(> .cell-head)::before, .board .main > .panel:has(> .cell-head)::before, .board .monitors > .cell:has(> .cell-head)::before { display: block; background: var(--cap, var(--bone)); }
+.board .main > *:has(> .cell-head) { --cap-at: 0; }
+
+/* ---- Ideas: a rack wide enough for the tube's words; colour replaced, not removed ------------ */
+@media (min-width: 1061px) {
+  .in-ideas .board, .in-ideas .board:has(> .tube-cell) { grid-template-columns: 19rem repeat(3, minmax(0, 1fr)); }
+}
+.in-ideas .radar-screen .hs-line { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 0.6rem; }
+.in-ideas .radar-screen .hs-line > .rel { justify-self: end; }
+.in-ideas .radar-screen .hs-line > a { grid-column: 1 / -1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.in-ideas .radar-screen .rings { white-space: nowrap; }
+.in-ideas .tube-cell > .crt { box-shadow: none; }
+.idea-index .no { color: var(--bone); }
+.idea-index .fact.road b { color: var(--bone); }
+.idea-index .fact.bearing { color: var(--pewter); }
+
+/* ---- Plans: the weekend inset no taller than the head, no bloom, room from the primary ------- */
+@media (min-width: 1061px) {
+  .page-plans .board, .page-plans-month .board, .in-plans .board { column-gap: 2rem; }
+  .in-plans .board > .head-inset { align-self: start; margin-top: 0.35rem; }
+  .in-plans .board > .head-row::after { right: calc(-22rem - 2rem); }
+}
+.in-plans .head-inset .crt, .in-plans .head-inset > .crt, .in-plans .tube-cell.head-inset > .crt { box-shadow: none; }
+.in-plans .head-inset .crt-tube { padding: 0.45rem 0.9rem 0.5rem; }
+.in-plans .head-inset .hs-small, .in-plans .head-inset .hs-line { margin: 0; line-height: 1.2; }
+.in-plans .head-inset .hs-line { margin: 0.1rem 0; }
+
+/* ---- The type floor: no label under 0.875rem -------------------------------------------------- */
+.idea-form .field > label:not(.check), .field > label, .kind-pick label, .rack label, .side label, .search label { font: 600 0.875rem/1.3 var(--sans); color: var(--ink-2); letter-spacing: 0; text-transform: none; }
+.in-status table.data caption, .in-status table.data th { font-size: 0.875rem; }
+table.month th { font-size: 0.875rem; }
+.dc .dw, .dc .dm { font-size: 0.8125rem; }
+.page-home .plan-rows .dc .dw, .page-home .plan-rows .dc .dm { font-size: 0.875rem; line-height: 1.05; }
+
+/* ---- The form: labels on their field's first line, no rules between wells ------------------- */
+.idea-form > .field, .idea-form > fieldset, .idea-form .inner > .field, .idea-form .inner > fieldset { border-top: 0; padding: 0.55rem 0; align-items: baseline; }
+.idea-form .field > label:not(.check) { padding-top: 0; align-self: baseline; }
+.idea-form .field > button.mic { align-self: start; }
+.idea-form .field.can-dictate > textarea + button.mic { align-self: end; }
+.idea-form > details { border-top: 0; }
+
+/* ---- Status: the cost table unboxed under a rule head; its figures in bone ------------------- */
+.in-status .tables .scroll, .in-status table.data { border: 0; background: none; box-shadow: none; padding-left: 0; padding-right: 0; }
+.in-status table.data caption { padding: 0.75rem 0 0.4rem; text-align: left; font: 600 0.875rem/1.3 var(--sans); color: var(--ink-2); background: linear-gradient(var(--cap, var(--bone)), var(--cap, var(--bone))) left top / 3rem 2px no-repeat; }
+.in-status table.data td.num { color: var(--bone); }
+
+/* ---- Settings: needs-a-look is the row's own amber edge, as a late row's is ------------------ */
+.settings-index li.look .slot, .settings-register li.look .slot { visibility: hidden; }
+.settings-index li.look, .settings-register li.look, .rows > .row.part.look { box-shadow: inset 2px 0 0 var(--people); }
+.settings-index li.look:hover, .settings-index li.look:focus-within, .rows > .row.part.look:hover, .rows > .row.part.look:focus-within { box-shadow: inset 2px 0 0 var(--brand), inset 14px 0 14px -14px color-mix(in srgb, var(--brand) 55%, transparent); }
+
+/* ---- The phone: the next plan before the ideas, and less ground above the keys --------------- */
+@media (max-width: 63.99rem) {
+  .page-home .greet { order: 1; }
+  .page-home .plans-cell { order: 2; }
+  .page-home .map-right > .seam.h { order: 3; }
+  .page-home .home-todo { order: 4; }
+  .page-home .setup-line { order: 5; }
+  .page-home .lately { order: 6; }
+  .page-home .map > .seam.foot { order: 7; }
+  .page-home .household { order: 8; }
+}
+@media (max-width: 47.99rem) {
+  .greet .starters { margin-top: 0.6rem; }
+  .greet .starters a { min-height: 2.75rem; padding: 0.45rem 0.85rem; }
+  .greet .ledge.deck { row-gap: 0.25rem; }
+  .greet .ledge.deck > .locate label { min-height: 2.75rem; }
+  .page-home .case-foot { margin-top: 0.4rem; }
+  .page-home .map-right > .setup-line { margin-top: 0.4rem; }
+}
+.page-home .board { display: block; }
+.page-home .household > .hh { min-height: 0; }
+/* Ideas: the kind word in its kind's grounded ink, beside the icon that already wears it. */
+.idea-index .row .fact.kind-word { color: var(--k, var(--pewter)); }
+.idea-form > .field, .idea-form > fieldset, .idea-form .inner > .field, .idea-form .inner > fieldset { align-items: start; }
+.idea-form .field > label:not(.check) { padding-top: calc((2.75rem - 0.875rem * 1.3) / 2); }
+.idea-form > details, .idea-form > details > summary, .idea-form > .actions, .idea-form > .field.actions { border-top: 0 !important; border-bottom: 0 !important; box-shadow: none !important; }
+.idea-form > details { margin-top: 0.5rem; }
+.in-plans .head-inset, .in-plans .head-inset .crt, .in-plans .head-inset .crt-tube { box-shadow: none !important; }
+.in-plans .head-inset .crt { border-radius: 8px; }
+.in-plans .head-inset .crt-tube { padding: 0.4rem 0.85rem 0.45rem; }
+.in-plans .head-inset .hs-small { font-size: 1.05rem; line-height: 1.15; }
+.in-plans .head-inset .hs-line { font-size: 1.25rem; line-height: 1.15; margin: 0.05rem 0; }
+@media (min-width: 1061px) { .in-plans .board > .head-inset { margin-top: 0.15rem; } }
+.in-plans .head-inset .crt-tube > p, .in-plans .head-inset p { margin: 0 !important; line-height: 1.1 !important; }
+.in-plans .head-inset .crt-tube { display: flex; flex-direction: column; gap: 0.15rem; }
+.rows > .row.part.look .slot .lamp, .row.part.look > a > .slot { display: none; }
+main:has(> .status-foot) { padding-bottom: 1rem; }
+.page-home .scope figcaption, .dc .dw, .dc .dm { font-size: 0.875rem; }
+.greet .starters .key-dest { white-space: nowrap; }
+@media (max-width: 63.99rem) { .page-home .map .plans-cell::before { top: 0.2rem !important; } .page-home .map .plans-cell { padding-top: 1.1rem; } }
+@media (max-width: 47.99rem) { .page-home #where { margin: 0; } .greet .starters { margin-top: 0.35rem; } }
+@media (min-width: 64rem) { .page-home .household > .hh { padding-bottom: 0.4rem; } }
+.page-home .scope figcaption { text-wrap: balance; }
+body.page-home > .foot, .page-home .foot { margin-top: 1rem; }
+.idea-index .no, table.month .event small, .thread time, .bubble .meta span { font-size: 0.875rem; }
+.row.part.look .picon::after { display: none; }

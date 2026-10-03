@@ -1,0 +1,865 @@
+{
+ "round": "x14b",
+ "label": "14b",
+ "lines": {
+  "desk": {
+   "key": "desk",
+   "camp": "main",
+   "idea": "a docked terminal column: one real cased terminal beside the family's desk, Home's question typed at the foot of its glass",
+   "heat": "a",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a",
+   "carried": [
+    {
+     "id": "x14a-desk-cross",
+     "name": "Desk Terminal, Patched"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "cross",
+     "parent": "x14a-desk-cross",
+     "parentName": "Desk Terminal, Patched"
+    }
+   ],
+   "entrants": [
+    "x14b-desk-cross"
+   ],
+   "otherCamp": [
+    {
+     "key": "trued",
+     "id": "x14a-trued-cross",
+     "name": "Trued, Headlamp",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "manual",
+     "id": "x14a-manual-cross",
+     "name": "Lit Manual, Slotted",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "departures",
+     "id": "x14a-departures-cross",
+     "name": "Departures, Signalled",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "settled",
+     "id": "x14a-settled-cross",
+     "name": "Switchboard, Quoted",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "sill",
+     "id": "x14a-sill-cross",
+     "name": "Sill Line, Squared",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    },
+    {
+     "key": "pocket",
+     "id": "x14a-pocket-cross",
+     "name": "Pocket Diary, Lit",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    },
+    {
+     "key": "waypoint",
+     "id": "x14a-waypoint-cross",
+     "name": "Waypoint, Ruled",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    }
+   ]
+  },
+  "quote": {
+   "key": "quote",
+   "camp": "main",
+   "idea": "a count board: each section led by one big quote or figure, read at a glance",
+   "heat": "a",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a",
+   "carried": [
+    {
+     "id": "x14a-quote-cross",
+     "name": "Quote Board, Posted"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "cross",
+     "parent": "x14a-quote-cross",
+     "parentName": "Quote Board, Posted"
+    }
+   ],
+   "entrants": [
+    "x14b-quote-cross"
+   ],
+   "otherCamp": [
+    {
+     "key": "trued",
+     "id": "x14a-trued-cross",
+     "name": "Trued, Headlamp",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "manual",
+     "id": "x14a-manual-cross",
+     "name": "Lit Manual, Slotted",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "departures",
+     "id": "x14a-departures-cross",
+     "name": "Departures, Signalled",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "settled",
+     "id": "x14a-settled-cross",
+     "name": "Switchboard, Quoted",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "sill",
+     "id": "x14a-sill-cross",
+     "name": "Sill Line, Squared",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    },
+    {
+     "key": "pocket",
+     "id": "x14a-pocket-cross",
+     "name": "Pocket Diary, Lit",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    },
+    {
+     "key": "waypoint",
+     "id": "x14a-waypoint-cross",
+     "name": "Waypoint, Ruled",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    }
+   ]
+  },
+  "dessau": {
+   "key": "dessau",
+   "camp": "main",
+   "idea": "Bauhaus display type: a modernist poster's hierarchy and geometry around the green screens",
+   "heat": "a",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a",
+   "carried": [
+    {
+     "id": "x14a-dessau-cross",
+     "name": "Dessau, Wired Through"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "cross",
+     "parent": "x14a-dessau-cross",
+     "parentName": "Dessau, Wired Through"
+    }
+   ],
+   "entrants": [
+    "x14b-dessau-cross"
+   ],
+   "otherCamp": [
+    {
+     "key": "trued",
+     "id": "x14a-trued-cross",
+     "name": "Trued, Headlamp",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "manual",
+     "id": "x14a-manual-cross",
+     "name": "Lit Manual, Slotted",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "departures",
+     "id": "x14a-departures-cross",
+     "name": "Departures, Signalled",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "settled",
+     "id": "x14a-settled-cross",
+     "name": "Switchboard, Quoted",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "sill",
+     "id": "x14a-sill-cross",
+     "name": "Sill Line, Squared",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    },
+    {
+     "key": "pocket",
+     "id": "x14a-pocket-cross",
+     "name": "Pocket Diary, Lit",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    },
+    {
+     "key": "waypoint",
+     "id": "x14a-waypoint-cross",
+     "name": "Waypoint, Ruled",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    }
+   ]
+  },
+  "plate": {
+   "key": "plate",
+   "camp": "main",
+   "idea": "a long-persistence instrument: a cut matte plate over one lit screen",
+   "heat": "b",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b",
+   "carried": [
+    {
+     "id": "x14a-plate-cross",
+     "name": "Plate, Engraved"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "cross",
+     "parent": "x14a-plate-cross",
+     "parentName": "Plate, Engraved"
+    }
+   ],
+   "entrants": [
+    "x14b-plate-cross"
+   ],
+   "otherCamp": [
+    {
+     "key": "trued",
+     "id": "x14a-trued-cross",
+     "name": "Trued, Headlamp",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "manual",
+     "id": "x14a-manual-cross",
+     "name": "Lit Manual, Slotted",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "departures",
+     "id": "x14a-departures-cross",
+     "name": "Departures, Signalled",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "settled",
+     "id": "x14a-settled-cross",
+     "name": "Switchboard, Quoted",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "sill",
+     "id": "x14a-sill-cross",
+     "name": "Sill Line, Squared",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    },
+    {
+     "key": "pocket",
+     "id": "x14a-pocket-cross",
+     "name": "Pocket Diary, Lit",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    },
+    {
+     "key": "waypoint",
+     "id": "x14a-waypoint-cross",
+     "name": "Waypoint, Ruled",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    }
+   ]
+  },
+  "listing": {
+   "key": "listing",
+   "camp": "main",
+   "idea": "a programme listing: the family's evening set as a TV listings page, bands with a head column",
+   "heat": "b",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b",
+   "carried": [
+    {
+     "id": "x14a-listing-cross",
+     "name": "Listing, Lit Through"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "cross",
+     "parent": "x14a-listing-cross",
+     "parentName": "Listing, Lit Through"
+    }
+   ],
+   "entrants": [
+    "x14b-listing-cross"
+   ],
+   "otherCamp": [
+    {
+     "key": "trued",
+     "id": "x14a-trued-cross",
+     "name": "Trued, Headlamp",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "manual",
+     "id": "x14a-manual-cross",
+     "name": "Lit Manual, Slotted",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "departures",
+     "id": "x14a-departures-cross",
+     "name": "Departures, Signalled",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "settled",
+     "id": "x14a-settled-cross",
+     "name": "Switchboard, Quoted",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "sill",
+     "id": "x14a-sill-cross",
+     "name": "Sill Line, Squared",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    },
+    {
+     "key": "pocket",
+     "id": "x14a-pocket-cross",
+     "name": "Pocket Diary, Lit",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    },
+    {
+     "key": "waypoint",
+     "id": "x14a-waypoint-cross",
+     "name": "Waypoint, Ruled",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    }
+   ]
+  },
+  "folio": {
+   "key": "folio",
+   "camp": "main",
+   "idea": "a videotex service as a folio: numbered pages of one service, read like a teletext magazine",
+   "heat": "b",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b",
+   "carried": [
+    {
+     "id": "x14a-folio-cross",
+     "name": "Folio, Railed Contents"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "cross",
+     "parent": "x14a-folio-cross",
+     "parentName": "Folio, Railed Contents"
+    }
+   ],
+   "entrants": [
+    "x14b-folio-cross"
+   ],
+   "otherCamp": [
+    {
+     "key": "trued",
+     "id": "x14a-trued-cross",
+     "name": "Trued, Headlamp",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "manual",
+     "id": "x14a-manual-cross",
+     "name": "Lit Manual, Slotted",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "departures",
+     "id": "x14a-departures-cross",
+     "name": "Departures, Signalled",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "settled",
+     "id": "x14a-settled-cross",
+     "name": "Switchboard, Quoted",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "sill",
+     "id": "x14a-sill-cross",
+     "name": "Sill Line, Squared",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    },
+    {
+     "key": "pocket",
+     "id": "x14a-pocket-cross",
+     "name": "Pocket Diary, Lit",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    },
+    {
+     "key": "waypoint",
+     "id": "x14a-waypoint-cross",
+     "name": "Waypoint, Ruled",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    }
+   ]
+  },
+  "trued": {
+   "key": "trued",
+   "camp": "tour",
+   "idea": "the track series: the family's week as a signal box's lit track diagram; the greeting its own lit board with the ways to start on a steel branch, Next up as the line's first stop",
+   "heat": "a",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a",
+   "carried": [
+    {
+     "id": "x14a-trued-cross",
+     "name": "Trued, Headlamp"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "cross",
+     "parent": "x14a-trued-cross",
+     "parentName": "Trued, Headlamp"
+    }
+   ],
+   "entrants": [
+    "x14b-trued-cross"
+   ],
+   "otherCamp": [
+    {
+     "key": "desk",
+     "id": "x14a-desk-cross",
+     "name": "Desk Terminal, Patched",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "quote",
+     "id": "x14a-quote-cross",
+     "name": "Quote Board, Posted",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "dessau",
+     "id": "x14a-dessau-cross",
+     "name": "Dessau, Wired Through",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "plate",
+     "id": "x14a-plate-cross",
+     "name": "Plate, Engraved",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    },
+    {
+     "key": "listing",
+     "id": "x14a-listing-cross",
+     "name": "Listing, Lit Through",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    },
+    {
+     "key": "folio",
+     "id": "x14a-folio-cross",
+     "name": "Folio, Railed Contents",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    }
+   ]
+  },
+  "manual": {
+   "key": "manual",
+   "camp": "tour",
+   "idea": "the family's operator manual: every list in time hangs from a rail with one lit NOW, every section led by a figure drawn from its own data",
+   "heat": "a",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a",
+   "carried": [
+    {
+     "id": "x14a-manual-cross",
+     "name": "Lit Manual, Slotted"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "cross",
+     "parent": "x14a-manual-cross",
+     "parentName": "Lit Manual, Slotted"
+    }
+   ],
+   "entrants": [
+    "x14b-manual-cross"
+   ],
+   "otherCamp": [
+    {
+     "key": "desk",
+     "id": "x14a-desk-cross",
+     "name": "Desk Terminal, Patched",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "quote",
+     "id": "x14a-quote-cross",
+     "name": "Quote Board, Posted",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "dessau",
+     "id": "x14a-dessau-cross",
+     "name": "Dessau, Wired Through",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "plate",
+     "id": "x14a-plate-cross",
+     "name": "Plate, Engraved",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    },
+    {
+     "key": "listing",
+     "id": "x14a-listing-cross",
+     "name": "Listing, Lit Through",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    },
+    {
+     "key": "folio",
+     "id": "x14a-folio-cross",
+     "name": "Folio, Railed Contents",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    }
+   ]
+  },
+  "departures": {
+   "key": "departures",
+   "camp": "tour",
+   "idea": "a station at night: Vera's line down the left with the box as its first stop, a dot-matrix departures board beside it",
+   "heat": "a",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a",
+   "carried": [
+    {
+     "id": "x14a-departures-cross",
+     "name": "Departures, Signalled"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "cross",
+     "parent": "x14a-departures-cross",
+     "parentName": "Departures, Signalled"
+    }
+   ],
+   "entrants": [
+    "x14b-departures-cross"
+   ],
+   "otherCamp": [
+    {
+     "key": "desk",
+     "id": "x14a-desk-cross",
+     "name": "Desk Terminal, Patched",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "quote",
+     "id": "x14a-quote-cross",
+     "name": "Quote Board, Posted",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "dessau",
+     "id": "x14a-dessau-cross",
+     "name": "Dessau, Wired Through",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "plate",
+     "id": "x14a-plate-cross",
+     "name": "Plate, Engraved",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    },
+    {
+     "key": "listing",
+     "id": "x14a-listing-cross",
+     "name": "Listing, Lit Through",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    },
+    {
+     "key": "folio",
+     "id": "x14a-folio-cross",
+     "name": "Folio, Railed Contents",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    }
+   ]
+  },
+  "settled": {
+   "key": "settled",
+   "camp": "tour",
+   "idea": "the videotex sommaire settled: Home as a two-tier map of the service, every inner page on one rack with its own sized tube",
+   "heat": "a",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a",
+   "carried": [
+    {
+     "id": "x14a-settled-cross",
+     "name": "Switchboard, Quoted"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "cross",
+     "parent": "x14a-settled-cross",
+     "parentName": "Switchboard, Quoted"
+    }
+   ],
+   "entrants": [
+    "x14b-settled-cross"
+   ],
+   "otherCamp": [
+    {
+     "key": "desk",
+     "id": "x14a-desk-cross",
+     "name": "Desk Terminal, Patched",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "quote",
+     "id": "x14a-quote-cross",
+     "name": "Quote Board, Posted",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "dessau",
+     "id": "x14a-dessau-cross",
+     "name": "Dessau, Wired Through",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "plate",
+     "id": "x14a-plate-cross",
+     "name": "Plate, Engraved",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    },
+    {
+     "key": "listing",
+     "id": "x14a-listing-cross",
+     "name": "Listing, Lit Through",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    },
+    {
+     "key": "folio",
+     "id": "x14a-folio-cross",
+     "name": "Folio, Railed Contents",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    }
+   ]
+  },
+  "sill": {
+   "key": "sill",
+   "camp": "tour",
+   "idea": "the track series' bolder Home: the question as the board's headline, the tube's lit wire dropping onto the Coming up rail, To do's stops the ticks you press",
+   "heat": "b",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b",
+   "carried": [
+    {
+     "id": "x14a-sill-cross",
+     "name": "Sill Line, Squared"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "cross",
+     "parent": "x14a-sill-cross",
+     "parentName": "Sill Line, Squared"
+    }
+   ],
+   "entrants": [
+    "x14b-sill-cross"
+   ],
+   "otherCamp": [
+    {
+     "key": "desk",
+     "id": "x14a-desk-cross",
+     "name": "Desk Terminal, Patched",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "quote",
+     "id": "x14a-quote-cross",
+     "name": "Quote Board, Posted",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "dessau",
+     "id": "x14a-dessau-cross",
+     "name": "Dessau, Wired Through",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "plate",
+     "id": "x14a-plate-cross",
+     "name": "Plate, Engraved",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    },
+    {
+     "key": "listing",
+     "id": "x14a-listing-cross",
+     "name": "Listing, Lit Through",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    },
+    {
+     "key": "folio",
+     "id": "x14a-folio-cross",
+     "name": "Folio, Railed Contents",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    }
+   ]
+  },
+  "pocket": {
+   "key": "pocket",
+   "camp": "tour",
+   "idea": "the family's pocket diary: one steel line of time from Now to Later, every date set as a diary sets a day",
+   "heat": "b",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b",
+   "carried": [
+    {
+     "id": "x14a-pocket-cross",
+     "name": "Pocket Diary, Lit"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "cross",
+     "parent": "x14a-pocket-cross",
+     "parentName": "Pocket Diary, Lit"
+    }
+   ],
+   "entrants": [
+    "x14b-pocket-cross"
+   ],
+   "otherCamp": [
+    {
+     "key": "desk",
+     "id": "x14a-desk-cross",
+     "name": "Desk Terminal, Patched",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "quote",
+     "id": "x14a-quote-cross",
+     "name": "Quote Board, Posted",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "dessau",
+     "id": "x14a-dessau-cross",
+     "name": "Dessau, Wired Through",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "plate",
+     "id": "x14a-plate-cross",
+     "name": "Plate, Engraved",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    },
+    {
+     "key": "listing",
+     "id": "x14a-listing-cross",
+     "name": "Listing, Lit Through",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    },
+    {
+     "key": "folio",
+     "id": "x14a-folio-cross",
+     "name": "Folio, Railed Contents",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    }
+   ]
+  },
+  "waypoint": {
+   "key": "waypoint",
+   "camp": "tour",
+   "idea": "a 1969 flight console: a readout strip, the weeks as a flight plan whose waypoint rings carry the day numerals that lead the rows",
+   "heat": "b",
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b",
+   "carried": [
+    {
+     "id": "x14a-waypoint-cross",
+     "name": "Waypoint, Ruled"
+    }
+   ],
+   "briefs": [
+    {
+     "slot": "cross",
+     "parent": "x14a-waypoint-cross",
+     "parentName": "Waypoint, Ruled"
+    }
+   ],
+   "entrants": [
+    "x14b-waypoint-cross"
+   ],
+   "otherCamp": [
+    {
+     "key": "desk",
+     "id": "x14a-desk-cross",
+     "name": "Desk Terminal, Patched",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "quote",
+     "id": "x14a-quote-cross",
+     "name": "Quote Board, Posted",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "dessau",
+     "id": "x14a-dessau-cross",
+     "name": "Dessau, Wired Through",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a"
+    },
+    {
+     "key": "plate",
+     "id": "x14a-plate-cross",
+     "name": "Plate, Engraved",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    },
+    {
+     "key": "listing",
+     "id": "x14a-listing-cross",
+     "name": "Listing, Lit Through",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    },
+    {
+     "key": "folio",
+     "id": "x14a-folio-cross",
+     "name": "Folio, Railed Contents",
+     "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b"
+    }
+   ]
+  }
+ },
+ "anchors": {
+  "00-current": "today's page",
+  "r13-idea-1": "Desk Terminal, Joined (the main tournament's leader)",
+  "t3-track-refine2": "Trued, Relit (the side tour's winner)"
+ },
+ "heats": {
+  "a": {
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-a",
+   "lines": [
+    "desk",
+    "quote",
+    "dessau",
+    "trued",
+    "manual",
+    "departures",
+    "settled"
+   ]
+  },
+  "b": {
+   "dir": "/tmp/claude-0/-home-user-FamilyDB/62374e35-c7e3-5c25-a94d-0502bde8e9d6/scratchpad/harness/cross/x14b-b",
+   "lines": [
+    "plate",
+    "listing",
+    "folio",
+    "sill",
+    "pocket",
+    "waypoint"
+   ]
+  }
+ }
+}

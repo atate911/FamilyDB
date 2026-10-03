@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, presence %}
+{% block title %}Settings · {{ site_title }}{% endblock %}
+{% block body_class %}page-settings{% endblock %}
+{# Desk Terminal, Joined: nothing here is live, and the rows below already list every part with
+   how it stands, so the terminal folds to its one line under the head and the desk takes the width.
+   The bank of pages is on each page of settings, as its way round. #}
+{% block content %}
+  {{ page_head('Settings', 'Each part, how it stands now, and the way in to change it.', 'settings') }}
+  {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+  {# One card to a page of settings, each saying how things stand in a line or two, so this is
+     the place to look first as well as the way in. Something missing is marked, in words. #}
+  <section class="band settings-band" aria-label="Each part of the settings">
+  <p class="sig-key" aria-hidden="true"><span><span class="sig on"></span>On</span><span><span class="sig wait"></span>Waiting</span><span><span class="sig off"></span>Off or not set</span><span><span class="sig look"></span>Needs a look</span></p>
+  <ul class="rows section-cards">
+    {% for entry in sections %}
+      {% set one = entry.section %}
+      <li class="row-wrap">
+        <a class="row section-card{% if entry.look %} look{% endif %}" href="{{ url_for('settings.section', name=one.name) }}">
+          {% if one.icon == 'presence' %}{{ presence('section-icon') }}
+          {%- else %}<span class="section-icon" aria-hidden="true">{{ icon(one.icon) }}</span>{% endif %}
+          <strong class="t">{{ one.title }}</strong>
+          <span class="lead" aria-hidden="true"></span>
+          <span class="f">
+            {%- if entry.look %}<span class="look-words">Needs a look</span>{% endif -%}
+            {%- for line in entry.lines %}<span class="section-state">{{ line }}</span>{% endfor -%}
+          </span>
+          {{ icon('right', cls='go') }}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+  </section>
+  <p class="band-note">
+    Setting up for the first time, or starting again? <a href="{{ url_for('setup.overview') }}">Setup</a>
+    goes through what matters most, one step at a time.
+  </p>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, presence, rule, pin %}
+{% block title %}Settings · {{ site_title }}{% endblock %}
+{% block body_class %}page-settings{% endblock %}
+{% block content %}
+  {{ page_head('Settings', 'Each part, how it stands now, and the way in to change it.', 'settings') }}
+  {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+  {# Plate, Engraved: no tiles. Each part is an engraved row (its line icon in the icon column,
+     its name, a leader, how it stands, the arrow) under a rule head for what it belongs to:
+     the family, the machine, signing in. Something missing is a half-amber pinhole and amber
+     words, never a pill. #}
+  {% set GROUPS = [('The family', ['general', 'personality', 'messages']),
+                   ('The machine', ['model', 'spending', 'lookups', 'connections']),
+                   ('Sign-in', ['security', 'history'])] %}
+  {% set by = {} %}
+  {% for entry in sections %}{% set _ = by.update({entry.section.name: entry}) %}{% endfor %}
+  {% set placed = [] %}
+  {% for _, names in GROUPS %}{% for n in names %}{% set _ = placed.append(n) %}{% endfor %}{% endfor %}
+  {% set rest = sections | rejectattr('section.name', 'in', placed) | list %}
+  <div class="setting-groups">
+  {% for title, names in GROUPS %}
+    {% set rows = [] %}
+    {% for n in names if n in by %}{% set _ = rows.append(by[n]) %}{% endfor %}
+    {% if title == 'Sign-in' %}{% set rows = rows + rest %}{% endif %}
+    {% if rows %}
+    <section class="setting-group" aria-labelledby="sg-{{ loop.index }}">
+      {% set looks = rows | selectattr('look') | list | length %}
+      {{ rule(title, 'sg-' ~ loop.index, (looks ~ ' to look at') if looks else none) }}
+      <ul class="rows plain part-rows">
+        {% for entry in rows %}
+          {% set one = entry.section %}
+          <li class="row part-row{{ ' look' if entry.look }}">
+            <span class="d">{{ icon('chat' if one.icon == 'presence' else one.icon) }}</span>
+            <span class="t"><a href="{{ url_for('settings.section', name=one.name) }}">{{ one.title }}</a></span>
+            <span class="lead" aria-hidden="true"></span>
+            <span class="state">
+              {%- if entry.look %}<span class="look-say">{{ pin('part') }}Needs a look</span>{% endif -%}
+              {#- A pinhole to each part, as on Status: lit while it works, an unlit cut while it is off. -#}
+              {%- set said = (entry.lines | join(' ')) | lower -%}
+              {%- set off = said.startswith('off') or said.startswith('no ') or said.startswith('nothing') or 'not set up' in said or 'not connected' in said -%}
+              {%- for line in entry.lines %}<span class="section-state">{% if loop.first and not entry.look %}{{ pin('unlit' if off else 'on') }}{% endif %}{{ line }}</span>{% endfor -%}
+            </span>
+            <span class="f go">{{ icon('right') }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+  {% endfor %}
+  </div>
+  <p class="muted small settings-foot">
+    Setting up for the first time, or starting again? <a href="{{ url_for('setup.overview') }}">Setup</a>
+    goes through what matters most, one step at a time.
+  </p>
+{% endblock %}

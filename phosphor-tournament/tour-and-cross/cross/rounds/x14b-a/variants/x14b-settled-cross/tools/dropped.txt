@@ -1,0 +1,169 @@
+.plate-fig
+.fig-legend
+.fig-unit
+.fig-note
+.fig-note.warn
+a.fig-note
+a.fig-note:hover
+.cell-note
+.cell-link
+.cell-link .icon
+.cell-key
+.cell-key .icon
+.service-line
+.svc-head
+.svc-head .slot
+.svc-head .what
+.svc-head .dots
+.svc-head .count
+.svc-head .unit
+.svc-all
+.svc-all:hover
+.svc-next
+.svc-word
+.svc-one
+.svc-one:hover
+.svc-then
+.svc-then a
+.svc-then a:hover
+.hh-key
+.hh-key .lamp-key
+.glass-legend
+.speaker-name
+.power
+.glass-words
+.glass-said
+.prompt-line
+.prompt-line:focus-within
+.prompt-mark
+.crt .prompt-line textarea
+.crt .prompt-line textarea::placeholder
+.page-readout .crt-tube
+.page-readout .crt-tube > *
+.readout-title
+.readout-when
+.readout-lines
+.readout-lines li
+.readout-lines span
+.readout-foot
+.readout-foot .bright
+.week-bars li
+.week-bars .earlier .gone
+.weekend-line
+.week-bars .is-now
+.week-bars .is-past
+.register-head
+.register-head .count
+.month-bar
+.month-bar h2
+.ask-screen
+.ask-screen::after
+.ask-screen .crt-tube
+.ask-screen .prompt-line
+.ask-screen .prompt-line:focus-within
+.ask-screen:focus-within .crt-tube
+.plate-code.own
+.plate-code.own::before
+.cal-cell .cell-art
+.person-head
+.person-head h2
+.person-tags
+.person-cell.off
+.plate-title
+.plate-icon
+.plate-icon .icon
+.plate-icon .glyph.presence
+.plate-fig
+.plate-fig .fig
+.plate-fig .fig-unit
+.plate-fig .fig-sep
+.plate-fig .fig-note
+.plate-fig a.fig-note
+.tally-screen .hs-head
+.compose-row
+.compose-row > .ask-screen
+.compose-row > .send
+.ask-screen .crt-tube
+.ask-screen textarea
+.month-bar
+.service-line
+.plate > .plate-title
+.plate-fig .fig
+.map .service-line
+.terminal-screen .glass-words
+.terminal-screen .glass-said
+.terminal-screen .glass-legend
+.terminal-screen .glass-legend .day
+.terminal-screen .crt-tube:has(.glass-said) .glass-legend
+.crt .prompt-line textarea
+.svc-all
+.svc-next
+.compose-row > .send
+.service-line
+.svc-head
+.svc-all
+.svc-next
+.hh-foot
+.hh-foot .lamp-key
+.plate > .plate-title
+.plate > .plate-fig
+.service-line
+.svc-all
+.hh-foot
+.svc-head .dots
+.speaker-name
+.speaker-day
+.crt .ask-question .q-mid
+.crt .ask-question .q-dim
+.apos
+.crt-tube .prompt-line
+.crt .prompt-line textarea
+.terminal-screen .prompt-line
+.prompt-mark
+.map .cell > .cell-head.split > .late-link
+.late-link
+.cell-head.split > .late-link
+.late-link:hover
+.speaker-day
+.cell-close a
+.presence-tube .glyph.presence
+.presence-tube .is-working .tube-lamp
+.map > .setup-strip
+.setup-strip
+.ss-head
+.ss-head .lamp.look
+.setup-strip > .dots
+.ss-next
+.ss-one
+.ss-one, .ss-then a
+.ss-then a
+.ss-all
+.greet .ask-question .q-lead
+.well .prompt-mark
+.plans-foot .month-word
+.cell-close
+.cell-close .cc-word
+.cell-close a
+.cell-close .warn
+.page-chat .compose-row
+.page-chat .compose-row .ask-question
+.page-chat .compose-row > .sr
+.page-chat .compose-row .send
+.map > .setup-strip
+.ss-head
+.ss-then
+.ss-next
+.ss-all
+.setup-strip > .dots
+.greet .ask-question .q-lead
+.cell-close .cc-sep
+table.month td.today .now-word
+.page-chat .compose-row
+.page-chat .send-pair
+.page-chat .send-pair .send
+.page-chat .send-pair .mic-slot
+.page-chat .send-pair .mic-slot > *
+.page-chat .send-pair .mic-slot:empty
+.page-chat .compose-row
+.well .prompt-mark
+table.month td.today time .now-word

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, chat_line, waiting_line %}
+{% block title %}{{ assistant if has_persona else 'Chat' }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-chat{% endblock %}
+{# While an answer is on its way the browser fetches the page again by itself, landing back on
+   the newest line: a meta refresh, which every browser does, scripts or not. It is only set when
+   something really is being thought about, so the page goes quiet as soon as the reply is in the
+   log, and never on a page holding words somebody typed, which it would take with it. While a
+   turn runs the box is closed, so there is nothing to lose. Waiting on the retry job the box
+   stays open, so with scripts on ask.js does the looking again instead, and never while somebody
+   is writing. #}
+{% block head %}
+  {% if refresh and locked %}
+    <meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" />
+  {% elif refresh %}
+    <noscript><meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" /></noscript>
+  {% endif %}
+{% endblock %}
+{% block content %}
+  {# Hers: her name at the top, as on the tab that leads here, beside her screen, and the chat's
+     quote: how many times she answered on the day of the newest line, lit as the page's one live
+     figure, with when she last spoke stacked beside it. #}
+  {% set hers = lines | selectattr('from_bot') | list %}
+  {% set last_day = (hers[-1].when.split(',')[0]) if hers else none %}
+  {% set qn = namespace(n=0) %}
+  {% for line in hers %}{% if line.when.split(',')[0] == last_day %}{% set qn.n = qn.n + 1 %}{% endif %}{% endfor %}
+  {% set q_fig = qn.n if hers else none %}
+  {% set q_unit = ('replies on ' ~ last_day) if hers else none %}
+  {% set q_change = ('last ' ~ hers[-1].when.split(', ')[-1]) if hers else none %}
+  {% if reading %}
+    {{ page_head(reading ~ ' and ' ~ (assistant if has_persona else 'the bot'), 'Her own conversation, for you to read. Only she writes in it.', 'presence' if has_persona else 'chat', [(assistant if has_persona else 'Chat', url_for('chat.show'))]) }}
+  {% elif private %}
+    {{ page_head(assistant if has_persona else 'Chat', 'Just you and ' ~ assistant ~ '. Tell her what you wish for, or ask about the plans.', 'presence' if has_persona else 'chat', figure=q_fig, unit=q_unit, change=q_change, change_cls='live', change_href=('#' ~ latest) if hers else none, live=true) }}
+  {% else %}
+    {{ page_head(assistant if has_persona else 'Chat', 'Weekends, ideas, to-dos and the calendar: anything you would ask in Telegram works here too.', 'presence' if has_persona else 'chat', figure=q_fig, unit=q_unit, change=q_change, change_cls='live', change_href=('#' ~ latest) if hers else none, live=true) }}
+  {% endif %}
+
+  {% if lines %}
+    <ol class="thread">
+      {% for line in lines %}
+        {{ chat_line(line, latest if loop.last) }}
+      {% endfor %}
+      {% if pending %}{{ waiting_line(assistant, state, pending) }}{% endif %}
+    </ol>
+  {% else %}
+    <p class="muted empty">{{ icon('chat') }}<span>Nothing said here yet. Ask {{ assistant }} what to do this weekend, save an idea, or set a reminder.</span></p>
+  {% endif %}
+
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+  {% if not reading %}{% include "_ask.html" %}{% endif %}
+
+  {% if kids and not reading %}
+    <nav class="panel" aria-label="The kids' conversations">
+      <h2>{{ icon('user') }}The kids' conversations</h2>
+      <p class="muted">Each kid talks to {{ assistant }} on her own. You can read along.</p>
+      <ul class="plain">
+        {% for kid in kids %}<li><a href="{{ url_for('chat.show', with=kid.id, _anchor=latest) }}">{{ kid.name }}</a></li>{% endfor %}
+      </ul>
+    </nav>
+  {% endif %}
+{% endblock %}
