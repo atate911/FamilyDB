@@ -64,6 +64,20 @@ class CalendarEvent:
         }
 
 
+@dataclass(frozen=True)
+class CalendarChanges:
+    """What Google says changed on the calendar since a sync token, and the token to ask from next.
+
+    `events` maps an event's id to the event as it now stands, or to None when it is gone. With
+    `full` set the token was missing or too old, so `events` is every event on the calendar and an
+    id not in it is gone too.
+    """
+
+    events: dict[str, CalendarEvent | None]
+    token: str
+    full: bool
+
+
 class CalendarAPI(Protocol):
     """What the tools need from a calendar. `GoogleCalendar` implements it; tests fake it."""
 
@@ -74,6 +88,11 @@ class CalendarAPI(Protocol):
         ...
 
     def get_event(self, event_id: str) -> CalendarEvent | None: ...
+
+    def changes(self, sync_token: str | None) -> CalendarChanges:
+        """Everything that changed since `sync_token`, in one request however many events there
+        are; with no token, or one Google no longer honours, the whole calendar."""
+        ...
 
     def insert_event(
         self,
@@ -413,6 +432,32 @@ class GoogleCalendar:
             if self._writes == writes:
                 self._read[key] = (asked, writes, events)
         return list(events)
+
+    def changes(self, sync_token: str | None) -> CalendarChanges:
+        events: dict[str, CalendarEvent | None] = {}
+        page_token: str | None = None
+        while True:
+            response = self._execute(
+                self._events().list(
+                    calendarId=self.calendar_id,
+                    syncToken=sync_token,
+                    pageToken=page_token,
+                    maxResults=2500,
+                    fields="nextPageToken,nextSyncToken,items("
+                    "id,status,summary,start,end,location,description,htmlLink,transparency)",
+                ),
+                ignore=(410,),  # Google has forgotten that token: start again from nothing
+            )
+            if response is None:
+                if sync_token is None:
+                    raise ToolError("Google Calendar error 410: no sync possible")
+                return self.changes(None)
+            for item in response.get("items", []):
+                gone = item.get("status") == "cancelled"
+                events[item["id"]] = None if gone else parse_event(item, self.tz)
+            page_token = response.get("nextPageToken")
+            if not page_token:
+                return CalendarChanges(events, response["nextSyncToken"], full=sync_token is None)
 
     def _wrote(self) -> None:
         with self._read_lock:

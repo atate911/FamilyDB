@@ -3,18 +3,19 @@
 People move and cancel events in Google Calendar itself, on their phones, without telling the
 bot. So a plan is checked against its event before anything acts on it — moving it, asking how
 it went, listing it for the model — and brought up to date: a moved event moves the plan, and a
-deleted one cancels it and puts its idea back on the list.
+deleted one cancels it and puts its idea back on the list. One request to Google covers every
+plan: it says what changed since the last time (`sync_plans`).
 """
 
 from __future__ import annotations
 
 import sqlite3
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 from familydb.dates import iso_date, iso_datetime
 from familydb.integrations.google_calendar import CalendarAPI, CalendarEvent
-from familydb.store import ideas, plans
+from familydb.store import calendar_sync_state, ideas, plans
 from familydb.store.db import transaction
 from familydb.store.plans import Plan
 
@@ -44,13 +45,10 @@ def event_changes(event: CalendarEvent) -> dict[str, Any]:
     }
 
 
-def refresh_plan(
-    conn: sqlite3.Connection, calendar: CalendarAPI, plan: Plan, calendar_id: str | None, now: str
+def apply_event(
+    conn: sqlite3.Connection, plan: Plan, event: CalendarEvent | None, now: str
 ) -> Plan:
-    """The plan as its event now stands, stored if anything moved. One call to Google."""
-    if not plan.google_event_id or plan.calendar_id != calendar_id:
-        return plan
-    event = calendar.get_event(plan.google_event_id)
+    """The plan as its event now stands (None: the event is gone), stored if anything moved."""
     changes = event_changes(event) if event is not None else {"status": "cancelled"}
     if all(getattr(plan, key) == value for key, value in changes.items()):
         return plan
@@ -63,31 +61,38 @@ def refresh_plan(
     return updated or plan
 
 
-def sync_plans(
-    conn: sqlite3.Connection,
-    calendar: CalendarAPI,
-    calendar_id: str | None,
-    now: str,
-    *,
-    first: date | None = None,
-    last: date | None = None,
-) -> None:
-    """Refresh every live plan on this calendar, or only those starting from `first` to `last`.
+def refresh_plan(
+    conn: sqlite3.Connection, calendar: CalendarAPI, plan: Plan, calendar_id: str | None, now: str
+) -> Plan:
+    """The plan as its event now stands, stored if anything moved. One call to Google."""
+    if not plan.google_event_id or plan.calendar_id != calendar_id:
+        return plan
+    return apply_event(conn, plan, calendar.get_event(plan.google_event_id), now)
 
-    One call to Google per plan, so a caller that only cares about some days says which: the
-    model reading one weekend should not wait on every plan the family has made.
+
+def sync_plans(
+    conn: sqlite3.Connection, calendar: CalendarAPI, calendar_id: str | None, now: str
+) -> None:
+    """Bring every live plan on this calendar in line with Google, in one request.
+
+    Google is asked for what changed since the last time (`calendar_sync_state` keeps its token),
+    which is nothing at all most of the time. The first time, or after Google has forgotten the
+    token, it is asked for the whole calendar once. The token is kept only after the plans are
+    updated, so a failure in between means the same changes are read again, which does no harm.
     """
-    sql = (
+    if calendar_id is None:
+        return
+    changed = calendar.changes(calendar_sync_state.get(conn, calendar_id))
+    live = conn.execute(
         "SELECT * FROM plans WHERE calendar_id = ? AND google_event_id IS NOT NULL "
-        "AND status != 'cancelled' AND followed_up_at IS NULL"
-    )
-    params: list[Any] = [calendar_id]
-    if first is not None:
-        sql += " AND start >= ?"
-        params.append(first.isoformat())
-    if last is not None:
-        # A date sorts before that day's timed plans, so the bound is the day after.
-        sql += " AND start < ?"
-        params.append((last + timedelta(days=1)).isoformat())
-    for row in conn.execute(sql, params).fetchall():
-        refresh_plan(conn, calendar, Plan.from_row(row), calendar_id, now)
+        "AND status != 'cancelled' AND followed_up_at IS NULL",
+        (calendar_id,),
+    ).fetchall()
+    for row in live:
+        plan = Plan.from_row(row)
+        if plan.google_event_id in changed.events:
+            apply_event(conn, plan, changed.events[plan.google_event_id], now)
+        elif changed.full:
+            apply_event(conn, plan, None, now)  # the whole calendar was read; it is not there
+    with transaction(conn):
+        calendar_sync_state.save(conn, calendar_id, changed.token, now=now)

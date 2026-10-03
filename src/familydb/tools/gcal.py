@@ -288,9 +288,7 @@ def get_calendar(ctx: ToolContext, args: GetCalendarInput) -> dict[str, Any]:
     if (end - start).days > MAX_WINDOW_DAYS:
         raise ToolError(f"ask for at most {MAX_WINDOW_DAYS} days at a time")
     days = calendar_days(calendar, start, end, ctx.clock.tz)
-    sync_plans(
-        ctx.conn, calendar, ctx.settings.google_calendar_id, ctx.now_iso(), first=start, last=end
-    )
+    sync_plans(ctx.conn, calendar, ctx.settings.google_calendar_id, ctx.now_iso())
     owned = {
         r["google_event_id"]: r["id"]
         for r in ctx.conn.execute(
