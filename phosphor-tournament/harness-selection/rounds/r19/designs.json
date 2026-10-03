@@ -1,0 +1,190 @@
+[
+ {
+  "id": "r19-mut-1",
+  "name": "Desk Terminal, Docked Track",
+  "tagline": "Vera Card with Coming up and the Contents plate docked under the question and the tube, a big phone Send, one-row Ideas filters, and a lit track down the To do rows.",
+  "concept": "Three rolled changes on r18-mut-1 and nothing else. Home's second row now holds Coming up under Vera's card beside the Contents plate and status line under the tube, on the same two columns, so the left column no longer ends in a void. On a phone Send is a full key with its word and the composer is taller. Ideas' filter banks are one compact row each. On a desk, row text is a step larger and a fine lit rail with a branch to each tick runs down the To do rows, with the amber 'was due' kept. Colour is unchanged: the lit track is the parent's sage, #6dff9c stays on the live things.",
+  "companions": "Unchanged from the parent. Sage #86d9a6 (the everyday lit colour) lights the new To do track, so the signature #6dff9c is not spread further. Amber stays on the late words and rings, and steel-cyan on links and latched keys.",
+  "decisions": [
+   "GLASS: I read 'beside or under the tube' as a second row on the Vera row's own 1.22fr / 1fr columns. Coming up sits under her card and the Contents plate plus status line sit under the tube, so the gutters line up. The Contents plate is a second .terminal inside the row, so it keeps its case. The empty base aside is hidden with display:none.",
+   "GLASS knock-on: To do (left) and Finish setting up (right) now share the third row on the same measure, with Lately and the kids below. The page order, and so the band numbers and the plate, is now Coming up, My wishes, To do, Finish setting up, Lately, Kids. Setup used to be first, so a fresh install loses some prominence.",
+   "GLASS knock-on: the desk is no longer a narrow column, so To do's title column was shrunk to fit (who 3.5rem, due 11.5rem), setup steps may wrap, and the Ideas drive and for columns were narrowed so the larger row text does not clip titles.",
+   "CONTROLS (phone, 40rem and under): Send is a 3.5rem key with its word and a 1.4rem icon and fills the row beside a 3.5rem mic. The composer is 7.25rem tall with a 17px face, and the FROM select takes its own row. The pinned chat composer gets the same larger Send with a taller box (4.5rem), a nowrap select, and more room reserved under the thread.",
+   "CONTROLS (Ideas): each bank (Kind, For, Status) is one row of keys. On a phone the row slides sideways under a fade mask with a 4px pad so the focus ring is not clipped. On a desk the keys flow compactly, so Kind is 4 rows instead of 6, rather than a single clipped line.",
+   "LIST (desktop, 64rem and up): row titles go from 17px to 19px and facts from 15px to 16px. The kind tag stays at 15px. The amber 'was due N days ago' is untouched.",
+   "LIST: the track is a 3px rail at the left of the To do rows with a soft 20px halo and a short branch into each tick. It starts at the first tick and ends at the last, and is drawn as row backgrounds so the hover rule cannot erase it. It uses the lit sage, not amber: in the demo three of four rows are late, so an amber track would have hidden the 'lit' idea. Under prefers-contrast: more the track turns brand green."
+  ],
+  "floorsFailed": 0,
+  "measures": "The signature floors pass. ink_on_bg is 12.61 and brand_on_bg is 14.89, the same as the parent. Home (full render): bright green is 4.05 permille, green share of colour 54.1%, hue entropy 0.637. Ideas: bright green 8.1 permille, green share 34.1%, hue entropy 0.577. The kind and section colour distances are unchanged (kinds 13.6 / 5.5 / 7.4, sections 13.3 / 5.4 / 5.3 for typical / deuteranopia / protanopia). 0 hard failures, 0 targets under 44px on any page including the phone, no sideways scroll, smallest text 12px. The greeting's corner pixels are untouched. The one WARN is the words-changed measure (up to 38% of Plans' words differ), likely caused by the larger row text and reordered bands, since no copy was reworded.",
+  "strengths": [
+   "Home's first two screens are full: the card and tube, then Coming up beside the Contents plate. The void under the plate is gone.",
+   "The phone Send is unmistakable, a full-width green key with its word beside a 56px mic, and the composer is roughly twice as tall. Both show on the use card.",
+   "The Ideas desk filters shrink from 6 rows of Kind keys to 4 and no longer scroll, with 0 targets under 44px.",
+   "Larger row text reads better on every list. The lit track is a visible spine in the To do rows on Home and the To do page, and the amber late rings sit on it.",
+   "Each change is self-contained: the CSS lives in r19.css with its own classes, and the only markup changes are in the home template (the dock row) and a `tracked` class on two lists."
+  ],
+  "weaknesses": [
+   "The dock row is not equal height. The Contents plate is about 50px taller than Coming up, which leaves a gap under the fortnight before the To do row. I did not stretch it, in line with lessons principle 19.",
+   "Finish setting up moved from first on the page to the right of To do, in row 3. A fresh install loses some prominence. The amber ring in the Contents plate partly compensates.",
+   "On a phone the Ideas banks are scrolled rows. A latched key past the edge is hidden, because there is no script to scroll it into view and `order` would break Tab order. The fade only hints that there is more.",
+   "On a desk the Ideas keys are compact flowing rows, not literally one row, because 11 kinds do not fit the 26rem plate. Kind still takes 4 rows.",
+   "The track is a 3px rail with a halo and a branch, so it can read as a bracket or tree diagram, and at half size it is thin. It also needs the first and last rows to be plain 2.75rem rows, so an expanded last row on the To do page ends the rail short of its tick.",
+   "The larger text pushed a few things to compromise: To do's who column is 3.5rem, and Ideas' drive and for columns are narrower. A very long task title will ellipsize sooner than in the parent.",
+   "I could not see the phone Ideas filters or the phone Chat on the judges' cards, because only Home is shot on the phone. I checked both myself with a scratch render. The Chat composer's height budget (max 15.5rem) was tuned by eye."
+  ],
+  "elements": [
+   {
+    "slot": "glass",
+    "what": "Dock row on Home: `.dock-row` with `.dock-coming` (the Coming up band) and `.dock-terminal` (a `.terminal` holding the Contents plate and the status line), in the `glass` block of variants/r19-mut-1/templates/home.html. The block reuses the parent's `.vera-row` columns and adds `.page-home main > .desk` as a two-column third row."
+   },
+   {
+    "slot": "controls",
+    "what": "Phone: big Send and tall composer, `.ask .send`, `.ask textarea`, `.ask-bar`, `.page-chat .composer` under `@media (max-width: 40rem)`. Ideas: `.page-ideas .deck-body .key-row` as one row of keys, sliding with a fade mask on a phone and flowing compactly on a desk. All CSS in r19.css, no markup change."
+   },
+   {
+    "slot": "list",
+    "what": "Desktop rows one size up (`.rows .t` 19px, facts 16px) plus a lit track, `.tracked > .row` (rail, halo and branch drawn as row background layers). `class=\"tracked\"` is added to the Home `ul.checklist` and the To do page `ul.timetable`. It is a self-contained rule block that could be lifted onto any `.rows` list."
+   }
+  ]
+ },
+ {
+  "id": "r19-mut-2",
+  "name": "Track Diagram Rail Keys",
+  "tagline": "Track Diagram Scanlined with a rail dropping from Vera's screen to the question box, coarser scanlines in the key word, overdue tasks reading \"was due N days ago\" in amber, a wide primary Add key, and the keycap tray carried to Plans.",
+  "concept": "Same grounded slate page as the parent; the three rolled changes only. Home's greeting now has a visible track: a steel rail leaves Vera's lit screen, turns, and meets the question box at a lit lamp, so head to box reads as one line of travel. Lists speak plainly (an overdue task says \"was due 6 days ago\" in amber) and the actions are keys: one wide bright Add key, and the recessed keycap tray on Plans.",
+  "companions": "Unchanged from the parent: steel #a7c4d8 (accent, and now the Home track rail, mixed 78% into the surface), bone headings and ink, slate trays and plates, amber only for words, rings and dots (now the \"was due\" stamp), denim and cobalt wash as before. The only bright green added is the track's end lamp, which is live (Listening) and so allowed, and the Add key, which is a primary action.",
+  "decisions": [
+   "[glass] Track from head to box: .welcome-words>.speaker+.ask gets an elbow in ::before (3px steel border-left and border-bottom, 14px radius) from the bottom of Vera's screen to the question line, and a lit lamp in ::after (lamp-core and lamp-glow, the page's existing live-light tokens) at the box edge. The ask box, starters and brief thread shift right by --tk (2.1rem desktop, 1.8rem phone) so the rail has a gutter. To keep Send on the box's one row I widened the greeting's left column from 1.35fr to 1.55fr at 64rem and up, which narrows the Next up monitor. The rail's geometry is a function of --tk and --pw, so it holds if either is changed.",
+   "[light] Scanlines on the key word: the parent's period was 3px (1px at 30% alpha), which is invisible at half size. Now a 5px period (2px dark at 50% alpha) on Home's question, set through --sl-lit, --sl-pitch and --sl-dark on .glow and .q-mark. The chat's smaller 'mind' (.open-q .glow) gets 4.5px at 40% so it is not muddied. I edited the parent's gradient in place so the prefers-contrast, print and forced-colors fallbacks that follow it still win. The glow stays on the live word only (drop-shadow halo unchanged).",
+   "[list] Overdue rows: To do's margin stamp and Home's To do stamp now read 'was due' over 'N days ago' in amber, bold on the number, with the exact date kept in a title and a screen-reader span. The day count is computed in Jinja from the clock's date (civil-day arithmetic macro dn), since views.task_row cannot change. Rows due today read 'was due today'. On the phone the two lines join into one.",
+   "[list] Add key: the 'Add something to do' summary (To do) and 'Put something on the calendar' (Plans) become a full-width primary key (.add-key) in the Add an idea key's gradient, #07130c text, 3px lip and green halo. Closed it is only the key; open it sits on a plate with the form below. On To do it spans both columns and the Search/Show tray spans the full width beneath it.",
+   "[list] Keycap tray on filters: Plans' List/Month toggle and the month's Earlier/Later keys now sit in the recessed .key-row tray with raised keys (Earlier/Later were ghost buttons, now .key without the radio ring). To do's Show tray was already the parent's and is unchanged."
+  ],
+  "floorsFailed": 0,
+  "measures": "Full render: 0 hard checks failed, 1 guideline missed (the words-changed share on Plans, 19.0%, identical to the parent's). ink_on_bg 12.57, brand_on_bg 14.96. Green share of colour: home 63.0%, ideas 47.5%, chat 75.0%, status 65.3%. Hue entropy: home 0.534, ideas 0.477, chat 0.401, status 0.477. Kinds dE typical/deutan/protan: 13.6/5.5/7.4. Sections dE typical/deutan/protan: 12.8/5.5/5.3. Greeting corner pixels: top-right (24,34,46), bottom-left (15,21,25), the parent's wash unchanged. Smallest text 11.52px (the 'was due' line is .72rem).",
+  "strengths": [
+   "The track gives Home's first screen a visible structure that reads at half size: a steel rail from Vera to a lit lamp at the question, using the page's own lamp tokens.",
+   "The key word's scanlines now show on the half-size cards and at 100%, and the halo is still on that one word.",
+   "'was due 6 days ago' in amber says what the bare 'Due 27 Sep' did not. It is two short mono lines that fit the margin column on To do and on Home.",
+   "The wide primary Add key is the clearest action on To do, and Plans' tray now matches Ideas and To do.",
+   "Nothing outside the three slots changed: same tokens, same Ideas, Chat, Status and Settings."
+  ],
+  "weaknesses": [
+   "Home's box, starters and brief thread are indented about 34px, and the greeting's left column took 0.2fr from Next up, so the monitor is narrower and wraps its title in two lines. On the phone the box is tighter and its message field starts to scroll.",
+   "The rail is hand-tuned to the question line (2.15rem down the box). A much larger question or a wrapped speaker row would leave the lamp slightly off, and a viewer with no talk permission gets no track.",
+   "The 3px rail is a thin line at half size; it is seen mostly through its lamp.",
+   "The Add key is very wide on To do (about 1120px at desktop) and will feel heavy to some. I did not carry it to Ideas' 'Save a thought for later', which has its own head-add key.",
+   "On To do the exact due date moved from the visible stamp into a title attribute and a screen-reader span. The day count uses the server's date, so a task due late last night can read 'today'.",
+   "The coarser scanlines dim the word a little. I softened the chat's 'mind' to compensate, which makes Home's and Chat's bands differ."
+  ],
+  "elements": [
+   {
+    "slot": "glass",
+    "what": "Home's track from head to box: .welcome-words (--tk, --pw, --tkc), .welcome-words>.speaker+.ask::before for the rail and ::after for the lamp, in the css appended after the parent's rules; templates unchanged."
+   },
+   {
+    "slot": "light",
+    "what": "Key word scanlines on a coarser period: .glow,.q-mark with --sl-lit, --sl-pitch, --sl-dark inside the @supports background-clip block; .open-q .glow overrides the pitch for the chat."
+   },
+   {
+    "slot": "list",
+    "what": "Overdue stamp 'was due N days ago' in amber: .stamp.was-due with .wd-was and .wd-ago, markup in tasks.html (dn macro) and home.html; the Add key: details.add-key and .add-key-panel in tasks.html and plans.html; the keycap tray on Plans: nav.tabs.key-row and p.month-nav.key-row with a.key in plans.html and plans_month.html."
+   }
+  ]
+ },
+ {
+  "id": "r19-mut-3",
+  "name": "Lit Index, Cool Rail",
+  "tagline": "The lit index with the chat hung on a rail from her mark, boxed controls with a lit tick, a brighter MIND, and cool bone and steel where cream and brass were.",
+  "concept": "Parent r18-head-2 (Lit Index) with four slot changes. The chat is a thread on a steel rail that starts at Vera's mark, with times in the left margin and a lit ring where the box begins. Controls become boxes: a frame that lights and holds a tick, a select with a full frame and a caret cell, and 44px nav. MIND is brighter and the phone's question is smaller. Cream and brass become a cool bone and steel on slate plates. The feeling is the same lit poster, with a cooler and more material page around it.",
+  "companions": "Cool steel (#9fb6c8) takes over the brass in the labels, numbers, rail, rules and the select caret. A greener bone (#e1ebe3 text, #eef5ee headings) replaces the cream. Green-black slate (#11171a surface, #1f282c surface-3, #34414a edges, #4c555b case) replaces the olive plates. Amber stays only on the family's initials and rings, the date pill and 'needs a look'. Cyan, lilac and lemon stay on their own pages.",
+  "decisions": [
+   "[chat] Grafted the donor's rail structure: chat.html (rail-chat, day marks, hung times, 'your turn' box) and the hang/said-when change to chat_line in _ui.html. Dropped the 'Vera asks' label. Tightened the gaps: line gap 1.15rem to 0.7rem, bubble padding about 0.1rem less, family bubbles capped at 32rem, the rail's last stretch shortened. Drawn in the parent's tokens: bubble and bubble-them fills, steel rail from --brass, lit green for her edge. I did not copy the donor's brass colours or its key-echo light change.",
+   "[controls] The checkbox is a 1.5rem frame that fills with a lit tint, lights its border, blooms, and holds a standard tick in the phosphor green (#6dff9c). Radios use the same frame with a lit dot. The task tick tints and lights on hover. The select has a full 1.5px border, 3px radius and a caret in its own divided cell, with steel on hover and green on focus. Nav links get a 44px minimum, a faint chip fill for the current and hovered link, and 3.5rem phone tabs. This replaces the old solid lit fill with a dark tick. I did not copy the donor's tickless lit-square.",
+   "[head] MIND's gradient now holds full #6dff9c for the top 38% and bottoms out at #5eed90 (it fell to #34a55f). Scanline darkness drops from 0.34 to 0.17 and the halo drop-shadows rise (38 to 46%, 19 to 24%). Sampled MIND strokes are about (99,236,147) against (52,159,92) before. On the phone the question is two nowrap lines at 28vw for MIND and 10.4vw for the lead, with the speaker and question margins reduced, so the box starts about 30px higher. It was already two lines; I kept it at two and made it smaller. The ? keeps its dimmer 0.5 opacity on purpose, since the roll was MIND only.",
+   "[colour] Tokens only: ink, ink-2, dim, faint, heading, secondary, label (the brass, now steel), surface, surface-2, surface-3, field, line, line-2, edge, card-edge, bubble, bubble-them and bezel. The sheet's --brass now resolves to steel. The Plans 'today' cell no longer mixes amber into its fill; it takes a steel tint. The select caret's hard-coded brass hex became steel. The amber date pill and 'needs a look' edges stay, because amber has a job there.",
+   "Bug I hit and fixed: a '*/' inside a CSS comment ('surface*/line*') swallowed the today-cell rule. I found it by sampling the pixel, which read (33,33,29), the old amber, instead of (30,37,42)."
+  ],
+  "floorsFailed": 0,
+  "measures": "ink_on_bg 15.99, brand_on_bg 15.28 (parent 17.1 and 15.2 by README 'today'). Green share of colour: home 69.3%, ideas 54.0%, chat 41.1%, status 22.3%. Hue entropy: home 0.531, ideas 0.584, chat 0.617, status 0.631. Kinds dE typ/deu/pro: 15.2 / 6.2 / 6.9 (restaurant~seasonal, restaurant~seasonal, activity~outing). Sections dE typ/deu/pro: 19.5 / 7.9 / 6.9 (todo~family; home~todo in both). Greeting corner pixels: (1150,120) = (6,14,9), (100,640) = (10,13,11). Small targets under 44px: phone 6 down to 2, desktop the same as the parent (ideas 12, todo 10, status 6, plans 7). Smallest text 11.52px (the chat time stamp). The only WARN is the words-differ share on login (17.2%), which comes from the chat markup change and the harness's comparison. No hard failures.",
+  "strengths": [
+   "The chat reads as a thread, not a log: times in the margin, a rail from Vera's mark to a lit ring at the box, one day label, and the family's lines on the right along a dotted leader.",
+   "Controls look like controls: framed select with a caret cell, a lit frame with a tick, and 44px nav with a visible chip for the current page.",
+   "MIND is clearly brighter at the card scale (sampled about (99,236,147) against (52,159,92) before) while it stays a lit word with a halo and scanlines.",
+   "The cool slate, bone and steel change is the most visible slot at a glance on Status, Settings, Plans and Ideas (labels, numbers and rules go from brass to steel). It keeps contrast: label 9.3:1 on bg, ink 16:1.",
+   "Each change sits in its own classes or tokens: .rail-chat/.thread.line/.your-turn, the controls block, .glow, and the palette tokens. They lift cleanly into another design."
+  ],
+  "weaknesses": [
+   "On the phone the question is only about 30px higher; it was already two lines, so the head change is subtle there.",
+   "The ? stays dim next to the now much brighter MIND, which can look unmatched.",
+   "The rail leaves a long dotted leader beside the family's short lines on desktop; the vertical gap is tighter, but the horizontal one is not.",
+   "The chat page still has two question-like items: the page title row, then 'What's on your mind?' under Vera's mark.",
+   "The steel label and the denim cyan of Plans are close cousins on Plans and Ideas, so steel and the section colour can blur.",
+   "Desktop small-target counts are unchanged. The nav chip fill is faint at half size and mostly shows on the hovered and current link. The hung time stamp is 11.52px, just above the floor.",
+   "The amber setup tray and the family's amber initials still carry some warmth. The brief said no warm plates, and I kept amber only where it has a job."
+  ],
+  "elements": [
+   {
+    "slot": "chat",
+    "what": "The rail thread: variants/r19-mut-3/templates/chat.html (.rail-chat, .thread.line, .thread-open, .day-mark, .your-turn) plus the hang/stamp change to chat_line in _ui.html. Her mark starts a steel rail, times hang in the left margin, the family's lines come in at a ring on a dotted leader, and the rail ends in a lit ring at the box. No 'asks' label, tightened gaps."
+   },
+   {
+    "slot": "controls",
+    "what": "Boxed controls, in the sheet's '[controls] Boxed controls' block. input[type=checkbox|radio] is a 1.5rem frame that lights and holds a phosphor tick or dot. select has a full frame with a caret in its own divided cell. button.tick gets a lit tint. .places a/.tools a/.tabs a have a 44px minimum and a faint current/hover chip. The phone tab bar is 3.5rem."
+   },
+   {
+    "slot": "head",
+    "what": "The lit question, in .glow (a brighter gradient: #6dff9c held for 38% of the height, lighter scanlines, stronger halo) and the phone media block (.q-lead and .glow/.q-mark resized, .speaker and .ask-question margins), so it stays two lines and the box starts higher."
+   },
+   {
+    "slot": "colour",
+    "what": "Palette tokens: bone ink and headings, steel label (feeds --brass), slate surfaces, lines, edges, bubbles and bezel. Plus the '[colour] No warm plates' rule (table.month td.today steel tint) and the select caret's steel stroke."
+   }
+  ]
+ },
+ {
+  "id": "r19-mut-4",
+  "name": "Grid Console Calmer",
+  "tagline": "Grid Console Lit Track with the lattice calmed (no corner ticks, no hatched blank plates, softer outlines), heads on one baseline, a quieter poster question, and every target at 44px.",
+  "concept": "The parent unchanged except three self-contained edits. The grid stays but stops shouting: cells are drawn by fill and a quieter steel edge, with no lit corner ticks and no hatched blank plates closing short rows. The page heads set title, count and deck on one baseline, and the Home poster question's lead words drop a step so the lit key word, the rail and the NOW node carry the glow. Every control reaches 44px, mostly without changing how it looks.",
+  "companions": "Unchanged from the parent. Cyan-teal accent #77ced5 for links, title tiles, the Status/Settings figure and the spine. Section colours for their own pages. Grey-teal label #8fb4b7. Card edge #25393b (now mixed 58% toward the surface). Brand #6dff9c only on live things and the monitors.",
+  "decisions": [
+   "[rule] The lit 0.7rem corner tick is removed from every cell, panel, setting, agenda row, form field and wish list. It was drawn by one repeated rule, so it is cut in one block (.cell::before and its siblings set to content: none). The monitors keep their lit case corners because that is phosphor.",
+   "[rule] The hatched dashed blank plates that closed short rows in banks, agenda lists, section cards and the Settings grid are switched off with content: none in their own rules. The Plans month's out-of-month hatching is a calendar convention and stays.",
+   "[rule] Outlines are thinned by calming the --steel token, a 58% mix of the card edge into the surface, not by a new border width. One token calms every cell, panel, setting and field edge at once. Hover still lights the edge in the bank colour.",
+   "[head] Desktop heads with a count (Status, Ideas, Plans, To do, Settings) now use last-baseline alignment. The title, the numeral, the unit/change stack and the deck stand on one baseline. The numeral's underline is a real text-decoration at 2px, because its old padding and border held it above the baseline. I applied this to every has-count head rather than only Status so the rule holds on any page.",
+   "[head] The Home poster lead (WHAT'S ON YOUR) moves from ink to ink-2. That is one step less white and still 10:1 on the surface. The key word MIND, its scanlined bloom, the rail and NOW are untouched.",
+   "[controls] A shared --hit of 2.75rem. Visibly raised: bar-menu rows, Sign out, selects (40 to 44), the in-field mics (35 to 44), checkbox labels, folds and summaries, the skip link. Hit area only: checkboxes and radios keep a 20px drawn box inside a transparent 44px border, clipped from the paint, with the ring offset back to the drawn box. Bare text links get vertical and horizontal padding with an equal negative margin, so layout does not move. The ways-to-start chips and the Chat kids' links are excluded because they are already boxes. My probe found 0 targets under 44px on 16 pages at 1280 and at 390.",
+   "The first pass of the bare-link rule padded the ways-to-start chips and flattened the kids' links in Chat. I caught it on the cards and excluded both."
+  ],
+  "floorsFailed": 0,
+  "measures": "The full check passed with 0 hard failures. One guideline is missed, the words-unchanged share (worst: Plans, 16.5%), which comes from the calendar's dates and was present in the parent. ink_on_bg 14.95, brand_on_bg 14.95. Home: green share of colour 75.5%, hue entropy 0.504, bright green 3.64 permille. Status: green share 57.6%, hue entropy 0.417. Colour distances are unchanged from the parent: kinds 15.4 typical, 5.4 deutan, 6.4 protan; sections 15.4 typical, 5.4 deutan, 8.2 protan. The greeting's corner pixels are unchanged from the parent: (4,9,6) at (1150,120) and (9,17,16) at (100,640). Small targets under 44px were 17 on Status and about 10 elsewhere in the parent. The render's health now reads 0 on every page including the phone. The bare-link padding changes the hit area only and does not move layout.",
+  "strengths": [
+   "Calmer Home: the setup row and the kids' wishes row no longer end in hatched blank plates, and the corner ticks are gone. The seams read more like a quiet grid.",
+   "The page heads now share one baseline, with the numeral, unit stack and deck standing on the title's baseline across Status, Ideas, Plans, To do and Settings.",
+   "Zero small targets on every page at desktop and phone width, with the seen controls (menu rows, selects, mics) genuinely larger.",
+   "All three edits are self-contained in an appended block and a few in-place content: none lines, so each can be lifted out."
+  ],
+  "weaknesses": [
+   "The differences are quiet at half size. The corner ticks and hatched plates are small marks, the outline change is a few steps of grey, and the ink-2 on the poster lead is gentle. A judge may call it nearly identical to the parent.",
+   "The cells lost some of the lit-corner identity that made the Grid read as a console. Colour now shows in their icons and kind labels and on hover.",
+   "The checkbox technique relies on a transparent border snapped to whole pixels, so the box is 20px rather than 19.2px. A forced-colors or high-contrast mode may not draw the inset edge.",
+   "The bare-link hit areas overlap their neighbours vertically in tight lists, so a tap between two rows can land on the later one.",
+   "The baseline change uses last baseline in flex, which needs a recent Chromium. Where it is unsupported, the heads fall back to the parent's flex-end alignment, but the numeral's underline would still be a text-decoration."
+  ],
+  "elements": [
+   {
+    "slot": "rule",
+    "what": "Calmer lattice: .cell::before, .panel::before, .setting::before and the other corner ticks set to content: none. The hatched blank-plate pseudo-elements in the bank, agenda, section-card and Settings grid rules set to content: none. --steel in :root is a 58% mix of card-edge into the surface. All in sheet.css, under the [rule] comments."
+   },
+   {
+    "slot": "head",
+    "what": "A baseline-aligned head. In @media (min-width:64rem), .page-head.has-count .page-title and .head-count use align-items: last baseline. The title-row's h1 is the baseline participant. .hc-figure's rule is a 2px text-decoration. .lede and .hc-meta lose their bottom padding. The calmer poster lead is .q-lead { color: var(--ink-2) }."
+   },
+   {
+    "slot": "controls",
+    "what": "A 44px target system on one token, --hit: 2.75rem. Visible growth on .menu-list a, .signout button, select, .field.can-dictate > button.mic, label.check, summary, .skip and .steps .button. Hit-area growth on input[type=checkbox|radio] (a transparent border and background-clip: padding-box), on bare links via :where(main a:not([class])), and on .kid-name. All in the [controls] block at the end of sheet.css."
+   }
+  ]
+ }
+]

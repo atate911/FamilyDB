@@ -1,0 +1,1536 @@
+{
+ "parts": {
+  "head": [
+   {
+    "id": "r19-mut-3",
+    "name": "Lit Index, Cool Rail",
+    "points": 13.0,
+    "voters": [
+     "style",
+     "interaction",
+     "soul",
+     "style",
+     "systemuse"
+    ],
+    "what": [
+     "Poster-scale condensed question with a bright scanlined lit key word and a numbered index title",
+     "Lit poster question with a bright gradient MIND over a small label and the single full-width Send",
+     "Poster question with a bright scanlined key word and a bone head; or the baseline-aligned title, count and deck line",
+     "Poster question with a bright scanlined MIND, a listening line and a ruled input",
+     "Poster question with a bright gradient MIND and a running head 'VERA  SATURDAY 3 OCTOBER'"
+    ],
+    "share": 0.366
+   },
+   {
+    "id": "r19-mut-4",
+    "name": "Grid Console Calmer",
+    "points": 7.0,
+    "voters": [
+     "interaction",
+     "type",
+     "soul",
+     "systemuse"
+    ],
+    "what": [
+     "Title, count and deck on one last baseline; serif title with tabular underlined count as the alternative"
+    ],
+    "share": 0.197
+   },
+   {
+    "id": "r18-mut-3",
+    "name": "Track Diagram Scanlined",
+    "points": 6.0,
+    "voters": [
+     "type",
+     "usability",
+     "skeptic"
+    ],
+    "what": [
+     "serif display title with a lit-ring icon and a small count and subhead on the same baseline"
+    ],
+    "share": 0.169
+   },
+   {
+    "id": "r19-mut-1",
+    "name": "Desk Terminal, Docked Track",
+    "points": 4.5,
+    "voters": [
+     "style",
+     "usability"
+    ],
+    "what": [
+     "Title with the page's one bright primary key beside it (Add a task / Add a plan), plus a short deck and a count"
+    ],
+    "share": 0.127
+   },
+   {
+    "id": "r18-head-2",
+    "name": "Lit Index, merged",
+    "points": 2.5,
+    "voters": [
+     "style",
+     "skeptic"
+    ],
+    "what": [],
+    "share": 0.07
+   }
+  ],
+  "glass": [
+   {
+    "id": "r19-mut-1",
+    "name": "Desk Terminal, Docked Track",
+    "points": 27.0,
+    "voters": [
+     "feedback",
+     "soul",
+     "style",
+     "system",
+     "interaction",
+     "usability",
+     "skeptic",
+     "soul"
+    ],
+    "what": [
+     "CRT tube with a scanned bar-chart scope and mono readout, docked beside the question",
+     "Vera's question typed in mono on a lit scanlined screen with a LISTENING status line",
+     "Terminal Vera card, with a bar-chart tube and an ON THIS PAGE contents plate docked under it",
+     "The Home tube and Vera card: typed question in a monitor with a listening lamp, and the docked monitor with chart and contents plate",
+     "Terminal question line with a LISTENING status bar and level ticks inside Vera's card",
+     "Tube with a status line, docked over an 'On this page' contents plate and a Ready readout",
+     "Terminal tube with a glowing typed question, a listening status line and the Contents plate docked beside it",
+     "Vera's question typed in glyph type with a block cursor on a tube, with a LISTENING status line, plus a docked Contents plate and status under the tube"
+    ],
+    "share": 0.771
+   },
+   {
+    "id": "r19-mut-2",
+    "name": "Track Diagram Rail Keys",
+    "points": 7.0,
+    "voters": [
+     "style",
+     "system",
+     "feedback",
+     "style"
+    ],
+    "what": [
+     "Vera's lit screen with a steel rail turning to the question box and ending at a lit lamp"
+    ],
+    "share": 0.2
+   },
+   {
+    "id": "r19-mut-4",
+    "name": "Grid Console Calmer",
+    "points": 5.25,
+    "voters": [
+     "feedback",
+     "usability",
+     "skeptic"
+    ],
+    "what": [],
+    "share": 0.15
+   },
+   {
+    "id": "r18-mut-1",
+    "name": "Desk Terminal, Vera Card",
+    "points": 5.0,
+    "voters": [
+     "feedback",
+     "soul",
+     "style"
+    ],
+    "what": [
+     "Typed question on a CRT screen with a LISTENING status line, plus a rail from the tube to the box"
+    ],
+    "share": 0.143
+   },
+   {
+    "id": "r19-mut-3",
+    "name": "Lit Index, Cool Rail",
+    "points": 2.25,
+    "voters": [
+     "soul"
+    ],
+    "what": [],
+    "share": 0.064
+   },
+   {
+    "id": "r18-head-2",
+    "name": "Lit Index, merged",
+    "points": 1.5,
+    "voters": [
+     "interaction"
+    ],
+    "what": [],
+    "share": 0.043
+   }
+  ],
+  "list": [
+   {
+    "id": "r19-mut-1",
+    "name": "Desk Terminal, Docked Track",
+    "points": 19.5,
+    "voters": [
+     "style",
+     "system",
+     "interaction",
+     "type",
+     "usability",
+     "skeptic"
+    ],
+    "what": [
+     "Ledger rows with leaders and a lit rail with branches, plus amber 'was due N days' stamps",
+     "To do rows with a lit rail and 'was due N days ago' in amber, a facts column and a bigger row type",
+     "Tabular rows with designator, facts columns and 'was due N days ago' stamps along a lit track",
+     "Rows with leader dots and right-aligned tabular facts columns, with small-cap column heads",
+     "To do rows with a lit track, amber 'was due N days ago' and the owner and a pencil on the right",
+     "Larger rows with leader dots, a facts column and a lit rail with a branch to each tick, ending at a NOW node"
+    ],
+    "share": 0.639
+   },
+   {
+    "id": "r19-mut-2",
+    "name": "Track Diagram Rail Keys",
+    "points": 8.5,
+    "voters": [
+     "system",
+     "interaction",
+     "usability",
+     "feedback",
+     "skeptic"
+    ],
+    "what": [
+     "timeline rows with dated amber pips, the NOW node and a plain 'was due N days ago' stamp"
+    ],
+    "share": 0.279
+   },
+   {
+    "id": "r18-head-5",
+    "name": "Grid Console, merged, all-star",
+    "points": 3.75,
+    "voters": [
+     "skeptic",
+     "skeptic"
+    ],
+    "what": [],
+    "share": 0.123
+   },
+   {
+    "id": "r19-mut-4",
+    "name": "Grid Console Calmer",
+    "points": 3.5,
+    "voters": [
+     "style",
+     "feedback"
+    ],
+    "what": [
+     "To do on a vertical lit track with a 'now' node, amber 'was due' ladder at left and a DUE timetable margin"
+    ],
+    "share": 0.115
+   },
+   {
+    "id": "r19-mut-3",
+    "name": "Lit Index, Cool Rail",
+    "points": 1.5,
+    "voters": [
+     "type"
+    ],
+    "what": [],
+    "share": 0.049
+   }
+  ],
+  "figure": [
+   {
+    "id": "r19-mut-1",
+    "name": "Desk Terminal, Docked Track",
+    "points": 10.5,
+    "voters": [
+     "soul",
+     "type",
+     "soul"
+    ],
+    "what": [
+     "Dot-scope bar chart, numbered-blip radar and swept dial gauge on the tubes",
+     "Mono readout with a gauge dial and a labelled bar trace on the tubes",
+     "Spend dial in a bezelled tube (needle, tick scale, LIMIT flag), plus the radar and the chart with a lit floor grid"
+    ],
+    "share": 0.318
+   },
+   {
+    "id": "r18-mut-3",
+    "name": "Track Diagram Scanlined",
+    "points": 6.0,
+    "voters": [
+     "usability",
+     "skeptic"
+    ],
+    "what": [
+     "Plans clock and week key; the spend gauge on Status",
+     "the cost tube with its dial, plus the Plans clock showing the week's past, today and ahead"
+    ],
+    "share": 0.182
+   },
+   {
+    "id": "r19-mut-4",
+    "name": "Grid Console Calmer",
+    "points": 1.5,
+    "voters": [
+     "usability"
+    ],
+    "what": [],
+    "share": 0.045
+   },
+   {
+    "id": "r18-head-5",
+    "name": "Grid Console, merged, all-star",
+    "points": 1.5,
+    "voters": [
+     "soul"
+    ],
+    "what": [],
+    "share": 0.045
+   },
+   {
+    "id": "r18-mut-1",
+    "name": "Desk Terminal, Vera Card",
+    "points": 1.5,
+    "voters": [
+     "skeptic"
+    ],
+    "what": [],
+    "share": 0.045
+   }
+  ],
+  "rule": [
+   {
+    "id": "r19-mut-4",
+    "name": "Grid Console Calmer",
+    "points": 4.5,
+    "voters": [
+     "feedback",
+     "skeptic"
+    ],
+    "what": [
+     "Section heads set into a thin tracked rule with a node, calmer steel-edged cells without corner ticks"
+    ],
+    "share": 0.141
+   },
+   {
+    "id": "r18-head-5",
+    "name": "Grid Console, merged, all-star",
+    "points": 4.0,
+    "voters": [
+     "style",
+     "skeptic"
+    ],
+    "what": [
+     "a lit trunk rail with section heads branching off it, and cells drawn by fill and edge"
+    ],
+    "share": 0.125
+   },
+   {
+    "id": "r18-head-2",
+    "name": "Lit Index, merged",
+    "points": 2.0,
+    "voters": [
+     "style"
+    ],
+    "what": [
+     "Numbered sections under colour-tipped hairline bars, with a big condensed title and a small count beneath"
+    ],
+    "share": 0.062
+   },
+   {
+    "id": "r18-mut-3",
+    "name": "Track Diagram Scanlined",
+    "points": 1.5,
+    "voters": [
+     "feedback"
+    ],
+    "what": [],
+    "share": 0.047
+   }
+  ],
+  "signal": [
+   {
+    "id": "r19-mut-4",
+    "name": "Grid Console Calmer",
+    "points": 20.25,
+    "voters": [
+     "feedback",
+     "soul",
+     "style",
+     "system",
+     "interaction",
+     "usability",
+     "skeptic",
+     "soul"
+    ],
+    "what": [
+     "Lit NOW node on a vertical rail, amber dots for overdue tasks with 'N days ago' timetable margin",
+     "Lit NOW node on a track, with amber overdue dots and a late count",
+     "The lit track with a NOW node and amber late dots down the To do rows",
+     "NOW node with a time readout on the lit line; amber overdue dots",
+     "Lit NOW node on the To do track with the due date column, amber for late"
+    ],
+    "share": 0.604
+   },
+   {
+    "id": "r19-mut-2",
+    "name": "Track Diagram Rail Keys",
+    "points": 10.5,
+    "voters": [
+     "style",
+     "interaction",
+     "skeptic",
+     "soul",
+     "systemuse"
+    ],
+    "what": [
+     "Amber 'was due N days ago' stamp on a rail with a lit NOW lamp",
+     "Steel rail from Vera's lit screen to a lit lamp at the question box; the glowing live dot and NOW node on the track"
+    ],
+    "share": 0.313
+   },
+   {
+    "id": "r18-head-5",
+    "name": "Grid Console, merged, all-star",
+    "points": 6.0,
+    "voters": [
+     "feedback",
+     "soul"
+    ],
+    "what": [
+     "Lit rail with NOW node and amber dots on overdue tasks"
+    ],
+    "share": 0.179
+   },
+   {
+    "id": "r19-mut-1",
+    "name": "Desk Terminal, Docked Track",
+    "points": 4.5,
+    "voters": [
+     "system",
+     "systemuse"
+    ],
+    "what": [
+     "Listening lamp and level bars on the tube's status line; a lit lamp where the rail meets the box"
+    ],
+    "share": 0.134
+   },
+   {
+    "id": "r18-mut-3",
+    "name": "Track Diagram Scanlined",
+    "points": 3.5,
+    "voters": [
+     "usability",
+     "skeptic"
+    ],
+    "what": [
+     "a vertical lit chain down Who answers, with steel hollow rings for off and amber for needs a look"
+    ],
+    "share": 0.104
+   },
+   {
+    "id": "r18-mut-1",
+    "name": "Desk Terminal, Vera Card",
+    "points": 1.0,
+    "voters": [
+     "skeptic"
+    ],
+    "what": [],
+    "share": 0.03
+   }
+  ],
+  "type": [
+   {
+    "id": "r19-mut-3",
+    "name": "Lit Index, Cool Rail",
+    "points": 21.5,
+    "voters": [
+     "feedback",
+     "style",
+     "system",
+     "type",
+     "skeptic",
+     "feedback",
+     "style"
+    ],
+    "what": [
+     "Heavy condensed display titles paired with a mono small-caps label and a clean sans body",
+     "Condensed display heads with numbered designators and mono small-cap labels, on a double rule",
+     "Condensed grotesque display, tracked mono-caps labels, plain sans body, numbered running heads",
+     "Condensed poster titles with mono caps labels and a scanlined key word",
+     "Condensed poster headings with a mono label scale and numbered running heads (runner-up: serif section heads with a lit numeral)",
+     "Tall condensed poster headings with a mono index and small caps labels; serif display as the alternative voice"
+    ],
+    "share": 0.672
+   },
+   {
+    "id": "r18-head-2",
+    "name": "Lit Index, merged",
+    "points": 6.75,
+    "voters": [
+     "feedback",
+     "type",
+     "skeptic"
+    ],
+    "what": [
+     "Condensed display headlines with numbered index labels and mono small caps"
+    ],
+    "share": 0.211
+   },
+   {
+    "id": "r19-mut-2",
+    "name": "Track Diagram Rail Keys",
+    "points": 4.75,
+    "voters": [
+     "style",
+     "system",
+     "feedback"
+    ],
+    "what": [],
+    "share": 0.148
+   },
+   {
+    "id": "r18-mut-3",
+    "name": "Track Diagram Scanlined",
+    "points": 1.5,
+    "voters": [
+     "style"
+    ],
+    "what": [],
+    "share": 0.047
+   }
+  ],
+  "colour": [
+   {
+    "id": "r19-mut-3",
+    "name": "Lit Index, Cool Rail",
+    "points": 6.0,
+    "voters": [
+     "soul",
+     "style"
+    ],
+    "what": [
+     "Cool bone and steel ink on slate plates with lilac and amber companions",
+     "Cool bone ink and steel labels on slate plates, with the green kept for light and the hatched kind swatches as the accents"
+    ],
+    "share": 0.182
+   },
+   {
+    "id": "r19-mut-2",
+    "name": "Track Diagram Rail Keys",
+    "points": 3.0,
+    "voters": [
+     "feedback"
+    ],
+    "what": [
+     "Green-black slate plates with amber for late, soft cyan and violet for kinds, and the bright green held back for the lit things"
+    ],
+    "share": 0.091
+   },
+   {
+    "id": "r18-head-2",
+    "name": "Lit Index, merged",
+    "points": 1.5,
+    "voters": [
+     "soul"
+    ],
+    "what": [],
+    "share": 0.045
+   },
+   {
+    "id": "r19-mut-4",
+    "name": "Grid Console Calmer",
+    "points": 1.5,
+    "voters": [
+     "feedback"
+    ],
+    "what": [],
+    "share": 0.045
+   },
+   {
+    "id": "r18-mut-3",
+    "name": "Track Diagram Scanlined",
+    "points": 1.5,
+    "voters": [
+     "style"
+    ],
+    "what": [],
+    "share": 0.045
+   }
+  ],
+  "controls": [
+   {
+    "id": "r19-mut-3",
+    "name": "Lit Index, Cool Rail",
+    "points": 17.25,
+    "voters": [
+     "feedback",
+     "system",
+     "interaction",
+     "usability",
+     "skeptic",
+     "systemuse"
+    ],
+    "what": [
+     "Boxed checkbox with a lit tick, a select with a caret cell, and a double-ring focus",
+     "Boxed checkbox with a lit tick, select with a caret cell, 44px nav targets",
+     "Framed checkbox that lights and holds a tick, a select with a caret cell, and a tall Send key on the phone",
+     "Boxed controls: lit-tick checkbox frame, select with a caret cell, full-width Send key, 44px nav"
+    ],
+    "share": 0.539
+   },
+   {
+    "id": "r19-mut-4",
+    "name": "Grid Console Calmer",
+    "points": 9.25,
+    "voters": [
+     "feedback",
+     "system",
+     "interaction",
+     "skeptic",
+     "skeptic"
+    ],
+    "what": [
+     "44px target system, boxed checkboxes and selects with lit ticks, one quiet outline weight"
+    ],
+    "share": 0.289
+   },
+   {
+    "id": "r19-mut-1",
+    "name": "Desk Terminal, Docked Track",
+    "points": 6.0,
+    "voters": [
+     "usability",
+     "systemuse"
+    ],
+    "what": [
+     "Full-width labelled Send with a tall composer on the phone, pill filters in place of selects, boxed checkboxes"
+    ],
+    "share": 0.188
+   },
+   {
+    "id": "r18-mut-1",
+    "name": "Desk Terminal, Vera Card",
+    "points": 2.0,
+    "voters": [
+     "skeptic"
+    ],
+    "what": [
+     "keycap-tray filters with a lit pip on the held key, and a compact bright Add key"
+    ],
+    "share": 0.062
+   }
+  ],
+  "chat": [
+   {
+    "id": "r19-mut-3",
+    "name": "Lit Index, Cool Rail",
+    "points": 18.0,
+    "voters": [
+     "soul",
+     "style",
+     "interaction",
+     "type",
+     "skeptic",
+     "feedback"
+    ],
+    "what": [
+     "Thread hung on a steel rail with margin times and lit ring at the composer",
+     "Thread hung on a steel rail with margin times and a lit ring where the composer begins",
+     "Thread hung on a steel rail from Vera's mark, times in the left margin, lit ring at the composer",
+     "Steel-rail thread with times set in the left margin and mono-caps speaker labels",
+     "Thread hung on a steel rail from Vera's mark, with times in the left margin and a lit ring at the composer",
+     "Thread hung on a steel rail from Vera's mark, times in the margin, a lit ring where the box begins"
+    ],
+    "share": 0.562
+   },
+   {
+    "id": "r19-mut-1",
+    "name": "Desk Terminal, Docked Track",
+    "points": 6.5,
+    "voters": [
+     "soul",
+     "interaction",
+     "skeptic",
+     "systemuse"
+    ],
+    "what": [
+     "Vera card: tube with typed question, tall composer, FROM select, mic and a big Send key, starters below"
+    ],
+    "share": 0.203
+   },
+   {
+    "id": "r19-mut-2",
+    "name": "Track Diagram Rail Keys",
+    "points": 6.0,
+    "voters": [
+     "feedback",
+     "style"
+    ],
+    "what": [
+     "Conversation hung on a rail from Vera's screen to the box, stops for each speaker, times in the margin"
+    ],
+    "share": 0.188
+   },
+   {
+    "id": "r18-mut-3",
+    "name": "Track Diagram Scanlined",
+    "points": 5.25,
+    "voters": [
+     "feedback",
+     "type",
+     "feedback"
+    ],
+    "what": [],
+    "share": 0.164
+   },
+   {
+    "id": "r19-mut-4",
+    "name": "Grid Console Calmer",
+    "points": 1.0,
+    "voters": [
+     "systemuse"
+    ],
+    "what": [],
+    "share": 0.031
+   }
+  ],
+  "light": [
+   {
+    "id": "r19-mut-3",
+    "name": "Lit Index, Cool Rail",
+    "points": 13.5,
+    "voters": [
+     "soul",
+     "system",
+     "type",
+     "soul"
+    ],
+    "what": [
+     "Scanlined, haloed poster key word MIND with a bright #6dff9c band",
+     "The scanlined gradient key word with its halo, with #6dff9c held only on the lit part",
+     "Brighter scanlined key word with a layered halo as the one lit focal point",
+     "Key word as a bright #6dff9c gradient with scanlines and a strong halo, so the poster word is the lit centrepiece"
+    ],
+    "share": 0.443
+   },
+   {
+    "id": "r19-mut-2",
+    "name": "Track Diagram Rail Keys",
+    "points": 5.0,
+    "voters": [
+     "system",
+     "feedback",
+     "soul"
+    ],
+    "what": [
+     "Key word with coarse scanlines and layered halo, the tube's bloom, and a grid floor in the monitor"
+    ],
+    "share": 0.164
+   },
+   {
+    "id": "r18-head-2",
+    "name": "Lit Index, merged",
+    "points": 3.75,
+    "voters": [
+     "soul",
+     "type"
+    ],
+    "what": [],
+    "share": 0.123
+   },
+   {
+    "id": "r19-mut-1",
+    "name": "Desk Terminal, Docked Track",
+    "points": 1.0,
+    "voters": [
+     "feedback"
+    ],
+    "what": [],
+    "share": 0.033
+   }
+  ],
+  "foot": [
+   {
+    "id": "r19-mut-4",
+    "name": "Grid Console Calmer",
+    "points": 3.0,
+    "voters": [
+     "systemuse"
+    ],
+    "what": [
+     "Uppercase tab bar of divided 44px cells with a clear lit active cell"
+    ],
+    "share": 0.098
+   },
+   {
+    "id": "r18-head-2",
+    "name": "Lit Index, merged",
+    "points": 2.0,
+    "voters": [
+     "style"
+    ],
+    "what": [
+     "Numbered 00-05 index tabs with lettered utilities on the right; a lamp and grid-floor footer as the alternative"
+    ],
+    "share": 0.066
+   },
+   {
+    "id": "r19-mut-3",
+    "name": "Lit Index, Cool Rail",
+    "points": 1.5,
+    "voters": [
+     "systemuse"
+    ],
+    "what": [],
+    "share": 0.049
+   },
+   {
+    "id": "r18-head-5",
+    "name": "Grid Console, merged, all-star",
+    "points": 1.0,
+    "voters": [
+     "style"
+    ],
+    "what": [],
+    "share": 0.033
+   }
+  ]
+ },
+ "verdicts": [
+  {
+   "id": "r19-mut-1",
+   "parent": "r18-mut-1",
+   "parentName": "Desk Terminal, Vera Card",
+   "delta": 0.21,
+   "slots": [
+    {
+     "slot": "glass",
+     "child": 0.771,
+     "parent": 0.143,
+     "verdict": "won",
+     "graft": null,
+     "text": "close the empty left column on Home: move the Contents plate and Coming up beside or under the tube so the first screen is full"
+    },
+    {
+     "slot": "controls",
+     "child": 0.188,
+     "parent": 0.062,
+     "verdict": "tied",
+     "graft": null,
+     "text": "phone: a larger Send key and a bigger composer; on Ideas, the filters as one compact row of keys instead of a tall column"
+    },
+    {
+     "slot": "list",
+     "child": 0.639,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": null,
+     "text": "desktop: row text one size up, keep the amber 'was due N days ago', and add a fine lit track line down the To do rows"
+    }
+   ],
+   "kept": [
+    "glass",
+    "controls",
+    "list"
+   ],
+   "survives": true
+  },
+  {
+   "id": "r19-mut-2",
+   "parent": "r18-mut-3",
+   "parentName": "Track Diagram Scanlined",
+   "delta": 0.06,
+   "slots": [
+    {
+     "slot": "glass",
+     "child": 0.2,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": null,
+     "text": "give Home's first screen a visible structural change: a track running from the head to the box, or the tube standing on a grid floor"
+    },
+    {
+     "slot": "light",
+     "child": 0.164,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": null,
+     "text": "make the scanlines on the key word visible at half size (a coarser period), keep the glow on live things only"
+    },
+    {
+     "slot": "list",
+     "child": 0.279,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": null,
+     "text": "overdue tasks read 'was due N days ago' in amber, the Add key wide and primary, and the keycap tray carried to To do and Plans filters"
+    }
+   ],
+   "kept": [
+    "glass",
+    "light",
+    "list"
+   ],
+   "survives": true
+  },
+  {
+   "id": "r19-mut-3",
+   "parent": "r18-head-2",
+   "parentName": "Lit Index, merged",
+   "delta": 0.31,
+   "slots": [
+    {
+     "slot": "chat",
+     "child": 0.562,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": "r18-mut-5",
+     "text": "Thread hung on a rail from Vera's mark, times in the margin, a lit ring at the box; drop the 'Vera asks' opener and tighten the gaps beside short lines"
+    },
+    {
+     "slot": "controls",
+     "child": 0.539,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": "r18-mut-5",
+     "text": "lit-square checkboxes with a standard tick inside the frame; selects get a full border and a caret; nav chips and the phone tab bar reach 44px"
+    },
+    {
+     "slot": "head",
+     "child": 0.366,
+     "parent": 0.07,
+     "verdict": "won",
+     "graft": null,
+     "text": "keep the giant lit question but cap it at two lines on the phone so the box starts higher, and brighten MIND toward #6dff9c"
+    },
+    {
+     "slot": "colour",
+     "child": 0.182,
+     "parent": 0.045,
+     "verdict": "tied",
+     "graft": null,
+     "text": "swap the warm cream for a cooler, greener bone, and the brass for a cool steel, so no warm plates remain"
+    }
+   ],
+   "kept": [
+    "chat",
+    "controls",
+    "head",
+    "colour"
+   ],
+   "survives": true
+  },
+  {
+   "id": "r19-mut-4",
+   "parent": "r18-head-5",
+   "parentName": "Grid Console, merged, all-star",
+   "delta": 0.0,
+   "slots": [
+    {
+     "slot": "rule",
+     "child": 0.141,
+     "parent": 0.125,
+     "verdict": "tied",
+     "graft": null,
+     "text": "cut the extra corner ticks and the empty hatched panels beside the setup cards; thin the card outlines so the lattice is calmer"
+    },
+    {
+     "slot": "head",
+     "child": 0.197,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": null,
+     "text": "Status headline and its deck on one baseline; make the Home poster question a little calmer (less white) so the lit rail and the NOW node carry the glow"
+    },
+    {
+     "slot": "controls",
+     "child": 0.289,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": null,
+     "text": "raise every small target (nav chips, tags, lamps) to 44px"
+    }
+   ],
+   "kept": [
+    "head",
+    "controls"
+   ],
+   "survives": true
+  }
+ ],
+ "heirs": {
+  "r18-mut-1": {
+   "parent": "r18-mut-1",
+   "parentName": "Desk Terminal, Vera Card",
+   "kept": [
+    {
+     "slot": "glass",
+     "child": "r19-mut-1",
+     "verdict": "won",
+     "text": "close the empty left column on Home: move the Contents plate and Coming up beside or under the tube so the first screen is full",
+     "graft": null
+    },
+    {
+     "slot": "controls",
+     "child": "r19-mut-1",
+     "verdict": "tied",
+     "text": "phone: a larger Send key and a bigger composer; on Ideas, the filters as one compact row of keys instead of a tall column",
+     "graft": null
+    },
+    {
+     "slot": "list",
+     "child": "r19-mut-1",
+     "verdict": "won",
+     "text": "desktop: row text one size up, keep the amber 'was due N days ago', and add a fine lit track line down the To do rows",
+     "graft": null
+    }
+   ],
+   "culled": []
+  },
+  "r18-mut-3": {
+   "parent": "r18-mut-3",
+   "parentName": "Track Diagram Scanlined",
+   "kept": [
+    {
+     "slot": "glass",
+     "child": "r19-mut-2",
+     "verdict": "won",
+     "text": "give Home's first screen a visible structural change: a track running from the head to the box, or the tube standing on a grid floor",
+     "graft": null
+    },
+    {
+     "slot": "light",
+     "child": "r19-mut-2",
+     "verdict": "won",
+     "text": "make the scanlines on the key word visible at half size (a coarser period), keep the glow on live things only",
+     "graft": null
+    },
+    {
+     "slot": "list",
+     "child": "r19-mut-2",
+     "verdict": "won",
+     "text": "overdue tasks read 'was due N days ago' in amber, the Add key wide and primary, and the keycap tray carried to To do and Plans filters",
+     "graft": null
+    }
+   ],
+   "culled": []
+  },
+  "r18-head-2": {
+   "parent": "r18-head-2",
+   "parentName": "Lit Index, merged",
+   "kept": [
+    {
+     "slot": "chat",
+     "child": "r19-mut-3",
+     "verdict": "won",
+     "text": "Thread hung on a rail from Vera's mark, times in the margin, a lit ring at the box; drop the 'Vera asks' opener and tighten the gaps beside short lines",
+     "graft": "r18-mut-5"
+    },
+    {
+     "slot": "controls",
+     "child": "r19-mut-3",
+     "verdict": "won",
+     "text": "lit-square checkboxes with a standard tick inside the frame; selects get a full border and a caret; nav chips and the phone tab bar reach 44px",
+     "graft": "r18-mut-5"
+    },
+    {
+     "slot": "head",
+     "child": "r19-mut-3",
+     "verdict": "won",
+     "text": "keep the giant lit question but cap it at two lines on the phone so the box starts higher, and brighten MIND toward #6dff9c",
+     "graft": null
+    },
+    {
+     "slot": "colour",
+     "child": "r19-mut-3",
+     "verdict": "tied",
+     "text": "swap the warm cream for a cooler, greener bone, and the brass for a cool steel, so no warm plates remain",
+     "graft": null
+    }
+   ],
+   "culled": []
+  },
+  "r18-head-5": {
+   "parent": "r18-head-5",
+   "parentName": "Grid Console, merged, all-star",
+   "kept": [
+    {
+     "slot": "head",
+     "child": "r19-mut-4",
+     "verdict": "won",
+     "text": "Status headline and its deck on one baseline; make the Home poster question a little calmer (less white) so the lit rail and the NOW node carry the glow",
+     "graft": null
+    },
+    {
+     "slot": "controls",
+     "child": "r19-mut-4",
+     "verdict": "won",
+     "text": "raise every small target (nav chips, tags, lamps) to 44px",
+     "graft": null
+    }
+   ],
+   "culled": [
+    {
+     "slot": "rule",
+     "child": "r19-mut-4",
+     "verdict": "tied",
+     "text": "cut the extra corner ticks and the empty hatched panels beside the setup cards; thin the card outlines so the lattice is calmer",
+     "graft": null
+    }
+   ]
+  }
+ },
+ "bin": {
+  "head": [
+   {
+    "id": "r18-head-2",
+    "name": "Lit Index, merged",
+    "share": 0.506,
+    "round": 19,
+    "what": [
+     "Giant condensed page title over a mono folio and a section-coloured rule with the deck beside it (head-5's icon tile, title and count with ring-and-elbow line is the runner)",
+     "Giant condensed cream title with mono folio and a short section-coloured bar over a hairline, deck beside it",
+     "Index head: mono folio in the page colour, giant condensed title, deck on the baseline, hairline with a short colour bar",
+     "Index head: mono folio, giant condensed title, deck on the baseline, hairline with a short section-coloured bar",
+     "Giant scanlined question leading to a full-width Send key, with a numbered index head",
+     "Giant condensed title over a hairline with a coloured stub, a mono folio and the deck set right",
+     "Folio over giant condensed title with a coloured bar and the deck on a rule",
+     "Giant condensed bone title over a mono folio and hairline with a short section-colour bar",
+     "Mono folio and count over a giant condensed title, deck in a second column, rule with a short section-colour bar",
+     "poster headline with a lit key word under a Vera and date line"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r19-mut-3",
+    "name": "Lit Index, Cool Rail",
+    "share": 0.366,
+    "round": 19,
+    "what": [
+     "Poster-scale condensed question with a bright scanlined lit key word and a numbered index title",
+     "Lit poster question with a bright gradient MIND over a small label and the single full-width Send",
+     "Poster question with a bright scanlined key word and a bone head; or the baseline-aligned title, count and deck line",
+     "Poster question with a bright scanlined MIND, a listening line and a ruled input",
+     "Poster question with a bright gradient MIND and a running head 'VERA  SATURDAY 3 OCTOBER'"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r19-mut-4",
+    "name": "Grid Console Calmer",
+    "share": 0.197,
+    "round": 19,
+    "what": [
+     "Title, count and deck on one last baseline; serif title with tabular underlined count as the alternative"
+    ],
+    "age": 0
+   }
+  ],
+  "glass": [
+   {
+    "id": "r19-mut-1",
+    "name": "Desk Terminal, Docked Track",
+    "share": 0.771,
+    "round": 19,
+    "what": [
+     "CRT tube with a scanned bar-chart scope and mono readout, docked beside the question",
+     "Vera's question typed in mono on a lit scanlined screen with a LISTENING status line",
+     "Terminal Vera card, with a bar-chart tube and an ON THIS PAGE contents plate docked under it",
+     "The Home tube and Vera card: typed question in a monitor with a listening lamp, and the docked monitor with chart and contents plate",
+     "Terminal question line with a LISTENING status bar and level ticks inside Vera's card",
+     "Tube with a status line, docked over an 'On this page' contents plate and a Ready readout",
+     "Terminal tube with a glowing typed question, a listening status line and the Contents plate docked beside it",
+     "Vera's question typed in glyph type with a block cursor on a tube, with a LISTENING status line, plus a docked Contents plate and status under the tube"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r18-mut-1",
+    "name": "Desk Terminal, Vera Card",
+    "share": 0.472,
+    "round": 19,
+    "what": [
+     "Typed question on a CRT screen with a LISTENING status line, plus a rail from the tube to the box"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r19-mut-2",
+    "name": "Track Diagram Rail Keys",
+    "share": 0.2,
+    "round": 19,
+    "what": [
+     "Vera's lit screen with a steel rail turning to the question box and ending at a lit lamp"
+    ],
+    "age": 0
+   }
+  ],
+  "list": [
+   {
+    "id": "r19-mut-1",
+    "name": "Desk Terminal, Docked Track",
+    "share": 0.639,
+    "round": 19,
+    "what": [
+     "Ledger rows with leaders and a lit rail with branches, plus amber 'was due N days' stamps",
+     "To do rows with a lit rail and 'was due N days ago' in amber, a facts column and a bigger row type",
+     "Tabular rows with designator, facts columns and 'was due N days ago' stamps along a lit track",
+     "Rows with leader dots and right-aligned tabular facts columns, with small-cap column heads",
+     "To do rows with a lit track, amber 'was due N days ago' and the owner and a pencil on the right",
+     "Larger rows with leader dots, a facts column and a lit rail with a branch to each tick, ending at a NOW node"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r16-head-2",
+    "name": "Track Diagram Aglow, merged",
+    "share": 0.388,
+    "round": 17,
+    "what": [
+     "To do on a vertical track with dated nodes and a lit NOW marker; tight rows with facts flush right"
+    ],
+    "age": 2
+   },
+   {
+    "id": "r18-head-5",
+    "name": "Grid Console, merged, all-star",
+    "share": 0.34,
+    "round": 19,
+    "what": [
+     "To do as a vertical track: timetable margin of due times, a lamp per row, overdue amber, a lit NOW lamp, hollow terminal ring",
+     "To do on a vertical track with a lamp per item, a due-time margin and a NOW lamp",
+     "To do as a due-date track with dated nodes and a lit NOW node; or tight rows with tabular facts on the right"
+    ],
+    "age": 0
+   }
+  ],
+  "figure": [
+   {
+    "id": "r19-mut-1",
+    "name": "Desk Terminal, Docked Track",
+    "share": 0.318,
+    "round": 19,
+    "what": [
+     "Dot-scope bar chart, numbered-blip radar and swept dial gauge on the tubes",
+     "Mono readout with a gauge dial and a labelled bar trace on the tubes",
+     "Spend dial in a bezelled tube (needle, tick scale, LIMIT flag), plus the radar and the chart with a lit floor grid"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r18-mut-3",
+    "name": "Track Diagram Scanlined",
+    "share": 0.182,
+    "round": 19,
+    "what": [
+     "Plans clock and week key; the spend gauge on Status",
+     "the cost tube with its dial, plus the Plans clock showing the week's past, today and ahead"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r17-mut-1",
+    "name": "Desk Terminal, Gauged Rows",
+    "share": 0.171,
+    "round": 18,
+    "what": [
+     "Gauge dial with a lit LIMIT tag and a numbered radar scatter drawn on the tube"
+    ],
+    "age": 1
+   }
+  ],
+  "rule": [
+   {
+    "id": "r18-head-2",
+    "name": "Lit Index, merged",
+    "share": 0.214,
+    "round": 19,
+    "what": [
+     "Numbered sections under colour-tipped hairline bars, with a big condensed title and a small count beneath"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r16-head-5",
+    "name": "Grid Console, merged",
+    "share": 0.15,
+    "round": 16,
+    "what": [
+     "Section heads on a lit hairline with node ends and corner-tabbed trays"
+    ],
+    "age": 3
+   },
+   {
+    "id": "r17-head-4",
+    "name": "Swiss Thread, merged",
+    "share": 0.15,
+    "round": 17,
+    "what": [
+     "Hue-coded 2px rules over each Settings entry; section-colour caps over section heads"
+    ],
+    "age": 2
+   }
+  ],
+  "signal": [
+   {
+    "id": "r19-mut-4",
+    "name": "Grid Console Calmer",
+    "share": 0.604,
+    "round": 19,
+    "what": [
+     "Lit NOW node on a vertical rail, amber dots for overdue tasks with 'N days ago' timetable margin",
+     "Lit NOW node on a track, with amber overdue dots and a late count",
+     "The lit track with a NOW node and amber late dots down the To do rows",
+     "NOW node with a time readout on the lit line; amber overdue dots",
+     "Lit NOW node on the To do track with the due date column, amber for late"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r18-head-5",
+    "name": "Grid Console, merged, all-star",
+    "share": 0.455,
+    "round": 19,
+    "what": [
+     "Lit rail with NOW node and amber dots on overdue tasks"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r19-mut-2",
+    "name": "Track Diagram Rail Keys",
+    "share": 0.313,
+    "round": 19,
+    "what": [
+     "Amber 'was due N days ago' stamp on a rail with a lit NOW lamp",
+     "Steel rail from Vera's lit screen to a lit lamp at the question box; the glowing live dot and NOW node on the track"
+    ],
+    "age": 0
+   }
+  ],
+  "type": [
+   {
+    "id": "r19-mut-3",
+    "name": "Lit Index, Cool Rail",
+    "share": 0.672,
+    "round": 19,
+    "what": [
+     "Heavy condensed display titles paired with a mono small-caps label and a clean sans body",
+     "Condensed display heads with numbered designators and mono small-cap labels, on a double rule",
+     "Condensed grotesque display, tracked mono-caps labels, plain sans body, numbered running heads",
+     "Condensed poster titles with mono caps labels and a scanlined key word",
+     "Condensed poster headings with a mono label scale and numbered running heads (runner-up: serif section heads with a lit numeral)",
+     "Tall condensed poster headings with a mono index and small caps labels; serif display as the alternative voice"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r18-head-2",
+    "name": "Lit Index, merged",
+    "share": 0.371,
+    "round": 19,
+    "what": [
+     "Condensed display headlines with numbered index labels and mono small caps"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r16-wild-1",
+    "name": "Lit Index",
+    "share": 0.3,
+    "round": 17,
+    "what": [
+     "Heavy condensed grotesque headings and poster question over small mono labels, with a numbered index"
+    ],
+    "age": 2
+   }
+  ],
+  "colour": [
+   {
+    "id": "r19-mut-3",
+    "name": "Lit Index, Cool Rail",
+    "share": 0.182,
+    "round": 19,
+    "what": [
+     "Cool bone and steel ink on slate plates with lilac and amber companions",
+     "Cool bone ink and steel labels on slate plates, with the green kept for light and the hatched kind swatches as the accents"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r17-mut-9",
+    "name": "Grid Console Cream Smallcaps",
+    "share": 0.125,
+    "round": 17,
+    "what": [
+     "Cream chalk ink on teal-black with sage lit, cyan and sparing amber and violet companions"
+    ],
+    "age": 2
+   },
+   {
+    "id": "r17-wild-1",
+    "name": "Patch Bay",
+    "share": 0.125,
+    "round": 17,
+    "what": [
+     "Walnut rails, graphite panels and bone-brass engraving, phosphor kept for lamps and scope"
+    ],
+    "age": 2
+   }
+  ],
+  "controls": [
+   {
+    "id": "r19-mut-3",
+    "name": "Lit Index, Cool Rail",
+    "share": 0.539,
+    "round": 19,
+    "what": [
+     "Boxed checkbox with a lit tick, a select with a caret cell, and a double-ring focus",
+     "Boxed checkbox with a lit tick, select with a caret cell, 44px nav targets",
+     "Framed checkbox that lights and holds a tick, a select with a caret cell, and a tall Send key on the phone",
+     "Boxed controls: lit-tick checkbox frame, select with a caret cell, full-width Send key, 44px nav"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r19-mut-4",
+    "name": "Grid Console Calmer",
+    "share": 0.289,
+    "round": 19,
+    "what": [
+     "44px target system, boxed checkboxes and selects with lit ticks, one quiet outline weight"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r18-mut-3",
+    "name": "Track Diagram Scanlined",
+    "share": 0.266,
+    "round": 18,
+    "what": [
+     "Recessed tray of raised keycap filters with a lit radio dot on the one in force",
+     "Recessed keycap tray of filters with a lit radio dot, and a lit-square checkbox",
+     "Recessed keycap tray with a lit radio ring on the active filter",
+     "Recessed tray of filter keys with a lit radio ring on the one in force; sunken fields and a visible caret on selects",
+     "recessed tray of raised keycaps with a radio ring lighting the one in force; underline fields with a solid green Filter key"
+    ],
+    "age": 1
+   }
+  ],
+  "chat": [
+   {
+    "id": "r19-mut-3",
+    "name": "Lit Index, Cool Rail",
+    "share": 0.562,
+    "round": 19,
+    "what": [
+     "Thread hung on a steel rail with margin times and lit ring at the composer",
+     "Thread hung on a steel rail with margin times and a lit ring where the composer begins",
+     "Thread hung on a steel rail from Vera's mark, times in the left margin, lit ring at the composer",
+     "Steel-rail thread with times set in the left margin and mono-caps speaker labels",
+     "Thread hung on a steel rail from Vera's mark, with times in the left margin and a lit ring at the composer",
+     "Thread hung on a steel rail from Vera's mark, times in the margin, a lit ring where the box begins"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r18-mut-5",
+    "name": "Lit Index, Ruled Rail",
+    "share": 0.27,
+    "round": 18,
+    "what": [
+     "The thread hung on a rail with ring nodes from Vera's mark, margin times and a lit ring at the box",
+     "Thread hung on a rail from Vera's mark, margin times, ring nodes and a lit 'your turn' ring",
+     "Chat thread on a rail from Vera's mark, margin times, and a lit your-turn ring at the box",
+     "Rail thread with family and Vera on opposite sides, margin times and a lit 'your turn' ring above the composer",
+     "Rail thread with margin timestamps and a lit 'your turn' ring above the composer"
+    ],
+    "age": 1
+   },
+   {
+    "id": "r16-head-2",
+    "name": "Track Diagram Aglow, merged",
+    "share": 0.263,
+    "round": 17,
+    "what": [
+     "Thread hung from Vera's mark on a rail with times in the margin and a ring at the composer",
+     "one Vera card holding greeting, question, status line, composer and Send, with chips beneath"
+    ],
+    "age": 2
+   }
+  ],
+  "light": [
+   {
+    "id": "r19-mut-3",
+    "name": "Lit Index, Cool Rail",
+    "share": 0.443,
+    "round": 19,
+    "what": [
+     "Scanlined, haloed poster key word MIND with a bright #6dff9c band",
+     "The scanlined gradient key word with its halo, with #6dff9c held only on the lit part",
+     "Brighter scanlined key word with a layered halo as the one lit focal point",
+     "Key word as a bright #6dff9c gradient with scanlines and a strong halo, so the poster word is the lit centrepiece"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r18-head-2",
+    "name": "Lit Index, merged",
+    "share": 0.36,
+    "round": 19,
+    "what": [
+     "The key word drawn as a tube draws it: raster lines through a white-hot-to-phosphor gradient under a three-halo bloom",
+     "Scanlined, layered bloom on the one key word, plus a glowing monitor and dot",
+     "Scanlined, bloomed key word on the headline plus a lit mark",
+     "Key word drawn with raster lines and a layered green bloom, whiter at the core"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r16-wild-1",
+    "name": "Lit Index",
+    "share": 0.287,
+    "round": 17,
+    "what": [
+     "Scanlined bloom on the key word, with a glow only on the live things: rails, NOW lamps, tube"
+    ],
+    "age": 2
+   }
+  ],
+  "foot": [
+   {
+    "id": "r17-mut-8",
+    "name": "Blueprint, Keyed Rule",
+    "share": 0.15,
+    "round": 17,
+    "what": [
+     "tab bar marking the current page with a short glowing rule"
+    ],
+    "age": 2
+   },
+   {
+    "id": "r16-head-4",
+    "name": "Phosphor Blueprint, merged",
+    "share": 0.113,
+    "round": 16,
+    "what": [
+     "uppercase tab bar with a lit top edge on the current tab"
+    ],
+    "age": 3
+   },
+   {
+    "id": "r17-head-2",
+    "name": "Phosphor Blueprint, merged",
+    "share": 0.1,
+    "round": 17,
+    "what": [
+     "Drawing title-block footer (project, motto, drawn, sheet number)"
+    ],
+    "age": 2
+   }
+  ]
+ }
+}

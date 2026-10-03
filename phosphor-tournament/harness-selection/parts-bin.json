@@ -3,8 +3,8 @@
   {
    "id": "r18-head-2",
    "name": "Lit Index, merged",
-   "share": 0.873,
-   "round": 18,
+   "share": 0.506,
+   "round": 19,
    "what": [
     "Giant condensed page title over a mono folio and a section-coloured rule with the deck beside it (head-5's icon tile, title and count with ring-and-elbow line is the runner)",
     "Giant condensed cream title with mono folio and a short section-coloured bar over a hairline, deck beside it",
@@ -20,94 +20,100 @@
    "age": 0
   },
   {
-   "id": "r16-head-2",
-   "name": "Track Diagram Aglow, merged",
-   "share": 0.35,
-   "round": 17,
+   "id": "r19-mut-3",
+   "name": "Lit Index, Cool Rail",
+   "share": 0.366,
+   "round": 19,
    "what": [
-    "Serif page title with a large counted figure and small unit, deck line under a hairline rule"
+    "Poster-scale condensed question with a bright scanlined lit key word and a numbered index title",
+    "Lit poster question with a bright gradient MIND over a small label and the single full-width Send",
+    "Poster question with a bright scanlined key word and a bone head; or the baseline-aligned title, count and deck line",
+    "Poster question with a bright scanlined MIND, a listening line and a ruled input",
+    "Poster question with a bright gradient MIND and a running head 'VERA  SATURDAY 3 OCTOBER'"
    ],
-   "age": 1
+   "age": 0
   },
   {
-   "id": "r16-wild-1",
-   "name": "Lit Index",
-   "share": 0.281,
-   "round": 17,
+   "id": "r19-mut-4",
+   "name": "Grid Console Calmer",
+   "share": 0.197,
+   "round": 19,
    "what": [
-    "giant condensed title with folio number and rule under it; or serif title with a typed count",
-    "folio plus one giant condensed word with the lede on its baseline; or a typed count standing on the masthead rule"
+    "Title, count and deck on one last baseline; serif title with tabular underlined count as the alternative"
    ],
-   "age": 1
+   "age": 0
   }
  ],
  "glass": [
   {
+   "id": "r19-mut-1",
+   "name": "Desk Terminal, Docked Track",
+   "share": 0.771,
+   "round": 19,
+   "what": [
+    "CRT tube with a scanned bar-chart scope and mono readout, docked beside the question",
+    "Vera's question typed in mono on a lit scanlined screen with a LISTENING status line",
+    "Terminal Vera card, with a bar-chart tube and an ON THIS PAGE contents plate docked under it",
+    "The Home tube and Vera card: typed question in a monitor with a listening lamp, and the docked monitor with chart and contents plate",
+    "Terminal question line with a LISTENING status bar and level ticks inside Vera's card",
+    "Tube with a status line, docked over an 'On this page' contents plate and a Ready readout",
+    "Terminal tube with a glowing typed question, a listening status line and the Contents plate docked beside it",
+    "Vera's question typed in glyph type with a block cursor on a tube, with a LISTENING status line, plus a docked Contents plate and status under the tube"
+   ],
+   "age": 0
+  },
+  {
    "id": "r18-mut-1",
    "name": "Desk Terminal, Vera Card",
-   "share": 0.657,
-   "round": 18,
+   "share": 0.472,
+   "round": 19,
    "what": [
-    "The question typed in VT323 on a glass strip with a cursor, a lit Listening line with a breathing lamp, over the Vera card and a bezelled tube",
-    "The question typed in VT323 on a glass strip with a block cursor and a lit Listening lamp line",
-    "One Vera card: greeting, typed question on a glass strip, lit Listening line and the box together",
-    "Vera card with a lit typed-question glass strip and a Listening line, beside a bezelled tube",
-    "Question typed in VT323 with a block cursor and a lit LISTENING strip on the tube, week chart on a grid floor",
-    "Question typed on the tube under a block cursor, lit Listening strip and a grid-floor monitor"
+    "Typed question on a CRT screen with a LISTENING status line, plus a rail from the tube to the box"
    ],
    "age": 0
   },
   {
-   "id": "r18-mut-11",
-   "name": "Grid Console Typed Glass",
-   "share": 0.386,
-   "round": 18,
+   "id": "r19-mut-2",
+   "name": "Track Diagram Rail Keys",
+   "share": 0.2,
+   "round": 19,
    "what": [
-    "Question typed in VT323 on the Next up tube with a block cursor and a lamp status line",
-    "Question typed in VT323 on the tube under a block cursor, with a lamp status line beneath it"
+    "Vera's lit screen with a steel rail turning to the question box and ending at a lit lamp"
    ],
    "age": 0
-  },
-  {
-   "id": "r17-mut-10",
-   "name": "Grid Console Rail Serif",
-   "share": 0.188,
-   "round": 17,
-   "what": [
-    "One Vera card holding the greeting, the question, a lit 'Listening' status line and the box, beside a bezelled tube with a grid floor"
-   ],
-   "age": 1
   }
  ],
  "list": [
   {
-   "id": "r16-head-2",
-   "name": "Track Diagram Aglow, merged",
-   "share": 0.775,
-   "round": 17,
+   "id": "r19-mut-1",
+   "name": "Desk Terminal, Docked Track",
+   "share": 0.639,
+   "round": 19,
    "what": [
-    "To do on a vertical track with dated nodes and a lit NOW marker; tight rows with facts flush right"
-   ],
-   "age": 1
-  },
-  {
-   "id": "r18-mut-1",
-   "name": "Desk Terminal, Vera Card",
-   "share": 0.443,
-   "round": 18,
-   "what": [
-    "Tight rows with right-aligned tabular facts and a contents plate",
-    "Rows with column heads and right-aligned tabular facts; condensed row titles with mono facts",
-    "To do rows with 'was due N days ago' in amber, who and a pencil at the right",
-    "Tight rows with a right-aligned tabular facts column and the late flag in amber"
+    "Ledger rows with leaders and a lit rail with branches, plus amber 'was due N days' stamps",
+    "To do rows with a lit rail and 'was due N days ago' in amber, a facts column and a bigger row type",
+    "Tabular rows with designator, facts columns and 'was due N days ago' stamps along a lit track",
+    "Rows with leader dots and right-aligned tabular facts columns, with small-cap column heads",
+    "To do rows with a lit track, amber 'was due N days ago' and the owner and a pencil on the right",
+    "Larger rows with leader dots, a facts column and a lit rail with a branch to each tick, ending at a NOW node"
    ],
    "age": 0
   },
   {
+   "id": "r16-head-2",
+   "name": "Track Diagram Aglow, merged",
+   "share": 0.388,
+   "round": 17,
+   "what": [
+    "To do on a vertical track with dated nodes and a lit NOW marker; tight rows with facts flush right"
+   ],
+   "age": 2
+  },
+  {
    "id": "r18-head-5",
    "name": "Grid Console, merged, all-star",
-   "share": 0.434,
-   "round": 18,
+   "share": 0.34,
+   "round": 19,
    "what": [
     "To do as a vertical track: timetable margin of due times, a lamp per row, overdue amber, a lit NOW lamp, hollow terminal ring",
     "To do on a vertical track with a lamp per item, a due-time margin and a NOW lamp",
@@ -118,32 +124,35 @@
  ],
  "figure": [
   {
-   "id": "r17-mut-1",
-   "name": "Desk Terminal, Gauged Rows",
-   "share": 0.341,
-   "round": 18,
+   "id": "r19-mut-1",
+   "name": "Desk Terminal, Docked Track",
+   "share": 0.318,
+   "round": 19,
    "what": [
-    "Gauge dial with a lit LIMIT tag and a numbered radar scatter drawn on the tube"
+    "Dot-scope bar chart, numbered-blip radar and swept dial gauge on the tubes",
+    "Mono readout with a gauge dial and a labelled bar trace on the tubes",
+    "Spend dial in a bezelled tube (needle, tick scale, LIMIT flag), plus the radar and the chart with a lit floor grid"
    ],
    "age": 0
   },
   {
-   "id": "r16-mut-10",
-   "name": "Grid Console Ledger Dial",
-   "share": 0.281,
-   "round": 16,
+   "id": "r18-mut-3",
+   "name": "Track Diagram Scanlined",
+   "share": 0.182,
+   "round": 19,
    "what": [
-    "Moving-coil spend dial with lit sector and LIMIT flag, in a bezelled glowing tube"
+    "Plans clock and week key; the spend gauge on Status",
+    "the cost tube with its dial, plus the Plans clock showing the week's past, today and ahead"
    ],
-   "age": 2
+   "age": 0
   },
   {
-   "id": "r17-mut-3",
-   "name": "Track Diagram Dialled",
-   "share": 0.25,
-   "round": 17,
+   "id": "r17-mut-1",
+   "name": "Desk Terminal, Gauged Rows",
+   "share": 0.171,
+   "round": 18,
    "what": [
-    "Moving-coil spend dial on a bezelled glowing tube with a LIMIT flag, in the Status head"
+    "Gauge dial with a lit LIMIT tag and a numbered radar scatter drawn on the tube"
    ],
    "age": 1
   }
@@ -152,144 +161,169 @@
   {
    "id": "r18-head-2",
    "name": "Lit Index, merged",
-   "share": 0.305,
-   "round": 18,
+   "share": 0.214,
+   "round": 19,
    "what": [
-    "Hairline rules with a short coloured stub, ruled log in Chat",
-    "hairline under the title with a short section-coloured bar; the lit trail running down the left with branching section heads"
+    "Numbered sections under colour-tipped hairline bars, with a big condensed title and a small count beneath"
    ],
    "age": 0
   },
   {
    "id": "r16-head-5",
    "name": "Grid Console, merged",
-   "share": 0.3,
+   "share": 0.15,
    "round": 16,
    "what": [
     "Section heads on a lit hairline with node ends and corner-tabbed trays"
    ],
-   "age": 2
+   "age": 3
   },
   {
    "id": "r17-head-4",
    "name": "Swiss Thread, merged",
-   "share": 0.3,
+   "share": 0.15,
    "round": 17,
    "what": [
     "Hue-coded 2px rules over each Settings entry; section-colour caps over section heads"
    ],
-   "age": 1
+   "age": 2
   }
  ],
  "signal": [
   {
-   "id": "r18-head-5",
-   "name": "Grid Console, merged, all-star",
-   "share": 0.552,
-   "round": 18,
+   "id": "r19-mut-4",
+   "name": "Grid Console Calmer",
+   "share": 0.604,
+   "round": 19,
    "what": [
-    "The lit track running to a glowing NOW node with a time chip, and node lamps down the To do dates",
-    "NOW node with a lit time chip on the spine, and the lit dots and due-day nodes on the To do track",
-    "NOW marker on a track with colour-coded due dots and a live line to it",
-    "Dated To do timeline with a lit NOW node, late dates in amber",
-    "Lit track with the NOW marker and amber late dots running to the checkbox rows",
-    "lit NOW node on the due track and a glowing footer lamp; NOW as a time chip on the rail"
+    "Lit NOW node on a vertical rail, amber dots for overdue tasks with 'N days ago' timetable margin",
+    "Lit NOW node on a track, with amber overdue dots and a late count",
+    "The lit track with a NOW node and amber late dots down the To do rows",
+    "NOW node with a time readout on the lit line; amber overdue dots",
+    "Lit NOW node on the To do track with the due date column, amber for late"
    ],
    "age": 0
   },
   {
-   "id": "r17-mut-1",
-   "name": "Desk Terminal, Gauged Rows",
-   "share": 0.375,
-   "round": 17,
+   "id": "r18-head-5",
+   "name": "Grid Console, merged, all-star",
+   "share": 0.455,
+   "round": 19,
    "what": [
-    "Lit lamp with a mono status line on the glass; NOW as a lit tick on a rail",
-    "one-line glass status with a lit lamp (Listening, watching 4 plans)"
+    "Lit rail with NOW node and amber dots on overdue tasks"
    ],
-   "age": 1
+   "age": 0
   },
   {
-   "id": "r16-head-2",
-   "name": "Track Diagram Aglow, merged",
-   "share": 0.312,
-   "round": 17,
+   "id": "r19-mut-2",
+   "name": "Track Diagram Rail Keys",
+   "share": 0.313,
+   "round": 19,
    "what": [
-    "Lit NOW node on the track with amber dots for late; a thick amber bar for a late row"
+    "Amber 'was due N days ago' stamp on a rail with a lit NOW lamp",
+    "Steel rail from Vera's lit screen to a lit lamp at the question box; the glowing live dot and NOW node on the track"
    ],
-   "age": 1
+   "age": 0
   }
  ],
  "type": [
   {
-   "id": "r16-wild-1",
-   "name": "Lit Index",
-   "share": 0.6,
-   "round": 17,
+   "id": "r19-mut-3",
+   "name": "Lit Index, Cool Rail",
+   "share": 0.672,
+   "round": 19,
    "what": [
-    "Heavy condensed grotesque headings and poster question over small mono labels, with a numbered index"
-   ],
-   "age": 1
-  },
-  {
-   "id": "r18-head-2",
-   "name": "Lit Index, merged",
-   "share": 0.32,
-   "round": 18,
-   "what": [
-    "Condensed heavy titles with mono folios and small-caps labels, against a serif title with a count",
-    "Condensed heavy head over mono small-cap labels and a running head, with a serif option for counted figures",
-    "Giant heavy condensed titles in bone, mono folio and tracked small-cap labels, serif or sans body underneath"
+    "Heavy condensed display titles paired with a mono small-caps label and a clean sans body",
+    "Condensed display heads with numbered designators and mono small-cap labels, on a double rule",
+    "Condensed grotesque display, tracked mono-caps labels, plain sans body, numbered running heads",
+    "Condensed poster titles with mono caps labels and a scanlined key word",
+    "Condensed poster headings with a mono label scale and numbered running heads (runner-up: serif section heads with a lit numeral)",
+    "Tall condensed poster headings with a mono index and small caps labels; serif display as the alternative voice"
    ],
    "age": 0
   },
   {
-   "id": "r17-mut-10",
-   "name": "Grid Console Rail Serif",
-   "share": 0.2,
+   "id": "r18-head-2",
+   "name": "Lit Index, merged",
+   "share": 0.371,
+   "round": 19,
+   "what": [
+    "Condensed display headlines with numbered index labels and mono small caps"
+   ],
+   "age": 0
+  },
+  {
+   "id": "r16-wild-1",
+   "name": "Lit Index",
+   "share": 0.3,
    "round": 17,
    "what": [
-    "Source Serif headings and figures over small mono labels, with a tracked small-cap option"
+    "Heavy condensed grotesque headings and poster question over small mono labels, with a numbered index"
    ],
-   "age": 1
+   "age": 2
   }
  ],
  "colour": [
   {
+   "id": "r19-mut-3",
+   "name": "Lit Index, Cool Rail",
+   "share": 0.182,
+   "round": 19,
+   "what": [
+    "Cool bone and steel ink on slate plates with lilac and amber companions",
+    "Cool bone ink and steel labels on slate plates, with the green kept for light and the hatched kind swatches as the accents"
+   ],
+   "age": 0
+  },
+  {
    "id": "r17-mut-9",
    "name": "Grid Console Cream Smallcaps",
-   "share": 0.25,
+   "share": 0.125,
    "round": 17,
    "what": [
     "Cream chalk ink on teal-black with sage lit, cyan and sparing amber and violet companions"
    ],
-   "age": 1
+   "age": 2
   },
   {
    "id": "r17-wild-1",
    "name": "Patch Bay",
-   "share": 0.25,
+   "share": 0.125,
    "round": 17,
    "what": [
     "Walnut rails, graphite panels and bone-brass engraving, phosphor kept for lamps and scope"
-   ],
-   "age": 1
-  },
-  {
-   "id": "r16-head-5",
-   "name": "Grid Console, merged",
-   "share": 0.188,
-   "round": 16,
-   "what": [
-    "Teal-black ground with grounded section hues (amber, steel blue, mauve) as thin edges; cool slate with cream text as the runner"
    ],
    "age": 2
   }
  ],
  "controls": [
   {
+   "id": "r19-mut-3",
+   "name": "Lit Index, Cool Rail",
+   "share": 0.539,
+   "round": 19,
+   "what": [
+    "Boxed checkbox with a lit tick, a select with a caret cell, and a double-ring focus",
+    "Boxed checkbox with a lit tick, select with a caret cell, 44px nav targets",
+    "Framed checkbox that lights and holds a tick, a select with a caret cell, and a tall Send key on the phone",
+    "Boxed controls: lit-tick checkbox frame, select with a caret cell, full-width Send key, 44px nav"
+   ],
+   "age": 0
+  },
+  {
+   "id": "r19-mut-4",
+   "name": "Grid Console Calmer",
+   "share": 0.289,
+   "round": 19,
+   "what": [
+    "44px target system, boxed checkboxes and selects with lit ticks, one quiet outline weight"
+   ],
+   "age": 0
+  },
+  {
    "id": "r18-mut-3",
    "name": "Track Diagram Scanlined",
-   "share": 0.531,
+   "share": 0.266,
    "round": 18,
    "what": [
     "Recessed tray of raised keycap filters with a lit radio dot on the one in force",
@@ -298,34 +332,29 @@
     "Recessed tray of filter keys with a lit radio ring on the one in force; sunken fields and a visible caret on selects",
     "recessed tray of raised keycaps with a radio ring lighting the one in force; underline fields with a solid green Filter key"
    ],
-   "age": 0
-  },
-  {
-   "id": "r17-head-2",
-   "name": "Phosphor Blueprint, merged",
-   "share": 0.3,
-   "round": 17,
-   "what": [
-    "numbered select list with a check, joined composer row and dashed ways-to-start keys"
-   ],
    "age": 1
-  },
-  {
-   "id": "r18-mut-5",
-   "name": "Lit Index, Ruled Rail",
-   "share": 0.258,
-   "round": 18,
-   "what": [
-    "lit-square checkbox, echoing Send key; numbered select menu with check"
-   ],
-   "age": 0
   }
  ],
  "chat": [
   {
+   "id": "r19-mut-3",
+   "name": "Lit Index, Cool Rail",
+   "share": 0.562,
+   "round": 19,
+   "what": [
+    "Thread hung on a steel rail with margin times and lit ring at the composer",
+    "Thread hung on a steel rail with margin times and a lit ring where the composer begins",
+    "Thread hung on a steel rail from Vera's mark, times in the left margin, lit ring at the composer",
+    "Steel-rail thread with times set in the left margin and mono-caps speaker labels",
+    "Thread hung on a steel rail from Vera's mark, with times in the left margin and a lit ring at the composer",
+    "Thread hung on a steel rail from Vera's mark, times in the margin, a lit ring where the box begins"
+   ],
+   "age": 0
+  },
+  {
    "id": "r18-mut-5",
    "name": "Lit Index, Ruled Rail",
-   "share": 0.539,
+   "share": 0.27,
    "round": 18,
    "what": [
     "The thread hung on a rail with ring nodes from Vera's mark, margin times and a lit ring at the box",
@@ -334,46 +363,39 @@
     "Rail thread with family and Vera on opposite sides, margin times and a lit 'your turn' ring above the composer",
     "Rail thread with margin timestamps and a lit 'your turn' ring above the composer"
    ],
-   "age": 0
+   "age": 1
   },
   {
    "id": "r16-head-2",
    "name": "Track Diagram Aglow, merged",
-   "share": 0.525,
+   "share": 0.263,
    "round": 17,
    "what": [
     "Thread hung from Vera's mark on a rail with times in the margin and a ring at the composer",
     "one Vera card holding greeting, question, status line, composer and Send, with chips beneath"
    ],
-   "age": 1
-  },
-  {
-   "id": "r17-mut-10",
-   "name": "Grid Console Rail Serif",
-   "share": 0.4,
-   "round": 17,
-   "what": [
-    "Thread hung on a rail from Vera's mark, times in the margin, a lit ring at the box"
-   ],
-   "age": 1
+   "age": 2
   }
  ],
  "light": [
   {
-   "id": "r16-wild-1",
-   "name": "Lit Index",
-   "share": 0.575,
-   "round": 17,
+   "id": "r19-mut-3",
+   "name": "Lit Index, Cool Rail",
+   "share": 0.443,
+   "round": 19,
    "what": [
-    "Scanlined bloom on the key word, with a glow only on the live things: rails, NOW lamps, tube"
+    "Scanlined, haloed poster key word MIND with a bright #6dff9c band",
+    "The scanlined gradient key word with its halo, with #6dff9c held only on the lit part",
+    "Brighter scanlined key word with a layered halo as the one lit focal point",
+    "Key word as a bright #6dff9c gradient with scanlines and a strong halo, so the poster word is the lit centrepiece"
    ],
-   "age": 1
+   "age": 0
   },
   {
    "id": "r18-head-2",
    "name": "Lit Index, merged",
-   "share": 0.475,
-   "round": 18,
+   "share": 0.36,
+   "round": 19,
    "what": [
     "The key word drawn as a tube draws it: raster lines through a white-hot-to-phosphor gradient under a three-halo bloom",
     "Scanlined, layered bloom on the one key word, plus a glowing monitor and dot",
@@ -383,46 +405,46 @@
    "age": 0
   },
   {
-   "id": "r17-mut-5",
-   "name": "Lit Index, Dialled",
-   "share": 0.3,
+   "id": "r16-wild-1",
+   "name": "Lit Index",
+   "share": 0.287,
    "round": 17,
    "what": [
-    "Scanlined, blooming poster word (MIND) plus key afterglow on a beige case"
+    "Scanlined bloom on the key word, with a glow only on the live things: rails, NOW lamps, tube"
    ],
-   "age": 1
+   "age": 2
   }
  ],
  "foot": [
   {
    "id": "r17-mut-8",
    "name": "Blueprint, Keyed Rule",
-   "share": 0.3,
+   "share": 0.15,
    "round": 17,
    "what": [
     "tab bar marking the current page with a short glowing rule"
    ],
-   "age": 1
+   "age": 2
   },
   {
    "id": "r16-head-4",
    "name": "Phosphor Blueprint, merged",
-   "share": 0.225,
+   "share": 0.113,
    "round": 16,
    "what": [
     "uppercase tab bar with a lit top edge on the current tab"
    ],
-   "age": 2
+   "age": 3
   },
   {
    "id": "r17-head-2",
    "name": "Phosphor Blueprint, merged",
-   "share": 0.2,
+   "share": 0.1,
    "round": 17,
    "what": [
     "Drawing title-block footer (project, motto, drawn, sheet number)"
    ],
-   "age": 1
+   "age": 2
   }
  ]
 }

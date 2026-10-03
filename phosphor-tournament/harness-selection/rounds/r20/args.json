@@ -1,0 +1,103 @@
+{
+ "round": "r20",
+ "roundNo": 20,
+ "mode": "selection",
+ "carried": [
+  {
+   "id": "r19-mut-1",
+   "name": "Desk Terminal, Docked Track",
+   "summary": "Refinement comparator."
+  },
+  {
+   "id": "r19-mut-3",
+   "name": "Lit Index, Cool Rail",
+   "summary": "Refinement comparator."
+  },
+  {
+   "id": "r19-mut-4",
+   "name": "Grid Console Calmer",
+   "summary": "Refinement comparator."
+  }
+ ],
+ "wildCarried": [],
+ "seeds": [],
+ "mutants": [
+  {
+   "kind": "step",
+   "parent": "r19-mut-1",
+   "parentName": "Desk Terminal, Docked Track",
+   "parentMean": 8.02,
+   "refine": true,
+   "changes": [
+    {
+     "slot": "glass",
+     "text": "equalise the heights of the dock row so Coming up and the Contents plate end together, and shrink the tube column on Settings, Status and Plans so the lists get more width"
+    },
+    {
+     "slot": "rule",
+     "text": "thin the chrome: fewer plates; while setup is unfinished, Finish setting up comes first on Home"
+    },
+    {
+     "slot": "head",
+     "text": "give the Home question one size more weight so it wins when squinted"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r19-mut-3",
+   "parentName": "Lit Index, Cool Rail",
+   "parentMean": 7.75,
+   "refine": true,
+   "changes": [
+    {
+     "slot": "light",
+     "text": "light the question mark to match MIND exactly"
+    },
+    {
+     "slot": "list",
+     "text": "ledger rows with leaders, tabular facts, amber 'was due N days ago' stamps and a fine lit rail down To do, as in Docked Track",
+     "donor": "r19-mut-1",
+     "donorName": "Desk Terminal, Docked Track"
+    },
+    {
+     "slot": "type",
+     "text": "raise the 9px mono kickers and the tab labels to at least 12px, and take the Settings and To do titles down one step so they stop being walls"
+    },
+    {
+     "slot": "head",
+     "text": "phone: the poster question takes about a third of the first screen so the starters show above the fold; shorten the dotted leader beside short chat lines"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r19-mut-4",
+   "parentName": "Grid Console Calmer",
+   "parentMean": 7.28,
+   "refine": true,
+   "changes": [
+    {
+     "slot": "rule",
+     "text": "one quiet lit corner tick on the active or primary cell only, not on every cell"
+    },
+    {
+     "slot": "controls",
+     "text": "Add something to do is a visible key, the Filter select becomes pills, and the phone Send shows its word as well as the icon, with the taller composer of Docked Track",
+     "donor": "r19-mut-1",
+     "donorName": "Desk Terminal, Docked Track"
+    },
+    {
+     "slot": "colour",
+     "text": "lift the dim ink-2 text one step and make the kind colours in the cell labels a touch stronger so the difference from the parent shows at half size"
+    }
+   ]
+  }
+ ],
+ "wild": [],
+ "wildMutants": [],
+ "nInformed": 0,
+ "history": [],
+ "panel": "screen",
+ "merges": []
+}
