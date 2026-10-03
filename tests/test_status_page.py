@@ -191,6 +191,14 @@ def test_the_status_page_is_behind_the_password(settings, clock, conn, family) -
     assert client.get("/status").status_code == 200
 
 
+def test_a_connected_calendar_says_who_it_is_shared_with(settings, clock, conn, family):
+    key = settings.google_key_path
+    key.write_text('{"type": "service_account", "client_email": "bot@p.iam.gserviceaccount.com"}')
+    app = App(settings.model_copy(update={"google_calendar_id": "family@group.calendar"}), clock)
+    text = _flat(create_app(app).test_client().get("/status"))
+    assert "reached as bot@p.iam.gserviceaccount.com" in text
+
+
 def test_a_calendar_named_but_not_signed_into_is_not_connected(settings, clock, conn, family):
     app = App(settings.model_copy(update={"google_calendar_id": "family@group.calendar"}), clock)
     text = _flat(create_app(app).test_client().get("/status"))

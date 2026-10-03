@@ -897,9 +897,9 @@ def test_only_the_settings_page_writes_and_only_to_the_settings() -> None:
             for node in ast.walk(ast.parse(other.read_text("utf-8")))
             if isinstance(node, ast.Call)
             and isinstance(node.func, ast.Attribute)
-            and node.func.attr in {"rotate", "save_token"}
+            and node.func.attr in {"rotate", "save_key"}
         }
-        expected = {"rotate", "save_token"} if other.name == "settings.py" else set()
+        expected = {"rotate", "save_key"} if other.name == "settings.py" else set()
         assert writes == expected, other.name
 
 

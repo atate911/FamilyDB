@@ -102,7 +102,7 @@ docker compose exec bot familydb chat "we should try the new ramen place"
 docker compose exec -it bot familydb repl
 ```
 
-`FAMILYDB_PATH` and `GOOGLE_TOKEN_PATH` are set inside the container to `/data/...`; the compose
+`FAMILYDB_PATH` and `GOOGLE_KEY_PATH` are set inside the container to `/data/...`; the compose
 file mounts `./data` there. With `COMPOSE_PROFILES=tls` in `.env`, `docker compose up -d` starts
 the Caddy container too (section 10).
 
@@ -133,14 +133,14 @@ not start. If you do want it under `/home` anyway, the directory above it has to
 by the service user (`chmod o+x /home/you`), and the unit needs `ProtectHome=read-only` instead
 of `ProtectHome=true`, which the installer sets for you.
 
-The unit sets `FAMILYDB_PATH` and `GOOGLE_TOKEN_PATH` under `/opt/familydb/data` and locks the
+The unit sets `FAMILYDB_PATH` and `GOOGLE_KEY_PATH` under `/opt/familydb/data` and locks the
 service down to that folder: `UMask=0077`, so nothing it writes is readable by another account,
 and sandboxing such as `PrivateDevices`, the `ProtectKernel*` settings, `RestrictAddressFamilies`
 and `SystemCallFilter=@system-service`. To chat from the shell, run commands as the service user
 so the database stays owned by it: `sudo -u familydb /opt/familydb/.venv/bin/familydb repl`.
 
 Every `familydb` command runs with a umask of 077 as well, and `familydb run` and `familydb web`
-take group and other access off the database, its write-ahead files, the Google token and
+take group and other access off the database, its write-ahead files, the Google key and
 `data/web_secret` when they start, which puts right any that an older version left readable.
 
 Without uv: `python3 -m venv .venv && .venv/bin/pip install .` gives the same `.venv/bin/familydb`.
@@ -228,13 +228,9 @@ Then connect it from the settings page, which needs nothing copied to the server
    event and taking that off again, before it keeps either; if something is not right it says
    which (not shared, shared for reading only, the Calendar API not turned on in that project).
 
-The key is saved owner-only at `GOOGLE_TOKEN_PATH` (`data/google_token.json`). The same can be
+The key is saved owner-only at `GOOGLE_KEY_PATH` (`data/google_key.json`). The same can be
 done on the server: `uv run familydb google connect KEY_FILE CALENDAR_ID`. Check either with
 `familydb google events`.
-
-An install made before service accounts keeps working on the sign-in it saved, until Google
-ends that (a week, if the sign-in screen was left in Testing). Connect again as above to replace
-it; the settings page says which kind it has. Nothing else needs to change.
 
 A dedicated family Google account that owns the calendar keeps it apart from anyone's personal
 one, but is not needed: any calendar can be shared with the service account. From chat, "we're
@@ -732,7 +728,7 @@ readable by the bot's user alone, and so is everything in it:
 | Path | What it is | In backups? |
 |---|---|---|
 | `data/familydb.sqlite3` | everything: messages, ideas, plans, places, the settings changed from the page, and any key stored there | yes, this is the backup |
-| `data/google_token.json` | the service account's key for the calendar | no, make a new key instead (section 5) |
+| `data/google_key.json` | the service account's key for the calendar | no, make a new key instead (section 5) |
 | `data/web_secret` | signs the login cookie; "Sign everyone out" replaces it | no |
 | `.env` | the page's password and address, and anything not set from the page | no, keep your own copy |
 | `backups/` | the nightly backups, owner-only | they are the backups |

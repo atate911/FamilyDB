@@ -21,10 +21,9 @@ from familydb.errors import ToolError, ToolUnavailable
 log = logging.getLogger(__name__)
 
 SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
-# An install made before service accounts holds a person's sign-in instead of a key. It keeps
-# working while it lasts; connecting again replaces it.
-USER_SCOPES = [*SCOPES, "https://www.googleapis.com/auth/calendar.readonly"]
-REAUTH = "Google no longer accepts the saved key; connect the calendar again on the settings page"
+KEY_REFUSED = (
+    "Google no longer accepts the saved key; connect the calendar again on the settings page"
+)
 # How long the page may show what Google said rather than ask again. Asking took a few hundred
 # milliseconds of every Home and Plans view. A plan the bot makes, moves or cancels shows at once,
 # since its own writes forget what was read; an event added on a phone may take this long to
@@ -186,42 +185,28 @@ def build_service(creds: Any) -> Any:
     return build("calendar", "v3", credentials=creds, cache_discovery=False)
 
 
-def load_credentials(token_path: Path) -> Any:
-    """Credentials from the saved key (or an older install's sign-in, refreshed when needed)."""
-    from google.auth.exceptions import RefreshError
-    from google.auth.transport.requests import Request
+def load_credentials(key_path: Path) -> Any:
+    """Credentials from the saved service account key. Google's tokens are fetched as needed."""
     from google.oauth2 import service_account
-    from google.oauth2.credentials import Credentials
 
-    if not token_path.exists():
-        raise ToolUnavailable(f"no Google key at {token_path}; connect the calendar on the page")
+    if not key_path.exists():
+        raise ToolUnavailable(f"no Google key at {key_path}; connect the calendar on the page")
     try:
-        info = json.loads(token_path.read_text(encoding="utf-8"))
-        if info.get("type") == "service_account":
-            return service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
-        creds = Credentials.from_authorized_user_info(info, USER_SCOPES)
-    except ValueError as exc:
-        raise ToolUnavailable(REAUTH) from exc
-    if not creds.valid:
-        if not (creds.expired and creds.refresh_token):
-            raise ToolUnavailable(REAUTH)
-        try:
-            creds.refresh(Request())
-        except RefreshError as exc:
-            raise ToolUnavailable(REAUTH) from exc
-        save_token(token_path, creds.to_json())
-    return creds
+        info = json.loads(key_path.read_text(encoding="utf-8"))
+        return service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
+    except (ValueError, KeyError, AttributeError) as exc:
+        raise ToolUnavailable(KEY_REFUSED) from exc
 
 
-def save_token(token_path: Path, text: str) -> None:
+def save_key(key_path: Path, text: str) -> None:
     """Write the key owner-only, and whole: a half-written key is a lost calendar."""
-    token_path.parent.mkdir(parents=True, exist_ok=True)
-    fresh = token_path.with_name(token_path.name + ".new")
+    key_path.parent.mkdir(parents=True, exist_ok=True)
+    fresh = key_path.with_name(key_path.name + ".new")
     handle = os.open(fresh, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600)
     with os.fdopen(handle, "w", encoding="utf-8") as out:
         out.write(text)
     os.chmod(fresh, 0o600)  # in case an older file of that name was there with other rights
-    os.replace(fresh, token_path)
+    os.replace(fresh, key_path)
 
 
 # Connecting. The family makes a service account in Google Cloud, shares the calendar with its
@@ -231,10 +216,6 @@ NOT_JSON = "That is not the file Google gave you: it should be JSON, starting wi
 NOT_A_KEY = (
     "That is not a service account key. In Google Cloud, open the service account, then Keys, "
     "Add key, Create new key, JSON, and paste everything in the file it saves."
-)
-OLD_CLIENT = (
-    "That is an OAuth client, which is how FamilyDB used to connect. Make a service account "
-    "and a key for it instead, as the steps above say."
 )
 NO_CALENDAR = (
     "Type the calendar's id: in Google Calendar, the calendar's settings, under Integrate calendar."
@@ -269,8 +250,6 @@ def service_account_key(text: str) -> dict[str, Any]:
         raise GoogleSetupError(NOT_JSON) from None
     if not isinstance(info, dict):
         raise GoogleSetupError(NOT_JSON)
-    if "installed" in info or "web" in info:
-        raise GoogleSetupError(OLD_CLIENT)
     if info.get("type") != "service_account":
         raise GoogleSetupError(NOT_A_KEY)
     try:
@@ -280,12 +259,11 @@ def service_account_key(text: str) -> dict[str, Any]:
     return info
 
 
-def service_account_email(token_path: Path) -> str | None:
-    """Who the calendar must be shared with: the saved key's address, if there is such a key."""
+def service_account_email(key_path: Path) -> str | None:
+    """Who the calendar must be shared with: the saved key's address, if there is a key."""
     try:
-        info = json.loads(token_path.read_text(encoding="utf-8"))
-        return str(info["client_email"]) if info.get("type") == "service_account" else None
-    except (OSError, ValueError, KeyError, AttributeError):
+        return str(json.loads(key_path.read_text(encoding="utf-8"))["client_email"])
+    except (OSError, ValueError, KeyError, TypeError):
         return None
 
 
@@ -343,7 +321,7 @@ class GoogleCalendar:
         if not settings.google_calendar_id:
             raise ToolUnavailable("GOOGLE_CALENDAR_ID is not set")
         self.calendar_id = settings.google_calendar_id
-        self.token_path = Path(settings.google_token_path)
+        self.key_path = Path(settings.google_key_path)
         self.tz = settings.tzinfo
         self._service: Any = None
         # The underlying HTTP client is not thread-safe; the bot and the scheduler share this.
@@ -363,7 +341,7 @@ class GoogleCalendar:
         with self._lock:
             if self._service is None:
                 try:
-                    self._service = build_service(load_credentials(self.token_path))
+                    self._service = build_service(load_credentials(self.key_path))
                 except ToolUnavailable as exc:
                     self._shut_out(str(exc))
                     raise
@@ -387,8 +365,8 @@ class GoogleCalendar:
                 return None
             raise ToolError(f"Google Calendar error {status or '?'}: {exc.reason}") from exc
         except RefreshError as exc:
-            self._shut_out(REAUTH)
-            raise ToolUnavailable(REAUTH) from exc
+            self._shut_out(KEY_REFUSED)
+            raise ToolUnavailable(KEY_REFUSED) from exc
         if self._troubled:
             self._troubled = False
             if self.report is not None:

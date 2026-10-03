@@ -782,13 +782,13 @@ def google_connect(
     except (OSError, google_calendar.GoogleSetupError) as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=1) from exc
-    token_path = Path(application.settings.google_token_path)
-    google_calendar.save_token(token_path, json.dumps(info))
+    key_path = Path(application.settings.google_key_path)
+    google_calendar.save_key(key_path, json.dumps(info))
     with closing(application.connect()) as conn, db.transaction(conn):
         settings_store.set_many(
             conn, {"google_calendar_id": calendar_id.strip()}, changed_by=None, source="cli"
         )
-    typer.echo(f"connected to {calendar_id.strip()}; the key is saved in {token_path}")
+    typer.echo(f"connected to {calendar_id.strip()}; the key is saved in {key_path}")
 
 
 @google_app.command("events")

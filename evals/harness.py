@@ -188,13 +188,13 @@ def under_persona(base: Settings, choice: str) -> tuple[str, Settings]:
 
 
 def settings_for(base: Settings, folder: Path, *, limit: float = 1.0) -> Settings:
-    token = folder / "google_token.json"
+    token = folder / "google_key.json"
     token.write_text("{}")
     return base.model_copy(
         update={
             "familydb_path": folder / "eval.sqlite3",
             "google_calendar_id": "eval@group.calendar.google.com",
-            "google_token_path": token,
+            "google_key_path": token,
             "home_lat": 45.63,
             "home_lon": -122.67,
             "home_area": "Vancouver, WA",

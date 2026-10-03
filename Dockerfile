@@ -25,7 +25,7 @@ USER familydb
 
 ENV PATH="/app/.venv/bin:$PATH" \
     FAMILYDB_PATH=/data/familydb.sqlite3 \
-    GOOGLE_TOKEN_PATH=/data/google_token.json
+    GOOGLE_KEY_PATH=/data/google_key.json
 
 # The web page (chat, forms, status, settings), when WEB_ENABLED is set: on 8080 unless WEB_PORT
 # says otherwise. The compose file publishes whichever it is.

@@ -432,7 +432,7 @@ def check_integrations(app: App, report: Report) -> None:
         report.add(
             "google calendar",
             WARN,
-            f"a calendar id is set but no key at {settings.google_token_path}",
+            f"a calendar id is set but no key at {settings.google_key_path}",
             "Connect it again on the settings page (Google Calendar)",
         )
     else:

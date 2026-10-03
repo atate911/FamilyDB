@@ -1,7 +1,7 @@
 """The settings pages: the only part of the web surface that writes settings.
 
 It writes `app_settings` through `store.settings`, and two files: the session key
-(`keys.rotate`, which signs everyone out) and the Google key (`google.save_token`).
+(`keys.rotate`, which signs everyone out) and the Google key (`google.save_key`).
 Nothing here can reach an idea, a plan or a message. Every change is logged, and a key's value
 is never what gets logged: only that it was replaced.
 
@@ -236,11 +236,11 @@ def level_labels(key: str, live: Settings) -> dict[str, str]:
 
 
 def google_panel(live: Any) -> dict[str, Any]:
-    token = Path(live.google_token_path)
+    token = Path(live.google_key_path)
     return {
         "connected": token.exists(),
         "calendar": live.google_calendar_id,
-        # Who the calendar is shared with. None for a sign-in left by an older install.
+        # Who the calendar is shared with: the saved key's address.
         "email": google.service_account_email(token),
     }
 
@@ -1342,7 +1342,7 @@ def google_connect() -> Response | tuple[str, int]:
         google.check_access(info, calendar_id)
     except google.GoogleSetupError as exc:
         return _google_answer(back, error=str(exc))
-    google.save_token(Path(app.settings.google_token_path), json.dumps(info))
+    google.save_key(Path(app.settings.google_key_path), json.dumps(info))
     _save({"google_calendar_id": calendar_id})
     app.forget_calendar()
     log.info("Google Calendar connected from the page by %s", auth.client_address())

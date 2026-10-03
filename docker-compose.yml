@@ -7,7 +7,7 @@ services:
         required: false
     environment:
       FAMILYDB_PATH: /data/familydb.sqlite3
-      GOOGLE_TOKEN_PATH: /data/google_token.json
+      GOOGLE_KEY_PATH: /data/google_key.json
       # Inside a container the page has to bind every interface; the ports mapping below decides
       # who can actually reach it. WEB_ENABLED and WEB_PASSWORD come from .env. WEB_PORT in .env
       # moves the page to another port, inside and out alike (`maintain.sh port` sets it).

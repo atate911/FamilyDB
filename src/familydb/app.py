@@ -230,7 +230,7 @@ class App:
         self._models_stamp = stamp
 
     def forget_calendar(self) -> None:
-        """A new Google token was saved: build the calendar client again from it."""
+        """A new Google key was saved: build the calendar client again from it."""
         if "calendar" not in self._given:
             self._calendar = None
 

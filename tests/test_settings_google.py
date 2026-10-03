@@ -106,7 +106,7 @@ def test_connecting_is_one_form_and_keeps_the_key_and_the_calendar(page, events)
     response = _connect(page)
     assert response.status_code == 302
     assert events.calls == ["list", "insert", "delete"]  # read it, then changed it and put it back
-    saved = json.loads(page.app.settings.google_token_path.read_text())
+    saved = json.loads(page.app.settings.google_key_path.read_text())
     assert saved["client_email"] == EMAIL
     assert page.app.settings.google_calendar_id == CALENDAR
     shown = page.get("/settings/connections").text
@@ -115,7 +115,7 @@ def test_connecting_is_one_form_and_keeps_the_key_and_the_calendar(page, events)
 
 def test_the_key_file_is_owner_only(page) -> None:
     _connect(page)
-    assert page.app.settings.google_token_path.stat().st_mode & 0o077 == 0
+    assert page.app.settings.google_key_path.stat().st_mode & 0o077 == 0
 
 
 @pytest.mark.parametrize(
@@ -133,7 +133,7 @@ def test_a_calendar_that_cannot_be_used_is_explained_and_nothing_is_kept(
     response = _connect(page)
     assert response.status_code == 400 and words in response.text
     assert EMAIL in response.text
-    assert not page.app.settings.google_token_path.exists()
+    assert not page.app.settings.google_key_path.exists()
     assert page.app.settings.google_calendar_id is None
 
 
@@ -156,7 +156,7 @@ def test_a_project_without_the_calendar_api_is_told_to_turn_it_on(page, monkeypa
     assert response.status_code == 400 and "Turn on the Google Calendar API" in response.text
 
 
-def test_an_oauth_client_from_the_old_way_is_explained_not_accepted(page) -> None:
+def test_an_oauth_client_pasted_by_mistake_is_not_a_service_account_key(page) -> None:
     old = json.dumps({"installed": {"client_id": "123", "client_secret": "s"}})
     response = _connect(page, key=old)
     assert response.status_code == 400 and "service account" in response.text
@@ -182,16 +182,14 @@ def test_a_calendar_id_is_required(page) -> None:
 
 def test_a_service_account_key_loads_without_asking_google(tmp_path) -> None:
     path = tmp_path / "key.json"
-    google.save_token(path, KEY)
+    google.save_key(path, KEY)
     creds = google.load_credentials(path)
     assert creds.service_account_email == EMAIL
     assert google.service_account_email(path) == EMAIL
 
 
-def test_a_sign_in_left_by_an_older_install_has_no_address_to_share_with(tmp_path) -> None:
-    path = tmp_path / "token.json"
-    google.save_token(path, json.dumps({"token": "t", "refresh_token": "r", "client_id": "c"}))
-    assert google.service_account_email(path) is None
+def test_with_no_key_saved_there_is_no_address_to_share_with(tmp_path) -> None:
+    assert google.service_account_email(tmp_path / "none.json") is None
 
 
 def test_an_unreadable_key_asks_to_connect_again(tmp_path) -> None:

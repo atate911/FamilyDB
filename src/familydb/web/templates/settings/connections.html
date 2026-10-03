@@ -71,10 +71,8 @@
     {% if google.connected and google.calendar %}
       Connected, using <code>{{ google.calendar }}</code>.
       {% if google.email %}
-        It is shared with <code>{{ google.email }}</code>, which is how the bot reaches it.
-      {% else %}
-        It uses an older sign-in that can stop working. Connect again, with a service account,
-        to replace it.
+        The bot reaches it as <code>{{ google.email }}</code>: the calendar must stay shared with
+        that address, allowing <em>Make changes to events</em>.
       {% endif %}
     {% elif google.connected %}
       Connected, but no calendar is chosen yet. Connect again, or type its id below.

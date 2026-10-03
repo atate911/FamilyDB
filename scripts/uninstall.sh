@@ -48,7 +48,7 @@ Remove FamilyDB from this machine.
 
 What is removed
   (default)            The service and the unit, the virtualenv, the containers and the image.
-                       Kept: .env, data/ (the database, the Google token, the login key),
+                       Kept: .env, data/ (the database, the Google key, the login key),
                        backups/ and caddy/. Reinstalling over this picks up where it left off.
   --purge              All of the above, and everything that was kept: the database, the
                        configuration, the backups and the service user. Nothing is left.
@@ -519,7 +519,7 @@ if [ "$PURGE" = 1 ]; then
     "so nothing starts it again at boot"
   if [ "$INSTALL_PRESENT" = 1 ]; then
     plan_item "Delete ${TARGET}/data" \
-      "the database with every idea, plan and message, the Google token, and the web login key"
+      "the database with every idea, plan and message, the Google key, and the web login key"
     plan_item "Delete ${TARGET}/.env" \
       "the API keys, the page password and the rest of the configuration"
     plan_item "Delete ${TARGET} itself, and any backups inside it" \
@@ -540,7 +540,7 @@ else
     "so nothing starts it again at boot"
   plan_item "Delete the virtualenv and the caches inside ${TARGET}" \
     "these are rebuilt by an install, and nothing in them is yours"
-  plan_untouched "${TARGET}/data — the database, the Google token and the login key"
+  plan_untouched "${TARGET}/data — the database, the Google key and the login key"
   plan_untouched "${TARGET}/.env — your keys and configuration"
   plan_untouched "any backups, inside ${TARGET} or outside it"
 fi
@@ -648,7 +648,7 @@ if [ "$PURGE" = 1 ] && [ "$FORCE" = 0 ] && [ "$DRY_RUN" = 0 ]; then
   head2 "This cannot be undone"
   say "About to remove:"
   if [ "$INSTALL_PRESENT" = 1 ]; then
-    say "  ${TARGET}/data          the database, the Google token and the login key"
+    say "  ${TARGET}/data          the database, the Google key and the login key"
     say "  ${TARGET}/.env          the keys and the configuration"
     say "  ${TARGET}               the code itself"
   fi

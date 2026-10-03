@@ -37,11 +37,11 @@ def test_a_database_the_bot_creates_is_owner_only(tmp_path, monkeypatch) -> None
 def test_files_an_older_version_left_readable_are_tightened(settings, tmp_path) -> None:
     database = settings.familydb_path
     database.write_bytes(b"")
-    token = tmp_path / "google_token.json"
+    token = tmp_path / "google_key.json"
     token.write_text("{}")
     for path in (database, token):
         os.chmod(path, 0o644)
-    changed = privacy.tighten(settings.model_copy(update={"google_token_path": token}))
+    changed = privacy.tighten(settings.model_copy(update={"google_key_path": token}))
     assert set(changed) == {database, token}
     assert _mode(database) == 0o600 and _mode(token) == 0o600
     assert privacy.tighten(settings) == []  # nothing left to do the second time
@@ -54,16 +54,16 @@ def test_privacy_tightening_does_not_require_getuid_on_windows(settings, monkeyp
 
 
 @pytest.mark.skipif(os.name != "posix", reason="POSIX file permissions")
-def test_the_google_token_is_written_owner_only(tmp_path) -> None:
-    from familydb.integrations.google_calendar import save_token
+def test_the_google_key_is_written_owner_only(tmp_path) -> None:
+    from familydb.integrations.google_calendar import save_key
 
     before = os.umask(0o022)
     try:
-        save_token(tmp_path / "google_token.json", '{"token": "t"}')
+        save_key(tmp_path / "google_key.json", '{"token": "t"}')
     finally:
         os.umask(before)
-    assert _mode(tmp_path / "google_token.json") == 0o600
-    assert not (tmp_path / "google_token.json.new").exists()
+    assert _mode(tmp_path / "google_key.json") == 0o600
+    assert not (tmp_path / "google_key.json.new").exists()
 
 
 def test_a_telegram_token_never_reaches_the_log() -> None:

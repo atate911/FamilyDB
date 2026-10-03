@@ -6,7 +6,7 @@ restaurants, the plans, what is connected and what it has cost. Four parts write
 one door: `chat.py` hands a message to the pipeline, `edits.py` changes an idea, an outcome, a
 plan, a task or a memory through the same tools the model calls, `family.py` changes who is in
 the family and how they sign in through `familydb.family`, and `settings.py` is the only thing
-that writes `app_settings` (and two files, the session key and the Google token). Every other
+that writes `app_settings` (and two files, the session key and the Google key). Every other
 module in this package reads and nothing else.
 """
 
