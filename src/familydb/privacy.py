@@ -1,11 +1,11 @@
 """Keep what the bot writes readable by the bot alone.
 
 The database holds every message the family has sent and any key typed into the settings page;
-the Google token and the web session key are credentials. On a shared server none of that
+the Google key and the web session key are credentials. On a shared server none of that
 should be readable by another account, and on a single-user one it costs nothing to be sure.
 
 `private_by_default` sets the process umask, so every file the bot creates from then on (the
-database and its journal, backups, the Google token) is owner-only. `tighten` fixes any that
+database and its journal, backups, the Google key) is owner-only. `tighten` fixes any that
 already exist with the usual 0644, as an older version left them.
 """
 
@@ -29,12 +29,12 @@ def private_by_default() -> None:
 
 
 def sensitive_files(settings: Settings) -> list[Path]:
-    """The database with its journal files, the Google token, and the web session key."""
+    """The database with its journal files, the Google key, and the web session key."""
     database = Path(settings.familydb_path).expanduser()
     return [
         database,
         *(database.with_name(database.name + suffix) for suffix in JOURNALS),
-        Path(settings.google_token_path).expanduser(),
+        Path(settings.google_key_path).expanduser(),
         database.parent / "web_secret",
     ]
 

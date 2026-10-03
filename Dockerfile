@@ -17,7 +17,7 @@ COPY src ./src
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
-# Run as an unprivileged user; /data holds the database, the Google token and the login key.
+# Run as an unprivileged user; /data holds the database, the Google key and the login key.
 RUN useradd --create-home --uid 1000 familydb \
     && mkdir -p /data \
     && chown familydb:familydb /data
@@ -25,7 +25,7 @@ USER familydb
 
 ENV PATH="/app/.venv/bin:$PATH" \
     FAMILYDB_PATH=/data/familydb.sqlite3 \
-    GOOGLE_TOKEN_PATH=/data/google_token.json
+    GOOGLE_KEY_PATH=/data/google_key.json
 
 # The web page (chat, forms, status, settings), when WEB_ENABLED is set: on 8080 unless WEB_PORT
 # says otherwise. The compose file publishes whichever it is.

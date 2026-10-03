@@ -10,6 +10,7 @@ from __future__ import annotations
 import sqlite3
 from dataclasses import dataclass
 from datetime import timedelta
+from pathlib import Path
 from typing import Any
 
 from familydb import alerts
@@ -25,6 +26,7 @@ from familydb.availability import (
     web_is_public,
 )
 from familydb.dates import utc_iso
+from familydb.integrations.google_calendar import service_account_email
 from familydb.store import alerts as alert_store
 from familydb.store import calls, ideas, members, messages
 from familydb.store import judgements as judgement_store
@@ -133,6 +135,8 @@ def services(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
         calendar = "calendar named, but not connected yet: connect it on the settings page"
     elif calendar_available(live):
         calendar = live.google_calendar_id or ""
+        if email := service_account_email(Path(live.google_key_path)):
+            calendar += f", reached as {email}"
     weather = (
         f"{live.home_lat}, {live.home_lon} ({live.weather_units})"
         if weather_available(live)
@@ -524,7 +528,7 @@ def setup_progress(app: App, conn: sqlite3.Connection) -> list[SetupStep]:
             "Google Calendar",
             "Calendar",
             "optional",
-            15,
+            10,
             calendar_available(live),
             live.google_calendar_id
             if calendar_available(live)

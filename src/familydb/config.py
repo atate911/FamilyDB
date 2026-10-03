@@ -292,7 +292,7 @@ class Settings(BaseSettings):
     plan_checks: bool = True
     plan_check_hour: int = Field(default=19, ge=0, le=23)
     google_calendar_id: str | None = None
-    google_token_path: Path = Path("data/google_token.json")
+    google_key_path: Path = Path("data/google_key.json")
     enrichment_notes: bool = True
 
     # The web page (see familydb/web/). Off unless WEB_ENABLED is set.

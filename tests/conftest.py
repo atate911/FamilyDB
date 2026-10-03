@@ -71,7 +71,7 @@ def settings(tmp_path: Path) -> Settings:
         anthropic_api_key="test-key",
         familydb_path=tmp_path / "familydb.sqlite3",
         # Relative by default, which would be the checkout's own data/ folder.
-        google_token_path=tmp_path / "google_token.json",
+        google_key_path=tmp_path / "google_key.json",
         family_tz="America/Vancouver",
         # The daily check of models and prices reads the internet; its own tests switch it on
         # with stand-ins for what it reads (test_model_watch.py).
@@ -120,12 +120,12 @@ def ctx(
 @pytest.fixture
 def calendar_settings(settings: Settings, tmp_path: Path) -> Settings:
     """Settings under which the calendar tools count as available."""
-    token = tmp_path / "google_token.json"
+    token = tmp_path / "google_key.json"
     token.write_text("{}")
     return settings.model_copy(
         update={
             "google_calendar_id": "family@group.calendar.google.com",
-            "google_token_path": token,
+            "google_key_path": token,
         }
     )
 

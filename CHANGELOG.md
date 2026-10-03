@@ -272,8 +272,9 @@ What no test covers is a real conversation with a real model, a real Telegram
 bot or a real Google account: those need keys, and they are what this alpha is
 for. `uv run python -m evals` runs the family's own requests against a real
 model and grades what it did, for a few cents; it has not yet been run.
-Connecting Google from the page has not yet been tried against Google itself;
-`familydb google auth` on a laptop is the fallback.
+Connecting Google (a service account's key and the calendar's id, pasted into the
+page) has not yet been tried against Google itself; `familydb google connect` on the
+server does the same and prints Google's answer.
 
 ### Known limits
 

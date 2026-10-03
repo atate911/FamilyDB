@@ -890,16 +890,16 @@ def test_only_the_settings_page_writes_and_only_to_the_settings() -> None:
     assert called == {"overrides", "history", "set_many"}
 
     # Two writes to files rather than tables, and this page is the one place that may make
-    # them: signing everyone out replaces the session key, and connecting Google saves a token.
+    # them: signing everyone out replaces the session key, and connecting Google saves a key.
     for other in sorted(module.parent.glob("*.py")):
         writes = {
             node.func.attr
             for node in ast.walk(ast.parse(other.read_text("utf-8")))
             if isinstance(node, ast.Call)
             and isinstance(node.func, ast.Attribute)
-            and node.func.attr in {"rotate", "finish_consent", "save_token"}
+            and node.func.attr in {"rotate", "save_key"}
         }
-        expected = {"rotate", "finish_consent"} if other.name == "settings.py" else set()
+        expected = {"rotate", "save_key"} if other.name == "settings.py" else set()
         assert writes == expected, other.name
 
 

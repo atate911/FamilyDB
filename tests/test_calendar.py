@@ -4,10 +4,10 @@ from types import SimpleNamespace
 
 import pytest
 
+from familydb.free_time import free_blocks, on_day
 from familydb.integrations.google_calendar import CalendarEvent, event_body, parse_event
 from familydb.store import ideas, messages, plans
 from familydb.tools import ToolContext, ToolRegistry
-from familydb.tools.gcal import free_blocks, on_day
 from tests import fakes
 from tests.conftest import NOW_ISO, TZ, call
 
@@ -554,3 +554,188 @@ def test_the_page_asks_google_at_most_once_a_minute_and_sees_the_bot_s_writes_at
     assert client.recent_events(start, end) == ["stale"]
     client.list_events = list_events
     assert client.recent_events(start, end) == ["third"]
+
+
+# --- keeping plans in step with Google: one request, then only what changed --------------------
+
+
+def _plan_with_idea(env, title="Museum", start="2026-09-26T10:00"):
+    _, idea = call(env, "add_idea", title=title, kind="activity")
+    _, made = call(env, "create_event", title=title, start=start, idea_id=idea["id"])
+    return made["plan"]["id"], idea["id"]
+
+
+def test_one_request_covers_every_plan_however_many_there_are(env):
+    for day in range(26, 29):
+        call(env, "create_event", title=f"Trip {day}", start=f"2026-09-{day}T10:00")
+    env.cal.change_calls = 0
+    call(env, "search_plans", query="")
+    assert env.cal.change_calls == 1  # not one per plan
+
+
+def test_an_event_moved_in_google_moves_its_plan_on_the_next_look(env):
+    plan_id, _ = _plan_with_idea(env)
+    call(env, "search_plans", query="")  # the whole calendar, once
+    event_id = plans.get(env.conn, plan_id).google_event_id
+    env.cal.patch_event(
+        event_id,
+        start=datetime(2026, 9, 27, 10, tzinfo=TZ),
+        end=datetime(2026, 9, 27, 12, tzinfo=TZ),
+    )
+    call(env, "search_plans", query="")  # only what changed
+    assert plans.get(env.conn, plan_id).start == "2026-09-27T10:00-07:00"
+
+
+def test_an_event_deleted_in_google_cancels_its_plan_and_frees_the_idea(env):
+    plan_id, idea_id = _plan_with_idea(env)
+    call(env, "search_plans", query="")
+    del env.cal.events[plans.get(env.conn, plan_id).google_event_id]
+    call(env, "search_plans", query="")
+    assert plans.get(env.conn, plan_id).status == "cancelled"
+    assert ideas.get(env.conn, idea_id).status == "idea"
+
+
+def test_a_sync_token_Google_has_forgotten_means_reading_everything_again(env):
+    from familydb.store import calendar_sync_state
+
+    plan_id, _ = _plan_with_idea(env)
+    call(env, "search_plans", query="")
+    calendar_id = env.settings.google_calendar_id
+    calendar_sync_state.save(env.conn, calendar_id, "expired", now=NOW_ISO)
+    del env.cal.events[plans.get(env.conn, plan_id).google_event_id]
+    call(env, "search_plans", query="")  # a full read: what is not there is gone
+    assert plans.get(env.conn, plan_id).status == "cancelled"
+
+
+def test_the_token_is_kept_for_next_time_but_not_from_a_sync_that_failed(env):
+    from familydb.store import calendar_sync_state
+
+    calendar_id = env.settings.google_calendar_id
+    _plan_with_idea(env)
+    assert calendar_sync_state.get(env.conn, calendar_id) is None
+    original = env.cal.changes
+
+    def lost(token):
+        original(token)
+        raise TimeoutError("answer lost")
+
+    env.cal.changes = lost
+    assert call(env, "search_plans", query="")[0].is_error
+    assert calendar_sync_state.get(env.conn, calendar_id) is None
+    env.cal.changes = original
+    call(env, "search_plans", query="")
+    assert calendar_sync_state.get(env.conn, calendar_id) is not None
+
+
+def test_google_changes_pages_through_and_reads_deletions_without_dates():
+    from familydb.integrations.google_calendar import GoogleCalendar
+
+    client = GoogleCalendar.__new__(GoogleCalendar)
+    client.calendar_id, client.tz = "family", TZ
+    asked = []
+    pages = {
+        None: {
+            "items": [
+                {
+                    "id": "a",
+                    "summary": "Museum",
+                    "start": {"dateTime": "2026-09-26T10:00:00-07:00"},
+                    "end": {"dateTime": "2026-09-26T12:00:00-07:00"},
+                }
+            ],
+            "nextPageToken": "p2",
+        },
+        "p2": {"items": [{"id": "b", "status": "cancelled"}], "nextSyncToken": "t2"},
+    }
+
+    class Events:
+        def list(self, **kwargs):
+            asked.append(kwargs)
+            return pages[kwargs["pageToken"]]
+
+    client._events = Events
+    client._execute = lambda request, ignore=(): request
+    result = client.changes("t1")
+    assert result.token == "t2" and not result.full
+    assert result.events["a"].title == "Museum" and result.events["b"] is None
+    assert all(call["syncToken"] == "t1" for call in asked)
+
+
+def test_google_changes_starts_again_when_the_token_is_too_old():
+    from familydb.integrations.google_calendar import GoogleCalendar
+
+    client = GoogleCalendar.__new__(GoogleCalendar)
+    client.calendar_id, client.tz = "family", TZ
+    asked = []
+
+    class Events:
+        def list(self, **kwargs):
+            asked.append(kwargs["syncToken"])
+            return None if kwargs["syncToken"] == "old" else {"items": [], "nextSyncToken": "t9"}
+
+    client._events = Events
+    client._execute = lambda request, ignore=(): request
+    result = client.changes("old")
+    assert asked == ["old", None]
+    assert result.full and result.token == "t9"
+
+
+# --- a form drawn again after a lost reply finds the event Google may already have made ----------
+
+
+def _with_session(env, session, operation):
+    env.ctx = ToolContext(
+        env.conn,
+        env.settings,
+        env.app.clock,
+        member=env.member,
+        calendar=env.cal,
+        operation_id=operation,
+        resume_scope=session,
+    )
+
+
+def test_a_redrawn_form_from_the_same_session_takes_over_an_attempt_that_never_finished(env):
+    payload = dict(title="Museum", start="2026-09-26T10:00")
+    original = env.cal.insert_event
+
+    def committed_then_timeout(**kwargs):
+        original(**kwargs)
+        raise TimeoutError("response lost after server committed")
+
+    env.cal.insert_event = committed_then_timeout
+    _with_session(env, "browser-1", "form-1")
+    assert call(env, "create_event", **payload)[0].is_error
+    env.cal.insert_event = original
+    _with_session(env, "browser-1", "form-2")  # the page was drawn again
+    result, data = call(env, "create_event", **payload)
+    assert not result.is_error and len(env.cal.events) == 1
+    assert data["plan"]["google_event_id"] in env.cal.events
+    again = call(env, "create_event", **payload)[1]  # that second form sent once more
+    assert again["plan"]["id"] == data["plan"]["id"] and len(env.cal.events) == 1
+
+
+def test_a_new_form_after_a_finished_plan_makes_a_second_event_on_purpose(env):
+    payload = dict(title="Museum", start="2026-09-26T10:00")
+    _with_session(env, "browser-1", "form-1")
+    first = call(env, "create_event", **payload)[1]
+    _with_session(env, "browser-1", "form-2")
+    second = call(env, "create_event", **payload)[1]
+    assert first["plan"]["id"] != second["plan"]["id"] and len(env.cal.events) == 2
+
+
+def test_another_browser_session_never_takes_over_someone_else_s_attempt(env):
+    payload = dict(title="Museum", start="2026-09-26T10:00")
+    original = env.cal.insert_event
+
+    def committed_then_timeout(**kwargs):
+        original(**kwargs)
+        raise TimeoutError("response lost after server committed")
+
+    env.cal.insert_event = committed_then_timeout
+    _with_session(env, "browser-1", "form-1")
+    call(env, "create_event", **payload)
+    env.cal.insert_event = original
+    _with_session(env, "browser-2", "form-9")
+    assert not call(env, "create_event", **payload)[0].is_error
+    assert len(env.cal.events) == 2

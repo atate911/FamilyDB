@@ -16,7 +16,7 @@ Group=familydb
 WorkingDirectory=/opt/familydb
 EnvironmentFile=/opt/familydb/.env
 Environment=FAMILYDB_PATH=/opt/familydb/data/familydb.sqlite3
-Environment=GOOGLE_TOKEN_PATH=/opt/familydb/data/google_token.json
+Environment=GOOGLE_KEY_PATH=/opt/familydb/data/google_key.json
 ExecStart=/opt/familydb/.venv/bin/familydb run
 Restart=on-failure
 RestartSec=5

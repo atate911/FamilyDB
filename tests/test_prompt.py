@@ -87,7 +87,7 @@ def test_family_context_matches_tool_availability(conn, settings, family, tmp_pa
     assert "Weather: not configured" in text  # latitude without longitude
     token = tmp_path / "token.json"
     token.write_text("{}")
-    full = half.model_copy(update={"google_token_path": token, "home_lon": -122.5})
+    full = half.model_copy(update={"google_key_path": token, "home_lon": -122.5})
     text = build_system_blocks(conn, full)[1].text
     assert "Calendar: connected" in text
     assert "Weather: configured" in text

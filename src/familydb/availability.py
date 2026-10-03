@@ -10,7 +10,7 @@ LOOPBACK_HOSTS = frozenset({"", "localhost", "127.0.0.1", "::1", "[::1]"})
 
 
 def calendar_available(settings: Settings) -> bool:
-    return bool(settings.google_calendar_id) and Path(settings.google_token_path).exists()
+    return bool(settings.google_calendar_id) and Path(settings.google_key_path).exists()
 
 
 def weather_available(settings: Settings) -> bool:

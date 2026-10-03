@@ -67,97 +67,38 @@
 
 <section class="panel" id="google">
   <h2>{{ icon('plans') }}Google Calendar</h2>
-  {% if google.calendars is not none %}
-    {% if google.calendars %}
-      <form method="post" action="{{ url_for('settings.google_calendar_choice') }}">
-        <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-        <input type="hidden" name="section" value="connections" />
-        <fieldset>
-          <legend>Which calendar is the family's?</legend>
-          {% for row in google.calendars %}
-            <label class="inline">
-              <input
-                type="radio"
-                name="calendar_id"
-                value="{{ row.id }}"
-                {% if row.id == google.calendar or (not google.calendar and row.primary) %}checked{% endif %}
-              />
-              {{ row.summary or row.id }}{% if row.primary %} (your main one){% endif %}
-              {% if row.access not in ("owner", "writer") %}
-                <span class="muted">· read-only, so plans cannot be added</span>
-              {% endif %}
-            </label>
-          {% endfor %}
-        </fieldset>
-        <button type="submit">{{ icon('check') }}Use this calendar</button>
-      </form>
-    {% else %}
-      <p class="muted">
-        Connected, but no calendars could be listed. Type the calendar's id under
-        <em>Use a calendar by its id</em>, below.
-      </p>
-    {% endif %}
-  {% elif google.consent_url %}
-    <ol class="steps">
-      <li>
-        <a href="{{ google.consent_url }}" target="_blank" rel="noopener noreferrer">
-          Open Google's consent page</a>, sign in as the account that owns the family calendar,
-        and allow access. Google warns that the app is unverified: it is your own, so press
-        Advanced and go on. Then tick every box it offers (or Select all) and press Continue.
-      </li>
-      <li>
-        Google then sends the browser to an address starting <code>http://127.0.0.1:53682</code>,
-        which will not load. That is expected: copy the whole address from the address bar.
-      </li>
-    </ol>
-    <form method="post" action="{{ url_for('settings.google_finish') }}">
-      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-      <div class="setting">
-        <label for="google-pasted">The address it sent you to</label>
-        <input id="google-pasted" name="pasted" type="text" autocomplete="off" required
-               placeholder="http://127.0.0.1:53682/?state=…&code=…" />
-      </div>
-      <button type="submit">Connect</button>
-    </form>
-  {% else %}
-    <p class="state-line">
-      {% if google.connected and google.calendar %}
-        Connected, using <code>{{ google.calendar }}</code>. Connect again to change the account.
-      {% elif google.connected %}
-        Connected, but no calendar is chosen yet. Connect again to pick one.
-      {% else %}
-        Not connected, so plans are kept here but never put on a calendar.
+  <p class="state-line">
+    {% if google.connected and google.calendar %}
+      Connected, using <code>{{ google.calendar }}</code>.
+      {% if google.email %}
+        The bot reaches it as <code>{{ google.email }}</code>: the calendar must stay shared with
+        that address, allowing <em>Make changes to events</em>.
       {% endif %}
-    </p>
-    <details class="more" {% if not google.connected %}open{% endif %}>
-      <summary>{{ icon('plug') }}{% if google.connected %}Connect again{% else %}Connect Google Calendar{% endif %}</summary>
-      <div class="inner">
-        <p class="muted">
-          Once, in <a href="{{ links.google_cloud }}" target="_blank"
-          rel="noopener noreferrer">Google Cloud</a>: make a project, turn on the Google Calendar
-          API, set up its sign-in screen (Google Auth Platform) for External users and publish
-          it, so it is <strong>In production</strong> (left in Testing, the connection stops
-          working after a week), and create a client of type <strong>Desktop app</strong>. Press
-          Download JSON in the box that opens as the client is made, since Google shows its
-          secret only then, and paste the file here. The
-          <a href="{{ url_for('setup.step', name='calendar') }}">Google Calendar step of setup</a>
-          goes through it click by click.
-        </p>
-        <form method="post" action="{{ url_for('settings.google_start') }}">
-          <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-          <div class="setting">
-            <label for="google-client">The client's JSON</label>
-            <textarea id="google-client" name="client" rows="4" required
-              placeholder='{"installed": {"client_id": "…", …}}'></textarea>
-          </div>
-          <button type="submit">Get the consent link</button>
-        </form>
-      </div>
-    </details>
-  {% endif %}
+    {% elif google.connected %}
+      Connected, but no calendar is chosen yet. Connect again, or type its id below.
+    {% else %}
+      Not connected, so plans are kept here but never put on a calendar.
+    {% endif %}
+  </p>
+  <details class="more" {% if not google.connected %}open{% endif %}>
+    <summary>{{ icon('plug') }}{% if google.connected %}Connect again{% else %}Connect Google Calendar{% endif %}</summary>
+    <div class="inner">
+      <p class="muted">
+        Once, in <a href="{{ links.google_cloud }}" target="_blank"
+        rel="noopener noreferrer">Google Cloud</a>: make a project, turn on the Google Calendar
+        API, make a <strong>service account</strong> and a JSON key for it. Then share the
+        family calendar with the service account's address (the <code>client_email</code> in the
+        key), allowing <em>Make changes to events</em>. Paste the key file and the calendar's id
+        here. The
+        <a href="{{ url_for('setup.step', name='calendar') }}">Google Calendar step of setup</a>
+        goes through it click by click.
+      </p>
+      {% include "_google_connect.html" %}
+    </div>
+  </details>
 
   {% set calendar = groups.calendar %}
-  <details class="more"{% if calendar.open or google.calendars == [] %} open{% endif %}>
+  <details class="more"{% if calendar.open %} open{% endif %}>
     <summary>Use a calendar by its id</summary>
     <form class="inner" method="post" action="{{ url_for('settings.save') }}">
       <input type="hidden" name="csrf" value="{{ csrf_token() }}" />

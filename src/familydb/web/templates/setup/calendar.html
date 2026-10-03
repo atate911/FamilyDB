@@ -1,105 +1,52 @@
 <p class="why">
   When the family settles on a plan, {{ site_title }} can put it on your shared Google Calendar,
   and it checks the calendar before suggesting anything. Google makes this the longest step:
-  about a quarter of an hour, once. Skip it if you do not use Google Calendar; plans are still
-  kept here.
+  about ten minutes, once. Skip it if you do not use Google Calendar; plans are still kept here.
 </p>
 
-{% if google.calendars is not none %}
-  <section class="panel">
-    <h2>3. Choose the family calendar</h2>
-    {% if google.calendars %}
-      <form method="post" action="{{ url_for('settings.google_calendar_choice') }}">
-        <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-        <input type="hidden" name="then" value="{{ then }}" />
-        <fieldset class="calendars">
-          <legend>Which calendar should plans go on?</legend>
-          {% for row in google.calendars %}
-            <label class="inline">
-              <input type="radio" name="calendar_id" value="{{ row.id }}"
-                {% if row.id == google.calendar or (not google.calendar and row.primary) %}checked{% endif %} />
-              {{ row.summary or row.id }}{% if row.primary %} (your main one){% endif %}
-              {% if row.access not in ("owner", "writer") %}<span class="muted">· read-only, so plans cannot be added</span>{% endif %}
-            </label>
-          {% endfor %}
-        </fieldset>
-        <button type="submit">Use this calendar</button>
-      </form>
-    {% else %}
-      <p>Connected, but Google listed no calendars. Type the calendar’s id under <em>Use a
-        calendar by its id</em> on the <a href="{{ url_for('settings.section', name='connections', _anchor='google') }}">Connections
-        settings</a>.</p>
-    {% endif %}
-  </section>
-
-{% elif google.consent_url %}
-  <section class="panel">
-    <h2>2. Let {{ site_title }} use the calendar</h2>
-    <ol class="steps">
-      <li><a class="button" href="{{ google.consent_url }}" target="_blank" rel="noopener noreferrer">Open
-        Google’s sign-in page</a> and choose the account that owns the family calendar.</li>
-      <li>Google warns that it <em>hasn’t verified this app</em>. It is your own app, so press
-        <em>Advanced</em>, then <em>Go to {{ site_title }} (unsafe)</em>.</li>
-      <li>Google asks what {{ site_title }} may use, with a box beside each. <strong>Tick every
-        box</strong>, or <em>Select all</em>, then press <em>Continue</em>: one lets it put plans
-        on the calendar, the other lets it list your calendars.</li>
-      <li>The browser then tries to open a page starting <code>http://127.0.0.1:53682</code>,
-        which does not load. <strong>That is expected.</strong> Copy the whole address from the
-        address bar (on a phone, tap the address bar to see all of it) and paste it here, within
-        a quarter of an hour.</li>
-    </ol>
-    <form class="form" method="post" action="{{ url_for('settings.google_finish') }}">
-      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-      <input type="hidden" name="then" value="{{ then }}" />
-      <div class="field wide">
-        <label for="google-pasted">The address it sent you to</label>
-        <input id="google-pasted" name="pasted" type="text" autocomplete="off" required
-               placeholder="http://127.0.0.1:53682/?state=…&code=…" />
-      </div>
-      <div class="field wide actions"><button type="submit">Connect</button></div>
-    </form>
-  </section>
-
-{% else %}
-  {% if google.connected and google.calendar %}
-    <p>To use a different calendar or Google account, go through it again below.</p>
-  {% endif %}
-  <section class="panel">
-    <h2>1. Give {{ site_title }} its own key to Google</h2>
-    <p class="muted">Google only lets an app into a calendar through a “client” you make in
-      Google Cloud. It is free, and you do it once. Sign in as the Google account that owns the
-      family calendar throughout.</p>
-    <ol class="steps">
-      <li><a href="{{ links.google_project }}" target="_blank" rel="noopener noreferrer">Make
-        a project</a>: name it {{ site_title }} and press <em>Create</em>. Wait for it to finish,
-        and check that it is the project chosen at the top of the page.</li>
-      <li><a href="{{ links.google_calendar_api }}" target="_blank" rel="noopener noreferrer">Turn
-        on the Google Calendar API</a>: press <em>Enable</em>.</li>
-      <li><a href="{{ links.google_consent }}" target="_blank" rel="noopener noreferrer">Set
-        up the sign-in screen</a>: press <em>Get started</em>. App name: {{ site_title }}; support
-        email: yours. Audience: <em>External</em>. Contact email: yours. Agree, and
-        <em>Create</em>.</li>
-      <li><a href="{{ links.google_audience }}" target="_blank" rel="noopener noreferrer">Publish
-        it</a>: press <em>Publish app</em> and confirm. <strong>Do not skip this</strong>: left in
-        “Testing”, Google cuts the connection off after seven days.</li>
-      <li><a href="{{ links.google_clients }}" target="_blank" rel="noopener noreferrer">Make
-        the client</a>: <em>Create client</em>, application type <em>Desktop app</em>, name
-        {{ site_title }}, <em>Create</em>. A box opens with the client’s ID and secret:
-        <strong>press <em>Download JSON</em> in that box</strong>, before closing it. Google shows
-        the secret only this once; if the box has closed, make another client the same way. Open
-        the file it saves and copy everything in it.</li>
-    </ol>
-    <p class="muted">Google rearranges these pages now and then; the names above stay close even
-      when the layout moves.</p>
-    <form class="form" method="post" action="{{ url_for('settings.google_start') }}">
-      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-      <input type="hidden" name="then" value="{{ then }}" />
-      <div class="field wide">
-        <label for="google-client">Paste what is in the file</label>
-        <textarea id="google-client" name="client" rows="4" required
-          placeholder='{"installed": {"client_id": "…", …}}'></textarea>
-      </div>
-      <div class="field wide actions"><button type="submit">Next: sign in with Google</button></div>
-    </form>
-  </section>
+{% if google.connected and google.calendar %}
+  <p>Connected, using <code>{{ google.calendar }}</code>.
+    {% if google.email %}Shared with <code>{{ google.email }}</code>.{% endif %}
+    To use a different calendar or key, go through it again below.</p>
 {% endif %}
+
+<section class="panel">
+  <h2>1. Give {{ site_title }} its own account at Google</h2>
+  <p class="muted">Google lets an app into a calendar through a “service account”: a robot
+    account with an address of its own, which you then share the calendar with. It is free, it
+    never asks anybody to sign in, and it does not expire. Sign in to Google Cloud as any account
+    you like.</p>
+  <ol class="steps">
+    <li><a href="{{ links.google_project }}" target="_blank" rel="noopener noreferrer">Make
+      a project</a>: name it {{ site_title }} and press <em>Create</em>. Wait for it to finish,
+      and check that it is the project chosen at the top of the page.</li>
+    <li><a href="{{ links.google_calendar_api }}" target="_blank" rel="noopener noreferrer">Turn
+      on the Google Calendar API</a>: press <em>Enable</em>.</li>
+    <li><a href="{{ links.google_service_accounts }}" target="_blank" rel="noopener noreferrer">Make
+      the service account</a>: <em>Create service account</em>, name it {{ site_title }}, press
+      <em>Create and continue</em>, then <em>Done</em>: it needs no role.</li>
+    <li>Open the account you just made, then <em>Keys</em>, <em>Add key</em>, <em>Create new
+      key</em>, <strong>JSON</strong>. A file is saved. Open it and copy everything in it.</li>
+  </ol>
+</section>
+
+<section class="panel">
+  <h2>2. Share the family calendar with it</h2>
+  <ol class="steps">
+    <li>In <a href="{{ links.google_calendar_settings }}" target="_blank" rel="noopener noreferrer">Google
+      Calendar’s settings</a>, choose the family calendar under <em>Settings for my
+      calendars</em>.</li>
+    <li>Under <em>Share with specific people</em>, add the service account’s address: it is the
+      <code>client_email</code> line in the file, ending
+      <code>iam.gserviceaccount.com</code>. Set its permission to <strong>Make changes to
+      events</strong>.</li>
+    <li>Further down, under <em>Integrate calendar</em>, copy the <em>Calendar ID</em>.</li>
+  </ol>
+</section>
+
+<section class="panel">
+  <h2>3. Paste both here</h2>
+  <p class="muted">{{ site_title }} tries them on the calendar before it keeps them, so if
+    something is not right it says what.</p>
+  {% include "_google_connect.html" %}
+</section>

@@ -12,7 +12,7 @@ import httpx2
 from anthropic.types.beta import BetaMessage
 
 from familydb.integrations.geocode import GeoPoint
-from familydb.integrations.google_calendar import CalendarEvent
+from familydb.integrations.google_calendar import CalendarChanges, CalendarEvent
 from familydb.integrations.open_meteo import DayForecast
 
 
@@ -95,6 +95,10 @@ class FakeCalendar:
         self.events: dict[str, CalendarEvent] = {}
         self.deleted: list[str] = []
         self._counter = 0
+        # What the last `changes` call reported, to tell the next one what moved since.
+        self._reported: dict[str, CalendarEvent] = {}
+        self._syncs = 0
+        self.change_calls = 0
 
     def _as_datetime(self, value: datetime | date) -> datetime:
         if isinstance(value, datetime):
@@ -127,6 +131,21 @@ class FakeCalendar:
 
     def get_event(self, event_id: str) -> CalendarEvent | None:
         return self.events.get(event_id)
+
+    def changes(self, sync_token: str | None) -> CalendarChanges:
+        """Google's incremental sync: one consumer, told what differs from its last look."""
+        self.change_calls += 1
+        full = sync_token is None or sync_token != f"sync{self._syncs}"
+        if full:
+            moved: dict[str, CalendarEvent | None] = dict(self.events)
+        else:
+            moved = {
+                eid: event for eid, event in self.events.items() if self._reported.get(eid) != event
+            }
+            moved.update({eid: None for eid in self._reported if eid not in self.events})
+        self._reported = dict(self.events)
+        self._syncs += 1
+        return CalendarChanges(moved, f"sync{self._syncs}", full=full)
 
     def insert_event(
         self,

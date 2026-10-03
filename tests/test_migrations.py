@@ -85,9 +85,7 @@ def test_a_database_that_ran_the_retired_0007_still_gets_what_follows(tmp_path):
     with closing(db.connect(tmp_path / "pr2.sqlite3")) as conn:
         db.migrate(conn)
         conn.execute("DROP TABLE member_locations")  # and 0016's column with it
-        conn.execute("DROP TABLE calendar_links")
         conn.execute("DROP TABLE spend_holds")
-        conn.execute("DROP TABLE calendar_unfinished")
         conn.execute("DROP TABLE reminders")
         conn.execute("DROP TABLE tasks")
         conn.execute("ALTER TABLE messages DROP COLUMN cancelled_at")
@@ -124,9 +122,11 @@ def test_a_database_that_ran_the_retired_0007_still_gets_what_follows(tmp_path):
         conn.execute("ALTER TABLE members DROP COLUMN gender")
         conn.execute("DROP TABLE wishes")
         conn.execute("DROP TABLE wish_days")
+        conn.execute("DROP TABLE calendar_sync_state")
+        conn.execute("DROP INDEX plans_google_event_idx")
         # tasks, dropped above, comes back with 0012 and takes 0022's repeats, 0023's gift_for
         # and 0024's nudged_at on again.
-        assert db.migrate(conn) == list(range(8, 37))
+        assert db.migrate(conn) == list(range(8, 39))
         columns = {row["name"] for row in conn.execute("PRAGMA table_info(llm_calls)")}
         assert {"provider", "web_searches", "cost_usd", "cost_estimated"} <= columns
 
@@ -271,3 +271,32 @@ def test_the_alerts_already_noted_outlast_the_model_watch_rebuild(tmp_path, monk
             "INSERT INTO alerts (kind, subject, first_at, last_at) "
             "VALUES ('shift', 'chat:2026-W39', '2026-09-27T05:17:00Z', '2026-09-27T05:17:00Z')"
         )
+
+
+def test_calendar_attempts_keep_their_meaning_in_one_table(tmp_path, monkeypatch):
+    """0038 folds `calendar_unfinished` and `calendar_links` into `calendar_creations`: an attempt
+    a browser session left unfinished is still found by it, and a form that had taken one over
+    still finds its event."""
+    from contextlib import closing
+
+    from familydb.store import calendar_ops
+
+    with closing(db.connect(tmp_path / "old.sqlite3")) as conn:
+        _up_to(monkeypatch, conn, 37)
+        conn.executescript(
+            "INSERT INTO calendar_creations (operation_key, event_id, result) VALUES "
+            "('done', 'evt-done', '{}'), ('lost', 'evt-lost', NULL), ('lost2', 'evt-lost2', NULL);"
+            "INSERT INTO calendar_unfinished (resume_key, event_id) VALUES "
+            "('session-lost', 'evt-lost');"
+            "INSERT INTO calendar_links (operation_key, adopted_key) VALUES ('redrawn', 'done');"
+        )
+        assert db.migrate(conn)[-1] == 38
+        assert calendar_ops.get(conn, "done") == "evt-done"
+        assert calendar_ops.get(conn, "redrawn") == "evt-done"  # the form that took it over
+        assert calendar_ops.unfinished(conn, "session-lost") == "evt-lost"
+        assert calendar_ops.unfinished(conn, "nobody") is None
+        tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        assert not {"calendar_unfinished", "calendar_links"} & tables
+        # Two forms may now point at one event, which the old unique column forbade.
+        calendar_ops.reserve(conn, "another-form", "evt-done")
+        assert calendar_ops.get(conn, "another-form") == "evt-done"

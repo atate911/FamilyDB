@@ -102,7 +102,7 @@ docker compose exec bot familydb chat "we should try the new ramen place"
 docker compose exec -it bot familydb repl
 ```
 
-`FAMILYDB_PATH` and `GOOGLE_TOKEN_PATH` are set inside the container to `/data/...`; the compose
+`FAMILYDB_PATH` and `GOOGLE_KEY_PATH` are set inside the container to `/data/...`; the compose
 file mounts `./data` there. With `COMPOSE_PROFILES=tls` in `.env`, `docker compose up -d` starts
 the Caddy container too (section 10).
 
@@ -133,14 +133,14 @@ not start. If you do want it under `/home` anyway, the directory above it has to
 by the service user (`chmod o+x /home/you`), and the unit needs `ProtectHome=read-only` instead
 of `ProtectHome=true`, which the installer sets for you.
 
-The unit sets `FAMILYDB_PATH` and `GOOGLE_TOKEN_PATH` under `/opt/familydb/data` and locks the
+The unit sets `FAMILYDB_PATH` and `GOOGLE_KEY_PATH` under `/opt/familydb/data` and locks the
 service down to that folder: `UMask=0077`, so nothing it writes is readable by another account,
 and sandboxing such as `PrivateDevices`, the `ProtectKernel*` settings, `RestrictAddressFamilies`
 and `SystemCallFilter=@system-service`. To chat from the shell, run commands as the service user
 so the database stays owned by it: `sudo -u familydb /opt/familydb/.venv/bin/familydb repl`.
 
 Every `familydb` command runs with a umask of 077 as well, and `familydb run` and `familydb web`
-take group and other access off the database, its write-ahead files, the Google token and
+take group and other access off the database, its write-ahead files, the Google key and
 `data/web_secret` when they start, which puts right any that an older version left readable.
 
 Without uv: `python3 -m venv .venv && .venv/bin/pip install .` gives the same `.venv/bin/familydb`.
@@ -209,60 +209,32 @@ one at a time:
 
 ## 5. Google Calendar
 
-The Google Cloud side is done once, in a browser:
+FamilyDB reaches the calendar through a **service account**: a robot account with an address of
+its own, which the family calendar is shared with. Nobody signs in and nothing expires. The Google Cloud side is done once, in a browser:
 
 1. Create a Google Cloud project and enable the Google Calendar API.
-2. Under Google Auth Platform, press Get started to set up the sign-in screen: the app's name,
-   your email, audience **External**. Then, on Audience, press Publish app, so the publishing
-   status is **In production**. Left in Testing, refresh tokens expire after seven days and the
-   bot stops writing to the calendar every week. The "unverified app" warning during consent is
-   expected for a private app, which may have up to 100 users without Google verifying it.
-3. Under Clients, create a client of type **Desktop app**, and press Download JSON in the box
-   that opens as it is made: Google shows a client's secret only then, and a JSON downloaded
-   later from the list has none (the page says so if you paste one; make another client). A
-   client of type Web application will not do either; the page says so too.
+2. Under IAM & Admin, Service accounts, create a service account (name it FamilyDB; it needs no
+   role). Open it, then Keys, Add key, Create new key, **JSON**. A file is saved.
+3. In Google Calendar, open the family calendar's settings, Share with specific people, and add
+   the service account's address (the `client_email` line in the file, ending
+   `iam.gserviceaccount.com`) with **Make changes to events**. Under Integrate calendar, copy
+   the calendar's ID.
 
-Then connect it from the settings page, which needs no laptop and nothing copied to the server:
+Then connect it from the settings page, which needs nothing copied to the server:
 
-4. On `/settings/connections`, under Google Calendar, paste the client's JSON and press "Get the
-   consent link".
-5. Open the link and sign in as the account that owns the family calendar. Past the "unverified
-   app" warning (Advanced, then Go to FamilyDB), Google lists what the app may use with a box
-   beside each: tick them all, or Select all, and press Continue. With one left unticked the
-   page says so, and you start again.
-6. Google then sends the browser to an address starting `http://127.0.0.1:53682/`, which will
-   not load. That is expected. Copy the whole address from the address bar, paste it into the
-   page, and press Connect. Do this within a quarter of an hour of getting the link, and without
-   restarting the bot in between, or start again.
-7. Choose the family calendar from the list. A calendar you can only read is marked, since the
-   bot could not put plans on it.
+4. On `/settings/connections`, under Google Calendar, paste the key file and the calendar's ID
+   and press Connect. The page tries both on the calendar, which means reading it, adding a test
+   event and taking that off again, before it keeps either; if something is not right it says
+   which (not shared, shared for reading only, the Calendar API not turned on in that project).
 
-The token is saved owner-only at `GOOGLE_TOKEN_PATH` (`data/google_token.json`). This way of
-connecting has not yet been tried against a live Google account, so try it first, and if it
-will not work, sign in on a laptop instead:
+The key is saved owner-only at `GOOGLE_KEY_PATH` (`data/google_key.json`). The same can be
+done on the server: `uv run familydb google connect KEY_FILE CALENDAR_ID`. Check either with
+`familydb google events`.
 
-- On a laptop with a browser (not inside Docker), from a copy of the code, run
-  `uv run familydb google auth --client-secrets ~/Downloads/client_secret_XXX.json` and sign in as
-  the calendar's owner. It writes `data/google_token.json`.
-- `uv run familydb google calendars` lists the calendars and their ids. Put the family calendar's
-  id in the Google calendar id box on the settings page (under Connections, "Use a calendar by
-  its id"), or in `GOOGLE_CALENDAR_ID`.
-- Copy the token into the server's `data/`, owned by the bot's user and readable by it alone,
-  and restart the bot:
-
-  ```bash
-  scp data/google_token.json you@server:/tmp/        # on the laptop
-  sudo install -o familydb -g familydb -m 600 /tmp/google_token.json /opt/familydb/data/
-  rm /tmp/google_token.json
-  sudo systemctl restart familydb
-  ```
-
-  With Docker the owner is uid 1000 (`-o 1000 -g 1000`), and `docker compose restart bot`
-  restarts it.
-
-Either way, check with `familydb google events`. A dedicated family Google account keeps the
-bot's token separate from anyone's personal mail. From chat, "we're going to the symphony next
-Saturday at 8" then creates the event; "move that to Sunday" and "cancel the symphony" update it.
+A dedicated family Google account that owns the calendar keeps it apart from anyone's personal
+one, but is not needed: any calendar can be shared with the service account. From chat, "we're
+going to the symphony next Saturday at 8" then creates the event; "move that to Sunday" and
+"cancel the symphony" update it.
 
 ## 6. Weather
 
@@ -755,7 +727,7 @@ readable by the bot's user alone, and so is everything in it:
 | Path | What it is | In backups? |
 |---|---|---|
 | `data/familydb.sqlite3` | everything: messages, ideas, plans, places, the settings changed from the page, and any key stored there | yes, this is the backup |
-| `data/google_token.json` | the calendar's OAuth token | no, connect again instead (section 5) |
+| `data/google_key.json` | the service account's key for the calendar | no, make a new key instead (section 5) |
 | `data/web_secret` | signs the login cookie; "Sign everyone out" replaces it | no |
 | `.env` | the page's password and address, and anything not set from the page | no, keep your own copy |
 | `backups/` | the nightly backups, owner-only | they are the backups |
@@ -826,9 +798,9 @@ SQLite browser opens it. `scripts/uninstall.sh` does this with a backup and asks
 - **Telegram: "the token was refused by Telegram" on `/status`.** The token is wrong, or was revoked in BotFather. Paste the current one on the settings page. A refused token is not tried again until it changes, so nothing is hammering Telegram meanwhile.
 - **Telegram: the bot's name changes back by itself.** The bot sets its own name and description in Telegram to the name it goes by and its `/start` line (hers, or FamilyDB's under none), after each connect and whenever either changes on the Personality page, so a name set in BotFather lasts only until the bot next connects or her words change. Under none the contact is always FamilyDB and cannot be renamed; to give the bot another name, choose a persona on the Personality page and set what she is called there. If Telegram refuses, the log says so and it is not tried again until either changes or the bot reconnects; if Telegram cannot be reached, it is tried again shortly. The bot keeps working meanwhile.
 - **Telegram: "cannot reach Telegram; trying again" on `/status`.** The server cannot get out to Telegram right now. It tries again every thirty seconds by itself; if it lasts, check the machine's network and DNS.
-- **Google: the address will not load.** After allowing access, Google sends the browser to `http://127.0.0.1:53682/...` and it shows an error. That is expected: copy the whole address from the address bar into the page (section 5, step 6).
-- **Google: "That address belongs to an earlier try."** The pasted address came from an older consent link. Press "Get the consent link" again and use the newest one. "That connection was started too long ago, or before a restart" means the same: start again. "That client is of type Web application" means the OAuth client must be made again as a Desktop app.
-- **"Google credentials are expired or revoked."** Connect again from the settings page (Google Calendar), or run `familydb google auth` on a laptop and copy the new token over. If this happens weekly, the OAuth consent screen is still in Testing (section 5, step 2).
+- **Google: "cannot find that calendar", or "can see that calendar but not change it".** The calendar is not shared with the service account, or shared for reading only. In Google Calendar, the calendar's settings, Share with specific people: the service account's address needs "Make changes to events". The page names the address.
+- **Google: "Calendar is not turned on in the project".** Enable the Google Calendar API in the project the key was made in, wait a minute, and press Connect again.
+- **"Google no longer accepts the saved key."** The key was deleted in Google Cloud, or the service account was. Make a new key and connect again from the settings page (section 5).
 - **"no family members yet".** Add yourself on the page (its setup opens on it), or add an admin with `familydb members add NAME --role admin`.
 - **"a setting will not do" at startup.** A value in `.env` is not of the type the setting takes; the line names it. An empty line is fine and means "not set" — it is a value like `WEB_PORT=eighty` that stops it. Quote anything with a space or a `#` in it.
 - **The service will not start under systemd.** `systemctl status familydb` says which. The three that bite: the `familydb` user does not exist or does not own `data/` and `.env`; a checkout inside a home directory, which that user cannot enter at all; and `ProtectHome=true` with a checkout under `/home`. Section 2b covers all three, and `/opt/familydb` avoids the last two.
@@ -864,8 +836,8 @@ them, go through these with a dedicated test calendar:
 3. Paste the Telegram token on the settings page: within seconds `/status` should say "connected
    as @…", with no restart. Add each person's Telegram id on the Family page, then check two people
    in private chat and in the family group.
-4. Connect Google Calendar from the settings page (section 5). If that flow fails against Google,
-   `familydb google auth` on a laptop still works.
+4. Connect Google Calendar from the settings page (section 5), or with
+   `familydb google connect KEY_FILE CALENDAR_ID` on the server.
 5. Create, move and cancel a test event from chat. Edit one directly in Google and check that the
    plans page and the next chat edit follow it. Check that a busy all-day trip blocks suggestions
    and a transparent birthday does not.

@@ -20,10 +20,10 @@ from typing import Any
 from familydb import buttons, routing, voice
 from familydb.app import App
 from familydb.dates import utc_iso
+from familydb.free_time import events_by_day, free_spans
 from familydb.store import messages, tasks
 from familydb.store.db import transaction
 from familydb.store.tasks import Task
-from familydb.tools.gcal import events_by_day, free_spans
 from familydb.windows import read
 
 log = logging.getLogger(__name__)

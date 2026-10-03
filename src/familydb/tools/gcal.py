@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import uuid
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any, Literal
 from zoneinfo import ZoneInfo
 
@@ -21,19 +21,15 @@ from familydb.dates import (
     parse_datetime,
 )
 from familydb.errors import ToolError, ToolUnavailable
+from familydb.free_time import events_by_day, free_blocks
 from familydb.integrations.google_calendar import CalendarAPI, CalendarEvent
 from familydb.store import calendar_ops, ideas, messages, plans
 from familydb.store.db import to_json, transaction
 from familydb.tools.registry import ToolContext, tool
 
-NOT_CONFIGURED = "Google Calendar is not connected (no calendar id or token configured)"
+NOT_CONFIGURED = "Google Calendar is not connected (no calendar id or key configured)"
 MAX_WINDOW_DAYS = 60
 DEFAULT_DURATION = timedelta(hours=2)
-BLOCKS: tuple[tuple[str, time, time], ...] = (
-    ("morning", time(8, 0), time(12, 0)),
-    ("afternoon", time(12, 0), time(17, 0)),
-    ("evening", time(17, 0), time(22, 0)),
-)
 # plan field -> Google event field, for the simple text attributes
 TEXT_FIELDS = {"title": "title", "location": "location", "notes": "description"}
 
@@ -115,93 +111,6 @@ def _calendar(ctx: ToolContext) -> CalendarAPI:
     if ctx.calendar is None:
         raise ToolUnavailable(NOT_CONFIGURED)
     return ctx.calendar
-
-
-def _day_bounds(day: date, tz: ZoneInfo) -> tuple[datetime, datetime]:
-    start = datetime.combine(day, time.min, tzinfo=tz)
-    return start, start + timedelta(days=1)
-
-
-def on_day(event: CalendarEvent, day: date, tz: ZoneInfo) -> bool:
-    if event.all_day:
-        first = event.start if isinstance(event.start, date) else event.start.date()
-        last_exclusive = event.end if isinstance(event.end, date) else event.end.date()
-        if last_exclusive <= first:
-            last_exclusive = first + timedelta(days=1)
-        return first <= day < last_exclusive
-    day_start, day_end = _day_bounds(day, tz)
-    return event.start < day_end and event.end > day_start  # type: ignore[operator]
-
-
-def free_blocks(events: list[CalendarEvent], day: date, tz: ZoneInfo) -> list[str]:
-    """Which of morning, afternoon and evening are free.
-
-    A busy all-day event — a camping trip — takes the whole day. One marked free in Google — a
-    birthday — takes none of it, and neither does a free timed event.
-    """
-    free: list[str] = []
-    for name, start_t, end_t in BLOCKS:
-        block_start = datetime.combine(day, start_t, tzinfo=tz)
-        block_end = datetime.combine(day, end_t, tzinfo=tz)
-        busy = any(
-            event.busy
-            and on_day(event, day, tz)
-            and (event.all_day or (event.start < block_end and event.end > block_start))  # type: ignore[operator]
-            for event in events
-        )
-        if not busy:
-            free.append(name)
-    return free
-
-
-def free_spans(
-    events: list[CalendarEvent], day: date, tz: ZoneInfo, start: int, end: int
-) -> list[tuple[int, int]]:
-    """The free stretches of a day between two minutes after midnight, busy events taken out.
-
-    The same rules as `free_blocks`: a busy all-day event takes the whole day, and nothing marked
-    free in Google takes any of it. Minutes are family clock time, so a stretch reads as it would
-    on the kitchen wall even on the day the clocks change.
-    """
-    todays = [event for event in events if event.busy and on_day(event, day, tz)]
-    if any(event.all_day for event in todays):
-        return []
-
-    def minute(moment: datetime) -> int:
-        local = moment.astimezone(tz)
-        if local.date() < day:
-            return 0
-        if local.date() > day:
-            return 24 * 60
-        return local.hour * 60 + local.minute
-
-    busy = sorted((minute(e.start), minute(e.end)) for e in todays)  # type: ignore[arg-type]
-    spans: list[tuple[int, int]] = []
-    cursor = start
-    for left, right in busy:
-        if left > cursor:
-            spans.append((cursor, min(left, end)))
-        cursor = max(cursor, right)
-        if cursor >= end:
-            break
-    if cursor < end:
-        spans.append((cursor, end))
-    return [(a, b) for a, b in spans if b > a]
-
-
-def events_by_day(
-    calendar: CalendarAPI, start: date, end: date, tz: ZoneInfo
-) -> list[tuple[date, list[CalendarEvent]]]:
-    """Each day of a window with the events that touch it, from one call to Google."""
-    window_start, _ = _day_bounds(start, tz)
-    _, window_end = _day_bounds(end, tz)
-    events = calendar.list_events(window_start, window_end)
-    days = []
-    day = start
-    while day <= end:
-        days.append((day, [event for event in events if on_day(event, day, tz)]))
-        day += timedelta(days=1)
-    return days
 
 
 def _timed_or_all_day(
@@ -288,15 +197,12 @@ def get_calendar(ctx: ToolContext, args: GetCalendarInput) -> dict[str, Any]:
     if (end - start).days > MAX_WINDOW_DAYS:
         raise ToolError(f"ask for at most {MAX_WINDOW_DAYS} days at a time")
     days = calendar_days(calendar, start, end, ctx.clock.tz)
-    sync_plans(
-        ctx.conn, calendar, ctx.settings.google_calendar_id, ctx.now_iso(), first=start, last=end
-    )
+    sync_plans(ctx.conn, calendar, ctx.settings.google_calendar_id, ctx.now_iso())
     owned = {
-        r["google_event_id"]: r["id"]
-        for r in ctx.conn.execute(
-            "SELECT id, google_event_id FROM plans WHERE calendar_id = ?",
-            (ctx.settings.google_calendar_id,),
-        )
+        event_id: plan.id
+        for event_id, plan in plans.by_google_event(
+            ctx.conn, ctx.settings.google_calendar_id
+        ).items()
     }
     for day in days:
         for event in day["events"]:
@@ -304,6 +210,16 @@ def get_calendar(ctx: ToolContext, args: GetCalendarInput) -> dict[str, Any]:
         for event in day["all_day_events"]:
             event["plan_id"] = owned.get(event["id"])
     return {"calendar": ctx.settings.google_calendar_id, "days": days}
+
+
+def _created(ctx: ToolContext, plan: plans.Plan, event: CalendarEvent | None) -> dict[str, Any]:
+    """What creating a plan answers: the plan, its event, and the idea it put on the calendar."""
+    idea = ideas.get(ctx.conn, plan.idea_id) if plan.idea_id is not None else None
+    return {
+        "plan": plan.model_dump(mode="json"),
+        "event": event.to_public() if event else None,
+        "idea": idea.model_dump(mode="json") if idea else None,
+    }
 
 
 @tool(
@@ -347,19 +263,17 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
         else None
     )
     with transaction(ctx.conn):
-        # This form may already have taken over an earlier attempt, before a restart.
-        key = calendar_ops.adopted(ctx.conn, key) or key
-        if resume:
-            earlier = calendar_ops.unfinished_key(ctx.conn, resume)
-            if earlier is not None and earlier != key:
-                calendar_ops.link(ctx.conn, key, earlier)
-                key = earlier
-        operation = calendar_ops.reserve(ctx.conn, key, uuid.uuid4().hex)
-        if resume and not operation.result:
-            calendar_ops.mark_unfinished(ctx.conn, resume, operation.event_id)
-    if operation.result:
-        return operation.result
-    event = calendar.get_event(operation.event_id)
+        event_id = calendar_ops.get(ctx.conn, key)
+        if event_id is None:
+            earlier = calendar_ops.unfinished(ctx.conn, resume) if resume else None
+            if earlier is not None:
+                event_id = calendar_ops.reserve(ctx.conn, key, earlier)
+            else:
+                event_id = calendar_ops.reserve(ctx.conn, key, uuid.uuid4().hex, resume_key=resume)
+    event = calendar.get_event(event_id)
+    existing = plans.for_event(ctx.conn, event_id)
+    if existing is not None:
+        return _created(ctx, existing, event)  # this attempt finished before: say so again
     if event is None:
         ensure_not_past(start, ctx.clock)
         event = calendar.insert_event(
@@ -369,41 +283,31 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
             all_day=all_day,
             location=args.location,
             description=args.notes,
-            event_id=operation.event_id,
+            event_id=event_id,
         )
     origin = messages.get(ctx.conn, ctx.message_id) if ctx.message_id is not None else None
     with transaction(ctx.conn):
-        completed = calendar_ops.get(ctx.conn, key)
-        if completed is not None and completed.result:
-            return completed.result
-        if resume:
-            calendar_ops.clear_unfinished(ctx.conn, resume)
-        plan = plans.insert(
-            ctx.conn,
-            title=args.title.strip(),
-            start=stored_start,
-            end=stored_end,
-            all_day=all_day,
-            idea_id=args.idea_id,
-            google_event_id=event.id,
-            calendar_id=ctx.settings.google_calendar_id,
-            location=args.location,
-            notes=args.notes,
-            created_by=ctx.member.id if ctx.member else None,
-            channel=origin.channel if origin else None,
-            chat_id=origin.chat_id if origin else None,
-            now=ctx.now_iso(),
-        )
-        idea = None
-        if args.idea_id is not None:
-            idea = ideas.update(ctx.conn, args.idea_id, {"status": "planned"}, now=ctx.now_iso())
-        result = {
-            "plan": plan.model_dump(mode="json"),
-            "event": event.to_public(),
-            "idea": idea.model_dump(mode="json") if idea else None,
-        }
-        calendar_ops.record_result(ctx.conn, key, result)
-    return result
+        plan = plans.for_event(ctx.conn, event_id)  # an attempt running beside this one finished
+        if plan is None:
+            plan = plans.insert(
+                ctx.conn,
+                title=args.title.strip(),
+                start=stored_start,
+                end=stored_end,
+                all_day=all_day,
+                idea_id=args.idea_id,
+                google_event_id=event.id,
+                calendar_id=ctx.settings.google_calendar_id,
+                location=args.location,
+                notes=args.notes,
+                created_by=ctx.member.id if ctx.member else None,
+                channel=origin.channel if origin else None,
+                chat_id=origin.chat_id if origin else None,
+                now=ctx.now_iso(),
+            )
+            if args.idea_id is not None:
+                ideas.update(ctx.conn, args.idea_id, {"status": "planned"}, now=ctx.now_iso())
+        return _created(ctx, plan, event)
 
 
 def _cancel(ctx: ToolContext, plan: plans.Plan) -> dict[str, Any]:
@@ -436,16 +340,13 @@ def _target(
     calendar = _calendar(ctx)
     if plan_id is None:
         assert event_id is not None
-        owned = ctx.conn.execute(
-            "SELECT id FROM plans WHERE google_event_id = ? AND calendar_id = ?",
-            (event_id, ctx.settings.google_calendar_id),
-        ).fetchone()
-        if owned is None:
+        owned = plans.for_event(ctx.conn, event_id)
+        if owned is None or owned.calendar_id != ctx.settings.google_calendar_id:
             event = calendar.get_event(event_id)
             if event is None:
                 raise ToolError(f"no event {event_id} on the calendar; get_calendar lists them")
             return None, event
-        plan_id = int(owned["id"])
+        plan_id = owned.id
     plan = plans.get(ctx.conn, plan_id)
     if plan is None:
         raise ToolError(f"no plan #{plan_id}")

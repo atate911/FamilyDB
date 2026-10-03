@@ -114,7 +114,7 @@ def test_timezone_change_updates_planning_without_restart(settings, conn, family
     future = (app.clock.today() + timedelta(days=2)).isoformat() + "T10:00"
     ctx = ToolContext(conn, app.settings, app.clock, calendar=app.calendar)
     # Calendar availability also checks the presence of a token.
-    app.settings.google_token_path.write_text("{}")
+    app.settings.google_key_path.write_text("{}")
     ctx.settings = app.settings.model_copy(update={"google_calendar_id": "family"})
     result = app.registry.dispatch("create_event", {"title": "Morning", "start": future}, ctx)
     assert not result.is_error
