@@ -1,0 +1,151 @@
+[
+ {
+  "id": "r20-mut-1",
+  "name": "Desk Terminal, Even Dock",
+  "tagline": "Desk Terminal, Docked Track with the dock ending together, open bands, Finish setting up first and a bolder 56px question.",
+  "concept": "Three rolled changes on r19-mut-1 and nothing else. Coming up and the Contents plate now stretch to one height and end on the same line; Settings, Status and Plans give the lists 5rem more width by narrowing the tube column; most bands lose their plate and sit open under their coloured rule; while setup is unfinished a thin Finish setting up strip is Home's first band; the question on the glass goes from 44px to 56px with heavier strokes and a hotter core. The feel is calmer and more printed, with the green kept to the glass.",
+  "companions": "Unchanged from the parent. Sage #86d9a6 lights the To do track. Amber stays on the late words, the Finish setting up edge and its rings. Steel-cyan stays on links, the latched keys and Coming up's cap. The only change is that To do, Lately added and the kids' wishes now sit on the black ground with their section-coloured rule, instead of on a slate fill.",
+  "decisions": [
+   "[glass] The dock row is align-items: stretch. Coming up is a flex column whose three rows spread over the height (grid-auto-rows: minmax(2.75rem, 1fr)), with its source note pinned to the foot. The Contents plate's status line is pinned to its foot with margin-top: auto. Coming up gets a bottom hairline in its plans colour, so the common end shows. This knowingly bends the 'a container is as tall as its content' lesson (r7, r12, r13), which warns against stretched trays, because the roll asks for equal ends. On the demo data the difference is small, since the two were already within about 16px of each other.",
+   "[glass] The tube column on Status, Plans and Settings goes from 26rem to 21rem with a 1.5rem gap (it was 2rem), so the lists gain about 100px at 1280. I first tried 20rem, but the Status Contents plate wrapped 'Who answers' and 'Connected to'. At 21rem, with .c-t set to nowrap and a tighter signal meter, it holds on one line. Ideas, To do and Chat keep 26rem because the roll names only three pages.",
+   "[rule] Plates are removed from every .band except Coming up, Finish setting up, trouble, attention, capture and the restaurants link. The band keeps its coloured 2px top rule and its head, but its slate fill is gone and the ring behind its number is repainted bg. Horizontal padding is 0.75rem so the To do track does not hang outside the margin. This bends principle 3 (structure never replaces grounded colour) and principle 4 (read content in a slate tray). I judged this acceptable because the dock plates, the case, the tubes and the cards keep the slate fill, and the roll asks for fewer plates.",
+   "[rule] Finish setting up is moved out of the desk and into the glass block as .band.setup.setup-first, a full-width row directly under the Vera row. Its three steps sit side by side in a 3-column grid and the 'Each one is a short page' note sits underneath. It is number 1 in numbered() and on the Contents plate, so the numbers still match. Rows auto-flow in DOM order, so Tab order follows the drawing. The explicit grid-row values are overridden to auto. When setup is complete the band does not render and the rows close up. To do then spans the full desk width, as it already did after setup.",
+   "[head] The Home question moves from 2.75rem (44px) to 3.5rem (56px) on desktop, 3rem on tablet and 2.5rem on phone. It gets a 1.1px text-stroke with paint-order stroke-first (VT323 has no bold), a core one mix step toward white, and a 3-layer halo. At 100% it reads heavier and brighter than 'LISTENING' and than every other line on the page. The greeting stays on lit glass, the cursor stays, and the glow key word is untouched.",
+   "Everything else is the parent's, including the palette tokens, the sheet and the earlier css. The mutant's rules are all in variants/r20-mut-1/r20.css and templates/home.html, appended by build.py."
+  ],
+  "floorsFailed": 0,
+  "measures": "The full ./check.sh render ran twice on the final markup and css, with 0 hard checks failed and 1 guideline missed. The miss is words unchanged, where the worst page is plans at 38.0% of words differing; most of that was already in the parent. ink_on_bg 12.61 and brand_on_bg 14.89 (the parent's). Green share of colour: home 53.8%, chat 54.0%, status 26.1%. Hue entropy: home 0.637, chat 0.491, status 0.511. Kinds dE typical/deutan/protan 13.6/5.5/7.4. Sections dE typical/deutan/protan 13.3/5.4/5.3 (min pairs home~plans, home~wishes). Sideways scroll 0px. Smallest text 12px. The greeting's corner pixel (1150,120) is (4,12,8), which falls on the tube glass; (100,640) is (20,28,33).",
+  "strengths": [
+   "The three changes show on the half-size cards. The question is clearly the heaviest thing on Home. The amber Finish setting up strip is the first band. Status, Settings and Plans lists are visibly wider (their lists start about 50px further left on the card).",
+   "Home below the fold is calmer, since To do, Lately added and the kids' wishes sit open under coloured rules rather than on four slate plates. The lit To do track reads better on black.",
+   "The dock ends on one line with a bottom hairline on Coming up, so the first-screen composition ends cleanly. The Contents plate still numbers match the band heads.",
+   "No hard failures, the signature #6dff9c is unchanged, and the Tab order follows the DOM."
+  ],
+  "weaknesses": [
+   "With Finish setting up first, Coming up and the Contents plate drop below the first screen on a 1280x800 desktop. The parent's whole point was a full first screen. Home gains a priority and loses the dock above the fold while setup lasts.",
+   "Equalising is nearly invisible on the demo data, because the parent was already within about 16px. The rows spread to fill the height, which makes Coming up a little airier than the other lists and bends the 'container as tall as content' lesson.",
+   "The setup strip's steps still show an underline rule under each step, so they read as three dashed cells. The step text wraps to two lines at 1.06rem. The strip is thin only in height; it is still a full-width plate.",
+   "Open bands bend lessons 3 and 4 (the slate tray for reading content). On a phone the bands bleed to the edges with only a top rule, which is flatter than the parent.",
+   "At 21rem the Status tube is smaller, so its spend readout wraps ('AVERAGE DAY $0.04' goes to three lines) and the gauge is less roomy. On the phone the 2.5rem question wraps to two lines, as the parent's did, and takes slightly more height. The heavy text stroke softens VT323 a little at 100%."
+  ],
+  "elements": [
+   {
+    "slot": "glass",
+    "what": "Even dock. In templates/home.html the .dock-row, .dock-coming and .dock-terminal ends are made equal in r20.css (align-items: stretch, flex columns, a foot pinned to each, a bottom hairline on .band.coming, Coming up rows spread with grid-auto-rows 1fr). The narrow tube column is `body.page-status/-plans/-settings main { grid-template-columns: 21rem 1fr }`, with .c-t nowrap on the Contents plate."
+   },
+   {
+    "slot": "rule",
+    "what": "Open bands and the setup strip first. `.band:not(.coming,.setup,.trouble,.attention,.capture,.restaurants-link)` has a transparent fill and 0.75rem padding. Finish setting up is `section.band.setup.setup-first` in home.html's glass block, under .vera-row, with .steps as a 3-column grid and numbered() ordering setup first, matching the Contents plate."
+   },
+   {
+    "slot": "head",
+    "what": "The Home question is one step heavier. `.vera-glass .ask-question` is 3.5rem (3rem tablet, 2.5rem phone), with -webkit-text-stroke 1.1px, paint-order: stroke fill, a hotter colour mix and a 3-layer text-shadow. It lives in r20.css under HEAD and works anywhere a glass question is typed."
+   }
+  ]
+ },
+ {
+  "id": "r20-mut-2",
+  "name": "Lit Index, Ledger Rail",
+  "tagline": "The lit index with a lit question mark to match MIND, a ledger on To do and Home hung from a fine lit rail, 13.6px kickers and tabs, calmer long titles, and a phone poster with a short chat leader.",
+  "concept": "The parent (Lit Index, Cool Rail) carried exactly, with four slot changes. The question mark is lit as MIND is, so the poster reads as one lit line. To do and Home's To do become a ledger: a tick well on a fine lit rail with a branch to each well, title, dotted leader, who and when in fixed tabular columns, and an amber \"was due N days ago\" stamp. Kickers and tab labels are larger, the Settings and To do titles are a step smaller, and the phone question is a bit larger while the starters stay above the fold. Colour, palette tokens and everything else are the parent's.",
+  "companions": "Nothing new. Amber (--people) is the late stamp, the amber branch and the amber well on a late row. The parent's soft green --lit is the rail and the branches of rows that are not late. Brass (--label) is the leader dots and the WHO/DUE heads. Ink is the 3px rule over the ledger.",
+  "decisions": [
+   "[light] The question mark now shares MIND's rules (`.glow, .q-mark`): the same raster lines, the same face of the glyph (bright at the top edge, deepening toward the foot) and the same two-halo bloom. The parent's dimmed, half-opacity version is deleted, and only its 0.02em left margin stays. It reads clearly on the Home card and on the phone.",
+   "[list] The To do page and Home's To do list use the same ledger classes. Each row is a 2.75rem tick well, a Archivo 84-width title, a 2px dotted brass leader, then two fixed columns (who, then the due words in tabular slashed-zero mono). The edit fold is an icon at the end, with an sr-only label and an aria-label. It is drawn in the parent's materials: ink rule, brass labels, amber for late. The donor's colours and page were not copied.",
+   "[list] The rail is drawn per row, not as one absolute line. A segment runs from the first well to the last, with a 2px branch to each well, so it stays correct when a row grows because a title wraps or the edit form opens. The branch is amber on a late row. The rail is the parent's soft green --lit with a halo, not the full brand green.",
+   "[list] The late stamp is an amber-edged tinted box with a 3px amber bar, words only and not letterspaced. 'Was due N days ago' is worded by a copy of the donor's due_words macro on the To do page. Home uses the text the view already gives. I dropped the 'No active reminder.' filler line, because a ledger should not say what is absent.",
+   "[list] The ledger's facts track needs `min-width: calc(var(--who) + var(--due))`. `min-width: 0` on every grid child otherwise let the auto track collapse, and the stamp spilled past Home's half-width column. The phone folds the facts under the title.",
+   "[type] `--kick` (0.85rem, 13.6px) replaces every mono kicker, tab and bar label that was 0.70-0.78rem. That covers eyebrows, h3, said-by, ids, chip months, stamps, the Settings D1 numbers and the phone tab labels. The smallest text on the page went from 11.5px to 12.8px. At that size the bar wrapped 'TO DO', so the bar now has nowrap, tighter tracking (0.055em) and slimmer padding. Between 62 and 76rem the bar numbers are hidden so it still fits. The footer was set back to 0.8rem so it did not wrap.",
+   "[type] `body.in-settings h1` and `body.in-todo h1` drop from clamp(3.2rem, 7vw, 5.5rem) to clamp(2.8rem, 5.4vw, 4.25rem), about 88px to 68px, with a matching phone step. 'Things to do' fits one line on a 390px phone.",
+   "[head] On a phone the poster question is larger (q-lead 12.2vw, MIND? 37vw, tighter leading) and the status line is about 27% of the 844px screen. The box, the From row, Send and the starters are packed up underneath, so the starters sit at about y=525-590 of 844, well above the tab bar. I read 'a third' as the question plus its line, because the headline alone cannot reach 280px on a 358px-wide column.",
+   "[head] The chat leader is now a real flex item, `--lead` long (2-6.5rem, 1.1rem on a phone), between the rail ring and the time and bubble. It replaces the absolute line that ran to the far edge behind every short family line. To do this, family lines run left to right (leader, time, bubble, initial) and sit staggered in from Vera's, not flush right. This bends the 'family on the right' lesson, and I note it as a risk."
+  ],
+  "floorsFailed": 0,
+  "measures": "Same tokens as r19-mut-3. Final full render: 0 hard checks failed; the only WARN is the words-changed share, worst on login at 17.2%, the same as the parent. ink_on_bg 15.99, brand_on_bg 15.28. Green share of colour: home 69.1%, ideas 53.8%, chat 40.7%, status 22.4%. Hue entropy: home 0.52, ideas 0.58, chat 0.62, status 0.63. Kinds dE typ/deu/pro 15.2/6.2/6.9. Sections dE typ/deu/pro 19.5/7.9/6.9. Smallest text 12.8px (it was 11.52px). No sideways scroll. The greeting corner at (1150,120) samples (6,14,9) and the bottom-left at (100,640) samples (10,13,11). Both are near-black, because the parent has no wash there.",
+  "strengths": [
+   "The lit question mark is the most visible change. The poster is now one fully lit line, on desktop and phone, and the MIND? match is exact.",
+   "To do goes from stacked cards to a scannable ledger. The amber stamps, tabular who/due columns and lit rail read as a timetable at a glance, and the page is shorter and calmer. Home's To do uses the same grammar.",
+   "The Settings and To do titles are clearly less wall-like on the half-size cards, and the larger kickers are legible with no new overflow.",
+   "The phone first screen holds the question, box, Send and the starters above the tab bar, with the question bigger than before.",
+   "The change is self-contained: new classes (`.ledger*`, `.l-*`, `.stamp-late`, `--kick`, `--lead`), the parent's palette untouched, the signature intact, and the edit fold, CSRF and once tokens kept."
+  ],
+  "weaknesses": [
+   "The chat leader change moves the family's lines from the right edge to a stagger a little in from Vera's. The thread is less 'two sides' than the parent, and a judge may prefer the old right alignment.",
+   "The 13.6px kicker raise is subtle on half-size cards. The bar needed nowrap and tighter tracking, and still hides its numbers between 62 and 76rem, which the parent did not need.",
+   "On Home the ledger sits in a half-width column, so titles wrap to two lines. The 'Who' column is narrow, and the Wishes column beside it stays sparse.",
+   "The phone poster is only about 27% of the screen. The headline alone is about 17%, and the extra space is spent on keeping the starters visible, not on a third-of-the-screen headline.",
+   "The ledger duplicates the donor's idea of a rail with branches. It is drawn in the parent's green and amber, but a judge may see it as a copy. Done and cancelled rows keep the rail with a struck-through title, and I did not give them their own look.",
+   "Unused old `.cards.tasks` and `.checklist` rules remain in the sheet, so it carries some dead CSS."
+  ],
+  "elements": [
+   {
+    "slot": "light",
+    "what": "`.glow, .q-mark` (sheet.css, the Glass part-one rules, and `.q-mark` margin). The question mark is lit exactly like MIND, with the same raster lines, gradient face and two-halo drop-shadow bloom. The markup is the parent's `_ask.html`."
+   },
+   {
+    "slot": "list",
+    "what": "The To do ledger, markup in `templates/tasks.html` (`.ledger-wrap > .ledger-heads + ul.ledger > li.ledger-row`, plus the `due_words` macro) and in the To do block of `templates/home.html` (`ul.home-ledger`). CSS is the `[list] The ledger` block at the end of `sheet.css`: `.ledger`, `.ledger-row` with its `::before` branch and `::after` rail, `.l-title`, `.l-lead`, `.l-facts`, `.l-who`, `.l-due`, `.stamp-late` and `.l-more`."
+   },
+   {
+    "slot": "type",
+    "what": "`:root --kick` (0.85rem) now used by every mono kicker, tab and bar label in `sheet.css`. The `[type]` block holds `body.in-settings h1, body.in-todo h1` (a step down) and the bar nowrap rules (`@media (min-width: 48rem)`, and the 62-76rem number hide)."
+   },
+   {
+    "slot": "head",
+    "what": "Two parts, both at the end of `sheet.css`. The `[head]` phone poster block is `@media (max-width: 47.9rem)` over `.q-lead`, `.glow`, `.q-mark`, `.ask textarea`, `.ask-bar` and `.starters`. The short chat leader is `.thread.line .said-them::after` as a flex item sized by `--lead`, with the order and direction changes on `.said-them`, `.hang`, `.bubble` and `.avatar`."
+   }
+  ]
+ },
+ {
+  "id": "r20-mut-3",
+  "name": "Grid Console Keyed",
+  "tagline": "Grid Console Calmer with one lit corner on the primary cell, Add something to do as a green key, To do's Show as pills, a taller composer whose Send says Send on the phone, and a lifted secondary ink with stronger kind labels.",
+  "concept": "The calm, tickless lattice of the parent, but with one quiet lit corner that says which cell is first or live, and the To do page's controls drawn as things you can see and press: a green key, latched pills, and a Send that says Send. Everything else (ground, light, type, heads) is the parent's.",
+  "companions": "Unchanged from the parent: cyan accent and wash (#77ced5) for links, title tiles and the greeting's second light; steel-cyan labels (#8fb4b7) and card edges (#25393b); the kind and section colours (lilac, cyan, lemon, amber, pink, coral) in their own banks. The lit corner takes each cell's own bank colour. The Show pills latch in To do's lemon. #6dff9c stays on the mark, primary keys, key word, focus, live lamps and tubes.",
+  "decisions": [
+   "[rule] The parent had stripped every corner tick. A tick now returns only as a 2px, 1.3rem corner with a small halo in the cell's own bank colour (`.lit-corner`) on Home's next plan, Ideas' first card, Status' first lamp, Settings' needs-a-look part (or the first), To do's stop after NOW, and Plans' today (3px, amber). Hovered or focused cells show one too, as the afterglow of being active. The month's event days lose theirs. Task rows draw it on ::after because their ::before is the rail lamp (my first try mangled it; fixed).",
+   "[controls] Add something to do: the details summary is drawn exactly as the parent's primary button (green fill, glow, display face) and sits on the control row, bottom-aligned so it is 44px rather than a slab. Open, it turns into a quiet steel key whose plus rotates to a cross. Only sensible on To do; Ideas already had a head button.",
+   "[controls] The Show select becomes four pills (Open, Done, Cancelled, All) that are plain links keeping the search words, with a hidden status field so the search form keeps the chosen list. The current pill is latched with a lemon dot and fill, so state is shape as well as colour. Sentence case, 44px. The Ideas page's three selects are deliberately left alone: nine kind pills would break the parent's card grid, so only To do carries the pill graft.",
+   "[controls] Composer: the textarea is taller (6.75rem, and 5.25rem under Home's poster question, up from 3.5rem). On the phone, the From select takes its own row, and the mic and a full-width Send that shows its word and icon share the next. This is the donor's idea drawn in the parent's green key.",
+   "[colour] ink-2 and the secondary role move together from #b4c5c4 to #c6d5d4 (still below ink #dae6e5), so the ways to start, lede text, facts and buttons read a step brighter. `.kind` labels take their kind colour through `oklch(from var(--kind) l+.025 c*1.5 h)` and weight 650, so ACTIVITY, RESTAURANT, OUTING and the rest are visibly stronger on Ideas and Home. Kind and section tokens are unchanged, so the colour-distance floors are unchanged."
+  ],
+  "floorsFailed": 0,
+  "measures": "ink_on_bg 14.95, brand_on_bg 14.95 (both as the parent). Green share of colour: home 75.5%, ideas 66.6%, chat 41.1%, status 57.2%. Hue entropy: home 0.512, ideas 0.499, chat 0.592, status 0.416. Kinds dE typ/deu/pro 15.4/5.4/6.4; sections 15.4/5.4/8.2 (the parent's). Greeting corners sampled (4,9,6) top right and (15,23,24) bottom left, as the parent's. 0 hard checks failed; one WARN, the page's words differ (plans 16.5%, to do 12%), because the harness compares against today's page and the parent already differs.",
+  "strengths": [
+   "The lit corner reads as one cell being first or live instead of decoration on every cell, and it is visible on the half-size Ideas, Settings, To do and Home cards.",
+   "To do now has a visible green key and latched pills, so the page's controls are seen at a glance instead of hidden in a fold and a select.",
+   "Phone Send says Send and the composer has room to write; both are visible on the use card.",
+   "All three changes are self-contained: `.lit-corner`, `.add-key`, `.pill-row`, and the `.ask` block. Tokens and floors are untouched except the one ink-2 step."
+  ],
+  "weaknesses": [
+   "The lit corner is faint at half size on Status (a 1.3rem tick on a small lamp cell) and on Plans' today, where amber sits on an amber border; the Home tick is easy to miss.",
+   "Only To do got pills. Ideas still has three selects, so the control system is inconsistent between the two filter pages.",
+   "The ink-2 lift is a small step (about 0.04 L) and the kind label boost is chroma-only, so these two read as nearly the same page at half size apart from the label colours.",
+   "The Home textarea is taller by only about 2rem, which is hard to see on the desktop card.",
+   "The green Add key adds a second large green fill on To do beside the nav's lit tab, though the page still has just one filled key.",
+   "The pill and key have no reduced-motion or forced-colours treatment beyond the parent's globals."
+  ],
+  "elements": [
+   {
+    "slot": "rule",
+    "what": "`.lit-corner` (plus `.cell:hover` and `.is-today`): a 2px, 1.3rem corner tick in the cell's bank colour (`--c`) with a small halo, only on the primary or active cell. In sheet.css under `[rule] ONE LIT CORNER`, with `lit-corner` added in home, ideas, settings and tasks templates."
+   },
+   {
+    "slot": "controls",
+    "what": "`summary.add-key` in tasks.html: the Add something to do fold drawn as the green primary key, bottom-aligned on the control row, turning into a steel key when open."
+   },
+   {
+    "slot": "controls",
+    "what": "`.show-pills` / `.pill-row` / `.pill[aria-current]` in tasks.html: the Show select as latched 44px pills (links, with a hidden status field for the search form), lemon dot and fill for the current one."
+   },
+   {
+    "slot": "controls",
+    "what": "`.ask textarea` and the max-width 30rem `.ask .send` block: a taller composer, with the From select on its own row and the mic and full-width Send (word and icon) beneath it on the phone."
+   },
+   {
+    "slot": "colour",
+    "what": "palette `ink-2` and `secondary` lifted to #c6d5d4, and `.kind` label colour via `oklch(from var(--kind) l+0.025 c*1.5 h)` at weight 650, for idea cells on Ideas and Home."
+   }
+  ]
+ }
+]
