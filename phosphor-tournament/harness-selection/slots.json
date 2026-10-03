@@ -1,24 +1,162 @@
 {
  "slots": [
-  {"key": "head", "what": "the page head: title line, the page's one primary action, count or readout strip, running head", "experts": ["systemuse", "skeptic"]},
-  {"key": "glass", "what": "the machine: the tube or terminal, the typed question, Vera's presence, the status line on the glass", "experts": ["soul", "feedback"]},
-  {"key": "list", "what": "a list row or band: Coming up, To do, Lately added: designator, day numeral, body, facts column, row rhythm", "experts": ["skeptic"]},
-  {"key": "figure", "what": "figures that draw data: counts, the big figure leading a section, dials, scopes, meters, trend traces", "experts": ["skeptic", "soul"]},
-  {"key": "rule", "what": "structure: section heads, rules and delimiters, end marks, trays, plates, boxes, rounding", "experts": ["system", "skeptic"]},
-  {"key": "signal", "what": "state and signals: lamps, dots, the NOW marker and the lit line to it, late, done, off, needs a look", "experts": ["systemuse", "soul"]},
-  {"key": "type", "what": "the type system: faces and pairing, scale, tracking, leading, figures, small caps, running heads", "experts": ["style", "type"]},
-  {"key": "colour", "what": "colour and material: ground, neutrals, the companions to the green, case and plate materials", "experts": ["feedback", "style"]},
-  {"key": "controls", "what": "controls: buttons, filters and toggles, selects, fields, focus and hover, target size", "experts": ["systemuse", "interaction", "usability"]},
-  {"key": "chat", "what": "the conversation: thread, bubbles or log, the composer, the Home box, ways to start", "experts": ["feedback", "usability"]},
-  {"key": "light", "what": "the CRT light: halo, bloom, scanlines, afterglow, and where it is allowed to show", "experts": ["soul"]},
-  {"key": "foot", "what": "the frame: the bar and tabs, the phone's tab bar, the footer and its lamp", "experts": ["systemuse", "system"]}
+  {
+   "key": "head",
+   "what": "the page head: title line, the page's one primary action, count or readout strip, running head",
+   "experts": [
+    "systemuse",
+    "skeptic"
+   ],
+   "weight": 1.0
+  },
+  {
+   "key": "glass",
+   "what": "the machine: the tube or terminal, the typed question, Vera's presence, the status line on the glass",
+   "experts": [
+    "soul",
+    "feedback"
+   ],
+   "weight": 1.0
+  },
+  {
+   "key": "list",
+   "what": "a list row or band: Coming up, To do, Lately added: designator, day numeral, body, facts column, row rhythm",
+   "experts": [
+    "skeptic"
+   ],
+   "weight": 1.3
+  },
+  {
+   "key": "figure",
+   "what": "figures that draw data: counts, the big figure leading a section, dials, scopes, meters, trend traces",
+   "experts": [
+    "skeptic",
+    "soul"
+   ],
+   "weight": 1.0
+  },
+  {
+   "key": "rule",
+   "what": "structure: section heads, rules and delimiters, end marks, trays, plates, boxes, rounding",
+   "experts": [
+    "system",
+    "skeptic"
+   ],
+   "weight": 0.8
+  },
+  {
+   "key": "signal",
+   "what": "state and signals: lamps, dots, the NOW marker and the lit line to it, late, done, off, needs a look",
+   "experts": [
+    "systemuse",
+    "soul"
+   ],
+   "weight": 1.0
+  },
+  {
+   "key": "type",
+   "what": "the type system: faces and pairing, scale, tracking, leading, figures, small caps, running heads",
+   "experts": [
+    "style",
+    "type"
+   ],
+   "weight": 1.2
+  },
+  {
+   "key": "colour",
+   "what": "colour and material: ground, neutrals, the companions to the green, case and plate materials",
+   "experts": [
+    "feedback",
+    "style"
+   ],
+   "weight": 1.0
+  },
+  {
+   "key": "controls",
+   "what": "controls: buttons, filters and toggles, selects, fields, focus and hover, target size",
+   "experts": [
+    "systemuse",
+    "interaction",
+    "usability"
+   ],
+   "weight": 0.8
+  },
+  {
+   "key": "chat",
+   "what": "the conversation: thread, bubbles or log, the composer, the Home box, ways to start",
+   "experts": [
+    "feedback",
+    "usability"
+   ],
+   "weight": 1.0
+  },
+  {
+   "key": "light",
+   "what": "the CRT light: halo, bloom, scanlines, afterglow, and where it is allowed to show",
+   "experts": [
+    "soul"
+   ],
+   "weight": 1.1
+  },
+  {
+   "key": "foot",
+   "what": "the frame: the bar and tabs, the phone's tab bar, the footer and its lamp",
+   "experts": [
+    "systemuse",
+    "system"
+   ],
+   "weight": 0.6
+  }
  ],
  "visible": {
-  "feedback": ["head", "glass", "chat", "colour", "type", "rule"],
-  "style": ["type", "colour", "head", "rule", "glass"],
-  "soul": ["light", "glass", "head", "signal", "figure"],
-  "systemuse": ["controls", "foot", "signal", "chat", "head"],
-  "skeptic": ["list", "figure", "rule", "signal", "head"]
+  "feedback": [
+   "glass",
+   "list",
+   "chat",
+   "colour",
+   "type",
+   "light"
+  ],
+  "style": [
+   "type",
+   "colour",
+   "head",
+   "rule",
+   "glass",
+   "foot"
+  ],
+  "soul": [
+   "light",
+   "glass",
+   "head",
+   "signal",
+   "figure"
+  ],
+  "systemuse": [
+   "controls",
+   "foot",
+   "signal",
+   "chat",
+   "head"
+  ],
+  "skeptic": [
+   "list",
+   "figure",
+   "rule",
+   "signal",
+   "controls",
+   "head"
+  ]
  },
- "points": {"best": 2, "runner": 1, "expert": 1.5, "final": 1.5}
+ "points": {
+  "best": 2,
+  "runner": 1,
+  "expert": 1.5,
+  "final": 1.5
+ },
+ "thresholds": {
+  "win_share": 0.15,
+  "bin_share": 0.25,
+  "saturate": 0.5
+ }
 }

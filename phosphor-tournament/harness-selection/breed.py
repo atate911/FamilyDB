@@ -23,6 +23,8 @@ HERE = Path(__file__).parent
 SL = json.loads((HERE / "slots.json").read_text())
 SLOTS = [s["key"] for s in SL["slots"]]
 TWEAKS = json.loads((HERE / "tweaks.json").read_text())
+WEIGHT = {s["key"]: s["weight"] for s in SL["slots"]}
+TH = SL["thresholds"]
 LINEAGES = HERE / "lineages.json"
 MAX_LINEAGES, RETIRE_AFTER, CHILDREN, CHANGES = 6, 2, 2, 3
 
@@ -63,6 +65,14 @@ def read_lineages(prev):
     return {"gen": prev["roundNo"], "lineages": hosts}
 
 
+def slot_pick(rng, L, exclude):
+    """A slot for a blind tweak: by how much it matters to the family, less for a slot this lineage has
+    already won more than once (it has found what it wants there; look elsewhere)."""
+    pool = [s for s in SLOTS if s not in exclude]
+    w = [WEIGHT[s] * TH["saturate"] ** L.get("won", {}).get(s, 0) for s in pool]
+    return rng.choices(pool, weights=w)[0]
+
+
 def open_round(prev_name, name):
     prev_dir, dst = HERE / "rounds" / prev_name, HERE / "rounds" / name
     prev = json.loads((prev_dir / "args.json").read_text())
@@ -86,6 +96,7 @@ def open_round(prev_name, name):
         kept = [(v, s) for v in kids for s in v["slots"] if s["slot"] in v["kept"]]
         whole = [v for v in kids if v["survives"] and v["delta"] is not None and not any(s["verdict"] == "lost" for s in v["slots"])]
         L["culled"] += [s["text"] for v in kids for s in v["slots"] if s["slot"] not in v["kept"]]
+        L.setdefault("won", {})
         if whole and (not kept or all(v in whole for v, _ in kept)):
             best = max(whole, key=lambda v: v["delta"])  # the child that did best as a whole becomes the head
             L["kept"] = [{"slot": s["slot"], "text": s["text"]} for s in best["slots"]]
@@ -102,8 +113,11 @@ def open_round(prev_name, name):
             L["head"], L["name"] = mid, f"{L['name']}, merged"
         else:
             L["kept"] = []
+        for k in L["kept"]:
+            L["won"][k["slot"]] = L["won"].get(k["slot"], 0) + 1
         heads.append(L)
 
+    wanted_allstar = []
     # 2. the weakest lineage, two rounds running, is replaced by an all-star
     ranked = sorted(state["lineages"], key=lambda L: -mean.get(L["head"], mean.get(L["key"], 0)))
     for L in ranked[-2:]:
@@ -118,9 +132,11 @@ def open_round(prev_name, name):
         lifts = []
         for slot in SLOTS:
             top = next((r for r in bin_.get(slot, []) if r["id"] not in (leader["head"], "00-current")), None)
-            if top and top["points"] >= 2:
-                lifts.append((top["points"], {"slot": slot, "child": top["id"], "childName": top["name"], "text": "; ".join(top.get("what", [])[:2]) or f"{slot} element of {top['name']}"}))
+            if top and top["share"] >= TH["bin_share"]:
+                lifts.append((top["share"] * WEIGHT[slot], {"slot": slot, "child": top["id"], "childName": top["name"], "text": "; ".join(top.get("what", [])[:2]) or f"{slot} element of {top['name']}"}))
         lifts = [x for _, x in sorted(lifts, key=lambda t: -t[0])[:3]]
+        for l in lifts:
+            wanted_allstar.append({"slot": l["slot"], "id": l["child"], "name": l["childName"], "what": [l["text"]]})
         if lifts:
             mid = f"{name}-head-{len(merges) + 1}"
             merges.append({"id": mid, "base": leader["head"], "baseName": leader["name"], "lifts": lifts, "lineage": "allstar"})
@@ -128,25 +144,29 @@ def open_round(prev_name, name):
 
     # 3. children
     bin_ = json.loads((HERE / "parts-bin.json").read_text())
-    mutants = []
+    mutants, wanted = [], {}
     for L in state["lineages"]:
         head = L["head"]
         for n in range(CHILDREN):
             changes, used = [], set()
             informed = [r | {"slot": s} for s in SLOTS for r in bin_.get(s, [])[:2]
-                        if r["id"] not in (head, "00-current") and r["points"] >= 2 and r.get("what")]
-            rng.shuffle(informed)
-            for r in informed:
-                if r["slot"] not in used and len(changes) < 1:
-                    used.add(r["slot"])
-                    changes.append({"slot": r["slot"], "text": "; ".join(r["what"][:2]), "donor": r["id"], "donorName": r["name"]})
+                        if r["id"] not in (head, "00-current") and r["share"] >= TH["bin_share"] and r.get("what")]
+            while informed and len(changes) < 1:   # one informed change, drawn by share and by the slot's weight
+                r = rng.choices(informed, weights=[x["share"] * WEIGHT[x["slot"]] for x in informed])[0]
+                informed.remove(r)
+                if r["slot"] in used:
+                    continue
+                used.add(r["slot"])
+                spec = f"{{D}}/parts/{r['slot']}--{r['id']}.md"
+                changes.append({"slot": r["slot"], "text": "; ".join(r["what"][:2]), "donor": r["id"], "donorName": r["name"], "spec": spec})
+                wanted.setdefault((r["slot"], r["id"]), {"slot": r["slot"], "id": r["id"], "name": r["name"], "what": r["what"]})
             if n == 0 and L["kept"]:  # exploit: push what has just survived one step further
                 k = rng.choice(L["kept"])
                 if k["slot"] not in used:
                     used.add(k["slot"])
                     changes.append({"slot": k["slot"], "text": f"push this one step further, as the same idea made more of: {k['text']}"})
             while len(changes) < CHANGES:
-                slot = rng.choice([s for s in SLOTS if s not in used])
+                slot = slot_pick(rng, L, used)
                 used.add(slot)
                 pool = [t for t in TWEAKS[slot] if t not in L["culled"]] or TWEAKS[slot]
                 changes.append({"slot": slot, "text": rng.choice(pool)})
@@ -183,10 +203,20 @@ def open_round(prev_name, name):
             "mutants": mutants, "wild": wild, "wildMutants": [], "nInformed": 0, "history": [], "panel": "screen",
             "merges": merges}
     (dst / "args.json").write_text(json.dumps(args, indent=1))
+    # Specs are written only for the parts this round will use, and never twice: earlier rounds' are carried over.
+    (dst / "parts").mkdir(exist_ok=True)
+    for old in sorted((HERE / "rounds").glob("r*/parts/*.md")):
+        if not (dst / "parts" / old.name).exists():
+            shutil.copy2(old, dst / "parts" / old.name)
+    need = [w for w in list(wanted.values()) + wanted_allstar if not (dst / "parts" / f"{w['slot']}--{w['id']}.md").exists()
+            and not w["id"].startswith(f"{name}-head")]
+    (dst / "stage").mkdir(exist_ok=True)
+    (dst / "stage" / "extract.json").write_text(json.dumps({"round": name, "roundNo": no, "stage": "extract", "parts": need,
+                                                          "slotsJson": json.dumps({"slots": [{"key": x["key"], "what": x["what"]} for x in SL["slots"]]}, separators=(",", ":"))}))
     state["gen"] = no
     LINEAGES.write_text(json.dumps(state, indent=1))
     (dst / "lineages.json").write_text(json.dumps(state, indent=1))
-    print(f"round {name}: {len(state['lineages'])} lineages, {len(merges)} merges, {len(mutants)} children, {len(wild)} wild")
+    print(f"round {name}: {len(state['lineages'])} lineages, {len(merges)} merges, {len(mutants)} children, {len(wild)} wild, {len(need)} specs to write")
     for L in state["lineages"]:
         print(f"  {L['key']:14} head {L['head']} ({L['name']}) kept {[k['slot'] for k in L['kept']]} stale {L['stale']}")
     for m in merges:

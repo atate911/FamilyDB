@@ -6,7 +6,7 @@ the winning elements go into the parts bin, and the changes that survived are li
 (heirs.json) for the next generation to build in.
 
   python3 selection.py settle rN SCREEN_OUT...   a screen-only round: ranking.json, finish.json, then select
-  python3 selection.py select rN                 element tallies, verdicts, the bin, heirs, extract.json
+  python3 selection.py select rN                 element tallies, verdicts, the bin, heirs (specs are extracted by breed.py, only for parts it will use)
 """
 import json
 import sys
@@ -19,11 +19,27 @@ H = Path(__file__).parent
 SL = json.loads((H / "slots.json").read_text())
 SLOTS = [s["key"] for s in SL["slots"]]
 EXPERTS = {s["key"]: set(s["experts"]) for s in SL["slots"]}
+WEIGHT = {s["key"]: s["weight"] for s in SL["slots"]}   # how much a slot matters to the family; steers effort, not verdicts
 PTS = SL["points"]
-WIN_MIN = 1.5          # a change wins its slot with at least this many points more than its parent has
-KEEP_DELTA = 0.15      # a child's whole page beats its parent by this much on the screen's mean
+TH = SL["thresholds"]
+# A slot is voted on by the lenses whose card shows it, so slots differ in the points they can earn. Votes are
+# therefore compared as a SHARE of what the slot could have earned from the judges who could vote on it.
+WIN_SHARE = TH["win_share"]   # a change wins its slot when its share beats its parent's by this much
+KEEP_DELTA = 0.15             # or a child's whole page beats its parent by this much on the screen's mean
 BIN = H / "parts-bin.json"
 DECAY = 0.5
+
+
+def possible(judges):
+    """slot -> the most a design could earn: 2 points from every judge who could vote on it, at that judge's weight."""
+    out = {s: 0.0 for s in SLOTS}
+    for j in judges:
+        lens = j["lens"]
+        final = not lens.startswith("screen-") and "order" in j
+        lens = lens.removeprefix("screen-")
+        for s in (SLOTS if final else SL["visible"].get(lens, [])):
+            out[s] += PTS["best"] * (PTS["expert"] if lens in EXPERTS[s] else 1) * (PTS["final"] if final else 1)
+    return out
 
 
 def parts_tally(judges, names):
@@ -47,11 +63,15 @@ def parts_tally(judges, names):
                 r["voters"].append(lens)
                 if p.get("what") and p["what"] not in r["what"] and pid == p.get("best"):
                     r["what"].append(p["what"])
-    return {s: sorted(rows.values(), key=lambda r: -r["points"]) for s, rows in t.items()}
+    cap = possible(judges)
+    for s, rows in t.items():
+        for r in rows.values():
+            r["share"] = round(r["points"] / cap[s], 3) if cap[s] else 0.0
+    return {s: sorted(rows.values(), key=lambda r: -r["share"]) for s, rows in t.items()}
 
 
 def pts(parts, slot, pid):
-    return next((r["points"] for r in parts.get(slot, []) if r["id"] == pid), 0.0)
+    return next((r["share"] for r in parts.get(slot, []) if r["id"] == pid), 0.0)
 
 
 def verdicts(a, means, parts):
@@ -66,7 +86,7 @@ def verdicts(a, means, parts):
         slots = []
         for c in m["changes"]:
             cp, pp = pts(parts, c["slot"], cid), pts(parts, c["slot"], pid)
-            v = "won" if cp - pp >= WIN_MIN else "lost" if pp > cp else "tied" if cp or pp else "unseen"
+            v = "won" if cp - pp >= WIN_SHARE else "lost" if pp - cp >= WIN_SHARE else "tied" if cp or pp else "unseen"
             slots.append({"slot": c["slot"], "child": cp, "parent": pp, "verdict": v, "graft": c.get("donor"), "text": c["text"]})
         kept = [s for s in slots if s["verdict"] == "won" or (s["verdict"] == "tied" and delta is not None and delta >= KEEP_DELTA)]
         out.append({"id": cid, "parent": pid, "parentName": m["parentName"], "delta": delta, "slots": slots,
@@ -82,14 +102,14 @@ def update_bin(rnd_no, parts):
     for s in SLOTS:
         rows = {}
         for r in old.get(s, []):
-            rows[r["id"]] = {**r, "points": round(r["points"] * DECAY, 2), "age": r.get("age", 0) + 1}
+            rows[r["id"]] = {**r, "share": round(r["share"] * DECAY, 3), "age": r.get("age", 0) + 1}
         for r in parts.get(s, []):
-            if r["points"] <= 0:
+            if r["share"] <= 0:
                 continue
             prev = rows.get(r["id"], {})
-            rows[r["id"]] = {"id": r["id"], "name": r["name"], "points": round(r["points"] + prev.get("points", 0), 2),
+            rows[r["id"]] = {"id": r["id"], "name": r["name"], "share": round(r["share"] + prev.get("share", 0), 3),
                              "round": rnd_no, "what": r["what"] or prev.get("what", []), "age": 0}
-        new[s] = sorted(rows.values(), key=lambda r: -r["points"])[:4]
+        new[s] = sorted(rows.values(), key=lambda r: -r["share"])[:3]
     BIN.write_text(json.dumps(new, indent=1))
     return new
 
@@ -113,18 +133,15 @@ def select(rnd):
         for s in v["slots"]:
             (h["kept"] if s["slot"] in v["kept"] else h["culled"]).append({"slot": s["slot"], "child": v["id"], "verdict": s["verdict"], "text": s["text"], "graft": s["graft"]})
     (st / "parts.json").write_text(json.dumps({"parts": parts, "verdicts": vd, "heirs": heirs, "bin": bin_}, indent=1))
-    lines = [f"# Round {a['roundNo']}: elements\n", "## The best element in each slot (points: best 2, runner 1, expert lens x1.5, final x1.5)\n"]
+    lines = [f"# Round {a['roundNo']}: elements\n", "## The best element in each slot (share of the votes the slot could earn; best 2 points, runner 1, expert lens x1.5, final x1.5)\n"]
     for s in SLOTS:
         rows = parts[s][:3]
-        lines.append(f"- **{s}**: " + ("; ".join(f"{r['id']} ({r['name']}) {r['points']}: {'; '.join(r['what'][:2])}" for r in rows) or "no votes"))
+        lines.append(f"- **{s}**: " + ("; ".join(f"{r['id']} ({r['name']}) {r['share']:.0%}: {'; '.join(r['what'][:2])}" for r in rows) or "no votes"))
     lines += ["", "## Children against their parents (screen mean delta; per changed slot the element votes, child vs parent)\n"]
     for v in vd:
-        lines.append(f"- {v['id']} ({v['parentName']}) delta {v['delta']}: " + ", ".join(f"{s['slot']} {s['verdict']} ({s['child']} v {s['parent']})" for s in v["slots"]) + (" -> survives" if v["survives"] else " -> culled"))
+        lines.append(f"- {v['id']} ({v['parentName']}) delta {v['delta']}: " + ", ".join(f"{s['slot']} {s['verdict']} ({s['child']:.0%} v {s['parent']:.0%})" for s in v["slots"]) + (" -> survives" if v["survives"] else " -> culled"))
     (st / "parts.md").write_text("\n".join(lines) + "\n")
-    top = [{"slot": s, **{k: r[k] for k in ("id", "name", "what")}} for s in SLOTS for r in parts[s][:2] if r["points"] > 0 and r["id"] != "00-current"]
-    (st / "extract.json").write_text(json.dumps({"round": a["round"], "roundNo": a["roundNo"], "stage": "extract", "parts": top}))
     print("\n".join(lines))
-    print(st / "extract.json")
 
 
 def settle(rnd, *outs):
