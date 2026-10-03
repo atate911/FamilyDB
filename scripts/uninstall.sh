@@ -774,7 +774,7 @@ say ""
 say "Things this did not touch, because they are not ours to remove:"
 say "  · Docker itself, and uv"
 say "  · the Telegram bot (delete it with /deletebot in @BotFather)"
-say "  · the Google Cloud project and its OAuth client"
+say "  · the Google Cloud project and its service account"
 say "  · the API keys at each provider, which are still live until you revoke them"
 [ -n "${FAMILYDB_UNINSTALL_COPY:-}" ] && rm -rf "$FAMILYDB_UNINSTALL_COPY"
 exit 0

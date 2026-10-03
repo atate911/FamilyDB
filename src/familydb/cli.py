@@ -768,37 +768,27 @@ def db_retry_failed(
     typer.echo(f"recovered {recovered} message(s)")
 
 
-@google_app.command("auth")
-def google_auth(
-    client_secrets: Path = typer.Option(
-        ..., "--client-secrets", help="OAuth desktop-app credentials JSON from Google Cloud."
-    ),
+@google_app.command("connect")
+def google_connect(
+    key_file: Path = typer.Argument(..., help="The service account's JSON key from Google Cloud."),
+    calendar_id: str = typer.Argument(..., help="The family calendar's id, shared with it."),
 ) -> None:
-    """Sign in once on a machine with a browser. Saves the token to GOOGLE_TOKEN_PATH."""
-    application = build_app()
-    token_path = Path(application.settings.google_token_path)
-    if not client_secrets.exists():
-        raise typer.BadParameter(f"{client_secrets} does not exist")
-    google_calendar.run_auth_flow(client_secrets, token_path)
-    typer.echo(f"token saved to {token_path}")
-    typer.echo("If this is not the server, copy that file into the server's data folder.")
-
-
-@google_app.command("calendars")
-def google_calendars() -> None:
-    """List the calendars the signed-in account can see, with their ids."""
+    """Connect the calendar from the server, as the settings page does: tries the key on the
+    calendar, then keeps both."""
     application = build_app()
     try:
-        creds = google_calendar.load_credentials(Path(application.settings.google_token_path))
-        rows = google_calendar.list_calendars(creds)
-    except FamilyDBError as exc:
+        info = google_calendar.service_account_key(key_file.read_text(encoding="utf-8"))
+        google_calendar.check_access(info, calendar_id)
+    except (OSError, google_calendar.GoogleSetupError) as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=1) from exc
-    for row in rows:
-        flags = row["access"] or ""
-        if row["primary"]:
-            flags += ", primary"
-        typer.echo(f"{row['id']}    {row['summary']}    ({flags})")
+    token_path = Path(application.settings.google_token_path)
+    google_calendar.save_token(token_path, json.dumps(info))
+    with closing(application.connect()) as conn, db.transaction(conn):
+        settings_store.set_many(
+            conn, {"google_calendar_id": calendar_id.strip()}, changed_by=None, source="cli"
+        )
+    typer.echo(f"connected to {calendar_id.strip()}; the key is saved in {token_path}")
 
 
 @google_app.command("events")
@@ -808,7 +798,8 @@ def google_events(days: int = typer.Option(7, "--days", help="How many days ahea
     calendar = application.calendar
     if calendar is None:
         typer.echo(
-            "Google Calendar is not configured; set GOOGLE_CALENDAR_ID and run auth.", err=True
+            "Google Calendar is not connected; run `familydb google connect KEY_FILE CALENDAR_ID`.",
+            err=True,
         )
         raise typer.Exit(code=1)
     now = application.clock.now()

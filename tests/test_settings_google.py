@@ -1,41 +1,44 @@
-"""Connecting Google Calendar from the settings page, with no browser on the server."""
+"""Connecting Google Calendar from the settings page: a service account's key and a calendar id."""
 
 from __future__ import annotations
 
 import json
 import re
 
+import httplib2
 import pytest
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from googleapiclient.errors import HttpError
 
 from familydb.app import App
 from familydb.integrations import google_calendar as google
 from familydb.web import create_app
 
 PASSWORD = "open sesame please"
-DESKTOP = json.dumps(
-    {
-        "installed": {
-            "client_id": "123.apps.googleusercontent.com",
-            "client_secret": "not-really-secret",
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "token_uri": "https://oauth2.googleapis.com/token",
-            "redirect_uris": ["http://localhost"],
-        }
+EMAIL = "familydb@project.iam.gserviceaccount.com"
+CALENDAR = "family@group.calendar.google.com"
+
+
+def _key(**changes) -> str:
+    private = rsa.generate_private_key(public_exponent=65537, key_size=2048).private_bytes(
+        serialization.Encoding.PEM,
+        serialization.PrivateFormat.PKCS8,
+        serialization.NoEncryption(),
+    )
+    info = {
+        "type": "service_account",
+        "project_id": "project",
+        "private_key_id": "abc",
+        "private_key": private.decode(),
+        "client_email": EMAIL,
+        "client_id": "1",
+        "token_uri": "https://oauth2.googleapis.com/token",
     }
-)
+    return json.dumps({**info, **changes})
 
 
-class Flow:
-    """What google_auth_oauthlib's Flow does for us: take a code, hold the credentials."""
-
-    def __init__(self) -> None:
-        self.codes: list[str] = []
-        self.credentials = type("Creds", (), {"to_json": lambda self: '{"token": "t"}'})()
-
-    def fetch_token(self, *, code: str) -> None:
-        if code == "rejected":
-            raise ValueError("invalid_grant")
-        self.codes.append(code)
+KEY = _key()
 
 
 def _token(client) -> str:
@@ -44,119 +47,157 @@ def _token(client) -> str:
     return found.group(1)
 
 
+class Events:
+    """The three calls `check_access` makes, answering as Google would, or refusing."""
+
+    def __init__(self, refuse: dict[str, int] | None = None) -> None:
+        self.refuse = refuse or {}
+        self.calls: list[str] = []
+
+    def _do(self, name: str, answer: dict):
+        events = self
+
+        class Request:
+            def execute(self) -> dict:
+                events.calls.append(name)
+                if name in events.refuse:
+                    status = events.refuse[name]
+                    raise HttpError(httplib2.Response({"status": status}), b"{}", "no")
+                return answer
+
+        return Request()
+
+    def list(self, **_):
+        return self._do("list", {})
+
+    def insert(self, **_):
+        return self._do("insert", {"id": "check1"})
+
+    def delete(self, **_):
+        return self._do("delete", {})
+
+
 @pytest.fixture
-def page(settings, clock, conn, family, monkeypatch):
-    flow = Flow()
-    calendars = [
-        {
-            "id": "family@group.calendar.google.com",
-            "summary": "Family",
-            "primary": False,
-            "access": "owner",
-        },
-        {"id": "sam@example.com", "summary": "Sam", "primary": True, "access": "owner"},
-    ]
+def events(monkeypatch) -> Events:
+    found = Events()
     monkeypatch.setattr(
-        google, "begin_consent", lambda config: ("https://accounts.google.com/x", flow, "st8")
+        google, "build_service", lambda creds: type("S", (), {"events": lambda self: found})()
     )
-    monkeypatch.setattr(google, "list_calendars", lambda creds: calendars)
+    return found
+
+
+@pytest.fixture
+def page(settings, clock, conn, family, events):
     app = App(settings.model_copy(update={"web_password": PASSWORD}), clock)
     client = create_app(app).test_client()
     client.post("/login", data={"password": PASSWORD})
-    client.app, client.flow = app, flow
+    client.app = app
     return client
 
 
-def test_connecting_takes_three_steps_on_the_page(page) -> None:
-    started = page.post("/settings/google/start", data={"csrf": _token(page), "client": DESKTOP})
-    assert started.status_code == 200 and "https://accounts.google.com/x" in started.text
-
-    pasted = "http://127.0.0.1:53682/?state=st8&code=4/abc&scope=calendar"
-    finished = page.post("/settings/google/finish", data={"csrf": _token(page), "pasted": pasted})
-    assert finished.status_code == 200 and "Which calendar is the family" in finished.text
-    assert page.flow.codes == ["4/abc"]
-    token = page.app.settings.google_token_path
-    assert json.loads(token.read_text()) == {"token": "t"}
-
-    chosen = page.post(
-        "/settings/google/calendar",
-        data={"csrf": _token(page), "calendar_id": "family@group.calendar.google.com"},
+def _connect(client, key=KEY, calendar=CALENDAR):
+    return client.post(
+        "/settings/google/connect",
+        data={"csrf": _token(client), "key": key, "calendar_id": calendar},
     )
-    assert chosen.status_code == 302
-    assert page.app.settings.google_calendar_id == "family@group.calendar.google.com"
-    assert "Connected, using" in page.get("/settings/connections").text
 
 
-def test_a_calendar_the_connection_did_not_offer_is_refused(page) -> None:
-    page.post("/settings/google/start", data={"csrf": _token(page), "client": DESKTOP})
-    page.post("/settings/google/finish", data={"csrf": _token(page), "pasted": "4/abc"})
-    refused = page.post(
-        "/settings/google/calendar", data={"csrf": _token(page), "calendar_id": "someone@else"}
+def test_connecting_is_one_form_and_keeps_the_key_and_the_calendar(page, events) -> None:
+    response = _connect(page)
+    assert response.status_code == 302
+    assert events.calls == ["list", "insert", "delete"]  # read it, then changed it and put it back
+    saved = json.loads(page.app.settings.google_token_path.read_text())
+    assert saved["client_email"] == EMAIL
+    assert page.app.settings.google_calendar_id == CALENDAR
+    shown = page.get("/settings/connections").text
+    assert "Connected, using" in shown and EMAIL in shown
+
+
+def test_the_key_file_is_owner_only(page) -> None:
+    _connect(page)
+    assert page.app.settings.google_token_path.stat().st_mode & 0o077 == 0
+
+
+@pytest.mark.parametrize(
+    ("refused", "words"),
+    [
+        ({"list": 404}, "shared with"),
+        ({"list": 403}, "can see that calendar but not change"),
+        ({"insert": 403}, "Make changes to events"),
+    ],
+)
+def test_a_calendar_that_cannot_be_used_is_explained_and_nothing_is_kept(
+    page, events, refused, words
+) -> None:
+    events.refuse = refused
+    response = _connect(page)
+    assert response.status_code == 400 and words in response.text
+    assert EMAIL in response.text
+    assert not page.app.settings.google_token_path.exists()
+    assert page.app.settings.google_calendar_id is None
+
+
+def test_a_project_without_the_calendar_api_is_told_to_turn_it_on(page, monkeypatch) -> None:
+    class Disabled(Events):
+        def list(self, **_):
+            class Request:
+                def execute(self_inner):
+                    raise HttpError(
+                        httplib2.Response({"status": 403}), b'{"error": "accessNotConfigured"}', "x"
+                    )
+
+            return Request()
+
+    found = Disabled()
+    monkeypatch.setattr(
+        google, "build_service", lambda creds: type("S", (), {"events": lambda self: found})()
     )
-    assert refused.status_code == 400 and page.app.settings.google_calendar_id is None
+    response = _connect(page)
+    assert response.status_code == 400 and "Turn on the Google Calendar API" in response.text
 
 
-def test_a_web_application_client_is_explained_not_accepted(page) -> None:
-    web = json.dumps({"web": {"client_id": "x"}})
-    response = page.post("/settings/google/start", data={"csrf": _token(page), "client": web})
-    assert response.status_code == 400 and "Desktop app" in response.text
+def test_an_oauth_client_from_the_old_way_is_explained_not_accepted(page) -> None:
+    old = json.dumps({"installed": {"client_id": "123", "client_secret": "s"}})
+    response = _connect(page, key=old)
+    assert response.status_code == 400 and "service account" in response.text
 
 
-def test_finishing_without_starting_says_to_start_again(page) -> None:
-    response = page.post("/settings/google/finish", data={"csrf": _token(page), "pasted": "x"})
-    assert response.status_code == 400 and "Start again" in response.text
+@pytest.mark.parametrize("text", ["nope", "[1]", json.dumps({"type": "authorized_user"})])
+def test_something_that_is_not_a_key_is_refused(page, text) -> None:
+    assert _connect(page, key=text).status_code == 400
+
+
+def test_a_damaged_private_key_is_refused(page) -> None:
+    damaged = _key(private_key="-----BEGIN PRIVATE KEY-----\nzz")
+    assert _connect(page, key=damaged).status_code == 400
+
+
+def test_a_calendar_id_is_required(page) -> None:
+    response = _connect(page, calendar="  ")
+    assert response.status_code == 400 and "calendar's id" in response.text
 
 
 # -- the integration's own checks ---------------------------------------------------------
 
 
-def test_an_address_from_an_earlier_try_is_refused(tmp_path) -> None:
-    with pytest.raises(google.GoogleSetupError, match="earlier try"):
-        google.finish_consent(
-            Flow(), "http://127.0.0.1:53682/?state=old&code=c", tmp_path / "t.json", state="new"
-        )
+def test_a_service_account_key_loads_without_asking_google(tmp_path) -> None:
+    path = tmp_path / "key.json"
+    google.save_token(path, KEY)
+    creds = google.load_credentials(path)
+    assert creds.service_account_email == EMAIL
+    assert google.service_account_email(path) == EMAIL
 
 
-def test_google_saying_no_is_passed_on(tmp_path) -> None:
-    with pytest.raises(google.GoogleSetupError, match="not allowed on Google's page"):
-        google.finish_consent(Flow(), "http://127.0.0.1:53682/?error=access_denied", tmp_path)
-    with pytest.raises(google.GoogleSetupError, match="Google said: server_error"):
-        google.finish_consent(Flow(), "http://127.0.0.1:53682/?error=server_error", tmp_path)
+def test_a_sign_in_left_by_an_older_install_has_no_address_to_share_with(tmp_path) -> None:
+    path = tmp_path / "token.json"
+    google.save_token(path, json.dumps({"token": "t", "refresh_token": "r", "client_id": "c"}))
+    assert google.service_account_email(path) is None
 
 
-def test_a_permission_left_unticked_says_to_tick_them_all(tmp_path) -> None:
-    """Google's page lets each permission be ticked on its own; oauthlib says a grant came back
-    smaller than asked with a Warning, which is put in the family's words."""
+def test_an_unreadable_key_asks_to_connect_again(tmp_path) -> None:
+    from familydb.errors import ToolUnavailable
 
-    class Partly(Flow):
-        def fetch_token(self, *, code: str) -> None:
-            granted = Warning('Scope has changed from "a b" to "a".')
-            granted.old_scope, granted.new_scope = ["a", "b"], ["a"]
-            raise granted
-
-    with pytest.raises(google.GoogleSetupError, match="tick every box"):
-        google.finish_consent(Partly(), "http://127.0.0.1:53682/?code=c", tmp_path / "t.json")
-    assert not (tmp_path / "t.json").exists()
-
-
-def test_a_client_with_no_secret_is_explained(page) -> None:
-    """Google shows a client's secret only when it is made; a JSON downloaded later has none."""
-    later = json.dumps({"installed": {"client_id": "123.apps.googleusercontent.com"}})
-    response = page.post("/settings/google/start", data={"csrf": _token(page), "client": later})
-    assert response.status_code == 400 and "Download JSON" in response.text
-    with pytest.raises(google.GoogleSetupError, match="no secret"):
-        google.client_config(later)
-
-
-def test_a_code_google_rejects_saves_nothing(tmp_path) -> None:
-    with pytest.raises(google.GoogleSetupError, match="would not take"):
-        google.finish_consent(Flow(), "rejected", tmp_path / "t.json")
-    assert not (tmp_path / "t.json").exists()
-
-
-def test_the_real_library_makes_a_consent_link_with_pkce() -> None:
-    url, flow, state = google.begin_consent(google.client_config(DESKTOP))
-    assert url.startswith("https://accounts.google.com/o/oauth2/auth?")
-    assert "code_challenge_method=S256" in url and f"state={state}" in url
-    assert "redirect_uri=http%3A%2F%2F127.0.0.1%3A53682%2F" in url
-    assert "access_type=offline" in url and flow.code_verifier
+    path = tmp_path / "key.json"
+    path.write_text("{ half a file")
+    with pytest.raises(ToolUnavailable, match="connect the calendar again"):
+        google.load_credentials(path)

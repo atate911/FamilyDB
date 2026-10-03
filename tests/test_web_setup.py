@@ -319,8 +319,11 @@ def test_the_family_step_lets_in_whoever_messaged_the_bot(fresh, conn) -> None:
 
 def test_the_calendar_step_explains_google_and_reports_a_bad_paste(fresh) -> None:
     page = fresh.get("/setup/calendar").text
-    assert "console.cloud.google.com/auth/clients" in page and "Publish app" in page
-    back = _post(fresh, "calendar", "/settings/google/start", client="not json at all")
+    assert "console.cloud.google.com/iam-admin/serviceaccounts" in page
+    assert "client_email" in page
+    back = _post(
+        fresh, "calendar", "/settings/google/connect", key="not json at all", calendar_id="c"
+    )
     assert back.headers["Location"] == "/setup/calendar"
     assert 'class="error" role="alert"' in fresh.get("/setup/calendar").text
 

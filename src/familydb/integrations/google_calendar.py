@@ -1,4 +1,5 @@
-"""Google Calendar through the official client: one family account, one shared calendar."""
+"""Google Calendar through the official client: one shared family calendar, reached by a service
+account that the calendar was shared with. The family signs in to nothing and no token expires."""
 
 from __future__ import annotations
 
@@ -9,10 +10,9 @@ import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Protocol
-from urllib.parse import parse_qs, urlsplit
 from zoneinfo import ZoneInfo
 
 from familydb.config import Settings
@@ -20,11 +20,11 @@ from familydb.errors import ToolError, ToolUnavailable
 
 log = logging.getLogger(__name__)
 
-SCOPES = [
-    "https://www.googleapis.com/auth/calendar.events",
-    "https://www.googleapis.com/auth/calendar.readonly",
-]
-REAUTH = "Google credentials are expired or revoked; run `familydb google auth` again"
+SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
+# An install made before service accounts holds a person's sign-in instead of a key. It keeps
+# working while it lasts; connecting again replaces it.
+USER_SCOPES = [*SCOPES, "https://www.googleapis.com/auth/calendar.readonly"]
+REAUTH = "Google no longer accepts the saved key; connect the calendar again on the settings page"
 # How long the page may show what Google said rather than ask again. Asking took a few hundred
 # milliseconds of every Home and Plans view. A plan the bot makes, moves or cancels shows at once,
 # since its own writes forget what was read; an event added on a phone may take this long to
@@ -168,14 +168,21 @@ def build_service(creds: Any) -> Any:
 
 
 def load_credentials(token_path: Path) -> Any:
-    """Credentials from the saved token, refreshed and re-saved when needed."""
+    """Credentials from the saved key (or an older install's sign-in, refreshed when needed)."""
     from google.auth.exceptions import RefreshError
     from google.auth.transport.requests import Request
+    from google.oauth2 import service_account
     from google.oauth2.credentials import Credentials
 
     if not token_path.exists():
-        raise ToolUnavailable(f"no Google token at {token_path}; run `familydb google auth`")
-    creds = Credentials.from_authorized_user_file(str(token_path), SCOPES)
+        raise ToolUnavailable(f"no Google key at {token_path}; connect the calendar on the page")
+    try:
+        info = json.loads(token_path.read_text(encoding="utf-8"))
+        if info.get("type") == "service_account":
+            return service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
+        creds = Credentials.from_authorized_user_info(info, USER_SCOPES)
+    except ValueError as exc:
+        raise ToolUnavailable(REAUTH) from exc
     if not creds.valid:
         if not (creds.expired and creds.refresh_token):
             raise ToolUnavailable(REAUTH)
@@ -188,7 +195,7 @@ def load_credentials(token_path: Path) -> Any:
 
 
 def save_token(token_path: Path, text: str) -> None:
-    """Write the token owner-only, and whole: a half-written token is a lost calendar."""
+    """Write the key owner-only, and whole: a half-written key is a lost calendar."""
     token_path.parent.mkdir(parents=True, exist_ok=True)
     fresh = token_path.with_name(token_path.name + ".new")
     handle = os.open(fresh, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600)
@@ -198,120 +205,116 @@ def save_token(token_path: Path, text: str) -> None:
     os.replace(fresh, token_path)
 
 
-def run_auth_flow(client_secrets: Path, token_path: Path) -> Any:
-    """The one-time browser sign-in on a laptop. Saves the token for the server."""
-    from google_auth_oauthlib.flow import InstalledAppFlow
-
-    flow = InstalledAppFlow.from_client_secrets_file(str(client_secrets), SCOPES)
-    creds = flow.run_local_server(port=0)
-    save_token(token_path, creds.to_json())
-    return creds
-
-
-# Connecting from the web page, on a server with no browser of its own. Google sends the browser
-# back to this address after consent. Nothing answers there, so the browser shows an error, but
-# the address it shows carries the code: pasting it into the page finishes the connection. It is
-# the loopback address a "Desktop app" client is allowed to use, so the same client works here
-# and with `familydb google auth` on a laptop.
-CONSENT_RETURN = "http://127.0.0.1:53682/"
+# Connecting. The family makes a service account in Google Cloud, shares the calendar with its
+# address and pastes its key file and the calendar's id into the page, which tries both before it
+# keeps either.
 NOT_JSON = "That is not the file Google gave you: it should be JSON, starting with {."
-WEB_CLIENT = (
-    "That client is of type Web application. In Google Cloud, under Google Auth Platform, "
-    "Clients, make one of type Desktop app and paste that one instead."
+NOT_A_KEY = (
+    "That is not a service account key. In Google Cloud, open the service account, then Keys, "
+    "Add key, Create new key, JSON, and paste everything in the file it saves."
 )
-NO_CLIENT = (
-    "That JSON has no OAuth client in it. Paste the file Google offered when the client was made."
+OLD_CLIENT = (
+    "That is an OAuth client, which is how FamilyDB used to connect. Make a service account "
+    "and a key for it instead, as the steps above say."
 )
-# Google shows a client's secret once, in the box that opens when the client is made; a JSON
-# downloaded later from the list of clients has none, and the token cannot be had without it.
-NO_SECRET = (
-    "That file has no secret in it: Google shows a client's secret only in the box that opens "
-    "when the client is made. Make another client of type Desktop app and press Download JSON "
-    "in that box."
+NO_CALENDAR = (
+    "Type the calendar's id: in Google Calendar, the calendar's settings, under Integrate calendar."
 )
-# Google's page lets each permission be ticked on its own, and may show them unticked: both are
-# needed, one to put plans on the calendar and one to list the calendars.
-PARTLY = (
-    "Google was given only part of what is needed. On Google's page, tick every box (or Select "
-    "all) before pressing Continue. Start again."
+NOT_SHARED = (
+    "Google cannot find that calendar for {email}. Check the id, and that the calendar is "
+    "shared with {email}: in Google Calendar, the calendar's settings, Share with specific "
+    "people."
 )
-REFUSED = "Access was not allowed on Google's page. Start again and allow it."
-NO_CODE = "There is no code in that. Paste the whole address the browser was sent to."
-MIXED_UP = "That address belongs to an earlier try. Start again and use the newest link."
+API_OFF = (
+    "Google Calendar is not turned on in the project that key belongs to. Turn on the Google "
+    "Calendar API there, wait a minute, and try again."
+)
+READ_ONLY = (
+    "{email} can see that calendar but not change it. In its sharing settings, give it "
+    "'Make changes to events'."
+)
+CHECK_TITLE = "FamilyDB connection check"
 
 
 class GoogleSetupError(ValueError):
     """Something the person connecting the calendar can put right; the message says what."""
 
 
-def client_config(text: str) -> dict[str, Any]:
-    """The OAuth client pasted into the page, checked for being the right kind."""
+def service_account_key(text: str) -> dict[str, Any]:
+    """The key file pasted into the page, checked for being a service account's."""
+    from google.oauth2 import service_account
+
     try:
-        config = json.loads(text)
+        info = json.loads(text)
     except ValueError:
         raise GoogleSetupError(NOT_JSON) from None
-    if not isinstance(config, dict):
+    if not isinstance(info, dict):
         raise GoogleSetupError(NOT_JSON)
-    if "installed" not in config:
-        raise GoogleSetupError(WEB_CLIENT if "web" in config else NO_CLIENT)
-    installed = config["installed"]
-    if not isinstance(installed, dict) or not installed.get("client_secret"):
-        raise GoogleSetupError(NO_SECRET)
-    return config
-
-
-def begin_consent(config: dict[str, Any]) -> tuple[str, Any, str]:
-    """Google's consent address, the flow that must finish it (it holds the PKCE secret), and
-    the state the address will come back carrying."""
-    from google_auth_oauthlib.flow import Flow
-
-    flow = Flow.from_client_config(config, SCOPES, redirect_uri=CONSENT_RETURN)
-    # offline and consent: a refresh token every time, so the calendar keeps working for months.
-    url, state = flow.authorization_url(access_type="offline", prompt="consent")
-    return url, flow, state
-
-
-def finish_consent(flow: Any, pasted: str, token_path: Path, *, state: str | None = None) -> Any:
-    """Exchange what was pasted (the address, or just the code) for a token, and save it."""
-    pasted = pasted.strip()
-    code = pasted
-    if pasted.startswith(("http://", "https://")):
-        query = parse_qs(urlsplit(pasted).query)
-        if "error" in query:
-            said = query["error"][0]
-            raise GoogleSetupError(
-                REFUSED if said == "access_denied" else f"Google said: {said}. Start again."
-            )
-        if state and query.get("state", [state])[0] != state:
-            raise GoogleSetupError(MIXED_UP)
-        code = (query.get("code") or [""])[0]
-    if not code:
-        raise GoogleSetupError(NO_CODE)
+    if "installed" in info or "web" in info:
+        raise GoogleSetupError(OLD_CLIENT)
+    if info.get("type") != "service_account":
+        raise GoogleSetupError(NOT_A_KEY)
     try:
-        flow.fetch_token(code=code)
-    except Warning as exc:
-        # oauthlib's way of saying Google granted fewer scopes than were asked for.
-        if getattr(exc, "new_scope", None) is not None:
-            raise GoogleSetupError(PARTLY) from exc
-        raise GoogleSetupError(f"Google would not take that code ({exc}). Start again.") from exc
-    except Exception as exc:  # oauthlib raises a family of its own; each means the same here
-        raise GoogleSetupError(f"Google would not take that code ({exc}). Start again.") from exc
-    creds = flow.credentials
-    save_token(token_path, creds.to_json())
-    return creds
+        service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
+    except (ValueError, KeyError):
+        raise GoogleSetupError(NOT_A_KEY) from None
+    return info
 
 
-def list_calendars(creds: Any) -> list[dict[str, Any]]:
-    items = build_service(creds).calendarList().list().execute().get("items", [])
-    return [
-        {
-            "id": item.get("id"),
-            "summary": item.get("summary"),
-            "primary": bool(item.get("primary", False)),
-            "access": item.get("accessRole"),
-        }
-        for item in items
-    ]
+def service_account_email(token_path: Path) -> str | None:
+    """Who the calendar must be shared with: the saved key's address, if there is such a key."""
+    try:
+        info = json.loads(token_path.read_text(encoding="utf-8"))
+        return str(info["client_email"]) if info.get("type") == "service_account" else None
+    except (OSError, ValueError, KeyError, AttributeError):
+        return None
+
+
+def check_access(info: dict[str, Any], calendar_id: str) -> None:
+    """Prove the key can read and change the calendar, leaving it as it was found.
+
+    Changing is tried by making an event and taking it off again, since a calendar shared for
+    reading only looks the same as any other until something is written.
+    """
+    from google.auth.exceptions import RefreshError
+    from google.oauth2 import service_account
+    from googleapiclient.errors import HttpError
+
+    calendar_id = calendar_id.strip()
+    if not calendar_id:
+        raise GoogleSetupError(NO_CALENDAR)
+    email = info.get("client_email", "the service account")
+    creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
+    events = build_service(creds).events()
+    today = datetime.now(ZoneInfo("UTC")).date()
+    body = {
+        "summary": CHECK_TITLE,
+        "start": {"date": today.isoformat()},
+        "end": {"date": (today + timedelta(days=1)).isoformat()},
+    }
+    try:
+        events.list(calendarId=calendar_id, maxResults=1).execute()
+        made = events.insert(calendarId=calendar_id, body=body).execute()
+        events.delete(calendarId=calendar_id, eventId=made["id"]).execute()
+    except RefreshError:
+        raise GoogleSetupError(
+            "Google would not accept that key. It may have been deleted; make another."
+        ) from None
+    except HttpError as exc:
+        raise GoogleSetupError(_explain(exc, email)) from exc
+
+
+def _explain(exc: Any, email: str) -> str:
+    """What Google's refusal means for the person connecting, in their words."""
+    status = getattr(exc.resp, "status", None)
+    content = exc.content or b""
+    if status == 403 and (b"accessNotConfigured" in content or b"SERVICE_DISABLED" in content):
+        return API_OFF
+    if status == 404:
+        return NOT_SHARED.format(email=email)
+    if status == 403:
+        return READ_ONLY.format(email=email)
+    return f"Google said {status or '?'}: {exc.reason}. Check the key and the calendar's id."
 
 
 class GoogleCalendar:

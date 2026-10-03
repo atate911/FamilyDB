@@ -67,7 +67,7 @@ uv run familydb db status         # row counts and the last model calls, with ca
 | `familydb debug prompt TEXT [--as NAME] [--chat ID] [--kind KIND] [--idea N]` | The exact API request that would be sent (a chat message, or `--kind enrich --idea N` for a lookup), without sending it |
 | `familydb debug cost [--days N]` | What each message pays for before anyone types, and what the last month cost per purpose (chat, digest, lookups, ...) and per model |
 | `familydb debug validate-tools` | Have the API validate the tool schemas (needs an Anthropic or Gemini key) |
-| `familydb google auth --client-secrets FILE` / `calendars` / `events [--days N]` | Google sign-in on a machine with a browser (the settings page does it without one); find the calendar id; connection test |
+| `familydb google connect KEY_FILE CALENDAR_ID` / `events [--days N]` | Connect the calendar from the server (the settings page does the same); connection test |
 | `familydb enrich [--idea N] [--limit N]` | Look pending ideas up on the web now; `--idea` redoes one (needs `WEB_TOOLS_ENABLED=true`) |
 | `familydb suggest [--window now\|today\|this-weekend\|next-weekend\|someday\|START..END] [--discover] [--json]` | Run the suggestion engine and print its verdicts; `--discover` also searches the web |
 | `familydb digest [--now]` | Show the weekend digest schedule, or post it to the family chat now |

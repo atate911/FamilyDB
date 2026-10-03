@@ -1,7 +1,7 @@
 """The settings pages: the only part of the web surface that writes settings.
 
 It writes `app_settings` through `store.settings`, and two files: the session key
-(`keys.rotate`, which signs everyone out) and the Google token (`google.finish_consent`).
+(`keys.rotate`, which signs everyone out) and the Google key (`google.save_token`).
 Nothing here can reach an idea, a plan or a message. Every change is logged, and a key's value
 is never what gets logged: only that it was replaced.
 
@@ -31,10 +31,9 @@ every time the page is drawn.
 from __future__ import annotations
 
 import ipaddress
+import json
 import logging
 import re
-import secrets
-import time
 from contextlib import closing
 from pathlib import Path
 from typing import Any
@@ -208,24 +207,7 @@ def problems_from(exc: ValidationError) -> dict[str, str]:
     return found
 
 
-# Connecting Google from the page: the consent started, and the calendars found once it finished.
-# In memory, like the form tokens: a restart in the middle means starting the connection again.
-GOOGLE_KEY = "google_consent"
-CONSENT_MINUTES = 15
-GOOGLE_EXPIRED = "That connection was started too long ago, or before a restart. Start again."
-CALENDAR_SET = "Saved. The bot now uses {name}."
-
-
-def _consents() -> dict[str, dict[str, Any]]:
-    return current_app.config.setdefault("FAMILYDB_GOOGLE", {})
-
-
-def _pending() -> dict[str, Any] | None:
-    """This session's consent in progress, if it is recent enough to finish."""
-    found = _consents().get(session.get(GOOGLE_KEY, ""))
-    if found is None or time.monotonic() - found["started"] > CONSENT_MINUTES * 60:
-        return None
-    return found
+CALENDAR_CONNECTED = "Connected. The bot now uses {name}."
 
 
 def suggested(one: fields.Field) -> list[tuple[str, str]]:
@@ -254,12 +236,12 @@ def level_labels(key: str, live: Settings) -> dict[str, str]:
 
 
 def google_panel(live: Any) -> dict[str, Any]:
-    pending = _pending()
+    token = Path(live.google_token_path)
     return {
-        "connected": Path(live.google_token_path).exists(),
+        "connected": token.exists(),
         "calendar": live.google_calendar_id,
-        "consent_url": pending["url"] if pending and "calendars" not in pending else None,
-        "calendars": pending.get("calendars") if pending else None,
+        # Who the calendar is shared with. None for a sign-in left by an older install.
+        "email": google.service_account_email(token),
     }
 
 
@@ -1346,81 +1328,32 @@ def sign_out_everyone() -> Response | tuple[str, int]:
     return redirect(url_for("auth.login"))
 
 
-@bp.post("/settings/google/start")
-def google_start() -> tuple[str, int]:
-    """Take the OAuth client pasted in, and give back Google's consent link."""
-    back = auth.setup_return(request.form.get("then"))
-    if (complaint := auth.refused()) is not None:
-        return _google_answer(back, error=complaint)
-    try:
-        config = google.client_config(request.form.get("client", ""))
-        url, flow, state = google.begin_consent(config)
-    except google.GoogleSetupError as exc:
-        return _google_answer(back, error=str(exc))
-    key = secrets.token_urlsafe(16)
-    consents = _consents()
-    for old in [k for k, v in consents.items() if time.monotonic() - v["started"] > 3600]:
-        consents.pop(old, None)
-    consents[key] = {"flow": flow, "state": state, "url": url, "started": time.monotonic()}
-    session[GOOGLE_KEY] = key
-    return _google_answer(
-        back, said="Open the link below, allow access, then paste where it sends you."
-    )
-
-
-@bp.post("/settings/google/finish")
-def google_finish() -> tuple[str, int]:
-    """Exchange the pasted address for a token, save it, and offer the calendars it can see."""
+@bp.post("/settings/google/connect")
+def google_connect() -> Response | tuple[str, int]:
+    """Take the service account's key and the calendar's id, try both against Google, and keep
+    them only if the calendar can be read and changed."""
     app = _app()
     back = auth.setup_return(request.form.get("then"))
     if (complaint := auth.refused()) is not None:
         return _google_answer(back, error=complaint)
-    pending = _pending()
-    if pending is None:
-        return _google_answer(back, error=GOOGLE_EXPIRED)
+    calendar_id = request.form.get("calendar_id", "").strip()
     try:
-        creds = google.finish_consent(
-            pending["flow"],
-            request.form.get("pasted", ""),
-            Path(app.settings.google_token_path),
-            state=pending["state"],
-        )
-        pending["calendars"] = google.list_calendars(creds)
+        info = google.service_account_key(request.form.get("key", ""))
+        google.check_access(info, calendar_id)
     except google.GoogleSetupError as exc:
         return _google_answer(back, error=str(exc))
-    except Exception as exc:  # the token is saved; only listing the calendars failed
-        log.warning("connected to Google but could not list the calendars: %s", exc)
-        pending["calendars"] = []
+    google.save_token(Path(app.settings.google_token_path), json.dumps(info))
+    _save({"google_calendar_id": calendar_id})
     app.forget_calendar()
     log.info("Google Calendar connected from the page by %s", auth.client_address())
-    return _google_answer(back, said="Connected to Google. Choose the family calendar.")
-
-
-@bp.post("/settings/google/calendar")
-def google_calendar_choice() -> Response | tuple[str, int]:
-    """The calendar the bot keeps plans on, chosen from the ones the connection can see."""
-    back = auth.setup_return(request.form.get("then"))
-    here = _section(request.form.get("section"))
-    if (complaint := auth.refused()) is not None:
-        return _answer(back, here, error=complaint, otherwise="connections")
-    pending = _pending()
-    offered = {row["id"]: row for row in (pending or {}).get("calendars") or []}
-    chosen = request.form.get("calendar_id", "")
-    if chosen not in offered:
-        return _answer(back, here, error=GOOGLE_EXPIRED, otherwise="connections")
-    _save({"google_calendar_id": chosen})
-    _consents().pop(session.pop(GOOGLE_KEY, ""), None)
-    return _answer(back, here, said=CALENDAR_SET.format(name=offered[chosen]["summary"] or chosen))
+    return _google_answer(back, said=CALENDAR_CONNECTED.format(name=calendar_id))
 
 
 def _google_answer(
     back: str | None, *, said: str | None = None, error: str | None = None
 ) -> Response | tuple[str, int]:
-    """The consent steps draw the Connections page with the next step on it; setup draws its own
-    instead."""
-    if back is not None:
-        return auth.back_to_setup(back, said=said, problem=error)
-    return page("connections", said=said, error=error, status=400 if error else 200)
+    """The connection form answers on the page it was sent from: Connections, or setup's own."""
+    return _answer(back, "connections", said=said, error=error)
 
 
 def _problems_said(problems: dict[str, str]) -> str:

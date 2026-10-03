@@ -905,8 +905,9 @@ GROUPS: tuple[Group, ...] = (
             field(
                 "google_calendar_id",
                 "Google calendar id",
-                "Chosen when you connect. For another calendar, paste its id from Google "
-                "Calendar: the calendar's Settings and sharing, under Integrate calendar.",
+                "Set when you connect. For another calendar, share it with the service account "
+                "first, then paste its id from Google Calendar: the calendar's Settings and "
+                "sharing, under Integrate calendar.",
             ),
         ),
     ),

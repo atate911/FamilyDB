@@ -161,7 +161,7 @@ in as themselves, and you give each of them a starting password on the Family pa
 | Where home is | recommended | your town |
 | Telegram | optional | Telegram on your phone |
 | The rest of the family | optional | |
-| Google Calendar | optional, 15 minutes | the Google account that has the family calendar |
+| Google Calendar | optional, 10 minutes | any Google account, to make a service account and share the family calendar with it |
 
 You can skip any step and come back to it later; the home page lists what is left. That is the
 whole install.
@@ -572,10 +572,10 @@ It cannot reach these, so they are yours to remove if you are done with FamilyDB
 
 - the deploy key on GitHub, under the repository's Settings → Deploy keys (it names the page);
 - the Telegram bot: `/deletebot` in @BotFather;
-- the Google Cloud project and its OAuth client;
+- the Google Cloud project and its service account;
 - the API keys at each company, which work until you revoke them.
 
-A new install can reuse the bot, the Google client and the keys as they are.
+A new install can reuse the bot, the Google service account and the keys as they are.
 </details>
 
 ## Troubleshooting
@@ -839,20 +839,20 @@ other way round: Caddy is reached, and FamilyDB behind it is not serving.
 
 ### Google will not connect from the page
 
-The page names the usual causes as it meets them:
+The page tries the key on the calendar before it keeps anything, and names what is wrong:
 
-- *"tick every box"*: Google's page lists each permission with a box beside it, and may show
-  them unticked. Start again and tick them all, or Select all.
-- *"no secret in it"*: the client's JSON was downloaded from the list of clients after it was
-  made. Google shows the secret only in the box that opens when a client is made, so make
-  another client of type Desktop app and press Download JSON in that box.
-- It worked for a week, then stopped: the sign-in screen is still in Testing. Publish it
-  (Google Auth Platform, Audience, Publish app) and connect again.
+- *"cannot find that calendar"*: the id is wrong, or the calendar is not shared with the service
+  account. The message gives the address to share it with.
+- *"can see that calendar but not change it"*: it was shared for viewing. Give the service
+  account "Make changes to events".
+- *"Calendar is not turned on"*: enable the Google Calendar API in the project the key was made
+  in.
+- Google Cloud will not make a key: some organisations turn key creation off. Use a project
+  outside the organisation.
 
-Connecting Google Calendar from the page has not yet been tried against a live Google account. If
-it will not connect, do the sign-in on a computer with a browser instead, from a copy of the
-code, and copy the token it writes to the server: RUNBOOK section 5 has the commands. Check it
-with `cd /opt/familydb && sudo -u familydb .venv/bin/familydb google events`.
+If it still will not connect, `cd /opt/familydb && sudo -u familydb .venv/bin/familydb google
+connect KEY_FILE CALENDAR_ID` tries the same on the server and prints Google's answer, and
+`... familydb google events` shows what the bot sees afterwards. RUNBOOK section 5 has the steps.
 
 ### The page asks for the password again and again
 

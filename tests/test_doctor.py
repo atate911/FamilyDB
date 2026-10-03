@@ -157,7 +157,7 @@ def test_a_link_that_is_gone_or_has_moved_is_said(settings) -> None:
     def fetch(url):
         if url == LINKS["anthropic_keys"]:
             return 200, "https://platform.claude.com/settings/keys"
-        if url == LINKS["google_clients"]:
+        if url == LINKS["google_service_accounts"]:
             return 404, url
         if url == LINKS["openai_keys"]:
             return 403, url  # behind a sign-in: still there
@@ -167,7 +167,7 @@ def test_a_link_that_is_gone_or_has_moved_is_said(settings) -> None:
     doctor.check_links(report, fetch)
     (check,) = report.checks
     assert check.verdict == doctor.WARN
-    assert "no answer from google_clients (404)" in check.detail
+    assert "no answer from google_service_accounts (404)" in check.detail
     assert "anthropic_keys now at https://platform.claude.com/settings/keys" in check.detail
     assert "openai_keys" not in check.detail
 

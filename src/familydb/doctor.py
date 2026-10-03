@@ -427,12 +427,12 @@ def check_links(report: Report, fetch: Any = None) -> None:
 def check_integrations(app: App, report: Report) -> None:
     settings = app.settings
     if calendar_available(settings):
-        report.add("google calendar", OK, f"calendar {settings.google_calendar_id} with a token")
+        report.add("google calendar", OK, f"calendar {settings.google_calendar_id} with a key")
     elif settings.google_calendar_id:
         report.add(
             "google calendar",
             WARN,
-            f"a calendar id is set but no token at {settings.google_token_path}",
+            f"a calendar id is set but no key at {settings.google_token_path}",
             "Connect it again on the settings page (Google Calendar)",
         )
     else:

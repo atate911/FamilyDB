@@ -23,9 +23,8 @@ LINKS: dict[str, str] = {
     "google_calendar_api": (
         "https://console.cloud.google.com/apis/library/calendar-json.googleapis.com"
     ),
-    "google_consent": "https://console.cloud.google.com/auth/overview",
-    "google_audience": "https://console.cloud.google.com/auth/audience",
-    "google_clients": "https://console.cloud.google.com/auth/clients",
+    "google_service_accounts": "https://console.cloud.google.com/iam-admin/serviceaccounts",
+    "google_calendar_settings": "https://calendar.google.com/calendar/r/settings",
     "telegram": "https://telegram.org/",
     "botfather": "https://t.me/BotFather",
 }
