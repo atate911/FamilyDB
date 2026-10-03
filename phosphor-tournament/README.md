@@ -89,6 +89,30 @@ can be launched as it is or changed after the review. Review sheets for the six 
 into the refine rounds, and for the Signal Box line that left the main lane, are in
 `mockups/review-before-refine/`.
 
+## Cheaper rounds from round 14
+
+The rounds had come to cost too many tokens to carry on. Before round 14 the harness was changed
+to spend far less per round while still telling the designs apart and keeping the creative lanes.
+The changed files and the reasons, with the evidence from rounds 9 to 13, are in
+`harness-round14-changes/README.md`. In short:
+
+- **Judging is a screen, then a final.** Five lenses (the owner's judge, soul, style, the
+  skeptic, and one "system and use" judge for the three that agreed most closely) score the
+  whole field. The seven best, and up to two the screen most wants developed, go to a final.
+  There all eight lenses score them and put them in a strict order. Replayed on rounds 9 to 13,
+  every round's real top four reached the final. The 4th and 5th places, 0.01 apart in four of
+  those rounds, are now decided by the final's order.
+- **Judges and designers read cards.** Each palette gets four images, each sized to what a model
+  reads without shrinking it, read several to a message. They replace dozens of strips, sheets
+  and full-size shots opened one at a time.
+- **Fewer pages are shot**: 8 instead of 13 (no Sign in, 404, General settings, whole form or
+  phone Chat; together they were under 3% of what the judges wrote about).
+- **A digest of the lessons** (about 4,000 words, rewritten each round) replaces the 92 KB
+  `lessons.md` for every agent. The planner reads a brief pack instead of three results files.
+- **Bookkeeping agents** (the curator, re-asks for a missed score) run on a cheaper model.
+- `python3 stages.py usage <transcript folders>` reports each agent's tokens, so round 14
+  measures what the change saved.
+
 ## Carried into round 14
 
 Round 13 was the last exploratory round. **Desk Terminal, Joined** (8.33, in seven top fours)
@@ -272,7 +296,15 @@ local server with fake data.
 To put it back, restore the older tar as below, then extract the newer one over it at the same
 path: `tar -xzf harness-rounds-8-13/harness-rounds-8-13.tar.gz -C "$S/harness"`. The older
 `harness-round8-changes/` folder is now only a history of what changed; the newer archive
-supersedes it.
+supersedes it. Then copy the round-14 changes over both. With the demo server running, re-render
+round 14's carried designs so their cards exist (the archive leaves out screenshots):
+
+```sh
+H="$S/harness"
+cp -r phosphor-tournament/harness-round14-changes/harness/. "$H/"
+( cd "$H" && cp README.md render.js contact.py check.sh rounds/r14/ )
+( cd "$H/rounds/r14" && for p in palettes/*.json; do ./check.sh "$p"; done )
+```
 
 ## Restoring it
 
@@ -321,9 +353,13 @@ before round 8: `./check.sh palettes/00-current.json`.
      arguments.
    - When every design stage is done, run
      `python3 stages.py prepare rN <each design workflow's output file>`. It renders what is
-     missing or stale (four at a time), draws the sheets and writes `judge-K.json`. Launch
-     `stage.js` once per judge file, all at once.
-   - When every judge is done, run `python3 stages.py tally rN <each judge output file>`,
+     missing or stale (four at a time), draws the cards and sheets, and writes `screen-K.json`
+     (or `judge-K.json` for a round with `"panel": "full"`). Launch `stage.js` once per file,
+     all at once.
+   - When every screen judge is done, run `python3 stages.py cut rN <each screen output file>`.
+     It chooses the finalists and writes `final-K.json`. Launch `stage.js` once per file, all
+     at once.
+   - When every final judge is done, run `python3 stages.py tally rN <each final output file>`,
      then launch `stage.js` with `finish.json`.
    - When that is done, run `python3 stages.py assemble rN <its output file>`. This writes
      `rounds/rN/stage/output.json`.
@@ -378,7 +414,8 @@ table ... extreme ideas tried and voted either up or down". So the harness chang
 | 14 to 16 | 4 carried, the 4 mutants, 3 informed | 2 carried, 2 new, 1 mutant | `--informed 3 --wild 2` |
 
 The full command is `python3 advance.py open rN rM M --informed I --wild W` with the defaults
-`--point 0 --cross 1 --type 1 --graphics 1 --phosphor 1 --wild-carried 2 --wild-mutants 1 --mode refine`.
+`--point 0 --cross 1 --type 1 --graphics 1 --phosphor 1 --wild-carried 2 --wild-mutants 1 --mode refine
+--panel screen` (from round 14; `--panel full` judges the old way, eight lenses over the whole field).
 
 **Bringing the original's light back.** During round 10 the owner said: "in the goal of great
 interface design we've gained a lot but also lost a little of the unique effect of the original
