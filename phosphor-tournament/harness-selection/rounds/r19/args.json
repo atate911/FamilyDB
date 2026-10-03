@@ -1,0 +1,129 @@
+{
+ "round": "r19",
+ "roundNo": 19,
+ "mode": "selection",
+ "carried": [
+  {
+   "id": "r18-mut-1",
+   "name": "Desk Terminal, Vera Card",
+   "summary": "Lineage r13-mut-2: head of the line, entered as the bar its children are measured against. Last round it kept: glass, signal."
+  },
+  {
+   "id": "r18-mut-3",
+   "name": "Track Diagram Scanlined",
+   "summary": "Lineage r13-mut-4: head of the line, entered as the bar its children are measured against. Last round it kept: light, controls."
+  },
+  {
+   "id": "r18-head-2",
+   "name": "Lit Index, merged",
+   "summary": "Refinement comparator."
+  },
+  {
+   "id": "r18-head-5",
+   "name": "Grid Console, merged, all-star",
+   "summary": "Refinement comparator."
+  }
+ ],
+ "wildCarried": [],
+ "seeds": [],
+ "mutants": [
+  {
+   "kind": "step",
+   "parent": "r18-mut-1",
+   "parentName": "Desk Terminal, Vera Card",
+   "parentMean": 7.65,
+   "refine": true,
+   "changes": [
+    {
+     "slot": "glass",
+     "text": "close the empty left column on Home: move the Contents plate and Coming up beside or under the tube so the first screen is full"
+    },
+    {
+     "slot": "controls",
+     "text": "phone: a larger Send key and a bigger composer; on Ideas, the filters as one compact row of keys instead of a tall column"
+    },
+    {
+     "slot": "list",
+     "text": "desktop: row text one size up, keep the amber 'was due N days ago', and add a fine lit track line down the To do rows"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r18-mut-3",
+   "parentName": "Track Diagram Scanlined",
+   "parentMean": 7.32,
+   "refine": true,
+   "changes": [
+    {
+     "slot": "glass",
+     "text": "give Home's first screen a visible structural change: a track running from the head to the box, or the tube standing on a grid floor"
+    },
+    {
+     "slot": "light",
+     "text": "make the scanlines on the key word visible at half size (a coarser period), keep the glow on live things only"
+    },
+    {
+     "slot": "list",
+     "text": "overdue tasks read 'was due N days ago' in amber, the Add key wide and primary, and the keycap tray carried to To do and Plans filters"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r18-head-2",
+   "parentName": "Lit Index, merged",
+   "parentMean": 7.36,
+   "refine": true,
+   "changes": [
+    {
+     "slot": "chat",
+     "text": "Thread hung on a rail from Vera's mark, times in the margin, a lit ring at the box; drop the 'Vera asks' opener and tighten the gaps beside short lines",
+     "donor": "r18-mut-5",
+     "donorName": "Lit Index, Ruled Rail"
+    },
+    {
+     "slot": "controls",
+     "text": "lit-square checkboxes with a standard tick inside the frame; selects get a full border and a caret; nav chips and the phone tab bar reach 44px",
+     "donor": "r18-mut-5",
+     "donorName": "Lit Index, Ruled Rail"
+    },
+    {
+     "slot": "head",
+     "text": "keep the giant lit question but cap it at two lines on the phone so the box starts higher, and brighten MIND toward #6dff9c"
+    },
+    {
+     "slot": "colour",
+     "text": "swap the warm cream for a cooler, greener bone, and the brass for a cool steel, so no warm plates remain"
+    }
+   ]
+  },
+  {
+   "kind": "step",
+   "parent": "r18-head-5",
+   "parentName": "Grid Console, merged, all-star",
+   "parentMean": 7.51,
+   "refine": true,
+   "changes": [
+    {
+     "slot": "rule",
+     "text": "cut the extra corner ticks and the empty hatched panels beside the setup cards; thin the card outlines so the lattice is calmer"
+    },
+    {
+     "slot": "head",
+     "text": "Status headline and its deck on one baseline; make the Home poster question a little calmer (less white) so the lit rail and the NOW node carry the glow"
+    },
+    {
+     "slot": "controls",
+     "text": "raise every small target (nav chips, tags, lamps) to 44px"
+    }
+   ]
+  }
+ ],
+ "wild": [],
+ "wildMutants": [],
+ "nInformed": 0,
+ "history": [],
+ "panel": "screen",
+ "merges": []
+}

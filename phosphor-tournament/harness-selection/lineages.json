@@ -1,11 +1,11 @@
 {
- "gen": 18,
+ "gen": 19,
  "lineages": [
   {
    "key": "r13-mut-2",
-   "head": "r17-mut-1",
-   "name": "Desk Terminal, Gauged Rows",
-   "stale": 0,
+   "head": "r18-mut-1",
+   "name": "Desk Terminal, Vera Card",
+   "stale": 1,
    "culled": [
     "ONE LIT LINE: a single lit line from the screen (the tube, the typed question) down into the list's 'now' marker, a real wire from the live thing to the next thing due.",
     "set labels in small caps with +0.08em tracking",
@@ -20,20 +20,20 @@
     "make the first word of each row's label medium weight and the rest regular",
     "set numerals in a light weight one size above their text",
     "end every section's rule with a small solid end mark",
-    "give the primary action a short afterglow when it is pressed"
+    "give the primary action a short afterglow when it is pressed",
+    "raise body leading to 1.55 and cap the measure at 66 characters",
+    "Scanlined bloom on the key word, with a glow only on the live things: rails, NOW lamps, tube",
+    "raise body leading to 1.55 and cap the measure at 66 characters",
+    "put a thin bezel inset and a vent row on the case, nothing else"
    ],
    "kept": [
     {
+     "slot": "glass",
+     "text": "One Vera card holding the greeting, the question, a lit 'Listening' status line and the box, beside a bezelled tube with a grid floor"
+    },
+    {
      "slot": "signal",
-     "text": "one status line under the question (Listening, watching 4 plans) with a lit dot"
-    },
-    {
-     "slot": "figure",
-     "text": "push this one step further, as the same idea made more of: moving-coil spend dial in phosphor with a limit mark on the Status tube, with the $0.00 VT323 readout"
-    },
-    {
-     "slot": "list",
-     "text": "tighten every list row's height by one step and set its facts in a right-aligned tabular column"
+     "text": "push this one step further, as the same idea made more of: one status line under the question (Listening, watching 4 plans) with a lit dot"
     }
    ],
    "won": {
@@ -43,15 +43,16 @@
     "foot": 1,
     "controls": 1,
     "figure": 2,
-    "signal": 1
+    "signal": 2,
+    "glass": 1
    },
-   "prev_head": "r17-head-1",
-   "prev_name": "Desk Terminal, Banded, merged"
+   "prev_head": "r17-mut-1",
+   "prev_name": "Desk Terminal, Gauged Rows"
   },
   {
    "key": "r13-mut-4",
-   "head": "r18-head-1",
-   "name": "Track Diagram Aglow, merged",
+   "head": "r18-mut-3",
+   "name": "Track Diagram Scanlined",
    "stale": 0,
    "culled": [
     "end every section's rule with a small solid end mark",
@@ -67,76 +68,75 @@
     "give the primary action a short afterglow when it is pressed",
     "round every box and panel one step less",
     "give every other row the faintest ground band",
-    "set the section's count as a large light numeral with its unit in small caps beside it"
+    "set the section's count as a large light numeral with its unit in small caps beside it",
+    "raise body leading to 1.55 and cap the measure at 66 characters",
+    "giant condensed title with folio number and rule under it; or serif title with a typed count; folio plus one giant condensed word with the lede on its baseline; or a typed count standing on the masthead rule",
+    "shift the ground one step cooler and the neutrals one step warmer",
+    "type the question on the glass one size smaller and keep the cursor blinking only while focused"
    ],
    "kept": [
     {
-     "slot": "figure",
-     "text": "Moving-coil spend dial with lit sector and LIMIT flag, in a bezelled glowing tube"
-    },
-    {
-     "slot": "rule",
-     "text": "put a 2px cap of the section's own colour over each section head"
+     "slot": "light",
+     "text": "Scanlined bloom on the key word, with a glow only on the live things: rails, NOW lamps, tube"
     },
     {
      "slot": "controls",
-     "text": "Raised keyed segmented filters with a lit radio dot and a bright primary Add button"
-    },
-    {
-     "slot": "glass",
-     "text": "type the question on the glass one size smaller and keep the cursor blinking only while focused"
+     "text": "push this one step further, as the same idea made more of: Raised keyed segmented filters with a lit radio dot and a bright primary Add button"
     }
    ],
    "won": {
     "type": 2,
     "chat": 2,
     "figure": 2,
-    "controls": 2,
+    "controls": 3,
     "head": 1,
     "glass": 2,
     "colour": 1,
-    "rule": 1
+    "rule": 1,
+    "light": 1
    },
-   "prev_head": "r16-head-2",
+   "prev_head": "r18-head-1",
    "prev_name": "Track Diagram Aglow, merged"
   },
   {
    "key": "wild-16",
-   "head": "r18-head-2",
+   "head": "r19-head-1",
    "name": "Lit Index, merged",
    "stale": 0,
    "culled": [
     "moving-coil spend dial drawn in phosphor on the Status tube",
     "put a 2px cap of the section's own colour over each section head",
-    "make every target at least 44px and give the focus ring a 2px offset in the bright green"
+    "make every target at least 44px and give the focus ring a 2px offset in the bright green",
+    "push this one step further, as the same idea made more of: give the primary action a short afterglow when it is pressed",
+    "Cream chalk ink on teal-black with sage lit, cyan and sparing amber and violet companions",
+    "light the mark and the current page's name with the original halo",
+    "make the live lamp breathe slowly (a 4 second ease) only while she is answering"
    ],
    "kept": [
     {
-     "slot": "rule",
-     "text": "ruled section heads with coloured ends, hatched kind swatches and a title block; or a lit thread with nodes"
+     "slot": "chat",
+     "text": "Thread hung on a rail from Vera's mark, times in the margin, a lit ring at the box"
     },
     {
-     "slot": "glass",
-     "text": "add one line of status under the question in the machine's mono voice (what she is doing now)"
-    },
-    {
-     "slot": "light",
-     "text": "give the primary action a short afterglow when it is pressed"
+     "slot": "controls",
+     "text": "draw checkboxes as small lit squares, off as an empty frame"
     }
    ],
    "won": {
     "rule": 1,
     "glass": 1,
-    "light": 1
+    "light": 1,
+    "chat": 1,
+    "controls": 1
    },
-   "prev_head": "r16-wild-1",
-   "prev_name": "Lit Index"
+   "prev_head": "r18-head-2",
+   "prev_name": "Lit Index, merged"
   },
   {
    "key": "r13-wild-1",
    "head": "r18-head-3",
    "name": "Phosphor Blueprint, merged",
-   "stale": 1,
+   "stale": 0,
    "culled": [
     "A SECTION-HEAD RULE WITH AN END MARK on every page.",
     "add one line of status under the question in the machine's mono voice (what she is doing now)",
@@ -151,26 +151,15 @@
     "A single pilot lamp lit on the footer horizon with a lit run either side; or a numbered top bar with a lit segment under the mark",
     "turn the head's secondary links into a quiet row under the title, separated by thin middle dots",
     "Raised keyed segmented filters with a lit radio dot and a bright primary Add button",
-    "give 'late' an amber bar at the row's start and nothing else"
+    "give 'late' an amber bar at the row's start and nothing else",
+    "Scanlined bloom on the key word, with a glow only on the live things: rails, NOW lamps, tube",
+    "push this one step further, as the same idea made more of: push this one step further, as the same idea made more of: Teal-black ground with warm cream ink, plus thin section-coloured lines and sage and cyan companions",
+    "make the NOW marker a lit tick on the list's rail with the time beside it",
+    "Cream chalk ink on teal-black with sage lit, cyan and sparing amber and violet companions",
+    "tighten every list row's height by one step and set its facts in a right-aligned tabular column",
+    "draw a short trace (a sparkline of the last seven days) beside each count"
    ],
-   "kept": [
-    {
-     "slot": "head",
-     "text": "large two-line question with the one lit word, date on the right, composer straight below"
-    },
-    {
-     "slot": "colour",
-     "text": "push this one step further, as the same idea made more of: Teal-black ground with warm cream ink, plus thin section-coloured lines and sage and cyan companions"
-    },
-    {
-     "slot": "signal",
-     "text": "make the NOW marker a lit tick on the list's rail with the time beside it"
-    },
-    {
-     "slot": "foot",
-     "text": "mark the current page in the bar with a short rule under it instead of a pill"
-    }
-   ],
+   "kept": [],
    "won": {
     "glass": 1,
     "rule": 2,
@@ -182,14 +171,14 @@
     "head": 1,
     "foot": 1
    },
-   "prev_head": "r17-head-2",
+   "prev_head": "r18-head-3",
    "prev_name": "Phosphor Blueprint, merged"
   },
   {
    "key": "r13-wild-4",
-   "head": "r18-head-4",
-   "name": "Grid Console, merged",
-   "stale": 0,
+   "head": "r18-mut-10",
+   "name": "Grid Console Folio Head",
+   "stale": 1,
    "culled": [
     "ONE LIT LINE: a single lit line from the screen (the tube, the typed question) down into the list's 'now' marker, a real wire from the live thing to the next thing due.",
     "type the question on the glass one size smaller and keep the cursor blinking only while focused",
@@ -200,20 +189,17 @@
     "draw 'waiting' as a steel dot and 'off' as a pewter ring, nothing red",
     "set a thin dotted leader from each row's label to its facts",
     "push this one step further, as the same idea made more of: serif title with a typed count in the page colour standing on the masthead rule; wild-1 uses a huge thin section numeral; Serif title with a page-coloured typed count and unit beside it, standing on the masthead rule",
-    "give 'late' an amber bar at the row's start and nothing else"
+    "give 'late' an amber bar at the row's start and nothing else",
+    "Serif page title with a large counted figure and small unit, deck line under a hairline rule",
+    "push this one step further, as the same idea made more of: Thread hung from Vera's mark on a rail with times in the margin and a ring at the composer; one Vera card holding greeting, question, status line, composer and Send, with chips beneath",
+    "tighten every list row's height by one step and set its facts in a right-aligned tabular column",
+    "shift the ground one step cooler and the neutrals one step warmer",
+    "make the first word of each row's label medium weight and the rest regular"
    ],
    "kept": [
     {
-     "slot": "chat",
-     "text": "Thread hung from Vera's mark on a rail with times in the margin and a ring at the composer; one Vera card holding greeting, question, status line, composer and Send, with chips beneath"
-    },
-    {
-     "slot": "type",
-     "text": "set headings in a serif from the library and keep labels in the mono"
-    },
-    {
-     "slot": "colour",
-     "text": "warm cream ink and sage and cyan companions on a teal-black ground; or blue-grey slate plates"
+     "slot": "head",
+     "text": "giant condensed title with folio number and rule under it; or serif title with a typed count; folio plus one giant condensed word with the lede on its baseline; or a typed count standing on the masthead rule"
     }
    ],
    "won": {
@@ -222,25 +208,38 @@
     "signal": 2,
     "glass": 1,
     "chat": 2,
-    "head": 2,
+    "head": 3,
     "figure": 2,
     "foot": 2,
     "light": 1,
     "colour": 1
    },
-   "prev_head": "r17-head-3",
+   "prev_head": "r18-head-4",
    "prev_name": "Grid Console, merged"
   },
   {
    "key": "allstar-18",
-   "head": "r18-head-5",
-   "name": "Grid Console, merged, all-star",
+   "head": "r19-head-2",
+   "name": "Grid Console, merged, all-star, merged",
    "stale": 0,
-   "culled": [],
-   "kept": [],
-   "won": {},
-   "prev_head": "r17-head-4",
-   "prev_name": "Swiss Thread, merged"
+   "culled": [
+    "set numerals in a light weight one size above their text",
+    "give every other row the faintest ground band",
+    "Serif page title with a large counted figure and small unit, deck line under a hairline rule",
+    "show the ways to start as a column of keys beside the box on wide screens",
+    "put a thin bezel inset and a vent row on the case, nothing else"
+   ],
+   "kept": [
+    {
+     "slot": "glass",
+     "text": "Question typed on the glass with block cursor and a lit lamp status line under it"
+    }
+   ],
+   "won": {
+    "glass": 1
+   },
+   "prev_head": "r18-head-5",
+   "prev_name": "Grid Console, merged, all-star"
   }
  ],
  "bars": [
