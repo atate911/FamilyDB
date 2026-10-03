@@ -1,0 +1,1620 @@
+{
+ "parts": {
+  "head": [
+   {
+    "id": "r16-wild-1",
+    "name": "Lit Index",
+    "points": 5.5,
+    "voters": [
+     "soul",
+     "style",
+     "systemuse"
+    ],
+    "what": [
+     "giant condensed title with folio number and rule under it; or serif title with a typed count",
+     "folio plus one giant condensed word with the lede on its baseline; or a typed count standing on the masthead rule"
+    ],
+    "share": 0.55
+   },
+   {
+    "id": "r16-head-2",
+    "name": "Track Diagram Aglow, merged",
+    "points": 4.0,
+    "voters": [
+     "soul",
+     "skeptic"
+    ],
+    "what": [
+     "Serif page title with a page-coloured count and a small unit label standing on the title rule"
+    ],
+    "share": 0.4
+   },
+   {
+    "id": "r15-wild-1",
+    "name": "Swiss Thread",
+    "points": 3.0,
+    "voters": [
+     "systemuse"
+    ],
+    "what": [
+     "large two-line question with the one lit word, date on the right, composer straight below"
+    ],
+    "share": 0.3
+   },
+   {
+    "id": "r16-mut-9",
+    "name": "Grid Console Counted Pilot",
+    "points": 2.5,
+    "voters": [
+     "style",
+     "skeptic"
+    ],
+    "what": [],
+    "share": 0.25
+   }
+  ],
+  "glass": [
+   {
+    "id": "r16-head-3",
+    "name": "Long Persistence Tallied, merged",
+    "points": 3.5,
+    "voters": [
+     "feedback",
+     "style"
+    ],
+    "what": [
+     "tube with a scope trace of plans as pulses and a NOW marker, with a mono status line on the glass"
+    ],
+    "share": 0.438
+   },
+   {
+    "id": "r16-head-5",
+    "name": "Grid Console, merged",
+    "points": 3.0,
+    "voters": [
+     "feedback"
+    ],
+    "what": [
+     "Monitor in a thin bezel with scan-lit radar, Next up and a typed line, set on a bloom; the scope with a trace is the runner"
+    ],
+    "share": 0.375
+   },
+   {
+    "id": "r16-mut-2",
+    "name": "Desk Terminal, Dialled",
+    "points": 3.0,
+    "voters": [
+     "soul"
+    ],
+    "what": [
+     "Vera's typed question, Next up and trend or dial all in one VT323 tube with a cursor"
+    ],
+    "share": 0.375
+   },
+   {
+    "id": "r16-head-1",
+    "name": "Desk Terminal, Banded, merged",
+    "points": 1.5,
+    "voters": [
+     "soul"
+    ],
+    "what": [],
+    "share": 0.188
+   },
+   {
+    "id": "r16-head-4",
+    "name": "Phosphor Blueprint, merged",
+    "points": 1.0,
+    "voters": [
+     "style"
+    ],
+    "what": [],
+    "share": 0.125
+   }
+  ],
+  "list": [
+   {
+    "id": "r16-head-2",
+    "name": "Track Diagram Aglow, merged",
+    "points": 5.0,
+    "voters": [
+     "feedback",
+     "skeptic"
+    ],
+    "what": [
+     "To do as a dated spine: a left Due margin, nodes on a rail and a lit NOW; the runner is the day-numeral cards with a NOW tick",
+     "To do as a dated spine: date margin, rail nodes, task plates, lit NOW node"
+    ],
+    "share": 1.0
+   },
+   {
+    "id": "r16-mut-5",
+    "name": "Tallied Gauge Spine",
+    "points": 1.5,
+    "voters": [
+     "skeptic"
+    ],
+    "what": [],
+    "share": 0.3
+   },
+   {
+    "id": "r16-head-5",
+    "name": "Grid Console, merged",
+    "points": 1.0,
+    "voters": [
+     "feedback"
+    ],
+    "what": [],
+    "share": 0.2
+   }
+  ],
+  "figure": [
+   {
+    "id": "r16-mut-10",
+    "name": "Grid Console Ledger Dial",
+    "points": 4.5,
+    "voters": [
+     "soul",
+     "skeptic"
+    ],
+    "what": [
+     "Moving-coil spend dial with lit sector and LIMIT flag, in a bezelled glowing tube"
+    ],
+    "share": 0.75
+   },
+   {
+    "id": "r16-mut-2",
+    "name": "Desk Terminal, Dialled",
+    "points": 3.0,
+    "voters": [
+     "soul"
+    ],
+    "what": [
+     "moving-coil spend dial drawn in phosphor on the Status tube"
+    ],
+    "share": 0.5
+   },
+   {
+    "id": "r16-head-3",
+    "name": "Long Persistence Tallied, merged",
+    "points": 1.5,
+    "voters": [
+     "skeptic"
+    ],
+    "what": [],
+    "share": 0.25
+   }
+  ],
+  "rule": [
+   {
+    "id": "r16-head-5",
+    "name": "Grid Console, merged",
+    "points": 4.0,
+    "voters": [
+     "style",
+     "skeptic"
+    ],
+    "what": [
+     "Section heads on a lit hairline with node ends and corner-tabbed trays"
+    ],
+    "share": 0.8
+   },
+   {
+    "id": "r16-head-4",
+    "name": "Phosphor Blueprint, merged",
+    "points": 3.5,
+    "voters": [
+     "style",
+     "skeptic"
+    ],
+    "what": [
+     "ruled section heads with coloured ends, hatched kind swatches and a title block; or a lit thread with nodes"
+    ],
+    "share": 0.7
+   }
+  ],
+  "signal": [
+   {
+    "id": "r16-head-2",
+    "name": "Track Diagram Aglow, merged",
+    "points": 4.0,
+    "voters": [
+     "systemuse",
+     "skeptic"
+    ],
+    "what": [
+     "one status line under the question (Listening, watching 4 plans) with a lit dot"
+    ],
+    "share": 0.5
+   },
+   {
+    "id": "r16-head-1",
+    "name": "Desk Terminal, Banded, merged",
+    "points": 3.0,
+    "voters": [
+     "soul"
+    ],
+    "what": [
+     "lamp-row status dots (lit and hollow) with dotted leaders; white-hot pilot lamp on the title block"
+    ],
+    "share": 0.375
+   },
+   {
+    "id": "r16-head-5",
+    "name": "Grid Console, merged",
+    "points": 2.0,
+    "voters": [
+     "skeptic"
+    ],
+    "what": [
+     "Glowing NOW stamp with a live clock on the lit thread, and haloed status lamps"
+    ],
+    "share": 0.25
+   },
+   {
+    "id": "r16-mut-8",
+    "name": "Blueprint, Pilot Lamp",
+    "points": 1.5,
+    "voters": [
+     "soul"
+    ],
+    "what": [],
+    "share": 0.188
+   },
+   {
+    "id": "r16-head-3",
+    "name": "Long Persistence Tallied, merged",
+    "points": 1.5,
+    "voters": [
+     "systemuse"
+    ],
+    "what": [],
+    "share": 0.188
+   }
+  ],
+  "type": [
+   {
+    "id": "r16-wild-1",
+    "name": "Lit Index",
+    "points": 4.0,
+    "voters": [
+     "feedback",
+     "style"
+    ],
+    "what": [
+     "wide-range condensed display with a lit key word over small mono labels; or serif headings over mono labels"
+    ],
+    "share": 0.8
+   },
+   {
+    "id": "r16-head-5",
+    "name": "Grid Console, merged",
+    "points": 2.0,
+    "voters": [
+     "feedback"
+    ],
+    "what": [
+     "Serif page titles over mono small labels and a grotesque body; the runner is the condensed display with a lit word"
+    ],
+    "share": 0.4
+   },
+   {
+    "id": "r16-mut-11",
+    "name": "Serif Swiss Thread",
+    "points": 1.5,
+    "voters": [
+     "style"
+    ],
+    "what": [],
+    "share": 0.3
+   }
+  ],
+  "colour": [
+   {
+    "id": "r16-head-5",
+    "name": "Grid Console, merged",
+    "points": 3.0,
+    "voters": [
+     "feedback"
+    ],
+    "what": [
+     "Teal-black ground with grounded section hues (amber, steel blue, mauve) as thin edges; cool slate with cream text as the runner"
+    ],
+    "share": 0.5
+   },
+   {
+    "id": "r16-mut-7",
+    "name": "Blueprint, Cream Ink",
+    "points": 3.0,
+    "voters": [
+     "style"
+    ],
+    "what": [
+     "warm cream ink and sage and cyan companions on a teal-black ground; or blue-grey slate plates"
+    ],
+    "share": 0.5
+   },
+   {
+    "id": "r16-mut-12",
+    "name": "Swiss Thread Keys",
+    "points": 1.5,
+    "voters": [
+     "feedback"
+    ],
+    "what": [],
+    "share": 0.25
+   },
+   {
+    "id": "r16-mut-1",
+    "name": "Desk Terminal, Folded Slate",
+    "points": 1.5,
+    "voters": [
+     "style"
+    ],
+    "what": [],
+    "share": 0.25
+   }
+  ],
+  "controls": [
+   {
+    "id": "r16-head-4",
+    "name": "Phosphor Blueprint, merged",
+    "points": 3.0,
+    "voters": [
+     "systemuse"
+    ],
+    "what": [
+     "numbered ruled select list with a tick, fused composer row with square Send, dashed arrow chips"
+    ],
+    "share": 0.6
+   },
+   {
+    "id": "r16-head-1",
+    "name": "Desk Terminal, Banded, merged",
+    "points": 2.0,
+    "voters": [
+     "skeptic"
+    ],
+    "what": [
+     "Raised keyed segmented filters with a lit radio dot and a bright primary Add button"
+    ],
+    "share": 0.4
+   },
+   {
+    "id": "r16-mut-5",
+    "name": "Tallied Gauge Spine",
+    "points": 1.5,
+    "voters": [
+     "systemuse"
+    ],
+    "what": [],
+    "share": 0.3
+   },
+   {
+    "id": "r16-mut-12",
+    "name": "Swiss Thread Keys",
+    "points": 1.0,
+    "voters": [
+     "skeptic"
+    ],
+    "what": [],
+    "share": 0.2
+   }
+  ],
+  "chat": [
+   {
+    "id": "r16-head-2",
+    "name": "Track Diagram Aglow, merged",
+    "points": 5.0,
+    "voters": [
+     "feedback",
+     "systemuse"
+    ],
+    "what": [
+     "Thread hung from Vera's mark on a rail with times in the margin and a ring at the composer",
+     "one Vera card holding greeting, question, status line, composer and Send, with chips beneath"
+    ],
+    "share": 1.0
+   },
+   {
+    "id": "r16-head-5",
+    "name": "Grid Console, merged",
+    "points": 1.5,
+    "voters": [
+     "feedback"
+    ],
+    "what": [],
+    "share": 0.3
+   },
+   {
+    "id": "r15-wild-1",
+    "name": "Swiss Thread",
+    "points": 1.0,
+    "voters": [
+     "systemuse"
+    ],
+    "what": [],
+    "share": 0.2
+   }
+  ],
+  "light": [
+   {
+    "id": "r16-wild-1",
+    "name": "Lit Index",
+    "points": 5.0,
+    "voters": [
+     "feedback",
+     "soul"
+    ],
+    "what": [
+     "Raster-lined bloom on the key word and the primary key; the runner is a two-layer halo on live lead words only",
+     "scanlined glowing key word with a two-layer halo; lead-word halo on live list rows"
+    ],
+    "share": 1.0
+   },
+   {
+    "id": "r16-mut-10",
+    "name": "Grid Console Ledger Dial",
+    "points": 2.5,
+    "voters": [
+     "feedback",
+     "soul"
+    ],
+    "what": [],
+    "share": 0.5
+   }
+  ],
+  "foot": [
+   {
+    "id": "r16-head-4",
+    "name": "Phosphor Blueprint, merged",
+    "points": 3.0,
+    "voters": [
+     "systemuse"
+    ],
+    "what": [
+     "uppercase tab bar with a lit top edge on the current tab"
+    ],
+    "share": 0.6
+   },
+   {
+    "id": "r16-mut-8",
+    "name": "Blueprint, Pilot Lamp",
+    "points": 2.0,
+    "voters": [
+     "style"
+    ],
+    "what": [
+     "title-block footer (project, motto, drawn, sheet) with a pilot lamp on its top rule; or a pilot lamp in the console foot"
+    ],
+    "share": 0.4
+   },
+   {
+    "id": "r16-mut-11",
+    "name": "Serif Swiss Thread",
+    "points": 1.5,
+    "voters": [
+     "systemuse"
+    ],
+    "what": [],
+    "share": 0.3
+   },
+   {
+    "id": "r16-mut-9",
+    "name": "Grid Console Counted Pilot",
+    "points": 1.0,
+    "voters": [
+     "style"
+    ],
+    "what": [],
+    "share": 0.2
+   }
+  ]
+ },
+ "verdicts": [
+  {
+   "id": "r16-mut-1",
+   "parent": "r16-head-1",
+   "parentName": "Desk Terminal, Banded, merged",
+   "delta": -1.21,
+   "slots": [
+    {
+     "slot": "colour",
+     "child": 0.25,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": "r15-mut-4",
+     "text": "Teal-black ground with warm cream ink, plus thin section-coloured lines and sage and cyan companions"
+    },
+    {
+     "slot": "glass",
+     "child": 0.0,
+     "parent": 0.188,
+     "verdict": "lost",
+     "graft": null,
+     "text": "let the glass fold to a single Ready line whenever nothing is live"
+    },
+    {
+     "slot": "type",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "set numerals in a light weight one size above their text"
+    }
+   ],
+   "kept": [
+    "colour"
+   ],
+   "survives": true
+  },
+  {
+   "id": "r16-mut-2",
+   "parent": "r16-head-1",
+   "parentName": "Desk Terminal, Banded, merged",
+   "delta": 0.03,
+   "slots": [
+    {
+     "slot": "figure",
+     "child": 0.5,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": "r13-idea-1",
+     "text": "moving-coil spend dial in phosphor with a limit mark on the Status tube, with the $0.00 VT323 readout"
+    },
+    {
+     "slot": "list",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "make the first word of each row's label medium weight and the rest regular"
+    },
+    {
+     "slot": "type",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "set numerals in a light weight one size above their text"
+    }
+   ],
+   "kept": [
+    "figure"
+   ],
+   "survives": true
+  },
+  {
+   "id": "r16-mut-3",
+   "parent": "r16-head-2",
+   "parentName": "Track Diagram Aglow, merged",
+   "delta": -0.35,
+   "slots": [
+    {
+     "slot": "list",
+     "child": 0.0,
+     "parent": 1.0,
+     "verdict": "lost",
+     "graft": "r15-head-1",
+     "text": "To do as a dated spine with nodes and a lit NOW; faint alternate-row band as a runner"
+    },
+    {
+     "slot": "colour",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "push this one step further, as the same idea made more of: shift the ground one step cooler and the neutrals one step warmer"
+    },
+    {
+     "slot": "glass",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "add one line of status under the question in the machine's mono voice (what she is doing now)"
+    }
+   ],
+   "kept": [],
+   "survives": false
+  },
+  {
+   "id": "r16-mut-4",
+   "parent": "r16-head-2",
+   "parentName": "Track Diagram Aglow, merged",
+   "delta": -0.28,
+   "slots": [
+    {
+     "slot": "colour",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": "r15-mut-4",
+     "text": "Teal-black ground with warm cream ink, plus thin section-coloured lines and sage and cyan companions"
+    },
+    {
+     "slot": "light",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "give the primary action a short afterglow when it is pressed"
+    },
+    {
+     "slot": "rule",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "round every box and panel one step less"
+    }
+   ],
+   "kept": [],
+   "survives": false
+  },
+  {
+   "id": "r16-mut-5",
+   "parent": "r16-head-3",
+   "parentName": "Long Persistence Tallied, merged",
+   "delta": 0.24,
+   "slots": [
+    {
+     "slot": "list",
+     "child": 0.3,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": "r15-head-1",
+     "text": "To do as a dated spine with nodes and a lit NOW; faint alternate-row band as a runner"
+    },
+    {
+     "slot": "controls",
+     "child": 0.3,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": null,
+     "text": "push this one step further, as the same idea made more of: set the select menus as a plain button that opens a list, with a chevron"
+    },
+    {
+     "slot": "type",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "set labels in small caps with +0.08em tracking"
+    }
+   ],
+   "kept": [
+    "list",
+    "controls"
+   ],
+   "survives": true
+  },
+  {
+   "id": "r16-mut-6",
+   "parent": "r16-head-3",
+   "parentName": "Long Persistence Tallied, merged",
+   "delta": -0.03,
+   "slots": [
+    {
+     "slot": "head",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": "r15-mut-4",
+     "text": "serif title with a typed count in the page colour standing on the masthead rule; wild-1 uses a huge thin section numeral; Serif title with a page-coloured typed count and unit beside it, standing on the masthead rule"
+    },
+    {
+     "slot": "rule",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "end every section's rule with a small solid end mark"
+    },
+    {
+     "slot": "figure",
+     "child": 0.0,
+     "parent": 0.25,
+     "verdict": "lost",
+     "graft": null,
+     "text": "draw the count as a row of small ticks instead of a number where the count is under ten"
+    }
+   ],
+   "kept": [],
+   "survives": false
+  },
+  {
+   "id": "r16-mut-7",
+   "parent": "r16-head-4",
+   "parentName": "Phosphor Blueprint, merged",
+   "delta": -0.09,
+   "slots": [
+    {
+     "slot": "colour",
+     "child": 0.5,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": "r15-mut-4",
+     "text": "Teal-black ground with warm cream ink, plus thin section-coloured lines and sage and cyan companions"
+    },
+    {
+     "slot": "signal",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "make the live lamp breathe slowly (a 4 second ease) only while she is answering"
+    },
+    {
+     "slot": "head",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "add a running head (the page's name in small caps, tracked) above the title"
+    }
+   ],
+   "kept": [
+    "colour"
+   ],
+   "survives": true
+  },
+  {
+   "id": "r16-mut-8",
+   "parent": "r16-head-4",
+   "parentName": "Phosphor Blueprint, merged",
+   "delta": -0.07,
+   "slots": [
+    {
+     "slot": "foot",
+     "child": 0.4,
+     "parent": 0.6,
+     "verdict": "lost",
+     "graft": "r15-mut-9",
+     "text": "A single pilot lamp lit on the footer horizon with a lit run either side; or a numbered top bar with a lit segment under the mark"
+    },
+    {
+     "slot": "signal",
+     "child": 0.188,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": null,
+     "text": "make the live lamp breathe slowly (a 4 second ease) only while she is answering"
+    },
+    {
+     "slot": "head",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "turn the head's secondary links into a quiet row under the title, separated by thin middle dots"
+    }
+   ],
+   "kept": [
+    "signal"
+   ],
+   "survives": true
+  },
+  {
+   "id": "r16-mut-9",
+   "parent": "r16-head-5",
+   "parentName": "Grid Console, merged",
+   "delta": -0.09,
+   "slots": [
+    {
+     "slot": "head",
+     "child": 0.25,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": "r15-mut-4",
+     "text": "serif title with a typed count in the page colour standing on the masthead rule; wild-1 uses a huge thin section numeral; Serif title with a page-coloured typed count and unit beside it, standing on the masthead rule"
+    },
+    {
+     "slot": "foot",
+     "child": 0.2,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": null,
+     "text": "push this one step further, as the same idea made more of: keep one lamp lit in the page footer at rest"
+    },
+    {
+     "slot": "signal",
+     "child": 0.0,
+     "parent": 0.25,
+     "verdict": "lost",
+     "graft": null,
+     "text": "draw 'waiting' as a steel dot and 'off' as a pewter ring, nothing red"
+    }
+   ],
+   "kept": [
+    "head",
+    "foot"
+   ],
+   "survives": true
+  },
+  {
+   "id": "r16-mut-10",
+   "parent": "r16-head-5",
+   "parentName": "Grid Console, merged",
+   "delta": 0.07,
+   "slots": [
+    {
+     "slot": "figure",
+     "child": 0.75,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": "r13-idea-1",
+     "text": "moving-coil spend dial in phosphor with a limit mark on the Status tube, with the $0.00 VT323 readout"
+    },
+    {
+     "slot": "light",
+     "child": 0.5,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": null,
+     "text": "add the layered halo to the live list's lit words only, and nothing else"
+    },
+    {
+     "slot": "list",
+     "child": 0.0,
+     "parent": 0.2,
+     "verdict": "lost",
+     "graft": null,
+     "text": "set a thin dotted leader from each row's label to its facts"
+    }
+   ],
+   "kept": [
+    "figure",
+    "light"
+   ],
+   "survives": true
+  },
+  {
+   "id": "r16-mut-11",
+   "parent": "r15-wild-1",
+   "parentName": "Swiss Thread",
+   "delta": -0.21,
+   "slots": [
+    {
+     "slot": "controls",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": "r15-mut-1",
+     "text": "raised graphite select key with a steel chevron that flips open onto a plain plate list, plus a brighter raised Send"
+    },
+    {
+     "slot": "type",
+     "child": 0.3,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": null,
+     "text": "set headings in a serif from the library and keep labels in the mono"
+    },
+    {
+     "slot": "foot",
+     "child": 0.3,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": null,
+     "text": "mark the current page in the bar with a short rule under it instead of a pill"
+    }
+   ],
+   "kept": [
+    "type",
+    "foot"
+   ],
+   "survives": true
+  },
+  {
+   "id": "r16-mut-12",
+   "parent": "r15-wild-1",
+   "parentName": "Swiss Thread",
+   "delta": -0.09,
+   "slots": [
+    {
+     "slot": "controls",
+     "child": 0.2,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": "r15-mut-1",
+     "text": "raised graphite select key with a steel chevron that flips open onto a plain plate list, plus a brighter raised Send"
+    },
+    {
+     "slot": "type",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "set labels in small caps with +0.08em tracking"
+    },
+    {
+     "slot": "colour",
+     "child": 0.25,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": null,
+     "text": "shift the ground one step cooler and the neutrals one step warmer"
+    }
+   ],
+   "kept": [
+    "controls",
+    "colour"
+   ],
+   "survives": true
+  }
+ ],
+ "heirs": {
+  "r16-head-1": {
+   "parent": "r16-head-1",
+   "parentName": "Desk Terminal, Banded, merged",
+   "kept": [
+    {
+     "slot": "colour",
+     "child": "r16-mut-1",
+     "verdict": "won",
+     "text": "Teal-black ground with warm cream ink, plus thin section-coloured lines and sage and cyan companions",
+     "graft": "r15-mut-4"
+    },
+    {
+     "slot": "figure",
+     "child": "r16-mut-2",
+     "verdict": "won",
+     "text": "moving-coil spend dial in phosphor with a limit mark on the Status tube, with the $0.00 VT323 readout",
+     "graft": "r13-idea-1"
+    }
+   ],
+   "culled": [
+    {
+     "slot": "glass",
+     "child": "r16-mut-1",
+     "verdict": "lost",
+     "text": "let the glass fold to a single Ready line whenever nothing is live",
+     "graft": null
+    },
+    {
+     "slot": "type",
+     "child": "r16-mut-1",
+     "verdict": "unseen",
+     "text": "set numerals in a light weight one size above their text",
+     "graft": null
+    },
+    {
+     "slot": "list",
+     "child": "r16-mut-2",
+     "verdict": "unseen",
+     "text": "make the first word of each row's label medium weight and the rest regular",
+     "graft": null
+    },
+    {
+     "slot": "type",
+     "child": "r16-mut-2",
+     "verdict": "unseen",
+     "text": "set numerals in a light weight one size above their text",
+     "graft": null
+    }
+   ]
+  },
+  "r16-head-2": {
+   "parent": "r16-head-2",
+   "parentName": "Track Diagram Aglow, merged",
+   "kept": [],
+   "culled": [
+    {
+     "slot": "list",
+     "child": "r16-mut-3",
+     "verdict": "lost",
+     "text": "To do as a dated spine with nodes and a lit NOW; faint alternate-row band as a runner",
+     "graft": "r15-head-1"
+    },
+    {
+     "slot": "colour",
+     "child": "r16-mut-3",
+     "verdict": "unseen",
+     "text": "push this one step further, as the same idea made more of: shift the ground one step cooler and the neutrals one step warmer",
+     "graft": null
+    },
+    {
+     "slot": "glass",
+     "child": "r16-mut-3",
+     "verdict": "unseen",
+     "text": "add one line of status under the question in the machine's mono voice (what she is doing now)",
+     "graft": null
+    },
+    {
+     "slot": "colour",
+     "child": "r16-mut-4",
+     "verdict": "unseen",
+     "text": "Teal-black ground with warm cream ink, plus thin section-coloured lines and sage and cyan companions",
+     "graft": "r15-mut-4"
+    },
+    {
+     "slot": "light",
+     "child": "r16-mut-4",
+     "verdict": "unseen",
+     "text": "give the primary action a short afterglow when it is pressed",
+     "graft": null
+    },
+    {
+     "slot": "rule",
+     "child": "r16-mut-4",
+     "verdict": "unseen",
+     "text": "round every box and panel one step less",
+     "graft": null
+    }
+   ]
+  },
+  "r16-head-3": {
+   "parent": "r16-head-3",
+   "parentName": "Long Persistence Tallied, merged",
+   "kept": [
+    {
+     "slot": "list",
+     "child": "r16-mut-5",
+     "verdict": "won",
+     "text": "To do as a dated spine with nodes and a lit NOW; faint alternate-row band as a runner",
+     "graft": "r15-head-1"
+    },
+    {
+     "slot": "controls",
+     "child": "r16-mut-5",
+     "verdict": "won",
+     "text": "push this one step further, as the same idea made more of: set the select menus as a plain button that opens a list, with a chevron",
+     "graft": null
+    }
+   ],
+   "culled": [
+    {
+     "slot": "type",
+     "child": "r16-mut-5",
+     "verdict": "unseen",
+     "text": "set labels in small caps with +0.08em tracking",
+     "graft": null
+    },
+    {
+     "slot": "head",
+     "child": "r16-mut-6",
+     "verdict": "unseen",
+     "text": "serif title with a typed count in the page colour standing on the masthead rule; wild-1 uses a huge thin section numeral; Serif title with a page-coloured typed count and unit beside it, standing on the masthead rule",
+     "graft": "r15-mut-4"
+    },
+    {
+     "slot": "rule",
+     "child": "r16-mut-6",
+     "verdict": "unseen",
+     "text": "end every section's rule with a small solid end mark",
+     "graft": null
+    },
+    {
+     "slot": "figure",
+     "child": "r16-mut-6",
+     "verdict": "lost",
+     "text": "draw the count as a row of small ticks instead of a number where the count is under ten",
+     "graft": null
+    }
+   ]
+  },
+  "r16-head-4": {
+   "parent": "r16-head-4",
+   "parentName": "Phosphor Blueprint, merged",
+   "kept": [
+    {
+     "slot": "colour",
+     "child": "r16-mut-7",
+     "verdict": "won",
+     "text": "Teal-black ground with warm cream ink, plus thin section-coloured lines and sage and cyan companions",
+     "graft": "r15-mut-4"
+    },
+    {
+     "slot": "signal",
+     "child": "r16-mut-8",
+     "verdict": "won",
+     "text": "make the live lamp breathe slowly (a 4 second ease) only while she is answering",
+     "graft": null
+    }
+   ],
+   "culled": [
+    {
+     "slot": "signal",
+     "child": "r16-mut-7",
+     "verdict": "unseen",
+     "text": "make the live lamp breathe slowly (a 4 second ease) only while she is answering",
+     "graft": null
+    },
+    {
+     "slot": "head",
+     "child": "r16-mut-7",
+     "verdict": "unseen",
+     "text": "add a running head (the page's name in small caps, tracked) above the title",
+     "graft": null
+    },
+    {
+     "slot": "foot",
+     "child": "r16-mut-8",
+     "verdict": "lost",
+     "text": "A single pilot lamp lit on the footer horizon with a lit run either side; or a numbered top bar with a lit segment under the mark",
+     "graft": "r15-mut-9"
+    },
+    {
+     "slot": "head",
+     "child": "r16-mut-8",
+     "verdict": "unseen",
+     "text": "turn the head's secondary links into a quiet row under the title, separated by thin middle dots",
+     "graft": null
+    }
+   ]
+  },
+  "r16-head-5": {
+   "parent": "r16-head-5",
+   "parentName": "Grid Console, merged",
+   "kept": [
+    {
+     "slot": "head",
+     "child": "r16-mut-9",
+     "verdict": "won",
+     "text": "serif title with a typed count in the page colour standing on the masthead rule; wild-1 uses a huge thin section numeral; Serif title with a page-coloured typed count and unit beside it, standing on the masthead rule",
+     "graft": "r15-mut-4"
+    },
+    {
+     "slot": "foot",
+     "child": "r16-mut-9",
+     "verdict": "won",
+     "text": "push this one step further, as the same idea made more of: keep one lamp lit in the page footer at rest",
+     "graft": null
+    },
+    {
+     "slot": "figure",
+     "child": "r16-mut-10",
+     "verdict": "won",
+     "text": "moving-coil spend dial in phosphor with a limit mark on the Status tube, with the $0.00 VT323 readout",
+     "graft": "r13-idea-1"
+    },
+    {
+     "slot": "light",
+     "child": "r16-mut-10",
+     "verdict": "won",
+     "text": "add the layered halo to the live list's lit words only, and nothing else",
+     "graft": null
+    }
+   ],
+   "culled": [
+    {
+     "slot": "signal",
+     "child": "r16-mut-9",
+     "verdict": "lost",
+     "text": "draw 'waiting' as a steel dot and 'off' as a pewter ring, nothing red",
+     "graft": null
+    },
+    {
+     "slot": "list",
+     "child": "r16-mut-10",
+     "verdict": "lost",
+     "text": "set a thin dotted leader from each row's label to its facts",
+     "graft": null
+    }
+   ]
+  },
+  "r15-wild-1": {
+   "parent": "r15-wild-1",
+   "parentName": "Swiss Thread",
+   "kept": [
+    {
+     "slot": "type",
+     "child": "r16-mut-11",
+     "verdict": "won",
+     "text": "set headings in a serif from the library and keep labels in the mono",
+     "graft": null
+    },
+    {
+     "slot": "foot",
+     "child": "r16-mut-11",
+     "verdict": "won",
+     "text": "mark the current page in the bar with a short rule under it instead of a pill",
+     "graft": null
+    },
+    {
+     "slot": "controls",
+     "child": "r16-mut-12",
+     "verdict": "won",
+     "text": "raised graphite select key with a steel chevron that flips open onto a plain plate list, plus a brighter raised Send",
+     "graft": "r15-mut-1"
+    },
+    {
+     "slot": "colour",
+     "child": "r16-mut-12",
+     "verdict": "won",
+     "text": "shift the ground one step cooler and the neutrals one step warmer",
+     "graft": null
+    }
+   ],
+   "culled": [
+    {
+     "slot": "controls",
+     "child": "r16-mut-11",
+     "verdict": "unseen",
+     "text": "raised graphite select key with a steel chevron that flips open onto a plain plate list, plus a brighter raised Send",
+     "graft": "r15-mut-1"
+    },
+    {
+     "slot": "type",
+     "child": "r16-mut-12",
+     "verdict": "unseen",
+     "text": "set labels in small caps with +0.08em tracking",
+     "graft": null
+    }
+   ]
+  }
+ },
+ "bin": {
+  "head": [
+   {
+    "id": "r16-wild-1",
+    "name": "Lit Index",
+    "share": 0.825,
+    "round": 16,
+    "what": [
+     "giant condensed title with folio number and rule under it; or serif title with a typed count",
+     "folio plus one giant condensed word with the lede on its baseline; or a typed count standing on the masthead rule"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r15-wild-1",
+    "name": "Swiss Thread",
+    "share": 0.6,
+    "round": 16,
+    "what": [
+     "large two-line question with the one lit word, date on the right, composer straight below"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r16-head-2",
+    "name": "Track Diagram Aglow, merged",
+    "share": 0.6,
+    "round": 16,
+    "what": [
+     "Serif page title with a page-coloured count and a small unit label standing on the title rule"
+    ],
+    "age": 0
+   }
+  ],
+  "glass": [
+   {
+    "id": "r16-head-3",
+    "name": "Long Persistence Tallied, merged",
+    "share": 0.657,
+    "round": 16,
+    "what": [
+     "tube with a scope trace of plans as pulses and a NOW marker, with a mono status line on the glass"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r16-head-5",
+    "name": "Grid Console, merged",
+    "share": 0.563,
+    "round": 16,
+    "what": [
+     "Monitor in a thin bezel with scan-lit radar, Next up and a typed line, set on a bloom; the scope with a trace is the runner"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r16-mut-2",
+    "name": "Desk Terminal, Dialled",
+    "share": 0.563,
+    "round": 16,
+    "what": [
+     "Vera's typed question, Next up and trend or dial all in one VT323 tube with a cursor"
+    ],
+    "age": 0
+   }
+  ],
+  "list": [
+   {
+    "id": "r16-head-2",
+    "name": "Track Diagram Aglow, merged",
+    "share": 1.5,
+    "round": 16,
+    "what": [
+     "To do as a dated spine: a left Due margin, nodes on a rail and a lit NOW; the runner is the day-numeral cards with a NOW tick",
+     "To do as a dated spine: date margin, rail nodes, task plates, lit NOW node"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r16-mut-5",
+    "name": "Tallied Gauge Spine",
+    "share": 0.45,
+    "round": 16,
+    "what": [],
+    "age": 0
+   },
+   {
+    "id": "r15-head-1",
+    "name": "Track Diagram Aglow, merged",
+    "share": 0.2,
+    "round": 15,
+    "what": [
+     "To do as a dated spine with nodes and a lit NOW; faint alternate-row band as a runner"
+    ],
+    "age": 2
+   }
+  ],
+  "figure": [
+   {
+    "id": "r16-mut-10",
+    "name": "Grid Console Ledger Dial",
+    "share": 1.125,
+    "round": 16,
+    "what": [
+     "Moving-coil spend dial with lit sector and LIMIT flag, in a bezelled glowing tube"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r16-mut-2",
+    "name": "Desk Terminal, Dialled",
+    "share": 0.75,
+    "round": 16,
+    "what": [
+     "moving-coil spend dial drawn in phosphor on the Status tube"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r16-head-3",
+    "name": "Long Persistence Tallied, merged",
+    "share": 0.25,
+    "round": 16,
+    "what": [],
+    "age": 0
+   }
+  ],
+  "rule": [
+   {
+    "id": "r16-head-5",
+    "name": "Grid Console, merged",
+    "share": 1.2,
+    "round": 16,
+    "what": [
+     "Section heads on a lit hairline with node ends and corner-tabbed trays"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r16-head-4",
+    "name": "Phosphor Blueprint, merged",
+    "share": 1.05,
+    "round": 16,
+    "what": [
+     "ruled section heads with coloured ends, hatched kind swatches and a title block; or a lit thread with nodes"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r15-head-3",
+    "name": "Grid Console, merged",
+    "share": 0.15,
+    "round": 15,
+    "what": [
+     "Section head as a serif title and icon on a thin rail in the section's colour"
+    ],
+    "age": 2
+   }
+  ],
+  "signal": [
+   {
+    "id": "r16-head-2",
+    "name": "Track Diagram Aglow, merged",
+    "share": 0.75,
+    "round": 16,
+    "what": [
+     "one status line under the question (Listening, watching 4 plans) with a lit dot"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r16-head-1",
+    "name": "Desk Terminal, Banded, merged",
+    "share": 0.563,
+    "round": 16,
+    "what": [
+     "lamp-row status dots (lit and hollow) with dotted leaders; white-hot pilot lamp on the title block"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r16-head-5",
+    "name": "Grid Console, merged",
+    "share": 0.375,
+    "round": 16,
+    "what": [
+     "Glowing NOW stamp with a live clock on the lit thread, and haloed status lamps"
+    ],
+    "age": 0
+   }
+  ],
+  "type": [
+   {
+    "id": "r16-wild-1",
+    "name": "Lit Index",
+    "share": 1.2,
+    "round": 16,
+    "what": [
+     "wide-range condensed display with a lit key word over small mono labels; or serif headings over mono labels"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r16-head-5",
+    "name": "Grid Console, merged",
+    "share": 0.6,
+    "round": 16,
+    "what": [
+     "Serif page titles over mono small labels and a grotesque body; the runner is the condensed display with a lit word"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r16-mut-11",
+    "name": "Serif Swiss Thread",
+    "share": 0.3,
+    "round": 16,
+    "what": [],
+    "age": 0
+   }
+  ],
+  "colour": [
+   {
+    "id": "r16-head-5",
+    "name": "Grid Console, merged",
+    "share": 0.75,
+    "round": 16,
+    "what": [
+     "Teal-black ground with grounded section hues (amber, steel blue, mauve) as thin edges; cool slate with cream text as the runner"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r16-mut-7",
+    "name": "Blueprint, Cream Ink",
+    "share": 0.75,
+    "round": 16,
+    "what": [
+     "warm cream ink and sage and cyan companions on a teal-black ground; or blue-grey slate plates"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r16-mut-12",
+    "name": "Swiss Thread Keys",
+    "share": 0.25,
+    "round": 16,
+    "what": [],
+    "age": 0
+   }
+  ],
+  "controls": [
+   {
+    "id": "r16-head-4",
+    "name": "Phosphor Blueprint, merged",
+    "share": 0.9,
+    "round": 16,
+    "what": [
+     "numbered ruled select list with a tick, fused composer row with square Send, dashed arrow chips"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r16-head-1",
+    "name": "Desk Terminal, Banded, merged",
+    "share": 0.6,
+    "round": 16,
+    "what": [
+     "Raised keyed segmented filters with a lit radio dot and a bright primary Add button"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r16-mut-5",
+    "name": "Tallied Gauge Spine",
+    "share": 0.3,
+    "round": 16,
+    "what": [],
+    "age": 0
+   }
+  ],
+  "chat": [
+   {
+    "id": "r16-head-2",
+    "name": "Track Diagram Aglow, merged",
+    "share": 1.5,
+    "round": 16,
+    "what": [
+     "Thread hung from Vera's mark on a rail with times in the margin and a ring at the composer",
+     "one Vera card holding greeting, question, status line, composer and Send, with chips beneath"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r16-head-5",
+    "name": "Grid Console, merged",
+    "share": 0.45,
+    "round": 16,
+    "what": [],
+    "age": 0
+   },
+   {
+    "id": "r15-wild-1",
+    "name": "Swiss Thread",
+    "share": 0.2,
+    "round": 16,
+    "what": [],
+    "age": 0
+   }
+  ],
+  "light": [
+   {
+    "id": "r16-wild-1",
+    "name": "Lit Index",
+    "share": 1.5,
+    "round": 16,
+    "what": [
+     "Raster-lined bloom on the key word and the primary key; the runner is a two-layer halo on live lead words only",
+     "scanlined glowing key word with a two-layer halo; lead-word halo on live list rows"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r16-mut-10",
+    "name": "Grid Console Ledger Dial",
+    "share": 0.75,
+    "round": 16,
+    "what": [],
+    "age": 0
+   },
+   {
+    "id": "r15-mut-10",
+    "name": "Grid Console Single Line",
+    "share": 0.15,
+    "round": 15,
+    "what": [
+     "three-layer halo on the one lit word 'mind' in the Home panel, bright Send, halo kept for the live word only"
+    ],
+    "age": 2
+   }
+  ],
+  "foot": [
+   {
+    "id": "r16-head-4",
+    "name": "Phosphor Blueprint, merged",
+    "share": 0.9,
+    "round": 16,
+    "what": [
+     "uppercase tab bar with a lit top edge on the current tab"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r16-mut-8",
+    "name": "Blueprint, Pilot Lamp",
+    "share": 0.6,
+    "round": 16,
+    "what": [
+     "title-block footer (project, motto, drawn, sheet) with a pilot lamp on its top rule; or a pilot lamp in the console foot"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r16-mut-11",
+    "name": "Serif Swiss Thread",
+    "share": 0.3,
+    "round": 16,
+    "what": [],
+    "age": 0
+   }
+  ]
+ }
+}
