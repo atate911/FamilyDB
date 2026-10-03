@@ -147,6 +147,12 @@ def overlapping(conn: sqlite3.Connection, first: str, last: str) -> list[Plan]:
     return [Plan.from_row(row) for row in rows]
 
 
+def for_event(conn: sqlite3.Connection, event_id: str) -> Plan | None:
+    """The plan that holds a Google event, if any does."""
+    row = conn.execute("SELECT * FROM plans WHERE google_event_id = ?", (event_id,)).fetchone()
+    return Plan.from_row(row) if row else None
+
+
 def by_google_event(conn: sqlite3.Connection, calendar_id: str | None) -> dict[str, Plan]:
     """The bot's own plans on one Google calendar, by the id of their event."""
     rows = conn.execute(

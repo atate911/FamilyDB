@@ -290,11 +290,10 @@ def get_calendar(ctx: ToolContext, args: GetCalendarInput) -> dict[str, Any]:
     days = calendar_days(calendar, start, end, ctx.clock.tz)
     sync_plans(ctx.conn, calendar, ctx.settings.google_calendar_id, ctx.now_iso())
     owned = {
-        r["google_event_id"]: r["id"]
-        for r in ctx.conn.execute(
-            "SELECT id, google_event_id FROM plans WHERE calendar_id = ?",
-            (ctx.settings.google_calendar_id,),
-        )
+        event_id: plan.id
+        for event_id, plan in plans.by_google_event(
+            ctx.conn, ctx.settings.google_calendar_id
+        ).items()
     }
     for day in days:
         for event in day["events"]:
@@ -302,6 +301,16 @@ def get_calendar(ctx: ToolContext, args: GetCalendarInput) -> dict[str, Any]:
         for event in day["all_day_events"]:
             event["plan_id"] = owned.get(event["id"])
     return {"calendar": ctx.settings.google_calendar_id, "days": days}
+
+
+def _created(ctx: ToolContext, plan: plans.Plan, event: CalendarEvent | None) -> dict[str, Any]:
+    """What creating a plan answers: the plan, its event, and the idea it put on the calendar."""
+    idea = ideas.get(ctx.conn, plan.idea_id) if plan.idea_id is not None else None
+    return {
+        "plan": plan.model_dump(mode="json"),
+        "event": event.to_public() if event else None,
+        "idea": idea.model_dump(mode="json") if idea else None,
+    }
 
 
 @tool(
@@ -345,19 +354,17 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
         else None
     )
     with transaction(ctx.conn):
-        # This form may already have taken over an earlier attempt, before a restart.
-        key = calendar_ops.adopted(ctx.conn, key) or key
-        if resume:
-            earlier = calendar_ops.unfinished_key(ctx.conn, resume)
-            if earlier is not None and earlier != key:
-                calendar_ops.link(ctx.conn, key, earlier)
-                key = earlier
-        operation = calendar_ops.reserve(ctx.conn, key, uuid.uuid4().hex)
-        if resume and not operation.result:
-            calendar_ops.mark_unfinished(ctx.conn, resume, operation.event_id)
-    if operation.result:
-        return operation.result
-    event = calendar.get_event(operation.event_id)
+        event_id = calendar_ops.get(ctx.conn, key)
+        if event_id is None:
+            earlier = calendar_ops.unfinished(ctx.conn, resume) if resume else None
+            if earlier is not None:
+                event_id = calendar_ops.reserve(ctx.conn, key, earlier)
+            else:
+                event_id = calendar_ops.reserve(ctx.conn, key, uuid.uuid4().hex, resume_key=resume)
+    event = calendar.get_event(event_id)
+    existing = plans.for_event(ctx.conn, event_id)
+    if existing is not None:
+        return _created(ctx, existing, event)  # this attempt finished before: say so again
     if event is None:
         ensure_not_past(start, ctx.clock)
         event = calendar.insert_event(
@@ -367,41 +374,31 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
             all_day=all_day,
             location=args.location,
             description=args.notes,
-            event_id=operation.event_id,
+            event_id=event_id,
         )
     origin = messages.get(ctx.conn, ctx.message_id) if ctx.message_id is not None else None
     with transaction(ctx.conn):
-        completed = calendar_ops.get(ctx.conn, key)
-        if completed is not None and completed.result:
-            return completed.result
-        if resume:
-            calendar_ops.clear_unfinished(ctx.conn, resume)
-        plan = plans.insert(
-            ctx.conn,
-            title=args.title.strip(),
-            start=stored_start,
-            end=stored_end,
-            all_day=all_day,
-            idea_id=args.idea_id,
-            google_event_id=event.id,
-            calendar_id=ctx.settings.google_calendar_id,
-            location=args.location,
-            notes=args.notes,
-            created_by=ctx.member.id if ctx.member else None,
-            channel=origin.channel if origin else None,
-            chat_id=origin.chat_id if origin else None,
-            now=ctx.now_iso(),
-        )
-        idea = None
-        if args.idea_id is not None:
-            idea = ideas.update(ctx.conn, args.idea_id, {"status": "planned"}, now=ctx.now_iso())
-        result = {
-            "plan": plan.model_dump(mode="json"),
-            "event": event.to_public(),
-            "idea": idea.model_dump(mode="json") if idea else None,
-        }
-        calendar_ops.record_result(ctx.conn, key, result)
-    return result
+        plan = plans.for_event(ctx.conn, event_id)  # an attempt running beside this one finished
+        if plan is None:
+            plan = plans.insert(
+                ctx.conn,
+                title=args.title.strip(),
+                start=stored_start,
+                end=stored_end,
+                all_day=all_day,
+                idea_id=args.idea_id,
+                google_event_id=event.id,
+                calendar_id=ctx.settings.google_calendar_id,
+                location=args.location,
+                notes=args.notes,
+                created_by=ctx.member.id if ctx.member else None,
+                channel=origin.channel if origin else None,
+                chat_id=origin.chat_id if origin else None,
+                now=ctx.now_iso(),
+            )
+            if args.idea_id is not None:
+                ideas.update(ctx.conn, args.idea_id, {"status": "planned"}, now=ctx.now_iso())
+        return _created(ctx, plan, event)
 
 
 def _cancel(ctx: ToolContext, plan: plans.Plan) -> dict[str, Any]:
@@ -434,16 +431,13 @@ def _target(
     calendar = _calendar(ctx)
     if plan_id is None:
         assert event_id is not None
-        owned = ctx.conn.execute(
-            "SELECT id FROM plans WHERE google_event_id = ? AND calendar_id = ?",
-            (event_id, ctx.settings.google_calendar_id),
-        ).fetchone()
-        if owned is None:
+        owned = plans.for_event(ctx.conn, event_id)
+        if owned is None or owned.calendar_id != ctx.settings.google_calendar_id:
             event = calendar.get_event(event_id)
             if event is None:
                 raise ToolError(f"no event {event_id} on the calendar; get_calendar lists them")
             return None, event
-        plan_id = int(owned["id"])
+        plan_id = owned.id
     plan = plans.get(ctx.conn, plan_id)
     if plan is None:
         raise ToolError(f"no plan #{plan_id}")

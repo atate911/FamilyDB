@@ -220,9 +220,7 @@ plans               id, idea_id -> ideas (nullable), google_event_id, calendar_i
                     status (confirmed|tentative|cancelled), channel, chat_id,
                     followed_up_at, checked_at,
                     created_by -> members, created_at, updated_at
-calendar_creations  operation_key, event_id, result
-calendar_unfinished resume_key, event_id
-calendar_links      operation_key, adopted_key
+calendar_creations  operation_key, event_id, resume_key
 calendar_sync_state calendar_id, sync_token, synced_at
 
 outcomes            id, idea_id -> ideas, plan_id -> plans, happened_on, rating (1-10),
@@ -273,7 +271,7 @@ Notes:
 - `participants` records who the idea is for. "With the girls" becomes a participants entry, and kids exist in `members` even though they never message the bot.
 - `happens_from` and `happens_until` are the days an idea tied to dates is on (a festival, a show's run): the first, with its start time in family clock time when one was said, and the last. Both are empty for the usual idea.
 - `places` is the cache of looked-up facts: hours, address, booking, travel time, with source links and a timestamp. Ideas that are not a place (a home project, "a picnic somewhere") simply have no place row.
-- `plans` links an idea to a calendar event. The calendar itself is read from Google, so hand-added events are visible: at once by the bot, within a minute on the page, which keeps Google's answer that long unless the bot has written since (`PAGE_READ_SECONDS`). A plan is brought in line with its Google event before it is acted on or shown (`calendar_sync.py`), so an event moved or deleted in Google is not undone by the bot. That is one request however many plans there are: Google is asked what changed since the last look (its sync token, kept in `calendar_sync_state`), which is nothing most of the time, and the whole calendar once when there is no token or Google has dropped it. `followed_up_at` and `checked_at` make the day-after question and the evening-before check happen once per plan. `calendar_creations`, `calendar_unfinished` and `calendar_links` log each event asked of Google before Google is asked, so a retried turn or a form sent again never makes a second one.
+- `plans` links an idea to a calendar event. The calendar itself is read from Google, so hand-added events are visible: at once by the bot, within a minute on the page, which keeps Google's answer that long unless the bot has written since (`PAGE_READ_SECONDS`). A plan is brought in line with its Google event before it is acted on or shown (`calendar_sync.py`), so an event moved or deleted in Google is not undone by the bot. That is one request however many plans there are: Google is asked what changed since the last look (its sync token, kept in `calendar_sync_state`), which is nothing most of the time, and the whole calendar once when there is no token or Google has dropped it. `followed_up_at` and `checked_at` make the day-after question and the evening-before check happen once per plan. `calendar_creations` logs the event id each attempt will ask Google for before Google is asked, so a retried turn or a form sent again never makes a second one: an attempt is finished when a plan holds its event id, and a form drawn again by the same browser session takes over an attempt that has no plan yet (`resume_key`) rather than starting its own.
 - `suggestions` logs what was proposed, with the verdict on every candidate, so the bot can avoid repeating itself and we can see why it chose what it chose.
 - `messages` is both the audit log and raw material for eval cases: real family phrasings paired with the actions they led to. It also carries each inbound message's lease (`claim_token`, `claim_until`) and each reply's delivery (`delivered_at`, `cancelled_at`), section 5.
 - `outcomes` is separate from `ideas` so a restaurant can be done five times with five ratings.

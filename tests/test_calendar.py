@@ -678,3 +678,64 @@ def test_google_changes_starts_again_when_the_token_is_too_old():
     result = client.changes("old")
     assert asked == ["old", None]
     assert result.full and result.token == "t9"
+
+
+# --- a form drawn again after a lost reply finds the event Google may already have made ----------
+
+
+def _with_session(env, session, operation):
+    env.ctx = ToolContext(
+        env.conn,
+        env.settings,
+        env.app.clock,
+        member=env.member,
+        calendar=env.cal,
+        operation_id=operation,
+        resume_scope=session,
+    )
+
+
+def test_a_redrawn_form_from_the_same_session_takes_over_an_attempt_that_never_finished(env):
+    payload = dict(title="Museum", start="2026-09-26T10:00")
+    original = env.cal.insert_event
+
+    def committed_then_timeout(**kwargs):
+        original(**kwargs)
+        raise TimeoutError("response lost after server committed")
+
+    env.cal.insert_event = committed_then_timeout
+    _with_session(env, "browser-1", "form-1")
+    assert call(env, "create_event", **payload)[0].is_error
+    env.cal.insert_event = original
+    _with_session(env, "browser-1", "form-2")  # the page was drawn again
+    result, data = call(env, "create_event", **payload)
+    assert not result.is_error and len(env.cal.events) == 1
+    assert data["plan"]["google_event_id"] in env.cal.events
+    again = call(env, "create_event", **payload)[1]  # that second form sent once more
+    assert again["plan"]["id"] == data["plan"]["id"] and len(env.cal.events) == 1
+
+
+def test_a_new_form_after_a_finished_plan_makes_a_second_event_on_purpose(env):
+    payload = dict(title="Museum", start="2026-09-26T10:00")
+    _with_session(env, "browser-1", "form-1")
+    first = call(env, "create_event", **payload)[1]
+    _with_session(env, "browser-1", "form-2")
+    second = call(env, "create_event", **payload)[1]
+    assert first["plan"]["id"] != second["plan"]["id"] and len(env.cal.events) == 2
+
+
+def test_another_browser_session_never_takes_over_someone_else_s_attempt(env):
+    payload = dict(title="Museum", start="2026-09-26T10:00")
+    original = env.cal.insert_event
+
+    def committed_then_timeout(**kwargs):
+        original(**kwargs)
+        raise TimeoutError("response lost after server committed")
+
+    env.cal.insert_event = committed_then_timeout
+    _with_session(env, "browser-1", "form-1")
+    call(env, "create_event", **payload)
+    env.cal.insert_event = original
+    _with_session(env, "browser-2", "form-9")
+    assert not call(env, "create_event", **payload)[0].is_error
+    assert len(env.cal.events) == 2
