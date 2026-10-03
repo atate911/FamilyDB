@@ -62,7 +62,7 @@ def read_lineages(prev):
     for m in prev["mutants"]:
         if m.get("kind") == "step" and m["parent"] not in [h["head"] for h in hosts]:
             hosts.append({"key": m["parent"], "head": m["parent"], "name": m["parentName"], "stale": 0, "culled": [], "kept": []})
-    return {"gen": prev["roundNo"], "lineages": hosts}
+    return {"gen": prev["roundNo"], "lineages": hosts, "bars": ["r13-idea-1"]}
 
 
 def slot_pick(rng, L, exclude):
@@ -94,25 +94,33 @@ def open_round(prev_name, name):
     for L in state["lineages"]:
         kids = children_of.get(L["head"], [])
         kept = [(v, s) for v in kids for s in v["slots"] if s["slot"] in v["kept"]]
-        whole = [v for v in kids if v["survives"] and v["delta"] is not None and not any(s["verdict"] == "lost" for s in v["slots"])]
         L["culled"] += [s["text"] for v in kids for s in v["slots"] if s["slot"] not in v["kept"]]
         L.setdefault("won", {})
-        if whole and (not kept or all(v in whole for v, _ in kept)):
-            best = max(whole, key=lambda v: v["delta"])  # the child that did best as a whole becomes the head
-            L["kept"] = [{"slot": s["slot"], "text": s["text"]} for s in best["slots"]]
-            L["head"], L["name"] = best["id"], nameof.get(best["id"], best["id"])
-        elif kept:
+        if kept:
             picked, used = [], set()
-            for v, s in sorted(kept, key=lambda x: -x[0]["delta"] if x[0]["delta"] is not None else 0):
-                if s["slot"] not in used:  # one change per slot
+            for v, s in sorted(kept, key=lambda x: -(x[0]["delta"] if x[0]["delta"] is not None else 0)):
+                if s["slot"] not in used:  # one change per slot: the better child's wins
                     used.add(s["slot"])
                     picked.append({"slot": s["slot"], "child": v["id"], "childName": nameof.get(v["id"], v["id"]), "text": s["text"]})
-            mid = f"{name}-head-{len(merges) + 1}"
-            merges.append({"id": mid, "base": L["head"], "baseName": L["name"], "lifts": picked, "lineage": L["key"]})
-            L["kept"] = [{"slot": p["slot"], "text": p["text"]} for p in picked]
-            L["head"], L["name"] = mid, f"{L['name']}, merged"
+            sources = {x["child"] for x in picked}
+            only = next(iter(sources)) if len(sources) == 1 else None
+            if only and not any(x["verdict"] == "lost" for x in verdicts[only]["slots"]):
+                # one child contributed and none of its changes lost (the rest only went unseen): it is the next head, free
+                L["kept"] = [{"slot": x["slot"], "text": x["text"]} for x in picked]
+                L["head"], L["name"] = only, nameof.get(only, only)
+            else:
+                mid = f"{name}-head-{len(merges) + 1}"
+                merges.append({"id": mid, "base": L["head"], "baseName": L["name"], "lifts": picked, "lineage": L["key"]})
+                L["kept"] = [{"slot": x["slot"], "text": x["text"]} for x in picked]
+                L["head"], L["name"] = mid, f"{L['name']}, merged"
         else:
-            L["kept"] = []
+            whole = [v for v in kids if v["survives"] and not any(x["verdict"] == "lost" for x in v["slots"])]
+            if whole:  # nothing won a slot, but a child's whole page beat its parent's with nothing lost: it becomes the head
+                best = max(whole, key=lambda v: v["delta"])
+                L["kept"] = [{"slot": x["slot"], "text": x["text"]} for x in best["slots"]]
+                L["head"], L["name"] = best["id"], nameof.get(best["id"], best["id"])
+            else:
+                L["kept"] = []
         for k in L["kept"]:
             L["won"][k["slot"]] = L["won"].get(k["slot"], 0) + 1
         heads.append(L)
@@ -179,7 +187,8 @@ def open_round(prev_name, name):
     (dst / "cards").mkdir(exist_ok=True); (dst / "variants").mkdir(exist_ok=True)
     for pid in ["00-current"]:
         bring(pid, dst)
-    carried_ids = [L["head"] for L in state["lineages"] if not L["head"].startswith(f"{name}-head")]
+    bars = state.setdefault("bars", [])
+    carried_ids = [L["head"] for L in state["lineages"] if not L["head"].startswith(f"{name}-head")] + bars
     donor_ids = {c["donor"] for m in mutants for c in m["changes"] if c.get("donor")}
     for pid in carried_ids:
         bring(pid, dst)
@@ -192,6 +201,9 @@ def open_round(prev_name, name):
     # the lineages' heads, merged ones included, are carried; the merged are built before the children
     summary = lambda L: f"Lineage {L['key']}: head of the line, entered as the bar its children are measured against." + (f" Last round it kept: {', '.join(k['slot'] for k in L['kept'])}." if L["kept"] else "")
     carried = [{"id": L["head"], "name": L["name"], "summary": summary(L)} for L in state["lineages"]]
+    for b in bars:  # a reference design: in the field as a bar, with no children
+        carried.append({"id": b, "name": json.loads((HERE / "rounds" / name / "palettes" / f"{b}.json").read_text())["name"],
+                        "summary": "A reference from the early rounds, entered unchanged as a bar for the whole field; it has no children."})
     sys.path.insert(0, str(HERE))
     import seeds as dice
     past = {}

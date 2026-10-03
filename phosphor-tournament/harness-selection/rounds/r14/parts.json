@@ -1,0 +1,1982 @@
+{
+ "parts": {
+  "head": [
+   {
+    "id": "r14-mut-17",
+    "name": "Signal Catalogue, Counted",
+    "points": 4.0,
+    "voters": [
+     "style",
+     "soul"
+    ],
+    "what": [
+     "large typed count figure beside the plate with brass unit and a pencilled line; or 48px title with the page's one action at the right end",
+     "Page title plate with a large typed count and unit beside it"
+    ],
+    "share": 0.4
+   },
+   {
+    "id": "r14-mut-3",
+    "name": "Desk Terminal, Banded",
+    "points": 4.0,
+    "voters": [
+     "style",
+     "skeptic"
+    ],
+    "what": [
+     "larger title with the page's one lit primary action at the right end; or a ruled strip of linked counts under the head"
+    ],
+    "share": 0.4
+   },
+   {
+    "id": "r14-mut-7",
+    "name": "Long Persistence Tallied",
+    "points": 1.5,
+    "voters": [
+     "skeptic"
+    ],
+    "what": [],
+    "share": 0.15
+   },
+   {
+    "id": "r14-mut-14",
+    "name": "Grid Console Folio",
+    "points": 1.0,
+    "voters": [
+     "soul"
+    ],
+    "what": [],
+    "share": 0.1
+   }
+  ],
+  "glass": [
+   {
+    "id": "r14-mut-2",
+    "name": "Desk Terminal, Railed",
+    "points": 3.0,
+    "voters": [
+     "feedback"
+    ],
+    "what": [
+     "Terminal case with the question typed on the glass and a block cursor; add a one-line status on the glass"
+    ],
+    "share": 0.375
+   },
+   {
+    "id": "r14-mut-11",
+    "name": "Blueprint, Serif Glass",
+    "points": 3.0,
+    "voters": [
+     "feedback",
+     "soul"
+    ],
+    "what": [],
+    "share": 0.375
+   },
+   {
+    "id": "r13-mut-2",
+    "name": "Desk Terminal, Mapped",
+    "points": 3.0,
+    "voters": [
+     "soul"
+    ],
+    "what": [
+     "Cased tube with Vera's header, typed question, Next up and a radar map or trace; plus a status line on the glass"
+    ],
+    "share": 0.375
+   },
+   {
+    "id": "r13-idea-1",
+    "name": "Desk Terminal, Joined",
+    "points": 2.0,
+    "voters": [
+     "style"
+    ],
+    "what": [
+     "terminal case with the question typed on the glass and status line below; bezel lip and vent row as runner"
+    ],
+    "share": 0.25
+   },
+   {
+    "id": "r14-mut-14",
+    "name": "Grid Console Folio",
+    "points": 1.0,
+    "voters": [
+     "style"
+    ],
+    "what": [],
+    "share": 0.125
+   }
+  ],
+  "list": [
+   {
+    "id": "r13-mut-4",
+    "name": "Track Diagram Aglow",
+    "points": 3.0,
+    "voters": [
+     "skeptic"
+    ],
+    "what": [
+     "dated rail with stamps at each row and a lit now node; or faint steel banding on alternate rows"
+    ],
+    "share": 0.6
+   },
+   {
+    "id": "r14-mut-2",
+    "name": "Desk Terminal, Railed",
+    "points": 2.0,
+    "voters": [
+     "feedback"
+    ],
+    "what": [
+     "Coming up track: NOW dot, large mono day numeral with month over weekday, time and in-N-days columns"
+    ],
+    "share": 0.4
+   },
+   {
+    "id": "r14-mut-3",
+    "name": "Desk Terminal, Banded",
+    "points": 1.5,
+    "voters": [
+     "skeptic"
+    ],
+    "what": [],
+    "share": 0.3
+   },
+   {
+    "id": "r14-mut-13",
+    "name": "Grid Console, Wired",
+    "points": 1.0,
+    "voters": [
+     "feedback"
+    ],
+    "what": [],
+    "share": 0.2
+   }
+  ],
+  "figure": [
+   {
+    "id": "r13-idea-1",
+    "name": "Desk Terminal, Joined",
+    "points": 3.0,
+    "voters": [
+     "soul"
+    ],
+    "what": [
+     "Status gauge on the glass with tick scale, lit needle and a big mono readout; or an ECG scope trace"
+    ],
+    "share": 0.5
+   },
+   {
+    "id": "r11-idea-2",
+    "name": "Long Persistence",
+    "points": 3.0,
+    "voters": [
+     "skeptic"
+    ],
+    "what": [
+     "due scope on To do (late spikes, now line, week divisions); or the round week dial with today lit"
+    ],
+    "share": 0.5
+   },
+   {
+    "id": "r13-wild-2",
+    "name": "Signal Catalogue",
+    "points": 1.5,
+    "voters": [
+     "soul"
+    ],
+    "what": [],
+    "share": 0.25
+   },
+   {
+    "id": "r14-mut-4",
+    "name": "Track Diagram Weekdial",
+    "points": 1.5,
+    "voters": [
+     "skeptic"
+    ],
+    "what": [],
+    "share": 0.25
+   }
+  ],
+  "rule": [
+   {
+    "id": "r14-mut-11",
+    "name": "Blueprint, Serif Glass",
+    "points": 3.5,
+    "voters": [
+     "style",
+     "skeptic"
+    ],
+    "what": [
+     "section rule closing in a small solid end mark in the section's colour; or sections hung from a single titled rule"
+    ],
+    "share": 0.7
+   },
+   {
+    "id": "r13-wild-4",
+    "name": "Grid Console",
+    "points": 3.0,
+    "voters": [
+     "skeptic"
+    ],
+    "what": [
+     "section head as a titled rule with a trailing light rail; or a small solid end block closing each rule"
+    ],
+    "share": 0.6
+   },
+   {
+    "id": "r14-mut-15",
+    "name": "Grid Console Ruled",
+    "points": 1.0,
+    "voters": [
+     "style"
+    ],
+    "what": [],
+    "share": 0.2
+   }
+  ],
+  "signal": [
+   {
+    "id": "r14-mut-10",
+    "name": "Blueprint Rule Raster",
+    "points": 3.0,
+    "voters": [
+     "systemuse"
+    ],
+    "what": [
+     "One mono lamp line saying what Vera is doing ('Ready, nothing waiting on Vera'); a steel dot for waiting in place of red"
+    ],
+    "share": 0.375
+   },
+   {
+    "id": "r14-mut-18",
+    "name": "Signal Catalogue, Small Caps",
+    "points": 3.0,
+    "voters": [
+     "systemuse",
+     "soul"
+    ],
+    "what": [],
+    "share": 0.375
+   },
+   {
+    "id": "r13-mut-2",
+    "name": "Desk Terminal, Mapped",
+    "points": 3.0,
+    "voters": [
+     "soul"
+    ],
+    "what": [
+     "Dot rows showing 3 of 4 on, with a lit lamp at the case's foot; a steel dot for waiting"
+    ],
+    "share": 0.375
+   },
+   {
+    "id": "r14-mut-1",
+    "name": "Desk Terminal, Wired",
+    "points": 2.0,
+    "voters": [
+     "skeptic"
+    ],
+    "what": [
+     "one lit wire from the terminal into the NOW row; or a white-hot NOW tick with the time beside it"
+    ],
+    "share": 0.25
+   },
+   {
+    "id": "r14-mut-14",
+    "name": "Grid Console Folio",
+    "points": 1.0,
+    "voters": [
+     "skeptic"
+    ],
+    "what": [],
+    "share": 0.125
+   }
+  ],
+  "type": [
+   {
+    "id": "r14-mut-5",
+    "name": "Track Diagram Folio",
+    "points": 5.0,
+    "voters": [
+     "style",
+     "feedback"
+    ],
+    "what": [
+     "Fraunces titles and section heads, light lining figures, small-caps units",
+     "Fraunces heads with light lining figures and small-cap units; a larger page title with the action at its end"
+    ],
+    "share": 1.0
+   },
+   {
+    "id": "r14-mut-14",
+    "name": "Grid Console Folio",
+    "points": 1.5,
+    "voters": [
+     "style"
+    ],
+    "what": [],
+    "share": 0.3
+   },
+   {
+    "id": "r14-mut-3",
+    "name": "Desk Terminal, Banded",
+    "points": 1.0,
+    "voters": [
+     "feedback"
+    ],
+    "what": [],
+    "share": 0.2
+   }
+  ],
+  "colour": [
+   {
+    "id": "r14-mut-3",
+    "name": "Desk Terminal, Banded",
+    "points": 4.5,
+    "voters": [
+     "style",
+     "feedback"
+    ],
+    "what": [
+     "slightly cooler ground with warmer bone neutral words; walnut and brass plate material as runner"
+    ],
+    "share": 0.75
+   },
+   {
+    "id": "r14-mut-13",
+    "name": "Grid Console, Wired",
+    "points": 3.0,
+    "voters": [
+     "feedback"
+    ],
+    "what": [
+     "Green-black glass, steel-slate case and thin lines in amber and violet, with the least neon in the field"
+    ],
+    "share": 0.5
+   },
+   {
+    "id": "r13-wild-2",
+    "name": "Signal Catalogue",
+    "points": 1.5,
+    "voters": [
+     "style"
+    ],
+    "what": [],
+    "share": 0.25
+   }
+  ],
+  "controls": [
+   {
+    "id": "r14-mut-4",
+    "name": "Track Diagram Weekdial",
+    "points": 3.0,
+    "voters": [
+     "systemuse"
+    ],
+    "what": [
+     "Select drawn as a raised button with a chevron that flips open; a clean list; bright Send key"
+    ],
+    "share": 0.6
+   },
+   {
+    "id": "r13-idea-1",
+    "name": "Desk Terminal, Joined",
+    "points": 2.5,
+    "voters": [
+     "systemuse",
+     "skeptic"
+    ],
+    "what": [],
+    "share": 0.5
+   },
+   {
+    "id": "r14-mut-12",
+    "name": "Blueprint Latched Tube",
+    "points": 2.0,
+    "voters": [
+     "skeptic"
+    ],
+    "what": [
+     "filters as latched keys with a lamp on the one that is down; or the cased terminal's segmented view and month keys"
+    ],
+    "share": 0.4
+   }
+  ],
+  "chat": [
+   {
+    "id": "r14-mut-5",
+    "name": "Track Diagram Folio",
+    "points": 3.0,
+    "voters": [
+     "feedback"
+    ],
+    "what": [
+     "Thread hung on a rail that opens on What's on your mind? as its first stop, with Vera's lines on nodes"
+    ],
+    "share": 0.6
+   },
+   {
+    "id": "r13-mut-4",
+    "name": "Track Diagram Aglow",
+    "points": 2.0,
+    "voters": [
+     "systemuse"
+    ],
+    "what": [
+     "One panel: bold question with a lit key word, composer, From, mic, bright Send, then outlined ways to start"
+    ],
+    "share": 0.4
+   },
+   {
+    "id": "r14-mut-2",
+    "name": "Desk Terminal, Railed",
+    "points": 1.5,
+    "voters": [
+     "feedback"
+    ],
+    "what": [],
+    "share": 0.3
+   },
+   {
+    "id": "r13-mut-2",
+    "name": "Desk Terminal, Mapped",
+    "points": 1.0,
+    "voters": [
+     "systemuse"
+    ],
+    "what": [],
+    "share": 0.2
+   }
+  ],
+  "light": [
+   {
+    "id": "r13-idea-1",
+    "name": "Desk Terminal, Joined",
+    "points": 3.0,
+    "voters": [
+     "soul"
+    ],
+    "what": [
+     "Typed question in lit VT323 with halo and block cursor on a scanlined tube, glow limited to the glass"
+    ],
+    "share": 0.6
+   },
+   {
+    "id": "r14-mut-7",
+    "name": "Long Persistence Tallied",
+    "points": 2.0,
+    "voters": [
+     "feedback"
+    ],
+    "what": [
+     "Layered halo on the bar's mark, wordmark and current tab; phosphor wire and light trails"
+    ],
+    "share": 0.4
+   },
+   {
+    "id": "r14-mut-17",
+    "name": "Signal Catalogue, Counted",
+    "points": 1.5,
+    "voters": [
+     "soul"
+    ],
+    "what": [],
+    "share": 0.3
+   },
+   {
+    "id": "r14-mut-13",
+    "name": "Grid Console, Wired",
+    "points": 1.0,
+    "voters": [
+     "feedback"
+    ],
+    "what": [],
+    "share": 0.2
+   }
+  ],
+  "foot": [
+   {
+    "id": "r13-mut-2",
+    "name": "Desk Terminal, Mapped",
+    "points": 3.0,
+    "voters": [
+     "systemuse"
+    ],
+    "what": [
+     "Phone tab bar with a steel reverse block marking the here-tab, large icons and labels"
+    ],
+    "share": 0.6
+   },
+   {
+    "id": "r14-mut-2",
+    "name": "Desk Terminal, Railed",
+    "points": 2.0,
+    "voters": [
+     "style"
+    ],
+    "what": [
+     "terminal foot cut to lamp, state and Status link; title block cut to lamp and name"
+    ],
+    "share": 0.4
+   },
+   {
+    "id": "r13-wild-1",
+    "name": "Phosphor Blueprint",
+    "points": 1.5,
+    "voters": [
+     "systemuse"
+    ],
+    "what": [],
+    "share": 0.3
+   },
+   {
+    "id": "r14-mut-12",
+    "name": "Blueprint Latched Tube",
+    "points": 1.0,
+    "voters": [
+     "style"
+    ],
+    "what": [],
+    "share": 0.2
+   }
+  ]
+ },
+ "verdicts": [
+  {
+   "id": "r14-mut-1",
+   "parent": "r13-mut-2",
+   "parentName": "Desk Terminal, Mapped",
+   "delta": -0.21,
+   "slots": [
+    {
+     "slot": "signal",
+     "child": 0.25,
+     "parent": 0.375,
+     "verdict": "tied",
+     "graft": "x14b-manual-cross",
+     "text": "ONE LIT LINE: a single lit line from the screen (the tube, the typed question) down into the list's 'now' marker, a real wire from the live thing to the next thing due."
+    },
+    {
+     "slot": "type",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "set labels in small caps with +0.08em tracking"
+    },
+    {
+     "slot": "colour",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "make the primary button's ground a grounded deep green and keep the bright green for its label and halo"
+    }
+   ],
+   "kept": [],
+   "survives": false
+  },
+  {
+   "id": "r14-mut-2",
+   "parent": "r13-mut-2",
+   "parentName": "Desk Terminal, Mapped",
+   "delta": -0.13,
+   "slots": [
+    {
+     "slot": "list",
+     "child": 0.4,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": "x14b-desk-cross",
+     "text": "LARGE DAY NUMBERS in the list rows, with the month and weekday stacked beside them."
+    },
+    {
+     "slot": "foot",
+     "child": 0.4,
+     "parent": 0.6,
+     "verdict": "lost",
+     "graft": null,
+     "text": "drop the footer's legend strip and leave the lamp and the page name"
+    },
+    {
+     "slot": "chat",
+     "child": 0.3,
+     "parent": 0.2,
+     "verdict": "tied",
+     "graft": null,
+     "text": "hang the thread from a thin rail with Vera's mark at the top and the family's lines on the other side"
+    }
+   ],
+   "kept": [
+    "list"
+   ],
+   "survives": true
+  },
+  {
+   "id": "r14-mut-3",
+   "parent": "r13-mut-2",
+   "parentName": "Desk Terminal, Mapped",
+   "delta": -0.03,
+   "slots": [
+    {
+     "slot": "list",
+     "child": 0.3,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": null,
+     "text": "give every other row the faintest ground band"
+    },
+    {
+     "slot": "head",
+     "child": 0.4,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": null,
+     "text": "move the page's one primary action to the head's right end and set the title at one step larger"
+    },
+    {
+     "slot": "colour",
+     "child": 0.75,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": null,
+     "text": "shift the ground one step cooler and the neutrals one step warmer"
+    }
+   ],
+   "kept": [
+    "list",
+    "head",
+    "colour"
+   ],
+   "survives": true
+  },
+  {
+   "id": "r14-mut-4",
+   "parent": "r13-mut-4",
+   "parentName": "Track Diagram Aglow",
+   "delta": -0.07,
+   "slots": [
+    {
+     "slot": "figure",
+     "child": 0.25,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": "x14b-manual-cross",
+     "text": "A ROUND DIAL THAT SHOWS REAL DAYS: this week's days at their true positions with today lit. Every mark must mean something (the skeptic faulted a dial whose later days sat at meaningless clock positions)."
+    },
+    {
+     "slot": "rule",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "end every section's rule with a small solid end mark"
+    },
+    {
+     "slot": "controls",
+     "child": 0.6,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": null,
+     "text": "set the select menus as a plain button that opens a list, with a chevron"
+    }
+   ],
+   "kept": [
+    "figure",
+    "controls"
+   ],
+   "survives": true
+  },
+  {
+   "id": "r14-mut-5",
+   "parent": "r13-mut-4",
+   "parentName": "Track Diagram Aglow",
+   "delta": 0.24,
+   "slots": [
+    {
+     "slot": "type",
+     "child": 1.0,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": "x14b-folio-cross",
+     "text": "FOLIO'S TYPE PAIRING: serif headings, light serif figures and small-caps units."
+    },
+    {
+     "slot": "chat",
+     "child": 0.6,
+     "parent": 0.4,
+     "verdict": "won",
+     "graft": null,
+     "text": "put the question's own words as the thread's first line"
+    },
+    {
+     "slot": "figure",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "draw a short trace (a sparkline of the last seven days) beside each count"
+    }
+   ],
+   "kept": [
+    "type",
+    "chat"
+   ],
+   "survives": true
+  },
+  {
+   "id": "r14-mut-6",
+   "parent": "r13-mut-4",
+   "parentName": "Track Diagram Aglow",
+   "delta": -0.22,
+   "slots": [
+    {
+     "slot": "colour",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "move one section colour (the one currently nearest the green) a step towards slate"
+    },
+    {
+     "slot": "type",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "set labels in small caps with +0.08em tracking"
+    },
+    {
+     "slot": "chat",
+     "child": 0.0,
+     "parent": 0.4,
+     "verdict": "lost",
+     "graft": null,
+     "text": "show the ways to start as a column of keys beside the box on wide screens"
+    }
+   ],
+   "kept": [],
+   "survives": false
+  },
+  {
+   "id": "r14-mut-7",
+   "parent": "r11-idea-2",
+   "parentName": "Long Persistence",
+   "delta": 0.69,
+   "slots": [
+    {
+     "slot": "head",
+     "child": 0.15,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": "x14b-waypoint-cross",
+     "text": "A COUNT STRIP under the page head, 'Today \u00b7 Plans 4 \u00b7 To do 4 \u00b7 Late 3 \u00b7 Ideas 12', each count a link to its page."
+    },
+    {
+     "slot": "light",
+     "child": 0.4,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": null,
+     "text": "light the mark and the current page's name with the original halo"
+    },
+    {
+     "slot": "chat",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "put the question's own words as the thread's first line"
+    }
+   ],
+   "kept": [
+    "head",
+    "light"
+   ],
+   "survives": true
+  },
+  {
+   "id": "r14-mut-8",
+   "parent": "r11-idea-2",
+   "parentName": "Long Persistence",
+   "delta": 0.12,
+   "slots": [
+    {
+     "slot": "rule",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": "x14b-trued-cross",
+     "text": "A SECTION-HEAD RULE WITH AN END MARK on every page."
+    },
+    {
+     "slot": "signal",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "make the NOW marker a lit tick on the list's rail with the time beside it"
+    },
+    {
+     "slot": "controls",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "draw checkboxes as small lit squares, off as an empty frame"
+    }
+   ],
+   "kept": [],
+   "survives": false
+  },
+  {
+   "id": "r14-mut-9",
+   "parent": "r11-idea-2",
+   "parentName": "Long Persistence",
+   "delta": -0.44,
+   "slots": [
+    {
+     "slot": "figure",
+     "child": 0.0,
+     "parent": 0.5,
+     "verdict": "lost",
+     "graft": null,
+     "text": "draw a short trace (a sparkline of the last seven days) beside each count"
+    },
+    {
+     "slot": "foot",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "drop the footer's legend strip and leave the lamp and the page name"
+    },
+    {
+     "slot": "rule",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "round every box and panel one step less"
+    }
+   ],
+   "kept": [],
+   "survives": false
+  },
+  {
+   "id": "r14-mut-10",
+   "parent": "r13-wild-1",
+   "parentName": "Phosphor Blueprint",
+   "delta": 0.06,
+   "slots": [
+    {
+     "slot": "rule",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": "x14b-trued-cross",
+     "text": "A SECTION-HEAD RULE WITH AN END MARK on every page."
+    },
+    {
+     "slot": "glass",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "add one line of status under the question in the machine's mono voice (what she is doing now)"
+    },
+    {
+     "slot": "light",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "let the monitor's glass bloom 2px more and carry a faint scanline raster"
+    }
+   ],
+   "kept": [],
+   "survives": false
+  },
+  {
+   "id": "r14-mut-11",
+   "parent": "r13-wild-1",
+   "parentName": "Phosphor Blueprint",
+   "delta": 0.35,
+   "slots": [
+    {
+     "slot": "glass",
+     "child": 0.375,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": "x14b-desk-cross",
+     "text": "A STATUS LINE ON THE GLASS: '4 plans \u00b7 3 late \u00b7 Vera is listening', in the machine's words."
+    },
+    {
+     "slot": "rule",
+     "child": 0.7,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": null,
+     "text": "end every section's rule with a small solid end mark"
+    },
+    {
+     "slot": "type",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "set headings in a serif from the library and keep labels in the mono"
+    }
+   ],
+   "kept": [
+    "glass",
+    "rule"
+   ],
+   "survives": true
+  },
+  {
+   "id": "r14-mut-12",
+   "parent": "r13-wild-1",
+   "parentName": "Phosphor Blueprint",
+   "delta": 0.09,
+   "slots": [
+    {
+     "slot": "foot",
+     "child": 0.2,
+     "parent": 0.3,
+     "verdict": "tied",
+     "graft": null,
+     "text": "drop the footer's legend strip and leave the lamp and the page name"
+    },
+    {
+     "slot": "chat",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "set the composer as a one-line tube docked at the foot"
+    },
+    {
+     "slot": "controls",
+     "child": 0.4,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": null,
+     "text": "draw filters as latched keys with a lit lamp when on"
+    }
+   ],
+   "kept": [
+    "controls"
+   ],
+   "survives": true
+  },
+  {
+   "id": "r14-mut-13",
+   "parent": "r13-wild-4",
+   "parentName": "Grid Console",
+   "delta": 0.16,
+   "slots": [
+    {
+     "slot": "signal",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": "x14b-manual-cross",
+     "text": "ONE LIT LINE: a single lit line from the screen (the tube, the typed question) down into the list's 'now' marker, a real wire from the live thing to the next thing due."
+    },
+    {
+     "slot": "list",
+     "child": 0.2,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": null,
+     "text": "make the first word of each row's label medium weight and the rest regular"
+    },
+    {
+     "slot": "glass",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "type the question on the glass one size smaller and keep the cursor blinking only while focused"
+    }
+   ],
+   "kept": [
+    "list"
+   ],
+   "survives": true
+  },
+  {
+   "id": "r14-mut-14",
+   "parent": "r13-wild-4",
+   "parentName": "Grid Console",
+   "delta": 0.15,
+   "slots": [
+    {
+     "slot": "type",
+     "child": 0.3,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": "x14b-folio-cross",
+     "text": "FOLIO'S TYPE PAIRING: serif headings, light serif figures and small-caps units."
+    },
+    {
+     "slot": "signal",
+     "child": 0.125,
+     "parent": 0.0,
+     "verdict": "tied",
+     "graft": null,
+     "text": "make the NOW marker a lit tick on the list's rail with the time beside it"
+    },
+    {
+     "slot": "glass",
+     "child": 0.125,
+     "parent": 0.0,
+     "verdict": "tied",
+     "graft": null,
+     "text": "put a thin bezel inset and a vent row on the case, nothing else"
+    }
+   ],
+   "kept": [
+    "type",
+    "signal",
+    "glass"
+   ],
+   "survives": true
+  },
+  {
+   "id": "r14-mut-15",
+   "parent": "r13-wild-4",
+   "parentName": "Grid Console",
+   "delta": -0.13,
+   "slots": [
+    {
+     "slot": "colour",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "make the case material one step lighter so the glass reads deeper"
+    },
+    {
+     "slot": "rule",
+     "child": 0.2,
+     "parent": 0.6,
+     "verdict": "lost",
+     "graft": null,
+     "text": "replace boxes around sections by a single rule above, with the title sitting on it"
+    },
+    {
+     "slot": "type",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "raise body leading to 1.55 and cap the measure at 66 characters"
+    }
+   ],
+   "kept": [],
+   "survives": false
+  },
+  {
+   "id": "r14-mut-16",
+   "parent": "r13-wild-2",
+   "parentName": "Signal Catalogue",
+   "delta": 0.15,
+   "slots": [
+    {
+     "slot": "list",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": "x14b-desk-cross",
+     "text": "LARGE DAY NUMBERS in the list rows, with the month and weekday stacked beside them."
+    },
+    {
+     "slot": "head",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "move the page's one primary action to the head's right end and set the title at one step larger"
+    },
+    {
+     "slot": "figure",
+     "child": 0.0,
+     "parent": 0.25,
+     "verdict": "lost",
+     "graft": null,
+     "text": "set the section's count as a large light numeral with its unit in small caps beside it"
+    }
+   ],
+   "kept": [],
+   "survives": true
+  },
+  {
+   "id": "r14-mut-17",
+   "parent": "r13-wild-2",
+   "parentName": "Signal Catalogue",
+   "delta": 0.34,
+   "slots": [
+    {
+     "slot": "figure",
+     "child": 0.0,
+     "parent": 0.25,
+     "verdict": "lost",
+     "graft": "x14b-quote-cross",
+     "text": "ONE BIG FIGURE LEADING EACH SECTION (the section's count or its next date, set large)."
+    },
+    {
+     "slot": "light",
+     "child": 0.3,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": null,
+     "text": "let the monitor's glass bloom 2px more and carry a faint scanline raster"
+    },
+    {
+     "slot": "list",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "make the first word of each row's label medium weight and the rest regular"
+    }
+   ],
+   "kept": [
+    "light"
+   ],
+   "survives": true
+  },
+  {
+   "id": "r14-mut-18",
+   "parent": "r13-wild-2",
+   "parentName": "Signal Catalogue",
+   "delta": 0.07,
+   "slots": [
+    {
+     "slot": "signal",
+     "child": 0.375,
+     "parent": 0.0,
+     "verdict": "won",
+     "graft": null,
+     "text": "draw 'waiting' as a steel dot and 'off' as a pewter ring, nothing red"
+    },
+    {
+     "slot": "chat",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "put the question's own words as the thread's first line"
+    },
+    {
+     "slot": "type",
+     "child": 0.0,
+     "parent": 0.0,
+     "verdict": "unseen",
+     "graft": null,
+     "text": "set labels in small caps with +0.08em tracking"
+    }
+   ],
+   "kept": [
+    "signal"
+   ],
+   "survives": true
+  }
+ ],
+ "heirs": {
+  "r13-mut-2": {
+   "parent": "r13-mut-2",
+   "parentName": "Desk Terminal, Mapped",
+   "kept": [
+    {
+     "slot": "list",
+     "child": "r14-mut-2",
+     "verdict": "won",
+     "text": "LARGE DAY NUMBERS in the list rows, with the month and weekday stacked beside them.",
+     "graft": "x14b-desk-cross"
+    },
+    {
+     "slot": "list",
+     "child": "r14-mut-3",
+     "verdict": "won",
+     "text": "give every other row the faintest ground band",
+     "graft": null
+    },
+    {
+     "slot": "head",
+     "child": "r14-mut-3",
+     "verdict": "won",
+     "text": "move the page's one primary action to the head's right end and set the title at one step larger",
+     "graft": null
+    },
+    {
+     "slot": "colour",
+     "child": "r14-mut-3",
+     "verdict": "won",
+     "text": "shift the ground one step cooler and the neutrals one step warmer",
+     "graft": null
+    }
+   ],
+   "culled": [
+    {
+     "slot": "signal",
+     "child": "r14-mut-1",
+     "verdict": "tied",
+     "text": "ONE LIT LINE: a single lit line from the screen (the tube, the typed question) down into the list's 'now' marker, a real wire from the live thing to the next thing due.",
+     "graft": "x14b-manual-cross"
+    },
+    {
+     "slot": "type",
+     "child": "r14-mut-1",
+     "verdict": "unseen",
+     "text": "set labels in small caps with +0.08em tracking",
+     "graft": null
+    },
+    {
+     "slot": "colour",
+     "child": "r14-mut-1",
+     "verdict": "unseen",
+     "text": "make the primary button's ground a grounded deep green and keep the bright green for its label and halo",
+     "graft": null
+    },
+    {
+     "slot": "foot",
+     "child": "r14-mut-2",
+     "verdict": "lost",
+     "text": "drop the footer's legend strip and leave the lamp and the page name",
+     "graft": null
+    },
+    {
+     "slot": "chat",
+     "child": "r14-mut-2",
+     "verdict": "tied",
+     "text": "hang the thread from a thin rail with Vera's mark at the top and the family's lines on the other side",
+     "graft": null
+    }
+   ]
+  },
+  "r13-mut-4": {
+   "parent": "r13-mut-4",
+   "parentName": "Track Diagram Aglow",
+   "kept": [
+    {
+     "slot": "figure",
+     "child": "r14-mut-4",
+     "verdict": "won",
+     "text": "A ROUND DIAL THAT SHOWS REAL DAYS: this week's days at their true positions with today lit. Every mark must mean something (the skeptic faulted a dial whose later days sat at meaningless clock positions).",
+     "graft": "x14b-manual-cross"
+    },
+    {
+     "slot": "controls",
+     "child": "r14-mut-4",
+     "verdict": "won",
+     "text": "set the select menus as a plain button that opens a list, with a chevron",
+     "graft": null
+    },
+    {
+     "slot": "type",
+     "child": "r14-mut-5",
+     "verdict": "won",
+     "text": "FOLIO'S TYPE PAIRING: serif headings, light serif figures and small-caps units.",
+     "graft": "x14b-folio-cross"
+    },
+    {
+     "slot": "chat",
+     "child": "r14-mut-5",
+     "verdict": "won",
+     "text": "put the question's own words as the thread's first line",
+     "graft": null
+    }
+   ],
+   "culled": [
+    {
+     "slot": "rule",
+     "child": "r14-mut-4",
+     "verdict": "unseen",
+     "text": "end every section's rule with a small solid end mark",
+     "graft": null
+    },
+    {
+     "slot": "figure",
+     "child": "r14-mut-5",
+     "verdict": "unseen",
+     "text": "draw a short trace (a sparkline of the last seven days) beside each count",
+     "graft": null
+    },
+    {
+     "slot": "colour",
+     "child": "r14-mut-6",
+     "verdict": "unseen",
+     "text": "move one section colour (the one currently nearest the green) a step towards slate",
+     "graft": null
+    },
+    {
+     "slot": "type",
+     "child": "r14-mut-6",
+     "verdict": "unseen",
+     "text": "set labels in small caps with +0.08em tracking",
+     "graft": null
+    },
+    {
+     "slot": "chat",
+     "child": "r14-mut-6",
+     "verdict": "lost",
+     "text": "show the ways to start as a column of keys beside the box on wide screens",
+     "graft": null
+    }
+   ]
+  },
+  "r11-idea-2": {
+   "parent": "r11-idea-2",
+   "parentName": "Long Persistence",
+   "kept": [
+    {
+     "slot": "head",
+     "child": "r14-mut-7",
+     "verdict": "won",
+     "text": "A COUNT STRIP under the page head, 'Today \u00b7 Plans 4 \u00b7 To do 4 \u00b7 Late 3 \u00b7 Ideas 12', each count a link to its page.",
+     "graft": "x14b-waypoint-cross"
+    },
+    {
+     "slot": "light",
+     "child": "r14-mut-7",
+     "verdict": "won",
+     "text": "light the mark and the current page's name with the original halo",
+     "graft": null
+    }
+   ],
+   "culled": [
+    {
+     "slot": "chat",
+     "child": "r14-mut-7",
+     "verdict": "unseen",
+     "text": "put the question's own words as the thread's first line",
+     "graft": null
+    },
+    {
+     "slot": "rule",
+     "child": "r14-mut-8",
+     "verdict": "unseen",
+     "text": "A SECTION-HEAD RULE WITH AN END MARK on every page.",
+     "graft": "x14b-trued-cross"
+    },
+    {
+     "slot": "signal",
+     "child": "r14-mut-8",
+     "verdict": "unseen",
+     "text": "make the NOW marker a lit tick on the list's rail with the time beside it",
+     "graft": null
+    },
+    {
+     "slot": "controls",
+     "child": "r14-mut-8",
+     "verdict": "unseen",
+     "text": "draw checkboxes as small lit squares, off as an empty frame",
+     "graft": null
+    },
+    {
+     "slot": "figure",
+     "child": "r14-mut-9",
+     "verdict": "lost",
+     "text": "draw a short trace (a sparkline of the last seven days) beside each count",
+     "graft": null
+    },
+    {
+     "slot": "foot",
+     "child": "r14-mut-9",
+     "verdict": "unseen",
+     "text": "drop the footer's legend strip and leave the lamp and the page name",
+     "graft": null
+    },
+    {
+     "slot": "rule",
+     "child": "r14-mut-9",
+     "verdict": "unseen",
+     "text": "round every box and panel one step less",
+     "graft": null
+    }
+   ]
+  },
+  "r13-wild-1": {
+   "parent": "r13-wild-1",
+   "parentName": "Phosphor Blueprint",
+   "kept": [
+    {
+     "slot": "glass",
+     "child": "r14-mut-11",
+     "verdict": "won",
+     "text": "A STATUS LINE ON THE GLASS: '4 plans \u00b7 3 late \u00b7 Vera is listening', in the machine's words.",
+     "graft": "x14b-desk-cross"
+    },
+    {
+     "slot": "rule",
+     "child": "r14-mut-11",
+     "verdict": "won",
+     "text": "end every section's rule with a small solid end mark",
+     "graft": null
+    },
+    {
+     "slot": "controls",
+     "child": "r14-mut-12",
+     "verdict": "won",
+     "text": "draw filters as latched keys with a lit lamp when on",
+     "graft": null
+    }
+   ],
+   "culled": [
+    {
+     "slot": "rule",
+     "child": "r14-mut-10",
+     "verdict": "unseen",
+     "text": "A SECTION-HEAD RULE WITH AN END MARK on every page.",
+     "graft": "x14b-trued-cross"
+    },
+    {
+     "slot": "glass",
+     "child": "r14-mut-10",
+     "verdict": "unseen",
+     "text": "add one line of status under the question in the machine's mono voice (what she is doing now)",
+     "graft": null
+    },
+    {
+     "slot": "light",
+     "child": "r14-mut-10",
+     "verdict": "unseen",
+     "text": "let the monitor's glass bloom 2px more and carry a faint scanline raster",
+     "graft": null
+    },
+    {
+     "slot": "type",
+     "child": "r14-mut-11",
+     "verdict": "unseen",
+     "text": "set headings in a serif from the library and keep labels in the mono",
+     "graft": null
+    },
+    {
+     "slot": "foot",
+     "child": "r14-mut-12",
+     "verdict": "tied",
+     "text": "drop the footer's legend strip and leave the lamp and the page name",
+     "graft": null
+    },
+    {
+     "slot": "chat",
+     "child": "r14-mut-12",
+     "verdict": "unseen",
+     "text": "set the composer as a one-line tube docked at the foot",
+     "graft": null
+    }
+   ]
+  },
+  "r13-wild-4": {
+   "parent": "r13-wild-4",
+   "parentName": "Grid Console",
+   "kept": [
+    {
+     "slot": "list",
+     "child": "r14-mut-13",
+     "verdict": "won",
+     "text": "make the first word of each row's label medium weight and the rest regular",
+     "graft": null
+    },
+    {
+     "slot": "type",
+     "child": "r14-mut-14",
+     "verdict": "won",
+     "text": "FOLIO'S TYPE PAIRING: serif headings, light serif figures and small-caps units.",
+     "graft": "x14b-folio-cross"
+    },
+    {
+     "slot": "signal",
+     "child": "r14-mut-14",
+     "verdict": "tied",
+     "text": "make the NOW marker a lit tick on the list's rail with the time beside it",
+     "graft": null
+    },
+    {
+     "slot": "glass",
+     "child": "r14-mut-14",
+     "verdict": "tied",
+     "text": "put a thin bezel inset and a vent row on the case, nothing else",
+     "graft": null
+    }
+   ],
+   "culled": [
+    {
+     "slot": "signal",
+     "child": "r14-mut-13",
+     "verdict": "unseen",
+     "text": "ONE LIT LINE: a single lit line from the screen (the tube, the typed question) down into the list's 'now' marker, a real wire from the live thing to the next thing due.",
+     "graft": "x14b-manual-cross"
+    },
+    {
+     "slot": "glass",
+     "child": "r14-mut-13",
+     "verdict": "unseen",
+     "text": "type the question on the glass one size smaller and keep the cursor blinking only while focused",
+     "graft": null
+    },
+    {
+     "slot": "colour",
+     "child": "r14-mut-15",
+     "verdict": "unseen",
+     "text": "make the case material one step lighter so the glass reads deeper",
+     "graft": null
+    },
+    {
+     "slot": "rule",
+     "child": "r14-mut-15",
+     "verdict": "lost",
+     "text": "replace boxes around sections by a single rule above, with the title sitting on it",
+     "graft": null
+    },
+    {
+     "slot": "type",
+     "child": "r14-mut-15",
+     "verdict": "unseen",
+     "text": "raise body leading to 1.55 and cap the measure at 66 characters",
+     "graft": null
+    }
+   ]
+  },
+  "r13-wild-2": {
+   "parent": "r13-wild-2",
+   "parentName": "Signal Catalogue",
+   "kept": [
+    {
+     "slot": "light",
+     "child": "r14-mut-17",
+     "verdict": "won",
+     "text": "let the monitor's glass bloom 2px more and carry a faint scanline raster",
+     "graft": null
+    },
+    {
+     "slot": "signal",
+     "child": "r14-mut-18",
+     "verdict": "won",
+     "text": "draw 'waiting' as a steel dot and 'off' as a pewter ring, nothing red",
+     "graft": null
+    }
+   ],
+   "culled": [
+    {
+     "slot": "list",
+     "child": "r14-mut-16",
+     "verdict": "unseen",
+     "text": "LARGE DAY NUMBERS in the list rows, with the month and weekday stacked beside them.",
+     "graft": "x14b-desk-cross"
+    },
+    {
+     "slot": "head",
+     "child": "r14-mut-16",
+     "verdict": "unseen",
+     "text": "move the page's one primary action to the head's right end and set the title at one step larger",
+     "graft": null
+    },
+    {
+     "slot": "figure",
+     "child": "r14-mut-16",
+     "verdict": "lost",
+     "text": "set the section's count as a large light numeral with its unit in small caps beside it",
+     "graft": null
+    },
+    {
+     "slot": "figure",
+     "child": "r14-mut-17",
+     "verdict": "lost",
+     "text": "ONE BIG FIGURE LEADING EACH SECTION (the section's count or its next date, set large).",
+     "graft": "x14b-quote-cross"
+    },
+    {
+     "slot": "list",
+     "child": "r14-mut-17",
+     "verdict": "unseen",
+     "text": "make the first word of each row's label medium weight and the rest regular",
+     "graft": null
+    },
+    {
+     "slot": "chat",
+     "child": "r14-mut-18",
+     "verdict": "unseen",
+     "text": "put the question's own words as the thread's first line",
+     "graft": null
+    },
+    {
+     "slot": "type",
+     "child": "r14-mut-18",
+     "verdict": "unseen",
+     "text": "set labels in small caps with +0.08em tracking",
+     "graft": null
+    }
+   ]
+  }
+ },
+ "bin": {
+  "head": [
+   {
+    "id": "r14-mut-17",
+    "name": "Signal Catalogue, Counted",
+    "share": 0.4,
+    "round": 14,
+    "what": [
+     "large typed count figure beside the plate with brass unit and a pencilled line; or 48px title with the page's one action at the right end",
+     "Page title plate with a large typed count and unit beside it"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r14-mut-3",
+    "name": "Desk Terminal, Banded",
+    "share": 0.4,
+    "round": 14,
+    "what": [
+     "larger title with the page's one lit primary action at the right end; or a ruled strip of linked counts under the head"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r14-mut-7",
+    "name": "Long Persistence Tallied",
+    "share": 0.15,
+    "round": 14,
+    "what": [],
+    "age": 0
+   }
+  ],
+  "glass": [
+   {
+    "id": "r14-mut-2",
+    "name": "Desk Terminal, Railed",
+    "share": 0.375,
+    "round": 14,
+    "what": [
+     "Terminal case with the question typed on the glass and a block cursor; add a one-line status on the glass"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r14-mut-11",
+    "name": "Blueprint, Serif Glass",
+    "share": 0.375,
+    "round": 14,
+    "what": [],
+    "age": 0
+   },
+   {
+    "id": "r13-mut-2",
+    "name": "Desk Terminal, Mapped",
+    "share": 0.375,
+    "round": 14,
+    "what": [
+     "Cased tube with Vera's header, typed question, Next up and a radar map or trace; plus a status line on the glass"
+    ],
+    "age": 0
+   }
+  ],
+  "list": [
+   {
+    "id": "r13-mut-4",
+    "name": "Track Diagram Aglow",
+    "share": 0.6,
+    "round": 14,
+    "what": [
+     "dated rail with stamps at each row and a lit now node; or faint steel banding on alternate rows"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r14-mut-2",
+    "name": "Desk Terminal, Railed",
+    "share": 0.4,
+    "round": 14,
+    "what": [
+     "Coming up track: NOW dot, large mono day numeral with month over weekday, time and in-N-days columns"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r14-mut-3",
+    "name": "Desk Terminal, Banded",
+    "share": 0.3,
+    "round": 14,
+    "what": [],
+    "age": 0
+   }
+  ],
+  "figure": [
+   {
+    "id": "r13-idea-1",
+    "name": "Desk Terminal, Joined",
+    "share": 0.5,
+    "round": 14,
+    "what": [
+     "Status gauge on the glass with tick scale, lit needle and a big mono readout; or an ECG scope trace"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r11-idea-2",
+    "name": "Long Persistence",
+    "share": 0.5,
+    "round": 14,
+    "what": [
+     "due scope on To do (late spikes, now line, week divisions); or the round week dial with today lit"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r13-wild-2",
+    "name": "Signal Catalogue",
+    "share": 0.25,
+    "round": 14,
+    "what": [],
+    "age": 0
+   }
+  ],
+  "rule": [
+   {
+    "id": "r14-mut-11",
+    "name": "Blueprint, Serif Glass",
+    "share": 0.7,
+    "round": 14,
+    "what": [
+     "section rule closing in a small solid end mark in the section's colour; or sections hung from a single titled rule"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r13-wild-4",
+    "name": "Grid Console",
+    "share": 0.6,
+    "round": 14,
+    "what": [
+     "section head as a titled rule with a trailing light rail; or a small solid end block closing each rule"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r14-mut-15",
+    "name": "Grid Console Ruled",
+    "share": 0.2,
+    "round": 14,
+    "what": [],
+    "age": 0
+   }
+  ],
+  "signal": [
+   {
+    "id": "r14-mut-10",
+    "name": "Blueprint Rule Raster",
+    "share": 0.375,
+    "round": 14,
+    "what": [
+     "One mono lamp line saying what Vera is doing ('Ready, nothing waiting on Vera'); a steel dot for waiting in place of red"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r14-mut-18",
+    "name": "Signal Catalogue, Small Caps",
+    "share": 0.375,
+    "round": 14,
+    "what": [],
+    "age": 0
+   },
+   {
+    "id": "r13-mut-2",
+    "name": "Desk Terminal, Mapped",
+    "share": 0.375,
+    "round": 14,
+    "what": [
+     "Dot rows showing 3 of 4 on, with a lit lamp at the case's foot; a steel dot for waiting"
+    ],
+    "age": 0
+   }
+  ],
+  "type": [
+   {
+    "id": "r14-mut-5",
+    "name": "Track Diagram Folio",
+    "share": 1.0,
+    "round": 14,
+    "what": [
+     "Fraunces titles and section heads, light lining figures, small-caps units",
+     "Fraunces heads with light lining figures and small-cap units; a larger page title with the action at its end"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r14-mut-14",
+    "name": "Grid Console Folio",
+    "share": 0.3,
+    "round": 14,
+    "what": [],
+    "age": 0
+   },
+   {
+    "id": "r14-mut-3",
+    "name": "Desk Terminal, Banded",
+    "share": 0.2,
+    "round": 14,
+    "what": [],
+    "age": 0
+   }
+  ],
+  "colour": [
+   {
+    "id": "r14-mut-3",
+    "name": "Desk Terminal, Banded",
+    "share": 0.75,
+    "round": 14,
+    "what": [
+     "slightly cooler ground with warmer bone neutral words; walnut and brass plate material as runner"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r14-mut-13",
+    "name": "Grid Console, Wired",
+    "share": 0.5,
+    "round": 14,
+    "what": [
+     "Green-black glass, steel-slate case and thin lines in amber and violet, with the least neon in the field"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r13-wild-2",
+    "name": "Signal Catalogue",
+    "share": 0.25,
+    "round": 14,
+    "what": [],
+    "age": 0
+   }
+  ],
+  "controls": [
+   {
+    "id": "r14-mut-4",
+    "name": "Track Diagram Weekdial",
+    "share": 0.6,
+    "round": 14,
+    "what": [
+     "Select drawn as a raised button with a chevron that flips open; a clean list; bright Send key"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r13-idea-1",
+    "name": "Desk Terminal, Joined",
+    "share": 0.5,
+    "round": 14,
+    "what": [],
+    "age": 0
+   },
+   {
+    "id": "r14-mut-12",
+    "name": "Blueprint Latched Tube",
+    "share": 0.4,
+    "round": 14,
+    "what": [
+     "filters as latched keys with a lamp on the one that is down; or the cased terminal's segmented view and month keys"
+    ],
+    "age": 0
+   }
+  ],
+  "chat": [
+   {
+    "id": "r14-mut-5",
+    "name": "Track Diagram Folio",
+    "share": 0.6,
+    "round": 14,
+    "what": [
+     "Thread hung on a rail that opens on What's on your mind? as its first stop, with Vera's lines on nodes"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r13-mut-4",
+    "name": "Track Diagram Aglow",
+    "share": 0.4,
+    "round": 14,
+    "what": [
+     "One panel: bold question with a lit key word, composer, From, mic, bright Send, then outlined ways to start"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r14-mut-2",
+    "name": "Desk Terminal, Railed",
+    "share": 0.3,
+    "round": 14,
+    "what": [],
+    "age": 0
+   }
+  ],
+  "light": [
+   {
+    "id": "r13-idea-1",
+    "name": "Desk Terminal, Joined",
+    "share": 0.6,
+    "round": 14,
+    "what": [
+     "Typed question in lit VT323 with halo and block cursor on a scanlined tube, glow limited to the glass"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r14-mut-7",
+    "name": "Long Persistence Tallied",
+    "share": 0.4,
+    "round": 14,
+    "what": [
+     "Layered halo on the bar's mark, wordmark and current tab; phosphor wire and light trails"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r14-mut-17",
+    "name": "Signal Catalogue, Counted",
+    "share": 0.3,
+    "round": 14,
+    "what": [],
+    "age": 0
+   }
+  ],
+  "foot": [
+   {
+    "id": "r13-mut-2",
+    "name": "Desk Terminal, Mapped",
+    "share": 0.6,
+    "round": 14,
+    "what": [
+     "Phone tab bar with a steel reverse block marking the here-tab, large icons and labels"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r14-mut-2",
+    "name": "Desk Terminal, Railed",
+    "share": 0.4,
+    "round": 14,
+    "what": [
+     "terminal foot cut to lamp, state and Status link; title block cut to lamp and name"
+    ],
+    "age": 0
+   },
+   {
+    "id": "r13-wild-1",
+    "name": "Phosphor Blueprint",
+    "share": 0.3,
+    "round": 14,
+    "what": [],
+    "age": 0
+   }
+  ]
+ }
+}

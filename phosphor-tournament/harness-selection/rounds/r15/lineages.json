@@ -1,0 +1,205 @@
+{
+ "gen": 15,
+ "lineages": [
+  {
+   "key": "r13-mut-2",
+   "head": "r14-mut-3",
+   "name": "Desk Terminal, Banded",
+   "stale": 0,
+   "culled": [
+    "ONE LIT LINE: a single lit line from the screen (the tube, the typed question) down into the list's 'now' marker, a real wire from the live thing to the next thing due.",
+    "set labels in small caps with +0.08em tracking",
+    "make the primary button's ground a grounded deep green and keep the bright green for its label and halo",
+    "drop the footer's legend strip and leave the lamp and the page name",
+    "hang the thread from a thin rail with Vera's mark at the top and the family's lines on the other side"
+   ],
+   "kept": [
+    {
+     "slot": "list",
+     "text": "give every other row the faintest ground band"
+    },
+    {
+     "slot": "head",
+     "text": "move the page's one primary action to the head's right end and set the title at one step larger"
+    },
+    {
+     "slot": "colour",
+     "text": "shift the ground one step cooler and the neutrals one step warmer"
+    }
+   ],
+   "won": {
+    "list": 1,
+    "head": 1,
+    "colour": 1
+   }
+  },
+  {
+   "key": "r13-mut-4",
+   "head": "r15-head-1",
+   "name": "Track Diagram Aglow, merged",
+   "stale": 0,
+   "culled": [
+    "end every section's rule with a small solid end mark",
+    "draw a short trace (a sparkline of the last seven days) beside each count",
+    "move one section colour (the one currently nearest the green) a step towards slate",
+    "set labels in small caps with +0.08em tracking",
+    "show the ways to start as a column of keys beside the box on wide screens"
+   ],
+   "kept": [
+    {
+     "slot": "type",
+     "text": "FOLIO'S TYPE PAIRING: serif headings, light serif figures and small-caps units."
+    },
+    {
+     "slot": "chat",
+     "text": "put the question's own words as the thread's first line"
+    },
+    {
+     "slot": "figure",
+     "text": "A ROUND DIAL THAT SHOWS REAL DAYS: this week's days at their true positions with today lit. Every mark must mean something (the skeptic faulted a dial whose later days sat at meaningless clock positions)."
+    },
+    {
+     "slot": "controls",
+     "text": "set the select menus as a plain button that opens a list, with a chevron"
+    }
+   ],
+   "won": {
+    "type": 1,
+    "chat": 1,
+    "figure": 1,
+    "controls": 1
+   }
+  },
+  {
+   "key": "r11-idea-2",
+   "head": "r14-mut-7",
+   "name": "Long Persistence Tallied",
+   "stale": 0,
+   "culled": [
+    "put the question's own words as the thread's first line",
+    "A SECTION-HEAD RULE WITH AN END MARK on every page.",
+    "make the NOW marker a lit tick on the list's rail with the time beside it",
+    "draw checkboxes as small lit squares, off as an empty frame",
+    "draw a short trace (a sparkline of the last seven days) beside each count",
+    "drop the footer's legend strip and leave the lamp and the page name",
+    "round every box and panel one step less"
+   ],
+   "kept": [
+    {
+     "slot": "head",
+     "text": "A COUNT STRIP under the page head, 'Today \u00b7 Plans 4 \u00b7 To do 4 \u00b7 Late 3 \u00b7 Ideas 12', each count a link to its page."
+    },
+    {
+     "slot": "light",
+     "text": "light the mark and the current page's name with the original halo"
+    }
+   ],
+   "won": {
+    "head": 1,
+    "light": 1
+   }
+  },
+  {
+   "key": "r13-wild-1",
+   "head": "r15-head-2",
+   "name": "Phosphor Blueprint, merged",
+   "stale": 1,
+   "culled": [
+    "A SECTION-HEAD RULE WITH AN END MARK on every page.",
+    "add one line of status under the question in the machine's mono voice (what she is doing now)",
+    "let the monitor's glass bloom 2px more and carry a faint scanline raster",
+    "set headings in a serif from the library and keep labels in the mono",
+    "drop the footer's legend strip and leave the lamp and the page name",
+    "set the composer as a one-line tube docked at the foot"
+   ],
+   "kept": [
+    {
+     "slot": "glass",
+     "text": "A STATUS LINE ON THE GLASS: '4 plans \u00b7 3 late \u00b7 Vera is listening', in the machine's words."
+    },
+    {
+     "slot": "rule",
+     "text": "end every section's rule with a small solid end mark"
+    },
+    {
+     "slot": "controls",
+     "text": "draw filters as latched keys with a lit lamp when on"
+    }
+   ],
+   "won": {
+    "glass": 1,
+    "rule": 1,
+    "controls": 1
+   }
+  },
+  {
+   "key": "r13-wild-4",
+   "head": "r15-head-3",
+   "name": "Grid Console, merged",
+   "stale": 0,
+   "culled": [
+    "ONE LIT LINE: a single lit line from the screen (the tube, the typed question) down into the list's 'now' marker, a real wire from the live thing to the next thing due.",
+    "type the question on the glass one size smaller and keep the cursor blinking only while focused",
+    "make the case material one step lighter so the glass reads deeper",
+    "replace boxes around sections by a single rule above, with the title sitting on it",
+    "raise body leading to 1.55 and cap the measure at 66 characters"
+   ],
+   "kept": [
+    {
+     "slot": "list",
+     "text": "make the first word of each row's label medium weight and the rest regular"
+    },
+    {
+     "slot": "type",
+     "text": "FOLIO'S TYPE PAIRING: serif headings, light serif figures and small-caps units."
+    },
+    {
+     "slot": "signal",
+     "text": "make the NOW marker a lit tick on the list's rail with the time beside it"
+    },
+    {
+     "slot": "glass",
+     "text": "put a thin bezel inset and a vent row on the case, nothing else"
+    }
+   ],
+   "won": {
+    "list": 1,
+    "type": 1,
+    "signal": 1,
+    "glass": 1
+   }
+  },
+  {
+   "key": "r13-wild-2",
+   "head": "r15-head-4",
+   "name": "Signal Catalogue, merged",
+   "stale": 1,
+   "culled": [
+    "LARGE DAY NUMBERS in the list rows, with the month and weekday stacked beside them.",
+    "move the page's one primary action to the head's right end and set the title at one step larger",
+    "set the section's count as a large light numeral with its unit in small caps beside it",
+    "ONE BIG FIGURE LEADING EACH SECTION (the section's count or its next date, set large).",
+    "make the first word of each row's label medium weight and the rest regular",
+    "put the question's own words as the thread's first line",
+    "set labels in small caps with +0.08em tracking"
+   ],
+   "kept": [
+    {
+     "slot": "light",
+     "text": "let the monitor's glass bloom 2px more and carry a faint scanline raster"
+    },
+    {
+     "slot": "signal",
+     "text": "draw 'waiting' as a steel dot and 'off' as a pewter ring, nothing red"
+    }
+   ],
+   "won": {
+    "light": 1,
+    "signal": 1
+   }
+  }
+ ],
+ "bars": [
+  "r13-idea-1"
+ ]
+}

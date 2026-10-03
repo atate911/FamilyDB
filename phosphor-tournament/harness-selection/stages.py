@@ -58,7 +58,7 @@ FINALISTS, PROMISE_PICKS, PROMISE_MIN = 7, 2, 2
 LENS_WEIGHTS = {"soul": 1.5}
 # The fields a later stage needs from a finished design; its tokens stay in its palette file.
 KEEP = ["id", "name", "tagline", "concept", "companions", "decisions", "floorsFailed", "measures",
-        "strengths", "weaknesses", "revisions", "crit", "firstDraft", "secondDraft"]
+        "strengths", "weaknesses", "revisions", "crit", "firstDraft", "secondDraft", "elements"]
 
 
 def result_of(out_file):
@@ -70,11 +70,11 @@ def rdir(rnd):
     return HERE / "rounds" / rnd
 
 
-def common(a):
+def common(a, full=False):
     return {"round": a["round"], "roundNo": a["roundNo"], "mode": a["mode"], "panel": a.get("panel", "full"),
             "carried": [{"id": c["id"], "name": c["name"]} for c in a["carried"]],
             "wildCarried": [{"id": c["id"], "name": c["name"]} for c in a.get("wildCarried", [])],
-            "mutants": a["mutants"], "wildMutants": a.get("wildMutants", []), "nWild": len(a.get("wild", [])),
+            "mutants": a["mutants"] if full else [{"kind": m.get("kind")} for m in a["mutants"]], "wildMutants": a.get("wildMutants", []), "nWild": len(a.get("wild", [])),
             "nRandom": len(a["seeds"]), "nInformed": a["nInformed"],
             "slotsJson": (Path(__file__).parent / "slots.json").read_text()}
 
@@ -230,7 +230,7 @@ def split(rnd, resume_file=None):
     informed_done = all((resume.get(f"{r}-idea-{i}") or {}).get("final") for i in range(1, a["nInformed"] + 1))
     for k, g in enumerate(groups, 1):
         ids = [c[3] for c in g]
-        args = {**common(a), "stage": "design",
+        args = {**common(a, full=True), "stage": "design",
                 "seeds": [c[2] for c in g if c[1] == "seed"],
                 "mutantSlots": [c[2] for c in g if c[1] == "mut"],
                 "wildHere": [c[2] for c in g if c[1] == "wild"],
@@ -249,7 +249,7 @@ def split(rnd, resume_file=None):
         files[-1].write_text(json.dumps(args))
     extra = [x for x in a.get("extraBriefs", []) if not (resume.get(f"{r}-idea-{x['slot']}") or {}).get("final")]
     if extra:  # entrants briefed at the owner's request, beside the planner's
-        args = {**common(a), "stage": "design", "seeds": [], "mutantSlots": [], "plan": False,
+        args = {**common(a, full=True), "stage": "design", "seeds": [], "mutantSlots": [], "plan": False,
                 "briefs": [{k: x[k] for k in ("slot", "secondDraft", "brief")} for x in extra],
                 "resume": {i: by_file(i, resume[i]) for i in (f"{r}-idea-{x['slot']}" for x in extra) if i in resume}}
         files.append(stage_dir / f"design-{len(files) + 1}.json")
@@ -257,7 +257,7 @@ def split(rnd, resume_file=None):
     planned = a["nInformed"] - len(a.get("extraBriefs", []))
     informed_done = all((resume.get(f"{r}-idea-{i}") or {}).get("final") for i in range(1, planned + 1))
     if planned and not informed_done:
-        args = {**common(a), "stage": "design", "seeds": [], "mutantSlots": [], "plan": True, "nPlanned": planned,
+        args = {**common(a, full=True), "stage": "design", "seeds": [], "mutantSlots": [], "plan": True, "nPlanned": planned,
                 "history": a["history"],
                 "resume": {i: v for i, v in resume.items() if "-idea-" in i}}
         files.append(stage_dir / f"design-{len(files) + 1}.json")
@@ -347,7 +347,9 @@ def prepare(rnd, *outs):
     short = [f"### {c['id']} {c['name']} (carried)\n{short_text(c['summary'], 700)}{short_text(removed(c['id']), 400)}"
              for c in a["carried"] + a.get("wildCarried", [])]
     short += [f"### {x['id']} {x['name']}\n{short_text(x['tagline'], 200)} {short_text(x['concept'], 500)}\n"
-              f"Weaknesses: {' | '.join(short_text(w, 160) for w in x['weaknesses'][:3])}{short_text(removed(x['id']), 400)}" for x in ds]
+              f"Weaknesses: {' | '.join(short_text(w, 160) for w in x['weaknesses'][:3])}{short_text(removed(x['id']), 400)}"
+              + ("\nElements: " + " | ".join(f"[{e['slot']}] {short_text(e['what'], 140)}" for e in x.get("elements", [])) if x.get("elements") else "")
+              for x in ds]
     (stage_dir / "candidates-short.md").write_text("\n\n".join(short) + "\n")
 
     for old in [*stage_dir.glob("judge-*.json"), *stage_dir.glob("screen-*.json"), *stage_dir.glob("final-*.json")]:
