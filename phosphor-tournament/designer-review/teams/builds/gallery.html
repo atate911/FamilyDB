@@ -1,0 +1,150 @@
+<title>Phosphor Concepts, Blank Slate</title>
+<style>
+/* Layout: a contents strip, then one plate per concept (Home card above, the lists card below), captions set as figure notes. Single dark look by choice, to match the screens. */
+:root {
+  --bg: #070b0a; --plate: #0e1513; --rule: #23302c; --ink: #dfe7e2; --dim: #95a39d; --lit: #6dff9c; --late: #ffb850;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body); }
+.wrap { max-width: 1320px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 80px; display: grid; gap: 64px; }
+header { display: grid; gap: 14px; max-width: 72ch; }
+.kicker { font: 500 12px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+h1 { font: 600 clamp(32px, 5vw, 52px)/1.05 var(--display); margin: 0; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--lit); text-shadow: 0 0 8px rgba(109,255,156,.55), 0 0 22px rgba(109,255,156,.25); }
+h2 { font: 600 clamp(24px, 3vw, 32px)/1.1 var(--display); margin: 0; text-wrap: balance; }
+h2 small { font: 500 12px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin-left: 10px; vertical-align: middle; }
+p { margin: 0; color: var(--dim); }
+p strong { color: var(--ink); font-weight: 500; }
+nav ol { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0 24px; }
+nav li { border-top: 1px solid var(--rule); padding-block: 8px; display: grid; grid-template-columns: 3.4em 1fr; }
+nav li span { font: 500 12px/1.9 var(--mono); color: var(--dim); }
+nav a { color: var(--ink); text-decoration: none; }
+nav a:hover, nav a:focus-visible { color: var(--lit); text-decoration: underline; }
+section { display: grid; gap: 18px; scroll-margin-top: 20px; }
+section > header { gap: 8px; border-top: 1px solid var(--rule); padding-top: 14px; max-width: none; }
+.team h2 em { font-style: normal; color: var(--lit); }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 8px 32px; }
+.notes p { max-width: 70ch; }
+.notes b { font: 500 11px/1.4 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink); display: block; margin-bottom: 2px; }
+.notes .gap b { color: var(--late); }
+figure { margin: 0; display: grid; gap: 8px; }
+figure img { width: 100%; height: auto; display: block; border: 1px solid var(--rule); background: var(--plate); }
+figcaption { font: 500 12px/1.4 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; align-items: start; }
+.split > * { min-width: 0; }
+.divider { font: 500 12px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); display: flex; gap: 14px; align-items: center; }
+.divider::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+a { color: var(--lit); }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans+Condensed:wght@600&family=IBM+Plex+Sans:wght@400;500&display=swap">
+
+<div class="wrap">
+  <header>
+    <span class="kicker">FamilyDB · Phosphor · from a blank slate</span>
+    <h1>Eight designers, <em>one line</em> of brief</h1>
+    <p>Eight designers were told only that FamilyDB is a family planning app with an assistant called Vera, and that the direction is "a modern, easy-to-use family app that carries the character of an old green phosphor computer screen". They saw the earlier designs as unlabelled pictures and could take or leave anything. They split into two teams. Each team's lead built the team's entry; the other six each built a quick sketch of their own proposal.</p>
+    <p>These are real renders of the app with the demo family's data. Each plate shows two cards: <strong>Home, Chat and Ideas</strong>, then <strong>Status, Plans, To do and Settings</strong>. Today's page is last, for reference. Nothing in the app itself has changed.</p>
+  </header>
+
+  <nav aria-label="Concepts">
+    <ol>
+      <li><span>A</span><a href="#team-a">Signal, Team A's entry</a></li>
+      <li><span>B</span><a href="#team-b">The lit screen, Team B's entry</a></li>
+      <li><span>A·1</span><a href="#ben">One Glow</a></li>
+      <li><span>A·2</span><a href="#cleo">One lit trace</a></li>
+      <li><span>A·3</span><a href="#dev">One Lit Screen (desk)</a></li>
+      <li><span>B·1</span><a href="#finn">Afterglow</a></li>
+      <li><span>B·2</span><a href="#gia">One Lit Screen (monitor)</a></li>
+      <li><span>B·3</span><a href="#hal">Machine Voice</a></li>
+      <li><span>Ref</span><a href="#today">Today's page</a></li>
+    </ol>
+  </nav>
+
+  <div class="divider">The two team entries</div>
+
+  <section id="team-a" class="team">
+    <header>
+      <h2>Signal <small>Team A · built by its lead</small></h2>
+      <p>"A calm dark desk where phosphor green means only Vera, now or live, and each page has one lit screen that shows what its list cannot."</p>
+    </header>
+    <div class="notes">
+      <p><b>The idea</b>Green is kept for three things: Vera, now, and anything live. Late is amber. Each page gets one captioned green screen that draws what its list can't. Home's screen has the next plan and a four-week trace. Ideas gets a "line from home" with each place pinned at its drive time. Status gets a needle gauge.</p>
+      <p><b>Worth a look</b>The chat hangs on a time spine that ends in a lit "your turn" at the box. Home's question: "Give Vera something to plan." Coming up and To do share one NOW line. Settings puts the part that needs a look first.</p>
+      <p class="gap"><b>Unfinished</b>On the Ideas line, places at about the same drive time pile up (stops 6, 7, 8 and 10). The fix is to merge them into one stop. The less-used pages (Family, Memory, Wishes, sign-in) weren't restyled.</p>
+    </div>
+    <figure><img src="team-a/team-a-home.png" alt="Signal: Home with a green Next up screen and four-week trace beside the question, Chat on a time spine ending in your turn, Ideas with a line from home marking drive times" width="1246" height="910" loading="lazy"><figcaption>Home · below the fold · Chat · Ideas</figcaption></figure>
+    <figure><img src="team-a/team-a-lists.png" alt="Signal: Status with a needle gauge, Plans month calendar, To do on a date rail, Settings with the part needing a look first in amber" width="1246" height="910" loading="lazy"><figcaption>Status · Plans · To do · Settings</figcaption></figure>
+  </section>
+
+  <section id="team-b" class="team">
+    <header>
+      <h2>The lit screen <small>Team B · built by its lead</small></h2>
+      <p>"A calm, plain family app with one green phosphor screen per page, where the machine speaks and what is now glows."</p>
+    </header>
+    <div class="notes">
+      <p><b>The idea</b>Plain, quiet pages with one green screen each, which is where the machine speaks. There are no section colours. Home has a readout strip (today, plans, to do, late, ideas) and three columns below it. Ideas keeps a sticky radar screen beside the list.</p>
+      <p><b>Worth a look</b>The chat is a centred column with the kids' conversations as tabs. To do tallies with a text bar. Plans is a month list set in mono. Status has a needle gauge with a second needle for the 30-day average. One face (VT323) appears only on one Status figure.</p>
+      <p class="gap"><b>Unfinished</b>Only Home was checked on a phone. At $0 spent, the needle lies flat and says little. The less-used pages weren't restyled.</p>
+    </div>
+    <figure><img src="team-b/team-b-home.png" alt="The lit screen: Home with a radar Next up screen, a readout strip and three columns, Chat as a centred column with family and kids tabs, Ideas with a sticky radar screen" width="1246" height="910" loading="lazy"><figcaption>Home · below the fold · Chat · Ideas</figcaption></figure>
+    <figure><img src="team-b/team-b-lists.png" alt="The lit screen: Status, Plans, To do and Settings" width="1246" height="910" loading="lazy"><figcaption>Status · Plans · To do · Settings</figcaption></figure>
+  </section>
+
+  <div class="divider">The six sketches</div>
+
+  <section id="ben">
+    <header><h2>One Glow <small>Team A · sketch</small></h2><p>"A calm modern page where green light only means now, live or act here, and each page has one instrument."</p></header>
+    <div class="notes"><p><b>The idea</b>Uses Geist type. Home asks "Tell Vera. Let's plan." beside a tall radar screen. A figure strip comes next, then three ledger columns. The lists use who-has-what bars.</p></div>
+    <figure><img src="concept-ben/concept-ben-home.png" alt="One Glow: Home, Chat and Ideas" width="1246" height="910" loading="lazy"><figcaption>Home · below the fold · Chat · Ideas</figcaption></figure>
+    <figure><img src="concept-ben/concept-ben-lists.png" alt="One Glow: Status, Plans, To do and Settings" width="1246" height="910" loading="lazy"><figcaption>Status · Plans · To do · Settings</figcaption></figure>
+  </section>
+
+  <section id="cleo">
+    <header><h2>One lit trace <small>Team A · sketch</small></h2><p>"A calm dark app where phosphor glows only where something is alive: Vera, now, and working."</p></header>
+    <div class="notes"><p><b>The idea</b>One trace runs through the app, with a lit node at NOW. Coming up and To do hang on it. Vera's own lines are set in mono, so the machine's voice looks different from the family's.</p></div>
+    <figure><img src="concept-cleo/concept-cleo-home.png" alt="One lit trace: Home, Chat and Ideas" width="1246" height="910" loading="lazy"><figcaption>Home · below the fold · Chat · Ideas</figcaption></figure>
+    <figure><img src="concept-cleo/concept-cleo-lists.png" alt="One lit trace: Status, Plans, To do and Settings" width="1246" height="910" loading="lazy"><figcaption>Status · Plans · To do · Settings</figcaption></figure>
+  </section>
+
+  <section id="dev">
+    <header><h2>One Lit Screen, the desk <small>Team A · sketch</small></h2><p>"A calm dark desk with one phosphor screen per page, and the screen always holds the page's live answer."</p></header>
+    <div class="notes"><p><b>The idea</b>Uses Barlow Condensed and Figtree. A glowing line drops from Home's screen into the Coming up timeline, so the screen and the list read as one thing. Home leaves the Home tab off the bar.</p></div>
+    <figure><img src="concept-dev/concept-dev-home.png" alt="One Lit Screen, the desk: Home, Chat and Ideas" width="1246" height="910" loading="lazy"><figcaption>Home · below the fold · Chat · Ideas</figcaption></figure>
+    <figure><img src="concept-dev/concept-dev-lists.png" alt="One Lit Screen, the desk: Status, Plans, To do and Settings" width="1246" height="910" loading="lazy"><figcaption>Status · Plans · To do · Settings</figcaption></figure>
+  </section>
+
+  <section id="finn">
+    <header><h2>Afterglow <small>Team B · sketch</small></h2><p>"A calm, plain family app where only what matters now glows, and fades as it ages."</p></header>
+    <div class="notes"><p><b>The idea</b>Things glow when they're new and fade as they age, like phosphor after the beam has passed. Home asks "What needs a plan?". Its screen lists the next plans as a dotted ledger. Everything else is very plain.</p></div>
+    <figure><img src="concept-finn/concept-finn-home.png" alt="Afterglow: Home, Chat and Ideas" width="1246" height="910" loading="lazy"><figcaption>Home · below the fold · Chat · Ideas</figcaption></figure>
+    <figure><img src="concept-finn/concept-finn-lists.png" alt="Afterglow: Status, Plans, To do and Settings" width="1246" height="910" loading="lazy"><figcaption>Status · Plans · To do · Settings</figcaption></figure>
+  </section>
+
+  <section id="gia">
+    <header><h2>One Lit Screen, the monitor <small>Team B · sketch</small></h2><p>"One green screen per page, where Vera speaks and the numbers live, in a quiet dark app."</p></header>
+    <div class="notes"><p><b>The idea</b>On Home, the box and Next up both sit inside one sticky monitor, so you write to Vera on her screen. Pages are numbered like teletext (P100 Home, P200 Vera, P300 Ideas), and a small key at the foot explains the two colours.</p></div>
+    <figure><img src="concept-gia/concept-gia-home.png" alt="One Lit Screen, the monitor: Home, Chat and Ideas" width="1246" height="910" loading="lazy"><figcaption>Home · below the fold · Chat · Ideas</figcaption></figure>
+    <figure><img src="concept-gia/concept-gia-lists.png" alt="One Lit Screen, the monitor: Status, Plans, To do and Settings" width="1246" height="910" loading="lazy"><figcaption>Status · Plans · To do · Settings</figcaption></figure>
+  </section>
+
+  <section id="hal">
+    <header><h2>Machine Voice <small>Team B · sketch</small></h2><p>"Phosphor green only where the machine speaks; everything the family touches is plain."</p></header>
+    <div class="notes"><p><b>The idea</b>Home asks "Tell Vera what to plan." inside one framed console. A green readout strip of today's counts follows. To do is a table. Green only marks what the machine says.</p></div>
+    <figure><img src="concept-hal/concept-hal-home.png" alt="Machine Voice: Home, Chat and Ideas" width="1246" height="910" loading="lazy"><figcaption>Home · below the fold · Chat · Ideas</figcaption></figure>
+    <figure><img src="concept-hal/concept-hal-lists.png" alt="Machine Voice: Status, Plans, To do and Settings" width="1246" height="910" loading="lazy"><figcaption>Status · Plans · To do · Settings</figcaption></figure>
+  </section>
+
+  <div class="divider">For reference</div>
+
+  <section id="today">
+    <header><h2>Today's page <small>what the family sees now</small></h2></header>
+    <div class="split">
+      <figure><img src="00-current-home.png" alt="Today's FamilyDB page: Home, Chat and Ideas" width="1246" height="910" loading="lazy"><figcaption>Home · Chat · Ideas</figcaption></figure>
+      <figure><img src="00-current-lists.png" alt="Today's FamilyDB page: Status, Plans, To do and Settings" width="1246" height="910" loading="lazy"><figcaption>Status · Plans · To do · Settings</figcaption></figure>
+    </div>
+    <p>All eight share one gap the design can't fix by itself. The To do page isn't told today's date or which tasks are late. It can't mark late rows in amber or draw a NOW line, the way Home can. That would need a small change to the app if one of these goes forward.</p>
+  </section>
+</div>
