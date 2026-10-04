@@ -1,0 +1,104 @@
+<title>FamilyDB Three Directions</title>
+<style>
+/* Layout: three directions side by side for one screen at a time; controls for the screen, desktop or phone, and day or night; each column headed by its name, idea and the evidence behind it. Neutral warm-grey chrome so each direction's own colour carries. */
+:root {
+  --bg: #F3F1EC; --card: #FFFFFF; --ink: #1E2222; --ink-2: #4E5654; --line: #DEDAD0; --accent: #1E5C4F;
+  --serif: "Fraunces", Georgia, serif; --sans: "Atkinson Hyperlegible", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #121514; --card: #1A1E1D; --ink: #E9EEEB; --ink-2: #AEB8B3; --line: #2C3331; --accent: #6DFF9C; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #121514; --card: #1A1E1D; --ink: #E9EEEB; --ink-2: #AEB8B3; --line: #2C3331; --accent: #6DFF9C; color-scheme: dark; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.5 var(--sans); }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.wrap { max-width: 1440px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 80px; display: grid; gap: 28px; }
+.wrap > * { min-width: 0; }
+h1, h2 { font-family: var(--serif); font-weight: 600; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(32px, 4.6vw, 48px); line-height: 1.05; }
+h2 { font-size: 22px; line-height: 1.2; }
+p { margin: 0; }
+.lede { color: var(--ink-2); max-width: 74ch; font-size: 17px; }
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 3; background: var(--bg); padding-block: 10px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--card); }
+.seg button { background: none; border: 0; padding: 7px 12px; color: var(--ink-2); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); font-weight: 700; }
+.cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; align-items: start; }
+.cols.stack { grid-template-columns: minmax(0, 1fr); }
+.col { display: grid; gap: 10px; min-width: 0; }
+.head { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: grid; gap: 6px; }
+.head .tag { font-size: 13px; font-weight: 700; color: var(--ink-2); }
+.head p { color: var(--ink-2); font-size: 15px; }
+.head .ev { font-size: 14px; color: var(--ink); border-top: 1px solid var(--line); padding-top: 6px; }
+.shot { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--card); }
+.shot img { display: block; width: 100%; height: auto; }
+.phone .shot { max-width: 390px; width: 100%; margin-inline: auto; border-radius: 22px; }
+.sw { display: flex; gap: 5px; }
+.sw i { width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--line); }
+.verdict { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; display: grid; gap: 8px; max-width: 90ch; }
+.verdict p { color: var(--ink-2); }
+.verdict b { color: var(--ink); }
+@media (max-width: 980px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fraunces:opsz,wght@9..144,600&display=swap">
+
+<div class="wrap">
+  <header style="display:grid;gap:10px">
+    <h1>Three directions for FamilyDB</h1>
+    <p class="lede">The same finished design (twenty-four pages, the same content, phone layout, kids' pages and rules) in three looks. Kitchen Table, green is the final; the other two take the strongest alternatives from the blind judging and carry them into the finished system. Pick a screen, then compare.</p>
+  </header>
+
+  <div class="bar">
+    <div class="seg" role="group" aria-label="Screen" id="pages"></div>
+    <div class="seg" role="group" aria-label="Device"><button type="button" data-size="desktop">Desktop</button><button type="button" data-size="phone">Phone</button></div>
+    <div class="seg" role="group" aria-label="Time"><button type="button" data-time="day">Day</button><button type="button" data-time="night">Night</button></div>
+    <div class="seg" role="group" aria-label="Layout"><button type="button" data-lay="cols">Side by side</button><button type="button" data-lay="stack">One above the other</button></div>
+  </div>
+
+  <div class="cols" id="cols"></div>
+
+  <div class="verdict">
+    <h2>Which to build</h2>
+    <p><b>Kitchen Table, green</b> is the one with evidence behind it: chosen by the family, preferred to the original by four of four blind judges, and with its brand by four of four again. It is the safest pick.</p>
+    <p><b>Tomato Table</b> is the warmest and has the best score of any look in the blind field, but in this system it has one real weakness: a tomato button beside a late to-do shows two reds, told apart only by shade, the clock icon and the words.</p>
+    <p><b>Afterglow</b> is the Phosphor Interface grown up: calm, distinctive, and the most "FamilyDB". It costs warmth and daylight readability, the pixel titles are a taste call, and its light theme needs a per-person setting the app doesn't have yet.</p>
+    <p>None of the two new directions has been judged blind yet; that can be done the same way as before if one of them tempts you.</p>
+  </div>
+</div>
+
+<script>
+const DIRS = [
+ {k:'green', name:'Kitchen Table, green', tag:'The final', idea:'Warm paper for the family, a deep green card for Vera with a sun-yellow Send, and small panes of phosphor glass for FamilyDB and Vera.', ev:'Blind: chosen over the original 4 of 4 (8 vs 6 to 6.5), and with its brand 4 of 4 (8, 7.5, 8, 7.5 vs 7).', sw:['#F6F1E7','#1E5C4F','#F2C14E','#0E1312']},
+ {k:'tomato', name:'Tomato Table', tag:'Warmest', idea:'The same kitchen table in late summer: cream and brown ink, one ripe tomato for everything the family does, and Vera as a small lit screen on warm charcoal.', ev:'Its ancestor scored 8.5 from all three blind judges, the highest of twenty. Not yet judged in this form.', sw:['#F8F1E7','#2A201B','#C8461F','#8E2A16']},
+ {k:'afterglow', name:'Afterglow', tag:'Phosphor first', idea:'FamilyDB as a calm green-phosphor screen, day and night: Vera’s things glow, the family’s things sit on the glass in their own colours.', ev:'Its ancestors scored 7.3 to 7.7 blind, the best of the phosphor designs. Has a light theme for those who need it. Not yet judged in this form.', sw:['#0A100E','#6DFF9C','#E9F1EC','#FFB35C']}
+];
+const PAGES = [['home','Home'],['chat','Chat'],['ideas','Ideas'],['plans','Plans'],['todo','To do'],['home-kid','Kid’s Home'],['signin','Sign in']];
+const st = {p:'home', size:'desktop', time:'day', lay:'cols'};
+const $ = id => document.getElementById(id);
+function render() {
+  $('pages').innerHTML = PAGES.map(([k,l]) => '<button type="button" data-p="' + k + '" aria-pressed="' + (k === st.p) + '">' + l + '</button>').join('');
+  document.querySelectorAll('[data-size]').forEach(b => b.setAttribute('aria-pressed', b.dataset.size === st.size));
+  document.querySelectorAll('[data-time]').forEach(b => b.setAttribute('aria-pressed', b.dataset.time === st.time));
+  document.querySelectorAll('[data-lay]').forEach(b => b.setAttribute('aria-pressed', b.dataset.lay === st.lay));
+  const ph = st.size === 'phone';
+  $('cols').className = 'cols' + (st.lay === 'stack' ? ' stack' : '');
+  $('cols').innerHTML = DIRS.map(d => {
+    let suffix = st.time === 'night' ? '-dark' : '';
+    const src = 'img/' + d.k + '/' + st.p + suffix + (ph ? '-phone' : '') + '.webp';
+    const extra = d.k === 'afterglow' && st.time === 'day' ? '<p style="font-size:14px">Afterglow is dark by day too. <button type="button" data-light="1" style="background:none;border:0;padding:0;text-decoration:underline;color:inherit">Show its light theme</button></p>' : '';
+    return '<div class="col ' + (ph ? 'phone' : '') + '"><div class="head"><span class="tag">' + d.tag + '</span><h2>' + d.name + '</h2><div class="sw" aria-hidden="true">' + d.sw.map(c => '<i style="background:' + c + '"></i>').join('') + '</div><p>' + d.idea + '</p>' + extra + '<p class="ev">' + d.ev + '</p></div><div class="shot"><img id="img-' + d.k + '" src="' + src + '" alt="' + d.name + ', ' + PAGES.find(x => x[0] === st.p)[1] + ', ' + st.size + ', ' + st.time + '" width="' + (ph ? 585 : 1280) + '"></div></div>';
+  }).join('');
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.p) st.p = b.dataset.p;
+  else if (b.dataset.size) st.size = b.dataset.size;
+  else if (b.dataset.time) st.time = b.dataset.time;
+  else if (b.dataset.lay) st.lay = b.dataset.lay;
+  else if (b.dataset.light) { const i = $('img-afterglow'); const lit = i.src.includes('-light'); i.src = 'img/afterglow/' + st.p + (lit ? '' : '-light') + (st.size === 'phone' ? '-phone' : '') + '.webp'; b.textContent = lit ? 'Show its light theme' : 'Show its dark default'; return; }
+  else return;
+  render();
+});
+render();
+</script>
