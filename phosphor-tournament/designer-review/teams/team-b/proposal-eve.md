@@ -1,50 +1,49 @@
 # Proposal: Eve
 
-**The idea** A calm dark desk with one live phosphor screen on it. The screen is where Vera speaks, where you speak to her, and where time is drawn. Everything else is quiet, readable plain type.
+**The idea** A calm dark desk with one live phosphor screen on it. The screen is where Vera speaks, where you speak to her, and where time is drawn. Everything else is quiet, readable type.
 
 ## The look
 
-- **Two materials.** *Glass*: an inset screen with green phosphor mono text, faint scanlines and a soft glow. *Desk*: a near-black, green-tinted surface with off-white sans text, hairline rules and no glow.
-- **Rule 1: one screen per page,** holding the live thing: Vera's answer, Next up, or the page's instrument. The phosphor is precious because it is scarce.
-- **Rule 2: green means live or actionable** (Send, a lit status, what is next). Amber means late or needs a look. Kinds of idea get small muted squares. There are no other hues.
-- **Rule 3: time is the axis.** Every dated list has a NOW line. Every screen that charts time labels its ticks in words ("now", "1 wk"), never strips of tiny numbers.
-- **Rule 4: one level of frame.** No panels inside panels.
-- **Type.** A humanist sans (Plex Sans class) for the desk, its mono for the glass and for figures. A pixel face is allowed only for one word on a screen, and never for body text. Titles carry their count: "Things to do 4 · 3 late".
-- **Controls.** Bordered fields and chips, a phosphor focus ring with glow, a solid green primary button the size of a button, and words beside every nav icon on desktop. Scanlines and the one-time switch-on animation stop under reduced motion. Text on glass is at least 14px and captions at least 12px, both at a contrast of 7:1 or better.
+- **Two materials.** *Glass* is an inset screen: phosphor-green mono, faint scanlines, soft glow. *Desk* is near-black tinted green, with off-white sans, hairline rules and no glow.
+- **One screen per page,** holding only the live thing: Vera's answer, Next up, the page's instrument. The phosphor stays special because it is scarce.
+- **Green means live or actionable; amber means late or needs a look.** Idea kinds get small muted squares, and there are no other hues.
+- **Time is the axis.** Every dated list has a NOW line. Chart ticks are labelled in words ("now", "1 wk").
+- **One level of frame.** No panels inside panels.
+- **Type.** A humanist sans for the desk, its mono for glass and figures. A pixel face is allowed for one word on a screen at most. Titles carry their count: "Things to do 4 · 3 late".
+- **Controls.** Bordered fields and chips, a glowing phosphor focus ring, normal-sized green buttons, and words beside every nav icon. Text on glass is at least 14px at a contrast of 7:1. Scanlines and the switch-on stop under reduced motion.
 
 ## The pages
 
-- **Home.** The screen is the conversation's mouth. It shows "What's on your mind?", the textarea as a prompt line, and From, mic and Send, all inside one glass, so the form is never split. Beside it is a round dial of the next four weeks, with plans as numbered dots and Next up in the centre. Under both runs a stats strip: Today, Plans, To do, Late (amber), Ideas. Setup is one slim amber bar. Then come Coming up and To do (both with NOW lines), Lately added, and the kids' wishes as a small list, not a line.
-- **Chat.** The thread is on the desk for comfort in long reading. Vera's lines sit on phosphor-tinted glass slips with a mono name and time. The family's lines are plain desk cards on the right. The composer is the same glass as on Home. The kids' conversations are a short list above the thread on the phone and a narrow column on desktop.
-- **Ideas.** The screen is the radar: places by drive time, rings labelled "15 min", "45 min" and "2 h", with Nearest and Furthest named. The list is on the desk: kind square, name in heavy sans, drive time, way, who it is for. Filters are one row of chips with no dots, and Save a thought is a folded row.
-- **To do.** The screen is a time strip: amber ticks for the late items, a bright Now, empty weeks ahead. The list below has amber left bars on late rows, "was due 6 days ago" with the date, the NOW rule, and a whose-filter showing lates per person.
-- **Plans.** The screen is the same time strip, showing four weeks of plans. A List/Month switch. The month grid is on the desk, with each plan as a chip with a green edge, and today ringed.
-- **Status.** The screen is the spend gauge: $0, $1, $2, today's needle and a faint needle for the 30-day average, captioned in words. Three columns follow (Who answers, Keys, Connected to), each a rail lit where it works, with an amber "Needs a look" callout above them.
-- **Settings.** A 3x3 grid of parts, each card with how it stands and a state line (Set up, Off, Needs a look in amber). No screen: nothing here is live.
-- **Phone.** The screen comes first, with Send full width inside it, and a six-item bottom bar.
+- **Home.** One glass holds "What's on your mind?", the prompt-line textarea, and From, mic and Send, so the form is never split. Beside it is a round dial of the next four weeks: plans as dots, Next up in the centre. Below are a stats strip (Today, Plans, To do, Late, Ideas) and a slim amber setup bar. Then Coming up and To do with NOW lines, Lately added, and the kids' wishes.
+- **Chat.** The thread sits on the desk for easy reading. Vera's lines are phosphor-tinted glass slips, the family's are plain cards. The composer is Home's glass.
+- **Ideas.** The screen is the radar, with rings labelled 15 min, 45 min and 2 h, and Nearest and Furthest named. On the desk, the list shows kind square, name, drive, way and for whom. Filters are one row of chips without dots.
+- **To do.** The screen is a time strip: amber late ticks, a bright Now, empty weeks ahead. In the list, late rows have amber bars and "was due 6 days ago", followed by the NOW rule.
+- **Plans.** The screen is the same strip over four weeks, with a List/Month switch. In the month grid on the desk, each plan is a green-edged chip and today is ringed.
+- **Status.** The screen is the spend gauge: today's needle, plus a faint needle for the 30-day average, captioned in words. Below it are three lit rails (Who answers, Keys, Connected to) and an amber "Needs a look" callout.
+- **Settings.** A 3x3 grid. Each part says how it stands, with a state line (Set up, Off, Needs a look). There is no screen, because nothing here is live.
+- **Phone.** The screen comes first with Send inside it, and a six-item bottom bar.
 
 ## Taken from, and refused
 
 - **Taken from:**
-  - D10: the stats strip, Settings state lines, the gauge's faint average needle, the footer legend.
-  - D07: time strips with late ticks, starters tagged by destination.
-  - D17 and D27: the round dial of the coming weeks with Next up in the centre, counts in titles.
-  - D06: one instrument per page, the "On this page" index for long Status.
-  - D09: hatched kind squares.
-  - D37 and D22: restraint learnt by contrast.
+  - D10: the stats strip, Settings state lines, the faint average needle.
+  - D07: time strips with late ticks.
+  - D17 and D27: the dial of coming weeks with Next up in the centre, counts in titles.
+  - D06: one instrument per page.
+  - D09: kind squares.
 - **Refused:**
-  - grey plastic bezels and screens squeezed into corners;
-  - green body text on the desk;
+  - grey plastic bezels and corner stickers;
+  - green body text;
   - serif titles;
-  - pixel or uppercase-everything type for reading;
+  - pixel or all-caps reading type;
   - icon-only nav;
   - dots on every chip;
   - underline-only fields;
   - full-width glowing buttons;
   - frames inside frames;
-  - unlabelled chart axes;
-  - more than one screen fighting on a page.
+  - unlabelled axes;
+  - two screens on one page.
 
 ## Why it wins
 
-Most of the 37 designs either put the CRT everywhere until the app tires the eye, or confine it to a sticker. This one makes the phosphor mean something: it is always the live part, so the character carries information. The desk around it stays as easy to use as the best plain app. The family learns one rule ("green glass is where things are happening") and every page keeps it.
+Most designs either spread the CRT until it tires the eye, or shrink it to a sticker. Here the phosphor means something: it is always the live part, so the character carries information. The desk around it stays as easy as the best plain app. The family learns one rule, "green glass is where things are happening", and every page keeps it.
