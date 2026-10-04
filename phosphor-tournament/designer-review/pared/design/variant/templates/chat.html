@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, chat_line, waiting_line, fig, presence %}
+{% block title %}{{ assistant if has_persona else 'Chat' }} · {{ site_title }}{% endblock %}
+{% block body_class %}page-chat{% endblock %}
+{# While an answer is on its way the browser fetches the page again by itself, landing back on
+   the newest line: a meta refresh, only while something really is being thought about, and never
+   on a page holding words somebody typed. #}
+{% block head %}
+  {% if refresh and locked %}
+    <meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" />
+  {% elif refresh %}
+    <noscript><meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" /></noscript>
+  {% endif %}
+{% endblock %}
+{# A line's day, from its "27 Sep, 19:47", said in full ("Sunday 27 September") with the year
+   the app's own clock puts it in; the view would hand the page the day itself. #}
+{% macro day_words(when, t0) -%}
+  {%- set MON = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6, 'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12} -%}
+  {%- set part = (when or '').split(', ')[0] -%}
+  {%- set bits = part.split(' ') -%}
+  {%- if bits | length == 2 and bits[1] in MON and bits[0].isdigit() -%}
+    {%- set m = MON[bits[1]] -%}
+    {%- set d = t0.replace(year=t0.year - (1 if m > t0.month else 0), month=m, day=bits[0] | int) -%}
+    {{- ('Today · ' if d == t0 else '') ~ d.strftime('%a') ~ ' ' ~ d.day ~ ' ' ~ d.strftime('%b') -}}
+  {%- else -%}{{ part }}{%- endif -%}
+{%- endmacro %}
+{% block content %}
+  {% set her = assistant if has_persona else 'Chat' %}
+  {% set t0 = config.FAMILYDB_APP.clock.today() %}
+  {% if reading %}
+    {{ page_head(reading ~ ' and ' ~ (assistant if has_persona else 'the bot'), 'Her own conversation, for you to read. Only she writes in it.', none, [(her, url_for('chat.show'))]) }}
+  {% elif private %}
+    {{ page_head(her, 'Just you and ' ~ assistant ~ '. Tell her what you wish for, or ask about the plans.') }}
+  {% else %}
+    {{ page_head(her, 'Weekends, ideas, to-dos and the calendar: anything you would ask in Telegram works here too.') }}
+  {% endif %}
+
+  {# Slotted: the separate sequence panel goes. The thread is one column at the reading measure,
+     and the sequence lives in its own left gutter: one drawing-ink lane, and level with each line
+     a short stub, pointing in to the lane for the family and out from it for her; the newest
+     stub is lit, a lamp at its head. (Kept from the lifelines below: the day said once, mono.)
+     Was: THE LIFELINES. The thread spans the figure column and the
+     words, one grid, so every line's arrow is drawn level with the line it stands for, from the
+     lane of whoever said it to the lane it answers: her screen heads the first lane, each of the
+     family who has spoken (up to three, in the order they first spoke) a lane of their own, their
+     initial in the same steel square as beside their words. A dotted leader runs on from each
+     arrow over the hairline to whoever said the line. Her words sit on the glass at the left,
+     theirs on steel slips at the right; the newest arrow is the live mark, and pointing at a
+     line lights its arrow and its leader. #}
+  {% set folks = namespace(names=[]) %}
+  {% for line in lines or [] %}{% if not line.from_bot and line.who not in folks.names %}{% set folks.names = folks.names + [line.who] %}{% endif %}{% endfor %}
+  {% set cols = folks.names[:3] %}
+  <section class="plate conversation lanes-{{ cols | length }}" aria-label="The conversation">
+    {% if lines %}
+      <ol class="thread seq-thread">
+        <li class="day-rule"><span class="seq" aria-hidden="true"></span><span class="day-words">{{ day_words(lines[0].when, t0) }}</span></li>
+        {% set seen = namespace(day=(lines[0].when or '').split(', ')[0], lane=1) %}
+        {% for line in lines %}
+          {% set day = (line.when or '').split(', ')[0] %}
+          {% if day != seen.day %}
+            {% set seen.day = day %}
+            <li class="day-rule"><span class="seq" aria-hidden="true"></span><span class="day-words">{{ day_words(line.when, t0) }}</span></li>
+          {% endif %}
+          {% if line.from_bot %}
+            {% set seq = {'no': loop.index, 'fr': 0, 'to': seen.lane, 'live': false} %}
+          {% else %}
+            {% set lane = (cols.index(line.who) + 1) if line.who in cols else 3 %}
+            {% set seen.lane = lane %}
+            {% set seq = {'no': loop.index, 'fr': lane, 'to': 0, 'live': false} %}
+          {% endif %}
+          {{ chat_line(line, latest if loop.last, seq=seq) }}
+        {% endfor %}
+        {% if pending %}{{ waiting_line(assistant, state, pending, seq={'to': seen.lane}) }}{% endif %}
+      </ol>
+    {% endif %}
+    <div class="plate-body talk-body">
+      {% if not lines %}
+        <p class="muted empty">{{ icon('chat') }}<span>Nothing said here yet. Ask {{ assistant }} what to do this weekend, save an idea, or set a reminder.</span></p>
+      {% endif %}
+
+      {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+      {# The spine ends at the box (lifted from Trued): one lit run down from the last line, a ring on
+         the box's edge, and the words "your turn". While she is answering it is not drawn. #}
+      {% if not reading %}<div class="composer{{ ' has-turn' if lines and not pending }}">
+        {% if lines and not pending %}<p class="your-turn" aria-hidden="true"><span class="yt-run"></span><span class="yt-ring"></span><span class="yt-word">your turn</span></p>{% endif %}
+        {% include "_ask.html" %}</div>{% endif %}
+    </div>
+  </section>
+
+  {% if kids and not reading %}
+    <section class="plate kids-talk">
+      <nav class="plate-body" aria-label="The kids’ conversations">
+        <h2>The kids’ conversations</h2>
+        <p class="muted">Each kid talks to {{ assistant }} on her own. You can read along.</p>
+        <ul class="plain kid-rows">
+          {% for kid in kids %}<li><a href="{{ url_for('chat.show', with=kid.id, _anchor=latest) }}">{{ kid.name }}</a></li>{% endfor %}
+        </ul>
+      </nav>
+    </section>
+  {% endif %}
+{% endblock %}
