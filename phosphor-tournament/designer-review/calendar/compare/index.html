@@ -1,0 +1,125 @@
+<title>FamilyDB as a Calendar</title>
+<style>
+/* Layout: the three Home pages side by side first, then one long section per direction: desktop by day, by night, phone, and a kid's view. Shots show the first screen; "Whole page" opens the full length. Neutral warm-grey chrome so each design's colour carries. */
+:root {
+  --bg: #F2F0EB; --card: #FFFFFF; --ink: #1E2222; --ink-2: #505856; --line: #DCD8CE; --accent: #1E5C4F;
+  --serif: "Fraunces", Georgia, serif; --sans: "Atkinson Hyperlegible", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #121514; --card: #1A1E1D; --ink: #E9EEEB; --ink-2: #AEB8B3; --line: #2C3331; --accent: #6DFF9C; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #121514; --card: #1A1E1D; --ink: #E9EEEB; --ink-2: #AEB8B3; --line: #2C3331; --accent: #6DFF9C; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.5 var(--sans); }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.wrap { max-width: 1400px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 80px; display: grid; gap: 40px; }
+.wrap > * { min-width: 0; }
+h1, h2 { font-family: var(--serif); font-weight: 600; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(30px, 4.4vw, 46px); line-height: 1.05; }
+h2 { font-size: clamp(24px, 3vw, 32px); line-height: 1.1; }
+h3 { margin: 0; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+p { margin: 0; }
+.top { display: grid; gap: 10px; }
+.lede { color: var(--ink-2); max-width: 70ch; font-size: 17px; }
+nav { display: flex; flex-wrap: wrap; gap: 8px; }
+nav a { color: var(--ink); text-decoration: none; border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 5px 14px; font-weight: 700; font-size: 15px; }
+nav a:hover { border-color: var(--ink-2); }
+.glance { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.g { display: grid; gap: 8px; color: inherit; text-decoration: none; min-width: 0; }
+.gn { font-family: var(--serif); font-weight: 600; font-size: 19px; }
+.g .more { display: none; }
+.dir { display: grid; gap: 14px; border-top: 1px solid var(--line); padding-top: 28px; scroll-margin-top: 16px; }
+.dh { display: grid; gap: 8px; max-width: 76ch; margin-bottom: 6px; }
+.tag { font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+.idea { font-size: 17px; }
+.ev { color: var(--ink-2); font-size: 15px; }
+.sw { display: flex; gap: 6px; }
+.sw i { width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--line); }
+.d-green .c0{background:#F6F1E7}
+.d-green .c1{background:#1E5C4F}
+.d-green .c2{background:#F2C14E}
+.d-green .c3{background:#0E1312}
+.d-wall .c0{background:#F3F5F8}
+.d-wall .c1{background:#121A26}
+.d-wall .c2{background:#0A7A55}
+.d-wall .c3{background:#6DFF9C}
+.d-app .c0{background:#F3F4F6}
+.d-app .c1{background:#12161C}
+.d-app .c2{background:#04704A}
+.d-app .c3{background:#6DFF9C}
+.row { display: grid; gap: 16px; align-items: start; }
+.row.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.row.phones { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.shot { margin: 0; display: grid; gap: 6px; min-width: 0; }
+.frame { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--card); }
+.ph .frame { border-radius: 24px; }
+.frame img { display: block; width: 100%; height: auto; aspect-ratio: 1280 / 800; object-fit: cover; object-position: top; }
+.ph .frame img { aspect-ratio: 585 / 1266; }
+.shot.full .frame img { aspect-ratio: auto; }
+figcaption { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; font-size: 14px; color: var(--ink-2); }
+.more { background: none; border: 0; padding: 0; text-decoration: underline; color: var(--ink-2); font-size: 14px; }
+.more:hover { color: var(--ink); }
+.end { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; display: grid; gap: 8px; max-width: 80ch; }
+.end p { color: var(--ink-2); }
+.end b { color: var(--ink); }
+@media (max-width: 900px) { .glance, .row.two { grid-template-columns: minmax(0, 1fr); } .row.phones { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fraunces:opsz,wght@9..144,600&display=swap">
+
+<div class="wrap">
+  <header class="top">
+    <h1>Kitchen Table, as a calendar</h1>
+    <p class="lede">The same interface, every page, word and layout kept, with the look moved from recipe site to home calendar. Two designers took it two ways; the current look is first for comparison. Each shot shows the first screen; press “Whole page” under a shot to see it all.</p>
+    <nav aria-label="Jump to"><a href="#green">Kitchen Table now</a><a href="#wall">Kitchen Wall</a><a href="#app">Today Line</a></nav>
+  </header>
+
+  <div class="glance"><a class="g" href="#green"><span class="gn">Kitchen Table</span><figure class="shot dt "><div class="frame"><img src="img/green/plans.webp" alt="Kitchen Table, Plans, desktop, Day" width="1280" height="800"></div><figcaption><span>Plans · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></a><a class="g" href="#wall"><span class="gn">Kitchen Wall</span><figure class="shot dt "><div class="frame"><img src="img/wall/plans.webp" alt="Kitchen Wall, Plans, desktop, Day" width="1280" height="800"></div><figcaption><span>Plans · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></a><a class="g" href="#app"><span class="gn">Today Line</span><figure class="shot dt "><div class="frame"><img src="img/app/plans.webp" alt="Today Line, Plans, desktop, Day" width="1280" height="800"></div><figcaption><span>Plans · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></a></div>
+
+<section class="dir d-green" id="green" aria-labelledby="h-green">
+  <header class="dh"><p class="tag">As it is now</p><h2 id="h-green">Kitchen Table</h2><div class="sw" aria-hidden="true"><i class="c0"></i><i class="c1"></i><i class="c2"></i><i class="c3"></i></div><p class="idea">Cream paper, beige lines, soft serif headings (Fraunces), forest green with a sun-yellow Send.</p><p class="ev">The interface you said is nearly perfect, with the look that reads like a recipe or gardening site.</p></header>
+  <h3>Desktop · Day</h3>
+  <div class="row two"><figure class="shot dt "><div class="frame"><img src="img/green/home.webp" alt="Kitchen Table, Home, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Home · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt "><div class="frame"><img src="img/green/plans.webp" alt="Kitchen Table, Plans, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Plans · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt "><div class="frame"><img src="img/green/todo.webp" alt="Kitchen Table, To do, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>To do · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt "><div class="frame"><img src="img/green/chat.webp" alt="Kitchen Table, Chat, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Chat · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></div>
+  <h3>Desktop · Night</h3>
+  <div class="row two"><figure class="shot dt "><div class="frame"><img src="img/green/home-dark.webp" alt="Kitchen Table, Home, desktop, Night" width="1280" height="800" loading="lazy"></div><figcaption><span>Home · Night</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt "><div class="frame"><img src="img/green/plans-dark.webp" alt="Kitchen Table, Plans, desktop, Night" width="1280" height="800" loading="lazy"></div><figcaption><span>Plans · Night</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></div>
+  <h3>Phone</h3>
+  <div class="row phones"><figure class="shot ph "><div class="frame"><img src="img/green/home-phone.webp" alt="Kitchen Table, Home, phone, Day" width="585" height="1266" loading="lazy"></div><figcaption><span>Home · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot ph "><div class="frame"><img src="img/green/chat-phone.webp" alt="Kitchen Table, Chat, phone, Day" width="585" height="1266" loading="lazy"></div><figcaption><span>Chat · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot ph "><div class="frame"><img src="img/green/plans-phone.webp" alt="Kitchen Table, Plans, phone, Day" width="585" height="1266" loading="lazy"></div><figcaption><span>Plans · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot ph "><div class="frame"><img src="img/green/home-dark-phone.webp" alt="Kitchen Table, Home, phone, Night" width="585" height="1266" loading="lazy"></div><figcaption><span>Home · Night</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></div>
+  <h3>For a kid, and Ideas</h3>
+  <div class="row two"><figure class="shot dt "><div class="frame"><img src="img/green/home-kid.webp" alt="Kitchen Table, Kid’s Home, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Kid’s Home · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt "><div class="frame"><img src="img/green/ideas.webp" alt="Kitchen Table, Ideas, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Ideas · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></div>
+</section>
+<section class="dir d-wall" id="wall" aria-labelledby="h-wall">
+  <header class="dh"><p class="tag">Take 1 · the family calendar on the wall</p><h2 id="h-wall">Kitchen Wall</h2><div class="sw" aria-hidden="true"><i class="c0"></i><i class="c1"></i><i class="c2"></i><i class="c3"></i></div><p class="idea">A bright, ruled grid where dates and times are the main material: today is green, and every other colour is a person. One-person plans are solid blocks in that person’s colour.</p><p class="ev">Headings, dates, times and money in Manrope, with bold wide figures you can read across the room. Date tiles are calendar pages with an ink weekday band.</p></header>
+  <h3>Desktop · Day</h3>
+  <div class="row two"><figure class="shot dt "><div class="frame"><img src="img/wall/home.webp" alt="Kitchen Wall, Home, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Home · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt "><div class="frame"><img src="img/wall/plans.webp" alt="Kitchen Wall, Plans, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Plans · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt "><div class="frame"><img src="img/wall/todo.webp" alt="Kitchen Wall, To do, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>To do · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt "><div class="frame"><img src="img/wall/chat.webp" alt="Kitchen Wall, Chat, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Chat · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></div>
+  <h3>Desktop · Night</h3>
+  <div class="row two"><figure class="shot dt "><div class="frame"><img src="img/wall/home-dark.webp" alt="Kitchen Wall, Home, desktop, Night" width="1280" height="800" loading="lazy"></div><figcaption><span>Home · Night</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt "><div class="frame"><img src="img/wall/plans-dark.webp" alt="Kitchen Wall, Plans, desktop, Night" width="1280" height="800" loading="lazy"></div><figcaption><span>Plans · Night</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></div>
+  <h3>Phone</h3>
+  <div class="row phones"><figure class="shot ph "><div class="frame"><img src="img/wall/home-phone.webp" alt="Kitchen Wall, Home, phone, Day" width="585" height="1266" loading="lazy"></div><figcaption><span>Home · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot ph "><div class="frame"><img src="img/wall/chat-phone.webp" alt="Kitchen Wall, Chat, phone, Day" width="585" height="1266" loading="lazy"></div><figcaption><span>Chat · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot ph "><div class="frame"><img src="img/wall/plans-phone.webp" alt="Kitchen Wall, Plans, phone, Day" width="585" height="1266" loading="lazy"></div><figcaption><span>Plans · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot ph "><div class="frame"><img src="img/wall/home-dark-phone.webp" alt="Kitchen Wall, Home, phone, Night" width="585" height="1266" loading="lazy"></div><figcaption><span>Home · Night</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></div>
+  <h3>For a kid, and Ideas</h3>
+  <div class="row two"><figure class="shot dt "><div class="frame"><img src="img/wall/home-kid.webp" alt="Kitchen Wall, Kid’s Home, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Kid’s Home · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt "><div class="frame"><img src="img/wall/ideas.webp" alt="Kitchen Wall, Ideas, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Ideas · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></div>
+</section>
+<section class="dir d-app" id="app" aria-labelledby="h-app">
+  <header class="dh"><p class="tag">Take 2 · a calendar app</p><h2 id="h-app">Today Line</h2><div class="sw" aria-hidden="true"><i class="c0"></i><i class="c1"></i><i class="c2"></i><i class="c3"></i></div><p class="idea">Kitchen Table’s pages set like the family’s calendar app: a cool, gridded surface, one green that means “now”, and events marked the calendar way with a colour bar and a light tint.</p><p class="ev">Headings, dates, times and money in Inter, the open cousin of the fonts phone and desktop calendars use. Words are Atkinson, time is Inter.</p></header>
+  <h3>Desktop · Day</h3>
+  <div class="row two"><figure class="shot dt "><div class="frame"><img src="img/app/home.webp" alt="Today Line, Home, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Home · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt "><div class="frame"><img src="img/app/plans.webp" alt="Today Line, Plans, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Plans · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt "><div class="frame"><img src="img/app/todo.webp" alt="Today Line, To do, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>To do · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt "><div class="frame"><img src="img/app/chat.webp" alt="Today Line, Chat, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Chat · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></div>
+  <h3>Desktop · Night</h3>
+  <div class="row two"><figure class="shot dt "><div class="frame"><img src="img/app/home-dark.webp" alt="Today Line, Home, desktop, Night" width="1280" height="800" loading="lazy"></div><figcaption><span>Home · Night</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt "><div class="frame"><img src="img/app/plans-dark.webp" alt="Today Line, Plans, desktop, Night" width="1280" height="800" loading="lazy"></div><figcaption><span>Plans · Night</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></div>
+  <h3>Phone</h3>
+  <div class="row phones"><figure class="shot ph "><div class="frame"><img src="img/app/home-phone.webp" alt="Today Line, Home, phone, Day" width="585" height="1266" loading="lazy"></div><figcaption><span>Home · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot ph "><div class="frame"><img src="img/app/chat-phone.webp" alt="Today Line, Chat, phone, Day" width="585" height="1266" loading="lazy"></div><figcaption><span>Chat · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot ph "><div class="frame"><img src="img/app/plans-phone.webp" alt="Today Line, Plans, phone, Day" width="585" height="1266" loading="lazy"></div><figcaption><span>Plans · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot ph "><div class="frame"><img src="img/app/home-dark-phone.webp" alt="Today Line, Home, phone, Night" width="585" height="1266" loading="lazy"></div><figcaption><span>Home · Night</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></div>
+  <h3>For a kid, and Ideas</h3>
+  <div class="row two"><figure class="shot dt "><div class="frame"><img src="img/app/home-kid.webp" alt="Today Line, Kid’s Home, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Kid’s Home · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt "><div class="frame"><img src="img/app/ideas.webp" alt="Today Line, Ideas, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Ideas · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></div>
+</section>
+
+  <div class="end">
+    <h2>How they differ</h2>
+    <p><b>What both did:</b> dropped the soft serif (the biggest recipe-site tell), the cream paper and the yellow. Both use a cool grey page, white cards, hairline grid lines, tighter corners, green for today, and the Ask card as dark glass with a lit Send. The body text is still Atkinson, for the kids.</p>
+    <p><b>Kitchen Wall</b> is louder and more glanceable: Manrope’s wide figures, ink bands on every date tile, and one-person plans as solid colour blocks. It’s the more “family hub” of the two, but a busy month can get loud.</p>
+    <p><b>Today Line</b> is quieter and more like the calendar apps on the family’s phones: Inter, tinted events with a colour bar, and green only on today and the next plan. It’s the calmer of the two, but Inter on grey is many apps’ house style.</p>
+  </div>
+</div>
+
+<script>
+document.addEventListener('click', e => {
+  const b = e.target.closest('.more'); if (!b) return;
+  const f = b.closest('.shot'); const on = f.classList.toggle('full');
+  b.setAttribute('aria-expanded', on); b.textContent = on ? 'First screen' : 'Whole page';
+});
+</script>
