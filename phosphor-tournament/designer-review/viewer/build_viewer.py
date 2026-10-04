@@ -1,0 +1,10 @@
+import json, re
+S='viewer/index.tpl.html'; s=open(S).read()
+R=json.load(open('reviews.json')); M=json.load(open('metrics.json'))
+rj=json.dumps(R,ensure_ascii=True).replace('</','<\\/')
+s=s.replace('/*REVIEWS*/',rj)
+s=s.replace('/*HOMEH*/{}',json.dumps({k:[v['homeH'],v['homePhoneH']] for k,v in M.items()}))
+F=open('findings.html').read()
+s=s.replace("/*FINDINGS*/''",'/*FINDINGS*/'+json.dumps(F))
+open('viewer/index.html','w').write(s)
+print(len(s))

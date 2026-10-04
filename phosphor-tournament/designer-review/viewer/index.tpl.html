@@ -1,0 +1,619 @@
+<title>Phosphor Concept Viewer</title>
+<style>
+/* Layout: a fixed rail (Overview, Modes, Scoreboard, then every design grouped by how it was made), a sticky bar of page tabs and view controls, and one view below: a thumbnail grid, a modes comparison with a dot chart, a sortable scoreboard, or one design (or two side by side) at full size. Neutral dark chrome so the screenshots carry all the colour. */
+:root {
+  --bg: #111213; --panel: #181a1b; --panel-2: #1f2223; --rule: #2c3032; --ink: #eceeed; --dim: #9ea5a7; --accent: #e9cf84;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --rail: 270px;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body); }
+button, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+a { color: inherit; }
+p { margin: 0; }
+
+.app { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); min-height: 100vh; }
+.rail { position: sticky; top: env(safe-area-inset-top, 0px); align-self: start; height: 100vh; overflow-y: auto; border-right: 1px solid var(--rule); background: var(--panel); padding: 20px 14px 24px; display: grid; gap: 18px; align-content: start; }
+.brand { display: grid; gap: 2px; padding-inline: 8px; }
+.brand b { font: 600 17px/1.2 var(--body); }
+.brand span { font: 500 11px/1.4 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+.group-label { font: 500 11px/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); padding: 0 8px 6px; }
+.nav { display: grid; gap: 1px; }
+#rail { display: grid; gap: 18px; }
+.where { font: 500 11px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+.nav a { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; text-decoration: none; padding: 7px 8px; border-radius: 6px; color: var(--ink); }
+.nav a:hover { background: var(--panel-2); }
+.nav a[aria-current="true"] { background: var(--ink); color: #111; }
+.nav small { font: 500 11px/1 var(--mono); letter-spacing: .04em; color: var(--dim); }
+.nav a[aria-current="true"] small { color: #444; }
+.keys { font: 400 12px/1.6 var(--mono); color: var(--dim); padding-inline: 8px; }
+.keys kbd { font: inherit; border: 1px solid var(--rule); border-radius: 4px; padding: 0 5px; color: var(--ink); }
+
+main { min-width: 0; }
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--rule); padding: 10px 24px; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.tabs { display: flex; gap: 2px; overflow-x: auto; max-width: 100%; }
+.tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 6px 12px; color: var(--dim); white-space: nowrap; }
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-current="true"] { color: var(--ink); border-color: var(--accent); }
+.tools { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-left: auto; }
+.tools.left { margin-left: 0; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 7px; overflow: hidden; }
+.seg button { background: none; border: 0; padding: 5px 12px; color: var(--dim); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: #111; }
+.tool-btn { background: none; border: 1px solid var(--rule); border-radius: 7px; padding: 5px 12px; color: var(--dim); }
+.tool-btn[aria-pressed="true"] { background: var(--panel-2); color: var(--ink); border-color: var(--dim); }
+.field { display: inline-flex; align-items: center; gap: 8px; color: var(--dim); font: 500 12px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+select { background: var(--panel); border: 1px solid var(--rule); border-radius: 7px; padding: 5px 8px; max-width: 220px; }
+.pick-narrow { display: none; }
+
+.view { padding: 26px 24px 80px; display: grid; gap: 28px; }
+.view > * { min-width: 0; }
+.view h1, .view h2 { margin: 0; font: 600 clamp(24px, 3vw, 32px)/1.15 var(--body); text-wrap: balance; }
+.view h3.sec { margin: 0; font: 600 20px/1.2 var(--body); }
+.lede { color: var(--dim); max-width: 72ch; }
+.about { border: 1px solid var(--rule); border-radius: 8px; background: var(--panel); }
+.about summary { padding: 10px 14px; cursor: pointer; color: var(--dim); }
+.about > div { padding: 2px 14px 14px; display: grid; gap: 8px; color: var(--dim); max-width: 80ch; }
+
+.chip { font: 500 11px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--rule); border-radius: 999px; padding: 4px 9px; color: var(--dim); white-space: nowrap; }
+.chip.mark { color: var(--ink); border-color: var(--dim); }
+
+.ov-group { display: grid; gap: 12px; }
+.ov-group > h3 { margin: 0; font: 500 12px/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); display: flex; align-items: center; gap: 12px; }
+.ov-group > h3::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+.card { display: grid; gap: 8px; text-decoration: none; min-width: 0; position: relative; align-content: start; }
+.card .thumb { aspect-ratio: 7 / 5; width: 100%; object-fit: cover; object-position: top; border: 1px solid var(--rule); border-radius: 6px; background: var(--panel); display: block; }
+.card:hover .thumb, .card:focus-visible .thumb { border-color: var(--accent); }
+.card .name { font-weight: 500; }
+.card .meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font: 500 11px/1.2 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
+.card .score { position: absolute; top: 8px; right: 8px; background: rgba(17,18,19,.88); border: 1px solid var(--dim); border-radius: 6px; padding: 3px 7px; font: 500 12px/1 var(--mono); }
+
+.head { display: grid; gap: 8px; }
+.head-top { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.nav-arrows { display: inline-flex; gap: 6px; }
+.nav-arrows button { background: none; border: 1px solid var(--rule); border-radius: 7px; width: 34px; height: 34px; line-height: 1; color: var(--dim); }
+.nav-arrows button:hover { color: var(--ink); border-color: var(--dim); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.idea { font-size: 17px; max-width: 75ch; }
+.marks { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 10px 0; }
+.marks .big { font: 600 28px/1 var(--body); }
+.marks .big small { font: 500 12px/1 var(--mono); color: var(--dim); margin-left: 4px; }
+.marks .each { font: 500 13px/1.4 var(--mono); color: var(--dim); }
+.marks .each b { color: var(--ink); font-weight: 500; }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px 30px; }
+.notes p { color: var(--dim); max-width: 62ch; }
+.notes b { display: block; font: 500 11px/1.4 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink); margin-bottom: 2px; }
+.notes .gap b { color: var(--accent); }
+.words { display: grid; gap: 8px; }
+.words details { border: 1px solid var(--rule); border-radius: 8px; background: var(--panel); }
+.words summary { padding: 10px 14px; cursor: pointer; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.words summary .j { font: 500 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+.words summary .m { font: 600 15px/1 var(--body); }
+.words summary .t { color: var(--dim); font-size: 14px; flex: 1 1 320px; }
+.words .body { padding: 2px 14px 14px; display: grid; gap: 10px; color: var(--dim); max-width: 80ch; }
+.words .body b.h { display: block; font: 500 11px/1.4 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink); margin-bottom: 2px; }
+.words ul { margin: 0; padding-left: 1.1em; display: grid; gap: 3px; }
+
+.stage { display: grid; gap: 24px; align-items: start; }
+.stage.phone-single { grid-template-columns: minmax(0, 1fr) 390px; }
+.stage.pair { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.col { display: grid; gap: 10px; min-width: 0; align-content: start; }
+.col-head { display: grid; gap: 2px; }
+.col-head b { font-weight: 600; }
+.col-head span { color: var(--dim); font-size: 13px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.shot { border: 1px solid var(--rule); border-radius: 6px; background: var(--panel); overflow-x: auto; }
+.shot img { display: block; width: 100%; height: auto; }
+.actual .shot img { width: 1280px; max-width: none; }
+.phone .shot { width: min(390px, 100%); margin-inline: auto; }
+.sticky { position: sticky; top: 76px; display: grid; gap: 14px; }
+
+/* modes view */
+.explain { border: 1px solid var(--rule); border-radius: 8px; background: var(--panel); padding: 14px 16px; display: grid; gap: 8px; max-width: 90ch; color: var(--dim); }
+.explain b { color: var(--ink); font-weight: 500; }
+.chart { border: 1px solid var(--rule); border-radius: 8px; background: var(--panel); padding: 16px 18px 12px; display: grid; gap: 12px; }
+.chart-top { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; justify-content: space-between; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--dim); font-size: 13px; align-items: center; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; vertical-align: -1px; margin-right: 6px; }
+.legend i.solid { background: var(--ink); }
+.legend i.ring { border: 2px solid var(--ink); }
+.legend i.tick { width: 2px; height: 14px; border-radius: 0; background: var(--accent); margin-right: 8px; }
+.rows { display: grid; gap: 0; }
+.row { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 14px; align-items: center; padding: 10px 0; border-top: 1px solid var(--rule); }
+.row .lab { display: grid; gap: 1px; }
+.row .lab b { font-weight: 500; }
+.row .lab span { font: 500 11px/1.3 var(--mono); color: var(--dim); }
+.track { position: relative; height: 28px; margin-inline: 8px; }
+.track.grid-lines { background-image: repeating-linear-gradient(to right, var(--rule) 0, var(--rule) 1px, transparent 1px, transparent calc(100% / 6)); background-size: calc(100% + 1px) 100%; }
+.dot { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; padding: 0; border: 2px solid var(--ink); background: var(--ink); box-shadow: 0 0 0 2px var(--panel); }
+.dot.ring { background: var(--panel); }
+.dot:hover, .dot:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; z-index: 3; }
+.mean { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--accent); pointer-events: none; }
+.axis { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 14px; }
+.axis > div { position: relative; height: 18px; margin-inline: 8px; font: 500 11px/1 var(--mono); color: var(--dim); }
+.axis span { position: absolute; transform: translateX(-50%); }
+.readout { min-height: 22px; font: 500 13px/1.4 var(--mono); color: var(--ink); }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; align-items: start; }
+table.t { border-collapse: collapse; width: 100%; font-size: 14px; }
+table.t th, table.t td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+table.t th { font: 500 11px/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); background: var(--panel); position: sticky; top: 0; }
+table.t td.n { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+table.t td.empty { color: var(--dim); }
+.tw { border: 1px solid var(--rule); border-radius: 8px; overflow-x: auto; background: var(--panel); }
+.sortable th button { background: none; border: 0; padding: 0; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; text-align: left; cursor: pointer; }
+.sortable th button[aria-sort="ascending"]::after { content: " \2191"; }
+.sortable th button[aria-sort="descending"]::after { content: " \2193"; }
+.sortable tbody tr { cursor: pointer; }
+.sortable tbody tr:hover td { background: var(--panel-2); }
+.sortable td a { text-decoration: none; font-weight: 500; }
+.modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+.mode { border: 1px solid var(--rule); border-radius: 8px; background: var(--panel); padding: 14px 16px; display: grid; gap: 10px; align-content: start; }
+.mode h4 { margin: 0; font: 600 17px/1.2 var(--body); }
+.mode p { color: var(--dim); font-size: 14px; }
+.mode p b { color: var(--ink); font-weight: 500; }
+.mode .stats { display: flex; flex-wrap: wrap; gap: 6px 14px; font: 500 12px/1.3 var(--mono); color: var(--dim); }
+.mode .stats b { color: var(--ink); font-weight: 500; }
+.mode .strip { display: flex; gap: 6px; flex-wrap: wrap; }
+.mode .strip a { display: block; width: 72px; }
+.mode .strip img { display: block; width: 100%; aspect-ratio: 7 / 5; object-fit: cover; object-position: top; border: 1px solid var(--rule); border-radius: 4px; }
+.mode .strip a:hover img, .mode .strip a:focus-visible img { border-color: var(--accent); }
+.decision { border: 1px solid var(--accent); border-radius: 8px; padding: 12px 16px; max-width: 90ch; color: var(--ink); }
+.decision b { color: var(--accent); font-weight: 600; }
+.finds { display: grid; gap: 10px; max-width: 80ch; }
+.finds h3 { margin: 6px 0 0; }
+.finds p { color: var(--dim); }
+.finds p b { color: var(--ink); font-weight: 500; }
+.finds .caveat b { color: var(--accent); }
+
+@media (max-width: 900px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .rail { display: none; }
+  .pick-narrow { display: inline-flex; }
+  .bar { position: static; }
+  .bar, .view { padding-inline: 16px; }
+  .stage.phone-single, .stage.pair { grid-template-columns: minmax(0, 1fr); }
+  .tools { margin-left: 0; }
+  .sticky { position: static; }
+  .row, .axis { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .axis > div:first-child { display: none; }
+}
+@media (prefers-reduced-motion: no-preference) { .card .thumb { transition: border-color .15s; } }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<div class="app">
+  <aside class="rail" aria-label="Designs">
+    <div class="brand"><b>Phosphor concepts</b><span id="count"></span></div>
+    <nav id="rail"></nav>
+    <p class="keys"><kbd>←</kbd> <kbd>→</kbd> design · <kbd>1</kbd>–<kbd>7</kbd> page<br><kbd>P</kbd> phone · <kbd>O</kbd> overview</p>
+  </aside>
+  <main>
+    <div class="bar">
+      <label class="field pick-narrow">View <select id="pick" aria-label="View or design"></select></label>
+      <div class="tabs" id="tabs" role="group" aria-label="Page"></div>
+      <div class="tools">
+        <div class="seg" role="group" aria-label="Screen size" id="sizeSeg">
+          <button type="button" id="m-desktop" aria-pressed="true">Desktop</button>
+          <button type="button" id="m-phone" aria-pressed="false">Phone</button>
+        </div>
+        <button type="button" class="tool-btn" id="actual" aria-pressed="false" title="Show desktop shots at their real size">1:1</button>
+        <label class="field" id="vsField">Compare <select id="vs" aria-label="Compare with"></select></label>
+      </div>
+    </div>
+    <div class="view" id="view"></div>
+  </main>
+</div>
+
+<script type="application/json" id="reviews-data">/*REVIEWS*/</script>
+<script>
+const PAGES = [['home','Home'],['chat','Chat'],['ideas','Ideas'],['plans','Plans'],['todo','To do'],['status','Status'],['settings','Settings']];
+const MODES = [
+ {id:'today', name:'Today’s page', short:'Baseline',
+  how:'The page the app has now, made inside the project to its own style rules.',
+  knew:'Everything about the app, including its written style rules.'},
+ {id:'committee', name:'Committee tournament', short:'Committee',
+  how:'Twenty-one rounds. Designs were bred and mutated from one another, then scored by panels of reviewers, each reading through one lens (type, colour, usability and so on). The owner’s notes steered the rounds. Four finalists came out.',
+  knew:'The app, the owner’s priorities and notes, and the scores from earlier rounds.'},
+ {id:'pared', name:'One designer, pared down', short:'Pared',
+  how:'One designer read reviews of the committee’s best designs, then rebuilt one of them under five rules: green means now, amber means late, one drawing language, one instrument, each fact once.',
+  knew:'The committee designs, and the owner’s priorities.'},
+ {id:'team', name:'Blind designers, team entries', short:'Team entry',
+  how:'Four designers per team, shown the earlier designs as unlabelled pictures and told the Phosphor idea in one line. Each wrote a proposal; the team’s lead chose and built one on the app’s real pages.',
+  knew:'The earlier designs as anonymous pictures, and the one-line Phosphor idea. No owner notes or style rules.'},
+ {id:'sketch', name:'Blind designers, sketches', short:'Sketch',
+  how:'The other six designers each built a quick sketch of their own proposal on the app’s real pages.',
+  knew:'The same as the team leads.'},
+ {id:'plain', name:'From scratch, description only', short:'Scratch',
+  how:'Three designers started from a written description of the app, who uses it, its seven pages and the demo data. No pictures, no Phosphor idea. They drew standalone pages.',
+  knew:'The description of the app, nothing else.'},
+ {id:'concept', name:'From scratch, with the Phosphor idea', short:'Scratch + idea',
+  how:'The same brief, plus one paragraph: a modern, easy-to-use family app that carries the character of an old green phosphor computer screen.',
+  knew:'The description, and the one-line Phosphor idea.'}
+];
+const MODE = Object.fromEntries(MODES.map(m => [m.id, m]));
+const MOCK = 'Mockup drawn from a written description, not the app’s own templates. The daily split in the 30-day chart is invented; it adds up to the real totals.';
+const D = [
+ {id:'today',name:'Today’s page',mode:'today',medium:'app',look:'dark',nav:'top',fonts:'DM Sans, DM Mono, VT323',
+  idea:'What the family sees now, for reference.',
+  desc:'The current FamilyDB page, rendered with the same demo family as the rest.'},
+ {id:'fin-grid',name:'Grid Console, Keyed',mode:'committee',medium:'app',look:'dark',nav:'top',fonts:'IBM Plex Sans Condensed, DM Mono, Fraunces',
+  idea:'Round 21’s champion: a teal-black console with lit rails and keyed nodes.',
+  desc:'Condensed headings with coloured numerals, latched pills, and a green Add key.',
+  worth:'Top four on all eight of the committee’s lenses. The earlier blind reviewer marked it 6.',
+  gap:'Home is long: it runs about 2,170 px on desktop.'},
+ {id:'fin-desk',name:'Desk Terminal, Even Dock',mode:'committee',medium:'app',look:'dark',nav:'top',fonts:'IBM Plex Sans Condensed, IBM Plex Mono, Inter',
+  idea:'Second in the championship: a glass column on every page with the question typed on the glass.',
+  desc:'A Contents plate and ledger rows. Best soul and usability scores in the committee’s panel.',
+  worth:'The earlier blind reviewer marked it 7.5, the highest of the four.'},
+ {id:'fin-track',name:'Track Diagram, Rail Keys',mode:'committee',medium:'app',look:'dark',nav:'top',fonts:'IBM Plex Mono, Inter, Fraunces',
+  idea:'Third in the championship: serif titles with counts, and a rail from Vera’s screen to the box.',
+  desc:'Amber “was due” stamps on late items.',
+  worth:'The earlier blind reviewer marked it 6.5.',
+  gap:'The committee noted a phone composer to fix.'},
+ {id:'fin-index',name:'Lit Index, Ledger Rail',mode:'committee',medium:'app',look:'dark',nav:'top',fonts:'IBM Plex Sans Condensed, IBM Plex Mono',
+  idea:'Fourth in the championship: a poster-sized question with a lit MIND?, and a numbered index.',
+  desc:'A ledger To do and a cool bone-and-steel palette.',
+  worth:'The strongest identity and type of the four. The earlier blind reviewer marked it 7.',
+  gap:'The longest Home of any design here, about 2,560 px on desktop.'},
+ {id:'pared',name:'Lit Manual, Pared',mode:'pared',medium:'app',look:'dark',nav:'top',fonts:'IBM Plex Sans Condensed, IBM Plex Sans, IBM Plex Mono',
+  idea:'One designer’s build from the review of the early designs: start from Lit Manual, Dialled, take things away, and borrow two drawings from Trued, Yard Lit.',
+  desc:'Near-black. Green means now or yours to act on, amber means late, everything else is grey.',
+  worth:'One instrument in the whole app: a round next-plan dial on Home whose lit stem drops into the Coming up rail at NOW. Chat hangs on a spine that ends in a lit ring marked “your turn”. Ideas has a grey “line from home”.'},
+ {id:'team-a',name:'Signal',mode:'team',medium:'app',look:'dark',nav:'top',fonts:'IBM Plex Sans, Condensed and Mono',
+  idea:'A calm dark desk where phosphor green means only Vera, now or live, and each page has one lit screen that shows what its list cannot.',
+  desc:'Green only for Vera, now and live; amber for late.',
+  worth:'Home’s screen draws the next plan with a four-week trace. Chat hangs on a time spine that ends in a lit “your turn”. Ideas has a “line from home” with numbered stops. Status has a needle gauge.',
+  gap:'Places at similar drive times pile up on the Ideas line. The lesser pages weren’t restyled.'},
+ {id:'team-b',name:'The lit screen',mode:'team',medium:'app',look:'dark',nav:'top',fonts:'IBM Plex Sans and Mono; VT323 for one figure',
+  idea:'A calm, plain family app with one green phosphor screen per page, where the machine speaks and what is now glows.',
+  desc:'Plain pages, one green screen each. No section colours.',
+  worth:'Home has a readout strip (today, plans, to do, late, ideas) over three columns. Chat is a centred column with the kids’ conversations as tabs. Ideas keeps a sticky radar beside the list. Status adds a second needle for the 30-day average.',
+  gap:'At $0 spent the Status needle lies flat. The lesser pages weren’t restyled.'},
+ {id:'ben',name:'One Glow',mode:'sketch',medium:'app',look:'dark',nav:'top',fonts:'Geist, Geist Mono',
+  idea:'A calm modern page where green light only means now, live or act here, and each page has one instrument.',
+  desc:'Dark, with green kept for the instrument and the next action.',
+  worth:'Home asks “Tell Vera. Let’s plan.” beside a tall radar screen, then a figure strip and three ledger columns. The lists use who-has-what bars.'},
+ {id:'cleo',name:'One lit trace',mode:'sketch',medium:'app',look:'dark',nav:'top',fonts:'IBM Plex Sans, IBM Plex Mono',
+  idea:'A calm dark app where phosphor glows only where something is alive: Vera, now, and working.',
+  desc:'Dark, with one trace that runs through the app.',
+  worth:'A lit node marks NOW, and Coming up and To do hang on the trace. Vera’s own lines are set in mono, so the machine’s voice looks different from the family’s.'},
+ {id:'dev',name:'One Lit Screen (desk)',mode:'sketch',medium:'app',look:'dark',nav:'top',fonts:'Barlow Condensed, Figtree, IBM Plex Mono',
+  idea:'A calm dark desk with one phosphor screen per page, and the screen always holds the page’s live answer.',
+  desc:'Condensed headings over a rounded sans.',
+  worth:'A glowing line drops from Home’s screen into the Coming up timeline, so the screen and the list read as one thing. Home itself is left off the bar.'},
+ {id:'finn',name:'Afterglow (fade)',mode:'sketch',medium:'app',look:'dark',nav:'top',fonts:'IBM Plex Sans, IBM Plex Mono',
+  idea:'A calm, plain family app where only what matters now glows, and fades as it ages.',
+  desc:'Plain and dark, with glow as the only emphasis.',
+  worth:'New things glow and old ones fade, like phosphor after the beam has passed. Home asks “What needs a plan?” and its screen lists the next plans as a dotted ledger.'},
+ {id:'gia',name:'One Lit Screen (monitor)',mode:'sketch',medium:'app',look:'dark',nav:'top',fonts:'IBM Plex Sans, IBM Plex Mono',
+  idea:'One green screen per page, where Vera speaks and the numbers live, in a quiet dark app.',
+  desc:'Dark and quiet, with the green kept on the monitor.',
+  worth:'On Home the box and Next up sit inside one sticky monitor, so you write to Vera on her screen. Pages are numbered like teletext (P100 Home, P200 Vera, P300 Ideas), and a key at the foot explains the two colours.'},
+ {id:'hal',name:'Machine Voice',mode:'sketch',medium:'app',look:'dark',nav:'top',fonts:'IBM Plex Sans, Condensed and Mono',
+  idea:'Phosphor green only where the machine speaks; everything the family touches is plain.',
+  desc:'Plain dark, with green for the machine only.',
+  worth:'Home asks “Tell Vera what to plan.” inside one framed console, followed by a green readout strip of today’s counts. To do is a table.'},
+ {id:'a1',name:'Kitchen Table (green)',chosen:true,mode:'plain',medium:'mock',look:'warm',nav:'sidebar',fonts:'Fraunces, Atkinson Hyperlegible',
+  idea:'FamilyDB should feel like the family’s kitchen table: Vera is the first thing you can talk to, and everything else is a short pile of plain-language cards you can take in at a glance.',
+  desc:'Cream paper, deep green for Vera’s box, a sunny yellow Send, brick red only for late. Each person has a colour.',
+  worth:'When Vera does something, the chat shows it as a card (“Added to Plans”). Each idea’s drive time has a small arrow pointing the way. Settings opens with a banner for the one thing that needs a look, with its fix.',
+  gap:MOCK},
+ {id:'a2',name:'Kitchen Table (tomato)',mode:'plain',medium:'mock',look:'warm',nav:'sidebar',fonts:'Fraunces, Figtree',
+  idea:'FamilyDB is the family’s kitchen table: Vera sits at it, and everything the family keeps track of is laid out on warm paper cards, in plain words, with one bright colour for “this needs you”.',
+  desc:'Warm paper with tomato red as the only accent. Vera is a small drawn tomato with a sprout.',
+  worth:'Tomorrow’s plan is a tear-off calendar leaf. “Finish setting up” is the one dark card on Home. Ideas can be sorted by distance.',
+  gap:MOCK},
+ {id:'a3',name:'Kitchen Table (teal)',mode:'plain',medium:'mock',look:'warm',nav:'sidebar',fonts:'Fraunces, Atkinson Hyperlegible',
+  idea:'The website is the family’s kitchen table on a Saturday morning: Vera is there to talk to, today’s stuff is on top, and everything else is one tap away.',
+  desc:'Warm paper, deep teal for Vera and the next plan, tomato only for late, amber only for “needs a look”.',
+  worth:'The next plan is a teal card with a roller-skate drawing. Status lists each connection with its own Add or Set up button. Settings has a “Who can sign in” card.',
+  gap:MOCK},
+ {id:'b1',name:'Afterglow (scanlines)',mode:'concept',medium:'mock',look:'dark',nav:'sidebar',fonts:'VT323, IBM Plex Mono, Atkinson Hyperlegible',
+  idea:'A calm, dark family screen with the glow of an old green terminal: what Vera keeps shines soft green, and only what needs a person lights up amber.',
+  desc:'Green-black glass with faint scanlines.',
+  worth:'“Hi Sam” with a blinking cursor. The next plan counts down (“1 DAY”). Ideas has a “How far from home” radar. Status gives its verdict over an oscilloscope trace, and spend is an LED bar.',
+  gap:MOCK},
+ {id:'b2',name:'Kitchen Terminal',mode:'concept',medium:'mock',look:'dark',nav:'sidebar',fonts:'VT323, Atkinson Hyperlegible, IBM Plex Mono',
+  idea:'The family’s shared kitchen-counter screen, drawn in the light of an old green phosphor monitor, with Vera as the friendly face on it.',
+  desc:'Phosphor black and one glowing green, amber as the second phosphor. Vera’s replies are in glowing mono.',
+  worth:'Home opens with Vera speaking first. Plans fills the next plans with solid green and asks how past ones went with one-tap buttons. Settings has an ordered “Do these first”.',
+  gap:MOCK},
+ {id:'b3',name:'Afterglow (smiling terminal)',mode:'concept',medium:'mock',look:'dark',nav:'sidebar',fonts:'VT323, JetBrains Mono, Atkinson Hyperlegible Next',
+  idea:'A warm family app that glows like an old green phosphor screen. The terminal is in the light, the type and the > prompt; the reading and the words are modern and friendly.',
+  desc:'Near-black green glass with a soft glow. Vera’s mark is a small smiling terminal.',
+  worth:'Anywhere you can talk to Vera starts with a glowing >. Ideas has an “Around home” radar and a “Free weekend?” card. Status labels its 30-day bars with their values.',
+  gap:MOCK}
+];
+const HOME_H = /*HOMEH*/{};
+D.forEach(d => { const h = HOME_H[d.id]; if (h) { d.homeH = h[0]; d.homePhoneH = h[1]; } });
+const R = JSON.parse(document.getElementById('reviews-data').textContent || '{}');
+// R[id] = { marks:{A,B,C}, words:{A,B,C} } ; judges: A = first run (16 designs), B and C = the two runs of 20
+const JUDGES = [['A','Judge 1 (16 designs)'],['B','Judge 2 (20 designs)'],['C','Judge 3 (20 designs)']];
+const BY = Object.fromEntries(D.map(d => [d.id, d]));
+const LOOK = {warm:'Warm light', dark:'Dark phosphor'};
+const MEDIUM = {app:'Real app pages', mock:'Mockup'};
+const NAV = {top:'Top bar', sidebar:'Sidebar'};
+D.forEach(d => {
+  const m = (R[d.id] && R[d.id].marks) || {};
+  d.marks = m;
+  const v = Object.values(m).filter(x => typeof x === 'number');
+  d.mean = v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+  d.n = v.length;
+});
+const RANKED = D.filter(d => d.mean !== null).sort((a, b) => b.mean - a.mean);
+D.forEach(d => { d.rank = d.mean === null ? null : RANKED.indexOf(d) + 1; });
+const fmt = x => x === null || x === undefined ? '–' : (Math.round(x * 10) / 10).toFixed(1);
+
+const state = {id:'overview', page:'home', mode:'desktop', vs:'', actual:false, group:'mode', by:'mode', sort:'mean', dir:-1};
+const $ = id => document.getElementById(id);
+const order = D.slice().sort((a, b) => MODES.findIndex(m => m.id === a.mode) - MODES.findIndex(m => m.id === b.mode)).map(d => d.id);
+const VIEWS = ['overview', 'modes', 'scores'];
+
+function parse(h) {
+  const p = h.replace(/^#/, '').split('.');
+  if (p[0] && (VIEWS.includes(p[0]) || BY[p[0]])) state.id = p[0];
+  if (p[1] && PAGES.some(x => x[0] === p[1])) state.page = p[1];
+  state.mode = p[2] === 'phone' ? 'phone' : 'desktop';
+  state.vs = p[3] && BY[p[3]] && p[3] !== state.id ? p[3] : '';
+}
+function hash() { return [state.id, state.page, state.mode, state.vs].join('.').replace(/\.+$/, ''); }
+function go(patch) {
+  Object.assign(state, patch);
+  if (state.vs === state.id || VIEWS.includes(state.id)) state.vs = '';
+  render();
+  try { history.replaceState(null, '', '#' + hash()); } catch (e) {}
+  window.scrollTo(0, 0);
+}
+const src = (id, page, tail) => 'img/' + id + '/' + page + tail + '.webp';
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function md(t) {
+  if (!t) return '';
+  const lines = String(t).split('\n'); let out = '', ul = false;
+  for (const raw of lines) {
+    const l = raw.trim(); if (!l) continue;
+    const inline = esc(l.replace(/^[-*]\s+/, '')).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    if (/^[-*]\s+/.test(l)) { if (!ul) { out += '<ul>'; ul = true; } out += '<li>' + inline + '</li>'; }
+    else { if (ul) { out += '</ul>'; ul = false; } out += '<p>' + inline + '</p>'; }
+  }
+  return out + (ul ? '</ul>' : '');
+}
+
+function buildStatic() {
+  $('count').textContent = D.length + ' looks for FamilyDB';
+  const link = (id, label, small) => '<a href="#' + id + '" data-go="' + id + '" id="r-' + id + '"><span>' + label + '</span><small>' + (small || '') + '</small></a>';
+  let rail = '<div class="nav">' + link('overview', 'Overview', 'grid') + link('modes', 'Modes compared', 'chart') + link('scores', 'Scoreboard', 'table') + '</div>';
+  let pick = '<option value="overview">Overview</option><option value="modes">Modes compared</option><option value="scores">Scoreboard</option>';
+  for (const m of MODES) {
+    const items = D.filter(d => d.mode === m.id);
+    rail += '<div class="group"><div class="group-label">' + m.name + '</div><div class="nav">' +
+      items.map(d => link(d.id, d.name + (d.chosen ? ' \u2605' : ''), fmt(d.mean))).join('') + '</div></div>';
+    pick += '<optgroup label="' + m.name + '">' + items.map(d => '<option value="' + d.id + '">' + d.name + '</option>').join('') + '</optgroup>';
+  }
+  $('rail').innerHTML = rail;
+  $('pick').innerHTML = pick;
+  $('tabs').innerHTML = PAGES.map(([k, l], i) => '<button type="button" data-page="' + k + '" title="Key ' + (i + 1) + '">' + l + '</button>').join('');
+  $('vs').innerHTML = '<option value="">None</option>' + D.map(d => '<option value="' + d.id + '">' + d.name + '</option>').join('');
+}
+
+const chip = (t, cls) => '<span class="chip ' + (cls || '') + '">' + t + '</span>';
+const traitChips = d => (d.chosen ? chip('Chosen for FamilyDB', 'mark') : '') + chip(MODE[d.mode].short) + chip(MEDIUM[d.medium]) + chip(LOOK[d.look]) + chip(NAV[d.nav]);
+
+function overview() {
+  const pl = PAGES.find(p => p[0] === state.page)[1];
+  const byMode = state.group === 'mode';
+  let h = '<div class="head"><h1>All designs, ' + pl + '</h1>' +
+    '<p class="lede">Pick a page above to see it in every design. Click one to open it at full size. Thumbnails show the top of each desktop page. The number on each card is the mean mark from the blind judges.</p>' +
+    '<div class="tools left"><div class="seg" role="group" aria-label="Grouping"><button type="button" data-group="mode" aria-pressed="' + byMode + '">Group by mode</button><button type="button" data-group="rank" aria-pressed="' + !byMode + '">Rank by mark</button></div></div></div>';
+  const card = d => '<a class="card" href="#' + d.id + '.' + state.page + '" data-go="' + d.id + '"><img class="thumb" loading="lazy" src="' + src(d.id, state.page, '-t') + '" alt="' + d.name + ', ' + pl + '">' +
+    (d.mean !== null ? '<span class="score">' + fmt(d.mean) + '</span>' : '') +
+    '<span class="name">' + d.name + (d.chosen ? ' \u2605' : '') + '</span><span class="meta">' + MODE[d.mode].short + ' · ' + LOOK[d.look] + '</span></a>';
+  if (byMode) {
+    for (const m of MODES) h += '<section class="ov-group"><h3>' + m.name + '</h3><div class="grid">' + D.filter(d => d.mode === m.id).map(card).join('') + '</div></section>';
+  } else {
+    h += '<section class="ov-group"><h3>Best to worst, by mean mark</h3><div class="grid">' + RANKED.map(card).join('') + '</div></section>';
+  }
+  return h;
+}
+
+function shot(d) {
+  const pl = PAGES.find(p => p[0] === state.page)[1], ph = state.mode === 'phone';
+  return '<div class="shot"><img src="' + src(d.id, state.page, ph ? '-phone' : '') + '" alt="' + d.name + ', ' + pl + ', ' + (ph ? 'phone' : 'desktop') + '" width="' + (ph ? 585 : 1280) + '"></div>';
+}
+function notes(d) {
+  return '<div class="notes"><p><b>Look</b>' + d.desc + '</p>' +
+    (d.worth ? '<p><b>Worth a look</b>' + d.worth + '</p>' : '') +
+    (d.gap ? '<p class="gap"><b>Unfinished</b>' + d.gap + '</p>' : '') + '</div>';
+}
+function marksOf(d) {
+  if (d.mean === null) return '<div class="marks"><span class="each">Not marked by the blind judges. This is the baseline all the others are measured against by eye.</span></div>';
+  const each = JUDGES.filter(([k]) => typeof d.marks[k] === 'number').map(([k, l]) => '<span class="each">' + l.replace(/ \(.*\)/, '') + ' <b>' + fmt(d.marks[k]) + '</b></span>').join('');
+  return '<div class="marks"><span class="big">' + fmt(d.mean) + '<small>/ 10 mean · rank ' + d.rank + ' of ' + RANKED.length + '</small></span>' + each + '</div>';
+}
+function wordsOf(d) {
+  const w = (R[d.id] && R[d.id].words) || {};
+  const items = JUDGES.filter(([k]) => w[k]).map(([k, l]) => {
+    const x = w[k];
+    const body = [['What it is', x.what], ['What works', x.works], ['What doesn’t', x.doesnt], ['Beautiful', x.beautiful], ['Ugly', x.ugly]]
+      .filter(r => r[1]).map(r => '<div><b class="h">' + r[0] + '</b>' + md(r[1]) + '</div>').join('');
+    return '<details><summary><span class="j">' + l + '</span><span class="m">' + fmt(d.marks[k]) + '</span><span class="t">' + esc(x.markText || '') + '</span></summary><div class="body">' + body + '</div></details>';
+  });
+  return items.length ? '<div class="words"><h3 class="sec">What the blind judges said</h3>' + items.join('') + '</div>' : '';
+}
+function headOf(d, withArrows, full) {
+  const i = order.indexOf(d.id), n = order.length;
+  return '<div class="head"><div class="head-top"><h2>' + d.name + '</h2>' +
+    (withArrows ? '<span class="nav-arrows"><button type="button" data-step="-1" aria-label="Previous design">←</button><button type="button" data-step="1" aria-label="Next design">→</button></span>' : '') +
+    '</div><div class="chips">' + traitChips(d) + '</div>' +
+    (full ? '<p class="idea">“' + d.idea + '”</p><p class="where">' + d.fonts + ' · ' + (i + 1) + ' of ' + n + '</p>' : '') + '</div>';
+}
+function detail() {
+  const d = BY[state.id], v = state.vs ? BY[state.vs] : null;
+  if (v) {
+    const col = x => '<div class="col"><div class="col-head"><b>' + x.name + ' <span class="chip mark">' + fmt(x.mean) + '</span></b><span>' + MODE[x.mode].short + ' · ' + LOOK[x.look] + ' · ' + x.idea + '</span></div>' + shot(x) + '</div>';
+    return headOf(d, true, false) + '<div class="stage pair ' + state.mode + (state.actual ? ' actual' : '') + '">' + col(d) + col(v) + '</div>';
+  }
+  if (state.mode === 'phone') {
+    return '<div class="stage phone-single phone"><div class="sticky">' + headOf(d, true, true) + marksOf(d) + notes(d) + '</div><div class="col">' + shot(d) + '</div></div>' + wordsOf(d);
+  }
+  return headOf(d, true, true) + marksOf(d) + notes(d) + '<div class="stage ' + (state.actual ? 'actual' : '') + '"><div class="col">' + shot(d) + '</div></div>' + wordsOf(d);
+}
+
+/* ---- modes view ---- */
+const GROUPERS = {
+  mode: {label: 'How it was made', rows: () => MODES.map(m => ({id: m.id, name: m.name, sub: m.short, items: D.filter(d => d.mode === m.id)}))},
+  look: {label: 'Look', rows: () => Object.keys(LOOK).map(k => ({id: k, name: LOOK[k], sub: k === 'warm' ? 'cream paper, serif, light' : 'near-black, green glow', items: D.filter(d => d.look === k)}))},
+  medium: {label: 'Medium', rows: () => Object.keys(MEDIUM).map(k => ({id: k, name: MEDIUM[k], sub: k === 'app' ? 'built on the live templates' : 'standalone pages from a description', items: D.filter(d => d.medium === k)}))},
+  nav: {label: 'Navigation', rows: () => Object.keys(NAV).map(k => ({id: k, name: NAV[k], sub: k === 'top' ? 'bar across the top' : 'rail down the side', items: D.filter(d => d.nav === k)}))}
+};
+const LO = 3, HI = 9;
+const pct = v => ((v - LO) / (HI - LO) * 100);
+function stats(items) {
+  const v = items.map(d => d.mean).filter(x => x !== null);
+  if (!v.length) return null;
+  return {n: v.length, mean: v.reduce((a, b) => a + b, 0) / v.length, min: Math.min(...v), max: Math.max(...v)};
+}
+function chartRows(groupKey) {
+  return GROUPERS[groupKey].rows().map(r => ({...r, st: stats(r.items)})).filter(r => r.st).sort((a, b) => groupKey === 'mode' ? 0 : b.st.mean - a.st.mean);
+}
+function lanes(items) {
+  const sorted = items.filter(d => d.mean !== null).sort((a, b) => a.mean - b.mean), last = [], out = [];
+  for (const d of sorted) {
+    let l = 0; while (last[l] !== undefined && d.mean - last[l] < 0.28) l++;
+    last[l] = d.mean; out.push({d, l});
+  }
+  return out;
+}
+function chart() {
+  const rows = chartRows(state.by);
+  let h = '<div class="chart"><div class="chart-top"><div class="seg" role="group" aria-label="Group the chart by">' +
+    Object.entries(GROUPERS).map(([k, g]) => '<button type="button" data-by="' + k + '" aria-pressed="' + (state.by === k) + '">' + g.label + '</button>').join('') +
+    '</div><div class="legend"><span><i class="solid"></i>Warm light</span><span><i class="ring"></i>Dark phosphor</span><span><i class="tick"></i>Group mean</span></div></div><div class="rows">';
+  for (const r of rows) {
+    const L = lanes(r.items), nl = Math.max(1, ...L.map(x => x.l + 1)), hh = 14 + nl * 18;
+    h += '<div class="row"><div class="lab"><b>' + r.name + '</b><span>' + r.st.n + ' design' + (r.st.n === 1 ? '' : 's') + ' · mean ' + fmt(r.st.mean) + ' · ' + fmt(r.st.min) + '–' + fmt(r.st.max) + '</span></div>' +
+      '<div class="track grid-lines" data-h="' + hh + '"><span class="mean" data-left="' + pct(r.st.mean) + '"></span>' +
+      L.map(({d, l}) => '<button type="button" class="dot ' + (d.look === 'dark' ? 'ring' : '') + '" data-left="' + pct(d.mean) + '" data-top="' + (14 + l * 18 - 2) + '" data-go="' + d.id + '" data-tip="' + esc(d.name) + ': mean ' + fmt(d.mean) + ' (' + MODE[d.mode].short + ', ' + LOOK[d.look] + ', ' + MEDIUM[d.medium] + ')" aria-label="' + esc(d.name) + ', mean ' + fmt(d.mean) + '"></button>').join('') + '</div></div>';
+  }
+  h += '</div><div class="axis"><div></div><div>' + [3, 4, 5, 6, 7, 8, 9].map(v => '<span data-left="' + pct(v) + '">' + v + '</span>').join('') + '</div></div><div class="readout" id="readout" aria-live="polite">Hover or focus a dot to name the design. Click it to open.</div></div>';
+  return h;
+}
+function twoByTwo() {
+  const cell = (look, medium) => {
+    const it = D.filter(d => d.look === look && d.medium === medium), s = stats(it);
+    return s ? '<td class="n">' + fmt(s.mean) + ' <span class="where">(' + s.n + ')</span></td>' : '<td class="empty">none made</td>';
+  };
+  return '<div class="tw"><table class="t"><thead><tr><th></th><th>Real app pages</th><th>Mockup</th></tr></thead><tbody>' +
+    '<tr><th>Warm light</th>' + cell('warm', 'app') + cell('warm', 'mock') + '</tr>' +
+    '<tr><th>Dark phosphor</th>' + cell('dark', 'app') + cell('dark', 'mock') + '</tr></tbody></table></div>';
+}
+function modeCards() {
+  return '<div class="modes">' + MODES.map(m => {
+    const items = D.filter(d => d.mode === m.id), s = stats(items), best = items.filter(d => d.mean !== null).sort((a, b) => b.mean - a.mean)[0];
+    return '<div class="mode"><h4>' + m.name + '</h4><p><b>How:</b> ' + m.how + '</p><p><b>What they knew:</b> ' + m.knew + '</p>' +
+      '<div class="stats"><span>' + items.length + ' design' + (items.length === 1 ? '' : 's') + '</span>' + (s ? '<span>mean <b>' + fmt(s.mean) + '</b></span><span>range <b>' + fmt(s.min) + '–' + fmt(s.max) + '</b></span>' : '<span>not marked</span>') + (best ? '<span>best: <b>' + esc(best.name) + '</b></span>' : '') + '</div>' +
+      '<div class="strip">' + items.map(d => '<a href="#' + d.id + '.home" data-go="' + d.id + '" title="' + esc(d.name) + '"><img loading="lazy" src="' + src(d.id, 'home', '-t') + '" alt="' + esc(d.name) + '"></a>').join('') + '</div></div>';
+  }).join('') + '</div>';
+}
+const FINDINGS = /*FINDINGS*/'';
+function modesView() {
+  return '<div class="decision"><b>Decision.</b> Kitchen Table (green), \u2605, is the look chosen for FamilyDB. Phosphor stays a design system in its own right; this is a verdict on this app, not on the idea.</div>' +
+    '<div class="head"><h1>Modes compared</h1><p class="lede">Seven ways the designs were made, set against three blind judges’ marks. Each dot is one design, at its mean mark across the judges who saw it.</p></div>' +
+    chart() +
+    '<div class="two"><div class="head"><h3 class="sec">Look and medium together</h3><p class="lede">Mean mark, with the number of designs in brackets. The empty cell is the catch: every warm design is a mockup, so look and medium cannot be told apart in these marks.</p>' + twoByTwo() + '</div></div>' +
+    '<div class="head"><h3 class="sec">The seven modes</h3></div>' + modeCards() +
+    '<div class="finds">' + FINDINGS + '</div>';
+}
+
+/* ---- scoreboard ---- */
+const COLS = [
+  ['rank', 'Rank', d => d.rank === null ? 999 : d.rank, d => d.rank === null ? '–' : d.rank, 'n'],
+  ['name', 'Design', d => d.name.toLowerCase(), d => '<a href="#' + d.id + '.home" data-go="' + d.id + '">' + esc(d.name) + (d.chosen ? ' \u2605' : '') + '</a>'],
+  ['mode', 'Mode', d => MODES.findIndex(m => m.id === d.mode), d => MODE[d.mode].short],
+  ['look', 'Look', d => d.look, d => LOOK[d.look]],
+  ['medium', 'Medium', d => d.medium, d => MEDIUM[d.medium]],
+  ['nav', 'Nav', d => d.nav, d => NAV[d.nav]],
+  ['mean', 'Mean', d => d.mean === null ? -1 : d.mean, d => fmt(d.mean), 'n'],
+  ['A', 'Judge 1', d => d.marks.A === undefined ? -1 : d.marks.A, d => fmt(d.marks.A), 'n'],
+  ['B', 'Judge 2', d => d.marks.B === undefined ? -1 : d.marks.B, d => fmt(d.marks.B), 'n'],
+  ['C', 'Judge 3', d => d.marks.C === undefined ? -1 : d.marks.C, d => fmt(d.marks.C), 'n'],
+  ['hh', 'Home, desktop', d => d.homeH || 0, d => d.homeH ? d.homeH.toLocaleString('en-US') + ' px' : '–', 'n'],
+  ['hp', 'Home, phone', d => d.homePhoneH || 0, d => d.homePhoneH ? d.homePhoneH.toLocaleString('en-US') + ' px' : '–', 'n'],
+  ['fonts', 'Type', d => d.fonts.toLowerCase(), d => esc(d.fonts)]
+];
+function scores() {
+  const col = COLS.find(c => c[0] === state.sort) || COLS[6];
+  const rows = D.slice().sort((a, b) => { const x = col[2](a), y = col[2](b); return (x < y ? -1 : x > y ? 1 : 0) * state.dir; });
+  return '<div class="head"><h1>Scoreboard</h1><p class="lede">Every design with its marks and what can be measured from the pictures. Click a column to sort and a row to open the design. Home lengths are the full page at 1280 px wide and at phone width, in CSS pixels; a longer Home means more scrolling.</p></div>' +
+    '<div class="tw"><table class="t sortable"><thead><tr>' + COLS.map(c => '<th scope="col"><button type="button" data-sort="' + c[0] + '" aria-sort="' + (state.sort === c[0] ? (state.dir > 0 ? 'ascending' : 'descending') : 'none') + '">' + c[1] + '</button></th>').join('') + '</tr></thead><tbody>' +
+    rows.map(d => '<tr data-go="' + d.id + '">' + COLS.map(c => '<td class="' + (c[4] || '') + (c[3](d) === '–' ? ' empty' : '') + '">' + c[3](d) + '</td>').join('') + '</tr>').join('') + '</tbody></table></div>' +
+    '<p class="lede">Judge 1 saw sixteen designs; Judges 2 and 3 saw twenty, with the four committee finalists added, each in a different shuffled order. All three were given only a role (an expert graphic and interface designer), a three-sentence description of the app and the pictures. Marks are out of 10.</p>';
+}
+
+function applyPos() {
+  document.querySelectorAll('[data-left]').forEach(el => { el.style.left = el.dataset.left + '%'; });
+  document.querySelectorAll('[data-top]').forEach(el => { el.style.top = el.dataset.top + 'px'; });
+  document.querySelectorAll('[data-h]').forEach(el => { el.style.height = el.dataset.h + 'px'; });
+}
+function render() {
+  const id = state.id, isDetail = !VIEWS.includes(id);
+  $('view').innerHTML = id === 'overview' ? overview() : id === 'modes' ? modesView() : id === 'scores' ? scores() : detail();
+  document.querySelectorAll('#rail a').forEach(a => a.setAttribute('aria-current', a.dataset.go === id ? 'true' : 'false'));
+  document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.page === state.page ? 'true' : 'false'));
+  const showPageControls = isDetail || id === 'overview';
+  $('tabs').hidden = !showPageControls;
+  $('sizeSeg').hidden = !isDetail;
+  $('actual').hidden = !isDetail || state.mode === 'phone';
+  $('vsField').hidden = !isDetail;
+  $('m-desktop').setAttribute('aria-pressed', state.mode === 'desktop');
+  $('m-phone').setAttribute('aria-pressed', state.mode === 'phone');
+  $('actual').setAttribute('aria-pressed', state.actual);
+  $('pick').value = id;
+  $('vs').value = state.vs;
+  applyPos();
+  document.title = (isDetail ? BY[id].name + ' · ' : id === 'modes' ? 'Modes compared · ' : id === 'scores' ? 'Scoreboard · ' : '') + 'Phosphor Concept Viewer';
+}
+
+function step(n) {
+  if (VIEWS.includes(state.id)) return go({id: order[n > 0 ? 0 : order.length - 1]});
+  const i = (order.indexOf(state.id) + n + order.length) % order.length;
+  go({id: order[i]});
+}
+
+document.addEventListener('click', e => {
+  const a = e.target.closest('[data-go]');
+  if (a) { e.preventDefault(); go({id: a.dataset.go}); return; }
+  const t = e.target.closest('[data-page]'); if (t) { go({page: t.dataset.page}); return; }
+  const s = e.target.closest('[data-step]'); if (s) { step(Number(s.dataset.step)); return; }
+  const g = e.target.closest('[data-group]'); if (g) { state.group = g.dataset.group; render(); return; }
+  const b = e.target.closest('[data-by]'); if (b) { state.by = b.dataset.by; render(); return; }
+  const so = e.target.closest('[data-sort]');
+  if (so) { const k = so.dataset.sort; if (state.sort === k) state.dir = -state.dir; else { state.sort = k; state.dir = (k === 'name' || k === 'rank' || k === 'mode' || k === 'look' || k === 'medium' || k === 'nav' || k === 'fonts') ? 1 : -1; } render(); }
+});
+function tip(e) {
+  const d = e.target.closest && e.target.closest('.dot'), r = $('readout');
+  if (d && r) r.textContent = d.dataset.tip;
+}
+document.addEventListener('mouseover', tip);
+document.addEventListener('focusin', tip);
+$('m-desktop').addEventListener('click', () => go({mode: 'desktop'}));
+$('m-phone').addEventListener('click', () => go({mode: 'phone'}));
+$('actual').addEventListener('click', () => { state.actual = !state.actual; render(); });
+$('pick').addEventListener('change', e => go({id: e.target.value}));
+$('vs').addEventListener('change', e => go({vs: e.target.value}));
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey || /^(SELECT|INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); step(1); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); step(-1); }
+  else if (/^[1-7]$/.test(e.key)) go({page: PAGES[Number(e.key) - 1][0]});
+  else if (e.key === 'p' || e.key === 'P') go({mode: state.mode === 'phone' ? 'desktop' : 'phone'});
+  else if (e.key === 'o' || e.key === 'O') go({id: 'overview'});
+});
+
+buildStatic();
+parse(location.hash);
+render();
+</script>

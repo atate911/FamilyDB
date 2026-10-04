@@ -1,0 +1,102 @@
+{
+ "a1": {
+  "lum": 0.917,
+  "homeH": 1668,
+  "homePhoneH": 3030
+ },
+ "a2": {
+  "lum": 0.932,
+  "homeH": 1399,
+  "homePhoneH": 2454
+ },
+ "a3": {
+  "lum": 0.926,
+  "homeH": 1615,
+  "homePhoneH": 2910
+ },
+ "b1": {
+  "lum": 0.106,
+  "homeH": 1486,
+  "homePhoneH": 2709
+ },
+ "b2": {
+  "lum": 0.108,
+  "homeH": 1553,
+  "homePhoneH": 2662
+ },
+ "b3": {
+  "lum": 0.097,
+  "homeH": 1271,
+  "homePhoneH": 2663
+ },
+ "ben": {
+  "lum": 0.072,
+  "homeH": 1517,
+  "homePhoneH": 2859
+ },
+ "cleo": {
+  "lum": 0.084,
+  "homeH": 1349,
+  "homePhoneH": 2733
+ },
+ "dev": {
+  "lum": 0.095,
+  "homeH": 1712,
+  "homePhoneH": 2993
+ },
+ "fin-desk": {
+  "lum": 0.109,
+  "homeH": 1831,
+  "homePhoneH": 2952
+ },
+ "fin-grid": {
+  "lum": 0.103,
+  "homeH": 2167,
+  "homePhoneH": 3793
+ },
+ "fin-index": {
+  "lum": 0.1,
+  "homeH": 2562,
+  "homePhoneH": 4306
+ },
+ "fin-track": {
+  "lum": 0.105,
+  "homeH": 1807,
+  "homePhoneH": 3257
+ },
+ "finn": {
+  "lum": 0.079,
+  "homeH": 1073,
+  "homePhoneH": 2274
+ },
+ "gia": {
+  "lum": 0.08,
+  "homeH": 1511,
+  "homePhoneH": 2776
+ },
+ "hal": {
+  "lum": 0.081,
+  "homeH": 1512,
+  "homePhoneH": 2942
+ },
+ "pared": {
+  "lum": 0.084,
+  "homeH": 1441,
+  "homePhoneH": 2659
+ },
+ "team-a": {
+  "lum": 0.078,
+  "homeH": 1609,
+  "homePhoneH": 2772
+ },
+ "team-b": {
+  "lum": 0.069,
+  "homeH": 1305,
+  "homePhoneH": 2638
+ },
+ "today": {
+  "lum": 0.088,
+  "homeH": 1889,
+  "homePhoneH": 3162
+ }
+}

@@ -1,6 +1,6 @@
 <title>Phosphor Concept Viewer</title>
 <style>
-/* Layout: a fixed rail of designs on the left, a sticky bar of page tabs and view controls on top, one view below: an overview grid of every design on the chosen page, or one design (or two side by side) at full size. Neutral dark chrome so the screenshots carry all the colour. */
+/* Layout: a fixed rail (Overview, Modes, Scoreboard, then every design grouped by how it was made), a sticky bar of page tabs and view controls, and one view below: a thumbnail grid, a modes comparison with a dot chart, a sortable scoreboard, or one design (or two side by side) at full size. Neutral dark chrome so the screenshots carry all the colour. */
 :root {
   --bg: #111213; --panel: #181a1b; --panel-2: #1f2223; --rule: #2c3032; --ink: #eceeed; --dim: #9ea5a7; --accent: #e9cf84;
   --body: "IBM Plex Sans", system-ui, sans-serif;
@@ -14,6 +14,7 @@ button, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 a { color: inherit; }
+p { margin: 0; }
 
 .app { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); min-height: 100vh; }
 .rail { position: sticky; top: env(safe-area-inset-top, 0px); align-self: start; height: 100vh; overflow-y: auto; border-right: 1px solid var(--rule); background: var(--panel); padding: 20px 14px 24px; display: grid; gap: 18px; align-content: start; }
@@ -27,7 +28,7 @@ a { color: inherit; }
 .nav a { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; text-decoration: none; padding: 7px 8px; border-radius: 6px; color: var(--ink); }
 .nav a:hover { background: var(--panel-2); }
 .nav a[aria-current="true"] { background: var(--ink); color: #111; }
-.nav small { font: 500 10px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
+.nav small { font: 500 11px/1 var(--mono); letter-spacing: .04em; color: var(--dim); }
 .nav a[aria-current="true"] small { color: #444; }
 .keys { font: 400 12px/1.6 var(--mono); color: var(--dim); padding-inline: 8px; }
 .keys kbd { font: inherit; border: 1px solid var(--rule); border-radius: 4px; padding: 0 5px; color: var(--ink); }
@@ -39,6 +40,7 @@ main { min-width: 0; }
 .tabs button:hover { color: var(--ink); }
 .tabs button[aria-current="true"] { color: var(--ink); border-color: var(--accent); }
 .tools { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-left: auto; }
+.tools.left { margin-left: 0; }
 .seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 7px; overflow: hidden; }
 .seg button { background: none; border: 0; padding: 5px 12px; color: var(--dim); }
 .seg button[aria-pressed="true"] { background: var(--ink); color: #111; }
@@ -51,33 +53,51 @@ select { background: var(--panel); border: 1px solid var(--rule); border-radius:
 .view { padding: 26px 24px 80px; display: grid; gap: 28px; }
 .view > * { min-width: 0; }
 .view h1, .view h2 { margin: 0; font: 600 clamp(24px, 3vw, 32px)/1.15 var(--body); text-wrap: balance; }
-.lede { color: var(--dim); max-width: 70ch; margin: 0; }
+.view h3.sec { margin: 0; font: 600 20px/1.2 var(--body); }
+.lede { color: var(--dim); max-width: 72ch; }
 .about { border: 1px solid var(--rule); border-radius: 8px; background: var(--panel); }
 .about summary { padding: 10px 14px; cursor: pointer; color: var(--dim); }
-.about div { padding: 2px 14px 14px; display: grid; gap: 8px; color: var(--dim); max-width: 80ch; }
-.about p { margin: 0; }
+.about > div { padding: 2px 14px 14px; display: grid; gap: 8px; color: var(--dim); max-width: 80ch; }
+
+.chip { font: 500 11px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--rule); border-radius: 999px; padding: 4px 9px; color: var(--dim); white-space: nowrap; }
+.chip.mark { color: var(--ink); border-color: var(--dim); }
 
 .ov-group { display: grid; gap: 12px; }
 .ov-group > h3 { margin: 0; font: 500 12px/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); display: flex; align-items: center; gap: 12px; }
 .ov-group > h3::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
-.card { display: grid; gap: 8px; text-decoration: none; min-width: 0; }
+.card { display: grid; gap: 8px; text-decoration: none; min-width: 0; position: relative; align-content: start; }
 .card .thumb { aspect-ratio: 7 / 5; width: 100%; object-fit: cover; object-position: top; border: 1px solid var(--rule); border-radius: 6px; background: var(--panel); display: block; }
 .card:hover .thumb, .card:focus-visible .thumb { border-color: var(--accent); }
 .card .name { font-weight: 500; }
-.card .meta { font: 500 11px/1.2 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
+.card .meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font: 500 11px/1.2 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
+.card .score { position: absolute; top: 8px; right: 8px; background: rgba(17,18,19,.88); border: 1px solid var(--dim); border-radius: 6px; padding: 3px 7px; font: 500 12px/1 var(--mono); }
 
 .head { display: grid; gap: 8px; }
 .head-top { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
 .nav-arrows { display: inline-flex; gap: 6px; }
 .nav-arrows button { background: none; border: 1px solid var(--rule); border-radius: 7px; width: 34px; height: 34px; line-height: 1; color: var(--dim); }
 .nav-arrows button:hover { color: var(--ink); border-color: var(--dim); }
-.badge { font: 500 11px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--rule); border-radius: 999px; padding: 4px 9px; color: var(--dim); }
-.idea { font-size: 17px; max-width: 75ch; margin: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.idea { font-size: 17px; max-width: 75ch; }
+.marks { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 10px 0; }
+.marks .big { font: 600 28px/1 var(--body); }
+.marks .big small { font: 500 12px/1 var(--mono); color: var(--dim); margin-left: 4px; }
+.marks .each { font: 500 13px/1.4 var(--mono); color: var(--dim); }
+.marks .each b { color: var(--ink); font-weight: 500; }
 .notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px 30px; }
-.notes p { margin: 0; color: var(--dim); max-width: 62ch; }
+.notes p { color: var(--dim); max-width: 62ch; }
 .notes b { display: block; font: 500 11px/1.4 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink); margin-bottom: 2px; }
 .notes .gap b { color: var(--accent); }
+.words { display: grid; gap: 8px; }
+.words details { border: 1px solid var(--rule); border-radius: 8px; background: var(--panel); }
+.words summary { padding: 10px 14px; cursor: pointer; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.words summary .j { font: 500 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+.words summary .m { font: 600 15px/1 var(--body); }
+.words summary .t { color: var(--dim); font-size: 14px; flex: 1 1 320px; }
+.words .body { padding: 2px 14px 14px; display: grid; gap: 10px; color: var(--dim); max-width: 80ch; }
+.words .body b.h { display: block; font: 500 11px/1.4 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink); margin-bottom: 2px; }
+.words ul { margin: 0; padding-left: 1.1em; display: grid; gap: 3px; }
 
 .stage { display: grid; gap: 24px; align-items: start; }
 .stage.phone-single { grid-template-columns: minmax(0, 1fr) 390px; }
@@ -92,6 +112,63 @@ select { background: var(--panel); border: 1px solid var(--rule); border-radius:
 .phone .shot { width: min(390px, 100%); margin-inline: auto; }
 .sticky { position: sticky; top: 76px; display: grid; gap: 14px; }
 
+/* modes view */
+.explain { border: 1px solid var(--rule); border-radius: 8px; background: var(--panel); padding: 14px 16px; display: grid; gap: 8px; max-width: 90ch; color: var(--dim); }
+.explain b { color: var(--ink); font-weight: 500; }
+.chart { border: 1px solid var(--rule); border-radius: 8px; background: var(--panel); padding: 16px 18px 12px; display: grid; gap: 12px; }
+.chart-top { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; justify-content: space-between; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--dim); font-size: 13px; align-items: center; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; vertical-align: -1px; margin-right: 6px; }
+.legend i.solid { background: var(--ink); }
+.legend i.ring { border: 2px solid var(--ink); }
+.legend i.tick { width: 2px; height: 14px; border-radius: 0; background: var(--accent); margin-right: 8px; }
+.rows { display: grid; gap: 0; }
+.row { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 14px; align-items: center; padding: 10px 0; border-top: 1px solid var(--rule); }
+.row .lab { display: grid; gap: 1px; }
+.row .lab b { font-weight: 500; }
+.row .lab span { font: 500 11px/1.3 var(--mono); color: var(--dim); }
+.track { position: relative; height: 28px; margin-inline: 8px; }
+.track.grid-lines { background-image: repeating-linear-gradient(to right, var(--rule) 0, var(--rule) 1px, transparent 1px, transparent calc(100% / 6)); background-size: calc(100% + 1px) 100%; }
+.dot { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; padding: 0; border: 2px solid var(--ink); background: var(--ink); box-shadow: 0 0 0 2px var(--panel); }
+.dot.ring { background: var(--panel); }
+.dot:hover, .dot:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; z-index: 3; }
+.mean { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--accent); pointer-events: none; }
+.axis { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 14px; }
+.axis > div { position: relative; height: 18px; margin-inline: 8px; font: 500 11px/1 var(--mono); color: var(--dim); }
+.axis span { position: absolute; transform: translateX(-50%); }
+.readout { min-height: 22px; font: 500 13px/1.4 var(--mono); color: var(--ink); }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; align-items: start; }
+table.t { border-collapse: collapse; width: 100%; font-size: 14px; }
+table.t th, table.t td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+table.t th { font: 500 11px/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); background: var(--panel); position: sticky; top: 0; }
+table.t td.n { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+table.t td.empty { color: var(--dim); }
+.tw { border: 1px solid var(--rule); border-radius: 8px; overflow-x: auto; background: var(--panel); }
+.sortable th button { background: none; border: 0; padding: 0; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; text-align: left; cursor: pointer; }
+.sortable th button[aria-sort="ascending"]::after { content: " \2191"; }
+.sortable th button[aria-sort="descending"]::after { content: " \2193"; }
+.sortable tbody tr { cursor: pointer; }
+.sortable tbody tr:hover td { background: var(--panel-2); }
+.sortable td a { text-decoration: none; font-weight: 500; }
+.modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+.mode { border: 1px solid var(--rule); border-radius: 8px; background: var(--panel); padding: 14px 16px; display: grid; gap: 10px; align-content: start; }
+.mode h4 { margin: 0; font: 600 17px/1.2 var(--body); }
+.mode p { color: var(--dim); font-size: 14px; }
+.mode p b { color: var(--ink); font-weight: 500; }
+.mode .stats { display: flex; flex-wrap: wrap; gap: 6px 14px; font: 500 12px/1.3 var(--mono); color: var(--dim); }
+.mode .stats b { color: var(--ink); font-weight: 500; }
+.mode .strip { display: flex; gap: 6px; flex-wrap: wrap; }
+.mode .strip a { display: block; width: 72px; }
+.mode .strip img { display: block; width: 100%; aspect-ratio: 7 / 5; object-fit: cover; object-position: top; border: 1px solid var(--rule); border-radius: 4px; }
+.mode .strip a:hover img, .mode .strip a:focus-visible img { border-color: var(--accent); }
+.decision { border: 1px solid var(--accent); border-radius: 8px; padding: 12px 16px; max-width: 90ch; color: var(--ink); }
+.decision b { color: var(--accent); font-weight: 600; }
+.finds { display: grid; gap: 10px; max-width: 80ch; }
+.finds h3 { margin: 6px 0 0; }
+.finds p { color: var(--dim); }
+.finds p b { color: var(--ink); font-weight: 500; }
+.finds .caveat b { color: var(--accent); }
+
 @media (max-width: 900px) {
   .app { grid-template-columns: minmax(0, 1fr); }
   .rail { display: none; }
@@ -101,6 +178,8 @@ select { background: var(--panel); border: 1px solid var(--rule); border-radius:
   .stage.phone-single, .stage.pair { grid-template-columns: minmax(0, 1fr); }
   .tools { margin-left: 0; }
   .sticky { position: static; }
+  .row, .axis { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .axis > div:first-child { display: none; }
 }
 @media (prefers-reduced-motion: no-preference) { .card .thumb { transition: border-color .15s; } }
 </style>
@@ -114,114 +193,169 @@ select { background: var(--panel); border: 1px solid var(--rule); border-radius:
   </aside>
   <main>
     <div class="bar">
-      <label class="field pick-narrow">Design <select id="pick" aria-label="Design"></select></label>
+      <label class="field pick-narrow">View <select id="pick" aria-label="View or design"></select></label>
       <div class="tabs" id="tabs" role="group" aria-label="Page"></div>
       <div class="tools">
-        <div class="seg" role="group" aria-label="Screen size">
+        <div class="seg" role="group" aria-label="Screen size" id="sizeSeg">
           <button type="button" id="m-desktop" aria-pressed="true">Desktop</button>
           <button type="button" id="m-phone" aria-pressed="false">Phone</button>
         </div>
         <button type="button" class="tool-btn" id="actual" aria-pressed="false" title="Show desktop shots at their real size">1:1</button>
-        <label class="field">Compare <select id="vs" aria-label="Compare with"></select></label>
+        <label class="field" id="vsField">Compare <select id="vs" aria-label="Compare with"></select></label>
       </div>
     </div>
     <div class="view" id="view"></div>
   </main>
 </div>
 
+<script type="application/json" id="reviews-data">{"pared": {"marks": {"A": 6.5, "B": 9.0, "C": 7.0}, "words": {"A": {"what": "A near-black terminal look in phosphor green, with a top nav. Its Home is built around a glowing round countdown dial.", "works": "- The Home hero does two jobs at once. The composer sits on the left. On the right, a dial reading \"NEXT IN 1 DAY\" is joined by a green line that runs down into the \"Coming up\" timeline and its NOW node, so the next plan and the list of plans read as one thing.\n- On To do, late items carry an orange left rule and large date numbers (\"27 SEP SUN\"), with a NOW divider before \"Renew library cards\". You can see at a glance what is overdue.\n- \"Lately added\" puts the kind labels (Activity, Restaurant, Outing\u2026) on the left of a vertical rail. It is a tidy way to show a mixed list.\n- Ideas has \"The line from home\", a strip that plots each idea by drive time. It is a genuinely useful idea.", "doesnt": "- Status and Settings use very small grey-on-black type in three dense columns. They are hard to read.\n- On the phone, the \"line from home\" numbers run into each other (\"7106281\"). In the bottom tab bar, \"Wishes\" is cut off at the right edge.\n- In the phone Home the dial drops below the composer, so the line that joined it to the timeline no longer means anything.", "beautiful": "Home: the countdown dial with its glowing tick ring, and the green line that falls from it into the Coming up timeline.", "ugly": "Status page: the three columns of tiny grey bullet text (\"Who answers / Keys / Connected to\") at roughly 11 px.", "markText": "The Home has the best single idea in the dark group, but the inner pages don't carry it through and are hard to read."}, "B": {"what": "The calmest, most resolved of the CRT family. A round \"NEXT IN 1 DAY\" dial is wired directly into the Coming up timeline.", "works": "- The dial puts plan days 4, 9, 17 and 24 around a watch-like bezel. Beside it: \"then 9, 17 and 24 Oct \u2014 10\u201311 Oct free\". A green wire runs from the dial down into the timeline's \"NOW\" node.\n- To do (amber rule on late rows, NOW divider) sits next to Coming up.\n- The setup stepper ends with \"Then you're ready.\"\n- Kids' wishes are folded into one line: \"Maya, Theo \u00b7 nothing open\".\n- Lately added is a ladder from kind to item.\n- Ideas has a drive-time line whose crowded labels use leader lines, plus kind chips with counts and a clean table.\n- Plans draws a NOW line across the calendar week.\n- On phone, Plans becomes an agenda with a NOW marker.", "doesnt": "- On phone, the dial's wire runs through the \"Coming up\" heading.\n- Status is long and text-heavy.\n- It is still dark and technical for a family with young kids.", "beautiful": "Home, the glowing dial \"NEXT IN 1 DAY\" with its wire into the Coming up timeline. It is the best single gesture in all twenty.", "ugly": "Phone Home, the green wire striking through \"Coming up\".", "markText": "It is restrained, clear and inventive, with every element earning its place."}, "C": {"what": "An editorial version of the terminal look. A round dial and a green wire tie the next plan to the timeline.", "works": "Home's hero has a round dial, \"NEXT IN 1 DAY\", with the plan days (4, 9, 17, 24) on its bezel. A glowing wire drops from the dial into the NOW node of \"Coming up\". It is the best single image in the terminal group, and it means something. The setup list ends with \"Then you're ready.\" Ideas plots every idea on \"The line from home\" by drive time. The phone Plans page is an agenda with NOW placed between past and future plans. The Status title carries the money: \"Status $0.00 of $2.00\".", "doesnt": "On \"The line from home\", nearby labels collide: \"7 10 6 2 8 1\" on desktop, and \"7106281\" on the phone. On phone Home, the wire runs straight through the \"Coming up\" heading. Body typography is plain next to the hero. Chat's left rail is faint.", "beautiful": "Home, the dial and the wire into the timeline.", "ugly": "Ideas, the overlapping number labels on the drive-time line.", "markText": "It has the best idea in its group, held back by a few collisions."}}}, "a2": {"marks": {"A": 8.5, "B": 8.5, "C": 8.5}, "words": {"A": {"what": "A warm cream app with white rounded cards and tomato-red accents. It uses serif headings, a left sidebar, and a smiling tomato as the mascot.", "works": "- It is the most complete and even design of the sixteen. Every page uses the same card language, spacing and type.\n- On Home, the next plan sits beside a tear-off calendar badge (\"OCT 4 Sunday\") with the kids' avatars, \"Open plan\" and \"Move it\". It is the clearest next-plan card in the set.\n- On Home, \"Finish setting up\" is a dark brown card with a progress bar. It is the only dark block on the page, so it stands out without shouting.\n- Status (full page checked) is excellent. It opens with a plain \"Vera is working.\" summary, then shows spend with a bar, a 30-day chart, a \"Who answers what\" table with \"No backup\" pills, and five connection tiles, each with its own action button.\n- Chat has a conversation list (Family / Maya and Vera / Theo and Vera). Vera's confirmation arrives as an inline chip: \"Silver Falls hike \u00b7 On the calendar\".", "doesnt": "- The Home To do doesn't show lateness on each row. \"Was due Sun 27 Sep\" is in grey, and only the \"3 overdue\" badge in the card title says anything is wrong.\n- The 30-day chart on Status uses saturated blue bars. That colour appears nowhere else in the app.\n- On the phone, Wishes, Status and Settings sit behind a hamburger menu. Only five tabs show.\n- The tomato mascot is a bit cute for a parent's tool, though it suits the family.", "beautiful": "Home: the \"Next plan \u00b7 Tomorrow\" card, with its red-topped calendar badge, serif \"Oaks Park roller rink\", and avatar pair.", "ugly": "Status: the blue bars in the \"Last 30 days\" chart, which break an otherwise disciplined red, cream and brown palette.", "markText": "Calm, legible and consistent on every page, and the one I'd trust a non-technical family with."}, "B": {"what": "The warm cream family with a tomato-red accent and a smiling tomato mascot for Vera. It is the friendliest of the light designs.", "works": "- The composer is the hero, with a firm black outline, the tomato avatar, \"Writing as Sam\" and a red \"Send to Vera\".\n- The Next plan card has a tear-off calendar tile (red OCT, \"4 Sunday\") and \"Vera will ask how it went on Monday at 10:00\".\n- A dark espresso \"Finish setting up\" card with a salmon progress bar anchors the right rail.\n- Wish list empty states are kind (\"Maya can tell Vera what she'd love\").\n- Ideas cards say \"Planned \u00b7 Sun 4 Oct\" or \"Went \u00b7 29 Sep\", and there is a \"By distance\" tab.\n- On phone, Plans becomes an agenda with kind icons.\n- The phone Home is clean and complete.", "doesnt": "- The Status chart uses an off-palette blue.\n- On phone, the chip row is clipped.\n- The calendar's pastel chips are small and low contrast.", "beautiful": "Home, the dark \"Finish setting up\" card with its salmon progress bar, set against the cream page.", "ugly": "Status, the cobalt-blue bar chart that belongs to no other part of the palette.", "markText": "It is warm, legible and friendly to a family, and the strongest on phone."}, "C": {"what": "A warm, light, serif-headed family app: cream paper, tomato red and a tomato-face mascot.", "works": "It reads as a family app at a glance. \"Good morning, Sam.\" sits in a warm serif over a one-line summary. The composer has Vera's tomato avatar and a red \"Send to Vera\". The suggestion pills include \"What's overdue?\" and \"Plan next weekend\". The Next plan card has a tear-off calendar tile and says \"Vera will ask how it went on Monday at 10:00.\" The dark espresso setup card with a salmon progress bar is the one strong contrast block on the page. The empty wish lists are dashed cards that say what to do. Chat lets you pick \"Who's writing?\" (Sam, Alex, Maya, Theo). Calendar chips are tinted by kind. The Settings side panel explains the \"Kids' view\".", "doesnt": "Some secondary text is pale grey on cream and low in contrast. On the phone, the suggestion pills and the \"By distance\" tab are cut at the right edge. The Status bar chart switches to a cold blue that belongs to no other part of the palette.", "beautiful": "Home, the Next plan card: a red-topped \"OCT 4 Sunday\" tile beside a serif \"Oaks Park roller rink\".", "ugly": "Status, the blue bar chart in an otherwise tomato-and-cream system.", "markText": "It is warm and clear, and the most thoroughly considered product of the twenty."}}}, "b3": {"marks": {"A": 7.0, "B": 7.0, "C": 8.0}, "words": {"A": {"what": "A green CRT terminal with a left sidebar. It uses a pixel display font (\"Hello, Sam\u2588\") and puts nearly everything in a bordered card.", "works": "- The amber \"Finish setup\" card has a segmented progress bar. It is the right warning colour against the green.\n- Ideas (full page checked) has an \"Around home\" polar map, which plots each idea by drive time and compass direction. Beside it is a \"Free weekend?\" card with \"Ask Vera for a plan\".\n- Plans has a \"How was it?\" panel with Loved it / OK / Not again buttons for past outings.\n- The sidebar footer always shows \"Working \u00b7 $0.00 of $2.00 today\".", "doesnt": "- There are boxes inside boxes everywhere. Each to-do row is a bordered card inside a bordered card inside the page, so the screen feels busy.\n- Body text and labels are monospace too (\"for Maya & Theo\", \"Done \u00b7 29 Sep\"), which tires the eye over a long list.\n- The pastel pink and lavender avatar circles don't belong to the green and amber palette.", "beautiful": "Ideas: the \"Around home\" map, with faint rings, an N/E/S/W cross, green dots for places and amber dots for restaurants.", "ugly": "Home: the To do column, with four separately boxed rows, each holding a boxed checkbox and a pastel avatar, all inside another box.", "markText": "A committed, characterful theme with real ideas in it, weighed down by too many borders."}, "B": {"what": "X08 cleaned up, with a smiling monitor mascot, mono labels and a tidy two-column Home with a right rail.", "works": "- \"Hello, Sam\u2588\" with the block cursor sits next to a big smiley tile.\n- Home fills its grid with no dead zones. The right rail runs setup (with a six-segment progress bar), then To do cards with owner avatars, then a \"Vera today\" spend bar.\n- Ideas has an \"Around home\" polar plot (direction \u00d7 drive time) and a \"Free weekend? Ask Vera for a plan\" card.\n- Settings opens with an amber banner (\"3 sections need a look\") and OK / Needs a look tags.", "doesnt": "- Mono everywhere (nav, labels, chips) makes scanning slow.\n- On phone, the calendar shows only bars and today's tag is clipped to \"TODA\".\n- The status heading wraps into a very large block on phone.", "beautiful": "Ideas, the \"Around home\" polar plot with dots by direction and drive time, rings and a legend.", "ugly": "Phone Plans, the calendar with nameless green bars and the clipped \"TODA\" label.", "markText": "It is a well-organised terminal with one excellent chart. The mono-heavy text costs readability."}, "C": {"what": "A tidier X06: a sidebar app in green terminal with a smiling-monitor mascot. It is the most usable of the dark designs.", "works": "It keeps X06's product thinking (feedback, receipts, conversations, ECG status) and organises it better. The amber \"Finish setup \u00b7 3 left\" card has a segmented progress bar and an action link per step (\"Choose password \u2192\", \"Set up Telegram \u2192\"). To-dos carry round assignee initials. Ideas has an \"Around home\" map of dots and a \"Free weekend? Ask Vera for a plan\" card. Plans adds \"How was it?\" beside the calendar, and a dashed chip for \"Cannon Beach, day 2\". Status adds a 30-day bar chart. Settings adds an alert banner and a Family panel listing everyone with their role.", "doesnt": "Monospace is used for everything, body text included, which tires the eye on long pages. On the phone, the Plans calendar shrinks events to green bars with no text, so you cannot tell what is on any day without leaving the page.", "beautiful": "Home, the mascot tile beside \"Hello, Sam\u2588\". It is friendly and unmistakable.", "ugly": "Phone Plans, the calendar of unlabelled bars.", "markText": "It has the best structure in the dark group. Too much monospace is its only real cost."}}}, "gia": {"marks": {"A": 3.0, "B": 3.0, "C": 2.0}, "words": {"A": {"what": "A dark charcoal and green layout with teletext page codes (\"P100 \u00b7 Home\"). Vera's composer is drawn inside a bezelled CRT monitor.", "works": "- The CRT monitor composer on Home is a memorable object. Its \"NEXT UP\" inverse label and \"> 3 more coming\u2588\" fit the theme.\n- To do shows its tally as ASCII bars (\"With a date ###########\u2026 3\").\n- The footer legend explains the colours: \"Green: the screen, and what to do \u00b7 Amber: late, or needs a look\". That is good practice.", "doesnt": "- The Plans page is broken (full page checked). The month table has uneven column widths: Monday and Wednesday are narrow, Friday and Saturday wide. Events are plain underlined links. The Earlier and Later buttons are different heights. The day list below has no padding and sits flush against the box edge.\n- On the phone, the Plans calendar wraps event names one word per line (\"Mount / St. / Helens / day / trip\").\n- The theme stops after Home and To do. Status and Settings are plain unstyled lists.\n- On Home, the CRT column ends at about 700 px, leaving a tall empty area under it.", "beautiful": "Home: the bezelled CRT composer, with its scanline glass and the radar blip beside \"Oaks Park roller rink\".", "ugly": "Plans: the unstyled month table, with mismatched column widths and the bare list of underlined dates beneath it.", "markText": "One good object on Home, and a Plans page that looks unfinished on both desktop and phone."}, "B": {"what": "The CRT family as a Teletext terminal: \"P100 FamilyDB \u00b7 Home\" page codes, and the whole composer inside one CRT monitor.", "works": "- Committing the composer and Next up to a single monitor bezel gives Home a strong left anchor.\n- A footer legend explains the colours (\"Green: the screen, and what to do \u00b7 Amber: late, or needs a look\").\n- The To do CRT draws hash-mark bar charts (\"###########\u2026\").\n- Settings is a tidy single list with an amber bar on Sign-in.", "doesnt": "- The Plans page is broken (confirmed full size). The month grid is an unstyled table with columns of uneven width: MON is narrow, TUE wide, WED narrow. There is no today marker.\n- Under the grid, the plans list is unpadded bold/underlined text flush against its box.\n- The List/Month toggle icons touch their labels (\"\u2630List\").\n- On phone, calendar event names break one word per line.\n- Status loses its status dots and becomes plain stacked text.\n- On Home, the CRT column ends half way down, leaving the left side empty.", "beautiful": "Home, the CRT monitor holding \"What's on your mind?\" in mono with \"> What should we do today?\" prompts and \"SEND\" in caps. It is the most immersive composer in the set.", "ugly": "Plans (desktop), the uneven, unstyled calendar table above the bare unpadded list.", "markText": "A strong concept, but the calendar (a core page) is broken on desktop and phone."}, "C": {"what": "The terminal look with teletext page numbers (P100 Home, P200 Vera \u2026 P990 Settings), and the whole composer inside a tall CRT handset.", "works": "The teletext numbering is a witty idea. The handset holding the composer, suggestions and Next-up radar is a strong object, and a wire leads from it into the NOW node of \"Coming up\". Home's right column is orderly. The footer legend explains green and amber.", "doesnt": "Plans is broken. The month grid has no cell borders and uneven columns (Wed and Thu are squeezed, \"28 29\" is jammed together), events are plain underlined text, and the agenda below is an unstyled list. On the phone, event names wrap one word per line (\"Mount / St. / Helens / day / trip\"). Status is unstyled bold and plain text. Under the handset on Home, about 700 px of the left column is empty. Phone To do puts the tally and filters before the page title. In Chat, Vera's avatar is a blank grey square.", "beautiful": "Home, the green CRT handset holding the composer.", "ugly": "Plans, the unstyled calendar.", "markText": "A clever surface over pages that are visibly unfinished."}}}, "a3": {"marks": {"A": 7.0, "B": 7.5, "C": 7.5}, "words": {"A": {"what": "A cream and deep-teal sibling of X02, with serif headings, a sidebar, and a small illustrated roller skate on the next-plan card.", "works": "- Home opens with a summary sentence: \"Tomorrow is the **roller rink**. **Three to-dos are overdue**, and three setup steps are left.\" The key phrases are underlined or coloured red. It is the best opening line in the set.\n- The teal next-plan card has a line-drawn roller skate and a dashed circle. It is charming without being childish.\n- Late to-dos get a red warning line on each row (\"\u26a0 Was due Sun 27 Sep \u00b7 6 days late\").\n- Chat attaches place chips (Silver Falls hike, Pho Oregon, Oaks Park roller rink) under Vera's reply.", "doesnt": "- Phone Settings is broken. The \"Sign-in and security\" row squeezes its text into a column one word wide (\"Sign- / in / and / security / Still / the / password\u2026\"), and the row runs a full screen tall.\n- On the phone Plans calendar, chips shrink to \"Oa\u2026 Park rol\u2026 rink\".\n- Times are set with slashed zeros (\"09:00\", \"$2.00\") inside a proportional font, which looks like a font fallback.", "beautiful": "Home: the teal \"Next plan \u00b7 Tomorrow at 13:00\" card, with its calendar tile and the drawn skate on two orange wheels.", "ugly": "Phone Settings: the one-word-per-line \"Sign-in and security\" row.", "markText": "Lovely on desktop, but one obvious phone bug on a page parents will need."}, "B": {"what": "A warm cream \"paper\" app with a deep teal accent, a bold serif display face and a left sidebar. It reads like a well-made family organiser.", "works": "- \"Good morning, Sam.\" sits over one summary sentence that underlines \"roller rink\" and puts \"Three to-dos are overdue\" in red. The page tells you what matters before you scroll.\n- The teal Next plan card has a \"SUN 4 OCT\" tile, \"See the plan / Move it\" buttons and a little roller-skate drawing with yellow wheels.\n- Coming up rows carry drive times and direction pills (NNE, S, W).\n- In Chat, Vera's replies end with linked chips and a confirmation card (\"Silver Falls hike \u00b7 Added to Plans\").\n- Status opens with \"Vera is working.\" in a green band, a big serif \"$0.00\" and a 30-day bar chart.\n- Settings has a \"First-time setup\" rail and \"Who can sign in\".", "doesnt": "- The phone Settings page is broken. \"Sign-in and security\", \"Messages\" and \"Connections\" squeeze their text into a column one word wide, so the rows become tall ladders of single words (confirmed on the full phone page).\n- On phone, calendar chips shrink to \"Sil\u2026 Fa\u2026\".\n- On phone, the To do add form stacks its fields unevenly.", "beautiful": "Home, the teal \"NEXT PLAN \u00b7 TOMORROW AT 13:00\" card with the cream date tile and the roller-skate illustration.", "ugly": "Phone Settings, the \"Sign-in and security\" row with one word per line beside a stranded \"Needs a look\" tag.", "markText": "The desktop is one of the best in the set, held back by a plainly broken phone Settings page."}, "C": {"what": "A cream-and-teal sibling of X10, with heavier serif headings and an illustrated Next plan card.", "works": "The Home summary links and colours its parts: \"Tomorrow is the <u>roller rink<\/u>. **Three to-dos are overdue**\". The teal Next plan card has a roller skate drawn with amber wheels. Drive times carry small compass chips (\u25bc S, \u25c0 W, NNE). To-dos say \"Was due Sun 27 Sep \u00b7 6 days late\" in red with a warning icon, and you can add a to-do inline. Vera's chat bubble carries linked chips for the places it mentions. The Status chart prints call counts over its bars. Settings lists \"Who can sign in\", with Maya marked \"Kid \u00b7 no settings\".", "doesnt": "The phone Settings page is badly broken. The \"Sign-in and security\" row collapses to one word per line (\"Sign- / in / and / security / Still / the\u2026\"). Phone calendar chips are cut to \"Pho Or\u2026\" and \"Si.. Fa.. hike\".", "beautiful": "Home, the teal Next plan card with the drawn roller skate.", "ugly": "Phone Settings, the one-word-per-line \"Sign-in and security\" row.", "markText": "The desktop is perhaps the loveliest in the set, but the phone Settings break is serious."}}}, "team-a": {"marks": {"A": 7.0, "B": 7.5, "C": 7.0}, "words": {"A": {"what": "The most disciplined version of the dark top-nav terminal design, with CRT screens used sparingly as accents.", "works": "- Home's prompt rows explain themselves: \"What should we do today? \u2014 lands in Plans\", \"Remind me to\u2026 \u2014 lands in To do\".\n- The CRT \"Next up\" card has a four-week mini timeline (ticks at 4, 9, 17 and 24 against now / 1 wk / 2 wk / 3 wk / 4 wk). It shows the shape of the month in one line.\n- \"Finish setting up\" is a single amber-ruled bar with three step dots. It is present but doesn't take over the page.\n- Status (full page checked) has a CRT speedometer for spend ($0 to $2.00). Below it, Who answers / Keys / Connected to are aligned tables with \"WORKING\" and \"OFF\" tags and counts (\"3 of 4\").", "doesnt": "- The lower half of Status (Waiting, Worth a look) is plain stacked text.\n- On the phone, the To do filter control floats to the right instead of lining up with the page.\n- The text inside the phone CRT for \"line from home\" is very small.", "beautiful": "Status: the CRT gauge, with its sweeping tick scale, needle dot, and \"0% OF THE $2.00 LIMIT\".", "ugly": "Status: the \"Calls that ended oddly\" list at the bottom, which is six plain lines of \"gpt-6-luna \u2014 end_turn / 27 Sep, 19:51\".", "markText": "A restrained, well-edited version of the dark theme, with one really good chart."}, "B": {"what": "The CRT family where every retro screen shows real data: a 4-week timeline, a drive-time line, a cost gauge.", "works": "- On Home, the radar becomes a timeline (now / 1 wk / 2 wk / 3 wk / 4 wk) with the plans dotted on it.\n- The chips are rows with \"lands in Plans / To do / Ideas\".\n- Setup is a 1-2-3 stepper.\n- Page titles carry quiet counts: \"Ideas 12 \u00b7 10 ON THE LINE FROM HOME\", \"Status 6 OF 13 ON\", \"Settings 9 PARTS \u00b7 1 NEEDS A LOOK\".\n- Ideas is a ranked list with big tabular drive times (\"27 min\", \"2 h 10\").\n- Chat is a vertical thread that ends in a \"YOUR TURN\" node.\n- Status has a CRT speedometer.", "doesnt": "- The Ideas \"line from home\" stacks the labels 8/6/10/7 into a tower near 15 min.\n- The kids' wishes still take a section to say \"nothing yet\".\n- The green on black gets monotonous on long pages like Status.", "beautiful": "Status, the CRT speedometer dial with \"$0.00 \u2026 0% OF THE $2.00 LIMIT\".", "ugly": "Ideas, the stacked number tower at 15 minutes on the drive-time line.", "markText": "It is the most intelligent use of the retro motif, where decoration becomes data."}, "C": {"what": "The disciplined terminal design: X02's timelines with a real chart in each CRT.", "works": "The Home CRT doesn't just decorate. It plots the four plans on a \"now \u00b7 1 wk \u00b7 2 wk \u00b7 3 wk \u00b7 4 wk\" axis (\"4 plans in the next weeks \u00b7 see them\"). The suggestions are rows labelled \"lands in Plans / To do / Ideas\". The setup bar has a compact 1\u20132\u20133 stepper. Ideas has a large \"THE LINE FROM HOME\" chart that stacks nearby labels vertically, so they no longer collide. The idea list has big right-aligned drive times (\"27 min\", \"2 h 10\"). On Plans, days with plans get circled numbers. Status pairs a gauge with \"Today: about **$0.00** of the $2.00 daily limit\", three plain stats and WORKING / OFF rows. Settings puts \"NEEDS A LOOK\" first.", "doesnt": "It is a little austere: Home below the fold is two plain lists. Mono metadata is small. Only the Status top is very distinctive.", "beautiful": "Home, the 4-week axis inside the NEXT UP screen.", "ugly": "Ideas, the label stack on the line chart. It is legible, but \"7 / 10 / 6 / 8\" piled into a tower is awkward.", "markText": "The most coherent of the top-nav terminal designs."}}}, "a1": {"marks": {"A": 8.0, "B": 8.0, "C": 9.0}, "words": {"A": {"what": "A cream, deep-teal and mustard-yellow sibling of X02 and X05. It has serif headings and the most helpful copy of the light designs.", "works": "- On Home, the teal \"Ask Vera\" panel says \"say it the way you'd say it at the table\" and has a yellow Send button. It is the friendliest invitation to type.\n- The sidebar carries counts (Ideas 12, To do 3, Settings 1) and a \"Not you? Switch\" link for a shared family laptop.\n- Late to-dos say \"\u23f1 6 days late\" in red on every row.\n- Settings opens with a red banner that has one clear action, \"Choose a password\". It also explains its own tags (\"Reading this list: Needs a look / Could be better / No tag means it's fine\").\n- On the phone, the header shows \"\u2713 Vera is on\". The Plans calendar shrinks events to coloured bars instead of truncating text, which is the right call.", "doesnt": "- It uses the same slashed-zero times as X05 (\"13:00\").\n- On phone Settings, the row chevrons drop onto a line of their own under the text.\n- On the phone calendar, today's cell reads \"3 TOD\".", "beautiful": "Home: the \"Ask Vera\" teal panel, with its large soft circle in the corner and the yellow Send button.", "ugly": "Phone Settings: chevrons stranded on their own line under \"General\" and \"AI model\".", "markText": "Warm, clear and the most thoughtful about a real family using it, with only small phone flaws."}, "B": {"what": "The warm cream family (with X02 and X19): teal \"Ask Vera\" panel, mustard Send button, serif headings and a thoughtful right rail.", "works": "- On Home, the deep teal composer with a mustard Send button is inviting.\n- The Next up card has a date tile, \"Tomorrow\" pill and coloured kind tags (Day trip, Show, Trip).\n- The right rail runs setup (dashed numbered circles), Wish lists and \"Vera today $0.00\" with On / Not set up pills.\n- Ideas cards carry real status (\"Not looked up yet \u00b7 Look it up\", \"Planned \u00b7 Sat 17 Oct\").\n- On Plans, past events get \"Rate it\".\n- Settings has a rose \"One thing needs a look\" banner with a \"Choose a password\" button, and a \"Reading this list\" legend for the tags.", "doesnt": "- On phone Settings, each row's chevron drops onto its own line below the text.\n- On phone, the chip row is clipped (\"Remi\u2026\") and the calendar's today tag reads \"TOD\".\n- Ideas cards are busy with many small pills.", "beautiful": "Home, the teal \"Ask Vera\" panel with its white field, mustard Send and soft circle decoration.", "ugly": "Phone Settings, the orphaned \"\u203a\" chevrons sitting alone under each row.", "markText": "It is warm, legible and thoughtful throughout, with only small phone flaws."}, "C": {"what": "A cream, pine and mustard family app. It is the most complete and best explained of the twenty.", "works": "Home: a serif \"Good morning, Sam.\" with \"three to-dos have slipped past their dates\". A pine \"Ask Vera\" card with a white field and a mustard Send (\"say it the way you'd say it at the table\"). Agenda rows have kind pills (Day trip, Show, Trip). To-dos show \"6 days late\" in red with a pencil to edit. The setup steps each have a link and the note \"Only parents see this.\" The \"Vera today\" card has On / Not set up pills.\n\nAcross the other pages:\n- Chat has a \"Telegram not linked yet\" pill.\n- Ideas offers \"Not looked up yet \u00b7 Look it up\".\n- Past plans on the calendar offer \"Rate it\".\n- To-dos offer \"No reminder \u00b7 Add one\".\n- Status headlines \"Vera is working, and well under budget.\" with a \"Check again\" button.\n- Settings has a red banner, \"One thing needs a look\", with \"Choose a password\". Its tags read \"Needs a look\", \"Could be better\", \"Tell her about you\" and \"2 not set up\", and a legend card titled \"Reading this list\" explains them.\n\nThe phone header shows \"Vera is on\" and a six-tab strip ending in \"More\".", "doesnt": "In phone Settings, each chevron drops onto its own line under the row (\"General\" then \"\u203a\" below). The phone calendar is coloured bars without text. A suggestion chip is cut to \"Remi\". Like X10, some small grey text is faint on cream.", "beautiful": "Home, the pine \"Ask Vera\" card with its mustard Send and the soft circle in the corner.", "ugly": "Phone Settings, the chevrons orphaned on separate lines.", "markText": "Every state tells the family what to do next, and it looks warm doing it."}}}, "team-b": {"marks": {"A": 6.0, "B": 6.5, "C": 7.5}, "words": {"A": {"what": "A dark terminal Home with a CRT radar for the next plan and a stat strip across the page.", "works": "- The stat strip (\"TODAY \u25cf Saturday 3 October | PLANS 4 | TO DO 4 | \u26a0 LATE 3 | IDEAS 12\") gives the whole household's state in one line. LATE is in amber.\n- The Plans page pairs a CRT agenda (\"OCTOBER 2026 \u00b7 5 busy days\") with the month grid. On the phone the agenda replaces the grid.\n- To do has a CRT \"TALLY\" bar chart ending in \"> first due 2026-09-27 19:56 Call the dentist about Theo\u2588\".\n- Status has a gauge whose top end is shaded amber.", "doesnt": "- The \"who is asking?\" and Kind/Status/For dropdowns are native browser selects with system arrows, on both desktop and phone.\n- Settings is one narrow column with the right half of the screen empty.\n- Status puts three small-type columns under the gauge.", "beautiful": "Plans: the green CRT agenda box listing \"Thu 01 10:00 Silver Falls hike\u2026\" beside the calendar.", "ugly": "Home: the native grey `<select>` for \"who is asking?\" sitting in the styled composer.", "markText": "Good information design in the strip and tally, but the finish is uneven."}, "B": {"what": "A compact, orderly version of the CRT family. Each inner page pairs content with a CRT side panel.", "works": "- Plans has a CRT agenda (\"OCTOBER 2026 \u00b7 5 busy days\") beside the grid.\n- To do has a CRT \"TALLY\" bar chart plus \"> first due 2026-09-27 19:56 Call the dentist about Theo\".\n- Status has a large speedometer with an amber end zone and key-value rows (\"LAST 30 DAYS $1.26 \u2026 the faint needle\").\n- Overdue to-dos share one amber left rule.\n- The footer legend reads \"lit now or live \u00b7 amber needs you\".", "doesnt": "- Native browser selects appear on Home, Ideas and To do.\n- The Home is nearly identical to X03 and X10.\n- The cost table is plain.\n- On phone Chat, the fixed composer covers the conversation.", "beautiful": "Status, the CRT speedometer with the amber danger arc and \"$0.00 SPENT TODAY\".", "ugly": "Home, the native \"who is asking?\" select with its OS arrow.", "markText": "It is solid and well organised, with good side panels, but has little of its own on Home."}, "C": {"what": "The most finished of the top-nav terminal designs. Every page title carries a count, and the colours have a stated meaning.", "works": "The footer legend (\"\u25cf lit now or live \u00b7 \u25cf amber needs you\") turns the palette into a rule, and the pages follow it. Titles carry counts: \"Ideas 12 listed\", \"Status 6 of 13 lit\", \"Settings 9 parts \u00b7 1 needs a look\". Settings moves the one item that needs attention to the top. Plans pairs a CRT agenda (\"OCTOBER 2026 \u00b7 5 busy days\") with the month grid, and the phone shows only the agenda, which is the right call. To do has a small CRT bar chart (TALLY). Chat gets Family / Maya / Theo tabs.", "doesnt": "Much of the supporting text is small grey monospace, about 11 px at desktop. On the phone, Home puts the mic button alone on a row above a full-width Send. Ideas puts a tall radar beside a long list, so the radar repeats the list.", "beautiful": "Status, the analog gauge: a $0\u2013$2 arc whose last segment turns amber, a needle at zero, and \"$0.00 SPENT TODAY\" under it.", "ugly": "Phone Home, the orphaned mic button on a row of its own.", "markText": "The terminal idea finally has a grammar of colour and counts, and the instruments carry real information."}}}, "ben": {"marks": {"A": 5.5, "B": 5.5, "C": 6.5}, "words": {"A": {"what": "A dark terminal design with the strongest headline type in the group, \"Tell Vera. Let's plan.\", in a tight, heavy grotesque.", "works": "- The headline is confident and well set.\n- Home's prompt tiles name their destination (\"Remind me to\u2026 / lands in To do\").\n- To do has a CRT \"WHO HAS WHAT\" bar chart by person (Sam 1, Alex 2, Household 1). It is a useful way to share out chores.\n- The Status top row (full page checked) is three neat boxed columns.", "doesnt": "- On Home, the checkboxes for the three late to-dos are nearly invisible: dark squares on a dark background. Lateness isn't coloured either; \"was due 6 days ago\" is grey.\n- \"The kids' wishes\" is a full-width box above Coming up and To do, yet it holds only \"Maya 0 open / Theo 0 open\". The order of priority is wrong.\n- Below its first row, Status is raw markup: centred \"By kind of call\" captions over bare tables, \"Waiting\" tags jammed together, and a plain list for \"Calls that ended oddly\".", "beautiful": "Home: \"Tell Vera. Let's plan.\" in large tight grotesque, with \"plan.\" in glowing green.", "ugly": "Home: the To do column, where the three late items have no visible checkbox.", "markText": "Great type at the top, but the order of priority and the finish fall apart below it."}, "B": {"what": "The CRT family with the strongest headline typography: a tight grotesk \"Tell Vera. Let's plan.\" and a tall radar column.", "works": "- The headline is the most confident in the dark family.\n- The radar explains itself (\"sooner at the middle \u00b7 rings a week, two, four\").\n- The stat strip uses big numerals and dotted leaders.\n- To do has a CRT \"WHO HAS WHAT\" bar chart (Sam 1 / Alex 2 / Household 1).\n- The to-do list has date tiles (27 SEP).", "doesnt": "- On Home, the three overdue to-dos show no visible checkbox. Only \"Renew library cards\" has one.\n- The empty Kids' wishes card takes the prime spot under setup.\n- Status ends in a plain table with centred captions (\"By kind of call\") that look unstyled.\n- On phone To do, the search field is squeezed to \"de\".", "beautiful": "Home, the headline \"Tell Vera. Let's plan.\" with the glowing green \"plan.\".", "ugly": "Home, the To do column where the late items have lost their checkboxes.", "markText": "Good type and a good chart, undercut by missing controls and an unfinished Status."}, "C": {"what": "The terminal look with a sharp grotesk headline, and a radar where distance from the centre means time.", "works": "\"Tell Vera. Let's **plan.**\" is the best headline type in the dark designs: tight, confident and well spaced. Under the radar, \"sooner at the middle \u00b7 rings a week, two, four\" fixes the radar's meaning problem: it now plots time. The ticker strip uses leader lines between label and number. The suggestions are cards marked \"lands in Plans / To do / Ideas\". To do has a \"WHO HAS WHAT\" CRT bar chart by person (Sam 1, Alex 2, Household 1).", "doesnt": "On Home, the three late to-dos have nearly invisible checkboxes (dark on dark), while \"Renew library cards\" has a visible one, so the most urgent rows look non-interactive. The kids' wishes card spans the full width for two empty lines. The cost section on Status falls back to an unstyled table. On the phone, the to-do search field shrinks to show \"de\", and the status select reads \"any but droppe\".", "beautiful": "Home, the headline \"Tell Vera. Let's plan.\" in tight grotesk with green \"plan.\"", "ugly": "Home, the late to-dos with checkboxes you can barely see.", "markText": "Strong type and a radar that finally means something. The details let it down.\n\n---"}}}, "hal": {"marks": {"A": 5.5, "B": 6.0, "C": 4.5}, "words": {"A": {"what": "A dark terminal design with the hero in a large rounded panel and a stat strip set as a glowing green CRT band.", "works": "- The CRT stat band (TODAY / PLANS / TO DO / LATE / IDEAS in glowing mono digits) is a nice twist on X08's strip.\n- \"Finish setting up\" is one amber-ruled line: \"1 Next: Choose your own password\u2026 2 3\".\n- Settings is a tidy 3 \u00d7 3 card grid. The one card that needs a look has an amber outline.", "doesnt": "- The desktop top nav has no \"Home\" item. Only the logo leads home.\n- On the To do page, a CRT \"TO DO / OPEN\" tally floats at the top right and pushes the page title down, so the header looks misaligned.\n- On the phone To do, a title collides with its Edit button (\"Silver FallsEdit\").\n- The kids' wishes box is wide and empty at the bottom of Home.", "beautiful": "Home: the CRT stat band, a single glowing teletext line across the page.", "ugly": "To do: the floating CRT tally that knocks \"Things to do 4\" half a screen down.", "markText": "Competent and fairly consistent, with layout slips on the phone and on To do."}, "B": {"what": "X01 tightened up, with a big \"Tell Vera what to plan.\" headline, a stat strip and a three-column Home.", "works": "- A CRT-style stat strip (TODAY Saturday 3 October | PLANS 4 | TO DO 4 | LATE 3 | IDEAS 12) gives the whole state in one line.\n- Setup is cut to one line: \"Next: Choose your own password\" plus step circles 2 and 3.\n- Coming up, To do and Lately added sit side by side and the page ends cleanly.\n- On To do, a CRT counter panel (\"With a deadline 3 / No date 1 / Reminders set 0\") is a nice touch.", "doesnt": "- Inner pages are the same as X01, filter boxes included.\n- The To do table shows raw machine timestamps (\"2026-09-27 19:56\").\n- Kids' wishes is still a full-width card that only says \"0 open\".\n- On phone To do, the title \"Book the campsite at Silver Falls\" runs under the Edit button.", "beautiful": "Home, the mono green stat strip under the hero. It is compact, readable and in character.", "ugly": "Phone To do, the task title colliding with the Edit button.", "markText": "It improves X01's Home, but the rest is unchanged and it has a phone collision."}, "C": {"what": "A black and phosphor-green \"terminal\" dashboard. Several pages carry a green CRT panel with a radar sweep, and Home has a monospace ticker strip.", "works": "The hierarchy on Home is clear. A big sentence (\"Tell Vera what to **plan.**\") sits over a wide composer, with the CRT \"NEXT UP\" panel beside it. The ticker strip (TODAY \u00b7 PLANS 4 \u00b7 TO DO 4 \u00b7 LATE 3 \u00b7 IDEAS 12) gives a one-line summary. Amber is kept for lateness (\"was due 6 days ago\") and for the setup bar. The Plans month grid is clean.", "doesnt": "The radar appears on Home, Ideas, To do and Status, and on most of them it decorates rather than says anything. The kids' wishes card is a large empty box holding two lines (\"Maya 0 open\"). On the phone To do page, the title \"Book the campsite at Silver Falls\" runs into the Edit button. Status is three equal grey columns of text.", "beautiful": "Home, the ticker strip. Its mono labels and right-aligned big numerals read like an instrument.", "ugly": "Phone To do, where the task title collides with \"Edit\".", "markText": "It is the competent baseline the others start from, but its effects are repeated more than designed, and the phone has a visible collision."}}}, "b2": {"marks": {"A": 7.5, "B": 6.5, "C": 8.0}, "words": {"A": {"what": "The most atmospheric CRT design: a green-tinted background with scanlines and glow, pixel type, and a sidebar. It is a richer cousin of X03.", "works": "- Vera speaks first in the composer: \"Tomorrow is the roller rink at 13:00. Anything you'd like me to remember, plan or look up?\" It is the best expression of the assistant in any design.\n- Plans (full page checked) has a \"How did it go?\" panel with \":D Loved it / :| Fine / :( Not again\" buttons. It is witty and on-theme.\n- On Home, Wish lists show \"empty_\" with a blinking-cursor underscore. It is a lovely empty state.\n- The next-plan card has a line-drawn roller skate and \"Tomorrow 13:00\" in pixel type.", "doesnt": "- The amber \"3 steps left\" setup panel is the largest thing on Home and pushes the next plan below it.\n- The small avatar circles crop their letters (\"A\", \"S\" clipped at the edge).\n- In the Plans calendar, the multi-day Cannon Beach bar has a jagged notch where it crosses Saturday into Sunday.\n- The glow and scanlines soften small text.", "beautiful": "Plans: the \"How did it go?\" emoticon buttons beside the green calendar.", "ugly": "Plans: the notched Cannon Beach weekend bar spilling across 24 and 25.", "markText": "It has the most personality and the warmest Vera, at some cost to legibility and calm."}, "B": {"what": "A full phosphor terminal: green-tinted background with scanlines, a pixel-mono display face, a left sidebar and an amber setup panel.", "works": "- The atmosphere is total and consistent.\n- On Home, Vera speaks first inside the composer (\"Tomorrow is the roller rink at 13:00\u2026\").\n- The setup panel has a progress ring \"3\" and three step tiles.\n- The Next plan card has a line-drawn roller skate.\n- Wish lists show \"empty_ Nothing wished for yet\" in dashed boxes.\n- Plans has a \"HOW DID IT GO?\" rail with :D :| :( buttons.", "doesnt": "- Everything is green on green: surfaces, text, borders and glow. Secondary text is low contrast.\n- Small mono text (the setup step descriptions, ideas meta) is hard to read.\n- Calendar events are solid bright green blocks that shout.\n- On phone, the calendar shows bars with no names.", "beautiful": "Plans, the \"HOW DID IT GO?\" cards with the :D / :| / :( emoticon buttons.", "ugly": "Home, the amber \"3 STEPS LEFT\" panel. Its tiny mono descriptions (\"so each person signs in as themselves\") sit on a busy amber ground.", "markText": "It is memorable and has good ideas, but it is tiring to read and short on contrast."}, "C": {"what": "The X11 content model in the dark sidebar terminal look, with ASCII humour.", "works": "The Home composer opens with Vera speaking (\"Vera: Tomorrow is the roller rink at 13:00. Anything you'd like me to remember, plan or look up?\"), which puts the conversation first. The amber setup band has a ring showing progress. The Next plan card has a line-drawn roller skate. The empty wish lists read \"empty_ / Nothing wished for yet\". On Plans, events are solid green blocks, Cannon Beach spans its two days as one bar, and \"How did it go?\" uses ASCII faces (\":D Loved it\", \":| Fine\", \":( Not again\"). Settings has \"Do these first\" and a \"This server\" box.", "doesnt": "The bright solid green event blocks shout on the calendar. On the phone, the calendar is again bars without words, and a suggestion chip is cut to \"Rem\". Small mono caps labels are everywhere.", "beautiful": "Plans, the \":D :| :(\" feedback buttons. They are witty and on theme.", "ugly": "Plans, the slabs of saturated green on the month grid.", "markText": "It is the most charming dark design and as well organised as X08."}}}, "finn": {"marks": {"A": 4.5, "B": 3.5, "C": 4.0}, "words": {"A": {"what": "The most minimal of the dark terminal designs. Its Home is compact and ends before the fold.", "works": "- The CRT \"Next up\" agenda uses dotted leaders (\"Mount St. Helens day trip \u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7 Fri 9 Oct\"), like a railway timetable. It is very elegant.\n- \"\u25cf NOW\" is a green rule that fades out across the top of the three Home columns.\n- An \"Also\" column gathers small things (Something to eat \u00b7 2 to try, Maya's wishes \u00b7 0 open) with leaders.", "doesnt": "- Phone Status is broken (full page checked). The model table is wider than the screen, the page renders zoomed out with a dark strip down the right, and the tab bar floats halfway down.\n- Desktop Status is unstyled bold-and-plain text with no cards.\n- Ideas and Plans are faint and sparse, and the calendar cells barely separate.", "beautiful": "Home: the dotted-leader agenda inside the CRT, ending \"> All plans\u2588\".", "ugly": "Phone Status: the overflowing page, with its shrunken layout and stray tab bar.", "markText": "The Home is beautifully restrained, but much of the rest is unfinished."}, "B": {"what": "The CRT family stripped to the minimum: \"What needs a plan?\", a CRT agenda, and a Home that fits on one screen.", "works": "- Home is the tightest in the set. The CRT lists the next plans with dotted leaders, a green \"NOW\" rule leads into three columns, and an \"Also\" column folds the empty wishes and restaurants into one-line rows (\"Maya's wishes \u2026\u2026 0 open\").\n- The chips are dotted-underline text links.", "doesnt": "- Status is unstyled on desktop: stacked bold and regular text, no dots or cards, and centred table captions.\n- On phone (confirmed full size), the \"By model\" cost table overflows, so the page renders shrunk with the header and tab bar spanning only about 80% of the width.\n- \"Worth a look\" repeats \"gpt-6-luna \u2014 end_turn\" six times.\n- The other inner pages are thin copies.", "beautiful": "Home, the \"Also\" column, where empty states become quiet dotted-leader rows.", "ugly": "Phone Status, the overflowing raw table that shrinks the whole page.", "markText": "The Home is excellent, but the rest looks unfinished and one page is broken at both widths.\n\n---"}, "C": {"what": "The terminal look reduced to text: dotted leaders, underlined links and very few boxes.", "works": "Home is short (about 1,090 px) and calm. The \"NEXT UP\" CRT uses dotted leaders (\"Mount St. Helens day trip \u2026\u2026\u2026 Fri 9 Oct\"), and an \"Also\" column uses the same leaders for \"Something to eat \u00b7 2 to try\" and the wish lists. The newest idea is green with a NEW tag. Chat is a flat log, easy to read.", "doesnt": "The \"NOW\" line on Home hangs above three columns where it means nothing. Status is plain bold and regular text with no structure, and looks unfinished. On the phone Status page, the cost-by-model table is wider than the screen, so the whole page renders wider than the header and tab bar, and the table is cut off at the right edge.", "beautiful": "Home, the dotted leaders in the \"Also\" column. They are quiet and typographic.", "ugly": "Phone Status, the overflowing table that breaks the page width.", "markText": "The restraint is a real idea, but Status looks unstyled and the phone layout breaks."}}}, "cleo": {"marks": {"A": 5.0, "B": 6.5, "C": 6.5}, "words": {"A": {"what": "A dark terminal design close to X06, with a mixed-font headline (\"Give Vera something to **plan.**\", the last word in mono).", "works": "- The CRT next-plan card has a caption explaining its radar: \"The nearer the day, the nearer the middle.\"\n- Coming up is a NOW timeline. To do uses amber nodes and a \"3 late\" pill.\n- \"Lately added\" is a three-column table (name | kind | for) that scans quickly.\n- Vera's chat replies are set in mono with a green left rule, so her voice is distinct.", "doesnt": "- Switching font in the middle of the headline looks like an accident, not a choice.\n- The Home prompt chips wrap onto two rows, leaving \"We should try\u2026\" orphaned.\n- Selects are native browser controls.\n- The To do search box has no placeholder, and \"4 open\" floats at the far right.\n- Status ends in raw tables.", "beautiful": "Home: the radar CRT with its one-line caption, \"The nearer the day, the nearer the middle.\"", "ugly": "Home: the orphaned third prompt chip on a row of its own.", "markText": "Pleasant and readable, but it brings nothing new and leaves rough edges."}, "B": {"what": "The CRT family made flatter and more editorial. Coming up and To do become timelines with a \"NOW\" marker.", "works": "- The to-do timeline puts overdue items above a green \"NOW\" line and undated ones below. It is a genuinely clear idea.\n- The chips say where they land (\"What should we do today? \u2192 Plans\").\n- The radar has a caption: \"The nearer the day, the nearer the middle.\"\n- Status adds mono \"Working / Off\" words and a cost table.", "doesnt": "- Native, unstyled browser selects on \"who is asking?\" and To do's \"Show\" clash with the styled UI.\n- Chat sets Vera's replies in monospace, which reads like a log rather than a person.\n- Lately added becomes a plain table.\n- The kids' wishes column is half empty.", "beautiful": "Home, the Coming up timeline: green \"NOW Saturday 3 October\" node, big day numerals and right-aligned \"tomorrow / in 6 days\".", "ugly": "Home, the native grey \"who is asking?\" select box inside the dark composer.", "markText": "The timeline is a good idea, but the finish (native controls, mono chat) is unpolished."}, "C": {"what": "The same terminal look, made calmer: coming plans and to-dos become timelines with a green \"NOW\" node.", "works": "On Home, \"Coming up\" and \"To do\" are both vertical timelines. Overdue to-dos sit above the NOW line on amber dots, so lateness is shown by position as well as colour. The suggestion chips say where each prompt will land (\"\u2192 Plans\", \"\u2192 To do\", \"\u2192 Ideas\"). A caption under the radar explains it (\"The nearer the day, the nearer the middle\"). In Chat, Vera's replies are green-bordered monospace, so she reads as a different kind of speaker. The right-hand nav uses text labels (Memory, Family, Status, Settings) instead of bare icons.", "doesnt": "Settings has roughly a third of a screen of empty black under its 3\u00d73 grid. \"Lately added\" is a plain table with no visual grouping. The kids' wishes column is half empty. The Status cost table is unstyled.", "beautiful": "Home, the To do timeline. The three amber dots stack above the green NOW node, with \"Renew library cards\" alone below it.", "ugly": "Settings, the large dead area under the card grid.", "markText": "It takes one good idea (time as a line with \"now\" on it) and applies it consistently."}}}, "b1": {"marks": {"A": 8.0, "B": 7.5, "C": 7.5}, "words": {"A": {"what": "The most refined of the sidebar CRT designs (X03, X11, X14). It has pixel headings, a heartbeat logo and \"Vera is listening\".", "works": "- The next-plan card shows a big pixel \"IN 1 DAY\" and \"Leave by 12:30\". It is the only design that tells the family when to leave.\n- The sidebar shows status in place of plain counts: \"Plans 4 ahead\", \"To do 3 late\" (amber) and \"Status OK\".\n- Ideas (full page checked) has a \"How far from home\" radar with numbered dots and a legend. Bright rings mark planned ideas, and a note says two ideas aren't mapped yet. The list beside it carries drive time with a direction arrow and a status pill (\"Planned \u00b7 Sun 4 Oct\", \"Not looked up yet\" in amber).\n- Home includes \"How did it go?\" with Loved it / OK / Not again. The Wish lists empty state is helpful: \"The Lego set idea could be the first.\"\n- Status has an ECG-monitor \"Vera is working.\" and a segmented spend meter.", "doesnt": "- It still has the boxed-card heaviness of its family, and the amber setup panel takes the second row of Home.\n- On the phone Plans calendar, names break mid-word (\"Moun t St\u2026\").\n- Section labels in tracked caps mono (\"\u25b8 JUST ADDED TO IDEAS\") are small.", "beautiful": "Ideas: the \"How far from home\" radar, with numbered green markers, ring labels and a legend underneath.", "ugly": "Phone Plans: the event chips truncated to \"Moun / t St\u2026\" and \"Nutcr / ack\u2026\".", "markText": "The richest and most useful dark design, with real product thinking behind the look."}, "B": {"what": "The green terminal with a sidebar (with X08 and X09). It is the best written of the three, and the sidebar shows live counts.", "works": "- The sidebar shows the state of everything (\"Plans 4 ahead\", \"To do 3 late\", \"Status OK\").\n- On Home, \"Hi Sam\" sits over \"The roller rink is tomorrow at 13:00. 3 to-dos are late.\"\n- The composer's placeholder gives a real example (\"Remind me to call the dentist on Tuesday\").\n- The Next plan card has a big \"IN 1 DAY\" and \"Leave by 12:30\".\n- \"How did it go?\" has Loved it / OK / Not again buttons.\n- Wish lists have friendly copy (\"The Lego set idea could be the first.\").\n- Ideas has a \"How far from home\" radar with a numbered legend.\n- Status has a heartbeat monitor and a segmented spend meter.", "doesnt": "- It is still green on green, with pixel-mono headings.\n- On phone, calendar names break mid-word (\"Moun t St\u2026\", \"Pho Ore\u2026\").\n- The \"Hi Sam\" cursor is a dull grey block.", "beautiful": "Home, the NEXT PLAN card: \"Oaks Park roller rink\" in pixel mono with \"IN 1 DAY\" and \"Leave by 12:30\".", "ugly": "Phone Plans, the calendar chips cut mid-word.", "markText": "The content design is the most thoughtful in the dark sets, and the skin is a little oppressive."}, "C": {"what": "A different product: a sidebar app in the green-terminal palette, personal (\"Hi Sam\u2588\") and built around what the family does next.", "works": "Home opens with a sentence that does the work of a dashboard: \"The roller rink is tomorrow at 13:00. **3 to-dos are late.**\" The Next plan card carries real planning detail (\"27 min drive, south\", \"Leave by 12:30\", Open plan / Ask Vera about it). \"How did it go?\" asks for Loved it / OK / Not again. The empty wish lists say what to do (\"Maya can tell Vera 'I wish for\u2026'\"). Chat lists separate conversations (\"Theo and Vera \u00b7 parents can read\"). A Vera reply carries an \"Added to Plans \u00b7 See it \u2192\" receipt. Status opens with a heartbeat trace and \"Vera is working.\" Settings gives every row a status pill and has a \"3 need a look\" side panel with an amber \"Finish setting up\" button.", "doesnt": "The sidebar counts, pills, mono caps labels and boxed cards everywhere make it dense and evenly loud. The phone's quick-add date field is a raw \"mm/dd/yyyy\". Phone calendar chips are cut to \"Pho Ore\u2026\".", "beautiful": "Status, the ECG heartbeat monitor beside \"Vera is working.\"", "ugly": "Home, the setup card: a giant amber \"3\" plus three bordered tiles inside a bordered panel, which is too much frame for three links.", "markText": "It is the first design to treat this as a family app rather than a server console. The visuals are a little crowded."}}}, "today": {"marks": {"A": 4.5, "B": 5.0, "C": 3.5}, "words": {"A": {"what": "A near-twin of X10 (same top nav, calendar, Status and Settings), with a different Home layout.", "works": "- The CRT next-plan card and the 3 \u00d7 3 Settings grid are inherited and tidy.\n- \"Lately added\" uses 2 \u00d7 2 cards with coloured kind labels, plus an amber \"Something to eat \u00b7 2 restaurants to try\" card.\n- On To do, rows open into \"Edit, complete, or snooze\".", "doesnt": "- On Home, To do is pushed to the very bottom-left. The three overdue items are the last thing you reach, under the setup box, the kids' wishes and Coming up. The right column is empty beside them.\n- The Send button is stranded at the bottom-left of the composer, under the From row.\n- The large amber setup box and the full-width, empty kids' wishes take the prime space.\n- The To do page search box has no placeholder.", "beautiful": "Home: the 2 \u00d7 2 \"Lately added\" cards with their small coloured kind labels (Activity, Restaurant, Outing, Trip).", "ugly": "Home: the overdue to-dos buried at the bottom-left of the page.", "markText": "Familiar parts arranged in the wrong order of priority."}, "B": {"what": "A near-black dashboard in phosphor green, with one retro CRT \"radar\" screen added on Home, Ideas and Status.", "works": "- The Vera composer leads the page, with a glowing green border and three prompt chips. It is clearly the main thing to do.\n- Coming up uses neat date tiles (OCT / 9 / Fri) with \"in 6 days\" pills.\n- Overdue to-dos show \"was due 6 days ago\" in amber.\n- Settings is a calm 3\u00d73 grid of cards, and \"Sign-in and security\" gets an amber outline and a \"Needs a look\" tag.\n- The Plans month grid has an orange circle on today (3).", "doesnt": "- Apart from the CRT boxes, this is a generic dark admin template.\n- On Home the right column ends after \"Lately added\", leaving a large dead area beside the To do list.\n- \"The kids' wishes\" is a full-width card near the top of Home that only says \"Maya 0 open / Theo 0 open\".\n- Ideas and To do open with heavy boxed filter forms (Search / Kind / Status / For + a green Filter button) before any content.\n- On Status, every item is a dot plus small grey text in three dense columns.", "beautiful": "Home, the \"NEXT UP\" CRT. The bezel, scanlines, mono \"Oaks Park roller rink\" in green and the sweeping radar make a lovely object.", "ugly": "Home, the empty bottom-right quarter beside the To do card, plus the near-empty Kids' wishes card sitting above the useful content.", "markText": "One charming widget sits on top of an ordinary layout with dead space and a lot of form furniture."}, "C": {"what": "The softest and most generic terminal design: rounded cards, gentle glow and X01's layout without the ticker.", "works": "It is calm and readable. The amber setup card with three circle bullets is clear. The \"2 restaurants to try\" card is warm.", "doesnt": "The composer's Send button sits alone on its own row at the bottom left, under the From select, with the mic far off to the right. The empty kids' wishes card is promoted above \"Coming up\". \"Coming up\" and \"To do\" stack in the left column, leaving about 300 px of dead space on the right. To do shows ISO timestamps (\"Due 2026-09-27 19:56\"). Little here is not done better in X01 or X02.", "beautiful": "Home, the \"SOMETHING TO EAT \u00b7 2 restaurants to try\" card with its amber fork-and-knife tile.", "ugly": "Home, the Send button stranded under the select.", "markText": "Nothing is broken, but nothing is decided either."}}}, "dev": {"marks": {"A": 6.5, "B": 6.0, "C": 5.0}, "words": {"A": {"what": "A dark terminal design with condensed grotesque headlines and big condensed numbers (\"4 To do\", \"12 Ideas, lately added\").", "works": "- The condensed type gives it a strong editorial voice.\n- As in X01, the CRT next-plan card's green rail drops into the Coming up timeline, joining the two.\n- The To do page has a big \"4 OPEN\" number with a vertical filter list (Open, Done, Cancelled, All) beside the list. It is clean and quick.\n- Ideas along the bottom of Home sit on five cards with coloured left rules for each kind.", "doesnt": "- The CRT agenda (9 Oct / 17 Oct / 24 Oct) repeats exactly the Coming up list right below it.\n- Under Coming up, the right column is empty for about 450 px.\n- Like X10 and X15, the top nav has no Home item.", "beautiful": "Home: \"Tell Vera what to plan.\" in tall condensed type, with \"plan.\" in green.", "ugly": "Home: the duplicated agenda, the same three plans in the CRT and again directly underneath.", "markText": "Distinctive type and a good To do page, with a redundant Home.\n\n---"}, "B": {"what": "The CRT family with a condensed display face and the radar screen used as a mini agenda.", "works": "- The huge condensed \"Tell Vera what to plan.\" has real presence.\n- The CRT lists the next three plans (\"9 Oct Mount St. Helens day trip in 6 days\") and a green wire drops out of the monitor into the Coming up timeline.\n- Big numerals head each section (\"4 To do 3 late\", \"12 Ideas, lately added\").\n- On To do, a large \"4 OPEN\" numeral sits over a left filter rail.", "doesnt": "- The Coming up timeline repeats exactly what the CRT just listed.\n- The right column is empty for about 450 px under Coming up.\n- The other pages are the X01 pages with the new font.", "beautiful": "Home, the green wire from the bottom of the CRT into the \"NOW\" node of Coming up.", "ugly": "Home, the duplicated plan list (CRT, then timeline) next to the empty right column.", "markText": "It has typographic punch, but the Home duplicates content and leaves a hole."}, "C": {"what": "The X01 terminal with a condensed display face and a two-column Home.", "works": "The condensed headline has punch. The setup card lists all three steps in full. The \"12 Ideas, lately added\" cards get a coloured left edge by kind (amber restaurant, teal trip, green outing). To do adds a left rail with a big \"4 OPEN\" and Open / Done / Cancelled / All filters, which is the best filter treatment in the plain terminal group.", "doesnt": "Home shows the same four plans twice. The CRT \"NEXT UP\" panel now lists all four, and the \"Coming up\" timeline directly below repeats them. The right column then runs out, leaving about 450 px of empty space beside \"To do\" and \"The kids' wishes\". The rest of the site is essentially X01.", "beautiful": "To do, the left rail: a huge condensed \"4\" over \"OPEN\", with the status filters stacked under it.", "ugly": "Home, the duplicated plan list and the dead right column under it.", "markText": "One good page and one clumsy Home, with nothing new elsewhere."}}}, "fin-track": {"marks": {"B": 5.0, "C": 5.5}, "words": {"B": {"what": "The CRT family on a slate-blue ground with a soft editorial serif and coloured hairlines on top of each section.", "works": "- Each section has its own colour rule (amber setup, blue Coming up, yellow To do, purple Lately added, pink wishes).\n- Coming up becomes a horizontal timeline.\n- Plans adds a circular week dial (\"3 PLANS \u00b7 2 past \u00b7 Today \u00b7 1 ahead\"), which is inventive.\n- Titles carry counts (\"Plans 5 THIS MONTH\").\n- Ideas filters become pill chips with radio dots.", "doesnt": "- Four type voices fight: serif, sans, mono and a dithered pixel glitch face on \"mind?\".\n- On To do, a full-width glowing green \"Add something to do\" bar is the loudest thing on the page.\n- The radio-dot chips are fiddly.\n- On phone, the \"who is asking?\" select wraps to two lines.", "beautiful": "Plans, the circular week dial with the plan count in the middle.", "ugly": "Home, \"What's on your mind?\" with \"mind?\" in a dithered pixel font beside a serif and a sans.", "markText": "There are lovely parts, but no single voice: it looks like three designs layered."}, "C": {"what": "The terminal look on slate blue, mixing a serif display face, a pixel word and monospace, with lots of glow.", "works": "The Home composer is wired to Vera's avatar by a little cable and says \"Listening \u00b7 watching 4 plans\". \"Coming up\" is a horizontal timeline. Plans has a round \"3 PLANS this week\" dial with past / today / ahead. Ideas turns its filters into toggle chips with LED dots. Status reuses the VU meter.", "doesnt": "Three typographic voices fight: serif \"Things to do\", the pixel and hatched \"mind?\", and mono labels. The pixel \"mind?\" is low in contrast and hard to read. The LED chip wall on Ideas is long. On the phone, \"who is asking?\" wraps to two lines inside its select.", "beautiful": "Plans, the round week dial with its big \"3\".", "ugly": "Home, the hatched pixel \"mind?\" in the headline.", "markText": "Rich parts that don't agree with each other."}}}, "fin-desk": {"marks": {"B": 4.0, "C": 6.0}, "words": {"B": {"what": "The CRT family as a dense control panel: numbered sections, an \"ON THIS PAGE\" contents box, dotted leaders and left-rail widgets.", "works": "- The \"ON THIS PAGE\" index (\"To do \u2026\u2026 4 open \u25ac 3 late\") is a clever summary.\n- Leaders and numbered sections make Home read like a printed menu.\n- On inner pages, the CRT widget and filters sit in a left rail (Ideas radar with numbered dots, Status \"ON THIS PAGE\" with \u25cf\u25cf\u25cf\u25cb meters).\n- The Ideas table is dense and useful.", "doesnt": "- The phone layout overflows on four pages (Ideas confirmed full size). \"Add an idea\" and \"Add a plan\" are cut off at the right edge, titles are truncated (\"Cannon Beach week\", \"Mount St. Helens da\") and the # column is clipped. To do and Status overflow the same way.\n- On desktop, the NEXT UP CRT is half empty perspective grid.\n- The density tips into clutter.", "beautiful": "Home, the \"ON THIS PAGE\" box with dotted leaders and the amber \"3 late\".", "ugly": "Phone Ideas, rows and buttons running off the right edge of the screen.", "markText": "An interesting desktop, but the phone build is broken on most pages."}, "C": {"what": "The terminal look as an instrument panel. Each page has a left column of CRT instruments, and Home has an \"On this page\" index.", "works": "Home's \"ON THIS PAGE\" box lists every section with its count (3 steps \u00b7 3 plans \u00b7 4 open \u2013 3 late \u00b7 12 ideas \u00b7 0 open) plus \"Ready \u00b7 OpenAI \u00b7 gpt-6-luna $2.00 a day\", which is a genuinely useful summary. The Ideas list is a dense ledger of name, kind, drive time, bearing arrow and number. Status has a numbered index with LED dots (\"3 of 4 on\").", "doesnt": "The big Home CRT plots plans by day and hour, but its lower half is an empty perspective floor. The pages are heavy, with frames inside frames. The phone is full of truncation and overflow: to-dos read \"Call the\u2026\", \"Book th\u2026\", \"Buy Ma\u2026\"; ideas read \"Cannon Beach week\", \"Mount St. Helens da\"; and the \"Add a plan\" and \"Add an idea\" buttons and the filter fields run off the right edge.", "beautiful": "Ideas, the ledger rows with drive time and a little bearing arrow.", "ugly": "Phone To do, where every task title is cut to a few letters.", "markText": "Excellent density on desktop, but it fails on the phone."}}}, "fin-grid": {"marks": {"B": 4.0, "C": 5.5}, "words": {"B": {"what": "The CRT family as a sci-fi HUD: grid background, a circuit line down the left joining numbered sections, caps nav (\"00 HOME 01 VERA\") and an \"UP\" node over a perspective floor.", "works": "- The atmosphere is strong.\n- There is a live clock chip (\"NOW 06:58\") on the Coming up line.\n- To do has a due-date dot timeline.\n- Plans uses boxed day cells with an amber outline on today.", "doesnt": "- The Home section numbers run 05, 03, 04, 02 (they are page indexes), so the sequence reads as broken.\n- Three-card rows leave an empty fourth slot, so the right edge is ragged.\n- Ideas cards dim the first word of each title.\n- On Status, the gauge floats above the title.\n- On phone, \"Finish setting up\" is crushed into three lines (\"Finish / setting / up\"), tab labels clip to \"WISHE\" and the header gear is cut off.", "beautiful": "The footer, the glowing \"UP\" node on the perspective grid floor.", "ugly": "Phone Home, the \"Finish / setting / up\" heading crushed against \"ALL THE SETUP STEPS\".", "markText": "It is heavy on effects and light on order, with broken numbering and phone layout."}, "C": {"what": "The terminal pushed to Tron: numbered caps navigation, a circuit trace down the page and a perspective grid floor.", "works": "It has real atmosphere. The condensed \"WHAT'S ON YOUR **MIND?**\" uses a scanline texture in the green word. The vertical trace joins the sections, and the footer ends in a glowing \"UP\" node over a grid floor. The live \"NOW 06:58\" chip on the timeline is a nice touch. On Status, the analog VU needle meter is lovely. The To do timeline puts the due age (\"6 days ago\") beside each node.", "doesnt": "The numbering contradicts itself. The nav says 00 Home \u2026 05 Wishes, but the Home sections run 05, 03, 04, 02, and Status and Settings become \"C\" and \"D\". The setup, wishes and coming-up cards sit in a four-column grid with the last column empty. The phone breaks in several places: \"Finish setting up\" wraps to three lines and is jammed against \"ALL THE SETUP STEPS\", the tab label reads \"WISHE\", the settings gear is clipped at the header edge, and the radar text shows solid green blocks.", "beautiful": "Status, the VU meter: \"$0.00 TODAY\", LIMIT 2.00 and a sweeping needle.", "ugly": "Phone Home, the three-line \"Finish / setting / up\" heading.", "markText": "It is a memorable look, but the system under it (numbering, grid, phone) doesn't hold."}}}, "fin-index": {"marks": {"B": 6.0, "C": 5.0}, "words": {"B": {"what": "The CRT family as a magazine poster: a giant condensed \"WHAT'S ON YOUR MIND?\" and Home sections laid out as spreads with huge titles.", "works": "- The poster headline is unforgettable.\n- Each section is a spread with a coloured end cap on its rule and a big count (\"Ideas 12 SAVED\", \"Plans 4 COMING\").\n- Hatched squares stand in as category swatches.\n- Settings uses big condensed titles in two columns.", "doesnt": "- The hero is roughly 170 px of \"MIND?\" and fills the whole first phone screen.\n- On Home, the Vera section says \"Nothing said yet. Start a message\" while Chat holds four messages.\n- To do titles wrap in a narrow column.\n- The type scale is so loud that the content gets lost.", "beautiful": "Home, the striped glowing \"MIND?\" set huge in condensed caps.", "ugly": "Home, the \"Vera \u00b7 Nothing said yet\" spread, which contradicts the chat.", "markText": "Bold and striking, but more poster than tool."}, "C": {"what": "The terminal look as an editorial poster: a giant \"MIND?\" and numbered sections with colour-capped rules.", "works": "It is bold. \"WHAT'S ON YOUR **MIND?**\" stands about 170 px tall in scanline green. Each Home section (Vera, Ideas, Plans, To do, Wishes) opens on a thin rule with a coloured end cap (green, violet, blue, yellow, pink) and a huge condensed heading. Idea kinds are hatched swatches. To do uses tree connectors and dotted leaders.", "doesnt": "Home says \"01 Vera \u2014 Nothing said yet. Start a message\" while Chat shows four messages, so the page contradicts the data. Numbering mixes systems: 00\u201305, A\u2013D, and phone Settings rows numbered \"D1\u2013D5\". Home is about 2,560 px tall, with much of it black space. The phone tab label is clipped to \"WISHE\".", "beautiful": "Home, the colour-capped section rules over huge condensed headings.", "ugly": "Home, \"Nothing said yet\" in a family that has been chatting.", "markText": "Striking as a poster, weak as an app."}}}}</script>
 <script>
 const PAGES = [['home','Home'],['chat','Chat'],['ideas','Ideas'],['plans','Plans'],['todo','To do'],['status','Status'],['settings','Settings']];
-const GROUPS = [
-  ['ref','Reference'],
-  ['team','Reviewers: the two team entries'],
-  ['sketch','Reviewers: six sketches'],
-  ['a','From scratch: description only'],
-  ['b','From scratch: description and the Phosphor idea'],
-  ['early','Earlier']
+const MODES = [
+ {id:'today', name:'Today’s page', short:'Baseline',
+  how:'The page the app has now, made inside the project to its own style rules.',
+  knew:'Everything about the app, including its written style rules.'},
+ {id:'committee', name:'Committee tournament', short:'Committee',
+  how:'Twenty-one rounds. Designs were bred and mutated from one another, then scored by panels of reviewers, each reading through one lens (type, colour, usability and so on). The owner’s notes steered the rounds. Four finalists came out.',
+  knew:'The app, the owner’s priorities and notes, and the scores from earlier rounds.'},
+ {id:'pared', name:'One designer, pared down', short:'Pared',
+  how:'One designer read reviews of the committee’s best designs, then rebuilt one of them under five rules: green means now, amber means late, one drawing language, one instrument, each fact once.',
+  knew:'The committee designs, and the owner’s priorities.'},
+ {id:'team', name:'Blind designers, team entries', short:'Team entry',
+  how:'Four designers per team, shown the earlier designs as unlabelled pictures and told the Phosphor idea in one line. Each wrote a proposal; the team’s lead chose and built one on the app’s real pages.',
+  knew:'The earlier designs as anonymous pictures, and the one-line Phosphor idea. No owner notes or style rules.'},
+ {id:'sketch', name:'Blind designers, sketches', short:'Sketch',
+  how:'The other six designers each built a quick sketch of their own proposal on the app’s real pages.',
+  knew:'The same as the team leads.'},
+ {id:'plain', name:'From scratch, description only', short:'Scratch',
+  how:'Three designers started from a written description of the app, who uses it, its seven pages and the demo data. No pictures, no Phosphor idea. They drew standalone pages.',
+  knew:'The description of the app, nothing else.'},
+ {id:'concept', name:'From scratch, with the Phosphor idea', short:'Scratch + idea',
+  how:'The same brief, plus one paragraph: a modern, easy-to-use family app that carries the character of an old green phosphor computer screen.',
+  knew:'The description, and the one-line Phosphor idea.'}
 ];
+const MODE = Object.fromEntries(MODES.map(m => [m.id, m]));
 const MOCK = 'Mockup drawn from a written description, not the app’s own templates. The daily split in the 30-day chart is invented; it adds up to the real totals.';
 const D = [
- {id:'today',name:'Today’s page',group:'ref',kind:'app',
+ {id:'today',name:'Today’s page',mode:'today',medium:'app',look:'dark',nav:'top',fonts:'DM Sans, DM Mono, VT323',
   idea:'What the family sees now, for reference.',
-  look:'The current FamilyDB page, rendered with the same demo family as the rest.'},
- {id:'team-a',name:'Signal',group:'team',kind:'app',
+  desc:'The current FamilyDB page, rendered with the same demo family as the rest.'},
+ {id:'fin-grid',name:'Grid Console, Keyed',mode:'committee',medium:'app',look:'dark',nav:'top',fonts:'IBM Plex Sans Condensed, DM Mono, Fraunces',
+  idea:'Round 21’s champion: a teal-black console with lit rails and keyed nodes.',
+  desc:'Condensed headings with coloured numerals, latched pills, and a green Add key.',
+  worth:'Top four on all eight of the committee’s lenses. The earlier blind reviewer marked it 6.',
+  gap:'Home is long: it runs about 2,170 px on desktop.'},
+ {id:'fin-desk',name:'Desk Terminal, Even Dock',mode:'committee',medium:'app',look:'dark',nav:'top',fonts:'IBM Plex Sans Condensed, IBM Plex Mono, Inter',
+  idea:'Second in the championship: a glass column on every page with the question typed on the glass.',
+  desc:'A Contents plate and ledger rows. Best soul and usability scores in the committee’s panel.',
+  worth:'The earlier blind reviewer marked it 7.5, the highest of the four.'},
+ {id:'fin-track',name:'Track Diagram, Rail Keys',mode:'committee',medium:'app',look:'dark',nav:'top',fonts:'IBM Plex Mono, Inter, Fraunces',
+  idea:'Third in the championship: serif titles with counts, and a rail from Vera’s screen to the box.',
+  desc:'Amber “was due” stamps on late items.',
+  worth:'The earlier blind reviewer marked it 6.5.',
+  gap:'The committee noted a phone composer to fix.'},
+ {id:'fin-index',name:'Lit Index, Ledger Rail',mode:'committee',medium:'app',look:'dark',nav:'top',fonts:'IBM Plex Sans Condensed, IBM Plex Mono',
+  idea:'Fourth in the championship: a poster-sized question with a lit MIND?, and a numbered index.',
+  desc:'A ledger To do and a cool bone-and-steel palette.',
+  worth:'The strongest identity and type of the four. The earlier blind reviewer marked it 7.',
+  gap:'The longest Home of any design here, about 2,560 px on desktop.'},
+ {id:'pared',name:'Lit Manual, Pared',mode:'pared',medium:'app',look:'dark',nav:'top',fonts:'IBM Plex Sans Condensed, IBM Plex Sans, IBM Plex Mono',
+  idea:'One designer’s build from the review of the early designs: start from Lit Manual, Dialled, take things away, and borrow two drawings from Trued, Yard Lit.',
+  desc:'Near-black. Green means now or yours to act on, amber means late, everything else is grey.',
+  worth:'One instrument in the whole app: a round next-plan dial on Home whose lit stem drops into the Coming up rail at NOW. Chat hangs on a spine that ends in a lit ring marked “your turn”. Ideas has a grey “line from home”.'},
+ {id:'team-a',name:'Signal',mode:'team',medium:'app',look:'dark',nav:'top',fonts:'IBM Plex Sans, Condensed and Mono',
   idea:'A calm dark desk where phosphor green means only Vera, now or live, and each page has one lit screen that shows what its list cannot.',
-  look:'IBM Plex Sans, Condensed and Mono. Green only for Vera, now and live; amber for late.',
+  desc:'Green only for Vera, now and live; amber for late.',
   worth:'Home’s screen draws the next plan with a four-week trace. Chat hangs on a time spine that ends in a lit “your turn”. Ideas has a “line from home” with numbered stops. Status has a needle gauge.',
   gap:'Places at similar drive times pile up on the Ideas line. The lesser pages weren’t restyled.'},
- {id:'team-b',name:'The lit screen',group:'team',kind:'app',
+ {id:'team-b',name:'The lit screen',mode:'team',medium:'app',look:'dark',nav:'top',fonts:'IBM Plex Sans and Mono; VT323 for one figure',
   idea:'A calm, plain family app with one green phosphor screen per page, where the machine speaks and what is now glows.',
-  look:'Plain pages, one green screen each. IBM Plex Sans and Mono; VT323 for one Status figure. No section colours.',
+  desc:'Plain pages, one green screen each. No section colours.',
   worth:'Home has a readout strip (today, plans, to do, late, ideas) over three columns. Chat is a centred column with the kids’ conversations as tabs. Ideas keeps a sticky radar beside the list. Status adds a second needle for the 30-day average.',
   gap:'At $0 spent the Status needle lies flat. The lesser pages weren’t restyled.'},
- {id:'ben',name:'One Glow',group:'sketch',kind:'app',
+ {id:'ben',name:'One Glow',mode:'sketch',medium:'app',look:'dark',nav:'top',fonts:'Geist, Geist Mono',
   idea:'A calm modern page where green light only means now, live or act here, and each page has one instrument.',
-  look:'Geist. Dark, with green kept for the instrument and the next action.',
+  desc:'Dark, with green kept for the instrument and the next action.',
   worth:'Home asks “Tell Vera. Let’s plan.” beside a tall radar screen, then a figure strip and three ledger columns. The lists use who-has-what bars.'},
- {id:'cleo',name:'One lit trace',group:'sketch',kind:'app',
+ {id:'cleo',name:'One lit trace',mode:'sketch',medium:'app',look:'dark',nav:'top',fonts:'IBM Plex Sans, IBM Plex Mono',
   idea:'A calm dark app where phosphor glows only where something is alive: Vera, now, and working.',
-  look:'Dark, with one trace that runs through the app.',
+  desc:'Dark, with one trace that runs through the app.',
   worth:'A lit node marks NOW, and Coming up and To do hang on the trace. Vera’s own lines are set in mono, so the machine’s voice looks different from the family’s.'},
- {id:'dev',name:'One Lit Screen (desk)',group:'sketch',kind:'app',
+ {id:'dev',name:'One Lit Screen (desk)',mode:'sketch',medium:'app',look:'dark',nav:'top',fonts:'Barlow Condensed, Figtree, IBM Plex Mono',
   idea:'A calm dark desk with one phosphor screen per page, and the screen always holds the page’s live answer.',
-  look:'Barlow Condensed and Figtree.',
+  desc:'Condensed headings over a rounded sans.',
   worth:'A glowing line drops from Home’s screen into the Coming up timeline, so the screen and the list read as one thing. Home itself is left off the bar.'},
- {id:'finn',name:'Afterglow (fade)',group:'sketch',kind:'app',
+ {id:'finn',name:'Afterglow (fade)',mode:'sketch',medium:'app',look:'dark',nav:'top',fonts:'IBM Plex Sans, IBM Plex Mono',
   idea:'A calm, plain family app where only what matters now glows, and fades as it ages.',
-  look:'Plain and dark, with glow as the only emphasis.',
+  desc:'Plain and dark, with glow as the only emphasis.',
   worth:'New things glow and old ones fade, like phosphor after the beam has passed. Home asks “What needs a plan?” and its screen lists the next plans as a dotted ledger.'},
- {id:'gia',name:'One Lit Screen (monitor)',group:'sketch',kind:'app',
+ {id:'gia',name:'One Lit Screen (monitor)',mode:'sketch',medium:'app',look:'dark',nav:'top',fonts:'IBM Plex Sans, IBM Plex Mono',
   idea:'One green screen per page, where Vera speaks and the numbers live, in a quiet dark app.',
-  look:'Dark and quiet, with the green kept on the monitor.',
+  desc:'Dark and quiet, with the green kept on the monitor.',
   worth:'On Home the box and Next up sit inside one sticky monitor, so you write to Vera on her screen. Pages are numbered like teletext (P100 Home, P200 Vera, P300 Ideas), and a key at the foot explains the two colours.'},
- {id:'hal',name:'Machine Voice',group:'sketch',kind:'app',
+ {id:'hal',name:'Machine Voice',mode:'sketch',medium:'app',look:'dark',nav:'top',fonts:'IBM Plex Sans, Condensed and Mono',
   idea:'Phosphor green only where the machine speaks; everything the family touches is plain.',
-  look:'Plain dark, with green for the machine only.',
+  desc:'Plain dark, with green for the machine only.',
   worth:'Home asks “Tell Vera what to plan.” inside one framed console, followed by a green readout strip of today’s counts. To do is a table.'},
- {id:'a1',name:'Kitchen Table (green)',group:'a',kind:'mock',
+ {id:'a1',name:'Kitchen Table (green)',chosen:true,mode:'plain',medium:'mock',look:'warm',nav:'sidebar',fonts:'Fraunces, Atkinson Hyperlegible',
   idea:'FamilyDB should feel like the family’s kitchen table: Vera is the first thing you can talk to, and everything else is a short pile of plain-language cards you can take in at a glance.',
-  look:'Cream paper, deep green for Vera’s box, a sunny yellow Send, brick red only for late. Fraunces and Atkinson Hyperlegible. Each person has a colour.',
+  desc:'Cream paper, deep green for Vera’s box, a sunny yellow Send, brick red only for late. Each person has a colour.',
   worth:'When Vera does something, the chat shows it as a card (“Added to Plans”). Each idea’s drive time has a small arrow pointing the way. Settings opens with a banner for the one thing that needs a look, with its fix.',
   gap:MOCK},
- {id:'a2',name:'Kitchen Table (tomato)',group:'a',kind:'mock',
+ {id:'a2',name:'Kitchen Table (tomato)',mode:'plain',medium:'mock',look:'warm',nav:'sidebar',fonts:'Fraunces, Figtree',
   idea:'FamilyDB is the family’s kitchen table: Vera sits at it, and everything the family keeps track of is laid out on warm paper cards, in plain words, with one bright colour for “this needs you”.',
-  look:'Warm paper with tomato red as the only accent. Fraunces and Figtree. Vera is a small drawn tomato with a sprout.',
+  desc:'Warm paper with tomato red as the only accent. Vera is a small drawn tomato with a sprout.',
   worth:'Tomorrow’s plan is a tear-off calendar leaf. “Finish setting up” is the one dark card on Home. Ideas can be sorted by distance.',
   gap:MOCK},
- {id:'a3',name:'Kitchen Table (teal)',group:'a',kind:'mock',
+ {id:'a3',name:'Kitchen Table (teal)',mode:'plain',medium:'mock',look:'warm',nav:'sidebar',fonts:'Fraunces, Atkinson Hyperlegible',
   idea:'The website is the family’s kitchen table on a Saturday morning: Vera is there to talk to, today’s stuff is on top, and everything else is one tap away.',
-  look:'Warm paper, deep teal for Vera and the next plan, tomato only for late, amber only for “needs a look”. Fraunces and Atkinson Hyperlegible.',
+  desc:'Warm paper, deep teal for Vera and the next plan, tomato only for late, amber only for “needs a look”.',
   worth:'The next plan is a teal card with a roller-skate drawing. Status lists each connection with its own Add or Set up button. Settings has a “Who can sign in” card.',
   gap:MOCK},
- {id:'b1',name:'Afterglow (scanlines)',group:'b',kind:'mock',
+ {id:'b1',name:'Afterglow (scanlines)',mode:'concept',medium:'mock',look:'dark',nav:'sidebar',fonts:'VT323, IBM Plex Mono, Atkinson Hyperlegible',
   idea:'A calm, dark family screen with the glow of an old green terminal: what Vera keeps shines soft green, and only what needs a person lights up amber.',
-  look:'Green-black glass with faint scanlines. VT323 for titles, dates and money, IBM Plex Mono for labels, Atkinson Hyperlegible for reading.',
+  desc:'Green-black glass with faint scanlines.',
   worth:'“Hi Sam” with a blinking cursor. The next plan counts down (“1 DAY”). Ideas has a “How far from home” radar. Status gives its verdict over an oscilloscope trace, and spend is an LED bar.',
   gap:MOCK},
- {id:'b2',name:'Kitchen Terminal',group:'b',kind:'mock',
+ {id:'b2',name:'Kitchen Terminal',mode:'concept',medium:'mock',look:'dark',nav:'sidebar',fonts:'VT323, Atkinson Hyperlegible, IBM Plex Mono',
   idea:'The family’s shared kitchen-counter screen, drawn in the light of an old green phosphor monitor, with Vera as the friendly face on it.',
-  look:'Phosphor black and one glowing green, amber as the second phosphor. VT323 for big moments, Atkinson Hyperlegible for reading. Vera’s replies are in glowing mono.',
+  desc:'Phosphor black and one glowing green, amber as the second phosphor. Vera’s replies are in glowing mono.',
   worth:'Home opens with Vera speaking first. Plans fills the next plans with solid green and asks how past ones went with one-tap buttons. Settings has an ordered “Do these first”.',
   gap:MOCK},
- {id:'b3',name:'Afterglow (smiling terminal)',group:'b',kind:'mock',
+ {id:'b3',name:'Afterglow (smiling terminal)',mode:'concept',medium:'mock',look:'dark',nav:'sidebar',fonts:'VT323, JetBrains Mono, Atkinson Hyperlegible Next',
   idea:'A warm family app that glows like an old green phosphor screen. The terminal is in the light, the type and the > prompt; the reading and the words are modern and friendly.',
-  look:'Near-black green glass with a soft glow. VT323, JetBrains Mono and Atkinson Hyperlegible Next. Vera’s mark is a small smiling terminal.',
+  desc:'Near-black green glass with a soft glow. Vera’s mark is a small smiling terminal.',
   worth:'Anywhere you can talk to Vera starts with a glowing >. Ideas has an “Around home” radar and a “Free weekend?” card. Status labels its 30-day bars with their values.',
-  gap:MOCK},
- {id:'pared',name:'Lit Manual, Pared',group:'early',kind:'app',
-  idea:'One designer’s build from the review of the early designs: start from Lit Manual, Dialled, take things away, and borrow two drawings from Trued, Yard Lit.',
-  look:'IBM Plex Sans Condensed, Sans and Mono on near-black. Green means now or yours to act on, amber means late, everything else is grey.',
-  worth:'One instrument in the whole app: a round next-plan dial on Home whose lit stem drops into the Coming up rail at NOW. Chat hangs on a spine that ends in a lit ring marked “your turn”. Ideas has a grey “line from home”.'}
+  gap:MOCK}
 ];
+const HOME_H = {"a1": [1668, 3030], "a2": [1399, 2454], "a3": [1615, 2910], "b1": [1486, 2709], "b2": [1553, 2662], "b3": [1271, 2663], "ben": [1517, 2859], "cleo": [1349, 2733], "dev": [1712, 2993], "fin-desk": [1831, 2952], "fin-grid": [2167, 3793], "fin-index": [2562, 4306], "fin-track": [1807, 3257], "finn": [1073, 2274], "gia": [1511, 2776], "hal": [1512, 2942], "pared": [1441, 2659], "team-a": [1609, 2772], "team-b": [1305, 2638], "today": [1889, 3162]};
+D.forEach(d => { const h = HOME_H[d.id]; if (h) { d.homeH = h[0]; d.homePhoneH = h[1]; } });
+const R = JSON.parse(document.getElementById('reviews-data').textContent || '{}');
+// R[id] = { marks:{A,B,C}, words:{A,B,C} } ; judges: A = first run (16 designs), B and C = the two runs of 20
+const JUDGES = [['A','Judge 1 (16 designs)'],['B','Judge 2 (20 designs)'],['C','Judge 3 (20 designs)']];
 const BY = Object.fromEntries(D.map(d => [d.id, d]));
-const KIND = {app:'Real app', mock:'Mockup'};
-const state = {id:'overview', page:'home', mode:'desktop', vs:'', actual:false};
+const LOOK = {warm:'Warm light', dark:'Dark phosphor'};
+const MEDIUM = {app:'Real app pages', mock:'Mockup'};
+const NAV = {top:'Top bar', sidebar:'Sidebar'};
+D.forEach(d => {
+  const m = (R[d.id] && R[d.id].marks) || {};
+  d.marks = m;
+  const v = Object.values(m).filter(x => typeof x === 'number');
+  d.mean = v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+  d.n = v.length;
+});
+const RANKED = D.filter(d => d.mean !== null).sort((a, b) => b.mean - a.mean);
+D.forEach(d => { d.rank = d.mean === null ? null : RANKED.indexOf(d) + 1; });
+const fmt = x => x === null || x === undefined ? '–' : (Math.round(x * 10) / 10).toFixed(1);
+
+const state = {id:'overview', page:'home', mode:'desktop', vs:'', actual:false, group:'mode', by:'mode', sort:'mean', dir:-1};
 const $ = id => document.getElementById(id);
-const order = D.map(d => d.id);
+const order = D.slice().sort((a, b) => MODES.findIndex(m => m.id === a.mode) - MODES.findIndex(m => m.id === b.mode)).map(d => d.id);
+const VIEWS = ['overview', 'modes', 'scores'];
 
 function parse(h) {
   const p = h.replace(/^#/, '').split('.');
-  if (p[0] && (p[0] === 'overview' || BY[p[0]])) state.id = p[0];
+  if (p[0] && (VIEWS.includes(p[0]) || BY[p[0]])) state.id = p[0];
   if (p[1] && PAGES.some(x => x[0] === p[1])) state.page = p[1];
   state.mode = p[2] === 'phone' ? 'phone' : 'desktop';
   state.vs = p[3] && BY[p[3]] && p[3] !== state.id ? p[3] : '';
@@ -229,101 +363,222 @@ function parse(h) {
 function hash() { return [state.id, state.page, state.mode, state.vs].join('.').replace(/\.+$/, ''); }
 function go(patch) {
   Object.assign(state, patch);
-  if (state.vs === state.id || state.id === 'overview') state.vs = '';
+  if (state.vs === state.id || VIEWS.includes(state.id)) state.vs = '';
   render();
   try { history.replaceState(null, '', '#' + hash()); } catch (e) {}
   window.scrollTo(0, 0);
 }
 const src = (id, page, tail) => 'img/' + id + '/' + page + tail + '.webp';
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function md(t) {
+  if (!t) return '';
+  const lines = String(t).split('\n'); let out = '', ul = false;
+  for (const raw of lines) {
+    const l = raw.trim(); if (!l) continue;
+    const inline = esc(l.replace(/^[-*]\s+/, '')).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    if (/^[-*]\s+/.test(l)) { if (!ul) { out += '<ul>'; ul = true; } out += '<li>' + inline + '</li>'; }
+    else { if (ul) { out += '</ul>'; ul = false; } out += '<p>' + inline + '</p>'; }
+  }
+  return out + (ul ? '</ul>' : '');
+}
 
 function buildStatic() {
   $('count').textContent = D.length + ' looks for FamilyDB';
-  let rail = '<a href="#overview" data-go="overview" id="r-overview"><span>Overview</span><small>all</small></a>';
-  let railGroups = '';
-  const opts = '<option value="overview">Overview of all</option>';
-  let pick = opts;
-  for (const [key, label] of GROUPS) {
-    const items = D.filter(d => d.group === key);
-    railGroups += '<div class="group"><div class="group-label">' + label + '</div><div class="nav">' +
-      items.map(d => '<a href="#' + d.id + '" data-go="' + d.id + '" id="r-' + d.id + '"><span>' + d.name + '</span><small>' + KIND[d.kind] + '</small></a>').join('') + '</div></div>';
-    pick += '<optgroup label="' + label + '">' + items.map(d => '<option value="' + d.id + '">' + d.name + '</option>').join('') + '</optgroup>';
+  const link = (id, label, small) => '<a href="#' + id + '" data-go="' + id + '" id="r-' + id + '"><span>' + label + '</span><small>' + (small || '') + '</small></a>';
+  let rail = '<div class="nav">' + link('overview', 'Overview', 'grid') + link('modes', 'Modes compared', 'chart') + link('scores', 'Scoreboard', 'table') + '</div>';
+  let pick = '<option value="overview">Overview</option><option value="modes">Modes compared</option><option value="scores">Scoreboard</option>';
+  for (const m of MODES) {
+    const items = D.filter(d => d.mode === m.id);
+    rail += '<div class="group"><div class="group-label">' + m.name + '</div><div class="nav">' +
+      items.map(d => link(d.id, d.name + (d.chosen ? ' \u2605' : ''), fmt(d.mean))).join('') + '</div></div>';
+    pick += '<optgroup label="' + m.name + '">' + items.map(d => '<option value="' + d.id + '">' + d.name + '</option>').join('') + '</optgroup>';
   }
-  $('rail').innerHTML = '<div class="nav">' + rail + '</div>' + railGroups;
+  $('rail').innerHTML = rail;
   $('pick').innerHTML = pick;
   $('tabs').innerHTML = PAGES.map(([k, l], i) => '<button type="button" data-page="' + k + '" title="Key ' + (i + 1) + '">' + l + '</button>').join('');
   $('vs').innerHTML = '<option value="">None</option>' + D.map(d => '<option value="' + d.id + '">' + d.name + '</option>').join('');
 }
 
-function badge(d) { return '<span class="badge">' + KIND[d.kind] + '</span>'; }
+const chip = (t, cls) => '<span class="chip ' + (cls || '') + '">' + t + '</span>';
+const traitChips = d => (d.chosen ? chip('Chosen for FamilyDB', 'mark') : '') + chip(MODE[d.mode].short) + chip(MEDIUM[d.medium]) + chip(LOOK[d.look]) + chip(NAV[d.nav]);
 
 function overview() {
-  const pageLabel = PAGES.find(p => p[0] === state.page)[1];
-  let h = '<div class="head"><h1>All designs, ' + pageLabel + '</h1>' +
-    '<p class="lede">Pick a page above to see it in every design. Click one to open it at full size. The thumbnails show the top of each desktop page.</p></div>';
-  h += '<details class="about"><summary>What these are</summary><div>' +
-    '<p><b>Real app</b> designs were built on FamilyDB’s actual pages and rendered with the demo family’s data, so every page is the live markup. <b>Mockup</b> designs were drawn from a written description alone, as standalone HTML and CSS, so only the seven pages exist and nothing links anywhere.</p>' +
-    '<p>The reviewers were shown the earlier designs as unlabelled pictures and the Phosphor idea as one line. The from-scratch designers saw no pictures; two of the three groups of three were told the Phosphor idea, one group only the description.</p>' +
-    '<p>One model played every designer, so agreement between designs is one opinion repeated, not several votes.</p></div></details>';
-  for (const [key, label] of GROUPS) {
-    const items = D.filter(d => d.group === key);
-    h += '<section class="ov-group"><h3>' + label + '</h3><div class="grid">' + items.map(d =>
-      '<a class="card" href="#' + d.id + '.' + state.page + '" data-go="' + d.id + '"><img class="thumb" loading="lazy" src="' + src(d.id, state.page, '-t') + '" alt="' + d.name + ', ' + pageLabel + '">' +
-      '<span class="name">' + d.name + '</span><span class="meta">' + KIND[d.kind] + '</span></a>').join('') + '</div></section>';
+  const pl = PAGES.find(p => p[0] === state.page)[1];
+  const byMode = state.group === 'mode';
+  let h = '<div class="head"><h1>All designs, ' + pl + '</h1>' +
+    '<p class="lede">Pick a page above to see it in every design. Click one to open it at full size. Thumbnails show the top of each desktop page. The number on each card is the mean mark from the blind judges.</p>' +
+    '<div class="tools left"><div class="seg" role="group" aria-label="Grouping"><button type="button" data-group="mode" aria-pressed="' + byMode + '">Group by mode</button><button type="button" data-group="rank" aria-pressed="' + !byMode + '">Rank by mark</button></div></div></div>';
+  const card = d => '<a class="card" href="#' + d.id + '.' + state.page + '" data-go="' + d.id + '"><img class="thumb" loading="lazy" src="' + src(d.id, state.page, '-t') + '" alt="' + d.name + ', ' + pl + '">' +
+    (d.mean !== null ? '<span class="score">' + fmt(d.mean) + '</span>' : '') +
+    '<span class="name">' + d.name + (d.chosen ? ' \u2605' : '') + '</span><span class="meta">' + MODE[d.mode].short + ' · ' + LOOK[d.look] + '</span></a>';
+  if (byMode) {
+    for (const m of MODES) h += '<section class="ov-group"><h3>' + m.name + '</h3><div class="grid">' + D.filter(d => d.mode === m.id).map(card).join('') + '</div></section>';
+  } else {
+    h += '<section class="ov-group"><h3>Best to worst, by mean mark</h3><div class="grid">' + RANKED.map(card).join('') + '</div></section>';
   }
   return h;
 }
 
 function shot(d) {
-  const pl = PAGES.find(p => p[0] === state.page)[1];
-  const ph = state.mode === 'phone';
-  return '<div class="shot"><img src="' + src(d.id, state.page, ph ? '-phone' : '') + '" alt="' + d.name + ', ' + pl + ', ' + (ph ? 'phone' : 'desktop') + '" ' + (ph ? 'width="585"' : 'width="1280"') + '></div>';
+  const pl = PAGES.find(p => p[0] === state.page)[1], ph = state.mode === 'phone';
+  return '<div class="shot"><img src="' + src(d.id, state.page, ph ? '-phone' : '') + '" alt="' + d.name + ', ' + pl + ', ' + (ph ? 'phone' : 'desktop') + '" width="' + (ph ? 585 : 1280) + '"></div>';
 }
-
 function notes(d) {
-  return '<div class="notes"><p><b>Look</b>' + d.look + '</p>' +
+  return '<div class="notes"><p><b>Look</b>' + d.desc + '</p>' +
     (d.worth ? '<p><b>Worth a look</b>' + d.worth + '</p>' : '') +
     (d.gap ? '<p class="gap"><b>Unfinished</b>' + d.gap + '</p>' : '') + '</div>';
 }
-
-function headOf(d, withArrows) {
-  const i = order.indexOf(d.id), n = order.length;
-  const group = GROUPS.find(g => g[0] === d.group)[1];
-  return '<div class="head"><div class="head-top"><h2>' + d.name + '</h2>' + badge(d) +
-    (withArrows ? '<span class="nav-arrows"><button type="button" data-step="-1" aria-label="Previous design">←</button><button type="button" data-step="1" aria-label="Next design">→</button></span>' : '') +
-    '</div><span class="where">' + group + ' · ' + (i + 1) + ' of ' + n + '</span>' +
-    '<p class="idea">“' + d.idea.replace(/^"|"$/g, '') + '”</p></div>';
+function marksOf(d) {
+  if (d.mean === null) return '<div class="marks"><span class="each">Not marked by the blind judges. This is the baseline all the others are measured against by eye.</span></div>';
+  const each = JUDGES.filter(([k]) => typeof d.marks[k] === 'number').map(([k, l]) => '<span class="each">' + l.replace(/ \(.*\)/, '') + ' <b>' + fmt(d.marks[k]) + '</b></span>').join('');
+  return '<div class="marks"><span class="big">' + fmt(d.mean) + '<small>/ 10 mean · rank ' + d.rank + ' of ' + RANKED.length + '</small></span>' + each + '</div>';
 }
-
+function wordsOf(d) {
+  const w = (R[d.id] && R[d.id].words) || {};
+  const items = JUDGES.filter(([k]) => w[k]).map(([k, l]) => {
+    const x = w[k];
+    const body = [['What it is', x.what], ['What works', x.works], ['What doesn’t', x.doesnt], ['Beautiful', x.beautiful], ['Ugly', x.ugly]]
+      .filter(r => r[1]).map(r => '<div><b class="h">' + r[0] + '</b>' + md(r[1]) + '</div>').join('');
+    return '<details><summary><span class="j">' + l + '</span><span class="m">' + fmt(d.marks[k]) + '</span><span class="t">' + esc(x.markText || '') + '</span></summary><div class="body">' + body + '</div></details>';
+  });
+  return items.length ? '<div class="words"><h3 class="sec">What the blind judges said</h3>' + items.join('') + '</div>' : '';
+}
+function headOf(d, withArrows, full) {
+  const i = order.indexOf(d.id), n = order.length;
+  return '<div class="head"><div class="head-top"><h2>' + d.name + '</h2>' +
+    (withArrows ? '<span class="nav-arrows"><button type="button" data-step="-1" aria-label="Previous design">←</button><button type="button" data-step="1" aria-label="Next design">→</button></span>' : '') +
+    '</div><div class="chips">' + traitChips(d) + '</div>' +
+    (full ? '<p class="idea">“' + d.idea + '”</p><p class="where">' + d.fonts + ' · ' + (i + 1) + ' of ' + n + '</p>' : '') + '</div>';
+}
 function detail() {
   const d = BY[state.id], v = state.vs ? BY[state.vs] : null;
   if (v) {
-    const col = x => '<div class="col"><div class="col-head"><b>' + x.name + '</b><span>' + x.idea + '</span></div>' + shot(x) + '</div>';
-    return headOf(d, true).replace(/<p class="idea">.*?<\/p>/, '') + '<div class="stage pair ' + state.mode + (state.actual ? ' actual' : '') + '">' + col(d) + col(v) + '</div>';
+    const col = x => '<div class="col"><div class="col-head"><b>' + x.name + ' <span class="chip mark">' + fmt(x.mean) + '</span></b><span>' + MODE[x.mode].short + ' · ' + LOOK[x.look] + ' · ' + x.idea + '</span></div>' + shot(x) + '</div>';
+    return headOf(d, true, false) + '<div class="stage pair ' + state.mode + (state.actual ? ' actual' : '') + '">' + col(d) + col(v) + '</div>';
   }
   if (state.mode === 'phone') {
-    return '<div class="stage phone-single phone"><div class="sticky">' + headOf(d, true) + notes(d) + '</div>' + '<div class="col">' + shot(d) + '</div></div>';
+    return '<div class="stage phone-single phone"><div class="sticky">' + headOf(d, true, true) + marksOf(d) + notes(d) + '</div><div class="col">' + shot(d) + '</div></div>' + wordsOf(d);
   }
-  return headOf(d, true) + notes(d) + '<div class="stage ' + (state.actual ? 'actual' : '') + '"><div class="col">' + shot(d) + '</div></div>';
+  return headOf(d, true, true) + marksOf(d) + notes(d) + '<div class="stage ' + (state.actual ? 'actual' : '') + '"><div class="col">' + shot(d) + '</div></div>' + wordsOf(d);
 }
 
+/* ---- modes view ---- */
+const GROUPERS = {
+  mode: {label: 'How it was made', rows: () => MODES.map(m => ({id: m.id, name: m.name, sub: m.short, items: D.filter(d => d.mode === m.id)}))},
+  look: {label: 'Look', rows: () => Object.keys(LOOK).map(k => ({id: k, name: LOOK[k], sub: k === 'warm' ? 'cream paper, serif, light' : 'near-black, green glow', items: D.filter(d => d.look === k)}))},
+  medium: {label: 'Medium', rows: () => Object.keys(MEDIUM).map(k => ({id: k, name: MEDIUM[k], sub: k === 'app' ? 'built on the live templates' : 'standalone pages from a description', items: D.filter(d => d.medium === k)}))},
+  nav: {label: 'Navigation', rows: () => Object.keys(NAV).map(k => ({id: k, name: NAV[k], sub: k === 'top' ? 'bar across the top' : 'rail down the side', items: D.filter(d => d.nav === k)}))}
+};
+const LO = 3, HI = 9;
+const pct = v => ((v - LO) / (HI - LO) * 100);
+function stats(items) {
+  const v = items.map(d => d.mean).filter(x => x !== null);
+  if (!v.length) return null;
+  return {n: v.length, mean: v.reduce((a, b) => a + b, 0) / v.length, min: Math.min(...v), max: Math.max(...v)};
+}
+function chartRows(groupKey) {
+  return GROUPERS[groupKey].rows().map(r => ({...r, st: stats(r.items)})).filter(r => r.st).sort((a, b) => groupKey === 'mode' ? 0 : b.st.mean - a.st.mean);
+}
+function lanes(items) {
+  const sorted = items.filter(d => d.mean !== null).sort((a, b) => a.mean - b.mean), last = [], out = [];
+  for (const d of sorted) {
+    let l = 0; while (last[l] !== undefined && d.mean - last[l] < 0.28) l++;
+    last[l] = d.mean; out.push({d, l});
+  }
+  return out;
+}
+function chart() {
+  const rows = chartRows(state.by);
+  let h = '<div class="chart"><div class="chart-top"><div class="seg" role="group" aria-label="Group the chart by">' +
+    Object.entries(GROUPERS).map(([k, g]) => '<button type="button" data-by="' + k + '" aria-pressed="' + (state.by === k) + '">' + g.label + '</button>').join('') +
+    '</div><div class="legend"><span><i class="solid"></i>Warm light</span><span><i class="ring"></i>Dark phosphor</span><span><i class="tick"></i>Group mean</span></div></div><div class="rows">';
+  for (const r of rows) {
+    const L = lanes(r.items), nl = Math.max(1, ...L.map(x => x.l + 1)), hh = 14 + nl * 18;
+    h += '<div class="row"><div class="lab"><b>' + r.name + '</b><span>' + r.st.n + ' design' + (r.st.n === 1 ? '' : 's') + ' · mean ' + fmt(r.st.mean) + ' · ' + fmt(r.st.min) + '–' + fmt(r.st.max) + '</span></div>' +
+      '<div class="track grid-lines" data-h="' + hh + '"><span class="mean" data-left="' + pct(r.st.mean) + '"></span>' +
+      L.map(({d, l}) => '<button type="button" class="dot ' + (d.look === 'dark' ? 'ring' : '') + '" data-left="' + pct(d.mean) + '" data-top="' + (14 + l * 18 - 2) + '" data-go="' + d.id + '" data-tip="' + esc(d.name) + ': mean ' + fmt(d.mean) + ' (' + MODE[d.mode].short + ', ' + LOOK[d.look] + ', ' + MEDIUM[d.medium] + ')" aria-label="' + esc(d.name) + ', mean ' + fmt(d.mean) + '"></button>').join('') + '</div></div>';
+  }
+  h += '</div><div class="axis"><div></div><div>' + [3, 4, 5, 6, 7, 8, 9].map(v => '<span data-left="' + pct(v) + '">' + v + '</span>').join('') + '</div></div><div class="readout" id="readout" aria-live="polite">Hover or focus a dot to name the design. Click it to open.</div></div>';
+  return h;
+}
+function twoByTwo() {
+  const cell = (look, medium) => {
+    const it = D.filter(d => d.look === look && d.medium === medium), s = stats(it);
+    return s ? '<td class="n">' + fmt(s.mean) + ' <span class="where">(' + s.n + ')</span></td>' : '<td class="empty">none made</td>';
+  };
+  return '<div class="tw"><table class="t"><thead><tr><th></th><th>Real app pages</th><th>Mockup</th></tr></thead><tbody>' +
+    '<tr><th>Warm light</th>' + cell('warm', 'app') + cell('warm', 'mock') + '</tr>' +
+    '<tr><th>Dark phosphor</th>' + cell('dark', 'app') + cell('dark', 'mock') + '</tr></tbody></table></div>';
+}
+function modeCards() {
+  return '<div class="modes">' + MODES.map(m => {
+    const items = D.filter(d => d.mode === m.id), s = stats(items), best = items.filter(d => d.mean !== null).sort((a, b) => b.mean - a.mean)[0];
+    return '<div class="mode"><h4>' + m.name + '</h4><p><b>How:</b> ' + m.how + '</p><p><b>What they knew:</b> ' + m.knew + '</p>' +
+      '<div class="stats"><span>' + items.length + ' design' + (items.length === 1 ? '' : 's') + '</span>' + (s ? '<span>mean <b>' + fmt(s.mean) + '</b></span><span>range <b>' + fmt(s.min) + '–' + fmt(s.max) + '</b></span>' : '<span>not marked</span>') + (best ? '<span>best: <b>' + esc(best.name) + '</b></span>' : '') + '</div>' +
+      '<div class="strip">' + items.map(d => '<a href="#' + d.id + '.home" data-go="' + d.id + '" title="' + esc(d.name) + '"><img loading="lazy" src="' + src(d.id, 'home', '-t') + '" alt="' + esc(d.name) + '"></a>').join('') + '</div></div>';
+  }).join('') + '</div>';
+}
+const FINDINGS = /*FINDINGS*/"<h3 class=\"sec\">What the marks say</h3>\n<p><b>The three judges mostly agree.</b> Their rankings correlate at 0.8 to 0.9. The tomato and green Kitchen Tables lead (8.5 and 8.3), then Afterglow with scanlines (7.7) and Lit Manual, Pared (7.5). At the bottom are the monitor sketch (2.7), the fade sketch (4.0), today\u2019s page (4.3) and the committee\u2019s four finalists (4.8 to 5.5). Two of the three judges put Kitchen Table (green) first or second, and the third put it third. Its marks were 8, 8 and 9.</p>\n<p><b>Look and finish are tangled.</b> Among the mockups, warm light designs average 8.1 and dark phosphor ones 7.4, a gap of 0.6. That is about the size of the judges\u2019 own disagreement on a single design, and there are only three designs on each side. The much bigger gap is between dark mockups (7.4) and dark designs built on the real app (5.4). But the real-app builds that got the most care, Pared (7.5) and Signal (7.2), score as high as the dark mockups. What pulls the rest down is mostly pages that were never styled: raw Status tables, native date and select controls, phone layouts that overflow. It is not the green.</p>\n<p><b>Where the judges liked the retro screen.</b> The dark designs that scored best made the screen carry information. Pared\u2019s dial reads \u201cnext in 1 day\u201d and its stem runs into the Coming up list. Afterglow\u2019s radar plots ideas by drive time with a legend, and it adds \u201cLeave by 12:30\u201d. Where the radar was only decoration, repeated on several pages, they marked it down. Fourteen of the twenty designs share one structure (top bar, composer beside a CRT screen, the same Settings and Status), and the judges said much of that variety is surface.</p>\n<p><b>The identity model.</b> One judge pointed out that the top-bar dark designs assume nobody is signed in: they ask \u201cwho is asking?\u201d in a dropdown. The sidebar designs, light or dark, know it is Sam, greet Sam, and close loops (\u201cVera will ask how it went\u201d). That is a product decision more than a look, and it applies whichever look wins.</p>\n<h3 class=\"sec\">What the modes say</h3>\n<p><b>A short brief beat a long process.</b> The three designers who got only the description average 8.1, the highest of any mode. Telling them the Phosphor idea cost little (7.4). The committee tournament\u2019s four finalists average 5.1, below every from-scratch design and both team entries. The earlier blind panel had marked the same four 6 to 7.5, but against a smaller, easier field. Today\u2019s page is 18th of 20.</p>\n<p><b>Real-app builds can compete.</b> One designer working from review notes (Pared, 7.5) and one team entry (Signal, 7.2) show that a design on the live templates can score with the mockups. The six sketches scored lowest as a group (4.9), which fits their being quick.</p>\n<h3 class=\"sec\">What the marks do not say</h3>\n<p class=\"caveat\"><b>One kind of mind.</b> Every designer and every judge is the same kind of AI. Cream paper, a soft serif and a tomato accent is a look AI design output tends to produce, so the judges may be rewarding what they would have drawn. That says little about what this family would pick. The family\u2019s own taste is the verdict that counts, and it chose Kitchen Table (green).</p>\n<p class=\"caveat\"><b>Pictures, not pages.</b> The judges saw screenshots of seven pages. They could not see motion, hover, focus or real text rendering, and said so. The glow and scanline designs could move by up to a point either way.</p>\n<p class=\"caveat\"><b>Small groups, one prompt each.</b> Three designers per from-scratch group, one set of instructions, and every warm design is a mockup. A warm design built on the real pages has not been made, so look and medium are not separated.</p>\n";
+function modesView() {
+  return '<div class="decision"><b>Decision.</b> Kitchen Table (green), \u2605, is the look chosen for FamilyDB. Phosphor stays a design system in its own right; this is a verdict on this app, not on the idea.</div>' +
+    '<div class="head"><h1>Modes compared</h1><p class="lede">Seven ways the designs were made, set against three blind judges’ marks. Each dot is one design, at its mean mark across the judges who saw it.</p></div>' +
+    chart() +
+    '<div class="two"><div class="head"><h3 class="sec">Look and medium together</h3><p class="lede">Mean mark, with the number of designs in brackets. The empty cell is the catch: every warm design is a mockup, so look and medium cannot be told apart in these marks.</p>' + twoByTwo() + '</div></div>' +
+    '<div class="head"><h3 class="sec">The seven modes</h3></div>' + modeCards() +
+    '<div class="finds">' + FINDINGS + '</div>';
+}
+
+/* ---- scoreboard ---- */
+const COLS = [
+  ['rank', 'Rank', d => d.rank === null ? 999 : d.rank, d => d.rank === null ? '–' : d.rank, 'n'],
+  ['name', 'Design', d => d.name.toLowerCase(), d => '<a href="#' + d.id + '.home" data-go="' + d.id + '">' + esc(d.name) + (d.chosen ? ' \u2605' : '') + '</a>'],
+  ['mode', 'Mode', d => MODES.findIndex(m => m.id === d.mode), d => MODE[d.mode].short],
+  ['look', 'Look', d => d.look, d => LOOK[d.look]],
+  ['medium', 'Medium', d => d.medium, d => MEDIUM[d.medium]],
+  ['nav', 'Nav', d => d.nav, d => NAV[d.nav]],
+  ['mean', 'Mean', d => d.mean === null ? -1 : d.mean, d => fmt(d.mean), 'n'],
+  ['A', 'Judge 1', d => d.marks.A === undefined ? -1 : d.marks.A, d => fmt(d.marks.A), 'n'],
+  ['B', 'Judge 2', d => d.marks.B === undefined ? -1 : d.marks.B, d => fmt(d.marks.B), 'n'],
+  ['C', 'Judge 3', d => d.marks.C === undefined ? -1 : d.marks.C, d => fmt(d.marks.C), 'n'],
+  ['hh', 'Home, desktop', d => d.homeH || 0, d => d.homeH ? d.homeH.toLocaleString('en-US') + ' px' : '–', 'n'],
+  ['hp', 'Home, phone', d => d.homePhoneH || 0, d => d.homePhoneH ? d.homePhoneH.toLocaleString('en-US') + ' px' : '–', 'n'],
+  ['fonts', 'Type', d => d.fonts.toLowerCase(), d => esc(d.fonts)]
+];
+function scores() {
+  const col = COLS.find(c => c[0] === state.sort) || COLS[6];
+  const rows = D.slice().sort((a, b) => { const x = col[2](a), y = col[2](b); return (x < y ? -1 : x > y ? 1 : 0) * state.dir; });
+  return '<div class="head"><h1>Scoreboard</h1><p class="lede">Every design with its marks and what can be measured from the pictures. Click a column to sort and a row to open the design. Home lengths are the full page at 1280 px wide and at phone width, in CSS pixels; a longer Home means more scrolling.</p></div>' +
+    '<div class="tw"><table class="t sortable"><thead><tr>' + COLS.map(c => '<th scope="col"><button type="button" data-sort="' + c[0] + '" aria-sort="' + (state.sort === c[0] ? (state.dir > 0 ? 'ascending' : 'descending') : 'none') + '">' + c[1] + '</button></th>').join('') + '</tr></thead><tbody>' +
+    rows.map(d => '<tr data-go="' + d.id + '">' + COLS.map(c => '<td class="' + (c[4] || '') + (c[3](d) === '–' ? ' empty' : '') + '">' + c[3](d) + '</td>').join('') + '</tr>').join('') + '</tbody></table></div>' +
+    '<p class="lede">Judge 1 saw sixteen designs; Judges 2 and 3 saw twenty, with the four committee finalists added, each in a different shuffled order. All three were given only a role (an expert graphic and interface designer), a three-sentence description of the app and the pictures. Marks are out of 10.</p>';
+}
+
+function applyPos() {
+  document.querySelectorAll('[data-left]').forEach(el => { el.style.left = el.dataset.left + '%'; });
+  document.querySelectorAll('[data-top]').forEach(el => { el.style.top = el.dataset.top + 'px'; });
+  document.querySelectorAll('[data-h]').forEach(el => { el.style.height = el.dataset.h + 'px'; });
+}
 function render() {
-  const detailView = state.id !== 'overview';
-  $('view').innerHTML = detailView ? detail() : overview();
-  document.querySelectorAll('#rail a').forEach(a => a.setAttribute('aria-current', a.dataset.go === state.id ? 'true' : 'false'));
+  const id = state.id, isDetail = !VIEWS.includes(id);
+  $('view').innerHTML = id === 'overview' ? overview() : id === 'modes' ? modesView() : id === 'scores' ? scores() : detail();
+  document.querySelectorAll('#rail a').forEach(a => a.setAttribute('aria-current', a.dataset.go === id ? 'true' : 'false'));
   document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.page === state.page ? 'true' : 'false'));
+  const showPageControls = isDetail || id === 'overview';
+  $('tabs').hidden = !showPageControls;
+  $('sizeSeg').hidden = !isDetail;
+  $('actual').hidden = !isDetail || state.mode === 'phone';
+  $('vsField').hidden = !isDetail;
   $('m-desktop').setAttribute('aria-pressed', state.mode === 'desktop');
   $('m-phone').setAttribute('aria-pressed', state.mode === 'phone');
   $('actual').setAttribute('aria-pressed', state.actual);
-  $('actual').hidden = !detailView || state.mode === 'phone';
-  $('vs').closest('label').hidden = !detailView;
-  $('pick').value = state.id;
+  $('pick').value = id;
   $('vs').value = state.vs;
-  const d = detailView ? BY[state.id] : null;
-  document.title = (d ? d.name + ' · ' : '') + 'Phosphor Concept Viewer';
+  applyPos();
+  document.title = (isDetail ? BY[id].name + ' · ' : id === 'modes' ? 'Modes compared · ' : id === 'scores' ? 'Scoreboard · ' : '') + 'Phosphor Concept Viewer';
 }
 
 function step(n) {
-  if (state.id === 'overview') return go({id: order[n > 0 ? 0 : order.length - 1]});
+  if (VIEWS.includes(state.id)) return go({id: order[n > 0 ? 0 : order.length - 1]});
   const i = (order.indexOf(state.id) + n + order.length) % order.length;
   go({id: order[i]});
 }
@@ -331,11 +586,19 @@ function step(n) {
 document.addEventListener('click', e => {
   const a = e.target.closest('[data-go]');
   if (a) { e.preventDefault(); go({id: a.dataset.go}); return; }
-  const t = e.target.closest('[data-page]');
-  if (t) { go({page: t.dataset.page}); return; }
-  const s = e.target.closest('[data-step]');
-  if (s) { step(Number(s.dataset.step)); }
+  const t = e.target.closest('[data-page]'); if (t) { go({page: t.dataset.page}); return; }
+  const s = e.target.closest('[data-step]'); if (s) { step(Number(s.dataset.step)); return; }
+  const g = e.target.closest('[data-group]'); if (g) { state.group = g.dataset.group; render(); return; }
+  const b = e.target.closest('[data-by]'); if (b) { state.by = b.dataset.by; render(); return; }
+  const so = e.target.closest('[data-sort]');
+  if (so) { const k = so.dataset.sort; if (state.sort === k) state.dir = -state.dir; else { state.sort = k; state.dir = (k === 'name' || k === 'rank' || k === 'mode' || k === 'look' || k === 'medium' || k === 'nav' || k === 'fonts') ? 1 : -1; } render(); }
 });
+function tip(e) {
+  const d = e.target.closest && e.target.closest('.dot'), r = $('readout');
+  if (d && r) r.textContent = d.dataset.tip;
+}
+document.addEventListener('mouseover', tip);
+document.addEventListener('focusin', tip);
 $('m-desktop').addEventListener('click', () => go({mode: 'desktop'}));
 $('m-phone').addEventListener('click', () => go({mode: 'phone'}));
 $('actual').addEventListener('click', () => { state.actual = !state.actual; render(); });
