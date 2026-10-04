@@ -1,0 +1,18 @@
+{
+ "j1": {
+  "P": "orig",
+  "Q": "final"
+ },
+ "j2": {
+  "P": "final",
+  "Q": "orig"
+ },
+ "j3": {
+  "P": "orig",
+  "Q": "final"
+ },
+ "j4": {
+  "P": "final",
+  "Q": "orig"
+ }
+}
