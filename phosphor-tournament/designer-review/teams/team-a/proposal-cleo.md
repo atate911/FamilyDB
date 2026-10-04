@@ -16,9 +16,9 @@
 
 ## The pages
 
-- **Home.** Vera's line in mono with a block cursor, then "Give Vera something to plan." and the box. Under it, starters that say where they land ("Remind me to… → To do"). Beside it, the one screen: Next up. Coming up and To do sit below on the now trace. Finish setting up is one amber line above the fold. A footer strip reads "Ready · gpt-6-luna · $0.00 of $2.00 today".
-- **Chat.** A full-width thread on a vertical trace, with time stops, ending at "your turn" by the box. Vera's messages are mono on a faint green tint; the family's are sans, with initials. The kids' conversations go in a slim strip above the thread.
-- **Ideas.** The screen is "the line from home": places plotted by drive time, with numbered stops staggered so labels never collide, and the same numbers in the table below. Filters are one row of three selects plus search.
+- **Home.** Vera's line in mono with a block cursor, then "Give Vera something to plan." and the box. Under it, starters that say where they land ("Remind me to… → To do"). Beside it, the one screen: Next up. Coming up and To do sit below on the now trace. Finish setting up is one amber line above the fold. A footer strip shows readiness and today's spend.
+- **Chat.** A full-width thread on a vertical trace, with time stops, ending at "your turn" by the box. Vera speaks in mono on a faint green tint. The kids' conversations go in a slim strip above the thread.
+- **Ideas.** The screen is "the line from home": places plotted by drive time, with staggered numbered stops matching the table below. Filters are one row of three selects plus search.
 - **To do.** Late items sit above the lit now line in amber, no-date items below it. The title reads "4 open · 3 late".
 - **Plans.** A full-width calendar with no side screen. Today carries the now node. Chips show the title first and wrap rather than truncate. Empty weeks say "nothing on".
 - **Status.** A lamp board with readable labels beside a spending gauge captioned "The limit starts again at midnight". Then three columns of lamps with words, and a captioned FIG. 1 wiring diagram.
@@ -43,4 +43,4 @@
 
 ## Why it wins
 
-Most designs either wear phosphor everywhere and lose "easy to use", or forget the character. Here the glow is a signal: green means Vera, now, or working.  The family learns that in a day. The old screen's character becomes the app's grammar rather than its decoration.
+Most designs wear phosphor everywhere or forget it. Here the glow is a signal: green means Vera, now, or working. The family learns that in a day. The old screen's character becomes the app's grammar rather than its decoration.
