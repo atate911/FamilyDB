@@ -9,6 +9,7 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body); }
 button, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
@@ -165,6 +166,9 @@ table.t td.empty { color: var(--dim); }
 .decision b { color: var(--accent); font-weight: 600; }
 .finds { display: grid; gap: 10px; max-width: 80ch; }
 .finds h3 { margin: 6px 0 0; }
+.tabs.fp { border-bottom: 1px solid var(--rule); }
+.explain p + p { margin-top: 4px; }
+.two > .head { align-content: start; }
 .finds p { color: var(--dim); }
 .finds p b { color: var(--ink); font-weight: 500; }
 .finds .caveat b { color: var(--accent); }
@@ -212,6 +216,9 @@ table.t td.empty { color: var(--dim); }
 <script>
 const PAGES = [['home','Home'],['chat','Chat'],['ideas','Ideas'],['plans','Plans'],['todo','To do'],['status','Status'],['settings','Settings']];
 const MODES = [
+ {id:'final', name:'The final design', short:'Final',
+  how:'Kitchen Table (green)\u2019s own designer, given thirteen specialist reviews and the blind judges\u2019 notes, rebuilt it in three stages: the system and the seven pages with a real phone layout; the kid\u2019s pages, wishes, sign-in and the forms; then every state, dark mode and a written standard. Twenty pages.',
+  knew:'Everything the judges and reviewers said, and how the real app works: sign-in, the three roles, presents kept from kids, reminders, the security rules.'},
  {id:'today', name:'Today’s page', short:'Baseline',
   how:'The page the app has now, made inside the project to its own style rules.',
   knew:'Everything about the app, including its written style rules.'},
@@ -237,6 +244,11 @@ const MODES = [
 const MODE = Object.fromEntries(MODES.map(m => [m.id, m]));
 const MOCK = 'Mockup drawn from a written description, not the app’s own templates. The daily split in the 30-day chart is invented; it adds up to the real totals.';
 const D = [
+ {id:'final',name:'Kitchen Table, final',badge:'Final design',star:true,mode:'final',medium:'mock',look:'warm',nav:'sidebar',fonts:'Fraunces (with its own tabular figures), Atkinson Hyperlegible; self-hosted',
+  idea:'The family\u2019s kitchen table, made final: Vera first, the day in one sentence, everything else in plain cards, and a phone layout of its own.',
+  desc:'Cream paper and ink for the family; a few panes of charcoal glass with phosphor green for FamilyDB and Vera: the smiling-monitor mark, Vera\u2019s small screen, one map of ideas by drive time. Phosphor at night.',
+  worth:'Twenty-four pages (twenty shown here; all of them on the showcase page): the seven main ones as a parent, a kid\u2019s Home, Chat, To do and Wishes, deciding on wishes, an idea and the add form, More, sign-in, the grown-ups page, and three sheets of states. See \u201cThe final design\u201d for every page, light and dark.',
+  gap:'A mockup, not yet the app: it is ready to be ported into the templates with the written standard.'},
  {id:'today',name:'Today’s page',mode:'today',medium:'app',look:'dark',nav:'top',fonts:'DM Sans, DM Mono, VT323',
   idea:'What the family sees now, for reference.',
   desc:'The current FamilyDB page, rendered with the same demo family as the rest.'},
@@ -297,7 +309,7 @@ const D = [
   idea:'Phosphor green only where the machine speaks; everything the family touches is plain.',
   desc:'Plain dark, with green for the machine only.',
   worth:'Home asks “Tell Vera what to plan.” inside one framed console, followed by a green readout strip of today’s counts. To do is a table.'},
- {id:'a1',name:'Kitchen Table (green)',chosen:true,mode:'plain',medium:'mock',look:'warm',nav:'sidebar',fonts:'Fraunces, Atkinson Hyperlegible',
+ {id:'a1',name:'Kitchen Table (green)',badge:'Chosen look, before',mode:'plain',medium:'mock',look:'warm',nav:'sidebar',fonts:'Fraunces, Atkinson Hyperlegible',
   idea:'FamilyDB should feel like the family’s kitchen table: Vera is the first thing you can talk to, and everything else is a short pile of plain-language cards you can take in at a glance.',
   desc:'Cream paper, deep green for Vera’s box, a sunny yellow Send, brick red only for late. Each person has a colour.',
   worth:'When Vera does something, the chat shows it as a card (“Added to Plans”). Each idea’s drive time has a small arrow pointing the way. Settings opens with a banner for the one thing that needs a look, with its fix.',
@@ -348,10 +360,10 @@ const RANKED = D.filter(d => d.mean !== null).sort((a, b) => b.mean - a.mean);
 D.forEach(d => { d.rank = d.mean === null ? null : RANKED.indexOf(d) + 1; });
 const fmt = x => x === null || x === undefined ? '–' : (Math.round(x * 10) / 10).toFixed(1);
 
-const state = {id:'overview', page:'home', mode:'desktop', vs:'', actual:false, group:'mode', by:'mode', sort:'mean', dir:-1};
+const state = {fpage:'home', theme:'light', fgroup:0, id:'final', page:'home', mode:'desktop', vs:'', actual:false, group:'mode', by:'mode', sort:'mean', dir:-1};
 const $ = id => document.getElementById(id);
 const order = D.slice().sort((a, b) => MODES.findIndex(m => m.id === a.mode) - MODES.findIndex(m => m.id === b.mode)).map(d => d.id);
-const VIEWS = ['overview', 'modes', 'scores'];
+const VIEWS = ['final', 'overview', 'modes', 'scores'];
 
 function parse(h) {
   const p = h.replace(/^#/, '').split('.');
@@ -385,12 +397,12 @@ function md(t) {
 function buildStatic() {
   $('count').textContent = D.length + ' looks for FamilyDB';
   const link = (id, label, small) => '<a href="#' + id + '" data-go="' + id + '" id="r-' + id + '"><span>' + label + '</span><small>' + (small || '') + '</small></a>';
-  let rail = '<div class="nav">' + link('overview', 'Overview', 'grid') + link('modes', 'Modes compared', 'chart') + link('scores', 'Scoreboard', 'table') + '</div>';
-  let pick = '<option value="overview">Overview</option><option value="modes">Modes compared</option><option value="scores">Scoreboard</option>';
+  let rail = '<div class="nav">' + link('final', 'The final design \u2605', '20 pages') + link('overview', 'Overview', 'grid') + link('modes', 'Modes compared', 'chart') + link('scores', 'Scoreboard', 'table') + '</div>';
+  let pick = '<option value="final">The final design</option><option value="overview">Overview</option><option value="modes">Modes compared</option><option value="scores">Scoreboard</option>';
   for (const m of MODES) {
     const items = D.filter(d => d.mode === m.id);
     rail += '<div class="group"><div class="group-label">' + m.name + '</div><div class="nav">' +
-      items.map(d => link(d.id, d.name + (d.chosen ? ' \u2605' : ''), fmt(d.mean))).join('') + '</div></div>';
+      items.map(d => link(d.id, d.name + (d.star ? ' \u2605' : ''), fmt(d.mean))).join('') + '</div></div>';
     pick += '<optgroup label="' + m.name + '">' + items.map(d => '<option value="' + d.id + '">' + d.name + '</option>').join('') + '</optgroup>';
   }
   $('rail').innerHTML = rail;
@@ -400,7 +412,7 @@ function buildStatic() {
 }
 
 const chip = (t, cls) => '<span class="chip ' + (cls || '') + '">' + t + '</span>';
-const traitChips = d => (d.chosen ? chip('Chosen for FamilyDB', 'mark') : '') + chip(MODE[d.mode].short) + chip(MEDIUM[d.medium]) + chip(LOOK[d.look]) + chip(NAV[d.nav]);
+const traitChips = d => (d.badge ? chip(d.badge, 'mark') : '') + chip(MODE[d.mode].short) + chip(MEDIUM[d.medium]) + chip(LOOK[d.look]) + chip(NAV[d.nav]);
 
 function overview() {
   const pl = PAGES.find(p => p[0] === state.page)[1];
@@ -410,7 +422,7 @@ function overview() {
     '<div class="tools left"><div class="seg" role="group" aria-label="Grouping"><button type="button" data-group="mode" aria-pressed="' + byMode + '">Group by mode</button><button type="button" data-group="rank" aria-pressed="' + !byMode + '">Rank by mark</button></div></div></div>';
   const card = d => '<a class="card" href="#' + d.id + '.' + state.page + '" data-go="' + d.id + '"><img class="thumb" loading="lazy" src="' + src(d.id, state.page, '-t') + '" alt="' + d.name + ', ' + pl + '">' +
     (d.mean !== null ? '<span class="score">' + fmt(d.mean) + '</span>' : '') +
-    '<span class="name">' + d.name + (d.chosen ? ' \u2605' : '') + '</span><span class="meta">' + MODE[d.mode].short + ' · ' + LOOK[d.look] + '</span></a>';
+    '<span class="name">' + d.name + (d.star ? ' \u2605' : '') + '</span><span class="meta">' + MODE[d.mode].short + ' · ' + LOOK[d.look] + '</span></a>';
   if (byMode) {
     for (const m of MODES) h += '<section class="ov-group"><h3>' + m.name + '</h3><div class="grid">' + D.filter(d => d.mode === m.id).map(card).join('') + '</div></section>';
   } else {
@@ -520,7 +532,7 @@ function modeCards() {
 }
 const FINDINGS = /*FINDINGS*/'';
 function modesView() {
-  return '<div class="decision"><b>Decision.</b> Kitchen Table (green), \u2605, is the look chosen for FamilyDB. Phosphor stays a design system in its own right; this is a verdict on this app, not on the idea.</div>' +
+  return '<div class="decision"><b>Decision.</b> Kitchen Table (green) is the look chosen for FamilyDB, and \u201cKitchen Table, final\u201d \u2605 is that look made final. Phosphor stays a design system in its own right; this is a verdict on this app, not on the idea.</div>' +
     '<div class="head"><h1>Modes compared</h1><p class="lede">Seven ways the designs were made, set against three blind judges’ marks. Each dot is one design, at its mean mark across the judges who saw it.</p></div>' +
     chart() +
     '<div class="two"><div class="head"><h3 class="sec">Look and medium together</h3><p class="lede">Mean mark, with the number of designs in brackets. The empty cell is the catch: every warm design is a mockup, so look and medium cannot be told apart in these marks.</p>' + twoByTwo() + '</div></div>' +
@@ -531,7 +543,7 @@ function modesView() {
 /* ---- scoreboard ---- */
 const COLS = [
   ['rank', 'Rank', d => d.rank === null ? 999 : d.rank, d => d.rank === null ? '–' : d.rank, 'n'],
-  ['name', 'Design', d => d.name.toLowerCase(), d => '<a href="#' + d.id + '.home" data-go="' + d.id + '">' + esc(d.name) + (d.chosen ? ' \u2605' : '') + '</a>'],
+  ['name', 'Design', d => d.name.toLowerCase(), d => '<a href="#' + d.id + '.home" data-go="' + d.id + '">' + esc(d.name) + (d.star ? ' \u2605' : '') + '</a>'],
   ['mode', 'Mode', d => MODES.findIndex(m => m.id === d.mode), d => MODE[d.mode].short],
   ['look', 'Look', d => d.look, d => LOOK[d.look]],
   ['medium', 'Medium', d => d.medium, d => MEDIUM[d.medium]],
@@ -553,6 +565,36 @@ function scores() {
     '<p class="lede">Judge 1 saw sixteen designs; Judges 2 and 3 saw twenty, with the four committee finalists added, each in a different shuffled order. All three were given only a role (an expert graphic and interface designer), a three-sentence description of the app and the pictures. Marks are out of 10.</p>';
 }
 
+const FD = /*FINALDATA*/{};
+const FPAGES = [
+ ['Parent pages', [['home','Home'],['chat','Chat'],['ideas','Ideas'],['plans','Plans'],['todo','To do'],['status','Status'],['settings','Settings']]],
+ ['Kid pages (Maya)', [['home-kid','Home'],['chat-kid','Chat'],['todo-kid','To do'],['wishes-kid','Wishes']]],
+ ['More pages', [['wishes','Wishes, deciding'],['idea','An idea'],['idea-new','Add an idea'],['more','More (phone)'],['signin','Sign in'],['grownups','For grown-ups']]],
+ ['States', [['states','Vera’s states'],['states-actions','After an action, errors'],['states-content','Empty, busy, long']]]
+];
+function finalView() {
+  const grp = FPAGES[state.fgroup] || FPAGES[0];
+  const cur = grp[1].find(x => x[0] === state.fpage) || grp[1][0];
+  state.fpage = cur[0];
+  const ph = state.mode === 'phone', dk = state.theme === 'dark';
+  const img = 'img/final/' + state.fpage + (dk ? '-dark' : '') + (ph ? '-phone' : '') + '.webp';
+  const lens = (FD.lenses || []).map(r => '<tr><td>' + r[0] + '</td><td class="n">' + fmt(r[1]) + '</td><td class="n"><b>' + fmt(r[2]) + '</b></td><td>' + esc(r[3] || '') + '</td></tr>').join('');
+  const cmp = (FD.compare || []).map(r => '<tr><td>' + r[0] + '</td><td class="n">' + fmt(r[1]) + '</td><td class="n"><b>' + fmt(r[2]) + '</b></td><td>' + esc(r[3]) + '</td></tr>').join('');
+  let h = '<div class="head"><div class="head-top"><h1>Kitchen Table, final</h1>' + chip('Final design', 'mark') + '</div>' +
+    '<p class="lede">The look the family chose, made final and given a brand after blind judges, thirteen specialist reviewers and seven rounds of work by its own designer. Light and dark, desktop and phone, with a written standard to build from. It is a mockup: nothing in the app has changed yet.</p></div>' +
+    (FD.summary ? '<div class="explain">' + FD.summary + '</div>' : '') +
+    '<div class="chart"><div class="chart-top"><div class="seg" role="group" aria-label="Group of pages">' + FPAGES.map((g, i) => '<button type="button" data-fgroup="' + i + '" aria-pressed="' + (i === state.fgroup) + '">' + g[0] + '</button>').join('') + '</div>' +
+    '<div class="tools left"><div class="seg" role="group" aria-label="Screen size"><button type="button" data-fmode="desktop" aria-pressed="' + !ph + '">Desktop</button><button type="button" data-fmode="phone" aria-pressed="' + ph + '">Phone</button></div>' +
+    '<div class="seg" role="group" aria-label="Light or dark"><button type="button" data-theme="light" aria-pressed="' + !dk + '">Light</button><button type="button" data-theme="dark" aria-pressed="' + dk + '">Dark</button></div></div></div>' +
+    '<div class="tabs fp" role="group" aria-label="Page">' + grp[1].map(([k, l]) => '<button type="button" data-fpage="' + k + '" aria-current="' + (k === state.fpage) + '">' + l + '</button>').join('') + '</div>' +
+    '<div class="stage ' + (ph ? 'phone' : '') + '"><div class="col"><div class="shot"><img src="' + img + '" alt="Kitchen Table, final: ' + grp[0] + ', ' + cur[1] + ', ' + (ph ? 'phone' : 'desktop') + ', ' + (dk ? 'dark' : 'light') + '" width="' + (ph ? 585 : 1280) + '"></div></div></div></div>';
+  if (lens || cmp) h += '<div class="two">' +
+    (cmp ? '<div class="head"><h3 class="sec">Blind: the original against the final</h3><p class="lede">Four fresh judges saw the original Kitchen Table and the final as two unnamed designs, in both orders, on the same seven pages.</p><div class="tw"><table class="t"><thead><tr><th>Judge</th><th>Original</th><th>Final</th><th>Would build</th></tr></thead><tbody>' + cmp + '</tbody></table></div></div>' : '') +
+    (lens ? '<div class="head"><h3 class="sec">The thirteen lenses, before and after</h3><p class="lede">The same thirteen lenses, each a fresh reviewer, on the original seven pages and then on the final twenty.</p><div class="tw"><table class="t"><thead><tr><th>Lens</th><th>Before</th><th>Final</th><th>Their one change now</th></tr></thead><tbody>' + lens + '</tbody></table></div></div>' : '') + '</div>';
+  if (FD.changes) h += '<div class="finds"><h3 class="sec">What changed</h3>' + FD.changes + '</div>';
+  if (FD.decisions) h += '<div class="finds"><h3 class="sec">Left for the family to decide</h3>' + FD.decisions + '</div>';
+  return h;
+}
 function applyPos() {
   document.querySelectorAll('[data-left]').forEach(el => { el.style.left = el.dataset.left + '%'; });
   document.querySelectorAll('[data-top]').forEach(el => { el.style.top = el.dataset.top + 'px'; });
@@ -560,7 +602,7 @@ function applyPos() {
 }
 function render() {
   const id = state.id, isDetail = !VIEWS.includes(id);
-  $('view').innerHTML = id === 'overview' ? overview() : id === 'modes' ? modesView() : id === 'scores' ? scores() : detail();
+  $('view').innerHTML = id === 'final' ? finalView() : id === 'overview' ? overview() : id === 'modes' ? modesView() : id === 'scores' ? scores() : detail();
   document.querySelectorAll('#rail a').forEach(a => a.setAttribute('aria-current', a.dataset.go === id ? 'true' : 'false'));
   document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.page === state.page ? 'true' : 'false'));
   const showPageControls = isDetail || id === 'overview';
@@ -574,7 +616,7 @@ function render() {
   $('pick').value = id;
   $('vs').value = state.vs;
   applyPos();
-  document.title = (isDetail ? BY[id].name + ' · ' : id === 'modes' ? 'Modes compared · ' : id === 'scores' ? 'Scoreboard · ' : '') + 'Phosphor Concept Viewer';
+  document.title = (isDetail ? BY[id].name + ' · ' : id === 'final' ? 'The final design · ' : id === 'modes' ? 'Modes compared · ' : id === 'scores' ? 'Scoreboard · ' : '') + 'Phosphor Concept Viewer';
 }
 
 function step(n) {
@@ -588,6 +630,10 @@ document.addEventListener('click', e => {
   if (a) { e.preventDefault(); go({id: a.dataset.go}); return; }
   const t = e.target.closest('[data-page]'); if (t) { go({page: t.dataset.page}); return; }
   const s = e.target.closest('[data-step]'); if (s) { step(Number(s.dataset.step)); return; }
+  const fp = e.target.closest('[data-fpage]'); if (fp) { state.fpage = fp.dataset.fpage; render(); return; }
+  const fg = e.target.closest('[data-fgroup]'); if (fg) { state.fgroup = Number(fg.dataset.fgroup); state.fpage = FPAGES[state.fgroup][1][0][0]; render(); return; }
+  const th = e.target.closest('[data-theme]'); if (th) { state.theme = th.dataset.theme; render(); return; }
+  const fm = e.target.closest('[data-fmode]'); if (fm) { state.mode = fm.dataset.fmode; render(); return; }
   const g = e.target.closest('[data-group]'); if (g) { state.group = g.dataset.group; render(); return; }
   const b = e.target.closest('[data-by]'); if (b) { state.by = b.dataset.by; render(); return; }
   const so = e.target.closest('[data-sort]');

@@ -298,3 +298,345 @@ It covers:
 - The kid's More page and the Family page are linked but not drawn.
 - The ranking and decision forms show their resting state only; their own error states follow the same pattern as `states-actions.html`.
 - In full-page phone shots, the fixed tab bar sits at the 844 px fold. That is where it is on a real phone.
+
+---
+
+# Stage 4: the polish pass (POLISH.md)
+
+Four blind judges chose this design over the original, and the thirteen lenses' mean rose from 6.7 to 7.4. This pass works through POLISH.md in order. All 22 pages are rendered at 1280 and 390 px, light and dark (`shots/`, `shots/dark/`). Nothing scrolls sideways, every shot loaded its fonts, and no page has `style=""` or `<script>`.
+
+## Must fix
+
+1. **Person colours by slot, not by name.** `--sam…--theo`, `.av--sam`, `.msg--maya`, `.ev--theo` and `.d-maya` are gone.
+   - There are now eight slots, `--p1…--p8`, each with `-soft`, `-ink` and `-mark`, set by `.p1…p8`, plus `.p0` for Everyone.
+   - Avatars, bubbles (`.msg--person`), calendar events and dots all read `--p`, `--p-soft`, `--p-ink` and `--p-mark`.
+   - Slots 1–4 are today's colours. Slots 5–8 are new: teal #0B6A84, indigo #5448B0, olive #59661A and magenta #8C3E86.
+   - Every slot was checked: white letters are 5.4:1 or better; marks on the card are 5.3:1 or better in light and 7.8:1 or better in dark (in dark, `-mark` uses the lighter ink, which also fixes Maya's 2.8:1 dot). The server stores `person.slot`.
+2. **The phone opens on what people came for.**
+   - Phone Home: Ask Vera is one row (box and icon Send) with short starters ("Next weekend?", "Remind me…", "Save an idea…"), so the next plan's title and time sit above the tab bar.
+   - Card order on the phone is Ask, Next up, To do, How did it go, Wishes, Ideas (`display: contents` plus order classes, no duplicated markup). Next up is capped to one plan plus "3 more plans this month". To do shows the late ones plus "All 4". Vera today is hidden on the phone (the pill and Status cover it). The page is about a quarter shorter.
+   - To do on the phone: the list first, the quick add after it.
+   - Ideas everywhere: search and "Filter and order" first, then the list; Quick idea and the looking-things-up note come after it.
+3. **Ideas in the parent's tab bar.** Parents: Home, Chat, Ideas, Plans, To do. Kids: Home, Chat, Wishes, Plans, To do, so Plans is reachable.
+   - Everything else moved into the **account menu behind the avatar**: `more.html` (Wishes, What Vera knows, Status, Settings, Family, Sign out) and a new `more-kid.html` (Ideas, What Vera knows, Sign out).
+   - A dot on the avatar says something inside needs checking.
+4. **Phone Plans.** The month header, then the Month/List switch, then the month at a glance, then Coming up, then How did it go.
+5. **The calendar uses colour, and handles real months.**
+   - Events take their slot colour: a 5 px bar and a 20 % tint. A plan for several people takes the first person's colour plus their avatars; Everyone stays neutral, as decided.
+   - `.span2` is split in two: `.span-all` for page layouts, and `.len2…7` for an event's length.
+   - A plan that crosses a week is split into `.ev--to` (›) and `.ev--from` (‹), with "continues" in its spoken label.
+   - Today is a filled disc and a faint wash, never a ring.
+   - Past plans are plain and solid, with a small face icon whose label is "Not rated yet". Rating stays in "How did it go?".
+   - `states-content.html` now draws a real November: a busy Saturday (two plans, then "+2 more"), a five-day trip to Grandma's from Thu 19 to Mon 23 crossing the weekend and the week edge, and a two-day work trip.
+6. **One meaning per signal.**
+   - Yellow is only for the Ask card's Send, the logo dot, and "set this up / needs a look". The weekend tint, the warn-coloured "How did it go?" and the resting tone are gone.
+   - Mint is only "all good / done". Info banners are a neutral card with a grey icon tile; "Off" is a grey fill with its own icon.
+   - Dashed means only "not yet": Not looked up yet, No answer yet, Not done yet, Vera thinking. Card dividers, setup numbers, past events, the surprise tag and failed messages are solid.
+   - "Needs a look" is a yellow fill with a "!". "Could be better" and "Not connected" are an outline with a hollow amber dot.
+   - "Set this up" appears once per page. On Home it's the setup card (the phone strip goes to Settings' setup banner). Plans and Ideas have one quiet `.note` line. Settings has one setup banner, so the side "Setup" card is gone. Telegram left Home's "Vera today".
+   - Sidebar badges are loud only for **3 late** (red) and **1 to decide** (ink outline). "2 to rate" and "1 to check" are quiet grey numbers.
+7. **Numbers.**
+   - "Fraunces Figures" is out of the body stack, and `unicode-range` limits it to digits and money punctuation. Running text, digits and punctuation included, is Atkinson.
+   - Serif tabular figures stay only where numbers stand alone or line up: date tiles, money, the 30-day figures, calendar days, wish ranks, setup numbers, the meter scale and segment counts.
+   - I checked Atkinson Hyperlegible Next for an unslashed zero. It has none (its only zero variant, `zero.tf`, is the tabular one), so I kept Atkinson Hyperlegible and its slashed zero in running times as a legibility feature.
+8. **Accessibility.**
+   - `--tabbar-total` adds the safe-area inset to the tab bar's height, the body's padding and the chat height.
+   - `scroll-padding-bottom` keeps the focused control clear of the tab bar, and the chat scroller has `scroll-padding-top`.
+   - On screens under 560 px tall, the chat falls back to normal page scroll.
+   - Selected segments are filled ink with paper text (13.9:1). The current tab has a 3 px green top bar. The current conversation has the nav's inset bar.
+   - Dark today is `--today-bg` #7CC7AE (8.0:1 on the card). Slot marks are fixed as in item 1.
+   - Kid targets are 44 px: "Take it off my list", the starters, the small buttons on the phone, setup links, Change links and the tab badge text at 13 px.
+   - Hints moved out of `<label>` into `aria-describedby`. The kid's wish box and the to-do quick add have visible labels.
+9. **A kid's read-only to-do.**
+   - Its lead is the setter's avatar (Alex), never a box or ring, with a dashed "Not done yet" and "Tell Vera I did it", a link that fills her chat box.
+   - Her own things lead her phone Home: Ask, My wishes, My to-dos, then Next up and Ideas.
+   - The gentle message warning is drawn on `states.html`: "5 messages left today" as an outline tag. Her Ask card says how many she has left.
+10. **Words.**
+    - The pill is **"Vera is ready"** ("Ready" on the phone). "Vera is writing back" is used while she answers.
+    - Wish answers are one set for kids and parents: Yes! · Thinking about it · Not this time · **No answer yet**.
+    - "Mark as been" became **"We went"**, with "Not for us: remove it".
+    - "Save a thought" became **Quick idea / Save idea**, and "Save "pizza" as an idea".
+    - **"Add a backup key"** is used everywhere except the key table.
+    - Sign-in: "Parent · admin"; the heading is "For now, everyone shares one family password"; the kids' tiles have no role line.
+    - Settings rows: "OpenAI · no backup if it's down", "Vera's standard voice", "Changes to these settings: none yet". The Plans note says "These plans are only in FamilyDB for now". Home's lede says "are late".
+    - The Status disclosure is "Technical details: which AI answers each job", and the cache line is dropped.
+    - Spelling stays British English, the app's own (colour, kilometres, cancelled, tick off).
+11. **Forms and controls.**
+    - The quick add shows **Who's it for?** as visible person pills with nothing picked (required). Its error, "Pick who it's for. Pick Everyone if anyone can do it.", is drawn on `states-actions.html`.
+    - Ideas submits one sort control, inside "Filter and order". "Show ideas" comes after the filters in the source.
+    - A starter that sends is filled, with the send icon. One that fills the box is an outline with a pen and ends in "…".
+    - "Share where I am" is gone from the kid's pages.
+    - `white-space: nowrap` is removed from buttons, tags and the locked label. The surprise tag shows "hidden from Maya" at every width.
+    - Composer boxes have no resize grip.
+    - "Not you? Sign out" became "Not Sam? Switch", which goes to the person picker and back to Chat.
+12. **Drawn what was missing.**
+    - `todo-edit.html`: the form pattern for an existing thing, with title, notes, Who pills (Alex picked), Due with the late hint and quick dates, Reminder ("needs Telegram"), Save/Cancel, Tick it off, Cancel this to-do and History. Every "Edit" link goes to it.
+    - Vera's longest message is in the family chat: Thursday's **weekend suggestions**, with three ideas, each with when, drive, a price and who, and a "Plan it" form. Alex's reply puts the roller rink on Sunday, and Vera's receipt follows.
+
+## Left alone, as POLISH.md asks
+
+- **Vera stays undrawn.** The style lens asked again for a character and for spot drawings; declined, as decided.
+- **The chat's refresh while a reply is pending is kept.** The pending bubble now has a visible "Check for her answer" link. The accessibility review's concern (2.2.1 / 3.2.5) and a back-off schedule are recorded in STANDARD.md §8.
+
+## Declined or decided differently
+
+- **US English** (copy lens): declined. POLISH.md says the app is written in British English, so the UI matches it.
+- **A fixed-height desktop chat room** (engineer): declined. Earlier feedback asked for the whole short conversation to show on desktop, so the room grows with the latest 30 messages. The phone keeps the app-height scroller.
+- **Colouring Everyone events** (style lens: Vera's green): declined. Green is Vera, and POLISH.md keeps Everyone neutral. Multi-person plans now take their first person's colour, so most plans have colour.
+- **"I did it" as a form that marks the to-do** (kid, parent, usability lenses): declined, because kids can't change anything. "Tell Vera I did it" fills her chat box instead, which uses her messages as the rules allow.
+- **Removing the "Reading this list" key** (generalist, interaction): kept, because the protect list names it. It now explains tags that carry their own icons.
+- **A 30-day spending sparkline** (generalist, skeptic, usability): not drawn. It needs daily data the brief doesn't give, and drawing it would mean inventing numbers. The STANDARD notes how to draw it CSP-safely (SVG `<rect height>`).
+
+## For the family to decide (not designed in)
+
+- Whether kids may tick their own to-dos or rate how a plan went.
+- Whether each parent gets a private chat with Vera for planning surprises.
+- Whether a kid may share where they are with a message. It's hidden on kid pages until the family allows it.
+
+## Sample data added in this pass
+
+- **Vera's weekend suggestions**, with times, a weather line, "free to get in", "about $15 each" and "skates to hire", and Alex's reply that books the roller rink.
+- The **November month**: Alex's book club, Theo's soccer, the farmers market, Maya's recital, the Spokane trip and Sam's work trip.
+- **Maya's "Can hamsters eat carrots?" chat** on the states sheet.
+- The to-do edit page's **"added by Sam on Fri 25 Sep"**.
+
+## Still open
+
+- The Family page and What Vera knows are linked but not drawn.
+- A 320 px pass was not rendered; the segments now wrap instead of scrolling, which was the known risk.
+- Theo's own pages are not drawn. They follow Maya's with his slot.
+
+---
+
+# Stage 5: the brand (BRAND.md)
+
+The family said the final looks generic. This stage brings back what FamilyDB already owned (the smiling monitor and Vera's screen) and anchors the type back to A1, the version they chose. The brand is a sprinkle: the layout, components, roles, phone order and every check from stages 1–4 are unchanged. Order of work, as asked: brand elements first, then type, last and least.
+
+New pages: `type.html` (the type specimen) and `404.html` (the missing page). New files: `brand/` (icons), `type/` (six crops from `reference-a1/` shots), `fonts/fraunces-soft-600.woff2`, `fonts/jetbrains-mono-400.woff2`. Removed: `fonts/fraunces-600.woff2` (replaced by the soft cut). All 24 pages rendered at 1280 and 390 px, light and dark: 96 shots, fonts loaded on all, nothing wider than the screen, no `style=""` or `<script>`.
+
+## Kept
+
+1. **The mark replaces the house** in the sidebar, the phone bar, sign-in, Settings' colour key, the panes, and as the favicon and home-screen icon (`brand/`: SVG, 16, 32, 180, 512). Redrawn from `brand-ref/` on a 24 grid: one 2 px round stroke, a monitor with a stand, two eyes and a smile, phosphor #6DFF9C on a charcoal #0E1312 square. The house stays only as Everyone's avatar, where it means the family.
+2. **The wordmark with a lit cursor.** "FamilyDB" in Fraunces 600, soft, and a green block that blinks slowly like a waiting terminal. Ink on paper with a darker green cursor (#1B9A55, so it holds 3:1 on cream); cream and phosphor at night.
+3. **Vera's screen replaces the "V" circle** everywhere she appears: the Ask card, every message of hers, the pending bubble, Home's Vera row, Status' Vera row, Settings' key, the kid's empty chat, the states sheets. Glass with blurred glyphs (one in five bright), faint scanlines, `aria-hidden`. Three states: ready (still), answering (glyphs fall a row at a time; the only motion), can't answer (the glass goes dark). No motion under reduced motion.
+4. **Her voice in a mono** (JetBrains Mono 400, 14 px, 21 KB): her message times, the line under a receipt, the status pill, pane lines and the instrument. Her messages themselves stay Atkinson, like the family's.
+5. **The status pill is glass.** "Vera is ready" in phosphor mono with a breathing dot. Resting: quiet ink and a hollow dot. Down: alert paper in plain Atkinson bold, because an outage is a sentence for the family, not a machine line.
+6. **One instrument, on Ideas:** a glass pane plotting the ten looked-up ideas by drive time (square-root scale, rings at 30 min, 1, 2 and 3 h) and direction from home. The SVG is hidden from assistive tech; the numbered list beside it names every dot with its time and direction. On the phone it comes after the list, so the first screen is still search and ideas.
+7. **Brand moments:** sign-in (a pane: the mark, "FamilyDB · awake, Saturday 3 October", then who's using it), a family's first empty day ("FamilyDB is set up and awake"), the grown-ups page a kid lands on (the mark alone, glowing; the words stay on paper), and a new missing page, `404.html`.
+8. **Live things glow:** the pill's dot, the wordmark's cursor and the caret in Vera's box (`caret-color`), the bright glyphs, and Vera's bubble at night.
+9. **Dark mode is phosphor at night.** Warm brown became charcoal glass (#0C100F page, #161D1B card), cream ink, Vera's green became phosphor with a soft glow, amber for "needs a look", coral for late, and people's colours lightened on tinted charcoal. Every pair in STANDARD §7 was recomputed and all pass (lowest text pair 6.5:1, `--ink-3` on a field).
+10. **A deeper, glassier green by day for the Ask card** (#1E5C4F → #12382F). Its text goes from 7.8 to 12.9:1, and it sits with the phosphor screen in its corner.
+11. **The family's actions leave Vera's green at night.** New tokens `--link`, `--primary`, `--primary-2`, `--on-primary`: identical to before by day, cream at night. In my first dark pass, "Add an idea", "Save changes" and every link were phosphor, which put Vera's colour on the family's own things.
+
+## Typography: every change from A1, and why
+
+Compared rule by rule with `reference-a1/style.css` and page by page with its shots; `type.html` shows the scale and six real lines, A1 above and now below. Since A1 the type had drifted (h1 40, h2 24, h3 20, lede 19, card titles at h3 size, Next up's title 24, date tiles 36/22, money 32, to-do titles 17, group heads 17 sentence case, page eyebrow in capitals, meta line 1.4). **All of that is reverted to A1:** h1 42 (32 phone), h2 23, h3 19, lede 18 (16 phone), card titles at h2 size, Next up 26, Ask Vera 22, the hero banner 26, date tiles 34/28/21, money 30, figures 32, to-do titles 18 (17 on Home), group heads 15 capitals, the eyebrow 15 bold in sentence case, calendar weekday heads in small capitals, meta line 1.5, date-tile capitals at +0.08em.
+
+What still differs from A1, and why each is worth the change in voice:
+
+1. **Numbers that stand alone use Fraunces Figures** (date tiles, money, figures, counts). *Named problem: slashed zeros.* A1 set them in Fraunces, but stage 1's Atkinson stack slashed them. Figures is Fraunces' own digits made tabular, so they look like A1 and line up. Running text keeps Atkinson's slashed zero.
+2. **13 px is the smallest step** (A1 used 11–12 px for date-tile and calendar capitals). *Named problem: the 14 px floor*, with 13 px kept for capitals only.
+3. **Tags have a line height of 1.15** (A1: 1). *Named problem: phone wrapping.* Tags may wrap since the polish pass, and at 1 their two lines would touch.
+4. **Times read "1 pm", not "13:00".** A copy change from the final, not a type change; listed because it shows in the side-by-side.
+5. **The one Fraunces choice: `h1` and the wordmark use the softness axis at 100.** The same letters with rounder terminals, warmer and more its own at 42 px, invisible at body sizes. No other heading uses it, no alternates are on. The font file is the variable Fraunces subset with opsz and SOFT, weight fixed at 600 (58 KB).
+6. **One new face, the mono**, for Vera's machine lines only (above).
+
+## Tried and dropped
+
+- **The mark as drawn at 16 px from the 32 px artwork:** the eyes and smile blurred into a "U". Replaced by a hand-pixelled `mark-16.svg` with crisp edges.
+- **Vera's screen with no rim on the Ask card:** charcoal on dark green disappeared. It now has a 40 % phosphor rim there. At night all screens looked like holes in the page, so they get a faint lit rim and inner glow (`--vs-lit`).
+- **Glyphs at 0.35 px blur:** readable at 2x ("1a=14"). Now 0.55 px, which is past reading but still glyph-like.
+- **A pane of glass for the sliders tile on the grown-ups page:** decoration only, so it became the mark. A small pane around the mark was tried next and dropped: glass inside glass read as a double frame. The mark alone is the moment.
+- **Mono for the whole receipt:** the title went mono too (a selector caught both spans). Only the line under the title is mono; the plan's name is the family's, so it stays Atkinson.
+- **An instrument label "1–6" for the near cluster:** wrong, because idea 1 (the pumpkin patch) is north-west. It is now "1" and "2–6".
+- **Considered, not done:** Vera's whole messages in mono (the family reads them; they stay Atkinson, as BRAND.md says), a pixel or display face for headings (ruled out), a second instrument (Plans by distance; one per page and one in the app is enough), scanlines on cards (only inside panes and screens), green "today" washing the family's plans (today's tile header and disc stay green as the live thing; the plans in it keep the person's colour).
+
+## Fixed in passing (found while looking at every shot)
+
+- The November specimen skipped 30 Nov, so 1 Dec sat under Monday. The grid now runs to Mon 30 Nov.
+- The phone avatar link underlined its initial; the phone pill sat 6 px above the mark and avatar.
+- The resting Ask card's placeholder was 1.5:1 on the deeper green; it now uses `--ask-ink-2`.
+- A failed reply from Vera had a red rim plus her green glow at night. The glow is off when she can't answer, and her screen goes dark.
+- The 404 pane had a divider pressed against its text; panes have no divider.
+- Drive times and receipt times broke between the number and its unit ("18 / min", "2 / pm"); they're held together with no-break spaces.
+
+## Still open
+
+- The full-page phone shots show the fixed tab bar at the 844 px fold, over content, as in stage 4. On a real phone it's at the bottom of the screen.
+- The instrument shows the ten ideas Vera has looked up; the two not looked up are named under it only by their absence. The list says "Drive times Vera looked up".
+
+---
+
+# Stage 6: keep the brand, lose its costs (BRAND-2.md)
+
+Four blind judges found the branded version clearly stronger in identity, but three would have built the plain one because the brand cost something in use. This stage keeps every brand element (the mark, the wordmark, the pill, the radar, Settings' key, the four brand moments) and removes those costs, in BRAND-2's order. All 24 pages are rendered at 1280 and 390 px, light and dark (96 shots), looked at, fixed and rendered again.
+
+## 1. Vera's sign reads as her at 24–32 px
+
+- **Was:** a glass square of 5 × 12 tiny glyphs, blurred, under scanlines. Judges called it "a dark smudge" and "a broken thumbnail".
+- **Now:** inline SVG, crisp, built from four parts:
+  - a rounded square (radius ¼ of the size, so never mistaken for a round person avatar);
+  - a lit phosphor rim;
+  - one to three short, rounded lines of light, the newest brightest;
+  - her signature: a lit prompt `>▮` in the bottom-left corner, the same at every size.
+- **Sizes:** 24 px has one line, 32 px two, 40 px three, and a new 56 px for the kid's empty chat. Small sizes have fewer lines, not smaller ones.
+- **Halo:** a 3 px halo, Kitchen Table green by day and phosphor at night, keeps it a lit screen on both.
+- **Busy:** the lines light one after another and the cursor blinks, only while a reply is on its way.
+- **Off:** the light goes out. Rim, lines and prompt turn control-edge grey, the cursor goes hollow, and the halo goes. A first try in the glass-edge colour vanished on the dark card.
+- **Checked at real size** in the phone shots, light and dark.
+
+## 2. Mono only on the glass
+
+- Vera's message times and the line under a receipt are back in Atkinson.
+- The radar list's numbers are Atkinson bold.
+- The mono stays only on dark glass: the status pill, pane lines, and the radar's ring labels and dot numbers.
+- On the phone the receipt drops its decorative kind tile, so "Oaks Park roller rink" gets the width. It no longer breaks into three ragged lines.
+
+## 3. Dark mode keeps its hierarchy
+
+- **The Ask card is deep-green glass at night** (#0F2A22, text 12.5:1), with the page's brightest edge (a 1.5 px green rim at 4.6:1 against the page, plus a faint inner glow).
+- **Its box now has a real edge** (`--ask-edge`, 4.4:1). Before, it was 1.2:1, a WCAG 1.4.11 failure.
+- **The family's primary buttons are Kitchen Table green day and night** (night #2D7462, white text 5.5:1). Links are a lighter green (#8BD3B4), never phosphor. Stage 5's cream buttons are gone.
+- **No glow on Vera's bubbles.** Glow stays on the pill, the panes and her screen.
+
+## 4. The radar earns its place
+
+- **A piecewise scale** gives the first half hour more than half the radius, with rings at 15 min, 30 min, 1 h, 2 h and 3 h.
+- **The near cluster is spread out.** Ideas sharing a direction are fanned a few degrees apart, and every dot carries its own number; the "2–6" lump is gone. The caption says the near ones are spread.
+- **Ring labels are legible:** 10 px drawn at about 1.45×, set along the north axis.
+- **Placement:**
+  - Desktop: the cards now start right under the filters, and the radar sits after the first row of three, between two lists ("All ideas, continued").
+  - Phone: it stays after the list, which reads as one box.
+
+## 5. The calendar says who without colour alone
+
+- **The macro derives the colour from the people.** One person gets their colour; several people or Everyone get neutral grey. No template picks a colour.
+- **Every event shows its people:** small avatars, or the house for Everyone. Oaks Park, for Maya and Theo, is now grey with M and T, no longer Maya's pink.
+- **The phone month** shows up to three 14 px markers per day: an initial in the person's colour, the house for Everyone, or a hollow ring for a past plan.
+- **The November sample** gained its missing markers (book club, recital, the trip, Sam's work trip).
+- **Plans has a one-line key** under the calendar.
+- **Outside-month labels** ("28 Sep") hide their month on the phone with the clip pattern, so they no longer wrap.
+
+## 6. Money and clock times in one figure style
+
+- Every amount and every clock time, wherever it appears, is in Fraunces Figures, the face of the big money figures.
+  - A filter on the rendered page wraps them in `.fig`, so no template has to remember.
+  - "$0.00 of your $2.00" now has one kind of zero, and "7:48 pm" matches "$2.00".
+- In sentences they use a second, proportional cut of the same digits (`fonts/fraunces-text-figures-*.woff2`, 2.5 KB each). The first render used the tabular cut, which left "1 pm" with a gap like a missing digit.
+- Ranges like "6–9 pm" wrap both ends. The first filter only caught the 9.
+- Other numbers in sentences keep Atkinson's slashed zero.
+- `type.html` has a new section showing the choice.
+- **Tried and not chosen:** an Atkinson zero with its slash removed.
+  - Atkinson's slash is only the gap between two counters, so the shape is easy to make, and it reads as Atkinson.
+  - But it would leave a big Fraunces "$0.00" beside a small Atkinson "$2.00": two figure styles in one line.
+
+## 7. Accessibility
+
+- **Names restored:** on the phone, the starters' long labels and the Edit links' "Edit" were `display:none` beside `aria-hidden` stand-ins, so they had no names. They are now hidden with the `.sr` clip pattern, and STANDARD makes this a rule.
+- **Focus on glass:** the ring is phosphor (14.7:1) on panes, the radar and the pill. Before, it was 1.2:1 on the 404 pane.
+- **No endless blinking:** the wordmark cursor blinks twice and stays lit, and the pill's dot breathes once (both under 5 s). Reduced motion still stops everything.
+- **Sizes in rem:** every type size in px is now rem (30 declarations), and the top and tab bars use `min-height`.
+- **Narrow screens:** the Status figures stack at 400 px and below.
+- **Firmer edges:** icon buttons use `--edge` (3.8:1). A disabled arrow is `--ink-3` with a dashed edge.
+- **Forced colours:** the phone month markers get a `CanvasText` border.
+- **Page language** is `en-GB`, matching the standard's British spelling (it said `en-US`).
+
+## 8. Small things
+
+- **Idea titles** are Atkinson 700 at 17 px on every page (they were Fraunces on the Ideas cards).
+- **Maya's slot** is raspberry #A83C80. It sits further from "late" red (ΔE 58, was 40) and from Everyone's grey under protanopia (29, was 8).
+  - The cost: it sits closer to Alex's purple under protanopia, which the initials now cover.
+- **Slot 8** is cocoa #6F4E37 (was a magenta indistinguishable from slot 2).
+- **The surprise tag** in narrow tiles (Home's idea tiles and compact to-dos) says "Surprise"; "hidden from Maya" stays in its spoken name.
+- **The kid's empty chat** has one filled action (Send). The starters are outlines everywhere outside the Ask card.
+- **The phone "Ready" pill** is centred with the mark, and the avatar letter in the phone bar is no longer underlined.
+- **The To do "Add" button** is sized to its label.
+
+## Found while looking at every shot, and fixed
+
+- **Settings rows** broke "Up to / $2.00 / a day" onto three lines. A descendant rule (`.srow__text span`) caught the new figure spans; it is now a child rule.
+- **Two text buttons were phosphor at night** ("Take it off my list", "Cancel this to-do"). They now use `--link`.
+- **The radar's W** sat on dot 10. The plot has more margin now, and the ring labels alternate sides of the axis.
+- **The phone calendar key** broke between a marker and its words; each pair now holds together.
+- **"10 am"** broke inside a crowded day cell; event times don't wrap.
+- **The idea page's history row** had a 24 px Vera sign beside 40 px tiles; it is 40 px now.
+- **The resting Ask box** at night had no edge; it uses `--ask-edge`.
+- **The November specimen:** Sam's work trip was in the second lane with the first free, Wed 14 Oct had no phone marker, and the caption still said "dots in the plans' colours".
+- **The account rows** said "signed in on this phone" on a computer and the reverse; they say "signed in here".
+
+## Declined, and why
+
+- **Dropping the meta refresh** while a reply is pending (access lens, not in BRAND-2's list). It stays as STANDARD §8 records, with the server back-off and the visible "Check for her answer" link. It is the family's chosen behaviour with scripting off, and the opt-in alternative is noted there for the engineer.
+- **A focus specimen sheet, spot illustrations for happy moments, a print style:** these are suggestions from the reviews, not BRAND-2 items, and are left for a later pass.
+- **The 1000–1180 px band on Ideas:** the cards are two across there, so the radar follows a row and a half. Accepted rather than adding a third breakpoint.
+- **The Ask card's Send stays sun yellow** in both themes. The style lens asked to protect it, and it is the Ask card's one action, not a family primary button. Selected segments and chips stay inverted (ink fill, cream at night), as the system defines them.
+- **Earlier-stage layout seams the reviewers saw again, left for a later pass:**
+  - Status: the "Last 30 days" tiles don't align when a label wraps, and "Technical details" breaks up on the phone.
+  - Edit a to-do: the history rows don't line up.
+  - The states sheets: the quick-add error sits beside the chips on desktop; the Undo banners are loose on the phone.
+  - Ideas: the phone Quick idea placeholder is cut short.
+  - The kid's to-do row is loose.
+  - Word spacing in small Fraunces headings ("Add a to-do") is tight.
+
+---
+
+# Stage 7: the last touches (LAST.md)
+
+All four new judges chose this version (8, 7.5, 8, 7.5 against 7 each). This stage does only the small things they named, and nothing else. All 24 pages are rendered at 1280 and 390 px, light and dark (96 shots), looked at, fixed and rendered again.
+
+1. **The surprise chip always says who it's hidden from.**
+   - Stage 6 shortened it to a bare "Surprise" in narrow tiles, which hid the one fact a parent needs to trust.
+   - In a narrow tile (Home's idea tiles and Home's compact to-dos) it now shows the lock and **"Hidden from Maya"**, with "(a surprise)" in its spoken name.
+   - Everywhere else it reads **"Surprise · hidden from Maya"**, as before.
+2. **The radar has its own place.**
+   - It no longer splits the idea cards. The cards are one grid again, and the radar is a band after them.
+   - **Desktop:** the band is always shown.
+   - **Phone:** it is folded behind "Show the map" before Quick idea, so the phone Ideas page is about a quarter shorter (4,286 px tall in the 2x shot, down from 5,820).
+   - **No numbered list:** the cards are the list.
+   - **Names on the dots:** each dot carries the idea's short name ("Pumpkin patch", "Oaks Park"), the first words of its card's title, so a kid can match it.
+   - **Atkinson labels:** names are 15 px (14 on the phone), and ring, compass and "Home" labels are 13 px Atkinson.
+   - **Drawn twice from one data table:** a wide plot and a narrow one, each with label positions set per idea. Nothing sits on a compass letter ("W" no longer covers Cannon Beach, and "N" moved off "3 h").
+   - **Scale:** the first half hour now gets 70 % of the radius, so the five near ideas spread out.
+   - **The fold:** both this and To do's fold (item 4) use one native `<details>`. On the desktop it is always open: the summary is hidden and its `::details-content` is shown. No script.
+3. **The status pill is quiet when all is well.**
+   - "Vera is ready" is a soft-green pill in Atkinson 700 with a still dot.
+   - The dark glass pill with the mono voice appears only when there is something to notice:
+     - "Vera is writing back" (new; its dot breathes until the reply lands);
+     - "Vera is resting until midnight";
+     - "Vera can't answer right now", now on glass in coral (`--glass-alert`, 8.2:1).
+   - The states sheet shows all four.
+4. **To do's Add is a full, obvious button again.**
+   - **Desktop:** the card is the box, then who and when, then **Add as a full-width bar**.
+   - **Phone:** a one-row "Add a to-do" (box and Add) is at the top of the list, with "Who, when, reminder · Nobody picked yet · No date · No reminder" folded beneath it.
+   - **Still nobody by default.** The form is `novalidate`; the server checks who and sends the form back with the fold open and the error in it (drawn on the states sheet).
+5. **Small craft.**
+   - Spill-over days on the phone calendar show their month in small capitals beneath the number ("28" over "SEP", "1" over "NOV"). In stage 6 the month was only spoken.
+   - "Add a to-do" and other small Fraunces headings get their spacing back (letter-spacing 0, a little word spacing), so it no longer reads "Adda to-do".
+   - The Status cost figures stay on one row on phones from 360 px and stack only below that.
+
+STANDARD.md is updated for the pill, the radar, the Add form, the surprise chip's words, the phone calendar and the Status figures. type.html says where the mono now goes.
+
+## Found while looking at every shot, and fixed
+
+- **Narrow chip:** "Hidden from Theo" wrapped in Home's Lego tile; it is now one line, sized to its words.
+- **Spill-over days:**
+  - On the phone, the extra height for the month label also moved the other spill-over days; only a day that carries a month changes now.
+  - Phone day cells align to the top, so every row's numbers line up.
+  - On the desktop, "1 Nov" reads inline like "28 Sep".
+- **Map compass:** "N" sat on the outer ring and "S", "W" and "E" sat off their axes. All four now sit just outside the ring, on their axes.
+- **Status figures:** they stay on one row, and a wrapped label ("Questions answered") no longer pushes its figure below the others; the values share a line.
+- **The rebuilt To do form's error state:**
+  - The errored box had lost its red edge.
+  - The who-error sat inside the chip row. It now sits on its own line above the chips, as on every other form.
+- **The states sheet** labelled four pills "all three states"; it says "calm, then the three that need noticing".
+
+## Left alone (LAST.md: change nothing else)
+
+These were noted again by the reviewers but are not on LAST.md's list:
+- the phone Technical details row on Status;
+- the cut-off Quick idea placeholder;
+- hyphenated directions breaking at the hyphen;
+- the edit form's quick-date chips sitting under Reminder on the phone;
+- the kid's narrower My wishes card;
+- the loose Undo banners on the phone;
+- the narrow cards in the first-day specimen.

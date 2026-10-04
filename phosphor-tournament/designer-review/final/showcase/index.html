@@ -1,0 +1,251 @@
+<title>FamilyDB Kitchen Table</title>
+<style>
+/* Layout: the brand's own two worlds. Warm paper for the page (light) and charcoal glass (dark); one hero with the mark, then the brand in three cards, then every page in a browser, then the checks and the open decisions. Phosphor green appears only on the glass, as in the design itself. */
+:root {
+  --paper: #F6F1E7; --paper-2: #EFE7D7; --card: #FFFCF6; --ink: #1D2526; --ink-2: #4B5657; --ink-3: #596263;
+  --line: #E2D8C4; --vera: #1E5C4F; --vera-soft: #DCEAE2; --sun: #F2C14E; --on-sun: #1D2526;
+  --glass: #0E1312; --glass-2: #161D1B; --glass-line: #2A3632; --glass-ink: #E9F1EC; --glass-ink-2: #B9C6BF;
+  --phosphor: #6DFF9C; --phosphor-dim: rgba(109,255,156,.34); --focus: #1D2526;
+  --serif: "Fraunces", Georgia, serif;
+  --sans: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #0E1312; --paper-2: #161D1B; --card: #141B19; --ink: #E9F1EC; --ink-2: #C5D0CA; --ink-3: #A3B0AA;
+  --line: #2A3632; --vera: #6DFF9C; --vera-soft: #16241F; --focus: #6DFF9C; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --paper: #0E1312; --paper-2: #161D1B; --card: #141B19; --ink: #E9F1EC; --ink-2: #C5D0CA; --ink-3: #A3B0AA;
+  --line: #2A3632; --vera: #6DFF9C; --vera-soft: #16241F; --focus: #6DFF9C; color-scheme: dark; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--paper); color: var(--ink); font: 17px/1.55 var(--sans); }
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+button { font: inherit; color: inherit; cursor: pointer; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 90px; display: grid; gap: 56px; }
+.wrap > * { min-width: 0; }
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; margin: 0; text-wrap: balance; font-variation-settings: "SOFT" 100; }
+h2 { font-size: clamp(26px, 3.4vw, 34px); line-height: 1.15; }
+h3 { font-size: 20px; line-height: 1.25; }
+p { margin: 0; }
+.lede { color: var(--ink-2); max-width: 66ch; }
+.mono { font-family: var(--mono); font-size: 14px; }
+
+/* hero */
+.hero { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 32px; align-items: center; }
+.word { display: flex; align-items: center; gap: 16px; }
+.tile { width: 72px; height: 72px; border-radius: 18px; background: var(--glass); display: grid; place-items: center; box-shadow: 0 0 0 1px var(--glass-line); flex: none; }
+.tile svg { width: 52px; height: 52px; filter: drop-shadow(0 0 6px rgba(109,255,156,.45)); }
+.wordmark { font-family: var(--serif); font-weight: 600; font-size: 34px; font-variation-settings: "SOFT" 100; letter-spacing: -.01em; display: inline-flex; align-items: center; gap: 4px; }
+.cursor { display: inline-block; width: .42em; height: .9em; background: var(--vera); border-radius: 2px; }
+@media (prefers-reduced-motion: no-preference) { .cursor { animation: blink 1.6s steps(1) infinite; } }
+@keyframes blink { 50% { opacity: 0; } }
+.hero h1 { font-size: clamp(40px, 6vw, 64px); line-height: 1.02; margin-top: 18px; }
+.hero .lede { margin-top: 14px; font-size: 19px; }
+.glasscard { background: var(--glass); color: var(--glass-ink); border-radius: 22px; padding: 22px; display: grid; gap: 14px; box-shadow: 0 0 0 1px var(--glass-line); }
+.glasscard .row { display: flex; gap: 12px; align-items: center; }
+.vs { flex: none; filter: drop-shadow(0 0 3px rgba(109,255,156,.35)); }
+.vs__bg { fill: #0E1312; } .vs__rim { fill: none; stroke: #6DFF9C; stroke-opacity: .6; }
+.vs__r { fill: #6DFF9C; fill-opacity: .45; } .vs__r--new { fill-opacity: .9; }
+.vs__p { fill: none; stroke: #6DFF9C; stroke-linecap: round; stroke-linejoin: round; } .vs__c { fill: #6DFF9C; }
+.pane { width: 44px; height: 44px; border-radius: 10px; background: #071009; overflow: hidden; display: grid; grid-template-columns: repeat(5, 1fr); padding: 5px; gap: 1px 2px; box-shadow: inset 0 0 0 1px #1d2b25; flex: none; }
+.pane i { display: block; height: 4px; border-radius: 1px; background: var(--phosphor-dim); }
+.pane i.b { background: var(--phosphor); box-shadow: 0 0 4px rgba(109,255,156,.8); }
+.pill { font: 500 13px/1 var(--mono); color: var(--glass-ink); border: 1px solid var(--glass-line); border-radius: 999px; padding: 6px 11px; display: inline-flex; align-items: center; gap: 8px; }
+.pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--phosphor); box-shadow: 0 0 6px var(--phosphor); }
+.bubble { background: var(--glass-2); border: 1px solid var(--glass-line); border-radius: 14px; padding: 10px 14px; color: var(--glass-ink); }
+.bubble .who { font: 500 13px/1.3 var(--mono); color: var(--phosphor); }
+.paperbubble { background: #DCE6F7; color: #1D2526; border-radius: 14px; padding: 10px 14px; justify-self: end; max-width: 85%; }
+.paperbubble .who { font: 700 13px/1.3 var(--sans); color: #2B4E8C; }
+
+/* brand cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 20px; display: grid; gap: 12px; align-content: start; }
+.card p { color: var(--ink-2); font-size: 16px; }
+.marks { display: flex; gap: 14px; align-items: end; flex-wrap: wrap; }
+.marks .m { background: var(--glass); display: grid; place-items: center; box-shadow: 0 0 0 1px var(--glass-line); }
+.marks svg { display: block; }
+.swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.sw { border-radius: 10px; height: 46px; border: 1px solid var(--line); display: flex; align-items: end; padding: 4px 6px; font: 500 11px/1.2 var(--mono); }
+.typeline { display: grid; gap: 4px; border-top: 1px solid var(--line); padding-top: 10px; }
+.typeline small { font: 500 12px/1.3 var(--mono); color: var(--ink-3); }
+
+/* browser */
+.browser { display: grid; gap: 14px; }
+.bar { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; justify-content: space-between; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--card); flex-wrap: wrap; }
+.seg button { background: none; border: 0; padding: 8px 13px; color: var(--ink-2); font-size: 15px; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); font-weight: 700; }
+.tabs { display: flex; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--line); }
+.tabs button { background: none; border: 0; border-bottom: 3px solid transparent; padding: 8px 12px; color: var(--ink-2); white-space: nowrap; font-size: 16px; }
+.tabs button[aria-current="true"] { color: var(--ink); border-color: var(--vera); font-weight: 700; }
+.note { color: var(--ink-3); font-size: 15px; }
+.shot { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--card); }
+.shot img { display: block; width: 100%; height: auto; }
+.phone .shot { width: min(390px, 100%); margin-inline: auto; border-radius: 26px; }
+
+/* checks */
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 22px; align-items: start; }
+.tw { border: 1px solid var(--line); border-radius: 14px; overflow-x: auto; background: var(--card); }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 700 13px/1.3 var(--sans); color: var(--ink-3); }
+td.n { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: 0; }
+.list { display: grid; gap: 12px; max-width: 76ch; }
+.list p { color: var(--ink-2); }
+.list b { color: var(--ink); }
+.foot { color: var(--ink-3); font-size: 15px; border-top: 1px solid var(--line); padding-top: 18px; display: grid; gap: 6px; }
+
+@media (max-width: 820px) {
+  .hero { grid-template-columns: minmax(0, 1fr); }
+  .swatches { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fraunces:opsz,wght,SOFT@9..144,600,100&family=JetBrains+Mono:wght@500&display=swap">
+
+<div class="wrap">
+  <section class="hero" aria-labelledby="t">
+    <div>
+      <div class="word">
+        <span class="tile" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#6DFF9C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3" width="19" height="13.5" rx="3.5"/><path d="M12 16.5V21M8.5 21h7M9 8.25v1.25M15 8.25v1.25M9 12.25c1.7 1.35 4.3 1.35 6 0"/></svg></span>
+        <span class="wordmark">FamilyDB<span class="cursor" aria-hidden="true"></span></span>
+      </div>
+      <h1 id="t">Kitchen Table, final</h1>
+      <p class="lede">The look of FamilyDB's web page. Warm paper for everything the family keeps; a few panes of charcoal glass with green light for FamilyDB and for Vera. Chosen by the family, checked blind, and finished by its own designer.</p>
+    </div>
+    <div class="glasscard" aria-label="The brand in one picture">
+      <div class="row"><svg class="vs" width="44" height="44" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="vs__bg" width="32" height="32" rx="8"/><rect class="vs__rim" x=".5" y=".5" width="31" height="31" rx="7.5"/><rect class="vs__r" x="6" y="6" width="12" height="3" rx="1.5"/><rect class="vs__r" x="20" y="6" width="6" height="3" rx="1.5"/><rect class="vs__r vs__r--new" x="6" y="11" width="6" height="3" rx="1.5"/><rect class="vs__r vs__r--new" x="14" y="11" width="10" height="3" rx="1.5"/><polyline class="vs__p" points="6.5,17.5 10.5,21.25 6.5,25" stroke-width="2"/><rect class="vs__c" x="13.5" y="16.75" width="6" height="9" rx="1"/></svg><span class="pill">Vera is ready</span></div>
+      <div class="paperbubble"><div class="who">Sam</div>What should we do this weekend?</div>
+      <div class="bubble"><div class="who">Vera · 7:48 pm</div>Saturday looks dry: the Silver Falls hike fits the morning, and Pho Oregon is open for dinner.</div>
+    </div>
+  </section>
+
+  <section aria-labelledby="b">
+    <h2 id="b">The brand</h2>
+    <p class="lede">Paper is the family's. Glass is FamilyDB's and Vera's. Green light appears only where FamilyDB, Vera or something live is, and every touch of it says something true.</p>
+    <div class="cards" style="margin-top:18px">
+      <div class="card">
+        <h3>The mark</h3>
+        <div class="marks" aria-hidden="true">
+          <span class="m" style="width:64px;height:64px;border-radius:16px"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#6DFF9C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3" width="19" height="13.5" rx="3.5"/><path d="M12 16.5V21M8.5 21h7M9 8.25v1.25M15 8.25v1.25M9 12.25c1.7 1.35 4.3 1.35 6 0"/></svg></span>
+          <span class="m" style="width:32px;height:32px;border-radius:8px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6DFF9C" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3" width="19" height="13.5" rx="3.5"/><path d="M12 16.5V21M8.5 21h7M9 8.25v1.25M15 8.25v1.25M9 12.25c1.7 1.35 4.3 1.35 6 0"/></svg></span>
+          <span class="m" style="width:16px;height:16px;border-radius:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6DFF9C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3" width="19" height="13.5" rx="3.5"/><path d="M9 12.25c1.7 1.35 4.3 1.35 6 0"/></svg></span>
+        </div>
+        <p>FamilyDB's own smiling monitor, back from before the redesign: one phosphor stroke on charcoal. The favicon, the home-screen icon, the bar. It is never Vera's face.</p>
+      </div>
+      <div class="card">
+        <h3>Vera's screen</h3>
+        <div style="display:flex;gap:14px;align-items:end"><svg class="vs" width="56" height="56" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="vs__bg" width="32" height="32" rx="8"/><rect class="vs__rim" x=".5" y=".5" width="31" height="31" rx="7.5"/><rect class="vs__r" x="6" y="6" width="12" height="3" rx="1.5"/><rect class="vs__r" x="20" y="6" width="6" height="3" rx="1.5"/><rect class="vs__r vs__r--new" x="6" y="11" width="6" height="3" rx="1.5"/><rect class="vs__r vs__r--new" x="14" y="11" width="10" height="3" rx="1.5"/><polyline class="vs__p" points="6.5,17.5 10.5,21.25 6.5,25" stroke-width="2"/><rect class="vs__c" x="13.5" y="16.75" width="6" height="9" rx="1"/></svg><svg class="vs" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="vs__bg" width="32" height="32" rx="8"/><rect class="vs__rim" x=".5" y=".5" width="31" height="31" rx="7.5"/><rect class="vs__r" x="6" y="6" width="12" height="3" rx="1.5"/><rect class="vs__r" x="20" y="6" width="6" height="3" rx="1.5"/><rect class="vs__r vs__r--new" x="6" y="11" width="6" height="3" rx="1.5"/><rect class="vs__r vs__r--new" x="14" y="11" width="10" height="3" rx="1.5"/><polyline class="vs__p" points="6.5,17.5 10.5,21.25 6.5,25" stroke-width="2"/><rect class="vs__c" x="13.5" y="16.75" width="6" height="9" rx="1"/></svg><svg class="vs" width="24" height="24" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="vs__bg" width="32" height="32" rx="8"/><rect class="vs__rim" x=".5" y=".5" width="31" height="31" rx="7.5"/><rect class="vs__r" x="6" y="6" width="12" height="3" rx="1.5"/><rect class="vs__r" x="20" y="6" width="6" height="3" rx="1.5"/><rect class="vs__r vs__r--new" x="6" y="11" width="6" height="3" rx="1.5"/><rect class="vs__r vs__r--new" x="14" y="11" width="10" height="3" rx="1.5"/><polyline class="vs__p" points="6.5,17.5 10.5,21.25 6.5,25" stroke-width="2"/><rect class="vs__c" x="13.5" y="16.75" width="6" height="9" rx="1"/></svg></div>
+        <p>Vera is never drawn. Where she speaks there is a small screen with a lit prompt, its lines typing while she answers and going dark when she can't. Square, so she is never mistaken for one of the family's round faces, and it works whatever the family calls her.</p>
+      </div>
+      <div class="card">
+        <h3>Colour and type</h3>
+        <div class="swatches" aria-hidden="true">
+          <span class="sw" style="background:#F6F1E7;color:#1D2526">paper</span><span class="sw" style="background:#1E5C4F;color:#fff">vera</span><span class="sw" style="background:#F2C14E;color:#1D2526">send</span><span class="sw" style="background:#0E1312;color:#6DFF9C">glass</span>
+        </div>
+        <div class="typeline"><small>Fraunces, soft: headings</small><span style="font-family:var(--serif);font-variation-settings:'SOFT' 100;font-weight:600;font-size:24px">Good morning, Sam.</span></div>
+        <div class="typeline"><small>Atkinson Hyperlegible: everything read</small><span>Roller rink tomorrow, and three to-dos are late.</span></div>
+        <div class="typeline"><small>JetBrains Mono: Vera's small voice</small><span class="mono">Added to Plans · Thu 1 Oct</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="browser" aria-labelledby="p">
+    <h2 id="p">Every page</h2>
+    <p class="lede">Twenty-four pages, each on a desktop and a phone, by day and at night. For the seven main pages you can also see them as they were just before the brand went in.</p>
+    <div class="bar">
+      <div class="seg" role="group" aria-label="Group" id="groups"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <div class="seg" role="group" aria-label="Screen"><button type="button" data-size="desktop">Desktop</button><button type="button" data-size="phone">Phone</button></div>
+        <div class="seg" role="group" aria-label="Light or dark"><button type="button" data-theme="light">Day</button><button type="button" data-theme="dark">Night</button></div>
+        <div class="seg" role="group" aria-label="Version" id="versionSeg"><button type="button" data-ver="brand">Branded</button><button type="button" data-ver="plain">Before branding</button></div>
+      </div>
+    </div>
+    <div class="tabs" role="group" aria-label="Page" id="tabs"></div>
+    <p class="note" id="pnote"></p>
+    <div id="stage"></div>
+  </section>
+
+  <section aria-labelledby="c">
+    <h2 id="c">How it was checked</h2>
+    <div class="two" style="margin-top:18px" id="checks"></div>
+  </section>
+
+  <section aria-labelledby="d">
+    <h2 id="d">For the family to decide</h2>
+    <div class="list" style="margin-top:14px">
+      <p><b>Kids ticking their own to-dos, and rating how a plan went.</b> Today a kid can't change anything; the kid, parent and usability reviewers all asked for it. The design shows "Tell Vera I did it" for now.</p>
+      <p><b>A private chat for parents,</b> so a present can be planned with Vera without it appearing in the family chat.</p>
+      <p><b>A kid sharing where they are</b> with a message: hidden on kids' pages for now.</p>
+      <p><b>A twelve-hour clock setting:</b> the design shows "1 pm"; the app needs a setting for it.</p>
+      <p><b>Building it:</b> this is a set of drawn pages with a written standard (tokens, components, words, phone rules, states, accessibility numbers, notes for the engineer). Nothing in the app has changed yet; turning it into the app's templates is the next piece of work.</p>
+    </div>
+  </section>
+
+  <div class="foot">
+    <p>How it got here: thirty-seven earlier designs and a committee tournament; twenty designs judged blind by three judges, where Kitchen Table (green) came second, third and first; the family's choice; thirteen specialist reviews; five rounds of work by its designer; and blind checks after each step. Every design and judgement is in the comparison viewer.</p>
+    <p>Every designer and judge in this process is an AI model; the family's own eye is the verdict that counts.</p>
+  </div>
+</div>
+
+<script type="application/json" id="checks-data">{"brandIntro": "Four fresh judges saw the plain final and the branded one, unnamed and in both orders, by day and at night. All four would build the branded one, and all four said it has clearly the stronger identity. An earlier branded version lost three to one, because Vera's sign was unreadable small and dark mode lost its green; those were fixed before this round.", "brand": [["Judge 1", 7, 8, "Branded"], ["Judge 2", 7, 7.5, "Branded"], ["Judge 3", 7, 8, "Branded"], ["Judge 4", 7, 7.5, "Branded"]], "orig": [["Judge 1", 6.5, 8, "The final"], ["Judge 2", 6, 8, "The final"], ["Judge 3", 6, 8, "The final"], ["Judge 4", 6, 8, "The final"]], "lenses": [["Generalist", 7, 8], ["Visual style", 7, 8], ["Design system", 6.5, 7], ["Interaction", 7, 7], ["Typography", 7, 7], ["Usability", 7, 7], ["Skeptic", 6, 6], ["Parent", 7, 8], ["Kid", 6, 7.5], ["Accessibility", 6.5, 7.5], ["Copy", 7, 8], ["Front-end engineer", 7, 7.5], ["Phone", 6, 7]], "notes": "<p><b>On the branded version,</b> the style lens gave 8 and the accessibility lens 7, and both said build it; their fixes went into the last round.</p>"}</script>
+<script>
+const GROUPS = [
+ ['Parent pages', [['home','Home'],['chat','Chat'],['ideas','Ideas'],['plans','Plans'],['todo','To do'],['status','Status'],['settings','Settings']]],
+ ['Kid pages', [['home-kid','Home'],['chat-kid','Chat'],['todo-kid','To do'],['wishes-kid','Wishes'],['more-kid','More']]],
+ ['More pages', [['wishes','Wishes, deciding'],['idea','An idea'],['idea-new','Add an idea'],['todo-edit','Edit a to-do'],['more','More'],['signin','Sign in'],['grownups','For grown-ups'],['404','Missing page']]],
+ ['States', [['states','Vera’s states'],['states-actions','After an action, errors'],['states-content','Empty, busy, long']]],
+ ['Type', [['type','Type specimen']]]
+];
+const CORE = new Set(['home','chat','ideas','plans','todo','status','settings']);
+const NOTES = {
+  'home-kid':'Maya, 11, signed in. Kids see their own things, never cost, setup or presents.',
+  'todo-kid':'A kid can’t change anything in the app today, so her to-do is read-only.',
+  'states':'The daily limit, Vera unable to answer, a reply on its way and one that failed, for parents and for a kid.',
+  'states-actions':'Undo after an action, and form errors written as the fix.',
+  'states-content':'A new family’s first empty day, no results, a busy Saturday, a trip across a weekend, long titles.',
+  'type':'The type scale, and real lines as they were in the version the family chose, above the same lines now.',
+  'signin':'Pick who you are, then your password; below it, the brand-new install where the family shares one password.'
+};
+const st = {g: 0, p: 'home', size: 'desktop', theme: 'light', ver: 'brand'};
+try { if (matchMedia('(prefers-color-scheme: dark)').matches) st.theme = 'dark'; } catch (e) {}
+const $ = id => document.getElementById(id);
+function render() {
+  const grp = GROUPS[st.g]; if (!grp[1].some(x => x[0] === st.p)) st.p = grp[1][0][0];
+  const cur = grp[1].find(x => x[0] === st.p);
+  if (!CORE.has(st.p)) st.ver = 'brand';
+  $('groups').innerHTML = GROUPS.map((g, i) => '<button type="button" data-g="' + i + '" aria-pressed="' + (i === st.g) + '">' + g[0] + '</button>').join('');
+  $('tabs').innerHTML = grp[1].map(([k, l]) => '<button type="button" data-p="' + k + '" aria-current="' + (k === st.p) + '">' + l + '</button>').join('');
+  document.querySelectorAll('[data-size]').forEach(b => b.setAttribute('aria-pressed', b.dataset.size === st.size));
+  document.querySelectorAll('[data-theme]').forEach(b => b.setAttribute('aria-pressed', b.dataset.theme === st.theme));
+  document.querySelectorAll('[data-ver]').forEach(b => b.setAttribute('aria-pressed', b.dataset.ver === st.ver));
+  $('versionSeg').hidden = !CORE.has(st.p);
+  $('pnote').textContent = NOTES[st.p] || '';
+  const ph = st.size === 'phone', dk = st.theme === 'dark';
+  const src = 'img/' + st.ver + '/' + st.p + (dk ? '-dark' : '') + (ph ? '-phone' : '') + '.webp';
+  const alt = (st.ver === 'plain' ? 'Before branding: ' : '') + grp[0] + ', ' + cur[1] + ', ' + (ph ? 'phone' : 'desktop') + ', ' + (dk ? 'night' : 'day');
+  $('stage').innerHTML = '<div class="' + (ph ? 'phone' : '') + '"><div class="shot"><img src="' + src + '" alt="' + alt + '" width="' + (ph ? 585 : 1280) + '"></div></div>';
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.g !== undefined) { st.g = Number(t.dataset.g); st.p = GROUPS[st.g][1][0][0]; }
+  else if (t.dataset.p) st.p = t.dataset.p;
+  else if (t.dataset.size) st.size = t.dataset.size;
+  else if (t.dataset.theme) st.theme = t.dataset.theme;
+  else if (t.dataset.ver) st.ver = t.dataset.ver;
+  else return;
+  render();
+});
+(function checks() {
+  let C = {}; try { C = JSON.parse($('checks-data').textContent || '{}'); } catch (e) {}
+  const table = (title, intro, head, rows) => rows && rows.length ? '<div><h3>' + title + '</h3><p class="lede" style="font-size:16px;margin:6px 0 10px">' + intro + '</p><div class="tw"><table><thead><tr>' + head.map(h => '<th>' + h + '</th>').join('') + '</tr></thead><tbody>' + rows.map(r => '<tr>' + r.map((c, i) => '<td' + (typeof c === 'number' ? ' class="n"' : '') + '>' + c + '</td>').join('') + '</tr>').join('') + '</tbody></table></div></div>' : '';
+  $('checks').innerHTML =
+    table('Branded against plain', C.brandIntro || '', ['Judge', 'Plain', 'Branded', 'Would build'], C.brand) +
+    table('Original against final', 'Four fresh judges compared the original Kitchen Table and the final, unnamed, in both orders, before the brand pass.', ['Judge', 'Original', 'Final', 'Would build'], C.orig) +
+    table('Thirteen specialist lenses', 'The same thirteen reviewers, on the original seven pages and on the final twenty, before the brand pass.', ['Lens', 'Before', 'Final'], C.lenses) +
+    (C.notes ? '<div class="list">' + C.notes + '</div>' : '');
+})();
+render();
+</script>

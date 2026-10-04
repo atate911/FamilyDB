@@ -1,0 +1,18 @@
+{
+ "j1": {
+  "P": "plain",
+  "Q": "brand"
+ },
+ "j2": {
+  "P": "brand",
+  "Q": "plain"
+ },
+ "j3": {
+  "P": "plain",
+  "Q": "brand"
+ },
+ "j4": {
+  "P": "brand",
+  "Q": "plain"
+ }
+}

@@ -6,5 +6,9 @@ s=s.replace('/*REVIEWS*/',rj)
 s=s.replace('/*HOMEH*/{}',json.dumps({k:[v['homeH'],v['homePhoneH']] for k,v in M.items()}))
 F=open('findings.html').read()
 s=s.replace("/*FINDINGS*/''",'/*FINDINGS*/'+json.dumps(F))
+import os
+FDp='final_data.json'
+FDd=open(FDp).read() if os.path.exists(FDp) else '{}'
+s=s.replace('/*FINALDATA*/{}', '/*FINALDATA*/'+FDd)
 open('viewer/index.html','w').write(s)
 print(len(s))
