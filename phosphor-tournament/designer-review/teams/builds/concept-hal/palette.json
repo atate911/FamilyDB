@@ -1,0 +1,14 @@
+{
+  "id": "concept-hal",
+  "name": "Machine Voice",
+  "tagline": "Phosphor green only where the machine speaks; everything the family touches is plain.",
+  "sheet": "variants/concept-hal/sheet.css",
+  "tokens": {
+    "bg": "#0a0d0c", "surface": "#111513", "surface-2": "#161b19", "surface-3": "#1c2220",
+    "field": "#0d1110", "line": "#222927", "line-2": "#2e3733", "edge": "#5a6660",
+    "ink": "#eef3f0", "ink-2": "#bcc7c1", "dim": "#939f99", "faint": "#7f8b85",
+    "brand": "#6dff9c", "brand-hover": "#92ffb8", "screen": "#6dff9c", "outing": "#6dff9c",
+    "ideas": "#6dff9c", "plans": "#6dff9c", "todo": "#6dff9c", "people": "#ffb850",
+    "shows": "#6dff9c", "seasons": "#6dff9c", "danger": "#ff6b6b", "on-bright": "#07130c"
+  }
+}

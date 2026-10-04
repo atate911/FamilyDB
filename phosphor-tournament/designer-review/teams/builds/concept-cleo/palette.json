@@ -1,0 +1,14 @@
+{
+  "id": "concept-cleo",
+  "name": "One lit trace",
+  "tagline": "A calm dark app where phosphor glows only where something is alive: Vera, now, and working.",
+  "sheet": "variants/concept-cleo/sheet.css",
+  "tokens": {
+    "bg": "#0d100e", "surface": "#131714", "surface-2": "#181d19", "surface-3": "#20261f",
+    "field": "#0f1310", "line": "#232a25", "line-2": "#323a34", "edge": "#5b665e",
+    "ink": "#e9eee9", "ink-2": "#bcc6be", "dim": "#939f97", "faint": "#7f8b83",
+    "brand": "#6cf29a", "brand-hover": "#93f8b5", "screen": "#6cf29a", "outing": "#6cf29a",
+    "ideas": "#bcc6be", "plans": "#bcc6be", "todo": "#f2b35c", "people": "#bcc6be",
+    "shows": "#bcc6be", "seasons": "#bcc6be", "danger": "#ff7a6b", "on-bright": "#06120a"
+  }
+}

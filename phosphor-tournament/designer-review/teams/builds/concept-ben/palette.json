@@ -1,0 +1,14 @@
+{
+  "id": "concept-ben",
+  "name": "One Glow",
+  "tagline": "A calm modern page where green light only means now, live or act here, and each page has one instrument.",
+  "sheet": "variants/concept-ben/sheet.css",
+  "tokens": {
+    "bg": "#090c0b", "surface": "#0f1312", "surface-2": "#141917", "surface-3": "#1a201e",
+    "field": "#0b0f0e", "line": "#1f2724", "line-2": "#2b3531", "edge": "#55625c",
+    "ink": "#ece9df", "ink-2": "#bdc3b9", "dim": "#949d95", "faint": "#7f8981",
+    "brand": "#72f5a1", "brand-hover": "#9cffbf", "screen": "#7dffa8", "outing": "#86d4a2",
+    "ideas": "#b2a5ee", "plans": "#7cc4e4", "todo": "#e5cd7e", "people": "#f2b44f",
+    "shows": "#e6a3c6", "seasons": "#e89b7a", "danger": "#ff6e6e", "on-bright": "#05120a"
+  }
+}

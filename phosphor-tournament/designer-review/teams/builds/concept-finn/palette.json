@@ -1,0 +1,14 @@
+{
+  "id": "concept-finn",
+  "name": "Afterglow",
+  "tagline": "A calm, plain family app where only what matters now glows, and fades as it ages.",
+  "sheet": "variants/concept-finn/sheet.css",
+  "tokens": {
+    "bg": "#0b0f0c", "surface": "#111612", "surface-2": "#171d19", "surface-3": "#1e2520",
+    "field": "#0d120f", "line": "#222a25", "line-2": "#2f3933", "edge": "#5a675f",
+    "ink": "#e6e3d6", "ink-2": "#c2c0b4", "dim": "#9b9b8f", "faint": "#828479",
+    "brand": "#6bff9e", "brand-hover": "#9affbd", "screen": "#6bff9e", "outing": "#9b9b8f",
+    "ideas": "#9b9b8f", "plans": "#9b9b8f", "todo": "#ffb347", "people": "#9b9b8f",
+    "shows": "#9b9b8f", "seasons": "#9b9b8f", "danger": "#ff6b6b", "on-bright": "#06120a"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "concept-gia",
+  "name": "One Lit Screen",
+  "tagline": "One green screen per page, where Vera speaks and the numbers live, in a quiet dark app.",
+  "sheet": "variants/concept-gia/sheet.css",
+  "tokens": {
+    "bg": "#0a0d0c", "surface": "#101513", "surface-2": "#151b18", "surface-3": "#1b221f",
+    "field": "#0c100e", "line": "#212925", "line-2": "#2d3732", "edge": "#56625c",
+    "ink": "#e8eee9", "ink-2": "#b9c4be", "dim": "#929f99", "faint": "#7e8b85",
+    "brand": "#6dff9c", "brand-hover": "#9affbe", "screen": "#6dff9c", "outing": "#b9c4be",
+    "ideas": "#b9c4be", "plans": "#b9c4be", "todo": "#b9c4be", "people": "#b9c4be",
+    "shows": "#b9c4be", "seasons": "#b9c4be", "danger": "#ffb547", "on-bright": "#04110a"
+  }
+}

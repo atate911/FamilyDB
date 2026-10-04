@@ -1,0 +1,14 @@
+{
+  "id": "team-b",
+  "name": "The lit screen",
+  "tagline": "A calm, plain family app with one green phosphor screen per page, where the machine speaks and what is now glows.",
+  "sheet": "variants/team-b/sheet.css",
+  "tokens": {
+    "bg": "#0a0d0b", "surface": "#101411", "surface-2": "#151a16", "surface-3": "#1b211c",
+    "field": "#0c100d", "line": "#222a24", "line-2": "#2f3a32", "edge": "#5a675e",
+    "ink": "#ece9dd", "ink-2": "#c4c3b7", "dim": "#9fa397", "faint": "#878c82",
+    "brand": "#6dfc9e", "brand-hover": "#9affbe", "screen": "#7dffa8", "outing": "#c4c3b7",
+    "ideas": "#c4c3b7", "plans": "#c4c3b7", "todo": "#ffb547", "people": "#ffb547",
+    "shows": "#c4c3b7", "seasons": "#c4c3b7", "danger": "#ff6b6b", "on-bright": "#06130b"
+  }
+}

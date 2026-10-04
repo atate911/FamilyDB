@@ -1,0 +1,14 @@
+{
+  "id": "concept-dev",
+  "name": "One Lit Screen",
+  "tagline": "A calm dark desk with one phosphor screen per page, and the screen always holds the page's live answer.",
+  "sheet": "variants/concept-dev/sheet.css",
+  "tokens": {
+    "bg": "#0c100e", "surface": "#131916", "surface-2": "#18201c", "surface-3": "#1e2722",
+    "field": "#0e1311", "line": "#222c27", "line-2": "#2e3a33", "edge": "#5f6d65",
+    "ink": "#f0eee6", "ink-2": "#c6c8bd", "dim": "#9aa39a", "faint": "#858f87",
+    "brand": "#6dfc9b", "brand-hover": "#95ffb6", "screen": "#6dfc9b", "outing": "#8fd9a8",
+    "ideas": "#b9abf0", "plans": "#86c8e0", "todo": "#e8d38a", "people": "#ffb54d",
+    "shows": "#eeaacb", "seasons": "#f0a283", "danger": "#ff6b6b", "on-bright": "#06120b"
+  }
+}

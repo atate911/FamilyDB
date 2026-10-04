@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, kind_label, page_head, crt, radar %}
+{% block title %}Ideas · {{ site_title }}{% endblock %}
+{% block content %}
+  {% call page_head('Ideas', 'Places to go, things to try, and everything the family has mentioned.', 'idea', count=rows | length, count_note=('matching' if filtered else 'listed')) %}
+    {% if visitor().may('change') %}<a class="button" href="{{ url_for('web.new_idea') }}">{{ icon('plus') }}Add an idea</a>{% endif %}
+  {% endcall %}
+
+  <div class="ideas-top{{ ' has-screen' if on_radar }}">
+    <div class="ideas-controls">
+  {# Folded until wanted, so the list is on the first screen; the summary says what it is. #}
+  {% if visitor().may('change') %}
+  <details class="capture">
+    <summary>{{ icon('sparkles') }}Save a thought for later</summary>
+    <p class="muted">A restaurant, food cart pod, neighborhood, passport stop, kids' outing, special occasion,
+      or just a direction to explore. Write naturally; {{ assistant }} will organize it and say in Chat what was saved.</p>
+    <form class="form" method="post" action="{{ url_for('chat.send') }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="once" value="{{ once_token() }}">
+      <input type="hidden" name="intent" value="save_idea">
+      <div class="field wide">
+        <label for="capture-text">Your thought</label>
+        <textarea id="capture-text" name="text" required maxlength="3800" rows="3" data-dictate
+          placeholder="Maybe explore food carts in Portland with the girls on a sunny afternoon..."></textarea>
+      </div>
+      {% if not visitor().member %}
+        <div class="field">
+          <label for="capture-who">From</label>
+          <select id="capture-who" name="who" required><option value="">Choose your name</option>
+            {% for person in capture_people %}<option>{{ person.display_name }}</option>{% endfor %}
+          </select>
+        </div>
+      {% endif %}
+      <div class="field actions end">
+        <button type="submit">{{ icon('sparkles') }}Organize in Chat</button>
+      </div>
+      <p class="wide muted hint">Uses your configured assistant. Check its confirmation in Chat;
+        you can also use Add an idea to save directly without AI.</p>
+    </form>
+  </details>
+  {% endif %}
+
+  <nav class="tabs" aria-label="Which ideas">
+    <a href="{{ url_for('web.ideas') }}"{% if request.endpoint == 'web.ideas' %} aria-current="page"{% endif %}>{{ icon('idea') }}All ideas</a>
+    <a href="{{ url_for('web.restaurants') }}"{% if request.endpoint == 'web.restaurants' %} aria-current="page"{% endif %}>{{ icon('restaurant') }}Restaurants</a>
+  </nav>
+
+  <form class="filters" method="get" action="{{ url_for('web.ideas') }}" role="search">
+    <div class="field wide">
+      <label for="q">Search</label>
+      <input id="q" name="q" type="search" value="{{ selected.q }}" placeholder="ramen, museum…" />
+    </div>
+    <div class="field">
+      <label for="kind">Kind</label>
+      <select id="kind" name="kind">
+        <option value="">any</option>
+        {% for option in kinds %}
+          <option value="{{ option }}" {{ 'selected' if option == selected.kind }}>{{ option }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="status">Status</label>
+      <select id="status" name="status">
+        <option value="">any but dropped</option>
+        {% for option in statuses %}
+          <option value="{{ option }}" {{ 'selected' if option == selected.status }}>{{ option }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="who">For</label>
+      <select id="who" name="who">
+        <option value="">anyone</option>
+        {% for option in people %}
+          <option value="{{ option }}" {{ 'selected' if option == selected.who }}>{{ option }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field actions">
+      <button type="submit">{{ icon('search') }}Filter</button>
+      {% if filtered %}<a class="clear" href="{{ url_for('web.ideas') }}">{{ icon('x') }}Clear</a>{% endif %}
+    </div>
+  </form>
+
+  <p class="muted count">
+    {{ rows | length }} idea{{ '' if rows | length == 1 else 's' }}{% if filtered %} match{{ 'es' if rows | length == 1 else '' }}{% endif %}{% if rows | length == limit %}, showing the first {{ limit }}{% endif %}
+  </p>
+
+  {% if not rows %}
+    <p class="panel muted empty">{{ icon('idea') }}<span>
+      Nothing here yet.{% if visitor().may('change') %} <a href="{{ url_for('web.new_idea') }}">Add one</a>, or tell the bot in the
+      chat.{% endif %}</span>
+    </p>
+  {% endif %}
+
+  <ul class="idea-rows">
+    {% for row in rows %}
+      <li class="idea-card idea-row">
+        <p class="card-kind">
+          {{ kind_label(row.kind) }}
+          {% if row.status != 'idea' %}<span class="tag status-{{ row.status }}">{{ row.status }}</span>{% endif %}
+        </p>
+        <h2><a href="{{ url_for('web.idea', idea_id=row.id) }}">{{ row.title }}</a></h2>
+        <p class="muted meta">
+          {% if row.where %}<span>{{ icon('pin') }}{{ row.where }}</span>{% endif %}
+          {% if row.away %}<span>{{ icon('day_trip') }}{{ row.away }}</span>{% endif %}
+          {% if row.on %}<span>{{ icon('plans') }}{{ row.on }}</span>{% endif %}
+          <span>{{ icon('user') }}for {{ row.who }}</span>
+          {% if row.duration %}<span>{{ icon('clock') }}{{ row.duration }}</span>{% endif %}
+          {% if row.cost %}<span class="cost">{{ row.cost }}</span>{% endif %}
+          {% if row.rating %}<span>{{ icon('star') }}{{ row.rating }}</span>{% endif %}
+          {% if row.pending %}<span>{{ icon('hourglass') }}{{ row.details }}</span>{% endif %}
+        </p>
+        {% if row.tags %}
+          <p class="tags">{% for tag in row.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</p>
+        {% endif %}
+        <span class="card-id muted">#{{ row.id }}</span>
+      </li>
+    {% endfor %}
+  </ul>
+    </div>
+  {# Where the listed places are, on a green screen: a radar that is a map, home at the middle,
+     north at the top, the nearer by road the nearer the middle, and the nearest pinging. It
+     follows the filters. The words beside it are the page's own, and each card below says its
+     own distance and direction. #}
+  {% if on_radar %}
+    {% call crt('on-radar', hidden=false) %}
+      {{ radar(on_radar.blips, rings=on_radar.rings) }}
+      <div class="on-radar-text">
+        <p class="on-radar-label"><span class="inverse caps">On the radar</span></p>
+        <p class="on-radar-count bright">{{ on_radar.count }} place{{ '' if on_radar.count == 1 else 's' }} from home</p>
+        <p class="on-radar-line"><span class="dim">Nearest</span>
+          <a href="{{ url_for('web.idea', idea_id=on_radar.nearest.id) }}">#{{ on_radar.nearest.id }} {{ on_radar.nearest.title }}</a>
+          <span class="rel">{{ on_radar.nearest.away }}</span></p>
+        {% if on_radar.furthest %}
+          <p class="on-radar-line"><span class="dim">Furthest</span>
+            <a href="{{ url_for('web.idea', idea_id=on_radar.furthest.id) }}">#{{ on_radar.furthest.id }} {{ on_radar.furthest.title }}</a>
+            <span class="rel">{{ on_radar.furthest.away }}</span></p>
+        {% endif %}
+        <p class="on-radar-more dim">North at the top. Rings at 15 min, 45 min and 2 h by road.<span class="crt-cursor" aria-hidden="true"></span></p>
+      </div>
+    {% endcall %}
+  {% endif %}
+
+  </div>
+{% endblock %}
