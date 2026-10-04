@@ -1,0 +1,43 @@
+<title>FamilyDB Calendar Screens</title>
+<style>
+/* Layout: one section per take; phones first as a row, then each desktop page full length, one under another. Neutral chrome so the screens carry. */
+:root { --bg:#EEF0F2; --card:#FFFFFF; --ink:#14181D; --ink-2:#4C5560; --line:#D8DCE1; --accent:#0A7A55;
+  --head:"Manrope", system-ui, sans-serif; --body:"Atkinson Hyperlegible", system-ui, sans-serif; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#111417; --card:#1A1E22; --ink:#E8ECEF; --ink-2:#A9B2BB; --line:#2B3137; --accent:#6DFF9C; color-scheme:dark; } }
+:root[data-theme="dark"] { --bg:#111417; --card:#1A1E22; --ink:#E8ECEF; --ink-2:#A9B2BB; --line:#2B3137; --accent:#6DFF9C; color-scheme:dark; }
+* { box-sizing:border-box; }
+body { background:var(--bg); color:var(--ink); font:16px/1.5 var(--body); }
+.wrap { max-width:1320px; margin:0 auto; padding-inline:20px; padding-block:28px 80px; display:grid; gap:44px; }
+.wrap > * { min-width:0; }
+h1,h2 { font-family:var(--head); font-weight:800; margin:0; letter-spacing:-.02em; text-wrap:balance; }
+h1 { font-size:clamp(30px,4.4vw,44px); line-height:1.05; }
+h2 { font-size:clamp(26px,3.2vw,34px); }
+h3 { margin:0; font-size:13px; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-2); }
+p { margin:0; }
+.top { display:grid; gap:10px; }
+.lede { color:var(--ink-2); max-width:68ch; font-size:17px; }
+nav { display:flex; flex-wrap:wrap; gap:8px; }
+nav a { color:var(--ink); text-decoration:none; border:1px solid var(--line); background:var(--card); border-radius:8px; padding:6px 14px; font-weight:700; }
+nav a:hover { border-color:var(--ink-2); }
+:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+section { display:grid; gap:16px; border-top:1px solid var(--line); padding-top:28px; scroll-margin-top:16px; }
+.sh { display:grid; gap:6px; max-width:70ch; }
+.sh p { font-size:17px; color:var(--ink-2); }
+.phones { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; align-items:start; }
+.desk { display:grid; gap:28px; }
+figure { margin:0; display:grid; gap:6px; min-width:0; }
+figure img { display:block; width:100%; height:auto; border:1px solid var(--line); border-radius:12px; background:var(--card); }
+.ph img { border-radius:22px; }
+figcaption { font-size:14px; font-weight:700; color:var(--ink-2); }
+@media (max-width:900px) { .phones { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Manrope:wght@800&display=swap">
+<div class="wrap">
+  <header class="top">
+    <h1>Kitchen Table, as a calendar</h1>
+    <p class="lede">The interface you liked, with a calendar-app look. Two takes, each shown in full: phone screens first, then every main desktop page from top to bottom.</p>
+    <nav aria-label="Jump to"><a href="#wall">Kitchen Wall</a><a href="#app">Today Line</a></nav>
+  </header>
+<section id="wall" aria-labelledby="h-wall"><header class="sh"><h2 id="h-wall">Kitchen Wall</h2><p>The family calendar on the kitchen wall: bold figures, date tiles like calendar pages, and one-person plans as solid blocks in that person’s colour.</p></header><h3>Phone</h3><div class="phones"><figure class="ph"><img src="../compare/img/wall/home-phone.webp" alt="Kitchen Wall, Home, phone" width="585" height="3676"><figcaption>Home</figcaption></figure><figure class="ph"><img src="../compare/img/wall/plans-phone.webp" alt="Kitchen Wall, Plans, phone" width="585" height="2760"><figcaption>Plans</figcaption></figure><figure class="ph"><img src="../compare/img/wall/chat-phone.webp" alt="Kitchen Wall, Chat, phone" width="585" height="1266"><figcaption>Chat</figcaption></figure><figure class="ph"><img src="../compare/img/wall/home-dark-phone.webp" alt="Kitchen Wall, Home at night, phone" width="585" height="3676"><figcaption>Home at night</figcaption></figure></div><h3>Desktop</h3><div class="desk"><figure class="dt"><img src="../compare/img/wall/home.webp" alt="Kitchen Wall, Home" width="1280" height="1880" loading="lazy"><figcaption>Home</figcaption></figure><figure class="dt"><img src="../compare/img/wall/plans.webp" alt="Kitchen Wall, Plans" width="1280" height="1419" loading="lazy"><figcaption>Plans</figcaption></figure><figure class="dt"><img src="../compare/img/wall/todo.webp" alt="Kitchen Wall, To do" width="1280" height="1086" loading="lazy"><figcaption>To do</figcaption></figure><figure class="dt"><img src="../compare/img/wall/chat.webp" alt="Kitchen Wall, Chat" width="1280" height="1914" loading="lazy"><figcaption>Chat</figcaption></figure><figure class="dt"><img src="../compare/img/wall/ideas.webp" alt="Kitchen Wall, Ideas" width="1280" height="2097" loading="lazy"><figcaption>Ideas</figcaption></figure><figure class="dt"><img src="../compare/img/wall/home-kid.webp" alt="Kitchen Wall, A kid’s Home" width="1280" height="1407" loading="lazy"><figcaption>A kid’s Home</figcaption></figure><figure class="dt"><img src="../compare/img/wall/home-dark.webp" alt="Kitchen Wall, Home at night" width="1280" height="1880" loading="lazy"><figcaption>Home at night</figcaption></figure><figure class="dt"><img src="../compare/img/wall/plans-dark.webp" alt="Kitchen Wall, Plans at night" width="1280" height="1419" loading="lazy"><figcaption>Plans at night</figcaption></figure></div></section>
+<section id="app" aria-labelledby="h-app"><header class="sh"><h2 id="h-app">Today Line</h2><p>A quieter calendar app: events marked with a colour bar and a light tint, and green only for today and the next plan.</p></header><h3>Phone</h3><div class="phones"><figure class="ph"><img src="../compare/img/app/home-phone.webp" alt="Today Line, Home, phone" width="585" height="3681" loading="lazy"><figcaption>Home</figcaption></figure><figure class="ph"><img src="../compare/img/app/plans-phone.webp" alt="Today Line, Plans, phone" width="585" height="2757" loading="lazy"><figcaption>Plans</figcaption></figure><figure class="ph"><img src="../compare/img/app/chat-phone.webp" alt="Today Line, Chat, phone" width="585" height="1266" loading="lazy"><figcaption>Chat</figcaption></figure><figure class="ph"><img src="../compare/img/app/home-dark-phone.webp" alt="Today Line, Home at night, phone" width="585" height="3681" loading="lazy"><figcaption>Home at night</figcaption></figure></div><h3>Desktop</h3><div class="desk"><figure class="dt"><img src="../compare/img/app/home.webp" alt="Today Line, Home" width="1280" height="1872" loading="lazy"><figcaption>Home</figcaption></figure><figure class="dt"><img src="../compare/img/app/plans.webp" alt="Today Line, Plans" width="1280" height="1412" loading="lazy"><figcaption>Plans</figcaption></figure><figure class="dt"><img src="../compare/img/app/todo.webp" alt="Today Line, To do" width="1280" height="1082" loading="lazy"><figcaption>To do</figcaption></figure><figure class="dt"><img src="../compare/img/app/chat.webp" alt="Today Line, Chat" width="1280" height="1892" loading="lazy"><figcaption>Chat</figcaption></figure><figure class="dt"><img src="../compare/img/app/ideas.webp" alt="Today Line, Ideas" width="1280" height="2093" loading="lazy"><figcaption>Ideas</figcaption></figure><figure class="dt"><img src="../compare/img/app/home-kid.webp" alt="Today Line, A kid’s Home" width="1280" height="1399" loading="lazy"><figcaption>A kid’s Home</figcaption></figure><figure class="dt"><img src="../compare/img/app/home-dark.webp" alt="Today Line, Home at night" width="1280" height="1872" loading="lazy"><figcaption>Home at night</figcaption></figure><figure class="dt"><img src="../compare/img/app/plans-dark.webp" alt="Today Line, Plans at night" width="1280" height="1412" loading="lazy"><figcaption>Plans at night</figcaption></figure></div></section>
+</div>
