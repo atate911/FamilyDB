@@ -178,3 +178,37 @@ Every page's footer: the legend of timeline marks floating under a bare line, wi
 
 **Verdict**
 7.5/10. A strong Status and smart calendar details in a coherent system, held back by mismatched type, a narrow Chat and a stray legend.
+
+## With the concept
+
+I had already read all five as green-phosphor designs (the word is in each "What it is"), so the concept mostly confirms my reading rather than changing it. I now weigh two things more: whether the old-screen character sits in screens (glowing green type on a dark ground) rather than in borrowed props, and whether it stays out of the way of the easy-to-use part.
+
+### D16
+**Does it change my reading?** A little. The close-up labels the round dial "Next up's monitor, switched on", so it is meant as a round phosphor screen, like a radar scope, not a watch face.
+**What now reads differently** I called the dial "borrowed from another product". As a round tube with green numerals it fits the concept better than I allowed. The glossy bezel and the copy repeated on Plans are still the problems, so the fault is smaller but still there. The lit wire through the Coming up dates now reads even more clearly as a phosphor trace, and I like it more for that.
+**Revised mark** unchanged (7)
+The dial belongs to the concept more than I thought, but the crowded Home and the second copy on Plans still cost what they cost.
+
+### D17
+**Does it change my reading?** Yes, slightly against it. Knowing the concept makes it clearer that most of this design's character is not phosphor.
+**What now reads differently** The radar and the round corner gauges are the only real phosphor screens. The big rounded lowercase display face, the grey and purple icon tiles and the brown chat bubbles are a modern look with green added, not a phosphor one. I had faulted the tiles and bubbles on palette grounds; with the concept they also miss the brief. The gauges, which I praised, are now its strongest tie to the concept.
+**Revised mark** unchanged (6.5)
+It is easy to use and has a good gauge idea, but the old-screen character stays in a few small screens and does not run through the page.
+
+### D18
+**Does it change my reading?** Somewhat. The CRT panels (Next up, the money meter, the line from home) are the concept done literally and well, which I had already praised.
+**What now reads differently** The ideas' multicoloured icon circles (yellow, red, purple, blue), which I only noted as "a lot of colour", now read as pulling against a mostly one-colour character. The heavy framing, my main fault, still matters most, because it works against the "easy to use" half.
+**Revised mark** unchanged (7)
+It renders the phosphor screens convincingly, but it frames them too heavily to feel easy.
+
+### D19
+**Does it change my reading?** No. It already read as the best balance of plain, usable lists with phosphor screens kept for the moments that earn them, which is what the concept asks for.
+**What now reads differently** nothing; the radar wedged beside the Ideas table is still the one placement I would change.
+**Revised mark** unchanged (8)
+It is the clearest version of the brief: a modern family app whose glowing green screens carry the character without getting in the way.
+
+### D20
+**Does it change my reading?** A little. The Status instrument panel is the concept at its fullest, and the footer legend, a key to the timeline marks, reads like an old screen's legend strip.
+**What now reads differently** The footer legend has a reason to exist once you see the concept. It is still in a place where nobody will look, so the fault stands. The condensed headline face still does not read as an old-screen voice. The green mono inside the screens does that, so the clash with the body type remains.
+**Revised mark** unchanged (7.5)
+The concept explains its boldest pieces but does not fix the type clash, the narrow Chat or where the legend sits.

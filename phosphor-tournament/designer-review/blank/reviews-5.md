@@ -159,3 +159,35 @@
 5. Drop or explain the corner dots on nav tabs.
 
 **Verdict** 7/10. A well-informed, honest power-user dashboard with excellent Status and Ideas pages, but it crowds every screen and lets the calendar suffer.
+
+## With the concept
+
+### D21
+**Does it change my reading?** Yes, a little. It is the most literal phosphor screen of the five: green glow, scanlines, block cursors and radar sweeps on every page. That is the concept's "character" half done fully. But the brief also asks for a modern, easy-to-use app, and that is the half my faults were about.
+**What now reads differently** The glowing second face on "MIND" in the Home headline is clearly meant as phosphor glow, not a stray choice, so I fault it less as crude. The background grid, the vignette and a glow on every card still flatten the hierarchy, and that now counts against "easy to use" rather than only against taste. The Status header, the "C" and "D" kickers and the half-bold idea titles are faults under any concept.
+**Revised mark** Unchanged (6/10).
+It has the character in full, but the layout slips are exactly where it falls short of the "easy to use" half of the brief.
+
+### D22
+**Does it change my reading?** Yes. The blueprint sheet, the title blocks and the revision clouds are a different concept from a green phosphor screen. What I praised as its originality is mostly a departure from the brief.
+**What now reads differently** I faulted the green CRT monitor for sitting on the blueprint "like a sticker". Seen against the concept, the monitor is the on-brief part and the blueprint is what doesn't belong. The cream wide display face and the blue-grey drafting grid also pull away from phosphor green. The revision clouds are still witty, but they are a drafting joke, not a phosphor one.
+**Revised mark** 6/10 (was 7).
+Well made and clever, but it answers a blueprint brief, with the phosphor character confined to one monitor.
+
+### D23
+**Does it change my reading?** Yes, in its favour. The restraint I read as "editorial" is the "modern, easy-to-use" half of the brief. The green instruments (the four-week CRT chart, the dials, the monospace FIG. 1 schematic) carry the phosphor character in measured doses.
+**What now reads differently** The Plans dial and the hard-to-read bar chart still cost clarity. But I now see them as the places where the design spends its phosphor character, not as decoration for its own sake, so the fault is in how they read, not in their being there. Its plain Chat thread is where the character is thinnest.
+**Revised mark** Unchanged (8/10).
+It is the closest balance of modern usability and phosphor character, and the faults are legibility fixes rather than conceptual ones.
+
+### D24
+**Does it change my reading?** Somewhat. The transit line is its own idea, layered on top of the concept. The phosphor character comes through the CRT panels (Next up, the line from home, the lamp board and gauge), the green route glow and the status footer, and it stays easy to use.
+**What now reads differently** The tiny green-on-green lamp labels on Status now read as a deliberate phosphor look rather than a careless one, but they still fail legibility, and the brief puts ease of use first. The line metaphor is not part of the phosphor brief, but it doesn't fight it: a glowing trace on a dark screen suits the concept.
+**Revised mark** Unchanged (8/10).
+It wears the phosphor character naturally and stays usable, with only crowded labels and phone overflows against it.
+
+### D25
+**Does it change my reading?** Yes. Its terminal idioms read as on-concept: the monospace "plan." with a block cursor, the "########" bar chart of late tasks, the green mono status cards ("Ready · OpenAI gpt-6-luna · $2.00 a day") and the numbered radar.
+**What now reads differently** I faulted the hero for mixing a sans with a mono "plan." and cursor. With the concept, that mix is the point: a modern sans with a phosphor voice breaking through. I now count it as a strength, though the size jump is still awkward. The density reads as a nod to a terminal screen packed edge to edge, but it still works against "easy to use".
+**Revised mark** Unchanged (7/10).
+The concept makes its terminal details read as intended, but the crowding still weighs against the usability the brief asks for.

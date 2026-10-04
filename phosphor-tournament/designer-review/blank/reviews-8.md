@@ -121,3 +121,29 @@
 5. Shorten the Ideas radar monitor or move it beside the list so the ideas show above the fold.
 
 **Verdict** 7/10. The most characterful design of the four with a lovely beige monitor, but its pixel type and decorative rail cost readability and space.
+
+## With the concept
+
+### D34
+**Does it change my reading?** Partly. Teletext page numbers belong to the same family of old screens, so the numbering now reads as a deliberate part of the concept rather than a quirk. But "easy to use" makes the faults weigh more, not less.
+**What now reads differently** I called "P100 · Sommaire" an inside joke. I now see it as a teletext homage that fits the brief, though the word is still lost on an English-speaking family. The double navigation and the cramped, truncating Home grid count for more now, because they work against "easy to use". Outside the monitors, the phosphor character is thin: the tiles are a generic dark dashboard.
+**Revised mark** unchanged (6.5/10)
+It has the old-screen character in its numbering and its Home monitor, but it gives up too much ease of use to get it.
+
+### D35
+**Does it change my reading?** Yes. Its split now looks like the brief carried out on purpose: the phosphor character lives in one instrument per page, and everything you have to read or act on is modern, plain tables and big buttons.
+**What now reads differently** The CRT instruments in every sidebar (gauge, numbered radar, to-do tally) read less as decoration and more as how the concept should work: green screens that show real data. The cryptic Home dot plot is still a fault, since it puts character ahead of being easy to read.
+**Revised mark** 8/10 (up from 7.5)
+Of the four, it does the best job of keeping the phosphor character in working instruments while leaving the rest modern and usable.
+
+### D36
+**Does it change my reading?** Slightly. It fully meets the "modern and easy to use" half, but the phosphor half is lighter than I had weighed: one framed monitor per page, the green cursor after FamilyDB and some glow. Beyond that, the condensed editorial headlines owe nothing to an old screen.
+**What now reads differently** I faulted the slate-blue active state as off-palette. Against a phosphor concept it is worse, because it is the one colour with no link to a green screen. The big headline counts still work, but they read as magazine typography rather than terminal character.
+**Revised mark** unchanged (8/10)
+It is still the clearest and most inviting design, but it keeps its phosphor character in a few places rather than carrying it throughout.
+
+### D37
+**Does it change my reading?** Yes. Much of its personality comes from a different old computer: the pixel display face and the hatched window title bars recall early black-and-white desktops and 8-bit games, not a green phosphor terminal. Only the beige-bezelled monitor fits the brief squarely.
+**What now reads differently** I praised it as the most characterful design. It is, but much of that character is off-concept, and the pixel face that supplies it is the very thing that hurts readability, which the brief's "easy to use" rules out. The beige monitor I called beautiful still fits.
+**Revised mark** 6.5/10 (down from 7)
+It has plenty of retro character, but much of it comes from the wrong kind of old computer and costs the ease of use the concept asks for.

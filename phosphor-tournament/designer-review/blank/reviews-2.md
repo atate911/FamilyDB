@@ -152,3 +152,50 @@
 5. Allow one bolder moment, such as a larger Coming up timeline, to give it a signature.
 
 **Verdict** 8.5/10. The most usable and best-resolved design of the five, informative without noise, though a little reserved.
+
+## With the concept
+
+### D06
+**Does it change my reading?** Yes, a little. The bezelled CRT on every page is the concept taken literally. I now read it as the core of the design, not as a repeated ornament.
+
+**What now reads differently** I faulted the Plans bar chart as decoration. It is still unreadable, but it now reads as a misjudged attempt at phosphor character rather than as noise. Outside the monitors, the cards and lists are a plain dark app. So the character sits in boxes rather than running through the whole page.
+
+**Revised mark** Unchanged (7/10).
+
+The concept explains the monitors but doesn't excuse the crowded Home screen, and "easy to use" makes the split form there count against it more.
+
+### D07
+**Does it change my reading?** Yes. The timeline strips now read as oscilloscope traces, which is phosphor character that also carries real data. That is exactly the balance the concept asks for.
+
+**What now reads differently** I faulted the frames inside frames. Some of that layering now reads as instrument-panel bezels. It still costs width, though, especially in Chat. The low-contrast monitor captions are true to a dim screen, but they still fail "easy to use".
+
+**Revised mark** 8/10 (from 7.5).
+
+It is the design that best turns the phosphor look into something useful rather than something to look at.
+
+### D08
+**Does it change my reading?** Yes, and it counts against it. The glows and the pixel "mind?" were meant as the phosphor screen. But the serif headings, its strongest feature, have nothing to do with an old computer screen.
+
+**What now reads differently** The serif titles I called elegant now pull against the concept, and the mix of typefaces reads as two directions that never merged. The week dial on Plans still works, but it is drawn as a thin modern diagram, not as something on a screen.
+
+**Revised mark** 6/10 (from 6.5).
+
+Knowing the concept makes its mixed styles look less like richness and more like indecision.
+
+### D09
+**Does it change my reading?** Partly. The numbered nav ("00 HOME", "A MEMORY") now reads as a terminal menu, and the scanlined "MIND?" as phosphor at poster scale.
+
+**What now reads differently** I faulted the nav codes as cryptic. They now read as deliberate terminal character, though they are still less clear than plain words. The underline-only question field, and a hero that fills the phone's first screen, weigh more now, because the concept names "easy to use" first.
+
+**Revised mark** Unchanged (7/10).
+
+The concept explains its character, but the brutalist poster type is more magazine than computer screen, and the usability faults stand.
+
+### D10
+**Does it change my reading?** Yes. "Easy to use" confirms its strengths, but its phosphor character is thin: mostly the Next up and Status monitors, some green glow and mono numerals.
+
+**What now reads differently** I called it "the safest of the five" as a small fault. Against a brief that asks for character, that becomes a bigger one: outside the monitors, much of it could be any dark dashboard. The "lit" mark in its footer legend now reads as a nod to the concept, but a quiet one.
+
+**Revised mark** 8/10 (from 8.5).
+
+It still delivers the "modern, easy-to-use family app" half best of the five, but it carries less of the phosphor character than the concept asks for.

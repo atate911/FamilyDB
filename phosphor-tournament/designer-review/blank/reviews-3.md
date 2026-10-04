@@ -159,3 +159,37 @@
 4. Fix the arrow spacing on the setup link and lighten the phone tab bar.
 
 **Verdict** 7.5/10: the most characterful and inventive of the group, with excellent small ideas, but overloaded with monitors and type voices.
+
+## With the concept
+
+The concept asks for two things at once: a modern app that is easy to use, and the character of an old green phosphor screen. I reviewed these designs as green-on-dark interfaces with monitors in them, so knowing the name mostly confirms what I had already judged. It does give me one clearer test: is the phosphor character woven into the interface, or is it a picture set into an ordinary dashboard?
+
+### D11
+**Does it change my reading?** Slightly. Outside the Next up monitor and the Ideas radar, the phosphor character is carried mostly by the colour. The panels, gutters and tables are a standard dark dashboard.
+**What now reads differently** The orange monospace late dates, which I faulted for shouting, at least try to bring the screen's voice into the lists. They are still too loud, though, and amber is not the phosphor green.
+**Revised mark** Unchanged (6/10).
+One sentence: easy to use, but the character is concentrated in one monitor rather than carried through the app.
+
+### D12
+**Does it change my reading?** Yes, a little. The lowercase monospace counts ("3 on / 1 off") and the cursor after the logotype are clearly deliberate moves to carry the terminal into the interface, not accidents.
+**What now reads differently** I faulted the monospace counts for reading like log output. That is the intended character, so I see the choice more kindly. Under the brief's "easy to use" half they still scan worse than D11's big numerals, so the fault stands, only with a better reason behind it.
+**Revised mark** Unchanged (6.5/10).
+One sentence: it pushes the character further into the text, at a small cost to how quickly the numbers are read.
+
+### D13
+**Does it change my reading?** Yes. The glowing spine and its nodes read as a phosphor trace drawn across the whole app. That ties the screen's character to the structure rather than leaving it in a picture, which is what the concept asks for.
+**What now reads differently** I called the spine decoration on Ideas and Settings. As a trace it at least belongs to the concept. It still says nothing there, so it is decoration with a reason, and the tiny type remains against "easy to use".
+**Revised mark** Unchanged (7.5/10).
+One sentence: the most thorough weaving of the phosphor idea into the layout, still held back by small type and a spine used where it means nothing.
+
+### D14
+**Does it change my reading?** No. It already struck the balance the concept describes: the interface is modern and clear, and the phosphor appears where it carries information (the Next up monitor joined to its row, the spend gauge, the green drive times).
+**What now reads differently** Nothing.
+**Revised mark** Unchanged (8/10).
+One sentence: the best fit to the brief as stated, modern first, with the character used with restraint and meaning.
+
+### D15
+**Does it change my reading?** Somewhat. The teletext devices (page numbers, Contents, the header strip) come from broadcast television rather than from a computer's phosphor screen. They are a neighbouring reference layered on top of the concept, not the concept itself.
+**What now reads differently** I praised the teletext idea as witty and followed through. It still is, but it now reads partly as a second retro idea competing with the phosphor one. Together with a monitor on every page, that makes the overload I faulted look more like drift from the brief.
+**Revised mark** 7/10 (from 7.5).
+One sentence: the richest in character, but its character is a blend of two retro media and too much of both, at some cost to the "modern, easy to use" half.

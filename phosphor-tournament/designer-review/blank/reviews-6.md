@@ -147,3 +147,29 @@ Ideas, the filter rail: a grid of a dozen small grey buttons for kind, then pers
 
 **Verdict**
 7.5/10: a well-made refinement of the console idea with the best monitor and a whole composer, but its Home order and crowded filters make it busier than it needs to be.
+
+## With the concept
+
+### D26
+**Does it change my reading?** Partly. The monitors were already the phosphor element; knowing the concept makes the rest of the palette look less like variety and more like drift away from it.
+**What now reads differently** My fault with the extra accents (cyan for plans, lilac for ideas, slate blue for the active tab) is now sharper: a phosphor screen is near-monochrome, and those colours pull against it. The condensed headings and thin numerals, which I praised, sit outside the screens rather than inside the character, so the page is a modern dashboard with phosphor inserts, not a phosphor app.
+**Revised mark** unchanged (7/10)
+The monitors carry the concept well, but the colours around them dilute it.
+
+### D27
+**Does it change my reading?** Yes, a little. The dials now read as phosphor instruments (an oscilloscope, a radar, a meter), not just a circle motif.
+**What now reads differently** The dial on every page head looks more deliberate, as the screen that each page owns. It still says less than the strip under it on To do and Settings, so the repetition fault softens without going away. The tan numbers and the warm geometric sans are further from a phosphor screen than I noticed: outside the dials, little of the page carries the character.
+**Revised mark** unchanged (7/10)
+The most inviting design and the dials fit the idea, but the phosphor stays inside the circles.
+
+### D28
+**Does it change my reading?** Yes. Putting the message field inside the Home monitor is the concept taken literally: you type into the green screen.
+**What now reads differently** I called the composer split a fault. As an idea it is right: the screen is where you talk to Vera. What is still wrong is the execution: From, the mic and Send fall outside the bezel. The small mono text in the monitors is more in character than I allowed, though the smallest sizes are still too small for an easy-to-use app.
+**Revised mark** unchanged (8/10)
+It carries the concept furthest and most consistently; finishing the composer inside the screen would make it the clear leader.
+
+### D29
+**Does it change my reading?** Yes. The mono greeting in the monitor ("What's on your mind?" with a cursor) is the phosphor terminal prompt, and I had wrongly counted it against the design.
+**What now reads differently** I faulted the mono greeting as less inviting than a large sans headline. With the concept it is the right choice, and the warmth comes from the wording. The text-mode meters ("[.......] 0%", the To do bar chart) also now read as the concept done well rather than as a joke. The busy Ideas filter rail, the setup section first on Home and the repeated Settings menu are still faults, because they work against "easy to use".
+**Revised mark** 8/10 (from 7.5)
+The best phosphor screen in the set, joined to a usable composer; tidying Home's order and the filters would lift it further.

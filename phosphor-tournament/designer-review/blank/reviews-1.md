@@ -153,3 +153,37 @@
 5. Give "Send where I am" its words back, at least on the phone.
 
 **Verdict** 8/10: the most coherent system and the most useful monitors in the set; a few heavy control panels and a stray accent are all that stand between it and excellent.
+
+## With the concept
+
+The concept is close to what I had read from the images, since every design is plainly built on green phosphor monitors. So it mostly confirms my reviews. Where it changes things is the "modern, easy-to-use family app" half. That half makes density and gimmicks weigh more against a design, and it makes colours outside the phosphor palette a clearer fault.
+
+### D01
+**Does it change my reading?** No, apart from one point that sharpens. I had already read it as a phosphor console.
+**What now reads differently** I had faulted the pale-blue active state. Now I see it as a break from the concept, not only an off-palette choice: the one control state you use most is the one place the phosphor character disappears.
+**Revised mark** unchanged (6/10)
+The monitors carry the character well, but the page around them is an ordinary admin layout, so the "old screen" lives only in a box.
+
+### D02
+**Does it change my reading?** No.
+**What now reads differently** Nothing. The gauge, odometer and rulers are exactly the kind of instrument character the concept asks for, which is why I praised them. They are still applied in spots rather than as a system.
+**Revised mark** unchanged (6.5/10)
+It adds more of the right character to Status but does not spread it to the rest of the app.
+
+### D03
+**Does it change my reading?** Slightly.
+**What now reads differently** The numbered keyboard navigation and the "> HOME" prompt are a real attempt at an old-computer feel, so they are more on-concept than I allowed. But "easy to use" for a family is exactly why I faulted them, and the concept confirms that call rather than overturning it.
+**Revised mark** unchanged (7/10)
+Its terminal touches fit the brief's character, but they cost the ease of use the brief puts first.
+
+### D04
+**Does it change my reading?** Yes, a little.
+**What now reads differently** I had praised its teletext page numbers as the most complete concept. Against this brief, teletext is a television-text reference rather than a green phosphor computer screen. Its serif display also pulls further from that screen than any other design. Its density, already my main fault, now plainly works against "modern, easy-to-use".
+**Revised mark** 7/10 (from 7.5)
+It is still the most original design, but its originality partly answers a different brief, and it is the hardest of the five to use.
+
+### D05
+**Does it change my reading?** No; it confirms it.
+**What now reads differently** Nothing. The monitors show family information in phosphor form (places on a radar, the next plan on a dial), while the rest of the page stays a plain, modern two-panel layout. That is the balance the concept describes. The gold rule is still a stray accent.
+**Revised mark** unchanged (8/10)
+It is the clearest example of a modern, usable app that has the character of an old phosphor screen without being ruled by it.

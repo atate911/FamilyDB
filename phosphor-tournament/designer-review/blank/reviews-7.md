@@ -141,3 +141,29 @@ The Ideas header at 100%: a lone lilac icon tile at the far left, then a wide ga
 
 **Verdict**
 7.5/10. The most thoughtful of the four, with instruments that carry real data, held back by the off-palette blue and a few loose alignments.
+
+## With the concept
+
+### D30
+**Does it change my reading?** Yes, a little. I had read the transit lines as the design's main idea. Under the Phosphor Interface they look like a second idea competing with the first. Only the green, glowing parts of the lines read as phosphor traces: the "now" segment on Home and To do, and the Chat "your turn" node. The grey rails and the end brackets do not.
+**What now reads differently** The Ideas "line from home" strip and the Status needle gauge now read as the design's true phosphor instruments, not as one part of a map theme. The grey rails I already faulted as ornament now also look off-concept.
+**Revised mark** unchanged (7/10)
+It is modern and easy to use, with real phosphor moments, but the map metaphor takes attention away from the screen character the concept asks for.
+
+### D31
+**Does it change my reading?** Yes. Keeping the phosphor to the one Home monitor, inside a plain modern dashboard, now reads as a deliberate balance and not a lack of nerve. But the steel-blue selected state is now plainly outside the concept.
+**What now reads differently** The small monospaced meta ("3 more", "SAT 3 OCT", "12 ideas") reads as an intended terminal accent, not a careless choice. I still find it too small. The Status cost CRT now reads as a second phosphor screen that the page does not commit to.
+**Revised mark** unchanged (6.5/10)
+It is the right balance in principle, but the phosphor is too thin outside one monitor, and the blue works against it.
+
+### D32
+**Does it change my reading?** Yes, for the worse. The concept asks for a modern app with the character of a phosphor screen. D32 builds the whole old machine around the screen: wood grain, rivets, brass cables, and condensed all-caps panel labels. That is hardware nostalgia, not screen character, and it is not modern.
+**What now reads differently** Its Next up and On the radar monitors are still the best-made phosphor screens of the four. But the "strongest mood" I praised is mostly a mood the concept did not ask for, and the screws and wood now count as off-brief, not just noisy.
+**Revised mark** 5.5/10
+Superb phosphor screens set in a cabinet the brief never wanted.
+
+### D33
+**Does it change my reading?** Yes, it confirms it. D33 matches the concept most closely: the interface is a modern table-and-numeral app, and the phosphor is kept to instruments that carry real information: the plan bar chart, the countdown dial and the spending dial.
+**What now reads differently** The mono tables on Status now read as an intended phosphor readout and not as a debug dump. I still want them larger and placed after the plain-language rows. The green line from the monitor into "NOW" now reads as the clearest expression of the concept in the set: the screen and the app joined.
+**Revised mark** 8/10
+This is the Phosphor Interface as described: a modern family app with old-screen character where it earns its place, held back only by the blue and a few alignment slips.
