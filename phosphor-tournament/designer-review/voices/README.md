@@ -8,3 +8,7 @@ Round 4. The family asked for "another round of creative ideas for making it mor
 - **Thread** (`thread/`): talk first. Familjen Grotesk and Atkinson Hyperlegible Mono. Home is one timeline from "Now"; Chat is the phone's middle tab.
 
 Each folder has `BRIEF.md`, `DIRECTION.md`, `reply.md` and its `STANDARD.md`. `compare/index.html` shows all four. None has been judged blind.
+
+## Round 5
+
+The family liked The Board most, then House Log ("a close second", then "I might like House Log even more"). Their notes: bring back the hero box for writing to Vera; the big "Good morning" takes space that does no work; not sure about the colours, especially the pink. `board/` and `log/` now hold both taken further (each designer's `BRIEF-2.md`/`BRIEF-3.md` and replies): Ask Vera back as Home's hero on her own glass, a one-line greeting, and each borrowing the other's best ideas. `round5/index.html` shows both with their round-4 Home for comparison. The colour round is next.

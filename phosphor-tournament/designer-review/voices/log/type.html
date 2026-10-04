@@ -75,8 +75,20 @@
                   <td data-label="Sample"><span class="tx-wm"><b class="wm">FamilyDB<span class="wm__cur" aria-hidden="true"></span></b></span></td>
                   <td data-label="Face">Archivo<small>22 px · 20 on the phone bar · weight 820, width 100 %, −0.03em</small></td></tr>
               <tr><th scope="row"><b>Page title</b><small>One per page</small></th>
-                  <td data-label="Sample"><span class="tx-h1">Good morning, Sam.</span></td>
-                  <td data-label="Face">Archivo, condensed<small>64 px · 44 on the phone · weight 820, width 72 % · line 0.95</small></td></tr>
+                  <td data-label="Sample"><span class="tx-h1">Plans</span></td>
+                  <td data-label="Face">Archivo, condensed<small>40 px · 32 on the phone · weight 820, width 72 % · line 0.95. Titles earn their space: the page says what it is and gets out of the way</small></td></tr>
+              <tr><th scope="row"><b>Greeting</b><small>Home only: one line with the date</small></th>
+                  <td data-label="Sample"><span class="greet__date">Saturday 3 October</span> <span class="tx-greet">Good morning, Sam.</span></td>
+                  <td data-label="Face">Archivo, condensed<small>26 px · 22 on the phone · weight 800, width 80 %; the date in wide capitals in today’s green</small></td></tr>
+              <tr><th scope="row"><b>Today, as information</b><small>The sentence under Home’s greeting</small></th>
+                  <td data-label="Sample"><span class="tx-info">Roller rink tomorrow, and three to-dos are late.</span></td>
+                  <td data-label="Face">Atkinson Hyperlegible<small>22 px · 19 on the phone · weight 400, links 700 · ink</small></td></tr>
+              <tr><th scope="row"><b>Leave by</b><small>The biggest figure on Home: when to leave for the next plan</small></th>
+                  <td data-label="Sample"><span class="leave__t"><span class="fig">12:30</span> pm</span></td>
+                  <td data-label="Face">Archivo, condensed, tabular<small>72 px · 56 in a narrow column · 48 on the phone · weight 820, width 68 %</small></td></tr>
+              <tr><th scope="row"><b>Drive figure</b><small>A plan’s or an idea’s drive time, in its own column</small></th>
+                  <td data-label="Sample"><span class="drive-fig"><b><small>about</small> 22 min</b><span class="dir dir-s"><svg class="icon" aria-hidden="true"><use href="#i-arrowup"/></svg>south</span></span></td>
+                  <td data-label="Face">Archivo, condensed<small>24 px · 20 on the phone · weight 800, width 72 %; “about” at 62 %; the direction in wide capitals with an arrow turned to it</small></td></tr>
               <tr><th scope="row"><b>Next-plan title</b><small>Home’s “Next up”, the one plan that matters most</small></th>
                   <td data-label="Sample"><span class="tx-next">Oaks Park roller rink</span></td>
                   <td data-label="Face">Archivo, condensed<small>36 px · 30 on the phone · weight 820, width 72 % · line 1</small></td></tr>
@@ -129,9 +141,9 @@
         <p>The same lines as the app draws them, live on this page, so they follow dark mode and the phone.</p>
 
         <section class="tpair" aria-labelledby="tp-greeting">
-          <h3 id="tp-greeting">Home’s greeting</h3>
-          <div class="tpair__cols"><figure class="tpair__now"><div class="tpair__live"><div class="greet"><span class="dt dt--today dt--lg" aria-hidden="true"><span class="dt__wd">Sat</span><span class="dt__d">3</span><span class="dt__m">Oct</span></span><div><p class="tx-h1">Good morning, Sam.</p><p class="lede">Roller rink tomorrow, and three to-dos are late.</p></div></div></div></figure></div>
-          <p class="small muted">Today stamped in green in the margin; the greeting in Archivo condensed beside it.</p>
+          <h3 id="tp-greeting">Home’s greeting and today’s line</h3>
+          <div class="tpair__cols"><figure class="tpair__now"><div class="tpair__live"><div class="greet"><span class="greet__date">Saturday 3 October</span><span class="tx-greet">Good morning, Sam.</span></div><p class="lede lede--info">Roller rink tomorrow, and three to-dos are late.</p></div></figure></div>
+          <p class="small muted">The hello is one line; the sentence that does the work is the bigger type.</p>
         </section>
 
         <section class="tpair" aria-labelledby="tp-log">

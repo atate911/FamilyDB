@@ -28,3 +28,26 @@
 - Without boxes it relies on rules, and hairlines fade on dim screens.
 - The Ideas table needs about 1100 px. Narrower, it drops columns, and below 1000 px it becomes rows.
 - On the phone's Home, the late to-dos start just below the first screen. The lede links to them.
+
+## Round 5: the Log, taken further
+
+**Ask Vera leads Home.** A full-width pane of her glass sits right under the greeting, with her 56 px screen, her line in the mono after a lit `>`, a two-line box, a big phosphor Send and the starters. It is the only rounded, lit block on a ruled page, so it reads as Vera's, not as a section. Maya's Home has her version, with her line in Atkinson. Chat's box sits on the same glass with the same Send.
+
+**The greeting earns its space.** Home opens with one line: the date in green capitals and "Good morning, Sam." at 26 px. Under it, "Roller rink tomorrow, and three to-dos are late" is the bigger type (22 px, ink, with its links). Every other page title drops from 64 to 40 px. On the first screen, desktop and phone, you get the greeting, Ask Vera and the next plan with its Leave by time.
+
+**Borrowed from The Board, and made the Log's:**
+- **Next up as a departure board.** When in the margin, the route, the plan, then **Leave by 12:30 pm** (72 px), the biggest figure on Home. It is set in the Log's own Archivo and rules, not the Board's navy panel. On the phone, Leave by comes straight under the date line.
+- **Route stripes.** Every plan (Home, Coming up, the calendar's events) has a 6 px bar in the colours of the people going, with Everyone in grey. It replaces the person's rule and the calendar glyph.
+- **A due column.** The margin now holds the due date and the lateness ("Sun 27 Sep / 6 days late" in red), so one column says when and how late.
+- **Drive time as a figure** on the right of every plan row and in the Ideas index, with the direction in capitals beside an arrow turned to point that way.
+
+**Not borrowed:** the navy fascia and panels, the platform-number plates, Barlow, Coming up before the month on Plans, and the wish-list line diagram. The Log keeps paper, ink rules and its margin.
+
+**Colour:** Maya's pink (`--p3`) is now plum (#B884B0, with matching soft, ink and mark colours): dusky, not sugary, and still distinct from violet and periwinkle. It is a stopgap until the colour round.
+
+**Weak spots, improved:**
+- Hairlines are about 30 % darker in both themes.
+- On the phone, the margin now sits on a line above the title, so titles keep the full width.
+- Ideas keeps its drive column at every width. Under 1180 px the kind becomes a label over the title, and the phone shows number, title and drive figure.
+
+**Still weaker:** a drive direction like "north-north-east" wraps on the phone. The calendar's phone dots don't have route stripes.

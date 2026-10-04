@@ -1,0 +1,118 @@
+<title>Board and Log</title>
+<style>
+/* Layout: the three Home pages side by side first, then one long section per direction: desktop by day, by night, phone, and a kid's view. Shots show the first screen; "Whole page" opens the full length. Neutral warm-grey chrome so each design's colour carries. */
+:root {
+  --bg: #F2F0EB; --card: #FFFFFF; --ink: #1E2222; --ink-2: #505856; --line: #DCD8CE; --accent: #1E5C4F;
+  --serif: "Fraunces", Georgia, serif; --sans: "Atkinson Hyperlegible", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #121514; --card: #1A1E1D; --ink: #E9EEEB; --ink-2: #AEB8B3; --line: #2C3331; --accent: #6DFF9C; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #121514; --card: #1A1E1D; --ink: #E9EEEB; --ink-2: #AEB8B3; --line: #2C3331; --accent: #6DFF9C; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.5 var(--sans); }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.wrap { max-width: 1400px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 80px; display: grid; gap: 40px; }
+.wrap > * { min-width: 0; }
+h1, h2 { font-family: var(--serif); font-weight: 600; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(30px, 4.4vw, 46px); line-height: 1.05; }
+h2 { font-size: clamp(24px, 3vw, 32px); line-height: 1.1; }
+h3 { margin: 0; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+p { margin: 0; }
+.top { display: grid; gap: 10px; }
+.lede { color: var(--ink-2); max-width: 70ch; font-size: 17px; }
+nav { display: flex; flex-wrap: wrap; gap: 8px; }
+nav a { color: var(--ink); text-decoration: none; border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 5px 14px; font-weight: 700; font-size: 15px; }
+nav a:hover { border-color: var(--ink-2); }
+.glance { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.g { display: grid; gap: 8px; color: inherit; text-decoration: none; min-width: 0; }
+.gn { font-family: var(--serif); font-weight: 600; font-size: 19px; }
+.g .more { display: none; }
+.dir { display: grid; gap: 14px; border-top: 1px solid var(--line); padding-top: 28px; scroll-margin-top: 16px; }
+.dh { display: grid; gap: 8px; max-width: 76ch; margin-bottom: 6px; }
+.tag { font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+.idea { font-size: 17px; }
+.facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 16px; margin: 4px 0 0; font-size: 15px; }
+.facts dt { font-weight: 700; }
+.facts dd { margin: 0; color: var(--ink-2); }
+@media (max-width: 600px) { .facts { grid-template-columns: minmax(0, 1fr); } .facts dd { margin-bottom: 6px; } }
+.sw { display: flex; gap: 6px; }
+.sw i { width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--line); }
+.d-board .c0{background:#F3F1EC}
+.d-board .c1{background:#111A2B}
+.d-board .c2{background:#6DFF9C}
+.d-board .c3{background:#E2457A}
+.d-log .c0{background:#F3F4F0}
+.d-log .c1{background:#111315}
+.d-log .c2{background:#6DFF9C}
+.d-log .c3{background:#B884B0}
+.row { display: grid; gap: 16px; align-items: start; }
+.row.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.row.phones { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.shot { margin: 0; display: grid; gap: 6px; min-width: 0; }
+.frame { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--card); }
+.ph .frame { border-radius: 24px; }
+.frame img { display: block; width: 100%; height: auto; aspect-ratio: 1280 / 800; object-fit: cover; object-position: top; }
+.ph .frame img { aspect-ratio: 585 / 1266; }
+.shot.full .frame img { aspect-ratio: auto; }
+figcaption { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; font-size: 14px; color: var(--ink-2); }
+.more { background: none; border: 0; padding: 0; text-decoration: underline; color: var(--ink-2); font-size: 14px; }
+.more:hover { color: var(--ink); }
+.end { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; display: grid; gap: 8px; max-width: 80ch; }
+.end p { color: var(--ink-2); }
+.end b { color: var(--ink); }
+@media (max-width: 900px) { .glance, .row.two { grid-template-columns: minmax(0, 1fr); } .row.phones { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fraunces:opsz,wght@9..144,600&display=swap">
+
+<div class="wrap">
+  <header class="top">
+    <h1>The Board and House Log, taken further</h1>
+    <p class="lede">Both finalists after your notes: Ask Vera back as the hero of Home, a one-line greeting that gives the space back, and each borrowing the other’s best ideas. Colours are still to come. Each shot shows the first screen; press “Whole page” under a shot to see it all.</p>
+    <nav aria-label="Jump to"><a href="#board">The Board</a><a href="#log">House Log</a></nav>
+  </header>
+
+  <div class="glance"><a class="g" href="#board"><span class="gn">The Board</span><figure class="shot dt"><div class="frame"><img src="img/board/home.webp" alt="The Board, Home, desktop, Day" width="1280" height="800"></div><figcaption><span>Home · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></a><a class="g" href="#log"><span class="gn">House Log</span><figure class="shot dt"><div class="frame"><img src="img/log/home.webp" alt="House Log, Home, desktop, Day" width="1280" height="800"></div><figcaption><span>Home · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></a></div>
+
+<section class="dir d-board" id="board" aria-labelledby="h-board">
+  <header class="dh"><p class="tag">Departure board, with House Log’s ideas</p><h2 id="h-board">The Board</h2><div class="sw" aria-hidden="true"><i class="c0"></i><i class="c1"></i><i class="c2"></i><i class="c3"></i></div><p class="idea">The family’s day set like a station departure board: what leaves next, when to go and whose it is, readable from across the kitchen.</p>
+  <dl class="facts"><dt>Type</dt><dd>Barlow Condensed for times, dates and figures; Barlow Semi Condensed for headings; Vera’s line in a typed mono; Atkinson for every sentence.</dd><dt>What it makes easier</dt><dd>One-line greeting, then Ask Vera full width on her own dark glass, then the board with “Leave by 12:30 pm”, then the late to-dos, all on the first desktop screen. Every list has its date down the left edge. Chat is a transcript. Ruled sections where boxes did nothing.</dd><dt>Where it’s weaker</dt><dd>Navy panel heads beside Vera’s charcoal box: told apart by shape and her green glow. Wider weekend columns cut weekday titles shorter. Maya’s pink is unchanged until the colour round.</dd></dl></header>
+  <h3>Desktop</h3>
+  <div class="row two"><figure class="shot dt"><div class="frame"><img src="img/board/home.webp" alt="The Board, Home, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Home · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt"><div class="frame"><img src="img/board/plans.webp" alt="The Board, Plans, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Plans · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt"><div class="frame"><img src="img/board/todo.webp" alt="The Board, To do, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>To do · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt"><div class="frame"><img src="img/board/chat.webp" alt="The Board, Chat, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Chat · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt"><div class="frame"><img src="img/board/ideas.webp" alt="The Board, Ideas, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Ideas · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt"><div class="frame"><img src="img/board/home-dark.webp" alt="The Board, Home, desktop, Night" width="1280" height="800" loading="lazy"></div><figcaption><span>Home · Night</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></div>
+  <h3>Phone</h3>
+  <div class="row phones"><figure class="shot ph"><div class="frame"><img src="img/board/home-phone.webp" alt="The Board, Home, phone, Day" width="585" height="1266" loading="lazy"></div><figcaption><span>Home · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot ph"><div class="frame"><img src="img/board/plans-phone.webp" alt="The Board, Plans, phone, Day" width="585" height="1266" loading="lazy"></div><figcaption><span>Plans · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot ph"><div class="frame"><img src="img/board/todo-phone.webp" alt="The Board, To do, phone, Day" width="585" height="1266" loading="lazy"></div><figcaption><span>To do · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot ph"><div class="frame"><img src="img/board/home-dark-phone.webp" alt="The Board, Home, phone, Night" width="585" height="1266" loading="lazy"></div><figcaption><span>Home · Night</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></div>
+  <h3>A kid’s pages</h3>
+  <div class="row two"><figure class="shot dt"><div class="frame"><img src="img/board/home-kid.webp" alt="The Board, Maya’s Home, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Maya’s Home · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt"><div class="frame"><img src="img/board/wishes-kid.webp" alt="The Board, Maya’s wishes, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Maya’s wishes · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></div>
+  <div class="row phones"><figure class="shot ph"><div class="frame"><img src="img/board/home-kid-phone.webp" alt="The Board, Maya’s Home, phone, Day" width="585" height="1266" loading="lazy"></div><figcaption><span>Maya’s Home · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot ph"><div class="frame"><img src="img/board/wishes-kid-phone.webp" alt="The Board, Maya’s wishes, phone, Day" width="585" height="1266" loading="lazy"></div><figcaption><span>Maya’s wishes · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></div>
+  <h3>Before this round</h3>
+  <div class="row two"><figure class="shot dt"><div class="frame"><img src="img/board1/home.webp" alt="The Board, Home, desktop, Round 4" width="1280" height="800" loading="lazy"></div><figcaption><span>Home · Round 4</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></div>
+  <div class="row phones"><figure class="shot ph"><div class="frame"><img src="img/board1/home-phone.webp" alt="The Board, Home, phone, Round 4" width="585" height="1266" loading="lazy"></div><figcaption><span>Home · Round 4</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></div>
+</section>
+<section class="dir d-log" id="log" aria-labelledby="h-log">
+  <header class="dh"><p class="tag">Logbook, with The Board’s ideas</p><h2 id="h-log">House Log</h2><div class="sw" aria-hidden="true"><i class="c0"></i><i class="c1"></i><i class="c2"></i><i class="c3"></i></div><p class="idea">The family’s logbook: Vera keeps the ruling, with dates and times in a typed margin, and everybody writes the lines in plain words and their own colour.</p>
+  <dl class="facts"><dt>Type</dt><dd>Archivo condensed for titles, wide capitals for running heads; Martian Mono for the margin of dates and times; Atkinson for every sentence.</dd><dt>What it makes easier</dt><dd>One-line greeting, then Ask Vera as the only lit, rounded block on the page, then a departure-board Next up with “12:30 pm” at 72 px and route stripes. The due date and how late sit together in the margin. Darker rules for dim screens; on the phone the date sits above the title so titles get the full width.</dd><dt>Where it’s weaker</dt><dd>Long directions wrap on the phone. The phone calendar still shows dots, not stripes. Maya’s plum is a stand-in until the colour round.</dd></dl></header>
+  <h3>Desktop</h3>
+  <div class="row two"><figure class="shot dt"><div class="frame"><img src="img/log/home.webp" alt="House Log, Home, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Home · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt"><div class="frame"><img src="img/log/plans.webp" alt="House Log, Plans, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Plans · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt"><div class="frame"><img src="img/log/todo.webp" alt="House Log, To do, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>To do · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt"><div class="frame"><img src="img/log/chat.webp" alt="House Log, Chat, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Chat · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt"><div class="frame"><img src="img/log/ideas.webp" alt="House Log, Ideas, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Ideas · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt"><div class="frame"><img src="img/log/home-dark.webp" alt="House Log, Home, desktop, Night" width="1280" height="800" loading="lazy"></div><figcaption><span>Home · Night</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></div>
+  <h3>Phone</h3>
+  <div class="row phones"><figure class="shot ph"><div class="frame"><img src="img/log/home-phone.webp" alt="House Log, Home, phone, Day" width="585" height="1266" loading="lazy"></div><figcaption><span>Home · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot ph"><div class="frame"><img src="img/log/plans-phone.webp" alt="House Log, Plans, phone, Day" width="585" height="1266" loading="lazy"></div><figcaption><span>Plans · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot ph"><div class="frame"><img src="img/log/todo-phone.webp" alt="House Log, To do, phone, Day" width="585" height="1266" loading="lazy"></div><figcaption><span>To do · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot ph"><div class="frame"><img src="img/log/home-dark-phone.webp" alt="House Log, Home, phone, Night" width="585" height="1266" loading="lazy"></div><figcaption><span>Home · Night</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></div>
+  <h3>A kid’s pages</h3>
+  <div class="row two"><figure class="shot dt"><div class="frame"><img src="img/log/home-kid.webp" alt="House Log, Maya’s Home, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Maya’s Home · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot dt"><div class="frame"><img src="img/log/wishes-kid.webp" alt="House Log, Maya’s wishes, desktop, Day" width="1280" height="800" loading="lazy"></div><figcaption><span>Maya’s wishes · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></div>
+  <div class="row phones"><figure class="shot ph"><div class="frame"><img src="img/log/home-kid-phone.webp" alt="House Log, Maya’s Home, phone, Day" width="585" height="1266" loading="lazy"></div><figcaption><span>Maya’s Home · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure><figure class="shot ph"><div class="frame"><img src="img/log/wishes-kid-phone.webp" alt="House Log, Maya’s wishes, phone, Day" width="585" height="1266" loading="lazy"></div><figcaption><span>Maya’s wishes · Day</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></div>
+  <h3>Before this round</h3>
+  <div class="row two"><figure class="shot dt"><div class="frame"><img src="img/log1/home.webp" alt="House Log, Home, desktop, Round 4" width="1280" height="800" loading="lazy"></div><figcaption><span>Home · Round 4</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></div>
+  <div class="row phones"><figure class="shot ph"><div class="frame"><img src="img/log1/home-phone.webp" alt="House Log, Home, phone, Round 4" width="585" height="1266" loading="lazy"></div><figcaption><span>Home · Round 4</span><button type="button" class="more" aria-expanded="false">Whole page</button></figcaption></figure></div>
+</section>
+
+  <div class="end">
+    <h2>What’s left between them</h2>
+    <p>After this round they do the same things in the same order. The difference is the feel. <b>The Board</b> is bolder and more structured: navy panel heads, narrow sign lettering and square plates. <b>House Log</b> is lighter and quieter: no panels, lines instead of boxes, and dates typed in a margin.</p>
+    <p>Next is the colour round on whichever you pick, without the hot pink.</p>
+  </div>
+</div>
+
+<script>
+document.addEventListener('click', e => {
+  const b = e.target.closest('.more'); if (!b) return;
+  const f = b.closest('.shot'); const on = f.classList.toggle('full');
+  b.setAttribute('aria-expanded', on); b.textContent = on ? 'First screen' : 'Whole page';
+});
+</script>

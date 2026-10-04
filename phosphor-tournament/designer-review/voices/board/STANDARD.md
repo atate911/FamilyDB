@@ -2,7 +2,7 @@
 
 This is the reference for building FamilyDB's web pages. The mockups (`*.html`), `style.css`, `icons.svg` and `fonts/` in this folder are the source of truth. This document says how to use them.
 
-**The rule behind everything:** the family's day is set like a departure board. Every list of things with a time reads left to right: **when · whose line · what · the one figure you act on**. A person's colour marks that person wherever they appear. Green means *today or Vera*, ink means *something you press or picked* (and "you are here", as an inverted plate), and red means *late or broken*. Every status is said in words.
+**The rule behind everything:** the family's day is set like a departure board. Every list reads left to right: **when (always the left edge) · whose line · what · the one figure you act on (always the right edge)**. Nothing takes space without doing work: Home has no headline, only a one-line day head. A person's colour marks that person wherever they appear. Green means *today or Vera*, ink means *something you press or picked* (and "you are here", as an inverted plate), and red means *late or broken*. Every status is said in words.
 
 *The Board* (see `DIRECTION.md`) follows Felt Tip. The pages keep their jobs, words and states. Layout, type, colour, surfaces and the moments changed. Home, Plans, To do, Ideas, the kid's Home and Wishes were re-composed around new components (§2: Board, departure row, route stripe, board to-dos, destinations board, line diagram). Kids' pages still carry `kid me-pN` on `<body>`.
 
@@ -28,7 +28,10 @@ All values live on `:root` in `style.css` §2. Dark mode redefines the same name
 | `--alert-on-band` | #FF8B74 | #FF8B74 | the red block on an Overdue band (decorative; the word carries it) |
 | `--vera`, `--vera-bg`, `--vera-soft`, `--vera-line` | as Felt Tip | as Felt Tip | Vera's green; the calm pill; done ticks; the "Yes!" plate; the lede's route underline (`--vera-bg`) |
 | `--today-bg` / `--on-today` / `--today-wash` | #0B8457 / #FFF / #EAF6EF | #6DFF9C / #0B1019 / #10231D | **today**: the green Today plate on Home, the calendar day's filled number, its 5 px top bar and wash |
-| `--ask-bg` / `--ask-ink` / `--ask-ink-2` | #111A2B / #FFF / #C3CBD9 | #0E1A17 / #EAEEF3 / #C3D2CA | Ask Vera: the information point, a navy panel with a phosphor top rail and Send (green-rimmed glass at night) |
+| `--ask-bg` / `--ask-ink` / `--ask-ink-2` | #0E1312 / #F2F7F4 / #B9C6BF | #0E1A17 / #EAEEF3 / #C3D2CA | **Vera's box** (Ask on both Homes, Chat's composer): her charcoal glass, never the board's navy |
+| `--ask-field` / `--ask-ph` / `--ask-edge` | #161D1B / #A9B8B1 / #6F807A | #12221D / #A9B8B1 / #7D8899 | the box's field, placeholder and field edge on the glass |
+| `--ask-rim` / `--ask-glow` | 1 px glass-line + a 4 px phosphor halo at 28 % / a soft drop | 1.5 px #3E8A66 rim, inner glow, halo / a phosphor bloom | what makes the box read as lit glass, not a panel |
+| `--link-paper` | #0B6E4F | #8BD3B4 | the paper link colour, restored inside a banner that sits on the glass |
 | `--link` | #0B6E4F | #8BD3B4 | links |
 | `--primary` / `--on-primary` | #111A2B / #FFF | #F2F4F8 / #0B1019 | the one primary button: ink, inverted at night |
 | `--ok`, `--warn`, `--alert` (+ `-soft`, `-line`) | as Felt Tip | as Felt Tip | Working / set this up / late and broken |
@@ -48,7 +51,8 @@ Maya's slot (p3) is raspberry, not red. Colour is never the only cue: every pers
 
 | Token / step | Size | Face | Use |
 |---|---|---|---|
-| `--t-h1` | 56 px (42 phone) | Barlow Semi Condensed 700, −0.015em, line 1 | the page title, over the 4 px ink rule |
+| `--t-h1` | 44 px (36 phone) | Barlow Semi Condensed 700, line 1 | the page title, sharing its line with its sentence, over the ink rule. **Home has no headline:** its `h1` is the small greeting in the day head (26 px; 22 phone) |
+| — | 18 px caps / 19 px | Condensed 700 in today's green / Atkinson | the day head's date / its news line (links underlined green for plans, red for late) |
 | — | 36 px (28 phone) | Semi Condensed 700 | the next departure's name (Home) |
 | `--t-h2` / `--t-h3` | 24 / 21 px | Semi Condensed 700 | card and section titles / small titles |
 | — | 26 px (23 phone) | **Barlow Condensed 700** | a board's name on its band |
@@ -104,11 +108,12 @@ Class names are the API. Person colour classes are **slots** (`.p0…p8`), never
 
 | Component | Classes | Variants | When to use |
 |---|---|---|---|
-| Card | `.card`, `.card__head`, `.card__foot` | `--setup` (amber) | every group of content that isn't a board. Hangs from the 4 px ink rail; its icon is a pictogram (white symbol on an ink square; the kid's colour on her pages) |
+| Card | `.card`, `.card__head`, `.card__foot` | `--setup` (amber box) | a group of content that isn't a board. **A ruled section**: the 4 px ink rail and its head, no box (borrowed from House Log). `form.card`, `.card--setup`, `.room` and `.empty` keep their boxes. Its icon is a pictogram |
+| Day head | `header.dayhead` › `.dayhead__date`, `h1`, `.dayhead__news` | `.kid` (rule in her colour) | Home and the kid's Home only: one line instead of a headline, so Ask Vera and the board get the first screen |
 | **Board** | `section.board` › `.board__head` (band: pictogram, `h2`, `.board__n` count, `.more`) › `.board__cols` (column heads, `aria-hidden`) › rows › `.board__foot` | `--late` (red block on the band) | **any list of things with a time or a distance**: Next up, To do, Coming up, Overdue, All ideas. The band re-sets `--ink`, `--link`, `--focus` locally |
 | Departure row | `.deps` › `.dep` (`a` when it opens the plan): `.dep__when` (`.dep__day`, `.dep__time`), `.route`, `.dep__main` (`.dep__title`, `.meta`), `.dep__fig` | `--next` (the big row: `h3`, `.next__acts`, `.dep__leave` with `.dep__big`) | a plan on a board. When · whose line · what · one figure (drive, or drive and kind). `.board-cols-dep` sets matching column heads |
 | Route stripe | `span.route` › `i.pN` per person (`aria-hidden`) | `i.p0` (Everyone) | the left edge of every departure row: one segment per person going, in their colour. Never the only cue: names and bullets are in the row |
-| Board to-dos | `ul.todos.todos--board` › `.todo` with `p.todo__due` (date, then `.late` or `.muted`) and an icon-only `.todo__edit` (its name in `.sr`) | `--late` (6 px red edge) | to-dos on Home and To do. On the phone the due line drops under the title |
+| Board to-dos | `ul.todos.todos--board` › `.todo` opening with `p.todo__due` (date, then `.late` or `.muted`), then the tick, the words and an icon-only `.todo__edit` | `--late` (6 px red edge); `.todo--when` for a kid's read-only row | to-dos on Home and To do. **When is the left edge on every list** (borrowed from House Log). On the phone the date takes its own line above the title |
 | Destinations board | `ul.ideas.ideas--board` › `.idea` with `p.idea__far` (`b` drive, `.way.way--{n,nne,ne,e,se,s,sw,w,nw}` with `#i-dir`) | `--unknown` ("Not looked up yet") | Ideas: pictogram · idea and who · kind · drive and direction. `.board-cols-ideas` for the heads |
 | Way | `.way.way--s` + `#i-dir` icon | eight bearings and nne | a direction beside its word ("↓ south"); also in meta lines on Home |
 | Button | `.btn` | `--primary` (one per view), `--quiet`, `--sm`, `[disabled]` | actions. Rectangles (4 px), 2 px ink edge; quiet ones have the 1.5 px `--edge` |
@@ -132,9 +137,9 @@ Class names are the API. Person colour classes are **slots** (`.p0…p8`), never
 | Banner | `.banner` + `.banner__ic`, `.banner__text` | tone: default **info (neutral card, grey icon)**, `--ok` (mint: all good, done), `--warn` (set this up), `--alert` (broken, errors); size: `--hero`, `--slim` | a message with at most one action. Resting, Off and “for your information” use the neutral default, never mint or yellow. **One “set this up” message per page** |
 | Flash | `.banner.banner--ok.flash` (`role="status"`, `tabindex="-1"`) | — | after any one-tap action, with Undo |
 | Error summary | `.banner.banner--alert.errors` (`role="alert"`) | — | top of a form that came back with errors |
-| Composer | `.composer`, `__row`, `__who`, `__foot`, `__send` | inside `.ask` (charcoal glass, phosphor Send); `--sample`; closed (`textarea[disabled]` + a slim banner saying why) | writing to Vera; one per page |
+| Composer | `.composer`, `__row`, `__who`, `__foot`, `__send` | **Vera's box**: `section.ask` (+ `--hero` on Home and the kid's Home) and `.room .composer` in Chat share one look (§11 in `style.css`): charcoal glass, 12 px radius (rounded like her screen; boards are square-cut), phosphor halo, dark field with a phosphor caret, phosphor Send. `.ask__line` is her one typed line in the mono after a `>` prompt (Atkinson on kids' pages). Closed: `textarea[disabled]` with a dashed edge and a slim banner saying why | writing to Vera; one per page |
 | Starters | `.starters` › `.starter` | `--ask` (sends a complete question, `name="prompt"`); plain = a link that fills the box (`?draft=…`) | suggested messages |
-| Chat room | `.chat`, `.convos`/`.convo`, `.room` (head on the band), `.scroller` › `.thread` | `.msg--person` (6 px edge in their `-mark`), `--mine` (edge on the right), `--vera` (green edge), `--pending`, `--failed`, `--system`; `.receipt`; `.earlier`; `.day-sep` (a rule with the day on an ink plate) | conversations |
+| Chat room | `.chat`, `.convos`/`.convo`, `.room` (head on the band), `.scroller` › `.thread` | `.msg` › `.av`/`.vs`, `.msg__bub` › `.msg__by` (the margin: name over time, Barlow Condensed) + `.msg__text` (the words beside a 4 px rule in the person's `-mark`, Vera's green); `--mine` (a faint tint of their colour), `--pending` (dashed rule), `--failed` (red dashed rule), `--system`; `.receipt`; `.earlier`; `.day-sep` | **a transcript**, not bubbles (borrowed from House Log). On the phone the margin is 58 px and the bullet is left out; the name is in the margin |
 | Privacy line | `.privacy` (`--room` on phone) | — | "Sam and Alex can read …"; **at every width** |
 | Field | `.field`, `__label`, `__hint`, `__error`; `.req`/`.opt` | `--error` | every input; label above, error above the box, hint below |
 | Form | `.form`, `.fieldset`, `.form__row`, `.actions` | — | multi-field forms |
@@ -145,7 +150,7 @@ Class names are the API. Person colour classes are **slots** (`.p0…p8`), never
 | Faces | `.faces` › `.face` | — | "How did it go?"; three labelled faces; parents only |
 | Idea card | `.ideas` › `.idea` | `--unknown`; `.ideas--one`; **`.ideas--board`** on the Ideas page | cards elsewhere (states sheets); compact rows on the phone |
 | Ranked list | `.ranks` › `.rank`, `.rank__n` (a platform-number plate), `.rank__move`, `.quote`, `.decide` | `--decide`; **`.ranks--line`** (plates joined by the kid's line) | wishes |
-| Calendar | `.cal`, `.week`, `.day`, `.ev`, `.ev-more`, `.daylink`, `.dots` | slot class on `.ev` (one person: solid block in their colour; `.p0`: stone block, faces), `--past`; `.day--today` (filled green number, 5 px green top bar, wash, "Today" label on desktop), `--we`, `--out` | the month as a timetable: weekdays on the navy band |
+| Calendar | `.cal`, `.week`, `.day`, `.ev`, `.ev-more`, `.daylink`, `.dots` | slot class on `.ev`, `--past`; `.day--today`, `--we`, `--out` | the month as a timetable: weekdays on the navy band; **weekend columns 1.45× wider on the desktop** (borrowed), where the plans are |
 | Settings row | `.slist` › `.srow` | `--look` | lists of sections or destinations (Settings, the account menu) |
 | Note | `.note` | — | one quiet line for a connection that isn't set up, on a page that isn't about it (Plans: Google Calendar; Ideas: looking things up) |
 | Kind label | `.kind` | — | a kind of idea: icon + word, never a pill |
@@ -215,7 +220,7 @@ A kid who opens an admin URL gets `grownups.html`, never an error.
 ## 5. Phone rules (≤ 820 px)
 
 1. **The phone is its own layout, not the desktop stacked.** The sidebar becomes a 56 px top bar (brand, health pill for parents, and the avatar that opens the account menu, with a dot when something inside needs checking) and a **fixed bottom tab bar** of five, role-aware, with `--tabbar-total` = 68 px + `env(safe-area-inset-bottom)` for its height and the body's bottom padding, and `scroll-padding-bottom` so the focused control is never under it. The top bar is the navy fascia. The tab bar has a 3 px ink top rule, and the current tab is an inverted ink plate (the kid's colour on her pages).
-2. **The list you came for is in the first screen.** On Home that is the greeting, then the Next up board's big row with **Leave by 12:30 pm** across the full width, then the To do board. The later departures are folded behind “3 more plans this month”. The order is Next up, To do, Ask Vera (one row: box and icon Send, short starters), How did it go, Wishes, Ideas. Kids: Next up, My wishes, My to-dos, Ask Vera, Ideas. Ask moved below the board because Chat is its own tab. Quick-adds are one line; options, filters and sorting fold into `<details>`. Order: heading, lede, the list, then the tools.
+2. **What matters is in the first screen.** On Home the order is the one-line day head (date and greeting on a line, the news beneath), **Ask Vera** (the hero box: 56 px field and icon Send, short starters, its typed line hidden), then the Next up board's big row with **Leave by 12:30 pm** across the full width, all within the first screen. Then the setup banner (admins), To do, How did it go, Wishes, Ideas. Kids: greeting, Ask Vera with her own starters, Next up, My wishes, My to-dos, Ideas. Later departures fold behind “3 more plans this month”. Quick-adds are one line; options, filters and sorting fold into `<details>`.
 3. The destinations board keeps its rows: pictogram, title, “kind · who”, and the drive figure with its direction arrow on the right; tags go underneath. The radar folds behind "Show the map" after the rows.
 3a. **To do starts with one row to add a to-do** (box and Add) at the top of the list; who, when and the reminder fold beneath it. Nobody is picked by default.
 4. **Plans: Coming up (the board), then the month header and its Month/List switch, then the month at a glance, then How did it go.** Departure rows put the figure under the title. The month grid becomes a month at a glance: day cells are whole-cell links with person markers and a full spoken label. Weekday headers are single letters. A spill-over day shows its month in small capitals beneath the number ("28" over "SEP"), so it never wraps.
@@ -278,7 +283,8 @@ Contrast is computed from the tokens (WCAG 2.2). AA needs 4.5:1 for text and 3:1
 | `--vera` on `--today-wash` | "Today" beside the calendar number | 5.6 | 12.8 |
 | `--on-vera` on `--vera-bg` | done tick, meter, flash check, "Yes!" plate | 4.7 | 11.2 |
 | `--on-send` on `--send` | Send on Ask | 14.6 | 14.8 |
-| `--ask-ink` / `--ask-ink-2` on `--ask-bg` | Ask card text / quiet text | 17.4 / 10.7 | 15.3 / 11.4 |
+| `--ask-ink` / `--ask-ink-2` on `--ask-bg` | Vera's box text / quiet text | 17.3 / 10.6 | 15.3 / 11.4 |
+| `--ask-ink` / `--ask-ph` on `--ask-field` | typed text / placeholder | 15.8 / 8.3 | 14.2 / 8.0 |
 | `--ok` on `--ok-soft` | tag Working | 5.4 | 10.2 |
 | `--warn` on `--warn-soft` / `--card` | Needs a look / Could be better | 6.5 / 7.3 | 9.0 / 9.8 |
 | `--ink-2` on `--paper-2` | tag Off | 7.6 | 10.0 |
@@ -293,7 +299,7 @@ Contrast is computed from the tokens (WCAG 2.2). AA needs 4.5:1 for text and 3:1
 | `--glass-ink` / `--glass-ink-2` on `--glass` | pane text / quiet text | 16.3 / 10.6 | 17.3 / 11.3 |
 | `--glass-alert` on `--glass` | "can't answer" pill | 8.2 | 8.7 |
 | `--cursor` on `--paper` | wordmark cursor off the band (sign-in, panes use phosphor) (3:1, non-text) | 3.4 | 13.5 |
-| `--ask-edge` on `--ask-bg` | the Ask box's edge at night (3:1) | n/a | 5.0 |
+| `--ask-edge` on `--ask-field` | the box's field edge (3:1) | 4.1 | 4.6 |
 
 Route stripes, rails, rules and the red block on an Overdue band are decorative: the names, words and headings beside them carry the meaning.
 
@@ -371,7 +377,7 @@ The Board is the family's day set like a departure board: navy fascia and bands,
 **The board, its bands and the line colours are the family's. Phosphor on charcoal glass is FamilyDB's and Vera's.** Glass and phosphor appear only where one of three things is:
 
 1. **the brand**: the mark, the wordmark, and the brand moments (sign-in, a family's first empty day, the grown-ups page a kid lands on, the missing page);
-2. **Vera**: her screen, the Ask card (charcoal glass by day, green-rimmed glass at night, with a phosphor Send);
+2. **Vera**: her screen, her box (the Ask hero on both Homes and Chat's composer: charcoal glass with a phosphor halo, caret and Send);
 3. **something live**: the status pill when it has something to say (writing back, resting, can't answer), a reply on its way, the cursor in her box, today's date. When Vera is simply ready the pill is calm and on paper.
 
 Never on the family's own things: names, ideas, to-dos, wishes, plans, and the buttons and links that act on them (those use `--link`, Vera's green by day and a lighter green at night, and `--primary`, ink by day and inverted at night; never phosphor). **Mono only on the glass**: nothing printed on paper is in the mono. Every touch says something true; nothing is only ornament. No dark page in light mode, no CRT curvature, no vignettes, no heavy scanlines, no pixel font.
@@ -413,8 +419,8 @@ Vera is never drawn. Where she speaks there is a small pane of glass, as if she 
 |---|---|---|---|
 | 24 px | `.vs--sm` | 1 | Settings colour key, "Suggested by Vera" rows |
 | 32 px | `.vs` | 2 | chat messages (her avatar slot), the pending and failed bubbles; a receipt sits inside her message |
-| 40 px | `.vs--lg` | 3 | the Ask card, Home's Vera row, Status' Vera row |
-| 56 px | `.vs--xl` | 3, larger | the kid's empty chat (the one place she is introduced) |
+| 40 px | `.vs--lg` | 3 | Home's Vera row, Status' Vera row, the states sheets' Ask specimens |
+| 56 px | `.vs--xl` | 3, larger | the kid's empty chat; drawn at 40 px as the sign on the Ask hero |
 
 Geometry (per size, in px): radius 6 / 8 / 10 / 14; rim 1 px inside the edge; lines 3 px tall (4 at 56), rounded; prompt stroke 1.75 / 2 / 2.25 / 3. The macro `vera_screen(size, state)` holds the table.
 
@@ -442,7 +448,7 @@ JetBrains Mono 400, self-hosted (`fonts/jetbrains-mono-400.woff2`, 21 KB), 14 px
 | Status pill (when there's something to notice) | `--glass`, `--glass-line`, `--phosphor`, `--phosphor-glow`, `--glass-alert` | sidebar and phone bar, parents only. Writing back: phosphor mono, the dot breathes until the reply lands. Resting: `--glass-ink-2`, hollow dot. Can't answer: `--glass-alert` #FF8B74 (8.2:1 on glass), square dot. When Vera is ready the pill is not glass at all: `--vera-soft`, `--vera`, Atkinson 700, a still dot | kids' pages; anywhere it isn't Vera's real state; "ready" |
 | Glass pane | `--glass`, `--glass-2`, `--glass-line`, `--glass-ink`, `--glass-ink-2`, `--phosphor` | the four brand moments: sign-in, a first empty day, the grown-ups page, the missing page. Faint scanlines inside are fine | as a card style; around the family's content; more than one per page |
 | The radar | `--glass`, `--phosphor` at 14–25 % for rings and axes, `--glass-ink` and `--glass-ink-2` for labels | Ideas only, in its own band after all the cards (folded behind "Show the map" on the phone). Drive time is distance from home on a piecewise scale that gives the first half hour 70 % of the radius (rings at 15 min, 30 min, 1 h, 2 h, 3 h, labelled on alternate sides of the north axis); direction is bearing, north up; "Home" marks the middle. Each dot carries the idea's short name ("Pumpkin patch", "Oaks Park"): the first words of its card's title, so a kid can match it. Ideas in the same direction are fanned a few degrees apart. The SVG is `aria-hidden`: the cards are the list, and each card already says its drive time and direction | between the cards; any second page; a separate numbered list; mono labels. One instrument per page at most. If every idea is inside one ring, show the cards alone |
-| Ask card | `--ask-bg`, `--ask-rim`, `--ask-edge`, `--send` | Home's and the kid's Ask card: the information point, a navy panel with a 4 px phosphor rail and a phosphor Send by day; green-rimmed glass with an edged box at night | anywhere else |
+| Vera's box | `--ask-bg`, `--ask-rim`, `--ask-glow`, `--ask-field`, `--ask-edge`, `--send` | the Ask hero on Home and the kid's Home, and Chat's composer: one object everywhere | the board's panels; any family content; navy |
 | Live glow | `--phosphor-glow`, `--vs-halo` | the writing-back pill, the panes, Vera's screen, the wordmark cursor | the calm "ready" pill, chat bubbles (Vera's included), cards, buttons |
 
 The radar is drawn twice from the same data, so names stay readable: a wide 860 × 440 plot for the desktop (names 15 px, drawn at 1:1) and a narrow 360 × 400 plot for the phone (names 14 px). Ring and compass labels are 13 px Atkinson; every label position is set per idea in the data, so nothing sits on a compass letter.
@@ -460,4 +466,4 @@ At night the page is near-black (`--paper` #0B1019), panels are slate (`--card` 
 
 **The hierarchy holds at night.** Rails, the page rule and every inverted plate flip to near-white, so "you are here" and the date plates still stand out. The primary button inverts to near-white with dark words (15.7:1). Links are a lighter green (`--link` #8BD3B4), never phosphor. The Ask card is the one green-rimmed block. Only the pill, the panes and Vera's screen glow. Every pair is in §7.
 
-By day, the Ask card is a navy panel with a phosphor rail and Send. Its text is 17.4:1.
+By day, Vera's box is the brand's charcoal glass with a phosphor halo and Send, the one rounded dark object on the page; its text is 17.3:1, the field's 15.8:1, the field edge 4.1:1.

@@ -1,39 +1,39 @@
-# FamilyDB · House Log · the standard
+# FamilyDB · House Log (round 5) · the standard
 
 This is the reference for building FamilyDB's web pages. The mockups (`*.html`), `style.css`, `icons.svg` and `fonts/` in this folder are the source of truth; this document says how to use them.
 
 **The rule behind everything:** FamilyDB is the family's logbook. **Vera keeps the ruling, everybody writes the lines.** Every list has a margin, and dates, times and numbers go there in the mono. The words go beside it, in Atkinson, and each person writes in their own colour. Sections are ruled heads, not boxes. A bright colour means *a person*, green means *today or Vera*, ink means *something you press or picked*, and red means *late or broken*.
 
-*House Log* replaces Felt Tip (`history/`). The pages, words and states are unchanged. Layout, type, colour and the shell changed (see `DIRECTION.md`). New markup hooks: `.runhead`, `.greet`, `.log__m`, `.todo--m`, `.item--log`, `.glyph`, `.ideas-head`, `.ranks--mini`, `.wishline`, `.adder--log`, `.home-grid--kid`, `.notes`. Kids' pages keep the body class `kid me-pN`.
+*House Log* replaces Felt Tip (`history/`). The pages, words and states are unchanged. Layout, type, colour and the shell changed (see `DIRECTION.md`). New markup hooks: `.runhead`, `.greet`, `.lede--info`, `.ask--hero`, `.board`, `.next--narrow`, `.leave`, `.route`, `.drive-fig`, `.dir-*`, `.log__m`, `.todo--m`, `.item--log`, `.item__body`, `.ideas-head`, `.ranks--mini`, `.wishline`, `.adder--log`, `.home-grid--kid`, `.notes`. Kids' pages keep the body class `kid me-pN`.
 
 ---
 
 ## 0. Layout
 
-**The page.** On the desktop, the contents (sidebar, 236 px) sits on the left and the page on the right (max 1120 px). Every page opens with a **running head**: `.runhead`, `aria-hidden`, with "FamilyDB · *page*" on the left and the date on the right, in wide capitals over a hairline. On a kid's pages it reads "Maya’s pages · …" and is ruled in her colour. Then the page title: one `h1`, condensed, 64 px.
+**The page.** On the desktop, the contents (sidebar, 236 px) sits on the left and the page on the right (max 1120 px). Every page except Home opens with a **running head**: `.runhead`, `aria-hidden`, with "FamilyDB · *page*" on the left and the date on the right, in wide capitals over a hairline. On a kid's pages it reads "Maya’s pages · …" and is ruled in her colour. Then the page title: one `h1`, condensed, 40 px. Home has the one-line greeting instead (below).
 
 **The margin.** `--mw` is 116 px on the desktop, 76 px in side columns and 68 px on the phone. It is the column for *when*: a date and a time in Martian Mono (`.log__m`: the date in 650 weight, the time or weekday under it), a big condensed date (`.dt`), a rank, an entry number, or who and when in the chat. Lists that have a margin:
 
 | List | margin | column 2 (44 px) | body | trail |
 |---|---|---|---|---|
-| To-dos (`.todo.todo--m`) | due date, weekday ("No date" when none) | the tick (or, for kids, who set it) | title, owner, "6 days late", reminder, tags | Edit |
-| Plans (`.item.item--log`) | date, time | `.glyph`: the calendar icon, so the plan's title lines up with the to-dos' | title, drive, people | kind or chevron |
-| Next up (`.next`) | the big date (`.dt--now`), under a 3 px ink rule | — (the title hangs at the margin, like a headline) | tags, 36 px title, meta, actions | |
+| To-dos (`.todo.todo--m`) | **the due column**: due date and weekday, and "6 days late" in red under it ("No date" when none) | the tick (or, for kids, who set it) | title, owner, reminder, tags | Edit |
+| Plans (`.item.item--log`) | date, time | `.route`: the **route stripe** (6 px, split into the colours of the people going; Everyone grey) | title, kind, people | `.drive-fig`: the drive time as a figure |
+| Next up (`.next`, the departure board) | "Tomorrow" stamp, date, and the time in 36 px condensed | `.route` | 36 px title, people, drive, actions | `.leave`: **Leave by 12:30 pm**, 72 px, behind a 2 px ink rule: the biggest figure on Home |
 | Chat (`.msg`) | name (wide capitals) and time (mono), right-aligned, then the face | | the words, beside a 3 px rule in the person's colour | |
 | Wishes (`.rank`) | the rank, 52 px condensed | | wish, answer, the parent's note | move up and down |
 | Ideas (`.idea`) | No. (the list is `<ol reversed>`, so the newest has the highest number) | | kind · idea · for · drive · status | |
 
 **Sections, not cards.** `.card` is now an open section: a 2 px ink rule (`--rule`) over a condensed head (`.card__head h2`, 26 px). It has no box, padding, radius or shadow. Rows inside are divided by hairlines. Only three things sit on a tinted ground: the setup panel (`.card--setup`, amber), banners, and Vera's glass (Ask, panes, the radar).
 
-**Home** (`.home-grid`): the greeting (`.greet`) has today stamped in green in the margin (`.dt--today`, `aria-hidden`; the date line under it is visually hidden on the desktop and shown on the phone). Then the **log** on the left: Ask, Next up (the next plan big, then three more as `.item--log`), To do (as `.todo--m`). The **side notes** (`.notes`, 320 px) are on the right: Finish setting up, How did it go, Wish lists, Just added to Ideas, Vera today. The kid's Home (`.home-grid--kid`) has Ask, Next up for you and Ideas on the left, and My wishes (`.ranks--mini`) and My to-dos on the right.
+**Home** (`.home-grid`): **the greeting is one line** (`.greet`: the date in green wide capitals, then "Good morning, Sam." as a 26 px `h1`), over a hairline. Under it is **today as information** (`.lede--info`, 22 px ink, with its links). Then **Ask Vera, the hero** (`.ask--hero`, full width), then **Next up as a departure board** (`.board`, full width), then To do (left) and the side notes (right, 320 px: Finish setting up, How did it go, Wish lists, Just added to Ideas, Vera today). On the first screen, desktop and phone, you get the greeting, Ask Vera and the next plan with Leave by. On the phone the setup banner comes after the board. The kid's Home (`.home-grid--kid`) has the same greeting and her Ask hero, then Next up for you (`.next--narrow`: Leave by under the plan) and Ideas on the left, and My wishes and My to-dos on the right.
 
-**Plans:** the month name in 48 px condensed, with the arrows and Today. The month is a ruled table. **Saturday and Sunday are 1.45× wider** (`.cal { --cols }`), because that's where the family's plans are. Below it are Coming up (a log) and How did it go, side by side.
+**Plans:** the month name in 48 px condensed, with the arrows and Today. The month is a ruled table. **Saturday and Sunday are 1.45× wider** (`.cal { --cols }`), because that's where the family's plans are. Every event carries its route stripe down the left edge. Below the month are Coming up (a board: margin, route, plan, drive figure) and How did it go, side by side.
 
 **To do:** the add box is the book's next line (`.adder--log`, its label in the margin). The Open/Done/Cancelled/All tabs and Search come next, then ruled group heads (`.group-h`: "OVERDUE · 3" in red with a red rule, "NO DATE · 1").
 
 **Chat:** conversations as a ruled list on the left (the current one has a 4 px ink bar), and the room as a transcript. The box sits under the words' column.
 
-**Ideas:** tabs, search and filters, then the **index** (`.ideas-head` column heads: No., Kind, Idea, For, Drive from home, Status), then the radar band and Quick idea. Below 1180 px the Status column drops under the title. Below 1000 px the index becomes rows.
+**Ideas:** tabs, search and filters, then the **index** (`.ideas-head` column heads: No., Kind, Idea, For, Drive from home, Status), then the radar band and Quick idea. **The drive column stays at every width**: a figure (`.drive-fig`) with the direction in capitals beside an arrow turned to point that way (`.dir-n…nw`). Below 1180 px the kind becomes a label over the title and the column heads go. On the phone a row is number, kind, title, for, tags, with the drive figure on the right.
 
 **The contents** (sidebar): the brand, the health pill, then the pages numbered `01…10` in the mono (a CSS counter), each on a hairline, with counts aligned right. The current page has a 4 px ink bar (her colour on a kid's pages). Icons are hidden here and kept on the phone's tab bar. The person and Sign out are under a rule at the bottom.
 
@@ -53,7 +53,7 @@ All values live on `:root` in `style.css` §2. Dark mode redefines the same name
 | `--ink` / `--rule` | #111315 | #EDEFEA | text; **the ruled heads (2 px)**, the primary button, every picked control, the current tab and contents bar |
 | `--ink-2` | #393E44 | #C5C9C3 | secondary text, meta, margin times |
 | `--ink-3` | #555B61 | #9EA39D | quiet text, labels, entry numbers (still AA) |
-| `--line` / `--line-2` | #D9DCD4 / #BFC3BA | #262A2E / #363C41 | hairlines between rows; the running head's and calendar's rules (decorative) |
+| `--line` / `--line-2` | #C6CABF / #AEB3A8 | #30353A / #444A50 | hairlines between rows; the running head's, greeting's and calendar's rules (decorative; about 30 % darker since round 4, so they hold on a dim screen) |
 | `--edge` | #737980 | #80868C | control edges: inputs, tick boxes, faces, quiet buttons (3:1) |
 | `--link` / `--link-line` | #111315 / #8E949A | #EDEFEA / #80868C | links are ink with a grey underline that turns ink and thicker on hover; links in the lede are bold with a 2 px ink underline (the kid's colour on her pages) |
 | `--vera` | #0A6A4B | #6DFF9C | Vera's green as text; her rule in the chat |
@@ -64,7 +64,7 @@ All values live on `:root` in `style.css` §2. Dark mode redefines the same name
 | `--ok`, `--warn`, `--alert` (+ `-soft`, `-line`) | #17703F, #7A4D00, #B42318 | #7FE3A5, #F5B94A, #FF8B74 | working; set this up or needs a look; **late, broken, errors** |
 | `--primary` / `--on-primary` | #111315 / #FFF | #EDEFEA / #0F1113 | the one primary button, inverted at night |
 | `--p1…--p8` | cornflower, violet, raspberry, tangerine, teal, periwinkle, lime, caramel (unchanged pens) | the same | avatars, under dark letters `--on-p` (#111315) |
-| `--pN-soft` / `-ink` / `-mark` | e.g. Maya #FBE3EE / #A8205F / #D13A84 | e.g. #331A27 / #FFAED2 / #FF8CC0 | soft: a one-person plan's wash, "mine" in the chat, a kid's current tab; ink: names on soft and on paper; mark: **a person's rule** (a calendar event, a chat message, a kid's rules) |
+| `--pN-soft` / `-ink` / `-mark` | e.g. Maya (plum) #F1E6EF / #7C3A72 / #9B5592 | e.g. #2D1F2B / #E2B8DA / #D3A0CA | soft: a one-person plan's wash, "mine" in the chat, a kid's current tab; ink: names on soft and on paper; mark: **route stripes** and a person's rule (chat), and the ruling of a kid's pages |
 | `--everyone…` | #D6D9D1, soft #E9EBE6, ink #393E44, mark #737980 | #4A4F55, #1F2326, #C5C9C3, #9EA39D | Everyone and several-people plans: neutral |
 | `--me…` | from the kid's slot | same | `.kid.me-pN`: her running head, every ruled head and the contents rule, her h1 underline, her current tab and contents bar, her rank 1 |
 | Brand: `--glass…`, `--phosphor…`, `--cursor`, `--ask-…`, `--send` | unchanged from Felt Tip (§9) | | Vera's glass and FamilyDB's mark |
@@ -81,8 +81,12 @@ All values live on `:root` in `style.css` §2. Dark mode redefines the same name
 | `--t-md` | 17 px | body (line 1.5), row titles (700) |
 | — | 18 / 20 px | to-do titles / wish titles (Atkinson 700) |
 | `--t-lede` | 19 px | the sentence under a page title (17 on the phone) |
-| `--t-h3` / `--t-h2` / `--t-h1` | 20 / 26 / 64 px (h2 24, h1 44 on the phone) | Archivo: h1 820 at 72 % width, line 0.95; h2 800 at 78 %; h3 750 at 85 % |
-| — | 36 px | Next up's title (30 on the phone), 820 at 72 % |
+| `--t-h3` / `--t-h2` / `--t-h1` | 20 / 26 / 40 px (h2 24, h1 32 on the phone) | Archivo: h1 820 at 72 % width, line 0.95; h2 800 at 78 %; h3 750 at 85 %. **Titles earn their space**: the page says what it is and gets out of the way |
+| — | 26 px | Home's greeting `h1` (22 on the phone), 800 at 80 %; its date in 13 px wide capitals, green |
+| — | 22 px | today as information (`.lede--info`, 19 on the phone), Atkinson, ink |
+| — | 72 px | **Leave by** (`.leave__t`; 56 in a narrow column, 48 on the phone), Archivo 820 at 68 %, tabular: the biggest figure on Home |
+| — | 36 px | Next up's title and time (28 and 24 on the phone), 820 at 72 % |
+| — | 24 px | a drive figure (`.drive-fig`, 20 on the phone), 800 at 72 %; "about" at 62 % |
 | — | 52 / 34 / 26 px | margin dates (`.dt--lg` / normal / small) and ranks, Archivo 820 at 70 %, tabular |
 | — | 48 px | the month on Plans (30 on the phone) |
 | — | 44 / 56 px | money / display money and Status figures (Archivo 820 at 70 %) |
@@ -109,8 +113,8 @@ Small marks in the book, all CSS, each played once. **Nothing moves under `prefe
 
 | Moment | Where | What happens |
 |---|---|---|
-| Today | Home's greeting; the calendar | today is a green date stamp: the filled `.dt--today` in the margin, and the filled day number in the calendar with a green top rule and wash |
-| Next up | Home, the kid's Home | the date stands in the margin under a 3 px ink rule; "Tomorrow" is stamped in ink, in wide capitals |
+| Today | Home's greeting; the calendar | the date in green on Home's one-line greeting; on the calendar, the filled green day number with a green top rule and wash |
+| Next up | Home, the kid's Home, an idea's page | a departure board: the time big in the margin, the route stripe, "Tomorrow" stamped in ink, and **Leave by** as the biggest figure |
 | Crossing it off | `.todo--done`, `.tick--done` | the box fills green and pops, then a green line is ruled through the title, left to right |
 | A flash that went well | `.banner--ok.flash` | the banner drops in, and its check is stamped in a green square |
 | "Yes!" | wish answers | a green stamp in wide capitals |
@@ -141,13 +145,13 @@ Class names are the API. Person colour classes are **slots** (`.p0…p8`), never
 | Tile | `.tile` | `--lg`, `--ok` `--better` `--look` `--broken` `--vera` | leading icon for an idea kind (neutral) or a health area (tone) |
 | Margin date | `.dt` (`.dt__wd`, `.dt__d`, `.dt__m`) | `--now` (the next plan: weekday in ink under a 3 px ink rule), `--today` (the green stamp: Home's greeting only, `aria-hidden`), `--lg` `--sm` | a big date in the margin: weekday label, the day in Archivo condensed, the month label. No box |
 | Meta line | `.meta` (+ `.late`) | — | owner · due · reminder · drive under a title |
-| Item row | `.items` › `.item` (lead · body · trail) | `--log` (margin · glyph · body · trail), `--divided`, `--health` | every list of things that isn't a to-do or an idea; rows are divided by hairlines |
+| Item row | `.items` › `.item` (lead · body · trail) | `--log` (margin · route stripe · body · drive figure), `--divided`, `--health` | every list of things that isn't a to-do or an idea; rows are divided by hairlines |
 | To-do row | `.todos` › `.todo` | `--m` (with a `.log__m` margin: due date and weekday), `--compact` (Home), `--late` (a 3 px red rule outside the margin edge), `--done`, `--ro` (kids: who set it in the tick column) | to-dos |
 | Tick | `.tick` (a `<button>` in its own POST form) | `--done` | a 30 px square box in a 44 px hit area; never for kids |
 | Banner | `.banner` + `.banner__ic`, `.banner__text` | tone: default **info (neutral card, grey icon)**, `--ok` (mint: all good, done), `--warn` (set this up), `--alert` (broken, errors); size: `--hero`, `--slim` | a message with at most one action. Resting, Off and “for your information” use the neutral default, never mint or yellow. **One “set this up” message per page** |
 | Flash | `.banner.banner--ok.flash` (`role="status"`, `tabindex="-1"`) | — | after any one-tap action, with Undo |
 | Error summary | `.banner.banner--alert.errors` (`role="alert"`) | — | top of a form that came back with errors |
-| Composer | `.composer`, `__row`, `__who`, `__foot`, `__send` | inside `.ask` (charcoal glass, phosphor Send); `--sample`; closed (`textarea[disabled]` + a slim banner saying why) | writing to Vera; one per page |
+| Composer | `.composer`, `__row`, `__who`, `__foot`, `__send` | inside `.ask` (charcoal glass, phosphor Send); `.ask--hero` (Home and the kid's Home: full width, 56 px screen, her line in the mono after a lit `>`, Atkinson on a kid's page, a two-line box, a 96 px Send); in a chat room the composer is on the same glass (`.room .composer`); `--sample`; closed (`textarea[disabled]` + a slim banner saying why) | writing to Vera; one per page. **Every box for writing to Vera is on her glass, with her phosphor Send** |
 | Starters | `.starters` › `.starter` | `--ask` (sends a complete question, `name="prompt"`); plain = a link that fills the box (`?draft=…`) | suggested messages |
 | Chat room | `.chat`, `.convos`/`.convo`, `.room`, `.scroller` › `.thread` | `.msg--person` (+ slot), `--mine` (her soft wash), `--vera` (green rule), `--pending` (dashed rule), `--failed` (dashed red rule), `--system`; `.receipt`; `.earlier`; `.day-sep` (a label and a hairline) | a transcript: who and when in the margin, the words beside the person's rule |
 | Privacy line | `.privacy` (`--room` on phone) | — | "Sam and Alex can read …"; **at every width** |
@@ -173,8 +177,11 @@ Class names are the API. Person colour classes are **slots** (`.p0…p8`), never
 | Person picker | `.people` › `.person-tile` | `[aria-current]` | sign-in |
 | Running head | `.runhead` (`aria-hidden`) | — | the first line of every page: book and page left, date right |
 | Margin cell | `.log__m` (+ `b` for the date) | — | a date and a time, or a date and a weekday, in the mono |
-| Glyph | `.glyph` | — | a plan's calendar icon in the tick column, so titles line up |
-| Greeting | `.greet` (+ `.greet__date`) | — | Home: the today stamp in the margin, the h1 and lede beside it |
+| Route stripe | `span.route` › `i.pN` (`aria-hidden`) | `--key` (in the calendar key) | a plan's people as one 6 px bar split into their `-mark` colours (Everyone `.p0` grey). On Home, Coming up and every calendar event; the names are always in the text too |
+| Drive figure | `.drive-fig` › `b` (+ `small` for "about"), `.drive-fig__l` or `.dir.dir-{n,nne,ne,e,se,s,sw,w,nw}` | `--none` ("Not looked up yet") | a drive time in its own right-hand column: plans (with "drive") and ideas (with the direction and a turned arrow) |
+| Departure board | `.board` › `.next` (`.next__when`, `.next__time`, `.route`, `.next__body`, `.leave`, `.leave__l`, `.leave__t`) | `--narrow` (Leave by under the plan) | the next plan on Home, the kid's Home and an idea's page |
+| Today's line | `.lede--info` | — | Home: the sentence that says what matters today, set bigger than the greeting |
+| Greeting | `.greet` (+ `.greet__date`) | — | Home: one line, the date in green capitals and a 26 px `h1` |
 | Specimen | `.specimen`, `.sheet-sec` | `--wide` | the states sheets only |
 
 ---
@@ -234,13 +241,13 @@ A kid who opens an admin URL gets `grownups.html`, never an error.
 ## 5. Phone rules (≤ 820 px)
 
 1. **The phone is its own layout, not the desktop stacked.** The sidebar becomes a 56 px top bar (brand, health pill for parents, and the avatar that opens the account menu, with a dot when something inside needs checking) and a **fixed bottom tab bar** of five, role-aware, with `--tabbar-total` = 68 px + `env(safe-area-inset-bottom)` for its height and the body's bottom padding, and `scroll-padding-bottom` so the focused control is never under it. The top bar and tab bar are paper with a 2 px ink rule. The current tab has a 4 px ink bar on its top edge and a grey tint (the kid's colour on her pages).
-2. **The list you came for is in the first screen.** On Home, Ask Vera is one row (box and icon Send) with short starters, so the next plan and anything late show above the tab bar; cards are capped with “3 more plans” and “All 4 to-dos”, and the card order is Ask, Next up, To do, How did it go, Wishes, Ideas (kids: Ask, My wishes, My to-dos, Next up, Ideas). Quick-adds are one line; options, filters and sorting fold into `<details>`. Order: heading, lede, the list, then the tools.
+2. **The first screen is greeting, Ask Vera and the next plan.** On Home: the one-line greeting, today's line, Ask Vera (head with a 32 px screen, a 72 px box, icon Send, short starters), then the board, with **Leave by** right under its date line. The setup banner comes after the board. Cards are capped with "3 more plans" and "All 4 to-dos". The card order is Ask, Next up, setup, To do, How did it go, Wishes, Ideas (kids: Ask, My wishes, My to-dos, Next up, Ideas). Quick-adds are one line; options, filters and sorting fold into `<details>`.
 3. The Ideas index becomes compact rows: number, title, "kind · who · drive", tags underneath. The radar folds behind "Show the map" after the rows.
 3a. **To do starts with one row to add a to-do** (box and Add) at the top of the list; who, when and the reminder fold beneath it. Nobody is picked by default.
 4. **Plans: the month header, then the Month/List switch, then the month at a glance, then Coming up.** The month grid becomes a month at a glance: day cells are whole-cell links with person markers and a full spoken label. Weekday headers are single letters. A spill-over day shows its month in small capitals beneath the number ("28" over "SEP"), so it never wraps.
 5. Settings and More rows use grid areas: icon | text, tag | chevron. The chevron never wraps.
 6. The Status model table folds away and stacks; actions sit under their line.
-6a. **The margin is 68 px.** To-dos keep margin · tick · body · Edit (Edit is icon-only, named). Plans drop the glyph column. The chat puts the name and time on one line over the words, with the face beside them.
+6a. **The margin goes on a line of its own.** On the phone a to-do is tick | (due · late on one line, then the title) | Edit, and a plan is route | (date · time, then the title) | drive figure. Titles keep the full width. The chat puts the name and time on one line over the words, with the face beside them.
 7. **Chat is an app-height room** (on screens shorter than 560 px it falls back to normal page scroll): pills, the privacy line, a scroller that opens at the newest message (column-reverse), the box pinned above the tab bar, and a pinned "Earlier messages" bar with a fade at the top edge.
 8. Starters and choice pills **wrap**; they never scroll sideways. Only the conversation pills scroll, as one row.
 9. Nothing scrolls sideways at 390 px; test at 320 px too.
@@ -297,7 +304,10 @@ Contrast is computed from the tokens (WCAG 2.2). AA needs 4.5:1 for text and 3:1
 | `--ink-2` on `--pN-soft` | an event's time (lowest of eight) | 8.8 | 8.9 |
 | `--pN-ink` on `--pN-soft` | names on soft, a kid's current tab (lowest of eight) | 5.4 | 9.3 |
 | `--pN-ink` on `--paper` | names in the chat margin (lowest of eight) | 5.8 | 10.8 |
-| `--pN-mark` on `--paper` | a person's rule, dots (3:1, lowest of eight) | 3.8 | 8.7 |
+| `--pN-mark` on `--paper` | route stripes, a person's rule, dots (3:1, lowest of eight) | 3.8 | 8.7 |
+| `--p3-ink` on `--p3-soft` | Maya's (plum) name on her wash, her tab | 6.4 | 9.0 |
+| `--on-p` on `--p3` | Maya's (plum) avatar letter | 6.2 | 6.2 |
+| `--ask-ink-2` on `--ask-bg` | Vera's line in the mono on the hero | 11.6 | 11.6 |
 | `--everyone-mark` on `--paper` | Everyone's rule (3:1) | 4.0 | 7.4 |
 | `--everyone-ink` on `--everyone` | the house avatar | 7.6 | 4.9 |
 | `--on-p` on `--p1…p8` | avatar letters (lowest of eight) | 6.9 | 6.9 |

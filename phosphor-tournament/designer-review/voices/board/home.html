@@ -49,24 +49,26 @@
   <main class="main" id="main">
     <div class="wrap">
 
-      <div class="page-head page-head--today">
-        <div>
-          <div>
-          <p class="overline">Saturday 3 October</p>
-          <h1>Good morning, Sam.</h1>
-          <p class="lede"><a href="plans.html#d-2026-10-04">Roller rink tomorrow</a>, and <a href="todo.html">three to-dos</a> are late.</p>
+      <header class="dayhead">
+        <p class="dayhead__date">Saturday 3 October</p>
+        <h1>Good morning, Sam.</h1>
+        <p class="dayhead__news"><a href="plans.html#d-2026-10-04">Roller rink tomorrow</a>, and <a href="todo.html">three to-dos</a> are late.</p>
+      </header>
+
+      <section class="ask ask--hero" aria-labelledby="h-ask">
+        <div class="ask__head"><svg class="vs vs--xl" width="56" height="56" viewBox="0 0 56 56" aria-hidden="true" focusable="false"><rect class="vs__bg" width="56" height="56" rx="14"/><rect class="vs__rim" x=".5" y=".5" width="55" height="55" rx="13.5"/><g class="vs__rows"><rect class="vs__r" x="10" y="9" width="20" height="4" rx="2.0"/><rect class="vs__r" x="33" y="9" width="12" height="4" rx="2.0"/><rect class="vs__r" x="10" y="16" width="11" height="4" rx="2.0"/><rect class="vs__r" x="24" y="16" width="18" height="4" rx="2.0"/><rect class="vs__r vs__r--new" x="10" y="23" width="16" height="4" rx="2.0"/><rect class="vs__r vs__r--new" x="29" y="23" width="8" height="4" rx="2.0"/></g><polyline class="vs__p" points="10.5,32.5 16.5,38.25 10.5,44" stroke-width="3"/><rect class="vs__c" x="21" y="31" width="9.5" height="14" rx="1"/></svg><div><h2 id="h-ask">Ask Vera</h2><p class="ask__line">Plans, reminders, ideas: say it the way you’d say it at the table.</p></div></div>
+        <form class="composer" method="post" action="chat.html">
+          <div class="composer__row">
+            <label class="sr" for="ask-text">Message to Vera</label>
+            <textarea id="ask-text" name="text" rows="1" placeholder="Ask or tell Vera…"></textarea>
+            <button class="btn composer__send" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg><span class="lbl">Send</span></button>
           </div>
-        </div>
-        <span class="dt dt--today dt--lg desk-only" aria-hidden="true"><span class="dt__wd">Today</span><span class="dt__d">3</span><span class="dt__m">Sat · Oct</span></span>
-      </div>
+        </form>
+        <div class="starters mt-3" role="group" aria-label="Or start with"><form method="post" action="home.html"><button class="starter starter--ask" type="submit" name="prompt" value="What should we do next weekend?"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg><span class="long">What should we do next weekend?</span><span class="short" aria-hidden="true">Next weekend?</span></button></form><a class="starter" href="home.html?draft=Remind+me+to+#ask-text"><svg class="icon" aria-hidden="true"><use href="#i-pen"/></svg><span class="long">Remind me to…</span><span class="short" aria-hidden="true">Remind me…</span></a><a class="starter" href="home.html?draft=Save+an+idea%3A+#ask-text"><svg class="icon" aria-hidden="true"><use href="#i-pen"/></svg><span class="long">Save an idea…</span><span class="short" aria-hidden="true">Save an idea…</span></a></div>
+        <p class="composer__foot mt-3">Goes to the family chat as Sam.</p>
+      </section>
 
-      <div class="banner banner--warn banner--slim phone-only mt-2">
-        <span class="banner__ic"><svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg></span>
-        <p class="banner__text"><b>Setup: 3 steps left</b></p>
-        <a class="btn btn--quiet btn--sm" href="settings.html#setup">Continue</a>
-      </div>
-
-      <section class="board board--next mt-4" aria-labelledby="h-next">
+      <section class="board board--next" aria-labelledby="h-next">
         <div class="board__head"><h2 id="h-next"><svg class="icon" aria-hidden="true"><use href="#i-cal"/></svg>Next up</h2><a class="more" href="plans.html">All plans<svg class="icon icon--sm" aria-hidden="true"><use href="#i-chev"/></svg></a></div>
         <div class="board__cols board-cols-dep" aria-hidden="true"><span>When</span><span></span><span>Plan</span><span>Drive</span></div>
         <div class="dep dep--next">
@@ -93,51 +95,45 @@
         <p class="board__foot phone-only"><a class="more" href="plans.html">3 more plans this month<svg class="icon icon--sm" aria-hidden="true"><use href="#i-chev"/></svg></a></p>
       </section>
 
+      <div class="banner banner--warn banner--slim phone-only mt-4">
+        <span class="banner__ic"><svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg></span>
+        <p class="banner__text"><b>Setup: 3 steps left</b></p>
+        <a class="btn btn--quiet btn--sm" href="settings.html#setup">Continue</a>
+      </div>
+
       <div class="home-grid mt-5">
         <div class="stack">
           <section class="board o2" aria-labelledby="h-todo">
             <div class="board__head"><h2 id="h-todo"><svg class="icon" aria-hidden="true"><use href="#i-todo"/></svg>To do <span class="badge badge--late">3 late</span></h2><a class="more" href="todo.html">All 4 to-dos<svg class="icon icon--sm" aria-hidden="true"><use href="#i-chev"/></svg></a></div>
             <ul class="todos todos--board">
           <li class="todo todo--late" id="t-dentist">
+            <p class="todo__due"><span>Sun 27 Sep</span><span class="late">6 days late</span></p>
             <form method="post" action="#"><button class="tick" type="submit" aria-label="Mark done: Call the dentist about Theo"><span><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span></button></form>
             <div><div class="todo__title">Call the dentist about Theo</div><div class="meta"><span class="person"><span class="av p2 av--sm" aria-hidden="true">A</span>Alex</span></div></div>
-            <p class="todo__due"><span>Sun 27 Sep</span><span class="late">6 days late</span></p>
             <a class="todo__edit" href="todo-edit.html"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-edit"/></svg><span class="sr">Edit Call the dentist about Theo</span></a>
           </li>
           <li class="todo todo--late" id="t-campsite">
+            <p class="todo__due"><span>Mon 28 Sep</span><span class="late">5 days late</span></p>
             <form method="post" action="#"><button class="tick" type="submit" aria-label="Mark done: Book the campsite at Silver Falls"><span><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span></button></form>
             <div><div class="todo__title">Book the campsite at Silver Falls</div><div class="meta"><span class="person"><span class="av p1 av--sm" aria-hidden="true">S</span>Sam</span></div></div>
-            <p class="todo__due"><span>Mon 28 Sep</span><span class="late">5 days late</span></p>
             <a class="todo__edit" href="todo-edit.html"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-edit"/></svg><span class="sr">Edit Book the campsite at Silver Falls</span></a>
           </li>
           <li class="todo todo--late" id="t-present">
+            <p class="todo__due"><span>Thu 1 Oct</span><span class="late">2 days late</span></p>
             <form method="post" action="#"><button class="tick" type="submit" aria-label="Mark done: Buy Maya’s birthday present"><span><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span></button></form>
             <div><div class="todo__title">Buy Maya’s birthday present</div><div class="meta"><span class="person"><span class="av p2 av--sm" aria-hidden="true">A</span>Alex</span></div><div class="tags"><span class="tag tag--surprise"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>Hidden from Maya<span class="sr"> (a surprise)</span></span></div></div>
-            <p class="todo__due"><span>Thu 1 Oct</span><span class="late">2 days late</span></p>
             <a class="todo__edit" href="todo-edit.html"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-edit"/></svg><span class="sr">Edit Buy Maya’s birthday present</span></a>
           </li>
           <li class="todo phone-hide" id="t-library">
+            <p class="todo__due"><span class="muted">No date</span></p>
             <form method="post" action="#"><button class="tick" type="submit" aria-label="Mark done: Renew library cards"><span><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span></button></form>
             <div><div class="todo__title">Renew library cards</div><div class="meta"><span class="person"><span class="av p0 av--sm" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="#i-home"/></svg></span>Everyone</span></div></div>
-            <p class="todo__due"><span class="muted">No date</span></p>
             <a class="todo__edit" href="todo-edit.html"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-edit"/></svg><span class="sr">Edit Renew library cards</span></a>
           </li>
             </ul>
             <p class="board__foot"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-belloff"/></svg> No reminders are set: they go by Telegram, which isn’t connected yet.</p>
           </section>
 
-          <section class="ask o3" aria-labelledby="h-ask">
-            <div class="ask__head"><svg class="vs vs--lg" width="40" height="40" viewBox="0 0 40 40" aria-hidden="true" focusable="false"><rect class="vs__bg" width="40" height="40" rx="10"/><rect class="vs__rim" x=".5" y=".5" width="39" height="39" rx="9.5"/><g class="vs__rows"><rect class="vs__r" x="7" y="7" width="15" height="3" rx="1.5"/><rect class="vs__r" x="24" y="7" width="9" height="3" rx="1.5"/><rect class="vs__r" x="7" y="12" width="8" height="3" rx="1.5"/><rect class="vs__r" x="17" y="12" width="13" height="3" rx="1.5"/><rect class="vs__r vs__r--new" x="7" y="17" width="12" height="3" rx="1.5"/></g><polyline class="vs__p" points="7.5,23.5 12,27.75 7.5,32" stroke-width="2.25"/><rect class="vs__c" x="15.5" y="22.5" width="7" height="10.5" rx="1"/></svg><div><h2 id="h-ask">Ask Vera</h2><p>Plans, reminders, ideas: say it the way you’d say it at the table.</p></div></div>
-            <form class="composer" method="post" action="chat.html">
-              <div class="composer__row">
-                <label class="sr" for="ask-text">Message to Vera</label>
-                <textarea id="ask-text" name="text" rows="1" placeholder="Ask or tell Vera…"></textarea>
-                <button class="btn composer__send" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg><span class="lbl">Send</span></button>
-              </div>
-            </form>
-            <div class="starters mt-3" role="group" aria-label="Or start with"><form method="post" action="home.html"><button class="starter starter--ask" type="submit" name="prompt" value="What should we do next weekend?"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg><span class="long">What should we do next weekend?</span><span class="short" aria-hidden="true">Next weekend?</span></button></form><a class="starter" href="home.html?draft=Remind+me+to+#ask-text"><svg class="icon" aria-hidden="true"><use href="#i-pen"/></svg><span class="long">Remind me to…</span><span class="short" aria-hidden="true">Remind me…</span></a><a class="starter" href="home.html?draft=Save+an+idea%3A+#ask-text"><svg class="icon" aria-hidden="true"><use href="#i-pen"/></svg><span class="long">Save an idea…</span><span class="short" aria-hidden="true">Save an idea…</span></a></div>
-            <p class="composer__foot mt-3">Goes to the family chat as Sam.</p>
-          </section>
 
           <section class="card o6" aria-labelledby="h-ideas">
             <div class="card__head"><h2 id="h-ideas"><svg class="icon" aria-hidden="true"><use href="#i-bulb"/></svg>Just added to Ideas</h2><a class="more" href="ideas.html">All 12 ideas<svg class="icon icon--sm" aria-hidden="true"><use href="#i-chev"/></svg></a></div>
