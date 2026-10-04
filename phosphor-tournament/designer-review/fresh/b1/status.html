@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Status · FamilyDB</title>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="home" viewBox="0 0 24 24"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h5v-6h4v6h5V10"/></symbol><symbol id="chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></symbol><symbol id="bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/></symbol><symbol id="cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol><symbol id="check" viewBox="0 0 24 24"><path d="M5 12.5 10 17 19 7"/></symbol><symbol id="todo" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8 12 3 3 5-6"/></symbol><symbol id="gift" viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="11" rx="1.5"/><path d="M3 9h18M12 9v11M12 9c-2-4-6-4-6-1.5S10 9 12 9zM12 9c2-4 6-4 6-1.5S14 9 12 9z"/></symbol><symbol id="memory" viewBox="0 0 24 24"><path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 5 3 3 0 0 0 6 1V5a2 2 0 0 0-3-1z"/><path d="M15 4a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-2 5 3 3 0 0 1-6 1"/></symbol><symbol id="family" viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9.5" r="2.3"/><path d="M3 19c0-3 2.2-5 5-5s5 2 5 5M14 19c0-2.4 1.3-4 3-4s3.5 1.6 3.5 4"/></symbol><symbol id="pulse" viewBox="0 0 24 24"><path d="M3 12h4l2-5 4 10 2-5h6"/></symbol><symbol id="sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></symbol><symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></symbol><symbol id="send" viewBox="0 0 24 24"><path d="M4 12 20 4l-5 16-3-7z"/><path d="m12 13 8-9"/></symbol><symbol id="pin" viewBox="0 0 24 24"><path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0C18.5 15 12 21 12 21z"/><circle cx="12" cy="10" r="2.3"/></symbol><symbol id="bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5h4"/></symbol><symbol id="belloff" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 .9-3.2M9.5 5.5A6 6 0 0 1 18 11v5l1.5 2H7"/><path d="M10 20.5h4M3 3l18 18"/></symbol><symbol id="clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol><symbol id="car" viewBox="0 0 24 24"><path d="M5 16v3M19 16v3M3.5 16h17v-4l-2-5H5.5l-2 5z"/><circle cx="7.5" cy="13" r=".6"/><circle cx="16.5" cy="13" r=".6"/></symbol><symbol id="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol><symbol id="chevl" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></symbol><symbol id="alert" viewBox="0 0 24 24"><path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.5M12 17.2v.1"/></symbol><symbol id="ok" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m8 12.5 2.7 2.7L16 9.5"/></symbol><symbol id="x" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m9 9 6 6M15 9l-6 6"/></symbol><symbol id="lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></symbol><symbol id="globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.5 3.5 5.5 3.5 8.5s-1 6-3.5 8.5c-2.5-2.5-3.5-5.5-3.5-8.5s1-6 3.5-8.5z"/></symbol><symbol id="cpu" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/></symbol><symbol id="coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M14.5 9.2c-.5-.8-1.4-1.2-2.5-1.2-1.5 0-2.5.8-2.5 2s1.1 1.6 2.5 2 2.5.8 2.5 2-1 2-2.5 2c-1.1 0-2-.4-2.5-1.2M12 6.5V8M12 16v1.5"/></symbol><symbol id="msg" viewBox="0 0 24 24"><path d="M21 4 3 11l6 2.5L19 6l-7.5 9v5l3.5-4 4.5 3z"/></symbol><symbol id="book" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20v3H6.5"/></symbol><symbol id="smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 14c.9 1.3 2 2 3.5 2s2.6-.7 3.5-2M9 9.5v.5M15 9.5v.5"/></symbol><symbol id="history" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7L4 8.5"/><path d="M4 4v4.5h4.5M12 8v4l3 2"/></symbol><symbol id="link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol><symbol id="menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol><symbol id="edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></symbol><symbol id="bolt" viewBox="0 0 24 24"><path d="M13 3 5 13.5h6L10 21l8-10.5h-6z"/></symbol><symbol id="fork" viewBox="0 0 24 24"><path d="M7 3v7a3 3 0 0 0 6 0V3M10 3v18M17 3c-1.7 1.5-2.5 4-2.5 7h2.5v11"/></symbol><symbol id="tree" viewBox="0 0 24 24"><path d="M12 3 6 11h3l-4 6h14l-4-6h3z"/><path d="M12 17v4"/></symbol><symbol id="tent" viewBox="0 0 24 24"><path d="M12 4 3 20h18z"/><path d="m12 4 0 16M9 20l3-6 3 6"/></symbol><symbol id="mountain" viewBox="0 0 24 24"><path d="M2.5 19.5 9 8l4 7 2.5-4 6 8.5z"/><path d="m7.4 11 1.6 1.4L10.6 11"/></symbol><symbol id="mask" viewBox="0 0 24 24"><path d="M4 5c2.5 1.2 5 1.5 8 1.5S17.5 6.2 20 5v6c0 5-3.5 8.5-8 8.5S4 16 4 11z"/><path d="M8 11c.8-.7 1.7-.7 2.5 0M13.5 11c.8-.7 1.7-.7 2.5 0M9.5 15c1.6 1 3.4 1 5 0"/></symbol><symbol id="pumpkin" viewBox="0 0 24 24"><path d="M12 7c-5 0-8 2.5-8 6.5S7 20 12 20s8-2.5 8-6.5S17 7 12 7z"/><path d="M12 7c-2 0-3 3-3 6.5S10 20 12 20M12 7c2 0 3 3 3 6.5S14 20 12 20M12 7c0-2 1-3.5 3-4"/></symbol><symbol id="spark" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/></symbol><symbol id="dice" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r=".9"/><circle cx="15" cy="15" r=".9"/><circle cx="15" cy="9" r=".9"/><circle cx="9" cy="15" r=".9"/></symbol><symbol id="skate" viewBox="0 0 24 24"><path d="M5 4v10h10.5a3.5 3.5 0 0 1 3.5 3.5V18H5"/><circle cx="8" cy="20.5" r="1"/><circle cx="16" cy="20.5" r="1"/><path d="M5 8h4M5 11h4"/></symbol><symbol id="wave" viewBox="0 0 24 24"><path d="M2 15c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/><path d="M2 19c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/><circle cx="17" cy="7" r="3"/></symbol><symbol id="bowl" viewBox="0 0 24 24"><path d="M3 11h18a9 9 0 0 1-18 0z"/><path d="M8 20h8M9 3c-1 1.5 1 2.5 0 4M13 3c-1 1.5 1 2.5 0 4"/></symbol><symbol id="flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6L4.5 18.5A1.8 1.8 0 0 0 6 21h12a1.8 1.8 0 0 0 1.5-2.5L14 9V3"/><path d="M7 15h10"/></symbol><symbol id="cave" viewBox="0 0 24 24"><path d="M2 20c1-8 5-13 10-13s9 5 10 13z"/><path d="M8 20c0-3 1.8-6 4-6s4 3 4 6"/></symbol><symbol id="brick" viewBox="0 0 24 24"><rect x="3" y="9" width="18" height="11" rx="1.5"/><rect x="5.5" y="5.5" width="4" height="3.5" rx="1"/><rect x="14.5" y="5.5" width="4" height="3.5" rx="1"/></symbol><symbol id="logout" viewBox="0 0 24 24"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l-4-4 4-4M6 12h10"/></symbol><symbol id="eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></symbol><symbol id="list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r=".8"/><circle cx="4.5" cy="12" r=".8"/><circle cx="4.5" cy="18" r=".8"/></symbol><symbol id="grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></symbol><symbol id="key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M16 7l3 3M14 9l2 2"/></symbol><symbol id="tg" viewBox="0 0 24 24"><path d="M21 4 3 11l6 2.5L19 6l-7.5 9v5l3.5-4 4.5 3z"/></symbol></svg>
+<a class="sr" href="#main">Skip to content</a>
+<div class="app">
+<aside class="side" aria-label="Main">
+  <a class="brand" href="home.html"><svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+ <defs><radialGradient id="scr" cx="50%" cy="45%" r="65%"><stop offset="0" stop-color="#16402a"/><stop offset="1" stop-color="#04110a"/></radialGradient></defs>
+ <rect x="2" y="3" width="36" height="28" rx="8" fill="url(#scr)" stroke="#66f7a0" stroke-width="1.6"/>
+ <path d="M9 21c3 0 3-7 6-7s3 7 6 7 3-7 6-7" fill="none" stroke="#66f7a0" stroke-width="2" stroke-linecap="round" opacity=".95"/>
+ <rect x="27.5" y="19" width="4" height="5" fill="#66f7a0"/>
+ <path d="M14 36h12M20 31v5" stroke="#2a4a36" stroke-width="2" stroke-linecap="round"/>
+</svg><span><span class="brand-name">FamilyDB</span><span class="brand-sub">Family planning</span></span></a>
+  <div class="vera-live"><span class="dot"></span>Vera is listening</div>
+  <nav aria-label="Pages"><ul class="nav"><li><a href="home.html"><svg class="i" aria-hidden="true"><use href="#home"/></svg>Home</a></li><li><a href="chat.html"><svg class="i" aria-hidden="true"><use href="#chat"/></svg>Talk to Vera</a></li><li><a href="ideas.html"><svg class="i" aria-hidden="true"><use href="#bulb"/></svg>Ideas<span class="count">12</span></a></li><li><a href="plans.html"><svg class="i" aria-hidden="true"><use href="#cal"/></svg>Plans<span class="count">4 ahead</span></a></li><li><a href="todo.html"><svg class="i" aria-hidden="true"><use href="#todo"/></svg>To do<span class="alert">3 late</span></a></li><li><a href="#wishes"><svg class="i" aria-hidden="true"><use href="#gift"/></svg>Wishes</a></li><li><a href="#memory"><svg class="i" aria-hidden="true"><use href="#memory"/></svg>Memory</a></li><li><a href="#family"><svg class="i" aria-hidden="true"><use href="#family"/></svg>Family</a></li></ul>
+  <div class="nav-h">Behind the scenes</div>
+  <ul class="nav"><li><a href="status.html" aria-current="page"><svg class="i" aria-hidden="true"><use href="#pulse"/></svg>Status<span class="count">OK</span></a></li><li><a href="settings.html"><svg class="i" aria-hidden="true"><use href="#sliders"/></svg>Settings<span class="alert">3</span></a></li></ul></nav>
+  <div class="side-foot"><span class="av sam lg">S</span><span class="who">Sam<small>parent · admin</small></span><a href="#signout" aria-label="Sign out"><svg class="i" aria-hidden="true"><use href="#logout"/></svg></a></div>
+</aside>
+<div class="col" style="min-width:0">
+<header class="topbar">
+  <a class="brand" href="home.html"><svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+ <defs><radialGradient id="scr" cx="50%" cy="45%" r="65%"><stop offset="0" stop-color="#16402a"/><stop offset="1" stop-color="#04110a"/></radialGradient></defs>
+ <rect x="2" y="3" width="36" height="28" rx="8" fill="url(#scr)" stroke="#66f7a0" stroke-width="1.6"/>
+ <path d="M9 21c3 0 3-7 6-7s3 7 6 7 3-7 6-7" fill="none" stroke="#66f7a0" stroke-width="2" stroke-linecap="round" opacity=".95"/>
+ <rect x="27.5" y="19" width="4" height="5" fill="#66f7a0"/>
+ <path d="M14 36h12M20 31v5" stroke="#2a4a36" stroke-width="2" stroke-linecap="round"/>
+</svg><span class="brand-name">FamilyDB</span></a>
+  <span class="vera-live"><span class="dot"></span>Vera</span>
+  <details class="menu"><summary aria-label="More pages"><svg class="i" aria-hidden="true"><use href="#menu"/></svg></summary>
+    <ul class="nav"><li><a href="#wishes"><svg class="i" aria-hidden="true"><use href="#gift"/></svg>Wishes</a></li><li><a href="#memory"><svg class="i" aria-hidden="true"><use href="#memory"/></svg>Memory</a></li><li><a href="#family"><svg class="i" aria-hidden="true"><use href="#family"/></svg>Family</a></li><li><a href="status.html" aria-current="page"><svg class="i" aria-hidden="true"><use href="#pulse"/></svg>Status<span class="count">OK</span></a></li><li><a href="settings.html"><svg class="i" aria-hidden="true"><use href="#sliders"/></svg>Settings<span class="alert">3</span></a></li><li><a href="#signout"><svg class="i" aria-hidden="true"><use href="#logout"/></svg>Sign out (Sam)</a></li></ul>
+  </details>
+  <nav class="tabbar" aria-label="Main pages"><a href="home.html"><svg class="i" aria-hidden="true"><use href="#home"/></svg>Home</a><a href="chat.html"><svg class="i" aria-hidden="true"><use href="#chat"/></svg>Vera</a><a href="ideas.html"><svg class="i" aria-hidden="true"><use href="#bulb"/></svg>Ideas</a><a href="plans.html"><svg class="i" aria-hidden="true"><use href="#cal"/></svg>Plans</a><a href="todo.html"><svg class="i" aria-hidden="true"><use href="#todo"/></svg>To do<span class="badge">3</span></a></nav>
+</header>
+<main id="main">
+<div class="wrap">
+
+<div class="ph"><div class="grow"><p class="dateline"><b>Saturday 3 October</b><span>·</span><span>parents only</span></p><h1>Status</h1></div></div>
+
+<div class="grid g-main" style="margin-bottom:18px">
+  <section class="panel verdict" aria-labelledby="v-h">
+    <svg class="scope" viewBox="0 0 150 96" aria-hidden="true">
+      <path d="M0 48H150M75 0V96" stroke="#123522" />
+      <path d="M0 24H150M0 72H150M37 0V96M112 0V96" stroke="#0c2617"/>
+      <path d="M0 52h28l6-4 5 4h10l5-30 7 54 6-28h8l4-4 4 4h67" fill="none" stroke="#66f7a0" stroke-width="2.2" stroke-linejoin="round" style="filter:drop-shadow(0 0 4px #66f7a0)"/>
+    </svg>
+    <div><h2 id="v-h">Vera is working.</h2><p>OpenAI is answering. Two connections aren’t set up yet, and there’s no backup if OpenAI goes down.</p></div>
+  </section>
+  <section class="panel" aria-labelledby="s-h">
+    <div class="panel-h"><h2 class="lbl" id="s-h">Spent today</h2><a class="more" href="settings.html">Change limit →</a></div>
+    <p class="big">$0.00 <small>of $2.00</small></p>
+    <div class="meter" role="img" aria-label="$0.00 of a $2.00 daily limit spent"><i class="usual" title="A usual day, about $0.04"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="meter-scale"><span>$0</span><span>$1</span><span>$2 limit</span></div>
+    <p class="note" style="margin-top:10px">A usual day costs about <b>4¢</b> (the first, dim block). Vera won’t spend past the limit.</p>
+  </section>
+</div>
+
+<section class="panel" style="margin-bottom:18px" aria-labelledby="m30">
+  <div class="panel-h"><h2 class="lbl" id="m30">Last 30 days</h2></div>
+  <div class="stat-row">
+    <div class="stat"><small>Calls to the AI</small><b>6</b><span>about one every 5 days</span></div>
+    <div class="stat"><small>Cost</small><b>$1.26</b><span>about 4¢ a day</span></div>
+    <div class="stat"><small>Per call</small><b>$0.21</b><span>on average</span></div>
+    <div class="stat"><small>From the cache</small><b>0%</b><span>nothing reused yet</span></div>
+  </div>
+</section>
+
+<div class="grid g-2">
+  <section class="panel" aria-labelledby="mod">
+    <div class="panel-h"><h2 class="lbl" id="mod">Who answers what</h2><a class="more" href="settings.html">AI model →</a></div>
+    <table class="tbl">
+      <thead><tr><th>Job</th><th>Model</th><th>Backup</th></tr></thead>
+      <tbody>
+        <tr><td><span class="job"><svg class="i" aria-hidden="true"><use href="#chat"/></svg>Chat</span></td><td class="model">gpt-6-luna<small>OpenAI</small></td><td><span class="pill warn">none</span></td></tr>
+        <tr><td><span class="job"><svg class="i" aria-hidden="true"><use href="#spark"/></svg>Weekend digest</span></td><td class="model">gpt-6-luna<small>OpenAI</small></td><td><span class="pill warn">none</span></td></tr>
+        <tr><td><span class="job"><svg class="i" aria-hidden="true"><use href="#globe"/></svg>Web lookups</span></td><td class="model">gpt-6-luna<small>OpenAI · lookups are off</small></td><td><span class="pill warn">none</span></td></tr>
+      </tbody>
+    </table>
+    <div class="advice"><svg class="i" aria-hidden="true"><use href="#alert"/></svg><p><b>No backup.</b> Only one company’s key is set, so if OpenAI is down, Vera can’t answer. Adding a Claude or Gemini key gives her a fallback.</p></div>
+  </section>
+  <section class="panel" aria-labelledby="con">
+    <div class="panel-h"><h2 class="lbl" id="con">Connections</h2><a class="more" href="settings.html">Connections →</a></div>
+    <ul class="conn">
+      <li><span class="dot"></span><span class="grow"><b>OpenAI key</b><small>Set · working</small></span><span class="pill ok"><svg class="i i-sm" aria-hidden="true"><use href="#ok"/></svg>OK</span></li>
+      <li><span class="dot off"></span><span class="grow"><b>Claude key (Anthropic)</b><small>Not set · would be the backup</small></span><a href="#keys">Add key</a></li>
+      <li><span class="dot off"></span><span class="grow"><b>Gemini key (Google)</b><small>Not set</small></span><a href="#keys">Add key</a></li>
+      <li><span class="dot warn"></span><span class="grow"><b>Telegram</b><small>Not set up · no messages or reminders</small></span><a class="btn sm amber" href="#telegram">Set up</a></li>
+      <li><span class="dot warn"></span><span class="grow"><b>Google Calendar</b><small>Not connected</small></span><a class="btn sm amber" href="#calendar">Connect</a></li>
+    </ul>
+  </section>
+</div>
+
+</div>
+</main>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,187 @@
+<title>FamilyDB From Scratch</title>
+<style>
+/* Layout: findings first, then one plate per design in two groups, each with Home, every page, and the phone. Neutral dark ground so warm paper and green glass both read true. */
+:root {
+  --bg: #121313; --plate: #1b1d1d; --rule: #2e3231; --ink: #e6e8e6; --dim: #a1a8a5; --lit: #7dffaa; --paper: #f3e9d6;
+  --display: "Fraunces", Georgia, serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body); }
+.wrap { max-width: 1320px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 80px; display: grid; gap: 60px; }
+header.top { display: grid; gap: 14px; max-width: 74ch; }
+.kicker { font: 500 12px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+h1 { font: 600 clamp(34px, 5.5vw, 58px)/1.04 var(--display); margin: 0; text-wrap: balance; }
+h1 .p { color: var(--paper); } h1 .g { font-family: var(--mono); font-weight: 500; color: var(--lit); text-shadow: 0 0 10px rgba(125,255,170,.45); }
+h2 { font: 600 clamp(24px, 3vw, 34px)/1.1 var(--display); margin: 0; text-wrap: balance; }
+h2 small { font: 500 12px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin-left: 10px; vertical-align: middle; }
+h3 { font: 500 12px/1.4 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--ink); margin: 0; }
+p { margin: 0; color: var(--dim); max-width: 74ch; }
+p strong, li strong { color: var(--ink); font-weight: 500; }
+.findings { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 28px 36px; }
+.findings > div { display: grid; gap: 8px; align-content: start; border-top: 1px solid var(--rule); padding-top: 12px; min-width: 0; }
+.findings ul { margin: 0; padding-left: 1.1em; color: var(--dim); display: grid; gap: 4px; }
+.caveat { border: 1px solid var(--rule); background: var(--plate); padding: 16px 18px; display: grid; gap: 8px; }
+.caveat h3 { color: #ffc46b; }
+.group { display: grid; gap: 10px; }
+.group-head { font: 500 12px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); display: flex; gap: 14px; align-items: center; }
+.group-head::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+.group > p { max-width: 80ch; }
+section { display: grid; gap: 18px; scroll-margin-top: 20px; }
+section > header { display: grid; gap: 6px; border-top: 1px solid var(--rule); padding-top: 14px; }
+.idea { color: var(--ink); font-size: 17px; max-width: 80ch; }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px 32px; }
+.notes p b { font: 500 11px/1.4 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink); display: block; margin-bottom: 2px; }
+.shots { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .shots { grid-template-columns: minmax(0, 1fr); } }
+figure { margin: 0; display: grid; gap: 8px; min-width: 0; }
+figure img { width: 100%; height: auto; display: block; border: 1px solid var(--rule); background: var(--plate); }
+figcaption { font: 500 12px/1.4 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+.wide { grid-column: 1 / -1; }
+nav ol { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px 22px; }
+nav a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--rule); }
+nav a:hover, nav a:focus-visible { color: var(--lit); border-color: var(--lit); }
+nav span { font: 500 12px/1 var(--mono); color: var(--dim); margin-right: 6px; }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500&display=swap">
+
+<div class="wrap">
+  <header class="top">
+    <span class="kicker">FamilyDB · six designers · no pictures</span>
+    <h1><span class="p">Kitchen Table</span> and <span class="g">Afterglow</span></h1>
+    <p>Six designers started with nothing but a written description of FamilyDB: what it does, who uses it, the seven pages to design and the demo family's data. None of them saw today's page, any earlier design or each other's work. Each ran as a fresh session outside the project, so none of the project's notes reached them.</p>
+    <p><strong>Three got only the description.</strong> <strong>Three also got one paragraph</strong> naming the direction: "a modern, easy-to-use family app that carries the character of an old green phosphor computer screen." Each drew seven pages as standalone HTML and CSS mockups (not the app's own templates), checked them on a desktop and a phone, and wrote a short note.</p>
+    <nav aria-label="Designs"><ol>
+      <li><span>A1</span><a href="#a1">Kitchen Table</a></li>
+      <li><span>A2</span><a href="#a2">Kitchen Table, tomato</a></li>
+      <li><span>A3</span><a href="#a3">Kitchen Table, teal</a></li>
+      <li><span>B1</span><a href="#b1">Afterglow</a></li>
+      <li><span>B2</span><a href="#b2">Kitchen Terminal</a></li>
+      <li><span>B3</span><a href="#b3">Afterglow, the face</a></li>
+    </ol></nav>
+  </header>
+
+  <div class="findings">
+    <div>
+      <h3>They agreed, closely</h3>
+      <p>All three designers given only the description named their design <strong>Kitchen Table</strong>. All three chose warm paper and ink, a soft serif (Fraunces) for headings and a very legible sans for reading, and gave every person their own colour "so a kid can find mine without reading".</p>
+      <p>Of the three who were also given the Phosphor idea, two named theirs <strong>Afterglow</strong> and the third <strong>Kitchen Terminal</strong>. All three chose green-black glass, pixel type (VT323) only for big moments, Atkinson Hyperlegible for reading, and amber meaning only "this needs you".</p>
+    </div>
+    <div>
+      <h3>One structure under two skins</h3>
+      <ul>
+        <li>A sidebar on a desktop, with Status and Settings set apart as "behind the scenes" or "grown-ups"; five big tabs on a phone.</li>
+        <li>Home opens with a sentence about today and the box to write to Vera.</li>
+        <li>To do groups the overdue ones first and says "6 days late", not a bare date.</li>
+        <li>Status leads with a sentence ("Vera is working"), then spend, a 30-day chart, who answers what, connections.</li>
+        <li>Settings is nine one-line rows, with what needs a look tinted and repeated in a side card.</li>
+        <li>Plans asks "How did it go?" with one-tap faces a kid can use.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>What the Phosphor idea changed</h3>
+      <p>It changed the surface, not the structure. Given the line, the designers kept the same pages and order and turned the paper to glowing glass. The phosphor showed up as type, glow, a <code>&gt;</code> prompt and a blinking cursor. Two of the three added a radar on Ideas that plots each place by drive time and direction. The paper designs showed the same thing as a small compass arrow on each card.</p>
+      <p>Both groups put readability first. Every one of the six picked its body face for kids and tired parents.</p>
+    </div>
+  </div>
+
+  <div class="caveat">
+    <h3>Read the agreement with care</h3>
+    <p>These six "designers" are one AI model given the same brief six times, not six people. Some of their agreement is that. Some of it is the brief: it listed what each page must show, and they all followed that list in order. Treat the agreement as one strong opinion repeated, not as six votes. To get really different answers, give each designer a different brief or a different starting point, or ask people.</p>
+    <p>Two more things to keep in mind. These are mockups, not the app's own templates: the real page would have to be rebuilt to match. And the daily spending in each 30-day chart is made up; it only adds up to the real totals. The chat says the hike is on Saturday while the plan says Thursday 1 October; that mismatch is in the demo data they were given.</p>
+  </div>
+
+  <div class="group">
+    <div class="group-head">A · the description only</div>
+    <p>Warm paper, ink and one colour for Vera. All three start Home with "Good morning, Sam." and a sentence about the day.</p>
+  </div>
+
+  <section id="a1">
+    <header><h2>Kitchen Table <small>A1</small></h2><p class="idea">"FamilyDB should feel like the family's kitchen table: Vera is the first thing you can talk to, and everything else is a short pile of plain-language cards you can take in at a glance."</p></header>
+    <div class="notes">
+      <p><b>Look</b>Cream paper, deep green for Vera's box, a sunny yellow Send, brick red only for late. Fraunces and Atkinson Hyperlegible.</p>
+      <p><b>Worth a look</b>When Vera does something, the chat shows it as a card ("Silver Falls hike, added to Plans"). Each idea's drive time has a small arrow pointing the way. Settings opens with a banner for the one thing that needs a look, with its fix.</p>
+    </div>
+    <div class="shots">
+      <figure><img src="a1/shots/home.jpg" alt="Kitchen Table A1, Home on a desktop" width="1280" height="1500" loading="lazy"><figcaption>Home · desktop</figcaption></figure>
+      <figure><img src="sheets/a1-pages.jpg" alt="Kitchen Table A1, the seven pages" width="1304" height="2048" loading="lazy"><figcaption>Home · Chat · Ideas · Plans · To do · Status · Settings</figcaption></figure>
+      <figure class="wide"><img src="sheets/a1-phone.jpg" alt="Kitchen Table A1 on a phone: Home, Chat, To do" width="1218" height="845" loading="lazy"><figcaption>Phone · Home · Chat · To do</figcaption></figure>
+    </div>
+  </section>
+
+  <section id="a2">
+    <header><h2>Kitchen Table, tomato <small>A2</small></h2><p class="idea">"FamilyDB is the family's kitchen table: Vera sits at it, and everything the family keeps track of is laid out on warm paper cards, in plain words, with one bright colour for 'this needs you'."</p></header>
+    <div class="notes">
+      <p><b>Look</b>Warm paper with tomato red as the only accent: Vera, the main button and anything late. Fraunces and Figtree. Vera is drawn as a small tomato with a sprout, "friendly, easy to spot, not a robot".</p>
+      <p><b>Worth a look</b>Tomorrow's plan is a tear-off calendar leaf. "Finish setting up" is the one dark card on the page. Ideas can be sorted by distance.</p>
+    </div>
+    <div class="shots">
+      <figure><img src="a2/shots/home.jpg" alt="Kitchen Table A2, Home on a desktop" width="1280" height="1399" loading="lazy"><figcaption>Home · desktop</figcaption></figure>
+      <figure><img src="sheets/a2-pages.jpg" alt="Kitchen Table A2, the seven pages" width="1304" height="2024" loading="lazy"><figcaption>Home · Chat · Ideas · Plans · To do · Status · Settings</figcaption></figure>
+      <figure class="wide"><img src="sheets/a2-phone.jpg" alt="Kitchen Table A2 on a phone: Home, Chat, To do" width="1218" height="845" loading="lazy"><figcaption>Phone · Home · Chat · To do</figcaption></figure>
+    </div>
+  </section>
+
+  <section id="a3">
+    <header><h2>Kitchen Table, teal <small>A3</small></h2><p class="idea">"The website is the family's kitchen table on a Saturday morning: Vera is there to talk to, today's stuff is on top, and everything else is one tap away."</p></header>
+    <div class="notes">
+      <p><b>Look</b>Warm paper, deep teal for Vera and the next plan, tomato only for late, amber only for "needs a look". Fraunces and Atkinson Hyperlegible, with a thick amber focus ring.</p>
+      <p><b>Worth a look</b>The next plan is a teal card with a roller-skate drawing. Status lists each connection with its own Add or Set up button. Settings has a "Who can sign in" card. Its reasoning: "the family mostly talks to Vera on Telegram, so the site doesn't try to be another inbox."</p>
+    </div>
+    <div class="shots">
+      <figure><img src="a3/shots/home.jpg" alt="Kitchen Table A3, Home on a desktop" width="1280" height="1500" loading="lazy"><figcaption>Home · desktop</figcaption></figure>
+      <figure><img src="sheets/a3-pages.jpg" alt="Kitchen Table A3, the seven pages" width="1304" height="2048" loading="lazy"><figcaption>Home · Chat · Ideas · Plans · To do · Status · Settings</figcaption></figure>
+      <figure class="wide"><img src="sheets/a3-phone.jpg" alt="Kitchen Table A3 on a phone: Home, Chat, To do" width="1218" height="845" loading="lazy"><figcaption>Phone · Home · Chat · To do</figcaption></figure>
+    </div>
+  </section>
+
+  <div class="group">
+    <div class="group-head">B · the description and the Phosphor idea</div>
+    <p>Green-black glass, phosphor green for Vera's world and amber for "needs you". Pixel type only where it's big.</p>
+  </div>
+
+  <section id="b1">
+    <header><h2>Afterglow <small>B1</small></h2><p class="idea">"A calm, dark family screen with the glow of an old green terminal: what Vera keeps shines soft green, and only what needs a person lights up amber."</p></header>
+    <div class="notes">
+      <p><b>Look</b>Green-black glass with faint scanlines. VT323 for titles, dates and money, IBM Plex Mono for labels, Atkinson Hyperlegible for reading.</p>
+      <p><b>Worth a look</b>"Hi Sam" with a blinking cursor. The next plan counts down ("1 DAY"). Ideas has a "How far from home" radar. Status gives its verdict over an oscilloscope trace, and spend is an LED bar. Its reasoning: "a home server running an assistant is a bit of computer-room magic, and the phosphor glow makes that feel warm, not technical."</p>
+    </div>
+    <div class="shots">
+      <figure><img src="b1/shots/home.jpg" alt="Afterglow B1, Home on a desktop" width="1280" height="1486" loading="lazy"><figcaption>Home · desktop</figcaption></figure>
+      <figure><img src="sheets/b1-pages.jpg" alt="Afterglow B1, the seven pages" width="1304" height="2048" loading="lazy"><figcaption>Home · Chat · Ideas · Plans · To do · Status · Settings</figcaption></figure>
+      <figure class="wide"><img src="sheets/b1-phone.jpg" alt="Afterglow B1 on a phone: Home, Chat, To do" width="1218" height="845" loading="lazy"><figcaption>Phone · Home · Chat · To do</figcaption></figure>
+    </div>
+  </section>
+
+  <section id="b2">
+    <header><h2>Kitchen Terminal <small>B2</small></h2><p class="idea">"The family's shared kitchen-counter screen, drawn in the light of an old green phosphor monitor, with Vera as the friendly face on it."</p></header>
+    <div class="notes">
+      <p><b>Look</b>Phosphor black and one glowing green, amber as the second phosphor. VT323 for big moments, Atkinson Hyperlegible for reading. Vera's replies are set in glowing mono, so you can tell when the screen is talking.</p>
+      <p><b>Worth a look</b>Home opens with Vera speaking first ("Tomorrow is the roller rink at 13:00. Anything you'd like me to remember?"). Plans fills the next plans with solid green and asks how past ones went with :D :| :( buttons. Settings has an ordered "Do these first".</p>
+    </div>
+    <div class="shots">
+      <figure><img src="b2/shots/home.jpg" alt="Kitchen Terminal B2, Home on a desktop" width="1280" height="1500" loading="lazy"><figcaption>Home · desktop</figcaption></figure>
+      <figure><img src="sheets/b2-pages.jpg" alt="Kitchen Terminal B2, the seven pages" width="1304" height="2048" loading="lazy"><figcaption>Home · Chat · Ideas · Plans · To do · Status · Settings</figcaption></figure>
+      <figure class="wide"><img src="sheets/b2-phone.jpg" alt="Kitchen Terminal B2 on a phone: Home, Chat, To do" width="1218" height="845" loading="lazy"><figcaption>Phone · Home · Chat · To do</figcaption></figure>
+    </div>
+  </section>
+
+  <section id="b3">
+    <header><h2>Afterglow, the face <small>B3</small></h2><p class="idea">"A warm family app that glows like an old green phosphor screen. The terminal is in the light, the type and the &gt; prompt; the reading and the words are modern and friendly."</p></header>
+    <div class="notes">
+      <p><b>Look</b>Near-black green glass with a soft glow. VT323 for headings and big numbers, JetBrains Mono for times and money, Atkinson Hyperlegible Next for reading. Vera's mark is a small smiling terminal.</p>
+      <p><b>Worth a look</b>Anywhere you can talk to Vera starts with a glowing <code>&gt;</code>. Ideas has an "Around home" radar and a "Free weekend?" card. Status labels its 30-day bars with their values. Its calendar starts on Sunday, the others on Monday.</p>
+    </div>
+    <div class="shots">
+      <figure><img src="b3/shots/home.jpg" alt="Afterglow B3, Home on a desktop" width="1280" height="1271" loading="lazy"><figcaption>Home · desktop</figcaption></figure>
+      <figure><img src="sheets/b3-pages.jpg" alt="Afterglow B3, the seven pages" width="1304" height="2048" loading="lazy"><figcaption>Home · Chat · Ideas · Plans · To do · Status · Settings</figcaption></figure>
+      <figure class="wide"><img src="sheets/b3-phone.jpg" alt="Afterglow B3 on a phone: Home, Chat, To do" width="1218" height="845" loading="lazy"><figcaption>Phone · Home · Chat · To do</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <header><h2>All six on a phone</h2><p>Home at 390 wide, in order A1, A2, A3, B1, B2, B3.</p></header>
+    <figure><img src="sheets/phones.jpg" alt="The six Home pages on a phone side by side" width="2412" height="857" loading="lazy"></figure>
+  </section>
+</div>
