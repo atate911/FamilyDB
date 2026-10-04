@@ -1,0 +1,356 @@
+<title>Phosphor Concept Viewer</title>
+<style>
+/* Layout: a fixed rail of designs on the left, a sticky bar of page tabs and view controls on top, one view below: an overview grid of every design on the chosen page, or one design (or two side by side) at full size. Neutral dark chrome so the screenshots carry all the colour. */
+:root {
+  --bg: #111213; --panel: #181a1b; --panel-2: #1f2223; --rule: #2c3032; --ink: #eceeed; --dim: #9ea5a7; --accent: #e9cf84;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --rail: 270px;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body); }
+button, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+a { color: inherit; }
+
+.app { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); min-height: 100vh; }
+.rail { position: sticky; top: env(safe-area-inset-top, 0px); align-self: start; height: 100vh; overflow-y: auto; border-right: 1px solid var(--rule); background: var(--panel); padding: 20px 14px 24px; display: grid; gap: 18px; align-content: start; }
+.brand { display: grid; gap: 2px; padding-inline: 8px; }
+.brand b { font: 600 17px/1.2 var(--body); }
+.brand span { font: 500 11px/1.4 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+.group-label { font: 500 11px/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); padding: 0 8px 6px; }
+.nav { display: grid; gap: 1px; }
+#rail { display: grid; gap: 18px; }
+.where { font: 500 11px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+.nav a { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; text-decoration: none; padding: 7px 8px; border-radius: 6px; color: var(--ink); }
+.nav a:hover { background: var(--panel-2); }
+.nav a[aria-current="true"] { background: var(--ink); color: #111; }
+.nav small { font: 500 10px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
+.nav a[aria-current="true"] small { color: #444; }
+.keys { font: 400 12px/1.6 var(--mono); color: var(--dim); padding-inline: 8px; }
+.keys kbd { font: inherit; border: 1px solid var(--rule); border-radius: 4px; padding: 0 5px; color: var(--ink); }
+
+main { min-width: 0; }
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--rule); padding: 10px 24px; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.tabs { display: flex; gap: 2px; overflow-x: auto; max-width: 100%; }
+.tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 6px 12px; color: var(--dim); white-space: nowrap; }
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-current="true"] { color: var(--ink); border-color: var(--accent); }
+.tools { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-left: auto; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 7px; overflow: hidden; }
+.seg button { background: none; border: 0; padding: 5px 12px; color: var(--dim); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: #111; }
+.tool-btn { background: none; border: 1px solid var(--rule); border-radius: 7px; padding: 5px 12px; color: var(--dim); }
+.tool-btn[aria-pressed="true"] { background: var(--panel-2); color: var(--ink); border-color: var(--dim); }
+.field { display: inline-flex; align-items: center; gap: 8px; color: var(--dim); font: 500 12px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+select { background: var(--panel); border: 1px solid var(--rule); border-radius: 7px; padding: 5px 8px; max-width: 220px; }
+.pick-narrow { display: none; }
+
+.view { padding: 26px 24px 80px; display: grid; gap: 28px; }
+.view > * { min-width: 0; }
+.view h1, .view h2 { margin: 0; font: 600 clamp(24px, 3vw, 32px)/1.15 var(--body); text-wrap: balance; }
+.lede { color: var(--dim); max-width: 70ch; margin: 0; }
+.about { border: 1px solid var(--rule); border-radius: 8px; background: var(--panel); }
+.about summary { padding: 10px 14px; cursor: pointer; color: var(--dim); }
+.about div { padding: 2px 14px 14px; display: grid; gap: 8px; color: var(--dim); max-width: 80ch; }
+.about p { margin: 0; }
+
+.ov-group { display: grid; gap: 12px; }
+.ov-group > h3 { margin: 0; font: 500 12px/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); display: flex; align-items: center; gap: 12px; }
+.ov-group > h3::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+.card { display: grid; gap: 8px; text-decoration: none; min-width: 0; }
+.card .thumb { aspect-ratio: 7 / 5; width: 100%; object-fit: cover; object-position: top; border: 1px solid var(--rule); border-radius: 6px; background: var(--panel); display: block; }
+.card:hover .thumb, .card:focus-visible .thumb { border-color: var(--accent); }
+.card .name { font-weight: 500; }
+.card .meta { font: 500 11px/1.2 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
+
+.head { display: grid; gap: 8px; }
+.head-top { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.nav-arrows { display: inline-flex; gap: 6px; }
+.nav-arrows button { background: none; border: 1px solid var(--rule); border-radius: 7px; width: 34px; height: 34px; line-height: 1; color: var(--dim); }
+.nav-arrows button:hover { color: var(--ink); border-color: var(--dim); }
+.badge { font: 500 11px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--rule); border-radius: 999px; padding: 4px 9px; color: var(--dim); }
+.idea { font-size: 17px; max-width: 75ch; margin: 0; }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px 30px; }
+.notes p { margin: 0; color: var(--dim); max-width: 62ch; }
+.notes b { display: block; font: 500 11px/1.4 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink); margin-bottom: 2px; }
+.notes .gap b { color: var(--accent); }
+
+.stage { display: grid; gap: 24px; align-items: start; }
+.stage.phone-single { grid-template-columns: minmax(0, 1fr) 390px; }
+.stage.pair { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.col { display: grid; gap: 10px; min-width: 0; align-content: start; }
+.col-head { display: grid; gap: 2px; }
+.col-head b { font-weight: 600; }
+.col-head span { color: var(--dim); font-size: 13px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.shot { border: 1px solid var(--rule); border-radius: 6px; background: var(--panel); overflow-x: auto; }
+.shot img { display: block; width: 100%; height: auto; }
+.actual .shot img { width: 1280px; max-width: none; }
+.phone .shot { width: min(390px, 100%); margin-inline: auto; }
+.sticky { position: sticky; top: 76px; display: grid; gap: 14px; }
+
+@media (max-width: 900px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .rail { display: none; }
+  .pick-narrow { display: inline-flex; }
+  .bar { position: static; }
+  .bar, .view { padding-inline: 16px; }
+  .stage.phone-single, .stage.pair { grid-template-columns: minmax(0, 1fr); }
+  .tools { margin-left: 0; }
+  .sticky { position: static; }
+}
+@media (prefers-reduced-motion: no-preference) { .card .thumb { transition: border-color .15s; } }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<div class="app">
+  <aside class="rail" aria-label="Designs">
+    <div class="brand"><b>Phosphor concepts</b><span id="count"></span></div>
+    <nav id="rail"></nav>
+    <p class="keys"><kbd>←</kbd> <kbd>→</kbd> design · <kbd>1</kbd>–<kbd>7</kbd> page<br><kbd>P</kbd> phone · <kbd>O</kbd> overview</p>
+  </aside>
+  <main>
+    <div class="bar">
+      <label class="field pick-narrow">Design <select id="pick" aria-label="Design"></select></label>
+      <div class="tabs" id="tabs" role="group" aria-label="Page"></div>
+      <div class="tools">
+        <div class="seg" role="group" aria-label="Screen size">
+          <button type="button" id="m-desktop" aria-pressed="true">Desktop</button>
+          <button type="button" id="m-phone" aria-pressed="false">Phone</button>
+        </div>
+        <button type="button" class="tool-btn" id="actual" aria-pressed="false" title="Show desktop shots at their real size">1:1</button>
+        <label class="field">Compare <select id="vs" aria-label="Compare with"></select></label>
+      </div>
+    </div>
+    <div class="view" id="view"></div>
+  </main>
+</div>
+
+<script>
+const PAGES = [['home','Home'],['chat','Chat'],['ideas','Ideas'],['plans','Plans'],['todo','To do'],['status','Status'],['settings','Settings']];
+const GROUPS = [
+  ['ref','Reference'],
+  ['team','Reviewers: the two team entries'],
+  ['sketch','Reviewers: six sketches'],
+  ['a','From scratch: description only'],
+  ['b','From scratch: description and the Phosphor idea'],
+  ['early','Earlier']
+];
+const MOCK = 'Mockup drawn from a written description, not the app’s own templates. The daily split in the 30-day chart is invented; it adds up to the real totals.';
+const D = [
+ {id:'today',name:'Today’s page',group:'ref',kind:'app',
+  idea:'What the family sees now, for reference.',
+  look:'The current FamilyDB page, rendered with the same demo family as the rest.'},
+ {id:'team-a',name:'Signal',group:'team',kind:'app',
+  idea:'A calm dark desk where phosphor green means only Vera, now or live, and each page has one lit screen that shows what its list cannot.',
+  look:'IBM Plex Sans, Condensed and Mono. Green only for Vera, now and live; amber for late.',
+  worth:'Home’s screen draws the next plan with a four-week trace. Chat hangs on a time spine that ends in a lit “your turn”. Ideas has a “line from home” with numbered stops. Status has a needle gauge.',
+  gap:'Places at similar drive times pile up on the Ideas line. The lesser pages weren’t restyled.'},
+ {id:'team-b',name:'The lit screen',group:'team',kind:'app',
+  idea:'A calm, plain family app with one green phosphor screen per page, where the machine speaks and what is now glows.',
+  look:'Plain pages, one green screen each. IBM Plex Sans and Mono; VT323 for one Status figure. No section colours.',
+  worth:'Home has a readout strip (today, plans, to do, late, ideas) over three columns. Chat is a centred column with the kids’ conversations as tabs. Ideas keeps a sticky radar beside the list. Status adds a second needle for the 30-day average.',
+  gap:'At $0 spent the Status needle lies flat. The lesser pages weren’t restyled.'},
+ {id:'ben',name:'One Glow',group:'sketch',kind:'app',
+  idea:'A calm modern page where green light only means now, live or act here, and each page has one instrument.',
+  look:'Geist. Dark, with green kept for the instrument and the next action.',
+  worth:'Home asks “Tell Vera. Let’s plan.” beside a tall radar screen, then a figure strip and three ledger columns. The lists use who-has-what bars.'},
+ {id:'cleo',name:'One lit trace',group:'sketch',kind:'app',
+  idea:'A calm dark app where phosphor glows only where something is alive: Vera, now, and working.',
+  look:'Dark, with one trace that runs through the app.',
+  worth:'A lit node marks NOW, and Coming up and To do hang on the trace. Vera’s own lines are set in mono, so the machine’s voice looks different from the family’s.'},
+ {id:'dev',name:'One Lit Screen (desk)',group:'sketch',kind:'app',
+  idea:'A calm dark desk with one phosphor screen per page, and the screen always holds the page’s live answer.',
+  look:'Barlow Condensed and Figtree.',
+  worth:'A glowing line drops from Home’s screen into the Coming up timeline, so the screen and the list read as one thing. Home itself is left off the bar.'},
+ {id:'finn',name:'Afterglow (fade)',group:'sketch',kind:'app',
+  idea:'A calm, plain family app where only what matters now glows, and fades as it ages.',
+  look:'Plain and dark, with glow as the only emphasis.',
+  worth:'New things glow and old ones fade, like phosphor after the beam has passed. Home asks “What needs a plan?” and its screen lists the next plans as a dotted ledger.'},
+ {id:'gia',name:'One Lit Screen (monitor)',group:'sketch',kind:'app',
+  idea:'One green screen per page, where Vera speaks and the numbers live, in a quiet dark app.',
+  look:'Dark and quiet, with the green kept on the monitor.',
+  worth:'On Home the box and Next up sit inside one sticky monitor, so you write to Vera on her screen. Pages are numbered like teletext (P100 Home, P200 Vera, P300 Ideas), and a key at the foot explains the two colours.'},
+ {id:'hal',name:'Machine Voice',group:'sketch',kind:'app',
+  idea:'Phosphor green only where the machine speaks; everything the family touches is plain.',
+  look:'Plain dark, with green for the machine only.',
+  worth:'Home asks “Tell Vera what to plan.” inside one framed console, followed by a green readout strip of today’s counts. To do is a table.'},
+ {id:'a1',name:'Kitchen Table (green)',group:'a',kind:'mock',
+  idea:'FamilyDB should feel like the family’s kitchen table: Vera is the first thing you can talk to, and everything else is a short pile of plain-language cards you can take in at a glance.',
+  look:'Cream paper, deep green for Vera’s box, a sunny yellow Send, brick red only for late. Fraunces and Atkinson Hyperlegible. Each person has a colour.',
+  worth:'When Vera does something, the chat shows it as a card (“Added to Plans”). Each idea’s drive time has a small arrow pointing the way. Settings opens with a banner for the one thing that needs a look, with its fix.',
+  gap:MOCK},
+ {id:'a2',name:'Kitchen Table (tomato)',group:'a',kind:'mock',
+  idea:'FamilyDB is the family’s kitchen table: Vera sits at it, and everything the family keeps track of is laid out on warm paper cards, in plain words, with one bright colour for “this needs you”.',
+  look:'Warm paper with tomato red as the only accent. Fraunces and Figtree. Vera is a small drawn tomato with a sprout.',
+  worth:'Tomorrow’s plan is a tear-off calendar leaf. “Finish setting up” is the one dark card on Home. Ideas can be sorted by distance.',
+  gap:MOCK},
+ {id:'a3',name:'Kitchen Table (teal)',group:'a',kind:'mock',
+  idea:'The website is the family’s kitchen table on a Saturday morning: Vera is there to talk to, today’s stuff is on top, and everything else is one tap away.',
+  look:'Warm paper, deep teal for Vera and the next plan, tomato only for late, amber only for “needs a look”. Fraunces and Atkinson Hyperlegible.',
+  worth:'The next plan is a teal card with a roller-skate drawing. Status lists each connection with its own Add or Set up button. Settings has a “Who can sign in” card.',
+  gap:MOCK},
+ {id:'b1',name:'Afterglow (scanlines)',group:'b',kind:'mock',
+  idea:'A calm, dark family screen with the glow of an old green terminal: what Vera keeps shines soft green, and only what needs a person lights up amber.',
+  look:'Green-black glass with faint scanlines. VT323 for titles, dates and money, IBM Plex Mono for labels, Atkinson Hyperlegible for reading.',
+  worth:'“Hi Sam” with a blinking cursor. The next plan counts down (“1 DAY”). Ideas has a “How far from home” radar. Status gives its verdict over an oscilloscope trace, and spend is an LED bar.',
+  gap:MOCK},
+ {id:'b2',name:'Kitchen Terminal',group:'b',kind:'mock',
+  idea:'The family’s shared kitchen-counter screen, drawn in the light of an old green phosphor monitor, with Vera as the friendly face on it.',
+  look:'Phosphor black and one glowing green, amber as the second phosphor. VT323 for big moments, Atkinson Hyperlegible for reading. Vera’s replies are in glowing mono.',
+  worth:'Home opens with Vera speaking first. Plans fills the next plans with solid green and asks how past ones went with one-tap buttons. Settings has an ordered “Do these first”.',
+  gap:MOCK},
+ {id:'b3',name:'Afterglow (smiling terminal)',group:'b',kind:'mock',
+  idea:'A warm family app that glows like an old green phosphor screen. The terminal is in the light, the type and the > prompt; the reading and the words are modern and friendly.',
+  look:'Near-black green glass with a soft glow. VT323, JetBrains Mono and Atkinson Hyperlegible Next. Vera’s mark is a small smiling terminal.',
+  worth:'Anywhere you can talk to Vera starts with a glowing >. Ideas has an “Around home” radar and a “Free weekend?” card. Status labels its 30-day bars with their values.',
+  gap:MOCK},
+ {id:'pared',name:'Lit Manual, Pared',group:'early',kind:'app',
+  idea:'One designer’s build from the review of the early designs: start from Lit Manual, Dialled, take things away, and borrow two drawings from Trued, Yard Lit.',
+  look:'IBM Plex Sans Condensed, Sans and Mono on near-black. Green means now or yours to act on, amber means late, everything else is grey.',
+  worth:'One instrument in the whole app: a round next-plan dial on Home whose lit stem drops into the Coming up rail at NOW. Chat hangs on a spine that ends in a lit ring marked “your turn”. Ideas has a grey “line from home”.'}
+];
+const BY = Object.fromEntries(D.map(d => [d.id, d]));
+const KIND = {app:'Real app', mock:'Mockup'};
+const state = {id:'overview', page:'home', mode:'desktop', vs:'', actual:false};
+const $ = id => document.getElementById(id);
+const order = D.map(d => d.id);
+
+function parse(h) {
+  const p = h.replace(/^#/, '').split('.');
+  if (p[0] && (p[0] === 'overview' || BY[p[0]])) state.id = p[0];
+  if (p[1] && PAGES.some(x => x[0] === p[1])) state.page = p[1];
+  state.mode = p[2] === 'phone' ? 'phone' : 'desktop';
+  state.vs = p[3] && BY[p[3]] && p[3] !== state.id ? p[3] : '';
+}
+function hash() { return [state.id, state.page, state.mode, state.vs].join('.').replace(/\.+$/, ''); }
+function go(patch) {
+  Object.assign(state, patch);
+  if (state.vs === state.id || state.id === 'overview') state.vs = '';
+  render();
+  try { history.replaceState(null, '', '#' + hash()); } catch (e) {}
+  window.scrollTo(0, 0);
+}
+const src = (id, page, tail) => 'img/' + id + '/' + page + tail + '.webp';
+
+function buildStatic() {
+  $('count').textContent = D.length + ' looks for FamilyDB';
+  let rail = '<a href="#overview" data-go="overview" id="r-overview"><span>Overview</span><small>all</small></a>';
+  let railGroups = '';
+  const opts = '<option value="overview">Overview of all</option>';
+  let pick = opts;
+  for (const [key, label] of GROUPS) {
+    const items = D.filter(d => d.group === key);
+    railGroups += '<div class="group"><div class="group-label">' + label + '</div><div class="nav">' +
+      items.map(d => '<a href="#' + d.id + '" data-go="' + d.id + '" id="r-' + d.id + '"><span>' + d.name + '</span><small>' + KIND[d.kind] + '</small></a>').join('') + '</div></div>';
+    pick += '<optgroup label="' + label + '">' + items.map(d => '<option value="' + d.id + '">' + d.name + '</option>').join('') + '</optgroup>';
+  }
+  $('rail').innerHTML = '<div class="nav">' + rail + '</div>' + railGroups;
+  $('pick').innerHTML = pick;
+  $('tabs').innerHTML = PAGES.map(([k, l], i) => '<button type="button" data-page="' + k + '" title="Key ' + (i + 1) + '">' + l + '</button>').join('');
+  $('vs').innerHTML = '<option value="">None</option>' + D.map(d => '<option value="' + d.id + '">' + d.name + '</option>').join('');
+}
+
+function badge(d) { return '<span class="badge">' + KIND[d.kind] + '</span>'; }
+
+function overview() {
+  const pageLabel = PAGES.find(p => p[0] === state.page)[1];
+  let h = '<div class="head"><h1>All designs, ' + pageLabel + '</h1>' +
+    '<p class="lede">Pick a page above to see it in every design. Click one to open it at full size. The thumbnails show the top of each desktop page.</p></div>';
+  h += '<details class="about"><summary>What these are</summary><div>' +
+    '<p><b>Real app</b> designs were built on FamilyDB’s actual pages and rendered with the demo family’s data, so every page is the live markup. <b>Mockup</b> designs were drawn from a written description alone, as standalone HTML and CSS, so only the seven pages exist and nothing links anywhere.</p>' +
+    '<p>The reviewers were shown the earlier designs as unlabelled pictures and the Phosphor idea as one line. The from-scratch designers saw no pictures; two of the three groups of three were told the Phosphor idea, one group only the description.</p>' +
+    '<p>One model played every designer, so agreement between designs is one opinion repeated, not several votes.</p></div></details>';
+  for (const [key, label] of GROUPS) {
+    const items = D.filter(d => d.group === key);
+    h += '<section class="ov-group"><h3>' + label + '</h3><div class="grid">' + items.map(d =>
+      '<a class="card" href="#' + d.id + '.' + state.page + '" data-go="' + d.id + '"><img class="thumb" loading="lazy" src="' + src(d.id, state.page, '-t') + '" alt="' + d.name + ', ' + pageLabel + '">' +
+      '<span class="name">' + d.name + '</span><span class="meta">' + KIND[d.kind] + '</span></a>').join('') + '</div></section>';
+  }
+  return h;
+}
+
+function shot(d) {
+  const pl = PAGES.find(p => p[0] === state.page)[1];
+  const ph = state.mode === 'phone';
+  return '<div class="shot"><img src="' + src(d.id, state.page, ph ? '-phone' : '') + '" alt="' + d.name + ', ' + pl + ', ' + (ph ? 'phone' : 'desktop') + '" ' + (ph ? 'width="585"' : 'width="1280"') + '></div>';
+}
+
+function notes(d) {
+  return '<div class="notes"><p><b>Look</b>' + d.look + '</p>' +
+    (d.worth ? '<p><b>Worth a look</b>' + d.worth + '</p>' : '') +
+    (d.gap ? '<p class="gap"><b>Unfinished</b>' + d.gap + '</p>' : '') + '</div>';
+}
+
+function headOf(d, withArrows) {
+  const i = order.indexOf(d.id), n = order.length;
+  const group = GROUPS.find(g => g[0] === d.group)[1];
+  return '<div class="head"><div class="head-top"><h2>' + d.name + '</h2>' + badge(d) +
+    (withArrows ? '<span class="nav-arrows"><button type="button" data-step="-1" aria-label="Previous design">←</button><button type="button" data-step="1" aria-label="Next design">→</button></span>' : '') +
+    '</div><span class="where">' + group + ' · ' + (i + 1) + ' of ' + n + '</span>' +
+    '<p class="idea">“' + d.idea.replace(/^"|"$/g, '') + '”</p></div>';
+}
+
+function detail() {
+  const d = BY[state.id], v = state.vs ? BY[state.vs] : null;
+  if (v) {
+    const col = x => '<div class="col"><div class="col-head"><b>' + x.name + '</b><span>' + x.idea + '</span></div>' + shot(x) + '</div>';
+    return headOf(d, true).replace(/<p class="idea">.*?<\/p>/, '') + '<div class="stage pair ' + state.mode + (state.actual ? ' actual' : '') + '">' + col(d) + col(v) + '</div>';
+  }
+  if (state.mode === 'phone') {
+    return '<div class="stage phone-single phone"><div class="sticky">' + headOf(d, true) + notes(d) + '</div>' + '<div class="col">' + shot(d) + '</div></div>';
+  }
+  return headOf(d, true) + notes(d) + '<div class="stage ' + (state.actual ? 'actual' : '') + '"><div class="col">' + shot(d) + '</div></div>';
+}
+
+function render() {
+  const detailView = state.id !== 'overview';
+  $('view').innerHTML = detailView ? detail() : overview();
+  document.querySelectorAll('#rail a').forEach(a => a.setAttribute('aria-current', a.dataset.go === state.id ? 'true' : 'false'));
+  document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.page === state.page ? 'true' : 'false'));
+  $('m-desktop').setAttribute('aria-pressed', state.mode === 'desktop');
+  $('m-phone').setAttribute('aria-pressed', state.mode === 'phone');
+  $('actual').setAttribute('aria-pressed', state.actual);
+  $('actual').hidden = !detailView || state.mode === 'phone';
+  $('vs').closest('label').hidden = !detailView;
+  $('pick').value = state.id;
+  $('vs').value = state.vs;
+  const d = detailView ? BY[state.id] : null;
+  document.title = (d ? d.name + ' · ' : '') + 'Phosphor Concept Viewer';
+}
+
+function step(n) {
+  if (state.id === 'overview') return go({id: order[n > 0 ? 0 : order.length - 1]});
+  const i = (order.indexOf(state.id) + n + order.length) % order.length;
+  go({id: order[i]});
+}
+
+document.addEventListener('click', e => {
+  const a = e.target.closest('[data-go]');
+  if (a) { e.preventDefault(); go({id: a.dataset.go}); return; }
+  const t = e.target.closest('[data-page]');
+  if (t) { go({page: t.dataset.page}); return; }
+  const s = e.target.closest('[data-step]');
+  if (s) { step(Number(s.dataset.step)); }
+});
+$('m-desktop').addEventListener('click', () => go({mode: 'desktop'}));
+$('m-phone').addEventListener('click', () => go({mode: 'phone'}));
+$('actual').addEventListener('click', () => { state.actual = !state.actual; render(); });
+$('pick').addEventListener('change', e => go({id: e.target.value}));
+$('vs').addEventListener('change', e => go({vs: e.target.value}));
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey || /^(SELECT|INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); step(1); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); step(-1); }
+  else if (/^[1-7]$/.test(e.key)) go({page: PAGES[Number(e.key) - 1][0]});
+  else if (e.key === 'p' || e.key === 'P') go({mode: state.mode === 'phone' ? 'desktop' : 'phone'});
+  else if (e.key === 'o' || e.key === 'O') go({id: 'overview'});
+});
+
+buildStatic();
+parse(location.hash);
+render();
+</script>
