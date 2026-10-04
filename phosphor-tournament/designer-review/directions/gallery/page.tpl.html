@@ -1,0 +1,82 @@
+<title>FamilyDB Screenshots</title>
+<style>
+/* Layout: the three Home pages side by side first, then one long section per direction: desktop by day, by night, phone, and a kid's view. Shots show the first screen; "Whole page" opens the full length. Neutral warm-grey chrome so each design's colour carries. */
+:root {
+  --bg: #F2F0EB; --card: #FFFFFF; --ink: #1E2222; --ink-2: #505856; --line: #DCD8CE; --accent: #1E5C4F;
+  --serif: "Fraunces", Georgia, serif; --sans: "Atkinson Hyperlegible", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #121514; --card: #1A1E1D; --ink: #E9EEEB; --ink-2: #AEB8B3; --line: #2C3331; --accent: #6DFF9C; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #121514; --card: #1A1E1D; --ink: #E9EEEB; --ink-2: #AEB8B3; --line: #2C3331; --accent: #6DFF9C; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.5 var(--sans); }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.wrap { max-width: 1400px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 80px; display: grid; gap: 40px; }
+.wrap > * { min-width: 0; }
+h1, h2 { font-family: var(--serif); font-weight: 600; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(30px, 4.4vw, 46px); line-height: 1.05; }
+h2 { font-size: clamp(24px, 3vw, 32px); line-height: 1.1; }
+h3 { margin: 0; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+p { margin: 0; }
+.top { display: grid; gap: 10px; }
+.lede { color: var(--ink-2); max-width: 70ch; font-size: 17px; }
+nav { display: flex; flex-wrap: wrap; gap: 8px; }
+nav a { color: var(--ink); text-decoration: none; border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 5px 14px; font-weight: 700; font-size: 15px; }
+nav a:hover { border-color: var(--ink-2); }
+.glance { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.g { display: grid; gap: 8px; color: inherit; text-decoration: none; min-width: 0; }
+.gn { font-family: var(--serif); font-weight: 600; font-size: 19px; }
+.g .more { display: none; }
+.dir { display: grid; gap: 14px; border-top: 1px solid var(--line); padding-top: 28px; scroll-margin-top: 16px; }
+.dh { display: grid; gap: 8px; max-width: 76ch; margin-bottom: 6px; }
+.tag { font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+.idea { font-size: 17px; }
+.ev { color: var(--ink-2); font-size: 15px; }
+.sw { display: flex; gap: 6px; }
+.sw i { width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--line); }
+/*SW*/
+.row { display: grid; gap: 16px; align-items: start; }
+.row.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.row.phones { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.shot { margin: 0; display: grid; gap: 6px; min-width: 0; }
+.frame { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--card); }
+.ph .frame { border-radius: 24px; }
+.frame img { display: block; width: 100%; height: auto; aspect-ratio: 1280 / 800; object-fit: cover; object-position: top; }
+.ph .frame img { aspect-ratio: 585 / 1266; }
+.shot.full .frame img { aspect-ratio: auto; }
+figcaption { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; font-size: 14px; color: var(--ink-2); }
+.more { background: none; border: 0; padding: 0; text-decoration: underline; color: var(--ink-2); font-size: 14px; }
+.more:hover { color: var(--ink); }
+.end { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; display: grid; gap: 8px; max-width: 80ch; }
+.end p { color: var(--ink-2); }
+.end b { color: var(--ink); }
+@media (max-width: 900px) { .glance, .row.two { grid-template-columns: minmax(0, 1fr); } .row.phones { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fraunces:opsz,wght@9..144,600&display=swap">
+
+<div class="wrap">
+  <header class="top">
+    <h1>Three looks for FamilyDB</h1>
+    <p class="lede">The same finished design in three looks. Kitchen Table, green is the final, and the only one that has been judged blind. Each shot shows the first screen; press “Whole page” under a shot to see it all.</p>
+    <nav aria-label="Jump to"><a href="#green">Kitchen Table, green</a><a href="#tomato">Tomato Table</a><a href="#afterglow">Afterglow</a></nav>
+  </header>
+
+  <div class="glance"><!--GLANCE--></div>
+
+<!--SECTIONS-->
+
+  <div class="end">
+    <h2>Which to build</h2>
+    <p><b>Kitchen Table, green</b> is the one with evidence behind it, and the safest pick.</p>
+    <p><b>Tomato Table</b> is the warmest. Its weak spot is two reds side by side: the tomato button and a late to-do in brick.</p>
+    <p><b>Afterglow</b> is the most distinctive and the most like FamilyDB’s own mark. It costs warmth and daylight reading, and its light theme needs a setting the app does not have yet.</p>
+  </div>
+</div>
+
+<script>
+document.addEventListener('click', e => {
+  const b = e.target.closest('.more'); if (!b) return;
+  const f = b.closest('.shot'); const on = f.classList.toggle('full');
+  b.setAttribute('aria-expanded', on); b.textContent = on ? 'First screen' : 'Whole page';
+});
+</script>
