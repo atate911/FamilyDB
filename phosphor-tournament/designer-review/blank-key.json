@@ -1,0 +1,187 @@
+[
+ {
+  "code": "D01",
+  "id": "r11-idea-2",
+  "name": "Long Persistence"
+ },
+ {
+  "code": "D02",
+  "id": "r12-mut-2",
+  "name": "Long Persistence, Metered"
+ },
+ {
+  "code": "D03",
+  "id": "r12-wild-4",
+  "name": "Single Quote"
+ },
+ {
+  "code": "D04",
+  "id": "x14a-folio-cross",
+  "name": "Folio, Railed Contents"
+ },
+ {
+  "code": "D05",
+  "id": "x14b-desk-cross",
+  "name": "Desk Terminal, Wired"
+ },
+ {
+  "code": "D06",
+  "id": "r13-idea-1",
+  "name": "Desk Terminal, Joined"
+ },
+ {
+  "code": "D07",
+  "id": "x14a-plate-cross",
+  "name": "Plate, Engraved"
+ },
+ {
+  "code": "D08",
+  "id": "r19-mut-2",
+  "name": "Track Diagram Rail Keys"
+ },
+ {
+  "code": "D09",
+  "id": "r20-mut-2",
+  "name": "Lit Index, Ledger Rail"
+ },
+ {
+  "code": "D10",
+  "id": "x14a-waypoint-cross",
+  "name": "Waypoint, Ruled"
+ },
+ {
+  "code": "D11",
+  "id": "r12-idea-1",
+  "name": "Evening Listing, Traced"
+ },
+ {
+  "code": "D12",
+  "id": "r11-idea-1",
+  "name": "Evening Listing, Relit"
+ },
+ {
+  "code": "D13",
+  "id": "x14a-pocket-cross",
+  "name": "Pocket Diary, Lit"
+ },
+ {
+  "code": "D14",
+  "id": "x14b-waypoint-cross",
+  "name": "Waypoint, Patched"
+ },
+ {
+  "code": "D15",
+  "id": "x14b-folio-cross",
+  "name": "Folio, Fastext"
+ },
+ {
+  "code": "D16",
+  "id": "x14b-manual-cross",
+  "name": "Lit Manual, Dialled"
+ },
+ {
+  "code": "D17",
+  "id": "x14a-dessau-cross",
+  "name": "Dessau, Wired Through"
+ },
+ {
+  "code": "D18",
+  "id": "x14a-trued-cross",
+  "name": "Trued, Headlamp"
+ },
+ {
+  "code": "D19",
+  "id": "x14a-departures-cross",
+  "name": "Departures, Signalled"
+ },
+ {
+  "code": "D20",
+  "id": "x14a-sill-cross",
+  "name": "Sill Line, Squared"
+ },
+ {
+  "code": "D21",
+  "id": "r20-mut-3",
+  "name": "Grid Console Keyed"
+ },
+ {
+  "code": "D22",
+  "id": "r18-mut-7",
+  "name": "Blueprint, Lit Scale"
+ },
+ {
+  "code": "D23",
+  "id": "x14a-manual-cross",
+  "name": "Lit Manual, Slotted"
+ },
+ {
+  "code": "D24",
+  "id": "x14b-sill-cross",
+  "name": "Sill Line, Wired"
+ },
+ {
+  "code": "D25",
+  "id": "x14a-settled-cross",
+  "name": "Switchboard, Quoted"
+ },
+ {
+  "code": "D26",
+  "id": "x14b-quote-cross",
+  "name": "Quote Board, Lit"
+ },
+ {
+  "code": "D27",
+  "id": "x14b-dessau-cross",
+  "name": "Dessau, Dialled"
+ },
+ {
+  "code": "D28",
+  "id": "x14a-desk-cross",
+  "name": "Desk Terminal, Patched"
+ },
+ {
+  "code": "D29",
+  "id": "r12-idea-2",
+  "name": "Desk Terminal"
+ },
+ {
+  "code": "D30",
+  "id": "x14b-trued-cross",
+  "name": "Trued, Yard Lit"
+ },
+ {
+  "code": "D31",
+  "id": "r12-mut-4",
+  "name": "Evening Listing, Afterglow"
+ },
+ {
+  "code": "D32",
+  "id": "r17-wild-1",
+  "name": "Patch Bay"
+ },
+ {
+  "code": "D33",
+  "id": "x14a-listing-cross",
+  "name": "Listing, Lit Through"
+ },
+ {
+  "code": "D34",
+  "id": "r12-wmut-1",
+  "name": "Videotex Switchboard"
+ },
+ {
+  "code": "D35",
+  "id": "r20-mut-1",
+  "name": "Desk Terminal, Even Dock"
+ },
+ {
+  "code": "D36",
+  "id": "x14a-quote-cross",
+  "name": "Quote Board, Posted"
+ },
+ {
+  "code": "D37",
+  "id": "r18-wild-1",
+  "name": "Green Desk"
+ }
+]
