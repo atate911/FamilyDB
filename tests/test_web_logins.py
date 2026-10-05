@@ -319,14 +319,16 @@ def test_a_member_uses_the_bot_and_an_admin_looks_after_it(app, sam, alex, famil
 
 
 def test_the_settings_tile_opens_a_menu_with_every_settings_page_then_you(app, sam, alex) -> None:
-    """Every page of settings, then who is signed in, their password and signing out, in one
-    menu at the end of the bar; somebody who may not change settings sees only the last three."""
+    """Every page of settings, then how the page looks, who is signed in, their password and
+    signing out, in one menu at the end of the bar; somebody who may not change settings sees
+    only the last three, and the Look page, which is everybody's own."""
     menu = re.search(r'<details class="menu[^"]*">.*?</details>', sam.get("/status").text, re.S)
     assert menu is not None
     links = re.findall(r'<a[^>]* href="([^"]+)"', menu.group(0))
     assert links == [
         "/settings",
         *(f"/settings/{section.name}" for section in fields.SECTIONS),
+        "/look",
         "/you",
     ]
     assert "Signed in as <strong>Sam</strong>" in menu.group(0)
@@ -337,7 +339,7 @@ def test_the_settings_tile_opens_a_menu_with_every_settings_page_then_you(app, s
 
     theirs = re.search(r'<details class="menu[^"]*">.*?</details>', alex.get("/").text, re.S)
     assert theirs is not None and "/settings" not in theirs.group(0)
-    assert re.findall(r'<a[^>]* href="([^"]+)"', theirs.group(0)) == ["/you"]
+    assert re.findall(r'<a[^>]* href="([^"]+)"', theirs.group(0)) == ["/look", "/you"]
     assert "Alex" in theirs.group(0) and 'action="/logout"' in theirs.group(0)
 
 

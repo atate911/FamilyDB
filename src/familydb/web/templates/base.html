@@ -1,15 +1,19 @@
 {% from "_ui.html" import icon, presence %}
 <!doctype html>
-<html lang="en">
+{# The look this browser chose (web/looks.py, themes.css): a theme on <html>, and a mode only when
+     day or night was asked for, so the device's own is followed otherwise. #}
+<html lang="en" data-theme="{{ look.key }}"{% if look_mode != 'auto' %} data-mode="{{ look_mode }}"{% endif %}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#0b0e0d" />
+    <meta name="color-scheme" content="{{ look_scheme }}" />
+    {% for media, colour in look_colours %}<meta name="theme-color" content="{{ colour }}"{% if media %} media="{{ media }}"{% endif %} />
+    {% endfor %}
     <title>{% block title %}{{ site_title }}{% endblock %}</title>
     {# The reading face is on every screen; fetch it with the page. #}
     <link rel="preload" href="{{ url_for('static', filename='fonts/dm-sans.woff2') }}" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='themes.css') }}" />
     <script src="{{ url_for('static', filename='menu.js') }}" defer></script>
     {# A mic beside each box that takes words, where the browser can write down speech and the
        family has not turned it off (web_dictation). #}
@@ -37,6 +41,7 @@
     'wishes': ['web.wishes'],
     'family': ['family.show', 'family.edit'],
     'you': ['family.you'],
+    'look': ['look.show'],
     'memory': ['web.memory'],
     'status': ['web.status'],
     'settings': ['settings.show', 'settings.section', 'settings.personality'],
@@ -86,7 +91,7 @@
            and only the last three. A <details>, so it opens with scripts off too; menu.js
            closes it again on a click elsewhere or Escape. #}
         {% if managing or visiting.member or visiting.signed_in %}
-          <details class="menu{% if ns.section in ('settings', 'you') %} here{% endif %}">
+          <details class="menu{% if ns.section in ('settings', 'you', 'look') %} here{% endif %}">
             <summary>
               {%- if managing %}{{ icon('settings') }}<span class="label">Settings</span>
               {%- else %}{{ icon('user') }}<span class="label">{{ visiting.name or 'You' }}</span>{% endif -%}
@@ -100,6 +105,8 @@
                     {%- if one.icon == 'presence' %}{{ presence('glyph') }}{% else %}{{ icon(one.icon) }}{% endif %}{{ one.title }}</a>
                 {% endfor %}
               {% endif %}
+              {# How this browser looks, which is everybody's own to choose. #}
+              <a href="{{ url_for('look.show') }}"{% if here == 'look.show' %} aria-current="page"{% endif %}>{{ icon('palette') }}Look</a>
               {% if visiting.member or visiting.signed_in %}
                 <div class="menu-you">
                   {% if visiting.member %}
