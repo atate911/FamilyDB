@@ -1,10 +1,9 @@
-"""Where a member is, for a few hours: shared on Telegram, or sent by the web page's chat.
+"""Where a member is, for a few hours: shared on Telegram, or sent by the web chat.
 
-On Telegram sharing is an explicit act (the paperclip, then Location), confirmed once in words
-written by code, not a model: saving where someone is is not worth a paid call to acknowledge. A
-live location moving along is recorded without a word, and so is the position the web page sends
-with a message. Each is named once ("Pearl District, Portland") with the free reverse geocoder,
-so the chat model and the discovery worker are told where the family is, without anyone typing it.
+A Telegram share is confirmed once in code's words (a paid call to acknowledge is not worth it);
+a live location moving along and the web page's position are recorded silently. Each is named
+once with the free reverse geocoder, so the chat model and discovery worker know where the family
+is without anyone typing it.
 """
 
 from __future__ import annotations
@@ -23,13 +22,10 @@ from familydb.store import locations, members, messages
 from familydb.store.db import transaction
 from familydb.store.locations import SharedLocation
 
-# Long enough for an afternoon out; after that "here" is probably somewhere else.
 FRESH = timedelta(hours=3)
-# Kept no longer than a day, then deleted: by the next share, or by `forget_old` on the
-# scheduler's round (a few minutes over the day at most, while the service runs).
+# Kept no longer than a day: deleted by the next share or by `forget_old` on the scheduler's round.
 KEEP = timedelta(hours=24)
 
-# Closer than this to the last named position, the name is kept rather than looked up again.
 SAME_PLACE_KM = 0.2
 
 
@@ -44,17 +40,16 @@ def share(
     lon: float,
     live: bool,
 ) -> OutgoingMessage | None:
-    """Record a location shared on Telegram. Returns the confirmation to deliver, or None."""
     member = members.resolve(conn, channel, channel_user_id)
     if member is None:
-        return None  # a stranger's location is not ours to keep
+        return None
     now = app.clock.now()
     before = locations.get(conn, member.id)
     label = _name(app, before, lat, lon)
     with transaction(conn):
         _keep(conn, member.id, lat, lon, live, label, now)
         if live and before is not None and before.live and _fresh(before, now):
-            return None  # the same live location moving along
+            return None
         text = shared_text(label, app.settings)
         out = messages.insert_out(
             conn, channel=channel, chat_id=chat_id, text=text, now=utc_iso(now)
@@ -63,7 +58,6 @@ def share(
 
 
 def note(app: App, conn: sqlite3.Connection, member_id: int, lat: float, lon: float) -> None:
-    """Record the position the web page sent with a message, without a word back."""
     now = app.clock.now()
     label = _name(app, locations.get(conn, member_id), lat, lon)
     with transaction(conn):
@@ -71,13 +65,11 @@ def note(app: App, conn: sqlite3.Connection, member_id: int, lat: float, lon: fl
 
 
 def forget_old(app: App) -> int:
-    """Delete every position older than `KEEP`, whether or not anyone has shared since."""
     with closing(app.connect()) as conn, transaction(conn):
         return locations.forget_before(conn, utc_iso(app.clock.now() - KEEP))
 
 
 def shared_text(label: str | None, settings: Any) -> str:
-    """The confirmation, in the assistant's voice (voice.py)."""
     return voice.say(settings, "location_shared", where=f" ({label})" if label else "")
 
 
@@ -87,7 +79,6 @@ def _keep(conn, member_id, lat, lon, live, label, now) -> None:
 
 
 def _name(app: App, before: SharedLocation | None, lat: float, lon: float) -> str | None:
-    """The place's name: kept from the last share when it is the same place, else looked up."""
     if (
         before is not None
         and before.label
@@ -99,7 +90,6 @@ def _name(app: App, before: SharedLocation | None, lat: float, lon: float) -> st
 
 
 def current(conn: sqlite3.Connection, member_id: int, now: datetime) -> SharedLocation | None:
-    """Where the member shared from within the last few hours, or None."""
     shared = locations.get(conn, member_id)
     return shared if shared is not None and _fresh(shared, now) else None
 

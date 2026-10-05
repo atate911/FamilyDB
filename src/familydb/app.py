@@ -1,5 +1,3 @@
-"""Application wiring: settings, clock and database connections."""
-
 from __future__ import annotations
 
 import logging
@@ -19,13 +17,10 @@ from familydb.tools import ToolRegistry, build_registry
 from familydb.voice import Holds
 
 log = logging.getLogger(__name__)
-# The mark App.refresh keeps while the daily check of models is switched off.
 MODELS_OFF = "off"
 
 
 class App:
-    """Everything a command or channel needs, built once per process."""
-
     def __init__(
         self,
         settings: Settings,
@@ -36,16 +31,15 @@ class App:
         geocoder: Any = None,
     ) -> None:
         self.settings = settings
-        self._base = settings  # what the environment said, before anything stored on top
+        self._base = settings
         self._overrides_stamp: str | None = None
-        # When the daily check of models and prices last ran, as loaded into this process.
         self._models_stamp: str | None = None
         self._reload = threading.Lock()
         self._calendar = calendar
         self._weather = weather
         self._geocoder = geocoder
-        # Anything handed in (a test's fake, a command's client) is not ours to replace when the
-        # settings move; anything we built lazily from them is.
+        # Anything handed in (a test's fake, a command's client) is not ours to replace when
+        # settings move; anything built lazily from them is.
         self._given = {
             name
             for name, value in (
@@ -56,22 +50,16 @@ class App:
             )
             if value is not None
         }
-        # Channels register how to deliver a text to one of their chats, keyed by channel name.
-        # The web page's chat reads the message log, so storing a reply is delivering it. That
-        # sender is here rather than on the page so a web message can be retried, and a web
-        # digest sent, by a process that is not serving the page.
+        # Channels register how to deliver a text to one of their chats. The web chat reads the
+        # message log, so storing a reply is delivering it; kept here so a process not serving the
+        # page can retry a web message or send a web digest.
         self.senders: dict[str, Callable[[str, str], None]] = {"web": lambda _chat, _text: None}
-        # A channel that can put buttons under a message registers how here as well; a message
-        # with buttons goes through it, and anywhere else its words go alone (buttons.py).
+        # A channel that can show buttons registers how; elsewhere a message's words go alone
+        # (buttons.py).
         self.button_senders: dict[str, Callable[[str, str, list[dict[str, str]]], None]] = {}
-        # What each long-running channel last said about itself, for the status page.
         self.channel_states: dict[str, str] = {}
-        # What a connected channel learnt about itself, for the pages: whether the Telegram bot
-        # reads every message in a group or only those for it ("reads_groups").
         self.channel_facts: dict[str, dict[str, Any]] = {}
-        # Web discovery results per window, kept for a while (see suggest/discover.py).
         self.discover_cache: dict[str, Any] = {}
-        # Proactive messages waiting for the conversation under way to carry them (voice.py).
         self.held = Holds()
         self.clock = clock or SystemClock(settings.tzinfo, southern=settings.southern_hemisphere)
         self._registry: ToolRegistry | None = None
@@ -84,7 +72,6 @@ class App:
 
     @property
     def calendar(self) -> Any:
-        """The Google Calendar client when configured, else None (tools then say so)."""
         if self._calendar is None and calendar_available(self.settings):
             from familydb.integrations.google_calendar import GoogleCalendar
 
@@ -93,8 +80,9 @@ class App:
         return self._calendar
 
     def _calendar_said(self, trouble: str | None) -> None:
-        """Google would not let the bot in (what it said), or answered again (None): noted for
-        an admin, or forgotten (alerts.py)."""
+        """Google would not let the bot in (what it said), or answered again (None): noted for an
+        admin or forgotten (alerts.py).
+        """
         from familydb import alerts
 
         try:
@@ -108,7 +96,6 @@ class App:
 
     @property
     def weather(self) -> Any:
-        """The Open-Meteo client when coordinates are set, else None."""
         if self._weather is None and weather_available(self.settings):
             from familydb.integrations.open_meteo import OpenMeteo
 
@@ -117,7 +104,6 @@ class App:
 
     @property
     def geocoder(self) -> Any:
-        """The keyless geocoder; always constructible."""
         if self._geocoder is None:
             from familydb.integrations.geocode import Geocoder
 
@@ -126,37 +112,33 @@ class App:
 
     @property
     def base_settings(self) -> Settings:
-        """What the environment and the .env file said, before anything stored on top.
-
-        The settings page needs this to say what a box falls back to when it is emptied.
+        """What the environment and .env said, before anything stored on top: the settings page says
+        what an emptied box falls back to.
         """
         return self._base
 
     def provider(self, surface: str = "chat", api: Any = None) -> Any:
-        """The model provider for this surface, built fresh so a settings change takes effect."""
+        """The model provider, built fresh so a settings change takes effect."""
         from familydb.agent import providers
 
         return providers.for_surface(self.settings, surface, api=api)
 
     def can_ask(self, surface: str = "chat", api: Any = None) -> bool:
-        """Whether a model can be asked at all, which a fresh install without a key cannot."""
         from familydb.agent import providers
 
         return providers.ready(self.settings, surface, api=api)  # type: ignore[arg-type]
 
     def fallback(self, surface: str, primary: str) -> Any:
-        """Somewhere else to ask when the chosen provider cannot take a message right now."""
         from familydb.agent import providers
 
         return providers.fallback_for(self.settings, surface, primary)
 
     def refresh(self, conn: sqlite3.Connection | None = None) -> bool:
-        """Pick up settings changed from the page. True when something actually moved.
+        """Pick up settings changed from the page. True when something moved.
 
-        Cheap: one query for the newest change, and a rebuild only when that has moved on. Every
-        entry point calls this, so a change made on the page reaches the next message, the next
-        job and the next page view without a restart. Callers already holding a connection
-        should pass it rather than paying for a second one.
+        One query for the newest change, a rebuild only when it has moved. Every entry point
+        calls it so a page change reaches the next message, job and page view; pass a connection
+        you already hold.
         """
         if conn is None:
             try:
@@ -170,11 +152,9 @@ class App:
             try:
                 return self._reload_settings(conn)
             finally:
-                # After the settings, so switching the daily check off takes its prices with it.
                 self._keep_up_with_models(conn)
 
     def _reload_settings(self, conn: sqlite3.Connection) -> bool:
-        """Rebuild the settings when the stored values have moved; True when they did."""
         from familydb.config import apply_overrides
         from familydb.store import settings as settings_store
 
@@ -196,16 +176,17 @@ class App:
             return False
         self._overrides_stamp = stamp
         if fresh == self.settings:
-            return False  # a log line moved, the values did not
+            return False
         self.settings = fresh
         self._forget_built()
         log.info("settings reloaded (%d stored)", len(values))
         return True
 
     def _keep_up_with_models(self, conn: sqlite3.Connection) -> None:
-        """Put in force what the daily check of models and prices found, when it has run since
-        this process last looked (model_watch.py), or the built-in prices while the family has
-        it switched off. One small query otherwise."""
+        """Put in force what the daily check of models and prices found since this process last
+        looked (model_watch.py), or the built-in prices while it is off. One small query
+        otherwise.
+        """
         from familydb import model_watch
         from familydb.agent.providers import prices
         from familydb.store import model_watch as watch_store
@@ -218,8 +199,6 @@ class App:
         from familydb.store import judgements as judgement_store
 
         try:
-            # The daily check, or a judgement answered since (a replacement chosen, a part left
-            # out), each moves what is in force.
             stamp = f"{watch_store.stamp(conn)}|{judgement_store.last_answered(conn)}"
             if stamp == self._models_stamp:
                 return
@@ -230,17 +209,13 @@ class App:
         self._models_stamp = stamp
 
     def forget_calendar(self) -> None:
-        """A new Google key was saved: build the calendar client again from it."""
         if "calendar" not in self._given:
             self._calendar = None
 
     def _forget_built(self) -> None:
-        """Drop what was built from the settings that just changed, so it is built again.
-
-        Coordinates, units and the timezone are baked into these at construction. Anything
-        handed to the constructor stays: it belongs to whoever passed it.
+        """Drop what was built from the changed settings so it is built again (coordinates, units
+        and the timezone are baked in). Anything handed to the constructor stays.
         """
-        # A find depends on home and the models as well as the window, and both can have moved.
         self.discover_cache.clear()
         for name in ("calendar", "weather", "geocoder"):
             if name not in self._given:
@@ -252,14 +227,13 @@ class App:
             self.clock = SystemClock(
                 self.settings.tzinfo, southern=self.settings.southern_hemisphere
             )
-        # Turning the log up is most of the reason anyone opens the settings page in a hurry.
         wanted = getattr(logging, self.settings.log_level, logging.INFO)
         if logging.getLogger().level != wanted:
             set_log_level(wanted)
             log.info("log level is now %s", self.settings.log_level)
 
     def connect(self) -> sqlite3.Connection:
-        """A fresh connection. SQLite connections are per thread; do not share them."""
+        """A fresh connection: SQLite connections are per thread, do not share them."""
         return db.connect(self.settings.familydb_path)
 
     def migrate(self) -> list[int]:
@@ -270,36 +244,33 @@ class App:
         return applied
 
 
-# httpx logs every request at INFO with its full URL: a line on every Telegram poll, with the bot
-# token in its path. The vendor SDKs send their keys in headers, which are never logged, so only
-# the transport needs quietening; `RedactSecrets` takes the token out of whatever gets through.
+# httpx logs every request at INFO with its full URL, which holds the Telegram bot token on every
+# poll. Vendor SDKs send keys in headers, so only the transport needs quietening; `RedactSecrets`
+# takes the token out of whatever gets through.
 QUIET_LOGGERS = ("httpx", "httpcore")
 
 
 def set_log_level(wanted: int) -> None:
-    """Move the root logger, and the transport loggers with it.
-
-    Called again whenever the level changes on the settings page, so the two never drift: a
-    family that turns DEBUG on to read the traffic, and then turns it back down, must not be
-    left with the transport still logging every request.
+    """Move the root logger and the transport loggers with it, so turning DEBUG back down leaves no
+    transport logging every request.
     """
     logging.getLogger().setLevel(wanted)
-    # LOG_LEVEL=DEBUG is someone deliberately looking at the traffic, which the runbook warns is
-    # loud. Every other level keeps it out.
+    # LOG_LEVEL=DEBUG is someone deliberately reading the traffic; every other level keeps it out.
     transport = logging.DEBUG if wanted <= logging.DEBUG else logging.WARNING
     for name in QUIET_LOGGERS:
         logging.getLogger(name).setLevel(transport)
 
 
-# A Telegram bot token travels in the request URL, which the HTTP transport logs at DEBUG. The
-# settings page can turn DEBUG on, so the token is taken out of every line instead of relying on
-# the level: with it, anyone who can read the journal could run the family's bot.
+# A bot token travels in the request URL, which the transport logs at DEBUG, and the page can turn
+# DEBUG on: so the token is taken out of every line, or anyone who can read the journal could run
+# the family's bot.
 TELEGRAM_TOKEN = re.compile(r"bot\d{5,}:[A-Za-z0-9_-]{20,}")
 
 
 class RedactSecrets(logging.Filter):
-    """Replaces a bot token in a log line with a marker. Attached to handlers, so it sees every
-    record whichever logger it came from."""
+    """Replaces a bot token in a log line with a marker; attached to handlers so it sees every
+    record.
+    """
 
     def filter(self, record: logging.LogRecord) -> bool:
         text = record.getMessage()
@@ -315,7 +286,6 @@ def configure_logging(level: str) -> None:
     for handler in logging.getLogger().handlers:
         if not any(isinstance(one, RedactSecrets) for one in handler.filters):
             handler.addFilter(RedactSecrets())
-    # basicConfig leaves the level alone once a handler exists, so it is set here as well.
     set_log_level(wanted)
 
 

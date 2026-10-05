@@ -1,8 +1,8 @@
 """When the family is free: which days an event touches, and what is left of a day around it.
 
-Plain functions over a list of calendar events, shared by the tools that report the calendar,
-the suggestion engine and the nudges job. Minutes are family clock time, so a stretch reads as
-it would on the kitchen wall even on the day the clocks change.
+Plain functions over calendar events, shared by the calendar tools, the suggestion engine and
+nudges. Minutes are family clock time, so a stretch reads as on the kitchen wall even on a
+clock-change day.
 """
 
 from __future__ import annotations
@@ -36,10 +36,8 @@ def on_day(event: CalendarEvent, day: date, tz: ZoneInfo) -> bool:
 
 
 def free_blocks(events: list[CalendarEvent], day: date, tz: ZoneInfo) -> list[str]:
-    """Which of morning, afternoon and evening are free.
-
-    A busy all-day event — a camping trip — takes the whole day. One marked free in Google — a
-    birthday — takes none of it, and neither does a free timed event.
+    """Which of morning, afternoon and evening are free. A busy all-day event takes the whole day;
+    one marked free in Google, or a free timed event, takes none.
     """
     free: list[str] = []
     for name, start_t, end_t in BLOCKS:
@@ -59,11 +57,8 @@ def free_blocks(events: list[CalendarEvent], day: date, tz: ZoneInfo) -> list[st
 def free_spans(
     events: list[CalendarEvent], day: date, tz: ZoneInfo, start: int, end: int
 ) -> list[tuple[int, int]]:
-    """The free stretches of a day between two minutes after midnight, busy events taken out.
-
-    The same rules as `free_blocks`: a busy all-day event takes the whole day, and nothing marked
-    free in Google takes any of it. Minutes are family clock time, so a stretch reads as it would
-    on the kitchen wall even on the day the clocks change.
+    """The free stretches of a day between two minutes after midnight, busy events taken out; same
+    rules as `free_blocks`.
     """
     todays = [event for event in events if event.busy and on_day(event, day, tz)]
     if any(event.all_day for event in todays):
@@ -94,7 +89,6 @@ def free_spans(
 def events_by_day(
     calendar: CalendarAPI, start: date, end: date, tz: ZoneInfo
 ) -> list[tuple[date, list[CalendarEvent]]]:
-    """Each day of a window with the events that touch it, from one call to Google."""
     window_start, _ = day_bounds(start, tz)
     _, window_end = day_bounds(end, tz)
     events = calendar.list_events(window_start, window_end)
