@@ -95,7 +95,7 @@ Context has three layers, and every piece of information belongs to exactly one:
 
 | Kind | Trigger | Model | Sees | May do | Returns |
 |---|---|---|---|---|---|
-| Chat | a family message (Telegram, page, console) | chat model, chat level | persona, prompt, family, up to 150 ideas in the prefix; date, who reads a shared chat, sender, a recently shared location, the memories chosen for the message, anything due to be carried, up to 20 messages of the last 6 hours, the newest within 6,000 characters | 19 chat tools | a reply; tool writes |
+| Chat | a family message (Telegram, page, console) | chat model, chat level | persona, prompt, family, up to 150 ideas in the prefix; date, who reads a shared chat, sender, a recently shared location, the memories chosen for the message, anything due to be carried, up to 20 messages of the last 6 hours, the newest within 6,000 characters | 23 chat tools | a reply; tool writes |
 | Digest | the weekly schedule, or catch-up after a restart; after a failure, the retry job, still as the digest | chat model, digest level | the chat context, with a fixed question | the chat tools | a reply to the digest chat |
 | Retry | every 5 minutes, for a failed message other than the digest, 3 times at most; never after running out of steps | chat model, chat level | the chat context, plus which writes already ran | the chat tools | a reply |
 | Enrich | every 2 minutes, up to 3 pending ideas; a home idea with no place, link or location, and a gift that names no place, are skipped in code | worker model, lookup level | worker prompt, home area, the idea and what was saved before | web search (3), `save_place`, `skip_place` | a place record |
