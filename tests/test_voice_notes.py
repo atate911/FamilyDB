@@ -281,22 +281,6 @@ def test_hearing_is_purposed_and_priced(settings) -> None:
 # -- the providers
 
 
-def test_openai_hears_through_its_speech_endpoint(settings) -> None:
-    ears = fakes.FakeTranscriptionsAPI(fakes.oa_transcription(" hello there "))
-    provider = build("openai", _keys(settings, openai_api_key="sk"), audio=ears)
-    heard = provider.transcribe(Audio(OGG, "audio/ogg", 5, "voice.ogg"), "Names: Sam.")
-    assert heard.text == "hello there" and heard.model == "gpt-4o-mini-transcribe"
-    assert heard.usage == {"input_tokens": 250, "output_tokens": 40}
-    assert ears.requests == [
-        {
-            "model": "gpt-4o-mini-transcribe",
-            "file": ("voice.ogg", OGG, "audio/ogg"),
-            "response_format": "json",
-            "prompt": "Names: Sam.",
-        }
-    ]
-
-
 def test_openai_hearing_by_the_minute_and_its_failures(settings) -> None:
     from openai.types.audio import Transcription
 

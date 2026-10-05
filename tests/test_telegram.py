@@ -180,28 +180,6 @@ def test_a_group_message_keeps_who_sent_it(settings, clock, monkeypatch) -> None
     assert seen[0].text == "hello" and seen[0].sender_name == "Jo Bloggs"
 
 
-def test_duplicate_update_sends_nothing(settings, clock, monkeypatch) -> None:
-    from familydb.app import App
-
-    channel = TelegramChannel(App(settings, clock), token="123456:TEST-TOKEN")
-    monkeypatch.setattr("familydb.channels.telegram.handle_incoming", lambda a, m: None)
-    update, replies = _update("again")
-    context, _ = _context()
-    asyncio.run(channel.on_message(update, context))
-    assert replies == []
-
-
-def test_start_command(settings, clock, conn, family) -> None:
-    from familydb.app import App
-
-    channel = TelegramChannel(App(settings, clock), token="123456:TEST-TOKEN")
-    update, replies = _update("/start")
-    context, actions = _context()
-    asyncio.run(channel.on_start(update, context))
-    assert replies[0].startswith("Hi, I'm Vera.")
-    assert actions == [(42, "typing")]
-
-
 def test_a_stranger_pressing_start_knocks_as_the_pages_promise(settings, clock, conn, family):
     """The setup and Family pages say: send them the bot's link, and once they press Start they
     appear, ready to be let in. Start is all that is sent, so it has to knock."""

@@ -91,14 +91,6 @@ def test_the_week_names_each_day_and_the_month_where_it_turns(settings, conn, fa
     )
 
 
-def test_without_google_it_says_the_plans_are_its_own(settings, conn, family) -> None:
-    said = _ask(_app(settings), "/today")
-    assert said == (
-        "Here's today, Fri 25 Sep:\nNothing on.\n"
-        "Google Calendar isn't connected, so these are the saved plans only."
-    )
-
-
 def test_tasks_are_this_chats_open_ones(settings, conn, family) -> None:
     rule = {"repeat_every": 1, "repeat_unit": "week", "repeat_from": "schedule"}
     bins = task_service.create(

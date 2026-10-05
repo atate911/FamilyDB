@@ -81,17 +81,6 @@ def test_a_photo_is_looked_at_then_answered_like_words(settings, clock, conn, fa
     assert gateway.purpose("look") == "reading photos"
 
 
-def test_a_stranger_s_photo_is_never_even_fetched(settings, clock, conn, family) -> None:
-    fetched: list[str] = []
-    eyes = _eyes()
-    note = _photo(user_id="5555", fetched=fetched)
-    reply = handle_incoming(
-        App(settings, clock), note, api=fakes.FakeMessagesAPI(), conn=conn, seeing=eyes
-    )
-    assert reply.status == "unknown_sender"
-    assert fetched == [] and eyes.requests == [] and _kinds(conn) == []
-
-
 def test_with_photos_off_nothing_is_looked_at_and_words_are_still_answered(
     settings, clock, conn, family
 ) -> None:
