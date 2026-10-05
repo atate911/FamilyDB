@@ -730,9 +730,13 @@ def run() -> None:
 
 def _wait_for_stop(*, quiet: bool = False) -> None:
     stop = threading.Event()
+    received: list[int] = []
 
+    # Only note the signal here. It can land while the main thread is part way through writing
+    # a log line, and logging from the handler would write to the same stream again, which
+    # raises before the stop is set.
     def _stop(signum: int, _frame: object) -> None:
-        log.info("received signal %s, stopping", signum)
+        received.append(signum)
         stop.set()
 
     signal.signal(signal.SIGTERM, _stop)
@@ -746,6 +750,7 @@ def _wait_for_stop(*, quiet: bool = False) -> None:
     # handler only when the main thread next runs, which an untimed wait never lets it do.
     while not stop.wait(1):
         pass
+    log.info("received signal %s, stopping", received[0])
 
 
 @db_app.command("retry-failed")
