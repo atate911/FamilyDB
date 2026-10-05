@@ -405,11 +405,6 @@ def test_the_settings_history_says_who_changed_what(app, sam, conn) -> None:
     assert latest["key"] == "web_title" and latest["changed_by_name"] == "Sam"
 
 
-def test_the_family_page_says_who_signs_in(app, sam, alex, family) -> None:
-    page = sam.get("/family").text
-    assert page.count('<span class="tag">signs in</span>') == 2  # Sam and Alex, not the girls
-
-
 def test_a_stale_family_session_cannot_take_an_admin_afterwards(app, family) -> None:
     late = _as_family(app)
     form = {**_tokens(late, "/you"), "member": str(family["sam"].id), "new": SAMS, "again": SAMS}

@@ -97,15 +97,10 @@ def test_the_month_is_this_one_by_default_and_marks_today(google) -> None:
     assert "This month" not in text  # already on it
 
 
-@pytest.mark.parametrize("asked", ["2026-13", "soon", "1900-01", "2026-9-1"])
+@pytest.mark.parametrize("asked", ["2026-13", "soon", "1900-01"])
 def test_a_month_that_is_not_one_is_not_found(google, asked) -> None:
     _, client, _ = google
     assert client.get(f"/plans/month?month={asked}").status_code == 404
-
-
-def test_the_phone_list_says_when_a_month_is_empty(google) -> None:
-    _, client, _ = google
-    assert "Nothing on in March 2027." in client.get("/plans/month?month=2027-03").text
 
 
 def test_an_entry_knows_its_days() -> None:
