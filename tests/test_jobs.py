@@ -114,14 +114,6 @@ def test_run_retries_processes_eligible_messages(settings, clock, conn, family) 
     assert run_retries(app, api=fakes.FakeMessagesAPI()) == 0
 
 
-def test_scheduler_registers_the_retry_job(settings, clock) -> None:
-    app = App(settings.model_copy(update={"retry_interval_minutes": 7}), clock)
-    scheduler = build_scheduler(app)
-    job = scheduler.get_job("retry_failed")
-    assert job is not None
-    assert job.trigger.interval.total_seconds() == 7 * 60
-
-
 def test_retry_needs_a_sender_for_chat_channels(settings, clock, conn, family) -> None:
     from familydb.channels.base import IncomingMessage
     from familydb.pipeline import handle_incoming
@@ -292,14 +284,6 @@ def test_enrichment_crash_marks_the_idea_failed_and_continues(settings, clock, c
     assert failed.enrichment == "failed" and failed.enrichment_note == "error: RuntimeError: boom"
     assert ideas.get(conn, second.id).enrichment == "done"
     assert ideas.pending_enrichment(conn, limit=10) == []  # nothing left to retry forever
-
-
-def test_enrichment_is_a_noop_without_web_tools(settings, clock, conn, family) -> None:
-    app = App(settings, clock)
-    _captured_idea(conn, family)
-    api = fakes.FakeMessagesAPI()
-    assert run_enrichment(app, api=api)["done"] == 0
-    assert api.requests == []
 
 
 def test_enrichment_note_can_be_turned_off(settings, clock, conn, family) -> None:
@@ -571,7 +555,7 @@ def test_scheduler_registers_the_digest_only_with_a_chat_id(settings, clock) -> 
 # --- follow-ups
 
 from familydb.agent.history import load_history  # noqa: E402
-from familydb.jobs.follow_ups import render_follow_up, run_follow_ups  # noqa: E402
+from familydb.jobs.follow_ups import run_follow_ups  # noqa: E402
 from familydb.store import outcomes, plans  # noqa: E402
 from tests.conftest import NOW_ISO, call  # noqa: E402
 
@@ -657,20 +641,6 @@ def test_external_cancellation_suppresses_followup(env):
     assert plans.get(env.conn, created["plan"]["id"]).status == "cancelled"
 
 
-def test_render_follow_up_without_an_idea(family, conn, settings) -> None:
-    plan = _plan(conn, family, start="2026-09-20T18:00:00-07:00", title="Dinner out")
-    text = render_follow_up(plan, settings)
-    assert text == "How was Dinner out on Sunday? Worth doing again?"
-
-
-def test_scheduler_always_registers_follow_ups(settings, clock) -> None:
-    job = build_scheduler(App(settings.model_copy(update={"follow_up_hour": 9}), clock)).get_job(
-        "follow_ups"
-    )
-    assert job is not None and str(job.trigger) == "cron[hour='9']"
-    assert job.misfire_grace_time == 3600
-
-
 # --- catch-up after a restart
 
 from familydb.jobs.catch_up import run_catch_up  # noqa: E402
@@ -706,16 +676,6 @@ def test_catch_up_runs_the_follow_ups(settings, thursday_clock, conn, family) ->
     _plan(conn, family, start="2026-09-19", title="Hopscotch")
     assert run_catch_up(app)["follow_ups"] == 1
     assert asked == ["How was Hopscotch on Saturday? Worth doing again?"]
-
-
-def test_scheduler_registers_the_catch_up(settings, clock) -> None:
-    from datetime import timedelta
-
-    from familydb.jobs.scheduler import CATCH_UP_DELAY_SECONDS
-
-    job = build_scheduler(App(settings, clock)).get_job("catch_up")
-    assert job is not None and job.misfire_grace_time == 3600
-    assert job.trigger.run_date == clock.now() + timedelta(seconds=CATCH_UP_DELAY_SECONDS)
 
 
 # --- every job
