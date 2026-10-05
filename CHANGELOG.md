@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.3.0 — in progress
+
+Still being built. While this heading says "in progress", an install follows the
+default branch rather than a release tag, and an upgrade never moves to anything
+older than what is installed. It gets a date when it is released.
+
+### New since v0.2.0
+
+- **Looks.** Each browser can choose how the page looks on a new Look page, in
+  the bar's menu for anybody signed in: Phosphor, as before, or Midnight, Home
+  Computer, Ink, Enamel, Rail yellow or Fjord, each by day and by night, and
+  whether to follow the device's day and night or hold to one. The choice is
+  kept in the browser and touches nothing the family's data holds, and every
+  look is tested for readable contrast by day and by night.
+
 ## v0.2.0 — second alpha (2026-10-05)
 
 The second alpha: everything the first did, and the kids, the persona, voice and
@@ -38,6 +53,13 @@ installed.
 
 ### What it does
 
+- **Looks the page can wear.** Besides Phosphor, the green-screen look it was
+  drawn in, each browser can choose Midnight, Home Computer, Ink, Enamel, Rail
+  yellow or Fjord on the Look page (in the bar's menu, for anybody signed in),
+  each with a day and a night, following the device or held to one. It is kept
+  in the browser, so a phone and a wall tablet can differ. Vera's green screens
+  stay green glass in all of them, and every look keeps the same contrast floors
+  by day and by night.
 - **Captures ideas from chat.** "We should try that ramen place sometime" becomes
   a stored idea, tagged with what the model can infer, through Telegram, the web
   page's chat or the console.
