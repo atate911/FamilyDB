@@ -1,7 +1,4 @@
-{# The page's small parts, shared by every template: `{% from "_ui.html" import icon %}`.
-   Icons are Lucide's, with the page's own mark, gathered into one sprite (static/icons.svg) by
-   scripts/icons.py; they take the colour of the words they sit in. An icon beside words is
-   decoration and hidden from a screen reader; an icon on its own gets a label. #}
+{# Small parts shared by every template. Icons are Lucide's plus the page's mark, in one sprite (static/icons.svg, scripts/icons.py); beside words they are hidden from a screen reader, alone they get a label. #}
 
 {% set KIND_ICONS = {
   'restaurant': 'restaurant',
@@ -20,20 +17,17 @@
     <use href="{{ url_for('static', filename='icons.svg') }}#i-{{ name }}"></use></svg>
 {%- endmacro %}
 
-{# The icon for a kind of idea; one the family made up gets a spark. #}
+{# The icon for a kind of idea; an unknown kind gets a spark. #}
 {% macro kind_icon(kind) -%}
   {{ icon(KIND_ICONS.get((kind or '') | lower | replace(' ', '_'), 'spark')) }}
 {%- endmacro %}
 
-{# The kind of an idea as a small label in its own colour. #}
 {% macro kind_label(kind) -%}
   {% set key = (kind or '') | lower | replace(' ', '_') %}
   <span class="kind kind-{{ key if key in KIND_ICONS else 'other' }}">{{ kind_icon(kind) }}{{ kind | capitalize }}</span>
 {%- endmacro %}
 
-{# The top of a page: where it sits (for a page inside another), its icon in the colour of its
-   part of the site, the title, a line on what it is for, and the one or two things to do here
-   on the right, where the eye lands after the title. `crumbs` is a list of (label, href). #}
+{# Top of a page: title, glyph in its section's colour, a lede, and actions on the right. `crumbs` is a list of (label, href). #}
 {% macro page_head(title, lede=none, glyph=none, crumbs=none) -%}
   <header class="page-head">
     <div class="page-title">
@@ -55,17 +49,12 @@
   </header>
 {%- endmacro %}
 
-{# Where she is on the page: never a face or a figure, only her screen, small and full of words
-   nobody can read, as if busy. The glyphs are the stylesheet's and mean nothing. `variant` (0 to
-   3) shows another part of the same screen, so her lines down a thread do not all look alike. #}
+{# Where she is on the page: never a face, only her screen, full of words nobody can read. `variant` (0 to 3) shows another part of it. #}
 {% macro presence(cls='avatar', variant=0) -%}
   <span class="{{ cls }} presence v{{ variant }}" aria-hidden="true"><span class="presence-glass"></span></span>
 {%- endmacro %}
 
-{# One line of the conversation, wherever it is shown: hers on the left beside her screen, the
-   family's on the right with their initial, so side and mark tell them apart, not colour alone.
-   Everything she says looks the same, a long answer, a reminder or a one-word "Done."; only the
-   words differ. `anchor` is the id the newest line carries. Goes in an <ol class="thread">. #}
+{# One line of the conversation: hers on the left beside her screen, the family's on the right with their initial, so side and mark tell them apart, not colour alone. `anchor` is the id the newest line carries. Goes in <ol class="thread">. #}
 {% macro chat_line(line, anchor=none) -%}
   <li class="{{ 'said-bot' if line.from_bot else 'said-them' }}"{% if anchor %} id="{{ anchor }}"{% endif %}>
     {% if line.from_bot %}{{ presence(variant=(line.id or 0) % 4) }}{% else %}<span class="avatar" aria-hidden="true">{{ line.who[:1] | upper }}</span>{% endif %}
@@ -83,9 +72,7 @@
   </li>
 {%- endmacro %}
 
-{# The last line of the thread while the newest message waits: her screen and name, and a line
-   in the page's own words (nobody is asked to write it). While she is thinking the glyphs on her
-   screen fall; nobody is shown typing. A `call` block adds a way on, as Home's link to the chat. #}
+{# The thread's last line while the newest message waits: her screen and name, and the page's own words. A `call` block adds a way on. #}
 {% macro waiting_line(name, state, text) -%}
   <li class="said-bot pending is-{{ state }}">
     {{ presence(variant=1) }}
@@ -98,9 +85,7 @@
   </li>
 {%- endmacro %}
 
-{# The tick beside an open task: marks it done where it stands, through `update_task` at the
-   revision it was drawn at, and comes back to `back` (home or tasks). Ticking is a change, so a
-   role that may not change things (familydb/roles.py) is shown the empty box instead. #}
+{# The tick beside an open task: marks it done through `update_task` at the revision it was drawn at, and returns to `back`. A role that may not change things sees the empty box. #}
 {# Anybody's for whoever may change things; for a kid, who sees only her own, hers
    (roles.py `own_tasks`, which update_task holds to her own). #}
 {% macro tick(task_id, revision, title, back) -%}
@@ -117,15 +102,13 @@
   {%- endif %}
 {%- endmacro %}
 
-{# Open tasks as a checklist, soonest first, each ticked off where it stands (`tick`), with its
-   owner when `owners` and when it is due, in words (views.task_brief). The caller's block is
-   what an empty list says. On Home, and on Things to do for somebody who sees only their own. #}
+{# Open tasks as a checklist, soonest first, each ticked off in place (`tick`); `owners` adds the owner. The caller's block is what an empty list says. #}
 {% macro checklist(tasks, back, owners=true) -%}
   <ul class="panel plain checklist">
     {% for task in tasks %}
       <li>
         {{ tick(task.id, task.revision, task.title, back) }}
-        <div class="checklist-body">
+        <div>
           <div class="what">{{ task.title }}</div>
           <div class="when">
             {%- if owners and task.owner %}<span>{{ task.owner }}</span>{% endif -%}
@@ -141,7 +124,6 @@
   </ul>
 {%- endmacro %}
 
-{# A plan's day as a small calendar leaf: month, day, weekday. #}
 {% macro chip(parts, today=false) -%}
   {% if parts %}
     <span class="chip{{ ' is-today' if today }}" aria-hidden="true">
@@ -152,22 +134,14 @@
   {% endif %}
 {%- endmacro %}
 
-{# An old green-screen monitor, the page's one kind of picture: whatever is in the `call` block
-   is drawn on its tube, in phosphor. `cls` says where it is (and `power-on` to switch it on as the
-   page opens). A screen that is only a picture is hidden from screen readers; one whose words
-   are the page's own, like Next up, passes `hidden=false`. One to a page at most. #}
+{# A green-screen monitor, the page's one kind of picture: the `call` block is drawn on its tube. `cls` says where it is (`power-on` switches it on as the page opens). Hidden from screen readers unless `hidden=false`, for words that are the page's own. One to a page at most. #}
 {% macro crt(cls='', hidden=true) -%}
   <div class="crt{{ ' ' ~ cls if cls }}"{% if hidden %} aria-hidden="true"{% endif %}>
     <div class="crt-tube">{{ caller() }}</div>
   </div>
 {%- endmacro %}
 
-{# A radar, a program the green screen runs: range rings at a week, two weeks and four, "now" at
-   the middle, and a sweep that leaves an afterglow as a long-persistence phosphor did. `blips`
-   come from `views.radar_blips`: each flares as the sweep passes its bearing. The Ideas page's
-   is a map instead (`views.places_radar`), home at the middle, north at the top, and gives the
-   rings its own `rings` labels. Anything in a `call` block is drawn on the scope. Decoration
-   only; what it shows is always written out elsewhere on the page. #}
+{# A radar the green screen runs. `blips` come from `views.radar_blips`; the Ideas page's is a map (`views.places_radar`) with its own `rings` labels. A `call` block is drawn on the scope. Decoration only: what it shows is always written out elsewhere. #}
 {% macro radar(blips=[], rings=('1w', '2w', '4w')) -%}
   <div class="radar" aria-hidden="true">
     <svg viewBox="0 0 200 200" focusable="false">

@@ -57,7 +57,6 @@
     <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
     <input type="hidden" name="section" value="connections" />
     <div class="grid">{% for one in in_groups.boxes %}{{ box(one) }}{% endfor %}</div>
-    {# Quiet: the token's is the panel's one glowing action. #}
     <button class="quiet" type="submit">{{ icon('check') }}Save</button>
   </form>
   <p class="muted small">Making a bot, linking your phone to it and adding the family's group chat

@@ -1,11 +1,7 @@
-// Speaking instead of typing: a mic beside each box on the page that takes words (a field
-// marked data-dictate, which may name where its mic goes). It uses the browser's own speech
-// recognition, so it asks no model and costs nothing; the words appear in the box as they are
-// said, to be put right and sent as if typed. Nothing is sent until somebody presses the form's
-// own button. The sound goes from the browser to its maker (Apple for Safari, Google for
-// Chrome), never through FamilyDB, which is why the family can turn it off (web_dictation,
-// General settings). A browser without it (Firefox), or with scripts off, shows no mic at all;
-// a phone keyboard's own mic still works there.
+// A mic beside each [data-dictate] field, using the browser's own speech recognition: no model call,
+// and nothing is sent until the form's own button is pressed. The sound goes from the browser to its
+// maker, never through FamilyDB (hence the web_dictation setting). A browser without it, or with
+// scripts off, shows no mic.
 (() => {
   "use strict";
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -13,7 +9,7 @@
   if (!Recognition || !fields.length) return;
   const icons = document.currentScript && document.currentScript.dataset.icons;
   const SVG = "http://www.w3.org/2000/svg";
-  let listening = null; // the one recognition running, and the button that started it
+  let listening = null; // the recognition running, and its button
 
   function mic() {
     const button = document.createElement("button");
@@ -45,7 +41,7 @@
     recognition.lang = document.documentElement.lang || navigator.language || "en";
     recognition.interimResults = true;
     recognition.continuous = false;
-    // What was in the box before: the words said go after it, with a space between.
+    // The words said go after what the box held.
     const before = field.value.replace(/\s+$/, "");
     const joined = (said) => (before ? before + " " : "") + said.trim();
 
@@ -53,11 +49,11 @@
       let said = "";
       for (let i = 0; i < event.results.length; i += 1) said += event.results[i][0].transcript;
       field.value = joined(said);
-      // As if typed: the box's own script keeps the draft and puts the ways to start away.
+      // As if typed, so ask.js keeps the draft.
       field.dispatchEvent(new Event("input", { bubbles: true }));
     };
     recognition.onerror = (event) => {
-      // Refused, or no speech service here: the mic would never work, so it goes.
+      // Refused, or no speech service: the mic would never work.
       if (event.error === "not-allowed" || event.error === "service-not-allowed") {
         for (const other of document.querySelectorAll("button.mic")) other.hidden = true;
       }
@@ -71,7 +67,7 @@
     try {
       recognition.start();
     } catch (e) {
-      return; // already listening elsewhere, as a double tap can make it
+      return; // already listening, as a double tap can cause
     }
     listening = { recognition, button };
     button.setAttribute("aria-pressed", "true");
@@ -80,7 +76,7 @@
 
   for (const field of fields) {
     const button = mic();
-    // Beside the box, or where the box keeps its buttons (data-dictate names that place).
+    // Beside the box, or in the slot data-dictate names.
     const slot = field.dataset.dictate && document.getElementById(field.dataset.dictate);
     if (slot) slot.appendChild(button);
     else field.insertAdjacentElement("afterend", button);
@@ -91,7 +87,6 @@
       if (!mine && !field.disabled) listen(field, button);
     });
   }
-  // Leaving the page, or sending it, ends the listening.
   window.addEventListener("pagehide", stop);
   document.addEventListener("submit", stop, true);
 })();

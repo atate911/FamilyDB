@@ -2,13 +2,7 @@
 {% from "_ui.html" import icon, page_head, chat_line, waiting_line %}
 {% block title %}{{ assistant if has_persona else 'Chat' }} · {{ site_title }}{% endblock %}
 {% block body_class %}page-chat{% endblock %}
-{# While an answer is on its way the browser fetches the page again by itself, landing back on
-   the newest line: a meta refresh, which every browser does, scripts or not. It is only set when
-   something really is being thought about, so the page goes quiet as soon as the reply is in the
-   log, and never on a page holding words somebody typed, which it would take with it. While a
-   turn runs the box is closed, so there is nothing to lose. Waiting on the retry job the box
-   stays open, so with scripts on ask.js does the looking again instead, and never while somebody
-   is writing. #}
+{# While an answer is on its way a meta refresh fetches the page again (works without scripts). Only set while something really is being thought about, and never on a page holding typed words, which it would take with it. While a turn runs the box is closed; waiting on the retry job it stays open and ask.js looks again instead. #}
 {% block head %}
   {% if refresh and locked %}
     <meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" />
@@ -17,7 +11,6 @@
   {% endif %}
 {% endblock %}
 {% block content %}
-  {# Hers: her name at the top, as on the tab that leads here, beside her screen. #}
   {% if reading %}
     {{ page_head(reading ~ ' and ' ~ (assistant if has_persona else 'the bot'), 'Her own conversation, for you to read. Only she writes in it.', 'presence' if has_persona else 'chat', [(assistant if has_persona else 'Chat', url_for('chat.show'))]) }}
   {% elif private %}
