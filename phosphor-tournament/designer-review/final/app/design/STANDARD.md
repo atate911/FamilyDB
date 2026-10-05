@@ -374,7 +374,7 @@ Disabled controls are exempt, but each also carries its reason in words.
   - `--fx-title-adjust`: its `font-size-adjust` (`none`).
   - The plain values are in the `[data-theme]` block.
 - Scanlines are a background under the words; glow is a shadow outside an edge. Both are off in forced colours and print. `looks-check.py` check D measures the words over each effect at full strength.
-- `[data-theme="afterglow"]`: night-first, with a day. Its panel and Ask box are dark glass in both modes, and VT323 (`fonts/vt323-400.woff2`) sets the page titles and the wordmark. Rendered in full in `shots/afterglow/`.
+- `[data-theme="afterglow"]`: one fixed look from the Phosphor design language, no day (`color-scheme: dark`, one value per token, skipped by the `data-mode` rules; one "Night only" sample on the Look page). Its panel and Ask box are dark glass, and VT323 (`fonts/vt323-400.woff2`) sets the page titles and the wordmark. Rendered in full in `shots/afterglow/`.
 
 **Works with scripting off (required)**
 - Reading every page, and every form: tick, Undo, add, edit, rate (faces), answer a wish, move a wish up or down, sign in, search and filter (GET), send a message.
@@ -496,6 +496,7 @@ The radar is drawn twice from the same data, so names stay readable: a wide 860 
 - **Sign-in:** a pane with the mark, the wordmark, "awake, Saturday 3 October" and "Ready.", then "Sign in to FamilyDB" on paper: your name and your password. The family is never listed.
 - **A first empty day** (`states-content.html`): "FamilyDB is set up and awake. Welcome, Sam. This is your family's table." on glass, then the empty cards on paper.
 - **The grown-ups page** (`grownups.html`): the mark alone at 64 px, glowing, above the explanation; the explanation stays on paper. The mark is its own glass, so no pane around it.
+- **For an admin** (`admin-only.html`): the same page for a parent who isn't an admin and opens Settings, setup or the family list, in the app's words for an admin's part ("For an admin"), naming the admin, with Home and Status.
 - **The missing page** (`404.html`): a centred pane, the mark, "404 · nothing on the radar" in the mono, then the real words: "Not found", "There's nothing at that address.", Back to the start.
 - **Not part of your role** (`403.html`): the same pane, "403 · signed in Maya · role kid", "Not part of your role", then the refusal's own title and words ("For a parent" / "This page is for the grown-ups. Ask a parent if you need it.") and Back to the start.
 - **A first sign-in** (`you-first.html`): a small pane, "first sign-in · Maya", over "Choose your own password".

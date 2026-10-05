@@ -15,7 +15,7 @@ This is for the engineers who will build the Kitchen Table design into `src/fami
 | `STYLE-draft.md` | `docs/STYLE.md` | the design notes, as they will stand once built |
 | `STANDARD.md` | (reference) | every component, token, rule and check, with class names |
 | `CHANGES.md` | (reference) | why each thing is the way it is, stage by stage |
-| `*.html` (62 pages), `looks-test/*.html`, `palette/*.html` | (reference) | the mockups; Home and a kid's Home in Rail yellow, Midnight and Phosphor; a palette sheet per look |
+| `*.html` (63 pages), `looks-test/*.html`, `palette/*.html` | (reference) | the mockups; Home and a kid's Home in Rail yellow, Midnight and Phosphor; a palette sheet per look |
 | `shots/` | (reference) | every page at 1280 and 390 px, light and dark; `shots/looks/` for the built looks on Kitchen Table's layout and the palette sheets |
 
 The mockups are static: no scripts, no inline styles, every icon inline (only because `file://` blocks an external `<use>`). They are generated, so the markup of one component is the same on every page.
@@ -62,6 +62,7 @@ R = the mockup replaces the template's markup. S = a state of a template another
 | `signin.html` | `login.html` | `/login` → `auth.login` | R |
 | `403.html` | `403.html` | `auth._within_reach` → `REFUSALS[perm]` | R |
 | `grownups.html` | `403.html` | the same with `REFUSALS["manage"]` for a kid | S |
+| `admin-only.html` | `403.html` | the same friendly page for a parent who isn't an admin, opening Settings, setup or the family list: the app's own `REFUSALS["manage"]` words ("For an admin"), "Sam is the admin in this family", and Home and Status (decided, §9) | S |
 | `404.html` | `404.html` | `abort(404)` | R |
 | `more.html`, `more-kid.html`, `more-parent.html` | `base.html`'s `details.menu` | none today | N: `GET /more` → `more.html`, the phone account page (an admin's, a kid's, a parent's) |
 | `settings.html` | `settings.html` | `/settings` → `settings.show` (`overview()`) | R |
@@ -768,7 +769,7 @@ Results:
 |---|---|---|
 | Kitchen Table | passes every floor | nothing |
 | Phosphor | passes (night only) | `--here-icon`, `--here-pill` (added) |
-| Afterglow (stage 12, 8.8) | passes every floor by day and night, with its scanlines and page light composited (check D); wears Kitchen Table's people, so has the same recorded shortfalls | nothing: it is written for this layout |
+| Afterglow (stages 12 and 14, 8.8) | passes every floor (night only, one fixed look), with its scanlines and page light composited (check D); wears Kitchen Table's people, so has the same recorded shortfalls | nothing: it is written for this layout |
 | Rail yellow, Fjord, Ink, Midnight | pass | nothing: the derived roles work out from their own tokens |
 | Enamel | words on Vera's green fill are 4.48:1 by day with its `--on-bright` | `--on-vera: light-dark(#FFFFFF, #161513)` (4.72:1) |
 | Home Computer | the same, 4.33:1 | `--on-vera: light-dark(#FFFFFF, #171513)`. Its night red stays as built (the family's decision) |
@@ -825,7 +826,7 @@ Some feels can't be carried by colour alone: scanlines, a glow, a lit edge, a te
   - Scanlines are a `background-image` under the text, on the band, Vera's Ask box and the radar's pane, never on cards or fields.
   - The fixed glass panes (sign-in, first day, 404) drew their scanlines as a film over everything (`.pane::after`). They now draw them under the words too, in every look; the panes look the same.
   - Glow is a shadow outside a thing's edge.
-- **Measured with the effect on.** `looks-check.py` (check D) composites the scanline over the band and over Vera's box, and the page light at its strongest over the paper. It then measures the words drawn there: the panel's words and links, Vera's words, and every text colour on the page. Afterglow's lowest is 4.70:1 ("ok" green under the page light, by day; the floor is 4.5).
+- **Measured with the effect on.** `looks-check.py` (check D) composites the scanline over the band and over Vera's box, and the page light at its strongest over the paper. It then measures the words drawn there: the panel's words and links, Vera's words, and every text colour on the page. Afterglow's lowest over an effect is 6.94:1 (the quietest words under the page light; the floor is 4.5).
 - **Off when they should be.** Under `forced-colors` and in print, every effect background goes and the sign's halo is dropped. Under `prefers-reduced-motion`: none of the effects move, so nothing changes; the motions (8.10) all stop.
 - **CSS only.** No images, no scripts, nothing inline. The one font, VT323 (`fonts/vt323-400.woff2`, OFL, 18 KB), is self-hosted. It is fetched only by a look that names it.
 - **Vera stays the one lit thing.** With `--fx-glow: 1`:
@@ -835,38 +836,40 @@ Some feels can't be carried by colour alone: scanlines, a glow, a lit edge, a te
   - Nothing of the family's glows: links are a soft mint, their button a pale plate, today a flat chip.
   - So in a look that is all glass, she is still the brightest thing on the page.
 
-### 8.8 Afterglow, a look for Kitchen Table
+### 8.8 Phosphor, Afterglow and Kitchen Table
 
-`[data-theme="afterglow"]` in `themes.css`. It is the earlier Afterglow round (`afterglow-ref/`) brought into the look mechanism as a palette and the five effects. It changes no template, no markup and no words.
-- **Night first, with a day.**
-  - **Night:** charcoal glass with a breath of green for the page, lighter glass cards, a darker glass band.
-  - **Day:** pale green-grey paper with deep-green ink, the same dark glass band and Ask box.
-  - **Both:** faint scanlines on the band and her box, Vera lit.
-  - Why a day: the reference's own weakness was "dark by default: on a bright phone outdoors, or for readers with astigmatism, it is harder to read". The look mechanism gives the day for free. The dark band and Ask box keep it Afterglow by day: it reads as a green screen set into a light room, not as Kitchen Table with a green tint.
-- **Type.**
+The family's words: "Phosphor is a design system; Afterglow is one derivative of it." So the three names mean three things, and nothing is renamed:
+- **Phosphor is the design language**: the green-screen family FamilyDB was first drawn in. It means charcoal glass, phosphor green for what is live or Vera's, scanlines, a terminal's cursor, and type and light that recall the old screens.
+- **Looks drawn from it:**
+  - **The Phosphor look** (`phosphor`): the built app's original palette. It stays on the Look page as it is, and recolours Kitchen Table's layout fine (`shots/looks/`, stage 11).
+  - **Afterglow** (`afterglow`): a second look from the same language, made for Kitchen Table's layout, with its effects.
+- **Kitchen Table is the layout, and the default look.** Both the Phosphor look and Afterglow sit on it. Vera's glass and phosphor, her screen and the mark are the Phosphor language's too, which is why they look the same in every look.
+
+**Afterglow** is `[data-theme="afterglow"]` in `themes.css`: the earlier Afterglow round (`afterglow-ref/`) brought into the look mechanism as a palette and the five effects. It changes no template, no markup and no words.
+- **One fixed look**, as the family decided: no day and no night version, the same whatever the device or the Look page's "Day and night" says.
+  - Its block gives one value per token (no `light-dark()`) and `color-scheme: dark`.
+  - The two `data-mode` rules skip it, as they skip Phosphor.
+  - `has_day` is `False` in `looks.py`, so `looks.parse()` and `choose()` keep its mode at `auto`, as they do for Phosphor.
+- **On the Look page** it shows a single sample captioned "Night only", as Phosphor does. The built page's line under "Day and night" now names both: "Phosphor and Afterglow are green screens, so they have no day: they are always night, whatever is chosen here."
+- **What it looks like:**
+  - charcoal glass with a breath of green for the page, lighter glass cards;
+  - a darker glass band, with faint scanlines on it and on Vera's box;
+  - Vera the one lit thing (8.7);
+  - the family's links a soft mint, their button a pale plate.
+- **Type** (decided: titles and the wordmark only):
   - Atkinson Hyperlegible stays for everything read.
   - VT323 sets the page titles (42 px Fraunces becomes VT323 at the same cap height, about 52 px) and the wordmark. The smallest title in the face is sign-in's, at about 29 px.
   - Home's question "What's on your mind?" is an `h1` but a sentence, so it keeps the heading face.
-  - Card titles stay Fraunces: Kitchen Table's warmth, and the one thing left of its paper.
-  - Money and dates keep Fraunces Figures (one figure style).
+  - Card titles stay Fraunces, and money and dates keep Fraunces Figures (one figure style).
+  - Why: the pixel face carries the screen's character where a few big words stand alone. Anywhere it is read in quantity (card titles, figures in a row, sentences) it slows reading. And none of the family's big numbers should look different from Kitchen Table's.
 - **People.** It wears Kitchen Table's eight, and is checked on them (names, letters and marks against every ground).
 - **Its line in `looks.py`:**
   ```python
   Look("afterglow", "Afterglow",
-       "Kitchen Table lit like a green screen: charcoal glass by night, pale green-grey by day, a glass band with faint scanlines, and Vera the one thing that glows.",
-       True, ("#0B1813", "#060A08")),
+       "From the Phosphor family of green screens: Kitchen Table as charcoal glass with faint scanlines, and Vera the one thing that glows. Always night.",
+       False, ("#060A08", "#060A08")),
   ```
-- **Rendered:** every page, day and night, desktop and phone, in `shots/afterglow/day/` and `shots/afterglow/night/`, from `afterglow-test/`. Its palette sheet is `palette/afterglow.html` (shot: `shots/afterglow/palette-afterglow.png`).
-
-**Should Afterglow become what "Phosphor" means? Yes: one name, one look, once Kitchen Table ships.**
-- The built Phosphor is the old layout's own palette. Under Kitchen Table's layout it still reads (`shots/looks/`), but it is a dark-only recolour that knows nothing of Kitchen Table's people, Vera's box or the effects.
-- Afterglow is the same idea, phosphor on charcoal glass, made for this layout, with a day.
-- Keeping both would offer the family two green screens that differ in ways only a designer would name.
-- **The proposal:**
-  - When the new layout ships, the look keyed `phosphor` becomes Afterglow's block, under the name **"Phosphor"**: the family already knows it, it is the app's own first look, and a browser whose cookie says `phosphor.dark` keeps its green screen, now with a day for those who want it.
-  - Blurb: "The page as first drawn, on the new table: charcoal glass by night, pale green-grey by day, and Vera the one thing that glows."
-  - Until then, Afterglow stands beside Phosphor under its own key (`afterglow`), as here, so the family can try both.
-  - §9, question 2.
+- **Rendered:** every page, desktop and phone, in `shots/afterglow/`, from `afterglow-test/`. There is one set, because it looks the same in any mode. Its palette sheet is `palette/afterglow.html` (one column; shot: `shots/afterglow/palette-afterglow.png`).
 
 ### 8.9 What the built `themes.css`, `style.css` and `test_look.py` need for effects and Afterglow
 
@@ -888,7 +891,7 @@ Some feels can't be carried by colour alone: scanlines, a glow, a lit edge, a te
     - `--fx-title-adjust` is `none` or `cap-height` with a number. So nothing else can be smuggled in (no `url()`, no images).
   - **`themes.css` holds only tokens** still holds, since the effects are custom properties.
   - **the contrast floors with the effects composited**: check D of `looks-check.py`, ported (about 20 lines);
-  - **Afterglow's band matches `looks.py`** (`#0B1813`, `#060A08`).
+  - **Afterglow's band matches `looks.py`** (`#060A08`), and, like Phosphor, it has no day: no `light-dark()` in its block, and `"color-scheme: light dark"` is not expected of it.
   - A CSS test for the motions (8.10): every `animation` outside a `prefers-reduced-motion: no-preference` block is listed in the `reduce` block.
 
 ### 8.10 The small things that move (every look)
@@ -904,7 +907,7 @@ The old screen's motions, kept small and brought into Kitchen Table itself, in e
 | **Cursors rest** | the wordmark's cursor, as any page opens | four blinks, about 4 s, then lit | as today |
 | **The dot breathes** | the health pill, only while she is writing back | loops while busy | as today |
 
-- **Left behind:** glyphs falling on every busy screen, the 404 powering on, the radar's sweep, the flicker, the lamp breathing while idle.
+- **Left behind, decided** (§9): glyphs falling on every busy screen, the 404 powering on, the radar's sweep, the flicker, the lamp breathing while idle. They would move where nothing is happening.
 - **The rules:**
   - nothing moves for more than a moment where people read;
   - nothing loops except while she is working;
@@ -918,10 +921,10 @@ The old screen's motions, kept small and brought into Kitchen Table itself, in e
 
 ## 9. Open questions for the family
 
-The family answered the first round in stage 13 (each answer is folded in above; CHANGES.md lists them). These remain.
-
-1. **Who sees the "for grown-ups" page.** A kid opening Settings gets the friendly page naming the admins. Should a parent who isn't an admin get the same page, or the plain "For an admin" refusal?
-2. **Afterglow and Phosphor (§8.8).** Recommended: once Kitchen Table ships, Afterglow becomes the look called "Phosphor" (one name, one look, with a day), and the old Phosphor palette retires with the old layout. Until then both are offered, as "Phosphor" and "Afterglow". Agreed, or keep both for good, or call the new one something else?
-3. **Afterglow by day.** It has a day: pale green-grey paper under the dark glass band. Keep it, or make Afterglow night only, as Phosphor is today?
-4. **Afterglow's titles.** VT323 sets the page titles and the wordmark. The reference also set money, dates and card titles in it; here those stay Fraunces, for one figure style and some of Kitchen Table's warmth. Is the pixel face for titles enough, or too much?
-5. **The motions (§8.10).** Her sign typing once on Home and while she writes back, the afterglow on a flash, the landing glow, the resting cursor. Any to drop, or any of the old ones (glyphs falling, the 404 powering on) to bring back?
+None. The family answered the first round in stage 13, and the last five in stage 14:
+- **Afterglow and Phosphor:** Phosphor is the design language, and Afterglow is one look drawn from it, under its own name; the Phosphor look stays as it is (§8.8).
+- **Afterglow by day:** none. It is one fixed look (§8.8).
+- **These three were left to the designer:**
+  - **A parent opening Settings, setup or the family list gets the friendly page**, not the plain refusal (`admin-only.html`). Reason: it is the same kind page a kid gets, in the app's own words for an admin's part ("For an admin" / REFUSALS["manage"]), and it names who to ask ("Sam is the admin in this family"), which the plain refusal can't. It offers Home and Status, which a parent can open (§1).
+  - **Afterglow's pixel face: titles and the wordmark only.** Reason: it gives the screen its character where a few big words stand alone, and would slow reading anywhere it is read in quantity (§8.8).
+  - **The motions: keep the five, bring back none** (§8.10). Reason: each plays where it means something and ends on its own. Glyphs falling on every busy screen, the 404 powering on and the radar's sweep would move where nothing is happening, which a calm kitchen-table page shouldn't.

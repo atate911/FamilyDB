@@ -120,8 +120,8 @@ that, however small it looks.
 Kitchen Table is the look FamilyDB starts with, and the one this document describes. Each person
 can wear another, chosen on the **Look** page (`/look`, from the account corner and the phone's
 menu, for anybody signed in, a kid included): **Phosphor** (the page as first drawn, a green
-screen, night only), **Afterglow** (Kitchen Table lit like a green screen, night first, with a
-day), **Midnight**, **Home Computer**, **Ink**, **Enamel**, **Rail yellow** and **Fjord**. A look
+screen, night only), **Afterglow** (a second look from the same green-screen family, night
+only), **Midnight**, **Home Computer**, **Ink**, **Enamel**, **Rail yellow** and **Fjord**. A look
 changes colour, and at most the five small effects below, and nothing else, so every section here
 still holds, with the colours read from the look in force.
 
@@ -130,7 +130,8 @@ uses (`--paper`, `--card`, `--ink`, `--band`, `--here`, `--primary`, `--today`, 
 `--amber`, `--ok`, `--vera`…), and a look is a set of them. `static/themes.css` has one block for
 each, `[data-theme="rail"]`, its values written `light-dark(day, night)`, so the page follows the
 device's day and night, or is held to one by the Look page (`data-mode` on `<html>`), with no
-second list to keep in step. Because a block is keyed on an attribute and not on `:root`, a
+second list to keep in step. A look with no day (Phosphor, Afterglow) writes each value once and is
+always night, whatever is chosen; the Look page shows it with one sample, "Night only". Because a block is keyed on an attribute and not on `:root`, a
 sample of a look on the Look page is drawn in its own colours by putting its name on the sample.
 `web/looks.py` lists the looks: each one's name, a line about it, whether it has a day, and the
 colour of its panel for the browser's own bar.
@@ -152,15 +153,21 @@ words, never a film over them; glow is a shadow outside a thing's edge; and the 
 are measured with each effect on at its strongest. In forced colours and on paper they are off.
 They are CSS only: no images, no scripts, and the one face is self-hosted.
 
-**Afterglow** is the one look that uses them. Night is charcoal glass with a breath of green;
-day is pale green-grey paper; in both the panel and Vera's box are dark glass with faint
-scanlines, and she is the one thing that glows: her screen gets a second halo and a fully lit
+**Phosphor, Afterglow and Kitchen Table.** Phosphor is the design language FamilyDB was first
+drawn in: charcoal glass, phosphor green for what is live or Vera's, scanlines, a terminal's
+cursor. Two looks come from it: the **Phosphor look**, the original palette, which recolours this
+layout as it is; and **Afterglow**. Kitchen Table is the layout both sit on, and the default look.
+Vera's glass, her screen and the mark belong to the Phosphor language, which is why they are the
+same in every look.
+
+**Afterglow** is the one look that uses the effects. It is one fixed look, with no day and no
+night version: charcoal glass with a breath of green, a darker panel, faint scanlines on the
+panel and on Vera's box, and she is the one thing that glows: her screen gets a second halo and a fully lit
 rim, her Send and her lines a soft light. The family's links are a soft mint and their button a
 pale plate, never the phosphor. Page titles and the wordmark are set in VT323, a phosphor
 terminal's pixel face, as tall as Fraunces' capitals; everything read stays Atkinson, card titles
-stay Fraunces, and money and dates keep Fraunces Figures. It wears Kitchen Table's people. Once
-Kitchen Table ships, Afterglow is proposed to become the look called Phosphor: one name, one green
-screen, now with a day.
+stay Fraunces, and money and dates keep Fraunces Figures: the pixel face is for a few big words
+that stand alone, never for words read in quantity. It wears Kitchen Table's people.
 
 **The choice follows the person.** Each person chooses their own look, and its day and night,
 and it comes with them to every phone and computer they sign in on: it is kept with them
@@ -460,7 +467,9 @@ to a page at most, never as a card style:
   form on paper.
 - **A first empty day**: "FamilyDB is set up and awake. Welcome, Sam. This is your family's
   table.", then the empty cards on paper.
-- **The grown-ups page**: the mark alone at 64 pixels, glowing; the words stay on paper.
+- **The grown-ups page**: the mark alone at 64 pixels, glowing; the words stay on paper. A parent
+  who isn't an admin and opens Settings, setup or the family list gets the same page, saying "For
+  an admin" and who that is, never a bare refusal.
 - **Not found**: "404 · nothing on the radar" in the mono, then "Not found", "There's nothing at
   that address." and Back to the start.
 - **Not part of your role**: "403 · signed in Maya · role kid", then the refusal's own words.

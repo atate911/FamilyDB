@@ -42,7 +42,7 @@ figcaption { display:flex; justify-content:space-between; gap:10px; align-items:
 .more { background:none; border:0; padding:0; text-decoration:underline; color:var(--ink-2); font-size:14px; white-space:nowrap; }
 .more:hover { color:var(--ink); }
 .questions { background:var(--card); border:1px solid var(--line); border-left:6px solid var(--sun); border-radius:14px; padding:18px 22px; display:grid; gap:10px; max-width:90ch; }
-.questions ol { margin:0; padding-left:22px; display:grid; gap:8px; }
+.questions ol, .questions ul { margin:0; padding-left:22px; display:grid; gap:8px; }
 .hand { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:4px 22px 22px; }
 .hand summary { cursor:pointer; font-family:var(--serif); font-weight:600; font-size:24px; padding-block:14px; }
 .hand .body { max-width:100ch; display:grid; gap:12px; }
@@ -61,8 +61,8 @@ figcaption { display:flex; justify-content:space-between; gap:10px; align-items:
 <div class="wrap">
   <header class="top">
     <h1>Kitchen Table, the whole app</h1>
-    <p class="lede">Every page of FamilyDB in the design you chose, drawn from the app’s real pages and words, ready to build, with your decisions folded in. Switch the Look to see the same pages in Afterglow: the green screen, scanlines and glow as a look over Kitchen Table, with nothing else changed.</p>
-    <p class="facts"><span><b>62</b> pages</span><span><b>2</b> looks shown: Kitchen Table and Afterglow</span><span><b>13</b> small pull requests to build it</span><span><b>5</b> questions left</span></p>
+    <p class="lede">Every page of FamilyDB in the design you chose, drawn from the app’s real pages and words, with every decision folded in and nothing left open. Switch the Look to Afterglow to see the same pages as one fixed green screen: a look from the Phosphor design language, with scanlines and glow over Kitchen Table and nothing else changed (Day and Night don’t apply to it).</p>
+    <p class="facts"><span><b>63</b> pages</span><span><b>2</b> looks shown: Kitchen Table and Afterglow</span><span><b>13</b> small pull requests to build it</span><span><b>0</b> questions left</span></p>
   </header>
 
   <div class="bar">
@@ -75,15 +75,15 @@ figcaption { display:flex; justify-content:space-between; gap:10px; align-items:
 <!--SECTIONS-->
 
   <section class="questions" id="questions" aria-labelledby="h-q">
-    <h2 id="h-q">Questions left</h2>
-    <ol>
-      <li><b>A parent opening Settings:</b> the friendly “for grown-ups” page kids get, or the plain “For an admin” refusal?</li>
-      <li><b>Afterglow and Phosphor:</b> once Kitchen Table ships, should Afterglow become the look called “Phosphor” (recommended), or keep both, or take another name?</li>
-      <li><b>Afterglow by day:</b> keep its day version (pale green-grey page under the dark glass), or night only?</li>
-      <li><b>Afterglow’s pixel font:</b> page titles and the wordmark only (as drawn), more, or none?</li>
-      <li><b>Motion:</b> drop any of the four, or bring back an old one (glyphs falling on every busy screen, the 404 powering on, the radar sweep)?</li>
-    </ol>
-    <p class="note">Decided and folded in: plain Vera box in the paper looks; no colour-blind floor; Kitchen Table the default when it ships; each person’s look stored with them and following them to every device; Status for every grown-up; presents name whom they’re hidden from; to-dos get their own Edit page; “Set by” recorded on kids’ to-dos; “installer” gone.</p>
+    <h2 id="h-q">Decided</h2>
+    <ul>
+      <li>Vera’s box stays a plain card in the paper looks; no colour-blind floor; Kitchen Table is the default when it ships.</li>
+      <li>Each person’s look is stored with them and follows them to every device, kids included.</li>
+      <li>Status is for every grown-up; a parent opening Settings gets the friendly “for an admin” page that names who to ask.</li>
+      <li>Presents say whom they’re hidden from; to-dos get their own Edit page; “Set by” is recorded on kids’ to-dos; “installer” is gone.</li>
+      <li>Phosphor is the design language; Afterglow is one look drawn from it, under its own name, one fixed look with no day or night; the Phosphor look stays on the Look page.</li>
+      <li>Afterglow’s pixel face is for page titles and the wordmark only; the five small motions stay and the old ones stay retired.</li>
+    </ul>
   </section>
 
   <details class="hand" id="handoff">
@@ -99,7 +99,7 @@ function apply() {
   document.querySelectorAll('[data-dev]').forEach(b => b.setAttribute('aria-pressed', b.dataset.dev === st.dev));
   document.querySelectorAll('[data-time]').forEach(b => b.setAttribute('aria-pressed', b.dataset.time === st.time));
   document.querySelectorAll('[data-look]').forEach(b => b.setAttribute('aria-pressed', b.dataset.look === st.look));
-  const suf = (st.time === 'night' ? '-dark' : '') + (st.dev === 'phone' ? '-phone' : '');
+  const suf = (st.time === 'night' && st.look !== 'ag' ? '-dark' : '') + (st.dev === 'phone' ? '-phone' : '');
   document.querySelectorAll('.shot').forEach(f => { const i = f.querySelector('img'); const base = (st.look === 'ag' && !f.dataset.fixed) ? f.dataset.base.replace('img/', 'img/ag/') : f.dataset.base; i.onerror = () => { i.onerror = null; i.src = base + (st.dev === 'phone' ? '-phone' : '') + '.webp'; }; i.src = base + suf + '.webp'; i.width = st.dev === 'phone' ? 585 : 1280; i.height = st.dev === 'phone' ? 1266 : 800; });
 }
 document.addEventListener('click', e => {

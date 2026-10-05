@@ -1098,3 +1098,18 @@ Each answer is folded into the design, HANDOFF.md, STYLE-draft.md and STANDARD.m
 Also fixed: the "Hidden from Theo" tag ran past its box in a narrow idea tile; it now wraps inside it.
 
 Re-rendered: the pages that changed (Home, Maya's Home, both Look pages, both menus, Wishes, setup's password step) and the two new ones, by day and night on desktop and phone, in Kitchen Table and in Afterglow; and the palette sheets.
+
+# Stage 14: the last answers (STAGE14.md)
+
+- **Afterglow is one fixed look.**
+  - Its `themes.css` block has one value per token (each `light-dark()` pair replaced by its night half) and `color-scheme: dark`, and the two `data-mode` rules skip it, as they skip Phosphor.
+  - `looks.py`: `has_day=False`, band `#060A08`.
+  - On the Look page: one "Night only" sample. The built line under "Day and night" now reads "Phosphor and Afterglow are green screens, so they have no day: they are always night, whatever is chosen here."
+  - `shots/afterglow/`: one set (the night shots moved up; `day/` deleted).
+  - `_kit/looks-check.py` reads a look with no `light-dark()` as night only (it was Phosphor by name), and its palette sheet has one column for such a look.
+- **Phosphor is the design language; Afterglow is one look drawn from it.** Nothing is renamed, and the Phosphor look stays as it is. HANDOFF §8.8, STYLE-draft "Looks" and STANDARD say so.
+- **My three calls (HANDOFF §9, now empty):**
+  - A parent opening Settings, setup or the family list gets the friendly page, worded for an admin's part and naming the admin. New mockup: `admin-only.html`.
+  - Afterglow's pixel face stays on titles and the wordmark only.
+  - The five motions stay, and none of the old ones come back.
+- **Re-rendered:** the Look pages, `admin-only.html` (Kitchen Table day and night, and Afterglow), and the palette sheets.

@@ -158,7 +158,7 @@ def effect_grounds(full, mode, c):
 def check(key, own, full):
     problems, rows = [], {}
     own_people = "--p1" in own or key in KITCHEN_PEOPLE   # the people in the [data-theme] block are Kitchen Table's
-    night_only = key == "phosphor"   # a green screen has no day (looks.py: has_day=False)
+    night_only = not any("light-dark(" in v for v in own.values())   # one value per token: a look with no day (Phosphor, Afterglow; looks.py has_day=False)
     for mode in (("night",) if night_only else ("day", "night")):
         c = evaluate(full, mode)
         rows[mode] = []
@@ -190,15 +190,18 @@ td { overflow-wrap: anywhere; }
 def sheet(key, full, problems, rows, toks):
     sw = "".join(f'<div class="sw"><i class="t{toks.index(t)}"></i><b>{t}</b></div>' for t in toks)
     def table(mode):
+        title = "Measured" if "day" not in rows else mode.capitalize()
         tr = "".join(f'<tr><td>{H.escape(w)}</td><td>{g}</td><td class="{"ok" if r >= fl - .005 else "bad"}">{r:.2f}:1</td><td>{fl}:1</td></tr>' for g, w, fg, bg, r, fl in rows[mode])
-        return f'<h2>{mode.capitalize()}</h2><table><tr><th>Pair</th><th>Set</th><th>Measured</th><th>Floor</th></tr>{tr}</table>'
+        return f'<h2>{title}</h2><table><tr><th>Pair</th><th>Set</th><th>Measured</th><th>Floor</th></tr>{tr}</table>'
+    both = (f'<div class="cols"><section class="mode" data-theme="{key}" data-mode="light"><h2>Day</h2><div class="sws">{sw}</div></section>'
+            f'<section class="mode" data-theme="{key}" data-mode="dark"><h2>Night</h2><div class="sws">{sw}</div></section></div>')
+    one = f'<div class="one"><section class="mode" data-theme="{key}"><h2>One look, no day</h2><div class="sws">{sw}</div></section></div>'
     verdict = "Passes every floor." if not problems else "Fails: " + "; ".join(H.escape(p) for p in problems)
     page = f'''<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{key} · palette</title><link rel="stylesheet" href="../themes.css"><link rel="stylesheet" href="palette.css"></head><body>
 <h1>{key}</h1><p class="{"ok" if not problems else "bad"}">{verdict}</p>
-<div class="cols"><section class="mode" data-theme="{key}" data-mode="light"><h2>Day</h2><div class="sws">{sw}</div></section>
-<section class="mode" data-theme="{key}" data-mode="dark"><h2>Night</h2><div class="sws">{sw}</div></section></div>
-<div class="cols">{"".join(f"<div>{table(m)}</div>" for m in ("day", "night") if m in rows)}</div></body></html>
+{one if "day" not in rows else both}
+<div class="{"one" if "day" not in rows else "cols"}">{"".join(f"<div>{table(m)}</div>" for m in ("day", "night") if m in rows)}</div></body></html>
 '''
     os.makedirs(os.path.join(HERE, "palette"), exist_ok=True)
     open(os.path.join(HERE, "palette", f"{key}.html"), "w").write(page)
