@@ -60,6 +60,7 @@ ICONS = {
     "locate": "locate-fixed",
     "mic": "mic",
     "outing": "trees",
+    "palette": "palette",
     "person_plus": "user-plus",
     "pin": "map-pin",
     "plans": "calendar-days",
