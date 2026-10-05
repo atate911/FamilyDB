@@ -2,7 +2,7 @@
 
 A private family assistant, Vera, who lives in our chat app. She remembers the things we say we'd like to do and the things we have to do, puts confirmed plans on the shared Google Calendar, reminds us when we ask her to, and suggests what to do right now, tonight or this weekend, based on the calendar, the weather, where we are and the ideas we've collected.
 
-**Status:** usable by the family, ahead of its first release. [CHANGELOG.md](CHANGELOG.md) says what v0.1.0 does and its known limits, [docs/DESIGN.md](docs/DESIGN.md) is the design and what comes next, [docs/INSTALL.md](docs/INSTALL.md) installs it on a server, and [RUNBOOK.md](RUNBOOK.md) runs it, including the checks still to make against live Google, Telegram and model accounts.
+**Status:** alpha, v0.2.0. [CHANGELOG.md](CHANGELOG.md) says what it does and its known limits, [docs/DESIGN.md](docs/DESIGN.md) is the design and what comes next, [docs/INSTALL.md](docs/INSTALL.md) installs it on a server, and [RUNBOOK.md](RUNBOOK.md) runs it, including the checks still to make against live Google, Telegram and model accounts.
 
 ## How it works
 
