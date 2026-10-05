@@ -1,17 +1,65 @@
 # Changelog
 
-## v0.1.0 — in progress
-
-The first version meant to be installed on a real machine and used by a family.
-Everything below has been running against the tests and a scripted install; none
-of it has yet been lived with for a month, which is what this alpha is for.
+## v0.3.0 — in progress
 
 Still being built. While this heading says "in progress", an install follows the
 default branch rather than a release tag, and an upgrade never moves to anything
 older than what is installed. It gets a date when it is released.
 
+### New since v0.2.0
+
+- **Looks.** Each browser can choose how the page looks on a new Look page, in
+  the bar's menu for anybody signed in: Phosphor, as before, or Midnight, Home
+  Computer, Ink, Enamel, Rail yellow or Fjord, each by day and by night, and
+  whether to follow the device's day and night or hold to one. The choice is
+  kept in the browser and touches nothing the family's data holds, and every
+  look is tested for readable contrast by day and by night.
+
+## v0.2.0 — second alpha (2026-10-05)
+
+The second alpha: everything the first did, and the kids, the persona, voice and
+photos, and much more done by code with no model call. Everything below has been
+running against the tests and a scripted install; most of it has not yet been
+lived with for a month, which is what this alpha is for. An install follows the
+newest release, and an upgrade never moves to anything older than what is
+installed.
+
+### New since v0.1.0
+
+- **The kids have their own place.** Each kid signs in to her own simpler pages
+  and her own conversation with Vera, keeps wish lists that only she and her
+  parents see, ticks off her own things to do, and has a number of messages a
+  day. She is never shown how the bot works, and presents are kept from her.
+- **Vera is a persona the family can shape:** call her by another name, rewrite
+  her character, add notes on how she talks, or choose a shorter Vera.
+- **It hears and sees.** Voice notes and photos on Telegram, and a mic beside
+  each box on the page.
+- **More it does by itself, with no model call:** things to do that come round
+  again, birthdays with their gift ideas, a task brought up when its kind of
+  morning comes round free, buttons under a reminder, /today, /week, /tasks,
+  /now and /lookup, and a check the evening before a plan.
+- **It remembers what the family says about itself,** riding on the call that
+  was happening anyway, and the page lists and forgets it.
+- **It keeps costs down on its own:** GPT-6 Luna by default, each company's
+  models by level, lookups gathered into one evening run, a burst of messages
+  answered in one reply, a daily check of the companies' models and prices, and
+  admins told on Telegram when something only they can fix goes wrong.
+- **Everyone signs in as themselves,** with three roles, and setting up, the
+  settings and the Family page are all on the page, in short parts.
+- **Google Calendar connects with a service account,** a key pasted into the
+  page, and stays in step with one request.
+- **Installing is one block pasted into a server,** with HTTPS in front, the
+  page's port movable, and an uninstall that starts from zero.
+
 ### What it does
 
+- **Looks the page can wear.** Besides Phosphor, the green-screen look it was
+  drawn in, each browser can choose Midnight, Home Computer, Ink, Enamel, Rail
+  yellow or Fjord on the Look page (in the bar's menu, for anybody signed in),
+  each with a day and a night, following the device or held to one. It is kept
+  in the browser, so a phone and a wall tablet can differ. Vera's green screens
+  stay green glass in all of them, and every look keeps the same contrast floors
+  by day and by night.
 - **Captures ideas from chat.** "We should try that ramen place sometime" becomes
   a stored idea, tagged with what the model can infer, through Telegram, the web
   page's chat or the console.
@@ -38,6 +86,10 @@ older than what is installed. It gets a date when it is released.
   was said before.
 - **Fills them in.** A background worker turn looks each new idea up on the web:
   address, opening hours, booking link, price notes, a geocoded travel estimate.
+  The lookups wait for the evening (21:00 unless changed) and run together, with
+  one note to each chat for what was found; "look it up now", or /lookup on
+  Telegram, has them looked up within a couple of minutes. Looking each up as it
+  comes is a setting.
 - **Keeps the calendar.** Confirmed plans are created, moved and cancelled on the
   shared Google Calendar from chat, and free time is read back live.
 - **Keeps the things to do.** "Remind me on Tuesday that we need paper towels"
@@ -60,11 +112,12 @@ older than what is installed. It gets a date when it is released.
   "how was it?" with Yes, again, Not again and Didn't go: a tap is done by code
   with no model call, so it answers at once and works when the model does not,
   and the message then says who did what, for everyone in the chat.
-- **Answers /today, /week, /tasks and /now on Telegram by itself.** What is on
-  today and for the next seven days, the open tasks kept in that chat, and what
-  on the list could start right now are answered from the calendar, the task
-  list and the suggestion engine at once, with no model call, so they work when
-  the model is down or the day's limit is spent. They are in Telegram's "/"
+- **Answers /today, /week, /tasks, /now and /lookup on Telegram by itself.** What
+  is on today and for the next seven days, the open tasks kept in that chat, and
+  what on the list could start right now are answered from the calendar, the
+  task list and the suggestion engine at once, with no model call, so they work
+  when the model is down or the day's limit is spent; /lookup has the ideas
+  waiting looked up now rather than in the evening. They are in Telegram's "/"
   menu, only the family may ask, and each answer is kept in the conversation.
 - **Answers "what should we do?" for the time asked about:** right now, tonight,
   Saturday morning or this weekend. A staged engine checks every idea against
@@ -89,7 +142,10 @@ older than what is installed. It gets a date when it is released.
   address the bot, not on every message. Added to a family group, she says hello
   and how to talk to her there. "Answer only when mentioned" is on the settings
   page, which also says whether Telegram lets the bot read a whole group, and
-  what to change in BotFather when it does not.
+  what to change in BotFather when it does not. Several messages sent one after
+  another are answered together, in one reply. What is only for one person (their
+  reminder, the note on their idea, how their plan went) goes to their own chat
+  with the bot when it began in a group.
 - **Knows where the family is when a phone says so.** A location shared on
   Telegram, or the position the web page's chat sends with a message (only
   while "Send where I am" is ticked), is used for three hours: travel is measured from there
@@ -100,7 +156,10 @@ older than what is installed. It gets a date when it is released.
   it?", notices) is written in her words by code, and is carried by her reply
   instead when the family is already talking to her. Her name is written once
   and said as `{name}` everywhere else, and the chat page shows her replies
-  under it.
+  under it. On the Personality page the family can call her by a name of their
+  own, rewrite her character, add notes on how she talks, reword any line she
+  sends unasked, or choose a shorter Vera that costs fewer tokens a message; she
+  changes how things are said, never what is done.
 - **Speaks first.** A Thursday digest of the weekend's options, and a "how was
   it?" the morning after a plan. The evening before a plan it checks the forecast
   and the place's hours again, with no model call, and speaks only when one is
@@ -123,6 +182,37 @@ older than what is installed. It gets a date when it is released.
 - **Stops at a daily spending limit.** Every model call records an estimated
   cost; once the day's limit ($2 unless changed) is used up, nothing more is
   asked of a model until midnight, and the chat says why.
+- **Keeps up with the companies' models and prices.** Once a day, with no model
+  call, it asks each company with a key which models it may use and reads two
+  public price lists, puts a price in force only when the lists bear it out, and
+  tells admins what matters: a model in use going away, with the nearest at
+  about its price (put in with one press on the Status page, or by itself once
+  the old one has gone if it costs no more than twice as much), a price that
+  moved, or new models. A company that stops taking part of a request is sent it
+  again without that part, and admins are told. Weighing such a change with a
+  stronger model, within a monthly budget, is there to switch on and is off
+  unless chosen.
+- **Tells admins what only they can fix,** on Telegram: a company out of credit
+  or refusing its key, the day's limit reached, Google shutting the bot out.
+  Each is said again at most every twelve hours while it lasts, forgotten once
+  it works again, listed on the Status page, and lights the Status icon amber or
+  red. Any message or lookup can be opened from there to see every call it made
+  and what each cost.
+- **Wish lists for the kids.** Each kid keeps her own lists, everyday and for
+  Christmas and her birthday, ranked by her (dragged into order on the page),
+  and a parent answers when they choose; "not this time" puts a wish away for
+  longer each time it is asked again. Vera sorts what is said into a wish, a
+  family idea or both, answers at once at the kid's age, guides how often she
+  asks, and sends the parents only what they decided they want: a request a kid
+  asks to put to them, and one that is out of line. A kid's birthday wishes come
+  with her birthday's reminder. Kids never see each other's lists, and
+  presents are never shown to whoever they are for.
+- **Pages for the kids.** A kid's Home, things to do, plans and ideas are
+  simpler, her conversation with Vera is her own (her parents can read it), and
+  the family can set how many messages a day she may send (no limit unless they
+  do); a command or a button costs none. Where a kid reads, what the bot says of
+  its own workings is said plainly instead: the kids never see how it works or
+  why it does not.
 - **The whole bot in a browser:** a home page that asks what is on your mind and
   says what is coming up and what is left to set up, the conversation with Vera,
   the ideas and restaurants, the plans as a list or a month read live from
@@ -133,9 +223,11 @@ older than what is installed. It gets a date when it is released.
   menu on Android, the page opens full-screen as an app, with the mark for its
   icon and the page's name under it.
 - **Everyone signs in as themselves.** Each person has a password of their own,
-  stored hashed, and one of three roles: admin, parent and kid. Kids may do what
-  a parent may for now; what each role may do is one table, `familydb/roles.py`,
-  so kids' own limits are a line there. An admin gives each person a starting
+  stored hashed, and one of three roles: admin, parent and kid. What each role
+  may do is one table, `familydb/roles.py`: a kid signs in, reads the ideas and
+  plans, talks to Vera, keeps her wish lists and ticks off her own things to do,
+  and changes nothing else. An admin can take somebody off the list for good,
+  and the page says what goes with them. An admin gives each person a starting
   password, shown once, which they replace as soon as they sign in with it. The chat speaks
   as whoever is signed in, the settings history says who changed what, and only
   an admin reaches Settings, setup and the Family page. A new starting password
@@ -165,6 +257,11 @@ older than what is installed. It gets a date when it is released.
   (each ticked off where it stands) and what was added lately sit around the box,
   and opening any page asks nothing of a model. What is being typed is kept
   across a refresh, a change of page or signing in again, until it has been sent.
+  A mic beside each box fills it from the browser's own speech recognition: no
+  model call, and nothing is sent until the box's own button is pressed.
+- **Says what it sends unasked.** The Messages settings page lists each kind of
+  message she sends by herself, whether it is on, when it goes, what it costs
+  and how often it went, with the latest in full.
 - **Set up from that page.** The keys, the models, Telegram (taken up within
   seconds, no restart), Google Calendar (connected from the page, with no laptop
   needed), where home is (found on the map), the timezone and the spending
@@ -290,6 +387,104 @@ server does the same and prints Google's answer.
 - The page's site-wide lockout stops distributed password guessing. A browser
   that has signed in before is spared it; a new phone may have to wait fifteen
   minutes while someone is guessing.
+- Upgrading on a private repository needs the credential the install used. With
+  a deploy key the bootstrap wires it up; with a token there is nothing stored,
+  and `maintain.sh upgrade` says so and what to do.
+- There is no LICENSE file: all rights reserved by default.
+
+## v0.1.0 — first alpha (2026-09-21)
+
+The first version meant to be installed on a real machine and used by a family.
+Everything below has been running against the tests and a scripted install; none
+of it has yet been lived with for a month, which is what this alpha is for.
+
+### What it does
+
+- **Captures ideas from chat.** "We should try that ramen place sometime" becomes
+  a stored idea, tagged with what the model can infer, through Telegram or the
+  console.
+- **Fills them in.** A background worker turn looks each new idea up on the web:
+  address, opening hours, booking link, price notes, a geocoded travel estimate.
+- **Keeps the calendar.** Confirmed plans are created, moved and cancelled on the
+  shared Google Calendar from chat, and free time is read back live.
+- **Answers "what should we do this weekend?"** A staged engine checks every idea
+  against the free time, the forecast, the opening hours and the travel time,
+  searches for what is on that weekend, and logs every verdict.
+- **Speaks first.** A Thursday digest of the weekend's options, and a "how was
+  it?" the morning after a plan.
+- **Runs on Claude, OpenAI or Gemini,** chosen per surface, with another as a
+  spare when the first is rate limited or down.
+- **A web page** behind one shared family password: the ideas, the restaurants,
+  the plans, a status page saying what is connected and what the month has cost,
+  and a settings page that changes any setting or key without a restart.
+
+### Installing it
+
+Start at [docs/INSTALL.md](docs/INSTALL.md), which goes from a fresh VPS to a
+running bot. On the server:
+
+```bash
+sudo bash scripts/bootstrap.sh
+```
+
+That is the only script that assumes nothing. It installs the system packages,
+puts the code in `/opt/familydb`, creates the service account, hands over to
+`scripts/install.sh` for the questions, starts the service and checks the
+result. Before it touches anything it prints what it will change on the machine
+and why, and what it will not touch, and asks.
+
+Getting the code onto a bare server is a step of its own, because the
+repository is private: a deploy key, a token in the environment, or a copy you
+put there yourself. All three are in the install guide.
+
+Clone into `/opt/familydb` and not a home directory. A home directory is closed
+to other users, so a service running as its own account cannot start from one.
+The installer checks this and refuses rather than leaving a unit that will
+never start.
+
+### Looking after it
+
+- `familydb doctor` checks the whole install and says what is wrong and what to
+  do about it. `--online` also tests the keys against the APIs, `--json` is for
+  scripts, and `--fix` puts right the few things that can be put right without a
+  decision.
+- `scripts/maintain.sh` does status, check, backup, restore, upgrade, logs,
+  restart and nightly backups. A restore backs up the database it is about to
+  replace, so it can itself be undone.
+- `scripts/uninstall.sh` removes the service and the installed files but keeps
+  `.env`, `data/` and the backups, which is what a reinstall wants. `--purge`
+  removes those too, after taking a backup and asking you to type a
+  confirmation.
+
+Every one of these explains a failure rather than printing one: which step, the
+command, its exit code, what it said, what that usually means, and what to try.
+`RUNBOOK.md` covers running it day to day; `docs/INSTALL.md` has a section on
+each failure.
+
+### What has been checked
+
+Every push runs the test suite on Python 3.11 and 3.12, lints and shellchecks
+every script, and then, on a real machine: a bootstrap install into `/opt`, the
+bot running as the service account it created, `doctor` and its `--fix`, a
+backup, a restore over the database, an uninstall that keeps the data followed
+by a reinstall that picks it back up, and a purge that backs up first and leaves
+nothing. It also refuses an install from a home directory, and builds the Docker
+image, migrates inside the container, serves the page and stops it with a
+signal.
+
+What no test covers is a real conversation with a real model: that needs a key,
+and it is what this alpha is for.
+
+### Known limits
+
+- The suggestion engine has been exercised against fixtures and by hand, not yet
+  across a real season of weekends.
+- Travel time is a straight-line estimate times a road factor, not real routing.
+- Ideas and plans can only be changed by messaging the bot; the web page reads.
+- One process at a time writes the database. Run one `familydb run`.
+- The page's site-wide lockout, which stops distributed password guessing, also
+  means a determined stranger can keep the family off the page for fifteen
+  minutes at a time. On a public server, that is the trade being made.
 - Upgrading on a private repository needs the credential the install used. With
   a deploy key the bootstrap wires it up; with a token there is nothing stored,
   and `maintain.sh upgrade` says so and what to do.

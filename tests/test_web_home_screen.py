@@ -105,10 +105,13 @@ def test_every_page_points_a_phone_at_the_manifest_and_the_icon(
 
 
 def test_the_app_s_colours_are_the_page_s(settings, clock) -> None:
+    """Phosphor, the look a home screen opens in, is one colour from the icon to the page: the
+    manifest's, the browser bar's and the page's own. A look somebody chose themselves only moves
+    the bar's (`theme-color`, from `looks.py`), which a test in test_look.py holds to its CSS."""
     manifest = _manifest(_client(settings, clock, web_password=PASSWORD))
-    base = (STATIC.parent / "templates" / "base.html").read_text()
-    theme = re.search(r'<meta name="theme-color" content="(#[0-9a-f]{6})"', base)
-    background = re.search(r"--bg: (#[0-9a-f]{6});", (STATIC / "style.css").read_text())
+    page = _client(settings, clock, web_password=PASSWORD).get("/login").text
+    theme = re.search(r'<meta name="theme-color" content="(#[0-9a-f]{6})"', page)
+    background = re.search(r"--paper: (#[0-9a-f]{6});", (STATIC / "style.css").read_text())
     assert theme and background
     assert manifest["theme_color"] == manifest["background_color"] == theme[1] == background[1]
     # The icon's ground too, so opening the app is one colour from the icon to the page.
