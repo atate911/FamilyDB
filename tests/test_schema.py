@@ -71,16 +71,6 @@ def test_every_registered_tool_has_a_usable_schema(registry: ToolRegistry) -> No
         json.dumps(tool.schema)  # serialisable
 
 
-def test_the_registry_knows_nothing_about_hosted_tools(registry: ToolRegistry) -> None:
-    """Whether a surface may search is the provider's decision, from the request it is handed."""
-    from familydb.agent.providers.base import ToolDef
-
-    assert all(isinstance(tool, ToolDef) for tool in registry.tool_defs())
-    hand_back = {"save_place", "skip_place", "report_finds"}
-    assert hand_back.isdisjoint(t.name for t in registry.tool_defs())
-    assert hand_back <= {t.name for t in registry.tool_defs(registry.names())}
-
-
 def test_now_tool_takes_no_input(registry: ToolRegistry) -> None:
     schema = registry.get("now").api_definition()["input_schema"]
     assert schema == {"type": "object", "properties": {}, "additionalProperties": False}

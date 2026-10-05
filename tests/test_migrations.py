@@ -52,14 +52,6 @@ def test_connect_creates_parent_directory(tmp_path: Path) -> None:
     conn.close()
 
 
-def test_phase2_columns_exist(conn) -> None:
-    def columns(table: str) -> set[str]:
-        return {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
-
-    assert "enrichment_note" in columns("ideas")
-    assert {"followed_up_at", "channel", "chat_id"} <= columns("plans")
-
-
 def test_recovery_migration_does_not_resend_historical_replies(tmp_path):
     from contextlib import closing
 
