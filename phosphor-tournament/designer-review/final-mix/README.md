@@ -7,3 +7,5 @@ The family chose: "House Log with the left panel and the tightness and crispness
 - `compare/index.html`: the layout and the three palettes side by side.
 
 Then "I like the design sheets. Can we come up with three more colour palettes to evaluate?": `amber/` (Amber Terminal), `ultra/` (Ultramarine) and `fjord/` (Fjord), made the same way and told to differ from the first three. `compare/index.html` now shows all six, each palette sheet above its Home.
+
+"None of those are really speaking to me. Can we try five new ones?" The first six shared one shape (light grey page, navy-ish panel, one signal colour), so the next five were told to commit harder, with the panel colour open: `midnight/` (dark first), `aubergine/` (Aubergine & Brass), `homecomputer/` (an early-80s family computer), `ink/` (almost no colour) and `dusk/` (an evening sky). `compare-five/index.html` shows them.
