@@ -1,17 +1,13 @@
 """Buttons under what the bot says unasked, and what a tap on one does.
 
-A reminder comes with Done, In an hour and Tomorrow; "how was it?" with Yes, again, Not again
-and Didn't go. A tap does what saying so in the chat would, without asking a model: code calls
-the tool the model would have called, as the member who tapped, and says what it did in her
-words (`voice.say`). So it costs nothing, answers at once, and works when the model is down or
-the day's limit is spent.
+A tap does what saying so in the chat would, without a model: code calls the tool the model would
+have called, as the member who tapped, and says what it did in her words (`voice.say`). It costs
+nothing and works when the model is down or the limit spent.
 
-What a button sends back is untrusted, like anything a client sends: an action from a closed list
-and the number of what it is about, both checked, and whoever tapped checked against the family
-list, before anything is done. Nothing a tap does is new; each can be said in the chat instead. A
-tap is kept as a message from whoever tapped, so its tool call has a message to belong to in the
-audit and the conversation shows it. The same tap delivered twice is done once, and a tap on
-something already dealt with does nothing and says so.
+What a button sends back is untrusted: an action from a closed list and the number of what it is
+about, both checked, and whoever tapped checked against the family list, before anything is done.
+A tap is kept as a message so its tool call has one to belong to. The same tap delivered twice is
+done once; a tap on something already dealt with does nothing and says so.
 """
 
 from __future__ import annotations
@@ -31,15 +27,12 @@ from familydb.tools.registry import ToolContext
 
 log = logging.getLogger(__name__)
 
-# (action, label): what each kind of message is sent with. The label is what the button says;
-# what it does is the action's, in `_task_job` and `_plan_job`.
+# (action, label) per kind of message; what each does is in `_task_job` and `_plan_job`.
 REMINDER = (("done", "✓ Done"), ("hour", "In an hour"), ("tomorrow", "Tomorrow"))
 FOLLOW_UP = (("again", "Yes, again"), ("not_again", "Not again"), ("missed", "Didn't go"))
-# Under a kid's ask sent to the parents (wish_service.py): what a parent may answer at once.
 WISH = (("wish_yes", "Yes!"), ("wish_no", "Not this time"), ("wish_later", "Later"))
 LABELS = dict(REMINDER + FOLLOW_UP + WISH)
 SNOOZES = {"hour": timedelta(hours=1), "tomorrow": timedelta(days=1)}
-# Telegram hands back at most 64 bytes of a button; the longest here is well inside that.
 MAX_NUMBER_DIGITS = 18
 
 Button = dict[str, str]
@@ -63,11 +56,8 @@ def _row(choices: tuple[tuple[str, str], ...], number: int) -> list[Button]:
 
 @dataclass(frozen=True)
 class Tapped:
-    """What a tap did, for the channel to show.
-
-    `toast` goes to whoever tapped. `note`, when there is one, is added under the message for
-    everyone in the chat, saying who did what. `finished` takes the buttons off: they have done
-    their job, or there is nothing left for them to do.
+    """What a tap did: `toast` to whoever tapped; `note` under the message for everyone, saying who
+    did what; `finished` takes the buttons off.
     """
 
     toast: str
@@ -79,8 +69,8 @@ class Tapped:
 class _Job:
     tool: str
     values: dict[str, Any]
-    about: str  # what was tapped on, in words, for the message kept of the tap
-    event: str  # her line for having done it
+    about: str
+    event: str
     facts: dict[str, Any] = field(default_factory=dict)
 
 
@@ -96,8 +86,8 @@ def tap(
 ) -> Tapped | None:
     """Do what a tapped button says, as whoever tapped it. None for a tap already handled.
 
-    `tap_id` is the channel's own id for this tap, so the same one delivered again is seen as
-    such; `data` is what the button sends back, as `for_reminder` and `for_follow_up` made it.
+    `tap_id` is the channel's id for this tap, so a redelivery is seen as such; `data` is what
+    the button sent back.
     """
     settings = app.settings
     member = members.resolve(conn, channel, channel_user_id)
@@ -135,7 +125,6 @@ def tap(
                 text=f"{messages.TAP_PREFIX}{LABELS[action]}: {job.about}",
                 now=now,
             )
-            # Done by code, never a turn: nothing for the retry job to pick up.
             messages.mark_processed(conn, kept.id, [], now=now)
     except sqlite3.IntegrityError:
         log.info("tap %s arrived twice at once", tap_id)
@@ -172,7 +161,6 @@ def tap(
     event, facts = job.event, job.facts
     after = tasks.get(conn, job.values["task_id"]) if job.event == "tap_done" else None
     if after is not None and after.status == "open" and after.reminder is not None:
-        # A task that comes round again: done this time, and it says when next.
         moment = datetime.fromisoformat(after.reminder.remind_at).astimezone(app.clock.tz)
         event, facts = "tap_done_again", {"when": when_text(moment, app.clock.today())}
     line = voice.say(settings, event, seed=kept.id, who=member.display_name, **facts)
@@ -182,8 +170,9 @@ def tap(
 def _wish_check(
     conn: sqlite3.Connection, member: members.Member, action: str, wish_id: int
 ) -> str | None:
-    """Why a tap on a kid's ask does nothing, if it does: only a parent answers, Later is only
-    a note, and an ask already answered is answered."""
+    """Why a tap on a kid's ask does nothing: only a parent answers, Later is only a note, an
+    answered ask is answered.
+    """
     if not roles.may(member.role, "decide"):
         return "tap_parents_only"
     wish = wishes.get(conn, wish_id)
@@ -195,7 +184,6 @@ def _wish_check(
 
 
 def _wish_job(app: Any, conn: sqlite3.Connection, action: str, wish_id: int) -> _Job | str:
-    """A parent's answer to a kid's ask, as update_wish, with her told in her own chat."""
     wish = wishes.get(conn, wish_id)
     owner = members.get(conn, wish.member_id) if wish is not None else None
     if wish is None or owner is None:
@@ -211,7 +199,6 @@ def _wish_job(app: Any, conn: sqlite3.Connection, action: str, wish_id: int) -> 
 
 
 def _task_job(app: Any, conn: sqlite3.Connection, action: str, task_id: int) -> _Job | str:
-    """What a reminder's button does to its task, or the line for why it does nothing."""
     task = tasks.get(conn, task_id)
     if task is None:
         return "tap_stale"
@@ -224,7 +211,6 @@ def _task_job(app: Any, conn: sqlite3.Connection, action: str, task_id: int) -> 
     moment = now + SNOOZES[action]
     return _Job(
         "update_task",
-        # With its offset, so a clock change in between cannot make the time ambiguous.
         {"task_id": task.id, "remind_at": moment.isoformat(timespec="minutes")},
         about,
         "tap_snoozed",
@@ -233,7 +219,6 @@ def _task_job(app: Any, conn: sqlite3.Connection, action: str, task_id: int) -> 
 
 
 def _plan_job(app: Any, conn: sqlite3.Connection, action: str, plan_id: int) -> _Job | str:
-    """What a follow-up's button records about its plan, or the line for why it does nothing."""
     plan = plans.get(conn, plan_id)
     idea = ideas.get(conn, plan.idea_id) if plan is not None and plan.idea_id else None
     if plan is None or idea is None:
@@ -243,7 +228,6 @@ def _plan_job(app: Any, conn: sqlite3.Connection, action: str, plan_id: int) -> 
         return "tap_already"
     about = f"#{idea.id} {plan.title} on {date.fromisoformat(day):%A}"
     if action == "missed":
-        # Back on the list, so it can come up again; not an outcome. A dropped idea stays so.
         if idea.status == "dropped":
             return "tap_already"
         return _Job("update_idea", {"id": idea.id, "status": "idea"}, about, "tap_missed")
@@ -256,8 +240,9 @@ def _plan_job(app: Any, conn: sqlite3.Connection, action: str, plan_id: int) -> 
 
 
 def when_text(moment: datetime, today: date) -> str:
-    """When a snoozed reminder comes back, time first, so it reads after "until" and after
-    "at" alike: "20:05 today", "09:30 tomorrow", "09:30 on Mon 28 Sep"."""
+    """When a snoozed reminder comes back, time first so it reads after "until" and "at": "20:05
+    today", "09:30 on Mon 28 Sep".
+    """
     if moment.date() == today:
         return f"{moment:%H:%M} today"
     if moment.date() == today + timedelta(days=1):

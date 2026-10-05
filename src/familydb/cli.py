@@ -48,8 +48,8 @@ app = typer.Typer(
     help="FamilyDB: a private family planning assistant.",
     no_args_is_help=True,
     add_completion=False,
-    # Rich draws a traceback as a box of line art, which is unreadable in journalctl and in
-    # `docker compose logs`, the two places these are actually read.
+    # Rich's boxed traceback is unreadable in journalctl and `docker compose logs`, where these are
+    # read.
     pretty_exceptions_enable=False,
 )
 db_app = typer.Typer(help="Database maintenance.", no_args_is_help=True)
@@ -90,10 +90,8 @@ def main(
 
 
 def _ready(application: App) -> sqlite3.Connection:
-    """A migrated connection for a CLI command, with the stored settings already in force.
-
-    A command should show the family what the bot is doing, not what a file says it would do if
-    nothing had ever been changed from the page.
+    """A migrated connection with the stored settings in force: a command shows what the bot is
+    doing, not what a file says.
     """
     application.migrate()
     conn = application.connect()
@@ -103,18 +101,15 @@ def _ready(application: App) -> sqlite3.Connection:
 
 FROM_PAGE = "set on the settings page"
 FROM_ENV = "from the environment"
-# How much of a long text on the Personality page `familydb config` prints: enough to tell which
-# text it is. A rewrite of her also holds her whole character as it shipped, a page of prose.
+# How much of a long Personality-page text `familydb config` prints: enough to tell which one (a
+# rewrite also holds her whole shipped character).
 SHOWN_CHARACTERS = 60
 
 
 def _shown_setting(key: str, value: Any) -> Any:
-    """A setting as `familydb config` prints it, on one line.
-
-    A long text written on the Personality page (`store.settings.PROFILE`), on its own or inside
-    a rewrite of her or her lines, is cut to its start with how long it really is, and its line
-    breaks are written as \\n, as they already are inside a rewrite. Anything else prints as it
-    is, and nothing changes the setting itself or what `Settings.masked` gives."""
+    """A setting as `familydb config` prints it on one line: long Personality-page texts are cut to
+    their start with their real length, and line breaks written as \\n.
+    """
     if key not in settings_store.PROFILE:
         return value
     shown = _shortened(value)
@@ -130,7 +125,6 @@ def _shortened(value: Any) -> Any:
 
 
 def stored_settings(settings: Settings) -> dict[str, Any]:
-    """The overrides saved in the database, or nothing when there is no database yet."""
     try:
         with closing(db.connect(settings.familydb_path)) as conn:
             return settings_store.overrides(conn)
@@ -145,7 +139,7 @@ def config() -> None:
     stored = stored_settings(base)
     try:
         settings = apply_overrides(base, stored)
-    except Exception as exc:  # a stored value that no longer validates must not hide the rest
+    except Exception as exc:
         typer.echo(f"stored settings are not usable, showing the environment's: {exc}", err=True)
         settings, stored = base, {}
     defaults = {
@@ -258,9 +252,8 @@ def db_backup(dest: Path = typer.Argument(..., help="Path of the backup file to 
     """Copy the database with SQLite's online backup API (safe while the bot runs)."""
     application = build_app()
     source = application.settings.familydb_path
-    # Every other command may create the database; a backup may not. `FAMILYDB_PATH` is relative
-    # by default, so a backup run from cron with the wrong working directory would otherwise
-    # create an empty database beside itself, copy that, and report success every night.
+    # Every other command may create the database; a backup may not: run from cron in the wrong
+    # directory it would back up a new empty database and report success every night.
     if not source.exists():
         typer.secho(f"no database at {source.resolve()}", fg=typer.colors.RED, err=True)
         typer.secho(
@@ -431,7 +424,7 @@ def debug_prompt(
     application = build_app()
     call = gateway.spec(kind)
     with closing(_ready(application)) as conn:
-        settings = application.settings  # with what the page stored, which _ready brought in
+        settings = application.settings
         if kind == "enrich":
             idea = ideas.get(conn, idea_id) if idea_id is not None else None
             if idea is None:
@@ -450,7 +443,6 @@ def debug_prompt(
                 limit=settings.history_limit,
                 since_hours=settings.history_hours,
             )
-            # Named by its chat id alone, as the digest's chat is: "web", "console", or Telegram.
             channel = digest_channel(chat_id)
             audience = render_audience_line(channel, chat_id, members.list_all(conn))
             current = render_user_turn(sender, text, application.clock, audience)
@@ -488,7 +480,7 @@ def debug_cost(
     application = build_app()
     chat_call = gateway.spec("chat")
     with closing(_ready(application)) as conn:
-        settings = application.settings  # with what the page stored, which _ready brought in
+        settings = application.settings
         blocks, _ = compose.prefix(chat_call, conn, settings)
         tools = compose.tool_defs(chat_call, application.registry)
         since = utc_iso(application.clock.now() - timedelta(days=days))
@@ -496,7 +488,6 @@ def debug_cost(
         kinds = calls.usage_by_kind(conn, since=since)
         measured = calls.sections_since(conn, since=since)
 
-    # Four characters to the token is rough, but enough to show what is large.
     system_tokens = sum(len(block.text) for block in blocks) // 4
     tool_tokens = len(_json.dumps([t.schema for t in tools], ensure_ascii=False)) // 4
     tool_tokens += sum(len(t.name) + len(t.description) for t in tools) // 4
@@ -564,7 +555,7 @@ def debug_validate_tools() -> None:
     from familydb.agent import gateway
 
     application = build_app()
-    with closing(_ready(application)):  # the key and the level the page stored count too
+    with closing(_ready(application)):
         provider, model = gateway.answering(application.settings, "chat")
     everything = application.registry.tool_defs(application.registry.names())
     request = TurnRequest(
@@ -572,7 +563,7 @@ def debug_validate_tools() -> None:
     )
     try:
         tokens = provider.count_tokens(request)
-    except Exception as exc:  # ours, or whatever the SDK raises for a rejected schema
+    except Exception as exc:
         typer.echo(f"validation failed: {exc}", err=True)
         raise typer.Exit(code=1) from exc
     typer.echo(
@@ -659,12 +650,12 @@ def doctor(
     from familydb import doctor as checks
 
     application = build_app()
-    with suppress(Exception):  # a database that cannot be read is a finding, not a crash
+    with suppress(Exception):
         application.refresh()
     report = checks.run(application, online=online)
     if fix:
         checks.correct(application, report)
-        report = checks.run(application, online=online)  # say what is true after the repairs
+        report = checks.run(application, online=online)
     if new_install:
         checks.as_new_install(report)
     if as_json:
@@ -689,7 +680,7 @@ def run() -> None:
     application = build_app()
     application.migrate()
     privacy.tighten(application.settings)
-    application.refresh()  # before anything reads a setting, including the scheduler
+    application.refresh()
     settings = application.settings
     from familydb.agent import gateway
 
@@ -712,8 +703,7 @@ def run() -> None:
         from familydb.web.server import serve_in_thread
 
         stop_web = serve_in_thread(application)
-    # Telegram is watched rather than started once: a token added or changed on the settings
-    # page takes effect in seconds, without a restart.
+    # Telegram is watched rather than started once, so a changed token takes effect in seconds.
     from familydb.channels.telegram import TelegramSupervisor
 
     telegram = TelegramSupervisor(application)
@@ -732,9 +722,8 @@ def _wait_for_stop(*, quiet: bool = False) -> None:
     stop = threading.Event()
     received: list[int] = []
 
-    # Only note the signal here. It can land while the main thread is part way through writing
-    # a log line, and logging from the handler would write to the same stream again, which
-    # raises before the stop is set.
+    # Only note the signal: it can land mid-write of a log line, and logging from the handler would
+    # write to the same stream and raise before the stop is set.
     def _stop(signum: int, _frame: object) -> None:
         received.append(signum)
         stop.set()
@@ -746,8 +735,8 @@ def _wait_for_stop(*, quiet: bool = False) -> None:
             "no chat channel yet; waiting. Add a Telegram token or turn the web page on; "
             "meanwhile `familydb chat` and `familydb repl` work."
         )
-    # In slices: the kernel may hand SIGTERM to any of the bot's threads, and Python runs the
-    # handler only when the main thread next runs, which an untimed wait never lets it do.
+    # In slices: the kernel may hand SIGTERM to any thread, and Python runs the handler only when
+    # the main thread next runs, which an untimed wait never lets it do.
     while not stop.wait(1):
         pass
     log.info("received signal %s, stopping", received[0])
@@ -894,7 +883,7 @@ def suggest(
     if discover and not web_tools_available(application.settings):
         typer.echo("set WEB_TOOLS_ENABLED=true to look for events on the web", err=True)
         raise typer.Exit(code=1)
-    api = None  # the settings decide which provider runs discovery
+    api = None
     with closing(_ready(application)) as conn:
         ctx = ToolContext(
             conn=conn,
@@ -1028,11 +1017,8 @@ def _stop(message: str, *detail: str) -> None:
 
 
 def run_cli() -> None:
-    """The console entry point.
-
-    A first install gets its settings wrong, and the two ways it does so are a value that will
-    not validate and a database it cannot open. Both are worth a sentence naming the setting,
-    rather than the traceback that says the same thing in forty lines.
+    """The console entry point: a bad setting or unopenable database gets a sentence naming it, not
+    a traceback.
     """
     try:
         app()
@@ -1049,5 +1035,4 @@ def run_cli() -> None:
             detail = ["FAMILYDB_PATH names a folder this user cannot write to, or cannot reach."]
         _stop(f"the database could not be opened: {exc}", *detail)
     except OSError as exc:
-        # Most often .env or data/ belonging to the service user, read by somebody else.
         _stop(f"familydb could not start: {exc}")
