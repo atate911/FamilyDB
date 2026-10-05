@@ -231,7 +231,7 @@ def web_search_result(tool_use_id: str, results: list[dict[str, Any]]) -> dict[s
 
 
 class FakeGeocoder:
-    """In-memory GeocoderAPI: answers from a dict of query -> GeoPoint, else a default."""
+    """In-memory geocoder: answers from a dict of query -> GeoPoint, else a default."""
 
     def __init__(
         self, points: dict[str, GeoPoint] | None = None, default: GeoPoint | None = None
