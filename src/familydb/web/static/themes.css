@@ -1,14 +1,7 @@
-/* Themes. A theme is a set of the page's colour tokens, written once, with a day value and a night
-   value together: light-dark(day, night). The page asks for none by name; web/looks.py lists them,
-   and the Look page (/look) lets each browser choose one and whether to follow the device's day
-   and night. Phosphor, the default, is the tokens at the top of style.css, and is dark only.
-
-   Each is transcribed from its palette sheet (the tokens are the sheet's, the names the page's) and
-   every pair that carries words was checked for contrast in both modes: 4.5:1 for words, 3:1 for
-   the edge of anything you press. The paper themes (every one but Phosphor and Midnight, which is
-   dark first) keep to colour for people and signals: links are the theme's link colour on every
-   page, so sections are not told apart by colour there (--sect), and the glow that Phosphor gives
-   off is nearly out (--bloom). A screen, Vera's glass, is green-black phosphor in all of them. */
+/* Themes: sets of the page's colour tokens as light-dark(day, night) pairs, from each palette sheet; web/looks.py
+   lists them. Every pair that carries words holds 4.5:1 in both modes, 3:1 for the edge of anything you press.
+   Paper themes (all but Phosphor and Midnight) use their link colour on every page (no --sect) and barely glow
+   (--bloom). Vera's glass is green-black phosphor in all of them. */
 
 [data-theme="rail"] {
   color-scheme: light dark;

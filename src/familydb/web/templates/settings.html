@@ -7,8 +7,6 @@
   {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
   {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 
-  {# One card to a page of settings, each saying how things stand in a line or two, so this is
-     the place to look first as well as the way in. Something missing is marked, in words. #}
   <ul class="section-cards">
     {% for entry in sections %}
       {% set one = entry.section %}

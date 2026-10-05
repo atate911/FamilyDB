@@ -1,7 +1,6 @@
 {% from "_ui.html" import icon, presence %}
 <!doctype html>
-{# The look this browser chose (web/looks.py, themes.css): a theme on <html>, and a mode only when
-     day or night was asked for, so the device's own is followed otherwise. #}
+{# The look this browser chose (web/looks.py, themes.css): a theme on <html>, and a mode only when day or night was asked for. #}
 <html lang="en" data-theme="{{ look.key }}"{% if look_mode != 'auto' %} data-mode="{{ look_mode }}"{% endif %}>
   <head>
     <meta charset="utf-8" />
@@ -10,17 +9,14 @@
     {% for media, colour in look_colours %}<meta name="theme-color" content="{{ colour }}"{% if media %} media="{{ media }}"{% endif %} />
     {% endfor %}
     <title>{% block title %}{{ site_title }}{% endblock %}</title>
-    {# The reading face is on every screen; fetch it with the page. #}
     <link rel="preload" href="{{ url_for('static', filename='fonts/dm-sans.woff2') }}" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='themes.css') }}" />
     <script src="{{ url_for('static', filename='menu.js') }}" defer></script>
-    {# A mic beside each box that takes words, where the browser can write down speech and the
-       family has not turned it off (web_dictation). #}
+    {# A mic beside each box that takes words, unless the family turned it off (web_dictation). #}
     {% if dictation %}<script src="{{ url_for('static', filename='dictate.js') }}" data-icons="{{ url_for('static', filename='icons.svg') }}" defer></script>{% endif %}
     <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml" />
-    {# Kept on a phone's home screen, the page opens as an app: full-screen, with the mark for its
-       icon and the page's own name under it. #}
+    {# Home-screen install: full-screen, the mark for its icon. #}
     <link rel="manifest" href="{{ url_for('web.manifest') }}" />
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}" />
     <meta name="apple-mobile-web-app-title" content="{{ site_title }}" />
@@ -29,8 +25,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     {% block head %}{% endblock %}
   </head>
-  {# Which part of the site this page belongs to, by the view that drew it: it lights that
-     item in the bar, and gives the page its colour (see "Sections" in static/style.css). #}
+  {# Which part of the site this view belongs to: it lights that item in the bar and sets the page's colour ("Sections" in style.css). #}
   {% set here = request.endpoint or '' %}
   {% set SECTIONS = {
     'home': ['web.home'],
@@ -59,9 +54,7 @@
         <span class="brand-mark">{{ icon('mark') }}</span>
         <span class="brand-name">{{ site_title }}</span><span class="caret" aria-hidden="true"></span>
       </a>
-      {# The places a day is spent, and a kid's wish lists. On a phone they are the tabs along the bottom, where a
-         thumb is; on a wider screen they sit in this bar. The conversation is hers, so it goes
-         by her name; with no persona it is simply the chat. #}
+      {# The places a day is spent: tabs along the bottom on a phone, in this bar when wider. The chat goes by her name, or "Chat" with no persona. #}
       <nav class="places" aria-label="Main">
         {{ item('Home', url_for('web.home'), 'home', 'home') }}
         {% if visitor().may('chat') %}{{ item(assistant if has_persona else 'Chat', url_for('chat.show', _anchor='latest'), 'chat', 'chat') }}{% endif %}
@@ -71,25 +64,19 @@
         {% if visitor().may('decide') %}{{ item('Kids’ lists', url_for('web.wishes'), 'wishes', 'gift') }}
         {% elif visitor().may('wish') and visitor().member %}{{ item('My list', url_for('web.wishes'), 'wishes', 'gift') }}{% endif %}
       </nav>
-      {# And the ones for looking after it, kept to one side. Each is shown only to a role
-         that may go there (familydb/roles.py): Family and Settings to an admin, what she
-         remembers and what it costs to the grown-ups. #}
+      {# The household's pages, each only for a role that may go there (familydb/roles.py). #}
       {% set visiting = visitor() %}
       {% set managing = visiting.may('manage') %}
       <nav class="tools" aria-label="Household">
         {% if visiting.may('browse') %}{{ item('Memory', url_for('web.memory'), 'memory', 'heart') }}{% endif %}
         {% if managing %}{{ item('Family', url_for('family.show'), 'family', 'family') }}{% endif %}
-        {# For an admin it carries a light while something only an admin can fix goes on:
-           amber ▲ for a look, red ■ while the family cannot be answered (web/status.light). #}
+        {# For an admin it carries a light: amber ▲ for a look, red ■ while the family cannot be answered (web/status.light). #}
         {% if visiting.may('browse') %}
           <a class="to-status{{ ' lit lit-' ~ status_light if status_light }}" href="{{ url_for('web.status') }}"{% if ns.section == 'status' %} aria-current="page"{% endif %}>
             {{- icon('status') }}<span class="label">Status{% if status_words %}: {{ status_words[1] }}{% endif %}</span>
             {%- if status_words %}<span class="light" aria-hidden="true">{{ status_words[0] }}</span>{% endif %}</a>
         {% endif %}
-        {# The last tile opens a menu: every page of settings for an admin, then whoever is
-           signed in, their password and signing out. Anybody else sees their own name on it,
-           and only the last three. A <details>, so it opens with scripts off too; menu.js
-           closes it again on a click elsewhere or Escape. #}
+        {# The last tile opens a menu: every page of settings for an admin, then who is signed in, their password and signing out; anybody else sees only the last three. A <details>, so it opens with scripts off; menu.js closes it on a click elsewhere or Escape. #}
         {% if managing or visiting.member or visiting.signed_in %}
           <details class="menu{% if ns.section in ('settings', 'you', 'look') %} here{% endif %}">
             <summary>
@@ -105,7 +92,6 @@
                     {%- if one.icon == 'presence' %}{{ presence('glyph') }}{% else %}{{ icon(one.icon) }}{% endif %}{{ one.title }}</a>
                 {% endfor %}
               {% endif %}
-              {# How this browser looks, which is everybody's own to choose. #}
               <a href="{{ url_for('look.show') }}"{% if here == 'look.show' %} aria-current="page"{% endif %}>{{ icon('palette') }}Look</a>
               {% if visiting.member or visiting.signed_in %}
                 <div class="menu-you">
@@ -126,8 +112,7 @@
       </nav>
     </header>
     <main id="content">
-      {# What the last form said, handed over by the redirect that followed it. The settings
-         page keeps its own under another name and draws it in its own place. #}
+      {# What the last form said; the settings page keeps its own under another name. #}
       {% for said in get_flashed_messages(category_filter=['edit']) %}
         <p class="said" role="status">{{ said }}</p>
       {% endfor %}

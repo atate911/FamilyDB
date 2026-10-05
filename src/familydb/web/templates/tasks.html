@@ -22,8 +22,7 @@
   <p id="{{ p }}-repeat-help" class="wide muted hint">A repeat starts from the reminder: every week from Sunday 19:00, say. Counted from when it's done, it comes round that long after each time it is ticked off.</p>
 {% endmacro %}
 {% block content %}
-{# Somebody who sees only their own (a kid): what is left for her, as Home lists it, and nothing
-   else, no filters, no counts, no workings (docs/STYLE.md, "A kid's screen"). #}
+{# Somebody who sees only their own (a kid): what is left for her, as Home lists it, no filters or workings (docs/STYLE.md, "A kid's screen"). #}
 {% if simple %}
 {{ page_head('My things to do', 'What’s left for you, soonest first. Tell ' ~ assistant ~ ' to add one or to remind you.', 'todo') }}
 {% call checklist(briefs, 'tasks', owners=false) %}Nothing to do right now.{% endcall %}
