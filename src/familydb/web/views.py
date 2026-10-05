@@ -1,8 +1,5 @@
-"""Turning stored records into what the templates show. Pure functions, no database, no Flask.
-
-The wording here is for people reading a page. The model's view of an idea lives in
-`agent/render.py` and must not change, because it sits in the cached prompt prefix.
-"""
+"""Turning stored records into what the templates show: pure functions, no database, no Flask.
+The model's view of an idea is `agent/render.py`, which must not change for a page's sake."""
 
 from __future__ import annotations
 
@@ -54,19 +51,17 @@ DETAILS = {
     "failed": "details could not be found",
     "skipped": "not one place to look up",
 }
-# The last line of every page. The product's name, not the page's title, which the family may
-# change: the copyright is in the software, not in what they call it.
+# The product's name, not the page's title, which the family may change.
 FOOTER = "FamilyDB © 2026 by Andrew Tate. Version v{version}. All rights reserved."
-# The Status tile's light for an admin (status.light): its mark, drawn in the tile's corner and
-# never by its colour alone, and what it says to a screen reader, or beside it on a wide screen.
+# The Status tile's light (status.light): a mark, never colour alone, and its words for a screen
+# reader.
 STATUS_LIGHTS = {
     "bad": ("■", "not answering"),
     "warn": ("▲", "needs a look"),
 }
-# The same without the version, for somebody signed in who does not see how it works (a kid).
+# Without the version, for a kid.
 FOOTER_PLAIN = "FamilyDB © 2026 by Andrew Tate. All rights reserved."
-# Each role in the page's words, for the Family page and setup. What each may do is decided in
-# familydb/roles.py; this is only how the page says it.
+# What each may do is decided in familydb/roles.py.
 ROLE_WORDS = {
     "admin": "looks after it: the settings, setup, and who is on the family list. There is "
     "always at least one.",
@@ -76,10 +71,8 @@ ROLE_WORDS = {
     "keeps her own wish lists, sees only her own things to do, within the number of messages a "
     "day set under Spending.",
 }
-# The choice on a kid's Family page, as the page words it; stored as the key.
 GENDER_WORDS = {"female": "Female", "male": "Male"}
-# What somebody is told when their role may not go somewhere, by the permission it needs. The
-# conversation is hers, so it goes by her name: {name} is the persona in force.
+# By the permission needed; {name} is the persona in force.
 REFUSALS = {
     "manage": (
         "For an admin",
@@ -124,8 +117,8 @@ def participants_text(idea: Idea) -> str:
 
 
 def on_text(idea: Idea) -> str | None:
-    """When a dated idea is on, in the page's words: "Wed 18 Nov 2026, 20:00", "Thu 1 Oct to
-    Sat 31 Oct 2026", "from Thu 1 Oct 2026". None for an idea tied to no date."""
+    """When a dated idea is on: "Wed 18 Nov 2026, 20:00", "Thu 1 Oct to Sat 31 Oct 2026",
+    "from Thu 1 Oct 2026". None for an idea tied to no date."""
     first, last = idea.first_day, idea.last_day
     if first is None:
         return None
@@ -148,7 +141,7 @@ def rating_text(idea: Idea) -> str | None:
 
 
 def kind_text(kind: str) -> str:
-    """`day_trip` is how it is stored and how the model says it; nobody wants to read it."""
+    """`day_trip` as "day trip"."""
     return kind.replace("_", " ")
 
 
@@ -157,7 +150,6 @@ def details_text(idea: Idea) -> str:
 
 
 def local_day(value: str, tz: ZoneInfo) -> str:
-    """A stored UTC instant as the date it was in the family's timezone."""
     try:
         moment = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
@@ -168,13 +160,11 @@ def local_day(value: str, tz: ZoneInfo) -> str:
 
 
 def idea_row(idea: Idea, tz: ZoneInfo) -> dict[str, Any]:
-    """One line in a list of ideas."""
     return {
         "id": idea.id,
         "title": idea.title,
         "added": local_day(idea.created_at, tz),
-        # Links reach the page from chat and from pages the lookup worker read. Anything that is
-        # not an ordinary web address is dropped here rather than put in an href.
+        # Links come from chat and fetched pages: anything but an ordinary web address is dropped.
         "url": clean_url(idea.url),
         "kind": kind_text(idea.kind),
         "status": idea.status,
@@ -190,7 +180,7 @@ def idea_row(idea: Idea, tz: ZoneInfo) -> dict[str, Any]:
     }
 
 
-# Each kind of memory in the page's words, in the order the add form offers them.
+# In the order the add form offers them.
 MEMORY_KINDS = {
     "food": "food and drink",
     "activities": "things to do",
@@ -199,13 +189,11 @@ MEMORY_KINDS = {
     "routine": "routines",
     "other": "anything else",
 }
-# How much of the message a memory came from the page shows.
 SOURCE_CHARS = 140
 
 
 def excerpt(text: str, fact: str, room: int = SOURCE_CHARS) -> str:
-    """The part of a message a memory came from: around the first of its words found in it, so
-    a long voice note shows the line that mattered rather than how it began."""
+    """The part of a message a memory came from, around the first of its words found in it."""
     text = " ".join(text.split())
     if len(text) <= room:
         return text
@@ -222,7 +210,6 @@ def excerpt(text: str, fact: str, room: int = SOURCE_CHARS) -> str:
 
 
 def memory_row(memory: Memory, today: date, tz: ZoneInfo) -> dict[str, Any]:
-    """One memory as the page shows it, with where it came from in the family's own words."""
     when = day_text(local_day(memory.created_at, tz))
     who = memory.said_by_name
     if memory.source_message_id is None:
@@ -256,8 +243,7 @@ def memory_row(memory: Memory, today: date, tz: ZoneInfo) -> dict[str, Any]:
 def memory_page(
     memories: list[Memory], people: list[Member], today: date, tz: ZoneInfo
 ) -> dict[str, Any]:
-    """What the page lists: what is remembered, by whom it is about (the family first, then each
-    person in the family's order), and what was forgotten. Replaced ones are history."""
+    """What is remembered, grouped by whom it is about (family first), and what was forgotten."""
     kept = [m for m in memories if m.status == "active"]
     order = [None, *(person.id for person in people)]
     names = {person.id: person.display_name for person in people}
@@ -273,7 +259,7 @@ def memory_page(
                 }
             )
     strays = [m for m in kept if m.member_id is not None and m.member_id not in names]
-    if strays:  # about somebody since switched off the family list
+    if strays:  # about somebody since off the family list
         groups.append(
             {"who": "Others", "family": False, "rows": [memory_row(m, today, tz) for m in strays]}
         )
@@ -282,7 +268,6 @@ def memory_page(
 
 
 def task_brief(task: Task, tz: ZoneInfo, today: date) -> dict[str, Any]:
-    """An open task as Home lists it: what, whose, and when it is due, in words."""
     due = None
     late = False
     if task.due_at:
@@ -302,18 +287,15 @@ def task_brief(task: Task, tz: ZoneInfo, today: date) -> dict[str, Any]:
     }
 
 
-# Ways to start, under the box on Home and in an empty chat. The first is the question most
-# people open the page to ask, put the way the day puts it; the other two start an instruction
-# and leave the rest to whoever is typing. Written here, never asked of a model.
+# Ways to start, under the box on Home and in an empty chat; never asked of a model.
 WEEKEND_QUESTION = "What should we do this weekend?"
 TODAY_QUESTION = "What should we do today?"
 STARTERS = ("Remind me to ", "We should try ")
 
 
 def starters(today: date, *, kid: bool = False) -> list[dict[str, str]]:
-    """The suggestions under the box: what each puts in it, and how it reads as a link. None for
-    a kid, whose box is the one natural place to say anything (docs/STYLE.md, "A kid's screen"),
-    and whose ways to start would only be words for her to say instead of her own."""
+    """The suggestions under the box: what each puts in it, and its label. None for a kid
+    (docs/STYLE.md, "A kid's screen")."""
     if kid:
         return []
     question = TODAY_QUESTION if today.weekday() >= 5 else WEEKEND_QUESTION
@@ -323,7 +305,7 @@ def starters(today: date, *, kid: bool = False) -> list[dict[str, str]]:
     ]
 
 
-# How often a task may come round, as the tasks page offers it: "every:unit" and its words.
+# "every:unit" and its words.
 REPEATS = (
     ("", "Doesn't repeat"),
     ("1:day", "Every day"),
@@ -353,10 +335,8 @@ def repeat_text(task: Task, tz: ZoneInfo) -> str | None:
 
 
 def nudge_words(task: Task, tz: ZoneInfo) -> dict[str, str] | None:
-    """Whether an open task kept for a window is brought up by itself (jobs/nudges.py), for the
-    tasks page: `on`, "a free Saturday morning", and `last`, when it last was; or `unread` when
-    its window is not a day or part of the day that can be read, so the family can say it
-    again. None for a task that is not waiting on a window."""
+    """For an open task kept for a window (jobs/nudges.py): `on`, "a free Saturday morning", and
+    `last`; or `unread` when the window cannot be read. None for a task not waiting on one."""
     if task.status != "open" or task.repeats or not task.preferred_window:
         return None
     window = windows.read(task.preferred_window)
@@ -370,11 +350,10 @@ def nudge_words(task: Task, tz: ZoneInfo) -> dict[str, str] | None:
 
 
 def task_row(task: Task, tz: ZoneInfo, *, nudging: bool = False) -> dict[str, Any]:
-    """One task on the tasks page, with its times as the family's clock shows them. `nudging`
-    is whether tasks kept for a window are being brought up at all (the `task_nudges` setting)."""
+    """One task on the tasks page. `nudging` is the `task_nudges` setting."""
     choice = f"{task.repeat_every}:{task.repeat_unit}" if task.repeats else ""
     options = list(REPEATS)
-    if choice and choice not in dict(REPEATS):  # set in the chat to something the list lacks
+    if choice and choice not in dict(REPEATS):  # set in chat to something the list lacks
         options.insert(1, (choice, f"Every {task.repeat_every} {task.repeat_unit}s (as it is)"))
     return {
         "task": task,
@@ -387,14 +366,14 @@ def task_row(task: Task, tz: ZoneInfo, *, nudging: bool = False) -> dict[str, An
         "repeats": repeat_text(task, tz),
         "repeat_choice": choice,
         "repeat_options": options,
-        # What the form was drawn with, so saving it changes the repeat only when that did.
+        # So saving changes the repeat only when it changed.
         "repeat_was": f"{choice}:{task.repeat_from}" if choice else "",
         "nudge": nudge_words(task, tz) if nudging else None,
     }
 
 
 def hours_rows(place: Place | None) -> list[dict[str, str]]:
-    """Monday to Sunday, saying plainly which days are closed and which are unknown."""
+    """Monday to Sunday, with closed and unknown told apart."""
     hours = (place.hours if place else None) or {}
     rows = []
     for key in DAYS:
@@ -463,7 +442,6 @@ TODAY_HOURS = {"open": "open today {ranges}", "closed": "closed today", "unknown
 def restaurant_card(
     idea: Idea, place: Place | None, today: date, now: datetime, stale_days: int
 ) -> dict[str, Any]:
-    """A restaurant as the page shows it: where, what it costs, and where to read more."""
     state, ranges = open_on(place, today)
     hours_today = TODAY_HOURS[state]
     if hours_today:
@@ -489,7 +467,7 @@ def restaurant_card(
 
 
 def day_text(value: str) -> str:
-    """A stored date or datetime as 'Saturday 26 September', with the time when there is one."""
+    """A stored date or datetime as 'Saturday 26 September', with the time if there is one."""
     stamp = value.strip()
     try:
         if len(stamp) <= 10:
@@ -502,7 +480,7 @@ def day_text(value: str) -> str:
 
 
 def date_chip(value: str) -> dict[str, Any] | None:
-    """The day something starts in three parts, for the tear-off date beside it: Sat, 26, Sep."""
+    """The day in three parts for the tear-off date: Sat, 26, Sep."""
     try:
         day = date.fromisoformat(value.strip()[:10])
     except ValueError:
@@ -538,10 +516,8 @@ def plan_row(plan: Plan, today: date) -> dict[str, Any]:
         "relative": relative_text(plan.start, today),
         "chip": date_chip(plan.start),
         "all_day": plan.all_day,
-        # What a datetime-local box wants, "2026-09-26T18:30": the stored start without its
-        # offset — plans are stored in the family's own time, so the wall time is the first
-        # sixteen characters — or a morning on the day of an all-day plan. A box handed the
-        # offset as well shows nothing at all.
+        # A datetime-local box wants "2026-09-26T18:30", with no offset (it shows nothing with one):
+        # plans are stored in the family's own time, so that is the first sixteen characters.
         "start_value": plan.start[:16] if len(plan.start) > 10 else f"{plan.start[:10]}T09:00",
         "location": plan.location,
         "notes": plan.notes,
@@ -550,13 +526,12 @@ def plan_row(plan: Plan, today: date) -> dict[str, Any]:
 
 
 def entry_row(entry: Entry, today: date) -> dict[str, Any]:
-    """One line of the calendar: what, when, and whether the bot can move it."""
     days = entry.days()
     when = day_text(entry.start[:10] if entry.all_day else entry.start)
     if entry.all_day and len(days) > 1:
         first, last = days[0], days[-1]
         if (first.year, first.month) == (last.year, last.month):
-            # "Saturday 3 to Sunday 4 October": the month once, where it cannot be mistaken.
+            # "Saturday 3 to Sunday 4 October": the month once.
             when = f"{first:%A} {first.day} to {day_text(last.isoformat())}"
         else:
             when = f"{day_text(first.isoformat())} to {day_text(last.isoformat())}"
@@ -573,18 +548,15 @@ def entry_row(entry: Entry, today: date) -> dict[str, Any]:
         "location": entry.location,
         "notes": entry.notes,
         "status": entry.status,
-        # Made somewhere other than here, so this page can show it but not move it.
+        # Made elsewhere: shown, not movable here.
         "from_google": entry.plan_id is None,
         "start_value": entry.start[:16] if not entry.all_day else f"{entry.start[:10]}T09:00",
     }
 
 
 def month_weeks(entries: list[Entry], first: date, today: date) -> list[list[dict[str, Any]]]:
-    """A month as weeks of days, Monday first, each day with what is on it.
-
-    `first` is any day in the month. The weeks run from the Monday on or before the 1st to the
-    Sunday on or after the last day, so the grid is always whole weeks.
-    """
+    """A month as whole weeks of days, Monday first, each with what is on it. `first` is any day
+    in the month."""
     grid = months.Calendar(firstweekday=0).monthdatescalendar(first.year, first.month)
     by_day: dict[date, list[dict[str, Any]]] = {}
     for entry in entries:
@@ -607,19 +579,16 @@ def month_weeks(entries: list[Entry], first: date, today: date) -> list[list[dic
     ]
 
 
-# The home page's radar: a dial 200 units across, its range rings a week, two weeks and four weeks
-# out. Each pair is (days away, distance from the middle).
+# The home radar: a dial 200 units across, rings at a week, two and four. (days away, distance).
 RADAR_RINGS = ((0, 12.0), (7, 33.0), (14, 66.0), (28, 92.0))
-# Blips sit on one of twelve bearings, one every 30 degrees: the page times each blip's flare to
-# the moment the sweep passes that bearing (the `.b1` to `.b11` rules in style.css; bearing 0,
-# at twelve o'clock, needs no delay).
+# Blips sit on twelve bearings, 30 degrees apart; style.css (`.b1` to `.b11`) times each flare to
+# the sweep passing it (bearing 0 needs no delay).
 RADAR_BEARINGS = 12
 RADAR_START = 210  # degrees clockwise from twelve o'clock, where the first plan goes
 
 
 def radar_distance(away: float, rings: tuple[tuple[int, float], ...] = RADAR_RINGS) -> float:
-    """How far from the middle something `away` shows (days for a plan, minutes for a place):
-    along the rings, never past the last."""
+    """How far from the middle something `away` shows (days or minutes), within the last ring."""
     away = max(0, away)
     for (near_away, near), (far_away, far) in pairwise(rings):
         if away <= far_away:
@@ -628,12 +597,8 @@ def radar_distance(away: float, rings: tuple[tuple[int, float], ...] = RADAR_RIN
 
 
 def radar_blips(entries: list[Entry], today: date) -> list[dict[str, Any]]:
-    """Where each coming plan shows on the home page's radar.
-
-    The nearer the day, the nearer the middle. Plans are spread round the dial by the golden
-    angle so none sits on another, each on one of the twelve bearings, and the first, the next
-    thing on, is marked so the page can make it the brightest.
-    """
+    """Where each coming plan shows on the home radar: nearer the day, nearer the middle; spread
+    by the golden angle so none sits on another; the first is marked as the brightest."""
     blips: list[dict[str, Any]] = []
     taken: set[int] = set()
     for index, entry in enumerate(entries):
@@ -654,9 +619,8 @@ def radar_blips(entries: list[Entry], today: date) -> list[dict[str, Any]]:
     return blips
 
 
-# The ideas page's radar is a map: home at the middle, north at the top, and each saved place as
-# far out as it is by road, its rings a quarter of an hour, three quarters and two hours away.
-# Each pair is (minutes away, distance from the middle), as in RADAR_RINGS.
+# The ideas radar is a map: home at the middle, north up, rings at 15 min, 45 min and 2 h by road.
+# (minutes away, distance), as in RADAR_RINGS.
 PLACE_RINGS = ((0, 8.0), (15, 33.0), (45, 66.0), (120, 92.0))
 PLACE_RING_LABELS = ("15m", "45m", "2h")
 COMPASS = ("north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west")
@@ -664,7 +628,7 @@ POINTS = ("N", "NE", "E", "SE", "S", "SW", "W", "NW")
 
 
 def bearing(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """Which way the second point lies from the first, in degrees clockwise from north."""
+    """Degrees clockwise from north that the second point lies from the first."""
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     dlmb = math.radians(lon2 - lon1)
     east = math.sin(dlmb) * math.cos(phi2)
@@ -673,7 +637,7 @@ def bearing(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 
 def drive_text(minutes: int) -> str:
-    """A drive's length as people say it: "25 min", "1 h 35 min", to five minutes past an hour."""
+    """A drive as people say it: "25 min", "1 h 35 min" (past an hour, to five minutes)."""
     if minutes < 60:
         return f"{minutes} min"
     hours, rest = divmod(5 * round(minutes / 5), 60)
@@ -682,7 +646,7 @@ def drive_text(minutes: int) -> str:
 
 @dataclass(frozen=True)
 class Away:
-    """Where a saved place lies from home: the drive, as the lookups estimate it, and which way."""
+    """Where a saved place lies from home: the estimated drive and which way."""
 
     minutes: int
     degrees: float
@@ -720,12 +684,8 @@ def away_from_home(place: Place | None, settings: Settings) -> Away | None:
 
 
 def places_radar(placed: list[tuple[Idea, Away]]) -> dict[str, Any] | None:
-    """The ideas page's radar and the words beside it; None when nothing listed is on the map.
-
-    Each place shows where it is from home, the further by road the further out, never past
-    the last ring. It flares as the sweep passes its bearing, the nearest one brightest and
-    pinging, since the words beside the radar name it.
-    """
+    """The ideas radar and the words beside it; None when nothing listed is on the map. The
+    nearest place is the brightest, since the words beside the radar name it."""
     if not placed:
         return None
     ordered = sorted(placed, key=lambda pair: (pair[1].minutes, pair[0].id))
@@ -786,15 +746,9 @@ def chat_line(
     waiting: bool,
     assistant: str,
 ) -> dict[str, Any]:
-    """One message in the chat: who said it, when, what the turn ran, and what went wrong.
-
-    `did` is the turn's tool calls, which the log stores against the question rather than the
-    answer. They belong under the answer: "used suggest" beneath somebody's own message reads
-    as though they had run it. `waiting` is for a message nothing has replied to yet, which is
-    a fact about the thread rather than about the row, so the caller works it out. `assistant`
-    is what the persona in force is called: every line she sends, a reply, a reminder or a
-    plain "Done.", is hers alike.
-    """
+    """One message in the chat. `did` is the turn's tool calls, which the log stores against the
+    question but which belong under the answer. `waiting` (nothing has replied yet) is a fact about
+    the thread, so the caller works it out. Every line she sends is `assistant`'s."""
     from_bot = message.direction == "out"
     trouble = None
     if not from_bot:
@@ -814,7 +768,7 @@ def chat_line(
 
 
 def handed_line(who: str, text: str, now: datetime, tz: ZoneInfo) -> dict[str, Any]:
-    """A message just sent from the page that the log does not hold yet, drawn as it will be."""
+    """A message just sent that the log does not hold yet, drawn as it will be."""
     return {
         "id": None,
         "who": who,
@@ -827,8 +781,7 @@ def handed_line(who: str, text: str, now: datetime, tz: ZoneInfo) -> dict[str, A
 
 
 def tools_used(actions: Any) -> list[str]:
-    """The tools a turn ran, in order, named once each. Failures included: those are the ones
-    worth seeing."""
+    """The tools a turn ran, in order, named once each, failures included."""
     seen: list[str] = []
     for action in actions or []:
         name = action.get("tool") if isinstance(action, dict) else None
@@ -837,7 +790,7 @@ def tools_used(actions: Any) -> list[str]:
     return seen
 
 
-# What needs an admin, by kind (familydb/alerts.py), as the status page heads it.
+# By alert kind (familydb/alerts.py).
 ALERT_TITLES = {
     "credit": "{company} is out of credit",
     "key": "{company} refused its key",
@@ -852,13 +805,11 @@ ALERT_TITLES = {
     "refused": "{company} is refusing requests",
     "advice": "A judgement on the models",
 }
-# Kinds whose detail says what happened: shown with the row.
 SAID_IN_DETAIL = frozenset({"model", "price", "prices", "new", "shift", "api", "refused", "advice"})
 COMPANY_WORDS = {"openai": "OpenAI", "anthropic": "Anthropic", "gemini": "Google Gemini"}
 
 
 def alert_row(alert: Any, tz: ZoneInfo, *, telling: bool, admins: int) -> dict[str, Any]:
-    """One trouble as a light on the status page: what it is, since when, and who was told."""
     title = ALERT_TITLES.get(alert.kind, alert.kind).format(
         company=COMPANY_WORDS.get(alert.subject, alert.subject)
     )
@@ -893,7 +844,7 @@ CHANGE_WORDS = {
 
 
 def source_row(source: Any, tz: ZoneInfo) -> dict[str, Any]:
-    """Where the daily check of models and prices reads, as a light: when, and how it went."""
+    """Where the daily check reads, as a light: when, and how it went."""
     company = COMPANY_WORDS.get(source.source)
     label = SOURCE_WORDS.get(source.source) or f"{company or source.source}'s list for the key"
     when = local_moment(source.checked_at, tz)
@@ -913,9 +864,8 @@ JUDGEMENT_TITLES = {
 
 
 def judgement_row(question: Any, tz: ZoneInfo, live: Any) -> dict[str, Any]:
-    """One question a judgement was asked, as the Status page lists it: what, when, what it
-    said and what came of it, and the settings its buttons would save: what waits for an admin,
-    while it is not in force, and what it changed, while that still is."""
+    """One judgement question for the Status page: what, when, the answer, and the settings its
+    buttons save: `waiting` while not in force, `undo` while what it changed still is."""
     facts = question.facts
     title = JUDGEMENT_TITLES.get(question.kind, question.kind).format(
         model=facts.get("model", ""),
@@ -944,7 +894,6 @@ def judgement_row(question: Any, tz: ZoneInfo, live: Any) -> dict[str, Any]:
 
 
 def model_change_row(change: Any, tz: ZoneInfo) -> dict[str, str]:
-    """One thing the daily check found changed, for the status page's table."""
     what = CHANGE_WORDS.get(change.what, change.what)
     return {
         "when": local_moment(change.at, tz),
@@ -954,9 +903,8 @@ def model_change_row(change: Any, tz: ZoneInfo) -> dict[str, str]:
     }
 
 
-# Each kind of message she sends of her own accord, as the Messages page lists them: the group
-# on that page where it is switched (none for reminders, which somebody asked for), what sending
-# it costs, and which of her lines (voice.EVENTS, or "digest") are its messages.
+# Each kind of message she sends unasked, for the Messages page: the group where it is switched
+# (none for reminders, which somebody asked for), its cost, its lines (voice.EVENTS or "digest").
 AUTOMATIC = (
     ("weekend", "weekend", "Weekend ideas", "one model call a week", ("digest",)),
     ("reminders", "", "Reminders", "free", ("reminder", "reminder_late")),
@@ -990,7 +938,6 @@ AUTOMATIC_BY_EVENT = {event: title for _, _, title, _, events in AUTOMATIC for e
 
 
 def chat_words(conn_chat: str, member_name: str | None) -> str:
-    """Which chat a message went to, as the page says it."""
     if conn_chat == "web":
         return "the chat on this page"
     if conn_chat.startswith("-"):
@@ -998,13 +945,12 @@ def chat_words(conn_chat: str, member_name: str | None) -> str:
     return f"Telegram, {member_name}" if member_name else "Telegram"
 
 
-# A tool's input or answer is cut here on the history page; the log keeps it whole.
+# The history page cuts a tool's input or answer here; the log keeps it whole.
 MAX_SHOWN = 4000
 ASKED_WORDS = 90
 
 
 def pretty_json(text: str | None) -> str:
-    """A tool's input or answer, laid out to be read."""
     if not text:
         return ""
     try:
@@ -1015,7 +961,7 @@ def pretty_json(text: str | None) -> str:
 
 
 def asked_line(text: str, who: str) -> str:
-    """A message as a line of the status page's history: who, and the start of what they said."""
+    """A message as a line of the history: who, and the start of what they said."""
     words = " ".join(as_said(text).split())
     if len(words) > ASKED_WORDS:
         words = words[: ASKED_WORDS - 1].rstrip() + "…"
@@ -1023,7 +969,7 @@ def asked_line(text: str, who: str) -> str:
 
 
 def found_by_lookup(tool: dict[str, Any]) -> dict[str, Any] | None:
-    """What a lookup saved (save_place) or why it gave up (skip_place), as the page shows it."""
+    """What a lookup saved (save_place) or why it gave up (skip_place)."""
     try:
         given = json.loads(tool.get("input") or "{}")
     except ValueError:
@@ -1054,14 +1000,12 @@ def found_by_lookup(tool: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def lookups_when(settings: Any) -> str:
-    """When ideas waiting are looked up, as the page says it."""
     if settings.lookups_when == "asap":
         return "as soon as each is added"
     return f"together at {settings.lookup_hour:02d}:00 each evening"
 
 
 def local_moment(value: str, tz: ZoneInfo) -> str:
-    """A stored UTC instant as the day and time it was where the family lives."""
     try:
         moment = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
@@ -1073,7 +1017,7 @@ def local_moment(value: str, tz: ZoneInfo) -> str:
 
 
 def setting_text(value: str | None) -> str:
-    """A stored JSON value as the page shows it. Nothing stored reads as the default."""
+    """A stored JSON value; nothing stored reads as the default."""
     if value is None:
         return "—"
     try:
@@ -1088,8 +1032,7 @@ def setting_text(value: str | None) -> str:
 
 
 def price_text(price: prices.Price | None) -> str | None:
-    """What a model costs, in US dollars per million tokens read and written, or for a minute of
-    recording when that is how it is billed (a hearing model, prices.HEARING)."""
+    """US dollars per million tokens read and written, or per minute for a hearing model."""
     if price is None:
         return None
     if price.minute and not (price.input or price.output):
@@ -1098,8 +1041,7 @@ def price_text(price: prices.Price | None) -> str | None:
 
 
 def model_offer(provider: str, name: str) -> str:
-    """A model name as a box offers it: what it is called, where it stands in its company's
-    lineup, what it costs, and whether it is new or going (the daily check's word on it)."""
+    """A model name as a box offers it: lineup place, cost and the daily check's note."""
     known = catalog.known(provider, name)
     said = f"{known.label}, {known.level}" if known else ""
     cost = price_text(prices.price(provider, name))
@@ -1107,7 +1049,6 @@ def model_offer(provider: str, name: str) -> str:
 
 
 def level_choice(level: str, provider: str, name: str) -> str:
-    """A level as the settings page offers it: the model it means for the company answering."""
     known = catalog.known(provider, name)
     cost = price_text(prices.price(provider, name))
     said = f"{level}: {known.label if known else name}"
@@ -1115,8 +1056,7 @@ def level_choice(level: str, provider: str, name: str) -> str:
 
 
 def model_text(provider: str, name: str, level: str) -> str:
-    """Which model answers, as the status page and setup say it: its name, and its level when
-    that is not the everyday one, or when the model does not think before answering."""
+    """A model's name, with its level if not everyday and a note if it does not think first."""
     known = catalog.known(provider, name)
     notes = [] if level == catalog.EVERYDAY else [level]
     if known is not None and not known.thinks:
@@ -1125,19 +1065,15 @@ def model_text(provider: str, name: str, level: str) -> str:
 
 
 LONG_SETTINGS = frozenset({"persona_text", "persona_notes", "about_family", "voice_lines"})
-# How many unchanged lines are shown either side of a change. A persona's character is written in
-# paragraphs, one to a line with a blank line between them, so with one either side the only
-# context would be the blank.
+# Unchanged lines shown either side of a change. A character is paragraphs one to a line with a
+# blank between, so one line of context would be only the blank.
 CHANGE_CONTEXT = 2
 
 
 def line_changes(before: str, now: str) -> list[dict[str, str]]:
-    """What changed from one text to the other, line by line, as a unified diff shows it.
-
-    Each line keeps the mark the diff gives it (+ for one that is new, - for one that has gone, a
-    space for one either side that has not changed) and a kind the stylesheet colours, so a
-    change never rests on colour alone. The diff's headers and line numbers say nothing to a
-    family, so they are left out and its parts are parted by an ellipsis."""
+    """What changed between two texts, as a unified diff. Each line keeps its +, - or space mark
+    and a kind the stylesheet colours, so a change never rests on colour alone. Headers and line
+    numbers are left out and its parts are parted by an ellipsis."""
     shown: list[dict[str, str]] = []
     diff = difflib.unified_diff(
         before.splitlines(), now.splitlines(), lineterm="", n=CHANGE_CONTEXT
@@ -1152,12 +1088,12 @@ def line_changes(before: str, now: str) -> list[dict[str, str]]:
 
 
 def change_row(line: dict[str, Any], tz: ZoneInfo) -> dict[str, Any]:
-    """One line of the settings history. A key's value is never in there to show."""
+    """One line of the settings history; a key's value is never in it."""
     return {
         "when": local_moment(line["changed_at"], tz),
         "key": line["key"],
         "secret": bool(line["secret"]),
-        # A description is too long to show twice in a list; saying it changed is enough.
+        # Too long to show twice in a list.
         "long": line["key"] in LONG_SETTINGS,
         "old": setting_text(line["old_value"]),
         "new": setting_text(line["new_value"]),
@@ -1166,8 +1102,7 @@ def change_row(line: dict[str, Any], tz: ZoneInfo) -> dict[str, Any]:
     }
 
 
-# The regions time zones are named for, as the time zone dropdown heads them, in its order. A zone
-# named for no region (UTC) goes last, on its own.
+# The time zone dropdown's region headings, in order; a zone named for no region (UTC) goes last.
 ZONE_REGIONS = {
     "Africa": "Africa",
     "America": "Americas",
@@ -1183,7 +1118,7 @@ ZONE_OTHERS = "Other"
 
 
 def utc_offset(zone: str, now: datetime) -> str:
-    """How far a zone is from UTC at this moment, daylight saving and all: "UTC-07:00"."""
+    """How far a zone is from UTC now, daylight saving included: "UTC-07:00"."""
     offset = now.astimezone(ZoneInfo(zone)).utcoffset() or timedelta(0)
     total = round(offset.total_seconds() / 60)
     hours, minutes = divmod(abs(total), 60)
@@ -1191,9 +1126,8 @@ def utc_offset(zone: str, now: datetime) -> str:
 
 
 def zone_label(zone: str, now: datetime) -> str:
-    """A time zone as the dropdown offers it: the place it is named for first, so typing a city
-    finds it, then its offset now. "Vancouver · UTC-07:00", "Buenos Aires, Argentina ·
-    UTC-03:00", and "UTC" as itself."""
+    """A zone as the dropdown offers it, place first so typing a city finds it, then its offset
+    now: "Vancouver · UTC-07:00", "Buenos Aires, Argentina · UTC-03:00", "UTC"."""
     rest = zone.partition("/")[2]
     if not rest:
         return zone
@@ -1205,9 +1139,8 @@ ZoneGroups = tuple[tuple[str, tuple[tuple[str, str], ...]], ...]
 
 
 def zone_groups(zones: Sequence[str], now: datetime) -> ZoneGroups:
-    """Time zones for a dropdown: under the region each is named for, the places in alphabetical
-    order, each as (zone, how it reads). Worked out for the hour, since the offsets move only as
-    clocks change, and there are nearly five hundred of them to work out."""
+    """Time zones for a dropdown, under their regions, each as (zone, how it reads). Cached per
+    hour: offsets move only as clocks change and there are nearly five hundred."""
     hour = now.astimezone(UTC).replace(minute=0, second=0, microsecond=0)
     return _zone_groups(tuple(zones), hour)
 
@@ -1228,7 +1161,7 @@ def _zone_groups(zones: tuple[str, ...], hour: datetime) -> ZoneGroups:
 
 
 def knock_row(knock: Any, tz: Any) -> dict[str, Any]:
-    """Somebody who messaged the bot and is not on the family list, as the Family page shows it."""
+    """Somebody who messaged the bot and is not on the family list."""
     words = (knock.name or "").split()
     name = " ".join(word for word in words if not word.startswith("@"))
     handle = next((word for word in words if word.startswith("@")), "")
@@ -1244,8 +1177,7 @@ def knock_row(knock: Any, tz: Any) -> dict[str, Any]:
 
 
 def footer(version: str, *, plain: bool = False) -> str:
-    """The copyright and version line at the foot of every page; `plain` leaves the version
-    out, for somebody who does not see how the bot works (roles.py `browse`)."""
+    """The foot of every page; `plain` leaves the version out (roles.py `browse`)."""
     return FOOTER_PLAIN if plain else FOOTER.format(version=version)
 
 
@@ -1256,21 +1188,20 @@ WISH_LISTS = (
     ("christmas", "Christmas", "For Christmas: no daily limit."),
     ("birthday", "Birthday", "For your birthday: no daily limit."),
 )
-LIST_WORDS = {None: "every day", "christmas": "Christmas", "birthday": "birthday"}
 CONCERN_WORDS = {
     "rule": "a house rule",
     "sibling": "about a sister or brother",
     "inappropriate": "not OK",
     "too_many": "too many in one day",
 }
-# The same, as the kid it happened to reads it: what to do next, kindly, rather than a verdict.
+# As the kid it happened to reads it: what to do next, not a verdict.
 KID_CONCERN_WORDS = {
     "rule": "a house rule: ask a parent",
     "sibling": "about a sister or brother",
     "inappropriate": "not one for your list",
     "too_many": "one for another day",
 }
-# What asking for a wish on the page came to, by wish_service's result.
+# By wish_service's result.
 WISH_SAID = {
     "added": "On your list: {title}.",
     "duplicate": "Already on your list: {title}.",
@@ -1289,7 +1220,7 @@ ASKED_A_PARENT = "Sent to a parent."
 
 
 def day_words(iso: str | None, today: date) -> str:
-    """A day as the kids read it: "4 October", with the year only when it is not this one."""
+    """A day as the kids read it: "4 October", the year only when not this one."""
     if not iso:
         return ""
     day = date.fromisoformat(iso[:10])
@@ -1297,7 +1228,6 @@ def day_words(iso: str | None, today: date) -> str:
 
 
 def wish_row(wish: Any, today: date) -> dict[str, Any]:
-    """One wish for the page: what it is, where it stands, and when it may be asked again."""
     return {
         "id": wish.id,
         "title": wish.title,

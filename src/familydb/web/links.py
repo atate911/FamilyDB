@@ -1,10 +1,4 @@
-"""Every page outside FamilyDB the page links to, in one place.
-
-The companies move their consoles now and then, and a dead link in a setup step is found by the
-person who needed it. Written once here, each is one line to change, and `familydb doctor
---online` asks each one whether it still answers (doctor.check_links), from the server, which
-reaches them when a developer's machine may not.
-"""
+"""Every page outside FamilyDB the page links to; `familydb doctor --online` checks each."""
 
 from __future__ import annotations
 

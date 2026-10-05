@@ -1,11 +1,6 @@
-"""One message's or one lookup's history in full: every model call and tool call, for an admin.
-
-The status page lists what the models were asked lately; each line opens here. A message shows
-what was said, every call made to answer it (a lookup it started included), what each tool was
-given and gave back, and the reply. A lookup, which has no message, is found by its turn, with
-what it saved, or why it gave up, and the pages it read. These are private words from every chat,
-so only an admin reaches them (`auth.NEEDS`). Reading only, and no model call.
-"""
+"""One message's or one lookup's history in full, for an admin: every model call and tool call.
+A lookup has no message and is found by its turn. Private words from every chat, so `auth.NEEDS`
+limits it to admins."""
 
 from __future__ import annotations
 
@@ -22,7 +17,6 @@ from familydb.web import views
 
 bp = Blueprint("activity", __name__)
 
-# A message by its number, or a turn by its id: nothing else is looked up.
 KEY = re.compile(r"m[0-9]{1,18}|t[0-9a-f]{16}")
 
 

@@ -1,31 +1,17 @@
-"""The settings pages: the only part of the web surface that writes settings.
+"""The settings pages: the only web module that writes settings, through `store.settings`, plus
+two files (the session key via `keys.rotate`, the Google key via `google.save_key`). Every change
+is logged; a key's value never is.
 
-It writes `app_settings` through `store.settings`, and two files: the session key
-(`keys.rotate`, which signs everyone out) and the Google key (`google.save_key`).
-Nothing here can reach an idea, a plan or a message. Every change is logged, and a key's value
-is never what gets logged: only that it was replaced.
+/settings summarises each part; each has a page, /settings/<name> (`fields.SECTIONS`), and every
+form says which page it came from so its answer is shown there.
 
-/settings says how each part stands, in a line or two, and each part has a page of its own,
-/settings/<name> (`fields.SECTIONS`). Every form on one of those pages says which page it is on,
-so what it did is said on the page it was sent from. A form that names no page (a test, or a
-page an older version drew) comes back to /settings, and a complaint about it is drawn on the
-page its boxes are on.
+The Personality page writes the `PROFILE` settings. A rewrite of her description is kept for the
+persona in force when the page was drawn (see `PersonaRewrite.of`); the family's name for her
+and notes are theirs whoever she is.
 
-The Personality page (/settings/personality) writes the six `PROFILE` settings: which persona,
-the name the family call her, her description as the family rewrote it, their notes on how she
-talks, her lines likewise, and the family's words about themselves. Her description is shown and
-kept as written, with {name} where her name goes, and a rewrite of it is kept for the persona it
-describes, the one in force when the page was drawn; when her own has changed since, the page
-says so and shows how. Their name for her and their notes are theirs whoever she is: the name is
-what {name} says, and the notes follow her description, so they last when hers is improved or
-rewritten. A line of hers may have several wordings, one to a row of its box, and under each box
-the page shows how the line in force reads, filled in with example facts by `voice.reads_as`.
-
-Two kinds of form, because they are not the same kind of thing. A page's behaviour form carries
-every box on that page each time it is sent, so an emptied box means "go back to the default";
-the boxes of other pages are not in it, and are left alone. The keys form carries only what
-someone typed: an empty key box means "leave that one alone", since a password box is empty
-every time the page is drawn.
+A page's behaviour form carries every box on that page, so an emptied box means "back to the
+default" and other pages' boxes are left alone. The keys form carries only what was typed: an
+empty key box means "leave it alone", since a password box is always drawn empty.
 """
 
 from __future__ import annotations
@@ -83,11 +69,10 @@ KEY_HAS_SPACES = "A key has no spaces in it. Check what was pasted."
 UNKNOWN_KEY = "There is no such key."
 UNKNOWN_MODEL = "{company} says it has no model called {name}. Check the spelling."
 COMPANIES = fields.COMPANIES
-# Which company each model box belongs to, so a new name can be checked with that company.
+# So a new name can be checked with its company.
 MODEL_BOXES = {
     one.key: (one.company, COMPANIES[one.company]) for one in fields.FIELDS if one.company
 }
-# Which surface each level box chooses a model for: that of the kinds of call that read it.
 LEVEL_BOXES = {call.level: call.surface for call in gateway.KINDS.values()}
 KEY_LABELS = {
     "anthropic_api_key": "Anthropic key",
@@ -119,9 +104,8 @@ def _answer(
     status: int = 400,
     otherwise: str | None = None,
 ) -> Response | tuple[str, int]:
-    """Where a form's result goes: back to the setup page that sent it, or to the settings page
-    it was sent from. A complaint about a form that named no page is drawn on `otherwise`, the
-    page its boxes are on."""
+    """Back to the setup page that sent the form, or the settings page it came from; a complaint
+    from a form that named no page is drawn on `otherwise`, the page its boxes are on."""
     if back is not None:
         return auth.back_to_setup(back, said=said, problem=error)
     if error is not None:
@@ -136,8 +120,7 @@ def _stored() -> dict[str, Any]:
 
 
 def _save(values: dict[str, Any]) -> list[str]:
-    """Write the changes and log them, with who made them when the page knows. Returns the keys
-    that actually moved."""
+    """Write and log the changes. Returns the keys that actually moved."""
     app = _app()
     source = f"web {auth.client_address()}"
     me = auth.visitor().member
@@ -146,17 +129,14 @@ def _save(values: dict[str, Any]) -> list[str]:
             conn, values, changed_by=me.id if me else None, source=source
         )
     if changed:
-        app.refresh()  # the page it redirects to should already show the new state
+        app.refresh()
         log.info("settings changed from the page: %s", ", ".join(changed))
     return changed
 
 
 def unknown_models(values: dict[str, Any], stored: dict[str, Any], proposed: Settings) -> dict:
-    """The model names this save would introduce that their company says do not exist.
-
-    Asked only about a name that is changing, and only a definite no counts: a company that
-    cannot be reached, or has no key yet, is not a reason to refuse what was typed.
-    """
+    """New model names their company says do not exist. Only a definite no counts: an unreachable
+    company, or none with a key, is no reason to refuse."""
     found: dict[str, str] = {}
     for key, (company, label) in MODEL_BOXES.items():
         name = values.get(key)
@@ -172,11 +152,8 @@ FOUND_HOME = "Found {label}, at {lat}, {lon}."
 
 
 def locate_home(values: dict[str, Any], stored: dict[str, Any]) -> tuple[dict[str, Any], str]:
-    """Coordinates for a home area typed on the page, looked up on the map.
-
-    Only when the area is changing and no new coordinates were typed with it: coordinates typed
-    by hand win. Returns the coordinates to store, and a sentence saying what happened.
-    """
+    """Coordinates for a changed home area, unless some were typed with it (those win). Returns
+    them and a sentence saying what happened."""
     area = values.get("home_area")
     if not area or area == stored.get("home_area"):
         return {}, ""
@@ -199,7 +176,7 @@ def locate_home(values: dict[str, Any], stored: dict[str, Any]) -> tuple[dict[st
 
 
 def problems_from(exc: ValidationError) -> dict[str, str]:
-    """Pydantic's complaints, one sentence per box, in the words it used."""
+    """Pydantic's complaints, one sentence per box."""
     found: dict[str, str] = {}
     for error in exc.errors(include_url=False):
         key = str(error["loc"][0]) if error["loc"] else ""
@@ -211,18 +188,15 @@ CALENDAR_CONNECTED = "Connected. The bot now uses {name}."
 
 
 def suggested(one: fields.Field) -> list[tuple[str, str]]:
-    """The names a box suggests as it is typed in, each with a word on what it is: a model's
-    place in its company's lineup, and its price."""
+    """The names a box suggests, each with a word on its place in the lineup and its price."""
     company = MODEL_BOXES.get(one.key, ("", ""))[0]
-    # A company's models as the daily check last found them (prices.suggestions), except the
-    # hearing models, which it does not follow.
+    # As the daily check last found them, except the hearing models, which it does not follow.
     live = company and one.key not in fields.FIXED_OFFERS
     names = prices.suggestions(company) if live else one.suggested
     return [(name, views.model_offer(company, name)) for name in names]
 
 
 def level_labels(key: str, live: Settings) -> dict[str, str]:
-    """For a level box, what each level means on the company that answers it now."""
     surface = LEVEL_BOXES.get(key)
     if surface is None:
         return {}
@@ -240,15 +214,13 @@ def google_panel(live: Any) -> dict[str, Any]:
     return {
         "connected": token.exists(),
         "calendar": live.google_calendar_id,
-        # Who the calendar is shared with: the saved key's address.
         "email": google.service_account_email(token),
     }
 
 
 # -- the three companies, as setup and the AI model page both offer them -------------------------
 
-# Who each company is, in a line, for choosing between them. What a line says of price follows
-# the company's default model in prices.py, not a preference.
+# What a line says of price follows the company's default model in prices.py.
 COMPANY_LINES = {
     "openai": "The least expensive by far for what FamilyDB does, so it is the one it starts with.",
     "anthropic": "Claude. Several times dearer a message with the model it starts on.",
@@ -258,8 +230,7 @@ KEY_STARTS = {"openai": "sk-", "anthropic": "sk-ant-", "gemini": "AIza"}
 
 
 def company_choice(live: Settings, asked: str) -> dict[str, Any]:
-    """The three companies to choose between, and the one whose key is shown: the one asked for
-    in the address, or else the one answering now."""
+    """The three companies, and the one whose key is shown: the one asked for, else answering."""
     company = asked if asked in providers.NAMES else live.provider
     return {
         "company": company,
@@ -267,7 +238,6 @@ def company_choice(live: Settings, asked: str) -> dict[str, Any]:
         "prefix": KEY_STARTS[company],
         "has_key": bool(getattr(live, f"{company}_api_key")),
         "answering": live.provider,
-        # What it answers the family with: its everyday model, or a stronger one a level up.
         "model": providers.model_at(providers.build(company, live), "chat", live.chat_level),
         "companies": [
             {
@@ -294,7 +264,7 @@ def _box(
     live: Settings,
     grouped: dict[str, views.ZoneGroups] | None = None,
 ) -> dict[str, Any]:
-    # A dropdown drawn in groups (the time zones) says its default in the words it offers it in.
+    # A grouped dropdown (time zones) says its default in the words it offers.
     headed = (grouped or {}).get(one.key)
     reads = {value: words for _, rows in headed or () for value, words in rows}
     fallback = fields.fallback(one, base)
@@ -314,7 +284,7 @@ def _group(group: fields.Group, boxes: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "group": group,
         "boxes": boxes,
-        # A folded group opens by itself when it holds a complaint, so nobody hunts for it.
+        # A folded group opens when it holds a complaint.
         "open": any(box["problem"] for box in boxes),
         "changed": sum(1 for box in boxes if box["stored"]),
     }
@@ -326,8 +296,7 @@ def _key_rows(
     problems: dict[str, str],
     revealed: tuple[str, str] | None,
 ) -> dict[str, dict[str, Any]]:
-    """Every key and token, whether there is one and where it came from, answering company's
-    first, as that is the one a new install needs."""
+    """Every key and token, whether set and where from, the answering company's first."""
     return {
         name: {
             "key": name,
@@ -351,11 +320,9 @@ def page(
     typed: dict[str, str] | None = None,
     status: int = 200,
 ) -> tuple[str, int]:
-    """Draw one settings page, or with no section the list of them. Everything it shows is read
-    fresh, so a save is visible at once."""
+    """Draw one settings page, or with no section the list of them."""
     if said is None:
-        # What the last save said, handed over by the redirect that followed it. Named,
-        # because the edit forms flash too and their notices belong on their own pages.
+        # Named, because the edit forms flash too.
         told = get_flashed_messages(category_filter=[NOTICE])
         said = told[0] if told else None
     if section is None:
@@ -392,7 +359,6 @@ def page(
             said=said,
             error=error,
             needs_password=auth.visitor().signed_in,
-            # Whose password is typed again before a key is shown: their own, or the family's.
             own_password=auth.visitor().login is not None,
             **extra,
         ),
@@ -407,20 +373,14 @@ def _general(app: App, conn: Any) -> dict[str, Any]:
     }
 
 
-# Where the scripts are: beside the code on a virtualenv install. An image holds only the code,
-# so there the installer's own folder stands in.
+# Where the scripts are: beside the code on a virtualenv install; an image holds only the code.
 CHECKOUT = Path(__file__).resolve().parents[3]
 INSTALLED = Path("/opt/familydb")
 
 
 def served(app: App) -> dict[str, Any]:
-    """Where the page is served: the address this browser opened it at, the port FamilyDB itself
-    listens on, and what moves either on the server.
-
-    Shown, never set here. How the page is reached is the server's to change (`maintain.sh port`
-    and `https --port`), out of every form's reach, so a sign-in that falls into the wrong hands
-    cannot move the page or open it wider.
-    """
+    """Where the page is served and how to move it. Shown, never set here: `maintain.sh port` and
+    `https --port` are out of every form's reach, so a stolen sign-in cannot move or widen it."""
     live = app.settings
     opened = urlsplit(request.host_url)
     script = CHECKOUT / "scripts" / "maintain.sh"
@@ -434,8 +394,7 @@ def served(app: App) -> dict[str, Any]:
         "proxied": live.web_trust_proxy,
         "local": not web_is_public(live),
         "script": script if script.exists() else INSTALLED / "scripts" / "maintain.sh",
-        # For the guide to giving the page a name: what it is reached at now, and the name
-        # somebody typed to see the steps with it filled in (a view, never saved).
+        # For the guide to naming the page; the typed name is only a view, never saved.
         "host": host,
         "reached_by": reached_by(host),
         "domain": wanted if DOMAIN.fullmatch(wanted) else "",
@@ -443,13 +402,12 @@ def served(app: App) -> dict[str, Any]:
     }
 
 
-# A name somebody could point at the server: letters, digits and hyphens, in two parts or more.
+# Letters, digits and hyphens, in two parts or more.
 DOMAIN = re.compile(r"(?=.{4,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}")
 
 
 def reached_by(host: str) -> str:
-    """How the page was reached: "name", "public" or "private" address, or "local" (this
-    machine, or a tunnel to it)."""
+    """How the page was reached: "name", "public" or "private" address, or "local"."""
     if host in ("localhost", "") or host.endswith(".localhost"):
         return "local"
     try:
@@ -462,7 +420,6 @@ def reached_by(host: str) -> str:
 
 
 def _model(app: App, conn: Any) -> dict[str, Any]:
-    """The company answering, and the two models at work, shown before everything else."""
     live = app.settings
     chat = fields.MODEL_KEYS[live.provider][0]
     looking = fields.MODEL_KEYS[live.worker_provider or live.provider][1]
@@ -529,7 +486,6 @@ PAGES = {
 
 
 def setting_label(key: str) -> str:
-    """A setting by the name the pages give it."""
     if key in KEY_LABELS:
         return KEY_LABELS[key]
     if key in fields.BY_KEY:
@@ -540,7 +496,7 @@ def setting_label(key: str) -> str:
 
 
 def change(line: dict[str, Any], tz: Any) -> dict[str, Any]:
-    """One line of what has changed, in the words the pages use for the setting and its values."""
+    """One line of what has changed, in the pages' words."""
     row = views.change_row(line, tz)
     one = fields.BY_KEY.get(line["key"])
     if one is not None:
@@ -549,7 +505,7 @@ def change(line: dict[str, Any], tz: Any) -> dict[str, Any]:
 
 
 def overview(*, said: str | None, error: str | None, status: int) -> tuple[str, int]:
-    """Every settings page, each with a line or two on how it stands. Reads only; no network."""
+    """Every settings page, each with a line or two on how it stands. No network."""
     app = _app()
     live = app.settings
     with closing(app.connect()) as conn:
@@ -572,7 +528,7 @@ def overview(*, said: str | None, error: str | None, status: int) -> tuple[str, 
     elif live.persona in live.persona_text:
         who = f"{persona.name}, in your words."
     else:
-        # By her label, which says which of her it is: two personas may share a name.
+        # By label: two personas may share a name.
         who = f"{persona.listed_as}."
     if live.digest_chat_id:
         day = fields.BY_KEY["digest_day"].word(live.digest_day)
@@ -670,8 +626,7 @@ def save() -> Response | tuple[str, int]:
     if problems:
         if back is not None:
             return _answer(back, here, error=_problems_said(problems))
-        # Drawn on the page the box is on, so the complaint is beside it. With no such page
-        # (a complaint about no box in particular), every complaint is said at the top.
+        # Drawn on the page the box is on; with none, every complaint is said at the top.
         owner = next((fields.SECTION_OF[key] for key in problems if key in fields.SECTION_OF), None)
         drawn = here or owner
         elsewhere = {k: why for k, why in problems.items() if fields.SECTION_OF.get(k) != drawn}
@@ -714,12 +669,8 @@ def save_keys() -> Response | tuple[str, int]:
 
 @bp.post("/settings/reveal")
 def reveal() -> tuple[str, int]:
-    """Show one key, once, after the password this browser signed in with is typed again: the
-    person's own, or the family's while they share one.
-
-    Signing in weeks ago is not enough: a page left open on a phone should not hand a key to
-    whoever picks it up. Guessing here is counted and locked out the same way signing in is.
-    """
+    """Show one key, once, after the sign-in password is typed again (a page left open on a phone
+    must not hand a key to whoever picks it up). Guessing is locked out as at sign-in."""
     app = _app()
     if (complaint := auth.refused()) is not None:
         return page("security", error=complaint, status=400)
@@ -737,7 +688,7 @@ def reveal() -> tuple[str, int]:
         if not given:
             return page("security", error=NEEDS_PASSWORD, status=400)
         if not auth.confirms(given):
-            lockout.failed(attempt, now)  # counted apart from signing in, and logged there
+            lockout.failed(attempt, now)  # counted apart from sign-in
             return page("security", error=WRONG_PASSWORD, status=401)
         lockout.passed(attempt)
     value = getattr(app.settings, name) or ""
@@ -774,11 +725,8 @@ KEY_VERDICTS = {
 
 @bp.post("/settings/model")
 def save_model() -> Response | tuple[str, int]:
-    """Which company answers, and its key, checked with that company before anything is kept.
-
-    The check is the free model lookup the model boxes already use. Only a definite "that key is
-    wrong" stops the save: a company that cannot be reached is no reason to refuse what was pasted.
-    """
+    """Which company answers, and its key, checked with the company (the free model lookup)
+    before anything is kept. Only a definite "wrong key" stops the save."""
     app = _app()
     back = auth.setup_return(request.form.get("then"))
     here = _section(request.form.get("section"))
@@ -798,7 +746,7 @@ def save_model() -> Response | tuple[str, int]:
         values[name] = given
     elif not getattr(app.settings, name):
         return _answer(back, here, error=NO_KEY_GIVEN, otherwise="model")
-    # The environment's own choice is not stored over it, as on the rest of the page.
+    # The environment's own choice is not stored over it.
     values["provider"] = None if company == app.base_settings.provider else company
     stored = _stored()
     try:
@@ -816,7 +764,7 @@ def save_model() -> Response | tuple[str, int]:
     _save(values)
     said = KEY_VERDICTS.get(verdict, KEY_VERDICTS["unchecked"])
     her = personas.active(candidate).name
-    # The check asked about the everyday model, so that is the one a "no such model" names.
+    # The check asked about the everyday model, which a "no such model" names.
     asked = chosen.model_for("chat")
     answers = providers.model_at(chosen, "chat", candidate.chat_level)
     model = asked if verdict == "unknown_model" else answers
@@ -838,14 +786,13 @@ NO_FAMILY_PASSWORD = (
     "your own on the Your password page."
 )
 MAX_PASSWORD = passwords.MAX_LENGTH
-# The family's first choice may skip typing the installer's password again, which they have only
-# just typed to sign in, but only within this long of signing in with it.
+# The first choice may skip retyping the installer's password, within this long of signing in.
 FIRST_CHOICE_MINUTES = 60
 
 
 def current_password_needed(live: Any) -> bool:
-    """Whether changing the password asks for the one in force: always, except for the first one
-    the family chooses, soon after signing in with the installer's."""
+    """Whether changing the password asks for the one in force: always, except the first choice
+    soon after signing in with the installer's."""
     if not auth.password_in_use(live):
         return False
     if auth.password_chosen(live):
@@ -857,18 +804,14 @@ def current_password_needed(live: Any) -> bool:
 
 @bp.post("/settings/password")
 def change_password() -> Response | tuple[str, int]:
-    """Choose the family password. Stored hashed; this browser stays signed in, the rest do not.
-
-    It asks for the password in force, as every change of password should, so a phone left signed
-    in cannot be used to lock the family out of their own page.
-    """
+    """Choose the family password, stored hashed; this browser stays signed in, the rest do not.
+    It asks for the one in force, so a phone left signed in cannot lock the family out."""
     app = _app()
     back = auth.setup_return(request.form.get("then"))
     here = _section(request.form.get("section"))
     if (complaint := auth.refused()) is not None:
         return _answer(back, here, error=complaint, otherwise="security")
     if auth.visitor().kind == "person":
-        # Somebody signed in as themselves, so the shared password already opens nothing.
         return _answer(back, here, error=NO_FAMILY_PASSWORD, status=409, otherwise="security")
     new, again = request.form.get("new", ""), request.form.get("again", "")
     if new != again:
@@ -885,7 +828,7 @@ def change_password() -> Response | tuple[str, int]:
     live = app.settings
     if current_password_needed(live):
         who = auth.client_address()
-        attempt = f"{who} password"  # counted apart from signing in, like showing a key
+        attempt = f"{who} password"  # counted apart from sign-in
         lockout = current_app.config["FAMILYDB_LOCKOUT"]
         now = app.clock.now()
         if lockout.locked(attempt, now):
@@ -903,7 +846,7 @@ def change_password() -> Response | tuple[str, int]:
         lockout.passed(attempt)
     _save({"web_password_hash": passwords.hash_password(new)})
     log.warning("the family password was changed from the page by %s", auth.client_address())
-    # Every session was marked with the old password and so ends; this one is marked again.
+    # Every session carried the old password's mark and ends; this one is marked again.
     session[auth.SESSION_KEY] = True
     session[auth.PASSWORD_KEY] = auth.password_mark(app.settings)
     response = _answer(back, here, said=PASSWORD_SAVED)
@@ -928,10 +871,10 @@ PROFILE_LABELS = {
     "persona_notes": "notes on how she talks",
     "about_family": "about the family",
 }
-# A rough count, to say what a description adds to every message; the real one is on /status.
+# A rough count of what a description adds to every message; /status has the real one.
 CHARS_PER_TOKEN = 4
-# Her lines as the Personality page groups them, each group with whether it starts folded. A line
-# no group names (a new one in voice.EVENTS) is shown under "Other", so it is never left off.
+# Her lines grouped for the Personality page, each with whether it starts folded. A line no group
+# names (a new one in voice.EVENTS) is shown under "Other".
 LINE_GROUPS = (
     (
         "Reminders and follow-ups",
@@ -1062,28 +1005,22 @@ def personality_page(
         said = told[0] if told else None
     typed = typed or {}
     chosen = personas.key_for(typed.get("persona", live.persona))
-    # The description box describes the persona in force, whichever the list has chosen, and says
-    # which, so that saving writes it to her. Under none nobody is described and there is no box.
+    # The description box describes the persona in force, whichever the list has chosen. Under
+    # none nobody is described and there is no box.
     described = live.persona
     plain = described == personas.NONE
-    # What was typed goes back in the box only when it was typed for her.
     typed_for_her = personas.key_for(typed.get("described", described)) == described
     text = (typed.get("persona_text", "") if typed_for_her else "") or speaking.character
-    # The name the family call her, with her own as the placeholder: an empty box is hers.
     name = typed.get("persona_name", live.persona_name)
     notes = typed.get("persona_notes", live.persona_notes)
     about = typed.get("about_family", live.about_family)
-    # What has changed in her own description since the family rewrote her, if anything: their
-    # rewrite remembers hers as it was then (`of`), and her folder says what it is now. A rewrite
-    # stored without `of` cannot tell.
+    # Their rewrite remembers her description as it was then (`of`); without it, no telling.
     rewrite = None if plain else live.persona_text.get(described)
     changes = (
         views.line_changes(rewrite.of, personas.load(described).character)
         if rewrite and rewrite.of
         else []
     )
-    # What she says unasked: the family's line if they wrote one, hers as the placeholder, and
-    # how the line in force reads now, each of its wordings filled in with example facts.
     hers = voice.wording(personas.load(live.persona))
     lines = {
         name: {
@@ -1119,14 +1056,12 @@ def personality_page(
             rewritten=rewrite is not None,
             changes=changes,
             notes=notes,
-            # Under none, whether anything they wrote for a persona is waiting for her.
             kept=plain and any(key in personas.available() for key in live.persona_text),
             about=about,
             line_groups=[
                 {
                     "title": title,
                     "lines": shown,
-                    # Folded until one of its lines is the family's own, or was just typed.
                     "folded": folded and not any(line["value"] for line in shown),
                     "own": sum(1 for line in shown if line["value"]),
                 }
@@ -1153,13 +1088,9 @@ def personality() -> tuple[str, int]:
 
 @bp.post("/settings/personality")
 def save_personality() -> Response | tuple[str, int]:
-    """Who she is and who the family are.
-
-    The description box is a rewrite of the persona it described when the page was drawn, never
-    of one chosen in the same save. A box that is not sent (under none there is no description,
-    name or notes box) leaves what it stands for as it was: every rewrite, their name for her,
-    their notes. Her own text, as written or with her name filled in, is no rewrite, and her own
-    name is none of theirs."""
+    """Who she is and who the family are. The description box rewrites the persona it described
+    when the page was drawn, never one chosen in the same save. A box not sent (none under the
+    none persona) leaves what it stands for as it was. Her own text or name is no rewrite."""
     if (complaint := auth.refused()) is not None:
         return personality_page(error=complaint, status=400)
     typed = {
@@ -1185,28 +1116,24 @@ def save_personality() -> Response | tuple[str, int]:
     chosen = personas.key_for(typed["persona"])
     hers = voice.wording(personas.load(live.persona))
     values: dict[str, Any] = {
-        # What the environment already says is not stored over it, as on the main page.
+        # What the environment already says is not stored over it.
         "persona": None if chosen == _app().base_settings.persona else chosen,
         "about_family": typed["about_family"].replace("\r\n", "\n").strip() or None,
-        # Only lines that differ from hers are the family's own.
         "voice_lines": {
             name: line for name, line in written.items() if voice.wordings(line) != hers[name]
         }
         or None,
     }
     if "persona_name" in request.form:
-        # An empty box, or her own name, is no name of theirs. That is stored only over a name
-        # the environment gives her, which would otherwise stay whatever the box said.
+        # An empty box, or her own name, is no name of theirs, stored only over an environment name.
         called = typed["persona_name"].strip()
         if called == personas.load(live.persona).name:
             called = ""
         values["persona_name"] = None if called == _app().base_settings.persona_name else called
     if "persona_notes" in request.form:
-        # Likewise an empty box is stored only over notes the environment gives.
         notes = typed["persona_notes"].replace("\r\n", "\n").strip()
         values["persona_notes"] = None if notes == _app().base_settings.persona_notes else notes
     if "persona_text" in request.form:
-        # A form that does not say whom its box described was drawn for the persona in force.
         described = personas.key_for(typed.get("described", live.persona))
         text = typed["persona_text"].replace("\r\n", "\n").strip()
         rewrites = _rewritten(live, described, text)
@@ -1241,9 +1168,8 @@ def restore_personality() -> Response | tuple[str, int]:
 
 
 def _line(box: str, stored: voice.Line | None) -> voice.Line:
-    """What a line's box says: one wording to a row, blank rows no part of it, kept as a string
-    when there is one and a list when there are several. A box left as it was drawn keeps the
-    line as it is stored, so a single wording with line breaks in it stays one wording."""
+    """What a line's box says: one wording to a row, a string for one and a list for several. A box
+    left as drawn keeps the stored line, so a wording with line breaks stays one wording."""
     rows = _rows(box)
     if not rows:
         return ""
@@ -1257,17 +1183,13 @@ def _rows(box: str) -> list[str]:
 
 
 def _rewrites(settings: Settings) -> dict[str, dict[str, str]]:
-    """The family's rewrites of her, by persona, as they are stored."""
     return {key: rewrite.model_dump() for key, rewrite in settings.persona_text.items()}
 
 
 def _rewritten(live: Settings, described: str, text: str) -> dict[str, dict[str, str]]:
-    """The family's rewrites with the described persona's as her box now says.
-
-    A blank box, or her own character as written or with her name filled in, is no rewrite. A
-    text unchanged from theirs keeps theirs as it is; a new one is written against her own
-    character now, so the page can tell later when hers has changed. Only a persona there is a
-    folder for can have been described."""
+    """The rewrites with the described persona's as her box now says. A blank box or her own
+    character is no rewrite; an unchanged text keeps theirs; a new one is written against her
+    character now, so the page can tell later when hers changes."""
     rewrites = _rewrites(live)
     if described not in personas.available():
         return rewrites
@@ -1281,14 +1203,13 @@ def _rewritten(live: Settings, described: str, text: str) -> dict[str, dict[str,
 
 
 def _keeping(rewrites: dict[str, dict[str, str]]) -> dict[str, dict[str, str]] | None:
-    """What to store for these rewrites: nothing when they are what the environment says."""
+    """What to store: nothing when they are what the environment says."""
     return None if rewrites == _rewrites(_app().base_settings) else rewrites
 
 
 def _choices(live: Settings) -> list[dict[str, Any]]:
-    """Each persona there is a folder for, the default first, as she would be if chosen: her
-    label, with the name the family call her in it, and roughly what she would add to every
-    message, their rewrite of her and their notes included."""
+    """Each persona with a folder, the default first, as she would be if chosen, with roughly
+    what she would add to every message (their rewrite and notes included)."""
     choices = []
     for key in sorted(personas.available(), key=lambda key: key != personas.DEFAULT):
         her = personas.active(live.model_copy(update={"persona": key}))
@@ -1299,12 +1220,8 @@ def _choices(live: Settings) -> list[dict[str, Any]]:
 
 @bp.post("/settings/sign-out-everyone")
 def sign_out_everyone() -> Response | tuple[str, int]:
-    """End every session, on every device, this one included, after the password this browser
-    signed in with is typed again.
-
-    For a phone that went missing or a password that was shared too widely: every login cookie
-    and every known-browser mark was signed with the key this replaces.
-    """
+    """End every session on every device, this one included, after the sign-in password is typed
+    again: every cookie and known-browser mark was signed with the key this replaces."""
     app = _app()
     if (complaint := auth.refused()) is not None:
         return page("security", error=complaint, status=400)
@@ -1330,8 +1247,7 @@ def sign_out_everyone() -> Response | tuple[str, int]:
 
 @bp.post("/settings/google/connect")
 def google_connect() -> Response | tuple[str, int]:
-    """Take the service account's key and the calendar's id, try both against Google, and keep
-    them only if the calendar can be read and changed."""
+    """Keep the service account key and calendar id only if the calendar can be read and changed."""
     app = _app()
     back = auth.setup_return(request.form.get("then"))
     if (complaint := auth.refused()) is not None:
@@ -1352,12 +1268,11 @@ def google_connect() -> Response | tuple[str, int]:
 def _google_answer(
     back: str | None, *, said: str | None = None, error: str | None = None
 ) -> Response | tuple[str, int]:
-    """The connection form answers on the page it was sent from: Connections, or setup's own."""
     return _answer(back, "connections", said=said, error=error)
 
 
 def _problems_said(problems: dict[str, str]) -> str:
-    """Every complaint about a form, in one line, named by the box it is about."""
+    """Every complaint, in one line, named by its box."""
     named = [
         f"{fields.BY_KEY[key].label}: {why}" if key in fields.BY_KEY else why
         for key, why in problems.items()
@@ -1366,13 +1281,12 @@ def _problems_said(problems: dict[str, str]) -> str:
 
 
 def _key_order(provider: str) -> list[str]:
-    """The key of the company answering now first, as that is the one a new install needs."""
+    """The answering company's key first, as a new install needs it."""
     first = f"{provider}_api_key"
     return sorted(SECRETS, key=lambda name: (name != first, name == "telegram_bot_token"))
 
 
 def _said(changed: list[str], *, keys: bool = False) -> str:
-    """What moved, in the words the page uses for it."""
     if not changed:
         return NOTHING_CHANGED
     labels = [

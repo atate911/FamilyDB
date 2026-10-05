@@ -1,12 +1,6 @@
-"""The looks the page can wear, and how a browser's choice of one is kept.
-
-A look is a theme in `static/themes.css`: a set of colour tokens with a day value and a night value
-together, which the whole stylesheet reads. Phosphor, the page as first drawn, is the default and is
-written into `style.css` itself; it is dark only. The choice is one small cookie in the browser
-(`fdb_look`, "rail.dark"), not anything the family's database knows: it is how this screen looks to
-whoever is at it, so it follows the browser and costs nothing to read. A value that is not one of
-these is the default, so nobody can put anything else on the page with it.
-"""
+"""The looks the page can wear (themes in `static/themes.css`; Phosphor, the default, is in
+`style.css`), kept in one cookie (`fdb_look`, "rail.dark"). Any other value is the default, so a
+cookie can put nothing else on the page."""
 
 from __future__ import annotations
 
@@ -29,10 +23,9 @@ class Look:
     key: str
     name: str
     blurb: str
-    # Whether it has a day, or is night only. Phosphor is a green screen: it has no day.
+    # Night only, as Phosphor is.
     has_day: bool
-    # The band's colour by day and by night, for the browser's own bar (theme-color). themes.css
-    # is where they are written; a test holds the two together.
+    # theme-color by day and by night; a test holds these to themes.css.
     band: tuple[str, str]
 
 
@@ -97,13 +90,8 @@ LOOKS = (
 BY_KEY = {look.key: look for look in LOOKS}
 
 
-def get(key: str | None) -> Look:
-    return BY_KEY.get(key or "", BY_KEY[DEFAULT])
-
-
 def parse(value: str | None) -> tuple[Look, str]:
-    """The look and mode a cookie names; the default for anything else, a half-readable value
-    included."""
+    """The look and mode a cookie names; the default for anything else."""
     key, _, mode = (value or "").partition(".")
     look = BY_KEY.get(key)
     if look is None or mode not in MODES:
@@ -112,7 +100,7 @@ def parse(value: str | None) -> tuple[Look, str]:
 
 
 def choose(key: str | None, mode: str | None) -> tuple[Look, str] | None:
-    """What a form asked for, if it is a look and a mode this page has; None if it is not."""
+    """What a form asked for, or None if it is not a look and mode this page has."""
     if key not in BY_KEY or mode not in MODES:
         return None
     look = BY_KEY[key]
@@ -124,15 +112,14 @@ def value(look: Look, mode: str) -> str:
 
 
 def scheme(look: Look, mode: str) -> str:
-    """What to tell the browser about the page's colour scheme: it styles scrollbars and the
-    boxes it draws itself to match."""
+    """The colour scheme to tell the browser, which styles its own boxes to match."""
     if not look.has_day or mode == DARK:
         return "dark"
     return "light" if mode == LIGHT else "light dark"
 
 
 def theme_colours(look: Look, mode: str) -> list[tuple[str | None, str]]:
-    """The colour the browser's own bar should be, with the media query each goes with."""
+    """The browser bar's colour, with the media query each goes with."""
     day, night = look.band
     if not look.has_day or mode == DARK:
         return [(None, night)]

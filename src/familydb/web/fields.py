@@ -1,14 +1,7 @@
-"""What the settings pages show, and how a filled-in form becomes settings again.
-
-The settings are split into sections, one page each (`SECTIONS`), and on each page the boxes sit
-in groups under a heading (`GROUPS`); a group of fine-tuning is folded away until somebody opens
-it. The shape of each box comes from `Settings` itself: a Literal becomes a dropdown, a bool a
-yes/no, a number a number box. Only the label, the sentence under it and the words a choice is
-shown in are written out here, so a changed Literal can never leave the page offering something
-the setting will not take.
-
-Everything here is a pure function over strings: the routes do the storing.
-"""
+"""What the settings pages show (`SECTIONS`, each with `GROUPS` of boxes) and how a filled-in
+form becomes settings again. A box's shape comes from `Settings` itself (a Literal is a dropdown,
+a bool yes/no, a number a number box), so a changed Literal can never leave the page offering
+what the setting will not take. Pure functions over strings; the routes store."""
 
 from __future__ import annotations
 
@@ -28,10 +21,8 @@ NUMBER = {"int": "a whole number", "float": "a number"}
 NOT_A_NUMBER = "That needs to be {what}."
 TOO_LONG = "That is longer than a setting should be."
 MAX_LENGTH = 400
-# The three companies by the names the page gives them everywhere, setup included.
 COMPANIES = {"openai": "OpenAI", "anthropic": "Anthropic", "gemini": "Google"}
-# The zones worth offering: places, not the legacy aliases and offsets, and UTC itself, which
-# many a server keeps.
+# Places, not legacy aliases and offsets, and UTC, which many a server keeps.
 ZONE_PREFIXES = ("Africa/", "America/", "Antarctica/", "Asia/", "Atlantic/", "Australia/")
 ZONE_PREFIXES += ("Europe/", "Indian/", "Pacific/")
 ZONE_ALSO = frozenset({"UTC"})
@@ -46,49 +37,45 @@ class Field:
     note: str
     kind: str  # choice, toggle, int, float or text
     choices: tuple[str, ...] = ()
-    # Offered as the box is typed in, without limiting it: a model released next week still fits.
+    # Offered as the box is typed in, without limiting it.
     suggested: tuple[str, ...] = ()
-    # The words a value is shown in where the stored one would not read well: "thu", "true".
+    # How a value is shown where the stored one reads badly: "thu", "true".
     words: tuple[tuple[str, str], ...] = ()
-    # What having no value means, where "not set" would not say: no lookup company is the chat's.
+    # What no value means, where "not set" would not say.
     unset: str = ""
-    # For a model box, whose model it is, so the company answering can be shown first.
+    # For a model box, whose model it is.
     company: str = ""
-    # The keyboard a phone offers for it: digits, digits and a point, or all of it.
+    # The keyboard a phone offers: numeric, decimal or all of it.
     keyboard: str = ""
-    # For a box offering a list (the models, the chats), the words for the last choice, which
-    # opens a box to type any other in: "Another model". Empty for every other box.
+    # For a list box, the words for the last choice, which opens a box to type any other.
     another: str = ""
 
     def word(self, value: str) -> str:
-        """A value as the page says it."""
         return dict(self.words).get(value, value)
 
 
 @dataclass(frozen=True)
 class Section:
-    """One page of the settings, and its line in the list of them."""
+    """One page of the settings."""
 
     name: str  # its address, /settings/<name>
     title: str
-    icon: str  # a name in static/icons.svg, or "presence" for her screen
-    blurb: str  # what it is for, in a line
+    icon: str  # in static/icons.svg, or "presence"
+    blurb: str
 
 
 @dataclass(frozen=True)
 class Group:
-    """Boxes that belong together on a page, under one heading."""
-
     section: str
     name: str  # where a link lands, /settings/<section>#<name>
     title: str
     note: str
     fields: tuple[Field, ...]
-    folded: bool = False  # fine-tuning, folded away until somebody opens it
+    folded: bool = False  # fine-tuning
 
 
 def _bare(annotation: Any) -> Any:
-    """An annotation with any Annotated metadata (a range, say) taken off the front."""
+    """An annotation with any Annotated metadata taken off."""
     return typing.get_args(annotation)[0] if hasattr(annotation, "__metadata__") else annotation
 
 
@@ -101,11 +88,8 @@ def _members(annotation: Any) -> list[Any]:
 
 
 def _shape(annotation: Any) -> tuple[str, tuple[str, ...]]:
-    """How to draw a box for this annotation.
-
-    An empty string is never offered as a choice: leaving the box alone already means "whatever
-    the default is", and two ways to say nothing would only be confusing.
-    """
+    """How to draw a box for this annotation. An empty string is never a choice: an empty box
+    already means the default."""
     parts = _members(annotation)
     if parts and all(typing.get_origin(part) is Literal for part in parts):
         allowed = [str(value) for part in parts for value in typing.get_args(part) if value != ""]
@@ -120,11 +104,8 @@ def _shape(annotation: Any) -> tuple[str, tuple[str, ...]]:
 
 
 def _rules(annotation: Any) -> list[Any]:
-    """Every constraint on an annotation, including one tucked inside an Optional.
-
-    A range written as `Field(ge=..., le=...)` arrives wrapped in a FieldInfo, which carries the
-    constraints in a list of its own; unwrap that so both spellings read the same.
-    """
+    """Every constraint on an annotation, including inside an Optional. A `Field(ge=...)` arrives
+    wrapped in a FieldInfo, which is unwrapped so both spellings read the same."""
     carriers = list(getattr(annotation, "__metadata__", ()))
     inner = _bare(annotation)
     if typing.get_origin(inner) in (types.UnionType, typing.Union):
@@ -141,7 +122,7 @@ def _bounds(key: str) -> tuple[Any, Any, bool]:
     one = Settings.model_fields[key]
     low: Any = None
     high: Any = None
-    over = False  # whether the bottom of the range is one the setting will not actually take
+    over = False  # the bottom of the range is itself refused
     for rule in [*one.metadata, *_rules(one.annotation)]:
         if low is None:
             low = getattr(rule, "ge", None)
@@ -154,7 +135,7 @@ def _bounds(key: str) -> tuple[Any, Any, bool]:
 
 
 def limits(key: str) -> str:
-    """What the setting will take, read off the setting itself rather than written out again."""
+    """What the setting will take, read off the setting itself."""
     low, high, over = _bounds(key)
     if low is None and high is None:
         return ""
@@ -182,7 +163,7 @@ def field(
     return Field(
         key=key,
         label=label,
-        # A dropdown already says what it takes, so only a box that is typed in says its range.
+        # A dropdown already says what it takes.
         note=" ".join(part for part in (note, "" if choices else limits(key)) if part),
         kind=kind,
         choices=choices or derived,
@@ -196,8 +177,8 @@ def field(
 
 
 def _keyboard(key: str, kind: str) -> str:
-    """Which keyboard a phone should offer. A phone's number pads have no minus sign, so a
-    number that may be below nought (a longitude) keeps the whole keyboard."""
+    """Which keyboard a phone offers. Number pads have no minus sign, so a number that may be
+    negative (a longitude) keeps the whole keyboard."""
     low, _, _ = _bounds(key)
     if kind not in NUMBER or low is None or low < 0:
         return ""
@@ -206,8 +187,7 @@ def _keyboard(key: str, kind: str) -> str:
 
 @cache
 def zones() -> tuple[str, ...]:
-    """Every time zone worth offering, by the place it is named for, and UTC. Read once: the
-    list does not change while the process runs, and reading it walks the zone files."""
+    """Every time zone worth offering, and UTC. Cached: reading it walks the zone files."""
     return tuple(
         sorted(
             zone
@@ -229,18 +209,18 @@ EFFORT = (
 )
 
 
-# Boxes whose list is fixed rather than what the daily check of models found: the hearing model.
+# Boxes whose list is fixed rather than found by the daily check of models.
 FIXED_OFFERS = frozenset({"openai_transcribe_model"})
-# Each company's two models: the one that answers in the chat, and the one that looks things up.
+# Each company's chat model and lookup model.
 MODEL_KEYS = {
     "openai": ("openai_model", "openai_worker_model"),
-    "anthropic": ("anthropic_model", "worker_model"),  # the first, so named for no company
+    "anthropic": ("anthropic_model", "worker_model"),  # the first, so unprefixed
     "gemini": ("gemini_model", "gemini_worker_model"),
 }
 
 
 def _models(company: str, label: str) -> tuple[Field, Field]:
-    """A company's two everyday model boxes, offering its models without limiting them to those."""
+    """A company's two everyday model boxes, offering its models without limiting to them."""
     chat, worker = MODEL_KEYS[company]
     offered = suggestions(company)
     return (
@@ -255,7 +235,6 @@ def _models(company: str, label: str) -> tuple[Field, Field]:
     )
 
 
-# The pages, in the order the list of them reads.
 SECTIONS: tuple[Section, ...] = (
     Section("general", "General", "home", "Where home is, its clock and units, and this page."),
     Section("model", "AI model", "mark", "Which company answers, with which model, and its key."),
@@ -279,8 +258,7 @@ SECTIONS: tuple[Section, ...] = (
 )
 SECTION_BY_NAME: dict[str, Section] = {one.name: one for one in SECTIONS}
 
-# Every box, on the page and in the group it belongs to. Every name in BEHAVIOUR appears exactly
-# once; a test says so.
+# Every name in BEHAVIOUR appears exactly once; a test says so.
 GROUPS: tuple[Group, ...] = (
     Group(
         "general",
@@ -300,7 +278,7 @@ GROUPS: tuple[Group, ...] = (
                 "Time zone",
                 "It decides what “tonight” and “this weekend” mean, and when the messages that "
                 "go out on their own are sent. Choose the nearest city in the same zone.",
-                # Drawn under the region each is named for, with its offset now (views.py).
+                # Drawn under its region, with its offset now (views.py).
                 choices=zones(),
             ),
             field(
@@ -382,8 +360,7 @@ GROUPS: tuple[Group, ...] = (
         "The model that reads each message and writes the answer comes from one of three "
         "companies, and you pay the company for what it uses.",
         (
-            # Drawn as the three companies to choose between, with the key beside them: a
-            # company without a key cannot be chosen, since then nothing would answer.
+            # A company without a key cannot be chosen: nothing would answer.
             field("provider", "Company that answers", words=tuple(COMPANIES.items())),
         ),
     ),
@@ -932,15 +909,12 @@ SECTION_OF: dict[str, str] = {one.key: group.section for group in GROUPS for one
 
 
 def groups_in(section: str) -> tuple[Group, ...]:
-    """The groups on one page, in the order they are drawn."""
     return tuple(group for group in GROUPS if group.section == section)
 
 
 def parse(one: Field, given: str) -> Any:
-    """One box as the value it stands for. Empty means no override: the default again.
-
-    Raises ValueError with a sentence the family can act on.
-    """
+    """One box as its value; empty means no override. Raises ValueError with a sentence the
+    family can act on."""
     text = given.strip()
     if not text:
         return None
@@ -956,12 +930,11 @@ def parse(one: Field, given: str) -> Any:
     return text
 
 
-# The value of the last choice in a list box, which means "the one typed under it".
+# The last choice in a list box: "the one typed under it".
 ANOTHER = "another"
 
 
 def given(one: Field, form: Any) -> str:
-    """What one box sent: the choice, or, when the choice was "Another", what was typed for it."""
     chosen = form[one.key]
     if one.another and chosen == ANOTHER:
         return form.get(f"{one.key}_{ANOTHER}", "")
@@ -969,7 +942,7 @@ def given(one: Field, form: Any) -> str:
 
 
 def read_form(form: Any) -> tuple[dict[str, Any], dict[str, str]]:
-    """Every box the form carried, as values and as complaints. Absent boxes are left alone."""
+    """Every box the form carried, as values and complaints. Absent boxes are left alone."""
     values: dict[str, Any] = {}
     problems: dict[str, str] = {}
     for one in FIELDS:
@@ -983,20 +956,17 @@ def read_form(form: Any) -> tuple[dict[str, Any], dict[str, str]]:
 
 
 def shown(one: Field, override: Any) -> str:
-    """What to put in the box: the stored value, or nothing when there is no override."""
     if override is None:
         return ""
     return str(override).lower() if one.kind == "toggle" else str(override)
 
 
 def fallback(one: Field, base: Settings) -> Any:
-    """What the family gets with no override. The time zone is the one worked out, since an
-    empty FAMILYDB_TZ still means the server's own zone, or UTC."""
+    """What the family gets with no override. An empty FAMILYDB_TZ still means the server's zone."""
     return base.tz if one.key == "family_tz" else getattr(base, one.key)
 
 
 def placeholder(one: Field, value: Any) -> str:
-    """What the box says when it is empty: what the family gets without an override."""
     if value is None or value == "":
         return one.unset or "not set"
     return one.word(str(value).lower() if one.kind == "toggle" else str(value))

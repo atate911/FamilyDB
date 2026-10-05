@@ -1,23 +1,11 @@
-"""The gate in front of the page: each person signs in as themselves.
+"""The gate in front of the page: each person signs in as themselves (rules in
+familydb/family.py, hashes in store/logins.py, permissions in familydb/roles.py and `NEEDS`).
 
-Each admin and member may have their own password; familydb/family.py holds the rules and
-store/logins.py the hashes. Signing in with a name and that password opens a session that knows
-who it is: the chat speaks as them, the settings log says who changed what, and each part of the
-page is reached only by a role with the permission it needs (familydb/roles.py, and `NEEDS`
-below): Settings, the setup pages and the Family list by an admin alone. Somebody signed in with a
-starting password an admin made up for them goes nowhere until they have chosen their own.
-
-Until an admin has a password of their own, the page takes one the family shares instead: the
-installer makes one up and puts it in WEB_PASSWORD, and the family may choose another on the page,
-stored hashed. A session opened with it does not know who anybody is, so it may do everything.
-The first admin to choose their own password ends that: from then on the shared one opens
-nothing, and every session opened with it ends.
-
-A successful sign-in sets a signed session cookie; every page but the login, the health check and
-the home-screen manifest is behind it. Failed attempts are counted per client address and locked
-out for a while, and across the whole site past that, so a page on the open internet is not worth
-guessing at. When there is no password of either kind and the page is only on the loopback (or the
-waiver is set on purpose), there is nothing to sign in to and every page is open.
+Until an admin has a password of their own, the page takes one the family shares (WEB_PASSWORD or
+one chosen on the page), which does everything as nobody in particular. The first admin's own
+password ends it and every session opened with it. With no password of either kind on a loopback
+page (or the waiver), there is nothing to sign in to. Failed attempts are locked out per client
+address and, past a ceiling, across the site.
 """
 
 from __future__ import annotations
@@ -61,57 +49,47 @@ log = logging.getLogger(__name__)
 
 bp = Blueprint("auth", __name__)
 
-# Signed in with the password the family shares, so as nobody in particular.
+# Signed in with the shared password, so as nobody in particular.
 SESSION_KEY = "signed_in"
-# Signed in as this person: their member id.
+# Signed in as this member id.
 MEMBER_KEY = "member"
 CSRF_KEY = "csrf"
-# A mark of the password a session was opened with: the shared one, or the person's own.
-# Changing it then ends every session that was signed in with the old one, which is what someone
-# changing a password after a scare expects. It is an HMAC under the cookie signing key, not the
-# password itself or a plain hash of it, so what sits in the cookie says nothing about the
-# password to anyone holding the cookie.
+# An HMAC (under the cookie signing key, so the cookie says nothing of the password) of the
+# password a session was opened with: changing the password ends every session using the old one.
 PASSWORD_KEY = "pw"
-# When this session signed in, as a Unix time. The first password chosen on the page may skip
-# typing the installer's again, which the person has only just typed, but only this soon after.
+# Unix time of sign-in: the first password chosen on the page may skip retyping the installer's,
+# but only this soon after.
 SIGNED_IN_AT = "at"
-# A browser or a monitor asking to read gets the login page; anything else gets a plain refusal.
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 MAX_ATTEMPTS = 5
 LOCKOUT_MINUTES = 15
-# A page on the internet can be poked from endless addresses; the table of failures must not grow
-# with them. Past this many, everything not currently locked out is forgotten.
+# Past this many tracked addresses, everything not currently locked out is forgotten.
 MAX_TRACKED = 4096
-# Per-address counting alone cannot stop someone with many addresses, which anyone renting a
-# server has. A site-wide ceiling makes guessing a shared password impractical; a family will
-# never come near it.
+# A site-wide ceiling, because per-address counting cannot stop someone with many addresses.
 GLOBAL_ATTEMPTS = 50
 GLOBAL_WINDOW_MINUTES = 15
-# A browser that has signed in before carries this, and the site-wide ceiling does not apply to
-# it. Otherwise fifty wrong guesses from anywhere would keep the family out as well, for as long
-# as someone cared to keep guessing. The per-address lockout still applies. The cookie holds only
-# a signed mark of the password it was earned with, so a new password makes every one worthless.
+# A browser that has signed in before carries this and is spared the site-wide ceiling, so wrong
+# guesses from anywhere cannot keep the family out. The cookie holds a signed mark of the password
+# it was earned with, so a new password makes every one worthless.
 DEVICE_COOKIE = "familydb_device"
 DEVICE_SALT = "familydb-device"
 DEVICE_DAYS = 365
-# Long enough for any real address, IPv6 with a zone included.
 MAX_ADDRESS = 64
-# Endpoints reachable without signing in. "static" covers the stylesheet on the login page and
-# the home-screen icons, which a phone fetches without the cookie, as it does the manifest.
+# Reachable without signing in. "static" covers the login page's stylesheet and the home-screen
+# icons, which a phone fetches without the cookie.
 OPEN_ENDPOINTS = frozenset(
     {"auth.login", "auth.sign_in", "auth.logout", "web.healthz", "web.manifest", "static"}
 )
 # Where somebody signed in with a starting password may go before they have chosen their own.
 CHOOSING = frozenset({"family.you", "family.choose"})
-# The permission each part of the page needs beyond signing in, by blueprint (roles.py says who
-# has which). Reading the ideas and the plans needs nothing more.
+# The permission each blueprint needs beyond signing in.
 NEEDS: dict[str, roles.Permission] = {
     "chat": "chat",
     "edits": "change",
     "settings": "manage",
     "setup": "manage",
     "family": "manage",
-    # Every model call and tool call behind a message or a lookup: private words from any chat.
+    # Private words from any chat.
     "activity": "manage",
 }
 # A page that needs something other than its blueprint's, asked before the blueprint is.
@@ -126,11 +104,9 @@ NEEDS_HERE: dict[str, roles.Permission] = {
     "edits.withdraw_wish": "wish",
     "edits.ask_parent": "wish",
     "edits.answer_wish": "decide",
-    # The tick: anybody's for whoever may change things, only her own for a kid (update_task
-    # holds that for the page and the chat alike).
+    # A kid may tick only her own (update_task holds that for page and chat alike).
     "edits.finish_task": "own_tasks",
 }
-# Pages in those parts that are anybody's own, and need no more than signing in.
 EVERYBODY_S_OWN = CHOOSING
 HOME = "/"
 MIN_PASSWORD = passwords.MIN_LENGTH
@@ -149,12 +125,8 @@ Kind = Literal["stranger", "anyone", "family", "person"]
 
 @dataclass(frozen=True)
 class Visitor:
-    """Who is looking at the page.
-
-    A stranger has not signed in, and sees only the login page, the health check and the manifest.
-    On a page with nothing to sign in to it is anyone at all. The family is whoever the shared
-    password let in, whom the page cannot tell apart. A person signed in as themselves.
-    """
+    """Who is looking: a stranger (not signed in), anyone (nothing to sign in to), the family
+    (the shared password, indistinguishable people) or a person signed in as themselves."""
 
     kind: Kind
     member: Member | None = None
@@ -162,23 +134,18 @@ class Visitor:
 
     @property
     def signed_in(self) -> bool:
-        """Whether a password let them in, and so whether one is asked for again before a key
-        is shown or everybody is signed out."""
+        """Whether a password let them in, so one is asked again before a key is shown."""
         return self.kind in ("family", "person")
 
     def may(self, permission: roles.Permission) -> bool:
-        """Whether they may do this: as their role allows, when they signed in as themselves.
-
-        Anybody the page cannot tell apart may do everything, because there is nobody to tell
-        them from. A stranger may do nothing.
-        """
+        """A person by their role; anyone or the family may do everything; a stranger nothing."""
         if self.kind == "person":
             return self.member is not None and roles.may(self.member.role, permission)
         return self.kind in ("anyone", "family")
 
     @property
     def manages(self) -> bool:
-        """Whether they may reach what only an admin should: settings, setup, the family list."""
+        """Whether they may reach what only an admin should."""
         return self.may("manage")
 
     @property
@@ -198,11 +165,8 @@ def visitor() -> Visitor:
 
 @dataclass
 class Lockout:
-    """Wrong passwords per client address. In memory: a restart forgives, which is fine.
-
-    The address is the usual identity, but anything can be counted: the settings page counts its
-    reveal form separately, so a slip there never shuts the family out of the page itself.
-    """
+    """Wrong passwords per client key, in memory. The settings page counts its reveal form under
+    its own key, so a slip there never shuts the family out of the page."""
 
     failures: dict[str, int] = field(default_factory=dict)
     until: dict[str, datetime] = field(default_factory=dict)
@@ -211,10 +175,7 @@ class Lockout:
     lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     def locked(self, who: str, now: datetime, *, known: bool = False) -> bool:
-        """Whether this address, or the whole site, is being kept waiting.
-
-        `known` says the browser has signed in here before, which the site-wide ceiling spares.
-        """
+        """Whether this address, or the whole site (unless `known`), is being kept waiting."""
         with self.lock:
             if not known and self._everyone_locked(now):
                 return True
@@ -241,8 +202,6 @@ class Lockout:
             return
         live = {who for who, deadline in self.until.items() if deadline > now}
         if len(live) > MAX_TRACKED:
-            # More addresses are locked out than we will track. Per-address counting is not
-            # helping against whoever is doing this, so say so and start again.
             log.warning("forgetting %d web lockouts: too many addresses to track", len(live))
             live = set()
         self.failures = {who: n for who, n in self.failures.items() if who in live}
@@ -277,25 +236,19 @@ class Lockout:
 
 
 def password_in_use(settings: Settings) -> bool:
-    """Whether there is a password the family shares: the installer's, or one chosen on the page.
-
-    It opens the page only until an admin has a password of their own (`own_passwords`).
-    """
+    """Whether there is a shared password (until `own_passwords`, it opens the page)."""
     return bool(settings.web_password or settings.web_password_hash)
 
 
 def password_chosen(settings: Settings) -> bool:
-    """Whether the family has chosen their own password on the page, rather than the installer's."""
+    """Whether the family chose the shared password on the page, not the installer."""
     return bool(settings.web_password_hash)
 
 
 def own_passwords(conn: sqlite3.Connection) -> bool:
-    """Whether people sign in as themselves, which they do from the moment an admin can.
-
-    From then on the password the family shared opens nothing. A database that has not been
-    migrated yet has nobody with a password of their own; any other error is raised, because
-    answering "no" to a database that is only busy would let the shared password back in.
-    """
+    """Whether people sign in as themselves, from the moment an admin can; the shared password
+    then opens nothing. Errors other than an unmigrated database are raised: answering "no" to
+    a busy one would let the shared password back in."""
     try:
         return logins.admin_can_sign_in(conn)
     except sqlite3.OperationalError as exc:
@@ -316,9 +269,8 @@ def password_mark(settings: Settings) -> str:
 
 
 def login_mark(login: Login) -> str:
-    """A short mark of somebody's own password, for their session to carry. A new password is a
-    new hash with a new salt, so choosing one, or being given a starting one, changes the mark
-    and signs them out everywhere else."""
+    """A short mark of somebody's own password for their session. A new password is a new salted
+    hash, so it changes the mark."""
     seen = f"{login.member_id}|{login.password_hash}".encode()
     return hmac.new(_signing_key(), seen, hashlib.sha256).hexdigest()[:16]
 
@@ -334,11 +286,8 @@ def password_matches(settings: Settings, given: str) -> bool:
 
 
 def confirms(given: str) -> bool:
-    """Whether `given` is the password this visitor signed in with: their own, or the family's.
-
-    Asked again before something that matters, such as showing a key or signing everybody out,
-    so a phone left signed in is not enough to do it.
-    """
+    """Whether `given` is the password this visitor signed in with, asked again before showing
+    a key or signing everybody out, so a phone left signed in is not enough."""
     who = visitor()
     if who.login is not None:
         return passwords.hash_matches(who.login.password_hash, given)
@@ -347,9 +296,8 @@ def confirms(given: str) -> bool:
 
 @cache
 def _decoy() -> str:
-    """A hash nobody's password matches, made once, to check a name that signs in as nobody
-    against: as slow as a real check, so a wrong name cannot be told from a wrong password by
-    how long the answer takes."""
+    """A hash nobody's password matches, so an unknown name takes as long to refuse as a wrong
+    password."""
     return passwords.hash_password(secrets.token_urlsafe(32))
 
 
@@ -358,19 +306,16 @@ def _devices() -> URLSafeSerializer:
 
 
 def device_mark(login: Login | None, settings: Settings) -> str:
-    """What the known-browser cookie holds: whose password it was earned with, and a mark of
-    that password. Without a person, the mark of the shared password alone."""
+    """What the known-browser cookie holds: the member and a mark of their password, or the shared
+    password's mark."""
     if login is None:
         return password_mark(settings)
     return f"{login.member_id}:{login_mark(login)}"
 
 
 def known_device(conn: sqlite3.Connection, settings: Settings, *, personal: bool) -> bool:
-    """Whether this browser signed in here before, under a password still in force.
-
-    Once people sign in as themselves, only one of theirs counts: the shared password opens
-    nothing, and a browser that knew only that one is a stranger like any other.
-    """
+    """Whether this browser signed in before under a password still in force; once people sign
+    in as themselves, a browser that knew only the shared one is a stranger."""
     raw = request.cookies.get(DEVICE_COOKIE)
     if not raw:
         return False
@@ -388,7 +333,6 @@ def known_device(conn: sqlite3.Connection, settings: Settings, *, personal: bool
 
 
 def remember_device(response: Response, settings: Settings, login: Login | None = None) -> None:
-    """Mark this browser as one that signed in, with the password it signed in with."""
     response.set_cookie(
         DEVICE_COOKIE,
         _devices().dumps(device_mark(login, settings)),
@@ -400,20 +344,14 @@ def remember_device(response: Response, settings: Settings, login: Login | None 
 
 
 def client_address() -> str:
-    """Who is asking. Correct behind a proxy only when WEB_TRUST_PROXY is set.
-
-    Trimmed, because behind a proxy this is whatever arrived in a header: it is a key in the
-    lockout table and it is written to the settings log, and neither wants an essay.
-    """
+    """Who is asking; correct behind a proxy only when WEB_TRUST_PROXY is set. Trimmed, because it
+    may be a header's content and goes into the lockout table and the settings log."""
     return (request.remote_addr or "unknown")[:MAX_ADDRESS]
 
 
 def safe_next(target: str | None) -> str | None:
-    """A path on this site, or None. Stops the login form redirecting anywhere else.
-
-    Backslashes are refused outright: browsers treat "/\\elsewhere.example" the way they treat
-    "//elsewhere.example", which would send someone straight off the site after signing in.
-    """
+    """A path on this site, or None. Backslashes are refused: browsers read "/\\elsewhere.example"
+    as "//elsewhere.example", which would send someone off the site."""
     if not target or not target.startswith("/") or target.startswith("//"):
         return None
     if "\\" in target or "\r" in target or "\n" in target:
@@ -424,16 +362,13 @@ def safe_next(target: str | None) -> str | None:
     return target
 
 
-# The setup pages (web/setup.py) send each form to the module that owns that change, and ask to be
-# brought back afterwards. Only ever to a setup page: a hidden field is not a way to send a browser
-# anywhere else, on this site or off it.
+# Setup forms ask to be brought back, only ever to a setup page.
 SETUP_PATH = "/setup"
 SETUP_SAID = "setup"
 SETUP_PROBLEM = "setup-problem"
 
 
 def setup_return(target: str | None) -> str | None:
-    """Where a setup page's form asked to go back to: a setup page on this site, or None."""
     target = safe_next(target)
     if target is None:
         return None
@@ -442,7 +377,6 @@ def setup_return(target: str | None) -> str | None:
 
 
 def back_to_setup(target: str, *, said: str | None = None, problem: str | None = None) -> Response:
-    """Send the browser back to the setup page it came from, with what happened."""
     if said:
         flash(said, SETUP_SAID)
     if problem:
@@ -451,12 +385,7 @@ def back_to_setup(target: str, *, said: str | None = None, problem: str | None =
 
 
 def csrf_token() -> str:
-    """This session's token for its forms, made the first time a form is drawn.
-
-    The session cookie is SameSite=Lax and every post checks the Origin header, so this is the
-    third lock on the same door. It is the one that still holds if a browser ever forgets the
-    other two.
-    """
+    """This session's form token, the third lock after SameSite=Lax and the Origin check."""
     token = session.get(CSRF_KEY)
     if not token:
         token = secrets.token_urlsafe(32)
@@ -465,9 +394,8 @@ def csrf_token() -> str:
 
 
 def csrf_ok(given: str | None) -> bool:
-    """Whether this form carried this session's token. Encoded, because `compare_digest` refuses
-    to compare strings outside ASCII and a pasted token full of accents is a wrong answer, not a
-    server error."""
+    """Whether this form carried this session's token. Encoded because `compare_digest` refuses
+    non-ASCII strings, which must be a wrong answer, not a server error."""
     expected = session.get(CSRF_KEY)
     if not expected or not given:
         return False
@@ -475,11 +403,8 @@ def csrf_ok(given: str | None) -> bool:
 
 
 def origin_ok() -> bool:
-    """Whether a POST came from this site.
-
-    Browsers send Origin on every POST, so a mismatch is a cross-site attempt. A missing header
-    means a non-browser client, which the session cookie's SameSite setting already covers.
-    """
+    """Whether a POST came from this site. A missing Origin is a non-browser client, which
+    SameSite already covers."""
     origin = request.headers.get("Origin")
     if origin is None:
         return True
@@ -487,14 +412,8 @@ def origin_ok() -> bool:
 
 
 def refused() -> str | None:
-    """None when a form may be acted on, else what to tell whoever sent it.
-
-    Every form on the page goes through this: the Origin check catches a post from another site,
-    and this session's token catches a browser that did not send one. A missing token is not the
-    same thing as a request from somewhere else, and is not reported as one: signing out and back
-    in leaves an open page holding a token nobody recognises any more, and telling that person
-    their form came from another site would be a lie they cannot act on.
-    """
+    """None when a form may be acted on, else what to tell whoever sent it. A stale token is not
+    reported as a foreign origin: signing out and back in leaves an open page with one."""
     if not origin_ok():
         return BAD_ORIGIN
     if not csrf_ok(request.form.get("csrf")):
@@ -511,18 +430,12 @@ def _lockout() -> Lockout:
 
 
 def _marked(expected: str) -> bool:
-    """Whether this session carries the mark of the password it should have been opened with."""
     return hmac.compare_digest(str(session.get(PASSWORD_KEY, "")), expected)
 
 
 def require_login() -> Response | tuple[str, int] | None:
-    """Flask before_request hook: say who is asking, and send anyone not signed in to sign in.
-
-    Somebody signed in as themselves costs one small query: whether they are still on the list,
-    still allowed to sign in, and still using the password the session was opened with. Somebody
-    not signed in at all, on a page with a shared password, costs nothing: they are sent to sign
-    in without the page doing any work on their behalf.
-    """
+    """before_request hook: say who is asking, and send anyone not signed in to sign in. A person
+    costs one query (still listed, allowed and on the same password); a stranger none."""
     g.visitor = STRANGER
     if request.endpoint in OPEN_ENDPOINTS:
         return None
@@ -535,7 +448,6 @@ def require_login() -> Response | tuple[str, int] | None:
         if found is not None and _marked(login_mark(found.login)):
             g.visitor = Visitor("person", found.member, found.login)
             return _within_reach(g.visitor)
-        # A new password, switched off, a role that may not sign in, or their password taken away.
         session.clear()
     elif session.get(SESSION_KEY):
         if _marked(password_mark(settings)):
@@ -544,7 +456,6 @@ def require_login() -> Response | tuple[str, int] | None:
             if not personal:
                 g.visitor = FAMILY
                 return None
-        # The shared password changed, or an admin chose their own and so ended it.
         session.clear()
     elif not password_in_use(settings):
         with closing(app.connect()) as conn:
@@ -558,8 +469,7 @@ def require_login() -> Response | tuple[str, int] | None:
 
 
 def _within_reach(who: Visitor) -> Response | tuple[str, int] | None:
-    """Keep a person to what they may reach: their own password first, if an admin made it up
-    for them, and no part of the page their role has no permission for."""
+    """Keep a person to their own password first (if starting) and to what their role may reach."""
     if who.login is not None and who.login.temporary and request.endpoint not in CHOOSING:
         if request.method in SAFE_METHODS:
             return redirect(url_for("family.you"))
@@ -573,7 +483,7 @@ def _within_reach(who: Visitor) -> Response | tuple[str, int] | None:
 
 
 def start_session(found: SignIn, now: datetime) -> None:
-    """Sign this browser in as this person, in place of whoever it was signed in as."""
+    """Sign this browser in as this person, replacing any session."""
     session.clear()
     session[MEMBER_KEY] = found.member.id
     session[PASSWORD_KEY] = login_mark(found.login)
@@ -582,13 +492,12 @@ def start_session(found: SignIn, now: datetime) -> None:
 
 
 def keep_session(login: Login) -> None:
-    """Keep this browser signed in after its own password changed: the mark follows the new
-    one, while every other browser signed in with the old one is signed out."""
+    """Keep this browser signed in after its password changed; others using the old one end."""
     session[PASSWORD_KEY] = login_mark(login)
 
 
 def _find(conn: sqlite3.Connection, name: str) -> SignIn | None:
-    """Whoever signs in by this name, on a database old enough to have nobody who does."""
+    """Whoever signs in by this name; nobody on a database not yet migrated."""
     try:
         return logins.by_name(conn, name)
     except sqlite3.OperationalError as exc:
@@ -619,17 +528,14 @@ def login() -> Response | tuple[str, int]:
     if not personal and not password_in_use(app.settings):
         return redirect(HOME)  # nothing to sign in to
     if session.get(MEMBER_KEY) or session.get(SESSION_KEY):
-        return redirect(HOME)  # and if that session is no longer good, the gate says so there
+        return redirect(HOME)  # a session no longer good is caught there
     return _login_page(personal, target=safe_next(request.args.get("next")))
 
 
 @bp.post("/login")
 def sign_in() -> Response | tuple[str, int]:
-    """A name and that person's own password, or, while the family still shares one, that.
-
-    A name that signs in as nobody takes as long to refuse as a wrong password, and gets the
-    same answer, so the page is no way to find out who is in the family.
-    """
+    """A name and that person's own password, or the shared one. An unknown name is refused as a
+    wrong password is, so the page does not reveal who is in the family."""
     app = _app()
     settings = app.settings
     if not origin_ok():
@@ -656,7 +562,6 @@ def sign_in() -> Response | tuple[str, int]:
         lockout.passed(who)
         start_session(found, now)
         log.info("web login as member %s from %s", found.member.id, who)
-        # A starting password is for choosing their own with, and for nothing else.
         response = redirect(url_for("family.you") if found.login.temporary else target or HOME)
         remember_device(response, settings, found.login)
         return response
