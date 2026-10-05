@@ -1,9 +1,5 @@
-"""Serving the page: in the foreground for `familydb web`, on a thread inside `familydb run`.
-
-Waitress, not Flask's development server, and never in debug mode. The bot's own thread must
-survive a page that cannot start, so `serve_in_thread` reports the problem and returns nothing
-rather than raising.
-"""
+"""Serving the page with waitress: in the foreground for `familydb web`, on a thread inside
+`familydb run`, where a page that cannot start must not take the bot down."""
 
 from __future__ import annotations
 
@@ -24,23 +20,20 @@ THREAD_NAME = "familydb-web"
 IDENT = "FamilyDB"
 
 
-# The headers Caddy and nginx set. Waitress reads them only from the proxy it is told to trust,
-# and strips them from anyone else, so a visitor cannot claim to be somebody else.
+# Waitress reads these only from the proxy it is told to trust and strips them from anyone else.
 PROXY_HEADERS = frozenset({"x-forwarded-for", "x-forwarded-proto", "x-forwarded-host"})
 
 
 def proxy_options(settings: Any) -> dict[str, Any]:
     """How far to believe the forwarding headers: not at all unless WEB_TRUST_PROXY is set.
 
-    This has to be the server's job rather than the Flask app's. Waitress removes forwarding
-    headers from any peer it was not told to trust before the app ever runs, so a middleware in
-    the app would see none: behind Caddy every request would look like plain HTTP from the proxy
-    itself, the Origin check would refuse every sign-in, and the whole family would share one
-    lockout.
+    This must be the server's job, not a Flask middleware's: waitress strips the headers from any
+    untrusted peer before the app runs, so the app would see none, the Origin check would refuse
+    every sign-in and the family would share one lockout.
 
-    A page on the loopback trusts the proxy on this machine. One bound to every interface is in
-    a container, where Caddy's address is not known in advance; the compose file publishes the
-    port to the host's loopback only, so nothing but the proxy can reach it to lie.
+    On loopback the proxy is this machine. Bound to every interface is a container, where the
+    proxy's address is unknown; the compose file publishes the port to the host's loopback only,
+    so nothing but the proxy can reach it to lie.
     """
     if not settings.web_trust_proxy:
         return {}
@@ -60,9 +53,7 @@ def create_server(app: App) -> Any:
         host=settings.web_host,
         port=settings.web_port,
         ident=IDENT,
-        # Flask refuses a body over MAX_BODY_BYTES, but only once waitress has read it, and
-        # waitress will take a gigabyte by default. Stop it at the socket instead: nothing the
-        # page accepts is larger than a settings form.
+        # Flask refuses an oversize body only after waitress has read it (default 1 GB).
         max_request_body_size=MAX_BODY_BYTES,
         **proxy_options(settings),
     )

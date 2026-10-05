@@ -1,14 +1,5 @@
-"""The Family page: who is on the list, adding or changing somebody, and how they sign in.
-
-Like the edit forms, this module does not know how to save anything. It hands each form to
-`familydb.family`, which holds the rules — one person per name, always an admin, no quiet
-overwrites, an admin who can always sign in — and writes through `store.members` and
-`store.logins`. Nothing here reaches a table itself.
-
-Everything here is an admin's, except Your password (/you), which is everybody's own: where a
-person changes their password, chooses one in place of a starting password an admin made up for
-them, or, while the family still shares a password, where an admin chooses theirs and so ends it.
-"""
+"""The Family page: each form goes to `familydb.family`, which holds the rules and writes;
+nothing here reaches a table. All an admin's, except Your password (/you), which is everybody's."""
 
 from __future__ import annotations
 
@@ -49,7 +40,7 @@ log = logging.getLogger(__name__)
 bp = Blueprint("family", __name__)
 
 MAX_ID = 2**63 - 1
-NOTICE = "edit"  # the same stream as the other edit forms, drawn by the base template
+NOTICE = "edit"
 ADDED = "{name} is on the family list."
 CHANGED = "Saved {name}."
 REMOVED = (
@@ -77,12 +68,10 @@ YOURS_FIRST = (
 THAT_IS_YOU = "That is you: change your own password on the Your password page."
 NO_BOT = "Connect the Telegram bot first, on the setup page's Telegram step: the link names it."
 INVITE_LINK = "https://t.me/{bot}?start={code}"
-# A starting password waits here for the page that shows it, once, and is gone when shown. In
-# memory, like the form tokens: a password must not ride in the session cookie, which is signed
-# but not sealed, and a restart before it is shown only means making another.
+# A starting password or link waits here, in memory, for the page that shows it once: it must not
+# ride in the session cookie, which is signed but not sealed.
 MADE_KEY = "FAMILYDB_MADE"
 MADE_MINUTES = 10
-# What is held there: a starting password, or a link that links somebody's Telegram.
 PASSWORD = "password"
 INVITE = "invite"
 
@@ -103,7 +92,6 @@ def show() -> str:
         strangers = knock_store.recent(conn, channel=rules.TELEGRAM)
         passwords_by_member = login_store.by_member(conn)
         personal = auth.own_passwords(conn)
-        # How many messages each kid has had answered today, when the family set a number.
         limit = app.settings.kid_daily_messages
         since = spending.day_start(app.settings, app.clock.now())
         today = {
@@ -234,12 +222,8 @@ def remove(member_id: int) -> Response:
 @bp.post(f"/family/<int(max={MAX_ID}):member_id>/telegram")
 @once
 def link_telegram(member_id: int) -> Response:
-    """Put a Telegram id on somebody already on the list, as it arrived in a message to the bot.
-
-    The setup page's "That's me", pressed after messaging the bot from a phone. Nothing else about
-    the person changes, so the form carries no revision of its own: the one read here is passed
-    on, and the rules still refuse an id that somebody else already has.
-    """
+    """Put a Telegram id on somebody on the list (the setup page's "That's me"). Nothing else
+    changes, so the form has no revision: the one read here is passed on."""
     setup = auth.setup_return(request.form.get("then"))
     here = url_for("family.show")
     if (complaint := auth.refused()) is not None:
@@ -269,9 +253,8 @@ def link_telegram(member_id: int) -> Response:
 @bp.post(f"/family/<int(max={MAX_ID}):member_id>/invite")
 @once
 def invite(member_id: int) -> Response:
-    """A link that links somebody's Telegram to them when they open it and press Start: shown on
-    their page, once. Only a hash of its code is kept, so it cannot be shown again; making
-    another replaces it. The bot has to be connected, since the link names it."""
+    """A link that links somebody's Telegram when opened and Start is pressed, shown once (only a
+    hash of its code is kept). The bot must be connected, since the link names it."""
     here = url_for("family.edit", member_id=member_id)
     if (complaint := auth.refused()) is not None:
         return _answer(None, problem=complaint, fallback=here)
@@ -293,11 +276,8 @@ def invite(member_id: int) -> Response:
 @bp.post(f"/family/<int(max={MAX_ID}):member_id>/password")
 @once
 def sign_in_for(member_id: int) -> Response:
-    """Make somebody a starting password, shown once on their page, or take theirs away.
-
-    Only by an admin signed in as themselves: while the family shares a password there is nobody
-    to say who made it, and the first admin's own password comes first (see `choose`).
-    """
+    """Make somebody a starting password, shown once, or take theirs away. Only by an admin signed
+    in as themselves: under the shared password nobody is on record as making it."""
     here = url_for("family.edit", member_id=member_id)
     if (complaint := auth.refused()) is not None:
         return _answer(None, problem=complaint, fallback=here)
@@ -333,20 +313,14 @@ def you() -> str | tuple[str, int]:
 
 
 def _you_page(*, error: str | None = None, status: int = 200) -> tuple[str, int]:
-    """Your own password: to change it, to choose it after a starting one, or, while the family
-    still shares a password, for an admin to choose theirs and so end the shared one."""
     with closing(_app().connect()) as conn:
         own = own_form(conn)
     return render_template("you.html", error=error, own=own), status
 
 
 def own_form(conn: Any) -> dict[str, Any]:
-    """What the own-password form needs, wherever it is drawn: here, and on the setup page.
-
-    Signed in as themselves, it asks for the password in use, unless that was a starting one they
-    have only just signed in with. Let in by the family password, it offers the admins, one of
-    whom may be the first to have their own.
-    """
+    """What the own-password form needs, here and on the setup page: the current password unless
+    it was a starting one, or, under the shared password, the admins one of whom may claim."""
     who = auth.visitor()
     claimable: list[member_store.Member] = []
     if who.member is None and not auth.own_passwords(conn):
@@ -365,11 +339,8 @@ def own_form(conn: Any) -> dict[str, Any]:
 @bp.post("/you")
 @once
 def choose() -> Response | tuple[str, int]:
-    """Somebody's own password. Signed in as themselves, it replaces theirs, and asks for the one
-    it replaces unless that was a starting password they have only just used; this browser stays
-    signed in and every other one signed in as them does not. While the family shares a password,
-    it is an admin choosing theirs, which signs this browser in as them and ends the shared one.
-    """
+    """Somebody's own password: replaces theirs (this browser stays signed in, others do not), or
+    under the shared password an admin choosing theirs, which ends the shared one."""
     back = auth.setup_return(request.form.get("then"))
     if (complaint := auth.refused()) is not None:
         return _chosen(back, problem=complaint)
@@ -380,7 +351,7 @@ def choose() -> Response | tuple[str, int]:
     who = auth.visitor()
     now = app.clock.now()
     if who.login is not None and not who.login.temporary:
-        attempt = f"{auth.client_address()} password"  # counted apart from signing in
+        attempt = f"{auth.client_address()} password"  # counted apart from sign-in
         lockout = current_app.config["FAMILYDB_LOCKOUT"]
         if lockout.locked(attempt, now):
             return _chosen(back, problem=LOCKED_OUT, status=429)
@@ -402,7 +373,7 @@ def choose() -> Response | tuple[str, int]:
             found = login_store.signing_in(conn, person.id)
     except rules.FamilyError as exc:
         return _chosen(back, problem=str(exc))
-    if found is None:  # switched off in the same moment; the gate turns them away next time
+    if found is None:  # switched off in the same moment
         return _chosen(back, problem=NOBODY)
     if who.member is None:
         auth.start_session(found, now)
@@ -420,8 +391,7 @@ def choose() -> Response | tuple[str, int]:
 def _chosen(
     setup: str | None, *, said: str | None = None, problem: str | None = None, status: int = 400
 ) -> Any:
-    """Back to the setup page that sent the form; else home when it worked, and the page again,
-    saying what was wrong, when it did not."""
+    """Back to the setup page that sent the form; else home, or this page again on a problem."""
     if setup is not None:
         return auth.back_to_setup(setup, said=said, problem=problem)
     if problem is not None:
@@ -431,7 +401,6 @@ def _chosen(
 
 
 def _keep_made(member_id: int, secret: str, kind: str = PASSWORD) -> None:
-    """Hold a starting password, or a link, for this browser's next look at that person's page."""
     made: dict[str, tuple[str, float]] = current_app.config.setdefault(MADE_KEY, {})
     now = time.monotonic()
     for key in [key for key, (_, at) in made.items() if now - at > MADE_MINUTES * 60]:
@@ -440,12 +409,8 @@ def _keep_made(member_id: int, secret: str, kind: str = PASSWORD) -> None:
 
 
 def _take_made(member_id: int, kind: str = PASSWORD) -> str | None:
-    """The starting password (or link) this browser just made for that person, once, then never
-    again.
-
-    Keyed on the session's form token, which was there before the form was sent: a double click
-    lands on the page with the password on it even if the browser never saw the first answer.
-    """
+    """The starting password (or link) this browser just made, once. Keyed on the session's form
+    token, so a double click still lands on the page with it."""
     made: dict[str, tuple[str, float]] = current_app.config.setdefault(MADE_KEY, {})
     found = made.pop(f"{kind}:{session.get(auth.CSRF_KEY, '')}:{member_id}", None)
     if found is None or time.monotonic() - found[1] > MADE_MINUTES * 60:
@@ -456,7 +421,6 @@ def _take_made(member_id: int, kind: str = PASSWORD) -> str | None:
 def _answer(
     setup: str | None, *, said: str | None = None, problem: str | None = None, fallback: str
 ) -> Response:
-    """Back to the setup page that sent the form, or to this page's own, with what happened."""
     if setup is not None:
         return auth.back_to_setup(setup, said=said, problem=problem)
     _say(problem or said or "")
@@ -465,8 +429,7 @@ def _answer(
 
 def _person(person: member_store.Member, login: Login | None = None) -> dict[str, Any]:
     telegram = person.channel_user_id if person.channel == rules.TELEGRAM else None
-    # How they sign in to the page: "own", "starting", or None when they cannot (no password, a
-    # role that may not, or switched off, whatever may be stored for them).
+    # "own", "starting", or None when they cannot sign in whatever may be stored.
     may_sign_in = person.active and roles.may(person.role, "sign_in")
     sign_in = None
     if login is not None and may_sign_in:
@@ -481,7 +444,7 @@ def _person(person: member_store.Member, login: Login | None = None) -> dict[str
         "gender": person.gender,
         "active": person.active,
         "telegram_id": telegram,
-        # Somebody the bot knows on a channel this page does not edit, such as the console.
+        # On a channel this page does not edit, such as the console.
         "elsewhere": person.channel if person.channel not in (None, rules.TELEGRAM) else None,
         "revision": rules.revision(person),
         "sign_in": sign_in,

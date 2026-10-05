@@ -1,21 +1,11 @@
-"""Forms that do their thing once, however many times they arrive.
+"""Forms that do their work once however often they arrive (double click, resend, back button).
+Every such form carries a token drawn with the page; the first post with it does the work and
+remembers where it redirected, and a later post with the same token and session is sent there
+without doing anything. One that arrives while the first works waits for it. The server does
+this, not a script, because every form must work with scripts off.
 
-A double click, a refresh that resends, the back button and Send again: each posts the same
-form twice. For most forms that is harmless, but not for these: twice "put it on the calendar"
-is two events on everybody's phone, twice "record how it went" counts the visit twice. A script
-that disabled a button after one press would not stop a resend or the back button, and every
-form must work with scripts off, so the page does it on the server.
-
-Every such form carries a token drawn fresh when the page is drawn. The first post with a token
-does the work and remembers where it sent the browser; any later post with the same token,
-from the same session, is sent there too, without doing anything. One that arrives while the
-first is still working waits for it.
-
-This guard is in memory and handles rapid repeats. Calendar creation additionally carries the
-form identity into the durable calendar operation log, so it survives a restart, and the browser
-session, so a form drawn again after a lost reply from Google finds the event rather than adding
-another. Task creation carries the form identity too. Other forms have only this guard.
-"""
+The guard is in memory. Calendar and task creation also carry the form identity into the durable
+operation log, which survives a restart."""
 
 from __future__ import annotations
 
@@ -34,14 +24,12 @@ from familydb.web.auth import CSRF_KEY, safe_next
 
 FIELD = "once"
 MAX_TOKEN = 64
-# Enough for a family's afternoon of forms; the oldest are forgotten first.
 MAX_REMEMBERED = 2048
-# How long a duplicate waits for the first to finish before being sent back where it came from.
 WAIT_SECONDS = 30
 
 
 def once_token() -> str:
-    """A fresh token for one drawing of one form. Used as a template global."""
+    """A fresh token for one drawing of one form."""
     return secrets.token_urlsafe(16)
 
 
@@ -52,14 +40,12 @@ class _Sent:
 
 
 class Once:
-    """The tokens this process has seen, and where each one sent the browser."""
-
     def __init__(self) -> None:
         self._seen: OrderedDict[str, _Sent] = OrderedDict()
         self._lock = threading.Lock()
 
     def claim(self, key: str) -> tuple[_Sent, bool]:
-        """The record for this token, and whether this caller is the first to bring it."""
+        """The record for this token, and whether this caller is the first."""
         with self._lock:
             sent = self._seen.get(key)
             if sent is not None:
@@ -72,7 +58,6 @@ class Once:
 
 
 def once(view: Callable[..., Any]) -> Callable[..., Any]:
-    """Run a form's view the first time its token arrives; send repeats where the first went."""
 
     @wraps(view)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -99,6 +84,6 @@ def once(view: Callable[..., Any]) -> Callable[..., Any]:
 
 
 def _path(url: str) -> str:
-    """The path and query of a full URL, for sending a browser back to a page on this site."""
+    """The path and query of a full URL."""
     parts = urlsplit(url)
     return parts.path + (f"?{parts.query}" if parts.query else "")

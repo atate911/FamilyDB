@@ -1,9 +1,4 @@
-"""The key that signs the web session cookie.
-
-Set WEB_SECRET_KEY to pin it. Otherwise one is generated once and kept beside the database, so
-a restart does not sign everyone out. Read it through `session_secret` and replace it through
-`rotate`, never directly.
-"""
+"""The key that signs the web session cookie: WEB_SECRET_KEY, else one kept beside the database."""
 
 from __future__ import annotations
 
@@ -21,7 +16,7 @@ KEY_BYTES = 32
 
 
 def secret_path(settings: Settings) -> Path:
-    """Where the generated key lives: beside the database file."""
+    """Beside the database file."""
     return Path(settings.familydb_path).expanduser().resolve().parent / SECRET_FILE
 
 
@@ -65,11 +60,8 @@ def session_secret(settings: Settings) -> str:
 
 
 def rotate(settings: Settings) -> str | None:
-    """Replace the stored key, which signs every session and every known browser out at once.
-
-    None when the key is pinned by WEB_SECRET_KEY, which only the file it came from can change.
-    Another process serving the page keeps the old key until it restarts.
-    """
+    """Replace the stored key, signing everyone out. None when WEB_SECRET_KEY pins it. Another
+    process serving the page keeps the old key until it restarts."""
     if settings.web_secret_key:
         return None
     path = secret_path(settings)

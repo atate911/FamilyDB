@@ -65,7 +65,7 @@ def _app() -> App:
 
 
 def _who(conn: Any) -> dict[str, Any]:
-    """What every form on a page needs to say who is doing this: the family, and who last did."""
+    """What every form needs to say who is doing this."""
     return {
         "family": [member.display_name for member in member_store.list_all(conn)],
         "who": session.get(WHO_KEY),
@@ -73,7 +73,7 @@ def _who(conn: Any) -> dict[str, Any]:
 
 
 def _choices(rows: list[Any]) -> tuple[list[str], list[str]]:
-    """The kinds and participants actually in use, so the filters offer only real options."""
+    """The kinds and participants in use, for the filters."""
     kinds = sorted({row.kind for row in rows})
     people = sorted({name for row in rows for name in row.participants})
     return kinds, people
@@ -81,18 +81,14 @@ def _choices(rows: list[Any]) -> tuple[list[str], list[str]]:
 
 @bp.get("/healthz")
 def healthz() -> Response:
-    """A plain-text liveness check for a monitor or a reverse proxy. No password needed."""
+    """A liveness check for a monitor or proxy, open before sign-in."""
     return Response("ok\n", mimetype="text/plain")
 
 
 @bp.get("/manifest.webmanifest")
 def manifest() -> Response:
-    """What a phone needs to keep the page on its home screen as an app: its name, that it opens
-    without the browser's bars, where it starts, its colours and its icons.
-
-    No password needed: a phone asks for it without the page's cookie, as it does the icons, and
-    it says nothing the sign-in page does not.
-    """
+    """The home-screen manifest. Open before sign-in: a phone asks without the cookie, and it says
+    nothing the sign-in page does not."""
     title = _app().settings.web_title
     small, large = (
         url_for("static", filename="icon-192.png"),
@@ -101,7 +97,6 @@ def manifest() -> Response:
     icons = [
         {"src": small, "sizes": "192x192"},
         {"src": large, "sizes": "512x512"},
-        # The same picture for round masks, which leave its margin alone.
         {"src": large, "sizes": "512x512", "purpose": "maskable"},
     ]
     body = {
@@ -120,7 +115,6 @@ def manifest() -> Response:
 
 @bp.get("/status")
 def status() -> str:
-    """Is it working, and what is it costing us? A handful of small queries, no model call."""
     app = _app()
     with closing(app.connect()) as conn:
         return render_template("status.html", **status_page.status(app, conn))
@@ -128,25 +122,17 @@ def status() -> str:
 
 @bp.get("/")
 def home() -> Response | str:
-    """What is on your mind: the box to tell her, and around it what is coming up, what is left
-    to do and what was added lately.
-
-    The box is the chat's own and posts to it, so what is said here lands in the conversation.
-    Everything else is read from the database and worded here: opening this page asks nothing
-    of a model. Until it can answer anyone, which takes somebody on the list and a model, an
-    admin is sent to the setup page instead: there is nothing else here worth showing yet.
-    """
+    """The box (the chat's own, posting to it) around what is coming up, to do and new. No model
+    call. An admin is sent to setup until the bot can answer anyone."""
     if any(request.args.get(key) for key in FILTERS):
-        # Home takes no search: one sent here, as an old bookmark may, goes on to the ideas list.
+        # Home takes no search; an old bookmark's goes on to the ideas list.
         return redirect(url_for("web.ideas", **request.args))
     app = _app()
     today = app.clock.today()
     tz = app.settings.tzinfo
     visitor = auth.visitor()
-    # Setting up is an admin's, so nobody else is sent to it or shown what is left of it.
     manages = visitor.manages
-    # The box and how the conversation stands are the chat's, so only for a role that may talk
-    # to her (familydb/roles.py): nobody is shown a way into a page that would refuse them.
+    # The box is the chat's, so only for a role that may chat.
     talks = visitor.may("chat")
     kid = chat.is_kid()
     with closing(app.connect()) as conn:
@@ -181,8 +167,8 @@ def home() -> Response | str:
         talk=talk,
         wishes=wished,
         **chat.box(family, prompt=chat.KID_HOME_PROMPT if kid else chat.HOME_PROMPT),
-        question=True,  # the box's label is her question, and the page's heading
-        typed=chat.asked(),  # a way to start, followed with scripts off
+        question=True,
+        typed=chat.asked(),
         starters=views.starters(today, kid=kid),
     )
 
@@ -210,7 +196,6 @@ def ideas() -> str:
             listed = [idea for idea in listed if not idea_store.is_gift(idea)]
         kinds, people = _choices(listed)
         capture_people = member_store.list_all(conn)
-        # Where each listed idea is from home, for its card and the radar of the list.
         away = {
             idea.id: views.away_from_home(place_store.get(conn, idea.place_id), settings)
             for idea in found
@@ -252,7 +237,6 @@ def idea(idea_id: int) -> str:
         outcomes = outcome_store.list_for_idea(conn, idea_id)
         plans = plan_store.for_idea(conn, idea_id)
         asking = _who(conn)
-        # How it was last looked up, in full, for an admin (web/activity.py).
         looked_up = calls.last_lookup_turn(conn, idea_id) if auth.visitor().may("manage") else None
     return render_template(
         "idea.html",
@@ -275,7 +259,6 @@ def idea(idea_id: int) -> str:
 
 
 def _idea_form(record: Any = None) -> str:
-    """The boxes for adding or changing an idea. Drawing it is reading; `edits.py` saves it."""
     app = _app()
     with closing(app.connect()) as conn:
         kinds = sorted({row.kind for row in idea_store.list_all(conn, include_dropped=True)})
@@ -311,8 +294,6 @@ def edit_idea(idea_id: int) -> str:
 
 @bp.get("/memory")
 def memory() -> str:
-    """What the family has told her about itself, and what it asked her to forget. Reading only:
-    the forms on it are `edits.py`'s, through the `remember` tool."""
     app = _app()
     with closing(app.connect()) as conn:
         everything = memory_store.list_all(conn)
@@ -327,7 +308,6 @@ def memory() -> str:
 
 @bp.get("/restaurants")
 def restaurants() -> str:
-    """The restaurant list on its own, each card linking out to where you can read more."""
     app = _app()
     now = app.clock.now()
     today = app.clock.today()
@@ -348,7 +328,7 @@ def restaurants() -> str:
 
 
 def _month(asked: str | None, today: date) -> date:
-    """The first of the month asked for as YYYY-MM, or of this one. Anything else is a 404."""
+    """The first of the month asked for as YYYY-MM, or of this one; anything else is a 404."""
     if not asked:
         return today.replace(day=1)
     try:
@@ -362,7 +342,6 @@ def _month(asked: str | None, today: date) -> date:
 
 @bp.get("/plans")
 def plans() -> str:
-    """What is on: the next three months, then the past month, as a list."""
     app = _app()
     today = app.clock.today()
     with closing(app.connect()) as conn:
@@ -375,7 +354,6 @@ def plans() -> str:
         on = _no_gifts(conn, seen.entries)
         titles = {row.id: row.title for row in idea_store.list_all(conn, include_dropped=True)}
         asking = _who(conn)
-    # Something that ends today or later is still to come, or going on now.
     upcoming = [entry for entry in on if entry.days()[-1] >= today]
     recent = [entry for entry in on if entry.days()[-1] < today]
     return render_template(
@@ -394,7 +372,7 @@ def plans() -> str:
 
 @bp.get("/plans/month")
 def plans_month() -> str:
-    """One month as a calendar, or as a list of its busy days on a screen too narrow for one."""
+    """One month as a calendar, or a list of busy days on a narrow screen."""
     app = _app()
     today = app.clock.today()
     first = _month(request.args.get("month"), today)
@@ -421,13 +399,12 @@ def plans_month() -> str:
 
 
 def _gifts_hidden() -> bool:
-    """Whether presents are kept from this visitor: from anybody who may not decide what the kids
-    are given, so a present stays a surprise (docs/WISHES.md)."""
+    """Presents are kept from anybody who may not decide what the kids get (docs/WISHES.md)."""
     return not auth.visitor().may("decide")
 
 
 def _no_gifts(conn: Any, entries: list[agenda.Entry]) -> list[agenda.Entry]:
-    """What is on, without the plans made from a present, for a visitor presents are kept from."""
+    """What is on, without plans made from a present, where presents are kept."""
     if not _gifts_hidden():
         return entries
     gifts = {i.id for i in idea_store.list_all(conn, include_dropped=True) if idea_store.is_gift(i)}
@@ -435,7 +412,7 @@ def _no_gifts(conn: Any, entries: list[agenda.Entry]) -> list[agenda.Entry]:
 
 
 def _own_only() -> int | None:
-    """Whose things to do this visitor sees: their own, unless they may see the household's."""
+    """Whose tasks this visitor sees: their own, unless they may browse the household's."""
     visitor = auth.visitor()
     if visitor.may("browse") or visitor.member is None:
         return None
@@ -448,8 +425,7 @@ def tasks() -> str:
     status = request.args.get("status", "open")
     if status not in {"open", "done", "cancelled", "all"}:
         abort(400)
-    # Somebody who sees only their own (a kid) gets their open ones as a plain checklist, as
-    # Home lists them: no filters, no workings (docs/STYLE.md, "A kid's screen").
+    # A kid gets a plain checklist of her own open ones (docs/STYLE.md, "A kid's screen").
     simple = not auth.visitor().may("browse")
     if simple:
         status = "open"
@@ -482,18 +458,17 @@ def tasks() -> str:
 
 # -- the kids' wish lists (docs/WISHES.md) --------------------------------------------------------
 
-# Answers shown under her lists for this long, then only on the full list.
 ANSWERED_DAYS = 30
 TOP_WISHES = 3
 
 
 def _is_kid(member: member_store.Member) -> bool:
-    """Somebody who keeps a wish list and does not decide on anybody's: a kid, by roles.py."""
+    """A kid, by roles.py: keeps a wish list and decides on nobody's."""
     return roles.may(member.role, "wish") and not roles.may(member.role, "decide")
 
 
 def _lists(conn: Any, kid: member_store.Member, today: date) -> dict[str, Any]:
-    """Her three lists in her order, what was answered lately, and how far off each occasion is."""
+    """A kid's three lists in her order, what was answered lately, and the countdowns."""
     christmas = date(today.year, 12, 25)
     if christmas < today:
         christmas = date(today.year + 1, 12, 25)
@@ -542,8 +517,7 @@ def _kids(conn: Any) -> list[member_store.Member]:
 
 
 def wish_glance(conn: Any, today: date) -> dict[str, Any] | None:
-    """For Home: a kid's own lists at a glance, or for a parent, each kid's and what waits on
-    them. None for anybody else. Read from the database, asked of nobody."""
+    """For Home: a kid's own lists, or for a parent each kid's and what waits on them."""
     visitor = auth.visitor()
     if visitor.may("decide"):
         kids = [_lists(conn, kid, today) for kid in _kids(conn)]
@@ -582,7 +556,6 @@ def wishes() -> str:
         else:
             abort(404)
         family = [member.display_name for member in member_store.list_all(conn)]
-    # A kid lands on a box for anything at all, the chat's own, only if she may talk to her.
     talk = (
         {}
         if visitor.may("decide") or not visitor.may("chat")

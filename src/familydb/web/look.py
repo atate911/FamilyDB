@@ -1,10 +1,5 @@
-"""The Look page: which of the page's looks this browser wears, and whether it follows the
-device's day and night.
-
-It is everybody's own, signed in as anyone: a kid may choose how the page looks to them. Nothing
-here reaches the family's data. The choice is a cookie in this browser (see `looks.py`), set by the
-form's answer, so it is the one thing that changes with no database write and no tool call.
-"""
+"""The Look page: everybody's own, a kid included. The choice is a cookie (`looks.py`), so it
+writes no database row and makes no tool call."""
 
 from __future__ import annotations
 
@@ -32,7 +27,6 @@ def show() -> str:
 
 @bp.post("/look")
 def save() -> Response:
-    """Wear the look the form chose: the answer sets the cookie and comes back to the page."""
     problem = auth.refused()
     if problem:
         flash(problem, NOTICE)
