@@ -960,3 +960,59 @@ The look of every page is unchanged. This stage prepares the design to be built,
 - Nothing in `src/familydb/` was touched, as asked.
 - The real test suite isn't here, so HANDOFF.md §7 lists the markup the tests likely pin, rather than the tests themselves.
 - The JS files aren't here either: the hooks in HANDOFF.md §4 come from the templates.
+
+# Stage 11: fitted to the looks the app built (STAGE11.md)
+
+The family's engineers built theme support into the current app (`app-reference/built-looks/`): one `themes.css` of `light-dark()` blocks, seven looks in `web/looks.py`, a per-browser cookie, the Look page at `/look`, and `tests/test_look.py`. That is now the app's mechanism, so the design and the handoff follow it, replacing stage 10's plan (one file per theme, a family default and a per-person choice kept on the server).
+
+## Token names: the built ones, and nothing moved
+
+- **Renamed** to the built names wherever the role was the same:
+  - `--side*` → `--band`, `--on-band`, `--on-band-2`, `--band-hi`, `--band-line`; the panel's mark → `--here-icon`, with the current item as `--here` / `--on-here`;
+  - `--today-bg` → `--today`; `--alert` → `--red`; `--warn` → `--amber`;
+  - `--primary-2` → `--primary-hover`; `--shadow-lift` → `--pop`; `--shadow-up` → `--pop-up`;
+  - the wordmark's cursor is a look's `--cursor`.
+- **66 roles Kitchen Table needs that the built set lacks** (HANDOFF.md §8.1 lists them all): the panel's links, each meaning's wash and rule, words on a late plate and on Vera's green, her pill and rim, her box's words, rim, edge, rules and Send, and the eight people. A `[data-theme]` block works each one out for every look from its own tokens.
+- **Kitchen Table is one block**, `[data-theme="kitchen"]`, every value `light-dark(day, night)`, exactly as it would sit in the built `themes.css`.
+  - The key is `kitchen`: the built test only reads one-word keys.
+  - The fixed layer's night (the glass) is `light-dark()` too, so no media queries are left.
+- **Proved:** every page rendered before and after the rename, and compared pixel by pixel. The only differences were the pages whose content changed in this stage, and animation noise on the states sheet (two renders of it differ from each other in the same place).
+
+## The Look page replaces the stage-9 pickers
+
+- **`look.html`** is the built Look page in Kitchen Table:
+  - Day and night, with the built words;
+  - every look as a card with its radio, name, blurb and its own Day and Night samples (Phosphor: "Night only");
+  - "Use this look".
+  - The samples keep the built markup (`look-sample[data-theme]`), which the test counts.
+- **`look-kid.html`** is Maya's, just after she chose Fjord: the flash, and the whole page worn in Fjord.
+- **The pickers are gone** from Settings › General and from "You". The You page is "Your password" again, as in the app, with a line pointing to Look.
+- **The account corner** reads "Look · Your password · Sign out", and the phone menus have a Look row.
+- **A household default and a person's own look** are a marked later step (HANDOFF.md §8.5), as the built STYLE.md lists them.
+- **Removed:** the dead picker styles (`.themes`, `.theme*`, `.thumb`, `.mini*`, `.appear`), stage 10's `themes/` folder, its ports, `theme-test/` and `_kit/theme-check.py`.
+
+## The built looks on Kitchen Table's shapes
+
+- **Rendered:** Home and a kid's Home in Rail yellow, Midnight and Phosphor, day and night, desktop and phone (`looks-test/`, `shots/looks/`). They read.
+- In the paper looks, Vera's box becomes a card, because their `--ask-bg` is `var(--card)`. That's a question for the family.
+- **`_kit/looks-check.py`** replaces `theme-check.py`. For every look it runs:
+  - the built floors (`test_look.py`'s);
+  - the pairs Kitchen Table's layout draws;
+  - the colour-blind checks, with Kitchen Table's three known shortfalls recorded.
+  - It also writes `palette/<look>.html`.
+- **Results:**
+  - Kitchen Table, Phosphor, Rail yellow, Fjord, Ink and Midnight pass.
+  - Enamel and Home Computer need an `--on-vera` (white words on Vera's green fill), added after the looks in `themes.css`; in the built file it goes inside each look's own block.
+  - Home Computer's late red and orange action colour meet for tritanopes at night (4.9 against a floor of 6). That's a built look, so it goes to the family.
+- **Phosphor as a look** names `--here-icon` and `--here-pill`, which it skipped as the default.
+
+## Documents
+
+- **HANDOFF.md:**
+  - §8 is rewritten around the built mechanism.
+  - The page map gains `/look`, and Your password is the app's again.
+  - The order of work starts with Kitchen Table as a look on today's layout, a PR that can land now.
+  - The tests list says what Kitchen Table changes in `test_look.py`.
+  - The open questions are updated.
+- **STYLE-draft.md:** "Looks" replaces Themes, with the built STYLE.md's facts.
+- **STANDARD.md:** token names, the Look page and its sample, and the notes for the engineer.

@@ -8,7 +8,7 @@ This is the reference for building FamilyDB's web pages. The mockups (`*.html`),
 
 ## 1. Tokens
 
-**Two layers.** Components use only the semantic tokens below. Their colour values come from the theme, one file each in `themes/` (Kitchen Table, the default, is `themes/kitchen-table.css`), by day and by night, chosen by `data-theme` and `data-mode` on `<html>`. `style.css` §2 holds only what every theme shares: type, space, shape and size, and the brand (glass, phosphor, the cursor, the mark's glass, the white rules inside the always-dark Ask box). Never write a colour outside a theme file or §2; the full contract, its floors and how a theme is added are in HANDOFF.md §8.
+**Two layers.** Components use only the semantic tokens below, in the built app's names (HANDOFF.md §8.1). Their colours come from the look in force: one block per look in `themes.css`, `[data-theme="kitchen"]` for Kitchen Table, each value written `light-dark(day, night)`; `data-mode="light|dark"` on `<html>` holds a browser to one. A `[data-theme]` block works out the roles Kitchen Table adds (the panel's links, each meaning's wash, Vera's box and Send, the eight people) for every other look. `style.css` §2 holds only what every look shares: type, space, shape and size, and the brand (glass, phosphor, the mark's glass), whose night is `light-dark()` too. Never write a colour outside `themes.css` or §2.
 
 ### Colour
 
@@ -31,16 +31,16 @@ This is the reference for building FamilyDB's web pages. The mockups (`*.html`),
 | `--link` | #1E5C4F | #8BD3B4 | links: Kitchen Table green, lighter at night, never phosphor |
 | `--primary` / `-2` / `--on-primary` | #1E5C4F / #164539 / #FFF | #2D7462 / #24604F / #FFF | the family's primary buttons: green day and night |
 | `--send` / `-2` / `--on-send` | #F2C14E / #E5B035 / #1D2526 | #E0B04A / #F0C35C / #0C100F | the Ask card's Send and its focus ring only (was `--sun`) |
-| `--side`, `--side-ink`, `--side-ink-2`, `--side-hi`, `--side-line`, `--side-mark`, `--side-link` | #EFE7D7, #1D2526, #4B5657, #FFFCF6, #E2D8C4, #1E5C4F, #1E5C4F | #121816, #EEE8DA, #CBC5B6, #161D1B, #24302C, #6DFF9C, #8BD3B4 | **the panel**: the sidebar and the phone's top bar. `.side`/`.topbar` re-scope ink, card, line, focus and link to these, so a theme may make the panel dark. `--side-mark` is the current page's mark |
+| `--band`, `--on-band`, `--on-band-2`, `--band-hi`, `--band-line`, `--here-icon`, `--band-link` | #EFE7D7, #1D2526, #4B5657, #FFFCF6, #E2D8C4, #1E5C4F, #1E5C4F | #121816, #EEE8DA, #CBC5B6, #161D1B, #24302C, #6DFF9C, #8BD3B4 | **the panel**: the sidebar and the phone's top bar. `.side`/`.topbar` re-scope ink, card, line, focus and link to these, so a theme may make the panel dark. `--here-icon` is the current page's mark |
 | `--p1-on…--p8-on`, `--everyone-on` | #FFFFFF | #FFFFFF | the letter (or house) on an avatar; `.pN` sets `--p-on` |
-| `--shadow`, `--shadow-lift`, `--shadow-up` | warm brown, faint | black | cards; the lifted save bar; the tab bar's shadow upwards |
+| `--shadow`, `--pop`, `--pop-up` | warm brown, faint | black | cards; the lifted save bar; the tab bar's shadow upwards |
 | `--ok`, `-soft`, `-line` | #2B7148, #DDEFE2, #BFDCC8 | #7FE3A5, #11261B, #24503A | Working, Connected, done |
-| `--warn`, `-soft`, `-line` | #7E5108, #FBEFD0, #EBD69B | #F5B94A, #2A2112, #5E4620 | **only** “set this up” and “needs a look” (amber in the dark) |
-| `--alert`, `-soft`, `-line` | #B3381F, #F9E1D9, #EFC3B6 | #FF8B74, #33191A, #5C2E2B | late text, broken, form errors |
+| `--amber`, `-soft`, `-line` | #7E5108, #FBEFD0, #EBD69B | #F5B94A, #2A2112, #5E4620 | **only** “set this up” and “needs a look” (amber in the dark) |
+| `--red`, `-soft`, `-line` | #B3381F, #F9E1D9, #EFC3B6 | #FF8B74, #33191A, #5C2E2B | late text, broken, form errors |
 | `--focus` | #1D2526 | #EEE8DA | focus ring (yellow `--send` inside the Ask card) |
 | `--p1…--p8` (+ `-soft`, `-ink`, `-mark`) | p1 #2F5D9B · p2 #7B4790 · p3 #A83C80 · p4 #A2560E · p5 #0B6A84 · p6 #5448B0 · p7 #59661A · p8 #6F4E37 | same bases; `-soft` darkens to a tinted charcoal, `-ink`/`-mark` lighten (e.g. p3 soft #2E1A28, mark #EBA6D3) | **person colour slots**, assigned per member by the server (`person.slot`), never by name. `.p1…p8` set `--p`, `--p-soft`, `--p-ink`, `--p-mark` for avatars, bubbles, calendar events and dots. `--p-mark` is the base in light and the ink in dark, so marks stay ≥ 3:1 on the card |
 | `--everyone…` (`.p0`) | #596263, soft #ECE8E0, mark #8A806C | #5E6A66, soft #1C2422, mark #A3A69E | Everyone: always neutral |
-| `--today-bg` / `--on-today` | #1E5C4F / #FFF | #6DFF9C / #0C100F | today's number disc on the calendar |
+| `--today` / `--on-today` | #1E5C4F / #FFF | #6DFF9C / #0C100F | today's number disc on the calendar |
 | `--{person}-soft` / `--{person}-ink` | e.g. Maya #F6E3EF / #9C3777 | e.g. Maya #2E1A28 / #EBA6D3 | chat bubbles, event fills, names in bubbles |
 | **Brand, fixed in every theme** (§9) `--glass` / `--glass-2` / `--glass-line` | #0E1312 / #161D1B / #2A3632 | #070A09 / #0E1312 / #2B3B34 | the charcoal glass of the mark, Vera's screen, the pill and the panes |
 | `--glass-ink` / `--glass-ink-2` | #E9F1EC / #B9C6BF | same | text on glass |
@@ -48,7 +48,7 @@ This is the reference for building FamilyDB's web pages. The mockups (`*.html`),
 | `--cursor` / `--cursor-glow` | #1B9A55 / 35 % | #6DFF9C / 55 % | the wordmark's cursor and the caret in Vera's box |
 | `--vs-halo` | #1B9A55 at 35 % | #6DFF9C at 45 % | the 3 px halo round Vera's screen |
 
-**Measured by `_kit/theme-check.py`:** Kitchen Table's eight slots fall under the colour-blind floor in three places (slot 4 ochre and slot 7 olive under protanopia; slots 2 and 5 under deuteranopia; late red against slot 4 under deuteranopia). They are recorded as known until the family decides (HANDOFF.md §9). **Maya's slot (p3) is raspberry, not red-pink**, so it never reads as "late" (ΔE 58 from `--alert`, was 40), and slot 8 is cocoa brown (was a magenta that matched slot 2 under every simulation). Checked pairwise under deuteranopia and protanopia (Machado): eight colours can't all stay apart for every eye, so **colour is never the only cue**: every person marker carries an initial or the house.
+**Measured by `_kit/looks-check.py`:** Kitchen Table's eight slots fall under the colour-blind floor in three places (slot 4 ochre and slot 7 olive under protanopia; slots 2 and 5 under deuteranopia; late red against slot 4 under deuteranopia). They are recorded as known until the family decides (HANDOFF.md §9). **Maya's slot (p3) is raspberry, not red-pink**, so it never reads as "late" (ΔE 58 from `--red`, was 40), and slot 8 is cocoa brown (was a magenta that matched slot 2 under every simulation). Checked pairwise under deuteranopia and protanopia (Machado): eight colours can't all stay apart for every eye, so **colour is never the only cue**: every person marker carries an initial or the house.
 
 **Person colours come from the family's data.** The five above are the mockup family. A real install assigns each new person the next colour from a fixed set of eight. Each colour is checked for 4.5:1 with white letters and for its own `-soft`/`-ink` pair.
 
@@ -93,7 +93,7 @@ Class names are the API. Person colour classes are **slots** (`.p0…p8`), never
 
 | Component | Classes | Variants | When to use |
 |---|---|---|---|
-| Card | `.card`, `.card__head`, `.card__foot` | `--setup` (amber-tinted, `--warn-soft`) | every group of content |
+| Card | `.card`, `.card__head`, `.card__foot` | `--setup` (amber-tinted, `--amber-soft`) | every group of content |
 | Button | `.btn` | `--primary` (one per view), `--quiet`, `--sm`, `[disabled]` | actions; links styled as buttons only for navigation actions |
 | Text button | `.textbtn`, `.linkbtn`, `.more` | — | a form action that reads like a link (Delete, Take it off my list); "All plans ›" |
 | Badge | `.badge` | `--late` (red), `--act` (ink outline), `--quiet` (plain grey number), `--look` | counts with a word. Loud only for what needs someone now: **late** and **to decide**. “2 to rate” and “1 to check” are quiet |
@@ -112,13 +112,13 @@ Class names are the API. Person colour classes are **slots** (`.p0…p8`), never
 | Item row | `.items` › `.item` (lead · body · trail) | `--boxed`, `--divided`, `--health` | every list of things that isn't a to-do or an idea card |
 | To-do row | `.todos` › `.todo` | `--compact` (Home), `--late` (4 px red rule), `--done` (struck through after a tick), `--ro` (kids: read-only, icon tile instead of tick) | to-dos |
 | Tick | `.tick` (a `<button>` in its own POST form) | `--done` | marking a to-do done; never for kids |
-| Banner | `.banner` + `.banner__ic`, `.banner__text` | tone: default **info (neutral card, grey icon)**, `--ok` (mint: all good, done), `--warn` (set this up), `--alert` (broken, errors); size: `--hero`, `--slim` | a message with at most one action. Resting, Off and “for your information” use the neutral default, never mint or yellow. **One “set this up” message per page** |
+| Banner | `.banner` + `.banner__ic`, `.banner__text` | tone: default **info (neutral card, grey icon)**, `--ok` (mint: all good, done), `--amber` (set this up), `--red` (broken, errors); size: `--hero`, `--slim` | a message with at most one action. Resting, Off and “for your information” use the neutral default, never mint or yellow. **One “set this up” message per page** |
 | Flash | `.banner.banner--ok.flash` (`role="status"`, `tabindex="-1"`) | — | after any one-tap action, with Undo |
 | Error summary | `.banner.banner--alert.errors` (`role="alert"`) | — | top of a form that came back with errors |
 | Composer | `.composer`, `__row`, `__who`, `__foot`, `__send` | inside `.ask` (dark green, sun Send); `--sample`; closed (`textarea[disabled]` + a slim banner saying why) | writing to Vera; one per page |
 | Home head | `.home-head` › `__hi` (greeting · date, small) + `__line` (what's coming and what's late, with links; the big one) | — | Home only. The Ask card's label is the page's `h1`: “What’s on your mind?” (`.ask__q`), with “Vera” over it (`.ask__who`) and her last line from the past day under the box (`.ask__last`, with “Continue with Vera”; hidden on the phone) |
 | Footer | `.foot` › `__line` (mark + “A little less planning. A little more together.”), `__legal` | plain (no version) for kids and signed-out pages | every page |
-| Account corner | `.me` › `.me__acts` | — | sidebar: “You” (how it looks, your password; `you-kid.html` for a kid) and Sign out as a POST button; on the phone the same live in `more.html` (“Signed in as Sam”) |
+| Account corner | `.me` › `.me__acts` | — | sidebar: “Look” and “Your password” (`look-kid.html` / `you-kid.html` for a kid) and Sign out as a POST button; on the phone the same live in `more.html` (“Signed in as Sam”) |
 | Card with a list and its form | `.list-grid` (main column + side column of cards) | — | plans list, What Vera knows, Family, activity |
 | Folding card | `details.card.fold` › `summary h2` + `.fold__body` | `--danger` (red title and edge) | an add form beside a list (“Put something on the calendar”), “Forgotten”, “Save a thought for later”, “Record how it went”, “Take Maya off the list for good” |
 | Fold in a form | `details.fieldfold` › `__body` | open when editing | “Everything else” on an idea, “Original thought”, opening hours |
@@ -144,8 +144,8 @@ Class names are the API. Person colour classes are **slots** (`.p0…p8`), never
 | Automatic messages | `.autos` › `.auto` › `.auto__light` + On/Off tag; `.sentrows` › `details.sentrow` › `.said` | `--off` | what Vera sends unasked: a light that is filled or a ring, always beside the word |
 | Her lines | `.lines` › `.setting.line` › `.reads` | — | a written line: the box (her line as placeholder), “Can use …”, and “Reads as” with made-up details |
 | Change history | `ul.changes` › `.change` | — | what has changed: old → new, “replaced” for a key, “rewritten” for a long text |
-| Theme picker | `fieldset.themes-set` › `.themes` › `label.theme` › radio + `.theme__card` › `.thumb` (two `.mini`: day, night) + `.theme__name` + `.theme__line` | each `.mini` half carries `data-theme` and `data-mode`; “✓ In use” tag; `.theme-family` (a person's “The family's theme”) | choosing a theme: Settings › General for the family, You for one person. Ringed in ink with a tick when chosen |
-| Light or dark | `fieldset.choices.appear` › three `.choice` radios (Light, Dark, Match this device) | — | the family's default and each person's own |
+| Look page | `form.look-form` › `fieldset.card.look-modes` (three `label.look-mode` radios: Match my device, Always day, Always night) + `fieldset.looks` › `ul.look-grid` › `label.look-choice` (`.look-head` radio + `.look-name` with "In use" / "The default" tags, `.look-blurb`, `.look-samples`) + the save bar | ringed in ink when chosen | `/look`: this browser's look, for anybody signed in, kids included (the built page, in Kitchen Table) |
+| Look sample | `span.look-shot` › `span.look-sample[data-theme][data-mode]` › `.ls-band` (`.ls-mark`, `.ls-nav` with `.ls-here`) + `.ls-page` (`.ls-card` with title, line, `.ls-chip` Today, `.ls-btn`; `.ls-dots`) + `.look-caption` | Day / Night / Night only | a small page in a look's own colours; `aria-hidden`; the markup `test_look.py` counts |
 | Setup steps | `.setup-progress` (All, 1–7; `.done`, `aria-current="step"`), `.step-head`, `.step-body`, `.state-done`, `.step-nav` | `--end` | one step of setting up; labels hide on the phone, numbers stay |
 | Setup list | `.setup-list` › `a.setup-row` (`__n`, `__what`, need tag, chevron) | `--done` | setup's overview: every step, how it stands, and Done / Needed / Recommended / Optional |
 | Knock | `.knocks` › `.knock` (dashed) | — | somebody who wrote to the bot and isn't known yet: “That's me, Sam”, or Let them in |
@@ -214,7 +214,7 @@ Errors are written as the fix: "Give the idea a name", "A link starts with https
 | | Admin (Sam) | Parent (Alex) | Kid (Maya, Theo) |
 |---|---|---|---|
 | Nav | everything plus *Behind the scenes*: Status, Settings, Family | everything, no *Behind the scenes* (Status yes: grown-ups may see it; no admin links on it) | Home, Chat, My wishes, My to-dos, Plans, Ideas. **Not** What Vera knows: the real app keeps memory for grown-ups (`browse`) |
-| Phone tabs | Home, Chat, Ideas, Plans, To do; Wishes, What Vera knows, Status, Settings, Family, You (how it looks, your password) and Sign out are in the **account menu** behind the avatar (`more.html`) | same, without Status/Settings/Family | Home, Chat, Wishes, Plans, To do; Ideas, You (how her screen looks, her password) and Sign out in her menu (`more-kid.html`) |
+| Phone tabs | Home, Chat, Ideas, Plans, To do; Wishes, What Vera knows, Status, Settings, Family, Look, Your password and Sign out are in the **account menu** behind the avatar (`more.html`) | same, without Status/Settings/Family | Home, Chat, Wishes, Plans, To do; Ideas, Look, Your password and Sign out in her menu (`more-kid.html`) |
 | Health pill, cost, models, setup | yes | pill and cost; no setup | **never** |
 | To-dos | all; tick, add, edit | all; tick, add, edit | **only her own, read-only**; "Sam or Alex tick these off"; she can tell Vera she's done |
 | Ideas, plans | change; rate plans | change; rate plans | read only; no faces, no Add, no Edit; "Ask a parent" where a change is expected |
@@ -291,10 +291,10 @@ Contrast is computed from the tokens (WCAG 2.2). AA needs 4.5:1 for text and 3:1
 | `--ask-ink` on `--ask-bg` | Ask card text | 12.9 | 12.5 |
 | `--ask-ink-2` on `--ask-bg` | Ask card quiet text | 9.6 | 9.7 |
 | `--ok` on `--ok-soft` | tag Working | 4.9 | 10.2 |
-| `--warn` on `--warn-soft` | tag Needs a look | 6.0 | 9.0 |
-| `--warn` on `--card` | tag Could be better | 6.7 | 9.7 |
-| `--alert` on `--alert-soft` | tag Not working, late badge | 4.8 | 7.1 |
-| `--alert` on `--card` | late text, errors | 5.9 | 7.5 |
+| `--amber` on `--amber-soft` | tag Needs a look | 6.0 | 9.0 |
+| `--amber` on `--card` | tag Could be better | 6.7 | 9.7 |
+| `--red` on `--red-soft` | tag Not working, late badge | 4.8 | 7.1 |
+| `--red` on `--card` | late text, errors | 5.9 | 7.5 |
 | `--ink-2` on `--paper-2` | tag Off | 6.2 | 10.4 |
 | `--vera` on `--vera-soft` | tag Tomorrow | 6.3 | 12.7 |
 | `--p1-ink` on `--p1-soft` | slot 1 name in a bubble | 5.5 | 7.9 |
@@ -303,8 +303,8 @@ Contrast is computed from the tokens (WCAG 2.2). AA needs 4.5:1 for text and 3:1
 | `--p4-ink` on `--p4-soft` | Theo's name in a bubble | 5.1 | 8.5 |
 | `--ink` on `--p3-soft` | text in Maya's bubble | 12.8 | 13.3 |
 | `--everyone-mark` on `--card` | Everyone's dot (3:1) | 3.8 | 6.9 |
-| `--today-bg` on `--card` | today disc (3:1) | 7.6 | 13.4 |
-| `--on-today` on `--today-bg` | number on today's disc | 7.8 | 15.0 |
+| `--today` on `--card` | today disc (3:1) | 7.6 | 13.4 |
+| `--on-today` on `--today` | number on today's disc | 7.8 | 15.0 |
 | `--paper` on `--ink` | selected segment | 13.9 | 15.7 |
 | `--phosphor` on `--glass` | phosphor on glass: pill, pane lines, focus ring | 14.7 | 15.6 |
 | `--glass-ink` on `--glass` | pane text | 16.3 | 17.3 |
@@ -357,12 +357,11 @@ Disabled controls are exempt, but each also carries its reason in words.
 - `health(area)` returns one `(state, words, action)` per area: Vera, Spending, Sign-in, Backup, Telegram, Google Calendar, Looking things up. **Every page reads it** (pill, Home, Status, Settings, Ideas banner), so they can't disagree. Settings summary lines are computed, never written as copy.
 - `visible_to(viewer)` filters every list for kids: own to-dos only, gifts and surprises removed. Counts are taken *after* filtering.
 
-**Themes (stage 10: see HANDOFF.md §8 for the contract)**
-- A theme is one file, `/static/themes/<name>.css`, linked after `style.css`, holding only the colour tokens (§1), by day and by night, keyed on `[data-theme="<name>"]`, with a header: `@theme name`, `line`, `first` (light or dark), `theme-color` (day, night). Kitchen Table also matches `:root:not([data-theme])`. Components never name a theme.
-- The server writes `data-theme="<name>"` and `data-mode="auto|light|dark"` on `<html>`, links that theme's file, and writes `color-scheme` and `theme-color` to match. Auto follows `prefers-color-scheme`; light and dark override it. Everything is stylesheet-only.
-- Who wins: a person's own theme and mode, if they chose one, else the family's (Settings › General). Kids may choose for themselves; it changes nothing but their own screen. The sign-in page uses the family's.
-- The pickers list the installed theme files. They are plain forms: radios, Save, POST → redirect → GET. A page with a picker links every theme file, and each half of a preview carries `data-theme` and `data-mode`, so the previews are drawn by the theme files themselves.
-- `_kit/theme-check.py` (in the app, `tests/test_themes.py`) checks every theme against the contract and the floors, and `--sheets` writes `palette/<name>.html`.
+**Looks (stage 11: the app's built mechanism; HANDOFF.md §8)**
+- A look is a block of colour tokens in `/static/themes.css`, `[data-theme="<key>"]`, each value `light-dark(day, night)`, and a line in `web/looks.py`. Kitchen Table is `kitchen`, proposed as the default once this layout ships.
+- `base.html` writes `data-theme`, and `data-mode` only when the browser holds the page to day or night, from the `fdb_look` cookie; `color-scheme` and `theme-color` follow (`looks.scheme()`, `looks.theme_colours()`). Everything is stylesheet-only.
+- The choice is per browser, on the Look page, for anybody signed in, kids included. A household default and a person's own look across devices are not built (HANDOFF.md §8.5).
+- `tests/test_look.py` holds every look to the token set and the contrast floors; `_kit/looks-check.py` adds Kitchen Table's layout pairs and the colour-blind checks, and `--sheets` writes `palette/<key>.html`.
 
 **Works with scripting off (required)**
 - Reading every page, and every form: tick, Undo, add, edit, rate (faces), answer a wish, move a wish up or down, sign in, search and filter (GET), send a message.
@@ -487,7 +486,7 @@ The radar is drawn twice from the same data, so names stay readable: a wide 860 
 
 ### The dark theme: phosphor at night
 
-Day stays Kitchen Table. At night the page is charcoal (`--paper` #0C100F, `--card` #161D1B), the ink is cream (#EEE8DA), Vera's things are phosphor (`--vera` #6DFF9C), amber (`--warn` #F5B94A) is for what needs a look, coral (`--alert` #FF8B74) for late and broken, and people keep their colours, lightened (`-ink`, `-mark`) on tinted charcoal (`-soft`).
+Day stays Kitchen Table. At night the page is charcoal (`--paper` #0C100F, `--card` #161D1B), the ink is cream (#EEE8DA), Vera's things are phosphor (`--vera` #6DFF9C), amber (`--amber` #F5B94A) is for what needs a look, coral (`--red` #FF8B74) for late and broken, and people keep their colours, lightened (`-ink`, `-mark`) on tinted charcoal (`-soft`).
 
 **The hierarchy holds at night.** The Ask card stays the one coloured block: deep-green glass (`--ask-bg` #0F2A22) with the brightest edge on the page and an edged box. The family's primary buttons stay Kitchen Table green (`--primary` #2D7462, white text 5.5:1) and links a lighter green (`--link` #8BD3B4), never phosphor. Vera's bubbles have no glow; only the pill, the panes and her screen glow. Every pair is in §7.
 

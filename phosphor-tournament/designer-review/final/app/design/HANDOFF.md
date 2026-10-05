@@ -7,17 +7,16 @@ This is for the engineers who will build the Kitchen Table design into `src/fami
 | Here | Goes to | What it is |
 |---|---|---|
 | `style.css` | `static/style.css` | the one stylesheet: base, shell, components, pages, phone, forced colours |
-| `themes/kitchen-table.css` | `static/themes/kitchen-table.css` | the default theme: every colour token, by day and by night |
-| `themes/rail.css`, `themes/midnight.css` | not shipped yet | two test ports that prove the theme contract (see Themes) |
+| `themes.css` | `static/themes.css` (the built file, fitted) | every look: Kitchen Table's roles worked out for every look, Kitchen Table (`[data-theme="kitchen"]`), Phosphor, the six built looks, two additions (see §8) |
 | `fonts/*.woff2` (8 files) | `static/fonts/` | Atkinson Hyperlegible 400/700, Fraunces SOFT 600, Fraunces figures (2 subsets × 2 weights), JetBrains Mono 400 |
 | `brand/` | `static/brand/` | favicon (SVG, 32, 16), apple-touch-icon, 512 icon, mark sources |
 | `icons.svg` | `static/icons.svg` | the icon sprite (`#i-name`), replacing the Lucide one |
-| `_kit/theme-check.py` | `tests/test_themes.py` (as a test) | contract, contrast and colour-blind checks for every theme file |
+| `_kit/looks-check.py` | additions to `tests/test_look.py` | the built floors plus Kitchen Table's layout pairs and the colour-blind checks, for every look; palette sheets |
 | `STYLE-draft.md` | `docs/STYLE.md` | the design notes, as they will stand once built |
 | `STANDARD.md` | (reference) | every component, token, rule and check, with class names |
 | `CHANGES.md` | (reference) | why each thing is the way it is, stage by stage |
-| `*.html` (57 pages), `theme-test/*.html`, `palette/*.html` | (reference) | the mockups; the two test themes on Home, Plans and a kid's Home; a palette sheet per theme |
-| `shots/` | (reference) | every page at 1280 and 390 px, light and dark; `shots/themes/` for the test themes and palette sheets |
+| `*.html` (59 pages), `looks-test/*.html`, `palette/*.html` | (reference) | the mockups; Home and a kid's Home in Rail yellow, Midnight and Phosphor; a palette sheet per look |
+| `shots/` | (reference) | every page at 1280 and 390 px, light and dark; `shots/looks/` for the built looks on Kitchen Table's layout and the palette sheets |
 
 The mockups are static: no scripts, no inline styles, every icon inline (only because `file://` blocks an external `<use>`). They are generated, so the markup of one component is the same on every page.
 
@@ -54,7 +53,9 @@ R = the mockup replaces the template's markup. S = a state of a template another
 | `family.html` | `family.html` | `/family` → `family.show` | R |
 | `member.html` | `member_form.html` | `/family/<id>` → `family.edit` | R |
 | `password-shown.html` | `member_form.html` (`made`) | after POST `family.sign_in_for` | S |
-| `you.html` | `you.html` + `own_password_form.html` | `/you` → `family.you` (`own_form`) | R, plus "How it looks" |
+| `you.html` | `you.html` + `own_password_form.html` | `/you` → `family.you` (`own_form`) | R ("Your password", as in the app) |
+| `look.html` | `look.html` (built) | `/look` → `look.show`, POST `look.save` (`web/looks.py`) | R: the built Look page in Kitchen Table |
+| `look-kid.html` | `look.html` | the same for a kid, just after she chose Fjord (the whole page worn in Fjord) | S |
 | `you-kid.html` | `you.html` | the same, a kid | S |
 | `you-first.html` | `you.html` (`own.temporary`) | `/you` after a starting-password sign-in | S |
 | `signin.html` | `login.html` | `/login` → `auth.login` | R |
@@ -63,7 +64,7 @@ R = the mockup replaces the template's markup. S = a state of a template another
 | `404.html` | `404.html` | `abort(404)` | R |
 | `more.html`, `more-kid.html` | `base.html`'s `details.menu` | none today | N: `GET /more` → `more.html`, the phone account page |
 | `settings.html` | `settings.html` | `/settings` → `settings.show` (`overview()`) | R |
-| `settings-<name>.html` (9) | `settings_section.html` + `settings/<name>.html` | `/settings/<name>` → `settings.section` / `settings.personality` (`page()`, `PAGES[name]`) | R; General gains "How it looks" |
+| `settings-<name>.html` (9) | `settings_section.html` + `settings/<name>.html` | `/settings/<name>` → `settings.section` / `settings.personality` (`page()`, `PAGES[name]`) | R |
 | `setup.html` | `setup.html` | `/setup` → `setup.overview` | R |
 | `setup-<step>.html` (7) | `setup_step.html` + `setup/<step>.html` | `/setup/<step>` → `setup.step` (`PAGES[step]`) | R |
 | `setup-telegram-link.html` | `setup/telegram.html`, stage `link` | the same | S |
@@ -100,7 +101,7 @@ Each item names the smallest server change. Paths are under `src/familydb/`.
    - Change: migration `members.slot INTEGER`. `family.add` assigns the lowest free 1–8, and existing rows are backfilled in id order.
    - Expose it in `family._person`, and add `views.slot_of(name, people)`, which gives 0 for Everyone or nobody.
    - Lists that carry only names (`idea.participants`, `task.owner`, chat lines) get a name→slot map, built once per request from `member_store.list_all`.
-2. **Theme and light/dark** (`data-theme`, `data-mode` on `<html>`). Nothing exists yet. See Themes, "What the app must store".
+2. **Looks and light/dark** (`data-theme`, `data-mode` on `<html>`): **built** (`web/looks.py`, the `fdb_look` cookie, `/look`). Kitchen Table adds one look and 66 token roles (§8).
 3. **The health pill** ("Vera is ready", "Vera is writing back", "Vera is resting until midnight", "Vera can't answer right now", and "Can't answer yet" during setup).
    - Change: add `status.pill(app, conn, chat_id) -> (state, words)`. It is built from:
      - `status.light`;
@@ -210,8 +211,6 @@ In `_settings.html`:
 - `told(said, problems)` (replaces `setup_told.html` and the settings pages' `p.said`/`p.error`)
 - `settings_nav(sections, current)`
 - `line_setting(entry)` (Her lines)
-- `theme_picker(themes, chosen, name, in_use=none, family=none)`
-- `mode_picker(value, name, legend, hint)`
 
 In page templates:
 - `plan(plan, cancellable)` (was `plan_line`)
@@ -242,15 +241,14 @@ In page templates:
 7. Phone (≤ 820 px)
 8. Forced colours
 
-Section 9 has the settings, setup and theme picker parts.
+Section 9 has the settings and setup parts; section 10 the Look page.
 
 **Tokens, in two layers.**
-- `style.css` holds what is the same in every theme:
+- `style.css` holds what is the same in every look:
   - type (`--font-*`, `--t-*`);
   - space (`--s1`–`--s8`), radii (`--r-*`) and sizes;
   - the brand, which the family fixed: `--glass*`, `--phosphor*`, `--cursor*`, `--vs-halo`, `--mark-glass`, `--glass-scan`;
-  - the white rules on Vera's always-dark Ask box: `--ask-rule`, `--ask-fill`, `--ask-fill-2`.
-- `themes/<name>.css` holds every colour. Components use only these semantic tokens, and no component names a raw colour.
+- `themes.css` holds every colour, one block per look, in the built app's token names. Components use only these semantic tokens, and no component names a raw colour (§8.1).
 
 **Audited.** No literal colour remains in `style.css` outside the token block. The mark's colours moved out of the markup too. Every literal that was there, and its fix:
 
@@ -260,10 +258,10 @@ Section 9 has the settings, setup and theme picker parts.
 | `.ask__last` rule | `rgba(255,255,255,.16)` | `--ask-rule` |
 | `.ask textarea:disabled`, `.composer__send:disabled` | `rgba(255,255,255,.12/.18)` | `--ask-fill`, `--ask-fill-2` |
 | `.pane::after` scanlines | `rgba(0,0,0,.14)` | `--glass-scan` |
-| `.tabbar` shadow | `rgba(60,45,20,.5)` | `--shadow-up` (a theme token: Kitchen Table's is warm brown) |
+| `.tabbar` shadow | `rgba(60,45,20,.5)` | `--pop-up` (a look's token: Kitchen Table's is warm brown) |
 | `.ask .starter*` | three white literals | deleted: the starters left the Ask card in stage 8 |
 | the FamilyDB mark SVG | `fill="#0E1312" stroke="#6DFF9C"` in the markup | `.mf__bg` / `.mf__fg` classes reading `--mark-glass` / `--phosphor` |
-| the theme previews | 10 blocks of preview colours | gone: each preview half carries `data-theme` and `data-mode` and reads that theme's own tokens |
+| the look samples | 10 blocks of preview colours (stage 9) | gone: each sample carries `data-theme` (and `data-mode`) and reads that look's own tokens, as the built Look page does |
 | `--sun`, `--sun-2`, `--on-sun` | named after a colour | renamed `--send`, `--send-2`, `--on-send`: the token's only job is the Send button |
 | `--info`, `--info-soft`, `--info-line` | defined, never used | deleted |
 | `--vera-bg-2` | defined, never used | deleted |
@@ -289,14 +287,14 @@ DM Sans, DM Mono and VT323 go.
 
 **The head of `base.html`:**
 ```html
-<html lang="en-GB" data-theme="{{ look.theme }}" data-mode="{{ look.mode }}">
-<meta name="color-scheme" content="{{ look.color_scheme }}">            {# "light dark", "light" or "dark" #}
-<meta name="theme-color" content="{{ look.theme_color[0] }}" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="{{ look.theme_color[1] }}" media="(prefers-color-scheme: dark)">
+{# the built head, kept: web/looks.py gives look, look_mode, look_scheme and look_colours #}
+<html lang="en-GB" data-theme="{{ look.key }}"{% if look_mode != 'auto' %} data-mode="{{ look_mode }}"{% endif %}>
+<meta name="color-scheme" content="{{ look_scheme }}">
+{% for media, colour in look_colours %}<meta name="theme-color" content="{{ colour }}"{% if media %} media="{{ media }}"{% endif %}>{% endfor %}
 <link rel="preload" href="{{ url_for('static', filename='fonts/atkinson-400.woff2') }}" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="{{ url_for('static', filename='fonts/fraunces-soft-600.woff2') }}" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='themes/' ~ look.theme ~ '.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='themes.css') }}">
 <link rel="icon" href="{{ url_for('static', filename='brand/favicon.svg') }}" type="image/svg+xml">
 <link rel="icon" href="{{ url_for('static', filename='brand/favicon-32.png') }}" sizes="32x32" type="image/png">
 <link rel="icon" href="{{ url_for('static', filename='brand/favicon-16.png') }}" sizes="16x16" type="image/png">
@@ -310,7 +308,7 @@ Only Atkinson 400 and Fraunces 600 are preloaded, because every page uses them f
 
 **Content security policy.** `default-src 'self'; style-src 'self'; script-src 'self'; font-src 'self'; img-src 'self' data:; form-action 'self'; frame-ancestors 'none'`.
 - No `style=""`, no inline `<script>`, no `on*=`. Data-driven geometry uses SVG presentation attributes, which CSP allows: the spend meter's `rect width`, the radar.
-- Calendar placement uses classes. Themes are stylesheets chosen by attributes (see Themes), so nothing is ever computed into a style.
+- Calendar placement uses classes. Looks are token blocks chosen by attributes on `<html>` (§8), so nothing is ever computed into a style.
 - Add a CI check that fails on `style="` or an inline `<script>` in `templates/`.
 
 **Scripting off.** Every page reads, and every form works, with no script.
@@ -318,7 +316,7 @@ Only Atkinson 400 and Fraunces 600 are preloaded, because every page uses them f
 - `<details>` handles filters, options and fine-tuning, opened server-side when one holds an error or an active filter.
 - Chat opens at the newest message (`column-reverse`).
 - While a reply is pending, a short meta refresh backs off: 3 s, then 5, then 10, and stops at 60 s.
-- The theme pickers are radios and a Save.
+- The Look page is radios and a Save, as built.
 
 **The existing scripts.** Keep the app's four and give them the hooks below. Don't write the four that STANDARD.md §8 names: their jobs are already in `ask.js`, apart from the optional `password.js`.
 
@@ -339,7 +337,7 @@ Only Atkinson 400 and Fraunces 600 are preloaded, because every page uses them f
 - Nothing blinks for more than five seconds. The wordmark cursor blinks twice: its `animation` had a typo (`2te`) that stopped it altogether, and that is fixed. `prefers-reduced-motion` stops everything.
 - `forced-colors` gives every selected state a real border.
 - No sideways scrolling at 320 px or 200 % zoom.
-- `_kit/theme-check.py` now measures the colour pairs for every theme.
+- `_kit/looks-check.py` measures the colour pairs for every look, on Kitchen Table's layout as well as the built pages'.
 
 **Kids**:
 - Kids never see costs, models or workings: no health pill, no Status, no money, no setup, no "used …" lines.
@@ -374,7 +372,7 @@ Only deliberate wording changes are listed. The sample family (Sam, Alex, Maya, 
 - Skip link: "Skip to the page" → "Skip to content", and its target `#content` → `#main`.
 - Nav: "{assistant}" / "Chat" → "Chat with Vera" (tab bar: "Chat"); "Memory" → "What Vera knows"; a "Behind the scenes" group for Status, Settings, Family.
 - A kid's "To do" → "My to-dos".
-- "Your password" → "You", in the corner, the menu and the page.
+- The menu's "Your password" stays, and **Look** sits beside it (the built menu's item): the account corner reads "Look · Your password · Sign out", the phone menu has a Look row.
 - The Status light ("Status: needs a look" ▲ / "not answering" ■) → the health pill:
   - "Vera is ready" ("Ready" on the phone);
   - "Vera is writing back";
@@ -449,10 +447,9 @@ Only deliberate wording changes are listed. The sample family (Sam, Alex, Maya, 
   - "…she hasn't used yet";
   - "I'm sure: take Maya off for good".
 - Shown password: "Shown this once: send it to Maya now. She signs in as Maya with it, and chooses her own password straight away. Once you leave this page it can't be shown again; make a new one if it's lost."
-- You:
-  - title and h1 "You". Lede "How FamilyDB looks for you, and how you sign in." A kid's: "How your screen looks, and your password."
-  - New: "How it looks for you" (a kid's: "How your screen looks"), "The family's theme: Kitchen Table", "Light or dark", "Light / Dark / Match this device", "Save how it looks", "Good to know".
-- Settings › General gains "How it looks" (see Themes). Setup and settings keep `fields.py`, `settings.py` and `setup.py` word for word, apart from:
+- Your password: the app's title, h1 and lede, plus "How it looks is on Look, for each browser." The tips get the heading "Good to know".
+- Look: the built page's words throughout (`look.html`, `looks.MODE_WORDS`, the looks' blurbs, "Saved. This browser wears … from now on."). New: Kitchen Table's blurb, "The family's table: cream paper, deep green, and each person in their own colour."; the tag "The default"; the line by Save, "Only this browser changes: everybody else keeps their own." (a kid's: "Only this screen changes. Nobody else sees it."); the phone menu's row "How the page looks on this phone or computer".
+- Setup and settings keep `fields.py`, `settings.py` and `setup.py` word for word, apart from:
   - the arrows;
   - the tag case;
   - "/settings" gains "Only an admin can change these.";
@@ -467,15 +464,14 @@ Only deliberate wording changes are listed. The sample family (Sam, Alex, Maya, 
 
 ## 6. Order of work
 
-Each step is one pull request that leaves the app working. Every PR runs the tests, the CSP check and `tests/test_themes.py` once it exists.
+Each step is one pull request that leaves the app working. Every PR runs the tests (`tests/test_look.py` among them) and the CSP check.
 
-1. **Static files.** Fonts, brand, sprite, `style.css`, `themes/kitchen-table.css`, all side by side with the old ones and not yet linked.
-   - Test: the files serve; `theme-check` passes on Kitchen Table.
-2. **Theme plumbing.**
-   - The two family settings and the member columns (see Themes).
-   - A context processor that resolves `look` (theme, mode, color-scheme, theme-color).
-   - The manifest reads it.
-   - Test: `data-theme` / `data-mode` on `<html>` for an admin, a kid and a signed-out visitor; a member's choice beats the family's; an unknown theme name falls back to Kitchen Table.
+1. **Kitchen Table as a look, on today's layout.** This can land now, before anything else:
+   - the `[data-theme]` block of derived roles, the `[data-theme="kitchen"]` block and the two additions into `static/themes.css`;
+   - the line in `looks.py`.
+   - Test: `test_look.py` as changed in §7 (every look names the built set; the contrast floors hold for Kitchen Table by day and by night). The family can try Kitchen Table's colours on the Look page.
+2. **Static files.** Fonts, brand, sprite and the new `style.css`, side by side with the old ones and not yet linked.
+   - Test: the files serve; `python3 _kit/looks-check.py` passes (Home Computer's known finding aside, §9).
 3. **The shell.**
    - `base.html`: head, sidebar, account corner, top bar, tab bar, footer, flash.
    - The `/more` page; `menu.js` retired.
@@ -499,12 +495,12 @@ Each step is one pull request that leaves the app working. Every PR runs the tes
    - Test: search and filters (GET); a gift hidden from a kid; the form's errors.
 8. **Wishes and What Vera knows**: `wish_card` with the `wishes.js` hooks, the three lists, answers.
    - Test: move up/down with scripts off; drag with `wishes.js`; answer a wish.
-9. **Family, member, You**:
-   - "How it looks" on You (`POST /you/look`);
+9. **Family, member, Your password, Look**:
    - starting passwords shown once;
-   - you-first.
-   - Test: a kid changes her own theme and nobody else's; the password flows.
-10. **Settings**: `setting`, `group`, `save_bar`, `told`, `settings_nav`, every section page, and "How it looks" on General.
+   - you-first;
+   - the Look page in Kitchen Table (`look.html`: the built form, the new markup, the samples kept as `look-sample`).
+   - Test: the password flows; `test_look.py` on the new markup.
+10. **Settings**: `setting`, `group`, `save_bar`, `told`, `settings_nav`, every section page.
     - Test: save, an emptied box returns to its default, a complaint opens its fold, only an admin sees it.
 11. **Setup**: the overview, the steps, done, told.
     - Test: each step's form posts and comes back with what it said; Telegram's refresh.
@@ -522,7 +518,7 @@ No tests are in `app-reference/`. STYLE.md and the code name four pins that chan
 2. **`class="said"`** as the flash → `.banner.banner--ok.flash[role=status]`; on settings and setup, `.told > .banner--slim`. `.said` now marks a quoted message.
 3. **`<summary>Move it</summary>`** → `details.mini-fold > summary` with the same words. The test survives if it checks the text.
 4. **`class=" today"`** on the month → `day--today` plus `aria-current="date"`; `outside` goes.
-5. **Body and nav classes**: `in-{section}`, `page-chat/-lost/-signin/-status`, `header.bar`, `nav.places`, `nav.tools`, `a.to-*`, `span.label`, `details.menu`, `.menu-list`, "All settings", `.menu-who`, `form.signout` → `aside.side nav ul.nav`, `.nav-group` "Behind the scenes", `.me`, `.topbar`, `.tabbar`, `/more`. Also "Memory" → "What Vera knows" and "Your password" → "You".
+5. **Body and nav classes**: `in-{section}`, `page-chat/-lost/-signin/-status`, `header.bar`, `nav.places`, `nav.tools`, `a.to-*`, `span.label`, `details.menu`, `.menu-list`, "All settings", `.menu-who`, `form.signout` → `aside.side nav ul.nav`, `.nav-group` "Behind the scenes", `.me`, `.topbar`, `.tabbar`, `/more`. Also "Memory" → "What Vera knows". The menu's Look and Your password stay, in `.me__acts` and on `/more`.
 6. **The Status light**: `.to-status.lit-warn/-bad`, ▲/■, "Status: needs a look" → the health pill.
 7. **Vera's glyph**: `span.presence.v0`–`v3 > .presence-glass` → `svg.vs` (`.vs--busy`, `.vs--off`).
 8. **The thread**: `ol.thread > li.said-bot/.said-them`, `.said-by`, `.said-text`, `.did` → `div.thread > .msg.msg--vera/.msg--person`, `.msg__by`, `.msg__bub`. `#latest` and `THINKING` stay.
@@ -535,7 +531,7 @@ No tests are in `app-reference/`. STYLE.md and the code name four pins that chan
 10. **The tick**: `form.tick-form` with `.sr` "Done: …" → `button.tick[aria-label="Mark done: …"]`; `span.task-box` → `.todo--ro`.
 11. **Page heads and titles**:
     - `.page-title`, `nav.crumbs`, `.title-row`, `.page-actions` → `a.crumb`, `.page-head`, `.head-actions`;
-    - "Things to do" → "To do"; "What Vera remembers" → "What Vera knows"; "Your password" → "You"; "Edit #12" → "Change this idea";
+    - "Things to do" → "To do"; "What Vera remembers" → "What Vera knows"; "Edit #12" → "Change this idea";
     - `<title>` "Not found" → "Page not found", "New idea" → "Add an idea".
 12. **Dates**: `span.chip > .chip-mon/-day/-dow` → `span.dt > .dt__wd/.dt__d/.dt__m` (weekday first).
 13. **Green screens**: `.crt`, `.next-up`, "N more on the radar", `.radar .blip.bN`, `.on-radar*`, the spend `.readout`, `.lost-readout` → gone. Next up is a card; the Ideas radar has names; `PLACE_RING_LABELS` changes.
@@ -556,222 +552,218 @@ No tests are in `app-reference/`. STYLE.md and the code name four pins that chan
 21. **The head**:
     - the `dm-sans.woff2` preload → Atkinson and Fraunces;
     - `favicon.svg` → `brand/favicon.svg`;
-    - `color-scheme dark` and `theme-color #0b0e0d` → per theme;
+    - `color-scheme dark` and `theme-color #0b0e0d` for a first visit → `light dark` and Kitchen Table's two band colours, once Kitchen Table is the default (see 22);
     - `lang="en"` → `en-GB`.
 
-Unaffected: `test_browsing_asks_nothing_of_a_model`. "Every name in BEHAVIOUR appears exactly once" still holds once `theme` and `mode` are added to `fields.py` (they belong to General).
+22. **`tests/test_look.py`**, the built look tests. What Kitchen Table changes there:
+    - **When Kitchen Table is added as a look** (§6 step 1):
+      - `test_every_look_is_written_down_once_in_the_stylesheets` holds every block to the same set of tokens. Kitchen Table names 66 more (its people, washes, Vera's box, Send, the panel's links), and the `[data-theme]` block gives them to every look. Exclude those 66 from the comparison, as `--sect` is excluded today, or every other look fails.
+      - Its regex reads `[data-theme="([a-z]+)"]`: the key `kitchen` fits it, which is why it isn't `kitchen-table`.
+      - Its first check reads one block per look, so a look's addition (Enamel's and Home Computer's `--on-vera`) must go inside its own block.
+      - `test_a_look_is_a_set_of_tokens_and_nothing_else` still passes: the derived block is `[data-theme]`.
+      - `test_every_look_keeps_the_contrast_floors_by_day_and_by_night` passes for Kitchen Table as it is. Add Kitchen Table's layout pairs (the panel's links and current item, Vera's box and Send, words on Vera's fill, the late plate, each meaning on its wash, each person's name, letter and mark) and the colour-blind checks from `_kit/looks-check.py`.
+    - **When Kitchen Table becomes the default** (§8.2):
+      - `test_the_page_is_phosphor_and_follows_the_device_until_somebody_chooses` becomes "…is Kitchen Table…": `("kitchen", None)`, `content="light dark"`, and `#EFE7D7` by day, `#121816` by night.
+      - `test_phosphor_has_no_day_to_choose` stays.
+      - `test_nothing_but_a_look_this_page_has_is_kept`, `test_a_cookie_that_names_no_look_is_the_default` and `test_a_form_from_another_site_does_not_change_the_look` expect `("kitchen", None)`.
+      - In `test_every_look_is_written_down_once…`, Phosphor is now a block in `themes.css`, so `set(blocks) == {looks other than the default}` holds with Kitchen Table out and Phosphor in. But `assert one.has_day` must skip Phosphor, as must `"color-scheme: light dark" in blocks[...]`, and the check that the default sits in `style.css` reads `[data-theme="kitchen"]`.
+      - `test_the_look_page_offers_every_look_in_its_own_colours` still passes: the samples keep `class="look-sample" data-theme="…"`.
+
+Unaffected: `test_browsing_asks_nothing_of_a_model`. "Every name in BEHAVIOUR appears exactly once" is unaffected too: the look is a cookie, not a setting.
 
 ---
 
-## 8. Themes
+## 8. Looks (themes), as the app built them
 
-The family will add other colour schemes for the same design. The build makes adding one a matter of adding a file, and this folder already works that way: every page links `themes/kitchen-table.css` and carries `data-theme` and `data-mode`, and the two test themes run on the same `style.css` unchanged.
+The family's engineers have already built theme support into the current app (`app-reference/built-looks/`, the two commits in `COMMITS.txt`). That mechanism is the app's, and this design fits it.
 
-### 8.1 Two layers of tokens
+### 8.0 What was built
 
-- **Fixed, in `style.css`.**
-  - Type, space, shape and sizes.
-  - The brand: `--glass`, `--glass-2`, `--glass-line`, `--glass-ink`, `--glass-ink-2`, `--glass-alert`, `--glass-scan`, `--phosphor`, `--phosphor-dim`, `--phosphor-glow`, `--cursor`, `--cursor-glow`, `--vs-halo`, `--mark-glass`.
-  - The white rules on Vera's Ask box: `--ask-rule`, `--ask-fill`, `--ask-fill-2`.
-  - The glass has its own day and night (slightly deeper at night), keyed on the same `data-mode`.
-- **Semantic, in a theme.** Everything a component colours with: the contract below. No component names a raw colour. The audit and its fixes are in section 3.
+- **Every colour is a token.**
+  - The built `style.css` writes Phosphor's tokens at the top, as `:root, [data-theme="phosphor"]`.
+  - It uses the names every palette sheet uses: `--paper`, `--card`, `--ink`, `--band`, `--here`, `--primary`, `--today`, `--red`, `--amber`, `--ok`, `--vera`…
+  - The page's older names (`--bg`, `--surface`, `--green`) are read from them.
+- **A look is one block in `static/themes.css`**:
+  - `[data-theme="rail"] { color-scheme: light dark; --paper: light-dark(day, night); … }`;
+  - each colour is written once, with its day and its night;
+  - the page follows the device, or `data-mode="light|dark"` on `<html>` holds it (`[data-theme][data-mode="light"] { color-scheme: light }`).
+- **Seven looks are listed in `web/looks.py`**: Phosphor (the default, dark only), Midnight, Home Computer, Ink, Enamel, Rail yellow and Fjord. Each has its name, blurb, whether it has a day, and the band's two colours for `theme-color`.
+- **The choice is a cookie per browser**, `fdb_look` ("rail.dark").
+  - It is set on the Look page (`/look`, in the menu, for anybody signed in, kids included).
+  - It is not in the database. Anything that isn't a known look is the default.
+- **`base.html`** writes `data-theme`, and `data-mode` only when held; `<meta name="color-scheme">` from `looks.scheme()`; `theme-color` from `looks.theme_colours()`; and links `themes.css` after `style.css`.
+- **`tests/test_look.py`** holds:
+  - the cookie and the form (CSRF, origin, known looks only);
+  - every look naming the same tokens, and no fewer than Phosphor names;
+  - `themes.css` holding only tokens;
+  - each look's band matching `looks.py`;
+  - the contrast floors, by day and by night.
+- **Not yet built** (the built STYLE.md says so): a colour for each family member, and a household default.
 
-### 8.2 The theme contract
+### 8.1 Token names: Kitchen Table now uses the built ones
 
-A theme defines **all of these, by day and by night** (a token left out of the second mode inherits the first):
+Every token Kitchen Table's layout reads is now named as the built set names it. `style.css` here was renamed to match. Nothing moved: every page re-rendered pixel for pixel the same, except the pages whose content changed in this stage (the Look page, General, Your password, the menu).
 
-| Group | Tokens | Job |
+**Same role, built name adopted** (stage-10 name → built name):
+
+| Stage 10 | Built | Stage 10 | Built |
+|---|---|---|---|
+| `--side` | `--band` | `--today-bg` | `--today` |
+| `--side-ink` | `--on-band` | `--alert` | `--red` |
+| `--side-ink-2` | `--on-band-2` | `--warn` | `--amber` |
+| `--side-hi` | `--band-hi` | `--primary-2` | `--primary-hover` |
+| `--side-line` | `--band-line` | `--shadow-lift` | `--pop` |
+| `--side-mark` | `--here-icon` (and the current item is `--here` / `--on-here`) | `--shadow-up` | `--pop-up` |
+| the wordmark's `--cursor` (fixed) | `--cursor` (a look's token) | | |
+
+These names were already the same: `--paper`, `--paper-2`, `--card`, `--field`, `--ink`, `--ink-2`, `--ink-3`, `--line`, `--line-2`, `--edge`, `--link`, `--primary`, `--on-primary`, `--focus`, `--on-today`, `--vera`, `--vera-bg`, `--ok`, `--ask-bg` and `--shadow`.
+
+**Roles Kitchen Table needs that the built set lacks: add these 66** (the `[data-theme]` block in `themes.css` gives every look a value for each, so no look has to name them):
+
+| Add | Job in Kitchen Table's layout | Every look gets, unless it names its own |
 |---|---|---|
-| Surfaces | `--paper`, `--paper-2`, `--card`, `--field` | the page, wells and tags, cards, inputs |
-| Words | `--ink`, `--ink-2`, `--ink-3` | text, secondary, quiet |
-| Rules | `--line`, `--line-2`, `--edge` | hairlines, stronger rules, control edges (3:1) |
-| The panel | `--side`, `--side-ink`, `--side-ink-2`, `--side-hi`, `--side-line`, `--side-mark`, `--side-link` | the sidebar and the phone's top bar: its ground, words, current-item fill, rules, the "you are here" mark, its links. Light in Kitchen Table, dark in Rail and Midnight |
-| Action | `--link`, `--primary`, `--primary-2`, `--on-primary`, `--focus` | links, the one primary button and its hover, the focus ring |
-| Today | `--today-bg`, `--on-today` | today's date and disc |
-| Vera | `--vera`, `--vera-bg`, `--on-vera`, `--vera-soft`, `--vera-line` | her name and words, her filled things, her pill and her bubbles |
-| Her Ask box | `--ask-bg`, `--ask-ink`, `--ask-ink-2`, `--ask-rim`, `--ask-edge`, `--send`, `--send-2`, `--on-send` | the dark box on Home and Chat, and its Send |
-| Meanings | `--ok`, `--ok-soft`, `--ok-line`, `--warn`, `--warn-soft`, `--warn-line`, `--alert`, `--alert-soft`, `--alert-line`, `--on-alert` | done or working; needs a look; late or broken |
-| People | `--p1`…`--p8` and `--everyone`, each with `-soft`, `-ink`, `-mark`, `-on` | avatar fill, wash, name on the wash, dots and bars, the avatar's letter |
-| Depth | `--shadow`, `--shadow-lift`, `--shadow-up` | card, lifted (the save bar), and the tab bar's upward shadow |
+| `--band-link` | links in the panel (the account corner) | `var(--on-band)` |
+| `--ok-soft`, `--ok-line`, `--amber-soft`, `--amber-line`, `--red-soft`, `--red-line` | each meaning's wash and rule (tags, banners, the setup card, late rules) | 10 % / 35 % of the colour on `--card` (the built tags' own 10 % tint) |
+| `--on-red` | words on a late plate | `var(--on-bright)` |
+| `--on-vera`, `--vera-soft`, `--vera-line` | words on her green fills; her pill and bubbles; her bubble's rim | `var(--on-bright)`; 10 % / 35 % of `--vera` on `--card` |
+| `--ask-ink`, `--ask-ink-2`, `--ask-rim`, `--ask-edge` | words, rim and box edge of her Ask box | `var(--ink)`, `var(--ink-2)`, a `--line` rim, `var(--edge)` |
+| `--ask-rule`, `--ask-fill`, `--ask-fill-2` | rules and dimmed fills inside it (were fixed white) | 16 / 12 / 18 % of `--ask-ink` |
+| `--send`, `--send-2`, `--on-send` | Send in her box | `var(--primary)`, `var(--primary-hover)`, `var(--on-primary)` |
+| `--p1`…`--p8`, each with `-soft`, `-ink`, `-mark`, `-on`, and `--everyone` with the same (45) | **a colour for each family member**, the built STYLE.md's "not yet" | Kitchen Table's eight, by day and by night, until a look gives its own |
 
-Plus `color-scheme` per mode, and a header comment:
-```
-@theme name: Rail yellow
-@theme line: Like station signs: a rail-blue panel and one signal yellow for today.
-@theme first: light            (or dark: which mode is the base block)
-@theme theme-color: #0B2C69 #13336F     (the browser bar, day then night)
-```
-The server reads the header once at start-up for the picker and the `theme-color` meta, and the test reads it too.
+Two built tokens that Phosphor doesn't name, `--here-icon` and `--here-pill`, get `var(--on-here)` / `var(--here)` in the same block. Phosphor-as-a-look names them itself (8.2).
 
-**Fixed in every theme, and why:**
-- **Vera's glass and phosphor** stay in `style.css`, and no theme may set them. They are FamilyDB's and Vera's sign. The family decided they don't change, so the brand stays recognisable in any colours.
-- **Red means late or broken**, and nothing else. A theme sets its own `--alert`, but it must be a red, and no other token may be confused with it (the floors below).
-- **Phosphor green is Vera's**:
-  - only her own tokens, today, Send and the done green may come near it;
-  - a theme may use it for Send (Rail and Midnight do) and for Vera's text at night (all three do);
-  - nothing else.
-- **Her Ask box is always dark**, with light words. The white rules and fills inside it are fixed, so a theme can't make it light.
+**Fixed in every look**, in `style.css`'s fixed layer, as the built app keeps "the green screens, the radar, her screen and the mark" literal:
+- `--glass`, `--glass-2`, `--glass-line`, `--glass-ink`, `--glass-ink-2`, `--glass-alert`, `--glass-scan`;
+- `--phosphor`, `--phosphor-dim`, `--phosphor-glow`;
+- `--mark-glass`, `--cursor-glow`, `--vs-halo`.
 
-**A theme may change colour only.**
-- It may never change layout, type, size, spacing, radius, motion, icons or words.
-- The file holds custom properties and `color-scheme` inside its own selectors, and nothing else; the test rejects any other declaration.
-- The explored palettes in `theme-sources/` also changed fonts and radii (Rail's Barlow and 4 px corners). Those parts are not themes, and were left out of the ports.
+Their night is `light-dark()` too, so there are no media queries left. The built `--screen` is the same colour as `--phosphor`: keep one name, `--phosphor`, and alias `--screen: var(--phosphor)` while the old layout lives.
 
-**The floors every theme must pass** (`_kit/theme-check.py`, which becomes `tests/test_themes.py`):
-1. **Text is AA, 4.5:1.**
-   - `--ink`, `--ink-2` and `--ink-3` on all four surfaces; links on paper and card.
-   - Each `on-` pair: primary, today, Vera's fill, Send, a late plate.
-   - Vera's words on card, paper and her soft; each meaning on its soft and on card.
-   - The Ask box's words; the panel's words on the panel and its current item; the panel's links.
-   - Each person's name on their wash and on card; **avatar letters** (`--pN-on` on `--pN`).
-2. **Controls, marks and edges are 3:1.**
-   - `--edge` on field, card and paper; `--focus` on paper and card.
-   - The primary button against the page; Send on the Ask box; "you are here" on the panel.
-   - Each person's mark on card and paper; Everyone's house glyph.
-3. **The eight people stay apart.**
-   - The closest pair of avatars, and of marks, is at least 6.0 apart (CIEDE2000).
-   - This holds in normal vision and under simulated protanopia, deuteranopia and tritanopia (Machado 2009, full severity).
-4. **Red is never confused.** Late red is at least 6.0 from every person (avatar and mark), done, the action colour, "you are here" and today, under all four visions.
-   - Not from "needs a look": red and amber meet for red-green colour-blind eyes in every palette tried. So the system tells them apart by shape: late is a red rule and "N days late", a look is the warning sign and its words. A theme can't break that.
-5. **Phosphor green is Vera's alone.** Every token not on the list above stays at least 12 (CIEDE2000) from `#6DFF9C`.
-6. **Complete and clean.** Every contract token is present in both modes, no fixed token is set, the two copies of the second mode are identical, and the header is there.
+**Built tokens Kitchen Table's layout doesn't read.** The Kitchen Table look still gives each a value, so the old layout reads in it too, and every look keeps naming the same set:
+- the parts of the site and kinds: `--lilac`, `--cyan`, `--lemon`, `--pink`, `--orange`, `--on-bright` (Kitchen Table's kinds are neutral; its values are its people's inks);
+- one person: `--person`, `--on-person`;
+- light and depth: `--bloom`, `--glow`, `--glow-hover`, `--wash`, `--wash-faint`, `--shade`, `--hi`, `--scan`, `--raster`, `--bar-bg`, `--band-tabs`;
+- the rest: `--paper-3`, `--faint-ink`, `--lit`, `--today-rule`, `--today-wash`, `--error-ink`, `--here-pill`.
 
-### 8.3 How a theme is applied, within the content security policy
+`--sect` is only for the old layout's quiet looks, so Kitchen Table leaves it out.
 
-The server writes two attributes on `<html>` and links one stylesheet:
-```html
-<html lang="en-GB" data-theme="rail" data-mode="auto">
-<link rel="stylesheet" href="/static/style.css">
-<link rel="stylesheet" href="/static/themes/rail.css">
-```
-- `data-theme` is the theme's file name.
-- `data-mode` is `light`, `dark` or `auto`. **Auto** follows `prefers-color-scheme`; **light** and **dark** override it.
+### 8.2 Kitchen Table as a look, and as the default
 
-Each theme file keys its values on its own name:
-```css
-[data-theme="rail"] { color-scheme: light; …day… }                                        /* the first mode */
-@media (prefers-color-scheme: dark) { [data-theme="rail"]:not([data-mode="light"]) { color-scheme: dark; …night… } }
-[data-theme="rail"][data-mode="dark"] { color-scheme: dark; …night… }                   /* the same night, chosen */
-```
-A dark-first theme (Midnight) is the mirror: night is the base block, and day comes in under `prefers-color-scheme: light` or `data-mode="light"`. Kitchen Table, the default, also matches `:root:not([data-theme])`, so a page with no attribute still has colour.
+`themes.css` here is the built file fitted to Kitchen Table. Its parts:
+1. **The `[data-theme]` block**: the 66 roles above, worked out for every look.
+2. **`[data-theme="kitchen"] { color-scheme: light dark; … }`**: Kitchen Table, one block, every token as `light-dark(day, night)`, exactly as it would sit in the built `themes.css`.
+   - The key is `kitchen`, not `kitchen-table`: the built test reads looks with `[a-z]+`, and `looks.py`'s keys are one word (`homecomputer`).
+   - Its line in `looks.py`:
+   ```python
+   Look("kitchen", "Kitchen Table",
+        "The family's table: cream paper, deep green, and each person in their own colour.",
+        True, ("#EFE7D7", "#121816")),
+   ```
+3. **Phosphor, as a look** (dark only), copied from the built `style.css` with two tokens added (`--here-icon`, `--here-pill`).
+4. **The six built looks, verbatim**, plus two additions (8.4), and the two `data-mode` rules.
 
-No inline style and no script are needed: the server sets the attributes, and plain CSS does the rest.
+**Should Kitchen Table replace Phosphor as the default? Yes, when the new layout ships, and not before.** Kitchen Table is the design the family chose, and its layout is built around a light page. Phosphor's layout is the one being replaced.
 
-**One file per theme, loaded by a `<link>`, keyed on the attribute: recommended.** The two options compared:
-- **Blocks in one file** (every theme inside `style.css`, keyed on `data-theme`).
-  - It would be one request.
-  - But every visitor downloads every theme.
-  - Adding a theme means editing the shared stylesheet, so a theme PR touches the file every other PR touches.
-  - And the test can't hold a theme to "colour only" when it shares a file with the components.
-- **One file each**:
-  - adding a theme is adding a file;
-  - a visitor downloads one small file, about 5 KB;
-  - the test checks each file on its own.
-- Keying each file on its own `data-theme` as well costs nothing. It means the theme pickers can load **every** theme file and show each preview in its real colours: each half of a preview carries `data-theme` and `data-mode`, and reads the same tokens the pages do. So a preview can never drift from the theme.
+Until the new layout ships, Kitchen Table can go in as one more look on the old layout, now: one block and one line in `looks.py`. Its built-set tokens are all named, so the old pages read in its colours.
 
-**`theme-color` and the web manifest follow the theme.**
-- `<meta name="theme-color">` is written twice, with `media="(prefers-color-scheme: light|dark)"`, from the header's two colours.
-- With `data-mode="light"` or `"dark"`, write one meta with that mode's colour.
-- `routes.manifest` (today a fixed `CHARCOAL`) reads the family's theme: `theme_color` from its first mode, and `background_color` = its `--paper`. The manifest is per install, not per person, so it follows the family's choice.
+When it becomes the default:
+- `looks.DEFAULT = "kitchen"`.
+- `style.css` writes Kitchen Table's built-set tokens at its top as `:root, [data-theme="kitchen"]`, with `color-scheme: light dark`. That is what the default sits under every look as, so a look that names no `--p1` shows Kitchen Table's people, as here.
+- **What `style.css` must stop assuming**, all built for Phosphor being dark only:
+  - the default's `color-scheme: dark`;
+  - `looks.scheme()` / `theme_colours()` treating the default as having no day;
+  - base.html's `<meta name="color-scheme" content="dark">` for a first visit. It becomes `light dark`, and `theme-color` gets two metas (`#EFE7D7` by day, `#121816` by night).
+  - The new layout's own `style.css` (this folder's) already assumes nothing about day or night: every colour is a token, and the glass's night is `light-dark()`.
+- **Phosphor moves into `themes.css`** as `[data-theme="phosphor"]`. Its block has no `light-dark()` and stays `color-scheme: dark`; the two `data-mode` rules already skip it.
+- **A browser that chose Phosphor keeps it** (its cookie still says `phosphor.auto`). Every other browser changes to Kitchen Table at once, so tell the family in the release note. The Look page is one tap from the menu.
 
-### 8.4 What the app must store
+**The other looks under Kitchen Table's layout.** They recolour any layout, and they still read on Kitchen Table's shapes.
+- **Rendered:** Home and a kid's Home in Rail yellow, Midnight and Phosphor, day and night, desktop and phone, in `shots/looks/` (pages in `looks-test/`).
+- **Rendered too:** Maya's Look page (`look-kid.html`) is worn in Fjord, so it is a whole page of Kitchen Table's layout in a built look.
+- **What changes, by design:**
+  - The paper looks (Rail, Ink, Enamel, Fjord, Home Computer) set `--ask-bg: var(--card)`. So on Kitchen Table's Home, Vera's box becomes a card with ink words and the look's primary for Send, not dark glass. Her screen beside it stays glass. Kitchen Table keeps its dark green box. See §9, question 1.
+  - Rail's current page in the panel is its yellow plate (`--here`), as Rail's sheet draws it.
+  - Phosphor and Midnight keep their own band and current item.
+- **What would have broken, and is handled:** the panel's links (`--band-link`), Vera's pill (`--vera-soft`, worked out per look), her box's words, rules and fills, the meaning washes and the late plate. Without the `[data-theme]` block, every look would have shown Kitchen Table's cream-paper values through. With it, each works them out from its own tokens.
 
-- **The family's default**: two lines in `store.settings.BEHAVIOUR`, and two boxes in `web/fields.py`, in General's new group "How it looks":
-  ```python
-  field("theme", "Theme", "The family's colours: everyone gets them unless they choose their own on You.", choices=themes())   # default "kitchen-table"
-  field("theme_mode", "Light or dark, for the family", "Match this device follows each phone's or computer's own setting.",
-        words=(("auto", "Match this device"), ("light", "Light"), ("dark", "Dark")))                                         # default "auto"
-  ```
-  `themes()` lists `static/themes/*.css` that pass their header check. The page draws them as `theme_picker`, not as a dropdown. Changing them shows in What has changed, like any setting.
-- **Each person's choice**: one migration on `members`:
-  ```sql
-  ALTER TABLE members ADD COLUMN theme TEXT;        -- NULL: the family's theme
-  ALTER TABLE members ADD COLUMN theme_mode TEXT;   -- NULL: the family's light or dark; else 'auto', 'light' or 'dark'
-  ```
-  Both are NULL for existing rows, so nothing changes for anyone until they choose. A theme whose file has since gone falls back to the family's, and then to Kitchen Table.
-- **Who may change what**:
-  - Every signed-in member changes their own, on You (`POST /you/look`). Add it to `auth`'s set of endpoints anybody signed in may reach, kids included; it changes only that member's row.
-  - An admin changes the family's, on Settings › General (`manage`, as every setting).
-  - Nobody changes anyone else's.
-  - A shared-password visitor (no member) gets the family's, with no picker.
-  - The sign-in page uses the family's.
-- **The context processor** resolves `look`:
-  - the theme is the person's if set, else the family's;
-  - the mode likewise;
-  - `color_scheme` is `"light dark"` for auto, otherwise the mode;
-  - `theme_color` comes from the theme's header.
+### 8.3 The Look page, in Kitchen Table
 
-### 8.5 Checks as tests
+`look.html` here is the built `look.html` in Kitchen Table's components. `look-kid.html` is the same page for Maya, just after she chose Fjord.
+- **The same form**: "Day and night" (Match my device / Always day / Always night, with the built words), every look as a card with a radio, its name, "In use", its blurb and its samples (Day and Night, or "Night only" for Phosphor), and "Use this look".
+  - Kitchen Table adds "The default" tag, and a quiet line by Save: "Only this browser changes: everybody else keeps their own." (a kid's: "Only this screen changes. Nobody else sees it.").
+- **The samples keep the built markup** (`span.look-shot > span.look-sample[data-theme][data-mode] > .ls-band, .ls-page …`), because `test_look.py` counts them: one Phosphor sample, two for each other look.
+  - They are drawn in Kitchen Table's components: a panel with the mark and the current item, a card with a title, a line, "Today" and the button, and a row of dots (three people, Vera, amber and red).
+  - Each reads the look's own tokens, so a sample can't drift from its look.
+- **Where it sits:**
+  - the account corner reads **Look · Your password · Sign out** on every page;
+  - the phone menu has a **Look** row ("How the page looks on this phone or computer"; a kid's "How your screen looks").
+  - The stage-9 pickers are gone from Settings › General and from "You", which is "Your password" again, as in the app.
+- **The flash** is the built one: "Saved. This browser wears Fjord from now on."
 
-- **`tests/test_themes.py`**: the checks in `_kit/theme-check.py`, one parametrised test per `static/themes/*.css`.
-  - The script runs as is: `python3 _kit/theme-check.py` exits 1 when any theme fails.
-  - It has no dependencies. It covers WCAG contrast, Machado 2009 simulation, CIEDE2000, and the parsing of the three blocks and the header.
-  - A theme that misses a token or a floor can't be merged.
-- **Kitchen Table's known shortfall.** Kitchen Table's eight people were chosen before this check existed, and fall under the colour-blind floor:
-  - Theo's ochre and slot 7's olive are 1.1 apart for protanopes;
-  - Alex's purple and slot 5's teal are 2.5 apart for deuteranopes;
-  - late red is 2.1 from Theo's ochre for deuteranopes.
+### 8.4 What each built look adds for Kitchen Table's layout
 
-  The test records those measured values for `kitchen-table` alone: they pass as "known, waiting on the family", and anything worse fails. No other theme may be listed. That's an open question below.
-- **The palette sheet**: `python3 _kit/theme-check.py --sheets` writes `palette/<theme>.html`. Each sheet shows:
-  - every token as a swatch, day and night, drawn by the theme file itself;
-  - the people as avatars;
-  - every contrast pair with its measured ratio and floor;
-  - the closest pairs under each vision, and the verdict.
+`_kit/looks-check.py` runs every look through:
+- `test_look.py`'s floors;
+- the pairs Kitchen Table's layout draws that the old one doesn't: the panel's links and current item, Vera's box, Send, her fills and pill, the late plate, each meaning on its wash;
+- the colour-blind checks.
 
-  In the app, build them into the docs (or a `/status/themes` page for admins) so the family can look before choosing. Shots: `shots/themes/palette-*.png`.
+Results:
 
-### 8.6 Proof: two explored palettes, ported
+| Look | Result | Needs |
+|---|---|---|
+| Kitchen Table | passes every floor; its eight people's three colour-blind shortfalls recorded as known (§9, question 2) | nothing |
+| Phosphor | passes (night only) | `--here-icon`, `--here-pill` (added) |
+| Rail yellow, Fjord, Ink, Midnight | pass | nothing: the derived roles work out from their own tokens |
+| Enamel | words on Vera's green fill are 4.48:1 by day with its `--on-bright` | `--on-vera: light-dark(#FFFFFF, #161513)` (4.72:1) |
+| Home Computer | the same, 4.33:1 | `--on-vera: light-dark(#FFFFFF, #171513)`; and see §9, question 3 |
 
-Rail yellow (light first) and Midnight (dark first) were moved into the contract's token names: `themes/rail.css`, `themes/midnight.css`. Their values were copied, not redesigned. Their extras with no place in the contract were left out, and each file lists them.
+The two additions sit after the looks in this folder's `themes.css`. **In the built file they go inside each look's own block**, because `test_look.py` reads one block per look. Palette sheets for every look: `palette/<look>.html` (`python3 _kit/looks-check.py --sheets`). Shots of Kitchen Table's, Rail's and Midnight's sheets are in `shots/looks/`.
 
-Home, Plans and a kid's Home were rendered in each, light and dark, at both widths (`theme-test/*.html`, `shots/themes/`), and so was the theme picker on Settings › General and You.
+### 8.5 Later steps: the household default and a person's own look
 
-**What broke, and the fixes to the system** (all in `style.css` now):
-1. **The sidebar assumed a light panel.** On Rail's navy, the nav's ink and links vanished.
-   - Fix: the panel got its own tokens (`--side`, `--side-ink`, `--side-ink-2`, `--side-hi`, `--side-line`, `--side-mark`, `--side-link`).
-   - `.side` and `.topbar` re-scope `--ink`, `--ink-2`, `--ink-3`, `--card`, `--line`, `--paper-2`, `--focus` and `--link` to them, so every component inside the panel just works.
-2. **"You are here" used Vera's green.** On a dark panel it fell under 3:1. And Vera's green is Vera's.
-   - Fix: `--side-mark` (Kitchen Table: its green; Rail: signal yellow; Midnight: moonlight blue).
-   - The first attempt re-scoped `--vera` inside the panel, which turned the health pill's words yellow on pale green. The pill keeps Vera's own tokens, and only the nav's mark uses `--side-mark`.
-3. **The account corner's links** were the page's link colour, unreadable on navy. Fix: `--side-link`.
-4. **Avatar letters were hard-coded white.** Midnight's and Rail's light avatars need dark letters. Fix: `--pN-on` per slot, `--everyone-on`.
-   - Midnight's own file gave Everyone the same dark letter as every other avatar, which fails on its dark slate; its port uses its `--everyone-ink`.
-5. **The tab bar's shadow was a warm-brown literal**, wrong on any cool theme. Fix: `--shadow-up`.
-6. **The theme previews held copies of each theme's colours**, which would drift. Fix: the previews read the theme files.
+The stage-9 design drew two things for a choice kept on the server. They are **not built, and not for this release**. What each would need, when the family wants it:
+- **A household default look** (an admin chooses the look for every browser that hasn't chosen):
+  - one setting in `store.settings.BEHAVIOUR` and `web/fields.py` (`look`, default `kitchen`, choices from `looks.LOOKS`);
+  - a "How it looks" group on Settings › General, drawn with the Look page's cards;
+  - `looks.parse()` falls back to it instead of `DEFAULT` when there is no cookie.
+  - The cookie still wins, so a browser's own choice is never overridden.
+- **A person's own look, following them across devices**:
+  - a `members.look TEXT` column (NULL: none), one migration;
+  - the Look page saves it as well as the cookie when a member is signed in;
+  - base.html prefers the cookie, then the member's look, then the household's.
+  - Kids may set their own, as they can now.
+- **A colour for each family member** (the built STYLE.md's other "not yet"):
+  - Kitchen Table's layout already draws it (`.p0`–`.p8`, avatars, bubbles, calendar events);
+  - it needs a `members.slot` column (1, section 1);
+  - a look may give its own eight (`--p1`… in its block) or take Kitchen Table's.
 
-**What the checks say about the ports:**
-- **Midnight passes every floor.**
-- **Rail fails at night.** Late red (`#FF8B74`) is 1.9 from Rail's chestnut person mark for protanopes, 5.1 from its sand avatar for deuteranopes, and 3.2 from its tangerine mark for tritanopes.
-  - This is a flaw in Rail's night palette, not in the system: its night red and its warm people meet.
-  - Rail would need its night red or those three people retuned before it could ship. The test is doing its job.
-  - So `python3 _kit/theme-check.py` exits 1 in this folder today, on Rail alone. Copy only `kitchen-table.css` (and Midnight, if the family wants it) into `static/themes/`, and CI stays green.
+Keep all three behind the family's say. Each is one setting or one column and a few lines, and none changes the Look page's form.
 
-### 8.7 Adding a theme, step by step
+### 8.6 Adding a look, step by step (unchanged from the built STYLE.md, plus one check)
 
-For the family (or whoever picks the colours):
-1. Copy `static/themes/kitchen-table.css` to `static/themes/<name>.css` (lowercase, hyphens). Set the header: name, a one-line description, which mode comes first, and the two browser-bar colours.
-2. Change only the values. Keep every token, by day and by night. Replace `kitchen-table` in the three selectors with `<name>` (and drop the `:root:not([data-theme])` part: that's the default's alone).
-3. Run `python3 _kit/theme-check.py static/themes/<name>.css --sheets`. Fix anything it reports, and open `palette/<name>.html` to look at it by day and by night.
-4. Open Home, Plans and a kid's Home with `data-theme="<name>"`, light and dark, on a phone and a computer. The pickers on Settings › General and You list the new file by themselves.
-
-For the engineers:
-
-5. Open a PR with the one file. CI runs `tests/test_themes.py` over every theme, so it can't merge until it passes.
-6. Nothing else changes: no template, no `style.css`, no migration. `themes()` finds the file, the picker shows it, and the context processor links it.
+1. Write a block in `static/themes.css`: `[data-theme="<key>"] { color-scheme: light dark; … }`.
+   - It names every token the others name, each as `light-dark(day, night)`.
+   - The 66 Kitchen Table roles are optional: name one only to set it apart from the derived value.
+2. Add a line to `web/looks.py`: the key, name, blurb, `has_day`, and the band's two colours.
+3. Run `pytest tests/test_look.py` and `python3 _kit/looks-check.py --sheets`, then open `palette/<key>.html`.
+4. Open the Look page and Home in it, by day and by night. Nothing else changes: no template, no `style.css`.
 
 ---
 
 ## 9. Open questions for the family
 
-1. **Kitchen Table's people under colour blindness.**
-   - The default's eight people fall under the floor the other palettes meet: Theo's ochre and slot 7's olive look the same to a protanope, and late red sits next to Theo's ochre for a deuteranope.
+1. **Vera's box in the paper looks.** Kitchen Table draws her Ask box as dark green glass. The built paper looks (Rail yellow, Ink, Enamel, Fjord, Home Computer) make it a plain card with ink words, so in those looks it's no longer the one dark thing on the page; her screen beside it stays glass. Keep it as the looks have it, or ask each paper look for a dark `--ask-bg` of its own?
+2. **Kitchen Table's people under colour blindness.**
+   - Its eight people fall under the floor in three places: slot 4's ochre and slot 7's olive look the same to a protanope, slots 2 and 5 are close for a deuteranope, and late red sits next to slot 4's ochre for a deuteranope.
    - Names and initials are always beside the colours, so nothing becomes unreadable, but the calendar's dots are harder.
-   - Retune a few slots (slots 4, 5 and 7 mostly), or keep them and live with the recorded exception?
-2. **Rail and Midnight.** They are test ports, not finished themes. Ship Midnight as it is (it passes)? Fix Rail's night red first? Or design themes properly later?
-3. **Status for parents.** The design puts Status under "Behind the scenes" with Settings and Family. The app shows Status to parents too (`browse`). Keep Status for every grown-up, or make it admin-only?
-4. **"Hidden from Maya."** Presents are hidden from every kid today. Should a present name exactly whom it's hidden from (one more column), or keep "hidden from the kids"?
-5. **Who sees the "for grown-ups" page.** A kid opening Settings gets the friendly page naming the admins. Should a parent who isn't an admin get the same page, or the plain "For an admin" refusal?
-6. **To-dos' edit page.** The design gives a to-do its own Edit page. The app edits in a fold on the row. Add the page, or keep the fold?
-7. **"Set by Alex."** Showing who set a kid's to-do needs the app to remember it, from now on. Worth it?
-8. **"Installer".** Setup's "Still the password the installer made up." is the app's wording; an earlier round wanted "installer" gone. Keep it, or say "the password FamilyDB started with"?
+   - Every look shows these eight people until it has its own, so this now matters in all of them. Retune slots 4, 5 and 7, or keep the recorded exception?
+3. **Home Computer's red and orange.** At night, for tritanopes, its late red is 4.9 apart from its orange action colour (the floor is 6). This is a built look, and the built tests don't check colour blindness. Adjust its night red, or accept it?
+4. **Kitchen Table as the default.** Recommended once the new layout ships: until then it can be one more look. Every browser that hasn't chosen Phosphor then changes to Kitchen Table at once. Is that what the family wants, with a line in the release note?
+5. **A household default look, and a person's own look across devices** (§8.5). Neither is built. Wanted, and when?
+6. **Status for parents.** The design puts Status under "Behind the scenes" with Settings and Family. The app shows Status to parents too (`browse`). Keep Status for every grown-up, or make it admin-only?
+7. **"Hidden from Maya."** Presents are hidden from every kid today. Should a present name exactly whom it's hidden from (one more column), or keep "hidden from the kids"?
+8. **Who sees the "for grown-ups" page.** A kid opening Settings gets the friendly page naming the admins. Should a parent who isn't an admin get the same page, or the plain "For an admin" refusal?
+9. **To-dos' edit page.** The design gives a to-do its own Edit page. The app edits in a fold on the row. Add the page, or keep the fold?
+10. **"Set by Alex."** Showing who set a kid's to-do needs the app to remember it, from now on. Worth it?
+11. **"Installer".** Setup's "Still the password the installer made up." is the app's wording; an earlier round wanted "installer" gone. Keep it, or say "the password FamilyDB started with"?

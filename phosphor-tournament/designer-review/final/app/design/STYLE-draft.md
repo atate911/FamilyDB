@@ -11,15 +11,15 @@ The rule behind every page fits in a line: **one plain sentence first, cards bel
 person's colour wherever that person appears.** Every status is a sentence, not a code.
 Saturated colour means a person (or Vera's green). Red means late or broken.
 
-Everything here is carried by one stylesheet (`static/style.css`), a stylesheet for each other
-theme (`static/themes/`), a handful of templates and macros, self-hosted fonts and one icon
+Everything here is carried by one stylesheet (`static/style.css`), the looks' colours
+(`static/themes.css`), a handful of templates and macros, self-hosted fonts and one icon
 sprite (`static/icons.svg`). None of it needs a script: every page and every form works with
 scripting off, and the few small scripts only make things smoother.
 
 This document is a record of the look as it stands and why, not a fence around it. The design,
 the feel and the structure of the pages are meant to evolve with the app, and whoever is working
 on it, an AI agent included, is free to change any of them without asking first: a new layout, a
-new page, a new theme, a principle rewritten. Update this document in the same change, so the
+new page, a new look, a principle rewritten. Update this document in the same change, so the
 next person knows what the look is and why. Only the floors under "What does not move" stay put,
 because they are about people being able to use the page, it being safe, and what kids see, not
 about taste.
@@ -41,17 +41,19 @@ asks for what a colour is *for*: `--paper` for the page, `--card` for a card, `-
 `--edge` for the border of something you press or type into, `--primary` and `--link` for the
 family's actions, `--vera` for Vera's things, `--alert` for late or broken, `--p` for the person
 a thing belongs to. These names (listed under "Colour") are the only colours any rule may use. A
-colour written anywhere but a theme file is a mistake; `tests/test_themes.py` and the CSP check
+colour written anywhere but `themes.css` is a mistake; `tests/test_look.py` and the CSP check
 keep it that way.
 
-**On top, a theme gives each name its value**, once for day and once for night. Each theme is one
-small stylesheet, `static/themes/<name>.css`; Kitchen Table, the default, is
-`static/themes/kitchen-table.css`. `style.css` holds no colour of its own, only what every theme
-shares: the type, the sizes and the spacing, and the brand's glass and phosphor. Because the parts only ever ask for a job, a new
-theme needs no change to any template, and a change to a part reaches every theme at once.
+**On top, a look gives each name its value**, day and night written together:
+`--paper: light-dark(#F6F1E7, #0C100F)`. Every look is one block in `static/themes.css`;
+Kitchen Table, the default, is `[data-theme="kitchen"]`, and it is also written at the top of
+`style.css` on `:root`, so it is what every page wears until a browser chooses otherwise.
+`style.css` holds no other colour, only what every look shares: the type, the sizes and the
+spacing, and the brand's glass and phosphor. Because the parts only ever ask for a job, a new
+look needs no change to any template, and a change to a part reaches every look at once.
 
-A theme is colour only. It never changes the layout, the type, the sizes, the words or what a
-page holds. And two things are the same in every theme, because they carry meaning rather than
+A look is colour only. It never changes the layout, the type, the sizes, the words or what a
+page holds. And two things are the same in every look, because they carry meaning rather than
 taste: **Vera's glass and phosphor**, so she is recognisably herself whatever the page looks
 like, and **red, which means late or broken** and nothing else.
 
@@ -82,7 +84,7 @@ far, the page is an art project; held back everywhere, it is generic.
    everything read, Fraunces figures for money and clock times. JetBrains Mono only on glass.
 7. **What you came for is on the first screen.** On Home, Vera's box and what is next; on a list
    page, the list. Options, filters and rarer forms fold away under `<details>`.
-8. **Accessible by construction.** Contrast is measured in both appearances of every theme,
+8. **Accessible by construction.** Contrast is measured by day and by night in every look,
    focus is always visible, every box has a label, sizes are in rem, motion, contrast and
    forced-colour preferences are honoured, and nothing needs a script.
 9. **Vera is felt, not shown.** She is a real presence, in her name, her words and her screen,
@@ -113,53 +115,55 @@ clearly a machine they can trust. Four things make that.
 A change that whitens the paper, colours the neutral parts or spreads the glass wider dims all of
 that, however small it looks.
 
-## Themes
+## Looks
 
-Kitchen Table is the theme FamilyDB starts with, and the one this document describes. A theme
-is colour and nothing else: it can't move a thing, change a face or a size, or reword a page.
+Kitchen Table is the look FamilyDB starts with, and the one this document describes. A browser
+can wear another, chosen on the **Look** page (`/look`, from the account corner and the phone's
+menu, for anybody signed in, a kid included): **Phosphor** (the page as first drawn, a green
+screen, night only), **Midnight**, **Home Computer**, **Ink**, **Enamel**, **Rail yellow** and
+**Fjord**. A look changes colour and nothing else, so every section here still holds, with the
+colours read from the look in force.
 
-**What a theme is.** One file, `static/themes/<name>.css`, with a short header (its name, a line
-about it, whether it is made light first or dark first, and the two colours for the browser's
-bar) and three blocks of values, all keyed on its own name: the first appearance, the second as
-the device asks for it, and the second as somebody chooses it. Every token in the contract is in
-both appearances: the surfaces, the words, the rules, the panel down the side (`--side`,
-`--side-ink`, `--side-hi`, `--side-mark`, `--side-link`, which let a theme make it dark), the
-family's action, today, Vera's colours and her Ask box, the three meanings, the eight people with
-their soft, ink, mark and the letter on their avatar (`--pN-on`), and the shadows.
+**How it is built.** Every colour in `style.css` is a token, in the names every palette sheet
+uses (`--paper`, `--card`, `--ink`, `--band`, `--here`, `--primary`, `--today`, `--red`,
+`--amber`, `--ok`, `--vera`…), and a look is a set of them. `static/themes.css` has one block for
+each, `[data-theme="rail"]`, its values written `light-dark(day, night)`, so the page follows the
+device's day and night, or is held to one by the Look page (`data-mode` on `<html>`), with no
+second list to keep in step. Because a block is keyed on an attribute and not on `:root`, a
+sample of a look on the Look page is drawn in its own colours by putting its name on the sample.
+`web/looks.py` lists the looks: each one's name, a line about it, whether it has a day, and the
+colour of its panel for the browser's own bar.
 
-**What no theme may touch.** Vera's glass and phosphor live in `style.css`, the same everywhere,
-so she is herself whatever the page looks like. Red means late or broken in every theme, and
-nothing else may be mistaken for it. Phosphor green is hers: only her own colours, today, Send
-and "done" may come near it. Her Ask box is always dark with light words.
+**What Kitchen Table's layout adds.** It needs a few roles the older pages did not: links in the
+panel, each meaning's wash and rule, words on a late plate and on Vera's green, her pill's wash,
+the words, rim and Send of her box, and a colour for each of the eight people. A block of
+`themes.css` keyed on `[data-theme]` works each of them out from the look's own tokens (a wash
+is a tenth of the colour on its card, Send is the look's primary), so a look names them only to
+set one apart. The people are Kitchen Table's eight until a look gives its own.
 
-**How a page knows which.** The server writes on `<html>` `data-theme="<name>"` and
-`data-mode="auto"`, `"light"` or `"dark"`, links the one theme file, and writes the matching
-`color-scheme` and `theme-color`. Auto follows the device; light and dark override it. No script,
-no inline style, and no flash of the wrong colours.
+**The choice is a cookie** (`fdb_look`, "rail.dark"), set by the Look page's form, in this
+browser only: how a screen looks is the screen's, a phone and a wall tablet may differ, and it
+costs the family's database nothing, so it is not a setting, not a tool, and nothing the model
+can reach. Anything the cookie says that is not a look this page has is Kitchen Table. The
+browser's own bar and its scrollbars follow (`theme-color`, `color-scheme`).
 
-**Who chooses.** The family's theme and Light, Dark or Match this device are set in Settings ›
-General, under "How it looks". Each person may choose their own on their **You** page; its first
-choice, "The family's theme", follows the family's. A person's own choice wins, and changes
-nothing but their own screen, on every phone and computer they sign in on. Kids may choose too.
-The sign-in page uses the family's, since nobody is known yet.
+**What no look touches.** Vera's glass and phosphor, her screen and the mark stay in `style.css`,
+the same everywhere, so she is herself whatever the page wears. Red means late or broken in every
+look. Colour never speaks alone. In the paper looks (Ink, Enamel, Rail yellow, Fjord, Home
+Computer) her Ask box is a card like the rest; in Kitchen Table, Phosphor and Midnight it is
+dark.
 
-**The pickers** are plain forms that list whatever theme files are installed. Each theme is a
-card, a label round a real radio (`label.theme` › `.theme__card`): a tiny Home drawn by day and
-by night, the theme's name and its line. Each half of the tiny Home carries `data-theme` and
-`data-mode`, so it is drawn by the theme file itself and can't drift from it. The chosen card is
-ringed in ink with a tick; the one in use says "✓ In use". Under them, Light, Dark and Match this
-device (`fieldset.choices.appear`). Save posts, redirects, and the page comes back in the new
-theme.
+**Measured, in both modes.** For each look, by day and by night, `tests/test_look.py` holds the
+floors of "Accessibility": 4.5:1 for words on the page and on a card (4:1 for a colour on a
+well), 3:1 for the edge of a box and the focus ring, and words on each colour used as a fill,
+and Kitchen Table's own pairs: the panel's links and current item, her box and Send, the late
+plate, each meaning on its wash, each person's name, letter and mark. The eight people are
+checked against each other, and red against them, under simulated colour blindness. A look that
+cannot keep them is not offered. A new look is a block in `themes.css` and a line in `looks.py`,
+and nothing else.
 
-**Before a theme ships**, `tests/test_themes.py` checks it: every token present by day and by
-night and nothing else in the file; every text pair 4.5:1 or more and every control edge, mark
-and focus ring 3:1 or more; letters on each avatar at 4.5:1; the eight people at least 6 apart
-(CIEDE2000), in normal vision and under simulated protanopia, deuteranopia and tritanopia; late
-red at least 6 from every person, done, the action colour and today, under the same four; and
-every other colour well away from phosphor. `_kit/theme-check.py --sheets` draws each theme's
-palette sheet, with every swatch and every measurement, for the family to look at before choosing.
-Kitchen Table's own people fall short of the colour-blind floor in three places; the test records
-those as known until the family decides, and fails anything worse.
+**Not yet.** There is no household default look, and a person's look does not follow them from
+one device to another: each browser chooses.
 
 ## Colour
 
@@ -218,7 +222,7 @@ under simulated deuteranopia and protanopia: raspberry, not a red-pink, so a per
 as "late" (CIEDE2000 58 from `--alert`), and cocoa rather than a second magenta. Eight colours
 cannot all stay apart for every eye, which is why colour is never the only cue.
 
-**Glass** is the brand's, the same in every theme: `--glass` (`#0E1312`; `#070A09` at night),
+**Glass** is the brand's, the same in every look: `--glass` (`#0E1312`; `#070A09` at night),
 `--glass-2`, `--glass-line`, `--glass-ink`, `--glass-ink-2`, `--glass-alert` (coral, "can't
 answer"), `--phosphor` (`#6DFF9C`) with `--phosphor-dim` and `--phosphor-glow`, `--cursor`
 (`#1B9A55` on paper, phosphor at night) and `--vs-halo`.
@@ -600,7 +604,7 @@ rim is 4.6:1 against the page, its box's edge 4.4:1.
   longer: her busy screen, the typing dots and the writing-back dot, while a reply is on its way.
   Under `prefers-reduced-motion` nothing moves at all.
 - **Forced colours.** Whatever is shown by a background alone (the current place, segments,
-  choices, themes, tags, the pill, ticks, today) gets a real border.
+  choices, the looks, tags, the pill, ticks, today) gets a real border.
 - **Reflow.** Nothing scrolls sideways at 320 pixels or at 200 % zoom.
 - **Words** are written for about grade 4 to 7, and the kids' pages are read aloud for tone.
 - **Scripts add, never require.** `ask.js` asks quietly for her answer while one is pending (and
@@ -629,8 +633,8 @@ rim is 4.6:1 against the page, its box's edge 4.4:1.
 - **Presents stay hidden.** A gift idea or a surprise is left out of a kid's pages entirely: no
   row, no count, no greyed item. Lists are filtered for the viewer (`visible_to(viewer)`) before
   anything is counted. Grown-ups see it tagged, always by name: "Surprise · hidden from Maya".
-- **Themes are colour only**, and keep Vera's glass and phosphor and red for late or broken.
-- **The accessibility above**, in every theme, by day and by night. A new colour or theme is
+- **Looks are colour only**, and keep Vera's glass and phosphor and red for late or broken.
+- **The accessibility above**, in every look, by day and by night. A new colour or look is
   measured against the others on its pages, for typical sight and for deuteranopia and
   protanopia, before it is added.
 - Nothing from an idea, a place or a fetched page is marked safe in a template.
@@ -644,7 +648,7 @@ and say why here.
 
 - Class names are shared across the stylesheet and are the API: check a new one is not taken.
 - A colour is a token, and a token is a job. A part that needs a colour no token gives is a
-  question for this document first, so every theme can answer it.
+  question for this document first, so every look can answer it.
 - One primary button a view, one "set this up" a page, one pane a page, one instrument in the
   app. Each is scarce so it keeps its meaning.
 - Kinds of idea are neutral, so the family's colours are the colour on the page.
@@ -655,7 +659,7 @@ and say why here.
 - The look leans on a few facts the server keeps: each person's slot; who set a to-do and who
   owns it; who a plan is for; a wish's rank, answer and who gave it; whom a present is hidden
   from; a kid's daily message count.
-- A new colour, face, glow, motion or theme is written down here, with its reason, in the change
+- A new colour, face, glow, motion or look is written down here, with its reason, in the change
   that brings it. Trying one on a branch needs no entry until it stays.
 
 ## Left for later
@@ -673,8 +677,8 @@ and say why here.
 ## A kid's screen
 
 A kid signs in to the same page, in the same Kitchen Table look: nothing is drawn differently for
-her, there is only less of it, and it is hers. She may choose her own theme on her You page
-("Only your own screen changes. Nobody else sees it.").
+her, there is only less of it, and it is hers. She may choose a look for her own screen on the Look page,
+as anybody may ("Only this screen changes. Nobody else sees it.").
 
 Her nav is Home, Chat with Vera, My wishes, My to-dos, Plans and Ideas. There is no pill, no What
 Vera knows, no Status, Settings or Family, and her footer has no version. **Her Home** opens with

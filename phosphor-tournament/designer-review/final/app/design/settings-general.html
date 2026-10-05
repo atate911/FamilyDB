@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en-GB" data-theme="kitchen-table" data-mode="auto">
+<html lang="en-GB" data-theme="kitchen">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -10,9 +10,7 @@
 <link rel="icon" href="brand/favicon-16.png" sizes="16x16" type="image/png">
 <link rel="apple-touch-icon" href="brand/apple-touch-icon.png">
 <link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="themes/kitchen-table.css">
-<link rel="stylesheet" href="themes/rail.css">
-<link rel="stylesheet" href="themes/midnight.css">
+<link rel="stylesheet" href="themes.css">
 <meta name="theme-color" content="#EFE7D7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#121816" media="(prefers-color-scheme: dark)">
 </head>
@@ -48,7 +46,7 @@
       <div class="me">
         <span class="av p1 av--lg" aria-hidden="true">S</span>
         <div><b>Sam</b><span>Parent · admin</span>
-          <span class="me__acts"><a href="you.html">You</a><form method="post" action="signin.html"><button class="textbtn" type="submit">Sign out</button></form></span></div>
+          <span class="me__acts"><a href="look.html">Look</a><a href="you.html">Your password</a><form method="post" action="signin.html"><button class="textbtn" type="submit">Sign out</button></form></span></div>
       </div>
     </div>
   </aside>
@@ -57,7 +55,7 @@
 
       <a class="crumb" href="settings.html"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-chevl"/></svg>Settings</a>
       <div class="page-head">
-        <div><h1>General</h1><p class="lede">Where home is, its clock and units, this page and how it looks.</p></div>
+        <div><h1>General</h1><p class="lede">Where home is, its clock and units, and this page.</p></div>
       </div>
       
       <div class="settings-layout">
@@ -80,42 +78,7 @@
             <h2 class="sgroup__h" id="g-page">This page</h2>
             <div class="sgrid"><div class="setting"><div class="setting__head"><label class="field__label" for="f-web_title">Name of this page</label></div><input id="f-web_title" name="web_title" type="text" value="" placeholder="FamilyDB" aria-describedby="h-web_title"><p class="field__hint" id="h-web_title">In the bar, on the sign-in page and in the browser’s tab. Your family’s name works well.</p></div><div class="setting"><div class="setting__head"><label class="field__label" for="f-web_dictation">A mic to speak instead of typing</label></div><select id="f-web_dictation" name="web_dictation" aria-describedby="h-web_dictation"><option value="">Default (yes)</option><option value="true">yes</option><option value="false">no</option></select><p class="field__hint" id="h-web_dictation">Beside each box that takes words. The browser writes down what is said: Safari sends the sound to Apple, Chrome to Google, as a phone keyboard’s mic does. It never passes through FamilyDB and costs nothing. Firefox has no mic.</p></div></div>
           </section>
-          <section class="card sgroup" id="look" aria-labelledby="g-look">
-            <h2 class="sgroup__h" id="g-look">How it looks</h2>
-            <p class="sgroup__note">The family’s colours: everyone gets them, unless somebody chooses their own on their <a href="you.html">You</a> page. Saving reloads the page in the new theme.</p>
-            <fieldset class="themes-set" aria-describedby="h-theme">
-              <legend class="field__label">Theme</legend>
-              <p class="field__hint" id="h-theme">Each preview is Home by day, then by night.</p>
-              <div class="themes">
-              <label class="theme" for="ft-kitchen-table">
-                <input id="ft-kitchen-table" type="radio" name="theme" value="kitchen-table" checked>
-                <span class="theme__card"><span class="thumb" aria-hidden="true"><span class="mini" data-theme="kitchen-table" data-mode="light"><span class="mini__band"></span><span class="mini__page"><span class="mini__h"></span><span class="mini__ask"><span class="mini__line"></span></span><span class="mini__card"><span class="mini__ps"><i class="mini__p mini__p--1"></i><i class="mini__p mini__p--2"></i><i class="mini__p mini__p--3"></i><i class="mini__p mini__p--4"></i></span><span class="mini__row"><span class="mini__btn"></span><span class="mini__acc"></span></span></span></span></span><span class="mini" data-theme="kitchen-table" data-mode="dark"><span class="mini__band"></span><span class="mini__page"><span class="mini__h"></span><span class="mini__ask"><span class="mini__line"></span></span><span class="mini__card"><span class="mini__ps"><i class="mini__p mini__p--1"></i><i class="mini__p mini__p--2"></i><i class="mini__p mini__p--3"></i><i class="mini__p mini__p--4"></i></span><span class="mini__row"><span class="mini__btn"></span><span class="mini__acc"></span></span></span></span></span></span>
-                  <span class="theme__name">Kitchen Table<span class="tag tag--ok"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>In use</span></span>
-                  <span class="theme__line">Cream paper, deep green and the family’s colours. The one FamilyDB starts with.</span>
-                </span>
-              </label>
-              <label class="theme" for="ft-rail">
-                <input id="ft-rail" type="radio" name="theme" value="rail">
-                <span class="theme__card"><span class="thumb" aria-hidden="true"><span class="mini" data-theme="rail" data-mode="light"><span class="mini__band"></span><span class="mini__page"><span class="mini__h"></span><span class="mini__ask"><span class="mini__line"></span></span><span class="mini__card"><span class="mini__ps"><i class="mini__p mini__p--1"></i><i class="mini__p mini__p--2"></i><i class="mini__p mini__p--3"></i><i class="mini__p mini__p--4"></i></span><span class="mini__row"><span class="mini__btn"></span><span class="mini__acc"></span></span></span></span></span><span class="mini" data-theme="rail" data-mode="dark"><span class="mini__band"></span><span class="mini__page"><span class="mini__h"></span><span class="mini__ask"><span class="mini__line"></span></span><span class="mini__card"><span class="mini__ps"><i class="mini__p mini__p--1"></i><i class="mini__p mini__p--2"></i><i class="mini__p mini__p--3"></i><i class="mini__p mini__p--4"></i></span><span class="mini__row"><span class="mini__btn"></span><span class="mini__acc"></span></span></span></span></span></span>
-                  <span class="theme__name">Rail yellow</span>
-                  <span class="theme__line">Like station signs: a rail-blue panel and one signal yellow for today.</span>
-                </span>
-              </label>
-              <label class="theme" for="ft-midnight">
-                <input id="ft-midnight" type="radio" name="theme" value="midnight">
-                <span class="theme__card"><span class="thumb" aria-hidden="true"><span class="mini" data-theme="midnight" data-mode="light"><span class="mini__band"></span><span class="mini__page"><span class="mini__h"></span><span class="mini__ask"><span class="mini__line"></span></span><span class="mini__card"><span class="mini__ps"><i class="mini__p mini__p--1"></i><i class="mini__p mini__p--2"></i><i class="mini__p mini__p--3"></i><i class="mini__p mini__p--4"></i></span><span class="mini__row"><span class="mini__btn"></span><span class="mini__acc"></span></span></span></span></span><span class="mini" data-theme="midnight" data-mode="dark"><span class="mini__band"></span><span class="mini__page"><span class="mini__h"></span><span class="mini__ask"><span class="mini__line"></span></span><span class="mini__card"><span class="mini__ps"><i class="mini__p mini__p--1"></i><i class="mini__p mini__p--2"></i><i class="mini__p mini__p--3"></i><i class="mini__p mini__p--4"></i></span><span class="mini__row"><span class="mini__btn"></span><span class="mini__acc"></span></span></span></span></span></span>
-                  <span class="theme__name">Midnight</span>
-                  <span class="theme__line">A kitchen at night: blue-black, each person lit like a window. Made dark first.</span>
-                </span>
-              </label></div>
-            </fieldset>
-            
-            <fieldset class="choices appear" aria-describedby="h-appearance">
-              <legend>Light or dark, for the family</legend>
-              <label class="choice"><input type="radio" name="appearance" value="light"><span><svg class="icon" aria-hidden="true"><use href="#i-sun"/></svg>Light</span></label><label class="choice"><input type="radio" name="appearance" value="dark"><span><svg class="icon" aria-hidden="true"><use href="#i-moon"/></svg>Dark</span></label><label class="choice"><input type="radio" name="appearance" value="device" checked><span><svg class="icon" aria-hidden="true"><use href="#i-device"/></svg>Match this device</span></label>
-              <p class="field__hint" id="h-appearance">Match this device follows each phone’s or computer’s own setting, so a phone set to dark at night gets the night colours.</p>
-            </fieldset>
-          </section>
+          
           <details class="card fold sgroup" id="log">
             <summary><h2>The server’s log</h2><svg class="icon icon--sm chev" aria-hidden="true"><use href="#i-chev"/></svg></summary>
             <div class="fold__body"><p class="sgroup__note">For whoever looks after the server.</p><div class="sgrid"><div class="setting"><div class="setting__head"><label class="field__label" for="f-log_level">Log detail</label></div><select id="f-log_level" name="log_level" aria-describedby="h-log_level"><option value="">Default (Info: the usual)</option><option value="DEBUG">Debug: everything</option><option value="INFO">Info: the usual</option><option value="WARNING">Warnings and errors</option><option value="ERROR">Errors only</option></select><p class="field__hint" id="h-log_level">How much the server writes to its log. Debug is for chasing a problem.</p></div></div></div>
