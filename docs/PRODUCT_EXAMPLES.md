@@ -1,24 +1,14 @@
 # Examples of the intended FamilyDB experience
 
-Captured from the owner's product discussion.
-
-These are illustrative requests, not an exhaustive feature list, a committed roadmap, or a
-claim about what the app supports today. They describe the breadth of the intended experience
-and should inform design decisions as the app grows. They are not actual scheduling or reminder
-instructions, verified event listings, or personal health facts to enter into household memory.
+Captured from the owner's product discussion. These are illustrative requests, not a feature list, a roadmap, or a claim about what the app supports today. They describe the breadth of the intended experience and should inform design decisions as the app grows. They are not scheduling or reminder instructions, verified event listings, or personal health facts to enter into household memory.
 
 ## Guiding scenario
 
 > I'm bored. What should I do this afternoon?
 
-The aspiration is for the app to bring together the preferences of everyone involved, location,
-saved ideas, calendar commitments, previously generated options, current real-world opening
-hours and availability, travel and traffic, and novel possibilities that fit the people asking.
-It should do the useful research and reasoning a thoughtful person would do, then offer a small
-number of practical choices with clear reasons and uncertainties.
+The aspiration: bring together everyone's preferences, location, saved ideas, calendar commitments, previously generated options, current opening hours and availability, travel and traffic, and novel possibilities that fit the people asking; do the research and reasoning a thoughtful person would; offer a small number of practical choices with clear reasons and uncertainties.
 
-This is a guiding light, not the app's single focus. Remembering intentions, helping with
-ordinary decisions, arranging plans, and following through on errands and obligations matter too.
+This is a guiding light, not the single focus. Remembering intentions, helping with ordinary decisions, arranging plans and following through on errands and obligations matter too.
 
 ## Requests in the owner's words
 
@@ -35,40 +25,18 @@ ordinary decisions, arranging plans, and following through on errands and obliga
 - "Don't let me forget to make a dentist appointment."
 - "Next time I have some free time, I need to schedule my colonoscopy"
 
-Wording is preserved, including "expected"; do not silently treat it as a confirmed request for
-"unexpected." Novel discovery is separately part of the guiding scenario above. Relative dates,
-event details, participants, and reminder times are intentionally unresolved in these examples.
+Wording is preserved, including "expected": do not silently treat it as a request for "unexpected" (novel discovery is separate, in the guiding scenario). Relative dates, event details, participants and reminder times are intentionally unresolved.
 
 ## Design implications to explore
 
-The examples span recalling saved wishes, choosing between options, discovering new ones,
-checking feasibility now or later, scheduling confirmed plans, delivering timed reminders,
-and retaining flexible tasks until there is a suitable opportunity. A request to schedule an
-appointment is distinct from the appointment itself; a someday intention is distinct from a
-confirmed calendar commitment.
+The examples span recalling saved wishes, choosing between options, discovering new ones, checking feasibility now or later, scheduling confirmed plans, delivering timed reminders, and retaining flexible tasks until there is a suitable opportunity. Scheduling an appointment is distinct from the appointment itself; a someday intention is distinct from a confirmed calendar commitment.
 
-The owner favors a layered design: specialized parts handle specific responsibilities, pass
-work between layers, and return useful results. The highest-level decision-making approach is
-still an open design question: how should the app interpret a broad request, decide which
-specialists and information sources to consult, and coordinate them for the best outcome?
+The owner favors a layered design: specialized parts with specific responsibilities that pass work between layers and return useful results. The highest-level approach (how to interpret a broad request, decide which specialists and sources to consult, and coordinate them) is still open. So far it is AI interpretation and delegation within program-enforced permissions, budgets and recovery rules (`docs/AI_CALLS.md`). The experience should make clear what was checked, why an option fits, what remains uncertain, and what was actually done.
 
-The approach taken so far is AI interpretation and delegation within program-enforced
-permissions, budgets, and recovery rules (`docs/AI_CALLS.md`). The experience should make clear
-what was checked, why an option fits, what remains uncertain, and what was actually done.
-
-Use these examples to keep future proposals grounded in the owner's intended experience.
-Choose implementation priorities separately; do not assume their order here implies priority
-or that every example needs its own feature, model call, or architectural layer.
+Use these examples to keep proposals grounded in the intended experience. Choose priorities separately: their order implies no priority, and not every example needs its own feature, model call or architectural layer.
 
 ## Free-form capture and contextual recall
 
-People must be able to save unfinished thoughts without picking a category first.
-Restaurants, bars, cuisines, food carts and pods, neighborhoods, McMenamins passport
-locations, special occasions, kids activities, specific places and general directions
-all belong. A single idea may fit several contexts. Preserve original wording and
-attribute who suggested it; infer supported tags without inventing facts.
+People must be able to save unfinished thoughts without picking a category first. Restaurants, bars, cuisines, food carts and pods, neighborhoods, McMenamins passport locations, special occasions, kids activities, specific places and general directions all belong. One idea may fit several contexts. Preserve original wording and attribute who suggested it; infer supported tags without inventing facts.
 
-When asked what to do or where to eat, retrieve relevant saved ideas before considering
-new discoveries. An idea about a neighborhood need not become a specific venue.
-A task kept for a window is brought up when that window comes round free (the `nudges` job);
-nudging a saved idea when the context fits is a later capability.
+Asked what to do or where to eat, retrieve relevant saved ideas before considering new discoveries. An idea about a neighborhood need not become a specific venue. A task kept for a window is brought up when that window comes round free (the `nudges` job); nudging a saved idea when the context fits is a later capability.
