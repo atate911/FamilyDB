@@ -89,7 +89,7 @@ def alex(app, sam, family):
     return browser
 
 
-# -- the rules -----------------------------------------------------------------------------------
+# -- the rules
 
 
 def test_a_password_is_kept_hashed_and_apart_from_the_member(conn, family) -> None:
@@ -148,7 +148,7 @@ def test_the_last_admin_who_can_sign_in_is_never_lost(conn, family) -> None:
     assert [admin.id for admin in logins.admins_signing_in(conn)] == [pat.id]
 
 
-# -- signing in ------------------------------------------------------------------------------------
+# -- signing in
 
 
 def test_the_first_admin_s_own_password_ends_the_shared_one(app, family) -> None:
@@ -207,7 +207,7 @@ def test_a_browser_that_signed_in_as_somebody_is_not_kept_out_by_strangers(app, 
     assert known.post("/login", data={"name": "Sam", "password": SAMS}).status_code == 302
 
 
-# -- starting passwords ----------------------------------------------------------------------------
+# -- starting passwords
 
 
 def test_a_starting_password_is_shown_once_and_must_be_replaced(app, sam, family) -> None:
@@ -294,7 +294,7 @@ def test_a_parent_made_a_kid_stays_signed_in_and_reads_the_ideas(
     assert refused.status_code == 401
 
 
-# -- what each person may reach --------------------------------------------------------------------
+# -- what each person may reach
 
 
 def test_a_member_uses_the_bot_and_an_admin_looks_after_it(app, sam, alex, family) -> None:
@@ -319,9 +319,10 @@ def test_a_member_uses_the_bot_and_an_admin_looks_after_it(app, sam, alex, famil
 
 
 def test_the_settings_tile_opens_a_menu_with_every_settings_page_then_you(app, sam, alex) -> None:
-    """Every page of settings, then how the page looks, who is signed in, their password and
-    signing out, in one menu at the end of the bar; somebody who may not change settings sees
-    only the last three, and the Look page, which is everybody's own."""
+    """One menu at the end of the bar: every settings page, the Look page, who is signed in, their
+    password, sign out. Somebody who may not change settings sees only the last three and the
+    Look page.
+    """
     menu = re.search(r'<details class="menu[^"]*">.*?</details>', sam.get("/status").text, re.S)
     assert menu is not None
     links = re.findall(r'<a[^>]* href="([^"]+)"', menu.group(0))
@@ -367,7 +368,7 @@ def test_a_form_records_whoever_is_signed_in(app, alex, family, conn) -> None:
     assert ideas.get(conn, 1).suggested_by_name == "Alex"
 
 
-# -- your own password, and the settings page ------------------------------------------------------
+# -- your own password, and the settings page
 
 
 def test_changing_your_password_needs_the_one_in_use_and_keeps_this_browser(app, sam) -> None:
@@ -417,7 +418,7 @@ def test_a_stale_family_session_cannot_take_an_admin_afterwards(app, family) -> 
     assert late.post("/you", data=form).status_code == 401  # signed out before it is looked at
 
 
-# -- starting up, and the server -----------------------------------------------------------------
+# -- starting up, and the server
 
 
 def test_a_page_where_people_sign_in_as_themselves_needs_no_shared_password(settings, conn, family):
@@ -455,16 +456,15 @@ def test_familydb_password_for_a_member_waits_for_an_admin(settings, conn, famil
     assert logins.by_member(conn) == {}
 
 
-# -- the three roles ------------------------------------------------------------------------------
+# -- the three roles
 
 
 def test_three_roles_and_what_a_kid_may_do() -> None:
     assert roles.ROLES == ("admin", "parent", "kid")
     assert roles.PERMISSIONS["admin"] > roles.PERMISSIONS["parent"] > roles.PERMISSIONS["kid"]
     assert roles.PERMISSIONS["admin"] - roles.PERMISSIONS["parent"] == {"manage"}
-    # A kid reads, talks to the bot, keeps her own wishes and ticks off her own things to do;
-    # she changes nothing else, sees
-    # none of the household's pages, and answers nobody's wishes.
+    # A kid reads, talks to the bot, keeps her own wishes and ticks off her own things to do; she
+    # changes nothing else, sees none of the household's pages, and answers nobody's wishes.
     assert roles.PERMISSIONS["kid"] == {"sign_in", "chat", "wish", "own_tasks"}
     assert roles.may("parent", "chat") and not roles.may("parent", "manage")
     assert not roles.may("member", "sign_in")  # a role that is not one of the three may do nothing

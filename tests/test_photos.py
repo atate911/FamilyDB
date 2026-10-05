@@ -46,7 +46,7 @@ def _eyes(seen: str = POSTER) -> fakes.FakeMessagesAPI:
     return fakes.FakeMessagesAPI(fakes.message([fakes.text(seen)], model="claude-haiku-4-5"))
 
 
-# -- the pipeline --------------------------------------------------------------------------------
+# -- the pipeline
 
 
 def test_a_photo_is_looked_at_then_answered_like_words(settings, clock, conn, family) -> None:
@@ -179,7 +179,7 @@ def test_a_photo_the_process_stopped_before_looking_at_is_given_up_on_retry(
     assert messages.get(conn, stored.id).give_up
 
 
-# -- who looks, and what each is sent ------------------------------------------------------------
+# -- who looks, and what each is sent
 
 
 def test_the_company_that_looks_things_up_looks(settings, monkeypatch) -> None:
@@ -266,7 +266,7 @@ def test_a_description_cut_short_says_so(settings, clock, conn, family) -> None:
     assert messages.get(conn, reply.in_message_id).text == "(photo) A poster for the Night …"
 
 
-# -- on Telegram ---------------------------------------------------------------------------------
+# -- on Telegram
 
 
 def _sizes(*sides: tuple[int, int]):
@@ -372,7 +372,7 @@ def test_telegram_asks_for_a_photo_the_way_it_is_sent(settings, clock) -> None:
     assert (chosen.file_id, kind) == ("m", "image/jpeg")
 
 
-# -- albums --------------------------------------------------------------------------------------
+# -- albums
 
 
 def _album(count: int, *, caption="can we go here Sat?", fetched=None):

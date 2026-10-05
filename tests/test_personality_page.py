@@ -607,9 +607,9 @@ def _listed(page) -> dict[str, str]:
 
 
 def test_the_list_says_which_of_her_each_is_and_what_she_adds_to_every_message(page, conn) -> None:
-    """Both ship as Vera, so each is listed by her label, the one the family meet first, with
-    roughly what she would add to every message as she would be if chosen: the name they call
-    her, their rewrite of her and their notes included."""
+    """Both ship as Vera, so each is listed by her label with roughly what she would add to every
+    message if chosen: the name they call her, their rewrite and notes included.
+    """
     vera, brief = (
         len(personas.load(key).prompt) // CHARS_PER_TOKEN for key in (personas.DEFAULT, "brief")
     )

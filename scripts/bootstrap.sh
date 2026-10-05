@@ -1,22 +1,11 @@
 #!/usr/bin/env bash
 # FamilyDB bootstrap: a bare server to a running bot.
 #
-# This is the only script that assumes nothing is installed. It installs the system packages,
-# puts the code in /opt/familydb, hands over to scripts/install.sh for the configuration, starts
-# the service and checks the result. Running it again installs what is missing and leaves the
-# rest alone.
-#
-#   scp -r scripts you@server:~/          # or clone the repository on the server
-#   less scripts/bootstrap.sh             # read it: it is about to run as root
+# Assumes nothing is installed: packages, code in /opt/familydb, scripts/install.sh, service,
+# check. Running it again installs what is missing and leaves the rest alone. It prints what it
+# will change and asks first; a failed step says what ran, what it printed and what to try.
+# Private repository: code arrives by --deploy-key, GITHUB_TOKEN or --from (docs/INSTALL.md).
 #   sudo bash scripts/bootstrap.sh --help
-#
-# Before it changes anything it prints exactly what it will change on this machine and why, and
-# asks. When a step fails it says which step, what the command was, what the command printed,
-# what that usually means and what to try.
-#
-# FamilyDB lives in a private repository, so the code has to be let onto the machine somehow: a
-# deploy key (--deploy-key), a token (GITHUB_TOKEN), or a copy you put there yourself (--from).
-# docs/INSTALL.md, 'Other ways to get the code onto the server', walks through each one.
 set -euo pipefail
 
 # shellcheck disable=SC2034  # read by lib/common.sh when it opens the transcript.
@@ -142,7 +131,6 @@ as_service_user() {
   fi
 }
 
-# ------------------------------------------------------------- preflight ----
 head2 "FamilyDB bootstrap ${VERSION}"
 
 [ "$(uname -s)" = Linux ] \
@@ -186,7 +174,6 @@ if previous="$(last_checkpoint 2>/dev/null)" && [ -n "$previous" ] && [ "$previo
   note "A previous run of this script got as far as '${previous}'. This one will pick up from there."
 fi
 
-# ------------------------------------------------- what this will change ----
 PACKAGE_LIST="ca-certificates curl git tzdata"
 if [ "$PACKAGES" = 1 ]; then
   plan_item "Install these system packages, if missing: ${PACKAGE_LIST}" \
@@ -236,7 +223,6 @@ fi
 [ -e "$TARGET" ] || ledger began "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 checkpoint "started"
 
-# -------------------------------------------------------------- packages ----
 apt_install() {
   [ "$PACKAGES" = 1 ] || return 0
   local missing=() pkg
@@ -331,7 +317,6 @@ install_uv() {
 if [ "$MODE" = docker ]; then install_docker; else install_uv; fi
 checkpoint "runtime"
 
-# -------------------------------------------------------------- the code ----
 # A deploy key or a token means "clone it", so upgrades have a credential: then the checkout this
 # runs from is only where the script came from.
 if [ -z "$SOURCE_DIR" ] && [ -z "$DEPLOY_KEY" ] && [ -z "${GITHUB_TOKEN:-}" ] \
@@ -488,7 +473,6 @@ if [ "$RUN_INSTALL" = 0 ]; then
   exit 0
 fi
 
-# ------------------------------------------------------------- configure ----
 head2 "Configuring"
 say "scripts/install.sh takes over now. It asks at most whether the page has a domain name, then"
 say "writes ${TARGET}/.env, installs, and puts HTTPS in front of the page."
@@ -528,7 +512,6 @@ else
 fi
 checkpoint "configured"
 
-# --------------------------------------------------------------- service ----
 if [ "$START" = 1 ] && [ "$DRY_RUN" = 0 ]; then
   head2 "Starting it"
   if [ "$MODE" = docker ]; then
@@ -558,7 +541,6 @@ if [ "$START" = 1 ] && [ "$DRY_RUN" = 0 ]; then
 fi
 checkpoint "started"
 
-# -------------------------------------------------------------- checking ----
 if [ "$DRY_RUN" = 0 ]; then
   head2 "Checking it over"
   say "Every line below is something that was actually looked at. A '!' is usually just"
@@ -576,7 +558,6 @@ if [ "$DRY_RUN" = 0 ]; then
 fi
 checkpoint "checked"
 
-# ----------------------------------------------------------- what is next ----
 head2 "Done"
 if [ "$DRY_RUN" = 1 ]; then
   say "Nothing was changed. Run it again without --dry-run to do it for real."

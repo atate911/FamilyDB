@@ -19,7 +19,7 @@ from familydb.store import ideas
 from familydb.store.db import transaction
 from tests import fakes
 
-# -- the catalog --------------------------------------------------------------------------------
+# -- the catalog
 
 
 def test_every_company_has_a_model_at_each_level_and_each_costs_more() -> None:
@@ -83,7 +83,7 @@ def test_the_stronger_models_have_prices() -> None:
     assert prices.cost("gemini", "gemini-3.8-flash", million_out) == (3.75, True)
 
 
-# -- choosing by level --------------------------------------------------------------------------
+# -- choosing by level
 
 
 # Claude's everyday as it is by default, where the fixture's is Opus for the sake of its scripts.

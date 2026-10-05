@@ -311,7 +311,7 @@ def test_start_takes_turns_by_the_update_it_answers(settings, clock, conn, famil
     assert len(set(said)) > 1
 
 
-# -- buttons ---------------------------------------------------------------------------------------
+# -- buttons
 
 
 def _query(data, *, who=1001, text="Reminder: bins out. Task #1.", tap_id="cb1"):
@@ -417,7 +417,7 @@ def test_buttons_go_under_the_last_part_of_what_is_sent(settings, clock, monkeyp
     assert sent[-1][1].inline_keyboard[0][0].callback_data == "done:12"
 
 
-# -- typing, strangers in a group, and what cannot be read -----------------------------------------
+# -- typing, strangers in a group, and what cannot be read
 
 
 def test_typing_stays_up_until_the_answer_is_ready(settings, clock, monkeypatch) -> None:
@@ -583,7 +583,7 @@ def test_the_words_with_a_video_are_answered_marked_as_not_seen(
     assert len(seen) == 3 and replies[0].startswith("I can't open that kind of message")
 
 
-# -- in a group ------------------------------------------------------------------------------------
+# -- in a group
 
 
 def _added(by: int, *, was="left", now="member", chat_type="group"):
@@ -682,7 +682,7 @@ def test_answer_only_when_mentioned_is_set_on_the_page(settings, clock, conn, fa
     assert seen == [] and replies == [] and app.settings.telegram_require_mention
 
 
-# -- formatting ------------------------------------------------------------------------------------
+# -- formatting
 
 
 def test_what_a_job_sends_goes_formatted_with_its_buttons(settings, clock) -> None:

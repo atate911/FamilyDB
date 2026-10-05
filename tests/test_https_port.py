@@ -1,8 +1,9 @@
-"""The page's ports: the one it is served on over HTTPS (443 unless moved), and FamilyDB's own.
+"""The page's ports: the one served over HTTPS (443 unless moved), and FamilyDB's own.
 
-These run the real functions in scripts/lib/https.sh and scripts/maintain.sh, with nothing but
-root, the ledger, systemd, Docker and Caddy's reload stood in for, so what is tested is what
-writes /etc/caddy/Caddyfile and .env.
+Runs the real functions in scripts/lib/https.sh and scripts/maintain.sh with root, the ledger,
+systemd, Docker and Caddy's reload stood in for, so what is tested is what writes
+/etc/caddy/Caddyfile and .env.
+
 """
 
 from __future__ import annotations
@@ -156,7 +157,7 @@ def test_maintain_explains_how_to_move_it() -> None:
     assert "maintain.sh https --port random" in usage
 
 
-# -- FamilyDB's own port ---------------------------------------------------------------------------
+# -- FamilyDB's own port
 
 
 @pytest.mark.parametrize(

@@ -43,7 +43,7 @@ def said(ctx) -> ToolContext:
     return ctx
 
 
-# -- the tool ------------------------------------------------------------------------------------
+# -- the tool
 
 
 def test_a_memory_is_kept_with_where_it_came_from(registry, said, family) -> None:
@@ -151,7 +151,7 @@ def test_a_reply_is_offered_only_when_everything_was_kept(registry, said) -> Non
     assert said.take_reply() is None  # taken once
 
 
-# -- the turn ------------------------------------------------------------------------------------
+# -- the turn
 
 
 def _telegram(text: str, update_id: str) -> IncomingMessage:
@@ -232,7 +232,7 @@ def test_what_is_remembered_goes_with_the_message_never_in_the_cached_part(
     )
 
 
-# -- choosing what a message needs ---------------------------------------------------------------
+# -- choosing what a message needs
 
 
 def _keep(conn, fact, *, member_id=None, category="other", firm=False, until=None, inferred=False):
@@ -304,7 +304,7 @@ def test_how_a_memory_is_told(conn, clock, family) -> None:
     assert render_memories(one).endswith("(2 more, on other things.)")
 
 
-# -- the page ------------------------------------------------------------------------------------
+# -- the page
 
 PASSWORD = "open sesame please"
 

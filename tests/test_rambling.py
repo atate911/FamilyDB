@@ -24,7 +24,7 @@ def _call(registry: ToolRegistry, ctx: ToolContext, name: str, **payload):
     return result, json.loads(result.content)
 
 
-# -- ideas tied to dates -------------------------------------------------------------------------
+# -- ideas tied to dates
 
 
 def test_an_idea_keeps_the_days_it_is_on(registry, ctx) -> None:
@@ -142,7 +142,7 @@ def test_the_page_says_when_a_dated_idea_is_on(conn, family) -> None:
     assert idea_row(_idea(conn, "Plain"), TZ)["on"] is None
 
 
-# -- events somebody put on the calendar by hand -------------------------------------------------
+# -- events somebody put on the calendar by hand
 
 
 @pytest.fixture

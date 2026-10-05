@@ -177,7 +177,7 @@ def test_a_calendar_id_is_required(page) -> None:
     assert response.status_code == 400 and "calendar's id" in response.text
 
 
-# -- the integration's own checks ---------------------------------------------------------
+# -- the integration's own checks
 
 
 def test_a_service_account_key_loads_without_asking_google(tmp_path) -> None:

@@ -50,9 +50,9 @@ def test_the_brief_persona_is_vera_in_fewer_words() -> None:
 
 
 def test_no_character_names_a_tool(registry) -> None:
-    """A character is about how she talks. What can be done is the tools' and the job's, which
-    hold whoever she is, and a family can rewrite her. A tool whose name is an everyday word
-    ("now", "suggest") counts as named only when it is written as code."""
+    """A character is about how she talks; what can be done is the tools' and the job's. A tool
+    whose name is an everyday word ("now", "suggest") counts as named only when written as code.
+    """
     for key in personas.available():
         character = personas.load(key).character
         for tool in registry.names():

@@ -98,7 +98,6 @@ enable_failure_reporting
 on_failure_hint "Nothing after the failed step ran, and .env and the database were not touched by it. docs/INSTALL.md, under Troubleshooting, has a section on each failure."
 again_hint "run it again: sudo bash ${REPO_ROOT}/scripts/install.sh"
 
-# ----------------------------------------------------------------- input ----
 ask() { # ask VAR "question" "default"
   local var="$1" question="$2" default="${3:-}" current reply
   current="${!var:-}"
@@ -112,12 +111,10 @@ ask() { # ask VAR "question" "default"
   printf -v "$var" '%s' "${reply:-$default}"
 }
 
-# --------------------------------------------------------------- helpers ----
 quote_env() { # quote_env VALUE -> how that value must be written so .env reads it back whole
-  # A bare value loses everything from a '#' onwards and any trailing space, so a password with
-  # either in it silently becomes a different password. Single quotes are literal to all three
-  # readers of this file (python-dotenv, systemd EnvironmentFile, docker compose env_file), and
-  # a value with an apostrophe in it cannot use them, so that one falls back to double quotes.
+  # A bare value loses everything from '#' and any trailing space: a password with either would
+  # silently change. Single quotes are literal to python-dotenv, systemd and compose alike; a
+  # value with an apostrophe falls back to double quotes.
   local value="$1"
   case "$value" in
     "") printf '' ;;
@@ -141,8 +138,7 @@ quote_env() { # quote_env VALUE -> how that value must be written so .env reads 
 set_env() { # set_env KEY VALUE
   local key="$1" value="$2" written line replaced=0
   [ "$DRY_RUN" = 1 ] && { note "would set $key"; return 0; }
-  # One setting per line is the whole format; a value with a line break in it cannot be stored
-  # here at all, and quietly storing half of it is worse than stopping.
+  # One setting per line: a value with a line break cannot be stored, and storing half is worse.
   case "$value" in
     *$'\n'*) die "${key} contains a line break, which .env cannot hold. Use a value on one line." ;;
   esac
@@ -168,9 +164,7 @@ set_env() { # set_env KEY VALUE
 }
 
 service_can_reach_checkout() { # can the familydb user get to the files it has to run?
-  # A home directory is closed to other users on most systems (0750), and no amount of unit
-  # hardening changes that: the service would start into a path it cannot enter. /opt is the
-  # documented home for exactly this reason.
+  # A home directory is 0750 on most systems, so the service could not enter it; /opt is the home.
   [ "$(id -un)" = familydb ] && return 0   # running as that user, from inside it: yes
   have sudo || return 0                    # no way to ask from here; assume the admin knows
   sudo -n true 2>/dev/null || return 0     # sudo would ask for a password; do not hang on it
@@ -242,7 +236,6 @@ print(hit["latitude"], hit["longitude"], ", ".join(b for b in bits if b))
 ' 2>/dev/null
 }
 
-# -------------------------------------------------------------- preflight ----
 head2 "FamilyDB installer ${VERSION}"
 
 # Everything below is relative to the checkout, and so is the default FAMILYDB_PATH, so the
@@ -312,9 +305,8 @@ elif [ "$MODE" = docker ]; then
   fi
 else
   if ! have uv; then
-    # The most common reason by far: uv was installed into somebody's home directory, so it is
-    # on their PATH and on nobody else's. Say that, rather than "not installed", which sends
-    # people off to install it a second time.
+    # Most often uv sits in somebody's home directory, on their PATH only. Say that, not "not
+    # installed", which sends people to install it twice.
     if on_system_path uv; then
       die "uv is installed but not on this PATH" \
           "PATH is: ${PATH}" \
@@ -362,7 +354,6 @@ if [ -n "$free_mb" ] && [ "$free_mb" -lt 600 ]; then
   confirm "Carry on anyway?" no || die "stopped: not enough disk space"
 fi
 
-# ------------------------------------------------------------------ .env ----
 head2 "Configuration"
 
 KEEP_ENV=0
@@ -388,8 +379,7 @@ if [ "$KEEP_ENV" = 0 ]; then
   say "key, Telegram, Google Calendar, where the family lives, and what it may spend a day. This"
   say "asks only what the page cannot answer for itself: how you will reach it."
 
-  # A scripted build can still give any of these; they are written as given, and the page can
-  # change them later. Asked for, none of them is: the page does it better.
+  # A scripted build can give any of these; the page changes them later. None is asked for.
   case "${PROVIDER:-}" in
     claude|Claude|anthropic) PROVIDER=anthropic ;;
     openai|OpenAI|OPENAI|gpt|GPT) PROVIDER=openai ;;
@@ -405,11 +395,9 @@ if [ "$KEEP_ENV" = 0 ]; then
       set_env HOME_LON "$(printf '%s' "$place" | cut -d' ' -f2)"
     fi
   fi
-  # Looking ideas up is most of what makes a suggestion good, and the daily spending limit keeps
-  # it bounded, so it starts on. The page turns it off.
+  # Lookups make suggestions good and the daily spending limit bounds them, so they start on.
   set_env WEB_TOOLS_ENABLED "${WEB_TOOLS_ENABLED:-true}"
-  # The page's own chat can be spoken to from the first Thursday; a Telegram group cannot until
-  # someone has written in it. Moved to Telegram on the page later.
+  # The page's chat works from the start; a Telegram group needs someone to write in it first.
   [ -z "${DIGEST_CHAT_ID:-}" ] && set_env DIGEST_CHAT_ID web
 
   FAMILYDB_TZ="${FAMILYDB_TZ:-$(detect_timezone)}"
@@ -420,7 +408,6 @@ if [ "$KEEP_ENV" = 0 ]; then
   set_env FAMILYDB_TZ "$FAMILYDB_TZ"
   note "Timezone: ${FAMILYDB_TZ}, from this machine. The settings page changes it."
 
-  # --- the web page, which is how everything else gets set ---
   set_env WEB_ENABLED true
   say ""
   ADDRESS="$(this_address)"
@@ -460,14 +447,13 @@ if [ "$KEEP_ENV" = 0 ]; then
     fi
   fi
   if [ -n "$WEB_DOMAIN" ] && is_ipv4 "$WEB_DOMAIN"; then
-    # Caddy in front, with a certificate for the address itself (see lib/https.sh). Never plain
-    # HTTP on the open internet: that would send the family password in the clear.
+    # Caddy in front, with a certificate for the address itself (lib/https.sh): plain HTTP on the
+    # open internet would send the family password in the clear.
     set_env WEB_DOMAIN "$WEB_DOMAIN"
     set_env WEB_TRUST_PROXY true
     ok "The page will be $(public_url "$WEB_DOMAIN")"
   elif [ -n "$WEB_DOMAIN" ]; then
-    # Caddy can only get a certificate for a name that points here. Not a reason to stop, since
-    # DNS may simply be catching up, but worth saying now rather than as a silent Caddy retry.
+    # Caddy needs a name that points here. DNS may be catching up, so warn rather than stop.
     resolved="$(getent ahostsv4 "$WEB_DOMAIN" 2>/dev/null | awk 'NR==1 {print $1}' || true)"
     if [ -z "$resolved" ]; then
       warn "${WEB_DOMAIN} does not resolve yet. Point an A record at this server; Caddy keeps trying."
@@ -523,7 +509,6 @@ if [ "$SKIP_INSTALL" = 1 ]; then
   exit 0
 fi
 
-# --------------------------------------------------------------- install ----
 head2 "Installing"
 
 run mkdir -p "${REPO_ROOT}/data"
@@ -536,14 +521,13 @@ on_failure_hint "It never touches .env or the database twice, so running it agai
 if [ "$MODE" = docker ]; then
   retry 2 "Building the image" docker compose --project-directory "$REPO_ROOT" build
   FAMILYDB=(docker compose --project-directory "$REPO_ROOT" run --rm -T bot familydb)
-  # The container runs as uid 1000 and needs to write the database into data/.
+  # The container runs as uid 1000 and writes the database into data/.
   if [ "$DRY_RUN" = 0 ] && ! chown -R 1000:1000 "${REPO_ROOT}/data" 2>/dev/null; then
     note "Could not give data/ to uid 1000. If the container cannot write, run:"
     note "  sudo chown -R 1000:1000 ${REPO_ROOT}/data"
   fi
 else
-  # uv's download cache and the Python it fetches stay inside the install, whoever runs this, so
-  # removing the install removes them too.
+  # uv's cache and Python stay inside the install, so removing it removes them.
   retry 3 "Installing the dependencies" env UV_CACHE_DIR="${REPO_ROOT}/.cache/uv" \
     UV_PYTHON_INSTALL_DIR="${REPO_ROOT}/.local/share/uv/python" \
     uv sync --frozen --no-dev --project "$REPO_ROOT"
@@ -555,7 +539,6 @@ runfamilydb() { if [ "$DRY_RUN" = 1 ]; then note "would run: familydb $*"; else 
 head2 "Setting up the database"
 step "Creating the database" runfamilydb db migrate
 
-# --- the first family member ---
 have_members=0
 if [ "$DRY_RUN" = 0 ] && runfamilydb members list 2>/dev/null | grep -qv 'no members yet'; then
   have_members=1
@@ -572,7 +555,6 @@ else
   ok "Family members already set up."
 fi
 
-# --- the service ---
 if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
   head2 "Running it as a service"
   if [ "$(id -u)" = 0 ] || have sudo; then
@@ -584,8 +566,7 @@ if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
         note "would create the familydb user and install /etc/systemd/system/familydb.service"
         note "would give ${REPO_ROOT}/data and .env to that user"
       else
-        # The unit runs as its own user, so create it here: an installed unit that cannot start
-        # because the user it names does not exist is not an install, it is homework.
+        # The unit runs as its own user, so create it here: a unit naming a missing user cannot start.
         if id familydb >/dev/null 2>&1; then
           ok "The familydb user already exists."
         elif $SUDO useradd --system --home-dir "$REPO_ROOT" --shell /usr/sbin/nologin familydb \
@@ -607,9 +588,8 @@ if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
         fi
         tmp_unit="$(mktemp)"
         sed -e "s#/opt/familydb#${REPO_ROOT}#g" "$unit" > "$tmp_unit"
-        # ProtectHome=true hides /home from the service, so a checkout there would start into an
-        # empty directory and stop. Read-only keeps the hardening; ReadWritePaths still lets the
-        # data folder through.
+        # ProtectHome=true hides /home, so a checkout there would start empty. Read-only keeps the
+        # hardening; ReadWritePaths still lets the data folder through.
         case "$REPO_ROOT" in
           /home/*|/root/*)
             sed -i -e 's#^ProtectHome=true#ProtectHome=read-only#' "$tmp_unit"
@@ -618,8 +598,7 @@ if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
         esac
         if [ "$SKIP_UNIT" = 1 ]; then
           :
-        # install, not cp: mktemp made this file 0600, and a unit nobody but root can read is
-        # one `systemctl cat` nobody but root can run.
+        # install, not cp: mktemp made this 0600, and only root could then `systemctl cat` it.
         elif noting_new /etc/systemd/system/familydb.service \
           && noting_new /etc/systemd/system/multi-user.target.wants/familydb.service link \
           && $SUDO install -m 644 "$tmp_unit" /etc/systemd/system/familydb.service \
@@ -638,7 +617,6 @@ if [ "$MODE" = venv ] && have systemctl && [ -d /run/systemd/system ]; then
   fi
 fi
 
-# ------------------------------------------------------------- verifying ----
 head2 "Checking it over"
 if [ "$DRY_RUN" = 1 ]; then
   note "skipped in a dry run"
@@ -653,7 +631,6 @@ else
   fi
 fi
 
-# --------------------------------------------------- handing it to the service ----
 # Last, because everything above runs as whoever started this script and needs to be able to
 # read .env and write data/. After this, those belong to the service.
 if [ "$HAND_OVER_TO_SERVICE" = 1 ] && [ "$DRY_RUN" = 0 ] && id familydb >/dev/null 2>&1; then
@@ -667,7 +644,6 @@ if [ "$HAND_OVER_TO_SERVICE" = 1 ] && [ "$DRY_RUN" = 0 ] && id familydb >/dev/nu
   fi
 fi
 
-# -------------------------------------------------------------- backups ----
 # The database is one file and everything the family has said is in it, so a nightly copy is
 # part of installing, not a chore for later. BACKUPS=no skips it for a scripted build.
 BACKUPS_SCHEDULED=0
@@ -686,7 +662,6 @@ if [ "${BACKUPS:-yes}" != no ] && [ "$DRY_RUN" = 0 ]; then
   fi
 fi
 
-# ---------------------------------------------------------------- HTTPS ----
 # Something has to hold the certificate. In Docker that is the Caddy container
 # (COMPOSE_PROFILES=tls above); here it is Caddy on the machine, set up by lib/https.sh.
 env_value() { grep -E "^${1}=" "$ENV_FILE" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d "'\"" || true; }
@@ -703,7 +678,6 @@ elif [ -n "$DOMAIN" ] && [ "$MODE" = venv ] && [ "$DRY_RUN" = 0 ]; then
   fi
 fi
 
-# ----------------------------------------------------------- what is next ----
 # Run by bootstrap.sh, which starts the service and has the last word, with the link in it.
 if [ "${FROM_BOOTSTRAP:-0}" = 1 ]; then
   [ -n "$LOG_FILE" ] && note "A transcript of the configuration is at ${LOG_FILE}"

@@ -25,7 +25,7 @@ def test_backup_reads_wal_and_fails_closed(conn, settings, tmp_path, docker_mode
         members.add(conn, "Only in the WAL", "parent")
     script = (ROOT / "scripts/maintain.sh").read_text()
     start = script.index("take_backup() {")
-    function = script[start : script.index("\n# ----", start)]
+    function = script[start : script.index("\n}\n", start) + 3]
     helper = tmp_path / "backup.py"
     helper.write_text(
         "import sqlite3,sys\n"

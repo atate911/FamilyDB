@@ -274,9 +274,9 @@ def test_the_alerts_already_noted_outlast_the_model_watch_rebuild(tmp_path, monk
 
 
 def test_calendar_attempts_keep_their_meaning_in_one_table(tmp_path, monkeypatch):
-    """0038 folds `calendar_unfinished` and `calendar_links` into `calendar_creations`: an attempt
-    a browser session left unfinished is still found by it, and a form that had taken one over
-    still finds its event."""
+    """0038 folds `calendar_unfinished` and `calendar_links` into `calendar_creations`: an
+    unfinished attempt is still found, and a form that had taken one over still finds its event.
+    """
     from contextlib import closing
 
     from familydb.store import calendar_ops

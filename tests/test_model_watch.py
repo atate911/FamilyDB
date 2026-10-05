@@ -72,7 +72,7 @@ def _alerts(conn):
     return {(a.kind, a.subject): a.detail for a in alert_store.current(conn, since="2000")}
 
 
-# -- reading the lists ---------------------------------------------------------------------------
+# -- reading the lists
 
 
 def test_each_list_is_read_by_the_company_s_own_names() -> None:
@@ -175,7 +175,7 @@ def test_each_company_is_asked_what_the_key_may_use_and_a_failure_is_no_answer(
         assert provider.listed_models() == expected, name
 
 
-# -- what is kept, and put in force ----------------------------------------------------------------
+# -- what is kept, and put in force
 
 
 def test_the_first_check_learns_what_there_is_and_puts_it_in_force(settings, conn) -> None:
@@ -397,7 +397,7 @@ def test_a_catch_up_after_a_day_away_checks_again(settings, conn) -> None:
     assert model_watch.due(conn, app.clock.now() + timedelta(hours=24))
 
 
-# -- on the page -------------------------------------------------------------------------------
+# -- on the page
 
 
 def test_the_status_page_says_where_it_read_and_what_changed(settings, conn, family) -> None:

@@ -152,9 +152,10 @@ def test_ask_a_parent_is_a_button_where_it_was_offered(app, family, girls) -> No
 
 
 def test_a_kid_home_speaks_to_her_and_offers_only_what_she_may(app, family, sam, girls) -> None:  # noqa: F811
-    """Her box is the one natural place to say anything, with no ways to start put in her mouth
-    (least of all the "we should" Vera nudges her away from), and no
-    empty list sends her to a form she would be refused (docs/STYLE.md, "A kid's screen")."""
+    """Her box is the one natural place to say anything: no ways to start put in her mouth (least of
+    all the "we should" Vera nudges her away from), and no empty list sending her to a form she
+    would be refused (docs/STYLE.md, "A kid's screen").
+    """
     from familydb.web.chat import KID_HOME_PROMPT
 
     home = girls["mine"].get("/").text

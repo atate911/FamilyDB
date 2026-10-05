@@ -557,7 +557,7 @@ def test_the_digest_chat_is_offered_from_the_chats_it_has_seen(page, conn) -> No
     assert "private chat with Sam" in listed and "hello" not in listed
 
 
-# -- one page for each part --------------------------------------------------------------------
+# -- one page for each part
 
 
 def _drawn(text: str) -> set[str]:

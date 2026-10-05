@@ -167,7 +167,7 @@ def test_a_stranger_gets_the_strangers_line_and_knocks(settings, conn, family) -
     assert messages.get(conn, 1) is None  # nothing of theirs is kept
 
 
-# -- on Telegram ---------------------------------------------------------------------------------
+# -- on Telegram
 
 
 def _command(text: str):
@@ -248,7 +248,7 @@ def test_the_menu_is_set_only_when_it_differs(settings, clock) -> None:
     asyncio.run(channel.offer_commands(Broken([])))  # logged, not raised
 
 
-# -- a link that links somebody's Telegram -------------------------------------------------------
+# -- a link that links somebody's Telegram
 
 
 def _started(app, text, *, user="1003", chat=None, update="30"):

@@ -127,7 +127,7 @@ def _said(request) -> str:
     return system + " " + json.dumps(request["messages"], ensure_ascii=False)
 
 
-# -- personas ----------------------------------------------------------------------------------
+# -- personas
 
 
 def test_two_personas_are_compared_side_by_side(settings, monkeypatch, tmp_path, capsys) -> None:
@@ -209,7 +209,7 @@ def test_a_persona_by_key_is_her_as_she_ships(settings, tmp_path) -> None:
         under_persona(settings, str(empty))
 
 
-# -- who is listening --------------------------------------------------------------------------
+# -- who is listening
 
 
 def test_a_cases_sender_and_chat_reach_the_pipeline(settings, monkeypatch) -> None:
@@ -255,7 +255,7 @@ def test_tomorrow_is_asked_about_however_it_is_framed(settings, frame, wrong) ->
     assert [problem.split(":")[0] for problem in problems] == wrong
 
 
-# -- who she is --------------------------------------------------------------------------------
+# -- who she is
 
 
 def test_a_cases_settings_are_laid_over_the_run(settings) -> None:
@@ -284,7 +284,7 @@ def test_her_name_is_the_one_she_was_given_and_none_keeps_its_own(
     assert grade(case, run_case(case, chosen, api=_answer([fakes.text(reply)]))) == wrong
 
 
-# -- style, whoever she is ---------------------------------------------------------------------
+# -- style, whoever she is
 
 
 @pytest.mark.parametrize(

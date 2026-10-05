@@ -132,11 +132,9 @@ def test_every_response_carries_the_security_headers(settings, clock) -> None:
 def test_a_browser_s_own_posts_carry_an_origin_the_page_accepts(settings, clock) -> None:
     """Under `Referrer-Policy: no-referrer` Chromium posts every form with `Origin: null`.
 
-    The check below is right to refuse that — a null origin is also what a sandboxed frame on
-    another site sends — so the policy is what has to let the real origin through. Both halves
-    are pinned: a null origin is refused, and the policy is one under which browsers send the
-    real one. The test client sends no Origin header on its own, so without this nothing would
-    notice the page being unusable in a browser.
+    A null origin is refused (a sandboxed frame sends it too), so the policy must let the real
+    origin through. Both halves are pinned; the test client sends no Origin, so nothing else
+    would notice.
     """
     client = _client(settings, clock, web_password=PASSWORD)
     refused = client.post("/login", data={"password": PASSWORD}, headers={"Origin": "null"})
@@ -198,11 +196,10 @@ CADDY = {
 
 
 def test_behind_a_proxy_the_cookie_is_secure_and_the_client_is_the_real_one(settings, clock):
-    """Through the real server, because that is where the forwarding headers are kept or lost.
+    """Through the real server, where the forwarding headers are kept or lost.
 
-    Waitress strips them from a peer it was not told to trust before Flask sees them, and
-    Flask's test client skips waitress altogether, so this test written against the test client
-    would pass even while nobody could sign in through Caddy.
+    Waitress strips them from an untrusted peer and Flask's test client skips waitress, so a test
+    against it would pass while nobody could sign in through Caddy.
     """
     from familydb.web.server import serve_in_thread
 
@@ -649,11 +646,10 @@ def test_the_lockout_table_does_not_grow_without_limit(settings, clock) -> None:
 
 
 def test_no_page_reaches_a_table_to_write_to_it() -> None:
-    """No module in the package may write to a table itself, and that includes the four that
-    change things: the chat page hands a message to the pipeline, the edit forms call the tools,
-    the family page goes through the family rules, and the settings page through one repository.
-    Every write is somebody else's, which is what keeps the checks, the transactions and the
-    audit rows in one place."""
+    """No module in the package may write to a table itself, the four that change things included:
+    the chat page hands a message to the pipeline, the edit forms call the tools, the family page
+    uses the family rules, the settings page one repository.
+    """
     import ast
 
     import familydb.web as package
@@ -725,13 +721,11 @@ def test_no_page_reaches_a_table_to_write_to_it() -> None:
 
 
 def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
-    """Which modules may cause a write, and what each one is allowed to go through.
+    """Which modules may cause a write, and what each may go through.
 
-    Nothing here writes, so the previous test alone would pass even if a page had quietly grown
-    a way to change an idea. This one names the doors instead: the chat page may reach the
-    pipeline and nothing else, the edit forms may dispatch a fixed list of tools and nothing
-    else, the family page may add and change people through `familydb.family` and nothing else,
-    and every other module in the package may do none of it.
+    The previous test alone would pass if a page quietly grew a way to change an idea, so this
+    names the doors: chat reaches the pipeline only, the edit forms dispatch a fixed list of
+    tools, the family page uses `familydb.family`, and every other module does none of it.
     """
     import ast
 
@@ -788,8 +782,7 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
         "add_wish",
         "update_wish",
     }
-    # And it runs them the one way: through the registry, which validates and owns the
-    # transaction. Constructing a store call or a connection of its own would not be that.
+    # And it runs them the one way: through the registry, which validates and owns the transaction.
     assert (
         sum(
             1
@@ -822,9 +815,8 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
     assert ruled <= {"add", "change"} | reading | signing_in | linking | removing, ruled
     assert {"add", "change"} | signing_in | linking | removing <= ruled
 
-    # And the doors are shut to everything else. Not whole packages: `views.py` reads opening
-    # hours out of `tools.places` and tidies a link with `tools.urls`, which write nothing. It
-    # is the two ways of causing a write that are spoken for — the pipeline, and dispatch.
+    # The doors are shut to everything else, but not whole packages: `views.py` reads opening hours
+    # from `tools.places` and tidies links with `tools.urls`, which write nothing.
     for name, tree in trees.items():
         reached = {node.module or "" for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)}
         dispatches = any(
@@ -834,8 +826,8 @@ def test_only_four_pages_can_change_anything_and_only_the_agreed_way() -> None:
             for node in ast.walk(tree)
         )
         assert not any(module.startswith("familydb.pipeline") for module in reached), name
-        # The page reads Google through calendar_sync's pure translation of an event; the two
-        # functions there that bring stored plans up to date are writes, and belong to the bot.
+        # The page reads Google through calendar_sync's pure translation of an event; the functions
+        # there that update stored plans are writes, and belong to the bot.
         synced = {
             alias.name
             for node in ast.walk(tree)
@@ -889,8 +881,8 @@ def test_only_the_settings_page_writes_and_only_to_the_settings() -> None:
     }
     assert called == {"overrides", "history", "set_many"}
 
-    # Two writes to files rather than tables, and this page is the one place that may make
-    # them: signing everyone out replaces the session key, and connecting Google saves a key.
+    # Two file writes, and this page is the one place that may make them: signing everyone out
+    # replaces the session key, connecting Google saves a key.
     for other in sorted(module.parent.glob("*.py")):
         writes = {
             node.func.attr

@@ -127,9 +127,10 @@ def test_the_look_is_for_anybody_signed_in_and_nobody_else(settings, clock, conn
 
 
 def test_every_look_is_written_down_once_in_the_stylesheets() -> None:
-    """The catalogue and themes.css are two lists of the same thing, kept in step here: each look
-    has its block of tokens, with the same tokens as every other look, and the colour the browser
-    is told its bar is (`looks.Look.band`) is the panel the stylesheet draws."""
+    """The catalogue and themes.css list the same looks: each has a block with the same tokens as
+    every other, and the colour the browser is told its bar is (`looks.Look.band`) is the panel
+    the stylesheet draws.
+    """
     themes = (STATIC / "themes.css").read_text("utf-8")
     blocks = dict(re.findall(r'\[data-theme="([a-z]+)"\] \{(.*?)\n\}', themes, re.S))
     assert set(blocks) == {one.key for one in looks.LOOKS if one.key != looks.DEFAULT}
@@ -203,10 +204,9 @@ def _mixed(colour: str, into: str, share: float) -> str:
 
 
 def test_every_look_keeps_the_contrast_floors_by_day_and_by_night() -> None:
-    """The floors of "Accessibility" in docs/STYLE.md, held for each look in both its modes: 4.5:1
-    for words (4:1 for a colour on the wells a hover draws), 3:1 for the edge of a box and the
-    focus ring, and the same for words on each colour used as a fill. A look that cannot keep
-    them is not a look this page offers."""
+    """The floors of "Accessibility" in docs/STYLE.md, held for each look in both modes: 4.5:1 for
+    words (4:1 on hover wells), 3:1 for box edges, the focus ring and words on each fill colour.
+    """
     themes = (STATIC / "themes.css").read_text("utf-8")
     blocks = dict(re.findall(r'\[data-theme="([a-z]+)"\] \{(.*?)\n\}', themes, re.S))
     assert blocks

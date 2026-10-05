@@ -164,7 +164,7 @@ def test_retry_tells_the_model_what_already_ran(settings, clock, conn, family) -
     assert "must not be repeated" in blocks[-1]["text"]
 
 
-# --- enrichment ---------------------------------------------------------------------------------
+# --- enrichment
 
 from familydb.integrations.geocode import GeoPoint  # noqa: E402
 from familydb.jobs.enrich import render_place_note, run_enrichment  # noqa: E402
@@ -452,7 +452,7 @@ def test_scheduler_registers_enrichment_only_with_web_tools(settings, clock) -> 
     assert job is not None and job.trigger.interval.total_seconds() == 4 * 60
 
 
-# --- weekend digest -----------------------------------------------------------------------------
+# --- weekend digest
 
 from datetime import timedelta  # noqa: E402
 
@@ -568,7 +568,7 @@ def test_scheduler_registers_the_digest_only_with_a_chat_id(settings, clock) -> 
     assert str(job.trigger) == "cron[day_of_week='fri', hour='17']"
 
 
-# --- follow-ups -------------------------------------------------------------------------------
+# --- follow-ups
 
 from familydb.agent.history import load_history  # noqa: E402
 from familydb.jobs.follow_ups import render_follow_up, run_follow_ups  # noqa: E402
@@ -671,7 +671,7 @@ def test_scheduler_always_registers_follow_ups(settings, clock) -> None:
     assert job.misfire_grace_time == 3600
 
 
-# --- catch-up after a restart ------------------------------------------------------------------
+# --- catch-up after a restart
 
 from familydb.jobs.catch_up import run_catch_up  # noqa: E402
 
@@ -718,7 +718,7 @@ def test_scheduler_registers_the_catch_up(settings, clock) -> None:
     assert job.trigger.run_date == clock.now() + timedelta(seconds=CATCH_UP_DELAY_SECONDS)
 
 
-# --- every job ---------------------------------------------------------------------------------
+# --- every job
 
 
 def test_no_job_calls_the_model_when_there_is_nothing_to_do(settings, clock, conn, family) -> None:
@@ -756,7 +756,7 @@ def test_a_schedule_on_another_clock_is_a_different_schedule() -> None:
     assert not same_schedule(here, there)
 
 
-# --- the evening's lookups, and asking for one now ---------------------------------------------
+# --- the evening's lookups, and asking for one now
 
 
 def _evening(app, hour=21, minute=5) -> App:

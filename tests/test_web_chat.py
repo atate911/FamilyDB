@@ -171,9 +171,9 @@ def test_her_lines_carry_her_name_whatever_they_say(settings, clock, conn, famil
 def test_a_message_just_sent_shows_before_its_turn_has_stored_it(
     settings, clock, conn, family, replies, monkeypatch
 ) -> None:
-    """The browser is back before the turn stores the message (naming where the phone is can
-    wait on the map service first): the page draws it from the channel until the log has it,
-    rather than seeming to lose it and forgetting to look again."""
+    """The browser is back before the turn stores the message (naming the phone's place can wait on
+    the map service): the page draws it from the channel until the log has it.
+    """
     from familydb.channels import web as channel
 
     held, release = threading.Event(), threading.Event()
