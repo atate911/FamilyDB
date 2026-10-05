@@ -64,7 +64,7 @@ def _task(conn, title="Get the knives sharpened", window="one of these Saturday 
     )
 
 
-# -- reading the window --------------------------------------------------------------------------
+# -- reading the window
 
 
 @pytest.mark.parametrize(
@@ -114,7 +114,7 @@ def test_a_nudge_goes_from_an_hour_into_the_part_until_an_hour_before_its_end() 
     assert window.open_at(SATURDAY + timedelta(days=1)) is None  # a Sunday
 
 
-# -- the job -------------------------------------------------------------------------------------
+# -- the job
 
 
 def test_it_comes_up_on_a_free_saturday_morning_and_again_a_week_on(settings, conn, family) -> None:
@@ -225,7 +225,7 @@ def test_a_tap_on_in_an_hour_turns_it_into_a_reminder(settings, conn, family) ->
     assert tasks.get(conn, task.id).reminder is not None
 
 
-# -- what the model and the page are told --------------------------------------------------------
+# -- what the model and the page are told
 
 
 def _ctx(settings, conn, family, **changes) -> ToolContext:

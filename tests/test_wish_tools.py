@@ -42,7 +42,7 @@ def _as(conn, settings, clock, who) -> ToolContext:
     return ToolContext(conn=conn, settings=settings, clock=clock, member=who)
 
 
-# -- the tools ------------------------------------------------------------------------------------
+# -- the tools
 
 
 def test_a_kid_puts_a_wish_on_her_own_list(conn, settings, clock, family, mia, registry) -> None:
@@ -111,7 +111,7 @@ def test_turning_away_is_for_a_kid_s_ask_and_kept_once(
     assert "error" in _run(registry, "turn_away", ask, parent)
 
 
-# -- the nudge towards "I want" -------------------------------------------------------------------
+# -- the nudge towards "I want"
 
 
 @pytest.mark.parametrize(
@@ -170,7 +170,7 @@ def test_asking_plainly_is_praised_now_and_then(conn, settings, mia) -> None:
     assert wording.choose(conn, settings, mia.id, "what's up", NOW + timedelta(days=9)) is None
 
 
-# -- her line -------------------------------------------------------------------------------------
+# -- her line
 
 
 def test_her_line_is_short_and_says_only_what_code_chose() -> None:
@@ -237,7 +237,7 @@ def test_a_kid_s_own_conversation_on_the_page_is_private(conn, family) -> None:
     assert "everyone who signs in" in render_audience_line("web", "web", everyone)
 
 
-# -- her share of the day, and her lookups ---------------------------------------------------------
+# -- her share of the day, and her lookups
 
 
 def test_a_kid_past_her_share_is_told_by_code_and_nothing_is_asked(
@@ -279,7 +279,7 @@ def test_a_kid_cannot_have_lookups_done_at_once(conn, settings, clock, family, m
     assert "error" not in _run(registry, "look_up_now", {"idea_ids": []}, parent)
 
 
-# -- the two messages to the parents, and her answers ---------------------------------------------
+# -- the two messages to the parents, and her answers
 
 
 def _parents_telegram(conn) -> list[tuple[str, str, str]]:

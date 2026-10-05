@@ -197,7 +197,7 @@ def test_a_tap_asks_no_model(settings, clock, conn, family) -> None:
     assert conn.execute("SELECT count(*) FROM llm_calls").fetchone()[0] == 0
 
 
-# -- going out with them -------------------------------------------------------------------------
+# -- going out with them
 
 
 def _telegram_task(clock, conn, title="Bins out", remind_at="2026-09-20T21:05:00Z"):

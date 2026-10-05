@@ -1,19 +1,10 @@
 #!/usr/bin/env bash
-# Take FamilyDB off this machine, either keeping what the family said or removing that too.
-#
-#   scripts/uninstall.sh              stop it, remove the service and the installed code, and
-#                                     keep .env, data/ and the backups. This is what you want
-#                                     before reinstalling.
-#   scripts/uninstall.sh --purge      remove all of that as well, including the database.
-#   scripts/uninstall.sh --from-zero everything --purge does, and what the installer put around
-#                                     it: Caddy, the ports, the deploy key, uv and the logs. The
-#                                     server as it was before FamilyDB, for testing an install.
-#
-# It prints what it is about to remove, and what it is leaving, before removing anything.
-#
-# The database is the only copy of everything the family has ever said, so --purge takes a
-# backup first unless told not to, will not run without a typed confirmation, and refuses to
-# touch a directory that does not look like a FamilyDB install.
+# Take FamilyDB off this machine. It prints what it will remove and leave before removing anything.
+#   (none)      stop it, remove the service and installed code; keep .env, data/, backups
+#   --purge     also remove all of that, database included
+#   --from-zero --purge plus what the installer put around it (Caddy, ports, deploy key, uv, logs)
+# The database is the only copy of what the family said, so --purge backs up first unless told
+# not to, needs a typed confirmation, and refuses a directory that does not look like an install.
 set -euo pipefail
 
 # shellcheck disable=SC2034  # read by lib/common.sh when it opens the transcript.
@@ -101,8 +92,7 @@ export ASSUME_YES DRY_RUN
 # From zero means nothing left behind, a backup included, unless one is asked for by name.
 [ "$FROM_ZERO" = 1 ] && [ "$BACKUP_ASKED" = 0 ] && BACKUP=0
 
-# Removing everything means removing this script too. Run from a copy outside the install instead,
-# so that the last step can take the whole directory, and so nothing is read from a deleted file.
+# Run from a copy outside the install, so the last step can take the whole directory.
 if [ "$PURGE" = 1 ] && [ -z "${FAMILYDB_UNINSTALL_COPY:-}" ]; then
   install_dir="${TARGET:-$(cd -- "${HERE}/.." && pwd -P)}"
   case "$HERE" in
@@ -121,7 +111,6 @@ log_to "/var/log/familydb-uninstall.log"
 enable_failure_reporting
 on_failure_hint "Nothing is removed until the step that removes it runs, so a failure here leaves the install as it was. docs/INSTALL.md, 'Removing it', covers the rest."
 
-# ---------------------------------------------- what the installer put around it ----
 caddy_serves_only_familydb() { # nothing in the Caddyfile but what FamilyDB's setups write
   local file=/etc/caddy/Caddyfile
   as_root test -f "$file" || return 0
@@ -133,10 +122,8 @@ caddy_serves_only_familydb() { # nothing in the Caddyfile but what FamilyDB's se
     | grep -q .
 }
 
-# Everything --from-zero removes besides the install itself, found before anything is removed:
-# first what the install wrote down in its ledger as it made each change, then what the guide's
-# steps by hand, or an install from before the ledger, leave without writing it down. Each is
-# listed in the plan by name before anything happens.
+# Everything --from-zero removes besides the install itself, found before removing anything: the
+# ledger first, then what the guide's manual steps or a pre-ledger install leave. Each is listed.
 ZERO_PATHS=()     # files, directories and links to delete
 ZERO_EMPTY=()     # directories the install made that are deleted only if left empty
 ZERO_PACKAGES=()  # packages the install added, dependencies included
@@ -227,9 +214,8 @@ take_inventory() {
              /home/*/.ssh/familydb_deploy /home/*/familydb_deploy; do
     [ -n "$key" ] && _is_private_key "$key" && { _add_path "$key"; _add_path "${key}.pub"; }
   done
-  # What the guide's steps by hand left in a home directory: copies of the code, the archive it
-  # was carried in, and backups copied out to be fetched. A folder named FamilyDB or scripts
-  # counts only when it has no .git of its own: an unpacked archive, not somebody's working clone.
+  # What the guide's manual steps left in a home directory: code copies, the archive, backups.
+  # A folder named FamilyDB or scripts counts only without its own .git: not a working clone.
   for home in /root /home/*; do
     as_root test -d "$home" || continue
     for file in familydb-scripts familydb-code FamilyDB scripts; do
@@ -260,10 +246,8 @@ take_inventory() {
     ZERO_CERT="$WEB_DOMAIN_NOW"
   fi
 
-  # What only an install from before the ledger leaves without writing it down. With a ledger
-  # begun by a fresh install, the ledger alone says what the install added, and anything else (a
-  # uv of your own, say) was here first and stays. So does everything on a machine FamilyDB was
-  # never installed on.
+  # What only a pre-ledger install leaves unrecorded. With a fresh install's ledger, the ledger
+  # alone says what was added; anything else (your own uv) was here first and stays.
   [ "$WHOLE_LEDGER" = 1 ] || ! familydb_was_here || older_leftovers
 
   # Caddy, when it is going: its package, folders, account and the package source it came from.
@@ -467,7 +451,6 @@ remove_what_was_around_it() {
   return 0
 }
 
-# --------------------------------------------------------------- safety ----
 INSTALL_PRESENT=1
 if [ -z "$TARGET" ]; then
   TARGET="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
@@ -576,7 +559,6 @@ if [ "$PURGE" = 1 ] && [ "$FORCE" = 0 ] && [ "$DRY_RUN" = 0 ]; then
   fi
 fi
 
-# ------------------------------------------------------------- the service ----
 head2 "Stopping it"
 UNIT=/etc/systemd/system/familydb.service
 if have systemctl && [ -f "$UNIT" ]; then
@@ -608,7 +590,6 @@ if pgrep -af "${TARGET}/.venv/bin/familydb" >/dev/null 2>&1; then
   [ "$FORCE" = 1 ] || die "stop it first, or re-run with --force"
 fi
 
-# ---------------------------------------------------------------- backup ----
 DB="${TARGET}/data/familydb.sqlite3"
 if [ "$PURGE" = 1 ] && [ "$BACKUP" = 1 ] && [ -f "$DB" ]; then
   head2 "Backing the database up first"
@@ -643,7 +624,6 @@ PY
   fi
 fi
 
-# ----------------------------------------------------------- confirmation ----
 if [ "$PURGE" = 1 ] && [ "$FORCE" = 0 ] && [ "$DRY_RUN" = 0 ]; then
   head2 "This cannot be undone"
   say "About to remove:"
@@ -665,7 +645,6 @@ if [ "$PURGE" = 1 ] && [ "$FORCE" = 0 ] && [ "$DRY_RUN" = 0 ]; then
   [ "$answer" = "remove everything" ] || die "stopped. Nothing was removed."
 fi
 
-# ---------------------------------------------------------------- removal ----
 head2 "Removing"
 
 # Remove only the schedule installed by maintain.sh; leave unrelated root jobs alone.

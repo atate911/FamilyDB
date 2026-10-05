@@ -19,7 +19,7 @@ from familydb.store import db, messages, tasks
 from familydb.store import settings as settings_store
 from tests import fakes
 
-# -- the lines -----------------------------------------------------------------------------------
+# -- the lines
 
 
 def test_plain_then_hers_then_the_family_s(settings) -> None:
@@ -80,7 +80,7 @@ def test_what_is_wrong_with_a_written_line_is_named() -> None:
     assert "no 'nonsense' message" in found["nonsense"]
 
 
-# -- several wordings for a line -----------------------------------------------------------------
+# -- several wordings for a line
 
 # Three wordings of a follow-up, a blank one and stray spaces among them.
 THREE = ["One: {plan}.", "", "  Two: {plan}.", "Three: {plan}. "]
@@ -244,7 +244,7 @@ def test_a_notice_is_worded_by_the_message_it_answers(settings, clock, conn, fam
     assert len(said) > 1
 
 
-# -- a conversation under way carries what comes due ---------------------------------------------
+# -- a conversation under way carries what comes due
 
 
 @pytest.fixture

@@ -123,7 +123,7 @@ def family_members(family):
     return family
 
 
-# -- linking Telegram by a link -----------------------------------------------------------------
+# -- linking Telegram by a link
 
 
 def _at(hours: float = 0):
@@ -241,7 +241,7 @@ def test_an_age_and_the_next_birthday_are_worked_out_by_code() -> None:
     assert family.next_birthday("2016-02-29", date(2027, 12, 1)) == date(2028, 2, 29)
 
 
-# -- taking somebody off for good ------------------------------------------------------------------
+# -- taking somebody off for good
 
 
 def test_every_column_that_points_at_a_member_is_named_for_taking_somebody_off(conn) -> None:

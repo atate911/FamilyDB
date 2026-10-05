@@ -128,10 +128,9 @@ def test_debug_prompt_is_built_from_what_the_page_stored(env: Path) -> None:
 
 @pytest.mark.skipif(os.name == "nt", reason="Windows has no SIGTERM to send itself")
 def test_a_stop_signal_stops_run_even_while_a_line_is_being_logged(monkeypatch) -> None:
-    """A signal can land while the main thread is part way through writing a log line. Logging
-    from the handler then writes to the same stream again, which raises, and the stop was never
-    set, so `familydb run` went on running. Here logging fails whenever it is called from inside
-    the handler, as it does then."""
+    """A signal can land mid log line; logging from the handler then raises and the stop was never
+    set. Here logging fails whenever called from inside the handler.
+    """
     import inspect
 
     from familydb import cli
@@ -175,8 +174,8 @@ def test_run_command_waits_and_stops_on_sigterm(env: Path) -> None:
     reader = threading.Thread(target=read, daemon=True)
     reader.start()
     try:
-        # SIGTERM stops it cleanly only once its handler is in place, which it logs just after.
-        # On a busy machine that can take seconds, so wait for that line rather than a set time.
+        # SIGTERM stops it cleanly only once its handler is in place (logged just after); wait for
+        # that line, not a set time.
         assert waiting.wait(timeout=60), "run never said it was waiting"
         assert proc.poll() is None, "run exited early:\n" + "".join(lines)
         proc.send_signal(signal.SIGTERM)
@@ -343,9 +342,9 @@ def test_config_prints_a_rewrite_of_her_on_one_line(env: Path) -> None:
 
 
 def test_config_shortens_a_long_text_and_says_how_long_it_is(env: Path) -> None:
-    """A rewrite keeps her whole character as it shipped, a page of prose: the printout gives the
-    start of each long text on the Personality page and its real length, one setting to a line,
-    and the settings themselves keep all of it."""
+    """A rewrite keeps her whole character: the printout gives the start of each long Personality
+    text and its real length, one setting to a line, while the settings keep all of it.
+    """
     from contextlib import closing
 
     from familydb import personas

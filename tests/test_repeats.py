@@ -44,7 +44,7 @@ def _sent(app) -> list[str]:
     return said
 
 
-# -- the arithmetic ------------------------------------------------------------------------------
+# -- the arithmetic
 
 
 def test_a_schedule_keeps_its_hour_on_the_wall_when_the_clocks_change() -> None:
@@ -79,7 +79,7 @@ def test_the_next_time_is_found_however_long_ago_the_first_was() -> None:
     assert task_service.next_time(soon, 1, "week", after) == soon  # the first is still to come
 
 
-# -- on a schedule -------------------------------------------------------------------------------
+# -- on a schedule
 
 
 def test_a_weekly_reminder_comes_round_again(settings, clock, conn, family) -> None:
@@ -144,7 +144,7 @@ def test_a_snooze_moves_this_time_not_the_schedule(settings, clock, conn, family
     assert _local(tasks.get(conn, task["id"]).reminder.remind_at) == "Sun 2026-09-27 19:00"
 
 
-# -- counted from when it was done ---------------------------------------------------------------
+# -- counted from when it was done
 
 
 def test_counted_from_done_comes_round_that_long_after(settings, clock, conn, family) -> None:
@@ -167,7 +167,7 @@ def test_counted_from_done_comes_round_that_long_after(settings, clock, conn, fa
     assert _local(tasks.get(conn, task["id"]).reminder.remind_at) == "Wed 2027-03-24 15:00"
 
 
-# -- ending it, and what is refused ---------------------------------------------------------------
+# -- ending it, and what is refused
 
 
 def test_stopping_or_cancelling_ends_it(settings, clock, conn, family) -> None:
@@ -218,7 +218,7 @@ def test_a_tap_on_done_says_when_it_comes_round_next(settings, clock, conn, fami
     assert tapped.note == "Ticked off ✓ (Sam). It comes round again at 19:00 on Sun 27 Sep."
 
 
-# -- the tasks page --------------------------------------------------------------------------------
+# -- the tasks page
 
 
 def test_the_page_sets_changes_and_stops_a_repeat(settings, clock, conn, family) -> None:
@@ -262,7 +262,7 @@ def test_the_page_sets_changes_and_stops_a_repeat(settings, clock, conn, family)
     assert tasks.get(conn, task.id).repeat_every is None
 
 
-# -- birthdays and the gifts saved for them --------------------------------------------------------
+# -- birthdays and the gifts saved for them
 
 
 def _gift(conn, title, *, who="Grandma", kind="gift", status="idea"):

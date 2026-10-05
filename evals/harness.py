@@ -95,19 +95,16 @@ class Case:
     settings: Mapping[str, Any] = field(default_factory=dict)
 
 
-# Every case is also held to these: the bot never names a number that does not exist, never
-# writes something the message did not ask for (each case lists what it may write), and keeps it
-# short and plain whoever she is: one emoji at most (the spec's own rule), no "as an AI" filler,
-# and no more than two exclamation marks.
+# Every case is also held to these: no invented numbers, no write the message did not ask for
+# (each case lists what it may write), and short and plain whoever she is.
 MAX_REPLY = 900
 MAX_EMOJI = 1
 MAX_EXCLAMATIONS = 2
 FILLER = re.compile(
     r"\bas\s+(?:an\s+ai|an\s+artificial\s+intelligence|a\s+language\s+model)\b", re.IGNORECASE
 )
-# The blocks emoji are drawn from: Miscellaneous Technical (the watch, the alarm clock),
-# Miscellaneous Symbols and Dingbats (the sun, the heart, the tick), Miscellaneous Symbols and
-# Arrows (the star), and U+1F000 to U+1FAFF (faces, food, animals, flags).
+# The blocks emoji are drawn from: Misc Technical, Misc Symbols and Dingbats, Misc Symbols and
+# Arrows, and U+1F000 to U+1FAFF.
 PICTOGRAPHIC = ((0x2300, 0x23FF), (0x2600, 0x27BF), (0x2B00, 0x2BFF), (0x1F000, 0x1FAFF))
 JOINER = "\u200d"
 # The regional indicators A to Z: a country's flag is two of them.
@@ -199,10 +196,9 @@ def settings_for(base: Settings, folder: Path, *, limit: float = 1.0) -> Setting
             "home_lon": -122.67,
             "home_area": "Vancouver, WA",
             "family_tz": "America/Vancouver",
-            # No web searches: they cost, and what the web says today is not what it says
-            # tomorrow, so no case looks anything up or discovers anything.
+            # No web searches: they cost and the web changes, so no case looks anything up.
             "web_tools_enabled": False,
-            # The bot's own limit, checked before every call: what is left of the run's budget.
+            # The bot's own limit, checked before every call: what is left of the budget.
             "daily_spend_limit": limit,
             "digest_chat_id": None,
         }
@@ -253,10 +249,8 @@ def run_case(case: Case, base: Settings, *, api: Any = None, limit: float = 1.0)
                 run.counts[table] = conn.execute(f"SELECT count(*) FROM {table}").fetchone()[0]
                 run.ids |= {r[0] for r in conn.execute(f"SELECT id FROM {table}")}
             run.statuses = {r[0]: r[1] for r in conn.execute("SELECT id, status FROM ideas")}
-            # Input counts whether it was new, written to the cache or read from it. Each
-            # provider module splits what a call was sent into these three columns, taking the
-            # cached tokens out of the total where the vendor counts them inside it (OpenAI and
-            # Gemini do), so the sum counts every token sent once. A NULL column counts as 0.
+            # Input counts new, cache-written and cache-read tokens; providers split them so the
+            # sum counts every token once. A NULL column counts as 0.
             spent = conn.execute(
                 "SELECT coalesce(sum(cost_usd), 0), count(*), "
                 "coalesce(sum(input_tokens), 0) + coalesce(sum(cache_creation_input_tokens), 0) "

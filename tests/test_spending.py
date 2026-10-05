@@ -45,7 +45,7 @@ def _spent(conn, dollars: float, when: str = "2026-09-20T20:00:00Z") -> None:
         )
 
 
-# -- prices -------------------------------------------------------------------------------------
+# -- prices
 
 
 def test_a_dated_snapshot_costs_what_its_family_does() -> None:
@@ -102,7 +102,7 @@ def test_an_openai_call_counts_its_searches(settings, clock, conn, family) -> No
     assert reply.usage["web_searches"] == 2
 
 
-# -- the daily limit ----------------------------------------------------------------------------
+# -- the daily limit
 
 
 def test_the_day_is_the_family_s(settings, clock, conn) -> None:
@@ -200,7 +200,7 @@ def test_budget_interruption_reports_calendar_success(calendar_settings, conn, c
     assert len(api.requests) == 1
 
 
-# -- what a call in flight holds back -----------------------------------------------------------
+# -- what a call in flight holds back
 
 
 def test_concurrent_model_calls_cannot_spend_same_remaining_allowance(

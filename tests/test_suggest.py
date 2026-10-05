@@ -685,7 +685,7 @@ def test_a_short_list_is_returned_whole(registry, conn, full_settings, thursday_
     assert len(data["candidates"]) == 2 and data.get("not_shown", 0) == 0
 
 
-# -- right now and today ------------------------------------------------------------------------
+# -- right now and today
 # The `clock` fixture is Sunday 20 September, 14:03 in Vancouver.
 
 

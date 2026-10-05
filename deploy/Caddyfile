@@ -1,21 +1,18 @@
-# HTTPS in front of the web page, by hand, for a virtualenv install on a server with a domain.
-# The installer and `sudo /opt/familydb/scripts/maintain.sh https` write /etc/caddy/Caddyfile in
-# this shape themselves. (A Docker install does not need this file: the compose file's tls
-# profile runs Caddy.)
+# HTTPS in front of the web page, by hand, for a virtualenv install with a domain. The installer
+# and `maintain.sh https` write /etc/caddy/Caddyfile in this shape themselves; Docker uses the
+# compose file's tls profile instead.
 #
 #   sudo apt install caddy
 #   sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
 #   sudo sed -i 's/familydb.example.com/YOUR.DOMAIN/' /etc/caddy/Caddyfile
 #   sudo systemctl reload caddy
 #
-# and in the bot's .env: WEB_HOST=127.0.0.1, WEB_TRUST_PROXY=true and a WEB_PASSWORD of at
-# least twelve characters. Caddy fetches the certificate itself once the domain points here and
-# ports 80 and 443 are open. It replaces any X-Forwarded-For a visitor sends with the visitor's
-# real address, which is what the bot's lockout counts.
+# and in .env: WEB_HOST=127.0.0.1, WEB_TRUST_PROXY=true, a WEB_PASSWORD of 12+ characters. Caddy
+# gets the certificate once the domain points here and 80 and 443 are open, and replaces any
+# X-Forwarded-For a visitor sends with the real address, which the bot's lockout counts.
 #
-# On another port than 443, one the internet's scans rarely try, put this first, with that port,
-# add `tls { issuer acme { disable_tlsalpn_challenge } }` inside the site, and open 80 and that
-# port instead of 80 and 443 (80 answers only the certificate authority's check):
+# On another port than 443, put this first, add `tls { issuer acme { disable_tlsalpn_challenge } }`
+# inside the site, and open 80 and that port (80 answers only the certificate authority's check):
 #
 #   {
 #   	https_port 24613

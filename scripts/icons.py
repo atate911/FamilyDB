@@ -1,16 +1,13 @@
 """Build the web page's icon sprite, its favicon and its home-screen icons.
 
-The icons are Lucide's (https://lucide.dev, ISC licence, see static/LICENSE-icons.txt), taken
-from one pinned release so they never shift under the page, plus the page's own mark: a little
-monitor with a smile. Each becomes a <symbol> in static/icons.svg, drawn in the colour of the
-words around it. The mark is also the favicon, and the icon a phone shows for the page kept on
-its home screen, which has to be a PNG: this draws those too, from the same shapes. Add a name to
-ICONS and run this again; never edit the .svg or .png files by hand.
+Lucide's icons (ISC licence, static/LICENSE-icons.txt) from one pinned release, plus the page's
+own mark (a monitor with a smile), each a <symbol> in static/icons.svg. The mark is also the
+favicon and the home-screen PNGs, drawn here from the same shapes. Add a name to ICONS and run
+this again; never edit the .svg or .png files by hand.
 
     uv run python scripts/icons.py
 
-It downloads the pinned release from the npm registry the first time and keeps it in the
-system's temporary folder.
+The pinned release comes from the npm registry once and is kept in the temporary folder.
 """
 
 from __future__ import annotations
@@ -138,10 +135,9 @@ def favicon() -> str:
     )
 
 
-# The home-screen icons, by file and side in pixels: iPhone's, and the two a manifest names. The
-# mark is green on the page's charcoal, filling the square, since a phone rounds the corners
-# itself and shows black through anything transparent. The mark's 24 grid takes APP_MARK of the
-# side, which leaves the margin Android's round masks cut into.
+# The home-screen icons, by file and side in pixels. Filled square (a phone rounds the corners
+# and shows black through transparency); the mark takes APP_MARK of the side, leaving the margin
+# Android's round masks cut into.
 APP_ICONS = {"apple-touch-icon.png": 180, "icon-192.png": 192, "icon-512.png": 512}
 APP_MARK = 0.625
 MARK_STROKE = 2  # on the 24 grid, as the favicon draws it

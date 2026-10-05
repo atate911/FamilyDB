@@ -1,7 +1,7 @@
 """Checking a key before it is stored: each vendor's own answer, read for what it says.
 
-The setup page asks this once, when a key is pasted. It costs nothing: it is the model lookup
-`model_exists` makes, and only a definite "that key is wrong" may stop a key being saved.
+Costs nothing (`model_exists`); only a definite "that key is wrong" may stop a key being saved.
+
 """
 
 from __future__ import annotations

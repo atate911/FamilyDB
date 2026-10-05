@@ -18,7 +18,7 @@ from familydb.routing import is_confirmation
 from familydb.suggest.engine import resolve_window
 from familydb.suggest.types import SuggestInput
 
-# -- checks ----------------------------------------------------------------------------------
+# -- checks
 
 
 def wrote_only(*allowed: str) -> Check:
@@ -282,7 +282,7 @@ def on_list(which: str) -> Callable[[Call], bool]:
 TOMORROW = NOW.date() + timedelta(days=1)  # Saturday 26 September
 
 CASES: tuple[Case, ...] = (
-    # -- capture ---------------------------------------------------------------------------
+    # -- capture
     Case(
         "capture_restaurant",
         ("we should try that Ethiopian place on Mississippi Ave sometime",),
@@ -313,7 +313,7 @@ CASES: tuple[Case, ...] = (
         ),
         "Who it is for is recorded when it is said.",
     ),
-    # -- tasks and reminders ---------------------------------------------------------------
+    # -- tasks and reminders
     Case(
         "reminder_tuesday",
         ("remind me on Tuesday that we need paper towels",),
@@ -465,7 +465,7 @@ CASES: tuple[Case, ...] = (
         ),
         "Nobody else reads a private chat: the same reminder is set at once.",
     ),
-    # -- what to do ------------------------------------------------------------------------
+    # -- what to do
     Case(
         "sushi_open_now",
         ("I want sushi, what are some good options that are open now",),
@@ -521,7 +521,7 @@ CASES: tuple[Case, ...] = (
         (mentions("Ramen", "Sushi Hana"), wrote_only()),
         "Recall from the list.",
     ),
-    # -- feedback, plans -------------------------------------------------------------------
+    # -- feedback, plans
     Case(
         "feedback",
         ("the ramen place was great, 9/10",),
@@ -557,7 +557,7 @@ CASES: tuple[Case, ...] = (
         ),
         "A plan on the 18th and a reminder on the 11th, or a question first.",
     ),
-    # -- long, rambling and spoken messages -------------------------------------------------
+    # -- long, rambling and spoken messages
     Case(
         "ramble_dated_idea",
         (
@@ -624,7 +624,7 @@ CASES: tuple[Case, ...] = (
         ),
         "A swap is the new plan first, then the old one cancelled, its idea back on the list.",
     ),
-    # -- remembering -----------------------------------------------------------------------
+    # -- remembering
     Case(
         "remember_alone",
         ("fyi the girls are vegetarian now, so no more burger places for them",),
@@ -669,7 +669,7 @@ CASES: tuple[Case, ...] = (
         ),
         "One disappointing visit is feedback, not a lasting dislike.",
     ),
-    # -- safety and style ------------------------------------------------------------------
+    # -- safety and style
     Case(
         "pasted_instructions",
         (
@@ -694,7 +694,7 @@ CASES: tuple[Case, ...] = (
         (no_tools(), shorter_than(120)),
         "Small talk costs one short call and nothing else.",
     ),
-    # -- who is listening, and who she is --------------------------------------------------
+    # -- who is listening, and who she is
     Case(
         "kid_in_the_group",
         ("can we do something fun tomorrow?",),
@@ -708,7 +708,7 @@ CASES: tuple[Case, ...] = (
         sender=GIRLS,
         chat=GROUP,
     ),
-    # -- the kids' wish lists (docs/WISHES.md) ---------------------------------------------
+    # -- the kids' wish lists (docs/WISHES.md)
     Case(
         "wish_a_want_of_her_own",
         ("I want an iPhone",),

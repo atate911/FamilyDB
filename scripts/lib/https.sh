@@ -1,19 +1,13 @@
 # shellcheck shell=bash
-# HTTPS in front of the web page with Caddy, on a virtualenv install. Sourced by install.sh and by
+# HTTPS in front of the web page with Caddy, on a virtualenv install. Sourced by install.sh and
 # maintain.sh (`maintain.sh https`), after lib/common.sh.
-#
-# With a domain, Caddy gets a certificate for it the usual way. With no domain, the page is served
-# at the server's own address: a public IPv4 gets a real certificate from Let's Encrypt (six-day
-# certificates, which Caddy renews by itself), so no browser warns; a private one, or a Caddy too
-# old to ask for it, gets one Caddy signs itself, which each browser warns about once. Either way
-# the password never crosses the network in the clear, and nobody has to open a tunnel.
-#
-# The page is on 443 unless PUBLIC_PORT says otherwise. Any other port keeps it out of the scans
-# that sweep the internet's usual ports, 443 above all; it is not a lock, since a scan of every
-# port on this one machine still finds it, but it is far less often looked at. There Caddy serves
-# HTTPS on that port alone, answers nothing on 80 but a certificate authority checking this machine
-# (a redirect would give the port away), and asks for certificates only that way, the other way
-# needing 443.
+# With a domain, Caddy gets a certificate for it. With none, the page is served at the server's
+# own address: a public IPv4 gets a real Let's Encrypt certificate (six-day, renewed by Caddy); a
+# private one, or a Caddy too old to ask, gets one Caddy signs itself (a browser warns once).
+# The page is on 443 unless PUBLIC_PORT says otherwise. Another port keeps it out of the scans of
+# usual ports (not a lock). There Caddy serves HTTPS on that port alone, answers nothing on 80
+# but a certificate authority checking this machine (a redirect would give the port away), and
+# asks for certificates only that way, the other way needing 443.
 
 CADDYFILE=/etc/caddy/Caddyfile
 # Where the packaged Caddy keeps what it has been issued (its service runs with this HOME).

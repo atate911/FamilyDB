@@ -277,7 +277,7 @@ def discover_script(finds: list[dict[str, Any]]) -> list[BetaMessage]:
     ]
 
 
-# --- OpenAI's Responses API -----------------------------------------------------------------
+# --- OpenAI's Responses API
 
 
 def oa_text(value: str) -> dict[str, Any]:
@@ -398,7 +398,7 @@ def oa_enrich_script(save_place_input: dict[str, Any]) -> list[Any]:
     ]
 
 
-# --- Gemini -----------------------------------------------------------------------------------
+# --- Gemini
 
 
 def gm_text(value: str) -> dict[str, Any]:
@@ -473,7 +473,7 @@ def gm_enrich_script(save_place_input: dict[str, Any]) -> list[Any]:
     ]
 
 
-# --- Hearing voice notes ----------------------------------------------------------------------
+# --- Hearing voice notes
 
 
 def oa_transcription(text: str, *, input_tokens: int = 250, output_tokens: int = 40) -> Any:

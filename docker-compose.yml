@@ -8,36 +8,31 @@ services:
     environment:
       FAMILYDB_PATH: /data/familydb.sqlite3
       GOOGLE_KEY_PATH: /data/google_key.json
-      # Inside a container the page has to bind every interface; the ports mapping below decides
-      # who can actually reach it. WEB_ENABLED and WEB_PASSWORD come from .env. WEB_PORT in .env
-      # moves the page to another port, inside and out alike (`maintain.sh port` sets it).
+      # The page binds every interface inside the container; the ports mapping decides who
+      # reaches it. WEB_PORT in .env moves it inside and out (`maintain.sh port` sets it).
       WEB_HOST: 0.0.0.0
       WEB_PORT: ${WEB_PORT:-8080}
     volumes:
       # The host folder must be writable by uid 1000 (the container's familydb user).
       - ./data:/data
     ports:
-      # Reachable from this machine only. Drop the 127.0.0.1 prefix to serve the local network,
-      # and only with WEB_PASSWORD set. On a public server keep this and use the tls profile.
+      # This machine only. Drop 127.0.0.1 for the local network (with WEB_PASSWORD set); on a
+      # public server keep it and use the tls profile.
       - "127.0.0.1:${WEB_PORT:-8080}:${WEB_PORT:-8080}"
     restart: unless-stopped
     init: true
-    # Without a cap the json log grows until the disk is full, which on a small VPS is months
-    # rather than years away, and takes the bot with it.
+    # Uncapped, the json log fills a small VPS's disk and takes the bot with it.
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "5"
 
-  # Optional: HTTPS for a server on the internet. Needs WEB_DOMAIN pointing at this machine.
-  #   docker compose --profile tls up -d
-  # or COMPOSE_PROFILES=tls in .env, which the installer writes, and a plain docker compose up -d.
-  # Set WEB_TRUST_PROXY=true in .env so the real visitor address and the HTTPS scheme are read
-  # from Caddy's headers and the login cookie is marked Secure. WEB_PUBLIC_PORT in .env serves
-  # the page on another port of this machine than 443, one the scans that sweep the internet
-  # rarely try; 80 stays open for the certificate authority's check. Caddy's redirect from 80
-  # then points at 443, where nothing answers, rather than giving the port away.
+  # Optional HTTPS; needs WEB_DOMAIN pointing here. `docker compose --profile tls up -d`, or
+  # COMPOSE_PROFILES=tls in .env (the installer writes it). WEB_TRUST_PROXY=true in .env reads the
+  # visitor address and scheme from Caddy's headers and marks the login cookie Secure.
+  # WEB_PUBLIC_PORT serves the page on a port other than 443; 80 stays open for the certificate
+  # authority's check, and Caddy's redirect from 80 then points at 443, where nothing answers.
   caddy:
     image: caddy:2-alpine
     profiles: ["tls"]
@@ -48,8 +43,7 @@ services:
       - "${WEB_PUBLIC_PORT:-443}:443"
     command: caddy reverse-proxy --from ${WEB_DOMAIN:-localhost} --to bot:${WEB_PORT:-8080}
     volumes:
-      # Its own folder, not ./data: the certificate's private key has no business being inside
-      # the bot's volume, where the bot's container can read it and any copy of data/ carries it.
+      # Not ./data: the bot's container must not read the certificate key, nor copies of data/ carry it.
       - ./caddy:/data
     restart: unless-stopped
     logging:

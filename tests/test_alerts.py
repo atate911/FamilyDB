@@ -26,7 +26,7 @@ def _found(conn) -> set[tuple[str, str]]:
     return {(row["kind"], row["subject"]) for row in conn.execute("SELECT * FROM alerts")}
 
 
-# -- what counts ---------------------------------------------------------------------------------
+# -- what counts
 
 
 def test_each_company_s_empty_account_and_refused_key_are_read_as_such() -> None:
@@ -70,7 +70,7 @@ def test_each_company_s_empty_account_and_refused_key_are_read_as_such() -> None
     assert worth_switching(AgentError("API error 401", retryable=False, trouble="key"))
 
 
-# -- where it is noted ---------------------------------------------------------------------------
+# -- where it is noted
 
 
 def test_an_empty_account_is_noted_even_when_the_other_company_answers(
@@ -102,8 +102,9 @@ def test_an_empty_account_is_noted_even_when_the_other_company_answers(
 def test_a_model_the_company_has_no_more_is_noted_and_forgotten_once_it_answers(
     settings, registry, ctx
 ) -> None:
-    """A 404 for the model is not the company being down: every call to it will fail the same
-    way until an admin chooses another, so it is noted by name, and the other company answers."""
+    """A 404 for the model fails every call to it until an admin chooses another: noted by name, and
+    the other company answers.
+    """
     import anthropic
 
     paired = _both(settings)
@@ -169,7 +170,7 @@ def test_google_shutting_the_bot_out_is_noted_and_forgotten_when_it_answers(
     assert _found(conn) == set()
 
 
-# -- who is told -------------------------------------------------------------------------------
+# -- who is told
 
 
 def test_admins_on_telegram_are_told_once_and_again_while_it_lasts(settings, conn, family) -> None:
@@ -203,8 +204,9 @@ def test_admins_on_telegram_are_told_once_and_again_while_it_lasts(settings, con
 def test_a_refusal_nothing_can_read_is_told_once_it_happens_again(
     settings, registry, ctx, family
 ) -> None:
-    """One odd request is not news; the same company refusing twice with no answer between may
-    be a change on its side, which only an admin can look into."""
+    """One odd request is not news; the same company refusing twice with no answer between may be a
+    change only an admin can look into.
+    """
     import anthropic
 
     def refusing():

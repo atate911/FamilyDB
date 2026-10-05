@@ -23,9 +23,10 @@ def test_ensure_credentials_requires_some_source() -> None:
 
 
 def test_asking_whether_there_is_a_key_builds_no_connection_pool(settings, monkeypatch) -> None:
-    """Home, the status page and the settings pages ask on every view. A pool of its own for
-    each question loaded the certificate bundle every time, which was most of their time; the SDK
-    still decides, including from its own places the settings never see."""
+    """Home, the status page and the settings pages ask on every view. A pool of its own per
+    question loaded the certificate bundle every time; the SDK still decides, including from its
+    own places.
+    """
     for name in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"):
         monkeypatch.delenv(name, raising=False)
     built = []

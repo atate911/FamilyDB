@@ -50,8 +50,7 @@ jobs:
           scripts/install.sh --dry-run --non-interactive --mode venv
           test ! -e .env
       - name: An install from a home directory refuses to leave a unit that cannot start
-        # The checkout is under /home/runner here, which other users cannot enter, so the
-        # service user could never run from it. Say so rather than install a broken unit.
+        # /home/runner is closed to other users, so the service user could never run from it.
         env:
           ADMIN_NAME: Sam
           FAMILYDB_TZ: America/Vancouver
@@ -64,8 +63,8 @@ jobs:
           .venv/bin/familydb config > /dev/null       # still usable by whoever installed it
           .venv/bin/familydb members list | grep -q Sam
       - name: The documented install, in /opt, is complete
-        # Through bootstrap.sh, which is what docs/INSTALL.md tells people to run, and which puts
-        # uv where the service account can reach it as well as the installer.
+        # Through bootstrap.sh, what docs/INSTALL.md tells people to run; it puts uv where the
+        # service account can reach it.
         env:
           ADMIN_NAME: Sam
           FAMILYDB_TZ: America/Vancouver
@@ -84,8 +83,7 @@ jobs:
           sudo -u familydb /opt/familydb/.venv/bin/familydb members list | grep -q Sam
           test "$(stat -c %U /opt/familydb/.env)" = familydb
       - name: The service starts under its hardening, serves the page, and keeps its files private
-        # The install above stops short of starting it; this is the part a hardening line in the
-        # unit could break, and nothing else runs the unit under a real systemd.
+        # Nothing else runs the unit under a real systemd, where a hardening line could break it.
         run: |
           cd /opt/familydb
           printf "WEB_ENABLED=true\nWEB_PASSWORD='a long enough password'\n" | sudo tee -a .env > /dev/null
