@@ -126,6 +126,33 @@ def test_debug_prompt_is_built_from_what_the_page_stored(env: Path) -> None:
     assert "You are Juno" in result.output and "You are Vera" not in result.output
 
 
+@pytest.mark.skipif(os.name == "nt", reason="Windows has no SIGTERM to send itself")
+def test_a_stop_signal_stops_run_even_while_a_line_is_being_logged(monkeypatch) -> None:
+    """A signal can land while the main thread is part way through writing a log line. Logging
+    from the handler then writes to the same stream again, which raises, and the stop was never
+    set, so `familydb run` went on running. Here logging fails whenever it is called from inside
+    the handler, as it does then."""
+    import inspect
+
+    from familydb import cli
+
+    class Log:
+        def info(self, *args: object, **kwargs: object) -> None:
+            if any(frame.function == "_stop" for frame in inspect.stack(0)):
+                raise RuntimeError("reentrant call inside <_io.BufferedWriter name='<stderr>'>")
+
+    monkeypatch.setattr(cli, "log", Log())
+    handlers = signal.getsignal(signal.SIGTERM), signal.getsignal(signal.SIGINT)
+    timer = threading.Timer(0.2, os.kill, (os.getpid(), signal.SIGTERM))
+    timer.start()
+    try:
+        cli._wait_for_stop(quiet=True)  # returns once the signal has been handled
+    finally:
+        timer.cancel()
+        signal.signal(signal.SIGTERM, handlers[0])
+        signal.signal(signal.SIGINT, handlers[1])
+
+
 @pytest.mark.skipif(os.name == "nt", reason="Windows terminate does not deliver POSIX SIGTERM")
 def test_run_command_waits_and_stops_on_sigterm(env: Path) -> None:
     proc = subprocess.Popen(
