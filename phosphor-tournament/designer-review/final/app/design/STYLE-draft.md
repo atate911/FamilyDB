@@ -47,7 +47,7 @@ keep it that way.
 **On top, a look gives each name its value**, day and night written together:
 `--paper: light-dark(#F6F1E7, #0C100F)`. Every look is one block in `static/themes.css`;
 Kitchen Table, the default, is `[data-theme="kitchen"]`, and it is also written at the top of
-`style.css` on `:root`, so it is what every page wears until a browser chooses otherwise.
+`style.css` on `:root`, so it is what every page wears until a person chooses otherwise.
 `style.css` holds no other colour, only what every look shares: the type, the sizes and the
 spacing, and the brand's glass and phosphor. Because the parts only ever ask for a job, a new
 look needs no change to any template, and a change to a part reaches every look at once.
@@ -117,12 +117,13 @@ that, however small it looks.
 
 ## Looks
 
-Kitchen Table is the look FamilyDB starts with, and the one this document describes. A browser
+Kitchen Table is the look FamilyDB starts with, and the one this document describes. Each person
 can wear another, chosen on the **Look** page (`/look`, from the account corner and the phone's
 menu, for anybody signed in, a kid included): **Phosphor** (the page as first drawn, a green
-screen, night only), **Midnight**, **Home Computer**, **Ink**, **Enamel**, **Rail yellow** and
-**Fjord**. A look changes colour and nothing else, so every section here still holds, with the
-colours read from the look in force.
+screen, night only), **Afterglow** (Kitchen Table lit like a green screen, night first, with a
+day), **Midnight**, **Home Computer**, **Ink**, **Enamel**, **Rail yellow** and **Fjord**. A look
+changes colour, and at most the five small effects below, and nothing else, so every section here
+still holds, with the colours read from the look in force.
 
 **How it is built.** Every colour in `style.css` is a token, in the names every palette sheet
 uses (`--paper`, `--card`, `--ink`, `--band`, `--here`, `--primary`, `--today`, `--red`,
@@ -141,29 +142,55 @@ the words, rim and Send of her box, and a colour for each of the eight people. A
 is a tenth of the colour on its card, Send is the look's primary), so a look names them only to
 set one apart. The people are Kitchen Table's eight until a look gives its own.
 
-**The choice is a cookie** (`fdb_look`, "rail.dark"), set by the Look page's form, in this
-browser only: how a screen looks is the screen's, a phone and a wall tablet may differ, and it
-costs the family's database nothing, so it is not a setting, not a tool, and nothing the model
-can reach. Anything the cookie says that is not a look this page has is Kitchen Table. The
-browser's own bar and its scrollbars follow (`theme-color`, `color-scheme`).
+**Effects, beyond colour.** A look may also name five effect tokens, which `style.css` reads in
+one place; every look names them, most as nothing. `--fx-page` is a light on the page itself,
+behind everything. `--fx-scan` is the colour of faint scanlines on the panel and on Vera's glass.
+`--fx-glow` (0 to 1) is how much Vera's things glow beyond their plain look, and how bright the
+small motions are, never how long. `--fx-title` and `--fx-title-adjust` are a face for the page
+titles and the wordmark, set at the heading face's cap height. Scanlines are always under the
+words, never a film over them; glow is a shadow outside a thing's edge; and the contrast floors
+are measured with each effect on at its strongest. In forced colours and on paper they are off.
+They are CSS only: no images, no scripts, and the one face is self-hosted.
+
+**Afterglow** is the one look that uses them. Night is charcoal glass with a breath of green;
+day is pale green-grey paper; in both the panel and Vera's box are dark glass with faint
+scanlines, and she is the one thing that glows: her screen gets a second halo and a fully lit
+rim, her Send and her lines a soft light. The family's links are a soft mint and their button a
+pale plate, never the phosphor. Page titles and the wordmark are set in VT323, a phosphor
+terminal's pixel face, as tall as Fraunces' capitals; everything read stays Atkinson, card titles
+stay Fraunces, and money and dates keep Fraunces Figures. It wears Kitchen Table's people. Once
+Kitchen Table ships, Afterglow is proposed to become the look called Phosphor: one name, one green
+screen, now with a day.
+
+**The choice follows the person.** Each person chooses their own look, and its day and night,
+and it comes with them to every phone and computer they sign in on: it is kept with them
+(`members.look`, "rail.dark"), written through `familydb.family` like any change to a member, for
+whoever is signed in, a kid included, and only for themselves. It is not a family setting, not a
+tool, and nothing the model can reach. A cookie (`fdb_look`) carries it to the pages before
+anyone signs in: it is set from their look when they sign in, so the sign-in page on that device
+wears it too. While the family still shares one password, nobody in particular is signed in, so
+the choice stays in that browser. Anything stored that is not a look this page has is Kitchen
+Table, and so is anyone who hasn't chosen. The browser's own bar and its scrollbars follow
+(`theme-color`, `color-scheme`).
 
 **What no look touches.** Vera's glass and phosphor, her screen and the mark stay in `style.css`,
 the same everywhere, so she is herself whatever the page wears. Red means late or broken in every
 look. Colour never speaks alone. In the paper looks (Ink, Enamel, Rail yellow, Fjord, Home
-Computer) her Ask box is a card like the rest; in Kitchen Table, Phosphor and Midnight it is
-dark.
+Computer) her Ask box is a plain card like the rest, as the family chose; her screen beside it is
+still glass. In Kitchen Table, Phosphor, Afterglow and Midnight it is dark.
 
 **Measured, in both modes.** For each look, by day and by night, `tests/test_look.py` holds the
 floors of "Accessibility": 4.5:1 for words on the page and on a card (4:1 for a colour on a
 well), 3:1 for the edge of a box and the focus ring, and words on each colour used as a fill,
 and Kitchen Table's own pairs: the panel's links and current item, her box and Send, the late
-plate, each meaning on its wash, each person's name, letter and mark. The eight people are
-checked against each other, and red against them, under simulated colour blindness. A look that
-cannot keep them is not offered. A new look is a block in `themes.css` and a line in `looks.py`,
-and nothing else.
+plate, each meaning on its wash, each person's name, letter and mark. A look that cannot keep
+them is not offered. The people are not checked against each other under simulated colour
+blindness: the family decided against that floor, because a name or an initial is always beside a
+colour, so colour never carries it alone. A new look is a block in `themes.css` and a line in
+`looks.py`, and nothing else.
 
-**Not yet.** There is no household default look, and a person's look does not follow them from
-one device to another: each browser chooses.
+**Kitchen Table is the default** once its layout ships, for everyone who hasn't chosen another
+look; anyone who had chosen keeps their choice. There is no household default: each person picks.
 
 ## Colour
 
@@ -217,10 +244,10 @@ slot (`person.slot`); a template never picks a colour, and no class is named aft
 and dots read. At night the soft becomes a tinted charcoal and the ink and mark lighten, so marks
 stay at 3:1 or more on a card. **Everyone** (`.p0`) is always neutral grey, with the house icon.
 
-**Tuned apart.** White letters on every slot are 5.4:1 or more. The slots were checked pairwise
-under simulated deuteranopia and protanopia: raspberry, not a red-pink, so a person never reads
-as "late" (CIEDE2000 58 from `--alert`), and cocoa rather than a second magenta. Eight colours
-cannot all stay apart for every eye, which is why colour is never the only cue.
+**Tuned apart.** White letters on every slot are 5.4:1 or more. Raspberry, not a red-pink, so a
+person never reads as "late", and cocoa rather than a second magenta. Eight colours cannot all
+stay apart for every eye, which is why colour is never the only cue: a name or an initial is
+always beside it.
 
 **Glass** is the brand's, the same in every look: `--glass` (`#0E1312`; `#070A09` at night),
 `--glass-2`, `--glass-line`, `--glass-ink`, `--glass-ink-2`, `--glass-alert` (coral, "can't
@@ -318,8 +345,12 @@ scanlines, so it reads at 24 pixels on a phone.
 
 **Ready**, it has a 3-pixel halo (`--vs-halo`), Kitchen Table green by day and phosphor at
 night, so it reads as lit glass on cream and as a screen, not a hole, on charcoal.
-**Answering** (`.vs--busy`), the lines light one after another and the cursor blinks, only while
-a reply is on its way. **Can't answer** (`.vs--off`), the light goes out: rim, lines and prompt
+**Typing.** On Home, as the page opens, the Ask box's screen types its lines in from the left, a
+few characters at a time, one after another, then blinks its cursor three times and rests lit
+(`.vs--hello`, about three seconds, once). **Answering** (`.vs--busy`), the same lines type, hold,
+clear and type again every 2.4 seconds and the cursor blinks, only while a reply is on its way:
+in the chat's waiting line, and on Home while the pill says she is writing back. Everywhere else,
+and with less motion asked for, it is still. **Can't answer** (`.vs--off`), the light goes out: rim, lines and prompt
 turn control-edge grey, the cursor goes hollow, the halo goes, and the words beside it say why.
 
 The screen is always `aria-hidden`, with her name in text beside it. It never gets eyes, a mouth,
@@ -369,7 +400,8 @@ builds one by hand. Person classes are slots (`.p0` to `.p8`), never names.
   better, Not connected (an outline, a hollow amber dot); `--look` Needs a look (amber, a "!");
   `--broken` Not working; `--off` Off, Optional, No backup; `--when` Tomorrow, Planned; `--been`
   Went Thu 1 Oct, Not this time; `--pending` (dashed) No answer yet, Not done yet; `--surprise`
-  "Surprise · hidden from Maya".
+  "Surprise · hidden from Maya" (in a narrow tile, the lock and "Hidden from Maya"), always naming
+  exactly whom it's hidden from.
 - **Avatar** (`.av` with a slot): every mention of a person, their initial in white, the name
   always beside it. Everyone is the house.
 - **Item row** (`.items` › `.item`, lead · body · trail, `--boxed`, `--divided`): every list that
@@ -460,10 +492,23 @@ buttons.
 
 ## Small things
 
-Each sits where it means something, and none moves for long.
+Each sits where it means something, and none moves for long. The old green screen had a handful
+of motions; Kitchen Table keeps five, in every look, all in CSS (`motion.html` shows each in place,
+with when it plays):
 
-- **The cursor waits.** The wordmark's cursor blinks twice, slowly, then stays lit, the way a
-  terminal waits.
+- **Her screen types**, once on Home as the page opens, and on a loop only while she is writing
+  back (see "Her screen"). It is the one thing that loops, and it means she is working.
+- **Afterglow.** The flash that says what you just did (a save, a tick, an answer, with its Undo)
+  lights at once as the page comes back and fades over a second, falling fast and then lingering,
+  as a tube's glow did.
+- **Landing.** Where a link lands (a card, a day on the calendar, a plan) lights and fades over
+  about two seconds, so the eye finds it.
+- **The cursor rests.** The wordmark's cursor blinks for about four seconds as a page opens, then
+  stays lit, the way a terminal waits, so nothing blinks at you while you read.
+- **The dot breathes** on the pill while she is writing back, and only then.
+- In a look with `--fx-glow` (Afterglow) the lights are a little brighter; nothing lasts longer.
+  Left behind on purpose: glyphs falling on every busy screen, the missing page powering on, the
+  radar's sweep, flicker, a lamp breathing while she is idle.
 - **Her caret** in her box is the wordmark's cursor green.
 - **Today is lit**: a filled green disc on a faint wash, never a ring (a ring means focus).
 - **A tick stays.** A to-do ticked off stays where it was, struck through, with a flash and Undo.
@@ -483,9 +528,9 @@ The phone is its own layout, not the desktop stacked, at 820 pixels and below.
   checking) and a fixed tab bar of five, 68 pixels plus the phone's safe area (`--tabbar-total`).
   The current tab has a 3-pixel green bar on its top edge. `scroll-padding-bottom` keeps the
   focused control clear of it.
-- **Tabs by role.** Grown-ups: Home, Chat, Ideas, Plans, To do, with Wishes, What Vera knows,
-  Status, Settings, Family, You and Sign out in the account menu. A kid: Home, Chat, Wishes,
-  Plans, To do, with Ideas, You and Sign out in hers.
+- **Tabs by role.** Grown-ups: Home, Chat, Ideas, Plans, To do, with Look, Wishes, What Vera
+  knows and Status in the account menu, then Settings and Family for an admin, then Sign out. A
+  kid: Home, Chat, Wishes, Plans, To do, with Look, Ideas and Sign out in hers.
 - **The first screen.** On Home the greeting is one small line, the Ask card one row (the box and
   an arrow Send), and the next plan sits above the tab bar. Cards are capped ("3 more plans this
   month"), in the order Ask, Next up, To do, How did it go, Wishes, Ideas.
@@ -507,8 +552,9 @@ Kept on a home screen, the page opens full-screen, with the mark as its icon.
 
 - **The sidebar** (desktop): the mark and wordmark, the pill for grown-ups, then the nav, each
   place with its icon and a badge where something needs someone. An admin's ends with **Behind the
-  scenes**: Status, Settings, Family; a parent sees Status. At the foot (`.me`), who is signed
-  in, **You** and Sign out, a POST button.
+  scenes**: Status, Settings, Family; a parent's has Status alone, since Status is for every
+  grown-up and Settings and Family are an admin's. At the foot (`.me`), who is signed in, then
+  **Look** (theirs, on every device), **Your password** and Sign out, a POST button.
 - **Home.** A small greeting and the day, then the big line, what is coming and what is late,
   with links. Then the Ask card. Beside it **Next up** (the next plan with a large date tile, its
   time, drive and who, then "After that") and To do; under them what was just added to Ideas and
@@ -534,7 +580,9 @@ Kept on a home screen, the page opens full-screen, with the mark as its icon.
   `.ev--from`). A one-line key under it, then Coming up and "How did it go?". The list
   (`.plans-agenda` › `.plan`) is the next 90 days by month, then Recently.
 - **To do.** Overdue first, under a red heading; then the rest, No date last; a tick and Edit on
-  each. The add form: the box, who and when, then **Add** as a full-width bar on the desktop.
+  each. Edit opens the to-do's own page (title, notes, who, deadline, reminder, repeats, done):
+  one short form with a way back, rather than a form unfolding inside the list, which on a phone
+  pushes the list away and loses your place. A to-do remembers who set it. The add form: the box, who and when, then **Add** as a full-width bar on the desktop.
   Nobody is picked; the server says so if nobody is.
 - **Wishes.** For grown-ups, each kid's three lists (Every day, Christmas, Birthday, each with
   its countdown) at a glance, what Vera flagged, and the answers. One kid's page has the full
@@ -600,9 +648,11 @@ rim is 4.6:1 against the page, its box's edge 4.4:1.
   label and their people's initials; the pill's dot changes shape.
 - **The chat thread** is `role="log"`, named and focusable. One `h1` a page, headings in order.
 - **Sizes.** Targets 44 pixels; type 14 pixels or more (13 only for capitals), in rem.
-- **Motion.** Nothing blinks for more than five seconds. Only things that end on their own move
-  longer: her busy screen, the typing dots and the writing-back dot, while a reply is on its way.
-  Under `prefers-reduced-motion` nothing moves at all.
+- **Motion.** Nothing moves for more than about five seconds where people read: her screen types
+  in once on Home, a flash and a landing place glow and fade, the cursor rests. Only her typing
+  screen, the typing dots and the writing-back dot loop, and only while a reply is on its way.
+  Under `prefers-reduced-motion` nothing moves at all: the motions are written only for people
+  who have not asked for less (`prefers-reduced-motion: no-preference`).
 - **Forced colours.** Whatever is shown by a background alone (the current place, segments,
   choices, the looks, tags, the pill, ticks, today) gets a real border.
 - **Reflow.** Nothing scrolls sideways at 320 pixels or at 200 % zoom.
@@ -628,15 +678,17 @@ rim is 4.6:1 against the page, its box's edge 4.4:1.
   message by `column-reverse`. While a reply is pending the page refreshes itself, backing off
   (3 seconds, then 5, then 10) and never after 60, when the message is marked failed.
 - **Kids never see costs or workings**: no pill, no money, no limit, no models, no company names,
-  no setup, no Status. A kid is told "You've sent all 20 of today's messages", or that Vera is
+  no setup, no Status. Every grown-up, a parent as well as an admin, sees Status and the pill. A kid is told "You've sent all 20 of today's messages", or that Vera is
   resting "until tomorrow".
-- **Presents stay hidden.** A gift idea or a surprise is left out of a kid's pages entirely: no
-  row, no count, no greyed item. Lists are filtered for the viewer (`visible_to(viewer)`) before
-  anything is counted. Grown-ups see it tagged, always by name: "Surprise · hidden from Maya".
-- **Looks are colour only**, and keep Vera's glass and phosphor and red for late or broken.
+- **Presents stay hidden from whom they're for.** A present is hidden from exactly the people it
+  names, by default whoever it's for: for them it is left out entirely, no row, no count, no
+  greyed item. Everyone else, a kid included, sees it tagged by name, "Hidden from Theo", so they
+  know to keep it quiet. Lists are filtered for the viewer (`visible_to(viewer)`) before anything
+  is counted.
+- **Looks are colour only**, plus at most the five effects (a page light, scanlines, Vera's glow,
+  a title face), and keep Vera's glass and phosphor and red for late or broken.
 - **The accessibility above**, in every look, by day and by night. A new colour or look is
-  measured against the others on its pages, for typical sight and for deuteranopia and
-  protanopia, before it is added.
+  measured against every ground it sits on before it is added, and never asked to speak alone.
 - Nothing from an idea, a place or a fetched page is marked safe in a template.
 - No page view is a model call: only a message sent asks a model
   (`test_browsing_asks_nothing_of_a_model` holds it).

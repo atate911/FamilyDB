@@ -1,0 +1,26 @@
+61:{% macro presence(cls='avatar', variant=0) -%}
+62-  <span class="{{ cls }} presence v{{ variant }}" aria-hidden="true"><span class="presence-glass"></span></span>
+63-{%- endmacro %}
+64-
+65-{# One line of the conversation, wherever it is shown: hers on the left beside her screen, the
+66-   family's on the right with their initial, so side and mark tell them apart, not colour alone.
+67-   Everything she says looks the same, a long answer, a reminder or a one-word "Done."; only the
+68-   words differ. `anchor` is the id the newest line carries. Goes in an <ol class="thread">. #}
+69-{% macro chat_line(line, anchor=none) -%}
+70-  <li class="{{ 'said-bot' if line.from_bot else 'said-them' }}"{% if anchor %} id="{{ anchor }}"{% endif %}>
+71-    {% if line.from_bot %}{{ presence(variant=(line.id or 0) % 4) }}{% else %}<span class="avatar" aria-hidden="true">{{ line.who[:1] | upper }}</span>{% endif %}
+72-    <div class="bubble">
+73-      <div class="said-by">
+74-        <strong>{{ line.who }}</strong>
+75-        <span>{{ line.when }}</span>
+76-        {% if line.trouble %}<span class="tag warn">{{ line.trouble }}</span>{% endif %}
+77-      </div>
+78-      <div class="said-text">{{ line.text }}</div>
+79-      {% if line.did %}
+80-        <div class="did">used {{ line.did | join(', ') }}</div>
+81-      {% endif %}
+82-    </div>
+83-  </li>
+84-{%- endmacro %}
+85-
+86-{# The last line of the thread while the newest message waits: her screen and name, and a line

@@ -27,7 +27,7 @@ const dark = (process.env.DARK || "").split(/\s+/).filter(Boolean);
       const failed = await p.evaluate(() => [...document.fonts].filter(x => x.status === "error").length);
       wide = await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
       ok = !bad && !failed;
-      if (ok || tries === 5) await p.screenshot({ path: file, fullPage: true });
+      if (ok || tries === 5) await p.screenshot({ path: file, fullPage: true, animations: "disabled" });  // motions shown at rest (motion.html shows them moving)
       await ctx.close();
     }
     console.log(path.basename(file), ok ? "ok" : "FONTS FAILED", wide ? "WARNING: wider than the screen" : "", errs.length ? "errors: " + errs.join(" | ") : "");

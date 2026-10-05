@@ -48,7 +48,7 @@ This is the reference for building FamilyDB's web pages. The mockups (`*.html`),
 | `--cursor` / `--cursor-glow` | #1B9A55 / 35 % | #6DFF9C / 55 % | the wordmark's cursor and the caret in Vera's box |
 | `--vs-halo` | #1B9A55 at 35 % | #6DFF9C at 45 % | the 3 px halo round Vera's screen |
 
-**Measured by `_kit/looks-check.py`:** Kitchen Table's eight slots fall under the colour-blind floor in three places (slot 4 ochre and slot 7 olive under protanopia; slots 2 and 5 under deuteranopia; late red against slot 4 under deuteranopia). They are recorded as known until the family decides (HANDOFF.md §9). **Maya's slot (p3) is raspberry, not red-pink**, so it never reads as "late" (ΔE 58 from `--red`, was 40), and slot 8 is cocoa brown (was a magenta that matched slot 2 under every simulation). Checked pairwise under deuteranopia and protanopia (Machado): eight colours can't all stay apart for every eye, so **colour is never the only cue**: every person marker carries an initial or the house.
+**Maya's slot (p3) is raspberry, not red-pink**, so it never reads as "late", and slot 8 is cocoa brown rather than a second magenta. Eight colours can't all stay apart for every eye, so **colour is never the only cue**: every person marker carries an initial or the house. People are not checked against each other under simulated colour blindness (the family's decision, stage 13); every contrast floor, each person's letter on their colour included, is held by `_kit/looks-check.py`.
 
 **Person colours come from the family's data.** The five above are the mockup family. A real install assigns each new person the next colour from a fixed set of eight. Each colour is checked for 4.5:1 with white letters and for its own `-soft`/`-ink` pair.
 
@@ -145,6 +145,7 @@ Class names are the API. Person colour classes are **slots** (`.p0…p8`), never
 | Her lines | `.lines` › `.setting.line` › `.reads` | — | a written line: the box (her line as placeholder), “Can use …”, and “Reads as” with made-up details |
 | Change history | `ul.changes` › `.change` | — | what has changed: old → new, “replaced” for a key, “rewritten” for a long text |
 | Look page | `form.look-form` › `fieldset.card.look-modes` (three `label.look-mode` radios: Match my device, Always day, Always night) + `fieldset.looks` › `ul.look-grid` › `label.look-choice` (`.look-head` radio + `.look-name` with "In use" / "The default" tags, `.look-blurb`, `.look-samples`) + the save bar | ringed in ink when chosen | `/look`: this browser's look, for anybody signed in, kids included (the built page, in Kitchen Table) |
+| Motion sheet | `motion.html`: `sheet_head("motion")`, a `.sheet-sec` per motion with a `.specimen` and `.motion-stage` (a card-coloured stage for a sign or the wordmark) | | the states sheets' fourth page; screenshots can't show motion, so each is shown in place, with when it plays |
 | Look sample | `span.look-shot` › `span.look-sample[data-theme][data-mode]` › `.ls-band` (`.ls-mark`, `.ls-nav` with `.ls-here`) + `.ls-page` (`.ls-card` with title, line, `.ls-chip` Today, `.ls-btn`; `.ls-dots`) + `.look-caption` | Day / Night / Night only | a small page in a look's own colours; `aria-hidden`; the markup `test_look.py` counts |
 | Setup steps | `.setup-progress` (All, 1–7; `.done`, `aria-current="step"`), `.step-head`, `.step-body`, `.state-done`, `.step-nav` | `--end` | one step of setting up; labels hide on the phone, numbers stay |
 | Setup list | `.setup-list` › `a.setup-row` (`__n`, `__what`, need tag, chevron) | `--done` | setup's overview: every step, how it stands, and Done / Needed / Recommended / Optional |
@@ -199,8 +200,9 @@ One word per thing, on every page, in Vera's replies and in her Telegram message
 | spelling | **British English**, the app's own: colour, kilometres, cancelled, tick off | US spellings |
 | plan status | **Tomorrow · Planned · Went Thu 1 Oct** | Scheduled, Completed |
 | wish answers (kids and parents alike) | **Yes! · Thinking about it · Not this time · No answer yet**; the nav count is “1 to decide” | Approved, Denied, Pending, To decide, Not decided yet |
-| something kept from kids | **Surprise · hidden from Maya**; in a narrow tile, the lock and **Hidden from Maya**. Always says who | private, secret, a bare "Surprise" |
-| the starter password | "everyone shares one family password" | the installer's password |
+| a present | **Surprise · hidden from Maya**; in a narrow tile, the lock and **Hidden from Maya**. Always names exactly whom it's hidden from, to everyone who can see it | private, secret, a bare "Surprise", "hidden from the kids" |
+| the starter password | "everyone shares one family password"; the first one is "the password FamilyDB started with" | the installer's password, "installer" anywhere the family reads |
+| a look | "Yours, on every phone and computer you sign in on" | this browser, this screen (except while the family shares one password) |
 | who can change Settings | "Only admins can change these, and right now that's Sam" | "Only Sam" |
 | a backup AI | "If it's down, Vera switches to" / **No backup** | fallback |
 | late | "**6 days late**" (parents); "**Was due Sun 27 Sep**" (kids) | Overdue (except the group heading on To do) |
@@ -213,14 +215,14 @@ Errors are written as the fix: "Give the idea a name", "A link starts with https
 
 | | Admin (Sam) | Parent (Alex) | Kid (Maya, Theo) |
 |---|---|---|---|
-| Nav | everything plus *Behind the scenes*: Status, Settings, Family | everything, no *Behind the scenes* (Status yes: grown-ups may see it; no admin links on it) | Home, Chat, My wishes, My to-dos, Plans, Ideas. **Not** What Vera knows: the real app keeps memory for grown-ups (`browse`) |
-| Phone tabs | Home, Chat, Ideas, Plans, To do; Wishes, What Vera knows, Status, Settings, Family, Look, Your password and Sign out are in the **account menu** behind the avatar (`more.html`) | same, without Status/Settings/Family | Home, Chat, Wishes, Plans, To do; Ideas, Look, Your password and Sign out in her menu (`more-kid.html`) |
+| Nav | everything plus *Behind the scenes*: Status, Settings, Family | everything plus *Behind the scenes* with **Status alone** (`home-parent.html`); Status is for every grown-up, with no admin links on it | Home, Chat, My wishes, My to-dos, Plans, Ideas. **Not** What Vera knows: the real app keeps memory for grown-ups (`browse`) |
+| Phone tabs | Home, Chat, Ideas, Plans, To do; Wishes, What Vera knows, Status, Settings, Family, Look, Your password and Sign out are in the **account menu** behind the avatar (`more.html`) | same, with Status but without Settings and Family (`more-parent.html`) | Home, Chat, Wishes, Plans, To do; Ideas, Look, Your password and Sign out in her menu (`more-kid.html`) |
 | Health pill, cost, models, setup | yes | pill and cost; no setup | **never** |
 | To-dos | all; tick, add, edit | all; tick, add, edit | **only her own, read-only**; "Sam or Alex tick these off"; she can tell Vera she's done |
 | Ideas, plans | change; rate plans | change; rate plans | read only; no faces, no Add, no Edit; "Ask a parent" where a change is expected |
 | Wishes | decide | decide | add, rank, take off; sees answers in words |
 | Chat | family chat + reads kids' chats (read-only, “Her own conversation, for you to read”) | same | **only her own chat** (the real app never gives a kid the family conversation), within her daily message count; warned gently at 5 left; no “Share where I am” |
-| Gifts | shown, tagged "Surprise · hidden from …" | same | **left out entirely** (no row, no count, no greyed item) |
+| Presents | hidden from exactly the people they name (by default whoever they're for); shown to everyone else, tagged "Hidden from Theo" | same | the same rule: a present for her is left out entirely (no row, no count, no greyed item); her brother's is shown, tagged "Hidden from Theo" |
 
 Whether a kid may tick her own to-dos or rate a plan is a *family* decision. The app currently says no. If the family allows it later, the kid's to-do row becomes the normal `.todo` with a tick, and `.faces` appear on her Home. No new component is needed.
 
@@ -331,7 +333,7 @@ Disabled controls are exempt, but each also carries its reason in words.
 - Form fields have labels; errors are tied with `aria-describedby` and `aria-invalid`; the summary has `role="alert"`; flashes have `role="status"`.
 - Chat thread: `role="log"`, focusable (`tabindex="0"`), named.
 - Targets are 44 px; type is 14 px or more (13 px only on tab labels and overlines), set in rem; the top and tab bars use `min-height`.
-- **Nothing blinks for more than five seconds** (2.2.2): the wordmark cursor blinks twice and stays lit, the pill's dot breathes once. Only things that end on their own move longer: Vera's busy screen and the typing dots, while a reply is on its way.
+- **Nothing blinks for more than five seconds** (2.2.2): the wordmark cursor blinks four times and stays lit; Home's sign types in once and rests by 4.8 s; a flash's afterglow (1.2 s) and a landing glow (1.8 s) fade on their own. Only Vera's busy screen, the typing dots and the pill's dot loop, and only while a reply is on its way (§9, "Small things").
 - `prefers-reduced-motion`: nothing moves at all.
 - **Never `display:none` beside an `aria-hidden` stand-in.** When a short label replaces a long one on the phone (Edit links, month names), the long one is hidden with the `.sr` clip pattern, so it stays the control's name.
 - Icon-only buttons have `--edge` borders (3.8:1); a disabled one is `--ink-3` with a dashed edge and keeps its reason in words.
@@ -355,13 +357,24 @@ Disabled controls are exempt, but each also carries its reason in words.
 - `page(role, current)` wraps the shell (tab bars per role; the account menu behind the avatar): sidebar or top bar, role-aware nav and tabs, skip link, sprite.
 - Then `card`, `banner(tone, size)`, `tag(state)`, `badge(kind, n, word)`, `avatar(person, size)` (emits `av p{{ person.slot }}`), `vera_screen(size, state)` (emits an `aria-hidden` `svg.vs` from the geometry table in §9), `brand_mark(size)` and `wordmark()`, `item`, `todo(todo, viewer)` (picks `--late`, `--done` or `--ro` from the viewer's role), `composer(viewer, state)`, `starters(list)`, `field(...)`, `choices(name, options, required)`, `rank(wish, viewer)`, `idea_card`, `calendar_week`, `empty(title, text, action)`, `flash(message, undo_url)`, `error_summary(errors)`.
 - `health(area)` returns one `(state, words, action)` per area: Vera, Spending, Sign-in, Backup, Telegram, Google Calendar, Looking things up. **Every page reads it** (pill, Home, Status, Settings, Ideas banner), so they can't disagree. Settings summary lines are computed, never written as copy.
-- `visible_to(viewer)` filters every list for kids: own to-dos only, gifts and surprises removed. Counts are taken *after* filtering.
+- `visible_to(viewer)` filters every list: a kid's to-dos to her own, and every present away from the people it is hidden from (`ideas.hidden_from`). Counts are taken *after* filtering.
 
 **Looks (stage 11: the app's built mechanism; HANDOFF.md §8)**
 - A look is a block of colour tokens in `/static/themes.css`, `[data-theme="<key>"]`, each value `light-dark(day, night)`, and a line in `web/looks.py`. Kitchen Table is `kitchen`, proposed as the default once this layout ships.
 - `base.html` writes `data-theme`, and `data-mode` only when the browser holds the page to day or night, from the `fdb_look` cookie; `color-scheme` and `theme-color` follow (`looks.scheme()`, `looks.theme_colours()`). Everything is stylesheet-only.
-- The choice is per browser, on the Look page, for anybody signed in, kids included. A household default and a person's own look across devices are not built (HANDOFF.md §8.5).
-- `tests/test_look.py` holds every look to the token set and the contrast floors; `_kit/looks-check.py` adds Kitchen Table's layout pairs and the colour-blind checks, and `--sheets` writes `palette/<key>.html`.
+- The choice is the person's, on the Look page, for anybody signed in, kids included: kept with them (`members.look`, migration `0037`), written through `familydb.family.choose_look`, and worn on every device they sign in on. The cookie carries it to the pages before sign-in, and is the only store while the family shares one password. No household default (HANDOFF.md §8.5).
+- `tests/test_look.py` holds every look to the token set and the contrast floors; `_kit/looks-check.py` adds Kitchen Table's layout pairs and the effects, and `--sheets` writes `palette/<key>.html`.
+
+**Effects and Afterglow (stage 12; HANDOFF.md §8.7–8.9)**
+- Beside its colours, every look names five effect tokens, read only in `style.css` §11:
+  - `--fx-page`: a page light (`none`);
+  - `--fx-scan`: the scanline colour on the band, the Ask box and the radar's pane (`transparent`);
+  - `--fx-glow`: Vera's extra glow and the motions' brightness, 0–1 (`0`);
+  - `--fx-title`: the face of `h1` and the wordmark (`var(--font-head)`);
+  - `--fx-title-adjust`: its `font-size-adjust` (`none`).
+  - The plain values are in the `[data-theme]` block.
+- Scanlines are a background under the words; glow is a shadow outside an edge. Both are off in forced colours and print. `looks-check.py` check D measures the words over each effect at full strength.
+- `[data-theme="afterglow"]`: night-first, with a day. Its panel and Ask box are dark glass in both modes, and VT323 (`fonts/vt323-400.woff2`) sets the page titles and the wordmark. Rendered in full in `shots/afterglow/`.
 
 **Works with scripting off (required)**
 - Reading every page, and every form: tick, Undo, add, edit, rate (faces), answer a wish, move a wish up or down, sign in, search and filter (GET), send a message.
@@ -382,9 +395,9 @@ Disabled controls are exempt, but each also carries its reason in words.
 None of these may be needed to read, send or change anything.
 
 **Data rules the design depends on**
-- A to-do knows who set it (`Set by Alex`) and who owns it.
+- A to-do knows who set it (`Set by Alex`, `tasks.created_by_member_id`, from migration `0037` on) and who owns it. It is edited on its own page (`todo-edit.html`).
 - A wish has rank, answer, who answered and their words.
-- An idea or to-do can be a gift or surprise, with the people it's hidden from.
+- An idea can be a present, with the people it's hidden from (`ideas.hidden_from`, by default its `gifts_for`); a to-do for a present hides through its idea.
 - Plans know who they're for (one person → that person's colour and initial; several or Everyone → neutral with each person's avatar or the house). The macro derives the colour from the people; a template never picks it.
 - Kids have a daily message count.
 
@@ -431,7 +444,8 @@ A little monitor with a smile, drawn in one 2 px round-capped stroke (24-unit gr
 - Sizes: 22 px in the sidebar, 20 px in the phone bar, 18 px inside a pane. It is always beside the mark; the link around both is named "FamilyDB, home".
 - **On paper:** ink letters, cursor `--cursor` (#1B9A55, 3.2:1 on paper as a non-text mark) with a faint glow.
 - **On dark and on glass:** cream or glass-ink letters, cursor `--phosphor` with `--phosphor-glow`.
-- The cursor blinks twice (2 s each, mostly on), then stays lit: no blinking past five seconds (WCAG 2.2.2). Under `prefers-reduced-motion` it never blinks. The cursor is `aria-hidden`.
+- The cursor blinks four times (1.06 s each, mostly on), about four seconds, then stays lit: no blinking past five seconds (WCAG 2.2.2). Under `prefers-reduced-motion` it never blinks. The cursor is `aria-hidden`.
+- In a look with a title face (`--fx-title`, Afterglow's VT323) the wordmark is set in it, at Fraunces' cap height.
 
 ### Vera's screen
 
@@ -449,11 +463,13 @@ Geometry (per size, in px): radius 6 / 8 / 10 / 14; rim 1 px inside the edge; li
 | State | Class | Looks like |
 |---|---|---|
 | Ready | `.vs` | rim at 60 %, lines at 45 % with the newest at 90 %, the prompt and cursor fully lit, a soft halo (`--vs-halo`) |
-| Answering | `.vs--busy` | the lines light one after another and the cursor blinks, only while a reply is on its way |
+| Typing in | `.vs--hello` | Home's Ask card only, once as the page opens: each line types in from the left in four steps (0.32 s), one after another from 0.15 s to 1.7 s; then the cursor blinks three times and rests lit (done by 4.8 s) |
+| Answering | `.vs--busy` | while a reply is on its way (the chat's waiting line; Home's Ask card while the pill says "writing back"): the lines type one after another (three steps each, slots 0–64 % of 2.4 s), hold, clear together at 82 %, and type again; the cursor blinks every 1.06 s |
 | Can't answer | `.vs--off` | the light goes out: rim, lines and prompt turn `--edge` grey, the cursor is hollow, no halo. Visible on cream and on charcoal. The words beside it say why |
 
 - The whole screen is `aria-hidden`; Vera's name is always in text next to it.
-- **Motion:** only `--busy` moves (it stops when the reply lands), and nothing moves under `prefers-reduced-motion`.
+- **Motion:** `--hello` plays once and ends lit; `--busy` loops only while she is writing back and stops when the reply lands. Nothing moves under `prefers-reduced-motion` (the keyframes are inside `@media (prefers-reduced-motion: no-preference)`). The lines are bars of fixed length: they never spell anything and never make a face.
+- In a look with `--fx-glow` (Afterglow), the screen gets a second, wider halo and a fully lit rim.
 - Halo: `--vs-halo` is a 3 px drop shadow, Kitchen Table green by day and phosphor at night, so the pane reads as lit glass on cream and as a screen, not a hole, on charcoal.
 
 ### The mono: only on the glass
@@ -471,7 +487,7 @@ JetBrains Mono 400, self-hosted (`fonts/jetbrains-mono-400.woff2`, 21 KB), 14 px
 | Glass pane | `--glass`, `--glass-2`, `--glass-line`, `--glass-ink`, `--glass-ink-2`, `--phosphor` | the four brand moments: sign-in, a first empty day, the grown-ups page, the missing page. Faint scanlines inside are fine | as a card style; around the family's content; more than one per page |
 | The radar | `--glass`, `--phosphor` at 14–25 % for rings and axes, `--glass-ink` and `--glass-ink-2` for labels | Ideas only, in its own band after all the cards (folded behind "Show the map" on the phone). Drive time is distance from home on a piecewise scale that gives the first half hour 70 % of the radius (rings at 15 min, 30 min, 1 h, 2 h, 3 h, labelled on alternate sides of the north axis); direction is bearing, north up; "Home" marks the middle. Each dot carries the idea's short name ("Pumpkin patch", "Oaks Park"): the first words of its card's title, so a kid can match it. Ideas in the same direction are fanned a few degrees apart. The SVG is `aria-hidden`: the cards are the list, and each card already says its drive time and direction | between the cards; any second page; a separate numbered list; mono labels. One instrument per page at most. If every idea is inside one ring, show the cards alone |
 | Ask card glass | `--ask-bg`, `--ask-rim`, `--ask-edge` | Home's and the kid's Ask card: deep green, and at night a 1.5 px green rim, a faint inner glow and a real edge on its box | anywhere else |
-| Live glow | `--phosphor-glow`, `--vs-halo` | the writing-back pill, the panes, Vera's screen, the wordmark cursor | the calm "ready" pill, chat bubbles (Vera's included), cards, buttons |
+| Live glow | `--phosphor-glow`, `--vs-halo` | the writing-back pill, the panes, Vera's screen, the wordmark cursor; in a look with `--fx-glow` (Afterglow), also her Send and a soft edge on her chat lines | the calm "ready" pill, the family's bubbles, cards, the family's buttons; Vera's bubbles in a look without `--fx-glow` |
 
 The radar is drawn twice from the same data, so names stay readable: a wide 860 × 440 plot for the desktop (names 15 px, drawn at 1:1) and a narrow 360 × 400 plot for the phone (names 14 px). Ring and compass labels are 13 px Atkinson; every label position is set per idea in the data, so nothing sits on a compass letter.
 
@@ -483,6 +499,22 @@ The radar is drawn twice from the same data, so names stay readable: a wide 860 
 - **The missing page** (`404.html`): a centred pane, the mark, "404 · nothing on the radar" in the mono, then the real words: "Not found", "There's nothing at that address.", Back to the start.
 - **Not part of your role** (`403.html`): the same pane, "403 · signed in Maya · role kid", "Not part of your role", then the refusal's own title and words ("For a parent" / "This page is for the grown-ups. Ask a parent if you need it.") and Back to the start.
 - **A first sign-in** (`you-first.html`): a small pane, "first sign-in · Maya", over "Choose your own password".
+
+### Small things (motion, stage 12)
+
+Every look; all CSS, in `style.css` §12; shown in place on `motion.html` (and frame by frame in `shots/motion-frames.png`). The keyframes live inside `@media (prefers-reduced-motion: no-preference)`, so with less motion asked for none of them exists.
+
+| Motion | Selector | When it plays | Timing | Loops? |
+|---|---|---|---|---|
+| Her sign types in | `.vs--hello .vs__r`, `.vs__c` | Home's Ask card, as the page opens | lines `vs-in` .32 s `steps(4)`, staggered .15–1.4 s; cursor `vs-blink` ×3 from 1.6 s | no; ends lit |
+| Her sign types while she writes back | `.vs--busy .vs__r` (`vs-t1`…`vs-t6`), `.vs__c` | the chat's waiting line; Home's Ask card while the pill reads "writing back" (same health state) | 2.4 s, `steps(3)`; cursor 1.06 s | yes, only while busy |
+| Afterglow | `.flash` | a flash after a save, tick or answer | `fdb-afterglow` 1.2 s `cubic-bezier(.2,.7,.3,1)`: a ring and glow of `--lit` at full, fading to the banner's own | no |
+| Landing | `.card:target`, `li:target` | a link lands on a card, a calendar day or a plan | `fdb-landed` 1.8 s, same curve | no |
+| Cursor rests | `.wm__cur` | any page opening | `fdb-blink` 1.06 s ×4 | no; ends lit |
+| The dot breathes | `.pill-health--busy::before` | the pill while she writes back | `fdb-breathe` 1.6 s | yes, only while busy |
+
+- The lights' strength is `calc(45% + 35% * var(--fx-glow))` of `--lit` (the ring) and `calc(35% + 35% * var(--fx-glow))` (the glow): 45 % / 35 % in Kitchen Table, 80 % / 70 % in Afterglow. Durations never change with the look.
+- Not kept from the old screen: glyphs falling on every busy screen, the 404's power-on, the radar's sweep, flicker, the idle lamp's breathing, the mic's pulse beyond its own `.listening` state.
 
 ### The dark theme: phosphor at night
 

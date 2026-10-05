@@ -10,22 +10,26 @@ written light-dark(day, night) or once for both). Tokens a look doesn't name com
 [data-theme] block of derived defaults, worked out from the look's own tokens, exactly as the page
 does (color-mix in sRGB and var() are evaluated here too).
 
-Three sets of checks:
+The checks:
   A. The built floors, as tests/test_look.py holds them (4.5:1 words, 4:1 a colour on a well,
      3:1 edges and focus, words on each colour as a fill, a colour on its 10 % tint).
   B. The pairs Kitchen Table's layout draws that the built pages don't: the panel's links and
      its current item, Vera's box and its Send, each meaning on its wash, the late plate, words on
      Vera's fills, each person's name, mark and letter.
-  C. The eight people and late red, under simulated colour blindness (Machado 2009, CIEDE2000).
-     Kitchen Table's three known shortfalls are recorded, not failed (HANDOFF.md §9).
+  C. The effects (stage 12): where a look draws scanlines (--fx-scan) or a light on the page
+     (--fx-page), the words over them are measured on the ground with the effect composited at its
+     strongest: the panel's words on a scanline, Vera's words on a scanline in her box, and the
+     page's words under the top of the page light.
+Colour is never the only cue (each person's name or initial is beside their colour), so the people
+are not checked against each other under simulated colour blindness: the family decided against that
+floor in stage 13. Every contrast floor stays, each person's letter on their colour included.
 No dependencies beyond Python 3. In the app: tests/test_look.py gains B and C (HANDOFF.md §7).
 """
-import math, os, re, sys, html as H
+import os, re, sys, html as H
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEXT, WELL, NONTEXT = 4.5, 4.0, 3.0
-PEOPLE_FLOOR, RED_FLOOR = 6.0, 6.0
-KNOWN = {"kitchen": {"people": 1.1, "red": 2.1}}   # recorded, as measured; worse fails
+KITCHEN_PEOPLE = ("kitchen", "afterglow")   # looks that wear Kitchen Table's eight people (the [data-theme] block's), so are checked on them
 
 # ---------------------------------------------------------------- colour maths
 def rgb(h):
@@ -36,32 +40,6 @@ def lin(c): return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
 def unlin(c): c = min(1, max(0, c)); return 12.92 * c if c <= 0.0031308 else 1.055 * c ** (1 / 2.4) - 0.055
 def lum(c): r, g, b = (lin(x) for x in c); return 0.2126 * r + 0.7152 * g + 0.0722 * b
 def contrast(a, b): x, y = sorted((lum(a), lum(b)), reverse=True); return (x + 0.05) / (y + 0.05)
-MACHADO = {"protanopia": ((0.152286, 1.052583, -0.204868), (0.114503, 0.786281, 0.099216), (-0.003882, -0.048116, 1.051998)),
-           "deuteranopia": ((0.367322, 0.860646, -0.227968), (0.280085, 0.672501, 0.047413), (-0.011820, 0.042940, 0.968881)),
-           "tritanopia": ((1.255528, -0.076749, -0.178779), (-0.078411, 0.930809, 0.147602), (0.004733, 0.691367, 0.303900))}
-def sim(c, k):
-    if k == "normal": return c
-    l = [lin(x) for x in c]; m = MACHADO[k]
-    return tuple(unlin(sum(m[i][j] * l[j] for j in range(3))) for i in range(3))
-def lab(c):
-    r, g, b = (lin(x) for x in c)
-    x = (0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047; y = 0.2126 * r + 0.7152 * g + 0.0722 * b; z = (0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883
-    f = lambda t: t ** (1 / 3) if t > 216 / 24389 else (24389 / 27 * t + 16) / 116
-    return 116 * f(y) - 16, 500 * (f(x) - f(y)), 200 * (f(y) - f(z))
-def de(c1, c2):
-    L1, a1, b1 = lab(c1); L2, a2, b2 = lab(c2)
-    C1, C2 = math.hypot(a1, b1), math.hypot(a2, b2); Cb = (C1 + C2) / 2
-    G = 0.5 * (1 - math.sqrt(Cb ** 7 / (Cb ** 7 + 25 ** 7))); a1p, a2p = a1 * (1 + G), a2 * (1 + G)
-    C1p, C2p = math.hypot(a1p, b1), math.hypot(a2p, b2)
-    h1 = math.degrees(math.atan2(b1, a1p)) % 360; h2 = math.degrees(math.atan2(b2, a2p)) % 360
-    dL, dC = L2 - L1, C2p - C1p
-    dh = 0 if C1p * C2p == 0 else (h2 - h1 if abs(h2 - h1) <= 180 else h2 - h1 - 360 if h2 > h1 else h2 - h1 + 360)
-    dH = 2 * math.sqrt(C1p * C2p) * math.sin(math.radians(dh / 2)); Lb = (L1 + L2) / 2; Cbp = (C1p + C2p) / 2
-    hb = h1 + h2 if C1p * C2p == 0 else ((h1 + h2) / 2 if abs(h1 - h2) <= 180 else (h1 + h2 + 360) / 2 if h1 + h2 < 360 else (h1 + h2 - 360) / 2)
-    T = 1 - .17 * math.cos(math.radians(hb - 30)) + .24 * math.cos(math.radians(2 * hb)) + .32 * math.cos(math.radians(3 * hb + 6)) - .2 * math.cos(math.radians(4 * hb - 63))
-    Sl = 1 + .015 * (Lb - 50) ** 2 / math.sqrt(20 + (Lb - 50) ** 2); Sc = 1 + .045 * Cbp; Sh = 1 + .015 * Cbp * T
-    Rt = -2 * math.sqrt(Cbp ** 7 / (Cbp ** 7 + 25 ** 7)) * math.sin(math.radians(60 * math.exp(-((hb - 275) / 25) ** 2)))
-    return math.sqrt((dL / Sl) ** 2 + (dC / Sc) ** 2 + (dH / Sh) ** 2 + Rt * (dC / Sc) * (dH / Sh))
 
 # ---------------------------------------------------------------- reading themes.css
 def blocks(css):
@@ -154,40 +132,47 @@ KT_PAIRS = (
     + [(f"p{i}'s mark on a card", f"p{i}-mark", "card", NONTEXT) for i in range(1, 9)]
 )
 
+# C. the effects: each ground with its effect laid over it at full strength
+FX_PAIRS = ([("the panel's words on a scanline", n, "band+scan", TEXT) for n in ("on-band", "on-band-2", "band-link")]
+            + [("Vera's words on a scanline", n, "ask-bg+scan", TEXT) for n in ("ask-ink", "ask-ink-2")]
+            + [(f"{n} under the page light", n, "paper+light", TEXT) for n in ("ink", "ink-2", "ink-3", "link", "red", "amber", "ok", "vera")])
+def rgba(raw, mode):
+    """A colour written with its alpha, as (r, g, b, a), from rgb(… / a) or a light-dark() of them."""
+    v = split_ld(raw)[0 if mode == "day" else 1].strip()
+    m = re.fullmatch(r"rgb\((\d+) (\d+) (\d+)(?: / ([\d.]+))?\)", v)
+    if m: return tuple(int(m[i]) / 255 for i in (1, 2, 3)) + (float(m[4]) if m[4] else 1,)
+    if re.fullmatch(r"#[0-9A-Fa-f]{6}", v): return rgb(v) + (1,)
+    return None
+def over(top, ground): return tuple(top[i] * top[3] + ground[i] * (1 - top[3]) for i in range(3))
+def effect_grounds(full, mode, c):
+    out = {}
+    scan = full.get("--fx-scan", "transparent").strip()
+    if scan != "transparent" and rgba(scan, mode):
+        for g in ("band", "ask-bg"):
+            if c.get("--" + g): out[f"--{g}+scan"] = over(rgba(scan, mode), c["--" + g])
+    page = full.get("--fx-page", "none").strip()
+    m = re.search(r"(light-dark\((?:[^()]|\([^()]*\))*\)|rgb\([^()]*\))", page) if page != "none" else None
+    if m and rgba(m[1], mode) and c.get("--paper"): out["--paper+light"] = over(rgba(m[1], mode), c["--paper"])
+    return out
+
 def check(key, own, full):
-    problems, notes, rows, seps = [], [], {}, {}
-    own_people = "--p1" in own or key == "kitchen"   # the people in the [data-theme] block are Kitchen Table's
+    problems, rows = [], {}
+    own_people = "--p1" in own or key in KITCHEN_PEOPLE   # the people in the [data-theme] block are Kitchen Table's
     night_only = key == "phosphor"   # a green screen has no day (looks.py: has_day=False)
     for mode in (("night",) if night_only else ("day", "night")):
         c = evaluate(full, mode)
         rows[mode] = []
         kt_pairs = KT_PAIRS if own_people else [x for x in KT_PAIRS if not re.match(r"p\d", x[1])]
-        for group, pairs in (("built", built_pairs(c)), ("Kitchen Table's layout", kt_pairs)):
+        c.update(effect_grounds(full, mode, c))
+        fx = [x for x in FX_PAIRS if "--" + x[2] in c]
+        for group, pairs in (("built", built_pairs(c)), ("Kitchen Table's layout", kt_pairs), ("effects", fx)):
             for what, fg, bg, floor in pairs:
                 a, b = c.get("--" + fg), c.get("--" + bg)
                 if a is None or b is None:
                     problems.append(f"{mode}: --{fg} or --{bg} isn't a colour"); continue
                 r = contrast(a, b); rows[mode].append((group, what, fg, bg, r, floor))
                 if r < floor - 0.005: problems.append(f"{mode}: {what} (--{fg} on --{bg}) is {r:.2f}:1, under {floor}:1 [{group}]")
-        for kind in ("normal", "protanopia", "deuteranopia", "tritanopia"):
-            s = {k: sim(v, kind) for k, v in c.items() if v is not None}
-            for g, keys in ((("avatars", [f"--p{i}" for i in range(1, 9)]), ("marks", [f"--p{i}-mark" for i in range(1, 9)])) if own_people else ()):
-                best = min((de(s[a], s[b]), a, b) for i, a in enumerate(keys) for b in keys[i + 1:])
-                seps[(mode, g, kind)] = best
-                if best[0] < PEOPLE_FLOOR:
-                    known = KNOWN.get(key, {}).get("people")
-                    msg = f"{mode}, {kind}: {best[1]} and {best[2]} are {best[0]:.1f} apart (floor {PEOPLE_FLOOR})"
-                    if known is not None and kind != "normal" and best[0] >= known - .05: notes.append("known: " + msg)
-                    else: problems.append(msg)
-            others = ([f"--p{i}{v}" for i in range(1, 9) for v in ("", "-mark")] if own_people else []) + ["--ok", "--primary", "--link", "--today"]
-            near = min((de(s["--red"], s[o]), o) for o in others)
-            seps[(mode, "red", kind)] = near
-            if near[0] < RED_FLOOR:
-                known = KNOWN.get(key, {}).get("red")
-                msg = f"{mode}, {kind}: late red is {near[0]:.1f} from {near[1]} (floor {RED_FLOOR})"
-                if known is not None and kind != "normal" and near[0] >= known - .05: notes.append("known: " + msg)
-                else: problems.append(msg)
-    return problems, notes, rows, seps
+    return problems, rows
 
 SHEET_CSS = """body { margin: 0; padding: 24px; background: #FFFFFF; color: #1D2526; font: 400 15px/1.45 "Atkinson Hyperlegible", Arial, sans-serif; }
 h1 { font: 600 32px/1.1 Georgia, serif; margin: 0 0 4px; } h2 { font: 600 20px/1.2 Georgia, serif; margin: 24px 0 8px; }
@@ -199,13 +184,14 @@ h1 { font: 600 32px/1.1 Georgia, serif; margin: 0 0 4px; } h2 { font: 600 20px/1
 .sw i { display: block; width: 36px; height: 36px; border-radius: 8px; box-shadow: 0 0 0 1px rgba(127, 127, 127, .35); }
 table { border-collapse: collapse; width: 100%; font-size: 13px; } td, th { text-align: left; padding: 3px 6px; border-top: 1px solid #DDD; }
 .bad { color: #B3381F; font-weight: 700; } .ok { color: #2B7148; }
+td { overflow-wrap: anywhere; }
+@media (max-width: 700px) { body { padding: 16px; } .cols { grid-template-columns: minmax(0, 1fr); } }
 """
-def sheet(key, full, problems, rows, seps, toks):
+def sheet(key, full, problems, rows, toks):
     sw = "".join(f'<div class="sw"><i class="t{toks.index(t)}"></i><b>{t}</b></div>' for t in toks)
     def table(mode):
         tr = "".join(f'<tr><td>{H.escape(w)}</td><td>{g}</td><td class="{"ok" if r >= fl - .005 else "bad"}">{r:.2f}:1</td><td>{fl}:1</td></tr>' for g, w, fg, bg, r, fl in rows[mode])
-        sp = "".join(f'<tr><td>{g}</td><td>{k}</td><td>{v[0]:.1f}</td><td>{" and ".join(v[1:])}</td></tr>' for (m, g, k), v in sorted(seps.items()) if m == mode)
-        return f'<h2>{mode.capitalize()}</h2><table><tr><th>Pair</th><th>Set</th><th>Measured</th><th>Floor</th></tr>{tr}</table><h2>{mode.capitalize()}: closest pairs</h2><table><tr><th>Group</th><th>Vision</th><th>ΔE</th><th>Pair</th></tr>{sp}</table>'
+        return f'<h2>{mode.capitalize()}</h2><table><tr><th>Pair</th><th>Set</th><th>Measured</th><th>Floor</th></tr>{tr}</table>'
     verdict = "Passes every floor." if not problems else "Fails: " + "; ".join(H.escape(p) for p in problems)
     page = f'''<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{key} · palette</title><link rel="stylesheet" href="../themes.css"><link rel="stylesheet" href="palette.css"></head><body>
@@ -223,14 +209,13 @@ if __name__ == "__main__":
     all_looks, derived = looks()
     failed = 0; css = SHEET_CSS
     for key, (own, full) in all_looks.items():
-        problems, notes, rows, seps = check(key, own, full)
+        problems, rows = check(key, own, full)
         uses = sorted(k for k in derived if k not in own)
         print(f"{key}: {'PASS' if not problems else 'FAIL'}" + (f"  (takes {len(uses)} derived roles)" if uses and key != "kitchen" else ""))
         for p in problems: print("  FAIL", p)
-        for n in notes: print("  note", n)
         failed += bool(problems)
         if "--sheets" in sys.argv:
             toks = [k for k in all_looks["kitchen"][1] if evaluate(all_looks["kitchen"][1], "day").get(k) is not None]
-            css = sheet(key, full, problems, rows, seps, toks)
+            css = sheet(key, full, problems, rows, toks)
     if "--sheets" in sys.argv: open(os.path.join(HERE, "palette", "palette.css"), "w").write(css)
     sys.exit(1 if failed else 0)

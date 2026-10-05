@@ -9,7 +9,11 @@
       themes.css. If it becomes the default, style.css writes its built-set tokens at the top
       as `:root, [data-theme="kitchen"]`, the way it writes Phosphor today (HANDOFF.md §8).
    2. Phosphor, the built default, as a look (dark only), copied from the built style.css.
-   3. The six built looks, verbatim from app-reference/built-looks/themes.css.
+   3. Afterglow, Kitchen Table's phosphor look (night first, with a day): stage 12.
+   4. The six built looks, verbatim from app-reference/built-looks/themes.css.
+
+   Beside the colours, every look names five effect tokens (--fx-*), read once in style.css section 11.
+   The [data-theme] block gives the plain value of each, so a look that wants no effects says nothing.
 
    Every page here carries data-theme, so nothing is written on :root. */
 
@@ -18,6 +22,12 @@
    look's on-bright; Send is its primary; Vera's box takes its ink). The people are Kitchen Table's
    eight, by day and by night, until a look (and the family) gives its own. */
 [data-theme] {
+  /* the effects, plain: no light on the page, no scanlines, no glow beyond the look's own, the heading face */
+  --fx-page: none;
+  --fx-scan: transparent;
+  --fx-glow: 0;
+  --fx-title: var(--font-head);
+  --fx-title-adjust: none;
   --band-link: var(--on-band);
   --ok-soft: color-mix(in srgb, var(--ok) 10%, var(--card));
   --ok-line: color-mix(in srgb, var(--ok) 35%, var(--card));
@@ -185,6 +195,13 @@
   --ask-rule: rgb(255 255 255 / .16);
   --ask-fill: rgb(255 255 255 / .12);
   --ask-fill-2: rgb(255 255 255 / .18);
+
+  /* the effects: none (the plain values, named here so the block is the whole look) */
+  --fx-page: none;
+  --fx-scan: transparent;
+  --fx-glow: 0;
+  --fx-title: var(--font-head);
+  --fx-title-adjust: none;
 }
 
 /* ---- Phosphor, the built default (dark only), as a look ---------------------------------- */
@@ -264,6 +281,112 @@
   --raster: rgb(0 0 0 / 0.22);
   --ask-bg: rgb(9 12 11 / 0.72);
   --bar-bg: rgb(18 22 21 / 0.9);
+}
+
+/* ---- Afterglow: Kitchen Table's phosphor look, night first, with a day ------------------------ */
+/* The same Kitchen Table, lit the way Phosphor was: charcoal glass with a breath of green for the page at
+   night, pale green-grey paper by day, and in both a dark glass band with faint scanlines. Vera's things are
+   the one lit thing (--fx-glow: her sign's wider halo and full rim, her Send, her lines); the family's links are
+   a soft mint and their button a pale plate, never the phosphor. Page titles and the wordmark are set in VT323.
+   Proposed to be what "Phosphor" means once Kitchen Table ships (HANDOFF.md §8.7). */
+[data-theme="afterglow"] {
+  color-scheme: light dark;
+  /* the effects (style.css section 11) */
+  --fx-page: radial-gradient(1100px 520px at 18% -120px, light-dark(rgb(12 97 80 / .07), rgb(109 255 156 / .07)), transparent 70%);
+  --fx-scan: rgb(190 255 215 / .035);
+  --fx-glow: 1;
+  --fx-title: "VT323", var(--font-head);
+  --fx-title-adjust: cap-height .7;
+  /* surfaces and words */
+  --paper: light-dark(#EEF2EC, #0A100E);
+  --paper-2: light-dark(#E2E9E2, #0F1714);
+  --paper-3: color-mix(in srgb, var(--paper-2) 86%, var(--ink));
+  --card: light-dark(#FAFCF8, #131C19);
+  --field: light-dark(#FFFFFF, #0C1311);
+  --line: light-dark(#D3DDD5, #1E2A26);
+  --line-2: light-dark(#BFCCC2, #2B3A34);
+  --edge: light-dark(#76877E, #6E8479);
+  --ink: light-dark(#0F1A16, #E9F1E5);
+  --ink-2: light-dark(#3B4943, #C3CEC2);
+  --ink-3: light-dark(#4F5D57, #9DAA9F);
+  --faint-ink: var(--ink-3);
+  /* the band: dark glass by day and by night, the screen's own frame */
+  --band: light-dark(#0B1813, #060A08);
+  --band-hi: light-dark(#132620, #111A17);
+  --band-line: light-dark(#1F352C, #1A2622);
+  --on-band: #E9F1E5;
+  --on-band-2: light-dark(#BFD0C4, #B9C6BF);
+  --here: light-dark(#163329, #13221C);
+  --on-here: #E9F1E5;
+  --here-icon: #6DFF9C;
+  --here-pill: #10241A;
+  --band-link: #8EE0B9;
+  /* the action, focus, today */
+  --link: light-dark(#0C6150, #8EE0B9);
+  --primary: light-dark(#0F3F2B, #D3EEDD);
+  --primary-hover: light-dark(#0A2E1F, #EAF7EE);
+  --on-primary: light-dark(#FFFFFF, #0A100E);
+  --focus: light-dark(#0F1A16, #E9F1E5);
+  --lit: light-dark(#0C6150, #6DFF9C);
+  --today: light-dark(#0C6150, #6DFF9C);
+  --on-today: light-dark(#FFFFFF, #06100B);
+  --today-rule: light-dark(#0C6150, #6DFF9C);
+  --today-wash: light-dark(#DCEFE2, #0E2318);
+  /* meanings */
+  --ok: light-dark(#2B7148, #7FE3A5);
+  --amber: light-dark(#7E5108, #F5B94A);
+  --red: light-dark(#B3381F, #FF8B74);
+  --error-ink: light-dark(#B3381F, #FF8B74);
+  /* Vera on the page */
+  --vera: light-dark(#0C6150, #6DFF9C);
+  --vera-bg: light-dark(#0C6150, #4FE08A);
+  --cursor: light-dark(#1B9A55, #6DFF9C);
+  --ask-bg: #0B1813;
+  /* the built set's part colours, as Kitchen Table's */
+  --lilac: light-dark(#5448B0, #B5AEF0);
+  --cyan: light-dark(#0A6178, #8DD0E0);
+  --lemon: light-dark(#525E17, #C3D27A);
+  --pink: light-dark(#9C3777, #EBA6D3);
+  --orange: light-dark(#93500E, #EDB67C);
+  --on-bright: light-dark(#FFFFFF, #06100B);
+  --person: #2F5D9B;
+  --on-person: #FFFFFF;
+  /* depth and light */
+  --bloom: 1;
+  --glow: 0 0 0 1px light-dark(rgb(12 97 80 / .25), rgb(109 255 156 / .35)), 0 8px 28px -10px light-dark(rgb(12 97 80 / .3), rgb(109 255 156 / .6));
+  --glow-hover: 0 0 0 1px light-dark(rgb(12 97 80 / .4), rgb(109 255 156 / .5)), 0 10px 34px -10px light-dark(rgb(12 97 80 / .4), rgb(109 255 156 / .8));
+  --shadow: inset 0 1px 0 light-dark(transparent, rgb(233 241 229 / .035)), 0 1px 0 light-dark(rgb(15 40 28 / .05), rgb(0 0 0 / .4));
+  --pop: 0 8px 22px -14px light-dark(rgb(15 40 28 / .45), rgb(0 0 0 / .9));
+  --pop-up: 0 -8px 24px -16px light-dark(rgb(15 40 28 / .5), rgb(0 0 0 / .9));
+  --wash: color-mix(in srgb, var(--ink) 6%, transparent);
+  --wash-faint: color-mix(in srgb, var(--ink) 3%, transparent);
+  --shade: color-mix(in srgb, var(--ink) 5%, transparent);
+  --hi: light-dark(transparent, rgb(233 241 229 / .035));
+  --scan: light-dark(transparent, rgb(255 255 255 / .028));
+  --raster: light-dark(transparent, rgb(0 0 0 / .22));
+  --bar-bg: color-mix(in srgb, var(--card) 92%, transparent);
+  --band-tabs: var(--card);
+  /* Kitchen Table's own roles */
+  --ok-soft: light-dark(#DDEFE2, #10241A);
+  --ok-line: light-dark(#BFDCC8, #24503A);
+  --amber-soft: light-dark(#FBEFD0, #261E10);
+  --amber-line: light-dark(#EBD69B, #5E4620);
+  --red-soft: light-dark(#F9E1D9, #2E1716);
+  --red-line: light-dark(#EFC3B6, #5C2E2B);
+  --on-red: light-dark(#FFFFFF, #06100B);
+  --on-vera: light-dark(#FFFFFF, #06100B);
+  --vera-soft: light-dark(#DCEFE2, #0E2318);
+  --vera-line: light-dark(#B5DCC2, #22513A);
+  --ask-ink: #E9F1E5;
+  --ask-ink-2: #BFD0C4;
+  --ask-rim: inset 0 0 0 1.5px #3E8A66, inset 0 0 32px rgb(109 255 156 / .07), 0 0 30px -12px light-dark(rgb(27 154 85 / .45), rgb(109 255 156 / .5));
+  --ask-edge: #6E8479;
+  --send: #6DFF9C;
+  --send-2: #93FFB6;
+  --on-send: #06100B;
+  --ask-rule: rgb(233 241 229 / .16);
+  --ask-fill: rgb(233 241 229 / .1);
+  --ask-fill-2: rgb(233 241 229 / .16);
 }
 
 /* ---- The six built looks, verbatim ---------------------------------------------------------- */

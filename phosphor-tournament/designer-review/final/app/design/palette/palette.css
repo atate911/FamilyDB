@@ -8,6 +8,8 @@ h1 { font: 600 32px/1.1 Georgia, serif; margin: 0 0 4px; } h2 { font: 600 20px/1
 .sw i { display: block; width: 36px; height: 36px; border-radius: 8px; box-shadow: 0 0 0 1px rgba(127, 127, 127, .35); }
 table { border-collapse: collapse; width: 100%; font-size: 13px; } td, th { text-align: left; padding: 3px 6px; border-top: 1px solid #DDD; }
 .bad { color: #B3381F; font-weight: 700; } .ok { color: #2B7148; }
+td { overflow-wrap: anywhere; }
+@media (max-width: 700px) { body { padding: 16px; } .cols { grid-template-columns: minmax(0, 1fr); } }
 .t0 { background: var(--band-link); }
 .t1 { background: var(--ok-soft); }
 .t2 { background: var(--ok-line); }

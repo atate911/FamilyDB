@@ -1,0 +1,83 @@
+340:  animation: blink 1.2s steps(1) 8;
+922:.panel:target, :target > .panel, .fold:has(> :target) { animation: landed 1.8s cubic-bezier(0.2, 0.7, 0.3, 1); }
+1314:  animation: blink 1.06s steps(1) 10;
+1318:.crt.power-on .crt-tube > * { animation: power-on 0.6s cubic-bezier(0.2, 0.7, 0.2, 1); }
+1364:  animation: sweep var(--sweep) linear infinite;
+1377:.blip { opacity: 0.9; animation: blip var(--sweep) cubic-bezier(0.15, 0.7, 0.35, 1) infinite var(--at, 0s); }
+1391:  animation: ping var(--sweep) cubic-bezier(0.15, 0.7, 0.35, 1) infinite var(--at, 0s);
+1417:  animation: flicker 6s linear infinite;
+1462:.presence, .title-icon.presence, .section-icon.presence {
+1469:.avatar.presence { border-radius: 11px; }
+1470:.glyph.presence { display: inline-block; flex: none; width: 1.1rem; height: 1.1rem; border-radius: 4px; box-shadow: 0 0 10px -3px rgb(109 255 156 / 0.65); }
+1471:.presence-glass {
+1479:.title-icon .presence-glass { font-size: 6.5px; }
+1480:.section-icon .presence-glass { font-size: 7px; }
+1481:.glyph .presence-glass { font-size: 4px; }
+1484:.presence-glass::before, .presence-glass::after {
+1492:.presence-glass::before {
+1497:.presence-glass::after {
+1504:.presence.v1 { --from: 4; --across: 3; }
+1505:.presence.v2 { --from: 8; --across: 1; }
+1506:.presence.v3 { --from: 12; --across: 5; }
+1524:.thread:not(.brief) .pending.is-thinking .presence-glass::before,
+1525:.thread:not(.brief) .pending.is-thinking .presence-glass::after { animation: fall 2.4s steps(16) infinite; }
+1526:.speaker .presence-glass::before, .speaker .presence-glass::after { animation: fall 2.4s steps(16) 1; }
+1733:.light.on { background: var(--vera-bg); box-shadow: 0 0 8px color-mix(in srgb, var(--vera-bg) calc(100% * var(--bloom)), transparent), 0 0 18px color-mix(in srgb, var(--vera-bg) calc(45% * var(--bloom)), transparent); animation: breathe 3.2s ease-in-out infinite; }
+2117:.crt-face .eye { transform-box: fill-box; transform-origin: center; animation: eyes 7s ease-in-out infinite; }
+2159:@keyframes blink { 50% { opacity: 0; } }
+2160:@keyframes breathe { 50% { opacity: 0.55; } }
+2163:@keyframes fall { from { transform: translateY(-13.6em); } to { transform: none; } }
+2165:@keyframes flicker { 0%, 91%, 94%, 100% { opacity: 1; } 92% { opacity: 0.55; } 93% { opacity: 0.9; } }
+2167:@keyframes sweep { to { transform: rotate(1turn); } }
+2168:@keyframes blip { 0% { opacity: 1; } 62%, 100% { opacity: var(--rest, 0.3); } }
+2169:@keyframes ping { 0% { opacity: 0.9; transform: scale(1); } 32%, 100% { opacity: 0; transform: scale(3.6); } }
+2170:@keyframes power-on {
+2176:@keyframes eyes { 0%, 92%, 100% { transform: none; } 94%, 96% { transform: scaleY(0.12); } }
+2179:@keyframes landed { from { box-shadow: var(--shadow), 0 0 0 1px color-mix(in srgb, var(--lit) calc(65% * var(--bloom)), transparent), 0 0 40px -6px color-mix(in srgb, var(--lit) calc(55% * var(--bloom)), transparent); } }
+2182:  *, *::before, *::after { animation: none !important; transition: none !important; }
+2200:  .welcome .ask, .presence, .title-icon.presence, .section-icon.presence { box-shadow: none; }
+2201:  .presence-glass { -webkit-mask-image: none; mask-image: none; }
+2202:  .presence-glass::before, .presence-glass::after { filter: none; text-shadow: none; }
+2212:  .presence, .title-icon.presence, .section-icon.presence { background: none; box-shadow: none; }
+2213:  .presence-glass { display: none; }
+2214:  .glyph.presence { forced-color-adjust: none; border: 2px solid CanvasText; }
+2245:  .crt-tube::after, .starters, .brief-more, .presence-glass { display: none !important; }
+2316:  animation: listening 1.4s ease-in-out infinite;
+2318:@keyframes listening {
+2322:  button.mic.listening { animation: none; }
+  text-shadow: 0 0 2px #a9ffc7, 0 0 5px rgb(109 255 156 / 0.85);
+}
+/* Another part of the same screen for each of her lines, so a thread of them is not a row of
+   copies. */
+.presence.v1 { --from: 4; --across: 3; }
+.presence.v2 { --from: 8; --across: 1; }
+.presence.v3 { --from: 12; --across: 5; }
+.said-them .avatar { color: var(--on-person); background: var(--person); }
+.bubble { min-width: 0; padding: 0.75rem 1rem 0.85rem; border-radius: 20px; }
+.said-bot .bubble { background: var(--surface); border: 1px solid var(--line); border-bottom-left-radius: 6px; }
+.said-them .bubble { background: var(--surface-3); border: 1px solid var(--line-2); border-bottom-right-radius: 6px; }
+.said-by { display: flex; flex-wrap: wrap; gap: 0.15rem 0.6rem; align-items: baseline; margin-bottom: 0.3rem; font-size: 0.78rem; color: var(--dim); }
+.said-by strong { font-weight: 600; color: var(--ink-2); }
+.said-them .said-by { flex-direction: row-reverse; }
+/* Replies keep the line breaks the model wrote; escaping still happens, this is only layout. */
+.said-text { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.55; }
+.did { margin-top: 0.6rem; font: 0.74rem/1.4 var(--mono); color: var(--faint); }
+/* While the newest message waits, the page says so in her place, as the thread's last line: her
+   screen and name, the same bubble drawn in a dashed line, because the words are the page's, not
+   hers. While she is thinking the glyphs on her screen fall; nothing is shown typing. On Home,
+   which never looks again, they fall only for a moment as the page opens (see "Her screen"). */
+.pending .bubble { background: transparent; border: 1px dashed var(--line-2); }
+.pending .said-text { color: var(--ink-2); }
+.pending.is-lost .bubble { border-color: color-mix(in srgb, var(--amber) 45%, transparent); }
+.thread:not(.brief) .pending.is-thinking .presence-glass::before,
+.thread:not(.brief) .pending.is-thinking .presence-glass::after { animation: fall 2.4s steps(16) infinite; }
+.speaker .presence-glass::before, .speaker .presence-glass::after { animation: fall 2.4s steps(16) 1; }
+
+/* The box: the message on top, who is sending and Send along the bottom, all in one frame that
+   lights up while you write. */
+.ask {
+  margin: 0;
+  padding: 0.35rem 0.35rem 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--edge);
+  border-radius: 20px;

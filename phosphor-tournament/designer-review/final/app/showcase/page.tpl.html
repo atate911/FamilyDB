@@ -61,31 +61,29 @@ figcaption { display:flex; justify-content:space-between; gap:10px; align-items:
 <div class="wrap">
   <header class="top">
     <h1>Kitchen Table, the whole app</h1>
-    <p class="lede">Every page of FamilyDB in the design you chose, drawn from the app’s real pages and words, ready to build. Your notes are in: no starter buttons on Ask Vera, a small greeting so Ask Vera, Next up and To do share the first screen, and the green-screen touches kept as they were. Every colour now lives in one theme file, so other themes can be added later.</p>
-    <p class="facts"><span><b>57</b> pages</span><span><b>4</b> views of each: desktop, phone, day, night</span><span><b>13</b> small pull requests to build it</span><span><b>8</b> questions for the family</span></p>
+    <p class="lede">Every page of FamilyDB in the design you chose, drawn from the app’s real pages and words, ready to build, with your decisions folded in. Switch the Look to see the same pages in Afterglow: the green screen, scanlines and glow as a look over Kitchen Table, with nothing else changed.</p>
+    <p class="facts"><span><b>62</b> pages</span><span><b>2</b> looks shown: Kitchen Table and Afterglow</span><span><b>13</b> small pull requests to build it</span><span><b>5</b> questions left</span></p>
   </header>
 
   <div class="bar">
     <div class="seg" role="group" aria-label="Device"><button type="button" data-dev="desktop" aria-pressed="true">Desktop</button><button type="button" data-dev="phone" aria-pressed="false">Phone</button></div>
+    <div class="seg" role="group" aria-label="Look"><button type="button" data-look="kt" aria-pressed="true">Kitchen Table</button><button type="button" data-look="ag" aria-pressed="false">Afterglow</button></div>
     <div class="seg" role="group" aria-label="Time"><button type="button" data-time="day" aria-pressed="true">Day</button><button type="button" data-time="night" aria-pressed="false">Night</button></div>
-    <nav class="jump" aria-label="Jump to"><a href="#everyday">Everyday</a><a href="#kids">Kids</a><a href="#people">People</a><a href="#behind">Behind the scenes</a><a href="#setup">Setting up</a><a href="#states">States</a><a href="#themes">Themes</a><a href="#handoff">Handoff</a></nav>
+    <nav class="jump" aria-label="Jump to"><a href="#everyday">Everyday</a><a href="#kids">Kids</a><a href="#people">People</a><a href="#behind">Behind the scenes</a><a href="#setup">Setting up</a><a href="#states">States</a><a href="#motion">Motion</a><a href="#themes">Looks</a><a href="#handoff">Handoff</a></nav>
   </div>
 
 <!--SECTIONS-->
 
   <section class="questions" id="questions" aria-labelledby="h-q">
-    <h2 id="h-q">Questions for the family before building</h2>
+    <h2 id="h-q">Questions left</h2>
     <ol>
-      <li><b>Kitchen Table’s people colours under colour blindness.</b> Theo’s ochre and an unused slot’s olive look alike to some colour-blind eyes, and late red sits close to Theo’s ochre. Retune three slots, or accept it (names are always beside the colours)?</li>
-      <li><b>The two test themes.</b> Ship Midnight as it is (it passes), fix Rail yellow’s night red first, or design themes properly later?</li>
-      <li><b>Status for parents.</b> The design shows it to admins; the app shows it to every grown-up. Which?</li>
-      <li><b>“Hidden from Maya.”</b> Name exactly whom a present is hidden from (one new column), or keep “hidden from the kids”?</li>
-      <li><b>A parent opening Settings.</b> The friendly “for grown-ups” page kids get, or the plain refusal?</li>
-      <li><b>To-dos.</b> Their own Edit page, as drawn, or keep editing in a fold on the row?</li>
-      <li><b>“Set by Alex.”</b> Remember who set each kid’s to-do from now on?</li>
-      <li><b>Setup’s word “installer”.</b> Keep it, or say “the password FamilyDB started with”?</li>
+      <li><b>A parent opening Settings:</b> the friendly “for grown-ups” page kids get, or the plain “For an admin” refusal?</li>
+      <li><b>Afterglow and Phosphor:</b> once Kitchen Table ships, should Afterglow become the look called “Phosphor” (recommended), or keep both, or take another name?</li>
+      <li><b>Afterglow by day:</b> keep its day version (pale green-grey page under the dark glass), or night only?</li>
+      <li><b>Afterglow’s pixel font:</b> page titles and the wordmark only (as drawn), more, or none?</li>
+      <li><b>Motion:</b> drop any of the four, or bring back an old one (glyphs falling on every busy screen, the 404 powering on, the radar sweep)?</li>
     </ol>
-    <p class="note">And from earlier: should each person be able to pick their own theme, and may kids? The design draws both as yes.</p>
+    <p class="note">Decided and folded in: plain Vera box in the paper looks; no colour-blind floor; Kitchen Table the default when it ships; each person’s look stored with them and following them to every device; Status for every grown-up; presents name whom they’re hidden from; to-dos get their own Edit page; “Set by” recorded on kids’ to-dos; “installer” gone.</p>
   </section>
 
   <details class="hand" id="handoff">
@@ -95,18 +93,20 @@ figcaption { display:flex; justify-content:space-between; gap:10px; align-items:
 </div>
 
 <script>
-const st = {dev:'desktop', time:'day'};
+const st = {dev:'desktop', time:'day', look:'kt'};
 function apply() {
   document.body.classList.toggle('phone', st.dev === 'phone');
   document.querySelectorAll('[data-dev]').forEach(b => b.setAttribute('aria-pressed', b.dataset.dev === st.dev));
   document.querySelectorAll('[data-time]').forEach(b => b.setAttribute('aria-pressed', b.dataset.time === st.time));
+  document.querySelectorAll('[data-look]').forEach(b => b.setAttribute('aria-pressed', b.dataset.look === st.look));
   const suf = (st.time === 'night' ? '-dark' : '') + (st.dev === 'phone' ? '-phone' : '');
-  document.querySelectorAll('.shot').forEach(f => { const i = f.querySelector('img'); i.onerror = () => { i.onerror = null; i.src = f.dataset.base + (st.dev === 'phone' ? '-phone' : '') + '.webp'; }; i.src = f.dataset.base + suf + '.webp'; i.width = st.dev === 'phone' ? 585 : 1280; i.height = st.dev === 'phone' ? 1266 : 800; });
+  document.querySelectorAll('.shot').forEach(f => { const i = f.querySelector('img'); const base = (st.look === 'ag' && !f.dataset.fixed) ? f.dataset.base.replace('img/', 'img/ag/') : f.dataset.base; i.onerror = () => { i.onerror = null; i.src = base + (st.dev === 'phone' ? '-phone' : '') + '.webp'; }; i.src = base + suf + '.webp'; i.width = st.dev === 'phone' ? 585 : 1280; i.height = st.dev === 'phone' ? 1266 : 800; });
 }
 document.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.dev) { st.dev = b.dataset.dev; apply(); }
   else if (b.dataset.time) { st.time = b.dataset.time; apply(); }
+  else if (b.dataset.look) { st.look = b.dataset.look; apply(); }
   else if (b.classList.contains('more')) { const f = b.closest('.shot'); const on = f.classList.toggle('full'); b.setAttribute('aria-expanded', on); b.textContent = on ? 'First screen' : 'Whole page'; }
 });
 </script>

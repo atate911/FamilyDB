@@ -1016,3 +1016,85 @@ The family's engineers built theme support into the current app (`app-reference/
   - The open questions are updated.
 - **STYLE-draft.md:** "Looks" replaces Themes, with the built STYLE.md's facts.
 - **STANDARD.md:** token names, the Look page and its sample, and the notes for the engineer.
+
+# Stage 12: Afterglow as a look, and the small things that move (STAGE12.md)
+
+## Afterglow, a look for Kitchen Table
+
+- **`[data-theme="afterglow"]` in `themes.css`**, chosen on the Look page like any other (third card, after Phosphor). It is the earlier Afterglow round (`afterglow-ref/`) as a palette in the built names, plus effects. No page, markup or wording changed for it.
+- **Night first, with a day.**
+  - Night: charcoal glass with a breath of green.
+  - Day: pale green-grey paper.
+  - Both: a dark glass band, the dark glass Ask box, faint scanlines on both, and Vera the one lit thing.
+- **Five effect tokens** join the look contract: `--fx-page`, `--fx-scan`, `--fx-glow`, `--fx-title`, `--fx-title-adjust`.
+  - Every look names them: plain in the `[data-theme]` block and in Kitchen Table's own block.
+  - `style.css` reads them once, in a new §11 "Effects".
+  - Scanlines are a background under the words. They are off in forced colours and print.
+- **VT323** (`fonts/vt323-400.woff2`, 18 KB, OFL) sets the page titles and the wordmark in Afterglow only, at Fraunces' cap height. Atkinson stays for everything read.
+- **Vera stays the one lit thing**: in Afterglow her sign gets a wider halo and a fully lit rim, and her Send and chat lines glow. Nothing of the family's glows.
+- **The glass panes' scanlines** (sign-in, 404, first day) moved from a film over the words (`.pane::after`) to the glass under them, in every look. They look the same.
+- **Measured:** `_kit/looks-check.py` gained check D. It composites the scanline over the band and the Ask box, and the page light over the paper, and measures the words on top.
+  - Afterglow passes every floor by day and night; its lowest is 4.70:1.
+  - It wears Kitchen Table's people and is checked on them.
+  - Its day green moved from `#0B6638` to `#0C6150` so late red stays clear of it for protanopes (5.4 → 14.1).
+- **Rendered:** every page, day and night, desktop and phone, in `shots/afterglow/day/` and `shots/afterglow/night/` (240 shots, from `afterglow-test/`). Palette sheet: `palette/afterglow.html`, `shots/afterglow/palette-afterglow.png`.
+- **Proposed:** once Kitchen Table ships, Afterglow becomes the look called "Phosphor" (HANDOFF.md §8.8, §9 question 12).
+
+## The small things that move (every look)
+
+- **Her sign types itself in**: once on Home, as the page opens (`.vs--hello`), and on a loop only while she writes back (`.vs--busy`, rewritten from a flicker into typing). Bars only: never words, never a face.
+- **Afterglow** on the flash after an action; **landing** glow on `:target` cards, days and plans; the **wordmark's cursor** blinks for about four seconds, then rests lit.
+- All CSS, in a new `style.css` §12. Every new motion lives inside `prefers-reduced-motion: no-preference`; the old ones stop in the `reduce` block. In Afterglow the lights are brighter (`--fx-glow`), never longer.
+- **`motion.html`**: a fourth states sheet, showing each motion in place with when it plays. `shots/motion-frames.png` shows the sign's typing frame by frame.
+- **`_kit/render-all.js`** takes screenshots with `animations: "disabled"`, so every shot shows the motions at rest.
+
+## Documents
+
+- **HANDOFF.md:**
+  - §8.7 effect tokens;
+  - §8.8 Afterglow, and its relation to Phosphor;
+  - §8.9 what the built `themes.css`, `style.css` and `test_look.py` need;
+  - §8.10 the motions;
+  - the macro's `hello` state, the page map, and open questions 12–15.
+- **STYLE-draft.md:** Looks (effects, Afterglow), Her screen (typing), Small things, Accessibility (motion), What does not move.
+- **STANDARD.md:**
+  - effects and Afterglow in the engineer's notes;
+  - the sign's states and motion;
+  - the wordmark's cursor;
+  - the live-glow row;
+  - a "Small things (motion)" table;
+  - the motion sheet as a component.
+
+# Stage 13: the family's decisions (STAGE13.md)
+
+Each answer is folded into the design, HANDOFF.md, STYLE-draft.md and STANDARD.md. The answered questions are gone from HANDOFF §9; five remain (the grown-ups page for a parent, and the four from stage 12).
+
+1. **Vera's box in the paper looks** stays a plain card. No change; the docs now say it was chosen.
+2. **No colour-blind floor for the people.**
+   - `_kit/looks-check.py` no longer simulates colour blindness: the people against each other, late red against them, and the recorded exceptions for Kitchen Table and Home Computer are all gone. Its palette sheets lose the "closest pairs" tables, and now fit a phone.
+   - Every contrast floor stays, each person's letter on their colour included.
+   - Colour is still never the only cue.
+   - Every look passes, Home Computer included.
+3. **Home Computer's night red**: no change.
+4. **Kitchen Table becomes the default** when the new layout ships, for everyone who hasn't chosen. A look chosen before `0037` is copied from its cookie to the person once. The release note's line is in HANDOFF §8.2.
+5. **A look follows the person.**
+   - `members.look` in migration `0037`, written by the Look page through `familydb.family.choose_look`. The web AST test gains that one allowed call.
+   - The cookie stays for pages before sign-in, and is set from the person's look when they sign in. While the family shares a password, it stays per browser.
+   - No household default.
+   - `look.html` and `look-kid.html` say it follows you; the phone menu's Look row says "Yours, on every phone and computer you sign in on".
+6. **Status is for every grown-up.**
+   - New mockups `home-parent.html` and `more-parent.html` (Alex, a parent): Status alone under "Behind the scenes", no Settings, Family or setup card.
+   - Kids still never see it.
+7. **A present is hidden from exactly whom it names**, by default its `gifts_for`.
+   - The data change: `ideas.hidden_from` in `0037`, backfilled from `gifts_for`.
+   - `visible_to` checks the viewer against it, for every role.
+   - So Maya's Home now shows Theo's Lego set, tagged "Hidden from Theo".
+   - The wishes note says a gift idea "is hidden from whoever it's for".
+   - The `docs/DESIGN.md` §16 line to replace is given in HANDOFF §1 item 9.
+8. **To-do edits: the to-do's own Edit page** (`todo-edit.html` → `task_form.html`, `GET /task/<id>/edit`), replacing the fold. Seven fields unfolding inside a list lose your place on a phone.
+9. **"Set by Alex"**: `tasks.created_by_member_id` in `0037`, set from now on, shown on the kid's to-dos.
+10. **"Installer" is gone** from what the family reads: "the password FamilyDB started with" in setup's password step, Status and Settings › Sign-in (four strings, HANDOFF §1 item 19).
+
+Also fixed: the "Hidden from Theo" tag ran past its box in a narrow idea tile; it now wraps inside it.
+
+Re-rendered: the pages that changed (Home, Maya's Home, both Look pages, both menus, Wishes, setup's password step) and the two new ones, by day and night on desktop and phone, in Kitchen Table and in Afterglow; and the palette sheets.

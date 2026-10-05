@@ -2,7 +2,8 @@
    FamilyDB · Kitchen Table · style.css
    One stylesheet. No inline styles anywhere (CSP). Sections:
    1 Fonts  2 Tokens (light, dark)  3 Base  4 Shell  5 Components
-   6 Pages  7 Phone  8 Forced colours
+   6 Pages  7 Phone  8 Forced colours  9 Settings  10 The Look page
+   11 Effects (what a look may add beyond colour)  12 Small things that move
    ===================================================================== */
 
 /* ---------- 1. Fonts (self-hosted, Latin) ---------- */
@@ -21,6 +22,9 @@
 @font-face { font-family: "Fraunces"; src: url("fonts/fraunces-soft-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
 /* Vera's voice: one monospaced weight, for her machine lines only */
 @font-face { font-family: "JetBrains Mono"; src: url("fonts/jetbrains-mono-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+/* VT323, a phosphor terminal's pixel face (OFL, 18 KB). Only a look's title face (--fx-title, section 11): page titles and
+   the wordmark, never a word the family reads in a sentence. Kitchen Table never loads it: a face is fetched only when used. */
+@font-face { font-family: "VT323"; src: url("fonts/vt323-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 
 /* ---------- 2. Tokens ---------- */
 /* Two layers. Components use only semantic tokens, in the built app's names (paper, card, ink,
@@ -266,6 +270,8 @@ a.item:hover, .item--link:hover { background: var(--paper); color: var(--ink); }
 .item--divided + .item--divided { border-top: 1px solid var(--line); border-radius: 0; }
 .item .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .item--boxed .tag--surprise, .todo--compact .tag--surprise { white-space: nowrap; }
+/* …but in a tile narrower than the words it wraps inside its box, rather than running past it */
+.item--boxed .tag--surprise { white-space: normal; text-wrap: balance; border-radius: var(--r-md); }
 
 /* 5.10 To-do row (full and compact) */
 .todos { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s2); }
@@ -575,7 +581,6 @@ button.iconbtn { padding: 0; font: inherit; cursor: pointer; }
 .typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--vera); opacity: .35; animation: typing 1.2s infinite ease-in-out; }
 .typing i:nth-child(2) { animation-delay: .2s; } .typing i:nth-child(3) { animation-delay: .4s; }
 @keyframes typing { 50% { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .typing i { animation: none; opacity: .7; } }
 .msg__fail { display: flex; align-items: center; gap: var(--s2) var(--s3); flex-wrap: wrap; margin-top: var(--s2); font-size: var(--t-meta); font-weight: 700; color: var(--red); }
 .msg__fail form { margin: 0; }
 .msg--failed .msg__bub { border: 1.5px solid var(--red-line); }
@@ -611,10 +616,11 @@ button.iconbtn { padding: 0; font: inherit; cursor: pointer; }
 .ideas.ideas--one { grid-template-columns: minmax(0, 1fr); }
 
 /* 5.27 The brand --------------------------------------------------------- */
-/* Wordmark: the name in Fraunces at full softness, and a lit cursor that waits, the way a terminal does */
+/* Wordmark: the name in Fraunces at full softness, and a lit cursor that waits, the way a terminal does:
+   it blinks for about four seconds as the page opens, then stays lit */
 .brand .mark-fdb { width: 34px; height: 34px; flex: none; display: block; }
 .wm { font-family: var(--font-head); font-weight: 600; font-size: 1.375rem; letter-spacing: -0.02em; font-variation-settings: "SOFT" 100; color: var(--ink); display: inline-flex; align-items: center; }
-.wm__cur { display: inline-block; width: .42em; height: .86em; margin-left: .14em; border-radius: 1.5px; background: var(--cursor); box-shadow: 0 0 6px var(--cursor-glow); animation: fdb-blink 2s steps(1, end) 2; }
+.wm__cur { display: inline-block; width: .42em; height: .86em; margin-left: .14em; border-radius: 1.5px; background: var(--cursor); box-shadow: 0 0 6px var(--cursor-glow); animation: fdb-blink 1.06s steps(1, end) 4; }
 @keyframes fdb-blink { 0%, 60% { opacity: 1; } 61%, 100% { opacity: .2; } }
 
 /* Vera's screen: a small pane of glass with a lit rim, lines of light, and her signature lit prompt ">▮".
@@ -626,15 +632,7 @@ button.iconbtn { padding: 0; font: inherit; cursor: pointer; }
 .vs__r--new { fill-opacity: .9; }
 .vs__p { fill: none; stroke: var(--phosphor); stroke-linecap: round; stroke-linejoin: round; }
 .vs__c { fill: var(--phosphor); }
-/* while she is answering, her lines light one after another and the cursor blinks; nothing else ever moves */
-.vs--busy .vs__r { animation: vs-type 1.6s steps(1, end) infinite; }
-.vs--busy .vs__r:nth-child(2) { animation-delay: .2s; }
-.vs--busy .vs__r:nth-child(3) { animation-delay: .4s; }
-.vs--busy .vs__r:nth-child(4) { animation-delay: .6s; }
-.vs--busy .vs__r:nth-child(n+5) { animation-delay: .8s; }
-.vs--busy .vs__c { animation: vs-blink 1s steps(1, end) infinite; }
-@keyframes vs-type { 0% { fill-opacity: .15; } 50% { fill-opacity: .9; } }
-@keyframes vs-blink { 50% { opacity: .15; } }
+/* how her lines are typed (once on Home, and on a loop while she writes back) is in section 12 */
 /* when she can't answer, the light goes out: rim, lines and prompt turn the grey of a control edge, the cursor is hollow */
 .vs--off { filter: none; }
 .vs--off .vs__rim { stroke: var(--edge); stroke-opacity: 1; }
@@ -643,9 +641,8 @@ button.iconbtn { padding: 0; font: inherit; cursor: pointer; }
 .vs--off .vs__c { fill: none; stroke: var(--edge); stroke-width: 1.5; }
 
 /* A pane of glass on paper: the brand's moments (sign-in, a first day, a missing page) */
-.pane { position: relative; overflow: hidden; background: var(--glass); color: var(--glass-ink); border-radius: var(--r-lg); padding: var(--s6); box-shadow: inset 0 0 0 1px var(--glass-line), var(--shadow); }
-.pane::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(to bottom, transparent 0 3px, var(--glass-scan) 3px 4px); pointer-events: none; }
-.pane > * { position: relative; z-index: 1; }
+.pane { position: relative; overflow: hidden; background: repeating-linear-gradient(to bottom, transparent 0 3px, var(--glass-scan) 3px 4px), var(--glass); color: var(--glass-ink); border-radius: var(--r-lg); padding: var(--s6); box-shadow: inset 0 0 0 1px var(--glass-line), var(--shadow); }
+/* its scanlines are drawn on the glass, under the words (never a film over them) */
 .pane .wm { color: var(--glass-ink); }
 .pane .wm__cur { background: var(--phosphor); box-shadow: 0 0 8px var(--phosphor-glow); }
 .pane__mark { width: 64px; height: 64px; display: block; filter: drop-shadow(0 0 10px var(--phosphor-glow)); }
@@ -688,9 +685,6 @@ button.iconbtn { padding: 0; font: inherit; cursor: pointer; }
 .radar .nm { font: 700 15px var(--font-text); fill: var(--glass-ink); }
 .radar--narrow .nm { font-size: 14px; }
 
-@media (prefers-reduced-motion: reduce) {
-  .wm__cur, .vs--busy .vs__r, .vs--busy .vs__c, .pill-health--busy::before { animation: none; }
-}
 
 /* 5.29 Stage 8: the everyday pages (plans list, restaurants, memory, passwords, family, history) */
 .mt-1 { margin-top: var(--s1); }
@@ -1559,3 +1553,100 @@ textarea.script { min-height: 16em; line-height: 1.55; }
   .look-grid { grid-template-columns: minmax(0, 1fr); }
 }
 @media (forced-colors: active) { .look-sample { forced-color-adjust: none; } }
+
+/* ---------- 11. Effects: what a look may add beyond colour ---------- */
+/* Five effect tokens belong to the look contract beside the colours (themes.css). Every look defines them,
+   most as nothing (the [data-theme] block gives the plain values), and they are read here and nowhere else.
+     --fx-page          a light on the page itself, behind everything: a background image, or none
+     --fx-scan          the colour of the scanlines on the band and on Vera's glass, or transparent
+     --fx-glow          how much Vera's things glow beyond their plain look, 0 to 1; also how bright the small
+                        motions are (section 12), never how long
+     --fx-title         the face of the page titles and the wordmark (normally the heading face)
+     --fx-title-adjust  that face's font-size-adjust, so a pixel face stands at the heading's cap height, or none
+   Scanlines are a background, under the words, never a film over them; glow is a shadow outside a thing's edge.
+   Neither changes the colour of a word or of the ground right under it beyond what the contrast check measures
+   (_kit/looks-check.py composites the scanline over its ground). Off in forced colours and on paper. */
+body { background-image: var(--fx-page); background-repeat: no-repeat; }
+.side, .topbar, .ask, .instrument__pane, .ls-band { background-image: repeating-linear-gradient(to bottom, var(--fx-scan) 0 1px, transparent 1px 3px); }
+
+/* Vera stays the one lit thing: in a look that glows, her sign gains a second, wider halo and a fully lit rim,
+   her Send glows, and so do her lines in the chat. Nothing of the family's glows. */
+.vs:not(.vs--off) { filter: drop-shadow(0 0 3px var(--vs-halo)) drop-shadow(0 0 calc(7px * var(--fx-glow)) color-mix(in srgb, var(--phosphor) calc(55% * var(--fx-glow)), transparent)); }
+.vs__rim { stroke-opacity: calc(.6 + .4 * var(--fx-glow)); }
+.ask .composer__send:not(:disabled) { box-shadow: 0 0 calc(18px * var(--fx-glow)) -4px color-mix(in srgb, var(--send) calc(60% * var(--fx-glow)), transparent); }
+.msg--vera:not(.msg--pending):not(.msg--failed) .msg__bub { box-shadow: 0 0 calc(18px * var(--fx-glow)) -6px color-mix(in srgb, var(--vera) calc(40% * var(--fx-glow)), transparent); }
+
+/* The title face: page titles and the wordmark only. Atkinson stays for everything read; the Ask card's question,
+   though an h1, is a sentence at 22 px, so it keeps the heading face. A face with no bold is never faked bold. */
+h1, .wm { font-family: var(--fx-title); font-size-adjust: var(--fx-title-adjust); font-synthesis-weight: none; }
+.ask__q { font-family: var(--font-head); font-size-adjust: none; }
+
+@media (forced-colors: active) {
+  body, .side, .topbar, .ask, .instrument__pane, .pane { background-image: none; }
+  .vs:not(.vs--off) { filter: none; }
+}
+@media print {
+  body, .side, .topbar, .ask, .instrument__pane, .pane { background-image: none; }
+  .vs:not(.vs--off) { filter: none; }
+  .ask .composer__send:not(:disabled), .msg--vera:not(.msg--pending):not(.msg--failed) .msg__bub { box-shadow: none; }
+}
+
+/* ---------- 12. Small things that move ---------- */
+/* A few of the old screen's motions, kept small, in every look. Each plays where it means something; none moves
+   for more than a moment where people read; only Vera's sign and the writing-back dot loop, and only while she is
+   writing back. All CSS, and all of it only for people who have not asked for less motion. A look's --fx-glow
+   makes the lights a little brighter, never longer. motion.html shows each one in place.
+     1. Her sign is typed: once on Home as the page opens (.vs--hello), on a loop while she writes back (.vs--busy).
+     2. Afterglow: what you just did (the flash after a save, with its Undo) lights at once and fades over a second.
+     3. Landing: where a link lands (a card, a day, a plan) lights and fades.
+     4. Cursors rest: the wordmark's and her sign's cursor blink for a few seconds, then stay lit.
+     5. The writing-back dot breathes (section 5, the health pill), only while she is writing back. */
+:root { --afterglow: 1.2s cubic-bezier(.2, .7, .3, 1); --landed: 1.8s cubic-bezier(.2, .7, .3, 1); }
+.vs__r { transform-box: fill-box; transform-origin: 0 50%; }
+li:target { border-radius: var(--r-md); }
+/* motion.html: a little stage for a sign or the wordmark at a size you can watch */
+.motion-stage { display: flex; align-items: center; gap: var(--s3); min-height: 88px; padding: var(--s4) var(--s5); background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* 1. Her lines type in from the left, a few characters at a time, one after another; then her cursor blinks
+        three times and rests lit. About three seconds in all, once. */
+  .vs--hello .vs__r { animation: vs-in .32s steps(4, end) backwards; }
+  .vs--hello .vs__r:nth-child(1) { animation-delay: .15s; }
+  .vs--hello .vs__r:nth-child(2) { animation-delay: .4s; }
+  .vs--hello .vs__r:nth-child(3) { animation-delay: .65s; }
+  .vs--hello .vs__r:nth-child(4) { animation-delay: .9s; }
+  .vs--hello .vs__r:nth-child(5) { animation-delay: 1.15s; }
+  .vs--hello .vs__r:nth-child(6) { animation-delay: 1.4s; }
+  .vs--hello .vs__c { animation: vs-blink 1.06s steps(1, end) 1.6s 3; }
+  @keyframes vs-in { from { transform: scaleX(0); } }
+
+  /* While she writes back the same lines type, hold, clear and type again, every 2.4 s, and the cursor blinks.
+     Each line has its slot in the loop (vs-t1 to vs-t6), so they type one after another and clear together. */
+  .vs--busy .vs__r { animation: vs-t1 2.4s steps(3, end) infinite; }
+  .vs--busy .vs__r:nth-child(2) { animation-name: vs-t2; }
+  .vs--busy .vs__r:nth-child(3) { animation-name: vs-t3; }
+  .vs--busy .vs__r:nth-child(4) { animation-name: vs-t4; }
+  .vs--busy .vs__r:nth-child(5) { animation-name: vs-t5; }
+  .vs--busy .vs__r:nth-child(6) { animation-name: vs-t6; }
+  .vs--busy .vs__c { animation: vs-blink 1.06s steps(1, end) infinite; }
+  @keyframes vs-t1 { 0% { transform: scaleX(0); } 9%, 82% { transform: scaleX(1); } 82.01%, 100% { transform: scaleX(0); } }
+  @keyframes vs-t2 { 0%, 11% { transform: scaleX(0); } 20%, 82% { transform: scaleX(1); } 82.01%, 100% { transform: scaleX(0); } }
+  @keyframes vs-t3 { 0%, 22% { transform: scaleX(0); } 31%, 82% { transform: scaleX(1); } 82.01%, 100% { transform: scaleX(0); } }
+  @keyframes vs-t4 { 0%, 33% { transform: scaleX(0); } 42%, 82% { transform: scaleX(1); } 82.01%, 100% { transform: scaleX(0); } }
+  @keyframes vs-t5 { 0%, 44% { transform: scaleX(0); } 53%, 82% { transform: scaleX(1); } 82.01%, 100% { transform: scaleX(0); } }
+  @keyframes vs-t6 { 0%, 55% { transform: scaleX(0); } 64%, 82% { transform: scaleX(1); } 82.01%, 100% { transform: scaleX(0); } }
+  @keyframes vs-blink { 50% { opacity: .15; } }
+
+  /* 2. Afterglow: the flash lights at once, falls fast and lingers, as a tube's glow did. */
+  .flash { animation: fdb-afterglow var(--afterglow); }
+  @keyframes fdb-afterglow { from { box-shadow: 0 0 0 2px color-mix(in srgb, var(--lit) calc(45% + 35% * var(--fx-glow)), transparent), 0 0 26px -4px color-mix(in srgb, var(--lit) calc(35% + 35% * var(--fx-glow)), transparent); } }
+
+  /* 3. Landing: the card, day or plan a link points at lights and fades as the page opens on it. */
+  .card:target, li:target { animation: fdb-landed var(--landed); }
+  @keyframes fdb-landed { from { box-shadow: 0 0 0 3px color-mix(in srgb, var(--lit) calc(40% + 35% * var(--fx-glow)), transparent), 0 0 34px -6px color-mix(in srgb, var(--lit) calc(35% + 35% * var(--fx-glow)), transparent); } }
+}
+/* 4 and 5 are set where their things are (the wordmark, the health pill, the chat's waiting dots); here they stop. */
+@media (prefers-reduced-motion: reduce) {
+  .wm__cur, .pill-health--busy::before, .typing i { animation: none; }
+  .typing i { opacity: .7; }
+}
