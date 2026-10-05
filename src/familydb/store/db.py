@@ -16,7 +16,7 @@ MIGRATION_RE = re.compile(r"^(\d{4})_[a-z0-9_]+\.sql$")
 
 
 def connect(path: str | Path) -> sqlite3.Connection:
-    """Open a connection with the pragmas the app relies on. Use one connection per thread."""
+    """Open a connection with the app's pragmas; one connection per thread."""
     if str(path) != ":memory:":
         Path(path).parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(path), isolation_level=None)
@@ -42,7 +42,7 @@ def transaction(conn: sqlite3.Connection) -> Iterator[sqlite3.Connection]:
 
 
 def to_json(value: Any) -> str:
-    """The one way JSON is written to the database: deterministic key order, compact."""
+    """The one way JSON is written: sorted keys, compact (deterministic, for the cache)."""
     return json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
 
 
@@ -77,15 +77,14 @@ def schema_version(conn: sqlite3.Connection) -> int:
     return int(row["v"] or 0)
 
 
-# A migration that rebuilds a table other tables point at starts with this line. SQLite's own way
-# of doing that wants foreign keys off, or dropping the old table runs every ON DELETE action of
-# the tables that point at it. The switch cannot be thrown inside a transaction, so the runner
-# throws it around the migration's own, which checks its work before it commits (see 0018).
+# A migration rebuilding a table others point at starts with this: dropping the old table would
+# otherwise run every ON DELETE. Foreign keys cannot be switched inside a transaction, so the
+# runner switches them around the migration's own (which checks its work; see 0018).
 FOREIGN_KEYS_OFF = "-- foreign_keys: off"
 
 
 def migrate(conn: sqlite3.Connection) -> list[int]:
-    """Apply pending migrations in order, each in its own transaction. Returns versions applied."""
+    """Apply pending migrations in order, each in its own transaction; returns versions applied."""
     current = schema_version(conn)
     applied: list[int] = []
     for version, name, sql in list_migrations():

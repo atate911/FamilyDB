@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 
 
 def run_retries(app: App, *, api: MessagesAPI | None = None) -> int:
-    """Retry every eligible failed message once. Returns how many were processed successfully."""
+    """Retry every eligible failed message once; returns how many were processed successfully."""
     with closing(app.connect()) as conn:
         app.refresh(conn)
         run_deliveries(app)

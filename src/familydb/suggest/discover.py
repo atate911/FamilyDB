@@ -1,11 +1,6 @@
-"""Stage: time-bound things on the web, found by a discovery worker turn and cached for a while.
-
-The chat agent never searches the web itself. When discovery is on, this stage runs one worker
-turn (its own prompt, the web tools, `report_finds` as the hand-back) and keeps the finds per
-window for `DISCOVER_CACHE_SECONDS`, so a digest and the questions that follow it share one search.
-The request is built from the framing (the window, where they are, the constraints), never the
-question's wording, so "what's on this weekend" and "anything fun Saturday" share one search.
-"""
+"""Stage: time-bound things found by one discovery worker turn (`report_finds` hands back) and
+cached per window for `DISCOVER_CACHE_SECONDS`. The request is built from the framing, never the
+question's wording, so differently worded questions share one search."""
 
 from __future__ import annotations
 
@@ -38,19 +33,14 @@ def cache_key(window: tuple[date, date] | None) -> str:
 
 
 def _hours(bounds: tuple[int, int]) -> str:
-    """A day's bounds to the whole hour, outward: close enough to search by, and the same for
-    questions asked a few minutes apart, so they share one search."""
+    """A day's bounds to the whole hour, outward, so questions minutes apart share one search."""
     start, end = bounds
     return f"{clock(start // 60 * 60)}-{clock(min(24 * 60, -(-end // 60) * 60))}"
 
 
 def render_discover_request(context: Context, constraints: Constraints, settings: Settings) -> str:
-    """What the worker is asked: the window and its hours, the home area, where they are, and
-    what it is for.
-
-    Built from the framing, never the question's wording: two ways of asking for the same thing
-    ask the same, and share one cached search, while a different subject asks something else.
-    """
+    """What the worker is asked (window, hours, home, where they are, topic), from the framing
+    only, so the same ask in other words shares one cached search."""
     lines = ["Find time-bound things a family could go to near home."]
     if constraints.topic:
         lines.append(f"Looking for: {constraints.topic}.")
@@ -70,8 +60,7 @@ def render_discover_request(context: Context, constraints: Constraints, settings
             lines.append("Hours: " + "; ".join(f"{d.date:%a} {h}" for d, h in each) + ".")
     lines.append(f"Home area: {settings.home_area or 'not set'}.")
     if context.origin is not None:
-        # Rounded to about a hundred metres: close enough to search by, and the same for a phone
-        # that has moved along the street, so the search is shared.
+        # About a hundred metres, so a phone moving along a street shares the search.
         origin = context.origin
         lines.append(f"They are near: {origin.label} ({origin.lat:.3f}, {origin.lon:.3f}).")
     wanted = {
@@ -90,7 +79,7 @@ def render_discover_request(context: Context, constraints: Constraints, settings
 def discover(
     ctx: ToolContext, context: Context, constraints: Constraints
 ) -> tuple[list[WebFind], str | None]:
-    """Finds for the window, plus a note for `skipped_checks` when discovery did not run."""
+    """Finds for the window, plus a `skipped_checks` note when discovery did not run."""
     if not web_tools_available(ctx.settings):
         return [], NOTE_OFF
     if not providers.ready(ctx.settings, "worker", api=ctx.api):
@@ -101,8 +90,7 @@ def discover(
         + ":"
         + hashlib.sha256((str(context.today) + request).encode()).hexdigest()
     )
-    # The cache lives on the App and is shared by the chat thread and the scheduler thread; a
-    # dict is safe enough for that, the worst case being one duplicated search.
+    # Shared by the chat and scheduler threads; a dict suffices (worst case one duplicate search).
     cache: dict[str, Any] = ctx.discover_cache if ctx.discover_cache is not None else {}
     now = ctx.clock.now()
     entry = cache.get(key)
@@ -112,7 +100,7 @@ def discover(
     try:
         turn = run_worker_turn(
             kind="discover",
-            api=ctx.api,  # a stand-in when a test injects one; otherwise the settings decide
+            api=ctx.api,
             settings=ctx.settings,
             clock=ctx.clock,
             registry=build_registry(),
@@ -125,7 +113,7 @@ def discover(
     except AgentError as exc:
         log.warning("discovery failed for %s: %s", key, exc)
         return [], f"{NOTE_FAILED}: {exc}"
-    except Exception as exc:  # a crash in the worker must not fail the whole suggestion
+    except Exception as exc:  # must not fail the whole suggestion
         log.exception("discovery crashed for %s", key)
         return [], f"{NOTE_FAILED}: {type(exc).__name__}: {exc}"
     if turn.result.status != "ok":

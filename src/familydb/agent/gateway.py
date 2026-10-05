@@ -1,22 +1,6 @@
-"""The one door to a model. Everything that wants an answer from one comes through `ask`.
-
-Each kind of call is declared once, in `KINDS`: what it is for, which model setting answers it
-and at which level, which prompt it is given, which tools it may use, how much of the web it may
-search, and which settings cap it. The caller says which kind and brings what is particular to
-this one call (the conversation, and the context its tools run in); this module does the rest the
-same way every time, and every call it makes is recorded under its kind.
-
-What goes into the request, part by part, is built and measured by `agent.compose`. What the
-answer means stays with the caller: this module knows how to ask, not what a good weekend is.
-`docs/AI_CALLS.md` is the reasoning behind it; a test checks that nothing else in the package
-starts a turn.
-
-Hearing a voice note (`listen`) comes through here too. It is not a turn: a recording goes in and
-its words come out, with no prompt file, no tools and one request. But it is paid for like any
-other call, so the spending limit is checked first and the call is recorded under its own kind.
-Looking at a photo (`look`) is the same kind of thing: a picture in, what it shows written down,
-asked of the lookup model with `prompts/look.md`, and recorded under its own kind.
-"""
+"""The one door to a model (`docs/AI_CALLS.md`): `KINDS` declares each kind of call, `ask` runs one
+and records it under its kind. `listen` (voice note) and `look` (photo) are single requests, not
+turns, but are limited and recorded the same way. What an answer means stays with the caller."""
 
 from __future__ import annotations
 
@@ -74,8 +58,7 @@ class CallSpec:
     prompt: str  # the file in agent/prompts/; "system" also brings the family and the ideas
     tools: tuple[str, ...] | None  # None: every chat tool, the same list on every turn
     hand_back: tuple[str, ...] = ()  # the tools whose success is the result of a worker turn
-    # Tools that may end a chat turn with the reply they carry, when they are all a step did:
-    # remembering needs no second call just to say "noted" (tools/memory.py).
+    # Tools whose reply may end a chat turn when they are all a step did (no "noted" call).
     closes: tuple[str, ...] = ()
     web_searches: int | None = None  # hosted web search, capped; None means no web at all
     iterations: str = "agent_max_iterations"  # the setting that caps model calls in one turn
@@ -90,8 +73,8 @@ _CHAT = {
     "tools": None,
     "closes": ("remember",),
 }
-# A worker's only real output is one hand-back call, a few hundred tokens. The cap bounds a
-# runaway turn and leaves room for the thinking every vendor counts against it at low effort.
+# A worker's output is one hand-back call; the cap bounds a runaway turn and leaves room for
+# the thinking vendors count against it.
 WORKER_MAX_TOKENS = 4000
 _WORKER = {
     "surface": "worker",
@@ -125,9 +108,7 @@ KINDS: dict[str, CallSpec] = {
             web_searches=4,
             **_WORKER,
         ),
-        # Weighing a change the code has narrowed to a few options (familydb/judgement.py): a
-        # stronger model, at the level the family chose for it, and no web. The day's questions
-        # go in one call; its only output is one hand-back.
+        # Weighs a change the code narrowed to a few options (familydb/judgement.py); no web.
         CallSpec(
             "judge",
             "weighing a change in the models",
@@ -136,8 +117,7 @@ KINDS: dict[str, CallSpec] = {
             hand_back=("give_judgement",),
             **{**_WORKER, "level": "judgement_level", "effort": None},
         ),
-        # Reading a company's own pricing page for a price the lists disagree on: extraction,
-        # not judgement, so the lookup model at the lookup level, with a few searches.
+        # Extraction, not judgement: the lookup model reads a company's pricing page.
         CallSpec(
             "price_check",
             "checking a disputed price",
@@ -151,8 +131,6 @@ KINDS: dict[str, CallSpec] = {
 }
 
 
-# The kinds of call that are not a turn: hearing a voice note, and looking at a photo, each
-# recorded under its own kind.
 LISTEN = "transcribe"
 LISTEN_PURPOSE = "listening to voice notes"
 LOOK = "look"
@@ -167,7 +145,7 @@ def spec(kind: str) -> CallSpec:
 
 
 def purpose(kind: str | None) -> str:
-    """What a recorded call was for, in words. Calls from before kinds were recorded have none."""
+    """What a recorded call was for, in words."""
     if kind is None:
         return "not recorded (older calls)"
     if kind == LISTEN:
@@ -180,10 +158,7 @@ def purpose(kind: str | None) -> str:
 def answering(
     settings: Settings, kind: str, api: MessagesAPI | None = None
 ) -> tuple[Provider, str]:
-    """Who answers this kind of call first, and with which model: what `ask` would send to.
-
-    For the pages and the command line, which say it without asking anything of a model.
-    """
+    """Who answers this kind of call first, and with which model, without asking a model."""
     call = spec(kind)
     provider = for_surface(settings, call.surface, api=api)
     return provider, model_at(provider, call.surface, getattr(settings, call.level))
@@ -205,10 +180,7 @@ def build_request(
     history: Sequence[HistoryTurn] = (),
     user_location: dict[str, Any] | None = None,
 ) -> Composed:
-    """The request `ask` would open with, and the size of each part of it.
-
-    `familydb debug prompt` prints it without sending, so what it shows is what goes.
-    """
+    """The request `ask` would open with (`debug prompt` prints it), and each part's size."""
     call = spec(kind)
     composed = compose.compose(
         call,
@@ -221,7 +193,6 @@ def build_request(
         user_location=user_location,
     )
     if call.max_tokens is not None:
-        # Never above the ceiling the family set for every call.
         composed.request.max_tokens = min(call.max_tokens, settings.max_output_tokens)
     return composed
 
@@ -239,13 +210,8 @@ def ask(
     fallback: Provider | None = None,
     user_location: dict[str, Any] | None = None,
 ) -> TurnResult:
-    """Ask a model: one turn of the given kind, run to its answer, every call recorded.
-
-    `current` is what this call is about (today's date, who is asking, what they said) and
-    `history` the conversation before it; `ctx` is what the tools run in. An injected `api` (a
-    test's fake) means the configured provider and no spare; otherwise the spare is whichever
-    other provider is switched on and has a key.
-    """
+    """One turn of `kind`, run to its answer, every call recorded. `current` is the uncached turn
+    (date, sender, message). An injected `api` (a test's fake) means no spare provider."""
     call = spec(kind)
     chosen = provider or for_surface(settings, call.surface, api=api)
     spare = fallback
@@ -306,13 +272,7 @@ def listen(
     message_id: int | None = None,
     api: Any = None,
 ) -> Heard:
-    """Hear one recording: its words, the call checked against the limit and recorded first.
-
-    Asked of whoever `providers.hearers` puts first; one that is busy, unreachable or has lost
-    its key hands over to the next, if there is one. Nothing is done with the words here: the
-    caller decides what they mean, as `ask` leaves the answer to its caller. An injected `api`
-    (a test's stand-in) is the hearing endpoint of whoever would be asked.
-    """
+    """Hear one recording, limit-checked and recorded; `hearers` order, next on failure."""
     candidates = hearers(settings, audio=api)
     if not candidates:
         raise AgentError("no model that can hear voice notes has a key", retryable=False)
@@ -347,14 +307,8 @@ def look(
     message_id: int | None = None,
     api: Any = None,
 ) -> Seen:
-    """Look at one photo: what it shows, written down (`prompts/look.md`), the call checked
-    against the limit and recorded first.
-
-    Asked of whoever `providers.lookers` puts first, the company that looks things up, with its
-    lookup model; one that is busy, unreachable or has lost its key hands over to the next, if
-    there is one. What the words mean is the caller's, as with `listen`. An injected `api` (a
-    test's stand-in) is whoever would be asked.
-    """
+    """Write down what one photo shows (`prompts/look.md`), limit-checked and recorded;
+    `providers.lookers` order, next on failure."""
     candidates = lookers(settings, api=api)
     if not candidates:
         raise AgentError("no model that can look at photos has a key", retryable=False)
@@ -386,12 +340,8 @@ def _written_down(
     estimate: Callable[[Provider, str | None], float],
     request: Callable[[Provider], Heard],
 ) -> Heard:
-    """One request that writes something down (a recording's words, what a picture shows), to
-    the first candidate that takes it: its estimated cost held against the limit before it is
-    sent, handed on to the next when it is busy or out of reach, and recorded under `kind`.
-
-    A model that declined is recorded first, since it was paid for, and then raised as a failure
-    not worth trying again; words cut short are kept, and said to be in the log."""
+    """One request to the first candidate that takes it: cost held before sending, next candidate
+    when busy or out of reach. A refusal is recorded first (it was paid for), then raised."""
     failure: AgentError | None = None
     for provider in candidates:
         model = model_of(provider)

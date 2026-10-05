@@ -1,10 +1,5 @@
-"""Claude, through the Anthropic SDK.
-
-Everything specific to this vendor lives here: the request shape, prompt-cache markers, the
-server-side web tools, the content blocks a reply comes back in, and which failures are worth
-retrying. A paused turn is resumed by replaying the assistant output verbatim, so that output is
-carried on the reply as `raw` rather than normalised away.
-"""
+"""Claude, through the Anthropic SDK. A paused turn resumes by replaying the assistant output
+verbatim, so it rides on the reply as `raw`."""
 
 from __future__ import annotations
 
@@ -47,13 +42,9 @@ WEB_FETCH: dict[str, Any] = {"type": "web_fetch_20260209", "name": "web_fetch", 
 BASIC_WEB_SEARCH = "web_search_20250305"
 BASIC_WEB_FETCH = "web_fetch_20250910"
 
-# What a request may carry depends on the model, and the settings page can point either surface
-# at any model, so it is read from the name each time. Getting it wrong is not a degraded answer
-# but a 400 on every request.
-#
-# Adaptive thinking and effort: every current model takes them, the older ones below do not
-# (Haiku 4.5 wants a fixed thinking budget and rejects effort outright). Listed by what they are
-# rather than by what works, so a model released later gets thinking by default.
+# What a request carries depends on the model name; a wrong guess is a 400. Adaptive thinking and
+# effort go to every model but these (Haiku 4.5 rejects effort). Older models are named, not the
+# current ones, so a later release gets the current shape.
 OLDER_MODELS = (
     "claude-3",
     "claude-haiku-4-5",
@@ -65,18 +56,12 @@ OLDER_MODELS = (
     "claude-opus-4-2",  # the undotted first Claude 4 names, claude-opus-4-20250514
     "claude-sonnet-4-2",
 )
-# The web tools with dynamic filtering run on every model since Opus 4.6 and Sonnet 4.6; the
-# models before them, the same older ones, get the basic versions, which are slower to read a
-# page but work everywhere. Named by what they are, so a model released later gets the newer
-# tools; if it turns out not to take them, the provider leaves them out (PARTS).
+# Dynamic-filtering web tools run on Opus/Sonnet 4.6 and later; older models get the basic ones.
 BASIC_WEB_MODELS = OLDER_MODELS
-# Server-side refusal fallbacks exist for the models whose safety classifiers can decline a
-# request: the strongest, not Sonnet or Haiku, which have no such classifier, nor the older ones.
-# Named by what does not take them, so a stronger model released later has them too.
+# Refusal fallbacks exist only for the strongest models (Sonnet and Haiku have no such classifier).
 NO_REFUSAL_FALLBACK_MODELS = (*OLDER_MODELS, "claude-sonnet", "claude-haiku")
 
-# What a request carries that the company may stop taking, or a new model may not take yet: sent
-# again without it when a 400 names it (providers/parts.py).
+# Parts a company may refuse: sent again without when a 400 names one (providers/parts.py).
 FALLBACK = parts.Part(
     "the refusal fallback", (FALLBACK_BETA, "fallbacks", "anthropic-beta", "betas")
 )
@@ -108,10 +93,8 @@ def ensure_credentials(client: Any) -> None:
         raise AgentError(NO_CREDENTIALS, retryable=False)
 
 
-# Asking the SDK whether it can find credentials means building a client, and a client builds
-# its own connection pool, which loads the machine's certificate bundle: some 50 ms each time, on
-# every page that asks whether a model is there. Nothing is ever sent through this one, so one
-# idle pool, built on first use and never closed, answers every such question in well under one.
+# A client builds its own connection pool (loading the certificate bundle, ~50 ms) and pages ask
+# whether credentials exist on every view; nothing is sent through this shared idle pool.
 _idle_http: Any = None
 _idle_lock = threading.Lock()
 
@@ -137,9 +120,7 @@ def has_credentials(settings: Settings) -> bool:
 
 
 def trouble(status: int, said: str) -> str | None:
-    """What an admin would have to fix, from a refusal: a key refused (401, or 403, not allowed),
-    the account out of credit, which Anthropic answers with a 400 saying so, or a model it no
-    longer has (404)."""
+    """What an admin would have to fix, from a refusal: key, credit (a 400 saying so) or model."""
     if status in (401, 403):
         return "key"
     if status in (400, 402) and "credit balance" in said.lower():
@@ -152,12 +133,12 @@ def trouble(status: int, said: str) -> str | None:
 
 
 def make_client(settings: Settings) -> anthropic.Anthropic:
-    """A client for the configured key. With no key the SDK uses its own credential lookup."""
+    """A client for the configured key; with none, the SDK's own credential lookup."""
     client = anthropic.Anthropic(api_key=settings.anthropic_api_key, max_retries=2, timeout=120.0)
     try:
         ensure_credentials(client)
     except AgentError:
-        client.close()  # it holds a connection pool; nobody is going to use this one
+        client.close()
         raise
     return client
 
@@ -211,14 +192,8 @@ class AnthropicProvider:
         self.settings = settings
         self._api = api  # a test's scripted stand-in, when one is injected
 
-    # -- wiring ---------------------------------------------------------------------------
     def configured(self) -> bool:
-        """Whether a call could be made at all.
-
-        This one asks the SDK, because it looks for credentials in places the settings never
-        see. Home, the status page and the settings pages ask on every view, so it is asked over
-        one idle connection pool rather than a new one each time (see `has_credentials`).
-        """
+        """Whether a call could be made at all; asks the SDK, which looks beyond the settings."""
         if self._api is not None:
             return True
         return has_credentials(self.settings)
@@ -234,7 +209,6 @@ class AnthropicProvider:
             return self.settings.worker_model or self.settings.anthropic_model
         return self.settings.anthropic_model
 
-    # -- translation ----------------------------------------------------------------------
     def cache_marker(self) -> dict[str, str]:
         if self.settings.anthropic_cache_ttl == "1h":
             return {"type": "ephemeral", "ttl": "1h"}
@@ -282,8 +256,6 @@ class AnthropicProvider:
         last = request.messages[-1] if request.messages else None
         for message in request.messages:
             if message.role == "assistant" or message is not last:
-                # Only the newest turn is sent as separate blocks, one per part (its per-turn
-                # lines, then the message); each turn behind it goes as one piece of text.
                 messages.append({"role": message.role, "content": message.text})
             else:
                 messages.append(
@@ -293,8 +265,7 @@ class AnthropicProvider:
                     }
                 )
         for exchange in request.exchanges:
-            # The assistant turn goes back exactly as it arrived: a paused web turn only resumes
-            # when its opaque search results are replayed untouched.
+            # Verbatim: a paused web turn resumes only with its opaque search results untouched.
             messages.append({"role": "assistant", "content": exchange.reply.raw})
             if exchange.outcomes:
                 messages.append(
@@ -352,7 +323,6 @@ class AnthropicProvider:
             raw=response.content,
         )
 
-    # -- the call -------------------------------------------------------------------------
     def model_exists(self, model: str) -> bool | None:
         try:
             client = make_client(self.settings)
@@ -400,7 +370,6 @@ class AnthropicProvider:
             client.close()
         return "works"
 
-    # -- hearing --------------------------------------------------------------------------
     def listener(self) -> str | None:
         return None  # Claude takes text, images and documents, but no recordings
 
@@ -419,13 +388,11 @@ class AnthropicProvider:
         response, dropped = self._create(lambda: self.payload(request))
         return dataclasses.replace(self.reply(response), dropped=dropped)
 
-    # -- looking --------------------------------------------------------------------------
     def viewer(self) -> str | None:
         return self.model_for("worker")
 
     def seeing(self, picture: Picture, ask: str) -> dict[str, Any]:
-        """The request for one picture: the picture, then what to write down about it, to the
-        lookup model with a lookup's effort."""
+        """The request for one picture, to the lookup model at low effort."""
         shape = TurnRequest(
             system=[], messages=[], model=self.viewer(), effort="low", max_tokens=LOOK_TOKENS
         )
@@ -458,8 +425,8 @@ class AnthropicProvider:
         )
 
     def _create(self, build: Callable[[], dict[str, Any]]) -> tuple[Any, tuple[str, ...]]:
-        """One request, and again without any part a 400 names (PARTS), each at most once; its
-        failures as the loop understands them. Returns the response and what was left out."""
+        """One request, retried without any part a 400 names (PARTS), each once. Returns the
+        response and what was left out."""
         dropped: list[str] = []
         while True:
             payload = build()
@@ -489,7 +456,7 @@ class AnthropicProvider:
         except anthropic.APIStatusError as exc:
             raise _status_failure(exc) from exc
         except TypeError as exc:
-            # The SDK raises a bare TypeError when it finds no credentials at all.
+            # The SDK raises a bare TypeError when it finds no credentials.
             if "authentication" not in str(exc).lower():
                 raise
             raise AgentError(f"no API credentials configured: {exc}", retryable=False) from exc

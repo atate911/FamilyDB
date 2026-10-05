@@ -85,7 +85,7 @@ def _hours_check(
     reasons: list[str],
     travel: int | None,
 ) -> tuple[list, bool, bool]:
-    """Returns (fitting days after the hours check, hard_fail, soft)."""
+    """(fitting days after the hours check, hard_fail, soft)."""
     fits = list(item.fits_days)
     if place is None or not place.hours:
         checks.open = "unknown"
@@ -111,8 +111,7 @@ def _hours_check(
         spans = day_context.spans if day_context else []
         need = item.idea.duration_min or item.idea.duration_max or MIN_VISIT_MINUTES
         stretches = doable(ranges, spans, travel or 0)
-        # Without a calendar the day's free time is all of the time asked about, so the hours
-        # are still held to it: "open now" must not offer a café that closed at noon.
+        # Without a calendar the free time is all of the asked time, so hours still apply.
         if day_context is None:
             open_days.append(day)
         else:
@@ -126,7 +125,6 @@ def _hours_check(
         if hours_text is None:
             hours_text = format_ranges(ranges)
         if day == context.today and today_text is None:
-            # Asked about today: say when they could actually be there, not the posted hours.
             usable = [(a, b) for a, b in stretches if b - a >= need]
             if usable:
                 a, b = usable[0]
@@ -159,11 +157,8 @@ def _daylight_check(
     reasons: list[str],
     travel: int | None,
 ) -> bool:
-    """Whether an outdoor idea could only be done in the dark (soft); says when dark comes today.
-
-    Never a rule: something outdoor that is meant for the dark (lights, stars) is as outdoor as
-    a hike, so no daylight in the free time makes an idea possible, not ruled out.
-    """
+    """Whether an outdoor idea could only be done in the dark (soft, never ruled out: lights and
+    stars are outdoor too); says when dark comes today."""
     if item.idea.setting != "outdoor":
         return False
     need = item.idea.duration_min or item.idea.duration_max or MIN_VISIT_MINUTES
@@ -173,20 +168,18 @@ def _daylight_check(
         light = day_context.forecast.daylight if day_context and day_context.forecast else None
         if day_context is None or light is None:
             continue
-        # When they could be there: free, and open when the hours are known, travel allowed.
         there, margin = day_context.spans, travel or 0
         if place is not None and place.hours:
             status, ranges = open_on(place, day)
             if status == "open":
                 there, margin = doable(ranges, day_context.spans, travel or 0), 0
         if any(b - a >= need for a, b in in_daylight(there, light, margin)):
-            # Asked about today, and they could stay on after sunset: say when dark comes.
             if day == context.today and max(b - margin for _, b in there) > light[1]:
                 reasons.append(f"daylight until {clock(light[1])}")
             return False
         dark = dark or light
     if dark is None:
-        return False  # the forecast gives no sunrise or sunset: nothing to say
+        return False  # no sunrise or sunset in the forecast
     reasons.append(f"too dark then (daylight {clock(dark[0])}-{clock(dark[1])})")
     return True
 

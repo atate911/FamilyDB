@@ -14,7 +14,6 @@ class Reminder(BaseModel):
     remind_at: str
     message_id: int | None = None
     cancelled_at: str | None = None
-    # When the message carrying it was delivered, from the message log.
     delivered_at: str | None = None
 
     @classmethod
@@ -30,7 +29,6 @@ class Task(BaseModel):
     title: str
     notes: str = ""
     owner_id: int | None = None
-    # The owner's display name, from the family list.
     owner: str | None = None
     due_at: str | None = None
     preferred_window: str = ""
@@ -44,7 +42,6 @@ class Task(BaseModel):
     last_done_at: str | None = None
     # Whose birthday or anniversary it is: its reminder lists the gifts saved for them.
     gift_for: str | None = None
-    # When it was last brought up for its preferred window (jobs/nudges.py).
     nudged_at: str | None = None
     channel: str
     chat_id: str
@@ -59,7 +56,6 @@ class Task(BaseModel):
     @classmethod
     def from_row(cls, row: sqlite3.Row, reminder: Reminder | None) -> Task:
         data = dict(row)
-        # The idempotency key is how a write finds itself again, not part of the task.
         data.pop("operation_key", None)
         return cls(**data, reminder=reminder)
 
@@ -95,7 +91,7 @@ def list_all(
 def in_chat(
     conn: sqlite3.Connection, channel: str, chat_id: str, *, limit: int = 100
 ) -> list[Task]:
-    """Open tasks asked for in one chat, whose reminders go there: deadlines first, then oldest."""
+    """Open tasks asked for in one chat (their reminders go there): deadlines first, then oldest."""
     rows = conn.execute(
         "SELECT id FROM tasks WHERE status='open' AND channel=? AND chat_id=? "
         "ORDER BY due_at IS NULL, due_at, id LIMIT ?",
@@ -105,7 +101,7 @@ def in_chat(
 
 
 def find_by_operation(conn: sqlite3.Connection, operation_key: str) -> Task | None:
-    """The task an earlier attempt at the same request already saved, if any."""
+    """The task an earlier attempt at the same request saved, if any."""
     row = conn.execute("SELECT id FROM tasks WHERE operation_key=?", (operation_key,)).fetchone()
     return get(conn, row["id"]) if row else None
 
@@ -148,7 +144,7 @@ def insert(
 
 
 def update(conn: sqlite3.Connection, task_id: int, changes: dict[str, Any]) -> None:
-    """Set the given columns and move the revision on. Callers pass only editable columns."""
+    """Set the given columns and bump the revision; callers pass only editable columns."""
     assignment = ", ".join(f"{key}=?" for key in changes)
     conn.execute(
         f"UPDATE tasks SET {assignment}, revision=revision+1 WHERE id=?",
@@ -161,7 +157,7 @@ def add_reminder(conn: sqlite3.Connection, task_id: int, remind_at: str) -> None
 
 
 def has_pending_reminder(conn: sqlite3.Connection, task_id: int) -> bool:
-    """Whether a live reminder is waiting for its time, not yet turned into a message."""
+    """Whether a live reminder has no message yet."""
     row = conn.execute(
         "SELECT 1 FROM reminders WHERE task_id=? AND cancelled_at IS NULL AND message_id IS NULL",
         (task_id,),
@@ -193,8 +189,8 @@ def cancel_reminders(conn: sqlite3.Connection, task_id: int, now: str) -> None:
 
 
 def cancel_in_chat(conn: sqlite3.Connection, channel: str, chat_id: str, now: str) -> int:
-    """Cancel every open task kept in one chat, with its reminders: the chat of somebody taken
-    off the list. Returns how many. Call inside a transaction."""
+    """Cancel every open task in one chat with its reminders (somebody taken off the list);
+    returns how many. Call inside a transaction."""
     open_ids = [
         int(row["id"])
         for row in conn.execute(
@@ -239,10 +235,10 @@ def attach_message(conn: sqlite3.Connection, reminder_id: int, message_id: int) 
 def nudge_candidates(
     conn: sqlite3.Connection, *, said_before: str, nudged_before: str, chats_quiet_since: str
 ) -> list[Task]:
-    """Open tasks kept for a preferred window with nothing else to bring them up: no reminder
-    waiting, no repeat, said before `said_before`, not nudged since `nudged_before`, in a chat
-    with no nudge since `chats_quiet_since`. The one nudged longest ago first, never nudged
-    before all, then the oldest. Whether the window can be read is for the caller."""
+    """Open tasks with a preferred window and nothing else to bring them up (no pending reminder
+    or repeat), created before `said_before`, not nudged since `nudged_before`, in a chat quiet
+    since `chats_quiet_since`; never-nudged first, then longest ago. Reading the window is the
+    caller's."""
     rows = conn.execute(
         "SELECT t.id FROM tasks t WHERE t.status='open' AND t.preferred_window!='' "
         "AND t.repeat_every IS NULL AND t.created_at<? "
@@ -258,5 +254,5 @@ def nudge_candidates(
 
 
 def mark_nudged(conn: sqlite3.Connection, task_id: int, now: str) -> None:
-    """Note a nudge. Not an edit: the revision stays, so a form drawn before it still saves."""
+    """Note a nudge; the revision stays, so a form drawn before it still saves."""
     conn.execute("UPDATE tasks SET nudged_at=? WHERE id=?", (now, task_id))

@@ -1,4 +1,4 @@
-"""Data shapes shared by the suggestion stages, the `suggest` tool and the suggestions log."""
+"""Data shapes shared by the suggestion stages, the `suggest` tool and the log."""
 
 from __future__ import annotations
 
@@ -138,11 +138,8 @@ def clock(minutes: int) -> str:
 
 @dataclass(frozen=True)
 class DayBounds:
-    """The part of each day the question is about, and where the first and last days are cut.
-
-    `first_start` is later than `start` when the window begins today and the morning has gone,
-    or when the question is about right now; `last_end` cuts the last day for "the next hours".
-    """
+    """The part of each day asked about; `first_start` cuts the first day (today, or "now") and
+    `last_end` the last ("the next hours")."""
 
     start: int = DAY_START
     end: int = DAY_END
@@ -170,13 +167,13 @@ class DayContext:
 
     @property
     def whole(self) -> bool:
-        """Nothing on in the part of the day asked about."""
+
         return self.longest >= self.bounds[1] - self.bounds[0] > 0
 
 
 @dataclass(frozen=True)
 class Origin:
-    """Where travel is estimated from when the family is not at home."""
+    """Where travel is estimated from when not at home."""
 
     lat: float
     lon: float

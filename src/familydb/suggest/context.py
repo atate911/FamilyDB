@@ -1,9 +1,5 @@
-"""Stage: the calendar's free time and the forecast for the window.
-
-Free time is the stretches of each day between its bounds with the busy events taken out, in
-minutes, so "the next four hours" and "Saturday from 2" are answered as asked, and a question on
-Saturday afternoon does not count the morning that has gone.
-"""
+"""Stage: the calendar's free time (each day's bounds minus busy events, in minutes) and the
+forecast for the window."""
 
 from __future__ import annotations
 
@@ -23,7 +19,7 @@ log = logging.getLogger(__name__)
 def build_context(
     ctx: ToolContext, window: tuple[date, date] | None, bounds: DayBounds | None = None
 ) -> Context:
-    """Free time and forecast per day. A missing service becomes a skipped check, not an error."""
+    """Free time and forecast per day; a missing service is a skipped check, not an error."""
     today = ctx.clock.today()
     southern = ctx.settings.southern_hemisphere
     skipped: list[str] = []
@@ -50,7 +46,7 @@ def build_context(
                 commitments[day.isoformat()] = [e.title for e in todays if e.all_day] + [
                     e.title for e in todays if not e.all_day
                 ]
-        except Exception as exc:  # a transport error must not fail the whole suggestion
+        except Exception as exc:  # must not fail the whole suggestion
             if not isinstance(exc, ToolError):
                 log.exception("calendar check failed")
             skipped.append(f"calendar check failed: {exc}")
@@ -88,5 +84,5 @@ def build_context(
 
 
 def _unknown(limits: tuple[int, int]) -> list[tuple[int, int]]:
-    """With no calendar to ask, the whole of the time asked about is taken to be free."""
+    """With no calendar, all of the time asked about counts as free."""
     return [limits] if limits[1] > limits[0] else []

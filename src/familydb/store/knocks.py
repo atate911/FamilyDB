@@ -1,7 +1,5 @@
-"""Strangers who messaged the bot: who and when, never what they said.
-
-Kept a month and never more than `KEEP` of them, so a stream of strangers cannot fill the disk.
-"""
+"""Strangers who messaged the bot: who and when, never what they said. Kept a month and at most
+`KEEP`, so strangers cannot fill the disk."""
 
 from __future__ import annotations
 
@@ -53,7 +51,7 @@ def record(
 
 
 def recent(conn: sqlite3.Connection, *, channel: str, limit: int = 20) -> list[Knock]:
-    """The newest first, leaving out anybody who has since been put on the family list."""
+    """Newest first, excluding anybody since put on the family list."""
     rows = conn.execute(
         "SELECT k.* FROM knocks k WHERE k.channel = ? AND NOT EXISTS ("
         "SELECT 1 FROM members m WHERE m.channel = k.channel "

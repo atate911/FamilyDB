@@ -1,15 +1,6 @@
-"""What goes into a request, part by part, and what each part costs.
-
-The gateway decides which kind of call this is; this module builds what that kind is sent, from
-labelled sections, and measures them. The providers then put it in each vendor's own format.
-
-A provider reports one real number for what a call sent: its input tokens, cached or not. No
-vendor says how those split between the instructions, the tools, the idea list and the history,
-and counting each part exactly would cost a request of its own. So each section's size is
-recorded in characters with every call, and the real total is shared out in proportion: the
-split is an estimate, the total is what was billed. That is enough to see which part is large
-and whether a change made it smaller, which is what the numbers are for.
-"""
+"""Builds each kind's request from labelled sections and measures them. Vendors report only total
+input tokens, so each section's size is recorded in characters per call and the billed total is
+shared out in proportion (an estimate split of a real total)."""
 
 from __future__ import annotations
 
@@ -36,8 +27,7 @@ from familydb.tools import ToolRegistry
 if TYPE_CHECKING:
     from familydb.agent.gateway import CallSpec
 
-# Every part a request can have, what a person would call it, and which layer of
-# docs/AI_CALLS.md it belongs to: the cached prefix, or the turn itself.
+# Every part a request can have, its label, and its docs/AI_CALLS.md layer (prefix or turn).
 SECTIONS: dict[str, tuple[str, str]] = {
     "personality": ("who the assistant is", "prefix"),
     "instructions": ("instructions", "prefix"),
@@ -66,7 +56,7 @@ def _chars(parts: Iterable[str]) -> int:
 def prefix(
     call: CallSpec, conn: sqlite3.Connection, settings: Settings
 ) -> tuple[list[SystemBlock], dict[str, int]]:
-    """The cached part of the request. Nothing in it may change from one call to the next."""
+    """The cached part of the request; nothing in it may vary between calls."""
     if call.prompt == "system":
         character, instructions, family, idea_list = chat_prefix(conn, settings)
         sizes = {"instructions": len(instructions), "family": len(family), "ideas": len(idea_list)}
@@ -101,7 +91,7 @@ def compose(
     history: Sequence[HistoryTurn] = (),
     user_location: dict[str, Any] | None = None,
 ) -> Composed:
-    """The whole request for one call of this kind: the prefix, the tools, the conversation."""
+    """The whole request for one call of this kind."""
     system, sections = prefix(call, conn, settings)
     tools = tool_defs(call, registry)
     messages = build_messages(list(history), current)
@@ -126,7 +116,7 @@ def compose(
 
 
 def exchange_chars(exchanges: Iterable[Exchange]) -> int:
-    """What the earlier steps of a turn add to each later call: answers, tool calls, results."""
+    """What a turn's earlier steps add to each later call."""
     total = 0
     for exchange in exchanges:
         total += len(exchange.reply.text)
@@ -139,11 +129,8 @@ def exchange_chars(exchanges: Iterable[Exchange]) -> int:
 
 
 def breakdown(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Where the input tokens of these calls went, per section, averaged per call.
-
-    Each row is one recorded call: `sections` (JSON of characters per section) and `sent`, the
-    input tokens the provider reported for it. Calls recorded without sections are left out.
-    """
+    """Input tokens per section, averaged per call. Rows carry `sections` (JSON characters) and
+    `sent` (reported input tokens); rows without sections are left out."""
     tokens: dict[str, float] = {}
     counted = 0
     for row in rows:

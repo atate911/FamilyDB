@@ -1,21 +1,7 @@
-"""The one tool for what the family tells the bot about itself: `remember` (docs/MEMORY.md).
-
-One tool with a short list of changes, not a tool per kind of memory: its schema is part of every
-chat request, so it stays small and never varies. The model proposes; the rules here decide.
-
-- Who a memory is about is a name on the family list, or the family; anyone else is refused.
-- The same thing said again about the same person is not saved twice. Said outright after being
-  guessed, it stops being a guess.
-- A guess is never a must: an inference only leans on a decision, it never rules one out.
-- Something the family asked to forget is not saved again from a conversation, however it comes
-  back up; typed on the memory page (a person, not a model, with no message behind it) it is.
-- A correction replaces a memory rather than piling up beside it, and the old one points at the
-  new; nothing is deleted.
-
-When remembering is all a message needs, the model hands its whole reply over with the changes
-(`reply`), and the turn ends there: saying "noted" costs no further call (`ToolContext.offer_reply`,
-`agent/loop.py`). Anything else in the same step, or anything not saved, and the turn carries on.
-"""
+"""The one tool for what the family tells the bot about itself: `remember` (rules in
+docs/MEMORY.md). One tool with a list of changes, since its schema is in every chat request and
+must stay small and fixed; the model proposes, the rules here decide. When remembering is all a
+message needs, `reply` ends the turn with no further call (`ToolContext.offer_reply`)."""
 
 from __future__ import annotations
 
@@ -67,7 +53,7 @@ class RememberInput(BaseModel):
 
 
 def _about(ctx: ToolContext, name: str) -> int | None:
-    """The member a memory is about, or None for the whole family."""
+
     if name.strip().casefold() in FAMILY or not name.strip():
         return None
     member = members.find_by_name(ctx.conn, name)
@@ -118,7 +104,7 @@ def _add(ctx: ToolContext, change: Change, *, replacing: store.Memory | None = N
     fact = _fact(change)
     about = _about(ctx, change.about)
     until = _until(ctx, change.until)
-    firm = change.firm and not change.inferred  # a guess never rules anything out
+    firm = change.firm and not change.inferred  # a guess is never a must
     now = ctx.now_iso()
     same = store.matching(ctx.conn, about, fact, "active")
     if same is not None and (replacing is None or same.id != replacing.id):
@@ -128,7 +114,7 @@ def _add(ctx: ToolContext, change: Change, *, replacing: store.Memory | None = N
             store.replace(ctx.conn, replacing.id, by=same.id, now=now)
             return _shown(same, "replaced", was=replacing.fact)
         return _shown(same, "already remembered")
-    typed = ctx.message_id is None  # on the page or the command line: a person, no model
+    typed = ctx.message_id is None  # a person on the page or command line, no model
     gone = store.matching(ctx.conn, about, fact, "forgotten")
     if gone is not None and not typed:
         when = (gone.forgotten_at or "")[:10]
