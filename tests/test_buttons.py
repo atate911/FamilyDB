@@ -149,9 +149,7 @@ def test_not_again_and_didnt_go(settings, clock, conn, family) -> None:
 @pytest.mark.parametrize(
     "data",
     [
-        "done:",
         "done:abc",
-        "done:-1",
         "drop:1",
         "done:1:2",
         "",

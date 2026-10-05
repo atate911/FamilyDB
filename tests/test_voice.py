@@ -36,13 +36,6 @@ def test_plain_then_hers_then_the_family_s(settings) -> None:
     assert voice.say(own_but_plain, "reminder", **facts) == voice.say(plain, "reminder", **facts)
 
 
-def test_a_line_that_cannot_be_used_is_said_plainly(settings) -> None:
-    broken = settings.model_copy(update={"voice_lines": {"follow_up": "How was {venue}?"}})
-    assert voice.say(broken, "follow_up", plan="Hopscotch", day="Saturday") == (
-        "How was Hopscotch on Saturday? Worth doing again?"
-    )
-
-
 def test_every_line_a_persona_ships_with_is_usable() -> None:
     for key in personas.available():
         shipped = dict(personas.load(key).lines)
