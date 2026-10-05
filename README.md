@@ -24,17 +24,9 @@ One Python process does all of it. A chat adapter hands each message to a pipeli
 
 ## Quick start
 
-**On a server, follow [docs/INSTALL.md](docs/INSTALL.md):** three steps, about twenty minutes,
-and no Linux knowledge needed. Paste one block into the server's terminal; it walks you through
-letting the server read this private repository, then installs everything, puts the page on
-HTTPS at the server's address, and prints a link and a password. Open the link, and the page
-walks you through the rest: yourself, your own password, an AI key, where home is, Telegram, the
-rest of the family and Google Calendar.
+**On a server, follow [docs/INSTALL.md](docs/INSTALL.md):** three steps, about twenty minutes, no Linux knowledge needed. Paste one block into the server's terminal; it has the server read this private repository, installs everything, puts the page on HTTPS and prints a link and a password. The page then walks you through the rest: yourself, your password, an AI key, home, Telegram, the family, Google Calendar.
 
-Afterwards: `familydb doctor` says whether the install is right and what to do about anything
-that is not, `scripts/maintain.sh` does backups, restores, upgrades, logs and a forgotten
-password, and `scripts/uninstall.sh` removes it (`--from-zero` puts the server back as it was
-before FamilyDB, to try the install again).
+Afterwards: `familydb doctor` checks the install and says what to fix, `scripts/maintain.sh` does backups, restores, upgrades, logs and a forgotten password, and `scripts/uninstall.sh` removes it (`--from-zero` restores the server to before FamilyDB).
 
 On your own machine, to try it out:
 
@@ -79,59 +71,22 @@ uv run familydb db status         # row counts and the last model calls, with ca
 
 ## Layout
 
+`CLAUDE.md` has the module-by-module map; the design is `docs/DESIGN.md`.
+
 ```
-src/familydb/
-  cli.py          commands            pipeline.py     one message end to end
-  config.py       settings (.env)     app.py          wiring: settings, clock, connections
-  clock.py        time abstraction    dates.py        parsing in the family timezone
-  delivery.py     message leases and at-least-once delivery of stored replies
-  calendar_sync.py  plans brought in line with their Google events
-  agenda.py       what is on, from Google or else the saved plans
-  family.py       the rules for adding, changing and taking off family members (not a tool), and the
-                  one-time links that link somebody's Telegram
-  roles.py        the three roles, admin, parent and kid, and what each may do
-  task_service.py tasks, their reminders and repeats, changed in one place
-  windows.py      a task's preferred window ("some Saturday morning"), read by code
-  commands.py     Telegram's /start, /today, /week, /tasks, /now and /lookup, answered by code
-  buttons.py      the buttons under a reminder or a follow-up, and what a tap does
-  memory.py       which of the family's memories each message is sent
-  whereabouts.py  where a phone last said a member was, for a few hours
-  voice.py        the words for everything said unasked, and folding it into a conversation
-  alerts.py       telling admins on Telegram what only they can fix, with no model call
-  model_watch.py  the daily check of each company's models and the price lists, and what
-                  changed; usage_watch.py, the weekly look at what the calls cost and do
-  personas/       who the assistant is: a name, a character and her lines, a folder each
-                  (default/, Vera as first written, and brief/, a shorter Vera)
-  doctor.py       the install check   privacy.py      owner-only files and umask
-  agent/          the gateway (the one door to a model), the request and prompt builders,
-                  history, the tool loop, worker turns, the daily spending limit,
-                  prompts/{system,enrich,discover,look}.md
-  agent/providers/ one module per model vendor behind a small protocol, the price table and
-                  each company's models by level
-  tools/          registry, strict schemas, one module per tool group (ideas, outcomes,
-                  calendar, weather, places, suggest, tasks, memory, now)
-  suggest/        the suggestion engine: context, shortlist, evaluate, discover, compose, log
-  store/          SQLite connection, migrations/, one repository per table
-  channels/       message shapes, the console, Telegram (with the supervisor that follows its
-                  token, and markup.py, which draws a reply's bold and links) and the web chat
-  web/            the page: app factory, sign-in and roles, home, chat, the reading views, the
-                  edit forms, Family, status, settings and setup, once-only forms, templates
-  integrations/   Google Calendar, Open-Meteo, the keyless geocoder and the price lists
-  jobs/           the scheduler and its jobs: retries, lookups, the weekend digest, follow-ups,
-                  the evening-before check, reminders, nudges, forgetting shared locations,
-                  the daily check of models and prices, catch-up after a restart, and following settings changed on the page
+src/familydb/     pipeline.py (one message end to end), agent/ (the gateway, prompts, tool loop,
+                  spending limit, providers/ one module per model vendor), tools/ (one module per
+                  tool group), suggest/ (the suggestion engine), store/ (SQLite, migrations/, one
+                  repository per table), channels/ (console, Telegram, web chat), web/ (the page),
+                  jobs/ (scheduler and jobs), integrations/ (Google Calendar, Open-Meteo, geocoder,
+                  price lists), personas/ (who the assistant is), plus cli.py, config.py, app.py,
+                  family.py, roles.py, voice.py, delivery.py, doctor.py and the other top-level modules
 tests/            pytest suite with scripted fakes of each provider's SDK, Google and the weather
 evals/            the family's own requests run against a real model, graded by code
-scripts/          bootstrap (bare server to running bot), install, maintain, uninstall; lib/ for
-                  the shared logging, error reporting, retries and HTTPS; icons.py builds the
-                  page's icon sprite
-deploy/           systemd unit, a Caddyfile and an nginx site for HTTPS; Dockerfile and
-                  docker-compose.yml at the root
-docs/             DESIGN.md (the design and its decisions), INSTALL.md (a server from zero),
-                  AI_CALLS.md (how each model call is decided, fed and trusted), MEMORY.md (what
-                  the bot remembers of the family), PERSONAS.md (who the family talks to),
-                  STYLE.md (how the page looks, and why), PRODUCT_EXAMPLES.md (the owner's own
-                  scenarios)
+scripts/          bootstrap (bare server to running bot), install, maintain, uninstall; lib/ shared
+deploy/           systemd unit, Caddyfile and nginx site; Dockerfile and docker-compose.yml at the root
+docs/             DESIGN, INSTALL (a server from zero), AI_CALLS (how each model call is decided),
+                  MEMORY, PERSONAS, WISHES, STYLE (how the page looks, and why), PRODUCT_EXAMPLES
 ```
 
 ## Development
