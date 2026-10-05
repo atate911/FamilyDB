@@ -1,9 +1,5 @@
-"""Day-after follow-ups: ask how a plan went so the answer becomes feedback for its idea.
-
-No model call is needed to ask. The question is stored as an outbound message in the plan's chat,
-so when the family answers, the chat model sees its own question in the history and records the
-outcome through the normal feedback path.
-"""
+"""Day-after follow-ups, no model call: the question is stored as an outbound message in the
+plan's chat, so the chat model sees it in history and records the answer as an outcome."""
 
 from __future__ import annotations
 
@@ -23,7 +19,7 @@ from familydb.store.plans import Plan
 
 log = logging.getLogger(__name__)
 
-FOLLOW_UP_DAYS = 7  # plans older than this are left alone; asking weeks later is odd
+FOLLOW_UP_DAYS = 7  # older plans are left alone
 
 
 def render_follow_up(plan: Plan, settings: Any) -> str:
@@ -35,13 +31,12 @@ def render_follow_up(plan: Plan, settings: Any) -> str:
 def run_follow_ups(app: App) -> int:
     """Ask about each plan that ended before today and was not asked about; returns how many."""
     asked = 0
-    run_deliveries(app)  # anything an earlier run could not send goes first, and only once
+    run_deliveries(app)  # what an earlier run could not send goes first
     with closing(app.connect()) as conn:
         app.refresh(conn)
         if not app.settings.follow_ups:
             return 0
-        # Asking how a plan went that somebody cancelled in Google would be a small insult.
-        # When Google cannot be asked, the questions wait for a run that can check first.
+        # Don't ask about a plan cancelled in Google; if Google cannot be asked, wait.
         if app.calendar is not None:
             try:
                 sync_plans(
@@ -58,7 +53,6 @@ def run_follow_ups(app: App) -> int:
             if outcomes.exists_since(
                 conn, idea_id=plan.idea_id, plan_id=plan.id, since=plan.start[:10]
             ):
-                # Someone already said how it went; nothing to ask.
                 with transaction(conn):
                     plans.mark_followed_up(conn, plan.id, now=now)
                 continue
@@ -71,13 +65,12 @@ def run_follow_ups(app: App) -> int:
                 )
                 continue
             text = render_follow_up(plan, app.settings)
-            # Asked of whoever made the plan, in their own chat when it began in a group: one
-            # answer is enough (routing.py).
+            # Asked of the plan's maker, in their own chat when it began in a group (routing.py).
             channel, chat_id = routing.for_person(
                 conn, app.settings, plan.channel or "", plan.chat_id, plan.created_by
             )
             with transaction(conn):
-                # Recheck under the write lock: a run by hand can race the scheduler.
+                # Re-read under the write lock: a manual run can race the scheduler.
                 if plans.get(conn, plan.id).followed_up_at is not None:  # type: ignore[union-attr]
                     continue
                 outbound = messages.insert_out(
@@ -86,11 +79,9 @@ def run_follow_ups(app: App) -> int:
                     chat_id=chat_id,
                     text=text,
                     now=now,
-                    # Its answers as buttons, when there is an idea to record them against.
                     buttons=buttons.for_follow_up(plan.id) if plan.idea_id else None,
                 )
                 plans.mark_followed_up(conn, plan.id, now=now)
-            # Stored first, sent second: a send that fails stays queued for the next run.
             voice.hand_over(
                 app,
                 conn,

@@ -1,9 +1,5 @@
-"""Worker turns: small, separate model calls with their own prompt, tool subset and web access.
-
-The chat agent never gets the web tools; enrichment and discovery run here instead and hand their
-results back through strict client tools (save_place / skip_place, report_finds). What each
-kind may use is declared in `agent.gateway.KINDS`; this module only frames the request.
-"""
+"""Worker turns (enrichment, discovery): the only turns with web tools, handing results back
+through strict client tools. What each kind may use is in `gateway.KINDS`."""
 
 from __future__ import annotations
 
@@ -28,12 +24,12 @@ class WorkerTurn:
     kind: WorkerKind = "enrich"
 
     def handed_back(self, tool_name: str | None = None) -> bool:
-        """Whether the worker made a successful call to its hand-back tool (or to this one)."""
+
         return gateway.handed_back(gateway.spec(self.kind), self.result, tool_name)
 
 
 def home_location(settings: Settings) -> dict[str, Any] | None:
-    """An approximate location for web searches, from HOME_AREA ('City, Region')."""
+    """An approximate location for web searches, from `home_area` ('City, Region')."""
     if not settings.home_area:
         return None
     parts = [p.strip() for p in settings.home_area.split(",") if p.strip()]
@@ -44,7 +40,7 @@ def home_location(settings: Settings) -> dict[str, Any] | None:
 
 
 def worker_turn(clock: Clock, request: str) -> list[str]:
-    """A worker's whole conversation: today's date, then what it is asked to do."""
+
     return [f"Today is {clock.describe()}.", request]
 
 
@@ -65,7 +61,7 @@ def run_worker_turn(
     idea_id: int | None = None,
     about: str | None = None,
 ) -> WorkerTurn:
-    """One worker turn. `message_id` ties the audit rows to a chat message when there is one."""
+    """One worker turn; `message_id` ties the audit rows to a chat message."""
     ctx = ToolContext(
         conn=conn,
         settings=settings,

@@ -52,7 +52,7 @@ def resolve_window(
 ) -> tuple[tuple[date, date] | None, str, DayBounds]:
     """The days asked about, how to say them, and the part of each day that counts."""
     today = now.date()
-    # Rounded up to five minutes: nobody leaves this second, and it steadies the labels.
+    # Rounded up to five minutes, which steadies the labels.
     minute = min(24 * 60, -(-(now.hour * 60 + now.minute) // 5) * 5)
     from_minute = _minute(args.from_time, "from_time")
     until_minute = _minute(args.until_time, "until_time")
@@ -69,7 +69,7 @@ def resolve_window(
         if not 1 <= hours <= MAX_NOW_HOURS:
             raise ToolError(f"hours must be 1 to {MAX_NOW_HOURS}")
         end = min(24 * 60, minute + hours * 60)
-        # Right now is right now: not held to the usual 08:00 to 22:00.
+        # Not held to the usual 08:00 to 22:00.
         frame = DayBounds(start=0, end=24 * 60, first_start=minute, last_end=end)
         return (today, today), f"now until {clock(end)}", frame
     if args.window == "today":
@@ -86,7 +86,7 @@ def resolve_window(
             raise ToolError("ask about at most two weeks at a time")
         label = "those dates"
     elif args.window == "next_weekend":
-        # The weekend after this one, which on a weekend day means the coming Saturday.
+        # On a weekend day this means the coming Saturday.
         _, this_end = weekend_window(today)
         start_day, end_day = weekend_window(this_end + timedelta(days=1))
         label = "next weekend"
@@ -99,17 +99,14 @@ def resolve_window(
         label += f" ({start_day:%a %d} to {end_day:%a %d %b})"
     if from_minute is not None or until_minute is not None:
         label += f", {clock(bounds.start)}-{clock(bounds.end)}"
-    # Asked on the day itself, the part of it that has gone is not free time.
+    # Asked on the day itself, the part gone is not free time.
     frame = replace(bounds, first_start=minute) if start_day == today else bounds
     return (start_day, end_day), label, frame
 
 
 def run(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> SuggestResult:
-    """The whole engine for one question; returns the structured result the chat model composes.
-
-    `refresh_stale` queues a paid lookup for each place whose details have gone stale. Code that
-    runs the engine with no model call (commands.py, the evening check) passes False, so that it
-    never causes one either."""
+    """The whole engine for one question. `refresh_stale` queues a paid lookup per stale place;
+    code running with no model call (commands.py, the evening check) passes False."""
     window, label, bounds = resolve_window(args, ctx.clock.now())
     context = build_context(ctx, window, bounds)
     context.origin, where_note = resolve_origin(ctx, args.near, args.window)
@@ -126,7 +123,7 @@ def run(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> 
         setting=args.setting,
         max_travel_minutes=args.max_travel_minutes,
         max_duration_minutes=args.max_duration_minutes,
-        # Folded the same way however it was typed, so the same subject is the same search.
+        # Folded, so the same subject is the same search.
         topic=" ".join(args.topic.casefold().split())[:MAX_TOPIC],
     )
     excluded = outcomes.do_not_repeat(ctx.conn)
@@ -148,7 +145,7 @@ def run(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> 
     evaluated, stale_ids = evaluate(ctx.conn, kept, context, constraints, ctx.settings, ctx.clock)
     skipped = list(context.skipped)
     if unknown:
-        # A wrong number must not quietly empty the answer: say so, and widen when nothing is left.
+        # A wrong number must not quietly empty the answer: say so, widen when nothing is left.
         names = ", ".join(f"#{idea_id}" for idea_id in unknown)
         widened = "; considered every idea instead" if not idea_ids else ""
         skipped.append(f"no idea {names} on the list{widened}")

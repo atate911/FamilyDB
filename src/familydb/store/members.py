@@ -12,10 +12,7 @@ from familydb.roles import ROLES as ROLES
 from familydb.roles import Role as Role
 from familydb.store.db import utcnow_iso
 
-# Channels with no account of their own on another service behind them: the console, where
-# whoever is at the keyboard says who they are, and the web page, which names whoever is signed
-# in (or, while the family still shares one password, whoever they said they were). Both name a
-# member by display name instead of a channel user id.
+# Channels that name a member by display name, not a channel user id.
 BY_NAME = frozenset({"console", "web"})
 
 Gender = Literal["male", "female"]
@@ -102,7 +99,7 @@ def update_profile(
     birth_date: str | None = None,
     gender: Gender | None = None,
 ) -> Member | None:
-    """Change who somebody is to the bot, keeping their id and so everything they ever said."""
+    """Change who somebody is to the bot, keeping their id."""
     conn.execute(
         "UPDATE members SET display_name = ?, role = ?, active = ?, channel = ?, "
         "channel_user_id = ?, birth_date = ?, gender = ? WHERE id = ?",
@@ -120,12 +117,9 @@ def update_profile(
     return get(conn, member_id)
 
 
-# Every column that points at a member, and what taking somebody off the list for good does to
-# it, as the family chose: what was theirs alone goes with them (how they signed in, where they
-# were, a link for their Telegram, what she remembers about them), and what they said and did
-# stays, with nobody's name on it, so a conversation still reads. `erase` works through this
-# list, and a test holds it to the schema: a table added later that points at a member has to
-# be named here, or taking somebody off would fail on it.
+# Every column pointing at a member, and what taking somebody off for good does to it (the
+# family's choice): what was theirs alone is deleted, what they said and did stays unnamed. A
+# test holds this to the schema, so a new table pointing at a member must be named here.
 POINTING_AT = {
     ("app_settings", "updated_by"): "unname",
     ("ideas", "suggested_by"): "unname",
@@ -151,12 +145,9 @@ POINTING_AT = {
 
 
 def erase(conn: sqlite3.Connection, member_id: int) -> dict[str, int]:
-    """Take a member off the list for good, as POINTING_AT says. Call inside a transaction.
-
-    Returns how many rows each table lost or had the name taken off, for the log.
-    """
+    """Take a member off the list for good, as POINTING_AT says; call inside a transaction.
+    Returns the rows each table lost or unnamed, for the log."""
     touched: dict[str, int] = {}
-    # A memory about them may have replaced another, or been replaced by one that stays.
     conn.execute(
         "UPDATE memories SET replaced_by = NULL WHERE replaced_by IN "
         "(SELECT id FROM memories WHERE member_id = ?)",

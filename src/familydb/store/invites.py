@@ -1,8 +1,5 @@
-"""Links that link somebody's Telegram to them on the family list (familydb/family.py).
-
-Only a hash of each code is kept: the code is in the link, shown once on the page, and a copy of
-the database is no way in. One to a person: a new one replaces theirs.
-"""
+"""Invitations that link somebody's Telegram to them (familydb/family.py). Only a hash of each
+code is kept, so a database copy is no way in; one per person, a new one replaces it."""
 
 from __future__ import annotations
 
@@ -21,8 +18,7 @@ class Invite(BaseModel):
 
 
 def digest(code: str) -> str:
-    """What is kept of a code. A plain hash will do: a code is long and random, not a password
-    somebody chose, so there is nothing to guess it from."""
+    """What is kept of a code; a plain hash will do for a long random code."""
     return hashlib.sha256(code.encode("utf-8")).hexdigest()
 
 
@@ -35,7 +31,7 @@ def put(
     now: str,
     expires: str,
 ) -> None:
-    """Keep a new invitation for this person, in place of any they had."""
+
     conn.execute(
         "INSERT INTO telegram_invites (code_hash, member_id, made_by, made_at, expires_at) "
         "VALUES (?, ?, ?, ?, ?) ON CONFLICT (member_id) DO UPDATE SET "
@@ -57,5 +53,5 @@ def remove(conn: sqlite3.Connection, code_hash: str) -> None:
 
 
 def forget_expired(conn: sqlite3.Connection, now: str) -> int:
-    """Drop every invitation past its time. Returns how many went."""
+    """Drop every invitation past its time; returns how many."""
     return conn.execute("DELETE FROM telegram_invites WHERE expires_at <= ?", (now,)).rowcount

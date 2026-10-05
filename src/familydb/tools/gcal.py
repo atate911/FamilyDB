@@ -30,7 +30,7 @@ from familydb.tools.registry import ToolContext, tool
 NOT_CONFIGURED = "Google Calendar is not connected (no calendar id or key configured)"
 MAX_WINDOW_DAYS = 60
 DEFAULT_DURATION = timedelta(hours=2)
-# plan field -> Google event field, for the simple text attributes
+# plan field -> Google event field
 TEXT_FIELDS = {"title": "title", "location": "location", "notes": "description"}
 
 
@@ -121,10 +121,8 @@ def _timed_or_all_day(
     *,
     strict: bool = False,
 ) -> tuple[datetime | date, datetime | date, bool, str, str | None]:
-    """Resolve the user-facing start/end into calendar values and stored strings.
-
-    A date-only start makes the plan all-day unless `strict` says a time was required.
-    """
+    """Resolve start/end into calendar values and stored strings; a date-only start is all-day
+    unless `strict` requires a time."""
     date_only = len(start_text.strip()) == 10
     if date_only and strict and not all_day:
         raise ToolError("give a start time (YYYY-MM-DDTHH:MM) to make this a timed plan")
@@ -133,7 +131,7 @@ def _timed_or_all_day(
         end_d = parse_date(end_text.strip()[:10]) if end_text else start_d
         if end_d < start_d:
             raise ToolError("end is before start")
-        # Google's all-day end is exclusive.
+        # Google's all-day end is exclusive
         return start_d, end_d + timedelta(days=1), True, iso_date(start_d), iso_date(end_d)
     start_dt = parse_datetime(start_text, tz)
     end_dt = parse_datetime(end_text, tz) if end_text else start_dt + DEFAULT_DURATION
@@ -145,7 +143,7 @@ def _timed_or_all_day(
 def _end_keeping_duration(
     start: str, end: str | None, was_all_day: bool, new_start: str, all_day: bool, tz: ZoneInfo
 ) -> str | None:
-    """When only the start moves, carry the plan's length over to the new start."""
+    """Carry the plan's length over to a moved start."""
     if end is None or all_day != was_all_day:
         return None
     if all_day:
@@ -158,7 +156,7 @@ def _end_keeping_duration(
 def calendar_days(
     calendar: CalendarAPI, start: date, end: date, tz: ZoneInfo
 ) -> list[dict[str, Any]]:
-    """Per-day timed events, all-day entries and free blocks, as `get_calendar` reports them."""
+    """Per-day timed events, all-day entries and free blocks, as `get_calendar` reports."""
     return [
         {
             "date": day.isoformat(),
@@ -213,7 +211,7 @@ def get_calendar(ctx: ToolContext, args: GetCalendarInput) -> dict[str, Any]:
 
 
 def _created(ctx: ToolContext, plan: plans.Plan, event: CalendarEvent | None) -> dict[str, Any]:
-    """What creating a plan answers: the plan, its event, and the idea it put on the calendar."""
+
     idea = ideas.get(ctx.conn, plan.idea_id) if plan.idea_id is not None else None
     return {
         "plan": plan.model_dump(mode="json"),
@@ -240,8 +238,8 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
     start, end, all_day, stored_start, stored_end = _timed_or_all_day(
         args.start, args.end, args.all_day, tz
     )
-    # Persist identity before contacting Google. The same inbound request and normalized
-    # event intent reuse it even after a crash or a lost successful response.
+    # Persist identity before contacting Google, so the same request and event intent reuse it
+    # after a crash or a lost response.
     scope = (
         str(ctx.message_id)
         if ctx.message_id is not None
@@ -255,8 +253,8 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
         "idea_id": args.idea_id,
     }
     key = hashlib.sha256((scope + to_json(intent)).encode()).hexdigest()
-    # A form drawn again after a lost reply has a new identity. The same browser session asking
-    # for the same event takes over the unfinished attempt, which may already have made it.
+    # A redrawn form has a new identity; the same browser session asking for the same event
+    # takes over the unfinished attempt, which may already have made it.
     resume = (
         hashlib.sha256((ctx.resume_scope + to_json(intent)).encode()).hexdigest()
         if ctx.resume_scope
@@ -273,7 +271,7 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
     event = calendar.get_event(event_id)
     existing = plans.for_event(ctx.conn, event_id)
     if existing is not None:
-        return _created(ctx, existing, event)  # this attempt finished before: say so again
+        return _created(ctx, existing, event)  # finished before: say so again
     if event is None:
         ensure_not_past(start, ctx.clock)
         event = calendar.insert_event(
@@ -287,7 +285,7 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
         )
     origin = messages.get(ctx.conn, ctx.message_id) if ctx.message_id is not None else None
     with transaction(ctx.conn):
-        plan = plans.for_event(ctx.conn, event_id)  # an attempt running beside this one finished
+        plan = plans.for_event(ctx.conn, event_id)  # a concurrent attempt may have finished
         if plan is None:
             plan = plans.insert(
                 ctx.conn,
@@ -330,11 +328,8 @@ def _cancel(ctx: ToolContext, plan: plans.Plan) -> dict[str, Any]:
 def _target(
     ctx: ToolContext, plan_id: int | None, event_id: str | None
 ) -> tuple[plans.Plan | None, CalendarEvent | None]:
-    """The plan, or the hand-made event, that a change is for: exactly one of the two.
-
-    An event the bot made is always worked on as its plan, however it was named, so the plan
-    and its idea stay in step. Only an event nobody made through the bot is changed directly.
-    """
+    """The plan, or the hand-made event, a change is for (exactly one). The bot's own event is
+    always worked on as its plan, so plan and idea stay in step."""
     if (plan_id is None) == (event_id is None):
         raise ToolError("give plan_id, or event_id for an event put on the calendar by hand")
     calendar = _calendar(ctx)
@@ -356,7 +351,7 @@ def _target(
 
 
 def _remove_event(ctx: ToolContext, event: CalendarEvent) -> dict[str, Any]:
-    """Take an event that is not the bot's own off the calendar, and say which it was."""
+    """Take an event that is not the bot's own off the calendar."""
     _calendar(ctx).delete_event(event.id)
     return {"plan": None, "removed": event.to_public()}
 
@@ -386,7 +381,7 @@ def update_event(ctx: ToolContext, args: UpdateEventInput) -> dict[str, Any]:
     elif args.status == "cancelled":
         assert event is not None
         return _remove_event(ctx, event)
-    # What it is now, spelled the way plans are stored, for a plan and a hand-made event alike.
+    # Current state in plan-storage form, for a plan or a hand-made event.
     current = plan.model_dump() if plan is not None else event_changes(event)  # type: ignore[arg-type]
 
     changes: dict[str, Any] = {}

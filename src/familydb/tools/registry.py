@@ -24,7 +24,6 @@ from familydb.tools.schema import strict_schema
 log = logging.getLogger(__name__)
 
 
-# Where a tool leaves a reply it offers to end the turn with (`ToolContext.offer_reply`).
 OFFERED = "offered_reply"
 
 
@@ -39,7 +38,7 @@ class ToolContext:
     message_id: int | None = None
     calendar: Any = None  # a CalendarAPI (integrations.google_calendar) when connected
     weather: Any = None  # a ForecastAPI (integrations.open_meteo) when configured
-    geocoder: Any = None  # a GeocoderAPI (integrations.geocode) when available
+    geocoder: Any = None  # integrations.geocode.Geocoder, when available
     api: Any = None  # a test's stand-in model, for tools that run a worker turn (discovery)
     discover_cache: Any = None  # the App-level cache of discovery results
     allowed_tools: frozenset[str] | None = None
@@ -49,20 +48,17 @@ class ToolContext:
     idea_revision: str | None = None  # browser optimistic concurrency precondition
     task_revision: int | None = None
     scratch: dict[str, Any] = field(default_factory=dict)  # per-turn hand-back area
-    # Which turn the calls belong to (set by the loop), and what a worker turn is about (the
-    # idea looked up, the weekend searched), for the status page's history of each.
+    # The turn the calls belong to (set by the loop) and what a worker turn is about, for status.
     turn: str | None = None
     about: str | None = None
-    # Somebody who reads the chat may not see how the bot works (audience.plain): a kid. What
-    # code says there of the workings, a limit stopping a turn say, it says plainly.
+    # A kid reads the chat (audience.plain): code speaks plainly of the workings.
     plain: bool = False
 
     def now_iso(self) -> str:
         return utc_iso(self.clock.now())
 
     def offer_reply(self, text: str) -> None:
-        """A tool that can be all a turn does hands the family's reply over with its input; the
-        loop ends the turn with it when nothing else ran in that step (see `run_turn`)."""
+        """Hand the family's reply over with a tool's input; the loop may end the turn with it."""
         self.scratch[OFFERED] = text
 
     def take_reply(self) -> str | None:
@@ -161,13 +157,9 @@ class ToolRegistry:
         return sorted(self._specs)
 
     def tool_defs(self, names: Iterable[str] | None = None) -> list[ToolDef]:
-        """Declared tools sorted by name, in terms no vendor owns. Stable across chat turns.
-
-        Worker turns pass their subset in `names`. Without `names` this is the chat list, which
-        leaves out the hand-back tools only a worker ever calls: they cost input tokens on every
-        message and the chat model must not use them. Either way the list is the same from turn
-        to turn, so the prompt cache still holds.
-        """
+        """Declared tools sorted by name. Worker turns pass their subset in `names`; without it,
+        the chat list, which leaves out `worker_only` tools (input tokens on every message). The
+        list never varies between turns, so the prompt cache holds."""
         if names is None:
             wanted = sorted(name for name, spec in self._specs.items() if not spec.worker_only)
         else:
@@ -190,8 +182,7 @@ class ToolRegistry:
         spec = self._specs.get(name)
         if spec is None:
             return _error(name, f"unknown tool {name!r}")
-        # A provider whose strict mode forbids an absent field sends null instead, at any depth.
-        # Dropping those lets the input model's own default apply, as it does everywhere else.
+        # Strict mode sends null for an absent field, at any depth; dropping them applies defaults.
         raw_input = _without_nulls(raw_input)
         try:
             args = spec.input_model.model_validate(raw_input or {})
@@ -227,8 +218,7 @@ class ToolRegistry:
 
 
 def _without_nulls(value: Any) -> Any:
-    """`value` with the null fields of every object in it left out, however deep. A null item in
-    a list stays: it is an item, not a field left unsaid."""
+    """`value` without null object fields at any depth; a null list item stays."""
     if isinstance(value, dict):
         return {key: _without_nulls(item) for key, item in value.items() if item is not None}
     if isinstance(value, list):

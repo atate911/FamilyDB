@@ -1,5 +1,5 @@
-"""The prompt's parts: the prompt files, the chat's cached system blocks, and the conversation
-with everything volatile in its last turn. `agent.compose` puts them together into a request."""
+"""The prompt's parts: prompt files, the chat's cached system blocks, and the conversation with
+everything volatile in its last turn (`agent.compose` assembles them)."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ IDEAS_HEADER = (
 
 @lru_cache(maxsize=8)
 def load_prompt(name: str) -> str:
-    """A prompt file from the package: system, enrich, discover."""
+    """A prompt file from the package."""
     return (resources.files("familydb.agent") / "prompts" / f"{name}.md").read_text("utf-8")
 
 
@@ -38,18 +38,14 @@ def trim_ideas(everything: list[Any], limit: int) -> tuple[list[Any], int]:
     return everything[-limit:], len(everything) - limit
 
 
-# Between the persona's character and the product spec: who she is (her character, then the
-# family's notes on how she talks), then what the job is. The spec says what to do and wins where
-# the two meet, and the header says so for every persona, since a character need not say it and
-# a family's rewrite may not. Under none neither header is sent, as there is no character for the
-# job to win against.
+# Between the character and the product spec: the job wins where they meet, said for every
+# persona since a family's rewrite may not say it. Under `none` neither header is sent.
 PERSONA_HEADER = "# Who you are\n\n"
 JOB_HEADER = "\n\n# The job\n\nWhere who you are and the job disagree, the job wins.\n\n"
 
 
 def chat_prefix(conn: sqlite3.Connection, settings: Settings) -> tuple[str, str, str, str]:
-    """The chat prefix in its parts: her character (with the family's notes on how she talks),
-    the system prompt, the family, the ideas."""
+    """The chat prefix in parts: character (and family notes), system prompt, family, ideas."""
     family = render_family_context(members.list_all(conn), settings)
     everything = ideas.list_for_prompt(conn)
     shown, hidden = trim_ideas(everything, settings.prompt_idea_limit)
@@ -65,9 +61,8 @@ def chat_prefix(conn: sqlite3.Connection, settings: Settings) -> tuple[str, str,
 def chat_blocks(
     character: str, instructions: str, family: str, idea_list: str
 ) -> list[SystemBlock]:
-    """Two blocks, both cache breakpoints: who she is and the system prompt, which change rarely
-    (another persona, or the family editing her), then the family context and the idea list,
-    which change whenever the family or an idea does."""
+    """Two cache breakpoints: character plus system prompt (rarely change), then family and
+    ideas (change with either)."""
     first = f"{PERSONA_HEADER}{character}{JOB_HEADER}{instructions}" if character else instructions
     return [
         SystemBlock(first, cacheable=True),
@@ -80,7 +75,7 @@ def build_system_blocks(conn: sqlite3.Connection, settings: Settings) -> list[Sy
 
 
 def build_messages(history: list[HistoryTurn], current: list[str]) -> list[Message]:
-    """History as alternating turns (same-role turns merged), then the current user turn."""
+    """History as alternating turns (same-role merged), then the current user turn."""
     merged: list[Message] = []
     for turn in history:
         if merged and merged[-1].role == turn.role:
@@ -88,7 +83,7 @@ def build_messages(history: list[HistoryTurn], current: list[str]) -> list[Messa
         else:
             merged.append(Message(turn.role, [turn.text]))
     while merged and merged[0].role != "user":
-        merged.pop(0)  # a conversation has to open with the family, not with a reply
+        merged.pop(0)  # a conversation opens with the family
     if merged and merged[-1].role == "user":
         merged[-1] = Message("user", [*merged[-1].parts, *current])
     else:

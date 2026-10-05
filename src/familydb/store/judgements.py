@@ -40,9 +40,8 @@ def file(
     now: str,
     urgent: bool = False,
 ) -> bool:
-    """File a question, once for each kind and subject: one still open takes the newer facts
-    (a model released since, say), one answered stays as it was. True when it was not there.
-    Call inside a transaction."""
+    """File a question once per kind and subject: an open one takes the newer facts, an answered
+    one stays. True when it was not there. Call inside a transaction."""
     there = conn.execute(
         "SELECT 1 FROM judgements WHERE kind = ? AND subject = ?", (kind, subject)
     ).fetchone()
@@ -78,8 +77,7 @@ def answered(
 
 
 def tried(conn: sqlite3.Connection, judgement_id: int, *, now: str) -> int:
-    """No answer came back: it waits for the next evening, however urgent it was. Returns how
-    many times it has been asked."""
+    """No answer came back: it waits for the next evening. Returns how many times it was asked."""
     conn.execute(
         "UPDATE judgements SET tries = tries + 1, asked_at = ?, urgent = 0 WHERE id = ?",
         (now, judgement_id),
@@ -98,7 +96,7 @@ def recent(conn: sqlite3.Connection, *, since: str, limit: int = 20) -> list[Jud
 
 
 def choices(conn: sqlite3.Connection, kind: str) -> dict[str, Judgement]:
-    """The answered questions of a kind, by subject, that an answer was accepted for."""
+    """Questions of a kind with an accepted answer, by subject."""
     rows = conn.execute(
         "SELECT * FROM judgements WHERE kind = ? AND answer IS NOT NULL", (kind,)
     ).fetchall()

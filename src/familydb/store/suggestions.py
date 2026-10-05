@@ -73,7 +73,7 @@ def list_recent(conn: sqlite3.Connection, *, limit: int = 10) -> list[Suggestion
 
 
 def recently_suggested(conn: sqlite3.Connection, *, since: str) -> set[int]:
-    """Idea ids that got a 'good' verdict in any suggestion made at or after `since`."""
+    """Idea ids that got a 'good' verdict in any suggestion since `since`."""
     rows = conn.execute("SELECT candidates FROM suggestions WHERE asked_at >= ?", (since,))
     ids: set[int] = set()
     for row in rows:

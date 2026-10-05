@@ -41,7 +41,6 @@ class Plan(BaseModel):
     status: Literal["confirmed", "tentative", "cancelled"] = "confirmed"
     created_by: int | None = None
     followed_up_at: str | None = None
-    # When it was checked the evening before (jobs/plan_checks.py).
     checked_at: str | None = None
     channel: str | None = None
     chat_id: str | None = None
@@ -132,12 +131,9 @@ def list_between(conn: sqlite3.Connection, start: str, end: str) -> list[Plan]:
 
 
 def overlapping(conn: sqlite3.Connection, first: str, last: str) -> list[Plan]:
-    """Live plans touching the days from `first` to `last` inclusive, earliest first.
-
-    Unlike `list_between` this keeps a plan that started before `first` and is still going,
-    such as a weekend away. Dates compare as strings: a date sorts before that day's timed
-    plans, so the day after `last` is the exclusive bound on the start.
-    """
+    """Live plans touching `first` to `last` inclusive, earliest first; unlike `list_between`,
+    keeps a plan that started earlier and is still going. Dates compare as strings (a date sorts
+    before that day's timed plans), so the day after `last` bounds the start."""
     after = (date.fromisoformat(last) + timedelta(days=1)).isoformat()
     rows = conn.execute(
         "SELECT * FROM plans WHERE status != 'cancelled' AND start < ? "
@@ -185,8 +181,7 @@ def due_for_check(conn: sqlite3.Connection, *, day: str) -> list[Plan]:
 
 
 def leave_chat(conn: sqlite3.Connection, channel: str, chat_id: str) -> int:
-    """Forget which chat plans were made in, so nothing about them is said there again: the chat
-    of somebody taken off the list. The plans themselves stay."""
+    """Forget which chat plans were made in (somebody taken off the list); the plans stay."""
     return conn.execute(
         "UPDATE plans SET channel = NULL, chat_id = NULL WHERE channel = ? AND chat_id = ?",
         (channel, chat_id),

@@ -1,9 +1,5 @@
-"""The turn loop: call the model, run the tools it asks for, repeat until it answers.
-
-Nothing here knows which vendor is answering. The loop builds a provider-neutral request, hands
-it to a Provider, and reads back a ModelReply. What that costs, which tools ran and how it ended
-are logged the same way whoever served it.
-"""
+"""The turn loop: call the model, run the tools it asks for, repeat until it answers. Vendor-blind:
+it builds a provider-neutral request and reads back a ModelReply."""
 
 from __future__ import annotations
 
@@ -87,24 +83,15 @@ def run_turn(
     final_tools: frozenset[str] = frozenset(),
     closing_tools: frozenset[str] = frozenset(),
 ) -> TurnResult:
-    """Drive one inbound message to a reply.
+    """Drive one inbound message to a reply; callers go through `gateway.ask`, which passes `kind`
+    and `sections` (request part sizes) to be recorded with every call.
 
-    Callers in the package go through `agent.gateway.ask`, which declares each kind of call and
-    passes its `kind` on to be recorded with every model call, with `sections`: the size of each
-    part of the request, to which each later call adds the earlier steps of the turn.
+    A `fallback` takes only a failed first call, at the same `level`: after a tool has run,
+    starting again elsewhere would repeat its writes (the retry job's business).
 
-    With a `fallback` provider, a first call the chosen one cannot take is tried there instead, on
-    its model at the same `level`. Only the first call: once a tool has run, starting again
-    elsewhere would repeat whatever it did, and a half-finished turn is the retry job's business
-    rather than this one's.
-
-    `final_tools` are the tools whose success is the turn's result (a worker's hand-back): once
-    one succeeds, and nothing else in that step failed, the turn ends there rather than paying
-    for another call only for the model to say it is done. A failed one goes back to the model.
-
-    `closing_tools` may end a chat turn in the same way, with the reply the model handed over in
-    their input (`ToolContext.offer_reply`), but only when they are all the step did and all of
-    them succeeded: anything else run beside them has a result the model has not read yet.
+    `final_tools` (a worker's hand-back) end the turn once one succeeds and nothing else in that
+    step failed, saving a call. `closing_tools` end a chat turn with the reply they carried
+    (`ToolContext.offer_reply`) only when they are all the step did and all succeeded.
     """
     request = TurnRequest(
         system=system,
@@ -126,7 +113,7 @@ def run_turn(
     if fallback is not None and not active.configured():
         log.warning("%s has no credentials; asking %s instead", active.name, fallback.name)
         active = fallback
-        # Whatever model the caller named belonged to the provider we just left.
+        # The caller's model belonged to the provider we just left.
         request.model = model_at(active, surface, level)  # type: ignore[arg-type]
 
     for iteration in range(1, limit + 1):
@@ -185,7 +172,7 @@ def run_turn(
                         now=ctx.clock.now(),
                         model=request.model or active.model_for(surface),  # type: ignore[arg-type]
                     )
-                    # Preserve a retryable primary failure even if the spare says 400.
+                    # Keep the primary's (possibly retryable) failure even if the spare says 400.
                     log.warning("%s could not take it either: %s", active.name, spare_exc)
                     raise exc from spare_exc
         except BaseException:
@@ -247,7 +234,7 @@ def run_turn(
         exchange = Exchange(reply=reply)
         request.exchanges.append(exchange)
         if reply.stop == "paused":
-            continue  # a hosted tool paused the turn; sending the transcript back resumes it
+            continue  # a hosted tool paused the turn; resending the transcript resumes it
         if not reply.tool_calls:
             return TurnResult("ok", reply.text, actions, iteration, totals, provider=active.name)
 
@@ -289,7 +276,7 @@ def run_turn(
 
 
 def _handed_back(exchange: Exchange, final_tools: frozenset[str]) -> bool:
-    """Whether this step delivered the turn's result: a final tool ran and nothing failed."""
+    """Whether a final tool ran and nothing in the step failed."""
     outcomes = exchange.outcomes
     if any(outcome.is_error for outcome in outcomes):
         return False
@@ -297,7 +284,7 @@ def _handed_back(exchange: Exchange, final_tools: frozenset[str]) -> bool:
 
 
 def _closed(exchange: Exchange, closing_tools: frozenset[str]) -> bool:
-    """Whether this step was only tools that may close a turn, and every one of them worked."""
+    """Whether the step was only closing tools, all of which worked."""
     outcomes = exchange.outcomes
     return bool(outcomes) and all(
         outcome.name in closing_tools and not outcome.is_error for outcome in outcomes
@@ -305,7 +292,7 @@ def _closed(exchange: Exchange, closing_tools: frozenset[str]) -> bool:
 
 
 def _estimate(request: TurnRequest, provider: Provider, surface: str, settings: Settings) -> float:
-    """The most this call could cost, held against the limit while it is in flight."""
+    """The most this call could cost, held against the limit in flight."""
     chars = (
         sum(len(block.text) for block in request.system)
         + sum(len(message.text) for message in request.messages)
@@ -330,7 +317,7 @@ def _sizes(sections: dict[str, int] | None, request: TurnRequest) -> dict[str, i
 
 
 def first_call_only(request: TurnRequest) -> bool:
-    """Whether nothing has been run yet, so starting again elsewhere repeats no side effect."""
+    """Whether nothing has run yet, so starting again elsewhere repeats no side effect."""
     return not request.exchanges
 
 

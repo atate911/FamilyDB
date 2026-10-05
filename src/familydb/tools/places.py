@@ -78,7 +78,7 @@ class SkipPlaceInput(BaseModel):
 
 
 def hours_dict(entries: list[OpeningHours], closed_days: list[str]) -> dict[str, Any] | None:
-    """Storage form: weekday -> list of ranges; an empty list means closed; absent means unknown."""
+    """Storage form: weekday -> ranges; empty list is closed, absent is unknown."""
     out: dict[str, list[dict[str, str]]] = {}
     for entry in entries:
         for value in (entry.open, entry.close):
@@ -191,8 +191,7 @@ def lookup_place(ctx: ToolContext, args: LookupPlaceInput) -> dict[str, Any]:
     writes=True,
 )
 def look_up_now(ctx: ToolContext, args: LookUpNowInput) -> dict[str, Any]:
-    # A kid's lookups wait for the evening with everybody's (docs/WISHES.md): only somebody who
-    # may change the ideas may have them looked up at once.
+    # A kid's lookups wait for the evening (docs/WISHES.md).
     if ctx.member is not None and not roles.may(ctx.member.role, "change"):
         raise ToolError("lookups wait for the evening; a parent can ask for one now")
     with transaction(ctx.conn):
@@ -260,7 +259,7 @@ def save_place(ctx: ToolContext, args: SavePlaceInput) -> dict[str, Any]:
     travel = (
         estimate_travel(ctx.settings, lat, lon) if lat is not None and lon is not None else None
     )
-    # Links come from fetched pages through the model; keep only real web addresses.
+    # Links come from fetched pages via the model; keep only real web addresses.
     website, booking_url = clean_url(args.website), clean_url(args.booking_url)
     source_urls = [u for u in (clean_url(s) for s in args.source_urls) if u]
     dropped = sum(1 for v in (args.website, args.booking_url) if v) + len(args.source_urls)

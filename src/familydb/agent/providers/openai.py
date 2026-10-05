@@ -1,13 +1,6 @@
-"""OpenAI, through the Responses API.
-
-Written against the same Provider protocol as the Claude side, so the loop cannot tell them
-apart. The differences that matter here: the system prompt is `instructions` rather than blocks;
-caching happens automatically on a long prefix instead of being marked, so `cacheable` is used
-only to key the cache; strict function calling wants every property listed as required, with the
-optional ones nullable; and a hosted search is capped by the number of tool calls a turn may make
-rather than by a per-tool limit. Voice notes go to a separate speech-to-text endpoint, which takes
-the recording as a file; a photo goes to the same endpoint as a message, as a data URL.
-"""
+"""OpenAI, through the Responses API. Caching is automatic on a long prefix, so `cacheable` only
+keys it; strict function calling wants every property required (optional ones nullable); web
+search is capped per turn, not per tool; voice notes use the speech-to-text endpoint."""
 
 from __future__ import annotations
 
@@ -44,17 +37,13 @@ log = logging.getLogger(__name__)
 
 NAME = "openai"
 NO_CREDENTIALS = "no OpenAI credentials configured: set OPENAI_API_KEY (see .env.example)"
-# GPT-6 takes all five of our effort names as they are. The reasoning models before it stop at
-# high, so the top two collapse there; sending them xhigh would be a 400 on every request. The
-# models before those do not reason at all, and take no `reasoning` (GPT-4o, GPT-4.1). Named by
-# what they are rather than by what works, so a model released later is sent everything; if it
-# turns out not to take a part, the provider leaves it out (PARTS).
+# GPT-6 takes all five effort names; older reasoning models stop at high (xhigh is a 400), and
+# GPT-4o/4.1 take no `reasoning`. Older models are named, so a later release gets everything.
 EFFORT = {"low": "low", "medium": "medium", "high": "high", "xhigh": "high", "max": "high"}
 HIGH_AT_MOST_MODELS = ("gpt-5", "o1", "o3", "o4")
 NO_REASONING_MODELS = ("gpt-3", "gpt-4", "chatgpt-")
 
-# What a request carries that a model may not take: sent again without it when a 400 names it
-# (providers/parts.py). In order: capping the effort is tried before leaving reasoning out.
+# Parts a model may refuse (providers/parts.py); capping effort is tried before dropping reasoning.
 TOP_EFFORT = parts.Part("the top effort levels", ("xhigh", "'max'", '"max"'))
 REASONING = parts.Part("reasoning settings", ("reasoning",))
 CACHE_KEY = parts.Part("the prompt cache key", ("prompt_cache_key",))
@@ -70,13 +59,7 @@ def make_client(settings: Settings) -> openai.OpenAI:
 
 
 def openai_schema(schema: dict[str, Any]) -> dict[str, Any]:
-    """The same JSON Schema, as strict function calling wants it.
-
-    Strict mode will not accept a property that is merely absent from `required`, so every
-    property is made required, and one that may be left out is nullable instead: an optional
-    field already is, through the `anyOf` pydantic emits, and one with a default gets a null
-    branch here. Nested objects are rewritten the same way.
-    """
+    """The schema as strict mode wants it: every property required, optional ones nullable."""
     if not isinstance(schema, dict):
         return schema
     out: dict[str, Any] = {}
@@ -96,8 +79,7 @@ def openai_schema(schema: dict[str, Any]) -> dict[str, Any]:
         for name, child in out["properties"].items():
             if name in already or _accepts_null(child):
                 continue
-            # Optional only because it has a default: null stands for leaving it out, and
-            # dispatch drops a null at any depth so the input model's default applies.
+            # Null stands for "left out"; dispatch drops nulls so the model's default applies.
             out["properties"][name] = {"anyOf": [child, {"type": "null"}]}
         out["required"] = list(out["properties"])
         out.setdefault("additionalProperties", False)
@@ -140,7 +122,7 @@ def _carried(payload: dict[str, Any]) -> set[str]:
 
 
 def _search_effort(max_uses: int | None) -> str:
-    """How much of the web to pull back. Fewer allowed searches means a smaller context."""
+    """How much of the web to pull back: fewer searches, smaller context."""
     if max_uses is None or max_uses >= 5:
         return "high"
     return "medium" if max_uses >= 3 else "low"
@@ -156,7 +138,6 @@ class OpenAIProvider:
         self._api = api
         self._audio = audio  # `client.audio.transcriptions`, or a test's stand-in for it
 
-    # -- wiring ---------------------------------------------------------------------------
     def configured(self) -> bool:
         injected = self._api is not None or self._audio is not None
         return injected or bool(self.settings.openai_api_key)
@@ -178,16 +159,15 @@ class OpenAIProvider:
             return self.settings.openai_worker_model or self.settings.openai_model
         return self.settings.openai_model
 
-    # -- translation ----------------------------------------------------------------------
     def instructions(self, system: list[SystemBlock]) -> str:
         return "\n\n".join(block.text for block in system if block.text)
 
     def cache_key(self, system: list[SystemBlock]) -> str | None:
-        """Steers repeat requests at the same cached prefix. The content itself is not sent."""
+        """Steers repeat requests at the same cached prefix; the content is not sent."""
         cached = [block.text for block in system if block.cacheable]
         if not cached:
             return None
-        # Not hash(): that is salted per interpreter, so every restart would ask for a new shard.
+        # Not hash(): salted per interpreter, so every restart would change the key.
         digest = hashlib.sha256("\n\n".join(cached).encode("utf-8")).hexdigest()
         return f"familydb-{digest[:16]}"
 
@@ -207,7 +187,7 @@ class OpenAIProvider:
         return tools
 
     def web_tool(self, access: WebAccess) -> dict[str, Any]:
-        """One hosted tool covers searching and reading, unlike the two on the Claude side."""
+        """One hosted tool covers searching and reading."""
         tool: dict[str, Any] = {
             "type": "web_search",
             "search_context_size": _search_effort(access.max_uses),
@@ -232,7 +212,6 @@ class OpenAIProvider:
         last = request.messages[-1] if request.messages else None
         for message in request.messages:
             if message.role == "assistant" or message is not last:
-                # output_text is only legal on the way out; an incoming turn is plain text.
                 items.append({"role": message.role, "content": message.text})
             else:
                 items.append(
@@ -242,8 +221,7 @@ class OpenAIProvider:
                     }
                 )
         for exchange in request.exchanges:
-            # `raw` is the output list this API handed back; sending it again is how the turn
-            # carries on, and it keeps any reasoning the model wants to refer to.
+            # `raw` is the output list handed back; replaying it keeps the model's reasoning.
             items.extend(exchange.reply.raw or [])
             for outcome in exchange.outcomes:
                 items.append(
@@ -279,16 +257,15 @@ class OpenAIProvider:
             and request.web.max_uses is not None
             and TOOL_CAP.name not in left_out
         ):
-            # There is no per-tool cap here, only a cap on the whole turn, and that cap counts
-            # the hand-back call too. Leaving room for each declared tool once means a worker
-            # that has used all its searches can still report what it found.
+            # The cap is per turn and counts the hand-back call: room for each declared tool once
+            # lets a worker that used all its searches still report.
             payload["max_tool_calls"] = request.web.max_uses + len(request.tools)
         return payload
 
     def _stop(self, response: Any, calls: list[ToolCall]) -> tuple[Stop, str | None]:
         status = getattr(response, "status", None)
         if status in {"failed", "cancelled"}:
-            # A 200 carrying a failure. Saying "Done." to the family would be a lie.
+            # A 200 carrying a failure.
             detail = getattr(getattr(response, "error", None), "message", None) or status
             raise AgentError(f"response {status}: {detail}", retryable=True)
         if status == "incomplete":
@@ -306,8 +283,7 @@ class OpenAIProvider:
         searched = any(getattr(i, "type", "").endswith("_call") for i in output)
         spoke = any(getattr(i, "type", None) == "message" for i in output)
         if searched and not spoke:
-            # It went looking and has not said anything yet. Sending the transcript back lets it
-            # carry on, the same way a paused turn resumes on the other provider.
+            # It searched and has not spoken yet: resend the transcript, as a paused turn resumes.
             return "paused", None
         return "end", None
 
@@ -327,8 +303,7 @@ class OpenAIProvider:
         stop, detail = self._stop(response, calls)
         usage = getattr(response, "usage", None)
         details = getattr(usage, "input_tokens_details", None)
-        # This API counts cached and newly-cached tokens inside input_tokens; the column means
-        # "everything else", as it does on the other providers, so the three stay disjoint.
+        # input_tokens here includes cached ones; the column means "everything else".
         total_in = getattr(usage, "input_tokens", None)
         cached = getattr(details, "cached_tokens", None)
         written = getattr(details, "cache_write_tokens", None)
@@ -352,7 +327,6 @@ class OpenAIProvider:
             raw=[item.model_dump(exclude_none=True) for item in output],
         )
 
-    # -- the call -------------------------------------------------------------------------
     def model_exists(self, model: str) -> bool | None:
         try:
             client = make_client(self.settings)
@@ -410,7 +384,7 @@ class OpenAIProvider:
         return dataclasses.replace(self.reply(response), dropped=dropped)
 
     def _create(self, build: Callable[[], dict[str, Any]]) -> tuple[Any, tuple[str, ...]]:
-        """One request, and again without any part a 400 names (PARTS), each at most once."""
+        """One request, retried without any part a 400 names (PARTS), each once."""
         dropped: list[str] = []
         while True:
             payload = build()
@@ -426,12 +400,11 @@ class OpenAIProvider:
             except openai.OpenAIError as exc:
                 raise _failure(exc) from exc
 
-    # -- hearing --------------------------------------------------------------------------
     def listener(self) -> str | None:
         return self.settings.openai_transcribe_model or None
 
     def transcribe(self, audio: Audio, hints: str) -> Heard:
-        """One request to the speech-to-text endpoint, which takes the recording as a file."""
+
         model = self.listener()
         if model is None:
             raise AgentError("no OpenAI model is set to hear voice notes", retryable=False)
@@ -462,13 +435,11 @@ class OpenAIProvider:
             request_id=getattr(result, "_request_id", None),
         )
 
-    # -- looking --------------------------------------------------------------------------
     def viewer(self) -> str | None:
         return self.model_for("worker")
 
     def seeing(self, picture: Picture, ask: str) -> dict[str, Any]:
-        """The request for one picture: the picture, then what to write down about it, to the
-        lookup model with a lookup's effort."""
+        """The request for one picture, to the lookup model at low effort."""
         shape = TurnRequest(
             system=[], messages=[], model=self.viewer(), effort="low", max_tokens=LOOK_TOKENS
         )
@@ -501,10 +472,8 @@ class OpenAIProvider:
 
 
 def _failure(exc: openai.OpenAIError) -> AgentError:
-    """A failed request as the loop understands it: worth trying again later, or not.
-
-    OpenAI says an account is out of credit with a 429, the status it also uses for "slow
-    down", so the code on it tells the two apart: that one is not worth waiting for."""
+    """A failed request as the loop understands it. Out of credit is a 429 like "slow down";
+    the code tells them apart, and credit is not worth waiting for."""
     if isinstance(exc, openai.RateLimitError):
         if getattr(exc, "code", None) == "insufficient_quota" or "insufficient_quota" in str(exc):
             return AgentError(f"out of credit: {exc}", retryable=False, trouble="credit")
@@ -534,7 +503,7 @@ def _trouble(status: int, said: str) -> str | None:
 
 
 def _arguments(item: Any) -> dict[str, Any]:
-    """Arguments arrive as a JSON string here, unlike the parsed object on the Claude side."""
+    """Arguments arrive as a JSON string."""
     raw = getattr(item, "arguments", None)
     if isinstance(raw, dict):
         return raw

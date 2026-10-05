@@ -1,8 +1,5 @@
-"""Catch up on start: the cron jobs live in memory, so a restart after the hour would skip them.
-
-They are idempotent (one digest per day, one question and one check per plan), so running them
-once shortly after start costs nothing when they already ran.
-"""
+"""Catch up on start: cron jobs live in memory, so a restart after their hour would skip them.
+They are idempotent, so running them once after start costs nothing."""
 
 from __future__ import annotations
 
@@ -41,10 +38,8 @@ def plan_checks_due(app: App) -> bool:
 
 
 def run_catch_up(app: App, *, api: MessagesAPI | None = None) -> dict[str, Any]:
-    """Forget old locations, run the follow-ups, tomorrow's plan checks when their hour has
-    passed, and the digest when it was due earlier today."""
+    """Forget old locations, run follow-ups, plan checks and the digest if their hour has passed."""
     app.refresh()
-    # A bot that was off for days deletes the locations it should have forgotten meanwhile.
     forgotten = forget_old(app)
     if forgotten:
         log.info("catch-up on start: forgot %s shared location(s) past their day", forgotten)
@@ -54,7 +49,7 @@ def run_catch_up(app: App, *, api: MessagesAPI | None = None) -> dict[str, Any]:
     if digest_due(app):
         reply = run_digest(app, api=api)
         result["digest"] = "skipped" if reply is None else reply.status
-    # Models and prices, when a day has passed since the last check (or there never was one).
+    # Models and prices, when a day has passed since the last check.
     if app.settings.model_watch:
         with closing(app.connect()) as conn:
             watch_due = model_watch.due(conn, app.clock.now())

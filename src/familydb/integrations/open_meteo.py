@@ -77,7 +77,7 @@ class DayForecast:
 
     @property
     def daylight(self) -> tuple[int, int] | None:
-        """Sunrise to sunset, in minutes after midnight, when the forecast gives both."""
+        """Sunrise to sunset in minutes after midnight, when both are given."""
         if self.sunrise is None or self.sunset is None or self.sunrise >= self.sunset:
             return None
         return self.sunrise, self.sunset
@@ -106,8 +106,8 @@ def summarize_code(code: int | None) -> str:
 
 
 def local_minutes(value: Any, day: date) -> int | None:
-    """A local "YYYY-MM-DDTHH:MM", as the forecast gives sunrise and sunset, in minutes after
-    midnight of `day`. None when it is missing, unreadable or on another day."""
+    """A local "YYYY-MM-DDTHH:MM" in minutes after midnight of `day`; None if missing, unreadable
+    or on another day."""
     if value is None:
         return None
     try:
@@ -118,7 +118,7 @@ def local_minutes(value: Any, day: date) -> int | None:
 
 
 def parse_daily(payload: dict[str, Any]) -> list[DayForecast]:
-    """The `daily` block of an Open-Meteo response to one record per day."""
+    """One record per day from an Open-Meteo response's `daily` block."""
     daily = payload.get("daily") or {}
     dates = daily.get("time") or []
 
@@ -154,7 +154,7 @@ def parse_daily(payload: dict[str, Any]) -> list[DayForecast]:
 
 
 class OpenMeteo:
-    """ForecastAPI for the home coordinates, with a short in-memory cache."""
+    """Forecasts for the home coordinates, cached in memory."""
 
     def __init__(self, settings: Settings) -> None:
         if settings.home_lat is None or settings.home_lon is None:

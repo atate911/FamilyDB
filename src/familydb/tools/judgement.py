@@ -1,10 +1,5 @@
-"""The hand-back tools of the judgement calls (familydb/judgement.py): never the chat model's.
-
-`give_judgement` answers the questions code asked, each with one of the options code allowed;
-`report_price` says what a company's own pricing page gives for a model the price lists disagree
-about. Each checks what it is given against what was asked, and a wrong answer goes back to the
-model as an error to put right, never into the store.
-"""
+"""Hand-back tools of the judgement calls (familydb/judgement.py), never the chat model's. Each
+checks its input against what was asked; a wrong answer goes back as an error, never the store."""
 
 from __future__ import annotations
 

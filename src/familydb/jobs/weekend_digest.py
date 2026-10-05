@@ -1,9 +1,5 @@
-"""The weekend digest: once a week the bot asks itself what the family should do this weekend.
-
-The question goes through the normal pipeline as the first admin, into the configured chat, so
-the reply is the same checked suggestion anyone would get by asking. The update id carries the
-date, so a restart or a second run on the same day sends nothing.
-"""
+"""The weekend digest: a synthetic question through the pipeline as the first admin into the
+configured chat. The update id carries the date, so a second run the same day sends nothing."""
 
 from __future__ import annotations
 
@@ -24,11 +20,7 @@ DIGEST_TEXT = "Weekend digest: what should we do this weekend?"
 
 
 def digest_channel(chat_id: str) -> str:
-    """Which channel a configured chat id belongs to.
-
-    A Telegram chat id is a number, so the two chats that are not Telegram are named instead:
-    "console" for trying things out, "web" for the chat on the page.
-    """
+    """Which channel a configured chat id belongs to: "console" or "web" by name, else Telegram."""
     for named in ("console", "web"):
         if chat_id.startswith(named):
             return named
@@ -36,7 +28,7 @@ def digest_channel(chat_id: str) -> str:
 
 
 def run_digest(app: App, *, api: MessagesAPI | None = None) -> OutgoingMessage | None:
-    """Ask and deliver the digest. Returns None when nothing was sent (and logs why)."""
+    """Ask and deliver the digest; None when nothing was sent (logged)."""
     app.refresh()
     run_deliveries(app)
     settings = app.settings
