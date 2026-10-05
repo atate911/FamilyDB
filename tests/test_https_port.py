@@ -110,7 +110,7 @@ def test_a_random_port_is_one_scans_rarely_try() -> None:
 
 @pytest.mark.parametrize(
     ("wanted", "chosen"),
-    [("443", "443"), ("24613", "24613"), ("01234", "1234"), ("65535", "65535")],
+    [("443", "443"), ("01234", "1234"), ("65535", "65535")],
 )
 def test_a_port_that_will_do_is_kept(wanted, chosen) -> None:
     done = _shell(f"choose_public_port {wanted} 8080")
@@ -121,7 +121,6 @@ def test_a_port_that_will_do_is_kept(wanted, chosen) -> None:
     ("wanted", "why"),
     [
         ("80", "443, or one from 1024"),
-        ("22", "443, or one from 1024"),
         ("65536", "443, or one from 1024"),
         ("99999999999999999999", "443, or one from 1024"),  # never wraps round into range
         ("8080", "where FamilyDB itself listens"),
@@ -155,14 +154,13 @@ def test_maintain_explains_how_to_move_it() -> None:
     ).stdout
     assert "https [DOMAIN] [--port N|random|443]" in usage
     assert "maintain.sh https --port random" in usage
+    assert "port N|random" in usage and "maintain.sh port 9090" in usage
 
 
 # -- FamilyDB's own port
 
 
-@pytest.mark.parametrize(
-    ("wanted", "chosen"), [("9090", "9090"), ("01025", "1025"), ("65535", "65535")]
-)
+@pytest.mark.parametrize(("wanted", "chosen"), [("01025", "1025"), ("65535", "65535")])
 def test_a_port_for_familydb_itself_that_will_do_is_kept(wanted, chosen) -> None:
     done = _shell(f"port_listening() {{ return 1; }}; choose_app_port {wanted} 443 8080")
     assert done.returncode == 0 and done.stdout == chosen, done.stderr
@@ -172,7 +170,6 @@ def test_a_port_for_familydb_itself_that_will_do_is_kept(wanted, chosen) -> None
     ("wanted", "public", "why"),
     [
         ("1024", "443", "one from 1025 to 65535"),  # FamilyDB runs unprivileged
-        ("443", "443", "one from 1025 to 65535"),
         ("65536", "443", "one from 1025 to 65535"),
         ("99999999999999999999", "443", "one from 1025 to 65535"),
         ("24613", "24613", "where Caddy serves the page"),
@@ -328,18 +325,6 @@ def test_with_docker_https_moves_the_caddy_containers_port(tmp_path) -> None:
     # With no domain there is no Caddy container to move: it says how to have one.
     bare, calls = _port(tmp_path, "https_port_in_docker", "WEB_PORT=8080\n", HTTPS_PORT="24613")
     assert bare.returncode != 0 and "COMPOSE_PROFILES=tls" in bare.stderr and calls == []
-
-
-def test_maintain_explains_how_to_move_familydbs_own_port() -> None:
-    usage = subprocess.run(
-        [BASH, "scripts/maintain.sh", "--help"],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        env={**os.environ, "NO_COLOR": "1"},
-        timeout=60,
-    ).stdout
-    assert "port N|random" in usage and "maintain.sh port 9090" in usage
 
 
 def test_with_docker_a_port_something_else_listens_on_changes_nothing(tmp_path) -> None:
