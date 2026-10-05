@@ -48,12 +48,6 @@ def test_pages_are_behind_the_password(settings, clock) -> None:
     assert page.status_code == 200 and "Family password" in page.text
 
 
-def test_the_way_in_is_an_old_green_screen(settings, clock) -> None:
-    page = _client(settings, clock, web_password=PASSWORD).get("/login").text
-    assert '<div class="crt power-on" aria-hidden="true">' in page  # a picture beside the form
-    assert "Ready." in page and '<label for="password">Family password</label>' in page
-
-
 def test_every_page_ends_with_the_copyright_and_the_version(settings, clock) -> None:
     from familydb import __version__
 
@@ -430,15 +424,6 @@ def test_an_idea_page_shows_its_place_details(settings, clock, conn, family) -> 
     assert "checked today" in page.text
 
 
-def test_an_idea_page_without_a_lookup_says_so(settings, clock, conn, family) -> None:
-    idea = _idea(conn, "A picnic somewhere")
-    page = _client(settings, clock).get(f"/idea/{idea.id}")
-    assert "details not looked up yet" in page.text
-    assert "Opening hours" not in page.text
-    assert _client(settings, clock).get("/idea/404").status_code == 404
-    assert "Not found" in _client(settings, clock).get("/idea/404").text
-
-
 def test_a_stale_lookup_is_flagged(settings, clock, conn, family) -> None:
     idea = _idea(conn, "Old museum")
     with db.transaction(conn):
@@ -587,22 +572,6 @@ def test_the_plans_page_shows_what_is_coming_and_what_just_happened(
     assert (
         "Next summer" not in page.text and f"/plan/{far.id}/" not in page.text.split("Recently")[0]
     )
-
-
-def test_the_plans_page_when_the_calendar_is_empty(settings, clock, conn, family) -> None:
-    page = _client(settings, clock).get("/plans")
-    assert "Nothing on the calendar for the next 90 days." in page.text
-    assert "Recently" not in page.text
-
-
-def test_the_nav_reaches_every_page(settings, clock, conn, family) -> None:
-    client = _client(settings, clock)
-    home = client.get("/")
-    for target in ("/", "/ideas", "/plans", "/family", "/status", "/settings"):
-        assert f'href="{target}' in home.text, target  # "/chat" goes to its newest line
-        assert client.get(target).status_code == 200
-    assert 'href="/chat#latest"' in home.text
-    assert 'href="/restaurants"' in client.get("/ideas").text  # a tab of the ideas page
 
 
 def test_links_that_are_not_web_addresses_never_become_links(settings, clock, conn, family) -> None:

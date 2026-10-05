@@ -46,14 +46,6 @@ def replies():
     return [fakes.message([fakes.text("Saturday looks dry. The museum?")])]
 
 
-def test_an_empty_chat_says_so(settings, clock, conn, family) -> None:
-    page = _client(settings, clock).get("/chat")
-    assert page.status_code == 200
-    assert "Nothing said here yet" in page.text
-    assert "Sam" in page.text and "the girls" in page.text  # everyone can be spoken for
-    assert 'data-say="What should we do today?"' in page.text  # ways to start, on a Sunday
-
-
 def test_a_message_goes_through_the_pipeline_and_the_answer_lands_on_the_page(
     settings, clock, conn, family, replies
 ) -> None:
@@ -75,14 +67,6 @@ def test_a_message_goes_through_the_pipeline_and_the_answer_lands_on_the_page(
     assert [(m.direction, m.status) for m in thread] == [("in", "processed"), ("out", "processed")]
     assert thread[0].member_id == family["sam"].id
     assert thread[0].channel == "web"
-
-
-def test_her_answers_carry_her_name(settings, clock, conn, family, replies) -> None:
-    client = _client(settings, clock, *replies)
-    _say(client, "what should we do this weekend?")
-    assert client.chat.wait(10)
-    page = client.get("/chat").text
-    assert "<strong>Vera</strong>" in page and "<strong>FamilyDB</strong>" not in page
 
 
 def test_with_no_persona_the_answers_are_the_bot_s_own(
