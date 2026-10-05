@@ -1,0 +1,112 @@
+<title>FamilyDB, Kitchen Table</title>
+<style>
+/* Layout: a contact sheet of every page of the app, grouped as the family meets them, with one set of switches (desktop or phone, day or night) for all; then the themes proof; then the handoff to build it. Chrome borrows Kitchen Table's paper and green so the sheet reads as the app's own book. */
+:root { --paper:#F6F1E7; --card:#FFFCF6; --ink:#1D2526; --ink-2:#4B5657; --line:#E2D8C4; --vera:#1E5C4F; --sun:#F2C14E;
+  --serif:"Fraunces", Georgia, serif; --sans:"Atkinson Hyperlegible", system-ui, sans-serif; --mono:"JetBrains Mono", ui-monospace, monospace; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --paper:#141917; --card:#1B211F; --ink:#E9EEEB; --ink-2:#AEB8B3; --line:#2C3331; --vera:#6DFF9C; --sun:#F2C14E; color-scheme:dark; } }
+:root[data-theme="dark"] { --paper:#141917; --card:#1B211F; --ink:#E9EEEB; --ink-2:#AEB8B3; --line:#2C3331; --vera:#6DFF9C; --sun:#F2C14E; color-scheme:dark; }
+* { box-sizing:border-box; }
+body { background:var(--paper); color:var(--ink); font:16px/1.5 var(--sans); }
+button { font:inherit; color:inherit; cursor:pointer; }
+:focus-visible { outline:3px solid var(--vera); outline-offset:2px; }
+.wrap { max-width:1440px; margin:0 auto; padding-inline:20px; padding-block:28px 80px; display:grid; gap:36px; }
+.wrap > * { min-width:0; }
+h1,h2,h3 { font-family:var(--serif); font-weight:600; margin:0; text-wrap:balance; }
+h1 { font-size:clamp(32px,4.6vw,50px); line-height:1.05; }
+h2 { font-size:clamp(24px,3vw,30px); }
+p { margin:0; }
+.top { display:grid; gap:12px; max-width:80ch; }
+.lede { color:var(--ink-2); font-size:17px; }
+.facts { display:flex; flex-wrap:wrap; gap:8px 18px; color:var(--ink-2); font-size:15px; }
+.facts b { color:var(--ink); font-variant-numeric:tabular-nums; }
+.bar { position:sticky; top:env(safe-area-inset-top,0px); z-index:3; background:var(--paper); padding-block:10px; border-bottom:1px solid var(--line); display:flex; flex-wrap:wrap; gap:10px 14px; align-items:center; }
+.seg { display:inline-flex; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--card); }
+.seg button { background:none; border:0; padding:7px 12px; color:var(--ink-2); }
+.seg button[aria-pressed="true"] { background:var(--ink); color:var(--paper); font-weight:700; }
+nav.jump { display:flex; flex-wrap:wrap; gap:6px; }
+nav.jump a { color:var(--ink); text-decoration:none; font-size:14px; font-weight:700; padding:6px 10px; border-radius:8px; border:1px solid var(--line); background:var(--card); }
+.grp { display:grid; gap:14px; scroll-margin-top:72px; }
+.grp h2 .n { font-family:var(--mono); font-size:14px; font-weight:400; color:var(--ink-2); vertical-align:middle; }
+.note { color:var(--ink-2); max-width:80ch; }
+.grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; align-items:start; }
+body.phone .grid { grid-template-columns:repeat(5,minmax(0,1fr)); }
+.shot { margin:0; display:grid; gap:6px; min-width:0; }
+.frame { border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--card); }
+.frame img { display:block; width:100%; height:auto; aspect-ratio:1280/800; object-fit:cover; object-position:top; max-width:100%; }
+body.phone .frame { border-radius:20px; }
+body.phone .frame img { aspect-ratio:585/1266; }
+.shot.full { grid-column:1/-1; }
+.shot.full .frame img { aspect-ratio:auto; }
+body.phone .shot.full { max-width:430px; justify-self:center; width:100%; }
+figcaption { display:flex; justify-content:space-between; gap:10px; align-items:baseline; font-size:14px; color:var(--ink-2); }
+.more { background:none; border:0; padding:0; text-decoration:underline; color:var(--ink-2); font-size:14px; white-space:nowrap; }
+.more:hover { color:var(--ink); }
+.questions { background:var(--card); border:1px solid var(--line); border-left:6px solid var(--sun); border-radius:14px; padding:18px 22px; display:grid; gap:10px; max-width:90ch; }
+.questions ol { margin:0; padding-left:22px; display:grid; gap:8px; }
+.hand { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:4px 22px 22px; }
+.hand summary { cursor:pointer; font-family:var(--serif); font-weight:600; font-size:24px; padding-block:14px; }
+.hand .body { max-width:100ch; display:grid; gap:12px; }
+.hand .body > * { margin:0; min-width:0; }
+.hand h2 { font-size:24px; margin-top:18px; } .hand h3 { font-size:19px; margin-top:8px; }
+.hand table { border-collapse:collapse; font-size:14px; display:block; overflow-x:auto; max-width:100%; }
+.hand th,.hand td { border:1px solid var(--line); padding:6px 8px; text-align:left; vertical-align:top; }
+.hand code { font-family:var(--mono); font-size:.88em; overflow-wrap:anywhere; }
+.hand pre { overflow-x:auto; background:var(--paper); padding:12px; border-radius:8px; }
+.hand ul,.hand ol { padding-left:22px; display:grid; gap:4px; }
+@media (max-width:900px) { .grid { grid-template-columns:repeat(2,minmax(0,1fr)); } body.phone .grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:520px) { .grid { grid-template-columns:minmax(0,1fr); } }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fraunces:opsz,wght@9..144,600&family=JetBrains+Mono&display=swap">
+
+<div class="wrap">
+  <header class="top">
+    <h1>Kitchen Table, the whole app</h1>
+    <p class="lede">Every page of FamilyDB in the design you chose, drawn from the app’s real pages and words, ready to build. Your notes are in: no starter buttons on Ask Vera, a small greeting so Ask Vera, Next up and To do share the first screen, and the green-screen touches kept as they were. Every colour now lives in one theme file, so other themes can be added later.</p>
+    <p class="facts"><span><b>57</b> pages</span><span><b>4</b> views of each: desktop, phone, day, night</span><span><b>13</b> small pull requests to build it</span><span><b>8</b> questions for the family</span></p>
+  </header>
+
+  <div class="bar">
+    <div class="seg" role="group" aria-label="Device"><button type="button" data-dev="desktop" aria-pressed="true">Desktop</button><button type="button" data-dev="phone" aria-pressed="false">Phone</button></div>
+    <div class="seg" role="group" aria-label="Time"><button type="button" data-time="day" aria-pressed="true">Day</button><button type="button" data-time="night" aria-pressed="false">Night</button></div>
+    <nav class="jump" aria-label="Jump to"><a href="#everyday">Everyday</a><a href="#kids">Kids</a><a href="#people">People</a><a href="#behind">Behind the scenes</a><a href="#setup">Setting up</a><a href="#states">States</a><a href="#themes">Themes</a><a href="#handoff">Handoff</a></nav>
+  </div>
+
+<!--SECTIONS-->
+
+  <section class="questions" id="questions" aria-labelledby="h-q">
+    <h2 id="h-q">Questions for the family before building</h2>
+    <ol>
+      <li><b>Kitchen Table’s people colours under colour blindness.</b> Theo’s ochre and an unused slot’s olive look alike to some colour-blind eyes, and late red sits close to Theo’s ochre. Retune three slots, or accept it (names are always beside the colours)?</li>
+      <li><b>The two test themes.</b> Ship Midnight as it is (it passes), fix Rail yellow’s night red first, or design themes properly later?</li>
+      <li><b>Status for parents.</b> The design shows it to admins; the app shows it to every grown-up. Which?</li>
+      <li><b>“Hidden from Maya.”</b> Name exactly whom a present is hidden from (one new column), or keep “hidden from the kids”?</li>
+      <li><b>A parent opening Settings.</b> The friendly “for grown-ups” page kids get, or the plain refusal?</li>
+      <li><b>To-dos.</b> Their own Edit page, as drawn, or keep editing in a fold on the row?</li>
+      <li><b>“Set by Alex.”</b> Remember who set each kid’s to-do from now on?</li>
+      <li><b>Setup’s word “installer”.</b> Keep it, or say “the password FamilyDB started with”?</li>
+    </ol>
+    <p class="note">And from earlier: should each person be able to pick their own theme, and may kids? The design draws both as yes.</p>
+  </section>
+
+  <details class="hand" id="handoff">
+    <summary>The handoff: how to build it</summary>
+    <div class="body"><!--HANDOFF--></div>
+  </details>
+</div>
+
+<script>
+const st = {dev:'desktop', time:'day'};
+function apply() {
+  document.body.classList.toggle('phone', st.dev === 'phone');
+  document.querySelectorAll('[data-dev]').forEach(b => b.setAttribute('aria-pressed', b.dataset.dev === st.dev));
+  document.querySelectorAll('[data-time]').forEach(b => b.setAttribute('aria-pressed', b.dataset.time === st.time));
+  const suf = (st.time === 'night' ? '-dark' : '') + (st.dev === 'phone' ? '-phone' : '');
+  document.querySelectorAll('.shot').forEach(f => { const i = f.querySelector('img'); i.onerror = () => { i.onerror = null; i.src = f.dataset.base + (st.dev === 'phone' ? '-phone' : '') + '.webp'; }; i.src = f.dataset.base + suf + '.webp'; i.width = st.dev === 'phone' ? 585 : 1280; i.height = st.dev === 'phone' ? 1266 : 800; });
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.dev) { st.dev = b.dataset.dev; apply(); }
+  else if (b.dataset.time) { st.time = b.dataset.time; apply(); }
+  else if (b.classList.contains('more')) { const f = b.closest('.shot'); const on = f.classList.toggle('full'); b.setAttribute('aria-expanded', on); b.textContent = on ? 'First screen' : 'Whole page'; }
+});
+</script>

@@ -1,0 +1,94 @@
+/* =====================================================================
+   FamilyDB theme · Midnight (a test port of theme-sources/midnight: its values in the contract's names)
+   @theme name: Midnight
+   @theme line: A kitchen at night: blue-black, each person lit like a window. Made dark first.
+   @theme first: dark
+   @theme theme-color: #0A0F1E #04060D
+   Dark first: night is the base block; day applies when the device asks for light (data-mode="auto")
+   or with data-mode="light". Ported, not redesigned. Midnight's extras with no place in the contract
+   were left out (--rule, --link-line, --today-wash, --band-edge, --ask-ring, --alert-plate, --glow).
+   Its Everyone avatar took the dark letter of every other avatar; the contract asks for a letter that
+   reads on it, so --everyone-on is its --everyone-ink.
+   ===================================================================== */
+[data-theme="midnight"] {
+  color-scheme: dark;
+  --paper: #0B1020;  --paper-2: #161D30;  --card: #121A2B;  --field: #0E1526;
+  --ink: #E3E8F3;  --ink-2: #B7C0D5;  --ink-3: #939DB6;
+  --line: #262F47;  --line-2: #36405C;  --edge: #7884A3;
+  --vera: #6DFF9C;  --vera-bg: #4FE08A;  --on-vera: #0B1020;  --vera-soft: #0C2219;  --vera-line: #1F4D38;
+  --ask-bg: #07130F;  --ask-ink: #EAF2EE;  --ask-ink-2: #BCD0C5;  --ask-rim: inset 0 0 0 1.5px #3E8A66, inset 0 0 28px rgba(109, 255, 156, .08);  --ask-edge: #6F8C7E;
+  --send: #6DFF9C;  --send-2: #95FFB8;  --on-send: #07130F;
+  --ok: #7FE3A5;  --ok-soft: #0D2218;  --ok-line: #24503A;
+  --warn: #F6B04A;  --warn-soft: #231A0B;  --warn-line: #5C4420;
+  --alert: #FF7369;  --alert-soft: #2B1117;  --alert-line: #5E2830;  --on-alert: #0B1020;
+  --focus: #9DB9FF;
+  --p1: #96B5FB;  --p1-soft: #1B2234;  --p1-ink: #B2CAFF;  --p1-mark: #96B5FB;  --p1-on: #0B1020;
+  --p2: #958DF5;  --p2-soft: #212033;  --p2-ink: #C5C4FE;  --p2-mark: #958DF5;  --p2-on: #0B1020;
+  --p3: #69BAB8;  --p3-soft: #0A2828;  --p3-ink: #8ADBD9;  --p3-mark: #69BAB8;  --p3-on: #0B1020;
+  --p4: #ECB489;  --p4-soft: #2F1F11;  --p4-ink: #F6BD92;  --p4-mark: #ECB489;  --p4-on: #0B1020;
+  --p5: #A78BC2;  --p5-soft: #271E30;  --p5-ink: #D9BCF6;  --p5-mark: #A78BC2;  --p5-on: #0B1020;
+  --p6: #95DAF8;  --p6-soft: #0E2630;  --p6-ink: #95DAF8;  --p6-mark: #95DAF8;  --p6-on: #0B1020;
+  --p7: #C6950A;  --p7-soft: #2B210E;  --p7-ink: #F5C250;  --p7-mark: #C6950A;  --p7-on: #0B1020;
+  --p8: #93A066;  --p8-soft: #212511;  --p8-ink: #C4D396;  --p8-mark: #93A066;  --p8-on: #0B1020;
+  --everyone: #454E69;  --everyone-soft: #1A2133;  --everyone-ink: #CFD5E3;  --everyone-mark: #8590AD;  --everyone-on: #CFD5E3;
+  --today-bg: #6DFF9C;  --on-today: #0B1020;
+  --link: #E3E8F3;  --primary: #E3E8F3;  --primary-2: #FFFFFF;  --on-primary: #0B1020;
+  --shadow: 0 1px 0 rgba(0, 0, 0, .4);  --shadow-lift: 0 8px 22px -14px rgba(0, 0, 0, .9);  --shadow-up: 0 -8px 24px -16px rgba(0, 0, 0, .8);
+  --side: #04060D;  --side-ink: #EEF1F8;  --side-ink-2: #A6B0C8;  --side-hi: #121829;  --side-line: #1C2338;  --side-mark: #9DB9FF;  --side-link: #FFFFFF;
+}
+/* day, when the device asks for it (data-mode="auto") */
+@media (prefers-color-scheme: light) {
+  [data-theme="midnight"]:not([data-mode="dark"]) {
+    color-scheme: light;
+    --paper: #EEF1F7;  --paper-2: #E0E4EE;  --card: #FFFFFF;  --field: #FFFFFF;
+    --ink: #0B1020;  --ink-2: #353D52;  --ink-3: #4E576D;
+    --line: #C4CAD8;  --line-2: #A8B0C3;  --edge: #6C7489;
+    --vera: #0A6A4B;  --vera-bg: #0B8457;  --on-vera: #FFFFFF;  --vera-soft: #DCF0E5;  --vera-line: #A6D6BD;
+    --ask-bg: #0E1312;  --ask-ink: #FFFFFF;  --ask-ink-2: #C4CEC9;  --ask-rim: inset 0 0 0 1px rgba(255, 255, 255, .08);  --ask-edge: transparent;
+    --send: #6DFF9C;  --send-2: #95FFB8;  --on-send: #0E1312;
+    --ok: #17703F;  --ok-soft: #DDF1E4;  --ok-line: #A9D9BA;
+    --warn: #8A4B00;  --warn-soft: #FBEBCD;  --warn-line: #E3BD78;
+    --alert: #B42318;  --alert-soft: #FBE6E3;  --alert-line: #EDB9B3;  --on-alert: #FFFFFF;
+    --focus: #2D4FC4;
+    --p1-soft: #E4EDFF;  --p1-ink: #425FA7;  --p1-mark: #607FCA;
+    --p2-soft: #EAEBFF;  --p2-ink: #5144A0;  --p2-mark: #5144A0;
+    --p3-soft: #D8F3F2;  --p3-ink: #016868;  --p3-mark: #016868;
+    --p4-soft: #FCE9DB;  --p4-ink: #8D5320;  --p4-mark: #B17443;
+    --p5-soft: #F2E8FC;  --p5-ink: #614978;  --p5-mark: #614978;
+    --p6-soft: #DAF1FC;  --p6-ink: #126A86;  --p6-mark: #277895;
+    --p7-soft: #F6ECD8;  --p7-ink: #7D5C04;  --p7-mark: #936E09;
+    --p8-soft: #EAF0DB;  --p8-ink: #586328;  --p8-mark: #586328;
+    --everyone: #CDD2DE;  --everyone-soft: #E3E7EF;  --everyone-ink: #353D52;  --everyone-mark: #6C7489;  --everyone-on: #353D52;
+    --today-bg: #0B8457;  --on-today: #FFFFFF;
+    --link: #0B1020;  --primary: #0B1020;  --primary-2: #252E48;  --on-primary: #FFFFFF;
+    --shadow: 0 1px 0 rgba(11, 16, 32, .05);  --shadow-lift: 0 8px 22px -14px rgba(11, 16, 32, .45);  --shadow-up: 0 -8px 24px -16px rgba(11, 16, 32, .45);
+    --side: #0A0F1E;  --side-ink: #FFFFFF;  --side-ink-2: #AEB7CC;  --side-hi: #182036;  --side-line: #222A42;  --side-mark: #9DB9FF;  --side-link: #EEF1F8;
+  }
+}
+/* day, chosen (data-mode="light"): the same values */
+[data-theme="midnight"][data-mode="light"] {
+  color-scheme: light;
+  --paper: #EEF1F7;  --paper-2: #E0E4EE;  --card: #FFFFFF;  --field: #FFFFFF;
+  --ink: #0B1020;  --ink-2: #353D52;  --ink-3: #4E576D;
+  --line: #C4CAD8;  --line-2: #A8B0C3;  --edge: #6C7489;
+  --vera: #0A6A4B;  --vera-bg: #0B8457;  --on-vera: #FFFFFF;  --vera-soft: #DCF0E5;  --vera-line: #A6D6BD;
+  --ask-bg: #0E1312;  --ask-ink: #FFFFFF;  --ask-ink-2: #C4CEC9;  --ask-rim: inset 0 0 0 1px rgba(255, 255, 255, .08);  --ask-edge: transparent;
+  --send: #6DFF9C;  --send-2: #95FFB8;  --on-send: #0E1312;
+  --ok: #17703F;  --ok-soft: #DDF1E4;  --ok-line: #A9D9BA;
+  --warn: #8A4B00;  --warn-soft: #FBEBCD;  --warn-line: #E3BD78;
+  --alert: #B42318;  --alert-soft: #FBE6E3;  --alert-line: #EDB9B3;  --on-alert: #FFFFFF;
+  --focus: #2D4FC4;
+  --p1-soft: #E4EDFF;  --p1-ink: #425FA7;  --p1-mark: #607FCA;
+  --p2-soft: #EAEBFF;  --p2-ink: #5144A0;  --p2-mark: #5144A0;
+  --p3-soft: #D8F3F2;  --p3-ink: #016868;  --p3-mark: #016868;
+  --p4-soft: #FCE9DB;  --p4-ink: #8D5320;  --p4-mark: #B17443;
+  --p5-soft: #F2E8FC;  --p5-ink: #614978;  --p5-mark: #614978;
+  --p6-soft: #DAF1FC;  --p6-ink: #126A86;  --p6-mark: #277895;
+  --p7-soft: #F6ECD8;  --p7-ink: #7D5C04;  --p7-mark: #936E09;
+  --p8-soft: #EAF0DB;  --p8-ink: #586328;  --p8-mark: #586328;
+  --everyone: #CDD2DE;  --everyone-soft: #E3E7EF;  --everyone-ink: #353D52;  --everyone-mark: #6C7489;  --everyone-on: #353D52;
+  --today-bg: #0B8457;  --on-today: #FFFFFF;
+  --link: #0B1020;  --primary: #0B1020;  --primary-2: #252E48;  --on-primary: #FFFFFF;
+  --shadow: 0 1px 0 rgba(11, 16, 32, .05);  --shadow-lift: 0 8px 22px -14px rgba(11, 16, 32, .45);  --shadow-up: 0 -8px 24px -16px rgba(11, 16, 32, .45);
+  --side: #0A0F1E;  --side-ink: #FFFFFF;  --side-ink-2: #AEB7CC;  --side-hi: #182036;  --side-line: #222A42;  --side-mark: #9DB9FF;  --side-link: #EEF1F8;
+}
