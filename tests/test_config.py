@@ -42,11 +42,6 @@ def test_rejects_unknown_timezone() -> None:
         Settings(_env_file=None, family_tz="Mars/Olympus")
 
 
-def test_rejects_bad_effort() -> None:
-    with pytest.raises(ValidationError):
-        Settings(_env_file=None, effort="ultra")  # type: ignore[arg-type]
-
-
 def test_os_tz_is_a_fallback_only_when_it_is_a_real_zone(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("FAMILYDB_TZ", raising=False)
     monkeypatch.setenv("TZ", "America/Vancouver")

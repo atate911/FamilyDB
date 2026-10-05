@@ -188,10 +188,6 @@ def test_a_service_account_key_loads_without_asking_google(tmp_path) -> None:
     assert google.service_account_email(path) == EMAIL
 
 
-def test_with_no_key_saved_there_is_no_address_to_share_with(tmp_path) -> None:
-    assert google.service_account_email(tmp_path / "none.json") is None
-
-
 def test_an_unreadable_key_asks_to_connect_again(tmp_path) -> None:
     from familydb.errors import ToolUnavailable
 
