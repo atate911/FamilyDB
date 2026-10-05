@@ -177,6 +177,66 @@ tab's icon and the page's links take `--accent`.
 **Kinds.** A kind label (`kind_label` in `_ui.html`) carries `kind-restaurant`, `kind-outing` and
 so on, in that kind's colour; a card holding one takes the colour for its hover glow.
 
+## Looks
+
+Phosphor is the page as first drawn, and the default. A browser can wear another, chosen on the
+Look page (`/look`, in the bar's menu, for anybody signed in, a kid included): **Midnight**,
+**Home Computer**, **Ink**, **Enamel**, **Rail yellow** and **Fjord**, taken from the palette
+sheets the family looked at (two earlier rounds of designs, six of the eleven). Everything above
+and below describes Phosphor; a look changes colour and nothing else, so each of its sections
+still holds, with the colours read from the look in force.
+
+**How it is built.** Every colour in `style.css` is a token, and a look is a set of them. Phosphor
+writes its tokens at the top of `style.css` in the names every palette sheet uses (`--paper`,
+`--card`, `--ink`, `--band`, `--primary`, `--today`...); "Names the page uses" there reads the
+page's older names (`--bg`, `--surface`, `--green`) from them. `static/themes.css` is the rest:
+one block of the same tokens for each look, with a day value and a night value written together,
+`light-dark(day, night)`, so the page follows the device's day and night, or is held to one by the
+Look page (`data-mode` on `<html>`), with no second list to keep in step. A theme block is
+`[data-theme="rail"]`, not `:root`, so a sample of a look on the Look page is drawn in its own
+colours by putting its name on the sample. A look names every token Phosphor does, since
+Phosphor's sit on `<html>` under every one and would otherwise show through; a test holds that.
+
+**The choice is a cookie** (`fdb_look`, "rail.dark"), set by the Look page's form, in this
+browser only: how a screen looks is the screen's, a phone and a wall tablet may differ, and it
+costs the database nothing, so it is not a setting, not a tool, and nothing the model can reach.
+Anything the cookie says that is not a look this page has is Phosphor (`looks.parse`). The browser's
+own bar and its scrollbars follow (`theme-color`, `color-scheme`, from `web/looks.py`).
+
+| Look | The idea | The panel (bar) | What you act on |
+|---|---|---|---|
+| Phosphor | charcoal with a breath of green, lit like a screen | the page's own dark | phosphor green |
+| Midnight | made for night: a blue-black kitchen, each colour a lit window | darker than the page, by day too | soft white; moonlit blue ring |
+| Home Computer | an early-80s family machine: putty case, one orange key | brown-black keyboard | orange, with ink letters |
+| Ink | almost no colour: white, black and untinted greys | black | black |
+| Enamel | old enamel signs: warm grey plaster, earthy colours | deep petrol | ink |
+| Rail yellow | station signage: crisp page, one signal yellow | deep rail blue | rail blue; the page you are on is a yellow plate |
+| Fjord | a pale northern sky over slate water | slate indigo | fjord blue |
+
+**What does not change in any of them.** The green screens, the radar, her screen and the mark
+are glass in every look: dark glass and phosphor green, so Vera is the one lit thing whatever
+the page wears (`--screen`, never the page's own green). Colour never speaks alone, red is
+for late and what went wrong, and a kid sees the same page, only in its colours.
+
+**The paper looks are quiet.** Phosphor and Midnight tell the parts of the site apart by colour
+(Ideas lilac, Plans cyan...), as their palettes do. The other four keep colour for people and
+signals, as their sheets say, so a part of the site is not coloured there (`--sect`: links are the
+look's link colour on every page); what a kind of idea is still shows in its icon, its name and
+its colour. The glow Phosphor gives off is the look's `--bloom`: 1 on Phosphor, about a third on
+the paper looks, none on Ink, so a card hovered casts a shadow, not a halo.
+
+**Measured, in both modes.** For each look, by day and by night, `tests/test_look.py` holds the
+floors of "Accessibility": 4.5:1 for words on the page and on a card (4:1 for a colour on the wells
+a hover draws), 3:1 for the edge of a box and the focus ring, and words on each colour used as a
+fill. A look that cannot keep them is not offered. A new look is a block in `themes.css`, a line
+in `looks.py` (its name, its blurb and the colour of its panel, which that test holds to the CSS)
+and nothing else.
+
+**Not yet.** The palette sheets colour each family member (Sam cobalt, Alex violet...) and the
+page does not: its avatars are one colour a look, so what the sheets show for people, stripes on
+the plans and a face of your own colour, is still to build, and wants the family's say on who gets
+which. Nor is there a household default look: each browser chooses.
+
 ## Type
 
 | Face | Where |
@@ -442,7 +502,8 @@ looked at (see "Two layers").
 
 - Text contrast is at least 4.5:1 everywhere (see the tables); boxes you type into have a 3:1
   edge. Placeholders are hints, never labels.
-- Focus is a green ring on everything, offset from the control.
+- Focus is a ring in the look's focus colour (phosphor green on Phosphor, ink or a blue on the
+  others) on everything, offset from the control.
 - Every box has a label joined to it by `for`; the chat's message box has one for screen readers
   only, since the box itself says what it is for.
 - Nothing is said by colour alone: the chat tells voices apart by side and face; status lights
@@ -478,7 +539,8 @@ looked at (see "Two layers").
 - The accessibility above: measured contrast, visible focus, a label for every box, nothing said
   by colour alone, the motion, contrast and forced-colour preferences honoured, and reading,
   forms and sending working without scripts. A new colour is measured against the others that
-  share its pages, for typical sight and for deuteranopia and protanopia, before it is added.
+  share its pages, for typical sight and for deuteranopia and protanopia, before it is added, and
+  a new look keeps the contrast floors by day and by night (`tests/test_look.py`).
 - Nothing from an idea, a place or a fetched page is marked safe in a template.
 - No page view is a model call: the page reads what is stored and words its own lines, and only
   a message sent asks a model (`test_browsing_asks_nothing_of_a_model` holds it).
@@ -511,10 +573,12 @@ it, and say why here.
 
 ## Left for later
 
-- **A light theme.** The page is dark on every device, by choice, and the dark is half of the
-  look: the same green on white is 1.3:1, and nothing glows on white. A daylight version would be
-  a language of its own, designed as one rather than this one with the lights on, and a line on
-  the settings page, like everything else the family can change.
+- **A light Phosphor.** Phosphor itself has no day, by choice: the dark is half of its look, and the
+  same green on white is 1.3:1. The daylight looks are their own languages ("Looks"), designed as
+  such rather than this one with the lights on.
+- **A look for the household.** Each browser chooses its own on the Look page. A default the family
+  sets on the settings page, for browsers that have not chosen, is a line in `store.settings` and
+  `web/fields.py`, and not yet needed.
 
 ## A kid's screen
 

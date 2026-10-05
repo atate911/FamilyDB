@@ -7,7 +7,8 @@ one door: `chat.py` hands a message to the pipeline, `edits.py` changes an idea,
 plan, a task or a memory through the same tools the model calls, `family.py` changes who is in
 the family and how they sign in through `familydb.family`, and `settings.py` is the only thing
 that writes `app_settings` (and two files, the session key and the Google token). Every other
-module in this package reads and nothing else.
+module in this package reads and nothing else, bar `look.py`, whose Look page keeps which of the
+page's looks this one browser wears in a cookie: it changes nothing the family's data knows.
 """
 
 from __future__ import annotations
@@ -38,6 +39,8 @@ from familydb.web import (
     family,
     fields,
     links,
+    look,
+    looks,
     once,
     routes,
     setup,
@@ -233,6 +236,8 @@ def create_app(app: App, *, api: Any = None) -> Flask:
             "status_words": views.STATUS_LIGHTS.get(light or ""),
             "assistant": her.name,
             "has_persona": her is not personas.PLAIN,
+            # How this browser asked the page to look (web/looks.py): a theme, and day or night.
+            **_look(),
         }
 
     web.context_processor(every_page)
@@ -242,6 +247,7 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     web.register_blueprint(chat.bp)
     web.register_blueprint(edits.bp)
     web.register_blueprint(family.bp)
+    web.register_blueprint(look.bp)
     web.register_blueprint(settings_page.bp)
     web.register_blueprint(setup.bp)
     # The gate first: somebody who is not signed in should not be able to make the page work,
@@ -280,6 +286,18 @@ def _picking_up_settings(app: App, web: Flask) -> Any:
         web.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=app.settings.web_session_days)
 
     return hook
+
+
+def _look() -> dict[str, Any]:
+    """The look this browser chose, as the templates want it. Anything the cookie says that is
+    not one of ours is the default."""
+    wearing, mode = looks.parse(request.cookies.get(looks.COOKIE))
+    return {
+        "look": wearing,
+        "look_mode": mode,
+        "look_scheme": looks.scheme(wearing, mode),
+        "look_colours": looks.theme_colours(wearing, mode),
+    }
 
 
 def _not_found(_error: Any) -> tuple[str, int]:
