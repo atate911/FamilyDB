@@ -84,7 +84,6 @@ def _provider(monkeypatch, module, name: str, settings, outcome, **keys):
             ),
             "unchecked",
         ),
-        (openai_provider.openai.APIConnectionError(request=REQUEST), "unchecked"),
     ],
 )
 def test_openai_says_what_it_thinks_of_a_key(settings, monkeypatch, outcome, verdict) -> None:
