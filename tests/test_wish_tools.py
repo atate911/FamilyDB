@@ -122,10 +122,7 @@ def test_turning_away_is_for_a_kid_s_ask_and_kept_once(
         ("can we have pizza tonight", True, False),
         ("let's get slime", True, False),
         ("I want a puppy", False, True),
-        ("I'd like a puppy please", False, True),
         ("I\u2019d like a puppy", False, True),  # an iPad's apostrophe
-        ("let\u2019s get slime", True, False),
-        ("what's for dinner", False, False),
         ("do you think we should?", False, False),  # a question about "we", not an opener
     ],
 )

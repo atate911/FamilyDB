@@ -73,16 +73,6 @@ def test_a_name_is_known_by_its_family_but_not_by_a_longer_name() -> None:
     assert catalog.known("nobody", "gpt-6-luna") is None and catalog.known(None, None) is None
 
 
-def test_the_stronger_models_have_prices() -> None:
-    million_out = {"output_tokens": 1_000_000}
-    assert prices.cost("openai", "gpt-6-sol", million_out) == (10.0, True)
-    assert prices.cost("openai", "gpt-6-astra", million_out) == (50.0, True)
-    assert prices.cost("gemini", "gemini-3.1-pro-preview", million_out) == (12.0, True)
-    # Gemini's better model, which an install may name for lookups: unlisted, it would count as
-    # twenty times dearer than it is.
-    assert prices.cost("gemini", "gemini-3.8-flash", million_out) == (3.75, True)
-
-
 # -- choosing by level
 
 

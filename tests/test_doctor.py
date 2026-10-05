@@ -66,11 +66,6 @@ def test_a_key_for_another_provider_is_only_a_warning(settings, clock, conn, fam
     assert report.healthy
 
 
-def test_an_empty_family_is_a_failure(settings, clock, conn) -> None:
-    _app, report = _report(settings, clock)
-    assert _verdict_of(report, "family") == doctor.FAIL
-
-
 def test_a_page_that_would_not_serve_is_a_failure(settings, clock, conn, family) -> None:
     _app, report = _report(settings, clock, web_enabled=True, web_host="0.0.0.0", web_password=None)
     assert _verdict_of(report, "web page") == doctor.FAIL

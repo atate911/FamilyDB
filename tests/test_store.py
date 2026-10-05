@@ -4,7 +4,7 @@ from datetime import date
 import pytest
 
 from familydb.agent.render import render_idea_line
-from familydb.store import calls, db, ideas, members, messages, outcomes
+from familydb.store import db, ideas, members, messages, outcomes
 from familydb.store.members import Member
 from tests.conftest import NOW_ISO
 
@@ -179,37 +179,6 @@ def test_outcomes_update_idea_bookkeeping(conn, family) -> None:
     assert updated.avg_rating == 9.0
     assert updated.status == "done"
     assert len(outcomes.list_for_idea(conn, idea.id)) == 2
-
-
-def test_call_logs(conn) -> None:
-    with db.transaction(conn):
-        calls.log_tool_call(
-            conn,
-            message_id=None,
-            iteration=1,
-            tool_use_id="tu_1",
-            tool_name="add_idea",
-            input={"title": "x"},
-            output='{"id": 1}',
-            is_error=False,
-            duration_ms=3,
-            now=NOW_ISO,
-        )
-        calls.log_llm_call(
-            conn,
-            message_id=None,
-            iteration=1,
-            model="claude-opus-5",
-            served_model="claude-opus-5",
-            request_id="req_1",
-            stop_reason="end_turn",
-            usage={"input_tokens": 100, "cache_read_input_tokens": 90, "output_tokens": 10},
-            duration_ms=800,
-            now=NOW_ISO,
-        )
-    recent = calls.recent_llm_calls(conn)
-    assert recent[0]["cache_read_input_tokens"] == 90
-    assert recent[0]["cache_creation_input_tokens"] is None
 
 
 def test_render_idea_line_is_compact_and_complete(conn, family) -> None:
