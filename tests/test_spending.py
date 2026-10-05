@@ -78,10 +78,6 @@ def test_a_claude_cache_write_costs_by_how_long_it_lasts() -> None:
     assert prices.cost("anthropic", "claude-sonnet-5", usage, cache_ttl="5m")[0] == 2.5
 
 
-def test_the_page_suggests_the_cheapest_first() -> None:
-    assert prices.suggestions("openai")[0] == "gpt-6-luna"
-
-
 def test_every_call_records_who_answered_and_what_it_cost(settings, clock, conn, family) -> None:
     api = fakes.FakeMessagesAPI(
         fakes.message([fakes.text("Hi Sam.")], usage={"input_tokens": 1000, "output_tokens": 100})

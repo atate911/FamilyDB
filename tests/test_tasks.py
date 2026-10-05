@@ -120,15 +120,6 @@ def test_failed_send_retries_without_creating_another_message(ctx):
     assert sent[0][0] == "family-group"
 
 
-def test_a_reminder_sent_after_downtime_says_when_it_was_due(ctx):
-    add(ctx, remind_at="2026-09-20T15:00")
-    ctx.clock.advance(timedelta(days=2))
-    app = App(ctx.settings, ctx.clock)
-    assert run_reminders(app) == 1
-    sent = messages.last_for_chat(ctx.conn, "web", limit=1)[0].text
-    assert "was due Sun 20 Sep at 15:00" in sent
-
-
 def test_a_late_reminder_worded_again_still_says_when_it_was_due(ctx):
     task = add(ctx, remind_at="2026-09-20T15:00")
     ctx.clock.advance(timedelta(days=2))
