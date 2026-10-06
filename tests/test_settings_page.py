@@ -41,7 +41,15 @@ def _whole_form(client, **changes) -> dict[str, str]:
 
 
 def _errors(text: str) -> list[str]:
-    return [one.strip() for one in re.findall(r'class="error" role="alert">\s*([^<]+)', text)]
+    """What the page complained of: under a box, or in the banner at the top."""
+    boxes = re.findall(r'class="field__error" role="alert">\s*([^<]+)', text)
+    banners = re.findall(
+        r'role="alert"[^>]*><span class="banner__ic">.*?</span>\s*'
+        r'<p class="banner__text">\s*([^<]+)',
+        text,
+        re.S,
+    )
+    return [one.strip() for one in [*boxes, *banners]]
 
 
 def test_the_page_offers_every_setting_that_can_be_stored() -> None:
@@ -68,7 +76,10 @@ def test_saving_puts_it_in_force_at_once(page, conn) -> None:
         "Saved. Changed: Company that answers, Weekend ideas time, Look ideas up on the web."
         in (after)
     )
-    assert '<label for="model-key">Google key</label>' in page.get("/settings/model").text
+    assert (
+        '<label class="field__label" for="model-key">Google key</label>'
+        in page.get("/settings/model").text
+    )
     assert 'value="19" selected' in page.get("/settings/messages").text
 
 
@@ -87,7 +98,7 @@ def test_a_value_the_setting_will_not_take_is_refused_on_its_own_box(page, conn)
     assert 'value="seven"' in refused.text  # what was typed comes back, not a blank box
     # On the page the box is on, with its folded group opened so the complaint is in sight.
     assert "<h1>Lookups</h1>" in refused.text
-    assert '<details class="panel fold" id="pace" open>' in refused.text
+    assert '<details class="card fold sgroup" id="pace" open>' in refused.text
 
     refused = page.post("/settings", data=_whole_form(page, enrich_batch=99))
     assert refused.status_code == 400
@@ -123,7 +134,7 @@ def test_a_key_is_stored_but_never_shown_and_never_logged(page, conn) -> None:
     for path in ("/settings", "/settings/model", "/settings/security"):
         assert "sk-secret-value" not in page.get(path).text
     text = page.get("/settings/history").text
-    assert "OpenAI key</strong>" in text and "replaced" in text
+    assert "OpenAI key</b>" in text and "replaced" in text
     line = settings_store.history(conn)[0]
     assert line["secret"] == 1 and line["old_value"] is None and line["new_value"] is None
     assert line["source"].startswith("web ")
@@ -193,8 +204,8 @@ def test_the_history_shows_what_moved_and_who_moved_it(page, conn, family) -> No
     with db.transaction(conn):
         settings_store.set_many(conn, {"effort": "high"}, changed_by=family["sam"].id, source="cli")
     text = page.get("/settings/history").text
-    assert "Chat thinking</strong>" in text  # by the name on the page, not the setting's
-    assert "default → High" in text
+    assert "Chat thinking</b>" in text  # by the name on the page, not the setting's
+    assert 'default <span aria-hidden="true">→</span><span class="sr">to</span> High' in text
     assert "Sam" in text and "cli" in text
     assert "Last: Chat thinking" in page.get("/settings").text
 
@@ -580,7 +591,7 @@ def test_a_complaint_from_a_page_is_drawn_on_that_page(page, conn) -> None:
     refused = page.post("/settings", data=form)
     assert refused.status_code == 400 and "<h1>Spending</h1>" in refused.text
     assert "That needs to be a number." in _errors(refused.text)
-    assert '<details class="panel fold" id="each" open>' in refused.text
+    assert '<details class="card fold sgroup" id="each" open>' in refused.text
     assert settings_store.overrides(conn) == {}
 
 
@@ -633,7 +644,7 @@ def test_behind_caddy_it_says_how_to_move_the_address_people_open(settings, cloc
     opened = "https://203.0.113.7:24613"
     client.post("/login", data={"password": PASSWORD}, base_url=opened)
     served = client.get("/settings/general", base_url=opened).text
-    assert "<code>https://203.0.113.7:24613/</code>, on port 24613" in served
+    assert '<code class="code">https://203.0.113.7:24613/</code>, on port 24613' in served
     assert "and the page is passed on to it by Caddy" in served
     assert "https --port random</code> serves the page on a port" in served
     assert "The address people open stays as it is." in served
@@ -677,20 +688,19 @@ def test_the_messages_page_says_what_goes_out_unasked_and_how_often(page, conn) 
             conn, channel="web", chat_id="web", text="An answer", now="2026-09-20T21:00:00Z"
         )
     text = page.get("/settings/messages").text
-    listed = re.search(r'<section class="panel" id="on-her-own">.*?</section>', text, re.S)
+    listed = re.search(r'<section class="card sgroup" id="on-her-own".*?</section>', text, re.S)
     assert listed is not None
     shown = " ".join(listed.group(0).split())
     assert "How did it go?" in shown and "1 sent in 30 days, the last 19 Sep, 10:00." in shown
     assert "Weekend ideas" in shown and "Nowhere chosen, so none is sent" in shown
-    assert "Costs: one model call a week." in shown and '<a href="#others">Change</a>' in shown
+    assert "Costs: one model call a week." in shown and 'href="#others">Change' in shown
     assert "How was Hopscotch on Saturday?" in shown and "a Telegram group" in shown
     assert "An answer" not in shown  # a reply is not hers unasked
     # And the switch for it is on the same page.
     page.post("/settings", data=_whole_form(page, follow_ups="false"))
     assert page.app.settings.follow_ups is False
-    assert 'How did it go?</strong> <span class="tag">off</span>' in " ".join(
-        page.get("/settings/messages").text.split()
-    )
+    off = " ".join(page.get("/settings/messages").text.split())
+    assert re.search(r'How did it go\?</b><span class="tag tag--off">.*?Off</span>', off)
 
 
 def test_the_general_page_says_how_to_give_the_page_a_name(page) -> None:

@@ -63,6 +63,13 @@ class Section:
     icon: str  # in static/icons.svg, or "presence"
     blurb: str
 
+    @property
+    def glyph(self) -> str:
+        """Its picture in the new icon sheet (the built names stay until the clean-up)."""
+        return {"mark": "sparkle", "coin": "dollar", "clock": "history", "presence": "smile"}.get(
+            self.icon, self.icon
+        )
+
 
 @dataclass(frozen=True)
 class Group:

@@ -1,31 +1,37 @@
-{% extends "base.html" %}
-{% from "_ui.html" import icon, page_head, presence %}
+{% extends "base_kitchen.html" %}
+{% from "_kitchen.html" import icon, tile, tag, page_head with context %}
+{% from "_settings.html" import told with context %}
 {% block title %}Settings · {{ site_title }}{% endblock %}
-{% block body_class %}page-settings{% endblock %}
 {% block content %}
-  {{ page_head('Settings', 'Each part, how it stands now, and the way in to change it.', 'settings') }}
-  {% if said %}<p class="said" role="status">{{ said }}</p>{% endif %}
-  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  {{ page_head('Settings', 'Each part, how it stands now, and the way in to change it. Only an admin can change these.') }}
+  {{ told(said, error) }}
 
-  <ul class="section-cards">
-    {% for entry in sections %}
-      {% set one = entry.section %}
-      <li>
-        <a class="panel section-card{% if entry.look %} look{% endif %}" href="{{ url_for('settings.section', name=one.name) }}">
-          {% if one.icon == 'presence' %}{{ presence('section-icon') }}
-          {%- else %}<span class="section-icon" aria-hidden="true">{{ icon(one.icon) }}</span>{% endif %}
-          <span class="section-what">
-            <strong>{{ one.title }}</strong>
-            {% for line in entry.lines %}<span class="section-state">{{ line }}</span>{% endfor %}
-            {% if entry.look %}<span class="tag warn">{{ icon('warning') }}Needs a look</span>{% endif %}
-          </span>
-          {{ icon('right', cls='go') }}
-        </a>
-      </li>
-    {% endfor %}
-  </ul>
-  <p class="muted small">
-    Setting up for the first time, or starting again? <a href="{{ url_for('setup.overview') }}">Setup</a>
-    goes through what matters most, one step at a time.
-  </p>
+  <div class="settings-grid">
+    <ul class="slist">
+      {% for entry in sections %}
+        {% set one = entry.section %}
+        <li><a class="srow" href="{{ url_for('settings.section', name=one.name) }}">
+          {{ tile(one.glyph) }}
+          <span class="srow__text"><b>{{ one.title }}</b>{% for line in entry.lines %}<span>{{ line }}</span>{% endfor %}</span>
+          {% if entry.look %}<span class="tag tag--look">{{ icon('alert') }}Needs a look</span>
+          {%- elif entry.off %}<span class="tag tag--off">{{ icon('offc') }}Off</span>{% endif %}
+          <span class="srow__go">{{ icon('chev', size='sm') }}</span></a></li>
+      {% endfor %}
+    </ul>
+    <aside class="aside-stack" aria-label="About this page">
+      <section class="card" aria-labelledby="h-setup">
+        <h2 id="h-setup" class="card__head">Setting up</h2>
+        <p>Setting up for the first time, or starting again? Setup goes through what matters most, one step at a time.</p>
+        <div class="actions"><a class="btn btn--quiet btn--sm" href="{{ url_for('setup.overview') }}">Open setup</a></div>
+      </section>
+      <section class="card" aria-labelledby="h-key">
+        <h2 id="h-key" class="card__head">Reading this list</h2>
+        <ul class="key">
+          <li><span class="tag tag--look">{{ icon('alert') }}Needs a look</span>Something is missing that it needs.</li>
+          <li><span class="tag tag--off">{{ icon('offc') }}Off</span>Switched off on purpose. Turn it on any time.</li>
+          <li>No tag means it’s set up.</li>
+        </ul>
+      </section>
+    </aside>
+  </div>
 {% endblock %}

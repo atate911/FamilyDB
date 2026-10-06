@@ -1,5 +1,5 @@
-{# Small parts of the settings pages: box, group, form. A box says what it is, what it does, what it falls back to when empty, and whether it was changed here. #}
-{% from "_ui.html" import icon %}
+{# Small parts of the settings pages: setting, group, form, save bar, what the last save said. A setting says what it is, what it does, what it falls back to when empty, and whether it was changed here. #}
+{% from "_kitchen.html" import icon with context %}
 
 {# A dropdown's choices under headings, as `(heading, [(value, words)])`, with `value` chosen. #}
 {% macro grouped_options(groups, value) -%}
@@ -10,12 +10,12 @@
   {% endfor %}
 {%- endmacro %}
 
-{% macro box(entry) -%}
+{% macro setting(entry) -%}
   {% set one = entry.field %}
   {% set told = 'h-' ~ one.key %}
-  <div class="setting{% if entry.problem %} bad{% endif %}">
-    <div class="setting-head">
-      <label for="f-{{ one.key }}">{{ one.label }}</label>
+  <div class="setting{% if entry.problem %} setting--bad{% endif %}">
+    <div class="setting__head">
+      <label class="field__label" for="f-{{ one.key }}">{{ one.label }}</label>
       {% if entry.stored %}<span class="changed">changed</span>{% endif %}
     </div>
     {% if one.choices %}
@@ -52,8 +52,8 @@
           {% endfor %}
           <option value="another"{% if typed_in %} selected{% endif %}>{{ one.another }}…</option>
         </select>
-        <div class="another">
-          <label for="a-{{ one.key }}">{{ one.another }}</label>
+        <div class="pick__another">
+          <label class="field__label" for="a-{{ one.key }}">{{ one.another }}</label>
           <input id="a-{{ one.key }}" name="{{ one.key }}_another" type="text" autocomplete="off"
                  spellcheck="false" value="{{ entry.value if typed_in else '' }}"
                  placeholder="{{ 'its name, as the company writes it' if one.company else 'its id, such as -1001234567890' }}"
@@ -78,44 +78,78 @@
       {% endif %}
     {% endif %}
     {% if entry.problem %}
-      <p id="{{ told }}" class="error" role="alert">{{ entry.problem }}</p>
+      <p id="{{ told }}" class="field__error" role="alert">{{ entry.problem }}</p>
     {% elif one.note %}
-      <p id="{{ told }}" class="muted hint">{{ one.note }}</p>
+      <p id="{{ told }}" class="field__hint">{{ one.note }}</p>
     {% endif %}
   </div>
 {%- endmacro %}
 
-{# A group of boxes under a heading. Fine-tuning is folded and opens by itself when a box has a complaint. #}
+{# The built name, kept for a release. #}
+{% macro box(entry) -%}{{ setting(entry) }}{%- endmacro %}
+
+{# A group of settings under a heading. Fine-tuning is folded and opens by itself when a setting has a complaint. #}
 {% macro group(entry) -%}
   {% set g = entry.group %}
   {% if g.folded %}
-    <details class="panel fold" id="{{ g.name }}"{% if entry.open %} open{% endif %}>
-      <summary>
-        <span class="h2">{{ g.title }}</span>
+    <details class="card fold sgroup" id="{{ g.name }}"{% if entry.open %} open{% endif %}>
+      <summary><h2>{{ g.title }}</h2>
         {% if entry.changed %}<span class="changed">{{ entry.changed }} changed</span>{% endif %}
-      </summary>
-      {% if g.note %}<p class="muted">{{ g.note }}</p>{% endif %}
-      <div class="grid">{% for one in entry.boxes %}{{ box(one) }}{% endfor %}</div>
+        {{ icon('chev', size='sm', cls='chev') }}</summary>
+      <div class="fold__body">
+        {% if g.note %}<p class="sgroup__note">{{ g.note }}</p>{% endif %}
+        <div class="sgrid">{% for one in entry.boxes %}{{ setting(one) }}{% endfor %}</div>
+      </div>
     </details>
   {% else %}
-    <section class="panel" id="{{ g.name }}">
-      <h2>{{ g.title }}</h2>
-      {% if g.note %}<p class="muted">{{ g.note }}</p>{% endif %}
-      <div class="grid">{% for one in entry.boxes %}{{ box(one) }}{% endfor %}</div>
+    <section class="card sgroup" id="{{ g.name }}" aria-labelledby="g-{{ g.name }}">
+      <h2 class="sgroup__h" id="g-{{ g.name }}">{{ g.title }}</h2>
+      {% if g.note %}<p class="sgroup__note">{{ g.note }}</p>{% endif %}
+      <div class="sgrid">{% for one in entry.boxes %}{{ setting(one) }}{% endfor %}</div>
     </section>
   {% endif %}
 {%- endmacro %}
 
-{# A page's boxes in one form with one Save: a box emptied goes back to its default; other pages' boxes are not in it. A `call` block goes first. #}
+{# The bar a page's Save sits in. `still` keeps it from sticking to the bottom of the screen. #}
+{% macro save_bar(label='Save', still=false) -%}
+  <div class="save-bar{{ ' save-bar--still' if still }}">
+    <p class="small">An empty box uses the default it shows.</p>
+    <button class="btn btn--primary" type="submit">{{ icon('check') }}{{ label }}</button>
+  </div>
+{%- endmacro %}
+
+{# A page's settings in one form with one Save: a box emptied goes back to its default; other pages' boxes are not in it. A `call` block goes first. #}
 {% macro form(section, groups=[]) -%}
-  <form method="post" action="{{ url_for('settings.save') }}">
+  <form class="sform" method="post" action="{{ url_for('settings.save') }}">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
     <input type="hidden" name="section" value="{{ section }}" />
     {% if caller is defined %}{{ caller() }}{% endif %}
     {% for entry in groups %}{{ group(entry) }}{% endfor %}
-    <div class="save-bar">
-      <p class="muted">An empty box uses the default it shows.</p>
-      <button type="submit">{{ icon('check') }}Save</button>
-    </div>
+    {{ save_bar() }}
   </form>
+{%- endmacro %}
+
+{# What the last save or key check said, and what it found wrong: a banner at the top of the page. #}
+{% macro told(said=none, error=none) -%}
+  {% if said or error %}
+    <div class="told">
+      <div class="banner banner--{{ 'alert' if error and not said else 'ok' }} banner--slim flash" role="{{ 'alert' if error and not said else 'status' }}" tabindex="-1">
+        <span class="banner__ic">{{ icon('alert' if error and not said else 'check') }}</span>
+        <p class="banner__text">{{ said or error }}</p>
+      </div>
+      {% if said and error %}<div class="banner banner--alert banner--slim" role="alert"><span class="banner__ic">{{ icon('alert') }}</span><p class="banner__text">{{ error }}</p></div>{% endif %}
+    </div>
+  {% endif %}
+{%- endmacro %}
+
+{# The page's sections, down the side: where you are is marked. `sections` are `fields.SECTIONS`. #}
+{% macro settings_nav(sections, current) -%}
+  <nav class="settings-nav" aria-label="Settings">
+    <ol>
+      {% for one in sections %}
+        <li><a href="{{ url_for('settings.section', name=one.name) }}"{% if one.name == current %} aria-current="page"{% endif %}>
+          {{- icon(one.glyph) }}<span>{{ one.title }}</span></a></li>
+      {% endfor %}
+    </ol>
+  </nav>
 {%- endmacro %}

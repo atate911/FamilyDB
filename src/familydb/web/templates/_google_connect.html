@@ -1,16 +1,11 @@
 {# Connects Google Calendar: the key and the calendar's id. Setup passes `then` to return to the step. #}
-<form class="form" method="post" action="{{ url_for('settings.google_connect') }}">
+{% from "_kitchen.html" import icon with context %}
+<form class="form form--tight" method="post" action="{{ url_for('settings.google_connect') }}">
   <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
   {% if then %}<input type="hidden" name="then" value="{{ then }}" />{% endif %}
-  <div class="field wide">
-    <label for="google-key">The key file</label>
-    <textarea id="google-key" name="key" rows="4" required autocomplete="off"
-      placeholder='{"type": "service_account", "client_email": "…", …}'></textarea>
-  </div>
-  <div class="field wide">
-    <label for="google-calendar">The calendar's id</label>
-    <input id="google-calendar" name="calendar_id" type="text" autocomplete="off" required
-           value="{{ google.calendar or '' }}" placeholder="…@group.calendar.google.com" />
-  </div>
-  <div class="field wide actions"><button type="submit">Connect</button></div>
+  <div class="field"><label class="field__label" for="google-key">The key file</label>
+    <textarea id="google-key" name="key" rows="4" required autocomplete="off" placeholder='{"type": "service_account", "client_email": "…", …}'></textarea></div>
+  <div class="field"><label class="field__label" for="google-calendar">The calendar’s id</label>
+    <input id="google-calendar" name="calendar_id" type="text" autocomplete="off" required value="{{ google.calendar or '' }}" placeholder="…@group.calendar.google.com" /></div>
+  <div class="actions"><button class="btn btn--primary" type="submit">{{ icon('plug') }}Connect</button></div>
 </form>

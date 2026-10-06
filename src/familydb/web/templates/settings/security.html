@@ -1,110 +1,68 @@
-{% from "_ui.html" import icon %}
-{% from "_settings.html" import box %}
+{% from "_kitchen.html" import icon with context %}
+{% from "_settings.html" import setting with context %}
 {% if personal %}
-  <section class="panel" id="password">
-    <h2>{{ icon('user') }}Signing in</h2>
-    <p class="muted">
-      Everybody signs in as themselves, with a password of their own. Change yours on
-      <a href="{{ url_for('family.you') }}">Your password</a>; give somebody a starting
-      password, or take theirs away, on the <a href="{{ url_for('family.show') }}">Family</a>
-      page.
-    </p>
+  <section class="card sgroup" id="password" aria-labelledby="g-pw">
+    <h2 class="sgroup__h" id="g-pw">{{ icon('people') }}Signing in</h2>
+    <p class="sgroup__note">Everybody signs in as themselves, with a password of their own. Change yours on <a href="{{ url_for('family.you') }}">Your password</a>; give somebody a starting password, or take theirs away, on the <a href="{{ url_for('family.show') }}">Family</a> page.</p>
   </section>
 {% else %}
-  <section class="panel" id="password">
-    <h2>{{ icon('user') }}Family password</h2>
-    <p class="muted">
-      {% if not needs_password %}
-        This page has no password, so anyone who can reach it is in. Choose one to lock it.
-      {% elif password.chosen %}
-        The one everybody signs in with. Changing it signs every other browser out.
-      {% else %}
-        Still the one the installer made up. Choose one the family will remember: a short sentence
-        of at least {{ password.least }} characters is easy to remember and hard to guess.
-      {% endif %}
-      Better still, give each person a password of their own:
-      <a href="{{ url_for('family.you') }}">choose yours first</a>, as an admin.
+  <section class="card sgroup" id="password" aria-labelledby="g-pw">
+    <h2 class="sgroup__h" id="g-pw">{{ icon('lock') }}Family password</h2>
+    <p class="sgroup__note">
+      {% if not needs_password %}This page has no password, so anyone who can reach it is in. Choose one to lock it.
+      {% elif password.chosen %}The one everybody signs in with. Changing it signs every other browser out.
+      {% else %}Still the one FamilyDB started with. Choose one the family will remember: a short sentence of at least {{ password.least }} characters is easy to remember and hard to guess.{% endif %}
+      Better still, give each person a password of their own: <a href="{{ url_for('family.you') }}">choose yours first</a>, as an admin.
     </p>
     {% include "password_form.html" %}
   </section>
 {% endif %}
 
 {% set staying = groups['signing-in'] %}
-<section class="panel" id="{{ staying.group.name }}">
-  <h2>{{ icon('clock') }}{{ staying.group.title }}</h2>
-  <form method="post" action="{{ url_for('settings.save') }}">
-    <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-    <input type="hidden" name="section" value="security" />
-    <div class="grid">{% for one in staying.boxes %}{{ box(one) }}{% endfor %}</div>
-    <button type="submit">{{ icon('check') }}Save</button>
+<section class="card sgroup" id="{{ staying.group.name }}" aria-labelledby="g-stay">
+  <h2 class="sgroup__h" id="g-stay">{{ icon('clock') }}{{ staying.group.title }}</h2>
+  <form class="form form--tight mt-3" method="post" action="{{ url_for('settings.save') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="section" value="security" />
+    <div class="sgrid">{% for one in staying.boxes %}{{ setting(one) }}{% endfor %}</div>
+    <div><button class="btn btn--quiet btn--sm" type="submit">{{ icon('check', size='sm') }}Save</button></div>
   </form>
 </section>
 
-<section class="panel" id="reveal">
-  <h2>{{ icon('key') }}See a key</h2>
+<section class="card sgroup" id="reveal" aria-labelledby="g-reveal">
+  <h2 class="sgroup__h" id="g-reveal">{{ icon('key') }}See a key</h2>
   {% set saved = keys.values() | selectattr('set') | list %}
   {% if saved %}
-    <p class="muted">
-      {% if needs_password %}
-        Type {{ 'your' if own_password else 'the family' }} password again first. The key is shown
-        once, on this page, and never put in the address bar.
-      {% else %}
-        This page has no password, so a key is shown to anyone who can reach it.
-      {% endif %}
+    <p class="sgroup__note">
+      {% if needs_password %}Type {{ 'your' if own_password else 'the family' }} password again first. The key is shown once, on this page, and never put in the address bar.
+      {% else %}This page has no password, so a key is shown to anyone who can reach it.{% endif %}
     </p>
-    <form method="post" action="{{ url_for('settings.reveal') }}" class="filters">
+    <form class="form__row form__row--3 mt-3" method="post" action="{{ url_for('settings.reveal') }}">
       <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-      <div class="field">
-        <label for="reveal-key">Key</label>
-        <select id="reveal-key" name="key">
-          {% for row in saved %}
-            <option value="{{ row.key }}" {% if row.revealed %}selected{% endif %}>{{ row.label }}</option>
-          {% endfor %}
-        </select>
-      </div>
+      <div class="field"><label class="field__label" for="reveal-key">Key</label>
+        <select id="reveal-key" name="key">{% for row in saved %}<option value="{{ row.key }}" {% if row.revealed %}selected{% endif %}>{{ row.label }}</option>{% endfor %}</select></div>
       {% if needs_password %}
-        <div class="field">
-          <label for="reveal-password">{{ 'Your password' if own_password else 'Family password' }}</label>
-          <input
-            id="reveal-password"
-            name="password"
-            type="password"
-            autocomplete="current-password"
-          />
-        </div>
+        <div class="field"><label class="field__label" for="reveal-password">{{ 'Your password' if own_password else 'Family password' }}</label>
+          <input id="reveal-password" name="password" type="password" autocomplete="current-password" /></div>
       {% endif %}
-      <div class="actions"><button class="quiet" type="submit">Show it</button></div>
+      <div class="field field--end"><button class="btn btn--quiet" type="submit">{{ icon('eye') }}Show it</button></div>
     </form>
     {% for row in saved if row.revealed %}
-      <p class="revealed"><code>{{ row.revealed }}</code></p>
+      <p class="mt-3"><code class="code made__pw">{{ row.revealed }}</code></p>
     {% endfor %}
   {% else %}
-    <p class="muted">No key or token is saved yet. They are added on the
-      <a href="{{ url_for('settings.section', name='model') }}">AI model</a> and
-      <a href="{{ url_for('settings.section', name='connections') }}">Connections</a> pages.</p>
+    <p class="sgroup__note">No key or token is saved yet. They are added on the <a href="{{ url_for('settings.section', name='model') }}">AI model</a> and <a href="{{ url_for('settings.section', name='connections') }}">Connections</a> pages.</p>
   {% endif %}
 </section>
 
-<section class="panel" id="everyone">
-  <h2>{{ icon('signout') }}Sign everyone out</h2>
-  <p class="muted">
-    Ends every sign-in on every phone and computer, this one included, and makes every browser
-    a stranger again. For a lost phone or a password shared too widely; change the password too
-    if it is the password that got out.
-  </p>
-  <form method="post" action="{{ url_for('settings.sign_out_everyone') }}" class="filters">
+<section class="card sgroup sgroup--danger" id="everyone" aria-labelledby="g-everyone">
+  <h2 class="sgroup__h" id="g-everyone">{{ icon('signout') }}Sign everyone out</h2>
+  <p class="sgroup__note">Ends every sign-in on every phone and computer, this one included, and makes every browser a stranger again. For a lost phone or a password shared too widely; change the password too if it is the password that got out.</p>
+  <form class="form__row form__row--3 mt-3" method="post" action="{{ url_for('settings.sign_out_everyone') }}">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
     {% if needs_password %}
-      <div class="field">
-        <label for="everyone-password">{{ 'Your password' if own_password else 'Family password' }}</label>
-        <input
-          id="everyone-password"
-          name="password"
-          type="password"
-          autocomplete="current-password"
-        />
-      </div>
+      <div class="field"><label class="field__label" for="everyone-password">{{ 'Your password' if own_password else 'Family password' }}</label>
+        <input id="everyone-password" name="password" type="password" autocomplete="current-password" /></div>
     {% endif %}
-    <div class="actions"><button class="danger" type="submit">{{ icon('signout') }}Sign everyone out</button></div>
+    <div class="field field--end span-2"><button class="btn btn--danger" type="submit">{{ icon('signout') }}Sign everyone out</button></div>
   </form>
 </section>

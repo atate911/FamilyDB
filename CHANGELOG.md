@@ -62,6 +62,12 @@ older than what is installed. It gets a date when it is released.
   them to every phone and computer they sign in on, and everybody else keeps
   their own. A new look, Afterglow, joins the others: charcoal glass with faint
   scanlines, always night.
+- **A new Settings.** The list of settings is one row to a part, each saying
+  how it stands now and tagged when it needs a look or is switched off, with
+  the sections beside each other on every page. Every section is redone on the
+  new look: the same settings and the same saving, with each one's help under
+  it, and a bar at the foot of a form that says what an empty box does. The
+  sign-in page now says "the one FamilyDB started with" for the first password.
 
 
 ## v0.2.0 — second alpha (2026-10-05)

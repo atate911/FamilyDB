@@ -336,8 +336,8 @@ def test_the_settings_tile_opens_a_menu_with_every_settings_page_then_you(app, s
     assert "Signed in as <strong>Sam</strong>" in menu.group(0)
     assert 'action="/logout"' in menu.group(0)
     here = sam.get("/settings/spending").text
-    assert '<details class="menu here">' in here
-    assert re.search(r'href="/settings/spending" aria-current="page"', here)
+    assert re.search(r'href="/settings/spending" aria-current="page"', here)  # beside its page
+    assert re.search(r'href="/settings" aria-current="page"', here)  # and Settings in the panel
 
     # On the new frame the same things sit in the account corner of the sidebar.
     side = re.search(r'<aside class="side".*?</aside>', alex.get("/").text, re.S)
@@ -391,7 +391,7 @@ def test_changing_your_password_needs_the_one_in_use_and_keeps_this_browser(app,
 
 def test_showing_a_key_and_signing_everyone_out_ask_for_your_own(app, sam) -> None:
     page = sam.get("/settings/security").text
-    assert '<label for="reveal-password">Your password</label>' in page
+    assert re.search(r'<label[^>]*for="reveal-password">Your password</label>', page)
     assert "Everybody signs in as themselves" in page and "New family password" not in page
     form = {**_tokens(sam, "/settings/security"), "key": "anthropic_api_key"}
     assert sam.post("/settings/reveal", data={**form, "password": SHARED}).status_code == 401
