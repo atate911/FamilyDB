@@ -516,6 +516,7 @@ def memory() -> str:
         "memory.html",
         **views.memory_page(everything, people, app.clock.today(), app.settings.tzinfo),
         people=people,
+        slots=views.slot_map(people),
         kinds=views.MEMORY_KINDS,
     )
 
@@ -813,6 +814,8 @@ def _lists(conn: Any, kid: member_store.Member, today: date) -> dict[str, Any]:
     return {
         "id": kid.id,
         "name": kid.display_name,
+        "slot": kid.slot or 0,
+        "initial": kid.display_name[:1].upper(),
         "lists": lists,
         "answered": answered,
         "turned": turned,
@@ -863,7 +866,10 @@ def wishes() -> str:
             shown = [_lists(conn, visitor.member, today)]
         else:
             abort(404)
-        family = [member.display_name for member in member_store.list_all(conn)]
+        people = member_store.list_all(conn)
+        family = [member.display_name for member in people]
+    names = {member.id: member.display_name for member in people}
+    parents = [m.display_name for m in people if m.active and roles.may(m.role, "decide")]
     talk = (
         {}
         if visitor.may("decide") or not visitor.may("chat")
@@ -875,6 +881,8 @@ def wishes() -> str:
         ask_label=chat.KID_LIST_LABEL.format(name=personas.active(app.settings).name),
         **talk,
         kids=shown,
+        names=names,
+        parents_text=views.names_text([{"name": name} for name in parents]),
         parent=visitor.may("decide"),
         one=bool(wanted) or not visitor.may("decide"),
         choices=[(value or "everyday", name) for value, name, _ in views.WISH_LISTS],

@@ -10,7 +10,7 @@
   }
 
   function start(event) {
-    const handle = event.target.closest(".wish-grip");
+    const handle = event.target.closest(".wish__grip");
     if (!handle) return;
     const card = handle.closest(".wish");
     const list = card && card.parentElement;
@@ -35,7 +35,7 @@
       card.classList.remove("dragging");
       const after = place(list, card);
       if (after === before) return;
-      const form = card.querySelector("form.wish-list-move");
+      const form = card.querySelector("form.wish__move");
       if (!form) return;
       const position = document.createElement("input");
       position.type = "hidden";

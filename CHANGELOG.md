@@ -50,6 +50,12 @@ older than what is installed. It gets a date when it is released.
   a grown-up's own present, and a present for somebody else now shows to a kid,
   tagged, so she knows to keep it quiet. A present that names nobody is still kept
   from the kids, and Vera still never tells a kid of one in the chat.
+- **A new Kids' lists and What Vera knows.** Each kid's lists are one line to a
+  wish that opens to its buttons, with a grip to drag it (where scripts run);
+  a parent answers inside the line, sees what Vera turned away beside the list
+  and what was answered lately, and a kid sees what to do next about what Vera
+  could not put on her list. What Vera knows groups what the family has told her
+  by person, in each person's colour.
 
 
 ## v0.2.0 — second alpha (2026-10-05)

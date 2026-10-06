@@ -1,95 +1,85 @@
-{% extends 'base.html' %}
-{% from "_ui.html" import icon, page_head %}
-{% block title %}What {{ assistant }} remembers · {{ site_title }}{% endblock %}
+{% extends "base_kitchen.html" %}
+{% from "_kitchen.html" import icon, avatar, page_head with context %}
+{% block title %}What {{ assistant }} knows · {{ site_title }}{% endblock %}
 {# What she has been told about the family: a must is weighed as a rule, a guess only leans. Forgetting keeps the words, marked, so they are never saved again; the forms are edits.py's, through `remember`. #}
 {% block content %}
-{{ page_head('What %s remembers'|format(assistant),
-             'What the family has told %s about itself, weighed whenever it bears on a question. Forget something here and it does not come back from what was said before.'|format(assistant),
-             'heart') }}
+  {% call page_head('What ' ~ assistant ~ ' knows', 'What the family has told ' ~ assistant ~ ' about itself, weighed whenever it bears on a question. Forget something here and it doesn’t come back from what was said before.') %}
+    {% if visitor().may('change') %}<a class="btn btn--primary" href="#tell">{{ icon('plus') }}Tell {{ assistant }} something</a>{% endif %}
+  {% endcall %}
 
-{% for group in groups %}
-  <section class="panel">
-    <h2>{{ icon('family' if group.family else 'user') }}{{ group.who }}</h2>
-    <ul class="plain memories">
-      {% for row in group.rows %}
-        <li class="memory{{ ' ended' if row.ended }}">
-          <div>
-            <p class="memory-fact">
-              <strong>{{ row.fact }}</strong>
-              {% if row.firm %}<span class="tag warn">must</span>{% endif %}
-              {% if row.guess %}<span class="tag">a guess</span>{% endif %}
-              {% if row.until %}<span class="tag">{{ 'ended' if row.ended else 'until' }} {{ row.until }}</span>{% endif %}
-              <span class="tag">{{ row.kind }}</span>
-            </p>
-            <p class="muted small memory-source">
-              {{ row.source }}{% if row.said %}: <q>{{ row.said }}</q>{% endif %}
-            </p>
+  <div class="list-grid mt-4">
+    <div class="stack">
+      {% for group in groups %}
+        <section class="card mem-group" aria-labelledby="mg-{{ loop.index }}">
+          <h2 class="mem-group__h" id="mg-{{ loop.index }}">
+            {%- if group.family %}{{ avatar(0, '', 'md') }}{% else %}{{ avatar(slots.get(group.who.casefold(), 0), group.who[:1].upper(), 'md') }}{% endif -%}
+            {{ 'The family' if group.family else group.who }}</h2>
+          <ul class="mems">
+            {% for row in group.rows %}
+              <li class="mem{{ ' mem--firm' if row.firm }}{{ ' mem--ended' if row.ended }}">
+                <div class="mem__body">
+                  <p class="mem__fact"><b>{{ row.fact }}</b>
+                    {%- if row.firm %}<span class="tag tag--firm">Must</span>{% endif -%}
+                    {%- if row.guess %}<span class="tag tag--off">A guess</span>{% endif -%}
+                    {%- if row.until %}<span class="tag tag--when">{{ icon('cal') }}{{ 'Ended' if row.ended else 'Until' }} {{ row.until }}</span>{% endif -%}</p>
+                  <p class="mem__src"><span class="mem__kind">{{ row.kind }}</span> · {{ row.source }}{% if row.said %}: <q>{{ row.said }}</q>{% endif %}</p>
+                </div>
+                {% if visitor().may('change') %}
+                  <form method="post" action="{{ url_for('edits.forget_memory', memory_id=row.id) }}">
+                    <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+                    <button class="textbtn textbtn--quiet" type="submit">{{ icon('x', size='sm') }}Forget<span class="sr"> {{ row.fact }}</span></button>
+                  </form>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </section>
+      {% else %}
+        <p class="empty">{{ icon('memory') }}<span>Nothing yet. Tell {{ assistant }} something that matters, like “the girls are vegetarian now” or “Sam can’t do long drives”, and it is kept here.</span></p>
+      {% endfor %}
+    </div>
+
+    <div class="aside-stack">
+      {% if visitor().may('change') %}
+        <section class="card" id="tell" aria-labelledby="h-tell">
+          <h2 class="card__head" id="h-tell">Tell {{ assistant }} something to remember</h2>
+          <form class="form form--tight" method="post" action="{{ url_for('edits.add_memory') }}">
+            <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+            <div class="field"><label class="field__label" for="m-fact">What to remember</label>
+              <input id="m-fact" type="text" name="fact" required maxlength="200" placeholder="e.g. vegetarian" data-dictate /></div>
+            <div class="field"><label class="field__label" for="m-about">About</label>
+              <select id="m-about" name="about"><option value="family">The whole family</option>
+                {% for person in people %}<option value="{{ person.display_name }}">{{ person.display_name }}</option>{% endfor %}</select></div>
+            <div class="field"><label class="field__label" for="m-kind">Kind</label>
+              <select id="m-kind" name="category">{% for key, label in kinds.items() %}<option value="{{ key }}" {{ 'selected' if key == 'other' }}>{{ label | capitalize }}</option>{% endfor %}</select></div>
+            <div class="field"><label class="field__label" for="m-until">Until <span class="opt">(optional)</span></label>
+              <input id="m-until" type="date" name="until" /></div>
+            <label class="check check--top"><input type="checkbox" name="firm" value="yes" /><span>A must or a never (an allergy, a rule), not only a taste</span></label>
+            <div class="actions"><button class="btn btn--primary" type="submit">{{ icon('check') }}Remember it</button></div>
+          </form>
+        </section>
+      {% endif %}
+      <section class="card" aria-labelledby="h-how">
+        <h2 class="card__head" id="h-how">How {{ assistant }} weighs these</h2>
+        <ul class="legend-list">
+          <li><span class="tag tag--firm">Must</span><span>A rule: she never suggests against it.</span></li>
+          <li><span class="tag tag--off">A guess</span><span>Something she noticed herself. It only leans.</span></li>
+          <li><span class="tag tag--when">{{ icon('cal') }}Until</span><span>Kept until that day, then shown as ended.</span></li>
+        </ul>
+      </section>
+      {% if forgotten %}
+        <details class="card fold" id="forgotten">
+          <summary><h2>{{ icon('undo') }}Forgotten <span class="n-quiet">{{ forgotten | length }}</span></h2>{{ icon('chev', size='sm', cls='chev') }}</summary>
+          <div class="fold__body">
+            <p class="small muted">Not saved again from anything said before it was forgotten. To have one remembered after all, add it again.</p>
+            <ul class="mems mems--gone">
+              {% for row in forgotten %}
+                <li class="mem mem--gone"><div class="mem__body"><p class="mem__fact"><s>{{ row.fact }}</s></p><p class="mem__src">{{ row.about }} · {{ row.gone }}</p></div></li>
+              {% endfor %}
+            </ul>
           </div>
-          {% if visitor().may('change') %}
-            <form method="post" action="{{ url_for('edits.forget_memory', memory_id=row.id) }}">
-              <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-              <input type="hidden" name="once" value="{{ once_token() }}" />
-              <button class="quiet" type="submit">{{ icon('x') }}Forget<span class="sr"> {{ row.fact }}</span></button>
-            </form>
-          {% endif %}
-        </li>
-      {% endfor %}
-    </ul>
-  </section>
-{% else %}
-  <p class="panel muted empty">{{ icon('heart') }}<span>
-    Nothing yet. Tell {{ assistant }} something that matters, like "the girls are vegetarian now"
-    or "Sam can't do long drives", and it is kept here.</span>
-  </p>
-{% endfor %}
-
-{% if visitor().may('change') %}
-  <details class="panel" {{ 'open' if not groups }}>
-    <summary><span class="h2">{{ icon('plus') }}Tell {{ assistant }} something to remember</span></summary>
-    <form class="form" method="post" action="{{ url_for('edits.add_memory') }}">
-      <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
-      <input type="hidden" name="once" value="{{ once_token() }}" />
-      <div class="field wide">
-        <label for="fact">What to remember</label>
-        <input id="fact" name="fact" required maxlength="200" placeholder="vegetarian" />
-      </div>
-      <div class="field">
-        <label for="about">About</label>
-        <select id="about" name="about">
-          <option value="family">The whole family</option>
-          {% for person in people %}<option value="{{ person.display_name }}">{{ person.display_name }}</option>{% endfor %}
-        </select>
-      </div>
-      <div class="field">
-        <label for="category">Kind</label>
-        <select id="category" name="category">
-          {% for key, label in kinds.items() %}<option value="{{ key }}" {{ 'selected' if key == 'other' }}>{{ label }}</option>{% endfor %}
-        </select>
-      </div>
-      <div class="field">
-        <label for="until">Until <span class="optional">optional</span></label>
-        <input id="until" name="until" type="date" />
-      </div>
-      <div class="field wide">
-        <label class="check"><input type="checkbox" name="firm" value="yes" /> A must or a never (an allergy, a rule), not only a taste</label>
-      </div>
-      <div class="field wide actions"><button type="submit">{{ icon('check') }}Remember it</button></div>
-    </form>
-  </details>
-{% endif %}
-
-{% if forgotten %}
-  <details class="panel">
-    <summary><span class="h2">{{ icon('undo') }}Forgotten</span></summary>
-    <p class="muted small">Not saved again from anything said before it was forgotten. To have one remembered after all, add it again above.</p>
-    <ul class="plain memories">
-      {% for row in forgotten %}
-        <li class="memory gone">
-          <p class="memory-fact"><span>{{ row.fact }}</span></p>
-          <p class="muted small">{{ row.about }} · {{ row.gone }}</p>
-        </li>
-      {% endfor %}
-    </ul>
-  </details>
-{% endif %}
+        </details>
+      {% endif %}
+    </div>
+  </div>
 {% endblock %}

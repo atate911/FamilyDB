@@ -695,7 +695,7 @@ def test_an_admin_s_status_tile_lights_up_while_something_is_wrong(app, sam, fam
             alert_store.note(conn, kind, "", "test", now=NOW_ISO, keep_after="2026-01-01T00:00:00Z")
 
     def tile(browser) -> str:
-        page = browser.get("/memory").text  # a page still on the old frame, which has the tile
+        page = browser.get("/status").text  # a page still on the old frame, which has the tile
         found = re.search(r'<a class="to-status[^"]*"[^>]*>.*?</a>', page, re.S)
         return found.group(0) if found else ""
 

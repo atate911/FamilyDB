@@ -1087,7 +1087,7 @@ def test_a_page_the_bot_serves_is_never_cached(settings, clock, conn, family) ->
     [
         # Pages on the new frame, and pages not moved to it yet: each names its own files.
         ("/", "style-kitchen.css", "icons-kitchen.svg", "atkinson-400.woff2"),
-        ("/memory", "style.css", "icons.svg", "dm-sans.woff2"),
+        ("/status", "style.css", "icons.svg", "dm-sans.woff2"),
     ],
 )
 def test_a_browser_keeps_what_the_page_links_to_until_it_changes(
@@ -1101,7 +1101,7 @@ def test_a_browser_keeps_what_the_page_links_to_until_it_changes(
     assert stylesheet is not None
     style = (Path(web_module.__file__).parent / "static" / sheet).read_bytes()
     assert stylesheet.group(2) == hashlib.sha256(style).hexdigest()[:12]
-    assert re.search(r'src="/static/ask\.js\?v=[0-9a-f]{12}"', page) or path == "/memory"
+    assert re.search(r'src="/static/ask\.js\?v=[0-9a-f]{12}"', page) or path == "/status"
     assert re.search(rf'<use href="/static/{re.escape(sprite)}\?v=[0-9a-f]{{12}}#i-', page)
     kept = client.get(stylesheet.group(1))
     assert kept.status_code == 200 and "immutable" in kept.headers["Cache-Control"]
