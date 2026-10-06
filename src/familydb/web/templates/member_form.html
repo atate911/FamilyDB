@@ -1,5 +1,5 @@
-{% extends "base_kitchen.html" %}
-{% from "_kitchen.html" import icon, avatar with context %}
+{% extends "base.html" %}
+{% from "_ui.html" import icon, avatar with context %}
 {% block title %}{{ person.name }} · {{ site_title }}{% endblock %}
 {% block content %}
   <a class="crumb" href="{{ url_for('family.show') }}">{{ icon('chevl', size='sm') }}Family</a>

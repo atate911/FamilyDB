@@ -81,6 +81,9 @@ older than what is installed. It gets a date when it is released.
   the sign-in page, "Page not found" and the pages that say "for an admin" or
   "for grown-ups" are on the new look too. A kid who opens Settings is told who
   to ask.
+- **The old look's leftovers are gone.** Every page is on Kitchen Table now, so
+  the old stylesheet, icon sheet, menu script and favicons are removed, and the
+  home-screen icon and the page's tab icon are FamilyDB's own mark.
 
 
 ## v0.2.0 — second alpha (2026-10-05)

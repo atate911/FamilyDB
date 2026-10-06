@@ -56,8 +56,9 @@ HOME_IDEAS = 4
 HOME_TASKS = 4
 PLANS_AHEAD_DAYS = 90
 PLANS_BEHIND_DAYS = 30
-# The page's charcoal: `--bg` in style.css and the theme colour in base.html.
-CHARCOAL = "#0b0e0d"
+# The home-screen icon's ground (static/brand/icon-512.png), which the manifest's colours match so
+# opening the app is one colour from the icon to the splash.
+ICON_GROUND = "#0e1312"
 
 
 def _app() -> App:
@@ -90,12 +91,9 @@ def manifest() -> Response:
     """The home-screen manifest. Open before sign-in: a phone asks without the cookie, and it says
     nothing the sign-in page does not."""
     title = _app().settings.web_title
-    small, large = (
-        url_for("static", filename="icon-192.png"),
-        url_for("static", filename="icon-512.png"),
-    )
+    large = url_for("static", filename="brand/icon-512.png")
     icons = [
-        {"src": small, "sizes": "192x192"},
+        {"src": url_for("static", filename="brand/apple-touch-icon.png"), "sizes": "180x180"},
         {"src": large, "sizes": "512x512"},
         {"src": large, "sizes": "512x512", "purpose": "maskable"},
     ]
@@ -106,8 +104,8 @@ def manifest() -> Response:
         "start_url": "/",
         "scope": "/",
         "display": "standalone",
-        "background_color": CHARCOAL,
-        "theme_color": CHARCOAL,
+        "background_color": ICON_GROUND,
+        "theme_color": ICON_GROUND,
         "icons": [{**icon, "type": "image/png"} for icon in icons],
     }
     return Response(json.dumps(body, sort_keys=True), mimetype="application/manifest+json")

@@ -1,5 +1,5 @@
-{% extends "base_kitchen.html" %}
-{% from "_kitchen.html" import icon, page_head with context %}
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head with context %}
 {% block title %}Look · {{ site_title }}{% endblock %}
 {% block content %}
   {{ page_head('Look', 'How the page looks for you. It is kept with your name, so it comes with you to every phone and computer you sign in on, and everybody else keeps their own.' if follows else 'How the page looks on this phone or computer. It is kept in this browser, so each screen can have its own.') }}

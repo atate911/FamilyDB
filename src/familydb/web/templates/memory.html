@@ -1,5 +1,5 @@
-{% extends "base_kitchen.html" %}
-{% from "_kitchen.html" import icon, avatar, page_head with context %}
+{% extends "base.html" %}
+{% from "_ui.html" import icon, avatar, page_head with context %}
 {% block title %}What {{ assistant }} knows · {{ site_title }}{% endblock %}
 {# What she has been told about the family: a must is weighed as a rule, a guess only leans. Forgetting keeps the words, marked, so they are never saved again; the forms are edits.py's, through `remember`. #}
 {% block content %}

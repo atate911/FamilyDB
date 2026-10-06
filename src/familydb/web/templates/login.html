@@ -1,5 +1,5 @@
-{% extends "base_kitchen.html" %}
-{% from "_kitchen.html" import icon, brand_mark, wordmark with context %}
+{% extends "base.html" %}
+{% from "_ui.html" import icon, brand_mark, wordmark with context %}
 {% block title %}Sign in · {{ site_title }}{% endblock %}
 {% block body_class %}page-signin{% endblock %}
 {# Nobody is signed in, so there is no menu to draw: the page is the one card. #}

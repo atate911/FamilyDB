@@ -1,6 +1,6 @@
 """What the page's frame says around every page: who is signed in, how the assistant stands (the
 health pill), and the counts that sit by a page's name in the sidebar ("3 late", "1 to decide").
-Read from the log and the tables, no model call. Only a page built on `base_kitchen.html` asks, so
+Read from the log and the tables, no model call. Only a page built on `base.html` asks, so
 a page that has not moved to it costs nothing."""
 
 from __future__ import annotations

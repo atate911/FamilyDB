@@ -14,7 +14,7 @@ from familydb.web import create_app
 
 WEB = Path(package.__file__).parent
 STATIC = WEB / "static"
-KITCHEN = STATIC / "style-kitchen.css"
+KITCHEN = STATIC / "style.css"
 
 
 @pytest.fixture
@@ -24,8 +24,8 @@ def client(settings, clock, conn):
 
 def test_the_new_files_are_served(client) -> None:
     for name in (
-        "style-kitchen.css",
-        "icons-kitchen.svg",
+        "style.css",
+        "icons.svg",
         "brand/favicon.svg",
         "brand/favicon-32.png",
         "brand/favicon-16.png",
@@ -56,7 +56,7 @@ def test_the_stylesheet_has_no_colour_of_its_own_outside_the_fixed_layer() -> No
 
 
 def test_the_sprite_has_what_the_scripts_ask_for() -> None:
-    sprite = (STATIC / "icons-kitchen.svg").read_text("utf-8")
+    sprite = (STATIC / "icons.svg").read_text("utf-8")
     have = set(re.findall(r'<symbol id="i-([a-z0-9]+)"', sprite))
     assert "mic" in have  # dictate.js draws it
     assert len(have) == len(re.findall(r"<symbol ", sprite))  # no name twice

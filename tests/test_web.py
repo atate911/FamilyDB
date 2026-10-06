@@ -1085,7 +1085,7 @@ def test_a_page_the_bot_serves_is_never_cached(settings, clock, conn, family) ->
 @pytest.mark.parametrize(
     ("path", "sheet", "sprite", "font"),
     [
-        ("/", "style-kitchen.css", "icons-kitchen.svg", "atkinson-400.woff2"),
+        ("/", "style.css", "icons.svg", "atkinson-400.woff2"),
     ],
 )
 def test_a_browser_keeps_what_the_page_links_to_until_it_changes(

@@ -11,7 +11,7 @@
    Phosphor (in style.css) leaves them unset on purpose. */
 
 [data-theme] {
-  /* the effects (style-kitchen.css, section 11), plain: no light on the page, no scanlines, no glow
+  /* the effects (style.css, section 11), plain: no light on the page, no scanlines, no glow
      beyond the look's own, the heading face. A look may name its own; the test holds what they may be. */
   --fx-page: none;
   --fx-scan: transparent;

@@ -1,5 +1,5 @@
-{% extends "base_kitchen.html" %}
-{% from "_kitchen.html" import icon, avatar, vera_screen, page_head with context %}
+{% extends "base.html" %}
+{% from "_ui.html" import icon, avatar, vera_screen, page_head with context %}
 {% block title %}{{ "The kids’ lists" if parent else 'My list' }} · {{ site_title }}{% endblock %}
 {% block head %}
   <script src="{{ url_for('static', filename='wishes.js') }}" defer></script>

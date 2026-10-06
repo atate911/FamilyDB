@@ -1,5 +1,5 @@
-{% extends "base_kitchen.html" %}
-{% from "_kitchen.html" import icon, page_head, idea_tabs, idea_card, map_plot with context %}
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_head, idea_tabs, idea_card, map_plot with context %}
 {% block title %}Ideas · {{ site_title }}{% endblock %}
 {% block content %}
   {# Somebody who does not browse the household (a kid) sees plain cards: no search, filters, count, map or workings (docs/STYLE.md, "A kid's screen"). #}

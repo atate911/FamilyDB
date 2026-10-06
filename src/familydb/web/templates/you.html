@@ -1,5 +1,5 @@
-{% extends "base_kitchen.html" %}
-{% from "_kitchen.html" import icon, brand_mark, page_head with context %}
+{% extends "base.html" %}
+{% from "_ui.html" import icon, brand_mark, page_head with context %}
 {% block title %}Your password · {{ site_title }}{% endblock %}
 {% block content %}
   {% set kid = not visitor().may('browse') %}

@@ -1,4 +1,4 @@
-{% from "_kitchen.html" import icon with context %}
+{% from "_ui.html" import icon with context %}
 {% from "_settings.html" import grouped_options %}
 <p class="lede">Where the family lives decides the weather forecast, how far away things are, and what is on nearby. The town is enough; no street address.</p>
 <form class="card form form--tight setup-card" method="post" action="{{ url_for('settings.save') }}">

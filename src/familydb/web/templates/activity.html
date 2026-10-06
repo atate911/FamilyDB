@@ -1,5 +1,5 @@
-{% extends "base_kitchen.html" %}
-{% from "_kitchen.html" import icon, tag with context %}
+{% extends "base.html" %}
+{% from "_ui.html" import icon, tag with context %}
 {% block title %}{{ title }} · Status · {{ site_title }}{% endblock %}
 {% block content %}
   <a class="crumb" href="{{ url_for('web.status') }}">{{ icon('chevl', size='sm') }}Status</a>

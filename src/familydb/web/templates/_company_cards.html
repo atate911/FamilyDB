@@ -1,6 +1,6 @@
 {# The three companies to choose between, as setup's model step and the AI model settings page
    both offer them: a card each, leading back to the same page with that company chosen. #}
-{% from "_kitchen.html" import icon with context %}
+{% from "_ui.html" import icon with context %}
 <div class="companies">
   {% for one in companies %}
     <a class="company{% if one.name == company %} company--chosen{% endif %}"

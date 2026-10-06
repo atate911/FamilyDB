@@ -155,19 +155,13 @@ def test_every_look_is_written_down_once_in_the_stylesheets() -> None:
     # apart, so they are left out of the comparison. The block comes first, so a look's own wins.
     shared = set(_shared(themes))
     assert themes.index("\n[data-theme] {") < themes.index('\n[data-theme="')
-    # The page reads these two with a fallback, and Phosphor (in style.css) leaves them unset on
-    # purpose: a value for every look would change Phosphor's current page.
+    # The page reads these two with a fallback: a value for every look would change a page that
+    # does without.
     assert not shared & {"--here-icon", "--here-pill"}
     ignored = {"--sect"} | shared  # --sect: the quiet themes' one extra
     first = tokens(next(iter(blocks.values()))) - ignored
     for key, body in blocks.items():
         assert tokens(body) - ignored == first, f"{key}: {(tokens(body) - ignored) ^ first}"
-    # The older stylesheet still writes Phosphor's tokens on <html> under every theme (`:root`),
-    # so a token it names that a theme does not would leak into that theme: a theme names every one.
-    phosphor = (STATIC / "style.css").read_text("utf-8").split("/* ---- Names the page uses")[0]
-    assert tokens(phosphor) - {"--color-scheme"} <= first, tokens(phosphor) - first
-    assert first - tokens(phosphor) <= {"--primary-hover", "--here-icon", "--here-pill"}
-
     for one in looks.LOOKS:
         if not one.has_day:  # a green screen: one value for each token, always night
             assert "color-scheme: dark" in blocks[one.key], one.key

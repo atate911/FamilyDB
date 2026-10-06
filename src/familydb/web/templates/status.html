@@ -1,5 +1,5 @@
-{% extends "base_kitchen.html" %}
-{% from "_kitchen.html" import icon, tile, tag, page_head, vera_screen with context %}
+{% extends "base.html" %}
+{% from "_ui.html" import icon, tile, tag, page_head, vera_screen with context %}
 {% block title %}Status · {{ site_title }}{% endblock %}
 {# A part says how it stands three ways: its tile's colour, its words, and a tag (never colour alone). #}
 {% macro lines(rows, tags=false) %}

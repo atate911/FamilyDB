@@ -1,5 +1,5 @@
-{% extends "base_kitchen.html" %}
-{% from "_kitchen.html" import icon, avatar with context %}
+{% extends "base.html" %}
+{% from "_ui.html" import icon, avatar with context %}
 {% set editing = idea is not none %}
 {% block title %}{{ 'Change this idea' if editing else 'Add an idea' }} · {{ site_title }}{% endblock %}
 {% block content %}

@@ -1,5 +1,5 @@
 {# Small parts of the settings pages: setting, group, form, save bar, what the last save said. A setting says what it is, what it does, what it falls back to when empty, and whether it was changed here. #}
-{% from "_kitchen.html" import icon with context %}
+{% from "_ui.html" import icon with context %}
 
 {# A dropdown's choices under headings, as `(heading, [(value, words)])`, with `value` chosen. #}
 {% macro grouped_options(groups, value) -%}
@@ -86,7 +86,6 @@
 {%- endmacro %}
 
 {# The built name, kept for a release. #}
-{% macro box(entry) -%}{{ setting(entry) }}{%- endmacro %}
 
 {# A group of settings under a heading. Fine-tuning is folded and opens by itself when a setting has a complaint. #}
 {% macro group(entry) -%}

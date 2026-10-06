@@ -1,11 +1,10 @@
 """The page kept on a phone's home screen: the manifest, the icons and the tags that point at them.
 
 A phone asks for these without the page's cookie, so they are served before sign-in.
-scripts/icons.py draws the icons; these hold the files to it.
+The icons are the brand's own (static/brand); these hold the manifest and the tags to them.
 
 """
 
-import importlib.util
 import json
 import re
 import struct
@@ -43,14 +42,6 @@ def _png(data: bytes) -> tuple[int, int, int, bytes]:
     width, height, depth, colour = struct.unpack(">IIBB", header[:10])
     assert depth == 8
     return width, height, colour, zlib.decompress(pixels)
-
-
-def _icons_script():
-    spec = importlib.util.spec_from_file_location("icons_script", ROOT / "scripts" / "icons.py")
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def test_a_phone_reads_the_manifest_before_signing_in(settings, clock) -> None:
@@ -99,7 +90,7 @@ def test_every_page_points_a_phone_at_the_manifest_and_the_icon(
     for page in (login, ideas):
         assert '<link rel="manifest" href="/manifest.webmanifest" />' in page
         assert re.search(
-            r'<link rel="apple-touch-icon" href="/static/(?:brand/)?apple-touch-icon\.png'
+            r'<link rel="apple-touch-icon" href="/static/brand/apple-touch-icon\.png'
             r'(?:\?v=\w+)?" />',
             page,
         )
@@ -107,32 +98,16 @@ def test_every_page_points_a_phone_at_the_manifest_and_the_icon(
         assert '<meta name="apple-mobile-web-app-capable" content="yes" />' in page
 
 
-def test_the_app_s_colours_are_the_page_s(settings, clock) -> None:
-    """The home screen opens charcoal, from the icon to the manifest's splash, and Phosphor, the
-    look that is charcoal, wears the same: the manifest's colour, the browser bar's and the page's
-    own. (The page's default is Kitchen Table, held to its CSS in test_look.py; the icon and the
-    manifest follow it when the brand's own icons replace these, in the clean-up.)
-    """
+def test_the_manifest_s_colours_are_the_icon_s() -> None:
+    """The home screen opens in one colour from the icon to the manifest's splash."""
+    from familydb.web.routes import ICON_GROUND
+
+    _, _, _, pixels = _png((STATIC / "brand" / "icon-512.png").read_bytes())
+    assert pixels[1:4] == bytes.fromhex(ICON_GROUND[1:])
+
+
+def test_the_manifest_carries_the_icon_s_colour(settings, clock) -> None:
+    from familydb.web.routes import ICON_GROUND
+
     manifest = _manifest(_client(settings, clock, web_password=PASSWORD))
-    client = _client(settings, clock, web_password=PASSWORD)
-    client.set_cookie("fdb_look", "phosphor.auto")
-    page = client.get("/login").text
-    theme = re.search(r'<meta name="theme-color" content="(#[0-9a-f]{6})"', page)
-    block = re.search(
-        r'\[data-theme="phosphor"\] \{.*?--paper: (#[0-9a-f]{6});',
-        (STATIC / "themes.css").read_text(),
-        re.S,
-    )
-    assert theme and block
-    assert manifest["theme_color"] == manifest["background_color"] == theme[1] == block[1]
-    # The icon's ground too, so opening the app is one colour from the icon to the page.
-    _, _, _, pixels = _png((STATIC / "apple-touch-icon.png").read_bytes())
-    assert pixels[1:4] == bytes.fromhex(block[1][1:])
-
-
-def test_the_icons_are_the_ones_the_script_draws() -> None:
-    icons = _icons_script()
-    for name, size in icons.APP_ICONS.items():
-        # The pixels rather than the bytes: another zlib may pack the same picture differently.
-        drawn = _png(icons.app_icon(size))
-        assert _png((STATIC / name).read_bytes()) == drawn, f"run scripts/icons.py again: {name}"
+    assert manifest["theme_color"] == manifest["background_color"] == ICON_GROUND
