@@ -235,7 +235,8 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     return web
 
 
-# A monitor may ask healthz every few seconds, so these are not worth a query.
+# A monitor may ask healthz every few seconds, so these are not worth reading the settings:
+# healthz asks only whether the database answers and the jobs are running (familydb/health.py).
 SETTINGS_FREE = frozenset({"web.healthz", "static"})
 
 

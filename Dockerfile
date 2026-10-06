@@ -30,4 +30,7 @@ ENV PATH="/app/.venv/bin:$PATH" \
 EXPOSE 8080
 
 VOLUME ["/data"]
+# Well when the database answers and the scheduled jobs are running (`familydb health`), whether
+# or not the page is served.
+HEALTHCHECK --interval=2m --timeout=30s --start-period=2m --retries=3 CMD ["familydb", "health"]
 CMD ["familydb", "run"]

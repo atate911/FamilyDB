@@ -20,7 +20,7 @@ from flask import (
     url_for,
 )
 
-from familydb import agenda, personas, presents, roles
+from familydb import agenda, health, personas, presents, roles
 from familydb.app import App
 from familydb.availability import enrichment_available
 from familydb.dates import next_birthday
@@ -83,8 +83,10 @@ def _choices(rows: list[Any]) -> tuple[list[str], list[str]]:
 
 @bp.get("/healthz")
 def healthz() -> Response:
-    """A liveness check for a monitor or proxy, open before sign-in."""
-    return Response("ok\n", mimetype="text/plain")
+    """For a monitor or proxy, open before sign-in: "ok", or 503 and what is wrong (the database
+    does not answer, or the scheduled jobs went quiet; familydb/health.py)."""
+    ok, words = health.check(_app())
+    return Response(f"{words}\n", status=200 if ok else 503, mimetype="text/plain")
 
 
 @bp.get("/sw.js")

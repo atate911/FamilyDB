@@ -686,6 +686,18 @@ def doctor(
 
 
 @app.command()
+def health() -> None:
+    """Whether FamilyDB is well: the database answers and the scheduled jobs are running.
+    Exits 1 when not, for Docker's HEALTHCHECK or a monitor."""
+    from familydb import health as well
+
+    ok, words = well.check(build_app())
+    typer.echo(words)
+    if not ok:
+        raise typer.Exit(code=1)
+
+
+@app.command()
 def run() -> None:
     """Start the bot: apply migrations, then serve the configured channels until stopped."""
     application = build_app()
@@ -710,6 +722,9 @@ def run() -> None:
 
     scheduler = build_scheduler(application)
     scheduler.start()
+    from familydb import health
+
+    health.ticked(application)
     stop_web = None
     if web_available(settings):
         from familydb.web.server import serve_in_thread
@@ -727,6 +742,8 @@ def run() -> None:
         if stop_web is not None:
             stop_web()
         scheduler.shutdown(wait=False)
+        with suppress(Exception):  # a database gone with the stop is no reason to raise
+            health.stopped(application)
     log.info("stopped")
 
 

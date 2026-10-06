@@ -249,7 +249,10 @@ What a sign-in buys: a parent's password (or, for now, a kid's) is most of the b
 ```bash
 curl -sI http://127.0.0.1:8080/            # 302 to /login, plus the security headers
 curl -s http://127.0.0.1:8080/healthz      # ok
+familydb health                            # the same, without the page (exit 1 when unwell)
 ```
+
+`/healthz` and `familydb health` say "ok" when the database answers and the scheduled jobs are running; otherwise what is wrong, with a 503 (or exit 1): "the database does not answer", or "the scheduled jobs have not run for 20 minutes" when `familydb run` went quiet without stopping. A page served alone (`familydb web`) has no jobs and is judged by its database; a bot stopped on purpose is not trouble. The Docker image runs `familydb health` as its HEALTHCHECK, so `docker compose ps` shows "unhealthy" when it fails three times in a row.
 
 `familydb web --port 8099` serves the page alone in the foreground, with no Telegram or jobs: the quickest way to try a `WEB_` change without restarting the bot.
 

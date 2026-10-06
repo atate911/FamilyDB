@@ -16,6 +16,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
+from familydb import health
 from familydb.alerts import run_alerts
 from familydb.app import App
 from familydb.availability import digest_configured, enrichment_available
@@ -212,6 +213,7 @@ def apply_settings(app: App, scheduler: BaseScheduler) -> list[str]:
     moved = sync_jobs(app, scheduler)
     if moved:
         log.info("settings changed; %s", ", ".join(moved))
+    health.ticked(app)  # the jobs are running (familydb/health.py)
     return moved
 
 
