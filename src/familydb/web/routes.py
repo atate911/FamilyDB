@@ -34,7 +34,7 @@ from familydb.store import plans as plan_store
 from familydb.store import tasks as task_store
 from familydb.store import wishes as wish_store
 from familydb.store.ideas import KIND_SUGGESTIONS
-from familydb.web import auth, chat, views
+from familydb.web import auth, chat, shell, views
 from familydb.web import status as status_page
 from familydb.web.chat import WHO_KEY
 
@@ -51,7 +51,7 @@ RATINGS = tuple(range(10, 0, -1))
 RESTAURANT_KIND = "restaurant"
 FILTERS = ("q", "kind", "status", "who")
 HOME_AHEAD_DAYS = 60
-HOME_PLANS = 5
+HOME_PLANS = 4
 HOME_IDEAS = 4
 HOME_TASKS = 4
 PLANS_AHEAD_DAYS = 90
@@ -135,6 +135,7 @@ def home() -> Response | str:
         # Home takes no search; an old bookmark's goes on to the ideas list.
         return redirect(url_for("web.ideas", **request.args))
     app = _app()
+    now = app.clock.now()
     today = app.clock.today()
     tz = app.settings.tzinfo
     visitor = auth.visitor()
@@ -142,6 +143,8 @@ def home() -> Response | str:
     # The box is the chat's, so only for a role that may chat.
     talks = visitor.may("chat")
     kid = chat.is_kid()
+    # For somebody who does not browse the household (a kid): only what is hers (docs/STYLE.md).
+    browsing = visitor.may("browse")
     with closing(app.connect()) as conn:
         progress = status_page.setup_progress(app, conn)
         if manages and not status_page.ready_to_answer(progress):
@@ -152,32 +155,158 @@ def home() -> Response | str:
         if _gifts_hidden():
             everything = [idea for idea in everything if not idea_store.is_gift(idea)]
         unfinished = status_page.setup_steps(app, conn) if manages else []
-        family = [member.display_name for member in member_store.list_all(conn)]
+        people = member_store.list_all(conn)
         todo = task_store.list_all(conn, status="open", owner_id=_own_only())
         talk = chat.glance(app, conn) if talks else None
         wished = wish_glance(conn, today)
-    coming = [entry for entry in on if entry.days()[-1] >= today][:HOME_PLANS]
-    newest = sorted(everything, key=lambda idea: idea.created_at, reverse=True)[:HOME_IDEAS]
+        slots = views.slot_map(people)
+        coming = _plan_rows(conn, app, on, today, slots, visitor.member if not browsing else None)
+        rating = _to_rate(conn, today) if visitor.may("change") else None
+        newest = sorted(everything, key=lambda idea: idea.created_at, reverse=True)[:HOME_IDEAS]
+        mini = [_idea_mini(conn, app, idea) for idea in newest]
+        today_card = status_page.vera_today(app, conn) if browsing else None
+        left = chat.messages_left(app, conn, visitor.member)
+    late = sum(views.is_late(task, tz, today) for task in todo)
+    family = [member.display_name for member in people]
+    yes = _latest_yes(wished, people) if wished and not wished["parent"] else None
+    line = views.home_line(
+        coming,
+        late,
+        plans_href=url_for("web.plans"),
+        todo_href=url_for("web.tasks"),
+        kid=not browsing,
+        others=_others(coming, visitor.member),
+        yes=yes,
+    )
     return render_template(
         "home.html",
+        hello=views.greeting(now.astimezone(tz).hour, visitor.name),
         today=views.day_text(today.isoformat()),
-        coming=[views.entry_row(entry, today) for entry in coming],
-        blips=views.radar_blips(coming, today),
+        line=line,
+        coming=coming[:HOME_PLANS],
+        more_plans=max(0, len(coming) - HOME_PLANS),
         source=seen.source,
         source_note=views.AGENDA_NOTES[seen.source],
-        ideas=[views.idea_row(idea, tz) for idea in newest],
+        ideas=mini,
         idea_count=len(everything),
         restaurant_count=sum(1 for idea in everything if idea.kind == RESTAURANT_KIND),
-        tasks=[views.task_brief(task, tz, today) for task in todo[:HOME_TASKS]],
+        tasks=[views.todo_row(t, tz, today, slots, kid=not browsing) for t in todo[:HOME_TASKS]],
         task_count=len(todo),
+        late_count=late,
         setup=unfinished,
         talk=talk,
         wishes=wished,
+        kids=_kids_card(wished, people),
+        rating=rating,
+        vera=today_card,
+        left=left,
+        readers=views.names_text(
+            [{"name": p.display_name} for p in people if roles.may(p.role, "decide")]
+        ),
+        busy=bool(talk and talk["state"] == "thinking"),
         **chat.box(family, prompt=chat.KID_HOME_PROMPT if kid else chat.HOME_PROMPT),
-        question=True,
         typed=chat.asked(),
-        starters=views.starters(today, kid=kid),
     )
+
+
+def _plan_rows(
+    conn: Any,
+    app: App,
+    entries: list[agenda.Entry],
+    today: date,
+    slots: dict[str, int],
+    only_for: member_store.Member | None,
+) -> list[dict[str, Any]]:
+    """What is coming, with whom it is for and how far it is. A kid's are the ones that name her,
+    or nobody (so everybody)."""
+    rows = []
+    for entry in entries:
+        if entry.days()[-1] < today:
+            continue
+        idea = idea_store.get(conn, entry.idea_id) if entry.idea_id else None
+        people = views.people_for(idea, slots)
+        if only_for is not None and not views.names_in(people, only_for):
+            continue
+        place = place_store.get(conn, idea.place_id) if idea and idea.place_id else None
+        away = views.away_from_home(place, app.settings)
+        rows.append(views.entry_row(entry, today, people=people, away=away))
+    return rows
+
+
+def _others(coming: list[dict[str, Any]], me: member_store.Member | None) -> str:
+    """For a kid's sentence: who else is on her next plan ("with Theo")."""
+    if not coming or me is None:
+        return ""
+    named = [p for p in coming[0]["people"] if p["name"].casefold() != me.display_name.casefold()]
+    return views.names_text([p for p in named if p["initial"]])
+
+
+def _to_rate(conn: Any, today: date) -> dict[str, Any] | None:
+    """The oldest plan nobody has said how it went, for Home's three faces, and how many more."""
+    waiting = plan_store.unrated(
+        conn,
+        today=today.isoformat(),
+        since=(today - timedelta(days=shell.RATE_DAYS)).isoformat(),
+    )
+    if not waiting:
+        return None
+    plan = waiting[0]
+    return {
+        "plan_id": plan.id,
+        "idea_id": plan.idea_id,
+        "title": plan.title,
+        "day": plan.start[:10],
+        "when": views.day_short(date.fromisoformat(plan.start[:10])),
+        "more": len(waiting) - 1,
+    }
+
+
+def _idea_mini(conn: Any, app: App, idea: Any) -> dict[str, Any]:
+    """A new idea as Home's small row: its picture, its title, and how far it is or that it has
+    not been looked up."""
+    place = place_store.get(conn, idea.place_id) if idea.place_id else None
+    away = views.away_from_home(place, app.settings)
+    row = views.idea_row(idea, app.settings.tzinfo)
+    return {
+        **row,
+        "glyph": views.glyph_for(idea.kind, gift=idea_store.is_gift(idea)),
+        "away": away.words if away else None,
+    }
+
+
+def _kids_card(wished: dict[str, Any] | None, people: list[member_store.Member]) -> list[Any]:
+    """For a parent's Home: each kid with their colour, how much is on their list and what waits."""
+    if not wished or not wished["parent"]:
+        return []
+    by_id = {person.id: person for person in people}
+    cards = []
+    for kid in wished["kids"]:
+        person = by_id.get(kid["id"])
+        waiting = sum(1 for row in wished["waiting"] if row["id"] == kid["id"])
+        pronoun = {"female": "her", "male": "his"}.get(person.gender or "", "their")
+        cards.append(
+            {
+                **kid,
+                "slot": person.slot or 0 if person else 0,
+                "initial": kid["name"][:1].upper(),
+                "waiting": waiting,
+                "pronoun": pronoun,
+                "top": [row["title"] for row in kid["lists"][0]["rows"][: wished["top"]]],
+            }
+        )
+    return cards
+
+
+def _latest_yes(
+    wished: dict[str, Any], people: list[member_store.Member]
+) -> tuple[str, str] | None:
+    """A kid's latest yes: (who said it, the wish), for her sentence on Home."""
+    yeses = [row for row in wished["mine"]["answered"] if row["status"] == "granted"]
+    if not yeses:
+        return None
+    latest = max(yeses, key=lambda row: row["answered_at"] or "")
+    who = next((p.display_name for p in people if p.id == latest["answered_by"]), "A grown-up")
+    return who, latest["title"]
 
 
 @bp.get("/ideas")

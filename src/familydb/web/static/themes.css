@@ -134,10 +134,7 @@
   --vera: light-dark(#1E5C4F, #6DFF9C);
   --vera-bg: light-dark(#1E5C4F, #4FE08A);
   --cursor: light-dark(#1B9A55, #6DFF9C);
-  /* Vera's box is a plain card for now, as in every paper look: today's Home colours its words with the page's ink,
-     which a dark green box would swallow by day. Its dark green (--ask-bg #12382F by day, #0F2A22 at night) and its own
-     --ask-ink, --ask-ink-2, --ask-rim, --ask-edge, --ask-rule and --ask-fill* (design/themes.css) come with the new Home. */
-  --ask-bg: var(--card);
+  --ask-bg: light-dark(#12382F, #0F2A22);
   /* the built set's colours for parts of the site and kinds (Kitchen Table's layout keeps kinds neutral; these let the old layout read in it) */
   --lilac: light-dark(#5448B0, #B5AEF0);
   --cyan: light-dark(#0A6178, #8DD0E0);
@@ -176,6 +173,13 @@
   --on-vera: light-dark(#FFFFFF, #0C100F);
   --vera-soft: light-dark(#DCEAE2, #10241A);
   --vera-line: light-dark(#B9D3C6, #22513A);
+  --ask-ink: light-dark(#FFFFFF, #EEE8DA);
+  --ask-ink-2: light-dark(#D2E3DA, #C3D2CA);
+  --ask-rim: inset 0 0 0 1px light-dark(rgb(255 255 255 / .06), transparent), inset 0 0 0 1.5px light-dark(transparent, #3E8A66), inset 0 0 28px light-dark(transparent, rgb(109 255 156 / .08)), 0 0 26px -10px light-dark(transparent, rgb(109 255 156 / .45));
+  --ask-edge: light-dark(transparent, #7E8C86);
+  --ask-rule: rgb(255 255 255 / .16);
+  --ask-fill: rgb(255 255 255 / .12);
+  --ask-fill-2: rgb(255 255 255 / .18);
   --send: light-dark(#F2C14E, #E0B04A);
   --send-2: light-dark(#E5B035, #F0C35C);
   --on-send: light-dark(#1D2526, #0C100F);

@@ -39,6 +39,9 @@ STALE_IDEA = (
     "make your change again."
 )
 RECORDED = "Recorded. #{id} is marked done."
+# "How did it go?" on Home: three faces, kept as the same 1 to 10 rating the longer form takes.
+FACES = {"loved": 9, "ok": 6, "not-great": 3}
+RATED = "Thanks. That goes into the next suggestions."
 SCHEDULED = "On the calendar: {title}."
 MOVED = "Moved to {when}."
 CANCELLED = "Cancelled."
@@ -287,11 +290,18 @@ def record_outcome(idea_id: int) -> Response:
         values["happened_on"] = happened
     if rating := _text(form, "rating"):
         values["rating"] = int(rating)  # a fixed list of scores, so this cannot fail
+    went = _text(form, "went")
+    if went in FACES:
+        values["rating"] = FACES[went]
+    if plan_id := _text(form, "plan_id"):
+        values["plan_id"] = int(plan_id) if plan_id.isdigit() else None
     repeat = _text(form, "would_repeat")
     if repeat in {"yes", "no"}:
         values["would_repeat"] = repeat == "yes"
     _, complaint = run("record_outcome", values)
-    _say(complaint or RECORDED.format(id=idea_id))
+    _say(complaint or (RATED if went in FACES else RECORDED.format(id=idea_id)))
+    if _text(form, "back") == "home":  # asked on Home: back there for the next one
+        return _back("web.home")
     return _back("web.idea", idea_id=idea_id)
 
 

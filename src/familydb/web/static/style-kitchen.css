@@ -358,6 +358,18 @@ a.item:hover, .item--link:hover { background: var(--paper); color: var(--ink); }
 .ask .composer__send:hover { background: var(--send-2); border-color: var(--send-2); }
 .ask .composer__foot { color: var(--ask-ink-2); }
 .ask :focus-visible { outline-color: var(--send); }
+/* Added to the design (it drew neither): the mic dictate.js puts beside Send, and the rows the box gains when
+   the family shares one password ("From") or the phone may send where it is. Both sit in her dark box too. */
+.mic-slot { display: inline-flex; align-items: stretch; }
+.mic-slot:empty { display: none; }
+button.mic { min-width: var(--target); min-height: var(--target); padding: 0; display: inline-grid; place-items: center; border-radius: var(--r-md); border: 1.5px solid var(--edge); background: var(--field); color: var(--ink); cursor: pointer; }
+button.mic .icon { width: 22px; height: 22px; }
+button.mic.listening { background: var(--glass); border-color: var(--phosphor); color: var(--phosphor); }
+.ask button.mic { background: var(--ask-fill); border-color: var(--ask-edge, var(--ask-rule)); color: var(--ask-ink); }
+.ask button.mic.listening { background: var(--glass); border-color: var(--phosphor); color: var(--phosphor); }
+.ask .composer__who { color: var(--ask-ink-2); }
+.ask .composer__who label { color: inherit; }
+.composer__who label { display: inline-flex; align-items: center; gap: var(--s2); min-height: var(--target); cursor: pointer; }
 
 /* 5.13 Fields and forms */
 .field { display: grid; gap: 6px; align-content: start; min-width: 0; }

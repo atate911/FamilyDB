@@ -18,10 +18,17 @@ older than what is installed. It gets a date when it is released.
   charcoal at night, deep green for what you act on, and each of you in your
   own colour. It is what everybody sees now, except anybody who chose a look
   before, who keeps theirs. To change yours, open Look from the menu.
-- **A new menu** is coming, page by page. The first part is in: a sidebar on a
-  computer, a tab bar on a phone, Vera's state in a pill, and counts beside the
-  pages that need somebody ("3 late", "1 to decide"). The phone's menu page
-  (`/more`) is the first page to use it.
+- **A new menu and a new Home**, the first pages of the new layout (the others
+  follow, one at a time). A sidebar on a computer, a tab bar on a phone, Vera's
+  state in a pill, and counts beside the pages that need somebody ("3 late",
+  "1 to decide"). Home opens with a greeting and one line on what is coming and
+  what is late, then Vera's box, what is next (with who it is for and how far
+  it is), your to-dos, what was just added, the kids' lists, and, for
+  grown-ups, "How did it go?" for a plan nobody has rated and what Vera cost
+  today. A kid's Home is simpler: her box, what is next for her, her list and
+  her own to-dos. The ways to start under the box are gone. Each of you has a
+  colour, kept with your name.
+
 
 ## v0.2.0 — second alpha (2026-10-05)
 

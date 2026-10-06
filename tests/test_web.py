@@ -1009,28 +1009,38 @@ def test_a_page_the_bot_serves_is_never_cached(settings, clock, conn, family) ->
     assert client.get("/static/style.css").headers["Cache-Control"] != "no-store"
 
 
-def test_a_browser_keeps_what_the_page_links_to_until_it_changes(settings, clock, conn, family):
+@pytest.mark.parametrize(
+    ("path", "sheet", "sprite", "font"),
+    [
+        # Pages on the new frame, and pages not moved to it yet: each names its own files.
+        ("/", "style-kitchen.css", "icons-kitchen.svg", "atkinson-400.woff2"),
+        ("/ideas", "style.css", "icons.svg", "dm-sans.woff2"),
+    ],
+)
+def test_a_browser_keeps_what_the_page_links_to_until_it_changes(
+    settings, clock, conn, family, path, sheet, sprite, font
+):
     """Named with a fingerprint of what is in it, a file is kept for a year rather than asked
     about again on every page, and an upgrade that changes it changes its name."""
     client = _client(settings, clock)
-    page = client.get("/").text
-    stylesheet = re.search(r'href="(/static/style\.css\?v=([0-9a-f]{12}))"', page)
+    page = client.get(path).text
+    stylesheet = re.search(rf'href="(/static/{re.escape(sheet)}\?v=([0-9a-f]{{12}}))"', page)
     assert stylesheet is not None
-    style = (Path(web_module.__file__).parent / "static" / "style.css").read_bytes()
+    style = (Path(web_module.__file__).parent / "static" / sheet).read_bytes()
     assert stylesheet.group(2) == hashlib.sha256(style).hexdigest()[:12]
-    assert re.search(r'src="/static/ask\.js\?v=[0-9a-f]{12}"', page)
-    assert re.search(r'<use href="/static/icons\.svg\?v=[0-9a-f]{12}#i-', page)
+    assert re.search(r'src="/static/ask\.js\?v=[0-9a-f]{12}"', page) or path == "/ideas"
+    assert re.search(rf'<use href="/static/{re.escape(sprite)}\?v=[0-9a-f]{{12}}#i-', page)
     kept = client.get(stylesheet.group(1))
     assert kept.status_code == 200 and "immutable" in kept.headers["Cache-Control"]
     # A name it no longer has, or none, is still asked about every time.
-    for stale in ("/static/style.css?v=000000000000", "/static/style.css"):
+    for stale in (f"/static/{sheet}?v=000000000000", f"/static/{sheet}"):
         assert client.get(stale).headers["Cache-Control"] == "no-cache"
     # The stylesheet names the fonts itself, so the preload names them the same way, bare, or
     # the browser would fetch each twice; they are kept a day.
-    assert '<link rel="preload" href="/static/fonts/dm-sans.woff2"' in page
-    assert 'url("fonts/dm-sans.woff2")' in style.decode()
-    font = client.get("/static/fonts/dm-sans.woff2")
-    assert font.headers["Cache-Control"] == "public, max-age=86400"
+    assert f'<link rel="preload" href="/static/fonts/{font}"' in page
+    assert f'url("fonts/{font}")' in style.decode()
+    served = client.get(f"/static/fonts/{font}")
+    assert served.headers["Cache-Control"] == "public, max-age=86400"
     assert client.get("/static/nothing.css?v=abc").status_code == 404
 
 

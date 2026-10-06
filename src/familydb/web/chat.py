@@ -21,10 +21,12 @@ from flask import (
     url_for,
 )
 
-from familydb import personas
+from familydb import personas, roles
+from familydb.agent import spending
 from familydb.app import App
 from familydb.channels.web import DEFAULT_CHAT, MAX_MESSAGE, Handing, WebChat
 from familydb.config import Settings
+from familydb.store import calls
 from familydb.store import members as member_store
 from familydb.store import messages as message_store
 from familydb.store.messages import Message
@@ -94,6 +96,16 @@ PRIVATE = "member:{id}"
 
 def private_chat(member_id: int) -> str:
     return PRIVATE.format(id=member_id)
+
+
+def messages_left(app: App, conn: Any, member: member_store.Member | None) -> int | None:
+    """How many more messages a kid may send today, counted as the pipeline counts them; None for
+    anybody the limit does not hold (grown-ups, or no limit set)."""
+    limit = app.settings.kid_daily_messages
+    if member is None or not limit or not roles.daily_limited(member.role):
+        return None
+    since = spending.day_start(app.settings, app.clock.now())
+    return max(0, limit - calls.answered_for(conn, member.id, since=since))
 
 
 def is_kid() -> bool:

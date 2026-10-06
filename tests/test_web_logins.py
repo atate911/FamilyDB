@@ -59,7 +59,8 @@ def _as(app, name: str, password: str, api=None):
 
 
 def _said(response) -> str:
-    return " ".join(re.findall(r'class="said"[^>]*>\s*([^<]+)', response.text))
+    """What the last form said: the older pages' line, or the new frame's flash."""
+    return " ".join(re.findall(r'class="(?:said|banner__text)"[^>]*>\s*([^<]+)', response.text))
 
 
 @pytest.fixture
@@ -338,10 +339,12 @@ def test_the_settings_tile_opens_a_menu_with_every_settings_page_then_you(app, s
     assert '<details class="menu here">' in here
     assert re.search(r'href="/settings/spending" aria-current="page"', here)
 
-    theirs = re.search(r'<details class="menu[^"]*">.*?</details>', alex.get("/").text, re.S)
-    assert theirs is not None and "/settings" not in theirs.group(0)
-    assert re.findall(r'<a[^>]* href="([^"]+)"', theirs.group(0)) == ["/look", "/you"]
-    assert "Alex" in theirs.group(0) and 'action="/logout"' in theirs.group(0)
+    # On the new frame the same things sit in the account corner of the sidebar.
+    side = re.search(r'<aside class="side".*?</aside>', alex.get("/").text, re.S)
+    assert side is not None and "/settings" not in side.group(0)
+    theirs = side.group(0).split('<div class="me">')[1]
+    assert re.findall(r'<a[^>]* href="([^"]+)"', theirs) == ["/look", "/you"]
+    assert "<b>Alex</b>" in theirs and 'action="/logout"' in theirs
 
 
 def test_the_chat_speaks_as_whoever_is_signed_in(app, sam, family, conn) -> None:
@@ -567,7 +570,7 @@ def test_home_offers_only_what_a_role_may_do(app, sam, family, monkeypatch) -> N
     assert home.status_code == 200
     assert "/chat" not in home.text  # no box, no ways to start, no way into the conversation
     assert "The swings are waiting." not in home.text and "ask.js" not in home.text
-    assert "<h1>" in home.text  # a heading still, with the box's label gone
+    assert '<h1 class="sr">' in home.text  # a heading still, with the box's label gone
     assert "Buy paper towels" in home.text and "/done" not in home.text
     listed = girls.get("/tasks").text
     assert "Buy paper towels" in listed and f"/task/{towels}/done" not in listed

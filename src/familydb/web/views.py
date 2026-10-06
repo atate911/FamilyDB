@@ -159,6 +159,26 @@ def local_day(value: str, tz: ZoneInfo) -> str:
     return moment.astimezone(tz).date().isoformat()
 
 
+# The picture beside a kind of idea (the new sprite's names); anything else gets a spark.
+KIND_GLYPHS = {
+    "restaurant": "utensils",
+    "activity": "sparkle",
+    "outing": "sparkle",
+    "day_trip": "mountain",
+    "trip": "suitcase",
+    "show": "ticket",
+    "event": "star",
+    "seasonal": "leaf",
+}
+
+
+def glyph_for(kind: str | None, *, gift: bool = False) -> str:
+    """A gift is a gift whatever kind it is; otherwise the kind's own picture."""
+    if gift:
+        return "gift"
+    return KIND_GLYPHS.get((kind or "").lower().replace(" ", "_"), "sparkle")
+
+
 def idea_row(idea: Idea, tz: ZoneInfo) -> dict[str, Any]:
     return {
         "id": idea.id,
@@ -292,6 +312,164 @@ def task_brief(task: Task, tz: ZoneInfo, today: date) -> dict[str, Any]:
         "reminder": local_moment(task.reminder.remind_at, tz) if task.reminder else None,
         "revision": task.revision,
     }
+
+
+# -- Home: the greeting, the one useful line under it, and the people and colours in its rows.
+
+NUMBER_WORDS = ("no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten")
+EVERYONE = "Everyone"
+
+
+def money_text(dollars: float) -> str:
+    """ "$0.00", "$2.00"; under ten cents "4¢", which a dollar figure would round to nothing."""
+    if 0 < dollars < 0.1:
+        return f"{max(round(dollars * 100), 1)}¢"
+    return f"${dollars:.2f}"
+
+
+def count_words(count: int, one: str, many: str) -> str:
+    """ "one to-do", "three to-dos": a small number as a word, a big one as digits."""
+    number = NUMBER_WORDS[count] if count <= 10 else str(count)
+    return f"{number} {one if count == 1 else many}"
+
+
+def greeting(hour: int, name: str | None) -> str:
+    """ "Good morning, Sam"; with the family sharing one password there is no name to say."""
+    part = "morning" if hour < 12 else "afternoon" if hour < 18 else "evening"
+    return f"Good {part}, {name}" if name else f"Good {part}"
+
+
+def slot_map(people: Sequence[Member]) -> dict[str, int]:
+    """Each person's colour by name, for the lists that carry only names (an idea's people, a
+    to-do's owner, a chat line). Names are matched without regard to case."""
+    return {person.display_name.casefold(): person.slot or 0 for person in people}
+
+
+def slot_of(name: str | None, slots: dict[str, int]) -> int:
+    """A person's colour (1 to 8), or 0 for Everyone, nobody, or somebody not on the list."""
+    return slots.get((name or "").casefold(), 0)
+
+
+def person_of(name: str | None, slots: dict[str, int]) -> dict[str, Any]:
+    """A name and the colour and letter that go beside it; Everyone is the house, with no letter."""
+    if not name or name == EVERYONE:
+        return {"name": EVERYONE, "slot": 0, "initial": ""}
+    return {"name": name, "slot": slot_of(name, slots), "initial": name[:1].upper()}
+
+
+def people_for(idea: Idea | None, slots: dict[str, int]) -> list[dict[str, Any]]:
+    """Who a plan is for: the people its idea names, or Everyone when it names nobody."""
+    names = list(idea.participants) if idea else []
+    return [person_of(name, slots) for name in names] or [person_of(None, slots)]
+
+
+def names_text(people: Sequence[dict[str, Any]]) -> str:
+    """ "Maya", "Maya and Theo", "Maya, Theo and Sam"."""
+    names = [person["name"] for person in people]
+    if len(names) <= 1:
+        return "".join(names)
+    return f"{', '.join(names[:-1])} and {names[-1]}"
+
+
+def names_in(people: Sequence[dict[str, Any]], member: Member | None) -> bool:
+    """Whether a plan's people include this person, or nobody in particular (so everyone)."""
+    if member is None or all(person["slot"] == 0 and not person["initial"] for person in people):
+        return True
+    return any(person["name"].casefold() == member.display_name.casefold() for person in people)
+
+
+def day_short(day: date) -> str:
+    """ "Sun 27 Sep"."""
+    return f"{day:%a} {day.day} {day:%b}"
+
+
+def late_words(due: date, today: date, *, kid: bool = False) -> str | None:
+    """ "6 days late" for a grown-up, "Was due Sun 27 Sep" for a kid; None while it is not late."""
+    behind = (today - due).days
+    if behind <= 0:
+        return None
+    if kid:
+        return f"Was due {day_short(due)}"
+    return f"{behind} day{'' if behind == 1 else 's'} late"
+
+
+def todo_row(
+    task: Task, tz: ZoneInfo, today: date, slots: dict[str, int], *, kid: bool = False
+) -> dict[str, Any]:
+    """One to-do as the new rows draw it: who, when in words, and how late."""
+    due = None
+    when = "No date"
+    late = None
+    if task.due_at:
+        moment = datetime.fromisoformat(task.due_at.replace("Z", "+00:00")).astimezone(tz)
+        due = moment.date()
+        when = day_short(due)
+        if (moment.hour, moment.minute) != (0, 0):
+            when += f", {moment:%H:%M}"
+        late = late_words(due, today, kid=kid)
+        if kid and late is None and (ahead := relative_text(due.isoformat(), today)):
+            when += f", {ahead}"
+    elif task.preferred_window:
+        when = task.preferred_window
+    return {
+        "id": task.id,
+        "title": task.title,
+        "revision": task.revision,
+        "person": person_of(task.owner, slots),
+        "when": when,
+        "late": late,
+        "reminder": local_moment(task.reminder.remind_at, tz) if task.reminder else None,
+    }
+
+
+def home_line(
+    coming: Sequence[dict[str, Any]],
+    late: int,
+    *,
+    plans_href: str,
+    todo_href: str,
+    kid: bool = False,
+    others: str = "",
+    yes: tuple[str, str] | None = None,
+) -> list[dict[str, str | None]]:
+    """The sentence under the greeting, as parts so the plan and the to-dos can be links: "Roller
+    rink tomorrow, and three to-dos are late." `coming` are plan rows; `yes` is a kid's latest yes,
+    (who said it, the wish), told in her sentence instead of what is late."""
+    parts: list[dict[str, str | None]] = []
+
+    def say(text: str, href: str | None = None) -> None:
+        parts.append({"text": text, "href": href})
+
+    plan = coming[0] if coming else None
+    if plan:
+        label = plan["title"] + (f" {plan['relative']}" if plan["relative"] else "")
+        say(label, plans_href)
+        if kid and others:
+            say(f" with {others}")
+    if kid:
+        if yes:
+            who, wish = yes
+            say(", and " if plan else "")
+            say(f"{who} said yes to ")
+            say(wish, todo_href)
+            say("!")
+        elif plan:
+            say(".")
+        else:
+            say("Nothing is planned yet.")
+        return parts
+    if late:
+        text = count_words(late, "to-do", "to-dos")
+        say(", and " if plan else "")
+        if not plan:
+            text = text[0].upper() + text[1:]
+        say(text, todo_href)
+        say(f" {'is' if late == 1 else 'are'} late.")
+    elif plan:
+        say(".")
+    else:
+        say("Nothing is planned yet, and nothing is late.")
+    return parts
 
 
 # Ways to start, under the box on Home and in an empty chat; never asked of a model.
@@ -532,7 +710,13 @@ def plan_row(plan: Plan, today: date) -> dict[str, Any]:
     }
 
 
-def entry_row(entry: Entry, today: date) -> dict[str, Any]:
+def entry_row(
+    entry: Entry,
+    today: date,
+    *,
+    people: Sequence[dict[str, Any]] | None = None,
+    away: Away | None = None,
+) -> dict[str, Any]:
     days = entry.days()
     when = day_text(entry.start[:10] if entry.all_day else entry.start)
     if entry.all_day and len(days) > 1:
@@ -558,6 +742,11 @@ def entry_row(entry: Entry, today: date) -> dict[str, Any]:
         # Made elsewhere: shown, not movable here.
         "from_google": entry.plan_id is None,
         "start_value": entry.start[:16] if not entry.all_day else f"{entry.start[:10]}T09:00",
+        # Who it is for (each with their colour; Everyone when nobody is named) and how far.
+        "people": list(people) if people is not None else [person_of(None, {})],
+        "who": names_text(people) if people is not None else EVERYONE,
+        "away": away.words if away else None,
+        "day": days[0].isoformat(),
     }
 
 
@@ -591,7 +780,6 @@ RADAR_RINGS = ((0, 12.0), (7, 33.0), (14, 66.0), (28, 92.0))
 # Blips sit on twelve bearings, 30 degrees apart; style.css (`.b1` to `.b11`) times each flare to
 # the sweep passing it (bearing 0 needs no delay).
 RADAR_BEARINGS = 12
-RADAR_START = 210  # degrees clockwise from twelve o'clock, where the first plan goes
 
 
 def radar_distance(away: float, rings: tuple[tuple[int, float], ...] = RADAR_RINGS) -> float:
@@ -601,29 +789,6 @@ def radar_distance(away: float, rings: tuple[tuple[int, float], ...] = RADAR_RIN
         if away <= far_away:
             return near + (far - near) * (away - near_away) / (far_away - near_away)
     return rings[-1][1]
-
-
-def radar_blips(entries: list[Entry], today: date) -> list[dict[str, Any]]:
-    """Where each coming plan shows on the home radar: nearer the day, nearer the middle; spread
-    by the golden angle so none sits on another; the first is marked as the brightest."""
-    blips: list[dict[str, Any]] = []
-    taken: set[int] = set()
-    for index, entry in enumerate(entries):
-        bearing = round((RADAR_START + index * 137.5) % 360 / 30) % RADAR_BEARINGS
-        while bearing in taken and len(taken) < RADAR_BEARINGS:
-            bearing = (bearing + 1) % RADAR_BEARINGS
-        taken.add(bearing)
-        distance = radar_distance((entry.days()[0] - today).days)
-        angle = math.radians(bearing * 360 / RADAR_BEARINGS)
-        blips.append(
-            {
-                "x": round(100 + distance * math.sin(angle), 1),
-                "y": round(100 - distance * math.cos(angle), 1),
-                "bearing": bearing,
-                "next": index == 0,
-            }
-        )
-    return blips
 
 
 # The ideas radar is a map: home at the middle, north up, rings at 15 min, 45 min and 2 h by road.
@@ -669,6 +834,13 @@ class Away:
             return "under 5 min from home (estimate)"
         way = COMPASS[round(self.degrees / 45) % 8]
         return f"about {drive_text(self.minutes)} {way} of home (estimate)"
+
+    @property
+    def words(self) -> str:
+        """For a plan or an idea in a list: "27 min drive, south"."""
+        if self.near:
+            return "under 5 min from home"
+        return f"{drive_text(self.minutes)} drive, {COMPASS[round(self.degrees / 45) % 8]}"
 
     @property
     def short(self) -> str:
@@ -1247,6 +1419,8 @@ def wish_row(wish: Any, today: date) -> dict[str, Any]:
         "concern": CONCERN_WORDS.get(wish.concern or ""),
         "concern_kid": KID_CONCERN_WORDS.get(wish.concern or ""),
         "review": wish.parent_review,
+        "answered_by": wish.answered_by,
+        "answered_at": wish.answered_at,
     }
 
 

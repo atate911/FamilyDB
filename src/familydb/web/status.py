@@ -342,6 +342,22 @@ def pill(app: App, conn: sqlite3.Connection, *, name: str, busy: bool = False) -
     return Pill("ready", f"{name} is ready", "Ready")
 
 
+USUAL_DAYS = 30
+
+
+def vera_today(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
+    """Home's small card for a grown-up: what was spent today against the limit, and what a usual
+    day costs (the last 30 days). An estimate, as everywhere (agent/providers/prices.py)."""
+    live = app.settings
+    now = app.clock.now()
+    since = utc_iso(now - timedelta(days=USUAL_DAYS))
+    return {
+        "spent": views.money_text(spent_today(conn, live, now)),
+        "limit": views.money_text(live.daily_spend_limit) if live.daily_spend_limit else None,
+        "usual": views.money_text(calls.usual_day(conn, since=since)),
+    }
+
+
 def attention(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
     """What only an admin can fix, while it lasts. New models are under Models and prices."""
     now = app.clock.now()

@@ -118,6 +118,17 @@ def spent_since(conn: sqlite3.Connection, *, since: str) -> float:
     return float(row["spent"])
 
 
+def usual_day(conn: sqlite3.Connection, *, since: str) -> float:
+    """What a day that had any model calls cost on average since a UTC timestamp, in estimated
+    dollars: the total over the days that had calls, so a quiet week does not drag it to nothing."""
+    row = conn.execute(
+        "SELECT coalesce(sum(cost_usd), 0) AS spent, "
+        "count(DISTINCT substr(created_at, 1, 10)) AS days FROM llm_calls WHERE created_at >= ?",
+        (since,),
+    ).fetchone()
+    return float(row["spent"]) / row["days"] if row["days"] else 0.0
+
+
 def spent_since_by(conn: sqlite3.Connection, *, since: str, member_id: int) -> float:
     """Estimated dollars spent since then on calls made for somebody's own messages."""
     row = conn.execute(

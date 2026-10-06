@@ -1,11 +1,11 @@
-// The box everyone writes to her in (form.ask). Every part is a help, never a need: with scripts off
+// The box everyone writes to her in (the form #ask, in the old markup or the new). Every part is a help, never a need: with scripts off
 // the box still sends. It keeps an unsent draft in the tab's session storage (put back if the box comes
 // back empty, forgotten once the thread shows it arrived), fills the box from the ways to start, sends
 // the phone's position only while "Send where I am" is ticked, and looks again for an answer when the
 // page says to (data-refresh), never while somebody is writing.
 (function () {
   "use strict";
-  var form = document.querySelector("form.ask");
+  var form = document.getElementById("ask");
   var box = form && form.querySelector('textarea[name="text"]');
   if (!box) return;
 
@@ -33,7 +33,7 @@
   }
 
   // When the draft is the newest thing the family said in the thread, it arrived.
-  var theirs = document.querySelectorAll(".said-them .said-text");
+  var theirs = document.querySelectorAll(".said-them .said-text, .msg--mine .msg__text");
   var newest = theirs.length ? theirs[theirs.length - 1].textContent : "";
   var draft = kept();
   if (draft && newest && words(draft) === words(newest)) draft = "";

@@ -204,3 +204,22 @@ def test_each_person_has_their_own_colour_and_it_does_not_follow_their_name(conn
         channel_user_id="1002",
     )
     assert renamed is not None and renamed.slot == 2
+
+
+def test_the_page_you_are_on_is_marked_in_the_menu_and_the_tab_bar(sam, girl) -> None:
+    """Home is the first page on the frame; each of its two places for a page's name marks it
+    as current, once, for a screen reader as well as the eye."""
+    home = sam.get("/").text
+    side = re.search(r'<aside class="side".*?</aside>', home, re.S).group(0)
+    tabs = re.search(r'<nav class="tabbar".*?</nav>', home, re.S).group(0)
+    for where in (side, tabs):
+        assert where.count('aria-current="page"') == 1
+        assert re.search(r'<a href="/" aria-current="page">', where)
+    # The account corner marks Look while you are on it.
+    look = sam.get("/more").text  # a page of its own: none of the pages is current there
+    assert (
+        re.search(r'<aside class="side".*?</aside>', look, re.S).group(0).count("aria-current") == 0
+    )
+    # A kid's Home marks hers.
+    kid = girl.get("/").text
+    assert re.search(r'<a href="/" aria-current="page">', kid)
