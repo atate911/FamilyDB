@@ -272,7 +272,8 @@ Each lives in `_ui.html`, `_ask.html` or `_settings.html`, which show the markup
   their initial; everything she says drawn the same way, long answer or "Done."; the tools a turn
   ran sit under it in the machine's voice. **Waiting** (`waiting_line`) is the last line while the
   newest message waits: her screen and name, the bubble dashed because the words are the page's,
-  not hers.
+  not hers. Under a reminder of hers, the buttons Telegram shows (Done, In an hour, Tomorrow) are
+  a row of small quiet buttons inside her bubble, one row per task, gone once it is done.
 - **The tick** (`tick`): an empty box beside an open task, a 44-pixel target, showing the tick it
   will make when pointed at and marking the task done where it stands.
 - **Date** (`chip`): a calendar leaf, the month in cyan above the day; today amber. **Relative time**

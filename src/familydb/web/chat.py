@@ -21,7 +21,7 @@ from flask import (
     url_for,
 )
 
-from familydb import audience, personas, roles
+from familydb import audience, buttons, personas, roles
 from familydb.agent import spending
 from familydb.app import App
 from familydb.channels.web import DEFAULT_CHAT, MAX_MESSAGE, Handing, WebChat
@@ -29,6 +29,7 @@ from familydb.config import Settings
 from familydb.store import calls
 from familydb.store import members as member_store
 from familydb.store import messages as message_store
+from familydb.store import tasks as task_store
 from familydb.store.messages import Message
 from familydb.web import auth, views
 from familydb.web import status as status_page
@@ -259,6 +260,7 @@ def page(
                 }
             ]
         left = messages_left(app, conn, visitor.member)
+        pressed = {} if reading is not None else _task_buttons(conn, thread)
     # The log keeps a turn's tool calls against the question; the page shows them under the answer.
     answered = {message.reply_to for message in thread if message.reply_to is not None}
     actions = {message.id: message.actions for message in thread}
@@ -274,6 +276,8 @@ def page(
         )
         for message in thread
     ]
+    for line in lines:
+        line["tasks"] = pressed.get(line["id"], [])
     last = thread[-1] if thread else None
     # Older messages are only to be read: nothing is on its way there, so nothing waits.
     state, handing = (None, None) if before else standing(app, thread, chat_id)
@@ -325,9 +329,34 @@ def page(
             telegram=_telegram(app) if visitor.may("browse") else None,
             me=_me(visitor, slots),
             left=left,
+            presses=PAGE_BUTTONS,
         ),
         status,
     )
+
+
+# The buttons under a reminder the page draws as forms too; the rest are Telegram's own.
+PAGE_BUTTONS = buttons.REMINDER
+
+
+def _task_buttons(conn: Any, thread: list[Message]) -> dict[int, list[dict[str, Any]]]:
+    """By message, the open tasks whose buttons go under it on the page: Done, In an hour and
+    Tomorrow, as on Telegram, under the newest message to carry each (a reminder snoozed twice is
+    pressed once). Done or cancelled since, a task has none."""
+    newest: dict[int, int] = {}
+    for message in thread:
+        for button in message.buttons or []:
+            action, _, number = str(button.get("data", "")).partition(":")
+            if action in dict(PAGE_BUTTONS) and number.isascii() and number.isdigit():
+                newest[int(number)] = message.id
+    drawn: dict[int, list[dict[str, Any]]] = {}
+    for task_id, message_id in sorted(newest.items()):
+        task = task_store.get(conn, task_id)
+        if task is not None and task.status == "open":
+            drawn.setdefault(message_id, []).append(
+                {"id": task.id, "title": task.title, "revision": task.revision}
+            )
+    return drawn
 
 
 def _readers(family: list[member_store.Member]) -> str:

@@ -58,6 +58,13 @@ def _row(choices: tuple[tuple[str, str], ...], number: int) -> list[Button]:
     return [{"label": label, "data": f"{action}:{number}"} for action, label in choices]
 
 
+def in_row(row: list[Button], key: str) -> list[Button]:
+    """These buttons as one of several rows under a message, drawn one row per `key` in the order
+    they come: a tap takes off its own row and leaves the others (a message about more than one
+    thing, each with its own buttons)."""
+    return [{**button, "row": key} for button in row]
+
+
 @dataclass(frozen=True)
 class Tapped:
     """What a tap did: `toast` to whoever tapped; `note` under the message for everyone, saying who

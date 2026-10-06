@@ -213,6 +213,50 @@ def test_an_open_task_ticks_off_where_it_is_listed(settings, clock, conn, family
     assert f"/task/{task.id}/done" not in client.get("/tasks?status=done").text  # no tick left
 
 
+def test_a_reminder_in_the_page_chat_is_ticked_or_snoozed_there(settings, clock, conn, family):
+    """On Telegram a reminder carries Done, In an hour and Tomorrow; on the page it carried none,
+    so somebody who only uses the page could not act on it where it arrived. The chat draws them
+    as forms, through the same update_task, under the newest reminder of each open task."""
+    from familydb import buttons
+
+    client = _client(settings, clock)
+    form = dict(re.findall(r'name="(csrf|once)" value="([^"]+)"', client.get("/tasks").text))
+    client.post("/tasks/new", data={**form, "title": "Call the plumber"})
+    task = tasks.list_all(conn)[0]
+    with db.transaction(conn):
+        for _ in range(2):  # reminded twice: the buttons go under the second only
+            messages.insert_out(
+                conn,
+                channel="web",
+                chat_id="web",
+                text="Reminder: Call the plumber.",
+                now="2026-09-20T21:00:00Z",
+                buttons=buttons.for_reminder(task.id),
+            )
+    chat = client.get("/chat").text
+    assert chat.count(f'action="/task/{task.id}/done"') == 1
+    snooze = re.search(
+        rf'action="/task/{task.id}/snooze">((?:(?!</form>).)*?value="tomorrow".*?)</form>',
+        chat,
+        re.S,
+    )
+    assert snooze is not None and "Tomorrow" in snooze.group(1)
+    fields = dict(re.findall(r'name="(\w+)" value="([^"]*)"', snooze.group(1)))
+    assert fields["back"] == "chat" and fields["when"] == "tomorrow"
+    snoozed = client.post(f"/task/{task.id}/snooze", data=fields, follow_redirects=True)
+    assert "#1 Call the plumber comes back at 14:03 tomorrow." in snoozed.text
+    assert tasks.get(conn, task.id).reminder.remind_at == "2026-09-21T21:03:00Z"
+    chat = client.get("/chat").text
+    done = re.search(rf'action="/task/{task.id}/done">(.*?)</form>', chat, re.S)
+    fields = dict(re.findall(r'name="(\w+)" value="([^"]*)"', done.group(1)))
+    assert client.post(f"/task/{task.id}/done", data=fields).headers["Location"] == "/chat"
+    assert tasks.get(conn, task.id).status == "done"
+    assert f"/task/{task.id}/" not in client.get("/chat").text  # nothing left to press
+    wrong = {**fields, "once": "again", "when": "next year"}
+    client.post(f"/task/{task.id}/snooze", data=wrong)
+    assert tasks.get(conn, task.id).status == "done"
+
+
 def test_topic_selection_is_applied_before_shortlist_limit(ctx):
     with db.transaction(ctx.conn):
         for n in range(12):

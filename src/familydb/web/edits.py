@@ -18,6 +18,7 @@ from typing import Any
 from flask import Blueprint, Response, current_app, flash, redirect, request, session, url_for
 from werkzeug.datastructures import MultiDict
 
+from familydb import buttons
 from familydb.app import App
 from familydb.store import members as member_store
 from familydb.tools import ToolContext
@@ -48,12 +49,15 @@ CANCELLED = "Cancelled."
 TICKED = "Done: #{id} {title}."
 # For a kid: no numbers, which are the workings.
 TICKED_PLAIN = "Done: {title}!"
+SNOOZED = "#{id} {title} comes back at {when}."
+SNOOZED_PLAIN = "{title} comes back at {when}."
+NOT_A_SNOOZE = "Choose In an hour or Tomorrow."
 LOOKING = "Looking {what} up now: within a few minutes."
 NOTHING_WAITING = "Nothing is waiting to be looked up."
 REMEMBERED = {"saved": "Remembered: {fact}.", "already remembered": "Already remembered: {fact}."}
 FORGOTTEN = "Forgotten: {fact}. It will not come back from what was said before."
 NEEDS_FACT = "Say what to remember."
-TICK_PAGES = {"home": "web.home", "tasks": "web.tasks"}
+TICK_PAGES = {"home": "web.home", "tasks": "web.tasks", "chat": "chat.show"}
 NEEDS_TITLE = "An idea needs a title."
 NEEDS_KIND = "An idea needs a kind: restaurant, outing, trip, show…"
 NOT_A_NUMBER = "{label} needs to be a number."
@@ -480,6 +484,30 @@ def finish_task(task_id: int) -> Response:
         result, complaint = run("update_task", {"task_id": task_id, "status": "done"})
         said = TICKED if auth.visitor().may("browse") else TICKED_PLAIN
         _say(complaint or said.format(id=task_id, title=result["task"]["title"]))
+    return _back(TICK_PAGES.get(request.form.get("back", ""), "web.tasks"))
+
+
+@bp.post("/task/<int(max=9223372036854775807):task_id>/snooze")
+@once
+def snooze_task(task_id: int) -> Response:
+    """In an hour or Tomorrow under a reminder in the chat, as the buttons under it on Telegram:
+    a new reminder through `update_task`, at the time a tap there would set
+    (`buttons.snoozed_until`), at the revision the reminder was drawn at."""
+    action = request.form.get("when", "")
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+    elif _task_revision(request.form) is None:
+        _say("Reload this task before snoozing it.")
+    elif action not in buttons.SNOOZES:
+        _say(NOT_A_SNOOZE)
+    else:
+        clock = _app().clock
+        moment = buttons.snoozed_until(action, clock.now())
+        values = {"task_id": task_id, "remind_at": moment.strftime("%Y-%m-%dT%H:%M")}
+        result, complaint = run("update_task", values)
+        said = SNOOZED if auth.visitor().may("browse") else SNOOZED_PLAIN
+        when = buttons.when_text(moment, clock.today())
+        _say(complaint or said.format(id=task_id, title=result["task"]["title"], when=when))
     return _back(TICK_PAGES.get(request.form.get("back", ""), "web.tasks"))
 
 

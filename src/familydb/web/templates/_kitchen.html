@@ -170,7 +170,8 @@
 
 
 {# One message in the chat. Hers is on the left beside her screen; the family's carry their own colour and letter, and `mine` (the person looking) sits on the right, so side and mark tell them apart, not colour alone. `anchor` is the id the newest line carries. #}
-{% macro msg(line, mine=false, anchor=none) -%}
+{# A reminder's buttons under her message, as forms (`presses`: Done, In an hour, Tomorrow, the words Telegram shows): Done ticks the task off, the others snooze it, at the revision it was drawn at. #}
+{% macro msg(line, mine=false, anchor=none, presses=()) -%}
   {% if line.from_bot %}
     <div class="msg msg--vera"{% if anchor %} id="{{ anchor }}"{% endif %}>
       {{ vera_screen() }}
@@ -178,6 +179,20 @@
         <div class="msg__by">{{ line.who }} <time>{{ line.clock }}</time></div>
         <div class="msg__text">{{ line.text }}</div>
         {% if line.did %}<div class="msg__did">Used {{ line.did | join(', ') }}</div>{% endif %}
+        {% if visitor().may('change') or visitor().may('own_tasks') %}
+          {% for task in line.tasks or [] %}
+            <div class="msg__buttons">
+              {% for action, label in presses %}
+                <form method="post" action="{{ url_for('edits.finish_task', task_id=task.id) if action == 'done' else url_for('edits.snooze_task', task_id=task.id) }}">
+                  <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+                  <input type="hidden" name="revision" value="{{ task.revision }}" /><input type="hidden" name="back" value="chat" />
+                  {% if action != 'done' %}<input type="hidden" name="when" value="{{ action }}" />{% endif %}
+                  <button class="btn btn--sm btn--quiet" type="submit">{{ label }}{% if line.tasks | length > 1 %}<span class="sr">: {{ task.title }}</span>{% endif %}</button>
+                </form>
+              {% endfor %}
+            </div>
+          {% endfor %}
+        {% endif %}
       </div>
     </div>
   {% else %}
