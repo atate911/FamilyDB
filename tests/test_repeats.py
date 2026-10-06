@@ -321,6 +321,21 @@ def test_with_no_gifts_saved_it_asks_for_some(settings, clock, conn, family) -> 
     )
 
 
+def test_a_present_hidden_from_the_one_reading_is_not_in_their_reminder(
+    settings, clock, conn, family
+) -> None:
+    """Sam's own birthday reminder, in Sam's chat, says nothing of a present kept from Sam: not
+    the present, and not that there are none."""
+    app = App(settings, clock)
+    said = _sent(app)
+    ctx = _ctx(settings, clock, conn, family)
+    _gift(conn, "a telescope", who="Sam")
+    _add(ctx, remind_at="2026-09-20T15:00", gift_for="Sam")
+    clock.advance(timedelta(hours=1))
+    run_reminders(app)
+    assert "telescope" not in said[-1] and "gift" not in said[-1].lower()
+
+
 def test_a_kid_s_birthday_reminder_lists_her_own_birthday_wishes(
     settings, clock, conn, family
 ) -> None:

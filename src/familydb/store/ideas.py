@@ -202,8 +202,33 @@ def list_for_prompt(conn: sqlite3.Connection) -> list[Idea]:
 
 
 def is_gift(idea: Idea) -> bool:
-    """Whether this idea is a present (kept from the kids)."""
+    """Whether this idea is a present (kept from whoever it is hidden from, `presents.py`)."""
     return idea.kind.strip().lower() == GIFT
+
+
+def chosen_hidden_from(
+    conn: sqlite3.Connection, idea_ids: list[int]
+) -> dict[int, list[int] | None]:
+    """The member ids each idea was told to be kept from; None where nobody chose (the default)."""
+    if not idea_ids:
+        return {}
+    marks = ", ".join("?" for _ in idea_ids)
+    rows = conn.execute(f"SELECT id, hidden_from FROM ideas WHERE id IN ({marks})", idea_ids)
+    found: dict[int, list[int] | None] = {}
+    for row in rows:
+        chosen = from_json(row["hidden_from"], None)
+        found[row["id"]] = (
+            [int(one) for one in chosen if isinstance(one, int)]
+            if isinstance(chosen, list)
+            else None
+        )
+    return found
+
+
+def set_hidden_from(conn: sqlite3.Connection, idea_id: int, member_ids: list[int] | None) -> None:
+    """Choose whom a present is kept from (an empty list: nobody), or None for the default."""
+    value = None if member_ids is None else to_json(sorted(set(member_ids)))
+    conn.execute("UPDATE ideas SET hidden_from = ? WHERE id = ?", (value, idea_id))
 
 
 def pending_enrichment(conn: sqlite3.Connection, *, limit: int) -> list[Idea]:
@@ -325,14 +350,17 @@ def search(
     exclude_done_within_days: int | None = None,
     today: date | None = None,
     limit: int = 50,
-    without_gifts: bool = False,
+    exclude_ids: Iterable[int] = (),
+    newest_first: bool = False,
 ) -> list[Idea]:
-    """Filtered ideas; no filters returns everything not dropped. `without_gifts` hides presents."""
+    """Filtered ideas; no filters returns everything not dropped. `exclude_ids` leaves out the
+    ideas kept from the asker (`presents.kept_ids`); `newest_first` orders by when saved."""
     where: list[str] = []
     params: list[Any] = []
-    if without_gifts:
-        where.append("lower(trim(i.kind)) != ?")
-        params.append(GIFT)
+    left_out = sorted({int(one) for one in exclude_ids})
+    if left_out:
+        where.append(f"i.id NOT IN ({', '.join('?' for _ in left_out)})")
+        params.extend(left_out)
     if kind:
         where.append("i.kind = ?")
         params.append(kind.strip().lower())
@@ -363,7 +391,7 @@ def search(
         where.append("(i.last_done_at IS NULL OR i.last_done_at < ?)")
         params.append(cutoff)
 
-    order = "i.id"
+    order = "i.id DESC" if newest_first else "i.id"
     if text and text.strip():
         query = fts_query(text)
         ids: list[int] | None = None

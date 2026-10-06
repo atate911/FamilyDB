@@ -19,7 +19,7 @@ from flask import (
     url_for,
 )
 
-from familydb import agenda, personas, roles
+from familydb import agenda, personas, presents, roles
 from familydb.app import App
 from familydb.availability import calendar_available, enrichment_available
 from familydb.dates import next_birthday
@@ -150,10 +150,9 @@ def home() -> Response | str:
         if manages and not status_page.ready_to_answer(progress):
             return redirect(url_for("setup.overview"))
         seen = agenda.read(app, conn, today, today + timedelta(days=HOME_AHEAD_DAYS))
-        on = _no_gifts(conn, seen.entries)
-        everything = idea_store.list_all(conn)
-        if _gifts_hidden():
-            everything = [idea for idea in everything if not idea_store.is_gift(idea)]
+        kept = presents.kept_ids(conn, visitor.member)
+        on = _no_gifts(seen.entries, kept)
+        everything = [idea for idea in idea_store.list_all(conn) if idea.id not in kept]
         unfinished = status_page.setup_steps(app, conn) if manages else []
         people = member_store.list_all(conn)
         todo = task_store.list_all(conn, status="open", owner_id=_own_only())
@@ -333,11 +332,13 @@ def _latest_yes(
 def ideas() -> str:
     app = _app()
     settings = app.settings
+    visitor = auth.visitor()
     query = request.args.get("q", "").strip()
     kind = request.args.get("kind", "").strip()
     status = request.args.get("status", "").strip()
     who = request.args.get("who", "").strip()
     with closing(app.connect()) as conn:
+        kept = presents.kept_ids(conn, visitor.member)
         found = idea_store.search(
             conn,
             text=query or None,
@@ -345,35 +346,65 @@ def ideas() -> str:
             status=status if status in STATUSES else None,
             participant=who or None,
             limit=LIST_LIMIT,
-            without_gifts=_gifts_hidden(),
+            exclude_ids=kept,
+            newest_first=not query,
         )
-        listed = idea_store.list_all(conn, include_dropped=True)
-        if _gifts_hidden():
-            listed = [idea for idea in listed if not idea_store.is_gift(idea)]
+        listed = [
+            idea for idea in idea_store.list_all(conn, include_dropped=True) if idea.id not in kept
+        ]
         kinds, people = _choices(listed)
         capture_people = member_store.list_all(conn)
+        slots = views.slot_map(capture_people)
+        hidden = presents.of_presents(conn, found, capture_people)
         away = {
             idea.id: views.away_from_home(place_store.get(conn, idea.place_id), settings)
             for idea in found
             if idea.place_id
         }
     filtered = bool(query or kind or status or who)
-    rows = []
-    for idea in found:
-        spot = away.get(idea.id)
-        rows.append({**views.idea_row(idea, settings.tzinfo), "away": spot.text if spot else None})
+    rows = [
+        _idea_card(idea, settings, away.get(idea.id), slots, hidden.get(idea.id)) for idea in found
+    ]
+    placed = [(idea, away[idea.id]) for idea in found if away.get(idea.id)]
+    live = [idea for idea in listed if idea.status != "dropped"]
     return render_template(
         "ideas.html",
         capture_people=capture_people,
         rows=rows,
-        on_radar=views.places_radar([(i, away[i.id]) for i in found if away.get(i.id)]),
+        total=len(live),
+        restaurant_count=sum(1 for idea in live if idea.kind == RESTAURANT_KIND),
+        on_map=views.places_map(placed),
+        off_map=len(found) - len(placed),
+        looking_up=enrichment_available(settings),
         kinds=kinds,
         people=people,
         statuses=STATUSES,
+        status_words=views.STATUS_WORDS,
         selected={"q": query, "kind": kind, "status": status, "who": who},
+        filter_words=views.filter_words(kind, who, status),
         filtered=filtered,
         limit=LIST_LIMIT,
     )
+
+
+def _idea_card(
+    idea: Any,
+    settings: Any,
+    away: Any,
+    slots: dict[str, int],
+    kept: presents.Kept | None,
+) -> dict[str, Any]:
+    """An idea as the cards draw it: its words, its picture, whom it is for, how far it is, and
+    whom it is hidden from if it is a present."""
+    people = views.people_for(idea, slots)
+    return {
+        **views.idea_row(idea, settings.tzinfo, hidden=kept.words if kept else None),
+        "glyph": views.glyph_for(idea.kind, gift=idea_store.is_gift(idea)),
+        "people": people,
+        "who": views.names_text(people),
+        "away": away.words if away else None,
+        "went": views.went_text(idea),
+    }
 
 
 @bp.get(f"/idea/<int(max={MAX_ID}):idea_id>")
@@ -382,9 +413,10 @@ def idea(idea_id: int) -> str:
     settings = app.settings
     now = app.clock.now()
     today = app.clock.today()
+    visitor = auth.visitor()
     with closing(app.connect()) as conn:
         record = idea_store.get(conn, idea_id)
-        if record is None or (_gifts_hidden() and idea_store.is_gift(record)):
+        if record is None or presents.is_kept_from(conn, record, visitor.member):
             abort(404)
         original = (
             message_store.get(conn, record.source_message_id) if record.source_message_id else None
@@ -393,11 +425,17 @@ def idea(idea_id: int) -> str:
         outcomes = outcome_store.list_for_idea(conn, idea_id)
         plans = plan_store.for_idea(conn, idea_id)
         asking = _who(conn)
-        looked_up = calls.last_lookup_turn(conn, idea_id) if auth.visitor().may("manage") else None
+        looked_up = calls.last_lookup_turn(conn, idea_id) if visitor.may("manage") else None
+        family = member_store.list_all(conn)
+        slots = views.slot_map(family)
+        kept = presents.of_presents(conn, [record], family).get(idea_id)
+    away = views.away_from_home(place, settings)
+    card = _idea_card(record, settings, away, slots, kept)
     return render_template(
         "idea.html",
         idea=record,
         original_message=message_store.as_said(original.text) if original else None,
+        original_by=views.original_by(original, family, settings.tzinfo) if original else None,
         today=today.isoformat(),
         ratings=RATINGS,
         can_schedule=calendar_available(settings),
@@ -405,10 +443,10 @@ def idea(idea_id: int) -> str:
         looked_up=looked_up,
         lookups=views.lookups_when(settings),
         **asking,
-        row=views.idea_row(record, settings.tzinfo),
+        row=card,
         setting=views.SETTINGS.get(record.setting, record.setting),
         weather=views.WEATHER.get(record.weather),
-        place=views.place_panel(place, now, settings.place_stale_days),
+        place=views.place_panel(place, now, settings.place_stale_days, today),
         outcomes=[views.outcome_row(o) for o in reversed(outcomes)],
         plans=[views.plan_row(p, today) for p in reversed(plans)],
     )
@@ -417,19 +455,39 @@ def idea(idea_id: int) -> str:
 def _idea_form(record: Any = None) -> str:
     app = _app()
     with closing(app.connect()) as conn:
-        kinds = sorted({row.kind for row in idea_store.list_all(conn, include_dropped=True)})
-        family = [member.display_name for member in member_store.list_all(conn)]
+        everything = idea_store.list_all(conn, include_dropped=True)
+        visitor = auth.visitor()
+        if record is not None and presents.is_kept_from(conn, record, visitor.member):
+            abort(404)
+        kinds = sorted({row.kind for row in everything})
+        people = member_store.list_all(conn)
+        kept = presents.of_presents(conn, [record], people).get(record.id) if record else None
+        by = (
+            next((m.display_name for m in people if m.id == record.suggested_by), None)
+            if record
+            else None
+        )
+    family = [member.display_name for member in people]
     return render_template(
         "idea_form.html",
         idea=record,
         revision=idea_store.revision(record) if record else None,
         kinds=sorted(set(kinds) | set(KIND_SUGGESTIONS)),
         statuses=STATUSES,
+        status_words=views.STATUS_WORDS,
         settings=SETTINGS,
         weathers=WEATHERS,
         seasons=SEASONS,
         costs=COSTS,
         family=family,
+        keepable=[member for member in people if member.active],
+        kept_ids=sorted(kept.ids) if kept else [],
+        suggested_by=by,
+        added=views.day_short(
+            date.fromisoformat(views.local_day(record.created_at, app.settings.tzinfo))
+        )
+        if record
+        else None,
         who=session.get(WHO_KEY),
     )
 
@@ -469,18 +527,29 @@ def restaurants() -> str:
     today = app.clock.today()
     stale_days = app.settings.place_stale_days
     with closing(app.connect()) as conn:
-        found = idea_store.search(conn, kind=RESTAURANT_KIND, limit=LIST_LIMIT)
+        kept = presents.kept_ids(conn, auth.visitor().member)
+        found = idea_store.search(
+            conn, kind=RESTAURANT_KIND, limit=LIST_LIMIT, exclude_ids=kept, newest_first=True
+        )
+        people = member_store.list_all(conn)
+        slots = views.slot_map(people)
         cards = [
-            views.restaurant_card(
-                idea,
-                place_store.get(conn, idea.place_id) if idea.place_id else None,
-                today,
-                now,
-                stale_days,
-            )
+            {
+                **views.restaurant_card(
+                    idea,
+                    place_store.get(conn, idea.place_id) if idea.place_id else None,
+                    today,
+                    now,
+                    stale_days,
+                ),
+                "people": views.people_for(idea, slots),
+            }
             for idea in found
         ]
-    return render_template("restaurants.html", cards=cards)
+        total = len([idea for idea in idea_store.list_all(conn) if idea.id not in kept])
+    for card in cards:
+        card["who"] = views.names_text(card["people"])
+    return render_template("restaurants.html", cards=cards, total=total)
 
 
 def _month(asked: str | None, today: date) -> date:
@@ -520,7 +589,7 @@ def plans() -> str:
             today - timedelta(days=PLANS_BEHIND_DAYS),
             today + timedelta(days=PLANS_AHEAD_DAYS),
         )
-        on = _no_gifts(conn, seen.entries)
+        on = _no_gifts(seen.entries, presents.kept_ids(conn, auth.visitor().member))
         people = member_store.list_all(conn)
         rows = _plan_rows(conn, app, on, today, views.slot_map(people), None, past=True)
         asking = _who(conn)
@@ -552,7 +621,7 @@ def plans_month() -> str:
     weeks_last = last_day + timedelta(days=6 - last_day.weekday())
     with closing(app.connect()) as conn:
         seen = agenda.read(app, conn, weeks_first, weeks_last)
-        on = _no_gifts(conn, seen.entries)
+        on = _no_gifts(seen.entries, presents.kept_ids(conn, auth.visitor().member))
         people = member_store.list_all(conn)
         slots = views.slot_map(people)
         rows = _plan_rows(conn, app, on, today, slots, None, past=True)
@@ -585,17 +654,9 @@ def plans_month() -> str:
     )
 
 
-def _gifts_hidden() -> bool:
-    """Presents are kept from anybody who may not decide what the kids get (docs/WISHES.md)."""
-    return not auth.visitor().may("decide")
-
-
-def _no_gifts(conn: Any, entries: list[agenda.Entry]) -> list[agenda.Entry]:
-    """What is on, without plans made from a present, where presents are kept."""
-    if not _gifts_hidden():
-        return entries
-    gifts = {i.id for i in idea_store.list_all(conn, include_dropped=True) if idea_store.is_gift(i)}
-    return [entry for entry in entries if entry.idea_id not in gifts]
+def _no_gifts(entries: list[agenda.Entry], kept: set[int]) -> list[agenda.Entry]:
+    """What is on, without plans made from a present that is hidden from the one looking."""
+    return [entry for entry in entries if entry.idea_id not in kept]
 
 
 def _own_only() -> int | None:

@@ -72,7 +72,9 @@ def _app() -> App:
     return current_app.config["FAMILYDB_APP"]
 
 
-def run(name: str, values: dict[str, Any]) -> tuple[dict[str, Any] | None, str | None]:
+def run(
+    name: str, values: dict[str, Any], *, hidden_from: list[int] | None = None
+) -> tuple[dict[str, Any] | None, str | None]:
     """Run one tool as whoever is signed in, or, under the shared password, whoever the form said.
     Returns its result, or what went wrong (an unavailable tool's reason included)."""
     app = _app()
@@ -102,6 +104,7 @@ def run(name: str, values: dict[str, Any]) -> tuple[dict[str, Any] | None, str |
             ),
             idea_revision=request.form.get("revision") if name == "update_idea" else None,
             task_revision=_task_revision(request.form) if name == "update_task" else None,
+            hidden_from=hidden_from,
         )
         result = app.registry.dispatch(name, values, ctx)
     payload = json.loads(result.content)
@@ -188,6 +191,18 @@ def _say(message: str) -> None:
     flash(message, NOTICE)
 
 
+def _hidden_from(form: Any) -> list[int] | None:
+    """Whom the idea form's "Hidden from" boxes kept a present from. None where the form did not
+    ask (a form without the boxes) or, on a new idea, nobody was ticked: nobody chose, so the
+    present is kept from whom it is for."""
+    if not form.get("hidden_shown"):
+        return None
+    ticked = [int(one) for one in form.getlist("hidden_from") if one.isdigit()]
+    if not ticked and not form.get("revision"):
+        return None
+    return ticked
+
+
 @bp.post("/ideas/new")
 @once
 def add_idea() -> Response:
@@ -198,7 +213,7 @@ def add_idea() -> Response:
     if complaint:
         _say(complaint)
         return _back("web.new_idea")
-    result, complaint = run("add_idea", values)
+    result, complaint = run("add_idea", values, hidden_from=_hidden_from(request.form))
     if result is None:
         _say(complaint or "")
         return _back("web.new_idea")
@@ -225,7 +240,9 @@ def edit_idea(idea_id: int) -> Response:
     status = _text(request.form, "status")
     if status:
         values["status"] = status
-    result, complaint = run("update_idea", {**values, "id": idea_id})
+    result, complaint = run(
+        "update_idea", {**values, "id": idea_id}, hidden_from=_hidden_from(request.form)
+    )
     if result is None:
         _say(complaint or "")
         return _back("web.edit_idea", idea_id=idea_id)

@@ -7,7 +7,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from familydb import roles
+from familydb import presents
 from familydb.agent.render import render_idea_line
 from familydb.dates import parse_date, parse_datetime
 from familydb.errors import ToolError
@@ -186,13 +186,15 @@ def _resolve_member_name(ctx: ToolContext, name: str | None) -> int | None:
     return member.id
 
 
-def _gifts_kept_from(ctx: ToolContext) -> bool:
-    """Whether the asker is kept from presents (a kid, roles.py); a job sees everything."""
-    return ctx.member is not None and not roles.may(ctx.member.role, "decide")
-
-
 def _kept_from(ctx: ToolContext, idea: ideas.Idea | None) -> bool:
-    return idea is not None and ideas.is_gift(idea) and _gifts_kept_from(ctx)
+    """Whether this present is hidden from the asker (`presents.py`); a job sees everything."""
+    return presents.is_kept_from(ctx.conn, idea, ctx.member, kids_see_none=True)
+
+
+def _keep_presents(ctx: ToolContext, idea: ideas.Idea) -> None:
+    """Apply what the idea form chose about whom a present is kept from."""
+    if ctx.hidden_from is not None and ideas.is_gift(idea):
+        presents.choose(ctx.conn, idea, ctx.hidden_from)
 
 
 @tool(
@@ -227,6 +229,7 @@ def add_idea(ctx: ToolContext, args: AddIdeaInput) -> dict[str, Any]:
             source_message_id=ctx.message_id,
             **fields,
         )
+        _keep_presents(ctx, idea)
     return idea.model_dump(mode="json")
 
 
@@ -256,6 +259,8 @@ def update_idea(ctx: ToolContext, args: UpdateIdeaInput) -> dict[str, Any]:
             raise ToolError(f"no idea #{args.id}")
         changes |= _dated(ctx, args.happens_from, args.happens_until, current)
         idea = ideas.update(ctx.conn, args.id, changes, now=ctx.now_iso())
+        if idea is not None:
+            _keep_presents(ctx, idea)
     if idea is None:
         raise ToolError(f"no idea #{args.id}")
     return idea.model_dump(mode="json")
@@ -304,6 +309,6 @@ def search_ideas(ctx: ToolContext, args: SearchIdeasInput) -> dict[str, Any]:
         exclude_done_within_days=args.exclude_done_within_days,
         today=ctx.clock.today(),
         limit=limit,
-        without_gifts=_gifts_kept_from(ctx),
+        exclude_ids=presents.kept_ids(ctx.conn, ctx.member, kids_see_none=True),
     )
     return {"count": len(found), "ideas": [render_idea_line(idea) for idea in found]}

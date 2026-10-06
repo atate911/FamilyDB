@@ -695,7 +695,7 @@ def test_an_admin_s_status_tile_lights_up_while_something_is_wrong(app, sam, fam
             alert_store.note(conn, kind, "", "test", now=NOW_ISO, keep_after="2026-01-01T00:00:00Z")
 
     def tile(browser) -> str:
-        page = browser.get("/ideas").text
+        page = browser.get("/memory").text  # a page still on the old frame, which has the tile
         found = re.search(r'<a class="to-status[^"]*"[^>]*>.*?</a>', page, re.S)
         return found.group(0) if found else ""
 
@@ -762,3 +762,109 @@ def test_a_kid_is_told_who_set_her_a_to_do_but_not_what_she_set_herself(
     with db.transaction(conn):
         conn.execute("UPDATE tasks SET created_by_member_id = ?", (family["girls"].id,))
     assert "Set by" not in girls.get("/tasks").text
+
+
+def _kid_signed_in(app, sam, member):
+    kid = _as(app, member.display_name, _start(sam, member.id))
+    kid.post("/you", data={**_tokens(kid, "/you"), "new": KIDS, "again": KIDS})
+    return kid
+
+
+def _two_kids_and_a_present(app, sam, conn):
+    from familydb.store import ideas as idea_store
+    from familydb.store import members as member_store
+
+    with db.transaction(conn):
+        maya = member_store.add(conn, "Maya", "kid", now=NOW_ISO)
+        theo = member_store.add(conn, "Theo", "kid", now=NOW_ISO)
+        lego = idea_store.insert(
+            conn, title="Lego set", kind="gift", participants=["Theo"], now=NOW_ISO
+        )
+    return maya, theo, lego
+
+
+def test_a_present_shows_to_everyone_but_the_people_it_is_hidden_from(
+    app, sam, family, conn
+) -> None:
+    maya, theo, lego = _two_kids_and_a_present(app, sam, conn)
+    mayas, theos = _kid_signed_in(app, sam, maya), _kid_signed_in(app, sam, theo)
+    page = mayas.get("/ideas").text
+    assert "Lego set" in page and "hidden from Theo" in page  # she is told to keep it quiet
+    assert mayas.get(f"/idea/{lego.id}").status_code == 200
+    assert "Lego set" not in theos.get("/ideas").text
+    assert theos.get(f"/idea/{lego.id}").status_code == 404
+    assert "hidden from Theo" in sam.get("/ideas").text and "Lego set" in sam.get("/").text
+    for path in ("/", "/plans", "/restaurants"):  # it is nowhere on his pages
+        assert "Lego set" not in theos.get(path).text, path
+
+
+def test_a_grown_up_can_have_a_present_kept_from_them_too(app, sam, alex, family, conn) -> None:
+    from familydb.store import ideas as idea_store
+
+    with db.transaction(conn):
+        scarf = idea_store.insert(
+            conn, title="Silk scarf", kind="gift", participants=["Alex"], now=NOW_ISO
+        )
+    assert "Silk scarf" in sam.get("/ideas").text
+    assert "Silk scarf" not in alex.get("/ideas").text
+    assert alex.get(f"/idea/{scarf.id}").status_code == 404
+    assert alex.get(f"/idea/{scarf.id}/edit").status_code == 404
+
+
+def test_the_idea_form_chooses_whom_a_present_is_hidden_from(app, sam, family, conn) -> None:
+    from familydb.store import ideas as idea_store
+
+    maya, theo, lego = _two_kids_and_a_present(app, sam, conn)
+    page = sam.get(f"/idea/{lego.id}/edit").text
+    assert f'name="hidden_from" value="{theo.id}" checked' in page  # ticked for whom it is for
+    assert f'name="hidden_from" value="{maya.id}" checked' not in page
+    form = {
+        **_tokens(sam, f"/idea/{lego.id}/edit"),
+        "revision": re.search(r'name="revision" value="([^"]+)"', page).group(1),
+        "title": "Lego set",
+        "kind": "gift",
+        "participants": "Theo",
+        "hidden_shown": "1",
+        "hidden_from": [str(theo.id), str(maya.id)],  # a chatty sibling, too
+    }
+    assert sam.post(f"/idea/{lego.id}/edit", data=form).status_code == 302
+    assert idea_store.chosen_hidden_from(conn, [lego.id]) == {lego.id: sorted([maya.id, theo.id])}
+    assert "hidden from Maya and Theo" in sam.get("/ideas").text
+    mayas = _kid_signed_in(app, sam, maya)
+    assert "Lego set" not in mayas.get("/ideas").text
+
+
+def test_a_new_present_is_kept_from_whom_it_names_unless_somebody_chooses(
+    app, sam, family, conn
+) -> None:
+    from familydb.store import ideas as idea_store
+
+    _two_kids_and_a_present(app, sam, conn)
+    form = {
+        **_tokens(sam, "/ideas/new"),
+        "title": "Bike bell",
+        "kind": "gift",
+        "participants": "Maya",
+        "hidden_shown": "1",
+    }
+    assert sam.post("/ideas/new", data=form).status_code == 302
+    bell = idea_store.find_similar_title(conn, "Bike bell")
+    assert idea_store.chosen_hidden_from(conn, [bell.id]) == {bell.id: None}  # nobody chose
+    assert "hidden from Maya" in sam.get("/ideas").text
+
+
+def test_a_form_without_the_boxes_leaves_a_present_as_it_was(app, sam, family, conn) -> None:
+    from familydb.store import ideas as idea_store
+
+    maya, _, lego = _two_kids_and_a_present(app, sam, conn)
+    with db.transaction(conn):
+        idea_store.set_hidden_from(conn, lego.id, [maya.id])
+    page = sam.get(f"/idea/{lego.id}/edit").text
+    form = {
+        **_tokens(sam, f"/idea/{lego.id}/edit"),
+        "revision": re.search(r'name="revision" value="([^"]+)"', page).group(1),
+        "title": "Lego set!",
+        "kind": "gift",
+    }
+    assert sam.post(f"/idea/{lego.id}/edit", data=form).status_code == 302
+    assert idea_store.chosen_hidden_from(conn, [lego.id]) == {lego.id: [maya.id]}

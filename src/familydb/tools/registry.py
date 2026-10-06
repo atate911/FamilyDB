@@ -47,6 +47,9 @@ class ToolContext:
     resume_scope: str | None = None  # the browser session, to resume what a lost reply left
     idea_revision: str | None = None  # browser optimistic concurrency precondition
     task_revision: int | None = None
+    # Whom the idea form chose to keep a present from (member ids); None where it chose nobody.
+    # Kept out of the model's tool schemas: only the page sets it.
+    hidden_from: list[int] | None = None
     scratch: dict[str, Any] = field(default_factory=dict)  # per-turn hand-back area
     # The turn the calls belong to (set by the loop) and what a worker turn is about, for status.
     turn: str | None = None
