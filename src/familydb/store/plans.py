@@ -169,6 +169,21 @@ def due_for_follow_up(conn: sqlite3.Connection, *, today: str, since: str) -> li
     return [Plan.from_row(row) for row in rows]
 
 
+def unrated(conn: sqlite3.Connection, *, today: str, since: str) -> list[Plan]:
+    """Confirmed plans for an idea that ended before `today`, started on or after `since`, that
+    nobody has said how they went (no outcome for the plan, or for its idea, from its day on).
+    The follow-up job asks about the same plans; this is the page's count of them."""
+    rows = conn.execute(
+        "SELECT * FROM plans WHERE status = 'confirmed' AND idea_id IS NOT NULL "
+        "AND substr(coalesce(end, start), 1, 10) < ? AND substr(start, 1, 10) >= ? "
+        "AND NOT EXISTS (SELECT 1 FROM outcomes o WHERE (o.plan_id = plans.id "
+        "OR o.idea_id = plans.idea_id) AND o.happened_on >= substr(plans.start, 1, 10)) "
+        "ORDER BY start",
+        (today, since),
+    )
+    return [Plan.from_row(row) for row in rows]
+
+
 def due_for_check(conn: sqlite3.Connection, *, day: str) -> list[Plan]:
     """Live plans for an idea that start on `day`, made in a chat, and not checked yet."""
     rows = conn.execute(

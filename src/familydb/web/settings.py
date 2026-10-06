@@ -20,6 +20,7 @@ import ipaddress
 import json
 import logging
 import re
+import sqlite3
 from contextlib import closing
 from pathlib import Path
 from typing import Any
@@ -504,6 +505,34 @@ def change(line: dict[str, Any], tz: Any) -> dict[str, Any]:
     return {**row, "label": setting_label(line["key"])}
 
 
+def section_flags(
+    app: App,
+    conn: sqlite3.Connection,
+    *,
+    steps: dict[str, Any] | None = None,
+    spent: float | None = None,
+) -> dict[str, bool]:
+    """Which pages of settings need a look: the one list the overview marks and the sidebar counts,
+    so the two cannot disagree. `steps` and `spent` are for a caller that has them already."""
+    live = app.settings
+    if steps is None:
+        steps = {step.name: step for step in status_page.setup_progress(app, conn)}
+    if spent is None:
+        spent = spent_today(conn, live, app.clock.now())
+    limit = live.daily_spend_limit
+    return {
+        "general": not steps["home"].done,
+        "model": not steps["model"].done,
+        "spending": bool(limit) and spent >= limit,
+        "security": not steps["password"].done,
+    }
+
+
+def needs_look(app: App, conn: sqlite3.Connection) -> int:
+    """How many pages of settings need a look, for the sidebar's "1 to check"."""
+    return sum(section_flags(app, conn).values())
+
+
 def overview(*, said: str | None, error: str | None, status: int) -> tuple[str, int]:
     """Every settings page, each with a line or two on how it stands. No network."""
     app = _app()
@@ -511,6 +540,7 @@ def overview(*, said: str | None, error: str | None, status: int) -> tuple[str, 
     with closing(app.connect()) as conn:
         steps = {step.name: step for step in status_page.setup_progress(app, conn)}
         today = spent_today(conn, live, app.clock.now())
+        flags = section_flags(app, conn, steps=steps, spent=today)
         latest = [change(line, live.tzinfo) for line in settings_store.history(conn, limit=1)]
     hour = "{:02d}:00".format
     units = fields.BY_KEY["weather_units"].word(live.weather_units)
@@ -549,11 +579,11 @@ def overview(*, said: str | None, error: str | None, status: int) -> tuple[str, 
     else:
         lookups = "On, but waiting for a key for the company that looks things up."
     states = {
-        "general": ([home, f"{live.tz}, {units}"], not steps["home"].done),
-        "model": ([steps["model"].detail], not steps["model"].done),
+        "general": ([home, f"{live.tz}, {units}"], flags["general"]),
+        "model": ([steps["model"].detail], flags["model"]),
         "spending": (
             [f"Up to ${limit:.2f} a day." if limit else "No daily limit.", spend],
-            bool(limit) and today >= limit,
+            flags["spending"],
         ),
         "messages": ([weekend, f"Asks how a plan went at {hour(live.follow_up_hour)}."], False),
         "lookups": ([lookups], False),
@@ -570,7 +600,7 @@ def overview(*, said: str | None, error: str | None, status: int) -> tuple[str, 
             [f"Telegram: {steps['telegram'].detail}", f"Calendar: {steps['calendar'].detail}"],
             False,
         ),
-        "security": ([steps["password"].detail], not steps["password"].done),
+        "security": ([steps["password"].detail], flags["security"]),
         "history": ([changed], False),
     }
     return (

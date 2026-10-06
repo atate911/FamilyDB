@@ -41,11 +41,13 @@ def _wearing(client) -> tuple[str, str | None]:
     return (theme.group(1) if theme else ""), (mode.group(1) if mode else None)
 
 
-def test_the_page_is_phosphor_and_follows_the_device_until_somebody_chooses(page) -> None:
-    assert _wearing(page) == ("phosphor", None)
+def test_the_page_is_kitchen_table_and_follows_the_device_until_somebody_chooses(page) -> None:
+    assert _wearing(page) == ("kitchen", None)
     head = page.get("/").text
-    assert '<meta name="color-scheme" content="dark" />' in head
-    assert 'content="#0b0e0d"' in head
+    assert '<meta name="color-scheme" content="light dark" />' in head
+    assert 'media="(prefers-color-scheme: light)"' in head and 'content="#EFE7D7"' in head
+    assert 'media="(prefers-color-scheme: dark)"' in head and 'content="#121816"' in head
+    assert "The default" in page.get("/look").text
 
 
 def test_the_look_page_offers_every_look_in_its_own_colours(page) -> None:
@@ -106,7 +108,7 @@ def test_nothing_but_a_look_this_page_has_is_kept(page, form) -> None:
     sent = page.post("/look", data={"csrf": _token(page), **form})
     assert looks.COOKIE not in _cookies(sent)
     assert "not one of the looks" in page.get("/look").text  # said once, where it was asked
-    assert _wearing(page) == ("phosphor", None)
+    assert _wearing(page) == ("kitchen", None)
 
 
 def test_a_cookie_that_names_no_look_is_the_default(page) -> None:
@@ -114,7 +116,7 @@ def test_a_cookie_that_names_no_look_is_the_default(page) -> None:
         page.set_cookie(looks.COOKIE, value)
         theme, mode = _wearing(page)
         assert "<script>" not in page.get("/").text.split("<body")[0]
-        assert (theme, mode) == ("phosphor", None) or value == "rail.dark.extra"
+        assert (theme, mode) == ("kitchen", None) or value == "rail.dark.extra"
 
 
 def test_a_form_from_another_site_does_not_change_the_look(page) -> None:
@@ -126,7 +128,7 @@ def test_a_form_from_another_site_does_not_change_the_look(page) -> None:
     assert looks.COOKIE not in _cookies(sent)
     sent = page.post("/look", data={"csrf": "not-this-session", "theme": "ink", "mode": "dark"})
     assert looks.COOKIE not in _cookies(sent)
-    assert _wearing(page) == ("phosphor", None)
+    assert _wearing(page) == ("kitchen", None)
 
 
 def test_the_look_is_for_anybody_signed_in_and_nobody_else(settings, clock, conn, family) -> None:
@@ -143,8 +145,7 @@ def test_every_look_is_written_down_once_in_the_stylesheets() -> None:
     """
     themes = (STATIC / "themes.css").read_text("utf-8")
     blocks = dict(re.findall(r'\[data-theme="([a-z]+)"\] \{(.*?)\n\}', themes, re.S))
-    assert set(blocks) == {one.key for one in looks.LOOKS if one.key != looks.DEFAULT}
-    assert f'[data-theme="{looks.DEFAULT}"]' in (STATIC / "style.css").read_text("utf-8")
+    assert set(blocks) == {one.key for one in looks.LOOKS}
 
     def tokens(body: str) -> set[str]:
         return set(re.findall(r"^\s+(--[a-z0-9-]+):", body, re.M))
@@ -161,14 +162,16 @@ def test_every_look_is_written_down_once_in_the_stylesheets() -> None:
     first = tokens(next(iter(blocks.values()))) - ignored
     for key, body in blocks.items():
         assert tokens(body) - ignored == first, f"{key}: {(tokens(body) - ignored) ^ first}"
-    # Phosphor, the default, sits on <html> under every theme (`:root`), so a token it names that
-    # a theme does not would leak into that theme: a theme names every one of them.
+    # The older stylesheet still writes Phosphor's tokens on <html> under every theme (`:root`),
+    # so a token it names that a theme does not would leak into that theme: a theme names every one.
     phosphor = (STATIC / "style.css").read_text("utf-8").split("/* ---- Names the page uses")[0]
     assert tokens(phosphor) - {"--color-scheme"} <= first, tokens(phosphor) - first
     assert first - tokens(phosphor) <= {"--primary-hover", "--here-icon", "--here-pill"}
 
     for one in looks.LOOKS:
-        if one.key == looks.DEFAULT:
+        if not one.has_day:  # a green screen: one value for each token, always night
+            assert "color-scheme: dark" in blocks[one.key], one.key
+            assert "light-dark(" not in blocks[one.key], one.key
             continue
         found = re.search(
             r"--band: (?:light-dark\((#[0-9A-Fa-f]{6}), (#[0-9A-Fa-f]{6})\)|(#[0-9A-Fa-f]{6}));",
@@ -178,7 +181,6 @@ def test_every_look_is_written_down_once_in_the_stylesheets() -> None:
         day, night = (found[1], found[2]) if found[1] else (found[3], found[3])
         assert (day.upper(), night.upper()) == (one.band[0].upper(), one.band[1].upper()), one.key
         assert "color-scheme: light dark" in blocks[one.key]
-        assert one.has_day
 
 
 def test_a_look_is_a_set_of_tokens_and_nothing_else() -> None:
@@ -189,19 +191,6 @@ def test_a_look_is_a_set_of_tokens_and_nothing_else() -> None:
     selectors = [s.strip() for s in re.findall(r"([^{}]+)\{", code)]
     assert all(s.startswith("[data-theme") for s in selectors), selectors
     assert "!important" not in code and "@import" not in code and "url(" not in code
-
-
-def _colour_tokens(block: str) -> dict[str, tuple[str, str]]:
-    """Each plain colour token of a theme as (day, night): `light-dark(a, b)` or one value for
-    both. Tokens built with color-mix() or other functions are derived from these and skipped."""
-    found: dict[str, tuple[str, str]] = {}
-    for name, value in re.findall(r"^\s+--([a-z0-9-]+): ([^;]+);", block, re.M):
-        pair = re.fullmatch(r"light-dark\((#[0-9A-Fa-f]{6}), (#[0-9A-Fa-f]{6})\)", value)
-        if pair:
-            found[name] = (pair[1], pair[2])
-        elif re.fullmatch(r"#[0-9A-Fa-f]{6}", value):
-            found[name] = (value, value)
-    return found
 
 
 def _luminance(colour: str) -> float:
@@ -252,6 +241,15 @@ def _colour(tokens: dict[str, str], value: str, which: int, depth: int = 0) -> s
     named = re.fullmatch(r"var\((--[a-z0-9-]+)\)", value)
     if named:
         return _colour(tokens, tokens[named[1]], which, depth + 1) if named[1] in tokens else None
+    clear = re.fullmatch(r"rgb\((\d+) (\d+) (\d+)(?: / ([\d.]+))?\)", value)
+    if clear:  # laid over the page, as the eye sees it
+        hexed = "#" + "".join(f"{int(clear[i]):02X}" for i in (1, 2, 3))
+        under = (
+            _colour(tokens, tokens["--paper"], which, depth + 1) if "--paper" in tokens else None
+        )
+        if clear[4] is None or float(clear[4]) >= 1 or under is None:
+            return hexed
+        return _mixed(hexed, under, float(clear[4]))
     mixed = re.fullmatch(r"color-mix\(in srgb, (.+?) (\d+(?:\.\d+)?)%, (.+)\)", value)
     if mixed:
         a, b = (_colour(tokens, mixed[i], which, depth + 1) for i in (1, 3))
@@ -271,15 +269,19 @@ def test_every_look_keeps_the_contrast_floors_by_day_and_by_night() -> None:
     words (4:1 on hover wells), 3:1 for box edges, the focus ring and words on each fill colour.
     """
     themes = (STATIC / "themes.css").read_text("utf-8")
+    shared = _shared(themes)
     blocks = dict(re.findall(r'\[data-theme="([a-z]+)"\] \{(.*?)\n\}', themes, re.S))
     assert blocks
     short: list[str] = []
     for key, body in blocks.items():
-        tokens = _colour_tokens(body)
-        for mode, which in (("day", 0), ("night", 1)):
+        tokens = {**shared, **_declared(body)}
+        # A look with no day (Phosphor, a green screen) is measured at night only.
+        for mode, which in (("day", 0), ("night", 1))[0 if looks.BY_KEY[key].has_day else 1 :]:
 
-            def at(name: str, which: int = which, tokens: dict = tokens) -> str:
-                return tokens[name][which]
+            def at(name: str, which: int = which, tokens: dict = tokens, key: str = key) -> str:
+                found = _colour(tokens, tokens[f"--{name}"], which)
+                assert found, f"{key}: --{name} is not a colour"
+                return found
 
             paper, card, well = at("paper"), at("card"), at("paper-2")
             pairs: list[tuple[str, str, str, float]] = []
@@ -350,7 +352,7 @@ def test_every_look_keeps_the_floors_kitchen_tables_layout_needs() -> None:
     for key, body in blocks.items():
         tokens = {**shared, **_declared(body)}
         pairs = [p for p in KITCHEN_LAYOUT if key == "kitchen" or not re.match(r"p\d", p[1])]
-        for mode, which in (("day", 0), ("night", 1)):
+        for mode, which in (("day", 0), ("night", 1))[0 if looks.BY_KEY[key].has_day else 1 :]:
             for what, words, ground, floor in pairs:
                 a = _colour(tokens, tokens[f"--{words}"], which)
                 b = _colour(tokens, tokens[f"--{ground}"], which)
@@ -358,3 +360,33 @@ def test_every_look_keeps_the_floors_kitchen_tables_layout_needs() -> None:
                 if _contrast(a, b) < floor - 0.005:
                     short.append(f"{key} {mode} {what}: {_contrast(a, b):.2f} < {floor}")
     assert not short, "\n".join(short)
+
+
+def test_a_look_may_only_add_effects_of_the_allowed_kinds() -> None:
+    """Beside colour a look may name five effect tokens (a light on the page, scanlines, a glow,
+    the face of titles). Each is one of a few plain forms, so a look cannot smuggle in an image, a
+    link or a font the page does not carry: nothing here is `url()`, and a face is self-hosted."""
+    themes = (STATIC / "themes.css").read_text("utf-8")
+    shared = _shared(themes)
+    blocks = dict(re.findall(r'\[data-theme="([a-z]+)"\] \{(.*?)\n\}', themes, re.S))
+    names = ("--fx-page", "--fx-scan", "--fx-glow", "--fx-title", "--fx-title-adjust")
+    assert set(names) <= set(shared)  # every look has all five, plain unless it says otherwise
+    faces = {"VT323", "Fraunces", "Georgia", "serif"}
+    for key, body in blocks.items():
+        got = {
+            **{n: shared[n] for n in names},
+            **{n: v for n, v in _declared(body).items() if n in names},
+        }
+        page, scan, glow, title, adjust = (got[n] for n in names)
+        assert page == "none" or all(
+            float(a) <= 0.1 for a in re.findall(r"rgb\([^)/]*/ ?([\d.]+)\)", page)
+        ), key
+        assert "url(" not in page and "image" not in page, key
+        assert (
+            scan == "transparent"
+            or float(re.fullmatch(r"rgb\([^)/]*/ ?([\d.]+)\)", scan)[1]) <= 0.06
+        ), key
+        assert 0 <= float(glow) <= 1, key
+        assert title.endswith("var(--font-head)"), key
+        assert set(re.findall(r'"([^"]+)"', title)) <= faces, key
+        assert adjust == "none" or re.fullmatch(r"cap-height [\d.]+", adjust), key

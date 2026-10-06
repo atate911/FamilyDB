@@ -113,6 +113,13 @@ def manifest() -> Response:
     return Response(json.dumps(body, sort_keys=True), mimetype="application/manifest+json")
 
 
+@bp.get("/more")
+def more() -> str:
+    """The phone's menu: what is not in the tab bar, and signing out. It opens from the picture at
+    the top of every page and is not a page on a wide screen, where the sidebar holds all of it."""
+    return render_template("more.html")
+
+
 @bp.get("/status")
 def status() -> str:
     app = _app()

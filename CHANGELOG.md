@@ -14,10 +14,14 @@ older than what is installed. It gets a date when it is released.
   whether to follow the device's day and night or hold to one. The choice is
   kept in the browser and touches nothing the family's data holds, and every
   look is tested for readable contrast by day and by night.
-- **Kitchen Table, a new look to try.** Cream paper by day, charcoal at night,
-  and deep green for what you act on. Open Look from the menu to try it; nothing
-  else on the page moves yet, and Phosphor is still what everybody sees until
-  they choose.
+- **A new look, Kitchen Table.** FamilyDB has a new look: cream paper by day,
+  charcoal at night, deep green for what you act on, and each of you in your
+  own colour. It is what everybody sees now, except anybody who chose a look
+  before, who keeps theirs. To change yours, open Look from the menu.
+- **A new menu** is coming, page by page. The first part is in: a sidebar on a
+  computer, a tab bar on a phone, Vera's state in a pill, and counts beside the
+  pages that need somebody ("3 late", "1 to decide"). The phone's menu page
+  (`/more`) is the first page to use it.
 
 ## v0.2.0 — second alpha (2026-10-05)
 

@@ -106,19 +106,26 @@ def test_every_page_points_a_phone_at_the_manifest_and_the_icon(
 
 
 def test_the_app_s_colours_are_the_page_s(settings, clock) -> None:
-    """Phosphor, the look a home screen opens in, is one colour from icon to page: the manifest's,
-    the browser bar's and the page's own. A chosen look only moves the bar's (`theme-color`,
-    `looks.py`), held to its CSS in test_look.py.
+    """The home screen opens charcoal, from the icon to the manifest's splash, and Phosphor, the
+    look that is charcoal, wears the same: the manifest's colour, the browser bar's and the page's
+    own. (The page's default is Kitchen Table, held to its CSS in test_look.py; the icon and the
+    manifest follow it when the brand's own icons replace these, in the clean-up.)
     """
     manifest = _manifest(_client(settings, clock, web_password=PASSWORD))
-    page = _client(settings, clock, web_password=PASSWORD).get("/login").text
+    client = _client(settings, clock, web_password=PASSWORD)
+    client.set_cookie("fdb_look", "phosphor.auto")
+    page = client.get("/login").text
     theme = re.search(r'<meta name="theme-color" content="(#[0-9a-f]{6})"', page)
-    background = re.search(r"--paper: (#[0-9a-f]{6});", (STATIC / "style.css").read_text())
-    assert theme and background
-    assert manifest["theme_color"] == manifest["background_color"] == theme[1] == background[1]
+    block = re.search(
+        r'\[data-theme="phosphor"\] \{.*?--paper: (#[0-9a-f]{6});',
+        (STATIC / "themes.css").read_text(),
+        re.S,
+    )
+    assert theme and block
+    assert manifest["theme_color"] == manifest["background_color"] == theme[1] == block[1]
     # The icon's ground too, so opening the app is one colour from the icon to the page.
     _, _, _, pixels = _png((STATIC / "apple-touch-icon.png").read_bytes())
-    assert pixels[1:4] == bytes.fromhex(background[1][1:])
+    assert pixels[1:4] == bytes.fromhex(block[1][1:])
 
 
 def test_the_icons_are_the_ones_the_script_draws() -> None:

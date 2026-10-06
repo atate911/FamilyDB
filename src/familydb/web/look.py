@@ -21,7 +21,12 @@ NOT_ONE = "That is not one of the looks on this page."
 def show() -> str:
     look, mode = looks.parse(request.cookies.get(looks.COOKIE))
     return render_template(
-        "look.html", looks=looks.LOOKS, wearing=look, mode=mode, mode_words=looks.MODE_WORDS
+        "look.html",
+        looks=looks.LOOKS,
+        wearing=look,
+        mode=mode,
+        mode_words=looks.MODE_WORDS,
+        default=looks.DEFAULT,
     )
 
 

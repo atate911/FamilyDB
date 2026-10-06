@@ -1,0 +1,56 @@
+{% extends "base_kitchen.html" %}
+{% from "_kitchen.html" import icon, avatar, badge, tag, tile, srow, page_head %}
+{% block title %}Menu · {{ site_title }}{% endblock %}
+{% block content %}
+  {# The phone's menu. Grown-ups: everything the tab bar has no room for. A kid: her other pages and signing out. #}
+  {{ page_head('Menu', lede='Everything that isn’t in the tab bar.' if grownup else 'Your other pages, and signing out.') }}
+
+  {% if who.member %}
+    <ul class="slist">
+      {% set lead %}{{ avatar(shell.me.slot, shell.me.initial, 'lg') }}{% endset %}
+      {{ srow(url_for('family.you'), 'Signed in as ' ~ shell.me.name, (shell.me.role | capitalize) ~ ' · Your password', lead=lead) }}
+    </ul>
+  {% endif %}
+
+  <ul class="slist mt-3">
+    {% set lead %}{{ tile('palette') }}{% endset %}
+    {{ srow(url_for('look.show'), 'Look', 'How the page looks, in this browser', lead=lead) }}
+    {% if not grownup %}
+      {% set lead %}{{ tile('bulb') }}{% endset %}
+      {{ srow(url_for('web.ideas'), 'Ideas', 'Places to go and things to try', lead=lead) }}
+    {% endif %}
+  </ul>
+
+  {% if grownup %}
+    <h2 class="group-h">For the family</h2>
+    <ul class="slist">
+      {% if wishing == 'decide' %}
+        {% set lead %}{{ tile('gift') }}{% endset %}
+        {% set trail %}{% if shell.decide %}{{ badge('act', shell.decide, 'to decide') }}{% endif %}{% endset %}
+        {{ srow(url_for('web.wishes'), 'Kids’ lists', 'What each of the kids would like', lead=lead, trail=trail) }}
+      {% endif %}
+      {% set lead %}{{ tile('memory') }}{% endset %}
+      {{ srow(url_for('web.memory'), 'What ' ~ assistant ~ ' knows' if has_persona else 'What is remembered', 'What has been learned about the family, and what to forget', lead=lead) }}
+    </ul>
+
+    <h2 class="group-h">Behind the scenes</h2>
+    <ul class="slist">
+      {% set lead %}{{ tile('pulse', 'ok' if shell.pill and shell.pill.state == 'ready' else '') }}{% endset %}
+      {% set trail %}{% if shell.pill %}{{ tag('ok' if shell.pill.state == 'ready' else 'look', shell.pill.short) }}{% endif %}{% endset %}
+      {{ srow(url_for('web.status'), 'Status', shell.pill.long if shell.pill else none, lead=lead, trail=trail) }}
+      {% if managing %}
+        {% set lead %}{{ tile('sliders', 'look' if shell.check else '') }}{% endset %}
+        {% set trail %}{% if shell.check %}{{ tag('look', 'Needs a look', 'alert') }}{% endif %}{% endset %}
+        {{ srow(url_for('settings.show'), 'Settings', 'How it works, and what it needs', lead=lead, trail=trail) }}
+        {% set lead %}{{ tile('people') }}{% endset %}
+        {{ srow(url_for('family.show'), 'Family', 'Who ' ~ assistant ~ ' talks to' if has_persona else 'Who the bot talks to', lead=lead) }}
+      {% endif %}
+    </ul>
+  {% endif %}
+
+  {% if who.signed_in %}
+    <form class="mt-4" method="post" action="{{ url_for('auth.logout') }}">
+      <button class="btn btn--quiet" type="submit">{{ icon('signout', size='sm') }}Sign out</button>
+    </form>
+  {% endif %}
+{% endblock %}

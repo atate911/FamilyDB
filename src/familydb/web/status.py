@@ -315,6 +315,33 @@ def light(app: App, conn: sqlite3.Connection) -> str | None:
     return None
 
 
+@dataclass(frozen=True)
+class Pill:
+    """How the assistant stands, said once for the sidebar, the phone's top bar and Status: one of
+    ready, busy (writing back), rest (the day's limit is spent) or down (cannot answer)."""
+
+    state: str
+    long: str
+    short: str
+
+
+def pill(app: App, conn: sqlite3.Connection, *, name: str, busy: bool = False) -> Pill:
+    """Built from what Status already reads, so the pill and the page cannot disagree. `busy` is
+    whether a reply is being written (the chat's own `standing`); asked by the caller, which knows
+    whose chat it is."""
+    live = app.settings
+    if not ready_to_answer(setup_progress(app, conn)):
+        return Pill("down", f"{name} can\u2019t answer yet", "Can\u2019t answer yet")
+    limit = live.daily_spend_limit
+    if limit and spent_today(conn, live, app.clock.now()) >= limit:
+        return Pill("rest", f"{name} is resting until midnight", "Resting")
+    if light(app, conn) == "bad":
+        return Pill("down", f"{name} can\u2019t answer right now", "Can\u2019t answer")
+    if busy:
+        return Pill("busy", f"{name} is writing back", "Writing back")
+    return Pill("ready", f"{name} is ready", "Ready")
+
+
 def attention(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
     """What only an admin can fix, while it lasts. New models are under Models and prices."""
     now = app.clock.now()

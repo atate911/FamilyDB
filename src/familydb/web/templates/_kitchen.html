@@ -1,0 +1,86 @@
+{# Kitchen Table's parts (docs/STYLE.md; the class names are the design's STANDARD.md §2). Beside `_ui.html`, which the pages not yet moved to the new frame still use; the two become one when the last page moves. Icons are the design's own sprite (static/icons-kitchen.svg): beside words they are hidden from a screen reader, alone they get a label. #}
+
+{% set KIND_ICONS = {
+  'restaurant': 'utensils',
+  'activity': 'sparkle',
+  'outing': 'sparkle',
+  'day_trip': 'mountain',
+  'trip': 'suitcase',
+  'show': 'ticket',
+  'event': 'star',
+  'seasonal': 'leaf',
+} %}
+
+{% macro icon(name, label=none, cls='', size='') -%}
+  <svg class="icon{{ ' icon--' ~ size if size }}{{ ' ' ~ cls if cls }}" focusable="false"
+    {%- if label %} role="img" aria-label="{{ label }}"{% else %} aria-hidden="true"{% endif %}>
+    <use href="{{ url_for('static', filename='icons-kitchen.svg') }}#i-{{ name }}"></use></svg>
+{%- endmacro %}
+
+{# FamilyDB's own mark, a monitor with a smile; the colours are the brand's, set in the stylesheet. `size` is '' or 'xs'. #}
+{% macro brand_mark(size='') -%}
+  <svg class="mark-fdb{{ ' mark-fdb--' ~ size if size }}" viewBox="0 0 32 32" aria-hidden="true"><rect class="mf__bg" width="32" height="32" rx="8"/><g class="mf__fg" transform="translate(4 4)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3" width="19" height="13.5" rx="3.5"/><path d="M12 16.5V21M8.5 21h7M9 8.25v1.25M15 8.25v1.25M9 12.25c1.7 1.35 4.3 1.35 6 0"/></g></svg>
+{%- endmacro %}
+
+{# The cursor blinks four times as a page opens, then stays lit. #}
+{% macro wordmark(title) -%}
+  <b class="wm">{{ title }}<span class="wm__cur" aria-hidden="true"></span></b>
+{%- endmacro %}
+
+{# A person, by their colour slot (1 to 8, from the family's data, never by name); Everyone (slot 0) is the house. The name is always written beside it, so the letter is decoration. `size` is '', 'sm' or 'lg'. #}
+{% macro avatar(slot, initial='', size='') -%}
+  <span class="av p{{ slot or 0 }}{{ ' av--' ~ size if size }}" aria-hidden="true">
+    {%- if slot and initial %}{{ initial }}{% else %}{{ icon('home') }}{% endif -%}
+  </span>
+{%- endmacro %}
+
+{# A count with its word, loud only for what needs somebody now. `kind`: late, act, quiet or look. #}
+{% macro badge(kind, n, word) -%}
+  <span class="badge badge--{{ kind }}">{{ n }} {{ word }}</span>
+{%- endmacro %}
+
+{# The assistant's state, said the same in the sidebar and the phone's top bar. `pill` is `status.Pill`. #}
+{% macro health_pill(pill, href) -%}
+  <a class="pill-health{{ ' pill-health--' ~ pill.state if pill.state != 'ready' }}" href="{{ href }}" aria-label="{{ pill.long }}. See status and spending"><span class="long">{{ pill.long }}</span><span class="short">{{ pill.short }}</span></a>
+{%- endmacro %}
+
+{# How a thing stands: always words, never colour alone. `state`: ok, better, look, broken, off, when, been. #}
+{% macro tag(state, words, glyph=none) -%}
+  <span class="tag tag--{{ state }}">{% if glyph %}{{ icon(glyph) }}{% endif %}{{ words }}</span>
+{%- endmacro %}
+
+{# A neutral square for a destination or a kind. `tone` is '', ok, better, look, broken or vera. #}
+{% macro tile(glyph, tone='', size='') -%}
+  <span class="tile{{ ' tile--' ~ tone if tone }}{{ ' tile--' ~ size if size }}" aria-hidden="true">{{ icon(glyph) }}</span>
+{%- endmacro %}
+
+{# A row in a list of destinations (Settings, the account menu): a lead (a tile or an avatar), a title with one line under it, an optional tag or badge, and a chevron. `lead` and `trail` are written with {% set %} blocks. #}
+{% macro srow(href, title, line=none, lead=none, trail=none) -%}
+  <li><a class="srow" href="{{ href }}">
+    {{- lead if lead -}}
+    <span class="srow__text"><b>{{ title }}</b>{% if line %}<span>{{ line }}</span>{% endif %}</span>
+    {{- trail if trail -}}
+    <span class="srow__go">{{ icon('chev') }}</span></a></li>
+{%- endmacro %}
+
+{# The top of a page: a way back, the title and the one sentence under it, and actions on the right (the `call` block). `crumb` is (words, href). #}
+{% macro page_head(title, lede=none, crumb=none, overline=none) -%}
+  {% if crumb %}<a class="crumb" href="{{ crumb[1] }}">{{ icon('chevl', size='sm') }}{{ crumb[0] }}</a>{% endif %}
+  <div class="page-head">
+    <div>
+      {% if overline %}<p class="overline">{{ overline }}</p>{% endif %}
+      <h1>{{ title }}</h1>
+      {% if lede %}<p class="lede">{{ lede }}</p>{% endif %}
+    </div>
+    {%- if caller is defined %}<div class="head-actions">{{ caller() }}</div>{% endif %}
+  </div>
+{%- endmacro %}
+
+{# What the last form said, with a way to take it back when there is one. #}
+{% macro flash(message, undo_url=none) -%}
+  <div class="banner banner--ok flash" role="status" tabindex="-1">
+    <span class="banner__ic">{{ icon('check') }}</span>
+    <p class="banner__text">{{ message }}</p>
+    {% if undo_url %}<form method="post" action="{{ undo_url }}"><button class="btn btn--quiet btn--sm" type="submit">Undo</button></form>{% endif %}
+  </div>
+{%- endmacro %}

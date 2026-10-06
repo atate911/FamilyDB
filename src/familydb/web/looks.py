@@ -1,6 +1,6 @@
-"""The looks the page can wear (themes in `static/themes.css`; Phosphor, the default, is in
-`style.css`), kept in one cookie (`fdb_look`, "rail.dark"). Any other value is the default, so a
-cookie can put nothing else on the page."""
+"""The looks the page can wear (themes in `static/themes.css`), kept in one cookie (`fdb_look`,
+"rail.dark"). Any other value is the default, Kitchen Table, so a cookie can put nothing else on
+the page."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 COOKIE = "fdb_look"
 COOKIE_DAYS = 365
-DEFAULT = "phosphor"
+DEFAULT = "kitchen"
 AUTO, LIGHT, DARK = "auto", "light", "dark"
 MODES = (AUTO, LIGHT, DARK)
 MODE_WORDS = {
@@ -33,8 +33,8 @@ LOOKS = (
     Look(
         "kitchen",
         "Kitchen Table",
-        "The family's table: cream paper by day, charcoal at night, and deep green for what "
-        "you act on.",
+        "The family's table: cream paper by day, charcoal at night, deep green for what "
+        "you act on, and each person in their own colour.",
         True,
         ("#EFE7D7", "#121816"),
     ),

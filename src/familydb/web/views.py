@@ -267,12 +267,19 @@ def memory_page(
     return {"groups": groups, "forgotten": forgotten}
 
 
+def is_late(task: Task, tz: ZoneInfo, today: date) -> bool:
+    """Whether an open task's day has passed, in the family's own time."""
+    if not task.due_at:
+        return False
+    moment = datetime.fromisoformat(task.due_at.replace("Z", "+00:00")).astimezone(tz)
+    return moment.date() < today
+
+
 def task_brief(task: Task, tz: ZoneInfo, today: date) -> dict[str, Any]:
     due = None
-    late = False
+    late = is_late(task, tz, today)
     if task.due_at:
         moment = datetime.fromisoformat(task.due_at.replace("Z", "+00:00")).astimezone(tz)
-        late = moment.date() < today
         day = relative_text(moment.date().isoformat(), today)
         due = f"was due {day}" if late else f"due {day}, {moment:%H:%M}"
     return {
