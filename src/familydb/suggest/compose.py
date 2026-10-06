@@ -71,16 +71,11 @@ def order_candidates(
     return sorted(candidates, key=key)
 
 
-def compose(
-    context: Context,
-    label: str,
-    candidates: list[Candidate],
-    finds: list[WebFind],
-    skipped: list[str],
-    by_id: dict[int, Idea],
-    recently: set[int],
-    suggestion_id: int | None,
-) -> SuggestResult:
+def choose(
+    candidates: list[Candidate], by_id: dict[int, Idea], recently: set[int]
+) -> tuple[list[Candidate], int]:
+    """What the model is shown, in order, and how many are held back. The recently suggested
+    sink before the cut, so asking again brings others up."""
     ordered = [
         c.model_copy(update={"reasons": c.reasons[:MAX_REASONS]})
         for c in order_candidates(candidates, by_id, recently)
@@ -88,9 +83,18 @@ def compose(
     offered = [c for c in ordered if c.verdict != "ruled_out"]
     rejected = [c for c in ordered if c.verdict == "ruled_out"]
     shown = offered[:MAX_OFFERED] + rejected[:MAX_RULED_OUT]
-    held_back = (len(offered) - len(offered[:MAX_OFFERED])) + (
-        len(rejected) - len(rejected[:MAX_RULED_OUT])
-    )
+    return shown, len(ordered) - len(shown)
+
+
+def compose(
+    context: Context,
+    label: str,
+    shown: list[Candidate],
+    held_back: int,
+    finds: list[WebFind],
+    skipped: list[str],
+    suggestion_id: int | None,
+) -> SuggestResult:
     start, end = context.window if context.window else (None, None)
     return SuggestResult(
         window=Window(

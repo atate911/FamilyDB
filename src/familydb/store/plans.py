@@ -121,6 +121,20 @@ def for_idea(conn: sqlite3.Connection, idea_id: int) -> list[Plan]:
     return [Plan.from_row(row) for row in rows]
 
 
+def latest_by_idea(conn: sqlite3.Connection) -> dict[int, tuple[date, date]]:
+    """For each idea with a live plan, its latest plan's first and last day, in one query: what
+    the suggestion engine reads "already planned" by (suggest/shortlist.py)."""
+    rows = conn.execute(
+        "SELECT idea_id, substr(start, 1, 10) AS first, "
+        "substr(coalesce(end, start), 1, 10) AS last FROM plans "
+        "WHERE idea_id IS NOT NULL AND status != 'cancelled' ORDER BY start, id"
+    )
+    return {
+        int(row["idea_id"]): (date.fromisoformat(row["first"]), date.fromisoformat(row["last"]))
+        for row in rows
+    }
+
+
 def list_between(conn: sqlite3.Connection, start: str, end: str) -> list[Plan]:
     rows = conn.execute(
         "SELECT * FROM plans WHERE status != 'cancelled' AND start >= ? AND start < ? "

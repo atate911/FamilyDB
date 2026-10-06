@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta
 
 from familydb.free_time import free_blocks
 from familydb.integrations.open_meteo import DayForecast
-from familydb.store import db, ideas, outcomes, places, suggestions
+from familydb.store import db, ideas, outcomes, places, plans, suggestions
 from familydb.suggest.context import build_context
 from familydb.suggest.discover import DISCOVER_CACHE_SECONDS, discover
 from familydb.suggest.engine import resolve_window, run
@@ -100,6 +100,76 @@ def test_participants_match() -> None:
     assert not participants_match(idea(["adults only"]), ["with the girls"])
 
 
+def test_who_is_coming_is_read_against_the_family_list() -> None:
+    """Compared as text, "the kids" ruled out an idea kept "with the girls". Read as the people
+    they mean, both take in Mia, so it fits; "just the two of us" still leaves out an idea for
+    the kids, and words naming nobody on the list are compared as text, as before."""
+    from familydb.store.ideas import Idea
+    from familydb.store.members import Member
+    from familydb.suggest import people
+
+    def member(member_id, name, role, gender=None):
+        return Member(id=member_id, display_name=name, role=role, gender=gender, created_at="")
+
+    family = [
+        member(1, "Sam", "admin"),
+        member(2, "Alex", "parent"),
+        member(3, "Mia", "kid", "female"),
+        member(4, "Theo", "kid", "male"),
+    ]
+
+    def fits(saved, asked):
+        idea = Idea(id=1, kind="x", title="t", participants=saved, created_at="", updated_at="")
+        return participants_match(idea, asked, family)
+
+    assert fits(["with the girls"], ["the kids"])
+    assert fits(["for Mia"], ["the girls"])
+    assert fits(["Mia and Theo"], ["Theo"])
+    assert fits(["whole family"], ["Theo"]) and fits(["adults only"], ["Sam"])
+    assert not fits(["with the kids"], ["just the two of us"])
+    assert not fits(["date night"], ["the kids"])
+    assert not fits(["with the girls"], ["Theo"])
+    assert fits(["with Grandma"], ["grandma"]) and not fits(["with Grandma"], ["the neighbours"])
+    # A kid nobody set as a girl or a boy is counted among both.
+    ruby = [*family, member(5, "Ruby", "kid")]
+    assert people.resolve(["the girls"], ruby).ids == {3, 5}
+    assert people.resolve(["with the boys"], ruby).ids == {4, 5}
+    assert people.resolve(["Mia's friends", "the kids"], ruby).unplaced == ("mia friends",)
+
+
+def test_a_planned_idea_is_out_only_while_its_plan_is_to_come(
+    conn, full_settings, thursday_clock, family
+) -> None:
+    """An idea stayed "already planned" for good once its day had passed and nobody said how it
+    went. Now it is out while its plan is to come, and counts as done on its day after."""
+    ctx = _weekend_ctx(conn, full_settings, thursday_clock, family)
+    context = build_context(ctx, (SAT, SUN))
+    coming = _idea(conn, "Zoo", status="planned", setting="indoor")
+    over = _idea(conn, "Museum", status="planned", setting="indoor")
+    long_ago = _idea(conn, "Aquarium", status="planned", setting="indoor")
+    for idea, start in ((coming, "2026-09-26"), (over, "2026-09-12"), (long_ago, "2026-05-02")):
+        with db.transaction(conn):
+            plans.insert(
+                conn,
+                title=idea.title,
+                start=f"{start}T10:00:00-07:00",
+                end=None,
+                all_day=False,
+                idea_id=idea.id,
+            )
+    kept, ruled_out = shortlist(
+        ideas.list_all(conn),
+        context,
+        Constraints(),
+        full_settings,
+        plans=plans.latest_by_idea(conn),
+    )
+    reasons = {c.idea_id: c.reasons[0] for c in ruled_out}
+    assert reasons[coming.id] == "already planned for Sat 26 Sep"
+    assert reasons[over.id] == "was planned for Sat 12 Sep"  # as if done then
+    assert [s.idea.id for s in kept] == [long_ago.id]
+
+
 def test_shortlist_rules(conn, full_settings, thursday_clock, family) -> None:
     ctx = _weekend_ctx(conn, full_settings, thursday_clock, family, busy_saturday_morning=True)
     context = build_context(ctx, (SAT, SUN))
@@ -116,7 +186,7 @@ def test_shortlist_rules(conn, full_settings, thursday_clock, family) -> None:
     long_day = _idea(conn, "Day at the coast", kind="day_trip")
     cafe = _idea(conn, "Board game cafe", setting="indoor", duration_min=120, cost_level=1)
     pricey = _idea(conn, "Fancy dinner", kind="restaurant", cost_level=4)
-    kept, ruled_out, extras = shortlist(
+    kept, ruled_out = shortlist(
         ideas.list_all(conn),
         context,
         Constraints(participants=["with the girls"], max_cost_level=2),
@@ -136,7 +206,6 @@ def test_shortlist_rules(conn, full_settings, thursday_clock, family) -> None:
     assert kept_ids[hike.id].fits_days == [SAT] and kept_ids[hike.id].weather == "ok"
     assert kept_ids[long_day.id].fits_days == [SUN]
     assert kept_ids[cafe.id].fits_days == [SAT, SUN]
-    assert extras == []
 
 
 def test_shortlist_duration_and_weather_reasons(
@@ -152,7 +221,7 @@ def test_shortlist_duration_and_weather_reasons(
     context = build_context(ctx, (SAT, SUN))
     hike = _idea(conn, "The falls hike", setting="outdoor", duration_min=180)
     long_indoor = _idea(conn, "Museum marathon", setting="indoor", duration_min=420)
-    kept, ruled_out, _ = shortlist(ideas.list_all(conn), context, Constraints(), full_settings)
+    kept, ruled_out = shortlist(ideas.list_all(conn), context, Constraints(), full_settings)
     reasons = {c.idea_id: c.reasons[0] for c in ruled_out}
     assert reasons[hike.id].startswith("rain likely Saturday (90%); rain likely Sunday (80%)")
     assert reasons[long_indoor.id] == "needs about 7 h, only 5 h free"
@@ -162,7 +231,7 @@ def test_shortlist_duration_and_weather_reasons(
 def test_someday_skips_window_rules(conn, settings, thursday_clock, family) -> None:
     context = build_context(_ctx(conn, settings, thursday_clock, family), None)
     hike = _idea(conn, "The falls hike", setting="outdoor", duration_min=600)
-    kept, ruled_out, _ = shortlist(ideas.list_all(conn), context, Constraints(), settings)
+    kept, ruled_out = shortlist(ideas.list_all(conn), context, Constraints(), settings)
     assert [s.idea.id for s in kept] == [hike.id] and kept[0].fits_days == [] and ruled_out == []
 
 
@@ -659,6 +728,68 @@ def test_the_result_stays_small_however_long_the_list_gets(
     # The log keeps every verdict, whatever the model was shown.
     row = suggestions.list_recent(conn, limit=1)[0]
     assert len(row.candidates) == 70
+
+
+def test_every_idea_is_checked_and_asking_again_brings_others_up(
+    registry, conn, full_settings, thursday_clock, family
+) -> None:
+    """Only the first eight ideas saved used to be checked; the rest were "not checked in detail"
+    every time. Each is checked now, and the ones just shown sink, so asking again offers the
+    others first."""
+    from familydb.suggest.compose import MAX_OFFERED
+
+    made = []
+    for number in range(20):
+        idea = _idea(conn, f"Indoor {number}", setting="indoor", duration_min=60)
+        day = [{"open": "10:00", "close": "18:00"}]
+        _seed_place(conn, idea, hours={"sat": day, "sun": day}, travel_minutes=10)
+        made.append(idea.id)
+    ctx = _weekend_ctx(conn, full_settings, thursday_clock, family)
+    _, first = _suggest(registry, ctx)
+    _, second = _suggest(registry, ctx)
+    good = [
+        [c["idea_id"] for c in data["candidates"] if c["verdict"] == "good"]
+        for data in (first, second)
+    ]
+    assert good[0] == made[:MAX_OFFERED]
+    assert good[1][: len(made) - MAX_OFFERED] == made[MAX_OFFERED:]
+    reasons = [r for data in (first, second) for c in data["candidates"] for r in c["reasons"]]
+    assert "not checked in detail" not in reasons
+
+
+def test_only_ideas_shown_are_looked_up_again(
+    registry, conn, full_settings, thursday_clock, family
+) -> None:
+    """Every idea is evaluated now, so a stale place is looked up again (which is paid for) only
+    when its idea is among those shown."""
+    from familydb.suggest.compose import MAX_OFFERED
+
+    web_on = full_settings.model_copy(update={"web_tools_enabled": True})
+    ctx = _ctx(conn, web_on, thursday_clock, family, weather=fakes.FakeForecast([DRY_SAT, WET_SUN]))
+    stale = []
+    for number in range(MAX_OFFERED + 3):
+        idea = _idea(conn, f"Museum {number}", setting="indoor", duration_min=90)
+        with db.transaction(conn):
+            place = places.insert(
+                conn, name=idea.title, now=NOW_ISO, last_checked_at="2026-01-01T00:00:00Z"
+            )
+            ideas.update(conn, idea.id, {"place_id": place.id, "enrichment": "done"}, now=NOW_ISO)
+        stale.append(idea.id)
+    _, data = _suggest(registry, ctx)
+    shown = {c["idea_id"] for c in data["candidates"]}
+    pending = {i for i in stale if ideas.get(conn, i).enrichment == "pending"}
+    assert len(shown) == MAX_OFFERED and pending == shown
+
+
+def test_the_kids_find_an_idea_kept_for_the_girls(
+    registry, conn, full_settings, thursday_clock, family
+) -> None:
+    hopscotch = _idea(conn, "Hopscotch", setting="indoor", participants=["with the girls"])
+    date_night = _idea(conn, "Wine bar", setting="indoor", participants=["just the two of us"])
+    ctx = _weekend_ctx(conn, full_settings, thursday_clock, family)
+    _, data = _suggest(registry, ctx, participants=["the kids"])
+    verdicts = {c["idea_id"]: c["verdict"] for c in data["candidates"]}
+    assert verdicts[hopscotch.id] != "ruled_out" and verdicts[date_night.id] == "ruled_out"
 
 
 def test_a_short_list_is_returned_whole(registry, conn, full_settings, thursday_clock, family):

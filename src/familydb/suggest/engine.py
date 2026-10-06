@@ -8,9 +8,9 @@ from datetime import date, datetime, time, timedelta
 from familydb.availability import enrichment_available
 from familydb.dates import parse_date_range, utc_iso, weekend_window
 from familydb.errors import ToolError
-from familydb.store import ideas, outcomes, suggestions
+from familydb.store import ideas, members, outcomes, plans, suggestions
 from familydb.store.db import transaction
-from familydb.suggest.compose import compose
+from familydb.suggest.compose import choose, compose
 from familydb.suggest.context import build_context
 from familydb.suggest.discover import discover
 from familydb.suggest.evaluate import evaluate
@@ -127,8 +127,13 @@ def run(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> 
         topic=" ".join(args.topic.casefold().split())[:MAX_TOPIC],
     )
     excluded = outcomes.do_not_repeat(ctx.conn)
-    kept, ruled_out, extras = shortlist(
-        [idea for idea in all_ideas if idea.id not in excluded], context, constraints, ctx.settings
+    kept, ruled_out = shortlist(
+        [idea for idea in all_ideas if idea.id not in excluded],
+        context,
+        constraints,
+        ctx.settings,
+        people=members.list_all(ctx.conn),
+        plans=plans.latest_by_idea(ctx.conn),
     )
     ruled_out.extend(
         Candidate(
@@ -143,15 +148,23 @@ def run(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> 
         and (not idea_ids or idea.id in idea_ids)
     )
     evaluated, stale_ids = evaluate(ctx.conn, kept, context, constraints, ctx.settings, ctx.clock)
+    candidates = evaluated + ruled_out
+    since = utc_iso(ctx.clock.now() - timedelta(days=RECENT_SUGGESTION_DAYS))
+    recently = suggestions.recently_suggested(ctx.conn, since=since)
+    by_id = {idea.id: idea for idea in all_ideas}
+    shown, held_back = choose(candidates, by_id, recently)
     skipped = list(context.skipped)
     if unknown:
         # A wrong number must not quietly empty the answer: say so, widen when nothing is left.
         names = ", ".join(f"#{idea_id}" for idea_id in unknown)
         widened = "; considered every idea instead" if not idea_ids else ""
         skipped.append(f"no idea {names} on the list{widened}")
-    if stale_ids and refresh_stale and enrichment_available(ctx.settings):
+    # Looked up again only if it is shown: every idea is evaluated now, and a lookup is paid for.
+    on_show = {c.idea_id for c in shown}
+    stale_shown = [idea_id for idea_id in stale_ids if idea_id in on_show]
+    if stale_shown and refresh_stale and enrichment_available(ctx.settings):
         with transaction(ctx.conn):
-            ideas.requeue_enrichment(ctx.conn, stale_ids, now=ctx.now_iso())
+            ideas.requeue_enrichment(ctx.conn, stale_shown, now=ctx.now_iso())
         skipped.append("stale place details re-queued for a refresh")
 
     finds, note = ([], None)
@@ -160,17 +173,14 @@ def run(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> 
     if note:
         skipped.append(note)
 
-    since = utc_iso(ctx.clock.now() - timedelta(days=RECENT_SUGGESTION_DAYS))
-    recently = suggestions.recently_suggested(ctx.conn, since=since)
-    candidates = evaluated + extras + ruled_out
     suggestion_id = log_suggestion(
         ctx.conn,
         asked_by=ctx.member.id if ctx.member else None,
         window_start=window[0].isoformat() if window else None,
         window_end=window[1].isoformat() if window else None,
         candidates=candidates,
+        shown=on_show,
         finds=finds,
         now=ctx.now_iso(),
     )
-    by_id = {idea.id: idea for idea in all_ideas}
-    return compose(context, label, candidates, finds, skipped, by_id, recently, suggestion_id)
+    return compose(context, label, shown, held_back, finds, skipped, suggestion_id)
