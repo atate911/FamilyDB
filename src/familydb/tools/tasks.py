@@ -147,7 +147,7 @@ def add_task(ctx: ToolContext, args: AddTaskInput) -> dict[str, Any]:
             ctx,
             previous,
             {
-                "task": previous.model_dump(mode="json"),
+                "task": record(previous),
                 "reminder_destination": _destination(ctx, previous),
                 "timezone": ctx.clock.tz.key,
             },
@@ -191,7 +191,7 @@ def add_task(ctx: ToolContext, args: AddTaskInput) -> dict[str, Any]:
         ctx,
         task,
         {
-            "task": task.model_dump(mode="json"),
+            "task": record(task),
             "reminder_destination": _destination(ctx, task),
             "timezone": ctx.clock.tz.key,
         },
@@ -255,7 +255,7 @@ def update_task(ctx: ToolContext, args: UpdateTaskInput) -> dict[str, Any]:
         _keep_undo(
             ctx, before, task, values, reminder_changed=bool(args.remind_at or args.clear_reminder)
         )
-    return _with_nudges(ctx, task, {"task": task.model_dump(mode="json")})
+    return _with_nudges(ctx, task, {"task": record(task)})
 
 
 # What a change to a task can be put back to (undo.py); its repeat is not among them.
@@ -294,6 +294,17 @@ def _window_until(ctx: ToolContext, window: str) -> str | None:
     """When "this weekend" in the window ends, from today (windows.until), kept with the task."""
     last = windows.until(window, ctx.clock.today())
     return last.isoformat() if last else None
+
+
+# Kept with a task for code (a plan's reminder, when "this weekend" ends): said to the model
+# only when they hold something, so most tasks' records do not carry them as nulls.
+UNSAID_WHEN_EMPTY = ("plan_id", "plan_remind", "window_until")
+
+
+def record(task: Task) -> dict[str, Any]:
+    """A task as a tool answers with it."""
+    empty = {key for key in UNSAID_WHEN_EMPTY if getattr(task, key) is None}
+    return task.model_dump(mode="json", exclude=empty)
 
 
 def _may_update(ctx: ToolContext, task_id: int) -> None:

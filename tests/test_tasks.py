@@ -36,9 +36,13 @@ def test_deadlines_and_flexible_windows_do_not_schedule_reminders(ctx):
     assert task["reminder"] is None
     assert task["owner"] == "Sam"
     # The tool result is the task's columns, less its idempotency key and who made it (that is for
-    # the page's "Set by", not for the model), plus owner and reminder.
+    # the page's "Set by", not for the model), and the ones kept for code while they are empty,
+    # plus owner and reminder.
+    from familydb.tools.tasks import UNSAID_WHEN_EMPTY
+
     columns = {row["name"] for row in ctx.conn.execute("PRAGMA table_info(tasks)")}
-    assert set(task) == columns - {"operation_key", "created_by_member_id"} | {"owner", "reminder"}
+    unsaid = {"operation_key", "created_by_member_id", *UNSAID_WHEN_EMPTY}
+    assert set(task) == columns - unsaid | {"owner", "reminder"}
     assert not ctx.conn.execute("SELECT * FROM plans").fetchall()
 
 
