@@ -249,6 +249,8 @@ class Settings(BaseSettings):
     digest_hour: int = Field(default=18, ge=0, le=23)
     follow_up_hour: int = Field(default=10, ge=0, le=23)
     task_nudges: bool = True
+    # The nightly tidy (jobs/tidy.py): an idea whose dates are a week past leaves the list.
+    tidy_ideas: bool = True
     follow_ups: bool = True
     plan_checks: bool = True
     plan_check_hour: int = Field(default=19, ge=0, le=23)

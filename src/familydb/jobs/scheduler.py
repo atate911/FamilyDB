@@ -28,6 +28,7 @@ from familydb.jobs.nudges import run_nudges
 from familydb.jobs.plan_checks import run_plan_checks
 from familydb.jobs.reminders import run_reminders
 from familydb.jobs.retry_failed import run_retries
+from familydb.jobs.tidy import run_tidy
 from familydb.jobs.weekend_digest import run_digest
 from familydb.judgement import run_judgements
 from familydb.model_watch import run_model_watch
@@ -141,6 +142,14 @@ def job_specs(app: App) -> list[JobSpec]:
             run_nudges,
             IntervalTrigger(minutes=NUDGE_INTERVAL_MINUTES),
             wanted=settings.task_nudges,
+        ),
+        JobSpec(
+            "tidy",
+            "take off ideas whose dates are past",
+            run_tidy,
+            CronTrigger(hour=3, minute=30, timezone=zone),
+            wanted=settings.tidy_ideas,
+            misfire_grace_time=6 * 3600,
         ),
     ]
 

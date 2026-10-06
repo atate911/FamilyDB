@@ -240,7 +240,7 @@ SECTIONS: tuple[Section, ...] = (
     Section("model", "AI model", "mark", "Which company answers, with which model, and its key."),
     Section("spending", "Spending", "coin", "The daily limit, and what one message may use."),
     Section("messages", "Messages", "bell", "What is sent without being asked, and when."),
-    Section("lookups", "Lookups", "search", "Filling ideas in from the web."),
+    Section("lookups", "Lookups", "search", "Filling ideas in, and taking off what is over."),
     Section(
         "personality",
         "Personality and family",
@@ -869,6 +869,20 @@ GROUPS: tuple[Group, ...] = (
                 "In the family's time zone.",
                 choices=HOURS,
                 words=HOUR_WORDS,
+            ),
+        ),
+    ),
+    Group(
+        "lookups",
+        "tidy",
+        "What is over",
+        "",
+        (
+            field(
+                "tidy_ideas",
+                "Take an idea off a week after its last day",
+                "An event or a show whose dates have passed leaves the list overnight, so it stops "
+                "coming up and is no longer sent with every message. Its page can bring it back.",
             ),
         ),
     ),

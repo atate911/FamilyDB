@@ -57,6 +57,7 @@ BEHAVIOUR = (
     "follow_ups",
     "follow_up_hour",
     "task_nudges",
+    "tidy_ideas",
     "admin_alerts",
     "model_watch",
     "judgements",

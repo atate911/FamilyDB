@@ -331,6 +331,16 @@ def ending_between(conn: sqlite3.Connection, first: str, last: str) -> list[Idea
     return [Idea.from_row(row) for row in rows]
 
 
+def over_before(conn: sqlite3.Connection, day: str) -> list[Idea]:
+    """Ideas still only ideas whose last day is before `day` (a date): over, for the tidy job."""
+    rows = conn.execute(
+        f"{_SELECT} WHERE i.status = 'idea' AND i.happens_until IS NOT NULL "
+        "AND i.happens_until < ? ORDER BY i.id",
+        (day,),
+    )
+    return [Idea.from_row(row) for row in rows]
+
+
 def mark_nudged(conn: sqlite3.Connection, idea_ids: list[int], now: str) -> None:
     """Brought up by the morning message: once is enough (not an edit: no revision moves)."""
     conn.executemany("UPDATE ideas SET nudged_at = ? WHERE id = ?", [(now, i) for i in idea_ids])
