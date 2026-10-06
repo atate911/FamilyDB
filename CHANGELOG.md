@@ -50,6 +50,30 @@ older than what is installed. It gets a date when it is released.
   a grown-up's own present, and a present for somebody else now shows to a kid,
   tagged, so she knows to keep it quiet. A present that names nobody is still kept
   from the kids, and Vera still never tells a kid of one in the chat.
+- **Reminders reach the person they are for.** A reminder set on the page, or
+  set for somebody else ("remind Alex to..."), goes to that person's own
+  Telegram chat with Vera, saying who asked, or to their conversation on the
+  page until they open one. One for everyone goes to the family's chat, a new
+  setting on Connections. Taking somebody off cancels the to-dos they owned
+  outside the family group, which would otherwise have become everyone's.
+- **Plans work without Google Calendar.** They are kept here, count as busy
+  time for suggestions and nudges, and go onto Google once it is connected.
+  A plan made on the page is checked the evening before and asked about after,
+  like one made in a chat; a plan that moves is checked again for its new day;
+  and the evening check runs every hour until ten, so a plan made late for
+  tomorrow is still caught.
+- **A reminder before a plan moves with it.** "Remind me a week before the
+  concert" is tied to the concert: it moves when the concert does, by Vera or
+  in Google, goes if it is cancelled, says when the concert is, and is done
+  once it is over.
+- **Suggestions look at every idea.** Every saved idea is checked, not only the
+  first eight, and asking again brings others up. "The kids" now finds an idea
+  saved "with the girls", and an idea whose plan has passed can be suggested
+  again.
+- **To-dos do not get lost.** "Next time I have some free time" and "this
+  weekend" are understood, so Vera brings them up then; when nothing will
+  bring one up, she offers a reminder. /tasks shows a reminder already sent,
+  and Tomorrow under a reminder is never the middle of the night.
 
 
 ## v0.2.0 — second alpha (2026-10-05)
