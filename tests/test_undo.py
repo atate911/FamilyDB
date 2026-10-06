@@ -275,3 +275,13 @@ def test_the_page_offers_undo_beside_the_notice_and_under_her_reply(
     page.post("/undo", data=fields)
     assert tasks.get(conn, 1).status == "cancelled"
     assert 'class="undo-form"' not in page.get("/chat").text
+
+
+def test_an_idea_and_a_task_say_who_changed_them_last_and_from_where(page, conn, family):
+    from tests.test_web_edits import _idea_form
+
+    page.post("/ideas/new", data=_idea_form(page, who="Sam"))
+    assert "Added by Sam on the page, Sun 20 Sep 14:03" in page.get("/idea/1").text
+    form = dict(re.findall(r'name="(csrf|once)" value="([^"]+)"', page.get("/tasks").text))
+    page.post("/tasks/new", data={**form, "title": "Call the plumber", "who": "Alex"})
+    assert "Added by Alex on the page, Sun 20 Sep 14:03" in page.get("/task/1/edit").text

@@ -603,6 +603,30 @@ def repeat_text(task: Task, tz: ZoneInfo) -> str | None:
     return words
 
 
+# Where a change came from (tool_calls.source), as the history line under an idea or task says it.
+CHANGED_FROM = {
+    "chat": "through {name}",
+    "tap": "with a button",
+    "page": "on the page",
+    "command": "with a command",
+    "job": "by {name} on her own",
+    "worker": "by a lookup",
+    "cli": "on the server",
+}
+
+
+def changed_line(row: Any, tz: ZoneInfo, *, assistant: str) -> str | None:
+    """The last change to an idea or task, for a grown-up: "Changed by Sam on the page, Tue 6 Oct
+    09:10". None when nothing is known (made before changes were kept by whom)."""
+    if row is None or row["source"] is None:
+        return None
+    verb = "Added" if str(row["tool_name"]).startswith(("add_", "create_")) else "Changed"
+    who = f" by {row['who']}" if row["who"] else ""
+    where = CHANGED_FROM.get(row["source"], "").format(name=assistant)
+    when = datetime.fromisoformat(row["created_at"].replace("Z", "+00:00")).astimezone(tz)
+    return f"{verb}{who} {where}, {when:%a} {when.day} {when:%b %H:%M}".replace("  ", " ")
+
+
 def nudge_words(task: Task, tz: ZoneInfo, today: date) -> dict[str, str] | None:
     """For an open task kept for a window (jobs/nudges.py): `on`, "a free Saturday morning", and
     `last`; or `unread` when the window cannot be read (or "this weekend" is over). None for a

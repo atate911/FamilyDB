@@ -3,6 +3,7 @@
 {% block title %}Edit a to-do · {{ site_title }}{% endblock %}
 {% block content %}
   {{ page_head('Edit a to-do', task.title ~ ' · added' ~ (' by ' ~ made_by if made_by else '') ~ ' on ' ~ added, crumb=('To do', url_for('web.tasks'))) }}
+  {% if row.changed %}<p class="small muted">{{ row.changed }}</p>{% endif %}
   <div class="idea-grid">
     <form class="card form" method="post" action="{{ url_for('edits.edit_task', task_id=task.id) }}" aria-labelledby="h-edit" novalidate>
       <h2 class="sr" id="h-edit">Edit</h2>

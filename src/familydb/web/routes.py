@@ -426,6 +426,7 @@ def idea(idea_id: int) -> str:
         plans = plan_store.for_idea(conn, idea_id)
         asking = _who(conn)
         looked_up = calls.last_lookup_turn(conn, idea_id) if visitor.may("manage") else None
+        changed = calls.last_change(conn, idea_id=idea_id) if visitor.may("browse") else None
         family = member_store.list_all(conn)
         slots = views.slot_map(family)
         kept = presents.of_presents(conn, [record], family).get(idea_id)
@@ -448,6 +449,9 @@ def idea(idea_id: int) -> str:
         place=views.place_panel(place, now, settings.place_stale_days, today),
         outcomes=[views.outcome_row(o) for o in reversed(outcomes)],
         plans=[views.plan_row(p, today) for p in reversed(plans)],
+        changed=views.changed_line(
+            changed, settings.tzinfo, assistant=personas.active(settings).name
+        ),
     )
 
 
@@ -746,9 +750,13 @@ def edit_task(task_id: int) -> str:
             abort(404)
         people = member_store.list_all(conn)
         made_by = task_store.creators(conn, [task.id]).get(task.id)
+        changed = calls.last_change(conn, task_id=task.id)
     tz = app.settings.tzinfo
     slots = views.slot_map(people)
     row = views.task_row(task, tz, app.clock.today(), nudging=app.settings.task_nudges)
+    row["changed"] = views.changed_line(
+        changed, tz, assistant=personas.active(app.settings).name
+    )
     return render_template(
         "task_form.html",
         task=task,

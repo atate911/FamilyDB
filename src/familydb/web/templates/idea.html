@@ -37,6 +37,7 @@
           {%- if row.away %}{{ tag('off', row.away, 'car') }}{% endif -%}
         </div>
         <p class="small muted mt-2">{% if idea.suggested_by_name %}Suggested by {{ idea.suggested_by_name }} · {% endif %}added {{ row.added_words }}</p>
+        {% if changed %}<p class="small muted">{{ changed }}</p>{% endif %}
       </div>
     </div>
     {% if visitor().may('change') %}

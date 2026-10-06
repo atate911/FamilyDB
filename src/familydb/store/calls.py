@@ -327,6 +327,30 @@ def release_undo(conn: sqlite3.Connection, call_id: int) -> None:
     conn.execute("UPDATE tool_calls SET undone_at = NULL WHERE id = ?", (call_id,))
 
 
+# The tools that change an idea or a task, and where in what they answer its number is.
+CHANGES_IDEA = {"add_idea": "$.id", "update_idea": "$.id", "create_event": "$.idea.id"}
+CHANGES_TASK = {"add_task": "$.task.id", "update_task": "$.task.id"}
+
+
+def last_change(
+    conn: sqlite3.Connection, *, idea_id: int | None = None, task_id: int | None = None
+) -> sqlite3.Row | None:
+    """The last call that changed this idea or task, whoever made it and from where, with the
+    name of who did (`who`): its page's "changed by Sam on the page"."""
+    tools, number = (CHANGES_IDEA, idea_id) if idea_id is not None else (CHANGES_TASK, task_id)
+    found = " OR ".join(
+        f"(t.tool_name = '{name}' AND json_extract(t.output, '{path}') = ?)"
+        for name, path in tools.items()
+    )
+    return conn.execute(
+        "SELECT t.*, m.display_name AS who FROM tool_calls t "
+        "LEFT JOIN members m ON m.id = t.member_id "
+        f"WHERE t.is_error = 0 AND json_valid(t.output) AND ({found}) "
+        "ORDER BY t.id DESC LIMIT 1",
+        (number,) * len(tools),
+    ).fetchone()
+
+
 def tool_calls_for_message(conn: sqlite3.Connection, message_id: int) -> list[dict[str, Any]]:
     rows = conn.execute(
         "SELECT * FROM tool_calls WHERE message_id = ? ORDER BY id", (message_id,)
