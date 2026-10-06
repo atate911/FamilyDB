@@ -22,7 +22,7 @@ from familydb.agent.providers import catalog, prices
 from familydb.config import Settings
 from familydb.integrations.geocode import estimate_travel
 from familydb.memory import words
-from familydb.store.ideas import Idea
+from familydb.store.ideas import Idea, ages_text
 from familydb.store.members import Member
 from familydb.store.memories import Memory
 from familydb.store.messages import VOICE_PREFIX, Message, as_said
@@ -239,6 +239,8 @@ def idea_row(idea: Idea, tz: ZoneInfo, *, hidden: str | None = None) -> dict[str
         "tags": idea.tags,
         "duration": duration_text(idea),
         "cost": cost_text(idea.cost_level),
+        # "6+", "3-8", "up to 10": the page's label says "Ages".
+        "ages": (ages_text(idea) or " ").split(" ", 1)[1] or None,
         "rating": rating_text(idea),
         "details": details_text(idea),
         "pending": idea.enrichment == "pending",

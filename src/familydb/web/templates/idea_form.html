@@ -102,6 +102,13 @@
             <div class="field"><label class="field__label" for="i-lead">Book this far ahead (days)</label>
               <input id="i-lead" type="text" name="lead_time_days" inputmode="numeric" value="{{ idea.lead_time_days if editing and idea.lead_time_days is not none else '' }}" /></div>
           </div>
+          <div class="form__row form__row--3">
+            <div class="field"><label class="field__label" for="i-young">Youngest age</label>
+              <input id="i-young" type="text" name="min_age" inputmode="numeric" aria-describedby="i-ages-h" value="{{ idea.min_age if editing and idea.min_age is not none else '' }}" /></div>
+            <div class="field"><label class="field__label" for="i-old">Oldest age</label>
+              <input id="i-old" type="text" name="max_age" inputmode="numeric" aria-describedby="i-ages-h" value="{{ idea.max_age if editing and idea.max_age is not none else '' }}" /></div>
+            <p class="field__hint" id="i-ages-h">Only when it says, as in “ages 6+”: suggestions leave it out for a kid it does not suit.</p>
+          </div>
           <fieldset class="fieldset fieldset--inner">
             <legend class="field__label">Only in these seasons</legend>
             <div class="choices">{% for season in seasons %}<label class="choice"><input type="checkbox" name="seasons" value="{{ season }}" {{ 'checked' if editing and season in idea.seasons }} /><span>{{ season | capitalize }}</span></label>{% endfor %}</div>

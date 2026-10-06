@@ -157,6 +157,7 @@
           {% if idea.seasons %}<dt>Seasons</dt><dd>{{ idea.seasons | join(', ') }}</dd>{% endif %}
           {% if row.duration %}<dt>How long</dt><dd>{{ row.duration }}</dd>{% endif %}
           {% if row.cost %}<dt>Cost</dt><dd>{{ row.cost }}</dd>{% endif %}
+          {% if row.ages %}<dt>Ages</dt><dd>{{ row.ages }}</dd>{% endif %}
           {% if idea.needs_booking %}<dt>Booking</dt><dd>Needed{% if idea.lead_time_days %}, about {{ idea.lead_time_days }} days ahead{% endif %}</dd>{% endif %}
           <dt>So far</dt><dd>{{ row.rating or 'Not rated yet' }}</dd>
           {% if row.url %}<dt>Link</dt><dd><a href="{{ row.url }}" rel="noopener noreferrer">{{ row.url }}</a></dd>{% endif %}

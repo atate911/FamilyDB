@@ -12,7 +12,7 @@ from familydb.clock import Clock
 from familydb.config import Settings
 from familydb.memory import Chosen, line_of
 from familydb.routing import CONFIRMED
-from familydb.store.ideas import Idea
+from familydb.store.ideas import Idea, ages_text
 from familydb.store.members import Member
 
 
@@ -64,6 +64,8 @@ def render_idea_line(idea: Idea) -> str:
         parts.append("free" if idea.cost_level == 0 else "cost: " + "$" * idea.cost_level)
     if idea.needs_booking:
         parts.append("needs booking")
+    if ages := ages_text(idea):
+        parts.append(ages)
     parts.append(f"status: {idea.status}")
     parts.append(f"by {idea.suggested_by_name or 'unknown'} {idea.created_at[:10]}")
     if idea.times_done:

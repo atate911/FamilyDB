@@ -79,6 +79,8 @@ IDEA_NUMBERS = (
     ("duration_min", "The shortest time"),
     ("duration_max", "The longest time"),
     ("lead_time_days", "The booking lead time"),
+    ("min_age", "The youngest age"),
+    ("max_age", "The oldest age"),
 )
 
 

@@ -65,6 +65,7 @@ def test_an_idea_can_be_added_from_the_page(page, conn) -> None:
             tags="food, cheap",
             cost_level=2,
             duration_min=60,
+            min_age=6,
             needs_booking="yes",
             who="Alex",
         ),
@@ -75,8 +76,10 @@ def test_an_idea_can_be_added_from_the_page(page, conn) -> None:
     assert saved.participants == ["whole family", "the girls"]
     assert saved.tags == ["cheap", "food"]  # the store lowercases and sorts them
     assert saved.cost_level == 2 and saved.duration_min == 60 and saved.needs_booking
+    assert saved.min_age == 6 and saved.max_age is None
     assert saved.suggested_by_name == "Alex"  # the form said who, and the tool recorded it
-    assert "Saved #1 Ramen place." in _said(page.get("/idea/1"))
+    shown = page.get("/idea/1")
+    assert "Saved #1 Ramen place." in _said(shown) and "<dt>Ages</dt><dd>6+</dd>" in shown.text
 
 
 def test_an_idea_with_no_title_is_refused_and_nothing_is_written(page, conn) -> None:

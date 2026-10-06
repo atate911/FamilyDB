@@ -1115,3 +1115,26 @@ def test_a_firm_rule_is_held_by_code_and_named(env, family) -> None:
     assert said[far.id].verdict != "ruled_out"
     assert said[park.id].verdict == "ruled_out"  # hers holds, and so does the family's
     assert said[dear.id].verdict == "ruled_out"
+
+
+def test_an_idea_a_kid_coming_is_too_young_for_is_left_out(env, family) -> None:
+    """Ages come from the family list (a birthday, never sent); who is coming as the question
+    says, or every kid when it names nobody."""
+    from familydb.store import members
+
+    with db.transaction(env.conn):
+        mia = members.add(env.conn, "Mia", "kid", now=NOW_ISO)
+        env.conn.execute("UPDATE members SET birth_date = '2022-03-01' WHERE id = ?", (mia.id,))
+    tramp = _idea(env.conn, "Trampoline park", setting="indoor", min_age=6)
+    toddlers = _idea(env.conn, "Toddler gym", setting="indoor", max_age=5)
+    said = {
+        c.idea_id: c
+        for c in run(
+            env.ctx, SuggestInput(window="someday", discover=False, question="?")
+        ).candidates
+    }
+    assert said[tramp.id].reasons == ["Mia is 4; ages 6+"]
+    assert said[toddlers.id].verdict == "good"
+    asked = SuggestInput(window="someday", participants=["adults"], discover=False, question="?")
+    said = {c.idea_id: c for c in run(env.ctx, asked).candidates}
+    assert said[tramp.id].verdict == "good"

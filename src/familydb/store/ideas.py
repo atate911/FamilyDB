@@ -52,6 +52,8 @@ EDITABLE_FIELDS = frozenset(
         "cost_level",
         "needs_booking",
         "lead_time_days",
+        "min_age",
+        "max_age",
         "happens_from",
         "happens_until",
         "status",
@@ -86,6 +88,9 @@ class Idea(BaseModel):
     cost_level: int | None = None
     needs_booking: bool = False
     lead_time_days: int | None = None
+    # The ages it suits, when said: "ages 6+" is min_age 6.
+    min_age: int | None = None
+    max_age: int | None = None
     # When it is on, for an idea tied to dates; both None for the rest.
     happens_from: str | None = None
     happens_until: str | None = None
@@ -497,3 +502,15 @@ def apply_outcome(
 def revision(idea: Idea) -> str:
     """A content revision hash (sees changes within the same clock second)."""
     return hashlib.sha256(idea.model_dump_json().encode()).hexdigest()
+
+
+def ages_text(idea: Idea) -> str | None:
+    """The ages an idea suits, in a few words: "ages 6+", "ages 3-8", "ages up to 10"."""
+    low, high = idea.min_age, idea.max_age
+    if low is not None and high is not None:
+        return f"ages {low}-{high}" if low != high else f"age {low}"
+    if low is not None:
+        return f"ages {low}+"
+    if high is not None:
+        return f"ages up to {high}"
+    return None

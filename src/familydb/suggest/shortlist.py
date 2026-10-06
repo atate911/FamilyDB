@@ -11,8 +11,9 @@ from collections.abc import Mapping, Sequence
 from datetime import date
 
 from familydb.config import Settings
+from familydb.dates import age_on
 from familydb.integrations.open_meteo import DayForecast
-from familydb.store.ideas import GIFT, Idea
+from familydb.store.ideas import GIFT, Idea, ages_text
 from familydb.store.members import Member
 from familydb.suggest import people as who
 from familydb.suggest.types import Candidate, Constraints, Context, Shortlisted
@@ -171,6 +172,35 @@ def participants_match(
     return False
 
 
+def kids_coming(
+    constraints: Constraints, people: Sequence[Member], today: date
+) -> list[tuple[str, int]]:
+    """(name, age) of each kid the question is about whose age is known: those it names, or
+    every kid when it names nobody on the family list (the family is going)."""
+    named = who.resolve(constraints.participants, people) if constraints.participants else None
+    everyone = named is None or named.anyone or not named.ids
+    coming = []
+    for member in people:
+        if member.role != "kid" or not member.active:
+            continue
+        if not everyone and named is not None and member.id not in named.ids:
+            continue
+        age = age_on(member.birth_date, today)
+        if age is not None:
+            coming.append((member.display_name, age))
+    return coming
+
+
+def _age_reason(idea: Idea, kids: Sequence[tuple[str, int]]) -> str | None:
+    """Why an idea is not for a kid coming: "Mia is 4; ages 6+"."""
+    for name, age in kids:
+        if (idea.min_age is not None and age < idea.min_age) or (
+            idea.max_age is not None and age > idea.max_age
+        ):
+            return f"{name} is {age}; {ages_text(idea)}"
+    return None
+
+
 def _constraint_reason(idea: Idea, constraints: Constraints) -> str | None:
     """Why the question's limits, or a firm rule's (named by its memory), leave it out."""
     if (
@@ -284,6 +314,7 @@ def shortlist(
     they asked for, new things or favourites, which rest less."""
     kept: list[Shortlisted] = []
     ruled_out: list[Candidate] = []
+    kids = kids_coming(constraints, people or (), context.today)
 
     def out(idea: Idea, reason: str) -> None:
         ruled_out.append(
@@ -307,6 +338,10 @@ def shortlist(
             continue
         if not participants_match(idea, constraints.participants, people):
             out(idea, f"for {', '.join(idea.participants)}")
+            continue
+        reason = _age_reason(idea, kids)
+        if reason:
+            out(idea, reason)
             continue
         if idea.seasons and context.season not in idea.seasons:
             out(idea, f"for {', '.join(idea.seasons)}")
