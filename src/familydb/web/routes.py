@@ -120,6 +120,13 @@ def manifest() -> Response:
         "background_color": CHARCOAL,
         "theme_color": CHARCOAL,
         "icons": [{**icon, "type": "image/png"} for icon in icons],
+        # Share a link or some words to it from another app (Android): they wait in the chat's
+        # box until Send, so nothing is sent by sharing.
+        "share_target": {
+            "action": "/chat",
+            "method": "GET",
+            "params": {"title": "title", "text": "text", "url": "url"},
+        },
     }
     return Response(json.dumps(body, sort_keys=True), mimetype="application/manifest+json")
 

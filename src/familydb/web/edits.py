@@ -33,6 +33,12 @@ bp = Blueprint("edits", __name__)
 # The flash category, apart from the settings page's.
 NOTICE = "edit"
 SAVED_IDEA = "Saved #{id} {title}."
+# Several ideas at once, one a line (add_ideas).
+MOST_AT_ONCE = 20
+ADDED_SEVERAL = "Added {ideas}."
+ALREADY_THERE = "Already there: {ideas}."
+NOT_ADDED = "Not added: {ideas}."
+NEEDS_LINES = "Write one idea a line, and the kind they all are."
 CHANGED_IDEA = "Changed #{id} {title}."
 DUPLICATE = "There is already an idea called that: #{id}. Nothing was added."
 STALE_IDEA = (
@@ -86,6 +92,7 @@ def run(
     *,
     hidden_from: list[int] | None = None,
     undo_target: int | None = None,
+    offer_undo: bool = True,
 ) -> tuple[dict[str, Any] | None, str | None]:
     """Run one tool as whoever is signed in, or, under the shared password, whoever the form said.
     Returns its result, or what went wrong (an unavailable tool's reason included). A change that
@@ -127,7 +134,7 @@ def run(
         return None, payload.get("error", "that did not work")
     if payload.get("available") is False:
         return None, payload.get("reason", "that is not set up yet")
-    if result.undoable:
+    if result.undoable and offer_undo:
         flash(str(result.call_id), UNDO_NOTICE)
     log.info("%s from the page by %s", name, auth.client_address())
     return payload, None
@@ -239,6 +246,41 @@ def add_idea() -> Response:
         return _back("web.idea", idea_id=result["duplicate_of"])
     _say(SAVED_IDEA.format(id=result["id"], title=result["title"]))
     return _back("web.idea", idea_id=result["id"])
+
+
+@bp.post("/ideas/several")
+@once
+def add_ideas() -> Response:
+    """Several ideas at once, one a line and one kind for them all: `add_idea` for each, no model
+    call, and a notice of what was added and what was there already."""
+    if (complaint := auth.refused()) is not None:
+        _say(complaint)
+        return _back("web.new_idea")
+    kind = _text(request.form, "kind")
+    lines = [line.strip() for line in request.form.get("titles", "").splitlines()]
+    titles = list(dict.fromkeys(line for line in lines if line))[:MOST_AT_ONCE]
+    if not titles or not kind:
+        _say(NEEDS_LINES)
+        return _back("web.new_idea")
+    added: list[str] = []
+    there: list[str] = []
+    refused: list[str] = []
+    for title in titles:
+        # Each its own call, kept as such; one Undo would take back only the last, so none.
+        result, complaint = run("add_idea", {"title": title, "kind": kind}, offer_undo=False)
+        if result is None:
+            refused.append(f"{title} ({complaint})")
+        elif "duplicate_of" in result:
+            there.append(f"#{result['duplicate_of']} {title}")
+        else:
+            added.append(f"#{result['id']} {result['title']}")
+    said = [
+        words.format(ideas=", ".join(found))
+        for words, found in ((ADDED_SEVERAL, added), (ALREADY_THERE, there), (NOT_ADDED, refused))
+        if found
+    ]
+    _say(" ".join(said))
+    return _back("web.ideas")
 
 
 @bp.post("/idea/<int:idea_id>/edit")

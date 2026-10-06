@@ -521,3 +521,23 @@ def test_the_chat_link_counts_what_she_said_since_this_browser_looked(settings, 
     assert badge.search(client.get("/").text).group(1) == "2"
     client.get("/chat")
     assert badge.search(client.get("/").text) is None
+
+
+def test_what_another_app_shares_waits_in_the_box(settings, clock, family):
+    """The manifest offers the page as a place to share to (Android); what comes waits in the box
+    until Send, so sharing sends nothing."""
+    client = _client(settings, clock)
+    manifest = json.loads(client.get("/manifest.webmanifest").text)
+    assert manifest["share_target"]["action"] == "/chat"
+    page = client.get(
+        "/chat",
+        query_string={
+            "title": "Kiggins",
+            "text": "Look https://kiggins.example",
+            "url": "https://kiggins.example",
+        },
+    ).text
+    box = re.search(r"<textarea[^>]*>([^<]*)</textarea>", page).group(1)
+    assert box == "Kiggins\nLook https://kiggins.example\nhttps://kiggins.example"
+    with closing(db.connect(settings.familydb_path)) as conn:
+        assert conn.execute("SELECT count(*) FROM messages").fetchone()[0] == 0

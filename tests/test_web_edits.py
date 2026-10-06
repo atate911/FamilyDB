@@ -364,3 +364,24 @@ def test_an_idea_or_every_one_waiting_can_be_looked_up_now(settings, clock, conn
     # Without lookups on, neither button is there.
     plain = _client(settings, clock).get("/status").text
     assert "Look them up now" not in plain
+
+
+def test_several_ideas_are_added_at_once_one_a_line(page, conn) -> None:
+    """A list typed or pasted in, one idea a line and one kind for them all: each added by
+    add_idea as the single form would, and the notice says what was there already."""
+    first = {"csrf": _token(page, "/ideas/new"), "title": "Ramen place", "kind": "restaurant"}
+    page.post("/ideas/new", data={**first, "once": "a"})
+    lines = "Taco truck\n\nRamen place\nDumpling house\nTaco truck\n"
+    form = {"csrf": _token(page, "/ideas/new"), "once": "b", "titles": lines, "kind": "restaurant"}
+    sent = page.post("/ideas/several", data=form, follow_redirects=True)
+    assert "Added #2 Taco truck, #3 Dumpling house. Already there: #1 Ramen place." in _said(sent)
+    assert [idea.title for idea in ideas.list_all(conn)] == [
+        "Ramen place",
+        "Taco truck",
+        "Dumpling house",
+    ]
+    assert 'class="undo-form"' not in sent.text  # one Undo could not take back them all
+    empty = {**form, "once": "c", "titles": "\n \n"}
+    assert "Write one idea a line" in _said(
+        page.post("/ideas/several", data=empty, follow_redirects=True)
+    )

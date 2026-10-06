@@ -173,9 +173,16 @@ def box(family: list[str], *, locked: bool = False, prompt: str = PROMPT) -> dic
     }
 
 
+# What another app shares to the page (the manifest's share_target, on Android): its parts.
+SHARED = ("title", "text", "url")
+
+
 def asked() -> str | None:
-    """A question handed over by a link; it waits in the box until Send."""
-    return request.args.get("ask", "")[:MAX_MESSAGE].strip() or None
+    """A question handed over by a link (`ask`), or what another app shared here (a title, words
+    and a link, each once); it waits in the box until Send."""
+    shared = dict.fromkeys(part for key in SHARED if (part := request.args.get(key, "").strip()))
+    words = request.args.get("ask", "") or "\n".join(shared)
+    return words[:MAX_MESSAGE].strip() or None
 
 
 def standing(
