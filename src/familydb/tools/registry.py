@@ -56,6 +56,9 @@ class ToolContext:
     about: str | None = None
     # A kid reads the chat (audience.plain): code speaks plainly of the workings.
     plain: bool = False
+    # The time asked about counts as free, plans and all: the evening check's backup asks about a
+    # plan's own time, which the plan itself would fill (jobs/plan_checks.py).
+    ignore_busy: bool = False
 
     def now_iso(self) -> str:
         return utc_iso(self.clock.now())

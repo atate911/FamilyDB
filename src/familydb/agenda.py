@@ -74,7 +74,8 @@ def _from_plan(plan: Plan) -> Entry:
 
 
 def read(app: App, conn: sqlite3.Connection, first: date, last: date) -> Agenda:
-    saved = [_from_plan(plan) for plan in plan_store.overlapping(conn, str(first), str(last))]
+    kept = plan_store.overlapping(conn, str(first), str(last))
+    saved = [_from_plan(plan) for plan in kept]
     calendar = app.calendar
     if calendar is None:
         return Agenda(saved, "saved")
@@ -105,4 +106,6 @@ def read(app: App, conn: sqlite3.Connection, first: date, last: date) -> Agenda:
                 idea_id=plan.idea_id if plan else None,
             )
         )
+    # Kept here before Google was connected, and not on it yet (calendar_sync.adopt_local).
+    entries += [_from_plan(plan) for plan in kept if plan.calendar_id is None]
     return Agenda(sorted(entries, key=lambda entry: entry.start), "google")

@@ -740,7 +740,6 @@ CASES: tuple[Case, ...] = (
         ),
         "No Google calendar is connected: the plan is still kept, here, as a plan.",
         calendar=False,
-        waits_for="M1.3, plans without Google Calendar",
     ),
     # -- long, rambling and spoken messages
     Case(

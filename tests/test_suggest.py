@@ -406,11 +406,11 @@ def test_suggest_without_services_and_recent_variety(
     second = _idea(conn, "Cafe B", setting="indoor")
     _, data = _suggest(registry, ctx, discover=True)
     assert data["skipped_checks"] == [
-        "calendar not connected",
+        "no Google calendar connected: only the plans saved here count as busy",
         "weather not configured",
         "web discovery off",
     ]
-    assert all(d["free_known"] is False for d in data["days"])
+    assert all(d["free_known"] is True for d in data["days"])  # no plans saved: all free
     assert [c["idea_id"] for c in data["candidates"]] == [first.id, second.id]
     assert all(c["verdict"] == "possible" for c in data["candidates"])  # hours unknown everywhere
     # the second ask sinks what was already suggested as good... both possible, so order holds

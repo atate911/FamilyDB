@@ -1181,7 +1181,10 @@ def places_map(placed: list[tuple[Idea, Away]]) -> dict[str, Any] | None:
 
 AGENDA_NOTES = {
     "google": "From Google Calendar, including anything added there directly.",
-    "saved": "Google Calendar is not connected, so these are the plans the bot made.",
+    "saved": (
+        "Google Calendar is not connected, so these are the plans kept here. They go on it once "
+        "it is."
+    ),
     "unavailable": (
         "Google Calendar did not answer, so these are the plans as the bot last saw them. "
         "Times may have moved since."

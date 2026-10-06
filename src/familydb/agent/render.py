@@ -94,7 +94,7 @@ def render_family_context(family: list[Member], settings: Settings) -> str:
         lines.append(f"About the family, in their words:\n{about}")
     lines.append(f"Home area: {settings.home_area or 'not set'}")
     lines.append(f"Timezone: {settings.tz}")
-    calendar = "connected" if calendar_available(settings) else "not connected"
+    calendar = "connected" if calendar_available(settings) else "not connected (plans kept here)"
     weather = "configured" if weather_available(settings) else "not configured"
     web = "available" if web_tools_available(settings) else "not available"
     lines.append(f"Calendar: {calendar}. Weather: {weather}. Web tools: {web}.")

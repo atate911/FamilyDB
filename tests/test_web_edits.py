@@ -279,16 +279,18 @@ def test_an_all_day_plan_keeps_only_the_date(planning, conn) -> None:
     assert plan.all_day and plan.start == "2026-09-26"
 
 
-def test_without_a_calendar_the_page_offers_no_plan_form_and_refuses_one_anyway(page, conn):
+def test_without_a_calendar_the_page_keeps_the_plan_here(page, conn):
+    """No Google calendar: the page says so, and its plan form still works, keeping the plan here
+    (tools/gcal.py), where it used to show no form at all and refuse one."""
     assert "not connected" in page.get("/plans").text
-    assert "csrf" not in page.get("/plans").text  # there is no form on the page at all
-    page.post(
-        # A token from another form on the site: being refused for the right reason is the point.
+    sent = page.post(
         "/plans/new",
-        data={"csrf": _token(page, "/chat"), "title": "Nope", "start": "2026-09-26T18:30"},
+        data={"csrf": _token(page, "/plans"), "title": "Picnic", "start": "2026-09-26T18:30"},
     )
-    assert plans.get(conn, 1) is None
-    assert "Google Calendar" in _said(page.get("/plans"))
+    assert sent.status_code == 302
+    plan = plans.get(conn, 1)
+    assert plan.title == "Picnic" and plan.calendar_id is None and plan.google_event_id
+    assert "Picnic" in page.get("/plans").text
 
 
 @pytest.mark.parametrize(

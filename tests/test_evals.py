@@ -455,19 +455,20 @@ def test_a_firm_rule_broken_without_a_word_fails(settings) -> None:
 
 
 def test_a_case_without_a_calendar_runs_with_none(settings) -> None:
-    """With no calendar the tool answers that it is not there, which is not an error: the case
-    reads what it answered, and how many plans were kept."""
+    """With no calendar connected the plan is kept here, and the case reads what the tool
+    answered and how many plans were kept; a run that saved none fails on it."""
     case = by_name("plan_without_a_calendar")
     plan = {"title": "Symphony", "start": "2026-10-03T20:00"}
     api = _answer(
         [fakes.tool_use("t1", "create_event", plan)],
-        [fakes.text("The calendar isn't connected, so I couldn't add it.")],
+        [fakes.text("Kept here for Sat 3 Oct, 8pm: no calendar is connected.")],
     )
     run = run_case(case, settings, api=api)
-    assert run.calls[0].ok and run.calls[0].result["available"] is False
-    problems = grade(case, run)
-    assert "create_event was called, but not kept, with no calendar connected" in " ".join(problems)
-    assert "plans: 0, expected 1" in problems
+    assert run.calls[0].ok and "kept here" in run.calls[0].result["calendar"]
+    assert grade(case, run) == []
+    api = _answer([fakes.text("No calendar is connected, so I can't.")])
+    problems = grade(case, run_case(case, settings, api=api))
+    assert "never called create_event" in problems and "plans: 0, expected 1" in problems
 
 
 def test_reminders_are_read_on_the_familys_clock(settings) -> None:
@@ -507,17 +508,22 @@ def test_a_claim_of_a_booking_never_made_fails(settings) -> None:
 
 
 def test_a_case_waiting_for_work_is_a_gap_not_a_failure(settings, monkeypatch, capsys) -> None:
-    api = _answer(
-        [fakes.tool_use("t1", "create_event", {"title": "Symphony", "start": "2026-10-03T20:00"})],
-        [fakes.text("The calendar isn't connected.")],
+    waiting = Case(
+        "not_built_yet",
+        ("thanks!",),
+        (lambda run: "the reply is not what it will be",),
+        "why",
+        waits_for="something not built yet",
     )
+    monkeypatch.setattr(evals_cli, "by_name", lambda name: waiting)
     monkeypatch.setattr(evals_cli, "Settings", lambda: settings)
+    api = _answer([fakes.text("Any time.")])
     monkeypatch.setattr(evals_cli, "run_case", functools.partial(run_case, api=api))
 
-    assert evals_cli.main(["--case", "plan_without_a_calendar"]) == 0
+    assert evals_cli.main(["--case", "not_built_yet"]) == 0
 
     printed = capsys.readouterr().out
-    assert "gap  0/1  plan_without_a_calendar  (waits for M1.3" in printed
+    assert "gap  0/1  not_built_yet  (waits for something not built yet)" in printed
     assert "1 of the rest wait for work not built yet" in printed
 
 

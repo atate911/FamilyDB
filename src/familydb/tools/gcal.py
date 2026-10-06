@@ -1,4 +1,10 @@
-"""Google Calendar tools: what is on the family calendar, and putting plans on it."""
+"""Calendar tools: what is on, and plans made, moved and cancelled.
+
+With Google connected the plans are its events, kept in step both ways (calendar_sync.py). Without
+it they are still kept, here, holding the id their event will have once Google is connected
+(`calendar_ops`), when they are put on it (`calendar_sync.adopt_local`). A plan on Google is never
+changed here alone while Google cannot be reached: the two would drift apart.
+"""
 
 from __future__ import annotations
 
@@ -12,7 +18,7 @@ from pydantic import BaseModel, Field
 
 from familydb import plan_service, routing
 from familydb.availability import calendar_available
-from familydb.calendar_sync import event_changes, refresh_plan, sync_plans
+from familydb.calendar_sync import adopt, event_changes, refresh_plan, sync_plans
 from familydb.dates import (
     ensure_not_past,
     iso_date,
@@ -24,11 +30,17 @@ from familydb.dates import (
 from familydb.errors import ToolError, ToolUnavailable
 from familydb.free_time import events_by_day, free_blocks
 from familydb.integrations.google_calendar import CalendarAPI, CalendarEvent
+from familydb.saved_plans import SavedPlans
 from familydb.store import calendar_ops, ideas, messages, plans
 from familydb.store.db import to_json, transaction
 from familydb.tools.registry import ToolContext, tool
 
 NOT_CONFIGURED = "Google Calendar is not connected (no calendar id or key configured)"
+KEPT_HERE = "no Google calendar is connected: kept here, and put on it once one is"
+ON_GOOGLE_ONLY = (
+    "plan #{plan} is on the Google calendar, which is not connected now; connect it again to "
+    "change it"
+)
 MAX_WINDOW_DAYS = 60
 DEFAULT_DURATION = timedelta(hours=2)
 # plan field -> Google event field
@@ -114,6 +126,21 @@ def _calendar(ctx: ToolContext) -> CalendarAPI:
     return ctx.calendar
 
 
+def _google(ctx: ToolContext) -> CalendarAPI | None:
+    """The Google calendar plans go on, or None when none is configured and plans are kept here.
+    Configured but not reachable from here is unavailable, never quietly kept here instead."""
+    return _calendar(ctx) if calendar_available(ctx.settings) else None
+
+
+def _on_google(ctx: ToolContext, plan: plans.Plan) -> bool:
+    """Whether the plan is an event on the calendar configured now (not one kept here)."""
+    return (
+        bool(plan.google_event_id)
+        and plan.calendar_id is not None
+        and plan.calendar_id == ctx.settings.google_calendar_id
+    )
+
+
 def _timed_or_all_day(
     start_text: str,
     end_text: str | None,
@@ -187,14 +214,21 @@ def calendar_days(
         "Events on the shared family calendar between two dates, including ones people added by "
         "hand, plus the free blocks (morning, afternoon, evening) per day."
     ),
-    available=calendar_available,
-    unavailable_reason=NOT_CONFIGURED,
 )
 def get_calendar(ctx: ToolContext, args: GetCalendarInput) -> dict[str, Any]:
-    calendar = _calendar(ctx)
     start, end = parse_date_range(args.start, args.end)
     if (end - start).days > MAX_WINDOW_DAYS:
         raise ToolError(f"ask for at most {MAX_WINDOW_DAYS} days at a time")
+    calendar = _google(ctx)
+    if calendar is None:
+        days = calendar_days(SavedPlans(ctx.conn, ctx.clock.tz), start, end, ctx.clock.tz)
+        kept = {
+            plan.google_event_id: plan.id
+            for plan in plans.overlapping(ctx.conn, start.isoformat(), end.isoformat())
+            if plan.google_event_id
+        }
+        _number(days, kept)
+        return {"calendar": None, "plans": KEPT_HERE, "days": days}
     days = calendar_days(calendar, start, end, ctx.clock.tz)
     sync_plans(ctx.conn, calendar, ctx.settings.google_calendar_id, ctx.now_iso())
     owned = {
@@ -203,36 +237,41 @@ def get_calendar(ctx: ToolContext, args: GetCalendarInput) -> dict[str, Any]:
             ctx.conn, ctx.settings.google_calendar_id
         ).items()
     }
+    _number(days, owned)
+    return {"calendar": ctx.settings.google_calendar_id, "days": days}
+
+
+def _number(days: list[dict[str, Any]], owned: dict[str, int]) -> None:
+    """Name the plan behind each event, where the bot has one."""
     for day in days:
         for event in day["events"]:
             event["plan_id"] = owned.get(event["google_event_id"])
         for event in day["all_day_events"]:
             event["plan_id"] = owned.get(event["id"])
-    return {"calendar": ctx.settings.google_calendar_id, "days": days}
 
 
 def _created(ctx: ToolContext, plan: plans.Plan, event: CalendarEvent | None) -> dict[str, Any]:
 
     idea = ideas.get(ctx.conn, plan.idea_id) if plan.idea_id is not None else None
-    return {
+    made = {
         "plan": plan.model_dump(mode="json"),
         "event": event.to_public() if event else None,
         "idea": idea.model_dump(mode="json") if idea else None,
     }
+    return made if _on_google(ctx, plan) else {**made, "calendar": KEPT_HERE}
 
 
 @tool(
     name="create_event",
     description=(
-        "Put a confirmed plan on the shared family calendar and link it to an idea. Resolve the "
-        "date yourself and echo it back to the family afterwards. Returns the plan number."
+        "Put a confirmed plan on the shared family calendar (kept here when none is connected) "
+        "and link it to an idea. Resolve the date yourself and echo it back to the family "
+        "afterwards. Returns the plan number."
     ),
-    available=calendar_available,
-    unavailable_reason=NOT_CONFIGURED,
     writes=True,
 )
 def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
-    calendar = _calendar(ctx)
+    calendar = _google(ctx)
     tz = ctx.clock.tz
     if args.idea_id is not None and ideas.get(ctx.conn, args.idea_id) is None:
         raise ToolError(f"no idea #{args.idea_id}")
@@ -269,12 +308,13 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
                 event_id = calendar_ops.reserve(ctx.conn, key, earlier)
             else:
                 event_id = calendar_ops.reserve(ctx.conn, key, uuid.uuid4().hex, resume_key=resume)
-    event = calendar.get_event(event_id)
+    event = calendar.get_event(event_id) if calendar is not None else None
     existing = plans.for_event(ctx.conn, event_id)
     if existing is not None:
         return _created(ctx, existing, event)  # finished before: say so again
     if event is None:
         ensure_not_past(start, ctx.clock)
+    if event is None and calendar is not None:
         event = calendar.insert_event(
             title=args.title.strip(),
             start=start,
@@ -302,8 +342,9 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
                 end=stored_end,
                 all_day=all_day,
                 idea_id=args.idea_id,
-                google_event_id=event.id,
-                calendar_id=ctx.settings.google_calendar_id,
+                # Kept here, it holds the id its event will have, for when it goes on Google.
+                google_event_id=event.id if event is not None else event_id,
+                calendar_id=ctx.settings.google_calendar_id if event is not None else None,
                 location=args.location,
                 notes=args.notes,
                 created_by=ctx.member.id if ctx.member else None,
@@ -317,9 +358,8 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
 
 
 def _cancel(ctx: ToolContext, plan: plans.Plan) -> dict[str, Any]:
-    calendar = _calendar(ctx)
-    if plan.google_event_id:
-        calendar.delete_event(plan.google_event_id)
+    if _on_google(ctx, plan):
+        _calendar(ctx).delete_event(plan.google_event_id)  # type: ignore[arg-type]
     with transaction(ctx.conn):
         updated = plans.update(ctx.conn, plan.id, {"status": "cancelled"}, now=ctx.now_iso())
         if updated is not None:
@@ -342,20 +382,29 @@ def _target(
     always worked on as its plan, so plan and idea stay in step."""
     if (plan_id is None) == (event_id is None):
         raise ToolError("give plan_id, or event_id for an event put on the calendar by hand")
-    calendar = _calendar(ctx)
+    calendar = _google(ctx)
     if plan_id is None:
         assert event_id is not None
         owned = plans.for_event(ctx.conn, event_id)
-        if owned is None or owned.calendar_id != ctx.settings.google_calendar_id:
-            event = calendar.get_event(event_id)
+        ours = owned is not None and owned.calendar_id in (None, ctx.settings.google_calendar_id)
+        if not ours:
+            event = calendar.get_event(event_id) if calendar is not None else None
             if event is None:
                 raise ToolError(f"no event {event_id} on the calendar; get_calendar lists them")
             return None, event
+        assert owned is not None
         plan_id = owned.id
     plan = plans.get(ctx.conn, plan_id)
     if plan is None:
         raise ToolError(f"no plan #{plan_id}")
-    if plan.calendar_id != ctx.settings.google_calendar_id:
+    still_to_come = (plan.end or plan.start)[:10] >= ctx.clock.today().isoformat()
+    if plan.calendar_id is None and calendar is not None:
+        if plan.status != "cancelled" and still_to_come:
+            # Kept here before Google was connected: on Google first, then changed there.
+            plan = adopt(ctx.conn, calendar, plan, ctx.settings.google_calendar_id, ctx.now_iso())
+    elif plan.calendar_id is not None and calendar is None:
+        raise ToolUnavailable(ON_GOOGLE_ONLY.format(plan=plan.id))
+    elif plan.calendar_id not in (None, ctx.settings.google_calendar_id):
         raise ToolError("this plan belongs to a different calendar")
     return plan, None
 
@@ -373,17 +422,16 @@ def _remove_event(ctx: ToolContext, event: CalendarEvent) -> dict[str, Any]:
         "the start keeps the plan's length. An event put on the calendar by hand is changed by "
         "its event_id."
     ),
-    available=calendar_available,
-    unavailable_reason=NOT_CONFIGURED,
     writes=True,
 )
 def update_event(ctx: ToolContext, args: UpdateEventInput) -> dict[str, Any]:
-    calendar = _calendar(ctx)
+    calendar = _google(ctx)
     plan, event = _target(ctx, args.plan_id, args.event_id)
     if plan is not None:
-        plan = refresh_plan(
-            ctx.conn, calendar, plan, ctx.settings.google_calendar_id, ctx.now_iso()
-        )
+        if calendar is not None:
+            plan = refresh_plan(
+                ctx.conn, calendar, plan, ctx.settings.google_calendar_id, ctx.now_iso()
+            )
         if plan.status == "cancelled":
             raise ToolError(f"plan #{plan.id} is cancelled; create a new event instead")
         if args.status == "cancelled":
@@ -428,12 +476,12 @@ def update_event(ctx: ToolContext, args: UpdateEventInput) -> dict[str, Any]:
     if not changes:
         raise ToolError("nothing to change")
     if plan is None:
-        assert event is not None
+        assert event is not None and calendar is not None
         moved = calendar.patch_event(event.id, **patch)
         return {"plan": None, "event": moved.to_public(), "was": event.to_public()}
     patched = None
-    if patch and plan.google_event_id:
-        patched = calendar.patch_event(plan.google_event_id, **patch)
+    if patch and calendar is not None and _on_google(ctx, plan):
+        patched = calendar.patch_event(plan.google_event_id, **patch)  # type: ignore[arg-type]
     with transaction(ctx.conn):
         updated = plans.update(ctx.conn, plan.id, changes, now=ctx.now_iso())
         if updated is not None:
@@ -450,8 +498,6 @@ def update_event(ctx: ToolContext, args: UpdateEventInput) -> dict[str, Any]:
         "Take something off the calendar entirely: a plan by plan_id, or an event put there by "
         "hand by its event_id. Prefer cancelling a plan via update_event."
     ),
-    available=calendar_available,
-    unavailable_reason=NOT_CONFIGURED,
     writes=True,
 )
 def delete_event(ctx: ToolContext, args: DeleteEventInput) -> dict[str, Any]:

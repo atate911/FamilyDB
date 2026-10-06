@@ -7,14 +7,17 @@ it reads the database and returns; the calendar is asked only when a nudge could
 from __future__ import annotations
 
 import logging
+import sqlite3
 from contextlib import closing
 from datetime import datetime, time, timedelta
 from typing import Any
 
 from familydb import buttons, routing, voice
 from familydb.app import App
+from familydb.availability import calendar_available
 from familydb.dates import utc_iso
 from familydb.free_time import events_by_day, free_spans
+from familydb.saved_plans import SavedPlans
 from familydb.store import messages, tasks
 from familydb.store.db import transaction
 from familydb.store.tasks import Task
@@ -43,10 +46,12 @@ def nudge_text(task: Task, settings: Any, *, when: str, today: str) -> str:
     )
 
 
-def free_minutes(app: App, moment: datetime) -> int | None:
+def free_minutes(app: App, moment: datetime, conn: sqlite3.Connection | None = None) -> int | None:
     """Minutes the calendar is free from now, within the day; None when it cannot be asked (the
-    nudge then goes without it)."""
+    nudge then goes without it). With no Google calendar the plans kept here are the calendar."""
     calendar = app.calendar
+    if calendar is None and conn is not None and not calendar_available(app.settings):
+        calendar = SavedPlans(conn, app.clock.tz)
     if calendar is None:
         return None
     day = moment.date()
@@ -84,7 +89,7 @@ def run_nudges(app: App) -> int:
                 chosen.setdefault((task.channel, task.chat_id), (task, when))
         if not chosen:
             return 0
-        free = free_minutes(app, moment)
+        free = free_minutes(app, moment, conn)
         if free is not None and free < FREE_MINUTES:
             return 0
         nudged = 0

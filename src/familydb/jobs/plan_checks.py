@@ -161,8 +161,8 @@ def _backup(
     span: tuple[int, int],
     setting: str | None,
 ) -> str | None:
-    """Another idea for the same time from the engine, or None. The calendar is left out: it
-    holds the plan itself, leaving no time free."""
+    """Another idea for the same time from the engine, or None. The calendar, Google's or the
+    plans kept here, is left out: it holds the plan itself, leaving no time free."""
     ctx = ToolContext(
         conn=conn,
         settings=app.settings,
@@ -171,6 +171,7 @@ def _backup(
         calendar=None,
         weather=app.weather,
         geocoder=app.geocoder,
+        ignore_busy=True,
     )
     asked = SuggestInput(
         window="dates",

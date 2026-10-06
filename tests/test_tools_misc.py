@@ -51,11 +51,9 @@ def test_now_reports_family_time(registry, ctx) -> None:
 
 
 def test_stubs_report_unavailable_without_erroring(registry, ctx) -> None:
+    """A service that is not set up answers so, without an error. The calendar tools used to be
+    among them; without Google they keep the plans here now (tests/test_calendar.py)."""
     for name, payload in [
-        ("get_calendar", {"start": "2026-09-26", "end": "2026-09-27"}),
-        ("create_event", {"title": "Symphony", "start": "2026-09-26T20:00"}),
-        ("update_event", {"plan_id": 1, "start": "2026-09-27T20:00"}),
-        ("delete_event", {"plan_id": 1}),
         ("get_forecast", {"start": "2026-09-26", "end": "2026-09-27"}),
     ]:
         result, data = _call(registry, ctx, name, payload)

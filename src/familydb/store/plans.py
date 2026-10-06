@@ -207,6 +207,28 @@ def mark_checked(conn: sqlite3.Connection, plan_id: int, *, now: str) -> None:
     conn.execute("UPDATE plans SET checked_at = ? WHERE id = ?", (now, plan_id))
 
 
+def kept_here(conn: sqlite3.Connection, *, since: str) -> list[Plan]:
+    """Live plans kept here while no Google calendar was connected, from `since` (a date) on:
+    what goes on Google once one is (calendar_sync.adopt_local)."""
+    rows = conn.execute(
+        "SELECT * FROM plans WHERE calendar_id IS NULL AND status != 'cancelled' "
+        "AND coalesce(end, start) >= ? ORDER BY start",
+        (since,),
+    ).fetchall()
+    return [Plan.from_row(row) for row in rows]
+
+
+def adopted(
+    conn: sqlite3.Connection, plan_id: int, *, google_event_id: str, calendar_id: str, now: str
+) -> Plan | None:
+    """A plan kept here is on Google now, as this event of this calendar."""
+    conn.execute(
+        "UPDATE plans SET google_event_id = ?, calendar_id = ?, updated_at = ? WHERE id = ?",
+        (google_event_id, calendar_id, now, plan_id),
+    )
+    return get(conn, plan_id)
+
+
 def ask_again(conn: sqlite3.Connection, plan_id: int) -> None:
     """Forget that a plan was checked the evening before and asked about after: it moved, and its
     new day has both still to come (plan_service.changed)."""

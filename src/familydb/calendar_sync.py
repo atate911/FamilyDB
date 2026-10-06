@@ -8,7 +8,7 @@ it and puts its idea back. One request covers every plan (`sync_plans`).
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from familydb import plan_service
@@ -61,6 +61,59 @@ def apply_event(
     return updated or plan
 
 
+def adopt(
+    conn: sqlite3.Connection, calendar: CalendarAPI, plan: Plan, calendar_id: str | None, now: str
+) -> Plan:
+    """Put a plan kept here, while no calendar was connected, on Google. It goes with the id it
+    was given when it was made (tools/gcal.py create_event), so doing this twice makes one event:
+    the second finds the first."""
+    if calendar_id is None:
+        return plan
+    event_id = plan.google_event_id or None
+    event = calendar.get_event(event_id) if event_id else None
+    if event is None:
+        start, end = _times(plan)
+        event = calendar.insert_event(
+            title=plan.title,
+            start=start,
+            end=end,
+            all_day=plan.all_day,
+            location=plan.location,
+            description=plan.notes,
+            event_id=event_id,
+        )
+    with transaction(conn):
+        on_google = plans.adopted(
+            conn, plan.id, google_event_id=event.id, calendar_id=calendar_id, now=now
+        )
+    return on_google or plan
+
+
+def adopt_local(
+    conn: sqlite3.Connection, calendar: CalendarAPI, calendar_id: str | None, now: str
+) -> int:
+    """Every plan still to come that was kept here while no calendar was connected, on Google
+    now that one is. Nothing to do costs one query. Returns how many went."""
+    if calendar_id is None:
+        return 0
+    waiting = plans.kept_here(conn, since=now[:10])
+    for plan in waiting:
+        adopt(conn, calendar, plan, calendar_id, now)
+    return len(waiting)
+
+
+def _times(plan: Plan) -> tuple[datetime | date, datetime | date]:
+    """A stored plan's start and end as Google takes them: all-day as dates, the end the day
+    after the last (exclusive); timed as the instants stored, in the offset stored with them."""
+    if plan.all_day:
+        first = date.fromisoformat(plan.start[:10])
+        last = date.fromisoformat((plan.end or plan.start)[:10])
+        return first, max(first, last) + timedelta(days=1)
+    start = datetime.fromisoformat(plan.start)
+    end = datetime.fromisoformat(plan.end) if plan.end else start + timedelta(hours=2)
+    return start, end
+
+
 def refresh_plan(
     conn: sqlite3.Connection, calendar: CalendarAPI, plan: Plan, calendar_id: str | None, now: str
 ) -> Plan:
@@ -81,6 +134,8 @@ def sync_plans(
     """
     if calendar_id is None:
         return
+    # Plans kept here before Google was connected go on it first, so Google's answer holds them.
+    adopt_local(conn, calendar, calendar_id, now)
     changed = calendar.changes(calendar_sync_state.get(conn, calendar_id))
     live = conn.execute(
         "SELECT * FROM plans WHERE calendar_id = ? AND google_event_id IS NOT NULL "
