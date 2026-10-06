@@ -106,6 +106,20 @@ def find_by_operation(conn: sqlite3.Connection, operation_key: str) -> Task | No
     return get(conn, row["id"]) if row else None
 
 
+def creators(conn: sqlite3.Connection, task_ids: list[int]) -> dict[int, str]:
+    """Who made each of these tasks, by name, where that is known (migration 0040). Only the page
+    asks: it is not part of the record the model reads."""
+    if not task_ids:
+        return {}
+    marks = ",".join("?" * len(task_ids))
+    rows = conn.execute(
+        f"SELECT t.id, m.display_name AS name FROM tasks t JOIN members m "
+        f"ON m.id = t.created_by_member_id WHERE t.id IN ({marks})",
+        task_ids,
+    )
+    return {row["id"]: row["name"] for row in rows}
+
+
 def insert(
     conn: sqlite3.Connection,
     *,
@@ -120,6 +134,7 @@ def insert(
     now: str,
     repeat: dict[str, Any] | None = None,
     gift_for: str | None = None,
+    created_by_member_id: int | None = None,
 ) -> int:
     """A new task. `repeat` holds the four repeat_ columns, when it comes round again."""
     row = {
@@ -135,6 +150,7 @@ def insert(
         "updated_at": now,
         **(repeat or {}),
         **({"gift_for": gift_for} if gift_for else {}),
+        **({"created_by_member_id": created_by_member_id} if created_by_member_id else {}),
     }
     cur = conn.execute(
         f"INSERT INTO tasks({','.join(row)}) VALUES ({','.join('?' * len(row))})",

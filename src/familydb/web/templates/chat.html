@@ -1,8 +1,8 @@
-{% extends "base.html" %}
-{% from "_ui.html" import icon, page_head, chat_line, waiting_line %}
-{% block title %}{{ assistant if has_persona else 'Chat' }} · {{ site_title }}{% endblock %}
+{% extends "base_kitchen.html" %}
+{% from "_kitchen.html" import icon, avatar, tag, page_head, msg, msg_pending %}
+{% block title %}{{ 'Chat with ' ~ assistant if has_persona else 'Chat' }} · {{ site_title }}{% endblock %}
 {% block body_class %}page-chat{% endblock %}
-{# While an answer is on its way a meta refresh fetches the page again (works without scripts). Only set while something really is being thought about, and never on a page holding typed words, which it would take with it. While a turn runs the box is closed; waiting on the retry job it stays open and ask.js looks again instead. #}
+{# While an answer is on its way a meta refresh fetches the page again (works without scripts), soon at first and then less often, and stops, leaving the visible link. Only set while something really is being thought about, and never on a page holding typed words, which it would take with it. While a turn runs the box is closed; waiting on the retry job it stays open and ask.js looks again instead. #}
 {% block head %}
   {% if refresh and locked %}
     <meta http-equiv="refresh" content="{{ refresh }}; url={{ here }}" />
@@ -11,36 +11,62 @@
   {% endif %}
 {% endblock %}
 {% block content %}
+  {% set title = 'Chat with ' ~ assistant if has_persona else 'Chat' %}
   {% if reading %}
-    {{ page_head(reading ~ ' and ' ~ (assistant if has_persona else 'the bot'), 'Her own conversation, for you to read. Only she writes in it.', 'presence' if has_persona else 'chat', [(assistant if has_persona else 'Chat', url_for('chat.show'))]) }}
+    {{ page_head(reading ~ ' and ' ~ (assistant if has_persona else 'the bot'), 'Her own conversation, for you to read. Only she writes in it.', crumb=(title, url_for('chat.show'))) }}
   {% elif private %}
-    {{ page_head(assistant if has_persona else 'Chat', 'Just you and ' ~ assistant ~ '. Tell her what you’d like, or ask about the plans.', 'presence' if has_persona else 'chat') }}
+    {{ page_head(title, 'Just you and ' ~ assistant ~ '. Tell her what you’d like, or ask about the plans.') }}
   {% else %}
-    {{ page_head(assistant if has_persona else 'Chat', 'Weekends, ideas, to-dos and the calendar: anything you would ask in Telegram works here too.', 'presence' if has_persona else 'chat') }}
+    {{ page_head(title, 'Weekends, ideas, to-dos and the calendar: anything you’d ask in Telegram works here too.') }}
   {% endif %}
 
-  {% if lines %}
-    <ol class="thread">
-      {% for line in lines %}
-        {{ chat_line(line, latest if loop.last) }}
-      {% endfor %}
-      {% if pending %}{{ waiting_line(assistant, state, pending) }}{% endif %}
-    </ol>
-  {% else %}
-    <p class="muted empty">{{ icon('chat') }}<span>Nothing said here yet. Ask {{ assistant }} what to do this weekend, save an idea, or set a reminder.</span></p>
-  {% endif %}
+  <div class="chat">
+    {% if convos %}
+      <nav class="convos" aria-label="Conversations">
+        {% for one in convos %}
+          <a class="convo" href="{{ one.href }}"{% if one.current %} aria-current="page"{% endif %}>
+            {{ avatar(one.slot, one.initial) }}<span><b>{{ one.name }}</b><small>{{ one.snippet }}</small></span></a>
+          {% if loop.first and not private and convos | length > 1 %}<p class="convos__h">The kids’ conversations</p>{% endif %}
+        {% endfor %}
+        {% if private %}
+          {% if readers %}<p class="privacy">{{ icon('eye', size='sm') }}<span>{{ readers }} can read your chat with {{ assistant }}.</span></p>{% endif %}
+        {% else %}
+          <p class="privacy">{{ icon('eye', size='sm') }}<span>Each kid talks to {{ assistant }} on her own. You can read along; the kids see a note saying so at the top of theirs.</span></p>
+        {% endif %}
+      </nav>
+      {% if private and readers %}
+        <p class="privacy privacy--room">{{ icon('eye', size='sm') }}<span>{{ readers }} can read your chat with {{ assistant }}.</span></p>
+      {% elif convos | length > 1 %}
+        <p class="privacy privacy--room">{{ icon('eye', size='sm') }}<span>Parents can read the kids’ chats. The kids see a note saying so.</span></p>
+      {% endif %}
+    {% endif %}
 
-  {% if error %}<p class="error">{{ error }}</p>{% endif %}
-
-  {% if not reading %}{% include "_ask.html" %}{% endif %}
-
-  {% if kids and not reading %}
-    <nav class="panel" aria-label="The kids' conversations">
-      <h2>{{ icon('user') }}The kids' conversations</h2>
-      <p class="muted">Each kid talks to {{ assistant }} on her own. You can read along.</p>
-      <ul class="plain">
-        {% for kid in kids %}<li><a href="{{ url_for('chat.show', with=kid.id, _anchor=latest) }}">{{ kid.name }}</a></li>{% endfor %}
-      </ul>
-    </nav>
-  {% endif %}
+    <section class="card room" aria-labelledby="h-room">
+      <div class="room__head">
+        <div class="who">
+          {% if room.people | length > 1 %}<span class="avs">{% for one in room.people %}{{ avatar(one.slot, one.initial, 'sm') }}{% endfor %}</span>
+          {% else %}{{ avatar(room.people[0].slot, room.people[0].initial, 'sm') }}{% endif %}
+          <div><h2 id="h-room">{{ room.title }}</h2>
+            {% if private and readers %}<small>{{ readers }} can read this chat</small>{% elif room.line %}<small>{{ room.line }}</small>{% endif %}</div>
+        </div>
+        {% if telegram %}{{ tag(telegram[0], telegram[1]) }}{% endif %}
+      </div>
+      <div class="scroller" role="log" aria-label="{{ room.title }} chat, newest message last" tabindex="0">
+        <div class="thread">
+          {% if earlier %}<p class="earlier"><a class="linkbtn" href="{{ earlier }}">Earlier messages</a></p>{% endif %}
+          {% set ns = namespace(day='') %}
+          {% for line in lines %}
+            {% if line.day != ns.day %}<div class="day-sep"><span>{{ line.heading }}</span></div>{% set ns.day = line.day %}{% endif %}
+            {{ msg(line, mine=(me is not none and line.who == me.name and not line.from_bot), anchor=latest if loop.last else none) }}
+          {% else %}
+            <p class="empty">{{ icon('chat') }}<span>Nothing said here yet. Ask {{ assistant }} what to do this weekend, save an idea, or set a reminder.</span></p>
+          {% endfor %}
+          {% if pending %}{{ msg_pending(assistant, state, pending, check) }}{% endif %}
+          {% if newest %}<p class="earlier"><a class="linkbtn" href="{{ newest }}">Back to the newest</a></p>{% endif %}
+        </div>
+      </div>
+      {% if error %}<div class="banner banner--alert banner--slim" role="alert"><span class="banner__ic">{{ icon('alert') }}</span><p class="banner__text">{{ error }}</p></div>{% endif %}
+      {% if not reading %}{% include "_composer.html" %}{% endif %}
+    </section>
+  </div>
 {% endblock %}

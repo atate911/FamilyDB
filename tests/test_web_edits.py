@@ -41,7 +41,8 @@ def _token(client, path: str) -> str:
 
 
 def _said(response) -> str:
-    return " ".join(re.findall(r'class="said"[^>]*>\s*([^<]+)', response.text))
+    """What the last form said: the older pages' line, or the new frame's flash."""
+    return " ".join(re.findall(r'class="(?:said|banner__text)"[^>]*>\s*([^<]+)', response.text))
 
 
 def _idea_form(client, path="/ideas/new", **changes) -> dict[str, str]:

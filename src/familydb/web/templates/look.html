@@ -28,7 +28,7 @@
             <label class="look-choice">
               <span class="look-head">
                 <input type="radio" name="theme" value="{{ one.key }}"{% if one.key == wearing.key %} checked{% endif %} />
-                <span class="look-name">{{ one.name }}{% if one.key == wearing.key %} <span class="tag">In use</span>{% endif %}</span>
+                <span class="look-name">{{ one.name }}{% if one.key == wearing.key %} <span class="tag">In use</span>{% endif %}{% if one.key == default %} <span class="tag">The default</span>{% endif %}</span>
               </span>
               <span class="look-blurb">{{ one.blurb }}</span>
               <span class="look-samples" aria-hidden="true">

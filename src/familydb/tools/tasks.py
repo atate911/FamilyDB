@@ -124,6 +124,8 @@ def add_task(ctx: ToolContext, args: AddTaskInput) -> dict[str, Any]:
         _owner(ctx, args.owner) if args.owner else (ctx.member.id if ctx.member else None)
     )
     values["due_at"] = _time(ctx, args.due_at)
+    # Whoever asked for it, whoever it is for ("Set by Alex" on a kid's to-do).
+    values["created_by_member_id"] = ctx.member.id if ctx.member else None
     reminder = _time(ctx, args.remind_at, future=True)
     origin = messages.get(ctx.conn, ctx.message_id) if ctx.message_id else None
     channel, chat_id = (origin.channel, origin.chat_id) if origin else ("web", "web")

@@ -4,12 +4,20 @@
    (--bloom). Vera's glass is green-black phosphor in all of them.
 
    Kitchen Table (docs/STYLE.md) is first. The block just below it gives every look the roles Kitchen Table's
-   layout reads and the built set lacks (its people, the meaning washes, Vera's box, Send), worked out from
+   layout reads and the built set lacks (its people, the meaning washes, Vera's box, Send, the five effect
+   tokens), worked out from
    that look's own tokens, so no look has to name them (it may). It comes before the looks so a look that
    names one wins. --here-icon and --here-pill are not in it: the page reads them with a fallback, and
    Phosphor (in style.css) leaves them unset on purpose. */
 
 [data-theme] {
+  /* the effects (style-kitchen.css, section 11), plain: no light on the page, no scanlines, no glow
+     beyond the look's own, the heading face. A look may name its own; the test holds what they may be. */
+  --fx-page: none;
+  --fx-scan: transparent;
+  --fx-glow: 0;
+  --fx-title: var(--font-head);
+  --fx-title-adjust: none;
   --band-link: var(--on-band);
   --ok-soft: color-mix(in srgb, var(--ok) 10%, var(--card));
   --ok-line: color-mix(in srgb, var(--ok) 35%, var(--card));
@@ -126,10 +134,7 @@
   --vera: light-dark(#1E5C4F, #6DFF9C);
   --vera-bg: light-dark(#1E5C4F, #4FE08A);
   --cursor: light-dark(#1B9A55, #6DFF9C);
-  /* Vera's box is a plain card for now, as in every paper look: today's Home colours its words with the page's ink,
-     which a dark green box would swallow by day. Its dark green (--ask-bg #12382F by day, #0F2A22 at night) and its own
-     --ask-ink, --ask-ink-2, --ask-rim, --ask-edge, --ask-rule and --ask-fill* (design/themes.css) come with the new Home. */
-  --ask-bg: var(--card);
+  --ask-bg: light-dark(#12382F, #0F2A22);
   /* the built set's colours for parts of the site and kinds (Kitchen Table's layout keeps kinds neutral; these let the old layout read in it) */
   --lilac: light-dark(#5448B0, #B5AEF0);
   --cyan: light-dark(#0A6178, #8DD0E0);
@@ -168,10 +173,96 @@
   --on-vera: light-dark(#FFFFFF, #0C100F);
   --vera-soft: light-dark(#DCEAE2, #10241A);
   --vera-line: light-dark(#B9D3C6, #22513A);
+  --ask-ink: light-dark(#FFFFFF, #EEE8DA);
+  --ask-ink-2: light-dark(#D2E3DA, #C3D2CA);
+  --ask-rim: inset 0 0 0 1px light-dark(rgb(255 255 255 / .06), transparent), inset 0 0 0 1.5px light-dark(transparent, #3E8A66), inset 0 0 28px light-dark(transparent, rgb(109 255 156 / .08)), 0 0 26px -10px light-dark(transparent, rgb(109 255 156 / .45));
+  --ask-edge: light-dark(transparent, #7E8C86);
+  --ask-rule: rgb(255 255 255 / .16);
+  --ask-fill: rgb(255 255 255 / .12);
+  --ask-fill-2: rgb(255 255 255 / .18);
   --send: light-dark(#F2C14E, #E0B04A);
   --send-2: light-dark(#E5B035, #F0C35C);
   --on-send: light-dark(#1D2526, #0C100F);
 
+}
+
+/* ---- Phosphor (dark only): the green-screen look the page was first drawn in ----------------- */
+[data-theme="phosphor"] {
+  color-scheme: dark;
+  /* a look names every token the others do; Phosphor, once the default, did not need these two */
+  --here-icon: var(--on-here);
+  --here-pill: var(--here);
+
+  --paper: #0b0e0d;
+  --paper-2: #171c1a;
+  --paper-3: #1d2321;
+  --card: #121615;
+  --field: #0e1211;
+  --line: #232a27;
+  --line-2: #2f3834;
+  --edge: #5c6862;           /* the edge of anything you type in or press: 3.1:1 on a surface */
+
+  --ink: #edf2ef;
+  --ink-2: #bac5bf;          /* secondary words */
+  --ink-3: #919e98;          /* quiet words: 6.6:1 on a surface */
+  --faint-ink: #7d8a84;      /* placeholders and ids: 5:1 on a field */
+
+  /* The bar, which every theme calls its band: here a pane of the page's own dark. */
+  --band: rgb(11 14 13 / 0.82);
+  --band-tabs: rgb(14 18 17 / 0.94);
+  --band-hi: #171c1a;
+  --band-line: #232a27;
+  --on-band: #edf2ef;
+  --on-band-2: #919e98;
+  --here: #1d2321;           /* the page you are on, in the bar */
+  --on-here: #edf2ef;
+
+  /* The phosphors of the time, softened: the green and amber of the monitors, and the bright
+     cyan, yellow, magenta and red of the first colour screens. Each part of the site takes one.
+     Tuned so no two that share a page are easily confused, for typical sight or the commonest
+     colour-blindness (docs/STYLE.md has the measures). */
+  --lilac: #ae9bff;          /* ideas */
+  --cyan: #6cd4ff;           /* plans and dates, and going places */
+  --lemon: #f7dc78;          /* things to do */
+  --amber: #ffb850;          /* people, food, setting up: an amber screen's phosphor */
+  --pink: #ff9fd0;           /* shows, and children's faces */
+  --orange: #ff956c;         /* the seasons */
+  --red: #ff6b6b;            /* only what went wrong, or cannot be undone */
+  --on-bright: #07130c;      /* words on any of the colours above */
+
+  --ok: #6dff9c;             /* working, done */
+  --vera: #6dff9c;           /* her name and her words, on the page */
+  --vera-bg: #6dff9c;        /* a lamp that is on */
+  --cursor: #6dff9c;         /* the wordmark's cursor */
+  --link: #6dff9c;
+  --primary: #6dff9c;        /* the one button to press */
+  --primary-hover: #92ffb8;
+  --on-primary: #07130c;
+  --focus: #6dff9c;
+  --lit: #6dff9c;            /* the light the page gives off where attention is */
+  --today: #ffb850;          /* today's stamp, and what is next */
+  --on-today: #07130c;
+  --today-rule: #ffb850;
+  --today-wash: rgb(255 184 80 / 0.05);
+  --person: #ffb850;         /* a family member's face */
+  --on-person: #07130c;
+  --error-ink: #ffd6d6;
+
+  /* How much the page glows, and what its surfaces cast. Phosphor lights; the paper themes barely do. */
+  --bloom: 1;
+  --glow: 0 0 0 1px rgb(109 255 156 / 0.35), 0 8px 28px -10px rgb(109 255 156 / 0.7);
+  --glow-hover: 0 0 0 1px rgb(109 255 156 / 0.5), 0 10px 34px -10px rgb(109 255 156 / 0.85);
+  --shadow: inset 0 1px 0 rgb(255 255 255 / 0.035), 0 12px 32px -22px rgb(0 0 0 / 0.9);
+  --pop: 0 22px 44px -18px rgb(0 0 0 / 0.95);
+  --pop-up: 0 -8px 30px rgb(0 0 0 / 0.45);
+  --wash: rgb(255 255 255 / 0.05);
+  --wash-faint: rgb(255 255 255 / 0.025);
+  --shade: rgb(0 0 0 / 0.22);
+  --hi: rgb(255 255 255 / 0.05);
+  --scan: rgb(255 255 255 / 0.028);
+  --raster: rgb(0 0 0 / 0.22);
+  --ask-bg: rgb(9 12 11 / 0.72);
+  --bar-bg: rgb(18 22 21 / 0.9);
 }
 
 [data-theme="rail"] {

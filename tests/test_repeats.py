@@ -232,8 +232,8 @@ def test_the_page_sets_changes_and_stops_a_repeat(settings, clock, conn, family)
     assert client.post("/tasks/new", data=new).status_code == 302
     task = tasks.list_all(conn)[0]
     assert (task.repeat_every, task.repeat_unit, task.repeat_from) == (1, "week", "schedule")
-    page = client.get("/tasks").text
-    assert "Every week" in page and 'name="repeat_was" value="1:week:schedule"' in page
+    assert "Every week" in client.get("/tasks").text
+    assert 'name="repeat_was" value="1:week:schedule"' in client.get(f"/task/{task.id}/edit").text
 
     def edit(once, **changes):
         form = dict(

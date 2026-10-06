@@ -14,10 +14,34 @@ older than what is installed. It gets a date when it is released.
   whether to follow the device's day and night or hold to one. The choice is
   kept in the browser and touches nothing the family's data holds, and every
   look is tested for readable contrast by day and by night.
-- **Kitchen Table, a new look to try.** Cream paper by day, charcoal at night,
-  and deep green for what you act on. Open Look from the menu to try it; nothing
-  else on the page moves yet, and Phosphor is still what everybody sees until
-  they choose.
+- **A new look, Kitchen Table.** FamilyDB has a new look: cream paper by day,
+  charcoal at night, deep green for what you act on, and each of you in your
+  own colour. It is what everybody sees now, except anybody who chose a look
+  before, who keeps theirs. To change yours, open Look from the menu.
+- **A new menu and a new Home**, the first pages of the new layout (the others
+  follow, one at a time). A sidebar on a computer, a tab bar on a phone, Vera's
+  state in a pill, and counts beside the pages that need somebody ("3 late",
+  "1 to decide"). Home opens with a greeting and one line on what is coming and
+  what is late, then Vera's box, what is next (with who it is for and how far
+  it is), your to-dos, what was just added, the kids' lists, and, for
+  grown-ups, "How did it go?" for a plan nobody has rated and what Vera cost
+  today. A kid's Home is simpler: her box, what is next for her, her list and
+  her own to-dos. The ways to start under the box are gone. Each of you has a
+  colour, kept with your name.
+- **A new Chat.** Each person's messages wear their own colour and letter, the
+  day is said where it changes, and Vera is her screen beside her lines. A
+  parent moves between the family's conversation and each kid's (the list
+  shows when a kid last wrote, never what), a kid is told who can read hers,
+  and "Earlier messages" goes further back. While Vera is writing back, the
+  page looks again soon, then less often, then stops and leaves a link: "Check
+  for her answer".
+- **A new To do and a new Plans.** Each to-do has its own Edit page instead of
+  a form that opens in the list, shows who it is for in their colour, and tells
+  a kid who set it ("Set by Alex"). Plans open as a month, with each plan on its
+  days in the colour of who it is for, and a list beside it; a plan that has
+  happened asks how it went right there, with three faces. A kid sees one list
+  of what is next.
+
 
 ## v0.2.0 — second alpha (2026-10-05)
 

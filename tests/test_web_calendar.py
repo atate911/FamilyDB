@@ -86,14 +86,14 @@ def test_a_weekend_away_is_on_each_of_its_days_in_the_month(google, conn, family
     text = client.get("/plans/month?month=2026-10").text
     assert "October 2026" in text
     assert text.count("Camping") == 6  # three days in the grid, and the same three as a list
-    assert '<time datetime="2026-10-02">' in text and "18:30" in text
+    assert 'id="d-2026-10-02"' in text and "18:30" in text  # the day, in the list under the grid
     assert "month=2026-09" in text and "month=2026-11" in text  # earlier and later
 
 
 def test_the_month_is_this_one_by_default_and_marks_today(google) -> None:
     _, client, _ = google
     text = client.get("/plans/month").text
-    assert "September 2026" in text and 'class=" today"' in text  # the 20th, in the grid
+    assert "September 2026" in text and "day--today" in text  # the 20th, in the grid
     assert "This month" not in text  # already on it
 
 

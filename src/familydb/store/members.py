@@ -29,10 +29,21 @@ class Member(BaseModel):
     created_at: str
     birth_date: str | None = None  # YYYY-MM-DD; only the age it gives reaches the model
     gender: Gender | None = None
+    # Which of the page's eight person colours is theirs (1 to 8); None until given one.
+    slot: int | None = None
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> Member:
         return cls(**dict(row))
+
+
+SLOTS = range(1, 9)
+
+
+def next_slot(conn: sqlite3.Connection) -> int:
+    """The lowest colour nobody has; with all eight taken, the one fewest people share."""
+    held = [row[0] for row in conn.execute("SELECT slot FROM members WHERE slot IS NOT NULL")]
+    return min(SLOTS, key=lambda slot: (held.count(slot), slot))
 
 
 def add(
@@ -45,9 +56,16 @@ def add(
     now: str | None = None,
 ) -> Member:
     cur = conn.execute(
-        "INSERT INTO members (display_name, role, channel, channel_user_id, active, created_at) "
-        "VALUES (?, ?, ?, ?, 1, ?)",
-        (display_name.strip(), role, channel, channel_user_id, now or utcnow_iso()),
+        "INSERT INTO members (display_name, role, channel, channel_user_id, active, created_at, "
+        "slot) VALUES (?, ?, ?, ?, 1, ?, ?)",
+        (
+            display_name.strip(),
+            role,
+            channel,
+            channel_user_id,
+            now or utcnow_iso(),
+            next_slot(conn),
+        ),
     )
     member = get(conn, int(cur.lastrowid or 0))
     assert member is not None
@@ -134,6 +152,7 @@ POINTING_AT = {
     ("plans", "created_by"): "unname",
     ("settings_log", "changed_by"): "unname",
     ("suggestions", "asked_by"): "unname",
+    ("tasks", "created_by_member_id"): "unname",
     ("tasks", "owner_id"): "unname",
     ("telegram_invites", "made_by"): "unname",
     ("telegram_invites", "member_id"): "delete",

@@ -164,8 +164,8 @@ def test_a_kid_home_speaks_to_her_and_offers_only_what_she_may(app, family, sam,
     assert 'href="/ideas/new"' not in home and "plan an idea" not in home
     assert "Tell Vera anything" not in home and 'href="/wishes"' in home
     assert girls["mine"].get("/ideas/new").status_code == 403
-    # A grown-up's Home is as it was.
-    assert "We should try…" in sam.get("/").text and 'href="/ideas/new"' in sam.get("/").text
+    # A grown-up's Home has no ways to start either, but can add an idea from it.
+    assert "We should try" not in sam.get("/").text and 'href="/ideas/new"' in sam.get("/").text
 
 
 def test_her_list_opens_on_one_box_for_anything(app, family, sam, girls) -> None:  # noqa: F811

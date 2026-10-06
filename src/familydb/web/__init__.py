@@ -34,6 +34,7 @@ from familydb.web import (
     once,
     routes,
     setup,
+    shell,
     views,
 )
 from familydb.web import settings as settings_page
@@ -182,6 +183,8 @@ def create_app(app: App, *, api: Any = None) -> Flask:
     web.jinja_env.globals["once_token"] = once.once_token
     web.jinja_env.globals["links"] = links.LINKS
     web.jinja_env.globals["settings_sections"] = fields.SECTIONS
+    # The new frame's pill and counts, read only by a page built on base_kitchen.html.
+    web.jinja_env.globals["shell_frame"] = lambda: shell.frame(app)
 
     def every_page() -> dict[str, Any]:
         her = personas.active(app.settings)

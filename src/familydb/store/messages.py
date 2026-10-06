@@ -354,14 +354,28 @@ def give_up_for_member(conn: sqlite3.Connection, member_id: int, *, now: str) ->
     return int(cur.rowcount)
 
 
-def last_for_chat(conn: sqlite3.Connection, chat_id: str, *, limit: int) -> list[Message]:
-    """The last `limit` messages in a chat, however old, oldest first (what the page shows)."""
+def last_for_chat(
+    conn: sqlite3.Connection, chat_id: str, *, limit: int, before: int | None = None
+) -> list[Message]:
+    """The last `limit` messages in a chat, however old, oldest first (what the page shows). With
+    `before`, the last `limit` older than that message: "Earlier messages"."""
     rows = conn.execute(
         "SELECT * FROM messages WHERE chat_id = ? AND cancelled_at IS NULL "
-        "ORDER BY id DESC LIMIT ?",
-        (chat_id, limit),
+        "AND (? IS NULL OR id < ?) ORDER BY id DESC LIMIT ?",
+        (chat_id, before, before, limit),
     ).fetchall()
     return [Message.from_row(row) for row in reversed(rows)]
+
+
+def has_before(conn: sqlite3.Connection, chat_id: str, message_id: int) -> bool:
+    """Whether a chat holds anything older than this message."""
+    return (
+        conn.execute(
+            "SELECT 1 FROM messages WHERE chat_id = ? AND cancelled_at IS NULL AND id < ? LIMIT 1",
+            (chat_id, message_id),
+        ).fetchone()
+        is not None
+    )
 
 
 def failed(conn: sqlite3.Connection, *, max_retries: int | None = None) -> list[Message]:

@@ -118,7 +118,7 @@ def test_a_database_that_ran_the_retired_0007_still_gets_what_follows(tmp_path):
         conn.execute("DROP INDEX plans_google_event_idx")
         # tasks, dropped above, comes back with 0012 and takes 0022's repeats, 0023's gift_for
         # and 0024's nudged_at on again.
-        assert db.migrate(conn) == list(range(8, 39))
+        assert db.migrate(conn) == [v for v, _, _ in db.list_migrations() if v >= 8]
         columns = {row["name"] for row in conn.execute("PRAGMA table_info(llm_calls)")}
         assert {"provider", "web_searches", "cost_usd", "cost_estimated"} <= columns
 
@@ -282,7 +282,7 @@ def test_calendar_attempts_keep_their_meaning_in_one_table(tmp_path, monkeypatch
             "('session-lost', 'evt-lost');"
             "INSERT INTO calendar_links (operation_key, adopted_key) VALUES ('redrawn', 'done');"
         )
-        assert db.migrate(conn)[-1] == 38
+        assert 38 in db.migrate(conn)
         assert calendar_ops.get(conn, "done") == "evt-done"
         assert calendar_ops.get(conn, "redrawn") == "evt-done"  # the form that took it over
         assert calendar_ops.unfinished(conn, "session-lost") == "evt-lost"
@@ -292,3 +292,27 @@ def test_calendar_attempts_keep_their_meaning_in_one_table(tmp_path, monkeypatch
         # Two forms may now point at one event, which the old unique column forbade.
         calendar_ops.reserve(conn, "another-form", "evt-done")
         assert calendar_ops.get(conn, "another-form") == "evt-done"
+
+
+def test_each_person_keeps_a_colour_from_the_day_0039_gave_them_one(tmp_path, monkeypatch):
+    """0039 gives everyone already on the list a slot (1 to 8) in the order they were added, and
+    a person added afterwards gets the lowest slot nobody has."""
+    from contextlib import closing
+
+    from familydb.store import members
+
+    with closing(db.connect(tmp_path / "old.sqlite3")) as conn:
+        _up_to(monkeypatch, conn, 38)
+        for name in ("Sam", "Alex", "Maya", "Theo"):
+            conn.execute(
+                "INSERT INTO members (display_name, role, active, created_at) "
+                "VALUES (?, 'parent', 1, '2026-01-01T00:00:00Z')",
+                (name,),
+            )
+        assert 39 in db.migrate(conn)
+        assert [m.slot for m in members.list_all(conn)] == [1, 2, 3, 4]
+        conn.execute("DELETE FROM members WHERE display_name = 'Alex'")
+        assert members.add(conn, "Robin", "kid").slot == 2  # the freed colour, not a fifth
+        for name in ("a", "b", "c", "d", "e"):
+            members.add(conn, name, "kid")
+        assert members.add(conn, "ninth", "kid").slot in range(1, 9)  # all eight in use: shared

@@ -59,7 +59,8 @@ def _as(app, name: str, password: str, api=None):
 
 
 def _said(response) -> str:
-    return " ".join(re.findall(r'class="said"[^>]*>\s*([^<]+)', response.text))
+    """What the last form said: the older pages' line, or the new frame's flash."""
+    return " ".join(re.findall(r'class="(?:said|banner__text)"[^>]*>\s*([^<]+)', response.text))
 
 
 @pytest.fixture
@@ -338,10 +339,12 @@ def test_the_settings_tile_opens_a_menu_with_every_settings_page_then_you(app, s
     assert '<details class="menu here">' in here
     assert re.search(r'href="/settings/spending" aria-current="page"', here)
 
-    theirs = re.search(r'<details class="menu[^"]*">.*?</details>', alex.get("/").text, re.S)
-    assert theirs is not None and "/settings" not in theirs.group(0)
-    assert re.findall(r'<a[^>]* href="([^"]+)"', theirs.group(0)) == ["/look", "/you"]
-    assert "Alex" in theirs.group(0) and 'action="/logout"' in theirs.group(0)
+    # On the new frame the same things sit in the account corner of the sidebar.
+    side = re.search(r'<aside class="side".*?</aside>', alex.get("/").text, re.S)
+    assert side is not None and "/settings" not in side.group(0)
+    theirs = side.group(0).split('<div class="me">')[1]
+    assert re.findall(r'<a[^>]* href="([^"]+)"', theirs) == ["/look", "/you"]
+    assert "<b>Alex</b>" in theirs and 'action="/logout"' in theirs
 
 
 def test_the_chat_speaks_as_whoever_is_signed_in(app, sam, family, conn) -> None:
@@ -352,7 +355,7 @@ def test_the_chat_speaks_as_whoever_is_signed_in(app, sam, family, conn) -> None
     assert made  # replaced straight away
     alex = _as(app, "Alex", ALEXS, api=fakes.FakeMessagesAPI(*replies))
     page = alex.get("/chat").text
-    assert "From <strong>Alex</strong>" in page and 'name="who"' not in page
+    assert "Writing as <b>Alex</b>" in page and 'name="who"' not in page
     form = {**_tokens(alex, "/chat"), "text": "what should we do?", "who": "Sam"}
     assert alex.post("/chat", data=form).status_code == 302
     assert alex.chat.wait(10)
@@ -567,7 +570,7 @@ def test_home_offers_only_what_a_role_may_do(app, sam, family, monkeypatch) -> N
     assert home.status_code == 200
     assert "/chat" not in home.text  # no box, no ways to start, no way into the conversation
     assert "The swings are waiting." not in home.text and "ask.js" not in home.text
-    assert "<h1>" in home.text  # a heading still, with the box's label gone
+    assert '<h1 class="sr">' in home.text  # a heading still, with the box's label gone
     assert "Buy paper towels" in home.text and "/done" not in home.text
     listed = girls.get("/tasks").text
     assert "Buy paper towels" in listed and f"/task/{towels}/done" not in listed
@@ -706,3 +709,56 @@ def test_an_admin_s_status_tile_lights_up_while_something_is_wrong(app, sam, fam
     assert "lit" not in tile(alex) and "Status</span>" in tile(alex)
     with closing(app.connect()) as conn:
         assert status_page.light(app, conn) == "bad"
+
+
+# -- plans and to-dos, as each person sees them
+
+
+def _swim_bag(conn, family) -> int:
+    with db.transaction(conn):
+        return tasks.insert(
+            conn,
+            title="Pack the swim bag",
+            notes="",
+            owner_id=family["girls"].id,
+            due_at=None,
+            preferred_window="",
+            operation_key="swim-bag",
+            channel="telegram",
+            chat_id="-100",
+            now=NOW_ISO,
+        )
+
+
+def test_plans_open_as_a_month_for_a_grown_up_and_a_list_for_a_kid(app, sam, family) -> None:
+    girls = _as(app, "the girls", _start(sam, family["girls"].id))
+    girls.post("/you", data={**_tokens(girls, "/you"), "new": KIDS, "again": KIDS})
+    assert "How to show the plans" in sam.get("/plans").text
+    page = girls.get("/plans").text
+    assert "How to show the plans" not in page and "What the family is doing next." in page
+
+
+def test_a_kid_cannot_open_the_edit_page(app, sam, family, conn) -> None:
+    task_id = _swim_bag(conn, family)
+    girls = _as(app, "the girls", _start(sam, family["girls"].id))
+    girls.post("/you", data={**_tokens(girls, "/you"), "new": KIDS, "again": KIDS})
+    assert girls.get(f"/task/{task_id}/edit").status_code == 403
+    assert f"/task/{task_id}/edit" not in girls.get("/tasks").text
+
+
+def test_a_kid_is_told_who_set_her_a_to_do_but_not_what_she_set_herself(
+    app,
+    sam,
+    family,
+    conn,
+) -> None:
+    form = {**_tokens(sam, "/tasks"), "title": "Pack the swim bag", "owner": "the girls"}
+    assert sam.post("/tasks/new", data=form).status_code == 302
+    girls = _as(app, "the girls", _start(sam, family["girls"].id))
+    girls.post("/you", data={**_tokens(girls, "/you"), "new": KIDS, "again": KIDS})
+    page = girls.get("/tasks").text
+    assert "Pack the swim bag" in page and "Set by Sam" in page
+    assert "Set by" not in sam.get("/tasks").text  # Sam set it, and reads their own list
+    with db.transaction(conn):
+        conn.execute("UPDATE tasks SET created_by_member_id = ?", (family["girls"].id,))
+    assert "Set by" not in girls.get("/tasks").text
