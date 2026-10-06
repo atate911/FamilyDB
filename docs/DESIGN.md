@@ -108,7 +108,7 @@ Prompt caching: persona and system prompt, then family context and idea list, go
 | `report_finds` | Discovery hand-back: title, url, dates, summary; http(s) links only, at most six. |
 | `web_search`, `web_fetch` | Provider server-side tools, worker turns only. Fetch reads a page whose URL already appears in the conversation (a search result, an idea's saved website). |
 | `get_calendar` | Live events in a window (hand-added included) plus derived free blocks per day. |
-| `create_event` | Creates the Google event, records it in `plans`, links the idea and marks it planned. |
+| `create_event` | Creates the Google event, records it in `plans`, links the idea and marks it planned. Says what else takes up that time (`overlaps`, from Google or the plans kept here: a timed plan does not clash with a day's all-day note), so a plan is not put over the dentist without a word; `update_event` says the same when a plan moves. |
 | `update_event`, `delete_event` | Corrections and removal. A plan is found by plan id; an event somebody put on the calendar by hand (listed by `get_calendar` with an event id and no plan id) is moved or removed by that id, with no plan made up for it. An event the bot made is always worked on as its plan. |
 | `search_plans` | Finds plans and ids by title words, or the latest, once the conversation that made them has left the history. |
 | `get_forecast` | Daily forecast for home: condition, high, low, precipitation chance. |

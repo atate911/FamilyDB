@@ -226,3 +226,20 @@ def test_the_plan_s_day_is_said_from_when_the_reminder_goes():
     assert words(plan, datetime(2026, 11, 11, 9, tzinfo=TZ), TZ) == "on Wed 18 Nov at 20:00"
     assert words(plan, datetime(2026, 11, 17, 9, tzinfo=TZ), TZ) == "tomorrow at 20:00"
     assert words(fair, datetime(2026, 11, 19, 8, tzinfo=TZ), TZ) == "today"
+
+
+def test_a_plan_made_or_moved_onto_something_else_says_what_it_clashes_with(env):
+    """Before, a plan went on over the dentist without a word."""
+    saturday = datetime(2026, 9, 26, 10, tzinfo=TZ)
+    env.cal.seed("Dentist", saturday, saturday + timedelta(hours=1))
+    env.cal.seed(
+        "Grandma's birthday", saturday.date(), saturday.date() + timedelta(days=1), all_day=True
+    )
+    _, made = call(env, "create_event", title="Zoo", start="2026-09-26T10:30")
+    assert made["overlaps"] == [
+        {"title": "Dentist", "start": "2026-09-26T10:00", "end": "2026-09-26T11:00"}
+    ]
+    _, moved = call(env, "update_event", plan_id=made["plan"]["id"], start="2026-09-26T14:00")
+    assert "overlaps" not in moved
+    _, day = call(env, "create_event", title="Coast", start="2026-09-26", all_day=True)
+    assert {clash["title"] for clash in day["overlaps"]} == {"Dentist", "Grandma's birthday", "Zoo"}

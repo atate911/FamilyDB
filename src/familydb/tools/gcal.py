@@ -9,14 +9,15 @@ changed here alone while Google cannot be reached: the two would drift apart.
 from __future__ import annotations
 
 import hashlib
+import logging
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Any, Literal
 from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field
 
-from familydb import plan_service, routing, task_service
+from familydb import plan_service, routing, saved_plans, task_service
 from familydb import undo as taking_back
 from familydb.availability import calendar_available
 from familydb.calendar_sync import adopt, event_changes, refresh_plan, sync_plans
@@ -37,6 +38,8 @@ from familydb.saved_plans import SavedPlans
 from familydb.store import calendar_ops, ideas, messages, plans, tasks
 from familydb.store.db import to_json, transaction
 from familydb.tools.registry import ToolContext, tool
+
+log = logging.getLogger(__name__)
 
 NOT_CONFIGURED = "Google Calendar is not connected (no calendar id or key configured)"
 KEPT_HERE = "no Google calendar is connected: kept here, and put on it once one is"
@@ -381,7 +384,53 @@ def _made(
     ctx: ToolContext, plan: plans.Plan, event: CalendarEvent | None, remind_before: list[str]
 ) -> dict[str, Any]:
     made = _created(ctx, plan, event)
+    if overlaps := _overlaps(ctx, plan):
+        made["overlaps"] = overlaps
     return {**made, **_remind(ctx, plan, remind_before)} if remind_before else made
+
+
+# At most this many clashes are named; the reply mentions one or two.
+MAX_OVERLAPS = 3
+
+
+def _overlaps(ctx: ToolContext, plan: plans.Plan) -> list[dict[str, Any]]:
+    """What else takes up a plan's time on the calendar (Google, or the plans kept here): a clash
+    the family should hear of as the plan is made or moved. A timed plan is not said to clash with
+    a day's all-day note (a birthday, "Grandma visiting"); an all-day plan clashes with anything
+    that day. Nothing when the calendar cannot be asked."""
+    tz = ctx.clock.tz
+    event = saved_plans.as_event(plan, tz)
+    calendar = _google(ctx) or saved_plans.SavedPlans(ctx.conn, tz)
+    begins, ends = (
+        (
+            datetime.combine(event.start, time.min, tzinfo=tz),
+            datetime.combine(event.end, time.min, tzinfo=tz),
+        )
+        if plan.all_day
+        else (event.start, event.end)
+    )
+    try:
+        found = calendar.list_events(begins, ends)
+    except Exception:
+        log.warning("could not look for clashes with plan %s", plan.id, exc_info=True)
+        return []
+    own = {plan.google_event_id, f"plan-{plan.id}"}
+    clashes = [
+        other
+        for other in found
+        if other.id not in own
+        and other.status != "cancelled"
+        and other.busy
+        and (plan.all_day or not other.all_day)
+    ]
+    return [
+        {
+            "title": other.title,
+            "start": other.start.isoformat()[:16] if not other.all_day else other.start.isoformat(),
+            "end": other.end.isoformat()[:16] if not other.all_day else None,
+        }
+        for other in clashes[:MAX_OVERLAPS]
+    ]
 
 
 def _cancel(ctx: ToolContext, plan: plans.Plan) -> dict[str, Any]:
@@ -535,6 +584,8 @@ def update_event(ctx: ToolContext, args: UpdateEventInput) -> dict[str, Any]:
         "plan": updated.model_dump(mode="json") if updated else None,
         "event": patched.to_public() if patched else None,
     }
+    if updated is not None and "start" in changes and (overlaps := _overlaps(ctx, updated)):
+        result["overlaps"] = overlaps
     if args.remind_before is not None and updated is not None:
         result.update(_remind(ctx, updated, args.remind_before, replace=True))
     return result
