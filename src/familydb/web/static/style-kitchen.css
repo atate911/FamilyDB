@@ -367,6 +367,11 @@ a.item:hover, .item--link:hover { background: var(--paper); color: var(--ink); }
 button.mic { min-width: var(--target); min-height: var(--target); padding: 0; display: inline-grid; place-items: center; border-radius: var(--r-md); border: 1.5px solid var(--edge); background: var(--field); color: var(--ink); cursor: pointer; }
 button.mic .icon { width: 22px; height: 22px; }
 button.mic.listening { background: var(--glass); border-color: var(--phosphor); color: var(--phosphor); }
+/* In a form field the mic sits inside the box, at its bottom right, so the box keeps its width. */
+.field.can-dictate { position: relative; }
+.field.can-dictate > [data-dictate] { padding-right: 3.4rem; }
+.field.can-dictate > button.mic { position: absolute; right: 4px; bottom: 4px; min-width: 40px; min-height: 40px; width: 40px; height: 40px; border-color: transparent; background: transparent; }
+.field.can-dictate > button.mic.listening { background: var(--glass); border-color: var(--phosphor); }
 .ask button.mic { background: var(--ask-fill); border-color: var(--ask-edge, var(--ask-rule)); color: var(--ask-ink); }
 .ask button.mic.listening { background: var(--glass); border-color: var(--phosphor); color: var(--phosphor); }
 .ask .composer__who { color: var(--ask-ink-2); }
@@ -955,6 +960,7 @@ h3.field__label { font-family: var(--font-text); font-size: var(--t-meta); lette
 /* an event's length in days within one week; a plan that crosses a week is split, one bar per week */
 .len2 { grid-column-end: span 2; } .len3 { grid-column-end: span 3; } .len4 { grid-column-end: span 4; } .len5 { grid-column-end: span 5; } .len6 { grid-column-end: span 6; } .len7 { grid-column-end: span 7; }
 .lane1 { grid-row: 2; } .lane2 { grid-row: 3; } .lane3 { grid-row: 4; }
+.lane4 { grid-row: 5; }
 .ev { margin: 0 var(--s1) var(--s1); padding: 5px var(--s2) 6px; border-radius: var(--r-sm); border-left: 5px solid var(--p-mark, var(--everyone-mark)); background: color-mix(in srgb, var(--p-mark, var(--everyone-mark)) 20%, var(--card)); color: var(--ink); text-decoration: none; font-size: var(--t-sm); line-height: 1.25; min-width: 0; position: relative; }
 .ev b { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .ev time { display: block; font-weight: 700; color: var(--ink-2); white-space: nowrap; min-width: 0; }

@@ -1,59 +1,98 @@
-{% extends "base.html" %}
-{% from "_ui.html" import icon, page_head %}
+{% extends "base_kitchen.html" %}
+{% from "_kitchen.html" import icon, avatar, page_head, date_tile, people, tile, faces, badge %}
 {% block title %}{{ month }} · {{ site_title }}{% endblock %}
-{% macro event(entry) %}
-  <div class="event{{ ' from-google' if entry.from_google }}">
-    {% if entry.idea_id %}
-      <a href="{{ url_for('web.idea', idea_id=entry.idea_id) }}">{{ entry.title }}</a>
-    {% else %}
-      {{ entry.title }}
-    {% endif %}
-    {% if entry.time %}<small>{{ entry.time }}</small>{% endif %}
-  </div>
-{% endmacro %}
 {% block content %}
-  {{ page_head('Plans', none, 'plans') }}
-  <nav class="tabs" aria-label="How to show the plans">
-    <a href="{{ url_for('web.plans') }}">{{ icon('list') }}List</a>
-    <a href="{{ url_for('web.plans_month') }}" aria-current="page">{{ icon('grid') }}Month</a>
-  </nav>
-  {% if visitor().may('browse') %}<p class="muted source source-{{ source }}">{{ source_note }}</p>{% endif %}
+  {% call page_head('Plans', 'What’s on the family calendar. After each plan, ' ~ assistant ~ ' asks how it went.') %}
+    {% if visitor().may('change') %}<a class="btn btn--quiet" href="{{ url_for('web.plans', _anchor='add') }}">{{ icon('plus') }}Put something on the calendar</a>{% endif %}
+  {% endcall %}
 
-  <div class="month-head">
-    <h2>{{ month }}</h2>
-    <p class="month-nav">
-      <a class="button ghost" href="{{ url_for('web.plans_month', month=previous) }}">{{ icon('left') }}Earlier</a>
-      {% if not this_month %}<a class="button ghost" href="{{ url_for('web.plans_month') }}">This month</a>{% endif %}
-      <a class="button ghost" href="{{ url_for('web.plans_month', month=following) }}">Later{{ icon('right') }}</a>
-    </p>
-  </div>
+  <div class="plans">
+    <div class="cal-bar plans__bar">
+      <div class="month-nav">
+        <a class="iconbtn" href="{{ url_for('web.plans_month', month=previous) }}" aria-label="{{ previous_name }}">{{ icon('chevl') }}</a>
+        <h2>{{ month }}</h2>
+        <a class="iconbtn" href="{{ url_for('web.plans_month', month=following) }}" aria-label="{{ following_name }}">{{ icon('chev') }}</a>
+        {% if not this_month %}<a class="linkbtn" href="{{ url_for('web.plans_month') }}">This month</a>{% endif %}
+      </div>
+      <nav class="seg" aria-label="View">
+        <a href="{{ url_for('web.plans_month') }}" aria-current="page">{{ icon('grid', size='sm') }}Month</a>
+        <a href="{{ url_for('web.plans') }}">{{ icon('list', size='sm') }}List</a>
+      </nav>
+    </div>
+    {% if grownup %}<p class="note plans__note">{{ icon('cal') }}{{ source_note }}</p>{% endif %}
 
-  <table class="panel month">
-    <thead>
-      <tr>{% for name in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}<th scope="col">{{ name }}</th>{% endfor %}</tr>
-    </thead>
-    <tbody>
-      {% for week in weeks %}
-        <tr>
-          {% for day in week %}
-            <td class="{{ 'outside' if not day.current }}{{ ' today' if day.today }}">
-              <time datetime="{{ day.date.isoformat() }}">{{ day.day }}</time>
-              {% for entry in day.entries %}{{ event(entry) }}{% endfor %}
-            </td>
+    <section class="plans__cal" aria-labelledby="h-month">
+      <h2 class="sr" id="h-month">{{ month }}</h2>
+      <div class="cal">
+        <div class="cal__wh" aria-hidden="true">
+          {% for name in ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun') %}<span{{ ' class="we"' if loop.index > 5 }}>{{ name[0] }}<span class="full">{{ name[1:] }}</span></span>{% endfor %}
+        </div>
+        {% for week in weeks %}
+          <div class="week">
+            {% for day in week.days %}
+              <div class="day c{{ loop.index }}{{ ' day--out' if not day.current }}{{ ' day--we' if day.weekend }}{{ ' day--today' if day.today }}">
+                <span class="day__n"{% if day.today %} aria-current="date"{% endif %}>{{ day.number }}{% if day.month %}<span class="mo"> {{ day.month }}</span>{% endif %}</span>{% if day.today %}<span class="sr"> (today)</span>{% endif %}
+                {% if day.dots %}
+                  <span class="dots" aria-hidden="true">{% for dot in day.dots %}<i class="{{ 'd-past' if dot.past else 'p' ~ dot.slot }}">{% if not dot.past %}{% if dot.initial %}{{ dot.initial }}{% else %}{{ icon('home') }}{% endif %}{% endif %}</i>{% endfor %}</span>
+                  <a class="daylink" href="{{ ('#r-' ~ day.rate) if day.rate else ('#d-' ~ day.iso) }}"><span class="sr">{{ day.label }}</span></a>
+                {% endif %}
+              </div>
+            {% endfor %}
+            {% for ev in week.events %}
+              <a class="ev p{{ ev.slot }} c{{ ev.column }} lane{{ ev.lane }}{{ ' len' ~ ev.length if ev.length > 1 }}{{ ' ev--past' if ev.past }}{{ ' ev--to' if ev.to }}{{ ' ev--from' if ev.before }}"
+                 href="{{ ('#r-' ~ ev.id) if ev.unrated else (('#d-' ~ ev.day) if not ev.past else (url_for('web.idea', idea_id=ev.idea_id) if ev.idea_id and ev.linked else url_for('web.plans', _anchor='d-' ~ ev.day))) }}"
+                 aria-label="{{ ev.short }}, {{ ev.time ~ ', ' if ev.time }}{{ ev.title }}, for {{ 'everyone' if ev.who == 'Everyone' else ev.who }}{{ '. Not rated yet' if ev.unrated }}">
+                <span class="ev__top">
+                  {% if ev.before %}<span class="ev__cont">Continued</span>{% elif ev.time %}<time>{{ ev.time }}</time>{% else %}<span class="ev__cont">All day</span>{% endif %}
+                  {% if ev.unrated %}<span class="ev__rate" title="Not rated yet">{{ icon('smile', size='sm') }}</span>{% endif %}
+                  <span class="avs">{% for one in ev.people %}{{ avatar(one.slot, one.initial, 'sm') }}{% endfor %}</span>
+                </span>
+                <b>{{ ev.title }}</b>
+              </a>
+            {% endfor %}
+            {% for more in week.more %}
+              <a class="ev-more c{{ more.column }} lane4" href="{{ url_for('web.plans') }}">+{{ more.count }} more</a>
+            {% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+      <p class="cal-key" aria-label="Who is who">
+        <span class="cal-key__i"><span class="dots dots--key"><i class="p0">{{ icon('home') }}</i></span>Everyone</span>
+        {% for one in key_people %}<span class="cal-key__i"><span class="dots dots--key"><i class="p{{ one.slot }}">{{ one.initial }}</i></span>{{ one.name }}</span>{% endfor %}
+        <span class="cal-key__i"><span class="dots dots--key"><i class="d-past"></i></span>Past</span>
+      </p>
+    </section>
+
+    <section class="card plans__list" aria-labelledby="h-coming">
+      <div class="card__head"><h2 id="h-coming">{{ icon('cal') }}Coming up</h2></div>
+      {% if coming %}
+        <ul class="items">
+          {% for row in coming %}
+            <li{% if row.anchor %} id="d-{{ row.day }}"{% endif %}><a class="item" href="{{ url_for('web.idea', idea_id=row.idea_id) if row.idea_id and row.linked else url_for('web.plans', _anchor='d-' ~ row.day) }}">
+              {{ date_tile(row.chip, row.on_today, 'sm') }}
+              <span><span class="item__title">{{ row.title }}</span>
+                <span class="meta"><span class="sr">{{ row.short }}, </span><span>{{ row.when }}</span>{% if row.away %}<span>{{ row.away }}</span>{% endif %}{{ people(row.people, row.who) }}</span></span>
+              {{ icon('chev', cls='muted') }}</a></li>
           {% endfor %}
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+        </ul>
+      {% else %}
+        <p class="empty">{{ icon('cal') }}<span>Nothing on in {{ month }}.</span></p>
+      {% endif %}
+    </section>
 
-  <ol class="panel plain month-list">
-    {% for day in busy_days %}
-      <li class="{{ 'today' if day.today }}">
-        <strong>{{ day.name }}</strong>{% if day.today %} <span class="tag">today</span>{% endif %}
-        {% for entry in day.entries %}{{ event(entry) }}{% endfor %}
-      </li>
-    {% else %}
-      <li class="muted">Nothing on in {{ month }}.</li>
-    {% endfor %}
-  </ol>
+    {% if rate %}
+      <section class="card plans__rate" id="rate" aria-labelledby="h-rate">
+        <div class="card__head"><h2 id="h-rate">How did it go?</h2>{{ badge('quiet', rate | length, 'to rate') }}</div>
+        <ul class="items rates">
+          {% for row in rate %}
+            <li class="rate" id="r-{{ row.plan_id }}">
+              <div class="item">{{ tile(row.glyph) }}<span><span class="item__title">{{ row.title }}</span><span class="meta"><span>{{ row.when }}</span>{{ people(row.people, row.who if row.who is defined else '') }}</span></span><span></span></div>
+              {{ faces(row, 'plans', month=request.args.get('month', '')) }}
+            </li>
+          {% endfor %}
+        </ul>
+        <p class="card__foot">{{ assistant }} uses your answers when she suggests the next weekend.</p>
+      </section>
+    {% endif %}
+  </div>
 {% endblock %}

@@ -35,9 +35,10 @@ def test_deadlines_and_flexible_windows_do_not_schedule_reminders(ctx):
     assert task["due_at"] == "2026-09-22T16:00:00Z"
     assert task["reminder"] is None
     assert task["owner"] == "Sam"
-    # The tool result is the task's columns, less its idempotency key, plus owner and reminder.
+    # The tool result is the task's columns, less its idempotency key and who made it (that is for
+    # the page's "Set by", not for the model), plus owner and reminder.
     columns = {row["name"] for row in ctx.conn.execute("PRAGMA table_info(tasks)")}
-    assert set(task) == columns - {"operation_key"} | {"owner", "reminder"}
+    assert set(task) == columns - {"operation_key", "created_by_member_id"} | {"owner", "reminder"}
     assert not ctx.conn.execute("SELECT * FROM plans").fetchall()
 
 
@@ -201,7 +202,7 @@ def test_an_open_task_ticks_off_where_it_is_listed(settings, clock, conn, family
     task = tasks.list_all(conn)[0]
     page = client.get("/tasks").text
     tick = re.search(rf'action="/task/{task.id}/done">(.*?)</form>', page, re.S)
-    assert tick is not None and "Done: Sharpen the knives" in tick.group(1)
+    assert tick is not None and "Mark done: Sharpen the knives" in tick.group(1)
     fields = dict(re.findall(r'name="(\w+)" value="([^"]*)"', tick.group(1)))
     assert fields["back"] == "tasks"
     ticked = client.post(f"/task/{task.id}/done", data=fields)

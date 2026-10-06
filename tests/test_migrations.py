@@ -309,7 +309,7 @@ def test_each_person_keeps_a_colour_from_the_day_0039_gave_them_one(tmp_path, mo
                 "VALUES (?, 'parent', 1, '2026-01-01T00:00:00Z')",
                 (name,),
             )
-        assert db.migrate(conn)[-1] == 39
+        assert 39 in db.migrate(conn)
         assert [m.slot for m in members.list_all(conn)] == [1, 2, 3, 4]
         conn.execute("DELETE FROM members WHERE display_name = 'Alex'")
         assert members.add(conn, "Robin", "kid").slot == 2  # the freed colour, not a fifth

@@ -108,10 +108,13 @@
   <span class="person">{{ avatar(one.slot, one.initial, 'sm') }}{{ one.name }}</span>
 {%- endmacro %}
 
-{# A to-do in a list: the tick (for whoever may tick it), what, who and when, how late. `mine` is a kid's own, which she ticks off herself and sees without an owner. `back` is where a tick returns to. The row's own Edit link comes with its page. #}
-{% macro todo(row, back, compact=false, mine=false) -%}
-  <li class="todo{{ ' todo--compact' if compact }}{{ ' todo--mine' if mine }}{{ ' todo--late' if row.late and not mine }}" id="t-{{ row.id }}">
-    {% if visitor().may('change') or visitor().may('own_tasks') -%}
+{# A to-do in a list: the tick (for whoever may tick it), what, who and when, how late. `compact` is Home's short row; `mine` a kid's own, which she ticks off herself and sees without an owner (and with who set it); `edit` adds the link to the to-do's own page. `back` is where a tick returns to. A done or cancelled one has no tick, only its mark. #}
+{% macro todo(row, back, compact=false, mine=false, edit=false) -%}
+  {% set open = row.status is not defined or row.status == 'open' %}
+  <li class="todo{{ ' todo--compact' if compact }}{{ ' todo--mine' if mine }}{{ ' todo--late' if row.late and not mine }}{{ ' todo--done' if row.status == 'done' }}" id="t-{{ row.id }}">
+    {% if not open -%}
+      <span class="tick tick--done" aria-hidden="true"><span>{{ icon('check' if row.status == 'done' else 'x') }}</span></span>
+    {%- elif visitor().may('change') or visitor().may('own_tasks') -%}
     <form method="post" action="{{ url_for('edits.finish_task', task_id=row.id) }}">
       <input type="hidden" name="csrf" value="{{ csrf_token() }}" />
       <input type="hidden" name="once" value="{{ once_token() }}" />
@@ -128,9 +131,26 @@
         {%- if not mine %}{{ person(row.person) }}{% endif -%}
         <span>{{ icon('clock') }}{{ row.when }}</span>
         {%- if row.late %}<span class="late">{{ row.late }}</span>{% endif -%}
+        {%- if row.status == 'cancelled' %}<span>Cancelled</span>{% endif -%}
+        {%- if open and not compact and not mine %}
+          {%- if row.reminder %}<span>{{ icon('bell') }}Reminder {{ row.reminder }}{% if row.reminder_state %} · {{ row.reminder_state }}{% endif %}</span>
+          {%- else %}<span>{{ icon('belloff') }}No reminder</span>{% endif -%}
+        {%- elif open and mine and row.reminder %}<span>{{ icon('bell') }}Reminder {{ row.reminder }}</span>{% endif -%}
+        {%- if row.set_by %}<span>{{ row.set_by }}</span>{% endif -%}
       </div>
+      {% if not compact and not mine %}
+        {% if row.notes %}<p class="small">{{ row.notes }}</p>{% endif %}
+        {% if row.window %}<p class="small muted">Preferred window: {{ row.window }}
+          {%- if row.nudge and row.nudge.on %} · {{ assistant }} brings it up on {{ row.nudge.on }}{% if row.nudge.last %}, last on {{ row.nudge.last }}{% endif %}
+          {%- elif row.nudge %} · not a day or part of the day {{ assistant }} can read, so it comes up only when asked about{% endif %}</p>{% endif %}
+        {% if row.repeats %}<p class="small muted">{{ row.repeats }}</p>{% endif %}
+      {% endif %}
     </div>
-    <span></span>
+    {% if edit -%}
+      <a class="todo__edit" href="{{ url_for('web.edit_task', task_id=row.id) }}">{{ icon('edit', size='sm') }}<span class="lbl">Edit</span><span class="sr"> {{ row.title }}</span></a>
+    {%- else -%}
+      <span></span>
+    {%- endif %}
   </li>
 {%- endmacro %}
 
@@ -182,4 +202,64 @@
       <br><a href="{{ link }}">Check for her answer</a>
     </div>
   </div>
+{%- endmacro %}
+
+
+{# One plan in a list: its day, what and where and when, who it is for. `acts` adds the ways to move it or take it off the calendar (only with Google connected: it really changes the family calendar). #}
+{% macro plan(row, past=false, acts=false) -%}
+  <li class="plan{{ ' plan--past' if past }}"{% if row.anchor %} id="d-{{ row.day }}"{% endif %}>
+    {{ date_tile(row.chip, row.on_today, 'sm') }}
+    <div class="plan__body">
+      <h3 class="plan__title">{% if row.idea_id and row.linked %}<a href="{{ url_for('web.idea', idea_id=row.idea_id) }}">{{ row.title }}</a>{% else %}{{ row.title }}{% endif %}</h3>
+      <div class="meta">
+        <span class="sr">{{ row.short }}, </span>
+        <span>{{ row.when }}</span>
+        {%- if row.relative in ('today', 'tomorrow', 'now') %}<span class="tag tag--when">{{ icon('cal') }}{{ row.relative | capitalize }}</span>
+        {%- elif row.relative %}<span class="rel">{{ row.relative }}</span>{% endif -%}
+        {%- if row.status != 'confirmed' %}<span class="tag tag--off">{{ icon('offc') }}{{ row.status }}</span>{% endif -%}
+        {%- if row.from_google %}<span class="tag tag--off">added in Google</span>{% endif -%}
+        {%- if row.location %}<span>{{ icon('pin') }}{{ row.location }}</span>{% endif -%}
+        {%- if row.away %}<span>{{ icon('car') }}{{ row.away }}</span>{% endif -%}
+        {{ people(row.people, row.who) }}
+      </div>
+      {% if row.notes %}<p class="small muted mt-1">{{ row.notes }}</p>{% endif %}
+      {% if acts and row.id and row.status != 'cancelled' and visitor().may('change') %}
+        <div class="plan__acts">
+          <details class="mini-fold">
+            <summary>Move it</summary>
+            <form class="mini-fold__body" method="post" action="{{ url_for('edits.move_plan', plan_id=row.id) }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+              <div class="field"><label class="field__label" for="start-{{ row.id }}">New time</label>
+                <input id="start-{{ row.id }}" name="start" type="datetime-local" required value="{{ row.start_value }}" /></div>
+              <label class="check"><input type="checkbox" name="all_day" value="yes"{{ ' checked' if row.all_day }} />All day</label>
+              <div class="actions"><button class="btn btn--primary btn--sm" type="submit">Move it</button></div>
+            </form>
+          </details>
+          {# Taking a plan off the calendar really removes the Google event, and without a script there is no dialogue to ask twice, so the button asks for itself. #}
+          <details class="mini-fold mini-fold--danger">
+            <summary>Cancel it</summary>
+            <form class="mini-fold__body" method="post" action="{{ url_for('edits.cancel_plan', plan_id=row.id) }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+              <p class="small">This takes it off the family calendar for everyone.</p>
+              <button class="btn btn--danger btn--sm" type="submit">Yes, cancel it</button>
+            </form>
+          </details>
+        </div>
+      {% endif %}
+    </div>
+  </li>
+{%- endmacro %}
+
+{# "How did it go?" for one plan: three faces, each a word as well as a picture. They post to the idea's own outcome form, keeping the plan, and come back to `back`. #}
+{% macro faces(row, back, month='') -%}
+  <form method="post" action="{{ url_for('edits.record_outcome', idea_id=row.idea_id) }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />
+    <input type="hidden" name="plan_id" value="{{ row.plan_id }}" /><input type="hidden" name="happened_on" value="{{ row.day }}" />
+    <input type="hidden" name="back" value="{{ back }}" />{% if month %}<input type="hidden" name="month" value="{{ month }}" />{% endif %}
+    <span class="faces">
+      <button class="face" type="submit" name="went" value="loved">{{ icon('smile') }}<span>Loved it</span><span class="sr"> ({{ row.title }})</span></button>
+      <button class="face" type="submit" name="went" value="ok">{{ icon('meh') }}<span>OK</span><span class="sr"> ({{ row.title }})</span></button>
+      <button class="face" type="submit" name="went" value="not-great">{{ icon('frown') }}<span>Not great</span><span class="sr"> ({{ row.title }})</span></button>
+    </span>
+  </form>
 {%- endmacro %}

@@ -1,5 +1,5 @@
 {% extends "base_kitchen.html" %}
-{% from "_kitchen.html" import icon, tile, tag, avatar, badge, vera_screen, date_tile, people, todo, idea_mini %}
+{% from "_kitchen.html" import icon, tile, tag, avatar, badge, vera_screen, date_tile, people, todo, idea_mini with context %}
 {% block title %}{{ site_title }}{% endblock %}
 {% block body_class %}page-home{% endblock %}
 {% block content %}
@@ -44,7 +44,7 @@
       {% endif %}
 
       <section class="card o2" aria-labelledby="h-next">
-        <div class="card__head"><h2 id="h-next">{{ icon('cal') }}{{ 'Next up' if grownup else 'Next up for you' }}</h2><a class="more" href="{{ url_for('web.plans') }}">All plans{{ icon('chev', size='sm') }}</a></div>
+        <div class="card__head"><h2 id="h-next">{{ icon('cal') }}{{ 'Next up' if grownup else 'Next up for you' }}</h2><a class="more" href="{{ plans_url }}">All plans{{ icon('chev', size='sm') }}</a></div>
         {% if first %}
           <div class="next">
             {{ date_tile(first.chip, first.on_today, 'lg') }}
@@ -57,7 +57,7 @@
                 {%- if first.away %}<span>{{ icon('car') }}{{ first.away }}</span>{% endif -%}
                 {{ people(first.people, first.who) }}
               </div>
-              {% if grownup %}<div class="next__acts"><a class="btn btn--quiet btn--sm" href="{{ url_for('web.plans', _anchor='d-' ~ first.day) }}">See the plan</a></div>{% endif %}
+              {% if grownup %}<div class="next__acts"><a class="btn btn--quiet btn--sm" href="{{ url_for('web.plans_month', _anchor='d-' ~ first.day) if grownup else url_for('web.plans', _anchor='d-' ~ first.day) }}">See the plan</a></div>{% endif %}
             </div>
           </div>
           {% if coming | length > 1 %}
@@ -65,7 +65,7 @@
               <h3 class="sr">{{ 'After that' if grownup else 'Coming up' }}</h3>
               <ul class="items">
                 {% for entry in coming[1:] %}
-                  <li><a class="item" href="{{ url_for('web.plans', _anchor='d-' ~ entry.day) }}">
+                  <li><a class="item" href="{{ url_for('web.plans_month', _anchor='d-' ~ entry.day) if grownup else url_for('web.plans', _anchor='d-' ~ entry.day) }}">
                     {{ date_tile(entry.chip, entry.on_today, 'sm') }}
                     <span><span class="item__title">{{ entry.title }}</span>
                       <span class="meta"><span class="sr">{{ entry.when }}, </span>
@@ -78,7 +78,7 @@
             </div>
           {% endif %}
           {% if more_plans and grownup %}
-            <p class="card__foot phone-only"><a class="more" href="{{ url_for('web.plans') }}">{{ more_plans }} more plan{{ '' if more_plans == 1 else 's' }}{{ icon('chev', size='sm') }}</a></p>
+            <p class="card__foot phone-only"><a class="more" href="{{ plans_url }}">{{ more_plans }} more plan{{ '' if more_plans == 1 else 's' }}{{ icon('chev', size='sm') }}</a></p>
           {% endif %}
         {% else %}
           <p class="empty">{{ icon('cal') }}<span>Nothing planned yet.
@@ -153,7 +153,7 @@
           <a class="more" href="{{ url_for('web.tasks') }}">{{ ('All ' ~ task_count ~ (' to-do' if task_count == 1 else ' to-dos')) if task_count and grownup else 'All' }}{{ icon('chev', size='sm') }}</a></div>
         {% if tasks %}
           <ul class="todos todos--compact">
-            {% for row in tasks %}{{ todo(row, 'home', compact=true, mine=not grownup) }}{% endfor %}
+            {% for row in tasks %}{{ todo(row, 'home', compact=true, mine=not grownup, edit=visitor().may('change') and grownup) }}{% endfor %}
           </ul>
         {% else %}
           <p class="empty">{{ icon('todo') }}<span>{% if grownup %}No to-dos. Tell {{ assistant }} “remind me to call the dentist on Tuesday”, or add one on To do.{% else %}Nothing to do. Ask {{ assistant }} to remind you of something and it lands here.{% endif %}</span></p>
@@ -187,7 +187,7 @@
               <button class="face" type="submit" name="went" value="not-great">{{ icon('frown') }}<span>Not great</span><span class="sr"> ({{ rating.title }})</span></button>
             </span>
           </form>
-          {% if rating.more %}<p class="card__foot"><a class="more" href="{{ url_for('web.plans', _anchor='rate') }}">{{ rating.more }} more plan{{ '' if rating.more == 1 else 's' }} to rate{{ icon('chev', size='sm') }}</a></p>{% endif %}
+          {% if rating.more %}<p class="card__foot"><a class="more" href="{{ url_for('web.plans_month', _anchor='rate') }}">{{ rating.more }} more plan{{ '' if rating.more == 1 else 's' }} to rate{{ icon('chev', size='sm') }}</a></p>{% endif %}
         </section>
       {% endif %}
 

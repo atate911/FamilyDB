@@ -161,7 +161,7 @@ def home() -> Response | str:
         wished = wish_glance(conn, today)
         slots = views.slot_map(people)
         coming = _plan_rows(conn, app, on, today, slots, visitor.member if not browsing else None)
-        rating = _to_rate(conn, today) if visitor.may("change") else None
+        rating = _to_rate(conn, today, slots) if visitor.may("change") else None
         newest = sorted(everything, key=lambda idea: idea.created_at, reverse=True)[:HOME_IDEAS]
         mini = [_idea_mini(conn, app, idea) for idea in newest]
         today_card = status_page.vera_today(app, conn) if browsing else None
@@ -172,7 +172,7 @@ def home() -> Response | str:
     line = views.home_line(
         coming,
         late,
-        plans_href=url_for("web.plans"),
+        plans_href=url_for("web.plans_month" if browsing else "web.plans"),
         todo_href=url_for("web.tasks"),
         kid=not browsing,
         others=_others(coming, visitor.member),
@@ -216,12 +216,14 @@ def _plan_rows(
     today: date,
     slots: dict[str, int],
     only_for: member_store.Member | None,
+    *,
+    past: bool = False,
 ) -> list[dict[str, Any]]:
-    """What is coming, with whom it is for and how far it is. A kid's are the ones that name her,
-    or nobody (so everybody)."""
+    """What is on, with whom it is for and how far it is: what is coming, and what was too when
+    `past`. With `only_for` (a kid), the ones that name her, or nobody (so everybody)."""
     rows = []
     for entry in entries:
-        if entry.days()[-1] < today:
+        if entry.days()[-1] < today and not past:
             continue
         idea = idea_store.get(conn, entry.idea_id) if entry.idea_id else None
         people = views.people_for(idea, slots)
@@ -229,7 +231,14 @@ def _plan_rows(
             continue
         place = place_store.get(conn, idea.place_id) if idea and idea.place_id else None
         away = views.away_from_home(place, app.settings)
-        rows.append(views.entry_row(entry, today, people=people, away=away))
+        row = views.entry_row(entry, today, people=people, away=away)
+        # A plan whose idea has since gone is still a plan, with no page to link to.
+        row["linked"] = idea is not None
+        rows.append(row)
+    seen: set[str] = set()
+    for row in rows:  # the first plan of a day is what a link to that day lands on
+        row["anchor"] = row["day"] not in seen
+        seen.add(row["day"])
     return rows
 
 
@@ -241,24 +250,35 @@ def _others(coming: list[dict[str, Any]], me: member_store.Member | None) -> str
     return views.names_text([p for p in named if p["initial"]])
 
 
-def _to_rate(conn: Any, today: date) -> dict[str, Any] | None:
-    """The oldest plan nobody has said how it went, for Home's three faces, and how many more."""
+def _unrated(conn: Any, today: date, slots: dict[str, int]) -> list[dict[str, Any]]:
+    """Every plan of the last two weeks nobody has said how it went, oldest first."""
     waiting = plan_store.unrated(
         conn,
         today=today.isoformat(),
         since=(today - timedelta(days=shell.RATE_DAYS)).isoformat(),
     )
-    if not waiting:
-        return None
-    plan = waiting[0]
-    return {
-        "plan_id": plan.id,
-        "idea_id": plan.idea_id,
-        "title": plan.title,
-        "day": plan.start[:10],
-        "when": views.day_short(date.fromisoformat(plan.start[:10])),
-        "more": len(waiting) - 1,
-    }
+    found = []
+    for plan in waiting:
+        idea = idea_store.get(conn, plan.idea_id) if plan.idea_id else None
+        day = date.fromisoformat(plan.start[:10])
+        found.append(
+            {
+                "plan_id": plan.id,
+                "idea_id": plan.idea_id,
+                "title": plan.title,
+                "day": plan.start[:10],
+                "when": views.day_short(day),
+                "people": views.people_for(idea, slots),
+                "glyph": views.glyph_for(idea.kind if idea else None),
+            }
+        )
+    return found
+
+
+def _to_rate(conn: Any, today: date, slots: dict[str, int]) -> dict[str, Any] | None:
+    """The oldest plan nobody has said how it went, for Home's three faces, and how many more."""
+    waiting = _unrated(conn, today, slots)
+    return {**waiting[0], "more": len(waiting) - 1} if waiting else None
 
 
 def _idea_mini(conn: Any, app: App, idea: Any) -> dict[str, Any]:
@@ -476,8 +496,21 @@ def _month(asked: str | None, today: date) -> date:
     return first
 
 
+def _months(rows: list[dict[str, Any]], today: date) -> list[dict[str, Any]]:
+    """Plans under the month they begin in ("October", and the year when it is not this one)."""
+    groups: list[dict[str, Any]] = []
+    for row in rows:
+        day = date.fromisoformat(row["day"])
+        title = f"{day:%B}" + (f" {day.year}" if day.year != today.year else "")
+        if not groups or groups[-1]["title"] != title:
+            groups.append({"title": title, "rows": []})
+        groups[-1]["rows"].append(row)
+    return groups
+
+
 @bp.get("/plans")
 def plans() -> str:
+    """What is coming, by month, and what was lately; for a kid, one list of what is next."""
     app = _app()
     today = app.clock.today()
     with closing(app.connect()) as conn:
@@ -488,15 +521,17 @@ def plans() -> str:
             today + timedelta(days=PLANS_AHEAD_DAYS),
         )
         on = _no_gifts(conn, seen.entries)
-        titles = {row.id: row.title for row in idea_store.list_all(conn, include_dropped=True)}
+        people = member_store.list_all(conn)
+        rows = _plan_rows(conn, app, on, today, views.slot_map(people), None, past=True)
         asking = _who(conn)
-    upcoming = [entry for entry in on if entry.days()[-1] >= today]
-    recent = [entry for entry in on if entry.days()[-1] < today]
+    horizon = today.isoformat()
+    upcoming = [row for row in rows if row["end"] >= horizon]
+    recent = [row for row in rows if row["end"] < horizon][::-1]
     return render_template(
         "plans.html",
-        upcoming=[views.entry_row(entry, today) for entry in upcoming],
-        recent=[views.entry_row(entry, today) for entry in reversed(recent)],
-        titles=titles,
+        months=_months(upcoming, today),
+        upcoming=upcoming,
+        recent=recent,
         ahead=PLANS_AHEAD_DAYS,
         source=seen.source,
         source_note=views.AGENDA_NOTES[seen.source],
@@ -508,7 +543,7 @@ def plans() -> str:
 
 @bp.get("/plans/month")
 def plans_month() -> str:
-    """One month as a calendar, or a list of busy days on a narrow screen."""
+    """One month as a calendar, with what is coming in it and what is waiting to be rated."""
     app = _app()
     today = app.clock.today()
     first = _month(request.args.get("month"), today)
@@ -518,16 +553,32 @@ def plans_month() -> str:
     with closing(app.connect()) as conn:
         seen = agenda.read(app, conn, weeks_first, weeks_last)
         on = _no_gifts(conn, seen.entries)
+        people = member_store.list_all(conn)
+        slots = views.slot_map(people)
+        rows = _plan_rows(conn, app, on, today, slots, None, past=True)
+        rate = _unrated(conn, today, slots) if auth.visitor().may("change") else []
     previous = (first - timedelta(days=1)).replace(day=1)
     following = last_day + timedelta(days=1)
-    weeks = views.month_weeks(on, first, today)
+    weeks = views.month_calendar(rows, first, today, {row["plan_id"] for row in rate})
+    start = max(today, first).isoformat()
+    coming = [
+        row
+        for row in rows
+        if row["end"] >= start
+        and row["day"] <= last_day.isoformat()
+        and row["end"] >= first.isoformat()
+    ]
     return render_template(
         "plans_month.html",
         month=f"{first:%B %Y}",
         weeks=weeks,
-        busy_days=[day for week in weeks for day in week if day["current"] and day["entries"]],
+        coming=coming,
+        rate=rate,
+        key_people=[views.person_of(p.display_name, slots) for p in people],
         previous=f"{previous:%Y-%m}",
         following=f"{following:%Y-%m}",
+        previous_name=f"{previous:%B %Y}",
+        following_name=f"{following:%B %Y}",
         this_month=first == today.replace(day=1),
         source=seen.source,
         source_note=views.AGENDA_NOTES[seen.source],
@@ -565,6 +616,7 @@ def tasks() -> str:
     simple = not auth.visitor().may("browse")
     if simple:
         status = "open"
+    visitor = auth.visitor()
     with closing(app.connect()) as conn:
         rows = task_store.list_all(
             conn,
@@ -572,23 +624,82 @@ def tasks() -> str:
             query="" if simple else request.args.get("q", ""),
             owner_id=_own_only(),
         )
+        open_count = (
+            len(rows) if status == "open" and not request.args.get("q") else _open_count(conn)
+        )
         people = member_store.list_all(conn)
+        creators = task_store.creators(conn, [task.id for task in rows]) if simple else {}
     today = app.clock.today()
+    tz = app.settings.tzinfo
+    slots = views.slot_map(people)
+    shown = [
+        views.todo_page_row(
+            task,
+            tz,
+            today,
+            slots,
+            kid=simple,
+            nudging=app.settings.task_nudges,
+            creator=creators.get(task.id),
+            me=visitor.name,
+        )
+        for task in rows
+    ]
+    groups = _todo_groups(shown) if status == "open" and not simple else []
     return render_template(
         "tasks.html",
         simple=simple,
-        briefs=[views.task_brief(task, app.settings.tzinfo, today) for task in rows]
-        if simple
-        else [],
-        rows=[
-            views.task_row(task, app.settings.tzinfo, nudging=app.settings.task_nudges)
-            for task in rows
-        ],
+        rows=shown,
+        groups=groups,
+        open_count=open_count,
+        late_count=sum(1 for row in shown if row["late"]) if status == "open" else None,
         repeat_options=views.REPEATS,
-        people=people,
+        people=[views.person_of(p.display_name, slots) for p in people],
+        me=visitor.name,
         status=status,
         zone=app.settings.tz,
         query=request.args.get("q", ""),
+    )
+
+
+def _open_count(conn: Any) -> int:
+    return len(task_store.list_all(conn, status="open", owner_id=_own_only()))
+
+
+def _todo_groups(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Open to-dos in the order a person works through them: what is late, what has a day, what
+    has none."""
+    parts = (
+        ("Overdue", "late", [row for row in rows if row["late"]]),
+        ("Coming up", "", [row for row in rows if row["dated"] and not row["late"]]),
+        ("No date", "", [row for row in rows if not row["dated"]]),
+    )
+    return [{"title": title, "tone": tone, "rows": found} for title, tone, found in parts if found]
+
+
+@bp.get("/task/<int(max=9223372036854775807):task_id>/edit")
+def edit_task(task_id: int) -> str:
+    """A to-do's own page to change: all its boxes at once, with a way back to the list."""
+    app = _app()
+    with closing(app.connect()) as conn:
+        task = task_store.get(conn, task_id)
+        if task is None:
+            abort(404)
+        people = member_store.list_all(conn)
+        made_by = task_store.creators(conn, [task.id]).get(task.id)
+    tz = app.settings.tzinfo
+    slots = views.slot_map(people)
+    row = views.task_row(task, tz, nudging=app.settings.task_nudges)
+    return render_template(
+        "task_form.html",
+        task=task,
+        row=row,
+        words=views.todo_row(task, tz, app.clock.today(), slots),
+        added=views.day_short(date.fromisoformat(views.local_day(task.created_at, tz))),
+        made_by=made_by,
+        people=[views.person_of(p.display_name, slots) for p in people],
+        owner=views.person_of(task.owner, slots) if task.owner else None,
+        zone=app.settings.tz,
     )
 
 

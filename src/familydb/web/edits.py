@@ -302,6 +302,8 @@ def record_outcome(idea_id: int) -> Response:
     _say(complaint or (RATED if went in FACES else RECORDED.format(id=idea_id)))
     if _text(form, "back") == "home":  # asked on Home: back there for the next one
         return _back("web.home")
+    if _text(form, "back") == "plans":  # asked on the month: back to what is still to rate
+        return _back("web.plans_month", month=_text(form, "month") or None, _anchor="rate")
     return _back("web.idea", idea_id=idea_id)
 
 
@@ -418,10 +420,12 @@ def add_task() -> Response:
 @bp.post("/task/<int(max=9223372036854775807):task_id>/edit")
 @once
 def edit_task(task_id: int) -> Response:
+    """Save a to-do's own page. A complaint keeps you on it (with the words); a save goes back to
+    the list."""
     if (complaint := auth.refused()) is not None:
         _say(complaint)
     elif _task_revision(request.form) is None:
-        _say("Reload this task before editing.")
+        _say("Reload this to-do before changing it.")
     elif (chosen := repeat_chosen(request.form)) and repeat_fields(chosen) is None:
         _say(NOT_A_REPEAT)
     else:
@@ -440,7 +444,9 @@ def edit_task(task_id: int) -> Response:
                 values["stop_repeating"] = True
         result, complaint = run("update_task", values)
         _say(complaint or f"Updated task #{result['task']['id']}.")
-    return _back("web.tasks")
+        if complaint is None:
+            return _back("web.tasks")
+    return _back("web.edit_task", task_id=task_id)
 
 
 @bp.post("/task/<int(max=9223372036854775807):task_id>/done")

@@ -96,6 +96,7 @@ def create(
             now=now,
             repeat=columns,
             gift_for=values.get("gift_for"),
+            created_by_member_id=values.get("created_by_member_id"),
         )
         if reminder:
             tasks.add_reminder(conn, task_id, reminder)

@@ -709,3 +709,56 @@ def test_an_admin_s_status_tile_lights_up_while_something_is_wrong(app, sam, fam
     assert "lit" not in tile(alex) and "Status</span>" in tile(alex)
     with closing(app.connect()) as conn:
         assert status_page.light(app, conn) == "bad"
+
+
+# -- plans and to-dos, as each person sees them
+
+
+def _swim_bag(conn, family) -> int:
+    with db.transaction(conn):
+        return tasks.insert(
+            conn,
+            title="Pack the swim bag",
+            notes="",
+            owner_id=family["girls"].id,
+            due_at=None,
+            preferred_window="",
+            operation_key="swim-bag",
+            channel="telegram",
+            chat_id="-100",
+            now=NOW_ISO,
+        )
+
+
+def test_plans_open_as_a_month_for_a_grown_up_and_a_list_for_a_kid(app, sam, family) -> None:
+    girls = _as(app, "the girls", _start(sam, family["girls"].id))
+    girls.post("/you", data={**_tokens(girls, "/you"), "new": KIDS, "again": KIDS})
+    assert "How to show the plans" in sam.get("/plans").text
+    page = girls.get("/plans").text
+    assert "How to show the plans" not in page and "What the family is doing next." in page
+
+
+def test_a_kid_cannot_open_the_edit_page(app, sam, family, conn) -> None:
+    task_id = _swim_bag(conn, family)
+    girls = _as(app, "the girls", _start(sam, family["girls"].id))
+    girls.post("/you", data={**_tokens(girls, "/you"), "new": KIDS, "again": KIDS})
+    assert girls.get(f"/task/{task_id}/edit").status_code == 403
+    assert f"/task/{task_id}/edit" not in girls.get("/tasks").text
+
+
+def test_a_kid_is_told_who_set_her_a_to_do_but_not_what_she_set_herself(
+    app,
+    sam,
+    family,
+    conn,
+) -> None:
+    form = {**_tokens(sam, "/tasks"), "title": "Pack the swim bag", "owner": "the girls"}
+    assert sam.post("/tasks/new", data=form).status_code == 302
+    girls = _as(app, "the girls", _start(sam, family["girls"].id))
+    girls.post("/you", data={**_tokens(girls, "/you"), "new": KIDS, "again": KIDS})
+    page = girls.get("/tasks").text
+    assert "Pack the swim bag" in page and "Set by Sam" in page
+    assert "Set by" not in sam.get("/tasks").text  # Sam set it, and reads their own list
+    with db.transaction(conn):
+        conn.execute("UPDATE tasks SET created_by_member_id = ?", (family["girls"].id,))
+    assert "Set by" not in girls.get("/tasks").text

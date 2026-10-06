@@ -96,6 +96,7 @@ NEEDS: dict[str, roles.Permission] = {
 NEEDS_HERE: dict[str, roles.Permission] = {
     "web.new_idea": "change",
     "web.edit_idea": "change",
+    "web.edit_task": "change",
     "web.memory": "browse",
     "web.status": "browse",
     "web.wishes": "wish",

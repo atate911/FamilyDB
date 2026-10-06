@@ -422,6 +422,45 @@ def todo_row(
     }
 
 
+def reminder_state(task: Task) -> str:
+    """Where a task's reminder stands, for a grown-up."""
+    if task.reminder is None:
+        return ""
+    if task.reminder.delivered_at:
+        return "Delivered"
+    return "Waiting for delivery" if task.reminder.message_id else "Scheduled"
+
+
+def todo_page_row(
+    task: Task,
+    tz: ZoneInfo,
+    today: date,
+    slots: dict[str, int],
+    *,
+    kid: bool = False,
+    nudging: bool = False,
+    creator: str | None = None,
+    me: str | None = None,
+) -> dict[str, Any]:
+    """A to-do for the To do page: the short row Home draws, and what the page adds under it. A
+    kid's carries "Set by" when somebody else set it, and none of how reminders get there."""
+    row = todo_row(task, tz, today, slots, kid=kid)
+    nudge = nudge_words(task, tz) if nudging and not kid else None
+    set_by = creator if creator and creator.casefold() != (me or "").casefold() else None
+    return {
+        **row,
+        "status": task.status,
+        "notes": task.notes,
+        "window": task.preferred_window or None,
+        "repeats": None if kid else repeat_text(task, tz),
+        "nudge": nudge,
+        "dated": bool(task.due_at),
+        "set_by": f"Set by {set_by}" if set_by else None,
+        # How a reminder is getting there is the workings: a kid sees only when it is.
+        "reminder_state": None if kid or not task.reminder else reminder_state(task),
+    }
+
+
 def home_line(
     coming: Sequence[dict[str, Any]],
     late: int,
@@ -747,32 +786,125 @@ def entry_row(
         "who": names_text(people) if people is not None else EVERYONE,
         "away": away.words if away else None,
         "day": days[0].isoformat(),
+        "end": days[-1].isoformat(),
+        "short": day_short(days[0]),
     }
 
 
-def month_weeks(entries: list[Entry], first: date, today: date) -> list[list[dict[str, Any]]]:
-    """A month as whole weeks of days, Monday first, each with what is on it. `first` is any day
-    in the month."""
+LANES = 3
+MORE_LANE = LANES + 1
+
+
+def _event_slot(row: dict[str, Any]) -> int:
+    """An event wears one person's colour; with several people, or everyone, it is neutral."""
+    people = row["people"]
+    return people[0]["slot"] if len(people) == 1 else 0
+
+
+def _spoken(day: date, rows: list[dict[str, Any]], unrated: set[int]) -> str:
+    """What a day's cell says to a screen reader, as there is no room to write it: "Sun 4 Oct:
+    Oaks Park roller rink, 13:00, for Maya and Theo"."""
+    parts = []
+    for row in rows:
+        said = f"{row['title']}, {row['time']}, " if row["time"] else f"{row['title']}, "
+        said += f"for {row['who'] if row['who'] != EVERYONE else 'everyone'}"
+        if row["id"] in unrated:
+            said += ". Not rated yet"
+        parts.append(said)
+    return f"{day_short(day)}: " + "; ".join(parts)
+
+
+def month_calendar(
+    rows: list[dict[str, Any]], first: date, today: date, unrated: set[int] | None = None
+) -> list[dict[str, Any]]:
+    """A month as whole weeks, Monday first. Each week carries its seven days and the events that
+    touch it, each placed by the column it starts in, how many days it runs inside the week and
+    which of three lanes it sits in (an event over three deep is counted on its days instead). A
+    plan that crosses a week is cut: one bar to each week, `to` where it goes on and `before` where
+    it came from. `rows` are plan rows (`entry_row`)."""
+    unrated = unrated or set()
     grid = months.Calendar(firstweekday=0).monthdatescalendar(first.year, first.month)
-    by_day: dict[date, list[dict[str, Any]]] = {}
-    for entry in entries:
-        row = entry_row(entry, today)
-        for day in entry.days():
-            by_day.setdefault(day, []).append(row)
-    return [
-        [
-            {
-                "date": day,
-                "day": day.day,
-                "name": f"{day:%A} {day.day} {day:%B}",
-                "current": day.month == first.month,
-                "today": day == today,
-                "entries": by_day.get(day, []),
-            }
-            for day in week
+    weeks = []
+    for number, week in enumerate(grid):
+        start, end = week[0], week[-1]
+        spans = [
+            (date.fromisoformat(row["day"]), date.fromisoformat(row["end"]), row) for row in rows
         ]
-        for week in grid
-    ]
+        inside = [one for one in spans if one[0] <= end and one[1] >= start]
+        inside.sort(key=lambda one: (one[0], -(one[1] - one[0]).days, one[2]["title"]))
+        taken: list[list[tuple[int, int]]] = [[] for _ in range(LANES)]
+        events: list[dict[str, Any]] = []
+        overflow = [0] * 7
+        for began, ended, row in inside:
+            left = (max(began, start) - start).days + 1
+            right = (min(ended, end) - start).days + 1
+            lane = next(
+                (
+                    n
+                    for n, used in enumerate(taken, 1)
+                    if all(right < a or left > b for a, b in used)
+                ),
+                None,
+            )
+            if lane is None:
+                for column in range(left, right + 1):
+                    overflow[column - 1] += 1
+                continue
+            taken[lane - 1].append((left, right))
+            events.append(
+                {
+                    **row,
+                    "column": left,
+                    "lane": lane,
+                    "length": right - left + 1,
+                    "to": ended > end,
+                    "before": began < start,
+                    "slot": _event_slot(row),
+                    "past": ended < today,
+                    "unrated": row["id"] in unrated,
+                }
+            )
+        days = []
+        for index, day in enumerate(week):
+            today_rows = [r for b, e, r in spans if b <= day <= e]
+            days.append(
+                {
+                    "date": day,
+                    "iso": day.isoformat(),
+                    "number": day.day,
+                    "month": f"{day:%b}" if day.day == 1 or (number == 0 and index == 0) else None,
+                    "current": day.month == first.month,
+                    "today": day == today,
+                    "weekend": day.weekday() >= 5,
+                    "dots": [
+                        {
+                            **(r["people"][0] if len(r["people"]) == 1 else people_dot()),
+                            "past": day < today,
+                        }
+                        for r in today_rows[:3]
+                    ],
+                    "label": _spoken(day, today_rows, unrated) if today_rows else None,
+                    # The first plan that day still to be rated, so the day links to its faces.
+                    "rate": next((r["id"] for r in today_rows if r["id"] in unrated), None),
+                }
+            )
+        weeks.append(
+            {
+                "days": days,
+                "events": events,
+                "more": [
+                    {"column": column + 1, "count": count}
+                    for column, count in enumerate(overflow)
+                    if count
+                ],
+            }
+        )
+    return weeks
+
+
+def people_dot() -> dict[str, Any]:
+    """The marker for a plan that is for several people or everyone: the house."""
+    return {"name": EVERYONE, "slot": 0, "initial": ""}
 
 
 # The home radar: a dial 200 units across, rings at a week, two and four. (days away, distance).

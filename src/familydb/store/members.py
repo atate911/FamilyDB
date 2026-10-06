@@ -152,6 +152,7 @@ POINTING_AT = {
     ("plans", "created_by"): "unname",
     ("settings_log", "changed_by"): "unname",
     ("suggestions", "asked_by"): "unname",
+    ("tasks", "created_by_member_id"): "unname",
     ("tasks", "owner_id"): "unname",
     ("telegram_invites", "made_by"): "unname",
     ("telegram_invites", "member_id"): "delete",

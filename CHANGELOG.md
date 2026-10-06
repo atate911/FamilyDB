@@ -35,6 +35,12 @@ older than what is installed. It gets a date when it is released.
   and "Earlier messages" goes further back. While Vera is writing back, the
   page looks again soon, then less often, then stops and leaves a link: "Check
   for her answer".
+- **A new To do and a new Plans.** Each to-do has its own Edit page instead of
+  a form that opens in the list, shows who it is for in their colour, and tells
+  a kid who set it ("Set by Alex"). Plans open as a month, with each plan on its
+  days in the colour of who it is for, and a list beside it; a plan that has
+  happened asks how it went right there, with three faces. A kid sees one list
+  of what is next.
 
 
 ## v0.2.0 — second alpha (2026-10-05)
