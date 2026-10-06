@@ -205,9 +205,7 @@ def test_when_a_reminder_before_a_plan_goes(conn):
 def test_the_reminder_says_when_its_plan_is_and_is_done_once_it_is_over(env):
     said: list[str] = []
     env.app.senders["web"] = lambda chat, text: said.append(text)
-    _, made = call(
-        env, "create_event", title="Beck", start="2026-09-25T20:00", remind_before=["2 hours"]
-    )
+    call(env, "create_event", title="Beck", start="2026-09-25T20:00", remind_before=["2 hours"])
     env.app.clock.advance(timedelta(hours=24, minutes=1))  # Friday, 18:01
     assert run_reminders(env.app) == 1
     assert said[-1].startswith("Reminder: Beck") and said[-1].endswith("It's today at 20:00.")
