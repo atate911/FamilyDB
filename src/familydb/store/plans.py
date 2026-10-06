@@ -207,6 +207,14 @@ def mark_checked(conn: sqlite3.Connection, plan_id: int, *, now: str) -> None:
     conn.execute("UPDATE plans SET checked_at = ? WHERE id = ?", (now, plan_id))
 
 
+def ask_again(conn: sqlite3.Connection, plan_id: int) -> None:
+    """Forget that a plan was checked the evening before and asked about after: it moved, and its
+    new day has both still to come (plan_service.changed)."""
+    conn.execute(
+        "UPDATE plans SET checked_at = NULL, followed_up_at = NULL WHERE id = ?", (plan_id,)
+    )
+
+
 def mark_followed_up(conn: sqlite3.Connection, plan_id: int, *, now: str | None = None) -> None:
     stamp = now or utcnow_iso()
     conn.execute(

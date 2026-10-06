@@ -11,6 +11,7 @@ import sqlite3
 from datetime import datetime, timedelta
 from typing import Any
 
+from familydb import plan_service
 from familydb.dates import iso_date, iso_datetime
 from familydb.integrations.google_calendar import CalendarAPI, CalendarEvent
 from familydb.store import calendar_sync_state, ideas, plans
@@ -51,6 +52,8 @@ def apply_event(
         return plan
     with transaction(conn):
         updated = plans.update(conn, plan.id, changes, now=now)
+        if updated is not None:
+            plan_service.changed(conn, plan, updated, now=now)
         if event is None and plan.idea_id:
             idea = ideas.get(conn, plan.idea_id)
             if idea is not None and idea.status == "planned":

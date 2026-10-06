@@ -256,7 +256,7 @@ def test_the_schedule_follows_the_settings(conn, settings, clock) -> None:
 
     _store(conn, {"plan_check_hour": 20})
     assert apply_settings(app, scheduler) == ["plan_checks"]
-    assert str(scheduler.get_job("plan_checks").trigger) == "cron[hour='20']"
+    assert str(scheduler.get_job("plan_checks").trigger) == "cron[hour='20-22']"
     _store(conn, {"plan_checks": False})
     assert apply_settings(app, scheduler) == ["plan_checks off"]
 

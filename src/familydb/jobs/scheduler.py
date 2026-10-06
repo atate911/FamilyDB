@@ -104,7 +104,9 @@ def job_specs(app: App) -> list[JobSpec]:
             "plan_checks",
             "check tomorrow's plans",
             run_plan_checks,
-            CronTrigger(hour=settings.plan_check_hour, timezone=zone),
+            # From the hour until ten, so a plan made late for tomorrow is checked too; each run
+            # looks only at plans not checked yet, so a quiet evening costs one query an hour.
+            CronTrigger(hour=_until_ten(settings.plan_check_hour), timezone=zone),
             wanted=settings.plan_checks,
             misfire_grace_time=3600,
         ),
@@ -131,6 +133,11 @@ def job_specs(app: App) -> list[JobSpec]:
             wanted=settings.task_nudges,
         ),
     ]
+
+
+def _until_ten(hour: int) -> str:
+    """Every hour from `hour` to 22:00, as a cron field; just `hour` from ten at night on."""
+    return str(hour) if hour >= 22 else f"{hour}-22"
 
 
 def same_schedule(current: BaseTrigger, wanted: BaseTrigger) -> bool:

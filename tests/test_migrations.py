@@ -317,3 +317,33 @@ def test_each_person_keeps_a_colour_from_the_day_0039_gave_them_one(tmp_path, mo
         for name in ("a", "b", "c", "d", "e"):
             members.add(conn, name, "kid")
         assert members.add(conn, "ninth", "kid").slot in range(1, 9)  # all eight in use: shared
+
+
+def test_a_plan_made_on_the_page_before_0042_gets_the_pages_chat(tmp_path, monkeypatch):
+    """Plans the page made had no chat, so nothing checked or asked about them; 0042 gives the
+    live ones somebody made the page's own conversation, and leaves the rest as they were."""
+    from contextlib import closing
+
+    with closing(db.connect(tmp_path / "old.sqlite3")) as conn:
+        _up_to(monkeypatch, conn, 41)
+        conn.execute(
+            "INSERT INTO members (display_name, role, active, created_at) "
+            "VALUES ('Sam', 'admin', 1, '2026-01-01T00:00:00Z')"
+        )
+        for title, by, status in (
+            ("Page", 1, "confirmed"),
+            ("Gone", 1, "cancelled"),
+            ("X", None, "confirmed"),
+        ):
+            conn.execute(
+                "INSERT INTO plans (title, start, all_day, status, created_by, created_at, "
+                "updated_at) VALUES (?, '2026-09-26T10:00', 0, ?, ?, '2026-01-01T00:00:00Z', "
+                "'2026-01-01T00:00:00Z')",
+                (title, status, by),
+            )
+        assert 42 in db.migrate(conn)
+        chats = {
+            row["title"]: (row["channel"], row["chat_id"])
+            for row in conn.execute("SELECT title, channel, chat_id FROM plans")
+        }
+        assert chats == {"Page": ("web", "web"), "Gone": (None, None), "X": (None, None)}

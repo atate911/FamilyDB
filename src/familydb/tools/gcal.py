@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field
 
+from familydb import plan_service, routing
 from familydb.availability import calendar_available
 from familydb.calendar_sync import event_changes, refresh_plan, sync_plans
 from familydb.dates import (
@@ -284,6 +285,13 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
             event_id=event_id,
         )
     origin = messages.get(ctx.conn, ctx.message_id) if ctx.message_id is not None else None
+    # Made on the page there is no chat to answer in: the family's, so the evening-before check
+    # goes where everybody reads and the day-after question to its maker (routing.for_person).
+    channel, chat_id = (
+        (origin.channel, origin.chat_id)
+        if origin is not None
+        else routing.family_chat(ctx.settings) or ("web", "web")
+    )
     with transaction(ctx.conn):
         plan = plans.for_event(ctx.conn, event_id)  # a concurrent attempt may have finished
         if plan is None:
@@ -299,8 +307,8 @@ def create_event(ctx: ToolContext, args: CreateEventInput) -> dict[str, Any]:
                 location=args.location,
                 notes=args.notes,
                 created_by=ctx.member.id if ctx.member else None,
-                channel=origin.channel if origin else None,
-                chat_id=origin.chat_id if origin else None,
+                channel=channel,
+                chat_id=chat_id,
                 now=ctx.now_iso(),
             )
             if args.idea_id is not None:
@@ -314,6 +322,8 @@ def _cancel(ctx: ToolContext, plan: plans.Plan) -> dict[str, Any]:
         calendar.delete_event(plan.google_event_id)
     with transaction(ctx.conn):
         updated = plans.update(ctx.conn, plan.id, {"status": "cancelled"}, now=ctx.now_iso())
+        if updated is not None:
+            plan_service.changed(ctx.conn, plan, updated, now=ctx.now_iso())
         idea = None
         if plan.idea_id is not None:
             current = ideas.get(ctx.conn, plan.idea_id)
@@ -426,6 +436,8 @@ def update_event(ctx: ToolContext, args: UpdateEventInput) -> dict[str, Any]:
         patched = calendar.patch_event(plan.google_event_id, **patch)
     with transaction(ctx.conn):
         updated = plans.update(ctx.conn, plan.id, changes, now=ctx.now_iso())
+        if updated is not None:
+            plan_service.changed(ctx.conn, plan, updated, now=ctx.now_iso())
     return {
         "plan": updated.model_dump(mode="json") if updated else None,
         "event": patched.to_public() if patched else None,
