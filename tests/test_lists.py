@@ -11,6 +11,8 @@ from familydb.channels.base import IncomingMessage
 from familydb.store import db, messages
 from familydb.tools import ToolContext, build_registry
 from tests.conftest import NOW_ISO
+from tests.test_web_logins import KIDS, _start, _tokens, app, sam  # noqa: F401
+from tests.test_web_logins import _as as _browser_as
 
 REGISTRY = build_registry()
 
@@ -27,21 +29,21 @@ def _list(ctx, **args):
 
 
 def test_a_thing_goes_on_the_list_once_however_it_is_written(settings, clock, conn, family):
-    sam = _as(conn, settings, clock, family["sam"])
-    _, said = _list(sam, action="add", items=["Milk", "eggs", "bin bags"])
+    us = _as(conn, settings, clock, family["sam"])
+    _, said = _list(us, action="add", items=["Milk", "eggs", "bin bags"])
     assert said == {"list": "shopping", "add": ["Milk", "eggs", "bin bags"], "open": 3}
-    _, said = _list(sam, action="add", items=["some milk", "Eggs."])
+    _, said = _list(us, action="add", items=["some milk", "Eggs."])
     assert said["already"] == ["some milk", "Eggs."] and said["open"] == 3
-    _list(sam, action="tick", items=["milk"])
-    _, shown = _list(sam, action="show")
+    _list(us, action="tick", items=["milk"])
+    _, shown = _list(us, action="show")
     assert shown == {"list": "shopping", "to_get": ["eggs", "bin bags"], "ticked": ["Milk"]}
-    _, said = _list(sam, action="add", items=["milk"])  # wanted again
+    _, said = _list(us, action="add", items=["milk"])  # wanted again
     assert said["add"] == ["Milk"] and said["open"] == 3
-    _list(sam, action="add", items=["screws"], name="Hardware")
-    assert _list(sam, action="show", name="hardware")[1]["to_get"] == ["screws"]
-    _list(sam, action="tick", items=["eggs"])
-    assert _list(sam, action="clear_ticked")[1] == {"list": "shopping", "cleared": 1, "open": 2}
-    _, said = _list(sam, action="remove", items=["avocados"])
+    _list(us, action="add", items=["screws"], name="Hardware")
+    assert _list(us, action="show", name="hardware")[1]["to_get"] == ["screws"]
+    _list(us, action="tick", items=["eggs"])
+    assert _list(us, action="clear_ticked")[1] == {"list": "shopping", "cleared": 1, "open": 2}
+    _, said = _list(us, action="remove", items=["avocados"])
     assert said["not_on_it"] == ["avocados"]
 
 
@@ -82,16 +84,16 @@ def test_a_list_change_is_taken_back_with_undo(settings, clock, conn, family):
 def test_slash_list_shows_it_with_a_tick_for_each(settings, clock, conn, family):
     from familydb import buttons, commands
 
-    app = App(settings, clock)
-    asked = commands.answer(app, IncomingMessage("telegram", "1", "42", "1001", "/list"))
+    running = App(settings, clock)
+    asked = commands.answer(running, IncomingMessage("telegram", "1", "42", "1001", "/list"))
     assert asked.text == "Nothing on the shopping list."
     _list(_as(conn, settings, clock, family["sam"]), action="add", items=["milk", "eggs"])
-    asked = commands.answer(app, IncomingMessage("telegram", "2", "42", "1001", "/list"))
+    asked = commands.answer(running, IncomingMessage("telegram", "2", "42", "1001", "/list"))
     assert asked.text == "On the shopping list:\nmilk\neggs"
     assert [b["data"] for b in asked.buttons] == ["tick:1", "tick:2"]
     assert asked.buttons[0]["label"] == "✓ milk" and asked.buttons[0]["row"] == "1"
     tapped = buttons.tap(
-        app,
+        running,
         conn,
         channel="telegram",
         chat_id="42",
@@ -130,3 +132,12 @@ def test_the_lists_page_adds_and_ticks_through_the_same_tool(settings, clock, co
         follow_redirects=True,
     )
     assert "Got: milk." in _said(ticked) and "<s>milk</s>" in ticked.text
+
+
+def test_a_grown_up_finds_the_lists_on_a_phone_and_a_kid_does_not(app, sam, family):  # noqa: F811
+    assert 'href="/lists"' in sam.get("/more").text  # the phone's menu: the list at the shop
+    kid = _browser_as(app, "the girls", _start(sam, family["girls"].id))
+    kid.post("/you", data={**_tokens(kid, "/you"), "new": KIDS, "again": KIDS})
+    assert 'href="/lists"' not in kid.get("/more").text
+    assert 'href="/lists"' not in kid.get("/").text
+    assert kid.get("/lists").status_code == 403
