@@ -9,7 +9,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from familydb import roles, task_service, windows
+from familydb import personas, roles, routing, task_service, windows
 from familydb.dates import parse_datetime, utc_iso
 from familydb.errors import ToolError
 from familydb.store import members, messages, tasks
@@ -22,7 +22,7 @@ class AddTaskInput(BaseModel):
     title: str
     notes: str = ""
     owner: str | None = Field(
-        default=None, description="Family member name; defaults to the sender."
+        default=None, description="Family member name, or everyone; defaults to the sender."
     )
     due_at: str | None = Field(
         default=None,
@@ -69,11 +69,45 @@ class ListTasksInput(BaseModel):
     owner: str | None = None
 
 
+# A task for all of them is nobody's in particular, and its reminder goes to the family's chat
+# (routing.for_task). Somebody on the list who is called one of these is still themselves.
+EVERYONE = frozenset(
+    {"everyone", "everybody", "all", "all of us", "us", "family", "the family", "whole family"}
+    | {"the whole family"}
+)
+
+
 def _owner(ctx: ToolContext, name: str) -> int:
     member = members.find_by_name(ctx.conn, name)
     if member is None:
         raise ToolError(f"No active family member named {name}.")
     return member.id
+
+
+def _owner_or_everyone(ctx: ToolContext, name: str) -> int | None:
+    if members.find_by_name(ctx.conn, name) is None and name.strip().casefold() in EVERYONE:
+        return None
+    return _owner(ctx, name)
+
+
+def _destination(ctx: ToolContext, task: Task) -> str:
+    """Where the task's reminders will arrive, in words, for the model to tell the family."""
+    channel, chat_id = routing.for_task(ctx.conn, ctx.settings, task)
+    where = routing.where_words(ctx.conn, channel, chat_id, sender=ctx.member)
+    owner = members.get(ctx.conn, task.owner_id) if task.owner_id is not None else None
+    if (
+        owner is not None
+        and channel == "web"
+        and owner.channel == "telegram"
+        and owner.channel_user_id
+        and ctx.settings.private_when_personal
+    ):
+        # On Telegram, but never written to her there: Telegram lets no bot write first.
+        name = personas.active(ctx.settings).name
+        yours = ctx.member is not None and ctx.member.id == owner.id
+        who = "you open your" if yours else f"{owner.display_name} opens a"
+        where += f" (on Telegram once {who} chat with {name})"
+    return where
 
 
 def _time(ctx: ToolContext, value: str | None, *, future: bool = False) -> str | None:
@@ -97,7 +131,7 @@ def _time(ctx: ToolContext, value: str | None, *, future: bool = False) -> str |
     name="add_task",
     description=(
         "Save an obligation, optionally with a reminder. Not a calendar event. "
-        "Reminders arrive in this chat; from the page, in its Chat."
+        "Reminders go to its owner; reminder_destination says where."
     ),
     writes=True,
 )
@@ -113,7 +147,7 @@ def add_task(ctx: ToolContext, args: AddTaskInput) -> dict[str, Any]:
             previous,
             {
                 "task": previous.model_dump(mode="json"),
-                "reminder_destination": previous.channel,
+                "reminder_destination": _destination(ctx, previous),
                 "timezone": ctx.clock.tz.key,
             },
         )
@@ -121,7 +155,9 @@ def add_task(ctx: ToolContext, args: AddTaskInput) -> dict[str, Any]:
         exclude={"owner", "remind_at", "repeat_every", "repeat_unit", "repeat_from"}
     )
     values["owner_id"] = (
-        _owner(ctx, args.owner) if args.owner else (ctx.member.id if ctx.member else None)
+        _owner_or_everyone(ctx, args.owner)
+        if args.owner
+        else (ctx.member.id if ctx.member else None)
     )
     values["due_at"] = _time(ctx, args.due_at)
     # Whoever asked for it, whoever it is for ("Set by Alex" on a kid's to-do).
@@ -147,7 +183,7 @@ def add_task(ctx: ToolContext, args: AddTaskInput) -> dict[str, Any]:
         task,
         {
             "task": task.model_dump(mode="json"),
-            "reminder_destination": channel,
+            "reminder_destination": _destination(ctx, task),
             "timezone": ctx.clock.tz.key,
         },
     )
@@ -181,7 +217,7 @@ def update_task(ctx: ToolContext, args: UpdateTaskInput) -> dict[str, Any]:
         if v is not None
     }
     if args.owner is not None:
-        values["owner_id"] = _owner(ctx, args.owner)
+        values["owner_id"] = _owner_or_everyone(ctx, args.owner)
     if args.clear_due and args.due_at:
         raise ToolError("Choose a deadline or clear it, not both.")
     if args.clear_reminder and args.remind_at:

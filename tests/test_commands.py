@@ -91,7 +91,9 @@ def test_the_week_names_each_day_and_the_month_where_it_turns(settings, conn, fa
     )
 
 
-def test_tasks_are_this_chats_open_ones(settings, conn, family) -> None:
+def test_tasks_are_this_chats_open_ones_and_the_askers_own(settings, conn, family) -> None:
+    """This chat's open tasks, and the asker's own wherever they were set: a task Sam set for
+    himself elsewhere is on his list here too; somebody else's in another chat is not."""
     rule = {"repeat_every": 1, "repeat_unit": "week", "repeat_from": "schedule"}
     bins = task_service.create(
         conn,
@@ -109,7 +111,7 @@ def test_tasks_are_this_chats_open_ones(settings, conn, family) -> None:
     _task(conn, "Somebody else's", chat="-100")
     app = _app(settings)
     assert _ask(app, "/tasks") == (
-        "Still to do here:\n"
+        "Still to do, here and yours:\n"
         f"#{bins.id} Bins out (Sam): reminder Sun 27 Sep 19:00, every week\n"
         f"#{knives.id} Get the knives sharpened: some Saturday morning"
     )
@@ -118,7 +120,13 @@ def test_tasks_are_this_chats_open_ones(settings, conn, family) -> None:
     listed = _ask(app, "/tasks", update="2")
     assert listed is not None
     assert listed.splitlines()[-1] == "…and 2 more on the web page's Tasks."
-    assert _ask(app, "/tasks", chat="7", update="3") == "Still to do here:\nNone."
+    assert _ask(app, "/tasks", chat="7", update="3") == (
+        "Still to do, here and yours:\n"
+        f"#{bins.id} Bins out (Sam): reminder Sun 27 Sep 19:00, every week"
+    )
+    assert _ask(app, "/tasks", chat="7", update="4", user="1002") == (
+        "Still to do, here and yours:\nNone."
+    )
 
 
 def test_now_is_the_engine_without_a_model(settings, conn) -> None:

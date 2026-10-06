@@ -209,9 +209,12 @@ class Settings(BaseSettings):
     # and one reply (pipeline.receive). 0 answers each at once.
     gather_seconds: int = Field(default=4, ge=0, le=30)
     telegram_require_mention: bool = False
-    # What is only for one person goes to their own chat with her rather than the group it began in,
-    # when they have one (routing.py).
+    # What is only for one person goes to them (routing.py): their own Telegram chat with her, else
+    # their conversation on the page, rather than the group, the page or the chat it began in.
     private_when_personal: bool = True
+    # The family's chat, where a reminder for everyone goes when it was not asked for in a group
+    # (routing.family_chat): a Telegram chat id, or "web" for the page. Unset: the weekend ideas'.
+    family_chat_id: str | None = None
     # Voice notes are heard by a speech model, then answered as if typed (gateway.listen). Claude
     # hears nothing, so a family on Claude alone needs an OpenAI or Gemini key.
     voice_notes: bool = True

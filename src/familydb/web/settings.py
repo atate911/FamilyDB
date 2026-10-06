@@ -448,6 +448,7 @@ def _lookups(app: App, conn: Any) -> dict[str, Any]:
 
 def _connections(app: App, conn: Any) -> dict[str, Any]:
     return {
+        "offers": {"family_chat_id": status_page.digest_chats(conn, app.settings.tzinfo)},
         "google": google_panel(app.settings),
         "bot": status_page.telegram_name(app),
         "telegram": app.channel_states.get("telegram", ""),
@@ -912,6 +913,7 @@ LINE_GROUPS = (
         (
             "reminder",
             "reminder_late",
+            "reminder_from",
             "gift_ideas",
             "gift_ideas_none",
             "birthday_wishes",

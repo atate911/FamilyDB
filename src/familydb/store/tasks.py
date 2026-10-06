@@ -207,13 +207,44 @@ def cancel_reminders(conn: sqlite3.Connection, task_id: int, now: str) -> None:
 def cancel_in_chat(conn: sqlite3.Connection, channel: str, chat_id: str, now: str) -> int:
     """Cancel every open task in one chat with its reminders (somebody taken off the list);
     returns how many. Call inside a transaction."""
-    open_ids = [
-        int(row["id"])
-        for row in conn.execute(
-            "SELECT id FROM tasks WHERE channel = ? AND chat_id = ? AND status = 'open'",
-            (channel, chat_id),
-        )
-    ]
+    return _cancel(
+        conn,
+        "SELECT id FROM tasks WHERE channel = ? AND chat_id = ? AND status = 'open'",
+        (channel, chat_id),
+        now,
+    )
+
+
+def cancel_owned_by(conn: sqlite3.Connection, member_id: int, now: str) -> int:
+    """Cancel the open tasks somebody owns that were asked for outside a group (on the page, or
+    in somebody's own chat), with their reminders. Taking them off the list would leave each
+    nobody's, which is everyone's, and send their errand to the family's chat
+    (routing.for_task). One asked for in a group stays there, the family's, as it always has.
+    Returns how many. Call inside a transaction."""
+    return _cancel(
+        conn,
+        "SELECT id FROM tasks WHERE owner_id = ? AND status = 'open' "
+        "AND NOT (channel = 'telegram' AND chat_id LIKE '-%')",
+        (member_id,),
+        now,
+    )
+
+
+def open_for(
+    conn: sqlite3.Connection, channel: str, chat_id: str, member_id: int | None, *, limit: int = 100
+) -> list[Task]:
+    """Open tasks asked for in this chat and, wherever they were asked for, this person's own:
+    what /tasks and /today list, so a task Sam set for Alex is on Alex's list too."""
+    rows = conn.execute(
+        "SELECT id FROM tasks WHERE status='open' AND ((channel=? AND chat_id=?) "
+        "OR (? IS NOT NULL AND owner_id=?)) ORDER BY due_at IS NULL, due_at, id LIMIT ?",
+        (channel, chat_id, member_id, member_id, limit),
+    ).fetchall()
+    return [task for row in rows if (task := get(conn, row["id"])) is not None]
+
+
+def _cancel(conn: sqlite3.Connection, query: str, params: tuple[Any, ...], now: str) -> int:
+    open_ids = [int(row["id"]) for row in conn.execute(query, params)]
     for task_id in open_ids:
         cancel_reminders(conn, task_id, now)
         conn.execute(

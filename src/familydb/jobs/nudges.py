@@ -88,11 +88,9 @@ def run_nudges(app: App) -> int:
         if free is not None and free < FREE_MINUTES:
             return 0
         nudged = 0
-        for (began_in, began_chat), (task, when) in chosen.items():
-            # The owner's task goes to them, not the group (routing.py).
-            channel, chat_id = routing.for_person(
-                conn, app.settings, began_in, began_chat, task.owner_id
-            )
+        for task, when in chosen.values():
+            # The owner's task goes to them; everyone's to the family (routing.py).
+            channel, chat_id = routing.for_task(conn, app.settings, task)
             with transaction(conn):
                 # Re-read under the write lock: a manual run can race the scheduler, and a tap
                 # or reply can finish the task meanwhile.

@@ -25,10 +25,8 @@ def run_reminders(app: App) -> int:
                 if task is None:
                     continue
                 due_when = late_note(reminder.remind_at, now, app.clock.tz)
-                # The owner's reminder goes to them, not the group (routing.py).
-                channel, chat = routing.for_person(
-                    conn, app.settings, task.channel, task.chat_id, task.owner_id
-                )
+                # The owner's reminder goes to them; everyone's to the family (routing.py).
+                channel, chat = routing.for_task(conn, app.settings, task)
                 out = messages.insert_out(
                     conn,
                     channel=channel,

@@ -1768,3 +1768,13 @@ def countdown(days: int | None) -> str | None:
     if days == 0:
         return "Today!"
     return "Tomorrow!" if days == 1 else f"In {days} days"
+
+
+def task_saved(result: dict[str, Any]) -> str:
+    """The notice after a task is added on the page: its number, and where its reminder will
+    arrive (routing.for_task, as add_task worked it out), when it has one."""
+    task = result["task"]
+    said = f"Saved task #{task['id']}."
+    if task.get("reminder") and result.get("reminder_destination"):
+        said += f" Its reminder goes to {result['reminder_destination']}."
+    return said

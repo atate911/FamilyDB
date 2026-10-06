@@ -75,6 +75,7 @@ BEHAVIOUR = (
     "retry_max_attempts",
     "telegram_require_mention",
     "private_when_personal",
+    "family_chat_id",
     "gather_seconds",
     "voice_notes",
     "voice_max_minutes",

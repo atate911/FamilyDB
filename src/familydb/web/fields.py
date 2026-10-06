@@ -865,11 +865,23 @@ GROUPS: tuple[Group, ...] = (
             ),
             field(
                 "private_when_personal",
-                "Send what's for one person to their own chat",
+                "Send what's for one person to them",
                 "A reminder for somebody's own task, a note on an idea they added, how their "
-                "plan went: to their own chat with the bot, once they have written to it there, "
-                "rather than to the whole group. What is for everyone stays in the group. Either "
-                'way, a plain "saved" in the group is a 👌 on the message, which buzzes nobody.',
+                "plan went: to their own chat with the bot on Telegram, once they have written "
+                "to it there, or else to their conversation on this page, rather than to the "
+                "group, this page or whoever's chat it was asked for in. What is for everyone "
+                'stays in the group. Either way, a plain "saved" in the group is a 👌 on the '
+                "message, which buzzes nobody.",
+            ),
+            field(
+                "family_chat_id",
+                "The family's chat",
+                "Where a reminder for everyone goes when it was asked for on this page or in "
+                "somebody's own chat (one asked for in a group stays there). Choose a chat it "
+                "has seen, or another Telegram chat by its id. Default: where the weekend ideas "
+                "go, else where it was asked for.",
+                unset="where the weekend ideas go",
+                another="Another Telegram chat",
             ),
         ),
     ),

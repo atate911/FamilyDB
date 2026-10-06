@@ -158,7 +158,7 @@
         {% else %}
           <p class="empty">{{ icon('todo') }}<span>{% if grownup %}No to-dos. Tell {{ assistant }} “remind me to call the dentist on Tuesday”, or add one on To do.{% else %}Nothing to do. Ask {{ assistant }} to remind you of something and it lands here.{% endif %}</span></p>
         {% endif %}
-        {% if grownup %}<p class="card__foot">{{ icon('bell', size='sm') }} Reminders appear in the chat while FamilyDB is running; they aren’t phone notifications. With Telegram connected, they go there too.</p>{% endif %}
+        {% if grownup %}<p class="card__foot">{{ icon('bell', size='sm') }} A reminder goes to whoever it is for: their own Telegram chat with {{ assistant }} once they have started one, otherwise the chat here.</p>{% endif %}
       </section>
 
       {% if setup %}

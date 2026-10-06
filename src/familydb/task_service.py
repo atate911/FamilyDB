@@ -15,7 +15,7 @@ from calendar import monthrange
 from datetime import UTC, date, datetime, timedelta, tzinfo
 from typing import Any
 
-from familydb import audience, presents, voice
+from familydb import audience, presents, routing, voice
 from familydb.dates import utc_iso
 from familydb.errors import ToolError
 from familydb.store import ideas, members, messages, tasks, wishes
@@ -321,7 +321,7 @@ def reminder_for(
     readers = {member.id for member in audience.readers(conn, channel, chat_id)}
     kept = presents.of_presents(conn, gifts, members.list_all(conn))
     shown = [idea for idea in gifts if not (kept[idea.id].ids & readers)]
-    return reminder_text(
+    words = reminder_text(
         task,
         settings,
         due_when=due_when,
@@ -333,6 +333,13 @@ def reminder_for(
         presents=audience.everyone_may(conn, channel, chat_id, "decide")
         and len(shown) == len(gifts),
     )
+    # Set for them by somebody else, and reaching them on their own: say who asked, so a reminder
+    # does not arrive from nowhere. In a group the "(Alex)" in it already says whose it is.
+    asker = tasks.creators(conn, [task.id]).get(task.id)
+    if task.owner and asker and asker != task.owner and not routing.is_group(channel, chat_id):
+        seed = f"{task.id}:{task.reminder.id if task.reminder else ''}"
+        words += "\n" + voice.say(settings, "reminder_from", seed=seed, asker=asker)
+    return words
 
 
 def reminder_text(

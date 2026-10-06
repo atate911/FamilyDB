@@ -45,7 +45,7 @@ log = logging.getLogger(__name__)
 MENU = (
     ("today", "What's on today"),
     ("week", "The next seven days"),
-    ("tasks", "Open tasks in this chat"),
+    ("tasks", "Open tasks: this chat's and yours"),
     ("now", "What could start right now"),
     ("lookup", "Look up the ideas waiting, now"),
 )
@@ -208,11 +208,13 @@ def _answer(app: App, conn: sqlite3.Connection, msg: IncomingMessage) -> Outgoin
     return OutgoingMessage(msg.chat_id, text, "ok", in_message_id=asked.id, out_message_id=out.id)
 
 
-def _today(app: App, conn: sqlite3.Connection, msg: IncomingMessage, _: Member, seed: int) -> str:
+def _today(
+    app: App, conn: sqlite3.Connection, msg: IncomingMessage, member: Member, seed: int
+) -> str:
     today = app.clock.today()
     seen = agenda.read(app, conn, today, today)
     timed = [(_entry_key(entry, today), _entry_text(entry, today)) for entry in _on(seen, today)]
-    timed += _tasks_today(conn, msg, today, app)
+    timed += _tasks_today(conn, msg, member, today, app)
     lines = [text for _, text in sorted(timed)] or ["Nothing on."]
     said = voice.say(app.settings, "cmd_today", seed=seed, day=f"{today:%a %d %b}")
     return _with_source(_under(said, lines), seen)
@@ -259,10 +261,10 @@ def _entry_text(entry: Entry, day: date) -> str:
 
 
 def _tasks_today(
-    conn: sqlite3.Connection, msg: IncomingMessage, today: date, app: App
+    conn: sqlite3.Connection, msg: IncomingMessage, member: Member, today: date, app: App
 ) -> list[tuple[str, str]]:
     found = []
-    for task in tasks.in_chat(conn, msg.channel, msg.chat_id):
+    for task in tasks.open_for(conn, msg.channel, msg.chat_id, member.id):
         if task.reminder is not None:
             at = _local(task.reminder.remind_at, app)
             if at.date() == today:
@@ -281,8 +283,11 @@ def _with_source(said: str, seen: Agenda) -> str:
     return f"{said}\n{note}" if note else said
 
 
-def _tasks(app: App, conn: sqlite3.Connection, msg: IncomingMessage, _: Member, seed: int) -> str:
-    kept = tasks.in_chat(conn, msg.channel, msg.chat_id)
+def _tasks(
+    app: App, conn: sqlite3.Connection, msg: IncomingMessage, member: Member, seed: int
+) -> str:
+    # This chat's, and the asker's own wherever they were set: a task Sam set for Alex is Alex's.
+    kept = tasks.open_for(conn, msg.channel, msg.chat_id, member.id)
     lines = [_task_text(task, app) for task in kept[:MAX_TASKS]]
     if len(kept) > MAX_TASKS:
         lines.append(f"…and {len(kept) - MAX_TASKS} more on the web page's Tasks.")

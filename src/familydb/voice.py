@@ -59,6 +59,12 @@ EVENTS: dict[str, Event] = {
         ("title", "who", "task", "due"),
         {"title": "bins out", "who": " (Sam)", "task": 12, "due": "Tue 22 Sep at 07:30"},
     ),
+    "reminder_from": Event(
+        "Under a reminder somebody asked for on another's behalf",
+        "{asker} asked me to remind you.",
+        ("asker",),
+        {"asker": "Sam"},
+    ),
     "gift_ideas": Event(
         "Gift ideas under a birthday's reminder",
         "Gift ideas saved for {who}: {ideas}.",
@@ -90,7 +96,7 @@ EVENTS: dict[str, Event] = {
     ),
     "cmd_today": Event("Answering /today", "Today, {day}:", ("day",), {"day": "Sat 26 Sep"}),
     "cmd_week": Event("Answering /week", "The next seven days:", ()),
-    "cmd_tasks": Event("Answering /tasks", "Open tasks in this chat:", ()),
+    "cmd_tasks": Event("Answering /tasks", "Open tasks, this chat's and yours:", ()),
     "cmd_now": Event(
         "Answering /now", "From the list, {window}:", ("window",), {"window": "now until 19:30"}
     ),

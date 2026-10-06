@@ -25,7 +25,7 @@ import sqlite3
 from datetime import date, datetime, timedelta
 from typing import Any
 
-from familydb import passwords, roles
+from familydb import audience, passwords, roles
 from familydb.dates import age_on as age_on
 from familydb.dates import next_birthday as next_birthday
 from familydb.dates import utc_iso
@@ -270,8 +270,12 @@ def remove(
             tasks.cancel_in_chat(conn, TELEGRAM, private, now)
             plans.leave_chat(conn, TELEGRAM, private)
             messages.cancel_unsent(conn, TELEGRAM, private, now=now)
-        web_own = f"member:{member_id}"
+        web_own = audience.private_chat(member_id)
         tasks.cancel_in_chat(conn, "web", web_own, now)
+        # Their own things to do asked for on the page or in somebody's chat: with the name taken
+        # off, each would be nobody's, which reads as everyone's (routing.for_task), and their
+        # errand would go to the family's chat. A group's stays the family's, as before.
+        tasks.cancel_owned_by(conn, member_id, now)
         plans.leave_chat(conn, "web", web_own)
         messages.cancel_unsent(conn, "web", web_own, now=now)
         touched = members.erase(conn, member_id)

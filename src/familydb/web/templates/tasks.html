@@ -47,7 +47,7 @@
                 <div class="field"><label class="field__label" for="q-rep">Repeats</label>
                   <select id="q-rep" name="repeat" aria-describedby="q-rep-h">{% for value, label in repeat_options %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
                 <label class="check"><input type="checkbox" name="repeat_after_done" />Count from when it’s done</label>
-                <p class="field__hint span-all" id="q-rep-h">{{ icon('bell', size='sm') }} A repeat starts from the reminder: every week from Sunday 19:00, say. Counted from when it’s done, it comes round that long after each time it is ticked off. Reminders appear in the chat while FamilyDB is running; they aren’t phone notifications. With Telegram connected, they go there too.</p>
+                <p class="field__hint span-all" id="q-rep-h">{{ icon('bell', size='sm') }} A repeat starts from the reminder: every week from Sunday 19:00, say. Counted from when it’s done, it comes round that long after each time it is ticked off. A reminder goes to whoever it is for: their own Telegram chat with {{ assistant }} once they have started one, otherwise the chat here.</p>
               </div>
             </details>
           </div>

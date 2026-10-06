@@ -430,7 +430,7 @@ def add_task() -> Response:
         if chosen:
             values.update(repeat_fields(chosen) or {})
         result, complaint = run("add_task", values)
-        _say(complaint or f"Saved task #{result['task']['id']}. Reminders appear in Chat.")
+        _say(complaint or views.task_saved(result))
     return _back("web.tasks")
 
 

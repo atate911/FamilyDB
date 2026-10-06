@@ -272,3 +272,47 @@ def test_an_idea_number_not_on_the_list_is_reported_not_silently_empty(ctx):
     )
     assert [c.idea_id for c in mixed.candidates] == [sushi.id]
     assert any("#9999" in note for note in mixed.skipped_checks)
+
+
+def test_a_task_for_everyone_is_nobodys_and_says_where_it_will_go(ctx):
+    """ "Remind us all" is a task with no owner, whose reminder goes to the family's chat; one for
+    somebody else says so too. The model is told where in words it can say back."""
+    for_all = add_task(ctx, AddTaskInput(title="Swim bags", owner="everyone"))
+    assert for_all["task"]["owner_id"] is None
+    assert for_all["reminder_destination"] == "the chat on the page"
+    family_chat = ctx.settings.model_copy(update={"family_chat_id": "-100"})
+    ctx.settings = family_chat
+    assert add_task(ctx, AddTaskInput(title="Bins", owner="all of us"))["reminder_destination"] == (
+        "the Telegram group"
+    )
+    mine = add_task(ctx, AddTaskInput(title="Call the plumber"))
+    assert mine["reminder_destination"] == (
+        "the chat on the page (on Telegram once you open your chat with Vera)"
+    )
+    alex = add_task(ctx, AddTaskInput(title="Pick up the cake", owner="Alex"))
+    assert alex["reminder_destination"] == (
+        "the chat on the page (on Telegram once Alex opens a chat with Vera)"
+    )
+    with db.transaction(ctx.conn):
+        messages.insert_in(
+            ctx.conn,
+            channel="telegram",
+            channel_update_id="hello",
+            chat_id="1002",
+            member_id=alex["task"]["owner_id"],
+            text="/start",
+            now="2026-09-01T00:00:00Z",
+        )
+    again = add_task(ctx, AddTaskInput(title="Pick up the candles", owner="Alex"))
+    assert again["reminder_destination"] == "Alex's own chat on Telegram"
+    moved = update_task(ctx, UpdateTaskInput(task_id=again["task"]["id"], owner="everyone"))
+    assert moved["task"]["owner_id"] is None
+
+
+def test_the_page_says_where_a_reminder_will_go(settings, clock, conn, family):
+    from familydb.web import views
+
+    saved = {"task": {"id": 7, "reminder": None}, "reminder_destination": "the chat on the page"}
+    assert views.task_saved(saved) == "Saved task #7."
+    saved["task"]["reminder"] = {"remind_at": "2026-09-22T16:00:00Z"}
+    assert views.task_saved(saved) == ("Saved task #7. Its reminder goes to the chat on the page.")

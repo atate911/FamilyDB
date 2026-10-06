@@ -21,7 +21,7 @@ from flask import (
     url_for,
 )
 
-from familydb import personas, roles
+from familydb import audience, personas, roles
 from familydb.agent import spending
 from familydb.app import App
 from familydb.channels.web import DEFAULT_CHAT, MAX_MESSAGE, Handing, WebChat
@@ -95,12 +95,9 @@ def _chat() -> WebChat:
     return current_app.config["FAMILYDB_CHAT"]
 
 
-# A kid's own conversation, which a parent may read (docs/WISHES.md).
-PRIVATE = "member:{id}"
-
-
 def private_chat(member_id: int) -> str:
-    return PRIVATE.format(id=member_id)
+    """A kid's own conversation, which a parent may read (docs/WISHES.md; audience.py)."""
+    return audience.private_chat(member_id)
 
 
 def messages_left(app: App, conn: Any, member: member_store.Member | None) -> int | None:
@@ -120,7 +117,8 @@ def is_kid() -> bool:
 
 
 def my_chat() -> str:
-    """A kid talks in her own conversation; everybody else in the family's."""
+    """A kid talks in her own conversation; everybody else in the family's (audience.page_chat,
+    which routing.py also asks, so the page and what is sent to it cannot disagree)."""
     visitor = auth.visitor()
     if visitor.member is not None and not visitor.may("decide"):
         return private_chat(visitor.member.id)
