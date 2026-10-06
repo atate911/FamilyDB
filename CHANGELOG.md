@@ -103,6 +103,31 @@ older than what is installed. It gets a date when it is released.
 - **Getting things in.** Several ideas at once on the new-idea page, one a line;
   a photo from the page's chat, as from Telegram; and on Android, sharing a page
   or some words to the installed page opens the chat with them in the box.
+- **Your favourites can win.** Ask for "our usual" or something you know you'd
+  love, and what you loved comes first. A restaurant you went to is offered again
+  after three weeks, an activity after a month, a day trip after six months. One
+  disappointing visit no longer rules a place out for good: it is offered with
+  the rating said, and only two low ratings in a row in the same year leave it
+  out. "How was it?" now has Loved it, It was OK, Not again and Didn't go.
+- **Firm rules are kept.** Tell Vera "no drives over 30 minutes until my back is
+  better", or "nothing loud", and suggestions keep to it, saying why something
+  was left out, including /now and the evening backup. What she remembers shows
+  what each rule holds.
+- **Ages.** An idea can say the ages it suits ("ages 6+"), and one a kid coming
+  is too young or too old for is left out, with the reason.
+- **Lookups fill in more.** When Vera looks an idea up, what it costs, indoors or
+  out, how long a visit takes, whether to book, the ages it suits, and an
+  event's dates go on the idea, where you had not said already. Asked for
+  something cheap, an idea whose price nobody knows is said as such.
+- **Now means now.** "Now" and "today" are judged by their own hours, so rain this
+  morning does not rule out this afternoon, and the evening check looks at the
+  hours of the plan itself.
+- **What is over leaves the list.** An event a week past its last day is taken
+  off overnight (Lookups page); its page can bring it back.
+- **Places on the web, if you want them.** Asked for a kind of place nothing on
+  your list fits ("Thai food, what's open now?"), Vera can look nearby and offer
+  a few, said as found on the web. It costs a little each time, so it is off
+  until you turn it on (Lookups, "Look for a place when nothing saved fits").
 
 
 ## v0.2.0 — second alpha (2026-10-05)
