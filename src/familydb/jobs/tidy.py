@@ -2,7 +2,12 @@
 gone is taken off the list, through `update_idea` as the job, so it no longer comes up nor goes
 with every message the model is sent, and the list does not have to depend on the date to leave
 it out. Dropped is not deleted: its page brings it back. A plan made from it is not touched, nor
-an idea that is planned or done. Nothing to do costs one query. `tidy_ideas` turns it off."""
+an idea that is planned or done. `tidy_ideas` turns it off.
+
+And when the family keeps messages for a number of days (`keep_messages_days`, Sign-in and
+security; 0, for good, unless they choose), the words of every message older than that are
+emptied (`messages.forget_words`): the row stays, since replies, reminders, memories, wishes and
+calls point at it. Nothing to do costs a query or two."""
 
 from __future__ import annotations
 
@@ -11,19 +16,27 @@ from contextlib import closing
 from datetime import timedelta
 
 from familydb.app import App
-from familydb.store import ideas
+from familydb.dates import utc_iso
+from familydb.store import ideas, messages
+from familydb.store.db import transaction
 from familydb.tools import ToolContext
 
 log = logging.getLogger(__name__)
 
 # The week after an event: long enough to say how it went, or that it was missed.
 GRACE_DAYS = 7
+# The fewest days messages are kept for, whatever is set: the chat's own history reaches back six
+# hours, and a month leaves time to look back at what was said.
+LEAST_KEEP_DAYS = 30
 
 
 def run_tidy(app: App) -> int:
-    """Take off the ideas whose dates are past; returns how many."""
+    """Take off the ideas whose dates are past, and forget old messages' words when the family
+    keeps them for a while; returns how many ideas were taken off."""
     app.refresh()
     settings = app.settings
+    if settings.keep_messages_days:
+        forget_old_words(app, settings.keep_messages_days)
     if not settings.tidy_ideas:
         return 0
     before = (app.clock.today() - timedelta(days=GRACE_DAYS)).isoformat()
@@ -41,3 +54,13 @@ def run_tidy(app: App) -> int:
     if taken_off:
         log.info("tidy: took %d idea(s) off the list, their dates past", taken_off)
     return taken_off
+
+
+def forget_old_words(app: App, days: int) -> int:
+    """Empty the words of messages older than `days` (at least `LEAST_KEEP_DAYS`)."""
+    before = utc_iso(app.clock.now() - timedelta(days=max(days, LEAST_KEEP_DAYS)))
+    with closing(app.connect()) as conn, transaction(conn):
+        forgotten = messages.forget_words(conn, before)
+    if forgotten:
+        log.info("tidy: %d message(s) past the family's keeping lost their words", forgotten)
+    return forgotten

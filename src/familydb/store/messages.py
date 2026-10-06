@@ -17,6 +17,9 @@ CAPTURE_PREFIX = "Save this idea for later:\n"
 # A voice note keeps its heard words after VOICE_PREFIX (UNHEARD, with its length, until then).
 VOICE_PREFIX = "(voice note) "
 UNHEARD = "(voice note, {length}, not heard)"
+# What a message past the family's keeping says instead of its words (jobs/tidy.py): it keeps its
+# place in the conversation and what points at it, not what was said.
+WORDS_GONE = "(not kept)"
 # A tapped button is kept as a message from whoever tapped it (familydb/buttons.py).
 TAP_PREFIX = "(tapped) "
 # Words that came with something nobody could look at (a video, a file).
@@ -459,3 +462,19 @@ def said_by_since(conn: sqlite3.Connection, member_id: int, since: str) -> list[
         (member_id, since),
     )
     return [row[0] for row in rows]
+
+
+def forget_words(conn: sqlite3.Connection, before: str) -> int:
+    """Empty the words of every message received or sent before `before` (UTC), keeping the row:
+    replies, reminders, memories, wishes and calls point at it. Never one still to be sent or
+    answered, nor a reminder whose task is still open. Returns how many."""
+    cur = conn.execute(
+        "UPDATE messages SET text = ?, buttons = NULL "
+        "WHERE received_at < ? AND text != ? "
+        "AND NOT (direction = 'out' AND delivered_at IS NULL AND cancelled_at IS NULL) "
+        "AND NOT (direction = 'in' AND status = 'received') "
+        "AND id NOT IN (SELECT r.message_id FROM reminders r JOIN tasks t ON t.id = r.task_id "
+        "WHERE r.message_id IS NOT NULL AND r.cancelled_at IS NULL AND t.status = 'open')",
+        (WORDS_GONE, before, WORDS_GONE),
+    )
+    return cur.rowcount

@@ -37,3 +37,53 @@ def test_the_family_can_turn_it_off(settings, clock, conn) -> None:
     gone = _idea(conn, "Pumpkin fair", happens_from="2026-09-05", happens_until="2026-09-12")
     app = App(settings.model_copy(update={"tidy_ideas": False}), clock)
     assert run_tidy(app) == 0 and ideas.get(conn, gone.id).status == "idea"
+
+
+def test_old_messages_lose_their_words_when_the_family_says_so(settings, clock, conn, family):
+    """Kept for 30 days: older words go, the rows stay; never one still to be answered or sent."""
+    from familydb.store import messages
+
+    with db.transaction(conn):
+        old = messages.insert_in(
+            conn,
+            channel="telegram",
+            channel_update_id="old",
+            chat_id="42",
+            member_id=family["sam"].id,
+            text="the girls are vegetarian now",
+            now="2026-07-01T10:00:00Z",
+        )
+        messages.mark_processed(conn, old.id, [], now="2026-07-01T10:00:05Z")
+        waiting = messages.insert_in(
+            conn,
+            channel="telegram",
+            channel_update_id="waiting",
+            chat_id="42",
+            member_id=family["sam"].id,
+            text="still to be answered",
+            now="2026-07-01T10:00:00Z",
+        )
+        unsent = messages.insert_out(
+            conn, channel="telegram", chat_id="42", text="still to go", now="2026-07-01T10:00:00Z"
+        )
+        recent = messages.insert_in(
+            conn,
+            channel="telegram",
+            channel_update_id="recent",
+            chat_id="42",
+            member_id=family["sam"].id,
+            text="last week's",
+            now="2026-09-13T10:00:00Z",
+        )
+    app = App(settings.model_copy(update={"keep_messages_days": 7, "tidy_ideas": False}), clock)
+    run_tidy(app)  # seven is read as the least there is, thirty
+    assert messages.get(conn, old.id).text == messages.WORDS_GONE
+    assert messages.get(conn, waiting.id).text == "still to be answered"
+    assert messages.get(conn, unsent.id).text == "still to go"
+    assert messages.get(conn, recent.id).text == "last week's"
+    assert conn.execute("SELECT count(*) FROM messages").fetchone()[0] == 4
+    # Kept for good, the default: nothing is touched.
+    with db.transaction(conn):
+        conn.execute("UPDATE messages SET text = 'back' WHERE id = ?", (old.id,))
+    run_tidy(App(settings, clock))
+    assert messages.get(conn, old.id).text == "back"

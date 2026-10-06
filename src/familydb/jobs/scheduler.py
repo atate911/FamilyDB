@@ -146,10 +146,10 @@ def job_specs(app: App) -> list[JobSpec]:
         ),
         JobSpec(
             "tidy",
-            "take off ideas whose dates are past",
+            "take off ideas whose dates are past, and forget old messages' words",
             run_tidy,
             CronTrigger(hour=3, minute=30, timezone=zone),
-            wanted=settings.tidy_ideas,
+            wanted=settings.tidy_ideas or bool(settings.keep_messages_days),
             misfire_grace_time=6 * 3600,
         ),
     ]

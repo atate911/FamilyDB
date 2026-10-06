@@ -251,6 +251,9 @@ class Settings(BaseSettings):
     task_nudges: bool = True
     # The nightly tidy (jobs/tidy.py): an idea whose dates are a week past leaves the list.
     tidy_ideas: bool = True
+    # How many days a message keeps its words (jobs/tidy.py); 0 keeps them for good, the default
+    # and the family's to change (docs/DESIGN.md section 16).
+    keep_messages_days: int = Field(default=0, ge=0, le=36500)
     # A place nothing saved fits, looked for on the web (suggest/places.py). Spending, so the
     # family's to turn on (docs/DESIGN.md section 16): off until they do.
     find_places: bool = False

@@ -25,7 +25,7 @@ from familydb.memory import words
 from familydb.store.ideas import Idea, ages_text
 from familydb.store.members import Member
 from familydb.store.memories import Memory
-from familydb.store.messages import VOICE_PREFIX, Message, as_said
+from familydb.store.messages import VOICE_PREFIX, WORDS_GONE, Message, as_said
 from familydb.store.outcomes import Outcome
 from familydb.store.places import Place
 from familydb.store.plans import Plan
@@ -301,6 +301,8 @@ def memory_row(memory: Memory, today: date, tz: ZoneInfo) -> dict[str, Any]:
         said = None
     else:
         text = as_said(memory.source_text or "")
+        if text == WORDS_GONE:  # past the family's keeping (jobs/tidy.py)
+            text = ""
         voiced = text.startswith(VOICE_PREFIX)
         source = f"{who or 'Somebody'}, {when}{', in a voice note' if voiced else ''}"
         said = excerpt(text.removeprefix(VOICE_PREFIX), memory.fact) or None

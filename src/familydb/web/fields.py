@@ -992,6 +992,21 @@ GROUPS: tuple[Group, ...] = (
             ),
         ),
     ),
+    Group(
+        "security",
+        "keeping",
+        "How long messages are kept",
+        "",
+        (
+            field(
+                "keep_messages_days",
+                "Days a message keeps its words",
+                "0 keeps them for good. Otherwise, each night, a message older than this keeps "
+                "its place in the conversation but not what it said; at least 30 days. What she "
+                "remembers, the ideas, plans and to-dos are kept whatever this says.",
+            ),
+        ),
+    ),
 )
 
 FIELDS: tuple[Field, ...] = tuple(one for group in GROUPS for one in group.fields)

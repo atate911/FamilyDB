@@ -95,6 +95,7 @@ BEHAVIOUR = (
     "web_title",
     "web_dictation",
     "web_session_days",
+    "keep_messages_days",
     "google_calendar_id",
     "log_level",
 )
