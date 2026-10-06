@@ -106,6 +106,36 @@ EVENTS: dict[str, Event] = {
     "cmd_now": Event(
         "Answering /now", "From the list, {window}:", ("window",), {"window": "now until 19:30"}
     ),
+    "morning": Event(
+        "The morning message: its first line",
+        "Good morning. Here's {day}:",
+        ("day",),
+        {"day": "Tue 6 Oct"},
+    ),
+    "morning_ending": Event(
+        "The morning message: a dated idea that ends this week, with a free day for it",
+        "{idea} ends {last}; {free} looks free for it.",
+        ("idea", "last", "free"),
+        {"idea": "The lantern festival", "last": "Sunday", "free": "Saturday"},
+    ),
+    "morning_chase": Event(
+        "The morning message: reminders from yesterday nobody acted on",
+        "Still open from yesterday:",
+        (),
+        {},
+    ),
+    "morning_deadlines": Event(
+        "The morning message: what is due tomorrow",
+        "Due tomorrow:",
+        (),
+        {},
+    ),
+    "morning_roundup": Event(
+        "The morning message, once a week: to-dos that have waited",
+        "Waiting a week or more, with nothing to bring them up (tell me if any can go):",
+        (),
+        {},
+    ),
     "plan_rain": Event(
         "The evening before an outdoor plan, when rain is likely",
         "A heads-up for tomorrow: {weather} for {plan}, which is outdoors.",

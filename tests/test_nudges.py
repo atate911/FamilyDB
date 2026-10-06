@@ -288,8 +288,17 @@ def test_the_model_is_told_when_a_task_will_come_up(settings, conn, family) -> N
     assert kept["nudges"] == "on a free Saturday morning"
     vague = add_task(ctx, AddTaskInput(title="Gutters", preferred_window="before Christmas"))
     assert "nudges" not in vague
-    # Nothing will bring it up: the model is told, so it offers a reminder.
-    assert vague["comes_up"] == "not by itself; offer a reminder" and "comes_up" not in kept
+    # Only the weekly list of what has waited will bring it up: the model is told, so it offers
+    # a reminder for sooner; with that list off, nothing will.
+    assert vague["comes_up"] == (
+        "in Sunday morning's list once a week old; offer a reminder for sooner"
+    )
+    assert "comes_up" not in kept
+    quiet = _ctx(settings, conn, family, forgotten_roundup=False)
+    alone = add_task(quiet, AddTaskInput(title="Shed", preferred_window="before Christmas"))
+    assert alone["comes_up"] == "not by itself; offer a reminder"
+    due = add_task(ctx, AddTaskInput(title="Water bill", due_at="2026-10-02T17:00"))
+    assert due["comes_up"] == "the morning before it is due"
     reminded = add_task(ctx, AddTaskInput(title="Bins", remind_at="2026-09-30T19:00"))
     assert "comes_up" not in reminded
     weekend = add_task(ctx, AddTaskInput(title="Garage", preferred_window="this weekend"))

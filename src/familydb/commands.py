@@ -28,7 +28,7 @@ from contextlib import closing
 from datetime import date, datetime, timedelta
 
 from familydb import agenda, family, task_service, voice
-from familydb.agenda import Agenda, Entry
+from familydb.agenda import Agenda
 from familydb.app import App
 from familydb.channels.base import IncomingMessage, OutgoingMessage
 from familydb.dates import utc_iso
@@ -214,7 +214,10 @@ def _today(
 ) -> str:
     today = app.clock.today()
     seen = agenda.read(app, conn, today, today)
-    timed = [(_entry_key(entry, today), _entry_text(entry, today)) for entry in _on(seen, today)]
+    timed = [
+        (agenda.entry_key(entry, today), agenda.entry_text(entry, today))
+        for entry in agenda.on(seen, today)
+    ]
     timed += _tasks_today(conn, msg, member, today, app)
     lines = [text for _, text in sorted(timed)] or ["Nothing on."]
     said = voice.say(app.settings, "cmd_today", seed=seed, day=f"{today:%a %d %b}")
@@ -228,37 +231,12 @@ def _week(app: App, conn: sqlite3.Connection, _msg: IncomingMessage, _: Member, 
     lines = []
     for offset in range(7):
         day = today + timedelta(days=offset)
-        on = sorted(_on(seen, day), key=lambda entry: _entry_key(entry, day))
-        things = "; ".join(_entry_text(entry, day) for entry in on) or "nothing on"
+        on = sorted(agenda.on(seen, day), key=lambda entry: agenda.entry_key(entry, day))
+        things = "; ".join(agenda.entry_text(entry, day) for entry in on) or "nothing on"
         month = f" {day:%b}" if offset == 0 or day.day == 1 else ""
         lines.append(f"{day:%a} {day.day}{month}: {things}")
     said = voice.say(app.settings, "cmd_week", seed=seed)
     return _with_source(_under(said, lines), seen)
-
-
-def _on(seen: Agenda, day: date) -> list[Entry]:
-    return [entry for entry in seen.entries if day in entry.days()]
-
-
-def _entry_key(entry: Entry, day: date) -> str:
-    return "" if entry.all_day or entry.start[:10] < day.isoformat() else entry.start[11:16]
-
-
-def _entry_text(entry: Entry, day: date) -> str:
-    title = entry.title + (f" (#{entry.idea_id})" if entry.idea_id else "")
-    if entry.status == "tentative":
-        title += ", tentative"
-    if entry.all_day:
-        return f"All day: {title}"
-    started_before = entry.start[:10] < day.isoformat()
-    ends_today = entry.end is not None and entry.end[:10] == day.isoformat()
-    if started_before:
-        return (
-            f"until {entry.end[11:16]} {title}" if ends_today and entry.end else f"All day: {title}"
-        )
-    if ends_today and entry.end:
-        return f"{entry.start[11:16]}-{entry.end[11:16]} {title}"
-    return f"{entry.start[11:16]} {title}"
 
 
 def _tasks_today(

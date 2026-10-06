@@ -748,6 +748,47 @@ GROUPS: tuple[Group, ...] = (
     ),
     Group(
         "messages",
+        "morning",
+        "Each morning",
+        "One message a morning in each chat that has something for it, and none on an empty day. "
+        "Written, not thought up, so it costs nothing.",
+        (
+            field(
+                "morning_hour",
+                "Time of the morning message",
+                "In the family's time zone. After a restart it still goes, until noon.",
+                choices=HOURS,
+                words=HOUR_WORDS,
+            ),
+            field(
+                "morning_agenda",
+                "The day ahead",
+                "Today's plans, reminders and deadlines, and a dated idea that ends this week when "
+                "a free day could fit it.",
+            ),
+            field(
+                "chase_missed",
+                "A reminder nobody acted on, once more",
+                "The morning after a reminder went and was neither done nor snoozed, once, with a "
+                "button to tick it off.",
+            ),
+            field(
+                "deadline_heads_up",
+                "What is due tomorrow",
+                "The morning before a deadline, so a deadline is not missed for want of a "
+                "reminder.",
+            ),
+            field(
+                "forgotten_roundup",
+                "What has waited a week or more",
+                "Once a week: to-dos a week old or more with no reminder or time to bring them up, "
+                "five at most.",
+            ),
+            field("roundup_day", "Day of the week for that", words=tuple(DAY_NAMES.items())),
+        ),
+    ),
+    Group(
+        "messages",
         "admins",
         "When something needs fixing",
         "Written, not thought up, so they cost nothing. The status page lists the same.",

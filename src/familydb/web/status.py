@@ -24,7 +24,7 @@ from familydb.availability import (
 from familydb.dates import utc_iso
 from familydb.integrations.google_calendar import service_account_email
 from familydb.store import alerts as alert_store
-from familydb.store import calls, ideas, members, messages
+from familydb.store import calls, ideas, members, messages, mornings
 from familydb.store import judgements as judgement_store
 from familydb.store import model_watch as model_store
 from familydb.store import settings as settings_store
@@ -614,7 +614,10 @@ def automatic(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
     """What she sends of her own accord: each kind's state, cost and count, and the latest few."""
     settings, tz = app.settings, app.settings.tzinfo
     since = utc_iso(app.clock.now() - timedelta(days=AUTOMATIC_DAYS))
-    counts = messages.sent_on_their_own_counts(conn, since=since)
+    counts = {
+        **messages.sent_on_their_own_counts(conn, since=since),
+        **mornings.part_counts(conn, since=since),
+    }
     hour = "{:02d}:00".format
     digest_chat = dict(digest_chats(conn, tz)).get(settings.digest_chat_id, settings.digest_chat_id)
     state = {
@@ -638,6 +641,24 @@ def automatic(app: App, conn: sqlite3.Connection) -> dict[str, Any]:
         "nudges": (
             settings.task_nudges,
             "when the part of the week a task was kept for comes round, and the calendar is free",
+        ),
+        "morning_agenda": (
+            settings.morning_agenda,
+            f"each morning at {hour(settings.morning_hour)}: the day's plans, reminders and "
+            "deadlines, in each chat they are for",
+        ),
+        "chase_missed": (
+            settings.chase_missed,
+            "in the morning message, once, the day after a reminder went and nobody acted on it",
+        ),
+        "deadline_heads_up": (
+            settings.deadline_heads_up,
+            "in the morning message, the day before something is due",
+        ),
+        "forgotten_roundup": (
+            settings.forgotten_roundup,
+            f"in {views.DAY_NAMES.get(settings.roundup_day, settings.roundup_day)}'s morning "
+            "message: to-dos a week old with nothing to bring them up",
         ),
         "lookups": (
             settings.enrichment_notes and enrichment_available(settings),

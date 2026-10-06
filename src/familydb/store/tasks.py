@@ -304,6 +304,68 @@ def _cancel(
     return len(open_ids)
 
 
+def unchased(
+    conn: sqlite3.Connection, *, delivered_from: str, delivered_until: str
+) -> list[tuple[int, Task]]:
+    """Reminders that went between the two times and were neither done nor snoozed nor brought
+    up since, each with its task, which does not repeat and is no plan's heads-up: what the
+    morning message chases, once (`chased_at`)."""
+    rows = conn.execute(
+        "SELECT r.id AS reminder_id, r.task_id FROM reminders r "
+        "JOIN messages m ON m.id = r.message_id JOIN tasks t ON t.id = r.task_id "
+        "WHERE m.delivered_at >= ? AND m.delivered_at < ? AND r.cancelled_at IS NULL "
+        "AND r.chased_at IS NULL AND t.status = 'open' AND t.repeat_every IS NULL "
+        "AND t.plan_id IS NULL AND (t.nudged_at IS NULL OR t.nudged_at < m.delivered_at) "
+        "ORDER BY r.remind_at",
+        (delivered_from, delivered_until),
+    ).fetchall()
+    return [
+        (int(row["reminder_id"]), task)
+        for row in rows
+        if (task := get(conn, row["task_id"])) is not None
+    ]
+
+
+def mark_chased(conn: sqlite3.Connection, reminder_ids: list[int], now: str) -> None:
+    conn.executemany(
+        "UPDATE reminders SET chased_at = ? WHERE id = ?", [(now, rid) for rid in reminder_ids]
+    )
+
+
+def due_between(conn: sqlite3.Connection, start: str, end: str) -> list[Task]:
+    """Open tasks due from `start` until before `end` (UTC instants), soonest first."""
+    rows = conn.execute(
+        "SELECT id FROM tasks WHERE status = 'open' AND due_at >= ? AND due_at < ? "
+        "ORDER BY due_at, id",
+        (start, end),
+    ).fetchall()
+    return [task for row in rows if (task := get(conn, row["id"])) is not None]
+
+
+def reminded_between(conn: sqlite3.Connection, start: str, end: str) -> list[Task]:
+    """Open tasks with a reminder still to go from `start` until before `end`, soonest first."""
+    rows = conn.execute(
+        "SELECT DISTINCT t.id, r.remind_at FROM tasks t JOIN reminders r ON r.task_id = t.id "
+        "WHERE t.status = 'open' AND r.cancelled_at IS NULL AND r.message_id IS NULL "
+        "AND r.remind_at >= ? AND r.remind_at < ? ORDER BY r.remind_at, t.id",
+        (start, end),
+    ).fetchall()
+    return [task for row in rows if (task := get(conn, row["id"])) is not None]
+
+
+def waiting(conn: sqlite3.Connection, *, said_before: str) -> list[Task]:
+    """Open one-off tasks said before `said_before` with no reminder still to go and no plan:
+    what the weekly round-up looks at (its window is read by the caller), oldest first."""
+    rows = conn.execute(
+        "SELECT t.id FROM tasks t WHERE t.status = 'open' AND t.repeat_every IS NULL "
+        "AND t.plan_id IS NULL AND t.created_at < ? AND NOT EXISTS (SELECT 1 FROM reminders r "
+        "WHERE r.task_id = t.id AND r.cancelled_at IS NULL AND r.message_id IS NULL) "
+        "ORDER BY t.created_at, t.id",
+        (said_before,),
+    ).fetchall()
+    return [task for row in rows if (task := get(conn, row["id"])) is not None]
+
+
 def reword_queued(conn: sqlite3.Connection, task_id: int, text: str) -> None:
     """Give a queued but unsent reminder message for this task new words."""
     conn.execute(

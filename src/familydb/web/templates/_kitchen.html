@@ -191,6 +191,7 @@
         {% if visitor().may('change') or visitor().may('own_tasks') %}
           {% for task in line.tasks or [] %}
             <div class="msg__buttons">
+              {% if line.tasks | length > 1 %}<span class="msg__for">{{ task.title }}</span>{% endif %}
               {% for action, label in presses %}
                 <form method="post" action="{{ url_for('edits.finish_task', task_id=task.id) if action == 'done' else url_for('edits.snooze_task', task_id=task.id) }}">
                   <input type="hidden" name="csrf" value="{{ csrf_token() }}" /><input type="hidden" name="once" value="{{ once_token() }}" />

@@ -22,6 +22,8 @@ from familydb.availability import digest_configured, enrichment_available
 from familydb.jobs.catch_up import run_catch_up
 from familydb.jobs.enrich import run_enrichment
 from familydb.jobs.follow_ups import run_follow_ups
+from familydb.jobs.morning import any_on as morning_on
+from familydb.jobs.morning import run_morning
 from familydb.jobs.nudges import run_nudges
 from familydb.jobs.plan_checks import run_plan_checks
 from familydb.jobs.reminders import run_reminders
@@ -108,6 +110,14 @@ def job_specs(app: App) -> list[JobSpec]:
             # looks only at plans not checked yet, so a quiet evening costs one query an hour.
             CronTrigger(hour=_until_ten(settings.plan_check_hour), timezone=zone),
             wanted=settings.plan_checks,
+            misfire_grace_time=3600,
+        ),
+        JobSpec(
+            "morning",
+            "the morning message",
+            run_morning,
+            CronTrigger(hour=settings.morning_hour, timezone=zone),
+            wanted=morning_on(settings),
             misfire_grace_time=3600,
         ),
         JobSpec(

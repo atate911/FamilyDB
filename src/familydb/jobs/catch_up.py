@@ -11,6 +11,7 @@ from familydb import model_watch
 from familydb.agent.loop import MessagesAPI
 from familydb.app import App
 from familydb.availability import digest_configured
+from familydb.jobs import morning
 from familydb.jobs.follow_ups import run_follow_ups
 from familydb.jobs.plan_checks import run_plan_checks
 from familydb.jobs.weekend_digest import run_digest
@@ -38,7 +39,8 @@ def plan_checks_due(app: App) -> bool:
 
 
 def run_catch_up(app: App, *, api: MessagesAPI | None = None) -> dict[str, Any]:
-    """Forget old locations, run follow-ups, plan checks and the digest if their hour has passed."""
+    """Forget old locations, run follow-ups, plan checks, the morning message and the digest if
+    their hour has passed."""
     app.refresh()
     forgotten = forget_old(app)
     if forgotten:
@@ -46,6 +48,8 @@ def run_catch_up(app: App, *, api: MessagesAPI | None = None) -> dict[str, Any]:
     result: dict[str, Any] = {"follow_ups": run_follow_ups(app), "digest": "not due"}
     if plan_checks_due(app):
         result["plan_checks"] = run_plan_checks(app)
+    if morning.due(app):  # sent once a day, so this costs nothing when it went
+        result["morning"] = morning.run_morning(app)
     if digest_due(app):
         reply = run_digest(app, api=api)
         result["digest"] = "skipped" if reply is None else reply.status

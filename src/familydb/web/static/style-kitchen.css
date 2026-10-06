@@ -364,6 +364,7 @@ a.item:hover, .item--link:hover { background: var(--paper); color: var(--ink); }
 .msg__did { margin-top: var(--s1); font-size: var(--t-sm); color: var(--ink-3); }
 .msg__buttons { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s3); }
 .msg__buttons form { margin: 0; }
+.msg__for { flex-basis: 100%; font-size: var(--t-sm); color: var(--ink-3); }
 .mic-slot { display: inline-flex; align-items: stretch; }
 .mic-slot:empty { display: none; }
 button.mic { min-width: var(--target); min-height: var(--target); padding: 0; display: inline-grid; place-items: center; border-radius: var(--r-md); border: 1.5px solid var(--edge); background: var(--field); color: var(--ink); cursor: pointer; }

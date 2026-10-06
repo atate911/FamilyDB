@@ -109,3 +109,32 @@ def read(app: App, conn: sqlite3.Connection, first: date, last: date) -> Agenda:
     # Kept here before Google was connected, and not on it yet (calendar_sync.adopt_local).
     entries += [_from_plan(plan) for plan in kept if plan.calendar_id is None]
     return Agenda(sorted(entries, key=lambda entry: entry.start), "google")
+
+
+def on(seen: Agenda, day: date) -> list[Entry]:
+    """What is on that day, as read."""
+    return [entry for entry in seen.entries if day in entry.days()]
+
+
+def entry_key(entry: Entry, day: date) -> str:
+    """Its place in a day's list: all day first, then by time."""
+    return "" if entry.all_day or entry.start[:10] < day.isoformat() else entry.start[11:16]
+
+
+def entry_text(entry: Entry, day: date, *, numbers: bool = True) -> str:
+    """One line of a day ("10:00-12:00 Zoo (#4)"), as /today and the morning message say it;
+    without `numbers` no idea number (where a kid reads, the numbers being the workings)."""
+    title = entry.title + (f" (#{entry.idea_id})" if entry.idea_id and numbers else "")
+    if entry.status == "tentative":
+        title += ", tentative"
+    if entry.all_day:
+        return f"All day: {title}"
+    started_before = entry.start[:10] < day.isoformat()
+    ends_today = entry.end is not None and entry.end[:10] == day.isoformat()
+    if started_before:
+        return (
+            f"until {entry.end[11:16]} {title}" if ends_today and entry.end else f"All day: {title}"
+        )
+    if ends_today and entry.end:
+        return f"{entry.start[11:16]}-{entry.end[11:16]} {title}"
+    return f"{entry.start[11:16]} {title}"

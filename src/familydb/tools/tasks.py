@@ -394,5 +394,25 @@ def _with_nudges(ctx: ToolContext, task: Task, result: dict[str, Any]) -> dict[s
         return {**result, "nudges": said}
     waiting = task.reminder is not None and task.reminder.delivered_at is None
     if task.status == "open" and not waiting and not task.repeats:
-        return {**result, "comes_up": NOT_BY_ITSELF}
+        return {**result, "comes_up": comes_up(ctx, task)}
     return result
+
+
+def comes_up(ctx: ToolContext, task: Task) -> str:
+    """What brings up a task with no reminder waiting and no window to nudge it: the morning
+    message the day before its deadline, else its weekly list of what has waited, else nothing,
+    so the model offers a reminder."""
+    settings = ctx.settings
+    if task.due_at and settings.deadline_heads_up:
+        due = datetime.fromisoformat(task.due_at).astimezone(ctx.clock.tz).date()
+        if due > ctx.clock.today():
+            return BEFORE_DEADLINE
+    if settings.forgotten_roundup and task.plan_id is None:
+        day = DAY_NAMES.get(settings.roundup_day, settings.roundup_day)
+        return f"in {day} morning's list once a week old; offer a reminder for sooner"
+    return NOT_BY_ITSELF
+
+
+BEFORE_DEADLINE = "the morning before it is due"
+DAY_NAMES = {"mon": "Monday", "tue": "Tuesday", "wed": "Wednesday", "thu": "Thursday"}
+DAY_NAMES |= {"fri": "Friday", "sat": "Saturday", "sun": "Sunday"}

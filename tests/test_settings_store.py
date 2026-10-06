@@ -231,6 +231,7 @@ def test_the_schedule_follows_the_settings(conn, settings, clock) -> None:
         "nudges",
         "plan_checks",
         "alerts",
+        "morning",
     }
     assert scheduler.get_job("retry_failed").trigger.interval == timedelta(
         minutes=settings.retry_interval_minutes
@@ -259,6 +260,14 @@ def test_the_schedule_follows_the_settings(conn, settings, clock) -> None:
     assert str(scheduler.get_job("plan_checks").trigger) == "cron[hour='20-22']"
     _store(conn, {"plan_checks": False})
     assert apply_settings(app, scheduler) == ["plan_checks off"]
+
+    _store(conn, {"morning_hour": 6})
+    assert apply_settings(app, scheduler) == ["morning"]
+    assert str(scheduler.get_job("morning").trigger) == "cron[hour='6']"
+    _store(conn, {"morning_agenda": False, "chase_missed": False, "deadline_heads_up": False})
+    assert apply_settings(app, scheduler) == []  # the weekly list is still on
+    _store(conn, {"forgotten_roundup": False})
+    assert apply_settings(app, scheduler) == ["morning off"]
 
 
 def test_the_schedule_moves_even_when_the_page_saw_the_change_first(conn, settings, clock) -> None:

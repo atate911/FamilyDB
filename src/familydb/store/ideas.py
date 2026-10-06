@@ -315,6 +315,22 @@ def due_enrichment(conn: sqlite3.Connection, *, before: str | None, limit: int) 
     return [Idea.from_row(row) for row in rows]
 
 
+def ending_between(conn: sqlite3.Connection, first: str, last: str) -> list[Idea]:
+    """Ideas still only ideas whose last day falls from `first` to `last` (dates) and that the
+    morning message has not brought up yet (`nudged_at`)."""
+    rows = conn.execute(
+        f"{_SELECT} WHERE i.status = 'idea' AND i.nudged_at IS NULL "
+        "AND i.happens_until >= ? AND i.happens_until <= ? ORDER BY i.happens_until, i.id",
+        (first, last),
+    )
+    return [Idea.from_row(row) for row in rows]
+
+
+def mark_nudged(conn: sqlite3.Connection, idea_ids: list[int], now: str) -> None:
+    """Brought up by the morning message: once is enough (not an edit: no revision moves)."""
+    conn.executemany("UPDATE ideas SET nudged_at = ? WHERE id = ?", [(now, i) for i in idea_ids])
+
+
 def list_all(conn: sqlite3.Connection, *, include_dropped: bool = False) -> list[Idea]:
     where = "" if include_dropped else " WHERE i.status != 'dropped'"
     rows = conn.execute(f"{_SELECT}{where} ORDER BY i.id")

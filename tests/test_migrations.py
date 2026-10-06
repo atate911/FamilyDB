@@ -117,6 +117,8 @@ def test_a_database_that_ran_the_retired_0007_still_gets_what_follows(tmp_path):
         conn.execute("DROP TABLE calendar_sync_state")
         conn.execute("DROP INDEX plans_google_event_idx")
         conn.execute("ALTER TABLE ideas DROP COLUMN hidden_from")
+        conn.execute("DROP TABLE mornings")
+        conn.execute("ALTER TABLE ideas DROP COLUMN nudged_at")
         conn.execute("DROP INDEX tool_calls_undo_idx")
         for column in ("member_id", "source", "undo", "undone_at"):
             conn.execute(f"ALTER TABLE tool_calls DROP COLUMN {column}")

@@ -1428,6 +1428,11 @@ AUTOMATIC = (
         ("plan_rain", "plan_closed", "plan_backup"),
     ),
     ("nudges", "others", "A task brought up", "free", ("nudge",)),
+    # The morning message is one message; each part is counted as its own (store/mornings.py).
+    ("morning_agenda", "morning", "The day ahead, each morning", "free", ("morning:agenda",)),
+    ("chase_missed", "morning", "A reminder nobody acted on", "free", ("morning:chase",)),
+    ("deadline_heads_up", "morning", "What is due tomorrow", "free", ("morning:deadlines",)),
+    ("forgotten_roundup", "morning", "What has waited a week", "free", ("morning:roundup",)),
     (
         "lookups",
         "others",
@@ -1446,6 +1451,7 @@ AUTOMATIC = (
     ("kids_answers", "", "A parent's answer, to a kid", "free", ("wish_granted", "wish_declined")),
 )
 AUTOMATIC_BY_EVENT = {event: title for _, _, title, _, events in AUTOMATIC for event in events}
+AUTOMATIC_BY_EVENT["morning"] = "The morning message"
 
 
 def chat_words(conn_chat: str, member_name: str | None) -> str:

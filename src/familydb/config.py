@@ -252,6 +252,13 @@ class Settings(BaseSettings):
     follow_ups: bool = True
     plan_checks: bool = True
     plan_check_hour: int = Field(default=19, ge=0, le=23)
+    # The morning message (jobs/morning.py): each part on by default, the family's decision.
+    morning_hour: int = Field(default=7, ge=0, le=23)
+    morning_agenda: bool = True
+    chase_missed: bool = True
+    deadline_heads_up: bool = True
+    forgotten_roundup: bool = True
+    roundup_day: Weekday = "sun"
     google_calendar_id: str | None = None
     google_key_path: Path = Path("data/google_key.json")
     enrichment_notes: bool = True
