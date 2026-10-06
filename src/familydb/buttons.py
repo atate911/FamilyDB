@@ -17,6 +17,7 @@ import sqlite3
 import time
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
+from datetime import time as clock_time
 from typing import Any
 
 from familydb import roles, voice
@@ -32,7 +33,10 @@ REMINDER = (("done", "✓ Done"), ("hour", "In an hour"), ("tomorrow", "Tomorrow
 FOLLOW_UP = (("again", "Yes, again"), ("not_again", "Not again"), ("missed", "Didn't go"))
 WISH = (("wish_yes", "Yes!"), ("wish_no", "Not this time"), ("wish_later", "Later"))
 LABELS = dict(REMINDER + FOLLOW_UP + WISH)
-SNOOZES = {"hour": timedelta(hours=1), "tomorrow": timedelta(days=1)}
+SNOOZES = ("hour", "tomorrow")
+# "Tomorrow" is the same time of day, on the wall clock, between these; else nine.
+TOMORROW_FROM, TOMORROW_UNTIL = clock_time(8, 0), clock_time(20, 0)
+TOMORROW_AT = clock_time(9, 0)
 MAX_NUMBER_DIGITS = 18
 
 Button = dict[str, str]
@@ -208,7 +212,7 @@ def _task_job(app: Any, conn: sqlite3.Connection, action: str, task_id: int) -> 
     if action == "done":
         return _Job("update_task", {"task_id": task.id, "status": "done"}, about, "tap_done")
     now = app.clock.now()
-    moment = now + SNOOZES[action]
+    moment = snoozed_until(action, now)
     return _Job(
         "update_task",
         {"task_id": task.id, "remind_at": moment.isoformat(timespec="minutes")},
@@ -237,6 +241,19 @@ def _plan_job(app: Any, conn: sqlite3.Connection, action: str, plan_id: int) -> 
         about,
         "tap_again" if action == "again" else "tap_not_again",
     )
+
+
+def snoozed_until(action: str, now: datetime) -> datetime:
+    """When a snoozed reminder comes back: an hour on, or tomorrow at this time of day on the
+    wall clock (so a clock change does not move it), unless that is before eight or after eight
+    in the evening, when it is nine. A tap at half eleven at night is not answered at half
+    eleven the next night."""
+    if action == "hour":
+        return now + timedelta(hours=1)
+    at = now.time().replace(second=0, microsecond=0)
+    if not TOMORROW_FROM <= at <= TOMORROW_UNTIL:
+        at = TOMORROW_AT
+    return datetime.combine(now.date() + timedelta(days=1), at, tzinfo=now.tzinfo)
 
 
 def when_text(moment: datetime, today: date) -> str:

@@ -21,15 +21,13 @@ from familydb.saved_plans import SavedPlans
 from familydb.store import messages, tasks
 from familydb.store.db import transaction
 from familydb.store.tasks import Task
-from familydb.windows import read
+from familydb.windows import Window, read
 
 log = logging.getLogger(__name__)
 
 # Six days, so the same morning next week still qualifies.
 GAP = timedelta(days=6)
 SETTLE = timedelta(hours=12)
-# How long the calendar must be free from now for a nudge to go.
-FREE_MINUTES = 60
 
 
 def nudge_text(task: Task, settings: Any, *, when: str, today: str) -> str:
@@ -74,24 +72,29 @@ def run_nudges(app: App) -> int:
     now = utc_iso(moment)
     midnight = datetime.combine(moment.date(), time.min, tzinfo=app.clock.tz)
     with closing(app.connect()) as conn:
-        chosen: dict[tuple[str, str], tuple[Task, str]] = {}
+        due: list[tuple[Task, Window, str]] = []
         for task in tasks.nudge_candidates(
             conn,
             said_before=utc_iso(moment - SETTLE),
             nudged_before=utc_iso(moment - GAP),
             chats_quiet_since=utc_iso(midnight),
         ):
-            window = read(task.preferred_window)
+            window = read(task.preferred_window, until=task.until, today=moment.date())
             part = window.open_at(moment) if window else None
             # A chat nothing can send to waits.
             if window and part and app.senders.get(task.channel) is not None:
-                when = window.now_words(moment, part)
-                chosen.setdefault((task.channel, task.chat_id), (task, when))
-        if not chosen:
+                due.append((task, window, part))
+        if not due:
             return 0
+        # How long the calendar is free from now: each window says how long it needs (an hour,
+        # or two for "some free time").
         free = free_minutes(app, moment, conn)
-        if free is not None and free < FREE_MINUTES:
-            return 0
+        chosen: dict[tuple[str, str], tuple[Task, str]] = {}
+        for task, window, part in due:
+            if free is None or free >= window.min_free:
+                chosen.setdefault(
+                    (task.channel, task.chat_id), (task, window.now_words(moment, part))
+                )
         nudged = 0
         for task, when in chosen.values():
             # The owner's task goes to them; everyone's to the family (routing.py).

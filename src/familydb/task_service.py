@@ -99,6 +99,7 @@ def create(
             created_by_member_id=values.get("created_by_member_id"),
             plan_id=values.get("plan_id"),
             plan_remind=values.get("plan_remind"),
+            window_until=values.get("window_until"),
         )
         if reminder:
             tasks.add_reminder(conn, task_id, reminder)
@@ -160,7 +161,10 @@ def update(
                 tasks.add_reminder(conn, task_id, reminder)
         if round_done and rule is not None and rule["repeat_from"] == "schedule":
             _add_next(conn, task_id, rule, after=datetime.fromisoformat(now), zone=zone)
-        allowed = {"title", "notes", "owner_id", "due_at", "preferred_window", "status", "gift_for"}
+        allowed = {
+            *("title", "notes", "owner_id", "due_at", "preferred_window", "window_until"),
+            *("status", "gift_for"),
+        }
         changes = {key: value for key, value in values.items() if key in allowed}
         changes.update(columns)
         if round_done:

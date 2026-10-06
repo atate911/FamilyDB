@@ -10,7 +10,7 @@ from familydb.store import db, ideas, messages, outcomes, plans, tasks
 from familydb.tools import ToolContext
 from familydb.tools.registry import ToolResult
 from familydb.tools.tasks import AddTaskInput, add_task
-from tests.conftest import NOW_ISO
+from tests.conftest import NOW_ISO, TZ
 
 
 def _task(settings, clock, conn, family, title="Bins out"):
@@ -99,6 +99,22 @@ def test_snoozing_moves_the_reminder(settings, clock, conn, family) -> None:
         reminder.remind_at == "2026-09-21T21:03:00Z"
         and tasks.get(conn, task["id"]).status == "open"
     )
+
+
+def test_tomorrow_keeps_the_hour_on_the_wall_by_day_and_is_nine_by_night() -> None:
+    """Tapped at half eleven at night, "Tomorrow" was half eleven the next night; and a day
+    added in hours moved it by one across a clock change."""
+
+    def tomorrow(*when: int):
+        return buttons.snoozed_until("tomorrow", datetime(*when, tzinfo=TZ))
+
+    assert tomorrow(2026, 9, 20, 14, 3) == datetime(2026, 9, 21, 14, 3, tzinfo=TZ)
+    assert tomorrow(2026, 9, 20, 23, 30) == datetime(2026, 9, 21, 9, 0, tzinfo=TZ)
+    assert tomorrow(2026, 9, 20, 6, 45) == datetime(2026, 9, 21, 9, 0, tzinfo=TZ)
+    # The clocks went back on 2 November 2025: still 14:00 on the wall, not 13:00.
+    across = tomorrow(2025, 11, 1, 14, 0)
+    assert across == datetime(2025, 11, 2, 14, 0, tzinfo=TZ)
+    assert across.utcoffset() - datetime(2025, 11, 1, tzinfo=TZ).utcoffset() == timedelta(hours=-1)
 
 
 def test_when_a_snooze_comes_back_reads_after_until_and_at() -> None:

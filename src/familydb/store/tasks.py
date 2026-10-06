@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from datetime import date
 from typing import Any, Literal
 
 from pydantic import BaseModel
@@ -32,6 +33,8 @@ class Task(BaseModel):
     owner: str | None = None
     due_at: str | None = None
     preferred_window: str = ""
+    # The last day "this weekend" in preferred_window means (windows.until), YYYY-MM-DD.
+    window_until: str | None = None
     status: Literal["open", "done", "cancelled"] = "open"
     revision: int = 1
     # Coming round again (task_service.py): all four set, or none.
@@ -55,6 +58,11 @@ class Task(BaseModel):
     @property
     def repeats(self) -> bool:
         return self.repeat_every is not None and self.repeat_unit is not None
+
+    @property
+    def until(self) -> date | None:
+        """The last day its window holds, when it said "this weekend" (windows.read)."""
+        return date.fromisoformat(self.window_until) if self.window_until else None
 
     @classmethod
     def from_row(cls, row: sqlite3.Row, reminder: Reminder | None) -> Task:
@@ -167,6 +175,7 @@ def insert(
     created_by_member_id: int | None = None,
     plan_id: int | None = None,
     plan_remind: str | None = None,
+    window_until: str | None = None,
 ) -> int:
     """A new task. `repeat` holds the four repeat_ columns, when it comes round again."""
     row = {
@@ -184,6 +193,7 @@ def insert(
         **({"gift_for": gift_for} if gift_for else {}),
         **({"created_by_member_id": created_by_member_id} if created_by_member_id else {}),
         **({"plan_id": plan_id, "plan_remind": plan_remind} if plan_id is not None else {}),
+        **({"window_until": window_until} if window_until else {}),
     }
     cur = conn.execute(
         f"INSERT INTO tasks({','.join(row)}) VALUES ({','.join('?' * len(row))})",

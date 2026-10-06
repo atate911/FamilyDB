@@ -160,6 +160,7 @@ def add_task(ctx: ToolContext, args: AddTaskInput) -> dict[str, Any]:
         else (ctx.member.id if ctx.member else None)
     )
     values["due_at"] = _time(ctx, args.due_at)
+    values["window_until"] = _window_until(ctx, args.preferred_window)
     # Whoever asked for it, whoever it is for ("Set by Alex" on a kid's to-do).
     values["created_by_member_id"] = ctx.member.id if ctx.member else None
     reminder = _time(ctx, args.remind_at, future=True)
@@ -218,6 +219,8 @@ def update_task(ctx: ToolContext, args: UpdateTaskInput) -> dict[str, Any]:
     }
     if args.owner is not None:
         values["owner_id"] = _owner_or_everyone(ctx, args.owner)
+    if args.preferred_window is not None:
+        values["window_until"] = _window_until(ctx, args.preferred_window)
     if args.clear_due and args.due_at:
         raise ToolError("Choose a deadline or clear it, not both.")
     if args.clear_reminder and args.remind_at:
@@ -240,6 +243,12 @@ def update_task(ctx: ToolContext, args: UpdateTaskInput) -> dict[str, Any]:
         stop_repeating=args.stop_repeating,
     )
     return _with_nudges(ctx, task, {"task": task.model_dump(mode="json")})
+
+
+def _window_until(ctx: ToolContext, window: str) -> str | None:
+    """When "this weekend" in the window ends, from today (windows.until), kept with the task."""
+    last = windows.until(window, ctx.clock.today())
+    return last.isoformat() if last else None
 
 
 def _may_update(ctx: ToolContext, task_id: int) -> None:
@@ -323,10 +332,22 @@ def nudges(ctx: ToolContext, task: Task) -> str | None:
     morning"; None when it will not, so nothing may be promised."""
     if not ctx.settings.task_nudges or task.status != "open" or task.repeats:
         return None
-    window = windows.read(task.preferred_window)
+    window = windows.read(task.preferred_window, until=task.until, today=ctx.clock.today())
     return f"on {window.words('free')}" if window else None
 
 
+# Said of a task nothing will bring up: no reminder waiting, no window read, no repeat.
+NOT_BY_ITSELF = "not by itself; offer a reminder"
+
+
 def _with_nudges(ctx: ToolContext, task: Task, result: dict[str, Any]) -> dict[str, Any]:
+    """What a write answers with, and when the task comes up again: `nudges` when a window will
+    bring it up, `comes_up` when nothing will, so the model offers a reminder rather than leave
+    it to be forgotten."""
     said = nudges(ctx, task)
-    return {**result, "nudges": said} if said else result
+    if said:
+        return {**result, "nudges": said}
+    waiting = task.reminder is not None and task.reminder.delivered_at is None
+    if task.status == "open" and not waiting and not task.repeats:
+        return {**result, "comes_up": NOT_BY_ITSELF}
+    return result

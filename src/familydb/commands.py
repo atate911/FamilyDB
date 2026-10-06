@@ -296,8 +296,11 @@ def _tasks(
 
 def _task_text(task: Task, app: App) -> str:
     facts = []
-    if task.reminder is not None and task.reminder.delivered_at is None:
-        facts.append(f"reminder {_local(task.reminder.remind_at, app):%a %d %b %H:%M}")
+    if task.reminder is not None:
+        at = _local(task.reminder.remind_at, app)
+        # Sent and still open: say so, so a reminder nobody acted on is not taken for none.
+        sent = task.reminder.delivered_at is not None
+        facts.append(f"reminded {at:%a %H:%M}" if sent else f"reminder {at:%a %d %b %H:%M}")
     if task.due_at:
         facts.append(f"due {_local(task.due_at, app):%a %d %b %H:%M}")
     facts.append(task_service.repeat_words(task) or "")

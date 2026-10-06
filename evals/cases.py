@@ -444,7 +444,6 @@ CASES: tuple[Case, ...] = (
         ),
         "Scheduling an appointment is a task, kept for the next free time, which code can then "
         "bring up when the calendar is free; never an appointment invented on the calendar.",
-        waits_for="M1.6, free time read as a window",
     ),
     Case(
         "colonoscopy_in_the_group",

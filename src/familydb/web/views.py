@@ -490,7 +490,7 @@ def todo_page_row(
     """A to-do for the To do page: the short row Home draws, and what the page adds under it. A
     kid's carries "Set by" when somebody else set it, and none of how reminders get there."""
     row = todo_row(task, tz, today, slots, kid=kid)
-    nudge = nudge_words(task, tz) if nudging and not kid else None
+    nudge = nudge_words(task, tz, today) if nudging and not kid else None
     set_by = creator if creator and creator.casefold() != (me or "").casefold() else None
     return {
         **row,
@@ -603,12 +603,13 @@ def repeat_text(task: Task, tz: ZoneInfo) -> str | None:
     return words
 
 
-def nudge_words(task: Task, tz: ZoneInfo) -> dict[str, str] | None:
+def nudge_words(task: Task, tz: ZoneInfo, today: date) -> dict[str, str] | None:
     """For an open task kept for a window (jobs/nudges.py): `on`, "a free Saturday morning", and
-    `last`; or `unread` when the window cannot be read. None for a task not waiting on one."""
+    `last`; or `unread` when the window cannot be read (or "this weekend" is over). None for a
+    task not waiting on one."""
     if task.status != "open" or task.repeats or not task.preferred_window:
         return None
-    window = windows.read(task.preferred_window)
+    window = windows.read(task.preferred_window, until=task.until, today=today)
     if window is None:
         return {"unread": "yes"}
     said = {"on": window.words("free")}
@@ -618,7 +619,7 @@ def nudge_words(task: Task, tz: ZoneInfo) -> dict[str, str] | None:
     return said
 
 
-def task_row(task: Task, tz: ZoneInfo, *, nudging: bool = False) -> dict[str, Any]:
+def task_row(task: Task, tz: ZoneInfo, today: date, *, nudging: bool = False) -> dict[str, Any]:
     """One task on the tasks page. `nudging` is the `task_nudges` setting."""
     choice = f"{task.repeat_every}:{task.repeat_unit}" if task.repeats else ""
     options = list(REPEATS)
@@ -637,7 +638,7 @@ def task_row(task: Task, tz: ZoneInfo, *, nudging: bool = False) -> dict[str, An
         "repeat_options": options,
         # So saving changes the repeat only when it changed.
         "repeat_was": f"{choice}:{task.repeat_from}" if choice else "",
-        "nudge": nudge_words(task, tz) if nudging else None,
+        "nudge": nudge_words(task, tz, today) if nudging else None,
     }
 
 
