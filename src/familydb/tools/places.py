@@ -60,6 +60,18 @@ class SavePlaceInput(BaseModel):
     closed_days: list[Day] = Field(default_factory=list, description="Days it is closed.")
     price_note: str | None = Field(default=None, description="e.g. 'adults $28, kids free'.")
     source_urls: list[str] = Field(default_factory=list, description="Pages the facts came from.")
+    # What the suggestions need, only as a page states it; each fills the idea's only when empty.
+    cost_level: Literal[0, 1, 2, 3, 4] | None = Field(
+        default=None, description="0 free, 1 cheap, 2 moderate, 3 pricey, 4 expensive."
+    )
+    setting: Literal["indoor", "outdoor"] | None = None
+    visit_minutes: int | None = Field(default=None, description="How long a visit takes.")
+    needs_booking: bool | None = Field(default=None, description="Tickets or a table needed.")
+    book_days_ahead: int | None = None
+    first_day: str | None = Field(default=None, description="An event's first day, YYYY-MM-DD.")
+    last_day: str | None = Field(default=None, description="An event's last day, YYYY-MM-DD.")
+    min_age: int | None = None
+    max_age: int | None = None
 
 
 class LookUpNowInput(BaseModel):
@@ -75,6 +87,53 @@ class SkipPlaceInput(BaseModel):
         description="skipped: not a specific place or event; failed: could not be identified."
     )
     reason: str = Field(description="One short sentence.")
+
+
+# Kinds whose dates a page can give: a dated event or show, not a place open all year, nor a
+# season that comes round again (a pumpkin patch's "until 31 October" is this year's).
+DATED_KINDS = frozenset({"event", "show"})
+LONGEST_VISIT = 24 * 60
+FURTHEST_AHEAD = 365
+OLDEST = 120
+
+
+def filled_in(idea: ideas.Idea, args: SavePlaceInput, today: date) -> dict[str, Any]:
+    """What a lookup adds to the idea, field by field, only where the idea has nothing: what the
+    family said always stands. Anything a page could not have meant (a visit of a week, an age of
+    200, an event already over) is left out rather than refused, so the place is still kept."""
+    found: dict[str, Any] = {}
+    if args.cost_level is not None and idea.cost_level is None:
+        found["cost_level"] = args.cost_level
+    if args.setting and idea.setting == "either":
+        found["setting"] = args.setting
+    minutes = args.visit_minutes
+    empty = idea.duration_min is None and idea.duration_max is None
+    if minutes is not None and 0 < minutes <= LONGEST_VISIT and empty:
+        found["duration_min"] = minutes
+    if args.needs_booking and not idea.needs_booking:
+        found["needs_booking"] = True
+    ahead = args.book_days_ahead
+    if ahead is not None and 0 <= ahead <= FURTHEST_AHEAD and idea.lead_time_days is None:
+        found["lead_time_days"] = ahead
+    if idea.min_age is None and idea.max_age is None:
+        low, high = args.min_age, args.max_age
+        if low is not None and not 0 <= low <= OLDEST:
+            low = None
+        if high is not None and not 0 <= high <= OLDEST:
+            high = None
+        if low is not None and high is not None and low > high:
+            low = high = None
+        found |= {k: v for k, v in (("min_age", low), ("max_age", high)) if v is not None}
+    dated = idea.happens_from is not None or idea.happens_until is not None
+    if args.first_day and idea.kind.casefold() in DATED_KINDS and not dated:
+        try:
+            first = parse_date(args.first_day.strip()[:10])
+            last = parse_date(args.last_day.strip()[:10]) if args.last_day else first
+        except ToolError:
+            return found
+        if first <= last and last >= today:
+            found |= {"happens_from": first.isoformat(), "happens_until": last.isoformat()}
+    return found
 
 
 def hours_dict(entries: list[OpeningHours], closed_days: list[str]) -> dict[str, Any] | None:
@@ -293,11 +352,13 @@ def save_place(ctx: ToolContext, args: SavePlaceInput) -> dict[str, Any]:
         else:
             place = places.insert(ctx.conn, name=args.name, now=now, **fields)
         assert place is not None
+        filled = filled_in(idea, args, ctx.clock.today())
         changes: dict[str, Any] = {
             "place_id": place.id,
             "enrichment": "done",
             "enriched_at": now,
             "enrichment_note": note,
+            **filled,
         }
         if not idea.location_name:
             changes["location_name"] = args.name
@@ -305,6 +366,7 @@ def save_place(ctx: ToolContext, args: SavePlaceInput) -> dict[str, Any]:
     return {
         "place": place.model_dump(mode="json"),
         "idea": updated.model_dump(mode="json") if updated else None,
+        "filled": sorted(filled),
         "geocoded": geocoded,
         "travel": {"minutes": travel[0], "km": travel[1], "estimate": True} if travel else None,
         "note": note,
