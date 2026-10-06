@@ -323,6 +323,8 @@ a.item:hover, .item--link:hover { background: var(--paper); color: var(--ink); }
 .composer__who { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; font-size: var(--t-meta); color: var(--ink-2); }
 .composer__who b { color: var(--ink); }
 .composer__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); flex-wrap: wrap; font-size: var(--t-meta); color: var(--ink-2); }
+.composer__photo { font-weight: 700; color: var(--ink); }
+.composer__foot input[type="file"] { max-width: 100%; font: inherit; }
 .starters { display: flex; flex-wrap: wrap; gap: var(--s2); }
 .starter { display: inline-flex; align-items: center; gap: 6px; min-height: var(--target); padding: 0 var(--s4); border-radius: var(--r-pill); font: inherit; font-size: var(--t-meta); font-weight: 700; text-decoration: none; cursor: pointer; border: 1.5px solid var(--line-2); background: var(--card); color: var(--ink); }
 /* a starter that sends is filled, with the send icon; one that fills the box is an outline with a pen, ending in … */

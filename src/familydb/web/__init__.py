@@ -44,7 +44,10 @@ from familydb.web.keys import session_secret
 
 log = logging.getLogger(__name__)
 
-MAX_BODY_BYTES = 64 * 1024  # nothing here takes an upload
+MAX_BODY_BYTES = 64 * 1024  # every form but one: nothing else takes an upload
+# The chat's box, after sign-in, may carry a photo (chat.send); the server reads no more than that
+# of any request, and Flask still refuses anything over MAX_BODY_BYTES everywhere else.
+MAX_UPLOAD_BYTES = chat.MAX_UPLOAD_BYTES
 CONTENT_SECURITY_POLICY = (
     "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; "
     "frame-ancestors 'none'; base-uri 'none'; form-action 'self'"

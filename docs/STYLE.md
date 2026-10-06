@@ -260,7 +260,9 @@ Each lives in `_ui.html`, `_ask.html` or `_settings.html`, which show the markup
 
 - **Page head** (`page_head`): breadcrumbs for a nested page, the icon on a tile of the page's
   colour (her page: her screen instead), title, one line of purpose, actions on the right.
-- **The box** (`_ask.html`): the one place anybody writes to her, on Home and at the chat's foot,
+- **The box** (`_ask.html`; the new frame's is `_composer.html`, whose chat box also has **Add a
+  photo**, a plain file field under the words): the one place anybody writes to her, on Home and at
+  the chat's foot,
   always posting to the chat: message on top; who is sending, "Send where I am" and Send along the
   bottom; one frame that lights up while you write. In the chat it says "Message Vera" and, while an
   answer is on its way, is closed and says when it opens. On Home its label is her question,

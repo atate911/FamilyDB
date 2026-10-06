@@ -298,9 +298,9 @@ def test_free_form_capture_hands_the_words_to_chat(settings, clock, conn, family
     form.update(text=raw, who="Sam", intent="save_idea")
     received = []
     chat = client.application.config["FAMILYDB_CHAT"]
-    monkeypatch.setattr(chat, "ask", lambda *args: received.append(args))
+    monkeypatch.setattr(chat, "ask", lambda *args, **more: received.append((*args, more)))
     assert client.post("/chat", data=form).status_code == 302
-    assert received == [("Save this idea for later:\n" + raw, "Sam", "web", None)]
+    assert received == [("Save this idea for later:\n" + raw, "Sam", "web", None, {"photo": None})]
 
 
 def test_an_idea_number_not_on_the_list_is_reported_not_silently_empty(ctx):

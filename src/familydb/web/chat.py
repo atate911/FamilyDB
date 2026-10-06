@@ -7,6 +7,7 @@ from __future__ import annotations
 import logging
 from contextlib import closing
 from datetime import datetime, timedelta
+from functools import wraps
 from typing import Any
 
 from flask import (
@@ -61,6 +62,13 @@ NO_FAMILY = "There is nobody in the family list yet. Add someone on the Family p
 RETRY_REFRESH_SECONDS = REFRESH_STEPS["retrying"][0]
 # Slack on top of every attempt the settings allow, a retry interval apart.
 RETRY_SLACK_MINUTES = 5
+# The most any request may carry, a photo in this box (the server's read limit too).
+MAX_UPLOAD_BYTES = 4_500_000
+# A photo sent from the chat's box: what can be looked at, and how big (pipeline.MAX_PHOTO_BYTES).
+PHOTO_TYPES = frozenset({"image/jpeg", "image/png", "image/webp", "image/gif"})
+MAX_PHOTO_BYTES = 3_900_000
+PHOTO_TYPE = "Send a photo as a JPEG or PNG picture."
+PHOTO_TOO_BIG = "That photo is too big to send: up to about 3.9 MB."
 # What the page says in her place while the newest message waits: its words, no model call.
 THINKING = "Thinking about the last message. The answer will show here when it arrives."
 HELD = (
@@ -509,6 +517,19 @@ def show() -> Any:
     return page(reading=kid, before=older, looked=looked)
 
 
+def _photo() -> tuple[tuple[str, bytes] | None, str | None]:
+    """The photo sent with the message, if any, as its type and bytes; or why it cannot go."""
+    sent = request.files.get("photo")
+    if sent is None or not sent.filename:
+        return None, None
+    if sent.mimetype not in PHOTO_TYPES:
+        return None, PHOTO_TYPE
+    data = sent.read(MAX_PHOTO_BYTES + 1)
+    if len(data) > MAX_PHOTO_BYTES:
+        return None, PHOTO_TOO_BIG
+    return (sent.mimetype, data), None
+
+
 def _position(form: Any) -> tuple[float, float] | None:
     """Where the phone said it was; None when it said nothing or "Send where I am" is not ticked."""
     if form.get(WHERE_KEY) != "1":
@@ -522,13 +543,30 @@ def _position(form: Any) -> tuple[float, float] | None:
     return lat, lon
 
 
+def _roomy(view: Any) -> Any:
+    """Let this view's request carry a photo: every other form is held to a few kilobytes, this
+    one, reached only signed in (the gate runs first), to what the server reads at most."""
+
+    @wraps(view)
+    def wrapped(*args: Any, **kwargs: Any) -> Any:
+        request.max_content_length = MAX_UPLOAD_BYTES
+        return view(*args, **kwargs)
+
+    return wrapped
+
+
 @bp.post("/chat")
+@_roomy
 @once
 def send() -> Response | Any:
-    """Hand one message to the channel and come back to the thread. Home's box posts here too."""
+    """Hand one message to the channel and come back to the thread. Home's box posts here too,
+    and the chat's may carry a photo."""
     if (complaint := auth.refused()) is not None:
         return page(error=complaint, typed=request.form.get("text", ""), status=400)
     text = request.form.get("text", "")
+    photo, complaint = _photo()
+    if complaint is not None:
+        return page(error=complaint, typed=text, status=400)
     # Signed in as themselves, they are who is asking whatever the form says.
     me = auth.visitor().name
     who = me or request.form.get("who", "").strip()
@@ -540,7 +578,8 @@ def send() -> Response | Any:
     if me is None:
         session[WHO_KEY] = who
     session[WHERE_KEY] = request.form.get(WHERE_KEY) == "1"  # the box stays as they left it
-    if (complaint := _chat().ask(sent, who, my_chat(), _position(request.form))) is not None:
+    asked = _chat().ask(sent, who, my_chat(), _position(request.form), photo=photo)
+    if (complaint := asked) is not None:
         return page(error=complaint, typed=text, status=400)
     log.info("web chat: %s asked something", who)
     # Redirect, since refreshing a POST would send the message again.

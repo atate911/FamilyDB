@@ -12,7 +12,7 @@ from waitress import create_server as _create_server
 
 from familydb.app import App
 from familydb.errors import ConfigError, FamilyDBError
-from familydb.web import MAX_BODY_BYTES, create_app
+from familydb.web import MAX_UPLOAD_BYTES, create_app
 
 log = logging.getLogger(__name__)
 
@@ -53,8 +53,10 @@ def create_server(app: App) -> Any:
         host=settings.web_host,
         port=settings.web_port,
         ident=IDENT,
-        # Flask refuses an oversize body only after waitress has read it (default 1 GB).
-        max_request_body_size=MAX_BODY_BYTES,
+        # Flask refuses an oversize body only after waitress has read it (default 1 GB): the most
+        # any request may carry, a photo in the chat's box, and Flask refuses more than a form's
+        # anywhere else.
+        max_request_body_size=MAX_UPLOAD_BYTES,
         **proxy_options(settings),
     )
 

@@ -1004,15 +1004,27 @@ def test_a_form_token_outside_ascii_is_refused_and_not_a_crash(settings, clock, 
 
 
 def test_the_server_refuses_a_body_before_reading_it(settings, clock) -> None:
-    from familydb.web import MAX_BODY_BYTES
+    """The server reads no more than a photo in the chat's box; every other form is held to a few
+    kilobytes by Flask, and the chat's own only after sign-in (chat._roomy)."""
+    from familydb.web import MAX_BODY_BYTES, MAX_UPLOAD_BYTES
     from familydb.web.server import create_server
 
     app = App(settings.model_copy(update={"web_port": _free_port()}), clock)
     server = create_server(app)
     try:
-        assert server.adj.max_request_body_size == MAX_BODY_BYTES
+        assert server.adj.max_request_body_size == MAX_UPLOAD_BYTES
     finally:
         server.close()
+    client = create_app(
+        App(settings.model_copy(update={"web_password": "open sesame please"}), clock)
+    ).test_client()
+    big = {"password": "x" * (MAX_BODY_BYTES + 1)}
+    assert client.post("/login", data=big).status_code == 413
+    assert client.post("/chat", data={"text": "x" * (MAX_BODY_BYTES + 1)}).status_code in (
+        302,
+        401,
+        403,
+    )
 
 
 def test_a_public_page_needs_a_password_worth_having(settings, clock) -> None:
