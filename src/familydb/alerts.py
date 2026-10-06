@@ -5,7 +5,8 @@ spending limit), calendar (Google shut the bot out), model, price, prices, new a
 the daily check, model_watch.py and usage_watch.py), api (a company refused a part of a request,
 now sent without it; agent/providers/parts.py), refused (a refusal FamilyDB cannot read, told
 once it happens twice without an answer between, then a judgement is asked), advice (what a
-judgement answered and what came of it).
+judgement answered and what came of it), backup and disk (the hourly upkeep, upkeep.py), and
+telegram (the bot token refused; shown on the Status page only, `NOT_ON_TELEGRAM`).
 
 Each is noted where it is seen, in a short write of its own, and forgotten when that thing is
 seen to work again, so the next time is told at once. The minute job (`run_alerts`) tells every
@@ -44,8 +45,13 @@ KINDS = (
     "api",
     "refused",
     "advice",
+    "backup",
+    "disk",
+    "telegram",
 )
 COMPANY_KINDS = ("credit", "key", "refused")
+# Shown on the Status page and never told on Telegram, which cannot carry news of itself.
+NOT_ON_TELEGRAM = frozenset({"telegram"})
 TOLD_AFTER = {"refused": 2}
 TELL_AGAIN = timedelta(hours=12)
 KEEP = timedelta(days=7)
@@ -179,7 +185,7 @@ def run_alerts(app: Any) -> int:
         due = [
             alert
             for alert in alert_store.due(conn, told_before=told_before)
-            if alert.times >= TOLD_AFTER.get(alert.kind, 1)
+            if alert.times >= TOLD_AFTER.get(alert.kind, 1) and alert.kind not in NOT_ON_TELEGRAM
         ]
         if not due:
             return 0

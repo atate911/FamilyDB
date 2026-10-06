@@ -275,7 +275,28 @@ def db_backup(dest: Path = typer.Argument(..., help="Path of the backup file to 
     dest.parent.mkdir(parents=True, exist_ok=True)
     with closing(application.connect()) as conn, closing(sqlite3.connect(str(dest))) as target:
         conn.backup(target)
-    typer.echo(f"backup written to {dest}")
+        # The copy itself is read back: a backup nobody can restore is no backup.
+        verdict = str(target.execute("PRAGMA quick_check").fetchone()[0])
+    ok = verdict == "ok"
+    from familydb.store import backups
+
+    try:
+        with closing(application.connect()) as conn, db.transaction(conn):
+            backups.record(
+                conn,
+                path=str(dest),
+                size=dest.stat().st_size,
+                ok=ok,
+                detail=None if ok else verdict[:200],
+                now=utc_iso(application.clock.now()),
+            )
+    except sqlite3.OperationalError as exc:  # a database not migrated yet keeps no record
+        log.warning("the backup was not recorded: %s", exc)
+    if not ok:
+        failed = f"the backup at {dest} failed its check: {verdict}"
+        typer.secho(failed, fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+    typer.echo(f"backup written to {dest}, and checked")
 
 
 @members_app.command("add")

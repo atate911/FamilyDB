@@ -916,6 +916,17 @@ class TelegramSupervisor:
             await running.stop()
         self._set("off")
 
+    def _token_refused(self, refused: bool) -> None:
+        """Noted for the Status page (alerts.py, kind telegram), or forgotten once it connects;
+        never told on Telegram, which cannot carry it."""
+        from familydb import alerts
+
+        with closing(self.app.connect()) as conn:
+            if refused:
+                alerts.note(conn, "telegram", "", "the token was refused", self.app.clock.now())
+            else:
+                alerts.working(conn, "telegram")
+
     async def _open(self, token: str) -> tuple[Any, bool]:
         channel = self.make_channel(self.app, token)
         try:
@@ -923,6 +934,7 @@ class TelegramSupervisor:
         except InvalidToken:
             log.error("telegram: Telegram refused the bot token; replace it on the settings page")
             self._set("the token was refused by Telegram")
+            await asyncio.to_thread(self._token_refused, True)
             await _quietly_stop(channel)
             return None, True
         except NetworkError as exc:
@@ -932,6 +944,7 @@ class TelegramSupervisor:
             return None, False
         name = getattr(channel, "username", None)
         self._set(f"connected as @{name}" if name else "connected")
+        await asyncio.to_thread(self._token_refused, False)
         self._introduced = self._seen = None
         self._learn_at = 0.0
         return channel, False

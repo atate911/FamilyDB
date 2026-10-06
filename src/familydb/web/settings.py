@@ -1062,6 +1062,9 @@ LINE_GROUPS = (
             "alert_api",
             "alert_refused",
             "alert_advice",
+            "alert_backup",
+            "alert_disk",
+            "alert_telegram",
         ),
     ),
 )

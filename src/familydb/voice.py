@@ -438,6 +438,26 @@ EVENTS: dict[str, Event] = {
         ("company", "detail"),
         {"company": "OpenAI", "detail": "API error 400: Unsupported parameter"},
     ),
+    "alert_backup": Event(
+        "Telling an admin: the backups stopped working",
+        "The backups need a look: {detail}. Until one works, what the family has told me is on "
+        "this server alone. RUNBOOK section 7 has the backup line to check.",
+        ("detail",),
+        {"detail": "the last good backup was made 2026-10-01 10:15 UTC"},
+    ),
+    "alert_disk": Event(
+        "Telling an admin: the server's disk is nearly full",
+        "The server's disk is nearly full ({detail}). When it fills, I can't keep anything, "
+        "messages included: old backups and logs are the usual things to clear.",
+        ("detail",),
+        {"detail": "312 MB free"},
+    ),
+    "alert_telegram": Event(
+        "On the status page: Telegram refused the bot's token",
+        "Telegram refused my token, so I can't hear or answer anyone there. A new one from "
+        "@BotFather can be pasted on the settings page, under Connections.",
+        (),
+    ),
     "alert_advice": Event(
         "Telling an admin: what a judgement on the models said",
         "I weighed a change in the models: {detail}. The status page has it, with a way to "

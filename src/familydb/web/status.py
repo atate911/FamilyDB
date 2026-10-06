@@ -9,7 +9,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
-from familydb import alerts, whatsnew
+from familydb import alerts, upkeep, whatsnew
 from familydb import model_watch as watch
 from familydb.agent import compose, gateway, providers
 from familydb.agent.spending import spent_today
@@ -24,6 +24,7 @@ from familydb.availability import (
 from familydb.dates import utc_iso
 from familydb.integrations.google_calendar import service_account_email
 from familydb.store import alerts as alert_store
+from familydb.store import backups as backup_store
 from familydb.store import calls, ideas, members, messages, mornings
 from familydb.store import judgements as judgement_store
 from familydb.store import model_watch as model_store
@@ -155,7 +156,22 @@ def services(app: App, conn: sqlite3.Connection) -> list[dict[str, Any]]:
         _row("Reading the web", *_lookups(app)),
         _row("Weekend digest", *_digest(app)),
         _row("This page", (personal or password_in_use(live)) or None, page),
+        _row("Backups", *_backups(app, conn)),
     ]
+
+
+def _backups(app: App, conn: sqlite3.Connection) -> tuple[bool | None, str]:
+    """When the last good backup was made, from what `familydb db backup` recorded."""
+    good = backup_store.latest(conn, good=True)
+    trouble = upkeep.backup_trouble(conn, app.clock.now())
+    if good is None and trouble is None:
+        return None, "none recorded; the installer schedules one each night (RUNBOOK section 7)"
+    if trouble:
+        return False, trouble
+    assert good is not None
+    size = f"{good.bytes / (1024 * 1024):.1f} MB"
+    when = views.local_moment(good.made_at, app.settings.tzinfo)
+    return True, f"the last good one {when}, {size}"
 
 
 def spending(

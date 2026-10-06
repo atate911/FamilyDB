@@ -33,6 +33,7 @@ from familydb.jobs.tidy import run_tidy
 from familydb.jobs.weekend_digest import run_digest
 from familydb.judgement import run_judgements
 from familydb.model_watch import run_model_watch
+from familydb.upkeep import run_upkeep
 from familydb.whereabouts import forget_old
 
 log = logging.getLogger(__name__)
@@ -143,6 +144,12 @@ def job_specs(app: App) -> list[JobSpec]:
             run_nudges,
             IntervalTrigger(minutes=NUDGE_INTERVAL_MINUTES),
             wanted=settings.task_nudges,
+        ),
+        JobSpec(
+            "upkeep",
+            "check the backups and the disk",
+            run_upkeep,
+            IntervalTrigger(hours=1),
         ),
         JobSpec(
             "tidy",

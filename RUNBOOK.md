@@ -132,6 +132,8 @@ One line in root's crontab, for Docker or systemd: at 03:15 a backup into `backu
 15 3 * * * sudo -u familydb env FAMILYDB_PATH=/opt/familydb/data/familydb.sqlite3 /opt/familydb/.venv/bin/familydb db backup /opt/familydb/backups/familydb-$(date +\%F).sqlite3
 ```
 
+Each backup is read back once written (SQLite's `quick_check` on the copy) and recorded in the database: a copy that fails says so and exits 1, so cron mails it. Status and `familydb doctor` say when the last good one was, and once any has been recorded, admins are told when none has worked for a day and a half (the hourly upkeep, which also tells them when the disk has less than 500 MB free).
+
 `FAMILYDB_PATH` is set because cron does not run in the checkout, so `.env` is not read and the relative default path points at nothing (the backup then says so and writes nothing rather than backing up an empty database). `backups/` must be writable by `familydb`. Docker: `docker compose exec bot familydb db backup /data/backups/familydb-$(date +%F).sqlite3`. Calendar events are also in Google.
 
 Keep a copy off the server: a backup on the same disk is not a backup. Backups are readable by owner and root only, so bundle on the server and fetch:
@@ -159,6 +161,15 @@ sudo systemctl start familydb                      # or: docker compose start bo
 `familydb db status` then shows row counts and schema version; an older file is migrated on the next start.
 
 A key or token saved on the settings page lives in this file, so it is in every backup; section 11 says when to keep keys in `.env` instead.
+
+**Moving to a new server.**
+
+1. On the new server, install as in section 1 (the installer's block from `docs/INSTALL.md`), then stop the bot: `sudo systemctl stop familydb` (or `docker compose stop bot`).
+2. On the old one, take a backup and stop the bot, so nothing is said to it after the copy: `sudo scripts/maintain.sh backup`, then `sudo systemctl stop familydb`.
+3. Copy the newest file from the old `backups/` to the new server, with `.env` (it holds what the installer wrote, and any key kept outside the page) and `data/google_key.json` if Google Calendar is connected.
+4. On the new server: `sudo scripts/maintain.sh restore /path/to/familydb-XXXX.sqlite3`, which checks it, puts it in place and starts the bot.
+5. Point the domain at the new address if there is one; on Telegram nothing changes, since the token moved with the database or `.env`.
+6. Check: `familydb health` says ok, `familydb doctor` is clean, and the Status page shows the last good backup once the first night has passed. Each phone that had notices turned on keeps them only if the address is the same; otherwise turn them on again under Your password.
 
 **Taking the data away.** A backup is the database itself, for FamilyDB to read. To take the family's data somewhere else:
 

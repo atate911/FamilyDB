@@ -1366,8 +1366,13 @@ ALERT_TITLES = {
     "api": "A company stopped taking part of a request",
     "refused": "{company} is refusing requests",
     "advice": "A judgement on the models",
+    "backup": "The backups need a look",
+    "disk": "The server's disk is nearly full",
+    "telegram": "Telegram refused the bot's token",
 }
-SAID_IN_DETAIL = frozenset({"model", "price", "prices", "new", "shift", "api", "refused", "advice"})
+SAID_IN_DETAIL = frozenset(
+    {"model", "price", "prices", "new", "shift", "api", "refused", "advice", "backup", "disk"}
+)
 COMPANY_WORDS = {"openai": "OpenAI", "anthropic": "Anthropic", "gemini": "Google Gemini"}
 
 
@@ -1378,7 +1383,9 @@ def alert_row(alert: Any, tz: ZoneInfo, *, telling: bool, admins: int) -> dict[s
     seen = f"since {local_moment(alert.first_at, tz)}"
     if alert.times > 1:
         seen += f", {alert.times} times, last {local_moment(alert.last_at, tz)}"
-    if alert.told_at:
+    if alert.kind in alerts.NOT_ON_TELEGRAM:
+        told = "shown here only, since Telegram cannot carry it"
+    elif alert.told_at:
         told = f"admins told on Telegram {local_moment(alert.told_at, tz)}"
     elif not telling:
         told = "telling admins is switched off (Settings, Messages)"

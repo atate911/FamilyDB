@@ -543,6 +543,37 @@ def check_web(app: App, report: Report, conn: sqlite3.Connection | None = None) 
         )
 
 
+def check_backups(app: App, report: Report, conn: sqlite3.Connection | None) -> None:
+    """When the last good backup was made (familydb/upkeep.py has the rule)."""
+    from familydb import upkeep
+    from familydb.store import backups
+
+    if conn is None:
+        return
+    try:
+        good = backups.latest(conn, good=True)
+        trouble = upkeep.backup_trouble(conn, app.clock.now())
+    except sqlite3.OperationalError:
+        report.add("backups", SKIP, "the database is not up to date yet")
+        return
+    if trouble:
+        report.add(
+            "backups",
+            WARN,
+            trouble,
+            "sudo crontab -u root -l, then scripts/maintain.sh backup (RUNBOOK section 7)",
+        )
+    elif good is None:
+        report.add(
+            "backups",
+            WARN,
+            "none recorded",
+            "sudo scripts/maintain.sh schedule-backups (RUNBOOK section 7)",
+        )
+    else:
+        report.add("backups", OK, f"the last good one {good.made_at[:16].replace('T', ' ')} UTC")
+
+
 def check_service(report: Report) -> None:
     unit = Path("/etc/systemd/system/familydb.service")
     if not unit.exists():
@@ -620,6 +651,7 @@ def run(app: App, *, online: bool = False) -> Report:
         check_channels(app, report, online=online)
         check_integrations(app, report)
         check_web(app, report, conn)
+        check_backups(app, report, conn)
         if online:
             check_links(report)
         check_service(report)
