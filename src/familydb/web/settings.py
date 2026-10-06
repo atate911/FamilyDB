@@ -941,6 +941,7 @@ LINE_GROUPS = (
             "tap_undone",
             "tap_ticked",
             "tap_again",
+            "tap_ok",
             "tap_not_again",
             "tap_missed",
             "tap_wish_yes",

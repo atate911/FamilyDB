@@ -57,10 +57,11 @@ def test_what_a_reminder_and_a_follow_up_come_with() -> None:
         {"label": "In an hour", "data": "hour:12"},
         {"label": "Tomorrow", "data": "tomorrow:12"},
     ]
-    assert [b["data"] for b in buttons.for_follow_up(31)] == [
-        "again:31",
-        "not_again:31",
-        "missed:31",
+    assert [(b["label"], b["data"]) for b in buttons.for_follow_up(31)] == [
+        ("Loved it", "again:31"),
+        ("It was OK", "ok:31"),
+        ("Not again", "not_again:31"),
+        ("Didn't go", "missed:31"),
     ]
     # Telegram hands back at most 64 bytes of a button, whatever its number.
     longest = buttons.for_follow_up(10**18 - 1) + buttons.for_reminder(10**18 - 1)
@@ -132,8 +133,9 @@ def test_a_follow_up_is_answered_by_tapping(settings, clock, conn, family) -> No
     tapped = _tap(app, conn, f"again:{plan.id}")
     assert tapped.note == "Noted, Sam: one to do again." and tapped.finished
     recorded = outcomes.list_for_idea(conn, idea.id)
-    assert [(o.plan_id, o.happened_on, o.would_repeat) for o in recorded] == [
-        (plan.id, "2026-09-19", True)
+    # Loved it: kept as the page's loved face is, nine out of ten, and worth doing again.
+    assert [(o.plan_id, o.happened_on, o.rating, o.would_repeat) for o in recorded] == [
+        (plan.id, "2026-09-19", 9, True)
     ]
     assert ideas.get(conn, idea.id).status == "done"
     # Said already: another answer changes nothing.
@@ -150,7 +152,14 @@ def test_not_again_and_didnt_go(settings, clock, conn, family) -> None:
     dropped = _idea(conn, "Old idea", status="dropped")
     tapped = _tap(app, conn, f"not_again:{_plan(conn, family, idea_id=dud.id).id}")
     assert tapped.note == "Noted, Sam: not one to repeat."
-    assert outcomes.list_for_idea(conn, dud.id)[0].would_repeat is False
+    said = outcomes.list_for_idea(conn, dud.id)[0]
+    assert (said.rating, said.would_repeat) == (3, False)
+    # It was OK: a six, and nothing said about doing it again.
+    fine = _idea(conn, "Bowling")
+    tapped = _tap(app, conn, f"ok:{_plan(conn, family, idea_id=fine.id).id}", tap_id="q4")
+    assert tapped.note == "Noted, Sam: it was OK."
+    said = outcomes.list_for_idea(conn, fine.id)[0]
+    assert (said.rating, said.would_repeat) == (6, None)
     # Didn't go is not an outcome: the idea goes back on the list to come up again.
     tapped = _tap(app, conn, f"missed:{_plan(conn, family, idea_id=missed.id).id}", tap_id="q2")
     assert tapped.note == "No harm done, Sam: it's back on the list."

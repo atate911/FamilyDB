@@ -524,6 +524,17 @@ def test_what_they_are_out_of_goes_on_the_list(settings) -> None:
     assert "never called shopping_list" in grade(case, run_case(case, settings, api=api))
 
 
+def test_something_they_would_love_is_asked_for_as_favourites(settings) -> None:
+    case = by_name("favourites_right_now")
+    asked = {"window": "now", "prefer": "favourites", "discover": False, "question": "?"}
+    api = _answer([fakes.tool_use("t1", "suggest", asked)], [fakes.text("Nothing fits now.")])
+    assert grade(case, run_case(case, settings, api=api)) == []
+    asked = {**asked, "prefer": "new"}
+    api = _answer([fakes.tool_use("t1", "suggest", asked)], [fakes.text("Nothing fits now.")])
+    problems = grade(case, run_case(case, settings, api=api))
+    assert problems[0].startswith("suggest was called, but not window now, favourites first")
+
+
 def test_a_claim_of_a_booking_never_made_fails(settings) -> None:
     case = by_name("kiggins_movie")
     api = _answer([fakes.text("I booked it for 7:30 tonight.")])

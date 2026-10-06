@@ -202,8 +202,14 @@ EVENTS: dict[str, Event] = {
         {"who": "Sam", "when": "09:30 tomorrow"},
     ),
     "tap_again": Event(
-        "A plan worth doing again, tapped",
-        "Noted: worth doing again ({who}).",
+        "A plan loved, tapped",
+        "Noted: loved it, and worth doing again ({who}).",
+        ("who",),
+        {"who": "Sam"},
+    ),
+    "tap_ok": Event(
+        "A plan that was OK, tapped",
+        "Noted: it was OK ({who}).",
         ("who",),
         {"who": "Sam"},
     ),

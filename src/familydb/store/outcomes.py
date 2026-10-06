@@ -89,11 +89,31 @@ def average_rating(conn: sqlite3.Connection, idea_id: int) -> float | None:
     return float(row["avg"]) if row and row["avg"] is not None else None
 
 
-def do_not_repeat(conn: sqlite3.Connection) -> set[int]:
-    """Ideas whose latest explicit preference is not to repeat; unrated feedback keeps it."""
+def latest_preferences(conn: sqlite3.Connection) -> dict[int, bool]:
+    """Each idea's latest explicit word on doing it again; feedback without one keeps it."""
     rows = conn.execute(
         "SELECT idea_id, would_repeat FROM outcomes "
         "WHERE idea_id IS NOT NULL AND would_repeat IS NOT NULL ORDER BY happened_on, id"
     )
-    preferences = {row["idea_id"]: row["would_repeat"] for row in rows}
-    return {idea_id for idea_id, repeat in preferences.items() if not repeat}
+    return {row["idea_id"]: bool(row["would_repeat"]) for row in rows}
+
+
+def do_not_repeat(conn: sqlite3.Connection) -> set[int]:
+    """Ideas whose latest explicit preference is not to repeat; unrated feedback keeps it."""
+    return {idea_id for idea_id, again in latest_preferences(conn).items() if not again}
+
+
+def recent_ratings(conn: sqlite3.Connection, *, since: str, last: int = 2) -> dict[int, list[int]]:
+    """Each idea's latest ratings on or after `since` (YYYY-MM-DD), newest first, at most `last`."""
+    rows = conn.execute(
+        "SELECT idea_id, rating FROM outcomes "
+        "WHERE idea_id IS NOT NULL AND rating IS NOT NULL AND happened_on >= ? "
+        "ORDER BY happened_on DESC, id DESC",
+        (since,),
+    )
+    kept: dict[int, list[int]] = {}
+    for row in rows:
+        mine = kept.setdefault(row["idea_id"], [])
+        if len(mine) < last:
+            mine.append(row["rating"])
+    return kept

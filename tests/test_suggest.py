@@ -180,6 +180,7 @@ def test_shortlist_rules(conn, full_settings, thursday_clock, family) -> None:
     bad = _idea(conn, "Bad restaurant", kind="restaurant", status="done")
     with db.transaction(conn):
         ideas.apply_outcome(conn, bad.id, happened_on="2026-01-10", avg_rating=3.0, now=NOW_ISO)
+    once = _idea(conn, "Off night", kind="restaurant", status="done", setting="indoor")
     adults = _idea(conn, "Wine bar", participants=["adults only"])
     winter = _idea(conn, "Ski day", seasons=["winter"])
     hike = _idea(conn, "The falls hike", setting="outdoor", duration_min=180)
@@ -191,16 +192,20 @@ def test_shortlist_rules(conn, full_settings, thursday_clock, family) -> None:
         context,
         Constraints(participants=["with the girls"], max_cost_level=2),
         full_settings,
+        ratings={bad.id: [3, 4], once.id: [3]},
     )
     reasons = {c.idea_id: c.reasons[0] for c in ruled_out}
     assert reasons[planned.id] == "already planned"
-    assert reasons[recent.id] == "done 1 week ago"
-    assert reasons[bad.id] == "rated 3/10 last time"
+    assert reasons[recent.id] == "done 5 days ago"
+    # Two disappointments in a row rule it out; one is said, and left to the family.
+    assert reasons[bad.id] == "rated 4 and 3/10 the last two times"
+    assert once.id not in reasons
     assert reasons[adults.id] == "for adults only"
     assert reasons[winter.id] == "for winter"
     assert reasons[pricey.id] == "over the budget asked for"
     kept_ids = {s.idea.id: s for s in kept}
-    assert set(kept_ids) == {hike.id, cafe.id, long_day.id}
+    assert set(kept_ids) == {hike.id, cafe.id, long_day.id, once.id}
+    assert kept_ids[once.id].caveat == "rated 3/10 last time" and kept_ids[cafe.id].caveat is None
     # Sunday is wet, so the hike only fits Saturday; the day trip needs a whole free day and
     # Saturday morning is busy, so it only fits Sunday (rain only matters outdoors).
     assert kept_ids[hike.id].fits_days == [SAT] and kept_ids[hike.id].weather == "ok"
@@ -988,3 +993,70 @@ def test_the_topic_is_folded_so_the_same_subject_is_one_search(
     for topic in ("Live  Jazz", "live jazz"):
         engine.run(ctx, SuggestInput(window="this_weekend", question="?", topic=topic))
     assert seen == ["live jazz", "live jazz"]
+
+
+def _done(conn, title, kind, days_ago, **fields):
+    """An idea done `days_ago` days before Thursday 24 September."""
+    idea = _idea(conn, title, kind=kind, status="done", **fields)
+    day = (date(2026, 9, 24) - timedelta(days=days_ago)).isoformat()
+    with db.transaction(conn):
+        ideas.apply_outcome(conn, idea.id, happened_on=day, avg_rating=None, now=NOW_ISO)
+    return idea
+
+
+def test_what_was_done_rests_by_its_kind(conn, full_settings, thursday_clock, family) -> None:
+    """A restaurant is good again sooner than a day trip; asked for favourites, a week will do."""
+    ctx = _weekend_ctx(conn, full_settings, thursday_clock, family)
+    context = build_context(ctx, (SAT, SUN))
+    ramen = _done(conn, "Ramen place", "restaurant", 25, setting="indoor")
+    pizza = _done(conn, "Pizza place", "restaurant", 10, setting="indoor")
+    coast = _done(conn, "Day at the coast", "day_trip", 100)
+    museum = _done(conn, "Science museum", "activity", 3, setting="indoor")
+    kept, ruled_out = shortlist(ideas.list_all(conn), context, Constraints(), full_settings)
+    reasons = {c.idea_id: c.reasons[0] for c in ruled_out}
+    assert ramen.id in {s.idea.id for s in kept}
+    assert reasons[pizza.id] == "done 1 week ago"
+    assert reasons[coast.id] == "done 14 weeks ago"
+    assert reasons[museum.id] == "done 3 days ago"
+    kept, ruled_out = shortlist(
+        ideas.list_all(conn), context, Constraints(), full_settings, prefer="favourites"
+    )
+    assert {s.idea.id for s in kept} >= {ramen.id, pizza.id, coast.id}
+    assert {c.idea_id: c.reasons[0] for c in ruled_out}[museum.id] == "done 3 days ago"
+
+
+def test_a_rating_counts_for_a_year(env) -> None:
+    """One disappointing visit is said and left to the family; two in a row rule it out; a year
+    on, neither counts."""
+    _, sad = call(env, "add_idea", title="Noodle bar", kind="restaurant", setting="indoor")
+    _, old = call(env, "add_idea", title="Old diner", kind="restaurant", setting="indoor")
+    for day, rating in (("2026-05-01", 4), ("2026-06-01", 2)):
+        call(env, "record_outcome", idea_id=sad["id"], happened_on=day, rating=rating)
+    for day in ("2025-03-01", "2025-04-01"):
+        call(env, "record_outcome", idea_id=old["id"], happened_on=day, rating=2)
+    shown = run(env.ctx, SuggestInput(window="someday", discover=False, question="?"))
+    by_id = {c.idea_id: c for c in shown.candidates}
+    assert by_id[sad["id"]].verdict == "ruled_out"
+    assert by_id[sad["id"]].reasons == ["rated 4 and 2/10 the last two times"]
+    assert by_id[old["id"]].verdict == "good"
+    call(env, "record_outcome", idea_id=sad["id"], happened_on="2026-07-01", rating=8)
+    call(env, "record_outcome", idea_id=old["id"], happened_on="2026-07-01", rating=3)
+    shown = run(env.ctx, SuggestInput(window="someday", discover=False, question="?"))
+    by_id = {c.idea_id: c for c in shown.candidates}
+    assert by_id[sad["id"]].verdict == "good"
+    assert by_id[old["id"]].verdict == "possible"
+    assert by_id[old["id"]].reasons[0] == "rated 3/10 last time"
+
+
+def test_favourites_come_first_when_asked_for(env) -> None:
+    _, new = call(env, "add_idea", title="New climbing gym", kind="activity", setting="indoor")
+    _, loved = call(env, "add_idea", title="Thai Bloom", kind="restaurant", setting="indoor")
+    _, fine = call(env, "add_idea", title="Bowling", kind="activity", setting="indoor")
+    call(env, "record_outcome", idea_id=loved["id"], happened_on="2026-06-01", would_repeat=True)
+    call(env, "record_outcome", idea_id=fine["id"], happened_on="2026-06-01", rating=6)
+    asked = {"window": "someday", "discover": False, "question": "?"}
+    order = [c.idea_id for c in run(env.ctx, SuggestInput(**asked)).candidates]
+    assert order[0] == new["id"]  # something new, by default
+    shown = run(env.ctx, SuggestInput(**asked, prefer="favourites")).candidates
+    assert [c.idea_id for c in shown] == [loved["id"], fine["id"], new["id"]]
+    assert shown[0].reasons[0] == "loved last time" and "loved last time" not in shown[1].reasons

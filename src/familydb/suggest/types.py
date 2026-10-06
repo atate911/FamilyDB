@@ -55,6 +55,9 @@ class SuggestInput(BaseModel):
         description="What kind of thing, a few words: live jazz, puppet show. Empty for anything.",
     )
     discover: bool = Field(default=True, description="Also look for time-bound events on the web.")
+    prefer: Literal["new", "favourites"] = Field(
+        default="new", description="favourites for what they loved before: 'our usual'."
+    )
     question: str = Field(description="The family's question, verbatim.")
 
 
@@ -200,3 +203,5 @@ class Shortlisted:
     idea: Idea
     fits_days: list[date]
     weather: Literal["ok", "poor", "unknown"]
+    # Said first and making it possible at best: one disappointing visit ("rated 3/10 last time").
+    caveat: str | None = None

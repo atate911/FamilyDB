@@ -644,7 +644,17 @@ CASES: tuple[Case, ...] = (
     Case(
         "favourites_right_now",
         ("Give me something expected we could do right now that we'd love.",),
-        (window("now"), never(*DIRECT), wrote_only()),
+        (
+            called(
+                "suggest",
+                where=lambda c: (
+                    c.input.get("window") == "now" and c.input.get("prefer") == "favourites"
+                ),
+                what="window now, favourites first",
+            ),
+            never(*DIRECT),
+            wrote_only(),
+        ),
         'Right now, and "expected" as the owner said it: something they know they love.',
     ),
     Case(

@@ -39,7 +39,15 @@ log = logging.getLogger(__name__)
 
 # (action, label) per kind of message; what each does is in `_task_job` and `_plan_job`.
 REMINDER = (("done", "✓ Done"), ("hour", "In an hour"), ("tomorrow", "Tomorrow"))
-FOLLOW_UP = (("again", "Yes, again"), ("not_again", "Not again"), ("missed", "Didn't go"))
+FOLLOW_UP = (
+    ("again", "Loved it"),
+    ("ok", "It was OK"),
+    ("not_again", "Not again"),
+    ("missed", "Didn't go"),
+)
+# How each answer to "How was it?" is kept: the rating, out of ten, and whether to do it again
+# (None: not said). The page's three faces keep the same ratings (web/edits.py FACES).
+WENT = {"again": (9, True), "ok": (6, None), "not_again": (3, False)}
 WISH = (("wish_yes", "Yes!"), ("wish_no", "Not this time"), ("wish_later", "Later"))
 UNDO = (("undo", "↩ Undo"),)
 # A thing on a list, ticked as bought (/list); its label is the thing's own.
@@ -277,12 +285,11 @@ def _plan_job(app: Any, conn: sqlite3.Connection, action: str, plan_id: int) -> 
         if idea.status == "dropped":
             return "tap_already"
         return _Job("update_idea", {"id": idea.id, "status": "idea"}, about, "tap_missed")
-    return _Job(
-        "record_outcome",
-        {"plan_id": plan.id, "happened_on": day, "would_repeat": action == "again"},
-        about,
-        "tap_again" if action == "again" else "tap_not_again",
-    )
+    rating, again = WENT[action]
+    values: dict[str, Any] = {"plan_id": plan.id, "happened_on": day, "rating": rating}
+    if again is not None:
+        values["would_repeat"] = again
+    return _Job("record_outcome", values, about, f"tap_{action}")
 
 
 def snoozed_until(action: str, now: datetime) -> datetime:

@@ -16,7 +16,7 @@ from familydb.suggest.discover import discover
 from familydb.suggest.evaluate import evaluate
 from familydb.suggest.log import log_suggestion
 from familydb.suggest.origin import resolve as resolve_origin
-from familydb.suggest.shortlist import shortlist
+from familydb.suggest.shortlist import FAVOURITE_RATING, RATING_DAYS, shortlist
 from familydb.suggest.types import (
     DAY_END,
     DAY_START,
@@ -126,7 +126,15 @@ def run(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> 
         # Folded, so the same subject is the same search.
         topic=" ".join(args.topic.casefold().split())[:MAX_TOPIC],
     )
-    excluded = outcomes.do_not_repeat(ctx.conn)
+    # What the family said of what they did: "not again" leaves it out, a rating counts for a
+    # year, and "again" or a high rating is a favourite.
+    again = outcomes.latest_preferences(ctx.conn)
+    excluded = {idea_id for idea_id, yes in again.items() if not yes}
+    year_ago = ctx.clock.today() - timedelta(days=RATING_DAYS)
+    ratings = outcomes.recent_ratings(ctx.conn, since=year_ago.isoformat())
+    loved = {idea_id for idea_id, yes in again.items() if yes} | {
+        idea_id for idea_id, said in ratings.items() if said and said[0] >= FAVOURITE_RATING
+    }
     kept, ruled_out = shortlist(
         [idea for idea in all_ideas if idea.id not in excluded],
         context,
@@ -134,6 +142,8 @@ def run(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> 
         ctx.settings,
         people=members.list_all(ctx.conn),
         plans=plans.latest_by_idea(ctx.conn),
+        ratings=ratings,
+        prefer=args.prefer,
     )
     ruled_out.extend(
         Candidate(
@@ -152,7 +162,7 @@ def run(ctx: ToolContext, args: SuggestInput, *, refresh_stale: bool = True) -> 
     since = utc_iso(ctx.clock.now() - timedelta(days=RECENT_SUGGESTION_DAYS))
     recently = suggestions.recently_suggested(ctx.conn, since=since)
     by_id = {idea.id: idea for idea in all_ideas}
-    shown, held_back = choose(candidates, by_id, recently)
+    shown, held_back = choose(candidates, by_id, recently, prefer=args.prefer, loved=loved)
     skipped = list(context.skipped)
     if unknown:
         # A wrong number must not quietly empty the answer: say so, widen when nothing is left.

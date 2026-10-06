@@ -200,9 +200,10 @@ def evaluate(
         idea = item.idea
         place = places.get(conn, idea.place_id) if idea.place_id else None
         checks = Checks(weather=item.weather)
-        reasons: list[str] = []
+        # A disappointment last time is said first, and it is possible at best.
+        reasons: list[str] = [item.caveat] if item.caveat else []
         hard_fail = False
-        soft = False
+        soft = item.caveat is not None
         fits = list(item.fits_days)
         travel = travel_minutes(place, context, settings)
 

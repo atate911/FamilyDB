@@ -17,8 +17,19 @@ from familydb.store.members import Member
 from familydb.suggest import people as who
 from familydb.suggest.types import Candidate, Constraints, Context, Shortlisted
 
-RECENTLY_DONE_DAYS = 60
-LOW_RATING = 5.0
+# How long an idea that was done rests before it is offered again, by kind: a restaurant is good
+# again sooner than a day trip. Any other kind rests REST_DAYS; asked for their favourites ("our
+# usual"), a week is enough.
+REST_DAYS = 60
+REST_BY_KIND = {"restaurant": 21, "activity": 30, "outing": 60, "day_trip": 180}
+FAVOURITE_REST_DAYS = 7
+# A rating below this is a disappointment. Only the last two in a year count: one is feedback, not
+# a dislike (docs/MEMORY.md), so it is offered as possible with the rating said; two in a row rule
+# it out. Older ones have lapsed: the place, or the family, has moved on.
+LOW_RATING = 5
+RATING_DAYS = 365
+# Loved: a rating this high last time, or "again" the latest word on it.
+FAVOURITE_RATING = 8
 RAIN_CHANCE_MAX = 50
 RAIN_CODES = {51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99}
 SNOW_CODES = {71, 73, 75, 77, 85, 86}
@@ -58,29 +69,52 @@ def day_has_snow(forecast: DayForecast | None) -> bool | None:
     return forecast.code in SNOW_CODES
 
 
-def _status_reason(idea: Idea, today: date, plan: tuple[date, date] | None) -> str | None:
+def rest_days(idea: Idea, prefer: str = "new") -> int:
+    """How long this idea rests once done before it is offered again."""
+    if prefer == "favourites":
+        return FAVOURITE_REST_DAYS
+    return REST_BY_KIND.get(idea.kind.casefold(), REST_DAYS)
+
+
+def _status_reason(
+    idea: Idea, today: date, plan: tuple[date, date] | None, rest: int = REST_DAYS
+) -> str | None:
     """Why an idea is not for now, from what became of it. `plan` is its latest live plan's first
     and last day: a planned idea is out while that is to come, and once it is over counts as done
-    on its day, so an idea nobody said how it went is not left out for good."""
+    on its day, so an idea nobody said how it went is not left out for good. `rest` is how many
+    days a done one rests (`rest_days`)."""
     if idea.status == "planned":
         if plan is None:
             return "already planned"
         first, last = plan
         if last >= today:
             return f"already planned for {day_text(first)}"
-        if (today - last).days < RECENTLY_DONE_DAYS:
+        if (today - last).days < rest:
             return f"was planned for {day_text(first)}"
     elif idea.status == "done" and idea.last_done_at:
         try:
             days_ago = (today - date.fromisoformat(idea.last_done_at[:10])).days
         except ValueError:
             days_ago = None
-        if days_ago is not None and days_ago < RECENTLY_DONE_DAYS:
-            weeks = max(1, days_ago // 7)
+        if days_ago is not None and days_ago < rest:
+            if days_ago < 7:
+                return {0: "done today", 1: "done yesterday"}.get(
+                    days_ago, f"done {days_ago} days ago"
+                )
+            weeks = days_ago // 7
             return f"done {weeks} week{'s' if weeks != 1 else ''} ago"
-    if idea.avg_rating is not None and idea.avg_rating < LOW_RATING:
-        return f"rated {idea.avg_rating:g}/10 last time"
     return None
+
+
+def rating_reason(ratings: Sequence[int]) -> tuple[str | None, str | None]:
+    """(why it is out, what to say of it) from its ratings in the last year, newest first."""
+    last = list(ratings[:2])
+    if len(last) == 2 and all(rating < LOW_RATING for rating in last):
+        said = f"{last[0]}" if last[0] == last[1] else f"{last[1]} and {last[0]}"
+        return f"rated {said}/10 the last two times", None
+    if last and last[0] < LOW_RATING:
+        return None, f"rated {last[0]}/10 last time"
+    return None, None
 
 
 def day_text(day: date) -> str:
@@ -232,9 +266,13 @@ def shortlist(
     *,
     people: Sequence[Member] | None = None,
     plans: Mapping[int, tuple[date, date]] | None = None,
+    ratings: Mapping[int, Sequence[int]] | None = None,
+    prefer: str = "new",
 ) -> tuple[list[Shortlisted], list[Candidate]]:
     """(kept for evaluation, ruled out with reasons). `people` is the family list, to read who
-    is coming by; `plans` each idea's latest live plan (`store.plans.latest_by_idea`)."""
+    is coming by; `plans` each idea's latest live plan (`store.plans.latest_by_idea`); `ratings`
+    each idea's in the last year, newest first (`store.outcomes.recent_ratings`); `prefer` what
+    they asked for, new things or favourites, which rest less."""
     kept: list[Shortlisted] = []
     ruled_out: list[Candidate] = []
 
@@ -248,7 +286,13 @@ def shortlist(
             continue
         if idea.status == "dropped" or idea.kind.casefold() == GIFT:
             continue
-        reason = _status_reason(idea, context.today, (plans or {}).get(idea.id))
+        reason = _status_reason(
+            idea, context.today, (plans or {}).get(idea.id), rest_days(idea, prefer)
+        )
+        if reason:
+            out(idea, reason)
+            continue
+        reason, caveat = rating_reason((ratings or {}).get(idea.id, ()))
         if reason:
             out(idea, reason)
             continue
@@ -267,7 +311,7 @@ def shortlist(
             out(idea, reason)
             continue
         if context.window is None:
-            kept.append(Shortlisted(idea, [], "unknown"))
+            kept.append(Shortlisted(idea, [], "unknown", caveat))
             continue
         fits, weather_state, reason = _weather_fit(idea, context, settings)
         if reason:
@@ -277,5 +321,5 @@ def shortlist(
         if reason:
             out(idea, reason)
             continue
-        kept.append(Shortlisted(idea, fits, weather_state))  # type: ignore[arg-type]
+        kept.append(Shortlisted(idea, fits, weather_state, caveat))  # type: ignore[arg-type]
     return kept, ruled_out
