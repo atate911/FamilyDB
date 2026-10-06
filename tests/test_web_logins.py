@@ -355,7 +355,7 @@ def test_the_chat_speaks_as_whoever_is_signed_in(app, sam, family, conn) -> None
     assert made  # replaced straight away
     alex = _as(app, "Alex", ALEXS, api=fakes.FakeMessagesAPI(*replies))
     page = alex.get("/chat").text
-    assert "From <strong>Alex</strong>" in page and 'name="who"' not in page
+    assert "Writing as <b>Alex</b>" in page and 'name="who"' not in page
     form = {**_tokens(alex, "/chat"), "text": "what should we do?", "who": "Sam"}
     assert alex.post("/chat", data=form).status_code == 302
     assert alex.chat.wait(10)

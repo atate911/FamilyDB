@@ -108,8 +108,9 @@ def test_what_is_on_your_mind_is_asked_on_home_and_answered_in_the_chat(
     assert sent.status_code == 302 and sent.headers["Location"] == "/chat#latest"
     assert web.config["FAMILYDB_CHAT"].wait(10)
     chat = client.get("/chat").text
-    assert chat.index("what should we do this weekend?") < chat.index("Saturday looks dry.")
-    assert "<strong>Vera</strong>" in chat and "<h1>Vera</h1>" in chat
+    room = chat[chat.index('class="scroller"') :]
+    assert room.index("what should we do this weekend?") < room.index("Saturday looks dry.")
+    assert '<div class="msg__by">Vera <time>' in chat and "<h1>Chat with Vera</h1>" in chat
 
     # Back home, what she said is the line under the box, a tap from the rest of it.
     home = client.get("/").text
@@ -211,8 +212,7 @@ def test_home_says_when_she_is_answering_and_keeps_its_own_box_open(
     # Home never looks again by itself, so its box stays open: what is typed there is kept, and
     # a send before she is done is refused with the words handed back.
     assert 'http-equiv="refresh"' not in home and "disabled" not in _box(home)
-    chat_box = re.search(r'<form class="ask".*?</form>', client.get("/chat").text, re.S)
-    assert chat_box and "disabled" in chat_box.group(0)  # the chat's is closed meanwhile
+    assert "disabled" in _box(client.get("/chat").text)  # the chat's is closed meanwhile
     release.set()
     assert web.config["FAMILYDB_CHAT"].wait(10)
 

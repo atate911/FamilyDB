@@ -916,6 +916,9 @@ def outcome_row(outcome: Outcome) -> dict[str, Any]:
     }
 
 
+FAILED_WORDS = "this one did not go through"
+
+
 def chat_line(
     message: Message,
     names: dict[int, str],
@@ -924,6 +927,7 @@ def chat_line(
     did: list[str],
     waiting: bool,
     assistant: str,
+    slots: dict[str, int] | None = None,
 ) -> dict[str, Any]:
     """One message in the chat. `did` is the turn's tool calls, which the log stores against the
     question but which belong under the answer. `waiting` (nothing has replied yet) is a fact about
@@ -932,29 +936,44 @@ def chat_line(
     trouble = None
     if not from_bot:
         if message.status == "failed":
-            trouble = "this one did not go through"
+            trouble = FAILED_WORDS
         elif waiting:
             trouble = "waiting for an answer"
+    who = assistant if from_bot else names.get(message.member_id or -1, "someone")
     return {
         "id": message.id,
-        "who": assistant if from_bot else names.get(message.member_id or -1, "someone"),
+        "who": who,
         "from_bot": from_bot,
         "text": message.text,
         "when": local_moment(message.received_at, tz),
+        # The family's own date, for the lines that say when the day changed.
+        "day": local_day(message.received_at, tz),
+        "clock": local_clock(message.received_at, tz),
+        "slot": 0 if from_bot else slot_of(who, slots or {}),
+        "initial": "" if from_bot else who[:1].upper(),
         "trouble": trouble,
+        "failed": trouble == FAILED_WORDS,
         "did": did if from_bot else [],
     }
 
 
-def handed_line(who: str, text: str, now: datetime, tz: ZoneInfo) -> dict[str, Any]:
+def handed_line(
+    who: str, text: str, now: datetime, tz: ZoneInfo, slots: dict[str, int] | None = None
+) -> dict[str, Any]:
     """A message just sent that the log does not hold yet, drawn as it will be."""
+    stamp = now.astimezone(UTC).isoformat()
     return {
         "id": None,
         "who": who,
         "from_bot": False,
         "text": text,
-        "when": local_moment(now.astimezone(UTC).isoformat(), tz),
+        "when": local_moment(stamp, tz),
+        "day": local_day(stamp, tz),
+        "clock": local_clock(stamp, tz),
+        "slot": slot_of(who, slots or {}),
+        "initial": who[:1].upper(),
         "trouble": "waiting for an answer",
+        "failed": False,
         "did": [],
     }
 
@@ -1182,6 +1201,40 @@ def lookups_when(settings: Any) -> str:
     if settings.lookups_when == "asap":
         return "as soon as each is added"
     return f"together at {settings.lookup_hour:02d}:00 each evening"
+
+
+def local_clock(value: str, tz: ZoneInfo) -> str:
+    """A stored time as the family's clock reads it: "19:48"."""
+    try:
+        moment = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return ""
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=UTC)
+    return f"{moment.astimezone(tz):%H:%M}"
+
+
+def day_heading(day: str, today: date) -> str:
+    """The line that says the day changed in a chat: "Today", "Yesterday", "Sunday 27 September"."""
+    try:
+        when = date.fromisoformat(day)
+    except ValueError:
+        return day
+    if when == today:
+        return "Today"
+    if when == today - timedelta(days=1):
+        return "Yesterday"
+    return f"{when:%A} {when.day} {when:%B}" + (f" {when.year}" if when.year != today.year else "")
+
+
+def snippet(message: Message | None, assistant: str, names: dict[int, str], room: int = 60) -> str:
+    """The last thing said in a conversation, short, for the list of conversations."""
+    if message is None:
+        return ""
+    who = assistant if message.direction == "out" else names.get(message.member_id or -1, "")
+    text = " ".join(message.text.split())
+    text = text if len(text) <= room else text[: room - 1].rstrip() + "…"
+    return f"{who}: {text}" if who else text
 
 
 def local_moment(value: str, tz: ZoneInfo) -> str:

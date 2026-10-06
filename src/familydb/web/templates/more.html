@@ -5,7 +5,7 @@
   {# The phone's menu. Grown-ups: everything the tab bar has no room for. A kid: her other pages and signing out. #}
   {{ page_head('Menu', lede='Everything that isn’t in the tab bar.' if grownup else 'Your other pages, and signing out.') }}
 
-  {% if who.member %}
+  {% if viewer.member %}
     <ul class="slist">
       {% set lead %}{{ avatar(shell.me.slot, shell.me.initial, 'lg') }}{% endset %}
       {{ srow(url_for('family.you'), 'Signed in as ' ~ shell.me.name, (shell.me.role | capitalize) ~ ' · Your password', lead=lead) }}
@@ -48,7 +48,7 @@
     </ul>
   {% endif %}
 
-  {% if who.signed_in %}
+  {% if viewer.signed_in %}
     <form class="mt-4" method="post" action="{{ url_for('auth.logout') }}">
       <button class="btn btn--quiet" type="submit">{{ icon('signout', size='sm') }}Sign out</button>
     </form>

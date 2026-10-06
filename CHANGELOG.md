@@ -28,6 +28,13 @@ older than what is installed. It gets a date when it is released.
   today. A kid's Home is simpler: her box, what is next for her, her list and
   her own to-dos. The ways to start under the box are gone. Each of you has a
   colour, kept with your name.
+- **A new Chat.** Each person's messages wear their own colour and letter, the
+  day is said where it changes, and Vera is her screen beside her lines. A
+  parent moves between the family's conversation and each kid's (the list
+  shows when a kid last wrote, never what), a kid is told who can read hers,
+  and "Earlier messages" goes further back. While Vera is writing back, the
+  page looks again soon, then less often, then stops and leaves a link: "Check
+  for her answer".
 
 
 ## v0.2.0 — second alpha (2026-10-05)

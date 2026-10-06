@@ -46,12 +46,12 @@
   } %}
   {% set ns = namespace(section='none') %}
   {% for name, owns in SECTIONS.items() %}{% if here in owns %}{% set ns.section = name %}{% endif %}{% endfor %}
-  {% set who = visitor() %}
+  {% set viewer = visitor() %}
   {% set shell = shell_frame() %}
   {# Grown-ups browse the household; a kid's screen is simpler (roles.py `browse`). #}
-  {% set grownup = who.may('browse') %}
-  {% set managing = who.may('manage') %}
-  {% set wishing = 'decide' if who.may('decide') else ('wish' if who.may('wish') and who.member else none) %}
+  {% set grownup = viewer.may('browse') %}
+  {% set managing = viewer.may('manage') %}
+  {% set wishing = 'decide' if viewer.may('decide') else ('wish' if viewer.may('wish') and viewer.member else none) %}
   <body class="{% block body_class %}{% endblock %}">
     <a class="skip" href="#main">Skip to content</a>
 
@@ -84,7 +84,7 @@
           <nav aria-label="Pages">
             <ul class="nav">
               {{ nav_item('Home', url_for('web.home'), 'home', 'home') }}
-              {% if who.may('chat') %}{{ nav_item('Chat with ' ~ assistant if has_persona else 'Chat', url_for('chat.show', _anchor='latest'), 'chat', 'chat') }}{% endif %}
+              {% if viewer.may('chat') %}{{ nav_item('Chat with ' ~ assistant if has_persona else 'Chat', url_for('chat.show', _anchor='latest'), 'chat', 'chat') }}{% endif %}
               {{ nav_item('Ideas', url_for('web.ideas'), 'ideas', 'bulb') }}
               {{ nav_item('Plans', url_for('web.plans'), 'plans', 'cal', count=(badge('quiet', shell.rate, 'to rate') if shell.rate else none)) }}
               {{ nav_item('To do' if grownup else 'My to-dos', url_for('web.tasks'), 'todo', 'todo', count=(badge('late', shell.late, 'late') if shell.late else none)) }}
@@ -111,8 +111,8 @@
               <span>{{ shell.me.role | capitalize if shell.me.role else 'One shared password' }}</span>
               <span class="me__acts">
                 <a href="{{ url_for('look.show') }}"{% if ns.section == 'look' %} aria-current="page"{% endif %}>Look</a>
-                {% if who.member %}<a href="{{ url_for('family.you') }}"{% if ns.section == 'you' %} aria-current="page"{% endif %}>Your password</a>{% endif %}
-                {% if who.signed_in %}
+                {% if viewer.member %}<a href="{{ url_for('family.you') }}"{% if ns.section == 'you' %} aria-current="page"{% endif %}>Your password</a>{% endif %}
+                {% if viewer.signed_in %}
                   <form method="post" action="{{ url_for('auth.logout') }}"><button class="textbtn" type="submit">Sign out</button></form>
                 {% endif %}
               </span>
@@ -137,7 +137,7 @@
     {# The phone's tabs: five, by what a role may do. A kid has her list where a grown-up has Ideas; the rest is in the menu behind the picture. #}
     <nav class="tabbar" aria-label="Pages">
       {{ tab('Home', url_for('web.home'), 'home', 'home') }}
-      {% if who.may('chat') %}{{ tab('Chat', url_for('chat.show', _anchor='latest'), 'chat', 'chat') }}{% endif %}
+      {% if viewer.may('chat') %}{{ tab('Chat', url_for('chat.show', _anchor='latest'), 'chat', 'chat') }}{% endif %}
       {% if grownup %}{{ tab('Ideas', url_for('web.ideas'), 'ideas', 'bulb') }}
       {% elif wishing %}{{ tab('My list', url_for('web.wishes'), 'wishes', 'gift') }}{% endif %}
       {{ tab('Plans', url_for('web.plans'), 'plans', 'cal') }}

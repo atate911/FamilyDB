@@ -147,3 +147,39 @@
     <span></span>
   </a>
 {%- endmacro %}
+
+
+{# One message in the chat. Hers is on the left beside her screen; the family's carry their own colour and letter, and `mine` (the person looking) sits on the right, so side and mark tell them apart, not colour alone. `anchor` is the id the newest line carries. #}
+{% macro msg(line, mine=false, anchor=none) -%}
+  {% if line.from_bot %}
+    <div class="msg msg--vera"{% if anchor %} id="{{ anchor }}"{% endif %}>
+      {{ vera_screen() }}
+      <div class="msg__bub">
+        <div class="msg__by">{{ line.who }} <time>{{ line.clock }}</time></div>
+        <div class="msg__text">{{ line.text }}</div>
+        {% if line.did %}<div class="msg__did">Used {{ line.did | join(', ') }}</div>{% endif %}
+      </div>
+    </div>
+  {% else %}
+    <div class="msg msg--person p{{ line.slot }}{{ ' msg--mine' if mine }}{{ ' msg--failed' if line.failed }}"{% if anchor %} id="{{ anchor }}"{% endif %}>
+      {{ avatar(line.slot, line.initial) }}
+      <div class="msg__bub">
+        <div class="msg__by">{{ line.who }} <time>{{ line.clock }}</time></div>
+        <div class="msg__text">{{ line.text }}</div>
+        {% if line.failed %}<div class="msg__fail">{{ icon('alert', size='sm') }}<span>This one didn’t go through.</span></div>{% endif %}
+      </div>
+    </div>
+  {% endif %}
+{%- endmacro %}
+
+{# The thread's last line while the newest message waits: her screen (typing while she writes back), her name, and the page's own words, with a way to look again that works with no script. #}
+{% macro msg_pending(name, state, text, link) -%}
+  <div class="msg msg--vera msg--pending" role="status">
+    {{ vera_screen('', 'busy' if state == 'thinking' else '') }}
+    <div class="msg__bub">
+      <div class="msg__by">{{ name }}</div>
+      {{ text }}{% if state == 'thinking' %}<span class="typing" aria-hidden="true"><i></i><i></i><i></i></span>{% endif %}
+      <br><a href="{{ link }}">Check for her answer</a>
+    </div>
+  </div>
+{%- endmacro %}

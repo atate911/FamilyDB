@@ -31,6 +31,7 @@ from familydb.store import members as member_store
 from familydb.store import messages as message_store
 from familydb.store.messages import Message
 from familydb.web import auth, views
+from familydb.web import status as status_page
 from familydb.web.once import once
 
 log = logging.getLogger(__name__)
@@ -42,13 +43,17 @@ WHO_KEY = "who"
 # Whether this browser sends where it is with each message: off until someone ticks the box.
 WHERE_KEY = "send_where"
 THREAD_LIMIT = 60
-REFRESH_SECONDS = 3
+# While an answer is on its way a page asks again soon, then less often, then stops and leaves a
+# visible link: a page left open does not ask all night. Seconds before each next look, by what the
+# message is waiting for; a message waiting on the retry job takes minutes, so it asks less often.
+REFRESH_STEPS = {"thinking": (3, 5, 10, 10, 10, 10, 10), "retrying": (30, 30)}
+REFRESH_SECONDS = REFRESH_STEPS["thinking"][0]
 # The newest line carries this id and every way back points at it: without a script nothing else
 # scrolls the page.
 LATEST = "latest"
 NOBODY = "Say who is asking."
 NO_FAMILY = "There is nobody in the family list yet. Add someone on the Family page."
-RETRY_REFRESH_SECONDS = 30
+RETRY_REFRESH_SECONDS = REFRESH_STEPS["retrying"][0]
 # Slack on top of every attempt the settings allow, a retry interval apart.
 RETRY_SLACK_MINUTES = 5
 # What the page says in her place while the newest message waits: its words, no model call.
@@ -212,58 +217,88 @@ def glance(app: App, conn: Any) -> dict[str, Any]:
     return {"state": state, "note": notes.get(state or "", "").format(name=name), "line": line}
 
 
+def refresh_after(state: str | None, looked: int) -> int | None:
+    """Seconds before the page next asks for the answer, or None once it has asked enough.
+    `looked` is how many times it already has."""
+    steps = REFRESH_STEPS.get(state or "", ())
+    return steps[looked] if 0 <= looked < len(steps) else None
+
+
 def page(
     *,
     error: str | None = None,
     typed: str | None = None,
     status: int = 200,
     reading: member_store.Member | None = None,
+    before: int | None = None,
+    looked: int = 0,
 ) -> Any:
-    """Draw the chat. `reading` is a kid whose conversation a parent is reading: no box."""
+    """Draw the chat. `reading` is a kid whose conversation a parent is reading: no box. `before`
+    is the message to read earlier ones than; `looked` how often the page has already asked."""
     app = _app()
+    visitor = auth.visitor()
     chat_id = private_chat(reading.id) if reading is not None else my_chat()
+    tz = app.settings.tzinfo
+    assistant = personas.active(app.settings).name
+    kid_chat = chat_id != DEFAULT_CHAT and reading is None
     with closing(app.connect()) as conn:
         family = member_store.list_all(conn)
-        thread = message_store.last_for_chat(conn, chat_id, limit=THREAD_LIMIT)
-    kids = [m for m in family if m.role == "kid"] if auth.visitor().may("decide") else []
-    names = {member.id: member.display_name for member in family}
+        thread = message_store.last_for_chat(conn, chat_id, limit=THREAD_LIMIT, before=before)
+        older = bool(thread) and message_store.has_before(conn, chat_id, thread[0].id)
+        kids = [m for m in family if m.role == "kid"] if visitor.may("decide") else []
+        names = {member.id: member.display_name for member in family}
+        slots = views.slot_map(family)
+        convos = _conversations(conn, app, family, kids, chat_id, assistant) if kids else []
+        if kid_chat:  # hers is the only one, drawn the same way
+            said = views.snippet(thread[-1] if thread else None, assistant, names)
+            convos = [
+                {
+                    **views.person_of(visitor.name, slots),
+                    "name": f"You and {assistant}",
+                    "href": url_for("chat.show", _anchor=LATEST),
+                    "current": True,
+                    "snippet": said or "No messages yet",
+                }
+            ]
+        left = messages_left(app, conn, visitor.member)
     # The log keeps a turn's tool calls against the question; the page shows them under the answer.
     answered = {message.reply_to for message in thread if message.reply_to is not None}
     actions = {message.id: message.actions for message in thread}
-    assistant = personas.active(app.settings).name
     lines = [
         views.chat_line(
             message,
             names,
-            app.settings.tzinfo,
+            tz,
             did=views.tools_used(actions.get(message.reply_to)),
             waiting=message.id not in answered,
             assistant=assistant,
+            slots=slots,
         )
         for message in thread
     ]
     last = thread[-1] if thread else None
-    state, handing = standing(app, thread, chat_id)
+    # Older messages are only to be read: nothing is on its way there, so nothing waits.
+    state, handing = (None, None) if before else standing(app, thread, chat_id)
     if handing is not None:
         lines.append(
-            views.handed_line(
-                handing.member_name, handing.text, app.clock.now(), app.settings.tzinfo
-            )
+            views.handed_line(handing.member_name, handing.text, app.clock.now(), tz, slots)
         )
+    today = app.clock.today()
+    for line in lines:  # where the day changes, the thread says so
+        line["heading"] = views.day_heading(line["day"], today)
     # A page holding typed words never refreshes (it would lose them); with nothing typed the box
     # is closed while an answer is on its way.
     held = bool(typed and typed.strip())
     locked = state == "thinking" and not held
-    refresh = None
-    if not held:
-        refresh = {"thinking": REFRESH_SECONDS, "retrying": RETRY_REFRESH_SECONDS}.get(state or "")
-    retrying = RETRYING if auth.visitor().may("browse") else RETRYING_PLAIN
-    name = personas.active(app.settings).name
+    refresh = None if held else refresh_after(state, looked)
+    retrying = RETRYING if visitor.may("browse") else RETRYING_PLAIN
     pending = {
         "thinking": HELD if held else THINKING,
-        "retrying": retrying.format(name=name),
+        "retrying": retrying.format(name=assistant),
         "lost": LOST,
     }
+    who_here = _room(family, chat_id, reading, assistant, slots)
+    with_kid = {"with": reading.id} if reading else {}
     return (
         render_template(
             "chat.html",
@@ -272,33 +307,148 @@ def page(
             state=state,
             pending=pending.get(state or ""),
             typed=typed or (last.text if state == "lost" and last else None),
-            starters=[] if lines else views.starters(app.clock.today(), kid=is_kid()),
             error=error or (NO_FAMILY if not family else None),
             refresh=refresh,
             # With the box open, the script looks again, only on a GET (reloading a post resends).
             look_again=refresh if refresh and not locked and request.method == "GET" else None,
-            here=url_for("chat.show", _anchor=LATEST, **({"with": reading.id} if reading else {})),
+            here=url_for(
+                "chat.show", n=looked + 1, **with_kid, _anchor=LATEST
+            ),  # the next look, one further along
+            check=url_for("chat.show", **with_kid, _anchor=LATEST),  # a look from the start
             latest=LATEST,
             reading=reading.display_name if reading else None,
-            kids=[{"id": kid.id, "name": kid.display_name} for kid in kids],
-            private=chat_id != DEFAULT_CHAT and reading is None,
+            private=kid_chat,
+            convos=convos,
+            room=who_here,
+            earlier=url_for("chat.show", before=thread[0].id, **with_kid) if older else None,
+            newest=url_for("chat.show", **with_kid, _anchor=LATEST) if before else None,
+            where="chat",
+            readers=_readers(family),
+            telegram=_telegram(app) if visitor.may("browse") else None,
+            me=_me(visitor, slots),
+            left=left,
         ),
         status,
     )
 
 
+def _readers(family: list[member_store.Member]) -> str:
+    """Who may read a kid's conversation: the people who decide, as "Sam and Alex"."""
+    return views.names_text(
+        [{"name": m.display_name} for m in family if roles.may(m.role, "decide")]
+    )
+
+
+def _me(visitor: auth.Visitor, slots: dict[str, int]) -> dict[str, Any] | None:
+    """The person writing, with their colour; None while the family shares one password."""
+    return views.person_of(visitor.name, slots) if visitor.name else None
+
+
+def _telegram(app: App) -> tuple[str, str]:
+    """How the other way in stands, for a grown-up: (the tag's state, its words)."""
+    if status_page.telegram_name(app):
+        return "ok", "Telegram: connected"
+    return "better", "Telegram: not connected"
+
+
+def _room(
+    family: list[member_store.Member],
+    chat_id: str,
+    reading: member_store.Member | None,
+    assistant: str,
+    slots: dict[str, int],
+) -> dict[str, Any]:
+    """Whose conversation this is: who is in it, and what it is called."""
+    if reading is not None:
+        return {
+            "title": f"{reading.display_name} and {assistant}",
+            "line": "Her own conversation, for you to read",
+            "people": [views.person_of(reading.display_name, slots)],
+        }
+    if chat_id != DEFAULT_CHAT:
+        return {
+            "title": f"You and {assistant}",
+            "line": "",
+            "people": [views.person_of(auth.visitor().name, slots)],
+        }
+    people = [views.person_of(m.display_name, slots) for m in family]
+    return {
+        "title": "Family",
+        "line": views.names_text([*people, {"name": assistant}]),
+        "people": people,
+    }
+
+
+def _conversations(
+    conn: Any,
+    app: App,
+    family: list[member_store.Member],
+    kids: list[member_store.Member],
+    chat_id: str,
+    assistant: str,
+) -> list[dict[str, Any]]:
+    """The family's conversation and each kid's, for a parent to move between, with the last thing
+    said in each."""
+    names = {member.id: member.display_name for member in family}
+    slots = views.slot_map(family)
+    rows = [
+        {
+            "name": "Family",
+            "slot": 0,
+            "initial": "",
+            "href": url_for("chat.show", _anchor=LATEST),
+            "current": chat_id == DEFAULT_CHAT,
+            "snippet": views.snippet(_last(conn, DEFAULT_CHAT), assistant, names),
+        }
+    ]
+    for kid in kids:
+        mine = private_chat(kid.id)
+        latest = _last(conn, mine)
+        # When she last wrote, never what: her words belong to her conversation, not this page.
+        said = (
+            f"{kid.display_name} and {assistant} · last message "
+            f"{views.local_moment(latest.received_at, app.settings.tzinfo)}"
+            if latest
+            else f"{kid.display_name} and {assistant} · no messages yet"
+        )
+        rows.append(
+            {
+                "name": kid.display_name,
+                "slot": views.slot_of(kid.display_name, slots),
+                "initial": kid.display_name[:1].upper(),
+                "href": url_for("chat.show", **{"with": kid.id}, _anchor=LATEST),
+                "current": chat_id == mine,
+                "snippet": said,
+            }
+        )
+    return rows
+
+
+def _last(conn: Any, chat_id: str) -> Message | None:
+    found = message_store.last_for_chat(conn, chat_id, limit=1)
+    return found[0] if found else None
+
+
+def _number(name: str, ceiling: int) -> int | None:
+    """A whole number from the address, kept inside bounds; None when there is none."""
+    given = request.args.get(name, "")
+    return min(int(given), ceiling) if given.isdigit() else None
+
+
 @bp.get("/chat")
 def show() -> Any:
     wanted = request.args.get("with", "")
+    older = _number("before", 2**62)
+    looked = _number("n", len(REFRESH_STEPS["thinking"])) or 0
     if not wanted:
-        return page(typed=asked())
+        return page(typed=asked(), before=older, looked=looked)
     if not wanted.isdigit() or not auth.visitor().may("decide"):
         abort(404)
     with closing(_app().connect()) as conn:
         kid = member_store.get(conn, int(wanted))
     if kid is None or kid.role != "kid":
         abort(404)
-    return page(reading=kid)
+    return page(reading=kid, before=older, looked=looked)
 
 
 def _position(form: Any) -> tuple[float, float] | None:
